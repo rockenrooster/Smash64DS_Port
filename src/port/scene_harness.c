@@ -57,6 +57,52 @@ static void ndsSceneHarnessSeedVSDefaults(void)
     }
 }
 
+static void ndsSceneHarnessSeedBattleFDDefaults(void)
+{
+    s32 i;
+
+    dSCManagerDefaultSceneData.gkind = nGRKindLast;
+    gSCManagerSceneData.gkind = nGRKindLast;
+
+    gSCManagerTransferBattleState = dSCManagerDefaultBattleState;
+    gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_STOCK;
+    gSCManagerTransferBattleState.time_limit = 3;
+    gSCManagerTransferBattleState.stocks = 3;
+    gSCManagerTransferBattleState.handicap = 0;
+    gSCManagerTransferBattleState.is_team_battle = FALSE;
+    gSCManagerTransferBattleState.is_team_attack = FALSE;
+    gSCManagerTransferBattleState.is_stage_select = FALSE;
+    gSCManagerTransferBattleState.is_reset_players = FALSE;
+    gSCManagerTransferBattleState.pl_count = 1;
+    gSCManagerTransferBattleState.cp_count = 0;
+
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        gSCManagerTransferBattleState.players[i].player = (u8)i;
+        gSCManagerTransferBattleState.players[i].pkind = nFTPlayerKindNot;
+        gSCManagerTransferBattleState.players[i].fkind = nFTKindNull;
+        gSCManagerTransferBattleState.players[i].level = 1;
+        gSCManagerTransferBattleState.players[i].handicap = 0;
+        gSCManagerTransferBattleState.players[i].team = 0;
+        gSCManagerTransferBattleState.players[i].costume = 0;
+        gSCManagerTransferBattleState.players[i].shade = 0;
+        gSCManagerTransferBattleState.players[i].color = 0;
+        gSCManagerTransferBattleState.players[i].stock_count = 0;
+    }
+
+    gSCManagerTransferBattleState.players[0].pkind = nFTPlayerKindMan;
+    gSCManagerTransferBattleState.players[0].fkind = nFTKindMario;
+    gSCManagerTransferBattleState.players[0].handicap = 9;
+    gSCManagerTransferBattleState.players[0].stock_count = 3;
+
+    gSCManagerBackupData.error_flags = 0;
+    gSCManagerBackupData.boot = 0;
+    gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
+    gSCManagerBackupData.ground_mask = 0xFFFFu;
+
+    dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
+}
+
 void ndsDevSceneHarnessApply(void)
 {
     gNdsSceneHarnessMode = (u32)NDS_DEV_SCENE_HARNESS;
@@ -108,9 +154,9 @@ void ndsDevSceneHarnessApply(void)
         return;
 
     case NDS_DEV_SCENE_HARNESS_BATTLE_FD:
-        gNdsSceneHarnessReservedMask = 1u;
-        ndsSceneHarnessSetDefaultScene(nSCKindTitle, nSCKindOpeningNewcomers);
-        gNdsSceneHarnessResult = NDS_SCENE_HARNESS_RESERVED_PASS;
+        ndsSceneHarnessSetDefaultScene(nSCKindVSBattle, nSCKindMaps);
+        ndsSceneHarnessSeedBattleFDDefaults();
+        gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
         return;
 
     default:

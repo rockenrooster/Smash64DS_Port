@@ -8,8 +8,9 @@ for planning and handoff.
 
 The ROM boots through the original BattleShip startup path, runs the bounded
 Opening Room and opening movie sequence, reaches the imported Title scene
-boundary, and can now prove the bounded VS menu chain to the existing VSBattle
-scene boundary stub. The current Title slice loads original `MNTitle` and
+boundary, can prove the bounded VS menu chain, and now imports a bounded
+original `scvsbattle.c` VSBattle setup slice. The current Title slice loads
+original `MNTitle` and
 `MNTitleFireAnim` O2R files, creates the original Title actor pair, logo-fire
 GObj/display boundary, fire GObj/SObj/process/display boundary, four cameras,
 and initial Title vars. It normalizes the 30 original Title fire frame Sprites,
@@ -51,17 +52,23 @@ transition, enters bounded PlayersVS setup, injects a deterministic two-player
 ready/start state through original PlayersVS update logic, enters bounded Maps
 setup, injects a synthetic A-button stage select on Pupupu, observes original
 Maps scene-data saving, reaches `scene_prev = nSCKindMaps` and
-`scene_curr = nSCKindVSBattle`, and parks at the existing VSBattle scene
-boundary stub.
-The future `battle_fd` target is reserved only; it records a reserved marker
-and falls back to Title until the original one-fighter/Final-Destination battle
-slice is intentionally imported.
+`scene_curr = nSCKindVSBattle`, then reaches the same imported bounded
+VSBattle setup boundary.
+The `battle_fd` harness now starts directly at `nSCKindVSBattle` from
+`nSCKindMaps`, seeds one Mario with stock rules and `nGRKindLast` as the
+current Final Destination sentinel, loads the original/common battle file list,
+creates the default battle camera path through compatibility stubs, builds
+fighter descriptors from `SCBattleState`, creates stub fighter GObjs for active
+players, reaches interface/HUD setup stubs, proves one bounded
+`scVSBattleFuncUpdate` interface tick, and parks before real gameplay/update/draw.
 
 ## Next Boundary
 
-Use the new VSBattle boundary proof to identify the first narrow original
-`scvsbattle.c` setup boundary. Do not import fighters, stages, battle gameplay,
-audio, or full renderer systems until that exact boundary requires them.
+Use the imported VSBattle setup proof to identify the next narrow battle spine
+boundary, likely the first real stage/fighter asset contract needed after
+`scVSBattleStartBattle`. Do not import full fighter logic, full stage logic,
+items/weapons runtime, audio, or full renderer systems until that exact
+boundary requires them.
 
 ## Known Blockers
 
@@ -76,8 +83,10 @@ audio, or full renderer systems until that exact boundary requires them.
 - Maps setup is imported, but the stage preview model path is explicitly
   deferred. The A-select transition is bounded to stage-data saving and the
   VSBattle scene request.
-- VSBattle remains the final scene-boundary stub. No battle, fighter, stage,
-  item, or audio gameplay path is imported yet.
+- VSBattle setup is imported only to the bounded setup/update proof. Stub
+  fighter GObjs are created from original descriptors, but full fighter logic,
+  stage geometry/collision, items/weapons runtime, audio backend, HUD rendering,
+  and gameplay remain deferred.
 - Fighter/stage-heavy opening action scenes are still bounded bridge stubs in
   original order.
 - Opening Room DObj rendering is still a bounded preview path, not a general
@@ -103,6 +112,7 @@ make -j4
 .\scripts\verify-vs-start-transition-harness.ps1
 .\scripts\verify-players-vs-setup-harness.ps1
 .\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-battle-fd-harness.ps1
 .\scripts\verify-menu-chain-vsbattle-harness.ps1
 ```
 
@@ -145,13 +155,15 @@ make TARGET=smash64ds-players-vs BUILD=build-players-vs-setup-harness NDS_DEV_SC
 .\scripts\verify-players-vs-setup-harness.ps1
 make TARGET=smash64ds-maps BUILD=build-maps-setup-harness NDS_DEV_SCENE_HARNESS=maps_setup -j4
 .\scripts\verify-maps-setup-harness.ps1
+make TARGET=smash64ds-battle-fd BUILD=build-battle-fd-harness NDS_DEV_SCENE_HARNESS=battle_fd -j4
+.\scripts\verify-battle-fd-harness.ps1
 make TARGET=smash64ds-menu-chain BUILD=build-menu-chain-vsbattle-harness NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle -j4
 .\scripts\verify-menu-chain-vsbattle-harness.ps1
 ```
 
 ## Latest Proof
 
-Latest verified state after the PlayersVS + Maps menu-chain import:
+Latest verified state after the bounded VSBattle setup import:
 
 ```text
 make -j4
@@ -159,12 +171,13 @@ scripts/verify-vs-setup-harness.ps1 -> VS setup harness passed: scene=9/1 setup=
 scripts/verify-vs-start-transition-harness.ps1 -> VS Start transition harness passed: scene=16/9 trans=0x56535452 mask=0xff saved=1/3/2
 scripts/verify-players-vs-setup-harness.ps1 -> PlayersVS setup harness passed: files=7 mask=0xff sobj=65 slots=2/4/4
 scripts/verify-maps-setup-harness.ps1 -> Maps setup harness passed: files=5 mask=0xff sobj=36 slot=6 gkind=6
-scripts/verify-menu-chain-vsbattle-harness.ps1 -> Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, final=22/21
+scripts/verify-battle-fd-harness.ps1 -> Battle FD harness passed: files=8 players=1/0 fighters=1 gkind=16 mask=0x7f
+scripts/verify-menu-chain-vsbattle-harness.ps1 -> Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, VSBattle files=8 fighters=2, final=22/21
 scripts/verify-runtime.ps1 -> Runtime verification passed (401 frames, fps=60/up=0/dl=60, cv=0/ch=32, verifyfps=2.34)
 scripts/verify-opening-boundary.ps1 -> frames=504 hostfps=54.30 room=420
 scripts/verify-opening-skip.ps1 -> Opening Room skip verification passed (tick 10 -> Title)
 scripts/verify-title-boundary.ps1 -> frames=3292 hostfps=40.52 room=1320 action=9/324 title=0x54494457
-scripts/verify-all.ps1 -> Full verification passed; speed sample frames=3283 hostfps=40.47 title=0x54494457; VS Start scene=16/9; PlayersVS files=7; Maps slot=6; menu chain final=22/21
+scripts/verify-all.ps1 -> Full verification passed; speed sample frames=3282 hostfps=40.49 title=0x54494457; VS Start scene=16/9; PlayersVS files=7; Maps slot=6; direct VSBattle files=8; menu chain final=22/21
 scripts/verify-title-harness.ps1 -> Title harness passed: scene=1/46 room=0 title=0x54494457
 ```
 

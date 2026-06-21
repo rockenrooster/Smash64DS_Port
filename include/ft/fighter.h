@@ -110,7 +110,8 @@ enum {
 };
 
 enum {
-    nFTPartsDetailHigh = 0
+    nFTPartsDetailHigh = 0,
+    nFTPartsDetailLow = 1
 };
 
 #define FTKEY_EVENT_INSTRUCTION(k, t) \
@@ -172,6 +173,7 @@ extern f32 dSCSubsysFighterScales[];
 void ftManagerSetupFileSize(void);
 void ftManagerAllocFighter(u32 data_flags, s32 allocs_num);
 void ftManagerSetupFilesAllKind(s32 fkind);
+void ftManagerSetupFilesPlayablesAll(void);
 void *ftManagerAllocFigatreeHeapKind(s32 fkind);
 GObj *ftManagerMakeFighter(FTDesc *desc);
 void ftManagerDestroyFighter(GObj *fighter_gobj);

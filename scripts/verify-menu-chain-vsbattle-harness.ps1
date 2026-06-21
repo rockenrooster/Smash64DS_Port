@@ -61,6 +61,9 @@ try {
         'printf "PV_TRANS=%#x,%#x,%u,%#x,%u,%u,%u,%u,%u,%u\n", gNdsPlayersVSReadyTransitionResult, gNdsPlayersVSReadyTransitionMask, gNdsPlayersVSReadyTransitionUpdateCount, gNdsPlayersVSReadyTransitionInputMask, gNdsPlayersVSReadyTransitionScenePrevBefore, gNdsPlayersVSReadyTransitionSceneCurrBefore, gNdsPlayersVSReadyTransitionScenePrevFinal, gNdsPlayersVSReadyTransitionSceneCurrFinal, gNdsPlayersVSReadyTransitionPlayerCount, gNdsPlayersVSReadyTransitionStageSelect',
         'printf "MAPS_SETUP=%#x,%#x,%#x,%#x,%#x,%u,%u,%u,%u,%#x\n", gNdsMapsOriginalStartResult, gNdsMapsOriginalFuncStartResult, gNdsMapsOriginalRelocResult, gNdsMapsOriginalSetupResult, gNdsMapsOriginalSetupMask, gNdsMapsOriginalLoadedFileCount, gNdsMapsOriginalCursorSlot, gNdsMapsOriginalGroundKind, gNdsMapsOriginalPreviewDeferred, gNdsMapsOriginalDeferredMask',
         'printf "MAPS_TRANS=%#x,%#x,%u,%#x,%u,%u,%u,%u,%u\n", gNdsMapsSelectTransitionResult, gNdsMapsSelectTransitionMask, gNdsMapsSelectTransitionUpdateCount, gNdsMapsSelectTransitionInputMask, gNdsMapsSelectTransitionScenePrevBefore, gNdsMapsSelectTransitionSceneCurrBefore, gNdsMapsSelectTransitionScenePrevFinal, gNdsMapsSelectTransitionSceneCurrFinal, gNdsMapsSelectTransitionSelectedGKind',
+        'printf "VSB_SETUP=%#x,%#x,%#x,%#x,%#x,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u\n", gNdsSCVSBattleOriginalStartResult, gNdsSCVSBattleOriginalFuncStartResult, gNdsSCVSBattleOriginalRelocResult, gNdsSCVSBattleOriginalSetupResult, gNdsSCVSBattleOriginalSetupMask, gNdsSCVSBattleOriginalLoadedFileCount, gNdsSCVSBattleOriginalGObjCount, gNdsSCVSBattleOriginalCameraCount, gNdsSCVSBattleOriginalFighterGObjCount, gNdsSCVSBattleOriginalActivePlayerMask, gNdsSCVSBattleCompatMask, gNdsSCVSBattleOriginalPlayerCount, gNdsSCVSBattleOriginalCpuCount, gNdsSCVSBattleOriginalGameRule, gNdsSCVSBattleOriginalStock, gNdsSCVSBattleOriginalGKind, gNdsSCVSBattleOriginalSceneCurr, gNdsSCVSBattleOriginalScenePrev',
+        'printf "VSB_COMPAT=%#x,%#x,%#x,%#x,%#x,%#x,%u\n", gNdsSCVSBattleCompatCameraMask, gNdsSCVSBattleCompatInterfaceMask, gNdsSCVSBattleCompatManagerMask, gNdsSCVSBattleCompatAudioMask, gNdsSCVSBattleCompatSpawnMask, gNdsSCVSBattleCompatMask, gNdsSCVSBattleLastFGM',
+        'printf "VSB_UPDATE=%#x,%u\n", gNdsSCVSBattleOriginalUpdateResult, gNdsSCVSBattleOriginalUpdateCount',
         'printf "TASK=%u,%u,%u,%u,%u\n", gNdsTaskmanLoopReached, gNdsTaskmanSceneUpdateSet, gNdsTaskmanSceneDrawSet, gNdsTaskmanControllerAutoRead, gNdsSceneBoundaryKind',
         'printf "ROOM_TITLE=%u,%#x,%#x\n", gNdsOpeningRoomTickCount, gNdsTitleOriginalStartResult, gNdsTitleDrawResult',
         'detach',
@@ -76,6 +79,9 @@ try {
     $pvTrans = [regex]::Match($gdbStdout, 'PV_TRANS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $mapsSetup = [regex]::Match($gdbStdout, 'MAPS_SETUP=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $mapsTrans = [regex]::Match($gdbStdout, 'MAPS_TRANS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $vsbSetup = [regex]::Match($gdbStdout, 'VSB_SETUP=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $vsbCompat = [regex]::Match($gdbStdout, 'VSB_COMPAT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
+    $vsbUpdate = [regex]::Match($gdbStdout, 'VSB_UPDATE=(0x[0-9a-fA-F]+|0),([0-9]+)')
     $task = [regex]::Match($gdbStdout, 'TASK=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $roomTitle = [regex]::Match($gdbStdout, 'ROOM_TITLE=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
 
@@ -137,6 +143,37 @@ try {
         [int]$mapsTrans.Groups[9].Value -ne 6) {
         throw "Maps did not transition to VSBattle through original A-select logic.`n$gdbStdout"
     }
+    if (-not $vsbSetup.Success -or
+        (Convert-MarkerUInt32 $vsbSetup.Groups[1].Value) -ne 0x56425354 -or
+        (Convert-MarkerUInt32 $vsbSetup.Groups[2].Value) -ne 0x56424653 -or
+        (Convert-MarkerUInt32 $vsbSetup.Groups[3].Value) -ne 0x5642524c -or
+        (Convert-MarkerUInt32 $vsbSetup.Groups[4].Value) -ne 0x56425355 -or
+        ((Convert-MarkerUInt32 $vsbSetup.Groups[5].Value) -band 0x7f) -ne 0x7f -or
+        [int]$vsbSetup.Groups[6].Value -ne 8 -or
+        [int]$vsbSetup.Groups[8].Value -lt 1 -or
+        [int]$vsbSetup.Groups[9].Value -lt 2 -or
+        [int]$vsbSetup.Groups[10].Value -ne 3 -or
+        ((Convert-MarkerUInt32 $vsbSetup.Groups[11].Value) -band 0xff) -ne 0xff -or
+        [int]$vsbSetup.Groups[12].Value -lt 2 -or
+        [int]$vsbSetup.Groups[13].Value -ne 0 -or
+        [int]$vsbSetup.Groups[16].Value -ne 6 -or
+        [int]$vsbSetup.Groups[17].Value -ne 22 -or
+        [int]$vsbSetup.Groups[18].Value -ne 21) {
+        throw "Imported VSBattle setup proof failed after the menu chain.`n$gdbStdout"
+    }
+    if (-not $vsbCompat.Success -or
+        ((Convert-MarkerUInt32 $vsbCompat.Groups[1].Value) -band 0x3f) -ne 0x3f -or
+        ((Convert-MarkerUInt32 $vsbCompat.Groups[2].Value) -band 0x37ff) -ne 0x37ff -or
+        ((Convert-MarkerUInt32 $vsbCompat.Groups[3].Value) -band 0x1ff) -ne 0x1ff -or
+        ((Convert-MarkerUInt32 $vsbCompat.Groups[4].Value) -band 0x12) -ne 0x12 -or
+        ((Convert-MarkerUInt32 $vsbCompat.Groups[5].Value) -band 0x3) -ne 0x3 -or
+        ((Convert-MarkerUInt32 $vsbCompat.Groups[6].Value) -band 0xff) -ne 0xff -or
+        [int]$vsbCompat.Groups[7].Value -ne 626) {
+        throw "VSBattle compatibility stub coverage failed after the menu chain.`n$gdbStdout"
+    }
+    if (-not $vsbUpdate.Success -or (Convert-MarkerUInt32 $vsbUpdate.Groups[1].Value) -ne 0x56425550 -or [int]$vsbUpdate.Groups[2].Value -ne 1) {
+        throw "VSBattle interface update tick was not proven after the menu chain.`n$gdbStdout"
+    }
     if (-not $scene.Success -or [int]$scene.Groups[1].Value -ne 22 -or [int]$scene.Groups[2].Value -ne 21) {
         throw "Final scene state is not VSBattle from Maps.`n$gdbStdout"
     }
@@ -147,7 +184,7 @@ try {
         throw "Menu-chain harness replayed opening/title work.`n$gdbStdout"
     }
 
-    Write-Output ("Menu-chain VSBattle harness passed: VS->PV mask={0}, PV->Maps mask={1}, Maps->VSBattle mask={2}, final={3}/{4}" -f $vs.Groups[2].Value, $pvTrans.Groups[2].Value, $mapsTrans.Groups[2].Value, $scene.Groups[1].Value, $scene.Groups[2].Value)
+    Write-Output ("Menu-chain VSBattle harness passed: VS->PV mask={0}, PV->Maps mask={1}, Maps->VSBattle mask={2}, VSBattle files={3} fighters={4}, final={5}/{6}" -f $vs.Groups[2].Value, $pvTrans.Groups[2].Value, $mapsTrans.Groups[2].Value, $vsbSetup.Groups[6].Value, $vsbSetup.Groups[9].Value, $scene.Groups[1].Value, $scene.Groups[2].Value)
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

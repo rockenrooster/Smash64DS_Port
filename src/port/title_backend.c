@@ -419,7 +419,6 @@ NDS_SCENE_STUB(sc1PTrainingModeStartScene)
 NDS_SCENE_STUB(scAutoDemoStartScene)
 NDS_SCENE_STUB(scExplainStartScene)
 NDS_SCENE_STUB(scStaffrollStartScene)
-NDS_SCENE_STUB(scVSBattleStartScene)
 
 void mvOpeningRunStartScene(void)
 {

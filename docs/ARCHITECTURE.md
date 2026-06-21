@@ -193,6 +193,20 @@ guarded original Title update tick on the natural
 original sprite preview. None of these movie/title visuals are DS-native
 replacement art.
 
+The current menu-to-battle spine is also original-code first. Imported
+`mnvsmode.c`, `mnplayersvs.c`, and `mnmaps.c` can run as bounded setup or
+transition harnesses, preserving the VS Start, PlayersVS ready/start, and Maps
+A-select transitions through original controller/state paths. The chain now
+continues into imported `sccommon/scvsbattle.c` and
+`sccommon/scvsbattlefiles.c` for a bounded VSBattle setup proof: common battle
+files are loaded through the DS relocation layer, battle camera/interface/
+manager calls reach project-owned compatibility stubs, active fighter
+descriptors are built from `SCBattleState`, stub fighter GObjs are created for
+active players, and one bounded `scVSBattleFuncUpdate` interface tick is
+verified before parking. This is not full battle gameplay; fighter, stage,
+item/weapon runtime, full interface rendering, results, and audio playback
+remain deferred until their own narrow original-source boundaries are imported.
+
 The bounded renderer boundary for DObj display lists remains after Opening Room
 draw/preview probes that follow the tick-560 Scene 2 camera transition event in imported
 `mv/mvopening/mvopeningroom.c`. Before the startup scene exits, the DS seam now

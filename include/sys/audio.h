@@ -48,6 +48,8 @@ extern SYAudioPublicSettings dSYAudioPublicSettings;
 void syAudioThreadMain(void *arg);
 void syAudioStopBGMAll(void);
 void syAudioPlayBGM(s32 player, s32 bgm_id);
+s32 syAudioCheckBGMPlaying(s32 sngplayer);
+void syAudioSetBGMVolume(s32 sngplayer, u32 vol);
 void func_800266A0_272A0(void);
 void func_80026738_27338(alSoundEffect *sfx);
 void *func_800269C0_275C0(u16 fgm_id);

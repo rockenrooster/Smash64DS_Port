@@ -56,10 +56,13 @@
   but explicitly defers the stage preview model path. The Maps A-select proof
   is bounded to original stage-data saving and the scene request to VSBattle.
   `NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle` proves VS Mode -> PlayersVS ->
-  Maps -> VSBattle, but `scVSBattleStartScene` remains the final boundary stub.
-  `NDS_DEV_SCENE_HARNESS=battle_fd` is a reserved future slot and deliberately
-  falls back to Title while recording a reserved marker; it does not create a
-  fighter, load Final Destination, dispatch battle, or import gameplay.
+  Maps -> imported bounded VSBattle setup. `NDS_DEV_SCENE_HARNESS=battle_fd`
+  starts directly at the same bounded VSBattle setup with one seeded Mario and
+  the current Final Destination sentinel. The VSBattle proof imports
+  `scvsbattle.c` / `scvsbattlefiles.c` only through setup and one interface
+  update tick; it creates stub fighter GObjs from original descriptors but does
+  not import full fighter logic, stage logic, item/weapon runtime, audio
+  backend, HUD rendering, or gameplay.
 - `syTaskmanRunTask` runs one bounded startup draw pass at update `17`, then
   55 bounded original startup updates through the Opening Room request and
   original load-scene break/eject path, mirrors the taskman cleanup tail, and
@@ -99,8 +102,16 @@
 - `mnMapsStartScene` now dispatches through imported `mnmaps.c` for a bounded
   original Maps setup slice, and the A-select transition to VSBattle is proven
   through original `mnMapsFuncRun`. The stage preview model path is explicitly
-  deferred, and VSBattle remains a scene-boundary stub with no battle, fighter,
-  stage, item, audio, or gameplay import.
+  deferred.
+- `scVSBattleStartScene` now dispatches through imported `scvsbattle.c` /
+  `scvsbattlefiles.c` for a bounded original VSBattle setup slice. It loads the
+  original/common battle file list, reaches camera/manager/interface/audio
+  compatibility stubs, builds active fighter descriptors from
+  `SCBattleState`, creates stub fighter GObjs, proves one bounded
+  `scVSBattleFuncUpdate` interface tick, and parks before real gameplay/update
+  or draw. Full fighter logic, full stage/collision logic, item/weapon runtime,
+  interface rendering, audio backend, and results/sudden-death tails remain
+  deferred.
 - `mvopeningroom.c` is imported with an NDS entry slice. Original video/task
   setup, relocation setup/file-list resolution, actor/default-camera,
   Scene 1 camera, close-up overlay camera, wallpaper-camera, and logo-camera
@@ -275,6 +286,8 @@ differences:
 - imported menu matching-placeholder warnings such as unused variables,
   unused parameters, maybe-uninitialized locals, and control reaching end of
   non-void helper functions in decomp source
+- imported `gmcommon.c` / `scvsbattle.c` pointer-to-int reloc-symbol warnings
+  from original local file-ID tables crossing the project-owned relocation shim
 
 Do not silence warnings globally unless they block real signal. Prefer fixing or
 isolating the compatibility type that causes the warning.

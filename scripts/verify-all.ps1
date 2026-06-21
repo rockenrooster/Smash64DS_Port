@@ -75,6 +75,10 @@ Invoke-VerifyScript `
     -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
 
 Invoke-VerifyScript `
+    -Script (Join-Path $PSScriptRoot 'verify-battle-fd-harness.ps1') `
+    -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
+
+Invoke-VerifyScript `
     -Script (Join-Path $PSScriptRoot 'verify-menu-chain-vsbattle-harness.ps1') `
     -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
 

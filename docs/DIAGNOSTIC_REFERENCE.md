@@ -58,6 +58,7 @@ With `emulators/melonds/melonDS.exe` in the workspace:
 .\scripts\verify-vs-start-transition-harness.ps1
 .\scripts\verify-players-vs-setup-harness.ps1
 .\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-battle-fd-harness.ps1
 .\scripts\verify-menu-chain-vsbattle-harness.ps1
 .\scripts\verify-all.ps1
 ```
@@ -71,8 +72,10 @@ bounded imported VS Mode setup proof from Title,
 PlayersVS transition proof, `verify-players-vs-setup-harness.ps1` for bounded
 imported PlayersVS setup, `verify-maps-setup-harness.ps1` for bounded imported
 Maps setup, `verify-menu-chain-vsbattle-harness.ps1` for the guarded VS Mode ->
-PlayersVS -> Maps -> VSBattle proof, and `verify-all.ps1` for the maintained
-full regression chain. The shared PowerShell helpers live in
+PlayersVS -> Maps -> imported bounded VSBattle setup proof,
+`verify-battle-fd-harness.ps1` for the direct one-Mario bounded VSBattle setup
+proof, and `verify-all.ps1` for the maintained full regression chain. The
+shared PowerShell helpers live in
 `scripts/lib/melonds.ps1` and `scripts/lib/gdb-markers.ps1`.
 
 The script:
@@ -130,7 +133,16 @@ Pupupu/Dream Land cursor, and checks the bounded imported Maps setup markers.
 `TARGET=smash64ds-menu-chain BUILD=build-menu-chain-vsbattle-harness
 NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle`, proves original VS Start ->
 PlayersVS, bounded PlayersVS ready/start -> Maps, bounded Maps A-select ->
-VSBattle, and verifies final `scene_curr/scene_prev = 22/21`.
+VSBattle, then verifies the imported bounded VSBattle setup boundary and final
+`scene_curr/scene_prev = 22/21`.
+
+`verify-battle-fd-harness.ps1` builds `TARGET=smash64ds-battle-fd
+BUILD=build-battle-fd-harness NDS_DEV_SCENE_HARNESS=battle_fd`, starts
+directly at `nSCKindVSBattle` from `nSCKindMaps`, seeds one Mario and the
+current Final Destination sentinel, verifies the original common battle file
+list load, default camera path, manager/interface compatibility stubs, active
+fighter descriptor/stub-GObj creation, and one bounded
+`scVSBattleFuncUpdate` interface tick.
 
 ## Visual melonDS Debugging
 
@@ -351,21 +363,19 @@ Opening movie / Opening Portraits:
   `OpeningRun` through `OpeningNewcomers`, expected `0x1FF`.
 - `gNdsOpeningMovieTitleResult`: natural Title dispatch marker, expected
   `0x4F4D5449`.
-- `gNdsSceneHarnessResult`: dev/test harness marker. Direct Title harness
-  expects `0x4841524E` (`HARN`); the reserved battle slot reports
-  `0x48525356` (`HRSV`) until a real battle boundary exists.
+- `gNdsSceneHarnessResult`: dev/test harness marker. Maintained harnesses
+  expect `0x4841524E` (`HARN`).
 - `gNdsSceneHarnessMode`: build-time harness mode: `0` normal, `1` direct
-  Title, `2` bounded VS setup from Title, `3` reserved battle/Final-Destination
-  slot, `4` bounded VS Start to PlayersVS transition from Title, `5` direct
+  Title, `2` bounded VS setup from Title, `3` direct bounded VSBattle setup,
+  `4` bounded VS Start to PlayersVS transition from Title, `5` direct
   PlayersVS setup, `6` direct Maps setup, and `7` guarded VS Mode -> PlayersVS
   -> Maps -> VSBattle chain.
 - `gNdsSceneHarnessSceneCurr` / `ScenePrev`: default scene pair preseeded
   before imported `scManagerRunLoop` copies it. Direct Title expects `1/46`
   (`nSCKindTitle` from `nSCKindOpeningNewcomers`).
-- `gNdsSceneHarnessReservedMask`: `0` for the maintained Title, VS setup,
-  VS Start transition, PlayersVS, Maps, and menu-chain harnesses. The reserved
-  battle slot sets bit `0` and falls back to Title instead of dispatching
-  fighters/stages.
+- `gNdsSceneHarnessReservedMask`: expected `0` for the maintained Title,
+  VS setup, direct VSBattle setup, VS Start transition, PlayersVS, Maps, and
+  menu-chain harnesses.
 - `gNdsTitleOriginalStartResult` / `FuncStartResult`: imported
   `mntitle.c` bounded start markers, expected `0x54495354` and `0x54494653`.
 - `gNdsTitleOriginalSetupMask`: current bounded Title setup coverage,
@@ -531,6 +541,46 @@ Opening movie / Opening Portraits:
   `16/21 -> 21/22` in the menu-chain harness.
 - `gNdsMapsSelectTransitionSelectedSlot` /
   `SelectedGKind`: expected `6/6`.
+- `gNdsSCVSBattleOriginalStartResult` / `FuncStartResult`: imported
+  `scvsbattle.c` bounded start markers, expected `0x56425354` (`VBST`) and
+  `0x56424653` (`VBFS`).
+- `gNdsSCVSBattleOriginalRelocResult`: original common battle file-list load
+  marker, expected `0x5642524C` (`VBRL`) after eight interface/common battle
+  files load.
+- `gNdsSCVSBattleOriginalSetupResult`: bounded original VSBattle setup marker,
+  expected `0x56425355` (`VBSU`).
+- `gNdsSCVSBattleOriginalSetupMask`: expected `0x7F`. It proves common file
+  load, default battle camera path, manager compatibility stubs, active fighter
+  descriptor construction, interface/HUD compatibility stubs, audio/BGM
+  compatibility stubs, and the one bounded taskman update tick.
+- `gNdsSCVSBattleOriginalLoadedFileCount`: expected `8`.
+- `gNdsSCVSBattleOriginalGObjCount` / `CameraCount` / `MainGObjID`: bounded
+  VSBattle setup object evidence after imported `scVSBattleStartBattle`.
+- `gNdsSCVSBattleFighterGObjCount` / `ActivePlayerMask`: stub fighter GObjs
+  created from the active `SCBattleState` player descriptors. Direct
+  `battle_fd` expects `1/0x1`; the menu-chain proof expects at least `2/0x3`.
+- `gNdsSCVSBattlePlayerCount` / `CpuCount` / `GameRule` / `Stock` / `GKind`:
+  battle-state evidence sampled at the bounded setup boundary. Direct
+  `battle_fd` expects `1/0/2/3/16`; the menu-chain proof currently preserves
+  the selected Pupupu/Dream Land ground kind `6`.
+- `gNdsSCVSBattleScenePrev` / `SceneCurr`: expected `21/22`.
+- `gNdsSCVSBattleCompatMask`: low byte compatibility coverage. Expected
+  `0xFF` for effects, ground collision, camera, item/weapon manager, fighter
+  manager, interface, audio, and rumble stubs.
+- `gNdsSCVSBattleCompatCameraMask`: expected low six bits set for the battle,
+  player-arrow, magnify, screen-flash, interface, and effect camera stubs.
+- `gNdsSCVSBattleCompatInterfaceMask`: interface/HUD setup calls reached as
+  bounded compatibility stubs.
+- `gNdsSCVSBattleCompatManagerMask`: manager setup calls reached as bounded
+  compatibility stubs, including fighter setup and stub fighter creation.
+- `gNdsSCVSBattleCompatAudioMask` / `LastAudioVolume` / `LastFGM`: audio/BGM
+  compatibility evidence. `syAudioCheckBGMPlaying` currently returns false and
+  volume/FGM calls are diagnostic only.
+- `gNdsSCVSBattleCompatSpawnMask`: deterministic spawn-position queries from
+  `mpCollisionGetPlayerMapObjPosition`.
+- `gNdsSCVSBattleOriginalUpdateResult` / `UpdateCount`: one bounded
+  `scVSBattleFuncUpdate` interface tick, expected `0x56425550` (`VBUP`) and
+  `1`.
 - `gNdsControllerPollCount`: DS SI/controller polls, must be nonzero.
 - `gSYControllerMain`: original global controller state after update.
 

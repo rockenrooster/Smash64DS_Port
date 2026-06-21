@@ -72,12 +72,16 @@ typedef struct MPGroundData
 } MPGroundData;
 
 extern GObj *gGRCommonLayerGObjs[4];
+extern f32 gMPCollisionLightAngleX;
+extern f32 gMPCollisionLightAngleY;
 
 void grWallpaperMakeDecideKind(void);
 void grCommonSetupInitAll(void);
 s32 mpCollisionGetMapObjCountKind(s32 kind);
 void mpCollisionGetMapObjIDsKind(s32 kind, s32 *ids);
 void mpCollisionGetMapObjPositionID(s32 id, Vec3f *pos);
+void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos);
 void mpCollisionInitGroundData(void);
+void mpCollisionSetPlayBGM(void);
 
 #endif

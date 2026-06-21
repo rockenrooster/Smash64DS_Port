@@ -6,6 +6,8 @@ void syAudioPlayBGM(s32 player, s32 bgm_id)
 {
     (void)player;
     (void)bgm_id;
+    gNdsSCVSBattleCompatAudioMask |= 1u << 0;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
 }
 
 void func_800266A0_272A0(void)
@@ -25,7 +27,26 @@ void func_80026738_27338(alSoundEffect *sfx)
 void *func_800269C0_275C0(u16 fgm_id)
 {
     sNdsStubSoundEffect.sfx_id = fgm_id;
+    gNdsSCVSBattleLastFGM = fgm_id;
+    gNdsSCVSBattleCompatAudioMask |= 1u << 1;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
     return &sNdsStubSoundEffect;
+}
+
+s32 syAudioCheckBGMPlaying(s32 sngplayer)
+{
+    (void)sngplayer;
+    gNdsSCVSBattleCompatAudioMask |= 1u << 2;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+    return FALSE;
+}
+
+void syAudioSetBGMVolume(s32 sngplayer, u32 vol)
+{
+    (void)sngplayer;
+    gNdsSCVSBattleLastAudioVolume = vol;
+    gNdsSCVSBattleCompatAudioMask |= 1u << 3;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
 }
 
 /* scmanager.c excludes these renderer/task wrappers for the NDS target. Keep
@@ -67,6 +88,8 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
 {
     (void)data_flags;
     (void)allocs_num;
+    gNdsSCVSBattleCompatManagerMask |= 1u << 0;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
     if (gFTManagerFigatreeHeapSize == 0)
     {
         gFTManagerFigatreeHeapSize = 0x1000u;
@@ -76,6 +99,14 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
     (void)fkind;
+    gNdsSCVSBattleCompatManagerMask |= 1u << 1;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+}
+
+void ftManagerSetupFilesPlayablesAll(void)
+{
+    gNdsSCVSBattleCompatManagerMask |= 1u << 2;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
 }
 
 void *ftManagerAllocFigatreeHeapKind(s32 fkind)
@@ -95,6 +126,10 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
     {
         fighter_gobj->user_data.s = desc->player;
         gcAddDObjForGObj(fighter_gobj, NULL);
+        gNdsSCVSBattleOriginalFighterGObjCount++;
+        gNdsSCVSBattleOriginalActivePlayerMask |= 1u << (desc->player & 3);
+        gNdsSCVSBattleCompatManagerMask |= 1u << 3;
+        gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
     }
     return fighter_gobj;
 }
@@ -143,16 +178,22 @@ void lbCommonSetSpriteScissor(s32 xmin, s32 xmax, s32 ymin, s32 ymax)
 
 void ftPublicMakeActor(void)
 {
+    gNdsSCVSBattleCompatManagerMask |= 1u << 4;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
 }
 
 void ftParamInitGame(void)
 {
+    gNdsSCVSBattleCompatManagerMask |= 1u << 5;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
 }
 
 void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj)
 {
     (void)player;
     (void)fighter_gobj;
+    gNdsSCVSBattleCompatManagerMask |= 1u << 6;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
 }
 
 void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script)
@@ -181,6 +222,7 @@ void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id)
 
 void efParticleInitAll(void)
 {
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
 }
 
 s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
@@ -207,6 +249,7 @@ void lbParticleDrawTextures(GObj *gobj)
 
 void mpCollisionInitGroundData(void)
 {
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
 }
 
 void gmCameraSetViewportDimensions(s32 ulx, s32 uly, s32 lrx, s32 lry)
@@ -220,6 +263,56 @@ void gmCameraSetViewportDimensions(s32 ulx, s32 uly, s32 lrx, s32 lry)
 GObj *gmCameraMakeWallpaperCamera(void)
 {
     return NULL;
+}
+
+static GObj *ndsMakeBattleCompatCamera(u32 bit)
+{
+    gNdsSCVSBattleCompatCameraMask |= bit;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GAMEPLAY_CAMERA;
+
+    return gcMakeCameraGObj(nGCCommonKindSceneCamera,
+                            NULL,
+                            nGCCommonLinkIDCamera,
+                            GOBJ_PRIORITY_DEFAULT,
+                            func_80017EC0,
+                            10,
+                            ~0,
+                            ~0,
+                            FALSE,
+                            nGCProcessKindFunc,
+                            NULL,
+                            1,
+                            FALSE);
+}
+
+GObj *gmCameraMakeBattleCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 0);
+}
+
+GObj *gmCameraMakePlayerArrowsCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 1);
+}
+
+GObj *gmCameraMakePlayerMagnifyCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 2);
+}
+
+GObj *gmCameraScreenFlashMakeCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 3);
+}
+
+GObj *gmCameraMakeInterfaceCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 4);
+}
+
+GObj *gmCameraMakeEffectCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 5);
 }
 
 GObj *gmCameraMakeMovieCamera(void (*func_camera)(GObj *))
@@ -246,6 +339,7 @@ void grWallpaperMakeDecideKind(void)
 
 void grCommonSetupInitAll(void)
 {
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
 }
 
 s32 mpCollisionGetMapObjCountKind(s32 kind)
@@ -274,20 +368,135 @@ void mpCollisionGetMapObjPositionID(s32 id, Vec3f *pos)
     }
 }
 
+void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos)
+{
+    static const Vec3f spawns[GMCOMMON_PLAYERS_MAX] = {
+        { -80.0F, 0.0F, 0.0F },
+        { 80.0F, 0.0F, 0.0F },
+        { -40.0F, 0.0F, 0.0F },
+        { 40.0F, 0.0F, 0.0F },
+    };
+
+    if (pos != NULL)
+    {
+        s32 index = (player >= 0 && player < GMCOMMON_PLAYERS_MAX) ? player : 0;
+        *pos = spawns[index];
+    }
+    gNdsSCVSBattleCompatSpawnMask |= 1u << (player & 3);
+}
+
+void mpCollisionSetPlayBGM(void)
+{
+    gNdsSCVSBattleCompatAudioMask |= 1u << 4;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+}
+
 void gmRumbleMakeActor(void)
 {
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
+}
+
+void gmRumbleInitPlayers(void)
+{
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
 }
 
 void wpManagerAllocWeapons(void)
 {
+    gNdsSCVSBattleCompatManagerMask |= 1u << 7;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
 }
 
 void itManagerInitItems(void)
 {
+    gNdsSCVSBattleCompatManagerMask |= 1u << 8;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
 }
 
 void efManagerInitEffects(void)
 {
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
+}
+
+static void ndsSCVSBattleMarkInterface(u32 bit)
+{
+    gNdsSCVSBattleCompatInterfaceMask |= bit;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_INTERFACE;
+}
+
+void ifCommonBattleUpdateInterfaceAll(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 0);
+}
+
+void ifCommonBattleSetGameStatusWait(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 1);
+}
+
+void ifCommonPlayerArrowsInitInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 2);
+}
+
+void ifCommonPlayerMagnifyMakeInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 3);
+}
+
+void ifCommonPlayerTagMakeInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 4);
+}
+
+void ifCommonPlayerDamageSetDigitPositions(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 5);
+}
+
+void ifCommonPlayerDamageInitInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 6);
+}
+
+void ifCommonPlayerStockInitInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 7);
+}
+
+void ifCommonEntryAllMakeInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 8);
+}
+
+void ifCommonTimerMakeInterface(void (*func_init)(void))
+{
+    ndsSCVSBattleMarkInterface(1u << 9);
+    if (func_init != NULL)
+    {
+        func_init();
+    }
+}
+
+void ifCommonTimerMakeDigits(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 10);
+}
+
+void ifCommonSuddenDeathMakeInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 11);
+}
+
+void ifCommonAnnounceTimeUpInitInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 12);
+}
+
+void ifScreenFlashMakeInterface(u8 alpha)
+{
+    (void)alpha;
+    ndsSCVSBattleMarkInterface(1u << 13);
 }
 
 void lbBackupIsSramValid(void)
@@ -367,6 +576,14 @@ void syRdpResetSettings(Gfx **dl)
 #define NDS_RELOC_ASSET_MN_COMMON 0u
 #define NDS_RELOC_ASSET_N64_LOGO 194u
 #define NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE 37u
+#define NDS_RELOC_ASSET_IF_COMMON_PLAYER 0xa6u
+#define NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS 0x52u
+#define NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE 0xa4u
+#define NDS_RELOC_ASSET_IF_COMMON_TIMER 0xa5u
+#define NDS_RELOC_ASSET_IF_COMMON_DIGITS 0x24u
+#define NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE 0xc5u
+#define NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS 0x26u
+#define NDS_RELOC_ASSET_SY_KSEG1_VALIDATE 0xc7u
 #define NDS_RELOC_ASSET_MV_COMMON 52u
 #define NDS_RELOC_ASSET_OPENING_COMMON 65u
 #define NDS_RELOC_ASSET_OPENING_ROOM_TRANSITION 63u
@@ -990,7 +1207,15 @@ static void ndsRelocWriteNativePointer(void *addr, void *target)
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
+    if (token == ndsRelocFileID(&llIFCommonPlayerFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER;
+    if (token == ndsRelocFileID(&llIFCommonGameStatusFileID)) return NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS;
+    if (token == ndsRelocFileID(&llIFCommonPlayerDamageFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE;
+    if (token == ndsRelocFileID(&llIFCommonTimerFileID)) return NDS_RELOC_ASSET_IF_COMMON_TIMER;
+    if (token == ndsRelocFileID(&llIFCommonDigitsFileID)) return NDS_RELOC_ASSET_IF_COMMON_DIGITS;
+    if (token == ndsRelocFileID(&llIFCommonBattlePauseFileID)) return NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE;
+    if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
+    if (token == ndsRelocFileID(&llSYKseg1ValidateFileID)) return NDS_RELOC_ASSET_SY_KSEG1_VALIDATE;
     if (token == ndsRelocFileID(&llMVCommonFileID)) return NDS_RELOC_ASSET_MV_COMMON;
     if (token == ndsRelocFileID(&llMVOpeningCommonFileID)) return NDS_RELOC_ASSET_OPENING_COMMON;
     if (token == ndsRelocFileID(&llMVOpeningRoomTransitionFileID)) return NDS_RELOC_ASSET_OPENING_ROOM_TRANSITION;
@@ -2711,7 +2936,8 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
         (gSCManagerSceneData.scene_curr == nSCKindTitle) ||
         (gSCManagerSceneData.scene_curr == nSCKindVSMode) ||
         (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
-        (gSCManagerSceneData.scene_curr == nSCKindMaps))
+        (gSCManagerSceneData.scene_curr == nSCKindMaps) ||
+        (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
     {
         ndsRelocResetLoadedFiles();
     }
@@ -2846,6 +3072,13 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
     {
         gNdsMapsOriginalLoadedFileCount = len;
         gNdsMapsOriginalRelocResult = NDS_MAPS_ORIGINAL_RELOC_PASS;
+    }
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        (len == 8u))
+    {
+        gNdsSCVSBattleOriginalLoadedFileCount = len;
+        gNdsSCVSBattleOriginalRelocResult =
+            NDS_SCVSBATTLE_ORIGINAL_RELOC_PASS;
     }
 
     return (heap != NULL) ? (size_t)(heap_ptr - heap_start) : 0;

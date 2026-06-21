@@ -10,8 +10,9 @@ The ROM boots through original BattleShip startup, bounded Opening Room,
 Opening Portraits, Opening Mario, the imported fighter name-card scenes, the
 bounded action-scene bridge, imported bounded Title setup, a direct bounded VS
 Mode setup harness, a bounded original VS Start -> PlayersVS transition
-harness, bounded imported PlayersVS setup, bounded imported Maps setup, and a
-full guarded menu-chain proof to the existing VSBattle boundary stub.
+harness, bounded imported PlayersVS setup, bounded imported Maps setup, a
+direct bounded `battle_fd` VSBattle setup harness, and a full guarded
+menu-chain proof to the same imported VSBattle setup boundary.
 
 The current Title boundary loads original `MNTitle` and `MNTitleFireAnim`,
 creates the original actor/logo-fire/fire/camera/vars boundaries, normalizes
@@ -45,14 +46,22 @@ path.
 VS Start -> PlayersVS, injects a deterministic two-player PlayersVS ready/start
 state, proves original PlayersVS -> Maps, injects a synthetic Maps A-select on
 Pupupu, proves original Maps scene-data saving, and parks at
-`scene_curr/scene_prev = 22/21` on the existing VSBattle boundary stub.
+`scene_curr/scene_prev = 22/21` after imported bounded VSBattle setup.
+`NDS_DEV_SCENE_HARNESS=battle_fd` starts directly at `nSCKindVSBattle` from
+`nSCKindMaps`, seeds one Mario using stock rules and `nGRKindLast` as the
+current Final Destination sentinel, imports `scvsbattle.c` /
+`scvsbattlefiles.c`, runs original `scVSBattleStartBattle` through common
+battle file loading, default camera creation, manager/interface/audio
+compatibility stubs, active fighter descriptor construction, stub fighter GObj
+creation, and one bounded `scVSBattleFuncUpdate` interface tick.
 
 This is not full Title/VS/menu import. Full Title input, animated logo,
 labels/Press Start, slash, logo-fire particles, audio, continuous title draw,
 full VS Mode navigation/rule editing/options transition, continuous VS menu
 drawing, full interactive PlayersVS cursor/puck selection, Maps preview model
-rendering, fighter/stage-heavy action scene internals, and gameplay remain
-deferred.
+rendering, full fighter/stage logic, items/weapons runtime, interface
+rendering, audio backend, fighter/stage-heavy action scene internals, and
+gameplay remain deferred.
 
 A project-owned NDS dev/test scene harness is now available for faster
 boundary iteration. Default builds are unchanged. `NDS_DEV_SCENE_HARNESS=title`
@@ -66,10 +75,9 @@ then runs the bounded original VS Start transition probe.
 `NDS_DEV_SCENE_HARNESS=players_setup` enters bounded imported PlayersVS setup.
 `NDS_DEV_SCENE_HARNESS=maps_setup` enters bounded imported Maps setup.
 `NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle` proves the VS Mode -> PlayersVS ->
-Maps -> VSBattle boundary chain.
-`NDS_DEV_SCENE_HARNESS=battle_fd` is reserved only and falls back to Title
-while recording a reserved marker; it does not dispatch battle, fighters, or
-stages yet.
+Maps -> imported bounded VSBattle setup chain.
+`NDS_DEV_SCENE_HARNESS=battle_fd` enters the same imported bounded VSBattle
+setup directly.
 
 ## Latest Proof
 
@@ -93,6 +101,7 @@ make -j4
 .\scripts\verify-vs-start-transition-harness.ps1
 .\scripts\verify-players-vs-setup-harness.ps1
 .\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-battle-fd-harness.ps1
 .\scripts\verify-menu-chain-vsbattle-harness.ps1
 ```
 
@@ -108,8 +117,9 @@ verify-vs-setup-harness.ps1 -> VS setup harness passed: scene=9/1 setup=0x1f fil
 verify-vs-start-transition-harness.ps1 -> VS Start transition harness passed: scene=16/9 trans=0x56535452 mask=0xff saved=1/3/2
 verify-players-vs-setup-harness.ps1 -> PlayersVS setup harness passed: files=7 mask=0xff sobj=65 slots=2/4/4
 verify-maps-setup-harness.ps1 -> Maps setup harness passed: files=5 mask=0xff sobj=36 slot=6 gkind=6
-verify-menu-chain-vsbattle-harness.ps1 -> Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, final=22/21
-verify-all.ps1 -> Full verification passed; speed sample frames=3283 hostfps=40.47 title=0x54494457; menu chain final=22/21
+verify-battle-fd-harness.ps1 -> Battle FD harness passed: files=8 players=1/0 fighters=1 gkind=16 mask=0x7f
+verify-menu-chain-vsbattle-harness.ps1 -> Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, VSBattle files=8 fighters=2, final=22/21
+verify-all.ps1 -> Full verification passed; speed sample frames=3282 hostfps=40.49 title=0x54494457; direct VSBattle files=8; menu chain final=22/21
 ```
 
 ## Important Local Boundaries
@@ -160,8 +170,9 @@ cleanup adds explicit narrow shared headers.
   PlayersVS and then reaches the bounded imported PlayersVS boundary.
 - `scripts/verify-players-vs-setup-harness.ps1`: direct PlayersVS setup gate.
 - `scripts/verify-maps-setup-harness.ps1`: direct Maps setup gate.
+- `scripts/verify-battle-fd-harness.ps1`: direct bounded VSBattle setup gate.
 - `scripts/verify-menu-chain-vsbattle-harness.ps1`: full guarded VS Mode ->
-  PlayersVS -> Maps -> VSBattle boundary gate.
+  PlayersVS -> Maps -> imported bounded VSBattle setup gate.
 - `scripts/verify-all.ps1`: maintained regression chain.
 
 Shared verifier helpers:

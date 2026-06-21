@@ -107,6 +107,28 @@
 #define NDS_MAPS_ORIGINAL_SETUP_PASS 0x4d505355u
 #define NDS_MAPS_SELECT_TRANSITION_PASS 0x4d53454cu
 #define NDS_MAPS_SELECT_TRANSITION_FAIL 0x4d53464cu
+#define NDS_SCVSBATTLE_ORIGINAL_START_PASS 0x56425354u
+#define NDS_SCVSBATTLE_ORIGINAL_FUNC_START_PASS 0x56424653u
+#define NDS_SCVSBATTLE_ORIGINAL_RELOC_PASS 0x5642524cu
+#define NDS_SCVSBATTLE_ORIGINAL_SETUP_PASS 0x56425355u
+#define NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS 0x56425550u
+
+#define NDS_SCVSBATTLE_SETUP_FILES_READY (1u << 0)
+#define NDS_SCVSBATTLE_SETUP_DEFAULT_CAMERA_READY (1u << 1)
+#define NDS_SCVSBATTLE_SETUP_MANAGER_STUBS_READY (1u << 2)
+#define NDS_SCVSBATTLE_SETUP_FIGHTER_DESCS_READY (1u << 3)
+#define NDS_SCVSBATTLE_SETUP_INTERFACE_STUBS_READY (1u << 4)
+#define NDS_SCVSBATTLE_SETUP_AUDIO_STUBS_READY (1u << 5)
+#define NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY (1u << 6)
+
+#define NDS_SCVSBATTLE_COMPAT_EFFECTS (1u << 0)
+#define NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION (1u << 1)
+#define NDS_SCVSBATTLE_COMPAT_GAMEPLAY_CAMERA (1u << 2)
+#define NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER (1u << 3)
+#define NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER (1u << 4)
+#define NDS_SCVSBATTLE_COMPAT_INTERFACE (1u << 5)
+#define NDS_SCVSBATTLE_COMPAT_AUDIO (1u << 6)
+#define NDS_SCVSBATTLE_COMPAT_RUMBLE (1u << 7)
 
 #define NDS_OPENING_ROOM_DRAW_BLOCKER_NONE 0u
 #define NDS_OPENING_ROOM_DRAW_BLOCKER_NO_SCENE_DRAW 1u
@@ -1238,6 +1260,34 @@ extern volatile u32 gNdsMapsSelectTransitionSelectedSlot;
 extern volatile u32 gNdsMapsSelectTransitionSelectedGKind;
 extern volatile u32 gNdsMapsSelectTransitionTaskmanStatus;
 extern volatile u32 gNdsMapsSelectTransitionCleanupCount;
+extern volatile u32 gNdsSCVSBattleOriginalStartResult;
+extern volatile u32 gNdsSCVSBattleOriginalFuncStartResult;
+extern volatile u32 gNdsSCVSBattleOriginalRelocResult;
+extern volatile u32 gNdsSCVSBattleOriginalSetupResult;
+extern volatile u32 gNdsSCVSBattleOriginalSetupMask;
+extern volatile u32 gNdsSCVSBattleOriginalLoadedFileCount;
+extern volatile u32 gNdsSCVSBattleOriginalGObjCount;
+extern volatile u32 gNdsSCVSBattleOriginalCameraCount;
+extern volatile u32 gNdsSCVSBattleOriginalMainGObjID;
+extern volatile u32 gNdsSCVSBattleOriginalFighterGObjCount;
+extern volatile u32 gNdsSCVSBattleOriginalActivePlayerMask;
+extern volatile u32 gNdsSCVSBattleOriginalPlayerCount;
+extern volatile u32 gNdsSCVSBattleOriginalCpuCount;
+extern volatile u32 gNdsSCVSBattleOriginalGameRule;
+extern volatile u32 gNdsSCVSBattleOriginalStock;
+extern volatile u32 gNdsSCVSBattleOriginalGKind;
+extern volatile u32 gNdsSCVSBattleOriginalScenePrev;
+extern volatile u32 gNdsSCVSBattleOriginalSceneCurr;
+extern volatile u32 gNdsSCVSBattleOriginalUpdateResult;
+extern volatile u32 gNdsSCVSBattleOriginalUpdateCount;
+extern volatile u32 gNdsSCVSBattleCompatMask;
+extern volatile u32 gNdsSCVSBattleCompatCameraMask;
+extern volatile u32 gNdsSCVSBattleCompatInterfaceMask;
+extern volatile u32 gNdsSCVSBattleCompatManagerMask;
+extern volatile u32 gNdsSCVSBattleCompatAudioMask;
+extern volatile u32 gNdsSCVSBattleCompatSpawnMask;
+extern volatile u32 gNdsSCVSBattleLastAudioVolume;
+extern volatile u32 gNdsSCVSBattleLastFGM;
 extern volatile u32 gNdsOpeningRoomMaterialDLProbeResult;
 extern volatile u32 gNdsOpeningRoomMaterialDLProbeBlocker;
 extern volatile u32 gNdsOpeningRoomMaterialDLProbeFirstDL;

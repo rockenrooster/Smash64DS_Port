@@ -4491,3 +4491,49 @@ Verification:
   `Maps setup harness passed: files=5 mask=0xff sobj=36 slot=6 gkind=6`.
 - `scripts/verify-menu-chain-vsbattle-harness.ps1` passed with
   `Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, final=22/21`.
+
+## 2026-06-21: Bounded original VSBattle setup proof
+
+What changed:
+
+- Activated `NDS_DEV_SCENE_HARNESS=battle_fd` as a direct bounded VSBattle setup
+  harness instead of a reserved Title fallback.
+- Added `src/import/battleship_scvsbattle.c`, importing original
+  `sccommon/scvsbattle.c` and `sccommon/scvsbattlefiles.c` through a DS-owned
+  bounded wrapper.
+- Added `src/import/battleship_gmcommon.c` for original common battle file ID
+  tables.
+- Added the eight common battle interface files to NitroFS relocation staging
+  and mapped their file IDs through the DS relocation backend.
+- Added narrow compatibility ABI and stubs for the VSBattle setup boundary:
+  battle cameras, interface/HUD setup, fighter-file setup, stub fighter GObj
+  creation, ground spawn lookup, rumble, audio/BGM, item/weapon manager, and
+  effect/collision setup diagnostics.
+- Updated the VS Mode -> PlayersVS -> Maps -> VSBattle chain so the final
+  boundary now reaches the same imported bounded VSBattle setup proof instead
+  of parking at the old generic scene stub.
+- Added `scripts/verify-battle-fd-harness.ps1` and included it in
+  `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- Direct `battle_fd` seeds one Mario stock battle from `nSCKindMaps` into
+  `nSCKindVSBattle`, with the current Final Destination sentinel
+  `nGRKindLast`.
+- The imported setup loads the original/common battle file list, creates the
+  default battle camera path through compatibility stubs, reaches original
+  battle manager setup calls, builds active fighter descriptors from
+  `SCBattleState`, creates stub fighter GObjs for active players, reaches
+  interface/HUD setup calls, proves one bounded `scVSBattleFuncUpdate`
+  interface tick, and parks before real gameplay/update/draw.
+- Full fighter logic, full stage logic, item/weapon runtime, full interface
+  rendering, post-battle results, and audio playback remain deferred.
+- `decomp/` remained read-only; all hooks live in project-owned imports,
+  headers, scripts, or DS/port backend code.
+
+Verification:
+
+- `scripts/verify-battle-fd-harness.ps1` passed with
+  `Battle FD harness passed: files=8 players=1/0 fighters=1 gkind=16 mask=0x7f`.
+- `scripts/verify-menu-chain-vsbattle-harness.ps1` passed with
+  `Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, VSBattle files=8 fighters=2, final=22/21`.

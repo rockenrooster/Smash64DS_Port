@@ -170,6 +170,7 @@ u32 osGetCount(void);
 void osInvalDCache(void *address, s32 size);
 void osWritebackDCache(void *address, s32 size);
 void osWritebackDCacheAll(void);
+void osInvalICache(void *address, s32 size);
 void *osViGetCurrentFramebuffer(void);
 void *osViGetNextFramebuffer(void);
 void osViSetYScale(f32 scale);

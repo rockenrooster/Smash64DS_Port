@@ -22,5 +22,19 @@ s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
                             void *texture_lo, void *texture_hi);
 LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 generator_id);
 void lbParticleDrawTextures(GObj *gobj);
+void ifCommonBattleUpdateInterfaceAll(void);
+void ifCommonBattleSetGameStatusWait(void);
+void ifCommonPlayerArrowsInitInterface(void);
+void ifCommonPlayerMagnifyMakeInterface(void);
+void ifCommonPlayerTagMakeInterface(void);
+void ifCommonPlayerDamageSetDigitPositions(void);
+void ifCommonPlayerDamageInitInterface(void);
+void ifCommonPlayerStockInitInterface(void);
+void ifCommonEntryAllMakeInterface(void);
+void ifCommonTimerMakeInterface(void (*func_init)(void));
+void ifCommonTimerMakeDigits(void);
+void ifCommonSuddenDeathMakeInterface(void);
+void ifCommonAnnounceTimeUpInitInterface(void);
+void ifScreenFlashMakeInterface(u8 alpha);
 
 #endif

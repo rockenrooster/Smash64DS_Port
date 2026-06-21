@@ -21,7 +21,7 @@ Status labels:
 | 4 | DS platform layer like `sm64-nds/src/nds` | In Progress | Continue isolating DS behavior in `src/nds` and `src/port`. |
 | 5 | Stub enough libultra/N64 platform functions | In Progress | Replace broad stubs only when the next original boundary needs them. |
 | 6 | Boot an `.nds` ROM | Done | Keep melonDS/no$gba smoke paths working. |
-| 7 | Run minimal original game-state/update loop | In Progress | Current loop reaches bounded Title setup, bounded VS setup, imported PlayersVS setup, imported Maps setup, and a guarded VS Mode -> PlayersVS -> Maps -> VSBattle boundary proof. |
+| 7 | Run minimal original game-state/update loop | In Progress | Current loop reaches bounded Title setup, bounded VS setup, imported PlayersVS setup, imported Maps setup, direct bounded VSBattle setup, and a guarded VS Mode -> PlayersVS -> Maps -> imported VSBattle setup proof. |
 | 8 | Render a simple placeholder frame | Done | Placeholder remains disabled behind original-preview paths. |
 | 8a | Render one original Startup asset | Done | Preserve original `N64Logo` bounded SObj preview. |
 | 8b | Render one original Opening Room DObj slice | Done | Preserve bounded Opening Room DObj preview and renderer diagnostics. |
@@ -37,14 +37,14 @@ Status labels:
 
 Current source boundary: bounded imported Title setup after the natural opening
 movie path, plus guarded dev/test harnesses that can start directly at bounded
-original VS Mode, PlayersVS, or Maps setup and prove the VS Mode -> PlayersVS
--> Maps -> VSBattle boundary chain. See `docs/STATUS.md` for the exact current
-state.
+original VS Mode, PlayersVS, Maps, or VSBattle setup and prove the VS Mode ->
+PlayersVS -> Maps -> imported VSBattle setup chain. See `docs/STATUS.md` for
+the exact current state.
 
 Recommended next milestone:
 
-1. Use the VSBattle boundary proof to pick the smallest original
-   `scvsbattle.c` setup boundary.
+1. Use the VSBattle setup proof to pick the smallest next original battle
+   spine boundary after setup.
 2. Inspect BattleShip source and docs before changing code.
 3. Use `decomp/sm64-nds` only for DS backend architecture comparison.
 4. Add minimal compatibility shims in project-owned code.

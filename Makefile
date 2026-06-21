@@ -88,7 +88,8 @@ CFILES := main.c nds_platform.c nds_reloc_assets.c nds_renderer.c port_probe.c n
 	battleship_mvopeningkirby.c battleship_mvopeningfox.c \
 	battleship_mvopeningpikachu.c battleship_mntitlefiles.c \
 	battleship_mntitle.c battleship_mnvsmode.c \
-	battleship_mnplayersvs.c battleship_mnmaps.c
+	battleship_mnplayersvs.c battleship_mnmaps.c \
+	battleship_gmcommon.c battleship_scvsbattle.c
 CPPFILES :=
 SFILES := coroutine_arm.s
 
@@ -148,6 +149,17 @@ NDS_MAPS_RELOC_FILES := \
 	reloc_menus/MNCommonFonts \
 	reloc_stages/GRWallpaperTrainingBlack
 
+NDS_VSBATTLE_RELOC_FILES := \
+	reloc_interface/IFCommonPlayer \
+	reloc_interface/IFCommonGameStatus \
+	reloc_interface/IFCommonPlayerDamage \
+	reloc_interface/IFCommonTimer \
+	reloc_interface/IFCommonDigits \
+	reloc_interface/IFCommonBattlePause \
+	reloc_interface/IFCommonPlayerTags \
+	reloc_interface/IFCommonAnnounceCommon \
+	reloc_misc_named/SYKseg1Validate
+
 NDS_STARTUP_RELOC_FILES := \
 	reloc_misc_named/N64Logo
 
@@ -160,7 +172,8 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_TITLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VS_MODE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_PLAYERS_VS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
-	$(foreach file,$(NDS_MAPS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
+	$(foreach file,$(NDS_MAPS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
 .PHONY: all clean run $(BUILD)
 

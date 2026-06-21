@@ -39,7 +39,8 @@ typedef enum gmVoiceID
     nSYAudioVoiceAnnounceSamus = 604,
     nSYAudioVoiceAnnounceTeamBattle = 535,
     nSYAudioVoiceAnnounceYoshi = 626,
-    nSYAudioVoicePublicCheer = 626
+    nSYAudioVoicePublicCheer = 618,
+    nSYAudioVoicePublicExcited = 626
 } gmVoiceID;
 
 #endif

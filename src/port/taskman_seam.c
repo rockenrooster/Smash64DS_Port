@@ -309,6 +309,34 @@ void ndsResetStartupDiagnostics(void)
     gNdsMapsSelectTransitionSelectedGKind = 0;
     gNdsMapsSelectTransitionTaskmanStatus = 0;
     gNdsMapsSelectTransitionCleanupCount = 0;
+    gNdsSCVSBattleOriginalStartResult = 0;
+    gNdsSCVSBattleOriginalFuncStartResult = 0;
+    gNdsSCVSBattleOriginalRelocResult = 0;
+    gNdsSCVSBattleOriginalSetupResult = 0;
+    gNdsSCVSBattleOriginalSetupMask = 0;
+    gNdsSCVSBattleOriginalLoadedFileCount = 0;
+    gNdsSCVSBattleOriginalGObjCount = 0;
+    gNdsSCVSBattleOriginalCameraCount = 0;
+    gNdsSCVSBattleOriginalMainGObjID = 0;
+    gNdsSCVSBattleOriginalFighterGObjCount = 0;
+    gNdsSCVSBattleOriginalActivePlayerMask = 0;
+    gNdsSCVSBattleOriginalPlayerCount = 0;
+    gNdsSCVSBattleOriginalCpuCount = 0;
+    gNdsSCVSBattleOriginalGameRule = 0;
+    gNdsSCVSBattleOriginalStock = 0;
+    gNdsSCVSBattleOriginalGKind = 0;
+    gNdsSCVSBattleOriginalScenePrev = 0;
+    gNdsSCVSBattleOriginalSceneCurr = 0;
+    gNdsSCVSBattleOriginalUpdateResult = 0;
+    gNdsSCVSBattleOriginalUpdateCount = 0;
+    gNdsSCVSBattleCompatMask = 0;
+    gNdsSCVSBattleCompatCameraMask = 0;
+    gNdsSCVSBattleCompatInterfaceMask = 0;
+    gNdsSCVSBattleCompatManagerMask = 0;
+    gNdsSCVSBattleCompatAudioMask = 0;
+    gNdsSCVSBattleCompatSpawnMask = 0;
+    gNdsSCVSBattleLastAudioVolume = 0;
+    gNdsSCVSBattleLastFGM = 0;
     gNdsOpeningRoomGObjCount = 0;
     gNdsOpeningRoomCameraCount = 0;
     gNdsOpeningRoomDL0Size = 0;
@@ -983,6 +1011,7 @@ void ndsResetStartupDiagnostics(void)
 extern void ndsMNVSModeRunStartTransitionProbe(void);
 extern void ndsMNPlayersVSRunReadyTransitionProbe(void);
 extern void ndsMNMapsRunSelectVSBattleProbe(void);
+extern void scVSBattleFuncUpdate(void);
 
 /* Diagnostic snapshot of the real object-manager state after
  * mnStartupFuncStart ran. Every value here is read from the original object
@@ -2992,6 +3021,43 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+        osStopThread(NULL);
+        return;
+    }
+
+    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+    {
+        gNdsTaskmanContexts = 2;
+        gNdsTaskmanTaskGfxNum = 1;
+        gNdsTaskmanGraphicsHeapSize = 0xD000;
+        gNdsTaskmanRdpKind = 2;
+        gNdsTaskmanRdpBufferSize = 0xC000;
+        gNdsTaskmanSceneUpdateSet =
+            (sSYTaskmanDefaultFunction.scene_update != NULL) ? 1u : 0u;
+        gNdsTaskmanSceneDrawSet =
+            (sSYTaskmanDefaultFunction.scene_draw != NULL) ? 1u : 0u;
+        gNdsTaskmanLightsSet =
+            (sSYTaskmanDefaultFunction.task_update != NULL) ? 1u : 0u;
+        gNdsTaskmanControllerAutoRead = 1;
+        gNdsTaskmanDLContextsValid = 2;
+        gNdsTaskmanGeneralHeapUsed =
+            (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
+                  (uintptr_t)gSYTaskmanGeneralHeap.start);
+        gNdsTaskmanLoopReached = 1;
+
+        scVSBattleFuncUpdate();
+        dSYTaskmanUpdateCount++;
+        gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+        gNdsSCVSBattleOriginalUpdateCount++;
+        gNdsSCVSBattleOriginalUpdateResult =
+            NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+        gNdsSCVSBattleOriginalSetupMask |=
+            NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+
         osStopThread(NULL);
         return;
     }

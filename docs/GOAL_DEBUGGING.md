@@ -42,6 +42,7 @@ Use melonDS for automated pass/fail verification:
 .\scripts\verify-vs-start-transition-harness.ps1
 .\scripts\verify-players-vs-setup-harness.ps1
 .\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-battle-fd-harness.ps1
 .\scripts\verify-menu-chain-vsbattle-harness.ps1
 .\scripts\verify-all.ps1
 ```
@@ -63,7 +64,8 @@ Use the dev/test scene harness when the next task can start at a proven
 original-code boundary instead of replaying the full opening. The maintained
 harness targets are direct Title entry, bounded VS setup from Title, bounded
 VS Start to PlayersVS transition from Title, direct PlayersVS setup, direct
-Maps setup, and the guarded VS Mode -> PlayersVS -> Maps -> VSBattle chain:
+Maps setup, direct bounded VSBattle setup, and the guarded VS Mode -> PlayersVS
+-> Maps -> VSBattle setup chain:
 
 ```powershell
 .\scripts\verify-title-harness.ps1
@@ -71,6 +73,7 @@ Maps setup, and the guarded VS Mode -> PlayersVS -> Maps -> VSBattle chain:
 .\scripts\verify-vs-start-transition-harness.ps1
 .\scripts\verify-players-vs-setup-harness.ps1
 .\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-battle-fd-harness.ps1
 .\scripts\verify-menu-chain-vsbattle-harness.ps1
 ```
 
@@ -96,11 +99,16 @@ The Maps setup verifier builds `smash64ds-maps.nds` from
 `BUILD=build-maps-setup-harness NDS_DEV_SCENE_HARNESS=maps_setup`, starts at
 `nSCKindMaps` from `nSCKindPlayersVS`, and checks the bounded imported
 `mnMapsStartScene` setup markers with the seeded Pupupu cursor.
+The Battle FD verifier builds `smash64ds-battle-fd.nds` from
+`BUILD=build-battle-fd-harness NDS_DEV_SCENE_HARNESS=battle_fd`, starts at
+`nSCKindVSBattle` from `nSCKindMaps`, seeds one Mario and the current Final
+Destination sentinel, and checks the bounded imported `scVSBattleStartScene`
+/ `scVSBattleStartBattle` setup markers.
 The menu-chain verifier builds `smash64ds-menu-chain.nds` from
 `BUILD=build-menu-chain-vsbattle-harness
 NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle`, proves original VS Start ->
 PlayersVS, bounded PlayersVS ready/start -> Maps, bounded Maps A-select ->
-VSBattle, and parks at the existing VSBattle boundary stub.
+VSBattle, and checks the same imported bounded VSBattle setup boundary.
 
 The shared verifier helpers live in:
 

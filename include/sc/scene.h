@@ -13,6 +13,8 @@
 #define SCBATTLE_GAMERULE_TIME 1
 #define SCBATTLE_GAMERULE_STOCK 2
 #define LBBACKUP_ERROR_RANDOMKNOCKBACK 1
+#define LBBACKUP_ERROR_1PGAMEMARIO 0x4
+#define LBBACKUP_ERROR_VSBATTLECASTLE 0x8
 
 typedef struct GObj GObj;
 typedef struct SYTaskmanSetup SYTaskmanSetup;
@@ -125,7 +127,17 @@ enum {
     nGRKindYamabuki,
     nGRKindStarterEnd = nGRKindYamabuki,
     nGRKindInishie,
-    nGRKindUnlockEnd = nGRKindInishie
+    nGRKindUnlockEnd = nGRKindInishie,
+    nGRKindBattleEnd = nGRKindInishie,
+    nGRKindPupupuSmall,
+    nGRKindPupupuNew,
+    nGRKindExplain,
+    nGRKindYosterSmall,
+    nGRKindMetal,
+    nGRKindZako,
+    nGRKindBonus3,
+    nGRKindLast,
+    nGRKindCommonEnd = nGRKindLast
 };
 
 enum {
@@ -199,6 +211,14 @@ typedef struct SCPlayerData {
     u32 stale_id;
     struct { u16 attack_id, motion_count; } stale_info[5];
 } SCPlayerData;
+
+typedef struct SCBattleResults {
+    s32 tko;
+    s32 kos;
+    u8 player_or_team;
+    u8 unk_battleres_0x9;
+    ub8 is_human;
+} SCBattleResults;
 
 typedef struct SCBattleState {
     u8 game_type, gkind;

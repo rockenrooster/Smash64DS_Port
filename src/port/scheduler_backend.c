@@ -138,6 +138,13 @@ void osWritebackDCacheAll(void)
     DC_FlushAll();
 }
 
+void osInvalICache(void *address, s32 size)
+{
+    (void)address;
+    (void)size;
+    IC_InvalidateAll();
+}
+
 s32 osAfterPreNMI(void)
 {
     return 0;
