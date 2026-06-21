@@ -1,0 +1,112 @@
+# Current Status
+
+This is the short current-truth document for active development. Keep
+`docs/PORTING.md` as append-only history; use this file and `docs/HANDOFF.md`
+for planning and handoff.
+
+## Current Boundary
+
+The ROM boots through the original BattleShip startup path, runs the bounded
+Opening Room and opening movie sequence, and reaches the imported Title scene
+boundary. The current Title slice loads original `MNTitle` and
+`MNTitleFireAnim` O2R files, creates the original Title actor pair, logo-fire
+GObj/display boundary, fire GObj/SObj/process/display boundary, four cameras,
+and initial Title vars. It normalizes the 30 original Title fire frame Sprites,
+runs one guarded original Title update tick on the natural movie path, and
+renders a bounded original Title sprite preview.
+
+This is still a bounded porting boundary, not full Title/menu gameplay.
+
+A guarded NDS dev/test scene harness now exists for faster source-boundary
+iteration. Normal builds still follow the natural startup/opening/movie path.
+The Title harness build mutates the original-compatible
+`dSCManagerDefaultSceneData` before entering imported `scManagerRunLoop`, so it
+starts at `nSCKindTitle` with `scene_prev = nSCKindOpeningNewcomers` and still
+runs the imported bounded `mnTitleStartScene` path. A VS setup target is wired
+to `nSCKindVSMode`, which currently reaches the existing scene-boundary stub.
+The future `battle_fd` target is reserved only; it records a reserved marker
+and falls back to Title until the original one-fighter/Final-Destination battle
+slice is intentionally imported.
+
+## Next Boundary
+
+Use the new harness to move from title-preview polish toward the playable-game
+spine. First identify the next original menu / VS setup boundary from
+BattleShip source, then import only the smallest original slice needed to prove
+the next transition. Do not import fighters, stages, battle gameplay, audio, or
+full renderer systems until that exact boundary requires them.
+
+## Known Blockers
+
+- Full Title input, animated logo, labels/Press Start, slash, logo-fire
+  particles, audio, and continuous title drawing remain deferred.
+- Fighter/stage-heavy opening action scenes are still bounded bridge stubs in
+  original order.
+- Opening Room DObj rendering is still a bounded preview path, not a general
+  display-list-to-DS hardware renderer.
+- no$gba has only launch/window smoke automation. Use it interactively for
+  VRAM/OAM/register/timing questions only when melonDS cannot answer them.
+- Large maintenance files are being split for velocity:
+  `src/port/scene_backend.c` and `scripts/verify-runtime.ps1`.
+
+## Verifier Commands
+
+Use PowerShell with devkitPro variables set:
+
+```powershell
+$env:DEVKITPRO = 'C:/devkitPro'
+$env:DEVKITARM = 'C:/devkitPro/devkitARM'
+make -j4
+.\scripts\verify-runtime.ps1
+.\scripts\verify-opening-skip.ps1
+.\scripts\verify-opening-movie-speed.ps1
+.\scripts\verify-title-harness.ps1
+```
+
+For a clean regression after header, Makefile, imported source, or linker-visible
+symbol changes:
+
+```powershell
+make clean
+make -j4
+.\scripts\verify-all.ps1
+```
+
+Build a direct Title harness ROM without replacing the normal output:
+
+```powershell
+make TARGET=smash64ds-title BUILD=build-title-harness NDS_DEV_SCENE_HARNESS=title -j4
+.\scripts\verify-title-harness.ps1
+```
+
+## Latest Proof
+
+Latest verified state after the Title harness addition:
+
+```text
+make -j4
+scripts/verify-runtime.ps1 -> Runtime verification passed (401 frames, fps=60/up=0/dl=60, cv=0/ch=32, verifyfps=2.33)
+scripts/verify-opening-boundary.ps1 -> frames=504 hostfps=54.30 room=420
+scripts/verify-opening-skip.ps1 -> Opening Room skip verification passed (tick 19 -> Title)
+scripts/verify-title-boundary.ps1 -> frames=3297 hostfps=40.50 room=1320 action=9/324 title=0x54494457
+scripts/verify-all.ps1 -> Runtime, skip, and title boundary gates passed
+scripts/verify-title-harness.ps1 -> Title harness passed: scene=1/46 room=0 title=0x54494457
+```
+
+`src/port/scene_backend.c` is now a thin include orchestrator over
+`diagnostics.c`, `taskman_seam.c`, `reloc_backend.c`,
+`sprite_preview_backend.c`, `opening_movie_backend.c`, and `title_backend.c`.
+This is the mechanical split stage; those slices intentionally keep the old
+single-translation-unit static linkage.
+
+## Do-Not-Touch Constraints
+
+- Treat all of `decomp/` as read-only reference material.
+- Do not edit generated build output, generated ROM/ELF artifacts, or generated
+  emulator logs/configs except through build and verification commands.
+- Do not rewrite Smash gameplay or menus by hand when original BattleShip code
+  exists.
+- Do not import broad renderer/fighter/stage/audio systems just to satisfy a
+  narrow boundary.
+- Keep DS-specific behavior in `src/nds` or `src/port`, imports in
+  `src/import`, and compatibility declarations in `include`.

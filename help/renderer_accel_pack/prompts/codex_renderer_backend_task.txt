@@ -1,0 +1,37 @@
+/task
+
+Current boundary:
+Startup renders the original N64Logo sprite. Opening Room reaches the selected material-bearing DObj path, executes a bounded display-list traversal through src/nds/nds_renderer.c, resolves segment-E material branches, and renders a small prim-color preview. Full draw/rendering remains bounded.
+
+Next milestone:
+Turn the current Opening Room DObj renderer slice from stats/preview into a small reusable renderer-state pass, using sm64-nds as the architecture reference but keeping BattleShip object traversal original.
+
+Do not import fighters, stages, battle gameplay, audio, real Title, or full menu systems.
+Do not unbound continuous draw.
+Do not import full lbcommon.c or broad objdisplay dependencies blindly.
+Do not replace Opening Room visuals with fake DS-native art.
+
+Focus only on:
+- src/nds/nds_renderer.c
+- one selected Opening Room DObj/material path
+- GBI command-state tracking
+- prim/env/blend/fog color commands
+- SETCOMBINE tracking
+- TEXTURE/SETTIMG/SETTILE/LOADBLOCK/SETTILESIZE tracking
+- VTX/TRI command decoding diagnostics
+- one improved preview output
+
+Allowed:
+- add a small nds_rdp_state helper under src/nds/include/nds
+- add verifier markers for command-state values
+- use sm64-nds renderer as reference for command decoding patterns
+
+Success:
+- clean build
+- verify-runtime pass
+- verify-opening-skip pass
+- docs updated
+- melonDS capture showing improved original Opening Room preview or a precise blocker
+
+Stop condition:
+Stop once this one renderer state slice improves or a precise blocker is identified. Do not continue into unrelated systems.

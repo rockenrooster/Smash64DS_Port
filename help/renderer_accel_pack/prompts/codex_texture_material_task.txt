@@ -1,0 +1,31 @@
+/task
+
+Current boundary:
+The renderer can parse the selected Opening Room DObj path and prim-color material branches. Current ORTX evidence reports no texture-bearing original MObj in the selected path.
+
+Next milestone:
+Find and decode one real texture-bearing original material source without expanding into fighters/stages/battle gameplay.
+
+Do not import fighters, stages, battle gameplay, audio, real Title, or full menu systems.
+Do not fake textures.
+Do not upload to DS VRAM until CPU decode is verified.
+
+Focus only on:
+- original MObj/Sub/texture records reachable from Startup or Opening Room/movie/menu assets
+- pointer validation and relocation fixups for one texture-bearing source
+- N64 texture format/size/palette identification
+- CPU decode into a small 15-bit preview buffer
+- verifier markers proving format, size, source pointer, palette pointer, decoded texel count, nonzero texels
+
+Allowed:
+- add a narrow texture decode helper under src/nds
+- add a bounded preview for the decoded texture
+- stop at CPU preview if VRAM upload would require unrelated renderer work
+
+Success:
+- clean build
+- verifier pass
+- screenshot showing decoded original texture preview, or precise blocker documenting why no texture-bearing source is reachable yet
+
+Stop condition:
+Stop after one texture-bearing source is decoded or a precise source/relocation blocker is identified.

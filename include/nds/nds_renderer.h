@@ -1,0 +1,156 @@
+#ifndef SSB64_NDS_RENDERER_H
+#define SSB64_NDS_RENDERER_H
+
+#include <stddef.h>
+#include <PR/gbi.h>
+
+#define NDS_RENDERER_BLOCKER_NONE 0u
+#define NDS_RENDERER_BLOCKER_BAD_BRANCH 1u
+#define NDS_RENDERER_BLOCKER_TOO_DEEP 2u
+#define NDS_RENDERER_BLOCKER_BUDGET 3u
+#define NDS_RENDERER_BLOCKER_UNSUPPORTED 4u
+#define NDS_RENDERER_BLOCKER_NO_VERTICES 5u
+#define NDS_RENDERER_BLOCKER_NO_TRIANGLES 6u
+#define NDS_RENDERER_BLOCKER_NO_END 7u
+
+#define NDS_RENDERER_RESOLVE_NONE 0u
+#define NDS_RENDERER_RESOLVE_SEGMENT 1u
+
+#define NDS_RENDERER_TEXTURE_SETCOMBINE (1u << 0)
+#define NDS_RENDERER_TEXTURE_SETTILE (1u << 1)
+#define NDS_RENDERER_TEXTURE_TEXTURE (1u << 2)
+#define NDS_RENDERER_TEXTURE_SETTILESIZE (1u << 3)
+#define NDS_RENDERER_TEXTURE_SETTIMG (1u << 4)
+#define NDS_RENDERER_TEXTURE_LOADBLOCK (1u << 5)
+
+#define NDS_RENDERER_TEXTURE_STATE_SEEN (1u << 0)
+#define NDS_RENDERER_TEXTURE_STATE_ON (1u << 1)
+#define NDS_RENDERER_TEXTURE_STATE_SCALE_S (1u << 2)
+#define NDS_RENDERER_TEXTURE_STATE_SCALE_T (1u << 3)
+
+#define NDS_RENDERER_TILE_RENDER_SEEN (1u << 0)
+#define NDS_RENDERER_TILE_LOAD_SEEN (1u << 1)
+#define NDS_RENDERER_TILE_S_CLAMP (1u << 2)
+#define NDS_RENDERER_TILE_S_MIRROR (1u << 3)
+#define NDS_RENDERER_TILE_S_MASKED (1u << 4)
+#define NDS_RENDERER_TILE_T_CLAMP (1u << 5)
+#define NDS_RENDERER_TILE_T_MIRROR (1u << 6)
+#define NDS_RENDERER_TILE_T_MASKED (1u << 7)
+
+typedef s32 (*NDSRendererValidateRange)(const Gfx *dl, size_t bytes,
+                                        void *user);
+typedef const Gfx *(*NDSRendererResolveBranch)(const Gfx *dl,
+                                               u32 *resolve_kind,
+                                               void *user);
+
+typedef struct NDSRendererCommand
+{
+    const Gfx *dl;
+    u32 w0;
+    u32 w1;
+    u32 op;
+    u32 depth;
+    u32 list_index;
+    const Gfx *raw_branch_dl;
+    const Gfx *resolved_branch_dl;
+    u32 branch_resolve_kind;
+    u32 branch_is_jump;
+} NDSRendererCommand;
+
+typedef s32 (*NDSRendererCommandCallback)(const NDSRendererCommand *command,
+                                          void *user);
+
+typedef struct NDSRendererConfig
+{
+    u32 max_depth;
+    u32 max_commands;
+    u32 max_list_commands;
+    NDSRendererValidateRange validate_range;
+    NDSRendererResolveBranch resolve_branch;
+    void *user;
+} NDSRendererConfig;
+
+typedef struct NDSRendererStats
+{
+    u32 blocker;
+    u32 command_count;
+    u32 vertex_count;
+    u32 triangle_count;
+    u32 first_opcode;
+    u32 unsupported_opcode;
+    u32 vertex_command_count;
+    u32 triangle_command_count;
+    u32 sync_command_count;
+    u32 end_command_count;
+    u32 branch_command_count;
+    u32 branch_call_count;
+    u32 branch_jump_count;
+    u32 segment_resolve_count;
+    u32 othermode_command_count;
+    u32 color_command_count;
+    u32 unsupported_command_count;
+    u32 state_command_count;
+    u32 skip_command_count;
+    u32 render_command_count;
+    u32 max_depth_seen;
+    const Gfx *first_branch_dl;
+    const Gfx *first_resolved_branch_dl;
+    u32 geometry_mode;
+    u32 geometry_clear_mask;
+    u32 geometry_set_mask;
+    u32 geometry_command_count;
+    u32 texture_mask;
+    u32 texture_command_count;
+    u32 texture_scale_s;
+    u32 texture_scale_t;
+    u32 texture_level;
+    u32 texture_tile;
+    u32 texture_on;
+    u32 texture_xparam;
+    u32 texture_state_flags;
+    u32 texture_image;
+    u32 texture_format;
+    u32 texture_size;
+    u32 texture_image_width;
+    u32 texture_set_tile_count;
+    u32 texture_render_tile;
+    u32 texture_render_tile_line;
+    u32 texture_render_tile_tmem;
+    u32 texture_render_tile_palette;
+    u32 texture_render_tile_cms;
+    u32 texture_render_tile_cmt;
+    u32 texture_render_tile_masks;
+    u32 texture_render_tile_maskt;
+    u32 texture_render_tile_shifts;
+    u32 texture_render_tile_shiftt;
+    u32 texture_render_tile_flags;
+    u32 texture_load_tile;
+    u32 texture_load_block_uls;
+    u32 texture_load_block_ult;
+    u32 texture_load_block_lrs;
+    u32 texture_load_block_dxt;
+    u32 texture_load_texels;
+    u32 texture_tile_size_tile;
+    u32 texture_tile_size_uls;
+    u32 texture_tile_size_ult;
+    u32 texture_tile_size_lrs;
+    u32 texture_tile_size_lrt;
+    u32 texture_tile_width;
+    u32 texture_tile_height;
+    u32 texture_combine_w0;
+    u32 texture_combine_w1;
+    u32 texture_combine_count;
+    u32 prim_color;
+} NDSRendererStats;
+
+void ndsRendererInitStats(NDSRendererStats *stats);
+void ndsRendererScanDisplayList(const Gfx *dl,
+                                const NDSRendererConfig *config,
+                                NDSRendererStats *stats);
+void ndsRendererExecuteDisplayList(const Gfx *dl,
+                                   const NDSRendererConfig *config,
+                                   NDSRendererCommandCallback callback,
+                                   void *callback_user,
+                                   NDSRendererStats *stats);
+
+#endif
