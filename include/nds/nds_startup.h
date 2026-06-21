@@ -93,6 +93,8 @@
 #define NDS_VS_MODE_ORIGINAL_FUNC_START_PASS 0x56534653u
 #define NDS_VS_MODE_ORIGINAL_RELOC_PASS 0x5653524cu
 #define NDS_VS_MODE_ORIGINAL_SETUP_PASS 0x56535355u
+#define NDS_VS_MODE_START_TRANSITION_PASS 0x56535452u
+#define NDS_VS_MODE_START_TRANSITION_FAIL 0x5653464cu
 
 #define NDS_OPENING_ROOM_DRAW_BLOCKER_NONE 0u
 #define NDS_OPENING_ROOM_DRAW_BLOCKER_NO_SCENE_DRAW 1u
@@ -814,6 +816,23 @@ extern volatile u32 gNdsVSModeOriginalTime;
 extern volatile u32 gNdsVSModeOriginalStock;
 extern volatile u32 gNdsVSModeOriginalButtonMask;
 extern volatile u32 gNdsVSModeOriginalDeferredMask;
+extern volatile u32 gNdsVSModeStartTransitionResult;
+extern volatile u32 gNdsVSModeStartTransitionMask;
+extern volatile u32 gNdsVSModeStartTransitionUpdateCount;
+extern volatile u32 gNdsVSModeStartTransitionInputMask;
+extern volatile u32 gNdsVSModeStartTransitionScenePrevBefore;
+extern volatile u32 gNdsVSModeStartTransitionSceneCurrBefore;
+extern volatile u32 gNdsVSModeStartTransitionScenePrevAfterTap;
+extern volatile u32 gNdsVSModeStartTransitionSceneCurrAfterTap;
+extern volatile u32 gNdsVSModeStartTransitionScenePrevFinal;
+extern volatile u32 gNdsVSModeStartTransitionSceneCurrFinal;
+extern volatile u32 gNdsVSModeStartTransitionExitInterrupt;
+extern volatile u32 gNdsVSModeStartTransitionTaskmanStatus;
+extern volatile u32 gNdsVSModeStartTransitionSavedRule;
+extern volatile u32 gNdsVSModeStartTransitionSavedTime;
+extern volatile u32 gNdsVSModeStartTransitionSavedStock;
+extern volatile u32 gNdsVSModeStartTransitionButtonMaskAfter;
+extern volatile u32 gNdsVSModeStartTransitionCleanupCount;
 extern volatile u32 gNdsOpeningRoomGObjCount;
 extern volatile u32 gNdsOpeningRoomCameraCount;
 extern volatile u32 gNdsOpeningRoomDL0Size;

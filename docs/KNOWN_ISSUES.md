@@ -44,7 +44,9 @@
   `scene_prev = nSCKindTitle`, runs bounded imported `mnvsmode.c` setup,
   loads original `MNCommon`/`MNVSMode`, creates the original VS setup
   GObj/camera/SObj graph, and parks before `mnVSModeMain` input/update
-  transitions and continuous drawing. `NDS_DEV_SCENE_HARNESS=battle_fd`
+  transitions and continuous drawing. `NDS_DEV_SCENE_HARNESS=vs_start_transition`
+  runs the same setup, proves the original VS Start -> PlayersVS state change,
+  and parks at the existing PlayersVS stub. `NDS_DEV_SCENE_HARNESS=battle_fd`
   is a reserved future slot and deliberately falls back to Title while
   recording a reserved marker; it does not create a fighter, load Final
   Destination, dispatch battle, or import gameplay.
@@ -75,9 +77,10 @@
   input, fire background presentation, animated logo, labels/Press Start,
   slash, logo-fire particles, audio, and continuous title draw remain deferred.
 - `mnVSModeStartScene` now dispatches through imported `mnvsmode.c` for a
-  bounded original VS setup slice only. Full VS Mode controller interaction,
-  rule/value updates, transition to `PlayersVS` / `VSOptions`, audio, and
-  continuous menu drawing remain deferred.
+  bounded original VS setup slice, and the VS Start -> PlayersVS transition is
+  proven through original `mnVSModeMain`. Full VS Mode navigation, rule/value
+  editing, `VSOptions`, audio, and continuous menu drawing remain deferred.
+  PlayersVS is still only a stub boundary; character select is not imported.
 - `mvopeningroom.c` is imported with an NDS entry slice. Original video/task
   setup, relocation setup/file-list resolution, actor/default-camera,
   Scene 1 camera, close-up overlay camera, wallpaper-camera, and logo-camera

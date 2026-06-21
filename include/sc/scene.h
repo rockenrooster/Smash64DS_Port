@@ -283,6 +283,8 @@ void lbBackupApplyOptions(void);
 sb32 scSubsysControllerGetPlayerTapButtons(u32 mask);
 s32 scSubsysControllerGetPlayerHoldButtons(u32 mask);
 sb32 scSubsysControllerCheckNoInputAll(void);
+s32 scSubsysControllerGetPlayerStickLR(s8 range, sb32 right_or_left);
+s32 scSubsysControllerGetPlayerStickUD(s8 range, sb32 up_or_down);
 sb32 scSubsysControllerGetPlayerStickInRangeLR(s32 range_l_min, s32 range_r_min);
 sb32 scSubsysControllerGetPlayerStickInRangeUD(s32 range_d_min, s32 range_u_min);
 void scSubsysFighterSetLightParams(f32 light_angle_x, f32 light_angle_y,

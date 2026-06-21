@@ -39,6 +39,7 @@ Use melonDS for automated pass/fail verification:
 .\scripts\verify-opening-skip.ps1
 .\scripts\verify-title-boundary.ps1
 .\scripts\verify-vs-setup-harness.ps1
+.\scripts\verify-vs-start-transition-harness.ps1
 .\scripts\verify-all.ps1
 ```
 
@@ -57,11 +58,13 @@ preview cadence, renderer cost, or title-boundary timing:
 
 Use the dev/test scene harness when the next task can start at a proven
 original-code boundary instead of replaying the full opening. The maintained
-harness targets are direct Title entry and bounded VS setup from Title:
+harness targets are direct Title entry, bounded VS setup from Title, and
+bounded VS Start to PlayersVS transition from Title:
 
 ```powershell
 .\scripts\verify-title-harness.ps1
 .\scripts\verify-vs-setup-harness.ps1
+.\scripts\verify-vs-start-transition-harness.ps1
 ```
 
 That verifier builds `smash64ds-title.nds` from
@@ -73,6 +76,11 @@ The VS setup verifier builds `smash64ds-vs-setup.nds` from
 `nSCKindVSMode` with `scene_prev = nSCKindTitle`, proves `room=0` and no
 Title setup replay, then checks the imported bounded `mnVSModeStartScene`
 markers.
+The VS Start transition verifier builds `smash64ds-vs-start.nds` from
+`BUILD=build-vs-start-harness NDS_DEV_SCENE_HARNESS=vs_start_transition`,
+starts from that same original VS setup boundary, advances bounded original
+`mnVSModeMain`, injects A on VS Start, proves original settings save and
+load-scene request, then parks at the existing PlayersVS boundary stub.
 
 The shared verifier helpers live in:
 

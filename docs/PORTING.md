@@ -4400,3 +4400,41 @@ Verification:
 - `make -j4` passed.
 - `scripts/verify-vs-setup-harness.ps1` passed with
   `VS setup harness passed: scene=9/1 setup=0x1f files=2 sobj=28 buttons=0x3f`.
+
+## 2026-06-21: Bounded original VS Start to PlayersVS transition proof
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=vs_start_transition`, a guarded dev/test harness
+  mode that starts at the already proven original `mnvsmode.c` setup boundary
+  from `nSCKindTitle`.
+- Kept `NDS_DEV_SCENE_HARNESS=vs_setup` parked before `mnVSModeMain`; the new
+  transition proof is a separate harness mode.
+- Added a bounded project-owned probe in `src/import/battleship_mnvsmode.c`
+  that advances original `mnVSModeMain`, injects a synthetic A tap on VS Start
+  through the original controller globals, then runs one follow-up original tick
+  to observe the load-scene request.
+- Added diagnostics proving original `mnVSModeMain` changed scene state to
+  `nSCKindPlayersVS` from `nSCKindVSMode`, original
+  `mnVSModeSaveSettings` stored the transfer battle settings, and original
+  `syTaskmanSetLoadScene` was requested.
+- Added `scripts/verify-vs-start-transition-harness.ps1` and included it in
+  `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- The proof remains bounded to VS setup plus the VS Start branch. It does not
+  import `mnplayersvs.c`, maps, battle, fighters, stages, items, audio, full VS
+  menu navigation, or continuous menu rendering.
+- The final scene state is `scene_curr/scene_prev = 16/9`
+  (`PlayersVS` from `VSMode`), and the existing PlayersVS scene-boundary stub is
+  the stopping point.
+- The expected transition marker is `VSTR` (`0x56535452`) with mask `0xFF`,
+  input `0x8000`, saved settings `1/3/2`, and one bounded cleanup.
+
+Verification:
+
+- `scripts/verify-vs-setup-harness.ps1` passed with
+  `VS setup harness passed: scene=9/1 setup=0x1f files=2 sobj=28 buttons=0x3f`.
+- `scripts/verify-vs-start-transition-harness.ps1` passed with
+  `VS Start transition harness passed: scene=16/9 trans=0x56535452 mask=0xff saved=1/3/2`.

@@ -21,7 +21,7 @@ Status labels:
 | 4 | DS platform layer like `sm64-nds/src/nds` | In Progress | Continue isolating DS behavior in `src/nds` and `src/port`. |
 | 5 | Stub enough libultra/N64 platform functions | In Progress | Replace broad stubs only when the next original boundary needs them. |
 | 6 | Boot an `.nds` ROM | Done | Keep melonDS/no$gba smoke paths working. |
-| 7 | Run minimal original game-state/update loop | In Progress | Current loop reaches bounded Title setup, and the dev harness can start directly at bounded VS Mode setup from Title. |
+| 7 | Run minimal original game-state/update loop | In Progress | Current loop reaches bounded Title setup, and the dev harness can start directly at bounded VS Mode setup or the bounded original VS Start -> PlayersVS transition proof from Title. |
 | 8 | Render a simple placeholder frame | Done | Placeholder remains disabled behind original-preview paths. |
 | 8a | Render one original Startup asset | Done | Preserve original `N64Logo` bounded SObj preview. |
 | 8b | Render one original Opening Room DObj slice | Done | Preserve bounded Opening Room DObj preview and renderer diagnostics. |
@@ -36,14 +36,14 @@ Status labels:
 ## Active Focus
 
 Current source boundary: bounded imported Title setup after the natural opening
-movie path, plus a guarded dev/test harness that can start directly at bounded
-original VS Mode setup from Title. See `docs/STATUS.md` for the exact current
-state.
+movie path, plus guarded dev/test harnesses that can start directly at bounded
+original VS Mode setup or prove the original VS Start -> PlayersVS transition
+from Title. See `docs/STATUS.md` for the exact current state.
 
 Recommended next milestone:
 
-1. Use the VS setup harness to pick the smallest original menu behavior toward
-   Players VS setup.
+1. Use the VS Start transition harness to pick the smallest original PlayersVS
+   boundary.
 2. Inspect BattleShip source and docs before changing code.
 3. Use `decomp/sm64-nds` only for DS backend architecture comparison.
 4. Add minimal compatibility shims in project-owned code.

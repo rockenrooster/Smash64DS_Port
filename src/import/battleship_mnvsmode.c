@@ -39,6 +39,10 @@ void ndsBaseMNVSModeStartScene(void);
 #undef mnVSModeFuncStart
 #undef mnVSModeStartScene
 
+extern s32 sSYTaskmanStatus;
+
+static GObj *sNdsVSModeMainGObj;
+
 static u32 ndsMNVSModeCountSObjs(GObj *gobj)
 {
     u32 count = 0;
@@ -127,6 +131,7 @@ void mnVSModeFuncStart(void)
 
     main_gobj = gcMakeGObjSPAfter(0, mnVSModeMain, 0,
                                   GOBJ_PRIORITY_DEFAULT);
+    sNdsVSModeMainGObj = main_gobj;
     if (main_gobj != NULL)
     {
         gNdsVSModeOriginalMainGObjID = main_gobj->id;
@@ -172,6 +177,132 @@ void mnVSModeFuncStart(void)
         (1u << 1) | /* scene transition to PlayersVS / VSOptions */
         (1u << 2);  /* continuous gcDrawAll sprite rendering */
     gNdsVSModeOriginalSetupResult = NDS_VS_MODE_ORIGINAL_SETUP_PASS;
+}
+
+static void ndsMNVSModeClearControllerState(void)
+{
+    s32 i;
+
+    gSYControllerConnectedNum = 1;
+    for (i = 0; i < MAXCONTROLLERS; i++)
+    {
+        gSYControllerDeviceStatuses[i] = -1;
+        gSYControllerDevices[i].button_tap = 0;
+        gSYControllerDevices[i].button_hold = 0;
+        gSYControllerDevices[i].button_update = 0;
+        gSYControllerDevices[i].button_release = 0;
+        gSYControllerDevices[i].stick_range.x = 0;
+        gSYControllerDevices[i].stick_range.y = 0;
+    }
+    gSYControllerDeviceStatuses[0] = 0;
+}
+
+static void ndsMNVSModeRunMainTick(u32 *update_count)
+{
+    mnVSModeMain(sNdsVSModeMainGObj);
+    (*update_count)++;
+    gNdsVSModeStartTransitionUpdateCount = *update_count;
+}
+
+void ndsMNVSModeRunStartTransitionProbe(void)
+{
+    u32 i;
+    u32 updates = 0;
+    u32 mask = 0;
+
+    gNdsVSModeStartTransitionResult = NDS_VS_MODE_START_TRANSITION_FAIL;
+    gNdsVSModeStartTransitionMask = 0;
+    gNdsVSModeStartTransitionScenePrevBefore = gSCManagerSceneData.scene_prev;
+    gNdsVSModeStartTransitionSceneCurrBefore = gSCManagerSceneData.scene_curr;
+
+    if (((gNdsVSModeOriginalSetupMask & 0x1fu) == 0x1fu) &&
+        (sNdsVSModeMainGObj != NULL) &&
+        (sMNVSModeCursorIndex == nMNVSModeOptionStart))
+    {
+        mask |= (1u << 0);
+    }
+
+    ndsMNVSModeClearControllerState();
+
+    for (i = 0; i < 9u; i++)
+    {
+        ndsMNVSModeClearControllerState();
+        ndsMNVSModeRunMainTick(&updates);
+    }
+
+    gNdsVSModeStartTransitionInputMask = A_BUTTON;
+    gSYControllerDevices[0].button_tap = A_BUTTON;
+    gSYControllerDevices[0].button_hold = A_BUTTON;
+    ndsMNVSModeRunMainTick(&updates);
+
+    if (sMNVSModeTotalTimeTics >= 10)
+    {
+        mask |= (1u << 1);
+    }
+    if (gNdsVSModeStartTransitionInputMask == A_BUTTON)
+    {
+        mask |= (1u << 2);
+    }
+
+    gNdsVSModeStartTransitionScenePrevAfterTap =
+        gSCManagerSceneData.scene_prev;
+    gNdsVSModeStartTransitionSceneCurrAfterTap =
+        gSCManagerSceneData.scene_curr;
+    gNdsVSModeStartTransitionExitInterrupt = (u32)sMNVSModeExitInterrupt;
+
+    if ((gSCManagerSceneData.scene_prev == nSCKindVSMode) &&
+        (gSCManagerSceneData.scene_curr == nSCKindPlayersVS))
+    {
+        mask |= (1u << 3);
+    }
+
+    gNdsVSModeStartTransitionSavedRule =
+        gSCManagerTransferBattleState.game_rules;
+    gNdsVSModeStartTransitionSavedTime =
+        gSCManagerTransferBattleState.time_limit;
+    gNdsVSModeStartTransitionSavedStock =
+        gSCManagerTransferBattleState.stocks;
+
+    if ((gSCManagerTransferBattleState.game_rules ==
+            SCBATTLE_GAMERULE_TIME) &&
+        (gSCManagerTransferBattleState.time_limit == 3) &&
+        (gSCManagerTransferBattleState.stocks == 2))
+    {
+        mask |= (1u << 4);
+    }
+    if (sMNVSModeExitInterrupt != FALSE)
+    {
+        mask |= (1u << 5);
+    }
+
+    ndsMNVSModeClearControllerState();
+    ndsMNVSModeRunMainTick(&updates);
+    gNdsVSModeStartTransitionTaskmanStatus = (u32)sSYTaskmanStatus;
+
+    if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
+    {
+        mask |= (1u << 6);
+    }
+
+    gNdsVSModeStartTransitionScenePrevFinal =
+        gSCManagerSceneData.scene_prev;
+    gNdsVSModeStartTransitionSceneCurrFinal =
+        gSCManagerSceneData.scene_curr;
+
+    ndsMNVSModeRecordButtonProof();
+    gNdsVSModeStartTransitionButtonMaskAfter =
+        gNdsVSModeOriginalButtonMask;
+
+    gcEjectAll();
+    gNdsVSModeStartTransitionCleanupCount++;
+    mask |= (1u << 7);
+
+    gNdsVSModeStartTransitionMask = mask;
+    if (mask == 0xffu)
+    {
+        gNdsVSModeStartTransitionResult =
+            NDS_VS_MODE_START_TRANSITION_PASS;
+    }
 }
 
 void mnVSModeStartScene(void)

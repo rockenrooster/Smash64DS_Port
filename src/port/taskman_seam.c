@@ -226,6 +226,23 @@ void ndsResetStartupDiagnostics(void)
     gNdsVSModeOriginalStock = 0;
     gNdsVSModeOriginalButtonMask = 0;
     gNdsVSModeOriginalDeferredMask = 0;
+    gNdsVSModeStartTransitionResult = 0;
+    gNdsVSModeStartTransitionMask = 0;
+    gNdsVSModeStartTransitionUpdateCount = 0;
+    gNdsVSModeStartTransitionInputMask = 0;
+    gNdsVSModeStartTransitionScenePrevBefore = 0;
+    gNdsVSModeStartTransitionSceneCurrBefore = 0;
+    gNdsVSModeStartTransitionScenePrevAfterTap = 0;
+    gNdsVSModeStartTransitionSceneCurrAfterTap = 0;
+    gNdsVSModeStartTransitionScenePrevFinal = 0;
+    gNdsVSModeStartTransitionSceneCurrFinal = 0;
+    gNdsVSModeStartTransitionExitInterrupt = 0;
+    gNdsVSModeStartTransitionTaskmanStatus = 0;
+    gNdsVSModeStartTransitionSavedRule = 0;
+    gNdsVSModeStartTransitionSavedTime = 0;
+    gNdsVSModeStartTransitionSavedStock = 0;
+    gNdsVSModeStartTransitionButtonMaskAfter = 0;
+    gNdsVSModeStartTransitionCleanupCount = 0;
     gNdsOpeningRoomGObjCount = 0;
     gNdsOpeningRoomCameraCount = 0;
     gNdsOpeningRoomDL0Size = 0;
@@ -896,6 +913,8 @@ void ndsResetStartupDiagnostics(void)
     sNdsOpeningRoomLogoMObjsBefore = 0;
     sNdsOpeningRoomLogoAObjsBefore = 0;
 }
+
+extern void ndsMNVSModeRunStartTransitionProbe(void);
 
 /* Diagnostic snapshot of the real object-manager state after
  * mnStartupFuncStart ran. Every value here is read from the original object
@@ -2813,6 +2832,18 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
                   (uintptr_t)gSYTaskmanGeneralHeap.start);
         gNdsTaskmanLoopReached = 1;
+#if NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_VS_START_TRANSITION
+        ndsMNVSModeRunStartTransitionProbe();
+
+        if ((gNdsVSModeStartTransitionResult ==
+                NDS_VS_MODE_START_TRANSITION_PASS) &&
+            (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) &&
+            (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
+        {
+            ndsFinishTaskmanRun();
+            return;
+        }
+#endif
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;

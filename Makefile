@@ -46,8 +46,10 @@ else ifeq ($(NDS_DEV_SCENE_HARNESS),vs_setup)
 CFLAGS += -DNDS_DEV_SCENE_HARNESS=2
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_fd)
 CFLAGS += -DNDS_DEV_SCENE_HARNESS=3
+else ifeq ($(NDS_DEV_SCENE_HARNESS),vs_start_transition)
+CFLAGS += -DNDS_DEV_SCENE_HARNESS=4
 else
-$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal, title, vs_setup, or battle_fd)
+$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal, title, vs_setup, battle_fd, or vs_start_transition)
 endif
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)

@@ -43,6 +43,11 @@ void ndsDevSceneHarnessApply(void)
         gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
         return;
 
+    case NDS_DEV_SCENE_HARNESS_VS_START_TRANSITION:
+        ndsSceneHarnessSetDefaultScene(nSCKindVSMode, nSCKindTitle);
+        gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
+        return;
+
     case NDS_DEV_SCENE_HARNESS_BATTLE_FD:
         gNdsSceneHarnessReservedMask = 1u;
         ndsSceneHarnessSetDefaultScene(nSCKindTitle, nSCKindOpeningNewcomers);

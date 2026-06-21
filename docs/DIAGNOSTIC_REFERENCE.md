@@ -55,6 +55,7 @@ With `emulators/melonds/melonDS.exe` in the workspace:
 .\scripts\verify-title-boundary.ps1
 .\scripts\verify-title-harness.ps1
 .\scripts\verify-vs-setup-harness.ps1
+.\scripts\verify-vs-start-transition-harness.ps1
 .\scripts\verify-all.ps1
 ```
 
@@ -62,9 +63,11 @@ Use `verify-opening-boundary.ps1` as the quick current Opening Room progress
 gate, `verify-title-boundary.ps1` for the natural movie-to-Title speed gate,
 `verify-title-harness.ps1` for the direct imported Title boundary without
 Opening Room/movie replay, `verify-vs-setup-harness.ps1` for the direct
-bounded imported VS Mode setup proof from Title, and `verify-all.ps1` for the
-maintained full regression chain. The shared PowerShell helpers live in
-`scripts/lib/melonds.ps1` and `scripts/lib/gdb-markers.ps1`.
+bounded imported VS Mode setup proof from Title,
+`verify-vs-start-transition-harness.ps1` for the bounded original VS Start to
+PlayersVS transition proof, and `verify-all.ps1` for the maintained full
+regression chain. The shared PowerShell helpers live in `scripts/lib/melonds.ps1`
+and `scripts/lib/gdb-markers.ps1`.
 
 The script:
 
@@ -97,6 +100,14 @@ BUILD=build-vs-setup-harness NDS_DEV_SCENE_HARNESS=vs_setup`, starts the
 imported scene manager from `nSCKindVSMode` with `scene_prev = nSCKindTitle`,
 verifies Opening Room and Title setup did not replay, and checks the bounded
 imported VS setup markers.
+
+`verify-vs-start-transition-harness.ps1` builds `TARGET=smash64ds-vs-start
+BUILD=build-vs-start-harness NDS_DEV_SCENE_HARNESS=vs_start_transition`,
+starts from the same original `mnvsmode.c` setup boundary, advances bounded
+original `mnVSModeMain`, injects a synthetic A tap through the original
+controller globals, proves original `mnVSModeSaveSettings` and
+`syTaskmanSetLoadScene` ran, and verifies the existing PlayersVS scene-boundary
+stub was reached as `scene_curr/scene_prev = 16/9`.
 
 ## Visual melonDS Debugging
 
@@ -322,14 +333,13 @@ Opening movie / Opening Portraits:
   `0x48525356` (`HRSV`) until a real battle boundary exists.
 - `gNdsSceneHarnessMode`: build-time harness mode: `0` normal, `1` direct
   Title, `2` bounded VS setup from Title, `3` reserved battle/Final-Destination
-  slot.
+  slot, `4` bounded VS Start to PlayersVS transition from Title.
 - `gNdsSceneHarnessSceneCurr` / `ScenePrev`: default scene pair preseeded
   before imported `scManagerRunLoop` copies it. Direct Title expects `1/46`
   (`nSCKindTitle` from `nSCKindOpeningNewcomers`).
-- `gNdsSceneHarnessReservedMask`: `0` for the maintained Title and VS setup
-  harnesses. The
-  reserved battle slot sets bit `0` and falls back to Title instead of
-  dispatching fighters/stages.
+- `gNdsSceneHarnessReservedMask`: `0` for the maintained Title, VS setup, and
+  VS Start transition harnesses. The reserved battle slot sets bit `0` and
+  falls back to Title instead of dispatching fighters/stages.
 - `gNdsTitleOriginalStartResult` / `FuncStartResult`: imported
   `mntitle.c` bounded start markers, expected `0x54495354` and `0x54494653`.
 - `gNdsTitleOriginalSetupMask`: current bounded Title setup coverage,
@@ -393,6 +403,44 @@ Opening movie / Opening Portraits:
 - `gNdsVSModeOriginalDeferredMask`: explicitly deferred VS branches, expected
   `0x7` for `mnVSModeMain` input/update, scene transition, and continuous
   drawing.
+- `gNdsVSModeStartTransitionResult`: bounded original VS Start transition
+  marker. Expected pass is `0x56535452` (`VSTR`); fail marker is
+  `0x5653464C` (`VSFL`).
+- `gNdsVSModeStartTransitionMask`: expected `0xFF`. Bit `0` proves the setup
+  boundary was complete at entry; bit `1` proves original `mnVSModeMain`
+  reached the input-ready tick window; bit `2` proves the synthetic A tap was
+  injected through original controller globals; bit `3` proves original
+  `mnVSModeMain` changed scene state to `VSMode -> PlayersVS`; bit `4` proves
+  original `mnVSModeSaveSettings` stored rule/time/stock; bit `5` proves the
+  original start branch set `sMNVSModeExitInterrupt`; bit `6` proves the
+  follow-up original tick requested `syTaskmanSetLoadScene`; bit `7` proves
+  bounded cleanup ran before returning to the scene manager.
+- `gNdsVSModeStartTransitionUpdateCount`: bounded original `mnVSModeMain` call
+  count, expected at least `11` for nine idle ticks, one A tap tick, and one
+  follow-up load-scene tick.
+- `gNdsVSModeStartTransitionInputMask`: synthetic input used for the transition,
+  expected `0x8000` (`A_BUTTON`).
+- `gNdsVSModeStartTransitionScenePrevBefore` /
+  `SceneCurrBefore`: expected `1/9` before the A tap.
+- `gNdsVSModeStartTransitionScenePrevAfterTap` /
+  `SceneCurrAfterTap`: expected `9/16` after original `mnVSModeMain` accepts
+  VS Start.
+- `gNdsVSModeStartTransitionScenePrevFinal` /
+  `SceneCurrFinal`: expected `9/16` after the follow-up original load-scene
+  tick.
+- `gNdsVSModeStartTransitionExitInterrupt`: expected `1`, proving the original
+  VS exit-interrupt flag was set by the start branch.
+- `gNdsVSModeStartTransitionTaskmanStatus`: expected `1`
+  (`nSYTaskmanStatusLoadScene`) after the follow-up original tick.
+- `gNdsVSModeStartTransitionSavedRule` /
+  `SavedTime` / `SavedStock`: expected `1/3/2`, proving the original transfer
+  battle settings were saved as time rule, three minutes, two stock.
+- `gNdsVSModeStartTransitionButtonMaskAfter`: expected `0x3F`, proving the
+  original VS setup button/value SObj proof still survived the transition
+  probe.
+- `gNdsVSModeStartTransitionCleanupCount`: expected `1`, proving the bounded
+  transition probe performed one object cleanup before returning to the scene
+  manager.
 - `gNdsControllerPollCount`: DS SI/controller polls, must be nonzero.
 - `gSYControllerMain`: original global controller state after update.
 

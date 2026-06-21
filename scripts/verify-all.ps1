@@ -47,11 +47,23 @@ Invoke-VerifyScript `
     -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
 
 Invoke-VerifyScript `
+    -Script (Join-Path $PSScriptRoot 'verify-opening-movie-speed.ps1') `
+    -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
+
+Invoke-VerifyScript `
     -Script (Join-Path $PSScriptRoot 'verify-title-boundary.ps1') `
     -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
 
 Invoke-VerifyScript `
+    -Script (Join-Path $PSScriptRoot 'verify-title-harness.ps1') `
+    -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
+
+Invoke-VerifyScript `
     -Script (Join-Path $PSScriptRoot 'verify-vs-setup-harness.ps1') `
+    -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
+
+Invoke-VerifyScript `
+    -Script (Join-Path $PSScriptRoot 'verify-vs-start-transition-harness.ps1') `
     -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
 
 Write-Output 'Full verification passed.'

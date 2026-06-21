@@ -14,6 +14,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_scene.h>
+#include <nds/nds_scene_harness.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>

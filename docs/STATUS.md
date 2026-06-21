@@ -29,22 +29,31 @@ to `nSCKindVSMode` with `scene_prev = nSCKindTitle`. That target now imports
 files, create the original main GObj, default camera, viewports, VS menu
 button/value/background/menu-name/subtitle SObj object graph, then park before
 `mnVSModeMain` input/update transitions and continuous drawing.
+The `vs_start_transition` harness enters the same VS setup boundary, advances
+original `mnVSModeMain` through a bounded no-input gate, injects a synthetic
+A-button tap on the original VS Start cursor, records original
+`mnVSModeSaveSettings`, observes `scene_prev = nSCKindVSMode` and
+`scene_curr = nSCKindPlayersVS`, reaches the original load-scene request, and
+then parks at the existing PlayersVS scene stub. `mnplayersvs.c` is not
+imported.
 The future `battle_fd` target is reserved only; it records a reserved marker
 and falls back to Title until the original one-fighter/Final-Destination battle
 slice is intentionally imported.
 
 ## Next Boundary
 
-Use the new VS setup proof to identify the next original menu boundary toward
-Players VS setup. Do not import fighters, stages, battle gameplay, audio, or
+Use the VS Start transition proof to identify the next narrow original
+PlayersVS boundary. Do not import fighters, stages, battle gameplay, audio, or
 full renderer systems until that exact boundary requires them.
 
 ## Known Blockers
 
 - Full Title input, animated logo, labels/Press Start, slash, logo-fire
   particles, audio, and continuous title drawing remain deferred.
-- Full VS Mode input/update handling, transition to `PlayersVS` /
-  `VSOptions`, audio, and continuous menu drawing remain deferred.
+- Full VS Mode navigation/rule editing/options transition, audio, and
+  continuous menu drawing remain deferred.
+- PlayersVS is still only the existing scene stub/boundary; character select is
+  not imported.
 - Fighter/stage-heavy opening action scenes are still bounded bridge stubs in
   original order.
 - Opening Room DObj rendering is still a bounded preview path, not a general
@@ -67,6 +76,7 @@ make -j4
 .\scripts\verify-opening-movie-speed.ps1
 .\scripts\verify-title-harness.ps1
 .\scripts\verify-vs-setup-harness.ps1
+.\scripts\verify-vs-start-transition-harness.ps1
 ```
 
 For a clean regression after header, Makefile, imported source, or linker-visible
@@ -92,18 +102,27 @@ make TARGET=smash64ds-vs-setup BUILD=build-vs-setup-harness NDS_DEV_SCENE_HARNES
 .\scripts\verify-vs-setup-harness.ps1
 ```
 
+Build a direct VS Start transition harness ROM without replacing the normal
+output:
+
+```powershell
+make TARGET=smash64ds-vs-start BUILD=build-vs-start-harness NDS_DEV_SCENE_HARNESS=vs_start_transition -j4
+.\scripts\verify-vs-start-transition-harness.ps1
+```
+
 ## Latest Proof
 
-Latest verified state after the VS setup harness import:
+Latest verified state after the VS Start transition harness import:
 
 ```text
 make -j4
 scripts/verify-vs-setup-harness.ps1 -> VS setup harness passed: scene=9/1 setup=0x1f files=2 sobj=28 buttons=0x3f
+scripts/verify-vs-start-transition-harness.ps1 -> VS Start transition harness passed: scene=16/9 trans=0x56535452 mask=0xff saved=1/3/2
 scripts/verify-runtime.ps1 -> Runtime verification passed (401 frames, fps=60/up=0/dl=60, cv=0/ch=32, verifyfps=2.34)
 scripts/verify-opening-boundary.ps1 -> frames=504 hostfps=54.30 room=420
 scripts/verify-opening-skip.ps1 -> Opening Room skip verification passed (tick 10 -> Title)
 scripts/verify-title-boundary.ps1 -> frames=3292 hostfps=40.52 room=1320 action=9/324 title=0x54494457
-scripts/verify-all.ps1 -> Runtime, skip, title boundary, and VS setup harness gates passed
+scripts/verify-all.ps1 -> Full verification passed; speed sample frames=3299 hostfps=40.47 title=0x54494457; VS Start scene=16/9
 scripts/verify-title-harness.ps1 -> Title harness passed: scene=1/46 room=0 title=0x54494457
 ```
 
