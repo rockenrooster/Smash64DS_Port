@@ -54,14 +54,16 @@ With `emulators/melonds/melonDS.exe` in the workspace:
 .\scripts\verify-opening-boundary.ps1
 .\scripts\verify-title-boundary.ps1
 .\scripts\verify-title-harness.ps1
+.\scripts\verify-vs-setup-harness.ps1
 .\scripts\verify-all.ps1
 ```
 
 Use `verify-opening-boundary.ps1` as the quick current Opening Room progress
 gate, `verify-title-boundary.ps1` for the natural movie-to-Title speed gate,
 `verify-title-harness.ps1` for the direct imported Title boundary without
-Opening Room/movie replay, and `verify-all.ps1` for the maintained full
-regression chain. The shared PowerShell helpers live in
+Opening Room/movie replay, `verify-vs-setup-harness.ps1` for the direct
+bounded imported VS Mode setup proof from Title, and `verify-all.ps1` for the
+maintained full regression chain. The shared PowerShell helpers live in
 `scripts/lib/melonds.ps1` and `scripts/lib/gdb-markers.ps1`.
 
 The script:
@@ -89,6 +91,12 @@ BUILD=build-title-harness NDS_DEV_SCENE_HARNESS=title`, starts the imported
 scene manager from `nSCKindTitle` with `scene_prev =
 nSCKindOpeningNewcomers`, verifies `gNdsOpeningRoomTickCount == 0`, and checks
 the same bounded imported Title markers as the natural path.
+
+`verify-vs-setup-harness.ps1` builds `TARGET=smash64ds-vs-setup
+BUILD=build-vs-setup-harness NDS_DEV_SCENE_HARNESS=vs_setup`, starts the
+imported scene manager from `nSCKindVSMode` with `scene_prev = nSCKindTitle`,
+verifies Opening Room and Title setup did not replay, and checks the bounded
+imported VS setup markers.
 
 ## Visual melonDS Debugging
 
@@ -313,12 +321,13 @@ Opening movie / Opening Portraits:
   expects `0x4841524E` (`HARN`); the reserved battle slot reports
   `0x48525356` (`HRSV`) until a real battle boundary exists.
 - `gNdsSceneHarnessMode`: build-time harness mode: `0` normal, `1` direct
-  Title, `2` VS setup stub boundary, `3` reserved battle/Final-Destination
+  Title, `2` bounded VS setup from Title, `3` reserved battle/Final-Destination
   slot.
 - `gNdsSceneHarnessSceneCurr` / `ScenePrev`: default scene pair preseeded
   before imported `scManagerRunLoop` copies it. Direct Title expects `1/46`
   (`nSCKindTitle` from `nSCKindOpeningNewcomers`).
-- `gNdsSceneHarnessReservedMask`: `0` for the maintained Title harness. The
+- `gNdsSceneHarnessReservedMask`: `0` for the maintained Title and VS setup
+  harnesses. The
   reserved battle slot sets bit `0` and falls back to Title instead of
   dispatching fighters/stages.
 - `gNdsTitleOriginalStartResult` / `FuncStartResult`: imported
@@ -360,6 +369,30 @@ Opening movie / Opening Portraits:
 - `gNdsTitleDrawVisibleSObjCount` / `RenderableSObjCount` /
   `SObjCount` / `Pixels`: current expected counts `10,10,10` with nonzero
   accumulated pixels.
+- `gNdsVSModeOriginalStartResult` / `FuncStartResult`: imported
+  `mnvsmode.c` bounded start markers, expected `0x56535354` (`VSST`) and
+  `0x56534653` (`VSFS`).
+- `gNdsVSModeOriginalRelocResult`: original VS setup file-list load marker,
+  expected `0x5653524C` (`VSRL`) after `MNCommon` and `MNVSMode` load.
+- `gNdsVSModeOriginalSetupResult`: bounded original VS setup marker, expected
+  `0x56535355` (`VSSU`).
+- `gNdsVSModeOriginalSetupMask`: current bounded VS setup coverage, expected
+  `0x1F` for file load, main GObj, default camera, viewports, and menu SObj
+  graph creation.
+- `gNdsVSModeOriginalLoadedFileCount`: original VS setup file-list load count,
+  expected `2`.
+- `gNdsVSModeOriginalGObjCount` / `CameraCount` / `SObjCount`: current
+  bounded VS setup object proof, expected at least `8`, at least `1`, and at
+  least `20`; current verifier proof is `17,1,28`.
+- `gNdsVSModeOriginalButtonMask`: button/value SObj proof, expected `0x3F`
+  for VS Start, Rule, Time/Stock, VS Options, Rule value, and Time/Stock value
+  object creation.
+- `gNdsVSModeOriginalCursorIndex` / `Rule` / `Time` / `Stock`: original VS
+  setup state sampled after `mnVSModeFuncStartVars`; current harness proof is
+  `0,0,3,2`.
+- `gNdsVSModeOriginalDeferredMask`: explicitly deferred VS branches, expected
+  `0x7` for `mnVSModeMain` input/update, scene transition, and continuous
+  drawing.
 - `gNdsControllerPollCount`: DS SI/controller polls, must be nonzero.
 - `gSYControllerMain`: original global controller state after update.
 

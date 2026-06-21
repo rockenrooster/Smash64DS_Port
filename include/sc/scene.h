@@ -9,7 +9,10 @@
 
 #define GMCOMMON_PLAYERS_MAX 4
 #define GMCOMMON_FIGHTERS_PLAYABLE_NUM 12
+#define SCBATTLE_TIMELIMIT_INFINITE 100
 #define SCBATTLE_GAMERULE_TIME 1
+#define SCBATTLE_GAMERULE_STOCK 2
+#define LBBACKUP_ERROR_RANDOMKNOCKBACK 1
 
 typedef struct GObj GObj;
 typedef struct SYTaskmanSetup SYTaskmanSetup;
@@ -278,6 +281,8 @@ void scVSBattleStartScene(void);
 void lbBackupIsSramValid(void);
 void lbBackupApplyOptions(void);
 sb32 scSubsysControllerGetPlayerTapButtons(u32 mask);
+s32 scSubsysControllerGetPlayerHoldButtons(u32 mask);
+sb32 scSubsysControllerCheckNoInputAll(void);
 sb32 scSubsysControllerGetPlayerStickInRangeLR(s32 range_l_min, s32 range_r_min);
 sb32 scSubsysControllerGetPlayerStickInRangeUD(s32 range_d_min, s32 range_u_min);
 void scSubsysFighterSetLightParams(f32 light_angle_x, f32 light_angle_y,

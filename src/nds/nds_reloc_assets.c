@@ -22,6 +22,7 @@ volatile u32 gNdsRelocAssetFormatFailCount;
 volatile u32 gNdsRelocAssetShortReadCount;
 
 static const NDSRelocAssetEntry sNdsRelocAssets[] = {
+    { 0, "nitro:/reloc/reloc_menus/MNCommon" },
     { 194, "nitro:/reloc/reloc_misc_named/N64Logo" },
     { 52, "nitro:/reloc/reloc_movies/MVCommon" },
     { 63, "nitro:/reloc/reloc_transitions/MVOpeningRoomTransition" },
@@ -40,6 +41,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 73, "nitro:/reloc/reloc_movies/MVOpeningSector" },
     { 167, "nitro:/reloc/reloc_menus/MNTitle" },
     { 168, "nitro:/reloc/reloc_menus/MNTitleFireAnim" },
+    { 6, "nitro:/reloc/reloc_menus/MNVSMode" },
 };
 
 static u16 ndsReadLe16(const u8 *bytes)

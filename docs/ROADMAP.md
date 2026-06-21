@@ -21,7 +21,7 @@ Status labels:
 | 4 | DS platform layer like `sm64-nds/src/nds` | In Progress | Continue isolating DS behavior in `src/nds` and `src/port`. |
 | 5 | Stub enough libultra/N64 platform functions | In Progress | Replace broad stubs only when the next original boundary needs them. |
 | 6 | Boot an `.nds` ROM | Done | Keep melonDS/no$gba smoke paths working. |
-| 7 | Run minimal original game-state/update loop | In Progress | Current loop reaches bounded Title setup; the dev harness can start directly at Title for faster next-boundary tests. |
+| 7 | Run minimal original game-state/update loop | In Progress | Current loop reaches bounded Title setup, and the dev harness can start directly at bounded VS Mode setup from Title. |
 | 8 | Render a simple placeholder frame | Done | Placeholder remains disabled behind original-preview paths. |
 | 8a | Render one original Startup asset | Done | Preserve original `N64Logo` bounded SObj preview. |
 | 8b | Render one original Opening Room DObj slice | Done | Preserve bounded Opening Room DObj preview and renderer diagnostics. |
@@ -36,13 +36,14 @@ Status labels:
 ## Active Focus
 
 Current source boundary: bounded imported Title setup after the natural opening
-movie path, with a guarded dev/test harness that can start directly at the
-same Title boundary. See `docs/STATUS.md` for the exact current state.
+movie path, plus a guarded dev/test harness that can start directly at bounded
+original VS Mode setup from Title. See `docs/STATUS.md` for the exact current
+state.
 
 Recommended next milestone:
 
-1. Use the Title harness to pick the smallest original Title/menu or VS setup
-   behavior after the current bounded setup.
+1. Use the VS setup harness to pick the smallest original menu behavior toward
+   Players VS setup.
 2. Inspect BattleShip source and docs before changing code.
 3. Use `decomp/sm64-nds` only for DS backend architecture comparison.
 4. Add minimal compatibility shims in project-owned code.

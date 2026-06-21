@@ -12,9 +12,10 @@ void func_800266A0_272A0(void)
 {
 }
 
-void func_800269C0_275C0(s32 fgm_id)
+void *func_800269C0_275C0(u16 fgm_id)
 {
     (void)fgm_id;
+    return NULL;
 }
 
 /* scmanager.c excludes these renderer/task wrappers for the NDS target. Keep
@@ -100,6 +101,12 @@ void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script)
 }
 
 s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
+{
+    (void)fkind;
+    return color;
+}
+
+s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
 {
     (void)fkind;
     return color;
@@ -295,6 +302,8 @@ void syRdpResetSettings(Gfx **dl)
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 11u
 
+#define NDS_RELOC_ASSET_INVALID 0xffffffffu
+#define NDS_RELOC_ASSET_MN_COMMON 0u
 #define NDS_RELOC_ASSET_N64_LOGO 194u
 #define NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE 37u
 #define NDS_RELOC_ASSET_MV_COMMON 52u
@@ -313,6 +322,7 @@ void syRdpResetSettings(Gfx **dl)
 #define NDS_RELOC_ASSET_OPENING_PORTRAITS_SET2 54u
 #define NDS_RELOC_ASSET_MN_TITLE 167u
 #define NDS_RELOC_ASSET_MN_TITLE_FIRE_ANIM 168u
+#define NDS_RELOC_ASSET_MN_VS_MODE 6u
 
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_MOBJ 0x042f8u
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_DOBJ 0x07e98u
@@ -418,6 +428,38 @@ void syRdpResetSettings(Gfx **dl)
 #define NDS_RELOC_SYMBOL_TITLE_FIRE_FRAME28 0x1ca38u
 #define NDS_RELOC_SYMBOL_TITLE_FIRE_FRAME29 0x1da98u
 #define NDS_RELOC_SYMBOL_TITLE_FIRE_FRAME30 0x1eaf8u
+#define NDS_RELOC_SYMBOL_MNCOMMON_OPTION_TAB_LEFT 0x01e8u
+#define NDS_RELOC_SYMBOL_MNCOMMON_OPTION_TAB_MIDDLE 0x0330u
+#define NDS_RELOC_SYMBOL_MNCOMMON_OPTION_TAB_RIGHT 0x0568u
+#define NDS_RELOC_SYMBOL_MNCOMMON_FRAME 0x1420u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DECAL_PAPER 0x2a30u
+#define NDS_RELOC_SYMBOL_MNCOMMON_SMASH_LOGO 0x31f8u
+#define NDS_RELOC_SYMBOL_MNCOMMON_GAME_MODE_TEXT 0xd240u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT0 0xd310u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT1 0xd3e0u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT2 0xd4b0u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT3 0xd580u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT4 0xd650u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT5 0xd720u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT6 0xd7f0u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT7 0xd8c0u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT8 0xd990u
+#define NDS_RELOC_SYMBOL_MNCOMMON_DIGIT9 0xda60u
+#define NDS_RELOC_SYMBOL_MNCOMMON_INFINITY 0xdc48u
+#define NDS_RELOC_SYMBOL_MNCOMMON_ARROW_R 0xdd90u
+#define NDS_RELOC_SYMBOL_MNCOMMON_ARROW_L 0xde30u
+#define NDS_RELOC_SYMBOL_MNCOMMON_SMASH_BROS_COLLAGE 0x18000u
+#define NDS_RELOC_SYMBOL_MNVSMODE_VS_START_TEXT 0x24c8u
+#define NDS_RELOC_SYMBOL_MNVSMODE_RULE_PERIOD_TEXT 0x2748u
+#define NDS_RELOC_SYMBOL_MNVSMODE_TIME_TEXT 0x28e0u
+#define NDS_RELOC_SYMBOL_MNVSMODE_STOCK_TEXT 0x2a80u
+#define NDS_RELOC_SYMBOL_MNVSMODE_TEAM_TEXT 0x2c20u
+#define NDS_RELOC_SYMBOL_MNVSMODE_TIME_PERIOD_TEXT 0x2ec8u
+#define NDS_RELOC_SYMBOL_MNVSMODE_MIN_TEXT 0x2fc8u
+#define NDS_RELOC_SYMBOL_MNVSMODE_STOCK_PERIOD_TEXT 0x3248u
+#define NDS_RELOC_SYMBOL_MNVSMODE_VS_OPTIONS_TEXT 0x3828u
+#define NDS_RELOC_SYMBOL_MNVSMODE_CONSOLE_ICON_DARK 0x5eb0u
+#define NDS_RELOC_SYMBOL_MNVSMODE_VS_TEXT 0x6118u
 
 #define NDS_OPENING_PORTRAITS_CARD_WIDTH 300u
 #define NDS_OPENING_PORTRAITS_CARD_HEIGHT 55u
@@ -804,6 +846,44 @@ static const NDSRelocKnownSymbol sNdsTitleFireAnimFrameSymbols[] = {
     { &llMNTitleFireAnimFrame30Sprite, NDS_RELOC_SYMBOL_TITLE_FIRE_FRAME30 },
 };
 
+static const NDSRelocKnownSymbol sNdsMNCommonSymbols[] = {
+    { &llMNCommonOptionTabLeftSprite, NDS_RELOC_SYMBOL_MNCOMMON_OPTION_TAB_LEFT },
+    { &llMNCommonOptionTabMiddleSprite, NDS_RELOC_SYMBOL_MNCOMMON_OPTION_TAB_MIDDLE },
+    { &llMNCommonOptionTabRightSprite, NDS_RELOC_SYMBOL_MNCOMMON_OPTION_TAB_RIGHT },
+    { &llMNCommonFrameSprite, NDS_RELOC_SYMBOL_MNCOMMON_FRAME },
+    { &llMNCommonGameModeTextSprite, NDS_RELOC_SYMBOL_MNCOMMON_GAME_MODE_TEXT },
+    { &llMNCommonDigit0Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT0 },
+    { &llMNCommonDigit1Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT1 },
+    { &llMNCommonDigit2Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT2 },
+    { &llMNCommonDigit3Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT3 },
+    { &llMNCommonDigit4Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT4 },
+    { &llMNCommonDigit5Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT5 },
+    { &llMNCommonDigit6Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT6 },
+    { &llMNCommonDigit7Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT7 },
+    { &llMNCommonDigit8Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT8 },
+    { &llMNCommonDigit9Sprite, NDS_RELOC_SYMBOL_MNCOMMON_DIGIT9 },
+    { &llMNCommonInfinitySprite, NDS_RELOC_SYMBOL_MNCOMMON_INFINITY },
+    { &llMNCommonArrowRSprite, NDS_RELOC_SYMBOL_MNCOMMON_ARROW_R },
+    { &llMNCommonArrowLSprite, NDS_RELOC_SYMBOL_MNCOMMON_ARROW_L },
+    { &llMNCommonDecalPaperSprite, NDS_RELOC_SYMBOL_MNCOMMON_DECAL_PAPER },
+    { &llMNCommonSmashLogoSprite, NDS_RELOC_SYMBOL_MNCOMMON_SMASH_LOGO },
+    { &llMNCommonSmashBrosCollageSprite, NDS_RELOC_SYMBOL_MNCOMMON_SMASH_BROS_COLLAGE },
+};
+
+static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
+    { &llMNVSModeVSStartTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_VS_START_TEXT },
+    { &llMNVSModeRulePeriodTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_RULE_PERIOD_TEXT },
+    { &llMNVSModeTimeTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_TIME_TEXT },
+    { &llMNVSModeStockTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_STOCK_TEXT },
+    { &llMNVSModeTeamTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_TEAM_TEXT },
+    { &llMNVSModeTimePeriodTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_TIME_PERIOD_TEXT },
+    { &llMNVSModeMinTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_MIN_TEXT },
+    { &llMNVSModeStockPeriodTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_STOCK_PERIOD_TEXT },
+    { &llMNVSModeVSOptionsTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_VS_OPTIONS_TEXT },
+    { &llMNVSModeConsoleIconDarkSprite, NDS_RELOC_SYMBOL_MNVSMODE_CONSOLE_ICON_DARK },
+    { &llMNVSModeVSTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_VS_TEXT },
+};
+
 static u32 ndsRelocFileID(const void *file_id)
 {
     return (u32)(uintptr_t)file_id;
@@ -857,7 +937,9 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llMVOpeningPortraitsSet2FileID)) return NDS_RELOC_ASSET_OPENING_PORTRAITS_SET2;
     if (token == ndsRelocFileID(&llMNTitleFileID)) return NDS_RELOC_ASSET_MN_TITLE;
     if (token == ndsRelocFileID(&llMNTitleFireAnimFileID)) return NDS_RELOC_ASSET_MN_TITLE_FIRE_ANIM;
-    return 0;
+    if (token == ndsRelocFileID(&llMNCommonFileID)) return NDS_RELOC_ASSET_MN_COMMON;
+    if (token == ndsRelocFileID(&llMNVSModeFileID)) return NDS_RELOC_ASSET_MN_VS_MODE;
+    return NDS_RELOC_ASSET_INVALID;
 }
 
 static u32 ndsRelocOpeningRoomBitForAsset(u32 file_id)
@@ -2157,6 +2239,28 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
             }
         }
     }
+    if (loaded->asset_id == NDS_RELOC_ASSET_MN_COMMON)
+    {
+        for (i = 0; i < ARRAY_COUNT(sNdsMNCommonSymbols); i++)
+        {
+            if (symbol == sNdsMNCommonSymbols[i].symbol)
+            {
+                *out_offset = sNdsMNCommonSymbols[i].offset;
+                return TRUE;
+            }
+        }
+    }
+    if (loaded->asset_id == NDS_RELOC_ASSET_MN_VS_MODE)
+    {
+        for (i = 0; i < ARRAY_COUNT(sNdsMNVSModeSymbols); i++)
+        {
+            if (symbol == sNdsMNVSModeSymbols[i].symbol)
+            {
+                *out_offset = sNdsMNVSModeSymbols[i].offset;
+                return TRUE;
+            }
+        }
+    }
 
     for (i = 0; i < (sizeof(sNdsRelocSymbolProbes) / sizeof(sNdsRelocSymbolProbes[0])); i++)
     {
@@ -2402,7 +2506,8 @@ static size_t ndsRelocAssetAllocSize(u32 asset_id)
 {
     NDSRelocAssetHeader header;
 
-    if ((asset_id != 0) && (ndsRelocAssetReadHeader(asset_id, &header) != FALSE))
+    if ((asset_id != NDS_RELOC_ASSET_INVALID) &&
+        (ndsRelocAssetReadHeader(asset_id, &header) != FALSE))
     {
         return (size_t)NDS_RELOC_ALIGN(header.data_size);
     }
@@ -2440,7 +2545,7 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
     NDSRelocAssetHeader header;
     NDSRelocLoadedFile *loaded;
 
-    if ((asset_id == 0) || (heap == NULL))
+    if ((asset_id == NDS_RELOC_ASSET_INVALID) || (heap == NULL))
     {
         return heap;
     }
@@ -2509,7 +2614,8 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
         (gSCManagerSceneData.scene_curr == nSCKindOpeningPortraits) ||
         (ndsOpeningIsImportedNameScene(gSCManagerSceneData.scene_curr) !=
          FALSE) ||
-        (gSCManagerSceneData.scene_curr == nSCKindTitle))
+        (gSCManagerSceneData.scene_curr == nSCKindTitle) ||
+        (gSCManagerSceneData.scene_curr == nSCKindVSMode))
     {
         ndsRelocResetLoadedFiles();
     }
@@ -2525,7 +2631,8 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
 
         mask |= bit;
 
-        if ((asset_id != 0) && (ndsRelocAssetReadHeader(asset_id, &header) != FALSE))
+        if ((asset_id != NDS_RELOC_ASSET_INVALID) &&
+            (ndsRelocAssetReadHeader(asset_id, &header) != FALSE))
         {
             header_mask |= bit;
             asset_size = (size_t)NDS_RELOC_ALIGN(header.data_size);

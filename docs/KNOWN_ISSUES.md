@@ -40,8 +40,11 @@
   replacement scene system. `NDS_DEV_SCENE_HARNESS=title` starts from
   `nSCKindTitle` by pre-seeding `dSCManagerDefaultSceneData` before imported
   `scManagerRunLoop` copies it, then runs the bounded imported Title path.
-  `NDS_DEV_SCENE_HARNESS=vs_setup` currently reaches the existing
-  `mnVSModeStartScene` boundary stub only. `NDS_DEV_SCENE_HARNESS=battle_fd`
+  `NDS_DEV_SCENE_HARNESS=vs_setup` now starts from `nSCKindVSMode` with
+  `scene_prev = nSCKindTitle`, runs bounded imported `mnvsmode.c` setup,
+  loads original `MNCommon`/`MNVSMode`, creates the original VS setup
+  GObj/camera/SObj graph, and parks before `mnVSModeMain` input/update
+  transitions and continuous drawing. `NDS_DEV_SCENE_HARNESS=battle_fd`
   is a reserved future slot and deliberately falls back to Title while
   recording a reserved marker; it does not create a fighter, load Final
   Destination, dispatch battle, or import gameplay.
@@ -71,6 +74,10 @@
   Sprite/Bitmap records through the bounded DS SObj preview path. Full title
   input, fire background presentation, animated logo, labels/Press Start,
   slash, logo-fire particles, audio, and continuous title draw remain deferred.
+- `mnVSModeStartScene` now dispatches through imported `mnvsmode.c` for a
+  bounded original VS setup slice only. Full VS Mode controller interaction,
+  rule/value updates, transition to `PlayersVS` / `VSOptions`, audio, and
+  continuous menu drawing remain deferred.
 - `mvopeningroom.c` is imported with an NDS entry slice. Original video/task
   setup, relocation setup/file-list resolution, actor/default-camera,
   Scene 1 camera, close-up overlay camera, wallpaper-camera, and logo-camera

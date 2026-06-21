@@ -50,4 +50,8 @@ Invoke-VerifyScript `
     -Script (Join-Path $PSScriptRoot 'verify-title-boundary.ps1') `
     -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
 
+Invoke-VerifyScript `
+    -Script (Join-Path $PSScriptRoot 'verify-vs-setup-harness.ps1') `
+    -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
+
 Write-Output 'Full verification passed.'

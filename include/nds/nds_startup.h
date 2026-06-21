@@ -89,6 +89,10 @@
 #define NDS_TITLE_ORIGINAL_UPDATE_PASS 0x54495550u
 #define NDS_TITLE_ORIGINAL_LOGO_FIRE_PASS 0x544c4643u
 #define NDS_TITLE_ORIGINAL_FIRE_PASS 0x54464952u
+#define NDS_VS_MODE_ORIGINAL_START_PASS 0x56535354u
+#define NDS_VS_MODE_ORIGINAL_FUNC_START_PASS 0x56534653u
+#define NDS_VS_MODE_ORIGINAL_RELOC_PASS 0x5653524cu
+#define NDS_VS_MODE_ORIGINAL_SETUP_PASS 0x56535355u
 
 #define NDS_OPENING_ROOM_DRAW_BLOCKER_NONE 0u
 #define NDS_OPENING_ROOM_DRAW_BLOCKER_NO_SCENE_DRAW 1u
@@ -794,6 +798,22 @@ extern volatile u32 gNdsTitleOriginalTransitionTics;
 extern volatile u32 gNdsTitleOriginalStartActorProcess;
 extern volatile u32 gNdsTitleOriginalProceedScene;
 extern volatile u32 gNdsTitleOriginalProceedWait;
+extern volatile u32 gNdsVSModeOriginalStartResult;
+extern volatile u32 gNdsVSModeOriginalFuncStartResult;
+extern volatile u32 gNdsVSModeOriginalRelocResult;
+extern volatile u32 gNdsVSModeOriginalSetupResult;
+extern volatile u32 gNdsVSModeOriginalSetupMask;
+extern volatile u32 gNdsVSModeOriginalLoadedFileCount;
+extern volatile u32 gNdsVSModeOriginalGObjCount;
+extern volatile u32 gNdsVSModeOriginalCameraCount;
+extern volatile u32 gNdsVSModeOriginalSObjCount;
+extern volatile u32 gNdsVSModeOriginalMainGObjID;
+extern volatile u32 gNdsVSModeOriginalCursorIndex;
+extern volatile u32 gNdsVSModeOriginalRule;
+extern volatile u32 gNdsVSModeOriginalTime;
+extern volatile u32 gNdsVSModeOriginalStock;
+extern volatile u32 gNdsVSModeOriginalButtonMask;
+extern volatile u32 gNdsVSModeOriginalDeferredMask;
 extern volatile u32 gNdsOpeningRoomGObjCount;
 extern volatile u32 gNdsOpeningRoomCameraCount;
 extern volatile u32 gNdsOpeningRoomDL0Size;

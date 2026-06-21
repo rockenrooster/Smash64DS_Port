@@ -26,7 +26,7 @@ void syAudioThreadMain(void *arg);
 void syAudioStopBGMAll(void);
 void syAudioPlayBGM(s32 player, s32 bgm_id);
 void func_800266A0_272A0(void);
-void func_800269C0_275C0(s32 fgm_id);
+void *func_800269C0_275C0(u16 fgm_id);
 void syAudioSetSettingsUpdated(void);
 sb32 syAudioGetSettingsUpdated(void);
 void syAudioSetFXType(u8 type);

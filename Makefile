@@ -79,7 +79,7 @@ CFILES := main.c nds_platform.c nds_reloc_assets.c nds_renderer.c port_probe.c n
 	battleship_mvopeningsamus.c battleship_mvopeningyoshi.c \
 	battleship_mvopeningkirby.c battleship_mvopeningfox.c \
 	battleship_mvopeningpikachu.c battleship_mntitlefiles.c \
-	battleship_mntitle.c
+	battleship_mntitle.c battleship_mnvsmode.c
 CPPFILES :=
 SFILES := coroutine_arm.s
 
@@ -119,6 +119,10 @@ NDS_TITLE_RELOC_FILES := \
 	reloc_menus/MNTitle \
 	reloc_menus/MNTitleFireAnim
 
+NDS_VS_MODE_RELOC_FILES := \
+	reloc_menus/MNCommon \
+	reloc_menus/MNVSMode
+
 NDS_STARTUP_RELOC_FILES := \
 	reloc_misc_named/N64Logo
 
@@ -128,7 +132,8 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_OPENING_PORTRAITS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_OPENING_MARIO_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_OPENING_ACTION_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
-	$(foreach file,$(NDS_TITLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
+	$(foreach file,$(NDS_TITLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_VS_MODE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
 .PHONY: all clean run $(BUILD)
 

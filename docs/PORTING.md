@@ -4360,3 +4360,43 @@ Verification:
   and `Full verification passed`.
 - `scripts/verify-opening-boundary.ps1` passed with
   `Runtime speed sample (9.3s): frames=504 hostfps=54.30 romfps=60 up=58 dl=0 cv=0 ch=1 present=19 room=420 rdraw=0/0 portraits=0 mario=0 action=0/0 title=0`.
+
+## 2026-06-20: Bounded original VS Mode setup proof
+
+What changed:
+
+- Added `src/import/battleship_mnvsmode.c`, which imports the original
+  BattleShip `mnvsmode.c` translation unit and exposes a bounded DS wrapper for
+  `mnVSModeStartScene` / `mnVSModeFuncStart`.
+- Replaced the old `mnVSModeStartScene` scene-boundary stub. The
+  `NDS_DEV_SCENE_HARNESS=vs_setup` build now enters original VS Mode setup
+  from `nSCKindTitle`.
+- Added the original `MNCommon` and `MNVSMode` O2R resources to the NitroFS
+  manifest and relocation backend. File ID `0` is now valid for `MNCommon`, so
+  the relocation backend uses `0xffffffff` as its invalid asset sentinel.
+- Added narrow compatibility declarations for VS menu enums/macros, menu audio
+  IDs, controller helpers, backup flag constants, and the one missing fighter
+  costume helper.
+- Added maintained diagnostics for VS setup start, file load, setup mask,
+  object/camera/SObj counts, button/value proof, initial rule/time/stock state,
+  and explicitly deferred VS branches.
+- Added `scripts/verify-vs-setup-harness.ps1` and included it in
+  `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- The bounded VS setup path loads original `MNCommon` and `MNVSMode`, creates
+  the original main GObj (`id 0`), default camera, viewports, background,
+  menu-name, VS Start, Rule, Time/Stock, VS Options, value, arrow, and subtitle
+  SObj graph.
+- The taskman seam parks at scene kind `9` before running `mnVSModeMain`
+  controller/input transitions, `PlayersVS` / `VSOptions` scene changes,
+  audio, or continuous `gcDrawAll` menu rendering.
+- `battle_fd` remains reserved only. No fighters, stages, battle gameplay,
+  audio backend, or full renderer work was imported for this step.
+
+Verification:
+
+- `make -j4` passed.
+- `scripts/verify-vs-setup-harness.ps1` passed with
+  `VS setup harness passed: scene=9/1 setup=0x1f files=2 sobj=28 buttons=0x3f`.

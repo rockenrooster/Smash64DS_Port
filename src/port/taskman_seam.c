@@ -210,6 +210,22 @@ void ndsResetStartupDiagnostics(void)
     gNdsTitleOriginalStartActorProcess = 0;
     gNdsTitleOriginalProceedScene = 0;
     gNdsTitleOriginalProceedWait = 0;
+    gNdsVSModeOriginalStartResult = 0;
+    gNdsVSModeOriginalFuncStartResult = 0;
+    gNdsVSModeOriginalRelocResult = 0;
+    gNdsVSModeOriginalSetupResult = 0;
+    gNdsVSModeOriginalSetupMask = 0;
+    gNdsVSModeOriginalLoadedFileCount = 0;
+    gNdsVSModeOriginalGObjCount = 0;
+    gNdsVSModeOriginalCameraCount = 0;
+    gNdsVSModeOriginalSObjCount = 0;
+    gNdsVSModeOriginalMainGObjID = 0;
+    gNdsVSModeOriginalCursorIndex = 0;
+    gNdsVSModeOriginalRule = 0;
+    gNdsVSModeOriginalTime = 0;
+    gNdsVSModeOriginalStock = 0;
+    gNdsVSModeOriginalButtonMask = 0;
+    gNdsVSModeOriginalDeferredMask = 0;
     gNdsOpeningRoomGObjCount = 0;
     gNdsOpeningRoomCameraCount = 0;
     gNdsOpeningRoomDL0Size = 0;
@@ -2771,6 +2787,32 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         ndsMNTitleRunBoundedUpdates(1u);
         ndsTitleRenderPreview();
         gNdsOpeningMovieTitleResult = NDS_OPENING_MOVIE_TITLE_PASS;
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+        osStopThread(NULL);
+        return;
+    }
+
+    if (gSCManagerSceneData.scene_curr == nSCKindVSMode)
+    {
+        gNdsTaskmanContexts = 2;
+        gNdsTaskmanTaskGfxNum = 1;
+        gNdsTaskmanGraphicsHeapSize = 0x8000;
+        gNdsTaskmanRdpKind = 2;
+        gNdsTaskmanRdpBufferSize = 0xC000;
+        gNdsTaskmanSceneUpdateSet =
+            (sSYTaskmanDefaultFunction.scene_update == gcRunAll) ? 1u : 0u;
+        gNdsTaskmanSceneDrawSet =
+            (sSYTaskmanDefaultFunction.scene_draw == gcDrawAll) ? 1u : 0u;
+        gNdsTaskmanLightsSet =
+            (sSYTaskmanDefaultFunction.task_update != NULL) ? 1u : 0u;
+        gNdsTaskmanControllerAutoRead = 1;
+        gNdsTaskmanDLContextsValid = 2;
+        gNdsTaskmanGeneralHeapUsed =
+            (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
+                  (uintptr_t)gSYTaskmanGeneralHeap.start);
+        gNdsTaskmanLoopReached = 1;
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;

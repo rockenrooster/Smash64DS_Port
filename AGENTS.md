@@ -57,6 +57,14 @@ Title boundary without replaying the full opening:
 .\scripts\verify-title-harness.ps1
 ```
 
+Use the direct VS setup harness when the task can start from original
+`mnvsmode.c` setup without replaying Opening Room, the opening movie, or Title
+setup:
+
+```powershell
+.\scripts\verify-vs-setup-harness.ps1
+```
+
 The normal build must remain the natural startup/opening path. Harness builds
 use `NDS_DEV_SCENE_HARNESS=title`, `vs_setup`, or the reserved `battle_fd`
 mode with a separate build target/directory.
@@ -120,16 +128,19 @@ Current short version:
 
 - The ROM boots through original BattleShip startup, bounded Opening Room,
   Opening Portraits, Opening Mario, fighter name-card scenes, the bounded
-  action-scene bridge, and imported bounded Title setup.
+  action-scene bridge, imported bounded Title setup, and direct bounded VS
+  setup from the dev harness.
 - A guarded dev/test harness can start directly at the same imported Title
-  boundary for faster iteration; it does not replace the normal boot path.
+  boundary or bounded VS setup boundary for faster iteration; it does not
+  replace the normal boot path.
 - The current Title slice loads original `MNTitle` and `MNTitleFireAnim`,
   creates original actor/logo-fire/fire/camera/vars boundaries, normalizes the
   30 original fire-frame Sprites, runs one guarded original Title update tick,
   and renders a bounded original Title sprite preview.
 - Full Title input, animated logo, labels/Press Start, slash, logo-fire
-  particles, audio, continuous title draw, fighter/stage-heavy action scenes,
-  and gameplay remain deferred.
+  particles, audio, continuous title draw, full VS Mode input/update
+  transitions, fighter/stage-heavy action scenes, and gameplay remain
+  deferred.
 - `src/port/scene_backend.c` is intentionally a thin include orchestrator over
   DS-owned backend slices. Do not add those slices to `Makefile` `CFILES` until
   a later ABI cleanup introduces explicit narrow shared headers.
@@ -143,6 +154,7 @@ make -j4
 .\scripts\verify-runtime.ps1
 .\scripts\verify-opening-skip.ps1
 .\scripts\verify-title-boundary.ps1
+.\scripts\verify-vs-setup-harness.ps1
 .\scripts\verify-all.ps1
 ```
 

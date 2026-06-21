@@ -169,6 +169,7 @@ void ftParamInitGame(void);
 void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj);
 void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script);
 s32 ftParamGetCostumeCommonID(s32 fkind, s32 color);
+s32 ftParamGetCostumeTeamID(s32 fkind, s32 color);
 void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id);
 
 #endif
