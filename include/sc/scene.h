@@ -97,8 +97,10 @@ enum {
     nLBBackupUnlockEnumCount
 };
 
+#define LBBACKUP_UNLOCK_MASK_INISHIE (1u << nLBBackupUnlockInishie)
+
 enum { nSCBattleGameStatusWait };
-enum { nSCBattleHandicapOff };
+enum { nSCBattleHandicapOff, nSCBattleHandicapOn, nSCBattleHandicapAuto };
 enum { nSCBattleItemSwitchNone, nSCBattleItemSwitchVeryLow,
        nSCBattleItemSwitchLow, nSCBattleItemSwitchMiddle };
 enum {
@@ -120,7 +122,18 @@ enum {
     nGRKindHyrule,
     nGRKindYoster,
     nGRKindPupupu,
-    nGRKindYamabuki
+    nGRKindYamabuki,
+    nGRKindStarterEnd = nGRKindYamabuki,
+    nGRKindInishie,
+    nGRKindUnlockEnd = nGRKindInishie
+};
+
+enum {
+    nSCBattleTeamIDBattleStart,
+    nSCBattleTeamIDRed = nSCBattleTeamIDBattleStart,
+    nSCBattleTeamIDBlue,
+    nSCBattleTeamIDGreen,
+    nSCBattleTeamIDBattleEnd = nSCBattleTeamIDGreen
 };
 
 typedef struct LBBackupVSRecord {

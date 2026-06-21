@@ -42,6 +42,15 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 167, "nitro:/reloc/reloc_menus/MNTitle" },
     { 168, "nitro:/reloc/reloc_menus/MNTitleFireAnim" },
     { 6, "nitro:/reloc/reloc_menus/MNVSMode" },
+    { 0x11, "nitro:/reloc/reloc_menus/MNPlayersCommon" },
+    { 0x12, "nitro:/reloc/reloc_menus/MNPlayersGameModes" },
+    { 0x13, "nitro:/reloc/reloc_menus/MNPlayersPortraits" },
+    { 0x14, "nitro:/reloc/reloc_fighters_common/FTEmblemSprites" },
+    { 0x15, "nitro:/reloc/reloc_menus/MNSelectCommon" },
+    { 0x16, "nitro:/reloc/reloc_menus/MNPlayersSpotlight" },
+    { 0x1a, "nitro:/reloc/reloc_stages/GRWallpaperTrainingBlack" },
+    { 0x1e, "nitro:/reloc/reloc_menus/MNMaps" },
+    { 0x21, "nitro:/reloc/reloc_menus/MNCommonFonts" },
 };
 
 static u16 ndsReadLe16(const u8 *bytes)

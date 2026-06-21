@@ -95,6 +95,18 @@
 #define NDS_VS_MODE_ORIGINAL_SETUP_PASS 0x56535355u
 #define NDS_VS_MODE_START_TRANSITION_PASS 0x56535452u
 #define NDS_VS_MODE_START_TRANSITION_FAIL 0x5653464cu
+#define NDS_PLAYERS_VS_ORIGINAL_START_PASS 0x50565354u
+#define NDS_PLAYERS_VS_ORIGINAL_FUNC_START_PASS 0x50564653u
+#define NDS_PLAYERS_VS_ORIGINAL_RELOC_PASS 0x5056524cu
+#define NDS_PLAYERS_VS_ORIGINAL_SETUP_PASS 0x50565355u
+#define NDS_PLAYERS_VS_READY_TRANSITION_PASS 0x50565452u
+#define NDS_PLAYERS_VS_READY_TRANSITION_FAIL 0x5056464cu
+#define NDS_MAPS_ORIGINAL_START_PASS 0x4d415053u
+#define NDS_MAPS_ORIGINAL_FUNC_START_PASS 0x4d504653u
+#define NDS_MAPS_ORIGINAL_RELOC_PASS 0x4d50524cu
+#define NDS_MAPS_ORIGINAL_SETUP_PASS 0x4d505355u
+#define NDS_MAPS_SELECT_TRANSITION_PASS 0x4d53454cu
+#define NDS_MAPS_SELECT_TRANSITION_FAIL 0x4d53464cu
 
 #define NDS_OPENING_ROOM_DRAW_BLOCKER_NONE 0u
 #define NDS_OPENING_ROOM_DRAW_BLOCKER_NO_SCENE_DRAW 1u
@@ -1160,6 +1172,72 @@ extern volatile u32 gNdsOpeningRoomDLPreviewRendererTextureRenderTileLine;
 extern volatile u32 gNdsOpeningRoomDLPreviewRendererTextureRenderTileFlags;
 extern volatile u32 gNdsOpeningRoomDLPreviewRendererTextureLoadBlockLrs;
 extern volatile u32 gNdsOpeningRoomDLPreviewRendererTextureLoadBlockDxt;
+extern volatile u32 gNdsPlayersVSOriginalStartResult;
+extern volatile u32 gNdsPlayersVSOriginalFuncStartResult;
+extern volatile u32 gNdsPlayersVSOriginalRelocResult;
+extern volatile u32 gNdsPlayersVSOriginalSetupResult;
+extern volatile u32 gNdsPlayersVSOriginalSetupMask;
+extern volatile u32 gNdsPlayersVSOriginalLoadedFileCount;
+extern volatile u32 gNdsPlayersVSOriginalGObjCount;
+extern volatile u32 gNdsPlayersVSOriginalCameraCount;
+extern volatile u32 gNdsPlayersVSOriginalSObjCount;
+extern volatile u32 gNdsPlayersVSOriginalMainGObjID;
+extern volatile u32 gNdsPlayersVSOriginalControllerOrderMask;
+extern volatile u32 gNdsPlayersVSOriginalSlotKindMask;
+extern volatile u32 gNdsPlayersVSOriginalSlotSelectedMask;
+extern volatile u32 gNdsPlayersVSOriginalCursorCount;
+extern volatile u32 gNdsPlayersVSOriginalPuckCount;
+extern volatile u32 gNdsPlayersVSOriginalGateCount;
+extern volatile u32 gNdsPlayersVSOriginalPortraitCount;
+extern volatile u32 gNdsPlayersVSOriginalFigatreeHeapCount;
+extern volatile u32 gNdsPlayersVSOriginalTime;
+extern volatile u32 gNdsPlayersVSOriginalStock;
+extern volatile u32 gNdsPlayersVSOriginalGameRule;
+extern volatile u32 gNdsPlayersVSOriginalIsTeam;
+extern volatile u32 gNdsPlayersVSOriginalIsStageSelect;
+extern volatile u32 gNdsPlayersVSOriginalDeferredMask;
+extern volatile u32 gNdsPlayersVSReadyTransitionResult;
+extern volatile u32 gNdsPlayersVSReadyTransitionMask;
+extern volatile u32 gNdsPlayersVSReadyTransitionUpdateCount;
+extern volatile u32 gNdsPlayersVSReadyTransitionInputMask;
+extern volatile u32 gNdsPlayersVSReadyTransitionScenePrevBefore;
+extern volatile u32 gNdsPlayersVSReadyTransitionSceneCurrBefore;
+extern volatile u32 gNdsPlayersVSReadyTransitionScenePrevFinal;
+extern volatile u32 gNdsPlayersVSReadyTransitionSceneCurrFinal;
+extern volatile u32 gNdsPlayersVSReadyTransitionPlayerCount;
+extern volatile u32 gNdsPlayersVSReadyTransitionCpuCount;
+extern volatile u32 gNdsPlayersVSReadyTransitionP0FKind;
+extern volatile u32 gNdsPlayersVSReadyTransitionP1FKind;
+extern volatile u32 gNdsPlayersVSReadyTransitionStageSelect;
+extern volatile u32 gNdsPlayersVSReadyTransitionTaskmanStatus;
+extern volatile u32 gNdsPlayersVSReadyTransitionCleanupCount;
+extern volatile u32 gNdsMapsOriginalStartResult;
+extern volatile u32 gNdsMapsOriginalFuncStartResult;
+extern volatile u32 gNdsMapsOriginalRelocResult;
+extern volatile u32 gNdsMapsOriginalSetupResult;
+extern volatile u32 gNdsMapsOriginalSetupMask;
+extern volatile u32 gNdsMapsOriginalLoadedFileCount;
+extern volatile u32 gNdsMapsOriginalGObjCount;
+extern volatile u32 gNdsMapsOriginalCameraCount;
+extern volatile u32 gNdsMapsOriginalSObjCount;
+extern volatile u32 gNdsMapsOriginalMainGObjID;
+extern volatile u32 gNdsMapsOriginalCursorSlot;
+extern volatile u32 gNdsMapsOriginalGroundKind;
+extern volatile u32 gNdsMapsOriginalIsTrainingMode;
+extern volatile u32 gNdsMapsOriginalPreviewDeferred;
+extern volatile u32 gNdsMapsOriginalDeferredMask;
+extern volatile u32 gNdsMapsSelectTransitionResult;
+extern volatile u32 gNdsMapsSelectTransitionMask;
+extern volatile u32 gNdsMapsSelectTransitionUpdateCount;
+extern volatile u32 gNdsMapsSelectTransitionInputMask;
+extern volatile u32 gNdsMapsSelectTransitionScenePrevBefore;
+extern volatile u32 gNdsMapsSelectTransitionSceneCurrBefore;
+extern volatile u32 gNdsMapsSelectTransitionScenePrevFinal;
+extern volatile u32 gNdsMapsSelectTransitionSceneCurrFinal;
+extern volatile u32 gNdsMapsSelectTransitionSelectedSlot;
+extern volatile u32 gNdsMapsSelectTransitionSelectedGKind;
+extern volatile u32 gNdsMapsSelectTransitionTaskmanStatus;
+extern volatile u32 gNdsMapsSelectTransitionCleanupCount;
 extern volatile u32 gNdsOpeningRoomMaterialDLProbeResult;
 extern volatile u32 gNdsOpeningRoomMaterialDLProbeBlocker;
 extern volatile u32 gNdsOpeningRoomMaterialDLProbeFirstDL;

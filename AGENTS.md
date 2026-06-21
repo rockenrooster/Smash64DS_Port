@@ -66,16 +66,38 @@ setup:
 ```
 
 Use the direct VS Start transition harness when the task needs to prove the
-original `mnVSModeMain` start-button branch into the existing PlayersVS
-boundary without importing character select:
+original `mnVSModeMain` start-button branch into the bounded PlayersVS
+boundary:
 
 ```powershell
 .\scripts\verify-vs-start-transition-harness.ps1
 ```
 
+Use the direct PlayersVS setup harness when the task can start from original
+`mnplayersvs.c` setup:
+
+```powershell
+.\scripts\verify-players-vs-setup-harness.ps1
+```
+
+Use the direct Maps setup harness when the task can start from original
+`mnmaps.c` setup:
+
+```powershell
+.\scripts\verify-maps-setup-harness.ps1
+```
+
+Use the full menu-chain harness when the task needs to prove the bounded
+VS Mode -> PlayersVS -> Maps -> VSBattle boundary:
+
+```powershell
+.\scripts\verify-menu-chain-vsbattle-harness.ps1
+```
+
 The normal build must remain the natural startup/opening path. Harness builds
-use `NDS_DEV_SCENE_HARNESS=title`, `vs_setup`, `vs_start_transition`, or the
-reserved `battle_fd` mode with a separate build target/directory.
+use `NDS_DEV_SCENE_HARNESS=title`, `vs_setup`, `vs_start_transition`,
+`players_setup`, `maps_setup`, `menu_chain_vsbattle`, or the reserved
+`battle_fd` mode with a separate build target/directory.
 
 Use the visible melonDS HUD when debugging runtime progress by eye:
 
@@ -136,19 +158,23 @@ Current short version:
 
 - The ROM boots through original BattleShip startup, bounded Opening Room,
   Opening Portraits, Opening Mario, fighter name-card scenes, the bounded
-  action-scene bridge, imported bounded Title setup, and direct bounded VS
-  setup/start transition from the dev harness.
+  action-scene bridge, imported bounded Title setup, bounded VS setup/start
+  transition, bounded PlayersVS setup, bounded Maps setup, and a guarded
+  VS Mode -> PlayersVS -> Maps -> VSBattle boundary proof.
 - A guarded dev/test harness can start directly at the same imported Title
-  boundary, bounded VS setup boundary, or bounded original VS Start transition
-  boundary for faster iteration; it does not replace the normal boot path.
+  boundary, bounded VS setup boundary, bounded original VS Start transition
+  boundary, bounded PlayersVS boundary, bounded Maps boundary, or full menu
+  chain boundary for faster iteration; it does not replace the normal boot
+  path.
 - The current Title slice loads original `MNTitle` and `MNTitleFireAnim`,
   creates original actor/logo-fire/fire/camera/vars boundaries, normalizes the
   30 original fire-frame Sprites, runs one guarded original Title update tick,
   and renders a bounded original Title sprite preview.
 - Full Title input, animated logo, labels/Press Start, slash, logo-fire
   particles, audio, continuous title draw, full VS menu navigation/options,
-  PlayersVS/character-select import, fighter/stage-heavy action scenes, and
-  gameplay remain deferred.
+  full interactive PlayersVS selection, Maps preview model rendering,
+  fighter/stage-heavy action scenes, VSBattle import, and gameplay remain
+  deferred.
 - `src/port/scene_backend.c` is intentionally a thin include orchestrator over
   DS-owned backend slices. Do not add those slices to `Makefile` `CFILES` until
   a later ABI cleanup introduces explicit narrow shared headers.
@@ -164,6 +190,9 @@ make -j4
 .\scripts\verify-title-boundary.ps1
 .\scripts\verify-vs-setup-harness.ps1
 .\scripts\verify-vs-start-transition-harness.ps1
+.\scripts\verify-players-vs-setup-harness.ps1
+.\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-menu-chain-vsbattle-harness.ps1
 .\scripts\verify-all.ps1
 ```
 

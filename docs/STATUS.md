@@ -7,15 +7,16 @@ for planning and handoff.
 ## Current Boundary
 
 The ROM boots through the original BattleShip startup path, runs the bounded
-Opening Room and opening movie sequence, and reaches the imported Title scene
-boundary. The current Title slice loads original `MNTitle` and
+Opening Room and opening movie sequence, reaches the imported Title scene
+boundary, and can now prove the bounded VS menu chain to the existing VSBattle
+scene boundary stub. The current Title slice loads original `MNTitle` and
 `MNTitleFireAnim` O2R files, creates the original Title actor pair, logo-fire
 GObj/display boundary, fire GObj/SObj/process/display boundary, four cameras,
 and initial Title vars. It normalizes the 30 original Title fire frame Sprites,
 runs one guarded original Title update tick on the natural movie path, and
 renders a bounded original Title sprite preview.
 
-This is still a bounded porting boundary, not full Title/menu gameplay.
+This is still a bounded porting boundary, not full Title/menu/gameplay.
 
 A guarded NDS dev/test scene harness now exists for faster source-boundary
 iteration. Normal builds still follow the natural startup/opening/movie path.
@@ -34,17 +35,33 @@ original `mnVSModeMain` through a bounded no-input gate, injects a synthetic
 A-button tap on the original VS Start cursor, records original
 `mnVSModeSaveSettings`, observes `scene_prev = nSCKindVSMode` and
 `scene_curr = nSCKindPlayersVS`, reaches the original load-scene request, and
-then parks at the existing PlayersVS scene stub. `mnplayersvs.c` is not
-imported.
+then parks at the bounded imported PlayersVS setup boundary.
+The `players_setup` harness imports `mnplayersvs.c` through
+`src/import/battleship_mnplayersvs.c`, loads the seven original PlayersVS menu
+files, creates the original main GObj/default camera/camera set/menu object
+graph, initializes original PlayersVS vars and slot state, then parks before
+continuous character-select input/drawing.
+The `maps_setup` harness imports `mnmaps.c` through
+`src/import/battleship_mnmaps.c`, loads the five original Maps files, creates
+the original main GObj/default camera/camera set/stage-select SObj graph,
+starts from the seeded Pupupu/Dream Land cursor, and explicitly defers the
+stage preview model path.
+The `menu_chain_vsbattle` harness starts at VS Mode, runs the original VS Start
+transition, enters bounded PlayersVS setup, injects a deterministic two-player
+ready/start state through original PlayersVS update logic, enters bounded Maps
+setup, injects a synthetic A-button stage select on Pupupu, observes original
+Maps scene-data saving, reaches `scene_prev = nSCKindMaps` and
+`scene_curr = nSCKindVSBattle`, and parks at the existing VSBattle scene
+boundary stub.
 The future `battle_fd` target is reserved only; it records a reserved marker
 and falls back to Title until the original one-fighter/Final-Destination battle
 slice is intentionally imported.
 
 ## Next Boundary
 
-Use the VS Start transition proof to identify the next narrow original
-PlayersVS boundary. Do not import fighters, stages, battle gameplay, audio, or
-full renderer systems until that exact boundary requires them.
+Use the new VSBattle boundary proof to identify the first narrow original
+`scvsbattle.c` setup boundary. Do not import fighters, stages, battle gameplay,
+audio, or full renderer systems until that exact boundary requires them.
 
 ## Known Blockers
 
@@ -52,8 +69,15 @@ full renderer systems until that exact boundary requires them.
   particles, audio, and continuous title drawing remain deferred.
 - Full VS Mode navigation/rule editing/options transition, audio, and
   continuous menu drawing remain deferred.
-- PlayersVS is still only the existing scene stub/boundary; character select is
-  not imported.
+- PlayersVS setup is imported, but full interactive cursor/puck selection,
+  fighter actor runtime/rendering, and continuous character-select drawing
+  remain deferred. The ready transition uses deterministic two-player state
+  injection to prove original proceed behavior.
+- Maps setup is imported, but the stage preview model path is explicitly
+  deferred. The A-select transition is bounded to stage-data saving and the
+  VSBattle scene request.
+- VSBattle remains the final scene-boundary stub. No battle, fighter, stage,
+  item, or audio gameplay path is imported yet.
 - Fighter/stage-heavy opening action scenes are still bounded bridge stubs in
   original order.
 - Opening Room DObj rendering is still a bounded preview path, not a general
@@ -77,6 +101,9 @@ make -j4
 .\scripts\verify-title-harness.ps1
 .\scripts\verify-vs-setup-harness.ps1
 .\scripts\verify-vs-start-transition-harness.ps1
+.\scripts\verify-players-vs-setup-harness.ps1
+.\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-menu-chain-vsbattle-harness.ps1
 ```
 
 For a clean regression after header, Makefile, imported source, or linker-visible
@@ -110,19 +137,34 @@ make TARGET=smash64ds-vs-start BUILD=build-vs-start-harness NDS_DEV_SCENE_HARNES
 .\scripts\verify-vs-start-transition-harness.ps1
 ```
 
+Build the direct PlayersVS, Maps, and menu-chain harness ROMs without replacing
+the normal output:
+
+```powershell
+make TARGET=smash64ds-players-vs BUILD=build-players-vs-setup-harness NDS_DEV_SCENE_HARNESS=players_setup -j4
+.\scripts\verify-players-vs-setup-harness.ps1
+make TARGET=smash64ds-maps BUILD=build-maps-setup-harness NDS_DEV_SCENE_HARNESS=maps_setup -j4
+.\scripts\verify-maps-setup-harness.ps1
+make TARGET=smash64ds-menu-chain BUILD=build-menu-chain-vsbattle-harness NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle -j4
+.\scripts\verify-menu-chain-vsbattle-harness.ps1
+```
+
 ## Latest Proof
 
-Latest verified state after the VS Start transition harness import:
+Latest verified state after the PlayersVS + Maps menu-chain import:
 
 ```text
 make -j4
 scripts/verify-vs-setup-harness.ps1 -> VS setup harness passed: scene=9/1 setup=0x1f files=2 sobj=28 buttons=0x3f
 scripts/verify-vs-start-transition-harness.ps1 -> VS Start transition harness passed: scene=16/9 trans=0x56535452 mask=0xff saved=1/3/2
+scripts/verify-players-vs-setup-harness.ps1 -> PlayersVS setup harness passed: files=7 mask=0xff sobj=65 slots=2/4/4
+scripts/verify-maps-setup-harness.ps1 -> Maps setup harness passed: files=5 mask=0xff sobj=36 slot=6 gkind=6
+scripts/verify-menu-chain-vsbattle-harness.ps1 -> Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, final=22/21
 scripts/verify-runtime.ps1 -> Runtime verification passed (401 frames, fps=60/up=0/dl=60, cv=0/ch=32, verifyfps=2.34)
 scripts/verify-opening-boundary.ps1 -> frames=504 hostfps=54.30 room=420
 scripts/verify-opening-skip.ps1 -> Opening Room skip verification passed (tick 10 -> Title)
 scripts/verify-title-boundary.ps1 -> frames=3292 hostfps=40.52 room=1320 action=9/324 title=0x54494457
-scripts/verify-all.ps1 -> Full verification passed; speed sample frames=3299 hostfps=40.47 title=0x54494457; VS Start scene=16/9
+scripts/verify-all.ps1 -> Full verification passed; speed sample frames=3283 hostfps=40.47 title=0x54494457; VS Start scene=16/9; PlayersVS files=7; Maps slot=6; menu chain final=22/21
 scripts/verify-title-harness.ps1 -> Title harness passed: scene=1/46 room=0 title=0x54494457
 ```
 

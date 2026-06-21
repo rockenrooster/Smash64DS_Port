@@ -90,6 +90,8 @@ typedef union {
 #define G_RM_AA_ZB_XLU_SURF2 0u
 #define G_TP_PERSP 0u
 #define G_ZS_PIXEL 0u
+#define G_TX_WRAP 0u
+#define G_CC_PRIMITIVE 0u
 
 /* Segment base register indexes / move-word targets used by the task manager's
  * segment setup (gSPSegment). The DS has no segment registers, but the macros
@@ -176,6 +178,11 @@ typedef union {
     (void)(m); (void)(l); (void)(r); (void)(g); (void)(b); (void)(a); \
 } while (0)
 
+#define gDPSetEnvColor(pkt, r, g, b, a) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(r); (void)(g); (void)(b); (void)(a); \
+} while (0)
+
 #define gDPSetCombineLERP(pkt, a0, b0, c0, d0, Aa0, Ab0, Ac0, Ad0, \
                           a1, b1, c1, d1, Aa1, Ab1, Ac1, Ad1) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
@@ -183,6 +190,11 @@ typedef union {
     (void)(Aa0); (void)(Ab0); (void)(Ac0); (void)(Ad0); \
     (void)(a1); (void)(b1); (void)(c1); (void)(d1); \
     (void)(Aa1); (void)(Ab1); (void)(Ac1); (void)(Ad1); \
+} while (0)
+
+#define gDPSetCombineMode(pkt, mode1, mode2) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(mode1); (void)(mode2); \
 } while (0)
 
 #define gDPSetRenderMode(pkt, mode1, mode2) do { \

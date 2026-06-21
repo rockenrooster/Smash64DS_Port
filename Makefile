@@ -48,8 +48,14 @@ else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_fd)
 CFLAGS += -DNDS_DEV_SCENE_HARNESS=3
 else ifeq ($(NDS_DEV_SCENE_HARNESS),vs_start_transition)
 CFLAGS += -DNDS_DEV_SCENE_HARNESS=4
+else ifeq ($(NDS_DEV_SCENE_HARNESS),players_setup)
+CFLAGS += -DNDS_DEV_SCENE_HARNESS=5
+else ifeq ($(NDS_DEV_SCENE_HARNESS),maps_setup)
+CFLAGS += -DNDS_DEV_SCENE_HARNESS=6
+else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_vsbattle)
+CFLAGS += -DNDS_DEV_SCENE_HARNESS=7
 else
-$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal, title, vs_setup, battle_fd, or vs_start_transition)
+$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal, title, vs_setup, battle_fd, vs_start_transition, players_setup, maps_setup, or menu_chain_vsbattle)
 endif
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
@@ -81,7 +87,8 @@ CFILES := main.c nds_platform.c nds_reloc_assets.c nds_renderer.c port_probe.c n
 	battleship_mvopeningsamus.c battleship_mvopeningyoshi.c \
 	battleship_mvopeningkirby.c battleship_mvopeningfox.c \
 	battleship_mvopeningpikachu.c battleship_mntitlefiles.c \
-	battleship_mntitle.c battleship_mnvsmode.c
+	battleship_mntitle.c battleship_mnvsmode.c \
+	battleship_mnplayersvs.c battleship_mnmaps.c
 CPPFILES :=
 SFILES := coroutine_arm.s
 
@@ -125,6 +132,22 @@ NDS_VS_MODE_RELOC_FILES := \
 	reloc_menus/MNCommon \
 	reloc_menus/MNVSMode
 
+NDS_PLAYERS_VS_RELOC_FILES := \
+	reloc_menus/MNPlayersCommon \
+	reloc_menus/MNCommon \
+	reloc_fighters_common/FTEmblemSprites \
+	reloc_menus/MNSelectCommon \
+	reloc_menus/MNPlayersGameModes \
+	reloc_menus/MNPlayersPortraits \
+	reloc_menus/MNPlayersSpotlight
+
+NDS_MAPS_RELOC_FILES := \
+	reloc_fighters_common/FTEmblemSprites \
+	reloc_menus/MNSelectCommon \
+	reloc_menus/MNMaps \
+	reloc_menus/MNCommonFonts \
+	reloc_stages/GRWallpaperTrainingBlack
+
 NDS_STARTUP_RELOC_FILES := \
 	reloc_misc_named/N64Logo
 
@@ -135,7 +158,9 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_OPENING_MARIO_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_OPENING_ACTION_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_TITLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
-	$(foreach file,$(NDS_VS_MODE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
+	$(foreach file,$(NDS_VS_MODE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_PLAYERS_VS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_MAPS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
 .PHONY: all clean run $(BUILD)
 

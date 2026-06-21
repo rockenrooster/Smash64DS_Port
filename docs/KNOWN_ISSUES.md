@@ -46,10 +46,20 @@
   GObj/camera/SObj graph, and parks before `mnVSModeMain` input/update
   transitions and continuous drawing. `NDS_DEV_SCENE_HARNESS=vs_start_transition`
   runs the same setup, proves the original VS Start -> PlayersVS state change,
-  and parks at the existing PlayersVS stub. `NDS_DEV_SCENE_HARNESS=battle_fd`
-  is a reserved future slot and deliberately falls back to Title while
-  recording a reserved marker; it does not create a fighter, load Final
-  Destination, dispatch battle, or import gameplay.
+  and parks at the bounded imported PlayersVS setup boundary.
+  `NDS_DEV_SCENE_HARNESS=players_setup` imports bounded original
+  `mnplayersvs.c` setup but does not run full interactive character-select
+  navigation, fighter actor runtime, fighter rendering, audio, or continuous
+  drawing. The PlayersVS ready/start transition proof uses deterministic
+  two-player ready-state injection to prove original proceed behavior.
+  `NDS_DEV_SCENE_HARNESS=maps_setup` imports bounded original `mnmaps.c` setup
+  but explicitly defers the stage preview model path. The Maps A-select proof
+  is bounded to original stage-data saving and the scene request to VSBattle.
+  `NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle` proves VS Mode -> PlayersVS ->
+  Maps -> VSBattle, but `scVSBattleStartScene` remains the final boundary stub.
+  `NDS_DEV_SCENE_HARNESS=battle_fd` is a reserved future slot and deliberately
+  falls back to Title while recording a reserved marker; it does not create a
+  fighter, load Final Destination, dispatch battle, or import gameplay.
 - `syTaskmanRunTask` runs one bounded startup draw pass at update `17`, then
   55 bounded original startup updates through the Opening Room request and
   original load-scene break/eject path, mirrors the taskman cleanup tail, and
@@ -80,7 +90,17 @@
   bounded original VS setup slice, and the VS Start -> PlayersVS transition is
   proven through original `mnVSModeMain`. Full VS Mode navigation, rule/value
   editing, `VSOptions`, audio, and continuous menu drawing remain deferred.
-  PlayersVS is still only a stub boundary; character select is not imported.
+- `mnPlayersVSStartScene` now dispatches through imported `mnplayersvs.c` for a
+  bounded original PlayersVS setup slice, and the ready/start transition to
+  Maps is proven through original `mnPlayersVSFuncRun` using deterministic
+  two-player selected state. Full interactive cursor/puck character selection,
+  fighter object runtime/rendering, character-select audio, and continuous draw
+  remain deferred.
+- `mnMapsStartScene` now dispatches through imported `mnmaps.c` for a bounded
+  original Maps setup slice, and the A-select transition to VSBattle is proven
+  through original `mnMapsFuncRun`. The stage preview model path is explicitly
+  deferred, and VSBattle remains a scene-boundary stub with no battle, fighter,
+  stage, item, audio, or gameplay import.
 - `mvopeningroom.c` is imported with an NDS entry slice. Original video/task
   setup, relocation setup/file-list resolution, actor/default-camera,
   Scene 1 camera, close-up overlay camera, wallpaper-camera, and logo-camera
@@ -249,6 +269,12 @@ differences:
 - maybe-uninitialized warning in imported `sys/interp.c`
 - array-bounds warning in imported `sys/taskman.c` matching decomp-era globals
 - unused parameter in `mnStartupActorFuncRun`
+- imported `mnplayersvs.c` / `mnmaps.c` pointer-to-int reloc-symbol warnings
+  from original local `intptr_t` offset tables crossing the project-owned
+  `lbRelocGetFileData` shim
+- imported menu matching-placeholder warnings such as unused variables,
+  unused parameters, maybe-uninitialized locals, and control reaching end of
+  non-void helper functions in decomp source
 
 Do not silence warnings globally unless they block real signal. Prefer fixing or
 isolating the compatibility type that causes the warning.

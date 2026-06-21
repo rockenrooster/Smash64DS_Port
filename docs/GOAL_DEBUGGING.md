@@ -40,6 +40,9 @@ Use melonDS for automated pass/fail verification:
 .\scripts\verify-title-boundary.ps1
 .\scripts\verify-vs-setup-harness.ps1
 .\scripts\verify-vs-start-transition-harness.ps1
+.\scripts\verify-players-vs-setup-harness.ps1
+.\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-menu-chain-vsbattle-harness.ps1
 .\scripts\verify-all.ps1
 ```
 
@@ -58,13 +61,17 @@ preview cadence, renderer cost, or title-boundary timing:
 
 Use the dev/test scene harness when the next task can start at a proven
 original-code boundary instead of replaying the full opening. The maintained
-harness targets are direct Title entry, bounded VS setup from Title, and
-bounded VS Start to PlayersVS transition from Title:
+harness targets are direct Title entry, bounded VS setup from Title, bounded
+VS Start to PlayersVS transition from Title, direct PlayersVS setup, direct
+Maps setup, and the guarded VS Mode -> PlayersVS -> Maps -> VSBattle chain:
 
 ```powershell
 .\scripts\verify-title-harness.ps1
 .\scripts\verify-vs-setup-harness.ps1
 .\scripts\verify-vs-start-transition-harness.ps1
+.\scripts\verify-players-vs-setup-harness.ps1
+.\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-menu-chain-vsbattle-harness.ps1
 ```
 
 That verifier builds `smash64ds-title.nds` from
@@ -80,7 +87,20 @@ The VS Start transition verifier builds `smash64ds-vs-start.nds` from
 `BUILD=build-vs-start-harness NDS_DEV_SCENE_HARNESS=vs_start_transition`,
 starts from that same original VS setup boundary, advances bounded original
 `mnVSModeMain`, injects A on VS Start, proves original settings save and
-load-scene request, then parks at the existing PlayersVS boundary stub.
+load-scene request, then parks at the bounded imported PlayersVS boundary.
+The PlayersVS setup verifier builds `smash64ds-players-vs.nds` from
+`BUILD=build-players-vs-setup-harness NDS_DEV_SCENE_HARNESS=players_setup`,
+starts at `nSCKindPlayersVS` from `nSCKindVSMode`, and checks the bounded
+imported `mnPlayersVSStartScene` setup markers.
+The Maps setup verifier builds `smash64ds-maps.nds` from
+`BUILD=build-maps-setup-harness NDS_DEV_SCENE_HARNESS=maps_setup`, starts at
+`nSCKindMaps` from `nSCKindPlayersVS`, and checks the bounded imported
+`mnMapsStartScene` setup markers with the seeded Pupupu cursor.
+The menu-chain verifier builds `smash64ds-menu-chain.nds` from
+`BUILD=build-menu-chain-vsbattle-harness
+NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle`, proves original VS Start ->
+PlayersVS, bounded PlayersVS ready/start -> Maps, bounded Maps A-select ->
+VSBattle, and parks at the existing VSBattle boundary stub.
 
 The shared verifier helpers live in:
 

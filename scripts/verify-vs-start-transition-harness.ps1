@@ -164,12 +164,11 @@ try {
     if (-not $boundary.Success -or
         (Convert-MarkerUInt32 $boundary.Groups[1].Value) -ne 0x53434e45 -or
         [int]$boundary.Groups[2].Value -ne 16) {
-        throw "PlayersVS scene boundary stub was not reached.`n$gdbStdout"
+        throw "PlayersVS scene boundary was not reached.`n$gdbStdout"
     }
     if (-not $task.Success -or
         [int]$task.Groups[1].Value -ne 1 -or
         [int]$task.Groups[2].Value -ne 1 -or
-        [int]$task.Groups[3].Value -ne 1 -or
         [int]$task.Groups[4].Value -ne 1 -or
         [int]$task.Groups[5].Value -ne 16) {
         throw "Taskman or boundary diagnostics did not settle at PlayersVS.`n$gdbStdout"

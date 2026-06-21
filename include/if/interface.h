@@ -15,6 +15,8 @@ typedef struct LBGenerator {
     DObj *dobj;
 } LBGenerator;
 
+extern u8 dIFCommonPlayerTeamColorIDs[];
+
 void efParticleInitAll(void);
 s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
                             void *texture_lo, void *texture_hi);

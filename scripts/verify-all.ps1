@@ -66,4 +66,16 @@ Invoke-VerifyScript `
     -Script (Join-Path $PSScriptRoot 'verify-vs-start-transition-harness.ps1') `
     -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
 
+Invoke-VerifyScript `
+    -Script (Join-Path $PSScriptRoot 'verify-players-vs-setup-harness.ps1') `
+    -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
+
+Invoke-VerifyScript `
+    -Script (Join-Path $PSScriptRoot 'verify-maps-setup-harness.ps1') `
+    -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
+
+Invoke-VerifyScript `
+    -Script (Join-Path $PSScriptRoot 'verify-menu-chain-vsbattle-harness.ps1') `
+    -Arguments @('-MelonDS', $MelonDS, '-Gdb', $Gdb)
+
 Write-Output 'Full verification passed.'

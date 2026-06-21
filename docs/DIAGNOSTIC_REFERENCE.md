@@ -56,6 +56,9 @@ With `emulators/melonds/melonDS.exe` in the workspace:
 .\scripts\verify-title-harness.ps1
 .\scripts\verify-vs-setup-harness.ps1
 .\scripts\verify-vs-start-transition-harness.ps1
+.\scripts\verify-players-vs-setup-harness.ps1
+.\scripts\verify-maps-setup-harness.ps1
+.\scripts\verify-menu-chain-vsbattle-harness.ps1
 .\scripts\verify-all.ps1
 ```
 
@@ -65,9 +68,12 @@ gate, `verify-title-boundary.ps1` for the natural movie-to-Title speed gate,
 Opening Room/movie replay, `verify-vs-setup-harness.ps1` for the direct
 bounded imported VS Mode setup proof from Title,
 `verify-vs-start-transition-harness.ps1` for the bounded original VS Start to
-PlayersVS transition proof, and `verify-all.ps1` for the maintained full
-regression chain. The shared PowerShell helpers live in `scripts/lib/melonds.ps1`
-and `scripts/lib/gdb-markers.ps1`.
+PlayersVS transition proof, `verify-players-vs-setup-harness.ps1` for bounded
+imported PlayersVS setup, `verify-maps-setup-harness.ps1` for bounded imported
+Maps setup, `verify-menu-chain-vsbattle-harness.ps1` for the guarded VS Mode ->
+PlayersVS -> Maps -> VSBattle proof, and `verify-all.ps1` for the maintained
+full regression chain. The shared PowerShell helpers live in
+`scripts/lib/melonds.ps1` and `scripts/lib/gdb-markers.ps1`.
 
 The script:
 
@@ -106,8 +112,25 @@ BUILD=build-vs-start-harness NDS_DEV_SCENE_HARNESS=vs_start_transition`,
 starts from the same original `mnvsmode.c` setup boundary, advances bounded
 original `mnVSModeMain`, injects a synthetic A tap through the original
 controller globals, proves original `mnVSModeSaveSettings` and
-`syTaskmanSetLoadScene` ran, and verifies the existing PlayersVS scene-boundary
-stub was reached as `scene_curr/scene_prev = 16/9`.
+`syTaskmanSetLoadScene` ran, and verifies the bounded imported PlayersVS
+boundary was reached as `scene_curr/scene_prev = 16/9`.
+
+`verify-players-vs-setup-harness.ps1` builds
+`TARGET=smash64ds-players-vs BUILD=build-players-vs-setup-harness
+NDS_DEV_SCENE_HARNESS=players_setup`, starts from `nSCKindPlayersVS` with
+`scene_prev = nSCKindVSMode`, verifies Opening Room/Title/VS transition work
+did not replay, and checks the bounded imported PlayersVS setup markers.
+
+`verify-maps-setup-harness.ps1` builds `TARGET=smash64ds-maps
+BUILD=build-maps-setup-harness NDS_DEV_SCENE_HARNESS=maps_setup`, starts from
+`nSCKindMaps` with `scene_prev = nSCKindPlayersVS`, verifies the seeded
+Pupupu/Dream Land cursor, and checks the bounded imported Maps setup markers.
+
+`verify-menu-chain-vsbattle-harness.ps1` builds
+`TARGET=smash64ds-menu-chain BUILD=build-menu-chain-vsbattle-harness
+NDS_DEV_SCENE_HARNESS=menu_chain_vsbattle`, proves original VS Start ->
+PlayersVS, bounded PlayersVS ready/start -> Maps, bounded Maps A-select ->
+VSBattle, and verifies final `scene_curr/scene_prev = 22/21`.
 
 ## Visual melonDS Debugging
 
@@ -333,13 +356,16 @@ Opening movie / Opening Portraits:
   `0x48525356` (`HRSV`) until a real battle boundary exists.
 - `gNdsSceneHarnessMode`: build-time harness mode: `0` normal, `1` direct
   Title, `2` bounded VS setup from Title, `3` reserved battle/Final-Destination
-  slot, `4` bounded VS Start to PlayersVS transition from Title.
+  slot, `4` bounded VS Start to PlayersVS transition from Title, `5` direct
+  PlayersVS setup, `6` direct Maps setup, and `7` guarded VS Mode -> PlayersVS
+  -> Maps -> VSBattle chain.
 - `gNdsSceneHarnessSceneCurr` / `ScenePrev`: default scene pair preseeded
   before imported `scManagerRunLoop` copies it. Direct Title expects `1/46`
   (`nSCKindTitle` from `nSCKindOpeningNewcomers`).
-- `gNdsSceneHarnessReservedMask`: `0` for the maintained Title, VS setup, and
-  VS Start transition harnesses. The reserved battle slot sets bit `0` and
-  falls back to Title instead of dispatching fighters/stages.
+- `gNdsSceneHarnessReservedMask`: `0` for the maintained Title, VS setup,
+  VS Start transition, PlayersVS, Maps, and menu-chain harnesses. The reserved
+  battle slot sets bit `0` and falls back to Title instead of dispatching
+  fighters/stages.
 - `gNdsTitleOriginalStartResult` / `FuncStartResult`: imported
   `mntitle.c` bounded start markers, expected `0x54495354` and `0x54494653`.
 - `gNdsTitleOriginalSetupMask`: current bounded Title setup coverage,
@@ -441,6 +467,70 @@ Opening movie / Opening Portraits:
 - `gNdsVSModeStartTransitionCleanupCount`: expected `1`, proving the bounded
   transition probe performed one object cleanup before returning to the scene
   manager.
+- `gNdsPlayersVSOriginalStartResult` / `FuncStartResult`: imported
+  `mnplayersvs.c` bounded start markers, expected `0x50565354` (`PVST`) and
+  `0x50564653` (`PVFS`).
+- `gNdsPlayersVSOriginalRelocResult`: original PlayersVS file-list load marker,
+  expected `0x5056524C` (`PVRL`) after seven menu files load.
+- `gNdsPlayersVSOriginalSetupResult`: bounded original PlayersVS setup marker,
+  expected `0x50565355` (`PVSU`).
+- `gNdsPlayersVSOriginalSetupMask`: expected `0xFF`. It covers reloc/file
+  load, main GObj, default camera, controller-order/vars setup, fighter-manager
+  compatibility calls, figatree heap allocation, camera/UI object graph setup,
+  and light-parameter setup.
+- `gNdsPlayersVSOriginalLoadedFileCount`: expected `7`.
+- `gNdsPlayersVSOriginalGObjCount` / `CameraCount` / `SObjCount`: bounded
+  PlayersVS object proof; current verifier proof is `sobj=65`.
+- `gNdsPlayersVSOriginalControllerOrderMask`,
+  `SlotKindMask`, `SlotSelectedMask`, `CursorCount`, `PuckCount`,
+  `GateCount`, `PortraitCount`, and `FigatreeHeapCount`: setup-state evidence
+  sampled after original PlayersVS init and object creation.
+- `gNdsPlayersVSOriginalTime` / `Stock` / `GameRule` / `IsTeam` /
+  `IsStageSelect`: expected `3/2/time-rule/0/1` for the seeded VS defaults.
+- `gNdsPlayersVSReadyTransitionResult`: bounded original PlayersVS ready/start
+  marker. Expected pass is `0x50565452` (`PVTR`); fail marker is
+  `0x5056464C` (`PVFL`).
+- `gNdsPlayersVSReadyTransitionMask`: expected `0xFF`. It proves setup was
+  complete, deterministic two-player selected state was seeded, original
+  `mnPlayersVSFuncRun` reached the input-ready/proceed window, synthetic Start
+  was injected as `0x1000`, original scene state changed PlayersVS -> Maps,
+  the original load-scene request was observed, and bounded cleanup ran.
+- `gNdsPlayersVSReadyTransitionScenePrevBefore` /
+  `SceneCurrBefore` / `ScenePrevFinal` / `SceneCurrFinal`: expected
+  `9/16 -> 16/21` in the menu-chain harness.
+- `gNdsPlayersVSReadyTransitionPlayerCount` /
+  `CpuCount` / `P0FKind` / `P1FKind` / `StageSelect`: expected at least two
+  players, zero CPUs, deterministic Mario/Fox player seeds, and stage select
+  enabled for the bounded proof.
+- `gNdsMapsOriginalStartResult` / `FuncStartResult`: imported `mnmaps.c`
+  bounded start markers, expected `0x4D415053` (`MAPS`) and `0x4D504653`
+  (`MPFS`).
+- `gNdsMapsOriginalRelocResult`: original Maps file-list load marker, expected
+  `0x4D50524C` (`MPRL`) after five files load.
+- `gNdsMapsOriginalSetupResult`: bounded original Maps setup marker, expected
+  `0x4D505355` (`MPSU`).
+- `gNdsMapsOriginalSetupMask`: expected `0xFF`. It covers reloc/file load,
+  bounded model-heap proof, main GObj, default camera, vars, camera set,
+  wallpaper/plaque/labels/icons/name/cursor SObj graph, and explicit preview
+  defer recording.
+- `gNdsMapsOriginalLoadedFileCount`: expected `5`.
+- `gNdsMapsOriginalCursorSlot` / `GroundKind`: expected `6/6` for the seeded
+  Pupupu/Dream Land direct Maps and menu-chain harnesses.
+- `gNdsMapsOriginalPreviewDeferred` / `DeferredMask`: expected `1/0x1`,
+  proving the stage preview model path is deliberately parked.
+- `gNdsMapsSelectTransitionResult`: bounded original Maps A-select marker.
+  Expected pass is `0x4D53454C` (`MSEL`); fail marker is `0x4D53464C`
+  (`MSFL`).
+- `gNdsMapsSelectTransitionMask`: expected `0xFF`. It proves setup was
+  complete, cursor/ground kind were seeded to Pupupu, original input-ready
+  ticks ran, synthetic A was injected as `0x8000`, original scene data saved
+  the selected ground kind, scene state changed Maps -> VSBattle, load-scene
+  status was observed, and bounded cleanup ran.
+- `gNdsMapsSelectTransitionScenePrevBefore` /
+  `SceneCurrBefore` / `ScenePrevFinal` / `SceneCurrFinal`: expected
+  `16/21 -> 21/22` in the menu-chain harness.
+- `gNdsMapsSelectTransitionSelectedSlot` /
+  `SelectedGKind`: expected `6/6`.
 - `gNdsControllerPollCount`: DS SI/controller polls, must be nonzero.
 - `gSYControllerMain`: original global controller state after update.
 

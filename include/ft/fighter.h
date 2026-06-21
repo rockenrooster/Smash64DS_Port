@@ -8,6 +8,7 @@
  * exposed here. Full fighter headers are still deferred; this shadow keeps
  * scene/task slices compiling without importing the fighter tree. */
 #include <PR/ultratypes.h>
+#include <PR/gbi.h>
 #include <stddef.h>
 #include <ssb_types.h>
 #include <sys/controller.h>
@@ -101,7 +102,11 @@ typedef enum FTKeyEventKind {
     (LBBACKUP_CHARACTER_MASK_ALL & ~LBBACKUP_CHARACTER_MASK_UNLOCK)
 
 enum {
-    nFTDemoStatusStance = 0
+    nFTDemoStatusStance = 0,
+    nFTDemoStatusWin1,
+    nFTDemoStatusWin2,
+    nFTDemoStatusWin3,
+    nFTDemoStatusWin4
 };
 
 enum {
@@ -156,20 +161,38 @@ typedef struct FTDesc {
     void *proc_display;
 } FTDesc;
 
+typedef struct FTStruct {
+    u8 player;
+} FTStruct;
+
 extern size_t gFTManagerFigatreeHeapSize;
 extern FTDesc dFTManagerDefaultFighterDesc;
+extern f32 dSCSubsysFighterScales[];
 
 void ftManagerSetupFileSize(void);
 void ftManagerAllocFighter(u32 data_flags, s32 allocs_num);
 void ftManagerSetupFilesAllKind(s32 fkind);
 void *ftManagerAllocFigatreeHeapKind(s32 fkind);
 GObj *ftManagerMakeFighter(FTDesc *desc);
+void ftManagerDestroyFighter(GObj *fighter_gobj);
 void ftPublicMakeActor(void);
 void ftParamInitGame(void);
 void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj);
 void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script);
 s32 ftParamGetCostumeCommonID(s32 fkind, s32 color);
 s32 ftParamGetCostumeTeamID(s32 fkind, s32 color);
+void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade);
+void ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
+                                     s32 unused);
+FTStruct *ftGetStruct(GObj *fighter_gobj);
+void ftDisplayLightsDrawReflect(Gfx **display_list, f32 light_angle_x,
+                                f32 light_angle_y);
+f32 scSubsysFighterGetLightAngleX(void);
+f32 scSubsysFighterGetLightAngleY(void);
 void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id);
+
+enum {
+    nGMColAnimFighterComPlayer = 0
+};
 
 #endif

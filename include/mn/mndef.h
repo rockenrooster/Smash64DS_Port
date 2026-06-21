@@ -64,6 +64,22 @@ typedef enum MNOptionTabStatus
     nMNOptionTabStatusEnumCount
 } MNOptionTabStatus;
 
+typedef enum MNPlayersSelectButton
+{
+    nMNPlayersSelectButtonCU,
+    nMNPlayersSelectButtonCR,
+    nMNPlayersSelectButtonCD,
+    nMNPlayersSelectButtonCL,
+    nMNPlayersSelectButtonA
+} MNPlayersSelectButton;
+
+typedef enum MNPlayersCursorStatus
+{
+    nMNPlayersCursorStatusPointer,
+    nMNPlayersCursorStatusGrab,
+    nMNPlayersCursorStatusHover
+} MNPlayersCursorStatus;
+
 #define mnCommonCheckGetOptionButtonInput(wait, is_button, mask) \
     (((wait) == 0) && (((is_button) = scSubsysControllerGetPlayerHoldButtons(mask)), (is_button) != FALSE))
 #define mnCommonCheckGetOptionStickInputUD(wait, stick_range, min, b) \

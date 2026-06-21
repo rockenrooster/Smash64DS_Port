@@ -243,6 +243,72 @@ void ndsResetStartupDiagnostics(void)
     gNdsVSModeStartTransitionSavedStock = 0;
     gNdsVSModeStartTransitionButtonMaskAfter = 0;
     gNdsVSModeStartTransitionCleanupCount = 0;
+    gNdsPlayersVSOriginalStartResult = 0;
+    gNdsPlayersVSOriginalFuncStartResult = 0;
+    gNdsPlayersVSOriginalRelocResult = 0;
+    gNdsPlayersVSOriginalSetupResult = 0;
+    gNdsPlayersVSOriginalSetupMask = 0;
+    gNdsPlayersVSOriginalLoadedFileCount = 0;
+    gNdsPlayersVSOriginalGObjCount = 0;
+    gNdsPlayersVSOriginalCameraCount = 0;
+    gNdsPlayersVSOriginalSObjCount = 0;
+    gNdsPlayersVSOriginalMainGObjID = 0;
+    gNdsPlayersVSOriginalControllerOrderMask = 0;
+    gNdsPlayersVSOriginalSlotKindMask = 0;
+    gNdsPlayersVSOriginalSlotSelectedMask = 0;
+    gNdsPlayersVSOriginalCursorCount = 0;
+    gNdsPlayersVSOriginalPuckCount = 0;
+    gNdsPlayersVSOriginalGateCount = 0;
+    gNdsPlayersVSOriginalPortraitCount = 0;
+    gNdsPlayersVSOriginalFigatreeHeapCount = 0;
+    gNdsPlayersVSOriginalTime = 0;
+    gNdsPlayersVSOriginalStock = 0;
+    gNdsPlayersVSOriginalGameRule = 0;
+    gNdsPlayersVSOriginalIsTeam = 0;
+    gNdsPlayersVSOriginalIsStageSelect = 0;
+    gNdsPlayersVSOriginalDeferredMask = 0;
+    gNdsPlayersVSReadyTransitionResult = 0;
+    gNdsPlayersVSReadyTransitionMask = 0;
+    gNdsPlayersVSReadyTransitionUpdateCount = 0;
+    gNdsPlayersVSReadyTransitionInputMask = 0;
+    gNdsPlayersVSReadyTransitionScenePrevBefore = 0;
+    gNdsPlayersVSReadyTransitionSceneCurrBefore = 0;
+    gNdsPlayersVSReadyTransitionScenePrevFinal = 0;
+    gNdsPlayersVSReadyTransitionSceneCurrFinal = 0;
+    gNdsPlayersVSReadyTransitionPlayerCount = 0;
+    gNdsPlayersVSReadyTransitionCpuCount = 0;
+    gNdsPlayersVSReadyTransitionP0FKind = 0;
+    gNdsPlayersVSReadyTransitionP1FKind = 0;
+    gNdsPlayersVSReadyTransitionStageSelect = 0;
+    gNdsPlayersVSReadyTransitionTaskmanStatus = 0;
+    gNdsPlayersVSReadyTransitionCleanupCount = 0;
+    gNdsMapsOriginalStartResult = 0;
+    gNdsMapsOriginalFuncStartResult = 0;
+    gNdsMapsOriginalRelocResult = 0;
+    gNdsMapsOriginalSetupResult = 0;
+    gNdsMapsOriginalSetupMask = 0;
+    gNdsMapsOriginalLoadedFileCount = 0;
+    gNdsMapsOriginalGObjCount = 0;
+    gNdsMapsOriginalCameraCount = 0;
+    gNdsMapsOriginalSObjCount = 0;
+    gNdsMapsOriginalMainGObjID = 0;
+    gNdsMapsOriginalCursorSlot = 0;
+    gNdsMapsOriginalGroundKind = 0;
+    gNdsMapsOriginalIsTrainingMode = 0;
+    gNdsMapsOriginalPreviewDeferred = 0;
+    gNdsMapsOriginalDeferredMask = 0;
+    gNdsMapsSelectTransitionResult = 0;
+    gNdsMapsSelectTransitionMask = 0;
+    gNdsMapsSelectTransitionUpdateCount = 0;
+    gNdsMapsSelectTransitionInputMask = 0;
+    gNdsMapsSelectTransitionScenePrevBefore = 0;
+    gNdsMapsSelectTransitionSceneCurrBefore = 0;
+    gNdsMapsSelectTransitionScenePrevFinal = 0;
+    gNdsMapsSelectTransitionSceneCurrFinal = 0;
+    gNdsMapsSelectTransitionSelectedSlot = 0;
+    gNdsMapsSelectTransitionSelectedGKind = 0;
+    gNdsMapsSelectTransitionTaskmanStatus = 0;
+    gNdsMapsSelectTransitionCleanupCount = 0;
     gNdsOpeningRoomGObjCount = 0;
     gNdsOpeningRoomCameraCount = 0;
     gNdsOpeningRoomDL0Size = 0;
@@ -915,6 +981,8 @@ void ndsResetStartupDiagnostics(void)
 }
 
 extern void ndsMNVSModeRunStartTransitionProbe(void);
+extern void ndsMNPlayersVSRunReadyTransitionProbe(void);
+extern void ndsMNMapsRunSelectVSBattleProbe(void);
 
 /* Diagnostic snapshot of the real object-manager state after
  * mnStartupFuncStart ran. Every value here is read from the original object
@@ -2832,12 +2900,89 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
                   (uintptr_t)gSYTaskmanGeneralHeap.start);
         gNdsTaskmanLoopReached = 1;
-#if NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_VS_START_TRANSITION
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_VS_START_TRANSITION) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE)
         ndsMNVSModeRunStartTransitionProbe();
 
         if ((gNdsVSModeStartTransitionResult ==
                 NDS_VS_MODE_START_TRANSITION_PASS) &&
             (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) &&
+            (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
+        {
+            ndsFinishTaskmanRun();
+            return;
+        }
+#endif
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+        osStopThread(NULL);
+        return;
+    }
+
+    if (gSCManagerSceneData.scene_curr == nSCKindPlayersVS)
+    {
+        gNdsTaskmanContexts = 2;
+        gNdsTaskmanTaskGfxNum = 1;
+        gNdsTaskmanGraphicsHeapSize = 0x3A98;
+        gNdsTaskmanRdpKind = 2;
+        gNdsTaskmanRdpBufferSize = 0x8000;
+        gNdsTaskmanSceneUpdateSet =
+            (sSYTaskmanDefaultFunction.scene_update == gcRunAll) ? 1u : 0u;
+        gNdsTaskmanSceneDrawSet =
+            (sSYTaskmanDefaultFunction.scene_draw == gcDrawAll) ? 1u : 0u;
+        gNdsTaskmanLightsSet =
+            (sSYTaskmanDefaultFunction.task_update != NULL) ? 1u : 0u;
+        gNdsTaskmanControllerAutoRead = 1;
+        gNdsTaskmanDLContextsValid = 2;
+        gNdsTaskmanGeneralHeapUsed =
+            (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
+                  (uintptr_t)gSYTaskmanGeneralHeap.start);
+        gNdsTaskmanLoopReached = 1;
+#if NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE
+        ndsMNPlayersVSRunReadyTransitionProbe();
+
+        if ((gNdsPlayersVSReadyTransitionResult ==
+                NDS_PLAYERS_VS_READY_TRANSITION_PASS) &&
+            (gSCManagerSceneData.scene_curr == nSCKindMaps) &&
+            (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
+        {
+            ndsFinishTaskmanRun();
+            return;
+        }
+#endif
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+        osStopThread(NULL);
+        return;
+    }
+
+    if (gSCManagerSceneData.scene_curr == nSCKindMaps)
+    {
+        gNdsTaskmanContexts = 2;
+        gNdsTaskmanTaskGfxNum = 1;
+        gNdsTaskmanGraphicsHeapSize = 0x8000;
+        gNdsTaskmanRdpKind = 2;
+        gNdsTaskmanRdpBufferSize = 0x8000;
+        gNdsTaskmanSceneUpdateSet =
+            (sSYTaskmanDefaultFunction.scene_update == gcRunAll) ? 1u : 0u;
+        gNdsTaskmanSceneDrawSet =
+            (sSYTaskmanDefaultFunction.scene_draw == gcDrawAll) ? 1u : 0u;
+        gNdsTaskmanLightsSet =
+            (sSYTaskmanDefaultFunction.task_update != NULL) ? 1u : 0u;
+        gNdsTaskmanControllerAutoRead = 1;
+        gNdsTaskmanDLContextsValid = 2;
+        gNdsTaskmanGeneralHeapUsed =
+            (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
+                  (uintptr_t)gSYTaskmanGeneralHeap.start);
+        gNdsTaskmanLoopReached = 1;
+#if NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE
+        ndsMNMapsRunSelectVSBattleProbe();
+
+        if ((gNdsMapsSelectTransitionResult ==
+                NDS_MAPS_SELECT_TRANSITION_PASS) &&
+            (gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
             (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
         {
             ndsFinishTaskmanRun();

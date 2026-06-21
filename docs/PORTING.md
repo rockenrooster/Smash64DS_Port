@@ -4438,3 +4438,56 @@ Verification:
   `VS setup harness passed: scene=9/1 setup=0x1f files=2 sobj=28 buttons=0x3f`.
 - `scripts/verify-vs-start-transition-harness.ps1` passed with
   `VS Start transition harness passed: scene=16/9 trans=0x56535452 mask=0xff saved=1/3/2`.
+
+## 2026-06-21: Bounded PlayersVS + Maps menu-chain proof to VSBattle
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=players_setup`, `maps_setup`, and
+  `menu_chain_vsbattle`.
+- Added `src/import/battleship_mnplayersvs.c`, importing original
+  `mnplayersvs.c` through a DS-owned bounded wrapper.
+- Added `src/import/battleship_mnmaps.c`, importing original `mnmaps.c`
+  through a DS-owned bounded wrapper.
+- Added PlayersVS and Maps O2R files to the NitroFS relocation manifest and
+  extended the relocation asset table for the required menu/stage resources.
+- Added narrow compatibility ABI for the imported menu slices, including menu
+  reloc symbols, minimal fighter/audio/interface shims, and stage-select
+  constants. `decomp/` remained read-only.
+- Replaced the old generic PlayersVS and Maps scene stubs with bounded imported
+  scene wrappers. `scVSBattleStartScene` remains the final boundary stub.
+- Added verifier gates:
+  `scripts/verify-players-vs-setup-harness.ps1`,
+  `scripts/verify-maps-setup-harness.ps1`, and
+  `scripts/verify-menu-chain-vsbattle-harness.ps1`.
+- Added those gates to `scripts/verify-all.ps1` after the standalone harnesses
+  passed.
+
+Boundary details:
+
+- PlayersVS setup loads seven original menu files, creates the original main
+  GObj/default camera/camera set/menu object graph, initializes original
+  PlayersVS vars and slot state, allocates bounded figatree heaps, records
+  setup diagnostics, and parks before full interactive character-select
+  input/drawing.
+- The PlayersVS ready/start probe seeds a deterministic two-player selected
+  state, injects original Start input, advances original `mnPlayersVSFuncRun`,
+  observes PlayersVS -> Maps, and records the original load-scene request.
+- Maps setup loads five original files, creates the original stage-select SObj
+  graph, starts from seeded Pupupu/Dream Land, records setup diagnostics, and
+  explicitly defers the stage preview model path.
+- The Maps A-select probe injects original A input, advances original
+  `mnMapsFuncRun`, observes original selected-stage saving, reaches
+  `scene_prev = nSCKindMaps` and `scene_curr = nSCKindVSBattle`, and parks at
+  the existing VSBattle boundary stub.
+- No battle, fighter, stage, item, audio, full renderer, or gameplay subsystem
+  was imported for this step.
+
+Verification:
+
+- `scripts/verify-players-vs-setup-harness.ps1` passed with
+  `PlayersVS setup harness passed: files=7 mask=0xff sobj=65 slots=2/4/4`.
+- `scripts/verify-maps-setup-harness.ps1` passed with
+  `Maps setup harness passed: files=5 mask=0xff sobj=36 slot=6 gkind=6`.
+- `scripts/verify-menu-chain-vsbattle-harness.ps1` passed with
+  `Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, final=22/21`.

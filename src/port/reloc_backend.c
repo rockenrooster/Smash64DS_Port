@@ -12,10 +12,20 @@ void func_800266A0_272A0(void)
 {
 }
 
+static alSoundEffect sNdsStubSoundEffect;
+
+void func_80026738_27338(alSoundEffect *sfx)
+{
+    if (sfx != NULL)
+    {
+        sfx->sfx_id = 0;
+    }
+}
+
 void *func_800269C0_275C0(u16 fgm_id)
 {
-    (void)fgm_id;
-    return NULL;
+    sNdsStubSoundEffect.sfx_id = fgm_id;
+    return &sNdsStubSoundEffect;
 }
 
 /* scmanager.c excludes these renderer/task wrappers for the NDS target. Keep
@@ -76,8 +86,59 @@ void *ftManagerAllocFigatreeHeapKind(s32 fkind)
 
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
-    (void)desc;
-    return NULL;
+    GObj *fighter_gobj = gcMakeGObjSPAfter(nGCCommonKindFighter,
+                                           NULL,
+                                           nGCCommonLinkIDFighter,
+                                           GOBJ_PRIORITY_DEFAULT);
+
+    if (fighter_gobj != NULL)
+    {
+        fighter_gobj->user_data.s = desc->player;
+        gcAddDObjForGObj(fighter_gobj, NULL);
+    }
+    return fighter_gobj;
+}
+
+void ftManagerDestroyFighter(GObj *fighter_gobj)
+{
+    if (fighter_gobj != NULL)
+    {
+        gcEjectGObj(fighter_gobj);
+    }
+}
+
+void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
+{
+    (void)fighter_gobj;
+    (void)costume;
+    (void)shade;
+}
+
+void ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
+                                     s32 unused)
+{
+    (void)fighter_gobj;
+    (void)colanim_id;
+    (void)unused;
+}
+
+FTStruct *ftGetStruct(GObj *fighter_gobj)
+{
+    static FTStruct stub;
+
+    if (fighter_gobj != NULL)
+    {
+        stub.player = (u8)fighter_gobj->user_data.s;
+    }
+    return &stub;
+}
+
+void lbCommonSetSpriteScissor(s32 xmin, s32 xmax, s32 ymin, s32 ymax)
+{
+    (void)xmin;
+    (void)xmax;
+    (void)ymin;
+    (void)ymax;
 }
 
 void ftPublicMakeActor(void)
@@ -300,7 +361,7 @@ void syRdpResetSettings(Gfx **dl)
  * and are reported separately. */
 #define NDS_RELOC_OPENING_ROOM_FILE_COUNT 8u
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
-#define NDS_RELOC_LOADED_FILE_CAPACITY 11u
+#define NDS_RELOC_LOADED_FILE_CAPACITY 24u
 
 #define NDS_RELOC_ASSET_INVALID 0xffffffffu
 #define NDS_RELOC_ASSET_MN_COMMON 0u
@@ -323,6 +384,15 @@ void syRdpResetSettings(Gfx **dl)
 #define NDS_RELOC_ASSET_MN_TITLE 167u
 #define NDS_RELOC_ASSET_MN_TITLE_FIRE_ANIM 168u
 #define NDS_RELOC_ASSET_MN_VS_MODE 6u
+#define NDS_RELOC_ASSET_MN_PLAYERS_COMMON 0x11u
+#define NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES 0x12u
+#define NDS_RELOC_ASSET_MN_PLAYERS_PORTRAITS 0x13u
+#define NDS_RELOC_ASSET_FT_EMBLEM_SPRITES 0x14u
+#define NDS_RELOC_ASSET_MN_SELECT_COMMON 0x15u
+#define NDS_RELOC_ASSET_MN_PLAYERS_SPOTLIGHT 0x16u
+#define NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLACK 0x1au
+#define NDS_RELOC_ASSET_MN_MAPS 0x1eu
+#define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_MOBJ 0x042f8u
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_DOBJ 0x07e98u
@@ -939,6 +1009,15 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llMNTitleFireAnimFileID)) return NDS_RELOC_ASSET_MN_TITLE_FIRE_ANIM;
     if (token == ndsRelocFileID(&llMNCommonFileID)) return NDS_RELOC_ASSET_MN_COMMON;
     if (token == ndsRelocFileID(&llMNVSModeFileID)) return NDS_RELOC_ASSET_MN_VS_MODE;
+    if (token == ndsRelocFileID(&llMNPlayersCommonFileID)) return NDS_RELOC_ASSET_MN_PLAYERS_COMMON;
+    if (token == ndsRelocFileID(&llMNPlayersGameModesFileID)) return NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES;
+    if (token == ndsRelocFileID(&llMNPlayersPortraitsFileID)) return NDS_RELOC_ASSET_MN_PLAYERS_PORTRAITS;
+    if (token == ndsRelocFileID(&llFTEmblemSpritesFileID)) return NDS_RELOC_ASSET_FT_EMBLEM_SPRITES;
+    if (token == ndsRelocFileID(&llMNSelectCommonFileID)) return NDS_RELOC_ASSET_MN_SELECT_COMMON;
+    if (token == ndsRelocFileID(&llMNPlayersSpotlightFileID)) return NDS_RELOC_ASSET_MN_PLAYERS_SPOTLIGHT;
+    if (token == ndsRelocFileID(&llGRWallpaperTrainingBlackFileID)) return NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLACK;
+    if (token == ndsRelocFileID(&llMNMapsFileID)) return NDS_RELOC_ASSET_MN_MAPS;
+    if (token == ndsRelocFileID(&llMNCommonFontsFileID)) return NDS_RELOC_ASSET_MN_COMMON_FONTS;
     return NDS_RELOC_ASSET_INVALID;
 }
 
@@ -2280,6 +2359,16 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
         *out_offset = (u32)raw_symbol;
         return TRUE;
     }
+    if ((raw_symbol >= 0x02000000u) && (raw_symbol < 0x04000000u))
+    {
+        uintptr_t initialized_offset = *(const uintptr_t *)symbol;
+
+        if (initialized_offset < loaded->data_size)
+        {
+            *out_offset = (u32)initialized_offset;
+            return TRUE;
+        }
+    }
     return FALSE;
 }
 
@@ -2576,6 +2665,11 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
     return heap;
 }
 
+void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
+{
+    return lbRelocGetExternHeapFile(file_id, heap);
+}
+
 size_t lbRelocGetAllocSize(u32 *ids, u32 len)
 {
     size_t total = 0;
@@ -2615,7 +2709,9 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
         (ndsOpeningIsImportedNameScene(gSCManagerSceneData.scene_curr) !=
          FALSE) ||
         (gSCManagerSceneData.scene_curr == nSCKindTitle) ||
-        (gSCManagerSceneData.scene_curr == nSCKindVSMode))
+        (gSCManagerSceneData.scene_curr == nSCKindVSMode) ||
+        (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
+        (gSCManagerSceneData.scene_curr == nSCKindMaps))
     {
         ndsRelocResetLoadedFiles();
     }
@@ -2739,6 +2835,18 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
             gNdsOpeningMarioRelocResult = NDS_OPENING_MARIO_RELOC_PASS;
         }
     }
+    if ((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) &&
+        (len == 7u))
+    {
+        gNdsPlayersVSOriginalLoadedFileCount = len;
+        gNdsPlayersVSOriginalRelocResult = NDS_PLAYERS_VS_ORIGINAL_RELOC_PASS;
+    }
+    if ((gSCManagerSceneData.scene_curr == nSCKindMaps) &&
+        (len == 5u))
+    {
+        gNdsMapsOriginalLoadedFileCount = len;
+        gNdsMapsOriginalRelocResult = NDS_MAPS_ORIGINAL_RELOC_PASS;
+    }
 
     return (heap != NULL) ? (size_t)(heap_ptr - heap_start) : 0;
 }
@@ -2773,6 +2881,13 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
 }
 
 sb32 (*dLBCommonFuncMatrixList[])(void) = { NULL };
+
+f32 dSCSubsysFighterScales[] =
+{
+    1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F,
+    1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F,
+    1.0F, 1.0F, 1.0F, 1.0F
+};
 
 f32 scSubsysFighterGetLightAngleX(void)
 {

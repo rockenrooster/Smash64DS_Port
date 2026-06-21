@@ -3,14 +3,43 @@
 
 typedef enum gmMusicID
 {
-    nSYAudioBGMModeSelect = 43
+    nSYAudioBGMModeSelect = 43,
+    nSYAudioBGMBattleSelect
 } gmMusicID;
 
 typedef enum gmFGMID
 {
+    nSYAudioFGMMarioDash = 121,
+    nSYAudioFGMSamusDash = 127,
     nSYAudioFGMMenuSelect = 168,
+    nSYAudioFGMStageSelect = 169,
     nSYAudioFGMMenuScroll1 = 173,
-    nSYAudioFGMMenuScroll2 = 174
+    nSYAudioFGMMenuScroll2 = 174,
+    nSYAudioFGMMenuDenied = 175,
+    nSYAudioFGMPlayerSlotClose = 176,
+    nSYAudioFGMPlayerSlotWhoosh = 177
 } gmFGMID;
+
+typedef enum gmVoiceID
+{
+    nSYAudioVoiceAnnounceBlueTeam = 566,
+    nSYAudioVoiceAnnounceDonkey = 574,
+    nSYAudioVoiceAnnounceCaptain = 576,
+    nSYAudioVoiceAnnounceFox = 577,
+    nSYAudioVoiceAnnounceGreenTeam = 582,
+    nSYAudioVoiceAnnounceKirby = 587,
+    nSYAudioVoiceAnnounceLink = 588,
+    nSYAudioVoiceAnnounceLuigi = 589,
+    nSYAudioVoiceAnnounceMario = 590,
+    nSYAudioVoiceAnnounceNess = 592,
+    nSYAudioVoiceAnnouncePikachu = 598,
+    nSYAudioVoiceAnnouncePurin = 599,
+    nSYAudioVoiceAnnounceRedTeam = 601,
+    nSYAudioVoiceAnnounceFreeForAll = 521,
+    nSYAudioVoiceAnnounceSamus = 604,
+    nSYAudioVoiceAnnounceTeamBattle = 535,
+    nSYAudioVoiceAnnounceYoshi = 626,
+    nSYAudioVoicePublicCheer = 626
+} gmVoiceID;
 
 #endif
