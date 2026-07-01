@@ -1077,7 +1077,7 @@ Current large-file targets:
 
 | File | Target Split |
 |---|---|
-| `src/port/reloc_backend.c` | Split by domain: relocation asset loading, fighter model/struct proofs, movement proofs, MP collision proofs, cliff/ledge proofs, renderer/DL helpers, and diagnostic recorders. |
+| `src/port/reloc_backend.c` | Done 2026-07-01: kept the include-orchestrator shape and split project-owned code into relocation asset loading, fighter model/struct proofs, movement proofs, MP collision proofs, cliff/ledge proofs, renderer/DL helpers, diagnostic recorders, and compatibility/proof shims. |
 | `src/port/taskman_seam.c` | Split scene/harness dispatch, taskman update caps, boundary finalizers, and scene-transition helpers behind narrow headers. |
 | `include/nds/nds_startup.h` | Split diagnostics by subsystem once stable headers exist: startup/opening/title, menu chain, battle setup, fighter proofs, MP proofs, renderer proofs. |
 | `docs/DIAGNOSTIC_REFERENCE.md` | Keep as marker reference, but prefer generated marker indexes once diagnostic declarations are structured. |

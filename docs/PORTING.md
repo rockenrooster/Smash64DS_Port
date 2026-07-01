@@ -15621,3 +15621,16 @@ Still deferred:
   `artifacts\melonds-hwtri.png`; the current static DL slice has no inline
   `G_MTX`, so a temporary no-matrix scale fallback remains until original DObj
   matrix/camera prep is imported.
+
+## 2026-07-01 - Split Relocation Backend By Domain
+
+- Mechanically split `src/port/reloc_backend.c` while preserving the existing
+  include-orchestrator build shape and source order.
+- Added focused backend slices for relocation assets, fighter model/struct
+  proofs, renderer/DL helpers, movement proofs, MP collision proofs,
+  cliff/ledge proofs, diagnostic recorders, and compatibility/proof shims.
+- No gameplay, proof, or renderer behavior was changed; this was code motion
+  only.
+- Verified each split slice with `.\scripts\check-architecture.ps1`,
+  `.\scripts\check-harness-registry.ps1`, and
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
