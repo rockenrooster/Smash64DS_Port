@@ -15560,3 +15560,15 @@ Still deferred:
 - Pruned `docs/STATUS.md` and `docs/HANDOFF.md` back to short current-truth
   handoff docs; detailed markers stay in `docs/DIAGNOSTIC_REFERENCE.md`, and
   increment history stays here.
+
+## 2026-07-01 - Added Renderer Matrix/Vertex Fixed-Point Fixture
+
+- Added a DS renderer helper that unpacks BattleShip/N64 packed `Mtx` values
+  using the original `guMtxF2L` layout and converts them to DS 20.12 fixed
+  point.
+- Added a position vertex transform helper using the same orientation as
+  BattleShip's original `guMtxXFMF`.
+- Extended `check-gbi-decode-fixtures.ps1` to verify identity and
+  scale/translate transformed vertices alongside the existing F3DEX2
+  VTX/TRI packing fixtures.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.

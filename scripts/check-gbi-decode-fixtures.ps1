@@ -55,6 +55,75 @@ function Decode-F3DEX2TriPacked {
         V2 = (($Packed -band 0xff) / 2)
     }
 }
+function New-N64PackedMtx {
+    param([double[][]]$Rows)
+    $words = @(0) * 16
+    $ai = 0
+    $af = 8
+    for ($i = 0; $i -lt 4; $i++) {
+        for ($j = 0; $j -lt 2; $j++) {
+            $e1 = [int][Math]::Round($Rows[$i][$j * 2] * 65536.0)
+            $e2 = [int][Math]::Round($Rows[$i][$j * 2 + 1] * 65536.0)
+            $u1 = [uint32]([int64]$e1 -band 0xffffffffL)
+            $u2 = [uint32]([int64]$e2 -band 0xffffffffL)
+            $words[$ai++] = (($u1 -band 0xffff0000) -bor (($u2 -shr 16) -band 0xffff))
+            $words[$af++] = ((($u1 -shl 16) -band 0xffff0000) -bor ($u2 -band 0xffff))
+        }
+    }
+    return $words
+}
+function Get-N64PackedMtxCellS16p16 {
+    param(
+        [uint32[]]$Words,
+        [int]$Row,
+        [int]$Col
+    )
+    $pair = ($Row * 2) + [Math]::Floor($Col / 2)
+    $hi = $Words[$pair]
+    $lo = $Words[8 + $pair]
+    if (($Col -band 1) -eq 0) {
+        $raw = (($hi -band 0xffff0000) -bor (($lo -shr 16) -band 0xffff))
+    } else {
+        $raw = ((($hi -shl 16) -band 0xffff0000) -bor ($lo -band 0xffff))
+    }
+    if (($raw -band 0x80000000) -ne 0) {
+        return [int]([int64]$raw - 0x100000000L)
+    }
+    return [int]$raw
+}
+function Convert-S16p16To20p12 {
+    param([int]$Value)
+    if ($Value -lt 0) {
+        return -([int](((-$Value) + 8) -shr 4))
+    }
+    return [int](($Value + 8) -shr 4)
+}
+function Convert-N64PackedMtxTo20p12 {
+    param([uint32[]]$Words)
+    $out = @()
+    for ($row = 0; $row -lt 4; $row++) {
+        $outRow = @()
+        for ($col = 0; $col -lt 4; $col++) {
+            $outRow += Convert-S16p16To20p12 (Get-N64PackedMtxCellS16p16 -Words $Words -Row $row -Col $col)
+        }
+        $out += ,$outRow
+    }
+    return $out
+}
+function Transform-Vertex20p12 {
+    param(
+        [object[]]$Mtx,
+        [int]$X,
+        [int]$Y,
+        [int]$Z
+    )
+    return @{
+        X = $Mtx[0][0] * $X + $Mtx[1][0] * $Y + $Mtx[2][0] * $Z + $Mtx[3][0]
+        Y = $Mtx[0][1] * $X + $Mtx[1][1] * $Y + $Mtx[2][1] * $Z + $Mtx[3][1]
+        Z = $Mtx[0][2] * $X + $Mtx[1][2] * $Y + $Mtx[2][2] * $Z + $Mtx[3][2]
+        W = $Mtx[0][3] * $X + $Mtx[1][3] * $Y + $Mtx[2][3] * $Z + $Mtx[3][3]
+    }
+}
 $vtxW0 = New-F3DEX2VtxW0 -Count 4 -V0 12
 Assert-Equal $vtxW0 0x01004020 'F3DEX2 gSPVertex(4,12) fixture packed word mismatch.'
 $decodedVtx = Decode-F3DEX2Vtx -W0 $vtxW0 -MaxVtx 32
@@ -84,6 +153,33 @@ Assert-Equal $decodedTri2First.V2 6 'F3DEX2 gSP2Triangles first decoded v2 misma
 Assert-Equal $decodedTri2Second.V0 7 'F3DEX2 gSP2Triangles second decoded v0 mismatch.'
 Assert-Equal $decodedTri2Second.V1 8 'F3DEX2 gSP2Triangles second decoded v1 mismatch.'
 Assert-Equal $decodedTri2Second.V2 9 'F3DEX2 gSP2Triangles second decoded v2 mismatch.'
+$identityRows = @(
+    @(1.0, 0.0, 0.0, 0.0),
+    @(0.0, 1.0, 0.0, 0.0),
+    @(0.0, 0.0, 1.0, 0.0),
+    @(0.0, 0.0, 0.0, 1.0)
+)
+$identity = Convert-N64PackedMtxTo20p12 (New-N64PackedMtx -Rows $identityRows)
+Assert-Equal $identity[0][0] 4096 'N64 identity matrix did not convert to DS 20.12 one.'
+Assert-Equal $identity[3][3] 4096 'N64 identity matrix W did not convert to DS 20.12 one.'
+$identityVtx = Transform-Vertex20p12 -Mtx $identity -X 10 -Y -20 -Z 30
+Assert-Equal $identityVtx.X 40960 'Identity transformed X mismatch.'
+Assert-Equal $identityVtx.Y -81920 'Identity transformed Y mismatch.'
+Assert-Equal $identityVtx.Z 122880 'Identity transformed Z mismatch.'
+Assert-Equal $identityVtx.W 4096 'Identity transformed W mismatch.'
+$transformRows = @(
+    @(2.0, 0.0, 0.0, 0.0),
+    @(0.0, -3.0, 0.0, 0.0),
+    @(0.0, 0.0, 0.5, 0.0),
+    @(5.0, -7.0, 11.0, 1.0)
+)
+$transform = Convert-N64PackedMtxTo20p12 (New-N64PackedMtx -Rows $transformRows)
+$transformedVtx = Transform-Vertex20p12 -Mtx $transform -X 12 -Y -3 -Z 8
+Assert-Equal $transform[2][2] 2048 'N64 0.5 scale did not convert to DS 20.12 half.'
+Assert-Equal $transformedVtx.X 118784 'Scale/translate transformed X mismatch.'
+Assert-Equal $transformedVtx.Y 8192 'Scale/translate transformed Y mismatch.'
+Assert-Equal $transformedVtx.Z 61440 'Scale/translate transformed Z mismatch.'
+Assert-Equal $transformedVtx.W 4096 'Scale/translate transformed W mismatch.'
 $forbiddenSnippets = @(
     'u32 v0 = ((w0 >> 16) & 0xFFu) / 2u;',
     'u32 count = (w0 & 0xFFu) / 2u;',
@@ -105,4 +201,7 @@ foreach ($file in $files) {
         }
     }
 }
-Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI1/TRI2 packing and source snippets verified.'
+$renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
+Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
+Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
+Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI1/TRI2 packing, N64 matrix to DS 20.12 vertex transform, and source snippets verified.'

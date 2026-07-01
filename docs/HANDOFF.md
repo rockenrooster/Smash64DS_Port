@@ -39,6 +39,11 @@ physics tick copying fighter root position from the barrel root. Continuous
 TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
+Latest renderer detail: `src/nds/nds_renderer.c` now has a source-backed
+packed-N64-`Mtx` unpacker to DS 20.12 fixed point plus a position vertex
+transform using the original `guMtxXFMF` orientation. The fixture script gates
+identity and scale/translate transforms.
+
 ## Process Change
 
 Do not continue one-bit proof-mask increments. Future gameplay slices should
@@ -53,8 +58,9 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 1. Mechanical split: follow the `src/port/reloc_backend.c` split plan in
    `docs/ARCHITECTURE.md`. This is a pure move, no behavior change.
-2. Renderer stage 1: N64 matrix/vertex semantics to DS GX fixed-point pipeline,
-   gated by fixtures for proven Mario/Fox display lists.
+2. Renderer stage 1 continuation: wire the new matrix/vertex helper into
+   `ndsRendererExecuteDisplayList` state for real `G_MTX` / `G_VTX` command
+   traversal, then use proven Mario/Fox display lists as fixtures.
 3. Runtime slice 1: full `ft/ftmain.c` plus `gm/gmcollision.c`, gated by a
    continuous-runtime verifier on the current Mario/Fox scene.
 

@@ -579,6 +579,13 @@ stage-inclusive Pupupu `gcDrawAll` capture proof, and their `src/nds/nds_rendere
 command paths before expanding continuous `gcDrawAll` or importing the broader
 object-display stack.
 
+Renderer stage 1 now has a project-owned packed-N64-`Mtx` unpacker in
+`src/nds/nds_renderer.c`. It converts original `guMtxF2L` layout into DS
+20.12 fixed-point cells and transforms position vertices with the same
+orientation as `guMtxXFMF`. The next renderer step is to carry this state
+through `ndsRendererExecuteDisplayList` for real `G_MTX` / `G_VTX` traversal,
+then feed triangle submission.
+
 ## Scene And Startup
 
 `BattleShip-main/decomp/src/sc/scmanager.c` is imported through its main scene

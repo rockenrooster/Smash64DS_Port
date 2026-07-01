@@ -47,11 +47,13 @@ Full diagnostic marker strings live in `docs/DIAGNOSTIC_REFERENCE.md`, not here.
 
 ## Latest Proof
 
-The latest verified source-backed increment installed the original TaruCannon
-physics callback for status `61` and proved one bounded tick copies the fighter
-root position from the barrel root after source-ordered TaruCannon setup.
-Continuous TaruCannon update/shoot runtime remains deferred until Jungle barrel
-helpers and map throw-hit data are local.
+Renderer stage 1 has started in `src/nds/nds_renderer.c`: the renderer can now
+unpack BattleShip/N64 packed `Mtx` data into DS 20.12 fixed-point matrix cells
+and transform position-only vertices with the same orientation as original
+`guMtxXFMF`. `check-gbi-decode-fixtures.ps1` now gates identity and
+scale/translate vertex-transform fixtures alongside F3DEX2 VTX/TRI packing.
+
+Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
 ## Current Blocker
 
@@ -61,6 +63,8 @@ The next useful work is not another proof bit. It is one of:
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
 - DS hardware renderer stage 1: matrix/vertex pipeline fixtures;
+- wire the matrix/vertex helper into `ndsRendererExecuteDisplayList` command
+  state for real `G_MTX` / `G_VTX` display-list traversal;
 - full-TU runtime import slice for `ft/ftmain.c` plus `gm/gmcollision.c`;
 - continuous-runtime verifier for unbounded battle frames.
 

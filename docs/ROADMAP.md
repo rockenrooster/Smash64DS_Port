@@ -52,7 +52,9 @@ Use it as a regression anchor while migrating to larger source-backed slices.
    movement proofs, MP collision proofs, cliff/ledge proofs, renderer/DL
    helpers, and diagnostic recorders.
 3. DS hardware renderer stage 1: N64 `Mtx`/`Vtx` plus `gSPMatrix` /
-   `gSPVertex` semantics to DS GX fixed-point matrix/vertex pipeline.
+   `gSPVertex` semantics to DS GX fixed-point matrix/vertex pipeline. The
+   packed-matrix unpack and point-transform helper is in place; next wire it
+   into real display-list command state.
 4. Runtime slice 1: full `ft/ftmain.c` plus `gm/gmcollision.c`, replacing
    bounded hit-search/stat hubs with original code.
 5. DS hardware renderer stage 2: `gSP1Triangle` / `gSP2Triangles` to GX vertex

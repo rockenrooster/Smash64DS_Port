@@ -70,6 +70,26 @@ typedef struct NDSRendererConfig
     void *user;
 } NDSRendererConfig;
 
+typedef struct NDSRendererMatrix20p12
+{
+    s32 m[4][4];
+} NDSRendererMatrix20p12;
+
+typedef struct NDSRendererInputVertex
+{
+    s16 x;
+    s16 y;
+    s16 z;
+} NDSRendererInputVertex;
+
+typedef struct NDSRendererClipVertex20p12
+{
+    s32 x;
+    s32 y;
+    s32 z;
+    s32 w;
+} NDSRendererClipVertex20p12;
+
 typedef struct NDSRendererStats
 {
     u32 blocker;
@@ -150,6 +170,12 @@ typedef struct NDSRendererStats
     u32 prim_color;
 } NDSRendererStats;
 
+s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
+void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
+                                    NDSRendererMatrix20p12 *dst);
+void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
+                                     const NDSRendererInputVertex *vtx,
+                                     NDSRendererClipVertex20p12 *out);
 void ndsRendererInitStats(NDSRendererStats *stats);
 void ndsRendererScanDisplayList(const Gfx *dl,
                                 const NDSRendererConfig *config,

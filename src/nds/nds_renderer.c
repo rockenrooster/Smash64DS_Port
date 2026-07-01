@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <string.h>
 
 #include <nds/nds_gbi_decode.h>
@@ -40,6 +41,127 @@
 #define NDS_RENDERER_LOAD_TILE 7u
 
 #define NDS_RENDERER_MAX_VTX 32u
+#define NDS_RENDERER_N64_MTX_FRAC_BITS 16u
+#define NDS_RENDERER_DS_MTX_FRAC_BITS 12u
+
+static s32 ndsRendererClampS64ToS32(s64 value)
+{
+    if (value > (s64)INT_MAX)
+    {
+        return INT_MAX;
+    }
+    if (value < (s64)INT_MIN)
+    {
+        return INT_MIN;
+    }
+    return (s32)value;
+}
+
+static s32 ndsRendererRoundShiftS32(s32 value, u32 shift)
+{
+    s64 wide;
+    s64 bias;
+
+    if (shift == 0)
+    {
+        return value;
+    }
+
+    wide = value;
+    bias = (s64)(1u << (shift - 1u));
+    if (wide < 0)
+    {
+        return (s32)(-(((-wide) + bias) >> shift));
+    }
+    return (s32)((wide + bias) >> shift);
+}
+
+s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col)
+{
+    const u32 *ai;
+    const u32 *af;
+    u32 pair;
+    u32 hi;
+    u32 lo;
+
+    if ((mtx == NULL) || (row >= 4u) || (col >= 4u))
+    {
+        return 0;
+    }
+
+    ai = (const u32 *)&mtx->m[0][0];
+    af = (const u32 *)&mtx->m[2][0];
+    pair = (row * 2u) + (col / 2u);
+    hi = ai[pair];
+    lo = af[pair];
+
+    if ((col & 1u) == 0)
+    {
+        return (s32)((hi & 0xffff0000u) | ((lo >> 16) & 0xffffu));
+    }
+    return (s32)(((hi << 16) & 0xffff0000u) | (lo & 0xffffu));
+}
+
+void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
+                                    NDSRendererMatrix20p12 *dst)
+{
+    u32 row;
+    u32 col;
+    const u32 shift =
+        NDS_RENDERER_N64_MTX_FRAC_BITS - NDS_RENDERER_DS_MTX_FRAC_BITS;
+
+    if (dst == NULL)
+    {
+        return;
+    }
+
+    memset(dst, 0, sizeof(*dst));
+    if (src == NULL)
+    {
+        return;
+    }
+
+    for (row = 0; row < 4u; row++)
+    {
+        for (col = 0; col < 4u; col++)
+        {
+            dst->m[row][col] =
+                ndsRendererRoundShiftS32(
+                    ndsRendererMtxCellS16p16(src, row, col), shift);
+        }
+    }
+}
+
+void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
+                                     const NDSRendererInputVertex *vtx,
+                                     NDSRendererClipVertex20p12 *out)
+{
+    s64 x;
+    s64 y;
+    s64 z;
+
+    if ((mtx == NULL) || (vtx == NULL) || (out == NULL))
+    {
+        return;
+    }
+
+    x = vtx->x;
+    y = vtx->y;
+    z = vtx->z;
+
+    out->x = ndsRendererClampS64ToS32(
+        (s64)mtx->m[0][0] * x + (s64)mtx->m[1][0] * y +
+        (s64)mtx->m[2][0] * z + mtx->m[3][0]);
+    out->y = ndsRendererClampS64ToS32(
+        (s64)mtx->m[0][1] * x + (s64)mtx->m[1][1] * y +
+        (s64)mtx->m[2][1] * z + mtx->m[3][1]);
+    out->z = ndsRendererClampS64ToS32(
+        (s64)mtx->m[0][2] * x + (s64)mtx->m[1][2] * y +
+        (s64)mtx->m[2][2] * z + mtx->m[3][2]);
+    out->w = ndsRendererClampS64ToS32(
+        (s64)mtx->m[0][3] * x + (s64)mtx->m[1][3] * y +
+        (s64)mtx->m[2][3] * z + mtx->m[3][3]);
+}
 
 static s32 ndsRendererValidateCommand(const Gfx *dl,
                                       const NDSRendererConfig *config)
