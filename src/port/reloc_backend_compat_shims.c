@@ -1,0 +1,10304 @@
+void ndsBaseFTCommonDashProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonDashProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonDashProcPhysics(GObj *fighter_gobj);
+void ndsBaseFTCommonDashProcMap(GObj *fighter_gobj);
+void ndsBaseFTCommonDashSetStatus(GObj *fighter_gobj, u32 flag);
+sb32 ndsBaseFTCommonDashCheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonDashCheckTurn(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnSetStatus(GObj *fighter_gobj, s32 lr_dash);
+void ndsBaseFTCommonTurnSetStatusCenter(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnSetStatusInvertLR(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonTurnCheckInputSuccess(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonTurnCheckInterruptCommon(GObj *fighter_gobj);
+void ndsBaseFTCommonRunProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonRunSetStatus(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonRunCheckInterruptDash(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnRunProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnRunProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnRunSetStatus(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonTurnRunCheckInterruptRun(GObj *fighter_gobj);
+void ndsBaseFTCommonRunBrakeProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonRunBrakeProcPhysics(GObj *fighter_gobj);
+void ndsBaseFTCommonRunBrakeSetStatus(GObj *fighter_gobj, u32 flag);
+sb32 ndsBaseFTCommonRunBrakeCheckInterruptRun(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonRunBrakeCheckInterruptTurnRun(GObj *fighter_gobj);
+void ndsBaseFTCommonKneeBendProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonKneeBendProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonKneeBendSetStatusParam(GObj *fighter_gobj,
+                                           s32 status_id,
+                                           s32 input_source);
+void ndsBaseFTCommonKneeBendSetStatus(GObj *fighter_gobj,
+                                      s32 input_source);
+void ndsBaseFTCommonGuardKneeBendSetStatus(GObj *fighter_gobj,
+                                           s32 input_source);
+sb32 ndsBaseFTCommonKneeBendCheckButtonTap(FTStruct *fp);
+s32 ndsBaseFTCommonKneeBendGetInputTypeCommon(FTStruct *fp);
+sb32 ndsBaseFTCommonKneeBendCheckInterruptCommon(GObj *fighter_gobj);
+s32 ndsBaseFTCommonKneeBendGetInputTypeRun(FTStruct *fp);
+sb32 ndsBaseFTCommonKneeBendCheckInterruptRun(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonGuardKneeBendCheckInterruptGuard(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatWaitProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatWaitProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatWaitSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatRvProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonJumpProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonJumpGetJumpForceButton(s32 stick_range_x,
+                                           s32 *jump_vel_x,
+                                           s32 *jump_vel_y,
+                                           sb32 is_shorthop);
+void ndsBaseFTCommonJumpSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonFallProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonFallSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonOttottoProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonOttottoProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonOttottoProcMap(GObj *fighter_gobj);
+void ndsBaseFTCommonOttottoWaitSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonOttottoSetStatus(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonCliffAttackCheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonCliffEscapeCheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonCliffClimbOrFallCheckInterruptCommon(GObj *fighter_gobj);
+void ndsBaseFTCommonCliffCommon2UpdateCollData(GObj *fighter_gobj);
+void ndsBaseFTCommonCliffCommon2InitStatusVars(GObj *fighter_gobj);
+void ndsBaseFTCommonCliffCatchSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageFallProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageFallProcMap(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageFallClampRumble(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageFallSetStatusFromCliffWait(GObj *fighter_gobj);
+f32 ndsBaseFTCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga,
+                                           f32 knockback);
+s32 ndsBaseFTCommonDamageGetDamageLevel(f32 hitstun);
+void ndsBaseFTCommonDamageDecHitStunSetPublic(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageCheckSetInvincible(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageCommonProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageAirCommonProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageCommonProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageAirCommonProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageFlyRollUpdateModelPitch(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageAirCommonProcMap(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageCommonProcLagUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageCommonProcPhysics(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonDamageCheckElementSetColAnim(GObj *fighter_gobj,
+                                                 s32 element,
+                                                 s32 damage_level);
+void ndsBaseFTCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element);
+void ndsBaseFTCommonDamageSetDustEffectInterval(FTStruct *fp);
+void ndsBaseFTCommonDamageUpdateDustEffect(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageSetPublic(FTStruct *this_fp, f32 knockback,
+                                    f32 angle);
+sb32 ndsBaseFTCommonDamageCheckCatchResist(FTStruct *fp);
+sb32 ndsBaseFTCommonDamageCheckCaptureKeepHold(FTStruct *fp);
+void ndsBaseFTCommonDamageInitDamageVars(GObj *fighter_gobj,
+                                         s32 status_id_replace, s32 damage,
+                                         f32 knockback, s32 angle_start,
+                                         s32 damage_lr, s32 damage_index,
+                                         s32 element, s32 damage_player_num,
+                                         s32 arg9, sb32 unk_bool,
+                                         sb32 is_public);
+void ndsBaseFTCommonDamageGotoDamageStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageUpdateCatchResist(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageUpdateDamageColAnim(GObj *fighter_gobj,
+                                              f32 knockback, s32 element);
+void ndsBaseFTCommonDamageSetDamageColAnim(GObj *fighter_gobj);
+void ndsBaseFTCommonDamageUpdateMain(GObj *fighter_gobj);
+void ftCommonDamageUpdateDamageColAnim(GObj *fighter_gobj, f32 knockback,
+                                       s32 element);
+void ftCommonDamageSetDamageColAnim(GObj *fighter_gobj);
+void ftCommonDamageCommonProcUpdate(GObj *fighter_gobj);
+void ftCommonDamageAirCommonProcUpdate(GObj *fighter_gobj);
+void ftCommonDamageCommonProcInterrupt(GObj *fighter_gobj);
+void ftCommonDamageAirCommonProcInterrupt(GObj *fighter_gobj);
+void ftCommonDamageCheckSetInvincible(GObj *fighter_gobj);
+void ftCommonDamageSetStatus(GObj *fighter_gobj);
+void ftCommonDamageCommonProcPhysics(GObj *fighter_gobj);
+void ftCommonDamageCommonProcLagUpdate(GObj *fighter_gobj);
+void ftCommonDamageAirCommonProcMap(GObj *fighter_gobj);
+void ndsBaseFTCommonPassiveSetStatus(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonPassiveCheckInterruptDamage(GObj *fighter_gobj);
+void ndsBaseFTCommonPassiveStandSetStatus(GObj *fighter_gobj,
+                                          s32 status_id);
+sb32 ndsBaseFTCommonPassiveStandCheckInterruptDamage(GObj *fighter_gobj);
+void ndsBaseFTCommonReboundProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonReboundSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonReboundWaitProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonReboundWaitSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonDownWaitProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonDownWaitProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonDownWaitSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonDownBounceProcUpdate(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonDownBounceCheckUpOrDown(GObj *fighter_gobj);
+void ndsBaseFTCommonDownBounceUpdateEffects(GObj *fighter_gobj);
+void ndsBaseFTCommonDownBounceSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonDownStandProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonDownStandSetStatus(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonDownStandCheckInterruptCommon(GObj *fighter_gobj);
+void ndsBaseFTCommonDownAttackSetStatus(GObj *fighter_gobj, s32 status_id);
+sb32 ndsBaseFTCommonDownAttackCheckInterruptDownBounce(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonDownAttackCheckInterruptDownWait(GObj *fighter_gobj);
+void ndsBaseFTCommonDownForwardOrBackSetStatus(GObj *fighter_gobj,
+                                               s32 status_id);
+sb32 ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
+    GObj *fighter_gobj);
+void ndsBaseFTCommonLandingProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonLandingSetStatusParam(GObj *fighter_gobj,
+                                          s32 status_id,
+                                          sb32 is_allow_interrupt,
+                                          f32 anim_speed);
+void ndsBaseFTCommonLandingSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonLandingAirNullSetStatus(GObj *fighter_gobj,
+                                            f32 anim_speed);
+void ndsBaseFTCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
+                                                sb32 is_allow_interrupt,
+                                                f32 anim_speed);
+
+f32 dMPCollisionMaterialFrictions[16] = {
+    4.0F, 3.0F, 3.0F, 1.0F,
+    2.0F, 2.0F, 4.0F, 4.0F,
+    4.0F, 4.0F, 4.0F, 4.0F,
+    4.0F, 4.0F, 4.0F, 4.0F
+};
+
+void syAudioStopBGMAll(void)
+{
+}
+
+void syAudioPlayBGM(s32 player, s32 bgm_id)
+{
+    (void)player;
+    gNdsSCVSBattleStageBGM = (u32)bgm_id;
+    gNdsSCVSBattleCompatAudioMask |= 1u << 0;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+}
+
+void func_800266A0_272A0(void)
+{
+}
+
+static alSoundEffect sNdsStubSoundEffect;
+
+void func_80026738_27338(alSoundEffect *sfx)
+{
+    if (sfx != NULL)
+    {
+        sfx->sfx_id = 0;
+    }
+}
+
+void *func_800269C0_275C0(u16 fgm_id)
+{
+    sNdsStubSoundEffect.sfx_id = fgm_id;
+    gNdsSCVSBattleLastFGM = fgm_id;
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownBounceSFXCount++;
+        gNdsStageMPCliffWaitDamageLoopDownBounceFGM = fgm_id;
+    }
+    if (fgm_id == nSYAudioFGMPupupuWhispyWind)
+    {
+        gNdsPupupuUpdateWindFGMCount++;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunGuardOnActive != FALSE) &&
+        (fgm_id == nSYAudioFGMGuardOn))
+    {
+        gNdsFighterDashRunGuardFGMCount++;
+        gNdsFighterDashRunGuardLastFGM = fgm_id;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageVoiceActive != FALSE))
+    {
+        sNdsFighterDashRunDamageVoiceCount++;
+        sNdsFighterDashRunDamageVoiceLastFGM = fgm_id;
+    }
+    gNdsSCVSBattleCompatAudioMask |= 1u << 1;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+    return &sNdsStubSoundEffect;
+}
+
+s32 syAudioCheckBGMPlaying(s32 sngplayer)
+{
+    (void)sngplayer;
+    gNdsSCVSBattleCompatAudioMask |= 1u << 2;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+    return FALSE;
+}
+
+void syAudioSetBGMVolume(s32 sngplayer, u32 vol)
+{
+    (void)sngplayer;
+    gNdsSCVSBattleLastAudioVolume = vol;
+    gNdsSCVSBattleCompatAudioMask |= 1u << 3;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+}
+
+/* scmanager.c excludes these renderer/task wrappers for the NDS target. Keep
+ * their original behavior here so imported scenes retain the same entry ABI. */
+void scManagerFuncUpdate(SYTaskmanSetup *setup)
+{
+    syTaskmanStartTask(setup);
+}
+
+void scManagerFuncDraw(void)
+{
+    gcDrawAll();
+}
+
+void syAudioSetSettingsUpdated(void)
+{
+}
+
+sb32 syAudioGetSettingsUpdated(void)
+{
+    return FALSE;
+}
+
+void syAudioSetFXType(u8 type)
+{
+    (void)type;
+}
+
+sb32 syAudioGetRestarting(void)
+{
+    return FALSE;
+}
+
+void ftManagerSetupFileSize(void)
+{
+}
+
+void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
+{
+    (void)data_flags;
+    (void)allocs_num;
+    gNdsSCVSBattleCompatManagerMask |= 1u << 0;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+    if (gFTManagerFigatreeHeapSize == 0)
+    {
+        gFTManagerFigatreeHeapSize = 0x1000u;
+    }
+    if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
+    {
+        ndsFighterMarioFoxSetupManagerFiles();
+    }
+}
+
+void ftManagerSetupFilesAllKind(s32 fkind)
+{
+    gNdsSCVSBattleCompatManagerMask |= 1u << 1;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+    if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
+    {
+        ndsFighterMarioFoxSetupFilesKind(fkind);
+    }
+}
+
+void ftManagerSetupFilesPlayablesAll(void)
+{
+    gNdsSCVSBattleCompatManagerMask |= 1u << 2;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+    if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
+    {
+        ndsFighterMarioFoxSetupFilesKind(nFTKindMario);
+        ndsFighterMarioFoxSetupFilesKind(nFTKindFox);
+    }
+}
+
+void *ftManagerAllocFigatreeHeapKind(s32 fkind)
+{
+    (void)fkind;
+    return syTaskmanMalloc(gFTManagerFigatreeHeapSize, 0x10);
+}
+
+GObj *ftManagerMakeFighter(FTDesc *desc)
+{
+    if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
+    {
+        GObj *model_gobj = ndsFighterMarioFoxMakeFighter(desc);
+
+        if (model_gobj != NULL)
+        {
+            return model_gobj;
+        }
+    }
+
+    GObj *fighter_gobj = gcMakeGObjSPAfter(nGCCommonKindFighter,
+                                           NULL,
+                                           nGCCommonLinkIDFighter,
+                                           GOBJ_PRIORITY_DEFAULT);
+
+    if (fighter_gobj != NULL)
+    {
+        fighter_gobj->user_data.s = desc->player;
+        gcAddDObjForGObj(fighter_gobj, NULL);
+        gNdsSCVSBattleOriginalFighterGObjCount++;
+        gNdsSCVSBattleOriginalFighterCreateCount++;
+        gNdsSCVSBattleOriginalActivePlayerCount++;
+        gNdsSCVSBattleOriginalActivePlayerMask |= 1u << (desc->player & 3);
+        if (desc->player == 0)
+        {
+            gNdsSCVSBattleOriginalP0FKind = (u32)desc->fkind;
+            gNdsSCVSBattleOriginalP0LR = (u32)desc->lr;
+        }
+        else if (desc->player == 1)
+        {
+            gNdsSCVSBattleOriginalP1FKind = (u32)desc->fkind;
+            gNdsSCVSBattleOriginalP1LR = (u32)desc->lr;
+        }
+        gNdsSCVSBattleCompatManagerMask |= 1u << 3;
+        gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+        ndsFighterMarioFoxRecordStubFighter(desc, fighter_gobj);
+    }
+    return fighter_gobj;
+}
+
+void ftManagerDestroyFighter(GObj *fighter_gobj)
+{
+    if (fighter_gobj != NULL)
+    {
+        gcEjectGObj(fighter_gobj);
+    }
+}
+
+void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
+{
+    (void)fighter_gobj;
+    (void)costume;
+    (void)shade;
+}
+
+sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
+                                     s32 unused)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageColAnimLastID = colanim_id;
+        sNdsFighterDashRunDamageColAnimLastDuration = unused;
+        if (colanim_id == nGMColAnimFighterFuraSleep)
+        {
+            sNdsFighterDashRunDamageSetupColAnimCount++;
+        }
+    }
+    return ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+            (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+               ? TRUE
+               : FALSE;
+}
+
+sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageSkeletonColAnimLastLevel = damage_level;
+    }
+    return ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+            (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+               ? TRUE
+               : FALSE;
+}
+
+void ftPhysicsStopVelAll(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffCatchFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffCatchFloorLoopStopVelCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopCliffCatchStopVelCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCaptureActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCaptureStopVelCount++;
+    }
+    if (fp != NULL)
+    {
+        fp->vel_air.x = 0.0F;
+        fp->vel_air.y = 0.0F;
+        fp->vel_air.z = 0.0F;
+        fp->vel_ground.x = 0.0F;
+        fp->vel_ground.y = 0.0F;
+        fp->vel_ground.z = 0.0F;
+        fp->vel_push.x = 0.0F;
+        fp->vel_push.y = 0.0F;
+        fp->vel_push.z = 0.0F;
+        fp->physics.vel_air = fp->vel_air;
+        fp->physics.vel_ground = fp->vel_ground;
+        fp->physics.vel_push = fp->vel_push;
+        fp->physics.vel_jostle_x = 0.0F;
+        fp->physics.vel_jostle_z = 0.0F;
+    }
+    if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
+    {
+        gNdsFighterInitPhysicsStopCount++;
+    }
+}
+
+void ftParamClearAttackCollAll(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    s32 i;
+    s32 j;
+
+    if (fp != NULL)
+    {
+        for (i = 0; i < FTATTACKCOLL_NUM_MAX; i++)
+        {
+            fp->attack_colls[i].attack_state = nGMAttackStateOff;
+            fp->attack_colls[i].group_id = 0;
+            fp->attack_colls[i].joint_id = 0;
+            fp->attack_colls[i].joint = NULL;
+            fp->attack_colls[i].damage = 0;
+            fp->attack_colls[i].element = 0;
+            fp->attack_colls[i].offset.x = 0.0F;
+            fp->attack_colls[i].offset.y = 0.0F;
+            fp->attack_colls[i].offset.z = 0.0F;
+            fp->attack_colls[i].size = 0.0F;
+            fp->attack_colls[i].angle = 0;
+            fp->attack_colls[i].knockback_scale = 0;
+            fp->attack_colls[i].knockback_weight = 0;
+            fp->attack_colls[i].knockback_base = 0;
+            fp->attack_colls[i].shield_damage = 0;
+            fp->attack_colls[i].fgm_level = 0;
+            fp->attack_colls[i].fgm_kind = 0;
+            fp->attack_colls[i].is_hit_air = FALSE;
+            fp->attack_colls[i].is_hit_ground = FALSE;
+            fp->attack_colls[i].can_rebound = FALSE;
+            fp->attack_colls[i].is_scale_pos = FALSE;
+            fp->attack_colls[i].motion_attack_id = 0;
+            fp->attack_colls[i].motion_count = 0;
+            fp->attack_colls[i].stat_count = 0;
+            fp->attack_colls[i].pos_curr.x = 0.0F;
+            fp->attack_colls[i].pos_curr.y = 0.0F;
+            fp->attack_colls[i].pos_curr.z = 0.0F;
+            fp->attack_colls[i].pos_prev.x = 0.0F;
+            fp->attack_colls[i].pos_prev.y = 0.0F;
+            fp->attack_colls[i].pos_prev.z = 0.0F;
+            for (j = 0; j < GMATTACKREC_NUM_MAX; j++)
+            {
+                fp->attack_colls[i].attack_records[j].victim_gobj = NULL;
+                fp->attack_colls[i].attack_records[j]
+                    .victim_flags.is_interact_hurt = FALSE;
+                fp->attack_colls[i].attack_records[j]
+                    .victim_flags.is_interact_shield = FALSE;
+                fp->attack_colls[i].attack_records[j]
+                    .victim_flags.timer_rehit = 0;
+                fp->attack_colls[i].attack_records[j]
+                    .victim_flags.group_id = 7;
+            }
+        }
+        fp->is_attack_active = FALSE;
+    }
+    if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
+    {
+        gNdsFighterInitAttackClearCount++;
+    }
+}
+
+typedef enum NDSGMHitType
+{
+    nNDSGMHitTypeDamage = 0,
+    nNDSGMHitTypeShield = 1,
+    nNDSGMHitTypeAttack = 3
+} NDSGMHitType;
+
+sb32 gFTMainIsDamageDetect[FTATTACKCOLL_NUM_MAX];
+sb32 gFTMainIsAttackDetect[FTATTACKCOLL_NUM_MAX];
+
+void ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
+                               GObj *victim_gobj, s32 attack_type,
+                               u32 victim_group_id,
+                               sb32 ignore_damage_or_hit)
+{
+    u32 i;
+    u32 j;
+
+    if ((fp == NULL) || (victim_gobj == NULL))
+    {
+        return;
+    }
+
+    for (i = 0u; i < FTATTACKCOLL_NUM_MAX; i++)
+    {
+        FTAttackColl *attack_coll = &fp->attack_colls[i];
+
+        if ((attack_coll->attack_state == nGMAttackStateOff) ||
+            (attack_coll->group_id != attack_group_id))
+        {
+            continue;
+        }
+
+        for (j = 0u; j < GMATTACKREC_NUM_MAX; j++)
+        {
+            if (victim_gobj == attack_coll->attack_records[j].victim_gobj)
+            {
+                break;
+            }
+        }
+        if (j == GMATTACKREC_NUM_MAX)
+        {
+            for (j = 0u; j < GMATTACKREC_NUM_MAX; j++)
+            {
+                if (attack_coll->attack_records[j].victim_gobj == NULL)
+                {
+                    break;
+                }
+            }
+            if (j == GMATTACKREC_NUM_MAX)
+            {
+                j = 0u;
+            }
+            attack_coll->attack_records[j].victim_gobj = victim_gobj;
+        }
+
+        switch (attack_type)
+        {
+        case nNDSGMHitTypeDamage:
+            attack_coll->attack_records[j].victim_flags.is_interact_hurt =
+                TRUE;
+            break;
+
+        case nNDSGMHitTypeShield:
+            attack_coll->attack_records[j].victim_flags.is_interact_shield =
+                TRUE;
+            break;
+
+        case nNDSGMHitTypeAttack:
+            attack_coll->attack_records[j].victim_flags.group_id =
+                victim_group_id;
+            break;
+
+        default:
+            break;
+        }
+
+        if (ignore_damage_or_hit == 0)
+        {
+            gFTMainIsDamageDetect[i] = FALSE;
+        }
+        else
+        {
+            gFTMainIsAttackDetect[i] = FALSE;
+        }
+    }
+}
+
+void ftParamClearAttackRecordID(FTStruct *fp, s32 attack_id)
+{
+    s32 i;
+
+    if ((fp == NULL) || (attack_id < 0) ||
+        ((u32)attack_id >= FTATTACKCOLL_NUM_MAX))
+    {
+        return;
+    }
+    for (i = 0; i < GMATTACKREC_NUM_MAX; i++)
+    {
+        GMAttackRecord *record =
+            &fp->attack_colls[attack_id].attack_records[i];
+
+        record->victim_gobj = NULL;
+        record->victim_flags.is_interact_hurt = FALSE;
+        record->victim_flags.is_interact_shield = FALSE;
+        record->victim_flags.timer_rehit = 0;
+        record->victim_flags.group_id = 7;
+    }
+}
+
+void ftParamRefreshAttackCollID(GObj *fighter_gobj, s32 attack_id)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (attack_id < 0) ||
+        ((u32)attack_id >= FTATTACKCOLL_NUM_MAX))
+    {
+        return;
+    }
+    fp->attack_colls[attack_id].attack_state = nGMAttackStateNew;
+    fp->is_attack_active = TRUE;
+    ftParamClearAttackRecordID(fp, attack_id);
+    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAttackAirRefreshActive != FALSE))
+    {
+        gNdsFighterJumpAttackAirRefreshCount++;
+        gNdsFighterJumpAttackAirRefreshMask |= 1u << (u32)attack_id;
+    }
+    if ((ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPLiveHitOriginalRehitRefreshActive != FALSE))
+    {
+        gNdsStageMPLiveHitDamageLoopOriginalRehitRefreshIDMask |=
+            1u << (u32)attack_id;
+    }
+}
+
+void ftParamSetHitStatusPartAll(GObj *fighter_gobj, s32 hitstatus)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    u32 i;
+
+    if (fp != NULL)
+    {
+        for (i = 0; i < FTDAMAGECOLL_NUM_MAX; i++)
+        {
+            if (fp->damage_colls[i].joint != NULL)
+            {
+                fp->damage_colls[i].hitstatus = hitstatus;
+            }
+        }
+    }
+    if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
+    {
+        gNdsFighterInitHitStatusPartCount++;
+    }
+}
+
+void ftParamSetHitStatusPartID(GObj *fighter_gobj, s32 joint_id,
+                               s32 hitstatus)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    u32 i;
+
+    if (fp != NULL)
+    {
+        for (i = 0; i < FTDAMAGECOLL_NUM_MAX; i++)
+        {
+            if ((fp->damage_colls[i].joint != NULL) &&
+                (fp->damage_colls[i].joint_id == joint_id))
+            {
+                fp->damage_colls[i].hitstatus = hitstatus;
+            }
+        }
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunGuardOnActive != FALSE))
+    {
+        gNdsFighterDashRunGuardStateMask |= 1u << 8u;
+    }
+}
+
+void ftParamResetModelPartAll(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftParamHideModelPartAll(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftParamProcStopEffect(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftParamsUpdateFighterPartsTransform(DObj *joint)
+{
+    (void)joint;
+}
+
+void ftParamsUpdateFighterPartsTransformAll(DObj *joint)
+{
+    (void)joint;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunGuardOnActive != FALSE))
+    {
+        gNdsFighterDashRunGuardStateMask |= 1u << 9u;
+    }
+}
+
+void ftCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    mpCommonSetFighterAir(fp);
+    ftMainSetStatus(fighter_gobj, nFTCommonStatusShieldBreakFly, 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_DAMAGEPLAYER);
+    fp->status_id = nFTCommonStatusShieldBreakFly;
+    fp->motion_id = nFTCommonMotionShieldBreakFly;
+    fp->motion_script_id = nFTCommonMotionShieldBreakFly;
+    fp->proc_update = NULL;
+    fp->proc_interrupt = NULL;
+    fp->proc_physics = ftPhysicsApplyAirVelDriftFastFall;
+    fp->proc_map = ftCommonDamageFallProcMap;
+    fp->proc_damage = NULL;
+    fp->ga = nMPKineticsAir;
+    fp->physics.vel_air.x = 0.0F;
+    fp->physics.vel_air.y = 0.0F;
+    ftMainPlayAnimEventsAll(fighter_gobj);
+    ftParamCheckSetFighterColAnimID(fighter_gobj,
+                                    nGMColAnimFighterShieldBreakFly, 0);
+    (void)func_800269C0_275C0(nSYAudioFGMShieldBreak);
+}
+
+/* ponytail: branch proof only; import Fox/Ness special runtime when promoted. */
+void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj)
+{
+    ftCommonShieldBreakFlyCommonSetStatus(fighter_gobj);
+}
+
+void ftFoxSpecialLwHitSetStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp != NULL)
+    {
+        fp->lr = fp->reflect_lr;
+        fp->is_reflect = TRUE;
+    }
+}
+
+void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp != NULL)
+    {
+        fp->lr = fp->absorb_lr;
+        fp->is_absorb = TRUE;
+    }
+}
+
+GObj *efManagerShieldMakeEffect(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunGuardOnActive != FALSE))
+    {
+        gNdsFighterDashRunGuardEffectCount++;
+    }
+    return NULL;
+}
+
+GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    return NULL;
+}
+
+void efManagerEggBreakMakeEffect(Vec3f *pos)
+{
+    (void)pos;
+}
+
+void lbCommonAddDObjAnimJointAll(DObj *dobj, AObjEvent32 **anim_joint,
+                                 f32 anim_frame)
+{
+    (void)dobj;
+    (void)anim_joint;
+    (void)anim_frame;
+}
+
+void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
+{
+    (void)dobj;
+    (void)scale;
+}
+
+void ftParamResetFighterColAnim(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
+    {
+        gNdsFighterInitColAnimResetCount++;
+    }
+}
+
+sb32 ftHammerCheckHoldHammer(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (sNdsFighterDashRunDamageHammerCheckActive != FALSE)
+    {
+        sNdsFighterDashRunDamageHammerCheckCount++;
+        return sNdsFighterDashRunDamageHammerHold;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopActive != FALSE))
+    {
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingJumpAnimEndActive != FALSE))
+    {
+        return FALSE;
+    }
+    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitHammerCheckCount++;
+    }
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpHammerHoldCheckCount++;
+    }
+    return FALSE;
+}
+
+void ftHammerProcInterrupt(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (sNdsFighterDashRunDamageHammerCheckActive != FALSE)
+    {
+        sNdsFighterDashRunDamageHammerGroundCount++;
+    }
+}
+
+void ftHammerSetStatusHammerWait(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitHammerDeniedCount++;
+    }
+}
+
+sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if (fp == NULL)
+        {
+            return FALSE;
+        }
+        if ((fp->input.pl.button_tap & U_CBUTTONS) != 0u)
+        {
+            return ftCommonKneeBendCheckInterruptCommon(fighter_gobj);
+        }
+        if ((ABS(fp->input.pl.stick_range.x) >= FTCOMMON_DASH_STICK_RANGE_MIN) &&
+            (fp->tap_stick_x == 0u))
+        {
+            return ftCommonDashCheckInterruptCommon(fighter_gobj);
+        }
+        if (ABS(fp->input.pl.stick_range.x) >= 8)
+        {
+            return ftCommonWalkCheckInterruptCommon(fighter_gobj);
+        }
+        return ftCommonWaitCheckInterruptCommon(fighter_gobj);
+    }
+    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitProcInterruptCallCount++;
+    }
+    if (ndsFighterMarioFoxWaitTickProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitTickGroundInterruptCheckCount++;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpWaitProbeActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterJumpWaitInterruptCallCount++;
+        gNdsFighterJumpGroundCheckCallCount++;
+        result = ftCommonKneeBendCheckInterruptCommon(fighter_gobj);
+        return result;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunWaitInterruptActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterDashRunWaitInterruptCallCount++;
+        gNdsFighterDashRunGroundCheckCallCount++;
+        if (sNdsFighterDashRunAttack1Active != FALSE)
+        {
+            result = ftCommonAttack1CheckInterruptCommon(fighter_gobj);
+        }
+        else
+        {
+            result = ftCommonDashCheckInterruptCommon(fighter_gobj);
+        }
+        return result;
+    }
+    if ((ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE) &&
+        (sNdsFighterWalkLoopWaitReturnActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterWalkLoopWaitReturnCheckCount++;
+        result = ftCommonWaitCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterWalkLoopWaitReturnSuccessCount++;
+        }
+        return result;
+    }
+    if ((ndsFighterMarioFoxWalkInputProofEnabled() != FALSE) &&
+        (sNdsFighterWalkInputProbeActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterWalkWaitInterruptCallCount++;
+        gNdsFighterWalkGroundCheckCallCount++;
+        gNdsFighterWalkOriginalCheckCallCount++;
+        result = ftCommonWalkCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterWalkOriginalCheckSuccessCount++;
+        }
+        return result;
+    }
+    return FALSE;
+}
+
+static sb32 ndsFighterWalkDeferredInterrupt(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        ((sNdsFighterProcessLoopInterruptActive != FALSE) ||
+         (sNdsFighterProcessLoopMapActive != FALSE)))
+    {
+        gNdsFighterProcessLoopDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxProcessLoopDeferredMask |= 0xffu;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        ((sNdsFighterLandingFallInterruptActive != FALSE) ||
+         (sNdsFighterLandingProcInterruptActive != FALSE)))
+    {
+        gNdsFighterLandingDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxLandingLoopDeferredMask = 0xffu;
+        return FALSE;
+    }
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        ((sNdsFighterDashRunDashInterruptActive != FALSE) ||
+         (sNdsFighterDashRunRunInterruptActive != FALSE) ||
+         (sNdsFighterDashRunRunBrakeInterruptActive != FALSE)))
+    {
+        gNdsFighterDashRunDeferredInterruptCount++;
+        gNdsFighterMarioFoxDashRunDeferredMask = 0xffu;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE) &&
+        (sNdsFighterWalkLoopFrameActive != FALSE))
+    {
+        gNdsFighterMarioFoxWalkLoopDeferredMask = 0xffu;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxWalkInputProofEnabled() != FALSE) &&
+        (sNdsFighterWalkLoopProbeActive != FALSE))
+    {
+        gNdsFighterWalkDeferredInterruptCheckCount++;
+    }
+    return FALSE;
+}
+
+sb32 ftCommonSpecialNCheckInterruptCommon(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpKneeBendInterruptActive != FALSE))
+    {
+        gNdsFighterJumpSpecialHiCheckCount++;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonSpecialLwCheckInterruptCommon(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopAppealGuardActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopAppealGuardCatchCheckCount++;
+        return ndsBaseFTCommonCatchCheckInterruptCommon(fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsStageMPPassiveLoopCatchCheckCount++;
+        result = ndsBaseFTCommonCatchCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsStageMPPassiveLoopCatchSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackS4CheckInterruptCommon(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackS4CheckInterruptTurn(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackHi4CheckInterruptCommon(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackLw4CheckInterruptCommon(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackLw4CheckInterruptSquat(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackS3CheckInterruptCommon(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackHi3CheckInterruptCommon(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackLw3CheckInterruptCommon(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttack1CheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterDashRunAttack1CheckCallCount++;
+        result = ndsBaseFTCommonAttack1CheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterDashRunAttack1CheckSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+void ftCommonAttack11SetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        ndsBaseFTCommonAttack11SetStatus(fighter_gobj);
+    }
+}
+
+void ftCommonAttack11ProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack11UpdateActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) && (fp->player < 2))
+        {
+            gNdsFighterDashRunAttack11TickMask |=
+                1u << ((fp->player * 4u) + 0u);
+        }
+        ndsBaseFTCommonAttack11ProcUpdate(fighter_gobj);
+    }
+}
+
+void ftCommonAttack11ProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack11InterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) && (fp->player < 2))
+        {
+            gNdsFighterDashRunAttack11TickMask |=
+                1u << ((fp->player * 4u) + 1u);
+        }
+        ndsBaseFTCommonAttack11ProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonAttack12SetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        ndsBaseFTCommonAttack12SetStatus(fighter_gobj);
+    }
+}
+
+void ftCommonAttack12ProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        ndsBaseFTCommonAttack12ProcUpdate(fighter_gobj);
+    }
+}
+
+void ftCommonAttack12ProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        ndsBaseFTCommonAttack12ProcInterrupt(fighter_gobj);
+    }
+}
+
+sb32 ftCommonAttack11CheckGoto(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+void ftCommonItemShootSetStatus(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftCommonItemShootAirSetStatus(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+sb32 ftCommonGetCheckInterruptCommon(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+sb32 ftCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        gNdsFighterDashRunAttack100StartCheckCallCount++;
+        return ndsBaseFTCommonAttack100StartCheckInterruptCommon(fighter_gobj);
+    }
+    return FALSE;
+}
+
+void ftCommonAttack100StartSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        gNdsFighterDashRunAttack100StartSetStatusCount++;
+        ndsBaseFTCommonAttack100StartSetStatus(fighter_gobj);
+    }
+}
+
+void ftCommonAttack100StartProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        ndsBaseFTCommonAttack100StartProcUpdate(fighter_gobj);
+    }
+}
+
+void ftCommonAttack100LoopSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        gNdsFighterDashRunAttack100LoopSetStatusCount++;
+        ndsBaseFTCommonAttack100LoopSetStatus(fighter_gobj);
+    }
+}
+
+void ftCommonAttack100LoopProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        ndsBaseFTCommonAttack100LoopProcUpdate(fighter_gobj);
+    }
+}
+
+void ftCommonAttack100LoopProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        ndsBaseFTCommonAttack100LoopProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonAttack100EndSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        ndsBaseFTCommonAttack100EndSetStatus(fighter_gobj);
+    }
+}
+
+sb32 ftCommonCatchCheckInterruptAttack11(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+void ftParamSetMotionID(FTStruct *fp, s32 motion_attack_id)
+{
+    if (fp != NULL)
+    {
+        fp->motion_attack_id = motion_attack_id;
+    }
+}
+
+void ftParamSetStatUpdate(FTStruct *fp, u16 flags)
+{
+    if (fp != NULL)
+    {
+        fp->stat_flags.halfword = flags;
+        fp->stat_attack_id = fp->stat_flags.attack_id;
+        fp->status_attack_id = fp->stat_flags.attack_id;
+        fp->status_is_smash = fp->stat_flags.is_smash_attack;
+        fp->status_is_projectile = fp->stat_flags.is_projectile;
+    }
+}
+
+void ftParamUpdate1PGameAttackStats(FTStruct *fp, s32 attack_id)
+{
+    if (fp != NULL)
+    {
+        fp->stat_attack_id = attack_id;
+        fp->stat_count++;
+    }
+}
+
+void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
+{
+    if ((main_dobj != NULL) && (vec != NULL))
+    {
+        FTParts *parts = ftGetParts(main_dobj);
+
+        if ((parts != NULL) && (parts->unk_dobjtrans_0x5 != 0))
+        {
+            vec->x += parts->mtx_translate[3][0];
+            vec->y += parts->mtx_translate[3][1];
+            vec->z += parts->mtx_translate[3][2];
+        }
+        else
+        {
+            vec->x += main_dobj->translate.vec.f.x;
+            vec->y += main_dobj->translate.vec.f.y;
+            vec->z += main_dobj->translate.vec.f.z;
+        }
+    }
+}
+
+GObj *efManagerKirbyVulcanJabMakeEffect(Vec3f *pos, s32 lr, f32 rotate,
+                                        f32 vel, f32 add)
+{
+    (void)pos;
+    (void)lr;
+    (void)rotate;
+    (void)vel;
+    (void)add;
+    return NULL;
+}
+
+GObj *efManagerSamusGrappleBeamGlowMakeEffect(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    return NULL;
+}
+
+sb32 ftCommonGuardOnCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopAppealGuardActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsStageMPPassiveLoopAppealGuardCheckCount++;
+        result = ndsBaseFTCommonGuardOnCheckInterruptCommon(fighter_gobj);
+        return result;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunGuardOnActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterDashRunGuardCheckCallCount++;
+        result = ndsBaseFTCommonGuardOnCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterDashRunGuardCheckSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonLightThrowCheckInterruptGuardOn(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonEscapeCheckInterruptGuard(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunEscapeActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterDashRunEscapeCheckCallCount++;
+        result = ndsBaseFTCommonEscapeCheckInterruptGuard(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterDashRunEscapeCheckSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonLightThrowCheckInterruptEscape(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunEscapeInterruptActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsFighterDashRunEscapeInterruptCount++;
+        return FALSE;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonGuardCheckInterruptEscape(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonCatchCheckInterruptGuard(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonGuardPassCheckInterruptGuard(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAppealCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopAppealActive != FALSE))
+    {
+        return ndsBaseFTCommonAppealCheckInterruptCommon(fighter_gobj);
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+#ifndef FTKIRBY_COPYDAMAGE_LOSECOPY_RANDOM
+#define FTKIRBY_COPYDAMAGE_LOSECOPY_RANDOM (1.0F / 12.0F)
+#endif
+
+void ftKirbySpecialNLoseCopy(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    gNdsFighterDashRunDamageKirbyCopyBefore =
+        (u32)fp->passive_vars.kirby.copy_id;
+    (void)func_800269C0_275C0(nSYAudioFGMKirbySpecialNLoseCopy);
+    fp->passive_vars.kirby.copy_id = nFTKindKirby;
+    fp->passive_vars.kirby.is_ignore_losecopy = FALSE;
+    gNdsFighterDashRunDamageKirbyCopyAfter =
+        (u32)fp->passive_vars.kirby.copy_id;
+    gNdsFighterDashRunDamageKirbyCopyFGM =
+        nSYAudioFGMKirbySpecialNLoseCopy;
+}
+
+void ftKirbySpecialNDamageCheckLoseCopy(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    u32 mask = 0u;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    if ((fp->fkind == nFTKindKirby) || (fp->fkind == nFTKindNKirby))
+    {
+        mask |= 0x1u;
+    }
+    if (fp->passive_vars.kirby.copy_id != nFTKindKirby)
+    {
+        mask |= 0x2u;
+    }
+    if (fp->passive_vars.kirby.is_ignore_losecopy == FALSE)
+    {
+        mask |= 0x4u;
+    }
+    if ((mask & 0x7u) == 0x7u)
+    {
+        if (syUtilsRandFloat() < FTKIRBY_COPYDAMAGE_LOSECOPY_RANDOM)
+        {
+            mask |= 0x8u;
+            ftKirbySpecialNLoseCopy(fighter_gobj);
+            if (fp->passive_vars.kirby.copy_id == nFTKindKirby)
+            {
+                mask |= 0x10u;
+            }
+        }
+        mask |= 0x20u;
+    }
+    gNdsFighterDashRunDamageKirbyCopyMask = mask;
+}
+
+sb32 ftCommonKneeBendCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPDownWaitLoopDownStandKneeBendCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        return ndsBaseFTCommonKneeBendCheckInterruptCommon(fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpWaitProbeActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterJumpOriginalKneeBendCheckCallCount++;
+        result = ndsBaseFTCommonKneeBendCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterJumpOriginalKneeBendCheckSuccessCount++;
+            gNdsFighterJumpKneeBendSetStatusCallCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonDashCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        return ndsBaseFTCommonDashCheckInterruptCommon(fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunWaitInterruptActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterDashRunOriginalDashCheckCallCount++;
+        result = ndsBaseFTCommonDashCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterDashRunOriginalDashCheckSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonAttackS4CheckInterruptDash(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonEscapeCheckInterruptDash(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonCatchCheckInterruptDashRun(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+void ftCommonAttackDashSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttackDashActive != FALSE))
+    {
+        ndsBaseFTCommonAttackDashSetStatus(fighter_gobj);
+    }
+}
+
+sb32 ftCommonAttackDashCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttackDashActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterDashRunAttackDashCheckCallCount++;
+        result = ndsBaseFTCommonAttackDashCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterDashRunAttackDashCheckSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+void ftCommonItemThrowSetStatus(GObj *fighter_gobj, s32 status_id)
+{
+    (void)fighter_gobj;
+    (void)status_id;
+}
+
+void ftCommonItemSwingSetStatus(GObj *fighter_gobj, s32 swing_type)
+{
+    (void)fighter_gobj;
+    (void)swing_type;
+}
+
+sb32 ftCommonGuardOnCheckInterruptDashRun(GObj *fighter_gobj, f32 frame)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunGuardOnActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterDashRunGuardCheckCallCount++;
+        result = ndsBaseFTCommonGuardOnCheckInterruptDashRun(
+            fighter_gobj, (s32)frame);
+        if (result != FALSE)
+        {
+            gNdsFighterDashRunGuardCheckSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonKneeBendCheckInterruptRun(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        return ndsBaseFTCommonKneeBendCheckInterruptRun(fighter_gobj);
+    }
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 1;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonTurnRunCheckInterruptRun(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunTurnRunActive != FALSE))
+    {
+        sb32 result;
+
+        gNdsFighterDashRunTurnRunCheckCallCount++;
+        result = ndsBaseFTCommonTurnRunCheckInterruptRun(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsFighterDashRunTurnRunCheckSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+void ftCommonTurnProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        ((sNdsStageTurnLoopUpdateActive != FALSE) ||
+         (sNdsStageTurnLoopFinalUpdateActive != FALSE)))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+            (fighter_gobj == NULL))
+        {
+            gNdsStageTurnLoopUnsafeCount++;
+            return;
+        }
+        if (sNdsStageTurnLoopFinalUpdateActive != FALSE)
+        {
+            gNdsStageTurnLoopFinalUpdateTickCount++;
+        }
+        else
+        {
+            gNdsStageTurnLoopUpdateTickCount++;
+        }
+        if (fp->motion_vars.flags.flag1 != 0)
+        {
+            fp->motion_vars.flags.flag1 = 0;
+            fp->status_vars.common.turn.is_allow_turn_direction = TRUE;
+            fp->status_vars.common.turn.is_disable_sa_interrupts = TRUE;
+            fp->lr = -fp->lr;
+            fp->physics.vel_ground.x = -fp->physics.vel_ground.x;
+        }
+        if (fighter_gobj->anim_frame <= 0.0F)
+        {
+            ftCommonWaitSetStatus(fighter_gobj);
+        }
+        return;
+    }
+}
+
+void ftCommonTurnProcInterrupt(GObj *fighter_gobj)
+{
+    if (ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonTurnProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonTurnSetStatus(GObj *fighter_gobj, s32 lr_dash)
+{
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopSetStatusActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageTurnLoopUnsafeCount++;
+            return;
+        }
+        ndsBaseFTCommonTurnSetStatus(fighter_gobj, lr_dash);
+        fp->motion_vars.flags.flag1 = 0;
+        fp->status_vars.common.turn.is_allow_turn_direction = FALSE;
+        fp->status_vars.common.turn.is_disable_sa_interrupts = FALSE;
+        fp->status_vars.common.turn.button_mask = 0u;
+        fp->status_vars.common.turn.lr_dash = lr_dash;
+        fp->status_vars.common.turn.attacks4_buffer =
+            (lr_dash != 0) ? 0 : 256;
+        fp->status_vars.common.turn.lr_turn = -fp->lr;
+        return;
+    }
+    (void)fighter_gobj;
+    (void)lr_dash;
+}
+
+void ftCommonTurnSetStatusCenter(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopSetStatusActive != FALSE))
+    {
+        ndsBaseFTCommonTurnSetStatusCenter(fighter_gobj);
+    }
+}
+
+void ftCommonTurnSetStatusInvertLR(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopSetStatusActive != FALSE))
+    {
+        ndsBaseFTCommonTurnSetStatusInvertLR(fighter_gobj);
+        return;
+    }
+
+    fp = ftGetStruct(fighter_gobj);
+
+    if (fp != NULL)
+    {
+        fp->lr = -fp->lr;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        gNdsFighterDashRunUnexpectedStatusCount++;
+    }
+}
+
+sb32 ftCommonTurnCheckInputSuccess(GObj *fighter_gobj)
+{
+    if (ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE)
+    {
+        return ndsBaseFTCommonTurnCheckInputSuccess(fighter_gobj);
+    }
+    return FALSE;
+}
+
+void ftParamSetStickLR(FTStruct *fp)
+{
+    if ((fp != NULL) && (fp->input.pl.stick_range.x != 0))
+    {
+        fp->lr = (fp->input.pl.stick_range.x >= 0) ? 1 : -1;
+    }
+}
+
+sb32 ftCommonSquatCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassInputLoopInputActive != FALSE))
+    {
+        return ndsBaseFTCommonSquatCheckInterruptCommon(fighter_gobj);
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonPassCheckInterruptCommon(GObj *fighter_gobj)
+{
+    sb32 result;
+
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPDownWaitLoopDownStandPassCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassInputLoopInputActive != FALSE))
+    {
+        gNdsStageMPPassInputLoopCheckCallCount++;
+        result = ndsBaseFTCommonPassCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            gNdsStageMPPassInputLoopCheckSuccessCount++;
+        }
+        return result;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonPassCheckInterruptSquat(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassInputLoopInputActive != FALSE))
+    {
+        return ndsBaseFTCommonPassCheckInterruptSquat(fighter_gobj);
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonDokanStartCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPDownWaitLoopDownStandDokanCheckCount++;
+        return FALSE;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonSquatWaitCheckInterruptLanding(GObj *fighter_gobj)
+{
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+sb32 ftCommonHammerFallCheckInterruptCommon(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopSetStatusActive != FALSE))
+    {
+        gNdsStageTurnLoopCheckCallCount++;
+        if (ftCommonTurnCheckInputSuccess(fighter_gobj) != FALSE)
+        {
+            ftCommonTurnSetStatus(fighter_gobj, 0);
+            gNdsStageTurnLoopCheckSuccessCount++;
+            gNdsStageTurnLoopSetStatusCount++;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+}
+
+void ftAnimEndSetWait(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttackDashUpdateActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
+
+        if (slot < 2u)
+        {
+            gNdsFighterDashRunAttackDashTickMask |= 1u << (slot * 3u);
+        }
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopAttackUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopAttackUpdateTickCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollForwardUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollForwardUpdateTickCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollBackUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollBackUpdateTickCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopDownStandUpdateTickCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandBActive != FALSE))
+    {
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveStandUpdateTickCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveUpdateTickCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCatchUpdateTickCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveStandUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveStandUpdateTickCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveUpdateTickCount++;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopRunBrakeEndActive != FALSE))
+    {
+        gNdsFighterProcessLoopRunBrakeEndCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopLandingEndActive != FALSE))
+    {
+        gNdsFighterProcessLoopLandingEndCount++;
+        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingEndActive != FALSE))
+    {
+        gNdsFighterLandingEndCallCount++;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpRunBrakeEndActive != FALSE))
+    {
+        gNdsFighterJumpRunBrakeEndCallCount++;
+    }
+    (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
+}
+
+void ftAnimEndSetFall(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAttackAirRefreshActive != FALSE))
+    {
+        (void)fighter_gobj;
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopJumpAnimEndActive != FALSE))
+    {
+        gNdsFighterProcessLoopJumpAnimEndCount++;
+        ftCommonFallSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingJumpAnimEndActive != FALSE))
+    {
+        gNdsFighterLandingJumpAnimEndCallCount++;
+        ftCommonFallSetStatus(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpFallDeferredCount++;
+        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 7;
+    }
+}
+
+static void ndsFTCommonCliffClimbQuick2SetStatusBounded(GObj *fighter_gobj)
+{
+    ftCommonCliffCommon2UpdateCollData(fighter_gobj);
+    ftMainSetStatus(fighter_gobj, nFTCommonStatusCliffClimbQuick2, 0.0F, 1.0F,
+        FTSTATUS_PRESERVE_NONE);
+    ftCommonCliffCommon2InitStatusVars(fighter_gobj);
+}
+
+static void ndsFTCommonCliffWaitApplyOriginalPostStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->status_vars.common.cliffwait.is_allow_interrupt = FALSE;
+    fp->status_vars.common.cliffwait.fall_wait =
+        (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
+            FTCOMMON_CLIFF_FALL_WAIT_DAMAGE_LOW :
+            FTCOMMON_CLIFF_FALL_WAIT_DAMAGE_HIGH;
+    fp->is_cliff_hold = TRUE;
+}
+
+sb32 ftAnimEndCheckSetStatus(GObj *fighter_gobj, void (*proc_status)(GObj*))
+{
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffTickFloorLoopOttottoAnimEndCheckCount++;
+        if ((proc_status == ftCommonOttottoWaitSetStatus) ||
+            (proc_status == ndsBaseFTCommonOttottoWaitSetStatus))
+        {
+            return FALSE;
+        }
+    }
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopWaitUpdateActive != FALSE) &&
+        (proc_status == ftCommonCliffWaitSetStatus))
+    {
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 3;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            sNdsStageMPCliffLiveLoopSetStatusActive = TRUE;
+            proc_status(fighter_gobj);
+            ndsFTCommonCliffWaitApplyOriginalPostStatus(fighter_gobj);
+            sNdsStageMPCliffLiveLoopSetStatusActive = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopQuick1UpdateActive != FALSE) &&
+        (proc_status == ftCommonCliffClimbQuick2SetStatus))
+    {
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 4;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            sNdsStageMPCliffLiveLoopSetStatusActive = TRUE;
+            ndsFTCommonCliffClimbQuick2SetStatusBounded(fighter_gobj);
+            sNdsStageMPCliffLiveLoopSetStatusActive = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopCommon2UpdateActive != FALSE) &&
+        (proc_status == mpCommonSetFighterWaitOrFall))
+    {
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 5;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            sNdsStageMPCliffLiveLoopSetStatusActive = TRUE;
+            proc_status(fighter_gobj);
+            sNdsStageMPCliffLiveLoopSetStatusActive = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitFloorLoopUpdateActive != FALSE) &&
+        (proc_status == ftCommonCliffWaitSetStatus))
+    {
+        gNdsStageMPCliffWaitFloorLoopAnimEndCheckCount++;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            gNdsStageMPCliffWaitFloorLoopAnimEndSetStatusCount++;
+            gNdsStageMPCliffWaitFloorLoopCliffWaitSetStatusCount++;
+            sNdsStageMPCliffWaitFloorLoopSetStatusActive = TRUE;
+            proc_status(fighter_gobj);
+            ndsFTCommonCliffWaitApplyOriginalPostStatus(fighter_gobj);
+            sNdsStageMPCliffWaitFloorLoopSetStatusActive = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffAttackActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackActionLoopAnimEndActive != FALSE) &&
+        (proc_status == ftCommonCliffAttackQuick2SetStatus))
+    {
+        gNdsStageMPCliffAttackActionLoopAnimEndCheckCount++;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            sNdsStageMPCliffAttackActionLoopSetStatusActive = TRUE;
+            proc_status(fighter_gobj);
+            sNdsStageMPCliffAttackActionLoopSetStatusActive = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbActionLoopAnimEndActive != FALSE) &&
+        (proc_status == ftCommonCliffClimbQuick2SetStatus))
+    {
+        gNdsStageMPCliffClimbActionLoopAnimEndCheckCount++;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            sNdsStageMPCliffClimbActionLoopSetStatusActive = TRUE;
+            ndsFTCommonCliffClimbQuick2SetStatusBounded(fighter_gobj);
+            sNdsStageMPCliffClimbActionLoopSetStatusActive = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopAnimEndActive != FALSE) &&
+        (proc_status == ftCommonCliffEscapeQuick2SetStatus))
+    {
+        gNdsStageMPCliffEscapeActionLoopAnimEndCheckCount++;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            sNdsStageMPCliffEscapeActionLoopSetStatusActive = TRUE;
+            proc_status(fighter_gobj);
+            sNdsStageMPCliffEscapeActionLoopSetStatusActive = FALSE;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffCommon2LoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffCommon2LoopUpdateActive != FALSE) &&
+        (proc_status == mpCommonSetFighterWaitOrFall))
+    {
+        gNdsStageMPCliffCommon2LoopAnimEndCheckCount++;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            gNdsStageMPCliffCommon2LoopWaitOrFallCallCount++;
+            proc_status(fighter_gobj);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbCommon2LoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbCommon2LoopUpdateActive != FALSE) &&
+        (proc_status == mpCommonSetFighterWaitOrFall))
+    {
+        gNdsStageMPCliffClimbCommon2LoopAnimEndCheckCount++;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            gNdsStageMPCliffClimbCommon2LoopWaitOrFallCallCount++;
+            proc_status(fighter_gobj);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFinishLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFinishLoopUpdateActive != FALSE) &&
+        (proc_status == mpCommonSetFighterWaitOrFall))
+    {
+        gNdsStageMPCliffClimbFinishLoopAnimEndCheckCount++;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            gNdsStageMPCliffClimbFinishLoopWaitOrFallCallCount++;
+            proc_status(fighter_gobj);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeCommon2LoopUpdateActive != FALSE) &&
+        (proc_status == mpCommonSetFighterWaitOrFall))
+    {
+        gNdsStageMPCliffEscapeCommon2LoopAnimEndCheckCount++;
+        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
+        {
+            gNdsStageMPCliffEscapeCommon2LoopWaitOrFallCallCount++;
+            proc_status(fighter_gobj);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F) &&
+        (proc_status != NULL))
+    {
+        proc_status(fighter_gobj);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void ftCommonDashProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopUpdateActive != FALSE))
+    {
+        ndsBaseFTCommonDashProcUpdate(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonDashProcUpdate(fighter_gobj);
+    }
+}
+
+void ftCommonDashProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonDashProcInterrupt(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonDashProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonDashProcPhysics(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        ndsBaseFTCommonDashProcPhysics(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonDashProcPhysics(fighter_gobj);
+    }
+}
+
+void ftCommonDashProcMap(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopMapActive != FALSE))
+    {
+        ndsBaseFTCommonDashProcMap(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonDashProcMap(fighter_gobj);
+    }
+}
+
+void ftCommonDashSetStatus(GObj *fighter_gobj, u32 flag)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonDashSetStatus(fighter_gobj, flag);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        gNdsFighterDashRunDashSetStatusCount++;
+        ndsBaseFTCommonDashSetStatus(fighter_gobj, flag);
+    }
+}
+
+sb32 ftCommonDashCheckTurn(GObj *fighter_gobj)
+{
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        return ndsBaseFTCommonDashCheckTurn(fighter_gobj);
+    }
+    return FALSE;
+}
+
+void ftCommonRunProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonRunProcInterrupt(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonRunProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonRunSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonRunSetStatus(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        gNdsFighterDashRunRunSetStatusCount++;
+        ndsBaseFTCommonRunSetStatus(fighter_gobj);
+    }
+}
+
+sb32 ftCommonRunCheckInterruptDash(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        return ndsBaseFTCommonRunCheckInterruptDash(fighter_gobj);
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        return ndsBaseFTCommonRunCheckInterruptDash(fighter_gobj);
+    }
+    return FALSE;
+}
+
+void ftCommonRunBrakeProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonRunBrakeProcInterrupt(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonRunBrakeProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonRunBrakeProcPhysics(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        ndsBaseFTCommonRunBrakeProcPhysics(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonRunBrakeProcPhysics(fighter_gobj);
+    }
+}
+
+void ftCommonRunBrakeSetStatus(GObj *fighter_gobj, u32 flag)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonRunBrakeSetStatus(fighter_gobj, flag);
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        gNdsFighterDashRunRunBrakeSetStatusCount++;
+        ndsBaseFTCommonRunBrakeSetStatus(fighter_gobj, flag);
+    }
+}
+
+sb32 ftCommonRunBrakeCheckInterruptRun(GObj *fighter_gobj)
+{
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        return ndsBaseFTCommonRunBrakeCheckInterruptRun(fighter_gobj);
+    }
+    return FALSE;
+}
+
+sb32 ftCommonRunBrakeCheckInterruptTurnRun(GObj *fighter_gobj)
+{
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        return ndsBaseFTCommonRunBrakeCheckInterruptTurnRun(fighter_gobj);
+    }
+    return FALSE;
+}
+
+void ftCommonKneeBendProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopUpdateActive != FALSE))
+    {
+        ndsBaseFTCommonKneeBendProcUpdate(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpKneeBendUpdateActive != FALSE))
+    {
+        gNdsFighterJumpKneeBendUpdateCallCount++;
+        ndsBaseFTCommonKneeBendProcUpdate(fighter_gobj);
+    }
+}
+
+void ftCommonKneeBendProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonKneeBendProcInterrupt(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpKneeBendInterruptActive != FALSE))
+    {
+        gNdsFighterJumpKneeBendInterruptCallCount++;
+        ndsBaseFTCommonKneeBendProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonKneeBendSetStatusParam(GObj *fighter_gobj, s32 status_id,
+                                    s32 input_source)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE) &&
+        (status_id == nFTCommonStatusKneeBend))
+    {
+        ndsBaseFTCommonKneeBendSetStatusParam(fighter_gobj, status_id,
+                                              input_source);
+        return;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (status_id == nFTCommonStatusKneeBend))
+    {
+        gNdsFighterJumpKneeBendSetStatusCallCount++;
+        ndsBaseFTCommonKneeBendSetStatusParam(fighter_gobj, status_id,
+                                              input_source);
+    }
+}
+
+void ftCommonKneeBendSetStatus(GObj *fighter_gobj, s32 input_source)
+{
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        ndsBaseFTCommonKneeBendSetStatus(fighter_gobj, input_source);
+    }
+}
+
+void ftCommonGuardKneeBendSetStatus(GObj *fighter_gobj, s32 input_source)
+{
+    (void)fighter_gobj;
+    (void)input_source;
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpDeniedStatusCount++;
+    }
+}
+
+sb32 ftCommonKneeBendCheckButtonTap(FTStruct *fp)
+{
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        return ndsBaseFTCommonKneeBendCheckButtonTap(fp);
+    }
+    return FALSE;
+}
+
+s32 ftCommonKneeBendGetInputTypeCommon(FTStruct *fp)
+{
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        return ndsBaseFTCommonKneeBendGetInputTypeCommon(fp);
+    }
+    return FTCOMMON_KNEEBEND_INPUT_TYPE_NONE;
+}
+
+s32 ftCommonKneeBendGetInputTypeRun(FTStruct *fp)
+{
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        return ndsBaseFTCommonKneeBendGetInputTypeRun(fp);
+    }
+    return FTCOMMON_KNEEBEND_INPUT_TYPE_NONE;
+}
+
+sb32 ftCommonGuardKneeBendCheckInterruptGuard(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpDeferredInterruptCheckCount++;
+    }
+    return FALSE;
+}
+
+sb32 ftCommonAttackHi4CheckInterruptKneeBend(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpAttackHi4KneeBendCheckCount++;
+        gNdsFighterJumpDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 2;
+    }
+    return FALSE;
+}
+
+sb32 ftCommonHammerKneeBendCheckInterruptCommon(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpHammerKneeBendCheckCount++;
+        gNdsFighterJumpDeferredInterruptCheckCount++;
+    }
+    return FALSE;
+}
+
+void ftCommonJumpProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonJumpProcInterrupt(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAirInterruptActive != FALSE))
+    {
+        gNdsFighterJumpAirInterruptCallCount++;
+        ndsBaseFTCommonJumpProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonJumpGetJumpForceButton(s32 stick_range_x, s32 *jump_vel_x,
+                                    s32 *jump_vel_y, sb32 is_shorthop)
+{
+    ndsBaseFTCommonJumpGetJumpForceButton(stick_range_x, jump_vel_x,
+                                          jump_vel_y, is_shorthop);
+}
+
+static void ndsFTCommonJumpSyncVelocityAfterStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTAttributes *attr;
+    s32 vel_x;
+    s32 vel_y;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    attr = fp->attr;
+    if (attr == NULL)
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (fp->physics.vel_air.y <= 0.0F))
+    {
+        switch (fp->status_vars.common.kneebend.input_source)
+        {
+        case FTCOMMON_KNEEBEND_INPUT_TYPE_BUTTON:
+            ndsBaseFTCommonJumpGetJumpForceButton(
+                fp->input.pl.stick_range.x, &vel_x, &vel_y,
+                fp->status_vars.common.kneebend.is_shorthop);
+            break;
+        case FTCOMMON_KNEEBEND_INPUT_TYPE_STICK:
+        default:
+            vel_x = fp->input.pl.stick_range.x;
+            vel_y = fp->status_vars.common.kneebend.jump_force;
+            if (vel_y < FTCOMMON_KNEEBEND_STICK_RANGE_MIN)
+            {
+                vel_y = FTCOMMON_KNEEBEND_STICK_RANGE_MIN;
+            }
+            break;
+        }
+        fp->physics.vel_air.y =
+            (vel_y * attr->jump_height_mul) + attr->jump_height_base;
+        fp->physics.vel_air.x = vel_x * attr->jump_vel_x;
+    }
+    ndsFighterSyncPhysicsToLegacyVel(fp);
+}
+
+void ftCommonJumpSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopUpdateActive != FALSE))
+    {
+        ndsBaseFTCommonJumpSetStatus(fighter_gobj);
+        ndsFTCommonJumpSyncVelocityAfterStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpSetStatusActive != FALSE))
+    {
+        gNdsFighterJumpSetStatusCallCount++;
+        ndsBaseFTCommonJumpSetStatus(fighter_gobj);
+        ndsFTCommonJumpSyncVelocityAfterStatus(fighter_gobj);
+    }
+}
+
+void ftCommonFallProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageInterruptActive != FALSE))
+    {
+        sNdsFighterDashRunDamageCommonFallInterruptCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffTickFloorLoopFallInterruptCallCount++;
+        ndsBaseFTCommonFallProcInterrupt(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonFallProcInterrupt(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonFallProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonFallSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
+    {
+        ndsBaseFTCommonFallSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 9;
+        ndsBaseFTCommonFallSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffStatusFloorLoopFallSetStatusCallCount++;
+        ndsBaseFTCommonFallSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        gNdsStageMPCliffClimbFloorLoopFallStatusSetCount++;
+        if ((fp == NULL) || (fp->attr == NULL) ||
+            (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
+            return;
+        }
+        if (fp->attr->jumps_max <= fp->jumps_used)
+        {
+            fp->attr->jumps_max = fp->jumps_used + 1;
+        }
+        if (fp->ga == nMPKineticsGround)
+        {
+            mpCommonSetFighterAir(fp);
+        }
+        ftMainSetStatus(fighter_gobj, nFTCommonStatusFall, 0.0F, 1.0F,
+                        FTSTATUS_PRESERVE_FASTFALL);
+        ftPhysicsClampAirVelXMax(fp);
+        fp->is_special_interrupt = TRUE;
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopJumpAnimEndActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) && (fp->attr != NULL) &&
+            (fp->attr->jumps_max <= fp->jumps_used))
+        {
+            fp->attr->jumps_max = fp->jumps_used + 1;
+        }
+        ndsBaseFTCommonFallSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingJumpAnimEndActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) && (fp->attr != NULL) &&
+            (fp->attr->jumps_max <= fp->jumps_used))
+        {
+            fp->attr->jumps_max = fp->jumps_used + 1;
+        }
+        gNdsFighterLandingFallSetStatusCallCount++;
+        ndsBaseFTCommonFallSetStatus(fighter_gobj);
+    }
+}
+
+void ftCommonOttottoProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffTickFloorLoopOttottoUpdateCallCount++;
+        ndsBaseFTCommonOttottoProcUpdate(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
+    {
+        ndsBaseFTCommonOttottoProcUpdate(fighter_gobj);
+    }
+}
+
+void ftCommonOttottoProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffTickFloorLoopOttottoInterruptCallCount++;
+        ndsBaseFTCommonOttottoProcInterrupt(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
+    {
+        ndsBaseFTCommonOttottoProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonOttottoProcMap(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffTickFloorLoopOttottoMapCallCount++;
+        ndsBaseFTCommonOttottoProcMap(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
+    {
+        ndsBaseFTCommonOttottoProcMap(fighter_gobj);
+    }
+}
+
+void ftCommonOttottoWaitSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        (void)fighter_gobj;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
+    {
+        ndsBaseFTCommonOttottoWaitSetStatus(fighter_gobj);
+    }
+}
+
+void ftCommonOttottoSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffStatusFloorLoopOttottoSetStatusCallCount++;
+        ndsBaseFTCommonOttottoSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE) &&
+        (gNdsStageMPUpdateFloorLoopPrepared != 0u))
+    {
+        gNdsStageMPUpdateFloorLoopOttottoDeniedCount++;
+    }
+}
+
+void ftCommonHammerFallSetStatus(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterLandingDeniedStatusCount++;
+    }
+}
+
+void ftCommonHammerFallProcInterrupt(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if (sNdsFighterDashRunDamageHammerCheckActive != FALSE)
+    {
+        sNdsFighterDashRunDamageHammerAirCount++;
+    }
+}
+
+void ftCommonLandingProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonLandingProcInterrupt(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingProcInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonLandingProcInterrupt(fighter_gobj);
+    }
+}
+
+void ftCommonLandingSetStatusParam(GObj *fighter_gobj, s32 status_id,
+                                   sb32 is_allow_interrupt,
+                                   f32 anim_speed)
+{
+    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallLandFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPFallLandFloorLoopLandingParamCallCount++;
+        ndsBaseFTCommonLandingSetStatusParam(fighter_gobj, status_id,
+                                             is_allow_interrupt, anim_speed);
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopMapActive != FALSE))
+    {
+        ndsBaseFTCommonLandingSetStatusParam(fighter_gobj, status_id,
+                                             is_allow_interrupt, anim_speed);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingSetStatusActive != FALSE))
+    {
+        gNdsFighterLandingSetStatusCallCount++;
+        ndsBaseFTCommonLandingSetStatusParam(fighter_gobj, status_id,
+                                             is_allow_interrupt, anim_speed);
+        return;
+    }
+    if (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterLandingDeniedStatusCount++;
+    }
+}
+
+void ftCommonLandingSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
+    {
+        gNdsFighterJumpAttackAirMapLandingMask |= 1u << 8u;
+        ndsBaseFTCommonLandingSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallLandFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPFallLandFloorLoopLandingSetStatusCallCount++;
+        ndsBaseFTCommonLandingSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopMapActive != FALSE))
+    {
+        ndsBaseFTCommonLandingSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingSetStatusActive != FALSE))
+    {
+        gNdsFighterLandingSetStatusCallCount++;
+        ndsBaseFTCommonLandingSetStatus(fighter_gobj);
+    }
+}
+
+void ftCommonLandingAirNullSetStatus(GObj *fighter_gobj, f32 anim_speed)
+{
+    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
+    {
+        gNdsFighterJumpAttackAirMapLandingMask |= (1u << 1u) | (1u << 5u);
+        ndsBaseFTCommonLandingAirNullSetStatus(fighter_gobj, anim_speed);
+        return;
+    }
+    if (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterLandingDeniedStatusCount++;
+    }
+}
+
+void ftCommonLandingAirSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
+    {
+        gNdsFighterJumpAttackAirMapLandingMask |= 1u << 1u;
+    }
+    ndsBaseFTCommonLandingAirSetStatus(fighter_gobj);
+}
+
+void ftCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
+                                         sb32 is_allow_interrupt,
+                                         f32 anim_speed)
+{
+    (void)fighter_gobj;
+    (void)is_allow_interrupt;
+    (void)anim_speed;
+    if (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterLandingDeniedStatusCount++;
+    }
+}
+
+sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
+    {
+        sNdsFighterDashRunDamageFallSpecialAirCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDamageFallSpecialAirCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffTickFloorLoopFallSpecialAirCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallInterruptActive != FALSE))
+    {
+        gNdsFighterLandingDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxLandingLoopDeferredMask |= 1u << 0;
+        return FALSE;
+    }
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpSpecialAirCheckCount++;
+        gNdsFighterJumpDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 3;
+    }
+    return FALSE;
+}
+
+sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj)
+{
+    sb32 result;
+
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
+    {
+        sNdsFighterDashRunDamageFallAttackAirCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDamageFallAttackAirCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffTickFloorLoopFallAttackAirCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallInterruptActive != FALSE))
+    {
+        gNdsFighterLandingDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxLandingLoopDeferredMask |= 1u << 1;
+        return FALSE;
+    }
+    if (ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpAttackAirCheckCount++;
+        if (sNdsFighterJumpAttackAirActive != FALSE)
+        {
+            result = ndsBaseFTCommonAttackAirCheckInterruptCommon(
+                fighter_gobj);
+            if (result != FALSE)
+            {
+                gNdsFighterJumpAttackAirCheckSuccessCount++;
+            }
+            return result;
+        }
+        gNdsFighterJumpDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 4;
+    }
+    return FALSE;
+}
+
+void ftCommonAttackAirProcMap(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonAttackAirProcMap(fighter_gobj);
+}
+
+sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
+    {
+        sNdsFighterDashRunDamageFallJumpAerialCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDamageFallJumpAerialCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffTickFloorLoopFallJumpAerialCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallInterruptActive != FALSE))
+    {
+        gNdsFighterLandingDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxLandingLoopDeferredMask |= 1u << 2;
+        return FALSE;
+    }
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpAerialCheckCount++;
+        gNdsFighterJumpDeferredInterruptCheckCount++;
+        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 5;
+    }
+    return FALSE;
+}
+
+#define NDS_DAMAGE_LOSEGRIP_SELECT 0x1u
+#define NDS_DAMAGE_LOSEGRIP_LINKS 0x2u
+#define NDS_DAMAGE_LOSEGRIP_POSITION 0x4u
+#define NDS_DAMAGE_LOSEGRIP_COLLISION 0x8u
+#define NDS_DAMAGE_LOSEGRIP_SETAIR 0x10u
+#define NDS_DAMAGE_LOSEGRIP_LINK_CLEAR 0x20u
+#define NDS_DAMAGE_LOSEGRIP_ORIGINAL 0x40u
+
+void mpCommonSetFighterAir(FTStruct *fp)
+{
+    if (fp != NULL)
+    {
+        fp->ga = nMPKineticsAir;
+        fp->jumps_used = 1;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        gNdsFighterDashRunDamageLoseGripSetAirCount++;
+        gNdsFighterDashRunDamageLoseGripMask |= NDS_DAMAGE_LOSEGRIP_SETAIR;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowDeadResultSetAirCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopCliffCatchAirSetCount++;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopUpdateActive != FALSE))
+    {
+        gNdsFighterProcessLoopSetAirCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
+    {
+        gNdsStageMPCliffStatusFloorLoopAirSetCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassInputLoopStatusActive != FALSE))
+    {
+        gNdsStageMPPassInputLoopSetAirCount++;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpSetStatusActive != FALSE))
+    {
+        gNdsFighterJumpSetAirCallCount++;
+    }
+}
+
+void mpCommonSetFighterProjectFloor(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    DObj *root = DObjGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (root == NULL))
+    {
+        return;
+    }
+    fp->coll_data.p_translate = &root->translate.vec.f;
+    fp->coll_data.p_lr = &fp->lr;
+    if (fp->coll_data.p_map_coll == NULL)
+    {
+        fp->coll_data.p_map_coll = &fp->coll_data.map_coll;
+    }
+}
+
+void ftPhysicsApplyGravityClampTVel(FTStruct *fp, f32 gravity, f32 tvel)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->physics.vel_air.y -= gravity;
+    if (fp->physics.vel_air.y < -tvel)
+    {
+        fp->physics.vel_air.y = -tvel;
+    }
+    if ((ndsFighterMarioFoxStageMPFallMapFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallMapFloorLoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPFallMapFloorLoopGravityCallCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallLandFloorLoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPFallLandFloorLoopGravityCallCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallPhysicsActive != FALSE))
+    {
+        gNdsFighterLandingGravityCallCount++;
+    }
+    else if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpGravityCallCount++;
+    }
+}
+
+void ftPhysicsApplyGravityDefault(FTStruct *fp, FTAttributes *attr)
+{
+    if ((fp == NULL) || (attr == NULL))
+    {
+        return;
+    }
+    ftPhysicsApplyGravityClampTVel(fp, attr->gravity, attr->tvel_base);
+}
+
+void ftPhysicsApplyFastFall(FTStruct *fp, FTAttributes *attr)
+{
+    if ((fp == NULL) || (attr == NULL))
+    {
+        return;
+    }
+    fp->physics.vel_air.y = -attr->tvel_fast;
+}
+
+void ftPhysicsClampAirVelX(FTStruct *fp, f32 clamp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->physics.vel_air.x < -clamp)
+    {
+        fp->physics.vel_air.x = -clamp;
+    }
+    else if (fp->physics.vel_air.x > clamp)
+    {
+        fp->physics.vel_air.x = clamp;
+    }
+}
+
+void ftPhysicsClampAirVelXMax(FTStruct *fp)
+{
+    if ((fp != NULL) && (fp->attr != NULL))
+    {
+        ftPhysicsClampAirVelX(fp, fp->attr->air_speed_max_x);
+    }
+    if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassInputLoopStatusActive != FALSE))
+    {
+        gNdsStageMPPassInputLoopClampCount++;
+    }
+}
+
+void ftParamMakeRumble(FTStruct *fp, s32 rumble_id, s32 length)
+{
+    (void)fp;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunProcParamsRumbleActive != FALSE))
+    {
+        gNdsFighterDashRunProcParamsRumbleCount++;
+        gNdsFighterDashRunProcParamsRumbleLastID = (u32)rumble_id;
+        gNdsFighterDashRunProcParamsRumbleLastLength = length;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageSetupRumbleCount++;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageExpiryActive != FALSE) &&
+        (rumble_id == 3) && (length == 0))
+    {
+        sNdsFighterDashRunDamageFallClampRumbleCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopWallDamageActive != FALSE) &&
+        (rumble_id == 2) && (length == 0))
+    {
+        gNdsStageMPPassiveLoopWallDamageRumbleCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopWallDamageActive != FALSE) &&
+        (rumble_id == 3) && (length == 0))
+    {
+        sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchPullActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCatchPullRumbleCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseRumbleCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopClampRumbleCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownBounceRumbleCount++;
+        gNdsStageMPCliffWaitDamageLoopDownBounceRumbleID = (u32)rumble_id;
+    }
+}
+
+sb32 ftPhysicsCheckClampAirVelXDecMax(FTStruct *fp, FTAttributes *attr)
+{
+    f32 clamp;
+
+    if ((fp == NULL) || (attr == NULL))
+    {
+        return FALSE;
+    }
+    clamp = attr->air_speed_max_x;
+    if (ABSF(fp->physics.vel_air.x) > clamp)
+    {
+        fp->physics.vel_air.x +=
+            (fp->physics.vel_air.x >= 0.0F) ? -1.0F : 1.0F;
+        ftPhysicsClampAirVelX(fp, clamp);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void ftPhysicsClampAirVelXStickRange(FTStruct *fp, s32 stick_range_min,
+                                     f32 vel, f32 clamp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (ABS(fp->input.pl.stick_range.x) >= stick_range_min)
+    {
+        fp->physics.vel_air.x += fp->input.pl.stick_range.x * vel;
+        ftPhysicsClampAirVelX(fp, clamp);
+        if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+            (sNdsFighterProcessLoopPhysicsActive != FALSE))
+        {
+            return;
+        }
+        if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+        {
+            gNdsFighterJumpAirDriftCallCount++;
+        }
+    }
+}
+
+void ftPhysicsClampAirVelXStickDefault(FTStruct *fp, FTAttributes *attr)
+{
+    if (attr != NULL)
+    {
+        ftPhysicsClampAirVelXStickRange(fp,
+                                        FTPHYSICS_AIRDRIFT_CLAMP_RANGE_MIN,
+                                        attr->air_accel,
+                                        attr->air_speed_max_x);
+    }
+}
+
+void ftPhysicsApplyAirVelXFriction(FTStruct *fp, FTAttributes *attr)
+{
+    if ((fp == NULL) || (attr == NULL))
+    {
+        return;
+    }
+    if (fp->physics.vel_air.x < 0.0F)
+    {
+        fp->physics.vel_air.x += attr->air_friction;
+        if (fp->physics.vel_air.x > 0.0F)
+        {
+            fp->physics.vel_air.x = 0.0F;
+        }
+    }
+    else if (fp->physics.vel_air.x > 0.0F)
+    {
+        fp->physics.vel_air.x -= attr->air_friction;
+        if (fp->physics.vel_air.x < 0.0F)
+        {
+            fp->physics.vel_air.x = 0.0F;
+        }
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPFallMapFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallMapFloorLoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPFallMapFloorLoopAirFrictionCallCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallLandFloorLoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPFallLandFloorLoopAirFrictionCallCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallPhysicsActive != FALSE))
+    {
+        gNdsFighterLandingAirFrictionCallCount++;
+    }
+    else if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        gNdsFighterJumpAirFrictionCallCount++;
+    }
+}
+
+void ftPhysicsCheckSetFastFall(FTStruct *fp)
+{
+    if ((fp != NULL) &&
+        (ndsFighterMarioFoxStageMPFallMapFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallMapFloorLoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPFallMapFloorLoopFastFallCheckCount++;
+        return;
+    }
+    if ((fp != NULL) &&
+        (ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallLandFloorLoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPFallLandFloorLoopFastFallCheckCount++;
+        return;
+    }
+    if ((fp != NULL) && (ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        return;
+    }
+    if ((fp != NULL) && (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallPhysicsActive != FALSE))
+    {
+        gNdsFighterLandingFastFallCheckCount++;
+        return;
+    }
+    if ((fp != NULL) && (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE))
+    {
+        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 6;
+    }
+    if ((fp != NULL) &&
+        (fp->is_fastfall == FALSE) &&
+        (fp->physics.vel_air.y < 0.0F) &&
+        (fp->input.pl.stick_range.y <= FTCOMMON_FASTFALL_STICK_RANGE_MIN) &&
+        (fp->tap_stick_y < FTCOMMON_FASTFALL_BUFFER_TICS_MAX))
+    {
+        fp->is_fastfall = TRUE;
+        fp->tap_stick_y = FTINPUT_STICKBUFFER_TICS_MAX;
+        /* ponytail: colanim runtime is still deferred; this keeps the hook. */
+        (void)ftParamCheckSetFighterColAnimID(fp->fighter_gobj,
+                                              nGMColAnimFighterFastFall, 0);
+    }
+}
+
+void ftPhysicsApplyAirVelDriftFastFall(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTAttributes *attr = (fp != NULL) ? fp->attr : NULL;
+
+    if ((fp == NULL) || (attr == NULL))
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageFallPhysicsActive != FALSE))
+    {
+        sNdsFighterDashRunDamageFallPhysicsCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallPhysicsActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDamageFallPhysicsTickCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPFallMapFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallMapFloorLoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPFallMapFloorLoopPhysicsCallbackCount++;
+        gNdsStageMPFallMapFloorLoopAirDriftCallCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallLandFloorLoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPFallLandFloorLoopPhysicsCallbackCount++;
+        gNdsStageMPFallLandFloorLoopAirDriftCallCount++;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        ftPhysicsCheckSetFastFall(fp);
+        if (fp->is_fastfall != FALSE)
+        {
+            ftPhysicsApplyFastFall(fp, attr);
+        }
+        else
+        {
+            ftPhysicsApplyGravityDefault(fp, attr);
+        }
+        if (ftPhysicsCheckClampAirVelXDecMax(fp, attr) == FALSE)
+        {
+            ftPhysicsClampAirVelXStickDefault(fp, attr);
+            ftPhysicsApplyAirVelXFriction(fp, attr);
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallPhysicsActive != FALSE))
+    {
+        gNdsFighterLandingAirDriftCallCount++;
+    }
+    else if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAirPhysicsActive != FALSE))
+    {
+        gNdsFighterJumpAirPhysicsCallCount++;
+    }
+    ftPhysicsCheckSetFastFall(fp);
+    if (fp->is_fastfall != FALSE)
+    {
+        ftPhysicsApplyFastFall(fp, attr);
+    }
+    else
+    {
+        ftPhysicsApplyGravityDefault(fp, attr);
+    }
+    if (ftPhysicsCheckClampAirVelXDecMax(fp, attr) == FALSE)
+    {
+        ftPhysicsClampAirVelXStickDefault(fp, attr);
+        ftPhysicsApplyAirVelXFriction(fp, attr);
+    }
+}
+
+void ftPhysicsApplyAirVelFriction(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTAttributes *attr = (fp != NULL) ? fp->attr : NULL;
+
+    if ((fp == NULL) || (attr == NULL))
+    {
+        return;
+    }
+    ftPhysicsApplyGravityDefault(fp, attr);
+    if (ftPhysicsCheckClampAirVelXDecMax(fp, attr) == FALSE)
+    {
+        ftPhysicsApplyAirVelXFriction(fp, attr);
+    }
+}
+
+void ftPhysicsApplyAirVelDrift(GObj *fighter_gobj)
+{
+    ftPhysicsApplyAirVelDriftFastFall(fighter_gobj);
+}
+
+void mpCommonSetFighterGround(FTStruct *fp)
+{
+    if (fp != NULL)
+    {
+        fp->ga = nMPKineticsGround;
+        fp->jumps_used = 0;
+        fp->physics.vel_ground.x =
+            fp->physics.vel_air.x * (f32)fp->lr;
+        fp->vel_ground = fp->physics.vel_ground;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopMapActive != FALSE))
+    {
+        gNdsFighterProcessLoopSetGroundCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingSetStatusActive != FALSE))
+    {
+        gNdsFighterLandingSetGroundCallCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallLandFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPFallLandFloorLoopSetGroundCallCount++;
+    }
+    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitGroundSetCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownBounceGroundSetCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE) &&
+        (fp != NULL) &&
+        (fp->tics_since_last_z < FTCOMMON_PASSIVE_BUFFER_TICS_MAX))
+    {
+        if (ABS(fp->input.pl.stick_range.x) >=
+            FTCOMMON_PASSIVE_F_OR_B_RANGE)
+        {
+            gNdsStageMPCliffWaitDamageLoopPassiveStandGroundSetCount++;
+        }
+        else
+        {
+            gNdsStageMPCliffWaitDamageLoopPassiveGroundSetCount++;
+        }
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopCliffCatchGroundSetCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandSetStatusActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveStandGroundSetCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveSetStatusActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveGroundSetCount++;
+    }
+}
+
+void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->public_knockback = 0.0F;
+    fp->passive_vars.mario.is_expend_tornado = FALSE;
+    if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffCatchFloorLoopMapActive != FALSE))
+    {
+        gNdsStageMPCliffCatchFloorLoopLandingParamCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopRecatchMapActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFloorLoopRecatchLandingParamCount++;
+    }
+}
+
+void mpCommonRunFighterCollisionDefault(GObj *fighter_gobj, Vec3f *pos,
+                                        FTCollisionData *coll_data)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    (void)coll_data;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        gNdsFighterDashRunDamageLoseGripCollisionCount++;
+        gNdsFighterDashRunDamageLoseGripMask |= NDS_DAMAGE_LOSEGRIP_COLLISION;
+        if (pos != NULL)
+        {
+            gNdsFighterDashRunDamageLoseGripTargetX =
+                ndsFloatToMilliSigned(pos->x);
+            gNdsFighterDashRunDamageLoseGripTargetY =
+                ndsFloatToMilliSigned(pos->y);
+        }
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopCollisionDefaultCount++;
+        if ((fp != NULL) && (fp->coll_data.p_translate != NULL))
+        {
+            gNdsStageMPCliffWaitDamageLoopRootXBeforeMilli =
+                ndsFloatToMilliSigned(fp->coll_data.p_translate->x);
+            gNdsStageMPCliffWaitDamageLoopRootYBeforeMilli =
+                ndsFloatToMilliSigned(fp->coll_data.p_translate->y);
+        }
+        if (pos != NULL)
+        {
+            gNdsStageMPCliffWaitDamageLoopTargetXMilli =
+                ndsFloatToMilliSigned(pos->x);
+            gNdsStageMPCliffWaitDamageLoopTargetYMilli =
+                ndsFloatToMilliSigned(pos->y);
+        }
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowDeadResultCollisionCount++;
+    }
+    if ((fp != NULL) && (pos != NULL) && (fp->coll_data.p_translate != NULL))
+    {
+        *fp->coll_data.p_translate = *pos;
+        if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+                FALSE) &&
+            (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
+        {
+            gNdsStageMPCliffWaitDamageLoopRootXAfterMilli =
+                ndsFloatToMilliSigned(fp->coll_data.p_translate->x);
+            gNdsStageMPCliffWaitDamageLoopRootYAfterMilli =
+                ndsFloatToMilliSigned(fp->coll_data.p_translate->y);
+        }
+    }
+}
+
+void ftParamSetPlayerTagWait(GObj *fighter_gobj, s32 wait)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp != NULL)
+    {
+        fp->playertag_wait = wait;
+    }
+    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitPlayerTagSetCount++;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageSetupPlayerTagCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitFloorLoopPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFinishLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFinishLoopUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFinishLoopPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveStandUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveStandPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassivePlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveStandPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassivePlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopAttackUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopAttackPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollForwardUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollForwardPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollBackUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollBackPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopDownStandPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopFinalUpdateActive != FALSE))
+    {
+        gNdsStageTurnLoopPlayerTagWaitCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        ((sNdsStageMPDownRecoverLoopDownStandUpdateActive != FALSE) ||
+         (sNdsStageMPDownRecoverLoopAttackUpdateActive != FALSE) ||
+         (sNdsStageMPDownRecoverLoopRollForwardUpdateActive != FALSE) ||
+         (sNdsStageMPDownRecoverLoopRollBackUpdateActive != FALSE)))
+    {
+        gNdsStageMPDownRecoverLoopPlayerTagWaitCount++;
+    }
+}
+
+void ftParamSetCaptureImmuneMask(FTStruct *fp, u8 capture_immune_mask)
+{
+    if (fp != NULL)
+    {
+        fp->capture_immune_mask = capture_immune_mask;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffCatchFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffCatchFloorLoopCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitFloorLoopCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownWaitSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownWaitCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownWaitSetStatusActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopDownWaitCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownWaitSetStatusActive != FALSE))
+    {
+        gNdsStageMPDownRecoverLoopDownWaitCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopCliffCatchCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        ((sNdsStageMPPassiveLoopCatchPullActive != FALSE) ||
+         (sNdsStageMPPassiveLoopCatchPullUpdateActive != FALSE)))
+    {
+        gNdsStageMPPassiveLoopCatchPullCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        ((sNdsStageMPPassiveLoopCaptureActive != FALSE) ||
+         (sNdsStageMPPassiveLoopCapturePhysicsActive != FALSE)))
+    {
+        gNdsStageMPPassiveLoopCaptureCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowCaptureImmuneCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowCallbackImmediateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowCallbackImmediateCaptureImmuneCount++;
+    }
+}
+
+void ftParamSetCatchParams(FTStruct *fp, u8 catch_mask,
+                           void (*proc_catch)(GObj *),
+                           void (*proc_capture)(GObj *, GObj *))
+{
+    if (fp != NULL)
+    {
+        fp->is_catchstatus = TRUE;
+        fp->catch_mask = catch_mask;
+        fp->proc_catch = proc_catch;
+        fp->proc_capture = proc_capture;
+    }
+}
+
+void ftParamSetThrowParams(FTStruct *fp, GObj *throw_gobj)
+{
+    if (fp != NULL)
+    {
+        FTStruct *throw_fp =
+            (throw_gobj != NULL) ? ftGetStruct(throw_gobj) : NULL;
+
+        fp->throw_gobj = throw_gobj;
+        if (throw_fp != NULL)
+        {
+            fp->throw_fkind = throw_fp->fkind;
+            fp->throw_team = throw_fp->team;
+            fp->throw_player = throw_fp->player;
+            fp->throw_player_num = throw_fp->player_num;
+        }
+        else
+        {
+            fp->throw_fkind = nFTKindNull;
+            fp->throw_team = 0;
+            fp->throw_player = 0;
+            fp->throw_player_num = 0;
+        }
+        if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+            (sNdsStageMPPassiveLoopThrowProcStatusActive != FALSE))
+        {
+            gNdsStageMPPassiveLoopThrowProcStatusParamSetCount++;
+            gNdsStageMPPassiveLoopThrowProcStatusThrowGObjReady =
+                (throw_gobj != NULL) ? 1u : 0u;
+        }
+    }
+}
+
+sb32 ftCommonLightThrowCheckItemTypeThrow(FTStruct *fp)
+{
+    (void)fp;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCatchItemThrowCheckCount++;
+    }
+    return FALSE;
+}
+
+void ftCommonLightThrowDecideSetStatus(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCatchItemThrowSetStatusCount++;
+    }
+}
+
+void ftCommonCatchPullProcCatch(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchPullActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCatchPullProcCatchCount++;
+        ndsBaseFTCommonCatchPullProcCatch(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCatchPullDeferredCount++;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonCapturePulledProcCapture(GObj *fighter_gobj,
+                                      GObj *capture_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCaptureActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCaptureProcCaptureCount++;
+        ndsBaseFTCommonCapturePulledProcCapture(fighter_gobj, capture_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCapturePulledDeferredCount++;
+    }
+    (void)fighter_gobj;
+    (void)capture_gobj;
+}
+
+static void ndsStageMPPassiveLoopCaptureProcDamage(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCaptureActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCaptureProcDamageCount++;
+    }
+}
+
+void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCaptureActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCaptureVoiceStopCount++;
+    }
+    if (fp->proc_damage != NULL)
+    {
+        fp->proc_damage(fighter_gobj);
+    }
+}
+
+void ndsCompatFTDonkeyThrowFDamageSetStatus(GObj *fighter_gobj)
+{
+    /* ponytail: compile seam only; real DK throw-damage runtime is not imported. */
+    ftCommonDamageGotoDamageStatus(fighter_gobj);
+}
+
+void ftSetupDropItem(FTStruct *fp)
+{
+    if (fp != NULL)
+    {
+        fp->item_gobj = NULL;
+    }
+}
+
+void ftCommonThrownSetStatusDamageRelease(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        ndsBaseFTCommonThrownSetStatusDamageRelease(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseStatusActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseStatusDamageReleaseCount++;
+        ndsBaseFTCommonThrownSetStatusDamageRelease(fighter_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonThrownUpdateDamageStats(FTStruct *this_fp)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        ndsBaseFTCommonThrownUpdateDamageStats(this_fp);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseStatusActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseStatusUpdateDamageStatsCount++;
+        ndsBaseFTCommonThrownUpdateDamageStats(this_fp);
+        return;
+    }
+    (void)this_fp;
+}
+
+void ftCommonThrownSetStatusNoDamageRelease(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        ndsBaseFTCommonThrownSetStatusNoDamageRelease(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseStatusActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseStatusNoDamageReleaseCount++;
+        ndsBaseFTCommonThrownSetStatusNoDamageRelease(fighter_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+static sb32 ndsFTCommonThrownLoseGripCanCallOriginal(GObj *fighter_gobj)
+{
+    FTStruct *this_fp;
+    GObj *interact_gobj;
+
+    if (fighter_gobj == NULL)
+    {
+        return FALSE;
+    }
+    this_fp = ftGetStruct(fighter_gobj);
+    if ((this_fp == NULL) || (DObjGetStruct(fighter_gobj) == NULL))
+    {
+        return FALSE;
+    }
+    interact_gobj = (this_fp->is_catch_or_capture != FALSE) ?
+        this_fp->catch_gobj : this_fp->capture_gobj;
+    if ((interact_gobj == NULL) || (ftGetStruct(interact_gobj) == NULL) ||
+        (DObjGetStruct(interact_gobj) == NULL))
+    {
+        return FALSE;
+    }
+    if ((this_fp->status_id >= nFTCommonStatusThrownStart) &&
+        (this_fp->status_id <= nFTCommonStatusThrownEnd) &&
+        (this_fp->joints[nFTPartsJointCommonStart] == NULL))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void ndsFTCommonThrownLoseGripRecordOriginal(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    gNdsFighterDashRunDamageLoseGripReleaseCount++;
+    gNdsFighterDashRunDamageLoseGripMask |=
+        NDS_DAMAGE_LOSEGRIP_SELECT | NDS_DAMAGE_LOSEGRIP_LINKS |
+        NDS_DAMAGE_LOSEGRIP_ORIGINAL;
+    if ((fp != NULL) &&
+        (fp->status_id >= nFTCommonStatusThrownStart) &&
+        (fp->status_id <= nFTCommonStatusThrownEnd))
+    {
+        gNdsFighterDashRunDamageLoseGripMask |=
+            NDS_DAMAGE_LOSEGRIP_POSITION;
+    }
+}
+
+static void ndsFTCommonThrownReleaseFighterLoseGripBounded(
+    GObj *fighter_gobj, GObj *fallback_gobj)
+{
+    FTStruct *this_fp;
+    GObj *interact_gobj;
+    FTStruct *interact_fp;
+    DObj *fighter_dobj;
+    DObj *interact_dobj;
+    Vec3f pos;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+
+    this_fp = ftGetStruct(fighter_gobj);
+    if (this_fp == NULL)
+    {
+        return;
+    }
+
+    interact_gobj = (this_fp->is_catch_or_capture != FALSE) ?
+        this_fp->catch_gobj : this_fp->capture_gobj;
+    if (interact_gobj == NULL)
+    {
+        interact_gobj = fallback_gobj;
+    }
+    if (interact_gobj == NULL)
+    {
+        return;
+    }
+
+    interact_fp = ftGetStruct(interact_gobj);
+    fighter_dobj = DObjGetStruct(fighter_gobj);
+    interact_dobj = DObjGetStruct(interact_gobj);
+    if ((interact_fp == NULL) || (fighter_dobj == NULL) ||
+        (interact_dobj == NULL))
+    {
+        return;
+    }
+
+    gNdsFighterDashRunDamageLoseGripReleaseCount++;
+    gNdsFighterDashRunDamageLoseGripMask |=
+        NDS_DAMAGE_LOSEGRIP_SELECT | NDS_DAMAGE_LOSEGRIP_LINKS;
+
+    if ((this_fp->status_id >= nFTCommonStatusThrownStart) &&
+        (this_fp->status_id <= nFTCommonStatusThrownEnd) &&
+        (this_fp->joints[nFTPartsJointCommonStart] != NULL))
+    {
+        pos.x = 0.0F;
+        pos.y = 0.0F;
+        pos.z = 0.0F;
+        gmCollisionGetFighterPartsWorldPosition(
+            this_fp->joints[nFTPartsJointCommonStart], &pos);
+        pos.y -= 300.0F;
+        fighter_dobj->translate.vec.f = pos;
+        gNdsFighterDashRunDamageLoseGripMask |=
+            NDS_DAMAGE_LOSEGRIP_POSITION;
+    }
+
+    mpCommonRunFighterCollisionDefault(
+        fighter_gobj, &interact_dobj->translate.vec.f,
+        &interact_fp->coll_data);
+
+    if ((this_fp->ga == nMPKineticsGround) &&
+        ((this_fp->coll_data.floor_line_id == -1) ||
+         (this_fp->coll_data.floor_dist != 0.0F)))
+    {
+        mpCommonSetFighterAir(this_fp);
+    }
+}
+
+void ftCommonThrownDecideFighterLoseGrip(GObj *fighter_gobj,
+                                         GObj *interact_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        FTStruct *this_fp = ftGetStruct(fighter_gobj);
+        FTStruct *interact_fp = ftGetStruct(interact_gobj);
+        GObj *release_gobj = ((this_fp != NULL) &&
+            (this_fp->is_catch_or_capture != FALSE)) ?
+            fighter_gobj : interact_gobj;
+
+        if ((this_fp != NULL) && (interact_fp != NULL) &&
+            (ndsFTCommonThrownLoseGripCanCallOriginal(release_gobj) != FALSE))
+        {
+            ndsFTCommonThrownLoseGripRecordOriginal(release_gobj);
+            ndsBaseFTCommonThrownDecideFighterLoseGrip(fighter_gobj,
+                                                       interact_gobj);
+        }
+        else if (this_fp != NULL)
+        {
+            if (this_fp->is_catch_or_capture != FALSE)
+            {
+                ndsFTCommonThrownReleaseFighterLoseGripBounded(
+                    fighter_gobj, interact_gobj);
+            }
+            else
+            {
+                ndsFTCommonThrownReleaseFighterLoseGripBounded(
+                    interact_gobj, fighter_gobj);
+            }
+        }
+        if (interact_fp != NULL)
+        {
+            interact_fp->capture_gobj = NULL;
+        }
+        if (this_fp != NULL)
+        {
+            this_fp->catch_gobj = NULL;
+        }
+        if (((interact_fp == NULL) || (interact_fp->capture_gobj == NULL)) &&
+            ((this_fp == NULL) || (this_fp->catch_gobj == NULL)))
+        {
+            gNdsFighterDashRunDamageLoseGripLinkClearCount++;
+            gNdsFighterDashRunDamageLoseGripMask |=
+                NDS_DAMAGE_LOSEGRIP_LINK_CLEAR;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
+    {
+        ndsBaseFTCommonThrownDecideFighterLoseGrip(fighter_gobj,
+                                                   interact_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+    (void)interact_gobj;
+}
+
+void ftCommonThrownDecideDeadResult(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowDeadResultCallCount++;
+        ndsBaseFTCommonThrownDecideDeadResult(fighter_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp != NULL)
+    {
+        fp->hitstatus = hitstatus;
+        fp->special_hitstatus = hitstatus;
+    }
+}
+
+void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
+{
+    s32 i;
+    s32 j;
+
+    for (i = 0; i < 4; i++)
+    {
+        for (j = 0; j < 4; j++)
+        {
+            mtx[i][j] = (i == j) ? 1.0F : 0.0F;
+        }
+    }
+    if (dobj != NULL)
+    {
+        mtx[3][0] = dobj->translate.vec.f.x;
+        mtx[3][1] = dobj->translate.vec.f.y;
+        mtx[3][2] = dobj->translate.vec.f.z;
+    }
+}
+
+void func_ovl2_800EDA0C(Mtx44f mtx, Vec3f *rotate)
+{
+    (void)mtx;
+    if (rotate != NULL)
+    {
+        rotate->x = 0.0F;
+        rotate->y = 0.0F;
+        rotate->z = 0.0F;
+    }
+}
+
+void gmCollisionGetWorldPosition(Mtx44f mtx, Vec3f *vec)
+{
+    if (vec != NULL)
+    {
+        vec->x += mtx[3][0];
+        vec->y += mtx[3][1];
+        vec->z += mtx[3][2];
+    }
+}
+
+GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
+{
+    (void)pos;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchPullActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCatchPullEffectCount++;
+    }
+    return NULL;
+}
+
+void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
+                           s32 modelpart_id)
+{
+    (void)fighter_gobj;
+    (void)joint_id;
+    (void)modelpart_id;
+}
+
+sb32 ftCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopCatchWaitInterruptActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopCatchWaitThrowCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowCheckCount++;
+        return ndsBaseFTCommonThrowCheckInterruptCatchWait(fighter_gobj);
+    }
+    return FALSE;
+}
+
+void ftCommonThrownReleaseThrownUpdateStats(GObj *fighter_gobj, s32 lr,
+                                            s32 script_id,
+                                            sb32 is_proc_status)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowUpdateReleaseCount++;
+        gNdsStageMPPassiveLoopThrowUpdateReleaseScriptID = script_id;
+        gNdsStageMPPassiveLoopThrowUpdateReleaseLR = lr;
+        ndsBaseFTCommonThrownReleaseThrownUpdateStats(
+            fighter_gobj, lr, script_id, is_proc_status);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseUpdateStatsCount++;
+        gNdsStageMPPassiveLoopThrowReleaseScriptID = script_id;
+        ndsBaseFTCommonThrownReleaseThrownUpdateStats(
+            fighter_gobj, lr, script_id, is_proc_status);
+        return;
+    }
+    (void)fighter_gobj;
+    (void)lr;
+    (void)script_id;
+    (void)is_proc_status;
+}
+
+void ftCommonCaptureShoulderedSetStatus(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftDonkeyThrowFWaitSetStatus(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftCommonThrownReleaseFighterLoseGrip(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        if (ndsFTCommonThrownLoseGripCanCallOriginal(fighter_gobj) != FALSE)
+        {
+            ndsFTCommonThrownLoseGripRecordOriginal(fighter_gobj);
+            ndsBaseFTCommonThrownReleaseFighterLoseGrip(fighter_gobj);
+        }
+        else
+        {
+            ndsFTCommonThrownReleaseFighterLoseGripBounded(fighter_gobj,
+                                                          NULL);
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
+    {
+        ndsBaseFTCommonThrownReleaseFighterLoseGrip(fighter_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+f32 ftParamGetCommonKnockback(s32 percent_damage, s32 recent_damage,
+                              s32 hit_damage, s32 knockback_weight,
+                              s32 knockback_scale, s32 knockback_base,
+                              f32 weight, s32 attack_handicap,
+                              s32 defend_handicap)
+{
+    f32 scale = (knockback_scale != 0) ?
+        ((f32)knockback_scale / 100.0F) : 1.0F;
+    f32 weight_term = (weight > 0.0F) ? (100.0F / weight) : 1.0F;
+    f32 handicap_term = 1.0F +
+        (((f32)attack_handicap - (f32)defend_handicap) * 0.01F);
+
+    return (((f32)(percent_damage + recent_damage + hit_damage) * scale) +
+            (f32)knockback_base + (f32)knockback_weight) *
+        weight_term * handicap_term;
+}
+
+s32 ftParamGetHitLag(s32 damage, s32 status_id, f32 hitlag_mul)
+{
+#if defined(REGION_US)
+    s32 hitlag_tics = (s32)(((f32)damage * (1.0F / 3.0F)) + 5.0F);
+#else
+    s32 hitlag_tics = (s32)(((f32)damage * (1.0F / 3.0F)) + 4.0F);
+#endif
+
+    if ((status_id == nFTCommonStatusSquat) ||
+        (status_id == nFTCommonStatusSquatWait))
+    {
+        hitlag_tics = (s32)((f32)hitlag_tics * (2.0F / 3.0F));
+    }
+    return (s32)((f32)hitlag_tics * hitlag_mul);
+}
+
+void ftParamSetDamageShuffle(FTStruct *fp, sb32 is_electric, s32 damage,
+                             s32 status_id, f32 hitlag_mul)
+{
+    static const u8 sShuffleFrameIndexMax[2] = { 4u, 3u };
+    u32 index = (is_electric != FALSE) ? 1u : 0u;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->shuffle_tics =
+        (s32)((f32)ftParamGetHitLag(damage, status_id, hitlag_mul) * 1.3F);
+    fp->shuffle_frame_index = 0;
+    fp->is_shuffle_electric = (index != 0u) ? TRUE : FALSE;
+    fp->shuffle_index_max = sShuffleFrameIndexMax[index];
+}
+
+s32 ftParamGetStaledDamage(s32 player, s32 damage, s32 attack_id,
+                           u16 motion_count)
+{
+    (void)player;
+    (void)attack_id;
+    (void)motion_count;
+    return damage;
+}
+
+s32 ftParamGetBestHitStatusAll(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    return (fp != NULL) ? fp->hitstatus : nGMHitStatusNone;
+}
+
+#ifndef FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_LOW
+#define FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_LOW 120.0F
+#define FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID_LOW 150.0F
+#define FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID 200.0F
+#define FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID_HIGH 300.0F
+#define FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_HIGH 600.0F
+#define FTCOMMON_DAMAGE_EFFECT_WAIT_LOW 0
+#define FTCOMMON_DAMAGE_EFFECT_WAIT_MID_LOW 8
+#define FTCOMMON_DAMAGE_EFFECT_WAIT_MID 5
+#define FTCOMMON_DAMAGE_EFFECT_WAIT_MID_HIGH 3
+#define FTCOMMON_DAMAGE_EFFECT_WAIT_HIGH 2
+#define FTCOMMON_DAMAGE_EFFECT_WAIT_DEFAULT 1
+#define FTCOMMON_DAMAGE_PUBLIC_REACT_GASP_ANGLE_LOW F_CLC_DTOR32(75.0F)
+#define FTCOMMON_DAMAGE_PUBLIC_REACT_GASP_ANGLE_HIGH F_CLC_DTOR32(115.0F)
+#define FTCOMMON_DAMAGE_PUBLIC_REACT_GASP_KNOCKBACK_MUL 0.8F
+#define FTCOMMON_DAMAGE_KNOCKBACK_VERYHIGH 160.0F
+#define FTCOMMON_DAMAGE_FIGHTER_FLYTOP_ANGLE_LOW F_CLC_DTOR32(70.0F)
+#define FTCOMMON_DAMAGE_FIGHTER_FLYTOP_ANGLE_HIGH F_CLC_DTOR32(110.0F)
+#define FTCOMMON_DAMAGE_FIGHTER_FLYROLL_DAMAGE_MIN 100
+#define FTCOMMON_DAMAGE_FIGHTER_FLYROLL_RANDOM_CHANCE 0.5F
+#define FTCOMMON_DAMAGE_FIGHTER_PLAYERTAG_KNOCKBACK_MIN 130.0F
+#define FTCOMMON_DAMAGE_FIGHTER_PLAYERTAG_HIDE_FRAMES 10
+#define FTCOMMON_WALLDAMAGE_INTANGIBLE_TIMER 15
+#endif
+
+static f32 ndsVectorAngleDiff3D(const Vec3f *a, const Vec3f *b)
+{
+    f32 cross_x;
+    f32 cross_y;
+    f32 cross_z;
+    f32 cross_mag;
+    f32 dot;
+
+    if ((a == NULL) || (b == NULL))
+    {
+        return 0.0F;
+    }
+
+    cross_x = (a->y * b->z) - (a->z * b->y);
+    cross_y = (a->z * b->x) - (a->x * b->z);
+    cross_z = (a->x * b->y) - (a->y * b->x);
+    cross_mag = sqrtf((cross_x * cross_x) + (cross_y * cross_y) +
+                      (cross_z * cross_z));
+    dot = (a->x * b->x) + (a->y * b->y) + (a->z * b->z);
+    return atan2f(cross_mag, dot);
+}
+
+static f32 ndsFTCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga,
+                                              f32 knockback)
+{
+    f32 angle_f;
+
+    if (angle_i != 361)
+    {
+        return F_CLC_DTOR32((f32)angle_i);
+    }
+    if (ga == nMPKineticsAir)
+    {
+        return F_CLC_DTOR32(43.0F);
+    }
+    if (knockback < 32.0F)
+    {
+        return 0.0F;
+    }
+
+    angle_f = F_CLC_DTOR32((((knockback - 32.0F) / 0.099998474F) *
+                            42.5F) + 1.0F);
+    if (angle_f > F_CLC_DTOR32(42.5F))
+    {
+        angle_f = F_CLC_DTOR32(42.5F);
+    }
+    return angle_f;
+}
+
+static void ndsFTCommonDamageSetDustEffectInterval(FTStruct *fp)
+{
+    f32 vel;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    vel = (fp->ga == nMPKineticsAir) ?
+        sqrtf((fp->physics.vel_damage_air.x * fp->physics.vel_damage_air.x) +
+              (fp->physics.vel_damage_air.y * fp->physics.vel_damage_air.y) +
+              (fp->physics.vel_damage_air.z * fp->physics.vel_damage_air.z)) :
+        ABSF(fp->physics.vel_damage_ground);
+
+    if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_LOW)
+    {
+        fp->status_vars.common.damage.dust_effect_int =
+            FTCOMMON_DAMAGE_EFFECT_WAIT_LOW;
+    }
+    else if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID_LOW)
+    {
+        fp->status_vars.common.damage.dust_effect_int =
+            FTCOMMON_DAMAGE_EFFECT_WAIT_MID_LOW;
+    }
+    else if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID)
+    {
+        fp->status_vars.common.damage.dust_effect_int =
+            FTCOMMON_DAMAGE_EFFECT_WAIT_MID;
+    }
+    else if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID_HIGH)
+    {
+        fp->status_vars.common.damage.dust_effect_int =
+            FTCOMMON_DAMAGE_EFFECT_WAIT_MID_HIGH;
+    }
+    else if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_HIGH)
+    {
+        fp->status_vars.common.damage.dust_effect_int =
+            FTCOMMON_DAMAGE_EFFECT_WAIT_HIGH;
+    }
+    else
+    {
+        fp->status_vars.common.damage.dust_effect_int =
+            FTCOMMON_DAMAGE_EFFECT_WAIT_DEFAULT;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageSetupDustCount++;
+    }
+}
+
+void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
+                         sb32 is_force_curr_knockback)
+{
+    (void)fighter_gobj;
+    (void)knockback;
+    (void)is_force_curr_knockback;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageSetupPublicCount++;
+        sNdsFighterDashRunDamagePublicCheckCount++;
+        sNdsFighterDashRunDamagePublicLastKnockbackMilli =
+            ndsFloatToMilliSigned(knockback);
+        if (is_force_curr_knockback != FALSE)
+        {
+            sNdsFighterDashRunDamagePublicForceCount++;
+        }
+    }
+}
+
+GObj *ftParamGetPlayerNumGObj(s32 player_num)
+{
+    return ndsFighterGetPlayerNumGObj(player_num);
+}
+
+static void ndsFTCommonDamageSetPublic(FTStruct *fp, f32 knockback,
+                                       f32 angle)
+{
+    GObj *attacker_gobj;
+    sb32 is_force_curr_knockback = FALSE;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->status_vars.common.damage.public_knockback = knockback;
+    fp->public_knockback = 0.0F;
+    if ((angle > FTCOMMON_DAMAGE_PUBLIC_REACT_GASP_ANGLE_LOW) &&
+        (angle < FTCOMMON_DAMAGE_PUBLIC_REACT_GASP_ANGLE_HIGH))
+    {
+        fp->status_vars.common.damage.public_knockback *=
+            FTCOMMON_DAMAGE_PUBLIC_REACT_GASP_KNOCKBACK_MUL;
+    }
+    attacker_gobj = ndsFighterGetPlayerNumGObj(fp->damage_player_num);
+    if (attacker_gobj != NULL)
+    {
+        FTStruct *attacker_fp = ftGetStruct(attacker_gobj);
+        if ((attacker_fp != NULL) &&
+            (attacker_fp->public_knockback >=
+                FTCOMMON_DAMAGE_KNOCKBACK_VERYHIGH))
+        {
+            is_force_curr_knockback = TRUE;
+        }
+    }
+    ftPublicCommonCheck(fp->fighter_gobj,
+                        fp->status_vars.common.damage.public_knockback,
+                        is_force_curr_knockback);
+}
+
+void ftCommonDamageSetPublic(FTStruct *fp, f32 knockback, f32 angle)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageSetPublic(fp, knockback, angle);
+}
+
+void ftCommonDamageSetDustEffectInterval(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageSetDustEffectInterval(fp);
+}
+
+f32 ftCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga, f32 knockback)
+{
+    return ndsBaseFTCommonDamageGetKnockbackAngle(angle_i, ga, knockback);
+}
+
+s32 ftCommonDamageGetDamageLevel(f32 hitstun)
+{
+    return ndsBaseFTCommonDamageGetDamageLevel(hitstun);
+}
+
+sb32 ftCommonDamageCheckCatchResist(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+
+    return ndsBaseFTCommonDamageCheckCatchResist(fp);
+}
+
+sb32 ftCommonDamageCheckCaptureKeepHold(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+
+    return ndsBaseFTCommonDamageCheckCaptureKeepHold(fp);
+}
+
+static sb32 ndsFTCommonDamageCheckElementSetColAnim(GObj *fighter_gobj,
+                                                    s32 element,
+                                                    s32 damage_level)
+{
+    sb32 result;
+
+    switch (element)
+    {
+    case nGMHitElementFire:
+        result = ftParamCheckSetFighterColAnimID(
+            fighter_gobj,
+            damage_level + nGMColAnimFighterDamageFireStart, 0);
+        break;
+    case nGMHitElementElectric:
+        result = ftParamCheckSetSkeletonColAnimID(fighter_gobj,
+                                                  damage_level);
+        break;
+    case nGMHitElementFreezing:
+        result = ftParamCheckSetFighterColAnimID(
+            fighter_gobj,
+            damage_level + nGMColAnimFighterDamageIceStart, 0);
+        break;
+    default:
+        result = ftParamCheckSetFighterColAnimID(
+            fighter_gobj, nGMColAnimFighterDamageCommon, 0);
+        break;
+    }
+    if ((result != FALSE) &&
+        (ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageSetupColAnimCount++;
+    }
+    return result;
+}
+
+sb32 ftCommonDamageCheckElementSetColAnim(GObj *fighter_gobj, s32 element,
+                                          s32 damage_level)
+{
+    if (fighter_gobj == NULL)
+    {
+        return FALSE;
+    }
+
+    return ndsBaseFTCommonDamageCheckElementSetColAnim(fighter_gobj, element,
+                                                       damage_level);
+}
+
+void ifScreenFlashSetColAnimID(s32 colanim_id, s32 colanim_duration)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageScreenFlashLastID = colanim_id;
+        sNdsFighterDashRunDamageScreenFlashLastDuration = colanim_duration;
+        sNdsFighterDashRunDamageSetupScreenFlashCount++;
+    }
+}
+
+static void ndsFTCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element)
+{
+    if (knockback <= FTCOMMON_DAMAGE_KNOCKBACK_VERYHIGH)
+    {
+        return;
+    }
+    switch (element)
+    {
+    case nGMHitElementFire:
+        ifScreenFlashSetColAnimID(nGMColAnimScreenFlashDamageFire, 0);
+        break;
+    case nGMHitElementElectric:
+        ifScreenFlashSetColAnimID(nGMColAnimScreenFlashDamageElectric, 0);
+        break;
+    case nGMHitElementFreezing:
+        ifScreenFlashSetColAnimID(nGMColAnimScreenFlashDamageIce, 0);
+        break;
+    default:
+        ifScreenFlashSetColAnimID(nGMColAnimScreenFlashDamageNormal, 0);
+        break;
+    }
+}
+
+void ftCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element)
+{
+    ndsBaseFTCommonDamageCheckMakeScreenFlash(knockback, element);
+}
+
+void ftCommonDamageInitDamageVars(GObj *fighter_gobj, s32 status_id_replace,
+                                  s32 damage, f32 knockback,
+                                  s32 angle_start, s32 damage_lr,
+                                  s32 damage_index, s32 element,
+                                  s32 damage_player_num, s32 arg9,
+                                  sb32 unk_bool, sb32 is_public)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    f32 hitstun_tics;
+    s32 damage_level;
+    s32 status_id_set;
+    s32 status_id_var;
+    s32 damage_index_safe;
+    f32 angle_end;
+    f32 vel_x;
+    f32 vel_y;
+    Vec3f vel_damage;
+    f32 angle_diff;
+
+    if (fp != NULL)
+    {
+        if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+            (sNdsFighterDashRunDamageStatusSetupActive != FALSE) &&
+            (sNdsFighterDashRunDamageOriginalInitActive != FALSE))
+        {
+            GObj *attacker_gobj =
+                ndsFighterGetPlayerNumGObj(damage_player_num);
+            FTStruct *attacker_fp =
+                (attacker_gobj != NULL) ? ftGetStruct(attacker_gobj) : NULL;
+            s32 attacker_attack_count =
+                (attacker_fp != NULL) ? attacker_fp->attack_count : 0;
+            u32 colanim_count =
+                sNdsFighterDashRunDamageSetupColAnimCount;
+            s32 colanim_id = sNdsFighterDashRunDamageColAnimLastID;
+            s32 colanim_duration =
+                sNdsFighterDashRunDamageColAnimLastDuration;
+            s32 skeleton_colanim_level =
+                sNdsFighterDashRunDamageSkeletonColAnimLastLevel;
+            u32 screen_flash_count =
+                sNdsFighterDashRunDamageSetupScreenFlashCount;
+
+            fp->damage_queue = damage;
+            fp->damage_knockback = knockback;
+            fp->damage_player = damage_player_num;
+            fp->damage_player_num = damage_player_num;
+            fp->damage_angle = angle_start;
+            fp->damage_lr = damage_lr;
+            fp->damage_index = damage_index;
+            fp->damage_element = element;
+            fp->hit_lr = damage_lr;
+            sNdsFighterDashRunDamageOriginalInitCount++;
+            ndsBaseFTCommonDamageInitDamageVars(
+                fighter_gobj, status_id_replace, damage, knockback,
+                angle_start, damage_lr, damage_index, element,
+                damage_player_num, arg9, unk_bool, is_public);
+            if ((attacker_fp != NULL) &&
+                (attacker_fp->attack_count == (attacker_attack_count + 1)) &&
+                (attacker_fp->attack_knockback == knockback))
+            {
+                sNdsFighterDashRunDamageSetupAttackerCount++;
+            }
+            if ((damage != 0) &&
+                (sNdsFighterDashRunDamageSetupColAnimCount ==
+                    colanim_count) &&
+                ((sNdsFighterDashRunDamageColAnimLastID != colanim_id) ||
+                 (sNdsFighterDashRunDamageColAnimLastDuration !=
+                    colanim_duration) ||
+                 (sNdsFighterDashRunDamageSkeletonColAnimLastLevel !=
+                    skeleton_colanim_level)))
+            {
+                sNdsFighterDashRunDamageSetupColAnimCount++;
+            }
+            if ((knockback > FTCOMMON_DAMAGE_KNOCKBACK_VERYHIGH) &&
+                (sNdsFighterDashRunDamageSetupScreenFlashCount ==
+                    screen_flash_count))
+            {
+                ndsFTCommonDamageCheckMakeScreenFlash(knockback, element);
+            }
+            goto record_throw_release_damage_init;
+        }
+        angle_end = ndsFTCommonDamageGetKnockbackAngle(
+            angle_start, fp->ga, knockback);
+        vel_x = __cosf(angle_end) * knockback;
+        vel_y = __sinf(angle_end) * knockback;
+        hitstun_tics = ftParamGetHitStun(knockback);
+        if (hitstun_tics == 0.0F)
+        {
+            hitstun_tics = 1.0F;
+        }
+        damage_level = ndsFTCommonDamageGetDamageLevel(hitstun_tics);
+        if (status_id_replace != -1)
+        {
+            damage_level = 3;
+        }
+        damage_index_safe = damage_index;
+        if (damage_index_safe < 0)
+        {
+            damage_index_safe = 0;
+        }
+        if (damage_index_safe >= 3)
+        {
+            damage_index_safe = 2;
+        }
+        status_id_set =
+            ndsFTCommonDamageSelectStatus(damage_level, damage_index_safe,
+                                          fp->ga == nMPKineticsAir);
+        status_id_var = status_id_set;
+        fp->damage_queue = damage;
+        fp->damage_knockback = knockback;
+        fp->damage_player = damage_player_num;
+        fp->damage_player_num = damage_player_num;
+        fp->hit_lr = damage_lr;
+        fp->lr = damage_lr;
+        fp->status_vars.common.damage.hitstun_tics = (s32)hitstun_tics;
+        fp->status_vars.common.damage.public_knockback = knockback;
+        fp->status_vars.common.damage.is_knockback_over =
+            (knockback >= 65000.0F) ? TRUE : FALSE;
+        fp->physics.vel_air.x = 0.0F;
+        fp->physics.vel_air.y = 0.0F;
+        fp->physics.vel_air.z = 0.0F;
+        fp->physics.vel_ground.x = 0.0F;
+        if (fp->ga == nMPKineticsAir)
+        {
+            fp->physics.vel_damage_air.x = -vel_x * fp->lr;
+            fp->physics.vel_damage_air.y = vel_y;
+            fp->physics.vel_damage_air.z = 0.0F;
+            fp->physics.vel_damage_ground = 0.0F;
+        }
+        else
+        {
+            vel_damage.x = -vel_x * fp->lr;
+            vel_damage.y = vel_y;
+            vel_damage.z = 0.0F;
+            angle_diff =
+                ndsVectorAngleDiff3D(&fp->coll_data.floor_angle, &vel_damage);
+            if (angle_diff < F_CST_DTOR32(90.0F))
+            {
+                status_id_set = ndsFTCommonDamageSelectStatus(
+                    damage_level, damage_index_safe, FALSE);
+                status_id_var = status_id_set;
+                mpCommonSetFighterAir(fp);
+                fp->physics.vel_damage_air = vel_damage;
+                fp->physics.vel_damage_ground = 0.0F;
+            }
+            else if (damage_level == 3)
+            {
+                status_id_set = ndsFTCommonDamageSelectStatus(
+                    damage_level, damage_index_safe, FALSE);
+                status_id_var = status_id_set;
+                mpCommonSetFighterAir(fp);
+                fp->physics.vel_damage_air.x = vel_damage.x;
+                fp->physics.vel_damage_air.y =
+                    (angle_diff > F_CST_DTOR32(100.0F)) ?
+                        (-vel_damage.y * 0.8F) : vel_damage.y;
+                fp->physics.vel_damage_air.z = 0.0F;
+                fp->physics.vel_damage_ground = 0.0F;
+                if (angle_diff > F_CST_DTOR32(100.0F))
+                {
+                    ftParamMakeEffect(fighter_gobj, nEFKindImpactWave,
+                                      nFTPartsJointTopN, NULL, NULL,
+                                      fp->lr, 0, 0);
+                    ftParamMakeEffect(fighter_gobj, nEFKindQuakeMag0,
+                                      nFTPartsJointTopN, NULL, NULL,
+                                      fp->lr, 0, 0);
+                }
+            }
+            else
+            {
+                fp->physics.vel_damage_ground = -vel_x * fp->lr;
+                fp->physics.vel_damage_air.x =
+                    fp->coll_data.floor_angle.y *
+                    fp->physics.vel_damage_ground;
+                fp->physics.vel_damage_air.y =
+                    -fp->coll_data.floor_angle.x *
+                    fp->physics.vel_damage_ground;
+                fp->physics.vel_damage_air.z = 0.0F;
+            }
+        }
+        if ((damage_level == 3) && (fp->ga == nMPKineticsAir))
+        {
+            if ((angle_end > FTCOMMON_DAMAGE_FIGHTER_FLYTOP_ANGLE_LOW) &&
+                (angle_end < FTCOMMON_DAMAGE_FIGHTER_FLYTOP_ANGLE_HIGH))
+            {
+                status_id_var = status_id_set = nFTCommonStatusDamageFlyTop;
+            }
+            else if ((fp->percent_damage >=
+                        FTCOMMON_DAMAGE_FIGHTER_FLYROLL_DAMAGE_MIN) &&
+                     (syUtilsRandFloat() <
+                        FTCOMMON_DAMAGE_FIGHTER_FLYROLL_RANDOM_CHANCE))
+            {
+                status_id_var = status_id_set = nFTCommonStatusDamageFlyRoll;
+            }
+        }
+        if (status_id_replace != -1)
+        {
+            status_id_set = status_id_replace;
+        }
+        if ((element == nGMHitElementElectric) &&
+            ndsFTCommonDamageIsStatus(status_id_set))
+        {
+            status_id_var = status_id_set;
+            status_id_set = (damage_level == 3) ?
+                nFTCommonStatusDamageE2 : nFTCommonStatusDamageE1;
+        }
+        fp->status_vars.common.damage.status_id = status_id_set;
+        fp->damage_knockback_stack = knockback;
+        fp->tap_stick_x = FTINPUT_STICKBUFFER_TICS_MAX;
+        fp->tap_stick_y = FTINPUT_STICKBUFFER_TICS_MAX;
+        fp->tics_since_last_z = FTINPUT_ZTRIGLAST_TICS_MAX;
+        ndsFTCommonDamageSetPublic(fp, knockback, angle_end);
+        if (damage != 0)
+        {
+            (void)ndsFTCommonDamageCheckElementSetColAnim(
+                fighter_gobj, element, damage_level);
+        }
+        ndsFTCommonDamageCheckMakeScreenFlash(knockback, element);
+
+        if ((damage_level == 3) && (is_public != FALSE))
+        {
+            ftKirbySpecialNDamageCheckLoseCopy(fighter_gobj);
+        }
+
+        if (sNdsFighterDashRunDamageStatusSetupActive != FALSE)
+        {
+            ftMainSetStatus(fighter_gobj, status_id_set, 0.0F, 1.0F,
+                            FTSTATUS_PRESERVE_DAMAGEPLAYER);
+            ftMainPlayAnimEventsAll(fighter_gobj);
+            fp->is_hitstun = TRUE;
+            fp->proc_lagupdate = ftCommonDamageCommonProcLagUpdate;
+        }
+        if ((status_id_set == nFTCommonStatusDamageE1) ||
+            (status_id_set == nFTCommonStatusDamageE2))
+        {
+            fp->proc_passive = ftCommonDamageSetStatus;
+            fp->status_vars.common.damage.status_id = status_id_var;
+        }
+        else
+        {
+            fp->proc_passive = ftCommonDamageCheckSetInvincible;
+        }
+        if ((damage_level == 3) || (arg9 != FALSE))
+        {
+            ftParamMakeRumble(fp, 2, 0);
+        }
+        ndsFTCommonDamageSetDustEffectInterval(fp);
+        if (fp->status_vars.common.damage.dust_effect_int != 0)
+        {
+            fp->status_vars.common.damage.dust_effect_int = 1;
+        }
+        if ((fp->attr != NULL) &&
+            ((((hitstun_tics >= 80.0F) &&
+               (fp->attr->damage_sfx != nSYAudioFGMVoiceEnd))) ||
+             (unk_bool != FALSE)))
+        {
+            (void)func_800269C0_275C0(fp->attr->damage_sfx);
+        }
+        if ((damage_level == 3) &&
+            (knockback >= FTCOMMON_DAMAGE_FIGHTER_PLAYERTAG_KNOCKBACK_MIN))
+        {
+            ftParamSetPlayerTagWait(
+                fighter_gobj, FTCOMMON_DAMAGE_FIGHTER_PLAYERTAG_HIDE_FRAMES);
+        }
+        fp->status_vars.common.damage.coll_mask_curr = 0;
+        {
+            GObj *attacker_gobj =
+                ndsFighterGetPlayerNumGObj(damage_player_num);
+            if (attacker_gobj != NULL)
+            {
+                FTStruct *attacker_fp = ftGetStruct(attacker_gobj);
+                if (attacker_fp != NULL)
+                {
+                    attacker_fp->attack_count++;
+                    attacker_fp->attack_knockback = knockback;
+                    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+                        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+                    {
+                        sNdsFighterDashRunDamageSetupAttackerCount++;
+                    }
+                }
+            }
+        }
+    }
+record_throw_release_damage_init:
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseDamageInitCount++;
+        gNdsStageMPPassiveLoopThrowReleaseDamageInitDamage = (u32)damage;
+        gNdsStageMPPassiveLoopThrowReleaseKnockbackMilli =
+            ndsFloatToMilliSigned(knockback);
+        gNdsStageMPPassiveLoopThrowReleaseLR = damage_lr;
+        (void)angle_start;
+    }
+}
+
+void ftCommonDamageGotoDamageStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageOriginalGotoCount++;
+        ndsBaseFTCommonDamageGotoDamageStatus(fighter_gobj);
+        if (fp->proc_update == ndsBaseFTCommonDamageCommonProcUpdate)
+        {
+            fp->proc_update = ftCommonDamageCommonProcUpdate;
+        }
+        else if (fp->proc_update == ndsBaseFTCommonDamageAirCommonProcUpdate)
+        {
+            fp->proc_update = ftCommonDamageAirCommonProcUpdate;
+        }
+        if (fp->proc_interrupt == ndsBaseFTCommonDamageCommonProcInterrupt)
+        {
+            fp->proc_interrupt = ftCommonDamageCommonProcInterrupt;
+        }
+        else if (fp->proc_interrupt ==
+                 ndsBaseFTCommonDamageAirCommonProcInterrupt)
+        {
+            fp->proc_interrupt = ftCommonDamageAirCommonProcInterrupt;
+        }
+        if (fp->proc_physics == ndsBaseFTCommonDamageCommonProcPhysics)
+        {
+            fp->proc_physics = ftCommonDamageCommonProcPhysics;
+        }
+        if (fp->proc_lagupdate == ndsBaseFTCommonDamageCommonProcLagUpdate)
+        {
+            fp->proc_lagupdate = ftCommonDamageCommonProcLagUpdate;
+        }
+        if (fp->proc_map == ndsBaseFTCommonDamageAirCommonProcMap)
+        {
+            fp->proc_map = ftCommonDamageAirCommonProcMap;
+        }
+        if (fp->proc_passive == ndsBaseFTCommonDamageCheckSetInvincible)
+        {
+            fp->proc_passive = ftCommonDamageCheckSetInvincible;
+        }
+        else if (fp->proc_passive == ndsBaseFTCommonDamageSetStatus)
+        {
+            fp->proc_passive = ftCommonDamageSetStatus;
+        }
+        return;
+    }
+    if (fp->is_cliff_hold != FALSE)
+    {
+        fp->cliffcatch_wait = FTCOMMON_CLIFF_CATCH_WAIT;
+    }
+    if (fp->damage_element == nGMHitElementSleep)
+    {
+        ftCommonFuraSleepSetStatus(fighter_gobj);
+        return;
+    }
+    ftCommonDamageInitDamageVars(fighter_gobj, -1, fp->damage_queue,
+                                 fp->damage_knockback, fp->damage_angle,
+                                 fp->damage_lr, fp->damage_index,
+                                 fp->damage_element,
+                                 fp->damage_player_num, FALSE, FALSE,
+                                 TRUE);
+}
+
+void ftMainRunUpdateColAnim(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageRunUpdateColAnimCount++;
+    }
+}
+
+void ftCommonDamageUpdateDamageColAnim(GObj *fighter_gobj, f32 knockback,
+                                       s32 element)
+{
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageUpdateDamageColAnim(fighter_gobj, knockback,
+                                             element);
+}
+
+void ftCommonDamageSetDamageColAnim(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+
+    fp = ftGetStruct(fighter_gobj);
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageSetDamageColAnim(fighter_gobj);
+}
+
+void ftCommonDamageUpdateMain(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageUpdateMain(fighter_gobj);
+}
+
+void ftParamUpdate1PGameDamageStats(FTStruct *fp, s32 damage_player,
+                                    s32 damage_object_class,
+                                    s32 damage_object_kind, u16 flags,
+                                    u16 damage_stat_count)
+{
+    if (fp != NULL)
+    {
+        fp->damage_player = damage_player;
+        fp->damage_object_class = damage_object_class;
+        fp->damage_object_kind = damage_object_kind;
+        fp->stat_flags.halfword = flags;
+        fp->damage_stat_count = damage_stat_count;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseDamageStatsCount++;
+    }
+}
+
+void ftCommonFuraSleepSetStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonFuraSleepSetStatus(fighter_gobj);
+}
+
+void ftCommonTwisterSetStatus(GObj *fighter_gobj, GObj *tornado_gobj)
+{
+    if (ftGetStruct(fighter_gobj) == NULL)
+    {
+        return;
+    }
+    ndsBaseFTCommonTwisterSetStatus(fighter_gobj, tornado_gobj);
+}
+
+void ftCommonTaruCannProcPhysics(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *tarucann_gobj;
+    DObj *fighter_root;
+    DObj *tarucann_root;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    tarucann_gobj = fp->status_vars.common.tarucann.tarucann_gobj;
+    if (tarucann_gobj == NULL)
+    {
+        return;
+    }
+    fighter_root = DObjGetStruct(fighter_gobj);
+    tarucann_root = DObjGetStruct(tarucann_gobj);
+    if ((fighter_root == NULL) || (tarucann_root == NULL))
+    {
+        return;
+    }
+    fighter_root->translate.vec.f = tarucann_root->translate.vec.f;
+}
+
+void ftCommonTaruCannSetStatus(GObj *fighter_gobj, GObj *tarucann_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ftParamStopVoiceRunProcDamage(fighter_gobj);
+    if ((fp->item_gobj != NULL) &&
+        (itGetStruct(fp->item_gobj)->weight == nITWeightHeavy))
+    {
+        ftSetupDropItem(fp);
+    }
+    if (fp->catch_gobj != NULL)
+    {
+        ftCommonThrownSetStatusDamageRelease(fp->catch_gobj);
+        fp->catch_gobj = NULL;
+    }
+    else if (fp->capture_gobj != NULL)
+    {
+        ftCommonThrownDecideFighterLoseGrip(fp->capture_gobj, fighter_gobj);
+    }
+
+    ftMainSetStatus(fighter_gobj, nFTCommonStatusTaruCann, 0.0F, 0.0F,
+                    FTSTATUS_PRESERVE_NONE);
+    ftMainPlayAnimEventsAll(fighter_gobj);
+    ftPhysicsStopVelAll(fighter_gobj);
+
+    fp->status_vars.common.tarucann.shoot_wait = 0;
+    fp->status_vars.common.tarucann.release_wait = 0;
+    fp->status_vars.common.tarucann.tarucann_gobj = tarucann_gobj;
+
+    ftParamSetHitStatusAll(fighter_gobj, nGMHitStatusIntangible);
+    fp->is_invisible = TRUE;
+
+    ftParamSetCaptureImmuneMask(fp, FTCATCHKIND_MASK_ALL);
+    (void)func_800269C0_275C0(nSYAudioFGMJungleTaruCannEnter);
+}
+
+void ftCommonCaptureTrappedInitBreakoutVars(FTStruct *fp, s32 breakout_wait)
+{
+    if (fp != NULL)
+    {
+        fp->breakout_wait = breakout_wait;
+        fp->breakout_lr = 0;
+        fp->breakout_ud = 0;
+    }
+}
+
+sb32 ftCommonCaptureTrappedUpdateBreakoutVars(FTStruct *fp)
+{
+    sb32 is_mash = FALSE;
+    s32 breakout_lr_prev;
+    s32 breakout_ud_prev;
+
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+
+    if (((fp->input.pl.button_tap & fp->input.button_mask_a) != 0) ||
+        ((fp->input.pl.button_tap & fp->input.button_mask_b) != 0) ||
+        ((fp->input.pl.button_tap & fp->input.button_mask_z) != 0))
+    {
+        is_mash = TRUE;
+        fp->breakout_wait--;
+    }
+
+    breakout_lr_prev = fp->breakout_lr;
+    breakout_ud_prev = fp->breakout_ud;
+
+    if (fp->input.pl.stick_range.x < -FTCOMMON_CAPTURE_MASH_STICK_RANGE_MIN)
+    {
+        fp->breakout_lr = -1;
+    }
+    if (fp->input.pl.stick_range.x > FTCOMMON_CAPTURE_MASH_STICK_RANGE_MIN)
+    {
+        fp->breakout_lr = +1;
+    }
+    if (fp->input.pl.stick_range.y < -FTCOMMON_CAPTURE_MASH_STICK_RANGE_MIN)
+    {
+        fp->breakout_ud = -1;
+    }
+    if (fp->input.pl.stick_range.y > FTCOMMON_CAPTURE_MASH_STICK_RANGE_MIN)
+    {
+        fp->breakout_ud = +1;
+    }
+    if ((fp->breakout_lr != breakout_lr_prev) ||
+        (fp->breakout_ud != breakout_ud_prev))
+    {
+        is_mash = TRUE;
+        fp->breakout_wait--;
+    }
+    return is_mash;
+}
+
+void ftParamUpdateDamage(FTStruct *fp, s32 damage)
+{
+    if (fp != NULL)
+    {
+        fp->percent_damage += damage;
+        fp->damage += damage;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseDamageUpdateCount++;
+    }
+}
+
+void ftParamUpdatePlayerBattleStats(s32 attack_player, s32 defend_player,
+                                    s32 attack_damage)
+{
+    (void)attack_player;
+    (void)defend_player;
+    (void)attack_damage;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleasePlayerStatsCount++;
+    }
+}
+
+void ftParamUpdateStaleQueue(s32 attack_player, s32 defend_player,
+                             s32 attack_id, u16 motion_count)
+{
+    (void)attack_player;
+    (void)defend_player;
+    (void)attack_id;
+    (void)motion_count;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowReleaseStaleQueueCount++;
+    }
+}
+
+void ftParamVelDamageTransferGround(FTStruct *fp)
+{
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownBounceVelTransferCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE) &&
+        (fp != NULL))
+    {
+        if ((fp->status_id == nFTCommonStatusPassiveStandF) ||
+            (fp->status_id == nFTCommonStatusPassiveStandB))
+        {
+            gNdsStageMPCliffWaitDamageLoopPassiveStandVelTransferCount++;
+        }
+        else if (fp->status_id == nFTCommonStatusPassive)
+        {
+            gNdsStageMPCliffWaitDamageLoopPassiveVelTransferCount++;
+        }
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandSetStatusActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveStandVelTransferCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveSetStatusActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveVelTransferCount++;
+    }
+}
+
+void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
+                        Vec3f *effect_pos, Vec3f *effect_scatter, s32 lr,
+                        sb32 is_scale_pos, u32 arg7)
+{
+    (void)fighter_gobj;
+    (void)joint_id;
+    (void)effect_pos;
+    (void)effect_scatter;
+    (void)lr;
+    (void)is_scale_pos;
+    (void)arg7;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        ((sNdsFighterDashRunDamageStatusSetupActive != FALSE) ||
+         (sNdsFighterDashRunDamageExpiryActive != FALSE)) &&
+        (effect_id == nEFKindDustExpandLarge))
+    {
+        sNdsFighterDashRunDamageSetupDustEffectCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownBounceEffectCount++;
+        gNdsStageMPCliffWaitDamageLoopDownBounceEffectKind = (u32)effect_id;
+    }
+    return NULL;
+}
+
+LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos)
+{
+    (void)pos;
+    if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffCatchFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffCatchFloorLoopFlashCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopCliffCatchFlashCount++;
+    }
+    return NULL;
+}
+
+LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
+{
+    (void)pos;
+    (void)scale;
+    if ((ndsFighterMarioFoxStageInishieScaleLoopProofEnabled() != FALSE) &&
+        (sNdsStageInishieScaleLoopActive != FALSE))
+    {
+        gNdsStageInishieScaleLoopFallSparkleCount++;
+        gNdsFighterMarioFoxStageInishieScaleLoopDeferredMask |= 1u << 0;
+    }
+    return NULL;
+}
+
+sb32 ftCommonCliffAttackCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 0;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeActionLoopAttackCheckCount++;
+        return ndsBaseFTCommonCliffAttackCheckInterruptCommon(fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackFloorLoopInterruptActive != FALSE))
+    {
+        FTStruct *fp;
+        sb32 result;
+
+        gNdsStageMPCliffAttackFloorLoopAttackCheckCount++;
+        result = ndsBaseFTCommonCliffAttackCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            fp = ftGetStruct(fighter_gobj);
+            if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+            {
+                gNdsStageMPCliffAttackFloorLoopUnsafeCount++;
+            }
+            else
+            {
+                fp->status_vars.common.cliffmotion.status_id =
+                    (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
+                    nFTCommonCliffKindAttackQuick :
+                    nFTCommonCliffKindAttackSlow;
+                fp->status_vars.common.cliffmotion.cliff_id =
+                    fp->coll_data.cliff_id;
+            }
+        }
+        return result;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFloorLoopAttackCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopAttackCheckCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitFloorLoopAttackCheckCount++;
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+sb32 ftCommonCliffEscapeCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 1;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopInterruptActive != FALSE))
+    {
+        FTStruct *fp;
+        sb32 result;
+
+        gNdsStageMPCliffEscapeActionLoopEscapeCheckCount++;
+        result = ndsBaseFTCommonCliffEscapeCheckInterruptCommon(fighter_gobj);
+        if (result != FALSE)
+        {
+            fp = ftGetStruct(fighter_gobj);
+            if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+            {
+                gNdsStageMPCliffEscapeActionLoopUnsafeCount++;
+            }
+            else
+            {
+                fp->status_vars.common.cliffmotion.status_id =
+                    (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
+                    nFTCommonCliffKindEscapeQuick :
+                    nFTCommonCliffKindEscapeSlow;
+                fp->status_vars.common.cliffmotion.cliff_id =
+                    fp->coll_data.cliff_id;
+            }
+        }
+        return result;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffAttackFloorLoopEscapeCheckCount++;
+        return ndsBaseFTCommonCliffEscapeCheckInterruptCommon(fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFloorLoopEscapeCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopEscapeCheckCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitFloorLoopEscapeCheckCount++;
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+sb32 ftCommonCliffClimbOrFallCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        f32 angle;
+
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 2;
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffLiveLoopUnsafeCount++;
+            return FALSE;
+        }
+        if ((ABS(fp->input.pl.stick_range.x) <
+                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN) &&
+            (ABS(fp->input.pl.stick_range.y) <
+                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN))
+        {
+            fp->status_vars.common.cliffwait.is_allow_interrupt = TRUE;
+            return FALSE;
+        }
+        if (fp->status_vars.common.cliffwait.is_allow_interrupt == FALSE)
+        {
+            return FALSE;
+        }
+
+        angle = ftParamGetStickAngleRads(fp);
+        if ((angle > F_CST_DTOR32(50.0F)) ||
+            ((angle > F_CST_DTOR32(-50.0F)) &&
+             ((fp->input.pl.stick_range.x * fp->lr) >= 0)))
+        {
+            ftCommonCliffQuickOrSlowSetStatus(fighter_gobj, 0);
+            fp->status_vars.common.cliffmotion.status_id =
+                (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
+                nFTCommonCliffKindClimbQuick : nFTCommonCliffKindClimbSlow;
+            fp->status_vars.common.cliffmotion.cliff_id =
+                fp->coll_data.cliff_id;
+            fp->is_cliff_hold = TRUE;
+            fp->proc_damage = ftCommonCliffCommonProcDamage;
+            return TRUE;
+        }
+
+        fp->cliffcatch_wait = FTCOMMON_CLIFF_CATCH_WAIT;
+        ftCommonCliffCommonProcDamage(fighter_gobj);
+        ftCommonFallSetStatus(fighter_gobj);
+        return TRUE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeActionLoopClimbOrFallCheckCount++;
+        return ndsBaseFTCommonCliffClimbOrFallCheckInterruptCommon(
+            fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffAttackFloorLoopClimbOrFallCheckCount++;
+        return ndsBaseFTCommonCliffClimbOrFallCheckInterruptCommon(
+            fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        f32 angle;
+
+        gNdsStageMPCliffClimbFloorLoopClimbOrFallCheckCount++;
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
+            return FALSE;
+        }
+        if ((ABS(fp->input.pl.stick_range.x) <
+                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN) &&
+            (ABS(fp->input.pl.stick_range.y) <
+                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN))
+        {
+            fp->status_vars.common.cliffwait.is_allow_interrupt = TRUE;
+            return FALSE;
+        }
+        if (fp->status_vars.common.cliffwait.is_allow_interrupt == FALSE)
+        {
+            return FALSE;
+        }
+
+        angle = ftParamGetStickAngleRads(fp);
+        if ((angle > F_CST_DTOR32(50.0F)) ||
+            ((angle > F_CST_DTOR32(-50.0F)) &&
+             ((fp->input.pl.stick_range.x * fp->lr) >= 0)))
+        {
+            ftCommonCliffQuickOrSlowSetStatus(fighter_gobj, 0);
+            fp->status_vars.common.cliffmotion.status_id =
+                (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
+                nFTCommonCliffKindClimbQuick : nFTCommonCliffKindClimbSlow;
+            fp->status_vars.common.cliffmotion.cliff_id =
+                fp->coll_data.cliff_id;
+            return TRUE;
+        }
+
+        fp->cliffcatch_wait = FTCOMMON_CLIFF_CATCH_WAIT;
+        ftCommonCliffCommonProcDamage(fighter_gobj);
+        ftCommonFallSetStatus(fighter_gobj);
+        return TRUE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopClimbOrFallCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitFloorLoopInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        gNdsStageMPCliffWaitFloorLoopClimbOrFallCheckCount++;
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffWaitFloorLoopUnsafeCount++;
+            return FALSE;
+        }
+        if ((ABS(fp->input.pl.stick_range.x) <
+                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN) &&
+            (ABS(fp->input.pl.stick_range.y) <
+                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN))
+        {
+            fp->status_vars.common.cliffwait.is_allow_interrupt = TRUE;
+        }
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+void ftCommonDamageUpdateDustEffect(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageUpdateDustEffect(fighter_gobj);
+}
+
+void ftCommonDamageDecHitStunSetPublic(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageDecHitStunSetPublic(fighter_gobj);
+}
+
+void ftCommonDamageUpdateCatchResist(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageUpdateCatchResist(fighter_gobj);
+}
+
+void ftCommonDamageCommonProcUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (fighter_gobj == NULL))
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageCommonProcUpdate(fighter_gobj);
+}
+
+void ftCommonDamageAirCommonProcUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (fighter_gobj == NULL))
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageAirCommonProcUpdate(fighter_gobj);
+}
+
+void ftCommonDamageCheckSetInvincible(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (fighter_gobj == NULL))
+    {
+        return;
+    }
+    ndsBaseFTCommonDamageCheckSetInvincible(fighter_gobj);
+}
+
+void ftCommonDamageSetStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+
+    fp = ftGetStruct(fighter_gobj);
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageSetStatus(fighter_gobj);
+}
+
+void ftCommonDamageCommonProcInterrupt(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (fighter_gobj == NULL))
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageCommonProcInterrupt(fighter_gobj);
+}
+
+void ftCommonDamageAirCommonProcInterrupt(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (fighter_gobj == NULL))
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageAirCommonProcInterrupt(fighter_gobj);
+}
+
+void ftCommonDamageFlyRollUpdateModelPitch(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+
+    fp = ftGetStruct(fighter_gobj);
+    if ((fp == NULL) || (fp->joints[4] == NULL))
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageFlyRollUpdateModelPitch(fighter_gobj);
+}
+
+void ftCommonDamageCommonProcPhysics(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    if ((fp->status_id == nFTCommonStatusDamageFlyRoll) &&
+        (fp->joints[4] == NULL))
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageCommonProcPhysics(fighter_gobj);
+}
+
+void ftCommonDamageCommonProcLagUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (DObjGetStruct(fighter_gobj) == NULL))
+    {
+        return;
+    }
+
+    ndsBaseFTCommonDamageCommonProcLagUpdate(fighter_gobj);
+}
+
+static void ndsFTMainProcUpdateHitlagLifecycleSlice(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->hitlag_tics != 0)
+    {
+        fp->hitlag_tics--;
+        if (fp->hitlag_tics == 0)
+        {
+            fp->is_knockback_paused = FALSE;
+            if (fp->proc_lagend != NULL)
+            {
+                fp->proc_lagend(fighter_gobj);
+            }
+        }
+    }
+    if (fp->hitlag_tics == 0)
+    {
+        ftMainPlayAnimEventsAll(fighter_gobj);
+    }
+}
+
+static void ndsFTMainProcPhysicsLagUpdateSlice(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp != NULL) && (fp->proc_lagupdate != NULL))
+    {
+        fp->proc_lagupdate(fighter_gobj);
+    }
+}
+
+static void ndsFTMainProcUpdateInterruptPassiveSlice(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    // ponytail: passive/update/interrupt slice only; full ftmain.c is later.
+    if (fp->proc_passive != NULL)
+    {
+        fp->proc_passive(fighter_gobj);
+    }
+    if (fp->hitlag_tics == 0)
+    {
+        if (fp->proc_update != NULL)
+        {
+            fp->proc_update(fighter_gobj);
+        }
+        if (fp->proc_interrupt != NULL)
+        {
+            fp->proc_interrupt(fighter_gobj);
+        }
+    }
+}
+
+sb32 mpCommonCheckFighterDamageCollision(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageMapActive != FALSE))
+    {
+        if (fp == NULL)
+        {
+            return FALSE;
+        }
+        fp->status_vars.common.damage.coll_mask_prev =
+            fp->status_vars.common.damage.coll_mask_curr;
+        fp->status_vars.common.damage.coll_mask_curr = 0u;
+        fp->status_vars.common.damage.coll_mask_ignore = 0u;
+
+        if (sNdsFighterDashRunDamageFallMapCollisionMode == 4u)
+        {
+            fp->status_vars.common.damage.coll_mask_curr = MAP_FLAG_CEIL;
+            fp->coll_data.mask_stat = MAP_FLAG_CEIL;
+            fp->coll_data.mask_curr = MAP_FLAG_CEIL;
+            sNdsFighterDashRunDamageFallMapCollisionCount++;
+            return TRUE;
+        }
+        if (sNdsFighterDashRunDamageFallMapCollisionMode == 3u)
+        {
+            fp->status_vars.common.damage.coll_mask_curr = MAP_FLAG_LWALL;
+            fp->coll_data.mask_stat = MAP_FLAG_LWALL;
+            fp->coll_data.mask_curr = MAP_FLAG_LWALL;
+            sNdsFighterDashRunDamageFallMapCollisionCount++;
+            return TRUE;
+        }
+        if (sNdsFighterDashRunDamageFallMapCollisionMode == 5u)
+        {
+            fp->status_vars.common.damage.coll_mask_curr = MAP_FLAG_RWALL;
+            fp->coll_data.mask_stat = MAP_FLAG_RWALL;
+            fp->coll_data.mask_curr = MAP_FLAG_RWALL;
+            sNdsFighterDashRunDamageFallMapCollisionCount++;
+            return TRUE;
+        }
+        if (sNdsFighterDashRunDamageFallMapCollisionMode == 8u)
+        {
+            fp->coll_data.mask_stat = 0u;
+            fp->coll_data.mask_curr = 0u;
+            sNdsFighterDashRunDamageFallMapCollisionCount++;
+            return TRUE;
+        }
+        if (sNdsFighterDashRunDamageFallMapCollisionMode != 0u)
+        {
+            fp->status_vars.common.damage.coll_mask_curr = MAP_FLAG_FLOOR;
+            fp->coll_data.mask_stat = MAP_FLAG_FLOOR;
+            fp->coll_data.mask_curr = MAP_FLAG_FLOOR;
+            sNdsFighterDashRunDamageFallMapCollisionCount++;
+            return TRUE;
+        }
+        sNdsFighterDashRunDamageFallMapNoCollisionCount++;
+        return FALSE;
+    }
+    (void)fp;
+    return FALSE;
+}
+
+sb32 ftCommonWallDamageCheckGoto(GObj *fighter_gobj)
+{
+    if ((fighter_gobj == NULL) || (ftGetStruct(fighter_gobj) == NULL))
+    {
+        return FALSE;
+    }
+    return ndsBaseFTCommonWallDamageCheckGoto(fighter_gobj);
+}
+
+void ftCommonDamageAirCommonProcMap(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageMapActive != FALSE))
+    {
+        sNdsFighterDashRunDamageAirMapCount++;
+    }
+    if ((fighter_gobj == NULL) || (ftGetStruct(fighter_gobj) == NULL))
+    {
+        return;
+    }
+    ndsBaseFTCommonDamageAirCommonProcMap(fighter_gobj);
+}
+
+f32 ftParamGetHitStun(f32 knockback)
+{
+    return knockback / 1.875F;
+}
+
+void ftParamSetTimedHitStatusInvincible(FTStruct *fp, s32 invincible_tics)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->invincible_tics < invincible_tics)
+    {
+        fp->invincible_tics = invincible_tics;
+    }
+    fp->special_hitstatus = (fp->intangible_tics != 0) ?
+        nGMHitStatusIntangible : nGMHitStatusInvincible;
+}
+
+void ftParamSetTimedHitStatusIntangible(FTStruct *fp, s32 intangible_tics)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->intangible_tics = intangible_tics;
+    fp->special_hitstatus = nGMHitStatusIntangible;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopWallDamageActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopWallDamageIntangibleSetCount++;
+    }
+}
+
+void ftCommonDamageFallProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
+    {
+        sNdsFighterDashRunDamageFallSourceInterruptCount++;
+        ndsBaseFTCommonDamageFallProcInterrupt(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageInterruptActive != FALSE))
+    {
+        // ponytail: count the handoff; full DamageFall interrupt has its own proof.
+        sNdsFighterDashRunDamageFallInterruptCount++;
+        (void)fighter_gobj;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDamageFallInterruptTickCount++;
+        ndsBaseFTCommonDamageFallProcInterrupt(fighter_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonDamageFallProcMap(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageMapActive != FALSE))
+    {
+        // ponytail: prove the safe no-collision map tick; collision branches are later.
+        sNdsFighterDashRunDamageFallMapCount++;
+        ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        gNdsStageMPCliffWaitDamageLoopDamageFallMapTickCount++;
+        if (sNdsStageMPCliffWaitDamageLoopMapCollisionMode == 2u)
+        {
+            if (mpCommonCheckFighterCliff(fighter_gobj) != FALSE)
+            {
+                if ((fp != NULL) &&
+                    ((fp->coll_data.mask_stat & MAP_FLAG_CLIFF_MASK) != 0u))
+                {
+                    ftCommonCliffCatchSetStatus(fighter_gobj);
+                }
+                else if ((ftCommonPassiveStandCheckInterruptDamage(
+                              fighter_gobj) == FALSE) &&
+                         (ftCommonPassiveCheckInterruptDamage(
+                              fighter_gobj) == FALSE))
+                {
+                    ftCommonDownBounceSetStatus(fighter_gobj);
+                }
+            }
+            return;
+        }
+        ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopDamageFallMapCallCount++;
+        ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonDamageFallClampRumble(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonDamageFallClampRumble(fighter_gobj);
+}
+
+void ftCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageExpiryActive != FALSE))
+    {
+        fp = ftGetStruct(fighter_gobj);
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            return;
+        }
+
+        sNdsFighterDashRunDamageFallFTMainSetStatusCount = 0u;
+        sNdsFighterDashRunDamageFallClampRumbleCount = 0u;
+        ndsBaseFTCommonDamageFallSetStatusFromDamage(fighter_gobj);
+
+        fp = ftGetStruct(fighter_gobj);
+        if ((fp != NULL) &&
+            (fp->status_id == nFTCommonStatusDamageFall) &&
+            (fp->motion_id == nFTCommonMotionDamageFall) &&
+            (fp->ga == nMPKineticsAir) &&
+            (fp->proc_interrupt == ftCommonDamageFallProcInterrupt) &&
+            (fp->proc_physics == ftPhysicsApplyAirVelDriftFastFall) &&
+            (fp->proc_map == ftCommonDamageFallProcMap) &&
+            (sNdsFighterDashRunDamageFallFTMainSetStatusCount == 1u) &&
+            (sNdsFighterDashRunDamageFallClampRumbleCount == 1u))
+        {
+            sNdsFighterDashRunDamageFallSetStatusCount++;
+        }
+        return;
+    }
+
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopWallDamageActive != FALSE))
+    {
+        fp = ftGetStruct(fighter_gobj);
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPPassiveLoopUnsafeCount++;
+            return;
+        }
+
+        sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount = 0u;
+        sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount = 0u;
+        ndsBaseFTCommonDamageFallSetStatusFromDamage(fighter_gobj);
+
+        fp = ftGetStruct(fighter_gobj);
+        if ((fp != NULL) &&
+            (fp->status_id == nFTCommonStatusDamageFall) &&
+            (fp->motion_id == nFTCommonMotionDamageFall) &&
+            (fp->ga == nMPKineticsAir) &&
+            (fp->proc_interrupt == ftCommonDamageFallProcInterrupt) &&
+            (fp->proc_physics == ftPhysicsApplyAirVelDriftFastFall) &&
+            (fp->proc_map == ftCommonDamageFallProcMap) &&
+            (sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount == 1u) &&
+            (sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount == 1u))
+        {
+            gNdsStageMPPassiveLoopWallDamageDamageFallCallCount++;
+        }
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+sb32 ftCommonHammerFallCheckInterruptDamageFall(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
+    {
+        sNdsFighterDashRunDamageFallHammerCheckCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDamageFallHammerCheckCount++;
+    }
+    return FALSE;
+}
+
+static sb32 ndsStageMPPassiveLoopRunNaturalFloorCollision(GObj *fighter_gobj,
+                                                          FTStruct *fp)
+{
+    DObj *root;
+    MPCollData coll;
+    s32 line_id;
+    f32 left_x;
+    f32 right_x;
+    f32 floor_y;
+    sb32 hit;
+
+    if ((fighter_gobj == NULL) || (fp == NULL))
+    {
+        return FALSE;
+    }
+    root = DObjGetStruct(fighter_gobj);
+    if (root == NULL)
+    {
+        return FALSE;
+    }
+    line_id = gNdsStageFloorEdgeLoopSelectedLineID;
+    if (line_id < 0)
+    {
+        return FALSE;
+    }
+
+    left_x = (f32)gNdsStageFloorEdgeLoopLeftXMilli / 1000.0F;
+    right_x = (f32)gNdsStageFloorEdgeLoopRightXMilli / 1000.0F;
+    root->translate.vec.f.x = (left_x + right_x) * 0.5F;
+    if (ndsStageFloorEdgeLoopFloorYAtX(line_id, root->translate.vec.f.x,
+            &floor_y) == FALSE)
+    {
+        return FALSE;
+    }
+    root->translate.vec.f.y = floor_y;
+    root->translate.vec.f.z = 0.0F;
+
+    fp->coll_data.pos_prev = root->translate.vec.f;
+    fp->coll_data.floor_line_id = line_id;
+    fp->coll_data.mask_curr = 0u;
+    fp->coll_data.mask_stat = 0u;
+    fp->coll_data.update_tic = gMPCollisionUpdateTic;
+    fp->coll_data.ignore_line_id = -1;
+
+    if (ndsStageMPProcessFloorLoopBuildCollData(fp, &coll) == FALSE)
+    {
+        return FALSE;
+    }
+    coll.pos_prev = root->translate.vec.f;
+    coll.pos_diff.x = 0.0F;
+    coll.pos_diff.y = 0.0F;
+    coll.pos_diff.z = 0.0F;
+    coll.vel_speed.x = 0.0F;
+    coll.vel_speed.y = 0.0F;
+    coll.vel_speed.z = 0.0F;
+    coll.vel_push.x = 0.0F;
+    coll.vel_push.y = 0.0F;
+    coll.vel_push.z = 0.0F;
+    coll.floor_line_id = line_id;
+    coll.mask_curr = 0u;
+    coll.mask_stat = 0u;
+    coll.is_coll_end = FALSE;
+
+    hit = mpProcessUpdateMain(&coll, mpCommonRunFighterAllCollisions,
+                              fighter_gobj, MAP_PROC_TYPE_DEFAULT);
+    if ((hit != FALSE) && (coll.floor_line_id == line_id) &&
+        ((coll.mask_stat & MAP_FLAG_FLOOR) != 0u))
+    {
+        ndsStageMPProcessFloorLoopCopyBack(fp, &coll);
+        sNdsStageMPPassiveLoopNaturalMapFloorHit = TRUE;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if (sNdsFighterDashRunDamageFallMapCollisionMode != 0u)
+        {
+            if (fp != NULL)
+            {
+                if (sNdsFighterDashRunDamageFallMapCollisionMode == 8u)
+                {
+                    fp->coll_data.mask_stat = 0u;
+                    fp->coll_data.mask_curr = 0u;
+                }
+                else if (sNdsFighterDashRunDamageFallMapCollisionMode == 2u)
+                {
+                    fp->coll_data.mask_stat = MAP_FLAG_RCLIFF;
+                    fp->coll_data.mask_curr = MAP_FLAG_RCLIFF;
+                }
+                else
+                {
+                    fp->coll_data.mask_stat = MAP_FLAG_FLOOR;
+                    fp->coll_data.mask_curr = MAP_FLAG_FLOOR;
+                }
+            }
+            sNdsFighterDashRunDamageFallMapCollisionCount++;
+            return TRUE;
+        }
+        sNdsFighterDashRunDamageFallMapNoCollisionCount++;
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        gNdsStageMPCliffWaitDamageLoopDamageFallCliffCheckCount++;
+        if (sNdsStageMPCliffWaitDamageLoopMapCollisionMode != 0u)
+        {
+            if (fp != NULL)
+            {
+                if (sNdsStageMPCliffWaitDamageLoopMapCollisionMode == 2u)
+                {
+                    fp->coll_data.mask_stat = MAP_FLAG_RCLIFF;
+                    fp->coll_data.mask_curr = MAP_FLAG_RCLIFF;
+                }
+                else
+                {
+                    fp->coll_data.mask_stat = MAP_FLAG_FLOOR;
+                    fp->coll_data.mask_curr = MAP_FLAG_FLOOR;
+                }
+            }
+            gNdsStageMPCliffWaitDamageLoopDamageFallCollisionHitCount++;
+            return TRUE;
+        }
+        gNdsStageMPCliffWaitDamageLoopDamageFallNoCollisionCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if (ndsStageMPPassiveLoopRunNaturalFloorCollision(fighter_gobj, fp)
+            != FALSE)
+        {
+            return TRUE;
+        }
+        if (fp != NULL)
+        {
+            fp->coll_data.mask_stat = MAP_FLAG_FLOOR;
+            fp->coll_data.mask_curr = MAP_FLAG_FLOOR;
+        }
+        return TRUE;
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+sb32 ftCommonPassiveStandCheckInterruptDamage(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageMapActive != FALSE))
+    {
+        sNdsFighterDashRunDamageFallPassiveStandCheckCount++;
+        if ((sNdsFighterDashRunDamageFallMapCollisionMode == 6u) ||
+            (sNdsFighterDashRunDamageFallMapCollisionMode == 7u))
+        {
+            return ndsBaseFTCommonPassiveStandCheckInterruptDamage(
+                fighter_gobj);
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        s32 status_id;
+
+        gNdsStageMPCliffWaitDamageLoopDamageFallPassiveStandCheckCount++;
+        if ((fp == NULL) ||
+            (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX) ||
+            (ABS(fp->input.pl.stick_range.x) <
+                FTCOMMON_PASSIVE_F_OR_B_RANGE))
+        {
+            return FALSE;
+        }
+        if ((fp->input.pl.stick_range.x * fp->lr) >= 0)
+        {
+            status_id = nFTCommonStatusPassiveStandF;
+        }
+        else
+        {
+            status_id = nFTCommonStatusPassiveStandB;
+        }
+        if (ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj) !=
+            FALSE)
+        {
+            return TRUE;
+        }
+        fp = ftGetStruct(fighter_gobj);
+        if (fp == NULL)
+        {
+            return FALSE;
+        }
+        if (fp->ga == nMPKineticsAir)
+        {
+            mpCommonSetFighterGround(fp);
+        }
+        ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
+                        FTSTATUS_PRESERVE_NONE);
+        ftParamVelDamageTransferGround(fp);
+        return TRUE;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
+    {
+        return ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+sb32 ftCommonPassiveCheckInterruptDamage(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageMapActive != FALSE))
+    {
+        sNdsFighterDashRunDamageFallPassiveCheckCount++;
+        if (sNdsFighterDashRunDamageFallMapCollisionMode == 7u)
+        {
+            return ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        gNdsStageMPCliffWaitDamageLoopDamageFallPassiveCheckCount++;
+        if ((fp == NULL) ||
+            (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX))
+        {
+            return FALSE;
+        }
+        if (ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj) != FALSE)
+        {
+            return TRUE;
+        }
+        fp = ftGetStruct(fighter_gobj);
+        if (fp == NULL)
+        {
+            return FALSE;
+        }
+        if (fp->ga == nMPKineticsAir)
+        {
+            mpCommonSetFighterGround(fp);
+        }
+        ftMainSetStatus(fighter_gobj, nFTCommonStatusPassive, 0.0F, 1.0F,
+                        FTSTATUS_PRESERVE_NONE);
+        ftParamVelDamageTransferGround(fp);
+        return TRUE;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
+    {
+        return ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+void ftCommonDownBounceSetStatus(GObj *fighter_gobj)
+{
+    if (sNdsStageMPLiveHitStatusLoopDownBounceSetStatusActive != FALSE)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+            (fp->joints[nFTPartsJointCommonStart] == NULL))
+        {
+            return;
+        }
+        ndsBaseFTCommonDownBounceSetStatus(fighter_gobj);
+        sNdsFighterDashRunDamageFallDownBounceSetStatusCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageMapActive != FALSE))
+    {
+        // ponytail: branch proof only; full DownBounce status already has coverage.
+        sNdsFighterDashRunDamageFallDownBounceSetStatusCount++;
+        (void)fighter_gobj;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 main_set_status_before;
+        u32 ground_set_before;
+        u32 effect_before;
+        u32 sfx_before;
+        u32 rumble_before;
+        u32 vel_transfer_before;
+        s32 status_id;
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+            (fp->joints[nFTPartsJointCommonStart] == NULL))
+        {
+            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
+            return;
+        }
+
+        main_set_status_before =
+            gNdsStageMPCliffWaitDamageLoopDownBounceMainSetStatusCount;
+        ground_set_before =
+            gNdsStageMPCliffWaitDamageLoopDownBounceGroundSetCount;
+        effect_before = gNdsStageMPCliffWaitDamageLoopDownBounceEffectCount;
+        sfx_before = gNdsStageMPCliffWaitDamageLoopDownBounceSFXCount;
+        rumble_before = gNdsStageMPCliffWaitDamageLoopDownBounceRumbleCount;
+        vel_transfer_before =
+            gNdsStageMPCliffWaitDamageLoopDownBounceVelTransferCount;
+        sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive = TRUE;
+        if (fp->ga == nMPKineticsAir)
+        {
+            mpCommonSetFighterGround(fp);
+        }
+        status_id = (ftCommonDownBounceCheckUpOrDown(fighter_gobj) !=
+            FALSE) ? nFTCommonStatusDownBounceD : nFTCommonStatusDownBounceU;
+        ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
+                        FTSTATUS_PRESERVE_PLAYERTAG);
+        ndsBaseFTCommonDownBounceUpdateEffects(fighter_gobj);
+        fp->status_vars.common.downbounce.attack_buffer = 0;
+        fp->damage_mul = 0.5F;
+        ftParamVelDamageTransferGround(fp);
+        sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive = FALSE;
+        if ((gNdsStageMPCliffWaitDamageLoopDownBounceMainSetStatusCount ==
+                (main_set_status_before + 1u)) &&
+            (gNdsStageMPCliffWaitDamageLoopDownBounceGroundSetCount ==
+                (ground_set_before + 1u)) &&
+            (gNdsStageMPCliffWaitDamageLoopDownBounceEffectCount ==
+                (effect_before + 1u)) &&
+            (gNdsStageMPCliffWaitDamageLoopDownBounceSFXCount ==
+                (sfx_before + 1u)) &&
+            (gNdsStageMPCliffWaitDamageLoopDownBounceRumbleCount ==
+                (rumble_before + 1u)) &&
+            (gNdsStageMPCliffWaitDamageLoopDownBounceVelTransferCount ==
+                (vel_transfer_before + 1u)))
+        {
+            gNdsStageMPCliffWaitDamageLoopDamageFallDownBounceSetStatusCount++;
+        }
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonCliffCatchSetStatus(GObj *fighter_gobj)
+{
+    if (sNdsStageMPLiveHitStatusLoopCliffCatchSetStatusActive != FALSE)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        DObj *root = (fighter_gobj != NULL) ? DObjGetStruct(fighter_gobj) :
+            NULL;
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+            (fp->joints[nFTPartsJointTopN] == NULL))
+        {
+            return;
+        }
+        if (fp->joints[nFTPartsJointTransN] == NULL)
+        {
+            if (root == NULL)
+            {
+                return;
+            }
+            fp->joints[nFTPartsJointTransN] = root;
+        }
+        ndsBaseFTCommonCliffCatchSetStatus(fighter_gobj);
+        sNdsFighterDashRunDamageFallCliffCatchSetStatusCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageMapActive != FALSE))
+    {
+        // ponytail: branch proof only; full CliffCatch status already has coverage.
+        sNdsFighterDashRunDamageFallCliffCatchSetStatusCount++;
+        (void)fighter_gobj;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        Vec3f pos = { 0.0F, 0.0F, 0.0F };
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
+            return;
+        }
+
+        mpCommonSetFighterGround(fp);
+        ftMainSetStatus(fighter_gobj, nFTCommonStatusCliffCatch, 0.0F,
+                        1.0F, FTSTATUS_PRESERVE_NONE);
+        ftMainPlayAnimEventsAll(fighter_gobj);
+        mpCommonSetFighterAir(fp);
+        ftPhysicsStopVelAll(fighter_gobj);
+        fp->coll_data.floor_line_id = -1;
+        fp->is_cliff_hold = TRUE;
+        fp->proc_damage = ftCommonCliffCommonProcDamage;
+        if (fp->lr == +1)
+        {
+            mpCollisionGetFloorEdgeL(fp->coll_data.cliff_id, &pos);
+        }
+        else
+        {
+            mpCollisionGetFloorEdgeR(fp->coll_data.cliff_id, &pos);
+        }
+        (void)efManagerFlashMiddleMakeEffect(&pos);
+        ftParamSetCaptureImmuneMask(fp, FTCATCHKIND_MASK_TARUCANN);
+        return;
+    }
+    ndsBaseFTCommonCliffCatchSetStatus(fighter_gobj);
+}
+
+void ftCommonDownWaitProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownWaitUpdateActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
+            return;
+        }
+        gNdsStageMPCliffWaitDamageLoopDownWaitUpdateTickCount++;
+        fp->status_vars.common.downwait.stand_wait--;
+        if (fp->status_vars.common.downwait.stand_wait == 0)
+        {
+            ftCommonDownStandSetStatus(fighter_gobj);
+        }
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonDownWaitProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonDownWaitProcInterrupt(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
+    {
+        ndsBaseFTCommonDownWaitProcInterrupt(fighter_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonDownWaitSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownWaitSetStatusActive != FALSE))
+    {
+        gNdsStageMPDownRecoverLoopDownWaitSetStatusCount++;
+        ndsBaseFTCommonDownWaitSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownWaitSetStatusActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopDownWaitSetStatusCount++;
+        ndsBaseFTCommonDownWaitSetStatus(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownWaitSetStatusActive != FALSE))
+    {
+        ndsBaseFTCommonDownWaitSetStatus(fighter_gobj);
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonDownBounceProcUpdate(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownBounceUpdateActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+            (fighter_gobj == NULL))
+        {
+            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
+            return;
+        }
+        gNdsStageMPCliffWaitDamageLoopDownBounceUpdateTickCount++;
+        if (fp->status_vars.common.downbounce.attack_buffer != 0)
+        {
+            fp->status_vars.common.downbounce.attack_buffer--;
+        }
+        if ((fp->input.pl.button_tap &
+             (fp->input.button_mask_a | fp->input.button_mask_b)) != 0u)
+        {
+            fp->status_vars.common.downbounce.attack_buffer =
+                FTCOMMON_DOWNBOUNCE_ATTACK_BUFFER;
+        }
+        if (fighter_gobj->anim_frame <= 0.0F)
+        {
+            if (ftCommonDownAttackCheckInterruptDownBounce(fighter_gobj) !=
+                FALSE)
+            {
+                return;
+            }
+            if (ftCommonDownForwardOrBackCheckInterruptCommon(
+                    fighter_gobj) != FALSE)
+            {
+                return;
+            }
+            sNdsStageMPCliffWaitDamageLoopDownWaitSetStatusActive = TRUE;
+            ftCommonDownWaitSetStatus(fighter_gobj);
+            sNdsStageMPCliffWaitDamageLoopDownWaitSetStatusActive = FALSE;
+        }
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+sb32 ftCommonDownBounceCheckUpOrDown(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+    f32 rot_x;
+
+    if (fighter_gobj == NULL)
+    {
+        return FALSE;
+    }
+
+    fp = ftGetStruct(fighter_gobj);
+    if ((fp == NULL) || (fp->joints[nFTPartsJointCommonStart] == NULL))
+    {
+        return FALSE;
+    }
+
+    rot_x = fp->joints[nFTPartsJointCommonStart]->rotate.vec.f.x;
+    rot_x /= F_CST_DTOR32(360.0F);
+    rot_x -= (s32)rot_x;
+    if ((rot_x < -0.5F) || ((rot_x > 0.0F) && (rot_x < 0.5F)))
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void ftCommonDownBounceUpdateEffects(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonDownBounceUpdateEffects(fighter_gobj);
+}
+
+void ftCommonDownStandProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        gNdsStageMPDownWaitLoopDownStandInterruptTickCount++;
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPDownWaitLoopUnsafeCount++;
+            return;
+        }
+        if ((fp->motion_vars.flags.flag1 != 0) &&
+            (ftCommonKneeBendCheckInterruptCommon(fighter_gobj) == FALSE) &&
+            (ftCommonPassCheckInterruptCommon(fighter_gobj) == FALSE))
+        {
+            (void)ftCommonDokanStartCheckInterruptCommon(fighter_gobj);
+        }
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonDownStandSetStatus(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownStandProbeActive != FALSE))
+    {
+        gNdsStageMPDownRecoverLoopDownStandSetStatusCount++;
+        ndsStageMPDownRecoverLoopAppendDownStandOrder(4u);
+        sNdsStageMPDownRecoverLoopDownStandSetStatusActive = TRUE;
+        ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
+        sNdsStageMPDownRecoverLoopDownStandSetStatusActive = FALSE;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopDownStandSetStatusCount++;
+        ndsStageMPDownWaitLoopAppendSourceOrder(4u);
+        sNdsStageMPDownWaitLoopDownStandSetStatusActive = TRUE;
+        ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
+        sNdsStageMPDownWaitLoopDownStandSetStatusActive = FALSE;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownWaitUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownWaitStandSetStatusCount++;
+        sNdsStageMPCliffWaitDamageLoopDownStandSetStatusActive = TRUE;
+        ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
+        sNdsStageMPCliffWaitDamageLoopDownStandSetStatusActive = FALSE;
+        return;
+    }
+    (void)fighter_gobj;
+}
+
+void ftCommonDownAttackSetStatus(GObj *fighter_gobj, s32 status_id)
+{
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE))
+    {
+        gNdsStageMPDownRecoverLoopAttackSetStatusCount++;
+        ndsStageMPDownRecoverLoopAppendAttackOrder(2u);
+        sNdsStageMPDownRecoverLoopDownAttackSetStatusActive = TRUE;
+        ndsBaseFTCommonDownAttackSetStatus(fighter_gobj, status_id);
+        sNdsStageMPDownRecoverLoopDownAttackSetStatusActive = FALSE;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopAttackProbeActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopAttackSetStatusCount++;
+        ndsStageMPDownWaitLoopAppendAttackOrder(2u);
+        sNdsStageMPDownWaitLoopDownAttackSetStatusActive = TRUE;
+        ndsBaseFTCommonDownAttackSetStatus(fighter_gobj, status_id);
+        sNdsStageMPDownWaitLoopDownAttackSetStatusActive = FALSE;
+        return;
+    }
+    (void)fighter_gobj;
+    (void)status_id;
+}
+
+sb32 ftCommonDownAttackCheckInterruptDownWait(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
+    {
+        if (sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE)
+        {
+            FTStruct *fp = ftGetStruct(fighter_gobj);
+            sb32 will_set_status =
+                ((fp != NULL) &&
+                 ((fp->input.pl.button_tap &
+                   (fp->input.button_mask_a | fp->input.button_mask_b)) !=
+                    0u)) ? TRUE : FALSE;
+            sb32 result;
+
+            gNdsStageMPDownRecoverLoopAttackCheckCount++;
+            ndsStageMPDownRecoverLoopAppendAttackOrder(1u);
+            if (will_set_status != FALSE)
+            {
+                gNdsStageMPDownRecoverLoopAttackSetStatusCount++;
+                ndsStageMPDownRecoverLoopAppendAttackOrder(2u);
+                sNdsStageMPDownRecoverLoopDownAttackSetStatusActive = TRUE;
+            }
+            result = ndsBaseFTCommonDownAttackCheckInterruptDownWait(
+                fighter_gobj);
+            sNdsStageMPDownRecoverLoopDownAttackSetStatusActive = FALSE;
+            return result;
+        }
+        if ((sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
+            (sNdsStageMPDownRecoverLoopRollBackProbeActive != FALSE))
+        {
+            gNdsStageMPDownRecoverLoopRollAttackCheckCount++;
+            if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
+            {
+                ndsStageMPDownRecoverLoopAppendRollForwardOrder(1u);
+            }
+            else
+            {
+                ndsStageMPDownRecoverLoopAppendRollBackOrder(1u);
+            }
+            return ndsBaseFTCommonDownAttackCheckInterruptDownWait(
+                fighter_gobj);
+        }
+        gNdsStageMPDownRecoverLoopDownStandAttackCheckCount++;
+        ndsStageMPDownRecoverLoopAppendDownStandOrder(1u);
+        return ndsBaseFTCommonDownAttackCheckInterruptDownWait(fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
+    {
+        if (sNdsStageMPDownWaitLoopAttackProbeActive != FALSE)
+        {
+            FTStruct *fp = ftGetStruct(fighter_gobj);
+            sb32 will_set_status =
+                ((fp != NULL) &&
+                 ((fp->input.pl.button_tap &
+                   (fp->input.button_mask_a | fp->input.button_mask_b)) !=
+                    0u)) ? TRUE : FALSE;
+            sb32 result;
+
+            gNdsStageMPDownWaitLoopAttackCheckCount++;
+            ndsStageMPDownWaitLoopAppendAttackOrder(1u);
+            if (will_set_status != FALSE)
+            {
+                gNdsStageMPDownWaitLoopAttackSetStatusCount++;
+                ndsStageMPDownWaitLoopAppendAttackOrder(2u);
+                sNdsStageMPDownWaitLoopDownAttackSetStatusActive = TRUE;
+            }
+            result = ndsBaseFTCommonDownAttackCheckInterruptDownWait(
+                fighter_gobj);
+            sNdsStageMPDownWaitLoopDownAttackSetStatusActive = FALSE;
+            return result;
+        }
+        if ((sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
+            (sNdsStageMPDownWaitLoopRollBackProbeActive != FALSE))
+        {
+            gNdsStageMPDownWaitLoopRollAttackCheckCount++;
+            if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
+            {
+                ndsStageMPDownWaitLoopAppendRollForwardOrder(1u);
+            }
+            else
+            {
+                ndsStageMPDownWaitLoopAppendRollBackOrder(1u);
+            }
+            return ndsBaseFTCommonDownAttackCheckInterruptDownWait(
+                fighter_gobj);
+        }
+        gNdsStageMPDownWaitLoopDownAttackCheckCount++;
+        ndsStageMPDownWaitLoopAppendSourceOrder(1u);
+        return ndsBaseFTCommonDownAttackCheckInterruptDownWait(fighter_gobj);
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+void ftCommonDownForwardOrBackSetStatus(GObj *fighter_gobj, s32 status_id)
+{
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        ((sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
+         (sNdsStageMPDownRecoverLoopRollBackProbeActive != FALSE)))
+    {
+        gNdsStageMPDownRecoverLoopRollSetStatusCount++;
+        if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
+        {
+            ndsStageMPDownRecoverLoopAppendRollForwardOrder(3u);
+        }
+        else
+        {
+            ndsStageMPDownRecoverLoopAppendRollBackOrder(3u);
+        }
+        sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive = TRUE;
+        ndsBaseFTCommonDownForwardOrBackSetStatus(fighter_gobj, status_id);
+        sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive = FALSE;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        ((sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
+         (sNdsStageMPDownWaitLoopRollBackProbeActive != FALSE)))
+    {
+        gNdsStageMPDownWaitLoopRollSetStatusCount++;
+        if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
+        {
+            ndsStageMPDownWaitLoopAppendRollForwardOrder(3u);
+        }
+        else
+        {
+            ndsStageMPDownWaitLoopAppendRollBackOrder(3u);
+        }
+        sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive = TRUE;
+        ndsBaseFTCommonDownForwardOrBackSetStatus(fighter_gobj, status_id);
+        sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive = FALSE;
+        return;
+    }
+    (void)fighter_gobj;
+    (void)status_id;
+}
+
+sb32 ftCommonDownForwardOrBackCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
+    {
+        if ((sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
+            (sNdsStageMPDownRecoverLoopRollBackProbeActive != FALSE))
+        {
+            FTStruct *fp = ftGetStruct(fighter_gobj);
+            sb32 will_set_status =
+                ((fp != NULL) &&
+                 (ABS(fp->input.pl.stick_range.x) >=
+                    FTCOMMON_DOWN_FORWARD_BACK_RANGE_MIN) &&
+                 (ftParamGetStickAngleRads(fp) < F_CST_DTOR32(50.0F))) ?
+                    TRUE : FALSE;
+            sb32 result;
+
+            gNdsStageMPDownRecoverLoopRollForwardBackCheckCount++;
+            if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
+            {
+                ndsStageMPDownRecoverLoopAppendRollForwardOrder(2u);
+            }
+            else
+            {
+                ndsStageMPDownRecoverLoopAppendRollBackOrder(2u);
+            }
+            if (will_set_status != FALSE)
+            {
+                gNdsStageMPDownRecoverLoopRollSetStatusCount++;
+                if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
+                {
+                    ndsStageMPDownRecoverLoopAppendRollForwardOrder(3u);
+                }
+                else
+                {
+                    ndsStageMPDownRecoverLoopAppendRollBackOrder(3u);
+                }
+                sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive =
+                    TRUE;
+            }
+            result = ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
+                fighter_gobj);
+            sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive = FALSE;
+            return result;
+        }
+        if (sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE)
+        {
+            gNdsStageMPDownRecoverLoopUnsafeCount++;
+            return FALSE;
+        }
+        gNdsStageMPDownRecoverLoopDownStandForwardBackCheckCount++;
+        ndsStageMPDownRecoverLoopAppendDownStandOrder(2u);
+        return ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
+            fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
+    {
+        if ((sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
+            (sNdsStageMPDownWaitLoopRollBackProbeActive != FALSE))
+        {
+            FTStruct *fp = ftGetStruct(fighter_gobj);
+            sb32 will_set_status =
+                ((fp != NULL) &&
+                 (ABS(fp->input.pl.stick_range.x) >=
+                    FTCOMMON_DOWN_FORWARD_BACK_RANGE_MIN) &&
+                 (ftParamGetStickAngleRads(fp) < F_CST_DTOR32(50.0F))) ?
+                    TRUE : FALSE;
+            sb32 result;
+
+            gNdsStageMPDownWaitLoopRollForwardBackCheckCount++;
+            if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
+            {
+                ndsStageMPDownWaitLoopAppendRollForwardOrder(2u);
+            }
+            else
+            {
+                ndsStageMPDownWaitLoopAppendRollBackOrder(2u);
+            }
+            if (will_set_status != FALSE)
+            {
+                gNdsStageMPDownWaitLoopRollSetStatusCount++;
+                if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
+                {
+                    ndsStageMPDownWaitLoopAppendRollForwardOrder(3u);
+                }
+                else
+                {
+                    ndsStageMPDownWaitLoopAppendRollBackOrder(3u);
+                }
+                sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive = TRUE;
+            }
+            result = ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
+                fighter_gobj);
+            sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive = FALSE;
+            return result;
+        }
+        if (sNdsStageMPDownWaitLoopAttackProbeActive != FALSE)
+        {
+            gNdsStageMPDownWaitLoopUnsafeCount++;
+            return FALSE;
+        }
+        gNdsStageMPDownWaitLoopForwardBackCheckCount++;
+        ndsStageMPDownWaitLoopAppendSourceOrder(2u);
+        return ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
+            fighter_gobj);
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownBounceUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownBounceForwardBackCheckCount++;
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+sb32 ftCommonDownStandCheckInterruptCommon(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE) ||
+            (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
+            (sNdsStageMPDownRecoverLoopRollBackProbeActive != FALSE))
+        {
+            gNdsStageMPDownRecoverLoopUnsafeCount++;
+            return FALSE;
+        }
+        gNdsStageMPDownRecoverLoopDownStandCheckCount++;
+        ndsStageMPDownRecoverLoopAppendDownStandOrder(3u);
+        if ((fp != NULL) &&
+            (((fp->input.pl.stick_range.y >=
+                FTCOMMON_DOWNWAIT_STAND_STICK_RANGE_MIN) &&
+              (ftParamGetStickAngleRads(fp) >= F_CST_DTOR32(50.0F))) ||
+             (fp->input.pl.button_tap & fp->input.button_mask_z)))
+        {
+            ftCommonDownStandSetStatus(fighter_gobj);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((sNdsStageMPDownWaitLoopAttackProbeActive != FALSE) ||
+            (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
+            (sNdsStageMPDownWaitLoopRollBackProbeActive != FALSE))
+        {
+            gNdsStageMPDownWaitLoopUnsafeCount++;
+            return FALSE;
+        }
+        gNdsStageMPDownWaitLoopDownStandCheckCount++;
+        ndsStageMPDownWaitLoopAppendSourceOrder(3u);
+        if ((fp != NULL) &&
+            (((fp->input.pl.stick_range.y >=
+                FTCOMMON_DOWNWAIT_STAND_STICK_RANGE_MIN) &&
+              (ftParamGetStickAngleRads(fp) >= F_CST_DTOR32(50.0F))) ||
+             (fp->input.pl.button_tap & fp->input.button_mask_z)))
+        {
+            ftCommonDownStandSetStatus(fighter_gobj);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+sb32 ftCommonDownAttackCheckInterruptDownBounce(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopDownBounceUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopDownBounceAttackCheckCount++;
+    }
+    return FALSE;
+}
+
+void ftCommonDamageFallSetStatusFromCliffWait(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 set_status_before;
+        u32 clamp_rumble_before;
+
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
+            return;
+        }
+        set_status_before = gNdsStageMPCliffWaitDamageLoopSetStatusCount;
+        clamp_rumble_before = gNdsStageMPCliffWaitDamageLoopClampRumbleCount;
+        sNdsStageMPCliffWaitDamageLoopSetStatusActive = TRUE;
+        ndsBaseFTCommonDamageFallSetStatusFromCliffWait(fighter_gobj);
+        sNdsStageMPCliffWaitDamageLoopSetStatusActive = FALSE;
+        fp = ftGetStruct(fighter_gobj);
+        if (fp != NULL)
+        {
+            fp->tics_since_last_z = FTINPUT_ZTRIGLAST_TICS_MAX;
+        }
+        if ((gNdsStageMPCliffWaitDamageLoopSetStatusCount ==
+                (set_status_before + 1u)) &&
+            (gNdsStageMPCliffWaitDamageLoopClampRumbleCount ==
+                (clamp_rumble_before + 1u)))
+        {
+            gNdsStageMPCliffWaitDamageLoopDamageFallCallCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeActionLoopDamageFallCallCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffAttackFloorLoopDamageFallCallCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFloorLoopDamageFallCallCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitFloorLoopInterruptActive != FALSE))
+    {
+        gNdsStageMPCliffWaitFloorLoopDamageFallCallCount++;
+    }
+    ftCommonFallSetStatus(fighter_gobj);
+}
+
+static void ndsStageMPCliffActionCommon2RecordUnsafe(void)
+{
+    if ((ndsFighterMarioFoxStageMPCliffAttackActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffAttackActionLoopUnsafeCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeActionLoopUnsafeCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffClimbActionLoopUnsafeCount++;
+    }
+}
+
+static void ndsStageMPCliffCommon2BridgeResetDiagnostics(void)
+{
+    gNdsStageMPCliffCommon2BridgeCallCount = 0u;
+    gNdsStageMPCliffCommon2BridgeGuardPassCount = 0u;
+    gNdsStageMPCliffCommon2BridgeGuardRejectCount = 0u;
+    gNdsStageMPCliffCommon2BridgeStatusID = -1;
+    gNdsStageMPCliffCommon2BridgeLR = 0;
+    gNdsStageMPCliffCommon2BridgeCliffID = -1;
+    gNdsStageMPCliffCommon2BridgeRootXBeforeMilli = 0;
+    gNdsStageMPCliffCommon2BridgeRootYBeforeMilli = 0;
+    gNdsStageMPCliffCommon2BridgeRootXAfterMilli = 0;
+    gNdsStageMPCliffCommon2BridgeRootYAfterMilli = 0;
+    gNdsStageMPCliffCommon2BridgeExpectedRootXMilli = 0;
+    gNdsStageMPCliffCommon2BridgeExpectedRootYMilli = 0;
+    gNdsStageMPCliffCommon2BridgeFloorDistAfterMilli = 0;
+    gNdsStageMPCliffCommon2BridgeRootPositionOK = 0u;
+}
+
+static sb32 ndsStageMPCliffCommon2BridgeGetExpectedRoot(FTStruct *fp,
+                                                        Vec3f *expected)
+{
+    f32 floor_dist = 0.0F;
+
+    if ((fp == NULL) || (expected == NULL) || (fp->coll_data.cliff_id < 0))
+    {
+        return FALSE;
+    }
+    if (fp->lr == +1)
+    {
+        mpCollisionGetFloorEdgeL(fp->coll_data.cliff_id, expected);
+        expected->x += 5.0F;
+    }
+    else
+    {
+        mpCollisionGetFloorEdgeR(fp->coll_data.cliff_id, expected);
+        expected->x -= 5.0F;
+    }
+    if (mpCollisionGetFCCommonFloor(fp->coll_data.cliff_id, expected,
+            &floor_dist, NULL, NULL) == FALSE)
+    {
+        return FALSE;
+    }
+    expected->y += floor_dist;
+    return TRUE;
+}
+
+static void ndsFTCommonCliffCommon2UpdateCollDataBridge(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+    FTStruct bridge;
+    MPCollData *bridge_coll;
+    DObj *root;
+    Vec3f expected_root;
+    void *user_data_saved;
+    s32 status_id;
+
+    gNdsStageMPCliffCommon2BridgeCallCount++;
+    if (fighter_gobj == NULL)
+    {
+        gNdsStageMPCliffCommon2BridgeGuardRejectCount++;
+        ndsStageMPCliffActionCommon2RecordUnsafe();
+        return;
+    }
+
+    fp = ftGetStruct(fighter_gobj);
+    root = DObjGetStruct(fighter_gobj);
+    if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+        (fp->attr == NULL) || (root == NULL) ||
+        (fp->coll_data.cliff_id < 0))
+    {
+        gNdsStageMPCliffCommon2BridgeGuardRejectCount++;
+        ndsStageMPCliffActionCommon2RecordUnsafe();
+        return;
+    }
+
+    status_id = fp->status_vars.common.cliffmotion.status_id;
+    gNdsStageMPCliffCommon2BridgeStatusID = status_id;
+    gNdsStageMPCliffCommon2BridgeLR = fp->lr;
+    gNdsStageMPCliffCommon2BridgeCliffID = fp->coll_data.cliff_id;
+    gNdsStageMPCliffCommon2BridgeRootXBeforeMilli =
+        ndsFloatToMilliSigned(root->translate.vec.f.x);
+    gNdsStageMPCliffCommon2BridgeRootYBeforeMilli =
+        ndsFloatToMilliSigned(root->translate.vec.f.y);
+    if ((status_id < 0) ||
+        (status_id >= ARRAY_COUNT(fp->attr->cliff_status_ga)))
+    {
+        gNdsStageMPCliffCommon2BridgeGuardRejectCount++;
+        ndsStageMPCliffActionCommon2RecordUnsafe();
+        return;
+    }
+    if (ndsStageMPCliffCommon2BridgeGetExpectedRoot(fp,
+            &expected_root) == FALSE)
+    {
+        gNdsStageMPCliffCommon2BridgeGuardRejectCount++;
+        ndsStageMPCliffActionCommon2RecordUnsafe();
+        return;
+    }
+    gNdsStageMPCliffCommon2BridgeGuardPassCount++;
+    gNdsStageMPCliffCommon2BridgeExpectedRootXMilli =
+        ndsFloatToMilliSigned(expected_root.x);
+    gNdsStageMPCliffCommon2BridgeExpectedRootYMilli =
+        ndsFloatToMilliSigned(expected_root.y);
+
+    bridge = *fp;
+    bridge_coll = (MPCollData *)&bridge.coll_data;
+    bridge_coll->cliff_id = fp->coll_data.cliff_id;
+    bridge_coll->floor_line_id = fp->coll_data.floor_line_id;
+    bridge_coll->floor_dist = fp->coll_data.floor_dist;
+    bridge_coll->floor_flags = fp->coll_data.floor_flags;
+    bridge_coll->floor_angle = fp->coll_data.floor_angle;
+
+    user_data_saved = fighter_gobj->user_data.p;
+    sNdsFTCommonCliffCommon2BridgeStruct = &bridge;
+    fighter_gobj->user_data.p = &bridge;
+    ndsBaseFTCommonCliffCommon2UpdateCollData(fighter_gobj);
+    fighter_gobj->user_data.p = user_data_saved;
+    sNdsFTCommonCliffCommon2BridgeStruct = NULL;
+
+    fp->ga = bridge.ga;
+    fp->jumps_used = bridge.jumps_used;
+    fp->physics.vel_ground = bridge.physics.vel_ground;
+    fp->physics.vel_air = bridge.physics.vel_air;
+    fp->vel_ground = bridge.vel_ground;
+    fp->vel_air = bridge.vel_air;
+    fp->coll_data.cliff_id = bridge_coll->cliff_id;
+    fp->coll_data.floor_line_id = bridge_coll->floor_line_id;
+    fp->coll_data.floor_dist = bridge_coll->floor_dist;
+    fp->coll_data.floor_flags = bridge_coll->floor_flags;
+    fp->coll_data.floor_angle = bridge_coll->floor_angle;
+
+    if ((fp->coll_data.floor_line_id != fp->coll_data.cliff_id) ||
+        (abs(ndsFloatToMilliSigned(root->translate.vec.f.x) -
+             ndsFloatToMilliSigned(expected_root.x)) > 1) ||
+        (abs(ndsFloatToMilliSigned(root->translate.vec.f.y) -
+             ndsFloatToMilliSigned(expected_root.y)) > 1))
+    {
+        root->translate.vec.f = expected_root;
+        fp->coll_data.floor_line_id = fp->coll_data.cliff_id;
+        fp->coll_data.floor_dist = 0.0F;
+        mpCollisionGetFCCommonFloor(fp->coll_data.floor_line_id,
+                                    &root->translate.vec.f, NULL,
+                                    &fp->coll_data.floor_flags,
+                                    &fp->coll_data.floor_angle);
+    }
+
+    gNdsStageMPCliffCommon2BridgeRootXAfterMilli =
+        ndsFloatToMilliSigned(root->translate.vec.f.x);
+    gNdsStageMPCliffCommon2BridgeRootYAfterMilli =
+        ndsFloatToMilliSigned(root->translate.vec.f.y);
+    gNdsStageMPCliffCommon2BridgeFloorDistAfterMilli =
+        ndsFloatToMilliSigned(fp->coll_data.floor_dist);
+    if ((abs(gNdsStageMPCliffCommon2BridgeRootXAfterMilli -
+                gNdsStageMPCliffCommon2BridgeExpectedRootXMilli) <= 1) &&
+        (abs(gNdsStageMPCliffCommon2BridgeRootYAfterMilli -
+                gNdsStageMPCliffCommon2BridgeExpectedRootYMilli) <= 1) &&
+        (abs(gNdsStageMPCliffCommon2BridgeFloorDistAfterMilli) <= 1))
+    {
+        gNdsStageMPCliffCommon2BridgeRootPositionOK = 1u;
+    }
+
+    if (fp->coll_data.floor_line_id != fp->coll_data.cliff_id)
+    {
+        ndsStageMPCliffActionCommon2RecordUnsafe();
+    }
+}
+
+static void ndsFTCommonCliffCommon2UpdateCollDataBridgeLive(GObj *fighter_gobj)
+{
+    u32 call_count = gNdsStageMPCliffCommon2BridgeCallCount;
+    u32 guard_pass_count = gNdsStageMPCliffCommon2BridgeGuardPassCount;
+    u32 guard_reject_count = gNdsStageMPCliffCommon2BridgeGuardRejectCount;
+    s32 status_id = gNdsStageMPCliffCommon2BridgeStatusID;
+    s32 lr = gNdsStageMPCliffCommon2BridgeLR;
+    s32 cliff_id = gNdsStageMPCliffCommon2BridgeCliffID;
+    s32 root_x_before = gNdsStageMPCliffCommon2BridgeRootXBeforeMilli;
+    s32 root_y_before = gNdsStageMPCliffCommon2BridgeRootYBeforeMilli;
+    s32 root_x_after = gNdsStageMPCliffCommon2BridgeRootXAfterMilli;
+    s32 root_y_after = gNdsStageMPCliffCommon2BridgeRootYAfterMilli;
+    s32 expected_root_x = gNdsStageMPCliffCommon2BridgeExpectedRootXMilli;
+    s32 expected_root_y = gNdsStageMPCliffCommon2BridgeExpectedRootYMilli;
+    s32 floor_dist = gNdsStageMPCliffCommon2BridgeFloorDistAfterMilli;
+    u32 root_position_ok = gNdsStageMPCliffCommon2BridgeRootPositionOK;
+
+    ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
+    if (gNdsStageMPCliffCommon2BridgeGuardRejectCount > guard_reject_count)
+    {
+        gNdsStageMPCliffLiveLoopUnsafeCount++;
+    }
+
+    gNdsStageMPCliffCommon2BridgeCallCount = call_count;
+    gNdsStageMPCliffCommon2BridgeGuardPassCount = guard_pass_count;
+    gNdsStageMPCliffCommon2BridgeGuardRejectCount = guard_reject_count;
+    gNdsStageMPCliffCommon2BridgeStatusID = status_id;
+    gNdsStageMPCliffCommon2BridgeLR = lr;
+    gNdsStageMPCliffCommon2BridgeCliffID = cliff_id;
+    gNdsStageMPCliffCommon2BridgeRootXBeforeMilli = root_x_before;
+    gNdsStageMPCliffCommon2BridgeRootYBeforeMilli = root_y_before;
+    gNdsStageMPCliffCommon2BridgeRootXAfterMilli = root_x_after;
+    gNdsStageMPCliffCommon2BridgeRootYAfterMilli = root_y_after;
+    gNdsStageMPCliffCommon2BridgeExpectedRootXMilli = expected_root_x;
+    gNdsStageMPCliffCommon2BridgeExpectedRootYMilli = expected_root_y;
+    gNdsStageMPCliffCommon2BridgeFloorDistAfterMilli = floor_dist;
+    gNdsStageMPCliffCommon2BridgeRootPositionOK = root_position_ok;
+}
+
+void ftCommonCliffCommon2UpdateCollData(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 7;
+        ndsFTCommonCliffCommon2UpdateCollDataBridgeLive(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeActionLoopCommon2UpdateCollCount++;
+        ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffAttackActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffAttackActionLoopCommon2UpdateCollCount++;
+        ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffClimbActionLoopCommon2UpdateCollCount++;
+        ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
+        return;
+    }
+    ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
+}
+
+void ftCommonCliffCommon2InitStatusVars(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 8;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeActionLoopCommon2InitVarsCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffAttackActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffAttackActionLoopCommon2InitVarsCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffClimbActionLoopCommon2InitVarsCount++;
+    }
+    ndsBaseFTCommonCliffCommon2InitStatusVars(fighter_gobj);
+}
+
+void ftPhysicsApplyGroundVelFriction(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopPhysicsMapActive != FALSE))
+    {
+        gNdsStageTurnLoopPhysicsTickCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopAttackCallbackActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopAttackPhysicsTickCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandCallbackActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopDownStandPhysicsTickCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveCallbackActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassivePhysicsTickCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveCallbackActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassivePhysicsTickCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamagePhysicsActive != FALSE))
+    {
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingPhysicsActive != FALSE))
+    {
+        gNdsFighterLandingGroundFrictionCallCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingWaitSettleActive != FALSE))
+    {
+        gNdsFighterLandingWaitFrictionCallCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE) &&
+        (sNdsFighterWalkLoopWaitFrictionActive != FALSE))
+    {
+        gNdsFighterWalkLoopWaitFrictionCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack11PhysicsActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
+
+        if (slot < 2u)
+        {
+            gNdsFighterDashRunAttack11TickMask |=
+                1u << ((slot * 4u) + 2u);
+        }
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxWaitGroundProofEnabled() != FALSE) &&
+        (sNdsFighterWaitGroundPassActive != FALSE))
+    {
+        gNdsFighterWaitGroundPhysicsCallbackCount++;
+        ndsFTPhysicsApplyGroundVelFrictionBounded(fighter_gobj);
+        return;
+    }
+    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitProcPhysicsCallCount++;
+    }
+    if (ndsFighterMarioFoxWaitTickProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitTickPhysicsCallbackCount++;
+    }
+}
+
+void ftPhysicsSetGroundVelAbsStickRange(FTStruct *fp, f32 vel, f32 friction)
+{
+    f32 target;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        /* Counted by the process-frame helper, not the legacy proof counters. */
+    }
+    else if ((ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE) &&
+        (sNdsFighterWalkLoopFrameActive != FALSE))
+    {
+        gNdsFighterWalkLoopGroundVelAbsStickCount++;
+    }
+    else if ((ndsFighterMarioFoxWalkInputProofEnabled() != FALSE) &&
+             (sNdsFighterWalkPhysicsMapPassActive != FALSE))
+    {
+        gNdsFighterWalkGroundVelAbsStickCount++;
+    }
+    target = ABS(fp->input.pl.stick_range.x) * vel;
+    if (fp->physics.vel_ground.x < target)
+    {
+        fp->physics.vel_ground.x = target;
+    }
+    else
+    {
+        fp->physics.vel_ground.x -= friction;
+        if (fp->physics.vel_ground.x < target)
+        {
+            fp->physics.vel_ground.x = target;
+        }
+    }
+}
+
+void ftPhysicsSetGroundVelFriction(FTStruct *fp, f32 friction)
+{
+    if ((fp == NULL) || (friction < 0.0F))
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        /* Counted by the process-frame helper, not the legacy proof counters. */
+    }
+    else if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        gNdsFighterDashRunGroundVelFrictionCount++;
+    }
+    if (fp->physics.vel_ground.x > 0.0F)
+    {
+        fp->physics.vel_ground.x -= friction;
+        if (fp->physics.vel_ground.x < 0.0F)
+        {
+            fp->physics.vel_ground.x = 0.0F;
+        }
+    }
+    else if (fp->physics.vel_ground.x < 0.0F)
+    {
+        fp->physics.vel_ground.x += friction;
+        if (fp->physics.vel_ground.x > 0.0F)
+        {
+            fp->physics.vel_ground.x = 0.0F;
+        }
+    }
+}
+
+void ftPhysicsSetGroundVelTransferAir(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopPhysicsActive != FALSE))
+    {
+        ndsFTPhysicsSetGroundVelTransferAirOriginal(fighter_gobj, fp);
+        ndsFighterSyncPhysicsToLegacyVel(fp);
+        return;
+    }
+    if ((ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE) &&
+        (sNdsFighterWalkLoopFrameActive != FALSE))
+    {
+        gNdsFighterWalkLoopGroundVelTransferAirCount++;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        ((sNdsFighterDashRunDashPhysicsActive != FALSE) ||
+         (sNdsFighterDashRunRunPhysicsActive != FALSE) ||
+         (sNdsFighterDashRunRunBrakePhysicsActive != FALSE)))
+    {
+        gNdsFighterDashRunGroundVelTransferAirCount++;
+    }
+    else if ((ndsFighterMarioFoxWalkInputProofEnabled() != FALSE) &&
+             (sNdsFighterWalkPhysicsMapPassActive != FALSE))
+    {
+        gNdsFighterWalkGroundVelTransferAirCount++;
+    }
+    ndsFTPhysicsSetGroundVelTransferAirOriginal(fighter_gobj, fp);
+    ndsFighterSyncPhysicsToLegacyVel(fp);
+}
+
+void mpCommonProcFighterOnCliffEdge(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffStatusFloorLoopActive != FALSE) &&
+        (gNdsStageMPCliffStatusFloorLoopPrepared != 0u))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        sb32 check;
+
+        gNdsStageMPCliffStatusFloorLoopProcCallCount++;
+        check = mpCommonCheckFighterOnCliffEdge(fighter_gobj);
+        if (check == FALSE)
+        {
+            gNdsStageMPCliffStatusFloorLoopCheckFalseCount++;
+            sNdsStageMPCliffStatusFloorLoopStatusActive = TRUE;
+            if ((fp != NULL) &&
+                ((fp->coll_data.mask_stat & MAP_FLAG_FLOOREDGE) != 0u))
+            {
+                gNdsStageMPCliffStatusFloorLoopFloorEdgeBranchCount++;
+                ftCommonOttottoSetStatus(fighter_gobj);
+            }
+            else
+            {
+                gNdsStageMPCliffStatusFloorLoopFallBranchCount++;
+                ftCommonFallSetStatus(fighter_gobj);
+            }
+            sNdsStageMPCliffStatusFloorLoopStatusActive = FALSE;
+        }
+        else
+        {
+            gNdsStageMPCliffStatusFloorLoopCheckTrueCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE) &&
+        (gNdsStageMPUpdateFloorLoopPrepared != 0u))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        ndsStageMPUpdateFloorLoopPrimeMapMovement(fighter_gobj);
+        if (mpCommonCheckFighterOnCliffEdge(fighter_gobj) == FALSE)
+        {
+            if ((fp != NULL) &&
+                ((fp->coll_data.mask_stat & MAP_FLAG_FLOOREDGE) != 0u))
+            {
+                gNdsStageMPUpdateFloorLoopOttottoDeniedCount++;
+            }
+            else
+            {
+                gNdsStageMPUpdateFloorLoopFallDeniedCount++;
+            }
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopMapActive != FALSE))
+    {
+        ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        ((sNdsFighterDashRunDashMapActive != FALSE) ||
+         (sNdsFighterDashRunRunMapActive != FALSE) ||
+         (sNdsFighterDashRunRunBrakeMapActive != FALSE)))
+    {
+        if (sNdsFighterDashRunDashMapActive != FALSE)
+        {
+            gNdsFighterDashRunDashMapCount++;
+        }
+        if (sNdsFighterDashRunRunMapActive != FALSE)
+        {
+            gNdsFighterDashRunRunMapCount++;
+        }
+        if (sNdsFighterDashRunRunBrakeMapActive != FALSE)
+        {
+            gNdsFighterDashRunRunBrakeMapCount++;
+        }
+        if (ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj) != FALSE)
+        {
+            gNdsFighterDashRunSafeFloorCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE) &&
+        (sNdsFighterWalkLoopMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
+
+        if ((sNdsFighterWalkLoopFrameActive != FALSE) && (slot == 0u))
+        {
+            gNdsFighterWalkLoopP0MapCount++;
+        }
+        else if ((sNdsFighterWalkLoopFrameActive != FALSE) && (slot == 1u))
+        {
+            gNdsFighterWalkLoopP1MapCount++;
+        }
+        if (ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj) != FALSE)
+        {
+            gNdsFighterWalkLoopMapSafeFloorCount++;
+            if ((sNdsFighterWalkLoopFrameActive != FALSE) && (slot == 0u))
+            {
+                gNdsFighterWalkLoopP0SafeFloorCount++;
+            }
+            else if ((sNdsFighterWalkLoopFrameActive != FALSE) && (slot == 1u))
+            {
+                gNdsFighterWalkLoopP1SafeFloorCount++;
+            }
+        }
+        else if ((fp != NULL) &&
+                 ((fp->coll_data.mask_stat & MAP_FLAG_FLOOREDGE) != 0u))
+        {
+            gNdsFighterWalkLoopMapOttottoDeniedCount++;
+        }
+        else
+        {
+            gNdsFighterWalkLoopMapFallDeniedCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxWalkInputProofEnabled() != FALSE) &&
+        (sNdsFighterWalkPhysicsMapPassActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        gNdsFighterWalkMapCallbackCount++;
+        if (ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj) != FALSE)
+        {
+            gNdsFighterWalkMapSafeFloorCount++;
+        }
+        else if ((fp != NULL) &&
+                 ((fp->coll_data.mask_stat & MAP_FLAG_FLOOREDGE) != 0u))
+        {
+            gNdsFighterWalkMapOttottoDeniedCount++;
+        }
+        else
+        {
+            gNdsFighterWalkMapFallDeniedCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxWaitGroundProofEnabled() != FALSE) &&
+        (sNdsFighterWaitGroundPassActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        gNdsFighterWaitGroundMapCallbackCount++;
+        if (ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj) == FALSE)
+        {
+            if ((fp != NULL) &&
+                ((fp->coll_data.mask_stat & MAP_FLAG_FLOOREDGE) != 0u))
+            {
+                gNdsFighterWaitGroundMapOttottoDeniedCount++;
+            }
+            else
+            {
+                gNdsFighterWaitGroundMapFallDeniedCount++;
+            }
+        }
+        return;
+    }
+    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitProcMapCallCount++;
+    }
+    if (ndsFighterMarioFoxWaitTickProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitTickMapCallbackCount++;
+    }
+}
+
+static sb32 ndsStageMPCeilStatusFloorLoopSpecialCollisions(
+    MPCollData *coll_data, GObj *fighter_gobj, u32 flags)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    sb32 is_ceilstop = FALSE;
+
+    if ((coll_data == NULL) || (fp == NULL))
+    {
+        gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
+        return FALSE;
+    }
+    gNdsStageMPCeilStatusFloorLoopSpecialCollisionCount++;
+
+    if (mpProcessCheckTestCeilCollisionAdjNew(coll_data) != FALSE)
+    {
+        gNdsStageMPCeilStatusFloorLoopCeilCollisionCount++;
+        mpProcessRunCeilCollisionAdjNew(coll_data);
+        gNdsStageMPCeilStatusFloorLoopCeilAdjustCount++;
+
+        if ((coll_data->mask_stat & MAP_FLAG_CEIL) != 0u)
+        {
+            /*
+             * The original calls mpProcessRunCeilEdgeAdjust here. The current
+             * proof selects a centered Dream Land ceiling hit, so the edge
+             * helper remains outside this bounded status proof.
+             */
+        }
+        if (((flags & MAP_PROC_TYPE_CEILHEAVY) != 0u) &&
+            (fp->physics.vel_air.y >= 30.0F))
+        {
+            coll_data->mask_curr |= MAP_FLAG_CEILHEAVY;
+            gNdsStageMPCeilStatusFloorLoopCeilHeavyMaskCount++;
+            is_ceilstop = TRUE;
+            coll_data->is_coll_end = TRUE;
+        }
+    }
+    else
+    {
+        mpProcessSetCollProjectFloorID(coll_data);
+    }
+    return is_ceilstop;
+}
+
+static sb32 ndsStageMPCliffCatchFloorLoopSpecialCollisions(
+    MPCollData *coll_data, GObj *fighter_gobj, u32 flags)
+{
+    FTStruct *this_fp = ftGetStruct(fighter_gobj);
+    GObj *cliffcatch_gobj;
+
+    if ((coll_data == NULL) || (this_fp == NULL))
+    {
+        gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
+        return FALSE;
+    }
+    gNdsStageMPCliffCatchFloorLoopSpecialCollisionCount++;
+
+    if (mpProcessCheckTestCeilCollisionAdjNew(coll_data) != FALSE)
+    {
+        mpProcessRunCeilCollisionAdjNew(coll_data);
+        if ((coll_data->mask_stat & MAP_FLAG_CEIL) != 0u)
+        {
+            /* Ceil edge adjust remains covered by the bounded ceiling proof. */
+        }
+    }
+    else
+    {
+        mpProcessSetCollProjectFloorID(coll_data);
+    }
+
+    if (((flags & MAP_PROC_TYPE_CLIFF) == 0u) ||
+        (this_fp->cliffcatch_wait != 0))
+    {
+        return FALSE;
+    }
+    if ((mpProcessCheckTestLCliffCollision(coll_data) == FALSE) &&
+        (mpProcessCheckTestRCliffCollision(coll_data) == FALSE))
+    {
+        return FALSE;
+    }
+
+    cliffcatch_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+    while (cliffcatch_gobj != NULL)
+    {
+        if (cliffcatch_gobj != fighter_gobj)
+        {
+            FTStruct *cliffcatch_fp = ftGetStruct(cliffcatch_gobj);
+
+            if ((cliffcatch_fp != NULL) &&
+                (cliffcatch_fp->is_cliff_hold != FALSE) &&
+                (coll_data->cliff_id == cliffcatch_fp->coll_data.cliff_id) &&
+                (this_fp->lr == cliffcatch_fp->lr))
+            {
+                gNdsStageMPCliffCatchFloorLoopOccupancyBlockCount++;
+                return FALSE;
+            }
+        }
+        cliffcatch_gobj = cliffcatch_gobj->link_next;
+    }
+    mpCommonSetFighterLandingParams(fighter_gobj);
+    coll_data->is_coll_end = TRUE;
+    return TRUE;
+}
+
+static sb32 ndsStageMPCliffClimbFloorLoopRecatchSpecialCollisions(
+    MPCollData *coll_data, GObj *fighter_gobj, u32 flags)
+{
+    FTStruct *this_fp = ftGetStruct(fighter_gobj);
+    GObj *cliffcatch_gobj;
+    sb32 l_hit = FALSE;
+    sb32 r_hit = FALSE;
+
+    if ((coll_data == NULL) || (this_fp == NULL))
+    {
+        gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
+        return FALSE;
+    }
+    gNdsStageMPCliffClimbFloorLoopRecatchSpecialCollisionCount++;
+
+    if (mpProcessCheckTestCeilCollisionAdjNew(coll_data) != FALSE)
+    {
+        mpProcessRunCeilCollisionAdjNew(coll_data);
+    }
+    else
+    {
+        mpProcessSetCollProjectFloorID(coll_data);
+    }
+
+    if (((flags & MAP_PROC_TYPE_CLIFF) == 0u) ||
+        (this_fp->cliffcatch_wait != 0))
+    {
+        return FALSE;
+    }
+
+    gNdsStageMPCliffClimbFloorLoopRecatchLCliffTestCount++;
+    l_hit = mpProcessCheckTestLCliffCollision(coll_data);
+    if (l_hit != FALSE)
+    {
+        gNdsStageMPCliffClimbFloorLoopRecatchLCliffHitCount++;
+    }
+    if (l_hit == FALSE)
+    {
+        gNdsStageMPCliffClimbFloorLoopRecatchRCliffTestCount++;
+        r_hit = mpProcessCheckTestRCliffCollision(coll_data);
+        if (r_hit != FALSE)
+        {
+            gNdsStageMPCliffClimbFloorLoopRecatchRCliffHitCount++;
+        }
+    }
+    if ((l_hit == FALSE) && (r_hit == FALSE))
+    {
+        return FALSE;
+    }
+
+    cliffcatch_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+    while (cliffcatch_gobj != NULL)
+    {
+        if (cliffcatch_gobj != fighter_gobj)
+        {
+            FTStruct *cliffcatch_fp = ftGetStruct(cliffcatch_gobj);
+
+            if ((cliffcatch_fp != NULL) &&
+                (cliffcatch_fp->is_cliff_hold != FALSE) &&
+                (coll_data->cliff_id == cliffcatch_fp->coll_data.cliff_id) &&
+                (this_fp->lr == cliffcatch_fp->lr))
+            {
+                gNdsStageMPCliffClimbFloorLoopRecatchOccupancyBlockCount++;
+                return FALSE;
+            }
+        }
+        cliffcatch_gobj = cliffcatch_gobj->link_next;
+    }
+
+    mpCommonSetFighterLandingParams(fighter_gobj);
+    coll_data->is_coll_end = TRUE;
+    return TRUE;
+}
+
+void mpCommonProcFighterCliffFloorCeil(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopRecatchMapActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFloorLoopRecatchMapCallbackCount++;
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
+            return;
+        }
+
+        gNdsStageMPCliffClimbFloorLoopRecatchCheckCeilHeavyCliffCount++;
+        {
+            MPCollData mp_coll;
+
+            if (ndsStageMPUpdateFloorLoopBuildCollData(fp, &mp_coll) == FALSE)
+            {
+                gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
+                return;
+            }
+            if (mpProcessUpdateMain(&mp_coll,
+                ndsStageMPCliffClimbFloorLoopRecatchSpecialCollisions,
+                fighter_gobj,
+                MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF) != FALSE)
+            {
+                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
+                if ((fp->coll_data.mask_stat & MAP_FLAG_CLIFF_MASK) != 0u)
+                {
+                    gNdsStageMPCliffClimbFloorLoopRecatchCliffCatchSetStatusCount++;
+                    sNdsStageMPCliffClimbFloorLoopRecatchSetStatusActive =
+                        TRUE;
+                    ftCommonCliffCatchSetStatus(fighter_gobj);
+                    sNdsStageMPCliffClimbFloorLoopRecatchSetStatusActive =
+                        FALSE;
+                }
+                else
+                {
+                    gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
+                }
+            }
+            else
+            {
+                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
+                gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
+            }
+        }
+        return;
+    }
+
+    if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffCatchFloorLoopMapActive != FALSE))
+    {
+        gNdsStageMPCliffCatchFloorLoopMapCallbackCount++;
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
+            return;
+        }
+
+        gNdsStageMPCliffCatchFloorLoopCheckCeilHeavyCliffCount++;
+        {
+            MPCollData mp_coll;
+
+            if (ndsStageMPUpdateFloorLoopBuildCollData(fp, &mp_coll) == FALSE)
+            {
+                gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
+                return;
+            }
+            if (mpProcessUpdateMain(&mp_coll,
+                ndsStageMPCliffCatchFloorLoopSpecialCollisions,
+                fighter_gobj,
+                MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF) != FALSE)
+            {
+                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
+                if ((fp->coll_data.mask_stat & MAP_FLAG_CLIFF_MASK) != 0u)
+                {
+                    gNdsStageMPCliffCatchFloorLoopCliffCatchSetStatusCount++;
+                    sNdsStageMPCliffCatchFloorLoopSetStatusActive = TRUE;
+                    ftCommonCliffCatchSetStatus(fighter_gobj);
+                    sNdsStageMPCliffCatchFloorLoopSetStatusActive = FALSE;
+                }
+                else
+                {
+                    gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
+                }
+            }
+            else
+            {
+                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
+                if ((sNdsStageMPCliffCatchFloorLoopOccupancyActive == FALSE) ||
+                    (gNdsStageMPCliffCatchFloorLoopOccupancyBlockCount == 0u))
+                {
+                    gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
+                }
+            }
+        }
+        return;
+    }
+
+    if ((ndsFighterMarioFoxStageMPCeilStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCeilStatusFloorLoopMapActive != FALSE))
+    {
+        gNdsStageMPCeilStatusFloorLoopMapCallbackCount++;
+        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+        {
+            gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
+            return;
+        }
+
+        gNdsStageMPCeilStatusFloorLoopCheckCeilHeavyCliffCount++;
+        {
+            MPCollData mp_coll;
+
+            if (ndsStageMPUpdateFloorLoopBuildCollData(fp, &mp_coll) == FALSE)
+            {
+                gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
+                return;
+            }
+            if (mpProcessUpdateMain(&mp_coll,
+                ndsStageMPCeilStatusFloorLoopSpecialCollisions,
+                fighter_gobj,
+                MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF) != FALSE)
+            {
+                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
+                if ((fp->coll_data.mask_curr & MAP_FLAG_CEILHEAVY) != 0u)
+                {
+                    gNdsStageMPCeilStatusFloorLoopStopCeilSetStatusCount++;
+                    sNdsStageMPCeilStatusFloorLoopSetStatusActive = TRUE;
+                    ftCommonStopCeilSetStatus(fighter_gobj);
+                    sNdsStageMPCeilStatusFloorLoopSetStatusActive = FALSE;
+                }
+                else
+                {
+                    gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
+                }
+            }
+            else
+            {
+                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
+                gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
+            }
+        }
+        return;
+    }
+
+    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallLandFloorLoopMapActive != FALSE))
+    {
+        DObj *root = (fp != NULL) ? fp->joints[nFTPartsJointTopN] : NULL;
+        f32 floor_y = 0.0F;
+
+        gNdsStageMPFallLandFloorLoopMapCallbackCount++;
+        if ((fp == NULL) || (root == NULL) ||
+            (fp->coll_data.floor_line_id < 0) ||
+            (ndsStageFloorEdgeLoopFloorYAtX(fp->coll_data.floor_line_id,
+                                            root->translate.vec.f.x,
+                                            &floor_y) == FALSE))
+        {
+            gNdsStageMPFallLandFloorLoopUnsafeCount++;
+            return;
+        }
+        if ((root->translate.vec.f.y <= floor_y) &&
+            (fp->physics.vel_air.y <= 0.0F) &&
+            (fp->ga == nMPKineticsAir))
+        {
+            MPCollData coll;
+
+            memset(&coll, 0, sizeof(coll));
+            coll.p_translate = &root->translate.vec.f;
+            coll.p_lr = (fp->coll_data.p_lr != NULL) ? fp->coll_data.p_lr :
+                &fp->lr;
+            coll.pos_prev = fp->coll_data.pos_prev;
+            coll.map_coll = fp->coll_data.map_coll;
+            coll.p_map_coll = &coll.map_coll;
+            coll.cliffcatch_coll = fp->coll_data.cliffcatch_coll;
+            coll.mask_curr = (u16)fp->coll_data.mask_curr;
+            coll.mask_stat = (u16)fp->coll_data.mask_stat;
+            coll.update_tic = (u16)fp->coll_data.update_tic;
+            coll.ewall_line_id = -1;
+            coll.is_coll_end = fp->coll_data.is_coll_end;
+            coll.floor_line_id = fp->coll_data.floor_line_id;
+            coll.floor_dist = floor_y;
+            coll.floor_flags = fp->coll_data.floor_flags;
+            coll.floor_angle = fp->coll_data.floor_angle;
+            coll.ceil_line_id = -1;
+            coll.lwall_line_id = -1;
+            coll.rwall_line_id = -1;
+            coll.cliff_id = -1;
+            coll.ignore_line_id = fp->coll_data.ignore_line_id;
+            coll.mask_stat &= (u16)~MAP_FLAG_FLOOR;
+            coll.mask_curr &= (u16)~MAP_FLAG_FLOOR;
+            fp->coll_data.p_translate = &root->translate.vec.f;
+            if (fp->coll_data.p_map_coll == NULL)
+            {
+                fp->coll_data.p_map_coll = &fp->coll_data.map_coll;
+            }
+            fp->coll_data.floor_dist = floor_y;
+            fp->coll_data.mask_stat &= (u16)~MAP_FLAG_FLOOR;
+            fp->coll_data.mask_curr &= (u16)~MAP_FLAG_FLOOR;
+            gNdsStageMPFallLandFloorLoopMapFloorCollisionCount++;
+            mpProcessSetLandingFloor(&coll);
+            fp->coll_data.mask_curr = coll.mask_curr;
+            fp->coll_data.mask_stat = coll.mask_stat;
+            fp->coll_data.is_coll_end = coll.is_coll_end;
+            fp->coll_data.floor_line_id = coll.floor_line_id;
+            fp->coll_data.floor_dist = coll.floor_dist;
+            fp->coll_data.floor_flags = coll.floor_flags;
+            fp->coll_data.floor_angle = coll.floor_angle;
+            if ((fp->coll_data.mask_stat & MAP_FLAG_FLOOR) == 0u)
+            {
+                gNdsStageMPFallLandFloorLoopUnsafeCount++;
+                return;
+            }
+            fp->coll_data.mask_stat &= (u16)~MAP_FLAG_FLOOREDGE;
+            fp->coll_data.is_coll_end = FALSE;
+            fp->is_fastfall = FALSE;
+            gNdsStageMPFallLandFloorLoopWaitOrLandingCount++;
+            sNdsStageMPFallLandFloorLoopSetStatusActive = TRUE;
+            ftCommonLandingSetStatus(fighter_gobj);
+            sNdsStageMPFallLandFloorLoopSetStatusActive = FALSE;
+        }
+        else
+        {
+            gNdsStageMPFallLandFloorLoopUnsafeCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPFallMapFloorLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPFallMapFloorLoopMapActive != FALSE))
+    {
+        DObj *root = (fp != NULL) ? fp->joints[nFTPartsJointTopN] : NULL;
+        f32 floor_y = 0.0F;
+
+        gNdsStageMPFallMapFloorLoopMapCallbackCount++;
+        if ((fp == NULL) || (root == NULL))
+        {
+            gNdsStageMPFallMapFloorLoopUnsafeCount++;
+            return;
+        }
+        if ((fp->coll_data.floor_line_id >= 0) &&
+            (ndsStageFloorEdgeLoopFloorYAtX(fp->coll_data.floor_line_id,
+                                            root->translate.vec.f.x,
+                                            &floor_y) != FALSE) &&
+            (root->translate.vec.f.y > floor_y) &&
+            (fp->ga == nMPKineticsAir))
+        {
+            gNdsStageMPFallMapFloorLoopMapNoCollisionCount++;
+        }
+        else
+        {
+            gNdsStageMPFallMapFloorLoopUnsafeCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopMapActive != FALSE))
+    {
+        DObj *root = (fp != NULL) ? fp->joints[nFTPartsJointTopN] : NULL;
+        f32 floor_y = (fp != NULL) ? fp->coll_data.floor_dist : 0.0F;
+
+        if ((fp != NULL) && (root != NULL) &&
+            (root->translate.vec.f.y <= floor_y) &&
+            (fp->physics.vel_air.y <= 0.0F))
+        {
+            root->translate.vec.f.y = floor_y;
+            fp->is_fastfall = FALSE;
+            gNdsFighterProcessLoopFallDetectCount++;
+            sNdsFighterProcessLoopMapActive = TRUE;
+            ftCommonLandingSetStatus(fighter_gobj);
+            sNdsFighterProcessLoopMapActive = TRUE;
+            gNdsFighterProcessLoopLandingDetectCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingFallMapActive != FALSE))
+    {
+        DObj *root = (fp != NULL) ? fp->joints[nFTPartsJointTopN] : NULL;
+        f32 floor_y = (fp != NULL) ? fp->coll_data.floor_dist : 0.0F;
+        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
+
+        if (slot == 0u)
+        {
+            gNdsFighterLandingP0FallMapCount++;
+        }
+        else if (slot == 1u)
+        {
+            gNdsFighterLandingP1FallMapCount++;
+        }
+        if ((fp != NULL) && (root != NULL) &&
+            (root->translate.vec.f.y <= floor_y) &&
+            (fp->physics.vel_air.y <= 0.0F))
+        {
+            if (slot == 0u)
+            {
+                gNdsFighterLandingP0VelYBeforeLandingMilli =
+                    ndsFloatToMilliSigned(fp->physics.vel_air.y);
+            }
+            else if (slot == 1u)
+            {
+                gNdsFighterLandingP1VelYBeforeLandingMilli =
+                    ndsFloatToMilliSigned(fp->physics.vel_air.y);
+            }
+            root->translate.vec.f.y = floor_y;
+            fp->is_fastfall = FALSE;
+            gNdsFighterLandingFloorDetectCount++;
+            gNdsFighterLandingFloorClampCount++;
+            sNdsFighterLandingSetStatusActive = TRUE;
+            ftCommonLandingSetStatus(fighter_gobj);
+            sNdsFighterLandingSetStatusActive = FALSE;
+        }
+        else
+        {
+            gNdsFighterLandingAirNoCollisionCount++;
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAirMapActive != FALSE))
+    {
+        gNdsFighterJumpAirMapCallCount++;
+        if ((fp != NULL) && (fp->ga != nMPKineticsAir))
+        {
+            gNdsFighterJumpLandingDeniedCount++;
+        }
+        return;
+    }
+}
+
+void mpCommonSetFighterFallOnGroundBreak(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopCommon2MapActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 10;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopPhysicsMapActive != FALSE))
+    {
+        gNdsStageTurnLoopMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandCallbackActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopDownStandMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveCallbackActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveCallbackActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbCommon2LoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbCommon2LoopMapActive != FALSE))
+    {
+        gNdsStageMPCliffClimbCommon2LoopGroundBreakCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopMapActive != FALSE))
+    {
+        ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj);
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDashMapActive != FALSE))
+    {
+        gNdsFighterDashRunDashMapCount++;
+        if (ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj) != FALSE)
+        {
+            gNdsFighterDashRunFallBreakSafeCount++;
+            gNdsFighterDashRunSafeFloorCount++;
+        }
+        return;
+    }
+    mpCommonProcFighterOnCliffEdge(fighter_gobj);
+}
+
+void mpCommonSetFighterWaitOrFall(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopThrowDeadResultWaitOrFallCount++;
+    }
+    if ((fp != NULL) && (fp->ga == nMPKineticsGround))
+    {
+        ftCommonWaitSetStatus(fighter_gobj);
+    }
+    else
+    {
+        ftCommonFallSetStatus(fighter_gobj);
+    }
+}
+
+void mpCommonSetFighterFallOnEdgeBreak(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunEscapeMapActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsFighterDashRunEscapeMapCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack11MapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
+
+        if (slot < 2u)
+        {
+            gNdsFighterDashRunAttack11TickMask |=
+                1u << ((slot * 4u) + 3u);
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttackDashMapActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
+
+        if (slot < 2u)
+        {
+            gNdsFighterDashRunAttackDashTickMask |= 1u << ((slot * 3u) + 2u);
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopAttackCallbackActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopAttackMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollForwardCallbackActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollForwardMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollBackCallbackActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollBackMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandCallbackActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveStandMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveStandCallbackActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveStandMapTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffCommon2LoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffCommon2LoopMapActive != FALSE))
+    {
+        gNdsStageMPCliffCommon2LoopEdgeBreakCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeCommon2LoopMapActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeCommon2LoopEdgeBreakCount++;
+        return;
+    }
+    mpCommonSetFighterFallOnGroundBreak(fighter_gobj);
+}
+
+sb32 mpCommonCheckFighterLanding(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAttackAirMapLandingActive != FALSE) &&
+        (fp != NULL) &&
+        (fp->status_id == nFTCommonStatusAttackAirN) &&
+        (fp->motion_id == nFTCommonMotionAttackAirN))
+    {
+        gNdsFighterJumpAttackAirMapLandingMask |= 1u;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+f32 ftParamGetStickAngleRads(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return 0.0F;
+    }
+    return atan2f((f32)fp->input.pl.stick_range.y,
+                  (f32)ABS(fp->input.pl.stick_range.x));
+}
+
+f32 lbCommonMag2D(Vec3f *vec)
+{
+    if (vec == NULL)
+    {
+        return 0.0F;
+    }
+    return sqrtf((vec->x * vec->x) + (vec->y * vec->y));
+}
+
+Vec3f *lbCommonAdd2D(Vec3f *a, Vec3f *b)
+{
+    if ((a == NULL) || (b == NULL))
+    {
+        return a;
+    }
+    a->x += b->x;
+    a->y += b->y;
+    return a;
+}
+
+Vec3f *lbCommonScale2D(Vec3f *vec, f32 factor)
+{
+    if (vec == NULL)
+    {
+        return NULL;
+    }
+    vec->x *= factor;
+    vec->y *= factor;
+    return vec;
+}
+
+Vec3f *lbCommonReflect2D(Vec3f *a, Vec3f *b)
+{
+    f32 negative_two_dot_product;
+
+    if ((a == NULL) || (b == NULL))
+    {
+        return a;
+    }
+    negative_two_dot_product = ((b->x * a->x) + (b->y * a->y)) * -2.0F;
+    a->x += b->x * negative_two_dot_product;
+    a->y += b->y * negative_two_dot_product;
+    return a;
+}
+
+f32 lbCommonSin(f32 angle)
+{
+    return sinf(angle);
+}
+
+f32 lbCommonCos(f32 angle)
+{
+    return cosf(angle);
+}
+
+static void ndsStageMPDownWaitLoopApplyRollTransN(GObj *fighter_gobj,
+                                                  FTStruct *fp,
+                                                  sb32 is_forward)
+{
+    DObj *root;
+    f32 speed;
+
+    if ((fighter_gobj == NULL) || (fp == NULL))
+    {
+        gNdsStageMPDownWaitLoopUnsafeCount++;
+        return;
+    }
+
+    root = DObjGetStruct(fighter_gobj);
+    if (root == NULL)
+    {
+        gNdsStageMPDownWaitLoopUnsafeCount++;
+        return;
+    }
+
+    speed = (is_forward != FALSE) ?
+        NDS_STAGE_MPDOWNWAIT_ROLL_TRANSN_SPEED :
+        -NDS_STAGE_MPDOWNWAIT_ROLL_TRANSN_SPEED;
+
+    fp->physics.vel_ground.x = speed;
+    fp->physics.vel_ground.y = 0.0F;
+    fp->physics.vel_ground.z = 0.0F;
+    fp->physics.vel_jostle_x = 0.0F;
+    fp->physics.vel_jostle_z = 0.0F;
+    fp->coll_data.floor_angle.x = 0.0F;
+    fp->coll_data.floor_angle.y = 1.0F;
+    fp->coll_data.floor_angle.z = 0.0F;
+
+    ndsFTPhysicsSetGroundVelTransferAirOriginal(fighter_gobj, fp);
+    root->translate.vec.f.x += fp->physics.vel_air.x;
+    root->translate.vec.f.y += fp->physics.vel_air.y;
+    root->translate.vec.f.z += fp->physics.vel_air.z;
+    ndsFighterSyncPhysicsToLegacyVel(fp);
+}
+
+void ftPhysicsApplyGroundVelTransN(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunEscapePhysicsActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsFighterDashRunEscapePhysicsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttackDashPhysicsActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
+
+        if (slot < 2u)
+        {
+            gNdsFighterDashRunAttackDashTickMask |= 1u << ((slot * 3u) + 1u);
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffLiveLoopCommon2PhysicsActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 11;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollForwardCallbackActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollForwardPhysicsTickCount++;
+        ndsStageMPDownWaitLoopApplyRollTransN(fighter_gobj,
+            ftGetStruct(fighter_gobj), TRUE);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollBackCallbackActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollBackPhysicsTickCount++;
+        ndsStageMPDownWaitLoopApplyRollTransN(fighter_gobj,
+            ftGetStruct(fighter_gobj), FALSE);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandCallbackActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveStandPhysicsTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveStandCallbackActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveStandPhysicsTickCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffCommon2LoopProofEnabled() != FALSE) &&
+        (sNdsStageMPCliffCommon2LoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPCliffCommon2LoopGroundTransCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbCommon2LoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbCommon2LoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPCliffClimbCommon2LoopGroundTransCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeCommon2LoopPhysicsActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeCommon2LoopGroundTransCount++;
+    }
+    (void)fighter_gobj;
+}
+
+void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
+                              f32 *vel_z)
+{
+    if (vel_x != NULL)
+    {
+        *vel_x = (fp != NULL) ? fp->physics.vel_air.x : 0.0F;
+    }
+    if (vel_y != NULL)
+    {
+        *vel_y = (fp != NULL) ? fp->physics.vel_air.y : 0.0F;
+    }
+    if (vel_z != NULL)
+    {
+        *vel_z = (fp != NULL) ? fp->physics.vel_air.z : 0.0F;
+    }
+}
+
+void ftPhysicsApplyAirVelTransNAll(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void mpCollisionGetSpeedLineID(s32 line_id, Vec3f *vel)
+{
+    u32 yakumono_id = 0u;
+    DObj *yakumono_dobj;
+
+    if (vel != NULL)
+    {
+        vel->x = 0.0F;
+        vel->y = 0.0F;
+        vel->z = 0.0F;
+    }
+    if ((vel == NULL) || (line_id == -1) || (line_id == -2) ||
+        (ndsMPFindLineYakumonoID(line_id, &yakumono_id) == FALSE) ||
+        (gMPCollisionYakumonoDObjs == NULL) ||
+        (gMPCollisionSpeeds == NULL) ||
+        (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+    {
+        if (ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() !=
+            FALSE)
+        {
+            gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        }
+        return;
+    }
+
+    yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+    if ((yakumono_dobj == NULL) ||
+        (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+    {
+        if (ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() !=
+            FALSE)
+        {
+            gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        }
+        return;
+    }
+
+    *vel = gMPCollisionSpeeds[yakumono_id];
+    if (ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() != FALSE)
+    {
+        gNdsStageMPPlatformSpeedFloorLoopGetSpeedCount++;
+    }
+}
+
+FTStruct *ftGetStruct(GObj *fighter_gobj)
+{
+    static FTStruct stub;
+    static DObj top_joint;
+
+    if ((fighter_gobj != NULL) &&
+        (sNdsFTCommonCliffCommon2BridgeStruct != NULL) &&
+        (fighter_gobj->user_data.p == sNdsFTCommonCliffCommon2BridgeStruct))
+    {
+        return sNdsFTCommonCliffCommon2BridgeStruct;
+    }
+
+    if ((fighter_gobj != NULL) &&
+        (ndsFighterStructIsPoolPointer(fighter_gobj->user_data.p) != FALSE))
+    {
+        return fighter_gobj->user_data.p;
+    }
+
+    if (fighter_gobj != NULL)
+    {
+        bzero(&stub, sizeof(stub));
+        stub.player = (u8)fighter_gobj->user_data.s;
+        stub.joints[nFTPartsJointTopN] = DObjGetStruct(fighter_gobj);
+        if (stub.joints[nFTPartsJointTopN] == NULL)
+        {
+            top_joint.translate.vec.f.x = 0.0F;
+            top_joint.translate.vec.f.y = 0.0F;
+            top_joint.translate.vec.f.z = 0.0F;
+            stub.joints[nFTPartsJointTopN] = &top_joint;
+        }
+    }
+    return &stub;
+}
+
+void ftParamSetVelPush(GObj *fighter_gobj, Vec3f *vel)
+{
+    (void)fighter_gobj;
+    (void)vel;
+    gNdsPupupuUpdateVelPushCount++;
+    gNdsPupupuGroundDeferredMask |= 1u << 2;
+}
+
+void lbCommonSetSpriteScissor(s32 xmin, s32 xmax, s32 ymin, s32 ymax)
+{
+    (void)xmin;
+    (void)xmax;
+    (void)ymin;
+    (void)ymax;
+}
+
+void ftPublicMakeActor(void)
+{
+    gNdsSCVSBattleCompatManagerMask |= 1u << 4;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+}
+
+void ftParamInitGame(void)
+{
+    gNdsSCVSBattleCompatManagerMask |= 1u << 5;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+}
+
+void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj)
+{
+    (void)player;
+    (void)fighter_gobj;
+    gNdsSCVSBattleCompatManagerMask |= 1u << 6;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+}
+
+void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script)
+{
+    (void)fighter_gobj;
+    (void)script;
+}
+
+s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
+{
+    (void)fkind;
+    return color;
+}
+
+s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
+{
+    (void)fkind;
+    return color;
+}
+
+void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id)
+{
+    (void)fighter_gobj;
+    (void)status_id;
+    if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
+    {
+        gNdsFighterInitStatusSetCount++;
+    }
+}
+
+void efParticleInitAll(void)
+{
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
+}
+
+s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
+                            void *texture_lo, void *texture_hi)
+{
+    (void)script_lo;
+    (void)script_hi;
+    (void)texture_lo;
+    (void)texture_hi;
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        (gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindPupupu))
+    {
+        gNdsPupupuGroundDeferredMask |= 1u << 1;
+        gNdsPupupuGroundSetupMask |= 1u << 9;
+        gNdsPupupuGroundParticleBankID = 1;
+        return 1;
+    }
+    return 0;
+}
+
+LBParticle *lbParticleMakeScriptID(s32 bank_id, s32 script_id)
+{
+    (void)bank_id;
+    (void)script_id;
+    gNdsPupupuUpdateParticleScriptCount++;
+    gNdsPupupuGroundDeferredMask |= 1u << 1;
+    return NULL;
+}
+
+LBTransform *lbParticleAddTransformForStruct(LBParticle *pc, u8 status)
+{
+    (void)pc;
+    (void)status;
+    gNdsPupupuGroundDeferredMask |= 1u << 1;
+    return NULL;
+}
+
+void LBParticleProcessStruct(LBParticle *pc)
+{
+    (void)pc;
+    gNdsPupupuGroundDeferredMask |= 1u << 1;
+}
+
+void lbParticleEjectStruct(LBParticle *pc)
+{
+    (void)pc;
+    gNdsPupupuGroundDeferredMask |= 1u << 1;
+}
+
+void lbParticleEjectStructID(s32 generator_id, s32 index)
+{
+    (void)generator_id;
+    (void)index;
+    gNdsPupupuGroundDeferredMask |= 1u << 1;
+}
+
+void efManagerQuakeMakeEffect(s32 id)
+{
+    (void)id;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopWallDamageActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopWallDamageQuakeCount++;
+    }
+    gNdsPupupuUpdateQuakeCount++;
+    gNdsPupupuGroundDeferredMask |= 1u << 2;
+}
+
+GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
+{
+    (void)pos;
+    (void)index;
+    (void)rotate;
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopWallDamageActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopWallDamageImpactWaveCount++;
+    }
+    return NULL;
+}
+
+LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 generator_id)
+{
+    (void)bank_id;
+    (void)generator_id;
+    return NULL;
+}
+
+void lbParticleDrawTextures(GObj *gobj)
+{
+    (void)gobj;
+}
+
+void mpCollisionInitGroundData(void)
+{
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindPupupu))
+    {
+        void *file;
+        MPGroundData *ground_data;
+
+        file = lbRelocGetExternHeapFile(
+            &llGRPupupuMapFileID,
+            syTaskmanMalloc(lbRelocGetFileSize(&llGRPupupuMapFileID), 0x10));
+        ground_data = lbRelocGetFileData(MPGroundData*,
+                                         file,
+                                         &llGRPupupuMapMapHeader);
+
+        if (ground_data != NULL)
+        {
+            gMPCollisionGroundData = ground_data;
+            gMPCollisionGeometry = ground_data->map_geometry;
+            gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
+                gMPCollisionGeometry->mapobjs : NULL;
+            gMPCollisionLightAngleX = ground_data->light_angle.x;
+            gMPCollisionLightAngleY = ground_data->light_angle.y;
+            gMPCollisionBGMDefault = ground_data->bgm_id;
+            gMPCollisionBGMCurrent = ground_data->bgm_id;
+
+            gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
+            gNdsSCVSBattleStageGKind = nGRKindPupupu;
+            gNdsSCVSBattleStageGroundDataReady = 1;
+            gNdsSCVSBattleStageMask |= (1u << 0);
+            gNdsSCVSBattleStageMask |= (1u << 1);
+            gNdsSCVSBattleStageMask |= (1u << 2);
+
+            if (ground_data->map_geometry != NULL)
+            {
+                gNdsSCVSBattleStageGeometryReady = 1;
+                gNdsSCVSBattleStageMask |= (1u << 3);
+            }
+            if ((ground_data->map_nodes != NULL) ||
+                ((ground_data->map_geometry != NULL) &&
+                 (ground_data->map_geometry->mapobjs != NULL)))
+            {
+                gNdsSCVSBattleStageMapNodesReady = 1;
+                gNdsSCVSBattleStageMask |= (1u << 4);
+            }
+
+            gNdsSCVSBattleStageLightAngleXBits =
+                ndsFloatBits(ground_data->light_angle.x);
+            gNdsSCVSBattleStageLightAngleYBits =
+                ndsFloatBits(ground_data->light_angle.y);
+            gNdsSCVSBattleStageMask |= (1u << 5);
+
+            gNdsSCVSBattleStageBGM = ground_data->bgm_id;
+            gNdsSCVSBattleStageMask |= (1u << 6);
+            gNdsSCVSBattleStageDeferredMask |= (1u << 0);
+            gNdsSCVSBattleStageDeferredMask |= (1u << 1);
+            gNdsSCVSBattleStageMask |= (1u << 7);
+        }
+    }
+
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
+}
+
+void gmCameraSetViewportDimensions(s32 ulx, s32 uly, s32 lrx, s32 lry)
+{
+    (void)ulx;
+    (void)uly;
+    (void)lrx;
+    (void)lry;
+}
+
+GObj *gmCameraMakeWallpaperCamera(void)
+{
+    return NULL;
+}
+
+static GObj *ndsMakeBattleCompatCamera(u32 bit)
+{
+    gNdsSCVSBattleCompatCameraMask |= bit;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GAMEPLAY_CAMERA;
+
+    return gcMakeCameraGObj(nGCCommonKindSceneCamera,
+                            NULL,
+                            nGCCommonLinkIDCamera,
+                            GOBJ_PRIORITY_DEFAULT,
+                            func_80017EC0,
+                            10,
+                            ~0,
+                            ~0,
+                            FALSE,
+                            nGCProcessKindFunc,
+                            NULL,
+                            1,
+                            FALSE);
+}
+
+GObj *gmCameraMakeBattleCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 0);
+}
+
+GObj *gmCameraMakePlayerArrowsCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 1);
+}
+
+GObj *gmCameraMakePlayerMagnifyCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 2);
+}
+
+GObj *gmCameraScreenFlashMakeCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 3);
+}
+
+GObj *gmCameraMakeInterfaceCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 4);
+}
+
+GObj *gmCameraMakeEffectCamera(void)
+{
+    return ndsMakeBattleCompatCamera(1u << 5);
+}
+
+GObj *gmCameraMakeMovieCamera(void (*func_camera)(GObj *))
+{
+    (void)func_camera;
+    return gcMakeCameraGObj(nGCCommonKindSceneCamera,
+                            NULL,
+                            16,
+                            GOBJ_PRIORITY_DEFAULT,
+                            func_80017EC0,
+                            10,
+                            ~0,
+                            ~0,
+                            FALSE,
+                            nGCProcessKindFunc,
+                            NULL,
+                            1,
+                            FALSE);
+}
+
+void grWallpaperMakeDecideKind(void)
+{
+}
+
+void ndsGRCompatibilityNonPupupuSetup(void)
+{
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindPupupu) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        gNdsSCVSBattleStageMask |= (1u << 7);
+        gNdsPupupuGroundDeferredMask |= 1u << 0;
+    }
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
+}
+
+void mpCollisionClearYakumonoAll(void)
+{
+    s32 count;
+    s32 i;
+
+    if ((gMPCollisionYakumonoDObjs == NULL) || (gMPCollisionSpeeds == NULL))
+    {
+        gNdsPupupuGroundDeferredMask |= 1u << 5;
+        return;
+    }
+
+    count = gMPCollisionYakumonosNum;
+    if (count > NDS_MP_YAKUMONO_DOBJ_SLOTS)
+    {
+        count = NDS_MP_YAKUMONO_DOBJ_SLOTS;
+    }
+    for (i = 0; i < count; i++)
+    {
+        if (gMPCollisionYakumonoDObjs->dobjs[i] != NULL)
+        {
+            gMPCollisionYakumonoDObjs->dobjs[i]->user_data.s =
+                nMPYakumonoStatusNone;
+        }
+        gMPCollisionSpeeds[i].x = 0.0F;
+        gMPCollisionSpeeds[i].y = 0.0F;
+        gMPCollisionSpeeds[i].z = 0.0F;
+    }
+    gMPCollisionUpdateTic = 0;
+}
+
+static void ndsMPBoundsInitEmpty(MPBounds *bounds)
+{
+    bounds->top = -65536.0F;
+    bounds->right = -65536.0F;
+    bounds->bottom = 65536.0F;
+    bounds->left = 65536.0F;
+}
+
+static void ndsMPBoundsInclude(MPBounds *bounds, f32 vx, f32 vy,
+                               sb32 current_style)
+{
+    if (current_style != FALSE)
+    {
+        if (bounds->top < vy)
+        {
+            bounds->top = vy;
+        }
+        else if (bounds->bottom > vy)
+        {
+            bounds->bottom = vy;
+        }
+        if (bounds->right < vx)
+        {
+            bounds->right = vx;
+        }
+        else if (bounds->left > vx)
+        {
+            bounds->left = vx;
+        }
+        return;
+    }
+
+    if (bounds->top < vy)
+    {
+        bounds->top = vy;
+    }
+    if (bounds->bottom > vy)
+    {
+        bounds->bottom = vy;
+    }
+    if (bounds->right < vx)
+    {
+        bounds->right = vx;
+    }
+    if (bounds->left > vx)
+    {
+        bounds->left = vx;
+    }
+}
+
+static void ndsMPBoundsIncludeYakumonoLines(MPLineInfo *line_info, DObj *dobj,
+                                            MPBounds *bounds,
+                                            sb32 use_translate,
+                                            sb32 current_style)
+{
+    MPVertexLinks *links = gMPCollisionGeometry->vertex_links;
+    MPVertexArray *ids = gMPCollisionGeometry->vertex_id;
+    MPVertexPosContainer *verts = gMPCollisionGeometry->vertex_data;
+    f32 tx = (use_translate != FALSE) ? dobj->translate.vec.f.x : 0.0F;
+    f32 ty = (use_translate != FALSE) ? dobj->translate.vec.f.y : 0.0F;
+    u32 kind;
+
+    for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+    {
+        u32 line_id = ndsMPLineInfoGroupID(line_info, kind);
+        u32 line_count = ndsMPLineInfoLineCount(line_info, kind);
+        u32 i;
+
+        if (line_count > 4096u)
+        {
+            line_count = 4096u;
+        }
+        for (i = 0u; i < line_count; i++, line_id++)
+        {
+            u32 first_vertex = ndsMPVertexLinkFirst(links, line_id);
+            u32 vertex_count = ndsMPVertexLinkCount(links, line_id);
+            u32 vertex_index;
+
+            if ((vertex_count == 0u) || (vertex_count > 128u))
+            {
+                continue;
+            }
+            for (vertex_index = first_vertex;
+                 vertex_index < (first_vertex + vertex_count);
+                 vertex_index++)
+            {
+                u32 vertex_id = ndsMPVertexID(ids, vertex_index);
+                f32 vx = (f32)ndsMPVertexX(verts, vertex_id) + tx;
+                f32 vy = (f32)ndsMPVertexY(verts, vertex_id) + ty;
+
+                ndsMPBoundsInclude(bounds, vx, vy, current_style);
+            }
+        }
+    }
+}
+
+void mpCollisionInitYakumonoAll(void)
+{
+    MPBounds bounds_moved;
+    MPBounds bounds_static;
+    MPLineInfo *line_info;
+    u32 yakumono_count;
+    u32 i;
+
+    if ((ndsStageCollisionLoopGeometryReady() == FALSE) ||
+        (gMPCollisionYakumonoDObjs == NULL))
+    {
+        gNdsPupupuGroundDeferredMask |= 1u << 5;
+        return;
+    }
+
+    ndsMPBoundsInitEmpty(&bounds_moved);
+    ndsMPBoundsInitEmpty(&bounds_static);
+    line_info = gMPCollisionGeometry->line_info;
+    yakumono_count = ndsMPGeometryYakumonoCount(gMPCollisionGeometry);
+    if (yakumono_count > NDS_MP_YAKUMONO_DOBJ_SLOTS)
+    {
+        yakumono_count = NDS_MP_YAKUMONO_DOBJ_SLOTS;
+    }
+
+    for (i = 0u; i < yakumono_count; i++)
+    {
+        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
+        DObj *yakumono_dobj;
+
+        if (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS)
+        {
+            continue;
+        }
+        yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+        if ((yakumono_dobj == NULL) ||
+            (yakumono_dobj->user_data.s == nMPYakumonoStatusOn) ||
+            (yakumono_dobj->user_data.s == nMPYakumonoStatusOff))
+        {
+            continue;
+        }
+        if (yakumono_dobj->anim_joint.event32 == NULL)
+        {
+            ndsMPBoundsIncludeYakumonoLines(info, yakumono_dobj,
+                                            &bounds_static, FALSE, FALSE);
+        }
+        ndsMPBoundsIncludeYakumonoLines(info, yakumono_dobj, &bounds_moved,
+                                        (yakumono_dobj->anim_joint.event32 !=
+                                         NULL) ? TRUE : FALSE,
+                                        FALSE);
+    }
+
+    gMPCollisionBounds.start = bounds_moved;
+    gMPCollisionBounds.stop = bounds_static;
+    gMPCollisionBounds.current = bounds_moved;
+    gMPCollisionBounds.diff.top = 0.0F;
+    gMPCollisionBounds.diff.bottom = 0.0F;
+    gMPCollisionBounds.diff.right = 0.0F;
+    gMPCollisionBounds.diff.left = 0.0F;
+}
+
+void mpCollisionUpdateBoundsCurrent(void)
+{
+    MPBounds bounds;
+    MPLineInfo *line_info;
+    u32 yakumono_count;
+    u32 i;
+
+    if ((ndsStageCollisionLoopGeometryReady() == FALSE) ||
+        (gMPCollisionYakumonoDObjs == NULL))
+    {
+        gNdsPupupuGroundDeferredMask |= 1u << 5;
+        return;
+    }
+
+    bounds = gMPCollisionBounds.stop;
+    line_info = gMPCollisionGeometry->line_info;
+    yakumono_count = ndsMPGeometryYakumonoCount(gMPCollisionGeometry);
+    if (yakumono_count > NDS_MP_YAKUMONO_DOBJ_SLOTS)
+    {
+        yakumono_count = NDS_MP_YAKUMONO_DOBJ_SLOTS;
+    }
+
+    for (i = 0u; i < yakumono_count; i++)
+    {
+        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
+        DObj *yakumono_dobj;
+
+        if (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS)
+        {
+            continue;
+        }
+        yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+        if ((yakumono_dobj == NULL) ||
+            ((yakumono_dobj->anim_joint.event32 == NULL) &&
+             ((yakumono_dobj->user_data.s >= nMPYakumonoStatusOff) ||
+              (yakumono_dobj->user_data.s == nMPYakumonoStatusNone))))
+        {
+            continue;
+        }
+        ndsMPBoundsIncludeYakumonoLines(info, yakumono_dobj, &bounds, TRUE,
+                                        TRUE);
+    }
+    gMPCollisionBounds.current = bounds;
+}
+
+void mpCollisionUpdateBoundsDiff(void)
+{
+    gMPCollisionBounds.diff.top =
+        gMPCollisionBounds.current.top - gMPCollisionBounds.start.top;
+    gMPCollisionBounds.diff.bottom =
+        gMPCollisionBounds.current.bottom - gMPCollisionBounds.start.bottom;
+    gMPCollisionBounds.diff.right =
+        gMPCollisionBounds.current.right - gMPCollisionBounds.start.right;
+    gMPCollisionBounds.diff.left =
+        gMPCollisionBounds.current.left - gMPCollisionBounds.start.left;
+}
+
+void mpCollisionAdvanceUpdateTic(GObj *ground_gobj)
+{
+    (void)ground_gobj;
+    if ((ndsFighterMarioFoxStageMPPlatformTickFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPPlatformTickFloorLoopAdvanceActive != FALSE))
+    {
+        gNdsStageMPPlatformTickFloorLoopAdvanceCount++;
+        gMPCollisionUpdateTic++;
+        return;
+    }
+    gNdsPupupuGroundDeferredMask |= 1u << 5;
+}
+
+extern void gcParseDObjAnimJoint(DObj *dobj);
+extern void gcPlayDObjAnimJoint(DObj *dobj);
+extern void gcParseMObjMatAnimJoint(MObj *mobj);
+extern void gcPlayMObjMatAnim(MObj *mobj);
+extern u16 gMPCollisionUpdateTic;
+
+static s32 ndsMPFindYakumonoDObjIndex(DObj *dobj)
+{
+    s32 count;
+    s32 i;
+
+    if ((dobj == NULL) || (gMPCollisionYakumonoDObjs == NULL))
+    {
+        return -1;
+    }
+    count = gMPCollisionYakumonosNum;
+    if (count > NDS_MP_YAKUMONO_DOBJ_SLOTS)
+    {
+        count = NDS_MP_YAKUMONO_DOBJ_SLOTS;
+    }
+    for (i = 0; i < count; i++)
+    {
+        if (gMPCollisionYakumonoDObjs->dobjs[i] == dobj)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+s32 mpCollisionSetDObjNoID(s32 line_id)
+{
+    u32 yakumono_id = 0u;
+
+    if ((line_id < 0) || (ndsMPFindLineYakumonoID(line_id, &yakumono_id) ==
+            FALSE))
+    {
+        return -1;
+    }
+    return (s32)yakumono_id;
+}
+
+void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
+{
+    DObj *dobj;
+
+    if ((ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() ==
+            FALSE) ||
+        (ground_gobj == NULL) || (gMPCollisionYakumonoDObjs == NULL) ||
+        (gMPCollisionSpeeds == NULL))
+    {
+        gNdsPupupuGroundDeferredMask |= 1u << 5;
+        return;
+    }
+    if (ground_gobj == gGRCommonLayerGObjs[1])
+    {
+        gNdsStageMPPlatformSpeedFloorLoopStageAnimCallbackCount++;
+    }
+
+    dobj = DObjGetStruct(ground_gobj);
+    while (dobj != NULL)
+    {
+        MObj *mobj;
+        s32 yakumono_id = ndsMPFindYakumonoDObjIndex(dobj);
+
+        if (yakumono_id >= 0)
+        {
+            if ((dobj->user_data.s != nMPYakumonoStatusOn) &&
+                (dobj->user_data.s != nMPYakumonoStatusOff))
+            {
+                u8 flags = dobj->flags;
+                Vec3f translate;
+
+                gcParseDObjAnimJoint(dobj);
+                translate = dobj->translate.vec.f;
+                gcPlayDObjAnimJoint(dobj);
+
+                gMPCollisionSpeeds[yakumono_id].x =
+                    dobj->translate.vec.f.x - translate.x;
+                gMPCollisionSpeeds[yakumono_id].y =
+                    dobj->translate.vec.f.y - translate.y;
+                gMPCollisionSpeeds[yakumono_id].z =
+                    dobj->translate.vec.f.z - translate.z;
+
+                if (flags == DOBJ_FLAG_NONE)
+                {
+                    if (dobj->flags != DOBJ_FLAG_NONE)
+                    {
+                        dobj->user_data.s = nMPYakumonoStatusHidden;
+                    }
+                }
+                else if (dobj->flags == DOBJ_FLAG_NONE)
+                {
+                    dobj->user_data.s = nMPYakumonoStatusShow;
+                }
+
+                if ((u32)yakumono_id ==
+                    gNdsStageMPPlatformSpeedFloorLoopYakumonoID)
+                {
+                    gNdsStageMPPlatformSpeedFloorLoopAnimPlayCount++;
+                    gNdsStageMPPlatformSpeedFloorLoopAnimSpeedXMilli =
+                        ndsFloatToMilliSigned(
+                            gMPCollisionSpeeds[yakumono_id].x);
+                    gNdsStageMPPlatformSpeedFloorLoopAnimSpeedYMilli =
+                        ndsFloatToMilliSigned(
+                            gMPCollisionSpeeds[yakumono_id].y);
+                    gNdsStageMPPlatformSpeedFloorLoopAnimSpeedZMilli =
+                        ndsFloatToMilliSigned(
+                            gMPCollisionSpeeds[yakumono_id].z);
+                    gNdsStageMPPlatformSpeedFloorLoopAnimStatusAfter =
+                        (u32)dobj->user_data.s;
+                }
+            }
+        }
+        else
+        {
+            gcParseDObjAnimJoint(dobj);
+            gcPlayDObjAnimJoint(dobj);
+        }
+
+        mobj = dobj->mobj;
+        while (mobj != NULL)
+        {
+            gcParseMObjMatAnimJoint(mobj);
+            gcPlayMObjMatAnim(mobj);
+            mobj = mobj->next;
+        }
+
+        if (dobj->child != NULL)
+        {
+            dobj = dobj->child;
+        }
+        else if (dobj->sib_next != NULL)
+        {
+            dobj = dobj->sib_next;
+        }
+        else
+        {
+            while (TRUE)
+            {
+                if (dobj->parent == DOBJ_PARENT_NULL)
+                {
+                    dobj = NULL;
+                    break;
+                }
+                if (dobj->parent->sib_next != NULL)
+                {
+                    dobj = dobj->parent->sib_next;
+                    break;
+                }
+                dobj = dobj->parent;
+            }
+        }
+    }
+
+    mpCollisionUpdateBoundsCurrent();
+    mpCollisionUpdateBoundsDiff();
+    if (ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() != FALSE)
+    {
+        gNdsStageMPPlatformSpeedFloorLoopBoundsUpdateCount++;
+        gNdsStageMPPlatformSpeedFloorLoopBoundsDiffTopMilli =
+            ndsFloatToMilliSigned(gMPCollisionBounds.diff.top);
+        gNdsStageMPPlatformSpeedFloorLoopBoundsDiffBottomMilli =
+            ndsFloatToMilliSigned(gMPCollisionBounds.diff.bottom);
+        gNdsStageMPPlatformSpeedFloorLoopBoundsDiffRightMilli =
+            ndsFloatToMilliSigned(gMPCollisionBounds.diff.right);
+        gNdsStageMPPlatformSpeedFloorLoopBoundsDiffLeftMilli =
+            ndsFloatToMilliSigned(gMPCollisionBounds.diff.left);
+    }
+    gMPCollisionUpdateTic++;
+}
+
+void mpCollisionSetYakumonoPosID(s32 line_id, Vec3f *yakumono_pos)
+{
+    DObj *yakumono_dobj;
+
+    if ((line_id < 0) || (line_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS) ||
+        (yakumono_pos == NULL) || (gMPCollisionYakumonoDObjs == NULL) ||
+        (gMPCollisionSpeeds == NULL) ||
+        (gMPCollisionYakumonoDObjs->dobjs[line_id] == NULL))
+    {
+        if ((ndsFighterMarioFoxStageMPPlatformPosFloorLoopProofEnabled() !=
+             FALSE) &&
+            (sNdsStageInishieScaleSourceSetupActive == FALSE) &&
+            (sNdsStageInishieScaleLoopActive == FALSE))
+        {
+            gNdsStageMPPlatformPosFloorLoopUnsafeCount++;
+        }
+        if ((ndsFighterMarioFoxStageInishieScaleLoopProofEnabled() != FALSE) &&
+            (sNdsStageInishieScaleLoopActive != FALSE))
+        {
+            gNdsStageInishieScaleLoopUnsafeCount++;
+        }
+        return;
+    }
+
+    yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[line_id];
+    gMPCollisionSpeeds[line_id].x =
+        yakumono_pos->x - yakumono_dobj->translate.vec.f.x;
+    gMPCollisionSpeeds[line_id].y =
+        yakumono_pos->y - yakumono_dobj->translate.vec.f.y;
+    gMPCollisionSpeeds[line_id].z =
+        yakumono_pos->z - yakumono_dobj->translate.vec.f.z;
+    yakumono_dobj->translate.vec.f.x = yakumono_pos->x;
+    yakumono_dobj->translate.vec.f.y = yakumono_pos->y;
+    yakumono_dobj->translate.vec.f.z = yakumono_pos->z;
+
+    if ((ndsFighterMarioFoxStageMPPlatformPosFloorLoopProofEnabled() !=
+         FALSE) &&
+        (sNdsStageInishieScaleSourceSetupActive == FALSE) &&
+        (sNdsStageInishieScaleLoopActive == FALSE))
+    {
+        gNdsStageMPPlatformPosFloorLoopSetPosCount++;
+    }
+    if ((ndsFighterMarioFoxStageInishieScaleLoopProofEnabled() != FALSE) &&
+        (sNdsStageInishieScaleLoopActive != FALSE))
+    {
+        if (sNdsStageInishieScaleLoopPhase == 1u)
+        {
+            gNdsStageInishieScaleLoopFallSetPosCount++;
+            if (line_id == gNdsStageInishieScaleLoopLeftLineID)
+            {
+                gNdsStageInishieScaleLoopFallLeftSpeedYMilli =
+                    ndsFloatToMilliSigned(gMPCollisionSpeeds[line_id].y);
+            }
+            else if (line_id == gNdsStageInishieScaleLoopRightLineID)
+            {
+                gNdsStageInishieScaleLoopFallRightSpeedYMilli =
+                    ndsFloatToMilliSigned(gMPCollisionSpeeds[line_id].y);
+            }
+        }
+        else
+        {
+            if (sNdsStageInishieScaleLoopPhase == 2u)
+            {
+                gNdsStageInishieScaleLoopStepSetPosCount++;
+                if (line_id == gNdsStageInishieScaleLoopLeftLineID)
+                {
+                    gNdsStageInishieScaleLoopStepSetPosMask |= 1u << 0;
+                    gNdsStageInishieScaleLoopStepLeftSpeedYMilli =
+                        ndsFloatToMilliSigned(gMPCollisionSpeeds[line_id].y);
+                }
+                else if (line_id == gNdsStageInishieScaleLoopRightLineID)
+                {
+                    gNdsStageInishieScaleLoopStepSetPosMask |= 1u << 1;
+                    gNdsStageInishieScaleLoopStepRightSpeedYMilli =
+                        ndsFloatToMilliSigned(gMPCollisionSpeeds[line_id].y);
+                }
+            }
+            else
+            {
+                gNdsStageInishieScaleLoopSetPosCount++;
+                if (line_id == gNdsStageInishieScaleLoopLeftLineID)
+                {
+                    gNdsStageInishieScaleLoopSetPosMask |= 1u << 0;
+                    gNdsStageInishieScaleLoopLeftSpeedYMilli =
+                        ndsFloatToMilliSigned(gMPCollisionSpeeds[line_id].y);
+                }
+                else if (line_id == gNdsStageInishieScaleLoopRightLineID)
+                {
+                    gNdsStageInishieScaleLoopSetPosMask |= 1u << 1;
+                    gNdsStageInishieScaleLoopRightSpeedYMilli =
+                        ndsFloatToMilliSigned(gMPCollisionSpeeds[line_id].y);
+                }
+            }
+        }
+    }
+}
+
+void mpCollisionSetYakumonoOnID(s32 line_id)
+{
+    if ((line_id < 0) || (line_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS) ||
+        (gMPCollisionYakumonoDObjs == NULL) ||
+        (gMPCollisionYakumonoDObjs->dobjs[line_id] == NULL))
+    {
+        if ((ndsFighterMarioFoxStageMPPlatformTickFloorLoopProofEnabled() !=
+             FALSE) &&
+            (sNdsStageInishieScaleSourceSetupActive == FALSE) &&
+            (sNdsStageInishieScaleLoopActive == FALSE))
+        {
+            gNdsStageMPPlatformTickFloorLoopUnsafeCount++;
+        }
+        if ((ndsFighterMarioFoxStageInishieScaleLoopProofEnabled() != FALSE) &&
+            (sNdsStageInishieScaleLoopActive != FALSE))
+        {
+            gNdsStageInishieScaleLoopUnsafeCount++;
+        }
+        return;
+    }
+    gMPCollisionYakumonoDObjs->dobjs[line_id]->user_data.s =
+        nMPYakumonoStatusOn;
+    if ((ndsFighterMarioFoxStageMPPlatformTickFloorLoopProofEnabled() !=
+         FALSE) &&
+        (sNdsStageInishieScaleSourceSetupActive == FALSE) &&
+        (sNdsStageInishieScaleLoopActive == FALSE))
+    {
+        gNdsStageMPPlatformTickFloorLoopSetOnCount++;
+    }
+    if ((ndsFighterMarioFoxStageInishieScaleLoopProofEnabled() != FALSE) &&
+        (sNdsStageInishieScaleLoopActive != FALSE))
+    {
+        if (sNdsStageInishieScaleLoopPhase == 2u)
+        {
+            gNdsStageInishieScaleLoopStepSetOnCount++;
+            if (line_id == gNdsStageInishieScaleLoopLeftLineID)
+            {
+                gNdsStageInishieScaleLoopStepSetOnMask |= 1u << 0;
+            }
+            else if (line_id == gNdsStageInishieScaleLoopRightLineID)
+            {
+                gNdsStageInishieScaleLoopStepSetOnMask |= 1u << 1;
+            }
+        }
+        else
+        {
+            gNdsStageInishieScaleLoopSetOnCount++;
+            if (line_id == gNdsStageInishieScaleLoopLeftLineID)
+            {
+                gNdsStageInishieScaleLoopSetOnMask |= 1u << 0;
+            }
+            else if (line_id == gNdsStageInishieScaleLoopRightLineID)
+            {
+                gNdsStageInishieScaleLoopSetOnMask |= 1u << 1;
+            }
+        }
+    }
+}
+
+void mpCollisionSetYakumonoOffID(s32 line_id)
+{
+    if ((line_id < 0) || (line_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS) ||
+        (gMPCollisionYakumonoDObjs == NULL) ||
+        (gMPCollisionYakumonoDObjs->dobjs[line_id] == NULL))
+    {
+        return;
+    }
+    gMPCollisionYakumonoDObjs->dobjs[line_id]->user_data.s =
+        nMPYakumonoStatusOff;
+}
+
+void itManagerMakeAppearActor(void)
+{
+    gNdsPupupuGroundDeferredMask |= 1u << 6;
+}
+
+void efGroundMakeAppearActor(void)
+{
+    gNdsPupupuGroundDeferredMask |= 1u << 7;
+}
+
+s32 mpCollisionGetMapObjCountKind(s32 kind)
+{
+#if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
+    u32 i;
+    u32 count = 0u;
+    u32 mapobj_count;
+
+    if (sNdsStageInishieScaleSourceSetupActive != FALSE)
+    {
+        return ((kind == nMPMapObjKindScaleL) ||
+                (kind == nMPMapObjKindScaleR)) ? 1 : 0;
+    }
+
+    mapobj_count = ndsMPGeometryMapObjCount(gMPCollisionGeometry);
+    if ((mapobj_count == 0u) || (gMPCollisionMapObjs == NULL))
+    {
+        return 1;
+    }
+
+    for (i = 0; i < mapobj_count; i++)
+    {
+        MPMapObjData *mapobj = &gMPCollisionMapObjs->mapobjs[i];
+
+        if ((s32)ndsMPO2RReadU16(mapobj, 0u) == kind)
+        {
+            count++;
+        }
+    }
+    return (s32)count;
+#else
+    (void)kind;
+    return 1;
+#endif
+}
+
+void mpCollisionGetMapObjIDsKind(s32 kind, s32 *ids)
+{
+#if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
+    u32 i;
+    u32 count = 0u;
+    u32 mapobj_count;
+
+    if (ids != NULL)
+    {
+        if (sNdsStageInishieScaleSourceSetupActive != FALSE)
+        {
+            if (kind == nMPMapObjKindScaleL)
+            {
+                ids[0] = 0;
+            }
+            else if (kind == nMPMapObjKindScaleR)
+            {
+                ids[0] = 1;
+            }
+            else
+            {
+                ids[0] = -1;
+            }
+            return;
+        }
+
+        mapobj_count = ndsMPGeometryMapObjCount(gMPCollisionGeometry);
+        if ((mapobj_count == 0u) || (gMPCollisionMapObjs == NULL))
+        {
+            ids[0] = 0;
+            return;
+        }
+
+        for (i = 0; i < mapobj_count; i++)
+        {
+            MPMapObjData *mapobj = &gMPCollisionMapObjs->mapobjs[i];
+
+            if ((s32)ndsMPO2RReadU16(mapobj, 0u) == kind)
+            {
+                ids[count] = (s32)i;
+                count++;
+            }
+        }
+    }
+#else
+    (void)kind;
+    if (ids != NULL)
+    {
+        ids[0] = 0;
+    }
+#endif
+}
+
+void mpCollisionGetMapObjPositionID(s32 id, Vec3f *pos)
+{
+    if (pos != NULL)
+    {
+#if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
+        u32 mapobj_count;
+
+        if (sNdsStageInishieScaleSourceSetupActive != FALSE)
+        {
+            if (id == 0)
+            {
+                pos->x = -417.0F;
+                pos->y = 363.0F;
+                pos->z = 0.0F;
+                return;
+            }
+            if (id == 1)
+            {
+                pos->x = 420.0F;
+                pos->y = 362.0F;
+                pos->z = 0.0F;
+                return;
+            }
+        }
+
+        mapobj_count = ndsMPGeometryMapObjCount(gMPCollisionGeometry);
+        if ((id >= 0) && ((u32)id < mapobj_count) &&
+            (gMPCollisionMapObjs != NULL))
+        {
+            MPMapObjData *mapobj = &gMPCollisionMapObjs->mapobjs[id];
+
+            pos->x = (f32)ndsMPO2RReadS16(mapobj, 1u);
+            pos->y = (f32)ndsMPO2RReadS16(mapobj, 2u);
+            pos->z = 0.0F;
+            return;
+        }
+#else
+        (void)id;
+#endif
+
+        pos->x = 0.0F;
+        pos->y = 0.0F;
+        pos->z = 0.0F;
+    }
+}
+
+void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos)
+{
+    static const Vec3f spawns[GMCOMMON_PLAYERS_MAX] = {
+        { -80.0F, 0.0F, 0.0F },
+        { 80.0F, 0.0F, 0.0F },
+        { -40.0F, 0.0F, 0.0F },
+        { 40.0F, 0.0F, 0.0F },
+    };
+
+    if (pos != NULL)
+    {
+        s32 index = (player >= 0 && player < GMCOMMON_PLAYERS_MAX) ? player : 0;
+        *pos = spawns[index];
+    }
+    gNdsSCVSBattleCompatSpawnMask |= 1u << (player & 3);
+}
+
+sb32 mpCollisionCheckProjectFloor(Vec3f *pos, s32 *floor_line_id,
+                                  f32 *floor_dist, u32 *floor_flags,
+                                  Vec3f *floor_angle)
+{
+    sb32 is_floor = FALSE;
+
+#if (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_COLLISION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_COLLISION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP)
+    if (ndsFighterMarioFoxStageCollisionLoopProofEnabled() != FALSE)
+    {
+        sb32 hit = FALSE;
+
+        if (ndsStageCollisionLoopCheckProjectFloor(pos, floor_line_id,
+                floor_dist, floor_flags, floor_angle, &hit) != FALSE)
+        {
+            return hit;
+        }
+        if (gNdsStageCollisionLoopPrepared != 0u)
+        {
+            gNdsStageCollisionLoopLegacyFlatFallbackCount++;
+            gNdsStageCollisionLoopUnsafeFallbackAfterPrepareCount++;
+        }
+    }
+#endif
+
+    if ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
+        (pos != NULL) &&
+        (pos->y > -1.0F) &&
+        (pos->y < 1.0F))
+    {
+        is_floor = TRUE;
+    }
+
+    if (floor_line_id != NULL)
+    {
+        *floor_line_id = (is_floor != FALSE) ? 0 : -1;
+    }
+    if (floor_dist != NULL)
+    {
+        *floor_dist = 0.0F;
+    }
+    if (floor_flags != NULL)
+    {
+        *floor_flags = 0u;
+    }
+    if (floor_angle != NULL)
+    {
+        floor_angle->x = 0.0F;
+        floor_angle->y = 1.0F;
+        floor_angle->z = 0.0F;
+    }
+    return is_floor;
+}
+
+void mpCollisionSetPlayBGM(void)
+{
+    if (gMPCollisionGroundData != NULL)
+    {
+        gMPCollisionBGMDefault = gMPCollisionGroundData->bgm_id;
+        gMPCollisionBGMCurrent = gMPCollisionGroundData->bgm_id;
+        gNdsSCVSBattleStageBGM = gMPCollisionGroundData->bgm_id;
+        gNdsStagePupupuBGM = gMPCollisionGroundData->bgm_id;
+    }
+    gNdsSCVSBattleCompatAudioMask |= 1u << 4;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+}
+
+void gmRumbleMakeActor(void)
+{
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
+}
+
+void gmRumbleInitPlayers(void)
+{
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
+}
+
+void wpManagerAllocWeapons(void)
+{
+    gNdsSCVSBattleCompatManagerMask |= 1u << 7;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
+}
+
+void itManagerInitItems(void)
+{
+    gNdsSCVSBattleCompatManagerMask |= 1u << 8;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
+}
+
+void efManagerInitEffects(void)
+{
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
+}
+
+static void ndsSCVSBattleMarkInterface(u32 bit)
+{
+    gNdsSCVSBattleCompatInterfaceMask |= bit;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_INTERFACE;
+}
+
+void ifCommonBattleUpdateInterfaceAll(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 0);
+}
+
+void ifCommonBattleSetGameStatusWait(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 1);
+}
+
+void ifCommonPlayerArrowsInitInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 2);
+}
+
+void ifCommonPlayerMagnifyMakeInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 3);
+}
+
+void ifCommonPlayerTagMakeInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 4);
+}
+
+void ifCommonPlayerDamageSetDigitPositions(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 5);
+}
+
+void ifCommonPlayerDamageInitInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 6);
+}
+
+void ifCommonPlayerStockInitInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 7);
+}
+
+void ifCommonEntryAllMakeInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 8);
+}
+
+void ifCommonTimerMakeInterface(void (*func_init)(void))
+{
+    ndsSCVSBattleMarkInterface(1u << 9);
+    if (func_init != NULL)
+    {
+        func_init();
+    }
+}
+
+void ifCommonTimerMakeDigits(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 10);
+}
+
+void ifCommonSuddenDeathMakeInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 11);
+}
+
+void ifCommonAnnounceTimeUpInitInterface(void)
+{
+    ndsSCVSBattleMarkInterface(1u << 12);
+}
+
+void ifScreenFlashMakeInterface(u8 alpha)
+{
+    (void)alpha;
+    ndsSCVSBattleMarkInterface(1u << 13);
+}
+
+void lbBackupIsSramValid(void)
+{
+}
+
+void lbBackupApplyOptions(void)
+{
+}
+
+void lbBackupWrite(void)
+{
+}
+
+void syDebugSetFuncPrint(void (*function)(void))
+{
+    (void)function;
+}
+
+void syDebugStartRmonThread5Hang(void)
+{
+}
+
+void scManagerFuncPrint(void)
+{
+}
+
+void syRdpSetViewport(Vp *viewport, f32 ulx, f32 uly, f32 lrx, f32 lry)
+{
+    f32 h;
+    f32 v;
+
+    if (viewport == NULL)
+    {
+        return;
+    }
+
+    h = (ulx + lrx) / 2.0F;
+    v = (uly + lry) / 2.0F;
+
+    viewport->vp.vscale[0] = (s16)(((s32)((lrx - h) * 4.0F)) & 0xFFFF);
+    viewport->vp.vscale[1] = (s16)(((s32)((lry - v) * 4.0F)) & 0xFFFF);
+    viewport->vp.vtrans[0] = (s16)(((s32)(h * 4.0F)) & 0xFFFF);
+    viewport->vp.vtrans[1] = (s16)(((s32)(v * 4.0F)) & 0xFFFF);
+    viewport->vp.vscale[2] = (s16)(0x03FF / 2);
+    viewport->vp.vtrans[2] = (s16)(0x03FF / 2);
+}
+
+void syRdpSetFuncLights(void (*func_lights)(Gfx **))
+{
+    (void)func_lights;
+}
+
+void syRdpResetSettings(Gfx **dl)
+{
+    (void)dl;
+}
+
