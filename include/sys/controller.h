@@ -16,6 +16,7 @@ void syControllerThreadMain(void *arg);
 void syControllerInitRumble(s32 controller);
 void syControllerStopRumble(s32 controller);
 void syControllerFuncRead(void);
+void syControllerReadDeviceData(void);
 void syControllerUpdateGlobalData(void);
 void syControllerSetStatusDelay(s32 delay);
 void syControllerScheduleRead(void);

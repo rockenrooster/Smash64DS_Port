@@ -55,10 +55,12 @@ void gmRumbleInitPlayers(void);
 #define scVSBattleStartScene ndsBaseSCVSBattleStartScene
 #define scVSBattleStartBattle ndsBaseSCVSBattleStartBattle
 #define scVSBattleStartSuddenDeath ndsBaseSCVSBattleStartSuddenDeath
+#define scVSBattleFuncUpdate ndsBaseSCVSBattleFuncUpdate
 
 void ndsBaseSCVSBattleStartScene(void);
 void ndsBaseSCVSBattleStartBattle(void);
 void ndsBaseSCVSBattleStartSuddenDeath(void);
+void ndsBaseSCVSBattleFuncUpdate(void);
 
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c"
@@ -66,6 +68,7 @@ void ndsBaseSCVSBattleStartSuddenDeath(void);
 #undef scVSBattleStartScene
 #undef scVSBattleStartBattle
 #undef scVSBattleStartSuddenDeath
+#undef scVSBattleFuncUpdate
 
 static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
 {
@@ -90,7 +93,9 @@ void scVSBattleStartBattle(void)
     gNdsSCVSBattleOriginalPlayerCount = gSCManagerBattleState->pl_count;
     gNdsSCVSBattleOriginalCpuCount = gSCManagerBattleState->cp_count;
     gNdsSCVSBattleOriginalGameRule = gSCManagerBattleState->game_rules;
+    gNdsSCVSBattleOriginalTime = gSCManagerBattleState->time_limit;
     gNdsSCVSBattleOriginalStock = gSCManagerBattleState->stocks;
+    gNdsSCVSBattleOriginalIsTeam = gSCManagerBattleState->is_team_battle;
     gNdsSCVSBattleOriginalGKind = gSCManagerBattleState->gkind;
     gNdsSCVSBattleOriginalScenePrev = gSCManagerSceneData.scene_prev;
     gNdsSCVSBattleOriginalSceneCurr = gSCManagerSceneData.scene_curr;
@@ -128,6 +133,42 @@ void scVSBattleStartBattle(void)
 
     gNdsSCVSBattleOriginalSetupResult =
         NDS_SCVSBATTLE_ORIGINAL_SETUP_PASS;
+}
+
+void scVSBattleFuncUpdate(void)
+{
+    ndsBaseSCVSBattleFuncUpdate();
+
+    if (ndsFighterMarioFoxLivePreviewUpdateEnabled() != FALSE)
+    {
+        gNdsFighterLivePreviewBaseVSBattleUpdateCount++;
+        ndsFighterMarioFoxLivePreviewRunVSBattleUpdate();
+    }
+    else if (ndsFighterMarioFoxGCDrawAllLoopUpdateEnabled() != FALSE)
+    {
+        gNdsFighterGCDrawAllLoopBaseVSBattleUpdateCount++;
+        ndsFighterMarioFoxGCDrawAllLoopRunVSBattleUpdate();
+    }
+    else if (ndsFighterMarioFoxGCRunAllLoopUpdateEnabled() != FALSE)
+    {
+        gNdsFighterGCRunAllLoopBaseVSBattleUpdateCount++;
+        ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate();
+    }
+    else if (ndsFighterMarioFoxPreviewLoopUpdateEnabled() != FALSE)
+    {
+        gNdsFighterPreviewLoopBaseVSBattleUpdateCount++;
+        ndsFighterMarioFoxPreviewLoopRunVSBattleUpdate();
+    }
+    else if (ndsFighterMarioFoxControllerLoopUpdateEnabled() != FALSE)
+    {
+        gNdsFighterControllerLoopBaseVSBattleUpdateCount++;
+        ndsFighterMarioFoxControllerLoopRunVSBattleUpdate();
+    }
+    else if (ndsFighterMarioFoxSchedulerLoopUpdateEnabled() != FALSE)
+    {
+        gNdsFighterSchedulerLoopBaseVSBattleUpdateCount++;
+        ndsFighterMarioFoxSchedulerLoopRunVSBattleUpdate();
+    }
 }
 
 void scVSBattleStartScene(void)

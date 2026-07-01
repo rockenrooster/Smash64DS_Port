@@ -296,6 +296,14 @@ void ndsResetStartupDiagnostics(void)
     gNdsMapsOriginalGroundKind = 0;
     gNdsMapsOriginalIsTrainingMode = 0;
     gNdsMapsOriginalPreviewDeferred = 0;
+    gNdsMapsOriginalPreviewResult = 0;
+    gNdsMapsOriginalPreviewMask = 0;
+    gNdsMapsOriginalPreviewGObjCount = 0;
+    gNdsMapsOriginalPreviewLayerGObjMask = 0;
+    gNdsMapsOriginalPreviewWallpaperMade = 0;
+    gNdsMapsOriginalPreviewModelMade = 0;
+    gNdsMapsOriginalPreviewDObjCount = 0;
+    gNdsMapsOriginalPreviewMObjCount = 0;
     gNdsMapsOriginalDeferredMask = 0;
     gNdsMapsSelectTransitionResult = 0;
     gNdsMapsSelectTransitionMask = 0;
@@ -321,9 +329,17 @@ void ndsResetStartupDiagnostics(void)
     gNdsSCVSBattleOriginalFighterGObjCount = 0;
     gNdsSCVSBattleOriginalActivePlayerMask = 0;
     gNdsSCVSBattleOriginalPlayerCount = 0;
+    gNdsSCVSBattleOriginalActivePlayerCount = 0;
+    gNdsSCVSBattleOriginalFighterCreateCount = 0;
+    gNdsSCVSBattleOriginalP0FKind = 0xffffffffu;
+    gNdsSCVSBattleOriginalP1FKind = 0xffffffffu;
+    gNdsSCVSBattleOriginalP0LR = 0;
+    gNdsSCVSBattleOriginalP1LR = 0;
     gNdsSCVSBattleOriginalCpuCount = 0;
     gNdsSCVSBattleOriginalGameRule = 0;
+    gNdsSCVSBattleOriginalTime = 0;
     gNdsSCVSBattleOriginalStock = 0;
+    gNdsSCVSBattleOriginalIsTeam = 0;
     gNdsSCVSBattleOriginalGKind = 0;
     gNdsSCVSBattleOriginalScenePrev = 0;
     gNdsSCVSBattleOriginalSceneCurr = 0;
@@ -337,6 +353,2552 @@ void ndsResetStartupDiagnostics(void)
     gNdsSCVSBattleCompatSpawnMask = 0;
     gNdsSCVSBattleLastAudioVolume = 0;
     gNdsSCVSBattleLastFGM = 0;
+    gNdsStagePupupuRelocResult = 0;
+    gNdsStagePupupuRelocAssetMask = 0;
+    gNdsStagePupupuRelocDependencyMask = 0;
+    gNdsStagePupupuExternalFixupCount = 0;
+    gNdsStagePupupuExternalFixupFailCount = 0;
+    gNdsStagePupupuInternalFixupCount = 0;
+    gNdsStagePupupuMapHeaderOffset = 0;
+    gNdsStagePupupuGroundDataPtrReady = 0;
+    gNdsStagePupupuWallpaperPtrReady = 0;
+    gNdsStagePupupuGeometryPtrReady = 0;
+    gNdsStagePupupuMapNodesPtrReady = 0;
+    gNdsStagePupupuLightAngleXBits = 0;
+    gNdsStagePupupuLightAngleYBits = 0;
+    gNdsStagePupupuBGM = 0;
+    gNdsFighterMarioFoxRelocResult = 0;
+    gNdsFighterMarioFoxRelocAssetMask = 0;
+    gNdsFighterMarioFoxRelocDependencyMask = 0;
+    gNdsFighterMarioFoxLoadedFileCount = 0;
+    gNdsFighterMarioFoxExternalFixupCount = 0;
+    gNdsFighterMarioFoxExternalFixupFailCount = 0;
+    gNdsFighterMarioFoxModelResult = 0;
+    gNdsFighterMarioFoxGObjResult = 0;
+    gNdsFighterMarioFoxSetupMask = 0;
+    gNdsFighterMarioMainMotionPtrReady = 0;
+    gNdsFighterMarioMainPtrReady = 0;
+    gNdsFighterMarioModelPtrReady = 0;
+    gNdsFighterMarioAttrPtrReady = 0;
+    gNdsFighterMarioCommonPartsReady = 0;
+    gNdsFighterFoxMainMotionPtrReady = 0;
+    gNdsFighterFoxMainPtrReady = 0;
+    gNdsFighterFoxModelPtrReady = 0;
+    gNdsFighterFoxAttrPtrReady = 0;
+    gNdsFighterFoxCommonPartsReady = 0;
+    gNdsFighterModelRealGObjCount = 0;
+    gNdsFighterModelStubGObjCount = 0;
+    gNdsFighterModelProcessDeferredCount = 0;
+    gNdsFighterModelP0FKind = 0xffffffffu;
+    gNdsFighterModelP0GObjID = 0;
+    gNdsFighterModelP0TopDObjReady = 0;
+    gNdsFighterModelP0ModelDObjCount = 0;
+    gNdsFighterModelP0MObjCount = 0;
+    gNdsFighterModelP0AObjCount = 0;
+    gNdsFighterModelP0DisplayAttached = 0;
+    gNdsFighterModelP1FKind = 0xffffffffu;
+    gNdsFighterModelP1GObjID = 0;
+    gNdsFighterModelP1TopDObjReady = 0;
+    gNdsFighterModelP1ModelDObjCount = 0;
+    gNdsFighterModelP1MObjCount = 0;
+    gNdsFighterModelP1AObjCount = 0;
+    gNdsFighterModelP1DisplayAttached = 0;
+    gNdsFighterMarioFoxStructResult = 0;
+    gNdsFighterMarioFoxJointResult = 0;
+    gNdsFighterMarioFoxStateResult = 0;
+    gNdsFighterMarioFoxStructMask = 0;
+    gNdsFighterMarioFoxStructPoolUsedMask = 0;
+    gNdsFighterMarioFoxStructCount = 0;
+    gNdsFighterStructP0PtrReady = 0;
+    gNdsFighterStructP1PtrReady = 0;
+    gNdsFighterStructP0UserDataPtrReady = 0;
+    gNdsFighterStructP1UserDataPtrReady = 0;
+    gNdsFighterStructP0FtGetStructReady = 0;
+    gNdsFighterStructP1FtGetStructReady = 0;
+    gNdsFighterStructP0FKind = 0xffffffffu;
+    gNdsFighterStructP1FKind = 0xffffffffu;
+    gNdsFighterStructP0PKind = 0xffffffffu;
+    gNdsFighterStructP1PKind = 0xffffffffu;
+    gNdsFighterStructP0Player = 0xffffffffu;
+    gNdsFighterStructP1Player = 0xffffffffu;
+    gNdsFighterStructP0LR = 0;
+    gNdsFighterStructP1LR = 0;
+    gNdsFighterStructP0Stock = 0;
+    gNdsFighterStructP1Stock = 0;
+    gNdsFighterStructP0Detail = 0;
+    gNdsFighterStructP1Detail = 0;
+    gNdsFighterStructP0Costume = 0;
+    gNdsFighterStructP1Costume = 0;
+    gNdsFighterStructP0Shade = 0;
+    gNdsFighterStructP1Shade = 0;
+    gNdsFighterStructP0AttrReady = 0;
+    gNdsFighterStructP1AttrReady = 0;
+    gNdsFighterStructP0FigatreeHeapReady = 0;
+    gNdsFighterStructP1FigatreeHeapReady = 0;
+    gNdsFighterStructP0ControllerReady = 0;
+    gNdsFighterStructP1ControllerReady = 0;
+    gNdsFighterStructP0InputMaskA = 0;
+    gNdsFighterStructP1InputMaskA = 0;
+    gNdsFighterStructP0InputMaskB = 0;
+    gNdsFighterStructP1InputMaskB = 0;
+    gNdsFighterStructP0InputMaskZ = 0;
+    gNdsFighterStructP1InputMaskZ = 0;
+    gNdsFighterStructP0InputMaskL = 0;
+    gNdsFighterStructP1InputMaskL = 0;
+    gNdsFighterStructP0TopJointReady = 0;
+    gNdsFighterStructP1TopJointReady = 0;
+    gNdsFighterStructP0JointCount = 0;
+    gNdsFighterStructP1JointCount = 0;
+    gNdsFighterStructP0CommonJointCount = 0;
+    gNdsFighterStructP1CommonJointCount = 0;
+    gNdsFighterStructP0CollTranslateReady = 0;
+    gNdsFighterStructP1CollTranslateReady = 0;
+    gNdsFighterStructP0CollLRReady = 0;
+    gNdsFighterStructP1CollLRReady = 0;
+    gNdsFighterStructP0StatusID = 0;
+    gNdsFighterStructP1StatusID = 0;
+    gNdsFighterStructP0StatusTotalTics = 0;
+    gNdsFighterStructP1StatusTotalTics = 0;
+    gNdsFighterStructProcessAttachCount = 0;
+    gNdsFighterStructStatusSetCount = 0;
+    gNdsFighterStructDisplayProbeCount = 0;
+    gNdsFighterMarioFoxInitResult = 0;
+    gNdsFighterMarioFoxCollResult = 0;
+    gNdsFighterMarioFoxDeferResult = 0;
+    gNdsFighterMarioFoxInitMask = 0;
+    gNdsFighterMarioFoxInitDeferredMask = 0;
+    gNdsFighterMarioFoxInitCount = 0;
+    gNdsFighterInitP0FKind = 0xffffffffu;
+    gNdsFighterInitP1FKind = 0xffffffffu;
+    gNdsFighterInitP0PercentDamage = 0;
+    gNdsFighterInitP1PercentDamage = 0;
+    gNdsFighterInitP0ShieldHealth = 0;
+    gNdsFighterInitP1ShieldHealth = 0;
+    gNdsFighterInitP0GA = 0xffffffffu;
+    gNdsFighterInitP1GA = 0xffffffffu;
+    gNdsFighterInitP0JumpsUsed = 0xffffffffu;
+    gNdsFighterInitP1JumpsUsed = 0xffffffffu;
+    gNdsFighterInitP0HitStatus = 0xffffffffu;
+    gNdsFighterInitP1HitStatus = 0xffffffffu;
+    gNdsFighterInitP0DamageKind = 0xffffffffu;
+    gNdsFighterInitP1DamageKind = 0xffffffffu;
+    gNdsFighterInitP0MotionAttackID = 0;
+    gNdsFighterInitP1MotionAttackID = 0;
+    gNdsFighterInitP0FloorProjectAttempt = 0;
+    gNdsFighterInitP1FloorProjectAttempt = 0;
+    gNdsFighterInitP0FloorProjectResult = 0;
+    gNdsFighterInitP1FloorProjectResult = 0;
+    gNdsFighterInitP0FloorLineID = 0xffffffffu;
+    gNdsFighterInitP1FloorLineID = 0xffffffffu;
+    gNdsFighterInitP0FloorDistBits = 0;
+    gNdsFighterInitP1FloorDistBits = 0;
+    gNdsFighterInitP0RootTranslateYBits = 0;
+    gNdsFighterInitP1RootTranslateYBits = 0;
+    gNdsFighterInitP0RootScaleXBits = 0;
+    gNdsFighterInitP1RootScaleXBits = 0;
+    gNdsFighterInitDamageCollMask = 0;
+    gNdsFighterInitDamageCollNormalMask = 0;
+    gNdsFighterInitDamageCollJointMask = 0;
+    gNdsFighterInitDamageCollHalfSizeMask = 0;
+    gNdsFighterInitDamageCollPartsMask = 0;
+    gNdsFighterInitDamageCollMatrixMask = 0;
+    gNdsFighterInitDamageCollScaleMask = 0;
+    gNdsFighterInitP0DamageCollCount = 0;
+    gNdsFighterInitP1DamageCollCount = 0;
+    gNdsFighterInitP0DamageCollJoint0 = 0xffffffffu;
+    gNdsFighterInitP1DamageCollJoint0 = 0xffffffffu;
+    gNdsFighterInitP0DamageCollSizeXBits = 0;
+    gNdsFighterInitP1DamageCollSizeXBits = 0;
+    gNdsFighterInitP0DamageCollSizeYBits = 0;
+    gNdsFighterInitP1DamageCollSizeYBits = 0;
+    gNdsFighterInitP0DamageCollSizeZBits = 0;
+    gNdsFighterInitP1DamageCollSizeZBits = 0;
+    gNdsFighterInitP0DamageCollWorldXBits = 0;
+    gNdsFighterInitP1DamageCollWorldXBits = 0;
+    gNdsFighterInitP0DamageCollWorldYBits = 0;
+    gNdsFighterInitP1DamageCollWorldYBits = 0;
+    gNdsFighterInitP0DamageCollScaleXBits = 0;
+    gNdsFighterInitP1DamageCollScaleXBits = 0;
+    gNdsFighterInitPhysicsStopCount = 0;
+    gNdsFighterInitAttackClearCount = 0;
+    gNdsFighterInitHitStatusPartCount = 0;
+    gNdsFighterInitColAnimResetCount = 0;
+    gNdsFighterInitP0PassiveMarioTornado = 0xffffffffu;
+    gNdsFighterInitP1PassiveMarioTornado = 0xffffffffu;
+    gNdsFighterInitP0ThrowCatchItemClear = 0;
+    gNdsFighterInitP1ThrowCatchItemClear = 0;
+    gNdsFighterInitProcessAttachCount = 0;
+    gNdsFighterInitStatusSetCount = 0;
+    gNdsFighterInitDisplayProbeCount = 0;
+    gNdsFighterMarioFoxWaitStatusResult = 0;
+    gNdsFighterMarioFoxWaitMotionResult = 0;
+    gNdsFighterMarioFoxWaitDeferResult = 0;
+    gNdsFighterMarioFoxWaitMask = 0;
+    gNdsFighterMarioFoxWaitDeferredMask = 0;
+    gNdsFighterMarioFoxWaitCount = 0;
+    gNdsFighterWaitP0StatusPrev = 0xffffffffu;
+    gNdsFighterWaitP1StatusPrev = 0xffffffffu;
+    gNdsFighterWaitP0StatusID = 0xffffffffu;
+    gNdsFighterWaitP1StatusID = 0xffffffffu;
+    gNdsFighterWaitP0MotionID = 0xffffffffu;
+    gNdsFighterWaitP1MotionID = 0xffffffffu;
+    gNdsFighterWaitP0MotionAttackID = 0xffffffffu;
+    gNdsFighterWaitP1MotionAttackID = 0xffffffffu;
+    gNdsFighterWaitP0StatusAttackID = 0xffffffffu;
+    gNdsFighterWaitP1StatusAttackID = 0xffffffffu;
+    gNdsFighterWaitP0AnimFrameBits = 0;
+    gNdsFighterWaitP1AnimFrameBits = 0;
+    gNdsFighterWaitP0AnimSpeedBits = 0;
+    gNdsFighterWaitP1AnimSpeedBits = 0;
+    gNdsFighterWaitP0SpecialInterrupt = 0;
+    gNdsFighterWaitP1SpecialInterrupt = 0;
+    gNdsFighterWaitP0PlayerTagWait = 0;
+    gNdsFighterWaitP1PlayerTagWait = 0;
+    gNdsFighterWaitP0ProcInterruptReady = 0;
+    gNdsFighterWaitP1ProcInterruptReady = 0;
+    gNdsFighterWaitP0ProcPhysicsReady = 0;
+    gNdsFighterWaitP1ProcPhysicsReady = 0;
+    gNdsFighterWaitP0ProcMapReady = 0;
+    gNdsFighterWaitP1ProcMapReady = 0;
+    gNdsFighterWaitP0MainMotionReady = 0;
+    gNdsFighterWaitP1MainMotionReady = 0;
+    gNdsFighterWaitP0GA = 0xffffffffu;
+    gNdsFighterWaitP1GA = 0xffffffffu;
+    gNdsFighterWaitFtMainSetStatusCallCount = 0;
+    gNdsFighterWaitOriginalSetStatusCallCount = 0;
+    gNdsFighterWaitHammerCheckCount = 0;
+    gNdsFighterWaitHammerDeniedCount = 0;
+    gNdsFighterWaitGroundSetCount = 0;
+    gNdsFighterWaitPlayerTagSetCount = 0;
+    gNdsFighterWaitProcInterruptCallCount = 0;
+    gNdsFighterWaitProcPhysicsCallCount = 0;
+    gNdsFighterWaitProcMapCallCount = 0;
+    gNdsFighterWaitProcessAttachCount = 0;
+    gNdsFighterWaitDisplayProbeCount = 0;
+    gNdsFighterWaitGameplayUpdateCount = 0;
+    gNdsFighterMarioFoxWaitTickResult = 0;
+    gNdsFighterMarioFoxWaitCallbackResult = 0;
+    gNdsFighterMarioFoxWaitSafeResult = 0;
+    gNdsFighterMarioFoxWaitTickMask = 0;
+    gNdsFighterMarioFoxWaitTickDeferredMask = 0;
+    gNdsFighterMarioFoxWaitTickCount = 0;
+    gNdsFighterWaitTickP0StatusBefore = 0xffffffffu;
+    gNdsFighterWaitTickP1StatusBefore = 0xffffffffu;
+    gNdsFighterWaitTickP0StatusAfter = 0xffffffffu;
+    gNdsFighterWaitTickP1StatusAfter = 0xffffffffu;
+    gNdsFighterWaitTickP0MotionBefore = 0xffffffffu;
+    gNdsFighterWaitTickP1MotionBefore = 0xffffffffu;
+    gNdsFighterWaitTickP0MotionAfter = 0xffffffffu;
+    gNdsFighterWaitTickP1MotionAfter = 0xffffffffu;
+    gNdsFighterWaitTickP0GABefore = 0xffffffffu;
+    gNdsFighterWaitTickP1GABefore = 0xffffffffu;
+    gNdsFighterWaitTickP0GAAfter = 0xffffffffu;
+    gNdsFighterWaitTickP1GAAfter = 0xffffffffu;
+    gNdsFighterWaitTickP0RootXBeforeBits = 0;
+    gNdsFighterWaitTickP1RootXBeforeBits = 0;
+    gNdsFighterWaitTickP0RootYBeforeBits = 0;
+    gNdsFighterWaitTickP1RootYBeforeBits = 0;
+    gNdsFighterWaitTickP0RootXAfterBits = 0;
+    gNdsFighterWaitTickP1RootXAfterBits = 0;
+    gNdsFighterWaitTickP0RootYAfterBits = 0;
+    gNdsFighterWaitTickP1RootYAfterBits = 0;
+    gNdsFighterWaitTickP0VelGroundXBeforeBits = 0;
+    gNdsFighterWaitTickP1VelGroundXBeforeBits = 0;
+    gNdsFighterWaitTickP0VelGroundXAfterBits = 0;
+    gNdsFighterWaitTickP1VelGroundXAfterBits = 0;
+    gNdsFighterWaitTickGObjCountBefore = 0;
+    gNdsFighterWaitTickGObjCountAfter = 0;
+    gNdsFighterWaitTickStatusChangeCount = 0;
+    gNdsFighterWaitTickMotionChangeCount = 0;
+    gNdsFighterWaitTickGADriftCount = 0;
+    gNdsFighterWaitTickRootDriftCount = 0;
+    gNdsFighterWaitTickGObjDelta = 0;
+    gNdsFighterWaitTickOriginalInterruptCount = 0;
+    gNdsFighterWaitTickGroundInterruptCheckCount = 0;
+    gNdsFighterWaitTickPhysicsCallbackCount = 0;
+    gNdsFighterWaitTickMapCallbackCount = 0;
+    gNdsFighterWaitTickDeniedStatusCount = 0;
+    gNdsFighterWaitTickProcessAttachCount = 0;
+    gNdsFighterWaitTickDisplayProbeCount = 0;
+    gNdsFighterWaitTickGameplayUpdateCount = 0;
+    gNdsFighterMarioFoxGroundPhysResult = 0;
+    gNdsFighterMarioFoxGroundMapResult = 0;
+    gNdsFighterMarioFoxGroundSafeResult = 0;
+    gNdsFighterMarioFoxGroundMask = 0;
+    gNdsFighterMarioFoxGroundDeferredMask = 0;
+    gNdsFighterMarioFoxGroundCount = 0;
+    gNdsFighterWaitGroundP0VelBeforeMilli = 0;
+    gNdsFighterWaitGroundP1VelBeforeMilli = 0;
+    gNdsFighterWaitGroundP0VelAfterMilli = 0;
+    gNdsFighterWaitGroundP1VelAfterMilli = 0;
+    gNdsFighterWaitGroundP0AirVelXMilli = 0;
+    gNdsFighterWaitGroundP1AirVelXMilli = 0;
+    gNdsFighterWaitGroundP0AirVelYMilli = 0;
+    gNdsFighterWaitGroundP1AirVelYMilli = 0;
+    gNdsFighterWaitGroundP0FrictionMilli = 0;
+    gNdsFighterWaitGroundP1FrictionMilli = 0;
+    gNdsFighterWaitGroundP0Material = 0;
+    gNdsFighterWaitGroundP1Material = 0;
+    gNdsFighterWaitGroundP0TractionMilli = 0;
+    gNdsFighterWaitGroundP1TractionMilli = 0;
+    gNdsFighterWaitGroundP0StatusAfter = 0xffffffffu;
+    gNdsFighterWaitGroundP1StatusAfter = 0xffffffffu;
+    gNdsFighterWaitGroundP0MotionAfter = 0xffffffffu;
+    gNdsFighterWaitGroundP1MotionAfter = 0xffffffffu;
+    gNdsFighterWaitGroundP0GAAfter = 0xffffffffu;
+    gNdsFighterWaitGroundP1GAAfter = 0xffffffffu;
+    gNdsFighterWaitGroundP0RootXBeforeBits = 0;
+    gNdsFighterWaitGroundP1RootXBeforeBits = 0;
+    gNdsFighterWaitGroundP0RootXAfterBits = 0;
+    gNdsFighterWaitGroundP1RootXAfterBits = 0;
+    gNdsFighterWaitGroundP0RootYBeforeBits = 0;
+    gNdsFighterWaitGroundP1RootYBeforeBits = 0;
+    gNdsFighterWaitGroundP0RootYAfterBits = 0;
+    gNdsFighterWaitGroundP1RootYAfterBits = 0;
+    gNdsFighterWaitGroundPhysicsCallbackCount = 0;
+    gNdsFighterWaitGroundMapCallbackCount = 0;
+    gNdsFighterWaitGroundMapCheckCount = 0;
+    gNdsFighterWaitGroundMapSafeFloorCount = 0;
+    gNdsFighterWaitGroundMapFallDeniedCount = 0;
+    gNdsFighterWaitGroundMapOttottoDeniedCount = 0;
+    gNdsFighterWaitGroundStatusChangeCount = 0;
+    gNdsFighterWaitGroundMotionChangeCount = 0;
+    gNdsFighterWaitGroundGADriftCount = 0;
+    gNdsFighterWaitGroundRootDriftCount = 0;
+    gNdsFighterWaitGroundGObjDelta = 0;
+    gNdsFighterWaitGroundDisplayProbeCount = 0;
+    gNdsFighterWaitGroundGameplayUpdateCount = 0;
+    gNdsFighterMarioFoxDisplayResult = 0;
+    gNdsFighterMarioFoxDisplaySafeResult = 0;
+    gNdsFighterMarioFoxDisplayMask = 0;
+    gNdsFighterMarioFoxDisplayDeferredMask = 0;
+    gNdsFighterMarioFoxDisplayCallbackCount = 0;
+    gNdsFighterDisplayP0DObjCount = 0;
+    gNdsFighterDisplayP1DObjCount = 0;
+    gNdsFighterDisplayP0MObjCount = 0;
+    gNdsFighterDisplayP1MObjCount = 0;
+    gNdsFighterDisplayP0AObjCount = 0;
+    gNdsFighterDisplayP1AObjCount = 0;
+    gNdsFighterDisplayP0DLReadyCount = 0;
+    gNdsFighterDisplayP1DLReadyCount = 0;
+    gNdsFighterDisplayP0PartsPtrCount = 0;
+    gNdsFighterDisplayP1PartsPtrCount = 0;
+    gNdsFighterDisplayP0StatusAfter = 0xffffffffu;
+    gNdsFighterDisplayP1StatusAfter = 0xffffffffu;
+    gNdsFighterDisplayP0MotionAfter = 0xffffffffu;
+    gNdsFighterDisplayP1MotionAfter = 0xffffffffu;
+    gNdsFighterDisplayP0GAAfter = 0xffffffffu;
+    gNdsFighterDisplayP1GAAfter = 0xffffffffu;
+    gNdsFighterDisplayP0RootXBeforeBits = 0;
+    gNdsFighterDisplayP1RootXBeforeBits = 0;
+    gNdsFighterDisplayP0RootXAfterBits = 0;
+    gNdsFighterDisplayP1RootXAfterBits = 0;
+    gNdsFighterDisplayGObjDelta = 0;
+    gNdsFighterDisplayDrawCallCount = 0;
+    gNdsFighterDisplayMatrixCallCount = 0;
+    gNdsFighterDisplayGameplayUpdateCount = 0;
+    gNdsFighterMarioFoxDLScanResult = 0;
+    gNdsFighterMarioFoxDLScanSafeResult = 0;
+    gNdsFighterMarioFoxDLScanMask = 0;
+    gNdsFighterMarioFoxDLScanDeferredMask = 0;
+    gNdsFighterMarioFoxDLScanCount = 0;
+    gNdsFighterDLScanP0FirstDL = 0;
+    gNdsFighterDLScanP1FirstDL = 0;
+    gNdsFighterDLScanP0AssetID = 0xffffffffu;
+    gNdsFighterDLScanP1AssetID = 0xffffffffu;
+    gNdsFighterDLScanP0Offset = 0;
+    gNdsFighterDLScanP1Offset = 0;
+    gNdsFighterDLScanP0DObjIndex = 0xffffffffu;
+    gNdsFighterDLScanP1DObjIndex = 0xffffffffu;
+    gNdsFighterDLScanP0Blocker = 0;
+    gNdsFighterDLScanP1Blocker = 0;
+    gNdsFighterDLScanP0CommandCount = 0;
+    gNdsFighterDLScanP1CommandCount = 0;
+    gNdsFighterDLScanP0FirstOpcode = 0;
+    gNdsFighterDLScanP1FirstOpcode = 0;
+    gNdsFighterDLScanP0UnsupportedOpcode = 0;
+    gNdsFighterDLScanP1UnsupportedOpcode = 0;
+    gNdsFighterDLScanP0UnsupportedCommandCount = 0;
+    gNdsFighterDLScanP1UnsupportedCommandCount = 0;
+    gNdsFighterDLScanP0VertexCommandCount = 0;
+    gNdsFighterDLScanP1VertexCommandCount = 0;
+    gNdsFighterDLScanP0TriangleCommandCount = 0;
+    gNdsFighterDLScanP1TriangleCommandCount = 0;
+    gNdsFighterDLScanP0VertexCount = 0;
+    gNdsFighterDLScanP1VertexCount = 0;
+    gNdsFighterDLScanP0TriangleCount = 0;
+    gNdsFighterDLScanP1TriangleCount = 0;
+    gNdsFighterDLScanP0EndCommandCount = 0;
+    gNdsFighterDLScanP1EndCommandCount = 0;
+    gNdsFighterDLScanP0BranchCommandCount = 0;
+    gNdsFighterDLScanP1BranchCommandCount = 0;
+    gNdsFighterDLScanP0SegmentResolveCount = 0;
+    gNdsFighterDLScanP1SegmentResolveCount = 0;
+    gNdsFighterDLScanP0TextureMask = 0;
+    gNdsFighterDLScanP1TextureMask = 0;
+    gNdsFighterDLScanP0OtherModeCommandCount = 0;
+    gNdsFighterDLScanP1OtherModeCommandCount = 0;
+    gNdsFighterDLScanP0CullCommandCount = 0;
+    gNdsFighterDLScanP1CullCommandCount = 0;
+    gNdsFighterDLScanP0StateCommandCount = 0;
+    gNdsFighterDLScanP1StateCommandCount = 0;
+    gNdsFighterDLScanP0SkipCommandCount = 0;
+    gNdsFighterDLScanP1SkipCommandCount = 0;
+    gNdsFighterDLScanP0RenderCommandCount = 0;
+    gNdsFighterDLScanP1RenderCommandCount = 0;
+    gNdsFighterDLScanP0MaxDepthSeen = 0;
+    gNdsFighterDLScanP1MaxDepthSeen = 0;
+    gNdsFighterDLScanP0StatusAfter = 0xffffffffu;
+    gNdsFighterDLScanP1StatusAfter = 0xffffffffu;
+    gNdsFighterDLScanP0MotionAfter = 0xffffffffu;
+    gNdsFighterDLScanP1MotionAfter = 0xffffffffu;
+    gNdsFighterDLScanP0GAAfter = 0xffffffffu;
+    gNdsFighterDLScanP1GAAfter = 0xffffffffu;
+    gNdsFighterDLScanP0RootXBeforeBits = 0;
+    gNdsFighterDLScanP0RootXAfterBits = 0;
+    gNdsFighterDLScanP1RootXBeforeBits = 0;
+    gNdsFighterDLScanP1RootXAfterBits = 0;
+    gNdsFighterDLScanGObjDelta = 0;
+    gNdsFighterDLScanDrawCallCount = 0;
+    gNdsFighterDLScanMatrixCallCount = 0;
+    gNdsFighterDLScanGameplayUpdateCount = 0;
+    gNdsFighterDLScanRangeRejectCount = 0;
+    gNdsFighterDLScanBranchResolveCount = 0;
+    gNdsFighterMarioFoxDLExecResult = 0;
+    gNdsFighterMarioFoxDLExecSafeResult = 0;
+    gNdsFighterMarioFoxDLExecMask = 0;
+    gNdsFighterMarioFoxDLExecDeferredMask = 0;
+    gNdsFighterMarioFoxDLExecCount = 0;
+    gNdsFighterDLExecP0Blocker = 0;
+    gNdsFighterDLExecP1Blocker = 0;
+    gNdsFighterDLExecP0CommandCount = 0;
+    gNdsFighterDLExecP1CommandCount = 0;
+    gNdsFighterDLExecP0FirstOpcode = 0;
+    gNdsFighterDLExecP1FirstOpcode = 0;
+    gNdsFighterDLExecP0UnsupportedOpcode = 0;
+    gNdsFighterDLExecP1UnsupportedOpcode = 0;
+    gNdsFighterDLExecP0UnsupportedCommandCount = 0;
+    gNdsFighterDLExecP1UnsupportedCommandCount = 0;
+    gNdsFighterDLExecP0VertexCommandCount = 0;
+    gNdsFighterDLExecP1VertexCommandCount = 0;
+    gNdsFighterDLExecP0VertexDecodedCount = 0;
+    gNdsFighterDLExecP1VertexDecodedCount = 0;
+    gNdsFighterDLExecP0VertexValidMask = 0;
+    gNdsFighterDLExecP1VertexValidMask = 0;
+    gNdsFighterDLExecP0TriangleCommandCount = 0;
+    gNdsFighterDLExecP1TriangleCommandCount = 0;
+    gNdsFighterDLExecP0TriangleCount = 0;
+    gNdsFighterDLExecP1TriangleCount = 0;
+    gNdsFighterDLExecP0TriangleValidCount = 0;
+    gNdsFighterDLExecP1TriangleValidCount = 0;
+    gNdsFighterDLExecP0MinX = 0;
+    gNdsFighterDLExecP0MaxX = 0;
+    gNdsFighterDLExecP0MinY = 0;
+    gNdsFighterDLExecP0MaxY = 0;
+    gNdsFighterDLExecP0MinZ = 0;
+    gNdsFighterDLExecP0MaxZ = 0;
+    gNdsFighterDLExecP1MinX = 0;
+    gNdsFighterDLExecP1MaxX = 0;
+    gNdsFighterDLExecP1MinY = 0;
+    gNdsFighterDLExecP1MaxY = 0;
+    gNdsFighterDLExecP1MinZ = 0;
+    gNdsFighterDLExecP1MaxZ = 0;
+    gNdsFighterDLExecP0ColorChecksum = 0;
+    gNdsFighterDLExecP1ColorChecksum = 0;
+    gNdsFighterDLExecP0OtherModeCommandCount = 0;
+    gNdsFighterDLExecP1OtherModeCommandCount = 0;
+    gNdsFighterDLExecP0CullCommandCount = 0;
+    gNdsFighterDLExecP1CullCommandCount = 0;
+    gNdsFighterDLExecP0StateCommandCount = 0;
+    gNdsFighterDLExecP1StateCommandCount = 0;
+    gNdsFighterDLExecP0SkipCommandCount = 0;
+    gNdsFighterDLExecP1SkipCommandCount = 0;
+    gNdsFighterDLExecP0RenderCommandCount = 0;
+    gNdsFighterDLExecP1RenderCommandCount = 0;
+    gNdsFighterDLExecP0BranchCommandCount = 0;
+    gNdsFighterDLExecP1BranchCommandCount = 0;
+    gNdsFighterDLExecP0SegmentResolveCount = 0;
+    gNdsFighterDLExecP1SegmentResolveCount = 0;
+    gNdsFighterDLExecP0TextureMask = 0;
+    gNdsFighterDLExecP1TextureMask = 0;
+    gNdsFighterDLExecP0StatusAfter = 0xffffffffu;
+    gNdsFighterDLExecP1StatusAfter = 0xffffffffu;
+    gNdsFighterDLExecP0MotionAfter = 0xffffffffu;
+    gNdsFighterDLExecP1MotionAfter = 0xffffffffu;
+    gNdsFighterDLExecP0GAAfter = 0xffffffffu;
+    gNdsFighterDLExecP1GAAfter = 0xffffffffu;
+    gNdsFighterDLExecP0RootXBeforeBits = 0;
+    gNdsFighterDLExecP0RootXAfterBits = 0;
+    gNdsFighterDLExecP1RootXBeforeBits = 0;
+    gNdsFighterDLExecP1RootXAfterBits = 0;
+    gNdsFighterDLExecGObjDelta = 0;
+    gNdsFighterDLExecDrawCallCount = 0;
+    gNdsFighterDLExecMatrixCallCount = 0;
+    gNdsFighterDLExecGameplayUpdateCount = 0;
+    gNdsFighterDLExecRangeRejectCount = 0;
+    gNdsFighterDLExecVertexRangeRejectCount = 0;
+    gNdsFighterMarioFoxDLDrawResult = 0;
+    gNdsFighterMarioFoxDLDrawSafeResult = 0;
+    gNdsFighterMarioFoxDLDrawMask = 0;
+    gNdsFighterMarioFoxDLDrawDeferredMask = 0;
+    gNdsFighterMarioFoxDLDrawCount = 0;
+    gNdsFighterDLDrawPreviewWidth = 0;
+    gNdsFighterDLDrawPreviewHeight = 0;
+    gNdsFighterDLDrawPreviewPitch = 0;
+    gNdsFighterDLDrawPreviewReady = 0;
+    gNdsFighterDLDrawPreviewCommitBefore = 0;
+    gNdsFighterDLDrawPreviewCommitAfter = 0;
+    gNdsFighterDLDrawPreviewCommitDelta = 0;
+    gNdsFighterDLDrawP0Blocker = 0;
+    gNdsFighterDLDrawP1Blocker = 0;
+    gNdsFighterDLDrawP0CommandCount = 0;
+    gNdsFighterDLDrawP1CommandCount = 0;
+    gNdsFighterDLDrawP0FirstOpcode = 0;
+    gNdsFighterDLDrawP1FirstOpcode = 0;
+    gNdsFighterDLDrawP0UnsupportedOpcode = 0;
+    gNdsFighterDLDrawP1UnsupportedOpcode = 0;
+    gNdsFighterDLDrawP0UnsupportedCommandCount = 0;
+    gNdsFighterDLDrawP1UnsupportedCommandCount = 0;
+    gNdsFighterDLDrawP0VertexDecodedCount = 0;
+    gNdsFighterDLDrawP1VertexDecodedCount = 0;
+    gNdsFighterDLDrawP0TriangleCount = 0;
+    gNdsFighterDLDrawP1TriangleCount = 0;
+    gNdsFighterDLDrawP0TriangleValidCount = 0;
+    gNdsFighterDLDrawP1TriangleValidCount = 0;
+    gNdsFighterDLDrawP0TriangleDrawnCount = 0;
+    gNdsFighterDLDrawP1TriangleDrawnCount = 0;
+    gNdsFighterDLDrawP0RealTriangleDrawnCount = 0;
+    gNdsFighterDLDrawP1RealTriangleDrawnCount = 0;
+    gNdsFighterDLDrawP0MarkerTriangleDrawnCount = 0;
+    gNdsFighterDLDrawP1MarkerTriangleDrawnCount = 0;
+    gNdsFighterDLDrawP0PixelCount = 0;
+    gNdsFighterDLDrawP1PixelCount = 0;
+    gNdsFighterDLDrawTotalPixelCount = 0;
+    gNdsFighterDLDrawP0Axis = 0xffffffffu;
+    gNdsFighterDLDrawP1Axis = 0xffffffffu;
+    gNdsFighterDLDrawP0Area = 0;
+    gNdsFighterDLDrawP1Area = 0;
+    gNdsFighterDLDrawP0MinA = 0;
+    gNdsFighterDLDrawP0MaxA = 0;
+    gNdsFighterDLDrawP0MinB = 0;
+    gNdsFighterDLDrawP0MaxB = 0;
+    gNdsFighterDLDrawP1MinA = 0;
+    gNdsFighterDLDrawP1MaxA = 0;
+    gNdsFighterDLDrawP1MinB = 0;
+    gNdsFighterDLDrawP1MaxB = 0;
+    gNdsFighterDLDrawP0ScreenMinX = 0;
+    gNdsFighterDLDrawP0ScreenMaxX = 0;
+    gNdsFighterDLDrawP0ScreenMinY = 0;
+    gNdsFighterDLDrawP0ScreenMaxY = 0;
+    gNdsFighterDLDrawP1ScreenMinX = 0;
+    gNdsFighterDLDrawP1ScreenMaxX = 0;
+    gNdsFighterDLDrawP1ScreenMinY = 0;
+    gNdsFighterDLDrawP1ScreenMaxY = 0;
+    gNdsFighterDLDrawP0ColorChecksum = 0;
+    gNdsFighterDLDrawP1ColorChecksum = 0;
+    gNdsFighterDLDrawP0StatusAfter = 0xffffffffu;
+    gNdsFighterDLDrawP1StatusAfter = 0xffffffffu;
+    gNdsFighterDLDrawP0MotionAfter = 0xffffffffu;
+    gNdsFighterDLDrawP1MotionAfter = 0xffffffffu;
+    gNdsFighterDLDrawP0GAAfter = 0xffffffffu;
+    gNdsFighterDLDrawP1GAAfter = 0xffffffffu;
+    gNdsFighterDLDrawP0RootXBeforeBits = 0;
+    gNdsFighterDLDrawP0RootXAfterBits = 0;
+    gNdsFighterDLDrawP1RootXBeforeBits = 0;
+    gNdsFighterDLDrawP1RootXAfterBits = 0;
+    gNdsFighterDLDrawGObjDelta = 0;
+    gNdsFighterDLDrawDrawCallCount = 0;
+    gNdsFighterDLDrawMatrixCallCount = 0;
+    gNdsFighterDLDrawGameplayUpdateCount = 0;
+    gNdsFighterDLDrawRangeRejectCount = 0;
+    gNdsFighterDLDrawVertexRangeRejectCount = 0;
+    gNdsFighterMarioFoxDLMultiDrawResult = 0;
+    gNdsFighterMarioFoxDLMultiDrawSafeResult = 0;
+    gNdsFighterMarioFoxDLMultiDrawMask = 0;
+    gNdsFighterMarioFoxDLMultiDrawDeferredMask = 0;
+    gNdsFighterMarioFoxDLMultiDrawCount = 0;
+    gNdsFighterDLMultiDrawPreviewWidth = 0;
+    gNdsFighterDLMultiDrawPreviewHeight = 0;
+    gNdsFighterDLMultiDrawPreviewPitch = 0;
+    gNdsFighterDLMultiDrawPreviewReady = 0;
+    gNdsFighterDLMultiDrawPreviewCommitBefore = 0;
+    gNdsFighterDLMultiDrawPreviewCommitAfter = 0;
+    gNdsFighterDLMultiDrawPreviewCommitDelta = 0;
+    gNdsFighterDLMultiDrawP0CandidateCount = 0;
+    gNdsFighterDLMultiDrawP1CandidateCount = 0;
+    gNdsFighterDLMultiDrawP0SelectedCount = 0;
+    gNdsFighterDLMultiDrawP1SelectedCount = 0;
+    gNdsFighterDLMultiDrawP0AttemptCount = 0;
+    gNdsFighterDLMultiDrawP1AttemptCount = 0;
+    gNdsFighterDLMultiDrawP0CleanCount = 0;
+    gNdsFighterDLMultiDrawP1CleanCount = 0;
+    gNdsFighterDLMultiDrawP0DrawnDObjCount = 0;
+    gNdsFighterDLMultiDrawP1DrawnDObjCount = 0;
+    gNdsFighterDLMultiDrawP0FailedCount = 0;
+    gNdsFighterDLMultiDrawP1FailedCount = 0;
+    gNdsFighterDLMultiDrawP0SelectedIndexMask = 0;
+    gNdsFighterDLMultiDrawP1SelectedIndexMask = 0;
+    gNdsFighterDLMultiDrawP0FirstBlocker = 0;
+    gNdsFighterDLMultiDrawP1FirstBlocker = 0;
+    gNdsFighterDLMultiDrawP0BlockerMask = 0;
+    gNdsFighterDLMultiDrawP1BlockerMask = 0;
+    gNdsFighterDLMultiDrawP0CommandCount = 0;
+    gNdsFighterDLMultiDrawP1CommandCount = 0;
+    gNdsFighterDLMultiDrawP0FirstOpcode = 0;
+    gNdsFighterDLMultiDrawP1FirstOpcode = 0;
+    gNdsFighterDLMultiDrawP0UnsupportedOpcode = 0;
+    gNdsFighterDLMultiDrawP1UnsupportedOpcode = 0;
+    gNdsFighterDLMultiDrawP0UnsupportedCommandCount = 0;
+    gNdsFighterDLMultiDrawP1UnsupportedCommandCount = 0;
+    gNdsFighterDLMultiDrawP0VertexDecodedCount = 0;
+    gNdsFighterDLMultiDrawP1VertexDecodedCount = 0;
+    gNdsFighterDLMultiDrawP0TriangleCount = 0;
+    gNdsFighterDLMultiDrawP1TriangleCount = 0;
+    gNdsFighterDLMultiDrawP0TriangleValidCount = 0;
+    gNdsFighterDLMultiDrawP1TriangleValidCount = 0;
+    gNdsFighterDLMultiDrawP0TriangleDrawnCount = 0;
+    gNdsFighterDLMultiDrawP1TriangleDrawnCount = 0;
+    gNdsFighterDLMultiDrawP0RealTriangleDrawnCount = 0;
+    gNdsFighterDLMultiDrawP1RealTriangleDrawnCount = 0;
+    gNdsFighterDLMultiDrawP0MarkerTriangleDrawnCount = 0;
+    gNdsFighterDLMultiDrawP1MarkerTriangleDrawnCount = 0;
+    gNdsFighterDLMultiDrawP0PixelCount = 0;
+    gNdsFighterDLMultiDrawP1PixelCount = 0;
+    gNdsFighterDLMultiDrawTotalPixelCount = 0;
+    gNdsFighterDLMultiDrawP0Axis = 0xffffffffu;
+    gNdsFighterDLMultiDrawP1Axis = 0xffffffffu;
+    gNdsFighterDLMultiDrawP0Area = 0;
+    gNdsFighterDLMultiDrawP1Area = 0;
+    gNdsFighterDLMultiDrawP0MinA = 0;
+    gNdsFighterDLMultiDrawP0MaxA = 0;
+    gNdsFighterDLMultiDrawP0MinB = 0;
+    gNdsFighterDLMultiDrawP0MaxB = 0;
+    gNdsFighterDLMultiDrawP1MinA = 0;
+    gNdsFighterDLMultiDrawP1MaxA = 0;
+    gNdsFighterDLMultiDrawP1MinB = 0;
+    gNdsFighterDLMultiDrawP1MaxB = 0;
+    gNdsFighterDLMultiDrawP0ScreenMinX = 0;
+    gNdsFighterDLMultiDrawP0ScreenMaxX = 0;
+    gNdsFighterDLMultiDrawP0ScreenMinY = 0;
+    gNdsFighterDLMultiDrawP0ScreenMaxY = 0;
+    gNdsFighterDLMultiDrawP1ScreenMinX = 0;
+    gNdsFighterDLMultiDrawP1ScreenMaxX = 0;
+    gNdsFighterDLMultiDrawP1ScreenMinY = 0;
+    gNdsFighterDLMultiDrawP1ScreenMaxY = 0;
+    gNdsFighterDLMultiDrawP0ColorChecksum = 0;
+    gNdsFighterDLMultiDrawP1ColorChecksum = 0;
+    gNdsFighterDLMultiDrawP0StatusAfter = 0xffffffffu;
+    gNdsFighterDLMultiDrawP1StatusAfter = 0xffffffffu;
+    gNdsFighterDLMultiDrawP0MotionAfter = 0xffffffffu;
+    gNdsFighterDLMultiDrawP1MotionAfter = 0xffffffffu;
+    gNdsFighterDLMultiDrawP0GAAfter = 0xffffffffu;
+    gNdsFighterDLMultiDrawP1GAAfter = 0xffffffffu;
+    gNdsFighterDLMultiDrawP0RootXBeforeBits = 0;
+    gNdsFighterDLMultiDrawP0RootXAfterBits = 0;
+    gNdsFighterDLMultiDrawP1RootXBeforeBits = 0;
+    gNdsFighterDLMultiDrawP1RootXAfterBits = 0;
+    gNdsFighterDLMultiDrawGObjDelta = 0;
+    gNdsFighterDLMultiDrawDrawCallCount = 0;
+    gNdsFighterDLMultiDrawMatrixCallCount = 0;
+    gNdsFighterDLMultiDrawGameplayUpdateCount = 0;
+    gNdsFighterDLMultiDrawRangeRejectCount = 0;
+    gNdsFighterDLMultiDrawVertexRangeRejectCount = 0;
+    gNdsFighterMarioFoxDLAllDrawResult = 0;
+    gNdsFighterMarioFoxDLAllDrawSafeResult = 0;
+    gNdsFighterMarioFoxDLAllDrawMask = 0;
+    gNdsFighterMarioFoxDLAllDrawDeferredMask = 0;
+    gNdsFighterMarioFoxDLAllDrawCount = 0;
+    gNdsFighterDLAllDrawDisplayCallbackCount = 0;
+    gNdsFighterDLAllDrawP0DisplayCallbackCount = 0;
+    gNdsFighterDLAllDrawP1DisplayCallbackCount = 0;
+    gNdsFighterDLAllDrawPreviewWidth = 0;
+    gNdsFighterDLAllDrawPreviewHeight = 0;
+    gNdsFighterDLAllDrawPreviewPitch = 0;
+    gNdsFighterDLAllDrawPreviewReady = 0;
+    gNdsFighterDLAllDrawPreviewCommitBefore = 0;
+    gNdsFighterDLAllDrawPreviewCommitAfter = 0;
+    gNdsFighterDLAllDrawPreviewCommitDelta = 0;
+    gNdsFighterDLAllDrawP0CandidateCount = 0;
+    gNdsFighterDLAllDrawP1CandidateCount = 0;
+    gNdsFighterDLAllDrawP0SelectedCount = 0;
+    gNdsFighterDLAllDrawP1SelectedCount = 0;
+    gNdsFighterDLAllDrawP0AttemptCount = 0;
+    gNdsFighterDLAllDrawP1AttemptCount = 0;
+    gNdsFighterDLAllDrawP0CleanCount = 0;
+    gNdsFighterDLAllDrawP1CleanCount = 0;
+    gNdsFighterDLAllDrawP0DrawnDObjCount = 0;
+    gNdsFighterDLAllDrawP1DrawnDObjCount = 0;
+    gNdsFighterDLAllDrawP0FailedCount = 0;
+    gNdsFighterDLAllDrawP1FailedCount = 0;
+    gNdsFighterDLAllDrawP0SelectedIndexMask = 0;
+    gNdsFighterDLAllDrawP1SelectedIndexMask = 0;
+    gNdsFighterDLAllDrawP0FirstBlocker = 0;
+    gNdsFighterDLAllDrawP1FirstBlocker = 0;
+    gNdsFighterDLAllDrawP0BlockerMask = 0;
+    gNdsFighterDLAllDrawP1BlockerMask = 0;
+    gNdsFighterDLAllDrawP0CommandCount = 0;
+    gNdsFighterDLAllDrawP1CommandCount = 0;
+    gNdsFighterDLAllDrawP0FirstOpcode = 0;
+    gNdsFighterDLAllDrawP1FirstOpcode = 0;
+    gNdsFighterDLAllDrawP0UnsupportedOpcode = 0;
+    gNdsFighterDLAllDrawP1UnsupportedOpcode = 0;
+    gNdsFighterDLAllDrawP0UnsupportedCommandCount = 0;
+    gNdsFighterDLAllDrawP1UnsupportedCommandCount = 0;
+    gNdsFighterDLAllDrawP0VertexDecodedCount = 0;
+    gNdsFighterDLAllDrawP1VertexDecodedCount = 0;
+    gNdsFighterDLAllDrawP0TriangleCount = 0;
+    gNdsFighterDLAllDrawP1TriangleCount = 0;
+    gNdsFighterDLAllDrawP0TriangleValidCount = 0;
+    gNdsFighterDLAllDrawP1TriangleValidCount = 0;
+    gNdsFighterDLAllDrawP0TriangleDrawnCount = 0;
+    gNdsFighterDLAllDrawP1TriangleDrawnCount = 0;
+    gNdsFighterDLAllDrawP0RealTriangleDrawnCount = 0;
+    gNdsFighterDLAllDrawP1RealTriangleDrawnCount = 0;
+    gNdsFighterDLAllDrawP0MarkerTriangleDrawnCount = 0;
+    gNdsFighterDLAllDrawP1MarkerTriangleDrawnCount = 0;
+    gNdsFighterDLAllDrawP0PixelCount = 0;
+    gNdsFighterDLAllDrawP1PixelCount = 0;
+    gNdsFighterDLAllDrawTotalPixelCount = 0;
+    gNdsFighterDLAllDrawP0Axis = 0xffffffffu;
+    gNdsFighterDLAllDrawP1Axis = 0xffffffffu;
+    gNdsFighterDLAllDrawP0Area = 0;
+    gNdsFighterDLAllDrawP1Area = 0;
+    gNdsFighterDLAllDrawP0MinA = 0;
+    gNdsFighterDLAllDrawP0MaxA = 0;
+    gNdsFighterDLAllDrawP0MinB = 0;
+    gNdsFighterDLAllDrawP0MaxB = 0;
+    gNdsFighterDLAllDrawP1MinA = 0;
+    gNdsFighterDLAllDrawP1MaxA = 0;
+    gNdsFighterDLAllDrawP1MinB = 0;
+    gNdsFighterDLAllDrawP1MaxB = 0;
+    gNdsFighterDLAllDrawP0ScreenMinX = 0;
+    gNdsFighterDLAllDrawP0ScreenMaxX = 0;
+    gNdsFighterDLAllDrawP0ScreenMinY = 0;
+    gNdsFighterDLAllDrawP0ScreenMaxY = 0;
+    gNdsFighterDLAllDrawP1ScreenMinX = 0;
+    gNdsFighterDLAllDrawP1ScreenMaxX = 0;
+    gNdsFighterDLAllDrawP1ScreenMinY = 0;
+    gNdsFighterDLAllDrawP1ScreenMaxY = 0;
+    gNdsFighterDLAllDrawP0ColorChecksum = 0;
+    gNdsFighterDLAllDrawP1ColorChecksum = 0;
+    gNdsFighterDLAllDrawP0StatusAfter = 0xffffffffu;
+    gNdsFighterDLAllDrawP1StatusAfter = 0xffffffffu;
+    gNdsFighterDLAllDrawP0MotionAfter = 0xffffffffu;
+    gNdsFighterDLAllDrawP1MotionAfter = 0xffffffffu;
+    gNdsFighterDLAllDrawP0GAAfter = 0xffffffffu;
+    gNdsFighterDLAllDrawP1GAAfter = 0xffffffffu;
+    gNdsFighterDLAllDrawP0RootXBeforeBits = 0;
+    gNdsFighterDLAllDrawP0RootXAfterBits = 0;
+    gNdsFighterDLAllDrawP1RootXBeforeBits = 0;
+    gNdsFighterDLAllDrawP1RootXAfterBits = 0;
+    gNdsFighterDLAllDrawGObjDelta = 0;
+    gNdsFighterDLAllDrawDrawCallCount = 0;
+    gNdsFighterDLAllDrawMatrixCallCount = 0;
+    gNdsFighterDLAllDrawGameplayUpdateCount = 0;
+    gNdsFighterDLAllDrawRangeRejectCount = 0;
+    gNdsFighterDLAllDrawVertexRangeRejectCount = 0;
+    gNdsFighterMarioFoxWalkInputResult = 0;
+    gNdsFighterMarioFoxWalkSafeResult = 0;
+    gNdsFighterMarioFoxWalkInputMask = 0;
+    gNdsFighterMarioFoxWalkDeferredMask = 0;
+    gNdsFighterMarioFoxWalkInputCount = 0;
+    gNdsFighterWalkP0StickX = 0;
+    gNdsFighterWalkP1StickX = 0;
+    gNdsFighterWalkP0StickAbs = 0;
+    gNdsFighterWalkP1StickAbs = 0;
+    gNdsFighterWalkP0LR = 0;
+    gNdsFighterWalkP1LR = 0;
+    gNdsFighterWalkP0InputSuccess = 0;
+    gNdsFighterWalkP1InputSuccess = 0;
+    gNdsFighterWalkP0SelectedStatus = 0;
+    gNdsFighterWalkP1SelectedStatus = 0;
+    gNdsFighterWalkP0StatusBefore = 0xffffffffu;
+    gNdsFighterWalkP1StatusBefore = 0xffffffffu;
+    gNdsFighterWalkP0StatusAfter = 0xffffffffu;
+    gNdsFighterWalkP1StatusAfter = 0xffffffffu;
+    gNdsFighterWalkP0MotionBefore = 0xffffffffu;
+    gNdsFighterWalkP1MotionBefore = 0xffffffffu;
+    gNdsFighterWalkP0MotionAfter = 0xffffffffu;
+    gNdsFighterWalkP1MotionAfter = 0xffffffffu;
+    gNdsFighterWalkP0GABefore = 0xffffffffu;
+    gNdsFighterWalkP1GABefore = 0xffffffffu;
+    gNdsFighterWalkP0GAAfter = 0xffffffffu;
+    gNdsFighterWalkP1GAAfter = 0xffffffffu;
+    gNdsFighterWalkWaitInterruptCallCount = 0;
+    gNdsFighterWalkGroundCheckCallCount = 0;
+    gNdsFighterWalkOriginalCheckCallCount = 0;
+    gNdsFighterWalkOriginalCheckSuccessCount = 0;
+    gNdsFighterWalkSetStatusCallCount = 0;
+    gNdsFighterWalkFtMainSetStatusCallCount = 0;
+    gNdsFighterWalkAnimEventsCallCount = 0;
+    gNdsFighterWalkCallbackReadyCount = 0;
+    gNdsFighterWalkLoopInterruptCallCount = 0;
+    gNdsFighterWalkDeferredInterruptCheckCount = 0;
+    gNdsFighterWalkP0GroundVelBeforeMilli = 0;
+    gNdsFighterWalkP1GroundVelBeforeMilli = 0;
+    gNdsFighterWalkP0GroundVelAfterMilli = 0;
+    gNdsFighterWalkP1GroundVelAfterMilli = 0;
+    gNdsFighterWalkP0AirVelXMilli = 0;
+    gNdsFighterWalkP1AirVelXMilli = 0;
+    gNdsFighterWalkP0AirVelYMilli = 0;
+    gNdsFighterWalkP1AirVelYMilli = 0;
+    gNdsFighterWalkGroundVelAbsStickCount = 0;
+    gNdsFighterWalkGroundVelTransferAirCount = 0;
+    gNdsFighterWalkPhysicsCallbackCount = 0;
+    gNdsFighterWalkMapCallbackCount = 0;
+    gNdsFighterWalkMapSafeFloorCount = 0;
+    gNdsFighterWalkMapFallDeniedCount = 0;
+    gNdsFighterWalkMapOttottoDeniedCount = 0;
+    gNdsFighterWalkP0RootXBeforeBits = 0;
+    gNdsFighterWalkP0RootXAfterBits = 0;
+    gNdsFighterWalkP0RootYBeforeBits = 0;
+    gNdsFighterWalkP0RootYAfterBits = 0;
+    gNdsFighterWalkP1RootXBeforeBits = 0;
+    gNdsFighterWalkP1RootXAfterBits = 0;
+    gNdsFighterWalkP1RootYBeforeBits = 0;
+    gNdsFighterWalkP1RootYAfterBits = 0;
+    gNdsFighterWalkGObjDelta = 0;
+    gNdsFighterWalkDeniedStatusCount = 0;
+    gNdsFighterWalkUnexpectedStatusCount = 0;
+    gNdsFighterWalkProcessAttachCount = 0;
+    gNdsFighterWalkDisplayProbeCount = 0;
+    gNdsFighterWalkGameplayUpdateCount = 0;
+    gNdsFighterWalkDrawCallCount = 0;
+    gNdsFighterWalkMatrixCallCount = 0;
+    gNdsFighterMarioFoxWalkLoopResult = 0;
+    gNdsFighterMarioFoxWalkLoopSafeResult = 0;
+    gNdsFighterMarioFoxWalkLoopMask = 0;
+    gNdsFighterMarioFoxWalkLoopDeferredMask = 0;
+    gNdsFighterMarioFoxWalkLoopCount = 0;
+    gNdsFighterWalkLoopFrameTarget = 0;
+    gNdsFighterWalkLoopP0HeldFrameCount = 0;
+    gNdsFighterWalkLoopP1HeldFrameCount = 0;
+    gNdsFighterWalkLoopP0InterruptCount = 0;
+    gNdsFighterWalkLoopP1InterruptCount = 0;
+    gNdsFighterWalkLoopP0PhysicsCount = 0;
+    gNdsFighterWalkLoopP1PhysicsCount = 0;
+    gNdsFighterWalkLoopP0IntegrateCount = 0;
+    gNdsFighterWalkLoopP1IntegrateCount = 0;
+    gNdsFighterWalkLoopP0MapCount = 0;
+    gNdsFighterWalkLoopP1MapCount = 0;
+    gNdsFighterWalkLoopP0SafeFloorCount = 0;
+    gNdsFighterWalkLoopP1SafeFloorCount = 0;
+    gNdsFighterWalkLoopP0StickX = 0;
+    gNdsFighterWalkLoopP1StickX = 0;
+    gNdsFighterWalkLoopP0StickAbs = 0;
+    gNdsFighterWalkLoopP1StickAbs = 0;
+    gNdsFighterWalkLoopP0LR = 0;
+    gNdsFighterWalkLoopP1LR = 0;
+    gNdsFighterWalkLoopP0StatusStart = 0xffffffffu;
+    gNdsFighterWalkLoopP1StatusStart = 0xffffffffu;
+    gNdsFighterWalkLoopP0StatusAfterHeld = 0xffffffffu;
+    gNdsFighterWalkLoopP1StatusAfterHeld = 0xffffffffu;
+    gNdsFighterWalkLoopP0StatusAfterRelease = 0xffffffffu;
+    gNdsFighterWalkLoopP1StatusAfterRelease = 0xffffffffu;
+    gNdsFighterWalkLoopP0StatusAfterSettle = 0xffffffffu;
+    gNdsFighterWalkLoopP1StatusAfterSettle = 0xffffffffu;
+    gNdsFighterWalkLoopP0MotionStart = 0xffffffffu;
+    gNdsFighterWalkLoopP1MotionStart = 0xffffffffu;
+    gNdsFighterWalkLoopP0MotionAfterHeld = 0xffffffffu;
+    gNdsFighterWalkLoopP1MotionAfterHeld = 0xffffffffu;
+    gNdsFighterWalkLoopP0MotionAfterRelease = 0xffffffffu;
+    gNdsFighterWalkLoopP1MotionAfterRelease = 0xffffffffu;
+    gNdsFighterWalkLoopP0MotionAfterSettle = 0xffffffffu;
+    gNdsFighterWalkLoopP1MotionAfterSettle = 0xffffffffu;
+    gNdsFighterWalkLoopP0GAStart = 0xffffffffu;
+    gNdsFighterWalkLoopP1GAStart = 0xffffffffu;
+    gNdsFighterWalkLoopP0GAAfterHeld = 0xffffffffu;
+    gNdsFighterWalkLoopP1GAAfterHeld = 0xffffffffu;
+    gNdsFighterWalkLoopP0GAAfterRelease = 0xffffffffu;
+    gNdsFighterWalkLoopP1GAAfterRelease = 0xffffffffu;
+    gNdsFighterWalkLoopP0GAAfterSettle = 0xffffffffu;
+    gNdsFighterWalkLoopP1GAAfterSettle = 0xffffffffu;
+    gNdsFighterWalkLoopP0RootXStartBits = 0;
+    gNdsFighterWalkLoopP0RootXAfterHeldBits = 0;
+    gNdsFighterWalkLoopP0RootXAfterSettleBits = 0;
+    gNdsFighterWalkLoopP1RootXStartBits = 0;
+    gNdsFighterWalkLoopP1RootXAfterHeldBits = 0;
+    gNdsFighterWalkLoopP1RootXAfterSettleBits = 0;
+    gNdsFighterWalkLoopP0RootYStartBits = 0;
+    gNdsFighterWalkLoopP0RootYAfterHeldBits = 0;
+    gNdsFighterWalkLoopP0RootYAfterSettleBits = 0;
+    gNdsFighterWalkLoopP1RootYStartBits = 0;
+    gNdsFighterWalkLoopP1RootYAfterHeldBits = 0;
+    gNdsFighterWalkLoopP1RootYAfterSettleBits = 0;
+    gNdsFighterWalkLoopP0RootDeltaXMilli = 0;
+    gNdsFighterWalkLoopP1RootDeltaXMilli = 0;
+    gNdsFighterWalkLoopP0HeldRootDeltaXMilli = 0;
+    gNdsFighterWalkLoopP1HeldRootDeltaXMilli = 0;
+    gNdsFighterWalkLoopP0RootDirectionOK = 0;
+    gNdsFighterWalkLoopP1RootDirectionOK = 0;
+    gNdsFighterWalkLoopP0GroundVelStartMilli = 0;
+    gNdsFighterWalkLoopP1GroundVelStartMilli = 0;
+    gNdsFighterWalkLoopP0GroundVelAfterHeldMilli = 0;
+    gNdsFighterWalkLoopP1GroundVelAfterHeldMilli = 0;
+    gNdsFighterWalkLoopP0GroundVelAfterSettleMilli = 0;
+    gNdsFighterWalkLoopP1GroundVelAfterSettleMilli = 0;
+    gNdsFighterWalkLoopP0AirVelXAfterHeldMilli = 0;
+    gNdsFighterWalkLoopP1AirVelXAfterHeldMilli = 0;
+    gNdsFighterWalkLoopP0AirVelYAfterHeldMilli = 0;
+    gNdsFighterWalkLoopP1AirVelYAfterHeldMilli = 0;
+    gNdsFighterWalkLoopGroundVelAbsStickCount = 0;
+    gNdsFighterWalkLoopGroundVelTransferAirCount = 0;
+    gNdsFighterWalkLoopWaitReturnCheckCount = 0;
+    gNdsFighterWalkLoopWaitReturnSuccessCount = 0;
+    gNdsFighterWalkLoopWaitSetStatusCount = 0;
+    gNdsFighterWalkLoopWaitFrictionCount = 0;
+    gNdsFighterWalkLoopReleaseInputCount = 0;
+    gNdsFighterWalkLoopMapSafeFloorCount = 0;
+    gNdsFighterWalkLoopMapFallDeniedCount = 0;
+    gNdsFighterWalkLoopMapOttottoDeniedCount = 0;
+    gNdsFighterWalkLoopGObjDelta = 0;
+    gNdsFighterWalkLoopUnexpectedStatusCount = 0;
+    gNdsFighterWalkLoopDeniedStatusCount = 0;
+    gNdsFighterWalkLoopProcessAttachCount = 0;
+    gNdsFighterWalkLoopDisplayProbeCount = 0;
+    gNdsFighterWalkLoopGameplayUpdateCount = 0;
+    gNdsFighterWalkLoopDrawCallCount = 0;
+    gNdsFighterWalkLoopMatrixCallCount = 0;
+    gNdsFighterWalkLoopRootYDriftCount = 0;
+    gNdsFighterWalkLoopGADriftCount = 0;
+    gNdsFighterMarioFoxDashRunResult = 0;
+    gNdsFighterMarioFoxDashRunSafeResult = 0;
+    gNdsFighterMarioFoxDashRunMask = 0;
+    gNdsFighterMarioFoxDashRunDeferredMask = 0;
+    gNdsFighterMarioFoxDashRunCount = 0;
+    gNdsFighterDashRunWaitInterruptCallCount = 0;
+    gNdsFighterDashRunGroundCheckCallCount = 0;
+    gNdsFighterDashRunOriginalDashCheckCallCount = 0;
+    gNdsFighterDashRunOriginalDashCheckSuccessCount = 0;
+    gNdsFighterDashRunAttack1CheckCallCount = 0;
+    gNdsFighterDashRunAttack1CheckSuccessCount = 0;
+    gNdsFighterDashRunAttack100StartCheckCallCount = 0;
+    gNdsFighterDashRunAttackDashCheckCallCount = 0;
+    gNdsFighterDashRunAttackDashCheckSuccessCount = 0;
+    gNdsFighterDashRunDashSetStatusCount = 0;
+    gNdsFighterDashRunRunSetStatusCount = 0;
+    gNdsFighterDashRunRunBrakeSetStatusCount = 0;
+    gNdsFighterDashRunAttack11SetStatusCount = 0;
+    gNdsFighterDashRunAttack12SetStatusCount = 0;
+    gNdsFighterDashRunAttack13SetStatusCount = 0;
+    gNdsFighterDashRunAttack100StartSetStatusCount = 0;
+    gNdsFighterDashRunAttack100LoopSetStatusCount = 0;
+    gNdsFighterDashRunAttackDashSetStatusCount = 0;
+    gNdsFighterDashRunDashInterruptCount = 0;
+    gNdsFighterDashRunRunInterruptCount = 0;
+    gNdsFighterDashRunRunBrakeInterruptCount = 0;
+    gNdsFighterDashRunDashPhysicsCount = 0;
+    gNdsFighterDashRunRunPhysicsCount = 0;
+    gNdsFighterDashRunRunBrakePhysicsCount = 0;
+    gNdsFighterDashRunDashMapCount = 0;
+    gNdsFighterDashRunRunMapCount = 0;
+    gNdsFighterDashRunRunBrakeMapCount = 0;
+    gNdsFighterDashRunSafeFloorCount = 0;
+    gNdsFighterDashRunFallBreakSafeCount = 0;
+    gNdsFighterDashRunDeferredInterruptCount = 0;
+    gNdsFighterDashRunFtMainDashStatusCount = 0;
+    gNdsFighterDashRunFtMainRunStatusCount = 0;
+    gNdsFighterDashRunFtMainRunBrakeStatusCount = 0;
+    gNdsFighterDashRunFtMainAttack11StatusCount = 0;
+    gNdsFighterDashRunFtMainAttack12StatusCount = 0;
+    gNdsFighterDashRunFtMainAttack13StatusCount = 0;
+    gNdsFighterDashRunFtMainAttack100StartStatusCount = 0;
+    gNdsFighterDashRunFtMainAttack100LoopStatusCount = 0;
+    gNdsFighterDashRunFtMainAttackDashStatusCount = 0;
+    gNdsFighterDashRunAnimEventsCallCount = 0;
+    gNdsFighterDashRunGroundVelFrictionCount = 0;
+    gNdsFighterDashRunGroundVelTransferAirCount = 0;
+    gNdsFighterDashRunP0StatusDash = 0xffffffffu;
+    gNdsFighterDashRunP1StatusDash = 0xffffffffu;
+    gNdsFighterDashRunP0MotionDash = 0xffffffffu;
+    gNdsFighterDashRunP1MotionDash = 0xffffffffu;
+    gNdsFighterDashRunP0StatusRun = 0xffffffffu;
+    gNdsFighterDashRunP1StatusRun = 0xffffffffu;
+    gNdsFighterDashRunP0MotionRun = 0xffffffffu;
+    gNdsFighterDashRunP1MotionRun = 0xffffffffu;
+    gNdsFighterDashRunP0StatusRunBrake = 0xffffffffu;
+    gNdsFighterDashRunP1StatusRunBrake = 0xffffffffu;
+    gNdsFighterDashRunP0MotionRunBrake = 0xffffffffu;
+    gNdsFighterDashRunP1MotionRunBrake = 0xffffffffu;
+    gNdsFighterDashRunP0StatusAttack11 = 0xffffffffu;
+    gNdsFighterDashRunP1StatusAttack11 = 0xffffffffu;
+    gNdsFighterDashRunP0MotionAttack11 = 0xffffffffu;
+    gNdsFighterDashRunP1MotionAttack11 = 0xffffffffu;
+    gNdsFighterDashRunP0StatusAttack12 = 0xffffffffu;
+    gNdsFighterDashRunP1StatusAttack12 = 0xffffffffu;
+    gNdsFighterDashRunP0MotionAttack12 = 0xffffffffu;
+    gNdsFighterDashRunP1MotionAttack12 = 0xffffffffu;
+    gNdsFighterDashRunP0StatusAttack13 = 0xffffffffu;
+    gNdsFighterDashRunP1StatusAttack13 = 0xffffffffu;
+    gNdsFighterDashRunP0MotionAttack13 = 0xffffffffu;
+    gNdsFighterDashRunP1MotionAttack13 = 0xffffffffu;
+    gNdsFighterDashRunP0StatusAttack100Start = 0xffffffffu;
+    gNdsFighterDashRunP1StatusAttack100Start = 0xffffffffu;
+    gNdsFighterDashRunP0MotionAttack100Start = 0xffffffffu;
+    gNdsFighterDashRunP1MotionAttack100Start = 0xffffffffu;
+    gNdsFighterDashRunP1StatusAttack100Loop = 0xffffffffu;
+    gNdsFighterDashRunP1MotionAttack100Loop = 0xffffffffu;
+    gNdsFighterDashRunP0StatusAttackDash = 0xffffffffu;
+    gNdsFighterDashRunP1StatusAttackDash = 0xffffffffu;
+    gNdsFighterDashRunP0MotionAttackDash = 0xffffffffu;
+    gNdsFighterDashRunP1MotionAttackDash = 0xffffffffu;
+    gNdsFighterDashRunAttack11CallbackMask = 0;
+    gNdsFighterDashRunAttack11TickMask = 0;
+    gNdsFighterDashRunAttack11WaitProcMask = 0;
+    gNdsFighterDashRunAttack12CallbackMask = 0;
+    gNdsFighterDashRunAttack12GotoMask = 0;
+    gNdsFighterDashRunAttack13CallbackMask = 0;
+    gNdsFighterDashRunAttack13GotoMask = 0;
+    gNdsFighterDashRunAttack100StartCallbackMask = 0;
+    gNdsFighterDashRunAttack100StartGotoMask = 0;
+    gNdsFighterDashRunAttack100LoopCallbackMask = 0;
+    gNdsFighterDashRunAttack100LoopGotoMask = 0;
+    gNdsFighterDashRunAttack100LoopTickMask = 0;
+    gNdsFighterDashRunAttackAnimEventsMask = 0;
+    gNdsFighterDashRunAttackEventMask = 0;
+    gNdsFighterDashRunAttackEventScriptMask = 0;
+    gNdsFighterDashRunAttackEventNoHitMask = 0;
+    gNdsFighterDashRunAttackEventCommandMask = 0;
+    gNdsFighterDashRunAttackEventParseCount = 0;
+    gNdsFighterDashRunAttackEventLastPlayer = 0xffffffffu;
+    gNdsFighterDashRunAttackEventLastStatus = 0xffffffffu;
+    gNdsFighterDashRunAttackEventLastState = 0xffffffffu;
+    gNdsFighterDashRunAttackEventLastAttackID = 0xffffffffu;
+    gNdsFighterDashRunAttackEventLastGroupID = 0xffffffffu;
+    gNdsFighterDashRunAttackEventLastJointID = 0xffffffffu;
+    gNdsFighterDashRunAttackEventLastDamage = 0;
+    gNdsFighterDashRunAttackEventLastSize = 0;
+    gNdsFighterDashRunAttackEventLastOffsetX = 0;
+    gNdsFighterDashRunAttackEventLastOffsetY = 0;
+    gNdsFighterDashRunAttackEventLastOffsetZ = 0;
+    gNdsFighterDashRunAttackEventLastAngle = 0;
+    gNdsFighterDashRunAttackEventLastKBG = 0;
+    gNdsFighterDashRunAttackEventLastKBW = 0;
+    gNdsFighterDashRunAttackEventLastBKB = 0;
+    gNdsFighterDashRunAttackEventLastShield = 0;
+    gNdsFighterDashRunAttackEventLastFlags = 0;
+    gNdsFighterDashRunAttackEventPositionMask = 0;
+    gNdsFighterDashRunAttackEventPositionState = 0xffffffffu;
+    gNdsFighterDashRunAttackEventPositionAttackID = 0xffffffffu;
+    gNdsFighterDashRunAttackEventPositionJointID = 0xffffffffu;
+    gNdsFighterDashRunAttackEventPositionX = 0;
+    gNdsFighterDashRunAttackEventPositionY = 0;
+    gNdsFighterDashRunAttackEventPositionZ = 0;
+    gNdsFighterDashRunAttackEventPositionMatrixFlag = 0;
+    gNdsFighterDashRunAttackEventPositionMatrixValue = 0;
+    gNdsFighterDashRunDamageStatusMask = 0;
+    gNdsFighterDashRunDamageStatusLevel = 0xffffffffu;
+    gNdsFighterDashRunDamageStatusIndex = 0xffffffffu;
+    gNdsFighterDashRunDamageStatusGround = 0xffffffffu;
+    gNdsFighterDashRunDamageStatusAir = 0xffffffffu;
+    gNdsFighterDashRunDamageStatusElectric = 0xffffffffu;
+    gNdsFighterDashRunDamageSetupMask = 0;
+    gNdsFighterDashRunDamageSetupStatusBefore = 0xffffffffu;
+    gNdsFighterDashRunDamageSetupStatusAfter = 0xffffffffu;
+    gNdsFighterDashRunDamageSetupMotionAfter = 0xffffffffu;
+    gNdsFighterDashRunDamageSetupGAAfter = 0xffffffffu;
+    gNdsFighterDashRunDamageSetupHitstunBefore = -1;
+    gNdsFighterDashRunDamageSetupHitstunAfter = -1;
+    gNdsFighterDashRunDamageSetupVelGroundMilli = 0;
+    gNdsFighterDashRunDamageSetupVelAirXMilli = 0;
+    gNdsFighterDashRunDamageSetupVelAirYMilli = 0;
+    gNdsFighterDashRunDamageSetupVelPhysicsMilli = 0;
+    gNdsFighterDashRunGuardCheckCallCount = 0;
+    gNdsFighterDashRunGuardCheckSuccessCount = 0;
+    gNdsFighterDashRunGuardSetStatusCount = 0;
+    gNdsFighterDashRunFtMainGuardOnStatusCount = 0;
+    gNdsFighterDashRunGuardSetOffSetStatusCount = 0;
+    gNdsFighterDashRunFtMainGuardSetOffStatusCount = 0;
+    gNdsFighterDashRunGuardAnimEventsMask = 0;
+    gNdsFighterDashRunGuardEffectCount = 0;
+    gNdsFighterDashRunGuardFGMCount = 0;
+    gNdsFighterDashRunGuardLastFGM = 0;
+    gNdsFighterDashRunP0StatusGuardOn = 0;
+    gNdsFighterDashRunP1StatusGuardOn = 0;
+    gNdsFighterDashRunP0MotionGuardOn = 0;
+    gNdsFighterDashRunP1MotionGuardOn = 0;
+    gNdsFighterDashRunGuardCallbackMask = 0;
+    gNdsFighterDashRunGuardStateMask = 0;
+    gNdsFighterDashRunGuardSetOffMask = 0;
+    gNdsFighterDashRunGuardSetOffCallbackMask = 0;
+    gNdsFighterDashRunGuardSetOffFramesMilli = 0;
+    gNdsFighterDashRunGuardSetOffVelMilli = 0;
+    gNdsFighterDashRunEscapeCheckCallCount = 0;
+    gNdsFighterDashRunEscapeCheckSuccessCount = 0;
+    gNdsFighterDashRunEscapeSetStatusCount = 0;
+    gNdsFighterDashRunFtMainEscapeStatusCount = 0;
+    gNdsFighterDashRunEscapeCallbackMask = 0;
+    gNdsFighterDashRunEscapeStateMask = 0;
+    gNdsFighterDashRunEscapeTickMask = 0;
+    gNdsFighterDashRunEscapeInterruptCount = 0;
+    gNdsFighterDashRunEscapePhysicsCount = 0;
+    gNdsFighterDashRunEscapeMapCount = 0;
+    gNdsFighterDashRunP0StatusEscape = 0;
+    gNdsFighterDashRunP1StatusEscape = 0;
+    gNdsFighterDashRunP0MotionEscape = 0;
+    gNdsFighterDashRunP1MotionEscape = 0;
+    gNdsFighterDashRunP0EscapeItemThrowBuffer = 0;
+    gNdsFighterDashRunP1EscapeItemThrowBuffer = 0;
+    gNdsFighterDashRunAttackDashCallbackMask = 0;
+    gNdsFighterDashRunAttackDashTickMask = 0;
+    gNdsFighterDashRunAttackDashRunProcMask = 0;
+    gNdsFighterDashRunP0TapStickXAfterDash = 0;
+    gNdsFighterDashRunP1TapStickXAfterDash = 0;
+    gNdsFighterDashRunP0LR = 0;
+    gNdsFighterDashRunP1LR = 0;
+    gNdsFighterDashRunP0StickX = 0;
+    gNdsFighterDashRunP1StickX = 0;
+    gNdsFighterDashRunP0RootDeltaXMilli = 0;
+    gNdsFighterDashRunP1RootDeltaXMilli = 0;
+    gNdsFighterDashRunP0GroundVelRunMilli = 0;
+    gNdsFighterDashRunP1GroundVelRunMilli = 0;
+    gNdsFighterDashRunP0GroundVelBrakeMilli = 0;
+    gNdsFighterDashRunP1GroundVelBrakeMilli = 0;
+    gNdsFighterDashRunP0RootDirectionOK = 0;
+    gNdsFighterDashRunP1RootDirectionOK = 0;
+    gNdsFighterDashRunRootYDriftCount = 0;
+    gNdsFighterDashRunGADriftCount = 0;
+    gNdsFighterDashRunGObjDelta = 0;
+    gNdsFighterDashRunDeniedStatusCount = 0;
+    gNdsFighterDashRunUnexpectedStatusCount = 0;
+    gNdsFighterDashRunProcessAttachCount = 0;
+    gNdsFighterDashRunDisplayProbeCount = 0;
+    gNdsFighterDashRunGameplayUpdateCount = 0;
+    gNdsFighterDashRunDrawCallCount = 0;
+    gNdsFighterDashRunMatrixCallCount = 0;
+    gNdsFighterMarioFoxJumpLoopResult = 0;
+    gNdsFighterMarioFoxJumpLoopSafeResult = 0;
+    gNdsFighterMarioFoxJumpLoopMask = 0;
+    gNdsFighterMarioFoxJumpLoopDeferredMask = 0;
+    gNdsFighterMarioFoxJumpLoopCount = 0;
+    gNdsFighterJumpRunBrakeEndCallCount = 0;
+    gNdsFighterJumpWaitSetStatusCount = 0;
+    gNdsFighterJumpWaitInterruptCallCount = 0;
+    gNdsFighterJumpGroundCheckCallCount = 0;
+    gNdsFighterJumpOriginalKneeBendCheckCallCount = 0;
+    gNdsFighterJumpOriginalKneeBendCheckSuccessCount = 0;
+    gNdsFighterJumpKneeBendSetStatusCallCount = 0;
+    gNdsFighterJumpFtMainKneeBendStatusCount = 0;
+    gNdsFighterJumpKneeBendUpdateCallCount = 0;
+    gNdsFighterJumpKneeBendInterruptCallCount = 0;
+    gNdsFighterJumpSetStatusCallCount = 0;
+    gNdsFighterJumpFtMainJumpStatusCount = 0;
+    gNdsFighterJumpSetAirCallCount = 0;
+    gNdsFighterJumpAirInterruptCallCount = 0;
+    gNdsFighterJumpAirPhysicsCallCount = 0;
+    gNdsFighterJumpAirMapCallCount = 0;
+    gNdsFighterJumpGravityCallCount = 0;
+    gNdsFighterJumpAirDriftCallCount = 0;
+    gNdsFighterJumpAirFrictionCallCount = 0;
+    gNdsFighterJumpDeferredInterruptCheckCount = 0;
+    gNdsFighterJumpSpecialHiCheckCount = 0;
+    gNdsFighterJumpAttackHi4KneeBendCheckCount = 0;
+    gNdsFighterJumpSpecialAirCheckCount = 0;
+    gNdsFighterJumpAttackAirCheckCount = 0;
+    gNdsFighterJumpAttackAirRefreshCount = 0;
+    gNdsFighterJumpAttackAirRefreshMask = 0;
+    gNdsFighterJumpAttackAirRefreshStateMask = 0;
+    gNdsFighterJumpAttackAirRecordClearMask = 0;
+    gNdsFighterJumpAttackAirMapLandingMask = 0;
+    gNdsFighterJumpAttackAirDirectionMask = 0;
+    gNdsFighterJumpAerialCheckCount = 0;
+    gNdsFighterJumpHammerHoldCheckCount = 0;
+    gNdsFighterJumpHammerKneeBendCheckCount = 0;
+    gNdsFighterJumpFallDeferredCount = 0;
+    gNdsFighterJumpLandingDeniedCount = 0;
+    gNdsFighterJumpCliffDeniedCount = 0;
+    gNdsFighterJumpCeilingDeniedCount = 0;
+    gNdsFighterJumpDeniedStatusCount = 0;
+    gNdsFighterJumpUnexpectedStatusCount = 0;
+    gNdsFighterJumpProcessAttachCount = 0;
+    gNdsFighterJumpDisplayProbeCount = 0;
+    gNdsFighterJumpGameplayUpdateCount = 0;
+    gNdsFighterJumpDrawCallCount = 0;
+    gNdsFighterJumpMatrixCallCount = 0;
+    gNdsFighterJumpP0StatusStart = 0xffffffffu;
+    gNdsFighterJumpP1StatusStart = 0xffffffffu;
+    gNdsFighterJumpP0MotionStart = 0xffffffffu;
+    gNdsFighterJumpP1MotionStart = 0xffffffffu;
+    gNdsFighterJumpP0StatusWait = 0xffffffffu;
+    gNdsFighterJumpP1StatusWait = 0xffffffffu;
+    gNdsFighterJumpP0MotionWait = 0xffffffffu;
+    gNdsFighterJumpP1MotionWait = 0xffffffffu;
+    gNdsFighterJumpP0StatusKneeBend = 0xffffffffu;
+    gNdsFighterJumpP1StatusKneeBend = 0xffffffffu;
+    gNdsFighterJumpP0MotionKneeBend = 0xffffffffu;
+    gNdsFighterJumpP1MotionKneeBend = 0xffffffffu;
+    gNdsFighterJumpP0StatusJump = 0xffffffffu;
+    gNdsFighterJumpP1StatusJump = 0xffffffffu;
+    gNdsFighterJumpP0MotionJump = 0xffffffffu;
+    gNdsFighterJumpP1MotionJump = 0xffffffffu;
+    gNdsFighterJumpP0GAStart = 0xffffffffu;
+    gNdsFighterJumpP1GAStart = 0xffffffffu;
+    gNdsFighterJumpP0GAWait = 0xffffffffu;
+    gNdsFighterJumpP1GAWait = 0xffffffffu;
+    gNdsFighterJumpP0GAKneeBend = 0xffffffffu;
+    gNdsFighterJumpP1GAKneeBend = 0xffffffffu;
+    gNdsFighterJumpP0GAJump = 0xffffffffu;
+    gNdsFighterJumpP1GAJump = 0xffffffffu;
+    gNdsFighterJumpP0GAAfterAir = 0xffffffffu;
+    gNdsFighterJumpP1GAAfterAir = 0xffffffffu;
+    gNdsFighterJumpP0InputSource = 0;
+    gNdsFighterJumpP1InputSource = 0;
+    gNdsFighterJumpP0ShortHop = 0;
+    gNdsFighterJumpP1ShortHop = 0;
+    gNdsFighterJumpP0StickX = 0;
+    gNdsFighterJumpP1StickX = 0;
+    gNdsFighterJumpP0ButtonTap = 0;
+    gNdsFighterJumpP1ButtonTap = 0;
+    gNdsFighterJumpP0ButtonRelease = 0;
+    gNdsFighterJumpP1ButtonRelease = 0;
+    gNdsFighterJumpP0KneeBendFrames = 0;
+    gNdsFighterJumpP1KneeBendFrames = 0;
+    gNdsFighterJumpP0AirFrames = 0;
+    gNdsFighterJumpP1AirFrames = 0;
+    gNdsFighterJumpP0RootDeltaXMilli = 0;
+    gNdsFighterJumpP1RootDeltaXMilli = 0;
+    gNdsFighterJumpP0RootDeltaYMilli = 0;
+    gNdsFighterJumpP1RootDeltaYMilli = 0;
+    gNdsFighterJumpP0RootDirectionOK = 0;
+    gNdsFighterJumpP1RootDirectionOK = 0;
+    gNdsFighterJumpP0RootRiseOK = 0;
+    gNdsFighterJumpP1RootRiseOK = 0;
+    gNdsFighterJumpP0VelXInitialMilli = 0;
+    gNdsFighterJumpP1VelXInitialMilli = 0;
+    gNdsFighterJumpP0VelYInitialMilli = 0;
+    gNdsFighterJumpP1VelYInitialMilli = 0;
+    gNdsFighterJumpP0VelXAfterMilli = 0;
+    gNdsFighterJumpP1VelXAfterMilli = 0;
+    gNdsFighterJumpP0VelYAfterMilli = 0;
+    gNdsFighterJumpP1VelYAfterMilli = 0;
+    gNdsFighterJumpGObjDelta = 0;
+    gNdsFighterMarioFoxLandingLoopResult = 0;
+    gNdsFighterMarioFoxLandingLoopSafeResult = 0;
+    gNdsFighterMarioFoxLandingLoopMask = 0;
+    gNdsFighterMarioFoxLandingLoopDeferredMask = 0;
+    gNdsFighterMarioFoxLandingLoopCount = 0;
+    gNdsFighterLandingJumpAnimEndCallCount = 0;
+    gNdsFighterLandingFallSetStatusCallCount = 0;
+    gNdsFighterLandingFtMainFallStatusCount = 0;
+    gNdsFighterLandingSetGroundCallCount = 0;
+    gNdsFighterLandingSetStatusCallCount = 0;
+    gNdsFighterLandingFtMainLandingLightStatusCount = 0;
+    gNdsFighterLandingFtMainLandingHeavyStatusCount = 0;
+    gNdsFighterLandingEndCallCount = 0;
+    gNdsFighterLandingWaitSetStatusCount = 0;
+    gNdsFighterLandingWaitSetStatusSuccessCount = 0;
+    gNdsFighterLandingFallFrameMax = 0;
+    gNdsFighterLandingLandingFrameTarget = 0;
+    gNdsFighterLandingP0FallFrameCount = 0;
+    gNdsFighterLandingP1FallFrameCount = 0;
+    gNdsFighterLandingP0FallInterruptCount = 0;
+    gNdsFighterLandingP1FallInterruptCount = 0;
+    gNdsFighterLandingP0FallPhysicsCount = 0;
+    gNdsFighterLandingP1FallPhysicsCount = 0;
+    gNdsFighterLandingP0FallMapCount = 0;
+    gNdsFighterLandingP1FallMapCount = 0;
+    gNdsFighterLandingP0LandingFrameCount = 0;
+    gNdsFighterLandingP1LandingFrameCount = 0;
+    gNdsFighterLandingP0LandingInterruptCount = 0;
+    gNdsFighterLandingP1LandingInterruptCount = 0;
+    gNdsFighterLandingP0LandingPhysicsCount = 0;
+    gNdsFighterLandingP1LandingPhysicsCount = 0;
+    gNdsFighterLandingAirNoCollisionCount = 0;
+    gNdsFighterLandingFloorDetectCount = 0;
+    gNdsFighterLandingFloorClampCount = 0;
+    gNdsFighterLandingFastFallCheckCount = 0;
+    gNdsFighterLandingFastFallCount = 0;
+    gNdsFighterLandingHeavyDeniedCount = 0;
+    gNdsFighterLandingFallAerialDeniedCount = 0;
+    gNdsFighterLandingJumpAerialDeniedCount = 0;
+    gNdsFighterLandingCliffDeniedCount = 0;
+    gNdsFighterLandingCeilingDeniedCount = 0;
+    gNdsFighterLandingDeferredInterruptCheckCount = 0;
+    gNdsFighterLandingGObjDelta = 0;
+    gNdsFighterLandingUnexpectedStatusCount = 0;
+    gNdsFighterLandingDeniedStatusCount = 0;
+    gNdsFighterLandingProcessAttachCount = 0;
+    gNdsFighterLandingDisplayProbeCount = 0;
+    gNdsFighterLandingGameplayUpdateCount = 0;
+    gNdsFighterLandingDrawCallCount = 0;
+    gNdsFighterLandingMatrixCallCount = 0;
+    gNdsFighterLandingRootYDriftCount = 0;
+    gNdsFighterLandingGADriftCount = 0;
+    gNdsFighterLandingP0StatusStart = 0xffffffffu;
+    gNdsFighterLandingP1StatusStart = 0xffffffffu;
+    gNdsFighterLandingP0MotionStart = 0xffffffffu;
+    gNdsFighterLandingP1MotionStart = 0xffffffffu;
+    gNdsFighterLandingP0GAStart = 0xffffffffu;
+    gNdsFighterLandingP1GAStart = 0xffffffffu;
+    gNdsFighterLandingP0StatusFall = 0xffffffffu;
+    gNdsFighterLandingP1StatusFall = 0xffffffffu;
+    gNdsFighterLandingP0MotionFall = 0xffffffffu;
+    gNdsFighterLandingP1MotionFall = 0xffffffffu;
+    gNdsFighterLandingP0GAFall = 0xffffffffu;
+    gNdsFighterLandingP1GAFall = 0xffffffffu;
+    gNdsFighterLandingP0StatusLanding = 0xffffffffu;
+    gNdsFighterLandingP1StatusLanding = 0xffffffffu;
+    gNdsFighterLandingP0MotionLanding = 0xffffffffu;
+    gNdsFighterLandingP1MotionLanding = 0xffffffffu;
+    gNdsFighterLandingP0GALanding = 0xffffffffu;
+    gNdsFighterLandingP1GALanding = 0xffffffffu;
+    gNdsFighterLandingP0StatusWait = 0xffffffffu;
+    gNdsFighterLandingP1StatusWait = 0xffffffffu;
+    gNdsFighterLandingP0MotionWait = 0xffffffffu;
+    gNdsFighterLandingP1MotionWait = 0xffffffffu;
+    gNdsFighterLandingP0GAWait = 0xffffffffu;
+    gNdsFighterLandingP1GAWait = 0xffffffffu;
+    gNdsFighterLandingP0FloorYMilli = 0;
+    gNdsFighterLandingP1FloorYMilli = 0;
+    gNdsFighterLandingP0RootYFallStartMilli = 0;
+    gNdsFighterLandingP1RootYFallStartMilli = 0;
+    gNdsFighterLandingP0RootYFinalMilli = 0;
+    gNdsFighterLandingP1RootYFinalMilli = 0;
+    gNdsFighterLandingP0RootDeltaXMilli = 0;
+    gNdsFighterLandingP1RootDeltaXMilli = 0;
+    gNdsFighterLandingP0RootDirectionOK = 0;
+    gNdsFighterLandingP1RootDirectionOK = 0;
+    gNdsFighterLandingP0RootFloorOK = 0;
+    gNdsFighterLandingP1RootFloorOK = 0;
+    gNdsFighterLandingP0VelYFallStartMilli = 0;
+    gNdsFighterLandingP1VelYFallStartMilli = 0;
+    gNdsFighterLandingP0VelYBeforeLandingMilli = 0;
+    gNdsFighterLandingP1VelYBeforeLandingMilli = 0;
+    gNdsFighterLandingP0GroundVelAfterLandingMilli = 0;
+    gNdsFighterLandingP1GroundVelAfterLandingMilli = 0;
+    gNdsFighterLandingP0GroundVelAfterWaitMilli = 0;
+    gNdsFighterLandingP1GroundVelAfterWaitMilli = 0;
+    gNdsFighterLandingGravityCallCount = 0;
+    gNdsFighterLandingAirDriftCallCount = 0;
+    gNdsFighterLandingAirFrictionCallCount = 0;
+    gNdsFighterLandingGroundFrictionCallCount = 0;
+    gNdsFighterLandingWaitFrictionCallCount = 0;
+    gNdsFighterMarioFoxProcessLoopResult = 0;
+    gNdsFighterMarioFoxProcessLoopSafeResult = 0;
+    gNdsFighterMarioFoxProcessLoopMask = 0;
+    gNdsFighterMarioFoxProcessLoopDeferredMask = 0;
+    gNdsFighterMarioFoxProcessLoopCount = 0;
+    gNdsFighterProcessLoopFrameMax = 0;
+    gNdsFighterProcessLoopP0FrameCount = 0;
+    gNdsFighterProcessLoopP1FrameCount = 0;
+    gNdsFighterProcessLoopP0Completed = 0;
+    gNdsFighterProcessLoopP1Completed = 0;
+    gNdsFighterProcessLoopP0StatusVisitMask = 0;
+    gNdsFighterProcessLoopP1StatusVisitMask = 0;
+    gNdsFighterProcessLoopP0TransitionMask = 0;
+    gNdsFighterProcessLoopP1TransitionMask = 0;
+    gNdsFighterProcessLoopP0InputApplyCount = 0;
+    gNdsFighterProcessLoopP1InputApplyCount = 0;
+    gNdsFighterProcessLoopControllerBridgeCount = 0;
+    gNdsFighterProcessLoopControllerMirrorCount = 0;
+    gNdsFighterProcessLoopP0ButtonTapMask = 0;
+    gNdsFighterProcessLoopP1ButtonTapMask = 0;
+    gNdsFighterProcessLoopP0LastStickX = 0;
+    gNdsFighterProcessLoopP1LastStickX = 0;
+    gNdsFighterProcessLoopP0UpdateCount = 0;
+    gNdsFighterProcessLoopP1UpdateCount = 0;
+    gNdsFighterProcessLoopP0InterruptCount = 0;
+    gNdsFighterProcessLoopP1InterruptCount = 0;
+    gNdsFighterProcessLoopP0PhysicsCount = 0;
+    gNdsFighterProcessLoopP1PhysicsCount = 0;
+    gNdsFighterProcessLoopP0IntegrateCount = 0;
+    gNdsFighterProcessLoopP1IntegrateCount = 0;
+    gNdsFighterProcessLoopP0MapCount = 0;
+    gNdsFighterProcessLoopP1MapCount = 0;
+    gNdsFighterProcessLoopP0WaitVisitCount = 0;
+    gNdsFighterProcessLoopP1WaitVisitCount = 0;
+    gNdsFighterProcessLoopP0WalkVisitCount = 0;
+    gNdsFighterProcessLoopP1WalkVisitCount = 0;
+    gNdsFighterProcessLoopP0DashVisitCount = 0;
+    gNdsFighterProcessLoopP1DashVisitCount = 0;
+    gNdsFighterProcessLoopP0RunVisitCount = 0;
+    gNdsFighterProcessLoopP1RunVisitCount = 0;
+    gNdsFighterProcessLoopP0RunBrakeVisitCount = 0;
+    gNdsFighterProcessLoopP1RunBrakeVisitCount = 0;
+    gNdsFighterProcessLoopP0KneeBendVisitCount = 0;
+    gNdsFighterProcessLoopP1KneeBendVisitCount = 0;
+    gNdsFighterProcessLoopP0JumpVisitCount = 0;
+    gNdsFighterProcessLoopP1JumpVisitCount = 0;
+    gNdsFighterProcessLoopP0FallVisitCount = 0;
+    gNdsFighterProcessLoopP1FallVisitCount = 0;
+    gNdsFighterProcessLoopP0LandingVisitCount = 0;
+    gNdsFighterProcessLoopP1LandingVisitCount = 0;
+    gNdsFighterProcessLoopP0StatusStart = 0xffffffffu;
+    gNdsFighterProcessLoopP1StatusStart = 0xffffffffu;
+    gNdsFighterProcessLoopP0MotionStart = 0xffffffffu;
+    gNdsFighterProcessLoopP1MotionStart = 0xffffffffu;
+    gNdsFighterProcessLoopP0StatusFinal = 0xffffffffu;
+    gNdsFighterProcessLoopP1StatusFinal = 0xffffffffu;
+    gNdsFighterProcessLoopP0MotionFinal = 0xffffffffu;
+    gNdsFighterProcessLoopP1MotionFinal = 0xffffffffu;
+    gNdsFighterProcessLoopP0GAFinal = 0xffffffffu;
+    gNdsFighterProcessLoopP1GAFinal = 0xffffffffu;
+    gNdsFighterProcessLoopP0FloorYMilli = 0;
+    gNdsFighterProcessLoopP1FloorYMilli = 0;
+    gNdsFighterProcessLoopP0RootXStartMilli = 0;
+    gNdsFighterProcessLoopP1RootXStartMilli = 0;
+    gNdsFighterProcessLoopP0RootXFinalMilli = 0;
+    gNdsFighterProcessLoopP1RootXFinalMilli = 0;
+    gNdsFighterProcessLoopP0RootDeltaXMilli = 0;
+    gNdsFighterProcessLoopP1RootDeltaXMilli = 0;
+    gNdsFighterProcessLoopP0RootYFinalMilli = 0;
+    gNdsFighterProcessLoopP1RootYFinalMilli = 0;
+    gNdsFighterProcessLoopP0RootRiseMilli = 0;
+    gNdsFighterProcessLoopP1RootRiseMilli = 0;
+    gNdsFighterProcessLoopP0RootDirectionOK = 0;
+    gNdsFighterProcessLoopP1RootDirectionOK = 0;
+    gNdsFighterProcessLoopP0FloorOK = 0;
+    gNdsFighterProcessLoopP1FloorOK = 0;
+    gNdsFighterProcessLoopP0GroundVelFinalMilli = 0;
+    gNdsFighterProcessLoopP1GroundVelFinalMilli = 0;
+    gNdsFighterProcessLoopP0AirVelXFinalMilli = 0;
+    gNdsFighterProcessLoopP1AirVelXFinalMilli = 0;
+    gNdsFighterProcessLoopP0AirVelYFinalMilli = 0;
+    gNdsFighterProcessLoopP1AirVelYFinalMilli = 0;
+    gNdsFighterProcessLoopFallDetectCount = 0;
+    gNdsFighterProcessLoopLandingDetectCount = 0;
+    gNdsFighterProcessLoopSetGroundCount = 0;
+    gNdsFighterProcessLoopSetAirCount = 0;
+    gNdsFighterProcessLoopWaitSetStatusCount = 0;
+    gNdsFighterProcessLoopRunBrakeEndCount = 0;
+    gNdsFighterProcessLoopJumpAnimEndCount = 0;
+    gNdsFighterProcessLoopLandingEndCount = 0;
+    gNdsFighterProcessLoopDeferredInterruptCheckCount = 0;
+    gNdsFighterProcessLoopGObjDelta = 0;
+    gNdsFighterProcessLoopUnexpectedStatusCount = 0;
+    gNdsFighterProcessLoopDeniedStatusCount = 0;
+    gNdsFighterProcessLoopProcessAttachCount = 0;
+    gNdsFighterProcessLoopDisplayProbeCount = 0;
+    gNdsFighterProcessLoopGameplayUpdateCount = 0;
+    gNdsFighterProcessLoopDrawCallCount = 0;
+    gNdsFighterProcessLoopMatrixCallCount = 0;
+    gNdsFighterProcessLoopRootYDriftCount = 0;
+    gNdsFighterProcessLoopGADriftCount = 0;
+    gNdsFighterMarioFoxSchedulerLoopResult = 0;
+    gNdsFighterMarioFoxSchedulerLoopSafeResult = 0;
+    gNdsFighterMarioFoxSchedulerLoopMask = 0;
+    gNdsFighterMarioFoxSchedulerLoopDeferredMask = 0;
+    gNdsFighterMarioFoxSchedulerLoopCount = 0;
+    gNdsFighterSchedulerLoopPrepared = 0;
+    gNdsFighterSchedulerLoopFrameMax = 0;
+    gNdsFighterSchedulerLoopUpdateMax = 0;
+    gNdsFighterSchedulerLoopTaskmanUpdateCount = 0;
+    gNdsFighterSchedulerLoopVSBattleUpdateCount = 0;
+    gNdsFighterSchedulerLoopBaseVSBattleUpdateCount = 0;
+    gNdsFighterSchedulerLoopSchedulerUpdateCount = 0;
+    gNdsFighterSchedulerLoopGObjCountBefore = 0;
+    gNdsFighterSchedulerLoopGObjCountAfter = 0;
+    gNdsFighterSchedulerLoopGObjDelta = 0;
+    gNdsFighterSchedulerLoopP0ProcessAttachCount = 0;
+    gNdsFighterSchedulerLoopP1ProcessAttachCount = 0;
+    gNdsFighterSchedulerLoopProcessAttachEscapeCount = 0;
+    gNdsFighterSchedulerLoopP0GObjProcessRunCount = 0;
+    gNdsFighterSchedulerLoopP1GObjProcessRunCount = 0;
+    gNdsFighterSchedulerLoopP0ProcCallbackCount = 0;
+    gNdsFighterSchedulerLoopP1ProcCallbackCount = 0;
+    gNdsFighterSchedulerLoopP0InputApplyCount = 0;
+    gNdsFighterSchedulerLoopP1InputApplyCount = 0;
+    gNdsFighterSchedulerLoopControllerBridgeCount = 0;
+    gNdsFighterSchedulerLoopControllerMirrorCount = 0;
+    gNdsFighterSchedulerLoopP0ButtonTapMask = 0;
+    gNdsFighterSchedulerLoopP1ButtonTapMask = 0;
+    gNdsFighterSchedulerLoopP0LastStickX = 0;
+    gNdsFighterSchedulerLoopP1LastStickX = 0;
+    gNdsFighterSchedulerLoopP0FrameCount = 0;
+    gNdsFighterSchedulerLoopP1FrameCount = 0;
+    gNdsFighterSchedulerLoopP0Completed = 0;
+    gNdsFighterSchedulerLoopP1Completed = 0;
+    gNdsFighterSchedulerLoopP0StatusVisitMask = 0;
+    gNdsFighterSchedulerLoopP1StatusVisitMask = 0;
+    gNdsFighterSchedulerLoopP0TransitionMask = 0;
+    gNdsFighterSchedulerLoopP1TransitionMask = 0;
+    gNdsFighterSchedulerLoopP0WaitVisitCount = 0;
+    gNdsFighterSchedulerLoopP1WaitVisitCount = 0;
+    gNdsFighterSchedulerLoopP0WalkVisitCount = 0;
+    gNdsFighterSchedulerLoopP1WalkVisitCount = 0;
+    gNdsFighterSchedulerLoopP0DashVisitCount = 0;
+    gNdsFighterSchedulerLoopP1DashVisitCount = 0;
+    gNdsFighterSchedulerLoopP0RunVisitCount = 0;
+    gNdsFighterSchedulerLoopP1RunVisitCount = 0;
+    gNdsFighterSchedulerLoopP0RunBrakeVisitCount = 0;
+    gNdsFighterSchedulerLoopP1RunBrakeVisitCount = 0;
+    gNdsFighterSchedulerLoopP0KneeBendVisitCount = 0;
+    gNdsFighterSchedulerLoopP1KneeBendVisitCount = 0;
+    gNdsFighterSchedulerLoopP0JumpVisitCount = 0;
+    gNdsFighterSchedulerLoopP1JumpVisitCount = 0;
+    gNdsFighterSchedulerLoopP0FallVisitCount = 0;
+    gNdsFighterSchedulerLoopP1FallVisitCount = 0;
+    gNdsFighterSchedulerLoopP0LandingVisitCount = 0;
+    gNdsFighterSchedulerLoopP1LandingVisitCount = 0;
+    gNdsFighterSchedulerLoopP0StatusStart = 0xffffffffu;
+    gNdsFighterSchedulerLoopP1StatusStart = 0xffffffffu;
+    gNdsFighterSchedulerLoopP0MotionStart = 0xffffffffu;
+    gNdsFighterSchedulerLoopP1MotionStart = 0xffffffffu;
+    gNdsFighterSchedulerLoopP0StatusFinal = 0xffffffffu;
+    gNdsFighterSchedulerLoopP1StatusFinal = 0xffffffffu;
+    gNdsFighterSchedulerLoopP0MotionFinal = 0xffffffffu;
+    gNdsFighterSchedulerLoopP1MotionFinal = 0xffffffffu;
+    gNdsFighterSchedulerLoopP0GAFinal = 0xffffffffu;
+    gNdsFighterSchedulerLoopP1GAFinal = 0xffffffffu;
+    gNdsFighterSchedulerLoopP0FloorYMilli = 0;
+    gNdsFighterSchedulerLoopP1FloorYMilli = 0;
+    gNdsFighterSchedulerLoopP0RootXStartMilli = 0;
+    gNdsFighterSchedulerLoopP1RootXStartMilli = 0;
+    gNdsFighterSchedulerLoopP0RootXFinalMilli = 0;
+    gNdsFighterSchedulerLoopP1RootXFinalMilli = 0;
+    gNdsFighterSchedulerLoopP0RootDeltaXMilli = 0;
+    gNdsFighterSchedulerLoopP1RootDeltaXMilli = 0;
+    gNdsFighterSchedulerLoopP0RootYFinalMilli = 0;
+    gNdsFighterSchedulerLoopP1RootYFinalMilli = 0;
+    gNdsFighterSchedulerLoopP0RootRiseMilli = 0;
+    gNdsFighterSchedulerLoopP1RootRiseMilli = 0;
+    gNdsFighterSchedulerLoopP0RootDirectionOK = 0;
+    gNdsFighterSchedulerLoopP1RootDirectionOK = 0;
+    gNdsFighterSchedulerLoopP0FloorOK = 0;
+    gNdsFighterSchedulerLoopP1FloorOK = 0;
+    gNdsFighterSchedulerLoopP0GroundVelFinalMilli = 0;
+    gNdsFighterSchedulerLoopP1GroundVelFinalMilli = 0;
+    gNdsFighterSchedulerLoopP0AirVelXFinalMilli = 0;
+    gNdsFighterSchedulerLoopP1AirVelXFinalMilli = 0;
+    gNdsFighterSchedulerLoopP0AirVelYFinalMilli = 0;
+    gNdsFighterSchedulerLoopP1AirVelYFinalMilli = 0;
+    gNdsFighterSchedulerLoopP0UpdateCount = 0;
+    gNdsFighterSchedulerLoopP1UpdateCount = 0;
+    gNdsFighterSchedulerLoopP0InterruptCount = 0;
+    gNdsFighterSchedulerLoopP1InterruptCount = 0;
+    gNdsFighterSchedulerLoopP0PhysicsCount = 0;
+    gNdsFighterSchedulerLoopP1PhysicsCount = 0;
+    gNdsFighterSchedulerLoopP0IntegrateCount = 0;
+    gNdsFighterSchedulerLoopP1IntegrateCount = 0;
+    gNdsFighterSchedulerLoopP0MapCount = 0;
+    gNdsFighterSchedulerLoopP1MapCount = 0;
+    gNdsFighterSchedulerLoopFallDetectCount = 0;
+    gNdsFighterSchedulerLoopLandingDetectCount = 0;
+    gNdsFighterSchedulerLoopSetGroundCount = 0;
+    gNdsFighterSchedulerLoopSetAirCount = 0;
+    gNdsFighterSchedulerLoopWaitSetStatusCount = 0;
+    gNdsFighterSchedulerLoopRunBrakeEndCount = 0;
+    gNdsFighterSchedulerLoopJumpAnimEndCount = 0;
+    gNdsFighterSchedulerLoopLandingEndCount = 0;
+    gNdsFighterSchedulerLoopDeferredInterruptCheckCount = 0;
+    gNdsFighterSchedulerLoopUnexpectedStatusCount = 0;
+    gNdsFighterSchedulerLoopDeniedStatusCount = 0;
+    gNdsFighterSchedulerLoopDisplayProbeCount = 0;
+    gNdsFighterSchedulerLoopGameplayUpdateCount = 0;
+    gNdsFighterSchedulerLoopDrawCallCount = 0;
+    gNdsFighterSchedulerLoopMatrixCallCount = 0;
+    gNdsFighterSchedulerLoopRootYDriftCount = 0;
+    gNdsFighterSchedulerLoopGADriftCount = 0;
+    ndsControllerPlaybackReset();
+    gNdsControllerPollCount = 0;
+    gNdsFighterMarioFoxControllerLoopResult = 0;
+    gNdsFighterMarioFoxControllerLoopSafeResult = 0;
+    gNdsFighterMarioFoxControllerLoopMask = 0;
+    gNdsFighterMarioFoxControllerLoopDeferredMask = 0;
+    gNdsFighterMarioFoxControllerLoopCount = 0;
+    gNdsFighterControllerLoopPrepared = 0;
+    gNdsFighterControllerLoopFrameMax = 0;
+    gNdsFighterControllerLoopUpdateMax = 0;
+    gNdsFighterControllerLoopTaskmanUpdateCount = 0;
+    gNdsFighterControllerLoopVSBattleUpdateCount = 0;
+    gNdsFighterControllerLoopBaseVSBattleUpdateCount = 0;
+    gNdsFighterControllerLoopSchedulerUpdateCount = 0;
+    gNdsFighterControllerLoopSYReadCount = 0;
+    gNdsFighterControllerLoopSYUpdateCount = 0;
+    gNdsFighterControllerLoopGObjCountBefore = 0;
+    gNdsFighterControllerLoopGObjCountAfter = 0;
+    gNdsFighterControllerLoopGObjDelta = 0;
+    gNdsFighterControllerLoopP0ProcessAttachCount = 0;
+    gNdsFighterControllerLoopP1ProcessAttachCount = 0;
+    gNdsFighterControllerLoopProcessAttachEscapeCount = 0;
+    gNdsFighterControllerLoopP0GObjProcessRunCount = 0;
+    gNdsFighterControllerLoopP1GObjProcessRunCount = 0;
+    gNdsFighterControllerLoopP0ProcCallbackCount = 0;
+    gNdsFighterControllerLoopP1ProcCallbackCount = 0;
+    gNdsFighterControllerLoopP0PlaybackApplyCount = 0;
+    gNdsFighterControllerLoopP1PlaybackApplyCount = 0;
+    gNdsFighterControllerLoopP0ControllerToFTInputCount = 0;
+    gNdsFighterControllerLoopP1ControllerToFTInputCount = 0;
+    gNdsFighterControllerLoopP0DirectFTInputWriteCount = 0;
+    gNdsFighterControllerLoopP1DirectFTInputWriteCount = 0;
+    gNdsFighterControllerLoopP0ButtonTapMask = 0;
+    gNdsFighterControllerLoopP1ButtonTapMask = 0;
+    gNdsFighterControllerLoopP0ButtonHoldMask = 0;
+    gNdsFighterControllerLoopP1ButtonHoldMask = 0;
+    gNdsFighterControllerLoopP0ButtonReleaseMask = 0;
+    gNdsFighterControllerLoopP1ButtonReleaseMask = 0;
+    gNdsFighterControllerLoopP0LastStickX = 0;
+    gNdsFighterControllerLoopP1LastStickX = 0;
+    gNdsFighterControllerLoopP0LastStickY = 0;
+    gNdsFighterControllerLoopP1LastStickY = 0;
+    gNdsFighterControllerLoopP0TapStickXMin = 0xffffffffu;
+    gNdsFighterControllerLoopP1TapStickXMin = 0xffffffffu;
+    gNdsFighterControllerLoopP0TapStickYMin = 0xffffffffu;
+    gNdsFighterControllerLoopP1TapStickYMin = 0xffffffffu;
+    gNdsFighterControllerLoopP0DashTapEligibleCount = 0;
+    gNdsFighterControllerLoopP1DashTapEligibleCount = 0;
+    gNdsFighterControllerLoopP0JumpButtonTapCount = 0;
+    gNdsFighterControllerLoopP1JumpButtonTapCount = 0;
+    gNdsFighterControllerLoopP0FrameCount = 0;
+    gNdsFighterControllerLoopP1FrameCount = 0;
+    gNdsFighterControllerLoopP0Completed = 0;
+    gNdsFighterControllerLoopP1Completed = 0;
+    gNdsFighterControllerLoopP0StatusVisitMask = 0;
+    gNdsFighterControllerLoopP1StatusVisitMask = 0;
+    gNdsFighterControllerLoopP0TransitionMask = 0;
+    gNdsFighterControllerLoopP1TransitionMask = 0;
+    gNdsFighterControllerLoopP0WaitVisitCount = 0;
+    gNdsFighterControllerLoopP1WaitVisitCount = 0;
+    gNdsFighterControllerLoopP0WalkVisitCount = 0;
+    gNdsFighterControllerLoopP1WalkVisitCount = 0;
+    gNdsFighterControllerLoopP0DashVisitCount = 0;
+    gNdsFighterControllerLoopP1DashVisitCount = 0;
+    gNdsFighterControllerLoopP0RunVisitCount = 0;
+    gNdsFighterControllerLoopP1RunVisitCount = 0;
+    gNdsFighterControllerLoopP0RunBrakeVisitCount = 0;
+    gNdsFighterControllerLoopP1RunBrakeVisitCount = 0;
+    gNdsFighterControllerLoopP0KneeBendVisitCount = 0;
+    gNdsFighterControllerLoopP1KneeBendVisitCount = 0;
+    gNdsFighterControllerLoopP0JumpVisitCount = 0;
+    gNdsFighterControllerLoopP1JumpVisitCount = 0;
+    gNdsFighterControllerLoopP0FallVisitCount = 0;
+    gNdsFighterControllerLoopP1FallVisitCount = 0;
+    gNdsFighterControllerLoopP0LandingVisitCount = 0;
+    gNdsFighterControllerLoopP1LandingVisitCount = 0;
+    gNdsFighterControllerLoopP0StatusStart = 0xffffffffu;
+    gNdsFighterControllerLoopP1StatusStart = 0xffffffffu;
+    gNdsFighterControllerLoopP0MotionStart = 0xffffffffu;
+    gNdsFighterControllerLoopP1MotionStart = 0xffffffffu;
+    gNdsFighterControllerLoopP0StatusFinal = 0xffffffffu;
+    gNdsFighterControllerLoopP1StatusFinal = 0xffffffffu;
+    gNdsFighterControllerLoopP0MotionFinal = 0xffffffffu;
+    gNdsFighterControllerLoopP1MotionFinal = 0xffffffffu;
+    gNdsFighterControllerLoopP0GAFinal = 0xffffffffu;
+    gNdsFighterControllerLoopP1GAFinal = 0xffffffffu;
+    gNdsFighterControllerLoopP0FloorYMilli = 0;
+    gNdsFighterControllerLoopP1FloorYMilli = 0;
+    gNdsFighterControllerLoopP0RootXStartMilli = 0;
+    gNdsFighterControllerLoopP1RootXStartMilli = 0;
+    gNdsFighterControllerLoopP0RootXFinalMilli = 0;
+    gNdsFighterControllerLoopP1RootXFinalMilli = 0;
+    gNdsFighterControllerLoopP0RootDeltaXMilli = 0;
+    gNdsFighterControllerLoopP1RootDeltaXMilli = 0;
+    gNdsFighterControllerLoopP0RootYFinalMilli = 0;
+    gNdsFighterControllerLoopP1RootYFinalMilli = 0;
+    gNdsFighterControllerLoopP0RootRiseMilli = 0;
+    gNdsFighterControllerLoopP1RootRiseMilli = 0;
+    gNdsFighterControllerLoopP0RootDirectionOK = 0;
+    gNdsFighterControllerLoopP1RootDirectionOK = 0;
+    gNdsFighterControllerLoopP0FloorOK = 0;
+    gNdsFighterControllerLoopP1FloorOK = 0;
+    gNdsFighterControllerLoopP0GroundVelFinalMilli = 0;
+    gNdsFighterControllerLoopP1GroundVelFinalMilli = 0;
+    gNdsFighterControllerLoopP0AirVelXFinalMilli = 0;
+    gNdsFighterControllerLoopP1AirVelXFinalMilli = 0;
+    gNdsFighterControllerLoopP0AirVelYFinalMilli = 0;
+    gNdsFighterControllerLoopP1AirVelYFinalMilli = 0;
+    gNdsFighterControllerLoopP0UpdateCount = 0;
+    gNdsFighterControllerLoopP1UpdateCount = 0;
+    gNdsFighterControllerLoopP0InterruptCount = 0;
+    gNdsFighterControllerLoopP1InterruptCount = 0;
+    gNdsFighterControllerLoopP0PhysicsCount = 0;
+    gNdsFighterControllerLoopP1PhysicsCount = 0;
+    gNdsFighterControllerLoopP0IntegrateCount = 0;
+    gNdsFighterControllerLoopP1IntegrateCount = 0;
+    gNdsFighterControllerLoopP0MapCount = 0;
+    gNdsFighterControllerLoopP1MapCount = 0;
+    gNdsFighterControllerLoopFallDetectCount = 0;
+    gNdsFighterControllerLoopLandingDetectCount = 0;
+    gNdsFighterControllerLoopSetGroundCount = 0;
+    gNdsFighterControllerLoopSetAirCount = 0;
+    gNdsFighterControllerLoopWaitSetStatusCount = 0;
+    gNdsFighterControllerLoopRunBrakeEndCount = 0;
+    gNdsFighterControllerLoopJumpAnimEndCount = 0;
+    gNdsFighterControllerLoopLandingEndCount = 0;
+    gNdsFighterControllerLoopDeferredInterruptCheckCount = 0;
+    gNdsFighterControllerLoopUnexpectedStatusCount = 0;
+    gNdsFighterControllerLoopDeniedStatusCount = 0;
+    gNdsFighterControllerLoopDisplayProbeCount = 0;
+    gNdsFighterControllerLoopGameplayUpdateCount = 0;
+    gNdsFighterControllerLoopDrawCallCount = 0;
+    gNdsFighterControllerLoopMatrixCallCount = 0;
+    gNdsFighterControllerLoopRootYDriftCount = 0;
+    gNdsFighterControllerLoopGADriftCount = 0;
+    gNdsFighterMarioFoxPreviewLoopResult = 0;
+    gNdsFighterMarioFoxPreviewLoopSafeResult = 0;
+    gNdsFighterMarioFoxPreviewLoopMask = 0;
+    gNdsFighterMarioFoxPreviewLoopDeferredMask = 0;
+    gNdsFighterMarioFoxPreviewLoopCount = 0;
+    gNdsFighterPreviewLoopPrepared = 0;
+    gNdsFighterPreviewLoopFrameMax = 0;
+    gNdsFighterPreviewLoopUpdateMax = 0;
+    gNdsFighterPreviewLoopTaskmanUpdateCount = 0;
+    gNdsFighterPreviewLoopVSBattleUpdateCount = 0;
+    gNdsFighterPreviewLoopBaseVSBattleUpdateCount = 0;
+    gNdsFighterPreviewLoopSchedulerUpdateCount = 0;
+    gNdsFighterPreviewLoopSYReadCount = 0;
+    gNdsFighterPreviewLoopSYUpdateCount = 0;
+    gNdsFighterPreviewLoopGObjCountBefore = 0;
+    gNdsFighterPreviewLoopGObjCountAfter = 0;
+    gNdsFighterPreviewLoopGObjDelta = 0;
+    gNdsFighterPreviewLoopP0ProcessAttachCount = 0;
+    gNdsFighterPreviewLoopP1ProcessAttachCount = 0;
+    gNdsFighterPreviewLoopProcessAttachEscapeCount = 0;
+    gNdsFighterPreviewLoopP0GObjProcessRunCount = 0;
+    gNdsFighterPreviewLoopP1GObjProcessRunCount = 0;
+    gNdsFighterPreviewLoopP0ProcCallbackCount = 0;
+    gNdsFighterPreviewLoopP1ProcCallbackCount = 0;
+    gNdsFighterPreviewLoopP0PlaybackApplyCount = 0;
+    gNdsFighterPreviewLoopP1PlaybackApplyCount = 0;
+    gNdsFighterPreviewLoopP0ControllerToFTInputCount = 0;
+    gNdsFighterPreviewLoopP1ControllerToFTInputCount = 0;
+    gNdsFighterPreviewLoopP0DirectFTInputWriteCount = 0;
+    gNdsFighterPreviewLoopP1DirectFTInputWriteCount = 0;
+    gNdsFighterPreviewLoopP0ButtonTapMask = 0;
+    gNdsFighterPreviewLoopP1ButtonTapMask = 0;
+    gNdsFighterPreviewLoopP0ButtonHoldMask = 0;
+    gNdsFighterPreviewLoopP1ButtonHoldMask = 0;
+    gNdsFighterPreviewLoopP0LastStickX = 0;
+    gNdsFighterPreviewLoopP1LastStickX = 0;
+    gNdsFighterPreviewLoopP0LastStickY = 0;
+    gNdsFighterPreviewLoopP1LastStickY = 0;
+    gNdsFighterPreviewLoopP0DashTapEligibleCount = 0;
+    gNdsFighterPreviewLoopP1DashTapEligibleCount = 0;
+    gNdsFighterPreviewLoopP0JumpButtonTapCount = 0;
+    gNdsFighterPreviewLoopP1JumpButtonTapCount = 0;
+    gNdsFighterPreviewLoopP0FrameCount = 0;
+    gNdsFighterPreviewLoopP1FrameCount = 0;
+    gNdsFighterPreviewLoopP0Completed = 0;
+    gNdsFighterPreviewLoopP1Completed = 0;
+    gNdsFighterPreviewLoopP0StatusVisitMask = 0;
+    gNdsFighterPreviewLoopP1StatusVisitMask = 0;
+    gNdsFighterPreviewLoopP0TransitionMask = 0;
+    gNdsFighterPreviewLoopP1TransitionMask = 0;
+    gNdsFighterPreviewLoopP0StatusStart = 0xffffffffu;
+    gNdsFighterPreviewLoopP1StatusStart = 0xffffffffu;
+    gNdsFighterPreviewLoopP0MotionStart = 0xffffffffu;
+    gNdsFighterPreviewLoopP1MotionStart = 0xffffffffu;
+    gNdsFighterPreviewLoopP0StatusFinal = 0xffffffffu;
+    gNdsFighterPreviewLoopP1StatusFinal = 0xffffffffu;
+    gNdsFighterPreviewLoopP0MotionFinal = 0xffffffffu;
+    gNdsFighterPreviewLoopP1MotionFinal = 0xffffffffu;
+    gNdsFighterPreviewLoopP0GAFinal = 0xffffffffu;
+    gNdsFighterPreviewLoopP1GAFinal = 0xffffffffu;
+    gNdsFighterPreviewLoopP0RootXStartMilli = 0;
+    gNdsFighterPreviewLoopP1RootXStartMilli = 0;
+    gNdsFighterPreviewLoopP0RootDeltaXMilli = 0;
+    gNdsFighterPreviewLoopP1RootDeltaXMilli = 0;
+    gNdsFighterPreviewLoopP0RootRiseMilli = 0;
+    gNdsFighterPreviewLoopP1RootRiseMilli = 0;
+    gNdsFighterPreviewLoopP0RootYFinalMilli = 0;
+    gNdsFighterPreviewLoopP1RootYFinalMilli = 0;
+    gNdsFighterPreviewLoopP0FloorYMilli = 0;
+    gNdsFighterPreviewLoopP1FloorYMilli = 0;
+    gNdsFighterPreviewLoopP0RootDirectionOK = 0;
+    gNdsFighterPreviewLoopP1RootDirectionOK = 0;
+    gNdsFighterPreviewLoopP0FloorOK = 0;
+    gNdsFighterPreviewLoopP1FloorOK = 0;
+    gNdsFighterPreviewLoopP0InterruptCount = 0;
+    gNdsFighterPreviewLoopP1InterruptCount = 0;
+    gNdsFighterPreviewLoopP0PhysicsCount = 0;
+    gNdsFighterPreviewLoopP1PhysicsCount = 0;
+    gNdsFighterPreviewLoopP0IntegrateCount = 0;
+    gNdsFighterPreviewLoopP1IntegrateCount = 0;
+    gNdsFighterPreviewLoopP0MapCount = 0;
+    gNdsFighterPreviewLoopP1MapCount = 0;
+    gNdsFighterPreviewLoopPreviewWidth = 0;
+    gNdsFighterPreviewLoopPreviewHeight = 0;
+    gNdsFighterPreviewLoopPreviewPitch = 0;
+    gNdsFighterPreviewLoopPreviewReady = 0;
+    gNdsFighterPreviewLoopPreviewCommitBefore = 0;
+    gNdsFighterPreviewLoopPreviewCommitAfter = 0;
+    gNdsFighterPreviewLoopPreviewCommitDelta = 0;
+    gNdsFighterPreviewLoopDrawFrameCount = 0;
+    gNdsFighterPreviewLoopDisplayCallbackCount = 0;
+    gNdsFighterPreviewLoopP0DisplayCallbackCount = 0;
+    gNdsFighterPreviewLoopP1DisplayCallbackCount = 0;
+    gNdsFighterPreviewLoopP0CandidateCount = 0;
+    gNdsFighterPreviewLoopP1CandidateCount = 0;
+    gNdsFighterPreviewLoopP0DrawnDObjCount = 0;
+    gNdsFighterPreviewLoopP1DrawnDObjCount = 0;
+    gNdsFighterPreviewLoopP0PixelCount = 0;
+    gNdsFighterPreviewLoopP1PixelCount = 0;
+    gNdsFighterPreviewLoopTotalPixelCount = 0;
+    gNdsFighterPreviewLoopP0ColorChecksum = 0;
+    gNdsFighterPreviewLoopP1ColorChecksum = 0;
+    gNdsFighterPreviewLoopP0ScreenXStart = 0;
+    gNdsFighterPreviewLoopP1ScreenXStart = 0;
+    gNdsFighterPreviewLoopP0ScreenXFinal = 0;
+    gNdsFighterPreviewLoopP1ScreenXFinal = 0;
+    gNdsFighterPreviewLoopP0ScreenXDelta = 0;
+    gNdsFighterPreviewLoopP1ScreenXDelta = 0;
+    gNdsFighterPreviewLoopP0ScreenYFloor = 0;
+    gNdsFighterPreviewLoopP1ScreenYFloor = 0;
+    gNdsFighterPreviewLoopP0ScreenYMin = 0x7fffffff;
+    gNdsFighterPreviewLoopP1ScreenYMin = 0x7fffffff;
+    gNdsFighterPreviewLoopP0ScreenRise = 0;
+    gNdsFighterPreviewLoopP1ScreenRise = 0;
+    gNdsFighterPreviewLoopFallDetectCount = 0;
+    gNdsFighterPreviewLoopLandingDetectCount = 0;
+    gNdsFighterPreviewLoopSetGroundCount = 0;
+    gNdsFighterPreviewLoopSetAirCount = 0;
+    gNdsFighterPreviewLoopWaitSetStatusCount = 0;
+    gNdsFighterPreviewLoopRunBrakeEndCount = 0;
+    gNdsFighterPreviewLoopJumpAnimEndCount = 0;
+    gNdsFighterPreviewLoopLandingEndCount = 0;
+    gNdsFighterPreviewLoopDeferredInterruptCheckCount = 0;
+    gNdsFighterPreviewLoopUnexpectedStatusCount = 0;
+    gNdsFighterPreviewLoopDeniedStatusCount = 0;
+    gNdsFighterPreviewLoopDisplayProbeCount = 0;
+    gNdsFighterPreviewLoopGameplayUpdateCount = 0;
+    gNdsFighterPreviewLoopDrawCallCount = 0;
+    gNdsFighterPreviewLoopMatrixCallCount = 0;
+    gNdsFighterPreviewLoopRootYDriftCount = 0;
+    gNdsFighterPreviewLoopGADriftCount = 0;
+    gNdsFighterMarioFoxGCRunAllLoopResult = 0;
+    gNdsFighterMarioFoxGCRunAllLoopSafeResult = 0;
+    gNdsFighterMarioFoxGCRunAllLoopMask = 0;
+    gNdsFighterMarioFoxGCRunAllLoopDeferredMask = 0;
+    gNdsFighterMarioFoxGCRunAllLoopCount = 0;
+    gNdsFighterGCRunAllLoopPrepared = 0;
+    gNdsFighterGCRunAllLoopFrameMax = 0;
+    gNdsFighterGCRunAllLoopUpdateMax = 0;
+    gNdsFighterGCRunAllLoopTaskmanUpdateCount = 0;
+    gNdsFighterGCRunAllLoopVSBattleUpdateCount = 0;
+    gNdsFighterGCRunAllLoopBaseVSBattleUpdateCount = 0;
+    gNdsFighterGCRunAllLoopRunAllCount = 0;
+    gNdsFighterGCRunAllLoopSYReadCount = 0;
+    gNdsFighterGCRunAllLoopSYUpdateCount = 0;
+    gNdsFighterGCRunAllLoopGObjCountBefore = 0;
+    gNdsFighterGCRunAllLoopGObjCountAfter = 0;
+    gNdsFighterGCRunAllLoopGObjDelta = 0;
+    gNdsFighterGCRunAllLoopOldProcessPauseCount = 0;
+    gNdsFighterGCRunAllLoopNonTargetGObjVisitCount = 0;
+    gNdsFighterGCRunAllLoopNonTargetProcessPauseCount = 0;
+    gNdsFighterGCRunAllLoopTargetProcessPreserveCount = 0;
+    gNdsFighterGCRunAllLoopP0ProcessAttachCount = 0;
+    gNdsFighterGCRunAllLoopP1ProcessAttachCount = 0;
+    gNdsFighterGCRunAllLoopProcessAttachEscapeCount = 0;
+    gNdsFighterGCRunAllLoopP0GObjProcessRunCount = 0;
+    gNdsFighterGCRunAllLoopP1GObjProcessRunCount = 0;
+    gNdsFighterGCRunAllLoopP0ProcCallbackCount = 0;
+    gNdsFighterGCRunAllLoopP1ProcCallbackCount = 0;
+    gNdsFighterGCRunAllLoopP0PlaybackApplyCount = 0;
+    gNdsFighterGCRunAllLoopP1PlaybackApplyCount = 0;
+    gNdsFighterGCRunAllLoopP0ControllerToFTInputCount = 0;
+    gNdsFighterGCRunAllLoopP1ControllerToFTInputCount = 0;
+    gNdsFighterGCRunAllLoopP0DirectFTInputWriteCount = 0;
+    gNdsFighterGCRunAllLoopP1DirectFTInputWriteCount = 0;
+    gNdsFighterGCRunAllLoopP0ButtonTapMask = 0;
+    gNdsFighterGCRunAllLoopP1ButtonTapMask = 0;
+    gNdsFighterGCRunAllLoopP0ButtonHoldMask = 0;
+    gNdsFighterGCRunAllLoopP1ButtonHoldMask = 0;
+    gNdsFighterGCRunAllLoopP0LastStickX = 0;
+    gNdsFighterGCRunAllLoopP1LastStickX = 0;
+    gNdsFighterGCRunAllLoopP0LastStickY = 0;
+    gNdsFighterGCRunAllLoopP1LastStickY = 0;
+    gNdsFighterGCRunAllLoopP0DashTapEligibleCount = 0;
+    gNdsFighterGCRunAllLoopP1DashTapEligibleCount = 0;
+    gNdsFighterGCRunAllLoopP0JumpButtonTapCount = 0;
+    gNdsFighterGCRunAllLoopP1JumpButtonTapCount = 0;
+    gNdsFighterGCRunAllLoopP0FrameCount = 0;
+    gNdsFighterGCRunAllLoopP1FrameCount = 0;
+    gNdsFighterGCRunAllLoopP0Completed = 0;
+    gNdsFighterGCRunAllLoopP1Completed = 0;
+    gNdsFighterGCRunAllLoopP0StatusVisitMask = 0;
+    gNdsFighterGCRunAllLoopP1StatusVisitMask = 0;
+    gNdsFighterGCRunAllLoopP0TransitionMask = 0;
+    gNdsFighterGCRunAllLoopP1TransitionMask = 0;
+    gNdsFighterGCRunAllLoopP0WaitVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1WaitVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0WalkVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1WalkVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0DashVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1DashVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0RunVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1RunVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0RunBrakeVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1RunBrakeVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0KneeBendVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1KneeBendVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0JumpVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1JumpVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0FallVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1FallVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0LandingVisitCount = 0;
+    gNdsFighterGCRunAllLoopP1LandingVisitCount = 0;
+    gNdsFighterGCRunAllLoopP0StatusStart = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP1StatusStart = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP0MotionStart = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP1MotionStart = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP0StatusFinal = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP1StatusFinal = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP0MotionFinal = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP1MotionFinal = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP0GAFinal = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP1GAFinal = 0xffffffffu;
+    gNdsFighterGCRunAllLoopP0RootXStartMilli = 0;
+    gNdsFighterGCRunAllLoopP1RootXStartMilli = 0;
+    gNdsFighterGCRunAllLoopP0RootDeltaXMilli = 0;
+    gNdsFighterGCRunAllLoopP1RootDeltaXMilli = 0;
+    gNdsFighterGCRunAllLoopP0RootRiseMilli = 0;
+    gNdsFighterGCRunAllLoopP1RootRiseMilli = 0;
+    gNdsFighterGCRunAllLoopP0RootYFinalMilli = 0;
+    gNdsFighterGCRunAllLoopP1RootYFinalMilli = 0;
+    gNdsFighterGCRunAllLoopP0FloorYMilli = 0;
+    gNdsFighterGCRunAllLoopP1FloorYMilli = 0;
+    gNdsFighterGCRunAllLoopP0RootDirectionOK = 0;
+    gNdsFighterGCRunAllLoopP1RootDirectionOK = 0;
+    gNdsFighterGCRunAllLoopP0FloorOK = 0;
+    gNdsFighterGCRunAllLoopP1FloorOK = 0;
+    gNdsFighterGCRunAllLoopP0InterruptCount = 0;
+    gNdsFighterGCRunAllLoopP1InterruptCount = 0;
+    gNdsFighterGCRunAllLoopP0PhysicsCount = 0;
+    gNdsFighterGCRunAllLoopP1PhysicsCount = 0;
+    gNdsFighterGCRunAllLoopP0IntegrateCount = 0;
+    gNdsFighterGCRunAllLoopP1IntegrateCount = 0;
+    gNdsFighterGCRunAllLoopP0MapCount = 0;
+    gNdsFighterGCRunAllLoopP1MapCount = 0;
+    gNdsFighterGCRunAllLoopPreviewWidth = 0;
+    gNdsFighterGCRunAllLoopPreviewHeight = 0;
+    gNdsFighterGCRunAllLoopPreviewPitch = 0;
+    gNdsFighterGCRunAllLoopPreviewReady = 0;
+    gNdsFighterGCRunAllLoopPreviewCommitBefore = 0;
+    gNdsFighterGCRunAllLoopPreviewCommitAfter = 0;
+    gNdsFighterGCRunAllLoopPreviewCommitDelta = 0;
+    gNdsFighterGCRunAllLoopDrawFrameCount = 0;
+    gNdsFighterGCRunAllLoopDisplayCallbackCount = 0;
+    gNdsFighterGCRunAllLoopP0DisplayCallbackCount = 0;
+    gNdsFighterGCRunAllLoopP1DisplayCallbackCount = 0;
+    gNdsFighterGCRunAllLoopP0CandidateCount = 0;
+    gNdsFighterGCRunAllLoopP1CandidateCount = 0;
+    gNdsFighterGCRunAllLoopP0DrawnDObjCount = 0;
+    gNdsFighterGCRunAllLoopP1DrawnDObjCount = 0;
+    gNdsFighterGCRunAllLoopP0PixelCount = 0;
+    gNdsFighterGCRunAllLoopP1PixelCount = 0;
+    gNdsFighterGCRunAllLoopTotalPixelCount = 0;
+    gNdsFighterGCRunAllLoopP0ColorChecksum = 0;
+    gNdsFighterGCRunAllLoopP1ColorChecksum = 0;
+    gNdsFighterGCRunAllLoopP0ScreenXStart = 0;
+    gNdsFighterGCRunAllLoopP1ScreenXStart = 0;
+    gNdsFighterGCRunAllLoopP0ScreenXFinal = 0;
+    gNdsFighterGCRunAllLoopP1ScreenXFinal = 0;
+    gNdsFighterGCRunAllLoopP0ScreenXDelta = 0;
+    gNdsFighterGCRunAllLoopP1ScreenXDelta = 0;
+    gNdsFighterGCRunAllLoopP0ScreenYFloor = 0;
+    gNdsFighterGCRunAllLoopP1ScreenYFloor = 0;
+    gNdsFighterGCRunAllLoopP0ScreenYMin = 0x7fffffff;
+    gNdsFighterGCRunAllLoopP1ScreenYMin = 0x7fffffff;
+    gNdsFighterGCRunAllLoopP0ScreenRise = 0;
+    gNdsFighterGCRunAllLoopP1ScreenRise = 0;
+    gNdsFighterGCRunAllLoopFallDetectCount = 0;
+    gNdsFighterGCRunAllLoopLandingDetectCount = 0;
+    gNdsFighterGCRunAllLoopSetGroundCount = 0;
+    gNdsFighterGCRunAllLoopSetAirCount = 0;
+    gNdsFighterGCRunAllLoopWaitSetStatusCount = 0;
+    gNdsFighterGCRunAllLoopRunBrakeEndCount = 0;
+    gNdsFighterGCRunAllLoopJumpAnimEndCount = 0;
+    gNdsFighterGCRunAllLoopLandingEndCount = 0;
+    gNdsFighterGCRunAllLoopDeferredInterruptCheckCount = 0;
+    gNdsFighterGCRunAllLoopUnexpectedStatusCount = 0;
+    gNdsFighterGCRunAllLoopDeniedStatusCount = 0;
+    gNdsFighterGCRunAllLoopDisplayProbeCount = 0;
+    gNdsFighterGCRunAllLoopGameplayUpdateCount = 0;
+    gNdsFighterGCRunAllLoopDrawCallCount = 0;
+    gNdsFighterGCRunAllLoopMatrixCallCount = 0;
+    gNdsFighterGCRunAllLoopRootYDriftCount = 0;
+    gNdsFighterGCRunAllLoopGADriftCount = 0;
+    gNdsFighterMarioFoxGCDrawAllLoopResult = 0;
+    gNdsFighterMarioFoxGCDrawAllLoopSafeResult = 0;
+    gNdsFighterMarioFoxGCDrawAllLoopMask = 0;
+    gNdsFighterMarioFoxGCDrawAllLoopDeferredMask = 0;
+    gNdsFighterMarioFoxGCDrawAllLoopCount = 0;
+    gNdsFighterGCDrawAllLoopPrepared = 0;
+    gNdsFighterGCDrawAllLoopFrameMax = 0;
+    gNdsFighterGCDrawAllLoopUpdateMax = 0;
+    gNdsFighterGCDrawAllLoopTaskmanUpdateCount = 0;
+    gNdsFighterGCDrawAllLoopVSBattleUpdateCount = 0;
+    gNdsFighterGCDrawAllLoopBaseVSBattleUpdateCount = 0;
+    gNdsFighterGCDrawAllLoopDrawAllCount = 0;
+    gNdsFighterGCDrawAllLoopCameraCallbackCount = 0;
+    gNdsFighterGCDrawAllLoopCapturedDisplayCount = 0;
+    gNdsFighterGCDrawAllLoopNonTargetDisplayCallbackCount = 0;
+    gNdsFighterGCDrawAllLoopRunAllCount = 0;
+    gNdsFighterGCDrawAllLoopSYReadCount = 0;
+    gNdsFighterGCDrawAllLoopSYUpdateCount = 0;
+    gNdsFighterGCDrawAllLoopGObjCountBefore = 0;
+    gNdsFighterGCDrawAllLoopGObjCountAfter = 0;
+    gNdsFighterGCDrawAllLoopGObjDelta = 0;
+    gNdsFighterGCDrawAllLoopOldProcessPauseCount = 0;
+    gNdsFighterGCDrawAllLoopNonTargetGObjVisitCount = 0;
+    gNdsFighterGCDrawAllLoopNonTargetProcessPauseCount = 0;
+    gNdsFighterGCDrawAllLoopTargetProcessPreserveCount = 0;
+    gNdsFighterGCDrawAllLoopP0ProcessAttachCount = 0;
+    gNdsFighterGCDrawAllLoopP1ProcessAttachCount = 0;
+    gNdsFighterGCDrawAllLoopProcessAttachEscapeCount = 0;
+    gNdsFighterGCDrawAllLoopP0GObjProcessRunCount = 0;
+    gNdsFighterGCDrawAllLoopP1GObjProcessRunCount = 0;
+    gNdsFighterGCDrawAllLoopP0ProcCallbackCount = 0;
+    gNdsFighterGCDrawAllLoopP1ProcCallbackCount = 0;
+    gNdsFighterGCDrawAllLoopP0PlaybackApplyCount = 0;
+    gNdsFighterGCDrawAllLoopP1PlaybackApplyCount = 0;
+    gNdsFighterGCDrawAllLoopP0ControllerToFTInputCount = 0;
+    gNdsFighterGCDrawAllLoopP1ControllerToFTInputCount = 0;
+    gNdsFighterGCDrawAllLoopP0DirectFTInputWriteCount = 0;
+    gNdsFighterGCDrawAllLoopP1DirectFTInputWriteCount = 0;
+    gNdsFighterGCDrawAllLoopP0ButtonTapMask = 0;
+    gNdsFighterGCDrawAllLoopP1ButtonTapMask = 0;
+    gNdsFighterGCDrawAllLoopP0ButtonHoldMask = 0;
+    gNdsFighterGCDrawAllLoopP1ButtonHoldMask = 0;
+    gNdsFighterGCDrawAllLoopP0LastStickX = 0;
+    gNdsFighterGCDrawAllLoopP1LastStickX = 0;
+    gNdsFighterGCDrawAllLoopP0LastStickY = 0;
+    gNdsFighterGCDrawAllLoopP1LastStickY = 0;
+    gNdsFighterGCDrawAllLoopP0DashTapEligibleCount = 0;
+    gNdsFighterGCDrawAllLoopP1DashTapEligibleCount = 0;
+    gNdsFighterGCDrawAllLoopP0JumpButtonTapCount = 0;
+    gNdsFighterGCDrawAllLoopP1JumpButtonTapCount = 0;
+    gNdsFighterGCDrawAllLoopP0FrameCount = 0;
+    gNdsFighterGCDrawAllLoopP1FrameCount = 0;
+    gNdsFighterGCDrawAllLoopP0Completed = 0;
+    gNdsFighterGCDrawAllLoopP1Completed = 0;
+    gNdsFighterGCDrawAllLoopP0StatusVisitMask = 0;
+    gNdsFighterGCDrawAllLoopP1StatusVisitMask = 0;
+    gNdsFighterGCDrawAllLoopP0TransitionMask = 0;
+    gNdsFighterGCDrawAllLoopP1TransitionMask = 0;
+    gNdsFighterGCDrawAllLoopP0WaitVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1WaitVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0WalkVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1WalkVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0DashVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1DashVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0RunVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1RunVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0RunBrakeVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1RunBrakeVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0KneeBendVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1KneeBendVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0JumpVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1JumpVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0FallVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1FallVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0LandingVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP1LandingVisitCount = 0;
+    gNdsFighterGCDrawAllLoopP0StatusStart = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP1StatusStart = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP0MotionStart = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP1MotionStart = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP0StatusFinal = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP1StatusFinal = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP0MotionFinal = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP1MotionFinal = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP0GAFinal = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP1GAFinal = 0xffffffffu;
+    gNdsFighterGCDrawAllLoopP0RootXStartMilli = 0;
+    gNdsFighterGCDrawAllLoopP1RootXStartMilli = 0;
+    gNdsFighterGCDrawAllLoopP0RootDeltaXMilli = 0;
+    gNdsFighterGCDrawAllLoopP1RootDeltaXMilli = 0;
+    gNdsFighterGCDrawAllLoopP0RootRiseMilli = 0;
+    gNdsFighterGCDrawAllLoopP1RootRiseMilli = 0;
+    gNdsFighterGCDrawAllLoopP0RootYFinalMilli = 0;
+    gNdsFighterGCDrawAllLoopP1RootYFinalMilli = 0;
+    gNdsFighterGCDrawAllLoopP0FloorYMilli = 0;
+    gNdsFighterGCDrawAllLoopP1FloorYMilli = 0;
+    gNdsFighterGCDrawAllLoopP0RootDirectionOK = 0;
+    gNdsFighterGCDrawAllLoopP1RootDirectionOK = 0;
+    gNdsFighterGCDrawAllLoopP0FloorOK = 0;
+    gNdsFighterGCDrawAllLoopP1FloorOK = 0;
+    gNdsFighterGCDrawAllLoopP0InterruptCount = 0;
+    gNdsFighterGCDrawAllLoopP1InterruptCount = 0;
+    gNdsFighterGCDrawAllLoopP0PhysicsCount = 0;
+    gNdsFighterGCDrawAllLoopP1PhysicsCount = 0;
+    gNdsFighterGCDrawAllLoopP0IntegrateCount = 0;
+    gNdsFighterGCDrawAllLoopP1IntegrateCount = 0;
+    gNdsFighterGCDrawAllLoopP0MapCount = 0;
+    gNdsFighterGCDrawAllLoopP1MapCount = 0;
+    gNdsFighterGCDrawAllLoopPreviewWidth = 0;
+    gNdsFighterGCDrawAllLoopPreviewHeight = 0;
+    gNdsFighterGCDrawAllLoopPreviewPitch = 0;
+    gNdsFighterGCDrawAllLoopPreviewReady = 0;
+    gNdsFighterGCDrawAllLoopPreviewCommitBefore = 0;
+    gNdsFighterGCDrawAllLoopPreviewCommitAfter = 0;
+    gNdsFighterGCDrawAllLoopPreviewCommitDelta = 0;
+    gNdsFighterGCDrawAllLoopDrawFrameCount = 0;
+    gNdsFighterGCDrawAllLoopDisplayCallbackCount = 0;
+    gNdsFighterGCDrawAllLoopP0DisplayCallbackCount = 0;
+    gNdsFighterGCDrawAllLoopP1DisplayCallbackCount = 0;
+    gNdsFighterGCDrawAllLoopP0CandidateCount = 0;
+    gNdsFighterGCDrawAllLoopP1CandidateCount = 0;
+    gNdsFighterGCDrawAllLoopP0DrawnDObjCount = 0;
+    gNdsFighterGCDrawAllLoopP1DrawnDObjCount = 0;
+    gNdsFighterGCDrawAllLoopP0PixelCount = 0;
+    gNdsFighterGCDrawAllLoopP1PixelCount = 0;
+    gNdsFighterGCDrawAllLoopTotalPixelCount = 0;
+    gNdsFighterGCDrawAllLoopP0ColorChecksum = 0;
+    gNdsFighterGCDrawAllLoopP1ColorChecksum = 0;
+    gNdsFighterGCDrawAllLoopP0ScreenXStart = 0;
+    gNdsFighterGCDrawAllLoopP1ScreenXStart = 0;
+    gNdsFighterGCDrawAllLoopP0ScreenXFinal = 0;
+    gNdsFighterGCDrawAllLoopP1ScreenXFinal = 0;
+    gNdsFighterGCDrawAllLoopP0ScreenXDelta = 0;
+    gNdsFighterGCDrawAllLoopP1ScreenXDelta = 0;
+    gNdsFighterGCDrawAllLoopP0ScreenYFloor = 0;
+    gNdsFighterGCDrawAllLoopP1ScreenYFloor = 0;
+    gNdsFighterGCDrawAllLoopP0ScreenYMin = 0x7fffffff;
+    gNdsFighterGCDrawAllLoopP1ScreenYMin = 0x7fffffff;
+    gNdsFighterGCDrawAllLoopP0ScreenRise = 0;
+    gNdsFighterGCDrawAllLoopP1ScreenRise = 0;
+    gNdsFighterGCDrawAllLoopFallDetectCount = 0;
+    gNdsFighterGCDrawAllLoopLandingDetectCount = 0;
+    gNdsFighterGCDrawAllLoopSetGroundCount = 0;
+    gNdsFighterGCDrawAllLoopSetAirCount = 0;
+    gNdsFighterGCDrawAllLoopWaitSetStatusCount = 0;
+    gNdsFighterGCDrawAllLoopRunBrakeEndCount = 0;
+    gNdsFighterGCDrawAllLoopJumpAnimEndCount = 0;
+    gNdsFighterGCDrawAllLoopLandingEndCount = 0;
+    gNdsFighterGCDrawAllLoopDeferredInterruptCheckCount = 0;
+    gNdsFighterGCDrawAllLoopUnexpectedStatusCount = 0;
+    gNdsFighterGCDrawAllLoopDeniedStatusCount = 0;
+    gNdsFighterGCDrawAllLoopDisplayProbeCount = 0;
+    gNdsFighterGCDrawAllLoopGameplayUpdateCount = 0;
+    gNdsFighterGCDrawAllLoopDrawCallCount = 0;
+    gNdsFighterGCDrawAllLoopMatrixCallCount = 0;
+    gNdsFighterGCDrawAllLoopRootYDriftCount = 0;
+    gNdsFighterGCDrawAllLoopGADriftCount = 0;
+    gNdsFighterMarioFoxStageGCDrawAllLoopResult = 0;
+    gNdsFighterMarioFoxStageGCDrawAllLoopSafeResult = 0;
+    gNdsFighterMarioFoxStageGCDrawAllLoopMask = 0;
+    gNdsFighterMarioFoxStageGCDrawAllLoopDeferredMask = 0;
+    gNdsFighterMarioFoxStageGCDrawAllLoopCount = 0;
+    gNdsStageGCDrawAllLoopPrepared = 0;
+    gNdsStageGCDrawAllLoopBaseResultSeen = 0;
+    gNdsStageGCDrawAllLoopDrawAllCount = 0;
+    gNdsStageGCDrawAllLoopCameraCallbackCount = 0;
+    gNdsStageGCDrawAllLoopCapturedDisplayCount = 0;
+    gNdsStageGCDrawAllLoopLayerCaptureMask = 0;
+    gNdsStageGCDrawAllLoopMapCaptureMask = 0;
+    gNdsStageGCDrawAllLoopDObjDrawCallbackCount = 0;
+    gNdsStageGCDrawAllLoopDObjDrawKindMask = 0;
+    gNdsStageGCDrawAllLoopLayerDObjMask = 0;
+    gNdsStageGCDrawAllLoopMapDObjMask = 0;
+    gNdsStageGCDrawAllLoopLayerDLReadyMask = 0;
+    gNdsStageGCDrawAllLoopMapDLReadyMask = 0;
+    gNdsStageGCDrawAllLoopLayerMObjMask = 0;
+    gNdsStageGCDrawAllLoopMapMObjMask = 0;
+    gNdsStageGCDrawAllLoopNonStageCaptureCount = 0;
+    gNdsStageGCDrawAllLoopFighterDisplayCallbackCount = 0;
+    gNdsStageGCDrawAllLoopUnexpectedSceneCount = 0;
+    gNdsStageGCDrawAllLoopManualDisplayCallCount = 0;
+    gNdsStageGCDrawAllLoopGObjCountBefore = 0;
+    gNdsStageGCDrawAllLoopGObjCountAfter = 0;
+    gNdsStageGCDrawAllLoopGObjCountDelta = 0;
+    gNdsStageGCDrawAllLoopPreviewCommitDelta = 0;
+    gNdsStageGCDrawAllLoopTotalPixelCount = 0;
+    gNdsStageGCDrawAllLoopCompatMask = 0;
+    gNdsFighterMarioFoxStageCollisionLoopResult = 0;
+    gNdsFighterMarioFoxStageCollisionLoopSafeResult = 0;
+    gNdsFighterMarioFoxStageCollisionLoopMask = 0;
+    gNdsFighterMarioFoxStageCollisionLoopDeferredMask = 0;
+    gNdsFighterMarioFoxStageCollisionLoopCount = 0;
+    gNdsStageCollisionLoopPrepared = 0;
+    gNdsStageCollisionLoopBaseStageDrawSeen = 0;
+    gNdsStageCollisionLoopGeometryReady = 0;
+    gNdsStageCollisionLoopGroundDataReady = 0;
+    gNdsStageCollisionLoopYakumonoCount = 0;
+    gNdsStageCollisionLoopMapObjCount = 0;
+    gNdsStageCollisionLoopFloorLineCount = 0;
+    gNdsStageCollisionLoopTotalLineCount = 0;
+    gNdsStageCollisionLoopProjectCallCount = 0;
+    gNdsStageCollisionLoopGeometryProjectCallCount = 0;
+    gNdsStageCollisionLoopLegacyFlatFallbackCount = 0;
+    gNdsStageCollisionLoopNoGeometryCount = 0;
+    gNdsStageCollisionLoopOutOfRangeLineCount = 0;
+    gNdsStageCollisionLoopBadVertexCount = 0;
+    gNdsStageCollisionLoopDivisionGuardCount = 0;
+    gNdsStageCollisionLoopProbeCount = 0;
+    gNdsStageCollisionLoopProbeHitCount = 0;
+    gNdsStageCollisionLoopProbeMissCount = 0;
+    gNdsStageCollisionLoopOffstageMissCount = 0;
+    gNdsStageCollisionLoopBelowFloorMissCount = 0;
+    gNdsStageCollisionLoopP0ProjectCount = 0;
+    gNdsStageCollisionLoopP1ProjectCount = 0;
+    gNdsStageCollisionLoopP0HitCount = 0;
+    gNdsStageCollisionLoopP1HitCount = 0;
+    gNdsStageCollisionLoopP0FloorLineID = -1;
+    gNdsStageCollisionLoopP1FloorLineID = -1;
+    gNdsStageCollisionLoopP0FloorKind = 0xffffffffu;
+    gNdsStageCollisionLoopP1FloorKind = 0xffffffffu;
+    gNdsStageCollisionLoopP0FloorLineIsFloor = 0;
+    gNdsStageCollisionLoopP1FloorLineIsFloor = 0;
+    gNdsStageCollisionLoopFloorGroupID = -1;
+    gNdsStageCollisionLoopFloorGroupCount = 0;
+    gNdsStageCollisionLoopFloorLineMin = -1;
+    gNdsStageCollisionLoopFloorLineMaxExclusive = -1;
+    gNdsStageCollisionLoopNonFloorCandidateCount = 0;
+    gNdsStageCollisionLoopYakumonoDObjDeferredCount = 0;
+    gNdsStageCollisionLoopYakumonoDObjUnsafeIndexGuardCount = 0;
+    gNdsStageCollisionLoopP0FloorDistMilli = 0;
+    gNdsStageCollisionLoopP1FloorDistMilli = 0;
+    gNdsStageCollisionLoopP0FloorFlags = 0;
+    gNdsStageCollisionLoopP1FloorFlags = 0;
+    gNdsStageCollisionLoopP0FloorAngleX1000 = 0;
+    gNdsStageCollisionLoopP0FloorAngleY1000 = 0;
+    gNdsStageCollisionLoopP1FloorAngleX1000 = 0;
+    gNdsStageCollisionLoopP1FloorAngleY1000 = 0;
+    gNdsStageCollisionLoopP0EdgeLX = 0;
+    gNdsStageCollisionLoopP0EdgeLY = 0;
+    gNdsStageCollisionLoopP0EdgeRX = 0;
+    gNdsStageCollisionLoopP0EdgeRY = 0;
+    gNdsStageCollisionLoopP1EdgeLX = 0;
+    gNdsStageCollisionLoopP1EdgeLY = 0;
+    gNdsStageCollisionLoopP1EdgeRX = 0;
+    gNdsStageCollisionLoopP1EdgeRY = 0;
+    gNdsStageCollisionLoopP0RootYFinalMilli = 0;
+    gNdsStageCollisionLoopP1RootYFinalMilli = 0;
+    gNdsStageCollisionLoopP0FloorYMilli = 0;
+    gNdsStageCollisionLoopP1FloorYMilli = 0;
+    gNdsStageCollisionLoopP0FloorOK = 0;
+    gNdsStageCollisionLoopP1FloorOK = 0;
+    gNdsStageCollisionLoopGObjDelta = 0;
+    gNdsStageCollisionLoopUnexpectedSceneCount = 0;
+    gNdsStageCollisionLoopUnexpectedStatusCount = 0;
+    gNdsStageCollisionLoopUnsafeFallbackAfterPrepareCount = 0;
+    gNdsFighterMarioFoxStageFloorFollowLoopResult = 0;
+    gNdsFighterMarioFoxStageFloorFollowLoopSafeResult = 0;
+    gNdsFighterMarioFoxStageFloorFollowLoopMask = 0;
+    gNdsFighterMarioFoxStageFloorFollowLoopDeferredMask = 0;
+    gNdsFighterMarioFoxStageFloorFollowLoopCount = 0;
+    gNdsStageFloorFollowLoopPrepared = 0;
+    gNdsStageFloorFollowLoopBaseDrawSeen = 0;
+    gNdsStageFloorFollowLoopBaseCollisionSeen = 0;
+    gNdsStageFloorFollowLoopGeometryReady = 0;
+    gNdsStageFloorFollowLoopInitialSeedCount = 0;
+    gNdsStageFloorFollowLoopInitialAdoptCount = 0;
+    gNdsStageFloorFollowLoopFinalRecenterCount = 0;
+    gNdsStageFloorFollowLoopFinalAdoptCount = 0;
+    gNdsStageFloorFollowLoopMapUpdateCount = 0;
+    gNdsStageFloorFollowLoopP0MapUpdateCount = 0;
+    gNdsStageFloorFollowLoopP1MapUpdateCount = 0;
+    gNdsStageFloorFollowLoopProjectCallCount = 0;
+    gNdsStageFloorFollowLoopGeometryHitCount = 0;
+    gNdsStageFloorFollowLoopGeometryMissCount = 0;
+    gNdsStageFloorFollowLoopNoGeometryCount = 0;
+    gNdsStageFloorFollowLoopNonFloorLineCount = 0;
+    gNdsStageFloorFollowLoopClampCount = 0;
+    gNdsStageFloorFollowLoopNoClampCount = 0;
+    gNdsStageFloorFollowLoopP0HitCount = 0;
+    gNdsStageFloorFollowLoopP1HitCount = 0;
+    gNdsStageFloorFollowLoopP0FloorLineID = -1;
+    gNdsStageFloorFollowLoopP1FloorLineID = -1;
+    gNdsStageFloorFollowLoopP0FloorKind = 0xffffffffu;
+    gNdsStageFloorFollowLoopP1FloorKind = 0xffffffffu;
+    gNdsStageFloorFollowLoopP0FloorLineIsFloor = 0;
+    gNdsStageFloorFollowLoopP1FloorLineIsFloor = 0;
+    gNdsStageFloorFollowLoopP0InitialRootXMilli = 0;
+    gNdsStageFloorFollowLoopP1InitialRootXMilli = 0;
+    gNdsStageFloorFollowLoopP0FinalRootXMilli = 0;
+    gNdsStageFloorFollowLoopP1FinalRootXMilli = 0;
+    gNdsStageFloorFollowLoopP0RootXDeltaMilli = 0;
+    gNdsStageFloorFollowLoopP1RootXDeltaMilli = 0;
+    gNdsStageFloorFollowLoopP0FinalRootYMilli = 0;
+    gNdsStageFloorFollowLoopP1FinalRootYMilli = 0;
+    gNdsStageFloorFollowLoopP0FloorYMilli = 0;
+    gNdsStageFloorFollowLoopP1FloorYMilli = 0;
+    gNdsStageFloorFollowLoopP0FinalDriftMilli = 0;
+    gNdsStageFloorFollowLoopP1FinalDriftMilli = 0;
+    gNdsStageFloorFollowLoopP0MaxDriftMilli = 0;
+    gNdsStageFloorFollowLoopP1MaxDriftMilli = 0;
+    gNdsStageFloorFollowLoopMaxDriftMilli = 0;
+    gNdsStageFloorFollowLoopP0FloorOK = 0;
+    gNdsStageFloorFollowLoopP1FloorOK = 0;
+    gNdsStageFloorFollowLoopP0FloorVisitMask = 0;
+    gNdsStageFloorFollowLoopP1FloorVisitMask = 0;
+    gNdsStageFloorFollowLoopP0StatusFinal = 0xffffffffu;
+    gNdsStageFloorFollowLoopP1StatusFinal = 0xffffffffu;
+    gNdsStageFloorFollowLoopP0GAFinal = 0xffffffffu;
+    gNdsStageFloorFollowLoopP1GAFinal = 0xffffffffu;
+    gNdsFighterMarioFoxStageFloorEdgeLoopResult = 0;
+    gNdsFighterMarioFoxStageFloorEdgeLoopSafeResult = 0;
+    gNdsFighterMarioFoxStageFloorEdgeLoopMask = 0;
+    gNdsFighterMarioFoxStageFloorEdgeLoopDeferredMask = 0;
+    gNdsFighterMarioFoxStageFloorEdgeLoopCount = 0;
+    gNdsStageFloorEdgeLoopPrepared = 0;
+    gNdsStageFloorEdgeLoopGeometryReady = 0;
+    gNdsStageFloorEdgeLoopSelectedLineID = -1;
+    gNdsStageFloorEdgeLoopSelectedLineKind = 0xffffffffu;
+    gNdsStageFloorEdgeLoopSelectedVertexCount = 0;
+    gNdsStageFloorEdgeLoopLeftXMilli = 0;
+    gNdsStageFloorEdgeLoopRightXMilli = 0;
+    gNdsStageFloorEdgeLoopWidthMilli = 0;
+    gNdsStageFloorEdgeLoopP0StartDistMilli = 0;
+    gNdsStageFloorEdgeLoopP1StartDistMilli = 0;
+    gNdsStageFloorEdgeLoopP0FinalDistMilli = 0;
+    gNdsStageFloorEdgeLoopP1FinalDistMilli = 0;
+    gNdsStageFloorEdgeLoopP0DeltaDistMilli = 0;
+    gNdsStageFloorEdgeLoopP1DeltaDistMilli = 0;
+    gNdsStageFloorEdgeLoopP0MinDistMilli = 0x7fffffff;
+    gNdsStageFloorEdgeLoopP1MinDistMilli = 0x7fffffff;
+    gNdsStageFloorEdgeLoopP0ApproachOK = 0;
+    gNdsStageFloorEdgeLoopP1ApproachOK = 0;
+    gNdsStageFloorEdgeLoopP0NearEdgeOK = 0;
+    gNdsStageFloorEdgeLoopP1NearEdgeOK = 0;
+    gNdsStageFloorEdgeLoopP0FloorOK = 0;
+    gNdsStageFloorEdgeLoopP1FloorOK = 0;
+    gNdsStageFloorEdgeLoopP0FloorVisitMask = 0;
+    gNdsStageFloorEdgeLoopP1FloorVisitMask = 0;
+    gNdsStageFloorEdgeLoopInsideProbeCount = 0;
+    gNdsStageFloorEdgeLoopInsideProbeHitCount = 0;
+    gNdsStageFloorEdgeLoopOutsideProbeCount = 0;
+    gNdsStageFloorEdgeLoopOutsideProbeMissCount = 0;
+    gNdsStageFloorEdgeLoopOutsideProbeUnexpectedHitCount = 0;
+    gNdsStageFloorEdgeLoopFCCommonCallCount = 0;
+    gNdsStageFloorEdgeLoopFCCommonHitCount = 0;
+    gNdsStageFloorEdgeLoopLineTypeCallCount = 0;
+    gNdsStageFloorEdgeLoopVertexPositionCallCount = 0;
+    gNdsStageFloorEdgeLoopEdgeUnderLCallCount = 0;
+    gNdsStageFloorEdgeLoopEdgeUnderRCallCount = 0;
+    gNdsStageFloorEdgeLoopEdgeUnderDeferredCount = 0;
+    gNdsStageFloorEdgeLoopMapUpdateCount = 0;
+    gNdsStageFloorEdgeLoopP0MapUpdateCount = 0;
+    gNdsStageFloorEdgeLoopP1MapUpdateCount = 0;
+    gNdsStageFloorEdgeLoopPreClampDriftSampleCount = 0;
+    gNdsStageFloorEdgeLoopPreClampCount = 0;
+    gNdsStageFloorEdgeLoopP0MaxPreClampDriftMilli = 0;
+    gNdsStageFloorEdgeLoopP1MaxPreClampDriftMilli = 0;
+    gNdsStageFloorEdgeLoopMaxPreClampDriftMilli = 0;
+    gNdsStageFloorEdgeLoopFinalRecenterCount = 0;
+    gNdsStageFloorEdgeLoopFinalAdoptCount = 0;
+    gNdsStageFloorEdgeLoopUnexpectedSceneCount = 0;
+    gNdsStageFloorEdgeLoopUnexpectedStatusCount = 0;
+    gNdsStageFloorEdgeLoopUnsafeFallbackAfterPrepareCount = 0;
+    gNdsFighterMarioFoxStageMPProcessFloorLoopResult = 0;
+    gNdsFighterMarioFoxStageMPProcessFloorLoopSafeResult = 0;
+    gNdsFighterMarioFoxStageMPProcessFloorLoopMask = 0;
+    gNdsFighterMarioFoxStageMPProcessFloorLoopDeferredMask = 0;
+    gNdsFighterMarioFoxStageMPProcessFloorLoopCount = 0;
+    gNdsStageMPProcessFloorLoopPrepared = 0;
+    gNdsStageMPProcessFloorLoopBaseFloorEdgeSeen = 0;
+    gNdsStageMPProcessFloorLoopAdapterBuildCount = 0;
+    gNdsStageMPProcessFloorLoopAdapterCopyBackCount = 0;
+    gNdsStageMPProcessFloorLoopAdapterFallbackLRCount = 0;
+    gNdsStageMPProcessFloorLoopProjectFloorIDCallCount = 0;
+    gNdsStageMPProcessFloorLoopProjectFloorIDHitCount = 0;
+    gNdsStageMPProcessFloorLoopProjectFloorIDMissCount = 0;
+    gNdsStageMPProcessFloorLoopTestNewCallCount = 0;
+    gNdsStageMPProcessFloorLoopTestNewHitCount = 0;
+    gNdsStageMPProcessFloorLoopTestNewMissCount = 0;
+    gNdsStageMPProcessFloorLoopTestNewEdgeBranchCount = 0;
+    gNdsStageMPProcessFloorLoopTestNewSetProjectCount = 0;
+    gNdsStageMPProcessFloorLoopSetLandingFloorCallCount = 0;
+    gNdsStageMPProcessFloorLoopSetCollideFloorCallCount = 0;
+    gNdsStageMPProcessFloorLoopFCCommonPositiveDistCount = 0;
+    gNdsStageMPProcessFloorLoopFCCommonNegativeDistCount = 0;
+    gNdsStageMPProcessFloorLoopFCCommonZeroDistCount = 0;
+    gNdsStageMPProcessFloorLoopP0UpdateCount = 0;
+    gNdsStageMPProcessFloorLoopP1UpdateCount = 0;
+    gNdsStageMPProcessFloorLoopP0HitCount = 0;
+    gNdsStageMPProcessFloorLoopP1HitCount = 0;
+    gNdsStageMPProcessFloorLoopP0MissCount = 0;
+    gNdsStageMPProcessFloorLoopP1MissCount = 0;
+    gNdsStageMPProcessFloorLoopP0FinalLineID = -1;
+    gNdsStageMPProcessFloorLoopP1FinalLineID = -1;
+    gNdsStageMPProcessFloorLoopP0FinalLineIsFloor = 0;
+    gNdsStageMPProcessFloorLoopP1FinalLineIsFloor = 0;
+    gNdsStageMPProcessFloorLoopP0FinalMaskStat = 0;
+    gNdsStageMPProcessFloorLoopP1FinalMaskStat = 0;
+    gNdsStageMPProcessFloorLoopP0FinalDistMilli = 0;
+    gNdsStageMPProcessFloorLoopP1FinalDistMilli = 0;
+    gNdsStageMPProcessFloorLoopP0RootYMilli = 0;
+    gNdsStageMPProcessFloorLoopP1RootYMilli = 0;
+    gNdsStageMPProcessFloorLoopInsideProbeCount = 0;
+    gNdsStageMPProcessFloorLoopInsideProbeHitCount = 0;
+    gNdsStageMPProcessFloorLoopOutsideProbeCount = 0;
+    gNdsStageMPProcessFloorLoopOutsideProbeMissCount = 0;
+    gNdsStageMPProcessFloorLoopBelowFloorProbeCount = 0;
+    gNdsStageMPProcessFloorLoopBelowFloorPositiveDistCount = 0;
+    gNdsStageMPProcessFloorLoopNoFinalRecenterCount = 0;
+    gNdsStageMPProcessFloorLoopUnexpectedSceneCount = 0;
+    gNdsStageMPProcessFloorLoopUnexpectedStatusCount = 0;
+    gNdsStageMPProcessFloorLoopUnsafeCount = 0;
+    gNdsFighterMarioFoxStageMPUpdateFloorLoopResult = 0;
+    gNdsFighterMarioFoxStageMPUpdateFloorLoopSafeResult = 0;
+    gNdsFighterMarioFoxStageMPUpdateFloorLoopMask = 0;
+    gNdsFighterMarioFoxStageMPUpdateFloorLoopDeferredMask = 0;
+    gNdsFighterMarioFoxStageMPUpdateFloorLoopCount = 0;
+    gNdsStageMPUpdateFloorLoopPrepared = 0;
+    gNdsStageMPUpdateFloorLoopBaseMPProcessSeen = 0;
+    gNdsStageMPUpdateFloorLoopAdapterBuildCount = 0;
+    gNdsStageMPUpdateFloorLoopAdapterCopyBackCount = 0;
+    gNdsStageMPUpdateFloorLoopAdapterFallbackLRCount = 0;
+    gNdsStageMPUpdateFloorLoopUpdateMainCallCount = 0;
+    gNdsStageMPUpdateFloorLoopUpdateMainReturnTrueCount = 0;
+    gNdsStageMPUpdateFloorLoopUpdateMainReturnFalseCount = 0;
+    gNdsStageMPUpdateFloorLoopUpdateMainStepCount = 0;
+    gNdsStageMPUpdateFloorLoopUpdateMainMaxStepCount = 0;
+    gNdsStageMPUpdateFloorLoopUpdateMainSplitCount = 0;
+    gNdsStageMPUpdateFloorLoopUpdateMainCapCount = 0;
+    gNdsStageMPUpdateFloorLoopTranslateResetCount = 0;
+    gNdsStageMPUpdateFloorLoopProcCollCallCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsCallCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsFloorHitCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsCliffEdgeBranchCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsStopEdgeBranchCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsDefaultEndCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsWallDeferredCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsCeilDeferredCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsFloorEdgeAdjustDeferredCount = 0;
+    gNdsStageMPUpdateFloorLoopAllCollisionsSecondFloorTestDeferredCount = 0;
+    gNdsStageMPUpdateFloorLoopCheckFloorCallCount = 0;
+    gNdsStageMPUpdateFloorLoopCheckCliffEdgeCallCount = 0;
+    gNdsStageMPUpdateFloorLoopCheckFloorHitCount = 0;
+    gNdsStageMPUpdateFloorLoopCheckCliffEdgeHitCount = 0;
+    gNdsStageMPUpdateFloorLoopCheckFloorMissCount = 0;
+    gNdsStageMPUpdateFloorLoopCheckCliffEdgeMissCount = 0;
+    gNdsStageMPUpdateFloorLoopInsideProbeCount = 0;
+    gNdsStageMPUpdateFloorLoopInsideProbeHitCount = 0;
+    gNdsStageMPUpdateFloorLoopOutsideProbeCount = 0;
+    gNdsStageMPUpdateFloorLoopOutsideProbeMissCount = 0;
+    gNdsStageMPUpdateFloorLoopBelowFloorProbeCount = 0;
+    gNdsStageMPUpdateFloorLoopBelowFloorHitCount = 0;
+    gNdsStageMPUpdateFloorLoopSplitProbeCount = 0;
+    gNdsStageMPUpdateFloorLoopSplitProbeStepCount = 0;
+    gNdsStageMPUpdateFloorLoopP0UpdateCount = 0;
+    gNdsStageMPUpdateFloorLoopP1UpdateCount = 0;
+    gNdsStageMPUpdateFloorLoopP0HitCount = 0;
+    gNdsStageMPUpdateFloorLoopP1HitCount = 0;
+    gNdsStageMPUpdateFloorLoopP0MissCount = 0;
+    gNdsStageMPUpdateFloorLoopP1MissCount = 0;
+    gNdsStageMPUpdateFloorLoopP0PosDiffXMilli = 0;
+    gNdsStageMPUpdateFloorLoopP1PosDiffXMilli = 0;
+    gNdsStageMPUpdateFloorLoopP0PosDiffYMilli = 0;
+    gNdsStageMPUpdateFloorLoopP1PosDiffYMilli = 0;
+    gNdsStageMPUpdateFloorLoopP0RootXBeforeMilli = 0;
+    gNdsStageMPUpdateFloorLoopP1RootXBeforeMilli = 0;
+    gNdsStageMPUpdateFloorLoopP0RootXFinalMilli = 0;
+    gNdsStageMPUpdateFloorLoopP1RootXFinalMilli = 0;
+    gNdsStageMPUpdateFloorLoopP0RootYFinalMilli = 0;
+    gNdsStageMPUpdateFloorLoopP1RootYFinalMilli = 0;
+    gNdsStageMPUpdateFloorLoopP0FinalLineID = -1;
+    gNdsStageMPUpdateFloorLoopP1FinalLineID = -1;
+    gNdsStageMPUpdateFloorLoopP0FinalLineIsFloor = 0;
+    gNdsStageMPUpdateFloorLoopP1FinalLineIsFloor = 0;
+    gNdsStageMPUpdateFloorLoopP0FinalMaskStat = 0;
+    gNdsStageMPUpdateFloorLoopP1FinalMaskStat = 0;
+    gNdsStageMPUpdateFloorLoopP0FloorOK = 0;
+    gNdsStageMPUpdateFloorLoopP1FloorOK = 0;
+    gNdsStageMPUpdateFloorLoopNoFinalRecenterCount = 0;
+    gNdsStageMPUpdateFloorLoopFallDeniedCount = 0;
+    gNdsStageMPUpdateFloorLoopOttottoDeniedCount = 0;
+    gNdsStageMPUpdateFloorLoopUnexpectedSceneCount = 0;
+    gNdsStageMPUpdateFloorLoopUnexpectedStatusCount = 0;
+    gNdsStageMPUpdateFloorLoopUnsafeCount = 0;
+    gNdsFighterMarioFoxStageMPSweepFloorLoopResult = 0;
+    gNdsFighterMarioFoxStageMPSweepFloorLoopSafeResult = 0;
+    gNdsFighterMarioFoxStageMPSweepFloorLoopMask = 0;
+    gNdsFighterMarioFoxStageMPSweepFloorLoopDeferredMask = 0;
+    gNdsFighterMarioFoxStageMPSweepFloorLoopCount = 0;
+    gNdsStageMPSweepFloorLoopPrepared = 0;
+    gNdsStageMPSweepFloorLoopBaseMPUpdateSeen = 0;
+    gNdsStageMPSweepFloorLoopCheckFloorCallCount = 0;
+    gNdsStageMPSweepFloorLoopCheckFloorHitCount = 0;
+    gNdsStageMPSweepFloorLoopCheckFloorMissCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepSameCallCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepSameHitCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepSameMissCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepDiffCallCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepDiffHitCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepDiffMissCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepVisitCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepCandidateCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepRejectSameLineCount = 0;
+    gNdsStageMPSweepFloorLoopLineSweepAcceptNewLineCount = 0;
+    gNdsStageMPSweepFloorLoopSecondFloorCallCount = 0;
+    gNdsStageMPSweepFloorLoopSecondFloorHitCount = 0;
+    gNdsStageMPSweepFloorLoopSecondFloorMissCount = 0;
+    gNdsStageMPSweepFloorLoopLandingFloorCallCount = 0;
+    gNdsStageMPSweepFloorLoopFloorEdgeAdjustCallCount = 0;
+    gNdsStageMPSweepFloorLoopFloorEdgeAdjustDeferredCount = 0;
+    gNdsStageMPSweepFloorLoopMaskCurrFloorCount = 0;
+    gNdsStageMPSweepFloorLoopMaskStatFloorEdgeClearCount = 0;
+    gNdsStageMPSweepFloorLoopIsCollEndClearCount = 0;
+    gNdsStageMPSweepFloorLoopSameLineProbeCount = 0;
+    gNdsStageMPSweepFloorLoopSameLineProbeHitCount = 0;
+    gNdsStageMPSweepFloorLoopDiffLineProbeCount = 0;
+    gNdsStageMPSweepFloorLoopDiffLineProbeHitCount = 0;
+    gNdsStageMPSweepFloorLoopNoHitProbeCount = 0;
+    gNdsStageMPSweepFloorLoopNoHitProbeMissCount = 0;
+    gNdsStageMPSweepFloorLoopProbeLineID = -1;
+    gNdsStageMPSweepFloorLoopAltLineID = -1;
+    gNdsStageMPSweepFloorLoopP0FinalLineID = -1;
+    gNdsStageMPSweepFloorLoopP1FinalLineID = -1;
+    gNdsStageMPSweepFloorLoopP0FinalLineIsFloor = 0;
+    gNdsStageMPSweepFloorLoopP1FinalLineIsFloor = 0;
+    gNdsStageMPSweepFloorLoopP0FloorOK = 0;
+    gNdsStageMPSweepFloorLoopP1FloorOK = 0;
+    gNdsStageMPSweepFloorLoopUnsafeCount = 0;
+    gNdsSCVSBattleStageResult = 0;
+    gNdsSCVSBattleStageMask = 0;
+    gNdsSCVSBattleStageGKind = 0;
+    gNdsSCVSBattleStageGroundDataReady = 0;
+    gNdsSCVSBattleStageGeometryReady = 0;
+    gNdsSCVSBattleStageMapNodesReady = 0;
+    gNdsSCVSBattleStageBGM = 0;
+    gNdsSCVSBattleStageLightAngleXBits = 0;
+    gNdsSCVSBattleStageLightAngleYBits = 0;
+    gNdsSCVSBattleStageDeferredMask = 0;
+    gNdsPupupuGroundSetupResult = 0;
+    gNdsPupupuGroundDisplayResult = 0;
+    gNdsPupupuGroundGObjResult = 0;
+    gNdsPupupuGroundSetupMask = 0;
+    gNdsPupupuGroundDeferredMask = 0;
+    gNdsPupupuGroundLayerGObjCount = 0;
+    gNdsPupupuGroundLayerGObjMask = 0;
+    gNdsPupupuGroundLayerDObjMask = 0;
+    gNdsPupupuGroundLayerMObjMask = 0;
+    gNdsPupupuGroundLayerAnimMask = 0;
+    gNdsPupupuGroundMapGObjCount = 0;
+    gNdsPupupuGroundMapGObjMask = 0;
+    gNdsPupupuGroundMapHeadReady = 0;
+    gNdsPupupuGroundMapHeadOffset = 0;
+    gNdsPupupuGroundRootGObjID = 0;
+    gNdsPupupuGroundWhispyEyesGObjID = 0;
+    gNdsPupupuGroundWhispyMouthGObjID = 0;
+    gNdsPupupuGroundFlowersBackGObjID = 0;
+    gNdsPupupuGroundFlowersFrontGObjID = 0;
+    gNdsPupupuGroundParticleBankID = 0;
+    gNdsPupupuGroundProcessAttachCount = 0;
+    gNdsPupupuGroundNonPupupuStubCallCount = 0;
+    gNdsPupupuGroundGObjCountBefore = 0;
+    gNdsPupupuGroundGObjCountAfter = 0;
+    gNdsPupupuGroundDObjCountAfter = 0;
+    gNdsPupupuGroundMObjCountAfter = 0;
+    gNdsPupupuGroundAObjCountAfter = 0;
+    gNdsPupupuUpdateResult = 0;
+    gNdsPupupuUpdateMask = 0;
+    gNdsPupupuUpdateTickCount = 0;
+    gNdsPupupuUpdateGameStatusBefore = 0;
+    gNdsPupupuUpdateGameStatusAfter = 0;
+    gNdsPupupuUpdateWhispyStatusBefore = 0;
+    gNdsPupupuUpdateWhispyStatusAfterFirst = 0;
+    gNdsPupupuUpdateWhispyStatusAfterFinal = 0;
+    gNdsPupupuUpdateWindWaitBefore = 0;
+    gNdsPupupuUpdateWindWaitAfterFirst = 0;
+    gNdsPupupuUpdateWindWaitAfterFinal = 0;
+    gNdsPupupuUpdateBlinkWaitBefore = 0;
+    gNdsPupupuUpdateBlinkWaitAfterFinal = 0;
+    gNdsPupupuUpdateFlowersBackStatusBefore = 0;
+    gNdsPupupuUpdateFlowersBackStatusAfterFinal = 0;
+    gNdsPupupuUpdateFlowersFrontStatusBefore = 0;
+    gNdsPupupuUpdateFlowersFrontStatusAfterFinal = 0;
+    gNdsPupupuUpdateMapGObjMaskBefore = 0;
+    gNdsPupupuUpdateMapGObjMaskAfter = 0;
+    gNdsPupupuUpdateGObjCountBefore = 0;
+    gNdsPupupuUpdateGObjCountAfter = 0;
+    gNdsPupupuUpdateVelPushCount = 0;
+    gNdsPupupuUpdateQuakeCount = 0;
+    gNdsPupupuUpdateParticleScriptCount = 0;
+    gNdsPupupuUpdateWindFGMCount = 0;
     gNdsOpeningRoomGObjCount = 0;
     gNdsOpeningRoomCameraCount = 0;
     gNdsOpeningRoomDL0Size = 0;
@@ -1012,6 +3574,106 @@ extern void ndsMNVSModeRunStartTransitionProbe(void);
 extern void ndsMNPlayersVSRunReadyTransitionProbe(void);
 extern void ndsMNMapsRunSelectVSBattleProbe(void);
 extern void scVSBattleFuncUpdate(void);
+extern void ndsFighterMarioFoxRunImmediateProofChain(void);
+extern void ndsFighterMarioFoxSchedulerLoopPrepare(void);
+extern void ndsFighterMarioFoxControllerLoopPrepare(void);
+extern void ndsFighterMarioFoxPreviewLoopPrepare(void);
+extern void ndsFighterMarioFoxGCRunAllLoopPrepare(void);
+extern void ndsFighterMarioFoxLivePreviewPrepare(void);
+
+#define NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX 180u
+#define NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX 200u
+#define NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX 220u
+#define NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX 240u
+#define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
+#define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
+#define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
+
+static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
+{
+    scVSBattleFuncUpdate();
+    dSYTaskmanUpdateCount++;
+    gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+    if (counter != NULL)
+    {
+        (*counter)++;
+    }
+    gNdsSCVSBattleOriginalUpdateCount++;
+    gNdsSCVSBattleOriginalUpdateResult =
+        NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+    gNdsSCVSBattleOriginalSetupMask |=
+        NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+}
+
+static void ndsRunMarioFoxProcessPrerequisiteLoop(void)
+{
+    u32 i;
+
+    ndsFighterMarioFoxRunImmediateProofChain();
+    ndsRunMarioFoxProofUpdate(NULL);
+
+    for (i = 1u; i < 8u; i++)
+    {
+        if (gNdsFighterMarioFoxProcessLoopResult ==
+            NDS_FIGHTER_MARIOFOX_PROCESS_LOOP_PASS)
+        {
+            break;
+        }
+        ndsFighterMarioFoxRunImmediateProofChain();
+        ndsRunMarioFoxProofUpdate(NULL);
+    }
+}
+
+static void __attribute__((unused)) ndsRunMarioFoxGCRunAllPrerequisiteLoops(void)
+{
+    u32 i;
+
+    ndsRunMarioFoxProcessPrerequisiteLoop();
+
+    ndsFighterMarioFoxSchedulerLoopPrepare();
+    for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
+    {
+        ndsRunMarioFoxProofUpdate(&gNdsFighterSchedulerLoopTaskmanUpdateCount);
+        if (gNdsFighterMarioFoxSchedulerLoopResult ==
+            NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
+        {
+            break;
+        }
+    }
+
+    ndsFighterMarioFoxControllerLoopPrepare();
+    for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
+    {
+        ndsRunMarioFoxProofUpdate(&gNdsFighterControllerLoopTaskmanUpdateCount);
+        if (gNdsFighterMarioFoxControllerLoopResult ==
+            NDS_FIGHTER_MARIOFOX_CONTROLLER_LOOP_PASS)
+        {
+            break;
+        }
+    }
+
+    ndsFighterMarioFoxPreviewLoopPrepare();
+    for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
+    {
+        ndsRunMarioFoxProofUpdate(&gNdsFighterPreviewLoopTaskmanUpdateCount);
+        if (gNdsFighterMarioFoxPreviewLoopResult ==
+            NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_PASS)
+        {
+            break;
+        }
+    }
+
+    ndsFighterMarioFoxGCRunAllLoopPrepare();
+    for (i = 0u; i < NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX; i++)
+    {
+        ndsRunMarioFoxProofUpdate(&gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+        if (gNdsFighterMarioFoxGCRunAllLoopResult ==
+            NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_PASS)
+        {
+            break;
+        }
+    }
+}
 
 /* Diagnostic snapshot of the real object-manager state after
  * mnStartupFuncStart ran. Every value here is read from the original object
@@ -2930,7 +5592,84 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                   (uintptr_t)gSYTaskmanGeneralHeap.start);
         gNdsTaskmanLoopReached = 1;
 #if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_VS_START_TRANSITION) || \
-    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE)
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_PUPUPU_UPDATE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_MODEL) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STRUCT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_INIT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT_TICK) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT_GROUND) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DISPLAY_PROBE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_SCAN) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_EXECUTE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW_MULTI) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW_ALL) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WALK_INPUT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WALK_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DASH_RUN) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_JUMP_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LANDING_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PROCESS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_SCHEDULER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_CONTROLLER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PREVIEW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCRUNALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LIVE_PREVIEW) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_COLLISION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_TURN_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP)
         ndsMNVSModeRunStartTransitionProbe();
 
         if ((gNdsVSModeStartTransitionResult ==
@@ -2968,7 +5707,84 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
                   (uintptr_t)gSYTaskmanGeneralHeap.start);
         gNdsTaskmanLoopReached = 1;
-#if NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_PUPUPU_UPDATE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_MODEL) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STRUCT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_INIT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT_TICK) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT_GROUND) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DISPLAY_PROBE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_SCAN) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_EXECUTE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW_MULTI) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW_ALL) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WALK_INPUT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WALK_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DASH_RUN) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_JUMP_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LANDING_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PROCESS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_SCHEDULER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_CONTROLLER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PREVIEW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCRUNALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LIVE_PREVIEW) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_COLLISION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_TURN_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP)
         ndsMNPlayersVSRunReadyTransitionProbe();
 
         if ((gNdsPlayersVSReadyTransitionResult ==
@@ -3006,7 +5822,84 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
                   (uintptr_t)gSYTaskmanGeneralHeap.start);
         gNdsTaskmanLoopReached = 1;
-#if NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_VSBATTLE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_PUPUPU_UPDATE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_MODEL) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STRUCT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_INIT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT_TICK) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WAIT_GROUND) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DISPLAY_PROBE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_SCAN) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_EXECUTE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW_MULTI) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DL_DRAW_ALL) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WALK_INPUT) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_WALK_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DASH_RUN) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_JUMP_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LANDING_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PROCESS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_SCHEDULER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_CONTROLLER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PREVIEW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCRUNALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LIVE_PREVIEW) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_COLLISION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_TURN_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP)
         ndsMNMapsRunSelectVSBattleProbe();
 
         if ((gNdsMapsSelectTransitionResult ==
@@ -3045,6 +5938,1093 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                   (uintptr_t)gSYTaskmanGeneralHeap.start);
         gNdsTaskmanLoopReached = 1;
 
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_LIVE_PREVIEW) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LIVE_PREVIEW) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_GCDRAWALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_COLLISION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_COLLISION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_TURN_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_TURN_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP)
+        {
+            u32 i;
+            u32 live_update_max =
+                (NDS_DEV_LIVE_INPUT_PREVIEW != 0) ?
+                NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX :
+                NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX;
+
+            ndsFighterMarioFoxSchedulerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxSchedulerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxControllerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterControllerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxControllerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_CONTROLLER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxPreviewLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterPreviewLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxPreviewLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxGCRunAllLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxGCRunAllLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            if ((NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_GCDRAWALL_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCDRAWALL_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_GCDRAWALL_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_GCDRAWALL_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_COLLISION_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_COLLISION_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_TURN_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_TURN_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP))
+            {
+                ndsRunMarioFoxGCRunAllPrerequisiteLoops();
+                ndsFighterMarioFoxStageCollisionLoopPrepare();
+                ndsFighterMarioFoxStageFloorFollowLoopPrepare();
+                ndsFighterMarioFoxStageFloorEdgeLoopPrepare();
+                ndsFighterMarioFoxStageMPProcessFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPUpdateFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPSweepFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCrossFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPAdjustFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPEdgeFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPWallFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPStaleFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPLiveStaleFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPMotionStaleFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffStatusFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffTickFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPFallMapFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPFallLandFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCeilFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCeilStatusFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffCatchFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffWaitFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffAttackFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffAttackActionLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffCommon2LoopPrepare();
+                ndsFighterMarioFoxStageMPCliffEscapeActionLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopPrepare();
+                ndsFighterMarioFoxStageMPCliffClimbFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffClimbActionLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffClimbCommon2LoopPrepare();
+                ndsFighterMarioFoxStageMPCliffClimbFinishLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffWaitDamageLoopPrepare();
+                ndsFighterMarioFoxStageMPPassiveLoopPrepare();
+                ndsFighterMarioFoxStageMPDamageRecoverLoopPrepare();
+                ndsFighterMarioFoxStageMPLiveHitDamageLoopPrepare();
+                ndsFighterMarioFoxStageMPDownWaitLoopPrepare();
+                ndsFighterMarioFoxStageTurnLoopPrepare();
+                ndsFighterMarioFoxStageMPDownRecoverLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffLedgeLoopPrepare();
+                ndsFighterMarioFoxStageMPCliffLiveLoopPrepare();
+                ndsFighterMarioFoxStageMPWallCopyFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPPassFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPPlatformFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPPlatformTickFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPPassInputLoopPrepare();
+                ndsFighterMarioFoxStageMPPlatformPosFloorLoopPrepare();
+                ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopPrepare();
+                ndsFighterMarioFoxStageInishieScaleLoopPrepare();
+                ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
+                ndsFighterMarioFoxGCDrawAllLoopPrepare();
+                for (i = 0u; i < NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX; i++)
+                {
+                    scVSBattleFuncUpdate();
+                    dSYTaskmanUpdateCount++;
+                    gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                    gNdsFighterGCDrawAllLoopTaskmanUpdateCount++;
+                    gNdsSCVSBattleOriginalUpdateCount++;
+                    gNdsSCVSBattleOriginalUpdateResult =
+                        NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                    gNdsSCVSBattleOriginalSetupMask |=
+                        NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                    if (gNdsFighterMarioFoxGCDrawAllLoopResult ==
+                        NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_PASS)
+                    {
+#if (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP)
+                        ndsFighterMarioFoxStageGCDrawAllLoopFinalize();
+                        ndsFighterMarioFoxStageCollisionLoopFinalize();
+                        ndsFighterMarioFoxStageFloorFollowLoopFinalize();
+                        ndsFighterMarioFoxStageFloorEdgeLoopFinalize();
+                        ndsFighterMarioFoxStageMPProcessFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPUpdateFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPSweepFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCrossFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPAdjustFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPEdgeFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPWallFloorLoopFinalize();
+#endif
+#if (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_TURN_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_TURN_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP)
+                        if (gNdsStageMPLiveStaleFloorLoopSelectedCallbackCount ==
+                            0u)
+                        {
+                            continue;
+                        }
+#endif
+                        ndsFighterMarioFoxStageGCDrawAllLoopFinalize();
+                        ndsFighterMarioFoxStageCollisionLoopFinalize();
+                        ndsFighterMarioFoxStageFloorFollowLoopFinalize();
+                        ndsFighterMarioFoxStageFloorEdgeLoopFinalize();
+                        ndsFighterMarioFoxStageMPProcessFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPUpdateFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPSweepFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCrossFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPAdjustFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPEdgeFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPWallFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPStaleFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPLiveStaleFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPMotionStaleFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffStatusFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffTickFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPFallMapFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPFallLandFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCeilFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCeilStatusFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffCatchFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffWaitFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffClimbFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffClimbActionLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffClimbCommon2LoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffClimbFinishLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffWaitDamageLoopFinalize();
+                        ndsFighterMarioFoxStageMPPassiveLoopFinalize();
+                        ndsFighterMarioFoxStageMPDamageRecoverLoopFinalize();
+                        ndsFighterMarioFoxStageMPLiveHitDamageLoopFinalize();
+                        ndsFighterMarioFoxStageMPDownWaitLoopFinalize();
+                        ndsFighterMarioFoxStageTurnLoopFinalize();
+                        ndsFighterMarioFoxStageMPDownRecoverLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffLedgeLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffLiveLoopFinalize();
+                        ndsFighterMarioFoxStageMPWallCopyFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPPassFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPPlatformFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPPlatformTickFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPPassInputLoopFinalize();
+                        ndsFighterMarioFoxStageMPPlatformPosFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopFinalize();
+                        ndsFighterMarioFoxStageInishieScaleLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffAttackFloorLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffAttackActionLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffCommon2LoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffEscapeActionLoopFinalize();
+                        ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopFinalize();
+                        break;
+                    }
+                }
+                ndsFighterMarioFoxStageGCDrawAllLoopFinalize();
+                ndsFighterMarioFoxStageCollisionLoopFinalize();
+                ndsFighterMarioFoxStageFloorFollowLoopFinalize();
+                ndsFighterMarioFoxStageFloorEdgeLoopFinalize();
+                ndsFighterMarioFoxStageMPProcessFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPUpdateFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPSweepFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCrossFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPAdjustFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPEdgeFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPWallFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPStaleFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPLiveStaleFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPMotionStaleFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffStatusFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffTickFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPFallMapFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPFallLandFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCeilFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCeilStatusFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffCatchFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffWaitFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffClimbFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffClimbActionLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffClimbCommon2LoopFinalize();
+                ndsFighterMarioFoxStageMPCliffClimbFinishLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffWaitDamageLoopFinalize();
+                ndsFighterMarioFoxStageMPPassiveLoopFinalize();
+                ndsFighterMarioFoxStageMPDamageRecoverLoopFinalize();
+                ndsFighterMarioFoxStageMPLiveHitDamageLoopFinalize();
+                ndsFighterMarioFoxStageMPDownWaitLoopFinalize();
+                ndsFighterMarioFoxStageTurnLoopFinalize();
+                ndsFighterMarioFoxStageMPDownRecoverLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffLedgeLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffLiveLoopFinalize();
+                ndsFighterMarioFoxStageMPWallCopyFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPPassFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPPlatformFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPPlatformTickFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPPassInputLoopFinalize();
+                ndsFighterMarioFoxStageMPPlatformPosFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopFinalize();
+                ndsFighterMarioFoxStageInishieScaleLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffAttackFloorLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffAttackActionLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffCommon2LoopFinalize();
+                ndsFighterMarioFoxStageMPCliffEscapeActionLoopFinalize();
+                ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopFinalize();
+            }
+
+            if ((NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_LIVE_PREVIEW) ||
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LIVE_PREVIEW))
+            {
+                ndsFighterMarioFoxLivePreviewPrepare();
+                for (i = 0u; i < live_update_max; i++)
+                {
+                    scVSBattleFuncUpdate();
+                    dSYTaskmanUpdateCount++;
+                    gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                    gNdsFighterLivePreviewTaskmanUpdateCount++;
+                    gNdsSCVSBattleOriginalUpdateCount++;
+                    gNdsSCVSBattleOriginalUpdateResult =
+                        NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                    gNdsSCVSBattleOriginalSetupMask |=
+                        NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                    if ((NDS_DEV_LIVE_INPUT_PREVIEW == 0) &&
+                        (gNdsFighterMarioFoxLivePreviewResult ==
+                         NDS_FIGHTER_MARIOFOX_LIVE_PREVIEW_PASS))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+#elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_GCRUNALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCRUNALL_LOOP)
+        {
+            u32 i;
+
+            ndsRunMarioFoxProcessPrerequisiteLoop();
+            ndsFighterMarioFoxSchedulerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxSchedulerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxControllerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterControllerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxControllerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_CONTROLLER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxPreviewLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterPreviewLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxPreviewLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxGCRunAllLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxGCRunAllLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+        }
+#elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_PREVIEW_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PREVIEW_LOOP)
+        {
+            u32 i;
+
+            ndsRunMarioFoxProcessPrerequisiteLoop();
+            ndsFighterMarioFoxSchedulerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxSchedulerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxControllerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterControllerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxControllerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_CONTROLLER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxPreviewLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterPreviewLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxPreviewLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+        }
+#elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_CONTROLLER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_CONTROLLER_LOOP)
+        {
+            u32 i;
+
+            ndsRunMarioFoxProcessPrerequisiteLoop();
+            ndsFighterMarioFoxSchedulerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxSchedulerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+
+            ndsFighterMarioFoxControllerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterControllerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxControllerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_CONTROLLER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+        }
+#elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_SCHEDULER_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_SCHEDULER_LOOP)
+        {
+            u32 i;
+
+            ndsRunMarioFoxProcessPrerequisiteLoop();
+            ndsFighterMarioFoxSchedulerLoopPrepare();
+            for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterMarioFoxSchedulerLoopResult ==
+                    NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
+                {
+                    break;
+                }
+            }
+        }
+#elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_JUMP_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_JUMP_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_LANDING_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LANDING_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_PROCESS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PROCESS_LOOP)
+        ndsRunMarioFoxProcessPrerequisiteLoop();
+#else
         scVSBattleFuncUpdate();
         dSYTaskmanUpdateCount++;
         gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
@@ -3053,6 +7033,17 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
         gNdsSCVSBattleOriginalSetupMask |=
             NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+#endif
+
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PUPUPU_UPDATE) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_PUPUPU_UPDATE)
+        ndsGRPupupuRunSafeUpdateProbe();
+        if (gNdsPupupuUpdateResult == NDS_PUPUPU_UPDATE_PASS)
+        {
+            gNdsPupupuGroundDeferredMask |= 1u << 3;
+            gNdsPupupuGroundDeferredMask |= 1u << 4;
+        }
+#endif
 
         ndsFinishTaskmanRun();
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
@@ -3090,4 +7081,3 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     gNdsStartupTaskmanMallocCount = gNdsTaskmanMallocCount;
     ndsFinishTaskmanRun();
 }
-

@@ -101,7 +101,15 @@ enum {
 
 #define LBBACKUP_UNLOCK_MASK_INISHIE (1u << nLBBackupUnlockInishie)
 
-enum { nSCBattleGameStatusWait };
+enum {
+    nSCBattleGameStatusWait,
+    nSCBattleGameStatusGo,
+    nSCBattleGameStatusPause,
+    nSCBattleGameStatusUnpause,
+    nSCBattleGameStatusEnd = 5,
+    nSCBattleGameStatusBossDefeat,
+    nSCBattleGameStatusSet
+};
 enum { nSCBattleHandicapOff, nSCBattleHandicapOn, nSCBattleHandicapAuto };
 enum { nSCBattleItemSwitchNone, nSCBattleItemSwitchVeryLow,
        nSCBattleItemSwitchLow, nSCBattleItemSwitchMiddle };
@@ -137,7 +145,37 @@ enum {
     nGRKindZako,
     nGRKindBonus3,
     nGRKindLast,
-    nGRKindCommonEnd = nGRKindLast
+    nGRKindCommonEnd = nGRKindLast,
+    nGRKindBonusStageStart,
+    nGRKindBonus1Start = nGRKindBonusStageStart,
+    nGRKindBonus1Mario = nGRKindBonus1Start,
+    nGRKindBonus1Fox,
+    nGRKindBonus1Donkey,
+    nGRKindBonus1Samus,
+    nGRKindBonus1Luigi,
+    nGRKindBonus1Link,
+    nGRKindBonus1Yoshi,
+    nGRKindBonus1Captain,
+    nGRKindBonus1Kirby,
+    nGRKindBonus1Pikachu,
+    nGRKindBonus1Purin,
+    nGRKindBonus1Ness,
+    nGRKindBonus1End = nGRKindBonus1Ness,
+    nGRKindBonus2Start,
+    nGRKindBonus2Mario = nGRKindBonus2Start,
+    nGRKindBonus2Fox,
+    nGRKindBonus2Donkey,
+    nGRKindBonus2Samus,
+    nGRKindBonus2Luigi,
+    nGRKindBonus2Link,
+    nGRKindBonus2Yoshi,
+    nGRKindBonus2Captain,
+    nGRKindBonus2Kirby,
+    nGRKindBonus2Pikachu,
+    nGRKindBonus2Purin,
+    nGRKindBonus2Ness,
+    nGRKindBonus2End = nGRKindBonus2Ness,
+    nGRKindBonusStageEnd = nGRKindBonus2End
 };
 
 enum {

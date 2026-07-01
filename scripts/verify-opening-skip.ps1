@@ -1,37 +1,43 @@
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
-    [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
+    [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
+    [int]$GdbPort = 3333,
+    [int]$RunnerSlot = -1,
+    [switch]$NoBuild
 )
-
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$verifierContext = Initialize-MelonDSVerifierContext `
+    -Root $root `
+    -MelonDS $MelonDS `
+    -RunnerSlot $RunnerSlot `
+    -GdbPort $GdbPort `
+    -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
+    -NoBuild:$NoBuild
+$runnerSlot = Get-MelonDSActiveRunnerSlot
+$selectedGdbPort = Get-MelonDSActiveGdbPort
+$tempDir = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot $runnerSlot
 $rom = Join-Path $root 'smash64ds.nds'
 $elf = Join-Path $root 'smash64ds.elf'
-$melonDsPath = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
-    $MelonDS
-} else {
-    Join-Path $root $MelonDS
-}
+$melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $config = Join-Path $melonDsDir 'melonDS.toml'
-$logDir = Join-Path $root 'artifacts\emulator-logs'
+$logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $runnerSlot
 $stdout = Join-Path $logDir 'melonds.skip.stdout.log'
 $stderr = Join-Path $logDir 'melonds.skip.stderr.log'
 $originalConfig = $null
 $emulator = $null
-
 function Invoke-Arm9Gdb {
     param(
         [string]$Name,
         [string[]]$Commands,
         [int]$TimeoutMilliseconds = 15000
     )
-
-    $scriptPath = Join-Path $root "_verify_$Name.gdb"
-    $stdoutPath = Join-Path $root "_verify_$Name.gdb.out"
-    $stderrPath = Join-Path $root "_verify_$Name.gdb.err"
+    $scriptPath = Join-Path $tempDir "_verify_$Name.gdb"
+    $stdoutPath = Join-Path $tempDir "_verify_$Name.gdb.out"
+    $stderrPath = Join-Path $tempDir "_verify_$Name.gdb.err"
     [System.IO.File]::WriteAllLines($scriptPath, $Commands)
-
     Remove-Item $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
     $process = Start-Process -FilePath $Gdb `
         -ArgumentList @('-q', '-batch', '-x', $scriptPath, $elf) `
@@ -55,7 +61,6 @@ function Invoke-Arm9Gdb {
     }
     return $gdbOut
 }
-
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'Build smash64ds.nds and smash64ds.elf before skip verification.'
 }
@@ -63,7 +68,6 @@ if (-not (Test-Path $melonDsPath)) {
     throw "melonDS executable not found: $melonDsPath"
 }
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-
 try {
     if (Test-Path $config) {
         $originalConfig = Get-Content $config -Raw
@@ -74,23 +78,22 @@ try {
         if (-not $seed.HasExited) { Stop-Process -Id $seed.Id -Force }
         Start-Sleep -Milliseconds 250
     }
-
     $text = Get-Content $config -Raw
     $gdbSectionPattern = '(?s)\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?'
-    $enabled = $text -replace `
-        '(?s)(\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?\bEnabled\s*=\s*)false', `
+    $enabled = $text -replace
+        '(?s)(\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?\bEnabled\s*=\s*)false',
         '${1}true'
-    $enabled = $enabled -replace `
-        '(?s)(\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?\bEnable\s*=\s*)false', `
+    $enabled = $enabled -replace
+        '(?s)(\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?\bEnable\s*=\s*)false',
         '${1}true'
     if ($enabled -notmatch "$gdbSectionPattern\bEnabled\s*=\s*true") {
-        $enabled = $enabled -replace `
-            '(?m)(^\[Instance0\.Gdb\]\s*\r?\n)', `
+        $enabled = $enabled -replace
+            '(?m)(^\[Instance0\.Gdb\]\s*\r?\n)',
             "`$1Enabled = true`r`n"
     }
     if ($enabled -notmatch "$gdbSectionPattern\bEnable\s*=\s*true") {
-        $enabled = $enabled -replace `
-            '(?m)(^\[Instance0\.Gdb\]\s*\r?\n)', `
+        $enabled = $enabled -replace
+            '(?m)(^\[Instance0\.Gdb\]\s*\r?\n)',
             "`$1Enable = true`r`n"
     }
     if ($enabled -notmatch "$gdbSectionPattern\bEnabled\s*=\s*true" -or
@@ -98,13 +101,12 @@ try {
         throw 'Could not enable the melonDS ARM9 GDB stub.'
     }
     Set-Content $config -Value $enabled -NoNewline
-
+    Set-MelonDSGdbConfig -MelonDSPath $melonDsPath -GdbPort $selectedGdbPort -Persistent:($runnerSlot -ge 0) | Out-Null
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath -ArgumentList $rom `
         -WorkingDirectory $melonDsDir -WindowStyle Hidden `
         -RedirectStandardOutput $stdout -RedirectStandardError $stderr `
         -PassThru
-
     # Attach while Startup/Opening Room is still advancing. Break immediately
     # before the tick-10 callback body, then inject an N64 A-button tap into the
     # real BattleShip controller device that the imported helper scans.
@@ -115,7 +117,7 @@ try {
         if ($emulator.HasExited) {
             throw "melonDS exited before the Opening Room skip GDB attach (exit $($emulator.ExitCode))."
         }
-        $listener = Get-NetTCPConnection -LocalPort 3333 -State Listen `
+        $listener = Get-NetTCPConnection -LocalPort $selectedGdbPort -State Listen `
             -ErrorAction SilentlyContinue |
             Where-Object { $_.OwningProcess -eq $emulator.Id } |
             Select-Object -First 1
@@ -125,11 +127,11 @@ try {
         Start-Sleep -Milliseconds 250
     }
     if ($null -eq $listener) {
-        throw 'melonDS did not open the ARM9 GDB listener on 127.0.0.1:3333.'
+        throw "melonDS did not open the ARM9 GDB listener on 127.0.0.1:$selectedGdbPort."
     }
     $result = Invoke-Arm9Gdb -Name 'opening_skip' -TimeoutMilliseconds 20000 -Commands @(
         'set pagination off',
-        'target remote 127.0.0.1:3333',
+        "target remote 127.0.0.1:$selectedGdbPort",
         'break mvOpeningRoomFuncRun if sMVOpeningRoomTotalTimeTics >= 9',
         'continue',
         'set variable gSYControllerDevices[0].button_tap = 0x8000',
@@ -187,7 +189,6 @@ try {
         'printf "TITLE_ORIGINAL_UPDATE=%#x,%u,%u,%u,%u,%u,%u\n", gNdsTitleOriginalUpdateResult, gNdsTitleOriginalUpdateCount, gNdsTitleOriginalLayout, gNdsTitleOriginalTransitionTics, gNdsTitleOriginalStartActorProcess, gNdsTitleOriginalProceedScene, gNdsTitleOriginalProceedWait',
         'detach'
     )
-
     $expected = @{
         SKIP_COUNT = '1'
         SCENE_CURR = '1'
@@ -242,7 +243,6 @@ try {
             throw "Opening Room skip check '$name' failed.`n$result"
         }
     }
-
     $roomTicksMatch = [regex]::Match($result, 'ROOM_TICKS=([0-9]+)')
     $roomChecksMatch = [regex]::Match($result, 'ROOM_CHECKS=([0-9]+)')
     if (-not $roomTicksMatch.Success -or -not $roomChecksMatch.Success) {
@@ -254,7 +254,6 @@ try {
         $roomChecks -ne ($roomTicks - 9)) {
         throw "Opening Room skip was outside the original controller-gated interval.`n$result"
     }
-
     $titleSpriteNorm = [regex]::Match($result, 'TITLE_SPRITE_NORM=([0-9]+),([0-9]+)')
     $titleDrawCounts = [regex]::Match($result, 'TITLE_DRAW_COUNTS=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     if (-not $titleSpriteNorm.Success -or
@@ -267,7 +266,6 @@ try {
         [int]$titleDrawCounts.Groups[4].Value -le 1000) {
         throw "Opening Room skip reached Title but did not render the bounded MNTitle preview.`n$result"
     }
-
     Write-Output "Opening Room skip verification passed (tick $roomTicks -> Title)."
 } finally {
     if ($null -ne $emulator) {
@@ -277,14 +275,16 @@ try {
             $emulator.WaitForExit()
         }
     }
-    if ($null -ne $originalConfig) {
-        Set-Content $config -Value $originalConfig -NoNewline
-    } else {
-        Remove-Item $config -Force -ErrorAction SilentlyContinue
+    if ($runnerSlot -lt 0) {
+        if ($null -ne $originalConfig) {
+            Set-Content $config -Value $originalConfig -NoNewline
+        } else {
+            Remove-Item $config -Force -ErrorAction SilentlyContinue
+        }
     }
     Remove-Item $stdout, $stderr, `
-        (Join-Path $root '_verify_opening_skip.gdb'), `
-        (Join-Path $root '_verify_opening_skip.gdb.out'), `
-        (Join-Path $root '_verify_opening_skip.gdb.err') `
+        (Join-Path $tempDir '_verify_opening_skip.gdb'), `
+        (Join-Path $tempDir '_verify_opening_skip.gdb.out'), `
+        (Join-Path $tempDir '_verify_opening_skip.gdb.err') `
         -Force -ErrorAction SilentlyContinue
 }

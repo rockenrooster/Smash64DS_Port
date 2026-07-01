@@ -1,0 +1,34 @@
+name: Static Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  static:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docs check
+        run: .\scripts\check-docs.ps1
+
+      - name: Architecture check
+        run: .\scripts\check-architecture.ps1
+
+      - name: Harness registry check
+        run: .\scripts\check-harness-registry.ps1
+
+      - name: GBI decode fixture check
+        run: .\scripts\check-gbi-decode-fixtures.ps1
+
+      - name: Generated-output dry run
+        run: .\scripts\clean-generated.ps1 -DryRun

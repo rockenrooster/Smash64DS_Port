@@ -201,9 +201,32 @@ continues into imported `sccommon/scvsbattle.c` and
 `sccommon/scvsbattlefiles.c` for a bounded VSBattle setup proof: common battle
 files are loaded through the DS relocation layer, battle camera/interface/
 manager calls reach project-owned compatibility stubs, active fighter
-descriptors are built from `SCBattleState`, stub fighter GObjs are created for
-active players, and one bounded `scVSBattleFuncUpdate` interface tick is
-verified before parking. This is not full battle gameplay; fighter, stage,
+descriptors are built from `SCBattleState`, setup-only harnesses create stub
+fighter GObjs, and the Mario/Fox model harnesses replace those stubs with
+bounded asset-backed fighter GObjs that own real top/model/commonpart DObj
+trees. The Mario/Fox struct harnesses attach persistent project-owned
+`FTStruct` shells to those real fighter GObjs, keep `ftGetStruct` pointer
+identity stable, and prove a bounded top/common joint table from the DObj tree.
+The Mario/Fox init harnesses then run a bounded project-owned helper in the
+same source order as the safe initialization portion of original
+`ftManagerInitFighter`, seeding damage, shield, velocities, root DObj
+transform, collision contracts, floor projection, passive vars, and guarded
+compatibility-call diagnostics for Mario and Fox.
+The current fighter spine continues through imported original Wait, Walk,
+Dash, Run, RunBrake, KneeBend, Jump, Fall, and Landing slices. The direct and
+menu-chain process-loop harnesses first prove those paths in a bounded
+source-order frame driver. The direct and menu-chain scheduler-loop harnesses
+then attach selected Mario/Fox `GObjProcess` callbacks with original
+`gcAddGObjProcess`, invoke them through `gcRunGObjProcess`, and run the same
+movement contract from the wrapped `scVSBattleFuncUpdate` path under a capped
+VSBattle taskman update loop. The current draw spine reaches original
+`gcDrawAll()` for bounded moving Mario/Fox keyframes and now includes selected
+Pupupu display-layer/map GObjs in the same camera-capture traversal, proving
+their imported stage display callbacks reach the DS-owned DObj draw bridges.
+One bounded `scVSBattleFuncUpdate` interface tick is verified before parking.
+This is not full battle gameplay; exact original fighter joint-ID mapping, full
+`gcRunAll` object-process scheduling, real fighter input/update/physics loops,
+unmasked full-scene `gcDrawAll`, hardware polygon rendering, stage runtime,
 item/weapon runtime, full interface rendering, results, and audio playback
 remain deferred until their own narrow original-source boundaries are imported.
 
@@ -423,12 +446,26 @@ Current RSP/RDP behavior is still placeholder:
 
 - graphics tasks are accepted and immediately completed
 - RDP buffer submissions are acknowledged
-- general display-list commands are not interpreted for DS rendering yet; only
-  the bounded Opening Room material-candidate DObj command stream has a
-  diagnostic branch-expanded preview path, with the older link-6 DObj retained
-  as fallback
+- general display-list commands are not interpreted for DS hardware rendering
+  yet; the bounded Opening Room material-candidate DObj command stream has a
+  diagnostic branch-expanded preview path, and the Mario/Fox fighter path now
+  has a visible first-DL software preview proof that parses real vertex and
+  triangle payloads and commits a retained `96x72` original-DL preview without
+  submitting DS polygons
+- the DS renderer adapter treats known benign N64 state/culling/image/TLUT
+  commands as recorded state or skip commands for bounded proofs, while
+  unknown/default opcodes still produce unsupported blockers
 - original default RDP viewport math is implemented and verifier-backed, while
   full RDP reset state emission remains deferred
+
+GBI command decode helpers live in `include/nds/nds_gbi_decode.h`. BattleShip
+is built with `-DF3DEX_GBI_2`, so DS renderer paths must decode F3DEX2 command
+layouts: `G_VTX` uses count/end fields, and `G_TRI1`/`G_TRI2` triangle bytes
+store vertex indices as `index * 10`. The shared helpers are used by
+`src/nds/nds_renderer.c`, the Opening Room preview, and Mario/Fox fighter
+DL execute/draw proofs. `scripts/check-gbi-decode-fixtures.ps1` locks tiny
+fixtures for `gSPVertex`, `gSP1Triangle`, and `gSP2Triangles` so older ad hoc
+decode layouts do not re-enter the renderer.
 
 The next real rendering milestone is an N64 display-list to DS rendering backend,
 not a new DS-native renderer for gameplay.
@@ -457,13 +494,75 @@ systems, not directly through libnds.
 `sys/zbuffer.c` are imported. `syVideoInit` submits original framebuffer and VI
 tasks through the original scheduler.
 
-Current DS display output is a placeholder frame plus two narrow original-asset
+Current DS display output is a placeholder frame plus narrow original-asset
 preview paths. The startup `N64Logo` asset is rendered from the original
 BattleShip Sprite/SObj data through a bounded draw callback and copied into a
 DS preview buffer. A separate bounded Opening Room draw probe reaches a real
 DObj display-list pointer and rasterizes the first small `G_VTX`/`G_TRI1`/`G_TRI2`
-slice into a diagnostic preview. General N64 display-list rendering is still
-not converted to DS GPU calls.
+slice into a diagnostic preview. The Mario/Fox fighter path can now scan,
+execute/decode, and software-rasterize the selected first DL, the first four
+DL-ready DObjs per fighter, and all current DL-ready Mario/Fox DObjs through a
+guarded `ftDisplayMainProcDisplay` seam into deterministic side-by-side `96x72`
+preview boxes with nonzero pixels. The stage-inclusive draw harnesses keep that
+bounded preview path and record that selected Pupupu layer/map display GObjs
+are captured by original `gcDrawAll` and reach the DObj draw bridges with
+complete DObj/DL-ready masks. The Pupupu floor-edge harnesses build on
+that selected draw path and add map-query evidence, not renderer breadth: they
+keep Mario/Fox on decoded Pupupu floor line `3` and prove bounded
+original-compatible MP floor queries. The MP floor-process harnesses extend
+that boundary with a
+project-owned original-layout `MPCollData` adapter and source-order floor
+process calls for selected Mario/Fox fighters. The MP update-main harnesses
+route selected Mario/Fox map callbacks through bounded source-order
+`mpProcessUpdateMain` with a floor-only `mpCommonRunFighterAllCollisions`
+callback. The MP sweep harnesses replace the previous second-floor deferral
+with bounded same-line/different-line floor sweep helpers and
+`mpProcessCheckTestFloorCollision`; the MP cross-floor harnesses then prove
+the accepted second-floor path from the live selected Mario callback by
+priming source floor `-1`, projecting against decoded Pupupu geometry, and
+accepting line `3` through the original/source-order branch. Full
+`mpProcessRunFloorEdgeAdjust` is now entered through the MP adjust harnesses
+with bounded left/right floor-edge checks and wall-line sweep misses. The MP
+edge-floor harnesses then resolve the selected floor's edge-under adjacency to
+decoded Pupupu wall line IDs `6/5` with wall kinds `3/2` while keeping
+MPAdjust edge-under deferral at zero in modes `77/78`. The MP wall-floor
+harnesses then run a bounded source-order wall-candidate sweep and prove the
+current selected Dream Land main floor cannot produce a real wall-hit
+floor-edge adjustment because both side-wall candidates are the same
+edge-under walls that original `mpProcessCheckFloorEdgeCollisionL/R` rejects.
+The MP stale-floor harnesses then keep that live wall/edge route intact and
+run a finalizer-local source-order `MPCollData` probe for a valid stale
+second-floor pair, Dream Land floor line `1 -> 0`, through
+`mpProcessCheckTestFloorCollision`, landing-floor setup, floor-edge adjust,
+and collision-end clear. The MP live-stale and motion-stale harnesses then
+prove that same valid stale pair from the selected P0 callback path, first as
+a contained local `MPCollData` pass and then as a selected root/collision
+mutation copied back to live state. The MP cliff-status harnesses import
+original `ftcommonottotto.c` and prove bounded source-order
+`mpCommonProcFighterOnCliffEdge` branches into Ottotto and Fall status setup.
+The MP cliff-tick harnesses then run one guarded original Ottotto
+update/interrupt/map tick and one guarded original Fall interrupt tick from
+those created states, while keeping gameplay scheduling bounded. The MP
+Fall-map harnesses then consume the P1 Fall state, run the selected
+status-table original `ftPhysicsApplyAirVelDriftFastFall` callback, integrate
+one bounded airborne step, and reach the selected original
+`mpCommonProcFighterCliffFloorCeil` map callback through a guarded
+no-collision branch. The MP Fall-landing harnesses then seed P1 just above
+decoded Pupupu floor line `3`, cross the floor through the selected original
+map callback route, call landing-floor setup, reach original LandingLight
+status/motion `31/25`, switch to Ground, and clamp vertical velocity. The MP
+ceiling-floor harnesses then choose real Pupupu ceiling line `4` and prove a
+bounded source-order ceiling test/adjust path through
+`mpProcessCheckTestCeilCollisionAdjNew`, the different-line ceiling sweep,
+`mpCollisionGetFCCommonCeil`, and `mpProcessRunCeilCollisionAdjNew`. The MP
+ceiling-status harnesses build on that path, route the selected original
+`mpCommonProcFighterCliffFloorCeil` map callback through bounded
+`mpProcessUpdateMain`, and import original `ftcommonstopceil.c` enough to prove
+`ftCommonStopCeilSetStatus` changes Fall/Air into StopCeil/Ground.
+Real wall-hit floor-edge adjustment, natural-motion valid-stale/cliff-edge
+transitions, full `mpprocess.c`, full wall/ceiling/cliffcatch/platform logic,
+and unbounded stage collision remain deferred.
+General N64 display-list rendering is still not converted to DS GPU calls.
 
 The DS shim now implements BattleShip's original `syRdpSetDefaultViewport`
 math for camera creation. Runtime verification proves the default 320x240
@@ -475,8 +574,10 @@ The current `sys/objdisplay.c` boundary is intentionally stubbed in
 requires matrix look-at ABI, many RSP/RDP macros, sprite helpers, camera capture
 logic, and framebuffer/depth display-list commands. The next renderer milestone
 should grow from the verified material-bearing link-27 `gcDrawDObjDLHead1`
-preview and its `src/nds/nds_renderer.c` branch-expanded command path before
-expanding continuous `gcDrawAll` or importing the broader object-display stack.
+preview, the Mario/Fox first/multi/all-DL software draw proofs, the
+stage-inclusive Pupupu `gcDrawAll` capture proof, and their `src/nds/nds_renderer.c`
+command paths before expanding continuous `gcDrawAll` or importing the broader
+object-display stack.
 
 ## Scene And Startup
 
@@ -947,3 +1048,29 @@ the final gameplay implementation. A good shim:
 
 When a stub becomes too broad, the next milestone should import the original
 system behind it rather than expanding the stub into an engine.
+
+## Large Backend File Split Plan
+
+Some project-owned files are intentionally large because early source-port work
+favored keeping narrow proof slices moving over refactoring. They are now large
+enough to need a mechanical split plan before more broad edits.
+
+Current large-file targets:
+
+| File | Target Split |
+|---|---|
+| `src/port/reloc_backend.c` | Split by domain: relocation asset loading, fighter model/struct proofs, movement proofs, MP collision proofs, cliff/ledge proofs, renderer/DL helpers, and diagnostic recorders. |
+| `src/port/taskman_seam.c` | Split scene/harness dispatch, taskman update caps, boundary finalizers, and scene-transition helpers behind narrow headers. |
+| `include/nds/nds_startup.h` | Split diagnostics by subsystem once stable headers exist: startup/opening/title, menu chain, battle setup, fighter proofs, MP proofs, renderer proofs. |
+| `docs/DIAGNOSTIC_REFERENCE.md` | Keep as marker reference, but prefer generated marker indexes once diagnostic declarations are structured. |
+
+Rules for splitting:
+
+- Do not mix a large-file split with new gameplay proof behavior.
+- Keep the old include-orchestrator shape temporarily when it reduces ABI risk.
+- Move one domain at a time and run `check-architecture.ps1`,
+  `check-harness-registry.ps1`, `verify-boundary.ps1`, and
+  `verify-current.ps1`.
+- Do not move original imported BattleShip code out of `src/import`.
+- Do not introduce broad shared headers to make a split easier; create narrow
+  project-owned headers only when a module boundary is stable.

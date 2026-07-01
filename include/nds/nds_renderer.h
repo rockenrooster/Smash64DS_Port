@@ -93,6 +93,13 @@ typedef struct NDSRendererStats
     u32 skip_command_count;
     u32 render_command_count;
     u32 max_depth_seen;
+    u32 cull_command_count;
+    u32 ignored_state_command_count;
+    u32 first_othermode_opcode;
+    u32 first_othermode_w0;
+    u32 first_othermode_w1;
+    u32 first_cull_w0;
+    u32 first_cull_w1;
     const Gfx *first_branch_dl;
     const Gfx *first_resolved_branch_dl;
     u32 geometry_mode;

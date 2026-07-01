@@ -5,11 +5,16 @@
 
 #include <PR/os.h>
 #include <db/debug.h>
+#include <ef/effect.h>
 #include <ft/fighter.h>
+#include <gm/gmsound.h>
+#include <gr/ground.h>
 #include <if/interface.h>
+#include <mp/map.h>
 #include <mn/menu.h>
 #include <mv/movie.h>
 #include <nds/nds_boot.h>
+#include <nds/nds_controller.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
@@ -22,6 +27,7 @@
 #include <sys/controller.h>
 #include <sys/debug.h>
 #include <sys/malloc.h>
+#include <sys/obj.h>
 #include <sys/objman.h>
 #include <sys/objhelper.h>
 #include <sys/scheduler.h>

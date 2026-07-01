@@ -4,6 +4,9 @@ param(
     [switch]$RequireTitle,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
+    [int]$GdbPort = 3333,
+    [int]$RunnerSlot = -1,
+    [switch]$NoBuild,
     [int]$DelaySeconds = 15,
     [uint32]$ExpectedTitleMarker = 0x54494457,
     [int]$MinRoomTick = 0,
@@ -11,58 +14,58 @@ param(
     [int]$MinActionFrames = 0,
     [double]$MinHostFps = 0.0
 )
-
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$verifierContext = Initialize-MelonDSVerifierContext `
+    -Root $root `
+    -MelonDS $MelonDS `
+    -RunnerSlot $RunnerSlot `
+    -GdbPort $GdbPort `
+    -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
+    -NoBuild:$NoBuild
+$runnerSlot = Get-MelonDSActiveRunnerSlot
+$selectedGdbPort = Get-MelonDSActiveGdbPort
+$tempDir = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot $runnerSlot
 $rom = Join-Path $root 'smash64ds.nds'
 $elf = Join-Path $root 'smash64ds.elf'
-$melonDsPath = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
-    $MelonDS
-} else {
-    Join-Path $root $MelonDS
-}
+$melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $config = Join-Path $melonDsDir 'melonDS.toml'
-$logDir = Join-Path $root 'artifacts\emulator-logs'
+$logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $runnerSlot
 $stdout = Join-Path $logDir 'melonds.speed.stdout.log'
 $stderr = Join-Path $logDir 'melonds.speed.stderr.log'
-$gdbScriptPath = Join-Path $root '_speed_sample.gdb'
-$gdbStdoutPath = Join-Path $root '_speed_sample.gdb.out'
-$gdbStderrPath = Join-Path $root '_speed_sample.gdb.err'
+$gdbScriptPath = Join-Path $tempDir '_speed_sample.gdb'
+$gdbStdoutPath = Join-Path $tempDir '_speed_sample.gdb.out'
+$gdbStderrPath = Join-Path $tempDir '_speed_sample.gdb.err'
 $originalConfig = $null
 $emulator = $null
 $stopwatch = $null
-
 function Get-MatchValue {
     param(
         [string]$Text,
         [string]$Pattern,
         [string]$Fallback = '0'
     )
-
     $match = [regex]::Match($Text, $Pattern)
     if ($match.Success) {
         return $match.Groups[1].Value
     }
     return $Fallback
 }
-
 function Convert-MarkerUInt32 {
     param([string]$Value)
-
     if ($Value.StartsWith('0x')) {
         return [Convert]::ToUInt32($Value.Substring(2), 16)
     }
     return [Convert]::ToUInt32($Value, 10)
 }
-
 if ($Build) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
     if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    & make -C $root -j4
+    & make -C $root -j16
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
-
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'Build smash64ds.nds and smash64ds.elf before runtime speed sampling.'
 }
@@ -73,7 +76,6 @@ if (-not (Test-Path $Gdb)) {
     throw "GDB executable not found: $Gdb"
 }
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-
 try {
     if (Test-Path $config) {
         $originalConfig = Get-Content $config -Raw
@@ -84,27 +86,26 @@ try {
         if (-not $seed.HasExited) { Stop-Process -Id $seed.Id -Force }
         Start-Sleep -Milliseconds 250
     }
-
     $text = Get-Content $config -Raw
     $gdbSectionPattern = '(?s)\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?'
-    $enabled = $text -replace `
-        '(?s)(\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?\bEnabled\s*=\s*)false', `
+    $enabled = $text -replace
+        '(?s)(\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?\bEnabled\s*=\s*)false',
         '${1}true'
-    $enabled = $enabled -replace `
-        '(?s)(\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?\bEnable\s*=\s*)false', `
+    $enabled = $enabled -replace
+        '(?s)(\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?\bEnable\s*=\s*)false',
         '${1}true'
     if ($enabled -notmatch "$gdbSectionPattern\bEnabled\s*=\s*true") {
-        $enabled = $enabled -replace `
-            '(?m)(^\[Instance0\.Gdb\]\s*\r?\n)', `
+        $enabled = $enabled -replace
+            '(?m)(^\[Instance0\.Gdb\]\s*\r?\n)',
             "`$1Enabled = true`r`n"
     }
     if ($enabled -notmatch "$gdbSectionPattern\bEnable\s*=\s*true") {
-        $enabled = $enabled -replace `
-            '(?m)(^\[Instance0\.Gdb\]\s*\r?\n)', `
+        $enabled = $enabled -replace
+            '(?m)(^\[Instance0\.Gdb\]\s*\r?\n)',
             "`$1Enable = true`r`n"
     }
     Set-Content $config -Value $enabled -NoNewline
-
+    Set-MelonDSGdbConfig -MelonDSPath $melonDsPath -GdbPort $selectedGdbPort -Persistent:($runnerSlot -ge 0) | Out-Null
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $startInfo = @{
         FilePath = $melonDsPath
@@ -119,14 +120,13 @@ try {
     }
     $emulator = Start-Process @startInfo
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-
     $listener = $null
     for ($i = 0; $i -lt 60; $i++) {
         $emulator.Refresh()
         if ($emulator.HasExited) {
             throw "melonDS exited before speed sample (exit $($emulator.ExitCode))."
         }
-        $listener = Get-NetTCPConnection -LocalPort 3333 -State Listen `
+        $listener = Get-NetTCPConnection -LocalPort $selectedGdbPort -State Listen `
             -ErrorAction SilentlyContinue |
             Where-Object { $_.OwningProcess -eq $emulator.Id } |
             Select-Object -First 1
@@ -136,15 +136,14 @@ try {
         Start-Sleep -Milliseconds 250
     }
     if ($null -eq $listener) {
-        throw 'melonDS did not open the ARM9 GDB listener on 127.0.0.1:3333.'
+        throw "melonDS did not open the ARM9 GDB listener on 127.0.0.1:$selectedGdbPort."
     }
-
     Start-Sleep -Seconds ([Math]::Max($DelaySeconds, 1))
-
     $gdbCommands = @(
         'set pagination off',
+        'set confirm off',
         'set remotetimeout 5',
-        'target remote 127.0.0.1:3333',
+        "target remote 127.0.0.1:$selectedGdbPort",
         'printf "FRAMES=%u\n", gNdsFrameCounter',
         'printf "PRESENT=%u\n", gNdsOpeningMoviePresentFrameCount',
         'printf "PERF_FPS=%u,%u,%u,%u,%u\n", gNdsPerfPresentFps, gNdsPerfLogicFps, gNdsPerfDLDrawFps, gNdsPerfSampleCount, gNdsPerfSampleWindowTicks',
@@ -158,13 +157,13 @@ try {
         'detach'
     )
     [System.IO.File]::WriteAllLines($gdbScriptPath, $gdbCommands)
-
     Remove-Item $gdbStdoutPath, $gdbStderrPath -Force -ErrorAction SilentlyContinue
     $gdbproc = Start-Process -FilePath $Gdb `
         -ArgumentList @('-q', '-batch', '-x', $gdbScriptPath, $elf) `
         -WorkingDirectory $root `
         -RedirectStandardOutput $gdbStdoutPath `
         -RedirectStandardError $gdbStderrPath `
+        -Wait `
         -PassThru
     $gdbproc.WaitForExit()
     $gdbStdout =
@@ -177,7 +176,6 @@ try {
         throw ("GDB did not complete successfully (exit $($gdbproc.ExitCode))." +
                "`nstdout:$gdbStdout`nstderr:$gdbStderr")
     }
-
     $elapsed = [Math]::Max($stopwatch.Elapsed.TotalSeconds, 0.001)
     $frames = [int](Get-MatchValue $gdbStdout 'FRAMES=([0-9]+)')
     $present = [int](Get-MatchValue $gdbStdout 'PRESENT=([0-9]+)')
@@ -189,7 +187,6 @@ try {
     $mario = Get-MatchValue $gdbStdout 'MARIO=([0-9]+)'
     $action = [regex]::Match($gdbStdout, 'ACTION=([0-9]+),([0-9]+)')
     $title = Get-MatchValue $gdbStdout 'TITLE=(0x[0-9a-fA-F]+|0)'
-
     $romFps = if ($perf.Success) { $perf.Groups[1].Value } else { '0' }
     $logicFps = if ($perf.Success) { $perf.Groups[2].Value } else { '0' }
     $dlFps = if ($perf.Success) { $perf.Groups[3].Value } else { '0' }
@@ -200,7 +197,6 @@ try {
     $actionCount = if ($action.Success) { $action.Groups[1].Value } else { '0' }
     $actionFrames = if ($action.Success) { $action.Groups[2].Value } else { '0' }
     $hostFps = [double]$frames / $elapsed
-
     $summaryFormat =
         "Runtime speed sample ({0:N1}s): frames={1} hostfps={2:N2} " +
         "romfps={3} up={4} dl={5} cv={6} ch={7} present={8} " +
@@ -211,7 +207,6 @@ try {
                   $contentFps, $contentTotal, $present, $room,
                   $roomDrawProbes, $roomDrawReuse, $portraits, $mario,
                   $actionCount, $actionFrames, $title)
-
     $titleValue = Convert-MarkerUInt32 $title
     if ($RequireTitle -and $titleValue -ne $ExpectedTitleMarker) {
         throw ("Expected Title marker 0x{0:x8}, got {1}." -f
@@ -238,10 +233,12 @@ try {
             $emulator.WaitForExit()
         }
     }
-    if ($null -ne $originalConfig) {
-        Set-Content $config -Value $originalConfig -NoNewline
-    } else {
-        Remove-Item $config -Force -ErrorAction SilentlyContinue
+    if ($runnerSlot -lt 0) {
+        if ($null -ne $originalConfig) {
+            Set-Content $config -Value $originalConfig -NoNewline
+        } else {
+            Remove-Item $config -Force -ErrorAction SilentlyContinue
+        }
     }
     Remove-Item $stdout, $stderr, $gdbScriptPath, $gdbStdoutPath, $gdbStderrPath `
         -Force -ErrorAction SilentlyContinue

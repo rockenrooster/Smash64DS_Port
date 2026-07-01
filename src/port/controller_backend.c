@@ -7,8 +7,27 @@
 #include <nds/nds_platform.h>
 
 static OSContStatus sControllerStatus[MAXCONTROLLERS];
+static NDSControllerPlaybackPad sControllerPlaybackPads[MAXCONTROLLERS];
+static u32 sControllerPlaybackConnectedMask;
+static sb32 sControllerPlaybackEnabled;
 
 volatile u32 gNdsControllerPollCount;
+volatile u32 gNdsControllerPlaybackEnabled;
+volatile u32 gNdsControllerPlaybackConnectedMask;
+volatile u32 gNdsControllerPlaybackFrameCount;
+volatile u32 gNdsControllerPlaybackReadCount;
+volatile u32 gNdsControllerLiveReadCount;
+volatile u32 gNdsControllerLiveConnectedMask;
+volatile u32 gNdsControllerLivePad0Button;
+volatile s32 gNdsControllerLivePad0StickX;
+volatile s32 gNdsControllerLivePad0StickY;
+volatile u32 gNdsControllerLiveMapCount;
+volatile u32 gNdsControllerPlaybackPad0Button;
+volatile u32 gNdsControllerPlaybackPad1Button;
+volatile s32 gNdsControllerPlaybackPad0StickX;
+volatile s32 gNdsControllerPlaybackPad1StickX;
+volatile s32 gNdsControllerPlaybackPad0StickY;
+volatile s32 gNdsControllerPlaybackPad1StickY;
 
 static u16 ndsControllerMapButtons(u32 keys)
 {
@@ -56,18 +75,109 @@ static void ndsControllerComplete(OSMesgQueue *queue)
     }
 }
 
+static void ndsControllerRefreshStatusForPlayback(void)
+{
+    s32 i;
+
+    memset(sControllerStatus, 0, sizeof(sControllerStatus));
+    for (i = 0; i < MAXCONTROLLERS; i++) {
+        if (((sControllerPlaybackConnectedMask >> i) & 1u) != 0u) {
+            sControllerStatus[i].type = CONT_TYPE_NORMAL;
+        } else {
+            sControllerStatus[i].errno = CONT_NO_RESPONSE_ERROR;
+        }
+    }
+}
+
+void ndsControllerPlaybackReset(void)
+{
+    memset(sControllerPlaybackPads, 0, sizeof(sControllerPlaybackPads));
+    sControllerPlaybackEnabled = FALSE;
+    sControllerPlaybackConnectedMask = 0u;
+    gNdsControllerPlaybackEnabled = 0u;
+    gNdsControllerPlaybackConnectedMask = 0u;
+    gNdsControllerPlaybackFrameCount = 0u;
+    gNdsControllerPlaybackReadCount = 0u;
+    gNdsControllerLiveReadCount = 0u;
+    gNdsControllerLiveConnectedMask = 0u;
+    gNdsControllerLivePad0Button = 0u;
+    gNdsControllerLivePad0StickX = 0;
+    gNdsControllerLivePad0StickY = 0;
+    gNdsControllerLiveMapCount = 0u;
+    gNdsControllerPlaybackPad0Button = 0u;
+    gNdsControllerPlaybackPad1Button = 0u;
+    gNdsControllerPlaybackPad0StickX = 0;
+    gNdsControllerPlaybackPad1StickX = 0;
+    gNdsControllerPlaybackPad0StickY = 0;
+    gNdsControllerPlaybackPad1StickY = 0;
+}
+
+void ndsControllerPlaybackSetEnabled(sb32 is_enabled)
+{
+    sControllerPlaybackEnabled = (is_enabled != FALSE) ? TRUE : FALSE;
+    gNdsControllerPlaybackEnabled =
+        (sControllerPlaybackEnabled != FALSE) ? 1u : 0u;
+}
+
+void ndsControllerPlaybackSetConnectedMask(u32 mask)
+{
+    sControllerPlaybackConnectedMask = mask & ((1u << MAXCONTROLLERS) - 1u);
+    gNdsControllerPlaybackConnectedMask = sControllerPlaybackConnectedMask;
+    if (sControllerPlaybackEnabled != FALSE) {
+        ndsControllerRefreshStatusForPlayback();
+    }
+}
+
+void ndsControllerPlaybackSetPad(u32 slot, u16 button, s8 stick_x,
+                                 s8 stick_y)
+{
+    if (slot >= MAXCONTROLLERS) {
+        return;
+    }
+    sControllerPlaybackPads[slot].button = button;
+    sControllerPlaybackPads[slot].stick_x = stick_x;
+    sControllerPlaybackPads[slot].stick_y = stick_y;
+    sControllerPlaybackPads[slot].errno_value =
+        (((sControllerPlaybackConnectedMask >> slot) & 1u) != 0u) ?
+        0u : CONT_NO_RESPONSE_ERROR;
+
+    if (slot == 0u) {
+        gNdsControllerPlaybackPad0Button = button;
+        gNdsControllerPlaybackPad0StickX = stick_x;
+        gNdsControllerPlaybackPad0StickY = stick_y;
+    } else if (slot == 1u) {
+        gNdsControllerPlaybackPad1Button = button;
+        gNdsControllerPlaybackPad1StickX = stick_x;
+        gNdsControllerPlaybackPad1StickY = stick_y;
+    }
+}
+
+void ndsControllerPlaybackCommitFrame(void)
+{
+    if (sControllerPlaybackEnabled != FALSE) {
+        gNdsControllerPlaybackFrameCount++;
+    }
+}
+
 s32 osContInit(OSMesgQueue *queue, u8 *controller_bits,
                OSContStatus *status)
 {
     s32 i;
 
     (void)queue;
-    memset(sControllerStatus, 0, sizeof(sControllerStatus));
-    sControllerStatus[0].type = CONT_TYPE_NORMAL;
-    for (i = 1; i < MAXCONTROLLERS; i++) {
-        sControllerStatus[i].errno = CONT_NO_RESPONSE_ERROR;
+    if (sControllerPlaybackEnabled != FALSE) {
+        ndsControllerRefreshStatusForPlayback();
+    } else {
+        memset(sControllerStatus, 0, sizeof(sControllerStatus));
+        sControllerStatus[0].type = CONT_TYPE_NORMAL;
+        for (i = 1; i < MAXCONTROLLERS; i++) {
+            sControllerStatus[i].errno = CONT_NO_RESPONSE_ERROR;
+        }
     }
-    if (controller_bits != NULL) *controller_bits = 1;
+    if (controller_bits != NULL) {
+        *controller_bits = (sControllerPlaybackEnabled != FALSE) ?
+            (u8)sControllerPlaybackConnectedMask : 1;
+    }
     if (status != NULL) {
         memcpy(status, sControllerStatus, sizeof(sControllerStatus));
     }
@@ -83,6 +193,9 @@ s32 osContStartQuery(OSMesgQueue *queue)
 
 void osContGetQuery(OSContStatus *status)
 {
+    if (sControllerPlaybackEnabled != FALSE) {
+        ndsControllerRefreshStatusForPlayback();
+    }
     if (status != NULL) {
         memcpy(status, sControllerStatus, sizeof(sControllerStatus));
     }
@@ -96,16 +209,39 @@ s32 osContStartReadData(OSMesgQueue *queue)
 
 void osContGetReadData(OSContPad *pad)
 {
-    u32 keys = ndsPlatformHeldKeys();
+    u32 keys;
     s32 i;
 
     if (pad == NULL) return;
     memset(pad, 0, sizeof(*pad) * MAXCONTROLLERS);
+    if (sControllerPlaybackEnabled != FALSE) {
+        for (i = 0; i < MAXCONTROLLERS; i++) {
+            if (((sControllerPlaybackConnectedMask >> i) & 1u) != 0u) {
+                pad[i].button = sControllerPlaybackPads[i].button;
+                pad[i].stick_x = sControllerPlaybackPads[i].stick_x;
+                pad[i].stick_y = sControllerPlaybackPads[i].stick_y;
+                pad[i].errno = 0u;
+            } else {
+                pad[i].errno = CONT_NO_RESPONSE_ERROR;
+            }
+        }
+        gNdsControllerPlaybackReadCount++;
+        gNdsControllerPollCount++;
+        return;
+    }
+    keys = ndsPlatformHeldKeys();
     ndsControllerMapPad(keys, &pad[0]);
+    pad[0].errno = 0u;
 
     for (i = 1; i < MAXCONTROLLERS; i++) {
         pad[i].errno = CONT_NO_RESPONSE_ERROR;
     }
+    gNdsControllerLiveConnectedMask = 1u;
+    gNdsControllerLivePad0Button = pad[0].button;
+    gNdsControllerLivePad0StickX = pad[0].stick_x;
+    gNdsControllerLivePad0StickY = pad[0].stick_y;
+    gNdsControllerLiveMapCount++;
+    gNdsControllerLiveReadCount++;
     gNdsControllerPollCount++;
 }
 

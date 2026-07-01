@@ -36,6 +36,26 @@ extern uintptr_t llIFCommonAnnounceCommonFileID;
 extern uintptr_t llSYKseg1ValidateFileID;
 extern uintptr_t llSYKseg1ValidateFunc;
 extern uintptr_t llSYKseg1ValidateNBytes;
+extern uintptr_t llFTManagerCommonFileID;
+extern uintptr_t llMarioMainMotionFileID;
+extern uintptr_t llMarioMainFileID;
+extern uintptr_t llMarioSpecial1FileID;
+extern uintptr_t llMarioModelFileID;
+extern uintptr_t llMarioSpecial3FileID;
+extern uintptr_t llMarioShieldPoseFileID;
+extern uintptr_t llMarioSpecial2FileID;
+extern uintptr_t llFoxSpecial3FileID;
+extern uintptr_t llFoxMainMotionFileID;
+extern uintptr_t llFoxMainFileID;
+extern uintptr_t llFoxSpecial1FileID;
+extern uintptr_t llFoxModelFileID;
+extern uintptr_t llFoxShieldPoseFileID;
+extern uintptr_t llFoxSpecial4FileID;
+extern uintptr_t llFoxSpecial2FileID;
+extern uintptr_t llMarioModelStockSprite;
+extern uintptr_t llMarioModelFTEmblemSprite;
+extern uintptr_t llFoxModelStockSprite;
+extern uintptr_t llFoxModelFTEmblemSprite;
 extern uintptr_t llMVCommonFileID;
 extern uintptr_t llMVOpeningCommonFileID;
 extern uintptr_t llMVOpeningRoomTransitionFileID;
@@ -176,6 +196,10 @@ extern uintptr_t lMNTitleParticleScriptBankLo;
 extern uintptr_t lMNTitleParticleScriptBankHi;
 extern uintptr_t lMNTitleParticleTextureBankLo;
 extern uintptr_t lMNTitleParticleTextureBankHi;
+extern intptr_t lGRPupupuParticleScriptBankLo;
+extern intptr_t lGRPupupuParticleScriptBankHi;
+extern intptr_t lGRPupupuParticleTextureBankLo;
+extern intptr_t lGRPupupuParticleTextureBankHi;
 extern uintptr_t llIFCommonAnnounceCommonLetterASprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterBSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterCSprite;
@@ -217,16 +241,66 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llFTEmblemSpritesPMonstersSprite, 0x3918) \
     X(llFTEmblemSpritesYoshiSprite, 0x2c58) \
     X(llFTEmblemSpritesZeldaSprite, 0x25f8) \
+    X(ll_113_FileID, 0x71) \
     X(llGRCastleMapFileID, 0x103) \
     X(llGRCastleMapMapHeader, 0x14) \
     X(llGRHyruleMapFileID, 0x109) \
     X(llGRHyruleMapMapHeader, 0x14) \
+    X(llGRHyruleMapTwisterThrowHitDesc, 0xbc) \
     X(llGRInishieMapFileID, 0x104) \
     X(llGRInishieMapMapHeader, 0x14) \
+    X(llGRInishieMapScaleDObjDesc, 0x380) \
+    X(llGRInishieMapMapHead, 0x5f0) \
+    X(llGRInishieMapScaleRetractAnimJoint, 0x734) \
     X(llGRJungleMapFileID, 0x105) \
     X(llGRJungleMapMapHeader, 0x14) \
     X(llGRPupupuMapFileID, 0xff) \
     X(llGRPupupuMapMapHeader, 0x14) \
+    X(llGRPupupuMapWhispyEyesTransformKindsMObjSub, 0x0f00) \
+    X(llGRPupupuMapMapHead, 0x10f0) \
+    X(llGRPupupuMapWhispyEyesTransformKindsDObjDesc, 0x10f0) \
+    X(llGRPupupuMapWhispyMouthTransformKindsMObjSub, 0x13b0) \
+    X(llGRPupupuMapWhispyMouthTransformKindsDObjDesc, 0x1770) \
+    X(llGRPupupuMapFlowersBackTransformKindsDObjDesc, 0x2a80) \
+    X(llGRPupupuMapFlowersFrontTransformKindsDObjDesc, 0x31f8) \
+    X(llGRPupupuMapWhispyEyesLeftTurnAnimJoint, 0x11a0) \
+    X(llGRPupupuMapWhispyEyesLeftTurnMatAnimJoint, 0x11e0) \
+    X(llGRPupupuMapWhispyEyesLeftBlinkAnimJoint, 0x12b0) \
+    X(llGRPupupuMapWhispyEyesRightTurnAnimJoint, 0x1220) \
+    X(llGRPupupuMapWhispyEyesRightTurnMatAnimJoint, 0x1270) \
+    X(llGRPupupuMapWhispyEyesRightBlinkAnimJoint, 0x1330) \
+    X(llGRPupupuMapWhispyMouthLeftStretchAnimJoint, 0x18b0) \
+    X(llGRPupupuMapWhispyMouthLeftStretchMatAnimJoint, 0x1a00) \
+    X(llGRPupupuMapWhispyMouthLeftTurnAnimJoint, 0x1be0) \
+    X(llGRPupupuMapWhispyMouthLeftTurnMatAnimJoint, 0x1ce0) \
+    X(llGRPupupuMapWhispyMouthLeftOpenAnimJoint, 0x1e80) \
+    X(llGRPupupuMapWhispyMouthLeftOpenMatAnimJoint, 0x20b0) \
+    X(llGRPupupuMapWhispyMouthLeftCloseAnimJoint, 0x2100) \
+    X(llGRPupupuMapWhispyMouthLeftCloseMatAnimJoint, 0x22a0) \
+    X(llGRPupupuMapWhispyMouthRightStretchAnimJoint, 0x1a40) \
+    X(llGRPupupuMapWhispyMouthRightStretchMatAnimJoint, 0x1ba0) \
+    X(llGRPupupuMapWhispyMouthRightTurnAnimJoint, 0x1d30) \
+    X(llGRPupupuMapWhispyMouthRightTurnMatAnimJoint, 0x1e30) \
+    X(llGRPupupuMapWhispyMouthRightOpenAnimJoint, 0x22f0) \
+    X(llGRPupupuMapWhispyMouthRightOpenMatAnimJoint, 0x2540) \
+    X(llGRPupupuMapWhispyMouthRightCloseAnimJoint, 0x2590) \
+    X(llGRPupupuMapWhispyMouthRightCloseMatAnimJoint, 0x2740) \
+    X(llGRPupupuMapWhispyMouthLeftOpenTexture, 0x2be0) \
+    X(llGRPupupuMapWhispyMouthLeftBlowTexture, 0x2c30) \
+    X(llGRPupupuMapWhispyMouthLeftCloseTexture, 0x2c80) \
+    X(llGRPupupuMapWhispyMouthRightOpenTexture, 0x2cd0) \
+    X(llGRPupupuMapWhispyMouthRightBlowTexture, 0x2d20) \
+    X(llGRPupupuMapWhispyMouthRightCloseTexture, 0x2d70) \
+    X(llGRPupupuMapWhispyEyesLeft0Texture, 0x33e0) \
+    X(llGRPupupuMapWhispyEyesLeft1Texture, 0x3450) \
+    X(llGRPupupuMapWhispyEyesLeft2Texture, 0x34b0) \
+    X(llGRPupupuMapWhispyEyesRight0Texture, 0x3510) \
+    X(llGRPupupuMapWhispyEyesRight1Texture, 0x35c0) \
+    X(llGRPupupuMapWhispyEyesRight2Texture, 0x3660) \
+    X(llStageCastleFileID, 0x5f) \
+    X(llStageCastleSprite, 0x26c88) \
+    X(llStageDreamLandFileID, 0x58) \
+    X(llStageDreamLandSprite, 0x26c88) \
     X(llGRSectorMapFileID, 0x106) \
     X(llGRSectorMapMapHeader, 0x14) \
     X(llGRWallpaperTrainingBlackFileID, 0x1a) \

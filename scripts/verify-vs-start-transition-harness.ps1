@@ -1,46 +1,48 @@
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
+    [int]$GdbPort = 3333,
+    [int]$RunnerSlot = -1,
+    [switch]$NoBuild,
     [int]$DelaySeconds = 5
 )
-
 $ErrorActionPreference = 'Stop'
-
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
-
 function Get-MatchValue {
     param(
         [string]$Text,
         [string]$Pattern,
         [string]$Fallback = '0'
     )
-
     $match = [regex]::Match($Text, $Pattern)
     if ($match.Success) {
         return $match.Groups[1].Value
     }
     return $Fallback
 }
-
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$verifierContext = Initialize-MelonDSVerifierContext `
+    -Root $root `
+    -MelonDS $MelonDS `
+    -RunnerSlot $RunnerSlot `
+    -GdbPort $GdbPort `
+    -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
+    -NoBuild:$NoBuild
 $rom = Join-Path $root 'smash64ds-vs-start.nds'
 $elf = Join-Path $root 'smash64ds-vs-start.elf'
-$melonDsPath = Resolve-MelonDSPath -Root $root -MelonDS $MelonDS
+$melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
-$logDir = Join-Path $root 'artifacts\emulator-logs'
+$logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
 $stdout = Join-Path $logDir 'melonds.vs-start-transition-harness.stdout.log'
 $stderr = Join-Path $logDir 'melonds.vs-start-transition-harness.stderr.log'
 $configState = $null
 $emulator = $null
 $scriptName = '_vs_start_transition_harness.gdb'
-
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-
-& make -C $root TARGET=smash64ds-vs-start BUILD=build-vs-start-harness NDS_DEV_SCENE_HARNESS=vs_start_transition -j4
+& make -C $root TARGET=smash64ds-vs-start BUILD=build-vs-start-harness NDS_DEV_SCENE_HARNESS=vs_start_transition -j16
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'VS Start transition harness build did not produce smash64ds-vs-start.nds and smash64ds-vs-start.elf.'
 }
@@ -50,12 +52,9 @@ if (-not (Test-Path $melonDsPath)) {
 if (-not (Test-Path $Gdb)) {
     throw "GDB executable not found: $Gdb"
 }
-
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-
 try {
-    $configState = Enable-MelonDSGdbConfig -MelonDSPath $melonDsPath
-
+    $configState = Enable-MelonDSGdbConfig -MelonDSPath $melonDsPath -GdbPort $verifierContext.GdbPort -Persistent:([bool]$verifierContext.PersistentConfig)
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath `
         -ArgumentList $rom `
@@ -64,15 +63,13 @@ try {
         -RedirectStandardError $stderr `
         -WindowStyle Hidden `
         -PassThru
-
-    Wait-MelonDSGdbListener -Process $emulator | Out-Null
+    Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort | Out-Null
     Start-Sleep -Seconds ([Math]::Max($DelaySeconds, 1))
-
     $gdbCommands = @(
         'set pagination off',
         'set confirm off',
         'set remotetimeout 5',
-        'target remote 127.0.0.1:3333',
+        ("target remote 127.0.0.1:{0}" -f (Get-MelonDSActiveGdbPort)),
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
         'printf "SCENE=%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev',
         'printf "BOUNDARY=%#x,%u\n", gNdsSceneBoundaryResult, gNdsSceneBoundaryKind',
@@ -86,15 +83,16 @@ try {
         'detach',
         'quit'
     )
-
     $gdbResult = Invoke-GdbMarkerScript `
         -Gdb $Gdb `
+    -GdbPort $GdbPort `
+    -RunnerSlot $RunnerSlot `
+    -NoBuild:$NoBuild `
         -Elf $elf `
         -Root $root `
         -Commands $gdbCommands `
         -ScriptName $scriptName
     $gdbStdout = $gdbResult.Stdout
-
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
@@ -105,7 +103,6 @@ try {
     $task = [regex]::Match($gdbStdout, 'TASK=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $title = [regex]::Match($gdbStdout, 'TITLE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $room = [int](Get-MatchValue $gdbStdout 'ROOM=([0-9]+)')
-
     if (-not $harn.Success -or
         (Convert-MarkerUInt32 $harn.Groups[1].Value) -ne 0x4841524e -or
         [int]$harn.Groups[2].Value -ne 4 -or
@@ -181,7 +178,6 @@ try {
         (Convert-MarkerUInt32 $title.Groups[2].Value) -ne 0) {
         throw "VS Start transition harness unexpectedly ran Title setup/draw.`n$gdbStdout"
     }
-
     Write-Output ("VS Start transition harness passed: scene={0}/{1} trans={2} mask={3} saved={4}/{5}/{6}" -f
         $scene.Groups[1].Value,
         $scene.Groups[2].Value,

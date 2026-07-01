@@ -1,8 +1,11 @@
 #include <string.h>
 
+#include <nds/nds_gbi_decode.h>
 #include <nds/nds_renderer.h>
 
+#define NDS_RENDERER_OP_NOOP 0x00u
 #define NDS_RENDERER_OP_VTX 0x01u
+#define NDS_RENDERER_OP_MODIFYVTX 0x02u
 #define NDS_RENDERER_OP_CULLDL 0x03u
 #define NDS_RENDERER_OP_TRI1 0x05u
 #define NDS_RENDERER_OP_TRI2 0x06u
@@ -15,6 +18,7 @@
 #define NDS_RENDERER_OP_SETOTHERMODE_L 0xe2u
 #define NDS_RENDERER_OP_SETSCISSOR 0xedu
 #define NDS_RENDERER_OP_SETCOMBINE 0xfcu
+#define NDS_RENDERER_OP_SETCIMG 0xffu
 #define NDS_RENDERER_OP_SETFOGCOLOR 0xf8u
 #define NDS_RENDERER_OP_SETBLENDCOLOR 0xf9u
 #define NDS_RENDERER_OP_SETENVCOLOR 0xfbu
@@ -22,6 +26,7 @@
 #define NDS_RENDERER_OP_SETTIMG 0xfdu
 #define NDS_RENDERER_OP_SETTILE 0xf5u
 #define NDS_RENDERER_OP_LOADBLOCK 0xf3u
+#define NDS_RENDERER_OP_LOADTLUT 0xf0u
 #define NDS_RENDERER_OP_SETTILESIZE 0xf2u
 #define NDS_RENDERER_OP_RDPSETOTHERMODE 0xefu
 #define NDS_RENDERER_OP_RDPPIPESYNC 0xe7u
@@ -58,7 +63,32 @@ static void ndsRendererRecordUnsupported(NDSRendererStats *stats, u32 op)
     {
         stats->unsupported_opcode = op;
     }
-        stats->unsupported_command_count++;
+    stats->unsupported_command_count++;
+}
+
+static void ndsRendererRecordIgnoredOtherMode(NDSRendererStats *stats,
+                                              u32 op, u32 w0, u32 w1)
+{
+    stats->state_command_count++;
+    stats->othermode_command_count++;
+    stats->ignored_state_command_count++;
+    if (stats->first_othermode_opcode == 0)
+    {
+        stats->first_othermode_opcode = op;
+        stats->first_othermode_w0 = w0;
+        stats->first_othermode_w1 = w1;
+    }
+}
+
+static void ndsRendererRecordCull(NDSRendererStats *stats, u32 w0, u32 w1)
+{
+    stats->cull_command_count++;
+    stats->skip_command_count++;
+    if ((stats->first_cull_w0 == 0) && (stats->first_cull_w1 == 0))
+    {
+        stats->first_cull_w0 = w0;
+        stats->first_cull_w1 = w1;
+    }
 }
 
 static void ndsRendererRecordTextureState(NDSRendererStats *stats,
@@ -366,24 +396,27 @@ static void ndsRendererScanList(const Gfx *dl,
 
         switch (op)
         {
+        case NDS_RENDERER_OP_NOOP:
+            stats->skip_command_count++;
+            break;
+
+        case NDS_RENDERER_OP_MODIFYVTX:
+            stats->state_command_count++;
+            stats->skip_command_count++;
+            break;
+
         case NDS_RENDERER_OP_VTX:
         {
-            u32 v0 = ((w0 >> 16) & 0xFFu) / 2u;
-            u32 count = (w0 & 0xFFu) / 2u;
+            u32 v0;
+            u32 count;
 
             stats->vertex_command_count++;
             stats->state_command_count++;
-            if ((count == 0) || (count > NDS_RENDERER_MAX_VTX))
+            if (ndsGBIDecodeF3DEX2Vtx(w0, NDS_RENDERER_MAX_VTX, &v0,
+                                      &count) == FALSE)
             {
-                count = NDS_RENDERER_MAX_VTX - v0;
-            }
-            if (v0 >= NDS_RENDERER_MAX_VTX)
-            {
+                stats->skip_command_count++;
                 break;
-            }
-            if ((v0 + count) > NDS_RENDERER_MAX_VTX)
-            {
-                count = NDS_RENDERER_MAX_VTX - v0;
             }
             if ((v0 + count) > stats->vertex_count)
             {
@@ -457,7 +490,9 @@ static void ndsRendererScanList(const Gfx *dl,
 
         case NDS_RENDERER_OP_MOVEWORD:
         case NDS_RENDERER_OP_SETSCISSOR:
+        case NDS_RENDERER_OP_SETCIMG:
             stats->state_command_count++;
+            stats->ignored_state_command_count++;
             break;
 
         case NDS_RENDERER_OP_GEOMETRYMODE:
@@ -488,6 +523,12 @@ static void ndsRendererScanList(const Gfx *dl,
             stats->state_command_count++;
             break;
 
+        case NDS_RENDERER_OP_LOADTLUT:
+            stats->texture_command_count++;
+            stats->state_command_count++;
+            stats->ignored_state_command_count++;
+            break;
+
         case NDS_RENDERER_OP_SETTILESIZE:
             ndsRendererRecordSetTileSize(stats, w0, w1);
             stats->state_command_count++;
@@ -516,12 +557,13 @@ static void ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_SETOTHERMODE_H:
         case NDS_RENDERER_OP_SETOTHERMODE_L:
         case NDS_RENDERER_OP_RDPSETOTHERMODE:
-            stats->state_command_count++;
-            stats->othermode_command_count++;
-            ndsRendererRecordUnsupported(stats, op);
+            ndsRendererRecordIgnoredOtherMode(stats, op, w0, w1);
             break;
 
         case NDS_RENDERER_OP_CULLDL:
+            ndsRendererRecordCull(stats, w0, w1);
+            break;
+
         default:
             ndsRendererRecordUnsupported(stats, op);
             break;

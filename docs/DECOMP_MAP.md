@@ -4,6 +4,11 @@ Everything under `decomp/` is read-only reference material. Those folders are
 independent upstream repositories or extracted upstream assets. Do not patch
 them to make this port compile; add wrappers in `src/import`, DS backend code in
 `src/nds` or `src/port`, and compatibility declarations in `include`.
+Lean handoff snapshots include the decomp source/reference and build-critical
+top-level O2R context needed for current imports, but exclude upstream decomp
+build outputs, baseroms, generated binaries, duplicate nested O2R copies, and
+tool caches. Use `scripts/New-Smash64DSSnapshot.ps1 -Mode CodeOnly` when a
+handoff intentionally omits all `decomp/` material.
 
 Usefulness labels:
 
@@ -49,7 +54,7 @@ the port's game-code source of truth.
 |---|---:|---|---|
 | `decomp/BattleShip-main/decomp/src` | Critical | Original translation units for systems, scenes, menus, fighters, stages, items, effects, and libraries. | Import narrow slices through wrappers in `src/import`. |
 | `decomp/BattleShip-main/decomp/include` | Critical | Original ABI, structs, enums, libultra declarations, and reloc symbol declarations. | Inspect before adding project-owned shadow declarations. Do not add globally without checking conflicts. |
-| `decomp/BattleShip-main/decomp/BattleShip_o2r` | Critical | Original extracted O2R resources grouped by subsystem. | Source for NitroFS packaged resources and relocation tests. |
+| `decomp/BattleShip-main/decomp/BattleShip_o2r` | Avoid | Duplicate nested copy of extracted O2R resources. | The DS Makefile uses `decomp/BattleShip-main/BattleShip_o2r`; Lean snapshots exclude this nested duplicate to keep handoffs smaller. |
 | `decomp/BattleShip-main/decomp/symbols` | High | Symbol maps for source/data offset resolution. | Use when adding relocation symbol coverage. |
 | `decomp/BattleShip-main/decomp/assets` | High | Extracted source assets and build metadata. | Reference for asset identity and dimensions. |
 | `decomp/BattleShip-main/decomp/docs` | High | Original decomp documentation index. | Start here when source comments are sparse. |
@@ -98,7 +103,7 @@ decomp port structure this DS backend problem?"
 | `decomp/sm64-nds/src/menu` | Medium | Menu integration patterns. | Architecture reference only, not Smash menu source. |
 | `decomp/sm64-nds/src/goddard` | Low | SM64-specific face/goddard subsystem. | Usually irrelevant to Smash. |
 | `decomp/sm64-nds/lib` | Medium | Third-party/support libraries used by that port. | Reference for dependencies, not automatic imports. |
-| `decomp/sm64-nds/bin`, `build` | Avoid | Generated/staged output. | Do not edit or treat as source. |
+| `decomp/sm64-nds/bin`, `build` | Avoid | Generated/staged output. | Do not edit or treat as source. Lean snapshots exclude generated `build/` payloads. |
 | `decomp/sm64-nds/asm` | Medium | Assembly fallback/source matching context. | Use only for ABI or behavior questions. |
 | Root build files (`Makefile`, `Makefile.split`, `sm64.ld`, `util.mk`, `assets.json`) | High | devkitPro/libnds build, linker, asset, and segment organization. | Compare before changing this project's Makefile/linker/source list. |
 | ROM/hash/root extraction files (`baserom.us.z64`, `*.sha1`, `extract_assets.py`) | Low | SM64 extraction context. | Not Smash data. |
@@ -129,4 +134,3 @@ Before adding a subsystem:
 4. Add or adjust only project-owned code.
 5. Update `docs/PORTING.md`, `docs/HANDOFF.md`, and any verifier that proves
    the new boundary.
-

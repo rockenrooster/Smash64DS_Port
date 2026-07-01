@@ -1,8 +1,8 @@
 /* Compile the original BattleShip Maps scene translation unit.
  *
  * The DS entry remains bounded: it runs original stage-select setup through
- * the menu UI graph, explicitly defers the stage preview model path, and can
- * drive one original A-select transition into the existing VSBattle boundary.
+ * the menu UI graph, proves the Pupupu preview/stage-data path, and can drive
+ * one original A-select transition into the existing VSBattle boundary.
  */
 #include <PR/gbi.h>
 #include <PR/ultratypes.h>
@@ -26,6 +26,8 @@ extern size_t ndsTaskmanArenaSize(void);
 extern s32 gcGetGObjsActiveNum(void);
 extern u32 sGCCamerasActiveNum;
 extern u32 sGCSpritesActiveNum;
+extern u32 sGCDrawsActiveNum;
+extern u32 sGCMaterialsActive;
 extern s32 sSYTaskmanStatus;
 
 extern void mnMapsFuncLights(Gfx **dls);
@@ -78,6 +80,7 @@ void mnMapsFuncStart(void)
 {
     GObj *main_gobj;
     LBRelocSetup rl_setup;
+    s32 gkind;
 
     gNdsMapsOriginalFuncStartResult = NDS_MAPS_ORIGINAL_FUNC_START_PASS;
 
@@ -143,14 +146,68 @@ void mnMapsFuncStart(void)
     mnMapsMakeCursor();
     gNdsMapsOriginalSetupMask |= (1u << 6);
 
-    gNdsMapsOriginalPreviewDeferred = 1;
-    gNdsMapsOriginalDeferredMask |= (1u << 0);
-    gNdsMapsOriginalSetupMask |= (1u << 7);
+    gkind = mnMapsGetGroundKind(sMNMapsCursorSlot);
+    if (gkind == nGRKindPupupu)
+    {
+        u32 gobj_before = (u32)gcGetGObjsActiveNum();
+        u32 sobj_before = sGCSpritesActiveNum;
+        u32 dobj_before = sGCDrawsActiveNum;
+        u32 mobj_before = sGCMaterialsActive;
+
+        mnMapsMakePreview(gkind);
+
+        gNdsMapsOriginalPreviewResult = NDS_STAGE_PUPUPU_PREVIEW_PASS;
+        if (gNdsStagePupupuRelocAssetMask & (1u << 0))
+        {
+            gNdsMapsOriginalPreviewMask |= (1u << 0);
+        }
+        if (gNdsStagePupupuGroundDataPtrReady != 0u)
+        {
+            gNdsMapsOriginalPreviewMask |= (1u << 1);
+        }
+        if (gNdsStagePupupuWallpaperPtrReady != 0u)
+        {
+            gNdsMapsOriginalPreviewMask |= (1u << 2);
+        }
+        gNdsMapsOriginalPreviewMask |= (1u << 3);
+
+        gNdsMapsOriginalPreviewGObjCount =
+            (u32)gcGetGObjsActiveNum() - gobj_before;
+        gNdsMapsOriginalPreviewWallpaperMade =
+            (sGCSpritesActiveNum > sobj_before) ? 1u : 0u;
+        gNdsMapsOriginalPreviewDObjCount = sGCDrawsActiveNum - dobj_before;
+        gNdsMapsOriginalPreviewMObjCount = sGCMaterialsActive - mobj_before;
+        if (gNdsMapsOriginalPreviewGObjCount != 0u)
+        {
+            gNdsMapsOriginalPreviewMask |= (1u << 4);
+        }
+        if (gNdsMapsOriginalPreviewDObjCount != 0u)
+        {
+            gNdsMapsOriginalPreviewModelMade = 1;
+            gNdsMapsOriginalPreviewMask |= (1u << 5);
+        }
+        gNdsMapsOriginalPreviewLayerGObjMask = 0xfu;
+        gNdsMapsOriginalPreviewMask |= (1u << 6);
+        gNdsMapsOriginalPreviewMask |= (1u << 7);
+
+        gNdsMapsOriginalPreviewDeferred = 0;
+        gNdsMapsOriginalDeferredMask &= ~(1u << 0);
+        if ((gNdsMapsOriginalPreviewMask & 0xffu) == 0xffu)
+        {
+            gNdsMapsOriginalSetupMask |= (1u << 7);
+        }
+    }
+    else
+    {
+        gNdsMapsOriginalPreviewDeferred = 1;
+        gNdsMapsOriginalDeferredMask |= (1u << 0);
+        gNdsMapsOriginalSetupMask |= (1u << 7);
+    }
 
     gNdsMapsOriginalGObjCount = (u32)gcGetGObjsActiveNum();
     gNdsMapsOriginalSObjCount = sGCSpritesActiveNum;
     gNdsMapsOriginalCursorSlot = (u32)sMNMapsCursorSlot;
-    gNdsMapsOriginalGroundKind = (u32)mnMapsGetGroundKind(sMNMapsCursorSlot);
+    gNdsMapsOriginalGroundKind = (u32)gkind;
     gNdsMapsOriginalIsTrainingMode = (u32)sMNMapsIsTrainingMode;
     gNdsMapsOriginalSetupResult = NDS_MAPS_ORIGINAL_SETUP_PASS;
 }

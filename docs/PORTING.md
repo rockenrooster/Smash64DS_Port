@@ -4535,5 +4535,11016 @@ Verification:
 
 - `scripts/verify-battle-fd-harness.ps1` passed with
   `Battle FD harness passed: files=8 players=1/0 fighters=1 gkind=16 mask=0x7f`.
+
+## 2026-06-21: Bounded Mario/Fox fighter model GObj proof
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_model` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_model`.
+- Staged `FTManagerCommon`, Mario, Fox, and the required external fighter O2R
+  dependencies through NitroFS and the DS relocation table.
+- Extended the bounded fighter compatibility path so Mario/Fox descriptors from
+  imported `scvsbattle.c` can create asset-backed fighter GObjs with real
+  top/model/commonpart DObj trees.
+- Kept fighter process/status/gameplay execution explicitly deferred and kept
+  `ftDisplayMainProcDisplay` as a bounded no-op until the full fighter display
+  path is selected as its own renderer milestone.
+- Added maintained diagnostics for Mario/Fox relocation, model setup masks,
+  DObj/MObj/AObj counts, display attachment, and the last model materialization
+  pointers.
+- Fixed a scene-chain relocation bug by clearing fighter-specific file slots
+  whenever the scene-local relocation cache is reset. Without that, the
+  menu-chain model proof could reuse stale arena pointers after Maps ->
+  VSBattle and observe an invalid `attr->commonparts_container` pointer.
+- Added `scripts/verify-battle-mariofox-model-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-model-harness.ps1`, and included both in
+  `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- `battle_mariofox_model` starts directly at imported bounded VSBattle on
+  Pupupu/Dream Land, loads and relocates the Mario/Fox fighter files and shared
+  dependencies, creates two real asset-backed fighter model GObjs, records
+  Mario/Fox DObj counts, and parks before real fighter update/draw/gameplay.
+- `menu_chain_mariofox_model` proves the same model boundary after original VS
+  Mode -> PlayersVS -> Maps -> VSBattle transitions.
+- Setup-only VSBattle and Pupupu harnesses still use stub fighter GObjs; this
+  model proof is isolated to the two new harness modes.
+- Full fighter status logic, animation/motion playback, hitboxes, hurtboxes,
+  collision interaction, items/weapons, audio, HUD rendering, and full fighter
+  display rendering remain deferred.
+- `decomp/` remained read-only; all changes are in project-owned harness,
+  relocation, compatibility, verifier, and documentation files.
+
+Verification:
+
+- `scripts/verify-battle-mariofox-model-harness.ps1` passed with
+  `Battle Mario/Fox model harness passed: assets=0xffff, setup=0xfff, realGObjs=2, p0DObjs=25, p1DObjs=27`.
+- `scripts/verify-menu-chain-mariofox-model-harness.ps1` passed with
+  `Menu-chain Mario/Fox model harness passed: chain masks=0xff/0xff/0xff, assets=0xffff, setup=0xfff, realGObjs=2`.
+
+## 2026-06-21: Guarded bounded original Pupupu / Dream Land update probe
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_pupupu_update` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_pupupu_update`.
+- Added a bounded project-owned probe in the Pupupu import wrapper that calls
+  original `grPupupuProcUpdate` twice after seeding a deterministic safe
+  substate.
+- Recorded update diagnostics for Whispy state, wind wait, blink wait, flower
+  state, map GObj mask, GObj count, and guarded side-effect counters.
+- Added side-effect counters for Whispy wind FGM, fighter push, quake, and
+  particle script calls so the safe update path can prove those branches did
+  not run.
+- Added direct and menu-chain update verifiers and included them in
+  `scripts/verify-all.ps1`.
+- Upgraded the setup-only Pupupu stage and menu-chain VSBattle verifiers to
+  assert that the update probe remains untouched in setup-only builds.
+
+Boundary details:
+
+- The direct harness starts at imported bounded VSBattle with two seeded human
+  players on Pupupu/Dream Land, completes the existing original ground object
+  setup proof, then runs two guarded original `grPupupuProcUpdate` ticks.
+- The menu-chain harness proves the same update after VS Mode -> PlayersVS ->
+  Maps -> VSBattle.
+- The proven update path is deliberately narrow: Sleep -> Wait and one Wait
+  countdown tick. It preserves the four original map GObjs, keeps flowers in
+  default state, leaves GObj count unchanged, and records zero wind FGM,
+  fighter push, quake, and particle script side effects.
+- Continuous stage update/draw, Whispy wind/fighter push behavior, full
+  collision line processing, yakumono runtime, item/effect runtime, fighter
+  gameplay, HUD rendering, audio backend, and real gameplay remain deferred.
+- `decomp/` remained read-only; all changes are in project-owned imports,
+  headers, backend stubs, verifiers, and docs.
+
+Verification:
+
+- `scripts/verify-battle-pupupu-update-harness.ps1` passed with
+  `Battle Pupupu update harness passed: scene=22/21 update=0xff ticks=2 whispy=0->1 windWait=2->1 sidefx=0/0/0/0`.
+- `scripts/verify-menu-chain-pupupu-update-harness.ps1` passed with
+  `Menu-chain Pupupu update harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, ground=0x3ff, update=0xff, final=22/21`.
+- `make clean`, `make -j4`, and `scripts/verify-all.ps1` passed. The full
+  verifier reported speed sample `frames=3285 hostfps=40.42` and included both
+  direct and menu-chain Pupupu update gates.
 - `scripts/verify-menu-chain-vsbattle-harness.ps1` passed with
   `Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps->VSBattle mask=0xff, VSBattle files=8 fighters=2, final=22/21`.
+
+## 2026-06-21: Pupupu / Dream Land stage-data proof
+
+What changed:
+
+- Added Pupupu/Dream Land stage O2R staging for `GRPupupuMap`,
+  `StageDreamLand`, `ExternDataBank103`, `ExternDataBank104`, and
+  `MiscDataBank152`.
+- Updated the DS relocation asset table to distinguish DS-side asset lookup
+  keys from original O2R file IDs, because `StageDreamLand` and an Opening
+  Room movie asset both use original file ID `0x58`.
+- Added bounded external relocation support for the Pupupu dependency chain:
+  external file ID list parsing, recursive dependency loading, external pointer
+  fixups, and failure-count diagnostics.
+- Un-deferred the Pupupu path in bounded imported `mnmaps.c` setup. The direct
+  Maps harness now runs the Pupupu preview path, resolves real stage pointers,
+  records preview object diagnostics, and clears the preview-deferred marker.
+- Added `NDS_DEV_SCENE_HARNESS=battle_pupupu_stage`, seeding two human players
+  on Pupupu/Dream Land for direct VSBattle setup testing.
+- Updated `mpCollisionInitGroundData` to adopt real Pupupu `MPGroundData`,
+  record geometry/map-node/light/BGM metadata, and keep full collision and
+  yakumono/stage runtime explicitly deferred.
+- Added `scripts/verify-battle-pupupu-stage-harness.ps1`, upgraded the Maps
+  and menu-chain verifiers to assert Pupupu preview/stage markers, and included
+  the new verifier in `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- `maps_setup` still loads the five original Maps menu files, but Pupupu no
+  longer parks at a preview-deferred marker. It now proves real Pupupu stage
+  assets and fixups with `PUPR`, then records preview marker `PUPV`.
+- `battle_pupupu_stage` starts directly at imported bounded VSBattle setup,
+  proves two active original player descriptors, creates two stub fighter GObjs
+  for Mario/Fox, adopts real Pupupu `MPGroundData`, records stage marker
+  `PUPB`, and parks before gameplay.
+- `menu_chain_vsbattle` now proves the selected Pupupu stage carries from
+  original Maps A-select into imported VSBattle setup.
+
+- Full collision line processing, yakumono/stage object runtime, real fighter
+  logic/model/motion, items/weapons, HUD rendering, audio backend, and gameplay
+  remain deferred.
+
+Verification:
+
+- `scripts/verify-maps-setup-harness.ps1` passed with
+  `Maps setup harness passed: scene=21/16 setup=0xff files=5 preview=0xff assets=0x1f slot=6 gkind=6`.
+- `scripts/verify-battle-fd-harness.ps1` passed with
+  `Battle FD harness passed: files=8 players=1/0 fighters=1 gkind=16 mask=0x7f`.
+- `scripts/verify-battle-pupupu-stage-harness.ps1` passed with
+  `Battle Pupupu stage harness passed: scene=22/21 gkind=6 stage=0xff assets=0x1f players=2 fighters=2`.
+- `scripts/verify-menu-chain-vsbattle-harness.ps1` passed with
+  `Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps preview=0xff, Maps->VSBattle mask=0xff, VSBattle stage=0xff, final=22/21`.
+
+## 2026-06-21: Bounded original Pupupu / Dream Land ground object setup
+
+What changed:
+
+- Added `src/import/battleship_grpupupu_ground.c`, importing original
+  `grdisplay.c`, `grmainsetup.c`, `grcommonsetup.c`, and
+  `grcommon/grpupupu.c` through a bounded project-owned wrapper.
+- Added a narrow project-owned `include/mp/map.h` shadow header so imported
+  ground setup can use the existing local `MPGroundData` surface without
+  pulling in BattleShip's full map/fighter/item header graph.
+- Added the minimal GBI no-op compatibility shims needed by imported ground
+  display setup (`gSPClearGeometryMode`, `G_RM_AA_OPA_SURF`,
+  `G_RM_AA_OPA_SURF2`).
+- Moved Pupupu ground setup from the generic compatibility stub to a
+  Pupupu-only original path. Non-Pupupu stages still use the prior
+  compatibility helper.
+- Added narrow Pupupu ground ABI, particle/effect/item/fighter/collision
+  stubs, and diagnostics for display-layer GObjs, map GObjs, map-head offset,
+  DObj/MObj/animation pointer proof, object counts, deferred runtime work, and
+  non-Pupupu stub calls.
+- Upgraded `verify-battle-pupupu-stage-harness.ps1` and
+  `verify-menu-chain-vsbattle-harness.ps1` to assert the new `PUGS`, `PUGD`,
+  `PUGO`, and `0x3FF` ground setup mask markers.
+
+Boundary details:
+
+- `battle_pupupu_stage` now proves that bounded VSBattle adopts real
+  `GRPupupuMap` `MPGroundData`, enters imported original
+  `grCommonSetupInitAll`, creates four original display-layer GObjs, dispatches
+  through original `grMainSetupMakeGround` to `grPupupuMakeGround`, resolves
+  original Pupupu map head `0x10F0`, and creates the original Whispy eyes,
+  Whispy mouth, back flowers, and front flowers GObjs.
+- `menu_chain_vsbattle` proves the same Dream Land ground object graph after
+  VS Mode -> PlayersVS -> Maps -> VSBattle.
+- Continuous stage update/draw, Whispy wind/fighter push, real particle banks,
+  yakumono runtime, item/effect appear actors, full collision, full fighter
+  logic/model/motion, HUD rendering, audio, and gameplay remain deferred.
+- `decomp/` remained read-only; all changes are in project-owned imports,
+  headers, backend stubs, verifiers, and docs.
+
+Verification:
+
+- `scripts/verify-battle-pupupu-stage-harness.ps1` passed with
+  `Battle Pupupu stage harness passed: scene=22/21 gkind=6 stage=0xff ground=0x3ff layers=4 mapGObjs=4 players=2 fighters=2`.
+- `scripts/verify-menu-chain-vsbattle-harness.ps1` passed with
+  `Menu-chain VSBattle harness passed: VS->PV mask=0xff, PV->Maps mask=0xff, Maps preview=0xff, Maps->VSBattle mask=0xff, stage=0xff, ground=0x3ff, final=22/21`.
+- `scripts/verify-battle-fd-harness.ps1` passed with
+  `Battle FD harness passed: files=8 players=1/0 fighters=1 gkind=16 mask=0x7f`.
+
+## 2026-06-21: Persistent Mario/Fox FTStruct-backed fighter state shell
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_struct` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_struct`.
+- Kept `battle_mariofox_model` and `menu_chain_mariofox_model` behavior
+  unchanged, but made the Mario/Fox model proof predicate true for both model
+  and struct harness families.
+- Added a bounded project-owned `FTStruct` shell with descriptor identity,
+  attributes, figatree pointer, input masks, collision pointer contracts,
+  status/deferred counters, and a joint table sized for the original fighter
+  parts boundary.
+- Added a small static `FTStruct` pool for the active player slots. In struct
+  harnesses, Mario and Fox fighter GObjs store the pool pointer in
+  `fighter_gobj->user_data.p`, and `ftGetStruct` returns the persistent pool
+  object instead of the old fallback shell.
+- Seeded Mario/Fox `FTStruct` state from the original `FTDesc` values built by
+  imported `scvsbattle.c`, preserving the original descriptor path rather than
+  hand-authored gameplay state.
+- Populated the top joint and deterministic common joint table from the real
+  asset-backed DObj tree. Exact original
+  `lbCommonSetupFighterPartsDObjs` joint-ID mapping is still deferred.
+- Kept original fighter status/process/physics/input/hit/catch/shadow/gameplay
+  and full fighter display execution parked.
+- Added maintained diagnostics for struct result, joint result, state result,
+  struct mask, pool mask/count, per-player identity/input/joint/collision
+  fields, and zero status/process/display execution counters.
+- Added `scripts/verify-battle-mariofox-struct-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-struct-harness.ps1`, and included both in
+  `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- `battle_mariofox_struct` starts directly at imported bounded VSBattle on
+  Pupupu/Dream Land, reuses the asset-backed Mario/Fox model creation path,
+  attaches persistent `FTStruct` shells to both fighter GObjs, verifies
+  `ftGetStruct` identity, records Mario/Fox state and joint diagnostics, and
+  parks before real fighter runtime.
+- `menu_chain_mariofox_struct` proves the same persistent struct state after the
+  guarded original VS Mode -> PlayersVS -> Maps -> VSBattle chain.
+- The struct mask is expected to reach `0xFFF`, pool mask `0x3`, struct count
+  `2`, and zero process/status/display probe counters.
+
+Verification:
+
+- `scripts/verify-battle-mariofox-struct-harness.ps1` passed with
+  `Battle Mario/Fox struct harness passed: scene=22/21 struct=0xfff pool=0x3 p0Joints=24 p1Joints=26 model=0xfff`.
+- `scripts/verify-menu-chain-mariofox-struct-harness.ps1` passed with
+  `Menu-chain Mario/Fox struct harness passed: chain masks=0xff/0xff/0xff, model=0xfff, struct=0xfff, final=22/21`.
+
+## 2026-06-21: Bounded Mario/Fox fighter init-state proof
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_init` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_init`.
+- Kept the direct and menu-chain Mario/Fox model and struct proofs intact, then
+  made the model predicate cover modes `11` through `16`, the struct predicate
+  cover modes `13` through `16`, and added a new init predicate for modes `15`
+  and `16`.
+- Added a bounded project-owned helper that mirrors the safe source order of
+  original `ftManagerInitFighter` without running original fighter
+  status/process/input/physics/display/gameplay. The helper initializes
+  damage, shield, velocities, timers, root DObj position/scale, attribute map
+  collision and cliff-catch contracts, deterministic Pupupu floor projection,
+  ground/air state, jump counters, attack/damage counters, hitstatus/damage
+  kind, throw/catch/item pointer clearing, Mario/Fox passive vars, and the
+  guarded physics/attack-collision/hitstatus/colanim compatibility calls.
+- Expanded the narrow `FTStruct`, `FTCollisionData`, and `FTAttributes` shadow
+  ABI only enough to hold the new bounded init-state contract.
+- Added a deterministic `mpCollisionCheckProjectFloor` seam for the current
+  Pupupu spawn-state proof.
+- Added maintained diagnostics for init result, collision result, deferred
+  runtime result, init mask, deferred mask, per-player damage/shield/GA/jump/
+  floor/root/passive state, bounded call counters, and zero process/status/
+  display counters.
+- Added `scripts/verify-battle-mariofox-init-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-init-harness.ps1`, and included both in
+  `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- `battle_mariofox_init` starts directly at imported bounded VSBattle on
+  Pupupu/Dream Land, reuses the asset-backed Mario/Fox model creation and
+  persistent `FTStruct` shell paths, runs the bounded source-order init helper,
+  verifies ground-state/floor-projection and compatibility-call diagnostics,
+  and parks before real fighter runtime.
+- `menu_chain_mariofox_init` proves the same initialized fighter state after
+  the guarded original VS Mode -> PlayersVS -> Maps -> VSBattle chain.
+- The init mask is expected to reach `0x3FFF`, deferred mask `0xFF`, init
+  count `2`, both fighters on ground with floor projection `1/1`, four bounded
+  call counters at `2`, and status/process/display counters at `0`.
+- Original fighter status transitions, process callbacks, input/update loops,
+  physics/gameplay, hit/catch/search runtime, shadows, full display traversal,
+  and gameplay remain deferred.
+
+Verification:
+
+- `scripts/verify-battle-mariofox-init-harness.ps1` passed with
+  `Battle Mario/Fox init harness passed: scene=22/21 init=0x3fff p0GA=0 p1GA=0 floor=1/1 calls=2/2/2/2`.
+- `scripts/verify-menu-chain-mariofox-init-harness.ps1` passed with
+  `Menu-chain Mario/Fox init harness passed: chain masks=0xff/0xff/0xff, model=0xfff, struct=0xfff, init=0x3fff, final=22/21`.
+
+## 2026-06-21: Bounded original Mario/Fox Wait status and motion setup proof
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_wait` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_wait`.
+- Imported original BattleShip `ftcommonwait.c` only through
+  `src/import/battleship_ftcommon_wait.c`.
+- Extended the Mario/Fox model, struct, and init predicates to cover harness
+  modes `17` and `18`, then added a Wait-only predicate for modes `17` and
+  `18`.
+- Added a bounded project-owned `ftMainSetStatus` seam that accepts only
+  `nFTCommonStatusWait` while the Wait proof is enabled. It installs status
+  `10`, motion `4`, animation frame `0`, animation speed `1.0`, no attack
+  IDs, Wait interrupt/physics/map callback pointers, and defers all callback
+  execution.
+- Added compatibility stubs for the original Wait path:
+  `ftHammerCheckHoldHammer`, `ftHammerSetStatusHammerWait`,
+  `mpCommonSetFighterGround`, `ftParamSetPlayerTagWait`,
+  `ftPhysicsApplyGroundVelFriction`, `mpCommonProcFighterOnCliffEdge`, and
+  `ftCommonGroundCheckInterrupt`.
+- Added diagnostics for Wait status/motion/defer results, Wait mask,
+  per-player status/motion/animation/callback/tag fields, and call counters
+  proving original Wait entry ran while process/display/gameplay callbacks did
+  not.
+- Added `scripts/verify-battle-mariofox-wait-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-wait-harness.ps1`, and included both in
+  `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- `battle_mariofox_wait` starts directly at imported bounded VSBattle on
+  Pupupu/Dream Land, reuses the asset-backed Mario/Fox model creation,
+  persistent `FTStruct` shell path, and bounded init-state proof, then runs
+  original `ftCommonWaitSetStatus` for both fighters.
+- `menu_chain_mariofox_wait` proves the same Wait status/motion setup after the
+  guarded original VS Mode -> PlayersVS -> Maps -> VSBattle chain.
+- The Wait mask is expected to reach `0xFFF`, deferred mask `0xFF`, Wait count
+  `2`, status `10/10`, motion `4/4`, player tag wait `120/120`, original Wait
+  call count `2`, bounded `ftMainSetStatus` count `2`, and callback/process/
+  display/gameplay execution counts `0`.
+- Full fighter process callbacks, input/update loops, physics execution,
+  hit/catch/search runtime, shadows, full fighter display traversal, and
+  gameplay remain deferred.
+
+Verification:
+
+- `scripts/verify-battle-mariofox-wait-harness.ps1` passed with
+  `Battle Mario/Fox Wait harness passed: waitMask=0xfff count=2 status=10/10 motion=4/4 callbacks=0`.
+- `scripts/verify-menu-chain-mariofox-wait-harness.ps1` passed with
+  `Menu-chain Mario/Fox Wait harness passed: chain final=22/21 waitMask=0xfff count=2 status=10/10 motion=4/4 callbacks=0`.
+
+## 2026-06-21: Bounded Mario/Fox Wait callback tick proof
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_wait_tick` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_wait_tick`.
+- Extended the Mario/Fox model, struct, init, and Wait predicates to cover
+  harness modes `19` and `20`, then added a tick-only predicate for those modes.
+- Added a bounded Wait tick probe that requires the prior Wait setup proof,
+  validates the installed original `ftCommonWaitProcInterrupt` callback and
+  guarded physics/map callback pointers, seeds neutral input, and runs one
+  original Wait interrupt callback tick per fighter.
+- Kept `ftPhysicsApplyGroundVelFriction` and
+  `mpCommonProcFighterOnCliffEdge` as project-owned guarded seams for this
+  proof. They record callback counts but do not mutate velocity, map state, or
+  gameplay state.
+- Added diagnostics for Wait tick result, callback result, safety result, mask,
+  deferred mask, per-fighter before/after status/motion/GA/root/ground-velocity
+  state, callback counters, and safety counters.
+- Added `scripts/verify-battle-mariofox-wait-tick-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-wait-tick-harness.ps1`, and included both
+  in `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- `battle_mariofox_wait_tick` starts directly at imported bounded VSBattle on
+  Pupupu/Dream Land, reuses the asset-backed Mario/Fox model creation,
+  persistent `FTStruct` shell path, bounded init-state proof, and original Wait
+  setup proof, then runs one bounded original Wait interrupt callback tick for
+  Mario and Fox.
+- `menu_chain_mariofox_wait_tick` proves the same Wait callback tick after the
+  guarded original VS Mode -> PlayersVS -> Maps -> VSBattle chain.
+- The tick mask is expected to reach `0x3FF`, deferred mask `0xFF`, tick count
+  `2`, callback counts `2/2/2/2`, and safety counters `0`.
+- Status remains `10/10`, motion remains `4/4`, ground/air state remains
+  `0/0`, root positions remain stable, ground velocity X remains `0`, and GObj
+  count remains unchanged.
+- Real fighter update loops, unbounded physics/map mutation, hit/catch/search
+  runtime, shadows, full fighter display traversal, and gameplay remain
+  deferred.
+
+Verification:
+
+- `scripts/verify-battle-mariofox-wait-tick-harness.ps1` passed with
+  `Battle Mario/Fox Wait tick harness passed: scene=22/21 tick=0x3ff callbacks=2/2/2 stable=1 final=22`.
+- `scripts/verify-menu-chain-mariofox-wait-tick-harness.ps1` passed with
+  `Menu-chain Mario/Fox Wait tick harness passed: chain final=22/21 wait=0xfff tick=0x3ff callbacks=2/2/2 stable=1`.
+- The setup-only Wait verifiers still passed with callback execution counts at
+  `0`, proving the tick proof is isolated to the new harness modes.
+
+## 2026-06-22: Bounded Mario/Fox Wait ground-friction/map proof
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_wait_ground` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_wait_ground`.
+- Reused the existing Mario/Fox model, persistent `FTStruct`, init, Wait, and
+  Wait tick proofs, then added a second controlled ground pass only for the new
+  ground harness modes.
+- Added project-owned compatibility fields and constants needed by the bounded
+  ground proof, including nested fighter physics velocity state, floor angle
+  vector data, floor/map material flags, and common material friction data.
+- Added a bounded source-order helper for the original
+  `ftPhysicsSetGroundVelFriction` path plus the safe subset of
+  `ftPhysicsSetGroundVelTransferAir`.
+- Added a bounded safe-floor branch for `mpCommonProcFighterOnCliffEdge` that
+  proves the floor path without allowing Fall/Ottotto status changes.
+- Added diagnostics for ground result, map result, safety result, mask,
+  deferred mask, per-fighter before/after velocity, air-transfer fields,
+  material/traction/friction, status/motion/GA, root position, callback counts,
+  and safety counters.
+- Added `scripts/verify-battle-mariofox-wait-ground-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-wait-ground-harness.ps1`, and included
+  both in `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- `battle_mariofox_wait_ground` starts directly at imported bounded VSBattle on
+  Pupupu/Dream Land, reuses the Wait tick proof, seeds Mario/Fox ground
+  velocity to `2.0`, runs the bounded ground-friction/air-transfer pass, then
+  runs the safe floor-map seam.
+- `menu_chain_mariofox_wait_ground` proves the same ground-friction/map pass
+  after the guarded original VS Mode -> PlayersVS -> Maps -> VSBattle chain.
+- The ground mask is expected to reach `0x7FF`, deferred mask `0xFF`, ground
+  count `2`, physics/map/map-check/safe-floor counts `2`, and Fall/Ottotto,
+  status/motion/GA/root/GObj/display/gameplay safety counters `0`.
+- The current deterministic proof seeds velocity milli `2000` and the bounded
+  source-order friction path clamps both fighters to `0`, while preserving
+  Wait status `10`, motion `4`, ground/air state `0`, root position, and GObj
+  count.
+- Continuous fighter physics, full map/collision mutation, status/process
+  loops, hit/catch/search runtime, shadows, full display traversal, and
+  gameplay remain deferred.
+
+Verification:
+
+- `make clean` and `make -j4` passed.
+- `scripts/verify-battle-mariofox-wait-ground-harness.ps1` passed with
+  `Battle Mario/Fox Wait ground harness passed: scene=22/21 ground=0x7ff vel=2000->0/2000->0 map=2/2 stable=1`.
+- `scripts/verify-menu-chain-mariofox-wait-ground-harness.ps1` passed with
+  `Menu-chain Mario/Fox Wait ground harness passed: chain final=22/21 wait=0xfff tick=0x3ff ground=0x7ff map=2/2 stable=1`.
+- `scripts/verify-all.ps1` passed with the new direct and menu-chain ground
+  verifiers included in the maintained regression chain.
+
+## 2026-06-22: Direct bounded Mario/Fox fighter display metadata probe
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_display_probe` as direct-only
+  harness mode `23`.
+- Reused the direct Pupupu Mario/Fox proof chain through model, persistent
+  `FTStruct`, init, original Wait setup, Wait callback tick, and bounded Wait
+  ground-friction/map proof.
+- Added a DS-owned display probe guard that calls the current project-owned
+  `ftDisplayMainProcDisplay` seam exactly once for Mario and once for Fox.
+- Added diagnostics for display result/safety masks, callback count,
+  per-player DObj/MObj/AObj counts, display-list candidate counts, safe
+  parts-pointer counts, status/motion/GA after-state, root X stability, GObj
+  delta, and draw/matrix/gameplay escape counters.
+- Added `scripts/verify-battle-mariofox-display-probe-harness.ps1` and wired it
+  into `scripts/verify-all.ps1` after the standalone verifier passed.
+- Updated `docs/STATUS.md`, `docs/HANDOFF.md`,
+  `docs/DIAGNOSTIC_REFERENCE.md`, and `docs/KNOWN_ISSUES.md`.
+
+Boundary details:
+
+- The probe records metadata only. It does not render fighters, import
+  `ftdisplaymain.c`, prepare matrices, emit GBI, run shadows/afterimages/fog,
+  invoke magnify/interface rendering, start continuous draw traversal, or run
+  gameplay.
+- Current bounded Mario/Fox metadata is DObj `25/27`, MObj `0/0`, AObj `0/0`,
+  display-list candidates `14/18`, status `10/10`, motion `4/4`, and GA
+  `0/0`.
+- There is intentionally no menu-chain display-probe harness in this step.
+
+Verification:
+
+- `make clean` and `make -j4` passed.
+- `scripts/verify-battle-mariofox-display-probe-harness.ps1` passed with
+  `Battle Mario/Fox display probe harness passed: scene=22/21 display=0x7ff dobj=25/27 mobj=0/0 ready=14/18 stable=1`.
+- `scripts/verify-battle-mariofox-wait-ground-harness.ps1` passed with
+  `Battle Mario/Fox Wait ground harness passed: scene=22/21 ground=0x7ff vel=2000->0/2000->0 map=2/2 stable=1`.
+- `scripts/verify-menu-chain-mariofox-wait-ground-harness.ps1` passed with
+  `Menu-chain Mario/Fox Wait ground harness passed: chain final=22/21 wait=0xfff tick=0x3ff ground=0x7ff map=2/2 stable=1`.
+- `scripts/verify-all.ps1` passed with the new direct display metadata probe
+  included in the maintained regression chain.
+
+## 2026-06-22: Menu-chain Mario/Fox fighter display metadata probe
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_display_probe` as harness
+  mode `24`.
+- Reused the existing guarded menu-chain transition path through original VS
+  Mode -> PlayersVS -> Maps -> imported bounded VSBattle with Pupupu
+  stage-data adoption.
+- Reused the cumulative Mario/Fox proof chain through model, persistent
+  `FTStruct`, source-order init, original Wait setup, Wait callback tick,
+  bounded Wait ground-friction/map proof, and the guarded display metadata
+  callback probe.
+- Added `scripts/verify-menu-chain-mariofox-display-probe-harness.ps1` and
+  wired it into `scripts/verify-all.ps1` after the standalone verifier passed.
+- Updated current-truth, handoff, diagnostic, and known-issues docs.
+
+Boundary details:
+
+- The new harness proves the direct display metadata contract after the full
+  bounded menu chain: final scene `22/21`, selected Pupupu stage `6`, display
+  mask `0x7FF`, DObj counts `25/27`, display-list candidate counts `14/18`,
+  and stable Wait/ground/display state.
+- The probe remains metadata-only. It does not render fighters, import full
+  fighter display traversal, run matrix prep, emit GBI, start gameplay, create
+  new GObjs, or mutate root/status/motion/ground-air state.
+
+Verification:
+
+- `make clean` and `make -j4` passed.
+- `scripts/verify-battle-mariofox-display-probe-harness.ps1` passed with
+  `Battle Mario/Fox display probe harness passed: scene=22/21 display=0x7ff dobj=25/27 mobj=0/0 ready=14/18 stable=1`.
+- `scripts/verify-menu-chain-mariofox-wait-ground-harness.ps1` passed with
+  `Menu-chain Mario/Fox Wait ground harness passed: chain final=22/21 wait=0xfff tick=0x3ff ground=0x7ff map=2/2 stable=1`.
+- `scripts/verify-menu-chain-mariofox-display-probe-harness.ps1` passed with
+  `Menu-chain Mario/Fox display probe harness passed: chain final=22/21 display=0x7ff dobj=25/27 ready=14/18 stable=1`.
+- `scripts/verify-all.ps1` passed with the new menu-chain display metadata
+  probe included in the maintained regression chain.
+
+## 2026-06-22: Direct and menu-chain Mario/Fox display-list scan proofs
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_dl_scan` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_dl_scan` as harness modes `25`
+  and `26`.
+- Reused the existing Mario/Fox proof chain through model, persistent
+  `FTStruct`, source-order init, original Wait setup, Wait callback tick,
+  ground-friction/map proof, and display metadata proof.
+- Added a parser-only DL scan boundary in `src/port/reloc_backend.c` that
+  selects the first display-list-bearing DObj for Mario and Fox, scans each
+  selected list with `ndsRendererScanDisplayList()`, and records copied
+  `NDSRendererStats` without rendering, matrix prep, `gcDrawAll`, continuous
+  draw, or gameplay.
+- Added taskman-arena range ownership for copied original fighter display-list
+  data. Diagnostics use asset sentinel `0xfffffffe` to distinguish those
+  copied DLs from pointers still inside registered loaded O2R files.
+- Added `scripts/verify-battle-mariofox-dl-scan-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-dl-scan-harness.ps1`, then wired both
+  into `scripts/verify-all.ps1` after standalone verifier passes.
+- Updated current-truth, handoff, diagnostic, known-issues, and roadmap docs.
+
+Boundary details:
+
+- The scan records first DL pointers, asset/offset ownership, DObj index,
+  blocker, command counts, first/unsupported opcodes, vertex and triangle
+  counts, branch/end/texture stats, range rejects, branch resolves, stable
+  fighter state, and no draw/matrix/gameplay escape.
+- The selected fighter DLs currently live in taskman-arena copied original
+  data, not directly inside registered loaded-file records.
+- The exact next renderer blocker for this selected fighter DL path is
+  `NDS_RENDERER_BLOCKER_UNSUPPORTED` (`4`) on both Mario and Fox.
+
+Verification:
+
+- `scripts/verify-battle-mariofox-dl-scan-harness.ps1` passed with
+  `Battle Mario/Fox DL scan harness passed: scene=22/21 dl=0x22dbe88/0x2304850 asset=4294967294/4294967294 commands=59/69 blocker=4/4 safe=1`.
+- `scripts/verify-menu-chain-mariofox-dl-scan-harness.ps1` passed with
+  `Menu-chain Mario/Fox DL scan harness passed: chain final=22/21 dl=0x22dc528/0x2304ef0 asset=4294967294/4294967294 commands=59/69 blocker=4/4 safe=1`.
+- `scripts/verify-all.ps1` passed with both new DL-scan verifiers included in
+  the maintained regression chain.
+
+## 2026-06-22: Mario/Fox first display-list execute/decode proofs
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_dl_execute` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_dl_execute` as harness modes `27`
+  and `28`.
+- Reused the existing direct and menu-chain Mario/Fox proof chain through
+  model, persistent `FTStruct`, source-order init, original Wait setup, Wait
+  callback tick, ground-friction/map proof, display metadata, and first-DL
+  scan.
+- Extended the DS renderer adapter so known benign N64 state/culling/image/TLUT
+  commands are recorded as state or skip evidence instead of fatal unsupported
+  blockers: `G_SETOTHERMODE_H`, `G_SETOTHERMODE_L`, `G_RDPSETOTHERMODE`,
+  `G_CULLDL`, `G_SETCIMG`, `G_LOADTLUT`, and `G_NOOP`.
+- Kept unknown/default opcodes unsupported.
+- Added scan-family diagnostics and strengthened both DL scan verifiers to
+  require blocker `0/0`, unsupported opcode/counts `0`, and nonzero
+  vertex/triangle/state/render command evidence.
+- Added a decode-only execute probe that calls
+  `ndsRendererExecuteDisplayList()` once for the selected Mario DL and once for
+  the selected Fox DL, decodes real `G_VTX`, `G_TRI1`, and `G_TRI2` payloads,
+  records bounds/color/command-family diagnostics, and proves no fighter state,
+  root, GObj, draw, matrix, or gameplay escape.
+- Added `scripts/verify-battle-mariofox-dl-execute-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-dl-execute-harness.ps1`, then wired both
+  into `scripts/verify-all.ps1` after standalone passes.
+
+Boundary details:
+
+- The selected Mario/Fox DLs still come from taskman-arena copied original
+  fighter data (`0xfffffffe` ownership sentinel).
+- Current scan and execute command counts remain `59/69`.
+- Current execute decode evidence is `28/23` decoded vertices and `37/20`
+  triangles.
+- This is not visible fighter rendering. Matrix/camera projection,
+  material/texture upload, all DL-ready DObjs, full `ftdisplaymain.c`,
+  continuous draw, shadows/magnify/interface/afterimage/fog, and gameplay
+  remain deferred.
+
+Verification:
+
+- `make -j4` passed.
+- `scripts/verify-battle-mariofox-dl-scan-harness.ps1` passed with
+  `Battle Mario/Fox DL scan harness passed: scene=22/21 dl=0x22dc308/0x2304cd0 asset=4294967294/4294967294 commands=59/69 blocker=0/0 safe=1`.
+- `scripts/verify-battle-mariofox-dl-execute-harness.ps1` passed with
+  `Battle Mario/Fox DL execute harness passed: commands=59/69 verts=28/23 tris=37/20 safe=1`.
+- `scripts/verify-menu-chain-mariofox-dl-scan-harness.ps1` passed with
+  `Menu-chain Mario/Fox DL scan harness passed: chain final=22/21 dl=0x22dc9a8/0x2305370 asset=4294967294/4294967294 commands=59/69 blocker=0/0 safe=1`.
+- `scripts/verify-menu-chain-mariofox-dl-execute-harness.ps1` passed with
+  `Menu-chain Mario/Fox DL execute harness passed: chain final=22/21 commands=59/69 verts=28/23 tris=37/20 safe=1`.
+- `scripts/verify-all.ps1` passed with both new DL execute verifiers included
+  in the maintained regression chain.
+
+## 2026-06-22: Visible Mario/Fox first-DL software draw proofs
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_dl_draw` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_dl_draw` as harness modes `29`
+  and `30`.
+- Reused the existing direct and menu-chain Mario/Fox proof chain through
+  model, persistent `FTStruct`, source-order init, original Wait setup, Wait
+  callback tick, ground-friction/map proof, display metadata, first-DL scan,
+  and first-DL execute/decode.
+- Added a bounded software draw probe that reuses the selected real Mario/Fox
+  first display lists, decodes them again through `ndsRendererExecuteDisplayList()`,
+  collects vertices/triangles, chooses a best nonzero-area fallback projection
+  axis, rasterizes filled triangles into deterministic side-by-side boxes, and
+  commits the existing retained `96x72` original-DL preview surface.
+- Added maintained DL draw diagnostics for preview dimensions/commit state,
+  command stats, decoded geometry, chosen axes, source and screen bounds,
+  pixel counts, color checksums, fighter state, and safety counters.
+- Added `scripts/verify-battle-mariofox-dl-draw-harness.ps1` and
+  `scripts/verify-menu-chain-mariofox-dl-draw-harness.ps1`, then wired both
+  into `scripts/verify-all.ps1` after standalone passes.
+
+Boundary details:
+
+- Current draw evidence is still limited to the selected first
+  display-list-bearing DObj per fighter.
+- Current command counts remain at least `59/69`; current geometry proof draws
+  `37/20` triangles and `3642/4825` software pixels for Mario/Fox.
+- The retained original-DL preview commit proves visible software pixels, not
+  DS hardware polygon rendering.
+- Camera-correct battle projection, material/texture upload and sampling, all
+  fighter DL-ready DObjs beyond the selected first DL, full `ftdisplaymain.c`,
+  matrix prep, `gcDrawAll`, DS hardware polygon submission, shadows, magnify,
+  interface rendering, gameplay, items, and audio remain deferred.
+
+Verification:
+
+- `scripts/verify-battle-mariofox-dl-draw-harness.ps1` passed with
+  `Battle Mario/Fox DL draw harness passed: scene=22/21 pixels=3642/4825 tris=37/20 preview=96x72 commit=1 safe=1`.
+- `scripts/verify-menu-chain-mariofox-dl-draw-harness.ps1` passed with
+  `Menu-chain Mario/Fox DL draw harness passed: chain final=22/21 pixels=3642/4825 tris=37/20 preview=96x72 commit=1 safe=1`.
+
+## 2026-06-22: Visible Mario/Fox multi-DL software draw proofs
+
+What changed:
+
+- Added `NDS_DEV_SCENE_HARNESS=battle_mariofox_dl_draw_multi` and
+  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_dl_draw_multi` as harness modes
+  `31` and `32`.
+- Reused the full existing Mario/Fox proof chain through model creation,
+  persistent `FTStruct`, source-order init, original Wait setup, one Wait
+  callback tick, Wait ground-friction/map proof, display metadata, first-DL
+  scan, first-DL execute/decode, and first-DL software draw.
+- Added a bounded multi-DL software draw probe that censuses all DL-ready DObjs
+  in the Mario/Fox trees, selects the first four DL-ready DObjs per fighter in
+  deterministic depth-first order, executes/decodes all eight selected display
+  lists through `ndsRendererExecuteDisplayList()`, and draws them into the
+  retained `96x72` original-DL preview surface.
+- The multi-DL preview uses one shared projection axis and source bounds per
+  fighter across the selected clean DObjs, instead of independently scaling
+  each display list.
+- Added `G_MODIFYVTX` / opcode `0x02` as a recognized skipped state command in
+  the DS renderer adapter. It is not treated as a geometry blocker for the
+  current selected fighter DObjs.
+- Added maintained `FTR_DL_MULTI*` diagnostics and direct/menu-chain verifier
+  scripts, then wired both into `scripts/verify-all.ps1`.
+
+Boundary details:
+
+- The current maintained DL-ready DObj census is `14/18` for Mario/Fox.
+- The maintained selected draw set is the first four DL-ready DObjs per fighter.
+- Current multi-DL draw evidence is `87/79` triangles and `6208/7411` software
+  pixels for Mario/Fox, exceeding the previous first-DL-only proof.
+- All eight selected DObjs currently decode cleanly: no renderer blockers,
+  unsupported opcodes, unsupported command counts, range rejects, or vertex
+  range rejects.
+- This is still a bounded software preview. Full `ftdisplaymain.c`,
+  camera-correct battle projection, material/texture upload and sampling, all
+  remaining fighter DObjs, DS hardware polygon submission, continuous draw
+  traversal, shadows, magnify/interface rendering, gameplay, items, HUD, audio,
+  and full battle rendering remain deferred.
+
+Verification:
+
+- `scripts/verify-battle-mariofox-dl-draw-multi-harness.ps1` passed with
+  `Battle Mario/Fox multi-DL draw harness passed: scene=22/21 candidates=14/18 selected=4/4 pixels=6208/7411 tris=87/79 clean=4/4 preview=96x72 safe=1`.
+- `scripts/verify-menu-chain-mariofox-dl-draw-multi-harness.ps1` passed with
+  `Menu-chain Mario/Fox multi-DL draw harness passed: chain final=22/21 candidates=14/18 selected=4/4 pixels=6208/7411 tris=87/79 clean=4/4 preview=96x72 safe=1`.
+
+## 2026-06-22: Guarded Mario/Fox all-DL software draw proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for guarded all-DL Mario/Fox draw
+  proofs: `battle_mariofox_dl_draw_all` and
+  `menu_chain_mariofox_dl_draw_all`.
+- Reused the existing original-source spine through Pupupu VSBattle,
+  asset-backed Mario/Fox model GObjs, persistent `FTStruct` shells,
+  source-order init, original Wait status/motion, Wait tick, Wait ground,
+  display metadata, DL scan/execute, first-DL draw, and multi-DL draw.
+- Extended the current project-owned `ftDisplayMainProcDisplay` seam so the
+  all-DL proof calls it exactly once for Mario and once for Fox under a DS
+  guard, while preserving the no-continuous-draw/no-matrix/no-gameplay
+  contract.
+- Censused all DL-ready Mario/Fox DObjs (`14/18`), selected all 32 current
+  display-list-bearing DObjs, executed them through
+  `ndsRendererExecuteDisplayList()`, and drew all clean DObjs into the retained
+  `96x72` original-DL software preview.
+- Added a screen-aware projection selector and bounded collapsed-triangle
+  markers for clean original triangles that flatten under the current preview
+  projection. This is diagnostic software preview behavior only; real fighter
+  matrix/camera projection remains deferred.
+- Added all-DL diagnostics, verifier markers, and direct/menu-chain verifier
+  scripts, then wired both into `scripts/verify-all.ps1`.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox all-DL draw harness passed: scene=22/21 callbacks=2 candidates=14/18 selected=14/18 pixels=16618/15070 tris=334/322 clean=14/18 preview=96x72 safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox all-DL draw harness passed: chain final=22/21 callbacks=2 candidates=14/18 selected=14/18 pixels=16618/15070 tris=334/322 clean=14/18 preview=96x72 safe=1`.
+
+Still deferred:
+
+- Full `ftdisplaymain.c` import, real matrix prep, camera-correct fighter
+  projection, material/texture upload and sampling, DS hardware polygon
+  submission, continuous `gcDrawAll`, shadows, magnify/interface rendering,
+  gameplay, items, HUD, audio, and real fighter process/update loops.
+
+## 2026-06-22: Original Mario/Fox Wait -> Walk input proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for original Wait -> Walk input
+  proofs: `battle_mariofox_walk_input` (`35`) and
+  `menu_chain_mariofox_walk_input` (`36`).
+- Imported original `ftcommonwalk.c` through
+  `src/import/battleship_ftcommon_walk.c`; `decomp/` remains read-only.
+- Extended the narrow fighter ABI with Walk status/motion IDs, original
+  middle/fast stick thresholds, and the minimal Walk contracts required by the
+  imported source.
+- Reused the full existing Mario/Fox proof chain through guarded all-DL draw,
+  then seeded deterministic forward stick input and entered the transition
+  through original `ftCommonWaitProcInterrupt`.
+- Routed the guarded `ftCommonGroundCheckInterrupt` seam into original
+  `ftCommonWalkCheckInterruptCommon` only while the Walk proof is active.
+- Kept dash/run/jump/attack/special/guard/catch follow-up interrupt paths as
+  counted no-op compatibility stubs.
+- Extended `ftMainSetStatus` to accept only WalkSlow/WalkMiddle/WalkFast during
+  the Walk proof while preserving Wait-only behavior for older harnesses.
+- Added source-order Walk velocity generation through
+  `ftPhysicsSetGroundVelAbsStickRange` and the existing bounded ground-to-air
+  transfer mirror, plus one guarded safe floor-map pass.
+- Added `FTR_WALK*` diagnostics, direct/menu-chain verifiers, and wired both
+  into `scripts/verify-all.ps1`.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Walk input harness passed: scene=22/21 status=12/13 motion=6/7 stick=40/80 vel=12000/36000 callbacks=2 safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Walk input harness passed: chain final=22/21 status=12/13 motion=6/7 stick=40/80 vel=12000/36000 callbacks=2 safe=1`.
+
+Still deferred:
+
+- Continuous fighter process scheduling, root-position integration, dash/run/
+  turn/jump/squat/attack/special/guard/catch behavior, full collision,
+  hit/catch/search, items/weapons, HUD, audio, and full imported `ftmain.c`.
+
+## 2026-06-22: Project hygiene tooling and verifier registry
+
+What changed:
+
+- Added `scripts/clean-generated.ps1` for safe generated-output cleanup with
+  dry-run, force, artifact, normal-build, and latest-build preservation modes.
+- Reworked `scripts/New-Smash64DSSnapshot.ps1` so Lean ZIP snapshots are the
+  default review artifact, excluding generated build outputs, root ROM/ELF
+  files, artifacts, emulator payloads/logs, and GDB temps while keeping
+  `decomp/` included by default.
+- Added `scripts/lib/harness-registry.ps1` as the ordered verifier/harness
+  registry and refactored `scripts/verify-all.ps1` to support Full, Latest,
+  Smoke, Fighter, Direct, and MenuChain profiles.
+- Added `scripts/check-harness-registry.ps1` to detect drift between the
+  registry, `include/nds/nds_scene_harness.h`, Makefile harness mappings, and
+  verifier scripts.
+- Added `scripts/verify-current.ps1` as a short wrapper for the Latest profile.
+
+What is proven:
+
+- The registry check runs without emulator/GDB and verifies the current harness
+  mappings and Mario/Fox direct/menu-chain proof pairs.
+- Lean snapshot dry-run reports the expected exclusion of build directories,
+  root ROM/ELF outputs, artifacts, emulators, and scratch files while retaining
+  `decomp/` unless explicitly excluded.
+
+Still deferred:
+
+- No gameplay, renderer, fighter, menu, stage, or audio boundary changed in
+  this hygiene pass.
+
+## 2026-06-22: Bounded Mario/Fox Walk movement-loop and release-to-Wait proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first bounded Mario/Fox
+  Walk movement-loop proofs: `battle_mariofox_walk_loop` (`37`) and
+  `menu_chain_mariofox_walk_loop` (`38`).
+- Reused the existing Mario/Fox proof chain through all-DL draw and original
+  Wait -> Walk input before running four synthetic held-Walk frames.
+- Called original `ftCommonWalkProcInterrupt` and `ftCommonWalkProcPhysics`
+  once per held frame while keeping full fighter scheduling disabled.
+- Integrated root X from `fp->physics.vel_air` through the guarded proof helper,
+  then released stick to neutral and returned both fighters to Wait through
+  original Walk interrupt logic.
+- Ran one bounded Wait friction/map settle frame and recorded velocity decay,
+  root movement, release status, map safety, and escape counters.
+- Added `FTR_WALK_LOOP*` diagnostics, direct/menu-chain verifiers, and Latest
+  registry profile coverage.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Walk loop harness passed: scene=22/21 frames=4/4 root-dx=48000/-144000 release=Wait vel=12000/36000->6000/28000 safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Walk loop harness passed: chain final=22/21 frames=4/4 root-dx=48000/-144000 release=Wait vel=12000/36000->6000/28000 safe=1`.
+
+Still deferred:
+
+- Real DS controller input, continuous fighter process scheduling, imported
+  `ftmain.c` manager loops/status table, dash/run/turn/jump/squat/attack/
+  special/guard/catch transitions, full collision/ledge logic, jostle,
+  hit/catch/search, items/weapons, HUD, audio, and broad gameplay runtime.
+
+## 2026-06-22: Bounded Mario/Fox Dash -> Run -> RunBrake movement proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for bounded original Dash/Run
+  movement proofs: `battle_mariofox_dash_run` (`39`) and
+  `menu_chain_mariofox_dash_run` (`40`).
+- Imported original `ftcommondash.c`, `ftcommonrun.c`, and
+  `ftcommonrunbrake.c` through `src/import` wrappers.
+- Extended the narrow fighter ABI with Dash, Run, and RunBrake status/motion
+  IDs, tap/hold stick fields, motion/status vars, and the attribute fields
+  needed by the imported movement code.
+- Reused the existing Mario/Fox proof chain through Walk-loop, seeded
+  deterministic dash input, entered original Dash from Wait, crossed the
+  bounded Dash -> Run threshold, ran held Run frames, released to neutral, and
+  proved original Run -> RunBrake plus bounded RunBrake physics/map ticks.
+- Added `DASH_RUN`, `DASH_RUN_STATUS`, `DASH_RUN_CALLS`, and `DASH_RUN_MOVE`
+  diagnostics and direct/menu-chain verifiers. The Latest verifier profile now
+  covers runtime, Title, direct Dash/Run, and menu-chain Dash/Run.
+- Hardened GDB verifier plumbing by adding batch/confirm handling to the shared
+  marker helper and moving `verify-runtime.ps1` to the maintained 135-second
+  Title sample window. This avoids sampling after later bounded paths have
+  overwritten startup diagnostics.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Dash-Run harness passed: dash->run->runbrake root-dx=301575/-418500 vel=51200/71000->47450/66000`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 dash->run->runbrake root-dx=301575/-418500 vel=51200/71000->47450/66000`.
+- Current profile:
+  `verify-current.ps1 -Build -> Latest verification profile passed`.
+- Full regression:
+  `verify-all.ps1 -Profile Full -> Full verification profile passed`.
+
+Still deferred:
+
+- Continuous fighter process scheduling, real DS controller input,
+  turn/jump/squat/attack/special/guard/catch transitions, full collision/ledge
+  logic, jostle, hit/catch/search, items/weapons, HUD, audio, and full imported
+  `ftmain.c`.
+
+## 2026-06-22: Bounded Mario/Fox RunBrake -> Wait -> KneeBend -> JumpF proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first bounded original
+  ground-to-air movement proof: `battle_mariofox_jump_loop` (`41`) and
+  `menu_chain_mariofox_jump_loop` (`42`).
+- Imported original `ftcommonkneebend.c` and `ftcommonjump.c` through
+  `src/import` wrappers with guarded project-owned public seams.
+- Extended the narrow fighter ABI with KneeBend/Jump status and motion IDs,
+  button-release input, KneeBend status vars, jump constants, and bounded
+  air-physics/map declarations.
+- Reused the full Mario/Fox proof chain through Dash -> Run -> RunBrake,
+  closed RunBrake back to Wait through the guarded original-compatible
+  `ftAnimEndSetWait` path, seeded deterministic C-button jump input, entered
+  KneeBend through original `ftCommonWaitProcInterrupt`, advanced bounded
+  KneeBend updates until original `ftCommonJumpSetStatus`, and ran six bounded
+  JumpF airborne frames.
+- Added `JUMP_LOOP`, `JUMP_INPUT`, `JUMP_STATUS`, `JUMP_GA`, `JUMP_CALLS`,
+  `JUMP_FRAMES`, `JUMP_MOVE`, `JUMP_VEL`, `JUMP_DEFER`, and `JUMP_SAFE`
+  diagnostics and direct/menu-chain verifiers. The Latest verifier profile now
+  covers runtime, Title, direct Jump-loop, and menu-chain Jump-loop.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Jump-loop harness passed: jump dx=100800/-138900 dy=395400/468000 vy=74300/92000->59900/68000`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Jump-loop harness passed: jump dx=100800/-138900 dy=395400/468000 vy=74300/92000->59900/68000`.
+- Current profile:
+  `verify-current.ps1 -Build -> Latest verification profile passed`.
+
+Still deferred:
+
+- Landing, Fall/FallAerial, JumpAerial/double jump, aerial attacks/specials,
+  cliff/ceiling collision, continuous fighter process scheduling, real DS
+  controller input, hit/catch/search, items/weapons, HUD, audio, and full
+  imported `ftmain.c`.
+
+## 2026-06-23: Bounded Mario/Fox JumpF -> Fall -> LandingLight -> Wait proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first complete bounded
+  ground-air-ground fighter proof: `battle_mariofox_landing_loop` (`43`) and
+  `menu_chain_mariofox_landing_loop` (`44`).
+- Imported original `ftcommonfall.c` and `ftcommonlanding.c` through
+  `src/import` wrappers with guarded project-owned public seams.
+- Extended the narrow fighter ABI with original-compatible Fall, FallAerial,
+  LandingLight, LandingHeavy, LandingFallSpecial, and LandingAirNull status and
+  motion IDs, Landing status vars, and the small Fall/Landing function surface.
+- Reused the full Mario/Fox proof chain through JumpF, entered Fall through
+  guarded `ftAnimEndSetFall`, ran bounded Fall interrupt/air-physics/map
+  frames, detected a Pupupu floor crossing in the DS-owned map seam, called
+  original `ftCommonLandingSetStatus`, proved LandingLight, closed it back to
+  Wait through `ftAnimEndSetWait`, and ran one post-landing Wait friction/map
+  settle frame.
+- Added `LAND_LOOP`, `LAND_STATUS`, `LAND_MOTION`, `LAND_GA`, `LAND_CALLS`,
+  `LAND_FRAMES`, `LAND_MAP`, `LAND_MOVE`, `LAND_VEL`, and `LAND_SAFE`
+  diagnostics and direct/menu-chain verifiers. The Latest verifier profile now
+  covers runtime, Title, direct Landing-loop, and menu-chain Landing-loop.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Landing-loop harness passed: scene=22/21 fall=26/26 landing=31/31 wait=10/10 frames=16/14 floor=0/0 safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Landing-loop harness passed: scene=22/21 fall=26/26 landing=31/31 wait=10/10 frames=16/14 floor=0/0 safe=1`.
+- Current profile:
+  `verify-current.ps1 -> Latest verification profile passed`.
+
+Still deferred:
+
+- Full collision line tracing, platform pass-through, ledges, ceiling bonks,
+  FallAerial, LandingHeavy, JumpAerial/double jump, aerial attacks/specials,
+  continuous fighter process scheduling, real DS controller input,
+  hit/catch/search, items/weapons, HUD, audio, and full imported `ftmain.c`.
+
+## 2026-06-23: Bounded scripted Mario/Fox process-loop proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first bounded scripted
+  fighter process-loop proof: `battle_mariofox_process_loop` (`45`) and
+  `menu_chain_mariofox_process_loop` (`46`).
+- Reused the existing Mario/Fox proof chain through Landing-loop, then ran both
+  fighters through one shared source-order frame driver: update, interrupt,
+  physics, root integration, and map.
+- Added a deterministic controller-input bridge that writes the fighter input
+  fields and mirrors the same scripted state to the controller device slot for
+  diagnostics.
+- Proved three original movement paths for both Mario and Fox without importing
+  full fighter gameplay: Wait -> Walk -> Wait, Wait -> Dash -> Run ->
+  RunBrake -> Wait, and Wait -> KneeBend -> JumpF -> Fall -> LandingLight ->
+  Wait.
+- Added `PROC_LOOP`, `PROC_INPUT`, `PROC_STATUS`, `PROC_VISITS`, `PROC_CALLS`,
+  `PROC_MOVE`, `PROC_VEL`, `PROC_TRANS`, and `PROC_SAFE` verifier marker
+  groups. The Latest verifier profile now covers runtime, Title, direct
+  Process-loop, and menu-chain Process-loop.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox process-loop harness passed: scene=22/21 frames=30/28 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff root-dx=137250/-214000 rise=74300/92000 final=Wait/Ground safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox process-loop harness passed: scene=22/21 frames=30/28 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff root-dx=137250/-214000 rise=74300/92000 final=Wait/Ground safe=1`.
+
+Still deferred:
+
+- Real DS controller input, unbounded object-manager process scheduling,
+  turn/squat/attack/special/guard/catch paths, full collision line tracing,
+  platform pass-through, ledges, hit/catch/search, items/weapons, HUD, audio,
+  full fighter display traversal, and full imported `ftmain.c`.
+
+## 2026-06-23: VSBattle update-driven Mario/Fox GObjProcess scheduler-loop proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first bounded
+  VSBattle-update-driven fighter scheduler proof:
+  `battle_mariofox_scheduler_loop` (`47`) and
+  `menu_chain_mariofox_scheduler_loop` (`48`).
+- Reused the existing Mario/Fox process-loop proof chain, then attached one
+  selected `GObjProcess` callback for Mario and one for Fox through original
+  `gcAddGObjProcess`.
+- Invoked those callbacks with original `gcRunGObjProcess` from a bounded
+  `scVSBattleFuncUpdate` wrapper and a capped VSBattle taskman update loop,
+  without calling full `gcRunAll`.
+- Preserved the existing process-loop diagnostics by snapshotting/restoring
+  the prerequisite proof state before running the scheduler-facing proof.
+- Added `SCHED_LOOP`, `SCHED_TASKMAN`, `SCHED_PROCESS`, `SCHED_INPUT`,
+  `SCHED_STATUS`, `SCHED_VISITS`, `SCHED_CALLS`, `SCHED_MOVE`,
+  `SCHED_TRANS`, and `SCHED_SAFE` marker groups plus direct/menu-chain
+  verifier scripts. The Latest verifier profile now covers runtime, Title,
+  direct Scheduler-loop, and menu-chain Scheduler-loop.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox scheduler-loop harness passed: scene=22/21 updates=30 callbacks=30/30 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff root-dx=137250/-214000 rise=74300/92000 final=Wait/Ground safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox scheduler-loop harness passed: scene=22/21 updates=30 callbacks=30/30 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff root-dx=137250/-214000 rise=74300/92000 final=Wait/Ground safe=1`.
+
+Still deferred:
+
+- Full `gcRunAll` process scheduling, arbitrary fighter processes, real DS
+  controller input, turn/squat/attack/special/guard/catch paths, full
+  collision line tracing, platform pass-through, ledges, hit/catch/search,
+  items/weapons, HUD, audio, full fighter display traversal, and full imported
+  `ftmain.c`.
+
+## 2026-06-23: Controller-source Mario/Fox scheduler-loop proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first bounded
+  controller-source-driven fighter scheduler proof:
+  `battle_mariofox_controller_loop` (`49`) and
+  `menu_chain_mariofox_controller_loop` (`50`).
+- Added deterministic DS controller playback to `controller_backend.c`.
+  Playback-disabled builds keep the existing live DS key mapping; playback
+  enabled feeds only `OSContPad` data from the verifier harness.
+- Reused the full Mario/Fox proof chain through the existing scheduler-loop
+  endpoint, then ran original `syControllerReadDeviceData` and
+  `syControllerUpdateGlobalData` before bridging `gSYControllerDevices` into
+  `FTStruct` input through DS-owned code.
+- Invoked selected Mario/Fox `GObjProcess` callbacks through original
+  `gcRunGObjProcess` from bounded `scVSBattleFuncUpdate` taskman updates.
+- Added `CTRL_LOOP`, `CTRL_BACKEND`, `CTRL_TASKMAN`, `CTRL_PROCESS`,
+  `CTRL_INPUT`, `CTRL_STATUS`, `CTRL_VISITS`, `CTRL_CALLS`, `CTRL_MOVE`,
+  `CTRL_TRANS`, and `CTRL_SAFE` verifier marker groups. The Latest verifier
+  profile now covers runtime, Title, direct Controller-loop, and menu-chain
+  Controller-loop.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox controller-loop harness passed: scene=22/21 reads=30 updates=30 callbacks=30/30 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff root-dx=137250/-214000 rise=74300/92000 final=Wait/Ground safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox controller-loop harness passed: scene=22/21 reads=30 updates=30 callbacks=30/30 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff root-dx=137250/-214000 rise=74300/92000 final=Wait/Ground safe=1`.
+
+Still deferred:
+
+- Arbitrary live player input combinations, full `gcRunAll`, continuous
+  unbounded taskman scheduling, arbitrary fighter processes, turn/squat/
+  attack/special/guard/catch paths, full collision line tracing, platforms,
+  ledges, hit/catch/search, items/weapons, HUD, audio, camera-correct battle
+  projection, full fighter display traversal, and full imported `ftmain.c`.
+
+## 2026-06-23: Moving Mario/Fox battle-preview loop proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first moving
+  controller-source battle-preview proof:
+  `battle_mariofox_preview_loop` (`51`) and
+  `menu_chain_mariofox_preview_loop` (`52`).
+- Reused the existing scheduler-loop and controller-loop proof chain, then ran
+  a new bounded preview loop from the same `scVSBattleFuncUpdate` taskman path.
+- Kept movement controller-source-driven: deterministic `OSContPad` playback
+  still goes through original `syControllerReadDeviceData` and
+  `syControllerUpdateGlobalData` before DS-owned bridging into `FTStruct`
+  input.
+- Added guarded `ftDisplayMainProcDisplay` sampling for the preview loop. The
+  proof opens a bounded `96x72` software preview surface, samples the current
+  Mario/Fox DObj display callback, draws diagnostic per-DObj fighter markers
+  root-coupled to the moving fighter state, and commits the preview surface.
+- Added `PREV_LOOP`, `PREV_BACKEND`, `PREV_TASKMAN`, `PREV_PROCESS`,
+  `PREV_INPUT`, `PREV_STATUS`, `PREV_CALLS`, `PREV_MOVE`, `PREV_DRAW`,
+  `PREV_SCREEN`, `PREV_TRANS`, and `PREV_SAFE` verifier marker groups. The
+  Latest verifier profile now covers runtime, Title, direct Preview-loop, and
+  menu-chain Preview-loop.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox preview-loop harness passed: scene=22/21 drawFrames=7 callbacks=14 pixels=582 screenDx=61/-62 screenRise=52/52 rootDx=137250/-214000 final=Wait/Ground safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox preview-loop harness passed: scene=22/21 drawFrames=7 callbacks=14 pixels=582 screenDx=61/-62 screenRise=52/52 rootDx=137250/-214000 final=Wait/Ground safe=1`.
+- Registry/current proof:
+  `check-harness-registry.ps1 -> Harness registry check passed: 52 harness mappings, 56 verifier scripts, 0 drift` and
+  `verify-current.ps1 -SkipRegistryCheck -> Latest verification profile passed`.
+
+Still deferred:
+
+- Arbitrary live DS input as verifier input, real camera-correct fighter
+  projection, matrix prep, full fighter display traversal, DS hardware polygon
+  rendering for fighters, full `gcRunAll`, continuous gameplay scheduling,
+  broader fighter statuses, full collision/ledge/platform handling, HUD,
+  items/weapons, audio, and full imported `ftmain.c`.
+
+## 2026-06-23: Bounded Mario/Fox gcRunAll moving-preview proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first bounded original
+  object-manager run-all fighter proof:
+  `battle_mariofox_gcrunall_loop` (`53`) and
+  `menu_chain_mariofox_gcrunall_loop` (`54`).
+- Fixed the harness registry checker drift so Latest now tracks the current
+  boundary and the paired Mario/Fox proof list includes `preview_loop` and
+  `gcrunall_loop`.
+- Reused the verified Mario/Fox chain through the moving preview-loop endpoint,
+  then paused previous proof-owned and non-target object processes.
+- Attached selected Mario/Fox callbacks with original `gcAddGObjProcess` and
+  advanced those callbacks through original `gcRunAll()` from the bounded
+  VSBattle update path.
+- Kept controller input source-compatible: deterministic `OSContPad` playback
+  still goes through original controller read/global-update before the DS-owned
+  bridge updates `FTStruct` input.
+- Added `GCRUNALL_LOOP`, `GCRUNALL_TASKMAN`, `GCRUNALL_RUN`,
+  `GCRUNALL_PROCESS`, `GCRUNALL_INPUT`, `GCRUNALL_STATUS`,
+  `GCRUNALL_VISITS`, `GCRUNALL_CALLS`, `GCRUNALL_DRAW`,
+  `GCRUNALL_SCREEN`, `GCRUNALL_MOVE`, `GCRUNALL_TRANS`, and
+  `GCRUNALL_SAFE` verifier marker groups. The Latest verifier profile now
+  covers runtime, Title, direct gcRunAll-loop, and menu-chain gcRunAll-loop.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox gcRunAll-loop harness passed: scene=22/21 gcRunAll=30 callbacks=30/30 draws=11 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox gcRunAll-loop harness passed: scene=22/21 gcRunAll=30 callbacks=30/30 draws=11 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1`.
+
+Still deferred:
+
+- Unpaused full-scene `gcRunAll`, continuous unbounded taskman scheduling,
+  arbitrary live input, turn/squat/attack/special/guard/catch paths, full
+  collision/platform/ledge logic, hit/catch/search, items/weapons, HUD, audio,
+  camera-correct battle projection, hardware fighter rendering, and full
+  imported `ftmain.c`.
+
+## 2026-06-23: Live-input Mario/Fox moving-preview idle proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first live DS controller
+  source boundary:
+  `battle_mariofox_live_preview` (`55`) and
+  `menu_chain_mariofox_live_preview` (`56`).
+- Reused the verified Mario/Fox proof chain through the bounded original
+  `gcRunAll` moving-preview endpoint, then switched the controller source from
+  deterministic playback to live `osContGetReadData` samples for the maintained
+  idle proof.
+- Kept the source path original-compatible: live input still flows through
+  original `syControllerReadDeviceData` and `syControllerUpdateGlobalData`
+  before the DS-owned bridge copies controller state into the selected
+  `FTStruct` input fields.
+- Added live controller diagnostics for connected mask, P0 buttons/stick,
+  mapping count, live read count, frame count, taskman/update counts, selected
+  callback counts, idle status, draw evidence, and safety counters.
+- Added `LIVE_LOOP`, `LIVE_BACKEND`, `LIVE_TASKMAN`, `LIVE_RUN`,
+  `LIVE_INPUT`, `LIVE_STATUS`, `LIVE_CALLS`, `LIVE_DRAW`, `LIVE_MOVE`, and
+  `LIVE_SAFE` verifier marker groups. The Latest verifier profile now covers
+  runtime, Title, direct live-preview, and menu-chain live-preview.
+- Added a dev build switch for longer manual live movement checks:
+  `NDS_DEV_LIVE_INPUT_PREVIEW=1`.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox live-preview harness passed: scene=22/21 liveReads=60 frames=60/60 draws=16 pixels=1410 idle=Wait/Ground directInput=0 safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox live-preview harness passed: scene=22/21 liveReads=60 frames=60/60 draws=16 pixels=1410 idle=Wait/Ground directInput=0 safe=1`.
+- Registry/current proof:
+  `check-harness-registry.ps1 -> Harness registry check passed: 56 harness mappings, 60 verifier scripts, 0 drift`.
+- Dev build proof:
+  `make TARGET=smash64ds-live-preview BUILD=build-live-preview NDS_DEV_SCENE_HARNESS=battle_mariofox_live_preview NDS_DEV_LIVE_INPUT_PREVIEW=1 -j4`.
+
+Still deferred:
+
+- This is not a full playable battle loop. The automated proof verifies 60
+  neutral live-input frames and stable Wait/Ground state only. Arbitrary live
+  movement combinations, attacks, specials, guard, catch, items/weapons,
+  full collision/platform/ledge logic, hit/catch/search, HUD, audio, real
+  battle camera projection, hardware fighter rendering, unbounded taskman
+  scheduling, and full imported `ftmain.c` remain deferred.
+
+## 2026-06-24: Bounded Mario/Fox gcDrawAll moving-preview proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the first bounded original
+  object-manager draw traversal proof:
+  `battle_mariofox_gcdrawall_loop` (`57`) and
+  `menu_chain_mariofox_gcdrawall_loop` (`58`).
+- Moved the registry Latest profile to runtime, Title, direct gcDrawAll-loop,
+  and menu-chain gcDrawAll-loop.
+- Reused the full verified Mario/Fox chain through the live-input idle proof,
+  then re-enabled deterministic controller playback for the moving proof
+  phase.
+- Advanced selected Mario/Fox callbacks through original `gcRunAll()` and
+  rendered moving all-DL keyframes by calling original `gcDrawAll()` rather
+  than manually invoking `ftDisplayMainProcDisplay`.
+- Counted selected Mario/Fox display callbacks from inside the
+  `ftDisplayMainProcDisplay` seam only while the gcDrawAll display guard is
+  active, and kept non-target display callbacks masked/guarded.
+- Added direct and menu-chain gcDrawAll-loop verifiers plus `GCDRAWALL_LOOP`,
+  `GCDRAWALL_TASKMAN`, `GCDRAWALL_RUN`, `GCDRAWALL_PROCESS`,
+  `GCDRAWALL_INPUT`, `GCDRAWALL_STATUS`, `GCDRAWALL_DRAW`,
+  `GCDRAWALL_SCREEN`, `GCDRAWALL_MOVE`, `GCDRAWALL_TRANS`, and
+  `GCDRAWALL_SAFE` marker groups.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox gcDrawAll-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox gcDrawAll-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1`.
+- Registry/current proof:
+  `check-harness-registry.ps1 -> Harness registry check passed: 58 harness mappings, 62 verifier scripts, 0 drift` and
+  `verify-current.ps1 -> Latest verification profile passed`.
+
+Still deferred:
+
+- The gcDrawAll-loop harnesses still mask/guard non-target display callbacks.
+  They do not prove unpaused full-scene draw traversal, DS hardware polygon
+  rendering, camera-correct battle matrices, full fighter display, full
+  collision/platform/ledge logic, attacks, specials, guard, catch, items,
+  hit/search, HUD, audio, or full imported `ftmain.c`.
+
+## 2026-06-24: Pupupu stage-inclusive gcDrawAll traversal proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the selected Pupupu
+  stage-inclusive original object-manager draw traversal proof:
+  `battle_mariofox_stage_gcdrawall_loop` (`59`) and
+  `menu_chain_mariofox_stage_gcdrawall_loop` (`60`).
+- Reused the existing bounded Mario/Fox moving `gcDrawAll` proof and added
+  stage diagnostics around original `gcDrawAll -> func_80017EC0 ->
+  gcCaptureCameraGObj` plus the existing DS-owned `gcDrawDObjTree*` bridges.
+- Recorded selected Pupupu display-layer and map-GObj camera capture masks,
+  stage DObj draw bridge masks, layer/map DL-ready masks, safety counters, and
+  retained preview pixel evidence.
+- Kept traversal bounded to selected Pupupu layer/map GObjs. No manual stage
+  display calls are used; stage display callbacks are observed from the
+  original object-manager draw traversal.
+- Added direct and menu-chain verifier wrappers and moved the registry Latest
+  profile to runtime, Title, direct stage-inclusive gcDrawAll, and menu-chain
+  stage-inclusive gcDrawAll.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox stage gcDrawAll-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox stage gcDrawAll-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0`.
+- Registry proof:
+  `check-harness-registry.ps1 -> Harness registry check passed: 60 harness mappings, 64 verifier scripts, 0 drift`.
+
+Still deferred:
+
+- The stage-inclusive gcDrawAll-loop harnesses still mask/guard non-target
+  display callbacks. They do not prove unpaused full-scene draw traversal,
+  hardware polygon rendering, camera-correct battle matrices, continuous stage
+  draw/update, Whispy wind/yakumono runtime, collision lines, items, HUD,
+  audio, or full gameplay.
+
+## 2026-06-24: Geometry-backed Pupupu floor-collision proofs
+
+What changed:
+
+- Added direct and menu-chain harness modes for the selected Pupupu
+  geometry-backed floor projection proof:
+  `battle_mariofox_stage_collision_loop` (`61`) and
+  `menu_chain_mariofox_stage_collision_loop` (`62`).
+- Reused the stage-inclusive Mario/Fox `gcDrawAll` proof and made the new
+  collision modes opt into a real Pupupu `MPGroundData` / `MPGeometryData`
+  floor scan inside the project-owned `mpCollisionCheckProjectFloor` seam.
+  Older harnesses keep their previous flat-floor compatibility path.
+- Added minimal project-owned `gr/ground.h` map/collision declarations for the
+  loaded Pupupu geometry layout and added O2R-aware halfword readers for the
+  byte-swapped geometry tables.
+- Added floor projection diagnostics for geometry readiness, yakumono/map-object
+  counts, floor/total line counts, geometry-backed project calls, deliberate
+  offstage/below-floor misses, real line IDs, floor flags, floor angles, and
+  left/right edge samples.
+- During the new proof only, the selected proof-owned Mario/Fox roots adopt the
+  current real Pupupu floor before and after the bounded moving draw slice so
+  final floor evidence reflects the real geometry at the fighters' current X
+  positions.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox stage collision-loop harness passed: scene=22/21 gcRunAll=37 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=4/6 floorLines=4 probes=3/2`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox stage collision-loop harness passed: scene=22/21 gcRunAll=37 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=4/6 floorLines=4 probes=3/2`.
+- Regression spot checks:
+  `verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1` and
+  `verify-menu-chain-mariofox-stage-gcdrawall-loop-harness.ps1` still pass,
+  proving the new geometry path is opt-in and does not replace the old
+  stage-inclusive draw proof.
+
+Still deferred:
+
+- This is not full BattleShip map collision processing. Platforms, ledges,
+  wall/ceiling checks, cliffcatch, floor-edge behavior beyond the current edge
+  metadata, arbitrary stage hazards, items, HUD, audio, unbounded gameplay, and
+  full imported `ftmain.c` remain deferred.
+
+## 2026-06-24: Corrected Pupupu floor-line decoding proof
+
+What changed:
+
+- Corrected the project-owned Pupupu `MPLineInfo` halfword decoder to match the
+  original BattleShip layout: yakumono ID, then floor/ceil/rwall/lwall
+  group/count pairs.
+- Replaced the hardcoded `MPLineInfo` stride with `sizeof(MPLineInfo)` so O2R
+  line-info indexing follows the compatibility struct layout instead of the old
+  20-byte assumption.
+- Added line-kind classification helpers and new diagnostics for decoded floor
+  range, final P0/P1 floor-line kinds, final line-is-floor flags, non-floor
+  candidate count, and guarded yakumono-DObj access.
+- Changed the geometry projector to walk decoded floor ranges only and reject
+  any non-floor candidate instead of accepting any valid line ID.
+- Removed unsafe bounded-proof indexing into `MPYakumonoDObj::dobjs` for
+  yakumono IDs beyond the one-entry project shim. The proof records the
+  deferred/guarded yakumono access and treats static Pupupu collision lines as
+  active for this bounded sample.
+- Added a proof-owned floor sample seed that derives P0/P1 sample X positions
+  from decoded Pupupu floor endpoints before the final collision projection.
+  This keeps the current collision proof on real decoded floor data while full
+  continuous map collision remains deferred.
+- Tightened the stage-collision proof mask from `0x1fff` to `0xffff` and added
+  verifier checks for `STAGE_COLLISION_KIND`.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox stage collision-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=0/0 floorRange=0-4 floorLines=4 probes=3/2`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox stage collision-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=0/0 floorRange=0-4 floorLines=4 probes=3/2`.
+- Regression spot checks:
+  `verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1` and
+  `verify-menu-chain-mariofox-stage-gcdrawall-loop-harness.ps1` still pass, so
+  modes `59/60` keep their existing stage-inclusive draw behavior.
+
+Still deferred:
+
+- This remains a bounded floor-projection proof, not full BattleShip map
+  collision. Continuous floor following through arbitrary movement, platforms,
+  ledges, ceilings, walls, cliffcatch, yakumono runtime, items, HUD, audio,
+  unbounded gameplay, and full imported `ftmain.c` remain deferred.
+
+## 2026-06-24: Added tiered verifier workflow profiles
+
+What changed:
+
+- Added registry-driven verifier profiles for normal iteration:
+  `BoundaryDirect`, `Boundary`, and `Regression`.
+- `BoundaryDirect` runs only the latest direct current-boundary harness:
+  `battle_mariofox_stage_collision_loop`.
+- `Boundary` runs the latest direct + menu-chain current-boundary pair:
+  `battle_mariofox_stage_collision_loop` and
+  `menu_chain_mariofox_stage_collision_loop`.
+- `Regression` runs runtime/Title plus the immediate previous draw/collision
+  direct/menu-chain pairs: `battle_mariofox_gcdrawall_loop`,
+  `menu_chain_mariofox_gcdrawall_loop`,
+  `battle_mariofox_stage_gcdrawall_loop`,
+  `menu_chain_mariofox_stage_gcdrawall_loop`,
+  `battle_mariofox_stage_collision_loop`, and
+  `menu_chain_mariofox_stage_collision_loop`.
+- Kept `Latest` as runtime + Title + latest direct/menu-chain, and kept `Full`
+  unchanged as the complete registry suite.
+- Added wrapper scripts: `scripts/verify-dev-fast.ps1`,
+  `scripts/verify-boundary.ps1`, and `scripts/verify-regression.ps1`.
+  `scripts/verify-current.ps1` remains the Latest wrapper.
+- Extended `scripts/check-harness-registry.ps1` to validate the new profile
+  contents and wrapper-script existence without adding new harness records or
+  changing mode counts.
+- Updated active docs to make Full an explicit risk-based gate rather than a
+  routine per-task requirement. Full remains required for major snapshots, wide
+  refactors, Makefile/source-list/header ABI changes, shared taskman/object
+  manager/controller/reloc/display changes, verifier registry/checker work, or
+  explicit reviewer request.
+
+Validation:
+
+- `make -j16` remains the active build command for this machine.
+- `scripts/check-harness-registry.ps1` validates the new profile definitions
+  and still reports the same harness/script registry counts.
+- `verify-all.ps1 -List` now works for `BoundaryDirect`, `Boundary`, `Latest`,
+  and `Regression`.
+
+Still deferred:
+
+- This workflow update does not change gameplay, renderer, movement,
+  menu-chain, controller, or collision runtime behavior. Full is still available
+  for broad regression, but it is no longer the default every-task handoff gate.
+
+## 2026-06-24: Added continuous geometry-backed Pupupu floor-follow proofs
+
+What changed:
+
+- Added direct and menu-chain `battle_mariofox_stage_floor_follow_loop`
+  harnesses as modes `63/64`.
+- Built the new proof on top of the existing Pupupu stage-inclusive
+  `gcDrawAll` and geometry-backed floor-collision proofs without importing full
+  map collision or unbounding gameplay.
+- Added an opt-in proof-owned floor-follow update path that projects selected
+  Mario/Fox roots against decoded Pupupu floor lines during the bounded moving
+  slice, clamps root Y to projected floor Y, and updates the bounded
+  `FTStruct` collision state.
+- Kept older `stage_collision_loop` modes `61/62` on the final-sample
+  floor-projection behavior, including their explicit final re-center/adopt
+  step, so the new continuous floor-follow behavior is isolated to the new
+  modes.
+- Added `STAGE_FLOOR_FOLLOW*` diagnostics for setup, per-player updates,
+  projection hits, floor IDs/kinds, final root/floor Y, post-clamp drift,
+  status, ground/air state, and visit masks.
+- Added direct/menu-chain verifier wrappers and registry profile updates so
+  `verify-current.ps1`, `verify-boundary.ps1`, and `verify-regression.ps1`
+  target the new current boundary.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox stage floor-follow-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=0/0 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=0/0 updates=18/18 drift=0/0 visits=0x1/0x1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox stage floor-follow-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=0/0 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=0/0 updates=18/18 drift=0/0 visits=0x1/0x1`.
+- Regression spot checks:
+  `verify-battle-mariofox-stage-collision-loop-harness.ps1`,
+  `verify-menu-chain-mariofox-stage-collision-loop-harness.ps1`,
+  `verify-current.ps1`, `verify-boundary.ps1`, and `verify-regression.ps1`
+  pass with the new profile boundary.
+
+Still deferred:
+
+- This is continuous selected-fighter floor following for a bounded proof slice,
+  not full BattleShip map collision. Platform pass-through, ledges, ceilings,
+  walls, arbitrary slopes beyond the selected decoded floor, cliffcatch,
+  stage hazards, items, HUD, audio, unbounded gameplay, and full imported
+  `ftmain.c` remain deferred.
+
+## 2026-06-24: Added real Pupupu floor-edge / original MP floor-query proofs
+
+What changed:
+
+- Added direct and menu-chain `battle_mariofox_stage_floor_edge_loop`
+  harnesses as modes `65/66`.
+- Built the new proof on top of the existing Pupupu stage-inclusive
+  `gcDrawAll`, geometry-backed floor-collision, and continuous floor-follow
+  proofs without importing full map collision or unbounding gameplay.
+- Added narrow original-compatible MP query helpers in project-owned backend
+  code: `mpCollisionGetLineTypeID`, `mpCollisionGetVertexPositionID`,
+  `mpCollisionGetFCCommonFloor`, `mpCollisionGetEdgeUnderLLineID`, and
+  `mpCollisionGetEdgeUnderRLineID`.
+- Kept edge-under helpers deliberately bounded: they count calls and return
+  `-1` until real wall/ledge/platform contracts are imported.
+- Added `STAGE_FLOOR_EDGE*` diagnostics for selected line metadata, inside and
+  outside floor probes, edge-distance deltas, MP query counts, inherited
+  floor-follow updates, and safety counters.
+- Updated verifier wrappers, registry profiles, and active docs so
+  `verify-current.ps1`, `verify-boundary.ps1`, and `verify-regression.ps1`
+  target the new current boundary.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox stage floor-edge-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=118750/42000 delta=137250/214000 probes=2/2 queries=6/4`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox stage floor-edge-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=118750/42000 delta=137250/214000 probes=2/2 queries=6/4`.
+- Current profile proof:
+  `verify-current.ps1 -> Latest verification profile passed`.
+
+Still deferred:
+
+- This is a selected-fighter floor-edge and MP floor-query proof, not full
+  BattleShip map collision. Wall/ledge/platform edge-under resolution,
+  platform pass-through, ceilings, walls, arbitrary slopes, cliffcatch, stage
+  hazards, items, HUD, audio, unbounded gameplay, and full imported
+  `ftmain.c` remain deferred.
+
+## 2026-06-24: Added source-order MP floor-process proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpprocess_floor_loop` harnesses as modes `67/68`.
+- Added a narrow project-owned original-layout `MPCollData` compatibility
+  contract in `include/mp/map.h`.
+- Corrected the MP helper ABI surface used by the bounded floor-process slice:
+  `mpCollisionGetLineTypeID` returns `s32`,
+  `mpCollisionGetVertexPositionID` is a void output helper, and
+  `mpCollisionGetFCCommonFloor` now reports signed floor distance for objects
+  below the selected floor instead of rejecting them.
+- Added source-order floor-only copies of
+  `mpProcessSetCollProjectFloorID` and
+  `mpProcessCheckTestFloorCollisionNew`, plus local-probe calls to
+  `mpProcessSetLandingFloor` and `mpProcessSetCollideFloor`.
+- Added an `FTStruct` collision-shell to `MPCollData` adapter used after the
+  existing floor-follow update, with floor-field copyback only.
+- Added `STAGE_MPPROCESS_FLOOR*` diagnostics and verifier assertions, then
+  promoted modes `67/68` to the current Boundary/Latest profiles.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox stage MP floor-process-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=118750/42000 delta=137250/214000 probes=2/2 queries=50/46 mpProcessFloor=test=38/2 project=0/2 probes=1/2 below=2 p0line=3 p1line=3 fc=2/1/39`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox stage MP floor-process-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=118750/42000 delta=137250/214000 probes=2/2 queries=50/46 mpProcessFloor=test=38/2 project=0/2 probes=1/2 below=2 p0line=3 p1line=3 fc=2/1/39`.
+- Profile proof:
+  `verify-current.ps1 -> Latest verification profile passed` and
+  `verify-boundary.ps1 -> Boundary verification profile passed`.
+
+Still deferred:
+
+- This is a floor-only source-order MP process slice for selected proof-owned
+  Mario/Fox fighters, not full BattleShip map collision. Platform
+  pass-through, ledges, wall edge-under resolution, ceilings, walls,
+  cliffcatch, full fighter map callbacks, arbitrary live gameplay, items, HUD,
+  audio, unbounded gameplay, and full imported `ftmain.c` remain deferred.
+
+## 2026-06-24: Added source-order MP update-main floor-loop proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpupdate_floor_loop` harnesses as modes `69/70`.
+- Added bounded source-order `mpProcessUpdateMain` behavior in project-owned
+  backend code, including reset-to-previous-position, substep splitting,
+  callback invocation, update tick recording, and conservative cap diagnostics.
+- Added a floor-only `mpCommonRunFighterAllCollisions` callback and narrow
+  `mpCommonCheckFighterOnFloor` / `mpCommonCheckFighterOnCliffEdge` wrappers
+  over the existing original-layout `MPCollData` adapter.
+- Routed selected Mario/Fox map callbacks through the new update-main path only
+  in modes `69/70`, after preserving the existing MP floor-process,
+  floor-edge, floor-follow, stage-collision, and stage `gcDrawAll` proofs.
+- Added `STAGE_MPUPDATE_FLOOR*` diagnostics and verifier wrappers, promoted
+  modes `69/70` to the Boundary/Latest profiles, and fixed the
+  `scene_backend.o` dependency on included backend slices so slice edits
+  reliably rebuild.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox stage mpProcessUpdateMain floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=90/85 mpProcessFloor=test=42/3 project=0/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/36/42 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox stage mpProcessUpdateMain floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=90/85 mpProcessFloor=test=42/3 project=0/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/36/42 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000`.
+- Profile proofs:
+  `verify-boundary.ps1 -> Boundary verification profile passed`,
+  `verify-current.ps1 -> Latest verification profile passed`, and
+  `verify-regression.ps1 -> Regression verification profile passed`.
+
+Still deferred:
+
+- This is a bounded selected-fighter, floor-only `mpProcessUpdateMain` proof,
+  not full BattleShip map collision. Wall tests, ceiling tests, floor-edge
+  adjustment, second-floor tests, edge-under wall adjacency, platform
+  pass-through, ledges/cliffcatch, Fall/Ottotto, moving yakumono collision,
+  items, HUD, audio, arbitrary live gameplay, unpaused full-scene
+  `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c` remain deferred.
+
+## 2026-06-24: Added source-order MP floor-line sweep / second-floor proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpsweep_floor_loop` harnesses as modes `71/72`.
+- Added bounded source-order floor-line sweep helpers for the current Pupupu
+  floor slice, including same-line rejection, different-line acceptance, and
+  no-hit miss paths.
+- Replaced the previous second-floor-test deferral in the floor-only
+  `mpCommonRunFighterAllCollisions` slice with
+  `mpProcessCheckTestFloorCollision` plus source-order landing/floor-edge
+  bookkeeping for the bounded proof.
+- Kept the selected Mario/Fox callback path on decoded Pupupu floor line `3`
+  while proving that the second-floor branch is called and rejects same-line or
+  no-new-floor cases; standalone probes prove the accepted different-line path
+  from line `3` to line `0`.
+- Added `STAGE_MPSWEEP_FLOOR*` diagnostics, verifier assertions, direct/menu
+  verifier wrappers, and promoted modes `71/72` to the Boundary/Latest
+  profiles while keeping modes `69/70` in regression as the update-main floor
+  proof.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox stage MP sweep floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=90/85 mpProcessFloor=test=42/3 project=0/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/36/42 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000 mpSweepFloor=check=1/36 same=35/1 diff=1 line=3->0 second=34/34 p0line=3 p1line=3`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox stage MP sweep floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=90/85 mpProcessFloor=test=42/3 project=0/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/36/42 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000 mpSweepFloor=check=1/36 same=35/1 diff=1 line=3->0 second=34/34 p0line=3 p1line=3`.
+- Profile proofs:
+  `make -j16`, `check-harness-registry.ps1`, direct/menu-chain mpsweep
+  verifiers, `verify-current.ps1`, and `verify-regression.ps1` passed when run
+  sequentially.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. The accepted different-floor path is proven by
+  bounded standalone probes, not yet by the moving selected-fighter callback
+  route. Floor-edge adjustment remains a bounded stub, and wall tests, ceiling
+  tests, edge-under wall adjacency, platform pass-through, ledges/cliffcatch,
+  Fall/Ottotto, moving yakumono collision, items, HUD, audio, arbitrary live
+  gameplay, unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported
+  `ftmain.c` remain deferred.
+
+## 2026-06-24: Added source-order MP cross-floor / live second-floor proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpcross_floor_loop` harnesses as modes `73/74`.
+- Built on the existing source-order `mpProcessUpdateMain` floor-loop and
+  `mpsweep` proofs without widening the collision scope beyond the bounded
+  floor-only `mpCommonRunFighterAllCollisions` slice.
+- Added live selected-callback diagnostics for the second-floor branch,
+  accepted-new-line counts, landing/floor-edge/collision-end bookkeeping, P0/P1
+  final floor lines, and unsafe counters.
+- Primed P0 with source floor line `-1` in the cross-floor modes so
+  `mpProcessCheckTestFloorCollisionNew` projects against decoded Pupupu
+  geometry before `mpProcessCheckTestFloorCollision` accepts real floor line
+  `3` through the source-order second-floor branch.
+- Kept P1 as a retained-floor control on line `3`, preserved the existing
+  moving preview, `gcRunAll`, `gcDrawAll`, stage capture, MP floor-process, MP
+  update-main, and MP sweep evidence, and promoted modes `73/74` to the
+  Boundary/Latest verifier profiles.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Stage MP cross-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=138/133 mpProcessFloor=test=25/20 project=17/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/83/43 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000 mpSweepFloor=check=18/19 same=18/1 diff=18 line=3->0 second=34/17 p0line=3 p1line=3 mpCrossFloor=line=-1->3 live=17/17 accepted=17 p0line=3 p1line=3`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP cross-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=138/133 mpProcessFloor=test=25/20 project=17/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/83/43 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000 mpSweepFloor=check=18/19 same=18/1 diff=18 line=3->0 second=34/17 p0line=3 p1line=3 mpCrossFloor=line=-1->3 live=17/17 accepted=17 p0line=3 p1line=3`.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Stale-valid-floor crossings, real floor-edge
+  adjustment, wall tests, ceiling tests, edge-under wall adjacency, platform
+  pass-through, ledges/cliffcatch, Fall/Ottotto, moving yakumono collision,
+  items, HUD, audio, arbitrary live gameplay, unpaused full-scene
+  `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c` remain deferred.
+
+## 2026-06-25: Added source-order MP floor-edge-adjust check proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpadjust_floor_loop` harnesses as modes `75/76`.
+- Built on the existing source-order MP cross-floor proof without widening the
+  bounded floor-only `mpCommonRunFighterAllCollisions` slice.
+- Added source-order `mpProcessRunFloorEdgeAdjust`,
+  `mpProcessCheckFloorEdgeCollisionL/R`,
+  `mpCollisionCheckL/RWallLineCollisionSame`, and bounded wall helper
+  diagnostics in project-owned compatibility code.
+- Extended the shared gcDrawAll verifier with `STAGE_MPADJUST_FLOOR*` markers
+  and promoted modes `75/76` to the Latest/Boundary verifier profiles.
+- Kept P0 as the live second-floor/adjust branch and P1 as the retained-floor
+  control verified through the existing MP update-main final floor state.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Stage MP adjust-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=138/133 mpProcessFloor=test=25/20 project=17/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/83/43 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000 mpSweepFloor=check=18/19 same=18/1 diff=18 line=3->0 second=34/17 p0line=3 p1line=3 mpCrossFloor=line=-1->3 live=17/17 accepted=17 p0line=3 p1line=3 mpAdjustFloor=run=17 check=17/17 wallMiss=17/17 edge=17/17 noAdjust=17 p0line=3 p1maintained=3`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP adjust-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=138/133 mpProcessFloor=test=25/20 project=17/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/83/43 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000 mpSweepFloor=check=18/19 same=18/1 diff=18 line=3->0 second=34/17 p0line=3 p1line=3 mpCrossFloor=line=-1->3 live=17/17 accepted=17 p0line=3 p1line=3 mpAdjustFloor=run=17 check=17/17 wallMiss=17/17 edge=17/17 noAdjust=17 p0line=3 p1maintained=3`.
+- Profile proofs:
+  `make -j16`, `check-harness-registry.ps1`, direct/menu-chain MP adjust
+  verifiers, `verify-current.ps1`, and `verify-regression.ps1` passed when run
+  sequentially.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Real wall-hit floor-edge adjustment,
+  stale-valid-floor crossings, ceiling tests, edge-under wall adjacency,
+  platform pass-through, ledges/cliffcatch, Fall/Ottotto, moving yakumono
+  collision, items, HUD, audio, arbitrary live gameplay, unpaused full-scene
+  `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c` remain deferred.
+
+## 2026-06-25: Added source-order MP edge-under / floor-edge proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpedge_floor_loop` harnesses as modes `77/78`.
+- Built on the source-order MP floor-edge-adjust proof without widening the
+  bounded floor-only `mpCommonRunFighterAllCollisions` slice.
+- Replaced the previously deferred `mpCollisionGetEdgeUnderL/RLineID` lookup in
+  the new proof modes with decoded Pupupu geometry adjacency from the selected
+  floor line to adjacent wall lines.
+- Added `STAGE_MPEDGE_FLOOR*` GDB/verifier markers and promoted modes `77/78`
+  to the Boundary/Latest verifier profiles while keeping modes `75/76` in
+  regression for the older explicit edge-under deferral behavior.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Stage MP edge-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=138/133 mpProcessFloor=test=25/20 project=17/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/83/43 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000 mpSweepFloor=check=18/19 same=18/1 diff=18 line=3->0 second=34/17 p0line=3 p1line=3 mpCrossFloor=line=-1->3 live=17/17 accepted=17 p0line=3 p1line=3 mpAdjustFloor=run=17 checkHit=0/0 checkMiss=17/17 wallHit=0/0 wallMiss=17/17 edge=18/18 adjust=0/0 noAdjust=17 p0line=3 p1maintained=3 mpEdgeFloor=edge=6/5 kind=3/2 calls=18/18`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP edge-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 stageCollision=line=3/3 floorRange=0-4 floorLines=4 probes=3/2 floorFollow=line=3/3 updates=18/18 drift=0/0 visits=0x8/0x8 floorEdge=line=3 width=4636000 dist=97000/97000 delta=159000/159000 probes=2/2 queries=138/133 mpProcessFloor=test=25/20 project=17/3 probes=1/2 below=2 p0line=3 p1line=3 fc=3/83/43 mpUpdateFloor=steps=39/2 split=1 probes=1/1/1 p0line=3 p1line=3 posdiff=-1000/1000 mpSweepFloor=check=18/19 same=18/1 diff=18 line=3->0 second=34/17 p0line=3 p1line=3 mpCrossFloor=line=-1->3 live=17/17 accepted=17 p0line=3 p1line=3 mpAdjustFloor=run=17 checkHit=0/0 checkMiss=17/17 wallHit=0/0 wallMiss=17/17 edge=18/18 adjust=0/0 noAdjust=17 p0line=3 p1maintained=3 mpEdgeFloor=edge=6/5 kind=3/2 calls=18/18`.
+- Profile proofs:
+  `make -j16`, `check-harness-registry.ps1`, direct/menu-chain MP edge-floor
+  verifiers, `verify-current.ps1`, and `verify-regression.ps1` passed when run
+  sequentially.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Real wall-hit floor-edge adjustment,
+  stale-valid-floor crossings, ceiling tests, platform pass-through,
+  ledges/cliffcatch, Fall/Ottotto, moving yakumono collision, items, HUD,
+  audio, arbitrary live gameplay, unpaused full-scene `gcRunAll`/`gcDrawAll`,
+  and full imported `ftmain.c` remain deferred.
+
+## 2026-06-25: Added source-order MP wall-blocker proofs for the selected Dream Land floor
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpwall_floor_loop` harnesses as modes `79/80`.
+- Built on the source-order MP edge-under/floor-edge proof without widening
+  the bounded floor-only `mpCommonRunFighterAllCollisions` slice.
+- Added a bounded source-order wall-candidate sweep that records the selected
+  floor line, candidate wall line, wall kind, edge-under line, side, hit/miss
+  counts, adjust-call count, and position deltas.
+- Promoted modes `79/80` to the Boundary/Latest verifier profiles while
+  keeping the earlier MP adjust and MP edge harnesses in regression.
+
+What is proven:
+
+- The current selected Dream Land/Pupupu main floor line `3` has adjacent
+  edge-under wall lines `6/5` with kinds `3/2`.
+- The direct and menu-chain MP wall-floor harnesses record two side-wall
+  candidates, zero wall hits, nonzero miss evidence, zero adjust calls, zero
+  position deltas, and stable Wait/Ground/Floor state.
+- This identifies a precise renderer/playability blocker for the current
+  geometry slice: original `mpProcessCheckFloorEdgeCollisionL/R` rejects wall
+  candidates that are the same as the edge-under line, so this Dream Land main
+  floor cannot prove the real wall-hit floor-edge-adjust branch.
+- Profile proofs run in this milestone: `make -j16`, direct/menu-chain MP
+  wall-floor verifiers, `check-harness-registry.ps1`, `verify-current.ps1`,
+  and `verify-regression.ps1` passed.
+
+Still deferred:
+
+- A real wall-hit floor-edge adjustment proof now needs a different original
+  stage/line/collision case with a non-edge wall candidate. Stale-valid-floor
+  crossings, ceiling tests, platform pass-through, ledges/cliffcatch,
+  Fall/Ottotto, moving yakumono collision, items, HUD, audio, arbitrary live
+  gameplay, unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported
+  `ftmain.c` remain deferred.
+
+## 2026-06-25: Added source-order MP stale-valid second-floor proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpstale_floor_loop` harnesses as modes `81/82`.
+- Built on the MP wall-blocker proof without widening the floor-only
+  `mpCommonRunFighterAllCollisions` slice or moving the verified live
+  wall/edge proof-owned roots.
+- Added a finalizer-local source-order `MPCollData` probe that searches real
+  decoded Dream Land floor pairs and selects a valid stale floor pair,
+  line `1 -> 0` at `x=-285`, `y=1542`.
+- Added `STAGE_MPSTALE_FLOOR*` GDB/verifier markers and promoted modes
+  `81/82` to the Boundary/Latest verifier profiles.
+
+What is proven:
+
+- The maintained live selected-callback cross-floor path remains `-1 -> 3`.
+- The stale proof reaches source-order `mpProcessUpdateMain ->
+  mpCommonRunFighterAllCollisions -> mpProcessCheckTestFloorCollision`, accepts
+  a new target floor line, calls `mpProcessSetLandingFloor`, reaches
+  `mpProcessRunFloorEdgeAdjust`, and clears collision-end state.
+- Direct proof:
+  `Battle Mario/Fox Stage MP stale-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 mpWallFloor=blocked floor=3 edgeWall=5 kind=2 side=1 candidates=2 miss=1 mpStaleFloor=line=1->0 live=18/0 accepted=1 p0line=0 p1line=3`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP stale-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 mpWallFloor=blocked floor=3 edgeWall=5 kind=2 side=1 candidates=2 miss=1 mpStaleFloor=line=1->0 live=18/0 accepted=1 p0line=0 p1line=3`.
+- Profile proofs run in this milestone: `make -j16`, direct/menu-chain MP
+  stale-floor verifiers, `check-harness-registry.ps1`, `verify-current.ps1`,
+  and `verify-regression.ps1` passed. The first regression run used too short
+  a timeout and was rerun successfully.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Real wall-hit floor-edge adjustment on a
+  non-edge wall candidate, live selected-callback valid-stale crossing,
+  ceiling tests, platform pass-through, ledges/cliffcatch, Fall/Ottotto,
+  moving yakumono collision, items, HUD, audio, arbitrary live gameplay,
+  unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c`
+  remain deferred.
+
+## 2026-06-25: Added direct/menu-chain MP Fall-landing floor proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpfallland_floor_loop` harnesses as modes `93/94`.
+- Built the proof on the existing Fall-map boundary: P1 starts in Fall/Air on
+  decoded Pupupu floor line `3`, crosses the floor, enters the selected
+  original map callback route, calls landing-floor setup, reaches original
+  LandingLight status/motion `31/25`, switches to Ground, and clamps vertical
+  velocity to zero.
+- Added `STAGE_MPFALLLAND_FLOOR*` GDB/verifier markers and direct/menu-chain
+  wrapper verifiers. The landing-param marker is treated as optional because
+  the imported path can reach `ftCommonLandingSetStatus` and `ftMainSetStatus`
+  directly without the public wrapper.
+- Promoted modes `93/94` to the Boundary/Latest verifier profiles.
+
+What is proven:
+
+- Direct proof:
+  `Battle Mario/Fox Stage MP Fall-landing-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3 mpFallMap=phys=1 fast=1 grav=1 map=1 noColl=1 y=200000->194000 mpFallLand=phys=1 map=1 floor=1 land=1/0 status=26->31/25 y=4000->0 velY=-8000->0`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP Fall-landing-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3 mpFallMap=phys=1 fast=1 grav=1 map=1 noColl=1 y=200000->194000 mpFallLand=phys=1 map=1 floor=1 land=1/0 status=26->31/25 y=4000->0 velY=-8000->0`.
+- Proofs run in this milestone: `make -j16`,
+  `check-harness-registry.ps1`, direct/menu-chain MP Fall-landing verifiers,
+  `verify-boundary.ps1`, and `verify-current.ps1` passed.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Natural-motion cliff/offstage detection,
+  ledges/cliffcatch, ceiling tests, platform pass-through, real wall-hit
+  adjustment on another geometry case, moving yakumono collision, items, HUD,
+  audio, arbitrary live gameplay, unpaused full-scene `gcRunAll`/`gcDrawAll`,
+  and full imported `ftmain.c` remain deferred.
+
+## 2026-06-25: Added selected-callback live-stale MP second-floor proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mplivestale_floor_loop` harnesses as modes `83/84`.
+- Kept modes `81/82` as finalizer-local stale-valid regression proofs and
+  promoted modes `83/84` to the Boundary/Latest verifier profiles.
+- Reused the decoded Dream Land valid-stale floor pair `1 -> 0`, but triggered
+  it from the selected P0 callback path with a contained local `MPCollData`
+  source-order pass.
+- Isolated the local probe/search from older edge-under diagnostics so the
+  existing MP edge/wall/stale proof stack remains stable.
+- Added `STAGE_MPLIVESTALE_FLOOR*` GDB/verifier markers.
+
+What is proven:
+
+- The selected-callback proof reaches source-order `mpProcessUpdateMain ->
+  mpCommonRunFighterAllCollisions -> mpProcessCheckTestFloorCollision`,
+  accepts target line `0`, calls `mpProcessSetLandingFloor`, reaches
+  `mpProcessRunFloorEdgeAdjust`, and clears collision-end state.
+- The real Mario/Fox movement loop remains on decoded floor line `3/3`; the
+  valid-stale test is a contained collision proof, not a live root-position
+  mutation.
+- Direct proof:
+  `Battle Mario/Fox Stage MP live-stale-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 mpWallFloor=blocked floor=3 edgeWall=5 kind=2 side=1 candidates=2 miss=1 mpStaleFloor=line=1->0 live=1/0 accepted=1 p0line=0 p1line=3 mpLiveStaleFloor=line=1->0 selected=1 live=1/0 accepted=1 p0line=0 p1line=3`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP live-stale-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=61/-62 screen-rise=52/52 final=Wait/Ground safe=1 mpWallFloor=blocked floor=3 edgeWall=5 kind=2 side=1 candidates=2 miss=1 mpStaleFloor=line=1->0 live=1/0 accepted=1 p0line=0 p1line=3 mpLiveStaleFloor=line=1->0 selected=1 live=1/0 accepted=1 p0line=0 p1line=3`.
+- Profile proofs run in this milestone: `make -j16`,
+  `check-harness-registry.ps1`, direct/menu-chain MP live-stale-floor
+  verifiers, `verify-current.ps1`, and `verify-regression.ps1` passed.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Arbitrary natural-motion valid-stale
+  crossings, real wall-hit floor-edge adjustment on a non-edge wall candidate,
+  ceiling tests, platform pass-through, ledges/cliffcatch, Fall/Ottotto,
+  moving yakumono collision, items, HUD, audio, arbitrary live gameplay,
+  unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c`
+  remain deferred.
+
+## 2026-06-25: Added direct/menu-chain MP ceiling-hit StopCeil status proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpceilstatus_floor_loop` harnesses as modes `97/98`.
+- Imported original `ftcommonstopceil.c` through
+  `src/import/battleship_ftcommon_stopceil.c`.
+- Kept the older ceiling-floor modes `95/96` as regression coverage and
+  promoted the new ceiling-status modes to the Boundary/Latest verifier
+  profiles.
+- Added `STAGE_MPCEILSTATUS_FLOOR*` GDB/verifier markers for result, callback
+  counts, status/motion/ground-air transition, velocity clamp, and collision
+  masks.
+
+What is proven:
+
+- The selected P1 original `mpCommonProcFighterCliffFloorCeil` map callback
+  routes through bounded source-order `mpProcessUpdateMain` and the
+  ceiling-heavy collision/adjust path.
+- The proof selects real Pupupu ceiling line `4`, records ceiling collision and
+  adjust evidence, sets `MAP_FLAG_CEIL` / `MAP_FLAG_CEILHEAVY`, reaches
+  original `ftCommonStopCeilSetStatus`, and changes Fall/Air `26/20/1` to
+  StopCeil/Ground `66/57/0`.
+- Direct proof:
+  `Battle Mario/Fox Stage MP Ceiling-status floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 mpCeilFloor=line=4 kind=1 check=2/2 diff=2/2 fc=4/4 y=-1464000->-1472000 ceil=-1072000 dist=-8000 mpCeilStatus=line=4 status=26->66 motion=20->57 ga=1->0 velY=40000->0 masks=0x4400/0x400`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP Ceiling-status floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 mpCeilFloor=line=4 kind=1 check=2/2 diff=2/2 fc=4/4 y=-1464000->-1472000 ceil=-1072000 dist=-8000 mpCeilStatus=line=4 status=26->66 motion=20->57 ga=1->0 velY=40000->0 masks=0x4400/0x400`.
+- Proofs run in this milestone: `make -j16`, direct/menu-chain MP
+  ceiling-status verifiers, `check-harness-registry.ps1`,
+  `verify-current.ps1`, and `verify-regression.ps1` passed.
+
+Still deferred:
+
+- This is still a bounded selected-fighter map-collision/status proof, not full
+  BattleShip map collision. Arbitrary natural-motion ceiling hits,
+  cliffcatch/ledge behavior, platform pass-through, real wall-hit floor-edge
+  adjustment on a non-edge wall candidate, moving yakumono collision, items,
+  HUD, audio, arbitrary live gameplay, unpaused full-scene
+  `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c` remain deferred.
+
+## 2026-06-25: Added direct/menu-chain MP ceiling-floor collision proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpceil_floor_loop` harnesses as modes `95/96`.
+- Promoted modes `95/96` to the Boundary/Latest verifier profiles while
+  keeping the Fall-landing modes `93/94` in regression.
+- Added bounded project-owned ceiling sweep/query compatibility for
+  `mpProcessCheckTestCeilCollisionAdjNew`,
+  `mpCollisionCheckCeilLineCollisionSame/Diff`,
+  `mpCollisionGetFCCommonCeil`, and
+  `mpProcessRunCeilCollisionAdjNew`.
+- Added `STAGE_MPCEIL_FLOOR*` GDB/verifier markers and direct/menu-chain
+  wrapper scripts.
+
+What is proven:
+
+- The inherited Fall landing-floor proof remains intact through original
+  LandingLight/Ground setup.
+- The ceiling proof chooses real Pupupu ceiling line `4`, runs one bounded
+  ceiling test hit, reaches the different-line ceiling sweep path, records two
+  `mpCollisionGetFCCommonCeil` hits, runs one ceiling adjust call, and records
+  current/stat ceiling mask evidence.
+- Direct proof:
+  `Battle Mario/Fox Stage MP Ceiling-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3 mpFallMap=phys=1 fast=1 grav=1 map=1 noColl=1 y=200000->194000 mpFallLand=phys=1 map=1 floor=1 land=1/0 status=26->31/25 y=4000->0 velY=-8000->0 mpCeilFloor=line=4 kind=1 check=1/1 diff=1/1 fc=2/2 y=-1464000->-1472000 ceil=-1072000 dist=-8000`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP Ceiling-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3 mpFallMap=phys=1 fast=1 grav=1 map=1 noColl=1 y=200000->194000 mpFallLand=phys=1 map=1 floor=1 land=1/0 status=26->31/25 y=4000->0 velY=-8000->0 mpCeilFloor=line=4 kind=1 check=1/1 diff=1/1 fc=2/2 y=-1464000->-1472000 ceil=-1072000 dist=-8000`.
+- Proofs run in this milestone: `make -j16`, direct/menu-chain MP ceiling
+  verifiers, and `check-harness-registry.ps1` passed so far; final handoff
+  verification is recorded in `docs/STATUS.md` / `docs/HANDOFF.md`.
+
+Still deferred:
+
+- This is a bounded selected-fighter ceiling collision/adjust proof, not full
+  BattleShip map collision. Natural-motion ceiling hits, ceil-heavy handling,
+  platform pass-through, ledges/cliffcatch, real wall-hit floor-edge
+  adjustment on a non-edge wall candidate, moving yakumono collision, items,
+  HUD, audio, arbitrary live gameplay, unpaused full-scene
+  `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c` remain deferred.
+
+## 2026-06-25: Added bounded Mario/Fox Fall physics/map callback proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpfallmap_floor_loop` harnesses as modes `91/92`.
+- Promoted the new modes to the Latest/Boundary verifier profile while keeping
+  the cliff-status and cliff-tick modes as regression coverage.
+- Reused the P1 Fall state produced by the previous cliff-tick boundary, then
+  ran the selected status-table original `ftPhysicsApplyAirVelDriftFastFall`
+  callback and a bounded airborne integration step.
+- Added guarded diagnostics around fast-fall, gravity, air-drift, air-friction,
+  integration, and the selected original `mpCommonProcFighterCliffFloorCeil`
+  map callback.
+- Added `STAGE_MPFALLMAP_FLOOR*` GDB/verifier markers and direct/menu-chain
+  verifier wrappers.
+
+What is proven:
+
+- P1 starts in original Fall status/motion `26/20` and Air state from the
+  earlier cliff-status/tick proof.
+- The selected Fall physics callback path is reached through the original
+  status-table callback pointer, then records fast-fall, gravity, air-drift,
+  and air-friction seams.
+- One bounded airborne step decreases P1 root-Y from `200000` to `194000`.
+- The selected original Fall map callback reaches the guarded
+  `mpCommonProcFighterCliffFloorCeil` no-collision branch and leaves P1 in
+  Fall/Air on floor line `3`.
+- Direct proof:
+  `Battle Mario/Fox Stage MP Fall-map-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3 mpFallMap=phys=1 fast=1 grav=1 map=1 noColl=1 y=200000->194000`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP Fall-map-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3 mpFallMap=phys=1 fast=1 grav=1 map=1 noColl=1 y=200000->194000`.
+- Proofs run in this milestone: `make -j16`, direct/menu-chain MP Fall-map
+  verifiers, `check-harness-registry.ps1`, `verify-boundary.ps1`,
+  `verify-current.ps1`, and `verify-regression.ps1` passed.
+
+Still deferred:
+
+- This is a bounded selected-fighter Fall physics/map callback proof, not full
+  BattleShip map collision or gameplay. Real Fall landing, full
+  `mpCommonCheckFighterCeilHeavyCliff`, ceiling hits, cliffcatch, ledges,
+  platforms, real wall-hit floor-edge adjustment on a non-edge wall candidate,
+  continuous Fall/Ottotto runtime, arbitrary live offstage movement, items,
+  HUD, audio, unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported
+  `ftmain.c` remain deferred.
+
+## 2026-06-25: Added bounded Ottotto/Fall cliff-tick callback proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpclifftick_floor_loop` harnesses as modes `89/90`.
+- Built on the existing source-order MP cliff-status proof instead of
+  re-entering broad gameplay scheduling.
+- Reused imported original `ftcommonottotto.c` and `ftcommonfall.c` callbacks
+  through guarded project-owned proof wrappers.
+- Added `STAGE_MPCLIFFTICK_FLOOR`, `STAGE_MPCLIFFTICK_FLOOR_CALLS`, and
+  `STAGE_MPCLIFFTICK_FLOOR_STATUS` GDB/verifier markers.
+- Promoted the new direct/menu-chain harness pair to the Boundary/Latest
+  verifier profiles and registry drift check.
+
+What is proven:
+
+- The inherited moving/floor proof stack remains intact through the
+  motion-stale copyback path and the cliff-status Ottotto/Fall setup path.
+- P0 starts in original Ottotto status/motion `36/30`, runs one guarded
+  original `ftCommonOttottoProcUpdate`,
+  `ftCommonOttottoProcInterrupt`, and `ftCommonOttottoProcMap` tick, reaches
+  the bounded floor check/hit seam, and remains Ottotto/Ground on Dream Land
+  floor line `0`.
+- P1 starts in original Fall status/motion `26/20`, runs one guarded original
+  `ftCommonFallProcInterrupt` tick, reaches the guarded original
+  special-air, attack-air, and jump-aerial interrupt checks, and remains
+  Fall/Air on Dream Land floor line `3`.
+- Direct proof:
+  `Battle Mario/Fox Stage MP cliff-tick-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP cliff-tick-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3`.
+- Proofs run in this milestone: `make -j16`, direct/menu-chain MP
+  cliff-tick verifiers, `check-harness-registry.ps1`,
+  `verify-boundary.ps1`, `verify-current.ps1`, and `verify-regression.ps1`
+  passed.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Natural-motion cliff/offstage detection,
+  continuous Ottotto/Fall runtime, real wall-hit floor-edge adjustment on a
+  non-edge wall candidate, ceiling tests, platform pass-through,
+  ledges/cliffcatch, moving yakumono collision, items, HUD, audio, arbitrary
+  live gameplay, unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported
+  `ftmain.c` remain deferred.
+
+## 2026-06-25: Added source-order MP cliff-status branch proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpcliffstatus_floor_loop` harnesses as modes `87/88`.
+- Kept modes `85/86` as selected-callback/root motion-stale regression proofs
+  and promoted modes `87/88` to the Boundary/Latest verifier profiles.
+- Imported original `ftcommonottotto.c` through
+  `src/import/battleship_ftcommon_ottotto.c`.
+- Added a bounded proof-only `mpCommonProcFighterOnCliffEdge` status branch
+  that preserves source order: check cliff edge, branch to Ottotto when
+  `MAP_FLAG_FLOOREDGE` is set, otherwise branch to Fall.
+- Added `STAGE_MPCLIFFSTATUS_FLOOR*` GDB/verifier markers.
+- Fixed the menu-chain wrapper to assert the menu-chain harness selection
+  scene pair `9/1` while still proving the final VSBattle boundary `22/21`.
+
+What is proven:
+
+- The inherited moving/floor proof stack remains intact through the
+  motion-stale copyback path from Dream Land line `1 -> 0`.
+- The bounded source-order cliff-status probes call
+  `mpCommonProcFighterOnCliffEdge` twice, record two false
+  `mpCommonCheckFighterOnCliffEdge` results, and take one Ottotto branch plus
+  one Fall branch.
+- P0 with `MAP_FLAG_FLOOREDGE` reaches original Ottotto status/motion
+  `36/30`; P1 without that flag reaches original Fall status/motion `26/20`
+  and air state.
+- Direct proof:
+  `Battle Mario/Fox Stage MP cliff-status-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP cliff-status-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3`.
+- Proofs run in this milestone: `make -j16`, direct/menu-chain MP
+  cliff-status verifiers, `check-harness-registry.ps1`,
+  `verify-boundary.ps1`, `verify-current.ps1`, and `verify-regression.ps1`
+  passed.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Natural-motion cliff/offstage detection,
+  continuous Ottotto/Fall runtime, real wall-hit floor-edge adjustment on a
+  non-edge wall candidate, ceiling tests, platform pass-through,
+  ledges/cliffcatch, moving yakumono collision, items, HUD, audio, arbitrary
+  live gameplay, unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported
+  `ftmain.c` remain deferred.
+
+## 2026-06-25: Added selected-callback/root motion-stale MP second-floor proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpmotionstale_floor_loop` harnesses as modes `85/86`.
+- Kept modes `83/84` as selected-callback local live-stale regression proofs
+  and promoted modes `85/86` to the Boundary/Latest verifier profiles.
+- Reused the decoded Dream Land valid-stale floor pair `1 -> 0`, but this time
+  seeded it into the selected P0 root and live `FTStruct.coll_data` shell before
+  the selected map callback ran.
+- Added `STAGE_MPMOTIONSTALE_FLOOR*` GDB/verifier markers.
+- Scoped the new verifier to stage draw plus the motion-stale evidence because
+  the intentional P0 mutation invalidates older standalone stage-collision
+  finalizer assumptions inside this integrated harness. The older direct
+  verifiers still cover those standalone boundaries.
+
+What is proven:
+
+- The selected P0 callback reaches source-order `mpProcessUpdateMain ->
+  mpCommonRunFighterAllCollisions -> mpProcessCheckTestFloorCollision`,
+  accepts target line `0`, calls `mpProcessSetLandingFloor`, reaches
+  `mpProcessRunFloorEdgeAdjust`, clears collision-end state, and copies the
+  target floor back to the live P0 root/collision state.
+- P1 remains a grounded control on decoded line `3`.
+- Direct proof:
+  `Battle Mario/Fox Stage MP motion-stale-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP motion-stale-floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000`.
+- Profile proofs run in this milestone: `make -j16`,
+  `check-harness-registry.ps1`, direct/menu-chain MP motion-stale-floor
+  verifiers, `verify-current.ps1`, and `verify-regression.ps1` passed.
+
+Still deferred:
+
+- This is still a bounded selected-fighter, floor-only map-collision proof, not
+  full BattleShip map collision. Arbitrary natural-motion valid-stale
+  crossings, real wall-hit floor-edge adjustment on a non-edge wall candidate,
+  ceiling tests, platform pass-through, ledges/cliffcatch, Fall/Ottotto,
+  moving yakumono collision, items, HUD, audio, arbitrary live gameplay,
+  unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c`
+  remain deferred.
+
+Latest note:
+
+- The active boundary has since advanced to direct/menu-chain
+  `battle_mariofox_stage_mpceilstatus_floor_loop` modes `97/98`, importing
+  original `ftcommonstopceil.c` and proving the selected ceiling-hit
+  `mpCommonProcFighterCliffFloorCeil` path reaches original StopCeil status.
+  See the `2026-06-25: Added direct/menu-chain MP ceiling-hit StopCeil status
+  proofs` entry above for the full proof details.
+
+## 2026-06-25: Added direct/menu-chain MP cliff-catch status proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpcliffcatch_floor_loop` harnesses as modes `99/100`.
+- Imported original `ftcommoncliffcatchwait.c` through a project-owned wrapper.
+- Added the narrow fighter/map/effect ABI and DS-owned compatibility stubs
+  needed by `ftCommonCliffCatchSetStatus` without importing broad ledge or
+  fighter runtime.
+- Extended the shared Mario/Fox stage MP verifier with
+  `STAGE_MPCLIFFCATCH_FLOOR*` markers and promoted modes `99/100` to the
+  Boundary/Latest profiles.
+
+What is proven:
+
+- The selected P1 map callback reaches bounded source-order
+  `mpProcessUpdateMain -> mpCommonProcFighterCliffFloorCeil`.
+- The proof runs source-order left/right cliff checks, records a left miss and
+  right hit, selects real Pupupu line `3`, and reaches original
+  `ftCommonCliffCatchSetStatus`.
+- P1 transitions from Fall/Air `26/20/1` to CliffCatch/Air `84/72/1`, sets
+  cliff hold, copies `cliff_id=3`, records LR `-1`, moves the root to the
+  ledge X, and records `MAP_FLAG_RCLIFF` masks `0x2000/0x2000`.
+- Direct proof:
+  `Battle Mario/Fox Stage MP Cliff-catch floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 mpCeilFloor=line=4 kind=1 check=3/2 diff=3/2 fc=4/4 y=-1464000->-1472000 ceil=-1072000 dist=-8000 mpCeilStatus=line=4 status=26->66 motion=20->57 ga=1->0 velY=40000->0 masks=0x4400/0x400 mpCliffCatch=line=3 side=1 status=26->84 motion=20->72 ledge=2318000/0 root=2518000,-408000->2318000,-408000 masks=0x2000/0x2000`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP Cliff-catch floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 mpCeilFloor=line=4 kind=1 check=3/2 diff=3/2 fc=4/4 y=-1464000->-1472000 ceil=-1072000 dist=-8000 mpCeilStatus=line=4 status=26->66 motion=20->57 ga=1->0 velY=40000->0 masks=0x4400/0x400 mpCliffCatch=line=3 side=1 status=26->84 motion=20->72 ledge=2318000/0 root=2518000,-408000->2318000,-408000 masks=0x2000/0x2000`.
+- Proofs run in this milestone: `make -j16`,
+  `check-harness-registry.ps1`, direct/menu-chain MP cliff-catch verifiers,
+  `verify-current.ps1`, and `verify-regression.ps1` passed.
+
+Still deferred:
+
+- This is still a bounded selected-fighter map-collision/status proof, not full
+  BattleShip ledge gameplay. Natural-motion cliffcatch, CliffWait/climb/escape/
+  drop, ledge occupancy, real wall-hit floor-edge adjustment on a non-edge wall
+  candidate, platform pass-through, continuous Fall/Ottotto/Cliff runtime,
+  moving yakumono collision, items, HUD, audio, arbitrary live gameplay,
+  unpaused full-scene `gcRunAll`/`gcDrawAll`, and full imported `ftmain.c`
+  remain deferred.
+
+## 2026-06-25: Added direct/menu-chain MP CliffCatch -> CliffWait proofs
+
+What changed:
+
+- Added direct and menu-chain
+  `battle_mariofox_stage_mpcliffwait_floor_loop` harnesses as modes `101/102`.
+- Reused the existing imported original `ftcommoncliffcatchwait.c` wrapper
+  instead of adding a new gameplay rewrite.
+- Added a narrow CliffWait-only `ftMainSetStatus` compatibility branch,
+  original `ftAnimEndCheckSetStatus` instrumentation, and guarded CliffWait
+  interrupt/check stubs in the DS-owned port layer.
+- Extended the shared Mario/Fox stage MP verifier with
+  `STAGE_MPCLIFFWAIT_FLOOR*` markers and promoted modes `101/102` to the
+  Boundary/Latest profiles.
+
+What is proven:
+
+- The proof starts from the verified CliffCatch state on real Pupupu line `3`,
+  calls original `ftCommonCliffCatchProcUpdate`, reaches original
+  `ftAnimEndCheckSetStatus`, and enters original `ftCommonCliffWaitSetStatus`.
+- P1 transitions from CliffCatch/Air `84/72/1` to CliffWait/Ground `85/73/0`,
+  retains `cliff_id=3` and LR `-1`, sets cliff hold, player-tag wait `120`,
+  capture immunity, and proc-damage state.
+- One guarded original `ftCommonCliffWaitProcInterrupt` tick runs with
+  attack/escape/climb-or-fall checks returning false, decrements fall-wait
+  `1080 -> 1079`, and does not call the damage-fall path.
+- Direct proof:
+  `Battle Mario/Fox Stage MP Cliff-wait floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3 mpFallMap=phys=1 fast=1 grav=1 map=1 noColl=1 y=200000->194000 mpFallLand=phys=1 map=1 floor=1 land=1/0 status=26->31/25 y=4000->0 velY=-8000->0 mpCeilFloor=line=4 kind=1 check=3/2 diff=3/2 fc=4/4 y=-1464000->-1472000 ceil=-1072000 dist=-8000 mpCeilStatus=line=4 status=26->66 motion=20->57 ga=1->0 velY=40000->0 masks=0x4400/0x400 mpCliffCatch=line=3 side=1 status=26->84 motion=20->72 ledge=2318000/0 root=2518000,-408000->2318000,-408000 masks=0x2000/0x2000 mpCliffWait=status=84->85->85 motion=72->73->73 fallWait=1080->1079 cliff=3 guards=1/1/1`.
+- Menu-chain proof:
+  `Menu-chain Mario/Fox Stage MP Cliff-wait floor-loop harness passed: scene=22/21 gcRunAll=33 gcDrawAll=7 display=42/42 draws=7 pixels=930 visits=0x3ff/0x3ff transitions=0x7ff/0x7ff screen-dx=-22/-62 screen-rise=52/52 final=Wait/Ground safe=1 stageCapture=0xf/0xf stageDObj=0xf/0xf stageDL=0xf/0xf stagePixels=930 compat=0x0 mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3 pos=-293000,1574000->-285000,1542000 mpCliffStatus=ottotto=36/30 fall=26/20 branches=1/1 air=1 lines=0/3 mpCliffTick=ottTick=1/1/1 fallInt=1 airChecks=1/1/1 lines=0/3 mpFallMap=phys=1 fast=1 grav=1 map=1 noColl=1 y=200000->194000 mpFallLand=phys=1 map=1 floor=1 land=1/0 status=26->31/25 y=4000->0 velY=-8000->0 mpCeilFloor=line=4 kind=1 check=3/2 diff=3/2 fc=4/4 y=-1464000->-1472000 ceil=-1072000 dist=-8000 mpCeilStatus=line=4 status=26->66 motion=20->57 ga=1->0 velY=40000->0 masks=0x4400/0x400 mpCliffCatch=line=3 side=1 status=26->84 motion=20->72 ledge=2318000/0 root=2518000,-408000->2318000,-408000 masks=0x2000/0x2000 mpCliffWait=status=84->85->85 motion=72->73->73 fallWait=1080->1079 cliff=3 guards=1/1/1`.
+- Proofs run in this milestone: clean normal `make -j16`,
+  `verify-runtime.ps1`, direct/menu-chain MP CliffWait verifiers,
+  `check-harness-registry.ps1`, `verify-boundary.ps1`,
+  `verify-current.ps1`, and `verify-regression.ps1` passed.
+
+Still deferred:
+
+- This is still a bounded selected-fighter ledge-status proof, not full
+  BattleShip ledge gameplay. Natural-motion cliffcatch, ledge occupancy,
+  ledge release/drop/climb/escape/attack, damage-fall timeout, real wall-hit
+  floor-edge adjustment on a non-edge wall candidate, platform pass-through,
+  continuous Fall/Ottotto/Cliff runtime, moving yakumono collision, items, HUD,
+  audio, arbitrary live gameplay, unpaused full-scene `gcRunAll`/`gcDrawAll`,
+  and full imported `ftmain.c` remain deferred.
+
+## 2026-06-25: Fixed F3DEX2 GBI decode helpers for DS renderer paths
+
+What changed:
+
+- Confirmed BattleShip builds the original game source with `-DF3DEX_GBI_2`
+  and checked the original `PR/gbi.h` command packing before touching project
+  renderer code.
+- Added shared F3DEX2 decode helpers in `include/nds/nds_gbi_decode.h` for
+  `G_VTX`, `G_TRI1`, and `G_TRI2`.
+- Replaced duplicated ad hoc VTX/TRI1/TRI2 decode logic in the DS renderer,
+  Opening Room preview path, and Mario/Fox fighter DL execute/draw paths.
+- Added `scripts/check-gbi-decode-fixtures.ps1` with fixtures for
+  `gSPVertex(v, 4, 12)`, `gSP1Triangle(1, 2, 3, 0)`, and
+  `gSP2Triangles(4, 5, 6, 0, 7, 8, 9, 0)`, plus source-snippet checks for the
+  old decode shape.
+- Updated the bounded software draw verifiers so usable projection bounds plus
+  bounded degenerate-triangle marker drawing are accepted when projected area
+  collapses to zero.
+
+What is proven:
+
+- F3DEX2 VTX now decodes count/end fields instead of the older count/v0 byte
+  layout.
+- F3DEX2 TRI1 now reads the packed triangle payload from `w0`, matching TRI2's
+  first packed triangle, instead of reading `w1`.
+- Packed F3DEX2 triangle vertex bytes are decoded as `index * 10`.
+- Corrected first-DL proof:
+  `Battle Mario/Fox DL draw harness passed: scene=22/21 pixels=6170/680 tris=37/20 preview=96x72 commit=1 safe=1`.
+- Corrected multi-DL proof:
+  `Battle Mario/Fox multi-DL draw harness passed: scene=22/21 candidates=14/18 selected=4/4 pixels=7258/2686 tris=87/79 clean=4/4 preview=96x72 safe=1`.
+- Corrected all-DL proof:
+  `Battle Mario/Fox all-DL draw harness passed: scene=22/21 callbacks=2 candidates=14/18 selected=14/18 pixels=18406/14789 tris=334/322 clean=14/17 failed=0/1 fail_reason=0x20 fail_selected=17 preview=96x72 safe=1`.
+- Menu-chain first/multi/all-DL proofs report the same corrected counts after
+  VS Mode -> PlayersVS -> Maps -> VSBattle.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/check-gbi-decode-fixtures.ps1`
+- `scripts/verify-runtime.ps1`
+- `scripts/verify-opening-skip.ps1`
+- direct and menu-chain Mario/Fox DL execute, first-DL draw, multi-DL draw,
+  all-DL draw, and `gcDrawAll` loop verifiers
+
+Still deferred:
+
+- This fix corrects command decoding and bounded software-preview evidence; it
+  does not implement the final DS hardware polygon renderer, camera-correct
+  fighter projection, real fighter matrix prep, material/texture sampling,
+  shadows, interface rendering, items, audio, or unbounded full-scene draw.
+- One Fox all-DL selected DObj remains explicit as a non-clean/non-drawing
+  selected DObj under corrected F3DEX2 decode (`failed=0/1`,
+  `fail_reason=0x20`, selected `17`).
+
+## 2026-06-25: Added all-DL first-failure diagnostics
+
+What changed:
+
+- Added maintained first-failure diagnostics for the guarded Mario/Fox all-DL
+  draw proof:
+  `gNdsFighterDLAllDrawP0FirstFailed*` and
+  `gNdsFighterDLAllDrawP1FirstFailed*`.
+- Added `FTR_DL_ALL_FAIL` to the direct and menu-chain all-DL verifier marker
+  sets.
+- Tightened both all-DL verifiers so the one allowed Fox miss is no longer an
+  opaque `failed=0/1` allowance. It must be selected DObj `17`, reason `0x20`
+  (`NO_VALID_TRIS`), with no renderer blocker, unsupported opcode/command, or
+  vertex-range reject.
+
+What is proven:
+
+- The corrected F3DEX2 decode path does not leave a hidden renderer blocker in
+  the guarded all-DL proof.
+- Mario remains fully clean for the current selected all-DL draw boundary.
+- Fox has one explicit selected DObj that decodes through the renderer path but
+  contributes no valid triangles to the bounded software preview.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-dl-draw-all-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1`
+
+Still deferred:
+
+- This diagnostic does not make the no-valid-triangle Fox DObj render. The next
+  renderer step still needs source-guided fighter matrix/camera/material work,
+  not a broad renderer import or DS-native hand rendering.
+
+## 2026-06-25: Added direct/menu-chain MP CliffWait -> CliffQuick proofs
+
+What changed:
+
+- Added direct and menu-chain stage MP cliff-attack harness modes:
+  `battle_mariofox_stage_mpcliffattack_floor_loop` and
+  `menu_chain_mariofox_stage_mpcliffattack_floor_loop` as modes `103/104`.
+- Imported bounded original cliff action helpers through project-owned wrappers:
+  `ftcommoncliffattack.c`, `ftcommoncliffclimb.c`, and
+  `ftcommoncliffescape.c`.
+- Extended the CliffWait proof finalizer with a guarded A-button interrupt
+  probe that calls original `ftCommonCliffWaitProcInterrupt` and reaches
+  original `ftCommonCliffAttackCheckInterruptCommon`.
+- Added `STAGE_MPCLIFFATTACK_FLOOR*` diagnostics and promoted modes `103/104`
+  to the Boundary/Latest verifier profiles.
+
+What is proven:
+
+- The proof starts from the existing real Pupupu right-ledge CliffWait state on
+  `cliff_id=3`.
+- An A-button tap `0x8000` reaches the original CliffAttack interrupt path.
+- The guarded status seam accepts the original CliffQuick request and records
+  CliffWait/Ground `85/73/0 ->` CliffQuick/Ground `86/74/0`.
+- Queued cliff-motion metadata records AttackQuick on the retained cliff ID.
+- Escape and climb/drop checks stay out of this bounded attack proof, and no
+  damage-fall path runs.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffattack-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffattack-floor-loop-harness.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-all.ps1 -Profile Latest`
+
+Still deferred:
+
+- CliffQuick attack animation/action callbacks, ledge occupancy, ledge
+  release/drop/climb/escape behavior, damage-fall timeout, arbitrary
+  natural-motion ledge transitions, platform pass-through, full map collision,
+  gameplay, HUD, audio, and unbounded taskman scheduling remain deferred.
+
+## 2026-06-25: Added direct/menu-chain CliffQuick -> CliffAttackQuick1 -> CliffAttackQuick2 proofs
+
+What changed:
+
+- Added direct and menu-chain stage MP cliff-attack action harness modes:
+  `battle_mariofox_stage_mpcliffattack_action_loop` and
+  `menu_chain_mariofox_stage_mpcliffattack_action_loop` as modes `105/106`.
+- Extended the bounded cliff action imports so the proof can call original
+  `ftCommonCliffQuickProcUpdate` and original
+  `ftCommonCliffAttackQuick1ProcUpdate`, then reach the guarded original
+  `ftAnimEndCheckSetStatus` branch into `ftCommonCliffAttackQuick2SetStatus`.
+- Wrapped original `ftCommonCliffCommon2UpdateCollData` and
+  `ftCommonCliffCommon2InitStatusVars` so the verifier can prove the common2
+  setup helpers were reached without editing `decomp/`.
+- Added `STAGE_MPCLIFFATTACK_ACTION*` diagnostics, direct/menu-chain verifier
+  wrappers, and promoted modes `105/106` to the Boundary/Latest profiles while
+  keeping modes `103/104` as regression coverage.
+
+What is proven:
+
+- The proof starts from the existing real Pupupu right-ledge CliffAttack setup
+  state on retained `cliff_id=3`.
+- Original CliffQuick update consumes queued AttackQuick metadata and reaches
+  CliffAttackQuick1/Ground `92/80/0`.
+- Original CliffAttackQuick1 update reaches the anim-end status branch and
+  transitions to CliffAttackQuick2/Ground `93/81/0`.
+- The proof records one call each through the Quick update, Quick1 set status,
+  Quick1 update, anim-end branch, Quick2 set status, and common2 helper
+  wrappers, with unsafe count `0`.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffattack-action-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffattack-action-loop-harness.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- The imported common2 collision-data helper currently sees the project-owned
+  fighter collision shell through an original `MPCollData *` cast. The helper
+  is reached, but `floor_line_id` remains `-1`; align the `FTCollisionData`
+  shim or add a narrow conversion bridge before considering common2 floor
+  copyback complete.
+- Hitboxes/damage, ledge occupancy, ledge release/drop/climb/escape behavior,
+  damage-fall timeout, arbitrary natural-motion ledge transitions, platform
+  pass-through, full map collision, gameplay, HUD, audio, and unbounded taskman
+  scheduling remain deferred.
+
+## 2026-06-25: Fixed F3DEX2 packed triangle index decode and strict all-DL proof
+
+What changed:
+
+- Corrected the shared `nds_gbi_decode.h` packed triangle-index helper from the
+  older `/10` decode shape to BattleShip's F3DEX2 `*2` / `/2` command packing.
+- Updated the GBI fixture script to build and decode F3DEX2 `gSP1Triangle` and
+  `gSP2Triangles` command words with the same `*2` packing used by
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h`.
+- Tightened the guarded Mario/Fox all-DL pass condition and direct/menu-chain
+  verifiers. The all-DL boundary now requires all 14 Mario and all 18 Fox
+  selected DObjs to be clean/drawn, with zero failed DObjs and fully clear
+  `FTR_DL_ALL_FAIL` diagnostics.
+- Updated current docs to remove the previous Fox selected-DObj
+  `NO_VALID_TRIS` miss from active status. Historical PORTING entries above are
+  left intact as the prior state.
+
+What is proven:
+
+- First-DL draw remains bounded and now reports `4274/5345` pixels with
+  `37/20` represented triangles for Mario/Fox.
+- Multi-DL draw remains bounded and now reports `6190/7026` pixels with
+  `87/79` represented triangles for the first four DL-ready DObjs per fighter.
+- All-DL draw now reports `14913/13432` pixels, `334/322` represented
+  triangles, `clean=14/18`, and `failed=0/0` for both direct and menu-chain
+  paths.
+- Latest profile remains green after the decode fix.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/check-gbi-decode-fixtures.ps1`
+- `scripts/verify-battle-mariofox-dl-execute-harness.ps1`
+- `scripts/verify-battle-mariofox-dl-draw-harness.ps1`
+- `scripts/verify-battle-mariofox-dl-draw-multi-harness.ps1`
+- `scripts/verify-battle-mariofox-dl-draw-all-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-dl-execute-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-dl-draw-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-dl-draw-multi-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1`
+- `scripts/verify-current.ps1`
+
+Still deferred:
+
+- The bounded software renderer still uses collapsed-triangle marker fallback
+  for some projected fighter triangles until the real fighter matrix/camera
+  projection path is imported.
+- Texture/material fidelity, full display-list coverage, hardware 3D
+  replacement, unbounded draw traversal, gameplay, HUD, audio, and full battle
+  scheduling remain deferred.
+
+## 2026-06-25: Bridged CliffAttackQuick2 common2 floor copyback
+
+What changed:
+
+- Added a narrow project-owned bridge for the bounded
+  CliffAttackQuick2 action proof so imported original
+  `ftCommonCliffCommon2UpdateCollData` can run against a temporary original
+  `MPCollData` view while copying the resulting ledge floor fields back into
+  the live port-owned `FTCollisionData` shell.
+- Kept the bridge guarded to the direct/menu-chain
+  `stage_mpcliffattack_action_loop` proof path; the broader fighter collision
+  shell layout was not reshuffled.
+- Tightened the ROM-side proof mask and shared verifier so the action proof now
+  requires the copied floor line to match the retained cliff line.
+- Updated current docs to move the next boundary past common2 floor copyback
+  and toward one bounded original common2 update/physics/map tick from the
+  created CliffAttackQuick2/Ground state.
+
+What is proven:
+
+- Direct and menu-chain CliffAttack action harnesses now report
+  `mpCliffAttackAction=status=86->92->93 motion=74->80->81 cliff=3 floor=3
+  calls=1/1/1`.
+- The original common2 collision-data update helper is still called once, and
+  the proof no longer accepts `floor_line_id=-1`.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffattack-action-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffattack-action-loop-harness.ps1`
+- `scripts/verify-current.ps1`
+
+Still deferred:
+
+- The created CliffAttackQuick2 state is not yet consumed through a bounded
+  original common2 update/physics/map tick.
+- Natural ledge occupancy, ledge release/drop/climb/escape, hitboxes/damage,
+  damage-fall timeout, platform pass-through, continuous Cliff runtime, and
+  full gameplay scheduling remain deferred.
+
+## 2026-06-25: Added bounded CliffAttackQuick2 common2 update/physics/map tick proofs
+
+What changed:
+
+- Added direct and menu-chain dev harness modes
+  `battle_mariofox_stage_mpcliffcommon2_loop` and
+  `menu_chain_mariofox_stage_mpcliffcommon2_loop` as modes `107/108`.
+- Extended the existing CliffAttack action proof so the created
+  CliffAttackQuick2/Ground state is consumed through one bounded original
+  `ftCommonCliffCommon2ProcUpdate`, `ftCommonCliffCommon2ProcPhysics`, and
+  `ftCommonCliffAttackEscape2ProcMap` tick.
+- Added guarded diagnostics around the common2 anim-end check, ground velocity
+  transfer, and edge-break map seam while keeping full CliffAttack runtime
+  parked.
+- Updated the harness registry, Latest/Boundary profile targets, verifier
+  wrappers, and current docs to start the next task from the common2 boundary.
+
+What is proven:
+
+- Direct and menu-chain CliffCommon2 harnesses now report
+  `mpCliffCommon2=status=93->93->93->93 motion=81->81->81->81 cliff=3
+  floor=3->3 calls=1/1/1`.
+- The proof starts from the existing real Pupupu right-ledge
+  CliffAttackQuick2 state, preserves Ground state, keeps the retained
+  `cliff_id=3` and copied `floor_line_id=3`, reaches the original common2
+  update, physics, and map callbacks once each, and prevents fallback into
+  unbounded Wait/Fall or edge-break behavior.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffcommon2-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffcommon2-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+
+Still deferred:
+
+- Natural ledge occupancy, ledge release/drop/climb/escape, attack hitboxes,
+  damage-fall timeout, platform pass-through, continuous CliffAttack runtime,
+  broad map collision, full fighter display, HUD, audio, and full gameplay
+  scheduling remain deferred.
+
+## 2026-06-25: Added bounded CliffWait -> CliffEscapeQuick action proofs
+
+What changed:
+
+- Added direct and menu-chain dev harness modes
+  `battle_mariofox_stage_mpcliffescape_action_loop` and
+  `menu_chain_mariofox_stage_mpcliffescape_action_loop` as modes `109/110`.
+- Reused the bounded CliffWait state on the real Pupupu right ledge, injected a
+  Z-button tap, and routed through original cliff interrupt helpers to prove
+  EscapeQuick selection without opening continuous gameplay.
+- Imported the narrow original `ftcommoncliffescape.c` surface through the
+  project-owned import/wrapper path and kept all runtime guards in `src/port`.
+- Added verifier assertions and diagnostic references for the CliffEscape
+  action markers, including button-source checks that distinguish Z from the
+  existing A-button CliffAttack path.
+- Updated the harness registry, Latest/Boundary profile targets, verifier
+  wrappers, and current docs to start the next task from the CliffEscape
+  action boundary.
+
+What is proven:
+
+- Direct and menu-chain CliffEscape action harnesses now report
+  `mpCliffEscapeAction=status=85->86->96->97 motion=73->74->84->85 cliff=3
+  floor=3 calls=1/1/1`.
+- The proof starts from CliffWait/Ground `85/73/0`, reaches CliffQuick/Ground
+  `86/74/0` with queued EscapeQuick metadata, then reaches
+  CliffEscapeQuick1/Ground `96/84/0` and CliffEscapeQuick2/Ground `97/85/0`.
+- The retained real Pupupu `cliff_id=3` and copied `floor_line_id=3` survive
+  the bounded path, while damage-fall, climb/fall fallback, and unsafe guards
+  remain at zero.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffescape-action-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffescape-action-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- EscapeQuick2 common2 update/physics/map ticks, natural ledge occupancy,
+  ledge release/drop/climb behavior, hitboxes/damage, damage-fall timeout,
+  platform pass-through, continuous Cliff runtime, broad map collision, full
+  fighter display, HUD, audio, and full gameplay scheduling remain deferred.
+
+## 2026-06-25: Split real fighter DL geometry proof from degenerate marker pixels
+
+What changed:
+
+- Added maintained `RealTriangleDrawnCount` and `MarkerTriangleDrawnCount`
+  diagnostics for the first-DL, multi-DL, and all-DL Mario/Fox software
+  preview paths.
+- Kept existing `TriangleDrawnCount` as total visible software output for
+  compatibility, but tightened the renderer proof masks to require real
+  non-degenerate projected triangles.
+- Updated direct and menu-chain DL draw, multi-DL draw, and all-DL draw
+  verifiers with `FTR_DL_*_RENDER` marker lines so marker fallback pixels are
+  visible diagnostics only.
+- Updated `docs/DIAGNOSTIC_REFERENCE.md`, `docs/STATUS.md`, and
+  `docs/HANDOFF.md` with the new proof meaning.
+
+What is proven:
+
+- First-DL draw now reports `real=37/18` and `marker=0/2` while preserving
+  `4274/5345` pixels and `37/20` represented triangles.
+- Multi-DL draw now reports `real=82/76` and `marker=1/3` while preserving
+  `6190/7026` pixels, `87/79` represented triangles, and clean `4/4` selected
+  DObjs.
+- All-DL draw now reports `real=306/290` and `marker=10/24` while preserving
+  `14913/13432` pixels, `334/322` represented triangles, clean `14/18`
+  selected DObjs, and `failed=0/0`.
+- The prior F3DEX2 `/10` packed-triangle concern is not current: the maintained
+  helper and fixture use BattleShip's F3DEX2 `*2` / `/2` packing, and the GBI
+  fixture check passes.
+
+Proofs run in this milestone:
+
+- `make -j16`
+- `scripts/check-gbi-decode-fixtures.ps1`
+- `scripts/verify-battle-mariofox-dl-draw-harness.ps1`
+- `scripts/verify-battle-mariofox-dl-draw-multi-harness.ps1`
+- `scripts/verify-battle-mariofox-dl-draw-all-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-dl-draw-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-dl-draw-multi-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1`
+
+Still deferred:
+
+- Real fighter matrix/camera projection, material/texture upload and sampling,
+  DS hardware polygon submission, full `ftdisplaymain.c` fidelity, continuous
+  unguarded `gcDrawAll`, and full gameplay rendering remain deferred.
+
+## 2026-06-25: Added bounded CliffWait climb/fall interrupt proofs
+
+What changed:
+
+- Added direct and menu-chain dev harness modes
+  `battle_mariofox_stage_mpcliffclimb_floor_loop` and
+  `menu_chain_mariofox_stage_mpcliffclimb_floor_loop` as modes `113/114`.
+- Reused the verified CliffWait/Ground ledge state on real Pupupu
+  `cliff_id=3`, seeded deterministic climb/drop stick inputs, and routed
+  through original `ftCommonCliffWaitProcInterrupt` into original
+  `ftCommonCliffClimbOrFallCheckInterruptCommon`.
+- Kept the proof bounded: attack and escape checks are reached and rejected
+  for the seeded inputs, only the climb/fall branch is accepted, and no
+  continuous ledge action runtime is opened.
+- Added direct/menu-chain verifier wrappers, shared verifier assertions,
+  harness-registry entries, diagnostic marker docs, and current-truth doc
+  updates for the new active boundary.
+
+What is proven:
+
+- Direct and menu-chain CliffClimb harnesses now report
+  `mpCliffClimb=climbStatus=86/74 dropStatus=26/20 cliff=3
+  sticks=0,80/80,0 calls=2/2`.
+- The climb branch reaches CliffQuick/Ground `86/74/0` with queued climb
+  metadata and retained `cliff_id=3`.
+- The drop branch reaches Fall/Air `26/20/1` with `cliffcatch_wait=30`,
+  retained cliff metadata, proc callbacks set, and zero damage-fall or unsafe
+  fallback.
+
+Proofs run in this milestone:
+
+- `scripts/check-gbi-decode-fixtures.ps1`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- Natural ledge occupancy, continuous ledge climb/drop action runtime, ledge
+  release rules, ledge attack/escape hitboxes, damage-fall timeout, platform
+  pass-through, broad map collision, full fighter display, HUD, audio, and
+  full gameplay scheduling remain deferred.
+
+## 2026-06-25: Added bounded CliffQuick -> CliffClimbQuick1 -> CliffClimbQuick2 proofs
+
+What changed:
+
+- Added direct and menu-chain dev harness modes
+  `battle_mariofox_stage_mpcliffclimb_action_loop` and
+  `menu_chain_mariofox_stage_mpcliffclimb_action_loop` as modes `115/116`.
+- Reused the verified CliffClimb floor proof, consumed the climb-created
+  CliffQuick/Ground state, and routed through original
+  `ftCommonCliffQuickProcUpdate`, original
+  `ftCommonCliffClimbQuick1SetStatus`, original
+  `ftCommonCliffClimbQuick1ProcUpdate`, and the guarded anim-end path for
+  `ftCommonCliffClimbQuick2SetStatus`.
+- Kept `decomp/` read-only by importing `ftcommoncliffclimb.c` through
+  `src/import/battleship_ftcommon_cliffclimb.c` and keeping its common2
+  helpers isolated as `ndsBase*` symbols. The bounded animation-end seam calls
+  the source-order Quick2 setup through project-owned common2 wrappers so the
+  live `FTCollisionData` shell receives copied ledge-floor fields safely.
+- Promoted the new action harness pair to Latest/Boundary profiles and kept
+  modes `113/114` as regression coverage for climb/drop interrupt selection.
+
+What is proven:
+
+- Direct and menu-chain CliffClimb action harnesses now report
+  `mpCliffClimbAction=status=86->87->88 motion=74->75->76 cliff=3 floor=3
+  calls=1/1/1`.
+- The action path reaches CliffClimbQuick1/Ground `87/75/0` and
+  CliffClimbQuick2/Ground `88/76/0` from CliffQuick/Ground `86/74/0`.
+- The proof retains real Pupupu `cliff_id=3`, copies `floor_line_id=3`,
+  reaches one guarded common2 collision-data update, one guarded common2
+  init-vars call, and records zero unsafe fallback.
+
+Proofs run in this milestone:
+
+- `make clean`
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-action-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-action-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- Continuous ledge climb/drop runtime, ledge occupancy/release rules, damage
+  fall timeout, ledge attack/escape hitboxes, broad map collision, full fighter
+  display, HUD, audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-25: Added bounded CliffClimbQuick2 common2 tick proofs
+
+What changed:
+
+- Added direct and menu-chain dev harness modes
+  `battle_mariofox_stage_mpcliffclimb_common2_loop` and
+  `menu_chain_mariofox_stage_mpcliffclimb_common2_loop` as modes `117/118`.
+- Reused the verified CliffClimb action proof, consumed the created
+  CliffClimbQuick2/Ground state, and routed one bounded tick through original
+  `ftCommonCliffCommon2ProcUpdate`, original
+  `ftCommonCliffCommon2ProcPhysics`, and original
+  `ftCommonCliffClimbCommon2ProcMap`.
+- Added project-owned diagnostics for the common2 update, anim-end,
+  Wait/Fall fallback guard, physics, ground velocity transfer, map, and
+  ground-break callback path.
+- Promoted the new common2 harness pair to Latest/Boundary profiles and kept
+  modes `115/116` as regression coverage for CliffClimbQuick2 setup.
+
+What is proven:
+
+- Direct and menu-chain CliffClimb common2 harnesses report
+  `mpCliffClimbCommon2=status=88->88->88->88 motion=76->76->76->76
+  cliff=3 floor=3->3 calls=1/1/1`.
+- The proof preserves CliffClimbQuick2/Ground `88/76/0`, retained real Pupupu
+  `cliff_id=3`, and copied `floor_line_id=3` through one bounded original
+  update/physics/map callback tick.
+- The guarded anim-end check does not fall through to Wait/Fall, guarded
+  ground velocity transfer is reached once, guarded ground-break map callback
+  is reached once, and unsafe count remains zero.
+
+Proofs added for this milestone:
+
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-common2-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-common2-loop-harness.ps1`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- Continuous ledge climb/drop runtime, natural ledge occupancy/release rules,
+  damage-fall timeout, ledge attack/escape hitboxes, broad map collision, full
+  fighter display, HUD, audio, and unbounded gameplay scheduling remain
+  deferred.
+
+## 2026-06-26: Added CliffClimbQuick2 finish handoff and cliff-hold reset diagnostics
+
+What changed:
+
+- Added direct/menu-chain `battle_mariofox_stage_mpcliffclimb_finish_loop` and
+  `menu_chain_mariofox_stage_mpcliffclimb_finish_loop` as modes `119/120`.
+- Corrected the bounded DS-side `ftMainSetStatus` seam to clear
+  `is_cliff_hold` like original BattleShip `ftMainSetStatus`. The
+  CliffClimb drop proof now expects the Fall/Air branch to clear cliff hold
+  instead of preserving stale ledge hold state.
+- Added explicit hold-cleared diagnostics for CliffClimb/CliffAttack/
+  CliffEscape Quick2 and common2 paths so future status changes cannot regress
+  the original cliff-hold lifecycle silently.
+- Promoted the new finish harness pair to Latest/Boundary profiles and kept
+  the common2 harness pair as regression coverage.
+
+What is proven:
+
+- Direct and menu-chain CliffClimb finish harnesses report
+  `mpCliffClimbFinish=status=88->10 motion=76->4 cliff=3 floor=3->3
+  calls=1/1/1`.
+- The proof consumes CliffClimbQuick2/Ground `88/76/0` through original
+  `ftCommonCliffCommon2ProcUpdate`, reaches the guarded animation-end handoff
+  through `mpCommonSetFighterWaitOrFall`, calls bounded Wait
+  `ftMainSetStatus`, and ends in Wait/Ground `10/4/0`.
+- The proof retains `cliff_id=3`, keeps `floor_line_id=3`, sets
+  `playertag_wait=120`, restores the special interrupt hook, clears
+  `is_cliff_hold`, and parks before continuous ledge climb runtime.
+
+Proofs added for this milestone:
+
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-finish-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-finish-loop-harness.ps1`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+
+Still deferred:
+
+- Continuous ledge climb/drop runtime, natural ledge occupancy/release rules,
+  damage-fall timeout, ledge attack/escape hitboxes, broader collision cases,
+  full fighter display, HUD, audio, and unbounded gameplay scheduling remain
+  deferred.
+
+## 2026-06-26: Hardened bounded common2 ledge bridge diagnostics
+
+What changed:
+
+- Reviewed the common2 ledge handoff after the cliff-hold reset audit. The
+  stale `is_cliff_hold` issue was already fixed by the bounded
+  `ftMainSetStatus` seam, but the common2 collision-data bridge still needed
+  stronger guard and placement evidence.
+- Added a range guard before the bridge calls original
+  `ftCommonCliffCommon2UpdateCollData`, using the project/BattleShip
+  five-entry `cliff_status_ga` layout as the bound for the queued
+  cliff-motion status ID.
+- Added project-owned diagnostics for common2 bridge call/pass/reject counts,
+  queued status, LR, cliff ID, root X/Y before, root X/Y after, expected
+  ledge root X/Y, post-call floor distance, and root-position OK.
+- Folded the bridge/root contract into the CliffClimb, CliffAttack, and
+  CliffEscape action proof masks and verifier assertions.
+
+What is proven:
+
+- Direct CliffClimb action now reports
+  `climbBridge=root=2498000,-250000->2313000,0 exp=2313000,0`.
+- Direct CliffAttack action now reports
+  `attackBridge=root=2318000,-408000->2313000,0 exp=2313000,0`.
+- Direct CliffEscape action now reports
+  `escapeBridge=root=2318000,-408000->2313000,0 exp=2313000,0`.
+- All three action verifiers require one bridge pass, zero rejects, the
+  expected queued status ID (`0`, `1`, or `2`), a changed root, exact expected
+  root within one milli-unit, and floor distance reset to zero.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-action-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffattack-action-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffescape-action-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- Natural ledge occupancy/release, continuous ledge runtime, damage-fall
+  timeout, ledge attack/escape hitboxes, broader collision cases, HUD, audio,
+  and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Cleared jostle-ignore in bounded status reset
+
+What changed:
+
+- Reviewed the attached cliff-hold audit against the current source. The
+  bounded `ftMainSetStatus` seam was already clearing `is_cliff_hold`, but it
+  still missed the sibling common reset field `is_jostle_ignore`.
+- Extended the project-owned status reset helper so bounded status handoffs
+  clear both `is_cliff_hold` and `is_jostle_ignore`, matching the lifecycle the
+  original fighter code expects after leaving ledge/action states.
+- Added `gNdsStageMPCliffClimbFinishLoopIsJostleIgnoreAfterUpdate` and folded
+  it into `STAGE_MPCLIFFCLIMB_FINISH_FLAGS`, so the direct and menu-chain
+  CliffClimb finish verifiers now assert stale jostle-ignore state is clear
+  after the Wait handoff.
+- Updated the current-truth docs and diagnostic reference to describe the
+  common reset proof as `reset=0/0`: cliff-hold clear / jostle-ignore clear.
+
+What is proven:
+
+- Direct and menu-chain CliffClimb finish harnesses now report
+  `mpCliffClimbFinish=status=88->10 motion=76->4 cliff=3 floor=3->3
+  reset=0/0 calls=1/1/1`.
+- The proof consumes CliffClimbQuick2/Ground `88/76/0`, reaches bounded Wait
+  through the source-order common2 update path, and verifies both stale ledge
+  hold and stale jostle-ignore flags are clear once Wait owns the fighter.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-finish-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-finish-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+
+Still deferred:
+
+- Full original `ftMainSetStatus` common reset coverage beyond the flags now
+  needed by this ledge slice, natural ledge occupancy/release, continuous ledge
+  runtime, damage-fall timeout, ledge hitboxes, broader collision cases, HUD,
+  audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Proved bounded same-cliff ledge occupancy blocker
+
+What changed:
+
+- Reviewed the attached cliff-hold audit against the current source. The
+  highest-priority `is_cliff_hold` reset concern is already handled in this
+  snapshot by the bounded `ftMainSetStatus` reset helper, including Quick2,
+  common2, drop, and finish diagnostics that require stale hold state to clear.
+- Inspected original BattleShip `mpcommon.c` for the same-cliff/same-LR
+  occupancy scan and kept the implementation inside the existing bounded
+  CliffCatch proof instead of opening natural ledge runtime.
+- Added a second CliffCatch-local occupancy probe: P0 is seeded as the holder
+  on real Pupupu line `3`, P1 attempts the matching right-ledge catch, and the
+  original-compatible special-collision callback blocks the attempt before a
+  second status setup.
+- Added diagnostics and verifier coverage for
+  `STAGE_MPCLIFFCATCH_FLOOR_OCC`, including holder/probe cliff IDs, LR, blocked
+  probe status/motion/ground-air, cliff-hold after the block, status-set delta,
+  and landing-param delta.
+
+What is proven:
+
+- The normal CliffCatch proof still reaches original
+  `ftCommonCliffCatchSetStatus` once and transitions P1 from Fall/Air
+  `26/20/1` to CliffCatch/Air `84/72/1` on real Pupupu line `3`.
+- The occupancy probe records one blocker, holder/probe line `3/3`,
+  holder/probe LR `-1/-1`, P1 still Fall/Air `26/20/1`, cliff-hold `0`, and
+  no second CliffCatch status or landing-param call: summary `occ=1/0`.
+- Direct and menu-chain CliffCatch verifiers now require proof mask `0xfff`
+  and two selected map/collision passes while keeping landing/status setup at
+  one call.
+
+Proofs run:
+
+- `make -j16`
+- `make -j16 TARGET=smash64ds-battle-mariofox-stage-mpcliffcatch-floor-loop BUILD=build-battle-mariofox-stage-mpcliffcatch-floor-loop-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mpcliffcatch_floor_loop`
+- `scripts/verify-battle-mariofox-stage-mpcliffcatch-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffcatch-floor-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- Natural-motion cliffcatch, broader natural ledge occupancy/release/drop/climb,
+  continuous ledge runtime, damage-fall timeout, ledge hitboxes, broader
+  collision cases, HUD, audio, and unbounded gameplay scheduling remain
+  deferred.
+
+## 2026-06-26: Routed common2 fallback through the DS bridge
+
+What changed:
+
+- Removed the last direct fallback from the project-owned
+  `ftCommonCliffCommon2UpdateCollData` wrapper to the imported
+  `ndsBaseFTCommonCliffCommon2UpdateCollData` helper.
+- The fallback now enters the same DS common2 bridge used by the guarded
+  CliffClimb/CliffAttack/CliffEscape action proofs. The bridge validates the
+  queued cliff-motion status ID, snapshots the live fighter into an
+  original-layout temporary struct, lets the imported BattleShip helper mutate
+  the live root DObj, then copies selected collision/physics fields back.
+- This keeps the original helper as the source of truth while preventing
+  broader future common2 paths from bypassing the project-owned status range
+  guard and root placement diagnostics.
+
+What is proven:
+
+- Existing action proofs still own their explicit bridge counters through their
+  active proof guards.
+- The wrapper fallback no longer directly indexes the original
+  `cliff_status_ga` table without the port-side guard.
+
+Still deferred:
+
+- Natural, unseeded ledge progression through common2; full ledge physics and
+  map behavior beyond the current bounded action/common2/finish proofs; ledge
+  hitboxes, HUD, audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Guarded CliffCatch diagnostics during release-then-recatch proof
+
+What changed:
+
+- Scoped the CliffCatch L/R cliff-test diagnostic counters in
+  `mpProcessCheckTestLCliffCollision` and `mpProcessCheckTestRCliffCollision`
+  to the active CliffCatch map-callback window.
+- This prevents the newer CliffClimb release-then-recatch probe from polluting
+  the older bounded CliffCatch prerequisite counters while preserving the same
+  source-order collision query behavior and collision masks.
+- Updated current docs for the CliffClimb floor recatch marker groups and the
+  expanded `0x7fff` proof mask.
+
+What is proven:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1`
+
+Both direct and menu-chain proofs now report the bounded recatch summary:
+`recatch=26->84 hold=0/1 block=0`.
+
+Still deferred:
+
+- Continuous natural ledge release/drop/climb/occupancy runtime, ledge hitboxes,
+  HUD, audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Expanded bounded `ftMainSetStatus` common reset proof
+
+What changed:
+
+- Expanded the project-owned bounded `ftMainSetStatus` common reset helper
+  beyond the earlier cliff-hold/jostle proof. The helper now clears the
+  current `FTStruct` shell fields that correspond to the original BattleShip
+  common reset block: reflect, absorb, shield, fastfall, invisible, shadow
+  hide, player-tag hide, cliff hold, jostle ignore, hitstun, ignored line,
+  capture immune mask, ghost, camera zoom range, shuffle tics, knockback
+  resistance, and stacked knockback, plus ground-state damage-player reset
+  when the preserve flag is absent.
+- Added `gNdsStageMPCliffClimbFinishLoopCommonResetMask` to the CliffClimb
+  finish proof. The probe seeds stale values before the bounded Wait handoff
+  and requires `(reset_mask & 0x3ffff) == 0x3ffff` after original
+  `mpCommonSetFighterWaitOrFall` reaches bounded Wait `ftMainSetStatus`.
+- Updated current-truth and diagnostic docs so the latest direct/menu-chain
+  proof summary reports `reset=0/0/0x3ffff`.
+
+What is proven:
+
+- Direct CliffClimb finish reports
+  `mpCliffClimbFinish=status=88->10 motion=76->4 cliff=3 floor=3->3
+  reset=0/0/0x3ffff calls=1/1/1`.
+- Menu-chain CliffClimb finish reports the same reset mask after VS Mode ->
+  PlayersVS -> Maps -> VSBattle.
+- The bounded status seam now guards the stale status-lifecycle fields needed
+  by the current ledge slice, while still parking before unbounded natural
+  ledge runtime.
+
+Proofs run:
+
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-finish-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-finish-loop-harness.ps1`
+
+Still deferred:
+
+- Full original `ftMainSetStatus` coverage for fields not yet represented in
+  the project `FTStruct` shell, natural ledge occupancy/release/drop/climb,
+  continuous ledge runtime, damage-fall timeout, ledge hitboxes, broader
+  collision cases, HUD, audio, and unbounded gameplay scheduling remain
+  deferred.
+
+## 2026-06-26: Added bounded CliffWait timeout into DamageFall proofs
+
+What changed:
+
+- Added direct/menu-chain
+  `battle_mariofox_stage_mpcliffwait_damage_loop` and
+  `menu_chain_mariofox_stage_mpcliffwait_damage_loop` as modes `121/122`.
+- Added a bounded `ftCommonDamageFallSetStatusFromCliffWait` proof path that
+  routes through the project-owned `ftMainSetStatus` common-reset seam, then
+  installs the current DamageFall/Air status shell and air physics/map
+  callbacks.
+- Added CliffWait timeout diagnostics for the source-order interrupt checks,
+  DamageFall handoff, status/motion/GA transition, fall-wait fields, cliff
+  hold reset, retained cliff/floor IDs, callback pointers, and root placement.
+- Added direct and menu-chain verifier wrappers and promoted the new pair to
+  the current Latest/Boundary verifier profiles.
+
+What is proven:
+
+- The direct and menu-chain harnesses consume the verified CliffWait/Ground
+  state on real Pupupu `cliff_id=3`, force `fall_wait=1`, run original
+  `ftCommonCliffWaitProcInterrupt`, reach the guarded attack, escape, and
+  climb/fall checks in source order, take original `ftCommonCliffWaitCheckFall`,
+  and call the bounded DamageFall status seam.
+- The proof requires CliffWait/Ground `85/73/0 ->` DamageFall/Air `57/50/1`,
+  `fall_wait 1 -> 0`, `cliffcatch_wait=30`,
+  `tics_since_last_z=65536`, retained `cliff_id=3`/`floor_line_id=3`,
+  `is_cliff_hold 1 -> 0`, installed DamageFall air callbacks, and no unsafe
+  guard escape.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-current.ps1`
+
+Still deferred:
+
+- DamageFall collision outcomes beyond the no-collision branch, natural ledge
+  occupancy/release/drop behavior beyond the bounded proofs, ledge
+  hitboxes/damage, broader collision cases, HUD, audio, and unbounded gameplay
+  scheduling remain deferred.
+
+## 2026-06-26: Added one guarded original DamageFall callback tick
+
+What changed:
+
+- Imported original `ftcommondamagefall.c` through
+  `src/import/battleship_ftcommon_damagefall.c` under `ndsBase*` symbols.
+- Updated the bounded CliffWait timeout proof to call the imported original
+  `ftCommonDamageFallClampRumble` helper and install original-compatible
+  DamageFall interrupt/map callback wrappers.
+- Added guarded compatibility stubs for the first DamageFall dependency
+  surface: special-air, aerial-attack, aerial-jump, HammerFall, rumble,
+  `mpCommonCheckFighterCliff`, passive checks, and down-bounce.
+- Extended the direct/menu-chain CliffWait damage verifier to require one
+  original DamageFall interrupt tick, one
+  `ftPhysicsApplyAirVelDriftFastFall` physics tick, and one original
+  `ftCommonDamageFallProcMap` no-collision map tick.
+
+What is proven:
+
+- Direct and menu-chain harnesses still prove CliffWait/Ground `85/73/0 ->`
+  DamageFall/Air `57/50/1`, `fall_wait 1 -> 0`, `cliffcatch_wait=30`,
+  `tics_since_last_z=65536`, retained `cliff_id=3`/`floor_line_id=3`, and
+  `is_cliff_hold 1 -> 0`.
+- The same proof now reaches original DamageFall interrupt logic, records the
+  source-order false special-air/aerial-attack/aerial-jump/HammerFall checks,
+  applies the air-velocity drift/fastfall physics callback with velocity-Y
+  `0 -> -4000`, calls original `ftCommonDamageFallProcMap`, and proves the
+  bounded no-collision `mpCommonCheckFighterCliff == FALSE` branch without
+  passive/down-bounce escape.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- DamageFall collision outcomes after a positive map collision, including
+  cliff catch, passive stand/passive, down-bounce, landing/collision branches,
+  hitboxes/damage, broader natural ledge runtime, HUD, audio, and unbounded
+  gameplay scheduling remain deferred.
+
+## 2026-06-26: Added bounded DamageFall positive collision into DownBounce setup
+
+What changed:
+
+- Imported original `ftcommondownwaitbounce.c` through
+  `src/import/battleship_ftcommon_downwaitbounce.c` under `ndsBase*` symbols.
+- Extended the direct/menu-chain CliffWait damage harnesses so the first
+  guarded DamageFall map tick still proves the no-collision branch, then a
+  second guarded map pass forces a positive floor collision through
+  `mpCommonCheckFighterCliff`.
+- Added the bounded DownBounce status seam and compatibility diagnostics for
+  ground placement, ImpactWave effect, FGM, rumble, velocity transfer,
+  attack-buffer reset, and `damage_mul` reduction.
+- Updated the CliffWait damage verifier marker contract from mask `0x7ff` to
+  `0x1fff` and added `STAGE_MPCLIFFWAIT_DAMAGE_COLLISION`.
+
+What is proven:
+
+- Direct and menu-chain harnesses still prove CliffWait/Ground `85/73/0 ->`
+  DamageFall/Air `57/50/1`, `fall_wait 1 -> 0`, `cliffcatch_wait=30`,
+  `tics_since_last_z=65536`, retained `cliff_id=3`/`floor_line_id=3`, and
+  `is_cliff_hold 1 -> 0`.
+- The first guarded DamageFall callback tick remains a no-collision map pass
+  with status/motion/GA still `57/50/1` and velocity-Y `0 -> -4000`.
+- The second guarded map pass reaches original passive-stand/passive checks,
+  falls through to `ftCommonDownBounceSetStatus`, and proves
+  DownBounceU/Ground `68/59/0`, collision hit `1`, ground/effect/FGM/rumble/
+  velocity-transfer counts `1`, attack buffer `0`, `damage_mul=500` milli,
+  effect kind `22`, nonzero FGM, and rumble ID `4`.
+
+Proofs run:
+
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-current.ps1`
+
+Still deferred:
+
+- Continuous DownBounce/DownWait callback runtime, DamageFall cliff-catch and
+  passive collision branches, hitboxes/damage, broader natural ledge runtime,
+  HUD, audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Added bounded DownBounce and DownWait callback follow-through
+
+What changed:
+
+- Extended the direct/menu-chain CliffWait damage harnesses past the previous
+  DownBounce setup proof without opening continuous gameplay.
+- Routed the selected DownBounceU/Ground state through two guarded original
+  `ftCommonDownBounceProcUpdate` calls: first with an A-button tap to prove
+  `attack_buffer=60`, then with animation end to reach the original attack and
+  forward/back checks and the bounded DownWait setup seam.
+- Added a bounded DownWaitU/Ground `ftMainSetStatus` path for the original
+  `motion_id == -2` sentinel case, with the original DownWait update,
+  interrupt, physics, and map callback pointers installed.
+- Added compatibility diagnostics and verifier rows for
+  `STAGE_MPCLIFFWAIT_DAMAGE_DOWNBOUNCE` and
+  `STAGE_MPCLIFFWAIT_DAMAGE_DOWNWAIT`; the proof mask is now `0x1ffff`.
+
+What is proven:
+
+- Direct and menu-chain harnesses still prove CliffWait/Ground `85/73/0 ->`
+  DamageFall/Air `57/50/1`, `is_cliff_hold 1 -> 0`, one no-collision
+  DamageFall tick, and one positive DamageFall map-collision branch into
+  DownBounceU/Ground `68/59/0`.
+- The first DownBounce update tick records `attack_buffer=60` and stays
+  DownBounceU/Ground `68/59/0`.
+- The second DownBounce update reaches DownWaitU/Ground `70/-2/0`, sets
+  `stand_wait=180`, capture mask `0x33`, and `damage_mul=500` milli.
+- One original DownWait update tick decrements `stand_wait 180 -> 179`,
+  does not call DownStand, and remains DownWaitU/Ground `70/-2/0`.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-boundary.ps1`
+
+Still deferred:
+
+- DamageFall cliff-catch/passive collision branches, natural downed wakeup
+  runtime beyond one DownWait tick, hitboxes/damage, broader natural ledge
+  runtime, HUD, audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Cleared bounded status `proc_damage` and proved DownWait timeout into DownStand
+
+What changed:
+
+- Updated the bounded `ftMainSetStatus` common reset seam so status changes
+  clear stale `proc_damage` in addition to the existing cliff-hold/jostle reset
+  behavior.
+- Extended the CliffWait damage diagnostics and verifier rows to require
+  DamageFall and DownStand states to leave `proc_damage` cleared, while ledge
+  Quick1-style states still explicitly opt back into
+  `ftCommonCliffCommonProcDamage`.
+- Finished the bounded DownWait timeout follow-through by importing/proving the
+  original DownStandU setup path after the stable `stand_wait 180 -> 179` tick.
+- Updated current docs and verifier summaries for proof mask `0x3ffff`,
+  `procDmg=0`, and DownStandU/Ground `72/61/0` with wakeup flag `1 -> 0`.
+
+What is proven:
+
+- Direct and menu-chain harnesses still prove CliffWait/Ground `85/73/0 ->`
+  DamageFall/Air `57/50/1`, `is_cliff_hold 1 -> 0`, and the guarded
+  DamageFall no-collision plus positive collision paths.
+- The positive collision path reaches DownBounceU/Ground `68/59/0`, then
+  DownWaitU/Ground `70/-2/0`, proves one stable original DownWait update tick,
+  and then reaches DownStandU/Ground `72/61/0` through the original timeout
+  path.
+- Ledge drop, Quick2, attack/escape/climb action, and CliffWait damage proofs
+  now assert the relevant stale `proc_damage` state is cleared where original
+  `ftMainSetStatus` would clear it.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-action-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-action-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffattack-action-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffattack-action-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffescape-action-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffescape-action-loop-harness.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- DamageFall cliff-catch/passive collision branches, natural downed wakeup
+  runtime beyond the bounded DownStand setup proof, natural ledge occupancy/
+  release/drop/climb behavior, hitboxes/damage, broader map collision, HUD,
+  audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Added bounded DamageFall cliff-catch branch proof
+
+What changed:
+
+- Extended the direct/menu-chain CliffWait damage harnesses so the first
+  guarded DamageFall map tick still proves the no-collision branch, then a new
+  positive right-cliff map pass routes through original
+  `mpCommonCheckFighterCliff` into original
+  `ftCommonCliffCatchSetStatus`, before the existing positive floor-collision
+  pass continues into DownBounce/DownWait/DownStand.
+- Added `STAGE_MPCLIFFWAIT_DAMAGE_CLIFFCATCH` diagnostics for the bounded
+  CliffCatch status seam, ground/air placement calls, animation-event call,
+  velocity stop, ledge flash, capture-immune setup, final status/motion/GA,
+  cliff hold, proc-damage/callback pointers, retained cliff ID, cleared floor
+  line, right-cliff masks, and capture mask.
+- Updated the CliffWait damage proof mask from `0x3ffff` to `0x7ffff` and
+  tightened the verifier to require three guarded DamageFall map/cliff checks:
+  no-collision, CliffCatch, and DownBounce.
+
+What is proven:
+
+- Direct and menu-chain harnesses still prove CliffWait/Ground `85/73/0 ->`
+  DamageFall/Air `57/50/1`, `fall_wait 1 -> 0`, `cliffcatch_wait=30`,
+  `tics_since_last_z=65536`, and `is_cliff_hold 1 -> 0` on DamageFall setup.
+- The first guarded DamageFall map pass remains a no-collision branch with
+  velocity-Y `0 -> -4000`.
+- The new positive right-cliff map pass reaches bounded original
+  CliffCatch/Air `84/72/1`, restores cliff hold, installs cliff damage and
+  CliffCatch/Common callbacks, records `floor_line_id=-1`, right-cliff masks
+  `0x2000`, and capture mask `0x4`.
+- The existing positive floor-collision map pass still reaches
+  DownBounceU/Ground `68/59/0`, then bounded DownBounce update,
+  DownWaitU/Ground `70/-2/0`, and DownStandU/Ground `72/61/0`.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+
+Still deferred:
+
+- DamageFall passive collision branches, natural downed wakeup runtime beyond
+  the bounded DownStand setup proof, natural ledge occupancy/release/drop/climb
+  behavior, hitboxes/damage, broader map collision, HUD, audio, and unbounded
+  gameplay scheduling remain deferred.
+
+## 2026-06-26: Added bounded DamageFall PassiveStand and Passive setup proofs
+
+What changed:
+
+- Imported original `ftcommonpassivestand.c` and `ftcommonpassive.c` through
+  `src/import` wrappers under `ndsBase*` names.
+- Replaced the CliffWait damage harness passive false stubs with bounded calls
+  into the imported original passive checks while
+  `ftCommonDamageFallProcMap` is active for the proof.
+- Added bounded `ftMainSetStatus` contracts for PassiveStandF/PassiveStandB
+  and Passive, with the original callback shape for update, physics, and map
+  functions.
+- Extended direct and menu-chain CliffWait damage probes from three guarded
+  DamageFall map passes to five: no-collision, CliffCatch, PassiveStand,
+  Passive, and DownBounce.
+- Added `STAGE_MPCLIFFWAIT_DAMAGE_PASSIVESTAND` and
+  `STAGE_MPCLIFFWAIT_DAMAGE_PASSIVE` markers and raised the proof mask from
+  `0x7ffff` to `0x1fffff`.
+
+What is proven:
+
+- The buffered-stick positive floor-collision path reaches original
+  `ftCommonPassiveStandCheckInterruptDamage`, calls the original
+  PassiveStand setup helper, grounds the fighter, reaches the bounded
+  `ftMainSetStatus` seam, and proves PassiveStandF/Ground `73/62/0`.
+- The buffered-neutral positive floor-collision path reaches original
+  `ftCommonPassiveCheckInterruptDamage`, calls the original Passive setup
+  helper, grounds the fighter, reaches the bounded `ftMainSetStatus` seam, and
+  proves Passive/Ground `81/70/0`.
+- The existing no-collision, CliffCatch, DownBounce, DownWait, and DownStand
+  proof chain remains green with `dmgTick=1/1/5` and `coll=4`.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+
+Still deferred:
+
+- Full PassiveStand/Passive action runtime beyond setup, original
+  damage-velocity field import, natural downed wakeup runtime beyond the
+  bounded DownStand setup proof, natural ledge occupancy/release/drop/climb
+  behavior, hitboxes/damage, broader map collision, HUD, audio, and unbounded
+  gameplay scheduling remain deferred.
+
+## 2026-06-26: Added bounded PassiveStand/Passive anim-end handoff proofs
+
+What changed:
+
+- Extended the bounded CliffWait timeout/DamageFall proof after the imported
+  PassiveStandF/Ground and Passive/Ground setup branches.
+- Ran one guarded original `ftAnimEndSetWait` update tick for each passive
+  branch and routed the resulting Wait transition through the project-owned
+  bounded `ftMainSetStatus` seam.
+- Added `STAGE_MPCLIFFWAIT_DAMAGE_PASSIVESTAND_TICK` and
+  `STAGE_MPCLIFFWAIT_DAMAGE_PASSIVE_TICK` diagnostics and raised the current
+  DamageFall proof mask to `0x7fffff`.
+- Kept the original-compatible common status reset active, including
+  `is_cliff_hold = FALSE`, while the Wait handoff installs the current Wait
+  callbacks and player-tag wait behavior.
+
+What is proven:
+
+- PassiveStandF/Ground `73/62/0` now reaches Wait/Ground `10/4/0` through one
+  guarded original `ftAnimEndSetWait` callback tick.
+- Passive/Ground `81/70/0` now reaches Wait/Ground `10/4/0` through the same
+  bounded original update path.
+- Each branch records one Wait `ftMainSetStatus` call, one player-tag wait
+  call, `playertag_wait=120`, and a valid Wait callback shape.
+- Direct and menu-chain CliffWait damage harnesses both prove the same
+  PassiveStand/Passive setup-to-Wait handoff.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+Still deferred:
+
+- Continuous PassiveStand/Passive animation, physics, and map runtime beyond
+  this single guarded anim-end handoff, natural ledge occupancy/release/drop/
+  climb behavior, hitboxes/damage, broader map collision, HUD, audio, and
+  unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Corrected Wait callback, damage multiplier reset, and ground transfer seams
+
+What changed:
+
+- Fixed bounded Wait-status handoffs that were installing `proc_interrupt=NULL`
+  so they now install the original-compatible `ftCommonWaitProcInterrupt`.
+- Restored `damage_mul=1.0F` in the project-owned common `ftMainSetStatus`
+  reset seam and in seeded fighter state.
+- Adjusted the bounded `mpCommonSetFighterGround` seam to use the
+  source-order signed ground velocity transfer `vel_air.x * lr` and stop
+  clearing airborne Y velocity.
+- Updated the dependent Fall-landing and all-DL prerequisite verifiers for the
+  corrected source-order diagnostics.
+
+What is proven:
+
+- CliffClimbQuick2 finish now reaches Wait/Ground `10/4/0` with the Wait
+  interrupt callback installed, `playertag_wait=120`, and common reset mask
+  `0x7ffff`, including `damage_mul=1.0`.
+- CliffWait damage DownStand timeout now proves `damage_mul=1000` milli after
+  the bounded common status reset.
+- Fall-landing keeps the source-order negative airborne Y velocity diagnostic
+  after the ground transition while still clamping the position/status path.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffclimb-finish-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-finish-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-walk-input-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-walk-input-harness.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-all.ps1 -Profile Full -From battle_mariofox_walk_input`
+
+Still deferred:
+
+- Full natural ledge runtime, hitboxes/damage, broader map collision, HUD,
+  audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Added bounded PassiveStand/Passive physics-map callback tick proofs
+
+What changed:
+
+- Extended the existing CliffWait timeout/DamageFall passive branches so each
+  imported PassiveStandF/Ground and Passive/Ground state now runs its installed
+  physics/map callback pair before the existing animation-end Wait handoff.
+- Added guarded PassiveStand callback diagnostics for
+  `ftPhysicsApplyGroundVelTransN` and `mpCommonSetFighterFallOnEdgeBreak`.
+- Added guarded Passive callback diagnostics for the bounded
+  `ftPhysicsApplyGroundVelFriction` path and
+  `mpCommonSetFighterFallOnGroundBreak`.
+- Raised the current CliffWait DamageFall proof mask from `0x7fffff` to
+  `0x1ffffff`.
+
+What is proven:
+
+- PassiveStandF/Ground `73/62/0` retains its status/motion/ground state after
+  one guarded physics/map callback pair, then reaches Wait/Ground `10/4/0`
+  through the existing original `ftAnimEndSetWait` handoff.
+- Passive/Ground `81/70/0` retains its status/motion/ground state after one
+  guarded physics/map callback pair, then reaches Wait/Ground `10/4/0`.
+- Both direct and menu-chain proof summaries now record
+  `passiveStand=73/62/0->cb1/1->10/4/0` and
+  `passive=81/70/0->cb1/1->10/4/0`.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1`
+
+Still deferred:
+
+- Continuous PassiveStand/Passive runtime beyond a single guarded callback
+  pair and anim-end handoff, full natural ledge runtime, hitboxes/damage,
+  broader map collision, HUD, audio, and unbounded gameplay scheduling remain
+  deferred.
+
+## 2026-06-26: Added bounded multi-frame PassiveStand/Passive runtime proofs
+
+What changed:
+
+- Added direct and menu-chain `battle_mariofox_stage_mppassive_loop` harness
+  modes `123/124`.
+- Added Passive-loop diagnostics that consume the verified CliffWait damage
+  PassiveStand/Passive setup states instead of replaying the whole opening path.
+- Added guarded PassiveStandF/Ground and Passive/Ground runtime probes that run
+  two stable update/physics/map frames, then force the original animation-end
+  update handoff into Wait/Ground.
+- Promoted the new direct/menu-chain pair to the Boundary and Latest verifier
+  profiles.
+
+What is proven:
+
+- PassiveStandF/Ground `73/62/0` remains stable across two guarded
+  update/physics/map frames, then reaches Wait/Ground `10/4/0` through the
+  original `ftAnimEndSetWait` path.
+- Passive/Ground `81/70/0` remains stable across two guarded
+  update/physics/map frames, then reaches Wait/Ground `10/4/0`.
+- Both branches keep valid final Wait callbacks and `playertag_wait=120`.
+- Direct and menu-chain proof summaries now record
+  `mpPassive=ps=73/62->10/4 ticks=3/2/2 passive=81/70->10/4 ticks=3/2/2`.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mppassive-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mppassive-loop-harness.ps1`
+
+Still deferred:
+
+- Natural player-driven PassiveStand/Passive recovery runtime beyond the two
+  guarded stable frames, full natural ledge runtime, hitboxes/damage, broader
+  map collision, HUD, audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Optimized handoff snapshot and generated-output hygiene
+
+What changed:
+
+- Preserved the previous broad snapshot exporter as
+  `scripts/New-Smash64DSSnapshot.Legacy.ps1`.
+- Added a new parameterized `scripts/New-Smash64DSSnapshot.ps1` with
+  `-Mode Lean`, `-Mode CodeOnly`, and `-Mode Full`.
+- Added shared snapshot hygiene classification in
+  `scripts/lib/snapshot-hygiene.ps1` and a standalone
+  `scripts/check-snapshot-hygiene.ps1` archive checker.
+- Updated `scripts/clean-generated.ps1 -KeepLatestBuilds` to derive preserved
+  build/output targets from the current Boundary profile in
+  `scripts/lib/harness-registry.ps1` instead of hardcoded old Walk-input
+  paths.
+- Updated handoff docs to use `New-Smash64DSSnapshot.ps1 -Mode Lean` as the
+  default path, with CodeOnly and Full documented as explicit exceptions.
+
+What is proven:
+
+- Lean dry run excludes build directories, root ROM/ELF outputs, emulator
+  payloads, `.git`, and artifacts by default while retaining `decomp/`.
+- CodeOnly dry run excludes `decomp/`.
+- Full dry run prints a warning that it is not the normal handoff path.
+- `clean-generated.ps1 -DryRun -KeepLatestBuilds` reports the current
+  registry Boundary harnesses as the preserved latest builds and treats old
+  Walk-input outputs as removable generated files.
+
+Still deferred:
+
+- This was project hygiene only. It intentionally does not change gameplay,
+  renderer, taskman, fighter, stage, or source-boundary behavior.
+
+## 2026-06-26: Added bounded DownWait interrupt-loop proof
+
+What changed:
+
+- Added direct and menu-chain `battle_mariofox_stage_mpdownwait_loop` harness
+  modes `125/126`.
+- Added DownWait-loop diagnostics and verifier markers for setup, original
+  interrupt source order, seeded input, and final DownStand state.
+- Wired the DownWait proof after the Passive-loop proof while keeping the
+  normal boot path unchanged.
+- Promoted the new direct/menu-chain pair to the Boundary and Latest verifier
+  profiles.
+
+What is proven:
+
+- A fresh DownBounceU/Ground shell reaches DownWaitU/Ground `70/-2/0` through
+  original `ftCommonDownWaitSetStatus` and the bounded project-owned
+  `ftMainSetStatus` seam.
+- The installed original DownWait interrupt callback runs the source-order
+  DownAttack, forward/back, and DownStand check path, recorded as `0x12345`.
+- The bounded branch reaches DownStandU/Ground `72/61/0`, clears `flag1`,
+  installs DownStand callbacks, and restores `damage_mul=1.0`.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpdownwait-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpdownwait-loop-harness.ps1`
+
+Still deferred:
+
+- Broader player-driven DownWait attack/roll/stand input coverage, continuous
+  DownStand runtime, hitboxes/damage, full natural knockdown recovery, broader
+  map collision, HUD, audio, and unbounded gameplay scheduling remain deferred.
+
+## 2026-06-26: Expanded bounded DownWait recovery input proof
+
+What changed:
+
+- Imported original `ftcommondownattack.c` and `ftcommondownforwardback.c`
+  through `src/import` wrappers under `ndsBase*` symbols.
+- Fixed the bounded DownWait proof seam so the project-owned wrapper arms the
+  guarded `ftMainSetStatus` path before calling imported original DownAttack
+  and DownForward/Back check functions. This preserves the original check logic
+  while avoiding a broad gameplay import.
+- Extended the direct and menu-chain DownWait harness diagnostics to prove
+  original DownWait interrupt source order into A-button DownAttackU `80/69`,
+  forward-stick DownForwardU `76/65`, back-stick DownBackU `78/67`, and the
+  existing stick-up DownStandU `72/61` branch.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpdownwait-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpdownwait-loop-harness.ps1`
+
+Still deferred:
+
+- Continuous DownAttack/DownForward/DownBack/DownStand recovery action runtime,
+  hitboxes/damage, and natural gameplay scheduling remain deferred.
+
+## 2026-06-26: Added bounded DownWait attack/roll callback handoff proof
+
+What changed:
+
+- Extended the existing direct/menu-chain MP DownWait-loop proof without adding
+  a new harness mode.
+- Added project-owned guarded callback diagnostics for the DownAttackU,
+  DownForwardU, and DownBackU branches reached through the imported original
+  `ftCommonDownWaitProcInterrupt` path.
+- Added bounded seams for the selected branch callbacks:
+  `ftAnimEndSetWait`, `ftPhysicsApplyGroundVelFriction`,
+  `ftPhysicsApplyGroundVelTransN`, `mpCommonSetFighterFallOnEdgeBreak`,
+  `ftMainSetStatus`, and `ftParamSetPlayerTagWait`.
+- Updated the DownWait verifier markers so the proof now requires setup,
+  source order, one stable update/physics/map callback tick, and animation-end
+  handoff back to Wait/Ground for the attack/roll branches.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpdownwait-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpdownwait-loop-harness.ps1`
+- `scripts/check-harness-registry.ps1`
+
+What is proven:
+
+- Direct and menu-chain DownWait-loop harnesses now report
+  `mpDownWait=status=70/-2->72/61 attack=80/69->10/4
+  rolls=76/65->10/4,78/67->10/4 ticks=2/2/2 source=0x12345`.
+- DownAttackU, DownForwardU, and DownBackU each execute one guarded stable
+  callback tick and then return through original animation-end logic to
+  Wait/Ground `10/4/0` with `playertag_wait=120`.
+
+Still deferred:
+
+- Continuous DownAttack/DownForward/DownBack/DownStand recovery action runtime,
+  hitboxes/damage, full natural knockdown recovery, natural ledge occupancy/
+  release/drop/climb behavior, platform pass-through, and full gameplay remain
+  deferred.
+
+## 2026-06-26 - Bounded Cliff-Ledge Occupancy/Release/Drop/Climb Aggregation
+
+Added direct and menu-chain `battle_mariofox_stage_mpcliffledge_loop` /
+`menu_chain_mariofox_stage_mpcliffledge_loop` harnesses as modes `131/132`.
+These modes do not import broad ledge runtime. They aggregate the existing
+bounded original-code cliff-catch, CliffWait, CliffClimb, CliffClimbQuick2
+finish, and DownRecover proof slices to prove one narrow ledge spine.
+
+What changed:
+
+- Added harness mode defines, Makefile mappings, scene-harness seeding, taskman
+  prepare/finalize calls, registry entries, and verifier wrappers for the new
+  direct/menu-chain pair.
+- Added `STAGE_MPCLIFFLEDGE*` diagnostics and verifier assertions for:
+  same-cliff occupancy block, drop/release into Fall/Air, post-release recatch,
+  and CliffClimbQuick2 finish into Wait/Ground.
+- Extended the cliff-climb-finish compile guard so the new ledge aggregate mode
+  pulls in the existing CliffClimb finish chain instead of reading uninitialized
+  diagnostics.
+- Updated docs and profile registry so Latest/Boundary now point at modes
+  `131/132`.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffledge-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffledge-loop-harness.ps1`
+
+What is proven:
+
+- Direct and menu-chain ledge harnesses report `gcRunAll=33`, `gcDrawAll=7`,
+  selected display callbacks `42/42`, `draws=7`, `pixels=930`, and
+  `final=Wait/Ground`.
+- Same-cliff occupancy blocks a second catch on Pupupu line `3`.
+- Drop/release reaches Fall/Air `26/20/1`, sets `cliffcatch_wait=30`, clears
+  cliff hold, and preserves valid callbacks.
+- Recatch after release reaches CliffCatch/Air `84/72/1` with cliff hold set
+  and no occupancy block.
+- CliffClimbQuick2 finishes through the original Wait/Ground handoff
+  `10/4/0`, preserving line continuity `3/3/3`.
+
+Still deferred:
+
+- Continuous selected-callback ledge runtime, real multi-frame opponent ledge
+  contention, ledge invulnerability/timing, attacks from ledge, broad
+  platform/ledge/wall contracts, hitboxes/damage, and full gameplay remain
+  deferred.
+
+## 2026-06-26: Added bounded face-down DownRecover continuation proof
+
+What changed:
+
+- Added direct and menu-chain `battle_mariofox_stage_mpdownrecover_loop`
+  harnesses as modes `129/130`, building on the verified Turn-loop proof.
+- Added bounded diagnostics and wrappers for the face-down DownWaitD recovery
+  continuation without unbounding gameplay scheduling.
+- Seeded a fresh DownWaitD/Ground shell, called original
+  `ftCommonDownWaitProcInterrupt`, and proved source-order branches into
+  DownStandD, DownAttackD, DownForwardD, and DownBackD.
+- Recorded original animation-end handoffs from all four created branches back
+  to Wait/Ground, including DownAttackD attack IDs `52/32/32`.
+- Extended the harness registry, boundary/current profiles, wrapper scripts,
+  and diagnostic marker parser for the new `STAGE_MPDOWNRECOVER*` marker set.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-mpdownrecover-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpdownrecover-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-all.ps1 -Profile Regression -From battle_mariofox_stage_mpcliffwait_damage_loop`
+
+`scripts/verify-regression.ps1` was attempted as the complete Regression
+profile and hit the 20-minute command timeout before the wrapper returned
+usable progress output. The resumed status-heavy Regression tail from
+`battle_mariofox_stage_mpcliffwait_damage_loop` passed.
+
+What is proven:
+
+- Direct and menu-chain DownRecover harnesses report DownWaitD `69/-2`, then
+  DownStandD `71/60`, DownAttackD `79/68`, DownForwardD `75/64`, and
+  DownBackD `77/66`.
+- The source-order markers are `0x12345` for DownStandD/DownForwardD/DownBackD
+  and `0x1234` for DownAttackD.
+- Four bounded animation-end updates return the proof-owned fighter to
+  Wait/Ground with final status/motion/callback masks `0xf` and unsafe count
+  `0`.
+
+Still deferred:
+
+- Continuous downed action runtime, hitboxes, invulnerability timing, opponent
+  interactions, natural knockdown recovery from real gameplay damage, natural
+  ledge occupancy/release/drop/climb behavior, platform pass-through, and full
+  gameplay remain deferred.
+
+## 2026-06-26: Added static doc/architecture governance and slim AGENTS map
+
+What changed:
+
+- Replaced the long `AGENTS.md` with a short project map under the agent-legible
+  size budget.
+- Added `docs/README.md` as the project-owned docs index.
+- Added `docs/VERIFYING.md` for build, static-check, verifier, emulator, and
+  snapshot workflow.
+- Added `docs/HARNESSES.md` for harness registry policy, naming rules, current
+  boundary, and generator direction.
+- Added `scripts/check-docs.ps1` to validate required docs, docs indexing,
+  `AGENTS.md` size/section budgets, current Boundary references, harness index
+  source, and prospective architecture stub/deferred markers.
+- Added `scripts/check-architecture.ps1` to enforce read-only `decomp/`,
+  generated-output tracking rules, source directory ownership, decomp includes
+  only through `src/import`, import wrapper provenance, Mario/Fox direct/menu
+  pairing, and large-file split-plan presence.
+- Added a root `.github/workflows/static-checks.yml` workflow for static checks
+  that do not require devkitPro, melonDS, or no$gba.
+- Added a large backend file split plan to `docs/ARCHITECTURE.md` so the new
+  architecture lint can warn about oversized files without forcing an unsafe
+  behavior-changing split.
+
+Proofs run:
+
+- `scripts/check-docs.ps1`
+- `scripts/check-architecture.ps1`
+- `scripts/check-harness-registry.ps1`
+- `scripts/check-gbi-decode-fixtures.ps1`
+- `scripts/clean-generated.ps1 -DryRun`
+
+What is proven:
+
+- `AGENTS.md` is now 121 lines and points agents to structured docs instead of
+  carrying the full verifier/harness narrative.
+- The current Boundary pair remains indexed in `STATUS.md` and `HANDOFF.md`.
+- The new static CI path can run without emulator or devkitPro dependencies.
+
+Still deferred:
+
+- Harness-pair generation remains manual. The next tooling milestone should
+  generate registry, Makefile, mode defines, wrapper scripts, and docs/template
+  text together.
+- Splitting `src/port/reloc_backend.c`, `src/port/taskman_seam.c`, and
+  `include/nds/nds_startup.h` remains deferred until it can be done as
+  behavior-preserving mechanical refactors with verifier coverage.
+
+## 2026-06-26: Added bounded original Wait -> Turn -> Wait proof
+
+What changed:
+
+- Imported original `ftcommonturn.c` through
+  `src/import/battleship_ftcommon_turn.c`, remapping the public Turn symbols to
+  project-owned bounded wrappers.
+- Added direct and menu-chain `battle_mariofox_stage_turn_loop` harnesses
+  (modes `127/128`) and promoted them to the Boundary/Latest verifier profiles.
+- Added narrow Turn compatibility state in `FTStatusVars.common.turn`, plus
+  diagnostics for the original Turn input check, status setup, update flip,
+  physics/map callback tick, and final Wait handoff.
+- Kept the proof bounded after the verified DownWait-loop base; no fighter
+  gameplay loop, attacks, hitboxes, items, HUD, audio, or broad `ftmain.c`
+  import was added.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/verify-battle-mariofox-stage-turn-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-turn-loop-harness.ps1`
+
+What is proven:
+
+- Direct and menu-chain Turn harnesses report Wait/Ground `10/4/0` ->
+  Turn/Ground `18/12/0` -> Wait/Ground `10/4/0`.
+- The original Turn update path flips facing `1 -> -1`, negates ground
+  velocity `2500 -> -2500` milli, clears `motion_vars.flags.flag1`, sets the
+  original Turn direction / special-attack interrupt flags, and then reaches
+  the original animation-end Wait handoff with `playertag_wait=120`.
+- The DownWait-loop pair remains regression coverage for the bounded original
+  DownAttackU, DownForwardU, DownBackU, and DownStandU branches.
+
+Still deferred:
+
+- Continuous player-driven lateral ground movement around Turn/Walk/Dash
+  handoffs, natural knockdown recovery runtime, natural ledge
+  occupancy/release/drop/climb behavior, platform pass-through, and full
+  gameplay remain deferred.
+
+## 2026-06-26: Extended bounded DownWait recovery runtime and roll movement proof
+
+What changed:
+
+- Extended the direct/menu-chain MP DownWait-loop proof from three to eight
+  guarded stable update/physics/map frames for DownAttackU, DownForwardU,
+  DownBackU, and DownStandU before the deliberate animation-end handoff.
+- Added proof-owned DownForward/DownBack root-motion diagnostics behind the
+  existing DownWait harness guard. The roll callback path now uses the local
+  ground-velocity transfer seam to move the root in the expected direction,
+  then records forward/back root X before, after, delta, and a direction mask.
+- Added `STAGE_MPDOWNWAIT_ROLL_MOVE` GDB marker and verifier assertions so the
+  proof fails if the bounded roll branches stop moving forward/backward.
+- Updated current-truth docs and verifier summaries to report the new
+  `ticks=9/9/9`, `downStandTicks=9/8/8`, `dsChecks=8/8/8`, and
+  `rollDelta=10000/-10000` boundary.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpdownwait-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpdownwait-loop-harness.ps1`
+
+What is proven:
+
+- Direct and menu-chain DownWait-loop harnesses still pass from Pupupu
+  VSBattle, selected `gcRunAll=33`, selected `gcDrawAll=7`, selected display
+  callbacks `42/42`, and final Wait/Ground.
+- DownAttackU `80/69`, DownForwardU `76/65`, and DownBackU `78/67` now each
+  survive eight guarded stable callback frames, then return through original
+  `ftAnimEndCheckSetStatus` to Wait/Ground `10/4/0`.
+- DownForwardU and DownBackU now prove bounded root motion in opposite
+  directions with `rollDelta=10000/-10000` milli before the final Wait handoff.
+
+Still deferred:
+
+- True animation-event-sourced TransN velocity, hitbox/damage activation,
+  full natural knockdown recovery runtime, platform pass-through, and full
+  gameplay remain deferred.
+
+## 2026-06-26: Added bounded DownStand callback and Wait handoff proof
+
+What changed:
+
+- Extended the existing direct/menu-chain MP DownWait-loop proof without adding
+  a new harness mode.
+- Added a guarded project-owned DownStand callback slice after the original
+  DownWait stand-up branch reaches DownStandU/Ground `72/61/0`.
+- Routed the imported original `ftCommonDownStandProcInterrupt` through bounded
+  KneeBend, Pass, and Dokan compatibility checks, each counted and held false
+  to avoid starting unrelated statuses.
+- Added guarded DownStand update/physics/map diagnostics for
+  `ftAnimEndSetWait`, `ftPhysicsApplyGroundVelFriction`, and
+  `mpCommonSetFighterFallOnGroundBreak`, then proved the animation-end handoff
+  into Wait/Ground.
+- Updated the DownWait verifier mask from `0xffff` to `0x3ffff` so the new
+  DownStand interrupt/callback proof is required for pass.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpdownwait-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpdownwait-loop-harness.ps1`
+
+What is proven:
+
+- Direct and menu-chain DownWait-loop harnesses now report
+  `mpDownWait=status=70/-2->72/61->10/4 ... downStandTicks=2/1/1 ...
+  dsChecks=1/1/1`.
+- The DownStand branch runs one guarded imported interrupt tick, reaches
+  KneeBend/Pass/Dokan checks in source order through the original DownStand
+  interrupt function, stays DownStandU/Ground for one stable callback tick,
+  then returns through the original animation-end path to Wait/Ground
+  `10/4/0` with `playertag_wait=120`.
+
+Still deferred:
+
+- Continuous knockdown recovery action runtime, hitboxes/damage, full natural
+  knockdown recovery, natural ledge occupancy/release/drop/climb behavior,
+  platform pass-through, and full gameplay remain deferred.
+
+## 2026-06-26: Corrected ftAnimEndSetWait gating and DownAttack attack IDs
+
+What changed:
+
+- Corrected the project-owned `ftAnimEndSetWait` compatibility seam to route
+  all Wait handoffs through `ftAnimEndCheckSetStatus`, matching the original
+  animation-end gate instead of directly forcing `ftCommonWaitSetStatus`.
+- Updated proof-owned forced animation-end call sites to set the bounded GObj
+  and FTStruct animation frame to `0.0F` before invoking `ftAnimEndSetWait`;
+  this preserves the original gate while still allowing deterministic bounded
+  proof progression.
+- Added original-compatible DownAttack motion/status attack IDs:
+  DownAttackD `52/32/32` and DownAttackU `53/33/33`.
+- Updated the bounded DownAttack `ftMainSetStatus` branch so DownAttackD/U
+  populate `motion_attack_id`, `status_attack_id`, and `stat_attack_id`
+  instead of leaving them at `None`.
+- Extended the DownWait verifier marker so `STAGE_MPDOWNWAIT_ATTACK` requires
+  DownAttackU attack IDs `53/33/33`, and kept the three stable callback-frame
+  checks before the original animation-end Wait handoff.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpdownwait-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpdownwait-loop-harness.ps1`
+
+What is proven:
+
+- Direct and menu-chain DownWait-loop harnesses still report
+  `gcRunAll=33`, `gcDrawAll=7`, selected display callbacks `42/42`, and
+  `final=Wait/Ground`.
+- DownAttackU now reaches `status/motion/ga 80/69/0` with attack IDs
+  `53/33/33`, runs three guarded stable update/physics/map frames plus the
+  final animation-end update, then returns through the original
+  `ftAnimEndCheckSetStatus` path to Wait/Ground `10/4/0`.
+- Forward and back roll branches still run the same stable callback and
+  original animation-end handoff proof, and the DownStand branch still reaches
+  Wait/Ground with valid callbacks.
+
+Still deferred:
+
+- Continuous DownAttack/DownForward/DownBack/DownStand recovery action runtime,
+  hitboxes/damage, full natural knockdown recovery, natural ledge occupancy/
+  release/drop/climb behavior, platform pass-through, and full gameplay remain
+  deferred.
+
+## 2026-06-26: Added selected live-callback CliffWait/CliffClimb/drop proof
+
+What changed:
+
+- Added direct/menu-chain harness modes `133/134`:
+  `battle_mariofox_stage_mpclifflive_loop` and
+  `menu_chain_mariofox_stage_mpclifflive_loop`.
+- Extended the stage MP cliff-ledge boundary with a proof-owned selected P0
+  `GObjProcess` callback path instead of only aggregate probe calls.
+- Drove original CliffCatch -> CliffWait -> CliffQuick -> CliffClimbQuick1 ->
+  CliffClimbQuick2 through the guarded live process, then ran one original
+  common2 update/physics/map tick, the original common2 finish handoff into
+  Wait/Ground, and a reseeded CliffWait drop into Fall/Air.
+- Isolated the live proof's common2 collision-data bridge diagnostics so it
+  does not pollute the older aggregate CliffClimb action bridge marker counts.
+- Updated harness registry profiles, verifier wrappers, diagnostics, handoff,
+  status, and harness docs for the new Latest/Boundary pair.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpclifflive-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpclifflive-loop-harness.ps1`
+- `scripts/check-harness-registry.ps1`
+- `scripts/check-docs.ps1`
+- `scripts/check-architecture.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+
+What is proven:
+
+- Direct and menu-chain live cliff harnesses report selected `gcRunAll=33`,
+  selected `gcDrawAll=7`, selected display callbacks `42/42`, and
+  `final=Wait/Ground`.
+- `STAGE_MPCLIFFLIVE` passes with result `0x464c5650`, safe result
+  `0x464c5653`, mask `0x3ff`, deferred mask `0xff`, count `1`, and source
+  mask `0xfff`.
+- The live selected callback chain reaches CliffWait `85/73`, climbs through
+  CliffQuick `86/74` into CliffClimbQuick2 `88/76`, finishes to Wait/Ground
+  `10/4`, then drops from reseeded CliffWait into Fall/Air `26/20`.
+
+Still deferred:
+
+- Unbounded natural ledge runtime, real multiplayer ledge contention over many
+  frames, ledge timing/invulnerability, attacks from ledge, broad platform/wall
+  contracts, hitboxes/damage, and full gameplay remain deferred.
+
+## 2026-06-26: Added Pupupu geometry-wide wall-hit scout diagnostics
+
+What changed:
+
+- Extended the existing direct/menu-chain `stage_mpwall_floor_loop` verifiers
+  with `STAGE_MPWALL_HIT_SCOUT` markers.
+- Added an isolated project-owned scout that scans every currently loaded
+  Dream Land floor line for a non-edge wall candidate, then routes each
+  candidate through the source-order `mpProcessRunFloorEdgeAdjust` path.
+- Snapshot/restored the older MP-adjust and MP-edge diagnostic counters around
+  the scout so historical wall-blocker assertions remain stable.
+- Updated status, handoff, known-issues, diagnostic-reference, and next-boundary
+  docs to record that the current Pupupu map asset is exhausted for this
+  wall-hit proof.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpwall-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpwall-floor-loop-harness.ps1`
+
+What is proven:
+
+- Direct and menu-chain wall-floor harnesses still report selected
+  `gcRunAll=33`, selected `gcDrawAll=7`, selected display callbacks `42/42`,
+  and `final=Wait/Ground`.
+- The original wall-blocker proof remains intact: selected Dream Land line `3`
+  still resolves edge-under walls `6/5`, records zero wall hits, zero adjust
+  calls, and zero position deltas.
+- The new geometry-wide scout reports `mpWallHitScout=none floors=4 walls=8
+  candidates=6` with unsafe count `0`; no source-order non-edge wall-hit
+  adjustment case exists in the currently staged Pupupu geometry.
+
+Still deferred:
+
+- A real wall-hit floor-edge-adjust proof now needs another original stage/map
+  asset or collision case. Only `GRPupupuMap` is currently staged for the
+  battle harness, so the next wall-hit step should narrowly stage or offline
+  scan another original map before adding a direct/menu-chain wall-hit harness.
+
+## 2026-06-26: Added Hyrule wall-hit scout candidate to the MP wall-floor proof
+
+What changed:
+
+- Extended the existing direct/menu-chain `stage_mpwall_floor_loop` verifiers
+  with `STAGE_MPWALL_HYRULE_SCOUT`, `STAGE_MPWALL_HYRULE_SCOUT_LINE`, and
+  `STAGE_MPWALL_HYRULE_SCOUT_POS` markers.
+- Staged the minimal Hyrule Castle map dependency chain needed for the isolated
+  scout: `GRHyruleMap`, `StageCastle`, and `ExternDataBank113`.
+- Added reloc mappings for `llGRHyruleMapFileID`, `llGRHyruleMapMapHeader`,
+  `llStageCastleFileID`, and `ll_113_FileID`.
+- Kept the scout isolated from the live Pupupu fighter roots by saving and
+  restoring MP collision globals and the older wall-hit scout counters.
+- Avoided increasing ARM9 `.bss` after a first static-buffer attempt overflowed
+  the DS ARM9 memory budget. The scout-only Hyrule external dependencies now
+  reuse the existing aligned opening-action relocation scratch buffer during
+  non-normal harness builds.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/verify-battle-mariofox-stage-mpwall-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpwall-floor-loop-harness.ps1`
+
+What is proven:
+
+- The direct and menu-chain wall-floor harnesses still preserve the Dream Land
+  blocker result: line `3`, edge-under wall `5`/`6`, zero selected wall hits,
+  zero selected adjustments, and `mpWallHitScout=none floors=4 walls=8
+  candidates=6`.
+- The isolated Hyrule scout loads and relocates successfully with marker
+  `0x4859524c`, nonzero floor/wall/candidate counts, unsafe count `0`, and a
+  real source-order wall-hit candidate:
+  `hyruleWallHit=hit floor=5 wall=13 edge=12 side=0 delta=-1600/-388`.
+
+Still deferred:
+
+- The Hyrule result is a scout, not a gameplay proof yet. The next wall-hit
+  milestone should promote that exact Hyrule floor/wall pair into a bounded
+  direct/menu-chain real wall-hit floor-edge-adjust proof without unbounding
+  full map runtime, moving the live Pupupu fighter roots, or importing broad
+  stage systems.
+
+## 2026-06-26: Promoted Hyrule wall-hit scout to direct/menu-chain boundary
+
+What changed:
+
+- Added direct/menu-chain harness modes `135/136`:
+  `battle_mariofox_stage_mpwallhit_floor_loop` and
+  `menu_chain_mariofox_stage_mpwallhit_floor_loop`.
+- Moved the Boundary/Latest registry profiles to the new wall-hit pair while
+  keeping the previous `mpclifflive` pair in regression coverage.
+- Made the new wall-hit modes inherit the current cliff-live proof and added
+  wrapper assertions for the cliff-live marker group.
+- Added dedicated `STAGE_MPWALLHIT_FLOOR*` verifier markers that promote the
+  isolated Hyrule candidate into its own proof result while keeping the live
+  VSBattle scene on Pupupu/Dream Land.
+- Kept the older Dream Land wall-blocker evidence intact. In the combined
+  wall-hit/cliff-live modes, the wall-hit proof records the Dream Land blocker
+  diagnostics directly because the strict older MPWall result is finalized
+  against early movement counters that the later cliff-live proof mutates.
+
+Proofs run:
+
+- `make -j16`
+- `scripts/check-harness-registry.ps1`
+- `scripts/check-docs.ps1`
+- `scripts/check-architecture.ps1`
+- `scripts/check-gbi-decode-fixtures.ps1`
+- `scripts/verify-battle-mariofox-stage-mpwall-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpwall-floor-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpclifflive-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpclifflive-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpedge-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpedge-floor-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpadjust-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpadjust-floor-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpcliffledge-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpcliffledge-loop-harness.ps1`
+- `scripts/verify-battle-mariofox-stage-mpwallhit-floor-loop-harness.ps1`
+- `scripts/verify-menu-chain-mariofox-stage-mpwallhit-floor-loop-harness.ps1`
+- `scripts/verify-boundary.ps1`
+- `scripts/verify-current.ps1`
+- `scripts/verify-regression.ps1`
+
+What is proven:
+
+- The direct harness reaches Pupupu VSBattle from Maps; the menu-chain harness
+  reaches the same battle boundary through VS Mode -> PlayersVS -> Maps.
+- The current cliff-live proof still passes in both new modes with source mask
+  `0xfff`.
+- The new wall-hit proof validates Hyrule floor `5`, wall `13`, edge-under
+  `12`, side `0`, wall kind `3`, final-floor-OK `1`, and adjustment delta
+  `-1600/-388`.
+- The old Dream Land wall-blocker path still records zero wall hits and no
+  selected-floor adjustment, while the Hyrule proof remains isolated from full
+  Hyrule stage runtime.
+
+Still deferred:
+
+- Full Hyrule VSBattle stage setup, live broad wall collision, platform
+  pass-through, moving yakumono collision, attacks, items, HUD, audio, and
+  unbounded gameplay remain deferred.
+- A future live selected-callback wall-hit copyback proof should build on this
+  Hyrule candidate without switching the live Pupupu scene or broadening map
+  runtime.
+
+## 2026-06-27: Promoted Hyrule wall-hit copyback to direct/menu-chain boundary
+
+- Added direct/menu-chain harness modes `137/138`:
+  `battle_mariofox_stage_mpwallcopy_floor_loop` and
+  `menu_chain_mariofox_stage_mpwallcopy_floor_loop`.
+- Promoted those modes to the Latest/Boundary verifier profiles while keeping
+  the Hyrule wall-hit pair `135/136` in regression.
+- Wired the new modes through the Makefile harness mapping,
+  `scene_harness.c`, menu-chain taskman transition gates, bounded VSBattle
+  taskman update/finalize flow, harness registry, registry drift checker, and
+  direct/menu verifier wrappers.
+- Fixed the partial wall-copy proof's prepare/finalize ordering: `Prepare()`
+  no longer marks the proof unsafe before the Hyrule wall-hit finalizer has
+  populated the prerequisite result.
+- Extended the shared `verify-battle-mariofox-gcdrawall-loop-harness.ps1`
+  script with `-RequireStageMPWallCopyFloor`, GDB markers
+  `STAGE_MPWALLCOPY_*`, and assertions for proof result/safe result, process
+  attach/run/callback/copyback counts, source line IDs, `-1600/-388` delta,
+  P0 final floor/ground state, zero unsafe count, and unchanged P1 root.
+- The proof keeps the live battle scene on Pupupu/Dream Land, consumes the
+  promoted isolated Hyrule wall-hit candidate floor `5`, wall `13`,
+  edge-under `12`, side `0`, installs a proof-owned selected P0 process, and
+  copies the adjusted result back into the selected P0 root/collision shell.
+- Verified:
+  - `make -j16`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/verify-battle-mariofox-stage-mpwallcopy-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpwallcopy-floor-loop-harness.ps1`
+- Deferred: full Hyrule stage runtime, arbitrary live wall collision, platform
+  pass-through, full map runtime, items, HUD, audio, and unbounded gameplay.
+
+## 2026-06-27: Scoped platform/pass-through into a pass-through floor scout
+
+- Added `docs/MP_PASS_THROUGH_SCOUT.md` as the maintained scout for the next
+  source-order map-collision boundary after the Hyrule wall-copy proof.
+- Identified the original source route:
+  `mpCommonCheckFighterPass` / `mpCommonRunFighterSpecialCollisions` use
+  `MAP_PROC_TYPE_PASS` to call `mpProcessCheckTestFloorCollisionAdjNew`, whose
+  acceptance gate depends on `MAP_VERTEX_COLL_PASS`, `ignore_line_id`, and the
+  optional pass callback.
+- Recorded the current project gap: project-owned headers do not yet define
+  `MAP_VERTEX_COLL_PASS`, and the bounded MP floor-sweep helpers do not yet
+  preserve pass-through floor semantics.
+- Updated the next-boundary queue to target a direct/menu-chain pass-through
+  floor proof before any moving yakumono/platform runtime work.
+
+## 2026-06-27: Promoted pass-through floor proof to direct/menu-chain boundary
+
+- Promoted direct/menu-chain harness modes `139/140`:
+  `battle_mariofox_stage_mppass_floor_loop` and
+  `menu_chain_mariofox_stage_mppass_floor_loop`.
+- The proof consumes the Hyrule wall-hit and wall-copy proofs while keeping the
+  live scene on Pupupu/Dream Land.
+- The bounded pass-through slice selects Dream Land floor line `0`, verifies
+  raw vertex flags `0x4000` carry `MAP_VERTEX_COLL_PASS`, routes through
+  `MAP_PROC_TYPE_PASS` twice, rejects the same-line `ignore_line_id` probe,
+  accepts the different-line probe, calls the pass callback once with one
+  allow and zero denies, and proves P1 root state remains unchanged.
+- Fixed the shared GDB verifier surface so `-RequireStageMPPassFloor` is an
+  explicit switch with `STAGE_MPPASS_*` markers and assertions. Before this
+  fix, PowerShell partial-parameter binding could treat that wrapper switch as
+  `-RequireStageMPPassiveLoop`, which made the wrapper green without asserting
+  the pass-through proof markers.
+- Updated `docs/STATUS.md`, `docs/HANDOFF.md`,
+  `docs/DIAGNOSTIC_REFERENCE.md`, `docs/KNOWN_ISSUES.md`,
+  `docs/NEXT_BOUNDARY_QUEUE.md`, `docs/ROADMAP.md`, and
+  `docs/MP_PASS_THROUGH_SCOUT.md` so modes `139/140` are the current
+  Latest/Boundary target and modes `137/138` remain wall-copy regression
+  coverage.
+- Verified:
+  - `make -j16`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/verify-battle-mariofox-stage-mppass-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mppass-floor-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-all.ps1 -Profile Regression -From battle_mariofox_stage_mpwallhit_floor_loop`
+- `scripts/verify-regression.ps1` was also attempted, but the full regression
+  wrapper timed out at the 20-minute command limit before returning progress;
+  the focused regression resume above covers the changed wall-hit/wall-copy/pass
+  boundary range.
+- Deferred: moving yakumono/platform activation, natural drop-through input,
+  full platform runtime, full Hyrule runtime, broad map collision, gameplay,
+  HUD, audio, and unbounded taskman.
+
+## 2026-06-27: Promoted platform existence scout to direct/menu-chain boundary
+
+- Promoted direct/menu-chain harness modes `141/142`:
+  `battle_mariofox_stage_mpplatform_floor_loop` and
+  `menu_chain_mariofox_stage_mpplatform_floor_loop`.
+- The proof consumes the pass-through floor proof, keeps the live scene on
+  Pupupu/Dream Land, and calls original `mpCollisionCheckExistPlatformLineID`
+  for Dream Land line `0`.
+- Current diagnostic result is a precise blocker, not active platform runtime:
+  line flags `0x4000`, yakumono id/count `1/1`, no active yakumono DObj,
+  predicate `0`, blocker `0x30`.
+- Added `STAGE_MPPLATFORM_*` GDB markers/assertions and updated the harness
+  registry/checker so `141/142` are the Latest/Boundary targets while `139/140`
+  remain pass-through regression coverage.
+- Verified:
+  - `make -j16`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `git diff --check`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpplatform-floor-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-all.ps1 -Profile Regression -From battle_mariofox_stage_mppass_floor_loop`
+- `scripts/verify-regression.ps1` was attempted but timed out at the 20-minute
+  command limit before returning output. The focused regression tail above
+  covers the pass-through/platform range changed by this task.
+- Deferred: minimum original-compatible yakumono DObj activation, natural
+  drop-through input, moving platform runtime, broad stage runtime, gameplay,
+  HUD, audio, and unbounded taskman.
+
+## 2026-06-27: Promoted active platform predicate proof to direct/menu-chain boundary
+
+- Promoted direct/menu-chain harness modes `143/144`:
+  `battle_mariofox_stage_mpplatform_active_floor_loop` and
+  `menu_chain_mariofox_stage_mpplatform_active_floor_loop`.
+- The proof keeps the live battle scene on Pupupu/Dream Land, consumes the
+  Hyrule wall-hit, wall-copy, pass-through, and inactive platform blocker
+  proofs, then installs a bounded original-compatible yakumono DObj for Dream
+  Land line `0`.
+- Updated the project-owned yakumono DObj shell to allow bounded indexed DObj
+  slots and changed `mpCollisionCheckExistPlatformLineID` to use the original
+  indexed predicate shape under bounds checks instead of the earlier id-zero
+  shortcut.
+- Current diagnostic result: line flags `0x4000`, yakumono id/count `1/1`,
+  DObj present `1`, status `1`, anim `0`, predicate active, blocker `0`.
+- Kept modes `141/142` as regression coverage for the inactive blocker
+  (`dobj=1`, `status=0`, predicate `0`, blocker `0x40`) and moved
+  Latest/Boundary registry targets to `143/144`.
+- Verified:
+  - `make -j16`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `git diff --check`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-active-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpplatform-active-floor-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpplatform-floor-loop-harness.ps1`
+- Deferred: original platform/yakumono update runtime, natural drop-through
+  input, moving platform runtime, broad stage runtime, gameplay, HUD, audio,
+  and unbounded taskman.
+
+## 2026-06-27: Promoted platform status/update-tic proof to direct/menu-chain boundary
+
+- Promoted direct/menu-chain harness modes `145/146`:
+  `battle_mariofox_stage_mpplatform_tick_floor_loop` and
+  `menu_chain_mariofox_stage_mpplatform_tick_floor_loop`.
+- The proof keeps the live battle scene on Pupupu/Dream Land, consumes the
+  Hyrule wall-hit, wall-copy, pass-through, inactive platform blocker, and
+  active platform predicate proofs, then routes Dream Land line `0` /
+  yakumono id `1` through the project-owned `mpCollisionSetYakumonoOnID`
+  helper and one guarded original-compatible `mpCollisionAdvanceUpdateTic`
+  call.
+- Current diagnostic result: line flags `0x4000`, yakumono id/count `1/1`,
+  DObj present `1`, status `1 -> 1`, predicate active, update tic `0 -> 1`,
+  set-on count `1`, advance count `1`, and unsafe count `0`.
+- Kept modes `143/144` as regression coverage for the active platform
+  predicate and moved Latest/Boundary registry targets to `145/146`.
+- Normalized local `C:/devkitPro` / `C:/devkitPro/devkitARM` Makefile paths
+  to MSYS-style `/c/...` before including devkitARM rules, and added a narrow
+  post-compile dependency-file sanitizer that rewrites malformed
+  `C:devkitPro/...` entries to `C:/devkitPro/...`. This prevents generated
+  harness `.d` files from breaking the next incremental verifier run.
+- Verified:
+  - `make -j16`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `git diff --check`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-tick-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpplatform-tick-floor-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-title-harness.ps1` after regenerating and reparsing
+    `build-title-harness/main.d`
+- Deferred: natural drop-through input, real moving platform motion/runtime,
+  broad stage runtime, gameplay, HUD, audio, and unbounded taskman.
+
+## 2026-06-27: Promoted natural drop-through input proof to direct/menu-chain boundary
+
+- Promoted direct/menu-chain harness modes `147/148`:
+  `battle_mariofox_stage_mppass_input_loop` and
+  `menu_chain_mariofox_stage_mppass_input_loop`.
+- Imported original `ftcommonpass.c` and `ftcommonsquat.c` through
+  `src/import/battleship_ftcommon_pass.c`, exposing only the bounded
+  pass/squat input and status path needed for this proof.
+- The proof keeps the live battle scene on Pupupu/Dream Land, consumes the
+  Hyrule wall-hit, wall-copy, pass-through, inactive platform, active platform,
+  and platform-tick proofs, then seeds original-compatible down input on Dream
+  Land pass-through line `0`.
+- Current diagnostic result:
+  `mpPassInput=line=0 flags=0x4000 squat=28 pass=33 ignore=0`, with tap Y
+  `0 -> 254`, pass wait `3 -> 0`, `mpCommonSetFighterAir` and
+  `ftPhysicsClampAirVelXMax` reached once, and unsafe count `0`.
+- Kept modes `145/146` as regression coverage for platform status/update-tic
+  behavior and moved Latest/Boundary registry targets to `147/148`.
+- Verified:
+  - `make -j16`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/verify-battle-mariofox-stage-mppass-input-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mppass-input-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+- Deferred: real moving platform motion/runtime, broad stage runtime, full
+  player-driven drop-through runtime, gameplay, HUD, audio, and unbounded
+  taskman.
+
+## 2026-06-27: Promoted yakumono position/speed primitive proof to direct/menu-chain boundary
+
+- Promoted direct/menu-chain harness modes `149/150`:
+  `battle_mariofox_stage_mpplatform_pos_floor_loop` and
+  `menu_chain_mariofox_stage_mpplatform_pos_floor_loop`.
+- Added the narrow project-owned `mpCollisionSetYakumonoPosID` compatibility
+  seam with original BattleShip semantics from `mpcollision.c`: compute
+  `gMPCollisionSpeeds[id]` as target minus current DObj translation, then
+  update the DObj translation.
+- Added bounded yakumono speed storage beside the existing fixed yakumono DObj
+  compatibility shell. This does not import or enable full yakumono animation
+  runtime.
+- The proof consumes the pass-input boundary, runs on Dream Land line `0` /
+  yakumono `1`, and records DObj status `1 -> 1`, platform predicate `1`, and
+  speed delta `12000/-4000/2000` with unsafe count `0`.
+- Verified:
+  - `make -j16`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-pos-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpplatform-pos-floor-loop-harness.ps1`
+
+## 2026-06-27 - MP Platform Speed Reader Proof
+
+- Added direct/menu-chain modes `151/152`:
+  `battle_mariofox_stage_mpplatform_speed_floor_loop` and
+  `menu_chain_mariofox_stage_mpplatform_speed_floor_loop`.
+- Replaced the zero-only `mpCollisionGetSpeedLineID` seam with a bounded
+  original-compatible line-to-yakumono speed lookup. Invalid cases remain
+  bounded instead of entering the original debug infinite loop.
+- The proof consumes the existing position proof for Dream Land line `0` /
+  yakumono `1`, then reads the speed through `mpCollisionGetSpeedLineID` and
+  verifies `12000/-4000/2000`.
+- Added verifier markers `STAGE_MPPLATFORM_SPEED`,
+  `STAGE_MPPLATFORM_SPEED_SETUP`, and `STAGE_MPPLATFORM_SPEED_VEC`.
+- Verified:
+  - `scripts/verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1`
+- Deferred: real moving platform animation runtime, platform-speed collision
+  consumption by broader map queries, broad stage runtime, gameplay, HUD,
+  audio, and unbounded taskman.
+
+## 2026-06-27 - CliffWait/CliffMotion Queue Shell Regression Fix
+
+- Restored the original no-stick `ftCommonCliffClimbOrFallCheckInterruptCommon`
+  side effect in the bounded CliffWait proof path so `is_allow_interrupt`
+  becomes true before the follow-up CliffAttack/CliffEscape probes.
+- Kept the original BattleShip CliffAttack and CliffEscape interrupt calls in
+  path, then normalized the bounded `FTStruct` shell's `cliffmotion` queue
+  fields after true returns. This preserves the source-order postcondition
+  needed by the direct/menu-chain CliffAttack and CliffEscape action proofs.
+- Verified:
+  - `scripts/verify-battle-mariofox-stage-mpcliffattack-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpcliffattack-floor-loop-harness.ps1`
+  - `scripts/verify-battle-mariofox-stage-mpcliffescape-action-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpcliffescape-action-loop-harness.ps1`
+  - `scripts/verify-all.ps1 -Profile Regression -From battle_mariofox_stage_mpcliffescape_action_loop`
+- Deferred: replacing the large proof-owned `FTStruct` compatibility shell with
+  a smaller shared original-status helper.
+
+## 2026-06-27 - MP Platform Dynamic Floor Speed Consumer
+
+- Extended the project-owned floor diff sweep helper to apply the original
+  active-yakumono local-space transform from `mpCollisionCheckFloorLineCollisionDiff`:
+  previous position is offset by `gMPCollisionSpeeds[yakumono_id]`, current
+  position is measured relative to the yakumono DObj, and the hit position is
+  returned to world space.
+- Added one controlled platform-speed proof probe on Dream Land line `0` /
+  yakumono `1` after `mpCollisionGetSpeedLineID` reads `12000/-4000/2000`.
+  The new diagnostic marker is `STAGE_MPPLATFORM_SPEED_DYNAMIC`, summarized as
+  `dyn=1/2`.
+- Kept modes `151/152` as the current boundary rather than adding another
+  harness pair.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-dev-fast.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-regression.ps1`
+- Deferred: ceil/wall dynamic diff sweeps and real
+  `mpCollisionPlayYakumonoAnim` animation-driven movement.
+
+## 2026-06-27 - MP Ceil Dynamic Transform Alignment
+
+- Extended the bounded project-owned ceil same/diff sweep helper to use the
+  original active-yakumono local-space transform from
+  `mpCollisionCheckCeilLineCollisionDiff`: previous position is offset by
+  `gMPCollisionSpeeds[yakumono_id]`, current position is measured relative to
+  the yakumono DObj, and hit output is converted back to world space.
+- Kept modes `151/152` as the current boundary. This is source-order helper
+  alignment, not a new dynamic ceil asset proof.
+- Verified:
+  - `make -j16`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/verify-battle-mariofox-stage-mpceil-floor-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpceil-floor-loop-harness.ps1`
+  - `scripts/verify-dev-fast.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-regression.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+- Deferred: a controlled dynamic ceil candidate marker, wall diff wrappers, and
+  real `mpCollisionPlayYakumonoAnim` animation-driven movement.
+
+## 2026-06-27 - MP Platform Dynamic Ceil Speed Consumer
+
+- Extended the existing platform-speed proof for modes `151/152` with one
+  bounded same-yakumono Dream Land ceiling probe. The probe selects a ceiling
+  line owned by the same active yakumono as floor line `0`, then calls the
+  project-owned original-compatible `mpCollisionCheckCeilLineCollisionDiff`
+  path after `mpCollisionGetSpeedLineID` has proven the `12000/-4000/2000`
+  speed vector.
+- Added diagnostic marker `STAGE_MPPLATFORM_SPEED_DYNAMIC_CEIL`, summarized by
+  the verifier as `ceil=1/1`. The platform-speed result mask is now `0x3ff`
+  so the current boundary requires both the dynamic floor and dynamic ceiling
+  speed-consumer probes.
+- Kept the work inside the existing direct/menu-chain platform-speed harness
+  pair rather than adding another harness boundary.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-regression.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `git diff --check`
+- Deferred: wall diff caller coverage and real
+  `mpCollisionPlayYakumonoAnim` animation-driven movement.
+
+## 2026-06-27 - MP Platform Bounded Yakumono Animation Playback
+
+- Extended the existing platform-speed proof for modes `151/152` with one
+  bounded `mpCollisionPlayYakumonoAnim` slice. The proof seeds controlled
+  DObj animation tracks on Dream Land line `0` / yakumono `1`, then runs
+  original `gcParseDObjAnimJoint` and `gcPlayDObjAnimJoint` through the gated
+  compatibility hook.
+- Added diagnostics for the bounded animation tick:
+  `STAGE_MPPLATFORM_SPEED_ANIM` records one playback call, MP update tic
+  `+1`, status `2 -> 2`, and speed `12000/-4000/2000`. The platform-speed
+  result mask is now `0x7ff`, and the verifier summary includes `anim=1`.
+- Kept the old deferred behavior outside the platform-speed proof so the
+  change does not accidentally activate broad moving-platform runtime.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-regression.ps1`
+- Deferred: wall diff caller coverage, real stage-authored yakumono animation
+  scripts, and MP bounds recompute.
+
+## 2026-06-27 - MP Platform Dynamic Wall Speed Consumer
+
+- Extended the existing platform-speed proof for modes `151/152` with
+  project-owned `mpCollisionCheckLWallLineCollisionDiff` and
+  `mpCollisionCheckRWallLineCollisionDiff` wrappers. They share the bounded
+  wall sweep helper and apply the original active-yakumono local-space
+  transform before converting the hit back to world space.
+- Added one controlled same-yakumono Dream Land wall probe after the
+  `mpCollisionGetSpeedLineID` proof. The new diagnostic marker
+  `STAGE_MPPLATFORM_SPEED_DYNAMIC_WALL` records probe/hit counts, selected wall
+  line, yakumono ID, wall kind, and hit coordinates; the verifier summary now
+  includes `wall=1/1`.
+- Kept the work inside the existing direct/menu-chain platform-speed harness
+  pair instead of adding a new boundary. The platform-speed result mask is now
+  `0xfff`, requiring floor, ceiling, wall, and animation speed-consumer proofs.
+- Verified:
+  - `scripts/verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/verify-regression.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `git diff --check`
+- Deferred: real stage-authored yakumono animation scripts, MP bounds
+  recompute, and original live MP wall-diff caller coverage.
+
+## 2026-06-27 - MP Platform Bounded Wall-Process Caller
+
+- Extended the existing platform-speed proof for modes `151/152` with one
+  bounded first-probe slice of original
+  `mpProcessCheckTestL/RWallCollisionAdjNew`. The proof seeds a contained
+  `MPCollData`, forces the original source-order `update_tic !=
+  gMPCollisionUpdateTic` branch, and routes through the existing dynamic wall
+  diff seam without importing full `mpprocess.c`.
+- Added `STAGE_MPPLATFORM_SPEED_PROCESS_WALL`, summarized by the verifier as
+  `procwall=1/1`. The platform-speed result mask is now `0x1fff`.
+- Kept the work inside the existing direct/menu-chain platform-speed harness
+  pair. The original edge/ceil/floor follow-up branches of the wall-adjust
+  functions remain deferred until a verifier needs them.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-dev-fast.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - PowerShell parser sweep over `scripts/**/*.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `git diff --check`
+- Deferred: real stage-authored yakumono animation scripts, full moving
+  platform runtime, and MP bounds recompute.
+
+## 2026-06-27 - MP Platform Bounds Recompute Slice
+
+- Extended the existing platform-speed proof for modes `151/152` with
+  original-compatible MP bounds current/diff recompute after the bounded
+  yakumono animation tick. This adds the narrow `MPBounds` / `MPAllBounds`
+  surface and `gMPCollisionBounds` in project-owned compatibility code.
+- Replaced the remaining platform-speed proof's bounded clear/init/bounds
+  seams with guarded source-order behavior: `mpCollisionClearYakumonoAll`
+  clears yakumono DObj statuses and speeds, `mpCollisionInitYakumonoAll`
+  scans the decoded Dream Land collision geometry, and
+  `mpCollisionUpdateBoundsCurrent` / `mpCollisionUpdateBoundsDiff` compute the
+  current-vs-start stage bounds after the gated animation playback.
+- Added `STAGE_MPPLATFORM_SPEED_BOUNDS`, summarized by the verifier as
+  `bounds=1`. The platform-speed result mask is now `0x3fff`.
+- Kept the work inside the existing direct/menu-chain platform-speed harness
+  pair. The proof still uses a controlled seeded animation track; real
+  stage-authored yakumono scripts and full moving-platform runtime remain
+  deferred.
+- Verified:
+  - `make -j16`
+  - PowerShell parser sweep over `scripts/**/*.ps1`
+  - `scripts/verify-dev-fast.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+
+## 2026-06-27 - Pupupu Stage-Authored Platform Animation Blocker Diagnostic
+
+- Added `STAGE_MPPLATFORM_SPEED_STAGE_ANIM` to the existing platform-speed
+  proof for modes `151/152` without changing the pass mask. The diagnostic
+  records the layer animation mask, DObj/MObj authored-animation counts, and
+  bounded layer callback count.
+- Confirmed the selected Dream Land line `0` / yakumono `1` path still passes
+  the speed-consumer boundary but is not a real authored Pupupu layer-1
+  animation source. Both direct and menu-chain verifiers record
+  `stageanim=0/0x91`: layer/root and selected yakumono parent are present and
+  the bounded callback ran once, but there is no authored layer-1 animation
+  table/process on that path.
+- Updated the handoff/status/scout docs to treat this as a precise blocker,
+  not a completed moving-platform subsystem. The platform-speed result mask
+  remains `0x3fff`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1 -DelaySeconds 1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - PowerShell parser sweep over `scripts/**/*.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `git diff --check`
+- Deferred: scout another original stage/yakumono source path with authored
+  motion data, such as Yoster, Sector, or Yamabuki, before importing
+  moving-platform runtime.
+
+## 2026-06-27 - Moving-Yakumono Source Scout
+
+- Inspected read-only BattleShip stage sources after the Dream Land
+  `stageanim=0/0x91` blocker. The smallest real moving-yakumono candidate is
+  Inishie/Mushroom Kingdom scales: `grInishieScaleProcUpdate` moves two scale
+  platform DObjs and calls `mpCollisionSetYakumonoPosID` for both scale line
+  groups every update.
+- Ranked other candidates behind Inishie for the first proof: Yoster clouds
+  need fighter stand checks/material animation/particle state, Yamabuki gates
+  pull in item/monster gate runtime, and Sector Arwing collision pulls in
+  Arwing animation plus weapon/laser state.
+- Updated current docs so the next code boundary is an Inishie scale-platform
+  harness pair, not another Dream Land seeded-motion proof.
+- Verified:
+  - source inspection only; no code boundary changed.
+- Deferred: `GRInishieMap` NitroFS staging, narrow `GRStruct.inishie` fields,
+  and bounded import/proof harnesses for direct + menu-chain Inishie scale
+  update.
+
+## 2026-06-27 - Inishie Map Header Dependency Preflight
+
+- Added `GRInishieMap` to the staged NitroFS reloc assets and wired its file
+  ID / `llGRInishieMapMapHeader` symbol through the project-owned relocation
+  table.
+- Added bounded diagnostics for the existing platform-speed proof modes
+  `151/152`. The probe runs after the current Dream Land speed proof so the
+  dependency scout cannot disturb the active Pupupu battle scene.
+- Verified the marker `STAGE_INISHIE_ASSET=0x494e4952,0x14,1,1,1,0,0`,
+  summarized by both verifiers as `inishieAsset=header/geometry nodes=1`.
+  This proves the Inishie map header path is reachable; it intentionally does
+  not import Inishie scale platform GObjs or run `grInishieScaleProcUpdate`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1 -DelaySeconds 1`
+  - `scripts/verify-menu-chain-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1`
+- Deferred: narrow `GRStruct.inishie` fields, bounded Inishie scale GObj setup,
+  stage-data dependency handling beyond the map header, and one original
+  `grInishieScaleProcUpdate` tick proving two `mpCollisionSetYakumonoPosID`
+  calls.
+
+## 2026-06-27 - Inishie Scale Update Proof
+
+- Added direct/menu-chain modes `153/154`:
+  `battle_mariofox_stage_inishie_scale_loop` and
+  `menu_chain_mariofox_stage_inishie_scale_loop`.
+- Imported a bounded original Inishie/Mushroom Kingdom scale update slice in
+  `src/import/battleship_grinishie_scale.c`, centered on
+  `grInishieScaleProcUpdate`.
+- Added a narrow proof shell that creates two scale platform DObjs, two string
+  DObjs, and separate collision yakumono DObjs so
+  `mpCollisionSetYakumonoPosID` computes the original speed delta while the
+  live VSBattle roots remain on Pupupu/Dream Land.
+- The proof inherits the previous pass-through/platform/platform-speed,
+  dynamic floor/ceil/wall, process-wall, yakumono animation, bounds, and
+  Inishie map-header markers, then records line groups `1/2`, map object kinds
+  `5/6`, altitude `80000 -> 72000`, Y
+  `363000/362000 -> 435000/290000`, and speed `72000/-72000`.
+- Updated the Boundary/Latest registry target to the new pair while keeping
+  modes `151/152` as regression coverage for the platform-speed dependency.
+- Tightened the shared verifier build path so `verify-all.ps1 -Build` and
+  `build-verify-profile.ps1` force `TARGET=smash64ds BUILD=build
+  NDS_DEV_SCENE_HARNESS=normal -B`. This prevents runtime verification from
+  sampling a stale harness-flavored `smash64ds.nds` when the shared build
+  directory previously held a harness object.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1 -DelaySeconds 1`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1 -DelaySeconds 5`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/check-gbi-decode-fixtures.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `git diff --check`
+  - PowerShell parser sweep over `scripts/**/*.ps1`
+  - `scripts/verify-current.ps1 -Build`
+- Deferred: replace more of the proof shell with original
+  `grInishieMakeScale` setup by staging scale DObj/model data behind
+  `llGRInishieMapScaleDObjDesc` and `llGRInishieMapMapHead`; full Mushroom
+  Kingdom stage runtime, Pakkun, Power Block, item/monster runtime, and broad
+  map collision remain out of scope.
+
+## 2026-06-27 - Inishie Scale Setup Guard and Asset Blocker
+
+- Inspected original BattleShip `grInishieMakeScale` and
+  `grModelSetupGroundDObjs` as the next step after the scale update proof.
+  The original setup needs map-relative scale model offsets
+  `llGRInishieMapScaleDObjDesc = 0x380`,
+  `llGRInishieMapMapHead = 0x5f0`, and
+  `llGRInishieMapScaleRetractAnimJoint = 0x734`.
+- Confirmed the currently staged `GRInishieMap` O2R asset only carries the
+  header/geometry payload needed by the existing dependency proof: `368` bytes
+  of data in a `476` byte staged file. Calling original `grInishieMakeScale`
+  against that payload reads past the staged data and crashes before the scale
+  proof shell records diagnostics.
+- Added Makefile variable `NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP`, defaulting
+  off, so the source setup and map-object reader expansion stay available as a
+  documented guarded path without entering the active ROM until the required
+  `StageInishieFile2/3` scale model/display-list data is staged.
+- Kept the direct/menu-chain scale update proof on the existing bounded shell,
+  preserving the verified original `grInishieScaleProcUpdate` tick and
+  `mpCollisionSetYakumonoPosID` speed diagnostics.
+- Reduced opening-action preview cache reservation from three entries to one
+  for fighter/stage harness modes `>= 11`. This keeps menu-chain stage
+  harnesses under the DS ARM9 memory limit while leaving normal boot/opening
+  builds on the original three-entry cache.
+- Verified:
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1 -Build -DelaySeconds 1`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1 -Build -DelaySeconds 5`
+- Deferred: stage/import the narrow `StageInishieFile2/3` scale
+  DObj/model/display-list data, then build with
+  `NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1` to re-enable the guarded original
+  `grInishieMakeScale` setup for the same bounded verifier pair.
+
+## 2026-06-27 - Guarded Inishie Source Setup Proof
+
+- Added a guarded `NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1` path that runs
+  original `grInishieMakeScale` instead of the default proof-shell-only setup.
+- Because the generated `StageInishieFile2/3` payloads are absent from the
+  read-only decomp checkout, the guarded path uses a minimal project-owned,
+  offset-compatible source setup shim for `llGRInishieMapScaleDObjDesc`
+  (`0x380`), `llGRInishieMapMapHead` (`0x5f0`), and
+  `llGRInishieMapScaleRetractAnimJoint` (`0x734`). It supplies only the
+  bounded scale DObj/display-list contracts needed by `grInishieMakeScale`.
+- Added a source-setup map-object guard so original `grInishieMakeScale` sees
+  deterministic ScaleL/ScaleR IDs and positions without dereferencing the
+  incomplete `GRInishieMap` geometry `mapobjs` pointer.
+- Isolated the guarded source setup from older platform-position/tick
+  diagnostics so `mpCollisionSetYakumonoOnID` calls inside source setup do not
+  pollute the previous Dream Land platform proof markers.
+- Verified default direct/menu-chain Inishie scale proof remains green, and
+  opt-in direct/menu-chain source setup builds also pass the same verifier
+  boundary.
+- Verified:
+  - `make TARGET=smash64ds-battle-mariofox-stage-inishie-scale-loop BUILD=build-battle-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_inishie_scale_loop NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1 -B -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+  - `make TARGET=smash64ds-battle-mariofox-stage-inishie-scale-loop BUILD=build-battle-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_inishie_scale_loop -B -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1`
+  - `make TARGET=smash64ds-menu-chain-mariofox-stage-inishie-scale-loop BUILD=build-menu-chain-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_stage_inishie_scale_loop NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1 -B -j16`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+- Deferred: replace the offset-compatible shim with narrow original
+  `StageInishieFile2/3` scale visual/model data and then decide whether the
+  source setup path should become the default current-boundary build.
+
+## 2026-06-27 - Inishie Source Shim Data Tightening
+
+- Confirmed the read-only decomp context has typed `StageInishieFile3` source
+  data, but the generated include fragments and compiled O2R payload for
+  `StageInishieFile3` are absent from the current checkout.
+- Replaced the guarded source shim's zero display-list word with a real
+  `G_ENDDL` command and copied the original typed ScaleRetract anim words into
+  the offset-compatible `0x734` slot.
+- Verified:
+  - `make TARGET=smash64ds-battle-mariofox-stage-inishie-scale-loop BUILD=build-battle-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_inishie_scale_loop NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1 -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+  - `make TARGET=smash64ds-menu-chain-mariofox-stage-inishie-scale-loop BUILD=build-menu-chain-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_stage_inishie_scale_loop NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1 -j16`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+- Deferred: real `StageInishieFile2/3` visual/model/display-list payload
+  staging remains required before promoting source setup to default.
+
+## 2026-06-27 - Inishie StageInishieFile3 Raw Asset Proof
+
+- Added opt-in NitroFS staging for read-only
+  `decomp/BattleShip-main/decomp/assets/us/relocData/155.vpk0.bin` when
+  `NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1`.
+- Updated the guarded source setup shim to load the `5136` byte raw
+  `StageInishieFile3` payload, validate the DObjDesc, map-head display-list,
+  and ScaleRetract offsets, and convert the scale DObjDesc scalar fields from
+  big-endian raw data before calling original `grInishieMakeScale`.
+- Kept active display-list pointers bounded at `G_ENDDL`. The raw display-list
+  pointer words are relocation-chain encoded, so a narrow pointer/material/DL
+  fixup pass is still required before using the real scale visual data.
+- Added verifier coverage for `STAGE_INISHIE_SCALE_SOURCE` raw-source readiness
+  bits when the source setup reaches step `13`.
+- Verified:
+  - `make TARGET=smash64ds-battle-mariofox-stage-inishie-scale-loop BUILD=build-battle-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_inishie_scale_loop NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1 -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+  - `make TARGET=smash64ds-menu-chain-mariofox-stage-inishie-scale-loop BUILD=build-menu-chain-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_stage_inishie_scale_loop NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1 -j16`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+- Deferred: pointer/material/display-list relocation for the staged raw
+  `StageInishieFile3` scale payload, then deciding whether to promote the
+  source setup path to the default boundary.
+
+## 2026-06-27 - Inishie Scale Native DL Pointer Proof
+
+- Kept the source setup scoped to `StageInishieFile3` scale data only.
+- Converted the narrow scale Vtx arrays and DL arrays from the staged raw
+  payload into native word order for the guarded source path.
+- Patched the known DObj and map-head DL pointers used by original
+  `grInishieMakeScale`, then scanned the converted DLs with the shared NDS
+  renderer scanner before exposing them to the DObjDesc/map-head offsets.
+- Tightened `STAGE_INISHIE_SCALE_SOURCE` verification to require source bits
+  `8..16`, covering raw load/validation plus native DL scan and pointer fixup.
+- Verified:
+  - `make TARGET=smash64ds-battle-mariofox-stage-inishie-scale-loop BUILD=build-battle-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_inishie_scale_loop NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1 -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+  - `make TARGET=smash64ds-menu-chain-mariofox-stage-inishie-scale-loop BUILD=build-menu-chain-mariofox-stage-inishie-scale-loop-harness NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_stage_inishie_scale_loop NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1 -j16`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1 -NoBuild`
+- Deferred: texture/material handling and a bounded display traversal/renderer
+  proof for the source-enabled Inishie scale GObjs.
+
+## 2026-06-27 - Inishie Source DObj Display Scan Proof
+
+- Kept the source setup guarded behind `NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1`
+  and did not add a new harness mode.
+- Added source-only diagnostics that prove the four original-created Inishie
+  scale DObjs have the expected BattleShip display callbacks and scan cleanly
+  through `ndsRendererScanDisplayList`.
+- Extended the shared Inishie scale verifier with
+  `STAGE_INISHIE_SCALE_DISPLAY`; current source builds report
+  `sourceDL=0xff cmds=91 tris=20`.
+- Verified source-enabled direct/menu-chain builds with forced rebuilds, then
+  rebuilt default direct/menu-chain harnesses without the source flag and
+  re-ran both default no-build verifiers.
+- Deferred: texture/material handling and actual visible Mushroom Kingdom scale
+  rendering.
+
+## 2026-06-27 - Inishie Source Setup Default Boundary
+
+- Promoted the source-backed Inishie scale setup to the default build path for
+  the current boundary pair only: `battle_mariofox_stage_inishie_scale_loop`
+  and `menu_chain_mariofox_stage_inishie_scale_loop`.
+- Kept normal boot and older harnesses on the non-source default by deriving
+  `NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP` from `NDS_DEV_SCENE_HARNESS`.
+- Moved the current Inishie wrappers and registry entries to separate
+  `*-source-harness` build directories so source and non-source objects are not
+  mixed by incremental builds.
+- Updated current docs so the next boundary is the smallest texture/material
+  visibility proof for the source-created Inishie scale, not another setup
+  reachability decision.
+- Verified:
+  - `scripts/check-harness-registry.ps1`
+  - `scripts/check-docs.ps1`
+  - `scripts/verify-boundary.ps1`
+  - `scripts/verify-current.ps1`
+  - `make -j16`
+  - `scripts/check-architecture.ps1`
+  - `scripts/check-gbi-decode-fixtures.ps1`
+  - `git diff --check`
+- Current direct and menu-chain summaries both report
+  `sourceDL=0xff cmds=91 tris=20`.
+- Deferred: texture/material handling and actual visible Mushroom Kingdom scale
+  rendering.
+
+## 2026-06-27 - Inishie Source DL Material and Preview Proof
+
+- Kept the current `153/154` Inishie scale boundary and did not import broader
+  Mushroom Kingdom runtime.
+- Added source-DL material diagnostics for the four original-created scale
+  DObjs. The verifier now proves texture/material command state from the
+  original display-list stream with `tex=0x3f`.
+- Added a bounded software source-DL visibility preview for the same DObjs. It
+  decodes the patched source Vtx/DL pointers, commits the original-DL preview,
+  and records `preview=0x3f px=432`.
+- Kept full DS hardware texture upload/material application deferred; this is a
+  bounded visibility/material proof, not a full renderer rewrite.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1 -DelaySeconds 1`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1`
+
+## 2026-06-27 - Inishie Source Scale Two-Tick Proof
+
+- Kept the existing `153/154` Inishie scale harness pair; no new harness modes
+  or broader Mushroom Kingdom runtime were added.
+- Extended the bounded proof from one original `grInishieScaleProcUpdate` tick
+  to two ticks. The same source-created scale platform/string DObjs now prove
+  four `mpCollisionSetYakumonoPosID` calls.
+- Updated verifier expectations to require `ticks=2`,
+  `alt=80000->64000`, platform Y `363000/362000->427000/298000`, and
+  second-tick speed `-8000/8000`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1`
+
+## 2026-06-27 - Inishie Scale Threshold Fall/Sleep Proof
+
+- Kept the existing `153/154` Inishie scale harness pair and did not broaden
+  the stage runtime.
+- Added a forced threshold probe after the normal two bounded Wait ticks. The
+  probe reseeds original `gGRCommonStruct.inishie` state, calls original
+  `grInishieScaleProcUpdate`, proves the Wait threshold transition into Fall,
+  then calls the original update once more and records the bounded
+  Fall-to-Sleep result under the current proof-owned ground/deadzone setup.
+- Added `STAGE_INISHIE_SCALE_FALL` diagnostics and verifier checks. The current
+  direct/menu-chain summaries report `fall=1->2/0`, with two sparkle calls,
+  four fall-phase `mpCollisionSetYakumonoPosID` writes, final platform Y
+  `1460000/-741000`, and fall speed `-3000/-3000`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1`
+- Deferred: continuous Mushroom Kingdom scale runtime, Pakkun/Power Block/item
+  runtime, real hardware texture/material upload, and unbounded stage
+  scheduling.
+
+## 2026-06-27 - Inishie Scale Sleep/Retract Branch Proof
+
+- Kept the existing `153/154` Inishie scale harness pair; no new harness modes
+  or broader Mushroom Kingdom runtime were added.
+- Extended the bounded threshold probe after the Fall/Sleep proof by reseeding
+  original `gGRCommonStruct.inishie` to Sleep with `splat_wait = 1`, then
+  calling original `grInishieScaleProcUpdate` through the Sleep countdown and
+  Retract branch.
+- Added `STAGE_INISHIE_SCALE_STEP` diagnostics and verifier checks. The current
+  direct/menu-chain summaries report `step=3->0/0`, with four retract-phase
+  `mpCollisionSetYakumonoPosID` writes, two platform re-enable calls, retracted
+  altitude `0`, restored platform Y `363000/362000`, and final retract speeds
+  `-1097000/1103000`.
+- Updated the Inishie scale pass mask from `0x3ff` to `0x7ff` for the new
+  bounded Sleep/Retract bit.
+- Verified:
+  - `make -j16`
+  - `make -B -j16`
+  - `scripts/verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1`
+  - `scripts/verify-menu-chain-mariofox-stage-inishie-scale-loop-harness.ps1`
+- Deferred: continuous Mushroom Kingdom scale runtime, Pakkun/Power Block/item
+  runtime, real hardware texture/material upload, and unbounded stage
+  scheduling.
+
+## 2026-06-27 - PassiveStand/Passive Recover Loop Proof
+
+- Added direct/menu-chain modes `155/156`:
+  - `battle_mariofox_stage_mppassive_recover_loop`
+  - `menu_chain_mariofox_stage_mppassive_recover_loop`
+- Kept the live battle scene on Pupupu/Dream Land and did not import broad
+  fighter gameplay, full `ftmain.c`, item/runtime/HUD/audio, or broader map
+  collision.
+- Reused the existing source-order MP floor, cliff, DamageFall,
+  PassiveStand/Passive setup, and bounded Passive-loop proof chain. The new
+  modes extend PassiveStandF/Ground and Passive/Ground from two stable frames
+  to five guarded stable update/physics/map frames.
+- Kept the final transition source-authored: both branches still hand off to
+  Wait/Ground through original `ftAnimEndSetWait`. A follow-up entry below
+  extends the same bounded handoff proof to PassiveStandB/Ground.
+- Added wrapper verifiers and registry placement for Boundary/Latest profiles.
+  The menu-chain path needs `-DelaySeconds 3` so GDB captures the post-loop
+  finalizer markers after VS Mode -> PlayersVS -> Maps -> VSBattle.
+- Current summary markers:
+  - `mpMotionStaleFloor=line=1->0 mutation=1 update=1 match=1 p0line=0 p1line=3`
+  - `mpCliffWaitDamage=status=85->57 motion=73->50 fallWait=1->0 catch=30`
+  - `passiveStand=73/62/0->cb1/1->10/4/0`
+  - `passive=81/70/0->cb1/1->10/4/0`
+  - `mpPassive=ps=73/62->10/4 ticks=6/5/5 passive=81/70->10/4 ticks=6/5/5`
+- Verified:
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `scripts/verify-current.ps1 -DelaySeconds 3`
+- Deferred: natural collision-driven recovery selection, arbitrary recovery
+  durations, hitlag/damage interaction, full player-driven recovery runtime,
+  and broader fighter gameplay.
+
+## 2026-06-27 - Passive Recovery Branch Matrix Proof
+
+- Kept the existing direct/menu-chain modes `155/156`; no new harness pair was
+  added.
+- Added `gNdsStageMPPassiveLoopBranchMask` and the `STAGE_MPPASSIVE_BRANCH`
+  verifier marker. The recover-loop proof now calls the imported original
+  `ftCommonPassiveStandCheckInterruptDamage` and
+  `ftCommonPassiveCheckInterruptDamage` through a diagnostic-only status seam
+  before running the existing stable-frame proof.
+- The branch mask `0x7f` proves buffered-Z PassiveStandF, buffered-Z
+  PassiveStandB, neutral-stick PassiveStand no-transition, expired-Z
+  PassiveStand no-transition, buffered-Z Passive, expired-Z Passive
+  no-transition, and cleanup of the branch probe guard.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+- Deferred: natural collision-driven recovery selection from live collision
+  frames, arbitrary recovery durations beyond this guarded window,
+  hitlag/damage interaction, full player-driven recovery runtime, and broader
+  fighter gameplay.
+
+## 2026-06-27 - PassiveStandB Recover Handoff Proof
+
+- Kept the existing direct/menu-chain modes `155/156`; no new harness pair was
+  added.
+- Added `gNdsStageMPPassiveLoopPassiveStandBMask` and the
+  `STAGE_MPPASSIVE_PASSIVESTANDB` verifier marker.
+- Extended the recover-loop proof from a PassiveStandB branch-gate check into a
+  bounded PassiveStandB/Ground runtime proof: original buffered-Z setup, five
+  guarded stable update/physics/map frames, and the original
+  `ftAnimEndSetWait` handoff into Wait/Ground with valid Wait callbacks.
+- Focused summaries at this boundary reported
+  `mpPassive=ps=73/62->10/4 ticks=6/5/5 passive=81/70->10/4 ticks=6/5/5 branch=0x7f psb=0xf`.
+- Verified:
+  - `scripts/verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+- Deferred: natural collision-driven recovery selection from live collision
+  frames, arbitrary recovery durations beyond this guarded window,
+  hitlag/damage interaction, full player-driven recovery runtime, and broader
+  fighter gameplay.
+
+## 2026-06-27 - Passive DamageFall Map Selection Proof
+
+- Kept the existing direct/menu-chain modes `155/156`; no new harness pair was
+  added.
+- Added `gNdsStageMPPassiveLoopNaturalMapMask` and the
+  `STAGE_MPPASSIVE_NATURALMAP` verifier marker.
+- Reused imported original `ftCommonDamageFallProcMap` instead of adding a
+  handwritten recovery dispatcher. The initial proof supplied only bounded
+  project-owned floor-hit bits for `mpCommonCheckFighterCliff`, then let the
+  original DamageFall map callback choose PassiveStandF or Passive through the
+  original PassiveStand/Passive checks. The next entry supersedes this with
+  the source-order MP floor collision route.
+- Initial focused summaries at this boundary reported
+  `mpPassive=ps=73/62->10/4 ticks=6/5/5 passive=81/70->10/4 ticks=6/5/5 branch=0x7f psb=0xf natural=0x7`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+- Deferred: fully live collision-driven recovery selection from unseeded
+  collision frames, arbitrary recovery durations beyond this guarded window,
+  hitlag/damage interaction, full player-driven recovery runtime, and broader
+  fighter gameplay.
+
+## 2026-06-27 - Passive DamageFall Source-Order Floor Collision Proof
+
+- Kept the existing direct/menu-chain modes `155/156`; no new harness pair was
+  added.
+- Tightened `STAGE_MPPASSIVE_NATURALMAP` from mask `0x7` to `0x1f`. Bits 0-2
+  still prove imported original `ftCommonDamageFallProcMap` selects
+  PassiveStandF and Passive and cleans up its guard. New bits 3-4 prove both
+  branches reached that callback through the existing bounded source-order
+  `mpProcessUpdateMain` / `mpCommonRunFighterAllCollisions` floor path instead
+  of only setting floor bits by hand.
+- Focused summaries at this boundary reported
+  `mpPassive=ps=73/62->10/4 ticks=6/5/5 passive=81/70->10/4 ticks=6/5/5 branch=0x7f psb=0xf natural=0x1f`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+- Deferred: fully live collision-driven recovery selection from unseeded
+  collision frames, arbitrary recovery durations beyond this guarded window,
+  hitlag/damage interaction, full player-driven recovery runtime, and broader
+  fighter gameplay.
+
+## 2026-06-27 - Passive DamageFall Installed Map Callback Proof
+
+- Kept the existing direct/menu-chain modes `155/156`; no new harness pair was
+  added.
+- Tightened `STAGE_MPPASSIVE_NATURALMAP` from mask `0x1f` to `0x7f`. Bits 0-4
+  still prove imported original `ftCommonDamageFallProcMap` selects
+  PassiveStandF and Passive through the bounded source-order MP floor collision
+  path and cleans up its guard. New bits 5-6 prove both PassiveStandF and
+  Passive natural-map branches entered through the installed
+  `FTStruct.proc_map == ftCommonDamageFallProcMap` callback before the wrapper
+  dispatched to the imported original base.
+- Current focused summaries report
+  `mpPassive=ps=73/62->10/4 ticks=6/5/5 passive=81/70->10/4 ticks=6/5/5 branch=0x7f psb=0xf natural=0x7f`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+- Deferred: fully live collision-driven recovery selection from unseeded
+  collision frames, arbitrary recovery durations beyond this guarded window,
+  hitlag/damage interaction, full player-driven recovery runtime, and broader
+  fighter gameplay.
+
+## 2026-06-27 - Pass-Input Squat Interrupt Seam Fix
+
+- Fixed the bounded MP pass-input status seam to install the original Squat
+  proc interrupt callback, `ndsBaseFTCommonSquatProcInterrupt`, instead of the
+  predicate-only `ftCommonSquatCheckInterruptCommon`.
+- This keeps the project-owned Squat status callback slot aligned with original
+  `ftcommonstatus.h` and removes the local incompatible function-pointer build
+  warning without changing harness modes.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mppass-input-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-dev-fast.ps1 -DelaySeconds 3`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+
+## 2026-06-27 - Pass-Input Squat Proc Callback Proof
+
+- Kept the existing direct/menu-chain MP pass-input modes; no new harness pair
+  was added.
+- Tightened the proof to call the installed
+  `FTStruct.proc_interrupt == ndsBaseFTCommonSquatProcInterrupt` callback for
+  the Squat pass window instead of calling the GotoPass helper directly.
+- Expanded `STAGE_MPPASS_INPUT_SETUP` with the Squat proc callback count. The
+  verifier now expects `1/1/1/1/1/3/1/1/1/1/0`, proving three original Squat
+  proc ticks before the bounded transition reaches Pass.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mppass-input-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-stage-mppass-input-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-dev-fast.ps1 -DelaySeconds 3`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `scripts/verify-current.ps1 -DelaySeconds 3`
+- Deferred: broad live down-input/pass-through gameplay outside this bounded
+  Squat window, arbitrary platform sets, and full controller-driven battle
+  runtime.
+
+## 2026-06-27 - Passive Recover Installed Callback Guard
+
+- Kept the current direct/menu-chain modes `155/156`; no new harness pair was
+  added.
+- Tightened the bounded PassiveStand/Passive stable-frame and final-update
+  helpers to require the exact installed callback slots before ticking:
+  PassiveStand uses `ftAnimEndSetWait`, `ftPhysicsApplyGroundVelTransN`, and
+  `mpCommonSetFighterFallOnEdgeBreak`; Passive uses `ftAnimEndSetWait`,
+  `ftPhysicsApplyGroundVelFriction`, and
+  `mpCommonSetFighterFallOnGroundBreak`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+- Deferred: unbounded PassiveStand/Passive gameplay, hitlag/damage interaction,
+  and full controller-driven battle runtime.
+
+## 2026-06-27 - Dash-Run AttackDash Status Proof
+
+- Kept the existing direct/menu-chain Dash -> Run -> RunBrake modes; no new
+  harness pair was added.
+- Imported original BattleShip `ftcommonattackdash.c` through
+  `src/import/battleship_ftcommon_attackdash.c`.
+- Added the narrow item compatibility surface needed to link the original
+  AttackDash helper while keeping item attack branches deferred for this proof.
+- Fixed the local `FTAttributes` move-availability bitfield mapping to read the
+  relocated BattleShip high-bit flag word (`0xfffffc00`) correctly on ARM.
+- Extended the dash-run proof with an isolated A-button tap from Run that calls
+  original `ftCommonAttackDashCheckInterruptCommon`, reaches AttackDash
+  status/motion `191/167` for Mario/Fox, records `DASH_RUN_ATTACK`, then
+  restores Run before the existing run/runbrake movement proof continues.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+- Deferred: AttackDash animation runtime, hitboxes, item throw/swing attack
+  branches, full attack interrupt tables, and broad fighter gameplay.
+
+## 2026-06-27 - Dash-Run AttackDash Callback Slot Alignment
+
+- Kept the existing direct/menu-chain Dash -> Run -> RunBrake modes; no new
+  harness pair was added.
+- Aligned the local `ftMainSetStatus` AttackDash seam with the original
+  BattleShip status table by installing `ftAnimEndSetWait`, no interrupt,
+  `ftPhysicsApplyGroundVelTransN`, and
+  `mpCommonSetFighterFallOnEdgeBreak`.
+- Extended `DASH_RUN_ATTACK` with callback mask `0xff` and raised the dash-run
+  proof mask from `0x7ff` to `0xfff`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1` (known large-file/generated-output
+    warnings only)
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `Battle Mario/Fox Dash-Run harness passed: dash->run->runbrake + attackdash=191/167 cb=0xff root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 dash->run->runbrake + attackdash=191/167 cb=0xff root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: executing AttackDash animation runtime, hitboxes, item attack
+  branches, and unbounded attack gameplay.
+
+## 2026-06-27 - Dash-Run AttackDash Callback Tick Proof
+
+- Kept the existing direct/menu-chain Dash -> Run -> RunBrake modes; no new
+  harness pair was added.
+- Added one guarded call each to the installed AttackDash update, physics, and
+  map callbacks for Mario/Fox after original `ftCommonAttackDashCheckInterruptCommon`
+  reaches status/motion `191/167`.
+- Extended `DASH_RUN_ATTACK` with tick mask `0x3f` and raised the dash-run
+  proof mask from `0xfff` to `0x1fff`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `Battle Mario/Fox Dash-Run harness passed: dash->run->runbrake + attackdash=191/167 cb=0xff tick=0x3f root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 dash->run->runbrake + attackdash=191/167 cb=0xff tick=0x3f root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: AttackDash hitboxes, animation command runtime, item attack
+  branches, and unbounded attack gameplay.
+
+## 2026-06-27 - AttackDash Status Enum Alignment
+
+- Corrected the project-owned sparse `FTCommonStatus` enum to preserve the
+  original BattleShip ordering for `Attack11`, `Attack12`, and `AttackDash`.
+  The verified original values are `190`, `191`, and `192`; the local sparse
+  enum had previously assigned `AttackDash` to `191`.
+- Updated the direct/menu-chain Dash -> Run verifier expectations and current
+  docs so `DASH_RUN_ATTACK` now expects AttackDash status/motion `192/167`.
+- Deferred: importing `ftcommonattack1.c`, jab hitboxes, animation command
+  runtime, item attack branches, and unbounded attack gameplay.
+
+## 2026-06-27 - Passive Recovery Stable Frame Source Order
+
+- Reordered the bounded PassiveStand/Passive recover-loop stable-frame ticks
+  so they run the installed update callback before physics/map, matching the
+  original BattleShip process order from `ftMainProcUpdateInterrupt` followed
+  by `ftMainProcPhysicsMap`.
+- Kept the same direct/menu-chain harness pair and marker contract:
+  `mpPassive=ps=73/62->10/4 ticks=6/5/5 passive=81/70->10/4 ticks=6/5/5
+  branch=0x7f psb=0xf natural=0x7f mapcalls=2`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-dev-fast.ps1 -DelaySeconds 3`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+
+## 2026-06-27 - Boundary Docs Consistency
+
+- Updated `AGENTS.md`, `docs/HARNESSES.md`, `docs/STATUS.md`,
+  `docs/ROADMAP.md`, and `docs/NEXT_BOUNDARY_QUEUE.md` so the active boundary
+  consistently points at PassiveStand/Passive recover-loop modes `155/156`
+  with `mapcalls=2`.
+- Left platform-speed modes `151/152` and Inishie scale modes `153/154` as
+  regression history instead of current planning targets.
+- Verified:
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `git diff --name-only -- decomp`
+
+## 2026-06-27 - Passive Recovery DamageFall Map Callback Tightening
+
+- Tightened the current PassiveStand/Passive recover-loop proof so the natural
+  DamageFall map branch only runs through the installed
+  `FTStruct.proc_map == ftCommonDamageFallProcMap` callback. A missing callback
+  slot now marks the proof unsafe instead of executing the direct base wrapper.
+- No new harness or marker was added; the existing
+  `STAGE_MPPASSIVE_NATURALMAP` `0x7f` requirement still proves both
+  PassiveStandF and Passive selections went through the installed callback.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+
+## 2026-06-27 - Passive Recovery DamageFall Map Call Count
+
+- Added `gNdsStageMPPassiveLoopDamageFallMapCallCount` and
+  `STAGE_MPPASSIVE_NATURALMAP_CALLS`; current modes `155/156` now require
+  exactly two guarded `ftCommonDamageFallProcMap` wrapper calls for the
+  PassiveStandF and Passive natural map branches.
+- No new harness was added; this tightens the existing active boundary.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+
+## 2026-06-27 - Dash-Run AttackDash Run Proc Route Proof
+
+- Tightened the existing direct/menu-chain Dash -> Run -> RunBrake proof so
+  the isolated A-button tap from Run calls the installed original
+  `ftCommonRunProcInterrupt` callback instead of directly calling the
+  AttackDash interrupt helper.
+- Added `gNdsFighterDashRunAttackDashRunProcMask`; `DASH_RUN_ATTACK` now
+  reports `runproc=0x3` when both Mario and Fox enter AttackDash through the
+  Run interrupt route. The dash-run proof mask is now `0x3fff`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `Battle Mario/Fox Dash-Run harness passed: dash->run->runbrake + attackdash=191/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 dash->run->runbrake + attackdash=191/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: AttackDash hitboxes, animation command runtime, item attack
+  branches, and unbounded attack gameplay.
+
+## 2026-06-27 - Dash-Run Attack11 Wait Proc Route Proof
+
+- Added the bounded `src/import/battleship_ftcommon_attack1.c` wrapper for
+  original BattleShip `ftcommonattack1.c`, remapping the imported Attack11
+  entry points behind project-owned wrappers.
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof with a
+  pre-Dash Wait A-tap. The proof now calls original
+  `ftCommonAttack1CheckInterruptCommon`, enters Attack11 status/motion
+  `190/165` for Mario/Fox, installs the original Attack11 update/interrupt
+  callbacks plus bounded physics/map callbacks, and ticks those callback slots
+  once per fighter.
+- Added `DASH_RUN_ATTACK11` diagnostics:
+  `check=2/2`, `setstatus=2`, `ftmain=2`, status/motion `190/165`,
+  callback mask `0xff`, tick mask `0xff`, and wait-proc mask `0x3`. The
+  dash-run proof mask is now `0x1ffff`.
+- Kept the current port's `nFTMotionAttackIDNone` /
+  `nFTStatusAttackIDNone` sentinel at `-1` so existing FTStruct/Wait
+  diagnostics remain stable, while assigning explicit original-compatible
+  Attack11/Attack12/Attack13/Attack100/AttackDash attack IDs for the imported
+  Attack1 code path.
+- Verified:
+  - `make -j16`
+  - `make -C . TARGET=smash64ds-battle-mariofox-dash-run BUILD=build-battle-mariofox-dash-run-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_dash_run -B -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 5`
+  - `make -C . TARGET=smash64ds-menu-chain-mariofox-dash-run BUILD=build-menu-chain-mariofox-dash-run-harness NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_dash_run -B -j16`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 5`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `scripts/verify-current.ps1 -DelaySeconds 3`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `git diff --name-only -- decomp`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: Attack11 hitboxes, follow-up Attack12/Attack13/Attack100 runtime,
+  animation command runtime, item attack branches, and unbounded attack
+  gameplay.
+
+## 2026-06-28 - Dash-Run Attack11 to Attack12 Follow-Up Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof with a
+  bounded original Attack11 follow-up check. After the Wait A-tap enters
+  Attack11, the proof seeds the original follow-up window, calls the installed
+  Attack11 interrupt/update callbacks, and verifies the original follow-up gate
+  reaches Attack12 status/motion `191/166` for both Mario and Fox.
+- Added `DASH_RUN_ATTACK12` diagnostics:
+  `setstatus=2`, `ftmain=2`, status/motion `191/166`, callback mask `0xff`,
+  and goto mask `0xf`. The dash-run proof mask is now `0x7ffff`.
+- No new harness was added; this tightens the existing direct/menu-chain
+  dash-run proof pair.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 5`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 5`
+  - `scripts/verify-boundary.ps1 -DelaySeconds 3`
+  - `scripts/verify-current.ps1 -DelaySeconds 3`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `scripts/clean-generated.ps1 -DryRun`
+  - `git diff --name-only -- decomp`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: Attack12 hitboxes, animation command runtime, Attack13/Attack100
+  follow-up runtime, item attack branches, and unbounded attack gameplay.
+
+## 2026-06-28 - Dash-Run Attack12 to Mario Attack13 Gate Proof
+
+- Extended the same direct/menu-chain Dash -> Run -> RunBrake proof with a
+  bounded original Attack12 follow-up check. Mario reaches fighter-specific
+  Attack13 status/motion `220/195`; Fox remains at Attack12 `191/166` because
+  original `ftCommonAttack13CheckFighterKind` excludes Fox.
+- Added `DASH_RUN_ATTACK13` diagnostics:
+  `setstatus=1`, `ftmain=1`, Mario status/motion `220/195`, Fox blocked
+  status/motion `191/166`, callback mask `0xf`, and goto mask `0x7`. The
+  dash-run proof mask is now `0x1fffff`.
+- No new harness was added; this tightens the existing direct/menu-chain
+  dash-run proof pair.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 5`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 5`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: Attack13 hitboxes, animation command runtime, Attack100 runtime,
+  item attack branches, and unbounded attack gameplay.
+
+## 2026-06-28 - Dash-Run Attack12 to Fox Attack100Start Gate Proof
+
+- Imported bounded original `ftcommonattack100.c` through
+  `src/import/battleship_ftcommon_attack100.c`.
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof with a
+  bounded original Attack12 rapid-jab gate check. Fox now arms
+  `is_goto_attack100` through original
+  `ftCommonAttack100StartCheckInterruptCommon`, then reaches Fox
+  Attack100Start status/motion `220/195` through original
+  `ftCommonAttack100StartSetStatus` and the project-owned `ftMainSetStatus`
+  seam. Mario Attack13 remains distinguished from Fox Attack100Start by
+  fighter kind even though both use status `220`.
+- Added `DASH_RUN_ATTACK100` diagnostics:
+  `check/setstatus/ftmain=5/1/1`, Fox status/motion `220/195`, callback mask
+  `0xf`, and goto mask `0x3`. The dash-run proof mask is now `0x3fffff`.
+- No new harness was added; this tightens the existing direct/menu-chain
+  dash-run proof pair.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: Attack100Loop/Attack100End runtime, rapid-jab hitboxes, animation
+  command runtime, item attack branches, and unbounded attack gameplay.
+
+## 2026-06-28 - Dash-Run Fox Attack100Start to Attack100Loop Entry Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof with a
+  bounded original Fox rapid-jab loop-entry check. The proof drives the
+  installed original `ftCommonAttack100StartProcUpdate` callback at animation
+  end and verifies the handoff into Fox Attack100Loop status/motion `221/196`
+  through the project-owned `ftMainSetStatus` seam.
+- Added `DASH_RUN_ATTACK100_LOOP` diagnostics:
+  public wrapper count `0`, `ftmain=1`, Fox status/motion `221/196`,
+  callback mask `0xf`, and goto mask `0x3`. The public wrapper count is
+  expected to stay zero here because the imported translation unit calls the
+  macro-renamed base Loop status function internally. The dash-run proof mask
+  is now `0x7fffff`.
+- No new harness was added; this tightens the existing direct/menu-chain
+  dash-run proof pair.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0x1f; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0x1f; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: Attack100Loop runtime beyond entry, Attack100End, rapid-jab
+  hitboxes, animation command runtime, item attack branches, and unbounded
+  attack gameplay.
+
+## 2026-06-28 - Dash-Run Fox Attack100Loop Guarded Tick Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof with
+  one guarded original Fox Attack100Loop interrupt/update tick. The tick uses
+  the installed original Loop callbacks, proves A-input sets loop intent,
+  proves the update consumes `motion_vars.flags.flag1`, marks animation end,
+  clears loop intent, and remains in Fox Attack100Loop status/motion `221/196`.
+- Extended `DASH_RUN_ATTACK100_LOOP` with tick mask `0x1f`. The dash-run proof
+  mask is now `0xffffff`.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0x1f; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0x1f; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: continuous Attack100Loop runtime, Attack100End, rapid-jab hitboxes,
+  animation command runtime, item attack branches, and unbounded attack
+  gameplay.
+
+## 2026-06-28 - Dash-Run Fox Attack100Loop to Attack100End Handoff Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof with a
+  bounded no-input Fox rapid-jab loop exit. The proof drives the installed
+  original `ftCommonAttack100LoopProcUpdate` callback into original
+  `ftCommonAttack100EndSetStatus`, installs Fox Attack100End status/motion,
+  then runs the installed End update through `ftAnimEndSetWait` back to
+  Wait/Ground.
+- Extended `DASH_RUN_ATTACK100_LOOP` tick mask from `0x1f` to `0xfff`. Bits
+  now cover the prior A-input loop tick, no-input Loop -> Attack100End status,
+  End callback shape, and End -> Wait/Ground handoff.
+- No new harness was added; this tightens the existing direct/menu-chain
+  dash-run proof pair.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0xfff; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0xfff; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: continuous Attack100Loop runtime, rapid-jab hitboxes, animation
+  command runtime, item attack branches, and unbounded attack gameplay.
+
+## 2026-06-28 - Dash-Run Attack Animation-Event Seam Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof with a
+  bounded `ftMainPlayAnimEventsAll` marker for original attack status paths.
+  `DASH_RUN_ATTACK_ANIM=0x3f` proves Attack11 for Mario/Fox, Attack12 for
+  Mario/Fox, Mario Attack13, and Fox Attack100Start reached the project-owned
+  animation-event seam through their original status setters.
+- AttackDash is intentionally not part of this marker. Original BattleShip
+  `ftCommonAttackDashSetStatus` calls `ftMainSetStatus` but does not call
+  `ftMainPlayAnimEventsAll`; the existing AttackDash status/callback proof
+  remains the correct coverage for that path.
+- The dash-run proof mask is now `0x1ffffff`.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-current.ps1 -DelaySeconds 3`
+  - `scripts/check-docs.ps1`
+  - `scripts/check-architecture.ps1`
+  - `git diff --name-only -- decomp`
+  - `git diff --check`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0xfff; anim=0x3f; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0xfff; anim=0x3f; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: animation command runtime, attack hitboxes, continuous rapid-jab
+  gameplay, item attack branches, and unbounded attack gameplay.
+
+## 2026-06-28 - Dash-Run GuardOn Status Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof with a
+  bounded original GuardOn status/callback branch from Wait.
+- Imported original BattleShip `ftcommonguard1.c` and `ftcommonguard2.c`
+  through `src/import/battleship_ftcommon_guard.c`, keeping the original code
+  behind project-owned seams and without importing full shield gameplay.
+- Added `DASH_RUN_GUARD` diagnostics. The proof holds Z from Wait, calls
+  original `ftCommonGuardOnCheckInterruptCommon`, reaches GuardOn status/motion
+  `152/134`, installs callback mask `0xff`, records state mask `0x20f`,
+  emits GuardOn FGM `13`, and records the guarded shield-effect seam.
+- Fixed the local `FTAttributes` extension after `shield_size` so subsequent
+  fields retain their original offsets. Before this, Mario/Fox fell back to
+  stub fighter GObjs because `commonparts_container` was read from the wrong
+  offset.
+- The dash-run proof mask is now `0x3ffffff`.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-current.ps1 -DelaySeconds 3`
+  - `Battle Mario/Fox Dash-Run harness passed: wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; guard=152/134 cb=0xff state=0x20f fgm=13; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0xfff; anim=0x3f; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+  - `Menu-chain Mario/Fox Dash-Run harness passed: chain final=22/21 wait->attack11=190/165 cb=0xff tick=0xff waitproc=0x3; guard=152/134 cb=0xff state=0x20f fgm=13; attack11->attack12=191/166 cb=0xff goto=0xf; attack12->attack13=220/195 foxblock=191/166 cb=0xf goto=0x7; fox attack100start=220/195 cb=0xf goto=0x3; fox attack100loop=221/196 cb=0xf goto=0x3 tick=0xfff; anim=0x3f; dash->run->runbrake + attackdash=192/167 cb=0xff tick=0x3f runproc=0x3 root-dx=301575/-418500 vel=51200/71000->47450/66000`
+- Deferred: full GuardOn/Guard/GuardOff/SetOff shield runtime, shield collision,
+  shield visuals, guard cancel/escape/catch branches, hitlag interaction, item
+  branches, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Appeal Status Proof
+
+- Extended the existing direct/menu-chain Passive recovery modes `155/156`
+  without adding a new harness pair.
+- Imported bounded original BattleShip `ftcommonappeal.c` through
+  `src/import/battleship_ftcommon_appeal.c`.
+- Added the narrow Kirby passive-vars compatibility fields required for the
+  original Appeal source to compile; Mario/Fox proof execution does not import
+  Kirby runtime.
+- Added `STAGE_MPPASSIVE_APPEAL` diagnostics. The proof seeds one L-button tap
+  from Wait/Ground, calls imported original
+  `ftCommonAppealCheckInterruptCommon`, reaches Appeal/Ground status/motion
+  `189/164`, records the callback shape, and proves the bounded guard cleaned
+  up.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-current.ps1 -DelaySeconds 3`
+  - direct/menu-chain summaries now include `appeal=189/164`.
+- Deferred: continuous Appeal/Taunt animation, event runtime, audio/FGM beyond
+  the current status seam, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Appeal Callback/Update Proof
+
+- Extended the existing direct/menu-chain Passive recovery modes `155/156`
+  without adding a harness.
+- After the bounded original L-button Appeal status proof, the proof now ticks
+  the installed original `ftCommonAppealProcInterrupt` callback once with
+  `motion_vars.flags.flag1 = 0`, proving the callback is callable while catch
+  and guard branches remain deferred.
+- The same proof then runs the installed `ftAnimEndSetWait` update slot at
+  animation end and verifies the fighter returns to Wait/Ground with the Wait
+  callback shape.
+- `STAGE_MPPASSIVE_APPEAL` now requires mask `0x7f`.
+- Verified:
+  - `make -j16`
+  - `.\scripts\verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `.\scripts\verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+- Deferred: Appeal catch/guard interrupt branches, continuous Appeal animation
+  events, audio/FGM beyond existing seams, Kirby copy-loss behavior, and
+  unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover DownWait Chain Proof
+
+- Reused the existing bounded original DownWait proof instead of adding a new
+  harness.
+- Enabled `NDS_MARIOFOX_STAGE_MPDOWNWAIT_LOOP_HARNESS` under the current
+  Passive recover modes `155/156`.
+- Tightened the current recover verifier wrapper so `STAGE_MPDOWNWAIT` markers
+  are required for the latest direct/menu-chain boundary.
+- The latest proof now continues from the recovered Wait/Ground boundary into
+  DownWaitU/Ground, DownStandU, DownAttackU, DownForwardU, and DownBackU
+  source-order branches and their Wait/Ground handoffs.
+- Verified:
+  - `make -j16`
+  - `.\scripts\verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  - `.\scripts\verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+- Deferred: continuous downed-action gameplay, hitboxes, hurtboxes, live
+  player-driven damage/downed selection, and unbounded fighter scheduling.
+
+## 2026-06-28 - Dash-Run Guard Escape Status Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof without
+  adding a new harness pair.
+- Imported bounded original BattleShip `ftcommonescape.c` through
+  `src/import/battleship_ftcommon_escape.c`.
+- Added `DASH_RUN_ESCAPE` diagnostics. The proof reuses the verified GuardOn
+  state, seeds held-stick direction for both fighters, calls original
+  `ftCommonEscapeCheckInterruptGuard`, reaches EscapeF/EscapeB status/motion
+  `156/136` and `157/137`, records callback mask `0x3ff`, state mask `0xff`,
+  and preserves original `itemthrow_buffer_tics=5`.
+- The dash-run proof mask is now `0x7ffffff`.
+- Verified:
+  - `make -j16`
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - direct/menu-chain summaries now include
+    `escape=156/136 cb=0x3ff state=0xff`.
+- Deferred: full Guard/GuardOff/SetOff/Escape shield runtime, shield roll
+  movement, guard cancel/catch branches, hitlag interaction, item branches, and
+  unbounded fighter gameplay.
+
+## 2026-06-28 - Dash-Run GuardOn Update Tick Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof without
+  adding a new harness pair.
+- Reused the imported original `ftcommonguard1.c` path and ran one installed
+  original `ftCommonGuardOnProcUpdate` tick with positive animation time.
+- `DASH_RUN_GUARD` now requires state mask `0x3e0f`. The new bits prove the
+  callback preserves GuardOn status/motion `152/134`, keeps shield active, and
+  advances shield decay/release counters from `16/8` to `15/7`.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - direct/menu-chain summaries now include
+    `guard=152/134 cb=0xff state=0x3e0f fgm=13`.
+- Deferred: full Guard/GuardOff/SetOff/Escape shield runtime, shield collision,
+  shield visuals, guard cancel/catch branches, hitlag interaction, item
+  branches, and unbounded fighter gameplay.
+
+## 2026-06-28 - Dash-Run GuardOn To Guard Handoff Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof without
+  adding a new harness pair.
+- Corrected the local bounded GuardOn status callback installation to use
+  `mpCommonSetFighterFallOnGroundBreak`, matching BattleShip's original common
+  status table for GuardOn/Guard.
+- Added one animation-end `ftCommonGuardOnProcUpdate` tick. The proof now
+  reaches original `ftCommonGuardSetStatus`, enters Guard status `153` while
+  preserving GuardOn motion `134`, and installs the original Guard
+  update/interrupt/physics/map callbacks.
+- `DASH_RUN_GUARD` now requires state mask `0x3fe0f`. The new bits prove the
+  Guard handoff status/callback state after the existing positive-time GuardOn
+  update tick.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - direct/menu-chain summaries now include
+    `guard=152/134 cb=0xff state=0x3fe0f fgm=13`.
+- Deferred: full Guard hold, GuardOff, SetOff, shield collision, shield
+  visuals, guard cancel/catch branches, hitlag interaction, item branches, and
+  unbounded fighter gameplay.
+
+## 2026-06-28 - Dash-Run Guard Hold Tick Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof without
+  adding a new harness pair.
+- After the verified GuardOn -> Guard handoff, ran one installed original
+  `ftCommonGuardProcUpdate` callback with Z still held.
+- `DASH_RUN_GUARD` now requires state mask `0x3ffe0f`. The new bits prove the
+  Guard hold update stays in Guard status `153`, keeps shield active, keeps
+  release unscheduled, and advances shield decay/release counters from the
+  handoff state.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - direct/menu-chain summaries now include
+    `guard=152/134 cb=0xff state=0x3ffe0f fgm=13`.
+- Deferred: continuous Guard hold, GuardOff, SetOff, shield collision, shield
+  visuals, guard cancel/catch branches, hitlag interaction, item branches, and
+  unbounded fighter gameplay.
+
+## 2026-06-28 - Dash-Run GuardOff Release Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof without
+  adding a new harness pair.
+- During the verified Guard hold state, released Z and ran the installed
+  original `ftCommonGuardProcUpdate` callback. This reaches original
+  `ftCommonGuardOffSetStatus`, enters GuardOff status/motion `154/135`, and
+  installs original GuardOff update/physics/map callbacks.
+- Restored Guard through original `ftCommonGuardSetStatus` before the existing
+  Guard -> Escape proof, so the Escape proof still runs from a real Guard
+  state.
+- `DASH_RUN_GUARD` now requires state mask `0xffffe0f`. The new bits prove the
+  GuardOff status/callback state and the release-side shield counters.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - direct/menu-chain summaries now include
+    `guard=152/134 cb=0xff state=0xffffe0f fgm=13`.
+- Deferred: GuardOff completion to Wait, continuous Guard hold, SetOff, shield
+  collision, shield visuals, guard cancel/catch branches, hitlag interaction,
+  item branches, and unbounded fighter gameplay.
+
+## 2026-06-28 - Dash-Run GuardOff Completion Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof without
+  adding a new harness pair.
+- After the verified GuardOff status/motion `154/135`, ran one installed
+  original `ftCommonGuardOffProcUpdate` callback at animation end. This reaches
+  original `ftCommonWaitSetStatus` and returns to Wait/Ground with Wait
+  callbacks installed.
+- Restored Guard through original `ftCommonGuardSetStatus` before the existing
+  Guard -> Escape proof, so the Escape proof still runs from a real Guard
+  state.
+- `DASH_RUN_GUARD` now requires state mask `0xfffffe0f`. The new bits prove
+  the GuardOff -> Wait status/callback state.
+- Verified:
+  - `scripts/verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - `scripts/verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`
+  - direct/menu-chain summaries now include
+    `guard=152/134 cb=0xff state=0xfffffe0f fgm=13`.
+- Deferred: continuous Guard hold, SetOff, shield collision, shield visuals,
+  guard cancel/catch branches, hitlag interaction, item branches, and unbounded
+  fighter gameplay.
+
+## 2026-06-28 - Passive Recover Turn Chain Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded original Turn proof and wired it into the current
+  Passive recover modes after the recovered Wait/Ground boundary.
+- The latest direct/menu-chain boundary now proves original
+  `ftCommonTurnCheckInterruptCommon` reaches Turn/Ground status/motion `18/12`,
+  the installed update callback flips facing and ground velocity
+  `1 -> -1` / `2500 -> -2500`, and the final update returns through the
+  original Wait/Ground handoff.
+- Deferred: continuous player-driven Turn movement, broader directional
+  movement scheduling, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover DownRecoverD Chain Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded original face-down DownRecover proof and wired it
+  into the current Passive recover modes after the recovered/Turn-proven
+  Wait/Ground boundary.
+- The latest direct/menu-chain boundary now proves DownWaitD/Ground `69/-2`,
+  DownStandD `71/60`, DownAttackD `79/68`, DownForwardD `75/64`, DownBackD
+  `77/66`, and the original Wait/Ground handoff mask `0xf`.
+- Deferred: continuous face-down downed-action runtime, hitboxes/runtime effects
+  for DownAttackD, player-driven recovery scheduling, and unbounded fighter
+  gameplay.
+
+## 2026-06-28 - Passive Recover CliffLedge Aggregation Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded CliffLedge aggregation proof and wired it into
+  the current Passive recover modes after the DownRecoverD proof.
+- The latest direct/menu-chain boundary now proves same-cliff occupancy blocks
+  a second catch, ledge drop clears cliff hold into Fall/Air with
+  `cliffcatch_wait=30`, recatch succeeds after release, and CliffClimbQuick2
+  finishes through the original Wait/Ground handoff on Pupupu line `3`.
+- Deferred: continuous natural ledge occupancy/release/drop/climb runtime,
+  arbitrary player-driven ledge scheduling, ledge attack/escape hitboxes, and
+  unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover CliffLive Selected-Process Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded CliffLive proof and wired it into the current
+  Passive recover modes after the CliffLedge aggregation proof.
+- The latest direct/menu-chain boundary now drives a proof-owned selected P0
+  `GObjProcess` through original CliffCatch -> CliffWait -> CliffQuick ->
+  CliffClimbQuick1 -> CliffClimbQuick2, one guarded common2 update/physics/map
+  tick, Wait/Ground finish, and a reseeded CliffWait drop into Fall/Air.
+- Current marker:
+  `mpCliffLive=wait=85/73 climb=86/74 quick2=88/76 finish=10/4 drop=26/20 src=0xfff`.
+- Deferred: continuous natural ledge runtime, arbitrary player-driven ledge
+  scheduling, ledge attack/escape hitboxes, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Hyrule Wall-Hit Floor Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded Hyrule wall-hit floor proof and wired it into
+  the current Passive recover modes after the CliffLive proof.
+- The latest direct/menu-chain boundary now validates the source-order MP
+  wall-line/floor-edge scout relationship for the selected wall-hit probe:
+  `floor=5`, `wall=13`, `edge=12`, `side=0`, `mapNodes=1`, and
+  `delta=-1600/-388`.
+- Current marker:
+  `mpWallHitFloor=pass floor=5 wall=13 edge=12 side=0 mapNodes=1 delta=-1600/-388`.
+- Deferred: natural live wall collision, wall-copyback integration, wall
+  teching, continuous collision response, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Hyrule Wall-Copy Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded wall-copy proof for the selected Hyrule
+  wall-hit probe and wired it into the current Passive recover modes.
+- The latest direct/menu-chain boundary now proves one source-order wall
+  collision copyback pass for `floor=5`, `wall=13`, `edge=12`, preserving the
+  expected final wall collision mask and leaving the other fighter untouched.
+- Current marker:
+  `mpWallCopy=pass floor=5 wall=13 edge=12 delta=-1600/-388`.
+- Deferred: natural live wall collision, arbitrary wall copyback, wall
+  teching, continuous collision response, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Pass-Through Floor Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded pass-through floor proof and wired it into the
+  current Passive recover modes after the wall-copy proof.
+- The latest direct/menu-chain boundary now proves the source-order
+  pass-through floor route: same-line pass-through collision is rejected
+  through `ignore_line_id`, while the different-line probe is accepted through
+  the original-compatible pass callback.
+- Current marker:
+  `mpPass=line=0 flags=0x4000 route=2 same=1 diff=1 cb=1/1/0`.
+- Deferred: full player-driven down-input drop-through, moving platform
+  pass-through, continuous platform gameplay, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Platform-Floor Classification Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded platform-floor proof and wired it into the
+  current Passive recover modes after the pass-through proof.
+- The latest direct/menu-chain boundary now checks the selected pass-through
+  line against BattleShip's yakumono platform predicate and records DObj,
+  status, animation, and blocker state for that line.
+- Current marker:
+  `mpPlatform=line=0 yak=1 dobj=1 status=0 anim=0 deferred=0x40`.
+- Deferred: active platform state, ticking, movement, speed transfer, full
+  moving-platform pass-through, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Active Platform-Floor Predicate Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded active platform-floor proof and wired it into the
+  current Passive recover modes after the inactive platform classification.
+- The latest direct/menu-chain boundary now installs the bounded yakumono DObj
+  for Dream Land line `0`, sets the original-compatible active status, and
+  proves BattleShip's platform predicate reports active.
+- Current marker:
+  `mpPlatform=line=0 yak=1 dobj=1 status=1 anim=0 active`.
+- Deferred: platform ticking, movement, speed transfer, full moving-platform
+  pass-through, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Platform Tick Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded platform-tick proof and wired it into the current
+  Passive recover modes after the active platform predicate.
+- The latest direct/menu-chain boundary now runs one guarded
+  `mpCollisionAdvanceUpdateTic` step for the active Dream Land yakumono and
+  verifies the predicate remains active.
+- Current marker:
+  `mpPlatformTick=tic=0->1 setOn=1 advance=1 status=1/1`.
+- Deferred: platform movement, speed transfer, full moving-platform
+  pass-through, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Natural Drop-Through Input Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded natural drop-through input proof and wired it
+  into the current Passive recover modes after the platform-tick proof.
+- The latest direct/menu-chain boundary now seeds original-compatible down
+  input on Dream Land pass-through line `0` and routes Wait -> Squat -> Pass
+  through imported original `ftcommonpass.c` / `ftcommonsquat.c`.
+- Current marker:
+  `mpPassInput=line=0 flags=0x4000 squat=28 pass=33 ignore=0`.
+- Deferred: moving-platform pass-through, continuous platform gameplay, and
+  unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Platform Position Primitive Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded platform-position proof and wired it into the
+  current Passive recover modes after the natural drop-through input proof.
+- The latest direct/menu-chain boundary now calls
+  `mpCollisionSetYakumonoPosID` for Dream Land line `0` / yakumono `1` and
+  records the resulting `gMPCollisionSpeeds` delta.
+- Current marker:
+  `mpPlatformPos=line=0 yak=1 delta=12000/-4000/2000`.
+- Deferred: continuous platform movement, live speed transfer through
+  collision, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Platform Speed Consumer Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded platform-speed proof and wired it into the
+  current Passive recover modes after the platform-position proof.
+- The latest direct/menu-chain boundary now reads the active Dream Land
+  yakumono speed through `mpCollisionGetSpeedLineID` and runs the bounded
+  dynamic floor/ceil/wall, wall-process, animation, bounds, and stage-animation
+  diagnostic slices already covered by the platform-speed verifier.
+- Current marker:
+  `mpPlatformSpeed=line=0 yak=1 read=12000/-4000 dyn=1/2 ceil=1/1 wall=1/1 procwall=1/1 anim=1 bounds=1 stageanim=0/0x91 inishieAsset=header/geometry nodes=1`.
+- Deferred: continuous moving-platform gameplay, unbounded live speed transfer,
+  and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Inishie Scale Proof
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded Inishie/Mushroom Kingdom scale proof and wired it
+  into the current Passive recover modes after the platform-speed proof.
+- The latest direct/menu-chain boundary now stages read-only
+  `StageInishieFile3`, runs source-backed `grInishieMakeScale` /
+  `grInishieScaleProcUpdate`, and records the source-DL preview plus scale
+  update threshold diagnostics.
+- Current marker:
+  `inishieScale=ticks=2 lines=1/2 alt=80000->64000 y=363000/362000->427000/298000 speed=-8000/8000 fall=1->2/0 step=3->0/0 sourceDL=0xff cmds=91 tris=20 tex=0x3f preview=0x3f px=432`.
+- Deferred: full Mushroom Kingdom runtime, hardware-backed texture/material
+  rendering, continuous scale gameplay, and unbounded fighter gameplay.
+
+## 2026-06-28 - Passive Recover Dash-Run Aggregate Guard
+
+- Extended the current direct/menu-chain PassiveStand/Passive recover-loop
+  modes `155/156` without adding a new harness pair.
+- Reused the existing bounded Dash-Run attack/guard aggregate proof and wired
+  it into the current Passive recover modes after the Inishie scale proof.
+- The latest direct/menu-chain boundary now asserts the `DASH_RUN` marker and
+  records the older Attack11/Attack12/Mario Attack13/Fox Attack100,
+  AttackDash, GuardOn/Guard/GuardOff, and EscapeF/EscapeB
+  status/callback/update slices under the latest VSBattle/Pupupu root.
+- Current marker:
+  `dashRun=0x7ffffff`.
+- Deferred: full attack hitboxes, continuous Attack100/Guard runtime, shield
+  collision, player-driven attack/shield gameplay, and unbounded fighter
+  gameplay.
+
+## 2026-06-28 - Cliff Common2 Current-Fold Blocker
+
+- Tested a narrow current-mode fold of the existing standalone
+  CliffAttack/Common2 and CliffEscape/Common2 proofs into modes `155/156`.
+- The macro-gate-only approach was not kept. It let the CliffAttack/Common2
+  diagnostics publish, but shared selected-fighter proof state changed early
+  enough that later wall-copy/platform/Inishie current-boundary finalizers no
+  longer published.
+- Restored the current boundary to the prior proven behavior and kept
+  CliffAttack/Common2 and CliffEscape/Common2 as standalone proof pairs.
+- Current direct proof after restoration:
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  passed with `dashRun=0x7ffffff`.
+- Deferred: promote CliffAttack/Common2 or CliffEscape/Common2 into the latest
+  aggregate only after isolated reseeding or finalizer reordering.
+
+## 2026-06-28 - Promoted CliffAttack/Common2 Into Current Passive Recover Modes
+
+- Kept the existing direct/menu-chain Passive recover modes `155/156`; no new
+  harness pair was added.
+- Reordered the aggregate cliff finalizers after the current tail so the
+  wall-copy, platform, platform-speed, and Inishie scale finalizers publish
+  before the delayed cliff attack/common2 probes mutate the selected fighter.
+- Added a delayed aggregate reseed before the CliffAttack floor probe. The
+  reseed restores P1 to original-compatible CliffWait state with the existing
+  cliff ID, then calls the imported original CliffWait interrupt path to prove
+  the A-button CliffAttack transition.
+- Isolated the shared CliffCommon2 bridge diagnostics before the CliffAttack
+  action probe so prior CliffClimb bridge calls no longer contaminate the
+  CliffAttack action mask.
+- Scoped verifier expectations for the aggregate path: standalone
+  CliffAttack proofs keep the stricter existing checks, while current modes
+  accept the positive prior CliffWait fall-wait tick created before the delayed
+  reseed.
+- Direct proof:
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  passed with
+  `mpCliffAttack=status=85->86 motion=73->74 queue=1 cliff=3 button=0x8000`,
+  `mpCliffAttackAction=status=86->92->93 motion=74->80->81 cliff=3 floor=3`,
+  and `mpCliffCommon2=status=93->93->93->93 motion=81->81->81->81`.
+- Menu-chain proof:
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  passed with the same CliffAttack/Common2 markers.
+- Current profile:
+  `verify-current.ps1 -DelaySeconds 3` passed.
+- Deferred: CliffEscape/Common2 remains standalone regression coverage. Promote
+  it only with the same delayed-reseed and bridge-diagnostic isolation pattern.
+
+## 2026-06-28 - Promoted CliffEscape/Common2 Into Current Passive Recover Modes
+
+- Kept the existing direct/menu-chain Passive recover modes `155/156`; no new
+  harness pair was added.
+- Reused the existing bounded CliffEscape action/Common2 proofs and folded
+  them into the current Passive recover aggregate after the CliffAttack/Common2
+  proof.
+- Added a delayed aggregate reseed before the CliffEscape action probe. The
+  reseed restores the selected fighter to original-compatible CliffWait state
+  with the existing cliff ID, then calls the imported original CliffWait
+  interrupt path to prove the stick-away CliffEscape transition.
+- Isolated the shared CliffCommon2 bridge diagnostics before the CliffEscape
+  action probe so earlier CliffAttack bridge calls do not contaminate the
+  CliffEscape action mask.
+- Scoped verifier expectations for the aggregate path: standalone
+  CliffAttack proofs keep their stricter bridge checks, while current modes
+  let the later CliffEscape bridge own the shared bridge diagnostics.
+- Direct proof:
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  passed with
+  `mpCliffEscapeAction=status=85->86->96->97 motion=73->74->84->85 cliff=3 floor=3`
+  and
+  `mpCliffEscapeCommon2=status=97->97->97->97 motion=85->85->85->85 cliff=3 floor=3->3`.
+- Menu-chain proof:
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`
+  passed with the same CliffEscape/Common2 markers.
+- Current profile:
+  `verify-current.ps1 -DelaySeconds 3` passed.
+- Deferred: continuous natural ledge attack/escape runtime, full player-driven
+  ledge decisions, and unbounded fighter gameplay remain deferred.
+
+## 2026-06-28 - Added Bounded MakeAttackColl Event Decoder Proof
+
+- Kept the current Passive recover boundary unchanged and reused the existing
+  direct/menu-chain Dash -> Run -> RunBrake harness pair.
+- Added a narrow project-owned `FTAttackColl` shadow to `include/ft/fighter.h`
+  and made `ftParamClearAttackCollAll` clear the shadow state instead of acting
+  only as a counter.
+- Added a bounded original-layout `MakeAttackColl` decoder beside
+  `ftMainPlayAnimEventsAll`. The fixture uses the same field layout as
+  BattleShip `ftMotionCommandMakeAttackCollS*` macros and writes the decoded
+  values into `FTStruct.attack_colls[0]`.
+- Extended the direct/menu-chain dash-run verifiers with
+  `DASH_RUN_ATTACK_EVENT`. Both now require event mask/count `0x3f/6`, decoded
+  damage `7`, size `3000`, offset `1200/2400/-800`, angle `361`,
+  KBG/KBW/BKB `90/20/30`, shield `2`, and air/ground/rebound flags `0x7`.
+- Direct proof:
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3` passed with
+  `event=0x3f/6 dmg=7 size=3000 off=1200/2400/-800`.
+- Menu-chain proof:
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3` passed
+  with the same event marker after the VS menu chain.
+- Deferred: real fighter motion-script event hookup, full `ftmain.c`
+  animation command runtime, hitbox activation, fighter-vs-fighter hit
+  detection, hitlag/damage interaction, and continuous attack gameplay.
+
+## 2026-06-28 - Replaced MakeAttackColl Fixture With Selected Original Motion Commands
+
+- Kept the current Passive recover boundary unchanged and reused the existing
+  direct/menu-chain Dash -> Run -> RunBrake harness pair.
+- Added `src/import/battleship_mariofox_mainmotion.c` as a bounded selected
+  command extract from BattleShip `202_MarioMainMotion.c` and
+  `208_FoxMainMotion.c` instead of compiling the full relocData files. The full
+  files currently pull in broad item/map/audio enum surfaces outside this
+  proof.
+- Updated `ftMainPlayAnimEventsAll` to install the selected original
+  Attack11/Attack12/Mario Attack13/Fox Attack100Start command stream before
+  scanning for `MakeAttackColl`.
+- Extended `DASH_RUN_ATTACK_EVENT` to report decoded-hit mask, reached-script
+  mask, no-hit script mask, and parse count. Current direct/menu-chain proof
+  expects `0x1f/0x3f/0x20/5`.
+- The current source-order last decoded hitbox is Fox Jab2:
+  `damage=4`, `size=100`, `offset=140/0/0`, `angle=70`,
+  `KBG/KBW/BKB=100/0/0`, `shield=0`, and flags `0x7`.
+- Direct proof:
+  `verify-battle-mariofox-dash-run-harness.ps1` passed with
+  `event=0x1f/0x3f/0x20/5 dmg=4 size=100 off=140/0/0`.
+- Menu-chain proof:
+  `verify-menu-chain-mariofox-dash-run-harness.ps1` passed with the same event
+  marker after the VS menu chain.
+- Deferred: full motion-script relocData import, full animation command
+  runtime, hitbox activation, fighter-vs-fighter hit detection,
+  hitlag/damage interaction, and continuous attack gameplay.
+
+## 2026-06-28 - Extended Selected MakeAttackColl Scan To Second Hitboxes
+
+- Kept the current Passive recover boundary unchanged and reused the existing
+  direct/menu-chain Dash -> Run -> RunBrake harness pair.
+- Extended the selected Mario/Fox main-motion command extract to include the
+  second original `MakeAttackColl` command for Mario Jab1, Mario Jab2, Mario
+  Jab3, Fox Jab1, and Fox Jab2.
+- Updated the bounded `ftMainPlayAnimEventsAll` scanner to continue through
+  multiple selected `MakeAttackColl` commands before stopping at `End` or
+  `Pause`, while preserving Fox Attack100Start as the real no-hit script.
+- Updated the direct/menu-chain dash-run verifiers to require
+  `DASH_RUN_ATTACK_EVENT=0x1f/0x3f/0x20/10`. The source-order last decoded
+  hitbox is now Fox Jab2 attack ID `1`: `damage=4`, `size=100`,
+  `offset=0/0/0`, `angle=70`, `KBG/KBW/BKB=100/0/0`, `shield=0`, and flags
+  `0x7`.
+- Deferred: full motion-script relocData import, full animation command
+  runtime, command-driven clear/size/damage mutation, hitbox activation,
+  fighter-vs-fighter hit detection, hitlag/damage interaction, and continuous
+  attack gameplay.
+
+## 2026-06-28 - Added Selected Attack Damage/Size/Clear Command Scan
+
+- Kept the active Passive recover boundary unchanged and reused the existing
+  direct/menu-chain Dash -> Run -> RunBrake harness pair.
+- Extended the selected Mario Jab3 main-motion extract with the original
+  `SetAttackCollDamage`, `SetAttackCollSize`, and `ClearAttackCollAll` command
+  words from `202_MarioMainMotion.c`.
+- Updated the bounded `ftMainPlayAnimEventsAll` scanner to apply those command
+  words to the local `FTStruct.attack_colls` shadows and to use the existing
+  `ftParamClearAttackCollAll` seam for the clear command.
+- Added `gNdsFighterDashRunAttackEventCommandMask`; the direct/menu-chain
+  dash-run verifiers now require `DASH_RUN_ATTACK_EVENT_CMDS=0xf` for damage,
+  size, clear, and clear-off state.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  and `clean-generated.ps1 -DryRun`.
+- Deferred: full motion-script relocData import, full animation command
+  runtime, staled-damage handling after `SetAttackCollDamage`, hitbox
+  activation, fighter-vs-fighter hit detection, hitlag/damage interaction, and
+  continuous attack gameplay.
+
+## 2026-06-28 - Extended Pass-Input Proof To SquatRv Release
+
+- Kept the active Passive recover boundary unchanged and reused the existing
+  direct/menu-chain pass-input proof inherited by modes `155/156`.
+- Reused the already imported BattleShip `ftcommonsquat.c` path to prove
+  SquatWait -> SquatRv -> Wait after the existing Wait -> Squat -> Pass
+  drop-through proof.
+- Extended the bounded pass-input `ftMainSetStatus` seam to accept
+  SquatWait/SquatRv/Wait and install the original-compatible callback slots:
+  `ftCommonSquatWaitProcUpdate`, `ftCommonSquatWaitProcInterrupt`,
+  `ftAnimEndSetWait`, and `ftCommonSquatRvProcInterrupt`.
+- Added `STAGE_MPPASS_INPUT_SQUATRV`; current proof expects set/tick counts
+  `1/1/1/1`, status `29 -> 30 -> 10`, callback mask `0xf`, and final
+  ground state `0`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppass-input-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+- Deferred: continuous crouch movement, full ground interrupt scanning,
+  player-driven crouch/pass/squat release scheduling, and full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded GuardSetOff Proof
+
+- Kept the active Passive recover boundary unchanged and reused the existing
+  direct/menu-chain Dash -> Run -> RunBrake harness pair inherited by current
+  modes `155/156`.
+- Extended the local dash-run `ftMainSetStatus` guard seam to admit original
+  `nFTCommonStatusGuardSetOff` only while the bounded guard proof is active.
+  The status keeps the original `-1` script behavior by preserving the current
+  Guard motion while installing `ftCommonGuardSetOffProcUpdate`.
+- Drove imported original `ftCommonGuardSetOffSetStatus` with deterministic
+  shield damage `10`, proving `setoff_frames=20200` milli-units and ground
+  velocity `-40400`, then ticked the installed original SetOff update once for
+  held-Z return to Guard and once for released-Z return to GuardOff.
+- Added `DASH_RUN_GUARD_SETOFF`; direct/menu-chain dash-run verifiers require
+  counts `4/4`, mask `0xfff`, callback mask `0xff`, frames `20200`, and
+  velocity `-40400`. The inherited dash-run aggregate is now
+  `dashRun=0xfffffff`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-current.ps1 -DelaySeconds 3`.
+- Deferred: continuous Guard/SetOff/Escape shield runtime, real shield
+  collision, player-driven shield scheduling, shield visuals, and full
+  `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Escape Callback Tick Proof
+
+- Extended the existing direct/menu-chain Dash -> Run -> RunBrake proof without
+  adding a new harness or importing another BattleShip translation unit.
+- Reused the imported original `ftcommonescape.c` wrapper and the existing
+  Guard -> Escape setup to tick the installed original Escape callbacks once
+  per fighter.
+- Added guarded diagnostics for `DASH_RUN_ESCAPE` so the verifier now proves
+  `tick=0x3ff`: original `ftCommonEscapeProcUpdate` consumes
+  `motion_vars.flags.flag1` and flips LR, original
+  `ftCommonEscapeProcInterrupt` reaches the light-throw seam, the installed
+  physics/map callbacks reach bounded compatibility seams, and animation end
+  returns through original `ftCommonWaitSetStatus` to Wait/Ground.
+- Raised the inherited dash-run aggregate proof from `dashRun=0xfffffff` to
+  `dashRun=0x1fffffff`, so modes `155/156` kept this Escape callback tick
+  proof covered under the live VSBattle/Pupupu root at that milestone.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-current.ps1 -DelaySeconds 3`.
+- Continuous shield-roll runtime, shield collision, player-driven guard escape,
+  and full fighter scheduling remain deferred.
+
+## 2026-06-28 - Passive Recover Appeal GuardOn Branch Proof
+
+- Extended the current direct/menu-chain Passive recover modes `155/156` with a
+  bounded source-order Appeal/Taunt interrupt branch proof.
+- After the existing Appeal no-catch/no-guard callback tick and
+  `ftAnimEndSetWait` handoff, the proof re-enters Appeal through imported
+  original `ftCommonAppealCheckInterruptCommon`, sets
+  `motion_vars.flags.flag1`, calls the installed original
+  `ftCommonAppealProcInterrupt`, proves the catch seam returns false, and then
+  routes through imported original GuardOn setup to status/motion `152/134`.
+- Added Appeal-specific GuardOn diagnostics instead of reusing the Dash-Run
+  guard proof counters. The branch uses a temporary shield animation/DObj
+  lookup fixture around original GuardOn joint setup and restores the fighter
+  to Wait/Ground afterward so this remains a boundary proof.
+- Updated the shared gcDrawAll verifier marker contract:
+  `STAGE_MPPASSIVE_APPEAL` now expects two Appeal check/set-status entries,
+  `STAGE_MPPASSIVE_APPEAL_GUARD` requires mask `0x7f`, and the recover
+  Passive proof mask increases to `0x7ff`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: continuous Appeal/Taunt runtime, continuous Guard/Shield runtime,
+  real shield visuals/collision, player-driven guard scheduling, catch
+  gameplay, and full `ftmain.c`.
+
+## 2026-06-28 - Added Isolated melonDS Runner Slots
+
+- Added local generated melonDS runner slots under
+  `emulators/melonds-runners/slotN`, with per-slot executable links/copies,
+  persistent `melonDS.toml`, and deterministic ARM9/ARM7 GDB ports
+  `3333 + slot * 10` and `3334 + slot * 10`.
+- Threaded `-RunnerSlot`, `-GdbPort`, and `-NoBuild` through verifier profiles,
+  harness wrappers, runtime/title/opening samplers, and shared GDB marker
+  helpers. Slot runs use `artifacts/emulator-logs/slotN` and
+  `artifacts/verifier-temp/slotN`.
+- Added deterministic profile sharding in `verify-all.ps1` and a conservative
+  `Start-VerifyRegressionShards.ps1` launcher/list helper. Parallel shards are
+  intended to use prebuilt outputs plus `-NoBuild` to avoid shared build-output
+  races.
+- Verified:
+  `New-MelonDSRunnerSlots.ps1 -Count 2 -List`,
+  `verify-all.ps1 -Profile Boundary -ShardCount 2 -ShardIndex 0 -RunnerSlot 0 -List`,
+  `verify-all.ps1 -Profile Boundary -ShardCount 2 -ShardIndex 1 -RunnerSlot 1 -List`,
+  `build-verify-profile.ps1 -Profile Boundary`,
+  both Boundary shards concurrently with `-NoBuild -DelaySeconds 3`,
+  `verify-regression.ps1 -List`, and
+  `verify-boundary.ps1 -DelaySeconds 3`.
+- Deferred: four-way full Regression stress testing. Use the 2-slot Boundary
+  proof as the current smoke test before scaling parallel regression.
+
+## 2026-06-28 - Added Bounded Original WallDamage Proof
+
+- Imported original BattleShip `ftcommonwalldamage.c` through
+  `src/import/battleship_ftcommon_walldamage.c` and kept the new proof folded
+  into current modes `155/156`.
+- Added the narrow fighter struct/status fields and diagnostics needed by the
+  original WallDamage path, plus bounded compatibility seams for impact wave,
+  quake, rumble, timed intangible, and the DamageFall handoff.
+- The proof seeds the selected Hyrule wall-hit source (`floor=5`, `wall=13`,
+  `edge=12`), calls original `ftCommonWallDamageCheckGoto`, proves reflected
+  knockback into WallDamage status/motion `56/49`, then ticks original
+  `ftCommonWallDamageProcUpdate` once into bounded DamageFall `57/50`.
+- Fixed verifier parsing for `STAGE_MPPASSIVE_WALLDAMAGE`,
+  `STAGE_MPPASSIVE_WALLDAMAGE_STATE`, and `STAGE_MPPASSIVE_WALLDAMAGE_VEC`;
+  the current passive mask is now `0xfff`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: natural wall collision/copyback scheduling, wall teching,
+  hitlag/damage interaction, full DamageFall/WallDamage runtime, and full
+  `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original Rebound Proof
+
+- Imported original BattleShip `ftcommonrebound.c` through
+  `src/import/battleship_ftcommon_rebound.c` and kept the proof folded into
+  current modes `155/156`.
+- Added the narrow local fighter shell surface needed by the original path:
+  ReboundWait/Rebound status IDs `82/83`, Rebound motion `71`,
+  `FTStatusVars.common.rebound`, and `FTStruct.hit_lr`.
+- The proof seeds original-compatible `attack_rebound`, `hit_lr`, and
+  `rebound_anim_length`, calls original `ftCommonReboundWaitSetStatus`, proves
+  ReboundWait/Ground `82/-1`, lets the installed original ReboundWait update
+  transition into Rebound/Ground `83/71`, then ticks original Rebound once
+  into the existing Wait/Ground handoff `10/4`.
+- Added `STAGE_MPPASSIVE_REBOUND`, `STAGE_MPPASSIVE_REBOUND_STATE`, and
+  `STAGE_MPPASSIVE_REBOUND_VEC` verifier markers; the current passive-recover
+  mask is now `0x1fff`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: real attack/shield rebound triggers, continuous Rebound runtime
+  outside this bounded timer handoff, hitlag/damage integration, and full
+  `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original TurnRun Proof
+
+- Imported original BattleShip `ftcommonturnrun.c` through
+  `src/import/battleship_ftcommon_turnrun.c` and kept the proof folded into the
+  older direct/menu-chain Dash-Run modes plus current modes `155/156`.
+- Added the narrow original-compatible `FTCOMMON_TURNRUN_STICK_RANGE_MIN`
+  constant and diagnostics for `DASH_RUN_TURNRUN`.
+- The proof drives Run -> TurnRun -> Run through the installed original
+  `ftCommonRunProcInterrupt` path, verifies TurnRun status/motion `19/13`,
+  final Run status/motion `16/10`, callback/update masks `0xff/0xf`, four
+  guarded update ticks total, and LR/ground-velocity flips for both fighters.
+- Raised the inherited dash-run aggregate marker to `dashRun=0x3fffffff` in
+  the direct/menu-chain Dash-Run verifiers and the current boundary verifier.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-boundary.ps1 -DelaySeconds 3`.
+- Deferred: continuous player-driven TurnRun movement and broad fighter runtime
+  beyond this isolated callback/update handoff proof.
+
+## 2026-06-28 - Added Bounded Original Catch Status Proof
+
+- Imported original BattleShip `ftcommoncatch1.c` through
+  `src/import/battleship_ftcommon_catch.c` and folded the bounded proof into
+  current modes `155/156`.
+- Added the narrow local fighter shell surface needed by the original Catch
+  entry path: Catch/CatchPull motion and status IDs, catch status vars,
+  catch/capture callback fields, catch search fields, and the catch-param
+  compatibility seam.
+- The proof seeds Wait/Ground Z-hold plus A-tap, calls original
+  `ftCommonCatchCheckInterruptCommon`, proves the original path reaches
+  Catch/Ground status/motion `166/146`, records the expected Catch callback
+  shape, and verifies item throw returned false while CatchPull/CapturePulled
+  deferred seams were not executed.
+- Raised the current Passive-recover proof mask to `0x3fff` and added the
+  `STAGE_MPPASSIVE_CATCH` verifier marker plus `catch=166/146` summary output.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: full CatchPull/CatchWait/capture/throw runtime, item throw
+  branches, player-driven grab gameplay, and full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original Catch Callback Handoff Proof
+
+- Extended the current direct/menu-chain Passive recover modes `155/156` from
+  the earlier Catch status proof into one installed original Catch map callback
+  and one installed original Catch update callback.
+- The proof now records `STAGE_MPPASSIVE_CATCH_CALLBACKS`, verifies one
+  `ftCommonCatchProcMap` tick reaches the bounded
+  `mpCommonCheckFighterOnEdge` seam while preserving Catch/Ground `166/146`,
+  then forces `ftCommonCatchProcUpdate` through `ftAnimEndSetWait` into
+  Wait/Ground `10/4`.
+- Raised the Catch proof requirement from mask `0x7f` to `0xff` and updated
+  the current Passive summary to `catch=166/146->10/4`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`, and
+  `verify-current.ps1 -DelaySeconds 3`.
+- Deferred: full CatchPull/CatchWait/capture/throw runtime, item throw
+  branches, player-driven grab gameplay, and full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original CatchPull/CatchWait Proof
+
+- Extended `src/import/battleship_ftcommon_catch.c` to import original
+  BattleShip `ftcommoncatch2.c` beside the existing bounded `ftcommoncatch1.c`
+  import.
+- Added the narrow original-compatible fighter shell surface needed by this
+  slice: `FTStruct.proc_slope`, `FTCATCHKIND_MASK_ALL`,
+  `FTCOMMON_CATCH_THROW_WAIT`, the CatchPull/CatchWait declarations, and the
+  model-part / throw-check compatibility seams.
+- Kept the proof folded into current direct/menu-chain Passive recover modes
+  `155/156`; no new harness pair was added.
+- The proof now records `STAGE_MPPASSIVE_CATCH_PULL`, drives original
+  `ftCommonCatchPullProcCatch` into CatchPull/Ground status/motion `167/147`,
+  verifies `catch_gobj` is wired to the seeded target, records capture-immune,
+  catch-swirl, and rumble seams, ticks original `ftCommonCatchPullProcUpdate`
+  into CatchWait/Ground `168/-2`, and ticks original
+  `ftCommonCatchWaitProcInterrupt` once with throw check stubbed false so
+  `throw_wait` decrements `60->59`.
+- Raised the Catch proof requirement from mask `0xff` to `0x1ff` and updated
+  the current Passive summary to include
+  `catchPull=167/147->168/-2 tw=60->59`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: CapturePulled, throw execution, item throw branches, continuous
+  CatchPull/CatchWait runtime, player-driven grab gameplay, and full
+  `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original CapturePulled/CaptureWait Proof
+
+- Extended `src/import/battleship_ftcommon_catch.c` to import original
+  BattleShip `ftcommoncapturepulled.c` and `ftcommoncapturewait.c` beside the
+  existing bounded Catch/CatchPull imports.
+- Added the narrow compatibility surface required by this victim-side slice:
+  item weight shell data, CapturePulled/CaptureWait status and motion IDs,
+  voice-stop/drop-item/thrown-release hit-status seams, simple transform
+  helpers used by original capture positioning, and
+  `mpCommonSetFighterProjectFloor` for the installed CaptureWait map callback.
+- Kept the proof folded into current direct/menu-chain Passive recover modes
+  `155/156`; no new harness pair was added.
+- The proof now records `STAGE_MPPASSIVE_CAPTURE`, drives the seeded victim
+  through original `ftCommonCapturePulledProcCapture` into
+  CapturePulled/Ground status/motion `171/150`, verifies the captured GObj and
+  LR flip, records voice-stop, velocity-stop, and capture-immune seams, ticks
+  original `ftCommonCapturePulledProcPhysics` into CaptureWait/Ground
+  `172/-2`, and runs one installed `ftCommonCaptureWaitProcMap` callback.
+- Raised the Catch proof requirement from mask `0x1ff` to `0x3ff` and updated
+  the current Passive summary to include `capture=171/150->172/-2`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: throw execution, item throw branches, continuous grab/capture
+  runtime, player-driven grab gameplay, and full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original ThrowF/ThrownCommon Handoff Proof
+
+- Extended `src/import/battleship_ftcommon_catch.c` to import original
+  BattleShip `ftcommonthrow.c` and `ftcommonthrown1.c` beside the existing
+  bounded Catch/CatchPull/Capture imports.
+- Added the narrow fighter shell surface needed by this status handoff:
+  ThrowF/ThrowB/ThrownCommon motion and status IDs, original-compatible
+  thrown-status table structs, `FTStruct.is_ignore_dead`, and the catch-throw
+  stick/kind constants used by the original throw interrupt path.
+- Kept the proof folded into current direct/menu-chain Passive recover modes
+  `155/156`; no new harness pair was added.
+- The proof now records `STAGE_MPPASSIVE_THROW`, drives original
+  `ftCommonThrowCheckInterruptCatchWait` into ThrowF/Ground status/motion
+  `169/148`, queues the seeded target through original thrown-status data into
+  ThrownCommon/Air `186/161`, and records the throw anim-event plus
+  capture-immune seams.
+- Raised the Catch proof requirement from mask `0x3ff` to `0x7ff` and updated
+  the current Passive summary to include `throw=169/148->186/161`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3 -NoBuild`, and
+  `verify-current.ps1 -DelaySeconds 3`.
+- Deferred: throw release/damage runtime, item throw branches, continuous
+  grab/capture/throw runtime, player-driven grab gameplay, and full
+  `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original Thrown Release/Update-Stats Proof
+
+- Extended `src/import/battleship_ftcommon_catch.c` to import original
+  BattleShip `ftcommonthrown2.c` beside the existing bounded
+  Catch/CatchPull/Capture/Throw imports.
+- Added the narrow fighter shell surface needed by this slice:
+  `FTThrowHitDesc`, `FTStruct.throw_desc`, normal hit element/log constants,
+  and the throw-release damage/stat/stale compatibility seams used by
+  `ftCommonThrownReleaseThrownUpdateStats`.
+- Kept the proof folded into current direct/menu-chain Passive recover modes
+  `155/156`; no new harness pair was added.
+- The proof now records `STAGE_MPPASSIVE_THROW_RELEASE`, seeds an
+  original-compatible throw hit descriptor, calls the imported original
+  `ftCommonThrownReleaseThrownUpdateStats`, verifies victim damage `10->18`,
+  clears capture state, forces Air, installs the original thrown proc-status
+  callback with script ID `123`, and records the damage-init, damage update,
+  1P/player stat, stale queue, and rumble seams.
+- Raised the recover aggregate requirement from `0x7fff` to `0xffff` and
+  updated the current Passive summary to include
+  `throwRelease=dmg=10->18 kb=6600000 script=123`.
+- Verified before docs update:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: full throw release status runtime, no-damage release, item throw
+  branches, hitlag/full damage status runtime, stale queue internals,
+  continuous grab/capture/throw scheduling, player-driven grab gameplay, and
+  full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original Thrown Damage/No-Damage Release Status Proof
+
+- Folded the next `ftcommonthrown2.c` slice into current direct/menu-chain
+  Passive recover modes `155/156`; no new harness pair was added.
+- Added guarded public wrappers for imported original
+  `ftCommonThrownSetStatusDamageRelease`,
+  `ftCommonThrownUpdateDamageStats`, and
+  `ftCommonThrownSetStatusNoDamageRelease` while preserving the previous
+  no-op behavior outside the current proof guard.
+- Added `STAGE_MPPASSIVE_THROW_RELEASE_STATUS` diagnostics and raised the
+  recover aggregate requirement from `0xffff` to `0x1ffff`.
+- The new marker proves damage release `20->26`, update-damage-stats
+  `30->36`, no-damage release `40->40` with zero queued damage, capture clear,
+  hitstatus normalization, release LR, and guard cleanup.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: item throw branches, hitlag/full damage status runtime, stale queue
+  internals, continuous grab/capture/throw scheduling, player-driven grab
+  gameplay, and full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original Thrown Proc-Status Tick Proof
+
+- Folded the next `ftcommonthrown2.c` slice into current direct/menu-chain
+  Passive recover modes `155/156`; no new harness pair was added.
+- Added `STAGE_MPPASSIVE_THROW_PROC_STATUS` diagnostics and raised the recover
+  aggregate requirement from `0x1ffff` to `0x3ffff`.
+- The new marker ticks the installed original `ftCommonThrownProcStatus`
+  callback once after `ftCommonThrownReleaseThrownUpdateStats` installs it,
+  proves the callback reaches project-owned `ftParamSetThrowParams`, confirms
+  the seeded catcher is stored as `throw_gobj`, and records script ID `123`.
+- Verified:
+  `make -j16`,
+  `verify-dev-fast.ps1 -DelaySeconds 3`, and
+  `verify-boundary.ps1 -DelaySeconds 3`.
+- Deferred: item throw branches, hitlag/full damage status runtime, continuous
+  thrown/damage status scheduling, player-driven grab gameplay, and full
+  `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original Thrown Dead-Result Cleanup Proof
+
+- Folded the next `ftcommonthrown2.c` cleanup slice into current direct/menu-chain
+  Passive recover modes `155/156`; no new harness pair was added.
+- Added guarded public wrappers for imported original
+  `ftCommonThrownDecideFighterLoseGrip`,
+  `ftCommonThrownReleaseFighterLoseGrip`, and
+  `ftCommonThrownDecideDeadResult`, plus an active-only `ftCommonFallSetStatus`
+  seam for this cleanup proof.
+- Added `STAGE_MPPASSIVE_THROW_DEAD_RESULT` diagnostics and raised the recover
+  aggregate requirement from `0x3ffff` to `0x7ffff`.
+- The marker proves the original dead-result call, collision-default, SetAir,
+  two Wait/Fall resolutions, catch/capture pointer clearing, and final
+  Wait/Ground plus Fall/Air cleanup:
+  `throwDead=call=1 coll=1 air=1 waitFall=2 status=10/26`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3 -NoBuild`,
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and the direct verifier again after the summary update.
+- Deferred: continuous death/throw/damage scheduling, item throw branches,
+  player-driven grab gameplay, full damage runtime, and full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original ThrownCommon Callback Tick Proof
+
+- Folded the next `ftcommonthrown1.c` slice into current direct/menu-chain
+  Passive recover modes `155/156`; no new harness pair was added.
+- Added `STAGE_MPPASSIVE_THROW_CALLBACK` diagnostics and raised the recover
+  aggregate requirement from `0x7ffff` to `0xfffff`.
+- The new marker proves the installed original ThrownCommon update, physics,
+  and map callback slots are present, ticks each once, preserves
+  ThrownCommon/Air `186/161/1`, and proves the original map callback copies the
+  captor floor line:
+  `throwCb=1/1/1 floor=3`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: continuous thrown animation, release scheduling, item throw
+  branches, player-driven grab gameplay, full damage runtime, and full
+  `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original Neutral AttackAirN Proof
+
+- Imported BattleShip `ftcommonattackair.c` through the project-owned
+  `src/import` wrapper path and extended the existing direct/menu-chain
+  Jump-loop proof instead of adding a new harness pair.
+- The Jump-loop proof now seeds one guarded A-button neutral aerial after the
+  six bounded JumpF air frames, calls original
+  `ftCommonAttackAirCheckInterruptCommon`, and proves the bounded
+  `ftMainSetStatus` seam reaches AttackAirN/Air status/motion `209/184`.
+- Added `JUMP_ATTACKAIR` diagnostics. The maintained marker expects one
+  successful original check, one status setup, one `ftMainSetStatus` entry, one
+  animation-event seam call, attack IDs `12/9/9`, reset
+  `tics_since_last_z=65536`, and callback mask `0xf`.
+- During verification, the direct Walk-input/Jump-loop path initially failed
+  because stale harness objects still had imported BattleShip code compiled
+  against an older `FTStruct` layout. A forced rebuild corrected the imported
+  field offset. Treat wrong-offset imported reads after header edits as a build
+  hygiene issue first; use `make -B` or `make clean`.
+- Verified:
+  `verify-battle-mariofox-walk-input-harness.ps1 -DelaySeconds 8`,
+  `verify-battle-mariofox-jump-loop-harness.ps1 -DelaySeconds 8`,
+  and
+  `verify-menu-chain-mariofox-jump-loop-harness.ps1 -DelaySeconds 8`.
+- Deferred: continuous aerial attack runtime, hitbox activation/hit detection,
+  landing-lag integration, full animation command runtime, items/specials, and
+  full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original ThrowF Update Release Proof
+
+- Folded one installed original `ftCommonThrowProcUpdate` tick into current
+  direct/menu-chain Passive recover modes `155/156`; no new harness pair was
+  added.
+- Added isolated `STAGE_MPPASSIVE_THROW_UPDATE` diagnostics so this callback
+  release path does not disturb the existing direct
+  `STAGE_MPPASSIVE_THROW_RELEASE` marker.
+- The proof seeds ThrowF/Ground with `flag2` set, keeps animation time above
+  zero, reaches imported original thrown update-stats, clears the catcher
+  `catch_gobj`, clears victim capture, installs thrown proc-status, and records
+  `throwUpdate=169/148 dmg=50->58 script=0`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: continuous throw animation scheduling, item throw branches, full
+  damage runtime, player-driven grab gameplay, and full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original ThrowB Branch Proof
+
+- Extended the current direct/menu-chain Passive recover modes `155/156`;
+  no new harness pair was added.
+- Reused imported BattleShip `ftcommonthrow.c` / `ftcommonthrown1.c` and the
+  existing catch/throw proof block.
+- After the existing ThrowF proof passes, the current boundary now reseeds
+  original `ftCommonThrowCheckInterruptCatchWait` with stick-left input and
+  positive LR to prove ThrowB/Ground status/motion `170/149`.
+- Added `STAGE_MPPASSIVE_THROW_B` diagnostics and raised the throw marker
+  requirement to `0x3ff`; the current summary now includes
+  `throwB=170/149->186/161`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: item throw branches, continuous grab/capture/throw runtime,
+  player-driven grab gameplay, full damage runtime, and full `ftmain.c`.
+
+## 2026-06-28 - Added Bounded Original ThrownCommon Animation-End Branch Proof
+
+- Extended the current direct/menu-chain Passive recover modes `155/156`;
+  no new harness pair was added.
+- Reused imported BattleShip `ftcommonthrown1.c` and the existing
+  `STAGE_MPPASSIVE_THROW_CALLBACK` marker instead of adding a second marker.
+- Added a narrow proof guard for original `ftCommonThrownProcUpdate` when
+  `anim_frame <= 0`. The branch reaches original
+  `ftCommonThrownSetStatusImmediate`, then the existing project-owned
+  `ftMainSetStatus`, animation-event, and capture-immune seams.
+- The marker now requires mask `0x1ff` and reports
+  `throwCb=1/1/1 floor=3 end=1/186/161`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Deferred: continuous thrown animation, release scheduling, item throw
+  branches, player-driven grab gameplay, full damage runtime, and full
+  `ftmain.c`.
+
+## 2026-06-28 - Isolated Jump AttackAir Probe From Downstream Jump Prerequisites
+
+- Kept the bounded original neutral AttackAirN proof in the standalone
+  direct/menu-chain Jump-loop harnesses only.
+- Added a narrow `NDS_MARIOFOX_JUMP_ATTACKAIR_HARNESS` guard so downstream
+  Landing/process/current boundary harnesses still consume the non-mutating
+  JumpF/Air handoff and require the older Jump-loop `0x7ff` prerequisite mask.
+- This fixed the current Passive recover boundary regression where the
+  AttackAir status mutation prevented later landing/process prerequisites from
+  seeing both fighters in JumpF/Air.
+- Verified:
+  `make -j16`,
+  forced rebuilds for the direct/menu Jump-loop, Landing-loop, and current
+  Passive recover harness targets,
+  `verify-battle-mariofox-jump-loop-harness.ps1 -NoBuild -DelaySeconds 8`,
+  `verify-menu-chain-mariofox-jump-loop-harness.ps1 -NoBuild -DelaySeconds 8`,
+  `verify-battle-mariofox-landing-loop-harness.ps1 -NoBuild -DelaySeconds 8`,
+  and `verify-boundary.ps1 -NoBuild -DelaySeconds 8`.
+
+## 2026-06-28 - Added Bounded AttackAirLw Refresh Seam Proof
+
+- Kept the active Passive recover boundary unchanged and extended only the
+  standalone direct/menu-chain Jump-loop `JUMP_ATTACKAIR` proof.
+- Reused imported BattleShip `ftcommonattackair.c` and called original
+  `ftCommonAttackAirLwProcUpdate` in a bounded Link rehit setup so the source
+  path reaches `ftParamRefreshAttackCollID` for attack coll IDs `0/1`.
+- Replaced the previous no-op refresh seam with a project-owned compatibility
+  implementation that marks `FTAttackColl.attack_state` as
+  `nGMAttackStateNew`, sets `FTStruct.is_attack_active`, and records refresh
+  count/mask/state diagnostics. Original attack-record clearing stays
+  deferred because the local `FTAttackColl` shell does not yet include the
+  original record table.
+- Verified:
+  `make -j16`,
+  forced rebuilds for the direct/menu Jump-loop harness targets,
+  `verify-battle-mariofox-jump-loop-harness.ps1 -NoBuild -DelaySeconds 8`,
+  `verify-menu-chain-mariofox-jump-loop-harness.ps1 -NoBuild -DelaySeconds 8`,
+  and `verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-06-28 - Added AttackAir Refresh Record Clearing
+
+- Expanded the project-owned `FTAttackColl` shell with the original four
+  `GMAttackRecord` slots and added the narrow original-compatible
+  `ftParamClearAttackRecordID` seam.
+- `ftParamRefreshAttackCollID` now matches the BattleShip source path for the
+  bounded proof: mark the selected attack coll new, set attack active, then
+  clear the selected attack records to `victim_gobj=NULL`, hurt/shield false,
+  `timer_rehit=0`, and `group_id=7`.
+- Extended the existing direct/menu-chain Jump-loop `JUMP_ATTACKAIR` marker
+  with record-clear mask `0x3` for AttackAirLw refresh IDs `0/1`; no new
+  harness pair was added and the active Passive recover boundary is unchanged.
+- Verified:
+  `make -j16`,
+  forced rebuilds for the direct/menu Jump-loop harness targets,
+  `verify-battle-mariofox-jump-loop-harness.ps1 -NoBuild -DelaySeconds 8`,
+  `verify-menu-chain-mariofox-jump-loop-harness.ps1 -NoBuild -DelaySeconds 8`,
+  and `verify-boundary.ps1 -DelaySeconds 3`.
+- Deferred: continuous hit detection, victim record insertion, rehit timers,
+  and full fighter/item/weapon attack-record interaction.
+
+## 2026-06-28 - Added Bounded Attack Hitbox Position Step
+
+- Added original-compatible `FTAttackMatrix` storage to the project-owned
+  `FTAttackColl` shell.
+- Extended the direct/menu-chain Dash-Run `MakeAttackColl` proof with
+  `DASH_RUN_ATTACK_EVENT_POS`. The bounded helper copies the selected decoded
+  Fox Jab2 hitbox, follows the original `ftmain.c` `New -> Transfer` path,
+  applies scale when needed, calls `gmCollisionGetFighterPartsWorldPosition`,
+  and resets the original attack matrix fields.
+- Verified the marker with mask `0x1f`, state `2`, attack ID `1`, joint ID
+  `14`, and matrix `0/0` in both Dash harnesses, then reran the current
+  boundary profile. This is still a bounded copy-based position proof; live
+  hitbox activation and collision remain deferred.
+
+## 2026-06-28 - Added Selected Attack Hitbox Position Writeback
+
+- Extended the same direct/menu-chain Dash-Run position proof with one gated
+  live writeback for the selected decoded Fox Jab2 hitbox.
+- The bounded helper still follows the original `ftmain.c` `New -> Transfer`
+  offset/scale/world-position/matrix-reset path, then writes the selected
+  result back into `FTStruct.attack_colls[1]` only for Fox `Attack12`, attack
+  ID `1`, joint `14`, damage `4`, and size `100`.
+- Updated the `DASH_RUN_ATTACK_EVENT_POS` verifier contract from mask `0x1f`
+  to `0x3f` so the direct and menu-chain Dash harnesses prove the selected
+  live state reaches Transfer. Continuous hitbox activation, hit detection,
+  victim records, hitlag, and damage interaction remain deferred.
+
+## 2026-06-28 - Added Selected Attack Hitbox Interpolate Step
+
+- Extended the same selected Fox Jab2 position proof through the next original
+  `ftmain.c` attack-collision state: `Transfer -> Interpolate`.
+- The bounded helper copies the live `pos_curr` into `pos_prev`, recomputes
+  the joint world position from the selected offset, and resets the original
+  attack matrix fields again.
+- Updated `DASH_RUN_ATTACK_EVENT_POS` from mask `0x3f` / state `2` to mask
+  `0xff` / state `3` in the direct and menu-chain Dash harnesses. Continuous
+  hitbox activation, hit detection, victim records, hitlag, and damage
+  interaction remain deferred.
+
+## 2026-06-28 - Added Selected Attack Broad-Phase Range Proof
+
+- Exposed the original `FTAttributes.hit_detect_range` slot in the local
+  fighter compatibility header without changing the surrounding layout.
+- Added a bounded local copy of the original
+  `gmCollisionCheckAttackInFighterRange` predicate and applied it only to the
+  selected Fox Jab2 hitbox after the existing `New -> Transfer -> Interpolate`
+  writeback proof.
+- Updated `DASH_RUN_ATTACK_EVENT_POS` from mask `0xff` to `0x3ff` in the
+  direct and menu-chain Dash harnesses, proving current and previous hitbox
+  positions can pass the original broad-phase fighter-range gate. Hurtbox
+  collision, victim records, hitlag, damage, and continuous attack runtime
+  remain deferred.
+
+## 2026-06-28 - Promoted Selected Attack Range Guard Into Current Boundary
+
+- Updated the shared `verify-battle-mariofox-gcdrawall-loop-harness.ps1`
+  current-boundary verifier path so modes `155/156` assert
+  `DASH_RUN_ATTACK_EVENT_POS` alongside the existing `dashRun=0x3fffffff`
+  aggregate.
+- Current Passive recover direct/menu-chain verifiers now report
+  `dashRun=0x3fffffff hitboxPos=0x3ff`, keeping the selected Fox Jab2
+  `New -> Transfer -> Interpolate` and broad-phase fighter-range proof covered
+  under the latest VSBattle/Pupupu root.
+- No gameplay behavior changed. Hurtbox collision, victim records, hitlag,
+  damage, and continuous attack runtime remain deferred.
+
+## 2026-06-28 - Added Bounded Mario/Fox Damage-Collision State Shell
+
+- Added a project-owned `FTDamageColl[11]` compatibility shell to `FTStruct`
+  and made the bounded hit-status part helpers update active damage-coll slots
+  instead of only incrementing diagnostics.
+- Seeded one root-anchored active damage-collision slot for each initialized
+  Mario/Fox fighter using the original copy-and-half-size shape
+  (`30.0/45.0/20.0`) while keeping the real per-fighter
+  `attr->damage_coll_descs[]` import deferred.
+- Updated the direct and menu-chain Mario/Fox init verifiers to require
+  `damageColl=0x3/0x3/0x3/0x3`. This proves storage, normal hit status, joint
+  anchoring, and half-size conversion, but not hurtbox intersection, victim
+  records, hitlag, damage, or full `gmcollision.c`.
+
+## 2026-06-28 - Added Bounded Mario/Fox FTParts Damage-Coll Transform Shell
+
+- Added a narrow project-owned `FTParts` compatibility shell and attached one
+  root part to each initialized Mario/Fox DObj through `DObj.user_data.p`,
+  matching the BattleShip `ftGetParts` access pattern without importing broad
+  fighter display or transform runtime.
+- Synced the selected root DObj translate/scale into bounded matrix,
+  inverse-matrix, and scale fields so the existing damage-coll shell has the
+  next prerequisite for source-order rectangle collision work.
+- Updated the direct and menu-chain Mario/Fox init verifiers to require
+  `parts=0x3/0x3/0x3`, proving FTParts attachment, matrix/world-position
+  consistency, and scale availability for the selected shell.
+- Deferred: real per-fighter `attr->damage_coll_descs[]`, full joint
+  transforms, rectangle intersection, victim records, hitlag, damage, and
+  broad `gmcollision.c` import.
+
+## 2026-06-28 - Switched Selected Mario/Fox Hurtbox To Original Descriptor Data
+
+- Replaced the placeholder root hurtbox seed with the same source-order shape
+  used by BattleShip `ftmanager.c`: read `attr->damage_coll_descs[0]`, attach
+  `fp->joints[joint_id]`, copy placement/grabbable/offset/size, then halve
+  size.
+- Exposed the local `FTAttributes.damage_coll_descs[11]` field at the original
+  struct offset instead of treating that range as filler.
+- Updated the direct and menu-chain Mario/Fox init verifiers to require the
+  selected real descriptor identities: Mario joint `6` / half-size
+  `51.5/56.0/47.5`, Fox joint `5` / half-size `51.0/26.0/22.5`, while keeping
+  the proof bounded to one slot per fighter.
+- Deferred: remaining damage-coll descriptor slots, full joint transforms,
+  rectangle intersection, victim records, hitlag, damage, and broad
+  `gmcollision.c` import.
+
+## 2026-06-28 - Added Selected Attack/Hurtbox Rectangle Probe
+
+- Added a bounded local copy of BattleShip's `gmCollisionTestRectangle` math
+  for the selected Dash-Run Fox Jab2 hitbox proof only.
+- Extended `DASH_RUN_ATTACK_EVENT_POS` from mask `0x3ff` to `0x7ff`: after
+  `New -> Transfer -> Interpolate` and the broad-phase fighter-range predicate,
+  the selected hitbox now runs one original-compatible rectangle probe against
+  Mario's descriptor-backed `FTDamageColl[0]` hurtbox.
+- This does not enable continuous live hitboxes, victim records, hitlag,
+  damage, or broad `gmcollision.c`; the next attack-contact step is a bounded
+  selected `gmCollisionCheckFighterAttackDamageCollide`-style interaction
+  decision.
+
+## 2026-06-28 - Added Selected Attack/Damage Collision Decision Probe
+
+- Added a bounded local `gmCollisionCheckFighterAttackDamageCollide`-style
+  helper for the selected Dash-Run Fox Jab2 hitbox proof only, reusing the
+  already seeded Mario descriptor-backed `FTDamageColl[0]` and `FTParts`
+  transform shell.
+- Extended `DASH_RUN_ATTACK_EVENT_POS` from mask `0x7ff` to `0xfff`: after
+  `New -> Transfer -> Interpolate`, the broad-phase fighter-range predicate,
+  and the selected rectangle probe, the proof now records one selected
+  attack/damage collision decision.
+- This still does not enable continuous live hitboxes, victim records, rehit
+  timers, hitlag, damage, or broad `gmcollision.c`; the next attack-contact
+  step is bounded victim attack-record insertion or equivalent interaction
+  bookkeeping.
+
+## 2026-06-28 - Added Bounded Selected Attack Damage-Record Insertion
+
+- Added a bounded source-shaped damage-record helper for the selected Dash-Run
+  Fox Jab2 -> Mario hurtbox proof. It mirrors the original
+  `ftMainSetHitInteractStats` record behavior for the damage case: find the
+  matching active attack group, update an existing victim slot if present,
+  otherwise use the first empty slot and fall back to slot `0`.
+- Extended `DASH_RUN_ATTACK_EVENT_POS` from mask `0xfff` to `0x1fff`: after
+  `New -> Transfer -> Interpolate`, broad-phase range, selected rectangle, and
+  selected attack/damage collision decision, the proof now records Mario as a
+  hurt interaction in Fox Jab2's attack-record array.
+- This still does not enable continuous live hitboxes, rehit timers, hitlag,
+  full damage, or broad `ftmain.c`/`gmcollision.c`; the next attack-contact
+  step is a bounded post-record hit interaction/status bookkeeping slice.
+
+## 2026-06-28 - Added Bounded Selected Attack Damage Hit-Log Bookkeeping
+
+- Added a narrow `FTHitLog` compatibility type and a bounded normal-hit slice
+  for the selected Dash-Run Fox Jab2 -> Mario hurtbox proof.
+- Extended `DASH_RUN_ATTACK_EVENT_POS` from mask `0x1fff` to `0x3fff`: after
+  selected record insertion, the proof now mirrors the front half of
+  `ftMainUpdateDamageStatFighter` enough to record captured damage, attacker
+  `attack_damage`, victim `damage_queue` / `damage_lag`, the first fighter
+  hit-log entry, and the player-stat/stale-queue compatibility seams.
+- This still does not enable continuous live hitboxes, rehit timers, real
+  stale queue behavior, hitlag, damage status/runtime, effects, SFX, or broad
+  `ftmain.c` / `gmcollision.c`. The next attack-contact step should remain a
+  bounded damage-status/hitlag or impact-position/SFX/effect seam.
+
+## 2026-06-28 - Added Bounded Selected Attack Hit-SFX Seam
+
+- Extended `DASH_RUN_ATTACK_EVENT_POS` from mask `0x3fff` to `0x7fff`: after
+  the selected Fox Jab2 -> Mario damage-record and hit-log bookkeeping proof,
+  the local slice now selects the original `dFTMainHitCollisionFGMs` table entry
+  from the decoded hitbox `fgm_kind` / `fgm_level` and reaches the existing FGM
+  audio stub seam.
+- Kept this deliberately narrow: it does not import `lbcommon.c`, does not add
+  positional audio balance, and does not claim a real DS audio backend.
+- Deferred: continuous live hitboxes, rehit timers, real stale queue behavior,
+  hitlag, damage status/runtime, effects, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-28 - Added Bounded Selected Fighter-Hitlog Stats Handoff
+
+- Extended `DASH_RUN_ATTACK_EVENT_POS` from mask `0x7fff` to `0xffff`: after
+  the selected Fox Jab2 -> Mario contact proof builds the first `FTHitLog`, a
+  bounded source-shaped `ftMainProcessHitCollisionStatsMain` fighter-hitlog
+  slice now computes knockback through the existing `ftParamGetCommonKnockback`
+  seam and fills victim damage angle/LR/index/player metadata.
+- Added the missing local `FTStruct` damage metadata fields plus narrow
+  original-compatible hit-element and damage-kind enum values needed by that
+  source path.
+- Still deferred: hitlag scheduling, `ftMainProcParams`,
+  `ftCommonDamageGotoDamageStatus`, damage effects, and full damage runtime.
+
+## 2026-06-28 - Added Bounded Selected ftMainProcParams Damage/Hitlag Handoff
+
+- Extended `DASH_RUN_ATTACK_EVENT_POS` from mask `0xffff` to `0x1ffff`: after
+  the selected Fox Jab2 -> Mario hit-log stats handoff, the bounded slice now
+  runs source-shaped victim-side `ftMainProcParams` damage scheduling for the
+  queued Mario damage.
+- Added narrow local copies of the original `ftParamGetHitLag` and
+  `ftParamSetDamageShuffle` behavior, plus a bounded
+  `ftCommonDamageGotoDamageStatus` compatibility handoff that reaches the
+  existing damage-var initialization without promoting the full damage runtime.
+- Added the `DASH_RUN_PROCPARAMS` verifier marker. It records mask low bits
+  `0x7f`, damage before/after, queued damage, queued hitlag damage, computed
+  hitlag, knockback pause, and status before/after. The direct/menu-chain
+  dash-run verifiers and the current boundary aggregate require the queued
+  damage to update Mario's percent, positive hitlag, `is_knockback_paused`,
+  unchanged status, and transient damage-field clearing.
+- Still deferred: full `ftMainProcParams`, original damage status selection,
+  attacker-side `attack_damage`, shield/reflect/absorb branches, real
+  `proc_lagstart`, effects, full damage runtime, and broad `ftmain.c` /
+  `gmcollision.c`.
+
+## 2026-06-29 - Added Selected ftMainProcParams Lag-Start Tail
+
+- Added the missing project-owned `FTStruct.proc_lagstart` callback slot,
+  matching the original BattleShip callback surface needed by
+  `ftMainProcParams`.
+- Extended the existing `DASH_RUN_PROCPARAMS` verifier contract from mask low
+  bits `0x7f` to `0xff`: after selected hitlag/pause setup, the proof now
+  calls a proof-owned `proc_lagstart` callback at the original tail position
+  before clearing transient damage fields.
+- Kept this narrow. It does not promote full `ftMainProcParams`, original
+  damage status selection, attacker-side `attack_damage`, shield/reflect/absorb
+  branches, effects, full damage runtime, or broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Selected ftMainProcParams Attack-Damage Branch
+
+- Extended the selected Fox Jab2 -> Mario contact proof to run Fox's
+  attacker-side `attack_damage` branch in the source order used by
+  `ftMainProcParams`: call `proc_hit`, compute attacker hitlag from
+  `attack_damage`, run the rumble seam, clear input taps/releases, and clear
+  the transient attacker `attack_damage` field.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0xff` to `0x1ff` in the
+  direct, menu-chain, and current aggregate verifiers.
+- Still deferred: bounded original damage-status selection from
+  `ftcommondamage.c`, shield/reflect/absorb `ftMainProcParams` branches, full
+  hitbox runtime, full damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Selected ftMainProcParams Attack-Shield-Push Branch
+
+- Added the missing project-owned `FTStruct.proc_shield` callback slot and
+  clear it in the common status-reset seam.
+- Extended the selected Fox Jab2 contact proof with a bounded source-shaped
+  attacker `attack_shield_push` branch: call `proc_shield`, compute attacker
+  hitlag from `attack_shield_push`, clear input taps/releases, and clear the
+  transient `attack_shield_push` field.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x1ff` to `0x3ff` in the
+  direct, menu-chain, and current aggregate verifiers.
+- Still deferred: bounded original damage-status selection from
+  `ftcommondamage.c`, victim `shield_damage` / GuardSetOff through
+  `ftMainProcParams`, shield break, reflect/absorb branches, full hitbox
+  runtime, full damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Selected ftMainProcParams Shield-Damage GuardSetOff Branch
+
+- Added the missing project-owned `FTStruct.shield_damage_total` field needed
+  by the source-shaped shield-damage branch.
+- Extended the selected Fox Jab2 contact proof with Mario's victim-side
+  `shield_damage` branch from original `ftMainProcParams`: call imported
+  original `ftCommonGuardSetOffSetStatus` through the bounded
+  `ndsBaseFTCommonGuardSetOffSetStatus` path, prove GuardSetOff/GuardOn
+  status state, then run the shared hitlag/input-clear/`proc_lagstart`/
+  transient-field-clear tail.
+- The proof records deterministic GuardSetOff frames `20200` milli-units and
+  ground velocity `-40400`, while restoring the existing GuardSetOff
+  diagnostics so the older exact `DASH_RUN_GUARD_SETOFF=4/4` assertion stays
+  stable.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x3ff` to `0x7ff` in the
+  direct, menu-chain, and current aggregate verifiers.
+- Still deferred: bounded original damage-status selection from
+  `ftcommondamage.c`, shield break, reflect/absorb branches, full hitbox
+  runtime, full damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Selected ftMainProcParams Shield-Break Branch
+
+- Added the narrow ShieldBreakFly constants and FGM/colanim IDs needed by the
+  current bounded branch proof.
+- Promoted the project-owned `ftCommonShieldBreakFlyCommonSetStatus` seam from
+  no-op to a bounded original-compatible handoff: set air state, call the
+  ShieldBreakFly `ftMainSetStatus` path, run the animation-event seam, touch
+  the fighter colanim seam, and record the ShieldBreak FGM through the existing
+  audio stub.
+- Added a narrow early ShieldBreakFly case to the project-owned `ftMainSetStatus`
+  seam so the proof does not trip unrelated non-Wait status-denial diagnostics.
+- Extended the selected Fox Jab2 -> Mario `ftMainProcParams` proof with the
+  victim shield-break path: deplete shield health, reset it to `30`, enter
+  ShieldBreakFly status/motion `158/138`, run the shared hitlag/input-clear/
+  `proc_lagstart` tail, and clear `shield_damage` / `shield_damage_total`.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x7ff` to `0xfff` in the
+  direct and menu-chain Dash-Run verifiers.
+- Still deferred: exact imported `ftcommonshieldbreakfly.c` physics/effects,
+  bounded original damage-status selection from `ftcommondamage.c`, reflect/
+  absorb branches, full hitbox runtime, full damage runtime, and broad
+  `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Selected ftMainProcParams Reflect/Absorb Branches
+
+- Added the narrow `FTSpecialColl` compatibility shell and BatHit FGM constant
+  needed by the selected branch proof.
+- Extended the selected Fox Jab2 -> Mario `ftMainProcParams` proof with the
+  remaining bounded special-collision branches: reflect-damage break into
+  ShieldBreakFly, Fox reflector hit, Ness reflector sound, and Ness absorb.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0xfff` to `0xffff` in the
+  direct, menu-chain, and current aggregate verifiers.
+- Still deferred: bounded original damage-status selection from
+  `ftcommondamage.c`, exact imported Fox/Ness special runtimes/effects, full
+  hitbox runtime, full damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Selected ftcommondamage Status Selector Proof
+
+- Added BattleShip-compatible common damage status aliases `37..56` and the
+  `ftParamGetHitStun` prototype to the project-owned fighter header.
+- Added a narrow Dash-Run side probe that mirrors `ftcommondamage.c` damage
+  level thresholds and ground/air/electric status-table selection for the
+  selected Fox Jab2 -> Mario contact path.
+- Kept the current damage-status runtime parked: the probe requires the
+  existing stubbed `ftCommonDamageGotoDamageStatus` path to leave `status_id`
+  unchanged, then records `DASH_RUN_DAMAGE_STATUS`.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0xffff` to `0x1ffff` in
+  the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3` and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+- Still deferred: bounded real damage-status setup/tick from the selected
+  status path, exact damage effects/color/screen-flash behavior, full hitbox
+  runtime, full damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded ftcommondamage Status Setup Tick Proof
+
+- Added the missing original-compatible common damage motion aliases `31..49`
+  so selected damage statuses can record a real status/motion pairing.
+- Extended the project-owned `ftCommonDamageInitDamageVars` seam with bounded
+  `ftcommondamage.c`-compatible damage-level/status selection, hitstun storage,
+  public knockback, damage velocity, and cliff-hold wait handling. The actual
+  status install remains behind a Dash-Run-only proof gate.
+- Added a guarded `ftMainSetStatus` damage-status path that accepts only the
+  selected bounded proof, installs original-named damage update/interrupt/
+  physics/map callbacks, and leaves broad damage runtime deferred.
+- Added `DASH_RUN_DAMAGE_SETUP`, proving the selected Fox Jab2 -> Mario damage
+  path can run `ftCommonDamageGotoDamageStatus` -> `ftMainSetStatus`, install
+  a BattleShip-compatible damage status/motion, tick the damage update callback
+  once to decrement hitstun, then restore the preview fighter state.
+- Tightened the direct/menu-chain Dash-Run `DASH_RUN_PROCPARAMS` verifier
+  contract from mask low bits `0x1ffff` to `0x3ffff`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Live-Hit Damage-Resist Breakthrough Proof
+
+- Extended the existing direct/menu-chain live-hit damage lifecycle boundary
+  with a bounded source-shaped `ftMainCheckGetUpdateDamage` breakthrough
+  branch proof.
+- The probe keeps the selected Fox Jab2 hitbox path, seeds Mario damage resist
+  below the selected damage, calls the existing source-shaped helper, and
+  proves the original branch clears the resist flag, leaves a negative resist
+  remainder, and queues matching leftover damage/lag before restoring both
+  fighter structs.
+- Tightened the current `STAGE_MPLIVEHIT_DAMAGE` aggregate from mask low bits
+  `0x3ffffff` to `0x7ffffff`; current summary adds
+  `rbreak=0x7f/2->-2/q2`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added DamageUpdateMain Sleep Dispatcher Proof
+
+- Added `DASH_RUN_DAMAGE_SLEEP`, a bounded source-shaped
+  `ftCommonDamageUpdateMain` no-grab/no-capture Sleep-element dispatcher proof
+  under the inherited Dash-Run damage aggregate used by current modes
+  `159/160`.
+- The proof seeds no catch/capture/item links, Sleep element, zero knockback,
+  and a cliff-catch wait setup, then routes through
+  `ftCommonDamageGotoDamageStatus` into FuraSleep status/motion `165/145`,
+  observes the FuraSleep color-animation seam, and restores preview state.
+- Updated the current docs and verifier marker contract to record
+  `sleep=0x7f`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  `git diff --check`,
+  and `git status --short decomp`.
+
+## 2026-06-30 - Added Live-Hit Catch-Search Gate Proof
+
+- Added a bounded source-shaped `ftMainSearchFighterCatch` pre-stat gate proof
+  to current modes `159/160`.
+- The proof resets search target/distance, proves normal target and ground-air
+  gates, exercises the hurt-record skip and default-record pass, skips
+  status-disabled and non-grabbable damage-coll slots, collides with selected
+  Mario damage-coll slot `3`, assigns the closest target/distance, and restores
+  fighter/root/detect state.
+- Tightened `STAGE_MPLIVEHIT_DAMAGE` from mask low bits `0x3fffffff` to
+  `0x7fffffff` and added verifier marker `catchSearch=0x3ff/s3`.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Source-Order Hurtbox Damage Consumption Proof
+
+- Added bounded slot-1 hurtbox damage consumption to the existing
+  direct/menu-chain live-hit damage lifecycle modes `159/160`.
+- The proof builds on the source-order Mario hurtbox scan that skips slot `0`,
+  hits slot `1`, and observes the slot-`10` `None` sentinel. It then feeds the
+  selected slot into bounded damage record, hitlog, fighter-hit stats,
+  percent-damage, and hitlag scheduling helpers before restoring both fighter
+  structs.
+- Tightened the live-hit proof mask from `0x1fffff` to `0x3fffff` and added
+  the verifier marker `STAGE_MPLIVEHIT_HURTBOX_DAMAGE`, summarized as
+  `hbdmg=0->4/6`.
+- Still deferred: broad `gmcollision.c`, full `ftmain.c`, continuous
+  multi-hitbox runtime, natural continuous multi-slot victim/damage runtime,
+  arbitrary damage-state duration, real stale queues, effects, items/weapons,
+  HUD, audio, and unbounded gameplay scheduling.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-06-30 - Added Live-Hit Hurtbox Damage-Detect-Off Skip Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_HURTBOX` proof in modes `159/160`
+  from mask low bits `0x1fff` to `0xffff`.
+- The new bits prove the source-order `ftmain.c` per-attack hurtbox skip when
+  `gFTMainIsDamageDetect[attack_id] == FALSE`, then restore the detect flag
+  before the positive slot-0 intangible skip -> slot-1 hit -> slot-10 `None`
+  sentinel path.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Hurtbox Global Hitstatus Gate Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_HURTBOX` proof in modes `159/160`
+  from mask low bits `0xff` to `0x1fff`.
+- The new bits prove the source-order `ftmain.c` global hurtbox gate: all of
+  `special_hitstatus`, `star_hitstatus`, and `hitstatus` must be non-intangible
+  before the per-slot damage-coll loop can run. The proof also checks each
+  intangible skip case, restores the target status fields, then runs the
+  existing slot-0 intangible skip -> slot-1 hit -> slot-10 `None` sentinel
+  path.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Tightened Live-Hit Damage-Detect-Off Shield Skip Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in modes
+  `159/160` from mask low bits `0xfff` to `0x7fff`.
+- The new bits prove the sibling source-order shield branch where
+  `is_shield` is still true but `gFTMainIsDamageDetect[attack_id]` is false,
+  so shield contact is skipped without adding a collision/hit count, then the
+  proof restores the damage-detect gate before the positive shield-stat path.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Tightened Live-Hit Shield-Off Skip Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in modes
+  `159/160` from mask low bits `0xff` to `0xfff`.
+- The new high bits prove the adjacent source-order `is_shield == false`
+  branch skips shield contact while leaving `gFTMainIsDamageDetect[attack_id]`
+  available for the later hurtbox path, then restores the selected shield
+  state before the positive shield-stat proof continues.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added Selected Live-Hit Hit-Interact Refresh Proof
+
+- Strengthened live-hit modes `159/160` without adding another harness pair.
+- Added a small project-owned `ftMainSetHitInteractStats` compatibility seam
+  matching the original fighter damage/shield/attack record update shape.
+- The selected Fox Jab2 Attack12 proof now validates damage, shield, and
+  attack-group updates on the selected attack record, seeds a rehit timer,
+  calls `ftParamRefreshAttackCollID`, and proves the selected attack record is
+  cleared back to the original-compatible empty state.
+- Updated the live-hit proof mask from `0xffff` to `0x1ffff` and added
+  `STAGE_MPLIVEHIT_REHIT`, summarized as `rehit=5->0 clear=1`.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-29 - Added Live Selected-Hitbox Damage Lifecycle Proof
+
+- Added direct/menu-chain harness modes `159/160`:
+  `battle_mariofox_stage_mplivehit_damage_loop` and
+  `menu_chain_mariofox_stage_mplivehit_damage_loop`.
+- The new bounded proof inherits the current Pupupu live battle roots,
+  source-order MP/cliff/passive/wall/catch/throw/platform/Inishie coverage,
+  Dash-Run attack-event damage setup, and the selected hit-to-damage recovery
+  aggregate, then proves a selected Fox Jab2 Attack12 live-hit lifecycle.
+- The proof records original event-backed hitbox metadata, attack-state
+  `Off -> New -> Transfer -> Interpolate`, selected range/rectangle/contact,
+  damage-record insertion, immediate repeat-hit rejection, damage scheduling,
+  hitlag, and the existing damage-recover consumption path before restoring
+  bounded preview state.
+- Added `STAGE_MPLIVEHIT_*` diagnostics, direct/menu verifier wrappers,
+  registry/profile entries, and doc updates. Full continuous multi-hitbox
+  runtime, broad `gmcollision.c`, complete `ftmain.c`, real rehit timers,
+  specials/items/HUD/audio, and unbounded gameplay scheduling remain deferred.
+- Verified:
+  `make clean; make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `check-harness-registry.ps1`.
+
+## 2026-06-29 - Restored Original DamageInit Velocity Routing
+
+- Replaced the placeholder `knockback * 0.5/0.25` velocity math in the
+  project-owned `ftCommonDamageInitDamageVars` seam with BattleShip's
+  angle-derived `cos/sin` knockback vector routing.
+- Restored the deterministic source-order ground damage routing: floor-angle
+  comparison, ground-to-air conversion, high-damage floor-bounce
+  ImpactWave/QuakeMag0 effect seams, FlyTop selection, and final status
+  replacement/electric wrapping.
+- Kept random FlyRoll, Kirby copy-loss, and damage voice SFX deferred with
+  their owning systems instead of adding standalone stubs.
+- Adjusted the existing dust proof to accept the original high-speed default
+  reset interval of `1` after the dust effect spawns.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-29 - Added Damage Interrupt Hammer Branch Proof
+
+- Updated the bounded `ftCommonDamageCommonProcInterrupt` seam to preserve the
+  BattleShip branch shape for zero-hitstun damage recovery.
+- Added a narrow proof hook for hammer-held ground and air branches:
+  grounded fighters route to `ftHammerProcInterrupt`, airborne fighters route
+  to `ftCommonHammerFallProcInterrupt`, and normal non-proof behavior still
+  reports no held hammer.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x7fffffff` to
+  `0xffffffff` in the direct/menu-chain Dash-Run verifiers.
+- Still deferred: source-shaped damage physics/map/interrupt continuation,
+  hitstun-expiry Wait/Fall handoff, exact damage effects/color/screen-flash
+  behavior, full hitbox runtime, full damage runtime, and broad `ftmain.c` /
+  `gmcollision.c`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Restored Damage Air Dust Update Branch
+
+- Replaced the project-owned `ftCommonDamageUpdateDustEffect` decrement-only
+  stub with the original-shaped branch: when the damage dust interval reaches
+  zero, it calls `ftParamMakeEffect(... nEFKindDustExpandLarge ...)` and resets
+  the interval through the existing damage interval helper.
+- Added the original-compatible `nEFKindDustExpandLarge = 17` effect ID to the
+  narrow local effect enum.
+- Strengthened the existing `DASH_RUN_DAMAGE_SETUP` `DUST` bit so it now
+  proves the bounded DamageAir update dust-effect spawn and interval reset,
+  not only initial interval setup.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-29 - Added Bounded ftcommondamage Physics Callback Proof
+
+- Added a narrow project-owned `ftPhysicsApplyAirVelFriction` compatibility
+  helper and routed the selected installed damage status through the
+  original-shaped `ftCommonDamageCommonProcPhysics` branch.
+- Extended `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x7f` to `0xff` and
+  added post-physics velocity diagnostics. The verifier now checks the
+  grounded or airborne source velocity according to the installed damage
+  ground/air state.
+- Kept the proof bounded: it ticks one installed damage update callback and
+  one installed damage physics callback, then restores the preview fighter
+  state before the wider Dash-Run/current boundary continues.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Still deferred: damage map/interrupt continuation, hitstun-expiry Wait/Fall
+  handoff, exact fast-fall damage branch, exact damage effects/color/
+  screen-flash behavior, full hitbox runtime, full damage runtime, and broad
+  `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded ftcommondamage Interrupt Handoff Proof
+
+- Extended the selected Dash-Run damage-status side probe through one
+  installed airborne damage interrupt tick after seeding hitstun to zero.
+- Counted the original-shaped `ftCommonDamageAirCommonProcInterrupt` handoff
+  into the existing `ftCommonDamageFallProcInterrupt` seam without starting
+  the broader DamageFall interrupt runtime.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0xff` to `0x1ff` in
+  the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+- Still deferred: source-shaped damage map continuation, hitstun-expiry status
+  handoff, exact fast-fall damage branch, exact damage effects/color/
+  screen-flash behavior, full hitbox runtime, full damage runtime, and broad
+  `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded ftcommondamage Expiry Status Handoff Proof
+
+- Extended the selected Dash-Run damage-status side probe through the airborne
+  `ftCommonDamageAirCommonProcUpdate` expiry branch by seeding hitstun to one
+  and animation frame to zero.
+- Added a proof-only `ftCommonDamageFallSetStatusFromDamage` gate that sets up
+  DamageFall status/motion/callback slots, then restores the preview fighter
+  state.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x1ff` to `0x3ff` in
+  the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+- Still deferred: source-shaped DamageFall map continuation, continuous
+  DamageFall runtime, exact fast-fall damage branch, exact damage effects/
+  color/screen-flash behavior, full hitbox runtime, full damage runtime, and
+  broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded ftcommondamage DamageFall Map No-Collision Proof
+
+- Extended the selected Dash-Run damage-status side probe through one installed
+  DamageFall map callback tick after the hitstun-expiry handoff.
+- Gated `ftCommonDamageFallProcMap` to call the imported original base callback
+  and made `mpCommonCheckFighterCliff` return `FALSE` only for this proof,
+  proving the safe no-collision branch without enabling full DamageFall map
+  collision branches.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x3ff` to `0x7ff` in
+  the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`, and
+  `check-gbi-decode-fixtures.ps1`.
+- Still deferred: positive DamageFall map collision branches
+  (cliff/passive/downbounce), continuous DamageFall runtime, exact fast-fall
+  damage branch, exact damage effects/color/screen-flash behavior, full hitbox
+  runtime, full damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded ftcommondamage DamageFall Floor-Branch Proof
+
+- Extended the selected Dash-Run damage-status side probe through a second
+  installed DamageFall map callback tick after the safe no-collision tick.
+- Reused the existing Dash-Run DamageFall map gate to make
+  `mpCommonCheckFighterCliff` return a floor collision for that second tick,
+  proving original `ftCommonDamageFallProcMap` reaches the passive checks and
+  DownBounce seam in source order.
+- Kept this proof narrow: the Dash-Run side probe counts the DownBounce seam
+  but does not promote full DownBounce status/runtime here. The existing
+  CliffWait damage proof still covers the fuller DownBounce status path.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x7ff` to `0xfff` in
+  the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Still deferred: positive cliff-collision map branch, continuous DamageFall
+  runtime, exact fast-fall damage branch, exact damage effects/color/
+  screen-flash behavior, full hitbox runtime, full damage runtime, and broad
+  `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded ftcommondamage DamageFall Cliff-Branch Proof
+
+- Extended the selected Dash-Run damage-status side probe through a third
+  installed DamageFall map callback tick after the floor-branch tick.
+- Macro-renamed only `ftCommonCliffCatchSetStatus` in the
+  `ftcommoncliffcatchwait.c` import to a base symbol and added a project-owned
+  wrapper. Existing full CliffCatch proofs still call the imported base body;
+  the Dash-Run damage side probe counts the branch without promoting full
+  CliffCatch status/runtime here.
+- Reused the existing Dash-Run DamageFall map gate to make
+  `mpCommonCheckFighterCliff` return `MAP_FLAG_RCLIFF` for that third tick,
+  proving original `ftCommonDamageFallProcMap` reaches the CliffCatch seam in
+  source order.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0xfff` to `0x1fff` in
+  the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Still deferred: continuous DamageFall runtime, exact fast-fall damage branch,
+  exact damage effects/color/screen-flash behavior, full hitbox runtime, full
+  damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded ftcommondamage DamageFall Physics Tick Proof
+
+- Extended the selected Dash-Run damage-status side probe through one installed
+  DamageFall `ftPhysicsApplyAirVelDriftFastFall` callback tick after the
+  hitstun-expiry DamageFall status handoff and before the guarded DamageFall
+  map-branch ticks.
+- Counted the installed callback and required the selected fighter to stay in
+  DamageFall/Air while Y velocity moves downward, proving the imported
+  DamageFall physics slot is wired without starting continuous DamageFall
+  runtime.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x1fff` to `0x3fff`
+  in the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Still deferred: continuous DamageFall runtime, exact fast-fall branch,
+  exact damage effects/color/screen-flash behavior, full hitbox runtime, full
+  damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded DamageFall Fast-Fall Physics Branch Proof
+
+- Corrected the local physics compatibility shim so
+  `ftPhysicsApplyAirVelDriftFastFall` follows BattleShip's original
+  `is_fastfall ? ftPhysicsApplyFastFall : ftPhysicsApplyGravityDefault`
+  branch instead of always applying normal gravity.
+- Added the minimal `ftPhysicsApplyFastFall` helper and original-shaped
+  `ftPhysicsCheckSetFastFall` condition. The color-animation hook remains a
+  no-op compatibility seam until real colanim runtime is imported.
+- Extended the selected Dash-Run DamageFall side probe through one fast-fall
+  input/tap branch and required `vel_air.y == -attr->tvel_fast`.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x3fff` to `0x7fff`
+  in the direct, menu-chain, and current aggregate verifiers.
+- Still deferred: continuous DamageFall runtime, real fast-fall color-animation
+  runtime, exact damage effects/color/screen-flash behavior, full hitbox
+  runtime, full damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded DamageAir Map Continuation Proof
+
+- Replaced the local `ftCommonDamageAirCommonProcMap` no-op with a guarded
+  BattleShip-shaped map branch for the existing Dash-Run damage-status side
+  probe.
+- Added the minimal guarded `mpCommonCheckFighterDamageCollision` contract:
+  clear previous/current damage collision masks, publish a selected floor hit,
+  and let the original-shaped DamageAir map condition reach the passive checks
+  and DownBounce seam.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x7fff` to `0xffff`
+  in the direct, menu-chain, and current aggregate verifiers.
+- Still deferred: continuous DamageAir/DamageFall map runtime, real wall-damage
+  selection from arbitrary collision frames, full hitbox runtime, full damage
+  runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded DamageFlyRoll Physics Tail Proof
+
+- Restored the missing BattleShip tail in the local
+  `ftCommonDamageCommonProcPhysics` shim: DamageFlyRoll now updates the model
+  pitch, and throw-owned low-velocity damage clears attack collisions.
+- Added the minimal local `ftCommonDamageFlyRollUpdateModelPitch` helper using
+  the same source formula and existing DObj/parts-transform seam.
+- Isolated the proof so normal damage-physics diagnostics do not accidentally
+  run the throw-owned attack-collision clear tail, and check DamageFlyRoll
+  pitch against the post-friction velocities used by the original call order.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0xffff` to `0x1ffff`
+  in the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  and `clean-generated.ps1 -DryRun`.
+- Still deferred: continuous damage lifecycle runtime, real full
+  `ftcommondamage.c` import, full hitbox runtime, full damage runtime, and
+  broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded Knockback-Over Invincibility Branch Proof
+
+- Added local BattleShip-shaped `ftCommonDamageCheckSetInvincible`,
+  `ftCommonDamageSetStatus`, and `ftParamSetTimedHitStatusInvincible`
+  compatibility helpers for the existing bounded damage-status proof path.
+- Extended `DASH_RUN_DAMAGE_SETUP` with a restored side proof of the
+  `is_knockback_over` branch: hitlag-ready damage status setup clears the flag
+  and sets timed invincibility through `special_hitstatus`.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x1ffff` to `0x3ffff`
+  in the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+- Still deferred: continuous damage lifecycle runtime, `proc_passive` /
+  `proc_lagupdate` fields and real scheduling, real full
+  `ftcommondamage.c` import, full hitbox runtime, full damage runtime, and
+  broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded Damage Hitlag Smash DI Proof
+
+- Added BattleShip-compatible `FTCOMMON_DAMAGE_SMASH_DI_*` constants and a
+  local `ftCommonDamageCommonProcLagUpdate` helper.
+- Extended `DASH_RUN_DAMAGE_SETUP` with a bounded hitlag-only Smash DI side
+  proof: live stick input moves the root DObj by the original range multiplier
+  and consumes tap-stick buffers without decrementing hitlag.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x3ffff` to `0x7ffff`
+  in the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  and `clean-generated.ps1 -DryRun`.
+- Still deferred: continuous hitlag lifecycle scheduling, real
+  `proc_lagupdate` / `proc_lagend` wiring through imported `ftmain.c`, real
+  full `ftcommondamage.c` import, full hitbox runtime, full damage runtime,
+  and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded Damage Hitlag Lifecycle Proof
+
+- Added the missing local `FTStruct` `proc_lagupdate` and `proc_lagend`
+  callback slots used by original BattleShip fighter hitlag scheduling.
+- Installed `ftCommonDamageCommonProcLagUpdate` from the bounded damage setup
+  path and added a tiny source-shaped lifecycle slice for the selected proof:
+  hitlag decrements, knockback stays paused until the terminal tick, lag-end
+  runs, and animation events resume after hitlag reaches zero.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x7ffff` to
+  `0xfffff` in the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`.
+- Note: the dash-run direct/menu verifier pair must run serially with the
+  current melonDS/GDB wrappers; a parallel attempt corrupted GDB marker reads.
+- Still deferred: continuous hitlag scheduling through the real `ftmain.c`
+  task process, real `proc_lagupdate` / `proc_lagend` ownership outside this
+  bounded proof, real full `ftcommondamage.c` import, full hitbox runtime, full
+  damage runtime, and broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded Damage Setup Tail Proof
+
+- Restored the next bounded `ftCommonDamageInitDamageVars` setup-tail slice for
+  the selected Dash-Run damage proof without importing full `ftmain.c`,
+  `gmcollision.c`, or continuous damage runtime.
+- Added proof-local compatibility for public knockback, damage color animation
+  selection, screen flash, rumble, dust interval, player-tag wait, and attacker
+  hit count/knockback. The color-animation stubs only report success while the
+  guarded Dash-Run damage setup probe is active.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0xfffff` to
+  `0x7ffffff` in the direct, menu-chain, and current aggregate verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+- Current boundary note: `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`
+  still fails at the pre-existing `STAGE_MPWALLCOPY_FLOOR` aggregate
+  result/safe sentinel while the new `DASH_RUN_DAMAGE_SETUP=0x7ffffff` marker
+  is present. Treat that as a separate wall-copy/finalizer verifier issue, not
+  a damage-tail proof failure.
+- Still deferred: `proc_passive` ownership in local `FTStruct`, continuous
+  damage lifecycle scheduling, real full `ftcommondamage.c` import, full
+  hitbox runtime, full damage runtime, item/catch/capture damage branches, and
+  broad `ftmain.c` / `gmcollision.c`.
+
+## 2026-06-29 - Restored Passive Recover After Damage Setup Tail
+
+- Fixed the current Passive recover boundary regression exposed after the
+  bounded damage setup-tail proof restored the source-compatible
+  `ftCommonDamageInitDamageVars` rumble call.
+- Updated the recover-loop throw-release proof to expect three
+  source-compatible rumble requests: the damage-init rumble plus the two
+  original thrown-release rumbles from `ftCommonThrownReleaseThrownUpdateStats`.
+- Kept the existing direct/menu-chain Passive recover modes `155/156`; no new
+  harness pair or gameplay subsystem was added.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`.
+- The older `STAGE_MPWALLCOPY_FLOOR` failure was a downstream symptom of the
+  throw-release marker not reaching the status/dead-result continuation; the
+  same direct/menu-chain runs now pass through `mpWallCopy`, `mpCliffLive`,
+  `throwReleaseStatus`, `throwProc`, and `throwDead`.
+
+## 2026-06-29 - Restored Damage Setup proc_passive Ownership
+
+- Added the BattleShip-compatible `FTStruct.proc_passive` callback slot to the
+  local fighter shell and restored `ftCommonDamageInitDamageVars` ownership of
+  that slot for the bounded damage setup path.
+- Mirrored BattleShip's damage branch: electric damage statuses keep the
+  original selected damage status in `status_vars.common.damage.status_id` and
+  install `ftCommonDamageSetStatus` as `proc_passive`; other damage statuses
+  install `ftCommonDamageCheckSetInvincible`.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x7ffffff` to
+  `0xfffffff` in the direct, menu-chain, and current Passive recover aggregate
+  verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`.
+- Still deferred: continuous damage lifecycle scheduling through real
+  `ftmain.c`, full `ftcommondamage.c` import, full hitbox runtime, full damage
+  runtime, item/catch/capture damage branches, and broad `ftmain.c` /
+  `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded Electric proc_passive Status Dispatch
+
+- Added the next guarded `ftcommondamage.c` passive branch proof without adding
+  a harness: the damage setup side probe now seeds an electric DamageE status,
+  dispatches the installed `ftCommonDamageSetStatus` through the bounded
+  `ftMainProcUpdateInterrupt` slice, and verifies it hands off to the stored
+  original damage status with hitstun and invincibility set before restoring
+  preview state.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x1fffffff` to
+  `0x3fffffff` in the direct, menu-chain, and current Passive recover aggregate
+  verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`.
+- Still deferred: continuous damage lifecycle scheduling through real
+  `ftmain.c`, full `ftcommondamage.c` import, full hitbox runtime, full damage
+  runtime, item/catch/capture damage branches, and broad `ftmain.c` /
+  `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded proc_passive Dispatch Slice
+
+- Added a narrow `ftMainProcUpdateInterrupt`-shaped passive dispatch slice for
+  the selected Dash-Run damage setup proof. It calls the installed
+  `proc_passive` before update/interrupt callbacks when hitlag is clear,
+  matching the source-order shape needed by this bounded proof without
+  importing full `ftmain.c`.
+- Proved the non-electric `ftCommonDamageCheckSetInvincible` branch by seeding
+  knockback-over state, dispatching through the bounded passive slice, and
+  verifying the branch clears the flag and installs invincibility before the
+  preview fighter state is restored.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0xfffffff` to
+  `0x1fffffff` in the direct, menu-chain, and current Passive recover aggregate
+  verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`,
+  and
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 5`.
+- Still deferred: continuous damage lifecycle scheduling through real
+  `ftmain.c`, full `ftcommondamage.c` import, full hitbox runtime, full damage
+  runtime, item/catch/capture damage branches, and broad `ftmain.c` /
+  `gmcollision.c`.
+
+## 2026-06-29 - Added Bounded Sleep Damage FuraSleep Handoff
+
+- Restored the original `ftCommonDamageGotoDamageStatus` sleep-element branch
+  shape: sleep damage now calls a bounded project-owned
+  `ftCommonFuraSleepSetStatus` instead of returning before status setup.
+- Added original-compatible `nFTCommonMotionFuraFura/FuraSleep` and
+  `nFTCommonStatusFuraFura/FuraSleep` IDs, plus a narrow FuraSleep
+  `ftMainSetStatus` branch that installs FuraSleep status/motion and parks
+  before the full breakout/capture/color-animation runtime.
+- Tightened `DASH_RUN_DAMAGE_SETUP` from mask low bits `0x3fffffff` to
+  `0x7fffffff` in the direct, menu-chain, and current platform-speed
+  verifiers by proving a side probe through `ftCommonDamageGotoDamageStatus`
+  sets `cliffcatch_wait` and reaches FuraSleep status/motion before restoring
+  the preview fighter state.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1 -DelaySeconds 3`.
+- Still deferred: full `ftcommonfurasleep.c`, breakout mash variables,
+  capture-trapped helpers, fighter color-animation runtime, full damage
+  lifecycle scheduling through real `ftmain.c`, and broad `gmcollision.c`.
+
+## 2026-06-29 - Promoted Bounded Original FuraSleep Setup/Update Proof
+
+- Imported BattleShip's original
+  `decomp/src/ft/ftcommon/ftcommonfurasleep.c` through
+  `src/import/battleship_ftcommon_furasleep.c`, with public symbols remapped
+  behind the project-owned port seam.
+- Added the narrow original-compatible FuraSleep constants, color-animation ID,
+  and `FTStruct` breakout fields needed by that import.
+- Replaced the project-owned FuraSleep status placeholder with a bounded call
+  to imported `ndsBaseFTCommonFuraSleepSetStatus`, and installed imported
+  `ndsBaseFTCommonFuraSleepProcUpdate` in the local `ftMainSetStatus`
+  FuraSleep branch.
+- Added source-order `ftCommonCaptureTrappedInitBreakoutVars` and
+  `ftCommonCaptureTrappedUpdateBreakoutVars` compatibility helpers. These keep
+  button/stick mash countdown behavior local without importing the broad
+  capture runtime.
+- Strengthened the existing `DASH_RUN_DAMAGE_SETUP=0x7fffffff` sleep bit
+  without changing the mask: the side proof now requires FuraSleep
+  status/motion, `cliffcatch_wait`, original breakout timer initialization,
+  one imported FuraSleep update tick, forced imported FuraSleep -> Wait handoff,
+  and the fighter color-animation seam before restoring the preview state.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1 -DelaySeconds 3`,
+  and
+  `verify-menu-chain-mariofox-stage-mpplatform-speed-floor-loop-harness.ps1 -DelaySeconds 3`.
+- Still deferred: continuous FuraSleep lifecycle scheduling through real
+  `ftmain.c`, real fighter color-animation runtime, full capture/grab runtime,
+  full damage lifecycle scheduling, and broad `gmcollision.c`.
+
+## 2026-06-29 - Proved FuraSleep Mash Breakout Branch
+
+- Aligned the current-truth `STATUS` / `HANDOFF` headers back to registry
+  modes `155/156`; platform-speed modes `151/152` remain inherited regression
+  coverage.
+- Strengthened the existing dash-run damage setup side proof to run imported
+  original `ftCommonFuraSleepProcUpdate` with A-tap plus stick mash input and
+  require the source-shaped breakout timer delta.
+- Still deferred: continuous multi-frame FuraSleep scheduling, real fighter
+  color-animation runtime, full capture/grab runtime, full damage lifecycle
+  scheduling, and broad `gmcollision.c`.
+
+## 2026-06-29 - Added First DamageUpdateMain Catch Keep-Hold Proof
+
+- Added the original-compatible
+  `FTCOMMON_DAMAGE_CATCH_RELEASE_THRESHOLD` constant to the project fighter
+  ABI shadow.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x3ffff` to `0x7ffff`
+  in the direct/menu-chain Dash-Run verifiers.
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` first catch branch
+  probe inside the existing procparams side proof. The probe seeds the selected
+  fighter as catching the other fighter, proves the catch-resist and
+  keep-hold predicates, copies `damage_lag` and `hitlag_mul` to the grabbed
+  fighter, selects `nFTDamageKindColAnim`, records the fighter colanim seam,
+  and restores both preview fighter structs before the wider proof continues.
+- Updated diagnostic/current-truth docs to keep `ftCommonDamageUpdateMain`
+  scoped: the first catch-resist/keep-hold branch is now proven, while the
+  remaining catch/capture/item/release branches remain deferred.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Attack-Event Hitbox-ID Mask Proof
+
+- Added `gNdsFighterDashRunAttackEventAttackIDMask` to the existing bounded
+  original attack-event decoder diagnostics.
+- The current live-hit direct/menu-chain verifier now appends `hitboxIds=0x3`
+  to the Dash-Run aggregate marker and asserts the selected original
+  Mario/Fox script scan decoded at least attack-coll slots `0` and `1`.
+- This is decoder coverage only. The selected live-hit contact/damage proof
+  still intentionally stays on Fox Jab2 hitbox `1`; full continuous
+  multi-hitbox collision runtime remains deferred.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`
+  and
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  a forced normal rebuild plus `verify-runtime.ps1`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  and `verify-regression.ps1 -DelaySeconds 3`.
+
+## 2026-06-29 - Added DamageUpdateMain Heavy-Item Branch Proof
+
+- Added bounded source-shaped `ftCommonDamageUpdateMain` DK-family heavy-item
+  probes inside the existing Dash-Run procparams side proof.
+- The catch-resist probe seeds a fake heavy item on Donkey, reaches the
+  original-compatible damage colanim seam, and keeps the held item link.
+- The drop probe seeds a fake heavy item on Giant Donkey, forces the
+  non-resist branch through `ftSetupDropItem`, clears the item link, and
+  reaches the bounded damage-status path before restoring preview state.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x3fffffff` to
+  `0xffffffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Live-Hit Attack Clash Rebound Proof
+
+- Added a bounded source-shaped `ftMainUpdateAttackStatFighter` /
+  `ftMainSetHitRebound` proof inside current modes `159/160`, without adding
+  a new harness or importing broad `ftmain.c`.
+- The probe seeds one active attack coll on each selected Mario/Fox fighter,
+  follows the original two-branch attack-vs-attack order, proves both
+  hit-interact attack records store the opposing group, clears attack/damage
+  detect in the original ignore-flag order, applies the original US rebound
+  formula to both fighters, records facing signs, counts two setoff-effect
+  seams, and restores both fighter structs plus root X positions.
+- Tightened `STAGE_MPLIVEHIT_DAMAGE` from mask low bits `0xfffffff` to
+  `0x1fffffff` and added verifier marker `clash=0x3f/24/18`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Throw Attribution Proof
+
+- Added original-compatible throw-owner fields to the project `FTStruct` shell
+  and updated the `ftParamSetThrowParams` compatibility seam to copy
+  `throw_fkind`, `throw_team`, `throw_player`, and `throw_player_num` from the
+  owner fighter GObj.
+- Added a bounded source-shaped `ftMainUpdateDamageStatFighter` attribution
+  proof inside the current selected Fox Jab2 live-hit boundary. The probe
+  seeds a throw owner, proves the direct attacker `1` is replaced by throw
+  owner `0` for hitlog attribution, calls the player-stat/stale-queue seams,
+  and restores both preview fighter structs.
+- Widened the current live-hit aggregate mask from `0x7ffffff` to
+  `0xfffffff` and added verifier marker `throwAttr=0x1f/1->0`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  `git diff --check`,
+  and `git status --short -- decomp`.
+
+## 2026-06-30 - Added Live-Hit Damage-Resist False-Return Proof
+
+- Updated the project-owned fighter shell with the original-compatible
+  `damage_resist` and `is_damage_resist` fields needed by
+  `ftMainCheckGetUpdateDamage`.
+- Made the local selected-damage helper follow BattleShip's original
+  damage-resist decrement / breakthrough / false-return logic.
+- Added `STAGE_MPLIVEHIT_RESIST` to current modes `159/160`. It seeds damage
+  resist above the selected Fox Jab2 damage, proves resist `7 -> 3`, skips
+  damage queue/percent/hitlog, emits the bounded set-off effect and hit SFX
+  seams, and restores both fighter structs.
+- Tightened the current live-hit aggregate proof mask from `0x1ffffff` to
+  `0x3ffffff`; current summary adds `resist=0xfff/7->3`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  `git diff --check`,
+  and `git status --short -- decomp`.
+
+## 2026-06-30 - Added Live-Hit Effect-Only Damage Branch Proof
+
+- Added `STAGE_MPLIVEHIT_EFFECTONLY` to current modes `159/160`.
+- The proof follows the source-shaped `ftMainUpdateDamageStatFighter`
+  non-normal damage-coll branch: selected hurtbox slot `3` becomes
+  invincible, the attack record and attacker `attack_damage` update, the
+  set-off effect and hit SFX seams run, and damage queue, percent damage, and
+  hitlog remain unchanged before restoring both fighter structs.
+- Tightened `STAGE_MPLIVEHIT_DAMAGE` from mask low bits `0xffffff` to
+  `0x1ffffff`; current summary adds `eff=0x1ff/0->0`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  `git diff --check`,
+  and `git status --short -- decomp`.
+
+## 2026-06-30 - Added Live-Hit Shield-Contact Gate Proof
+
+- Extended the current direct/menu-chain live-hit damage modes `159/160` with
+  one bounded source-order shield-contact branch proof for the selected Fox
+  Jab2 hitbox `1`.
+- The proof follows the original `ftmain.c` shield branch shape for the
+  selected state: `is_shield`, per-attack damage detect, active attack,
+  bounded shield joint/sphere contact, shield-stat handoff, attack-record
+  clear, and proof-local state restore.
+- Added `STAGE_MPLIVEHIT_SHIELD_CONTACT` diagnostics and tightened
+  `STAGE_MPLIVEHIT_DAMAGE` mask low bits from `0x3fffff` to `0x7fffff`.
+  Current summary records
+  `mpLiveHit=atk=191/166 hitbox=1/j14 dmg=4 second=0/j14/x140 hurt=1/10 hbdmg=0->4/6 shield=4->4/4 shc=0xff/3142 so=155/134 contact=1 repeat=1 rehit=5->0 origRehit=hit30/v40000 30->29->0 clear=1/3 ids=0x3 dmg=0->4 hitlag=6`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-06-29 - Added Source-Order Hurtbox Scan Proof
+
+- Added `STAGE_MPLIVEHIT_HURTBOX` to the current direct/menu-chain live-hit
+  damage-loop boundary.
+- The proof reuses the selected Fox Jab2 attack-coll and project-owned
+  rectangle/collide helper, temporarily marks Mario damage-coll slot `0`
+  intangible, then follows the original `ftmain.c` loop shape: skip
+  intangible hurtboxes, test the next non-`None` hurtbox, break on first hit,
+  and observe the source-order `None` sentinel after Mario's `10` active
+  slots.
+- This advances the selected live-hit proof beyond slot-0-only hurtbox
+  evidence without importing broad `ftmain.c` or `gmcollision.c`; natural
+  multi-slot victim records, hitlag, and damage remain deferred.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`;
+  `verify-boundary.ps1 -DelaySeconds 3`;
+  `verify-current.ps1 -Build -DelaySeconds 3`;
+  `check-docs.ps1`;
+  `check-architecture.ps1`;
+  `check-harness-registry.ps1`;
+  `check-gbi-decode-fixtures.ps1`;
+  `clean-generated.ps1 -DryRun`;
+  `git diff --check` (existing CRLF warnings only).
+
+## 2026-06-29 - Added Live-Hit Secondary Fox Jab2 Hitbox Probe
+
+- Strengthened the existing direct/menu-chain live-hit damage lifecycle modes
+  `159/160` without adding another harness pair.
+- Added `STAGE_MPLIVEHIT_SECONDARY` to record the sibling Fox Jab2 hitbox `0`
+  decoded from the original motion script: joint `14`, damage `4`, normalized
+  radius `100`, forward offset `140`, angle `70`, and flags `0x7`.
+- The probe locally runs bounded `New -> Transfer -> Interpolate`, range,
+  rectangle, and selected collide gates while leaving the selected damage
+  scheduling path on hitbox `1`.
+- Tightened the live-hit proof mask from `0x7ffff` to `0xfffff` and updated
+  the current summary marker with `second=0/j14/x140`.
+- Verified:
+  direct and menu-chain live-hit builds,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3 -NoBuild`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3 -NoBuild`,
+  `verify-boundary.ps1 -DelaySeconds 3 -NoBuild`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Seeded Source-Order Mario/Fox Damage-Coll Slots
+
+- Replaced the bounded Mario/Fox init damage-coll seed with the same source
+  shape used by original `ftmanager.c`: copy every valid
+  `attr->damage_coll_descs[]` slot into `FTStruct.damage_colls[]`, set normal
+  hit status, attach the source joint, and halve the descriptor size.
+- The direct/menu-chain init verifiers now require Mario `10` active
+  damage-coll slots and Fox `11`, while the current live-hit proof still uses
+  selected slot `0` for collision scheduling.
+- Deferred: natural multi-slot rectangle iteration, victim records, hitlag,
+  damage, and broad `gmcollision.c` / `ftmain.c` imports.
+- Verified:
+  `verify-battle-mariofox-init-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-init-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`, and
+  `check-gbi-decode-fixtures.ps1`.
+
+## 2026-06-30 - Added Original Rehit Refresh-ID Proof
+
+- Strengthened the existing direct/menu-chain live-hit damage lifecycle modes
+  `159/160` without adding another harness pair.
+- Added a live-hit-local diagnostic around the imported original
+  `ftCommonAttackAirLwProcUpdate` Link down-air rehit refresh call. The
+  `ftParamRefreshAttackCollID` seam now records refresh IDs only while that
+  imported callback is active, proving the original timer window refreshes
+  attack-coll slots `0` and `1`.
+- Extended `STAGE_MPLIVEHIT_ORIG_REHIT` and the current summary to print
+  `ids=0x3`:
+  `mpLiveHit=atk=191/166 hitbox=1/j14 dmg=4 shield=4->4/4 so=155/134 contact=1 repeat=1 rehit=5->0 origRehit=hit30/v40000 30->29->0 clear=1/3 ids=0x3 dmg=0->4 hitlag=6`.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3 -NoBuild`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3 -NoBuild`,
+  `verify-boundary.ps1 -DelaySeconds 3 -NoBuild`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  and `check-gbi-decode-fixtures.ps1`.
+
+## 2026-06-29 - Added Live-Hit Shield-Stat GuardSetOff Proof
+
+- Strengthened the existing direct/menu-chain live-hit damage lifecycle modes
+  `159/160` without adding another harness pair.
+- Added a bounded source-shaped `ftMainUpdateShieldStatFighter` side proof for
+  the selected Fox Jab2 hitbox. The probe records attacker shield push, victim
+  shield damage before/after/total, source-facing `shield_lr`, source-player
+  diagnostic, one bounded set-off effect size, and the GuardSetOff
+  status/motion/hitlag/clear path before restoring preview fighter state.
+- Added `STAGE_MPLIVEHIT_SHIELD` and tightened the live-hit result mask from
+  low bits `0x3ffff` to `0x7ffff`.
+- Current marker:
+  `mpLiveHit=atk=191/166 hitbox=1/j14 dmg=4 shield=4->4/4 so=155/134 contact=1 repeat=1 rehit=5->0 origRehit=hit30/v40000 30->29->0 clear=1/3 dmg=0->4 hitlag=6`.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-29 - Added Link Down-Air ProcHit Rehit Seed Proof
+
+- Strengthened the existing live-hit damage lifecycle modes `159/160` without
+  adding another harness pair.
+- Added a bounded original `ftCommonAttackAirLwProcHit` seed probe for Link's
+  down-air rehit branch before the existing selected Fox Jab2 live-hit damage
+  proof. The probe records AttackAirLw status/motion `213/188`, rehit timer
+  `30`, vertical velocity `40000`, fastfall clear, animation frame `35000`,
+  and attack-record clear mask `0x7`.
+- Added live-hit-only `ftMainSetStatus` handling for AttackAirLw so the probe
+  can install the original update/physics/map callback shape without changing
+  the broader Dash-Run or damage-recover proofs.
+- Extended the live-hit verifier marker to
+  `mpLiveHit=atk=191/166 hitbox=1/j14 dmg=4 contact=1 repeat=1 rehit=5->0 origRehit=hit30/v40000 30->29->0 clear=1/3 dmg=0->4 hitlag=6`.
+- Added a default project-owned fallback for
+  `ndsGRInishieScaleGetSourceSetupMapHead` so non-Inishie builds still link
+  when the Inishie source-scale import glue is present.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  `verify-regression.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added Selected Original Rehit Timer Window to Live-Hit Proof
+
+- Folded a bounded imported original `ftCommonAttackAirLwProcUpdate` rehit
+  timer 30-tick window into the current direct/menu-chain MP live-hit damage
+  proof.
+- The probe temporarily uses the original Link down-air branch on the selected
+  live shell, dirties attack records for IDs `0/1`, proves `rehit_timer`
+  `30 -> 29 -> ... -> 1` without early refresh/clear, then proves `1 -> 0`
+  refreshes both attack collisions to `New`, clears both records, and restores
+  the proof-local fighter state.
+- Tightened `STAGE_MPLIVEHIT_DAMAGE` from mask low bits `0x1ffff` to
+  `0x3ffff` and added `STAGE_MPLIVEHIT_ORIG_REHIT`.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added MP Damage-Recover Lifecycle Proof
+
+- Added direct/menu-chain harness modes `157/158`:
+  `battle_mariofox_stage_mpdamage_recover_loop` and
+  `menu_chain_mariofox_stage_mpdamage_recover_loop`.
+- The new proof keeps the live VSBattle roots on Pupupu/Dream Land, consumes
+  the Passive recover aggregate plus Dash-Run selected contact/damage setup
+  proof, and adds a bounded source-shaped selected contact -> damage scheduling
+  -> hitlag callback -> damage status -> DamageFall -> recovery branch path.
+- Added `STAGE_MPDAMAGE_RECOVER_*` verifier markers for setup, contact,
+  damage, status, callbacks, ground/DamageFall, PassiveStand/Passive/
+  DownBounce branch reachability, velocity, and final safety.
+- Fixed guarded compatibility regressions exposed by the new aggregate:
+  CliffWaitDamage now follows the original DamageFall map branch order under
+  the active proof, PassiveStand/Passive ground-set counters are recorded when
+  guarded status shells set `ga`, DownStand interrupt checks run in source
+  order, down-roll shells restore `is_jostle_ignore`, and Turn setup/update
+  restores the original one-frame flip semantics.
+- Current marker:
+  `mpDamageRecover=contact=1/1 dmg=0->4 hitlag=6 status=52/45 fall=57/50 ps=1 passive=1 dbounce=1`.
+- Continuous live hitbox activation, full `gmcollision.c`, full `ftmain.c`,
+  arbitrary damage-state duration, complete hitlag/damage runtime, items,
+  weapons, HUD, audio, and unbounded gameplay scheduling remain deferred.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-stage-mpdamage-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mpdamage-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mppassive-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mpdownwait-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mpdownwait-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mpdownrecover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mpdownrecover-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`, and
+  `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-29 - Repaired Mario/Fox Process-Loop Scheduler Prerequisite
+
+- Repaired the bounded Mario/Fox movement proof ladder after the standalone
+  process loop passed but scheduler-mode prerequisites stopped at
+  `visits=0x1f3` / `transitions=0xff`.
+- The root cause was a bounded-process status shim rejecting the
+  JumpAnimEnd-driven `FallAerial` handoff in scheduler mode. The process-loop
+  helper now coerces only that active JumpAnimEnd `FallAerial` case back to the
+  intended `Fall` handoff, preserving the standalone process proof and avoiding
+  a broad status rewrite.
+- Kept the original-style jump velocity repair in place so Jump, process,
+  scheduler, preview, and `gcRunAll` proofs all observe nonzero source-shaped
+  airborne velocity before landing back to Wait/Ground.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-landing-loop-harness.ps1 -DelaySeconds 5`,
+  `verify-battle-mariofox-process-loop-harness.ps1 -DelaySeconds 5`,
+  `verify-battle-mariofox-scheduler-loop-harness.ps1 -DelaySeconds 5`,
+  `verify-menu-chain-mariofox-scheduler-loop-harness.ps1 -DelaySeconds 5`,
+  `verify-battle-mariofox-preview-loop-harness.ps1 -DelaySeconds 5`,
+  `verify-menu-chain-mariofox-preview-loop-harness.ps1 -DelaySeconds 5`,
+  `verify-battle-mariofox-gcrunall-loop-harness.ps1 -DelaySeconds 5`,
+  `verify-menu-chain-mariofox-gcrunall-loop-harness.ps1 -DelaySeconds 5`,
+  `verify-boundary.ps1 -DelaySeconds 5`,
+  `verify-current.ps1 -DelaySeconds 5`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  `git diff --check`,
+  and `git status --short -- decomp`.
+
+## 2026-06-29 - Strengthened DamageCommon Ground Expiry Proof
+
+- Strengthened the existing `DASH_RUN_DAMAGE_SETUP` update bit so it now
+  proves both the installed damage update hitstun decrement and a bounded
+  ground `ftCommonDamageCommonProcUpdate` expiry through
+  `mpCommonSetFighterWaitOrFall` into Wait/Ground.
+- The subprobe saves and restores the selected preview `FTStruct` and
+  `anim_frame`; it does not add a new harness, marker bit, or continuous
+  damage runtime.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Tail Branch Proofs
+
+- Added bounded source-shaped `ftCommonDamageUpdateMain` no-grab/no-capture
+  tail probes inside the existing Dash-Run procparams side proof.
+- The first probe seeds zero knockback with no catch, capture, or item link,
+  then reaches the original-compatible damage color-animation seam without
+  changing fighter status.
+- The second probe seeds non-sleep non-resist damage with no catch, capture,
+  or item link, then routes through the bounded damage-status path before
+  restoring the preview fighter state.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0xfffffff` to
+  `0x3fffffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-29 - Added DamageUpdateMain Catch Zero-Knockback Proof
+
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` catch-side
+  zero-knockback probe inside the existing Dash-Run procparams side proof.
+- The probe seeds the selected fighter with `catch_gobj`, proves the
+  catch-resist predicate through `damage_knockback == 0`, takes the original
+  grabbed-fighter-zero-knockback branch, reaches the existing damage
+  color-animation seam, and restores both preview fighter structs.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x1fffff` to
+  `0x3fffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Capture Zero-Knockback Proof
+
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` capture-side
+  zero-knockback probe inside the existing Dash-Run procparams side proof.
+- The probe seeds the selected fighter as captured by the other fighter,
+  proves the original captor-zero-knockback branch, sets captor hitlag, clears
+  captured fighter tap/release input, runs the selected `proc_lagstart` tail,
+  reaches the existing damage color-animation seam, and restores both preview
+  fighter structs.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x3fffff` to
+  `0x7fffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Catch Non-Resist Stats Proof
+
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` catch-side
+  non-resist keep-hold probe inside the existing Dash-Run procparams side
+  proof.
+- The probe seeds the selected fighter as catching the other fighter without
+  satisfying the catch-resist predicate, proves the grabbed fighter keeps hold,
+  runs imported original `ftCommonThrownUpdateDamageStats` on the grabbed
+  fighter, then reaches the same bounded lose-grip / stop-voice /
+  damage-status path before restoring both preview fighter structs.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x7fffff` to
+  `0xffffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Capture Non-Resist Stats Proof
+
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` capture-side
+  non-resist keep-hold probe inside the existing Dash-Run procparams side
+  proof.
+- The probe seeds the selected fighter as captured by the other fighter,
+  keeps the captured fighter under the release threshold, forces the captor
+  out of catch-resist, runs imported original `ftCommonThrownUpdateDamageStats`
+  on the captured fighter, then reaches the same bounded lose-grip /
+  stop-voice / damage-status path before restoring both preview fighter
+  structs.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0xffffff` to
+  `0x1ffffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Capture Keep-Hold Proof
+
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` capture-side
+  keep-hold probe inside the existing Dash-Run procparams side proof.
+- The probe seeds the selected fighter as captured by the other fighter,
+  proves the captured fighter remains under the release threshold while the
+  captor is in the catch-resist case, copies `damage_lag` / `hitlag_mul` back
+  to the captured fighter, selects `nFTDamageKindCatch` on the captor, records
+  the existing damage color-animation seam, and restores both preview fighter
+  structs.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0xfffff` to
+  `0x1fffff` in the direct/menu-chain Dash-Run verifiers.
+- Updated current-truth docs so the first catch keep-hold, catch release, and
+  capture keep-hold branches are covered while the remaining
+  `ftCommonDamageUpdateMain` catch/capture/item branches stay deferred.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+- Still deferred: importing full `ftcommondamage.c`, the remaining
+  `ftCommonDamageUpdateMain` catch/capture/item/release branches, continuous
+  damage/hitlag scheduling through real `ftmain.c`, full hitbox runtime, real
+  fighter color-animation runtime, and broad `gmcollision.c`.
+
+## 2026-06-29 - Added DamageUpdateMain Catch Release Proof
+
+- Added a sibling bounded source-shaped `ftCommonDamageUpdateMain` catch
+  branch probe inside the existing Dash-Run procparams side proof.
+- The new probe seeds the selected fighter as caught by the other fighter,
+  proves catch-resist with keep-hold false, routes through the same bounded
+  lose-grip / stop-voice / damage-status install sequence, selects
+  `nFTDamageKindStatus` on the grabbed fighter, and restores both preview
+  fighter structs plus animation state.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x7ffff` to `0xfffff`
+  in the direct/menu-chain Dash-Run verifiers.
+- Updated diagnostic/current-truth docs so the catch-resist keep-hold branch
+  and sibling release/lose-grip branch are now covered, while the remaining
+  `ftCommonDamageUpdateMain` catch/capture/item branches stay deferred.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Capture Lose-Grip Proof
+
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` capture-side
+  keep-hold false probe inside the existing Dash-Run procparams side proof.
+- The probe seeds the selected fighter as captured by the other fighter, puts
+  the captured fighter at the release threshold, keeps captor knockback
+  nonzero, then reaches the original lose-grip / stop-voice / damage-status
+  path without running thrown damage-stats before restoring both preview
+  fighter structs.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x1ffffff` to
+  `0x3ffffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Hit-Record Detect-Gate Proof
+
+- Added a bounded source-order hit-record detect-gate proof inside the
+  existing direct/menu-chain live-hit modes `159/160`.
+- The proof mirrors the BattleShip fighter-vs-fighter branch that enables
+  `gFTMainIsDamageDetect[i]` only when the selected attack record has no prior
+  hurt/shield interaction and its group is still the default `7`.
+- The current `STAGE_MPLIVEHIT_REHIT` diagnostic now records `gate=0x3f`,
+  proving the empty/default allow case, hurt skip, shield skip, nondefault
+  group skip, and restored positive path before the selected Fox Jab2 damage
+  proof continues.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Same-Group Attack-Record Carry Proof
+
+- Added a bounded source-shaped same-group attack-record carry/clear proof
+  inside existing direct/menu-chain live-hit modes `159/160`.
+- Added `gNdsFighterDashRunAttackEventRecordCarryMask` and threaded it into
+  `STAGE_MPLIVEHIT_EVENTS`; current passing proof records `carry=0xf`.
+- The proof uses proof-only attack-coll slots `2` and `3` with save/restore to
+  prove the original MakeAttackColl same-group copy branch and no-sibling clear
+  branch without adding a new harness or unbounding fighter runtime.
+- Tightened `STAGE_MPLIVEHIT_DAMAGE` from mask low bits `0x7fffff` to
+  `0xffffff` in the direct/menu-chain live-hit verifiers.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Hurtbox Tested-Miss Before Hit Proof
+
+- Extended the current direct/menu-chain live-hit modes `159/160` so the
+  source-order hurtbox scan now proves a normal tested miss before the first
+  hit.
+- The proof still marks Mario damage-coll slots `0` and `1` intangible, then
+  runs the rectangle/collide helper against slot `2` as a miss, continues to
+  slot `3`, breaks on the first hit, records the slot-10 `None` sentinel, and
+  feeds selected slot `3` through bounded damage record, hitlog, stats,
+  percent-damage, and hitlag scheduling before restoring fighter state.
+- The hurtbox mask now requires low bits `0x1ffff`, adding the explicit
+  tested-miss bit. The current marker is now
+  `mpLiveHit=atk=191/166 hitbox=1/j14 dmg=4 second=0/j14/x140 hurt=3/10 hbdmg=0->4/6 shield=4->4/4 shc=0x3fffff/3142 so=155/134 contact=1 repeat=1 carry=0xf gate=0x3f rehit=5->0 origRehit=hit30/v40000 30->29->0 clear=1/3 ids=0x3 dmg=0->4 hitlag=6`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Advanced Live-Hit Hurtbox Scan To Slot 2
+
+- Extended the current direct/menu-chain live-hit modes `159/160` from a
+  slot-1 positive hurtbox hit to a source-order slot-2 hit.
+- The proof now temporarily marks Mario damage-coll slots `0` and `1`
+  intangible, then proves the original loop skips both, tests slot `2`,
+  records the slot-10 `None` sentinel, and feeds selected slot `2` through
+  the bounded damage record, hitlog, stats, percent-damage, and hitlag
+  scheduling handoff before restoring both fighter structs.
+- The current marker is now
+  `mpLiveHit=atk=191/166 hitbox=1/j14 dmg=4 second=0/j14/x140 hurt=2/10 hbdmg=0->4/6 shield=4->4/4 shc=0x3fffff/3142 so=155/134 contact=1 repeat=1 carry=0xf gate=0x3f rehit=5->0 origRehit=hit30/v40000 30->29->0 clear=1/3 ids=0x3 dmg=0->4 hitlag=6`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Shield Hitlag-Mul Tail Reset Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in current
+  modes `159/160` from mask low bits `0x1fffff` to `0x3fffff`.
+- The new bit proves the selected normal shield-contact tail resets
+  `hitlag_mul` to `1.0F` in the same source-order `ftMainProcParams` tail
+  block that clears attack, shield, damage, special, rebound, and knockback
+  transients.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Shield Special Tail Clear Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in current
+  modes `159/160` from mask low bits `0xfffff` to `0x1fffff`.
+- The new bit proves the selected normal shield-contact tail also clears
+  `reflect_lr`, `reflect_damage`, `absorb_lr`, `attack_rebound`, and
+  `damage_knockback` in the same source-order tail block.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Shield Tail Clear Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in current
+  modes `159/160` from mask low bits `0x7ffff` to `0xfffff`.
+- The new bit proves the selected normal GuardSetOff shield-contact branch
+  runs the common `ftMainProcParams` post-branch tail that clears
+  `attack_damage`, `attack_shield_push`, `damage_lag`, `damage_queue`, and
+  `damage_kind`, while leaving knockback pause unset for the shield path.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit ShieldBreak Hitlag Clear Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in current
+  modes `159/160` from mask low bits `0x3ffff` to `0x7ffff`.
+- The new bit proves the selected low-shield ShieldBreakFly branch runs the
+  common post-shield `damage != 0` tail: hitlag calculation, input tap/release
+  clear, lagstart callback, and transient `shield_damage` /
+  `shield_damage_total` clear while preserving ShieldBreakFly status.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Shield-Heal Branch Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in current
+  modes `159/160` from mask low bits `0x1ffff` to `0x3ffff`.
+- The new bit proves the selected not-shielding, below-full shield branch
+  decrements `shield_heal_wait`, restores shield health by one, and resets
+  `shield_heal_wait` to `10` in the original `ftMainProcParams` order.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit ShieldBreakFly Branch Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in current
+  modes `159/160` from mask low bits `0xffff` to `0x1ffff`.
+- The new bit proves the selected low-shield branch subtracts
+  `shield_damage_total`, detects shield break, sets shield health to `30`,
+  and reaches ShieldBreakFly through the existing project-owned
+  compatibility seam while restoring proof-local state.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added Live-Hit Shield-Health Decrement Proof
+
+- Extended the existing `STAGE_MPLIVEHIT_SHIELD_CONTACT` proof in current
+  modes `159/160` from mask low bits `0x7fff` to `0xffff`.
+- The new bit proves the selected shield contact subtracts
+  `shield_damage_total` from `shield_health` in the original
+  `ftMainProcParams` order before the existing bounded GuardSetOff and hitlag
+  clear proof.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Capture No-Damage Release Proof
+
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` capture-side
+  keep-hold false zero-knockback probe inside the existing Dash-Run
+  procparams side proof.
+- The probe seeds the selected fighter as captured by the other fighter,
+  puts the captured fighter at the release threshold, gives the captor zero
+  knockback, routes the captured fighter into the bounded damage-status path,
+  then calls imported original `ftCommonThrownSetStatusNoDamageRelease` on
+  the captor before restoring both preview fighter structs.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x3ffffff` to
+  `0x7ffffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Catch Damage-Release Proof
+
+- Added a bounded source-shaped `ftCommonDamageUpdateMain` catch-side
+  non-resist zero-knockback probe inside the existing Dash-Run procparams side
+  proof.
+- The probe seeds the selected fighter as catching the other fighter, forces
+  the catcher out of catch-resist while the grabbed fighter has zero
+  knockback, routes the grabbed fighter through imported original
+  `ftCommonThrownSetStatusDamageRelease`, clears the catch link, then routes
+  the catcher into the bounded damage-status path before restoring both
+  preview fighter structs.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x7ffffff` to
+  `0xfffffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-29 - Added DamageUpdateMain Heavy-Item Branch Proof
+
+- Added bounded source-shaped `ftCommonDamageUpdateMain` DK-family heavy-item
+  probes inside the existing Dash-Run procparams side proof.
+- The catch-resist probe seeds a fake heavy item on Donkey, reaches the
+  original-compatible damage colanim seam, and keeps the held item link.
+- The drop probe seeds a fake heavy item on Giant Donkey, forces the
+  non-resist branch through `ftSetupDropItem`, clears the item link, and
+  reaches the bounded damage-status path before restoring preview state.
+- Tightened `DASH_RUN_PROCPARAMS` from mask low bits `0x3fffffff` to
+  `0xffffffff` in the direct/menu-chain Dash-Run verifiers.
+- Verified:
+  `make -j16`,
+  `verify-battle-mariofox-dash-run-harness.ps1 -DelaySeconds 3`, and
+  `verify-menu-chain-mariofox-dash-run-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Live-Hit Catch-Stat Distance/Search Proof
+
+- Added a bounded source-shaped catch-stat proof to current modes `159/160`.
+  The proof follows the tail of original `ftMainUpdateCatchStatFighter` while
+  reusing the existing project-owned `ftMainSetHitInteractStats` seam, records
+  the selected hurt interaction and attack-detect clear, computes the
+  source-order absolute X distance, assigns the closest `search_gobj`, and
+  restores fighter/root/detect state.
+- Tightened `STAGE_MPLIVEHIT_DAMAGE` from mask low bits `0x1fffffff` to
+  `0x3fffffff` and added verifier marker `catchStat=0x1f/160000`.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  and `git diff --check`.
+
+## 2026-06-30 - Added DamageInit Damage Voice SFX Branch Proof
+
+- Named `FTAttributes.damage_sfx` at the original-compatible attribute offset
+  used by BattleShip's damage-init path.
+- Added the bounded source-shaped damage voice branch to the project-owned
+  `ftCommonDamageInitDamageVars` seam, covering the hitstun-threshold and
+  forced-call gates without promoting full audio.
+- Added `DASH_RUN_DAMAGE_VOICE` to the Dash-Run damage proof. The marker
+  records `voice=0xf`, at least two captured calls, and distinct threshold and
+  forced FGM IDs through the existing audio stub seam.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added DamageInit Random FlyRoll Branch Proof
+
+- Added the original-shaped airborne non-FlyTop percent/RNG FlyRoll branch to
+  the project-owned `ftCommonDamageInitDamageVars` seam using BattleShip
+  `syUtilsRandFloat`.
+- Added `DASH_RUN_DAMAGE_FLYROLL`, recording `flyroll=0x1f`, DamageFlyRoll
+  status/motion `55/48`, percent `100+`, RNG consumption, and proof-local
+  RNG/fighter-state restore.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -DelaySeconds 3`,
+  `check-docs.ps1`,
+  `check-architecture.ps1`,
+  `check-harness-registry.ps1`,
+  `check-gbi-decode-fixtures.ps1`,
+  `clean-generated.ps1 -DryRun`,
+  `git diff --check`,
+  and `git status --short decomp`.
+
+## 2026-06-30 - Added DamageInit Kirby Copy-Loss Branch Proof
+
+- Added the bounded source-shaped Kirby copy-loss branch to the project-owned
+  `ftCommonDamageInitDamageVars` seam, calling the local
+  `ftKirbySpecialNDamageCheckLoseCopy` compatibility helper when
+  `damage_level == 3` and copy loss is allowed.
+- Upgraded the local `ftKirbySpecialNLoseCopy` seam from a no-op to reset the
+  proof-local Kirby copy ID to `nFTKindKirby` and fire the original FGM ID
+  `204`; full Kirby effect/model-part runtime remains deferred.
+- Added `DASH_RUN_DAMAGE_KIRBYCOPY`, recording `kirbycopy=0x6`, copy ID
+  `1->8`, and FGM `204` through the existing Dash-Run damage verifier path.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added ProcParams Attack-Damage Rumble Branch Proof
+
+- Added a bounded source-shaped `ftMainProcParams` attacker-side
+  `attack_damage` rumble proof inside the existing Dash-Run procparams side
+  proof.
+- The proof records the normal damage-derived `ftParamMakeRumble` ID/length
+  branch, then temporarily seeds `nFTStatusAttackIDBatSwing4` to prove the
+  original BatSwing4 special case calls rumble ID `10` with length `0`, before
+  restoring fighter state.
+- Added `DASH_RUN_PROCPARAMS_RUMBLE`, recording `procRumble=0x3`, at least two
+  captured calls, and final ID/length `10/0` through the project-owned rumble
+  seam.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage Dust Interval Threshold Proof
+
+- Added `DASH_RUN_DAMAGE_DUST` to the existing Dash-Run damage setup proof,
+  recording `dust=0xff` without adding a new harness mode.
+- The proof drives the imported-original
+  `ftCommonDamageSetDustEffectInterval` low, mid-low, mid, mid-high, high,
+  and default air threshold buckets, records packed waits `0x123580`, and
+  restores fighter state.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Dust Thresholds Through Imported ftcommondamage.c
+
+- Routed the existing `DASH_RUN_DAMAGE_DUST` proof through imported original
+  BattleShip `ftCommonDamageSetDustEffectInterval` instead of the local
+  source-shaped helper.
+- Strengthened the dust marker from `0x7f` to `0xff`; the high bit records
+  imported-original routing while the packed wait proof remains `0x123580`.
+
+## 2026-06-30 - Added Damage Public Reaction Branch Proof
+
+- Added `DASH_RUN_DAMAGE_PUBLIC` to the existing Dash-Run damage setup proof,
+  recording `public=0x1f` without adding a new harness mode.
+- The proof drives the source-shaped `ftCommonDamageSetPublic` angle-window
+  branch with knockback `200` at 80 degrees, proving reduced public knockback
+  `160000`, target public-knockback reset, the very-high attacker force
+  handoff, and the default non-forced attacker branch through
+  `ftPublicCommonCheck`.
+- The probe now restores only the changed fields and the diagnostic active flag
+  so inherited live-hit and damage-recover proofs keep their surrounding
+  fighter state.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage Dust Runtime Update Proof
+
+- Added `DASH_RUN_DAMAGE_DUST_UPDATE` to the existing Dash-Run damage setup
+  proof, recording `dustUpdate=0xf` without adding a new harness mode.
+- The proof drives the source-shaped `ftCommonDamageUpdateDustEffect` runtime
+  through a nonzero decrement/no-spawn path and a zero-cross DustExpandLarge
+  spawn plus dust interval reset, then restores only the touched fighter fields
+  and proof counters.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage Hitstun/Public Decay Proof
+
+- Added `DASH_RUN_DAMAGE_HITSTUN_PUBLIC` to the existing Dash-Run damage setup
+  proof, recording `hitPublic=0xf` without adding a new harness mode.
+- The proof drives imported original `ftCommonDamageDecHitStunSetPublic`
+  branch through nonzero hitstun decrement and zero-cross public-knockback
+  transfer, then restores the touched fighter fields and records
+  imported-original routing.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Hitstun/Public Decay Through Imported ftcommondamage.c
+
+- Routed the existing `DASH_RUN_DAMAGE_HITSTUN_PUBLIC` proof through imported
+  original BattleShip `ftCommonDamageDecHitStunSetPublic`.
+- Strengthened the current direct/menu-chain marker from `hitPublic=0x7` to
+  `hitPublic=0xf`, preserving nonzero decrement, zero-cross public-knockback
+  transfer, and proof-local restore while adding an imported-original routing
+  bit.
+
+## 2026-06-30 - Added Damage Screen Flash Routing Proof
+
+- Added `DASH_RUN_DAMAGE_SCREEN_FLASH` to the existing Dash-Run damage setup
+  proof, recording `flash=0x7f` without adding a new harness mode.
+- The proof drives imported original `ftCommonDamageCheckMakeScreenFlash`
+  branch through the low-knockback no-op and high-knockback Fire, Electric,
+  Freezing, and default colanim routes, then restores the proof counters.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Screen Flash Through Imported ftcommondamage.c
+
+- Routed the existing `DASH_RUN_DAMAGE_SCREEN_FLASH` proof through imported
+  original BattleShip `ftCommonDamageCheckMakeScreenFlash`.
+- Strengthened the current direct/menu-chain marker from `flash=0x3f` to
+  `flash=0x7f`, preserving the low-knockback no-op and four high-knockback
+  element routes while adding an imported-original routing bit.
+
+## 2026-06-30 - Added Damage Color Animation Routing Proof
+
+- Added `DASH_RUN_DAMAGE_COLANIM` to the existing Dash-Run damage setup proof,
+  recording `colAnim=0x3f` without adding a new harness mode.
+- The proof drives imported original `ftCommonDamageCheckElementSetColAnim`
+  through Fire, Electric, Freezing, and default routes, then restores the proof
+  counters and records imported-original routing.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Color Animation Through Imported ftcommondamage.c
+
+- Routed the existing `DASH_RUN_DAMAGE_COLANIM` proof through imported original
+  BattleShip `ftCommonDamageCheckElementSetColAnim`.
+- Strengthened the current direct/menu-chain marker from `colAnim=0x1f` to
+  `colAnim=0x3f`, preserving the Fire/Electric/Freezing/default routes,
+  proof-local restore, and adding an imported-original routing bit.
+
+## 2026-06-30 - Added Damage ColAnim Update Wrapper Proof
+
+- Added `DASH_RUN_DAMAGE_COLANIM_UPDATE` to the existing Dash-Run damage setup
+  proof, recording `colAnimUpdate=0x1f` without adding a new harness mode.
+- The proof drives imported original `ftCommonDamageUpdateDamageColAnim` and
+  `ftCommonDamageSetDamageColAnim`, then proves direct wrapper routing,
+  struct-field wrapper routing, gated no-update behavior, proof-local restore,
+  and imported-original routing through the existing `ftMainRunUpdateColAnim`
+  seam.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage ColAnim Update Through Imported ftcommondamage.c
+
+- Routed the existing `DASH_RUN_DAMAGE_COLANIM_UPDATE` proof through imported
+  original BattleShip `ftCommonDamageUpdateDamageColAnim` and
+  `ftCommonDamageSetDamageColAnim`.
+- Strengthened the current direct/menu-chain marker from `colAnimUpdate=0xf`
+  to `colAnimUpdate=0x1f`, preserving direct wrapper routing, struct-field
+  wrapper routing, gated no-update behavior, and proof-local restore while
+  adding an imported-original routing bit.
+
+## 2026-06-30 - Added Damage Invincibility Gate Proof
+
+- Added `DASH_RUN_DAMAGE_INVINCIBLE` to the existing Dash-Run damage setup
+  proof, recording `invGate=0xf` without adding a new harness mode.
+- The proof drives bounded source-shaped `ftCommonDamageCheckSetInvincible`
+  through the hitlag-blocked gate, knockback-over flag gate, timed-invincible
+  true branch, and proof-local restore.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage Lag-Update Gate Proof
+
+- Added `DASH_RUN_DAMAGE_LAGUPDATE` to the existing Dash-Run damage setup
+  proof, recording `lagUpdate=0x1f` without adding a new harness mode.
+- The proof drives bounded source-shaped `ftCommonDamageCommonProcLagUpdate`
+  through the hitlag-blocked gate, stick-range gate, tap-buffer gate, active
+  Smash DI root translation branch, and proof-local restore.
+- Verified after implementation:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Live-Hit GuardSetOff Tick Proof
+
+- Added `STAGE_MPLIVEHIT_SHIELD_SETOFF_TICK` to the existing live-hit shield
+  proof, recording `soTick=0x1f/155->154` without adding a new harness mode.
+- The proof drives imported original `ftCommonGuardSetOffProcUpdate` from the
+  selected shield-stat -> GuardSetOff branch: held Z decrements
+  `setoff_frames` and stays in GuardSetOff, released Z exits to GuardOff, then
+  the proof restores the local fighter state.
+- Verified after implementation:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage Common Physics Branch Proof
+
+- Added `DASH_RUN_DAMAGE_COMMON_PHYSICS` to the existing Dash-Run damage setup
+  proof, recording `commonPhys=0x1f` without adding a new harness mode.
+- The proof drives the bounded source-shaped
+  `ftCommonDamageCommonProcPhysics` callback through ground friction, air
+  friction, air drift/gravity, low-speed throw attack-clear, and proof-local
+  restore branches.
+- Verified after implementation:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Repaired Live-Hit Dash-Run Attack11 Additive Gate
+
+- Repaired the inherited Dash-Run aggregate gate used by the current live-hit
+  modes: Attack11 call counters now require at least two source-path calls
+  while status/motion IDs and callback/tick masks remain exact.
+- Updated the current docs for the existing `commonCb=0x7f` common damage
+  callback marker.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added DamageAir Wall-Map Short-Circuit Proof
+
+- Added `DASH_RUN_DAMAGE_AIR_MAP_WALL` to the existing Dash-Run damage setup
+  proof, recording `airMapWall=0x1f` without adding a new harness mode.
+- The proof drives the bounded DamageAir map callback through a left-wall
+  collision, original WallDamage helper side effects, Passive/DownBounce
+  short-circuit, reflected knockback/LR, and proof-local restore.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added DamageFall Source-Order Interrupt Proof
+
+- Added `DASH_RUN_DAMAGE_FALL_INTERRUPT` to the existing Dash-Run damage setup
+  proof, recording `fallInterrupt=0x3f` without adding a new harness mode.
+- The proof calls imported original `ftCommonDamageFallProcInterrupt` through
+  the project-owned wrapper and records source-order special-air, attack-air,
+  jump-aerial, hammer fallback, and restore evidence.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage Knockback-Angle Branch Proof
+
+- Added `DASH_RUN_DAMAGE_KNOCKBACK_ANGLE` to the existing Dash-Run damage setup
+  proof, recording `angle=0x3f` without adding a new harness mode.
+- The proof covers fixed-angle, air `361`, ground low-knockback `361`, ground
+  high-knockback scaled `361`, and capped ground `361` branches through the
+  imported-original `ftCommonDamageGetKnockbackAngle` helper.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Knockback Angle Probe Through Imported ftcommondamage.c
+
+- Routed the existing `DASH_RUN_DAMAGE_KNOCKBACK_ANGLE` proof through imported
+  original BattleShip `ftCommonDamageGetKnockbackAngle`.
+- Strengthened the angle marker from `0x1f` to `0x3f`; the high bit records
+  imported-original routing while branch coverage remains fixed-angle, air
+  `361`, and ground low/high/capped `361`.
+
+## 2026-06-30 - Added DamageInit Deterministic FlyTop Branch Proof
+
+- Added `DASH_RUN_DAMAGE_FLYTOP` to the existing Dash-Run damage setup proof,
+  recording `flytop=0xf` without adding a new harness mode.
+- The proof drives the source-shaped `ftCommonDamageInitDamageVars` airborne
+  high-knockback 90-degree angle-window path into DamageFlyTop status/motion
+  `54/47`, then restores the local fighter state.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added DamageInit Replacement/Electric Wrapper Proof
+
+- Added `DASH_RUN_DAMAGE_REPLACE_ELECTRIC` to the existing Dash-Run damage
+  setup proof, recording `replace=0xf` without adding a new harness mode.
+- The proof drives the source-shaped `ftCommonDamageInitDamageVars` final
+  status replacement plus electric wrapper branch: replacement status `55` is
+  stored, electric status/motion `50/43` is installed, the electric passive
+  handoff is selected, and the local fighter state is restored.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Strengthened DamageInit Replacement/Electric Dispatch Proof
+
+- Strengthened the existing `DASH_RUN_DAMAGE_REPLACE_ELECTRIC` proof without
+  adding a new harness mode. The marker now records `replace=0x1f`.
+- The proof still verifies replacement status `55` storage and electric
+  status/motion `50/43`, then ticks the selected passive callback once and
+  proves it dispatches to the stored replacement status/motion `55/48` before
+  restoring local fighter state.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Strengthened Common Damage Callback Stay/Expiry Proof
+
+- Strengthened `DASH_RUN_DAMAGE_COMMON_CALLBACKS` without adding a new harness
+  mode. The marker now records `commonCb=0x1ff`.
+- The proof now covers ground update non-expiry while hitstun remains, air
+  update non-expiry while animation frames remain, ground expiry to Wait, air
+  expiry to DamageFall, ground/air interrupt routing, hammer routing, and
+  proof-local restore.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage Hold/Resist Gate Proof
+
+- Added `DASH_RUN_DAMAGE_HOLD_RESIST` to the existing Dash-Run damage setup
+  proof, recording `hold=0xff` without adding a new harness mode.
+- The proof mirrors the original `ftCommonDamageCheckCatchResist` and
+  `ftCommonDamageCheckCaptureKeepHold` gates through project-local helpers,
+  proving Sleep false, zero-knockback true, paused low-stack true, Donkey
+  cargo throw low-level true, default high-knockback false, keep-hold
+  true/false thresholds, and proof-local restore.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage-Level Threshold Proof
+
+- Added `DASH_RUN_DAMAGE_LEVELS` to the existing Dash-Run damage setup proof,
+  recording `level=0x1f` without adding a new harness mode.
+- The proof now calls imported original `ftCommonDamageGetDamageLevel` for
+  low/mid/high/fly levels at hitstun `0`, `12`, `24`, and `32`.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Levels Through Imported ftcommondamage.c
+
+- Routed the existing `DASH_RUN_DAMAGE_LEVELS` proof through imported original
+  BattleShip `ftCommonDamageGetDamageLevel`.
+- Strengthened the current direct/menu-chain marker from `level=0xf` to
+  `level=0x1f`, preserving the four threshold branches and adding an
+  imported-original routing bit.
+
+## 2026-06-30 - Added Damage Item-Bypass Fallthrough Proof
+
+- Added `DASH_RUN_DAMAGE_ITEM_BYPASS` to the existing Dash-Run damage proof,
+  recording `itemBypass=0x1f` without adding a new harness mode.
+- The proof mirrors the `ftCommonDamageUpdateMain` held-item gate: light items
+  and heavy items held by non-DK fighters skip the heavy-item branch, keep the
+  item attached, reach the normal damage color-animation tail, and restore
+  local state.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage Heavy-Item Branch Marker
+
+- Added `DASH_RUN_DAMAGE_ITEM_HEAVY` to the existing Dash-Run damage proof,
+  recording `itemHeavy=0x1f` without adding a new harness mode.
+- The proof mirrors the `ftCommonDamageUpdateMain` DK-family heavy-item branch,
+  proving the heavy-item predicate, catch-resist return, drop/status return,
+  and proof-local restore.
+- Verified direct current-boundary harness:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Corrected Runtime Action-Preview Verifier Expectation
+
+- Updated `verify-runtime.ps1` to match the current bounded opening bridge:
+  nine action-scene bridge boundaries, three cached original action-preview
+  sprites, and 324 paced preview frames.
+
+## 2026-06-30 - Preserved Damage Kind Across Damage Init
+
+- Corrected the project-owned `ftCommonDamageInitDamageVars` seam so the
+  selected hit element no longer overwrites `FTStruct.damage_kind`.
+- Added `DASH_RUN_DAMAGE_KIND` to the existing Dash-Run damage aggregate,
+  recording `dmgKind=0x7` without adding a new harness mode. The proof seeds
+  `nFTDamageKindCatch`, runs damage-var setup with a non-aliasing hit element,
+  then verifies before/after preservation and proof-local restore.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Strengthened Damage SetStatus Hitlag Block Proof
+
+- Strengthened the existing `DASH_RUN_DAMAGE_REPLACE_ELECTRIC` proof without
+  adding a new harness mode. The marker now records `replace=0x3f`.
+- The proof calls the selected electric `proc_passive` while `hitlag_tics > 0`
+  and verifies status, motion, stored replacement status, and animation-event
+  calls remain unchanged before the existing zero-hitlag dispatch reaches stored
+  replacement status/motion `55/48`.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Damage UpdateCatchResist Branch Proof
+
+- Added `DASH_RUN_DAMAGE_UPDATE_CATCH_RESIST` to the existing Dash-Run damage
+  proof, recording `catchResist=0x1f` without adding a new harness mode.
+- The proof mirrors the branch shape of
+  `ftCommonDamageUpdateCatchResist`: zero-knockback and paused low-stack
+  knockback route through the existing color-animation seam, while the
+  non-resist branch reaches the project-owned voice-stop/damage-status side
+  seam before proof-local restore. Full DK throw damage runtime remains
+  deferred.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Imported Bounded ftcommondamage.c for UpdateCatchResist
+
+- Added `src/import/battleship_ftcommon_damage.c`, remapping original
+  BattleShip `ftcommondamage.c` symbols to `ndsBase*` names so project-owned
+  damage seams remain in control.
+- Strengthened `DASH_RUN_DAMAGE_UPDATE_CATCH_RESIST` from `0xf` to `0x1f` by
+  calling imported original `ndsBaseFTCommonDamageUpdateCatchResist` for the
+  zero-knockback color-animation branch and observing the original
+  `ftMainRunUpdateColAnim` callback seam. The DK throw-damage branch remains a
+  compile seam only; full Donkey throw damage runtime is still deferred.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Dust Update Through Imported ftcommondamage.c
+
+- Strengthened `DASH_RUN_DAMAGE_DUST_UPDATE` from `0xf` to `0x1f` by calling
+  imported original `ndsBaseFTCommonDamageUpdateDustEffect`.
+- The proof keeps the existing decrement/no-spawn and zero-cross
+  DustExpandLarge spawn checks, observes the original interval reset through
+  post-reset wait `5`, and restores proof-local fighter/counter state.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Public Reaction Through Imported ftcommondamage.c
+
+- Added a narrow project-owned `ftParamGetPlayerNumGObj` compatibility seam
+  over the existing Mario/Fox player lookup.
+- Strengthened `DASH_RUN_DAMAGE_PUBLIC` from `0x1f` to `0x3f` by calling
+  imported original `ndsBaseFTCommonDamageSetPublic`.
+- The proof keeps the existing angle reduction, target public reset, forced
+  and non-forced public-check branches, and proof-local restore.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Public Damage Invincibility Gate Seam Through Imported ftcommondamage.c
+
+- Strengthened `DASH_RUN_DAMAGE_INVINCIBLE` from `0xf` to `0x1f` by calling
+  imported original `ndsBaseFTCommonDamageCheckSetInvincible`.
+- The proof keeps the existing hitlag block, knockback-over flag block,
+  timed-invincible true branch, and proof-local restore.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Lag Update Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageCommonProcLagUpdate` body with a
+  guarded call into imported original `ndsBaseFTCommonDamageCommonProcLagUpdate`.
+- Strengthened `DASH_RUN_DAMAGE_LAGUPDATE` from `0x1f` to `0x3f`, keeping the
+  hitlag block, stick-range block, tap-buffer block, Smash DI translation, and
+  proof-local restore checks.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Common Damage Physics Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageCommonProcPhysics` body with a
+  guarded call into imported original `ndsBaseFTCommonDamageCommonProcPhysics`.
+- Strengthened `DASH_RUN_DAMAGE_COMMON_PHYSICS` from `0x1f` to `0x3f`, keeping
+  the ground-friction, air-friction, air-drift/gravity, low-speed throw
+  attack-clear, and proof-local restore checks.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Ground Common Damage Update Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageCommonProcUpdate` body with a
+  guarded call into imported original `ndsBaseFTCommonDamageCommonProcUpdate`.
+- Strengthened `DASH_RUN_DAMAGE_COMMON_CALLBACKS` from `0x1ff` to `0x3ff`,
+  keeping the ground stay, ground expiry, air update, interrupt, hammer, and
+  proof-local restore checks.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Air Common Damage Update Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageAirCommonProcUpdate` body with a
+  guarded call into imported original `ndsBaseFTCommonDamageAirCommonProcUpdate`.
+- Strengthened `DASH_RUN_DAMAGE_COMMON_CALLBACKS` from `0x3ff` to `0x7ff`,
+  keeping the ground update, air update, interrupt, hammer, and restore checks
+  while proving both ground and air update stay/expiry branches through
+  imported-original routing.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Common Damage Interrupt Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageCommonProcInterrupt` body with a
+  guarded call into imported original
+  `ndsBaseFTCommonDamageCommonProcInterrupt`.
+- Strengthened `DASH_RUN_DAMAGE_COMMON_CALLBACKS` from `0x7ff` to `0xfff`,
+  keeping ground update, air update, interrupt, hammer, and restore checks
+  while proving common interrupt ground/hammer branches through
+  imported-original routing.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Air Common Damage Interrupt Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageAirCommonProcInterrupt` body with a
+  guarded call into imported original
+  `ndsBaseFTCommonDamageAirCommonProcInterrupt`.
+- Strengthened `DASH_RUN_DAMAGE_COMMON_CALLBACKS` from `0xfff` to `0x1fff`,
+  keeping ground update, air update, common interrupt, AirCommon interrupt,
+  hammer, and restore checks while proving AirCommon interrupt through
+  imported-original routing.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Air Common Damage Map Through Imported ftcommondamage.c
+
+- Replaced the copied project-owned `ftCommonDamageAirCommonProcMap` branch with
+  a guarded call into imported original
+  `ndsBaseFTCommonDamageAirCommonProcMap`.
+- Added the narrow public `ftCommonWallDamageCheckGoto` compatibility alias
+  back to the already-imported WallDamage helper, matching the name expected by
+  original `ftcommondamage.c`.
+- Strengthened `DASH_RUN_DAMAGE_AIR_MAP_WALL` from `0x1f` to `0x3f`, proving
+  the DamageAir wall-map route still reaches collision, WallDamage side
+  effects, Passive/DownBounce short-circuit, reflected knockback/LR,
+  imported-original AirCommon map routing, and proof-local restore.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Invincibility Gate Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageCheckSetInvincible` body with a
+  guarded call into imported original
+  `ndsBaseFTCommonDamageCheckSetInvincible`.
+- Changed the existing `DASH_RUN_DAMAGE_INVINCIBLE` probe to call the public
+  seam, so the unchanged `invGate=0x1f` marker now proves the public seam's
+  imported-original route rather than only the private imported helper.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Status Passive Dispatch Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageSetStatus` body with a guarded
+  call into imported original `ndsBaseFTCommonDamageSetStatus`.
+- Kept the existing `DASH_RUN_DAMAGE_SETUP` marker stable at
+  `damageSetup=0xffffffff`; the current proof already drives the electric
+  passive status-dispatch tick through the public seam, now reaching original
+  BattleShip status handoff code.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage FlyRoll Pitch Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageFlyRollUpdateModelPitch` body with
+  a guarded call into imported original
+  `ndsBaseFTCommonDamageFlyRollUpdateModelPitch`.
+- Changed the existing FlyRoll physics pitch proof to expect original
+  `syUtilsArcTan2` math instead of libc `atan2f`.
+- Kept the existing `DASH_RUN_DAMAGE_SETUP` marker stable at
+  `damageSetup=0xffffffff`; the FlyRoll pitch/update-and-throw-clear physics
+  tail now reaches original BattleShip code.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage ColAnim Update Public Wrappers Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageUpdateDamageColAnim` and
+  `ftCommonDamageSetDamageColAnim` bodies with guarded calls into imported
+  original `ndsBaseFTCommonDamageUpdateDamageColAnim` /
+  `ndsBaseFTCommonDamageSetDamageColAnim`.
+- Changed the existing `DASH_RUN_DAMAGE_COLANIM_UPDATE` probe to call the
+  public seams instead of the private imported helpers directly.
+- Kept the marker stable at `colAnimUpdate=0x1f`, proving direct wrapper
+  routing, struct-field wrapper routing, gated no-update behavior,
+  proof-local restore, and imported-original routing through the public seams.
+- Verified:
+  `make NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_damage_loop -j16`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Dust and Hitstun Public Wrappers Through Imported ftcommondamage.c
+
+- Replaced the project-owned `ftCommonDamageUpdateDustEffect` and
+  `ftCommonDamageDecHitStunSetPublic` bodies with guarded calls into imported
+  original `ndsBaseFTCommonDamageUpdateDustEffect` /
+  `ndsBaseFTCommonDamageDecHitStunSetPublic`.
+- Added the two public declarations to `include/ft/fighter.h` and changed the
+  existing dust-update and hitstun/public probes to call the public seams.
+- Kept the markers stable at `dustUpdate=0x1f` and `hitPublic=0xf`, proving
+  runtime dust decrement/spawn/reset and hitstun/public-knockback transfer
+  through the public imported-original seams.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage ColAnim, Screen Flash, and Public Reaction Wrappers Through Imported ftcommondamage.c
+
+- Added narrow public wrappers for `ftCommonDamageCheckElementSetColAnim`,
+  `ftCommonDamageCheckMakeScreenFlash`, and `ftCommonDamageSetPublic` that
+  delegate to the imported original BattleShip `ndsBase*` functions.
+- Added the public declarations to `include/ft/fighter.h` and changed the
+  existing colanim, screen-flash, and public-reaction probes to call the public
+  seams instead of the private imported helpers directly.
+- Kept the markers stable at `colAnim=0x3f`, `flash=0x7f`, and
+  `public=0x3f`, proving the existing routes now pass through public
+  imported-original seams.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Level and Knockback Angle Wrappers Through Imported ftcommondamage.c
+
+- Added narrow public wrappers for `ftCommonDamageGetDamageLevel` and
+  `ftCommonDamageGetKnockbackAngle` that delegate to the imported original
+  BattleShip `ndsBase*` functions.
+- Added the public declarations to `include/ft/fighter.h` and changed the
+  existing damage-level and knockback-angle probes to call the public seams
+  instead of the private imported helpers directly.
+- Kept the markers stable at `level=0x1f` and `angle=0x3f`, proving the
+  existing threshold and Sakurai-angle routes now pass through public
+  imported-original seams.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Dust Interval Wrapper Through Imported ftcommondamage.c
+
+- Added a narrow public wrapper for `ftCommonDamageSetDustEffectInterval` that
+  delegates to imported original
+  `ndsBaseFTCommonDamageSetDustEffectInterval`.
+- Added the public declaration to `include/ft/fighter.h` and changed the
+  existing dust-threshold probe to call the public seam instead of the private
+  imported helper directly.
+- Kept the marker stable at `dust=0xff`, proving the low, mid-low, mid,
+  mid-high, high, and default-air buckets now pass through the public
+  imported-original seam.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Catch-Resist Update Wrapper Through Imported ftcommondamage.c
+
+- Added a narrow public wrapper for `ftCommonDamageUpdateCatchResist` that
+  delegates to imported original
+  `ndsBaseFTCommonDamageUpdateCatchResist`.
+- Added the public declaration to `include/ft/fighter.h` and changed the
+  existing catch-resist update probe to call the public seam instead of the
+  private imported helper directly.
+- Kept the marker stable at `catchResist=0x1f`, proving the existing branch
+  coverage now passes through the public imported-original seam.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage Hold/Resist Gate Wrappers Through Imported ftcommondamage.c
+
+- Added narrow public wrappers for `ftCommonDamageCheckCatchResist` and
+  `ftCommonDamageCheckCaptureKeepHold` that delegate to imported original
+  `ndsBaseFTCommonDamageCheckCatchResist` /
+  `ndsBaseFTCommonDamageCheckCaptureKeepHold`.
+- Removed the proof-local mirror helpers and changed the existing
+  `DASH_RUN_DAMAGE_HOLD_RESIST` probe to call the public seams.
+- Kept the marker stable at `hold=0xff`, proving the existing hold/resist
+  gate coverage now passes through public imported-original seams.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed First Damage UpdateMain Branch Through Imported ftcommondamage.c
+
+- Added a narrow public `ftCommonDamageUpdateMain` wrapper that delegates to
+  imported original `ndsBaseFTCommonDamageUpdateMain`.
+- Changed the existing first catch/keep-hold `DASH_RUN_PROCPARAMS` branch
+  proof to call the public dispatcher seam instead of mirroring that branch
+  locally.
+- Left the rest of the `ftCommonDamageUpdateMain` branch probes source-shaped
+  for now; full damage initializer routing remains deferred.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Damage UpdateMain Zero-Knockback Catch Branch Through Imported ftcommondamage.c
+
+- Changed the existing zero-knockback catch `DASH_RUN_PROCPARAMS` proof to call
+  public `ftCommonDamageUpdateMain`.
+- The branch stays bounded to the imported dispatcher into
+  `ftCommonDamageUpdateCatchResist`; it does not enter full damage status
+  setup.
+- The aggregate marker remains stable.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed No-Status Damage UpdateMain Branch Family Through Imported ftcommondamage.c
+
+- Expanded the public `ftCommonDamageUpdateMain` dispatcher proof from the
+  first catch/zero-catch branches to the bounded no-status branch family:
+  catch/capture keep-hold, catch/capture zero-knockback, no-grab/no-capture
+  tail colanim, and held-item bypass/resist.
+- Preserved the existing aggregate markers, including `itemBypass=0x1f`,
+  `catchResist=0x1f`, `colAnimUpdate=0x1f`, and `sleep=0x7f`.
+- Narrowed back from a broader status-changing dispatcher attempt after it
+  crashed; throw/release/drop/status branches remain source-shaped until they
+  can be migrated as a separate verified slice.
+- Verified serially:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Status-Changing Damage UpdateMain Branches Through Imported ftcommondamage.c
+
+- Replaced the remaining local `DASH_RUN_PROCPARAMS`
+  `ftCommonDamageUpdateMain` branch mirrors with calls through the public
+  imported-original dispatcher.
+- Added bounded dash-run damage-setup access to the imported
+  `ftCommonThrownUpdateDamageStats`,
+  `ftCommonThrownSetStatusDamageRelease`, and
+  `ftCommonThrownSetStatusNoDamageRelease` helpers, so catch/capture
+  stats/release/no-damage and heavy-item drop branches reach original helper
+  code.
+- Left `ftCommonThrownDecideFighterLoseGrip` / release map collision stubbed
+  outside the older isolated throw-dead proof; natural lose-grip collision is
+  still a separate boundary.
+- Verified:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Bounded Lose-Grip Link Clear to Damage UpdateMain Seam
+
+- Tightened the public `ftCommonThrownDecideFighterLoseGrip` seam during the
+  dash-run damage setup proof: it now clears the catcher `catch_gobj` and
+  interact `capture_gobj` links in source order instead of being a total
+  no-op for this branch family.
+- Tried enabling the imported original lose-grip release collision helper for
+  this boundary; it faults before the live-hit finalizer, so full map-collision
+  release stays deferred to a separate boundary.
+- Verified after narrowing back:
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-06-30 - Added Bounded Lose-Grip Release Collision Slice
+
+- Extended the same public lose-grip seam from link clear to a bounded
+  source-order release slice: select the original release side, project through
+  `mpCommonRunFighterCollisionDefault`, trigger invalid-floor
+  `mpCommonSetFighterAir`, then clear catch/capture links.
+- Added the compact `DASH_RUN_DAMAGE_LOSEGRIP` marker and required it in the
+  current direct/menu-chain live-hit damage boundary as `loseGrip=0x3b/6/6`.
+- Full imported lose-grip runtime is still guarded; this only proves the next
+  collision/set-air slice needed by the existing damage dispatcher boundary.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`
+  and
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  plus `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-06-30 - Routed Lose-Grip Release Through Imported ftcommonthrown2.c
+
+- Reused the existing live-hit damage boundary and routed complete seeded
+  catch/capture lose-grip links through imported original
+  `ftCommonThrownDecideFighterLoseGrip` /
+  `ftCommonThrownReleaseFighterLoseGrip`.
+- Kept a bounded local fallback for incomplete proof seeds, while shared
+  collision/air seams record the original helper path.
+- Updated the compact marker to require the original-routing bit:
+  `loseGrip=0x7b/6/6`.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`
+  and
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Routed Selected Damage Init Setup Through Imported ftcommondamage.c
+
+- Kept the current live-hit damage boundary and routed the selected
+  high-knockback `ftCommonDamageInitDamageVars` setup call through imported
+  BattleShip `ftcommondamage.c`.
+- Preserved project-owned diagnostics around the imported call by recording
+  the original color-animation, screenflash, attacker-stat, and
+  `FTStruct.damage_kind` side effects without broadening the damage runtime.
+- Updated the current marker requirement from `dmgKind=0x7` to `dmgKind=0xf`;
+  the direct and menu-chain modes still report `damageSetup=0xffffffff`.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Routed Damage Status Entry Through Imported ftcommondamage.c
+
+- Reused the current live-hit damage boundary and routed the public
+  `ftCommonDamageGotoDamageStatus` seam through imported BattleShip
+  `ftcommondamage.c` during the bounded dash-run damage setup proof.
+- Normalized imported callback pointers back to the project-owned public
+  wrappers after the imported call, keeping later DS diagnostics on the public
+  seam instead of duplicating the original Goto body.
+- Updated the current marker requirement from `dmgKind=0xf` to
+  `dmgKind=0x1f`; direct/menu-chain still report `damageSetup=0xffffffff`.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Added Bounded ftMainUpdateDamageStatFighter Front Half
+
+- Reused the current live-hit damage boundary and moved the selected slot-3
+  normal-hit front half into a bounded source-shaped
+  `ftMainUpdateDamageStatFighter` slice.
+- The slice now owns the source-order attack-record, captured-damage,
+  queue/lag, first `FTHitLog`, player-stat/stale-queue, and hit-SFX table
+  handling before the existing percent-damage and hitlag scheduling proof.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`
+  and
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Centralized Selected ftmain Stat Slices
+
+- Reused the current live-hit damage boundary and moved the selected
+  attack-clash/rebound, shield-stat -> GuardSetOff, and catch distance/search
+  probes behind bounded source-shaped `ftmain.c` compatibility slices:
+  `ftMainSetHitRebound`, `ftMainUpdateAttackStatFighter`,
+  `ftMainUpdateShieldStatFighter`, and `ftMainUpdateCatchStatFighter`.
+- Kept these as selected shared seams only; full unbounded `ftmain.c`
+  collision/stat runtime remains deferred.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Added Bounded ftMainProcessHitCollisionStatsMain Fighter Branch
+
+- Reused the current live-hit damage boundary and added a bounded
+  fighter-hitlog branch of `ftMainProcessHitCollisionStatsMain`.
+- Routed the selected slot-3 hurtbox damage consume proof and the older
+  Dash-Run hit-stats handoff through the shared seam instead of hand-setting
+  damage angle, element, LR, player/object attribution, joint/index, and
+  knockback fields at each proof site.
+- Kept weapon, item, and ground hitlog branches deferred; this is only the
+  selected fighter-vs-fighter path needed by the current Mario/Fox boundary.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Routed Selected Slot-3 Damage Through ftMainSearchHitFighter
+
+- Added a bounded fighter-only `ftMainSearchHitFighter` branch for the current
+  Mario/Fox live-hit proof and routed the selected slot-3 damage consume path
+  through it before the existing damage-stat and hit-collision-stat seams.
+- Kept weapon/item/ground search branches deferred; the current proof seeds the
+  selected fighter link and hitbox contact, calls the range shim, and preserves
+  the existing `hbdmg=0->4/6` public summary while requiring mask bit `0x100`.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`
+  and
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Routed Selected Shield Stat Through ftMainSearchHitFighter
+
+- Extended the bounded fighter-only `ftMainSearchHitFighter` branch with the
+  selected shield-contact/stat path from original `ftmain.c` source order.
+- Routed the existing shield proof through the shared search hub before
+  `ftMainUpdateShieldStatFighter`; the public `shield=4->4/4` and
+  `shc=0x3fffff/3142` markers stayed stable.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Expanded Bounded ftmain Search Slice
+
+- Routed the selected attack-clash proof through `ftMainSearchHitFighter`
+  using the original self-before-other fighter-link ordering.
+- Added bounded `ftMainSearchFighterCatch` coverage for the selected
+  catch-search proof and kept `ftMainProcSearchCatch`, hazards, weapons, items,
+  ground hitlog search, and full unbounded `ftmain.c` deferred.
+- Public `clash=0x3f/24/18`, `catchSearch=0x3ff/s3`,
+  `shield=4->4/4`, `shc=0x3fffff/3142`, and `hbdmg=0->4/6`
+  markers stayed stable.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Routed Selected Damage Through ftMainProcSearchHitAll
+
+- Added bounded `ftMainProcSearchHitAll` coverage for the selected slot-3
+  hurtbox damage proof. The dispatcher clears hitlogs, calls the bounded
+  fighter search, records item/weapon/ground search deferrals, and runs the
+  fighter hitlog stats handoff when a hitlog exists.
+- Kept real item, weapon, ground, hazard, and full `ftmain.c` search runtime
+  deferred; the public live-hit marker stayed stable.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Routed Selected Damage Tails Through ftMainProcParams
+
+- Added a bounded project-owned `ftMainProcParams` dispatcher slice and routed
+  the selected slot-3 hurtbox damage consume proof plus the Dash-Run proc-params
+  aggregate through it.
+- Covered the selected damage queue/percent/status/shuffle/rumble/hitlag/
+  lagstart/transient-clear path, attacker attack-damage/BatSwing4 rumble,
+  attack-shield-push, shield damage, shield break, reflect, and absorb branches.
+- Kept Boss, Twister/trap, full rebound promotion, and unbounded `ftmain.c`
+  runtime deferred.
+- Trimmed the title scratch buffer cap from `180000` to `176000` bytes to keep
+  the menu-chain ARM9 image under the limit while keeping the fighter scratch
+  copy static and off the runtime stack.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected ftMainProcParams Rebound Promotion
+
+- Extended bounded project-owned `ftMainProcParams` with the original
+  `attack_shield_push` + `attack_rebound` branch. The proof calls imported
+  original `ndsBaseFTCommonReboundWaitSetStatus` through the existing rebound
+  status gate and restores the older passive-loop rebound counters afterward.
+- Folded the proof into `DASH_RUN_PROCPARAMS_RUMBLE`: low bits still prove
+  normal/BatSwing4 rumble, while high bits now expose `procRebound=0x1f` for
+  ReboundWait status/callbacks/vector/hitlag/clear. The public aggregate is
+  now `procRumble=0x7f` / `procRebound=0x1f`.
+- Added scoped mode-160 `-Os` because the full menu-chain latest-boundary ROM
+  is ARM9-size-tight. Normal/direct runtime keeps the existing optimization.
+- Still deferred: natural continuous rebound gameplay, broad Rebound status
+  routing, Boss/Twister/trap paths, and full unbounded `ftmain.c`.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`
+  and
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected ftMainProcParams Twister and proc_trap Branch
+
+- Extended the bounded project-owned `ftMainProcParams` slice with the
+  original BattleShip Twister damage-kind override and installed `proc_trap`
+  callback call, keeping Boss and natural continuous trap gameplay deferred.
+- Added the missing local `FTStruct.proc_trap` compatibility field and the
+  original Twister status name, plus proof-local save/reset plumbing for the
+  new callback field.
+- Folded the proof into `DASH_RUN_DAMAGE_KIND`; the public aggregate now
+  reports `dmgKind=0x7f`, preserving the existing imported
+  `ftCommonDamageInitDamageVars` / `ftCommonDamageGotoDamageStatus` routing
+  and damage-kind restore bits while proving Twister colanim routing and
+  `proc_trap` source order.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Promoted Selected Live-Hit Status Loop Boundary
+
+- Added direct/menu-chain modes `161/162`:
+  `battle_mariofox_stage_mplivehit_status_loop` and
+  `menu_chain_mariofox_stage_mplivehit_status_loop`.
+- Routed the new pair through the same bounded taskman update/finalize ladder
+  as the live-hit damage loop, kept modes `159/160` as regression coverage, and
+  added scoped `-Os` for the size-tight live-hit boundary ROMs.
+- Inherited the selected Fox Jab2 damage-loop proof and added bounded
+  source-shaped damage-status follow-through: status `17->52/45`, hitlag
+  `6->0`, callbacks `1/6/1`, search mask `0xf`, and repeat gate
+  `1/1 gate=0x3f`.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-battle-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3 -NoBuild`,
+  `verify-menu-chain-mariofox-stage-mplivehit-damage-loop-harness.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Update Tick
+
+- Strengthened modes `161/162` by driving the selected post-hitlag damage
+  status through the installed imported-original common damage update callback
+  once after `ftCommonDamageSetStatus`.
+- The status-loop verifier mask is now `0x7ff`, and the public summary adds
+  `update=2->1`, proving hitstun decrements through the original callback with
+  proof-local fighter/animation state restored.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  and `verify-dev-fast.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Expiry Tick
+
+- Extended the modes `161/162` status-loop callback probe with a second
+  installed imported-original damage update tick after `ftCommonDamageSetStatus`.
+- The selected `DamageFlyN` status now proves hitstun `2->1`, public knockback
+  release, and the bounded air/fly expiry into DamageFall `57/50`; the public
+  summary now adds `finish=57/50`.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  and `verify-dev-fast.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Physics Tick
+
+- Strengthened modes `161/162` by driving the selected post-hitlag damage
+  status through the installed imported-original damage physics callback after
+  `ftCommonDamageSetStatus`.
+- The callback proof now seeds deterministic air attributes and `DamageFlyN`
+  velocity, then proves the original hitstun air-physics branch applies air
+  friction and gravity as `phys=11500/-1000` while restoring proof-local state.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  and `verify-dev-fast.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Interrupt Tick
+
+- Strengthened modes `161/162` by driving the selected post-hitlag damage
+  status through the installed imported-original damage interrupt callback
+  after `ftCommonDamageSetStatus`.
+- The callback proof now forces hitstun clear, ticks the installed AirCommon
+  interrupt slot, records the guarded DamageFall interrupt handoff as
+  `interrupt=1`, and restores proof-local fighter/guard state before the
+  existing expiry proof.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-current.ps1 -Build -DelaySeconds 3`,
+  and `verify-dev-fast.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Map Tick
+
+- Strengthened modes `161/162` by ticking the installed imported-original
+  AirCommon damage map callback after `ftCommonDamageSetStatus`.
+- The selected `DamageFlyN` callback proof now records `map=1/1`, proving the
+  installed map slot reaches the original no-collision path and then restores
+  proof-local fighter/map guard state before the existing expiry proof.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Map Floor Branch
+
+- Strengthened modes `161/162` by reusing the installed AirCommon damage map
+  callback proof to drive the original floor-collision branch after
+  `ftCommonDamageSetStatus`.
+- The selected `DamageFlyN` callback proof now records
+  `map=1/1 floor=1/1/1/1`, proving the original collision, PassiveStand check,
+  Passive check, and DownBounce handoff path while restoring proof-local
+  fighter/map state before expiry.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Map Wall Branch
+
+- Strengthened modes `161/162` by reusing the installed AirCommon damage map
+  callback proof to drive the original wall-collision short-circuit after
+  `ftCommonDamageSetStatus`.
+- The selected `DamageFlyN` callback proof now records
+  `map=1/1 floor=1/1/1/1 wall=0x3f`, proving the original WallDamage helper,
+  passive/DownBounce short-circuit, reflected knockback, and restore path.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Map Ceiling Branch
+
+- Strengthened modes `161/162` by extending the same installed AirCommon
+  damage map callback proof through the original `MAP_FLAG_CEIL` branch in
+  `ftCommonWallDamageCheckGoto`.
+- The selected `DamageFlyN` callback proof now records
+  `map=1/1 floor=1/1/1/1 wall=0xfff`; low six bits prove the side-wall
+  WallDamage helper/short-circuit/knockback/restore path, and high six bits
+  prove the same original WallDamage route for ceiling collision.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit Damage Map Right-Wall Branch
+
+- Strengthened modes `161/162` by extending the installed AirCommon damage map
+  callback proof through the original `MAP_FLAG_RWALL` branch in
+  `ftCommonWallDamageCheckGoto`, completing the original left-wall,
+  right-wall, and ceiling WallDamage branch set.
+- The selected `DamageFlyN` callback proof now records
+  `map=1/1 floor=1/1/1/1 wall=0x3ffff`; low six bits prove left-wall,
+  middle six bits prove ceiling, and high six bits prove right-wall helper,
+  short-circuit, knockback, and restore.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit DamageFall Map Cliff-Catch Branch
+
+- Strengthened modes `161/162` by running the selected post-expiry
+  DamageFall map callback through the original `ftCommonDamageFallProcMap`
+  cliff branch after the AirCommon damage callback proof.
+- The selected `DamageFlyN` callback proof now records
+  `map=1/1 floor=1/1/1/1 wall=0x3ffff cliff=0x1f`; `cliff=0x1f`
+  proves the DamageFall map tick, cliff collision mask, CliffCatch seam,
+  passive/DownBounce skip, preserved DamageFall state, and source route.
+- Verified:
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `verify-dev-fast.ps1 -DelaySeconds 3`,
+  and `verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Selected Live-Hit DamageFall Map Floor Fallback
+
+- Strengthened modes `161/162` by reusing the selected post-expiry
+  DamageFall map callback proof to run original `ftCommonDamageFallProcMap`
+  through no-collision and floor-fallback paths after the cliff branch.
+- The selected callback marker now records
+  `map=1/1 floor=1/1/1/1 wall=0x3ffff cliff=0x1f fallmap=0x7f`;
+  `fallmap=0x7f` proves DamageFall no-collision, floor collision,
+  PassiveStand/Passive checks, DownBounce handoff, preserved DamageFall state,
+  and source route while restoring proof-local state.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Common Damage Fall Interrupt Callback Proof
+
+- Strengthened `DASH_RUN_DAMAGE_COMMON_CALLBACKS` from `0x1fff` to `0x3fff`
+  by driving imported-original `ftCommonDamageCommonProcInterrupt` through its
+  air/no-hammer branch into `ftCommonFallProcInterrupt`.
+- The proof uses the existing Fall interrupt wrapper only as a counter seam,
+  restores local fighter/counter state, and keeps the earlier ground/air
+  update stay/expiry, common ground/hammer, and AirCommon interrupt coverage.
+- No broad `ftmain.c`, `gmcollision.c`, continuous damage runtime, item,
+  weapon, or audio runtime import was added.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`,
+  `.\scripts\check-docs.ps1`,
+  `.\scripts\check-architecture.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\clean-generated.ps1 -DryRun`, and
+  `git diff --check`.
+
+## 2026-07-01 - Routed DamageFall Expiry Through Imported Original Helper
+
+- Strengthened the existing Dash-Run hitstun-expiry DamageFall handoff without
+  changing the marker surface. The public `ftCommonDamageFallSetStatusFromDamage`
+  wrapper now calls imported-original `ndsBaseFTCommonDamageFallSetStatusFromDamage`
+  instead of hand-installing the DamageFall status shell.
+- Added a proof-gated `ftMainSetStatus` DamageFall install for this expiry path
+  and required the imported `ftCommonDamageFallClampRumble` tail to reach the
+  public rumble seam before the existing expiry success counter increments.
+- `DASH_RUN_DAMAGE_SETUP=0xffffffff` and the selected live-hit `finish=57/50`
+  markers remain stable, but the expiry bit now proves the source-routed
+  status helper plus clamp/rumble tail. Continuous DamageFall runtime and
+  full unbounded `ftmain.c` remain deferred.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Routed WallDamage DamageFall Handoff Through Imported Original Helper
+
+- Strengthened the standalone passive/recover WallDamage update proof without
+  changing the marker surface. Imported-original `ftCommonWallDamageProcUpdate`
+  now reaches imported-original `ndsBaseFTCommonDamageFallSetStatusFromDamage`
+  instead of a local DamageFall shell.
+- Added the matching proof-gated `ftMainSetStatus` DamageFall install and a
+  private clamp-rumble counter for this WallDamage path. The public WallDamage
+  rumble marker stays scoped to original setup rumble ID `2`, while the
+  handoff count requires the imported clamp/rumble tail.
+- `wallDamage=56/49->57/50` remains stable. Continuous WallDamage/DamageFall
+  runtime and full unbounded `ftmain.c` remain deferred.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`,
+  `.\scripts\check-docs.ps1`,
+  `.\scripts\check-architecture.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\clean-generated.ps1 -DryRun`, and
+  `git diff --check`.
+
+## 2026-07-01 - Routed CliffWait DamageFall Handoff Through Imported Original Helper
+
+- Strengthened the standalone CliffWait damage proof without changing the
+  marker surface. Public `ftCommonDamageFallSetStatusFromCliffWait` now calls
+  imported-original `ndsBaseFTCommonDamageFallSetStatusFromCliffWait` instead
+  of hand-installing the DamageFall shell.
+- The handoff count now requires the bounded `ftMainSetStatus` DamageFall
+  install and imported clamp/rumble tail. The wrapper preserves the original
+  Z-trigger timer tail, and the bounded PassiveStand/Passive floor branches
+  still give imported-original checks first chance before using the existing
+  proof-local original setter sequence if the DS compatibility shell needs it.
+- `mpCliffWaitDamage=status=85->57 motion=73->50 fallWait=1->0 catch=30`,
+  `passiveStand=73/62/0->cb1/1->10/4/0`, and
+  `passive=81/70/0->cb1/1->10/4/0` remain stable. Continuous CliffWait,
+  DamageFall, PassiveStand, Passive, and DownBounce gameplay remain deferred.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Routed DownBounce Effect Tail Through Imported Original Helper
+
+- Strengthened the standalone CliffWait damage DownBounce setup proof without
+  changing the marker surface. The bounded `ftCommonDownBounceSetStatus`
+  branch now calls imported-original `ndsBaseFTCommonDownBounceUpdateEffects`
+  for the ImpactWave/FGM/rumble tail instead of hand-counting those side
+  effects.
+- Kept the selected DownBounceU/Ground status install in the existing bounded
+  DS proof shell, then cleared `attack_buffer`, set `damage_mul=0.5`, and ran
+  the velocity-transfer seam in the original order. Full imported
+  `ftCommonDownBounceSetStatus` remains deferred until the DS proof shell can
+  hand over orientation/status selection safely.
+- `mpCliffWaitDamage=status=85->57 motion=73->50 fallWait=1->0 catch=30` and
+  `downBounce=68/59/0 dbuf=60` remain stable.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`,
+  `.\scripts\check-docs.ps1`,
+  `.\scripts\check-architecture.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\clean-generated.ps1 -DryRun`, and
+  `git diff --check`.
+
+## 2026-07-01 - Routed DownBounce Orientation Through Original Formula
+
+- Strengthened the same CliffWait damage DownBounce setup proof without
+  changing the marker surface. The bounded `ftCommonDownBounceSetStatus`
+  branch now calls public `ftCommonDownBounceCheckUpOrDown`, whose DS-safe
+  wrapper uses BattleShip's original rotation normalization and D/U predicate
+  before choosing the DownBounce status.
+- Kept the existing bounded status install and imported-original
+  `ndsBaseFTCommonDownBounceUpdateEffects` tail. The selected proof seed still
+  resolves to DownBounceU/Ground `68/59/0`; full imported
+  `ftCommonDownBounceSetStatus` remains deferred because the unchecked imported
+  orientation helper is not safe on this DS proof seed.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mpcliffwait-damage-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`,
+  `.\scripts\check-docs.ps1`,
+  `.\scripts\check-architecture.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\clean-generated.ps1 -DryRun`, and
+  `git diff --check`.
+
+## 2026-07-01 - Restored ftParamStopVoiceRunProcDamage Callback Tail
+
+- Restored the source-backed `proc_damage` call in public
+  `ftParamStopVoiceRunProcDamage`, matching BattleShip's helper after the
+  existing DS capture voice-stop marker path. The current compatibility
+  `FTStruct` still does not expose BattleShip's `p_voice` / `voice_id` fields,
+  so the voice-object stop itself remains deferred.
+- Extended the inherited Passive recover CapturePulled proof with a bounded
+  victim `proc_damage` callback. `STAGE_MPPASSIVE_CAPTURE` now records the
+  callback count and the aggregate summary prints
+  `capture=171/150->172/-2 procDamage=1`.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mppassive-recover-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`,
+  `.\scripts\check-docs.ps1`,
+  `.\scripts\check-architecture.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\clean-generated.ps1 -DryRun`, and
+  `git diff --check`.
+
+## 2026-07-01 - Proved AttackAir Map Landing Handoff
+
+- Strengthened the standalone Jump-loop AttackAirN proof by routing the
+  selected landing case through BattleShip's original
+  `ftCommonAttackAirProcMap` landing branch and imported-original
+  `ftCommonLandingAirSetStatus`.
+- Aligned the local compatibility status enum with BattleShip so
+  `nFTCommonStatusLandingAirEnd` aliases `nFTCommonStatusLandingAirNull`.
+  The bounded proof still accepts only LandingAirN/LandingAirNull while the
+  map-landing probe is active.
+- Seeded a proof-local `FTData.mainmotion` table only because the standalone
+  proof fighter has no `fp->data`; the probe restores the original fighter,
+  DObj, callback, status, motion, and velocity fields immediately after the
+  call.
+- `JUMP_ATTACKAIR` now asserts the map-landing diagnostic mask `map=0x1f`:
+  landing detected, imported landing setter reached, bounded landing status
+  installed, LandingAirN/LandingAirNull observed, and the Ground landing
+  callback shell installed.
+- Verified:
+  `.\scripts\verify-battle-mariofox-jump-loop-harness.ps1 -DelaySeconds 3`
+  (`attackAir=209/184 map=0x1f`),
+  `.\scripts\verify-menu-chain-mariofox-jump-loop-harness.ps1 -DelaySeconds 3`
+  (`attackAir=209/184 map=0x1f`),
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-current.ps1 -DelaySeconds 3`,
+  `.\scripts\check-docs.ps1`,
+  `.\scripts\check-architecture.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\clean-generated.ps1 -DryRun`, and
+  `git diff --check`.
+
+## 2026-07-01 - Proved Directional AttackAir Selector Handoff
+
+- Extended the same standalone Jump-loop `JUMP_ATTACKAIR` proof without
+  changing the neutral AttackAirN counters. A proof-only restored direction
+  probe now calls imported-original `ftCommonAttackAirCheckInterruptCommon`
+  for AttackAirF/B/Hi/Lw.
+- Widened the bounded Jump-loop `ftMainSetStatus` shell only while that
+  direction probe is active. It installs the source-shaped status/motion and
+  motion/status/stat attack IDs for the four directional aerials, including
+  imported-original Link down-air proc-hit/rehit callback setup for Lw.
+- `JUMP_ATTACKAIR` now asserts `map=0x1f dir=0x1f`; the direction mask proves
+  F/B/Hi/Lw selector status installs plus the AttackAirLw callback setup.
+- Verified:
+  `.\scripts\verify-battle-mariofox-jump-loop-harness.ps1 -DelaySeconds 3`
+  (`attackAir=209/184 map=0x1f dir=0x1f`),
+  `.\scripts\verify-menu-chain-mariofox-jump-loop-harness.ps1 -DelaySeconds 3`
+  (`attackAir=209/184 map=0x1f dir=0x1f`),
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved AttackAir Map Branch Handoffs
+
+- Extended the same standalone Jump-loop `JUMP_ATTACKAIR` proof through the
+  remaining bounded BattleShip `ftCommonAttackAirProcMap` landing branches.
+- The map proof now covers smooth LandingAirN, missing-animation
+  LandingAirNull, skip-landing Wait, and plain LandingLight handoffs through
+  proof-local restored seeds while keeping the neutral AttackAirN and
+  directional selector counters stable.
+- `JUMP_ATTACKAIR` now asserts `map=0x3ff dir=0x1f`.
+- Verified:
+  `.\scripts\verify-battle-mariofox-jump-loop-harness.ps1 -DelaySeconds 3`
+  (`attackAir=209/184 map=0x3ff dir=0x1f`),
+  `.\scripts\verify-menu-chain-mariofox-jump-loop-harness.ps1 -DelaySeconds 3`
+  (`attackAir=209/184 map=0x3ff dir=0x1f`),
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageFall DownBounce Status Handoff
+
+- Extended modes `161/162` by reusing the selected post-expiry DamageFall map
+  callback proof with a restored floor-collision seed that reaches imported
+  original `ftCommonDownBounceSetStatus`.
+- Added a proof-local DownBounce `ftMainSetStatus` install guard so the
+  imported setter can run source order while the wider damage-map proof keeps
+  its count-only branch and restores the DamageFall seed afterward.
+- The selected callback marker now records
+  `map=1/1 floor=1/1/1/1 wall=0x3ffff cliff=0x1f fallmap=0xff`; the new
+  `fallmap` bit proves imported DownBounce status/motion, Ground state,
+  callback slots, attack-buffer clear, and `damage_mul=0.5`.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageFall CliffCatch Status Handoff
+
+- Extended modes `161/162` by reusing the selected post-expiry DamageFall map
+  callback proof with a restored cliff-collision seed that reaches imported
+  original `ftCommonCliffCatchSetStatus`.
+- Added a proof-local CliffCatch `ftMainSetStatus` install guard so the
+  imported setter can run source order while the wider damage-map proof keeps
+  its count-only branch and restores the DamageFall seed afterward.
+- The selected callback marker now records
+  `map=1/1 floor=1/1/1/1 wall=0x3ffff cliff=0x3f fallmap=0xff`; the new
+  `cliff` bit proves imported CliffCatch status/motion, Air state,
+  floor-line clear, cliff hold, callback slots, capture immunity, damage
+  callback, and velocity stop.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Natural Slot-0 Live-Hit Hurtbox Consume
+
+- Extended modes `161/162` inside the existing selected live-hit hurtbox
+  damage consume proof. After the selected slot-3 pass records the public
+  `hurt=3/10 hbdmg=0->4/6` diagnostic, the proof restores both fighter
+  structs and reruns unmasked source-order `ftMainProcSearchHitAll` against
+  Mario damage-coll slot `0`.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0x1ff` to
+  `0x3ff`; the new bit proves natural slot-0 record/hitlog/queue/percent/
+  hitlag consume without the proof-local slot `0` / `1` intangible setup used
+  by the selected slot-3 diagnostic.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Natural Slot-0 Live-Hit Repeat Suppression
+
+- Extended modes `161/162` inside the existing selected live-hit hurtbox
+  damage consume proof. After the restored natural slot-0 consume, the proof
+  reruns unmasked source-order `ftMainProcSearchHitAll` without clearing the
+  attack record.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0x3ff` to
+  `0x7ff`; the new bit proves the same-victim attack record rejects the
+  immediate repeat search with no new hitlog, damage queue growth, or percent
+  growth.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Shield-Contact Repeat Suppression
+
+- Extended modes `161/162` inside the existing selected live-hit shield-contact
+  proof. After the first selected shield contact records the attack record, the
+  proof reruns source-order `ftMainSearchHitFighter` without clearing that
+  record.
+- Tightened `STAGE_MPLIVEHIT_SHIELD_CONTACT` from mask low bits `0x3fffff` to
+  `0x7fffff`; the new bit proves the same-victim shield repeat is rejected
+  with no new shield collision, stat, effect, or shield-damage changes.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Catch-Search Repeat Suppression
+
+- Extended modes `161/162` inside the existing selected live-hit catch-search
+  proof. After the first source-order `ftMainSearchFighterCatch` records the
+  selected target through `ftMainUpdateCatchStatFighter`, the proof reruns the
+  same search without clearing that attack record.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x3ff` to
+  `0x7ff`; the new bit proves the same-victim catch repeat is rejected with no
+  new closest target/distance update.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Natural Slot-0 Catch Search
+
+- Extended modes `161/162` inside the selected live-hit catch-search proof.
+  The new bit restores saved Mario/Fox fighter structs, clears the catch attack
+  record, positions the selected catch hitbox on Mario's natural damage-coll
+  slot `0`, and reruns source-order `ftMainSearchFighterCatch` without the
+  proof-local slot-3 masking.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x7ff` to
+  `0xfff`; the new bit proves the natural target, distance, and attack-record
+  update before state restore.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Catch-Search Capture-Immune Gate
+
+- Extended modes `161/162` inside the selected live-hit catch-search proof.
+  The new bit restores Mario/Fox, seeds `capture_immune_mask & catch_mask`,
+  reruns source-order `ftMainSearchFighterCatch`, and proves the target is
+  rejected before search target/distance or attack-record update.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0xfff` to
+  `0x1fff`; the public marker is now `catchSearch=0x1fff/s3`.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Catch-Search Team Gate
+
+- Extended modes `161/162` inside the selected live-hit catch-search proof.
+  The new bit restores Mario/Fox, seeds same-team fighters with team battle on
+  and team attack off, reruns source-order `ftMainSearchFighterCatch`, and
+  proves the target is rejected before search target/distance or attack-record
+  update.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x1fff` to
+  `0x3fff`; the public marker is now `catchSearch=0x3fff/s3`.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Catch-Search Ghost and Boss Gates
+
+- Extended modes `161/162` inside the selected live-hit catch-search proof.
+  The new bits restore Mario/Fox, seed ghost and Boss targets, rerun
+  source-order `ftMainSearchFighterCatch`, and prove each target is rejected
+  before search target/distance or attack-record update.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x3fff` to
+  `0xffff`; the public marker is now `catchSearch=0xffff/s3`.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Catch-Search Target Hitstatus Gate
+
+- Aligned the local `ftMainSearchFighterCatch` early rejection order with
+  BattleShip's ghost, Boss, team, capture-immune, then hitstatus source order.
+- Extended modes `161/162` inside the selected live-hit catch-search proof.
+  The new bit restores Mario/Fox, seeds `special_hitstatus`, `star_hitstatus`,
+  and `hitstatus` non-normal one at a time, reruns source-order
+  `ftMainSearchFighterCatch`, and proves target rejection before search
+  target/distance or attack-record update.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0xffff` to
+  `0x1ffff`; the public marker is now `catchSearch=0x1ffff/s3`.
+- Verified:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-dev-fast.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-current.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Inner Catch-Search Source Order
+
+- Extended modes `161/162` inside the selected live-hit catch-search proof.
+  The new bits prove selected attack-state-off rejection, Ground/Air mismatch
+  rejection, hurt/shield/group attack-record skips, the damage-coll
+  `hitstatus == None` sentinel break, and valid grabbable no-collision
+  no-update without changing selected slot `s3` or skip mask `0x3`.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x1ffff` to
+  `0xffffff`; the public marker is now `catchSearch=0xffffff/s3`.
+- Verified:
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Routed Catch Search Through Proc Wrapper
+
+- Restored BattleShip's `FTStruct.is_catchstatus` compatibility flag in the
+  local fighter shell, setting it from `ftParamSetCatchParams` and clearing it
+  on common status reset.
+- Added bounded `ftMainProcSearchCatch` coverage around the selected
+  catch-search proof. The new bits prove hazard wait-timer decrement before the
+  catch-status gate, no search/callbacks while the gate is closed, and
+  catch/capture callbacks after the selected target is found.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0xffffff` to
+  `0x7ffffff`; the public marker is now `catchSearch=0x7ffffff/s3`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Ground Obstacle Callback Iteration
+
+- Restored the local two-entry `ftMainCheckAddGroundObstacle` /
+  `ftMainClearGroundObstacle` registry shape from BattleShip and let
+  `ftMainSearchHitHazard` iterate registered false-return obstacle callbacks
+  after the existing wait-timer decrement.
+- Extended the selected live-hit catch-search proof to cover add/full/clear
+  ordering, false-return callback argument/order, and Twister/TaruCannon wait
+  decrement while leaving true-return trap status dispatch deferred.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x7ffffff` to
+  `0x1fffffff`; the public marker is now `catchSearch=0x1fffffff/s3`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Twister Hazard Dispatch
+
+- Imported bounded original BattleShip `ftcommontwister.c` through
+  `src/import/battleship_ftcommon_twister.c` and added the narrow
+  compatibility declarations needed by its status setter.
+- Routed true-return `nGMHitEnvironmentTwister` ground-obstacle callbacks
+  through `ftMainSetHitHazard` into imported original
+  `ftCommonTwisterSetStatus`. The selected live-hit catch-search proof now
+  verifies Twister status/motion, imported update/physics callbacks,
+  release-wait reset, tornado GObj capture, capture immunity, and wait-timer
+  decrement before restoring state.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x1fffffff` to
+  `0x3fffffff`; the public marker is now `catchSearch=0x3fffffff/s3`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Twister Callback Tick
+
+- Extended the selected live-hit catch-search proof after the true-return
+  Twister hazard dispatch to run one installed imported-original Twister
+  update/physics callback tick.
+- The new bit proves release-wait advance, bounded air-velocity update, and
+  root Y-rotation before restoring the fighter and root state.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x3fffffff` to
+  `0x7fffffff`; the public marker is now `catchSearch=0x7fffffff/s3`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Hazard Ghost Gate
+
+- Extended the selected live-hit catch-search proof around
+  `ftMainSearchHitHazard`.
+- The new bit marks the fighter ghost and proves BattleShip's outer guard
+  exits before wait-timer decrement or obstacle callbacks.
+- Tightened `STAGE_MPLIVEHIT_CATCHSEARCH` from mask low bits `0x7fffffff` to
+  `0xffffffff`; the public marker is now `catchSearch=0xffffffff/s3`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Search Ghost Gate
+
+- Extended the selected live-hit damage-loop aggregate around
+  `ftMainProcSearchHitAll`.
+- The new bit marks the attacking fighter ghost and proves BattleShip's outer
+  guard exits before hitlog clear, fighter/item/weapon/ground search, or
+  hit-stat processing.
+- Tightened `STAGE_MPLIVEHIT_DAMAGE` from mask low bits `0x7fffffff` to
+  `0xffffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Damage Update No-Expiry Gate
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageAirCommonProcUpdate`.
+- The new bit keeps animation active while hitstun reaches zero, proving
+  public knockback release without the DamageFall expiry handoff.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x7ff` to `0xfff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Ground Damage Expiry
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcUpdate`.
+- The new bit seeds ground `DamageN1`, runs the installed original update at
+  animation end as hitstun reaches zero, and proves public-knockback transfer
+  through original `mpCommonSetFighterWaitOrFall` into imported-original
+  Wait/Ground before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0xfff` to `0x1fff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Ground Damage Interrupt
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcInterrupt`.
+- The new bit seeds ground `DamageN1`, runs the installed original interrupt
+  with hitstun already zero, and proves it clears hitstun state and reaches
+  imported-original Wait/Ground interrupt handling before restoring the
+  live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x1fff` to `0x3fff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Air Damage Interrupt
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcInterrupt`.
+- The new bit seeds `DamageN1` with Air kinetics, runs the installed original
+  interrupt with hitstun already zero, and proves the no-hammer air branch
+  reaches `ftCommonFallProcInterrupt` before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x3fff` to `0x7fff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Ground Hammer Interrupt
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcInterrupt`.
+- The new bit seeds ground `DamageN1`, marks hammer held through the existing
+  hammer-check seam, runs the installed original interrupt with hitstun already
+  zero, and proves the hammer branch reaches `ftHammerProcInterrupt` before
+  restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x7fff` to `0xffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Air Hammer Interrupt
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcInterrupt`.
+- The new bit seeds `DamageN1` with Air kinetics, marks hammer held through
+  the existing hammer-check seam, runs the installed original interrupt with
+  hitstun already zero, and proves the air hammer branch reaches
+  `ftCommonHammerFallProcInterrupt` before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0xffff` to
+  `0x1ffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Knockback-Over Status Set
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageSetStatus`.
+- The new bit reruns the installed original status set with
+  `is_knockback_over` set, proving the source branch clears that flag and sets
+  timed hit-status invincibility before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x1ffff` to
+  `0x3ffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageFlyRoll Status Pitch
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageSetStatus`.
+- The new bit reruns the installed original status set with `DamageFlyRoll`,
+  proving the source branch reaches `ftCommonDamageFlyRollUpdateModelPitch`
+  and updates joint pitch before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x3ffff` to
+  `0x7ffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Throw-Clear Physics Tail
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcPhysics`.
+- The new bit reruns the installed original physics callback with a low-speed
+  throw-owned attack coll, proving the source tail clears attack collisions
+  before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x7ffff` to
+  `0xfffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Smash DI Lag Update
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcLagUpdate`.
+- The new bit reruns the installed original lag-update callback with hitlag,
+  stick range, and tap-buffer state, proving the Smash DI branch moves the
+  root and resets tap buffers before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0xfffff` to
+  `0x1fffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageFlyRoll Physics Pitch
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcPhysics`.
+- The new bit reruns the installed original physics callback as
+  `DamageFlyRoll`, proving the source branch reaches
+  `ftCommonDamageFlyRollUpdateModelPitch` and updates joint pitch before
+  restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x1fffff` to
+  `0x3fffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Ground Damage Physics
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcPhysics`.
+- The new bit reruns the installed original physics callback with ground
+  kinetics, proving the source ground-friction branch reduces ground velocity
+  before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x3fffff` to
+  `0x7fffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Air Fastfall Physics
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcPhysics`.
+- The new bit reruns the installed original physics callback with
+  zero-hitstun Air kinetics, proving the source
+  `ftPhysicsApplyAirVelDriftFastFall` branch sets fastfall state and terminal
+  velocity before restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x7fffff` to
+  `0xffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Air Drift Physics
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcPhysics`.
+- The new bit reruns the installed original physics callback with
+  zero-hitstun Air kinetics and horizontal stick input, proving the source
+  air-drift branch updates X velocity after gravity before restoring the
+  live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0xffffff` to
+  `0x1ffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Air Clamp Physics
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcPhysics`.
+- The new bit reruns the installed original physics callback with
+  zero-hitstun Air kinetics and over-max horizontal velocity, proving the
+  source air-velocity clamp-decrement branch before restoring the live-hit
+  state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x1ffffff` to
+  `0x3ffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Lag-Update No-Op Gates
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageCommonProcLagUpdate`.
+- The new bit reruns the installed original lag-update callback through
+  no-hitlag, below-threshold stick, and saturated tap-buffer no-op gates before
+  restoring the live-hit state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x3ffffff` to
+  `0x7ffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageAir Passive Map Gates
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageAirCommonProcMap`.
+- The new bit reruns the installed original map callback with floor collision,
+  proving imported-original PassiveStand and Passive true-return
+  short-circuits skip later map branches before restoring state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x7ffffff` to
+  `0xfffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageFall Passive Map Gates
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageFallProcMap`.
+- The new bit reruns the installed original DamageFall map callback with floor
+  collision, proving imported-original PassiveStand and Passive true-return
+  short-circuits skip the DownBounce tail before restoring state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0xfffffff` to
+  `0x1fffffff`; `fallmap` is now `0x3ff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageAir No-Floor Map Gate
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageAirCommonProcMap`.
+- The new bit reruns the installed original map callback with collision but
+  no `MAP_FLAG_FLOOR`, proving the source floor-bit short-circuit skips
+  PassiveStand, Passive, and DownBounce before restoring state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x1fffffff` to
+  `0x3fffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageFall No-Cliff Map Tail
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageFallProcMap`.
+- The new bit reruns the installed original DamageFall map callback with
+  collision but no `MAP_FLAG_CLIFF_MASK`, proving the source no-cliff tail
+  runs PassiveStand, Passive, and DownBounce before restoring state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x3fffffff` to
+  `0x7fffffff`; `fallmap` is now `0x7ff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit DamageFall Interrupt Source Order
+
+- Extended the selected live-hit status-loop callback proof around installed
+  original `ftCommonDamageFallProcInterrupt`.
+- The new bit reruns the installed original DamageFall interrupt after expiry,
+  proving BattleShip's source-order SpecialAir, AttackAir, JumpAerial, and
+  HammerFall checks before restoring state.
+- Tightened `STAGE_MPLIVEHIT_STATUS` and
+  `STAGE_MPLIVEHIT_STATUS_CALLBACK` from mask low bits `0x7fffffff` to
+  `0xffffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Natural Slot-1 Hurtbox Damage
+
+- Extended the selected live-hit hurtbox-damage consume proof around
+  BattleShip's source-order `ftMainProcSearchHitAll`.
+- The new bit restores Mario/Fox after the natural slot-0 consume/repeat
+  proof, marks Mario damage-coll slot `0` intangible, reruns the unmasked
+  fighter-only search, and proves natural slot-1 hitlog, attack-record, queue,
+  percent, and hitlag consumption before restoring state.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0x7ff` to
+  `0xfff`; the status-loop search marker now requires the inherited damage
+  mask `0xfff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Natural Slot-2 Hurtbox Damage
+
+- Extended the selected live-hit hurtbox-damage consume proof around the same
+  BattleShip source-order `ftMainProcSearchHitAll` path.
+- The new bit restores Mario/Fox after the natural slot-1 proof, marks Mario
+  damage-coll slots `0` and `1` intangible, reruns the unmasked fighter-only
+  search, and proves natural slot-2 hitlog, attack-record, queue, percent, and
+  hitlag consumption before restoring state.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0xfff` to
+  `0x1fff`; the status-loop search marker now requires the inherited damage
+  mask `0x1fff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Natural Slot-4 Hurtbox Damage
+
+- Extended the selected live-hit hurtbox-damage consume proof around the same
+  BattleShip source-order `ftMainProcSearchHitAll` path.
+- The new bit restores Mario/Fox after the natural slot-2 proof, marks Mario
+  damage-coll slots `0` through `3` intangible, reruns the unmasked fighter-only
+  search, and proves natural slot-4 hitlog, attack-record, queue, percent, and
+  hitlag consumption before restoring state.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0x1fff` to
+  `0x3fff`; the status-loop search marker now requires the inherited damage
+  mask `0x3fff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Natural Slot-5 Hurtbox Damage
+
+- Extended the selected live-hit hurtbox-damage consume proof around the same
+  BattleShip source-order `ftMainProcSearchHitAll` path.
+- The new bit restores Mario/Fox after the natural slot-4 proof, marks Mario
+  damage-coll slots `0` through `4` intangible, reruns the unmasked fighter-only
+  search, and proves natural slot-5 hitlog, attack-record, queue, percent, and
+  hitlag consumption before restoring state.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0x3fff` to
+  `0x7fff`; the status-loop search marker now requires the inherited damage
+  mask `0x7fff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Natural Slot-6 Hurtbox Damage
+
+- Extended the selected live-hit hurtbox-damage consume proof around the same
+  BattleShip source-order `ftMainProcSearchHitAll` path.
+- The new bit restores Mario/Fox after the natural slot-5 proof, marks Mario
+  damage-coll slots `0` through `5` intangible, reruns the unmasked
+  fighter-only search, and proves natural slot-6 hitlog, attack-record, queue,
+  percent, and hitlag consumption before restoring state.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0x7fff` to
+  `0xffff`; the status-loop search marker now requires the inherited damage
+  mask `0xffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Natural Slot-7 Hurtbox Damage
+
+- Extended the selected live-hit hurtbox-damage consume proof around the same
+  BattleShip source-order `ftMainProcSearchHitAll` path.
+- The new bit restores Mario/Fox after the natural slot-6 proof, marks Mario
+  damage-coll slots `0` through `6` intangible, reruns the unmasked
+  fighter-only search, and proves natural slot-7 hitlog, attack-record, queue,
+  percent, and hitlag consumption before restoring state.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0xffff` to
+  `0x1ffff`; the status-loop search marker now requires the inherited damage
+  mask `0x1ffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Natural Slot-8/9 Hurtbox Damage
+
+- Extended the selected live-hit hurtbox-damage consume proof around the same
+  BattleShip source-order `ftMainProcSearchHitAll` path.
+- The new bits restore Mario/Fox after the natural slot-7 proof, mark earlier
+  Mario damage-coll slots intangible, rerun the unmasked fighter-only search,
+  and prove natural slot-8 and slot-9 hitlog, attack-record, queue, percent,
+  and hitlag consumption before restoring state.
+- Tightened `STAGE_MPLIVEHIT_HURTBOX_DAMAGE` from mask low bits `0x1ffff` to
+  `0x7ffff`; the status-loop search marker now requires the inherited damage
+  mask `0x7ffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Catch-Search Invincible Slot Skip
+
+- Extended the selected live-hit catch-search proof around BattleShip's
+  source-order `ftMainSearchFighterCatch` loop.
+- The new skip bit restores Mario/Fox, marks the selected damage-coll slot
+  invincible, reruns the fighter catch search, and proves no search target,
+  distance update, or attack record is written before restoring state.
+- Tightened the `STAGE_MPLIVEHIT_CATCHSEARCH` secondary skip mask from `0x3` to
+  `0x7`; the public catch-search mask remains `0xffffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Catch-Search None/Miss Secondary Gates
+
+- Extended the selected live-hit catch-search secondary skip proof around the
+  same BattleShip source-order `ftMainSearchFighterCatch` loop.
+- The new bits record the restored `None` sentinel break and valid
+  no-collision no-update probes in the secondary skip mask before state
+  restore.
+- Tightened the `STAGE_MPLIVEHIT_CATCHSEARCH` secondary skip mask from `0x7` to
+  `0x1f`; the public catch-search mask remains `0xffffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Catch-Search Attack/Record Secondary Gates
+
+- Extended the selected live-hit catch-search secondary skip proof around the
+  same BattleShip source-order `ftMainSearchFighterCatch` loop.
+- The new bits record restored attack-state-off, Ground/Air mismatch, and
+  attack-record rejection probes in the secondary skip mask before state
+  restore.
+- Tightened the `STAGE_MPLIVEHIT_CATCHSEARCH` secondary skip mask from `0x1f`
+  to `0xff`; the public catch-search mask remains `0xffffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Catch-Search Target Secondary Gates
+
+- Extended the selected live-hit catch-search secondary skip proof around the
+  same BattleShip source-order `ftMainSearchFighterCatch` loop.
+- The new bits record restored capture-immune, ghost, Boss, global hitstatus,
+  and same-team target rejection probes in the secondary skip mask before state
+  restore.
+- Tightened the `STAGE_MPLIVEHIT_CATCHSEARCH` secondary skip mask from `0xff`
+  to `0x1fff`; the public catch-search mask remains `0xffffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit Catch-Search Self Secondary Gate
+
+- Extended the selected live-hit catch-search secondary skip proof around the
+  same BattleShip source-order `ftMainSearchFighterCatch` loop.
+- The new bit restores Mario/Fox, runs the fighter catch search with attacker
+  before target in the fighter list, and records self rejection plus
+  next-fighter target catch before state restore.
+- Tightened the `STAGE_MPLIVEHIT_CATCHSEARCH` secondary skip mask from
+  `0x1fff` to `0x3fff`; the public catch-search mask remains `0xffffffff`.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit TaruCannon Setup Dispatch
+
+- Strengthened the selected live-hit catch-search hazard proof without changing
+  the public `catchSearch=0xffffffff/s3` marker.
+- Added bounded TaruCannon kind `3` dispatch through `ftMainSetHitHazard` into
+  a source-ordered setup shell matching the original `ftCommonTaruCannSetStatus`
+  entry sequence up through status `61`, script `-1`, TaruCannon status-vars
+  reset, barrel GObj capture, capture immunity, invisible flag, and intangible
+  hitstatus.
+- Continuous TaruCannon update/shoot runtime remains deferred until the Jungle
+  barrel helpers and map throw-hit data are local.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Proved Live-Hit TaruCannon Physics Tick
+
+- Strengthened the selected live-hit catch-search hazard proof without changing
+  the public `catchSearch=0xffffffff/s3` marker.
+- Installed the original TaruCannon physics callback for status `61` and proved
+  one bounded tick copies the fighter root position from the barrel root before
+  state restore.
+- Continuous TaruCannon update/shoot runtime remains deferred until the Jungle
+  barrel helpers and map throw-hit data are local.
+- Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.

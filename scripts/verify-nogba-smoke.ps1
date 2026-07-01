@@ -1,23 +1,26 @@
 param(
     [switch]$Build,
+    [switch]$NoBuild,
     [string]$NoGba = (Join-Path $PSScriptRoot '..\emulators\nogba\NO$GBA.EXE'),
+    [int]$GdbPort = 3333,
+    [int]$RunnerSlot = -1,
     [int]$DelaySeconds = 5
 )
-
 $ErrorActionPreference = 'Stop'
+if ($NoBuild) {
+    $Build = $false
+}
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $output = Join-Path $root "artifacts\nogba-smoke-$stamp.png"
 $outputDirectory = Split-Path -Parent $output
 $outputStem = [System.IO.Path]::GetFileNameWithoutExtension($output)
-
 & (Join-Path $PSScriptRoot 'capture-nogba.ps1') `
     -Build:$Build `
     -NoGba $NoGba `
     -Output $output `
     -DelaySeconds $DelaySeconds `
     -AllWindows
-
 $captures = @(
     Get-ChildItem -Path $outputDirectory -Filter "$outputStem-w*.png" `
         -File -ErrorAction SilentlyContinue |
@@ -29,7 +32,6 @@ if ($captures.Count -eq 0 -and (Test-Path $output)) {
 if ($captures.Count -eq 0) {
     throw "no`$gba smoke capture was not created: $output"
 }
-
 Add-Type -AssemblyName System.Drawing
 $validCount = 0
 foreach ($capture in $captures) {
@@ -43,5 +45,4 @@ foreach ($capture in $captures) {
         $bitmap.Dispose()
     }
 }
-
 Write-Output "no`$gba smoke verification passed: $validCount capture(s), stem $outputStem"

@@ -1,3 +1,5 @@
+#include <nds/nds_gbi_decode.h>
+
 #define NDS_DL_PREVIEW_WIDTH 96u
 #define NDS_DL_PREVIEW_HEIGHT 72u
 #define NDS_DL_PREVIEW_MAX_VTX 32u
@@ -317,9 +319,11 @@ static void ndsDLPreviewAddTriangle(NDSDLPreviewTri *tris,
                                     u32 *tri_count,
                                     u32 packed)
 {
-    u32 v0 = ((packed >> 16) & 0xFFu) / 2u;
-    u32 v1 = ((packed >> 8) & 0xFFu) / 2u;
-    u32 v2 = (packed & 0xFFu) / 2u;
+    u32 v0;
+    u32 v1;
+    u32 v2;
+
+    ndsGBIDecodePackedTriIndices(packed, &v0, &v1, &v2);
 
     if ((*tri_count >= NDS_DL_PREVIEW_MAX_TRIS) ||
         (v0 >= NDS_DL_PREVIEW_MAX_VTX) ||
@@ -1901,21 +1905,14 @@ static void ndsOpeningRoomProbeMaterialDLShape(void)
         {
         case NDS_GBI_OP_VTX:
         {
-            u32 v0 = ((w0 >> 16) & 0xFFu) / 2u;
-            u32 count = (w0 & 0xFFu) / 2u;
+            u32 v0;
+            u32 count;
 
             gNdsOpeningRoomMaterialDLProbeVertexCommandCount++;
-            if ((count == 0) || (count > NDS_DL_PREVIEW_MAX_VTX))
-            {
-                count = NDS_DL_PREVIEW_MAX_VTX - v0;
-            }
-            if (v0 >= NDS_DL_PREVIEW_MAX_VTX)
+            if (ndsGBIDecodeF3DEX2Vtx(w0, NDS_DL_PREVIEW_MAX_VTX, &v0,
+                                      &count) == FALSE)
             {
                 break;
-            }
-            if ((v0 + count) > NDS_DL_PREVIEW_MAX_VTX)
-            {
-                count = NDS_DL_PREVIEW_MAX_VTX - v0;
             }
             if ((v0 + count) > vertex_count)
             {
@@ -3100,22 +3097,15 @@ static s32 ndsOpeningRoomVisitDLPreviewCommand(
     case NDS_GBI_OP_VTX:
     {
         const u8 *src = (const u8 *)(uintptr_t)w1;
-        u32 v0 = ((w0 >> 16) & 0xFFu) / 2u;
-        u32 count = (w0 & 0xFFu) / 2u;
+        u32 v0;
+        u32 count;
         u32 v;
 
         gNdsOpeningRoomDLPreviewVertexCommandCount++;
-        if ((count == 0) || (count > NDS_DL_PREVIEW_MAX_VTX))
-        {
-            count = NDS_DL_PREVIEW_MAX_VTX - v0;
-        }
-        if (v0 >= NDS_DL_PREVIEW_MAX_VTX)
+        if (ndsGBIDecodeF3DEX2Vtx(w0, NDS_DL_PREVIEW_MAX_VTX, &v0,
+                                  &count) == FALSE)
         {
             break;
-        }
-        if ((v0 + count) > NDS_DL_PREVIEW_MAX_VTX)
-        {
-            count = NDS_DL_PREVIEW_MAX_VTX - v0;
         }
         for (v = 0; v < count; v++)
         {
@@ -3132,15 +3122,15 @@ static s32 ndsOpeningRoomVisitDLPreviewCommand(
     case NDS_GBI_OP_TRI1:
         gNdsOpeningRoomDLPreviewTriangleCommandCount++;
         ndsDLPreviewAddTriangle(state->tris, state->tri_count,
-                                w0 & 0x00FFFFFFu);
+                                ndsGBIDecodeF3DEX2Tri1(w0));
         break;
 
     case NDS_GBI_OP_TRI2:
         gNdsOpeningRoomDLPreviewTriangleCommandCount++;
         ndsDLPreviewAddTriangle(state->tris, state->tri_count,
-                                w0 & 0x00FFFFFFu);
+                                ndsGBIDecodeF3DEX2Tri2First(w0));
         ndsDLPreviewAddTriangle(state->tris, state->tri_count,
-                                w1 & 0x00FFFFFFu);
+                                ndsGBIDecodeF3DEX2Tri2Second(w1));
         break;
 
     case NDS_GBI_OP_ENDDL:
@@ -4306,6 +4296,9 @@ void gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                     dGCCurrentStatus = nGCStatusDisplaying;
                     gGCCurrentDisplay = current_gobj;
 
+                    ndsStageGCDrawAllLoopRecordCapturedDisplay(camera_gobj,
+                                                               current_gobj,
+                                                               link_id);
                     ndsOpeningRoomRecordCapturedDisplay(camera_gobj,
                                                         current_gobj,
                                                         link_id);
@@ -4404,6 +4397,13 @@ void func_80017EC0(GObj *gobj)
                 NDS_OPENING_ROOM_DRAW_BLOCKER_CAMERA_BACKEND;
         }
     }
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        (gNdsFighterGCDrawAllLoopPrepared != 0u) &&
+        (gNdsFighterMarioFoxGCDrawAllLoopResult == 0u))
+    {
+        gNdsFighterGCDrawAllLoopCameraCallbackCount++;
+    }
+    ndsStageGCDrawAllLoopRecordCameraCallback();
 
     gcCaptureCameraGObj(gobj,
                         (cobj->flags & COBJ_FLAG_IDENTIFIER) ? TRUE : FALSE);
@@ -4411,6 +4411,9 @@ void func_80017EC0(GObj *gobj)
 
 void gcDrawDObjTreeForGObj(GObj *gobj)
 {
+    ndsStageGCDrawAllLoopRecordDObjDraw(
+        gobj,
+        NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE);
     ndsOpeningRoomRecordDObjDraw(
         gobj,
         NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE);
@@ -4418,6 +4421,9 @@ void gcDrawDObjTreeForGObj(GObj *gobj)
 
 void gcDrawDObjTreeDLLinksForGObj(GObj *gobj)
 {
+    ndsStageGCDrawAllLoopRecordDObjDraw(
+        gobj,
+        NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS);
     ndsOpeningRoomRecordDObjDraw(
         gobj,
         NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS);
@@ -4425,13 +4431,29 @@ void gcDrawDObjTreeDLLinksForGObj(GObj *gobj)
 
 void gcDrawDObjDLLinksForGObj(GObj *gobj)
 {
+    ndsStageGCDrawAllLoopRecordDObjDraw(
+        gobj,
+        NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS);
     ndsOpeningRoomRecordDObjDraw(
         gobj,
         NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS);
 }
 
+void gcDrawDObjDLHead0(GObj *gobj)
+{
+    ndsStageGCDrawAllLoopRecordDObjDraw(
+        gobj,
+        NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0);
+    ndsOpeningRoomRecordDObjDraw(
+        gobj,
+        NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0);
+}
+
 void gcDrawDObjDLHead1(GObj *gobj)
 {
+    ndsStageGCDrawAllLoopRecordDObjDraw(
+        gobj,
+        NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1);
     ndsOpeningRoomRecordDObjDraw(
         gobj,
         NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1);

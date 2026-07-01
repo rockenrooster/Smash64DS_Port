@@ -1,42 +1,44 @@
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
+    [int]$GdbPort = 3333,
+    [int]$RunnerSlot = -1,
+    [switch]$NoBuild,
     [int]$DelaySeconds = 5
 )
-
 $ErrorActionPreference = 'Stop'
-
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
-
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$verifierContext = Initialize-MelonDSVerifierContext `
+    -Root $root `
+    -MelonDS $MelonDS `
+    -RunnerSlot $RunnerSlot `
+    -GdbPort $GdbPort `
+    -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
+    -NoBuild:$NoBuild
 $rom = Join-Path $root 'smash64ds-players-vs.nds'
 $elf = Join-Path $root 'smash64ds-players-vs.elf'
-$melonDsPath = Resolve-MelonDSPath -Root $root -MelonDS $MelonDS
+$melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
-$logDir = Join-Path $root 'artifacts\emulator-logs'
+$logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
 $stdout = Join-Path $logDir 'melonds.players-vs-setup-harness.stdout.log'
 $stderr = Join-Path $logDir 'melonds.players-vs-setup-harness.stderr.log'
 $configState = $null
 $emulator = $null
 $scriptName = '_players_vs_setup_harness.gdb'
-
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-
-& make -C $root TARGET=smash64ds-players-vs BUILD=build-players-vs-setup-harness NDS_DEV_SCENE_HARNESS=players_setup -j4
+& make -C $root TARGET=smash64ds-players-vs BUILD=build-players-vs-setup-harness NDS_DEV_SCENE_HARNESS=players_setup -j16
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'PlayersVS setup harness build did not produce smash64ds-players-vs.nds and smash64ds-players-vs.elf.'
 }
 if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melonDsPath" }
 if (-not (Test-Path $Gdb)) { throw "GDB executable not found: $Gdb" }
-
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-
 try {
-    $configState = Enable-MelonDSGdbConfig -MelonDSPath $melonDsPath
+    $configState = Enable-MelonDSGdbConfig -MelonDSPath $melonDsPath -GdbPort $verifierContext.GdbPort -Persistent:([bool]$verifierContext.PersistentConfig)
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath `
         -ArgumentList $rom `
@@ -45,15 +47,13 @@ try {
         -RedirectStandardError $stderr `
         -WindowStyle Hidden `
         -PassThru
-
-    Wait-MelonDSGdbListener -Process $emulator | Out-Null
+    Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort | Out-Null
     Start-Sleep -Seconds ([Math]::Max($DelaySeconds, 1))
-
     $gdbCommands = @(
         'set pagination off',
         'set confirm off',
         'set remotetimeout 5',
-        'target remote 127.0.0.1:3333',
+        ("target remote 127.0.0.1:{0}" -f (Get-MelonDSActiveGdbPort)),
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
         'printf "SCENE=%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev',
         'printf "PV_SETUP=%#x,%#x,%#x,%#x,%#x,%u,%u,%u,%u,%u,%#x\n", gNdsPlayersVSOriginalStartResult, gNdsPlayersVSOriginalFuncStartResult, gNdsPlayersVSOriginalRelocResult, gNdsPlayersVSOriginalSetupResult, gNdsPlayersVSOriginalSetupMask, gNdsPlayersVSOriginalLoadedFileCount, gNdsPlayersVSOriginalGObjCount, gNdsPlayersVSOriginalCameraCount, gNdsPlayersVSOriginalSObjCount, gNdsPlayersVSOriginalMainGObjID, gNdsPlayersVSOriginalDeferredMask',
@@ -65,9 +65,7 @@ try {
         'detach',
         'quit'
     )
-
     $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root -Commands $gdbCommands -ScriptName $scriptName).Stdout
-
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+)')
     $setup = [regex]::Match($gdbStdout, 'PV_SETUP=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
@@ -76,7 +74,6 @@ try {
     $trans = [regex]::Match($gdbStdout, 'PV_TRANS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $task = [regex]::Match($gdbStdout, 'TASK=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $roomTitle = [regex]::Match($gdbStdout, 'ROOM_TITLE=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
-
     if (-not $harn.Success -or
         (Convert-MarkerUInt32 $harn.Groups[1].Value) -ne 0x4841524e -or
         [int]$harn.Groups[2].Value -ne 5 -or
@@ -124,7 +121,6 @@ try {
     if (-not $roomTitle.Success -or [int]$roomTitle.Groups[1].Value -ne 0 -or (Convert-MarkerUInt32 $roomTitle.Groups[2].Value) -ne 0 -or (Convert-MarkerUInt32 $roomTitle.Groups[3].Value) -ne 0) {
         throw "PlayersVS setup harness replayed opening/title work.`n$gdbStdout"
     }
-
     Write-Output ("PlayersVS setup harness passed: files={0} mask={1} sobj={2} slots={3}/{4}/{5}" -f $setup.Groups[6].Value, $setup.Groups[5].Value, $setup.Groups[9].Value, $slots.Groups[4].Value, $slots.Groups[5].Value, $slots.Groups[6].Value)
 } finally {
     if ($null -ne $emulator) {

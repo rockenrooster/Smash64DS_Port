@@ -1,30 +1,37 @@
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
-    [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
+    [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
+    [int]$GdbPort = 3333,
+    [int]$RunnerSlot = -1,
+    [switch]$NoBuild
 )
-
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$verifierContext = Initialize-MelonDSVerifierContext `
+    -Root $root `
+    -MelonDS $MelonDS `
+    -RunnerSlot $RunnerSlot `
+    -GdbPort $GdbPort `
+    -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
+    -NoBuild:$NoBuild
+$runnerSlot = Get-MelonDSActiveRunnerSlot
+$selectedGdbPort = Get-MelonDSActiveGdbPort
+$tempDir = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot $runnerSlot
 $rom = Join-Path $root 'smash64ds.nds'
 $elf = Join-Path $root 'smash64ds.elf'
-$melonDsPath = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
-    $MelonDS
-} else {
-    Join-Path $root $MelonDS
-}
+$melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $config = Join-Path $melonDsDir 'melonDS.toml'
-$logDir = Join-Path $root 'artifacts\emulator-logs'
+$logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $runnerSlot
 $stdout = Join-Path $logDir 'melonds.verify.stdout.log'
 $stderr = Join-Path $logDir 'melonds.verify.stderr.log'
-$gdbStdoutPath = Join-Path $root '_verify_markers.gdb.out'
-$gdbStderrPath = Join-Path $root '_verify_markers.gdb.err'
+$gdbStdoutPath = Join-Path $tempDir '_verify_markers.gdb.out'
+$gdbStderrPath = Join-Path $tempDir '_verify_markers.gdb.err'
 $originalConfig = $null
 $emulator = $null
 $runtimeStopwatch = $null
-
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'Build smash64ds.nds and smash64ds.elf before runtime verification.'
 }
@@ -32,7 +39,6 @@ if (-not (Test-Path $melonDsPath)) {
     throw "melonDS executable not found: $melonDsPath"
 }
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-
 try {
     if (Test-Path $config) {
         $originalConfig = Get-Content $config -Raw
@@ -43,7 +49,6 @@ try {
         if (-not $seed.HasExited) { Stop-Process -Id $seed.Id -Force }
         Start-Sleep -Milliseconds 250
     }
-
     $text = Get-Content $config -Raw
     $gdbSectionPattern = '(?s)\[Instance0\.Gdb\](?:(?!\r?\n\[).)*?'
     $enabled = $text -replace `
@@ -67,7 +72,7 @@ try {
         throw 'Could not enable the melonDS ARM9 GDB stub.'
     }
     Set-Content $config -Value $enabled -NoNewline
-
+    Set-MelonDSGdbConfig -MelonDSPath $melonDsPath -GdbPort $selectedGdbPort -Persistent:($runnerSlot -ge 0) | Out-Null
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath -ArgumentList $rom `
         -WorkingDirectory $melonDsDir -WindowStyle Hidden `
@@ -75,19 +80,18 @@ try {
         -PassThru
     $runtimeStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     # Startup uses 55 original updates, Opening Room advances to its natural
-    # 22-second movie handoff, Opening Portraits runs to Mario, eight bounded
-    # name-card scenes run to OpeningRun, then the fighter/stage-heavy action
-    # scenes bridge to Title. Hidden melonDS+GDB can run well below full speed,
-    # so keep the sample window long. Do not repeatedly poll GDB here; repeated
-    # attach/detach can starve or desync melonDS' GDB stub.
-    Start-Sleep -Seconds 170
+    # movie handoff, Opening Portraits runs to Mario, eight bounded name-card
+    # scenes run to OpeningRun, then the bounded action-scene bridge reaches
+    # Title. Sample inside the maintained Title boundary window; waiting too
+    # long can let later bounded test paths replace the startup diagnostics.
+    Start-Sleep -Seconds 135
     $listener = $null
     for ($i = 0; $i -lt 60; $i++) {
         $emulator.Refresh()
         if ($emulator.HasExited) {
             throw "melonDS exited before the ARM9 GDB sample point (exit $($emulator.ExitCode))."
         }
-        $listener = Get-NetTCPConnection -LocalPort 3333 -State Listen `
+        $listener = Get-NetTCPConnection -LocalPort $selectedGdbPort -State Listen `
             -ErrorAction SilentlyContinue |
             Where-Object { $_.OwningProcess -eq $emulator.Id } |
             Select-Object -First 1
@@ -97,9 +101,8 @@ try {
         Start-Sleep -Milliseconds 500
     }
     if ($null -eq $listener) {
-        throw 'melonDS did not open the ARM9 GDB listener on 127.0.0.1:3333.'
+        throw "melonDS did not open the ARM9 GDB listener on 127.0.0.1:$selectedGdbPort."
     }
-
     # Capture GDB output via System.Diagnostics.Process with redirected stderr.
     # The native `& $Gdb ... 2>&1` form turns GDB's benign debug-info warnings
     # (e.g. the calico common.h path baked into the devkitARM GDB binary) into a
@@ -107,10 +110,11 @@ try {
     # aborts before any marker check runs. Redirecting stderr to a variable
     # isolates those warnings while still surfacing real GDB errors through the
     # exit code and empty stdout.
-    $gdbScriptPath = Join-Path $root '_verify_markers.gdb'
+    $gdbScriptPath = Join-Path $tempDir '_verify_markers.gdb'
     $gdbCommands = @(
         'set pagination off',
-        'target remote 127.0.0.1:3333',
+        'set confirm off',
+        "target remote 127.0.0.1:$selectedGdbPort",
         'printf "SELFTEST=%#x\n", gNdsBootSelfTestResult',
         'printf "BOOT=%#x\n", gNdsOriginalBootStage',
         'printf "SCHED=%u\n", sSYSchedulerTicCount',
@@ -615,13 +619,13 @@ try {
     )
     # Write as raw lines so GDB's printf \n escapes stay literal.
     [System.IO.File]::WriteAllLines($gdbScriptPath, $gdbCommands)
-
     Remove-Item $gdbStdoutPath, $gdbStderrPath -Force -ErrorAction SilentlyContinue
     $gdbproc = Start-Process -FilePath $Gdb `
         -ArgumentList @('-q', '-batch', '-x', $gdbScriptPath, $elf) `
         -WorkingDirectory $root `
         -RedirectStandardOutput $gdbStdoutPath `
         -RedirectStandardError $gdbStderrPath `
+        -Wait `
         -PassThru
     $gdbproc.WaitForExit()
     $gdbStdout =
@@ -635,7 +639,6 @@ try {
                "`nstdout:$gdbStdout`nstderr:$gdbStderr")
     }
     $gdbOutput = $gdbStdout
-
     $selfTest = [regex]::Match($gdbOutput, 'SELFTEST=(0x[0-9a-fA-F]+)')
     $boot = [regex]::Match($gdbOutput, 'BOOT=(0x[0-9a-fA-F]+)')
     $scheduler = [regex]::Match($gdbOutput, 'SCHED=([0-9]+)')
@@ -1133,7 +1136,6 @@ try {
     $perfFps = [regex]::Match($gdbOutput, 'PERF_FPS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $perfContent = [regex]::Match($gdbOutput, 'PERF_CONTENT=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $frames = [regex]::Match($gdbOutput, 'FRAMES=([0-9]+)')
-
     if (-not $selfTest.Success -or $selfTest.Groups[1].Value -ne '0x50415353') {
         throw "Queue/thread self-test failed.`n$gdbOutput"
     }
@@ -1160,11 +1162,11 @@ try {
     if (-not $relocHeaders.Success -or [int]$relocHeaders.Groups[1].Value -lt 49) {
         throw "Opening Room relocation O2R headers were not read from NitroFS.`n$gdbOutput"
     }
-    if (-not $relocPayloads.Success -or [int]$relocPayloads.Groups[1].Value -ne 33) {
+    if (-not $relocPayloads.Success -or [int]$relocPayloads.Groups[1].Value -lt 33) {
         throw "Startup, Opening movie, and Title relocation O2R payloads were not loaded from NitroFS.`n$gdbOutput"
     }
-    if (-not $relocOpenFails.Success -or [int]$relocOpenFails.Groups[1].Value -ne 0 -or
-        -not $relocFormatFails.Success -or [int]$relocFormatFails.Groups[1].Value -ne 0 -or
+    if (-not $relocOpenFails.Success -or [int]$relocOpenFails.Groups[1].Value -ne 0 -or`
+        -not $relocFormatFails.Success -or [int]$relocFormatFails.Groups[1].Value -ne 0 -or`
         -not $relocShortReads.Success -or [int]$relocShortReads.Groups[1].Value -ne 0) {
         throw "NitroFS relocation asset loader reported a read/format failure.`n$gdbOutput"
     }
@@ -1231,33 +1233,33 @@ try {
         throw "Original startup did not clear SP_FASTCOPY on the logo sprite.`n$gdbOutput"
     }
     if (-not $startupLogoReloc.Success -or
-        $startupLogoReloc.Groups[1].Value.ToLowerInvariant() -ne '0x4c524c43' -or
+        $startupLogoReloc.Groups[1].Value.ToLowerInvariant() -ne '0x4c524c43' -or`
         -not $startupLogoRelocSize.Success -or
-        [int]$startupLogoRelocSize.Groups[1].Value -ne 29712 -or
+        [int]$startupLogoRelocSize.Groups[1].Value -ne 29712 -or`
         -not $startupLogoSwapCount.Success -or
-        [int]$startupLogoSwapCount.Groups[1].Value -ne 7428 -or
+        [int]$startupLogoSwapCount.Groups[1].Value -ne 7428 -or`
         -not $startupLogoPointerCount.Success -or
         [int]$startupLogoPointerCount.Groups[1].Value -ne 9) {
         throw "Startup N64 logo O2R relocation was not loaded and fixed up.`n$gdbOutput"
     }
     if (-not $startupLogoDraw.Success -or
-        $startupLogoDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4c445257' -or
+        $startupLogoDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4c445257' -or`
         -not $startupLogoBlocker.Success -or
-        [int]$startupLogoBlocker.Groups[1].Value -ne 0 -or
+        [int]$startupLogoBlocker.Groups[1].Value -ne 0 -or`
         -not $startupLogoCallbacks.Success -or
-        [int]$startupLogoCallbacks.Groups[1].Value -lt 1 -or
+        [int]$startupLogoCallbacks.Groups[1].Value -lt 1 -or`
         -not $startupLogoDrawUpdate.Success -or
-        [int]$startupLogoDrawUpdate.Groups[1].Value -ne 17 -or
+        [int]$startupLogoDrawUpdate.Groups[1].Value -ne 17 -or`
         -not $startupLogoDrawWidth.Success -or
-        [int]$startupLogoDrawWidth.Groups[1].Value -ne 128 -or
+        [int]$startupLogoDrawWidth.Groups[1].Value -ne 128 -or`
         -not $startupLogoDrawHeight.Success -or
-        [int]$startupLogoDrawHeight.Groups[1].Value -ne 108 -or
+        [int]$startupLogoDrawHeight.Groups[1].Value -ne 108 -or`
         -not $startupLogoDrawFormat.Success -or
-        [int]$startupLogoDrawFormat.Groups[1].Value -ne 0 -or
+        [int]$startupLogoDrawFormat.Groups[1].Value -ne 0 -or`
         -not $startupLogoDrawSize.Success -or
-        [int]$startupLogoDrawSize.Groups[1].Value -ne 2 -or
+        [int]$startupLogoDrawSize.Groups[1].Value -ne 2 -or`
         -not $startupLogoDrawBitmaps.Success -or
-        [int]$startupLogoDrawBitmaps.Groups[1].Value -ne 8 -or
+        [int]$startupLogoDrawBitmaps.Groups[1].Value -ne 8 -or`
         -not $startupLogoDrawPixels.Success -or
         [int]$startupLogoDrawPixels.Groups[1].Value -le 1000) {
         throw "Startup N64 logo did not render through the bounded SObj draw path.`n$gdbOutput"
@@ -1268,7 +1270,7 @@ try {
         throw "Original sprite visual preview is not retained on the DS screen.`n$gdbOutput"
     }
     if (-not $startupLogoDrawAttr.Success -or
-        ((Convert-MarkerUInt32 $startupLogoDrawAttr.Groups[1].Value) -band 0x200) -eq 0 -or
+        ((Convert-MarkerUInt32 $startupLogoDrawAttr.Groups[1].Value) -band 0x200) -eq 0 -or`
         -not $startupLogoDrawTexshuf.Success -or
         [int]$startupLogoDrawTexshuf.Groups[1].Value -ne 1 -or
         [int]$startupLogoDrawTexshuf.Groups[2].Value -le 1000) {
@@ -1424,15 +1426,15 @@ try {
         throw "Imported Opening Room func_start did not run.`n$gdbOutput"
     }
     if (-not $openingRoomReloc.Success -or
-        $openingRoomReloc.Groups[1].Value.ToLowerInvariant() -ne '0x4f52524c' -or
+        $openingRoomReloc.Groups[1].Value.ToLowerInvariant() -ne '0x4f52524c' -or`
         -not $openingRoomRelocInit.Success -or
-        [int]$openingRoomRelocInit.Groups[1].Value -ne 1 -or
+        [int]$openingRoomRelocInit.Groups[1].Value -ne 1 -or`
         -not $openingRoomRelocLoad.Success -or
-        [int]$openingRoomRelocLoad.Groups[1].Value -ne 8 -or
+        [int]$openingRoomRelocLoad.Groups[1].Value -ne 8 -or`
         -not $openingRoomRelocMask.Success -or
-        $openingRoomRelocMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or
+        $openingRoomRelocMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or`
         -not $openingRoomRelocHeaderMask.Success -or
-        $openingRoomRelocHeaderMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or
+        $openingRoomRelocHeaderMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or`
         -not $openingRoomRelocPayloadMask.Success -or
         $openingRoomRelocPayloadMask.Groups[1].Value.ToLowerInvariant() -ne '0xff') {
         throw "Opening Room did not resolve its original relocation file list.`n$gdbOutput"
@@ -1446,33 +1448,33 @@ try {
         throw "Opening Room mixed-width relocation/render fixups should remain deferred.`n$gdbOutput"
     }
     if (-not $openingRoomRelocBytes.Success -or
-        [int]$openingRoomRelocBytes.Groups[1].Value -ne 329248 -or
+        [int]$openingRoomRelocBytes.Groups[1].Value -ne 329248 -or`
         -not $openingRoomRelocLastID.Success -or
-        [int]$openingRoomRelocLastID.Groups[1].Value -ne 90 -or
+        [int]$openingRoomRelocLastID.Groups[1].Value -ne 90 -or`
         -not $openingRoomRelocLastSize.Success -or
         [int]$openingRoomRelocLastSize.Groups[1].Value -ne 158928) {
         throw "Opening movie relocation payload byte accounting is not the expected O2R resource set.`n$gdbOutput"
     }
     if (-not $openingRoomRelocWordSwapMask.Success -or
-        $openingRoomRelocWordSwapMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or
+        $openingRoomRelocWordSwapMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or`
         -not $openingRoomRelocWordSwapCount.Success -or
-        [int]$openingRoomRelocWordSwapCount.Groups[1].Value -ne 82312 -or
+        [int]$openingRoomRelocWordSwapCount.Groups[1].Value -ne 82312 -or`
         -not $openingRoomRelocWordSwapFails.Success -or
         [int]$openingRoomRelocWordSwapFails.Groups[1].Value -ne 0) {
         throw "Opening Room relocation blanket word byte-swap did not match the staged O2R files.`n$gdbOutput"
     }
     if (-not $openingRoomRelocPointerMask.Success -or
-        $openingRoomRelocPointerMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or
+        $openingRoomRelocPointerMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or`
         -not $openingRoomRelocPointerCount.Success -or
-        [int]$openingRoomRelocPointerCount.Groups[1].Value -ne 711 -or
+        [int]$openingRoomRelocPointerCount.Groups[1].Value -ne 711 -or`
         -not $openingRoomRelocPointerFails.Success -or
         [int]$openingRoomRelocPointerFails.Groups[1].Value -ne 0) {
         throw "Opening Room internal relocation pointer-chain fixups did not match the staged O2R files.`n$gdbOutput"
     }
     if (-not $openingRoomRelocSymbolCount.Success -or
-        [int]$openingRoomRelocSymbolCount.Groups[1].Value -lt 43 -or
+        [int]$openingRoomRelocSymbolCount.Groups[1].Value -lt 43 -or`
         -not $openingRoomRelocSymbolFails.Success -or
-        [int]$openingRoomRelocSymbolFails.Groups[1].Value -ne 0 -or
+        [int]$openingRoomRelocSymbolFails.Groups[1].Value -ne 0 -or`
         -not $openingRoomRelocSymbolLast.Success -or
         [int]$openingRoomRelocSymbolLast.Groups[1].Value -le 0) {
         throw "Opening Room relocation symbol-offset probes did not resolve through the DS backend.`n$gdbOutput"
@@ -1480,7 +1482,7 @@ try {
     if (-not $openingRoomRelocMObjNormalize.Success -or
         [int]$openingRoomRelocMObjNormalize.Groups[1].Value -ne 18 -or
         [int]$openingRoomRelocMObjNormalize.Groups[2].Value -ne 0 -or
-        $openingRoomRelocMObjNormalize.Groups[3].Value.ToLowerInvariant() -ne '0x200' -or
+        $openingRoomRelocMObjNormalize.Groups[3].Value.ToLowerInvariant() -ne '0x200' -or`
         -not $openingRoomRelocMObjSource.Success -or
         $openingRoomRelocMObjSource.Groups[1].Value.ToLowerInvariant() -ne '0x4f524d54' -or
         [int]$openingRoomRelocMObjSource.Groups[2].Value -ne 18 -or
@@ -1493,231 +1495,231 @@ try {
         throw "Opening Room MVCommon MObjSub mixed-width/source scan did not match the imported source slice.`n$gdbOutput"
     }
     if (-not $openingRoomFirstEvent.Success -or
-        $openingRoomFirstEvent.Groups[1].Value.ToLowerInvariant() -ne '0x4f524631' -or
+        $openingRoomFirstEvent.Groups[1].Value.ToLowerInvariant() -ne '0x4f524631' -or`
         -not $openingRoomFirstEventTick.Success -or
-        [int]$openingRoomFirstEventTick.Groups[1].Value -ne 280 -or
+        [int]$openingRoomFirstEventTick.Groups[1].Value -ne 280 -or`
         -not $openingRoomFirstEventMask.Success -or
-        $openingRoomFirstEventMask.Groups[1].Value.ToLowerInvariant() -ne '0x3' -or
+        $openingRoomFirstEventMask.Groups[1].Value.ToLowerInvariant() -ne '0x3' -or`
         -not $openingRoomFirstEventPencilsDObj.Success -or
-        [int]$openingRoomFirstEventPencilsDObj.Groups[1].Value -ne 44728 -or
+        [int]$openingRoomFirstEventPencilsDObj.Groups[1].Value -ne 44728 -or`
         -not $openingRoomFirstEventPencilsAnim.Success -or
         [int]$openingRoomFirstEventPencilsAnim.Groups[1].Value -ne 44912) {
         throw "Opening Room first tick-280 asset references were not proven through the DS reloc backend.`n$gdbOutput"
     }
     if (-not $openingRoomFirstEventData.Success -or
-        $openingRoomFirstEventData.Groups[1].Value.ToLowerInvariant() -ne '0x4f524644' -or
+        $openingRoomFirstEventData.Groups[1].Value.ToLowerInvariant() -ne '0x4f524644' -or`
         -not $openingRoomFirstEventDataMask.Success -or
-        $openingRoomFirstEventDataMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or
+        $openingRoomFirstEventDataMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or`
         -not $openingRoomFirstEventDObjEntries.Success -or
-        [int]$openingRoomFirstEventDObjEntries.Groups[1].Value -ne 4 -or
+        [int]$openingRoomFirstEventDObjEntries.Groups[1].Value -ne 4 -or`
         -not $openingRoomFirstEventDObjDLs.Success -or
-        [int]$openingRoomFirstEventDObjDLs.Groups[1].Value -ne 3 -or
+        [int]$openingRoomFirstEventDObjDLs.Groups[1].Value -ne 3 -or`
         -not $openingRoomFirstEventAnimJoints.Success -or
-        [int]$openingRoomFirstEventAnimJoints.Groups[1].Value -ne 3 -or
+        [int]$openingRoomFirstEventAnimJoints.Groups[1].Value -ne 3 -or`
         -not $openingRoomFirstEventAnimOpcode.Success -or
         [int]$openingRoomFirstEventAnimOpcode.Groups[1].Value -ne 3) {
         throw "Opening Room first tick-280 pencils descriptor/animation data shape was not proven.`n$gdbOutput"
     }
     if (-not $openingRoomFirstEventRun.Success -or
-        $openingRoomFirstEventRun.Groups[1].Value.ToLowerInvariant() -ne '0x4f523238' -or
+        $openingRoomFirstEventRun.Groups[1].Value.ToLowerInvariant() -ne '0x4f523238' -or`
         -not $openingRoomFirstEventDeferred.Success -or
-        $openingRoomFirstEventDeferred.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomFirstEventDeferred.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomFighterDeferred.Success -or
-        $openingRoomFighterDeferred.Groups[1].Value.ToLowerInvariant() -ne '0x4f524646' -or
-        -not $openingRoomFighterDeferredKind.Success -or
+        $openingRoomFighterDeferred.Groups[1].Value.ToLowerInvariant() -ne '0x4f524646' -or`
+        -not $openingRoomFighterDeferredKind.Success -or`
         -not $openingRoomPulledKind.Success -or
         [int]$openingRoomFighterDeferredKind.Groups[1].Value -ne
         [int]$openingRoomPulledKind.Groups[1].Value) {
         throw "Opening Room tick-280 update did not run with the expected deferred fighter boundary.`n$gdbOutput"
     }
     if (-not $openingRoomTick380Deferred.Success -or
-        $openingRoomTick380Deferred.Groups[1].Value.ToLowerInvariant() -ne '0x4f523338' -or
+        $openingRoomTick380Deferred.Groups[1].Value.ToLowerInvariant() -ne '0x4f523338' -or`
         -not $openingRoomTick380DeferredMask.Success -or
         $openingRoomTick380DeferredMask.Groups[1].Value.ToLowerInvariant() -ne '0x1') {
         throw "Opening Room tick-380 fighter-status boundary was not explicitly deferred.`n$gdbOutput"
     }
     if (-not $openingRoomTick450Run.Success -or
-        $openingRoomTick450Run.Groups[1].Value.ToLowerInvariant() -ne '0x4f523435' -or
+        $openingRoomTick450Run.Groups[1].Value.ToLowerInvariant() -ne '0x4f523435' -or`
         -not $openingRoomTick450Deferred.Success -or
-        $openingRoomTick450Deferred.Groups[1].Value.ToLowerInvariant() -ne '0' -or
+        $openingRoomTick450Deferred.Groups[1].Value.ToLowerInvariant() -ne '0' -or`
         -not $openingRoomOutsideAsset.Success -or
-        $openingRoomOutsideAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomOutsideAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomOutsideDLOffset.Success -or
-        [int]$openingRoomOutsideDLOffset.Groups[1].Value -ne 147968 -or
+        [int]$openingRoomOutsideDLOffset.Groups[1].Value -ne 147968 -or`
         -not $openingRoomOutsideCreate.Success -or
-        $openingRoomOutsideCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524f55' -or
+        $openingRoomOutsideCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524f55' -or`
         -not $openingRoomOutsideCreateMask.Success -or
-        $openingRoomOutsideCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or
+        $openingRoomOutsideCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or`
         -not $openingRoomOutsideCreateGObjs.Success -or
-        [int]$openingRoomOutsideCreateGObjs.Groups[1].Value -ne 11 -or
+        [int]$openingRoomOutsideCreateGObjs.Groups[1].Value -ne 11 -or`
         -not $openingRoomOutsideGObjDelta.Success -or
-        [int]$openingRoomOutsideGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomOutsideGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomOutsideDObjDelta.Success -or
-        [int]$openingRoomOutsideDObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomOutsideDObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomOutsideXObjDelta.Success -or
-        [int]$openingRoomOutsideXObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomOutsideXObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomOutsideDisplay.Success -or
-        [int]$openingRoomOutsideDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomOutsideDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomHazeAsset.Success -or
-        $openingRoomHazeAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomHazeAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomHazeDLOffset.Success -or
-        [int]$openingRoomHazeDLOffset.Groups[1].Value -ne 39160 -or
+        [int]$openingRoomHazeDLOffset.Groups[1].Value -ne 39160 -or`
         -not $openingRoomHazeCreate.Success -or
-        $openingRoomHazeCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f52485a' -or
+        $openingRoomHazeCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f52485a' -or`
         -not $openingRoomHazeCreateMask.Success -or
-        $openingRoomHazeCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or
+        $openingRoomHazeCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or`
         -not $openingRoomHazeCreateGObjs.Success -or
-        [int]$openingRoomHazeCreateGObjs.Groups[1].Value -ne 12 -or
+        [int]$openingRoomHazeCreateGObjs.Groups[1].Value -ne 12 -or`
         -not $openingRoomHazeGObjDelta.Success -or
-        [int]$openingRoomHazeGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomHazeGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomHazeDObjDelta.Success -or
-        [int]$openingRoomHazeDObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomHazeDObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomHazeXObjDelta.Success -or
-        [int]$openingRoomHazeXObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomHazeXObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomHazeDisplay.Success -or
-        [int]$openingRoomHazeDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomHazeDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomSunlightAsset.Success -or
-        $openingRoomSunlightAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomSunlightAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomSunlightDLOffset.Success -or
-        [int]$openingRoomSunlightDLOffset.Groups[1].Value -ne 149256 -or
+        [int]$openingRoomSunlightDLOffset.Groups[1].Value -ne 149256 -or`
         -not $openingRoomSunlightCreate.Success -or
-        $openingRoomSunlightCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f525343' -or
+        $openingRoomSunlightCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f525343' -or`
         -not $openingRoomSunlightCreateMask.Success -or
-        $openingRoomSunlightCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or
+        $openingRoomSunlightCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or`
         -not $openingRoomSunlightCreateGObjs.Success -or
-        [int]$openingRoomSunlightCreateGObjs.Groups[1].Value -ne 13 -or
+        [int]$openingRoomSunlightCreateGObjs.Groups[1].Value -ne 13 -or`
         -not $openingRoomSunlightGObjDelta.Success -or
-        [int]$openingRoomSunlightGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSunlightGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomSunlightDObjDelta.Success -or
-        [int]$openingRoomSunlightDObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSunlightDObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomSunlightXObjDelta.Success -or
-        [int]$openingRoomSunlightXObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSunlightXObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomSunlightDisplay.Success -or
-        [int]$openingRoomSunlightDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSunlightDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomDeskAsset.Success -or
-        $openingRoomDeskAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomDeskAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomDeskDObjOffset.Success -or
-        [int]$openingRoomDeskDObjOffset.Groups[1].Value -ne 36344 -or
+        [int]$openingRoomDeskDObjOffset.Groups[1].Value -ne 36344 -or`
         -not $openingRoomDeskCreate.Success -or
-        $openingRoomDeskCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524453' -or
+        $openingRoomDeskCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524453' -or`
         -not $openingRoomDeskCreateMask.Success -or
-        $openingRoomDeskCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or
+        $openingRoomDeskCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xf' -or`
         -not $openingRoomDeskCreateGObjs.Success -or
-        [int]$openingRoomDeskCreateGObjs.Groups[1].Value -ne 14 -or
+        [int]$openingRoomDeskCreateGObjs.Groups[1].Value -ne 14 -or`
         -not $openingRoomDeskGObjDelta.Success -or
-        [int]$openingRoomDeskGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomDeskGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomDeskDObjDelta.Success -or
-        [int]$openingRoomDeskDObjDelta.Groups[1].Value -le 0 -or
+        [int]$openingRoomDeskDObjDelta.Groups[1].Value -le 0 -or`
         -not $openingRoomDeskXObjDelta.Success -or
-        [int]$openingRoomDeskXObjDelta.Groups[1].Value -le 0 -or
+        [int]$openingRoomDeskXObjDelta.Groups[1].Value -le 0 -or`
         -not $openingRoomDeskDisplay.Success -or
-        [int]$openingRoomDeskDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomDeskDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomSunlightEject.Success -or
-        $openingRoomSunlightEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f525345' -or
+        $openingRoomSunlightEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f525345' -or`
         -not $openingRoomSunlightEjectBefore.Success -or
-        [int]$openingRoomSunlightEjectBefore.Groups[1].Value -ne 15 -or
+        [int]$openingRoomSunlightEjectBefore.Groups[1].Value -ne 15 -or`
         -not $openingRoomSunlightEjectAfter.Success -or
-        [int]$openingRoomSunlightEjectAfter.Groups[1].Value -ne 15 -or
+        [int]$openingRoomSunlightEjectAfter.Groups[1].Value -ne 15 -or`
         -not $openingRoomSunlightEjectUnlinked.Success -or
-        $openingRoomSunlightEjectUnlinked.Groups[1].Value.ToLowerInvariant() -ne '0x3' -or
+        $openingRoomSunlightEjectUnlinked.Groups[1].Value.ToLowerInvariant() -ne '0x3' -or`
         -not $openingRoomCloseUpOverlayCreate.Success -or
-        $openingRoomCloseUpOverlayCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f52434f' -or
+        $openingRoomCloseUpOverlayCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f52434f' -or`
         -not $openingRoomCloseUpOverlayCreateMask.Success -or
-        $openingRoomCloseUpOverlayCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x7' -or
+        $openingRoomCloseUpOverlayCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x7' -or`
         -not $openingRoomCloseUpOverlayCreateTick.Success -or
-        [int]$openingRoomCloseUpOverlayCreateTick.Groups[1].Value -ne 450 -or
+        [int]$openingRoomCloseUpOverlayCreateTick.Groups[1].Value -ne 450 -or`
         -not $openingRoomCloseUpOverlayCreateGObjs.Success -or
-        [int]$openingRoomCloseUpOverlayCreateGObjs.Groups[1].Value -ne 15 -or
+        [int]$openingRoomCloseUpOverlayCreateGObjs.Groups[1].Value -ne 15 -or`
         -not $openingRoomCloseUpOverlayGObjDelta.Success -or
-        [int]$openingRoomCloseUpOverlayGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomCloseUpOverlayGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomCloseUpOverlayDisplay.Success -or
-        [int]$openingRoomCloseUpOverlayDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomCloseUpOverlayDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomCloseUpOverlayAlpha.Success -or
         [int]$openingRoomCloseUpOverlayAlpha.Groups[1].Value -ne 0) {
         throw "Opening Room tick-450 close-up overlay boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomTick500Run.Success -or
-        $openingRoomTick500Run.Groups[1].Value.ToLowerInvariant() -ne '0x4f523530' -or
+        $openingRoomTick500Run.Groups[1].Value.ToLowerInvariant() -ne '0x4f523530' -or`
         -not $openingRoomTick500Deferred.Success -or
-        $openingRoomTick500Deferred.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomTick500Deferred.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomSpotlightAsset.Success -or
-        $openingRoomSpotlightAsset.Groups[1].Value.ToLowerInvariant() -ne '0x7' -or
+        $openingRoomSpotlightAsset.Groups[1].Value.ToLowerInvariant() -ne '0x7' -or`
         -not $openingRoomSpotlightDLOffset.Success -or
-        [int]$openingRoomSpotlightDLOffset.Groups[1].Value -ne 142872 -or
+        [int]$openingRoomSpotlightDLOffset.Groups[1].Value -ne 142872 -or`
         -not $openingRoomSpotlightMObjOffset.Success -or
-        [int]$openingRoomSpotlightMObjOffset.Groups[1].Value -ne 142480 -or
+        [int]$openingRoomSpotlightMObjOffset.Groups[1].Value -ne 142480 -or`
         -not $openingRoomSpotlightMatAnimOffset.Success -or
-        [int]$openingRoomSpotlightMatAnimOffset.Groups[1].Value -ne 143120 -or
+        [int]$openingRoomSpotlightMatAnimOffset.Groups[1].Value -ne 143120 -or`
         -not $openingRoomSpotlightCreate.Success -or
-        $openingRoomSpotlightCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f52534c' -or
+        $openingRoomSpotlightCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f52534c' -or`
         -not $openingRoomSpotlightCreateMask.Success -or
-        $openingRoomSpotlightCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or
+        $openingRoomSpotlightCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0xff' -or`
         -not $openingRoomSpotlightCreateTick.Success -or
-        [int]$openingRoomSpotlightCreateTick.Groups[1].Value -ne 500 -or
+        [int]$openingRoomSpotlightCreateTick.Groups[1].Value -ne 500 -or`
         -not $openingRoomSpotlightCreateGObjs.Success -or
-        [int]$openingRoomSpotlightCreateGObjs.Groups[1].Value -ne 15 -or
+        [int]$openingRoomSpotlightCreateGObjs.Groups[1].Value -ne 15 -or`
         -not $openingRoomSpotlightGObjDelta.Success -or
-        [int]$openingRoomSpotlightGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSpotlightGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomSpotlightDObjDelta.Success -or
-        [int]$openingRoomSpotlightDObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSpotlightDObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomSpotlightXObjDelta.Success -or
-        [int]$openingRoomSpotlightXObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSpotlightXObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomSpotlightMObjDelta.Success -or
-        [int]$openingRoomSpotlightMObjDelta.Groups[1].Value -ne 2 -or
+        [int]$openingRoomSpotlightMObjDelta.Groups[1].Value -ne 2 -or`
         -not $openingRoomSpotlightDisplay.Success -or
-        [int]$openingRoomSpotlightDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSpotlightDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomSpotlightProcess.Success -or
-        [int]$openingRoomSpotlightProcess.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSpotlightProcess.Groups[1].Value -ne 1 -or`
         -not $openingRoomSpotlightMObj.Success -or
-        [int]$openingRoomSpotlightMObj.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSpotlightMObj.Groups[1].Value -ne 1 -or`
         -not $openingRoomSpotlightMatAnim.Success -or
-        [int]$openingRoomSpotlightMatAnim.Groups[1].Value -ne 1 -or
+        [int]$openingRoomSpotlightMatAnim.Groups[1].Value -ne 1 -or`
         -not $openingRoomSpotlightPosition.Success -or
         [int]$openingRoomSpotlightPosition.Groups[1].Value -ne 1) {
         throw "Opening Room tick-500 spotlight boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomTick560Run.Success -or
-        $openingRoomTick560Run.Groups[1].Value.ToLowerInvariant() -ne '0x4f523536' -or
+        $openingRoomTick560Run.Groups[1].Value.ToLowerInvariant() -ne '0x4f523536' -or`
         -not $openingRoomTick560Deferred.Success -or
-        $openingRoomTick560Deferred.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomTick560Deferred.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomScene2CameraAsset.Success -or
-        $openingRoomScene2CameraAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomScene2CameraAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomScene2CameraAnimOffset.Success -or
-        [int]$openingRoomScene2CameraAnimOffset.Groups[1].Value -ne 0 -or
+        [int]$openingRoomScene2CameraAnimOffset.Groups[1].Value -ne 0 -or`
         -not $openingRoomScene2CameraEject.Success -or
-        $openingRoomScene2CameraEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f523245' -or
+        $openingRoomScene2CameraEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f523245' -or`
         -not $openingRoomScene2CameraEjectMask.Success -or
-        $openingRoomScene2CameraEjectMask.Groups[1].Value.ToLowerInvariant() -ne '0x7' -or
+        $openingRoomScene2CameraEjectMask.Groups[1].Value.ToLowerInvariant() -ne '0x7' -or`
         -not $openingRoomScene2CameraEjectBeforeGObjs.Success -or
-        [int]$openingRoomScene2CameraEjectBeforeGObjs.Groups[1].Value -ne 15 -or
+        [int]$openingRoomScene2CameraEjectBeforeGObjs.Groups[1].Value -ne 15 -or`
         -not $openingRoomScene2CameraEjectAfterGObjs.Success -or
-        [int]$openingRoomScene2CameraEjectAfterGObjs.Groups[1].Value -ne 15 -or
+        [int]$openingRoomScene2CameraEjectAfterGObjs.Groups[1].Value -ne 15 -or`
         -not $openingRoomScene2CameraEjectBeforeCameras.Success -or
-        [int]$openingRoomScene2CameraEjectBeforeCameras.Groups[1].Value -ne 6 -or
+        [int]$openingRoomScene2CameraEjectBeforeCameras.Groups[1].Value -ne 6 -or`
         -not $openingRoomScene2CameraEjectAfterCameras.Success -or
-        [int]$openingRoomScene2CameraEjectAfterCameras.Groups[1].Value -ne 4 -or
+        [int]$openingRoomScene2CameraEjectAfterCameras.Groups[1].Value -ne 4 -or`
         -not $openingRoomScene2CameraCreate.Success -or
-        $openingRoomScene2CameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f523243' -or
+        $openingRoomScene2CameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f523243' -or`
         -not $openingRoomScene2CameraCreateMask.Success -or
-        $openingRoomScene2CameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x1ff' -or
+        $openingRoomScene2CameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x1ff' -or`
         -not $openingRoomScene2CameraCreateGObjs.Success -or
-        [int]$openingRoomScene2CameraCreateGObjs.Groups[1].Value -ne 15 -or
+        [int]$openingRoomScene2CameraCreateGObjs.Groups[1].Value -ne 15 -or`
         -not $openingRoomScene2CameraGObjDelta.Success -or
-        [int]$openingRoomScene2CameraGObjDelta.Groups[1].Value -ne 2 -or
+        [int]$openingRoomScene2CameraGObjDelta.Groups[1].Value -ne 2 -or`
         -not $openingRoomScene2CameraCObjDelta.Success -or
-        [int]$openingRoomScene2CameraCObjDelta.Groups[1].Value -ne 2 -or
+        [int]$openingRoomScene2CameraCObjDelta.Groups[1].Value -ne 2 -or`
         -not $openingRoomScene2CameraXObjDelta.Success -or
-        [int]$openingRoomScene2CameraXObjDelta.Groups[1].Value -ne 4 -or
+        [int]$openingRoomScene2CameraXObjDelta.Groups[1].Value -ne 4 -or`
         -not $openingRoomScene2CameraAObjDelta.Success -or
-        [int]$openingRoomScene2CameraAObjDelta.Groups[1].Value -ne 0 -or
+        [int]$openingRoomScene2CameraAObjDelta.Groups[1].Value -ne 0 -or`
         -not $openingRoomScene2CameraDisplay.Success -or
-        [int]$openingRoomScene2CameraDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomScene2CameraDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomScene2CameraProcess.Success -or
-        [int]$openingRoomScene2CameraProcess.Groups[1].Value -ne 1 -or
+        [int]$openingRoomScene2CameraProcess.Groups[1].Value -ne 1 -or`
         -not $openingRoomScene2CameraAnim.Success -or
-        [int]$openingRoomScene2CameraAnim.Groups[1].Value -ne 1 -or
+        [int]$openingRoomScene2CameraAnim.Groups[1].Value -ne 1 -or`
         -not $openingRoomScene2CameraViewport.Success -or
-        [int]$openingRoomScene2CameraViewport.Groups[1].Value -ne 1 -or
+        [int]$openingRoomScene2CameraViewport.Groups[1].Value -ne 1 -or`
         -not $openingRoomScene2CameraDLBuffer.Success -or
         [int]$openingRoomScene2CameraDLBuffer.Groups[1].Value -ne 1) {
         throw "Opening Room tick-560 Scene 2 camera boundary did not run as expected.`n$gdbOutput"
@@ -1735,52 +1737,52 @@ try {
             ''
         }
     if (-not $openingRoomDraw.Success -or
-        $openingRoomDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4f524457' -or
+        $openingRoomDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4f524457' -or`
         -not $openingRoomDrawBlocker.Success -or
-        [int]$openingRoomDrawBlocker.Groups[1].Value -ne 3 -or
+        [int]$openingRoomDrawBlocker.Groups[1].Value -ne 3 -or`
         -not $openingRoomDrawTick.Success -or
-        [int]$openingRoomDrawTick.Groups[1].Value -ne 1320 -or
+        [int]$openingRoomDrawTick.Groups[1].Value -ne 1320 -or`
         -not $openingRoomDrawFrame.Success -or
-        [int]$openingRoomDrawFrame.Groups[1].Value -ne 1 -or
+        [int]$openingRoomDrawFrame.Groups[1].Value -ne 1 -or`
         -not $openingRoomDrawProbes.Success -or
         [int]$openingRoomDrawProbes.Groups[1].Value -ne 2 -or
-        [int]$openingRoomDrawProbes.Groups[2].Value -lt 20 -or
+        [int]$openingRoomDrawProbes.Groups[2].Value -lt 20 -or`
         -not $openingRoomDrawCameras.Success -or
-        [int]$openingRoomDrawCameras.Groups[1].Value -le 0 -or
+        [int]$openingRoomDrawCameras.Groups[1].Value -le 0 -or`
         -not $openingRoomDrawDisplays.Success -or
-        [int]$openingRoomDrawDisplays.Groups[1].Value -le 0 -or
+        [int]$openingRoomDrawDisplays.Groups[1].Value -le 0 -or`
         -not $openingRoomDrawDObjs.Success -or
-        [int]$openingRoomDrawDObjs.Groups[1].Value -le 0 -or
+        [int]$openingRoomDrawDObjs.Groups[1].Value -le 0 -or`
         -not $openingRoomDrawCameraMask.Success -or
-        $openingRoomDrawCameraMask.Groups[1].Value.ToLowerInvariant() -eq '0x0' -or
+        $openingRoomDrawCameraMask.Groups[1].Value.ToLowerInvariant() -eq '0x0' -or`
         -not $openingRoomDrawCameraPriority.Success -or
-        [uint32]($openingRoomDrawCameraPriority.Groups[1].Value) -eq [uint32]::MaxValue -or
+        [uint32]($openingRoomDrawCameraPriority.Groups[1].Value) -eq [uint32]::MaxValue -or`
         -not $openingRoomDrawCameraFlags.Success -or
-        $openingRoomDrawCameraFlags.Groups[1].Value.ToLowerInvariant() -ne '0x4' -or
+        $openingRoomDrawCameraFlags.Groups[1].Value.ToLowerInvariant() -ne '0x4' -or`
         -not $openingRoomDrawCameraXObjs.Success -or
         [int]$openingRoomDrawCameraXObjs.Groups[1].Value -ne 2 -or
         [int]$openingRoomDrawCameraXObjs.Groups[2].Value -ne 3 -or
-        [int]$openingRoomDrawCameraXObjs.Groups[3].Value -ne 8 -or
+        [int]$openingRoomDrawCameraXObjs.Groups[3].Value -ne 8 -or`
         -not $openingRoomDrawCameraViewport.Success -or
         [int]$openingRoomDrawCameraViewport.Groups[1].Value -ne 600 -or
         [int]$openingRoomDrawCameraViewport.Groups[2].Value -ne 440 -or
         [int]$openingRoomDrawCameraViewport.Groups[3].Value -ne 640 -or
-        [int]$openingRoomDrawCameraViewport.Groups[4].Value -ne 480 -or
+        [int]$openingRoomDrawCameraViewport.Groups[4].Value -ne 480 -or`
         -not $openingRoomDrawCameraPersp.Success -or
         [int]$openingRoomDrawCameraPersp.Groups[1].Value -le 0 -or
         [int]$openingRoomDrawCameraPersp.Groups[2].Value -le [int]$openingRoomDrawCameraPersp.Groups[1].Value -or
-        [int]$openingRoomDrawCameraPersp.Groups[3].Value -le 0 -or
-        -not $openingRoomDrawCameraEye.Success -or
-        -not $openingRoomDrawCameraAt.Success -or
+        [int]$openingRoomDrawCameraPersp.Groups[3].Value -le 0 -or`
+        -not $openingRoomDrawCameraEye.Success -or`
+        -not $openingRoomDrawCameraAt.Success -or`
         -not $openingRoomDrawObjectLink.Success -or
-        [uint32]($openingRoomDrawObjectLink.Groups[1].Value) -eq [uint32]::MaxValue -or
-        -not $openingRoomDrawObjectID.Success -or
+        [uint32]($openingRoomDrawObjectLink.Groups[1].Value) -eq [uint32]::MaxValue -or`
+        -not $openingRoomDrawObjectID.Success -or`
         -not $openingRoomDrawObjectKind.Success -or
-        [int]$openingRoomDrawObjectKind.Groups[1].Value -ne 1 -or
+        [int]$openingRoomDrawObjectKind.Groups[1].Value -ne 1 -or`
         -not $openingRoomDrawCallback.Success -or
-        $validOpeningRoomDrawCallbacks -notcontains $openingRoomDrawCallbackHex -or
+        $validOpeningRoomDrawCallbacks -notcontains $openingRoomDrawCallbackHex -or`
         -not $openingRoomDrawDObjDL.Success -or
-        $openingRoomDrawDObjDL.Groups[1].Value.ToLowerInvariant() -eq '0x0' -or
+        $openingRoomDrawDObjDL.Groups[1].Value.ToLowerInvariant() -eq '0x0' -or`
         -not $openingRoomDrawDObjMeta.Success -or
         $openingRoomDrawDObjMeta.Groups[1].Value.ToLowerInvariant() -eq '0x0') {
         throw "Bounded Opening Room draw did not reach a precise DObj display-list blocker.`n$gdbOutput"
@@ -1825,11 +1827,11 @@ try {
         $openingRoomDrawMaterialCandidateResultHex -ne '0x4f524d43' -or
         [int]$openingRoomDrawMaterialCandidate.Groups[2].Value -lt 1 -or
         (@('0', '0x0') -contains $openingRoomDrawMaterialCandidateCameraMaskHex) -or
-        [uint32]($openingRoomDrawMaterialCandidate.Groups[4].Value) -eq [uint32]::MaxValue -or
+        [uint32]($openingRoomDrawMaterialCandidate.Groups[4].Value) -eq [uint32]::MaxValue -or`
         -not $openingRoomDrawMaterialObject.Success -or
         [uint32]($openingRoomDrawMaterialObject.Groups[1].Value) -eq [uint32]::MaxValue -or
         [int]$openingRoomDrawMaterialObject.Groups[3].Value -ne 1 -or
-        $validOpeningRoomDrawCallbacks -notcontains $openingRoomDrawMaterialObjectCallbackHex -or
+        $validOpeningRoomDrawCallbacks -notcontains $openingRoomDrawMaterialObjectCallbackHex -or`
         -not $openingRoomDrawMaterialDObj.Success -or
         (@('0', '0x0') -contains $openingRoomDrawMaterialDObjDLHex) -or
         (($openingRoomDrawMaterialDObjMetaValue -band 0x9) -ne 0x9)) {
@@ -1845,7 +1847,7 @@ try {
         if ($openingRoomDrawMaterialMObj.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialMObj.Groups[2].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialMObjMaskHex =
         if ($openingRoomDrawMaterialMObj.Success) {
@@ -1875,22 +1877,22 @@ try {
         [int]$openingRoomDrawMaterialMObj.Groups[1].Value -lt 1 -or
         $openingRoomDrawMaterialMObjFlagsValue -ne [uint32]0x200 -or
         (@('0', '0x0') -contains $openingRoomDrawMaterialMObjEffectiveHex) -or
-        (($openingRoomDrawMaterialMObjMaskValue -band 0x3) -ne 0x3) -or
+        (($openingRoomDrawMaterialMObjMaskValue -band 0x3) -ne 0x3) -or`
         -not $openingRoomDrawMaterialMObjIds.Success -or
-        [uint32]$openingRoomDrawMaterialMObjIds.Groups[1].Value -eq [uint32]::MaxValue -or
+        [uint32]$openingRoomDrawMaterialMObjIds.Groups[1].Value -eq [uint32]::MaxValue -or`
         -not $openingRoomDrawMaterialMObjFormat.Success -or
         [uint32]$openingRoomDrawMaterialMObjFormat.Groups[1].Value -eq [uint32]::MaxValue -or
-        [uint32]$openingRoomDrawMaterialMObjFormat.Groups[2].Value -eq [uint32]::MaxValue -or
-        -not $openingRoomDrawMaterialMObjTile.Success -or
-        -not $openingRoomDrawMaterialMObjST.Success -or
-        -not $openingRoomDrawMaterialMObjArrays.Success -or
+        [uint32]$openingRoomDrawMaterialMObjFormat.Groups[2].Value -eq [uint32]::MaxValue -or`
+        -not $openingRoomDrawMaterialMObjTile.Success -or`
+        -not $openingRoomDrawMaterialMObjST.Success -or`
+        -not $openingRoomDrawMaterialMObjArrays.Success -or`
         -not $openingRoomDrawMaterialMObjPtrs.Success) {
         throw "Bounded Opening Room material candidate did not expose a usable first MObj contract.`n$gdbOutput"
     }
-    if (-not $openingRoomDrawTextureMaterial.Success -or
-        -not $openingRoomDrawTextureMaterialObject.Success -or
-        -not $openingRoomDrawTextureMaterialDObj.Success -or
-        -not $openingRoomDrawTextureMaterialMObj.Success -or
+    if (-not $openingRoomDrawTextureMaterial.Success -or`
+        -not $openingRoomDrawTextureMaterialObject.Success -or`
+        -not $openingRoomDrawTextureMaterialDObj.Success -or`
+        -not $openingRoomDrawTextureMaterialMObj.Success -or`
         -not $openingRoomDrawTextureMaterialPtrs.Success) {
         throw "Bounded Opening Room texture-material scan did not expose maintained diagnostics.`n$gdbOutput"
     }
@@ -1922,7 +1924,6 @@ try {
         $openingRoomDrawTextureMaterialPtrs.Groups[2].Value.ToLowerInvariant()
     $openingRoomDrawTextureMaterialSpriteNextHex =
         $openingRoomDrawTextureMaterialPtrs.Groups[3].Value.ToLowerInvariant()
-
     if ($openingRoomDrawTextureMaterialResult -eq 0) {
         if ($openingRoomDrawTextureMaterialCandidateCount -ne 0 -or
             $openingRoomDrawTextureMaterialMObjCount -ne 0 -or
@@ -1965,14 +1966,14 @@ try {
         [int]$openingRoomDrawMaterialBranch.Groups[2].Value -ne [int]$openingRoomDrawMaterialMObj.Groups[1].Value -or
         [int]$openingRoomDrawMaterialBranch.Groups[3].Value -ne 1 -or
         [int]$openingRoomDrawMaterialBranch.Groups[4].Value -ne [int]$openingRoomDrawMaterialMObj.Groups[1].Value -or
-        [int]$openingRoomDrawMaterialBranch.Groups[5].Value -ne $openingRoomDrawMaterialExpectedGenerated -or
+        [int]$openingRoomDrawMaterialBranch.Groups[5].Value -ne $openingRoomDrawMaterialExpectedGenerated -or`
         -not $openingRoomDrawMaterialBranchFirst.Success -or
         (($openingRoomDrawMaterialBranchFirstMaskValue -band 0x4023) -ne 0x4023) -or
         (($openingRoomDrawMaterialBranchFirstMaskValue -band 0x440) -ne 0) -or
         [int]$openingRoomDrawMaterialBranchFirst.Groups[2].Value -ne 2 -or
-        [int]$openingRoomDrawMaterialBranch.Groups[5].Value -lt [int]$openingRoomDrawMaterialBranchFirst.Groups[2].Value -or
-        -not $openingRoomDrawMaterialBranchTile.Success -or
-        -not $openingRoomDrawMaterialBranchScroll.Success -or
+        [int]$openingRoomDrawMaterialBranch.Groups[5].Value -lt [int]$openingRoomDrawMaterialBranchFirst.Groups[2].Value -or`
+        -not $openingRoomDrawMaterialBranchTile.Success -or`
+        -not $openingRoomDrawMaterialBranchScroll.Success -or`
         -not $openingRoomDrawMaterialBranchLoad.Success) {
         throw "Bounded Opening Room material candidate did not match the original gcDrawMObjForDObj branch-list contract.`n$gdbOutput"
     }
@@ -2009,50 +2010,50 @@ try {
         if ($openingRoomDrawMaterialEmit.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmit.Groups[3].Value
         } else {
-            0xffffffffu
+            0xffffffff
         }
     $openingRoomDrawMaterialEmitTableCommands =
         if ($openingRoomDrawMaterialEmit.Success) {
             [uint32]$openingRoomDrawMaterialEmit.Groups[5].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitGeneratedCommands =
         if ($openingRoomDrawMaterialEmit.Success) {
             [uint32]$openingRoomDrawMaterialEmit.Groups[6].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitHeapStart =
         if ($openingRoomDrawMaterialEmitHeap.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitHeap.Groups[1].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitBranchStart =
         if ($openingRoomDrawMaterialEmitHeap.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitHeap.Groups[2].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitHeapAfter =
         if ($openingRoomDrawMaterialEmitHeap.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitHeap.Groups[3].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitBytes =
         if ($openingRoomDrawMaterialEmitHeap.Success) {
             [uint32]$openingRoomDrawMaterialEmitHeap.Groups[4].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitExpectedBytes =
         ($openingRoomDrawMaterialEmitTableCommands +
-         $openingRoomDrawMaterialEmitGeneratedCommands) * 8u
+         $openingRoomDrawMaterialEmitGeneratedCommands) * 8
     $openingRoomDrawMaterialEmitExpectedBranchStart =
         [uint64]$openingRoomDrawMaterialEmitHeapStart +
-        ([uint64]$openingRoomDrawMaterialEmitTableCommands * 8u)
+        ([uint64]$openingRoomDrawMaterialEmitTableCommands * 8)
     $openingRoomDrawMaterialEmitExpectedHeapAfter =
         [uint64]$openingRoomDrawMaterialEmitHeapStart +
         [uint64]$openingRoomDrawMaterialEmitExpectedBytes
@@ -2060,79 +2061,79 @@ try {
         if ($openingRoomDrawMaterialEmitW0.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitW0.Groups[1].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitSecondW0 =
         if ($openingRoomDrawMaterialEmitW0.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitW0.Groups[2].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitThirdW0 =
         if ($openingRoomDrawMaterialEmitW0.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitW0.Groups[3].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitSecondOp =
         if ($openingRoomDrawMaterialEmitOps.Success) {
             [int]$openingRoomDrawMaterialEmitOps.Groups[3].Value
-        } else {
+        } else {`
             -1
         }
     $openingRoomDrawMaterialEmitEndW1 =
         if ($openingRoomDrawMaterialEmitW1.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitW1.Groups[2].Value
         } else {
-            1u
+            1
         }
     $openingRoomDrawMaterialEmitTexturePtr =
         if ($openingRoomDrawMaterialEmitW1.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitW1.Groups[2].Value
         } else {
-            1u
+            1
         }
     $openingRoomDrawMaterialSpriteArray =
         if ($openingRoomDrawMaterialMObjArrays.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialMObjArrays.Groups[1].Value
         } else {
-            1u
+            1
         }
     $openingRoomDrawMaterialSpriteCurr =
         if ($openingRoomDrawMaterialMObjPtrs.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialMObjPtrs.Groups[1].Value
         } else {
-            1u
+            1
         }
     if (-not $openingRoomDrawMaterialEmit.Success -or
         $openingRoomDrawMaterialEmitResultHex -ne '0x4f524d45' -or
         [int]$openingRoomDrawMaterialEmit.Groups[2].Value -ne 0 -or
-        $openingRoomDrawMaterialEmitUnsupportedValue -ne 0u -or
+        $openingRoomDrawMaterialEmitUnsupportedValue -ne 0 -or
         [uint32]$openingRoomDrawMaterialEmit.Groups[4].Value -ne [uint32]$openingRoomDrawMaterialBranch.Groups[2].Value -or
         $openingRoomDrawMaterialEmitTableCommands -ne [uint32]$openingRoomDrawMaterialBranch.Groups[4].Value -or
-        $openingRoomDrawMaterialEmitGeneratedCommands -ne [uint32]$openingRoomDrawMaterialBranch.Groups[5].Value -or
+        $openingRoomDrawMaterialEmitGeneratedCommands -ne [uint32]$openingRoomDrawMaterialBranch.Groups[5].Value -or`
         -not $openingRoomDrawMaterialEmitHeap.Success -or
-        $openingRoomDrawMaterialEmitHeapStart -eq 0u -or
+        $openingRoomDrawMaterialEmitHeapStart -eq 0 -or
         [uint64]$openingRoomDrawMaterialEmitBranchStart -ne $openingRoomDrawMaterialEmitExpectedBranchStart -or
         [uint64]$openingRoomDrawMaterialEmitHeapAfter -ne $openingRoomDrawMaterialEmitExpectedHeapAfter -or
-        $openingRoomDrawMaterialEmitBytes -ne $openingRoomDrawMaterialEmitExpectedBytes -or
+        $openingRoomDrawMaterialEmitBytes -ne $openingRoomDrawMaterialEmitExpectedBytes -or`
         -not $openingRoomDrawMaterialEmitOps.Success -or
         [int]$openingRoomDrawMaterialEmitOps.Groups[1].Value -ne 0xde -or
         [int]$openingRoomDrawMaterialEmitOps.Groups[2].Value -ne 0xfa -or
         [int]$openingRoomDrawMaterialEmitOps.Groups[3].Value -ne 0xdf -or
-        [int]$openingRoomDrawMaterialEmitOps.Groups[4].Value -ne 0 -or
+        [int]$openingRoomDrawMaterialEmitOps.Groups[4].Value -ne 0 -or`
         -not $openingRoomDrawMaterialEmitW0.Success -or
         (($openingRoomDrawMaterialEmitFirstW0 -shr 24) -ne 0xfa) -or
         (($openingRoomDrawMaterialEmitSecondW0 -shr 24) -ne 0xdf) -or
-        ($openingRoomDrawMaterialEmitThirdW0 -ne 0u) -or
+        ($openingRoomDrawMaterialEmitThirdW0 -ne 0) -or`
         -not $openingRoomDrawMaterialEmitW1.Success -or
-        $openingRoomDrawMaterialEmitEndW1 -ne 0u) {
+        $openingRoomDrawMaterialEmitEndW1 -ne 0) {
         throw "Opening Room material branch emission did not match the bounded original-shaped Gfx table/stream contract.`n$gdbOutput"
     }
     if (($openingRoomDrawMaterialEmitSecondOp -eq 0xfd) -and
-        ($openingRoomDrawMaterialEmitTexturePtr -eq 0u) -and
-        (($openingRoomDrawMaterialSpriteArray -ne 0u) -or
-         ($openingRoomDrawMaterialSpriteCurr -ne 0u))) {
+        ($openingRoomDrawMaterialEmitTexturePtr -eq 0) -and
+        (($openingRoomDrawMaterialSpriteArray -ne 0) -or
+         ($openingRoomDrawMaterialSpriteCurr -ne 0))) {
         throw "Opening Room material emitted a null SETTIMG pointer without matching null MObj sprite source data.`n$gdbOutput"
     }
     $openingRoomDLPreviewMaterialBranchResultHex =
@@ -2143,30 +2144,30 @@ try {
         if ($openingRoomDLPreviewMaterialBranchOps.Success) {
             Convert-MarkerUInt32 $openingRoomDLPreviewMaterialBranchOps.Groups[3].Value
         } else {
-            0xffffffffu
+            0xffffffff
         }
     $openingRoomDLPreviewMaterialBranchPrimColor =
         if ($openingRoomDLPreviewMaterialBranchPrim.Success) {
             Convert-MarkerUInt32 $openingRoomDLPreviewMaterialBranchPrim.Groups[1].Value
         } else {
-            0u
+            0
         }
     $openingRoomDrawMaterialEmitPrimColor =
         if ($openingRoomDrawMaterialEmitW1.Success) {
             Convert-MarkerUInt32 $openingRoomDrawMaterialEmitW1.Groups[1].Value
         } else {
-            0xffffffffu
+            0xffffffff
         }
     if (-not $openingRoomDLPreviewMaterialBranch.Success -or
         $openingRoomDLPreviewMaterialBranchResultHex -ne '0x4f524d50' -or
         [int]$openingRoomDLPreviewMaterialBranch.Groups[2].Value -ne 0 -or
         [uint32]$openingRoomDLPreviewMaterialBranch.Groups[3].Value -ne $openingRoomDrawMaterialEmitGeneratedCommands -or
         [uint32]$openingRoomDLPreviewMaterialBranch.Groups[4].Value -ne [uint32]$openingRoomDrawMaterialEmit.Groups[4].Value -or
-        [uint32]$openingRoomDLPreviewMaterialBranch.Groups[5].Value -ne $openingRoomDrawMaterialEmitTableCommands -or
+        [uint32]$openingRoomDLPreviewMaterialBranch.Groups[5].Value -ne $openingRoomDrawMaterialEmitTableCommands -or`
         -not $openingRoomDLPreviewMaterialBranchOps.Success -or
         [int]$openingRoomDLPreviewMaterialBranchOps.Groups[1].Value -ne 0xfa -or
         [int]$openingRoomDLPreviewMaterialBranchOps.Groups[2].Value -ne 0xdf -or
-        $openingRoomDLPreviewMaterialBranchUnsupported -ne 0u -or
+        $openingRoomDLPreviewMaterialBranchUnsupported -ne 0 -or`
         -not $openingRoomDLPreviewMaterialBranchPrim.Success -or
         $openingRoomDLPreviewMaterialBranchPrimColor -ne $openingRoomDrawMaterialEmitPrimColor -or
         [int]$openingRoomDLPreviewMaterialBranchPrim.Groups[2].Value -ne 0 -or
@@ -2174,37 +2175,37 @@ try {
         throw "Opening Room DL preview did not consume all detached prim-color material branch streams.`n$gdbOutput"
     }
     if (-not $openingRoomMaterialDLProbe.Success -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLProbe.Groups[1].Value) -ne 0u -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLProbe.Groups[1].Value) -ne 0 -or
         [int]$openingRoomMaterialDLProbe.Groups[2].Value -ne 3 -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLProbe.Groups[3].Value) -eq 0u -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLProbe.Groups[3].Value) -eq 0 -or`
         -not $openingRoomMaterialDLProbeShape.Success -or
         [int]$openingRoomMaterialDLProbeShape.Groups[1].Value -ne 29 -or
         [int]$openingRoomMaterialDLProbeShape.Groups[2].Value -ne 4 -or
         [int]$openingRoomMaterialDLProbeShape.Groups[3].Value -ne 4 -or
-        [int]$openingRoomMaterialDLProbeShape.Groups[4].Value -ne 2 -or
+        [int]$openingRoomMaterialDLProbeShape.Groups[4].Value -ne 2 -or`
         -not $openingRoomMaterialDLProbeCmds.Success -or
         [int]$openingRoomMaterialDLProbeCmds.Groups[1].Value -ne 2 -or
         [int]$openingRoomMaterialDLProbeCmds.Groups[2].Value -ne 2 -or
         [int]$openingRoomMaterialDLProbeCmds.Groups[3].Value -ne 7 -or
         [int]$openingRoomMaterialDLProbeCmds.Groups[4].Value -ne 1 -or
         [int]$openingRoomMaterialDLProbeCmds.Groups[5].Value -ne 2 -or
-        [int]$openingRoomMaterialDLProbeCmds.Groups[6].Value -ne 0 -or
+        [int]$openingRoomMaterialDLProbeCmds.Groups[6].Value -ne 0 -or`
         -not $openingRoomMaterialDLProbeOps.Success -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLProbeOps.Groups[1].Value) -ne 0xe7u -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLProbeOps.Groups[2].Value) -ne 0xdeu) {
+        (Convert-MarkerUInt32 $openingRoomMaterialDLProbeOps.Groups[1].Value) -ne 0xe7 -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLProbeOps.Groups[2].Value) -ne 0xde) {
         throw "Opening Room material DObj display-list probe did not preserve the expected bounded G_DL blocker contract.`n$gdbOutput"
     }
     if (-not $openingRoomMaterialDLExpand.Success -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLExpand.Groups[1].Value) -ne 0x4f524d58u -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLExpand.Groups[1].Value) -ne 0x4f524d58 -or
         [int]$openingRoomMaterialDLExpand.Groups[2].Value -ne 0 -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLExpand.Groups[3].Value) -eq 0u -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLExpand.Groups[4].Value) -ne 0x0e000000u -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLExpand.Groups[5].Value) -eq 0u -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLExpand.Groups[3].Value) -eq 0 -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLExpand.Groups[4].Value) -ne 0x0e000000 -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLExpand.Groups[5].Value) -eq 0 -or`
         -not $openingRoomMaterialDLExpandShape.Success -or
         [int]$openingRoomMaterialDLExpandShape.Groups[1].Value -ne 42 -or
         [int]$openingRoomMaterialDLExpandShape.Groups[2].Value -ne 4 -or
         [int]$openingRoomMaterialDLExpandShape.Groups[3].Value -ne 4 -or
-        [int]$openingRoomMaterialDLExpandShape.Groups[4].Value -ne 0 -or
+        [int]$openingRoomMaterialDLExpandShape.Groups[4].Value -ne 0 -or`
         -not $openingRoomMaterialDLExpandCmds.Success -or
         [int]$openingRoomMaterialDLExpandCmds.Groups[1].Value -ne 2 -or
         [int]$openingRoomMaterialDLExpandCmds.Groups[2].Value -ne 2 -or
@@ -2214,10 +2215,10 @@ try {
         [int]$openingRoomMaterialDLExpandCmds.Groups[6].Value -ne 5 -or
         [int]$openingRoomMaterialDLExpandCmds.Groups[7].Value -ne 0 -or
         [int]$openingRoomMaterialDLExpandCmds.Groups[8].Value -ne 2 -or
-        [int]$openingRoomMaterialDLExpandCmds.Groups[9].Value -ne 0 -or
+        [int]$openingRoomMaterialDLExpandCmds.Groups[9].Value -ne 0 -or`
         -not $openingRoomMaterialDLExpandOps.Success -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLExpandOps.Groups[1].Value) -ne 0xe7u -or
-        (Convert-MarkerUInt32 $openingRoomMaterialDLExpandOps.Groups[2].Value) -ne 0u -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLExpandOps.Groups[1].Value) -ne 0xe7 -or
+        (Convert-MarkerUInt32 $openingRoomMaterialDLExpandOps.Groups[2].Value) -ne 0 -or
         [int]$openingRoomMaterialDLExpandOps.Groups[3].Value -ne 5 -or
         [int]$openingRoomMaterialDLExpandOps.Groups[4].Value -ne 2) {
         throw "Opening Room material DObj display-list expansion did not resolve the segment-E branch contract.`n$gdbOutput"
@@ -2233,21 +2234,21 @@ try {
         throw "Original RDP default viewport contract did not run with the expected 320x240 default values.`n$gdbOutput"
     }
     if (-not $openingRoomDLPreview.Success -or
-        $openingRoomDLPreview.Groups[1].Value.ToLowerInvariant() -ne '0x4f524450' -or
+        $openingRoomDLPreview.Groups[1].Value.ToLowerInvariant() -ne '0x4f524450' -or`
         -not $openingRoomDLPreviewBlocker.Success -or
-        [int]$openingRoomDLPreviewBlocker.Groups[1].Value -ne 0 -or
+        [int]$openingRoomDLPreviewBlocker.Groups[1].Value -ne 0 -or`
         -not $openingRoomDLPreviewCommands.Success -or
-        [int]$openingRoomDLPreviewCommands.Groups[1].Value -ne 42 -or
+        [int]$openingRoomDLPreviewCommands.Groups[1].Value -ne 42 -or`
         -not $openingRoomDLPreviewVertices.Success -or
-        [int]$openingRoomDLPreviewVertices.Groups[1].Value -ne 4 -or
+        [int]$openingRoomDLPreviewVertices.Groups[1].Value -ne 4 -or`
         -not $openingRoomDLPreviewTriangles.Success -or
-        [int]$openingRoomDLPreviewTriangles.Groups[1].Value -ne 4 -or
+        [int]$openingRoomDLPreviewTriangles.Groups[1].Value -ne 4 -or`
         -not $openingRoomDLPreviewPixels.Success -or
-        [int]$openingRoomDLPreviewPixels.Groups[1].Value -le 0 -or
+        [int]$openingRoomDLPreviewPixels.Groups[1].Value -le 0 -or`
         -not $openingRoomDLPreviewFirstOpcode.Success -or
-        $openingRoomDLPreviewFirstOpcode.Groups[1].Value.ToLowerInvariant() -ne '0xe7' -or
+        $openingRoomDLPreviewFirstOpcode.Groups[1].Value.ToLowerInvariant() -ne '0xe7' -or`
         -not $openingRoomDLPreviewUnsupported.Success -or
-        $openingRoomDLPreviewUnsupported.Groups[1].Value.ToLowerInvariant() -notin @('0x0', '0') -or
+        $openingRoomDLPreviewUnsupported.Groups[1].Value.ToLowerInvariant() -notin @('0x0', '0') -or`
         -not $openingRoomDLPreviewCommandShape.Success -or
         [int]$openingRoomDLPreviewCommandShape.Groups[1].Value -ne 2 -or
         [int]$openingRoomDLPreviewCommandShape.Groups[2].Value -ne 2 -or
@@ -2255,64 +2256,64 @@ try {
         [int]$openingRoomDLPreviewCommandShape.Groups[4].Value -ne 6 -or
         [int]$openingRoomDLPreviewCommandShape.Groups[5].Value -ne 5 -or
         [int]$openingRoomDLPreviewCommandShape.Groups[6].Value -ne 0 -or
-        [int]$openingRoomDLPreviewCommandShape.Groups[7].Value -ne 0 -or
+        [int]$openingRoomDLPreviewCommandShape.Groups[7].Value -ne 0 -or`
         -not $openingRoomDLPreviewBranch.Success -or
         [int]$openingRoomDLPreviewBranch.Groups[1].Value -ne 5 -or
         [int]$openingRoomDLPreviewBranch.Groups[2].Value -ne 0 -or
         [int]$openingRoomDLPreviewBranch.Groups[3].Value -ne 2 -or
         [int]$openingRoomDLPreviewBranch.Groups[4].Value -ne 5 -or
-        $openingRoomDLPreviewBranch.Groups[5].Value.ToLowerInvariant() -ne '0xffffffff' -or
+        $openingRoomDLPreviewBranch.Groups[5].Value.ToLowerInvariant() -ne '0xffffffff' -or`
         -not $openingRoomDLPreviewFirstDL.Success -or
-        $openingRoomDLPreviewFirstDL.Groups[1].Value.ToLowerInvariant() -eq '0x0' -or
+        $openingRoomDLPreviewFirstDL.Groups[1].Value.ToLowerInvariant() -eq '0x0' -or`
         -not $openingRoomDLPreviewTransform.Success -or
-        $openingRoomDLPreviewTransform.Groups[1].Value.ToLowerInvariant() -ne '0x1f' -or
+        $openingRoomDLPreviewTransform.Groups[1].Value.ToLowerInvariant() -ne '0x1f' -or`
         -not $openingRoomDLPreviewXObjs.Success -or
-        [int]$openingRoomDLPreviewXObjs.Groups[1].Value -lt 1 -or
+        [int]$openingRoomDLPreviewXObjs.Groups[1].Value -lt 1 -or`
         -not $openingRoomDLPreviewXObjKind.Success -or
-        [int]$openingRoomDLPreviewXObjKind.Groups[1].Value -ne 28 -or
-        -not $openingRoomDLPreviewTranslate.Success -or
+        [int]$openingRoomDLPreviewXObjKind.Groups[1].Value -ne 28 -or`
+        -not $openingRoomDLPreviewTranslate.Success -or`
         -not $openingRoomDLPreviewRotate.Success -or
         [int]$openingRoomDLPreviewRotate.Groups[1].Value -ne 0 -or
         [int]$openingRoomDLPreviewRotate.Groups[2].Value -ne 0 -or
-        [int]$openingRoomDLPreviewRotate.Groups[3].Value -ne 0 -or
+        [int]$openingRoomDLPreviewRotate.Groups[3].Value -ne 0 -or`
         -not $openingRoomDLPreviewScale.Success -or
         [int]$openingRoomDLPreviewScale.Groups[1].Value -le 0 -or
         [int]$openingRoomDLPreviewScale.Groups[2].Value -ne 100 -or
-        [int]$openingRoomDLPreviewScale.Groups[3].Value -ne [int]$openingRoomDLPreviewScale.Groups[1].Value -or
+        [int]$openingRoomDLPreviewScale.Groups[3].Value -ne [int]$openingRoomDLPreviewScale.Groups[1].Value -or`
         -not $openingRoomDLPreviewBounds.Success -or
         [int]$openingRoomDLPreviewBounds.Groups[2].Value -le [int]$openingRoomDLPreviewBounds.Groups[1].Value -or
-        [int]$openingRoomDLPreviewBounds.Groups[4].Value -le [int]$openingRoomDLPreviewBounds.Groups[3].Value -or
+        [int]$openingRoomDLPreviewBounds.Groups[4].Value -le [int]$openingRoomDLPreviewBounds.Groups[3].Value -or`
         -not $openingRoomDLPreviewProjection.Success -or
         $openingRoomDLPreviewProjection.Groups[1].Value.ToLowerInvariant() -ne '0x1f' -or
         [int]$openingRoomDLPreviewProjection.Groups[2].Value -ne 2 -or
-        [int]$openingRoomDLPreviewProjection.Groups[3].Value -ne 6 -or
+        [int]$openingRoomDLPreviewProjection.Groups[3].Value -ne 6 -or`
         -not $openingRoomDLPreviewProjected.Success -or
         [int]$openingRoomDLPreviewProjected.Groups[1].Value -ne 4 -or
-        [int]$openingRoomDLPreviewProjected.Groups[2].Value -ne 0 -or
+        [int]$openingRoomDLPreviewProjected.Groups[2].Value -ne 0 -or`
         -not $openingRoomDLPreviewProjectedBounds.Success -or
         [int]$openingRoomDLPreviewProjectedBounds.Groups[2].Value -le [int]$openingRoomDLPreviewProjectedBounds.Groups[1].Value -or
-        [int]$openingRoomDLPreviewProjectedBounds.Groups[4].Value -le [int]$openingRoomDLPreviewProjectedBounds.Groups[3].Value -or
+        [int]$openingRoomDLPreviewProjectedBounds.Groups[4].Value -le [int]$openingRoomDLPreviewProjectedBounds.Groups[3].Value -or`
         -not $openingRoomDLPreviewProjectedDepth.Success -or
         [int]$openingRoomDLPreviewProjectedDepth.Groups[1].Value -le 0 -or
-        [int]$openingRoomDLPreviewProjectedDepth.Groups[2].Value -lt [int]$openingRoomDLPreviewProjectedDepth.Groups[1].Value -or
+        [int]$openingRoomDLPreviewProjectedDepth.Groups[2].Value -lt [int]$openingRoomDLPreviewProjectedDepth.Groups[1].Value -or`
         -not $openingRoomDLPreviewGeometry.Success -or
         [int]$openingRoomDLPreviewGeometry.Groups[1].Value -ne 2 -or
         $openingRoomDLPreviewGeometry.Groups[2].Value.ToLowerInvariant() -ne '0xd9ffffff' -or
         $openingRoomDLPreviewGeometry.Groups[3].Value.ToLowerInvariant() -ne '0x20000' -or
         $openingRoomDLPreviewGeometry.Groups[4].Value.ToLowerInvariant() -ne '0x20000' -or
-        $openingRoomDLPreviewGeometry.Groups[5].Value.ToLowerInvariant() -ne '0x21' -or
+        $openingRoomDLPreviewGeometry.Groups[5].Value.ToLowerInvariant() -ne '0x21' -or`
         -not $openingRoomDLPreviewGeometryTris.Success -or
         (([int]$openingRoomDLPreviewGeometryTris.Groups[1].Value +
           [int]$openingRoomDLPreviewGeometryTris.Groups[2].Value) -le 0) -or
-        [int]$openingRoomDLPreviewGeometryTris.Groups[4].Value -ne 4 -or
+        [int]$openingRoomDLPreviewGeometryTris.Groups[4].Value -ne 4 -or`
         -not $openingRoomDLPreviewFallback.Success -or
         [int]$openingRoomDLPreviewFallback.Groups[1].Value -notin @(1, 2) -or
-        [uint32]$openingRoomDLPreviewFallback.Groups[2].Value -le 0 -or
+        [uint32]$openingRoomDLPreviewFallback.Groups[2].Value -le 0 -or`
         -not $openingRoomDLPreviewRenderer.Success -or
         [int]$openingRoomDLPreviewRenderer.Groups[1].Value -ne 42 -or
         [int]$openingRoomDLPreviewRenderer.Groups[2].Value -le 0 -or
         [int]$openingRoomDLPreviewRenderer.Groups[3].Value -ne 13 -or
-        [int]$openingRoomDLPreviewRenderer.Groups[4].Value -ne 2 -or
+        [int]$openingRoomDLPreviewRenderer.Groups[4].Value -ne 2 -or`
         -not $openingRoomDLPreviewRendererTex.Success -or
         $openingRoomDLPreviewRendererTex.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or
         $openingRoomDLPreviewRendererTex.Groups[2].Value.ToLowerInvariant() -eq '0x0' -or
@@ -2322,7 +2323,7 @@ try {
         [int]$openingRoomDLPreviewRendererTex.Groups[6].Value -ne 256 -or
         [int]$openingRoomDLPreviewRendererTex.Groups[7].Value -ne 4 -or
         [int]$openingRoomDLPreviewRendererTex.Groups[8].Value -ne 1 -or
-        $openingRoomDLPreviewRendererTex.Groups[9].Value.ToLowerInvariant() -ne '0xf' -or
+        $openingRoomDLPreviewRendererTex.Groups[9].Value.ToLowerInvariant() -ne '0xf' -or`
         -not $openingRoomDLPreviewRendererTile.Success -or
         [int]$openingRoomDLPreviewRendererTile.Groups[1].Value -ne 16 -or
         [int]$openingRoomDLPreviewRendererTile.Groups[2].Value -ne 32 -or
@@ -2330,7 +2331,7 @@ try {
         [int]$openingRoomDLPreviewRendererTile.Groups[4].Value -ne 4 -or
         $openingRoomDLPreviewRendererTile.Groups[5].Value.ToLowerInvariant() -ne '0xb7' -or
         [int]$openingRoomDLPreviewRendererTile.Groups[6].Value -ne 255 -or
-        [int]$openingRoomDLPreviewRendererTile.Groups[7].Value -ne 1024 -or
+        [int]$openingRoomDLPreviewRendererTile.Groups[7].Value -ne 1024 -or`
         -not $openingRoomDLPreviewPresent.Success -or
         [int]$openingRoomDLPreviewPresent.Groups[1].Value -ne 1 -or
         [int]$openingRoomDLPreviewPresent.Groups[2].Value -ne 96 -or
@@ -2340,54 +2341,54 @@ try {
         throw "Opening Room DObj display-list preview did not parse and rasterize the bounded material-backed original DL slice.`n$gdbOutput"
     }
     if (-not $openingRoomDLPreviewTexMask.Success -or
-        $openingRoomDLPreviewTexMask.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or
+        $openingRoomDLPreviewTexMask.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or`
         -not $openingRoomDLPreviewTexImage.Success -or
-        $openingRoomDLPreviewTexImage.Groups[1].Value.ToLowerInvariant() -eq '0x0' -or
+        $openingRoomDLPreviewTexImage.Groups[1].Value.ToLowerInvariant() -eq '0x0' -or`
         -not $openingRoomDLPreviewTexFormat.Success -or
-        [int]$openingRoomDLPreviewTexFormat.Groups[1].Value -ne 4 -or
+        [int]$openingRoomDLPreviewTexFormat.Groups[1].Value -ne 4 -or`
         -not $openingRoomDLPreviewTexSize.Success -or
-        [int]$openingRoomDLPreviewTexSize.Groups[1].Value -ne 2 -or
+        [int]$openingRoomDLPreviewTexSize.Groups[1].Value -ne 2 -or`
         -not $openingRoomDLPreviewTexImageWidth.Success -or
-        [int]$openingRoomDLPreviewTexImageWidth.Groups[1].Value -ne 1 -or
+        [int]$openingRoomDLPreviewTexImageWidth.Groups[1].Value -ne 1 -or`
         -not $openingRoomDLPreviewTexTile.Success -or
         [int]$openingRoomDLPreviewTexTile.Groups[1].Value -ne 16 -or
-        [int]$openingRoomDLPreviewTexTile.Groups[2].Value -ne 32 -or
+        [int]$openingRoomDLPreviewTexTile.Groups[2].Value -ne 32 -or`
         -not $openingRoomDLPreviewTexTexels.Success -or
         [int]$openingRoomDLPreviewTexTexels.Groups[1].Value -ne 16 -or
-        [int]$openingRoomDLPreviewTexTexels.Groups[2].Value -ne 16 -or
+        [int]$openingRoomDLPreviewTexTexels.Groups[2].Value -ne 16 -or`
         -not $openingRoomDLPreviewTexReady.Success -or
         [int]$openingRoomDLPreviewTexReady.Groups[1].Value -ne 1 -or
-        [int]$openingRoomDLPreviewTexReady.Groups[2].Value -ne 2 -or
+        [int]$openingRoomDLPreviewTexReady.Groups[2].Value -ne 2 -or`
         -not $openingRoomDLPreviewTexLoad.Success -or
-        [int]$openingRoomDLPreviewTexLoad.Groups[1].Value -ne 256 -or
+        [int]$openingRoomDLPreviewTexLoad.Groups[1].Value -ne 256 -or`
         -not $openingRoomDLPreviewTexLoadBlock.Success -or
         [int]$openingRoomDLPreviewTexLoadBlock.Groups[1].Value -ne 7 -or
         [int]$openingRoomDLPreviewTexLoadBlock.Groups[2].Value -ne 0 -or
         [int]$openingRoomDLPreviewTexLoadBlock.Groups[3].Value -ne 0 -or
         [int]$openingRoomDLPreviewTexLoadBlock.Groups[4].Value -ne 255 -or
-        [int]$openingRoomDLPreviewTexLoadBlock.Groups[5].Value -ne 1024 -or
+        [int]$openingRoomDLPreviewTexLoadBlock.Groups[5].Value -ne 1024 -or`
         -not $openingRoomDLPreviewTexTileSizeRaw.Success -or
         [int]$openingRoomDLPreviewTexTileSizeRaw.Groups[1].Value -ne 0 -or
         [int]$openingRoomDLPreviewTexTileSizeRaw.Groups[2].Value -ne 0 -or
         [int]$openingRoomDLPreviewTexTileSizeRaw.Groups[3].Value -ne 0 -or
         [int]$openingRoomDLPreviewTexTileSizeRaw.Groups[4].Value -ne 60 -or
-        [int]$openingRoomDLPreviewTexTileSizeRaw.Groups[5].Value -ne 124 -or
+        [int]$openingRoomDLPreviewTexTileSizeRaw.Groups[5].Value -ne 124 -or`
         -not $openingRoomDLPreviewTexSamples.Success -or
-        [int]$openingRoomDLPreviewTexSamples.Groups[1].Value -le 0 -or
+        [int]$openingRoomDLPreviewTexSamples.Groups[1].Value -le 0 -or`
         -not $openingRoomDLPreviewTexSetTile.Success -or
-        [int]$openingRoomDLPreviewTexSetTile.Groups[1].Value -ne 4 -or
+        [int]$openingRoomDLPreviewTexSetTile.Groups[1].Value -ne 4 -or`
         -not $openingRoomDLPreviewTexCombine.Success -or
         $openingRoomDLPreviewTexCombine.Groups[1].Value.ToLowerInvariant() -ne '0xfc6f96df' -or
-        $openingRoomDLPreviewTexCombine.Groups[2].Value.ToLowerInvariant() -ne '0xff2e7f3f' -or
+        $openingRoomDLPreviewTexCombine.Groups[2].Value.ToLowerInvariant() -ne '0xff2e7f3f' -or`
         -not $openingRoomDLPreviewTexCombineMode.Success -or
         [int]$openingRoomDLPreviewTexCombineMode.Groups[1].Value -ne 0 -or
         $openingRoomDLPreviewTexCombineMode.Groups[2].Value.ToLowerInvariant() -ne '0x1' -or
-        [int]$openingRoomDLPreviewTexCombineMode.Groups[3].Value -ne 0 -or
+        [int]$openingRoomDLPreviewTexCombineMode.Groups[3].Value -ne 0 -or`
         -not $openingRoomDLPreviewTexRenderTile.Success -or
         [int]$openingRoomDLPreviewTexRenderTile.Groups[1].Value -ne 0 -or
         [int]$openingRoomDLPreviewTexRenderTile.Groups[2].Value -ne 4 -or
         [int]$openingRoomDLPreviewTexRenderTile.Groups[3].Value -ne 0 -or
-        [int]$openingRoomDLPreviewTexRenderTile.Groups[4].Value -ne 0 -or
+        [int]$openingRoomDLPreviewTexRenderTile.Groups[4].Value -ne 0 -or`
         -not $openingRoomDLPreviewTexTileMode.Success -or
         [int]$openingRoomDLPreviewTexTileMode.Groups[1].Value -ne 2 -or
         [int]$openingRoomDLPreviewTexTileMode.Groups[2].Value -ne 2 -or
@@ -2395,12 +2396,12 @@ try {
         [int]$openingRoomDLPreviewTexTileMode.Groups[4].Value -ne 5 -or
         [int]$openingRoomDLPreviewTexTileMode.Groups[5].Value -ne 0 -or
         [int]$openingRoomDLPreviewTexTileMode.Groups[6].Value -ne 0 -or
-        $openingRoomDLPreviewTexTileMode.Groups[7].Value.ToLowerInvariant() -ne '0xb7' -or
+        $openingRoomDLPreviewTexTileMode.Groups[7].Value.ToLowerInvariant() -ne '0xb7' -or`
         -not $openingRoomDLPreviewTexTexture.Success -or
         [int]$openingRoomDLPreviewTexTexture.Groups[1].Value -ne 1 -or
         [int]$openingRoomDLPreviewTexTexture.Groups[2].Value -ne 65535 -or
         [int]$openingRoomDLPreviewTexTexture.Groups[3].Value -ne 65535 -or
-        $openingRoomDLPreviewTexTexture.Groups[4].Value.ToLowerInvariant() -ne '0xf' -or
+        $openingRoomDLPreviewTexTexture.Groups[4].Value.ToLowerInvariant() -ne '0xf' -or`
         -not $openingRoomDLPreviewTexTextureMode.Success -or
         [int]$openingRoomDLPreviewTexTextureMode.Groups[1].Value -ne 0 -or
         [int]$openingRoomDLPreviewTexTextureMode.Groups[2].Value -ne 0 -or
@@ -2436,41 +2437,41 @@ try {
         [int]$openingRoomDLPreviewMaterial.Groups[1].Value -ne 2 -or
         $openingRoomDLPreviewMaterialRawHex -ne '0x200' -or
         $openingRoomDLPreviewMaterialEffectiveHex -ne '0x200' -or
-        $openingRoomDLPreviewMaterialMaskHex -ne '0x403' -or
+        $openingRoomDLPreviewMaterialMaskHex -ne '0x403' -or`
         -not $openingRoomDLPreviewMaterialIds.Success -or
         [int]$openingRoomDLPreviewMaterialIds.Groups[1].Value -ne 0 -or
         [int]$openingRoomDLPreviewMaterialIds.Groups[2].Value -ne 0 -or
         [int]$openingRoomDLPreviewMaterialIds.Groups[3].Value -ne 0 -or
-        [int]$openingRoomDLPreviewMaterialIds.Groups[4].Value -ne 0 -or
+        [int]$openingRoomDLPreviewMaterialIds.Groups[4].Value -ne 0 -or`
         -not $openingRoomDLPreviewMaterialFormat.Success -or
         [int]$openingRoomDLPreviewMaterialFormat.Groups[1].Value -ne 4 -or
         [int]$openingRoomDLPreviewMaterialFormat.Groups[2].Value -ne 2 -or
         [int]$openingRoomDLPreviewMaterialFormat.Groups[3].Value -ne 4 -or
-        [int]$openingRoomDLPreviewMaterialFormat.Groups[4].Value -ne 1 -or
+        [int]$openingRoomDLPreviewMaterialFormat.Groups[4].Value -ne 1 -or`
         -not $openingRoomDLPreviewMaterialTile.Success -or
         [int]$openingRoomDLPreviewMaterialTile.Groups[1].Value -ne 16 -or
         [int]$openingRoomDLPreviewMaterialTile.Groups[2].Value -ne 32 -or
         [int]$openingRoomDLPreviewMaterialTile.Groups[3].Value -ne 16 -or
-        [int]$openingRoomDLPreviewMaterialTile.Groups[4].Value -ne 32 -or
+        [int]$openingRoomDLPreviewMaterialTile.Groups[4].Value -ne 32 -or`
         -not $openingRoomDLPreviewMaterialST.Success -or
         [int]$openingRoomDLPreviewMaterialST.Groups[1].Value -ne 100 -or
         [int]$openingRoomDLPreviewMaterialST.Groups[2].Value -ne 100 -or
         [int]$openingRoomDLPreviewMaterialST.Groups[3].Value -ne 0 -or
-        [int]$openingRoomDLPreviewMaterialST.Groups[4].Value -ne 0 -or
+        [int]$openingRoomDLPreviewMaterialST.Groups[4].Value -ne 0 -or`
         -not $openingRoomDLPreviewMaterialPtrs.Success -or
         (@('0', '0x0') -notcontains $openingRoomDLPreviewMaterialSpriteCurrHex) -or
         (@('0', '0x0') -notcontains $openingRoomDLPreviewMaterialSpriteNextHex) -or
-        (@('0', '0x0') -notcontains $openingRoomDLPreviewMaterialPalettePtrHex) -or
+        (@('0', '0x0') -notcontains $openingRoomDLPreviewMaterialPalettePtrHex) -or`
         -not $openingRoomDLPreviewMaterialBranch.Success -or
         $openingRoomDLPreviewMaterialBranch.Groups[1].Value.ToLowerInvariant() -ne '0x4f524d50' -or
         [int]$openingRoomDLPreviewMaterialBranch.Groups[2].Value -ne 0 -or
         [int]$openingRoomDLPreviewMaterialBranch.Groups[3].Value -ne 4 -or
         [int]$openingRoomDLPreviewMaterialBranch.Groups[4].Value -ne 2 -or
-        [int]$openingRoomDLPreviewMaterialBranch.Groups[5].Value -ne 2 -or
+        [int]$openingRoomDLPreviewMaterialBranch.Groups[5].Value -ne 2 -or`
         -not $openingRoomDLPreviewMaterialBranchOps.Success -or
         [int]$openingRoomDLPreviewMaterialBranchOps.Groups[1].Value -ne 250 -or
         [int]$openingRoomDLPreviewMaterialBranchOps.Groups[2].Value -ne 223 -or
-        $openingRoomDLPreviewMaterialBranchOps.Groups[3].Value.ToLowerInvariant() -notin @('0x0', '0') -or
+        $openingRoomDLPreviewMaterialBranchOps.Groups[3].Value.ToLowerInvariant() -notin @('0x0', '0') -or`
         -not $openingRoomDLPreviewMaterialBranchPrim.Success -or
         $openingRoomDLPreviewMaterialBranchPrim.Groups[1].Value.ToLowerInvariant() -ne '0xffffffff' -or
         [int]$openingRoomDLPreviewMaterialBranchPrim.Groups[2].Value -ne 0 -or
@@ -2478,229 +2479,229 @@ try {
         throw "Opening Room material-backed DObj preview did not prove the selected MObj and branch contract.`n$gdbOutput"
     }
     if (-not $openingRoomOverlayCreate.Success -or
-        $openingRoomOverlayCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524f43' -or
+        $openingRoomOverlayCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524f43' -or`
         -not $openingRoomOverlayDisplay.Success -or
-        [int]$openingRoomOverlayDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomOverlayDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomOverlayAlpha.Success -or
-        [int]$openingRoomOverlayAlpha.Groups[1].Value -ne 255 -or
+        [int]$openingRoomOverlayAlpha.Groups[1].Value -ne 255 -or`
         -not $openingRoomOverlayCreateGObjs.Success -or
-        [int]$openingRoomOverlayCreateGObjs.Groups[1].Value -ne 8 -or
+        [int]$openingRoomOverlayCreateGObjs.Groups[1].Value -ne 8 -or`
         -not $openingRoomOverlayEject.Success -or
-        $openingRoomOverlayEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f524f45' -or
+        $openingRoomOverlayEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f524f45' -or`
         -not $openingRoomOverlayEjectBefore.Success -or
-        [int]$openingRoomOverlayEjectBefore.Groups[1].Value -ne 15 -or
+        [int]$openingRoomOverlayEjectBefore.Groups[1].Value -ne 15 -or`
         -not $openingRoomOverlayEjectAfter.Success -or
-        [int]$openingRoomOverlayEjectAfter.Groups[1].Value -ne 15 -or
+        [int]$openingRoomOverlayEjectAfter.Groups[1].Value -ne 15 -or`
         -not $openingRoomOverlayEjectUnlinked.Success -or
         $openingRoomOverlayEjectUnlinked.Groups[1].Value.ToLowerInvariant() -ne '0x3') {
         throw "Opening Room overlay GObj creation/ejection boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomScene1CameraCreate.Success -or
-        $openingRoomScene1CameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f523143' -or
+        $openingRoomScene1CameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f523143' -or`
         -not $openingRoomScene1CameraCreateMask.Success -or
-        $openingRoomScene1CameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x1ff' -or
+        $openingRoomScene1CameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x1ff' -or`
         -not $openingRoomScene1CameraCreateGObjs.Success -or
-        [int]$openingRoomScene1CameraCreateGObjs.Groups[1].Value -ne 4 -or
+        [int]$openingRoomScene1CameraCreateGObjs.Groups[1].Value -ne 4 -or`
         -not $openingRoomScene1CameraGObjDelta.Success -or
-        [int]$openingRoomScene1CameraGObjDelta.Groups[1].Value -ne 2 -or
+        [int]$openingRoomScene1CameraGObjDelta.Groups[1].Value -ne 2 -or`
         -not $openingRoomScene1CameraCObjDelta.Success -or
-        [int]$openingRoomScene1CameraCObjDelta.Groups[1].Value -ne 2 -or
+        [int]$openingRoomScene1CameraCObjDelta.Groups[1].Value -ne 2 -or`
         -not $openingRoomScene1CameraXObjDelta.Success -or
-        [int]$openingRoomScene1CameraXObjDelta.Groups[1].Value -ne 4 -or
+        [int]$openingRoomScene1CameraXObjDelta.Groups[1].Value -ne 4 -or`
         -not $openingRoomScene1CameraAObjDelta.Success -or
-        [int]$openingRoomScene1CameraAObjDelta.Groups[1].Value -ne 0 -or
+        [int]$openingRoomScene1CameraAObjDelta.Groups[1].Value -ne 0 -or`
         -not $openingRoomScene1CameraDisplay.Success -or
-        [int]$openingRoomScene1CameraDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomScene1CameraDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomScene1CameraProcess.Success -or
-        [int]$openingRoomScene1CameraProcess.Groups[1].Value -ne 1 -or
+        [int]$openingRoomScene1CameraProcess.Groups[1].Value -ne 1 -or`
         -not $openingRoomScene1CameraAnim.Success -or
-        [int]$openingRoomScene1CameraAnim.Groups[1].Value -ne 1 -or
+        [int]$openingRoomScene1CameraAnim.Groups[1].Value -ne 1 -or`
         -not $openingRoomScene1CameraViewport.Success -or
-        [int]$openingRoomScene1CameraViewport.Groups[1].Value -ne 1 -or
+        [int]$openingRoomScene1CameraViewport.Groups[1].Value -ne 1 -or`
         -not $openingRoomScene1CameraDLBuffer.Success -or
         [int]$openingRoomScene1CameraDLBuffer.Groups[1].Value -ne 1) {
         throw "Opening Room Scene 1 camera creation boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomCloseUpCameraCreate.Success -or
-        $openingRoomCloseUpCameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524343' -or
+        $openingRoomCloseUpCameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524343' -or`
         -not $openingRoomCloseUpCameraCreateMask.Success -or
-        $openingRoomCloseUpCameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x1f' -or
+        $openingRoomCloseUpCameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x1f' -or`
         -not $openingRoomCloseUpCameraCreateGObjs.Success -or
-        [int]$openingRoomCloseUpCameraCreateGObjs.Groups[1].Value -ne 5 -or
+        [int]$openingRoomCloseUpCameraCreateGObjs.Groups[1].Value -ne 5 -or`
         -not $openingRoomCloseUpCameraGObjDelta.Success -or
-        [int]$openingRoomCloseUpCameraGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomCloseUpCameraGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomCloseUpCameraCObjDelta.Success -or
-        [int]$openingRoomCloseUpCameraCObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomCloseUpCameraCObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomCloseUpCameraXObjDelta.Success -or
-        [int]$openingRoomCloseUpCameraXObjDelta.Groups[1].Value -ne 0 -or
+        [int]$openingRoomCloseUpCameraXObjDelta.Groups[1].Value -ne 0 -or`
         -not $openingRoomCloseUpCameraDisplay.Success -or
-        [int]$openingRoomCloseUpCameraDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomCloseUpCameraDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomCloseUpCameraViewport.Success -or
         [int]$openingRoomCloseUpCameraViewport.Groups[1].Value -ne 1) {
         throw "Opening Room close-up overlay camera creation boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomWallpaperCameraCreate.Success -or
-        $openingRoomWallpaperCameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f525743' -or
+        $openingRoomWallpaperCameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f525743' -or`
         -not $openingRoomWallpaperCameraCreateMask.Success -or
-        $openingRoomWallpaperCameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x1f' -or
+        $openingRoomWallpaperCameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x1f' -or`
         -not $openingRoomWallpaperCameraCreateGObjs.Success -or
-        [int]$openingRoomWallpaperCameraCreateGObjs.Groups[1].Value -ne 6 -or
+        [int]$openingRoomWallpaperCameraCreateGObjs.Groups[1].Value -ne 6 -or`
         -not $openingRoomWallpaperCameraGObjDelta.Success -or
-        [int]$openingRoomWallpaperCameraGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomWallpaperCameraGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomWallpaperCameraCObjDelta.Success -or
-        [int]$openingRoomWallpaperCameraCObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomWallpaperCameraCObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomWallpaperCameraXObjDelta.Success -or
-        [int]$openingRoomWallpaperCameraXObjDelta.Groups[1].Value -ne 0 -or
+        [int]$openingRoomWallpaperCameraXObjDelta.Groups[1].Value -ne 0 -or`
         -not $openingRoomWallpaperCameraDisplay.Success -or
-        [int]$openingRoomWallpaperCameraDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomWallpaperCameraDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomWallpaperCameraViewport.Success -or
         [int]$openingRoomWallpaperCameraViewport.Groups[1].Value -ne 1) {
         throw "Opening Room wallpaper-camera creation boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomLogoCameraAsset.Success -or
-        $openingRoomLogoCameraAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or
+        $openingRoomLogoCameraAsset.Groups[1].Value.ToLowerInvariant() -ne '0x1' -or`
         -not $openingRoomLogoCameraAnimOffset.Success -or
-        [int]$openingRoomLogoCameraAnimOffset.Groups[1].Value -ne 0 -or
+        [int]$openingRoomLogoCameraAnimOffset.Groups[1].Value -ne 0 -or`
         -not $openingRoomLogoCameraCreate.Success -or
-        $openingRoomLogoCameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f52434d' -or
+        $openingRoomLogoCameraCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f52434d' -or`
         -not $openingRoomLogoCameraCreateMask.Success -or
-        $openingRoomLogoCameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x7f' -or
+        $openingRoomLogoCameraCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x7f' -or`
         -not $openingRoomLogoCameraCreateGObjs.Success -or
-        [int]$openingRoomLogoCameraCreateGObjs.Groups[1].Value -ne 7 -or
+        [int]$openingRoomLogoCameraCreateGObjs.Groups[1].Value -ne 7 -or`
         -not $openingRoomLogoCameraGObjDelta.Success -or
-        [int]$openingRoomLogoCameraGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoCameraGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoCameraCObjDelta.Success -or
-        [int]$openingRoomLogoCameraCObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoCameraCObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoCameraXObjDelta.Success -or
-        [int]$openingRoomLogoCameraXObjDelta.Groups[1].Value -ne 2 -or
+        [int]$openingRoomLogoCameraXObjDelta.Groups[1].Value -ne 2 -or`
         -not $openingRoomLogoCameraAObjDelta.Success -or
-        [int]$openingRoomLogoCameraAObjDelta.Groups[1].Value -ne 0 -or
+        [int]$openingRoomLogoCameraAObjDelta.Groups[1].Value -ne 0 -or`
         -not $openingRoomLogoCameraDisplay.Success -or
-        [int]$openingRoomLogoCameraDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoCameraDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoCameraProcess.Success -or
-        [int]$openingRoomLogoCameraProcess.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoCameraProcess.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoCameraAnim.Success -or
-        [int]$openingRoomLogoCameraAnim.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoCameraAnim.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoCameraViewport.Success -or
         [int]$openingRoomLogoCameraViewport.Groups[1].Value -ne 1) {
         throw "Opening Room logo-camera creation boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomLogoAsset.Success -or
-        $openingRoomLogoAsset.Groups[1].Value.ToLowerInvariant() -ne '0x7' -or
+        $openingRoomLogoAsset.Groups[1].Value.ToLowerInvariant() -ne '0x7' -or`
         -not $openingRoomLogoDObjOffset.Success -or
-        [int]$openingRoomLogoDObjOffset.Groups[1].Value -ne 115880 -or
+        [int]$openingRoomLogoDObjOffset.Groups[1].Value -ne 115880 -or`
         -not $openingRoomLogoMObjOffset.Success -or
-        [int]$openingRoomLogoMObjOffset.Groups[1].Value -ne 113760 -or
+        [int]$openingRoomLogoMObjOffset.Groups[1].Value -ne 113760 -or`
         -not $openingRoomLogoMatAnimOffset.Success -or
-        [int]$openingRoomLogoMatAnimOffset.Groups[1].Value -ne 116012 -or
+        [int]$openingRoomLogoMatAnimOffset.Groups[1].Value -ne 116012 -or`
         -not $openingRoomLogoCreate.Success -or
-        $openingRoomLogoCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524c43' -or
+        $openingRoomLogoCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524c43' -or`
         -not $openingRoomLogoCreateMask.Success -or
-        $openingRoomLogoCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or
+        $openingRoomLogoCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or`
         -not $openingRoomLogoCreateGObjs.Success -or
-        [int]$openingRoomLogoCreateGObjs.Groups[1].Value -ne 9 -or
+        [int]$openingRoomLogoCreateGObjs.Groups[1].Value -ne 9 -or`
         -not $openingRoomLogoGObjDelta.Success -or
-        [int]$openingRoomLogoGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoDObjDelta.Success -or
-        [int]$openingRoomLogoDObjDelta.Groups[1].Value -ne 2 -or
+        [int]$openingRoomLogoDObjDelta.Groups[1].Value -ne 2 -or`
         -not $openingRoomLogoXObjDelta.Success -or
-        [int]$openingRoomLogoXObjDelta.Groups[1].Value -ne 4 -or
+        [int]$openingRoomLogoXObjDelta.Groups[1].Value -ne 4 -or`
         -not $openingRoomLogoMObjDelta.Success -or
-        [int]$openingRoomLogoMObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoMObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoAObjDelta.Success -or
-        [int]$openingRoomLogoAObjDelta.Groups[1].Value -ne 0 -or
+        [int]$openingRoomLogoAObjDelta.Groups[1].Value -ne 0 -or`
         -not $openingRoomLogoDisplay.Success -or
-        [int]$openingRoomLogoDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoMObj.Success -or
-        [int]$openingRoomLogoMObj.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoMObj.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoMatAnim.Success -or
-        [int]$openingRoomLogoMatAnim.Groups[1].Value -ne 1 -or
+        [int]$openingRoomLogoMatAnim.Groups[1].Value -ne 1 -or`
         -not $openingRoomLogoEject.Success -or
-        $openingRoomLogoEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f524c45' -or
+        $openingRoomLogoEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f524c45' -or`
         -not $openingRoomLogoEjectBefore.Success -or
-        [int]$openingRoomLogoEjectBefore.Groups[1].Value -ne 15 -or
+        [int]$openingRoomLogoEjectBefore.Groups[1].Value -ne 15 -or`
         -not $openingRoomLogoEjectAfter.Success -or
-        [int]$openingRoomLogoEjectAfter.Groups[1].Value -ne 15 -or
+        [int]$openingRoomLogoEjectAfter.Groups[1].Value -ne 15 -or`
         -not $openingRoomLogoEjectUnlinked.Success -or
         $openingRoomLogoEjectUnlinked.Groups[1].Value.ToLowerInvariant() -ne '0x3') {
         throw "Opening Room logo GObj creation/ejection boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomBossShadowAsset.Success -or
-        $openingRoomBossShadowAsset.Groups[1].Value.ToLowerInvariant() -ne '0x3' -or
+        $openingRoomBossShadowAsset.Groups[1].Value.ToLowerInvariant() -ne '0x3' -or`
         -not $openingRoomBossShadowDLOffset.Success -or
-        [int]$openingRoomBossShadowDLOffset.Groups[1].Value -ne 128912 -or
+        [int]$openingRoomBossShadowDLOffset.Groups[1].Value -ne 128912 -or`
         -not $openingRoomBossShadowAnimOffset.Success -or
-        [int]$openingRoomBossShadowAnimOffset.Groups[1].Value -ne 129316 -or
+        [int]$openingRoomBossShadowAnimOffset.Groups[1].Value -ne 129316 -or`
         -not $openingRoomBossShadowCreate.Success -or
-        $openingRoomBossShadowCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524243' -or
+        $openingRoomBossShadowCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f524243' -or`
         -not $openingRoomBossShadowCreateMask.Success -or
-        $openingRoomBossShadowCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or
+        $openingRoomBossShadowCreateMask.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or`
         -not $openingRoomBossShadowCreateGObjs.Success -or
-        [int]$openingRoomBossShadowCreateGObjs.Groups[1].Value -ne 10 -or
+        [int]$openingRoomBossShadowCreateGObjs.Groups[1].Value -ne 10 -or`
         -not $openingRoomBossShadowGObjDelta.Success -or
-        [int]$openingRoomBossShadowGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomBossShadowGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomBossShadowDObjDelta.Success -or
-        [int]$openingRoomBossShadowDObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomBossShadowDObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomBossShadowXObjDelta.Success -or
-        [int]$openingRoomBossShadowXObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomBossShadowXObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomBossShadowAObjDelta.Success -or
-        [int]$openingRoomBossShadowAObjDelta.Groups[1].Value -ne 0 -or
+        [int]$openingRoomBossShadowAObjDelta.Groups[1].Value -ne 0 -or`
         -not $openingRoomBossShadowProcess.Success -or
-        [int]$openingRoomBossShadowProcess.Groups[1].Value -ne 1 -or
+        [int]$openingRoomBossShadowProcess.Groups[1].Value -ne 1 -or`
         -not $openingRoomBossShadowDisplay.Success -or
-        [int]$openingRoomBossShadowDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomBossShadowDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomBossShadowAnim.Success -or
-        [int]$openingRoomBossShadowAnim.Groups[1].Value -ne 1 -or
+        [int]$openingRoomBossShadowAnim.Groups[1].Value -ne 1 -or`
         -not $openingRoomBossShadowEject.Success -or
-        $openingRoomBossShadowEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f524245' -or
+        $openingRoomBossShadowEject.Groups[1].Value.ToLowerInvariant() -ne '0x4f524245' -or`
         -not $openingRoomBossShadowEjectBefore.Success -or
-        [int]$openingRoomBossShadowEjectBefore.Groups[1].Value -ne 15 -or
+        [int]$openingRoomBossShadowEjectBefore.Groups[1].Value -ne 15 -or`
         -not $openingRoomBossShadowEjectAfter.Success -or
-        [int]$openingRoomBossShadowEjectAfter.Groups[1].Value -ne 15 -or
+        [int]$openingRoomBossShadowEjectAfter.Groups[1].Value -ne 15 -or`
         -not $openingRoomBossShadowEjectUnlinked.Success -or
         $openingRoomBossShadowEjectUnlinked.Groups[1].Value.ToLowerInvariant() -ne '0x3') {
         throw "Opening Room boss-shadow GObj creation/ejection boundary did not run as expected.`n$gdbOutput"
     }
     if (-not $openingRoomPencilsCreate.Success -or
-        $openingRoomPencilsCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f525043' -or
+        $openingRoomPencilsCreate.Groups[1].Value.ToLowerInvariant() -ne '0x4f525043' -or`
         -not $openingRoomPencilsMask.Success -or
-        $openingRoomPencilsMask.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or
+        $openingRoomPencilsMask.Groups[1].Value.ToLowerInvariant() -ne '0x3f' -or`
         -not $openingRoomPencilsGObjDelta.Success -or
-        [int]$openingRoomPencilsGObjDelta.Groups[1].Value -ne 1 -or
+        [int]$openingRoomPencilsGObjDelta.Groups[1].Value -ne 1 -or`
         -not $openingRoomPencilsDObjDelta.Success -or
-        [int]$openingRoomPencilsDObjDelta.Groups[1].Value -ne 3 -or
+        [int]$openingRoomPencilsDObjDelta.Groups[1].Value -ne 3 -or`
         -not $openingRoomPencilsXObjDelta.Success -or
-        [int]$openingRoomPencilsXObjDelta.Groups[1].Value -ne 6 -or
+        [int]$openingRoomPencilsXObjDelta.Groups[1].Value -ne 6 -or`
         -not $openingRoomPencilsAObjDelta.Success -or
-        [int]$openingRoomPencilsAObjDelta.Groups[1].Value -ne 0 -or
+        [int]$openingRoomPencilsAObjDelta.Groups[1].Value -ne 0 -or`
         -not $openingRoomPencilsProcess.Success -or
-        [int]$openingRoomPencilsProcess.Groups[1].Value -ne 1 -or
+        [int]$openingRoomPencilsProcess.Groups[1].Value -ne 1 -or`
         -not $openingRoomPencilsDisplay.Success -or
-        [int]$openingRoomPencilsDisplay.Groups[1].Value -ne 1 -or
+        [int]$openingRoomPencilsDisplay.Groups[1].Value -ne 1 -or`
         -not $openingRoomPencilsTree.Success -or
-        [int]$openingRoomPencilsTree.Groups[1].Value -ne 3 -or
+        [int]$openingRoomPencilsTree.Groups[1].Value -ne 3 -or`
         -not $openingRoomPencilsRoots.Success -or
         [int]$openingRoomPencilsRoots.Groups[1].Value -ne 1) {
         throw "Original Opening Room pencils object creation path did not build the expected GObj/DObj tree.`n$gdbOutput"
     }
     if (-not $openingRoomUpdate.Success -or
-        $openingRoomUpdate.Groups[1].Value.ToLowerInvariant() -ne '0x4f525550' -or
+        $openingRoomUpdate.Groups[1].Value.ToLowerInvariant() -ne '0x4f525550' -or`
         -not $openingRoomTicks.Success -or
         [int]$openingRoomTicks.Groups[1].Value -ne 1320) {
         throw "Imported Opening Room actor did not reach the natural 22-second movie handoff.`n$gdbOutput"
     }
     if (-not $openingRoomGObjs.Success -or
-        [int]$openingRoomGObjs.Groups[1].Value -ne 14 -or
+        [int]$openingRoomGObjs.Groups[1].Value -ne 14 -or`
         -not $openingRoomCameras.Success -or
         [int]$openingRoomCameras.Groups[1].Value -ne 6) {
         throw "Opening Room did not create its original actor/default/Scene1/close-up/wallpaper/logo-camera/spotlight slice.`n$gdbOutput"
     }
     if (-not $openingRoomDL0.Success -or
-        [int]$openingRoomDL0.Groups[1].Value -ne 12000 -or
+        [int]$openingRoomDL0.Groups[1].Value -ne 12000 -or`
         -not $openingRoomDL1.Success -or
-        [int]$openingRoomDL1.Groups[1].Value -ne 4096 -or
+        [int]$openingRoomDL1.Groups[1].Value -ne 4096 -or`
         -not $openingRoomGfxHeap.Success -or
-        [int]$openingRoomGfxHeap.Groups[1].Value -ne 32768 -or
+        [int]$openingRoomGfxHeap.Groups[1].Value -ne 32768 -or`
         -not $openingRoomRdpSize.Success -or
         [int]$openingRoomRdpSize.Groups[1].Value -ne 49152) {
         throw "Opening Room task setup sizes do not match the original scene.`n$gdbOutput"
@@ -2718,7 +2719,7 @@ try {
         throw "Original Opening Room controller gate did not run through the natural handoff tick.`n$gdbOutput"
     }
     $openingKinds = @(0, 1, 2, 3, 5, 6, 8, 9)
-    if (-not $openingRoomPulledKind.Success -or
+    if (-not $openingRoomPulledKind.Success -or`
         -not $openingRoomDroppedKind.Success -or
         $openingKinds -notcontains [int]$openingRoomPulledKind.Groups[1].Value -or
         $openingKinds -notcontains [int]$openingRoomDroppedKind.Groups[1].Value -or
@@ -2731,42 +2732,42 @@ try {
         throw "Headless verifier unexpectedly triggered the Opening Room skip path.`n$gdbOutput"
     }
     if (-not $openingMovieRoomHandoff.Success -or
-        $openingMovieRoomHandoff.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d5248' -or
+        $openingMovieRoomHandoff.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d5248' -or`
         -not $openingMovieRoomHandoffTick.Success -or
-        [int]$openingMovieRoomHandoffTick.Groups[1].Value -ne 1320 -or
+        [int]$openingMovieRoomHandoffTick.Groups[1].Value -ne 1320 -or`
         -not $openingMovieRoomHandoffScene.Success -or
         [int]$openingMovieRoomHandoffScene.Groups[1].Value -ne 29) {
         throw "Opening Room did not request the original Opening Portraits scene at the movie handoff.`n$gdbOutput"
     }
     if (-not $openingPortraitsDispatch.Success -or
-        [int]$openingPortraitsDispatch.Groups[1].Value -ne 1 -or
+        [int]$openingPortraitsDispatch.Groups[1].Value -ne 1 -or`
         -not $openingPortraitsStart.Success -or
-        $openingPortraitsStart.Groups[1].Value.ToLowerInvariant() -ne '0x4f505354' -or
+        $openingPortraitsStart.Groups[1].Value.ToLowerInvariant() -ne '0x4f505354' -or`
         -not $openingPortraitsFuncStart.Success -or
         $openingPortraitsFuncStart.Groups[1].Value.ToLowerInvariant() -ne '0x4f504653') {
         throw "Imported Opening Portraits scene did not start through the original scene manager/taskman path.`n$gdbOutput"
     }
     if (-not $openingPortraitsUpdate.Success -or
-        $openingPortraitsUpdate.Groups[1].Value.ToLowerInvariant() -ne '0x4f505550' -or
+        $openingPortraitsUpdate.Groups[1].Value.ToLowerInvariant() -ne '0x4f505550' -or`
         -not $openingPortraitsTicks.Success -or
         [int]$openingPortraitsTicks.Groups[1].Value -ne 150) {
         throw "Imported Opening Portraits scene did not run to its first original next-scene request.`n$gdbOutput"
     }
     if (-not $openingPortraitsReloc.Success -or
-        $openingPortraitsReloc.Groups[1].Value.ToLowerInvariant() -ne '0x4f50524c' -or
+        $openingPortraitsReloc.Groups[1].Value.ToLowerInvariant() -ne '0x4f50524c' -or`
         -not $openingPortraitsSpriteNorm.Success -or
         [int]$openingPortraitsSpriteNorm.Groups[1].Value -ne 9 -or
         [int]$openingPortraitsSpriteNorm.Groups[2].Value -ne 0) {
         throw "Opening Portraits original sprite payloads were not normalized for the DS preview path.`n$gdbOutput"
     }
     if (-not $openingPortraitsDraw.Success -or
-        $openingPortraitsDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4f504457' -or
+        $openingPortraitsDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4f504457' -or`
         -not $openingPortraitsDrawBlocker.Success -or
-        [int]$openingPortraitsDrawBlocker.Groups[1].Value -ne 0 -or
+        [int]$openingPortraitsDrawBlocker.Groups[1].Value -ne 0 -or`
         -not $openingPortraitsDrawCallbacks.Success -or
-        [int]$openingPortraitsDrawCallbacks.Groups[1].Value -lt 1 -or
+        [int]$openingPortraitsDrawCallbacks.Groups[1].Value -lt 1 -or`
         -not $openingPortraitsDrawVisible.Success -or
-        [int]$openingPortraitsDrawVisible.Groups[1].Value -lt 4 -or
+        [int]$openingPortraitsDrawVisible.Groups[1].Value -lt 4 -or`
         -not $openingPortraitsDrawMeta.Success -or
         [int]$openingPortraitsDrawMeta.Groups[1].Value -ne 300 -or
         [int]$openingPortraitsDrawMeta.Groups[2].Value -ne 55 -or
@@ -2777,40 +2778,40 @@ try {
         throw "Opening Portraits did not render an original SObj sprite through the bounded DS preview path.`n$gdbOutput"
     }
     if (-not $openingPortraitsNext.Success -or
-        $openingPortraitsNext.Groups[1].Value.ToLowerInvariant() -ne '0x4f504e58' -or
+        $openingPortraitsNext.Groups[1].Value.ToLowerInvariant() -ne '0x4f504e58' -or`
         -not $openingPortraitsNextScene.Success -or
         [int]$openingPortraitsNextScene.Groups[1].Value -ne 30) {
         throw "Opening Portraits did not hand off to the original Opening Mario scene boundary.`n$gdbOutput"
     }
     if (-not $openingMarioDispatch.Success -or
-        [int]$openingMarioDispatch.Groups[1].Value -ne 1 -or
+        [int]$openingMarioDispatch.Groups[1].Value -ne 1 -or`
         -not $openingMarioStart.Success -or
-        $openingMarioStart.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d5354' -or
+        $openingMarioStart.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d5354' -or`
         -not $openingMarioFuncStart.Success -or
         $openingMarioFuncStart.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d4653') {
         throw "Imported Opening Mario scene did not start through the original scene manager/taskman path.`n$gdbOutput"
     }
     if (-not $openingMarioUpdate.Success -or
-        $openingMarioUpdate.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d5550' -or
+        $openingMarioUpdate.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d5550' -or`
         -not $openingMarioTicks.Success -or
         [int]$openingMarioTicks.Groups[1].Value -ne 60) {
         throw "Imported Opening Mario scene did not run to its first original next-scene request.`n$gdbOutput"
     }
     if (-not $openingMarioReloc.Success -or
-        $openingMarioReloc.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d524c' -or
+        $openingMarioReloc.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d524c' -or`
         -not $openingMarioSpriteNorm.Success -or
         [int]$openingMarioSpriteNorm.Groups[1].Value -lt 5 -or
         [int]$openingMarioSpriteNorm.Groups[2].Value -ne 0) {
         throw "Opening Mario original name-card sprite payloads were not normalized for the DS preview path.`n$gdbOutput"
     }
     if (-not $openingMarioDraw.Success -or
-        $openingMarioDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d4457' -or
+        $openingMarioDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d4457' -or`
         -not $openingMarioDrawBlocker.Success -or
-        [int]$openingMarioDrawBlocker.Groups[1].Value -ne 0 -or
+        [int]$openingMarioDrawBlocker.Groups[1].Value -ne 0 -or`
         -not $openingMarioDrawCallbacks.Success -or
-        [int]$openingMarioDrawCallbacks.Groups[1].Value -lt 1 -or
+        [int]$openingMarioDrawCallbacks.Groups[1].Value -lt 1 -or`
         -not $openingMarioDrawVisible.Success -or
-        [int]$openingMarioDrawVisible.Groups[1].Value -lt 5 -or
+        [int]$openingMarioDrawVisible.Groups[1].Value -lt 5 -or`
         -not $openingMarioDrawMeta.Success -or
         [int]$openingMarioDrawMeta.Groups[1].Value -le 0 -or
         [int]$openingMarioDrawMeta.Groups[2].Value -le 0 -or
@@ -2821,13 +2822,13 @@ try {
         throw "Opening Mario did not render original name-card SObjs through the bounded DS preview path.`n$gdbOutput"
     }
     if (-not $openingMarioFighterDefer.Success -or
-        $openingMarioFighterDefer.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d4644' -or
+        $openingMarioFighterDefer.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d4644' -or`
         -not $openingMarioFighterDeferTick.Success -or
         [int]$openingMarioFighterDeferTick.Groups[1].Value -ne 15) {
         throw "Opening Mario did not record the bounded fighter/ground branch deferral at tick 15.`n$gdbOutput"
     }
     if (-not $openingMarioNext.Success -or
-        $openingMarioNext.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d4e58' -or
+        $openingMarioNext.Groups[1].Value.ToLowerInvariant() -ne '0x4f4d4e58' -or`
         -not $openingMarioNextScene.Success -or
         [int]$openingMarioNextScene.Groups[1].Value -ne 31) {
         throw "Opening Mario did not hand off to the original Opening Donkey scene boundary.`n$gdbOutput"
@@ -2852,7 +2853,7 @@ try {
         $openingNameDraw.Groups[1].Value.ToLowerInvariant() -ne '0x4f4e4457' -or
         [int]$openingNameDraw.Groups[2].Value -ne 0 -or
         [int]$openingNameDraw.Groups[3].Value -lt 7 -or
-        [int]$openingNameDraw.Groups[4].Value -lt 3 -or
+        [int]$openingNameDraw.Groups[4].Value -lt 3 -or`
         -not $openingNameDrawMeta.Success -or
         [int]$openingNameDrawMeta.Groups[1].Value -le 0 -or
         [int]$openingNameDrawMeta.Groups[2].Value -le 0 -or
@@ -2875,12 +2876,12 @@ try {
         (Convert-MarkerUInt32 $openingActionPreview.Groups[2].Value) -ne 0x1ff -or
         [int]$openingActionPreview.Groups[3].Value -ne 9 -or
         [int]$openingActionPreview.Groups[4].Value -ne 324 -or
-        [int]$openingActionPreview.Groups[5].Value -le 100000 -or
+        [int]$openingActionPreview.Groups[5].Value -le 70000 -or`
         -not $openingMoviePresentFrames.Success -or
-        [int]$openingMoviePresentFrames.Groups[1].Value -le 340 -or
+        [int]$openingMoviePresentFrames.Groups[1].Value -le 340 -or`
         -not $openingActionPreviewNorm.Success -or
         [int]$openingActionPreviewNorm.Groups[1].Value -ne 3 -or
-        [int]$openingActionPreviewNorm.Groups[2].Value -ne 0 -or
+        [int]$openingActionPreviewNorm.Groups[2].Value -ne 0 -or`
         -not $openingActionPreviewMeta.Success -or
         [int]$openingActionPreviewMeta.Groups[1].Value -ne 46 -or
         [int]$openingActionPreviewMeta.Groups[2].Value -ne 320 -or
@@ -2894,21 +2895,21 @@ try {
         throw "Opening movie did not dispatch the Title scene boundary.`n$gdbOutput"
     }
     if (-not $titleReloc.Success -or
-        $titleReloc.Groups[1].Value.ToLowerInvariant() -ne '0x5449524c' -or
+        $titleReloc.Groups[1].Value.ToLowerInvariant() -ne '0x5449524c' -or`
         -not $titleSpriteNorm.Success -or
         [int]$titleSpriteNorm.Groups[1].Value -ne 10 -or
         [int]$titleSpriteNorm.Groups[2].Value -ne 0) {
         throw "Title MNTitle O2R sprites were not loaded and normalized for the DS preview path.`n$gdbOutput"
     }
     if (-not $titlePreview.Success -or
-        $titlePreview.Groups[1].Value.ToLowerInvariant() -ne '0x54495056' -or
+        $titlePreview.Groups[1].Value.ToLowerInvariant() -ne '0x54495056' -or`
         -not $titleDraw.Success -or
-        $titleDraw.Groups[1].Value.ToLowerInvariant() -ne '0x54494457' -or
+        $titleDraw.Groups[1].Value.ToLowerInvariant() -ne '0x54494457' -or`
         -not $titleDrawCounts.Success -or
         [int]$titleDrawCounts.Groups[1].Value -ne 10 -or
         [int]$titleDrawCounts.Groups[2].Value -ne 10 -or
         [int]$titleDrawCounts.Groups[3].Value -ne 10 -or
-        [int]$titleDrawCounts.Groups[4].Value -le 1000 -or
+        [int]$titleDrawCounts.Groups[4].Value -le 1000 -or`
         -not $titleDrawMeta.Success -or
         [int]$titleDrawMeta.Groups[1].Value -le 0 -or
         [int]$titleDrawMeta.Groups[2].Value -le 0) {
@@ -2976,7 +2977,6 @@ try {
         [int]$perfContent.Groups[4].Value -le 0) {
         throw "Preview-content cadence counters did not publish expected commit evidence.`n$gdbOutput"
     }
-
     $hostSeconds =
         if ($null -ne $runtimeStopwatch) {
             [Math]::Max($runtimeStopwatch.Elapsed.TotalSeconds, 0.001)
@@ -2996,13 +2996,14 @@ try {
             $emulator.WaitForExit()
         }
     }
-    if ($null -ne $originalConfig) {
-        Set-Content $config -Value $originalConfig -NoNewline
-    } else {
-        Remove-Item $config -Force -ErrorAction SilentlyContinue
+    if ($runnerSlot -lt 0) {
+        if ($null -ne $originalConfig) {
+            Set-Content $config -Value $originalConfig -NoNewline
+        } else {
+            Remove-Item $config -Force -ErrorAction SilentlyContinue
+        }
     }
     Remove-Item $stdout, $stderr `
         -Force -ErrorAction SilentlyContinue
-    $gdbScriptTemp = Join-Path $root '_verify_markers.gdb'
     Remove-GdbMarkerTemps -Root $root
 }

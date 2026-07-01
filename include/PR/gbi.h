@@ -82,6 +82,8 @@ typedef union {
 #define ZERO         31
 
 #define G_CYC_1CYCLE 0u
+#define G_RM_AA_OPA_SURF 0u
+#define G_RM_AA_OPA_SURF2 0u
 #define G_RM_AA_XLU_SURF 0u
 #define G_RM_AA_XLU_SURF2 0u
 #define G_RM_AA_ZB_OPA_SURF 0u
@@ -151,6 +153,11 @@ typedef union {
 } while (0)
 
 #define gSPSetGeometryMode(pkt, mode) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(mode); \
+} while (0)
+
+#define gSPClearGeometryMode(pkt, mode) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
     (void)(mode); \
 } while (0)

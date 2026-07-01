@@ -9,6 +9,10 @@ typedef enum gmMusicID
 
 typedef enum gmFGMID
 {
+    nSYAudioFGMGuardOn = 13,
+    nSYAudioFGMGuardOff = 14,
+    nSYAudioFGMShieldBreak = 15,
+    nSYAudioFGMBatHit = 52,
     nSYAudioFGMMarioDash = 121,
     nSYAudioFGMSamusDash = 127,
     nSYAudioFGMMenuSelect = 168,
@@ -17,7 +21,13 @@ typedef enum gmFGMID
     nSYAudioFGMMenuScroll2 = 174,
     nSYAudioFGMMenuDenied = 175,
     nSYAudioFGMPlayerSlotClose = 176,
-    nSYAudioFGMPlayerSlotWhoosh = 177
+    nSYAudioFGMPlayerSlotWhoosh = 177,
+    nSYAudioFGMKirbySpecialNLoseCopy = 204,
+    nSYAudioFGMJungleTaruCannShoot = 281,
+    nSYAudioFGMJungleTaruCannEnter = 282,
+    nSYAudioFGMHyruleTwisterAppear = 283,
+    nSYAudioFGMHyruleTwisterTrapped = 284,
+    nSYAudioFGMPupupuWhispyWind = 0x11d
 } gmFGMID;
 
 typedef enum gmVoiceID
@@ -40,7 +50,8 @@ typedef enum gmVoiceID
     nSYAudioVoiceAnnounceTeamBattle = 535,
     nSYAudioVoiceAnnounceYoshi = 626,
     nSYAudioVoicePublicCheer = 618,
-    nSYAudioVoicePublicExcited = 626
+    nSYAudioVoicePublicExcited = 626,
+    nSYAudioFGMVoiceEnd = 0x2B7
 } gmVoiceID;
 
 #endif

@@ -1,265 +1,150 @@
 # AGENTS.md
-
 ## Mission
 
-This repo is a Nintendo DS port of the BattleShip Smash 64 decompilation. Keep
-moving toward:
+This repo is a Nintendo DS source port of the BattleShip Smash 64
+decompilation:
 
 ```text
 Original Smash 64 decomp game code + Nintendo DS backend = playable port
 ```
 
-Do not turn this into a handwritten clone or DS-native gameplay rewrite.
+Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 
-## Required Working Rules
+## Hard Rules
 
-- Inspect relevant BattleShip source before implementing a feature.
-- Inspect `decomp/sm64-nds` when making architectural DS-port decisions.
-- Treat everything under `decomp/` as read-only reference source. Those
-  directories are independent upstream repositories; make port hooks in
-  project-owned wrappers, shims, or headers instead.
-- Use the whole `decomp/` tree as useful context, including BattleShip docs,
-  tools, generated symbol headers, yamls, O2R resources, and `sm64-nds`;
-  `decomp/BattleShip-main/decomp` is the primary original game-code source,
-  not the only readable reference.
+- Treat `decomp/` as read-only reference source. Never edit it.
+- Inspect relevant BattleShip source before importing or replacing behavior.
+- Inspect `decomp/sm64-nds` before DS backend architecture changes.
 - Prefer importing original BattleShip translation units through `src/import`.
-- Put DS-specific behavior in `src/nds` or `src/port`.
-- Put compatibility declarations in `include/`.
-- Keep generated outputs untouched.
-- Keep changes small enough to build and verify.
-- Update docs when adding, replacing, stubbing, or deferring a subsystem.
-- Remove temporary probes before handoff; keep only verified diagnostics that are
-  part of the maintained runtime boundary.
+- Keep DS/backend behavior in `src/nds` or `src/port`.
+- Keep compatibility declarations in `include/`.
+- Do not edit generated build outputs or local emulator payloads.
+- Keep changes bounded, source-backed, buildable, and verifier-backed. Larger
+  slices are acceptable when they follow one original-code path and end at a
+  clear verifier boundary.
+- After successful verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1` as the final project action/tool call. Finish docs, static checks, verifiers, and status inspection first; never run commands, probes, or status checks after the snapshot.
+- Update docs at meaningful boundary or handoff points. Do not churn docs for
+  every internal helper, probe, or mechanical seam when the boundary summary
+  already covers it.
 
-## Build And Verify
+## Start Here
 
-Use this environment on Windows PowerShell:
+Use `.\scripts\verify-all.ps1 -Profile Boundary -List` as the authority for
+current Boundary/Latest membership, then read these human summaries:
+
+| Need | File |
+|---|---|
+| Active handoff and exact current commands | `docs/HANDOFF.md` |
+| Current boundary summary, latest proof, blockers | `docs/STATUS.md` |
+| Verification workflow | `docs/VERIFYING.md` |
+| Harness registry and naming rules | `docs/HARNESSES.md` |
+| Architecture and split plans | `docs/ARCHITECTURE.md` |
+| Known blockers and deferred work | `docs/KNOWN_ISSUES.md` |
+| Read-only upstream map | `docs/DECOMP_MAP.md` |
+| Append-only history | `docs/PORTING.md` |
+
+`docs/PORTING.md` is history, not the planning surface.
+
+## Current Boundary
+
+Current active boundary summary; the registry wins if this drifts:
+
+```powershell
+.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1
+.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1
+```
+
+Modes `161/162` prove bounded selected Fox Jab2 live-hit activation -> damage
+lifecycle -> damage-status follow-through on the Pupupu Mario/Fox battle root,
+inheriting the current MP, cliff, passive/recover, wall/rebound, catch/throw,
+ledge, dash-run damage setup, and `mpDamageRecover` proofs. Summary:
+`status=17->52/45`, `hitlag=6->0`, callbacks `1/6/1`, search `0xf`, repeat
+gate `1/1 gate=0x3f`, statusMask `0xffffffff`, damage `0xffffffff`, hbdmg `0x7ffff`, shc `0x7fffff`, catchSearch `0xffffffff`.
+See `docs/STATUS.md` and `docs/HANDOFF.md`.
+Use `-DelaySeconds 3` for boundary/current verifier profiles.
+
+## Common Commands
 
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
-make -j4
-.\scripts\verify-runtime.ps1
-.\scripts\verify-opening-skip.ps1
+make NDS_DEV_SCENE_HARNESS=normal -j16
 ```
 
-Use the long opening-movie speed gate when changing movie pacing,
-presentation, or renderer cost:
+Static checks:
 
 ```powershell
-.\scripts\verify-opening-movie-speed.ps1
+.\scripts\check-docs.ps1
+.\scripts\check-architecture.ps1
+.\scripts\check-harness-registry.ps1
+.\scripts\check-gbi-decode-fixtures.ps1
+.\scripts\clean-generated.ps1 -DryRun
 ```
 
-Use the direct Title dev/test harness when the task can start from the imported
-Title boundary without replaying the full opening:
+Tiered verifiers:
 
 ```powershell
-.\scripts\verify-title-harness.ps1
+.\scripts\verify-dev-fast.ps1
+.\scripts\verify-boundary.ps1
+.\scripts\verify-current.ps1
+.\scripts\verify-regression.ps1
 ```
 
-Use the direct VS setup harness when the task can start from original
-`mnvsmode.c` setup without replaying Opening Room, the opening movie, or Title
-setup:
+For parallel melonDS regression shards, create local gitignored runner slots,
+prebuild once, then run shards with `-NoBuild`:
 
 ```powershell
-.\scripts\verify-vs-setup-harness.ps1
+.\scripts\New-MelonDSRunnerSlots.ps1 -Count 4
+.\scripts\build-verify-profile.ps1 -Profile Regression
+.\scripts\verify-all.ps1 -Profile Regression -ShardCount 4 -ShardIndex 0 -RunnerSlot 0 -NoBuild
 ```
 
-Use the direct VS Start transition harness when the task needs to prove the
-original `mnVSModeMain` start-button branch into the bounded PlayersVS
-boundary:
+Do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
+
+Run Full only when the risk requires it or the user asks:
 
 ```powershell
-.\scripts\verify-vs-start-transition-harness.ps1
+.\scripts\verify-all.ps1 -Profile Full
 ```
 
-Use the direct PlayersVS setup harness when the task can start from original
-`mnplayersvs.c` setup:
+## Emulator Policy
+
+melonDS is the automated GDB verifier path. no$gba is for interactive DS
+hardware/register/VRAM/OAM/palette/timing debugging. See
+`docs/EMULATOR_STRATEGY.md`.
+
+## Snapshot Policy
+Run a snapshot after successful verified progress, always as the final project
+action after docs, verification, static checks, and status inspection. Run no
+commands after it; only the final response may follow.
 
 ```powershell
-.\scripts\verify-players-vs-setup-harness.ps1
+.\scripts\New-Smash64DSSnapshot.ps1
 ```
 
-Use the direct Maps setup harness when the task can start from original
-`mnmaps.c` setup:
+## Slice And Doc Policy
 
-```powershell
-.\scripts\verify-maps-setup-harness.ps1
-```
+Prefer one coherent source-backed slice over many tiny proof-only edits when
+the original BattleShip path is understood and the verifier boundary remains
+bounded. A good slice may import or route several adjacent original helpers
+together, but it must keep runtime restored after the proof and avoid broad
+subsystem imports.
 
-Use the full menu-chain harness when the task needs to prove the bounded
-VS Mode -> PlayersVS -> Maps -> imported bounded VSBattle setup boundary:
+Keep docs lean during implementation. Update `docs/STATUS.md` and
+`docs/HANDOFF.md` when the current boundary, latest proof, verifier command, or
+known blocker changes. Append `docs/PORTING.md` only after a verified milestone
+or important architectural decision. Avoid duplicating full marker strings
+across multiple docs unless a verifier or reviewer needs the exact value.
 
-```powershell
-.\scripts\verify-menu-chain-vsbattle-harness.ps1
-```
+## Parallel Agents
 
-Use the direct battle setup harness when the task can start at imported
-bounded `scvsbattle.c` setup with one seeded Mario and the current Final
-Destination sentinel:
-
-```powershell
-.\scripts\verify-battle-fd-harness.ps1
-```
-
-The normal build must remain the natural startup/opening path. Harness builds
-use `NDS_DEV_SCENE_HARNESS=title`, `vs_setup`, `vs_start_transition`,
-`players_setup`, `maps_setup`, `menu_chain_vsbattle`, or `battle_fd` with a
-separate build target/directory.
-
-Use the visible melonDS HUD when debugging runtime progress by eye:
-
-```powershell
-.\scripts\debug-melonds.ps1 -Build
-```
-
-Use no$gba for interactive DS hardware/register/VRAM renderer debugging:
-
-```powershell
-.\scripts\debug-nogba.ps1 -Build
-```
-
-For no$gba automated window smoke/capture:
-
-```powershell
-.\scripts\verify-nogba-smoke.ps1 -Build
-.\scripts\capture-nogba.ps1 -Build -AllWindows
-```
-
-Before a renderer/hardware task, decide whether melonDS, no$gba, or both best
-answer the question. Use `docs/EMULATOR_STRATEGY.md`: melonDS remains the
-machine-readable GDB verifier; no$gba is preferred for DS hardware state such
-as VRAM, OAM, palettes, BG/3D registers, and timing.
-
-Local emulator binaries/configs live under `emulators/`; keep them out of the
-repo root and out of source control.
-
-Capture and inspect the actual emulator window when changing visual markers:
-
-```powershell
-.\scripts\capture-melonds.ps1 -Build
-```
-
-For the current natural opening movie-to-Title visual boundary, use:
-
-```powershell
-.\scripts\capture-melonds.ps1 -Build -DelaySeconds 135
-```
-
-Run a clean build when changing headers, Makefile source lists, imported source,
-or linker-visible compatibility symbols:
-
-```powershell
-make clean
-make -j4
-.\scripts\verify-runtime.ps1
-.\scripts\verify-opening-skip.ps1
-```
-
-## Current Boundary
-
-Use `docs/STATUS.md` as the short current-truth source for active planning and
-`docs/HANDOFF.md` for detailed verified boundary evidence. Keep
-`docs/PORTING.md` append-only as history, not as the primary planning surface.
-
-Current short version:
-
-- The ROM boots through original BattleShip startup, bounded Opening Room,
-  Opening Portraits, Opening Mario, fighter name-card scenes, the bounded
-  action-scene bridge, imported bounded Title setup, bounded VS setup/start
-  transition, bounded PlayersVS setup, bounded Maps setup, direct bounded
-  VSBattle setup, and a guarded VS Mode -> PlayersVS -> Maps -> imported
-  VSBattle setup proof.
-- A guarded dev/test harness can start directly at the same imported Title
-  boundary, bounded VS setup boundary, bounded original VS Start transition
-  boundary, bounded PlayersVS boundary, bounded Maps boundary, direct bounded
-  VSBattle setup boundary, or full menu chain boundary for faster iteration; it
-  does not replace the normal boot path.
-- The current Title slice loads original `MNTitle` and `MNTitleFireAnim`,
-  creates original actor/logo-fire/fire/camera/vars boundaries, normalizes the
-  30 original fire-frame Sprites, runs one guarded original Title update tick,
-  and renders a bounded original Title sprite preview.
-- Full Title input, animated logo, labels/Press Start, slash, logo-fire
-  particles, audio, continuous title draw, full VS menu navigation/options,
-  full interactive PlayersVS selection, Maps preview model rendering,
-  fighter/stage-heavy action scenes, full fighter/stage battle logic, items,
-  audio, HUD rendering, and gameplay remain deferred.
-- `src/port/scene_backend.c` is intentionally a thin include orchestrator over
-  DS-owned backend slices. Do not add those slices to `Makefile` `CFILES` until
-  a later ABI cleanup introduces explicit narrow shared headers.
-- Do not import all of `sys/objdisplay.c` as a broad next step. Keep renderer
-  imports scoped to the next deliberately verified draw boundary.
-
-Latest maintained proof commands are:
-
-```powershell
-make -j4
-.\scripts\verify-runtime.ps1
-.\scripts\verify-opening-skip.ps1
-.\scripts\verify-title-boundary.ps1
-.\scripts\verify-vs-setup-harness.ps1
-.\scripts\verify-vs-start-transition-harness.ps1
-.\scripts\verify-players-vs-setup-harness.ps1
-.\scripts\verify-maps-setup-harness.ps1
-.\scripts\verify-battle-fd-harness.ps1
-.\scripts\verify-menu-chain-vsbattle-harness.ps1
-.\scripts\verify-all.ps1
-```
-
-Use no$gba only when melonDS cannot answer the question, especially for VRAM,
-OAM, palette, BG/3D register, DMA, or timing inspection. melonDS remains the
-automated runtime/global verifier.
-
-## Documentation To Maintain
-
-- `docs/ARCHITECTURE.md`: subsystem boundaries and architecture.
-- `docs/STATUS.md`: short current-truth summary for active planning.
-- `docs/HANDOFF.md`: current verified state and next work.
-- `docs/ROADMAP.md`: milestone status.
-- `docs/KNOWN_ISSUES.md`: stubs, warnings, and risks.
-- `docs/GOAL_DEBUGGING.md`: short debug and verifier workflow.
-- `docs/DIAGNOSTIC_REFERENCE.md`: diagnostic globals and marker inventory.
-- `docs/DECOMP_MAP.md`: read-only upstream reference folder map.
-- `docs/EMULATOR_STRATEGY.md`: emulator choice and no$gba automation boundary.
-- `docs/PORTING.md`: chronological porting log.
-
-Use `docs/STATUS.md` and `docs/HANDOFF.md` for current planning. Keep
-`docs/PORTING.md` append-only as history; do not make it the primary planning
-surface.
-
-When a runtime diagnostic changes, update both the verifier and the docs that
-describe it.
+Use parallel agents for bounded scouting, docs synthesis, verifier/tooling work,
+or collision/renderer research. The main agent owns merge decisions.
 
 ## Editing Policy
 
-- Use `apply_patch` for source edits.
-- Do not revert user or generated changes unless explicitly requested.
-- Do not edit `build/`, generated ROM/ELF artifacts, or generated emulator
-  logs/configs except through build/verification commands.
-- Do not edit `decomp/`; use `src/import`, `src/port`, `src/nds`, or `include`
-  for DS-port changes.
-- Do not add BattleShip's full `include` directory globally without checking
-  header conflicts.
-- Avoid broad compatibility headers. Add the ABI needed by the imported source
-  slice and no more.
-
-## How To Add The Next Original Subsystem
-
-1. Read the original source and headers.
-2. Identify the next real runtime boundary.
-3. Add a wrapper in `src/import` for the original `.c` file.
-4. Add the wrapper to the explicit `CFILES` list in `Makefile`.
-5. Add missing ABI to `include/`.
-6. Add backend behavior or diagnostics in `src/port` or `src/nds`.
-7. Build.
-8. Fix the smallest real missing contract.
-9. Extend `scripts/verify-runtime.ps1` if the new boundary can be proven.
-10. Update docs.
-
-## What Not To Do
-
-- Do not manually approximate moves, physics, hitboxes, or menus.
-- Do not replace BattleShip scene logic with a DS-native scene.
+- Use `apply_patch` for manual source/doc edits.
+- Do not revert user changes unless explicitly requested.
+- Do not add broad compatibility headers or broad original imports.
 - Do not treat a stub as a completed subsystem.
-- Do not remove diagnostics without replacing them with stronger evidence.
-- Do not optimize memory/rendering before the original code path is proven.
+- Remove temporary probes before handoff; keep verified diagnostics only.

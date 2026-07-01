@@ -10,6 +10,7 @@
 #define NDS_O2R_MAGIC "OLER"
 
 typedef struct NDSRelocAssetEntry {
+    u32 asset_id;
     u32 file_id;
     const char *path;
 } NDSRelocAssetEntry;
@@ -22,43 +23,72 @@ volatile u32 gNdsRelocAssetFormatFailCount;
 volatile u32 gNdsRelocAssetShortReadCount;
 
 static const NDSRelocAssetEntry sNdsRelocAssets[] = {
-    { 0, "nitro:/reloc/reloc_menus/MNCommon" },
-    { 194, "nitro:/reloc/reloc_misc_named/N64Logo" },
-    { 52, "nitro:/reloc/reloc_movies/MVCommon" },
-    { 63, "nitro:/reloc/reloc_transitions/MVOpeningRoomTransition" },
-    { 56, "nitro:/reloc/reloc_movies/MVOpeningRoomScene1" },
-    { 57, "nitro:/reloc/reloc_movies/MVOpeningRoomScene2" },
-    { 58, "nitro:/reloc/reloc_movies/MVOpeningRoomScene3" },
-    { 59, "nitro:/reloc/reloc_movies/MVOpeningRoomScene4" },
-    { 75, "nitro:/reloc/reloc_movies/MVOpeningRunCrash" },
-    { 90, "nitro:/reloc/reloc_movies/MVOpeningRoomWallpaper" },
-    { 53, "nitro:/reloc/reloc_movies/MVOpeningPortraitsSet1" },
-    { 54, "nitro:/reloc/reloc_movies/MVOpeningPortraitsSet2" },
-    { 37, "nitro:/reloc/reloc_interface/IFCommonAnnounceCommon" },
-    { 65, "nitro:/reloc/reloc_movies/MVOpeningCommon" },
-    { 55, "nitro:/reloc/reloc_movies/MVOpeningRun" },
-    { 71, "nitro:/reloc/reloc_movies/MVOpeningYamabuki" },
-    { 73, "nitro:/reloc/reloc_movies/MVOpeningSector" },
-    { 167, "nitro:/reloc/reloc_menus/MNTitle" },
-    { 168, "nitro:/reloc/reloc_menus/MNTitleFireAnim" },
-    { 0xa6, "nitro:/reloc/reloc_interface/IFCommonPlayer" },
-    { 0x52, "nitro:/reloc/reloc_interface/IFCommonGameStatus" },
-    { 0xa4, "nitro:/reloc/reloc_interface/IFCommonPlayerDamage" },
-    { 0xa5, "nitro:/reloc/reloc_interface/IFCommonTimer" },
-    { 0x24, "nitro:/reloc/reloc_interface/IFCommonDigits" },
-    { 0xc5, "nitro:/reloc/reloc_interface/IFCommonBattlePause" },
-    { 0x26, "nitro:/reloc/reloc_interface/IFCommonPlayerTags" },
-    { 0xc7, "nitro:/reloc/reloc_misc_named/SYKseg1Validate" },
-    { 6, "nitro:/reloc/reloc_menus/MNVSMode" },
-    { 0x11, "nitro:/reloc/reloc_menus/MNPlayersCommon" },
-    { 0x12, "nitro:/reloc/reloc_menus/MNPlayersGameModes" },
-    { 0x13, "nitro:/reloc/reloc_menus/MNPlayersPortraits" },
-    { 0x14, "nitro:/reloc/reloc_fighters_common/FTEmblemSprites" },
-    { 0x15, "nitro:/reloc/reloc_menus/MNSelectCommon" },
-    { 0x16, "nitro:/reloc/reloc_menus/MNPlayersSpotlight" },
-    { 0x1a, "nitro:/reloc/reloc_stages/GRWallpaperTrainingBlack" },
-    { 0x1e, "nitro:/reloc/reloc_menus/MNMaps" },
-    { 0x21, "nitro:/reloc/reloc_menus/MNCommonFonts" },
+    { 0, 0, "nitro:/reloc/reloc_menus/MNCommon" },
+    { 194, 194, "nitro:/reloc/reloc_misc_named/N64Logo" },
+    { 52, 52, "nitro:/reloc/reloc_movies/MVCommon" },
+    { 63, 63, "nitro:/reloc/reloc_transitions/MVOpeningRoomTransition" },
+    { 56, 56, "nitro:/reloc/reloc_movies/MVOpeningRoomScene1" },
+    { 57, 57, "nitro:/reloc/reloc_movies/MVOpeningRoomScene2" },
+    { 58, 58, "nitro:/reloc/reloc_movies/MVOpeningRoomScene3" },
+    { 59, 59, "nitro:/reloc/reloc_movies/MVOpeningRoomScene4" },
+    { 75, 75, "nitro:/reloc/reloc_movies/MVOpeningRunCrash" },
+    { 90, 90, "nitro:/reloc/reloc_movies/MVOpeningRoomWallpaper" },
+    { 53, 53, "nitro:/reloc/reloc_movies/MVOpeningPortraitsSet1" },
+    { 54, 54, "nitro:/reloc/reloc_movies/MVOpeningPortraitsSet2" },
+    { 37, 37, "nitro:/reloc/reloc_interface/IFCommonAnnounceCommon" },
+    { 65, 65, "nitro:/reloc/reloc_movies/MVOpeningCommon" },
+    { 55, 55, "nitro:/reloc/reloc_movies/MVOpeningRun" },
+    { 71, 71, "nitro:/reloc/reloc_movies/MVOpeningYamabuki" },
+    { 73, 73, "nitro:/reloc/reloc_movies/MVOpeningSector" },
+    { 167, 167, "nitro:/reloc/reloc_menus/MNTitle" },
+    { 168, 168, "nitro:/reloc/reloc_menus/MNTitleFireAnim" },
+    { 0xa6, 0xa6, "nitro:/reloc/reloc_interface/IFCommonPlayer" },
+    { 0x52, 0x52, "nitro:/reloc/reloc_interface/IFCommonGameStatus" },
+    { 0xa4, 0xa4, "nitro:/reloc/reloc_interface/IFCommonPlayerDamage" },
+    { 0xa5, 0xa5, "nitro:/reloc/reloc_interface/IFCommonTimer" },
+    { 0x24, 0x24, "nitro:/reloc/reloc_interface/IFCommonDigits" },
+    { 0xc5, 0xc5, "nitro:/reloc/reloc_interface/IFCommonBattlePause" },
+    { 0x26, 0x26, "nitro:/reloc/reloc_interface/IFCommonPlayerTags" },
+    { 0xc7, 0xc7, "nitro:/reloc/reloc_misc_named/SYKseg1Validate" },
+    { 6, 6, "nitro:/reloc/reloc_menus/MNVSMode" },
+    { 0x11, 0x11, "nitro:/reloc/reloc_menus/MNPlayersCommon" },
+    { 0x12, 0x12, "nitro:/reloc/reloc_menus/MNPlayersGameModes" },
+    { 0x13, 0x13, "nitro:/reloc/reloc_menus/MNPlayersPortraits" },
+    { 0x14, 0x14, "nitro:/reloc/reloc_fighters_common/FTEmblemSprites" },
+    { 0x15, 0x15, "nitro:/reloc/reloc_menus/MNSelectCommon" },
+    { 0x16, 0x16, "nitro:/reloc/reloc_menus/MNPlayersSpotlight" },
+    { 0x1a, 0x1a, "nitro:/reloc/reloc_stages/GRWallpaperTrainingBlack" },
+    { 0x1e, 0x1e, "nitro:/reloc/reloc_menus/MNMaps" },
+    { 0x21, 0x21, "nitro:/reloc/reloc_menus/MNCommonFonts" },
+    { 0xff, 0xff, "nitro:/reloc/reloc_stages/GRPupupuMap" },
+    { 0x104, 0x104, "nitro:/reloc/reloc_stages/GRInishieMap" },
+    { 0x109, 0x109, "nitro:/reloc/reloc_stages/GRHyruleMap" },
+    { 0x1005f, 0x5f, "nitro:/reloc/reloc_stages/StageCastle" },
+    { 0x10058, 0x58, "nitro:/reloc/reloc_stages/StageDreamLand" },
+    { 0x71, 0x71, "nitro:/reloc/reloc_extern_data/ExternDataBank113" },
+    { 0x67, 0x67, "nitro:/reloc/reloc_extern_data/ExternDataBank103" },
+    { 0x68, 0x68, "nitro:/reloc/reloc_extern_data/ExternDataBank104" },
+    { 0x98, 0x98, "nitro:/reloc/reloc_extern_data/MiscDataBank152" },
+    { 0xa3, 0xa3, "nitro:/reloc/reloc_fighters_common/FTManagerCommon" },
+    { 0xcb, 0xcb, "nitro:/reloc/reloc_fighters_main/MarioMain" },
+    { 0xca, 0xca, "nitro:/reloc/reloc_fighters_main/MarioMainMotion" },
+    { 0x128, 0x128, "nitro:/reloc/reloc_fighters_main/MarioModel" },
+    { 0x12a, 0x12a, "nitro:/reloc/reloc_fighters_main/MarioShieldPose" },
+    { 0xcc, 0xcc, "nitro:/reloc/reloc_fighters_main/MarioSpecial1" },
+    { 0x164, 0x164, "nitro:/reloc/reloc_fighters_main/MarioSpecial2" },
+    { 0x129, 0x129, "nitro:/reloc/reloc_fighters_main/MarioSpecial3" },
+    { 0xd1, 0xd1, "nitro:/reloc/reloc_fighters_main/FoxMain" },
+    { 0xd0, 0xd0, "nitro:/reloc/reloc_fighters_main/FoxMainMotion" },
+    { 0x139, 0x139, "nitro:/reloc/reloc_fighters_main/FoxModel" },
+    { 0x13a, 0x13a, "nitro:/reloc/reloc_fighters_main/FoxShieldPose" },
+    { 0xd2, 0xd2, "nitro:/reloc/reloc_fighters_main/FoxSpecial1" },
+    { 0x15a, 0x15a, "nitro:/reloc/reloc_fighters_main/FoxSpecial2" },
+    { 0xa1, 0xa1, "nitro:/reloc/reloc_fighters_main/FoxSpecial3" },
+    { 0x13c, 0x13c, "nitro:/reloc/reloc_fighters_main/FoxSpecial4" },
+    { 0xc9, 0xc9, "nitro:/reloc/reloc_extern_data/MiscData201" },
+    { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
+    { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
+    { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
 };
 
 static u16 ndsReadLe16(const u8 *bytes)
@@ -74,18 +104,25 @@ static u32 ndsReadLe32(const u8 *bytes)
            ((u32)bytes[3] << 24);
 }
 
-const char *ndsRelocAssetGetPath(u32 file_id)
+static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
 {
     size_t i;
 
     for (i = 0; i < (sizeof(sNdsRelocAssets) / sizeof(sNdsRelocAssets[0])); i++)
     {
-        if (sNdsRelocAssets[i].file_id == file_id)
+        if (sNdsRelocAssets[i].asset_id == asset_id)
         {
-            return sNdsRelocAssets[i].path;
+            return &sNdsRelocAssets[i];
         }
     }
     return NULL;
+}
+
+const char *ndsRelocAssetGetPath(u32 asset_id)
+{
+    const NDSRelocAssetEntry *entry = ndsRelocAssetFindEntry(asset_id);
+
+    return (entry != NULL) ? entry->path : NULL;
 }
 
 void ndsRelocAssetsInit(void)
@@ -162,9 +199,9 @@ s32 ndsRelocAssetReadHeaderFromFile(FILE *file, u32 expected_file_id,
     return TRUE;
 }
 
-s32 ndsRelocAssetReadHeader(u32 file_id, NDSRelocAssetHeader *out_header)
+s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header)
 {
-    const char *path;
+    const NDSRelocAssetEntry *entry;
     FILE *file;
     long data_offset;
     s32 ok;
@@ -174,21 +211,21 @@ s32 ndsRelocAssetReadHeader(u32 file_id, NDSRelocAssetHeader *out_header)
         return FALSE;
     }
 
-    path = ndsRelocAssetGetPath(file_id);
-    if (path == NULL)
+    entry = ndsRelocAssetFindEntry(asset_id);
+    if (entry == NULL)
     {
         gNdsRelocAssetOpenFailCount++;
         return FALSE;
     }
 
-    file = fopen(path, "rb");
+    file = fopen(entry->path, "rb");
     if (file == NULL)
     {
         gNdsRelocAssetOpenFailCount++;
         return FALSE;
     }
 
-    ok = ndsRelocAssetReadHeaderFromFile(file, file_id, out_header, &data_offset);
+    ok = ndsRelocAssetReadHeaderFromFile(file, entry->file_id, out_header, &data_offset);
     fclose(file);
 
     if (ok != FALSE)
@@ -198,10 +235,82 @@ s32 ndsRelocAssetReadHeader(u32 file_id, NDSRelocAssetHeader *out_header)
     return ok;
 }
 
-s32 ndsRelocAssetLoadData(u32 file_id, void *dst, size_t dst_capacity,
+s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u32 *out_file_ids,
+                                   u32 capacity, u32 *out_count)
+{
+    const NDSRelocAssetEntry *entry;
+    FILE *file;
+    NDSRelocAssetHeader header;
+    long data_offset;
+    u32 i;
+
+    if (out_count != NULL)
+    {
+        *out_count = 0;
+    }
+    if ((out_file_ids == NULL) && (capacity != 0))
+    {
+        return FALSE;
+    }
+
+    entry = ndsRelocAssetFindEntry(asset_id);
+    if (entry == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+
+    file = fopen(entry->path, "rb");
+    if (file == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+
+    if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
+                                        &data_offset) == FALSE)
+    {
+        fclose(file);
+        return FALSE;
+    }
+    if (header.extern_file_ids_num > capacity)
+    {
+        fclose(file);
+        gNdsRelocAssetFormatFailCount++;
+        return FALSE;
+    }
+    if (fseek(file, NDS_O2R_RESOURCE_HEADER_SIZE + 12, SEEK_SET) != 0)
+    {
+        fclose(file);
+        gNdsRelocAssetShortReadCount++;
+        return FALSE;
+    }
+
+    for (i = 0; i < header.extern_file_ids_num; i++)
+    {
+        u8 id_bytes[2];
+
+        if (fread(id_bytes, 1, sizeof(id_bytes), file) != sizeof(id_bytes))
+        {
+            fclose(file);
+            gNdsRelocAssetShortReadCount++;
+            return FALSE;
+        }
+        out_file_ids[i] = ndsReadLe16(id_bytes);
+    }
+    fclose(file);
+
+    if (out_count != NULL)
+    {
+        *out_count = header.extern_file_ids_num;
+    }
+    return TRUE;
+}
+
+s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
                            NDSRelocAssetHeader *out_header)
 {
-    const char *path;
+    const NDSRelocAssetEntry *entry;
     FILE *file;
     NDSRelocAssetHeader header;
     long data_offset;
@@ -212,21 +321,21 @@ s32 ndsRelocAssetLoadData(u32 file_id, void *dst, size_t dst_capacity,
         return FALSE;
     }
 
-    path = ndsRelocAssetGetPath(file_id);
-    if (path == NULL)
+    entry = ndsRelocAssetFindEntry(asset_id);
+    if (entry == NULL)
     {
         gNdsRelocAssetOpenFailCount++;
         return FALSE;
     }
 
-    file = fopen(path, "rb");
+    file = fopen(entry->path, "rb");
     if (file == NULL)
     {
         gNdsRelocAssetOpenFailCount++;
         return FALSE;
     }
 
-    ok = ndsRelocAssetReadHeaderFromFile(file, file_id, &header, &data_offset);
+    ok = ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header, &data_offset);
     if (ok == FALSE)
     {
         fclose(file);

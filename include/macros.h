@@ -19,6 +19,7 @@
 #define M_DTOR_F(x) ((f32)((x) * (f32)M_DTOR))
 #define F_CST_DTOR32(x) ((f32)((x) * (M_PI / 180.0)))
 #define F_CLC_DTOR32(x) ((f32)(((x) * M_PI) / 180.0))
+#define F_PCT_TO_DEC(x) ((f32)((x) * 0.01F))
 #define PHYSICAL_TO_ROM(x) ((uintptr_t)(x) + 0xB0000000u)
 #define TIME_SEC 60
 #define TIME_MIN (TIME_SEC * 60)
