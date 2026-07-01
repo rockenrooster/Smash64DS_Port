@@ -266,6 +266,13 @@ Assert-Equal $restoredVtx.X $transformedVtx.X 'Modelview pop fixture did not res
 Assert-Equal $restoredVtx.Y $transformedVtx.Y 'Modelview pop fixture did not restore transformed Y.'
 Assert-Equal $restoredVtx.Z $transformedVtx.Z 'Modelview pop fixture did not restore transformed Z.'
 Assert-Equal $restoredVtx.W $transformedVtx.W 'Modelview pop fixture did not restore transformed W.'
+$rawValidMask = (1 -shl 1) -bor (1 -shl 2) -bor (1 -shl 3)
+$rawTri = New-F3DEX2TriPacked -V0 1 -V1 2 -V2 3
+$decodedRawTri = Decode-F3DEX2TriPacked -Packed $rawTri
+$rawTriMask = (1 -shl $decodedRawTri.V0) -bor
+    (1 -shl $decodedRawTri.V1) -bor
+    (1 -shl $decodedRawTri.V2)
+Assert-True (($rawValidMask -band $rawTriMask) -eq $rawTriMask) 'Hardware raw triangle readiness fixture failed.'
 $forbiddenSnippets = @(
     'u32 v0 = ((w0 >> 16) & 0xFFu) / 2u;',
     'u32 count = (w0 & 0xFFu) / 2u;',
@@ -298,14 +305,26 @@ Assert-True ($renderer.Contains('ndsRendererApplyPopMatrixCommand')) 'Renderer G
 Assert-True ($renderer.Contains('modelview_stack')) 'Renderer modelview stack state is missing.'
 Assert-True ($renderer.Contains('ndsRendererDecodeInputVertex')) 'Renderer Vtx payload decode helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordTransformedTriangle')) 'Renderer transformed triangle readiness handler is missing.'
+Assert-True ($renderer.Contains('ndsRendererSubmitHardwareTriangle')) 'Renderer hardware triangle submission handler is missing.'
+Assert-True ($renderer.Contains('glVertex3v16')) 'Renderer hardware path does not submit raw vertices through GX.'
+Assert-True ($renderer.Contains('input_vertices')) 'Renderer hardware raw vertex cache is missing.'
+Assert-True ($renderer.Contains('sNdsRendererHardwareSubmitted')) 'Renderer hardware frame-submit latch is missing.'
 Assert-True ($renderer.Contains('matrix_command_count')) 'Renderer matrix stats are missing.'
 Assert-True ($renderer.Contains('matrix_pop_count')) 'Renderer matrix pop stats are missing.'
 Assert-True ($renderer.Contains('transformed_vertex_count')) 'Renderer transformed vertex stats are missing.'
 Assert-True ($renderer.Contains('transformed_triangle_count')) 'Renderer transformed triangle stats are missing.'
+Assert-True ($renderer.Contains('hardware_triangle_count')) 'Renderer hardware triangle stats are missing.'
+$platform = Get-Content (Join-Path $root 'src/nds/nds_platform.c') -Raw
+Assert-True ($platform.Contains('MODE_0_3D')) 'Platform hardware renderer mode init is missing.'
+Assert-True ($platform.Contains('glFlush(0)')) 'Platform hardware renderer frame flush is missing.'
+Assert-True ($platform.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Platform does not guard hardware flushes with the renderer submit latch.'
+$makefile = Get-Content (Join-Path $root 'Makefile') -Raw
+Assert-True ($makefile.Contains('NDS_RENDERER_HW_TRIANGLES ?= 0')) 'Makefile hardware renderer flag default is missing.'
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
 Assert-True ($rendererHeader.Contains('NDSRendererResolveData')) 'Renderer data resolver hook is missing.'
 Assert-True ($rendererHeader.Contains('transformed_vertices')) 'Renderer command transformed vertex cache exposure is missing.'
+Assert-True ($rendererHeader.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Renderer hardware submit-latch API is missing.'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
 Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'
-Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, transformed triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.'
+Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, transformed and hardware raw triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.'

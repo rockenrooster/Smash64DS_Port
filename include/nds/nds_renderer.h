@@ -118,6 +118,10 @@ typedef struct NDSRendererStats
     u32 matrix_transform_count;
     u32 transformed_vertex_count;
     u32 transformed_triangle_count;
+    u32 hardware_vertex_count;
+    u32 hardware_triangle_count;
+    u32 hardware_oracle_triangle_count;
+    u32 hardware_oracle_reject_count;
     u32 first_transformed_tri_v0;
     u32 first_transformed_tri_v1;
     u32 first_transformed_tri_v2;
@@ -211,5 +215,6 @@ void ndsRendererExecuteDisplayList(const Gfx *dl,
                                    NDSRendererCommandCallback callback,
                                    void *callback_user,
                                    NDSRendererStats *stats);
+u32 ndsRendererHardwareConsumeSubmittedFrame(void);
 
 #endif

@@ -579,7 +579,7 @@ stage-inclusive Pupupu `gcDrawAll` capture proof, and their `src/nds/nds_rendere
 command paths before expanding continuous `gcDrawAll` or importing the broader
 object-display stack.
 
-Renderer stage 1 now has a project-owned packed-N64-`Mtx` unpacker in
+Renderer stage 1 added a project-owned packed-N64-`Mtx` unpacker in
 `src/nds/nds_renderer.c`. It converts original `guMtxF2L` layout into DS
 20.12 fixed-point cells and transforms position vertices with the same
 orientation as `guMtxXFMF`. The shared display-list traversal now handles real
@@ -587,8 +587,15 @@ orientation as `guMtxXFMF`. The shared display-list traversal now handles real
 a composed transform matrix, modelview `G_POPMTX` stack restore, optional
 scene-owned data resolution for segmented payloads, transformed vertex
 counters, and transformed-ready triangle counters.
-The next renderer step is to feed those `G_TRI1` / `G_TRI2` triangles into DS
-3D submission.
+Renderer stage 2 adds a build-flagged DS 3D path:
+`NDS_RENDERER_HW_TRIANGLES=1` initializes the top screen as `MODE_0_3D`, loads
+the traversal's projection/modelview state into GX, and submits untextured
+`G_TRI1` / `G_TRI2` raw vertex coordinates with `glVertex3v16`. Default builds
+still use the software preview. The current Mario/Fox first/multi/all-DL static
+content has no inline `G_MTX`, so the hardware path keeps a temporary
+no-matrix scale fallback only to make that proven slice visible until original
+DObj matrix/camera prep is routed into the renderer. Texture, combiner,
+material, depth, and full cutover remain later stages.
 
 ## Scene And Startup
 

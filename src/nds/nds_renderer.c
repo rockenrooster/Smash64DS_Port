@@ -4,6 +4,14 @@
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_renderer.h>
 
+#ifndef NDS_RENDERER_HW_TRIANGLES
+#define NDS_RENDERER_HW_TRIANGLES 0
+#endif
+
+#if NDS_RENDERER_HW_TRIANGLES
+#include <nds.h>
+#endif
+
 #define NDS_RENDERER_OP_NOOP 0x00u
 #define NDS_RENDERER_OP_VTX 0x01u
 #define NDS_RENDERER_OP_MODIFYVTX 0x02u
@@ -50,6 +58,11 @@
 #define NDS_RENDERER_MTX_PUSH 0x01u
 #define NDS_RENDERER_MTX_LOAD 0x02u
 #define NDS_RENDERER_MTX_PROJECTION 0x04u
+#define NDS_RENDERER_HW_FALLBACK_SCALE 16
+
+#if NDS_RENDERER_HW_TRIANGLES
+static u32 sNdsRendererHardwareSubmitted;
+#endif
 
 typedef struct NDSRendererTraversalState
 {
@@ -58,9 +71,15 @@ typedef struct NDSRendererTraversalState
     NDSRendererMatrix20p12 matrix;
     NDSRendererMatrix20p12 modelview_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     NDSRendererClipVertex20p12 vertices[NDS_RENDERER_MAX_VTX];
+#if NDS_RENDERER_HW_TRIANGLES
+    NDSRendererInputVertex input_vertices[NDS_RENDERER_MAX_VTX];
+#endif
     u32 modelview_valid_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     u32 modelview_stack_depth;
     u32 vertex_valid_mask;
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 input_vertex_valid_mask;
+#endif
     u32 projection_valid;
     u32 modelview_valid;
     u32 matrix_valid;
@@ -775,10 +794,12 @@ static void ndsRendererApplyVertexCommand(
     {
         stats->vertex_count = v0 + count;
     }
+#if !NDS_RENDERER_HW_TRIANGLES
     if (state->matrix_valid == 0u)
     {
         return;
     }
+#endif
 
     src = ndsRendererResolveDataPointer(config,
                                         (const void *)(uintptr_t)w1,
@@ -795,6 +816,14 @@ static void ndsRendererApplyVertexCommand(
         NDSRendererClipVertex20p12 *out = &state->vertices[v0 + i];
 
         ndsRendererDecodeInputVertex(&input, src + (i * 16u));
+#if NDS_RENDERER_HW_TRIANGLES
+        state->input_vertices[v0 + i] = input;
+        state->input_vertex_valid_mask |= 1u << (v0 + i);
+#endif
+        if (state->matrix_valid == 0u)
+        {
+            continue;
+        }
         ndsRendererTransformVertex20p12(&state->matrix, &input, out);
         state->vertex_valid_mask |= 1u << (v0 + i);
         stats->matrix_transform_count++;
@@ -862,6 +891,149 @@ static void ndsRendererRecordTransformedTriangle(
     }
     stats->transformed_triangle_count++;
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+static void ndsRendererCopyMtx20p12ToM4x4(
+    const NDSRendererMatrix20p12 *src, m4x4 *dst)
+{
+    u32 row;
+    u32 col;
+
+    if ((src == NULL) || (dst == NULL))
+    {
+        return;
+    }
+
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            dst->m[(row * 4u) + col] = src->m[row][col];
+        }
+    }
+}
+
+static void ndsRendererLoadHardwareMatrices(
+    const NDSRendererTraversalState *state)
+{
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    m4x4 projection_hw;
+    m4x4 modelview_hw;
+
+    ndsRendererMtxIdentity20p12(&projection);
+    ndsRendererMtxIdentity20p12(&modelview);
+
+    if (state != NULL)
+    {
+        if (state->projection_valid != 0u)
+        {
+            projection = state->projection;
+        }
+        if (state->modelview_valid != 0u)
+        {
+            modelview = state->modelview;
+        }
+        else
+        {
+            /*
+             * ponytail: keeps no-matrix DL draw probes visible until the
+             * original DObj matrix prep path feeds renderer-owned G_MTX.
+             */
+            modelview.m[0][0] = NDS_RENDERER_HW_FALLBACK_SCALE <<
+                                NDS_RENDERER_DS_MTX_FRAC_BITS;
+            modelview.m[1][1] = NDS_RENDERER_HW_FALLBACK_SCALE <<
+                                NDS_RENDERER_DS_MTX_FRAC_BITS;
+            modelview.m[2][2] = NDS_RENDERER_HW_FALLBACK_SCALE <<
+                                NDS_RENDERER_DS_MTX_FRAC_BITS;
+        }
+    }
+
+    ndsRendererCopyMtx20p12ToM4x4(&projection, &projection_hw);
+    ndsRendererCopyMtx20p12ToM4x4(&modelview, &modelview_hw);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadMatrix4x4(&projection_hw);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrix4x4(&modelview_hw);
+}
+
+static s32 ndsRendererInputTriangleReady(
+    const NDSRendererTraversalState *state, u32 packed,
+    u32 *out_i0, u32 *out_i1, u32 *out_i2)
+{
+    u32 i0;
+    u32 i1;
+    u32 i2;
+    u32 mask;
+
+    ndsGBIDecodePackedTriIndices(packed, &i0, &i1, &i2);
+    if (out_i0 != NULL) { *out_i0 = i0; }
+    if (out_i1 != NULL) { *out_i1 = i1; }
+    if (out_i2 != NULL) { *out_i2 = i2; }
+
+    if ((state == NULL) ||
+        (i0 >= NDS_RENDERER_MAX_VTX) ||
+        (i1 >= NDS_RENDERER_MAX_VTX) ||
+        (i2 >= NDS_RENDERER_MAX_VTX))
+    {
+        return FALSE;
+    }
+
+    mask = (1u << i0) | (1u << i1) | (1u << i2);
+    return ((state->input_vertex_valid_mask & mask) == mask) ? TRUE : FALSE;
+}
+
+static void ndsRendererSubmitHardwareTriangle(
+    NDSRendererStats *stats,
+    const NDSRendererTraversalState *state,
+    u32 packed)
+{
+    u32 i0;
+    u32 i1;
+    u32 i2;
+    const NDSRendererInputVertex *v0;
+    const NDSRendererInputVertex *v1;
+    const NDSRendererInputVertex *v2;
+
+    if (stats == NULL)
+    {
+        return;
+    }
+    if (ndsRendererInputTriangleReady(state, packed, &i0, &i1, &i2) == FALSE)
+    {
+        stats->hardware_oracle_reject_count++;
+        return;
+    }
+    if ((state != NULL) && (state->matrix_valid != 0u))
+    {
+        if (ndsRendererTransformedTriangleReady(state, packed, NULL, NULL,
+                                                NULL) == FALSE)
+        {
+            stats->hardware_oracle_reject_count++;
+            return;
+        }
+        stats->hardware_oracle_triangle_count++;
+    }
+
+    v0 = &state->input_vertices[i0];
+    v1 = &state->input_vertices[i1];
+    v2 = &state->input_vertices[i2];
+
+    ndsRendererLoadHardwareMatrices(state);
+    glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(31));
+    glColor3b(255, 224, 48);
+    glBegin(GL_TRIANGLE);
+    glVertex3v16(v0->x, v0->y, v0->z);
+    glVertex3v16(v1->x, v1->y, v1->z);
+    glVertex3v16(v2->x, v2->y, v2->z);
+    glEnd();
+
+    sNdsRendererHardwareSubmitted = TRUE;
+    stats->hardware_triangle_count++;
+    stats->hardware_vertex_count += 3u;
+}
+#endif
 
 static void ndsRendererScanList(const Gfx *dl,
                                 const NDSRendererConfig *config,
@@ -974,6 +1146,10 @@ static void ndsRendererScanList(const Gfx *dl,
             stats->render_command_count++;
             ndsRendererRecordTransformedTriangle(
                 stats, state, ndsGBIDecodeF3DEX2Tri1(w0));
+#if NDS_RENDERER_HW_TRIANGLES
+            ndsRendererSubmitHardwareTriangle(
+                stats, state, ndsGBIDecodeF3DEX2Tri1(w0));
+#endif
             break;
 
         case NDS_RENDERER_OP_TRI2:
@@ -984,6 +1160,12 @@ static void ndsRendererScanList(const Gfx *dl,
                 stats, state, ndsGBIDecodeF3DEX2Tri2First(w0));
             ndsRendererRecordTransformedTriangle(
                 stats, state, ndsGBIDecodeF3DEX2Tri2Second(w1));
+#if NDS_RENDERER_HW_TRIANGLES
+            ndsRendererSubmitHardwareTriangle(
+                stats, state, ndsGBIDecodeF3DEX2Tri2First(w0));
+            ndsRendererSubmitHardwareTriangle(
+                stats, state, ndsGBIDecodeF3DEX2Tri2Second(w1));
+#endif
             break;
 
         case NDS_RENDERER_OP_ENDDL:
@@ -1179,6 +1361,18 @@ void ndsRendererScanDisplayList(const Gfx *dl,
         stats->blocker = NDS_RENDERER_BLOCKER_NO_END;
         return;
     }
+}
+
+u32 ndsRendererHardwareConsumeSubmittedFrame(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 submitted = sNdsRendererHardwareSubmitted;
+
+    sNdsRendererHardwareSubmitted = FALSE;
+    return submitted;
+#else
+    return FALSE;
+#endif
 }
 
 void ndsRendererExecuteDisplayList(const Gfx *dl,

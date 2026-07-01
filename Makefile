@@ -18,6 +18,7 @@ TARGET := smash64ds
 BUILD := build
 NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
+NDS_RENDERER_HW_TRIANGLES ?= 0
 NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	battle_mariofox_stage_inishie_scale_loop \
 	menu_chain_mariofox_stage_inishie_scale_loop \
@@ -403,6 +404,7 @@ $(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use a harness 
 endif
 CFLAGS += -DNDS_DEV_LIVE_INPUT_PREVIEW=$(NDS_DEV_LIVE_INPUT_PREVIEW)
 CFLAGS += -DNDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=$(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)
+CFLAGS += -DNDS_RENDERER_HW_TRIANGLES=$(NDS_RENDERER_HW_TRIANGLES)
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections

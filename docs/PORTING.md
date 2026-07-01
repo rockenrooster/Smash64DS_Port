@@ -15605,3 +15605,19 @@ Still deferred:
   fixture and source-snippet guards for the renderer stack handler.
 - Verified: `.\scripts\check-gbi-decode-fixtures.ps1`;
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Build-Flagged DS Hardware Triangle Submission
+
+- Added `NDS_RENDERER_HW_TRIANGLES=1` as an opt-in build flag; default builds
+  still use the software preview path.
+- The shared renderer now caches raw `G_VTX` payloads, uses the CPU 20.12
+  transformed-triangle path as the oracle when matrices exist, loads
+  projection/modelview state into GX, and submits `G_TRI1` / `G_TRI2` triangles
+  with `glVertex3v16`.
+- Added DS 3D top-screen init/flush wiring in `src/nds/nds_platform.c` and a
+  submit latch so one-shot DL traversal output is not overwritten by later
+  empty hardware frames.
+- Captured Mario/Fox all-DL hardware triangles at
+  `artifacts\melonds-hwtri.png`; the current static DL slice has no inline
+  `G_MTX`, so a temporary no-matrix scale fallback remains until original DObj
+  matrix/camera prep is imported.

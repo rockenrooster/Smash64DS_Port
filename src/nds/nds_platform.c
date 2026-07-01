@@ -7,10 +7,15 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_scene.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_video.h>
 #include <sys/controller.h>
+
+#ifndef NDS_RENDERER_HW_TRIANGLES
+#define NDS_RENDERER_HW_TRIANGLES 0
+#endif
 
 extern volatile u32 gNdsBootSelfTestResult;
 extern volatile u32 gNdsFrameCounter;
@@ -30,9 +35,11 @@ extern volatile u32 gNdsFrameCounter;
 #define NDS_TOP_BACKGROUND_COLOR (RGB15(2, 3, 6) | BIT(15))
 #define NDS_PERF_SAMPLE_TICKS 60u
 
+#if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
 static u32 sDrawFramebufferIndex;
+#endif
 static u32 sTicks;
 static u32 sHeldKeys;
 static u32 sPerfSampleReady;
@@ -92,6 +99,18 @@ void ndsPlatformInit(void)
      * for libnds' 32-bit CPU timing source before original code can sample it. */
     cpuStartTiming(0);
 
+#if NDS_RENDERER_HW_TRIANGLES
+    videoSetMode(MODE_0_3D);
+    glInit();
+    glClearColor(2, 3, 6, 31);
+    glClearDepth(GL_MAX_DEPTH);
+    glEnable(GL_ANTIALIAS);
+    glViewport(0, 0, 255, 191);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+#else
     videoSetMode(MODE_FB0);
     vramSetBankA(VRAM_A_LCD);
     vramSetBankB(VRAM_B_LCD);
@@ -103,6 +122,7 @@ void ndsPlatformInit(void)
                      SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u16));
     dmaFillHalfWords(NDS_TOP_BACKGROUND_COLOR, sFramebuffers[1],
                      SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u16));
+#endif
 
     videoSetModeSub(MODE_0_2D);
     vramSetBankH(VRAM_H_SUB_BG);
@@ -135,12 +155,23 @@ u32 ndsPlatformReadInput(void)
 
 void ndsPlatformBeginFrame(void)
 {
+#if NDS_RENDERER_HW_TRIANGLES
+    return;
+#else
     dmaFillHalfWords(NDS_TOP_BACKGROUND_COLOR, sFramebuffer,
                      SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u16));
+#endif
 }
 
 void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color)
 {
+#if NDS_RENDERER_HW_TRIANGLES
+    (void)x;
+    (void)y;
+    (void)width;
+    (void)height;
+    (void)color;
+#else
     s32 row;
     s32 column;
 
@@ -159,6 +190,7 @@ void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color)
             dst[column] = color;
         }
     }
+#endif
 }
 
 u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
@@ -419,6 +451,7 @@ void ndsPlatformClearOriginalDLPreview(void)
     memset(sOriginalDLPreview, 0, sizeof(sOriginalDLPreview));
 }
 
+#if !NDS_RENDERER_HW_TRIANGLES
 static void ndsPlatformDrawOriginalSpritePreview(void)
 {
     s32 dst_x;
@@ -521,6 +554,7 @@ static void ndsPlatformDrawOriginalDLPreview(void)
                dst_w * sizeof(sOriginalDLDisplayPreview[0]));
     }
 }
+#endif
 
 static void ndsPlatformPrintDebugLine(u32 row, const char *format, ...)
 {
@@ -764,8 +798,10 @@ void ndsPlatformRenderDebugHud(void)
 {
     u32 debug_text_fingerprint;
 
+#if !NDS_RENDERER_HW_TRIANGLES
     ndsPlatformDrawOriginalDLPreview();
     ndsPlatformDrawOriginalSpritePreview();
+#endif
     ndsPlatformUpdatePerfCounters();
 
     debug_text_fingerprint = ndsPlatformDebugTextFingerprint();
@@ -867,11 +903,20 @@ void ndsPlatformRenderDebugHud(void)
 
 void ndsPlatformEndFrame(void)
 {
+#if NDS_RENDERER_HW_TRIANGLES
+    if (ndsRendererHardwareConsumeSubmittedFrame() != 0u)
+    {
+        glFlush(0);
+    }
+    swiWaitForVBlank();
+    sTicks++;
+#else
     swiWaitForVBlank();
     videoSetMode((sDrawFramebufferIndex == 0) ? MODE_FB0 : MODE_FB1);
     sDrawFramebufferIndex ^= 1u;
     sFramebuffer = sFramebuffers[sDrawFramebufferIndex];
     sTicks++;
+#endif
 }
 
 u32 ndsPlatformTicks(void)

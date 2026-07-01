@@ -47,14 +47,15 @@ Full diagnostic marker strings live in `docs/DIAGNOSTIC_REFERENCE.md`, not here.
 
 ## Latest Proof
 
-Renderer stage 1 now carries real `G_MTX` / `G_VTX` traversal state in
-`src/nds/nds_renderer.c`: BattleShip/N64 packed `Mtx` data is unpacked to DS
-20.12, modelview/projection state is composed, modelview `G_POPMTX` stack
-restore is tracked, and vertex payloads are decoded/transformed during shared
-display-list execution. The shared traversal also counts `G_TRI1` / `G_TRI2`
-triangles whose vertices are transformed-ready for the next GX submission
-slice. The fixture script gates F3DEX2 VTX/TRI/MTX/POPMTX packing, composed
-vertex transforms, modelview stack restore, and transformed triangle readiness.
+Renderer stage 2 now has build-flagged DS 3D triangle submission behind
+`NDS_RENDERER_HW_TRIANGLES=1`. The shared traversal keeps the stage-1
+`G_MTX` / `G_VTX` matrix and CPU 20.12 transform oracle, caches raw display-list
+vertices, loads projection/modelview state into GX, and submits `G_TRI1` /
+`G_TRI2` raw coords with `glVertex3v16`. The Mario/Fox all-DL hardware capture
+uses the current no-matrix static DL slice with a temporary scale fallback, so
+the default software preview remains the normal path until original DObj matrix
+prep is imported. Screenshot proof:
+`artifacts\melonds-hwtri.png`.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -65,10 +66,8 @@ The next useful work is not another proof bit. It is one of:
 
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
-- DS hardware renderer stage 1 continuation: feed proven Mario/Fox and Pupupu
-  display-list samples through the shared matrix/vertex state;
-- renderer stage 2: submit transformed `G_TRI1` / `G_TRI2` output to the DS
-  3D path;
+- renderer stage 3: route original DObj matrix/camera prep into the shared
+  renderer path, then add texture/combiner work for cutover;
 - full-TU runtime import slice for `ft/ftmain.c` plus `gm/gmcollision.c`;
 - continuous-runtime verifier for unbounded battle frames.
 
