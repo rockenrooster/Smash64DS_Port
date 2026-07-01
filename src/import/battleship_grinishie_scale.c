@@ -319,6 +319,7 @@ static sb32 ndsGRInishieScaleScanNativeDL(const Gfx *dl)
     config.max_list_commands = 64u;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
+    config.resolve_data = NULL;
     config.user = NULL;
 
     ndsRendererInitStats(&stats);

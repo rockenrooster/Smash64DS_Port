@@ -15572,3 +15572,36 @@ Still deferred:
   scale/translate transformed vertices alongside the existing F3DEX2
   VTX/TRI packing fixtures.
 - Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Wired Renderer Matrix/Vertex Display-List State
+
+- Extended the shared DS renderer traversal to recognize F3DEX2 `G_MTX`
+  commands, decode BattleShip matrix flags, and keep separate modelview and
+  projection matrix state.
+- Added an optional renderer data resolver hook so scene-owned pointer/segment
+  rules can resolve matrix and vertex payloads without moving that policy into
+  `src/nds`.
+- `G_VTX` traversal now decodes original 16-byte vertex records and records
+  transformed DS 20.12 clip vertices after matrix composition.
+- `G_TRI1` / `G_TRI2` traversal now records how many triangles have a complete
+  transformed vertex set, and exposes the transformed vertex cache snapshot to
+  command callbacks for the upcoming DS 3D submission path.
+- Extended `check-gbi-decode-fixtures.ps1` with `G_MTX` packing/flag fixtures
+  and modelview-projection plus transformed-triangle-readiness fixtures.
+- Verified: `.\scripts\check-gbi-decode-fixtures.ps1`;
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Added Renderer Modelview Matrix Stack State
+
+- Added F3DEX2 `G_POPMTX` handling to the shared DS renderer traversal,
+  following the BattleShip/sm64-nds modelview pop count shape
+  (`words.w1 / 64`).
+- `G_MTX` modelview push now stores the current modelview matrix and validity
+  state before load/mul, so source-shaped DObj display-list branches can
+  restore the previous transform after nested draws.
+- Allowed `G_POPMTX` through the fighter display-list diagnostics and Opening
+  Room preview/probe state-command paths.
+- Extended `check-gbi-decode-fixtures.ps1` with a modelview push/pop restore
+  fixture and source-snippet guards for the renderer stack handler.
+- Verified: `.\scripts\check-gbi-decode-fixtures.ps1`;
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.

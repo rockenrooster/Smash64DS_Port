@@ -461,7 +461,7 @@ Current RSP/RDP behavior is still placeholder:
 GBI command decode helpers live in `include/nds/nds_gbi_decode.h`. BattleShip
 is built with `-DF3DEX_GBI_2`, so DS renderer paths must decode F3DEX2 command
 layouts: `G_VTX` uses count/end fields, and `G_TRI1`/`G_TRI2` triangle bytes
-store vertex indices as `index * 10`. The shared helpers are used by
+store vertex indices as `index * 2`. The shared helpers are used by
 `src/nds/nds_renderer.c`, the Opening Room preview, and Mario/Fox fighter
 DL execute/draw proofs. `scripts/check-gbi-decode-fixtures.ps1` locks tiny
 fixtures for `gSPVertex`, `gSP1Triangle`, and `gSP2Triangles` so older ad hoc
@@ -582,9 +582,13 @@ object-display stack.
 Renderer stage 1 now has a project-owned packed-N64-`Mtx` unpacker in
 `src/nds/nds_renderer.c`. It converts original `guMtxF2L` layout into DS
 20.12 fixed-point cells and transforms position vertices with the same
-orientation as `guMtxXFMF`. The next renderer step is to carry this state
-through `ndsRendererExecuteDisplayList` for real `G_MTX` / `G_VTX` traversal,
-then feed triangle submission.
+orientation as `guMtxXFMF`. The shared display-list traversal now handles real
+`G_MTX` / `G_VTX` command state with separate modelview/projection matrices,
+a composed transform matrix, modelview `G_POPMTX` stack restore, optional
+scene-owned data resolution for segmented payloads, transformed vertex
+counters, and transformed-ready triangle counters.
+The next renderer step is to feed those `G_TRI1` / `G_TRI2` triangles into DS
+3D submission.
 
 ## Scene And Startup
 

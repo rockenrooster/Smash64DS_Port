@@ -39,10 +39,14 @@ physics tick copying fighter root position from the barrel root. Continuous
 TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
-Latest renderer detail: `src/nds/nds_renderer.c` now has a source-backed
-packed-N64-`Mtx` unpacker to DS 20.12 fixed point plus a position vertex
-transform using the original `guMtxXFMF` orientation. The fixture script gates
-identity and scale/translate transforms.
+Latest renderer detail: `src/nds/nds_renderer.c` now handles real `G_MTX` /
+`G_VTX` traversal state. It unpacks packed-N64 `Mtx` values to DS 20.12,
+keeps separate modelview/projection state, composes the transform matrix,
+restores modelview state for `G_POPMTX`, and decodes/transforms vertex payloads
+during shared display-list execution. `G_TRI1` / `G_TRI2` traversal now counts
+triangles whose vertices are transformed-ready for the next GX submission
+slice. The fixture script gates F3DEX2 VTX/TRI/MTX/POPMTX packing, composed
+vertex transforms, modelview stack restore, and transformed triangle readiness.
 
 ## Process Change
 
@@ -58,9 +62,9 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 1. Mechanical split: follow the `src/port/reloc_backend.c` split plan in
    `docs/ARCHITECTURE.md`. This is a pure move, no behavior change.
-2. Renderer stage 1 continuation: wire the new matrix/vertex helper into
-   `ndsRendererExecuteDisplayList` state for real `G_MTX` / `G_VTX` command
-   traversal, then use proven Mario/Fox display lists as fixtures.
+2. Renderer stage 1 continuation: route proven Mario/Fox and Pupupu samples
+   through the shared matrix/vertex/triangle-ready state, then submit those
+   transformed triangles through the DS 3D path.
 3. Runtime slice 1: full `ft/ftmain.c` plus `gm/gmcollision.c`, gated by a
    continuous-runtime verifier on the current Mario/Fox scene.
 

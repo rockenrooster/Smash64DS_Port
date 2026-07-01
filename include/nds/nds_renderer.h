@@ -37,38 +37,15 @@
 #define NDS_RENDERER_TILE_T_MIRROR (1u << 6)
 #define NDS_RENDERER_TILE_T_MASKED (1u << 7)
 
+#define NDS_RENDERER_VERTEX_CACHE_SIZE 32u
+
 typedef s32 (*NDSRendererValidateRange)(const Gfx *dl, size_t bytes,
                                         void *user);
 typedef const Gfx *(*NDSRendererResolveBranch)(const Gfx *dl,
                                                u32 *resolve_kind,
                                                void *user);
-
-typedef struct NDSRendererCommand
-{
-    const Gfx *dl;
-    u32 w0;
-    u32 w1;
-    u32 op;
-    u32 depth;
-    u32 list_index;
-    const Gfx *raw_branch_dl;
-    const Gfx *resolved_branch_dl;
-    u32 branch_resolve_kind;
-    u32 branch_is_jump;
-} NDSRendererCommand;
-
-typedef s32 (*NDSRendererCommandCallback)(const NDSRendererCommand *command,
-                                          void *user);
-
-typedef struct NDSRendererConfig
-{
-    u32 max_depth;
-    u32 max_commands;
-    u32 max_list_commands;
-    NDSRendererValidateRange validate_range;
-    NDSRendererResolveBranch resolve_branch;
-    void *user;
-} NDSRendererConfig;
+typedef const void *(*NDSRendererResolveData)(const void *ptr, size_t bytes,
+                                              void *user);
 
 typedef struct NDSRendererMatrix20p12
 {
@@ -90,6 +67,37 @@ typedef struct NDSRendererClipVertex20p12
     s32 w;
 } NDSRendererClipVertex20p12;
 
+typedef struct NDSRendererCommand
+{
+    const Gfx *dl;
+    u32 w0;
+    u32 w1;
+    u32 op;
+    u32 depth;
+    u32 list_index;
+    const Gfx *raw_branch_dl;
+    const Gfx *resolved_branch_dl;
+    u32 branch_resolve_kind;
+    u32 branch_is_jump;
+    const NDSRendererClipVertex20p12 *transformed_vertices;
+    u32 transformed_vertex_valid_mask;
+    u32 matrix_valid;
+} NDSRendererCommand;
+
+typedef s32 (*NDSRendererCommandCallback)(const NDSRendererCommand *command,
+                                          void *user);
+
+typedef struct NDSRendererConfig
+{
+    u32 max_depth;
+    u32 max_commands;
+    u32 max_list_commands;
+    NDSRendererValidateRange validate_range;
+    NDSRendererResolveBranch resolve_branch;
+    NDSRendererResolveData resolve_data;
+    void *user;
+} NDSRendererConfig;
+
 typedef struct NDSRendererStats
 {
     u32 blocker;
@@ -100,6 +108,24 @@ typedef struct NDSRendererStats
     u32 unsupported_opcode;
     u32 vertex_command_count;
     u32 triangle_command_count;
+    u32 matrix_command_count;
+    u32 matrix_load_count;
+    u32 matrix_mul_count;
+    u32 matrix_projection_count;
+    u32 matrix_modelview_count;
+    u32 matrix_push_count;
+    u32 matrix_pop_count;
+    u32 matrix_transform_count;
+    u32 transformed_vertex_count;
+    u32 transformed_triangle_count;
+    u32 first_transformed_tri_v0;
+    u32 first_transformed_tri_v1;
+    u32 first_transformed_tri_v2;
+    u32 matrix_flags;
+    s32 first_transformed_x;
+    s32 first_transformed_y;
+    s32 first_transformed_z;
+    s32 first_transformed_w;
     u32 sync_command_count;
     u32 end_command_count;
     u32 branch_command_count;

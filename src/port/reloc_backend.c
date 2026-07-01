@@ -11446,6 +11446,8 @@ void syRdpResetSettings(Gfx **dl)
 #define NDS_FIGHTER_DL_OP_TRI1 0x05u
 #define NDS_FIGHTER_DL_OP_TRI2 0x06u
 #define NDS_FIGHTER_DL_OP_TEXTURE 0xd7u
+#define NDS_FIGHTER_DL_OP_POPMTX 0xd8u
+#define NDS_FIGHTER_DL_OP_MTX 0xdau
 #define NDS_FIGHTER_DL_OP_GEOMETRYMODE 0xd9u
 #define NDS_FIGHTER_DL_OP_MOVEWORD 0xdbu
 #define NDS_FIGHTER_DL_OP_DL 0xdeu
@@ -17713,6 +17715,43 @@ static const Gfx *ndsFighterDLScanResolveBranch(const Gfx *dl,
     return dl;
 }
 
+static const void *ndsFighterDLScanResolveDataPointer(const void *ptr,
+                                                      size_t bytes,
+                                                      void *user)
+{
+    NDSFighterDLScanContext *context = user;
+    uintptr_t raw = (uintptr_t)ptr;
+    uintptr_t offset = raw & 0x00ffffffu;
+    u32 i;
+
+    if ((ndsRelocFindLoadedFileContaining(ptr, bytes) != NULL) ||
+        (ndsFighterDLScanRangeInTaskmanArena(ptr, bytes) != FALSE))
+    {
+        return ptr;
+    }
+
+    if ((context != NULL) &&
+        (context->primary_file != NULL) &&
+        (ndsRelocRangeInLoadedFile(context->primary_file,
+                                   offset,
+                                   bytes) != FALSE))
+    {
+        return (const u8 *)context->primary_file->data + offset;
+    }
+
+    for (i = 0; i < sNdsRelocLoadedFileCount; i++)
+    {
+        if (ndsRelocRangeInLoadedFile(&sNdsRelocLoadedFiles[i],
+                                      offset,
+                                      bytes) != FALSE)
+        {
+            return (const u8 *)sNdsRelocLoadedFiles[i].data + offset;
+        }
+    }
+
+    return NULL;
+}
+
 static void ndsFighterMarioFoxCopyDLScanStats(u32 slot,
                                                const NDSRendererStats *stats)
 {
@@ -17877,6 +17916,7 @@ static void ndsFighterMarioFoxScanDLForSlot(u32 slot, FTStruct *fp)
     config.max_list_commands = 512u;
     config.validate_range = ndsFighterDLScanValidateRange;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
+    config.resolve_data = ndsFighterDLScanResolveDataPointer;
     config.user = &context;
 
     ndsRendererInitStats(&stats);
@@ -18061,6 +18101,13 @@ static const void *ndsFighterDLExecResolveDataPointer(uintptr_t raw,
     return NULL;
 }
 
+static const void *ndsFighterDLExecResolveRendererData(const void *ptr,
+                                                       size_t bytes,
+                                                       void *user)
+{
+    return ndsFighterDLExecResolveDataPointer((uintptr_t)ptr, bytes, user);
+}
+
 static s32 ndsFighterDLExecValidateRange(const Gfx *dl, size_t bytes,
                                          void *user)
 {
@@ -18240,6 +18287,8 @@ static s32 ndsFighterMarioFoxVisitDLExecuteCommand(
 
     case NDS_FIGHTER_DL_OP_CULLDL:
     case NDS_FIGHTER_DL_OP_TEXTURE:
+    case NDS_FIGHTER_DL_OP_POPMTX:
+    case NDS_FIGHTER_DL_OP_MTX:
     case NDS_FIGHTER_DL_OP_GEOMETRYMODE:
     case NDS_FIGHTER_DL_OP_MOVEWORD:
     case NDS_FIGHTER_DL_OP_DL:
@@ -18408,6 +18457,7 @@ static void ndsFighterMarioFoxExecuteDLForSlot(u32 slot, FTStruct *fp)
     config.max_list_commands = 512u;
     config.validate_range = ndsFighterDLExecValidateRange;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
+    config.resolve_data = ndsFighterDLExecResolveRendererData;
     config.user = &state;
 
     ndsRendererInitStats(&stats);
@@ -18654,6 +18704,13 @@ static const void *ndsFighterDLDrawResolveDataPointer(uintptr_t raw,
     return NULL;
 }
 
+static const void *ndsFighterDLDrawResolveRendererData(const void *ptr,
+                                                       size_t bytes,
+                                                       void *user)
+{
+    return ndsFighterDLDrawResolveDataPointer((uintptr_t)ptr, bytes, user);
+}
+
 static s32 ndsFighterDLDrawValidateRange(const Gfx *dl, size_t bytes,
                                          void *user)
 {
@@ -18815,6 +18872,8 @@ static s32 ndsFighterMarioFoxVisitDLDrawCommand(
 
     case NDS_FIGHTER_DL_OP_CULLDL:
     case NDS_FIGHTER_DL_OP_TEXTURE:
+    case NDS_FIGHTER_DL_OP_POPMTX:
+    case NDS_FIGHTER_DL_OP_MTX:
     case NDS_FIGHTER_DL_OP_GEOMETRYMODE:
     case NDS_FIGHTER_DL_OP_MOVEWORD:
     case NDS_FIGHTER_DL_OP_DL:
@@ -19398,6 +19457,7 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     config.max_list_commands = 512u;
     config.validate_range = ndsFighterDLDrawValidateRange;
     config.resolve_branch = ndsFighterDLDrawResolveBranch;
+    config.resolve_data = ndsFighterDLDrawResolveRendererData;
     config.user = &state;
 
     ndsRendererInitStats(&stats);
@@ -20233,6 +20293,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         config.max_list_commands = 512u;
         config.validate_range = ndsFighterDLMultiDrawValidateRange;
         config.resolve_branch = ndsFighterDLMultiDrawResolveBranch;
+        config.resolve_data = ndsFighterDLDrawResolveRendererData;
         config.user = &states[i];
 
         ndsRendererInitStats(&stats[i]);
@@ -21253,6 +21314,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.max_list_commands = 512u;
         config.validate_range = ndsFighterDLAllDrawValidateRange;
         config.resolve_branch = ndsFighterDLAllDrawResolveBranch;
+        config.resolve_data = ndsFighterDLDrawResolveRendererData;
         config.user = &states[i];
 
         ndsRendererInitStats(&stats[i]);
@@ -42603,6 +42665,7 @@ static void ndsStageInishieScaleLoopScanSourceDObj(
     config.max_list_commands = 128u;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
+    config.resolve_data = NULL;
     config.user = NULL;
     ndsRendererInitStats(&stats);
     ndsRendererScanDisplayList(dobj->dl, &config, &stats);
@@ -42697,6 +42760,8 @@ static s32 ndsStageInishieScaleLoopVisitSourcePreviewCommand(
 
     case NDS_FIGHTER_DL_OP_CULLDL:
     case NDS_FIGHTER_DL_OP_TEXTURE:
+    case NDS_FIGHTER_DL_OP_POPMTX:
+    case NDS_FIGHTER_DL_OP_MTX:
     case NDS_FIGHTER_DL_OP_GEOMETRYMODE:
     case NDS_FIGHTER_DL_OP_MOVEWORD:
     case NDS_FIGHTER_DL_OP_DL:
@@ -42962,6 +43027,7 @@ static void ndsStageInishieScaleLoopPreviewSourceDObj(
     config.max_list_commands = 128u;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
+    config.resolve_data = NULL;
     config.user = state;
 
     ndsRendererInitStats(stats);

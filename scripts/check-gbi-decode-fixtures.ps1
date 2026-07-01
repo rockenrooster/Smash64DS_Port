@@ -55,6 +55,14 @@ function Decode-F3DEX2TriPacked {
         V2 = (($Packed -band 0xff) / 2)
     }
 }
+function New-F3DEX2MtxW0 {
+    param([int]$Flags)
+    return [uint32](([int64]0xda -shl 24) -bor ([int64]7 -shl 19) -bor (($Flags -bxor 1) -band 0xff))
+}
+function Decode-F3DEX2MtxFlags {
+    param([uint32]$W0)
+    return (($W0 -band 0xff) -bxor 1)
+}
 function New-N64PackedMtx {
     param([double[][]]$Rows)
     $words = @(0) * 16
@@ -97,6 +105,37 @@ function Convert-S16p16To20p12 {
         return -([int](((-$Value) + 8) -shr 4))
     }
     return [int](($Value + 8) -shr 4)
+}
+function Round-Shift-S64 {
+    param(
+        [Int64]$Value,
+        [int]$Shift
+    )
+    if ($Shift -eq 0) { return $Value }
+    $bias = [Int64]1 -shl ($Shift - 1)
+    if ($Value -lt 0) {
+        return -([Int64](((-$Value) + $bias) -shr $Shift))
+    }
+    return [Int64](($Value + $bias) -shr $Shift)
+}
+function Multiply-Mtx20p12 {
+    param(
+        [object[]]$Lhs,
+        [object[]]$Rhs
+    )
+    $out = @()
+    for ($row = 0; $row -lt 4; $row++) {
+        $outRow = @()
+        for ($col = 0; $col -lt 4; $col++) {
+            [Int64]$sum = 0
+            for ($k = 0; $k -lt 4; $k++) {
+                $sum += [Int64]$Lhs[$row][$k] * [Int64]$Rhs[$k][$col]
+            }
+            $outRow += [int](Round-Shift-S64 -Value $sum -Shift 12)
+        }
+        $out += ,$outRow
+    }
+    return $out
 }
 function Convert-N64PackedMtxTo20p12 {
     param([uint32[]]$Words)
@@ -153,6 +192,22 @@ Assert-Equal $decodedTri2First.V2 6 'F3DEX2 gSP2Triangles first decoded v2 misma
 Assert-Equal $decodedTri2Second.V0 7 'F3DEX2 gSP2Triangles second decoded v0 mismatch.'
 Assert-Equal $decodedTri2Second.V1 8 'F3DEX2 gSP2Triangles second decoded v1 mismatch.'
 Assert-Equal $decodedTri2Second.V2 9 'F3DEX2 gSP2Triangles second decoded v2 mismatch.'
+$validMask = (1 -shl 4) -bor (1 -shl 5) -bor (1 -shl 6) -bor (1 -shl 8)
+$triReadyMask = (1 -shl $decodedTri2First.V0) -bor (1 -shl $decodedTri2First.V1) -bor (1 -shl $decodedTri2First.V2)
+Assert-True (($validMask -band $triReadyMask) -eq $triReadyMask) 'Transformed triangle readiness mask did not accept the first TRI2 fixture.'
+$triMissingMask = (1 -shl $decodedTri2Second.V0) -bor (1 -shl $decodedTri2Second.V1) -bor (1 -shl $decodedTri2Second.V2)
+Assert-True (($validMask -band $triMissingMask) -ne $triMissingMask) 'Transformed triangle readiness mask did not reject the second TRI2 fixture.'
+$mtxProjectionLoadW0 = New-F3DEX2MtxW0 -Flags (0x04 -bor 0x02)
+$mtxModelViewLoadW0 = New-F3DEX2MtxW0 -Flags 0x02
+$mtxModelViewPushMulW0 = New-F3DEX2MtxW0 -Flags 0x01
+$popMtxW1 = 64
+Assert-Equal $mtxProjectionLoadW0 3661103111 'F3DEX2 gSPMatrix projection-load fixture w0 mismatch.'
+Assert-Equal $mtxModelViewLoadW0 3661103107 'F3DEX2 gSPMatrix modelview-load fixture w0 mismatch.'
+Assert-Equal $mtxModelViewPushMulW0 3661103104 'F3DEX2 gSPMatrix modelview-push-mul fixture w0 mismatch.'
+Assert-Equal ($popMtxW1 / 64) 1 'F3DEX2 gSPPopMatrix fixture pop count mismatch.'
+Assert-Equal (Decode-F3DEX2MtxFlags -W0 $mtxProjectionLoadW0) 0x06 'F3DEX2 gSPMatrix projection-load flags decode mismatch.'
+Assert-Equal (Decode-F3DEX2MtxFlags -W0 $mtxModelViewLoadW0) 0x02 'F3DEX2 gSPMatrix modelview-load flags decode mismatch.'
+Assert-Equal (Decode-F3DEX2MtxFlags -W0 $mtxModelViewPushMulW0) 0x01 'F3DEX2 gSPMatrix modelview-push-mul flags decode mismatch.'
 $identityRows = @(
     @(1.0, 0.0, 0.0, 0.0),
     @(0.0, 1.0, 0.0, 0.0),
@@ -180,6 +235,37 @@ Assert-Equal $transformedVtx.X 118784 'Scale/translate transformed X mismatch.'
 Assert-Equal $transformedVtx.Y 8192 'Scale/translate transformed Y mismatch.'
 Assert-Equal $transformedVtx.Z 61440 'Scale/translate transformed Z mismatch.'
 Assert-Equal $transformedVtx.W 4096 'Scale/translate transformed W mismatch.'
+$projectionRows = @(
+    @(2.0, 0.0, 0.0, 0.0),
+    @(0.0, 2.0, 0.0, 0.0),
+    @(0.0, 0.0, 1.0, 0.0),
+    @(0.0, 0.0, 0.0, 1.0)
+)
+$projection = Convert-N64PackedMtxTo20p12 (New-N64PackedMtx -Rows $projectionRows)
+$combined = Multiply-Mtx20p12 -Lhs $transform -Rhs $projection
+$combinedVtx = Transform-Vertex20p12 -Mtx $combined -X 12 -Y -3 -Z 8
+Assert-Equal $combinedVtx.X 237568 'Modelview-projection composed transformed X mismatch.'
+Assert-Equal $combinedVtx.Y 16384 'Modelview-projection composed transformed Y mismatch.'
+Assert-Equal $combinedVtx.Z 61440 'Modelview-projection composed transformed Z mismatch.'
+Assert-Equal $combinedVtx.W 4096 'Modelview-projection composed transformed W mismatch.'
+$modelviewStack = @()
+$modelviewStack += ,$transform
+$innerRows = @(
+    @(1.0, 0.0, 0.0, 0.0),
+    @(0.0, 1.0, 0.0, 0.0),
+    @(0.0, 0.0, 1.0, 0.0),
+    @(100.0, 0.0, 0.0, 1.0)
+)
+$inner = Convert-N64PackedMtxTo20p12 (New-N64PackedMtx -Rows $innerRows)
+$pushedModelview = Multiply-Mtx20p12 -Lhs $transform -Rhs $inner
+$pushedVtx = Transform-Vertex20p12 -Mtx $pushedModelview -X 12 -Y -3 -Z 8
+$restoredModelview = $modelviewStack[$modelviewStack.Count - 1]
+$restoredVtx = Transform-Vertex20p12 -Mtx $restoredModelview -X 12 -Y -3 -Z 8
+Assert-True ($pushedVtx.X -ne $restoredVtx.X) 'Modelview push fixture did not change transformed X.'
+Assert-Equal $restoredVtx.X $transformedVtx.X 'Modelview pop fixture did not restore transformed X.'
+Assert-Equal $restoredVtx.Y $transformedVtx.Y 'Modelview pop fixture did not restore transformed Y.'
+Assert-Equal $restoredVtx.Z $transformedVtx.Z 'Modelview pop fixture did not restore transformed Z.'
+Assert-Equal $restoredVtx.W $transformedVtx.W 'Modelview pop fixture did not restore transformed W.'
 $forbiddenSnippets = @(
     'u32 v0 = ((w0 >> 16) & 0xFFu) / 2u;',
     'u32 count = (w0 & 0xFFu) / 2u;',
@@ -204,4 +290,22 @@ foreach ($file in $files) {
 $renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
-Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI1/TRI2 packing, N64 matrix to DS 20.12 vertex transform, and source snippets verified.'
+Assert-True ($renderer.Contains('NDS_RENDERER_OP_MTX 0xdau')) 'Renderer G_MTX opcode support is missing.'
+Assert-True ($renderer.Contains('NDS_RENDERER_OP_POPMTX 0xd8u')) 'Renderer G_POPMTX opcode support is missing.'
+Assert-True ($renderer.Contains('NDS_RENDERER_MTX_PUSH_XOR')) 'Renderer G_MTX push-flag decode is missing.'
+Assert-True ($renderer.Contains('ndsRendererApplyMatrixCommand')) 'Renderer G_MTX traversal state handler is missing.'
+Assert-True ($renderer.Contains('ndsRendererApplyPopMatrixCommand')) 'Renderer G_POPMTX traversal state handler is missing.'
+Assert-True ($renderer.Contains('modelview_stack')) 'Renderer modelview stack state is missing.'
+Assert-True ($renderer.Contains('ndsRendererDecodeInputVertex')) 'Renderer Vtx payload decode helper is missing.'
+Assert-True ($renderer.Contains('ndsRendererRecordTransformedTriangle')) 'Renderer transformed triangle readiness handler is missing.'
+Assert-True ($renderer.Contains('matrix_command_count')) 'Renderer matrix stats are missing.'
+Assert-True ($renderer.Contains('matrix_pop_count')) 'Renderer matrix pop stats are missing.'
+Assert-True ($renderer.Contains('transformed_vertex_count')) 'Renderer transformed vertex stats are missing.'
+Assert-True ($renderer.Contains('transformed_triangle_count')) 'Renderer transformed triangle stats are missing.'
+$rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
+Assert-True ($rendererHeader.Contains('NDSRendererResolveData')) 'Renderer data resolver hook is missing.'
+Assert-True ($rendererHeader.Contains('transformed_vertices')) 'Renderer command transformed vertex cache exposure is missing.'
+$decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
+Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
+Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'
+Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, transformed triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.'

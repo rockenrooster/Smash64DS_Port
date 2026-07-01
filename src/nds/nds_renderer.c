@@ -11,6 +11,8 @@
 #define NDS_RENDERER_OP_TRI1 0x05u
 #define NDS_RENDERER_OP_TRI2 0x06u
 #define NDS_RENDERER_OP_TEXTURE 0xd7u
+#define NDS_RENDERER_OP_POPMTX 0xd8u
+#define NDS_RENDERER_OP_MTX 0xdau
 #define NDS_RENDERER_OP_GEOMETRYMODE 0xd9u
 #define NDS_RENDERER_OP_MOVEWORD 0xdbu
 #define NDS_RENDERER_OP_DL 0xdeu
@@ -40,9 +42,29 @@
 #define NDS_RENDERER_RENDER_TILE 0u
 #define NDS_RENDERER_LOAD_TILE 7u
 
-#define NDS_RENDERER_MAX_VTX 32u
+#define NDS_RENDERER_MAX_VTX NDS_RENDERER_VERTEX_CACHE_SIZE
+#define NDS_RENDERER_MODELVIEW_STACK_SIZE 32u
 #define NDS_RENDERER_N64_MTX_FRAC_BITS 16u
 #define NDS_RENDERER_DS_MTX_FRAC_BITS 12u
+#define NDS_RENDERER_MTX_PUSH_XOR 0x01u
+#define NDS_RENDERER_MTX_PUSH 0x01u
+#define NDS_RENDERER_MTX_LOAD 0x02u
+#define NDS_RENDERER_MTX_PROJECTION 0x04u
+
+typedef struct NDSRendererTraversalState
+{
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    NDSRendererMatrix20p12 matrix;
+    NDSRendererMatrix20p12 modelview_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
+    NDSRendererClipVertex20p12 vertices[NDS_RENDERER_MAX_VTX];
+    u32 modelview_valid_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
+    u32 modelview_stack_depth;
+    u32 vertex_valid_mask;
+    u32 projection_valid;
+    u32 modelview_valid;
+    u32 matrix_valid;
+} NDSRendererTraversalState;
 
 static s32 ndsRendererClampS64ToS32(s64 value)
 {
@@ -74,6 +96,23 @@ static s32 ndsRendererRoundShiftS32(s32 value, u32 shift)
         return (s32)(-(((-wide) + bias) >> shift));
     }
     return (s32)((wide + bias) >> shift);
+}
+
+static s64 ndsRendererRoundShiftS64(s64 value, u32 shift)
+{
+    s64 bias;
+
+    if (shift == 0)
+    {
+        return value;
+    }
+
+    bias = (s64)(1u << (shift - 1u));
+    if (value < 0)
+    {
+        return -(((-value) + bias) >> shift);
+    }
+    return (value + bias) >> shift;
 }
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col)
@@ -163,6 +202,82 @@ void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
         (s64)mtx->m[2][3] * z + mtx->m[3][3]);
 }
 
+static void ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
+                                   const NDSRendererMatrix20p12 *rhs,
+                                   NDSRendererMatrix20p12 *out)
+{
+    NDSRendererMatrix20p12 temp;
+    u32 row;
+    u32 col;
+    u32 k;
+
+    if ((lhs == NULL) || (rhs == NULL) || (out == NULL))
+    {
+        return;
+    }
+
+    for (row = 0; row < 4u; row++)
+    {
+        for (col = 0; col < 4u; col++)
+        {
+            s64 sum = 0;
+
+            for (k = 0; k < 4u; k++)
+            {
+                sum += (s64)lhs->m[row][k] * rhs->m[k][col];
+            }
+            temp.m[row][col] = ndsRendererClampS64ToS32(
+                ndsRendererRoundShiftS64(sum, NDS_RENDERER_DS_MTX_FRAC_BITS));
+        }
+    }
+
+    *out = temp;
+}
+
+static void ndsRendererMtxIdentity20p12(NDSRendererMatrix20p12 *out)
+{
+    u32 i;
+
+    if (out == NULL)
+    {
+        return;
+    }
+
+    memset(out, 0, sizeof(*out));
+    for (i = 0; i < 4u; i++)
+    {
+        out->m[i][i] = 1 << NDS_RENDERER_DS_MTX_FRAC_BITS;
+    }
+}
+
+static u32 ndsRendererReadU32(const void *ptr)
+{
+    const u8 *bytes = ptr;
+
+    return (u32)bytes[0] |
+           ((u32)bytes[1] << 8) |
+           ((u32)bytes[2] << 16) |
+           ((u32)bytes[3] << 24);
+}
+
+static void ndsRendererDecodeInputVertex(NDSRendererInputVertex *dst,
+                                         const void *src)
+{
+    u32 xy;
+    u32 zf;
+
+    if ((dst == NULL) || (src == NULL))
+    {
+        return;
+    }
+
+    xy = ndsRendererReadU32(src);
+    zf = ndsRendererReadU32((const u8 *)src + 4);
+    dst->x = (s16)(xy >> 16);
+    dst->y = (s16)(xy & 0xffffu);
+    dst->z = (s16)(zf >> 16);
+}
+
 static s32 ndsRendererValidateCommand(const Gfx *dl,
                                       const NDSRendererConfig *config)
 {
@@ -177,6 +292,28 @@ static s32 ndsRendererValidateCommand(const Gfx *dl,
         return TRUE;
     }
     return config->validate_range(dl, sizeof(*dl), config->user);
+}
+
+static const void *ndsRendererResolveDataPointer(
+    const NDSRendererConfig *config, const void *ptr, size_t bytes)
+{
+    uintptr_t addr = (uintptr_t)ptr;
+
+    if ((ptr == NULL) || ((addr & 0x3u) != 0))
+    {
+        return NULL;
+    }
+    if ((config != NULL) && (config->resolve_data != NULL))
+    {
+        return config->resolve_data(ptr, bytes, config->user);
+    }
+    if ((config != NULL) && (config->validate_range != NULL) &&
+        (config->validate_range((const Gfx *)ptr, bytes, config->user) ==
+         FALSE))
+    {
+        return NULL;
+    }
+    return ptr;
 }
 
 static void ndsRendererRecordUnsupported(NDSRendererStats *stats, u32 op)
@@ -430,9 +567,306 @@ static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
     }
 }
 
+static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
+{
+    NDSRendererMatrix20p12 identity;
+
+    if (state == NULL)
+    {
+        return;
+    }
+
+    if ((state->projection_valid != 0u) &&
+        (state->modelview_valid != 0u))
+    {
+        ndsRendererMtxMul20p12(&state->modelview,
+                               &state->projection,
+                               &state->matrix);
+    }
+    else if (state->modelview_valid != 0u)
+    {
+        state->matrix = state->modelview;
+    }
+    else if (state->projection_valid != 0u)
+    {
+        state->matrix = state->projection;
+    }
+    else
+    {
+        ndsRendererMtxIdentity20p12(&identity);
+        state->matrix = identity;
+    }
+    state->matrix_valid =
+        ((state->projection_valid != 0u) ||
+         (state->modelview_valid != 0u)) ? TRUE : FALSE;
+}
+
+static void ndsRendererPushModelview(NDSRendererStats *stats,
+                                     NDSRendererTraversalState *state)
+{
+    u32 depth;
+
+    if ((stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+
+    depth = state->modelview_stack_depth;
+    if (depth >= NDS_RENDERER_MODELVIEW_STACK_SIZE)
+    {
+        stats->skip_command_count++;
+        return;
+    }
+
+    state->modelview_stack[depth] = state->modelview;
+    state->modelview_valid_stack[depth] = state->modelview_valid;
+    state->modelview_stack_depth = depth + 1u;
+}
+
+static void ndsRendererApplyMatrixCommand(
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 w0,
+    u32 w1)
+{
+    const Mtx *src;
+    NDSRendererMatrix20p12 incoming;
+    NDSRendererMatrix20p12 *target;
+    u32 *target_valid;
+    u32 flags;
+
+    if ((stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+
+    flags = (w0 & 0xffu) ^ NDS_RENDERER_MTX_PUSH_XOR;
+    stats->state_command_count++;
+    stats->matrix_command_count++;
+    stats->matrix_flags = flags;
+    if ((flags & NDS_RENDERER_MTX_PROJECTION) != 0u)
+    {
+        stats->matrix_projection_count++;
+    }
+    else
+    {
+        stats->matrix_modelview_count++;
+    }
+    if ((flags & NDS_RENDERER_MTX_PUSH) != 0u)
+    {
+        stats->matrix_push_count++;
+    }
+
+    src = ndsRendererResolveDataPointer(config,
+                                        (const void *)(uintptr_t)w1,
+                                        sizeof(Mtx));
+    if (src == NULL)
+    {
+        stats->skip_command_count++;
+        return;
+    }
+
+    ndsRendererMtxLoadN64ToDS20p12(src, &incoming);
+    if ((flags & NDS_RENDERER_MTX_PROJECTION) != 0u)
+    {
+        target = &state->projection;
+        target_valid = &state->projection_valid;
+    }
+    else
+    {
+        target = &state->modelview;
+        target_valid = &state->modelview_valid;
+        if ((flags & NDS_RENDERER_MTX_PUSH) != 0u)
+        {
+            ndsRendererPushModelview(stats, state);
+        }
+    }
+
+    if ((flags & NDS_RENDERER_MTX_LOAD) != 0u)
+    {
+        *target = incoming;
+        *target_valid = TRUE;
+        stats->matrix_load_count++;
+    }
+    else
+    {
+        if (*target_valid != 0u)
+        {
+            ndsRendererMtxMul20p12(target, &incoming, target);
+        }
+        else
+        {
+            *target = incoming;
+            *target_valid = TRUE;
+        }
+        stats->matrix_mul_count++;
+    }
+    ndsRendererComposeMatrix(state);
+}
+
+static void ndsRendererApplyPopMatrixCommand(NDSRendererStats *stats,
+                                             NDSRendererTraversalState *state,
+                                             u32 w1)
+{
+    u32 count;
+
+    if ((stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+
+    count = w1 / 64u;
+    if (count == 0u)
+    {
+        count = 1u;
+    }
+
+    stats->state_command_count++;
+    stats->matrix_command_count++;
+    stats->matrix_modelview_count++;
+    stats->matrix_pop_count += count;
+
+    while (count != 0u)
+    {
+        u32 depth = state->modelview_stack_depth;
+
+        if (depth == 0u)
+        {
+            stats->skip_command_count++;
+            break;
+        }
+
+        depth--;
+        state->modelview = state->modelview_stack[depth];
+        state->modelview_valid = state->modelview_valid_stack[depth];
+        state->modelview_stack_depth = depth;
+        count--;
+    }
+    ndsRendererComposeMatrix(state);
+}
+
+static void ndsRendererApplyVertexCommand(
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 w0,
+    u32 w1)
+{
+    u32 v0;
+    u32 count;
+    const u8 *src;
+    u32 i;
+
+    if ((stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+
+    stats->vertex_command_count++;
+    stats->state_command_count++;
+    if (ndsGBIDecodeF3DEX2Vtx(w0, NDS_RENDERER_MAX_VTX, &v0,
+                              &count) == FALSE)
+    {
+        stats->skip_command_count++;
+        return;
+    }
+    if ((v0 + count) > stats->vertex_count)
+    {
+        stats->vertex_count = v0 + count;
+    }
+    if (state->matrix_valid == 0u)
+    {
+        return;
+    }
+
+    src = ndsRendererResolveDataPointer(config,
+                                        (const void *)(uintptr_t)w1,
+                                        (size_t)count * 16u);
+    if (src == NULL)
+    {
+        stats->skip_command_count++;
+        return;
+    }
+
+    for (i = 0u; i < count; i++)
+    {
+        NDSRendererInputVertex input;
+        NDSRendererClipVertex20p12 *out = &state->vertices[v0 + i];
+
+        ndsRendererDecodeInputVertex(&input, src + (i * 16u));
+        ndsRendererTransformVertex20p12(&state->matrix, &input, out);
+        state->vertex_valid_mask |= 1u << (v0 + i);
+        stats->matrix_transform_count++;
+        stats->transformed_vertex_count++;
+        if (stats->transformed_vertex_count == 1u)
+        {
+            stats->first_transformed_x = out->x;
+            stats->first_transformed_y = out->y;
+            stats->first_transformed_z = out->z;
+            stats->first_transformed_w = out->w;
+        }
+    }
+}
+
+static s32 ndsRendererTransformedTriangleReady(
+    const NDSRendererTraversalState *state, u32 packed,
+    u32 *out_i0, u32 *out_i1, u32 *out_i2)
+{
+    u32 i0;
+    u32 i1;
+    u32 i2;
+    u32 mask;
+
+    ndsGBIDecodePackedTriIndices(packed, &i0, &i1, &i2);
+    if (out_i0 != NULL) { *out_i0 = i0; }
+    if (out_i1 != NULL) { *out_i1 = i1; }
+    if (out_i2 != NULL) { *out_i2 = i2; }
+
+    if ((state == NULL) ||
+        (i0 >= NDS_RENDERER_MAX_VTX) ||
+        (i1 >= NDS_RENDERER_MAX_VTX) ||
+        (i2 >= NDS_RENDERER_MAX_VTX))
+    {
+        return FALSE;
+    }
+
+    mask = (1u << i0) | (1u << i1) | (1u << i2);
+    return ((state->vertex_valid_mask & mask) == mask) ? TRUE : FALSE;
+}
+
+static void ndsRendererRecordTransformedTriangle(
+    NDSRendererStats *stats,
+    const NDSRendererTraversalState *state,
+    u32 packed)
+{
+    u32 i0;
+    u32 i1;
+    u32 i2;
+
+    if (stats == NULL)
+    {
+        return;
+    }
+    if (ndsRendererTransformedTriangleReady(state, packed, &i0, &i1, &i2) ==
+        FALSE)
+    {
+        return;
+    }
+
+    if (stats->transformed_triangle_count == 0u)
+    {
+        stats->first_transformed_tri_v0 = i0;
+        stats->first_transformed_tri_v1 = i1;
+        stats->first_transformed_tri_v2 = i2;
+    }
+    stats->transformed_triangle_count++;
+}
+
 static void ndsRendererScanList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats,
+                                NDSRendererTraversalState *state,
                                 u32 depth,
                                 NDSRendererCommandCallback callback,
                                 void *callback_user)
@@ -486,6 +920,9 @@ static void ndsRendererScanList(const Gfx *dl,
         command.op = op;
         command.depth = depth;
         command.list_index = i;
+        command.transformed_vertices = state->vertices;
+        command.transformed_vertex_valid_mask = state->vertex_valid_mask;
+        command.matrix_valid = state->matrix_valid;
 
         if (op == NDS_RENDERER_OP_DL)
         {
@@ -528,35 +965,25 @@ static void ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_VTX:
-        {
-            u32 v0;
-            u32 count;
-
-            stats->vertex_command_count++;
-            stats->state_command_count++;
-            if (ndsGBIDecodeF3DEX2Vtx(w0, NDS_RENDERER_MAX_VTX, &v0,
-                                      &count) == FALSE)
-            {
-                stats->skip_command_count++;
-                break;
-            }
-            if ((v0 + count) > stats->vertex_count)
-            {
-                stats->vertex_count = v0 + count;
-            }
+            ndsRendererApplyVertexCommand(config, stats, state, w0, w1);
             break;
-        }
 
         case NDS_RENDERER_OP_TRI1:
             stats->triangle_command_count++;
             stats->triangle_count++;
             stats->render_command_count++;
+            ndsRendererRecordTransformedTriangle(
+                stats, state, ndsGBIDecodeF3DEX2Tri1(w0));
             break;
 
         case NDS_RENDERER_OP_TRI2:
             stats->triangle_command_count++;
             stats->triangle_count += 2u;
             stats->render_command_count++;
+            ndsRendererRecordTransformedTriangle(
+                stats, state, ndsGBIDecodeF3DEX2Tri2First(w0));
+            ndsRendererRecordTransformedTriangle(
+                stats, state, ndsGBIDecodeF3DEX2Tri2Second(w1));
             break;
 
         case NDS_RENDERER_OP_ENDDL:
@@ -590,13 +1017,13 @@ static void ndsRendererScanList(const Gfx *dl,
             if ((w0 & (1u << 16)) != 0)
             {
                 stats->branch_jump_count++;
-                ndsRendererScanList(branch, config, stats, depth + 1u,
+                ndsRendererScanList(branch, config, stats, state, depth + 1u,
                                     callback, callback_user);
                 return;
             }
 
             stats->branch_call_count++;
-            ndsRendererScanList(branch, config, stats, depth + 1u,
+            ndsRendererScanList(branch, config, stats, state, depth + 1u,
                                 callback, callback_user);
             if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
             {
@@ -608,6 +1035,14 @@ static void ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_TEXTURE:
             ndsRendererRecordTextureState(stats, w0, w1);
             stats->state_command_count++;
+            break;
+
+        case NDS_RENDERER_OP_MTX:
+            ndsRendererApplyMatrixCommand(config, stats, state, w0, w1);
+            break;
+
+        case NDS_RENDERER_OP_POPMTX:
+            ndsRendererApplyPopMatrixCommand(stats, state, w1);
             break;
 
         case NDS_RENDERER_OP_MOVEWORD:
@@ -705,6 +1140,8 @@ void ndsRendererScanDisplayList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats)
 {
+    NDSRendererTraversalState state;
+
     if (stats == NULL)
     {
         return;
@@ -716,7 +1153,8 @@ void ndsRendererScanDisplayList(const Gfx *dl,
         return;
     }
 
-    ndsRendererScanList(dl, config, stats, 0, NULL, NULL);
+    memset(&state, 0, sizeof(state));
+    ndsRendererScanList(dl, config, stats, &state, 0, NULL, NULL);
     if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
     {
         return;
@@ -749,6 +1187,8 @@ void ndsRendererExecuteDisplayList(const Gfx *dl,
                                    void *callback_user,
                                    NDSRendererStats *stats)
 {
+    NDSRendererTraversalState state;
+
     if (stats == NULL)
     {
         return;
@@ -760,7 +1200,9 @@ void ndsRendererExecuteDisplayList(const Gfx *dl,
         return;
     }
 
-    ndsRendererScanList(dl, config, stats, 0, callback, callback_user);
+    memset(&state, 0, sizeof(state));
+    ndsRendererScanList(dl, config, stats, &state, 0, callback,
+                        callback_user);
     if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
     {
         return;

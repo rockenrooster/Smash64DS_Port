@@ -10,6 +10,8 @@
 #define NDS_GBI_OP_TRI1 0x05u
 #define NDS_GBI_OP_TRI2 0x06u
 #define NDS_GBI_OP_TEXTURE 0xd7u
+#define NDS_GBI_OP_POPMTX 0xd8u
+#define NDS_GBI_OP_MTX 0xdau
 #define NDS_GBI_OP_GEOMETRYMODE 0xd9u
 #define NDS_GBI_OP_MOVEWORD 0xdbu
 #define NDS_GBI_OP_DL 0xdeu
@@ -1938,6 +1940,8 @@ static void ndsOpeningRoomProbeMaterialDLShape(void)
             break;
 
         case NDS_GBI_OP_TEXTURE:
+        case NDS_GBI_OP_POPMTX:
+        case NDS_GBI_OP_MTX:
         case NDS_GBI_OP_MOVEWORD:
         case NDS_GBI_OP_GEOMETRYMODE:
         case NDS_GBI_OP_SETCOMBINE:
@@ -2115,6 +2119,45 @@ static const Gfx *ndsOpeningRoomRendererResolveBranch(const Gfx *dl,
     return (const Gfx *)(heap_start + offset);
 }
 
+static const void *ndsOpeningRoomRendererResolveData(const void *ptr,
+                                                     size_t bytes,
+                                                     void *user)
+{
+    uintptr_t raw = (uintptr_t)ptr;
+    uintptr_t heap_start;
+    uintptr_t heap_after;
+    uintptr_t offset;
+
+    (void)user;
+
+    if ((ndsOpeningRoomPointerRangeInLoadedFiles(ptr, bytes) != FALSE) ||
+        (ndsOpeningRoomPointerRangeInTaskmanGraphicsHeap(ptr, bytes) != FALSE))
+    {
+        return ptr;
+    }
+    if ((raw >> 24) != 0x0Eu)
+    {
+        return NULL;
+    }
+    if (gNdsOpeningRoomDrawMaterialEmitResult !=
+        NDS_OPENING_ROOM_DRAW_MATERIAL_EMIT_PASS)
+    {
+        return NULL;
+    }
+
+    heap_start = (uintptr_t)gNdsOpeningRoomDrawMaterialEmitHeapStart;
+    heap_after = (uintptr_t)gNdsOpeningRoomDrawMaterialEmitHeapAfter;
+    offset = raw & 0x00FFFFFFu;
+    if ((heap_start == 0) || (heap_after <= heap_start) ||
+        (offset > (heap_after - heap_start)) ||
+        (bytes > (size_t)(heap_after - heap_start - offset)))
+    {
+        return NULL;
+    }
+
+    return (const void *)(heap_start + offset);
+}
+
 static u32 ndsOpeningRoomMaterialDLExpandMapRendererBlocker(u32 blocker)
 {
     switch (blocker)
@@ -2192,6 +2235,7 @@ static void ndsOpeningRoomProbeMaterialDLExpandedShape(void)
     config.max_list_commands = NDS_MATERIAL_DL_EXPAND_MAX_LIST_COMMANDS;
     config.validate_range = ndsOpeningRoomRendererValidateRange;
     config.resolve_branch = ndsOpeningRoomRendererResolveBranch;
+    config.resolve_data = ndsOpeningRoomRendererResolveData;
     config.user = NULL;
 
     ndsRendererInitStats(&stats);
@@ -3160,6 +3204,12 @@ static s32 ndsOpeningRoomVisitDLPreviewCommand(
             NDS_OPENING_ROOM_DL_TEXTURE_TEXTURE;
         break;
 
+    case NDS_GBI_OP_POPMTX:
+        break;
+
+    case NDS_GBI_OP_MTX:
+        break;
+
     case NDS_GBI_OP_MOVEWORD:
         break;
 
@@ -3391,6 +3441,7 @@ static void ndsOpeningRoomRenderDLPreview(DObj *dobj, Gfx *dl)
         NDS_MATERIAL_DL_EXPAND_MAX_LIST_COMMANDS;
     renderer_config.validate_range = ndsOpeningRoomRendererValidateRange;
     renderer_config.resolve_branch = ndsOpeningRoomRendererResolveBranch;
+    renderer_config.resolve_data = ndsOpeningRoomRendererResolveData;
     renderer_config.user = NULL;
     ndsRendererInitStats(&renderer_stats);
     ndsRendererExecuteDisplayList(dl, &renderer_config,

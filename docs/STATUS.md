@@ -47,11 +47,14 @@ Full diagnostic marker strings live in `docs/DIAGNOSTIC_REFERENCE.md`, not here.
 
 ## Latest Proof
 
-Renderer stage 1 has started in `src/nds/nds_renderer.c`: the renderer can now
-unpack BattleShip/N64 packed `Mtx` data into DS 20.12 fixed-point matrix cells
-and transform position-only vertices with the same orientation as original
-`guMtxXFMF`. `check-gbi-decode-fixtures.ps1` now gates identity and
-scale/translate vertex-transform fixtures alongside F3DEX2 VTX/TRI packing.
+Renderer stage 1 now carries real `G_MTX` / `G_VTX` traversal state in
+`src/nds/nds_renderer.c`: BattleShip/N64 packed `Mtx` data is unpacked to DS
+20.12, modelview/projection state is composed, modelview `G_POPMTX` stack
+restore is tracked, and vertex payloads are decoded/transformed during shared
+display-list execution. The shared traversal also counts `G_TRI1` / `G_TRI2`
+triangles whose vertices are transformed-ready for the next GX submission
+slice. The fixture script gates F3DEX2 VTX/TRI/MTX/POPMTX packing, composed
+vertex transforms, modelview stack restore, and transformed triangle readiness.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -62,9 +65,10 @@ The next useful work is not another proof bit. It is one of:
 
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
-- DS hardware renderer stage 1: matrix/vertex pipeline fixtures;
-- wire the matrix/vertex helper into `ndsRendererExecuteDisplayList` command
-  state for real `G_MTX` / `G_VTX` display-list traversal;
+- DS hardware renderer stage 1 continuation: feed proven Mario/Fox and Pupupu
+  display-list samples through the shared matrix/vertex state;
+- renderer stage 2: submit transformed `G_TRI1` / `G_TRI2` output to the DS
+  3D path;
 - full-TU runtime import slice for `ft/ftmain.c` plus `gm/gmcollision.c`;
 - continuous-runtime verifier for unbounded battle frames.
 
