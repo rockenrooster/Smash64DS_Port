@@ -15548,3 +15548,15 @@ Still deferred:
 - Continuous TaruCannon update/shoot runtime remains deferred until the Jungle
   barrel helpers and map throw-hit data are local.
 - Verified: `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Reset Slice Policy Toward Whole-TU Runtime
+
+- Updated active process docs to ban future one-bit proof-mask increments and
+  require gameplay slices to import whole original BattleShip translation units
+  or coherent adjacent TU groups.
+- Documented proof graduation: once a subsystem's TUs are fully imported, the
+  guarded seam should be removed and the original code should run live, with
+  old bounded proofs kept only as regression markers.
+- Pruned `docs/STATUS.md` and `docs/HANDOFF.md` back to short current-truth
+  handoff docs; detailed markers stay in `docs/DIAGNOSTIC_REFERENCE.md`, and
+  increment history stays here.

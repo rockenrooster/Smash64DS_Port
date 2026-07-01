@@ -1,4 +1,5 @@
 # AGENTS.md
+
 ## Mission
 
 This repo is a Nintendo DS source port of the BattleShip Smash 64
@@ -16,16 +17,27 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - Inspect relevant BattleShip source before importing or replacing behavior.
 - Inspect `decomp/sm64-nds` before DS backend architecture changes.
 - Prefer importing original BattleShip translation units through `src/import`.
+- Minimum gameplay slice is one whole original translation unit, or a coherent
+  adjacent group of TUs, imported through the existing
+  `src/import/battleship_*.c` include pattern and proven at a harness boundary.
+- Ban new one-bit proof-mask increments. Do not add per-branch seed/restore
+  proofs when the whole function or TU can run naturally.
+- Do not add proof code whose only purpose is to rerun one already-imported
+  branch with synthetic state. Convert proven paths to live runtime instead.
+- When a subsystem's TUs are fully imported, remove the guarded seam and let
+  the original code run live in-scene. Keep the old proof as a regression
+  marker only; no permanent state-restore around proven runtime.
+- New harness modes are exceptional. Fold new proofs into the current
+  Latest/Boundary pair unless the work reaches a scene-level boundary such as
+  `battle_playable` or `results_screen`.
 - Keep DS/backend behavior in `src/nds` or `src/port`.
 - Keep compatibility declarations in `include/`.
 - Do not edit generated build outputs or local emulator payloads.
-- Keep changes bounded, source-backed, buildable, and verifier-backed. Larger
-  slices are acceptable when they follow one original-code path and end at a
-  clear verifier boundary.
-- After successful verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1` as the final project action/tool call. Finish docs, static checks, verifiers, and status inspection first; never run commands, probes, or status checks after the snapshot.
-- Update docs at meaningful boundary or handoff points. Do not churn docs for
-  every internal helper, probe, or mechanical seam when the boundary summary
-  already covers it.
+- Keep changes source-backed, buildable, and verifier-backed.
+- After successful verified progress, run
+  `.\scripts\New-Smash64DSSnapshot.ps1` as the final project action/tool call.
+  Finish docs, static checks, verifiers, and status inspection first; never run
+  commands, probes, or status checks after the snapshot.
 
 ## Start Here
 
@@ -41,27 +53,27 @@ current Boundary/Latest membership, then read these human summaries:
 | Architecture and split plans | `docs/ARCHITECTURE.md` |
 | Known blockers and deferred work | `docs/KNOWN_ISSUES.md` |
 | Read-only upstream map | `docs/DECOMP_MAP.md` |
+| Full marker strings and diagnostics | `docs/DIAGNOSTIC_REFERENCE.md` |
 | Append-only history | `docs/PORTING.md` |
 
 `docs/PORTING.md` is history, not the planning surface.
 
 ## Current Boundary
 
-Current active boundary summary; the registry wins if this drifts:
+Registry modes `161/162` remain the active legacy proof boundary:
 
 ```powershell
-.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1
-.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1
+.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
+.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
 ```
 
-Modes `161/162` prove bounded selected Fox Jab2 live-hit activation -> damage
-lifecycle -> damage-status follow-through on the Pupupu Mario/Fox battle root,
-inheriting the current MP, cliff, passive/recover, wall/rebound, catch/throw,
-ledge, dash-run damage setup, and `mpDamageRecover` proofs. Summary:
-`status=17->52/45`, `hitlag=6->0`, callbacks `1/6/1`, search `0xf`, repeat
-gate `1/1 gate=0x3f`, statusMask `0xffffffff`, damage `0xffffffff`, hbdmg `0x7ffff`, shc `0x7fffff`, catchSearch `0xffffffff`.
-See `docs/STATUS.md` and `docs/HANDOFF.md`.
-Use `-DelaySeconds 3` for boundary/current verifier profiles.
+They prove a bounded selected Fox Jab2 live-hit damage lifecycle and
+damage-status follow-through on the Pupupu Mario/Fox battle root, inheriting
+the current MP, ledge, damage, catch/throw, shield, rebound, and TaruCannon
+hazard setup/physics proofs. Full marker strings live only in
+`docs/DIAGNOSTIC_REFERENCE.md`.
+
+This boundary is a regression anchor, not the template for future one-bit work.
 
 ## Common Commands
 
@@ -90,56 +102,43 @@ Tiered verifiers:
 .\scripts\verify-regression.ps1
 ```
 
-For parallel melonDS regression shards, create local gitignored runner slots,
-prebuild once, then run shards with `-NoBuild`:
-
-```powershell
-.\scripts\New-MelonDSRunnerSlots.ps1 -Count 4
-.\scripts\build-verify-profile.ps1 -Profile Regression
-.\scripts\verify-all.ps1 -Profile Regression -ShardCount 4 -ShardIndex 0 -RunnerSlot 0 -NoBuild
-```
-
-Do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
-
-Run Full only when the risk requires it or the user asks:
+Use `verify-dev-fast.ps1 -Build -DelaySeconds 3` while iterating. Run
+`verify-boundary.ps1 -DelaySeconds 3` when a runtime slice appears done. Run
+`verify-current` or `verify-regression` only for shared runtime, common fighter
+code, scene-manager, allocator/linker, harness registry, or broad renderer
+changes. Run Full only when risk requires it or the user asks:
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile Full
 ```
 
-## Emulator Policy
+Do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
 
-melonDS is the automated GDB verifier path. no$gba is for interactive DS
-hardware/register/VRAM/OAM/palette/timing debugging. See
-`docs/EMULATOR_STRATEGY.md`.
+## Slice And Doc Policy
+
+Future gameplay progress should move by whole original TUs or coherent
+subsystems: import, wire narrow seams, prove end-to-end, then graduate to live
+runtime. Mechanical file splits and docs/tooling may stay smaller when they do
+not claim gameplay progress.
+
+New proofs should fold into the current Latest/Boundary pair. Add a new
+harness mode only for scene-level milestones. Registry changes go through
+`scripts/lib/harness-registry.ps1` and `.\scripts\check-harness-registry.ps1`.
+
+Docs stay short. Keep `docs/STATUS.md` and `docs/HANDOFF.md` at or under 150
+lines each. Put full marker strings in `docs/DIAGNOSTIC_REFERENCE.md`; append
+increment history to `docs/PORTING.md`; do not duplicate previous-increment
+stacks across active docs.
 
 ## Snapshot Policy
+
 Run a snapshot after successful verified progress, always as the final project
 action after docs, verification, static checks, and status inspection. Run no
 commands after it; only the final response may follow.
 
 ```powershell
-.\scripts\New-Smash64DSSnapshot.ps1
+.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean
 ```
-
-## Slice And Doc Policy
-
-Prefer one coherent source-backed slice over many tiny proof-only edits when
-the original BattleShip path is understood and the verifier boundary remains
-bounded. A good slice may import or route several adjacent original helpers
-together, but it must keep runtime restored after the proof and avoid broad
-subsystem imports.
-
-Keep docs lean during implementation. Update `docs/STATUS.md` and
-`docs/HANDOFF.md` when the current boundary, latest proof, verifier command, or
-known blocker changes. Append `docs/PORTING.md` only after a verified milestone
-or important architectural decision. Avoid duplicating full marker strings
-across multiple docs unless a verifier or reviewer needs the exact value.
-
-## Parallel Agents
-
-Use parallel agents for bounded scouting, docs synthesis, verifier/tooling work,
-or collision/renderer research. The main agent owns merge decisions.
 
 ## Editing Policy
 
