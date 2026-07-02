@@ -16015,3 +16015,19 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining combiner policy,
   full non-zbuffer/projected-Z depth policy, broader texture-state coverage,
   and renderer cutover stay deferred.
+
+## 2026-07-02 - Added HW No-Z Projected Submission
+
+- Split opt-in hardware triangle submission on recorded source `G_ZBUFFER`:
+  z-buffered geometry keeps raw GX vertex submission, while no-z geometry uses
+  the sm64-nds-style projected clip-vertex/synthetic-Z lane fed by the existing
+  CPU 20.12 oracle.
+- Added renderer stats and fixture guards for z-buffered and projected-depth
+  hardware submissions.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, then passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
+  combiner/material behavior, broader texture/no-z source-scene coverage, and
+  renderer cutover stay deferred.

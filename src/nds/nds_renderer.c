@@ -77,6 +77,9 @@
 #define NDS_RENDERER_HW_TEXTURE_SIZ_8B 1u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_16B 2u
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
+#define NDS_RENDERER_HW_PROJECTED_DEPTH_START (0x1000 * 6)
+#define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
+#define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_CCMUX_TEXEL0 1u
 #define NDS_RENDERER_CCMUX_PRIMITIVE 3u
 #define NDS_RENDERER_CCMUX_SHADE 4u
@@ -104,6 +107,7 @@
 
 #if NDS_RENDERER_HW_TRIANGLES
 static u32 sNdsRendererHardwareSubmitted;
+static s32 sNdsRendererHardwareProjectedDepth;
 
 typedef struct NDSRendererHardwareTextureKey
 {
@@ -2056,6 +2060,87 @@ static void ndsRendererLoadHardwareMatrices(
     glLoadMatrix4x4(&modelview_hw);
 }
 
+static s32 ndsRendererHardwareNextProjectedDepth(void)
+{
+    if (sNdsRendererHardwareProjectedDepth <= 0)
+    {
+        sNdsRendererHardwareProjectedDepth =
+            NDS_RENDERER_HW_PROJECTED_DEPTH_START;
+    }
+    sNdsRendererHardwareProjectedDepth--;
+    return (sNdsRendererHardwareProjectedDepth /
+            NDS_RENDERER_HW_PROJECTED_DEPTH_STEP) << 4;
+}
+
+static void ndsRendererHardwareClipVertex(
+    const NDSRendererClipVertex20p12 *vtx, s32 z)
+{
+    m4x4 vertex;
+
+    if (vtx == NULL)
+    {
+        return;
+    }
+
+    vertex.m[0] = vtx->x; vertex.m[1] = 0;      vertex.m[2] = 0; vertex.m[3] = 0;
+    vertex.m[4] = 0;      vertex.m[5] = vtx->y; vertex.m[6] = 0; vertex.m[7] = 0;
+    vertex.m[8] = 0;      vertex.m[9] = 0;      vertex.m[10] = z; vertex.m[11] = 0;
+    vertex.m[12] = 0;     vertex.m[13] = 0;     vertex.m[14] = 0; vertex.m[15] = vtx->w;
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadMatrix4x4(&vertex);
+    glVertex3v16(NDS_RENDERER_HW_PROJECTED_VERTEX,
+                 NDS_RENDERER_HW_PROJECTED_VERTEX,
+                 NDS_RENDERER_HW_PROJECTED_VERTEX);
+    glPopMatrix(1);
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix(1);
+}
+
+static void ndsRendererHardwareSubmitVertex(
+    const NDSRendererInputVertex *vtx,
+    const NDSRendererClipVertex20p12 *clip_vtx,
+    u32 material_color,
+    s32 use_material_color,
+    s32 use_vertex_color,
+    s32 use_texture,
+    u32 scale_s,
+    u32 scale_t,
+    s32 texture_offset,
+    u32 scale_world,
+    s32 zbuffered,
+    s32 projected_z)
+{
+    if (vtx == NULL)
+    {
+        return;
+    }
+
+    ndsRendererHardwareColorVertex(vtx, material_color, use_material_color,
+                                   use_vertex_color);
+    if (use_texture != FALSE)
+    {
+        glTexCoord2t16(ndsRendererHardwareTexCoord(vtx->s, scale_s,
+                                                   texture_offset),
+                       ndsRendererHardwareTexCoord(vtx->t, scale_t,
+                                                   texture_offset));
+    }
+    if (zbuffered != FALSE)
+    {
+        glVertex3v16(ndsRendererHardwareVertexCoord(vtx->x, scale_world),
+                     ndsRendererHardwareVertexCoord(vtx->y, scale_world),
+                     ndsRendererHardwareVertexCoord(vtx->z, scale_world));
+    }
+    else
+    {
+        ndsRendererHardwareClipVertex(clip_vtx, projected_z);
+    }
+}
+
 static s32 ndsRendererInputTriangleReady(
     const NDSRendererTraversalState *state, u32 packed,
     u32 *out_i0, u32 *out_i1, u32 *out_i2)
@@ -2101,6 +2186,9 @@ static void ndsRendererSubmitHardwareTriangle(
     s32 use_material_color;
     s32 use_vertex_color;
     s32 texture_offset;
+    s32 zbuffered;
+    s32 transformed_ready;
+    s32 projected_z = 0;
 
     if (stats == NULL)
     {
@@ -2111,15 +2199,26 @@ static void ndsRendererSubmitHardwareTriangle(
         stats->hardware_oracle_reject_count++;
         return;
     }
+    transformed_ready =
+        ((state != NULL) &&
+         (state->matrix_valid != 0u) &&
+         (ndsRendererTransformedTriangleReady(state, packed, NULL, NULL,
+                                              NULL) != FALSE)) ? TRUE : FALSE;
     if ((state != NULL) && (state->matrix_valid != 0u))
     {
-        if (ndsRendererTransformedTriangleReady(state, packed, NULL, NULL,
-                                                NULL) == FALSE)
+        if (transformed_ready == FALSE)
         {
             stats->hardware_oracle_reject_count++;
             return;
         }
         stats->hardware_oracle_triangle_count++;
+    }
+    zbuffered = ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) != 0u) ?
+        TRUE : FALSE;
+    if ((zbuffered == FALSE) && (transformed_ready == FALSE))
+    {
+        stats->hardware_oracle_reject_count++;
+        return;
     }
 
     v0 = &state->input_vertices[i0];
@@ -2137,8 +2236,14 @@ static void ndsRendererSubmitHardwareTriangle(
     }
     scale_world = TRUE;
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
-
-    ndsRendererLoadHardwareMatrices(state, scale_world);
+    if (zbuffered != FALSE)
+    {
+        ndsRendererLoadHardwareMatrices(state, scale_world);
+    }
+    else
+    {
+        projected_z = ndsRendererHardwareNextProjectedDepth();
+    }
     if (use_texture != FALSE)
     {
         glEnable(GL_TEXTURE_2D);
@@ -2149,46 +2254,33 @@ static void ndsRendererSubmitHardwareTriangle(
     }
     glPolyFmt(ndsRendererHardwarePolyFmt(stats, poly_alpha));
     glBegin(GL_TRIANGLE);
-    ndsRendererHardwareColorVertex(v0, material_color, use_material_color,
-                                   use_vertex_color);
-    if (use_texture != FALSE)
-    {
-        glTexCoord2t16(ndsRendererHardwareTexCoord(
-                           v0->s, stats->texture_scale_s, texture_offset),
-                       ndsRendererHardwareTexCoord(
-                           v0->t, stats->texture_scale_t, texture_offset));
-    }
-    glVertex3v16(ndsRendererHardwareVertexCoord(v0->x, scale_world),
-                 ndsRendererHardwareVertexCoord(v0->y, scale_world),
-                 ndsRendererHardwareVertexCoord(v0->z, scale_world));
-    ndsRendererHardwareColorVertex(v1, material_color, use_material_color,
-                                   use_vertex_color);
-    if (use_texture != FALSE)
-    {
-        glTexCoord2t16(ndsRendererHardwareTexCoord(
-                           v1->s, stats->texture_scale_s, texture_offset),
-                       ndsRendererHardwareTexCoord(
-                           v1->t, stats->texture_scale_t, texture_offset));
-    }
-    glVertex3v16(ndsRendererHardwareVertexCoord(v1->x, scale_world),
-                 ndsRendererHardwareVertexCoord(v1->y, scale_world),
-                 ndsRendererHardwareVertexCoord(v1->z, scale_world));
-    ndsRendererHardwareColorVertex(v2, material_color, use_material_color,
-                                   use_vertex_color);
-    if (use_texture != FALSE)
-    {
-        glTexCoord2t16(ndsRendererHardwareTexCoord(
-                           v2->s, stats->texture_scale_s, texture_offset),
-                       ndsRendererHardwareTexCoord(
-                           v2->t, stats->texture_scale_t, texture_offset));
-    }
-    glVertex3v16(ndsRendererHardwareVertexCoord(v2->x, scale_world),
-                 ndsRendererHardwareVertexCoord(v2->y, scale_world),
-                 ndsRendererHardwareVertexCoord(v2->z, scale_world));
+    ndsRendererHardwareSubmitVertex(
+        v0, &state->vertices[i0], material_color, use_material_color,
+        use_vertex_color, use_texture, stats->texture_scale_s,
+        stats->texture_scale_t, texture_offset, scale_world, zbuffered,
+        projected_z);
+    ndsRendererHardwareSubmitVertex(
+        v1, &state->vertices[i1], material_color, use_material_color,
+        use_vertex_color, use_texture, stats->texture_scale_s,
+        stats->texture_scale_t, texture_offset, scale_world, zbuffered,
+        projected_z);
+    ndsRendererHardwareSubmitVertex(
+        v2, &state->vertices[i2], material_color, use_material_color,
+        use_vertex_color, use_texture, stats->texture_scale_s,
+        stats->texture_scale_t, texture_offset, scale_world, zbuffered,
+        projected_z);
     glEnd();
 
     sNdsRendererHardwareSubmitted = TRUE;
     stats->hardware_triangle_count++;
+    if (zbuffered != FALSE)
+    {
+        stats->hardware_zbuffer_triangle_count++;
+    }
+    else
+    {
+        stats->hardware_projected_depth_triangle_count++;
+    }
     stats->hardware_vertex_count += 3u;
 }
 #endif
@@ -2539,6 +2631,7 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
     u32 submitted = sNdsRendererHardwareSubmitted;
 
     sNdsRendererHardwareSubmitted = FALSE;
+    sNdsRendererHardwareProjectedDepth = 0;
     return submitted;
 #else
     return FALSE;

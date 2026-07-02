@@ -95,9 +95,12 @@ Renderer scans now seed BattleShip reset geometry
 (`G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH`) and reset texture
 filter `G_TF_BILERP`, so DObj traversals entered below
 `sSYRdpResetDisplayList` use the same baseline until source DL commands
-override it. Full visual fidelity still needs remaining combiner behavior,
-full non-zbuffer/projected-Z depth policy, remaining texture-state coverage,
-and renderer cutover work. Default builds still use the software preview.
+override it. Hardware submission now branches on the recorded source
+`G_ZBUFFER` state: z-buffered triangles keep raw GX vertex submission, while
+no-z triangles use the sm64-nds-style projected clip-vertex/synthetic-Z lane
+fed by the CPU 20.12 oracle. Full visual fidelity still needs remaining
+combiner/material behavior, broader texture/no-z source-scene coverage, and
+renderer cutover work. Default builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -108,8 +111,7 @@ The next useful work is not another proof bit. It is one of:
 
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
-- renderer follow-up: finish opt-in hardware combiner/full non-zbuffer
-  depth/material policy,
+- renderer follow-up: finish opt-in hardware combiner/material policy,
   broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
   plus IA/I decoders, then plan renderer cutover work;
 - compatibility-header split needed before full-TU runtime import of

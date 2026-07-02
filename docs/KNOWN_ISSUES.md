@@ -79,8 +79,8 @@
   Hardware all-DL stats prove triangle submission and matrix seeds, but the
   direct all-DL scene emits no matrix-word stream
   (`MW=0/0/0/0`) and many texture states still reject. Remaining renderer work
-  is remaining combiner behavior, broader texture coverage, depth/material
-  policy, and cutover policy.
+  is remaining combiner/material behavior, broader texture/no-z source-scene
+  coverage, and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-
