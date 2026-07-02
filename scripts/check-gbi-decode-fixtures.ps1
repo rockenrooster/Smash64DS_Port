@@ -353,6 +353,8 @@ Assert-True ($renderer.Contains('key.load_uls = stats->texture_load_block_uls'))
 Assert-True ($renderer.Contains('key.load_dxt = stats->texture_load_block_dxt')) 'Renderer hardware texture cache key is missing load-block DXT state.'
 Assert-True (-not $renderer.Contains('if (stats->texture_load_texels == 0)')) 'Renderer load-block state still freezes on the first texture load.'
 Assert-True (-not $renderer.Contains('stats->texture_tile_width != 0) &&')) 'Renderer tile-size state still freezes on the first tile size.'
+Assert-True ($renderer.Contains('stats->texture_tile_width = 0u;')) 'Renderer tile-size state does not clear stale width.'
+Assert-True ($renderer.Contains('stats->texture_tile_height = 0u;')) 'Renderer tile-size state does not clear stale height.'
 Assert-True ($renderer.Contains('ndsRendererHardwareColorSource')) 'Renderer hardware material color source helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseMaterialColor')) 'Renderer hardware material color presence helper is missing.'
 Assert-True ($renderer.Contains('use_material_color != FALSE')) 'Renderer hardware material color selection still depends on a nonzero color value.'

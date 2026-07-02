@@ -714,6 +714,8 @@ static void ndsRendererRecordSetTileSize(NDSRendererStats *stats,
     stats->texture_tile_size_ult = ult;
     stats->texture_tile_size_lrs = lrs;
     stats->texture_tile_size_lrt = lrt;
+    stats->texture_tile_width = 0u;
+    stats->texture_tile_height = 0u;
     if (lrs >= uls)
     {
         stats->texture_tile_width = ((lrs - uls) >> 2) + 1u;

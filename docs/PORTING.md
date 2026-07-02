@@ -15958,3 +15958,17 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
   combiner/depth policy, texture-state coverage, and renderer cutover deferred.
+
+## 2026-07-02 - Cleared HW Tile-Size Dimensions
+
+- Cleared hardware texture tile width/height before applying each current
+  `G_SETTILESIZE`, so invalid/current size packets cannot inherit stale
+  dimensions from an earlier texture.
+- Added fixture guards for the tile-size dimension clear.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, then passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
+  combiner/depth policy, texture-state coverage, and renderer cutover stay
+  deferred.
