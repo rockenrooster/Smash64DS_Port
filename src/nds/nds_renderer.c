@@ -92,6 +92,7 @@
 #define NDS_RENDERER_BLEND_ALPHA_MEM_MASK (NDS_RENDERER_G_BL_A_MEM << 18)
 #define NDS_RENDERER_GEOM_CULL_FRONT 0x00000200u
 #define NDS_RENDERER_GEOM_CULL_BACK 0x00000400u
+#define NDS_RENDERER_POLY_ID_MASK 0x3fu
 
 #if NDS_RENDERER_HW_TRIANGLES
 static u32 sNdsRendererHardwareSubmitted;
@@ -1369,7 +1370,9 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
 
 static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
 {
-    u32 poly_fmt = POLY_CULL_NONE | POLY_ALPHA(alpha);
+    u32 poly_id = (stats != NULL) ?
+        (stats->texture_combine_count & NDS_RENDERER_POLY_ID_MASK) : 0u;
+    u32 poly_fmt = POLY_CULL_NONE | POLY_ALPHA(alpha) | POLY_ID(poly_id);
     u32 mode = (stats != NULL) ? stats->geometry_mode : 0u;
 
     if (ndsRendererHardwareUseDecal(stats) != FALSE)

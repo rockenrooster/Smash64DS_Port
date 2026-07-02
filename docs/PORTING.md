@@ -15887,3 +15887,15 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Remaining
   combiner behavior, depth policy, broader texture coverage, and renderer
   cutover stay deferred.
+
+## 2026-07-02 - Applied HW Polygon IDs
+
+- Mirrored the sm64-nds polygon-format rule by adding `POLY_ID` to the opt-in
+  DS hardware submitter, deriving the ID from the current `G_SETCOMBINE`
+  sequence already tracked in renderer stats.
+- Added a fixture guard for the combine-sequenced polygon ID and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Remaining
+  combiner behavior, depth policy, broader texture coverage, and renderer
+  cutover stay deferred.

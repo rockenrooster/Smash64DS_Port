@@ -357,6 +357,8 @@ Assert-True ($renderer.Contains('NDS_RENDERER_BLEND_ALPHA_MEM_MASK')) 'Renderer 
 Assert-True ($renderer.Contains('stats->othermode_l & NDS_RENDERER_BLEND_ALPHA_MEM_MASK')) 'Renderer hardware alpha does not honor current blend alpha-memory state.'
 Assert-True ($renderer.Contains('NDS_RENDERER_GEOM_CULL_BACK')) 'Renderer hardware cull-back geometry flag is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwarePolyFmt')) 'Renderer hardware poly-format helper is missing.'
+Assert-True ($renderer.Contains('POLY_ID(poly_id)')) 'Renderer hardware polygon ID state is missing.'
+Assert-True ($renderer.Contains('stats->texture_combine_count & NDS_RENDERER_POLY_ID_MASK')) 'Renderer hardware polygon ID does not follow combine sequencing.'
 Assert-True ($renderer.Contains('stats->env_color = w1')) 'Renderer env-color material state tracking is missing.'
 Assert-True (-not $renderer.Contains('NDS_RENDERER_HW_FALLBACK_SCALE')) 'Renderer hardware fallback scale returned.'
 Assert-True ($renderer.Contains('input_vertices')) 'Renderer hardware raw vertex cache is missing.'
