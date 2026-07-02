@@ -406,6 +406,8 @@ typedef struct NDSFighterDLDrawTri {
 typedef struct NDSFighterDLDrawState {
     const NDSRelocLoadedFile *primary_file;
     u32 slot;
+    const Gfx *segment_e_base;
+    const Gfx *segment_e_end;
     NDSFighterDLDrawVtx vertices[NDS_FIGHTER_DL_DRAW_MAX_VTX];
     NDSFighterDLDrawTri tris[NDS_FIGHTER_DL_DRAW_MAX_TRIS];
     u32 vertex_valid_mask;

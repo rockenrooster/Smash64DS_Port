@@ -387,6 +387,9 @@ Assert-True ($rendererAdapter.Contains('parts->unk_dobjtrans_0x10')) 'Battle DL 
 Assert-True ($rendererAdapter.Contains('value = (row == 3u) ? 1.0F : 0.0F;')) 'Battle DL renderer cached fighter-parts matrix conversion no longer matches syMatrixF2LFixedW W-column behavior.'
 Assert-True ($rendererAdapter.Contains('for (i = depth; i != 0u; i--)')) 'Battle DL renderer DObj parent-chain composition order regressed.'
 Assert-True ($rendererAdapter.Contains('ndsRendererMtxMul20p12(&dobj_world, &camera_modelview, modelview)')) 'Battle DL renderer DObj/camera modelview composition order regressed.'
+Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareMaterialSegment')) 'Battle DL renderer material segment emission is missing.'
+Assert-True ($rendererAdapter.Contains('segment_e_base')) 'Battle DL renderer segment 0x0E material resolver is missing.'
+Assert-True ($rendererAdapter.Contains('NDS_FIGHTER_DL_OP_LOADTLUT')) 'Battle DL renderer material TLUT packet emission is missing.'
 $compatShims = Get-Content (Join-Path $root 'src/port/reloc_backend_compat_shims.c') -Raw
 Assert-True ($compatShims.Contains('gcAddXObjForCamera(cobj, 0x4C, 0)')) 'VSBattle compatibility camera no longer exposes the BattleShip 0x4C matrix kind.'
 $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c') -Raw
@@ -394,4 +397,4 @@ Assert-True ($openingBackend.Contains('ndsRendererAdapterPrepareInitialMatrices'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
 Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'
-Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.'
+Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.'

@@ -40,32 +40,24 @@ TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
 Latest renderer detail: `src/nds/nds_renderer.c` has opt-in DS 3D hardware
-submission behind `NDS_RENDERER_HW_TRIANGLES=1`, now fed by source-shaped DObj
-and camera matrix seeds from `src/port/reloc_backend_renderer_dl.c`. Stage 3b
-adds billboard-kind `33-40` and recalc-kind `41-50` seed coverage, consistent
-textured/untextured `v16` world scaling, stage DObj submission from the
-existing Pupupu `gcDrawAll` traversal, and renderer support for emitted
+submission behind `NDS_RENDERER_HW_TRIANGLES=1`, fed by source-shaped DObj,
+camera, and material state from `src/port/reloc_backend_renderer_dl.c`. Stage
+3b added billboard-kind `33-40` and recalc-kind `41-50` seed coverage,
+consistent textured/untextured `v16` world scaling, stage DObj submission from
+the existing Pupupu `gcDrawAll` traversal, and renderer support for emitted
 BattleShip `gSPMvpRecalc` / `G_MW_MATRIX` display-list streams. It also seeds
 fighter-parts matrix kind `0x4B`, BattleShip battle-camera matrix kind `0x4C`,
-converts cached fighter-parts `Mtx44f` seeds with fixed-W semantics matching
-`syMatrixF2LFixedW`, and composes selected DObj parent chains from root to child
-before the camera modelview. The hardware texture path now records
-`LOADTLUT` state and converts CI4/CI8 texels through TLUT palettes in addition
-to RGBA16/I16 uploads. Captures:
-`artifacts\renderer-chain-hw-battle.png` and
+and composes selected DObj parent chains from root to child before the camera
+modelview. The latest increment routes source-shaped `gcDrawMObjForDObj`
+material branch tables into the opt-in hardware traversal by emitting segment
+`0x0E` branch lists plus palette/TLUT, texture image, load-block, tile-size,
+texture, color, and light-color packets from the taskman graphics heap.
+Captures: `artifacts\renderer-chain-hw-battle.png` and
 `artifacts\renderer-stage-gcdrawall-hw.png`. The stage-inclusive capture shows
-the Pupupu platform plus fighter geometry using the captured BattleShip camera
-GObj and `0x4C` matrix seed; the all-DL battle capture restores the same battle
-camera around its direct display calls, so it no longer depends on the bounded
-hardware fallback camera. It is still flat-shaded because these proof paths
-submit raw DObj DLs without preceding material DL emission.
-Hardware all-DL stats on the opt-in build were
-`HW=316/314 oracle=316/314 rejects=18/8 seeds=14/18` and
-`MW=0/0/0/0`, so this direct all-DL scene is using per-DObj matrix seeds rather
-than emitted matrix-word streams. The next renderer pass should route material
-display lists into opt-in hardware draw, prove textured CI/TLUT output, then
-finish combiner/material/depth state and renderer cutover. Default builds still
-use the software preview.
+the Pupupu platform plus hardware-submitted fighter geometry using the captured
+BattleShip camera path. The next renderer pass should finish combiner,
+material/depth policy, broader texture-state proof, and renderer cutover.
+Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
 TU via `src/import/battleship_gmcollision.c`, replacing the local
@@ -86,14 +78,13 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Renderer follow-up: route material display lists into opt-in hardware draw,
-   then prove textured CI/TLUT output, combiner/material/depth state, and
-   renderer cutover.
+1. Renderer follow-up: finish opt-in hardware combiner/material/depth state,
+   broaden texture-state proof, and then plan renderer cutover.
 2. Runtime slice 1 follow-up: split/expand the item, weapon, effect, audio, and
    ground compatibility headers enough for full `ft/ftmain.c`, then replace
    the remaining local `ftMain*` seams and add the continuous-runtime verifier.
-3. Broaden hardware texture/combiner support after material DL emission is
-   wired into the hardware path.
+3. Broaden hardware texture coverage now that material DL emission reaches the
+   hardware traversal.
 
 ## Verification
 

@@ -15759,3 +15759,19 @@ Still deferred:
   because the current proof submits raw DObj DLs; material display-list emission
   must be routed into the hardware path before the CI/TLUT upload support is
   visually exercised.
+
+## 2026-07-02 - Routed BattleShip Material Branches Into HW Traversal
+
+- Added an opt-in hardware-only material segment route for DObj drawing:
+  `src/port/reloc_backend_renderer_dl.c` now emits source-shaped
+  `gcDrawMObjForDObj` segment `0x0E` branch tables from the taskman graphics
+  heap and resolves those branches during renderer traversal.
+- Emitted the material packets the DS renderer already records, including
+  palette/TLUT, texture image, load-block, tile-size, texture enable, color,
+  and light-color state, without widening the narrow local PR compatibility
+  header.
+- Refreshed `artifacts\renderer-chain-hw-battle.png` and
+  `artifacts\renderer-stage-gcdrawall-hw.png`; the stage-inclusive capture
+  still shows Pupupu platform geometry plus hardware-submitted fighter
+  geometry through the captured BattleShip camera path. Renderer cutover still
+  needs combiner, depth/material policy, and broader texture-state proof.

@@ -7,6 +7,19 @@
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
 #define NDS_RENDERER_ADAPTER_HW_WORLD_SCALE 256.0F
+#define NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX 64u
+#define NDS_RENDERER_ADAPTER_G_TX_LOADTILE 7u
+#define NDS_RENDERER_ADAPTER_G_TX_RENDERTILE 0u
+#define NDS_RENDERER_ADAPTER_G_TX_WRAP 0u
+#define NDS_RENDERER_ADAPTER_G_TX_NOMASK 0u
+#define NDS_RENDERER_ADAPTER_G_TX_NOLOD 0u
+#define NDS_RENDERER_ADAPTER_G_ON 1u
+#define NDS_RENDERER_ADAPTER_G_MW_LIGHTCOL 0x0au
+#define NDS_RENDERER_ADAPTER_G_MWO_A_LIGHT_1 0x00u
+#define NDS_RENDERER_ADAPTER_G_MWO_B_LIGHT_1 0x04u
+#define NDS_RENDERER_ADAPTER_G_MWO_A_LIGHT_2 0x18u
+#define NDS_RENDERER_ADAPTER_G_MWO_B_LIGHT_2 0x1cu
+#define NDS_RENDERER_ADAPTER_G_TX_LDBLK_MAX_TXL 2047u
 /* dLBCommonFuncMatrixList is consumed as syMtxProcess pairs; kind 0x4B maps
  * to lbCommonFighterPartsFuncMatrix in BattleShip. */
 #define NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND 0x4Bu
@@ -2043,6 +2056,22 @@ static const Gfx *ndsFighterDLDrawResolveBranch(const Gfx *dl,
     {
         return dl;
     }
+    if ((state != NULL) && (state->segment_e_base != NULL) &&
+        ((raw >> 24) == 0x0eu))
+    {
+        uintptr_t base = (uintptr_t)state->segment_e_base;
+        uintptr_t end = (uintptr_t)state->segment_e_end;
+
+        if ((end > base) && (offset <= (end - base)) &&
+            (sizeof(Gfx) <= (size_t)(end - base - offset)))
+        {
+            if (resolve_kind != NULL)
+            {
+                *resolve_kind = NDS_RENDERER_RESOLVE_SEGMENT;
+            }
+            return (const Gfx *)(base + offset);
+        }
+    }
     if ((state != NULL) &&
         (state->primary_file != NULL) &&
         (ndsRelocRangeInLoadedFile(state->primary_file,
@@ -2084,6 +2113,18 @@ static const void *ndsFighterDLDrawResolveDataPointer(uintptr_t raw,
         (ndsFighterDLScanRangeInTaskmanArena(ptr, bytes) != FALSE))
     {
         return ptr;
+    }
+    if ((state != NULL) && (state->segment_e_base != NULL) &&
+        ((raw >> 24) == 0x0eu))
+    {
+        uintptr_t base = (uintptr_t)state->segment_e_base;
+        uintptr_t end = (uintptr_t)state->segment_e_end;
+
+        if ((end > base) && (offset <= (end - base)) &&
+            (bytes <= (size_t)(end - base - offset)))
+        {
+            return (const void *)(base + offset);
+        }
     }
     if ((state != NULL) &&
         (state->primary_file != NULL) &&
@@ -2355,6 +2396,738 @@ static sb32 ndsRendererAdapterStageDObjDrawable(DObj *dobj, u32 kind)
     }
 }
 
+static u32 ndsRendererAdapterMaterialFlags(const MObj *mobj)
+{
+    u32 flags;
+
+    if (mobj == NULL)
+    {
+        return MOBJ_FLAG_NONE;
+    }
+    flags = mobj->sub.flags;
+    return (flags == MOBJ_FLAG_NONE) ?
+        (MOBJ_FLAG_TEXTURE | 0x20u | MOBJ_FLAG_ALPHA) : flags;
+}
+
+static u32 ndsRendererAdapterMaterialPositiveOrOne(s32 value)
+{
+    return (value <= 0) ? 1u : (u32)value;
+}
+
+static void ndsRendererAdapterMaterialLoadBlock(const MObj *mobj,
+                                                u32 *texels,
+                                                u32 *dxt)
+{
+    s32 load_texels = 0;
+    u32 divisor = 1u;
+
+    if ((mobj == NULL) || (texels == NULL) || (dxt == NULL))
+    {
+        return;
+    }
+
+    switch (mobj->sub.block_siz)
+    {
+    case G_IM_SIZ_4b:
+        load_texels =
+            ((((s32)mobj->sub.block_dxt * (s32)mobj->sub.unk36) + 3) >> 2) -
+            1;
+        divisor = ndsRendererAdapterMaterialPositiveOrOne(
+            (s32)mobj->sub.block_dxt / 16);
+        break;
+    case G_IM_SIZ_8b:
+        load_texels =
+            ((((s32)mobj->sub.block_dxt * (s32)mobj->sub.unk36) + 1) >> 1) -
+            1;
+        divisor = ndsRendererAdapterMaterialPositiveOrOne(
+            (s32)mobj->sub.block_dxt / 8);
+        break;
+    case G_IM_SIZ_16b:
+        load_texels =
+            ((s32)mobj->sub.block_dxt * (s32)mobj->sub.unk36) - 1;
+        divisor = ndsRendererAdapterMaterialPositiveOrOne(
+            ((s32)mobj->sub.block_dxt * 2) / 8);
+        break;
+    case G_IM_SIZ_32b:
+        load_texels =
+            ((s32)mobj->sub.block_dxt * (s32)mobj->sub.unk36) - 1;
+        divisor = ndsRendererAdapterMaterialPositiveOrOne(
+            ((s32)mobj->sub.block_dxt * 4) / 8);
+        break;
+    default:
+        break;
+    }
+
+    *texels = (load_texels > 0) ? (u32)load_texels : 0u;
+    *dxt = (divisor + 0x7ffu) / divisor;
+}
+
+static u32 ndsRendererAdapterMaterialCommandCount(u32 flags)
+{
+    u32 count = 1u;
+
+    if ((flags & MOBJ_FLAG_PALETTE) != 0)
+    {
+        count++;
+        if ((flags & (MOBJ_FLAG_SPLIT | MOBJ_FLAG_ALPHA)) != 0)
+        {
+            count += 5u;
+        }
+    }
+    if ((flags & MOBJ_FLAG_LIGHT1) != 0)
+    {
+        count += 2u;
+    }
+    if ((flags & MOBJ_FLAG_LIGHT2) != 0)
+    {
+        count += 2u;
+    }
+    if ((flags & (MOBJ_FLAG_PRIMCOLOR | MOBJ_FLAG_FRAC | 0x8u)) != 0)
+    {
+        count++;
+    }
+    if ((flags & MOBJ_FLAG_ENVCOLOR) != 0)
+    {
+        count++;
+    }
+    if ((flags & MOBJ_FLAG_BLENDCOLOR) != 0)
+    {
+        count++;
+    }
+    if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_SPLIT)) != 0)
+    {
+        count++;
+        if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_ALPHA)) != 0)
+        {
+            count += 3u;
+        }
+    }
+    if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_ALPHA)) != 0)
+    {
+        count++;
+    }
+    if ((flags & 0x20u) != 0)
+    {
+        count++;
+    }
+    if ((flags & 0x40u) != 0)
+    {
+        count++;
+    }
+    if ((flags & MOBJ_FLAG_TEXTURE) != 0)
+    {
+        count++;
+    }
+    return count;
+}
+
+static sb32 ndsRendererAdapterCountMaterialCommands(DObj *dobj,
+                                                    u32 *mobj_count,
+                                                    u32 *branch_commands)
+{
+    MObj *mobj;
+    u32 count = 0u;
+    u32 commands = 0u;
+
+    if ((dobj == NULL) || (mobj_count == NULL) ||
+        (branch_commands == NULL))
+    {
+        return FALSE;
+    }
+    for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
+    {
+        count++;
+        if (count > NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX)
+        {
+            return FALSE;
+        }
+        commands += ndsRendererAdapterMaterialCommandCount(
+            ndsRendererAdapterMaterialFlags(mobj));
+    }
+    *mobj_count = count;
+    *branch_commands = commands;
+    return TRUE;
+}
+
+static void ndsRendererAdapterMaterialTextureState(
+    const MObj *mobj,
+    u32 flags,
+    f32 *scau,
+    f32 *scav,
+    f32 *trau,
+    f32 *trav,
+    f32 *scrollu,
+    f32 *scrollv)
+{
+    if ((mobj == NULL) || (scau == NULL) || (scav == NULL) ||
+        (trau == NULL) || (trav == NULL) || (scrollu == NULL) ||
+        (scrollv == NULL) ||
+        ((flags & (MOBJ_FLAG_TEXTURE | 0x40u | 0x20u)) == 0))
+    {
+        return;
+    }
+
+    *scau = mobj->sub.scau;
+    *scav = mobj->sub.scav;
+    *trau = mobj->sub.trau;
+    *trav = mobj->sub.trav;
+    *scrollu = mobj->sub.scrollu;
+    *scrollv = mobj->sub.scrollv;
+
+    if (mobj->sub.unk10 == 1)
+    {
+        *scau *= 0.5F;
+        *trau =
+            ((*trau - mobj->sub.unk24) + 1.0F -
+             (mobj->sub.unk28 * 0.5F)) *
+            0.5F;
+        *scrollu =
+            ((*scrollu - mobj->sub.unk44) + 1.0F -
+             (mobj->sub.unk28 * 0.5F)) *
+            0.5F;
+    }
+}
+
+static u32 ndsRendererAdapterClampU8S32(s32 value)
+{
+    if (value < 0)
+    {
+        return 0u;
+    }
+    return (value > 0xff) ? 0xffu : (u32)value;
+}
+
+static u32 ndsRendererAdapterClampU8F32(f32 value)
+{
+    return ndsRendererAdapterClampU8S32((s32)value);
+}
+
+static const void *ndsRendererAdapterReadPointerEntry(void **items,
+                                                      s32 index)
+{
+    if ((items == NULL) || (index < 0))
+    {
+        return NULL;
+    }
+    return items[index];
+}
+
+static void ndsRendererAdapterEmitBranchTableCommand(Gfx *cmd,
+                                                     const Gfx *branch)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 = (NDS_FIGHTER_DL_OP_DL << 24) | (1u << 16);
+    cmd->words.w1 = (u32)(uintptr_t)branch;
+}
+
+static void ndsRendererAdapterEmitEndDL(Gfx *cmd)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 = NDS_FIGHTER_DL_OP_ENDDL << 24;
+    cmd->words.w1 = 0u;
+}
+
+static void ndsRendererAdapterEmitSync(Gfx *cmd, u32 op)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 = op << 24;
+    cmd->words.w1 = 0u;
+}
+
+static void ndsRendererAdapterEmitTextureImage(Gfx *cmd,
+                                               u32 fmt,
+                                               u32 siz,
+                                               u32 width,
+                                               const void *image)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 =
+        (NDS_FIGHTER_DL_OP_SETTIMG << 24) |
+        ((fmt & 0x7u) << 21) |
+        ((siz & 0x3u) << 19) |
+        (((width != 0u) ? (width - 1u) : 0u) & 0x0fffu);
+    cmd->words.w1 = (u32)(uintptr_t)image;
+}
+
+static void ndsRendererAdapterEmitSetTile(Gfx *cmd,
+                                          u32 fmt,
+                                          u32 siz,
+                                          u32 line,
+                                          u32 tmem,
+                                          u32 tile,
+                                          u32 palette,
+                                          u32 cmt,
+                                          u32 maskt,
+                                          u32 shiftt,
+                                          u32 cms,
+                                          u32 masks,
+                                          u32 shifts)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 =
+        (NDS_FIGHTER_DL_OP_SETTILE << 24) |
+        ((fmt & 0x7u) << 21) |
+        ((siz & 0x3u) << 19) |
+        ((line & 0x01ffu) << 9) |
+        (tmem & 0x01ffu);
+    cmd->words.w1 =
+        ((tile & 0x7u) << 24) |
+        ((palette & 0x0fu) << 20) |
+        ((cmt & 0x3u) << 18) |
+        ((maskt & 0x0fu) << 14) |
+        ((shiftt & 0x0fu) << 10) |
+        ((cms & 0x3u) << 8) |
+        ((masks & 0x0fu) << 4) |
+        (shifts & 0x0fu);
+}
+
+static void ndsRendererAdapterEmitLoadTlut(Gfx *cmd, u32 tile, u32 count)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 = NDS_FIGHTER_DL_OP_LOADTLUT << 24;
+    cmd->words.w1 =
+        ((tile & 0x7u) << 24) |
+        ((count & 0x03ffu) << 14);
+}
+
+static void ndsRendererAdapterEmitMoveWord(Gfx *cmd,
+                                           u32 index,
+                                           u32 offset,
+                                           u32 data)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 =
+        (NDS_FIGHTER_DL_OP_MOVEWORD << 24) |
+        ((offset & 0xffffu) << 8) |
+        (index & 0xffu);
+    cmd->words.w1 = data;
+}
+
+static Gfx *ndsRendererAdapterEmitLightColor(Gfx *branch_dl,
+                                             u32 light,
+                                             u32 color)
+{
+    u32 offset_a = NDS_RENDERER_ADAPTER_G_MWO_A_LIGHT_1;
+    u32 offset_b = NDS_RENDERER_ADAPTER_G_MWO_B_LIGHT_1;
+
+    if (branch_dl == NULL)
+    {
+        return branch_dl;
+    }
+    if (light == 2u)
+    {
+        offset_a = NDS_RENDERER_ADAPTER_G_MWO_A_LIGHT_2;
+        offset_b = NDS_RENDERER_ADAPTER_G_MWO_B_LIGHT_2;
+    }
+    ndsRendererAdapterEmitMoveWord(branch_dl++,
+                                   NDS_RENDERER_ADAPTER_G_MW_LIGHTCOL,
+                                   offset_a,
+                                   color);
+    ndsRendererAdapterEmitMoveWord(branch_dl++,
+                                   NDS_RENDERER_ADAPTER_G_MW_LIGHTCOL,
+                                   offset_b,
+                                   color);
+    return branch_dl;
+}
+
+static void ndsRendererAdapterEmitPrimColor(Gfx *cmd,
+                                            u32 m,
+                                            u32 l,
+                                            u32 r,
+                                            u32 g,
+                                            u32 b,
+                                            u32 a)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 =
+        (NDS_FIGHTER_DL_OP_SETPRIMCOLOR << 24) |
+        ((m & 0xffu) << 8) |
+        (l & 0xffu);
+    cmd->words.w1 =
+        ((r & 0xffu) << 24) |
+        ((g & 0xffu) << 16) |
+        ((b & 0xffu) << 8) |
+        (a & 0xffu);
+}
+
+static void ndsRendererAdapterEmitColor(Gfx *cmd,
+                                        u32 op,
+                                        u32 r,
+                                        u32 g,
+                                        u32 b,
+                                        u32 a)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 = op << 24;
+    cmd->words.w1 =
+        ((r & 0xffu) << 24) |
+        ((g & 0xffu) << 16) |
+        ((b & 0xffu) << 8) |
+        (a & 0xffu);
+}
+
+static void ndsRendererAdapterEmitLoadBlock(Gfx *cmd,
+                                            u32 tile,
+                                            u32 uls,
+                                            u32 ult,
+                                            u32 lrs,
+                                            u32 dxt)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    if (lrs > NDS_RENDERER_ADAPTER_G_TX_LDBLK_MAX_TXL)
+    {
+        lrs = NDS_RENDERER_ADAPTER_G_TX_LDBLK_MAX_TXL;
+    }
+    cmd->words.w0 =
+        (NDS_FIGHTER_DL_OP_LOADBLOCK << 24) |
+        ((uls & 0x0fffu) << 12) |
+        (ult & 0x0fffu);
+    cmd->words.w1 =
+        ((tile & 0x7u) << 24) |
+        ((lrs & 0x0fffu) << 12) |
+        (dxt & 0x0fffu);
+}
+
+static void ndsRendererAdapterEmitTileSize(Gfx *cmd,
+                                           u32 tile,
+                                           s32 uls,
+                                           s32 ult,
+                                           s32 lrs,
+                                           s32 lrt)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 =
+        (NDS_FIGHTER_DL_OP_SETTILESIZE << 24) |
+        (((u32)uls & 0x0fffu) << 12) |
+        ((u32)ult & 0x0fffu);
+    cmd->words.w1 =
+        ((tile & 0x7u) << 24) |
+        (((u32)lrs & 0x0fffu) << 12) |
+        ((u32)lrt & 0x0fffu);
+}
+
+static void ndsRendererAdapterEmitTexture(Gfx *cmd,
+                                          u32 s,
+                                          u32 t,
+                                          u32 level,
+                                          u32 tile,
+                                          u32 on)
+{
+    if (cmd == NULL)
+    {
+        return;
+    }
+    cmd->words.w0 =
+        (NDS_FIGHTER_DL_OP_TEXTURE << 24) |
+        ((level & 0x7u) << 11) |
+        ((tile & 0x7u) << 8) |
+        ((on & 0x7fu) << 1);
+    cmd->words.w1 =
+        ((s & 0xffffu) << 16) |
+        (t & 0xffffu);
+}
+
+static Gfx *ndsRendererAdapterEmitMaterialCommands(Gfx *branch_dl, MObj *mobj)
+{
+    u32 flags = ndsRendererAdapterMaterialFlags(mobj);
+    f32 scau = 0.0F;
+    f32 scav = 0.0F;
+    f32 trau = 0.0F;
+    f32 trav = 0.0F;
+    f32 scrollu = 0.0F;
+    f32 scrollv = 0.0F;
+    s32 uls;
+    s32 ult;
+    s32 s;
+    s32 t;
+
+    if ((branch_dl == NULL) || (mobj == NULL))
+    {
+        return branch_dl;
+    }
+
+    ndsRendererAdapterMaterialTextureState(
+        mobj, flags, &scau, &scav, &trau, &trav, &scrollu, &scrollv);
+
+    if ((flags & MOBJ_FLAG_PALETTE) != 0)
+    {
+        ndsRendererAdapterEmitTextureImage(
+            branch_dl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1u,
+            ndsRendererAdapterReadPointerEntry(
+                mobj->sub.palettes, (s32)mobj->palette_id));
+        if ((flags & (MOBJ_FLAG_SPLIT | MOBJ_FLAG_ALPHA)) != 0)
+        {
+            ndsRendererAdapterEmitSync(branch_dl++,
+                                       NDS_FIGHTER_DL_OP_RDPTILESYNC);
+            ndsRendererAdapterEmitSetTile(
+                branch_dl++, G_IM_FMT_RGBA, G_IM_SIZ_4b, 0u, 0x0100u, 5u,
+                0u, NDS_RENDERER_ADAPTER_G_TX_WRAP,
+                NDS_RENDERER_ADAPTER_G_TX_NOMASK,
+                NDS_RENDERER_ADAPTER_G_TX_NOLOD,
+                NDS_RENDERER_ADAPTER_G_TX_WRAP,
+                NDS_RENDERER_ADAPTER_G_TX_NOMASK,
+                NDS_RENDERER_ADAPTER_G_TX_NOLOD);
+            ndsRendererAdapterEmitSync(branch_dl++,
+                                       NDS_FIGHTER_DL_OP_RDPLOADSYNC);
+            ndsRendererAdapterEmitLoadTlut(
+                branch_dl++, 5u,
+                (mobj->sub.siz == G_IM_SIZ_8b) ? 0xffu : 0x0fu);
+            ndsRendererAdapterEmitSync(branch_dl++,
+                                       NDS_FIGHTER_DL_OP_RDPPIPESYNC);
+        }
+    }
+    if ((flags & MOBJ_FLAG_LIGHT1) != 0)
+    {
+        branch_dl = ndsRendererAdapterEmitLightColor(
+            branch_dl, 1u, mobj->sub.light1color.pack);
+    }
+    if ((flags & MOBJ_FLAG_LIGHT2) != 0)
+    {
+        branch_dl = ndsRendererAdapterEmitLightColor(
+            branch_dl, 2u, mobj->sub.light2color.pack);
+    }
+    if ((flags & (MOBJ_FLAG_PRIMCOLOR | MOBJ_FLAG_FRAC | 0x8u)) != 0)
+    {
+        if ((flags & MOBJ_FLAG_FRAC) != 0)
+        {
+            s32 trunc = (s32)mobj->lfrac;
+
+            ndsRendererAdapterEmitPrimColor(
+                branch_dl++, mobj->sub.prim_m,
+                ndsRendererAdapterClampU8F32(
+                    (mobj->lfrac - (f32)trunc) * 256.0F),
+                mobj->sub.primcolor.s.r,
+                mobj->sub.primcolor.s.g,
+                mobj->sub.primcolor.s.b,
+                mobj->sub.primcolor.s.a);
+            mobj->texture_id_curr = trunc;
+            mobj->texture_id_next = trunc + 1;
+        }
+        else
+        {
+            ndsRendererAdapterEmitPrimColor(
+                branch_dl++, mobj->sub.prim_m,
+                ndsRendererAdapterClampU8F32(mobj->lfrac * 255.0F),
+                mobj->sub.primcolor.s.r,
+                mobj->sub.primcolor.s.g,
+                mobj->sub.primcolor.s.b,
+                mobj->sub.primcolor.s.a);
+        }
+    }
+    if ((flags & MOBJ_FLAG_ENVCOLOR) != 0)
+    {
+        ndsRendererAdapterEmitColor(
+            branch_dl++, NDS_FIGHTER_DL_OP_SETENVCOLOR,
+            mobj->sub.envcolor.s.r, mobj->sub.envcolor.s.g,
+            mobj->sub.envcolor.s.b, mobj->sub.envcolor.s.a);
+    }
+    if ((flags & MOBJ_FLAG_BLENDCOLOR) != 0)
+    {
+        ndsRendererAdapterEmitColor(
+            branch_dl++, NDS_FIGHTER_DL_OP_SETBLENDCOLOR,
+            mobj->sub.blendcolor.s.r, mobj->sub.blendcolor.s.g,
+            mobj->sub.blendcolor.s.b, mobj->sub.blendcolor.s.a);
+    }
+    if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_SPLIT)) != 0)
+    {
+        s32 block_siz = (mobj->sub.block_siz == G_IM_SIZ_32b) ?
+            G_IM_SIZ_32b : G_IM_SIZ_16b;
+
+        ndsRendererAdapterEmitTextureImage(
+            branch_dl++, mobj->sub.block_fmt, (u32)block_siz, 1u,
+            ndsRendererAdapterReadPointerEntry(
+                mobj->sub.sprites, mobj->texture_id_next));
+        if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_ALPHA)) != 0)
+        {
+            u32 texels = 0u;
+            u32 dxt = 0u;
+
+            ndsRendererAdapterMaterialLoadBlock(mobj, &texels, &dxt);
+            ndsRendererAdapterEmitSync(branch_dl++,
+                                       NDS_FIGHTER_DL_OP_RDPLOADSYNC);
+            ndsRendererAdapterEmitLoadBlock(branch_dl++, 6u, 0u, 0u,
+                                            texels, dxt);
+            ndsRendererAdapterEmitSync(branch_dl++,
+                                       NDS_FIGHTER_DL_OP_RDPLOADSYNC);
+        }
+    }
+    if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_ALPHA)) != 0)
+    {
+        ndsRendererAdapterEmitTextureImage(
+            branch_dl++, mobj->sub.fmt, mobj->sub.siz, 1u,
+            ndsRendererAdapterReadPointerEntry(
+                mobj->sub.sprites, mobj->texture_id_curr));
+    }
+    if ((flags & 0x20u) != 0)
+    {
+        if (mobj->sub.unk10 == 2)
+        {
+            uls = (ABSF(scau) > (1.0F / 65535.0F)) ?
+                (s32)((((f32)mobj->sub.unk0C * trau) / scau) * 4.0F) : 0;
+            ult = (ABSF(scav) > (1.0F / 65535.0F)) ?
+                (s32)((((f32)mobj->sub.unk0E * trav) / scav) * 4.0F) : 0;
+            if (uls < 0)
+            {
+                uls = 0;
+            }
+            if (ult < 0)
+            {
+                ult = 0;
+            }
+        }
+        else
+        {
+            uls = (ABSF(scau) > (1.0F / 65535.0F)) ?
+                (s32)(((((f32)mobj->sub.unk0C * trau) +
+                         (f32)mobj->sub.unk0A) / scau) * 4.0F) : 0;
+            ult = (ABSF(scav) > (1.0F / 65535.0F)) ?
+                (s32)((((((1.0F - scav) - trav) *
+                          (f32)mobj->sub.unk0E) +
+                         (f32)mobj->sub.unk0A) / scav) * 4.0F) : 0;
+        }
+        ndsRendererAdapterEmitTileSize(
+            branch_dl++, NDS_RENDERER_ADAPTER_G_TX_RENDERTILE, uls, ult,
+            (((s32)mobj->sub.unk0C - 1) << 2) + uls,
+            (((s32)mobj->sub.unk0E - 1) << 2) + ult);
+    }
+    if ((flags & 0x40u) != 0)
+    {
+        uls = (ABSF(scau) > (1.0F / 65535.0F)) ?
+            (s32)(((((f32)mobj->sub.unk38 * scrollu) +
+                     (f32)mobj->sub.unk0A) / scau) * 4.0F) : 0;
+        ult = (ABSF(scav) > (1.0F / 65535.0F)) ?
+            (s32)((((((1.0F - scav) - scrollv) *
+                      (f32)mobj->sub.unk3A) +
+                     (f32)mobj->sub.unk0A) / scav) * 4.0F) : 0;
+        ndsRendererAdapterEmitTileSize(
+            branch_dl++, 1u, uls, ult,
+            (((s32)mobj->sub.unk38 - 1) << 2) + uls,
+            (((s32)mobj->sub.unk3A - 1) << 2) + ult);
+    }
+    if ((flags & MOBJ_FLAG_TEXTURE) != 0)
+    {
+        if (mobj->sub.unk10 == 2)
+        {
+            s = (ABSF(scau) > (1.0F / 65535.0F)) ?
+                (s32)(((f32)mobj->sub.unk0C * 64.0F) / scau) : 0;
+            t = (ABSF(scav) > (1.0F / 65535.0F)) ?
+                (s32)(((f32)mobj->sub.unk0E * 64.0F) / scav) : 0;
+        }
+        else
+        {
+            s = ((mobj->sub.unk08 != 0) &&
+                 (ABSF(scau) > (1.0F / 65535.0F))) ?
+                (s32)((2097152.0F / (f32)mobj->sub.unk08) / scau) : 0;
+            t = ((mobj->sub.unk08 != 0) &&
+                 (ABSF(scav) > (1.0F / 65535.0F))) ?
+                (s32)((2097152.0F / (f32)mobj->sub.unk08) / scav) : 0;
+        }
+        if (s > 0xffff)
+        {
+            s = 0xffff;
+        }
+        if (t > 0xffff)
+        {
+            t = 0xffff;
+        }
+        ndsRendererAdapterEmitTexture(
+            branch_dl++, (u32)s, (u32)t, 0u,
+            NDS_RENDERER_ADAPTER_G_TX_RENDERTILE,
+            NDS_RENDERER_ADAPTER_G_ON);
+    }
+
+    ndsRendererAdapterEmitEndDL(branch_dl++);
+    return branch_dl;
+}
+
+static sb32 ndsRendererAdapterPrepareMaterialSegment(
+    DObj *dobj, NDSFighterDLDrawState *state)
+{
+    MObj *mobj;
+    Gfx *table;
+    Gfx *branch_dl;
+    uintptr_t heap_start;
+    uintptr_t heap_end;
+    uintptr_t heap_ptr;
+    u32 mobj_count = 0u;
+    u32 branch_commands = 0u;
+    size_t heap_bytes;
+    u32 i = 0u;
+
+    if ((dobj == NULL) || (state == NULL) || (dobj->mobj == NULL))
+    {
+        return FALSE;
+    }
+    if (ndsRendererAdapterCountMaterialCommands(
+            dobj, &mobj_count, &branch_commands) == FALSE)
+    {
+        return FALSE;
+    }
+    if ((mobj_count == 0u) ||
+        (gSYTaskmanGraphicsHeap.ptr == NULL) ||
+        (gSYTaskmanGraphicsHeap.start == NULL) ||
+        (gSYTaskmanGraphicsHeap.end == NULL))
+    {
+        return FALSE;
+    }
+
+    heap_start = (uintptr_t)gSYTaskmanGraphicsHeap.start;
+    heap_end = (uintptr_t)gSYTaskmanGraphicsHeap.end;
+    heap_ptr = (uintptr_t)gSYTaskmanGraphicsHeap.ptr;
+    heap_bytes = (size_t)(mobj_count + branch_commands) * sizeof(Gfx);
+    if ((heap_ptr < heap_start) || (heap_ptr > heap_end) ||
+        (heap_bytes > (size_t)(heap_end - heap_ptr)))
+    {
+        return FALSE;
+    }
+
+    table = (Gfx *)gSYTaskmanGraphicsHeap.ptr;
+    branch_dl = table + mobj_count;
+    for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next, i++)
+    {
+        ndsRendererAdapterEmitBranchTableCommand(&table[i], branch_dl);
+        branch_dl = ndsRendererAdapterEmitMaterialCommands(branch_dl, mobj);
+    }
+
+    gSYTaskmanGraphicsHeap.ptr = branch_dl;
+    state->segment_e_base = table;
+    state->segment_e_end = branch_dl;
+    return TRUE;
+}
+
 static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                             GObj *camera_gobj)
 {
@@ -2382,6 +3155,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     bzero(&state, sizeof(state));
     state.primary_file = loaded;
     state.slot = 0u;
+    ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
     ndsRendererAdapterPrepareInitialMatrices(dobj,
                                              (camera_gobj != NULL) ?
                                                  CObjGetStruct(camera_gobj) :
@@ -3019,6 +3793,9 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     bzero(&state, sizeof(state));
     state.primary_file = loaded;
     state.slot = slot;
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsRendererAdapterPrepareMaterialSegment(selected, &state);
+#endif
     ndsRendererAdapterPrepareInitialMatrices(selected,
                                              (gGCCurrentCamera != NULL) ?
                                                  CObjGetStruct(
@@ -3871,6 +4648,10 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
+#if NDS_RENDERER_HW_TRIANGLES
+        ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
+                                                 &states[i]);
+#endif
         ndsRendererAdapterPrepareInitialMatrices(collection.dobjs[i],
                                                  (gGCCurrentCamera != NULL) ?
                                                      CObjGetStruct(
@@ -4931,6 +5712,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
+#if NDS_RENDERER_HW_TRIANGLES
+        ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
+                                                 &states[i]);
+#endif
         ndsRendererAdapterPrepareInitialMatrices(collection.dobjs[i],
                                                  (gGCCurrentCamera != NULL) ?
                                                      CObjGetStruct(

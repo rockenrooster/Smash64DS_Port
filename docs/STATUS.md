@@ -56,33 +56,22 @@ as a whole-TU import but did not land; it fails before duplicate cleanup on
 full item/weapon/effect/audio/ground header compatibility, tracked in
 `docs/KNOWN_ISSUES.md`.
 
-Renderer stage 3b keeps the hardware path opt-in behind
-`NDS_RENDERER_HW_TRIANGLES=1` and adds source-shaped DObj matrix seed coverage
-for BattleShip billboard kinds `33-40` and recalc kinds `41-50`. The DS path now
-uses consistent `v16` world scaling for textured/untextured triangles and can
-submit stage DObj display lists reached through the existing Pupupu `gcDrawAll`
-traversal. The renderer now recognizes BattleShip `gSPMvpRecalc` /
-`G_MW_MATRIX` display-list streams, seeds fighter-parts matrix kind `0x4B`,
-seeds BattleShip battle-camera matrix kind `0x4C`,
-converts cached fighter-parts `Mtx44f` seeds with fixed-W semantics matching
-`syMatrixF2LFixedW`, and composes selected DObj parent chains from root to child
-before the camera modelview. The stage-inclusive hardware capture
-`artifacts\renderer-stage-gcdrawall-hw.png` shows the Pupupu platform plus
-fighter geometry using the captured BattleShip camera GObj and its `0x4C`
-matrix seed. The Mario/Fox all-DL hardware capture
-`artifacts\renderer-chain-hw-battle.png` now restores the same battle camera
-around the direct display calls, so it no longer depends on the bounded
-hardware fallback camera. The hardware texture upload path now records
-`LOADTLUT` palette state and converts CI4/CI8 textures through the same
-RGBA5551 scratch upload used by RGBA16/I16, but these captures still submit raw
-DObj geometry without material display-list emission, so they remain
-flat-shaded.
-Hardware all-DL stats are `HW=316/314 oracle=316/314 rejects=18/8 seeds=14/18`
-and `MW=0/0/0/0`, proving the direct all-DL scene reaches DS hardware triangle
-submission and per-DObj matrix seeds but not matrix-word streams. Full fighter
-visual fidelity still needs material display-list submission before raw DObj
-DLs, then combiner, depth/material state, broader texture proof, and cutover
-work. Default builds still use the software preview.
+Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
+Stage 3b added BattleShip billboard/recalc DObj matrix seed coverage, consistent
+`v16` world scaling, stage DObj submission through the existing Pupupu
+`gcDrawAll` traversal, BattleShip `gSPMvpRecalc` / `G_MW_MATRIX` stream support,
+fighter-parts matrix kind `0x4B`, and battle-camera matrix kind `0x4C`. The
+latest increment routes source-shaped `gcDrawMObjForDObj` material branch tables
+into that same traversal by emitting segment `0x0E` branch lists and material
+packets from the taskman graphics heap, including palette/TLUT, texture image,
+load-block, tile-size, texture, color, and light-color state packets. Updated
+captures:
+`artifacts\renderer-chain-hw-battle.png` and
+`artifacts\renderer-stage-gcdrawall-hw.png`. The stage-inclusive capture shows
+the Pupupu platform plus hardware-submitted fighter geometry using the captured
+BattleShip camera path. Full visual fidelity still needs combiner,
+depth/material policy, broader texture-state proof, and renderer cutover work.
+Default builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -93,9 +82,8 @@ The next useful work is not another proof bit. It is one of:
 
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
-- renderer follow-up: route material display lists into the opt-in hardware
-  draw, then prove textured CI/TLUT output, combiner/material/depth state, and
-  renderer cutover work;
+- renderer follow-up: finish opt-in hardware combiner/material/depth state,
+  broaden texture-state proof, and then plan renderer cutover work;
 - compatibility-header split needed before full-TU runtime import of
   `ft/ftmain.c`;
 - continuous-runtime verifier for unbounded battle frames.
