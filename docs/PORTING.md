@@ -15899,3 +15899,15 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Remaining
   combiner behavior, depth policy, broader texture coverage, and renderer
   cutover stay deferred.
+
+## 2026-07-02 - Fixed HW Black Material Colors
+
+- Split hardware material-color presence from material-color value so primitive
+  or environment black (`0x00000000`) is submitted as black instead of falling
+  through to the non-shade white fallback.
+- Added a fixture guard for material-color presence and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Remaining
+  combiner behavior, depth policy, broader texture coverage, and renderer
+  cutover stay deferred.
