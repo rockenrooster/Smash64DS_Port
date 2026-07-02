@@ -16121,3 +16121,16 @@ Still deferred:
   fails to link because remaining local `ftMain*` seams duplicate symbols from
   `battleship_ftmain.o`. The import remains fenced; no ftmain graduation was
   committed.
+
+## 2026-07-02 - Measured Regression Build Bottleneck
+
+- Added optional `-TimingPath` support to `scripts/build-verify-profile.ps1` so
+  build-only verifier profile runs record per-output timings without changing
+  the verifier plan.
+- Baseline measurement before build-path changes:
+  `.\scripts\build-verify-profile.ps1 -Profile Regression -Force -TimingPath artifacts\verifier-cost\build-cost-regression-baseline.json`.
+  It built 108 outputs sequentially in `6821.796s` (`113.7m`). The slowest
+  harness builds were `battle_mariofox_stage_mpdamage_recover_loop` (`69.95s`),
+  `battle_mariofox_stage_mplivehit_damage_loop` (`69.13s`),
+  `menu_chain_mariofox_stage_mpdamage_recover_loop` (`67.72s`), and
+  `menu_chain_mariofox_stage_mplivehit_damage_loop` (`67.67s`).
