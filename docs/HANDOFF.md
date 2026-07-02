@@ -57,7 +57,7 @@ Captures: `artifacts\renderer-chain-hw-battle.png` and
 the Pupupu platform plus hardware-submitted fighter geometry using the captured
 BattleShip camera path. The all-DL verifier also has an opt-in hardware texture
 gate; run `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`.
-It reports `hwtex=bind16/upload1/ready16/reject212/fmt0x4/max8x8`, with screenshot
+It reports `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, with screenshot
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. The hardware texture cache
 key now includes the source render/load tile, TMEM, palette, and tile-origin
 state for that opt-in path. The hardware triangle path now applies recorded

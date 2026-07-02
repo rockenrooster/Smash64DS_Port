@@ -726,11 +726,8 @@ static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
 
     stats->texture_mask |= NDS_RENDERER_TEXTURE_SETCOMBINE;
     stats->texture_combine_count++;
-    if (stats->texture_combine_w0 == 0)
-    {
-        stats->texture_combine_w0 = w0;
-        stats->texture_combine_w1 = w1;
-    }
+    stats->texture_combine_w0 = w0;
+    stats->texture_combine_w1 = w1;
 }
 
 static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)

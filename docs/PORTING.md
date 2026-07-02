@@ -15825,3 +15825,15 @@ Still deferred:
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
   combiner behavior, depth/material policy, broader texture coverage, and
   renderer cutover deferred.
+
+## 2026-07-02 - Kept HW Combine State Current
+
+- Fixed the shared renderer `G_SETCOMBINE` recorder to keep the latest combine
+  words, so hardware texture/material decisions use current display-list state
+  instead of the first combine command encountered during traversal.
+- Added a fixture guard against reintroducing first-combine-only behavior.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8` and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Full combiner behavior,
+  depth/material policy, broader texture coverage, and renderer cutover remain
+  deferred.

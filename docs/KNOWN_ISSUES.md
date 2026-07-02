@@ -73,7 +73,7 @@
   recorded primitive/environment material color and alpha from the current
   combine state, maps recorded F3DEX2 front/back cull geometry mode to DS
   polygon cull bits, and the all-DL verifier proves one hardware texture
-  upload/bind (`hwtex=bind16/upload1/ready16/reject212/fmt0x4/max8x8`).
+  upload/bind (`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`).
   Hardware all-DL stats prove triangle submission and matrix seeds, but the
   direct all-DL scene emits no matrix-word stream
   (`MW=0/0/0/0`) and many texture states still reject. Remaining renderer work
