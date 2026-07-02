@@ -76,6 +76,13 @@
 #define NDS_RENDERER_HW_TEXTURE_SIZ_8B 1u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_16B 2u
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
+#define NDS_RENDERER_CCMUX_TEXEL0 1u
+#define NDS_RENDERER_CCMUX_PRIMITIVE 3u
+#define NDS_RENDERER_CCMUX_ENVIRONMENT 5u
+#define NDS_RENDERER_ACMUX_TEXEL0 1u
+#define NDS_RENDERER_ACMUX_PRIMITIVE 3u
+#define NDS_RENDERER_ACMUX_SHADE 4u
+#define NDS_RENDERER_ACMUX_ENVIRONMENT 5u
 
 #if NDS_RENDERER_HW_TRIANGLES
 static u32 sNdsRendererHardwareSubmitted;
@@ -1188,6 +1195,104 @@ static v16 ndsRendererHardwareVertexCoord(s16 value, u32 scale_world)
     return ndsRendererHardwareCoordToV16(value);
 }
 
+static s32 ndsRendererCombineUsesColor(u32 w0, u32 w1, u32 source)
+{
+    return ((((w0 >> 20) & 0x0fu) == source) ||
+            (((w1 >> 28) & 0x0fu) == source) ||
+            (((w0 >> 15) & 0x1fu) == source) ||
+            (((w1 >> 15) & 0x07u) == source)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererCombineUsesAlpha(u32 w0, u32 w1, u32 source)
+{
+    return ((((w0 >> 9) & 0x07u) == source) ||
+            (((w1 >> 9) & 0x07u) == source)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
+{
+    if (stats == NULL)
+    {
+        return FALSE;
+    }
+    if (stats->texture_combine_count == 0u)
+    {
+        return TRUE;
+    }
+    return ndsRendererCombineUsesColor(
+        stats->texture_combine_w0, stats->texture_combine_w1,
+        NDS_RENDERER_CCMUX_TEXEL0);
+}
+
+static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
+{
+    if ((stats != NULL) && (stats->texture_combine_count != 0u))
+    {
+        u32 w0 = stats->texture_combine_w0;
+        u32 w1 = stats->texture_combine_w1;
+
+        if (ndsRendererCombineUsesColor(
+                w0, w1, NDS_RENDERER_CCMUX_PRIMITIVE) != FALSE)
+        {
+            return stats->prim_color;
+        }
+        if (ndsRendererCombineUsesColor(
+                w0, w1, NDS_RENDERER_CCMUX_ENVIRONMENT) != FALSE)
+        {
+            return stats->env_color;
+        }
+    }
+    return 0u;
+}
+
+static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
+                                    const NDSRendererInputVertex *vtx)
+{
+    u32 alpha = 0xffu;
+
+    if (vtx != NULL)
+    {
+        alpha = vtx->a;
+    }
+    if ((stats != NULL) && (stats->texture_combine_count != 0u))
+    {
+        u32 w0 = stats->texture_combine_w0;
+        u32 w1 = stats->texture_combine_w1;
+
+        if (ndsRendererCombineUsesAlpha(
+                w0, w1, NDS_RENDERER_ACMUX_PRIMITIVE) != FALSE)
+        {
+            alpha = stats->prim_color & 0xffu;
+        }
+        else if (ndsRendererCombineUsesAlpha(
+                     w0, w1, NDS_RENDERER_ACMUX_ENVIRONMENT) != FALSE)
+        {
+            alpha = stats->env_color & 0xffu;
+        }
+        else if ((ndsRendererCombineUsesAlpha(
+                      w0, w1, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
+                 (ndsRendererCombineUsesAlpha(
+                      w0, w1, NDS_RENDERER_ACMUX_SHADE) == FALSE))
+        {
+            alpha = 0xffu;
+        }
+    }
+    return alpha >> 3;
+}
+
+static void ndsRendererHardwareColorVertex(
+    const NDSRendererInputVertex *vtx,
+    u32 material_color)
+{
+    if (material_color != 0u)
+    {
+        glColor3b((u8)(material_color >> 24),
+                  (u8)(material_color >> 16),
+                  (u8)(material_color >> 8));
+        return;
+    }
+    glColor3b(vtx->r, vtx->g, vtx->b);
+}
 
 static const void *ndsRendererResolveTextureDataPointer(
     const NDSRendererConfig *config, const void *ptr, size_t bytes)
@@ -1722,6 +1827,8 @@ static void ndsRendererSubmitHardwareTriangle(
     const NDSRendererInputVertex *v2;
     s32 use_texture;
     u32 scale_world;
+    u32 material_color;
+    u32 poly_alpha;
 
     if (stats == NULL)
     {
@@ -1746,7 +1853,14 @@ static void ndsRendererSubmitHardwareTriangle(
     v0 = &state->input_vertices[i0];
     v1 = &state->input_vertices[i1];
     v2 = &state->input_vertices[i2];
-    use_texture = ndsRendererHardwareBindTexture(stats, config);
+    use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
+        ndsRendererHardwareBindTexture(stats, config) : FALSE;
+    material_color = ndsRendererHardwareColorSource(stats);
+    poly_alpha = ndsRendererHardwareAlpha(stats, v0);
+    if (poly_alpha == 0u)
+    {
+        return;
+    }
     scale_world = TRUE;
 
     ndsRendererLoadHardwareMatrices(state, scale_world);
@@ -1758,9 +1872,9 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         glDisable(GL_TEXTURE_2D);
     }
-    glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(31));
+    glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(poly_alpha));
     glBegin(GL_TRIANGLE);
-    glColor3b(v0->r, v0->g, v0->b);
+    ndsRendererHardwareColorVertex(v0, material_color);
     if (use_texture != FALSE)
     {
         glTexCoord2t16(
@@ -1770,7 +1884,7 @@ static void ndsRendererSubmitHardwareTriangle(
     glVertex3v16(ndsRendererHardwareVertexCoord(v0->x, scale_world),
                  ndsRendererHardwareVertexCoord(v0->y, scale_world),
                  ndsRendererHardwareVertexCoord(v0->z, scale_world));
-    glColor3b(v1->r, v1->g, v1->b);
+    ndsRendererHardwareColorVertex(v1, material_color);
     if (use_texture != FALSE)
     {
         glTexCoord2t16(
@@ -1780,7 +1894,7 @@ static void ndsRendererSubmitHardwareTriangle(
     glVertex3v16(ndsRendererHardwareVertexCoord(v1->x, scale_world),
                  ndsRendererHardwareVertexCoord(v1->y, scale_world),
                  ndsRendererHardwareVertexCoord(v1->z, scale_world));
-    glColor3b(v2->r, v2->g, v2->b);
+    ndsRendererHardwareColorVertex(v2, material_color);
     if (use_texture != FALSE)
     {
         glTexCoord2t16(
@@ -2051,6 +2165,10 @@ static void ndsRendererScanList(const Gfx *dl,
             if (op == NDS_RENDERER_OP_SETPRIMCOLOR)
             {
                 stats->prim_color = w1;
+            }
+            else if (op == NDS_RENDERER_OP_SETENVCOLOR)
+            {
+                stats->env_color = w1;
             }
             break;
 

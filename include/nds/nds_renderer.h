@@ -221,6 +221,7 @@ typedef struct NDSRendererStats
     u32 texture_combine_w1;
     u32 texture_combine_count;
     u32 prim_color;
+    u32 env_color;
 } NDSRendererStats;
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);

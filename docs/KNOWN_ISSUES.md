@@ -69,13 +69,15 @@
   source-backed seed path, cached fighter-parts `Mtx44f` seeds use fixed-W
   conversion semantics matching `syMatrixF2LFixedW`, and selected DObj parent
   chains compose root to child. The hardware texture upload path now handles
-  `LOADTLUT` plus CI4/CI8 palette conversion, and the opt-in all-DL verifier
-  proves one hardware texture upload/bind
-  (`hwtex=bind16/upload1/ready16/reject614/fmt0x4/max8x8`). Hardware all-DL stats prove triangle submission
-  and matrix seeds, but the direct all-DL scene emits no matrix-word stream
+  `LOADTLUT` plus CI4/CI8 palette conversion; the opt-in hardware path applies
+  recorded primitive/environment material color and alpha from the current
+  combine state, and the all-DL verifier proves one hardware texture
+  upload/bind (`hwtex=bind16/upload1/ready16/reject212/fmt0x4/max8x8`).
+  Hardware all-DL stats prove triangle submission and matrix seeds, but the
+  direct all-DL scene emits no matrix-word stream
   (`MW=0/0/0/0`) and many texture states still reject. Remaining renderer work
-  is broader material/texture coverage, combiner fidelity, depth/material state,
-  and cutover policy.
+  is remaining combiner behavior, broader texture coverage, depth/material
+  policy, and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

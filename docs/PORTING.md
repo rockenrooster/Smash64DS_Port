@@ -15799,3 +15799,16 @@ Still deferred:
 - Reverified the all-DL hardware texture gate:
   `hwtex=bind16/upload1/ready16/reject614/fmt0x4/max8x8`. This does not add new
   texture formats, combiner policy, or renderer cutover.
+
+## 2026-07-02 - Applied Material Color In HW Triangle Path
+
+- Taught the opt-in DS hardware triangle submitter to decode the current
+  `G_SETCOMBINE` color/alpha selectors and apply recorded primitive or
+  environment material color through `glColor3b` plus 5-bit `POLY_ALPHA`.
+- Restricted hardware texture binding to combine states that actually reference
+  `TEXEL0`, keeping the existing CI/TLUT upload proof but reducing rejected
+  texture-bind attempts in the all-DL gate.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject212/fmt0x4/max8x8` and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Full combiner behavior,
+  depth/material policy, and renderer cutover remain deferred.

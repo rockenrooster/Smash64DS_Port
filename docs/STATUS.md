@@ -71,12 +71,15 @@ captures:
 the Pupupu platform plus hardware-submitted fighter geometry using the captured
 BattleShip camera path. The all-DL verifier now has an opt-in hardware texture
 gate; run `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`.
-It proves `hwtex=bind16/upload1/ready16/reject614/fmt0x4/max8x8`, and the current capture is
+It proves `hwtex=bind16/upload1/ready16/reject212/fmt0x4/max8x8`, and the current capture is
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. The hardware texture cache
 key now includes the source render/load tile, TMEM, palette, and tile-origin
-state for that opt-in path. Full visual fidelity still needs combiner,
-depth/material policy, broader texture-format coverage, and renderer cutover
-work. Default builds still use the software preview.
+state for that opt-in path. The hardware triangle path now applies the recorded
+primitive/environment material color and alpha from the current combine state,
+for that gate.
+Full visual fidelity still needs remaining combiner behavior, depth/material
+policy, broader texture-format coverage, and renderer cutover work. Default
+builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -87,7 +90,7 @@ The next useful work is not another proof bit. It is one of:
 
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
-- renderer follow-up: finish opt-in hardware combiner/material/depth state,
+- renderer follow-up: finish opt-in hardware combiner/depth/material policy,
   broaden texture-format/state coverage beyond the first all-DL CI/TLUT upload, and
   then plan renderer cutover work;
 - compatibility-header split needed before full-TU runtime import of
