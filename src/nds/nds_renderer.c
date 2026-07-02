@@ -83,6 +83,8 @@
 #define NDS_RENDERER_ACMUX_PRIMITIVE 3u
 #define NDS_RENDERER_ACMUX_SHADE 4u
 #define NDS_RENDERER_ACMUX_ENVIRONMENT 5u
+#define NDS_RENDERER_GEOM_CULL_FRONT 0x00000200u
+#define NDS_RENDERER_GEOM_CULL_BACK 0x00000400u
 
 #if NDS_RENDERER_HW_TRIANGLES
 static u32 sNdsRendererHardwareSubmitted;
@@ -1280,6 +1282,22 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     return alpha >> 3;
 }
 
+static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
+{
+    u32 poly_fmt = POLY_CULL_NONE | POLY_ALPHA(alpha);
+    u32 mode = (stats != NULL) ? stats->geometry_mode : 0u;
+
+    if ((mode & NDS_RENDERER_GEOM_CULL_FRONT) != 0u)
+    {
+        poly_fmt &= ~((u32)POLY_CULL_BACK);
+    }
+    if ((mode & NDS_RENDERER_GEOM_CULL_BACK) != 0u)
+    {
+        poly_fmt &= ~((u32)POLY_CULL_FRONT);
+    }
+    return poly_fmt;
+}
+
 static void ndsRendererHardwareColorVertex(
     const NDSRendererInputVertex *vtx,
     u32 material_color)
@@ -1872,7 +1890,7 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         glDisable(GL_TEXTURE_2D);
     }
-    glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(poly_alpha));
+    glPolyFmt(ndsRendererHardwarePolyFmt(stats, poly_alpha));
     glBegin(GL_TRIANGLE);
     ndsRendererHardwareColorVertex(v0, material_color);
     if (use_texture != FALSE)

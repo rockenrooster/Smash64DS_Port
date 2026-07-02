@@ -15812,3 +15812,16 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject212/fmt0x4/max8x8` and refreshed
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Full combiner behavior,
   depth/material policy, and renderer cutover remain deferred.
+
+## 2026-07-02 - Mapped HW Geometry Cull State
+
+- Mapped recorded F3DEX2 `G_CULL_FRONT` and `G_CULL_BACK` geometry mode bits
+  into the opt-in DS hardware `glPolyFmt` cull field, matching the sm64-nds
+  renderer pattern while leaving the software preview path as default.
+- Added a GBI fixture guard so the hardware submitter keeps deriving polygon
+  format from renderer state instead of falling back to unconditional no-cull.
+- Reverified the all-DL hardware texture gate:
+  `hwtex=bind16/upload1/ready16/reject212/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
+  combiner behavior, depth/material policy, broader texture coverage, and
+  renderer cutover deferred.
