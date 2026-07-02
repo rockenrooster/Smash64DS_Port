@@ -10,6 +10,7 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | `DECOMP_MAP.md` | Maintained | Read-only upstream reference map for `decomp/`. |
 | `DIAGNOSTIC_REFERENCE.md` | Maintained | Runtime marker and diagnostic contracts. |
 | `EMULATOR_STRATEGY.md` | Maintained | melonDS/no$gba usage boundaries. |
+| `FTSTRUCT_PARITY.md` | Maintained | Field-by-field FTStruct parity report against BattleShip source layout. |
 | `GOAL_DEBUGGING.md` | Maintained | Debugging and verifier workflow notes. |
 | `HANDOFF.md` | Current truth | Detailed current handoff and latest proof evidence. |
 | `HARNESSES.md` | Maintained | Harness naming, registry, and generated-index policy. |
