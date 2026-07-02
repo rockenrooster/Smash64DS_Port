@@ -1536,6 +1536,11 @@ static void ndsFighterPartsSyncDObj(FTStruct *fp, DObj *dobj, u32 joint_id)
     parts->unk_dobjtrans_0x9C[3][1] = -translate->y;
     parts->unk_dobjtrans_0x9C[3][2] = -translate->z;
 
+    dobj->parent_gobj = fp->fighter_gobj;
+    if ((joint_id == nFTPartsJointTopN) && (dobj->parent == NULL))
+    {
+        dobj->parent = DOBJ_PARENT_NULL;
+    }
     dobj->user_data.p = parts;
 }
 
@@ -1782,6 +1787,23 @@ static void ndsFighterStructPopulateJointsRecurse(FTStruct *fp, DObj *dobj,
     }
 }
 
+static void ndsFighterStructAliasMissingJoint(FTStruct *fp, s32 joint_id)
+{
+    DObj *fallback;
+
+    if ((fp == NULL) || (joint_id < 0) ||
+        (joint_id >= nFTPartsJointNumMax) || (fp->joints[joint_id] != NULL))
+    {
+        return;
+    }
+    fallback = fp->joints[nFTPartsJointCommonStart];
+    if (fallback == NULL)
+    {
+        fallback = fp->joints[nFTPartsJointTopN];
+    }
+    fp->joints[joint_id] = fallback;
+}
+
 static void ndsFighterStructPopulateJoints(FTStruct *fp, DObj *root_dobj)
 {
     u32 next_joint = nFTPartsJointCommonStart;
@@ -1795,6 +1817,10 @@ static void ndsFighterStructPopulateJoints(FTStruct *fp, DObj *root_dobj)
     fp->nds_joint_count = 0u;
     fp->nds_common_joint_count = 0u;
     ndsFighterStructPopulateJointsRecurse(fp, root_dobj, &next_joint, TRUE);
+    if (fp->attr != NULL)
+    {
+        ndsFighterStructAliasMissingJoint(fp, fp->attr->joint_itemheavy_id);
+    }
 }
 
 static void ndsFighterStructRefreshProofMask(void)

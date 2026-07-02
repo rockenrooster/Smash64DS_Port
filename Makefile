@@ -437,7 +437,7 @@ CFILES := main.c nds_platform.c nds_reloc_assets.c nds_renderer.c port_probe.c n
 	battleship_mvopeningpikachu.c battleship_mntitlefiles.c \
 	battleship_mntitle.c battleship_mnvsmode.c \
 	battleship_mnplayersvs.c battleship_mnmaps.c \
-	battleship_gmcommon.c battleship_scvsbattle.c \
+	battleship_gmcommon.c battleship_gmcollision.c battleship_scvsbattle.c \
 	battleship_grpupupu_ground.c \
 	battleship_grinishie_scale.c \
 	battleship_ftcommon_wait.c \

@@ -1304,27 +1304,6 @@ void ftParamUpdate1PGameAttackStats(FTStruct *fp, s32 attack_id)
     }
 }
 
-void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
-{
-    if ((main_dobj != NULL) && (vec != NULL))
-    {
-        FTParts *parts = ftGetParts(main_dobj);
-
-        if ((parts != NULL) && (parts->unk_dobjtrans_0x5 != 0))
-        {
-            vec->x += parts->mtx_translate[3][0];
-            vec->y += parts->mtx_translate[3][1];
-            vec->z += parts->mtx_translate[3][2];
-        }
-        else
-        {
-            vec->x += main_dobj->translate.vec.f.x;
-            vec->y += main_dobj->translate.vec.f.y;
-            vec->z += main_dobj->translate.vec.f.z;
-        }
-    }
-}
-
 GObj *efManagerKirbyVulcanJabMakeEffect(Vec3f *pos, s32 lr, f32 rotate,
                                         f32 vel, f32 add)
 {
@@ -4249,27 +4228,6 @@ void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
     }
 }
 
-void func_ovl2_800EDA0C(Mtx44f mtx, Vec3f *rotate)
-{
-    (void)mtx;
-    if (rotate != NULL)
-    {
-        rotate->x = 0.0F;
-        rotate->y = 0.0F;
-        rotate->z = 0.0F;
-    }
-}
-
-void gmCollisionGetWorldPosition(Mtx44f mtx, Vec3f *vec)
-{
-    if (vec != NULL)
-    {
-        vec->x += mtx[3][0];
-        vec->y += mtx[3][1];
-        vec->z += mtx[3][2];
-    }
-}
-
 GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
 {
     (void)pos;
@@ -6468,6 +6426,48 @@ sb32 ftCommonPassiveStandCheckInterruptDamage(GObj *fighter_gobj)
         return TRUE;
     }
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        ((sNdsStageMPPassiveLoopPassiveStandSetStatusActive != FALSE) ||
+         (sNdsStageMPPassiveLoopBranchProbeActive != FALSE) ||
+         (sNdsStageMPPassiveLoopPassiveStandBActive != FALSE)))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        s32 status_id;
+
+        if ((fp == NULL) ||
+            (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX) ||
+            (ABS(fp->input.pl.stick_range.x) <
+                FTCOMMON_PASSIVE_F_OR_B_RANGE))
+        {
+            return FALSE;
+        }
+        if ((fp->input.pl.stick_range.x * fp->lr) >= 0)
+        {
+            status_id = nFTCommonStatusPassiveStandF;
+        }
+        else
+        {
+            status_id = nFTCommonStatusPassiveStandB;
+        }
+        if (ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj) !=
+            FALSE)
+        {
+            return TRUE;
+        }
+        fp = ftGetStruct(fighter_gobj);
+        if (fp == NULL)
+        {
+            return FALSE;
+        }
+        if (fp->ga == nMPKineticsAir)
+        {
+            mpCommonSetFighterGround(fp);
+        }
+        ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
+                        FTSTATUS_PRESERVE_NONE);
+        ftParamVelDamageTransferGround(fp);
+        return TRUE;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
     {
         return ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
@@ -6495,6 +6495,35 @@ sb32 ftCommonPassiveCheckInterruptDamage(GObj *fighter_gobj)
         FTStruct *fp = ftGetStruct(fighter_gobj);
 
         gNdsStageMPCliffWaitDamageLoopDamageFallPassiveCheckCount++;
+        if ((fp == NULL) ||
+            (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX))
+        {
+            return FALSE;
+        }
+        if (ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj) != FALSE)
+        {
+            return TRUE;
+        }
+        fp = ftGetStruct(fighter_gobj);
+        if (fp == NULL)
+        {
+            return FALSE;
+        }
+        if (fp->ga == nMPKineticsAir)
+        {
+            mpCommonSetFighterGround(fp);
+        }
+        ftMainSetStatus(fighter_gobj, nFTCommonStatusPassive, 0.0F, 1.0F,
+                        FTSTATUS_PRESERVE_NONE);
+        ftParamVelDamageTransferGround(fp);
+        return TRUE;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        ((sNdsStageMPPassiveLoopPassiveSetStatusActive != FALSE) ||
+         (sNdsStageMPPassiveLoopBranchProbeActive != FALSE)))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
         if ((fp == NULL) ||
             (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX))
         {
@@ -8910,6 +8939,7 @@ FTStruct *ftGetStruct(GObj *fighter_gobj)
 {
     static FTStruct stub;
     static DObj top_joint;
+    static FTParts top_parts;
 
     if ((fighter_gobj != NULL) &&
         (sNdsFTCommonCliffCommon2BridgeStruct != NULL) &&
@@ -8926,16 +8956,46 @@ FTStruct *ftGetStruct(GObj *fighter_gobj)
 
     if (fighter_gobj != NULL)
     {
+        DObj *stub_joint;
+        FTParts *stub_parts;
+
         bzero(&stub, sizeof(stub));
         stub.player = (u8)fighter_gobj->user_data.s;
-        stub.joints[nFTPartsJointTopN] = DObjGetStruct(fighter_gobj);
-        if (stub.joints[nFTPartsJointTopN] == NULL)
+        stub_joint = DObjGetStruct(fighter_gobj);
+        if (stub_joint == NULL)
         {
+            bzero(&top_joint, sizeof(top_joint));
             top_joint.translate.vec.f.x = 0.0F;
             top_joint.translate.vec.f.y = 0.0F;
             top_joint.translate.vec.f.z = 0.0F;
-            stub.joints[nFTPartsJointTopN] = &top_joint;
+            top_joint.scale.vec.f.x = 1.0F;
+            top_joint.scale.vec.f.y = 1.0F;
+            top_joint.scale.vec.f.z = 1.0F;
+            stub_joint = &top_joint;
         }
+        stub.joints[nFTPartsJointTopN] = stub_joint;
+        stub_joint->parent_gobj = fighter_gobj;
+        if (stub_joint->parent == NULL)
+        {
+            stub_joint->parent = DOBJ_PARENT_NULL;
+        }
+        stub_parts = &top_parts;
+        bzero(stub_parts, sizeof(*stub_parts));
+        stub_joint->user_data.p = stub_parts;
+        stub_parts->unk_dobjtrans_0x5 = 1;
+        stub_parts->unk_dobjtrans_0x6 = 1;
+        stub_parts->unk_dobjtrans_0x7 = 1;
+        stub_parts->transform_update_mode = 1;
+        stub_parts->gobj = fighter_gobj;
+        stub_parts->vec_scale.x = 1.0F;
+        stub_parts->vec_scale.y = 1.0F;
+        stub_parts->vec_scale.z = 1.0F;
+        stub_parts->mtx_translate[0][0] = 1.0F;
+        stub_parts->mtx_translate[1][1] = 1.0F;
+        stub_parts->mtx_translate[2][2] = 1.0F;
+        stub_parts->mtx_translate[3][0] = stub_joint->translate.vec.f.x;
+        stub_parts->mtx_translate[3][1] = stub_joint->translate.vec.f.y;
+        stub_parts->mtx_translate[3][2] = stub_joint->translate.vec.f.z;
     }
     return &stub;
 }

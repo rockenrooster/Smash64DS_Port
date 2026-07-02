@@ -97,6 +97,7 @@ Assert-ProfilePlan 'Latest' @(
 )
 Assert-ProfilePlan 'Regression' @(
     'runtime',
+    'stage_mplivehit_continuous_runtime',
     'title',
     'battle_mariofox_gcdrawall_loop',
     'menu_chain_mariofox_gcdrawall_loop',

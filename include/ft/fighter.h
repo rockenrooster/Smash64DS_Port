@@ -1801,6 +1801,8 @@ void ftParamRefreshAttackCollID(GObj *fighter_gobj, s32 attack_id);
 sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj);
 void ftAnimEndSetWait(GObj *fighter_gobj);
 void ftAnimEndSetFall(GObj *fighter_gobj);
+void gmCollisionGetWorldPosition(Mtx44f mtx, Vec3f *vec);
+void func_ovl2_800EDA0C(Mtx44f mtx, Vec3f *vec);
 sb32 ftAnimEndCheckSetStatus(GObj *fighter_gobj, void (*proc_status)(GObj*));
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj);
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,

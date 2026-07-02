@@ -25,6 +25,7 @@ function New-HarnessRecord {
 function Get-Smash64DSHarnessRegistry {
     $records = @(
         New-HarnessRecord 'runtime' $null $null 'verify-runtime.ps1' $null $null @('full','smoke','latest','core')
+        New-HarnessRecord 'stage_mplivehit_continuous_runtime' $null $null 'verify-stage-mplivehit-continuous-runtime.ps1' $null $null @('full','fighter','stage','damage','damage_lifecycle','hitlag','procparams','attack_contact','attack_event','live_hit','hitbox','repeat_hit','status','status_loop','runtime','continuous','gcdrawall','gcrunall','controller','preview','visual','playable_slice','stage_mplivehit_status_loop')
         New-HarnessRecord 'opening_skip' $null $null 'verify-opening-skip.ps1' $null $null @('full','smoke','core')
         New-HarnessRecord 'opening_movie_speed' $null $null 'verify-opening-movie-speed.ps1' $null $null @('full','core')
         New-HarnessRecord 'title_boundary' $null $null 'verify-title-boundary.ps1' $null $null @('full','core')
@@ -250,6 +251,7 @@ function Get-Smash64DSVerifyPlan {
         'Regression' {
             Select-Smash64DSRegistryEntriesByName $registry @(
                 'runtime',
+                'stage_mplivehit_continuous_runtime',
                 'title',
                 'battle_mariofox_gcdrawall_loop',
                 'menu_chain_mariofox_gcdrawall_loop',

@@ -2301,6 +2301,10 @@ static void ndsStageMPPassiveLoopPrimeDamageFall(FTStruct *fp,
     fp->coll_data.mask_stat = 0u;
     fp->coll_data.mask_curr = 0u;
     fp->coll_data.ignore_line_id = -1;
+    if ((fighter_gobj != NULL) && (ndsFighterStructIsPoolPointer(fp) != FALSE))
+    {
+        fighter_gobj->user_data.p = fp;
+    }
     fp->anim_frame = 0.0F;
     if (fighter_gobj != NULL)
     {
@@ -2486,7 +2490,7 @@ static void ndsStageMPPassiveLoopProbeBranches(GObj *fighter_gobj,
     ndsStageMPPassiveLoopPrimeDamageFall(
         fp, fighter_gobj, cliff_id, -FTCOMMON_PASSIVE_F_OR_B_RANGE);
     sNdsStageMPPassiveLoopBranchProbeActive = TRUE;
-    result = ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveStandCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopBranchProbeActive = FALSE;
     if ((result != FALSE) &&
         (fp->status_id == nFTCommonStatusPassiveStandF) &&
@@ -2499,7 +2503,7 @@ static void ndsStageMPPassiveLoopProbeBranches(GObj *fighter_gobj,
     ndsStageMPPassiveLoopPrimeDamageFall(
         fp, fighter_gobj, cliff_id, FTCOMMON_PASSIVE_F_OR_B_RANGE);
     sNdsStageMPPassiveLoopBranchProbeActive = TRUE;
-    result = ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveStandCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopBranchProbeActive = FALSE;
     if ((result != FALSE) &&
         (fp->status_id == nFTCommonStatusPassiveStandB) &&
@@ -2511,7 +2515,7 @@ static void ndsStageMPPassiveLoopProbeBranches(GObj *fighter_gobj,
 
     ndsStageMPPassiveLoopPrimeDamageFall(fp, fighter_gobj, cliff_id, 0);
     sNdsStageMPPassiveLoopBranchProbeActive = TRUE;
-    result = ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveStandCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopBranchProbeActive = FALSE;
     if ((result == FALSE) &&
         (fp->status_id == nFTCommonStatusDamageFall) &&
@@ -2525,7 +2529,7 @@ static void ndsStageMPPassiveLoopProbeBranches(GObj *fighter_gobj,
         fp, fighter_gobj, cliff_id, -FTCOMMON_PASSIVE_F_OR_B_RANGE);
     fp->tics_since_last_z = FTCOMMON_PASSIVE_BUFFER_TICS_MAX;
     sNdsStageMPPassiveLoopBranchProbeActive = TRUE;
-    result = ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveStandCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopBranchProbeActive = FALSE;
     if ((result == FALSE) &&
         (fp->status_id == nFTCommonStatusDamageFall) &&
@@ -2537,7 +2541,7 @@ static void ndsStageMPPassiveLoopProbeBranches(GObj *fighter_gobj,
 
     ndsStageMPPassiveLoopPrimeDamageFall(fp, fighter_gobj, cliff_id, 0);
     sNdsStageMPPassiveLoopBranchProbeActive = TRUE;
-    result = ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopBranchProbeActive = FALSE;
     if ((result != FALSE) &&
         (fp->status_id == nFTCommonStatusPassive) &&
@@ -2550,7 +2554,7 @@ static void ndsStageMPPassiveLoopProbeBranches(GObj *fighter_gobj,
     ndsStageMPPassiveLoopPrimeDamageFall(fp, fighter_gobj, cliff_id, 0);
     fp->tics_since_last_z = FTCOMMON_PASSIVE_BUFFER_TICS_MAX;
     sNdsStageMPPassiveLoopBranchProbeActive = TRUE;
-    result = ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopBranchProbeActive = FALSE;
     if ((result == FALSE) &&
         (fp->status_id == nFTCommonStatusDamageFall) &&
@@ -2590,7 +2594,7 @@ static void ndsStageMPPassiveLoopRunPassiveStandBProof(GObj *fighter_gobj,
     ndsStageMPPassiveLoopPrimeDamageFall(
         fp, fighter_gobj, cliff_id, FTCOMMON_PASSIVE_F_OR_B_RANGE);
     sNdsStageMPPassiveLoopBranchProbeActive = TRUE;
-    result = ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveStandCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopBranchProbeActive = FALSE;
 
     if ((result == FALSE) ||
@@ -4919,7 +4923,7 @@ static void ndsStageMPPassiveLoopRunProbe(void)
     ndsStageMPPassiveLoopPrimeDamageFall(
         fp, fighter_gobj, cliff_id, -FTCOMMON_PASSIVE_F_OR_B_RANGE);
     sNdsStageMPPassiveLoopPassiveStandSetStatusActive = TRUE;
-    result = ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveStandCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopPassiveStandSetStatusActive = FALSE;
     if (result == FALSE)
     {
@@ -4943,7 +4947,7 @@ static void ndsStageMPPassiveLoopRunProbe(void)
 
     ndsStageMPPassiveLoopPrimeDamageFall(fp, fighter_gobj, cliff_id, 0);
     sNdsStageMPPassiveLoopPassiveSetStatusActive = TRUE;
-    result = ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
+    result = ftCommonPassiveCheckInterruptDamage(fighter_gobj);
     sNdsStageMPPassiveLoopPassiveSetStatusActive = FALSE;
     if (result == FALSE)
     {
