@@ -340,6 +340,8 @@ Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_FMT_RGBA16')) 'Renderer
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_FMT_CI')) 'Renderer CI texture format support is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_FMT_IA')) 'Renderer IA texture format support is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_FMT_I16')) 'Renderer I16 texture format support is missing.'
+Assert-True ($renderer.Contains('ndsRendererHardwareConvertI(')) 'Renderer I texture conversion helper is missing.'
+Assert-True ($renderer.Contains('intensity4 * 0x11u')) 'Renderer I4 texture expansion is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareConvertIA')) 'Renderer IA texture conversion helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordLoadTlut')) 'Renderer TLUT state tracking is missing.'
 Assert-True ($renderer.Contains('texture_tlut_image')) 'Renderer CI texture palette pointer tracking is missing.'

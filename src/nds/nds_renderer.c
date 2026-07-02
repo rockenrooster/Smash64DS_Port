@@ -1539,17 +1539,23 @@ static u16 ndsRendererHardwareConvertRgba16(u16 n64_color)
     return (u16)((1u << 15) | red | (green << 5) | (blue << 10));
 }
 
+static u16 ndsRendererHardwareConvertI(u8 intensity)
+{
+    u16 v;
+
+    v = (u16)(intensity >> 3);
+    return (u16)((1u << 15) | v | (v << 5) | (v << 10));
+}
+
 static u16 ndsRendererHardwareConvertI16(u16 value)
 {
     u8 intensity = (u8)(value >> 8);
-    u16 v;
 
     if (intensity == 0u)
     {
         intensity = (u8)value;
     }
-    v = (u16)(intensity >> 3);
-    return (u16)((1u << 15) | v | (v << 5) | (v << 10));
+    return ndsRendererHardwareConvertI(intensity);
 }
 
 static u16 ndsRendererHardwareConvertIA(u8 intensity, u8 alpha)
@@ -1594,9 +1600,21 @@ static u32 ndsRendererHardwareTextureSourceBytes(u32 format, u32 size,
         }
         return 0u;
     }
-    if ((format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16) ||
-        (format == NDS_RENDERER_HW_TEXTURE_FMT_I16))
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16)
     {
+        return (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B) ?
+            texels * sizeof(u16) : 0u;
+    }
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_I16)
+    {
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            return (texels + 1u) >> 1;
+        }
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)
+        {
+            return texels;
+        }
         return (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B) ?
             texels * sizeof(u16) : 0u;
     }
@@ -1684,7 +1702,27 @@ static u16 ndsRendererHardwareTextureColor(
         }
         return 0u;
     }
-    return ndsRendererHardwareConvertI16(((const u16 *)texels)[index ^ 1u]);
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_I16)
+    {
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            u8 packed = texels[index >> 1];
+            u8 intensity4 = ((index & 1u) == 0u) ?
+                (u8)(packed >> 4) : (u8)(packed & 0x0fu);
+
+            return ndsRendererHardwareConvertI((u8)(intensity4 * 0x11u));
+        }
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)
+        {
+            return ndsRendererHardwareConvertI(texels[index]);
+        }
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B)
+        {
+            return ndsRendererHardwareConvertI16(
+                ((const u16 *)texels)[index ^ 1u]);
+        }
+    }
+    return 0u;
 }
 
 static s32 ndsRendererHardwareBindTexture(

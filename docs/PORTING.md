@@ -15923,3 +15923,15 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
   combiner/depth policy, texture-state coverage, and renderer cutover deferred.
+
+## 2026-07-02 - Added HW I4/I8 Texture Decode
+
+- Extended the opt-in DS hardware `G_IM_FMT_I` converter from I16-only to
+  I4/I8/I16, preserving the existing I16 intensity fallback.
+- Added fixture guards for the shared I converter and I4 nibble expansion.
+  BattleShip source scan covered I4/I8 stage, effect, staff-roll, and item
+  texture records.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
+  combiner/depth policy, texture-state coverage, and renderer cutover deferred.

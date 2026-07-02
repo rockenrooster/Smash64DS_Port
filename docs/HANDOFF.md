@@ -67,7 +67,8 @@ uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
 alpha-memory, and texture-filter coordinate-bias rules. The hardware upload
 converter now accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16 texels for
 alpha-bearing source textures used by collision overlays, particles, and
-material records; that is the latest gate.
+material records, and `G_IM_FMT_I` I4/I8/I16 texels for stage/effect
+intensity textures; that is the latest gate.
 The next renderer pass should finish remaining combiner behavior, depth
 policy, remaining texture-state coverage, and renderer cutover. Default builds
 still use the software preview.
@@ -93,7 +94,7 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 1. Renderer follow-up: finish opt-in hardware combiner/depth/material policy,
    broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
-   and IA decoder, then plan renderer cutover.
+   plus IA/I decoders, then plan renderer cutover.
 2. Runtime slice 1 follow-up: split/expand the item, weapon, effect, audio, and
    ground compatibility headers enough for full `ft/ftmain.c`, then replace
    the remaining local `ftMain*` seams and add the continuous-runtime verifier.

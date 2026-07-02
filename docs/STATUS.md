@@ -81,7 +81,8 @@ uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
 alpha-memory, and texture-filter coordinate-bias rules for that gate. The
 hardware upload converter also accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16
 texels, matching the source texture formats used by fighter collision overlays,
-particles, and several stage/fighter material records.
+particles, and several stage/fighter material records, and accepts
+`G_IM_FMT_I` I4/I8/I16 texels for stage/effect intensity textures.
 Full visual fidelity still needs remaining combiner behavior, depth
 policy, remaining texture-state coverage, and renderer cutover work. Default
 builds still use the software preview.
@@ -97,7 +98,7 @@ The next useful work is not another proof bit. It is one of:
   `docs/ARCHITECTURE.md`;
 - renderer follow-up: finish opt-in hardware combiner/depth/material policy,
   broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
-  and IA decoder, then plan renderer cutover work;
+  plus IA/I decoders, then plan renderer cutover work;
 - compatibility-header split needed before full-TU runtime import of
   `ft/ftmain.c`;
 - continuous-runtime verifier for unbounded battle frames.
