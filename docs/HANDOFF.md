@@ -60,8 +60,10 @@ gate; run `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTri
 It reports `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, with screenshot
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. The hardware texture cache
 key now includes the source render/load tile, TMEM, palette, and tile-origin
-state, plus load-block range and DXT state for that opt-in path. The hardware
-triangle path now applies recorded
+state, plus load-block range and DXT state for that opt-in path. Load-block
+and tile-size state now tracks the current command instead of freezing on the
+first texture load/size in a traversal. The hardware triangle path now applies
+recorded
 primitive/environment material color, including black color values, and alpha
 from the current combine state, maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits, and
 uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend

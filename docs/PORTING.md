@@ -15946,3 +15946,15 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
   combiner/depth policy, texture-state coverage, and renderer cutover deferred.
+
+## 2026-07-02 - Kept HW Texture State Current
+
+- Removed first-load/first-size latching from the renderer texture-state
+  recorders: `G_LOADBLOCK` and `G_SETTILESIZE` now update the current state
+  used by opt-in hardware triangle submission.
+- Added fixture guards so load-block and tile-size tracking cannot freeze on
+  the first texture command again.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
+  combiner/depth policy, texture-state coverage, and renderer cutover deferred.

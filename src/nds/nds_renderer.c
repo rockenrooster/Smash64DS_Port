@@ -681,16 +681,12 @@ static void ndsRendererRecordLoadBlock(NDSRendererStats *stats,
     }
 
     stats->texture_mask |= NDS_RENDERER_TEXTURE_LOADBLOCK;
-    if (stats->texture_load_texels == 0)
-    {
-        stats->texture_load_tile = (w1 >> 24) & 0x7u;
-        stats->texture_load_block_uls = (w0 >> 12) & 0x0FFFu;
-        stats->texture_load_block_ult = w0 & 0x0FFFu;
-        stats->texture_load_block_lrs = (w1 >> 12) & 0x0FFFu;
-        stats->texture_load_block_dxt = w1 & 0x0FFFu;
-        stats->texture_load_texels =
-            stats->texture_load_block_lrs + 1u;
-    }
+    stats->texture_load_tile = (w1 >> 24) & 0x7u;
+    stats->texture_load_block_uls = (w0 >> 12) & 0x0FFFu;
+    stats->texture_load_block_ult = w0 & 0x0FFFu;
+    stats->texture_load_block_lrs = (w1 >> 12) & 0x0FFFu;
+    stats->texture_load_block_dxt = w1 & 0x0FFFu;
+    stats->texture_load_texels = stats->texture_load_block_lrs + 1u;
 }
 
 static void ndsRendererRecordSetTileSize(NDSRendererStats *stats,
@@ -707,11 +703,6 @@ static void ndsRendererRecordSetTileSize(NDSRendererStats *stats,
     }
 
     stats->texture_mask |= NDS_RENDERER_TEXTURE_SETTILESIZE;
-    if ((stats->texture_tile_width != 0) &&
-        (stats->texture_tile_height != 0))
-    {
-        return;
-    }
 
     uls = (w0 >> 12) & 0x0FFFu;
     ult = w0 & 0x0FFFu;
