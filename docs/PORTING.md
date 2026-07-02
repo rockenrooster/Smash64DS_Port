@@ -15788,3 +15788,14 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject614/fmt0x4/max8x8` and captured
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Broader texture coverage,
   combiner, material/depth policy, and cutover remain deferred.
+
+## 2026-07-02 - Keyed Hardware Textures By Tile State
+
+- Tightened the opt-in DS hardware texture cache key to include the source
+  render tile, render TMEM, palette, load tile, and tile origin alongside the
+  decoded image/TLUT pointers and render size.
+- Added a fixture guard so future hardware-texture changes keep render TMEM and
+  load-tile state in the cache key.
+- Reverified the all-DL hardware texture gate:
+  `hwtex=bind16/upload1/ready16/reject614/fmt0x4/max8x8`. This does not add new
+  texture formats, combiner policy, or renderer cutover.

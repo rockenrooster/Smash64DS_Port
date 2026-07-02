@@ -343,6 +343,8 @@ Assert-True ($renderer.Contains('ndsRendererRecordLoadTlut')) 'Renderer TLUT sta
 Assert-True ($renderer.Contains('texture_tlut_image')) 'Renderer CI texture palette pointer tracking is missing.'
 Assert-True ($renderer.Contains('texture_render_tile_size')) 'Renderer render-tile pixel size tracking is missing.'
 Assert-True ($renderer.Contains('hardware_texture_upload_count')) 'Renderer hardware texture upload stats are missing.'
+Assert-True ($renderer.Contains('key.render_tmem = stats->texture_render_tile_tmem')) 'Renderer hardware texture cache key is missing render TMEM state.'
+Assert-True ($renderer.Contains('key.load_tile = stats->texture_load_tile')) 'Renderer hardware texture cache key is missing load-tile state.'
 Assert-True (-not $renderer.Contains('NDS_RENDERER_HW_FALLBACK_SCALE')) 'Renderer hardware fallback scale returned.'
 Assert-True ($renderer.Contains('input_vertices')) 'Renderer hardware raw vertex cache is missing.'
 Assert-True ($renderer.Contains('sNdsRendererHardwareSubmitted')) 'Renderer hardware frame-submit latch is missing.'

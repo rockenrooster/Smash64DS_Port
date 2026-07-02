@@ -89,6 +89,12 @@ typedef struct NDSRendererHardwareTextureKey
     u32 size;
     u32 width;
     u32 height;
+    u32 render_tile;
+    u32 render_tmem;
+    u32 render_palette;
+    u32 load_tile;
+    u32 tile_uls;
+    u32 tile_ult;
     u32 line;
     u32 flags;
 } NDSRendererHardwareTextureKey;
@@ -1218,6 +1224,12 @@ static s32 ndsRendererHardwareTextureKeyEqual(
             (a->size == b->size) &&
             (a->width == b->width) &&
             (a->height == b->height) &&
+            (a->render_tile == b->render_tile) &&
+            (a->render_tmem == b->render_tmem) &&
+            (a->render_palette == b->render_palette) &&
+            (a->load_tile == b->load_tile) &&
+            (a->tile_uls == b->tile_uls) &&
+            (a->tile_ult == b->tile_ult) &&
             (a->line == b->line) &&
             (a->flags == b->flags)) ? TRUE : FALSE;
 }
@@ -1481,6 +1493,12 @@ static s32 ndsRendererHardwareBindTexture(
     key.size = size;
     key.width = width;
     key.height = height;
+    key.render_tile = stats->texture_render_tile;
+    key.render_tmem = stats->texture_render_tile_tmem;
+    key.render_palette = stats->texture_render_tile_palette;
+    key.load_tile = stats->texture_load_tile;
+    key.tile_uls = stats->texture_tile_size_uls;
+    key.tile_ult = stats->texture_tile_size_ult;
     key.line = stats->texture_render_tile_line;
     key.flags = stats->texture_render_tile_flags;
 
