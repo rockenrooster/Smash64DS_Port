@@ -78,6 +78,7 @@
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
 #define NDS_RENDERER_CCMUX_TEXEL0 1u
 #define NDS_RENDERER_CCMUX_PRIMITIVE 3u
+#define NDS_RENDERER_CCMUX_SHADE 4u
 #define NDS_RENDERER_CCMUX_ENVIRONMENT 5u
 #define NDS_RENDERER_ACMUX_TEXEL0 1u
 #define NDS_RENDERER_ACMUX_PRIMITIVE 3u
@@ -1311,6 +1312,21 @@ static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
     return 0u;
 }
 
+static s32 ndsRendererHardwareUseVertexColor(const NDSRendererStats *stats)
+{
+    if ((stats == NULL) || (stats->texture_combine_count == 0u))
+    {
+        return TRUE;
+    }
+    if (ndsRendererHardwareColorSource(stats) != 0u)
+    {
+        return FALSE;
+    }
+    return ndsRendererCombineUsesColor(
+        stats->texture_combine_w0, stats->texture_combine_w1,
+        NDS_RENDERER_CCMUX_SHADE);
+}
+
 static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
                                     const NDSRendererInputVertex *vtx)
 {
@@ -1390,13 +1406,19 @@ static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, s32 offset)
 
 static void ndsRendererHardwareColorVertex(
     const NDSRendererInputVertex *vtx,
-    u32 material_color)
+    u32 material_color,
+    s32 use_vertex_color)
 {
     if (material_color != 0u)
     {
         glColor3b((u8)(material_color >> 24),
                   (u8)(material_color >> 16),
                   (u8)(material_color >> 8));
+        return;
+    }
+    if (use_vertex_color == FALSE)
+    {
+        glColor3b(0xffu, 0xffu, 0xffu);
         return;
     }
     glColor3b(vtx->r, vtx->g, vtx->b);
@@ -1937,6 +1959,7 @@ static void ndsRendererSubmitHardwareTriangle(
     u32 scale_world;
     u32 material_color;
     u32 poly_alpha;
+    s32 use_vertex_color;
     s32 texture_offset;
 
     if (stats == NULL)
@@ -1965,6 +1988,7 @@ static void ndsRendererSubmitHardwareTriangle(
     use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
         ndsRendererHardwareBindTexture(stats, config) : FALSE;
     material_color = ndsRendererHardwareColorSource(stats);
+    use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
     poly_alpha = ndsRendererHardwareAlpha(stats, v0);
     if (poly_alpha == 0u)
     {
@@ -1984,7 +2008,7 @@ static void ndsRendererSubmitHardwareTriangle(
     }
     glPolyFmt(ndsRendererHardwarePolyFmt(stats, poly_alpha));
     glBegin(GL_TRIANGLE);
-    ndsRendererHardwareColorVertex(v0, material_color);
+    ndsRendererHardwareColorVertex(v0, material_color, use_vertex_color);
     if (use_texture != FALSE)
     {
         glTexCoord2t16(ndsRendererHardwareTexCoord(
@@ -1995,7 +2019,7 @@ static void ndsRendererSubmitHardwareTriangle(
     glVertex3v16(ndsRendererHardwareVertexCoord(v0->x, scale_world),
                  ndsRendererHardwareVertexCoord(v0->y, scale_world),
                  ndsRendererHardwareVertexCoord(v0->z, scale_world));
-    ndsRendererHardwareColorVertex(v1, material_color);
+    ndsRendererHardwareColorVertex(v1, material_color, use_vertex_color);
     if (use_texture != FALSE)
     {
         glTexCoord2t16(ndsRendererHardwareTexCoord(
@@ -2006,7 +2030,7 @@ static void ndsRendererSubmitHardwareTriangle(
     glVertex3v16(ndsRendererHardwareVertexCoord(v1->x, scale_world),
                  ndsRendererHardwareVertexCoord(v1->y, scale_world),
                  ndsRendererHardwareVertexCoord(v1->z, scale_world));
-    ndsRendererHardwareColorVertex(v2, material_color);
+    ndsRendererHardwareColorVertex(v2, material_color, use_vertex_color);
     if (use_texture != FALSE)
     {
         glTexCoord2t16(ndsRendererHardwareTexCoord(

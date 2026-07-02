@@ -346,6 +346,8 @@ Assert-True ($renderer.Contains('hardware_texture_upload_count')) 'Renderer hard
 Assert-True ($renderer.Contains('key.render_tmem = stats->texture_render_tile_tmem')) 'Renderer hardware texture cache key is missing render TMEM state.'
 Assert-True ($renderer.Contains('key.load_tile = stats->texture_load_tile')) 'Renderer hardware texture cache key is missing load-tile state.'
 Assert-True ($renderer.Contains('ndsRendererHardwareColorSource')) 'Renderer hardware material color source helper is missing.'
+Assert-True ($renderer.Contains('ndsRendererHardwareUseVertexColor')) 'Renderer hardware combine shade/white color selection helper is missing.'
+Assert-True ($renderer.Contains('glColor3b(0xffu, 0xffu, 0xffu)')) 'Renderer hardware path does not tint non-shade combine output white.'
 Assert-True ($renderer.Contains('ndsRendererHardwareAlpha')) 'Renderer hardware material alpha helper is missing.'
 Assert-True (-not $renderer.Contains('if (stats->texture_combine_w0 == 0)')) 'Renderer combine state recorder still keeps first combine instead of current combine.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseDecal')) 'Renderer hardware combine decal helper is missing.'

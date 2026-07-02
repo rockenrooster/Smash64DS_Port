@@ -15875,3 +15875,15 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Remaining
   combiner behavior, depth policy, broader texture coverage, and renderer
   cutover stay deferred.
+
+## 2026-07-02 - Applied HW Non-Shade White Tint
+
+- Mirrored the sm64-nds combiner color rule for the opt-in DS hardware path:
+  when current combine state does not use primitive, environment, or shade
+  color, the submitter tints with white instead of vertex color.
+- Added a fixture guard for the shade/white selector and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Remaining
+  combiner behavior, depth policy, broader texture coverage, and renderer
+  cutover stay deferred.
