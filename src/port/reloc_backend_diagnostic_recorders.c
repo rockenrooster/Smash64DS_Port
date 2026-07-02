@@ -17131,9 +17131,15 @@ static void ndsFighterMarioFoxRunWaitStatusProbe(GObj *fighter_gobj,
 
         if (fp->is_wait_status_setup == FALSE)
         {
+            gNdsFighterWaitOriginalSetStatusCallCount++;
             ftCommonWaitSetStatus(probe_gobj);
+            fp->is_special_interrupt = TRUE;
+            gNdsFighterMarioFoxWaitCount++;
         }
-        ndsFighterMarioFoxRecordInstalledWaitState(fp);
+        else
+        {
+            ndsFighterMarioFoxRecordInstalledWaitState(fp);
+        }
         ndsFighterStructRecord(fp);
         ndsFighterMarioFoxRecordWaitStatus(fp);
     }

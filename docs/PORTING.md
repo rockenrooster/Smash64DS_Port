@@ -16071,3 +16071,21 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
   `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`.
+
+## 2026-07-02 - Checkpointed ftmain Import Layout Diagnosis
+
+- Checkpointed the in-flight full `ft/ftmain.c` import on `wip/ftmain-import`
+  and kept temporary scheduler debug instrumentation as a separate WIP commit.
+- Kept source-backed init/wait verifier attack-ID expectations at `0`:
+  BattleShip `ftmanager.c:526` initializes `motion_attack_id` to
+  `nFTMotionAttackIDNone`, `ftmanager.c:528` initializes
+  `stat_flags.attack_id` to `nFTStatusAttackIDNone`, and both enum entries are
+  the first values in `ftdef.h`. Reverted uncited dash-run proof-mask
+  relaxations.
+- Verified imported and port TUs both resolve `FTStruct` through the port header,
+  then added compile-time guards for the active port layout. The full
+  `ftmain.c` wrapper remains compile-clean behind
+  `NDS_IMPORT_BATTLESHIP_FTMAIN=1`, but the default build restores the guarded
+  local `ftMain*` seam because the source-layout probe shows BattleShip
+  `fttypes.h` places shared fields such as `joints` and callbacks at very
+  different offsets.

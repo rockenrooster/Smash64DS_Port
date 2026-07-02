@@ -19,6 +19,7 @@ BUILD := build
 NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
+NDS_IMPORT_BATTLESHIP_FTMAIN ?= 0
 NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	battle_mariofox_stage_inishie_scale_loop \
 	menu_chain_mariofox_stage_inishie_scale_loop \
@@ -405,7 +406,7 @@ endif
 CFLAGS += -DNDS_DEV_LIVE_INPUT_PREVIEW=$(NDS_DEV_LIVE_INPUT_PREVIEW)
 CFLAGS += -DNDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=$(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)
 CFLAGS += -DNDS_RENDERER_HW_TRIANGLES=$(NDS_RENDERER_HW_TRIANGLES)
-CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMAIN=1
+CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMAIN=$(NDS_IMPORT_BATTLESHIP_FTMAIN)
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
@@ -440,7 +441,7 @@ CFILES := main.c nds_platform.c nds_reloc_assets.c nds_renderer.c port_probe.c n
 	battleship_mvopeningpikachu.c battleship_mntitlefiles.c \
 	battleship_mntitle.c battleship_mnvsmode.c \
 	battleship_mnplayersvs.c battleship_mnmaps.c \
-	battleship_gmcommon.c battleship_gmcollision.c battleship_ftmain.c battleship_scvsbattle.c \
+	battleship_gmcommon.c battleship_gmcollision.c battleship_scvsbattle.c \
 	battleship_grpupupu_ground.c \
 	battleship_grinishie_scale.c \
 	battleship_ftcommon_wait.c \
@@ -477,6 +478,9 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downattack.c \
 	battleship_ftcommon_downforwardback.c \
 	battleship_ftcommon_downstand.c
+ifeq ($(NDS_IMPORT_BATTLESHIP_FTMAIN),1)
+CFILES += battleship_ftmain.c
+endif
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
 CFILES += battleship_grmodelsetup.c
 endif

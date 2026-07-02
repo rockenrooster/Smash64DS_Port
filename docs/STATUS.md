@@ -51,10 +51,12 @@ Runtime slice 1 landed the full BattleShip `gm/gmcollision.c` translation unit
 through `src/import/battleship_gmcollision.c`. The old project-owned
 `gmCollisionGetFighterPartsWorldPosition`, `func_ovl2_800EDA0C`, and
 `gmCollisionGetWorldPosition` copies were removed, so matrix/world-position
-collision helpers now resolve to the original source. `ft/ftmain.c` was tested
-as a whole-TU import but did not land; it fails before duplicate cleanup on
-full item/weapon/effect/audio/ground header compatibility, tracked in
-`docs/KNOWN_ISSUES.md`.
+collision helpers now resolve to the original source. `ft/ftmain.c` now has a
+whole-TU wrapper that compiles with `NDS_IMPORT_BATTLESHIP_FTMAIN=1`, but the
+default build keeps the old guarded `ftMain*` seam. The imported runtime exposed
+FTStruct source-layout drift; current port/import TUs share `include/ft/fighter.h`
+(`sizeof(FTStruct)=3232`, `joints=412`) while BattleShip `fttypes.h` places
+`joints` at `2280`. This is tracked in `docs/KNOWN_ISSUES.md`.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 Stage 3b added BattleShip billboard/recalc DObj matrix seed coverage, consistent
@@ -114,6 +116,8 @@ Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 The active boundary is still bounded proof scaffolding, not continuous gameplay.
 The next useful work is not another proof bit. It is one of:
 
+- runtime follow-up: make the shared FTStruct region source-layout compatible
+  with BattleShip `fttypes.h`, then re-enable the opt-in `ftmain.c` runtime path;
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
 - renderer follow-up: finish opt-in hardware combiner/material policy,

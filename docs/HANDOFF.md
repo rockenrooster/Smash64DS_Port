@@ -94,10 +94,14 @@ use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
 TU via `src/import/battleship_gmcollision.c`, replacing the local
-matrix/world-position helper copies. A full `ft/ftmain.c` wrapper was tested
-but rejected before landing because the current narrow item/weapon/effect,
-audio, and ground headers cannot expose that TU without a broader
-compatibility-header split.
+matrix/world-position helper copies. A full `ft/ftmain.c` wrapper now compiles
+behind `NDS_IMPORT_BATTLESHIP_FTMAIN=1`, but default builds leave the guarded
+local `ftMain*` seam active. Preprocessor checks show imported and port TUs both
+resolve `FTStruct` to `include/ft/fighter.h`; layout guards now freeze that
+active port layout. A source-layout probe still shows drift from BattleShip
+`fttypes.h` (`joints` `412` in the port layout versus `2280` in source layout),
+so the next runtime slice should fix FTStruct layout compatibility before more
+emulator watchpoint debugging.
 
 ## Process Change
 
@@ -114,9 +118,10 @@ the work reaches a scene-level boundary such as `battle_playable` or
 1. Renderer follow-up: finish opt-in hardware combiner/material policy,
    broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
    plus IA/I decoders, then plan renderer cutover.
-2. Runtime slice 1 follow-up: split/expand the item, weapon, effect, audio, and
-   ground compatibility headers enough for full `ft/ftmain.c`, then replace
-   the remaining local `ftMain*` seams and add the continuous-runtime verifier.
+2. Runtime slice 1 follow-up: make the shared FTStruct region source-layout
+   compatible with BattleShip `fttypes.h`, then re-enable the opt-in
+   `ftmain.c` runtime path, replace the remaining local `ftMain*` seams, and
+   add the continuous-runtime verifier.
 3. Broaden hardware texture coverage now that all-DL CI/TLUT upload is proven
    and material DL emission reaches the hardware traversal where source MObjs
    expose branchable material state.

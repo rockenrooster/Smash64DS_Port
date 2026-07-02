@@ -48,15 +48,17 @@
 - Full `gm/gmcollision.c` is now imported through
   `src/import/battleship_gmcollision.c`, replacing the local
   `gmCollisionGetFighterPartsWorldPosition`, `func_ovl2_800EDA0C`, and
-  `gmCollisionGetWorldPosition` copies. The full `ft/ftmain.c` import was
-  attempted but is blocked before duplicate seam cleanup by compatibility
-  headers: full BattleShip item/weapon types collide with the port's narrow
-  `it/item.h`, `wp/weapon.h`, and `ef/effect.h` shadows; `ftmain.c` also needs
-  unshadowed `alSoundEffect`, the complete hit FGM enum/table constants,
-  `GRAttackColl` / `GRObstacle` / `GRHazard`, and `GMColAnim` visibility.
-  After that header split, the project-owned `ftMain*` definitions in
-  `src/port/reloc_backend_diagnostic_recorders.c` and adjacent compatibility
-  shims still need to be deleted where the original TU replaces them.
+  `gmCollisionGetWorldPosition` copies. A full `ft/ftmain.c` wrapper now
+  compiles behind `NDS_IMPORT_BATTLESHIP_FTMAIN=1`, but default builds keep the
+  guarded local `ftMain*` seam active. The current blocker is FTStruct source
+  layout: imported and port TUs both resolve `FTStruct` to
+  `include/ft/fighter.h`, with guards freezing `sizeof(FTStruct)=3232`,
+  `coll_data=204`, `attack_colls=632`, `joints=412`, and callbacks at
+  `2680+`; BattleShip `src/ft/fttypes.h` places the same shared fields at
+  `coll_data=120`, `motion_attack_id=648`, `attack_colls=660`,
+  `joints=2280`, and callbacks at `2516+`. Fix the shared layout before
+  re-enabling the imported runtime path or deleting the project-owned
+  `ftMain*` definitions.
 - Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
   billboard/recalc DObj matrix seed coverage, first bounded Opening Room
   RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is

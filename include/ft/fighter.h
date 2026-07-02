@@ -1992,6 +1992,87 @@ typedef struct FTStruct {
     u32 nds_init_floor_project_result;
 } FTStruct;
 
+#define NDS_FTSTRUCT_LAYOUT_SIZE 3232u
+#define NDS_FTSTRUCT_OFF_STATUS_ID 56u
+#define NDS_FTSTRUCT_OFF_STATUS_PREV 60u
+#define NDS_FTSTRUCT_OFF_COLL_DATA 204u
+#define NDS_FTSTRUCT_OFF_JOINTS 412u
+#define NDS_FTSTRUCT_OFF_MODELPART_STATUS 560u
+#define NDS_FTSTRUCT_OFF_ATTACK_COLLS 632u
+#define NDS_FTSTRUCT_OFF_MOTION_ATTACK_ID 2504u
+#define NDS_FTSTRUCT_OFF_MOTION_ID 2508u
+#define NDS_FTSTRUCT_OFF_MOTION_COUNT 2660u
+#define NDS_FTSTRUCT_OFF_STAT_FLAGS 2676u
+#define NDS_FTSTRUCT_OFF_PROC_UPDATE 2680u
+#define NDS_FTSTRUCT_OFF_PROC_INTERRUPT 2684u
+#define NDS_FTSTRUCT_OFF_PROC_PHYSICS 2688u
+#define NDS_FTSTRUCT_OFF_PROC_MAP 2692u
+#define NDS_FTSTRUCT_OFF_PROC_SLOPE 2696u
+#define NDS_FTSTRUCT_OFF_PROC_STATUS 2700u
+#define NDS_FTSTRUCT_OFF_PROC_DAMAGE 2708u
+#define NDS_FTSTRUCT_OFF_PROC_LAGSTART 2724u
+#define NDS_FTSTRUCT_OFF_PROC_LAGUPDATE 2728u
+#define NDS_FTSTRUCT_OFF_PROC_PASSIVE 2732u
+#define NDS_FTSTRUCT_OFF_PROC_LAGEND 2736u
+
+_Static_assert(sizeof(FTStruct) == NDS_FTSTRUCT_LAYOUT_SIZE,
+               "FTStruct size changed");
+_Static_assert(offsetof(FTStruct, status_id) == NDS_FTSTRUCT_OFF_STATUS_ID,
+               "FTStruct status_id offset changed");
+_Static_assert(offsetof(FTStruct, status_prev) == NDS_FTSTRUCT_OFF_STATUS_PREV,
+               "FTStruct status_prev offset changed");
+_Static_assert(offsetof(FTStruct, coll_data) == NDS_FTSTRUCT_OFF_COLL_DATA,
+               "FTStruct coll_data offset changed");
+_Static_assert(offsetof(FTStruct, joints) == NDS_FTSTRUCT_OFF_JOINTS,
+               "FTStruct joints offset changed");
+_Static_assert(offsetof(FTStruct, modelpart_status) ==
+                   NDS_FTSTRUCT_OFF_MODELPART_STATUS,
+               "FTStruct modelpart_status offset changed");
+_Static_assert(offsetof(FTStruct, attack_colls) ==
+                   NDS_FTSTRUCT_OFF_ATTACK_COLLS,
+               "FTStruct attack_colls offset changed");
+_Static_assert(offsetof(FTStruct, motion_attack_id) ==
+                   NDS_FTSTRUCT_OFF_MOTION_ATTACK_ID,
+               "FTStruct motion_attack_id offset changed");
+_Static_assert(offsetof(FTStruct, motion_id) == NDS_FTSTRUCT_OFF_MOTION_ID,
+               "FTStruct motion_id offset changed");
+_Static_assert(offsetof(FTStruct, motion_count) ==
+                   NDS_FTSTRUCT_OFF_MOTION_COUNT,
+               "FTStruct motion_count offset changed");
+_Static_assert(offsetof(FTStruct, stat_flags) == NDS_FTSTRUCT_OFF_STAT_FLAGS,
+               "FTStruct stat_flags offset changed");
+_Static_assert(offsetof(FTStruct, proc_update) ==
+                   NDS_FTSTRUCT_OFF_PROC_UPDATE,
+               "FTStruct proc_update offset changed");
+_Static_assert(offsetof(FTStruct, proc_interrupt) ==
+                   NDS_FTSTRUCT_OFF_PROC_INTERRUPT,
+               "FTStruct proc_interrupt offset changed");
+_Static_assert(offsetof(FTStruct, proc_physics) ==
+                   NDS_FTSTRUCT_OFF_PROC_PHYSICS,
+               "FTStruct proc_physics offset changed");
+_Static_assert(offsetof(FTStruct, proc_map) == NDS_FTSTRUCT_OFF_PROC_MAP,
+               "FTStruct proc_map offset changed");
+_Static_assert(offsetof(FTStruct, proc_slope) == NDS_FTSTRUCT_OFF_PROC_SLOPE,
+               "FTStruct proc_slope offset changed");
+_Static_assert(offsetof(FTStruct, proc_status) ==
+                   NDS_FTSTRUCT_OFF_PROC_STATUS,
+               "FTStruct proc_status offset changed");
+_Static_assert(offsetof(FTStruct, proc_damage) ==
+                   NDS_FTSTRUCT_OFF_PROC_DAMAGE,
+               "FTStruct proc_damage offset changed");
+_Static_assert(offsetof(FTStruct, proc_lagstart) ==
+                   NDS_FTSTRUCT_OFF_PROC_LAGSTART,
+               "FTStruct proc_lagstart offset changed");
+_Static_assert(offsetof(FTStruct, proc_lagupdate) ==
+                   NDS_FTSTRUCT_OFF_PROC_LAGUPDATE,
+               "FTStruct proc_lagupdate offset changed");
+_Static_assert(offsetof(FTStruct, proc_passive) ==
+                   NDS_FTSTRUCT_OFF_PROC_PASSIVE,
+               "FTStruct proc_passive offset changed");
+_Static_assert(offsetof(FTStruct, proc_lagend) ==
+                   NDS_FTSTRUCT_OFF_PROC_LAGEND,
+               "FTStruct proc_lagend offset changed");
+
 typedef struct FTCommonPart {
     DObjDesc *dobjdesc;
     MObjSub ***p_mobjsubs;
