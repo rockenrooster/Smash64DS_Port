@@ -76,6 +76,7 @@
 #define NDS_RENDERER_HW_TEXTURE_SIZ_4B 0u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_8B 1u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_16B 2u
+#define NDS_RENDERER_HW_TEXTURE_SIZ_32B 3u
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_START (0x1000 * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
@@ -1561,6 +1562,23 @@ static u16 ndsRendererHardwareConvertRgba16(u16 n64_color)
     return (u16)((1u << 15) | red | (green << 5) | (blue << 10));
 }
 
+static u16 ndsRendererHardwareConvertRgba32(u32 rgba)
+{
+    u8 red = (u8)(rgba >> 24);
+    u8 green = (u8)(rgba >> 16);
+    u8 blue = (u8)(rgba >> 8);
+    u8 alpha = (u8)rgba;
+
+    if (alpha == 0u)
+    {
+        return 0u;
+    }
+    return (u16)((1u << 15) |
+                 ((u16)(red >> 3)) |
+                 ((u16)(green >> 3) << 5) |
+                 ((u16)(blue >> 3) << 10));
+}
+
 static u16 ndsRendererHardwareConvertI(u8 intensity)
 {
     u16 v;
@@ -1602,6 +1620,8 @@ static u32 ndsRendererHardwareTextureLinePixels(u32 size, u32 line)
         return line * 8u;
     case NDS_RENDERER_HW_TEXTURE_SIZ_16B:
         return line * 4u;
+    case NDS_RENDERER_HW_TEXTURE_SIZ_32B:
+        return line * 2u;
     default:
         return 0u;
     }
@@ -1624,8 +1644,12 @@ static u32 ndsRendererHardwareTextureSourceBytes(u32 format, u32 size,
     }
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16)
     {
-        return (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B) ?
-            texels * sizeof(u16) : 0u;
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B)
+        {
+            return texels * sizeof(u16);
+        }
+        return (size == NDS_RENDERER_HW_TEXTURE_SIZ_32B) ?
+            texels * sizeof(u32) : 0u;
     }
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_I16)
     {
@@ -1695,6 +1719,13 @@ static u16 ndsRendererHardwareTextureColor(
     }
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16)
     {
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_32B)
+        {
+            u32 rgba;
+
+            memcpy(&rgba, &texels[index * sizeof(rgba)], sizeof(rgba));
+            return ndsRendererHardwareConvertRgba32(rgba);
+        }
         return ndsRendererHardwareConvertRgba16(((const u16 *)texels)[index ^ 1u]);
     }
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_IA)
@@ -1835,7 +1866,8 @@ static s32 ndsRendererHardwareBindTexture(
         {
             texels *= 2u;
         }
-        else if (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B)
+        else if ((size == NDS_RENDERER_HW_TEXTURE_SIZ_16B) ||
+                 (size == NDS_RENDERER_HW_TEXTURE_SIZ_32B))
         {
             texels /= 2u;
         }
@@ -1896,7 +1928,9 @@ static s32 ndsRendererHardwareBindTexture(
 
     texels = width * height;
     bytes = ndsRendererHardwareTextureSourceBytes(format, size, texels);
-    loaded_bytes = stats->texture_load_texels * sizeof(u16);
+    loaded_bytes = (size == NDS_RENDERER_HW_TEXTURE_SIZ_32B) ?
+        stats->texture_load_texels * sizeof(u32) :
+        stats->texture_load_texels * sizeof(u16);
     if ((bytes == 0u) || (bytes > loaded_bytes))
     {
         stats->hardware_texture_reject_count++;

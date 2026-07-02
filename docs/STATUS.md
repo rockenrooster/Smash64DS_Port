@@ -88,11 +88,12 @@ uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
 alpha-memory, texture-alpha upload, and texture-filter coordinate-bias rules
 for that gate. Material color selection now follows sm64-nds/BattleShip output
 slot semantics: environment/primitive colors are promoted only when the combine
-output `c`/`d` slots use them. The
-hardware upload converter also accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16
-texels, matching the source texture formats used by fighter collision overlays,
-particles, and several stage/fighter material records, and accepts
-`G_IM_FMT_I` I4/I8/I16 texels for stage/effect intensity textures.
+output `c`/`d` slots use them. The hardware upload converter also accepts
+BattleShip `G_IM_FMT_IA` IA4/IA8/IA16 texels, matching the source texture
+formats used by fighter collision overlays, particles, and several
+stage/fighter material records, accepts `G_IM_FMT_I` I4/I8/I16 texels for
+stage/effect intensity textures, and converts `G_IM_FMT_RGBA` RGBA32 material
+records used by movie/common assets.
 Renderer scans now seed BattleShip reset geometry
 (`G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH`) and reset texture
 filter `G_TF_BILERP`, so DObj traversals entered below

@@ -16057,3 +16057,17 @@ Still deferred:
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, then passed
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-02 - Added HW RGBA32 Texture Conversion
+
+- Extended the opt-in hardware texture upload path to accept BattleShip
+  `G_IM_FMT_RGBA` / `G_IM_SIZ_32b` material records, using the same RGBA32
+  byte order as the project-owned sprite preview converter and converting to
+  DS RGBA5551 scratch texels before `glTexImage2D`.
+- Added fixture guards for the RGBA32 size constant, conversion helper, and
+  32-bit source-byte sizing.
+- Reverified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`, and
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`.

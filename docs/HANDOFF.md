@@ -73,11 +73,12 @@ uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
 alpha-memory, texture-alpha upload, and texture-filter coordinate-bias rules.
 Material color selection now follows sm64-nds/BattleShip output slot semantics:
 environment/primitive colors are promoted only when the combine output `c`/`d`
-slots use them. The hardware upload
-converter now accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16 texels for
-alpha-bearing source textures used by collision overlays, particles, and
-material records, and `G_IM_FMT_I` I4/I8/I16 texels for stage/effect
-intensity textures. Renderer scans now seed BattleShip reset geometry
+slots use them. The hardware upload converter now accepts BattleShip
+`G_IM_FMT_IA` IA4/IA8/IA16 texels for alpha-bearing source textures used by
+collision overlays, particles, and material records, `G_IM_FMT_I` I4/I8/I16
+texels for stage/effect intensity textures, and `G_IM_FMT_RGBA` RGBA32
+material records used by movie/common assets. Renderer scans now seed
+BattleShip reset geometry
 (`G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH`) and `G_TF_BILERP`
 texture-filter state before per-DL commands, matching
 `sSYRdpResetDisplayList` for DObj traversals that start below the global reset

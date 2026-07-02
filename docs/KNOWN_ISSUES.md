@@ -69,7 +69,8 @@
   source-backed seed path, cached fighter-parts `Mtx44f` seeds use fixed-W
   conversion semantics matching `syMatrixF2LFixedW`, and selected DObj parent
   chains compose root to child. The hardware texture upload path now handles
-  `LOADTLUT` plus CI4/CI8 palette conversion; the opt-in hardware path applies
+  `LOADTLUT`, CI4/CI8 palette conversion, IA4/IA8/IA16, I4/I8/I16, and
+  RGBA32 conversion for source material records; the opt-in hardware path applies
   recorded primitive/environment material color and alpha from the current
   combine state, maps recorded F3DEX2 front/back cull geometry mode to DS
   polygon cull bits, applies the sm64-nds decal-combine rule to DS
