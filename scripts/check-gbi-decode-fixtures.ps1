@@ -344,6 +344,7 @@ Assert-True ($renderer.Contains('ndsRendererHardwareConvertI(')) 'Renderer I tex
 Assert-True ($renderer.Contains('intensity4 * 0x11u')) 'Renderer I4 texture expansion is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareConvertIA')) 'Renderer IA texture conversion helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordLoadTlut')) 'Renderer TLUT state tracking is missing.'
+Assert-True ($renderer.Contains('glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA')) 'Renderer hardware upload does not preserve converted texture alpha.'
 Assert-True ($renderer.Contains('texture_tlut_image')) 'Renderer CI texture palette pointer tracking is missing.'
 Assert-True ($renderer.Contains('texture_render_tile_size')) 'Renderer render-tile pixel size tracking is missing.'
 Assert-True ($renderer.Contains('hardware_texture_upload_count')) 'Renderer hardware texture upload stats are missing.'

@@ -1963,7 +1963,7 @@ static s32 ndsRendererHardwareBindTexture(
     }
 
     glBindTexture(GL_TEXTURE_2D, sNdsRendererHardwareTextureName);
-    if (glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size_x, size_y, 0,
+    if (glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size_x, size_y, 0,
                      params, sNdsRendererHardwareTextureScratch) == 0)
     {
         stats->hardware_texture_reject_count++;

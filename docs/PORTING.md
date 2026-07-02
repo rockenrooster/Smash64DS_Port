@@ -15986,3 +15986,17 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
   combiner/depth policy, broader texture-state coverage, and renderer cutover
   stay deferred.
+
+## 2026-07-02 - Preserved HW Texture Alpha
+
+- Switched the opt-in DS hardware texture upload from `GL_RGB` to `GL_RGBA`,
+  matching the converted RGBA5551 scratch texels so transparent RGBA/CI/IA
+  samples keep their alpha bit instead of being forced opaque by libnds.
+- Added a fixture guard for the alpha-preserving upload type and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, then passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
+  combiner/depth policy, broader texture-state coverage, and renderer cutover
+  stay deferred.

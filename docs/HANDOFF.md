@@ -70,7 +70,8 @@ recorded
 primitive/environment material color, including black color values, and alpha
 from the current combine state, maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits, and
 uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
-alpha-memory, and texture-filter coordinate-bias rules. The hardware upload
+alpha-memory, texture-alpha upload, and texture-filter coordinate-bias rules.
+The hardware upload
 converter now accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16 texels for
 alpha-bearing source textures used by collision overlays, particles, and
 material records, and `G_IM_FMT_I` I4/I8/I16 texels for stage/effect
