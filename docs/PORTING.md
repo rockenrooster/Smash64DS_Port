@@ -16031,3 +16031,17 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
   combiner/material behavior, broader texture/no-z source-scene coverage, and
   renderer cutover stay deferred.
+
+## 2026-07-02 - Added HW Decal Depth Bias
+
+- Routed z-buffered `ZMODE_DEC` hardware triangles through the projected
+  clip-vertex lane with the sm64-nds/BattleShip `3 << 4` depth bias, while
+  keeping ordinary z-buffered triangles on raw GX vertex submission.
+- Added renderer stats and fixture guards for the decal-depth hardware path.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, then passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
+  combiner/material behavior, broader texture/no-z source-scene coverage, and
+  renderer cutover stay deferred.

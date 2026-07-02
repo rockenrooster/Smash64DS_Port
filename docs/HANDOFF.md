@@ -82,9 +82,11 @@ texture-filter state before per-DL commands, matching
 list. Hardware submission now branches on recorded source `G_ZBUFFER` state:
 z-buffered triangles keep raw GX vertex submission, while no-z triangles use
 the sm64-nds-style projected clip-vertex/synthetic-Z lane fed by the CPU 20.12
-oracle; that is the latest gate. The next renderer pass should finish
-remaining combiner/material behavior, broader texture/no-z source-scene
-coverage, and renderer cutover. Default builds still use the software preview.
+oracle. Z-buffered `ZMODE_DEC` polygons now use that projected clip-vertex lane
+with the sm64-nds/BattleShip `3 << 4` depth bias; that is the latest gate. The
+next renderer pass should finish remaining combiner/material behavior, broader
+texture/no-z source-scene coverage, and renderer cutover. Default builds still
+use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
 TU via `src/import/battleship_gmcollision.c`, replacing the local

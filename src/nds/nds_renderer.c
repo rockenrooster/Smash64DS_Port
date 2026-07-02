@@ -80,6 +80,7 @@
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_START (0x1000 * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
+#define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
 #define NDS_RENDERER_CCMUX_TEXEL0 1u
 #define NDS_RENDERER_CCMUX_PRIMITIVE 3u
 #define NDS_RENDERER_CCMUX_SHADE 4u
@@ -93,6 +94,7 @@
 #define NDS_RENDERER_TF_BILERP (2u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TEXTFILT_MASK (3u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TEXCOORD_FILTER_OFFSET (1 << 4)
+#define NDS_RENDERER_ZMODE_DEC 0x00000c00u
 #define NDS_RENDERER_G_BL_A_MEM 1u
 #define NDS_RENDERER_BLEND_ALPHA_MEM_MASK (NDS_RENDERER_G_BL_A_MEM << 18)
 #define NDS_RENDERER_GEOM_ZBUFFER 0x00000001u
@@ -2113,6 +2115,7 @@ static void ndsRendererHardwareSubmitVertex(
     s32 texture_offset,
     u32 scale_world,
     s32 zbuffered,
+    s32 decal_depth,
     s32 projected_z)
 {
     if (vtx == NULL)
@@ -2129,11 +2132,19 @@ static void ndsRendererHardwareSubmitVertex(
                        ndsRendererHardwareTexCoord(vtx->t, scale_t,
                                                    texture_offset));
     }
-    if (zbuffered != FALSE)
+    if ((zbuffered != FALSE) && (decal_depth == FALSE))
     {
         glVertex3v16(ndsRendererHardwareVertexCoord(vtx->x, scale_world),
                      ndsRendererHardwareVertexCoord(vtx->y, scale_world),
                      ndsRendererHardwareVertexCoord(vtx->z, scale_world));
+    }
+    else if (decal_depth != FALSE)
+    {
+        if (clip_vtx != NULL)
+        {
+            ndsRendererHardwareClipVertex(
+                clip_vtx, clip_vtx->z - NDS_RENDERER_HW_DECAL_DEPTH_BIAS);
+        }
     }
     else
     {
@@ -2187,6 +2198,7 @@ static void ndsRendererSubmitHardwareTriangle(
     s32 use_vertex_color;
     s32 texture_offset;
     s32 zbuffered;
+    s32 decal_depth;
     s32 transformed_ready;
     s32 projected_z = 0;
 
@@ -2215,7 +2227,11 @@ static void ndsRendererSubmitHardwareTriangle(
     }
     zbuffered = ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) != 0u) ?
         TRUE : FALSE;
-    if ((zbuffered == FALSE) && (transformed_ready == FALSE))
+    decal_depth = ((zbuffered != FALSE) &&
+                   ((stats->othermode_l & NDS_RENDERER_ZMODE_DEC) ==
+                    NDS_RENDERER_ZMODE_DEC)) ? TRUE : FALSE;
+    if (((zbuffered == FALSE) || (decal_depth != FALSE)) &&
+        (transformed_ready == FALSE))
     {
         stats->hardware_oracle_reject_count++;
         return;
@@ -2236,7 +2252,7 @@ static void ndsRendererSubmitHardwareTriangle(
     }
     scale_world = TRUE;
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
-    if (zbuffered != FALSE)
+    if ((zbuffered != FALSE) && (decal_depth == FALSE))
     {
         ndsRendererLoadHardwareMatrices(state, scale_world);
     }
@@ -2258,17 +2274,17 @@ static void ndsRendererSubmitHardwareTriangle(
         v0, &state->vertices[i0], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
         stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        projected_z);
+        decal_depth, projected_z);
     ndsRendererHardwareSubmitVertex(
         v1, &state->vertices[i1], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
         stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        projected_z);
+        decal_depth, projected_z);
     ndsRendererHardwareSubmitVertex(
         v2, &state->vertices[i2], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
         stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        projected_z);
+        decal_depth, projected_z);
     glEnd();
 
     sNdsRendererHardwareSubmitted = TRUE;
@@ -2276,6 +2292,10 @@ static void ndsRendererSubmitHardwareTriangle(
     if (zbuffered != FALSE)
     {
         stats->hardware_zbuffer_triangle_count++;
+        if (decal_depth != FALSE)
+        {
+            stats->hardware_decal_depth_triangle_count++;
+        }
     }
     else
     {

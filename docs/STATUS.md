@@ -98,9 +98,11 @@ filter `G_TF_BILERP`, so DObj traversals entered below
 override it. Hardware submission now branches on the recorded source
 `G_ZBUFFER` state: z-buffered triangles keep raw GX vertex submission, while
 no-z triangles use the sm64-nds-style projected clip-vertex/synthetic-Z lane
-fed by the CPU 20.12 oracle. Full visual fidelity still needs remaining
-combiner/material behavior, broader texture/no-z source-scene coverage, and
-renderer cutover work. Default builds still use the software preview.
+fed by the CPU 20.12 oracle. Z-buffered `ZMODE_DEC` polygons now use the same
+projected clip-vertex lane with the sm64-nds/BattleShip `3 << 4` depth bias.
+Full visual fidelity still needs remaining combiner/material behavior, broader
+texture/no-z source-scene coverage, and renderer cutover work. Default builds
+still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
