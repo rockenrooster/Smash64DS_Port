@@ -443,6 +443,8 @@ Assert-True ($openingBackend.Contains('ndsRendererAdapterPrepareInitialMatrices'
 $allDLVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($allDLVerifier.Contains('HardwareTriangles')) 'All-DL verifier hardware-triangle switch is missing.'
 Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HWTEX')) 'All-DL verifier hardware texture marker is missing.'
+Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HW')) 'All-DL verifier hardware triangle marker is missing.'
+Assert-True ($allDLVerifier.Contains('gNdsFighterDLAllDrawP0HardwareMatrixSeedCount')) 'All-DL verifier hardware matrix-seed diagnostics are missing.'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
 Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'
