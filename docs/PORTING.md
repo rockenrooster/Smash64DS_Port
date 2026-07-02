@@ -15911,3 +15911,15 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Remaining
   combiner behavior, depth policy, broader texture coverage, and renderer
   cutover stay deferred.
+
+## 2026-07-02 - Added HW IA Texture Decode
+
+- Added opt-in DS hardware texture conversion for BattleShip `G_IM_FMT_IA`
+  IA4/IA8/IA16 texels, keeping RGBA/CI/I upload behavior unchanged.
+- Added fixture guards for IA format support and the IA converter. The source
+  scan covered fighter collision overlays, IF magnify sprites, particles, and
+  stage/fighter material records that use IA textures.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
+  combiner/depth policy, texture-state coverage, and renderer cutover deferred.

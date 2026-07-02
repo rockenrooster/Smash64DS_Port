@@ -64,9 +64,12 @@ state for that opt-in path. The hardware triangle path now applies recorded
 primitive/environment material color, including black color values, and alpha
 from the current combine state, maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits, and
 uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
-alpha-memory, and texture-filter coordinate-bias rules; that is the latest gate.
+alpha-memory, and texture-filter coordinate-bias rules. The hardware upload
+converter now accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16 texels for
+alpha-bearing source textures used by collision overlays, particles, and
+material records; that is the latest gate.
 The next renderer pass should finish remaining combiner behavior, depth
-policy, broader texture-format coverage, and renderer cutover. Default builds
+policy, remaining texture-state coverage, and renderer cutover. Default builds
 still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
@@ -89,8 +92,8 @@ the work reaches a scene-level boundary such as `battle_playable` or
 ## Recommended Next Work
 
 1. Renderer follow-up: finish opt-in hardware combiner/depth/material policy,
-   broaden texture-format/state coverage beyond the first all-DL CI/TLUT upload, and
-   then plan renderer cutover.
+   broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
+   and IA decoder, then plan renderer cutover.
 2. Runtime slice 1 follow-up: split/expand the item, weapon, effect, audio, and
    ground compatibility headers enough for full `ft/ftmain.c`, then replace
    the remaining local `ftMain*` seams and add the continuous-runtime verifier.

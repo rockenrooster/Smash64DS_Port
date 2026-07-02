@@ -71,6 +71,7 @@
     (NDS_RENDERER_HW_TEXTURE_MAX_WIDTH * NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT)
 #define NDS_RENDERER_HW_TEXTURE_FMT_RGBA16 0u
 #define NDS_RENDERER_HW_TEXTURE_FMT_CI 2u
+#define NDS_RENDERER_HW_TEXTURE_FMT_IA 3u
 #define NDS_RENDERER_HW_TEXTURE_FMT_I16 4u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_4B 0u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_8B 1u
@@ -1551,6 +1552,18 @@ static u16 ndsRendererHardwareConvertI16(u16 value)
     return (u16)((1u << 15) | v | (v << 5) | (v << 10));
 }
 
+static u16 ndsRendererHardwareConvertIA(u8 intensity, u8 alpha)
+{
+    u16 v;
+
+    if (alpha == 0u)
+    {
+        return 0u;
+    }
+    v = (u16)(intensity >> 3);
+    return (u16)((1u << 15) | v | (v << 5) | (v << 10));
+}
+
 static u32 ndsRendererHardwareTextureLinePixels(u32 size, u32 line)
 {
     switch (size)
@@ -1584,6 +1597,19 @@ static u32 ndsRendererHardwareTextureSourceBytes(u32 format, u32 size,
     if ((format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16) ||
         (format == NDS_RENDERER_HW_TEXTURE_FMT_I16))
     {
+        return (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B) ?
+            texels * sizeof(u16) : 0u;
+    }
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_IA)
+    {
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            return (texels + 1u) >> 1;
+        }
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)
+        {
+            return texels;
+        }
         return (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B) ?
             texels * sizeof(u16) : 0u;
     }
@@ -1628,6 +1654,35 @@ static u16 ndsRendererHardwareTextureColor(
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16)
     {
         return ndsRendererHardwareConvertRgba16(((const u16 *)texels)[index ^ 1u]);
+    }
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_IA)
+    {
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            u8 packed = texels[index >> 1];
+            u8 value = ((index & 1u) == 0u) ?
+                (u8)(packed >> 4) : (u8)(packed & 0x0fu);
+            u8 intensity = (u8)(((value >> 1) & 0x07u) * 0x24u);
+            u8 alpha = (value & 1u) ? 0xffu : 0u;
+
+            return ndsRendererHardwareConvertIA(intensity, alpha);
+        }
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)
+        {
+            u8 value = texels[index];
+            u8 intensity = (u8)((value >> 4) * 0x11u);
+            u8 alpha = (u8)((value & 0x0fu) * 0x11u);
+
+            return ndsRendererHardwareConvertIA(intensity, alpha);
+        }
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B)
+        {
+            u16 value = ((const u16 *)texels)[index ^ 1u];
+
+            return ndsRendererHardwareConvertIA((u8)(value >> 8),
+                                                (u8)value);
+        }
+        return 0u;
     }
     return ndsRendererHardwareConvertI16(((const u16 *)texels)[index ^ 1u]);
 }
@@ -1699,6 +1754,7 @@ static s32 ndsRendererHardwareBindTexture(
     }
     if ((format != NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
         (format != NDS_RENDERER_HW_TEXTURE_FMT_RGBA16) &&
+        (format != NDS_RENDERER_HW_TEXTURE_FMT_IA) &&
         (format != NDS_RENDERER_HW_TEXTURE_FMT_I16))
     {
         stats->hardware_texture_reject_count++;

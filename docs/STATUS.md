@@ -78,9 +78,12 @@ state for that opt-in path. The hardware triangle path now applies the recorded
 primitive/environment material color, including black color values, and alpha
 from the current combine state, maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits, and
 uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
-alpha-memory, and texture-filter coordinate-bias rules for that gate.
+alpha-memory, and texture-filter coordinate-bias rules for that gate. The
+hardware upload converter also accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16
+texels, matching the source texture formats used by fighter collision overlays,
+particles, and several stage/fighter material records.
 Full visual fidelity still needs remaining combiner behavior, depth
-policy, broader texture-format coverage, and renderer cutover work. Default
+policy, remaining texture-state coverage, and renderer cutover work. Default
 builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
@@ -93,8 +96,8 @@ The next useful work is not another proof bit. It is one of:
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
 - renderer follow-up: finish opt-in hardware combiner/depth/material policy,
-  broaden texture-format/state coverage beyond the first all-DL CI/TLUT upload, and
-  then plan renderer cutover work;
+  broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
+  and IA decoder, then plan renderer cutover work;
 - compatibility-header split needed before full-TU runtime import of
   `ft/ftmain.c`;
 - continuous-runtime verifier for unbounded battle frames.
