@@ -15863,3 +15863,15 @@ Still deferred:
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Remaining combiner
   behavior, depth/material policy, broader texture coverage, and renderer
   cutover stay deferred.
+
+## 2026-07-02 - Applied HW Blend Alpha Memory
+
+- Mirrored the sm64-nds blend-alpha rule in the opt-in DS hardware submitter:
+  when current `othermode_l` selects `G_BL_A_MEM`, `POLY_ALPHA` is forced to
+  `31` instead of using vertex/material alpha.
+- Added a fixture guard for the alpha-memory mask and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Remaining
+  combiner behavior, depth policy, broader texture coverage, and renderer
+  cutover stay deferred.

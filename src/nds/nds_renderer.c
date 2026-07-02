@@ -87,6 +87,8 @@
 #define NDS_RENDERER_TF_POINT (0u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TEXTFILT_MASK (3u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TEXCOORD_FILTER_OFFSET (1 << 4)
+#define NDS_RENDERER_G_BL_A_MEM 1u
+#define NDS_RENDERER_BLEND_ALPHA_MEM_MASK (NDS_RENDERER_G_BL_A_MEM << 18)
 #define NDS_RENDERER_GEOM_CULL_FRONT 0x00000200u
 #define NDS_RENDERER_GEOM_CULL_BACK 0x00000400u
 
@@ -1317,6 +1319,11 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     if (vtx != NULL)
     {
         alpha = vtx->a;
+    }
+    if ((stats != NULL) &&
+        ((stats->othermode_l & NDS_RENDERER_BLEND_ALPHA_MEM_MASK) != 0u))
+    {
+        return 31u;
     }
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {

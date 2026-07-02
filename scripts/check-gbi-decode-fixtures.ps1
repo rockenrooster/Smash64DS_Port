@@ -351,6 +351,8 @@ Assert-True (-not $renderer.Contains('if (stats->texture_combine_w0 == 0)')) 'Re
 Assert-True ($renderer.Contains('ndsRendererHardwareUseDecal')) 'Renderer hardware combine decal helper is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_MDSFT_TEXTFILT')) 'Renderer hardware texture-filter othermode constant is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureFilterOffset')) 'Renderer hardware texture-filter coordinate offset helper is missing.'
+Assert-True ($renderer.Contains('NDS_RENDERER_BLEND_ALPHA_MEM_MASK')) 'Renderer hardware blend alpha-memory mask is missing.'
+Assert-True ($renderer.Contains('stats->othermode_l & NDS_RENDERER_BLEND_ALPHA_MEM_MASK')) 'Renderer hardware alpha does not honor current blend alpha-memory state.'
 Assert-True ($renderer.Contains('NDS_RENDERER_GEOM_CULL_BACK')) 'Renderer hardware cull-back geometry flag is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwarePolyFmt')) 'Renderer hardware poly-format helper is missing.'
 Assert-True ($renderer.Contains('stats->env_color = w1')) 'Renderer env-color material state tracking is missing.'
