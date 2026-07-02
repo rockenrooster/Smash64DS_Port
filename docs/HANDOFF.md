@@ -71,7 +71,9 @@ primitive/environment material color, including black color values, and alpha
 from the current combine state, maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits, and
 uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
 alpha-memory, texture-alpha upload, and texture-filter coordinate-bias rules.
-The hardware upload
+Material color selection now follows sm64-nds/BattleShip output slot semantics:
+environment/primitive colors are promoted only when the combine output `c`/`d`
+slots use them. The hardware upload
 converter now accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16 texels for
 alpha-bearing source textures used by collision overlays, particles, and
 material records, and `G_IM_FMT_I` I4/I8/I16 texels for stage/effect
@@ -83,7 +85,8 @@ list. Hardware submission now branches on recorded source `G_ZBUFFER` state:
 z-buffered triangles keep raw GX vertex submission, while no-z triangles use
 the sm64-nds-style projected clip-vertex/synthetic-Z lane fed by the CPU 20.12
 oracle. Z-buffered `ZMODE_DEC` polygons now use that projected clip-vertex lane
-with the sm64-nds/BattleShip `3 << 4` depth bias; that is the latest gate. The
+with the sm64-nds/BattleShip `3 << 4` depth bias. The latest gate narrows
+material colors to combine output slots. The
 next renderer pass should finish remaining combiner/material behavior, broader
 texture/no-z source-scene coverage, and renderer cutover. Default builds still
 use the software preview.

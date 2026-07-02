@@ -16045,3 +16045,15 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
   combiner/material behavior, broader texture/no-z source-scene coverage, and
   renderer cutover stay deferred.
+
+## 2026-07-02 - Narrowed HW Material Output Colors
+
+- Matched sm64-nds/BattleShip combine output semantics for opt-in hardware
+  material color: environment/primitive colors are selected only from output
+  `c`/`d` slots, so blend/decal inputs no longer override shade/texture color.
+- Added a fixture guard for the output-slot material helper.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, then passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.

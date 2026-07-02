@@ -359,6 +359,7 @@ Assert-True ($renderer.Contains('stats->texture_tile_width = 0u;')) 'Renderer ti
 Assert-True ($renderer.Contains('stats->texture_tile_height = 0u;')) 'Renderer tile-size state does not clear stale height.'
 Assert-True ($renderer.Contains('ndsRendererHardwareColorSource')) 'Renderer hardware material color source helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseMaterialColor')) 'Renderer hardware material color presence helper is missing.'
+Assert-True ($renderer.Contains('ndsRendererCombineOutputUsesColor')) 'Renderer hardware material color selection is not limited to combine output slots.'
 Assert-True ($renderer.Contains('use_material_color != FALSE')) 'Renderer hardware material color selection still depends on a nonzero color value.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseVertexColor')) 'Renderer hardware combine shade/white color selection helper is missing.'
 Assert-True ($renderer.Contains('glColor3b(0xffu, 0xffu, 0xffu)')) 'Renderer hardware path does not tint non-shade combine output white.'
