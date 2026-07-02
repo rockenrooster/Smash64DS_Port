@@ -1,5 +1,6 @@
 #include <ft/fighter.h>
 #include <nds/nds_scene_harness.h>
+#include "nds_scene_harness_config.h"
 
 #ifndef NDS_DEV_SCENE_HARNESS
 #define NDS_DEV_SCENE_HARNESS NDS_DEV_SCENE_HARNESS_NORMAL

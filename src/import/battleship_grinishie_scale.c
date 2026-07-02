@@ -15,6 +15,7 @@
 #include <gr/ground.h>
 #include <macros.h>
 #include <nds/nds_renderer.h>
+#include "nds_scene_harness_config.h"
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/objanim.h>
