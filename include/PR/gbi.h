@@ -28,6 +28,24 @@ typedef struct Lights1 {
     s8 direction[3];
 } Lights1;
 
+typedef struct {
+    u8 col[3];
+    u8 pad1;
+    u8 colc[3];
+    u8 pad2;
+    s8 dir[3];
+    u8 pad3;
+} Light_t;
+
+typedef union {
+    Light_t l;
+    long long int force_structure_alignment;
+} Light;
+
+typedef struct {
+    Light l[2];
+} LookAt;
+
 /* Viewport types, matching the N64 PR/gbi.h ABI exactly. The imported
  * rdp/video/object code references Vp (the aligned union used by CObj.viewport
  * and gSYRdpViewport) and accesses its inner Vp_t.vscale/vtrans arrays. */

@@ -425,6 +425,8 @@ CFILES := main.c nds_platform.c nds_reloc_assets.c nds_renderer.c port_probe.c n
 	battleship_sys_controller.c battleship_sys_maindevice.c \
 	battleship_sys_video.c battleship_sys_malloc.c \
 	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c \
+	battleship_sys_sintable.c battleship_sys_matrix.c \
+	battleship_libultra_gu_normalize.c \
 	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c utils.c vector.c \
 	battleship_scsubsyscontroller.c \
 	battleship_sys_taskman.c battleship_sys_objman.c \

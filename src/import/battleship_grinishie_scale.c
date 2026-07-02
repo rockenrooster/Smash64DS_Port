@@ -317,6 +317,8 @@ static sb32 ndsGRInishieScaleScanNativeDL(const Gfx *dl)
     config.max_depth = 2u;
     config.max_commands = 96u;
     config.max_list_commands = 64u;
+    config.initial_projection = NULL;
+    config.initial_modelview = NULL;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
     config.resolve_data = NULL;

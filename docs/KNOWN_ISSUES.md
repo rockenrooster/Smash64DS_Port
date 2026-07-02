@@ -45,6 +45,25 @@
 
 ## Active Stub Boundaries
 
+- Full `gm/gmcollision.c` is now imported through
+  `src/import/battleship_gmcollision.c`, replacing the local
+  `gmCollisionGetFighterPartsWorldPosition`, `func_ovl2_800EDA0C`, and
+  `gmCollisionGetWorldPosition` copies. The full `ft/ftmain.c` import was
+  attempted but is blocked before duplicate seam cleanup by compatibility
+  headers: full BattleShip item/weapon types collide with the port's narrow
+  `it/item.h`, `wp/weapon.h`, and `ef/effect.h` shadows; `ftmain.c` also needs
+  unshadowed `alSoundEffect`, the complete hit FGM enum/table constants,
+  `GRAttackColl` / `GRObstacle` / `GRHazard`, and `GMColAnim` visibility.
+  After that header split, the project-owned `ftMain*` definitions in
+  `src/port/reloc_backend_diagnostic_recorders.c` and adjacent compatibility
+  shims still need to be deleted where the original TU replaces them.
+- Renderer stage 3 proves opt-in DS hardware triangles and the first bounded
+  Opening Room RGBA16/I16 texture upload, but it is not a full renderer cutover.
+  The Mario/Fox hardware capture is framed from source-shaped DObj/camera seeds,
+  yet fighter parts still collapse because the BattleShip recalc/billboard DObj
+  matrix family is only partially modeled. CI/TLUT texture formats, combiner
+  fidelity, depth/material state, and stage-inclusive Pupupu hardware draw
+  remain deferred.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

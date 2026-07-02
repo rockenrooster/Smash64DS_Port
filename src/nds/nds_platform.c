@@ -101,10 +101,15 @@ void ndsPlatformInit(void)
 
 #if NDS_RENDERER_HW_TRIANGLES
     videoSetMode(MODE_0_3D);
+    vramSetBankA(VRAM_A_TEXTURE);
+    vramSetBankB(VRAM_B_TEXTURE);
+    vramSetBankE(VRAM_E_TEX_PALETTE);
     glInit();
     glClearColor(2, 3, 6, 31);
     glClearDepth(GL_MAX_DEPTH);
     glEnable(GL_ANTIALIAS);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
     glViewport(0, 0, 255, 191);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();

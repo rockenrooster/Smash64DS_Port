@@ -1,3 +1,653 @@
+#include <sys/matrix.h>
+
+#ifndef NDS_RENDERER_HW_TRIANGLES
+#define NDS_RENDERER_HW_TRIANGLES 0
+#endif
+
+#define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
+#define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
+#define NDS_RENDERER_ADAPTER_HW_WORLD_SCALE 256.0F
+
+static void ndsRendererAdapterMtxIdentity20p12(
+    NDSRendererMatrix20p12 *out)
+{
+    u32 i;
+
+    if (out == NULL)
+    {
+        return;
+    }
+
+    memset(out, 0, sizeof(*out));
+    for (i = 0; i < 4u; i++)
+    {
+        out->m[i][i] = 1 << NDS_RENDERER_ADAPTER_MTX_FRAC_BITS;
+    }
+}
+
+static void ndsRendererAdapterMulInto(NDSRendererMatrix20p12 *target,
+                                      const NDSRendererMatrix20p12 *incoming,
+                                      u32 *valid)
+{
+    if ((target == NULL) || (incoming == NULL) || (valid == NULL))
+    {
+        return;
+    }
+
+    if (*valid != 0u)
+    {
+        ndsRendererMtxMul20p12(target, incoming, target);
+    }
+    else
+    {
+        *target = *incoming;
+        *valid = TRUE;
+    }
+}
+
+static void ndsRendererAdapterMtxFromN64(
+    const Mtx *src, NDSRendererMatrix20p12 *dst)
+{
+    if ((src == NULL) || (dst == NULL))
+    {
+        return;
+    }
+    ndsRendererMtxLoadN64ToDS20p12(src, dst);
+}
+
+static f32 ndsRendererAdapterProjectionDepth(f32 value)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    return value / NDS_RENDERER_ADAPTER_HW_WORLD_SCALE;
+#else
+    return value;
+#endif
+}
+
+static void ndsRendererAdapterBuildDObjFallbackMtx(DObj *dobj, Mtx *mtx)
+{
+    if ((dobj == NULL) || (mtx == NULL))
+    {
+        return;
+    }
+
+    syMatrixTraRotRpyRSca(mtx,
+                          dobj->translate.vec.f.x,
+                          dobj->translate.vec.f.y,
+                          dobj->translate.vec.f.z,
+                          dobj->rotate.vec.f.x,
+                          dobj->rotate.vec.f.y,
+                          dobj->rotate.vec.f.z,
+                          dobj->scale.vec.f.x,
+                          dobj->scale.vec.f.y,
+                          dobj->scale.vec.f.z);
+}
+
+static void ndsRendererAdapterGetDObjVectorTracks(
+    DObj *dobj,
+    GCTranslate **translate,
+    GCRotate **rotate,
+    GCScale **scale)
+{
+    uintptr_t cursor;
+    u32 i;
+
+    if ((dobj == NULL) || (translate == NULL) || (rotate == NULL) ||
+        (scale == NULL))
+    {
+        return;
+    }
+
+    *translate = &dobj->translate;
+    *rotate = &dobj->rotate;
+    *scale = &dobj->scale;
+
+    if (dobj->vec == NULL)
+    {
+        return;
+    }
+
+    cursor = (uintptr_t)dobj->vec->data;
+    for (i = 0u; i < 3u; i++)
+    {
+        switch (dobj->vec->kinds[i])
+        {
+        case nGCDrawVectorKindTranslate:
+            *translate = (GCTranslate *)cursor;
+            cursor += sizeof(GCTranslate);
+            break;
+        case nGCDrawVectorKindRotate:
+            *rotate = (GCRotate *)cursor;
+            cursor += sizeof(GCRotate);
+            break;
+        case nGCDrawVectorKindScale:
+            *scale = (GCScale *)cursor;
+            cursor += sizeof(GCScale);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
+    DObj *dobj, XObj *xobj, NDSRendererMatrix20p12 *out)
+{
+    Mtx mtx;
+    GCTranslate *translate;
+    GCRotate *rotate;
+    GCScale *scale;
+
+    if ((dobj == NULL) || (xobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+
+    ndsRendererAdapterGetDObjVectorTracks(dobj, &translate, &rotate, &scale);
+
+    switch (xobj->kind)
+    {
+    case 1:
+        mtx = xobj->mtx;
+        break;
+    case 2:
+        return FALSE;
+    case nGCMatrixKindTra:
+        syMatrixTra(&mtx, dobj->translate.vec.f.x,
+                    dobj->translate.vec.f.y,
+                    dobj->translate.vec.f.z);
+        break;
+    case nGCMatrixKindRotD:
+        syMatrixRotD(&mtx, dobj->rotate.a, dobj->rotate.vec.f.x,
+                     dobj->rotate.vec.f.y, dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindTraRotD:
+        syMatrixTraRotD(&mtx, dobj->translate.vec.f.x,
+                        dobj->translate.vec.f.y,
+                        dobj->translate.vec.f.z,
+                        dobj->rotate.a,
+                        dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindRotRpyD:
+        syMatrixRotRpyD(&mtx, dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindTraRotRpyD:
+        syMatrixTraRotRpyD(&mtx, dobj->translate.vec.f.x,
+                           dobj->translate.vec.f.y,
+                           dobj->translate.vec.f.z,
+                           dobj->rotate.vec.f.x,
+                           dobj->rotate.vec.f.y,
+                           dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindRotR:
+        syMatrixRotR(&mtx, dobj->rotate.a, dobj->rotate.vec.f.x,
+                     dobj->rotate.vec.f.y, dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindTraRotR:
+        syMatrixTraRotR(&mtx, dobj->translate.vec.f.x,
+                        dobj->translate.vec.f.y,
+                        dobj->translate.vec.f.z,
+                        dobj->rotate.a,
+                        dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindTraRotRSca:
+        syMatrixTraRotRSca(&mtx, dobj->translate.vec.f.x,
+                           dobj->translate.vec.f.y,
+                           dobj->translate.vec.f.z,
+                           dobj->rotate.a,
+                           dobj->rotate.vec.f.x,
+                           dobj->rotate.vec.f.y,
+                           dobj->rotate.vec.f.z,
+                           dobj->scale.vec.f.x,
+                           dobj->scale.vec.f.y,
+                           dobj->scale.vec.f.z);
+        break;
+    case nGCMatrixKindRotRpyR:
+        syMatrixRotRpyR(&mtx, dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindTraRotRpyR:
+        syMatrixTraRotRpyR(&mtx, dobj->translate.vec.f.x,
+                           dobj->translate.vec.f.y,
+                           dobj->translate.vec.f.z,
+                           dobj->rotate.vec.f.x,
+                           dobj->rotate.vec.f.y,
+                           dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindTraRotRpyRSca:
+        syMatrixTraRotRpyRSca(&mtx, dobj->translate.vec.f.x,
+                              dobj->translate.vec.f.y,
+                              dobj->translate.vec.f.z,
+                              dobj->rotate.vec.f.x,
+                              dobj->rotate.vec.f.y,
+                              dobj->rotate.vec.f.z,
+                              dobj->scale.vec.f.x,
+                              dobj->scale.vec.f.y,
+                              dobj->scale.vec.f.z);
+        break;
+    case nGCMatrixKindRotPyrR:
+        syMatrixRotPyrR(&mtx, dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindTraRotPyrR:
+        syMatrixTraRotPyrR(&mtx, dobj->translate.vec.f.x,
+                           dobj->translate.vec.f.y,
+                           dobj->translate.vec.f.z,
+                           dobj->rotate.vec.f.x,
+                           dobj->rotate.vec.f.y,
+                           dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindTraRotPyrRSca:
+        syMatrixTraRotPyrRSca(&mtx, dobj->translate.vec.f.x,
+                              dobj->translate.vec.f.y,
+                              dobj->translate.vec.f.z,
+                              dobj->rotate.vec.f.x,
+                              dobj->rotate.vec.f.y,
+                              dobj->rotate.vec.f.z,
+                              dobj->scale.vec.f.x,
+                              dobj->scale.vec.f.y,
+                              dobj->scale.vec.f.z);
+        break;
+    case nGCMatrixKindSca:
+        syMatrixSca(&mtx, dobj->scale.vec.f.x,
+                    dobj->scale.vec.f.y,
+                    dobj->scale.vec.f.z);
+        break;
+    case nGCMatrixKindVecTra:
+        syMatrixTra(&mtx, translate->vec.f.x,
+                    translate->vec.f.y,
+                    translate->vec.f.z);
+        break;
+    case nGCMatrixKindVecRotR:
+        syMatrixRotR(&mtx, rotate->a,
+                     rotate->vec.f.x,
+                     rotate->vec.f.y,
+                     rotate->vec.f.z);
+        break;
+    case nGCMatrixKindVecRotRpyR:
+        syMatrixRotRpyR(&mtx,
+                        rotate->vec.f.x,
+                        rotate->vec.f.y,
+                        rotate->vec.f.z);
+        break;
+    case nGCMatrixKindVecSca:
+        syMatrixSca(&mtx, scale->vec.f.x,
+                    scale->vec.f.y,
+                    scale->vec.f.z);
+        break;
+    case nGCMatrixKindVecTraRotR:
+        syMatrixTraRotR(&mtx,
+                        translate->vec.f.x,
+                        translate->vec.f.y,
+                        translate->vec.f.z,
+                        rotate->a,
+                        rotate->vec.f.x,
+                        rotate->vec.f.y,
+                        rotate->vec.f.z);
+        break;
+    case nGCMatrixKindVecTraRotRSca:
+        syMatrixTraRotRSca(&mtx,
+                           translate->vec.f.x,
+                           translate->vec.f.y,
+                           translate->vec.f.z,
+                           rotate->a,
+                           rotate->vec.f.x,
+                           rotate->vec.f.y,
+                           rotate->vec.f.z,
+                           scale->vec.f.x,
+                           scale->vec.f.y,
+                           scale->vec.f.z);
+        break;
+    case nGCMatrixKindVecTraRotRpyR:
+        syMatrixTraRotRpyR(&mtx,
+                           translate->vec.f.x,
+                           translate->vec.f.y,
+                           translate->vec.f.z,
+                           rotate->vec.f.x,
+                           rotate->vec.f.y,
+                           rotate->vec.f.z);
+        break;
+    case nGCMatrixKindVecTraRotRpyRSca:
+        syMatrixTraRotRpyRSca(&mtx,
+                              translate->vec.f.x,
+                              translate->vec.f.y,
+                              translate->vec.f.z,
+                              rotate->vec.f.x,
+                              rotate->vec.f.y,
+                              rotate->vec.f.z,
+                              scale->vec.f.x,
+                              scale->vec.f.y,
+                              scale->vec.f.z);
+        break;
+    default:
+        ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+        break;
+    }
+
+    ndsRendererAdapterMtxFromN64(&mtx, out);
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
+    DObj *dobj, NDSRendererMatrix20p12 *out)
+{
+    NDSRendererMatrix20p12 incoming;
+    u32 valid = FALSE;
+    u32 i;
+
+    if ((dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+
+    for (i = 0u; i < dobj->xobjs_num; i++)
+    {
+        if ((dobj->xobjs[i] != NULL) &&
+            (ndsRendererAdapterBuildDObjXObjMatrix(
+                 dobj, dobj->xobjs[i], &incoming) != FALSE))
+        {
+            ndsRendererAdapterMulInto(out, &incoming, &valid);
+        }
+    }
+
+    if (valid == FALSE)
+    {
+        Mtx mtx;
+
+        ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+        ndsRendererAdapterMtxFromN64(&mtx, out);
+    }
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
+    DObj *dobj, NDSRendererMatrix20p12 *out)
+{
+    DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
+    DObj *cursor = dobj;
+    NDSRendererMatrix20p12 local;
+    u32 depth = 0u;
+    u32 i;
+
+    if ((dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+
+    while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+           (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
+    {
+        chain[depth++] = cursor;
+        cursor = cursor->parent;
+    }
+    if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
+    {
+        return FALSE;
+    }
+
+    ndsRendererAdapterMtxIdentity20p12(out);
+    for (i = depth; i != 0u; i--)
+    {
+        if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u],
+                                                   &local) != FALSE)
+        {
+            ndsRendererMtxMul20p12(out, &local, out);
+        }
+    }
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterBuildCameraMatrices(
+    CObj *cobj,
+    NDSRendererMatrix20p12 *projection,
+    u32 *projection_valid,
+    NDSRendererMatrix20p12 *modelview,
+    u32 *modelview_valid)
+{
+    NDSRendererMatrix20p12 incoming;
+    XObj *xobj;
+    Mtx mtx;
+    u32 i;
+
+    if ((projection == NULL) || (projection_valid == NULL) ||
+        (modelview == NULL) || (modelview_valid == NULL))
+    {
+        return FALSE;
+    }
+
+    *projection_valid = FALSE;
+    *modelview_valid = FALSE;
+
+    if (cobj == NULL)
+    {
+        return FALSE;
+    }
+    if (cobj->xobjs_num <= 0)
+    {
+        return FALSE;
+    }
+
+    for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+    {
+        xobj = cobj->xobjs[i];
+        if (xobj == NULL)
+        {
+            continue;
+        }
+
+        switch (xobj->kind)
+        {
+        case nGCMatrixKindPerspFastF:
+            syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
+                              cobj->projection.persp.fovy,
+                              cobj->projection.persp.aspect,
+                              ndsRendererAdapterProjectionDepth(
+                                  cobj->projection.persp.near),
+                              ndsRendererAdapterProjectionDepth(
+                                  cobj->projection.persp.far),
+                              cobj->projection.persp.scale);
+            ndsRendererAdapterMtxFromN64(&mtx, projection);
+            *projection_valid = TRUE;
+            break;
+        case nGCMatrixKindPerspF:
+            syMatrixPersp(&mtx, &cobj->projection.persp.norm,
+                          cobj->projection.persp.fovy,
+                          cobj->projection.persp.aspect,
+                          ndsRendererAdapterProjectionDepth(
+                              cobj->projection.persp.near),
+                          ndsRendererAdapterProjectionDepth(
+                              cobj->projection.persp.far),
+                          cobj->projection.persp.scale);
+            ndsRendererAdapterMtxFromN64(&mtx, projection);
+            *projection_valid = TRUE;
+            break;
+        case nGCMatrixKindOrtho:
+            syMatrixOrtho(&mtx,
+                          cobj->projection.ortho.l,
+                          cobj->projection.ortho.r,
+                          cobj->projection.ortho.b,
+                          cobj->projection.ortho.t,
+                          ndsRendererAdapterProjectionDepth(
+                              cobj->projection.ortho.n),
+                          ndsRendererAdapterProjectionDepth(
+                              cobj->projection.ortho.f),
+                          cobj->projection.ortho.scale);
+            ndsRendererAdapterMtxFromN64(&mtx, projection);
+            *projection_valid = TRUE;
+            break;
+        case 6:
+        case 7:
+            syMatrixLookAt(&mtx, cobj->vec.eye.x, cobj->vec.eye.y,
+                           cobj->vec.eye.z, cobj->vec.at.x,
+                           cobj->vec.at.y, cobj->vec.at.z,
+                           cobj->vec.up.x, cobj->vec.up.y,
+                           cobj->vec.up.z);
+            ndsRendererAdapterMtxFromN64(&mtx, &incoming);
+            if (xobj->kind == 6)
+            {
+                ndsRendererAdapterMulInto(projection, &incoming,
+                                          projection_valid);
+            }
+            else
+            {
+                *modelview = incoming;
+                *modelview_valid = TRUE;
+            }
+            break;
+        case 8:
+        case 9:
+            syMatrixModLookAt(&mtx, cobj->vec.eye.x, cobj->vec.eye.y,
+                              cobj->vec.eye.z, cobj->vec.at.x,
+                              cobj->vec.at.y, cobj->vec.at.z,
+                              cobj->vec.up.x, 0.0F, 1.0F, 0.0F);
+            ndsRendererAdapterMtxFromN64(&mtx, &incoming);
+            if (xobj->kind == 8)
+            {
+                ndsRendererAdapterMulInto(projection, &incoming,
+                                          projection_valid);
+            }
+            else
+            {
+                *modelview = incoming;
+                *modelview_valid = TRUE;
+            }
+            break;
+        case 10:
+        case 11:
+            syMatrixModLookAt(&mtx, cobj->vec.eye.x, cobj->vec.eye.y,
+                              cobj->vec.eye.z, cobj->vec.at.x,
+                              cobj->vec.at.y, cobj->vec.at.z,
+                              cobj->vec.up.x, 0.0F, 0.0F, 1.0F);
+            ndsRendererAdapterMtxFromN64(&mtx, &incoming);
+            if (xobj->kind == 10)
+            {
+                ndsRendererAdapterMulInto(projection, &incoming,
+                                          projection_valid);
+            }
+            else
+            {
+                *modelview = incoming;
+                *modelview_valid = TRUE;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return ((*projection_valid != 0u) || (*modelview_valid != 0u)) ?
+        TRUE : FALSE;
+}
+
+#if NDS_RENDERER_HW_TRIANGLES
+static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
+    NDSRendererMatrix20p12 *projection,
+    u32 *projection_valid,
+    NDSRendererMatrix20p12 *modelview,
+    u32 *modelview_valid)
+{
+    u16 norm = 0u;
+    Mtx mtx;
+
+    if ((projection == NULL) || (projection_valid == NULL) ||
+        (modelview == NULL) || (modelview_valid == NULL))
+    {
+        return;
+    }
+
+    syMatrixPerspFast(&mtx, &norm, 38.0F, 15.0F / 11.0F,
+                      ndsRendererAdapterProjectionDepth(256.0F),
+                      ndsRendererAdapterProjectionDepth(39936.0F),
+                      1.0F);
+    ndsRendererAdapterMtxFromN64(&mtx, projection);
+    *projection_valid = TRUE;
+
+    syMatrixLookAt(&mtx,
+                   0.0F, 300.0F, 10000.0F,
+                   0.0F, 300.0F, 0.0F,
+                   0.0F, 1.0F, 0.0F);
+    ndsRendererAdapterMtxFromN64(&mtx, modelview);
+    *modelview_valid = TRUE;
+}
+#endif
+
+static void ndsRendererAdapterPrepareInitialMatrices(
+    DObj *dobj,
+    CObj *cobj,
+    NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 **projection_ptr,
+    NDSRendererMatrix20p12 *modelview,
+    const NDSRendererMatrix20p12 **modelview_ptr)
+{
+    NDSRendererMatrix20p12 camera_projection;
+    NDSRendererMatrix20p12 camera_modelview;
+    NDSRendererMatrix20p12 dobj_world;
+    u32 camera_projection_valid = FALSE;
+    u32 camera_modelview_valid = FALSE;
+    u32 dobj_world_valid = FALSE;
+
+    if ((projection_ptr == NULL) || (modelview_ptr == NULL))
+    {
+        return;
+    }
+    *projection_ptr = NULL;
+    *modelview_ptr = NULL;
+
+    if ((projection == NULL) || (modelview == NULL))
+    {
+        return;
+    }
+
+    ndsRendererAdapterBuildCameraMatrices(cobj, &camera_projection,
+                                          &camera_projection_valid,
+                                          &camera_modelview,
+                                          &camera_modelview_valid);
+#if NDS_RENDERER_HW_TRIANGLES
+    if ((camera_projection_valid == FALSE) &&
+        (camera_modelview_valid == FALSE))
+    {
+        ndsRendererAdapterBuildDefaultBattleCameraMatrices(
+            &camera_projection, &camera_projection_valid,
+            &camera_modelview, &camera_modelview_valid);
+    }
+#endif
+    if (dobj != NULL)
+    {
+        dobj_world_valid =
+            ndsRendererAdapterBuildDObjWorldMatrix(dobj, &dobj_world);
+    }
+
+    if (camera_projection_valid != FALSE)
+    {
+        *projection = camera_projection;
+        *projection_ptr = projection;
+    }
+
+    if ((camera_modelview_valid != FALSE) && (dobj_world_valid != FALSE))
+    {
+        ndsRendererMtxMul20p12(&camera_modelview, &dobj_world, modelview);
+        *modelview_ptr = modelview;
+    }
+    else if (camera_modelview_valid != FALSE)
+    {
+        *modelview = camera_modelview;
+        *modelview_ptr = modelview;
+    }
+    else if (dobj_world_valid != FALSE)
+    {
+        *modelview = dobj_world;
+        *modelview_ptr = modelview;
+    }
+}
+
 static s32 ndsFighterDLScanRangeInTaskmanArena(const void *ptr, size_t bytes)
 {
     const u8 *arena = ndsTaskmanArenaStart();
@@ -283,6 +933,8 @@ static void ndsFighterMarioFoxScanDLForSlot(u32 slot, FTStruct *fp)
     config.max_depth = 8u;
     config.max_commands = 2048u;
     config.max_list_commands = 512u;
+    config.initial_projection = NULL;
+    config.initial_modelview = NULL;
     config.validate_range = ndsFighterDLScanValidateRange;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
     config.resolve_data = ndsFighterDLScanResolveDataPointer;
@@ -824,6 +1476,8 @@ static void ndsFighterMarioFoxExecuteDLForSlot(u32 slot, FTStruct *fp)
     config.max_depth = 8u;
     config.max_commands = 2048u;
     config.max_list_commands = 512u;
+    config.initial_projection = NULL;
+    config.initial_modelview = NULL;
     config.validate_range = ndsFighterDLExecValidateRange;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
     config.resolve_data = ndsFighterDLExecResolveRendererData;
@@ -1786,6 +2440,10 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     NDSRendererConfig config;
     NDSRendererStats stats;
     NDSFighterDLDrawState state;
+    NDSRendererMatrix20p12 initial_projection;
+    NDSRendererMatrix20p12 initial_modelview;
+    const NDSRendererMatrix20p12 *initial_projection_ptr;
+    const NDSRendererMatrix20p12 *initial_modelview_ptr;
     u32 root_x_before;
     u32 root_x_after;
     u32 unused_index;
@@ -1820,10 +2478,21 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     bzero(&state, sizeof(state));
     state.primary_file = loaded;
     state.slot = slot;
+    ndsRendererAdapterPrepareInitialMatrices(selected,
+                                             (gGCCurrentCamera != NULL) ?
+                                                 CObjGetStruct(
+                                                     gGCCurrentCamera) :
+                                                 NULL,
+                                             &initial_projection,
+                                             &initial_projection_ptr,
+                                             &initial_modelview,
+                                             &initial_modelview_ptr);
 
     config.max_depth = 8u;
     config.max_commands = 2048u;
     config.max_list_commands = 512u;
+    config.initial_projection = initial_projection_ptr;
+    config.initial_modelview = initial_modelview_ptr;
     config.validate_range = ndsFighterDLDrawValidateRange;
     config.resolve_branch = ndsFighterDLDrawResolveBranch;
     config.resolve_data = ndsFighterDLDrawResolveRendererData;
@@ -2648,6 +3317,10 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         NDSRelocLoadedFile *loaded =
             ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
         NDSRendererConfig config;
+        NDSRendererMatrix20p12 initial_projection;
+        NDSRendererMatrix20p12 initial_modelview;
+        const NDSRendererMatrix20p12 *initial_projection_ptr;
+        const NDSRendererMatrix20p12 *initial_modelview_ptr;
 
         if ((loaded == NULL) &&
             (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
@@ -2657,9 +3330,20 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
+        ndsRendererAdapterPrepareInitialMatrices(collection.dobjs[i],
+                                                 (gGCCurrentCamera != NULL) ?
+                                                     CObjGetStruct(
+                                                         gGCCurrentCamera) :
+                                                     NULL,
+                                                 &initial_projection,
+                                                 &initial_projection_ptr,
+                                                 &initial_modelview,
+                                                 &initial_modelview_ptr);
         config.max_depth = 8u;
         config.max_commands = 2048u;
         config.max_list_commands = 512u;
+        config.initial_projection = initial_projection_ptr;
+        config.initial_modelview = initial_modelview_ptr;
         config.validate_range = ndsFighterDLMultiDrawValidateRange;
         config.resolve_branch = ndsFighterDLMultiDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;
@@ -3669,6 +4353,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         NDSRelocLoadedFile *loaded =
             ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
         NDSRendererConfig config;
+        NDSRendererMatrix20p12 initial_projection;
+        NDSRendererMatrix20p12 initial_modelview;
+        const NDSRendererMatrix20p12 *initial_projection_ptr;
+        const NDSRendererMatrix20p12 *initial_modelview_ptr;
 
         if ((loaded == NULL) &&
             (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
@@ -3678,9 +4366,20 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
+        ndsRendererAdapterPrepareInitialMatrices(collection.dobjs[i],
+                                                 (gGCCurrentCamera != NULL) ?
+                                                     CObjGetStruct(
+                                                         gGCCurrentCamera) :
+                                                     NULL,
+                                                 &initial_projection,
+                                                 &initial_projection_ptr,
+                                                 &initial_modelview,
+                                                 &initial_modelview_ptr);
         config.max_depth = 8u;
         config.max_commands = 2048u;
         config.max_list_commands = 512u;
+        config.initial_projection = initial_projection_ptr;
+        config.initial_modelview = initial_modelview_ptr;
         config.validate_range = ndsFighterDLAllDrawValidateRange;
         config.resolve_branch = ndsFighterDLAllDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;

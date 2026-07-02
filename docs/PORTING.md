@@ -15634,3 +15634,28 @@ Still deferred:
 - Verified each split slice with `.\scripts\check-architecture.ps1`,
   `.\scripts\check-harness-registry.ps1`, and
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-01 - Imported BattleShip gmcollision Translation Unit
+
+- Added `src/import/battleship_gmcollision.c` and compiled the original
+  `gm/gmcollision.c` whole TU.
+- Removed the project-owned matrix/world-position helper copies that the
+  original TU now supplies.
+- Tested a full `ft/ftmain.c` wrapper, but did not land it: the current narrow
+  item/weapon/effect/audio/ground compatibility headers block the TU before
+  duplicate `ftMain*` seam cleanup can begin.
+
+## 2026-07-02 - Added Renderer Stage 3 Hardware Matrix/Texture Proof
+
+- Imported original BattleShip sine/matrix helpers needed by renderer-side DObj
+  and camera matrix prep, then seeded the shared renderer with source-shaped
+  projection/modelview matrices for the Mario/Fox DL proof and Opening Room
+  material preview.
+- Removed the stage-2 no-matrix fallback. The hardware path now encodes
+  untextured DL vertices into DS `v16` units, keeps the CPU 20.12 traversal path
+  as the oracle, and uploads the first bounded RGBA16/I16 texture slice.
+- Captured current hardware proof images at
+  `artifacts\renderer-stage3-hw-battle.png` and
+  `artifacts\renderer-stage3-hw-opening-texture.png`. The battle capture is
+  framed but still has collapsed fighter parts until the BattleShip
+  recalc/billboard DObj matrix family is fully modeled.

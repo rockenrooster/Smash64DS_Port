@@ -17,6 +17,15 @@
 #define U8_MAX 0xFF
 #define M_PI_F ((f32)M_PI)
 #define M_DTOR_F(x) ((f32)((x) * (f32)M_DTOR))
+#ifndef PI32
+#define PI32 3.1415927F
+#endif
+#ifndef DTOR32
+#define DTOR32 ((float)(3.14159265358979323846 / 180.0))
+#endif
+#ifndef RTOD32
+#define RTOD32 ((float)(180.0 / 3.14159265358979323846))
+#endif
 #define F_CST_DTOR32(x) ((f32)((x) * (M_PI / 180.0)))
 #define F_CLC_DTOR32(x) ((f32)(((x) * M_PI) / 180.0))
 #define F_PCT_TO_DEC(x) ((f32)((x) * 0.01F))
@@ -50,5 +59,19 @@
 #define F32_MAX 3.40282346639e38F
 #define F32_MIN (-F32_MAX)
 #define F32_HALF (F32_MAX / 2)
+
+#ifndef COMBINE_INTEGRAL
+#define COMBINE_INTEGRAL(a, b) (((a) & 0xffff0000) | (((b) >> 16) & 0xffff))
+#endif
+#ifndef COMBINE_FRACTIONAL
+#define COMBINE_FRACTIONAL(a, b) (((a) << 16) | ((b) & 0xffff))
+#endif
+#ifndef SINTABLE_RAD_TO_ID
+#define SINTABLE_RAD_TO_ID(x) \
+    ((s32)((x) * ((f32)ARRAY_COUNT(gSYSinTable) / PI32)))
+#endif
+#ifndef SINTABLE_MASK_ID
+#define SINTABLE_MASK_ID (ARRAY_COUNT(gSYSinTable) - 1)
+#endif
 
 #endif

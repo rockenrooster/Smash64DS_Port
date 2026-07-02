@@ -47,15 +47,27 @@ Full diagnostic marker strings live in `docs/DIAGNOSTIC_REFERENCE.md`, not here.
 
 ## Latest Proof
 
-Renderer stage 2 now has build-flagged DS 3D triangle submission behind
-`NDS_RENDERER_HW_TRIANGLES=1`. The shared traversal keeps the stage-1
-`G_MTX` / `G_VTX` matrix and CPU 20.12 transform oracle, caches raw display-list
-vertices, loads projection/modelview state into GX, and submits `G_TRI1` /
-`G_TRI2` raw coords with `glVertex3v16`. The Mario/Fox all-DL hardware capture
-uses the current no-matrix static DL slice with a temporary scale fallback, so
-the default software preview remains the normal path until original DObj matrix
-prep is imported. Screenshot proof:
-`artifacts\melonds-hwtri.png`.
+Runtime slice 1 landed the full BattleShip `gm/gmcollision.c` translation unit
+through `src/import/battleship_gmcollision.c`. The old project-owned
+`gmCollisionGetFighterPartsWorldPosition`, `func_ovl2_800EDA0C`, and
+`gmCollisionGetWorldPosition` copies were removed, so matrix/world-position
+collision helpers now resolve to the original source. `ft/ftmain.c` was tested
+as a whole-TU import but did not land; it fails before duplicate cleanup on
+full item/weapon/effect/audio/ground header compatibility, tracked in
+`docs/KNOWN_ISSUES.md`.
+
+Renderer stage 3 now seeds the shared renderer from source-shaped DObj and
+camera matrix prep and keeps the hardware path opt-in behind
+`NDS_RENDERER_HW_TRIANGLES=1`. The renderer imports BattleShip matrix/sine-table
+helpers, loads seeded projection/modelview matrices into GX, submits untextured
+raw DL triangles with DS `v16` unit conversion, and uploads the first bounded
+RGBA16/I16 texture slice for the Opening Room material DL. Screenshots:
+`artifacts\renderer-stage3-hw-battle.png` and
+`artifacts\renderer-stage3-hw-opening-texture.png`.
+
+The battle hardware proof is framed, but still collapses fighter DObj parts
+into one cluster because the BattleShip recalc/billboard matrix kinds are not
+fully modeled yet. Default builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -66,9 +78,11 @@ The next useful work is not another proof bit. It is one of:
 
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
-- renderer stage 3: route original DObj matrix/camera prep into the shared
-  renderer path, then add texture/combiner work for cutover;
-- full-TU runtime import slice for `ft/ftmain.c` plus `gm/gmcollision.c`;
+- renderer follow-up: finish BattleShip recalc/billboard DObj matrix kinds,
+  then route stage-inclusive Pupupu hardware draw and broader texture/combiner
+  work toward cutover;
+- compatibility-header split needed before full-TU runtime import of
+  `ft/ftmain.c`;
 - continuous-runtime verifier for unbounded battle frames.
 
 ## Runtime Target

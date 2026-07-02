@@ -39,14 +39,23 @@ physics tick copying fighter root position from the barrel root. Continuous
 TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
-Latest renderer detail: `src/nds/nds_renderer.c` now has build-flagged DS 3D
-triangle submission behind `NDS_RENDERER_HW_TRIANGLES=1`. It keeps the stage-1
-`G_MTX` / `G_VTX` matrix state and CPU 20.12 transform oracle, caches raw
-display-list vertices, loads projection/modelview state into GX, and submits
-`G_TRI1` / `G_TRI2` raw coords with `glVertex3v16`. The Mario/Fox all-DL
-hardware capture uses the current no-matrix static DL slice with a temporary
-scale fallback; default builds still use the software preview. Screenshot:
-`artifacts\melonds-hwtri.png`.
+Latest renderer detail: `src/nds/nds_renderer.c` has opt-in DS 3D hardware
+submission behind `NDS_RENDERER_HW_TRIANGLES=1`, now fed by source-shaped DObj
+and camera matrix seeds from `src/port/reloc_backend_renderer_dl.c`. It keeps
+the CPU 20.12 traversal oracle, loads projection/modelview matrices into GX,
+submits raw DL triangles with DS `v16` unit conversion, and uploads the first
+bounded RGBA16/I16 Opening Room texture. Captures:
+`artifacts\renderer-stage3-hw-battle.png` and
+`artifacts\renderer-stage3-hw-opening-texture.png`. The battle capture is
+framed but fighter parts still collapse because recalc/billboard DObj matrix
+kinds remain incomplete; default builds still use the software preview.
+
+Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
+TU via `src/import/battleship_gmcollision.c`, replacing the local
+matrix/world-position helper copies. A full `ft/ftmain.c` wrapper was tested
+but rejected before landing because the current narrow item/weapon/effect,
+audio, and ground headers cannot expose that TU without a broader
+compatibility-header split.
 
 ## Process Change
 
@@ -60,14 +69,12 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Mechanical split: follow the `src/port/reloc_backend.c` split plan in
-   `docs/ARCHITECTURE.md`. This is a pure move, no behavior change.
-2. Renderer stage 3: route original DObj matrix/camera prep into the shared
-   renderer path, then add texture/combiner work for hardware cutover.
-3. Runtime slice 1: full `ft/ftmain.c` plus `gm/gmcollision.c`, gated by a
-   continuous-runtime verifier on the current Mario/Fox scene.
-
-Do the mechanical split before broad runtime edits unless the user redirects.
+1. Renderer follow-up: implement the remaining BattleShip recalc/billboard
+   DObj matrix kinds, then prove stage-inclusive Pupupu hardware draw.
+2. Runtime slice 1 follow-up: split/expand the item, weapon, effect, audio, and
+   ground compatibility headers enough for full `ft/ftmain.c`, then replace
+   the remaining local `ftMain*` seams and add the continuous-runtime verifier.
+3. Broaden hardware texture/combiner support after the matrix pose is correct.
 
 ## Verification
 

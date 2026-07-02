@@ -57,6 +57,12 @@ typedef struct NDSRendererInputVertex
     s16 x;
     s16 y;
     s16 z;
+    s16 s;
+    s16 t;
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 a;
 } NDSRendererInputVertex;
 
 typedef struct NDSRendererClipVertex20p12
@@ -92,6 +98,8 @@ typedef struct NDSRendererConfig
     u32 max_depth;
     u32 max_commands;
     u32 max_list_commands;
+    const NDSRendererMatrix20p12 *initial_projection;
+    const NDSRendererMatrix20p12 *initial_modelview;
     NDSRendererValidateRange validate_range;
     NDSRendererResolveBranch resolve_branch;
     NDSRendererResolveData resolve_data;
@@ -122,6 +130,14 @@ typedef struct NDSRendererStats
     u32 hardware_triangle_count;
     u32 hardware_oracle_triangle_count;
     u32 hardware_oracle_reject_count;
+    u32 hardware_matrix_seed_count;
+    u32 hardware_texture_bind_count;
+    u32 hardware_texture_upload_count;
+    u32 hardware_texture_ready_count;
+    u32 hardware_texture_reject_count;
+    u32 hardware_texture_format;
+    u32 hardware_texture_width;
+    u32 hardware_texture_height;
     u32 first_transformed_tri_v0;
     u32 first_transformed_tri_v1;
     u32 first_transformed_tri_v2;
@@ -203,6 +219,9 @@ typedef struct NDSRendererStats
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
                                     NDSRendererMatrix20p12 *dst);
+void ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
+                            const NDSRendererMatrix20p12 *rhs,
+                            NDSRendererMatrix20p12 *out);
 void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
                                      const NDSRendererInputVertex *vtx,
                                      NDSRendererClipVertex20p12 *out);

@@ -587,15 +587,15 @@ orientation as `guMtxXFMF`. The shared display-list traversal now handles real
 a composed transform matrix, modelview `G_POPMTX` stack restore, optional
 scene-owned data resolution for segmented payloads, transformed vertex
 counters, and transformed-ready triangle counters.
-Renderer stage 2 adds a build-flagged DS 3D path:
-`NDS_RENDERER_HW_TRIANGLES=1` initializes the top screen as `MODE_0_3D`, loads
-the traversal's projection/modelview state into GX, and submits untextured
-`G_TRI1` / `G_TRI2` raw vertex coordinates with `glVertex3v16`. Default builds
-still use the software preview. The current Mario/Fox first/multi/all-DL static
-content has no inline `G_MTX`, so the hardware path keeps a temporary
-no-matrix scale fallback only to make that proven slice visible until original
-DObj matrix/camera prep is routed into the renderer. Texture, combiner,
-material, depth, and full cutover remain later stages.
+Renderer stage 3 keeps the DS 3D path build-flagged behind
+`NDS_RENDERER_HW_TRIANGLES=1`. Default builds still use the software preview.
+The hardware path now imports the original BattleShip sine/matrix helpers,
+seeds traversal with source-shaped DObj and camera projection/modelview
+matrices, encodes untextured DL vertices into DS `v16` units for GX, and uploads
+the first bounded RGBA16/I16 Opening Room texture slice. The stage-2 temporary
+no-matrix scale fallback is gone. Remaining renderer work is the BattleShip
+recalc/billboard DObj matrix family, stage-inclusive Pupupu hardware draw,
+palette/CI texture formats, combiner/material/depth fidelity, and full cutover.
 
 ## Scene And Startup
 

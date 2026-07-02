@@ -2233,6 +2233,8 @@ static void ndsOpeningRoomProbeMaterialDLExpandedShape(void)
     config.max_depth = NDS_MATERIAL_DL_EXPAND_MAX_DEPTH;
     config.max_commands = NDS_MATERIAL_DL_EXPAND_MAX_COMMANDS;
     config.max_list_commands = NDS_MATERIAL_DL_EXPAND_MAX_LIST_COMMANDS;
+    config.initial_projection = NULL;
+    config.initial_modelview = NULL;
     config.validate_range = ndsOpeningRoomRendererValidateRange;
     config.resolve_branch = ndsOpeningRoomRendererResolveBranch;
     config.resolve_data = ndsOpeningRoomRendererResolveData;
@@ -3400,6 +3402,10 @@ static void ndsOpeningRoomRenderDLPreview(DObj *dobj, Gfx *dl)
     NDSDLPreviewParseState parse_state;
     NDSRendererConfig renderer_config;
     NDSRendererStats renderer_stats;
+    NDSRendererMatrix20p12 initial_projection;
+    NDSRendererMatrix20p12 initial_modelview;
+    const NDSRendererMatrix20p12 *initial_projection_ptr;
+    const NDSRendererMatrix20p12 *initial_modelview_ptr;
 
     if (gNdsOpeningRoomDLPreviewResult != 0)
     {
@@ -3435,10 +3441,18 @@ static void ndsOpeningRoomRenderDLPreview(DObj *dobj, Gfx *dl)
     parse_state.combine_mode = &combine_mode;
     parse_state.combine_flags = &combine_flags;
 
+    preview_cobj = ndsOpeningRoomGetCurrentDrawCameraCObj();
+    ndsRendererAdapterPrepareInitialMatrices(dobj, preview_cobj,
+                                             &initial_projection,
+                                             &initial_projection_ptr,
+                                             &initial_modelview,
+                                             &initial_modelview_ptr);
     renderer_config.max_depth = NDS_MATERIAL_DL_EXPAND_MAX_DEPTH;
     renderer_config.max_commands = NDS_MATERIAL_DL_EXPAND_MAX_COMMANDS;
     renderer_config.max_list_commands =
         NDS_MATERIAL_DL_EXPAND_MAX_LIST_COMMANDS;
+    renderer_config.initial_projection = initial_projection_ptr;
+    renderer_config.initial_modelview = initial_modelview_ptr;
     renderer_config.validate_range = ndsOpeningRoomRendererValidateRange;
     renderer_config.resolve_branch = ndsOpeningRoomRendererResolveBranch;
     renderer_config.resolve_data = ndsOpeningRoomRendererResolveData;
@@ -3647,7 +3661,6 @@ static void ndsOpeningRoomRenderDLPreview(DObj *dobj, Gfx *dl)
     gNdsOpeningRoomDLPreviewMinY = min_y;
     gNdsOpeningRoomDLPreviewMaxY = max_y;
 
-    preview_cobj = ndsOpeningRoomGetCurrentDrawCameraCObj();
     ndsOpeningRoomProjectDLPreview(preview_cobj, vertices, vertex_count,
                                    tris, tri_count);
     if (gNdsOpeningRoomDLPreviewProjectionMode ==
