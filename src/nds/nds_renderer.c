@@ -1653,6 +1653,7 @@ static u16 ndsRendererHardwareTextureColor(
     const u8 *texels,
     const u16 *palette,
     u32 palette_count,
+    u32 palette_base,
     u32 index)
 {
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
@@ -1669,6 +1670,7 @@ static u16 ndsRendererHardwareTextureColor(
         {
             palette_index = texels[index];
         }
+        palette_index += palette_base;
         return ndsRendererHardwarePaletteColor(palette, palette_index,
                                                palette_count);
     }
@@ -1744,6 +1746,7 @@ static s32 ndsRendererHardwareBindTexture(
     u32 texels;
     u32 bytes;
     u32 loaded_bytes;
+    u32 palette_base;
     u32 params;
     int size_x;
     int size_y;
@@ -1888,11 +1891,17 @@ static s32 ndsRendererHardwareBindTexture(
         return FALSE;
     }
     tlut_src = NULL;
+    palette_base = 0u;
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
     {
         u32 palette_entries = (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ?
             16u : 256u;
 
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            palette_base = stats->texture_render_tile_palette * 16u;
+            palette_entries += palette_base;
+        }
         if ((stats->texture_tlut_image == 0u) ||
             (stats->texture_tlut_count < palette_entries))
         {
@@ -1921,6 +1930,7 @@ static s32 ndsRendererHardwareBindTexture(
                 ndsRendererHardwareTextureColor(format, size, texels_src,
                                                 tlut_src,
                                                 stats->texture_tlut_count,
+                                                palette_base,
                                                 src_index);
         }
     }

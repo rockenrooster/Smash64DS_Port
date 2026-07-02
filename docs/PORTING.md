@@ -15972,3 +15972,17 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
   combiner/depth policy, texture-state coverage, and renderer cutover stay
   deferred.
+
+## 2026-07-02 - Applied HW CI4 Palette Banks
+
+- Applied the render-tile palette bank when the opt-in DS hardware texture
+  uploader samples CI4 TLUT entries; the cache already keyed this state, but
+  conversion now uses it.
+- Added a fixture guard for the CI4 palette-base path and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, then passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
+  combiner/depth policy, broader texture-state coverage, and renderer cutover
+  stay deferred.

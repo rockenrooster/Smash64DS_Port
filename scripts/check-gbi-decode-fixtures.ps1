@@ -348,6 +348,7 @@ Assert-True ($renderer.Contains('texture_tlut_image')) 'Renderer CI texture pale
 Assert-True ($renderer.Contains('texture_render_tile_size')) 'Renderer render-tile pixel size tracking is missing.'
 Assert-True ($renderer.Contains('hardware_texture_upload_count')) 'Renderer hardware texture upload stats are missing.'
 Assert-True ($renderer.Contains('key.render_tmem = stats->texture_render_tile_tmem')) 'Renderer hardware texture cache key is missing render TMEM state.'
+Assert-True ($renderer.Contains('palette_base = stats->texture_render_tile_palette * 16u')) 'Renderer CI4 palette bank is not applied to TLUT sampling.'
 Assert-True ($renderer.Contains('key.load_tile = stats->texture_load_tile')) 'Renderer hardware texture cache key is missing load-tile state.'
 Assert-True ($renderer.Contains('key.load_uls = stats->texture_load_block_uls')) 'Renderer hardware texture cache key is missing load-block ULS state.'
 Assert-True ($renderer.Contains('key.load_dxt = stats->texture_load_block_dxt')) 'Renderer hardware texture cache key is missing load-block DXT state.'
