@@ -15837,3 +15837,15 @@ Still deferred:
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Full combiner behavior,
   depth/material policy, broader texture coverage, and renderer cutover remain
   deferred.
+
+## 2026-07-02 - Applied HW Decal Combine Mode
+
+- Added the sm64-nds combine rule that maps current `G_SETCOMBINE` decal state
+  to DS `POLY_DECAL`, and disables texture binding for the primitive-decal case
+  before hardware triangle submission.
+- Added a fixture guard for the hardware decal-combine helper.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8` and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Remaining combiner
+  behavior, depth/material policy, broader texture coverage, and renderer
+  cutover stay deferred.

@@ -76,8 +76,8 @@ It proves `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the current 
 key now includes the source render/load tile, TMEM, palette, and tile-origin
 state for that opt-in path. The hardware triangle path now applies the recorded
 primitive/environment material color and alpha from the current combine state,
-and maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits
-for that gate.
+maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits, and
+uses the sm64-nds decal-combine rule to select DS `POLY_DECAL` for that gate.
 Full visual fidelity still needs remaining combiner behavior, depth/material
 policy, broader texture-format coverage, and renderer cutover work. Default
 builds still use the software preview.

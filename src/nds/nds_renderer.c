@@ -1208,6 +1208,29 @@ static s32 ndsRendererCombineUsesAlpha(u32 w0, u32 w1, u32 source)
             (((w1 >> 9) & 0x07u) == source)) ? TRUE : FALSE;
 }
 
+static s32 ndsRendererHardwareUseDecal(const NDSRendererStats *stats)
+{
+    u32 w1;
+
+    if ((stats == NULL) || (stats->texture_combine_count == 0u))
+    {
+        return FALSE;
+    }
+    w1 = stats->texture_combine_w1;
+    return ((((w1 >> 28) & 0x0fu) == ((w1 >> 15) & 0x07u)) ?
+        TRUE : FALSE);
+}
+
+static s32 ndsRendererHardwarePrimitiveDecal(const NDSRendererStats *stats)
+{
+    if (ndsRendererHardwareUseDecal(stats) == FALSE)
+    {
+        return FALSE;
+    }
+    return ((((stats->texture_combine_w0 >> 20) & 0x0fu) ==
+             NDS_RENDERER_CCMUX_PRIMITIVE) ? TRUE : FALSE);
+}
+
 static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
 {
     if (stats == NULL)
@@ -1217,6 +1240,10 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
     if (stats->texture_combine_count == 0u)
     {
         return TRUE;
+    }
+    if (ndsRendererHardwarePrimitiveDecal(stats) != FALSE)
+    {
+        return FALSE;
     }
     return ndsRendererCombineUsesColor(
         stats->texture_combine_w0, stats->texture_combine_w1,
@@ -1284,6 +1311,10 @@ static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
     u32 poly_fmt = POLY_CULL_NONE | POLY_ALPHA(alpha);
     u32 mode = (stats != NULL) ? stats->geometry_mode : 0u;
 
+    if (ndsRendererHardwareUseDecal(stats) != FALSE)
+    {
+        poly_fmt |= POLY_DECAL;
+    }
     if ((mode & NDS_RENDERER_GEOM_CULL_FRONT) != 0u)
     {
         poly_fmt &= ~((u32)POLY_CULL_BACK);
