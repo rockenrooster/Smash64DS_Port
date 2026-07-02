@@ -111,6 +111,11 @@ typedef struct NDSRendererHardwareTextureKey
     u32 render_tmem;
     u32 render_palette;
     u32 load_tile;
+    u32 load_uls;
+    u32 load_ult;
+    u32 load_lrs;
+    u32 load_dxt;
+    u32 load_texels;
     u32 tile_uls;
     u32 tile_ult;
     u32 line;
@@ -1484,6 +1489,11 @@ static s32 ndsRendererHardwareTextureKeyEqual(
             (a->render_tmem == b->render_tmem) &&
             (a->render_palette == b->render_palette) &&
             (a->load_tile == b->load_tile) &&
+            (a->load_uls == b->load_uls) &&
+            (a->load_ult == b->load_ult) &&
+            (a->load_lrs == b->load_lrs) &&
+            (a->load_dxt == b->load_dxt) &&
+            (a->load_texels == b->load_texels) &&
             (a->tile_uls == b->tile_uls) &&
             (a->tile_ult == b->tile_ult) &&
             (a->line == b->line) &&
@@ -1846,6 +1856,11 @@ static s32 ndsRendererHardwareBindTexture(
     key.render_tmem = stats->texture_render_tile_tmem;
     key.render_palette = stats->texture_render_tile_palette;
     key.load_tile = stats->texture_load_tile;
+    key.load_uls = stats->texture_load_block_uls;
+    key.load_ult = stats->texture_load_block_ult;
+    key.load_lrs = stats->texture_load_block_lrs;
+    key.load_dxt = stats->texture_load_block_dxt;
+    key.load_texels = stats->texture_load_texels;
     key.tile_uls = stats->texture_tile_size_uls;
     key.tile_ult = stats->texture_tile_size_ult;
     key.line = stats->texture_render_tile_line;

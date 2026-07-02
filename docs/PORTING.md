@@ -15935,3 +15935,14 @@ Still deferred:
   with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
   combiner/depth policy, texture-state coverage, and renderer cutover deferred.
+
+## 2026-07-02 - Keyed HW Textures By Load Block
+
+- Added the recorded `G_LOADBLOCK` ULS/ULT/LRS/DXT/texel count to the opt-in
+  hardware texture cache key, so different loads from one source image cannot
+  reuse a stale DS texture.
+- Added fixture guards for load-block range and DXT cache-key state.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, and kept remaining
+  combiner/depth policy, texture-state coverage, and renderer cutover deferred.

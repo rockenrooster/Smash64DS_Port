@@ -349,6 +349,8 @@ Assert-True ($renderer.Contains('texture_render_tile_size')) 'Renderer render-ti
 Assert-True ($renderer.Contains('hardware_texture_upload_count')) 'Renderer hardware texture upload stats are missing.'
 Assert-True ($renderer.Contains('key.render_tmem = stats->texture_render_tile_tmem')) 'Renderer hardware texture cache key is missing render TMEM state.'
 Assert-True ($renderer.Contains('key.load_tile = stats->texture_load_tile')) 'Renderer hardware texture cache key is missing load-tile state.'
+Assert-True ($renderer.Contains('key.load_uls = stats->texture_load_block_uls')) 'Renderer hardware texture cache key is missing load-block ULS state.'
+Assert-True ($renderer.Contains('key.load_dxt = stats->texture_load_block_dxt')) 'Renderer hardware texture cache key is missing load-block DXT state.'
 Assert-True ($renderer.Contains('ndsRendererHardwareColorSource')) 'Renderer hardware material color source helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseMaterialColor')) 'Renderer hardware material color presence helper is missing.'
 Assert-True ($renderer.Contains('use_material_color != FALSE')) 'Renderer hardware material color selection still depends on a nonzero color value.'
