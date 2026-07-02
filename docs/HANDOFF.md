@@ -75,10 +75,14 @@ The hardware upload
 converter now accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16 texels for
 alpha-bearing source textures used by collision overlays, particles, and
 material records, and `G_IM_FMT_I` I4/I8/I16 texels for stage/effect
-intensity textures; that is the latest gate.
-The next renderer pass should finish remaining combiner behavior, depth
-policy, remaining texture-state coverage, and renderer cutover. Default builds
-still use the software preview.
+intensity textures. Renderer scans now seed BattleShip reset geometry
+(`G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH`) and `G_TF_BILERP`
+texture-filter state before per-DL commands, matching
+`sSYRdpResetDisplayList` for DObj traversals that start below the global reset
+list; that is the latest gate.
+The next renderer pass should finish remaining combiner behavior, full
+non-zbuffer/projected-Z depth policy, remaining texture-state coverage, and
+renderer cutover. Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
 TU via `src/import/battleship_gmcollision.c`, replacing the local
@@ -99,7 +103,8 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Renderer follow-up: finish opt-in hardware combiner/depth/material policy,
+1. Renderer follow-up: finish opt-in hardware combiner/full non-zbuffer
+   depth/material policy,
    broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
    plus IA/I decoders, then plan renderer cutover.
 2. Runtime slice 1 follow-up: split/expand the item, weapon, effect, audio, and

@@ -91,9 +91,13 @@ hardware upload converter also accepts BattleShip `G_IM_FMT_IA` IA4/IA8/IA16
 texels, matching the source texture formats used by fighter collision overlays,
 particles, and several stage/fighter material records, and accepts
 `G_IM_FMT_I` I4/I8/I16 texels for stage/effect intensity textures.
-Full visual fidelity still needs remaining combiner behavior, depth
-policy, remaining texture-state coverage, and renderer cutover work. Default
-builds still use the software preview.
+Renderer scans now seed BattleShip reset geometry
+(`G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH`) and reset texture
+filter `G_TF_BILERP`, so DObj traversals entered below
+`sSYRdpResetDisplayList` use the same baseline until source DL commands
+override it. Full visual fidelity still needs remaining combiner behavior,
+full non-zbuffer/projected-Z depth policy, remaining texture-state coverage,
+and renderer cutover work. Default builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -104,7 +108,8 @@ The next useful work is not another proof bit. It is one of:
 
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
-- renderer follow-up: finish opt-in hardware combiner/depth/material policy,
+- renderer follow-up: finish opt-in hardware combiner/full non-zbuffer
+  depth/material policy,
   broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
   plus IA/I decoders, then plan renderer cutover work;
 - compatibility-header split needed before full-TU runtime import of

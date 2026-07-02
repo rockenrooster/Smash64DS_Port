@@ -16000,3 +16000,18 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining
   combiner/depth policy, broader texture-state coverage, and renderer cutover
   stay deferred.
+
+## 2026-07-02 - Seeded HW Reset Renderer State
+
+- Seeded opt-in hardware renderer stats with BattleShip reset geometry mode
+  and bilerp texture-filter state, matching `sSYRdpResetDisplayList` for
+  traversals that enter below the global reset display list.
+- Added fixture guards for reset geometry/filter seeds; the full
+  sm64-nds-style no-zbuffer projected-Z path remains deferred.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`, then passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3` and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Remaining combiner policy,
+  full non-zbuffer/projected-Z depth policy, broader texture-state coverage,
+  and renderer cutover stay deferred.
