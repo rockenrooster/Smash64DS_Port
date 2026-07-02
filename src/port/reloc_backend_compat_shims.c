@@ -126,6 +126,8 @@ void ndsBaseFTCommonReboundProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonReboundSetStatus(GObj *fighter_gobj);
 void ndsBaseFTCommonReboundWaitProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonReboundWaitSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonGuardSetOffProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonGuardSetOffSetStatus(GObj *fighter_gobj);
 void ndsBaseFTCommonDownWaitProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonDownWaitProcInterrupt(GObj *fighter_gobj);
 void ndsBaseFTCommonDownWaitSetStatus(GObj *fighter_gobj);
@@ -161,6 +163,83 @@ f32 dMPCollisionMaterialFrictions[16] = {
     4.0F, 4.0F, 4.0F, 4.0F,
     4.0F, 4.0F, 4.0F, 4.0F
 };
+
+u8 gSC1PGameBonusStarCount;
+u8 gSC1PGameBonusGiantImpact;
+
+static FTOpeningDesc sNdsDefaultOpeningDesc = { 0xFFFFFFFF, NULL };
+
+FTOpeningDesc D_ovl1_80390BE8 = { 0x00010000, NULL };
+
+FTOpeningDesc *D_ovl1_80390D20[] = {
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc,
+    &sNdsDefaultOpeningDesc
+};
+
+GMColDesc dGMColScriptsDescs[64];
+
+static FTParts sNdsFTManagerPartsAllocPool[64];
+static FTParts *sNdsFTManagerPartsAllocFree;
+static sb32 sNdsFTManagerPartsAllocInit;
+
+static void ndsFTManagerInitPartsAllocPool(void)
+{
+    s32 i;
+
+    if (sNdsFTManagerPartsAllocInit != FALSE)
+    {
+        return;
+    }
+    for (i = 0; i < (ARRAY_COUNT(sNdsFTManagerPartsAllocPool) - 1); i++)
+    {
+        sNdsFTManagerPartsAllocPool[i].next =
+            &sNdsFTManagerPartsAllocPool[i + 1];
+    }
+    sNdsFTManagerPartsAllocPool[ARRAY_COUNT(sNdsFTManagerPartsAllocPool) - 1]
+        .next = NULL;
+    sNdsFTManagerPartsAllocFree = &sNdsFTManagerPartsAllocPool[0];
+    sNdsFTManagerPartsAllocInit = TRUE;
+}
+
+FTParts *ftManagerGetNextPartsAlloc(void)
+{
+    FTParts *parts;
+
+    ndsFTManagerInitPartsAllocPool();
+    parts = sNdsFTManagerPartsAllocFree;
+    if (parts == NULL)
+    {
+        return NULL;
+    }
+    sNdsFTManagerPartsAllocFree = parts->next;
+    bzero(parts, sizeof(*parts));
+    return parts;
+}
+
+void ftManagerSetPrevPartsAlloc(FTParts *parts)
+{
+    if (parts == NULL)
+    {
+        return;
+    }
+    ndsFTManagerInitPartsAllocPool();
+    parts->next = sNdsFTManagerPartsAllocFree;
+    sNdsFTManagerPartsAllocFree = parts;
+}
 
 void syAudioStopBGMAll(void)
 {
@@ -518,6 +597,7 @@ typedef enum NDSGMHitType
     nNDSGMHitTypeAttack = 3
 } NDSGMHitType;
 
+#if !NDS_IMPORT_BATTLESHIP_FTMAIN
 sb32 gFTMainIsDamageDetect[FTATTACKCOLL_NUM_MAX];
 sb32 gFTMainIsAttackDetect[FTATTACKCOLL_NUM_MAX];
 
@@ -598,6 +678,7 @@ void ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
         }
     }
 }
+#endif
 
 void ftParamClearAttackRecordID(FTStruct *fp, s32 attack_id)
 {
@@ -647,6 +728,15 @@ void ftParamRefreshAttackCollID(GObj *fighter_gobj, s32 attack_id)
     }
 }
 
+s32 ftParamGetJointID(FTStruct *fp, s32 joint_id)
+{
+    if ((joint_id == -2) && (fp != NULL) && (fp->attr != NULL))
+    {
+        return fp->attr->joint_itemlight_id;
+    }
+    return joint_id;
+}
+
 void ftParamSetHitStatusPartAll(GObj *fighter_gobj, s32 hitstatus)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -665,6 +755,67 @@ void ftParamSetHitStatusPartAll(GObj *fighter_gobj, s32 hitstatus)
     if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
     {
         gNdsFighterInitHitStatusPartCount++;
+    }
+}
+
+void ftParamResetFighterDamageCollsAll(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    FTDamageColl *damage_coll;
+    FTDamageCollDesc *damage_coll_desc;
+    s32 i;
+
+    if ((fp == NULL) || (fp->attr == NULL))
+    {
+        return;
+    }
+    damage_coll = &fp->damage_colls[0];
+    damage_coll_desc = &fp->attr->damage_coll_descs[0];
+    for (i = 0;
+         i < ((ARRAY_COUNT(fp->damage_colls) +
+               ARRAY_COUNT(fp->attr->damage_coll_descs)) / 2);
+         i++, damage_coll++, damage_coll_desc++)
+    {
+        if (damage_coll_desc->joint_id != -1)
+        {
+            damage_coll->joint_id = damage_coll_desc->joint_id;
+            damage_coll->joint = fp->joints[damage_coll->joint_id];
+            damage_coll->placement = damage_coll_desc->placement;
+            damage_coll->is_grabbable = damage_coll_desc->is_grabbable;
+            damage_coll->offset = damage_coll_desc->offset;
+            damage_coll->size = damage_coll_desc->size;
+            damage_coll->size.x *= 0.5F;
+            damage_coll->size.y *= 0.5F;
+            damage_coll->size.z *= 0.5F;
+        }
+    }
+    fp->is_damage_coll_modify = FALSE;
+}
+
+void ftParamModifyDamageCollID(GObj *fighter_gobj, s32 joint_id,
+                               Vec3f *offset, Vec3f *size)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    s32 i;
+
+    if ((fp == NULL) || (offset == NULL) || (size == NULL))
+    {
+        return;
+    }
+    for (i = 0; i < ARRAY_COUNT(fp->damage_colls); i++)
+    {
+        FTDamageColl *damage_coll = &fp->damage_colls[i];
+
+        if (joint_id == damage_coll->joint_id)
+        {
+            damage_coll->offset = *offset;
+            damage_coll->size = *size;
+            damage_coll->size.x *= 0.5F;
+            damage_coll->size.y *= 0.5F;
+            damage_coll->size.z *= 0.5F;
+            fp->is_damage_coll_modify = TRUE;
+            return;
+        }
     }
 }
 
@@ -697,6 +848,70 @@ void ftParamResetModelPartAll(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
+void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
+                             s32 texture_id)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    FTTexturePartContainer *container;
+    FTTexturePart *texturepart;
+    DObj *joint;
+    MObj *mobj;
+    s32 detail;
+    s32 i;
+
+    if ((fp == NULL) || (fp->attr == NULL) ||
+        (texturepart_id < 0) ||
+        ((u32)texturepart_id >= ARRAY_COUNT(fp->texturepart_status)))
+    {
+        return;
+    }
+    container = fp->attr->textureparts_container;
+    if (container == NULL)
+    {
+        fp->texturepart_status[texturepart_id].texture_id_curr = texture_id;
+        fp->is_texturepart_modify = TRUE;
+        return;
+    }
+
+    texturepart = &container->textureparts[texturepart_id];
+    if ((texturepart->joint_id >= ARRAY_COUNT(fp->joints)) ||
+        (fp->detail_curr < nFTPartsDetailStart))
+    {
+        return;
+    }
+
+    detail = texturepart->detail[fp->detail_curr - nFTPartsDetailStart];
+    joint = fp->joints[texturepart->joint_id];
+    mobj = (joint != NULL) ? joint->mobj : NULL;
+    for (i = 0; (mobj != NULL) && (i < detail); i++)
+    {
+        mobj = mobj->next;
+    }
+    if (mobj != NULL)
+    {
+        mobj->texture_id_curr = texture_id;
+    }
+    fp->texturepart_status[texturepart_id].texture_id_curr = texture_id;
+    fp->is_texturepart_modify = TRUE;
+}
+
+void ftParamResetTexturePartAll(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    s32 i;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    for (i = 0; i < ARRAY_COUNT(fp->texturepart_status); i++)
+    {
+        fp->texturepart_status[i].texture_id_curr =
+            fp->texturepart_status[i].texture_id_base;
+    }
+    fp->is_texturepart_modify = FALSE;
+}
+
 void ftParamHideModelPartAll(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -719,6 +934,145 @@ void ftParamsUpdateFighterPartsTransformAll(DObj *joint)
         (sNdsFighterDashRunGuardOnActive != FALSE))
     {
         gNdsFighterDashRunGuardStateMask |= 1u << 9u;
+    }
+}
+
+extern void gcParseDObjAnimJoint(DObj *dobj);
+extern void gcPlayDObjAnimJoint(DObj *dobj);
+extern void gcParseMObjMatAnimJoint(MObj *mobj);
+extern void gcPlayMObjMatAnim(MObj *mobj);
+void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale);
+
+void ftAnimParseDObjFigatree(DObj *root_dobj)
+{
+    (void)root_dobj;
+}
+
+static s32 ndsFTStructJointLoopLimit(const FTStruct *fp)
+{
+    u32 limit;
+
+    if ((fp == NULL) || (fp->nds_magic != NDS_FTSTRUCT_MAGIC) ||
+        (fp->nds_common_joint_count == 0u))
+    {
+        return nFTPartsJointNumMax;
+    }
+
+    limit = nFTPartsJointCommonStart + fp->nds_common_joint_count;
+    if (limit > nFTPartsJointNumMax)
+    {
+        limit = nFTPartsJointNumMax;
+    }
+    return (s32)limit;
+}
+
+void ftParamUpdateAnimKeys(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    DObj **p_joint;
+    DObj *joint;
+    FTParts *parts;
+    f32 anim_wait_bak;
+    s32 joint_limit;
+    s32 i;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    p_joint = &fp->joints[nFTPartsJointTopN];
+    joint_limit = ndsFTStructJointLoopLimit(fp);
+
+    if (fp->motion_id != -2)
+    {
+        Vec3f *translate_scales =
+            ((fp->is_have_translate_scale != FALSE) && (fp->attr != NULL))
+                ? fp->attr->translate_scales
+                : NULL;
+
+        for (i = 0; i < joint_limit; i++, p_joint++)
+        {
+            MObj *mobj;
+
+            joint = *p_joint;
+            if (joint == NULL)
+            {
+                if (translate_scales != NULL)
+                {
+                    translate_scales++;
+                }
+                continue;
+            }
+
+            if (fp->anim_desc.flags.is_anim_joint)
+            {
+                gcParseDObjAnimJoint(joint);
+            }
+            else
+            {
+                ftAnimParseDObjFigatree(joint);
+            }
+
+            if (translate_scales != NULL)
+            {
+                lbCommonPlayTranslateScaledDObjAnim(joint, translate_scales);
+                translate_scales++;
+            }
+            else
+            {
+                gcPlayDObjAnimJoint(joint);
+            }
+
+            mobj = joint->mobj;
+            while (mobj != NULL)
+            {
+                gcParseMObjMatAnimJoint(mobj);
+                gcPlayMObjMatAnim(mobj);
+                mobj = mobj->next;
+            }
+        }
+    }
+    else
+    {
+        Vec3f *translate_scales =
+            ((fp->is_have_translate_scale != FALSE) && (fp->attr != NULL))
+                ? fp->attr->translate_scales
+                : NULL;
+
+        for (i = 0; i < joint_limit; i++, p_joint++)
+        {
+            joint = *p_joint;
+            if (joint == NULL)
+            {
+                if (translate_scales != NULL)
+                {
+                    translate_scales++;
+                }
+                continue;
+            }
+            parts = ftGetParts(joint);
+            if ((parts == NULL) || (parts->is_have_anim == FALSE))
+            {
+                if (translate_scales != NULL)
+                {
+                    translate_scales++;
+                }
+                continue;
+            }
+
+            anim_wait_bak = joint->anim_wait;
+            joint->anim_wait = AOBJ_ANIM_END;
+            if (translate_scales != NULL)
+            {
+                lbCommonPlayTranslateScaledDObjAnim(joint, translate_scales);
+                translate_scales++;
+            }
+            else
+            {
+                gcPlayDObjAnimJoint(joint);
+            }
+            joint->anim_wait = anim_wait_bak;
+        }
     }
 }
 
@@ -817,11 +1171,33 @@ void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
 
 void ftParamResetFighterColAnim(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    s32 i;
+
+    if (fp != NULL)
+    {
+        for (i = 0; i < ARRAY_COUNT(fp->colanim.cs); i++)
+        {
+            fp->colanim.cs[i].p_script = NULL;
+            fp->colanim.cs[i].color_event_timer = 0;
+            fp->colanim.cs[i].script_id = 0;
+        }
+        fp->colanim.length = 0;
+        fp->colanim.colanim_id = 0;
+        fp->colanim.is_use_color1 = 0;
+        fp->colanim.is_use_color2 = 0;
+        fp->colanim.is_use_light = 0;
+        fp->colanim.skeleton_id = 0;
+    }
     if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
     {
         gNdsFighterInitColAnimResetCount++;
     }
+}
+
+void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
+{
+    ftParamResetFighterColAnim(fighter_gobj);
 }
 
 sb32 ftHammerCheckHoldHammer(GObj *fighter_gobj)
@@ -948,12 +1324,35 @@ sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj)
     if ((ndsFighterMarioFoxWalkInputProofEnabled() != FALSE) &&
         (sNdsFighterWalkInputProbeActive != FALSE))
     {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        s32 stick_x = 0;
+        s32 lr = 0;
         sb32 result;
 
+        if (fp != NULL)
+        {
+            stick_x = fp->input.pl.stick_range.x;
+            lr = fp->lr;
+        }
         gNdsFighterWalkWaitInterruptCallCount++;
         gNdsFighterWalkGroundCheckCallCount++;
         gNdsFighterWalkOriginalCheckCallCount++;
         result = ftCommonWalkCheckInterruptCommon(fighter_gobj);
+        if ((result == FALSE) && (fp != NULL) &&
+            ((stick_x * lr) >= 8))
+        {
+            s32 status_id = ftCommonWalkGetWalkStatus((s8)stick_x);
+
+            fp->input.pl.stick_range.x = (s8)stick_x;
+            ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
+                            FTSTATUS_PRESERVE_NONE);
+            ftMainPlayAnimEventsAll(fighter_gobj);
+            if (status_id != nFTCommonStatusWalkFast)
+            {
+                fp->is_special_interrupt = TRUE;
+            }
+            result = TRUE;
+        }
         if (result != FALSE)
         {
             gNdsFighterWalkOriginalCheckSuccessCount++;
@@ -1295,11 +1694,12 @@ void ftParamSetStatUpdate(FTStruct *fp, u16 flags)
     }
 }
 
-void ftParamUpdate1PGameAttackStats(FTStruct *fp, s32 attack_id)
+void ftParamUpdate1PGameAttackStats(FTStruct *fp, u16 flags)
 {
     if (fp != NULL)
     {
-        fp->stat_attack_id = attack_id;
+        fp->stat_flags.halfword = flags;
+        fp->stat_attack_id = fp->stat_flags.attack_id;
         fp->stat_count++;
     }
 }
@@ -3919,6 +4319,235 @@ static void ndsStageMPPassiveLoopCaptureProcDamage(GObj *fighter_gobj)
     }
 }
 
+static void ndsFtParamStopVoice(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->p_voice != NULL)
+    {
+        if ((fp->p_voice->sfx_id != 0) && (fp->p_voice->sfx_id == fp->voice_id))
+        {
+            func_80026738_27338(fp->p_voice);
+        }
+    }
+    fp->p_voice = NULL;
+    fp->voice_id = 0;
+}
+
+void ftParamPlayVoice(FTStruct *fp, u16 voice_id)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->p_voice = func_800269C0_275C0(voice_id);
+    fp->voice_id = (fp->p_voice != NULL) ? fp->p_voice->sfx_id : 0;
+}
+
+void ftParamPlayLoopSFX(FTStruct *fp, u16 sfx_id)
+{
+    if ((fp != NULL) && (fp->p_loop_sfx == NULL))
+    {
+        fp->p_loop_sfx = func_800269C0_275C0(sfx_id);
+        fp->loop_sfx_id =
+            (fp->p_loop_sfx != NULL) ? fp->p_loop_sfx->sfx_id : 0;
+    }
+}
+
+void ftParamStopLoopSFX(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->p_loop_sfx != NULL)
+    {
+        if ((fp->p_loop_sfx->sfx_id != 0) &&
+            (fp->p_loop_sfx->sfx_id == fp->loop_sfx_id))
+        {
+            func_80026738_27338(fp->p_loop_sfx);
+        }
+    }
+    fp->p_loop_sfx = NULL;
+    fp->loop_sfx_id = 0;
+}
+
+void gmRumbleStopRumbleID(s32 player, s32 rumble_id)
+{
+    (void)player;
+    (void)rumble_id;
+}
+
+void ftBossCommonUpdateDamageStats(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+s32 itMainGetDamageOutput(ITStruct *ip)
+{
+    if (ip == NULL)
+    {
+        return 0;
+    }
+    return (s32)((ip->attack_coll.damage * ip->attack_coll.stale) + 0.999F);
+}
+
+s32 wpMainGetStaledDamage(WPStruct *wp)
+{
+    if (wp == NULL)
+    {
+        return 0;
+    }
+    return (s32)((wp->attack_coll.damage * wp->attack_coll.stale) + 0.999F);
+}
+
+static void ndsCompatSetHitInteractStats(GMAttackRecord *records,
+                                         GObj *victim_gobj, s32 attack_type,
+                                         u32 group_id, u32 rehit_time)
+{
+    s32 i;
+
+    if (records == NULL)
+    {
+        return;
+    }
+    for (i = 0; i < GMATTACKREC_NUM_MAX; i++)
+    {
+        if (records[i].victim_gobj == victim_gobj)
+        {
+            break;
+        }
+    }
+    if (i == GMATTACKREC_NUM_MAX)
+    {
+        for (i = 0; i < GMATTACKREC_NUM_MAX; i++)
+        {
+            if (records[i].victim_gobj == NULL)
+            {
+                break;
+            }
+        }
+        if (i == GMATTACKREC_NUM_MAX)
+        {
+            i = 0;
+        }
+        records[i].victim_gobj = victim_gobj;
+    }
+
+    switch (attack_type)
+    {
+    case nGMHitTypeDamage:
+        records[i].victim_flags.is_interact_hurt = TRUE;
+        break;
+
+    case nGMHitTypeShield:
+        records[i].victim_flags.is_interact_shield = TRUE;
+        break;
+
+    case nGMHitTypeShieldRehit:
+        records[i].victim_flags.is_interact_shield = TRUE;
+        records[i].victim_flags.timer_rehit = rehit_time;
+        break;
+
+    case nGMHitTypeReflect:
+        records[i].victim_flags.is_interact_reflect = TRUE;
+        records[i].victim_flags.timer_rehit = rehit_time;
+        break;
+
+    case nGMHitTypeAbsorb:
+        records[i].victim_flags.is_interact_absorb = TRUE;
+        break;
+
+    case nGMHitTypeAttack:
+        records[i].victim_flags.group_id = group_id;
+        break;
+
+    case nGMHitTypeDamageRehit:
+        records[i].victim_flags.is_interact_hurt = TRUE;
+        records[i].victim_flags.timer_rehit = rehit_time;
+        break;
+
+    default:
+        break;
+    }
+}
+
+void wpProcessUpdateHitInteractStats(WPStruct *wp, WPAttackColl *attack_coll,
+                                     GObj *victim_gobj, s32 attack_type,
+                                     u32 victim_group_id)
+{
+    GObj *weapon_gobj;
+
+    if (wp == NULL)
+    {
+        return;
+    }
+    if (wp->group_id == 0)
+    {
+        ndsCompatSetHitInteractStats(
+            (attack_coll != NULL) ? attack_coll->attack_records :
+                                    wp->attack_coll.attack_records,
+            victim_gobj, attack_type, victim_group_id,
+            WEAPON_REHIT_TIME_DEFAULT);
+        return;
+    }
+
+    weapon_gobj = gGCCommonLinks[nGCCommonLinkIDWeapon];
+    while (weapon_gobj != NULL)
+    {
+        WPStruct *other_wp = wpGetStruct(weapon_gobj);
+
+        if ((other_wp != NULL) && (other_wp->group_id == wp->group_id))
+        {
+            ndsCompatSetHitInteractStats(
+                other_wp->attack_coll.attack_records, victim_gobj,
+                attack_type, victim_group_id, WEAPON_REHIT_TIME_DEFAULT);
+        }
+        weapon_gobj = weapon_gobj->link_next;
+    }
+}
+
+void itProcessSetHitInteractStats(ITAttackColl *attack_coll,
+                                  GObj *victim_gobj, s32 attack_type,
+                                  u32 victim_group_id)
+{
+    if (attack_coll == NULL)
+    {
+        return;
+    }
+    ndsCompatSetHitInteractStats(attack_coll->attack_records, victim_gobj,
+                                 attack_type, victim_group_id,
+                                 ITEM_REHIT_TIME_DEFAULT);
+}
+
+void ftParamTryPlayItemMusic(s32 bgm_id)
+{
+    (void)bgm_id;
+}
+
+void ftParamSetStarHitStatusInvincible(FTStruct *fp, s32 invincible_tics)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->star_hitstatus = nGMHitStatusInvincible;
+    fp->star_invincible_tics = invincible_tics;
+    ftParamCheckSetFighterColAnimID(fp->fighter_gobj, 74, 0);
+}
+
+void ftParamSetHealDamage(FTStruct *fp, s32 heal)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->damage_heal += heal;
+    ftParamCheckSetFighterColAnimID(fp->fighter_gobj, 9, 0);
+}
+
 void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -3932,6 +4561,7 @@ void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj)
     {
         gNdsStageMPPassiveLoopCaptureVoiceStopCount++;
     }
+    ndsFtParamStopVoice(fp);
     if (fp->proc_damage != NULL)
     {
         fp->proc_damage(fighter_gobj);
@@ -4245,6 +4875,16 @@ void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
     (void)fighter_gobj;
     (void)joint_id;
     (void)modelpart_id;
+}
+
+void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if (fp != NULL)
+    {
+        fp->detail_curr = detail;
+    }
 }
 
 sb32 ftCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj)
@@ -5080,6 +5720,7 @@ void ftCommonDamageGotoDamageStatus(GObj *fighter_gobj)
                                  TRUE);
 }
 
+#if !NDS_IMPORT_BATTLESHIP_FTMAIN
 void ftMainRunUpdateColAnim(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -5089,6 +5730,7 @@ void ftMainRunUpdateColAnim(GObj *fighter_gobj)
         sNdsFighterDashRunDamageRunUpdateColAnimCount++;
     }
 }
+#endif
 
 void ftCommonDamageUpdateDamageColAnim(GObj *fighter_gobj, f32 knockback,
                                        s32 element)
@@ -5429,6 +6071,267 @@ LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
         gNdsFighterMarioFoxStageInishieScaleLoopDeferredMask |= 1u << 0;
     }
     return NULL;
+}
+
+LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
+                                                 s32 size, sb32 is_static)
+{
+    (void)pos;
+    (void)player;
+    (void)size;
+    (void)is_static;
+    return NULL;
+}
+
+LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
+                                                 s32 size)
+{
+    (void)pos;
+    (void)player;
+    (void)size;
+    return NULL;
+}
+
+LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
+{
+    (void)pos;
+    (void)size;
+    return NULL;
+}
+
+LBParticle *efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size)
+{
+    (void)pos;
+    (void)size;
+    return NULL;
+}
+
+LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos)
+{
+    (void)pos;
+    return NULL;
+}
+
+GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
+{
+    (void)pos;
+    (void)size;
+    (void)rotate;
+    return NULL;
+}
+
+GObj *efManagerDamageSpawnOrbsRandomMakeEffect(Vec3f *pos)
+{
+    (void)pos;
+    return NULL;
+}
+
+GObj *efManagerDamageSpawnSparksRandomMakeEffect(Vec3f *pos, s32 lr)
+{
+    (void)pos;
+    (void)lr;
+    return NULL;
+}
+
+GObj *efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr)
+{
+    (void)pos;
+    (void)lr;
+    return NULL;
+}
+
+LBParticle *efManagerSetOffMakeEffect(Vec3f *pos, s32 size)
+{
+    (void)pos;
+    (void)size;
+    return NULL;
+}
+
+void ftHammerUpdateStats(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+sb32 ftCommonDeadCheckInterruptCommon(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    return FALSE;
+}
+
+void ftParamKirbyTryMakeMapStarEffect(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftParamSetAnimLocks(FTStruct *fp)
+{
+    u32 flags0;
+    u32 flags1;
+    u32 current_flags;
+    FTParts *parts;
+    u32 *animlock;
+    s32 i;
+
+    if ((fp == NULL) || (fp->attr == NULL) || (fp->attr->animlock == NULL))
+    {
+        return;
+    }
+    animlock = fp->attr->animlock;
+    flags0 = animlock[0];
+    flags1 = animlock[1];
+
+    for (i = nFTPartsJointCommonStart; ((flags0 != 0) || (flags1 != 0)); i++)
+    {
+        current_flags =
+            (i < (ARRAY_COUNT(fp->joints) - 1)) ? flags0 : flags1;
+        if ((current_flags & (1u << 31)) && (fp->joints[i] != NULL))
+        {
+            parts = fp->joints[i]->user_data.p;
+            if (parts != NULL)
+            {
+                gmCollisionTransformMatrixAll(fp->joints[i], parts,
+                                              parts->unk_dobjtrans_0x10);
+                parts->transform_update_mode = 3;
+                if (fp->joints[i]->xobjs[0] != NULL)
+                {
+                    fp->joints[i]->xobjs[0]->unk05 = 1;
+                }
+            }
+        }
+        if (i < (ARRAY_COUNT(fp->joints) - 1))
+        {
+            flags0 <<= 1;
+        }
+        else
+        {
+            flags1 <<= 1;
+        }
+    }
+}
+
+void ftParamClearAnimLocks(FTStruct *fp)
+{
+    FTParts *parts;
+    s32 i;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    for (i = 0; i < ARRAY_COUNT(fp->joints); i++)
+    {
+        if (fp->joints[i] != NULL)
+        {
+            parts = fp->joints[i]->user_data.p;
+            if ((parts != NULL) && (parts->transform_update_mode == 3))
+            {
+                parts->transform_update_mode = 0;
+                if (fp->joints[i]->xobjs[0] != NULL)
+                {
+                    fp->joints[i]->xobjs[0]->unk05 = 0;
+                }
+            }
+        }
+    }
+}
+
+void ftParamMoveDLLink(GObj *fighter_gobj, u8 dl_link)
+{
+    FTStruct *fp;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+    gcMoveGObjDL(fighter_gobj, dl_link, GOBJ_PRIORITY_DEFAULT);
+    fp = ftGetStruct(fighter_gobj);
+    if (fp != NULL)
+    {
+        fp->dl_link = dl_link;
+    }
+}
+
+void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
+                                     f32 anim_frame)
+{
+    (void)figatree;
+    if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
+    {
+        root_dobj->parent_gobj->anim_frame = anim_frame;
+    }
+}
+
+void lbCommonInitDObj(DObj *dobj, u8 tk1, u8 tk2, u8 tk3, u8 arg4)
+{
+    (void)tk1;
+    (void)tk2;
+    (void)tk3;
+    (void)arg4;
+    if (dobj != NULL)
+    {
+        dobj->translate.vec.f.x = 0.0F;
+        dobj->translate.vec.f.y = 0.0F;
+        dobj->translate.vec.f.z = 0.0F;
+        dobj->rotate.vec.f.x = 0.0F;
+        dobj->rotate.vec.f.y = 0.0F;
+        dobj->rotate.vec.f.z = 0.0F;
+        dobj->scale.vec.f.x = 1.0F;
+        dobj->scale.vec.f.y = 1.0F;
+        dobj->scale.vec.f.z = 1.0F;
+    }
+}
+
+void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
+                                        AObjEvent32 **costume_matanim_joints,
+                                        AObjEvent32 **main_matanim_joints,
+                                        s32 costume)
+{
+    (void)dobj;
+    (void)mobjsubs;
+    (void)costume_matanim_joints;
+    (void)main_matanim_joints;
+    (void)costume;
+}
+
+void mpCommonUpdateFighterSlopeContour(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftCommonReboundProcUpdate(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonReboundProcUpdate(fighter_gobj);
+}
+
+void ftCommonReboundSetStatus(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonReboundSetStatus(fighter_gobj);
+}
+
+void ftCommonReboundWaitProcUpdate(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonReboundWaitProcUpdate(fighter_gobj);
+}
+
+void ftCommonReboundWaitSetStatus(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonReboundWaitSetStatus(fighter_gobj);
+}
+
+void ftCommonGuardSetOffProcUpdate(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonGuardSetOffProcUpdate(fighter_gobj);
+}
+
+void ftCommonGuardSetOffSetStatus(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonGuardSetOffSetStatus(fighter_gobj);
+}
+
+alSoundEffect *lbCommonMakePositionFGM(u16 fgm, f32 pos)
+{
+    (void)pos;
+    return func_800269C0_275C0(fgm);
 }
 
 sb32 ftCommonCliffAttackCheckInterruptCommon(GObj *fighter_gobj)

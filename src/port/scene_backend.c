@@ -33,6 +33,7 @@
 #include <sys/scheduler.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
+#include <wp/weapon.h>
 
 extern volatile u32 gNdsFrameCounter;
 

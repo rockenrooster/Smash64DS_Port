@@ -6525,7 +6525,8 @@ extern void func_80005BFC(void);
 #define NDS_OPENING_PORTRAITS_HANDOFF_TICK 150u
 #define NDS_OPENING_MARIO_HANDOFF_TICK 60u
 #define NDS_OPENING_MOVIE_DRAW_INTERVAL 30u
-static u8 sNdsTaskmanArenaBytes[NDS_TASKMAN_ARENA_SIZE] __attribute__((aligned(16)));
+static void *sNdsTaskmanArenaAlloc;
+static u8 *sNdsTaskmanArenaBytes;
 
 #define NDS_OPENING_ROOM_PENCILS_DOBJ_ENTRIES 4u
 #define NDS_OPENING_ROOM_PENCILS_RENDER_DOBJS 3u
@@ -6546,14 +6547,28 @@ static u8 sNdsTaskmanArenaBytes[NDS_TASKMAN_ARENA_SIZE] __attribute__((aligned(1
      NDS_OPENING_ROOM_PENCILS_CREATE_DISPLAY_READY | \
      NDS_OPENING_ROOM_PENCILS_CREATE_ANIM_ROOT_READY)
 
+static u8 *ndsTaskmanArenaBytes(void)
+{
+    if (sNdsTaskmanArenaBytes == NULL)
+    {
+        sNdsTaskmanArenaAlloc = calloc(1, NDS_TASKMAN_ARENA_SIZE + 0x10u);
+        if (sNdsTaskmanArenaAlloc != NULL)
+        {
+            uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
+            sNdsTaskmanArenaBytes = (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
+        }
+    }
+    return sNdsTaskmanArenaBytes;
+}
+
 void *ndsTaskmanArenaStart(void)
 {
-    return sNdsTaskmanArenaBytes;
+    return ndsTaskmanArenaBytes();
 }
 
 size_t ndsTaskmanArenaSize(void)
 {
-    return sizeof(sNdsTaskmanArenaBytes);
+    return (ndsTaskmanArenaBytes() != NULL) ? NDS_TASKMAN_ARENA_SIZE : 0u;
 }
 
 #define NDS_OVERLAY_LIST(X) \

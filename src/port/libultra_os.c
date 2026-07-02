@@ -7,7 +7,7 @@
 
 #define NDS_OS_MAX_THREADS 64
 #define NDS_OS_SERVICE_STACK_SIZE (16u * 1024u)
-#define NDS_OS_GOBJ_STACK_SIZE (4u * 1024u)
+#define NDS_OS_GOBJ_STACK_SIZE (16u * 1024u)
 
 static OSThread *sThreads[NDS_OS_MAX_THREADS];
 

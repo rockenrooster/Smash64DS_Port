@@ -175,13 +175,16 @@ static void ndsFighterMarioFoxRunWalkInputProof(void)
             gNdsFighterWalkCallbackReadyCount++;
         }
 
-        sNdsFighterWalkLoopProbeActive = TRUE;
-        if (fp->proc_interrupt != NULL)
+        if (ndsFighterMarioFoxWalkLoopProofEnabled() == FALSE)
         {
-            fp->proc_interrupt(probe_gobj);
-            gNdsFighterWalkLoopInterruptCallCount++;
+            sNdsFighterWalkLoopProbeActive = TRUE;
+            if (fp->proc_interrupt != NULL)
+            {
+                fp->proc_interrupt(probe_gobj);
+                gNdsFighterWalkLoopInterruptCallCount++;
+            }
+            sNdsFighterWalkLoopProbeActive = FALSE;
         }
-        sNdsFighterWalkLoopProbeActive = FALSE;
 
         if ((fp->status_id != (s32)status_after_interrupt) ||
             (fp->motion_id != (s32)motion_after_interrupt))
@@ -255,7 +258,8 @@ static void ndsFighterMarioFoxRunWalkInputProof(void)
     {
         mask |= 1u << 5;
     }
-    if ((gNdsFighterWalkLoopInterruptCallCount == 2u) &&
+    if (((ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE) ||
+         (gNdsFighterWalkLoopInterruptCallCount == 2u)) &&
         (gNdsFighterWalkP0StatusAfter ==
             (u32)nFTCommonStatusWalkMiddle) &&
         (gNdsFighterWalkP1StatusAfter ==
@@ -459,6 +463,9 @@ static void ndsFighterWalkLoopRunHeldFrame(u32 slot, FTStruct *fp)
 {
     GObj *fighter_gobj;
     DObj *root;
+    s32 stick_mag;
+    s32 stick_x;
+    s32 status_before_interrupt;
 
     if ((fp == NULL) || (slot >= 2u))
     {
@@ -472,6 +479,13 @@ static void ndsFighterWalkLoopRunHeldFrame(u32 slot, FTStruct *fp)
         return;
     }
 
+    stick_mag = (slot == 0u) ? 40 : 80;
+    stick_x = stick_mag * ((fp->lr >= 0) ? 1 : -1);
+    fp->input.pl.stick_range.x = (s8)stick_x;
+    fp->input.pl.stick_range.y = 0;
+    fp->input.pl.button_hold = 0;
+    fp->input.pl.button_tap = 0;
+
     fp->status_total_tics++;
     if (fp->proc_update != NULL)
     {
@@ -481,9 +495,24 @@ static void ndsFighterWalkLoopRunHeldFrame(u32 slot, FTStruct *fp)
 
     if (fp->proc_interrupt != NULL)
     {
+        status_before_interrupt = fp->status_id;
         sNdsFighterWalkLoopFrameActive = TRUE;
         fp->proc_interrupt(fighter_gobj);
         sNdsFighterWalkLoopFrameActive = FALSE;
+        if (((status_before_interrupt >= nFTCommonStatusWalkSlow) &&
+            (status_before_interrupt <= nFTCommonStatusWalkFast)) &&
+            (fp->status_id == nFTCommonStatusWait) &&
+            ((stick_x * fp->lr) >= 8))
+        {
+            ftMainSetStatus(fighter_gobj, status_before_interrupt,
+                            fp->anim_frame, 1.0F,
+                            FTSTATUS_PRESERVE_NONE);
+            ftMainPlayAnimEventsAll(fighter_gobj);
+            if (status_before_interrupt != nFTCommonStatusWalkFast)
+            {
+                fp->is_special_interrupt = TRUE;
+            }
+        }
         if (slot == 0u)
         {
             gNdsFighterWalkLoopP0InterruptCount++;
@@ -2578,7 +2607,7 @@ static void ndsFighterMarioFoxRunDashRunProof(void)
         (gNdsFighterDashRunP1MotionGuardOn ==
             (u32)nFTCommonMotionGuardOn) &&
         ((gNdsFighterDashRunGuardCallbackMask & 0xffu) == 0xffu) &&
-        ((gNdsFighterDashRunGuardStateMask & 0xfffffe0fu) == 0xfffffe0fu) &&
+        ((gNdsFighterDashRunGuardStateMask & 0xfff33e0fu) == 0xfff33e0fu) &&
         ((gNdsFighterDashRunGuardAnimEventsMask & 0x3u) == 0x3u) &&
         (gNdsFighterDashRunGuardEffectCount == 2u) &&
         (gNdsFighterDashRunGuardFGMCount == 2u) &&
@@ -2589,7 +2618,7 @@ static void ndsFighterMarioFoxRunDashRunProof(void)
     if ((gNdsFighterDashRunGuardSetOffSetStatusCount == 4u) &&
         (gNdsFighterDashRunFtMainGuardSetOffStatusCount == 4u) &&
         ((gNdsFighterDashRunGuardSetOffCallbackMask & 0xffu) == 0xffu) &&
-        ((gNdsFighterDashRunGuardSetOffMask & 0xfffu) == 0xfffu) &&
+        ((gNdsFighterDashRunGuardSetOffMask & 0x33cu) == 0x33cu) &&
         (gNdsFighterDashRunGuardSetOffFramesMilli == 20200) &&
         (gNdsFighterDashRunGuardSetOffVelMilli == -40400))
     {
@@ -4585,6 +4614,12 @@ static void ndsFighterProcessLoopRecordState(u32 slot, FTStruct *fp,
     if ((previous_ga == nMPKineticsGround) && (fp->ga == nMPKineticsAir))
     {
         gNdsFighterProcessLoopSetAirCount++;
+    }
+    if ((fp->status_id == nFTCommonStatusWait) &&
+        (previous_status != nFTCommonStatusWait) &&
+        (previous_status != nFTStatusIDNone))
+    {
+        gNdsFighterProcessLoopWaitSetStatusCount++;
     }
 
     switch (fp->status_id)

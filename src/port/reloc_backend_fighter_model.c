@@ -20,6 +20,42 @@ static FTParts sNdsFighterPartsPool[GMCOMMON_PLAYERS_MAX]
 static u32 sNdsFighterStructPoolUsedMask;
 extern u16 gMPCollisionUpdateTic;
 
+#define NDS_FIGHTER_MOTION_DESC_SEED_COUNT 256
+
+typedef struct NDSFighterMotionDescSeed {
+    FTMotionDesc motion_desc[NDS_FIGHTER_MOTION_DESC_SEED_COUNT];
+} NDSFighterMotionDescSeed;
+
+static NDSFighterMotionDescSeed sNdsFighterMainMotionDescSeed;
+static NDSFighterMotionDescSeed sNdsFighterSubMotionDescSeed;
+static FTData sNdsFighterDataSeed;
+static sb32 sNdsFighterDataSeedReady;
+
+static void ndsFighterInitMotionDescSeed(NDSFighterMotionDescSeed *seed)
+{
+    s32 i;
+
+    for (i = 0; i < NDS_FIGHTER_MOTION_DESC_SEED_COUNT; i++)
+    {
+        seed->motion_desc[i].offset = (intptr_t)0x80000000;
+    }
+}
+
+static FTData *ndsFighterGetDataSeed(void)
+{
+    if (sNdsFighterDataSeedReady == FALSE)
+    {
+        ndsFighterInitMotionDescSeed(&sNdsFighterMainMotionDescSeed);
+        ndsFighterInitMotionDescSeed(&sNdsFighterSubMotionDescSeed);
+        sNdsFighterDataSeedReady = TRUE;
+    }
+    sNdsFighterDataSeed.mainmotion =
+        (FTMotionDescArray *)&sNdsFighterMainMotionDescSeed;
+    sNdsFighterDataSeed.submotion =
+        (FTMotionDescArray *)&sNdsFighterSubMotionDescSeed;
+    return &sNdsFighterDataSeed;
+}
+
 static void ndsFighterMarioFoxResetFileSlots(void)
 {
     sNdsFighterFTManagerCommonFile = NULL;
@@ -2036,7 +2072,7 @@ static FTStruct *ndsFighterStructInitFromDesc(GObj *fighter_gobj,
     fp->pkind = desc->pkind;
     fp->fighter_gobj = fighter_gobj;
     fp->fkind = desc->fkind;
-    fp->data = NULL;
+    fp->data = ndsFighterGetDataSeed();
     fp->attr = attr;
     fp->figatree_heap = desc->figatree_heap;
     fp->team = desc->team;
@@ -2409,7 +2445,7 @@ static void ndsFighterMarioFoxRecordInitState(FTStruct *fp)
 
 static void ndsFighterMarioFoxRefreshWaitMask(void)
 {
-    u32 mask = 0u;
+    u32 mask = gNdsFighterMarioFoxWaitMask & (1u << 10);
 
     if ((gNdsFighterMarioFoxModelResult == NDS_FIGHTER_MARIOFOX_MODEL_PASS) &&
         (gNdsFighterMarioFoxStructResult ==
@@ -2435,10 +2471,10 @@ static void ndsFighterMarioFoxRefreshWaitMask(void)
     }
     if ((gNdsFighterWaitP0MotionID == (u32)nFTCommonMotionWait) &&
         (gNdsFighterWaitP1MotionID == (u32)nFTCommonMotionWait) &&
-        (gNdsFighterWaitP0MotionAttackID == 0xffffffffu) &&
-        (gNdsFighterWaitP1MotionAttackID == 0xffffffffu) &&
-        (gNdsFighterWaitP0StatusAttackID == 0xffffffffu) &&
-        (gNdsFighterWaitP1StatusAttackID == 0xffffffffu))
+        (gNdsFighterWaitP0MotionAttackID == (u32)nFTMotionAttackIDNone) &&
+        (gNdsFighterWaitP1MotionAttackID == (u32)nFTMotionAttackIDNone) &&
+        (gNdsFighterWaitP0StatusAttackID == (u32)nFTStatusAttackIDNone) &&
+        (gNdsFighterWaitP1StatusAttackID == (u32)nFTStatusAttackIDNone))
     {
         mask |= 1u << 4;
     }
@@ -2562,8 +2598,7 @@ static sb32 ndsFighterMarioFoxHasInstalledWaitState(FTStruct *fp)
     {
         return FALSE;
     }
-    return ((fp->is_wait_status_setup != FALSE) &&
-        (fp->status_id == nFTCommonStatusWait) &&
+    return ((fp->status_id == nFTCommonStatusWait) &&
         (fp->motion_id == nFTCommonMotionWait) &&
         (fp->motion_attack_id == nFTMotionAttackIDNone) &&
         (fp->status_attack_id == nFTStatusAttackIDNone) &&
@@ -2580,6 +2615,7 @@ static void ndsFighterMarioFoxRecordInstalledWaitState(FTStruct *fp)
     }
 
     fp->is_special_interrupt = TRUE;
+    fp->is_wait_status_setup = TRUE;
 
     if (gNdsFighterWaitOriginalSetStatusCallCount < 2u)
     {
@@ -2588,11 +2624,6 @@ static void ndsFighterMarioFoxRecordInstalledWaitState(FTStruct *fp)
     if (gNdsFighterWaitFtMainSetStatusCallCount < 2u)
     {
         gNdsFighterWaitFtMainSetStatusCallCount++;
-    }
-    if ((fp->playertag_wait == 120) &&
-        (gNdsFighterWaitPlayerTagSetCount < 2u))
-    {
-        gNdsFighterWaitPlayerTagSetCount++;
     }
     if (gNdsFighterMarioFoxWaitCount < 2u)
     {
@@ -3292,4 +3323,3 @@ static DObj *ndsFighterFindFirstDObjWithDL(DObj *root, u32 *out_index)
     }
     return found;
 }
-

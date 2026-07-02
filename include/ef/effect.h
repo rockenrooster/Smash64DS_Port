@@ -29,6 +29,18 @@ void lbParticleEjectStruct(LBParticle *pc);
 void lbParticleEjectStructID(s32 generator_id, s32 index);
 LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos);
 LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
+LBParticle *efManagerSetOffMakeEffect(Vec3f *pos, s32 size);
+LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
+                                                 s32 size, sb32 is_static);
+LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
+                                                 s32 size);
+LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size);
+LBParticle *efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size);
+LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos);
+GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate);
+GObj *efManagerDamageSpawnOrbsRandomMakeEffect(Vec3f *pos);
+GObj *efManagerDamageSpawnSparksRandomMakeEffect(Vec3f *pos, s32 lr);
+GObj *efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr);
 void efManagerQuakeMakeEffect(s32 id);
 void efGroundMakeAppearActor(void);
 

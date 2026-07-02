@@ -405,6 +405,7 @@ endif
 CFLAGS += -DNDS_DEV_LIVE_INPUT_PREVIEW=$(NDS_DEV_LIVE_INPUT_PREVIEW)
 CFLAGS += -DNDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=$(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)
 CFLAGS += -DNDS_RENDERER_HW_TRIANGLES=$(NDS_RENDERER_HW_TRIANGLES)
+CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMAIN=1
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
@@ -439,7 +440,7 @@ CFILES := main.c nds_platform.c nds_reloc_assets.c nds_renderer.c port_probe.c n
 	battleship_mvopeningpikachu.c battleship_mntitlefiles.c \
 	battleship_mntitle.c battleship_mnvsmode.c \
 	battleship_mnplayersvs.c battleship_mnmaps.c \
-	battleship_gmcommon.c battleship_gmcollision.c battleship_scvsbattle.c \
+	battleship_gmcommon.c battleship_gmcollision.c battleship_ftmain.c battleship_scvsbattle.c \
 	battleship_grpupupu_ground.c \
 	battleship_grinishie_scale.c \
 	battleship_ftcommon_wait.c \
@@ -639,6 +640,14 @@ SCENE_BACKEND_SLICES := \
 	$(PROJECT_ROOT)/src/port/diagnostics.c \
 	$(PROJECT_ROOT)/src/port/taskman_seam.c \
 	$(PROJECT_ROOT)/src/port/reloc_backend.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_compat_shims.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_assets.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_fighter_model.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_renderer_dl.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_movement.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_mp_collision.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_cliff_ledge.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_diagnostic_recorders.c \
 	$(PROJECT_ROOT)/src/port/sprite_preview_backend.c \
 	$(PROJECT_ROOT)/src/port/opening_movie_backend.c \
 	$(PROJECT_ROOT)/src/port/title_backend.c

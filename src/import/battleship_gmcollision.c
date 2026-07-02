@@ -14,6 +14,7 @@
 #define ITEM_ATKCOLL_NUM_MAX 2
 #endif
 
+#ifndef SSB64_NDS_WP_ATTACK_COLL_DECLARED
 typedef struct WPAttackPos {
     Vec3f pos_curr;
     Vec3f pos_prev;
@@ -54,7 +55,9 @@ typedef struct WPAttackColl {
     WPAttackPos attack_pos[WEAPON_ATKCOLL_NUM_MAX];
     GMAttackRecord attack_records[GMATTACKREC_NUM_MAX];
 } WPAttackColl;
+#endif
 
+#ifndef SSB64_NDS_IT_ATTACK_COLL_DECLARED
 typedef struct ITAttackPos {
     Vec3f pos_curr;
     Vec3f pos_prev;
@@ -101,6 +104,7 @@ typedef struct ITDamageColl {
     Vec3f offset;
     Vec3f size;
 } ITDamageColl;
+#endif
 
 f32 lbCommonSin(f32 angle);
 f32 lbCommonCos(f32 angle);

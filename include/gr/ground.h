@@ -214,6 +214,34 @@ typedef struct GRDisplayDesc
     void (*proc_update)(GObj *);
 } GRDisplayDesc;
 
+typedef struct GRAttackColl
+{
+    s32 kind;
+    s32 damage;
+    s32 angle;
+    s32 knockback_scale;
+    s32 knockback_weight;
+    s32 knockback_base;
+    s32 element;
+} GRAttackColl;
+
+typedef struct GRObstacle
+{
+    GObj *gobj;
+    sb32 (*proc_update)(GObj *, GObj *, s32 *);
+} GRObstacle;
+
+typedef struct GRHazard
+{
+    GObj *gobj;
+    sb32 (*proc_update)(GObj *, GObj *, GRAttackColl **, s32 *);
+} GRHazard;
+
+extern GRObstacle sFTMainGroundObstacles[2];
+extern GRHazard sFTMainGroundHazards[1];
+extern s32 sFTMainGroundObstaclesNum;
+extern s32 sFTMainGroundHazardsNum;
+
 typedef struct GRPupupuEffect
 {
     Vec3f pos;

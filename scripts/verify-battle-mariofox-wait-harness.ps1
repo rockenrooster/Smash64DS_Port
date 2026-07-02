@@ -101,8 +101,8 @@ try {
             (Convert-MarkerUInt32 $player.Groups[1].Value) -ne [uint32]::MaxValue -or
             [int]$player.Groups[2].Value -ne 10 -or
             [int]$player.Groups[3].Value -ne 4 -or
-            (Convert-MarkerUInt32 $player.Groups[4].Value) -ne [uint32]::MaxValue -or
-            (Convert-MarkerUInt32 $player.Groups[5].Value) -ne [uint32]::MaxValue -or
+            (Convert-MarkerUInt32 $player.Groups[4].Value) -ne 0 -or
+            (Convert-MarkerUInt32 $player.Groups[5].Value) -ne 0 -or
             (Convert-MarkerUInt32 $player.Groups[6].Value) -ne 0 -or
             (Convert-MarkerUInt32 $player.Groups[7].Value) -ne 0x3f800000 -or
             [int]$player.Groups[8].Value -ne 1 -or

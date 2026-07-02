@@ -12,14 +12,27 @@
 #include <stddef.h>
 #include <ssb_types.h>
 #include <sys/controller.h>
+#include <sys/objdef.h>
 #include <sys/objtypes.h>
 
 #ifndef U8_MAX
 #define U8_MAX 255
 #endif
 
+#ifndef GMCOMMON_PLAYERS_MAX
+#define GMCOMMON_PLAYERS_MAX 4
+#endif
+
+#define GMHITCOLLISION_FLAG_FIGHTER (1u << 0)
+#define GMHITCOLLISION_FLAG_WEAPON (1u << 1)
+#define GMHITCOLLISION_FLAG_ITEM (1u << 2)
+#define GMHITCOLLISION_FLAG_ALL \
+    (GMHITCOLLISION_FLAG_FIGHTER | GMHITCOLLISION_FLAG_WEAPON | \
+     GMHITCOLLISION_FLAG_ITEM)
+
 typedef struct GObj GObj;
 typedef struct FTData FTData;
+typedef struct alSoundEffect alSoundEffect;
 
 typedef enum FTKind {
     nFTKindPlayableStart,
@@ -129,7 +142,7 @@ enum {
     nFTPartsJointXRotN = 2,
     nFTPartsJointYRotN = 3,
     nFTPartsJointCommonStart = 4,
-    nFTPartsJointNumMax = 74
+    nFTPartsJointNumMax = 37
 };
 
 #define FTKEY_EVENT_INSTRUCTION(k, t) \
@@ -208,6 +221,9 @@ typedef struct FTInputCPU {
     u16 button_inputs;
 } FTInputCPU;
 
+typedef FTInputPlayer FTPlayerInput;
+typedef FTInputCPU FTComputerInput;
+
 typedef struct FTInput {
     FTInputPlayer pl;
     FTInputCPU cp;
@@ -221,14 +237,22 @@ typedef struct FTInput {
 typedef struct FTCollisionData {
     Vec3f *p_translate;
     s32 *p_lr;
+    Vec3f pos_prev;
+    Vec3f pos_diff;
+    Vec3f vel_speed;
+    Vec3f vel_push;
     MPObjectColl map_coll;
     MPObjectColl *p_map_coll;
     Vec2f cliffcatch_coll;
-    s32 ignore_line_id;
-    u32 update_tic;
-    u32 mask_curr;
+    u16 mask_prev;
+    u16 mask_curr;
+    u16 mask_unk;
+    u16 mask_stat;
+    u16 update_tic;
+    s32 ewall_line_id;
+    sb32 is_coll_end;
+    Vec3f line_coll_dist;
     s32 floor_line_id;
-    s32 cliff_id;
     f32 floor_dist;
     u32 floor_flags;
     Vec3f floor_angle;
@@ -241,9 +265,8 @@ typedef struct FTCollisionData {
     s32 rwall_line_id;
     u32 rwall_flags;
     Vec3f rwall_angle;
-    u32 mask_stat;
-    sb32 is_coll_end;
-    Vec3f pos_prev;
+    s32 cliff_id;
+    s32 ignore_line_id;
 } FTCollisionData;
 
 typedef enum GMAttackState {
@@ -334,6 +357,16 @@ typedef struct FTHitLog {
     s32 attacker_player_num;
 } FTHitLog;
 
+typedef enum GMHitType {
+    nGMHitTypeDamage,
+    nGMHitTypeShield,
+    nGMHitTypeShieldRehit,
+    nGMHitTypeAttack,
+    nGMHitTypeDamageRehit,
+    nGMHitTypeAbsorb,
+    nGMHitTypeReflect
+} GMHitType;
+
 typedef enum FTSpecialCollKind {
     nFTSpecialCollKindFoxReflector,
     nFTSpecialCollKindNessAbsorb,
@@ -416,6 +449,155 @@ typedef union GMStatFlags {
     };
     u16 halfword;
 } GMStatFlags;
+
+#define gmColEventAdvance(event, type) \
+    ((event) = (void *)((uintptr_t)(event) + sizeof(type)))
+#define gmColEventCast(event, type) ((type *)(event))
+#define gmColEventCastAdvance(event, type) ((type *)(event)++)
+
+typedef enum GMColEvent {
+    nGMColEventEnd,
+    nGMColEventWait,
+    nGMColEventGoto,
+    nGMColEventLoopBegin,
+    nGMColEventLoopEnd,
+    nGMColEventSubroutine,
+    nGMColEventReturn,
+    nGMColEventSetParallelScript,
+    nGMColEventClearColorAll,
+    nGMColEventSetColor1,
+    nGMColEventBlendColor1,
+    nGMColEventSetColor2,
+    nGMColEventBlendColor2,
+    nGMColEventEffect,
+    nGMColEventEffectItemHoldOffset,
+    nGMColEventSetLight,
+    nGMColEventClearLight,
+    nGMColEventPlayFGM,
+    nGMColEventSetSkeletonID
+} GMColEvent;
+
+typedef struct GMColScript {
+    u32 *p_script;
+    u16 color_event_timer;
+    u16 script_id;
+    void *p_subroutine[1];
+    s32 loop_count[1];
+    void *p_goto[2];
+    s32 unk_ca_timer;
+} GMColScript;
+
+typedef struct GMColKeys {
+    u8 r, g, b, a;
+    s16 ir, ig, ib, ia;
+} GMColKeys;
+
+typedef struct GMColAnim {
+    GMColScript cs[2];
+    s32 length;
+    s32 colanim_id;
+    GMColKeys color1;
+    f32 light_angle_x;
+    f32 light_angle_y;
+    GMColKeys color2;
+    ub8 is_use_color1 : 1;
+    ub8 is_use_light : 1;
+    ub8 is_use_color2 : 1;
+    u8 skeleton_id : 2;
+} GMColAnim;
+
+typedef struct GMColDesc {
+    void *p_script;
+    u8 priority;
+    ub8 is_unlocked;
+} GMColDesc;
+
+typedef struct GMColEventDefault {
+    u32 opcode : 6;
+    u32 value : 26;
+} GMColEventDefault;
+
+typedef struct GMColEventGoto1 {
+    u32 opcode : 6;
+} GMColEventGoto1;
+
+typedef struct GMColEventGoto2 {
+    void *p_goto;
+} GMColEventGoto2;
+
+typedef struct GMColEventSubroutine1 {
+    u32 opcode : 6;
+} GMColEventSubroutine1;
+
+typedef struct GMColEventSubroutine2 {
+    void *p_subroutine;
+} GMColEventSubroutine2;
+
+typedef struct GMColEventParallel1 {
+    u32 opcode : 6;
+} GMColEventParallel1;
+
+typedef struct GMColEventParallel2 {
+    void *p_script;
+} GMColEventParallel2;
+
+typedef struct GMColEventSetRGBA1 {
+    u32 opcode : 6;
+} GMColEventSetRGBA1;
+
+typedef struct GMColEventSetRGBA2 {
+    u32 r : 8;
+    u32 g : 8;
+    u32 b : 8;
+    u32 a : 8;
+} GMColEventSetRGBA2;
+
+typedef struct GMColEventBlendRGBA1 {
+    u32 opcode : 6;
+    u32 blend_frames : 26;
+} GMColEventBlendRGBA1;
+
+typedef struct GMColEventBlendRGBA2 {
+    u32 r : 8;
+    u32 g : 8;
+    u32 b : 8;
+    u32 a : 8;
+} GMColEventBlendRGBA2;
+
+typedef struct GMColEventMakeEffect1 {
+    u32 opcode : 6;
+    s32 joint_id : 7;
+    u32 effect_id : 9;
+    u32 flag : 10;
+} GMColEventMakeEffect1;
+
+typedef struct GMColEventMakeEffect2 {
+    s32 off_x : 16;
+    s32 off_y : 16;
+} GMColEventMakeEffect2;
+
+typedef struct GMColEventMakeEffect3 {
+    s32 off_z : 16;
+    s32 rng_x : 16;
+} GMColEventMakeEffect3;
+
+typedef struct GMColEventMakeEffect4 {
+    s32 rng_y : 16;
+    s32 rng_z : 16;
+} GMColEventMakeEffect4;
+
+typedef struct GMColEventMakeEffect {
+    GMColEventMakeEffect1 s1;
+    GMColEventMakeEffect2 s2;
+    GMColEventMakeEffect3 s3;
+    GMColEventMakeEffect4 s4;
+} GMColEventMakeEffect;
+
+typedef struct GMColEventSetLight {
+    u32 opcode : 6;
+    s32 light1 : 13;
+    s32 light2 : 13;
+} GMColEventSetLight;
 
 enum {
     nFTCommonMotionNull = -1,
@@ -656,7 +838,11 @@ enum {
     nFTCommonStatusCliffEscapeQuick2 = 97,
     nFTCommonStatusCliffEscapeSlow1 = 98,
     nFTCommonStatusCliffEscapeSlow2 = 99,
-    nFTCommonStatusLightThrowDrop = 103,
+    nFTCommonStatusLightGet = 100,
+    nFTCommonStatusHeavyGet = 101,
+    nFTCommonStatusLiftWait = 102,
+    nFTCommonStatusLiftTurn = 103,
+    nFTCommonStatusLightThrowDrop = 104,
     nFTCommonStatusLightThrowDash = 104,
     nFTCommonStatusLightThrowF = 105,
     nFTCommonStatusLightThrowB,
@@ -703,7 +889,13 @@ enum {
     nFTItemSwingTypeAttackDash = 3
 };
 
+#define FTSTAT_CHARDATA_START 0x20000
+#define FTSTAT_OPENING1_START 0xE0000
+#define FTSTAT_OPENING2_START 0x10000
+
 #define FTSTATUS_PRESERVE_NONE 0u
+#define FTSTATUS_PRESERVE_HIT 0x1u
+#define FTSTATUS_PRESERVE_COLANIM 0x2u
 #define FTSTATUS_PRESERVE_EFFECT 0x4u
 #define FTSTATUS_PRESERVE_FASTFALL 0x8u
 #define FTSTATUS_PRESERVE_HITSTATUS 0x10u
@@ -711,8 +903,12 @@ enum {
 #define FTSTATUS_PRESERVE_SLOPECONTOUR 0x40u
 #define FTSTATUS_PRESERVE_TEXTUREPART 0x80u
 #define FTSTATUS_PRESERVE_PLAYERTAG 0x100u
+#define FTSTATUS_PRESERVE_THROWPOINTER 0x200u
 #define FTSTATUS_PRESERVE_SHUFFLETIME 0x400u
+#define FTSTATUS_PRESERVE_LOOPSFX 0x800u
 #define FTSTATUS_PRESERVE_DAMAGEPLAYER 0x1000u
+#define FTSTATUS_PRESERVE_AFTERIMAGE 0x2000u
+#define FTSTATUS_PRESERVE_RUMBLE 0x4000u
 #define F_CONTROLLER_RANGE_MAX 80.0F
 #define FTCOMMON_WALKMIDDLE_STICK_RANGE_MIN 26
 #define FTCOMMON_WALKFAST_STICK_RANGE_MIN 62
@@ -736,7 +932,7 @@ enum {
 #define FTCOMMON_ESCAPE_BUFFER_TICS_MAX 4
 
 enum {
-    nFTMotionAttackIDNone = -1,
+    nFTMotionAttackIDNone = 0,
     nFTMotionAttackIDAttack11 = 1,
     nFTMotionAttackIDAttack12 = 2,
     nFTMotionAttackIDAttack13 = 3,
@@ -754,7 +950,7 @@ enum {
 };
 
 enum {
-    nFTStatusAttackIDNone = -1,
+    nFTStatusAttackIDNone = 0,
     nFTStatusAttackIDAttack11 = 1,
     nFTStatusAttackIDAttackDash = 2,
     nFTStatusAttackIDAttackAirN = 9,
@@ -889,7 +1085,22 @@ enum {
 
 enum {
     nMPMaterialCommon = 0,
-    nMPMaterial4 = 4
+    nMPMaterial1 = 1,
+    nMPMaterial2 = 2,
+    nMPMaterial3 = 3,
+    nMPMaterial4 = 4,
+    nMPMaterial5 = 5,
+    nMPMaterial6 = 6,
+    nMPMaterialFireWeakS1 = 7,
+    nMPMaterialFireStrongS1 = 8,
+    nMPMaterialFireWeakHi1 = 9,
+    nMPMaterialSpikes = 10,
+    nMPMaterialFireWeakHi2 = 11,
+    nMPMaterialDokanL = 12,
+    nMPMaterialDokanR = 13,
+    nMPMaterialDetect = 14,
+    nMPMaterialFireWeakHi3 = 15,
+    nMPMaterialEnumCount = 16
 };
 
 enum {
@@ -910,11 +1121,36 @@ enum {
 };
 
 enum {
+    nGMHitLevelSmall = 0,
+    nGMHitLevelMiddle = 1,
+    nGMHitLevelLarge = 2,
+    nGMHitLevelEnumCount = 3
+};
+
+enum {
     nGMHitEnvironmentAcid = 0,
     nGMHitEnvironmentPowerBlock = 1,
     nGMHitEnvironmentTwister = 2,
     nGMHitEnvironmentTaruCann = 3
 };
+
+enum {
+    nFTCameraModeDefault = 0,
+    nFTCameraModeGhost = 1,
+    nFTCameraModeDeadUp = 2,
+    nFTCameraModeEntry = 3,
+    nFTCameraModeExplain = 4
+};
+
+enum {
+    nFTSlopeContourLFoot = 0,
+    nFTSlopeContourRFoot = 1,
+    nFTSlopeContourFull = 2
+};
+
+#define FTSLOPECONTOUR_FLAG_LFOOT (1u << nFTSlopeContourLFoot)
+#define FTSLOPECONTOUR_FLAG_RFOOT (1u << nFTSlopeContourRFoot)
+#define FTSLOPECONTOUR_FLAG_FULL (1u << nFTSlopeContourFull)
 
 enum {
     nFTHitLogObjectNone = 0,
@@ -956,6 +1192,73 @@ typedef struct FTStatusDesc {
     void (*proc_map)(GObj *);
 } FTStatusDesc;
 
+typedef enum FTMotionEvent {
+    nFTMotionEventEnd,
+    nFTMotionEventSyncWait,
+    nFTMotionEventAsyncWait,
+    nFTMotionEventMakeAttackColl,
+    nFTMotionEventMakeAttackCollScaled,
+    nFTMotionEventClearAttackCollID,
+    nFTMotionEventClearAttackCollAll,
+    nFTMotionEventSetAttackCollOffset,
+    nFTMotionEventSetAttackCollDamage,
+    nFTMotionEventSetAttackCollSize,
+    nFTMotionEventSetAttackCollSoundLevel,
+    nFTMotionEventRefreshAttackCollID,
+    nFTMotionEventSetThrow,
+    nFTMotionEventSetDamageThrown,
+    nFTMotionEventPlayFGM,
+    nFTMotionEventPlayLoopSFXStoreInfo,
+    nFTMotionEventStopLoopSFX,
+    nFTMotionEventPlayVoiceStoreInfo,
+    nFTMotionEventPlayLoopVoiceStoreInfo,
+    nFTMotionEventPlayFGMStoreInfo,
+    nFTMotionEventPlaySmashVoice,
+    nFTMotionEventSetFlag0,
+    nFTMotionEventSetFlag1,
+    nFTMotionEventSetFlag2,
+    nFTMotionEventSetFlag3,
+    nFTMotionEventSetAirJumpAdd,
+    nFTMotionEventSetAirJumpMax,
+    nFTMotionEventSetHitStatusPartAll,
+    nFTMotionEventSetHitStatusPartID,
+    nFTMotionEventSetHitStatusAll,
+    nFTMotionEventResetDamageCollPartAll,
+    nFTMotionEventSetDamageCollPartID,
+    nFTMotionEventLoopBegin,
+    nFTMotionEventLoopEnd,
+    nFTMotionEventSubroutine,
+    nFTMotionEventReturn,
+    nFTMotionEventGoto,
+    nFTMotionEventPauseScript,
+    nFTMotionEventEffect,
+    nFTMotionEventEffectItemHold,
+    nFTMotionEventSetModelPartID,
+    nFTMotionEventResetModelPartAll,
+    nFTMotionEventHideModelPartAll,
+    nFTMotionEventSetTexturePartID,
+    nFTMotionEventSetColAnim,
+    nFTMotionEventResetColAnim,
+    nFTMotionEventSetParallelScript,
+    nFTMotionEventSetSlopeContour,
+    nFTMotionEventHideItem,
+    nFTMotionEventMakeRumble,
+    nFTMotionEventStopRumble,
+    nFTMotionEventSetAfterImage
+} FTMotionEvent;
+
+#define FTANIM_FLAG_SUBMOTION_SCRIPT 0x00000010u
+#define FTANIM_FLAG_ANIMJOINT 0x00000008u
+#define FTANIM_FLAG_TRANSLATE_SCALES 0x00000004u
+#define FTANIM_FLAG_SHIELDPOSE 0x00000002u
+#define FTANIM_FLAG_ANIMLOCKS 0x00000001u
+
+#define ftMotionEventAdvance(event, type) \
+    ((event)->p_script = \
+         (void *)((uintptr_t)(event)->p_script + sizeof(type)))
+#define ftMotionEventCast(event, type) ((type *)(event)->p_script)
+#define ftMotionEventCastAdvance(event, type) ((type *)(event)->p_script++)
+
 typedef struct FTPhysics {
     Vec3f vel_air;
     Vec3f vel_damage_air;
@@ -993,7 +1296,270 @@ typedef struct FTMotionDescArray {
 
 struct FTData {
     FTMotionDescArray *mainmotion;
+    FTMotionDescArray *submotion;
+    void *p_file_shieldpose;
+    void **p_file_mainmotion;
+    void **p_file_submotion;
 };
+
+typedef struct FTMotionEventDefault {
+    u32 opcode : 6;
+    u32 value : 26;
+} FTMotionEventDefault;
+
+typedef struct FTMotionEventDouble {
+    u32 opcode : 6;
+    u32 pad1 : 26;
+    u32 pad2 : 32;
+} FTMotionEventDouble;
+
+typedef struct FTMotionEventMakeAttack1 {
+    u32 opcode : 6;
+    u32 attack_id : 3;
+    u32 group_id : 3;
+    s32 joint_id : 7;
+    u32 damage : 8;
+    ub32 can_rebound : 1;
+    u32 element : 4;
+} FTMotionEventMakeAttack1;
+
+typedef struct FTMotionEventMakeAttack2 {
+    u32 size : 16;
+    s32 off_x : 16;
+} FTMotionEventMakeAttack2;
+
+typedef struct FTMotionEventMakeAttack3 {
+    s32 off_y : 16;
+    s32 off_z : 16;
+} FTMotionEventMakeAttack3;
+
+typedef struct FTMotionEventMakeAttack4 {
+    s32 angle : 10;
+    u32 knockback_scale : 10;
+    u32 knockback_weight : 10;
+    u32 is_hit_ground_air : 2;
+} FTMotionEventMakeAttack4;
+
+typedef struct FTMotionEventMakeAttack5 {
+    s32 shield_damage : 8;
+    u32 fgm_level : 3;
+    u32 fgm_kind : 4;
+    u32 knockback_base : 10;
+} FTMotionEventMakeAttack5;
+
+typedef struct FTMotionEventMakeAttack {
+    FTMotionEventMakeAttack1 s1;
+    FTMotionEventMakeAttack2 s2;
+    FTMotionEventMakeAttack3 s3;
+    FTMotionEventMakeAttack4 s4;
+    FTMotionEventMakeAttack5 s5;
+} FTMotionEventMakeAttack;
+
+typedef struct FTMotionEventSetAttackOffset1 {
+    u32 opcode : 6;
+    u32 attack_id : 3;
+    s32 off_x : 16;
+} FTMotionEventSetAttackOffset1;
+
+typedef struct FTMotionEventSetAttackOffset2 {
+    s32 off_y : 16;
+    s32 off_z : 16;
+} FTMotionEventSetAttackOffset2;
+
+typedef struct FTMotionEventSetAttackOffset {
+    FTMotionEventSetAttackOffset1 s1;
+    FTMotionEventSetAttackOffset2 s2;
+} FTMotionEventSetAttackOffset;
+
+typedef struct FTMotionEventSetAttackCollDamage {
+    u32 opcode : 6;
+    u32 attack_id : 3;
+    u32 damage : 8;
+} FTMotionEventSetAttackCollDamage;
+
+typedef struct FTMotionEventSetAttackCollSize {
+    u32 opcode : 6;
+    u32 attack_id : 3;
+    u32 size : 16;
+} FTMotionEventSetAttackCollSize;
+
+typedef struct FTMotionEventSetAttackCollSound {
+    u32 opcode : 6;
+    u32 attack_id : 3;
+    u32 fgm_level : 3;
+} FTMotionEventSetAttackCollSound;
+
+typedef struct FTMotionEventSetThrow1 {
+    u32 opcode : 6;
+} FTMotionEventSetThrow1;
+
+typedef struct FTMotionEventSetThrow2 {
+    FTThrowHitDesc *throw_desc;
+} FTMotionEventSetThrow2;
+
+typedef struct FTMotionEventSetThrow {
+    FTMotionEventSetThrow1 s1;
+    FTMotionEventSetThrow2 s2;
+} FTMotionEventSetThrow;
+
+typedef struct FTMotionEventMakeEffect1 {
+    u32 opcode : 6;
+    s32 joint_id : 7;
+    u32 effect_id : 9;
+    u32 flag : 10;
+} FTMotionEventMakeEffect1;
+
+typedef struct FTMotionEventMakeEffect2 {
+    s32 off_x : 16;
+    s32 off_y : 16;
+} FTMotionEventMakeEffect2;
+
+typedef struct FTMotionEventMakeEffect3 {
+    s32 off_z : 16;
+    s32 rng_x : 16;
+} FTMotionEventMakeEffect3;
+
+typedef struct FTMotionEventMakeEffect4 {
+    s32 rng_y : 16;
+    s32 rng_z : 16;
+} FTMotionEventMakeEffect4;
+
+typedef struct FTMotionEventMakeEffect {
+    FTMotionEventMakeEffect1 s1;
+    FTMotionEventMakeEffect2 s2;
+    FTMotionEventMakeEffect3 s3;
+    FTMotionEventMakeEffect4 s4;
+} FTMotionEventMakeEffect;
+
+typedef struct FTMotionEventSetHitStatusPartID {
+    u32 opcode : 6;
+    s32 joint_id : 7;
+    u32 hitstatus : 19;
+} FTMotionEventSetHitStatusPartID;
+
+typedef struct FTMotionEventSetDamageCollPartID1 {
+    u32 opcode : 6;
+    s32 joint_id : 7;
+} FTMotionEventSetDamageCollPartID1;
+
+typedef struct FTMotionEventSetDamageCollPartID2 {
+    s32 off_x : 16;
+    s32 off_y : 16;
+} FTMotionEventSetDamageCollPartID2;
+
+typedef struct FTMotionEventSetDamageCollPartID3 {
+    s32 off_z : 16;
+    s32 size_x : 16;
+} FTMotionEventSetDamageCollPartID3;
+
+typedef struct FTMotionEventSetDamageCollPartID4 {
+    s32 size_y : 16;
+    s32 size_z : 16;
+} FTMotionEventSetDamageCollPartID4;
+
+typedef struct FTMotionEventSetDamageCollPartID {
+    FTMotionEventSetDamageCollPartID1 s1;
+    FTMotionEventSetDamageCollPartID2 s2;
+    FTMotionEventSetDamageCollPartID3 s3;
+    FTMotionEventSetDamageCollPartID4 s4;
+} FTMotionEventSetDamageCollPartID;
+
+typedef struct FTMotionEventSubroutine1 {
+    u32 opcode : 6;
+} FTMotionEventSubroutine1;
+
+typedef struct FTMotionEventSubroutine2 {
+    void *p_goto;
+} FTMotionEventSubroutine2;
+
+typedef struct FTMotionEventSubroutine {
+    FTMotionEventSubroutine1 s1;
+    FTMotionEventSubroutine2 s2;
+} FTMotionEventSubroutine;
+
+typedef struct FTMotionEventSetDamageThrown1 {
+    u32 opcode : 6;
+} FTMotionEventSetDamageThrown1;
+
+typedef struct FTMotionEventSetDamageThrown2 {
+    void *p_subroutine;
+} FTMotionEventSetDamageThrown2;
+
+typedef struct FTMotionDamageScript {
+    void *p_script[2][nFTKindEnumCount];
+} FTMotionDamageScript;
+
+typedef struct FTMotionEventSetDamageThrown {
+    FTMotionEventSetDamageThrown1 s1;
+    FTMotionEventSetDamageThrown2 s2;
+} FTMotionEventSetDamageThrown;
+
+typedef struct FTMotionEventGoto1 {
+    u32 opcode : 6;
+} FTMotionEventGoto1;
+
+typedef struct FTMotionEventGoto2 {
+    void *p_goto;
+} FTMotionEventGoto2;
+
+typedef struct FTMotionEventGoto {
+    FTMotionEventGoto1 s1;
+    FTMotionEventGoto2 s2;
+} FTMotionEventGoto;
+
+typedef struct FTMotionEventParallel1 {
+    u32 opcode : 6;
+} FTMotionEventParallel1;
+
+typedef struct FTMotionEventParallel2 {
+    void *p_goto;
+} FTMotionEventParallel2;
+
+typedef struct FTMotionEventParallel {
+    FTMotionEventParallel1 s1;
+    FTMotionEventParallel2 s2;
+} FTMotionEventParallel;
+
+typedef struct FTMotionEventSetModelPartID {
+    u32 opcode : 6;
+    s32 joint_id : 7;
+    s32 modelpart_id : 19;
+} FTMotionEventSetModelPartID;
+
+typedef struct FTMotionEventSetTexturePartID {
+    u32 opcode : 6;
+    u32 texturepart_id : 6;
+    u32 frame : 20;
+} FTMotionEventSetTexturePartID;
+
+typedef struct FTMotionEventSetColAnimID {
+    u32 opcode : 6;
+    u32 colanim_id : 8;
+    u32 length : 18;
+} FTMotionEventSetColAnimID;
+
+typedef struct FTMotionEventSetSlopeContour {
+    u32 opcode : 6;
+    u32 pad : 23;
+    u32 flags : 3;
+} FTMotionEventSetSlopeContour;
+
+typedef struct FTMotionEventSetAfterImage {
+    u32 opcode : 6;
+    u32 is_itemswing : 8;
+    s32 drawstatus : 18;
+} FTMotionEventSetAfterImage;
+
+typedef struct FTMotionEventMakeRumble {
+    u32 opcode : 6;
+    u32 length : 13;
+    u32 rumble_id : 13;
+} FTMotionEventMakeRumble;
+
+typedef struct FTMotionEventStopRumble {
+    u32 opcode : 6;
+    u32 rumble_id : 26;
+} FTMotionEventStopRumble;
 
 typedef union FTMotionVars {
     struct {
@@ -1123,6 +1689,44 @@ typedef struct ftKirbyAttack100Effect {
     f32 add;
 } ftKirbyAttack100Effect;
 
+typedef struct FTOpeningDesc {
+    s32 motion_id;
+    void (*proc_update)(GObj *);
+} FTOpeningDesc;
+
+typedef struct FTHiddenPart {
+    s32 root_joint_id;
+    s32 parent_joint_id;
+    s32 partindex_0x8;
+    s32 joint_kind;
+} FTHiddenPart;
+
+typedef struct FTAfterImage {
+    s16 translate_x;
+    s16 translate_y;
+    s16 translate_z;
+    Vec3f vec;
+} FTAfterImage;
+
+typedef struct FTModelPartStatus {
+    s8 modelpart_id_base;
+    s8 modelpart_id_curr;
+} FTModelPartStatus;
+
+typedef struct FTTexturePartStatus {
+    s8 texture_id_base;
+    s8 texture_id_curr;
+} FTTexturePartStatus;
+
+typedef struct FTTexturePart {
+    u8 joint_id;
+    u8 detail[2];
+} FTTexturePart;
+
+typedef struct FTTexturePartContainer {
+    FTTexturePart textureparts[2];
+} FTTexturePartContainer;
+
 typedef struct FTStruct {
     s32 pkind;
     GObj *fighter_gobj;
@@ -1130,6 +1734,7 @@ typedef struct FTStruct {
     FTData *data;
     FTAttributes *attr;
     void *figatree_heap;
+    void *figatree;
 
     u8 team;
     u8 player;
@@ -1153,6 +1758,7 @@ typedef struct FTStruct {
     f32 anim_frame;
     f32 anim_speed;
     FTAnimDesc anim_desc;
+    Vec3f anim_vel;
 
     sb32 is_invisible;
     sb32 is_shadow_hide;
@@ -1160,6 +1766,15 @@ typedef struct FTStruct {
     sb32 is_have_translate_scale;
     sb32 is_playertag_hide;
     sb32 is_ghost;
+    sb32 is_control_disable;
+    sb32 is_rebirth;
+    sb32 is_effect_skip;
+    sb32 is_muted;
+    sb32 is_item_show;
+    sb32 is_events_forward;
+    sb32 is_menu_ignore;
+    s32 slope_contour;
+    s32 camera_mode;
 
     s32 display_mode;
     s32 dl_link;
@@ -1175,6 +1790,9 @@ typedef struct FTStruct {
     FTCollisionData coll_data;
 
     DObj *joints[nFTPartsJointNumMax];
+    FTModelPartStatus modelpart_status[nFTPartsJointNumMax -
+                                       nFTPartsJointCommonStart];
+    FTTexturePartStatus texturepart_status[2];
     FTAttackColl attack_colls[FTATTACKCOLL_NUM_MAX];
     FTDamageColl damage_colls[FTDAMAGECOLL_NUM_MAX];
 
@@ -1182,6 +1800,7 @@ typedef struct FTStruct {
     s32 damage_resist;
     s32 shield_health;
     f32 unk_ft_0x38;
+    s32 unk_ft_0x3C;
     s32 hitlag_tics;
     sb32 is_knockback_paused;
 
@@ -1192,10 +1811,15 @@ typedef struct FTStruct {
 
     s32 ga;
     s32 jumps_used;
+    u8 unk_ft_0x149;
     sb32 is_reflect;
     sb32 is_absorb;
     sb32 is_shield;
     sb32 is_attack_active;
+    sb32 is_hitstatus_nodamage;
+    sb32 is_damage_coll_modify;
+    sb32 is_modelpart_modify;
+    sb32 is_texturepart_modify;
     sb32 is_effect_attach;
     sb32 is_jostle_ignore;
     sb32 is_cliff_hold;
@@ -1221,6 +1845,7 @@ typedef struct FTStruct {
     s32 shield_damage;
     s32 shield_damage_total;
     s32 shield_lr;
+    s32 shield_player;
     s32 damage_lag;
     s32 damage_queue;
     s32 damage_angle;
@@ -1277,6 +1902,8 @@ typedef struct FTStruct {
     f32 damage_knockback;
     f32 hitlag_mul;
     f32 shield_heal_wait;
+    f32 unk_ft_0x7A0;
+    s32 unk_ft_0x7AC;
 
     sb32 is_fastfall;
     s32 player_num;
@@ -1309,6 +1936,7 @@ typedef struct FTStruct {
     void (*proc_map)(GObj *);
     void (*proc_slope)(GObj *);
     void (*proc_status)(GObj *);
+    void (*proc_accessory)(GObj *);
     void (*proc_damage)(GObj *);
     void (*proc_trap)(GObj *);
     void (*proc_shield)(GObj *);
@@ -1317,6 +1945,21 @@ typedef struct FTStruct {
     void (*proc_lagupdate)(GObj *);
     void (*proc_passive)(GObj *);
     void (*proc_lagend)(GObj *);
+
+    alSoundEffect *p_sfx;
+    u16 sfx_id;
+    alSoundEffect *p_voice;
+    u16 voice_id;
+    alSoundEffect *p_loop_sfx;
+    u16 loop_sfx_id;
+    GMColAnim colanim;
+
+    struct {
+        ub8 is_itemswing;
+        s8 drawstatus;
+        u8 desc_id;
+        FTAfterImage desc[3];
+    } afterimage;
 
     FTMotionVars motion_vars;
     FTStatusVars status_vars;
@@ -1408,13 +2051,22 @@ typedef struct FTAttributes {
     f32 attack1_followup_frames;
     f32 dash_to_run;
     f32 shield_size;
-    u8 filler_0x078[0x09C - 0x078];
+    f32 shield_break_vel_y;
+    f32 shadow_size;
+    f32 jostle_width;
+    f32 jostle_x;
+    sb32 is_metallic;
+    f32 cam_offset_y;
+    f32 closeup_camera_zoom;
+    f32 camera_zoom;
+    f32 camera_zoom_base;
     MPObjectColl map_coll;
     Vec2f cliffcatch_coll;
     u16 dead_fgm_ids[2];
     u16 deadup_sfx;
     u16 damage_sfx;
-    u8 filler_0x0BC[0x100 - 0x0BC];
+    u16 smash_sfx[3];
+    u8 filler_0x0C2[0x100 - 0x0C2];
     ub32 filler_flags_low    : 10;
     ub32 is_have_voice       : 1;
     ub32 is_have_catch       : 1;
@@ -1440,9 +2092,12 @@ typedef struct FTAttributes {
     ub32 is_have_attack11    : 1;
     FTDamageCollDesc damage_coll_descs[FTDAMAGECOLL_NUM_MAX];
     Vec3f hit_detect_range;
-    u8 filler_0x29C[0x2B8 - 0x29C];
+    u32 *setup_parts;
+    u32 *animlock;
+    s32 effect_joint_ids[5];
     s32 cliff_status_ga[5];
-    u8 filler_0x2CC[0x2D4 - 0x2CC];
+    s32 unused_0x2CC;
+    FTHiddenPart *hiddenparts;
     FTCommonPartContainer *commonparts_container;
     DObjDesc *dobj_lookup;
     AObjEvent32 **shield_anim_joints[8];
@@ -1456,7 +2111,7 @@ typedef struct FTAttributes {
     Vec3f *translate_scales;
     FTModelPartContainer *modelparts_container;
     void *accesspart;
-    void *textureparts_container;
+    FTTexturePartContainer *textureparts_container;
     s32 joint_itemheavy_id;
     FTThrownStatusArray *thrown_status;
     s32 joint_itemlight_id;
@@ -1467,6 +2122,10 @@ typedef struct FTAttributes {
 extern size_t gFTManagerFigatreeHeapSize;
 extern FTDesc dFTManagerDefaultFighterDesc;
 extern f32 dSCSubsysFighterScales[];
+extern GObj *gGCCommonLinks[GC_COMMON_MAX_LINKS];
+extern FTOpeningDesc *D_ovl1_80390D20[];
+extern FTOpeningDesc D_ovl1_80390BE8;
+extern GMColDesc dGMColScriptsDescs[];
 
 void ftManagerSetupFileSize(void);
 void ftManagerAllocFighter(u32 data_flags, s32 allocs_num);
@@ -1485,6 +2144,69 @@ void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade);
 sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
                                      s32 unused);
 sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level);
+void ftParamPlayVoice(FTStruct *fp, u16 voice_id);
+void ftParamPlayLoopSFX(FTStruct *fp, u16 sfx_id);
+void ftParamStopLoopSFX(FTStruct *fp);
+void ftParamMoveDLLink(GObj *fighter_gobj, u8 dl_link);
+void ftParamSetHitStatusPartAll(GObj *fighter_gobj, s32 hitstatus);
+void ftParamSetHitStatusPartID(GObj *fighter_gobj, s32 joint_id,
+                               s32 hitstatus);
+void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus);
+void ftParamResetFighterDamageCollsAll(GObj *fighter_gobj);
+void ftParamModifyDamageCollID(GObj *fighter_gobj, s32 joint_id,
+                               Vec3f *offset, Vec3f *size);
+void ftParamResetModelPartAll(GObj *fighter_gobj);
+void ftParamHideModelPartAll(GObj *fighter_gobj);
+void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
+                           s32 modelpart_id);
+void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail);
+void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
+                             s32 texture_id);
+void ftParamResetTexturePartAll(GObj *fighter_gobj);
+void ftParamResetStatUpdateColAnim(GObj *fighter_gobj);
+void ftParamProcStopEffect(GObj *fighter_gobj);
+void ftParamUpdateAnimKeys(GObj *fighter_gobj);
+void ftParamsUpdateFighterPartsTransform(DObj *joint);
+void ftParamsUpdateFighterPartsTransformAll(DObj *joint);
+void ftParamTryUpdateItemMusic(void);
+void ftParamKirbyTryMakeMapStarEffect(GObj *fighter_gobj);
+void ftParamTryPlayItemMusic(s32 bgm_id);
+void ftParamSetStarHitStatusInvincible(FTStruct *fp, s32 invincible_tics);
+void ftParamSetHealDamage(FTStruct *fp, s32 heal);
+s32 ftParamGetJointID(FTStruct *fp, s32 joint_id);
+s32 ftParamGetCapturedDamage(FTStruct *fp, s32 damage);
+void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj);
+void ftParamSetCaptureImmuneMask(FTStruct *fp, u8 mask);
+void ftParamSetMotionID(FTStruct *fp, s32 attack_id);
+void ftParamSetStatUpdate(FTStruct *fp, u16 stat_flags);
+void ftParamUpdate1PGameAttackStats(FTStruct *fp, u16 stat_flags);
+void ftParamSetAnimLocks(FTStruct *fp);
+void ftParamClearAnimLocks(FTStruct *fp);
+void gmRumbleStopRumbleID(s32 player, s32 rumble_id);
+void ftComputerProcessAll(GObj *fighter_gobj);
+void ftKeyProcessKeyEvents(GObj *fighter_gobj);
+sb32 ftCommonDeadCheckInterruptCommon(GObj *fighter_gobj);
+void ftBossCommonUpdateDamageStats(GObj *fighter_gobj);
+void ftCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj);
+void ftCommonGuardSetOffSetStatus(GObj *fighter_gobj);
+void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj);
+void ftFoxSpecialLwHitSetStatus(GObj *fighter_gobj);
+void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj);
+void ftHammerUpdateStats(GObj *fighter_gobj);
+void func_ovl2_800EDBA4(DObj *joint);
+extern f32 dMPCollisionMaterialFrictions[];
+extern u8 gSC1PGameBonusStarCount;
+extern u8 gSC1PGameBonusGiantImpact;
+void ftManagerSetPrevPartsAlloc(FTParts *parts);
+FTParts *ftManagerGetNextPartsAlloc(void);
+void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap);
+void lbCommonInitDObj(DObj *dobj, u8 tk1, u8 tk2, u8 tk3, u8 arg4);
+void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
+                                        AObjEvent32 **costume_matanim_joints,
+                                        AObjEvent32 **main_matanim_joints,
+                                        s32 costume);
+DObj *gcAddDObjForGObj(GObj *gobj, void *dvar);
+void gcEjectDObj(DObj *dobj);
 void ftMainRunUpdateColAnim(GObj *fighter_gobj);
 void ftCommonDamageSetPublic(FTStruct *fp, f32 knockback, f32 angle);
 void ftCommonDamageSetDustEffectInterval(FTStruct *fp);
@@ -1501,6 +2223,12 @@ void ftCommonDamageUpdateCatchResist(GObj *fighter_gobj);
 void ftCommonDamageUpdateDamageColAnim(GObj *fighter_gobj, f32 knockback,
                                        s32 element);
 void ftCommonDamageSetDamageColAnim(GObj *fighter_gobj);
+void ftCommonDamageCommonProcUpdate(GObj *fighter_gobj);
+void ftCommonDamageAirCommonProcUpdate(GObj *fighter_gobj);
+void ftCommonDamageCommonProcInterrupt(GObj *fighter_gobj);
+void ftCommonDamageAirCommonProcInterrupt(GObj *fighter_gobj);
+void ftCommonDamageCommonProcPhysics(GObj *fighter_gobj);
+void ftCommonDamageAirCommonProcMap(GObj *fighter_gobj);
 void ftCommonDamageUpdateMain(GObj *fighter_gobj);
 void ftPhysicsStopVelAll(GObj *fighter_gobj);
 void ftPhysicsApplyGroundVelFriction(GObj *fighter_gobj);
@@ -1733,6 +2461,8 @@ sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj);
 void ftCommonAttackAirProcMap(GObj *fighter_gobj);
 sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
 sb32 ftCommonTurnRunCheckInterruptRun(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnRunProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonTurnRunProcInterrupt(GObj *fighter_gobj);
 void ftCommonTurnSetStatusInvertLR(GObj *fighter_gobj);
 void ftParamSetStickLR(FTStruct *fp);
 sb32 ftCommonSquatCheckInterruptCommon(GObj *fighter_gobj);
@@ -1743,11 +2473,17 @@ sb32 ftCommonSquatWaitCheckInterruptLanding(GObj *fighter_gobj);
 sb32 ftCommonHammerFallCheckInterruptCommon(GObj *fighter_gobj);
 void ndsBaseFTCommonPassSetStatusParam(GObj *fighter_gobj, s32 status_id,
                                        f32 frame_begin, u32 flags);
+void ndsBaseFTCommonPassProcInterrupt(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonPassCheckInterruptCommon(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonPassCheckInterruptSquat(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatProcInterrupt(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonSquatCheckInterruptCommon(GObj *fighter_gobj);
 void ndsBaseFTCommonSquatSetStatusPass(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonSquatCheckGotoPass(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatWaitProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatWaitProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonSquatRvProcInterrupt(GObj *fighter_gobj);
 void ndsBaseFTCommonAttackDashSetStatus(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttackDashCheckInterruptCommon(GObj *fighter_gobj);
 void ndsBaseFTCommonAttack11ProcUpdate(GObj *fighter_gobj);
@@ -1787,15 +2523,44 @@ void ndsBaseFTCommonAttack100LoopProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonAttack100LoopProcInterrupt(GObj *fighter_gobj);
 void ndsBaseFTCommonAttack100LoopSetStatus(GObj *fighter_gobj);
 void ndsBaseFTCommonAttack100EndSetStatus(GObj *fighter_gobj);
+void ndsBaseFTCommonGuardOnProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonGuardCommonProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonGuardProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonGuardOffProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonGuardSetOffProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonEscapeProcUpdate(GObj *fighter_gobj);
+void ndsBaseFTCommonEscapeProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonEscapeProcStatus(GObj *fighter_gobj);
 extern void *gFTDataKirbyMainMotion;
 extern uintptr_t llKirbyMainMotionftKirbyAttack100Effect;
 void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec);
+void gmCollisionTransformMatrixAll(DObj *dobj, FTParts *parts, Mtx44f mtx);
+sb32 gmCollisionCheckFighterInFighterRange(FTAttackColl *attack_coll,
+                                           GObj *fighter_gobj);
+sb32 gmCollisionCheckFighterAttacksCollide(FTAttackColl *attack_coll1,
+                                           FTAttackColl *attack_coll2);
+sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
+                                                FTDamageColl *damage_coll);
+sb32 gmCollisionCheckFighterAttackShieldCollide(FTAttackColl *attack_coll,
+                                                GObj *fighter_gobj,
+                                                DObj *dobj, f32 *p_angle);
+void gmCollisionGetFighterAttackDamagePosition(Vec3f *dst,
+                                               FTAttackColl *ft_attack_coll,
+                                               FTDamageColl *damage_coll);
+void gmCollisionGetFighterAttackShieldPosition(Vec3f *dst,
+                                               FTAttackColl *ft_attack_coll,
+                                               GObj *gobj, DObj *dobj);
+void gmCollisionGetFighterAttacksPosition(Vec3f *dst,
+                                          FTAttackColl *ft_attack_coll1,
+                                          FTAttackColl *ft_attack_coll2);
+f32 gmCollisionGetDamageSlashRotation(FTStruct *fp,
+                                      FTAttackColl *attack_coll);
 GObj *efManagerKirbyVulcanJabMakeEffect(Vec3f *pos, s32 lr, f32 rotate,
                                         f32 vel, f32 add);
 sb32 ftCommonCatchCheckInterruptAttack11(GObj *fighter_gobj);
 void ftParamSetMotionID(FTStruct *fp, s32 motion_attack_id);
 void ftParamSetStatUpdate(FTStruct *fp, u16 flags);
-void ftParamUpdate1PGameAttackStats(FTStruct *fp, s32 attack_id);
+void ftParamUpdate1PGameAttackStats(FTStruct *fp, u16 flags);
 void ftParamClearAttackRecordID(FTStruct *fp, s32 attack_id);
 void ftParamRefreshAttackCollID(GObj *fighter_gobj, s32 attack_id);
 sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj);
@@ -1807,6 +2572,42 @@ sb32 ftAnimEndCheckSetStatus(GObj *fighter_gobj, void (*proc_status)(GObj*));
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj);
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags);
+extern sb32 gFTMainIsDamageDetect[GMCOMMON_PLAYERS_MAX];
+extern sb32 gFTMainIsAttackDetect[GMCOMMON_PLAYERS_MAX];
+sb32 ftMainCheckGetUpdateDamage(FTStruct *fp, s32 *damage);
+void ftMainPlayHitSFX(FTStruct *fp, FTAttackColl *attack_coll);
+void ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
+                               GObj *victim_gobj, s32 attack_type,
+                               u32 victim_group_id,
+                               sb32 ignore_damage_or_hit);
+void ftMainSetHitRebound(GObj *attacker_gobj, FTStruct *fp,
+                         FTAttackColl *attack_coll, GObj *victim_gobj);
+void ftMainUpdateAttackStatFighter(FTStruct *other_fp,
+                                   FTAttackColl *other_hit,
+                                   FTStruct *this_fp,
+                                   FTAttackColl *this_hit,
+                                   GObj *other_gobj,
+                                   GObj *this_gobj);
+void ftMainUpdateShieldStatFighter(FTStruct *attacker_fp,
+                                   FTAttackColl *attack_coll,
+                                   FTStruct *victim_fp,
+                                   GObj *attacker_gobj,
+                                   GObj *victim_gobj);
+void ftMainUpdateCatchStatFighter(FTStruct *attacker_fp,
+                                  FTAttackColl *attack_coll,
+                                  FTStruct *victim_fp,
+                                  GObj *attacker_gobj,
+                                  GObj *victim_gobj);
+void ftMainProcessHitCollisionStatsMain(GObj *fighter_gobj);
+void ftMainSearchHitFighter(GObj *this_gobj);
+void ftMainSearchFighterCatch(GObj *this_gobj);
+void ftMainProcSearchCatch(GObj *fighter_gobj);
+void ftMainSearchHitHazard(GObj *fighter_gobj);
+void ftMainProcSearchHitAll(GObj *fighter_gobj);
+void ftMainProcParams(GObj *fighter_gobj);
+sb32 ftMainCheckAddGroundObstacle(GObj *gobj,
+                                  sb32 (*proc_update)(GObj *, GObj *, s32 *));
+void ftMainClearGroundObstacle(GObj *gobj);
 void ftPhysicsSetGroundVelAbsStickRange(FTStruct *fp, f32 vel, f32 friction);
 void ftPhysicsSetGroundVelFriction(FTStruct *fp, f32 friction);
 void ftPhysicsSetGroundVelTransferAir(GObj *fighter_gobj);

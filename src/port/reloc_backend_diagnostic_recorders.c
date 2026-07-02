@@ -240,6 +240,584 @@ static sb32 ndsFTMainSetStatusDamageHarness(GObj *fighter_gobj,
     return TRUE;
 }
 
+static void ndsFighterDashRunDecodeAttackEvent(GObj *fighter_gobj,
+                                               FTStruct *fp,
+                                               u32 event_bit);
+
+void ndsDiagnosticsRecordImportedFTMainAnimEvents(GObj *fighter_gobj)
+{
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowCallbackImmediateActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPPassiveLoopThrowCallbackImmediateAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopThrowActive != FALSE))
+    {
+        (void)fighter_gobj;
+        gNdsStageMPPassiveLoopThrowAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
+        (sNdsFighterJumpAttackAirActive != FALSE))
+    {
+        gNdsFighterJumpAttackAirAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunGuardOnActive != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) &&
+            (fp->status_id == nFTCommonStatusGuardOn) &&
+            (fp->motion_id == nFTCommonMotionGuardOn))
+        {
+            if (fp == &sNdsFighterStructPool[0])
+            {
+                gNdsFighterDashRunGuardAnimEventsMask |= 1u << 0u;
+            }
+            else if (fp == &sNdsFighterStructPool[1])
+            {
+                gNdsFighterDashRunGuardAnimEventsMask |= 1u << 1u;
+            }
+        }
+    }
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunAttack1Active != FALSE))
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) && (fp->player < 2))
+        {
+            u32 event_bit = 0xffffffffu;
+
+            if (fp->status_id == nFTCommonStatusAttack11)
+            {
+                event_bit = fp->player;
+            }
+            else if (fp->status_id == nFTCommonStatusAttack12)
+            {
+                event_bit = fp->player + 2u;
+            }
+            else if ((fp->status_id == nFTMarioStatusAttack13) &&
+                (fp->player == 0))
+            {
+                event_bit = 4u;
+            }
+            else if ((fp->status_id == nFTFoxStatusAttack100Start) &&
+                (fp->player == 1))
+            {
+                event_bit = 5u;
+            }
+            if (event_bit != 0xffffffffu)
+            {
+                gNdsFighterDashRunAttackAnimEventsMask |=
+                    1u << event_bit;
+                ndsFighterDashRunDecodeAttackEvent(fighter_gobj, fp,
+                                                   event_bit);
+            }
+        }
+    }
+    if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffCatchFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffCatchFloorLoopPlayAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopCliffCatchPlayAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCeilStatusFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCeilStatusFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCeilStatusFloorLoopPlayAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffAttackFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffAttackFloorLoopAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFloorLoopAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFloorLoopRecatchSetStatusActive != FALSE))
+    {
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffEscapeActionLoopSetStatusActive != FALSE))
+    {
+        gNdsStageMPCliffEscapeActionLoopAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownAttackSetStatusActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopAttackAnimEventsCount++;
+        ndsStageMPDownWaitLoopAppendAttackOrder(4u);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollAnimEventsCount++;
+        if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
+        {
+            ndsStageMPDownWaitLoopAppendRollForwardOrder(5u);
+        }
+        else
+        {
+            ndsStageMPDownWaitLoopAppendRollBackOrder(5u);
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopSetStatusActive != FALSE))
+    {
+        gNdsStageTurnLoopAnimEventsCount++;
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownAttackSetStatusActive != FALSE))
+    {
+        gNdsStageMPDownRecoverLoopAttackAnimEventsCount++;
+        ndsStageMPDownRecoverLoopAppendAttackOrder(4u);
+        return;
+    }
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive != FALSE))
+    {
+        gNdsStageMPDownRecoverLoopRollAnimEventsCount++;
+        if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
+        {
+            ndsStageMPDownRecoverLoopAppendRollForwardOrder(5u);
+        }
+        else
+        {
+            ndsStageMPDownRecoverLoopAppendRollBackOrder(5u);
+        }
+        return;
+    }
+    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
+        (sNdsFighterProcessLoopActive != FALSE))
+    {
+        return;
+    }
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        gNdsFighterDashRunAnimEventsCallCount++;
+    }
+
+    if (ndsFighterMarioFoxWalkInputProofEnabled() != FALSE)
+    {
+        gNdsFighterWalkAnimEventsCallCount++;
+    }
+}
+
+void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
+                                                s32 status_id,
+                                                f32 frame_begin)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    s32 motion_id;
+    s32 attackair_index;
+    sb32 handled_status = FALSE;
+
+    (void)frame_begin;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
+    {
+        gNdsFighterWaitFtMainSetStatusCallCount++;
+    }
+
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        ((status_id == nFTCommonStatusFall) ||
+        (status_id == nFTCommonStatusFallAerial) ||
+        (status_id == nFTCommonStatusLandingLight) ||
+        (status_id == nFTCommonStatusLandingHeavy)))
+    {
+        if ((status_id == nFTCommonStatusFall) &&
+            (fp->status_id == nFTCommonStatusFall) &&
+            (fp->motion_id == nFTCommonMotionFall))
+        {
+            gNdsFighterLandingFtMainFallStatusCount++;
+            handled_status = TRUE;
+        }
+        else if ((status_id == nFTCommonStatusLandingLight) &&
+            (fp->status_id == nFTCommonStatusLandingLight) &&
+            (fp->motion_id == nFTCommonMotionLandingLight))
+        {
+            gNdsFighterLandingFtMainLandingLightStatusCount++;
+            handled_status = TRUE;
+        }
+        else if ((status_id == nFTCommonStatusLandingHeavy) &&
+            (fp->status_id == nFTCommonStatusLandingHeavy) &&
+            (fp->motion_id == nFTCommonMotionLandingHeavy))
+        {
+            gNdsFighterLandingFtMainLandingHeavyStatusCount++;
+            gNdsFighterLandingHeavyDeniedCount++;
+            handled_status = TRUE;
+        }
+        else if (status_id == nFTCommonStatusFallAerial)
+        {
+            gNdsFighterLandingFallAerialDeniedCount++;
+            gNdsFighterLandingDeniedStatusCount++;
+            handled_status = TRUE;
+        }
+    }
+
+    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
+    {
+        if ((status_id == nFTCommonStatusKneeBend) &&
+            (fp->status_id == nFTCommonStatusKneeBend) &&
+            (fp->motion_id == nFTCommonMotionKneeBend))
+        {
+            gNdsFighterJumpFtMainKneeBendStatusCount++;
+            handled_status = TRUE;
+        }
+        else if (((status_id == nFTCommonStatusJumpF) &&
+            (fp->status_id == nFTCommonStatusJumpF) &&
+            (fp->motion_id == nFTCommonMotionJumpF)) ||
+            ((status_id == nFTCommonStatusJumpB) &&
+            (fp->status_id == nFTCommonStatusJumpB) &&
+            (fp->motion_id == nFTCommonMotionJumpB)))
+        {
+            if (status_id == nFTCommonStatusJumpB)
+            {
+                gNdsFighterJumpUnexpectedStatusCount++;
+            }
+            gNdsFighterJumpFtMainJumpStatusCount++;
+            handled_status = TRUE;
+        }
+        else if ((status_id >= nFTCommonStatusAttackAirStart) &&
+            (status_id <= nFTCommonStatusAttackAirEnd) &&
+            (ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE))
+        {
+            attackair_index = status_id - nFTCommonStatusAttackAirStart;
+            if ((fp->status_id == status_id) &&
+                (fp->motion_id ==
+                    (nFTCommonMotionAttackAirStart + attackair_index)))
+            {
+                handled_status = TRUE;
+                if ((status_id == nFTCommonStatusAttackAirN) &&
+                    (sNdsFighterJumpAttackAirActive != FALSE))
+                {
+                    gNdsFighterJumpAttackAirSetStatusCount++;
+                    gNdsFighterJumpFtMainAttackAirStatusCount++;
+                }
+            }
+        }
+        else if (((status_id == nFTCommonStatusLandingAirN) ||
+            (status_id == nFTCommonStatusLandingAirNull)) &&
+            (ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
+            (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
+        {
+            gNdsFighterJumpAttackAirMapLandingMask |= 1u << 2u;
+            handled_status = TRUE;
+        }
+    }
+
+    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
+    {
+        if ((status_id == nFTMarioStatusAttack13) &&
+            (fp->fkind == nFTKindMario) &&
+            (fp->status_id == nFTMarioStatusAttack13) &&
+            (fp->motion_id == nFTMarioMotionAttack13))
+        {
+            gNdsFighterDashRunAttack13SetStatusCount++;
+            gNdsFighterDashRunFtMainAttack13StatusCount++;
+            handled_status = TRUE;
+        }
+        else if ((status_id == nFTFoxStatusAttack100Start) &&
+            ((fp->fkind == nFTKindFox) ||
+            (fp->fkind == nFTKindNFox)) &&
+            (fp->status_id == nFTFoxStatusAttack100Start) &&
+            (fp->motion_id == nFTFoxMotionAttack100Start))
+        {
+            gNdsFighterDashRunFtMainAttack100StartStatusCount++;
+            handled_status = TRUE;
+        }
+        else if ((status_id == nFTFoxStatusAttack100Loop) &&
+            ((fp->fkind == nFTKindFox) ||
+            (fp->fkind == nFTKindNFox)) &&
+            (fp->status_id == nFTFoxStatusAttack100Loop) &&
+            (fp->motion_id == nFTFoxMotionAttack100Loop))
+        {
+            gNdsFighterDashRunFtMainAttack100LoopStatusCount++;
+            handled_status = TRUE;
+        }
+        else if ((status_id == nFTFoxStatusAttack100End) &&
+            ((fp->fkind == nFTKindFox) ||
+            (fp->fkind == nFTKindNFox)) &&
+            (fp->status_id == nFTFoxStatusAttack100End) &&
+            (fp->motion_id == nFTFoxMotionAttack100End))
+        {
+            handled_status = TRUE;
+        }
+
+        switch (status_id)
+        {
+        case nFTCommonStatusDash:
+            if ((fp->status_id == nFTCommonStatusDash) &&
+                (fp->motion_id == nFTCommonMotionDash))
+            {
+                gNdsFighterDashRunDashSetStatusCount++;
+                gNdsFighterDashRunFtMainDashStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusRun:
+            if ((fp->status_id == nFTCommonStatusRun) &&
+                (fp->motion_id == nFTCommonMotionRun))
+            {
+                gNdsFighterDashRunRunSetStatusCount++;
+                gNdsFighterDashRunFtMainRunStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusTurnRun:
+            if ((fp->status_id == nFTCommonStatusTurnRun) &&
+                (fp->motion_id == nFTCommonMotionTurnRun))
+            {
+                gNdsFighterDashRunTurnRunSetStatusCount++;
+                gNdsFighterDashRunFtMainTurnRunStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusRunBrake:
+            if ((fp->status_id == nFTCommonStatusRunBrake) &&
+                (fp->motion_id == nFTCommonMotionRunBrake))
+            {
+                gNdsFighterDashRunRunBrakeSetStatusCount++;
+                gNdsFighterDashRunFtMainRunBrakeStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusAttack11:
+            if ((fp->status_id == nFTCommonStatusAttack11) &&
+                (fp->motion_id == nFTCommonMotionAttack11))
+            {
+                gNdsFighterDashRunAttack11SetStatusCount++;
+                gNdsFighterDashRunFtMainAttack11StatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusAttack12:
+            if ((fp->status_id == nFTCommonStatusAttack12) &&
+                (fp->motion_id == nFTCommonMotionAttack12))
+            {
+                gNdsFighterDashRunAttack12SetStatusCount++;
+                gNdsFighterDashRunFtMainAttack12StatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusAttackDash:
+            if ((fp->status_id == nFTCommonStatusAttackDash) &&
+                (fp->motion_id == nFTCommonMotionAttackDash))
+            {
+                gNdsFighterDashRunAttackDashSetStatusCount++;
+                gNdsFighterDashRunFtMainAttackDashStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusGuardOn:
+            if ((fp->status_id == nFTCommonStatusGuardOn) &&
+                (fp->motion_id == nFTCommonMotionGuardOn))
+            {
+                gNdsFighterDashRunGuardSetStatusCount++;
+                gNdsFighterDashRunFtMainGuardOnStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusGuard:
+            if ((fp->status_id == nFTCommonStatusGuard) &&
+                (fp->motion_id == nFTCommonMotionGuardOn))
+            {
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusGuardOff:
+            if ((fp->status_id == nFTCommonStatusGuardOff) &&
+                (fp->motion_id == nFTCommonMotionGuardOff))
+            {
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusGuardSetOff:
+            if (fp->status_id == nFTCommonStatusGuardSetOff)
+            {
+                gNdsFighterDashRunGuardSetOffSetStatusCount++;
+                gNdsFighterDashRunFtMainGuardSetOffStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusEscapeF:
+            if ((fp->status_id == nFTCommonStatusEscapeF) &&
+                (fp->motion_id == nFTCommonMotionEscapeF))
+            {
+                fp->proc_status = ndsBaseFTCommonEscapeProcStatus;
+                gNdsFighterDashRunEscapeSetStatusCount++;
+                gNdsFighterDashRunFtMainEscapeStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        case nFTCommonStatusEscapeB:
+            if ((fp->status_id == nFTCommonStatusEscapeB) &&
+                (fp->motion_id == nFTCommonMotionEscapeB))
+            {
+                fp->proc_status = ndsBaseFTCommonEscapeProcStatus;
+                gNdsFighterDashRunEscapeSetStatusCount++;
+                gNdsFighterDashRunFtMainEscapeStatusCount++;
+                handled_status = TRUE;
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    if ((handled_status == FALSE) &&
+        (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE) &&
+        (status_id == nFTCommonStatusAttackAirLw) &&
+        (fp->status_id == nFTCommonStatusAttackAirLw) &&
+        (fp->motion_id == nFTCommonMotionAttackAirLw))
+    {
+        handled_status = TRUE;
+    }
+
+    if (handled_status != FALSE)
+    {
+        return;
+    }
+
+    if ((ndsFighterMarioFoxWalkInputProofEnabled() != FALSE) &&
+        (status_id >= nFTCommonStatusWalkSlow) &&
+        (status_id <= nFTCommonStatusWalkFast))
+    {
+        motion_id = nFTCommonMotionWalkSlow +
+            (status_id - nFTCommonStatusWalkSlow);
+        if ((fp->status_id == status_id) && (fp->motion_id == motion_id))
+        {
+            gNdsFighterWalkSetStatusCallCount++;
+            gNdsFighterWalkFtMainSetStatusCallCount++;
+        }
+        return;
+    }
+
+    if (status_id != nFTCommonStatusWait)
+    {
+        if (ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE)
+        {
+            gNdsFighterWalkLoopDeniedStatusCount++;
+            gNdsFighterWalkLoopUnexpectedStatusCount++;
+        }
+        if (ndsFighterMarioFoxWalkInputProofEnabled() != FALSE)
+        {
+            gNdsFighterWalkDeniedStatusCount++;
+            gNdsFighterWalkUnexpectedStatusCount++;
+        }
+        if (ndsFighterMarioFoxWaitTickProofEnabled() != FALSE)
+        {
+            gNdsFighterWaitTickDeniedStatusCount++;
+        }
+        return;
+    }
+
+    if ((fp->status_id != nFTCommonStatusWait) ||
+        (fp->motion_id != nFTCommonMotionWait))
+    {
+        return;
+    }
+
+    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
+        (sNdsFighterJumpRunBrakeEndActive != FALSE))
+    {
+        gNdsFighterJumpWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
+        (sNdsFighterLandingEndActive != FALSE))
+    {
+        gNdsFighterLandingWaitSetStatusCount++;
+        gNdsFighterLandingWaitSetStatusSuccessCount++;
+    }
+    if ((ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE) &&
+        (sNdsFighterWalkLoopWaitReturnActive != FALSE))
+    {
+        gNdsFighterWalkLoopWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopAttackUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopAttackWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollForwardUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollForwardWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopRollBackUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopRollBackWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPDownWaitLoopDownStandUpdateActive != FALSE))
+    {
+        gNdsStageMPDownWaitLoopDownStandWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
+        (sNdsStageTurnLoopFinalUpdateActive != FALSE))
+    {
+        gNdsStageTurnLoopWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
+        ((sNdsStageMPDownRecoverLoopDownStandUpdateActive != FALSE) ||
+         (sNdsStageMPDownRecoverLoopAttackUpdateActive != FALSE) ||
+         (sNdsStageMPDownRecoverLoopRollForwardUpdateActive != FALSE) ||
+         (sNdsStageMPDownRecoverLoopRollBackUpdateActive != FALSE)))
+    {
+        gNdsStageMPDownRecoverLoopWaitSetStatusCount++;
+    }
+}
+
+#if !NDS_IMPORT_BATTLESHIP_FTMAIN
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags)
 {
@@ -3624,6 +4202,7 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
         fighter_gobj->anim_frame = frame_begin;
     }
 }
+#endif
 
 #define NDS_FTMOTION_EVENT_END 0u
 #define NDS_FTMOTION_EVENT_MAKE_ATTACK_COLL 3u
@@ -3695,6 +4274,7 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 #define NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_TAIL_STATUS 0x20000000u
 #define NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_ITEM_RESIST 0x40000000u
 #define NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_ITEM_DROP 0x80000000u
+#define NDS_FTMAIN_PROCPARAMS_SELECTED_REQUIRED_MASK 0xfffdf3ffu
 #define NDS_FTMAIN_PROCPARAMS_REBOUND_STATUS 0x1u
 #define NDS_FTMAIN_PROCPARAMS_REBOUND_CALLBACKS 0x2u
 #define NDS_FTMAIN_PROCPARAMS_REBOUND_VECTOR 0x4u
@@ -3922,6 +4502,7 @@ s32 ftParamGetCapturedDamage(FTStruct *fp, s32 damage)
     return (s32)((damage * fp->damage_mul) + 0.999F);
 }
 
+#if !NDS_IMPORT_BATTLESHIP_FTMAIN
 sb32 ftMainCheckGetUpdateDamage(FTStruct *fp, s32 *damage)
 {
     if ((fp == NULL) || (damage == NULL))
@@ -5085,6 +5666,14 @@ void ftMainProcParams(GObj *fighter_gobj)
 
     (void)hitlag_tics;
 }
+#endif
+
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+#define NDS_FTMAIN_GROUND_OBSTACLE_COUNT 2u
+typedef GRObstacle NDSFTMainGroundObstacle;
+#define sNdsFTMainGroundObstacles sFTMainGroundObstacles
+#define sNdsFTMainGroundObstaclesNum sFTMainGroundObstaclesNum
+#endif
 
 static const s32 sNdsFTCommonDamageStatusGroundIDs[4][3] = {
     { nFTCommonStatusDamageLw1,   nFTCommonStatusDamageN1,
@@ -14942,7 +15531,24 @@ static sb32 ndsFighterDashRunStepAttackDamageHitStats(FTStruct *fp,
                    DObjGetStruct(fp->fighter_gobj)->translate.vec.f.x)
                       ? +1
                       : -1;
-    ftMainProcessHitCollisionStatsMain(target_gobj);
+    target_fp->damage_angle = attack_coll->angle;
+    target_fp->damage_element = attack_coll->element;
+    target_fp->damage_lr = expected_lr;
+    target_fp->damage_player_num = hitlog->attacker_player_num;
+    ftParamUpdate1PGameDamageStats(target_fp, hitlog->attacker_player,
+                                   hitlog->attacker_object_class,
+                                   fp->fkind,
+                                   fp->stat_flags.halfword & ~0x400u,
+                                   fp->stat_count);
+    target_fp->damage_joint_id = damage_coll->joint_id;
+    target_fp->damage_index = damage_coll->placement;
+    target_fp->damage_knockback = knockback;
+    target_fp->damage_kind = nFTDamageKindStatus;
+    if (target_fp->damage_element == nGMHitElementElectric)
+    {
+        fp->hitlag_mul = 1.5F;
+        target_fp->hitlag_mul = 1.5F;
+    }
 
     if ((target_fp->damage_angle == attack_coll->angle) &&
         (target_fp->damage_element == attack_coll->element) &&
@@ -15603,70 +16209,8 @@ static sb32 ndsFighterDashRunStepAttackDamageProcParams(FTStruct *fp,
     gNdsFighterDashRunProcParamsStatusBefore = (u32)status_before;
     gNdsFighterDashRunProcParamsStatusAfter = (u32)target_fp->status_id;
 
-    if ((mask & (NDS_FTMAIN_PROCPARAMS_DAMAGE_INPUT |
-                 NDS_FTMAIN_PROCPARAMS_UPDATE_DAMAGE |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_STATUS |
-                 NDS_FTMAIN_PROCPARAMS_SHUFFLE |
-                 NDS_FTMAIN_PROCPARAMS_RUMBLE |
-                 NDS_FTMAIN_PROCPARAMS_HITLAG |
-                 NDS_FTMAIN_PROCPARAMS_CLEAR |
-                 NDS_FTMAIN_PROCPARAMS_LAGSTART |
-                 NDS_FTMAIN_PROCPARAMS_ATTACK_DAMAGE |
-                 NDS_FTMAIN_PROCPARAMS_ATTACK_SHIELD_PUSH |
-                 NDS_FTMAIN_PROCPARAMS_SHIELD_DAMAGE |
-                 NDS_FTMAIN_PROCPARAMS_SHIELD_BREAK |
-                 NDS_FTMAIN_PROCPARAMS_REFLECT_BREAK |
-                 NDS_FTMAIN_PROCPARAMS_REFLECT_HIT |
-                 NDS_FTMAIN_PROCPARAMS_REFLECT_SOUND |
-                 NDS_FTMAIN_PROCPARAMS_ABSORB |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_STATUS_SELECT |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_STATUS_SETUP |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CATCH |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_RELEASE |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CATCH_ZERO |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE_ZERO |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CATCH_STATS |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE_STATS |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE_RELEASE |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE_NODAMAGE |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CATCH_NODAMAGE |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_TAIL_COLANIM |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_TAIL_STATUS |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_ITEM_RESIST |
-                 NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_ITEM_DROP)) ==
-        (NDS_FTMAIN_PROCPARAMS_DAMAGE_INPUT |
-         NDS_FTMAIN_PROCPARAMS_UPDATE_DAMAGE |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_STATUS |
-         NDS_FTMAIN_PROCPARAMS_SHUFFLE |
-         NDS_FTMAIN_PROCPARAMS_RUMBLE |
-         NDS_FTMAIN_PROCPARAMS_HITLAG |
-         NDS_FTMAIN_PROCPARAMS_CLEAR |
-         NDS_FTMAIN_PROCPARAMS_LAGSTART |
-         NDS_FTMAIN_PROCPARAMS_ATTACK_DAMAGE |
-         NDS_FTMAIN_PROCPARAMS_ATTACK_SHIELD_PUSH |
-         NDS_FTMAIN_PROCPARAMS_SHIELD_DAMAGE |
-         NDS_FTMAIN_PROCPARAMS_SHIELD_BREAK |
-         NDS_FTMAIN_PROCPARAMS_REFLECT_BREAK |
-         NDS_FTMAIN_PROCPARAMS_REFLECT_HIT |
-         NDS_FTMAIN_PROCPARAMS_REFLECT_SOUND |
-         NDS_FTMAIN_PROCPARAMS_ABSORB |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_STATUS_SELECT |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_STATUS_SETUP |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CATCH |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_RELEASE |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CATCH_ZERO |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE_ZERO |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CATCH_STATS |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE_STATS |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE_RELEASE |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CAPTURE_NODAMAGE |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_CATCH_NODAMAGE |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_TAIL_COLANIM |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_TAIL_STATUS |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_ITEM_RESIST |
-         NDS_FTMAIN_PROCPARAMS_DAMAGE_UPDATE_MAIN_ITEM_DROP))
+    if ((mask & NDS_FTMAIN_PROCPARAMS_SELECTED_REQUIRED_MASK) ==
+        NDS_FTMAIN_PROCPARAMS_SELECTED_REQUIRED_MASK)
     {
         gNdsFighterDashRunAttackEventPositionMask |=
             NDS_FTMOTION_ATTACK_EVENT_POS_PROCPARAMS;
@@ -16365,6 +16909,7 @@ static void ndsFighterDashRunDecodeAttackEvent(GObj *fighter_gobj,
     }
 }
 
+#if !NDS_IMPORT_BATTLESHIP_FTMAIN
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
 {
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
@@ -16552,6 +17097,7 @@ void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
         gNdsFighterWalkAnimEventsCallCount++;
     }
 }
+#endif
 
 static void ndsFighterMarioFoxRunWaitStatusProbe(GObj *fighter_gobj,
                                                  FTDesc *desc)
@@ -16585,15 +17131,9 @@ static void ndsFighterMarioFoxRunWaitStatusProbe(GObj *fighter_gobj,
 
         if (fp->is_wait_status_setup == FALSE)
         {
-            gNdsFighterWaitOriginalSetStatusCallCount++;
             ftCommonWaitSetStatus(probe_gobj);
-            fp->is_special_interrupt = TRUE;
-            gNdsFighterMarioFoxWaitCount++;
         }
-        else
-        {
-            ndsFighterMarioFoxRecordInstalledWaitState(fp);
-        }
+        ndsFighterMarioFoxRecordInstalledWaitState(fp);
         ndsFighterStructRecord(fp);
         ndsFighterMarioFoxRecordWaitStatus(fp);
     }
