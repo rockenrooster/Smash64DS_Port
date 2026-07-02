@@ -59,6 +59,16 @@ function New-F3DEX2MtxW0 {
     param([int]$Flags)
     return [uint32](([int64]0xda -shl 24) -bor ([int64]7 -shl 19) -bor (($Flags -bxor 1) -band 0xff))
 }
+function New-F3DEXMvpRecalcW0 {
+    return [uint32](([int64]0xd5 -shl 24) -bor 1)
+}
+function New-F3DEXMoveWdW0 {
+    param(
+        [int]$Index,
+        [int]$Offset
+    )
+    return [uint32](([int64]0xdb -shl 24) -bor (([int64]$Offset -band 0xffff) -shl 8) -bor ($Index -band 0xff))
+}
 function Decode-F3DEX2MtxFlags {
     param([uint32]$W0)
     return (($W0 -band 0xff) -bxor 1)
@@ -208,6 +218,13 @@ Assert-Equal ($popMtxW1 / 64) 1 'F3DEX2 gSPPopMatrix fixture pop count mismatch.
 Assert-Equal (Decode-F3DEX2MtxFlags -W0 $mtxProjectionLoadW0) 0x06 'F3DEX2 gSPMatrix projection-load flags decode mismatch.'
 Assert-Equal (Decode-F3DEX2MtxFlags -W0 $mtxModelViewLoadW0) 0x02 'F3DEX2 gSPMatrix modelview-load flags decode mismatch.'
 Assert-Equal (Decode-F3DEX2MtxFlags -W0 $mtxModelViewPushMulW0) 0x01 'F3DEX2 gSPMatrix modelview-push-mul flags decode mismatch.'
+$mvpRecalcW0 = New-F3DEXMvpRecalcW0
+$matrixMoveWdW0 = New-F3DEXMoveWdW0 -Index 0 -Offset 0x20
+Assert-Equal $mvpRecalcW0 ([uint32](([int64]0xd5 -shl 24) -bor 1)) 'F3DEX gSPMvpRecalc fixture w0 mismatch.'
+Assert-Equal $matrixMoveWdW0 ([uint32](([int64]0xdb -shl 24) -bor ([int64]0x20 -shl 8))) 'F3DEX gMoveWd(G_MW_MATRIX, 0x20) fixture w0 mismatch.'
+Assert-Equal (($matrixMoveWdW0 -shr 24) -band 0xff) 0xdb 'F3DEX gMoveWd opcode decode mismatch.'
+Assert-Equal (($matrixMoveWdW0 -shr 8) -band 0xffff) 0x20 'F3DEX gMoveWd offset decode mismatch.'
+Assert-Equal ($matrixMoveWdW0 -band 0xff) 0 'F3DEX gMoveWd index decode mismatch.'
 $identityRows = @(
     @(1.0, 0.0, 0.0, 0.0),
     @(0.0, 1.0, 0.0, 0.0),
@@ -302,6 +319,10 @@ Assert-True ($renderer.Contains('NDS_RENDERER_OP_POPMTX 0xd8u')) 'Renderer G_POP
 Assert-True ($renderer.Contains('NDS_RENDERER_MTX_PUSH_XOR')) 'Renderer G_MTX push-flag decode is missing.'
 Assert-True ($renderer.Contains('ndsRendererApplyMatrixCommand')) 'Renderer G_MTX traversal state handler is missing.'
 Assert-True ($renderer.Contains('ndsRendererApplyPopMatrixCommand')) 'Renderer G_POPMTX traversal state handler is missing.'
+Assert-True ($renderer.Contains('ndsRendererApplyMvpRecalcCommand')) 'Renderer G_SPECIAL_1 MVP-recalc traversal state handler is missing.'
+Assert-True ($renderer.Contains('ndsRendererApplyMatrixMoveWordCommand')) 'Renderer G_MOVEWORD matrix traversal state handler is missing.'
+Assert-True ($renderer.Contains('NDS_RENDERER_OP_SPECIAL_1 0xd5u')) 'Renderer G_SPECIAL_1 opcode support is missing.'
+Assert-True ($renderer.Contains('NDS_RENDERER_MOVEWORD_MATRIX')) 'Renderer G_MOVEWORD matrix target support is missing.'
 Assert-True ($renderer.Contains('modelview_stack')) 'Renderer modelview stack state is missing.'
 Assert-True ($renderer.Contains('ndsRendererDecodeInputVertex')) 'Renderer Vtx payload decode helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordTransformedTriangle')) 'Renderer transformed triangle readiness handler is missing.'
@@ -316,7 +337,11 @@ Assert-True ($renderer.Contains('ndsRendererHardwareVertexCoord')) 'Renderer har
 Assert-True ($renderer.Contains('glTexImage2D')) 'Renderer hardware texture upload path is missing.'
 Assert-True ($renderer.Contains('glTexCoord2t16')) 'Renderer hardware texture coordinates are missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_FMT_RGBA16')) 'Renderer RGBA16 texture format support is missing.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_FMT_CI')) 'Renderer CI texture format support is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_FMT_I16')) 'Renderer I16 texture format support is missing.'
+Assert-True ($renderer.Contains('ndsRendererRecordLoadTlut')) 'Renderer TLUT state tracking is missing.'
+Assert-True ($renderer.Contains('texture_tlut_image')) 'Renderer CI texture palette pointer tracking is missing.'
+Assert-True ($renderer.Contains('texture_render_tile_size')) 'Renderer render-tile pixel size tracking is missing.'
 Assert-True ($renderer.Contains('hardware_texture_upload_count')) 'Renderer hardware texture upload stats are missing.'
 Assert-True (-not $renderer.Contains('NDS_RENDERER_HW_FALLBACK_SCALE')) 'Renderer hardware fallback scale returned.'
 Assert-True ($renderer.Contains('input_vertices')) 'Renderer hardware raw vertex cache is missing.'
@@ -341,6 +366,8 @@ Assert-True ($rendererHeader.Contains('NDSRendererResolveData')) 'Renderer data 
 Assert-True ($rendererHeader.Contains('initial_projection')) 'Renderer config initial projection field is missing.'
 Assert-True ($rendererHeader.Contains('initial_modelview')) 'Renderer config initial modelview field is missing.'
 Assert-True ($rendererHeader.Contains('hardware_texture_ready_count')) 'Renderer hardware texture stats are missing from the public header.'
+Assert-True ($rendererHeader.Contains('matrix_mvp_recalc_count')) 'Renderer MVP-recalc stats are missing from the public header.'
+Assert-True ($rendererHeader.Contains('matrix_move_word_count')) 'Renderer matrix move-word stats are missing from the public header.'
 Assert-True ($rendererHeader.Contains('transformed_vertices')) 'Renderer command transformed vertex cache exposure is missing.'
 Assert-True ($rendererHeader.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Renderer hardware submit-latch API is missing.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
@@ -352,9 +379,19 @@ Assert-True ($rendererAdapter.Contains('nGCMatrixKindVecTraRotRpyRSca')) 'Battle
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterBuildBillboardMtx')) 'Battle DL renderer billboard DObj matrix cases are missing.'
 Assert-True ($rendererAdapter.Contains('nGCMatrixKindRecalcRotRpyRSca')) 'Battle DL renderer recalc DObj matrix cases are missing.'
 Assert-True ($rendererAdapter.Contains('nGCMatrixKind50')) 'Battle DL renderer camera-mod recalc DObj matrix cases are missing.'
+Assert-True ($rendererAdapter.Contains('NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND 0x4Bu')) 'Battle DL renderer common fighter-parts DObj matrix kind 0x4B is missing.'
+Assert-True ($rendererAdapter.Contains('NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu')) 'Battle DL renderer BattleShip camera matrix kind 0x4C is missing.'
+Assert-True ($rendererAdapter.Contains('syMatrixLookAtReflect')) 'Battle DL renderer BattleShip camera matrix path no longer uses reflected look-at prep.'
+Assert-True ($rendererAdapter.Contains('parts->transform_update_mode != 0')) 'Battle DL renderer fighter-parts cached matrix branch is missing.'
+Assert-True ($rendererAdapter.Contains('parts->unk_dobjtrans_0x10')) 'Battle DL renderer fighter-parts matrix seed is missing.'
+Assert-True ($rendererAdapter.Contains('value = (row == 3u) ? 1.0F : 0.0F;')) 'Battle DL renderer cached fighter-parts matrix conversion no longer matches syMatrixF2LFixedW W-column behavior.'
+Assert-True ($rendererAdapter.Contains('for (i = depth; i != 0u; i--)')) 'Battle DL renderer DObj parent-chain composition order regressed.'
+Assert-True ($rendererAdapter.Contains('ndsRendererMtxMul20p12(&dobj_world, &camera_modelview, modelview)')) 'Battle DL renderer DObj/camera modelview composition order regressed.'
+$compatShims = Get-Content (Join-Path $root 'src/port/reloc_backend_compat_shims.c') -Raw
+Assert-True ($compatShims.Contains('gcAddXObjForCamera(cobj, 0x4C, 0)')) 'VSBattle compatibility camera no longer exposes the BattleShip 0x4C matrix kind.'
 $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c') -Raw
 Assert-True ($openingBackend.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Opening-room renderer seed hook is missing.'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
 Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'
-Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, transformed and hardware raw triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.'
+Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.'

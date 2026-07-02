@@ -11661,6 +11661,7 @@ static s32 ndsStageInishieScaleLoopVisitSourcePreviewCommand(
     case NDS_FIGHTER_DL_OP_MTX:
     case NDS_FIGHTER_DL_OP_GEOMETRYMODE:
     case NDS_FIGHTER_DL_OP_MOVEWORD:
+    case NDS_FIGHTER_DL_OP_SPECIAL_1:
     case NDS_FIGHTER_DL_OP_DL:
     case NDS_FIGHTER_DL_OP_ENDDL:
     case NDS_FIGHTER_DL_OP_SETOTHERMODE_H:
@@ -14826,4 +14827,3 @@ void ndsFighterMarioFoxStageMPCeilStatusFloorLoopFinalize(void)
             NDS_FIGHTER_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP_SAFE_PASS;
     }
 }
-

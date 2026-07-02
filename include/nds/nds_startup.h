@@ -2110,6 +2110,18 @@ extern volatile u32 gNdsFighterDLAllDrawP0UnsupportedCommandCount;
 extern volatile u32 gNdsFighterDLAllDrawP1UnsupportedCommandCount;
 extern volatile u32 gNdsFighterDLAllDrawP0VertexDecodedCount;
 extern volatile u32 gNdsFighterDLAllDrawP1VertexDecodedCount;
+extern volatile u32 gNdsFighterDLAllDrawP0MatrixMvpRecalcCount;
+extern volatile u32 gNdsFighterDLAllDrawP1MatrixMvpRecalcCount;
+extern volatile u32 gNdsFighterDLAllDrawP0MatrixMoveWordCount;
+extern volatile u32 gNdsFighterDLAllDrawP1MatrixMoveWordCount;
+extern volatile u32 gNdsFighterDLAllDrawP0HardwareTriangleCount;
+extern volatile u32 gNdsFighterDLAllDrawP1HardwareTriangleCount;
+extern volatile u32 gNdsFighterDLAllDrawP0HardwareOracleTriangleCount;
+extern volatile u32 gNdsFighterDLAllDrawP1HardwareOracleTriangleCount;
+extern volatile u32 gNdsFighterDLAllDrawP0HardwareOracleRejectCount;
+extern volatile u32 gNdsFighterDLAllDrawP1HardwareOracleRejectCount;
+extern volatile u32 gNdsFighterDLAllDrawP0HardwareMatrixSeedCount;
+extern volatile u32 gNdsFighterDLAllDrawP1HardwareMatrixSeedCount;
 extern volatile u32 gNdsFighterDLAllDrawP0TriangleCount;
 extern volatile u32 gNdsFighterDLAllDrawP1TriangleCount;
 extern volatile u32 gNdsFighterDLAllDrawP0TriangleValidCount;
@@ -3707,7 +3719,8 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                                 void *display_gobj,
                                                 s32 link_id);
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind);
-void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind);
+void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
+                                       void *camera_gobj);
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopMask;

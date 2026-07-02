@@ -23,6 +23,7 @@
 #define NDS_RENDERER_OP_MTX 0xdau
 #define NDS_RENDERER_OP_GEOMETRYMODE 0xd9u
 #define NDS_RENDERER_OP_MOVEWORD 0xdbu
+#define NDS_RENDERER_OP_SPECIAL_1 0xd5u
 #define NDS_RENDERER_OP_DL 0xdeu
 #define NDS_RENDERER_OP_ENDDL 0xdfu
 #define NDS_RENDERER_OP_SETOTHERMODE_H 0xe3u
@@ -58,12 +59,21 @@
 #define NDS_RENDERER_MTX_PUSH 0x01u
 #define NDS_RENDERER_MTX_LOAD 0x02u
 #define NDS_RENDERER_MTX_PROJECTION 0x04u
-#define NDS_RENDERER_HW_TEXTURE_MAX_WIDTH 64u
-#define NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT 64u
+#define NDS_RENDERER_MOVEWORD_MATRIX 0x00u
+#define NDS_RENDERER_MOVEWORD_OFFSET_SHIFT 8u
+#define NDS_RENDERER_MOVEWORD_OFFSET_MASK 0xffffu
+#define NDS_RENDERER_MOVEWORD_INDEX_MASK 0xffu
+#define NDS_RENDERER_MATRIX_WORD_BYTES 4u
+#define NDS_RENDERER_MATRIX_WORD_COUNT 16u
+#define NDS_RENDERER_HW_TEXTURE_MAX_WIDTH 128u
+#define NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT 128u
 #define NDS_RENDERER_HW_TEXTURE_MAX_TEXELS \
     (NDS_RENDERER_HW_TEXTURE_MAX_WIDTH * NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT)
 #define NDS_RENDERER_HW_TEXTURE_FMT_RGBA16 0u
+#define NDS_RENDERER_HW_TEXTURE_FMT_CI 2u
 #define NDS_RENDERER_HW_TEXTURE_FMT_I16 4u
+#define NDS_RENDERER_HW_TEXTURE_SIZ_4B 0u
+#define NDS_RENDERER_HW_TEXTURE_SIZ_8B 1u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_16B 2u
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
 
@@ -73,6 +83,8 @@ static u32 sNdsRendererHardwareSubmitted;
 typedef struct NDSRendererHardwareTextureKey
 {
     u32 image;
+    u32 tlut_image;
+    u32 tlut_count;
     u32 format;
     u32 size;
     u32 width;
@@ -93,6 +105,7 @@ typedef struct NDSRendererTraversalState
     NDSRendererMatrix20p12 projection;
     NDSRendererMatrix20p12 modelview;
     NDSRendererMatrix20p12 matrix;
+    Mtx matrix_word_raw;
     NDSRendererMatrix20p12 modelview_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     NDSRendererClipVertex20p12 vertices[NDS_RENDERER_MAX_VTX];
 #if NDS_RENDERER_HW_TRIANGLES
@@ -107,6 +120,7 @@ typedef struct NDSRendererTraversalState
     u32 projection_valid;
     u32 modelview_valid;
     u32 matrix_valid;
+    u32 matrix_word_valid;
 } NDSRendererTraversalState;
 
 static s32 ndsRendererClampS64ToS32(s64 value)
@@ -182,6 +196,71 @@ s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col)
         return (s32)((hi & 0xffff0000u) | ((lo >> 16) & 0xffffu));
     }
     return (s32)(((hi << 16) & 0xffff0000u) | (lo & 0xffffu));
+}
+
+static s32 ndsRendererMtxCell20p12ToS16p16(s32 value)
+{
+    return ndsRendererClampS64ToS32(
+        (s64)value << (NDS_RENDERER_N64_MTX_FRAC_BITS -
+                       NDS_RENDERER_DS_MTX_FRAC_BITS));
+}
+
+static void ndsRendererMtxStoreCellS16p16(Mtx *mtx, u32 row, u32 col,
+                                          s32 value)
+{
+    u32 *ai;
+    u32 *af;
+    u32 pair;
+    u32 ui;
+
+    if ((mtx == NULL) || (row >= 4u) || (col >= 4u))
+    {
+        return;
+    }
+
+    ai = (u32 *)&mtx->m[0][0];
+    af = (u32 *)&mtx->m[2][0];
+    pair = (row * 2u) + (col / 2u);
+    ui = (u32)value;
+    if ((col & 1u) == 0)
+    {
+        ai[pair] = (ai[pair] & 0x0000ffffu) | (ui & 0xffff0000u);
+        af[pair] = (af[pair] & 0x0000ffffu) |
+            ((ui << 16) & 0xffff0000u);
+    }
+    else
+    {
+        ai[pair] = (ai[pair] & 0xffff0000u) | ((ui >> 16) & 0xffffu);
+        af[pair] = (af[pair] & 0xffff0000u) | (ui & 0xffffu);
+    }
+}
+
+static void ndsRendererMtxStoreDS20p12ToN64(
+    const NDSRendererMatrix20p12 *src, Mtx *dst)
+{
+    u32 row;
+    u32 col;
+
+    if (dst == NULL)
+    {
+        return;
+    }
+
+    memset(dst, 0, sizeof(*dst));
+    if (src == NULL)
+    {
+        return;
+    }
+
+    for (row = 0; row < 4u; row++)
+    {
+        for (col = 0; col < 4u; col++)
+        {
+            ndsRendererMtxStoreCellS16p16(
+                dst, row, col,
+                ndsRendererMtxCell20p12ToS16p16(src->m[row][col]));
+        }
+    }
 }
 
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
@@ -480,6 +559,8 @@ static void ndsRendererRecordSetTile(NDSRendererStats *stats,
         u32 flags = NDS_RENDERER_TILE_RENDER_SEEN;
 
         stats->texture_render_tile = tile;
+        stats->texture_render_tile_format = fmt;
+        stats->texture_render_tile_size = siz;
         stats->texture_render_tile_line = line;
         stats->texture_render_tile_tmem = tmem;
         stats->texture_render_tile_palette = palette;
@@ -598,13 +679,23 @@ static void ndsRendererRecordSetImage(NDSRendererStats *stats,
     }
 
     stats->texture_mask |= NDS_RENDERER_TEXTURE_SETTIMG;
-    if (stats->texture_image == 0)
+    stats->texture_format = (w0 >> 21) & 0x7u;
+    stats->texture_size = (w0 >> 19) & 0x3u;
+    stats->texture_image_width = (w0 & 0x0FFFu) + 1u;
+    stats->texture_image = w1;
+}
+
+static void ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
+{
+    if (stats == NULL)
     {
-        stats->texture_format = (w0 >> 21) & 0x7u;
-        stats->texture_size = (w0 >> 19) & 0x3u;
-        stats->texture_image_width = (w0 & 0x0FFFu) + 1u;
-        stats->texture_image = w1;
+        return;
     }
+
+    stats->texture_command_count++;
+    stats->texture_tlut_tile = (w1 >> 24) & 0x7u;
+    stats->texture_tlut_count = ((w1 >> 14) & 0x3ffu) + 1u;
+    stats->texture_tlut_image = stats->texture_image;
 }
 
 static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
@@ -656,6 +747,29 @@ static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
     state->matrix_valid =
         ((state->projection_valid != 0u) ||
          (state->modelview_valid != 0u)) ? TRUE : FALSE;
+    state->matrix_word_valid = FALSE;
+}
+
+static void ndsRendererInitMatrixWordRaw(NDSRendererTraversalState *state)
+{
+    NDSRendererMatrix20p12 identity;
+
+    if (state == NULL)
+    {
+        return;
+    }
+
+    if (state->matrix_valid == 0u)
+    {
+        ndsRendererMtxIdentity20p12(&identity);
+        ndsRendererMtxStoreDS20p12ToN64(&identity, &state->matrix_word_raw);
+    }
+    else
+    {
+        ndsRendererMtxStoreDS20p12ToN64(&state->matrix,
+                                        &state->matrix_word_raw);
+    }
+    state->matrix_word_valid = TRUE;
 }
 
 static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
@@ -791,6 +905,75 @@ static void ndsRendererApplyMatrixCommand(
         stats->matrix_mul_count++;
     }
     ndsRendererComposeMatrix(state);
+}
+
+static void ndsRendererApplyMvpRecalcCommand(
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 w0,
+    u32 w1)
+{
+    if ((stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+
+    stats->state_command_count++;
+    if ((((w0 >> NDS_RENDERER_MOVEWORD_OFFSET_SHIFT) &
+          NDS_RENDERER_MOVEWORD_OFFSET_MASK) != 0u) ||
+        ((w0 & NDS_RENDERER_MOVEWORD_INDEX_MASK) != 1u) ||
+        (w1 != 0u))
+    {
+        ndsRendererRecordUnsupported(stats, NDS_RENDERER_OP_SPECIAL_1);
+        return;
+    }
+
+    stats->matrix_command_count++;
+    stats->matrix_mvp_recalc_count++;
+    ndsRendererInitMatrixWordRaw(state);
+}
+
+static void ndsRendererApplyMatrixMoveWordCommand(
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 w0,
+    u32 w1)
+{
+    u32 index;
+    u32 offset;
+    u32 word_index;
+    u32 *words;
+
+    if ((stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+
+    stats->state_command_count++;
+    index = w0 & NDS_RENDERER_MOVEWORD_INDEX_MASK;
+    offset = (w0 >> NDS_RENDERER_MOVEWORD_OFFSET_SHIFT) &
+        NDS_RENDERER_MOVEWORD_OFFSET_MASK;
+    if ((index != NDS_RENDERER_MOVEWORD_MATRIX) ||
+        ((offset % NDS_RENDERER_MATRIX_WORD_BYTES) != 0u) ||
+        ((offset / NDS_RENDERER_MATRIX_WORD_BYTES) >=
+         NDS_RENDERER_MATRIX_WORD_COUNT))
+    {
+        stats->ignored_state_command_count++;
+        return;
+    }
+
+    if (state->matrix_word_valid == 0u)
+    {
+        ndsRendererInitMatrixWordRaw(state);
+    }
+
+    word_index = offset / NDS_RENDERER_MATRIX_WORD_BYTES;
+    words = (u32 *)&state->matrix_word_raw.m[0][0];
+    words[word_index] = w1;
+    ndsRendererMtxLoadN64ToDS20p12(&state->matrix_word_raw, &state->matrix);
+    state->matrix_valid = TRUE;
+    stats->matrix_command_count++;
+    stats->matrix_move_word_count++;
 }
 
 static void ndsRendererApplyPopMatrixCommand(NDSRendererStats *stats,
@@ -1026,6 +1209,8 @@ static s32 ndsRendererHardwareTextureKeyEqual(
         return FALSE;
     }
     return ((a->image == b->image) &&
+            (a->tlut_image == b->tlut_image) &&
+            (a->tlut_count == b->tlut_count) &&
             (a->format == b->format) &&
             (a->size == b->size) &&
             (a->width == b->width) &&
@@ -1096,18 +1281,103 @@ static u16 ndsRendererHardwareConvertI16(u16 value)
     return (u16)((1u << 15) | v | (v << 5) | (v << 10));
 }
 
+static u32 ndsRendererHardwareTextureLinePixels(u32 size, u32 line)
+{
+    switch (size)
+    {
+    case NDS_RENDERER_HW_TEXTURE_SIZ_4B:
+        return line * 16u;
+    case NDS_RENDERER_HW_TEXTURE_SIZ_8B:
+        return line * 8u;
+    case NDS_RENDERER_HW_TEXTURE_SIZ_16B:
+        return line * 4u;
+    default:
+        return 0u;
+    }
+}
+
+static u32 ndsRendererHardwareTextureSourceBytes(u32 format, u32 size,
+                                                 u32 texels)
+{
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
+    {
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            return (texels + 1u) >> 1;
+        }
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)
+        {
+            return texels;
+        }
+        return 0u;
+    }
+    if ((format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16) ||
+        (format == NDS_RENDERER_HW_TEXTURE_FMT_I16))
+    {
+        return (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B) ?
+            texels * sizeof(u16) : 0u;
+    }
+    return 0u;
+}
+
+static u16 ndsRendererHardwarePaletteColor(const u16 *palette, u32 index,
+                                           u32 count)
+{
+    if ((palette == NULL) || (index >= count))
+    {
+        return 0u;
+    }
+    return ndsRendererHardwareConvertRgba16(palette[index ^ 1u]);
+}
+
+static u16 ndsRendererHardwareTextureColor(
+    u32 format,
+    u32 size,
+    const u8 *texels,
+    const u16 *palette,
+    u32 palette_count,
+    u32 index)
+{
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
+    {
+        u32 palette_index;
+
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            u8 packed = texels[index >> 1];
+            palette_index = ((index & 1u) == 0u) ?
+                (u32)(packed >> 4) : (u32)(packed & 0x0fu);
+        }
+        else
+        {
+            palette_index = texels[index];
+        }
+        return ndsRendererHardwarePaletteColor(palette, palette_index,
+                                               palette_count);
+    }
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16)
+    {
+        return ndsRendererHardwareConvertRgba16(((const u16 *)texels)[index ^ 1u]);
+    }
+    return ndsRendererHardwareConvertI16(((const u16 *)texels)[index ^ 1u]);
+}
+
 static s32 ndsRendererHardwareBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config)
 {
     NDSRendererHardwareTextureKey key;
-    const u16 *src;
+    const u8 *texels_src;
+    const u16 *tlut_src;
     u32 width;
     u32 height;
+    u32 format;
+    u32 size;
     u32 upload_width;
     u32 upload_height;
     u32 texels;
     u32 bytes;
+    u32 loaded_bytes;
     u32 params;
     int size_x;
     int size_y;
@@ -1120,22 +1390,57 @@ static s32 ndsRendererHardwareBindTexture(
     }
     if (((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_ON) == 0u) ||
         (stats->texture_image == 0u) ||
-        (stats->texture_size != NDS_RENDERER_HW_TEXTURE_SIZ_16B) ||
         (stats->texture_render_tile_line == 0u) ||
         (stats->texture_load_texels == 0u))
     {
         stats->hardware_texture_reject_count++;
         return FALSE;
     }
-    if ((stats->texture_format != NDS_RENDERER_HW_TEXTURE_FMT_RGBA16) &&
-        (stats->texture_format != NDS_RENDERER_HW_TEXTURE_FMT_I16))
+
+    if ((stats->texture_render_tile_flags & NDS_RENDERER_TILE_RENDER_SEEN) !=
+        0u)
+    {
+        format = stats->texture_render_tile_format;
+        size = stats->texture_render_tile_size;
+    }
+    else
+    {
+        format = stats->texture_format;
+        size = stats->texture_size;
+    }
+
+    if ((format == NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
+        ((size != NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
+         (size != NDS_RENDERER_HW_TEXTURE_SIZ_8B)))
+    {
+        stats->hardware_texture_reject_count++;
+        return FALSE;
+    }
+    if ((format != NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
+        (format != NDS_RENDERER_HW_TEXTURE_FMT_RGBA16) &&
+        (format != NDS_RENDERER_HW_TEXTURE_FMT_I16))
     {
         stats->hardware_texture_reject_count++;
         return FALSE;
     }
 
-    width = stats->texture_render_tile_line * 4u;
-    height = stats->texture_load_texels / width;
+    width = stats->texture_tile_width;
+    height = stats->texture_tile_height;
+    if ((width == 0u) || (height == 0u))
+    {
+        width = ndsRendererHardwareTextureLinePixels(
+            size, stats->texture_render_tile_line);
+        texels = stats->texture_load_texels * sizeof(u16);
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            texels *= 2u;
+        }
+        else if (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B)
+        {
+            texels /= 2u;
+        }
+        height = (width != 0u) ? texels / width : 0u;
+    }
     if ((width == 0u) || (height == 0u) ||
         (width > NDS_RENDERER_HW_TEXTURE_MAX_WIDTH) ||
         (height > NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT))
@@ -1156,8 +1461,10 @@ static s32 ndsRendererHardwareBindTexture(
 
     memset(&key, 0, sizeof(key));
     key.image = stats->texture_image;
-    key.format = stats->texture_format;
-    key.size = stats->texture_size;
+    key.tlut_image = stats->texture_tlut_image;
+    key.tlut_count = stats->texture_tlut_count;
+    key.format = format;
+    key.size = size;
     key.width = width;
     key.height = height;
     key.line = stats->texture_render_tile_line;
@@ -1170,20 +1477,47 @@ static s32 ndsRendererHardwareBindTexture(
         glBindTexture(GL_TEXTURE_2D, sNdsRendererHardwareTextureName);
         stats->hardware_texture_bind_count++;
         stats->hardware_texture_ready_count++;
-        stats->hardware_texture_format = stats->texture_format;
+        stats->hardware_texture_format = format;
         stats->hardware_texture_width = width;
         stats->hardware_texture_height = height;
         return TRUE;
     }
 
     texels = width * height;
-    bytes = texels * sizeof(u16);
-    src = ndsRendererResolveTextureDataPointer(
-        config, (const void *)(uintptr_t)stats->texture_image, bytes);
-    if (src == NULL)
+    bytes = ndsRendererHardwareTextureSourceBytes(format, size, texels);
+    loaded_bytes = stats->texture_load_texels * sizeof(u16);
+    if ((bytes == 0u) || (bytes > loaded_bytes))
     {
         stats->hardware_texture_reject_count++;
         return FALSE;
+    }
+    texels_src = ndsRendererResolveTextureDataPointer(
+        config, (const void *)(uintptr_t)stats->texture_image, bytes);
+    if (texels_src == NULL)
+    {
+        stats->hardware_texture_reject_count++;
+        return FALSE;
+    }
+    tlut_src = NULL;
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
+    {
+        u32 palette_entries = (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ?
+            16u : 256u;
+
+        if ((stats->texture_tlut_image == 0u) ||
+            (stats->texture_tlut_count < palette_entries))
+        {
+            stats->hardware_texture_reject_count++;
+            return FALSE;
+        }
+        tlut_src = ndsRendererResolveTextureDataPointer(
+            config, (const void *)(uintptr_t)stats->texture_tlut_image,
+            palette_entries * sizeof(u16));
+        if (tlut_src == NULL)
+        {
+            stats->hardware_texture_reject_count++;
+            return FALSE;
+        }
     }
 
     memset(sNdsRendererHardwareTextureScratch, 0,
@@ -1192,19 +1526,13 @@ static s32 ndsRendererHardwareBindTexture(
     {
         for (x = 0u; x < width; x++)
         {
-            u32 src_index = ((y * width) + x) ^ 1u;
+            u32 src_index = (y * width) + x;
             u32 dst_index = (y * upload_width) + x;
-            u16 color = src[src_index];
-
-            if (stats->texture_format == NDS_RENDERER_HW_TEXTURE_FMT_RGBA16)
-            {
-                color = ndsRendererHardwareConvertRgba16(color);
-            }
-            else
-            {
-                color = ndsRendererHardwareConvertI16(color);
-            }
-            sNdsRendererHardwareTextureScratch[dst_index] = color;
+            sNdsRendererHardwareTextureScratch[dst_index] =
+                ndsRendererHardwareTextureColor(format, size, texels_src,
+                                                tlut_src,
+                                                stats->texture_tlut_count,
+                                                src_index);
         }
     }
 
@@ -1249,7 +1577,7 @@ static s32 ndsRendererHardwareBindTexture(
     stats->hardware_texture_upload_count++;
     stats->hardware_texture_bind_count++;
     stats->hardware_texture_ready_count++;
-    stats->hardware_texture_format = stats->texture_format;
+    stats->hardware_texture_format = format;
     stats->hardware_texture_width = width;
     stats->hardware_texture_height = height;
     return TRUE;
@@ -1295,13 +1623,21 @@ static void ndsRendererLoadHardwareMatrices(
 
     if (state != NULL)
     {
-        if (state->projection_valid != 0u)
+        if ((state->matrix_word_valid != 0u) &&
+            (state->matrix_valid != 0u))
         {
-            projection = state->projection;
+            modelview = state->matrix;
         }
-        if (state->modelview_valid != 0u)
+        else
         {
-            modelview = state->modelview;
+            if (state->projection_valid != 0u)
+            {
+                projection = state->projection;
+            }
+            if (state->modelview_valid != 0u)
+            {
+                modelview = state->modelview;
+            }
         }
     }
 
@@ -1623,6 +1959,13 @@ static void ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_MOVEWORD:
+            ndsRendererApplyMatrixMoveWordCommand(stats, state, w0, w1);
+            break;
+
+        case NDS_RENDERER_OP_SPECIAL_1:
+            ndsRendererApplyMvpRecalcCommand(stats, state, w0, w1);
+            break;
+
         case NDS_RENDERER_OP_SETSCISSOR:
         case NDS_RENDERER_OP_SETCIMG:
             stats->state_command_count++;
@@ -1658,9 +2001,8 @@ static void ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_LOADTLUT:
-            stats->texture_command_count++;
+            ndsRendererRecordLoadTlut(stats, w1);
             stats->state_command_count++;
-            stats->ignored_state_command_count++;
             break;
 
         case NDS_RENDERER_OP_SETTILESIZE:

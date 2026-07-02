@@ -9301,6 +9301,9 @@ s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void)
             (gNdsStageGCDrawAllLoopPrepared != 0u)) ? TRUE : FALSE;
 }
 
+static GObj *sNdsStageGCDrawAllLoopCurrentCameraGObj;
+static GObj *sNdsStageGCDrawAllLoopCurrentDisplayGObj;
+
 static sb32 ndsStageGCDrawAllLoopClassifyGObj(GObj *gobj, u32 *mask,
                                               sb32 *is_layer)
 {
@@ -9427,7 +9430,12 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                     NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1)) &&
               (dobj == root))))
         {
-            ndsRendererAdapterSubmitStageDObj(dobj, callback_kind);
+            ndsRendererAdapterSubmitStageDObj(
+                dobj,
+                callback_kind,
+                (gobj == sNdsStageGCDrawAllLoopCurrentDisplayGObj) ?
+                    sNdsStageGCDrawAllLoopCurrentCameraGObj :
+                    NULL);
         }
 #endif
         if ((dobj->sib_next != NULL) && (stack_count < ARRAY_COUNT(stack)))
@@ -9461,7 +9469,6 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     u32 mask;
     sb32 is_layer;
 
-    (void)camera_gobj;
     (void)link_id;
     if ((ndsFighterMarioFoxStageGCDrawAllLoopProofActive() == FALSE) ||
         (gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
@@ -9470,6 +9477,8 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
         return;
     }
     gNdsStageGCDrawAllLoopCapturedDisplayCount++;
+    sNdsStageGCDrawAllLoopCurrentCameraGObj = camera_gobj;
+    sNdsStageGCDrawAllLoopCurrentDisplayGObj = display;
     if (ndsStageGCDrawAllLoopClassifyGObj(display, &mask,
                                           &is_layer) != FALSE)
     {

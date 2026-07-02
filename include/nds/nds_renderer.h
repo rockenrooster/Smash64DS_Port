@@ -124,6 +124,8 @@ typedef struct NDSRendererStats
     u32 matrix_push_count;
     u32 matrix_pop_count;
     u32 matrix_transform_count;
+    u32 matrix_mvp_recalc_count;
+    u32 matrix_move_word_count;
     u32 transformed_vertex_count;
     u32 transformed_triangle_count;
     u32 hardware_vertex_count;
@@ -186,7 +188,12 @@ typedef struct NDSRendererStats
     u32 texture_size;
     u32 texture_image_width;
     u32 texture_set_tile_count;
+    u32 texture_tlut_image;
+    u32 texture_tlut_count;
+    u32 texture_tlut_tile;
     u32 texture_render_tile;
+    u32 texture_render_tile_format;
+    u32 texture_render_tile_size;
     u32 texture_render_tile_line;
     u32 texture_render_tile_tmem;
     u32 texture_render_tile_palette;

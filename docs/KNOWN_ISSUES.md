@@ -60,10 +60,21 @@
 - Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
   billboard/recalc DObj matrix seed coverage, first bounded Opening Room
   RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is
-  not a full renderer cutover. The Mario/Fox all-DL capture remains
-  flat-shaded/compact because BattleShip MVP-recalc display-list matrix-word
-  handling, CI/TLUT texture formats, combiner fidelity, depth/material state,
-  and cutover policy remain deferred.
+  not a full renderer cutover. Stage-inclusive `gcDrawAll` and direct all-DL
+  hardware paths now use the BattleShip battle-camera `0x4C` matrix seed, and
+  the Mario/Fox all-DL capture is no longer framed by a bounded proof camera.
+  BattleShip
+  `gSPMvpRecalc` / `G_MW_MATRIX` display-list
+  streams are now decoded when emitted, fighter-parts matrix kind `0x4B` has a
+  source-backed seed path, cached fighter-parts `Mtx44f` seeds use fixed-W
+  conversion semantics matching `syMatrixF2LFixedW`, and selected DObj parent
+  chains compose root to child. The hardware texture upload path now handles
+  `LOADTLUT` plus CI4/CI8 palette conversion, but current proof captures still
+  submit raw DObj display lists without material DL emission. Hardware all-DL
+  stats prove triangle submission and matrix seeds, but
+  the direct all-DL scene emits no matrix-word stream (`MW=0/0/0/0`); remaining
+  renderer work is material DL submission, textured CI/TLUT proof, combiner
+  fidelity, depth/material state, and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

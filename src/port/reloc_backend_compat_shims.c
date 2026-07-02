@@ -9257,9 +9257,53 @@ static GObj *ndsMakeBattleCompatCamera(u32 bit)
                             FALSE);
 }
 
+static GObj *sNdsBattleCompatMainCameraGObj;
+
+static GObj *ndsBattleCompatMainCameraGObj(void)
+{
+    return sNdsBattleCompatMainCameraGObj;
+}
+
 GObj *gmCameraMakeBattleCamera(void)
 {
-    return ndsMakeBattleCompatCamera(1u << 0);
+    GObj *camera_gobj = ndsMakeBattleCompatCamera(1u << 0);
+    CObj *cobj;
+    XObj *xobj;
+
+    if (camera_gobj == NULL)
+    {
+        return NULL;
+    }
+
+    cobj = CObjGetStruct(camera_gobj);
+    if (cobj == NULL)
+    {
+        return camera_gobj;
+    }
+
+    xobj = gcAddXObjForCamera(cobj, 0x4C, 0);
+    (void)xobj;
+    cobj->projection.persp.xobj = NULL;
+    cobj->projection.persp.norm = 0;
+    cobj->projection.persp.fovy = 38.0F;
+    cobj->projection.persp.aspect = 15.0F / 11.0F;
+    cobj->projection.persp.near = 256.0F;
+    cobj->projection.persp.far = 39936.0F;
+    cobj->projection.persp.scale = 1.0F;
+    cobj->vec.xobj = NULL;
+    cobj->vec.eye.x = 0.0F;
+    cobj->vec.eye.y = 300.0F;
+    cobj->vec.eye.z = 10000.0F;
+    cobj->vec.at.x = 0.0F;
+    cobj->vec.at.y = 300.0F;
+    cobj->vec.at.z = 0.0F;
+    cobj->vec.up.x = 0.0F;
+    cobj->vec.up.y = 1.0F;
+    cobj->vec.up.z = 0.0F;
+
+    sNdsBattleCompatMainCameraGObj = camera_gobj;
+
+    return camera_gobj;
 }
 
 GObj *gmCameraMakePlayerArrowsCamera(void)
@@ -10361,4 +10405,3 @@ void syRdpResetSettings(Gfx **dl)
 {
     (void)dl;
 }
-

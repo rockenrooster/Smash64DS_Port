@@ -11,6 +11,7 @@
 #define NDS_GBI_OP_TRI2 0x06u
 #define NDS_GBI_OP_TEXTURE 0xd7u
 #define NDS_GBI_OP_POPMTX 0xd8u
+#define NDS_GBI_OP_SPECIAL_1 0xd5u
 #define NDS_GBI_OP_MTX 0xdau
 #define NDS_GBI_OP_GEOMETRYMODE 0xd9u
 #define NDS_GBI_OP_MOVEWORD 0xdbu
@@ -1941,6 +1942,7 @@ static void ndsOpeningRoomProbeMaterialDLShape(void)
 
         case NDS_GBI_OP_TEXTURE:
         case NDS_GBI_OP_POPMTX:
+        case NDS_GBI_OP_SPECIAL_1:
         case NDS_GBI_OP_MTX:
         case NDS_GBI_OP_MOVEWORD:
         case NDS_GBI_OP_GEOMETRYMODE:
@@ -3207,6 +3209,9 @@ static s32 ndsOpeningRoomVisitDLPreviewCommand(
         break;
 
     case NDS_GBI_OP_POPMTX:
+        break;
+
+    case NDS_GBI_OP_SPECIAL_1:
         break;
 
     case NDS_GBI_OP_MTX:

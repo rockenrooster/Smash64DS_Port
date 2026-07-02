@@ -15675,3 +15675,87 @@ Still deferred:
   shows the Pupupu platform plus fighter geometry; full fighter visual fidelity
   still needs MVP-recalc matrix-word handling, CI/TLUT texture/combiner work,
   material/depth state, and renderer cutover.
+
+## 2026-07-02 - Advanced Renderer Matrix-Word And Stage HW Proof
+
+- Added F3DEX `G_SPECIAL_1` / `gSPMvpRecalc` handling and `G_MOVEWORD`
+  `G_MW_MATRIX` patching to the shared renderer traversal state, preserving the
+  CPU 20.12 transformed-vertex oracle.
+- Updated the opt-in hardware path to load the patched combined matrix when a
+  live matrix-word stream is active, while leaving the default software preview
+  path unchanged.
+- Added source-backed fighter-parts matrix kind `0x4B` seeding and root-to-child
+  selected-DObj parent-chain composition before the camera modelview.
+- Verified the targeted GBI fixture plus opt-in hardware captures:
+  `artifacts\renderer-chain-hw-battle.png` and
+  `artifacts\renderer-stage-gcdrawall-hw.png`. The stage-inclusive capture
+  shows Pupupu platform geometry plus fighter geometry.
+- Hardware all-DL stats were `HW=316/314 oracle=316/314 rejects=18/8
+  seeds=14/18` and `MW=0/0/0/0`, proving the direct all-DL scene uses the
+  per-DObj seed path rather than emitted matrix-word commands. The Mario/Fox
+  all-DL hardware capture remains compact, so the next renderer pass should fix
+  DS matrix/projection scaling before treating texture/combiner work as the
+  blocker.
+
+## 2026-07-02 - Matched Fighter-Parts Cached Matrix Fixed-W Conversion
+
+- Updated the renderer's cached fighter-parts `Mtx44f` seed conversion to force
+  the W column to `0,0,0,1`, matching BattleShip `syMatrixF2LFixedW` for the
+  `0x4B` fighter-parts branch.
+- Refreshed the opt-in all-DL and stage-inclusive hardware captures. The Pupupu
+  stage capture remains stable, and the Mario/Fox all-DL capture is still
+  compact, so the next renderer pass should isolate hardware pose/scale
+  submission before CI/TLUT texture and combiner work.
+
+## 2026-07-02 - Framed Renderer Stage 3b Hardware Proof Camera
+
+- Moved the bounded hardware fallback camera closer for opt-in
+  `NDS_RENDERER_HW_TRIANGLES=1` proofs so the Mario/Fox all-DL capture shows
+  separated fighter body/limb geometry instead of a single compact mesh.
+- Refreshed `artifacts\renderer-chain-hw-battle.png` and
+  `artifacts\renderer-stage-gcdrawall-hw.png`; the stage-inclusive capture
+  still shows Pupupu platform geometry plus hardware-submitted fighter
+  triangles.
+- This is still a proof camera, not renderer cutover. The next renderer pass
+  should route hardware submission through the BattleShip camera-capture path,
+  then finish pose/scale fidelity before CI/TLUT textures and combiner work.
+
+## 2026-07-02 - Routed Stage HW Submission Through Captured Camera
+
+- Threaded the camera GObj from the existing BattleShip `gcDrawAll` display
+  bridge into opt-in stage DObj hardware submission.
+- Refreshed `artifacts\renderer-stage-gcdrawall-hw.png`; the stage-inclusive
+  hardware capture now uses that captured camera path while still showing the
+  Pupupu platform plus hardware-submitted fighter triangles.
+- The standalone Mario/Fox all-DL proof still uses the bounded fallback camera.
+  Extending captured-camera submission to that path, then finishing pose/scale
+  fidelity and CI/TLUT/combiner work, remains next.
+
+## 2026-07-02 - Added Battle Camera 0x4C Hardware Matrix Seed
+
+- Updated the VSBattle compatibility camera to expose BattleShip's `0x4C`
+  battle-camera matrix kind with the source default perspective and eye/at/up
+  values.
+- Taught the renderer matrix adapter to seed that kind with the same reflected
+  look-at plus perspective path used by `gmCameraLookAtFuncMatrix`, without
+  importing broad `gmcamera.c` runtime.
+- Restored the battle camera around the direct Mario/Fox all-DL display probe
+  and refreshed `artifacts\renderer-chain-hw-battle.png` plus
+  `artifacts\renderer-stage-gcdrawall-hw.png`. Both opt-in hardware captures
+  now run through the BattleShip battle-camera matrix seed; renderer cutover
+  still needs fighter pose/scale fidelity, CI/TLUT textures, combiner/material
+  state, and depth policy.
+
+## 2026-07-02 - Added CI/TLUT Hardware Texture Decode
+
+- Taught `src/nds/nds_renderer.c` to preserve `LOADTLUT` palette state, track
+  render-tile pixel size separately from load-block size, and convert CI4/CI8
+  texels through RGBA5551 TLUTs into the existing DS texture upload scratch.
+- Raised the single opt-in hardware texture scratch limit to `128x128`, enough
+  for the bounded Pupupu and fighter CI texture sizes seen in the current DL
+  sources.
+- Refreshed `artifacts\renderer-chain-hw-battle.png` and
+  `artifacts\renderer-stage-gcdrawall-hw.png`. These captures still look flat
+  because the current proof submits raw DObj DLs; material display-list emission
+  must be routed into the hardware path before the CI/TLUT upload support is
+  visually exercised.

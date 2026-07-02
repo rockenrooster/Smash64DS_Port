@@ -7,6 +7,11 @@
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
 #define NDS_RENDERER_ADAPTER_HW_WORLD_SCALE 256.0F
+/* dLBCommonFuncMatrixList is consumed as syMtxProcess pairs; kind 0x4B maps
+ * to lbCommonFighterPartsFuncMatrix in BattleShip. */
+#define NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND 0x4Bu
+/* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
+#define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
 
 static void ndsRendererAdapterMtxIdentity20p12(
     NDSRendererMatrix20p12 *out)
@@ -53,6 +58,48 @@ static void ndsRendererAdapterMtxFromN64(
         return;
     }
     ndsRendererMtxLoadN64ToDS20p12(src, dst);
+}
+
+static s32 ndsRendererAdapterFloatTo20p12(f32 value)
+{
+    f32 scaled = value * (f32)(1 << NDS_RENDERER_ADAPTER_MTX_FRAC_BITS);
+
+    if (scaled >= 2147483520.0F)
+    {
+        return 0x7fffffff;
+    }
+    if (scaled <= -2147483520.0F)
+    {
+        return (s32)0x80000000u;
+    }
+    return (s32)((scaled >= 0.0F) ? (scaled + 0.5F) : (scaled - 0.5F));
+}
+
+static void ndsRendererAdapterMtxFromF(
+    Mtx44f mtx, NDSRendererMatrix20p12 *dst)
+{
+    u32 row;
+    u32 col;
+
+    if (dst == NULL)
+    {
+        return;
+    }
+
+    memset(dst, 0, sizeof(*dst));
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            f32 value = mtx[row][col];
+
+            if (col == 3u)
+            {
+                value = (row == 3u) ? 1.0F : 0.0F;
+            }
+            dst->m[row][col] = ndsRendererAdapterFloatTo20p12(value);
+        }
+    }
 }
 
 static f32 ndsRendererAdapterProjectionDepth(f32 value)
@@ -305,6 +352,58 @@ static sb32 ndsRendererAdapterBuildRecalcLocalMtx(DObj *dobj, u32 kind,
     return TRUE;
 }
 
+static sb32 ndsRendererAdapterBuildFighterPartsMtx(
+    DObj *dobj, NDSRendererMatrix20p12 *out)
+{
+    FTParts *parts;
+    Mtx mtx;
+
+    if ((dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+
+    parts = ftGetParts(dobj);
+    if (parts == NULL)
+    {
+        return FALSE;
+    }
+
+    if (parts->transform_update_mode != 0)
+    {
+        ndsRendererAdapterMtxFromF(parts->unk_dobjtrans_0x10, out);
+        return TRUE;
+    }
+
+    if ((dobj->scale.vec.f.x != 1.0F) ||
+        (dobj->scale.vec.f.y != 1.0F) ||
+        (dobj->scale.vec.f.z != 1.0F))
+    {
+        syMatrixTraRotRpyRSca(&mtx,
+                              dobj->translate.vec.f.x,
+                              dobj->translate.vec.f.y,
+                              dobj->translate.vec.f.z,
+                              dobj->rotate.vec.f.x,
+                              dobj->rotate.vec.f.y,
+                              dobj->rotate.vec.f.z,
+                              dobj->scale.vec.f.x,
+                              dobj->scale.vec.f.y,
+                              dobj->scale.vec.f.z);
+    }
+    else
+    {
+        syMatrixTraRotRpyR(&mtx,
+                           dobj->translate.vec.f.x,
+                           dobj->translate.vec.f.y,
+                           dobj->translate.vec.f.z,
+                           dobj->rotate.vec.f.x,
+                           dobj->rotate.vec.f.y,
+                           dobj->rotate.vec.f.z);
+    }
+    ndsRendererAdapterMtxFromN64(&mtx, out);
+    return TRUE;
+}
+
 static void ndsRendererAdapterGetDObjVectorTracks(
     DObj *dobj,
     GCTranslate **translate,
@@ -505,6 +604,13 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
     case nGCMatrixKind50:
         ndsRendererAdapterBuildRecalcLocalMtx(dobj, xobj->kind, &mtx);
         break;
+    case NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND:
+        if (ndsRendererAdapterBuildFighterPartsMtx(dobj, out) != FALSE)
+        {
+            return TRUE;
+        }
+        ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+        break;
     case nGCMatrixKindVecTra:
         syMatrixTra(&mtx, translate->vec.f.x,
                     translate->vec.f.y,
@@ -640,8 +746,8 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     ndsRendererAdapterMtxIdentity20p12(out);
     for (i = depth; i != 0u; i--)
     {
-        if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u],
-                                                   &local) != FALSE)
+        if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u], &local) !=
+            FALSE)
         {
             ndsRendererMtxMul20p12(out, &local, out);
         }
@@ -689,6 +795,33 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
 
         switch (xobj->kind)
         {
+        case NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND:
+        {
+            LookAt look_at;
+            Mtx mtx;
+            NDSRendererMatrix20p12 lookat;
+            NDSRendererMatrix20p12 persp;
+
+            syMatrixLookAtReflect(&mtx, &look_at,
+                                  cobj->vec.eye.x, cobj->vec.eye.y,
+                                  cobj->vec.eye.z, cobj->vec.at.x,
+                                  cobj->vec.at.y, cobj->vec.at.z,
+                                  cobj->vec.up.x, cobj->vec.up.y,
+                                  cobj->vec.up.z);
+            ndsRendererAdapterMtxFromN64(&mtx, &lookat);
+            syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
+                              cobj->projection.persp.fovy,
+                              cobj->projection.persp.aspect,
+                              ndsRendererAdapterProjectionDepth(
+                                  cobj->projection.persp.near),
+                              ndsRendererAdapterProjectionDepth(
+                                  cobj->projection.persp.far),
+                              cobj->projection.persp.scale);
+            ndsRendererAdapterMtxFromN64(&mtx, &persp);
+            ndsRendererMtxMul20p12(&lookat, &persp, projection);
+            *projection_valid = TRUE;
+            break;
+        }
         case nGCMatrixKindPerspFastF:
             syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
                               cobj->projection.persp.fovy,
@@ -815,7 +948,7 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
     *projection_valid = TRUE;
 
     syMatrixLookAt(&mtx,
-                   0.0F, 300.0F, 10000.0F,
+                   0.0F, 300.0F, 1600.0F,
                    0.0F, 300.0F, 0.0F,
                    0.0F, 1.0F, 0.0F);
     ndsRendererAdapterMtxFromN64(&mtx, modelview);
@@ -877,7 +1010,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
 
     if ((camera_modelview_valid != FALSE) && (dobj_world_valid != FALSE))
     {
-        ndsRendererMtxMul20p12(&camera_modelview, &dobj_world, modelview);
+        ndsRendererMtxMul20p12(&dobj_world, &camera_modelview, modelview);
         *modelview_ptr = modelview;
     }
     else if (camera_modelview_valid != FALSE)
@@ -1556,6 +1689,7 @@ static s32 ndsFighterMarioFoxVisitDLExecuteCommand(
     case NDS_FIGHTER_DL_OP_MTX:
     case NDS_FIGHTER_DL_OP_GEOMETRYMODE:
     case NDS_FIGHTER_DL_OP_MOVEWORD:
+    case NDS_FIGHTER_DL_OP_SPECIAL_1:
     case NDS_FIGHTER_DL_OP_DL:
     case NDS_FIGHTER_DL_OP_ENDDL:
     case NDS_FIGHTER_DL_OP_SETOTHERMODE_H:
@@ -2143,6 +2277,7 @@ static s32 ndsFighterMarioFoxVisitDLDrawCommand(
     case NDS_FIGHTER_DL_OP_MTX:
     case NDS_FIGHTER_DL_OP_GEOMETRYMODE:
     case NDS_FIGHTER_DL_OP_MOVEWORD:
+    case NDS_FIGHTER_DL_OP_SPECIAL_1:
     case NDS_FIGHTER_DL_OP_DL:
     case NDS_FIGHTER_DL_OP_ENDDL:
     case NDS_FIGHTER_DL_OP_SETOTHERMODE_H:
@@ -2220,7 +2355,8 @@ static sb32 ndsRendererAdapterStageDObjDrawable(DObj *dobj, u32 kind)
     }
 }
 
-static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl)
+static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
+                                            GObj *camera_gobj)
 {
     NDSRelocLoadedFile *loaded;
     NDSRendererConfig config;
@@ -2247,10 +2383,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl)
     state.primary_file = loaded;
     state.slot = 0u;
     ndsRendererAdapterPrepareInitialMatrices(dobj,
-                                             (gGCCurrentCamera != NULL) ?
-                                                 CObjGetStruct(
-                                                     gGCCurrentCamera) :
-                                                 NULL,
+                                             (camera_gobj != NULL) ?
+                                                 CObjGetStruct(camera_gobj) :
+                                                 ((gGCCurrentCamera != NULL) ?
+                                                      CObjGetStruct(
+                                                          gGCCurrentCamera) :
+                                                      NULL),
                                              &initial_projection,
                                              &initial_projection_ptr,
                                              &initial_modelview,
@@ -2274,9 +2412,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl)
                                   &stats);
 }
 
-void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind)
+void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
+                                       void *camera_gobj_ptr)
 {
     DObj *dobj = dobj_ptr;
+    GObj *camera_gobj = camera_gobj_ptr;
     DObjDLLink *dl_link;
     u32 i;
 
@@ -2292,7 +2432,7 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind)
     case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1:
         if (dobj->dv != NULL)
         {
-            ndsRendererAdapterSubmitStageDL(dobj, dobj->dl);
+            ndsRendererAdapterSubmitStageDL(dobj, dobj->dl, camera_gobj);
         }
         break;
 
@@ -2313,7 +2453,8 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind)
                 ((u32)dl_link->list_id < NDS_RENDERER_STAGE_DL_HEADS) &&
                 (dl_link->dl != NULL))
             {
-                ndsRendererAdapterSubmitStageDL(dobj, dl_link->dl);
+                ndsRendererAdapterSubmitStageDL(dobj, dl_link->dl,
+                                                camera_gobj);
             }
         }
         break;
@@ -2323,10 +2464,12 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind)
     }
 }
 #else
-void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind)
+void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
+                                       void *camera_gobj)
 {
     (void)dobj;
     (void)kind;
+    (void)camera_gobj;
 }
 #endif
 
@@ -4643,6 +4786,18 @@ static void ndsFighterDLAllDrawAccumulateStats(
         gNdsFighterDLAllDrawP0UnsupportedCommandCount += unsupported_count;
         gNdsFighterDLAllDrawP0VertexDecodedCount +=
             state->vertex_decoded_count;
+        gNdsFighterDLAllDrawP0MatrixMvpRecalcCount +=
+            stats->matrix_mvp_recalc_count;
+        gNdsFighterDLAllDrawP0MatrixMoveWordCount +=
+            stats->matrix_move_word_count;
+        gNdsFighterDLAllDrawP0HardwareTriangleCount +=
+            stats->hardware_triangle_count;
+        gNdsFighterDLAllDrawP0HardwareOracleTriangleCount +=
+            stats->hardware_oracle_triangle_count;
+        gNdsFighterDLAllDrawP0HardwareOracleRejectCount +=
+            stats->hardware_oracle_reject_count;
+        gNdsFighterDLAllDrawP0HardwareMatrixSeedCount +=
+            stats->hardware_matrix_seed_count;
         gNdsFighterDLAllDrawP0TriangleCount += state->triangle_count;
         gNdsFighterDLAllDrawP0TriangleValidCount +=
             state->triangle_valid_count;
@@ -4684,6 +4839,18 @@ static void ndsFighterDLAllDrawAccumulateStats(
         gNdsFighterDLAllDrawP1UnsupportedCommandCount += unsupported_count;
         gNdsFighterDLAllDrawP1VertexDecodedCount +=
             state->vertex_decoded_count;
+        gNdsFighterDLAllDrawP1MatrixMvpRecalcCount +=
+            stats->matrix_mvp_recalc_count;
+        gNdsFighterDLAllDrawP1MatrixMoveWordCount +=
+            stats->matrix_move_word_count;
+        gNdsFighterDLAllDrawP1HardwareTriangleCount +=
+            stats->hardware_triangle_count;
+        gNdsFighterDLAllDrawP1HardwareOracleTriangleCount +=
+            stats->hardware_oracle_triangle_count;
+        gNdsFighterDLAllDrawP1HardwareOracleRejectCount +=
+            stats->hardware_oracle_reject_count;
+        gNdsFighterDLAllDrawP1HardwareMatrixSeedCount +=
+            stats->hardware_matrix_seed_count;
         gNdsFighterDLAllDrawP1TriangleCount += state->triangle_count;
         gNdsFighterDLAllDrawP1TriangleValidCount +=
             state->triangle_valid_count;
@@ -4866,6 +5033,7 @@ static void ndsFighterMarioFoxRunDLAllDrawProbe(void)
     u32 gobj_after;
     u32 pitch = 0u;
     u16 *pixels;
+    GObj *saved_camera;
 
     if ((ndsFighterMarioFoxDLAllDrawProofEnabled() == FALSE) ||
         (gNdsFighterMarioFoxDLAllDrawResult != 0u))
@@ -4920,8 +5088,11 @@ static void ndsFighterMarioFoxRunDLAllDrawProbe(void)
     sNdsFighterDLAllDrawProbeActive = TRUE;
     sNdsFighterDLAllDrawPixels = pixels;
     sNdsFighterDLAllDrawPitch = pitch;
+    saved_camera = gGCCurrentCamera;
+    gGCCurrentCamera = ndsBattleCompatMainCameraGObj();
     ftDisplayMainProcDisplay(sNdsFighterStructPool[0].fighter_gobj);
     ftDisplayMainProcDisplay(sNdsFighterStructPool[1].fighter_gobj);
+    gGCCurrentCamera = saved_camera;
     sNdsFighterDLAllDrawProbeActive = FALSE;
     sNdsFighterDLAllDrawPixels = NULL;
     sNdsFighterDLAllDrawPitch = 0u;
