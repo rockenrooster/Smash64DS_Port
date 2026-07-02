@@ -32,11 +32,17 @@ $headerModes = @{}
     $headerModes[$name] = [int]$_.Groups[2].Value
 }
 $makefileModes = @{}
-$makePattern = 'else ifeq \(\$\(NDS_DEV_SCENE_HARNESS\),([a-zA-Z0-9_]+)\)\s*CFLAGS \+= -DNDS_DEV_SCENE_HARNESS=([0-9]+)'
-[regex]::Matches($makefileText, $makePattern) | ForEach-Object {
-    $makefileModes[$_.Groups[1].Value] = [int]$_.Groups[2].Value
+$makePatterns = @(
+    'else ifeq \(\$\(NDS_DEV_SCENE_HARNESS\),([a-zA-Z0-9_]+)\)\s*CFLAGS \+= -DNDS_DEV_SCENE_HARNESS=([0-9]+)',
+    'else ifeq \(\$\(NDS_DEV_SCENE_HARNESS\),([a-zA-Z0-9_]+)\)\s*NDS_DEV_SCENE_HARNESS_ID\s*:=\s*([0-9]+)'
+)
+foreach ($makePattern in $makePatterns) {
+    [regex]::Matches($makefileText, $makePattern) | ForEach-Object {
+        $makefileModes[$_.Groups[1].Value] = [int]$_.Groups[2].Value
+    }
 }
-if ($makefileText -match 'ifeq \(\$\(NDS_DEV_SCENE_HARNESS\),normal\)\s*CFLAGS \+= -DNDS_DEV_SCENE_HARNESS=([0-9]+)') {
+if (($makefileText -match 'ifeq \(\$\(NDS_DEV_SCENE_HARNESS\),normal\)\s*CFLAGS \+= -DNDS_DEV_SCENE_HARNESS=([0-9]+)') -or
+    ($makefileText -match 'ifeq \(\$\(NDS_DEV_SCENE_HARNESS\),normal\)\s*NDS_DEV_SCENE_HARNESS_ID\s*:=\s*([0-9]+)')) {
     $makefileModes['normal'] = [int]$Matches[1]
 }
 foreach ($field in @('Name','Harness','Mode','Script')) {

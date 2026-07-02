@@ -16134,3 +16134,22 @@ Still deferred:
   `battle_mariofox_stage_mplivehit_damage_loop` (`69.13s`),
   `menu_chain_mariofox_stage_mpdamage_recover_loop` (`67.72s`), and
   `menu_chain_mariofox_stage_mplivehit_damage_loop` (`67.67s`).
+
+## 2026-07-02 - Cut Regression Build Wall-Clock
+
+- Moved the harness mode and Inishie source-scale selector from global CFLAGS
+  into a generated `nds_scene_harness_config.h` included only by the
+  harness-aware TUs. Normal builds still compile the same default mode, while
+  verifier profile builds can reuse shared object trees.
+- `scripts/build-verify-profile.ps1` now uses shared build slots by default and
+  runs Regression/Full prebuilds with four workers at `-j4` each. The four
+  `-Os` live-hit modes use separate opt-size shared slots so their CFLAGS do
+  not contaminate the normal shared object trees.
+- Optimized cold Regression prebuild:
+  `.\scripts\build-verify-profile.ps1 -Profile Regression -TimingPath artifacts\verifier-cost\build-cost-regression-optimized.json`
+  built 108 outputs in `1336.35s` (`22.3m`), down from `6821.796s` (`113.7m`).
+- Dependency audit: generated `.d` files record
+  `nds_scene_harness_config.h` for `scene_backend.o`, `scene_harness.o`, and
+  `battleship_grinishie_scale.o`; imported fighter TUs record
+  `include/ft/fighter.h`. `scripts/check-harness-registry.ps1` now validates
+  the Makefile's `NDS_DEV_SCENE_HARNESS_ID :=` mapping.
