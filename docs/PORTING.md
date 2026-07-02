@@ -15659,3 +15659,19 @@ Still deferred:
   `artifacts\renderer-stage3-hw-opening-texture.png`. The battle capture is
   framed but still has collapsed fighter parts until the BattleShip
   recalc/billboard DObj matrix family is fully modeled.
+
+## 2026-07-02 - Added Renderer Stage 3b Pupupu Hardware Draw
+
+- Added BattleShip billboard-kind `33-40` and recalc-kind `41-50` coverage to
+  the shared DObj matrix seed path used by renderer traversal.
+- Routed stage DObjs reached by the existing Pupupu `gcDrawAll` callbacks into
+  the opt-in hardware triangle path without adding a harness mode, preserving
+  the default software preview path.
+- Kept hardware texture and untextured triangle submission on the same `v16`
+  world-scale path.
+- Captured current hardware proof images at
+  `artifacts\renderer-stage3b-hw-battle.png` and
+  `artifacts\renderer-stage3b-hw-pupupu-stage.png`. The stage-inclusive capture
+  shows the Pupupu platform plus fighter geometry; full fighter visual fidelity
+  still needs MVP-recalc matrix-word handling, CI/TLUT texture/combiner work,
+  material/depth state, and renderer cutover.

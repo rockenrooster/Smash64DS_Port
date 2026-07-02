@@ -57,13 +57,13 @@
   After that header split, the project-owned `ftMain*` definitions in
   `src/port/reloc_backend_diagnostic_recorders.c` and adjacent compatibility
   shims still need to be deleted where the original TU replaces them.
-- Renderer stage 3 proves opt-in DS hardware triangles and the first bounded
-  Opening Room RGBA16/I16 texture upload, but it is not a full renderer cutover.
-  The Mario/Fox hardware capture is framed from source-shaped DObj/camera seeds,
-  yet fighter parts still collapse because the BattleShip recalc/billboard DObj
-  matrix family is only partially modeled. CI/TLUT texture formats, combiner
-  fidelity, depth/material state, and stage-inclusive Pupupu hardware draw
-  remain deferred.
+- Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
+  billboard/recalc DObj matrix seed coverage, first bounded Opening Room
+  RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is
+  not a full renderer cutover. The Mario/Fox all-DL capture remains
+  flat-shaded/compact because BattleShip MVP-recalc display-list matrix-word
+  handling, CI/TLUT texture formats, combiner fidelity, depth/material state,
+  and cutover policy remain deferred.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

@@ -3707,6 +3707,7 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                                 void *display_gobj,
                                                 s32 link_id);
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind);
+void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind);
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopMask;

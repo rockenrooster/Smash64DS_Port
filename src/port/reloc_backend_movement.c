@@ -9360,7 +9360,8 @@ static sb32 ndsStageGCDrawAllLoopIsSelectedFighter(GObj *gobj)
 }
 
 static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
-                                           sb32 is_layer, u32 kind)
+                                           sb32 is_layer, u32 kind,
+                                           u32 callback_kind)
 {
     DObj *stack[128];
     u32 stack_count = 0u;
@@ -9376,6 +9377,9 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
     {
         return;
     }
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)callback_kind;
+#endif
     stack[stack_count++] = root;
     while ((stack_count != 0u) && (scanned < ARRAY_COUNT(stack)))
     {
@@ -9410,6 +9414,22 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                 gNdsStageGCDrawAllLoopMapMObjMask |= owner_mask;
             }
         }
+#if NDS_RENDERER_HW_TRIANGLES
+        if ((dobj->dv != NULL) &&
+            ((callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) ||
+             (callback_kind ==
+                 NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS) ||
+             (((callback_kind ==
+                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS) ||
+               (callback_kind ==
+                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0) ||
+               (callback_kind ==
+                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1)) &&
+              (dobj == root))))
+        {
+            ndsRendererAdapterSubmitStageDObj(dobj, callback_kind);
+        }
+#endif
         if ((dobj->sib_next != NULL) && (stack_count < ARRAY_COUNT(stack)))
         {
             stack[stack_count++] = dobj->sib_next;
@@ -9477,6 +9497,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     GObj *stage_gobj = gobj;
     u32 mask;
     sb32 is_layer;
+    u32 callback_kind = kind;
 
     if (kind >= 32u)
     {
@@ -9502,6 +9523,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
         return;
     }
     gNdsStageGCDrawAllLoopDObjDrawCallbackCount++;
-    ndsStageGCDrawAllLoopScanDObjs(stage_gobj, mask, is_layer, kind);
+    ndsStageGCDrawAllLoopScanDObjs(stage_gobj, mask, is_layer, kind,
+                                   callback_kind);
 }
 

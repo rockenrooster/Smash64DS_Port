@@ -1379,7 +1379,7 @@ static void ndsRendererSubmitHardwareTriangle(
     v1 = &state->input_vertices[i1];
     v2 = &state->input_vertices[i2];
     use_texture = ndsRendererHardwareBindTexture(stats, config);
-    scale_world = (use_texture == FALSE) ? TRUE : FALSE;
+    scale_world = TRUE;
 
     ndsRendererLoadHardwareMatrices(state, scale_world);
     if (use_texture != FALSE)

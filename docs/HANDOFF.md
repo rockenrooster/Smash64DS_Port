@@ -41,14 +41,16 @@ throw-hit data.
 
 Latest renderer detail: `src/nds/nds_renderer.c` has opt-in DS 3D hardware
 submission behind `NDS_RENDERER_HW_TRIANGLES=1`, now fed by source-shaped DObj
-and camera matrix seeds from `src/port/reloc_backend_renderer_dl.c`. It keeps
-the CPU 20.12 traversal oracle, loads projection/modelview matrices into GX,
-submits raw DL triangles with DS `v16` unit conversion, and uploads the first
-bounded RGBA16/I16 Opening Room texture. Captures:
-`artifacts\renderer-stage3-hw-battle.png` and
-`artifacts\renderer-stage3-hw-opening-texture.png`. The battle capture is
-framed but fighter parts still collapse because recalc/billboard DObj matrix
-kinds remain incomplete; default builds still use the software preview.
+and camera matrix seeds from `src/port/reloc_backend_renderer_dl.c`. Stage 3b
+adds billboard-kind `33-40` and recalc-kind `41-50` seed coverage, consistent
+textured/untextured `v16` world scaling, and stage DObj submission from the
+existing Pupupu `gcDrawAll` traversal. Captures:
+`artifacts\renderer-stage3b-hw-battle.png` and
+`artifacts\renderer-stage3b-hw-pupupu-stage.png`. The stage-inclusive capture
+shows the Pupupu platform plus fighter geometry; the all-DL battle capture is
+still flat-shaded/compact until MVP-recalc matrix-word handling,
+CI/TLUT textures, combiner, material/depth state, and renderer cutover land.
+Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
 TU via `src/import/battleship_gmcollision.c`, replacing the local
@@ -69,8 +71,9 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Renderer follow-up: implement the remaining BattleShip recalc/billboard
-   DObj matrix kinds, then prove stage-inclusive Pupupu hardware draw.
+1. Renderer follow-up: implement MVP-recalc/display-list matrix-word handling,
+   CI/TLUT textures, combiner/material/depth state, then continue renderer
+   cutover.
 2. Runtime slice 1 follow-up: split/expand the item, weapon, effect, audio, and
    ground compatibility headers enough for full `ft/ftmain.c`, then replace
    the remaining local `ftMain*` seams and add the continuous-runtime verifier.

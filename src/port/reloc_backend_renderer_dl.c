@@ -83,6 +83,228 @@ static void ndsRendererAdapterBuildDObjFallbackMtx(DObj *dobj, Mtx *mtx)
                           dobj->scale.vec.f.z);
 }
 
+static f32 ndsRendererAdapterSquareF(f32 value)
+{
+    return value * value;
+}
+
+static void ndsRendererAdapterBuildBillboardMtxF(Mtx44f *mtx_f,
+                                                 DObj *dobj,
+                                                 u32 kind)
+{
+    CObj *cobj;
+    f32 distx;
+    f32 disty;
+    f32 distz;
+    f32 res;
+    u32 is_translate;
+
+    if ((mtx_f == NULL) || (dobj == NULL))
+    {
+        return;
+    }
+
+    memset(mtx_f, 0, sizeof(*mtx_f));
+    (*mtx_f)[0][0] = 1.0F;
+    (*mtx_f)[1][1] = 1.0F;
+    (*mtx_f)[2][2] = 1.0F;
+    (*mtx_f)[3][3] = 1.0F;
+
+    cobj = (gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL;
+    if (cobj == NULL)
+    {
+        return;
+    }
+
+    is_translate = (((kind & 1u) == 0u) ? TRUE : FALSE);
+    distx = dobj->translate.vec.f.x - cobj->vec.eye.x;
+    disty = dobj->translate.vec.f.y - cobj->vec.eye.y;
+    distz = dobj->translate.vec.f.z - cobj->vec.eye.z;
+
+    switch (kind)
+    {
+    case 33:
+    case 34:
+        res = sqrtf(ndsRendererAdapterSquareF(distx) +
+                    ndsRendererAdapterSquareF(disty));
+        (*mtx_f)[2][2] = 1.0F;
+        if (res != 0.0F)
+        {
+            f32 inv = 1.0F / res;
+
+            distx *= inv;
+            disty *= inv;
+            (*mtx_f)[0][0] = -distx;
+            (*mtx_f)[0][1] = -disty;
+            (*mtx_f)[1][0] = disty;
+            (*mtx_f)[1][1] = -distx;
+        }
+        break;
+    case 35:
+    case 36:
+        res = 1.0F / sqrtf(ndsRendererAdapterSquareF(distx) +
+                           ndsRendererAdapterSquareF(disty) +
+                           ndsRendererAdapterSquareF(distz));
+        distx *= res;
+        disty *= res;
+        distz *= res;
+        res = sqrtf(ndsRendererAdapterSquareF(distx) +
+                    ndsRendererAdapterSquareF(disty));
+        if (res != 0.0F)
+        {
+            f32 inv = 1.0F / res;
+
+            (*mtx_f)[2][2] = res;
+            (*mtx_f)[0][0] = -distx;
+            (*mtx_f)[1][0] = disty * inv;
+            (*mtx_f)[2][0] = -distx * distz * inv;
+            (*mtx_f)[0][1] = -disty;
+            (*mtx_f)[1][1] = -distx * inv;
+            (*mtx_f)[2][1] = -disty * distz * inv;
+            (*mtx_f)[0][2] = -distz;
+        }
+        break;
+    case 37:
+    case 38:
+        res = sqrtf(ndsRendererAdapterSquareF(distx) +
+                    ndsRendererAdapterSquareF(distz));
+        if (res != 0.0F)
+        {
+            f32 inv = 1.0F / res;
+
+            distx *= inv;
+            distz *= inv;
+            (*mtx_f)[0][2] = distx;
+            (*mtx_f)[2][0] = -distx;
+            (*mtx_f)[0][0] = -distz;
+            (*mtx_f)[2][2] = -distz;
+        }
+        break;
+    case 39:
+    case 40:
+        res = 1.0F / sqrtf(ndsRendererAdapterSquareF(distx) +
+                           ndsRendererAdapterSquareF(disty) +
+                           ndsRendererAdapterSquareF(distz));
+        distx *= res;
+        disty *= res;
+        distz *= res;
+        res = sqrtf(ndsRendererAdapterSquareF(distx) +
+                    ndsRendererAdapterSquareF(distz));
+        if (res != 0.0F)
+        {
+            f32 inv = 1.0F / res;
+
+            (*mtx_f)[0][0] = -distz * inv;
+            (*mtx_f)[1][0] = -disty * distx * inv;
+            (*mtx_f)[2][0] = -distx;
+            (*mtx_f)[1][1] = res;
+            (*mtx_f)[2][1] = -disty;
+            (*mtx_f)[0][2] = distx * inv;
+            (*mtx_f)[1][2] = -disty * distz * inv;
+            (*mtx_f)[2][2] = -distz;
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (is_translate != FALSE)
+    {
+        (*mtx_f)[3][0] = dobj->translate.vec.f.x;
+        (*mtx_f)[3][1] = dobj->translate.vec.f.y;
+        (*mtx_f)[3][2] = dobj->translate.vec.f.z;
+    }
+}
+
+static sb32 ndsRendererAdapterBuildBillboardMtx(DObj *dobj, u32 kind,
+                                                Mtx *mtx)
+{
+    Mtx44f mtx_f;
+
+    if ((dobj == NULL) || (mtx == NULL))
+    {
+        return FALSE;
+    }
+
+    ndsRendererAdapterBuildBillboardMtxF(&mtx_f, dobj, kind);
+    syMatrixF2LFixedW(&mtx_f, mtx);
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterBuildRecalcLocalMtx(DObj *dobj, u32 kind,
+                                                  Mtx *mtx)
+{
+    if ((dobj == NULL) || (mtx == NULL))
+    {
+        return FALSE;
+    }
+
+    switch (kind)
+    {
+    case nGCMatrixKindRecalcRotPyrR:
+        syMatrixRotPyrR(mtx,
+                        dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindRecalcRotRpyR:
+        syMatrixRotRpyR(mtx,
+                        dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z);
+        break;
+    case nGCMatrixKindRecalcRotPyrRSca:
+        syMatrixTraRotPyrRSca(mtx,
+                              0.0F, 0.0F, 0.0F,
+                              dobj->rotate.vec.f.x,
+                              dobj->rotate.vec.f.y,
+                              dobj->rotate.vec.f.z,
+                              dobj->scale.vec.f.x,
+                              dobj->scale.vec.f.y,
+                              dobj->scale.vec.f.z);
+        break;
+    case nGCMatrixKindRecalcRotRpyRSca:
+        syMatrixTraRotRpyRSca(mtx,
+                              0.0F, 0.0F, 0.0F,
+                              dobj->rotate.vec.f.x,
+                              dobj->rotate.vec.f.y,
+                              dobj->rotate.vec.f.z,
+                              dobj->scale.vec.f.x,
+                              dobj->scale.vec.f.y,
+                              dobj->scale.vec.f.z);
+        break;
+    case nGCMatrixKind45:
+        syMatrixTraRotPyrRSca(mtx,
+                              0.0F, 0.0F, 0.0F,
+                              dobj->rotate.vec.f.x, 0.0F, 0.0F,
+                              dobj->scale.vec.f.x,
+                              dobj->scale.vec.f.y,
+                              dobj->scale.vec.f.z);
+        break;
+    case nGCMatrixKind46:
+        syMatrixTraRotRpyRSca(mtx,
+                              0.0F, 0.0F, 0.0F,
+                              0.0F, 0.0F, dobj->rotate.vec.f.z,
+                              dobj->scale.vec.f.x,
+                              dobj->scale.vec.f.y,
+                              dobj->scale.vec.f.z);
+        break;
+    case nGCMatrixKind47:
+    case nGCMatrixKind48:
+    case nGCMatrixKind49:
+    case nGCMatrixKind50:
+        syMatrixSca(mtx,
+                    dobj->scale.vec.f.x,
+                    dobj->scale.vec.f.y,
+                    dobj->scale.vec.f.z);
+        break;
+    default:
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 static void ndsRendererAdapterGetDObjVectorTracks(
     DObj *dobj,
     GCTranslate **translate,
@@ -260,6 +482,28 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         syMatrixSca(&mtx, dobj->scale.vec.f.x,
                     dobj->scale.vec.f.y,
                     dobj->scale.vec.f.z);
+        break;
+    case 33:
+    case 34:
+    case 35:
+    case 36:
+    case 37:
+    case 38:
+    case 39:
+    case 40:
+        ndsRendererAdapterBuildBillboardMtx(dobj, xobj->kind, &mtx);
+        break;
+    case nGCMatrixKindRecalcRotPyrR:
+    case nGCMatrixKindRecalcRotRpyR:
+    case nGCMatrixKindRecalcRotPyrRSca:
+    case nGCMatrixKindRecalcRotRpyRSca:
+    case nGCMatrixKind45:
+    case nGCMatrixKind46:
+    case nGCMatrixKind47:
+    case nGCMatrixKind48:
+    case nGCMatrixKind49:
+    case nGCMatrixKind50:
+        ndsRendererAdapterBuildRecalcLocalMtx(dobj, xobj->kind, &mtx);
         break;
     case nGCMatrixKindVecTra:
         syMatrixTra(&mtx, translate->vec.f.x,
@@ -1931,6 +2175,160 @@ static s32 ndsFighterMarioFoxVisitDLDrawCommand(
         return FALSE;
     }
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+#define NDS_RENDERER_STAGE_DL_HEADS 4u
+
+static s32 ndsRendererAdapterStageValidateRange(const Gfx *dl, size_t bytes,
+                                                void *user)
+{
+    (void)user;
+
+    if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
+        ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
+         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE)))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterStageDObjDrawable(DObj *dobj, u32 kind)
+{
+    if (dobj == NULL)
+    {
+        return FALSE;
+    }
+    if ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0)
+    {
+        return FALSE;
+    }
+
+    switch (kind)
+    {
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE:
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS:
+        return ((dobj->flags & DOBJ_FLAG_NOTEXTURE) == 0) ? TRUE : FALSE;
+
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS:
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0:
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1:
+        return (dobj->flags == DOBJ_FLAG_NONE) ? TRUE : FALSE;
+
+    default:
+        return FALSE;
+    }
+}
+
+static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl)
+{
+    NDSRelocLoadedFile *loaded;
+    NDSRendererConfig config;
+    NDSRendererStats stats;
+    NDSFighterDLDrawState state;
+    NDSRendererMatrix20p12 initial_projection;
+    NDSRendererMatrix20p12 initial_modelview;
+    const NDSRendererMatrix20p12 *initial_projection_ptr;
+    const NDSRendererMatrix20p12 *initial_modelview_ptr;
+
+    if ((dobj == NULL) || (dl == NULL))
+    {
+        return;
+    }
+
+    loaded = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+    if ((loaded == NULL) &&
+        (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
+    {
+        return;
+    }
+
+    bzero(&state, sizeof(state));
+    state.primary_file = loaded;
+    state.slot = 0u;
+    ndsRendererAdapterPrepareInitialMatrices(dobj,
+                                             (gGCCurrentCamera != NULL) ?
+                                                 CObjGetStruct(
+                                                     gGCCurrentCamera) :
+                                                 NULL,
+                                             &initial_projection,
+                                             &initial_projection_ptr,
+                                             &initial_modelview,
+                                             &initial_modelview_ptr);
+
+    config.max_depth = 8u;
+    config.max_commands = 2048u;
+    config.max_list_commands = 512u;
+    config.initial_projection = initial_projection_ptr;
+    config.initial_modelview = initial_modelview_ptr;
+    config.validate_range = ndsRendererAdapterStageValidateRange;
+    config.resolve_branch = ndsFighterDLDrawResolveBranch;
+    config.resolve_data = ndsFighterDLDrawResolveRendererData;
+    config.user = &state;
+
+    ndsRendererInitStats(&stats);
+    ndsRendererExecuteDisplayList(dl,
+                                  &config,
+                                  ndsFighterMarioFoxVisitDLDrawCommand,
+                                  &state,
+                                  &stats);
+}
+
+void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind)
+{
+    DObj *dobj = dobj_ptr;
+    DObjDLLink *dl_link;
+    u32 i;
+
+    if (ndsRendererAdapterStageDObjDrawable(dobj, kind) == FALSE)
+    {
+        return;
+    }
+
+    switch (kind)
+    {
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE:
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0:
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1:
+        if (dobj->dv != NULL)
+        {
+            ndsRendererAdapterSubmitStageDL(dobj, dobj->dl);
+        }
+        break;
+
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS:
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS:
+        dl_link = dobj->dl_link;
+        if (dl_link == NULL)
+        {
+            return;
+        }
+        for (i = 0u; i < GC_COMMON_MAX_DLLINKS; i++, dl_link++)
+        {
+            if (dl_link->list_id == (s32)NDS_RENDERER_STAGE_DL_HEADS)
+            {
+                break;
+            }
+            if ((dl_link->list_id >= 0) &&
+                ((u32)dl_link->list_id < NDS_RENDERER_STAGE_DL_HEADS) &&
+                (dl_link->dl != NULL))
+            {
+                ndsRendererAdapterSubmitStageDL(dobj, dl_link->dl);
+            }
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+#else
+void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind)
+{
+    (void)dobj;
+    (void)kind;
+}
+#endif
 
 static s32 ndsFighterDLDrawAxisCoord(const NDSFighterDLDrawVtx *vtx,
                                      u32 axis, u32 coord)
@@ -4663,4 +5061,3 @@ static void ndsFighterMarioFoxRunDLAllDrawProbe(void)
             NDS_FIGHTER_MARIOFOX_DL_ALL_DRAW_SAFE_PASS;
     }
 }
-

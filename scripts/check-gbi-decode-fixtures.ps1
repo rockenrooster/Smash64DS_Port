@@ -349,6 +349,9 @@ Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL rend
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterBuildDefaultBattleCameraMatrices')) 'Battle DL renderer default battle camera seed is missing.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterProjectionDepth')) 'Battle DL renderer hardware projection-depth scaling is missing.'
 Assert-True ($rendererAdapter.Contains('nGCMatrixKindVecTraRotRpyRSca')) 'Battle DL renderer vector DObj matrix cases are missing.'
+Assert-True ($rendererAdapter.Contains('ndsRendererAdapterBuildBillboardMtx')) 'Battle DL renderer billboard DObj matrix cases are missing.'
+Assert-True ($rendererAdapter.Contains('nGCMatrixKindRecalcRotRpyRSca')) 'Battle DL renderer recalc DObj matrix cases are missing.'
+Assert-True ($rendererAdapter.Contains('nGCMatrixKind50')) 'Battle DL renderer camera-mod recalc DObj matrix cases are missing.'
 $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c') -Raw
 Assert-True ($openingBackend.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Opening-room renderer seed hook is missing.'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw

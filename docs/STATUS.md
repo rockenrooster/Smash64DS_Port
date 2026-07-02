@@ -56,18 +56,20 @@ as a whole-TU import but did not land; it fails before duplicate cleanup on
 full item/weapon/effect/audio/ground header compatibility, tracked in
 `docs/KNOWN_ISSUES.md`.
 
-Renderer stage 3 now seeds the shared renderer from source-shaped DObj and
-camera matrix prep and keeps the hardware path opt-in behind
-`NDS_RENDERER_HW_TRIANGLES=1`. The renderer imports BattleShip matrix/sine-table
-helpers, loads seeded projection/modelview matrices into GX, submits untextured
-raw DL triangles with DS `v16` unit conversion, and uploads the first bounded
-RGBA16/I16 texture slice for the Opening Room material DL. Screenshots:
-`artifacts\renderer-stage3-hw-battle.png` and
-`artifacts\renderer-stage3-hw-opening-texture.png`.
+Renderer stage 3b keeps the hardware path opt-in behind
+`NDS_RENDERER_HW_TRIANGLES=1` and adds source-shaped DObj matrix seed coverage
+for BattleShip billboard kinds `33-40` and recalc kinds `41-50`. The DS path now
+uses consistent `v16` world scaling for textured/untextured triangles and can
+submit stage DObj display lists reached through the existing Pupupu `gcDrawAll`
+traversal. Captures:
+`artifacts\renderer-stage3b-hw-battle.png` and
+`artifacts\renderer-stage3b-hw-pupupu-stage.png`.
 
-The battle hardware proof is framed, but still collapses fighter DObj parts
-into one cluster because the BattleShip recalc/billboard matrix kinds are not
-fully modeled yet. Default builds still use the software preview.
+The stage-inclusive hardware capture shows the Pupupu platform plus fighter
+geometry. The Mario/Fox all-DL capture remains flat-shaded and compact; full
+fighter visual fidelity still needs the BattleShip MVP-recalc matrix-word path,
+CI/TLUT textures, combiner, material/depth state, and cutover work. Default
+builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -78,9 +80,8 @@ The next useful work is not another proof bit. It is one of:
 
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
-- renderer follow-up: finish BattleShip recalc/billboard DObj matrix kinds,
-  then route stage-inclusive Pupupu hardware draw and broader texture/combiner
-  work toward cutover;
+- renderer follow-up: finish the MVP-recalc/display-list matrix-word path,
+  CI/TLUT textures, combiner/material/depth state, and renderer cutover work;
 - compatibility-header split needed before full-TU runtime import of
   `ft/ftmain.c`;
 - continuous-runtime verifier for unbounded battle frames.
