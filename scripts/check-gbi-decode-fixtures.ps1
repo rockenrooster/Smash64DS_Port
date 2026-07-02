@@ -370,6 +370,8 @@ Assert-True ($rendererHeader.Contains('matrix_mvp_recalc_count')) 'Renderer MVP-
 Assert-True ($rendererHeader.Contains('matrix_move_word_count')) 'Renderer matrix move-word stats are missing from the public header.'
 Assert-True ($rendererHeader.Contains('transformed_vertices')) 'Renderer command transformed vertex cache exposure is missing.'
 Assert-True ($rendererHeader.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Renderer hardware submit-latch API is missing.'
+$startupHeader = Get-Content (Join-Path $root 'include/nds/nds_startup.h') -Raw
+Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawHardwareTextureReadyCount')) 'All-DL hardware texture diagnostics are missing from the startup header.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Battle DL renderer matrix adapter is missing.'
 Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL renderer does not route DObj prep through original matrix helpers.'
@@ -394,6 +396,9 @@ $compatShims = Get-Content (Join-Path $root 'src/port/reloc_backend_compat_shims
 Assert-True ($compatShims.Contains('gcAddXObjForCamera(cobj, 0x4C, 0)')) 'VSBattle compatibility camera no longer exposes the BattleShip 0x4C matrix kind.'
 $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c') -Raw
 Assert-True ($openingBackend.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Opening-room renderer seed hook is missing.'
+$allDLVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-dl-draw-all-harness.ps1') -Raw
+Assert-True ($allDLVerifier.Contains('HardwareTriangles')) 'All-DL verifier hardware-triangle switch is missing.'
+Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HWTEX')) 'All-DL verifier hardware texture marker is missing.'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
 Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'

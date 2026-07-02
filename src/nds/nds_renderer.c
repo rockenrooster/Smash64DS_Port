@@ -695,7 +695,10 @@ static void ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
     stats->texture_command_count++;
     stats->texture_tlut_tile = (w1 >> 24) & 0x7u;
     stats->texture_tlut_count = ((w1 >> 14) & 0x3ffu) + 1u;
-    stats->texture_tlut_image = stats->texture_image;
+    if (stats->texture_image != 0u)
+    {
+        stats->texture_tlut_image = stats->texture_image;
+    }
 }
 
 static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
@@ -1413,8 +1416,19 @@ static s32 ndsRendererHardwareBindTexture(
         ((size != NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
          (size != NDS_RENDERER_HW_TEXTURE_SIZ_8B)))
     {
-        stats->hardware_texture_reject_count++;
-        return FALSE;
+        if (stats->texture_tlut_count <= 16u)
+        {
+            size = NDS_RENDERER_HW_TEXTURE_SIZ_4B;
+        }
+        else if (stats->texture_tlut_count <= 256u)
+        {
+            size = NDS_RENDERER_HW_TEXTURE_SIZ_8B;
+        }
+        else
+        {
+            stats->hardware_texture_reject_count++;
+            return FALSE;
+        }
     }
     if ((format != NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
         (format != NDS_RENDERER_HW_TEXTURE_FMT_RGBA16) &&

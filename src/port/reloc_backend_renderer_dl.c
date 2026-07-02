@@ -5512,6 +5512,35 @@ static void ndsFighterDLAllDrawAccumulateStats(
         return;
     }
 
+    gNdsFighterDLAllDrawHardwareTextureBindCount +=
+        stats->hardware_texture_bind_count;
+    gNdsFighterDLAllDrawHardwareTextureUploadCount +=
+        stats->hardware_texture_upload_count;
+    gNdsFighterDLAllDrawHardwareTextureReadyCount +=
+        stats->hardware_texture_ready_count;
+    gNdsFighterDLAllDrawHardwareTextureRejectCount +=
+        stats->hardware_texture_reject_count;
+    if (stats->hardware_texture_ready_count != 0u)
+    {
+        if (stats->hardware_texture_format < 32u)
+        {
+            gNdsFighterDLAllDrawHardwareTextureFormatMask |=
+                1u << stats->hardware_texture_format;
+        }
+        if (stats->hardware_texture_width >
+            gNdsFighterDLAllDrawHardwareTextureMaxWidth)
+        {
+            gNdsFighterDLAllDrawHardwareTextureMaxWidth =
+                stats->hardware_texture_width;
+        }
+        if (stats->hardware_texture_height >
+            gNdsFighterDLAllDrawHardwareTextureMaxHeight)
+        {
+            gNdsFighterDLAllDrawHardwareTextureMaxHeight =
+                stats->hardware_texture_height;
+        }
+    }
+
     unsupported_opcode = (stats->unsupported_opcode != 0u) ?
         stats->unsupported_opcode : state->unsupported_opcode;
     unsupported_count = stats->unsupported_command_count +

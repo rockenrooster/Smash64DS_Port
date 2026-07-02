@@ -55,9 +55,12 @@ texture, color, and light-color packets from the taskman graphics heap.
 Captures: `artifacts\renderer-chain-hw-battle.png` and
 `artifacts\renderer-stage-gcdrawall-hw.png`. The stage-inclusive capture shows
 the Pupupu platform plus hardware-submitted fighter geometry using the captured
-BattleShip camera path. The next renderer pass should finish combiner,
-material/depth policy, broader texture-state proof, and renderer cutover.
-Default builds still use the software preview.
+BattleShip camera path. The all-DL verifier also has an opt-in hardware texture
+gate; run `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`.
+It reports `hwtex=bind16/upload1/ready16/reject614/fmt0x4/max8x8`, with screenshot
+`artifacts\battle-mariofox-dl-draw-all-hwtri.png`. The next renderer pass should
+finish combiner, material/depth policy, broader texture-state coverage, and
+renderer cutover. Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
 TU via `src/import/battleship_gmcollision.c`, replacing the local
@@ -79,12 +82,14 @@ the work reaches a scene-level boundary such as `battle_playable` or
 ## Recommended Next Work
 
 1. Renderer follow-up: finish opt-in hardware combiner/material/depth state,
-   broaden texture-state proof, and then plan renderer cutover.
+   broaden texture-state coverage beyond the first all-DL CI/TLUT upload, and
+   then plan renderer cutover.
 2. Runtime slice 1 follow-up: split/expand the item, weapon, effect, audio, and
    ground compatibility headers enough for full `ft/ftmain.c`, then replace
    the remaining local `ftMain*` seams and add the continuous-runtime verifier.
-3. Broaden hardware texture coverage now that material DL emission reaches the
-   hardware traversal.
+3. Broaden hardware texture coverage now that all-DL CI/TLUT upload is proven
+   and material DL emission reaches the hardware traversal where source MObjs
+   expose branchable material state.
 
 ## Verification
 

@@ -69,9 +69,12 @@ captures:
 `artifacts\renderer-chain-hw-battle.png` and
 `artifacts\renderer-stage-gcdrawall-hw.png`. The stage-inclusive capture shows
 the Pupupu platform plus hardware-submitted fighter geometry using the captured
-BattleShip camera path. Full visual fidelity still needs combiner,
-depth/material policy, broader texture-state proof, and renderer cutover work.
-Default builds still use the software preview.
+BattleShip camera path. The all-DL verifier now has an opt-in hardware texture
+gate; run `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`.
+It proves `hwtex=bind16/upload1/ready16/reject614/fmt0x4/max8x8`, and the current capture is
+`artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Full visual fidelity still
+needs combiner, depth/material policy, broader texture-state coverage, and
+renderer cutover work. Default builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -83,7 +86,8 @@ The next useful work is not another proof bit. It is one of:
 - mechanical split of `src/port/reloc_backend.c` by the plan in
   `docs/ARCHITECTURE.md`;
 - renderer follow-up: finish opt-in hardware combiner/material/depth state,
-  broaden texture-state proof, and then plan renderer cutover work;
+  broaden texture-state coverage beyond the first all-DL CI/TLUT upload, and
+  then plan renderer cutover work;
 - compatibility-header split needed before full-TU runtime import of
   `ft/ftmain.c`;
 - continuous-runtime verifier for unbounded battle frames.

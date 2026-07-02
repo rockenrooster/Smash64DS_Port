@@ -15775,3 +15775,16 @@ Still deferred:
   still shows Pupupu platform geometry plus hardware-submitted fighter
   geometry through the captured BattleShip camera path. Renderer cutover still
   needs combiner, depth/material policy, and broader texture-state proof.
+
+## 2026-07-02 - Added All-DL Hardware Texture Gate
+
+- Added all-DL hardware texture diagnostics and a
+  `-HardwareTriangles` switch to the existing Mario/Fox all-DL verifier, without
+  adding a harness mode or changing the default software-preview path.
+- Preserved nonzero `LOADTLUT` palette state and infer CI4/CI8 upload size from
+  TLUT count when the N64 tile/load state reports a 16-bit load path, allowing
+  the first opt-in all-DL CI/TLUT texture upload to bind on DS hardware.
+- Verified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject614/fmt0x4/max8x8` and captured
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Broader texture coverage,
+  combiner, material/depth policy, and cutover remain deferred.

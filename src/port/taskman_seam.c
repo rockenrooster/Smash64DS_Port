@@ -1058,6 +1058,13 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterDLAllDrawP1HardwareOracleRejectCount = 0;
     gNdsFighterDLAllDrawP0HardwareMatrixSeedCount = 0;
     gNdsFighterDLAllDrawP1HardwareMatrixSeedCount = 0;
+    gNdsFighterDLAllDrawHardwareTextureBindCount = 0;
+    gNdsFighterDLAllDrawHardwareTextureUploadCount = 0;
+    gNdsFighterDLAllDrawHardwareTextureReadyCount = 0;
+    gNdsFighterDLAllDrawHardwareTextureRejectCount = 0;
+    gNdsFighterDLAllDrawHardwareTextureFormatMask = 0;
+    gNdsFighterDLAllDrawHardwareTextureMaxWidth = 0;
+    gNdsFighterDLAllDrawHardwareTextureMaxHeight = 0;
     gNdsFighterDLAllDrawP0TriangleCount = 0;
     gNdsFighterDLAllDrawP1TriangleCount = 0;
     gNdsFighterDLAllDrawP0TriangleValidCount = 0;
