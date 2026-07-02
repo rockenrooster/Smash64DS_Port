@@ -3244,17 +3244,17 @@ Scene and startup:
   `1`.
 - `gNdsOpeningRoomDLPreviewRendererTextureLoadTexels` /
   `TextureSetTileCount` / `TextureCommandCount`: adapter-owned load/tile/
-  texture-command counts, currently `256`, `4`, and `1`.
+  texture-command counts, currently `512`, `4`, and `1`.
 - `gNdsOpeningRoomDLPreviewRendererTextureStateFlags`: adapter-owned
   `G_TEXTURE` state flags, currently `0x0F`.
 - `gNdsOpeningRoomDLPreviewRendererTextureTileWidth` /
   `TextureTileHeight` / `TextureRenderTile` / `TextureRenderTileLine` /
   `TextureRenderTileFlags`: adapter-owned tile decode for the bounded
-  preview, currently `16`, `32`, render tile `0`, line `4`, and flags
+  preview, currently `32`, `32`, render tile `0`, line `4`, and flags
   `0xB7`.
 - `gNdsOpeningRoomDLPreviewRendererTextureLoadBlockLrs` /
   `TextureLoadBlockDxt`: adapter-owned first load-block fields, currently
-  `255` and `1024`.
+  `511` and `512`.
 - `gNdsOpeningRoomDLPreviewFirstDL`: first parsed `DObjDLLink->dl` pointer,
   expected nonzero.
 - `gNdsOpeningRoomDLPreviewTransformMask`: sampled original DObj/XObj

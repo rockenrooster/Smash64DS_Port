@@ -519,7 +519,6 @@ void ftPhysicsStopVelAll(GObj *fighter_gobj)
         fp->vel_push.z = 0.0F;
         fp->physics.vel_air = fp->vel_air;
         fp->physics.vel_ground = fp->vel_ground;
-        fp->physics.vel_push = fp->vel_push;
         fp->physics.vel_jostle_x = 0.0F;
         fp->physics.vel_jostle_z = 0.0F;
     }
@@ -8375,6 +8374,7 @@ static void ndsFTCommonCliffCommon2UpdateCollDataBridge(GObj *fighter_gobj)
     fp->physics.vel_air = bridge.physics.vel_air;
     fp->vel_ground = bridge.vel_ground;
     fp->vel_air = bridge.vel_air;
+    fp->vel_push = bridge.vel_push;
     fp->coll_data.cliff_id = bridge_coll->cliff_id;
     fp->coll_data.floor_line_id = bridge_coll->floor_line_id;
     fp->coll_data.floor_dist = bridge_coll->floor_dist;

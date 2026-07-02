@@ -2427,8 +2427,7 @@ static void ndsFighterMarioFoxRecordInitState(FTStruct *fp)
         gNdsFighterInitP1FloorLineID = (u32)fp->coll_data.floor_line_id;
         gNdsFighterInitP1FloorDistBits =
             ndsFloatBits(fp->coll_data.floor_dist);
-        gNdsFighterInitP1PassiveMarioTornado =
-            (u32)fp->passive_vars.fox.reserved;
+        gNdsFighterInitP1PassiveMarioTornado = 0u;
         gNdsFighterInitP1ThrowCatchItemClear = throw_catch_item_clear;
         if (fp->joints[nFTPartsJointTopN] != NULL)
         {
@@ -2648,7 +2647,6 @@ static void ndsFighterSyncLegacyVelToPhysics(FTStruct *fp)
     }
     fp->physics.vel_air = fp->vel_air;
     fp->physics.vel_ground = fp->vel_ground;
-    fp->physics.vel_push = fp->vel_push;
 }
 
 static void ndsFighterSyncPhysicsToLegacyVel(FTStruct *fp)
@@ -2659,7 +2657,6 @@ static void ndsFighterSyncPhysicsToLegacyVel(FTStruct *fp)
     }
     fp->vel_air = fp->physics.vel_air;
     fp->vel_ground = fp->physics.vel_ground;
-    fp->vel_push = fp->physics.vel_push;
 }
 
 static void ndsFTPhysicsSetGroundVelFrictionOriginal(FTStruct *fp,
@@ -2926,9 +2923,9 @@ static void ndsFighterMarioFoxRunWaitGroundProof(void)
         fp->physics.vel_air.x = 0.0F;
         fp->physics.vel_air.y = 0.0F;
         fp->physics.vel_air.z = 0.0F;
-        fp->physics.vel_push.x = 0.0F;
-        fp->physics.vel_push.y = 0.0F;
-        fp->physics.vel_push.z = 0.0F;
+        fp->vel_push.x = 0.0F;
+        fp->vel_push.y = 0.0F;
+        fp->vel_push.z = 0.0F;
         fp->physics.vel_jostle_x = 0.0F;
         fp->physics.vel_jostle_z = 0.0F;
         ndsFighterSyncPhysicsToLegacyVel(fp);

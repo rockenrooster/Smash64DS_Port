@@ -1,8 +1,50 @@
 # FTStruct Parity Report
 
-Generated from `include/ft/fighter.h` and read-only `decomp/BattleShip-main/decomp/src/ft/fttypes.h`. This report compares top-level `FTStruct` declarations before the layout-convergence edit.
+Generated from `include/ft/fighter.h` and read-only
+`decomp/BattleShip-main/decomp/src/ft/fttypes.h`. The first comparison below
+was produced before the layout-convergence edit and records the drift that
+motivated the slice. The converged result section records the landed layout.
 
-## Summary
+## Converged Result
+
+- The `FTStruct` original-field region now follows BattleShip `fttypes.h`
+  order, types, and nesting through `display_mode`.
+- The source-layout region is frozen at `NDS_FTSTRUCT_SOURCE_SIZE == 2896`.
+- Port-only DS/proof extensions begin after the source region at offset `2896`
+  and the complete port struct is frozen at `sizeof(FTStruct) == 3012`.
+- Permanent `_Static_assert` guards now cover the shared fighter fields touched
+  by imported TUs: `status_id`, `motion_id`, `percent_damage`, `hitlag_tics`,
+  `physics`, `coll_data`, `motion_vars`, `input`, `computer`,
+  `motion_attack_id`, `stat_flags`, `attack_colls`, `damage_colls`,
+  `damage_stat_flags`, `motion_scripts`, `joints`, `modelpart_status`,
+  callback slots, `fog_color`, `key`, `passive_vars`, `hammer_tics`,
+  `status_vars`, and the DS extension boundary.
+
+| Field | Converged port offset | BattleShip source-layout offset |
+|---|---:|---:|
+| `status_id` | `36` | `36` |
+| `coll_data` | `120` | `120` |
+| `motion_attack_id` | `648` | `648` |
+| `stat_flags` | `654` | `654` |
+| `attack_colls` | `660` | `660` |
+| `joints` | `2280` | `2280` |
+| `modelpart_status` | `2428` | `2428` |
+| `proc_update` | `2516` | `2516` |
+| `proc_physics` | `2528` | `2528` |
+| `proc_map` | `2532` | `2532` |
+| `proc_damage` | `2540` | `2540` |
+| `proc_lagupdate` | `2560` | `2560` |
+| `proc_lagstart` | `2564` | `2564` |
+| `proc_status` | `2572` | `2572` |
+| DS extension `damage` | `2896` | n/a |
+
+The default build remains on the guarded local `ftMain*` seam. Retesting the
+fenced `NDS_IMPORT_BATTLESHIP_FTMAIN=1` path after convergence no longer showed
+the earlier data-abort signature in init/wait/dash-run, but it is still not
+green: Wait/Dash-run proof counters drift, and the continuous live-hit import
+build still conflicts with remaining local ftMain seam definitions.
+
+## Initial Drift Summary
 
 - Source fields parsed: 194
 - Port fields parsed: 201
@@ -11,7 +53,7 @@ Generated from `include/ft/fighter.h` and read-only `decomp/BattleShip-main/deco
 - Original-only fields missing from the port layout: 16
 - Port-only fields/extensions: 23
 
-## Important Offset Drift
+## Initial Important Offset Drift
 
 | Field | Port offset | BattleShip source-layout offset |
 |---|---:|---:|

@@ -39,69 +39,28 @@ physics tick copying fighter root position from the barrel root. Continuous
 TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
-Latest renderer detail: `src/nds/nds_renderer.c` has opt-in DS 3D hardware
-submission behind `NDS_RENDERER_HW_TRIANGLES=1`, fed by source-shaped DObj,
-camera, and material state from `src/port/reloc_backend_renderer_dl.c`. Stage
-3b added billboard-kind `33-40` and recalc-kind `41-50` seed coverage,
-consistent textured/untextured `v16` world scaling, stage DObj submission from
-the existing Pupupu `gcDrawAll` traversal, and renderer support for emitted
-BattleShip `gSPMvpRecalc` / `G_MW_MATRIX` display-list streams. It also seeds
-fighter-parts matrix kind `0x4B`, BattleShip battle-camera matrix kind `0x4C`,
-and composes selected DObj parent chains from root to child before the camera
-modelview. The latest increment routes source-shaped `gcDrawMObjForDObj`
-material branch tables into the opt-in hardware traversal by emitting segment
-`0x0E` branch lists plus palette/TLUT, texture image, load-block, tile-size,
-texture, color, and light-color packets from the taskman graphics heap.
-Captures: `artifacts\renderer-chain-hw-battle.png` and
-`artifacts\renderer-stage-gcdrawall-hw.png`. The stage-inclusive capture shows
-the Pupupu platform plus hardware-submitted fighter geometry using the captured
-BattleShip camera path. The all-DL verifier also has an opt-in hardware texture
-gate; run `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`.
-It reports `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, with screenshot
-`artifacts\battle-mariofox-dl-draw-all-hwtri.png`. The hardware texture cache
-key now includes the source render/load tile, TMEM, palette, and tile-origin
-state, plus load-block range and DXT state for that opt-in path. CI4 sampling
-applies the render-tile palette bank when reading TLUT entries. Load-block and
-tile-size state now tracks the current command instead of freezing on the first
-texture load/size in a traversal, and tile-size width/height are cleared before
-each recompute so invalid size packets cannot inherit stale dimensions.
-The hardware triangle path now applies
-recorded
-primitive/environment material color, including black color values, and alpha
-from the current combine state, maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits, and
-uses the sm64-nds decal-combine, polygon-ID, non-shade white tint, blend
-alpha-memory, texture-alpha upload, and texture-filter coordinate-bias rules.
-Material color selection now follows sm64-nds/BattleShip output slot semantics:
-environment/primitive colors are promoted only when the combine output `c`/`d`
-slots use them. The hardware upload converter now accepts BattleShip
-`G_IM_FMT_IA` IA4/IA8/IA16 texels for alpha-bearing source textures used by
-collision overlays, particles, and material records, `G_IM_FMT_I` I4/I8/I16
-texels for stage/effect intensity textures, and `G_IM_FMT_RGBA` RGBA32
-material records used by movie/common assets. Renderer scans now seed
-BattleShip reset geometry
-(`G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH`) and `G_TF_BILERP`
-texture-filter state before per-DL commands, matching
-`sSYRdpResetDisplayList` for DObj traversals that start below the global reset
-list. Hardware submission now branches on recorded source `G_ZBUFFER` state:
-z-buffered triangles keep raw GX vertex submission, while no-z triangles use
-the sm64-nds-style projected clip-vertex/synthetic-Z lane fed by the CPU 20.12
-oracle. Z-buffered `ZMODE_DEC` polygons now use that projected clip-vertex lane
-with the sm64-nds/BattleShip `3 << 4` depth bias. The latest gate narrows
-material colors to combine output slots. The
-next renderer pass should finish remaining combiner/material behavior, broader
-texture/no-z source-scene coverage, and renderer cutover. Default builds still
-use the software preview.
+Latest renderer detail: opt-in DS 3D hardware submission lives behind
+`NDS_RENDERER_HW_TRIANGLES=1` and is fed by source-shaped DObj, camera, and
+material state. It now covers BattleShip billboard/recalc matrix seeds, Pupupu
+stage-inclusive submission, material branch packets, CI/IA/I/RGBA texture
+uploads, material color/alpha, source culling, reset geometry/filter seeds, and
+sm64-nds-style no-z / decal-depth submission. Current captures:
+`artifacts\renderer-stage-gcdrawall-hw.png` and
+`artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
+reports `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Default builds
+still use the software preview.
 
-Latest runtime detail: `gm/gmcollision.c` is now imported as a whole BattleShip
-TU via `src/import/battleship_gmcollision.c`, replacing the local
-matrix/world-position helper copies. A full `ft/ftmain.c` wrapper now compiles
-behind `NDS_IMPORT_BATTLESHIP_FTMAIN=1`, but default builds leave the guarded
-local `ftMain*` seam active. Preprocessor checks show imported and port TUs both
-resolve `FTStruct` to `include/ft/fighter.h`; layout guards now freeze that
-active port layout. A source-layout probe still shows drift from BattleShip
-`fttypes.h` (`joints` `412` in the port layout versus `2280` in source layout),
-so the next runtime slice should fix FTStruct layout compatibility before more
-emulator watchpoint debugging.
+Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
+via `src/import/battleship_gmcollision.c`, replacing the local
+matrix/world-position helper copies. The shared `FTStruct` source region in
+`include/ft/fighter.h` now matches BattleShip `fttypes.h` through
+`display_mode`; `joints` is at `2280`, callback slots start at `2516`, the
+source region is `2896` bytes, and DS/proof-only fields live after that
+boundary. Static layout guards freeze the source offsets and extension boundary.
+The fenced `NDS_IMPORT_BATTLESHIP_FTMAIN=1` retest no longer reproduces the
+old init/wait/dash-run data abort, but it is not green: Wait/Dash-run proof
+counters drift and the continuous live-hit target still has duplicate symbol
+conflicts with remaining local `ftMain*` seam definitions.
 
 ## Process Change
 
@@ -118,10 +77,9 @@ the work reaches a scene-level boundary such as `battle_playable` or
 1. Renderer follow-up: finish opt-in hardware combiner/material policy,
    broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
    plus IA/I decoders, then plan renderer cutover.
-2. Runtime slice 1 follow-up: make the shared FTStruct region source-layout
-   compatible with BattleShip `fttypes.h`, then re-enable the opt-in
-   `ftmain.c` runtime path, replace the remaining local `ftMain*` seams, and
-   add the continuous-runtime verifier.
+2. Runtime slice 1 follow-up: remove or fence the remaining local `ftMain*`
+   definitions now replaced by the BattleShip `ftmain.c` TU, then re-test the
+   opt-in import before graduating it to default.
 3. Broaden hardware texture coverage now that all-DL CI/TLUT upload is proven
    and material DL emission reaches the hardware traversal where source MObjs
    expose branchable material state.
@@ -143,11 +101,14 @@ For mechanical split chunks:
 ```
 
 For shared runtime/common fighter/renderer/harness registry changes, add the
-smallest broader check that matches the touched area:
+smallest broader check that matches the touched area. For shared fighter
+runtime, use sharded regression, not the serial 45-minute run:
 
 ```powershell
 .\scripts\verify-current.ps1 -Build -DelaySeconds 3
-.\scripts\verify-regression.ps1
+.\scripts\New-MelonDSRunnerSlots.ps1 -Count 4
+.\scripts\build-verify-profile.ps1 -Profile Regression -Force
+.\scripts\verify-all.ps1 -Profile Regression -ShardCount 4 -ShardIndex N -RunnerSlot N -NoBuild
 .\scripts\check-harness-registry.ps1
 .\scripts\check-gbi-decode-fixtures.ps1
 ```

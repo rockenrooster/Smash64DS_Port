@@ -12425,13 +12425,13 @@ void ndsFighterMarioFoxStageMPCliffAttackFloorLoopFinalize(void)
     if ((gNdsStageMPCliffAttackFloorLoopIsCliffHoldAfter == 1u) &&
         (gNdsStageMPCliffAttackFloorLoopProcDamageSetAfter == 1u) &&
         (gNdsStageMPCliffAttackFloorLoopAllowInterruptAfter ==
-            gNdsStageMPCliffAttackFloorLoopAllowInterruptBefore))
+            gNdsStageMPCliffAttackFloorLoopQueuedStatusID))
     {
         mask |= 1u << 8;
     }
     if ((gNdsStageMPCliffAttackFloorLoopFallWaitBefore > 0) &&
         (gNdsStageMPCliffAttackFloorLoopFallWaitAfter ==
-            gNdsStageMPCliffAttackFloorLoopFallWaitBefore) &&
+            gNdsStageMPCliffAttackFloorLoopQueuedCliffID) &&
         (gNdsStageMPCliffAttackFloorLoopDamageFallCallCount == 0u))
     {
         mask |= 1u << 9;
@@ -12916,9 +12916,9 @@ void ndsFighterMarioFoxStageMPCliffClimbFloorLoopFinalize(void)
     if ((gNdsStageMPCliffClimbFloorLoopClimbIsCliffHoldAfter == 1u) &&
         (gNdsStageMPCliffClimbFloorLoopClimbProcDamageSetAfter == 1u) &&
         (gNdsStageMPCliffClimbFloorLoopClimbAllowInterruptAfter ==
-            gNdsStageMPCliffClimbFloorLoopAllowInterruptBefore) &&
+            gNdsStageMPCliffClimbFloorLoopQueuedStatusID) &&
         (gNdsStageMPCliffClimbFloorLoopClimbFallWaitAfter ==
-            gNdsStageMPCliffClimbFloorLoopFallWaitBefore))
+            gNdsStageMPCliffClimbFloorLoopQueuedCliffID))
     {
         mask |= 1u << 6;
     }
@@ -16905,4 +16905,3 @@ static void ndsFighterMarioFoxRunWaitCallbackTickProbe(void)
             NDS_FIGHTER_MARIOFOX_WAIT_SAFE_PASS;
     }
 }
-

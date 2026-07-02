@@ -2,7 +2,8 @@ param(
     [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
     [string]$Profile = 'Boundary',
     [string[]]$Only,
-    [string]$From
+    [string]$From,
+    [switch]$Force
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -31,7 +32,17 @@ foreach ($record in $plan) {
     }
     $seen[$key] = $true
     Write-Output "Building verifier output: $($record.Name)"
-    & make -C $root TARGET=$($record.Target) BUILD=$($record.Build) NDS_DEV_SCENE_HARNESS=$($record.Harness) -j16
+    $makeArgs = @(
+        '-C', $root,
+        "TARGET=$($record.Target)",
+        "BUILD=$($record.Build)",
+        "NDS_DEV_SCENE_HARNESS=$($record.Harness)"
+    )
+    if ($Force) {
+        $makeArgs += '-B'
+    }
+    $makeArgs += '-j16'
+    & make @makeArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 Write-Output "Built verifier profile '$Profile' outputs."

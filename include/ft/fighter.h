@@ -11,6 +11,7 @@
 #include <PR/gbi.h>
 #include <stddef.h>
 #include <ssb_types.h>
+#include <mp/map.h>
 #include <sys/controller.h>
 #include <sys/objdef.h>
 #include <sys/objtypes.h>
@@ -145,6 +146,8 @@ enum {
     nFTPartsJointNumMax = 37
 };
 
+#define FTPARTS_JOINT_NUM_MAX nFTPartsJointNumMax
+
 #define FTKEY_EVENT_INSTRUCTION(k, t) \
     ((((u16)(k) << 12) & 0xF000u) | ((u16)(t) & 0x0FFFu))
 #define FTKEY_EVENT_STICK(x, y, t) \
@@ -209,65 +212,32 @@ typedef struct MPObjectColl {
 #endif
 
 typedef struct FTInputPlayer {
-    Vec2b stick_range;
-    Vec2b stick_prev;
     u16 button_hold;
     u16 button_tap;
     u16 button_release;
+    Vec2b stick_range;
+    Vec2b stick_prev;
 } FTInputPlayer;
 
 typedef struct FTInputCPU {
-    Vec2b stick_range;
     u16 button_inputs;
+    Vec2b stick_range;
 } FTInputCPU;
 
 typedef FTInputPlayer FTPlayerInput;
 typedef FTInputCPU FTComputerInput;
 
 typedef struct FTInput {
-    FTInputPlayer pl;
-    FTInputCPU cp;
     SYController *controller;
     u16 button_mask_a;
     u16 button_mask_b;
     u16 button_mask_z;
     u16 button_mask_l;
+    FTInputPlayer pl;
+    FTInputCPU cp;
 } FTInput;
 
-typedef struct FTCollisionData {
-    Vec3f *p_translate;
-    s32 *p_lr;
-    Vec3f pos_prev;
-    Vec3f pos_diff;
-    Vec3f vel_speed;
-    Vec3f vel_push;
-    MPObjectColl map_coll;
-    MPObjectColl *p_map_coll;
-    Vec2f cliffcatch_coll;
-    u16 mask_prev;
-    u16 mask_curr;
-    u16 mask_unk;
-    u16 mask_stat;
-    u16 update_tic;
-    s32 ewall_line_id;
-    sb32 is_coll_end;
-    Vec3f line_coll_dist;
-    s32 floor_line_id;
-    f32 floor_dist;
-    u32 floor_flags;
-    Vec3f floor_angle;
-    s32 ceil_line_id;
-    u32 ceil_flags;
-    Vec3f ceil_angle;
-    s32 lwall_line_id;
-    u32 lwall_flags;
-    Vec3f lwall_angle;
-    s32 rwall_line_id;
-    u32 rwall_flags;
-    Vec3f rwall_angle;
-    s32 cliff_id;
-    s32 ignore_line_id;
-} FTCollisionData;
+typedef MPCollData FTCollisionData;
 
 typedef enum GMAttackState {
     nGMAttackStateOff,
@@ -314,13 +284,13 @@ typedef struct FTAttackColl {
     s32 knockback_weight;
     s32 knockback_base;
     s32 shield_damage;
-    u32 fgm_level;
-    u32 fgm_kind;
-    sb32 is_hit_air;
-    sb32 is_hit_ground;
-    sb32 can_rebound;
-    sb32 is_scale_pos;
-    u32 motion_attack_id;
+    u32 fgm_level : 3;
+    u32 fgm_kind : 4;
+    ub32 is_hit_air : 1;
+    ub32 is_hit_ground : 1;
+    ub32 can_rebound : 1;
+    ub32 is_scale_pos : 1;
+    u32 motion_attack_id : 6;
     u16 motion_count;
     u16 stat_count;
     Vec3f pos_curr;
@@ -1264,7 +1234,6 @@ typedef struct FTPhysics {
     Vec3f vel_damage_air;
     Vec3f vel_ground;
     f32 vel_damage_ground;
-    Vec3f vel_push;
     f32 vel_jostle_x;
     f32 vel_jostle_z;
 } FTPhysics;
@@ -1563,123 +1532,637 @@ typedef struct FTMotionEventStopRumble {
 
 typedef union FTMotionVars {
     struct {
-        ub32 flag0 : 1;
-        ub32 flag1 : 1;
-        ub32 flag2 : 1;
-        ub32 flag3 : 1;
-        ub32 flag4 : 1;
-        ub32 flag5 : 1;
-        ub32 flag6 : 1;
-        ub32 flag7 : 1;
+        u32 flag0;
+        u32 flag1;
+        u32 flag2;
+        u32 flag3;
     } flags;
+    struct {
+        sb32 is_throw_item;
+        u8 unk1;
+        u32 damage : 24;
+        u8 unk2;
+        u32 vel : 12;
+        s32 angle : 12;
+    } item_throw;
     u32 word;
 } FTMotionVars;
 
+typedef struct FTComputer {
+    u8 objective;
+    u8 objective_base;
+    u8 input_kind;
+    u8 behavior;
+    u8 unk_ftcom_0x4;
+    u8 trait;
+    u8 unk_ftcom_0x6;
+    u8 input_wait;
+    u8 *p_command;
+    sb32 (*proc_com)(GObj *);
+    u16 jump_wait;
+    u16 item_track_wait;
+    u16 behavior_change_wait;
+    u16 unk_ftcom_0x16;
+    u16 walk_stop_wait;
+    u16 fighter_follow_since;
+    u16 fighter_follow_wait;
+    u16 fighter_follow_end;
+    u16 unk_ftcom_0x20;
+    u16 target_find_wait;
+    u16 wiggle_wait;
+    u16 target_damage_percent;
+    u16 attack_count;
+    u16 appeal_attempt_frames;
+    u16 stand_stop_wait;
+    GObj *target_gobj;
+    u8 item_throw_wait;
+    u8 unk_ftcom_0x35;
+    u8 unk_ftcom_0x36;
+    u8 input_repeat_count;
+    u8 unk_ftcom_0x38;
+    u8 stickn_button_a_count;
+    u8 sticktilts_button_a_count;
+    u8 sticksmashs_button_a_count;
+    u8 sticktilthi_button_a_count;
+    u8 sticksmashhi_button_a_count;
+    u8 sticktiltlw_button_a_count;
+    u8 sticksmashlw_button_a_count;
+    u8 sticksmashs_button_b_count;
+    u8 sticksmashhi_button_b_count;
+    u8 sticksmashlw_button_b_count;
+    u8 stickn_button_z_button_a_count;
+    ub32 unk_ftcom_0x44;
+    ub32 ftcom_flags_0x48_b0 : 1;
+    ub32 ftcom_flags_0x48_b1 : 1;
+    ub32 ftcom_flags_0x48_b2 : 1;
+    ub32 ftcom_flags_0x48_b3 : 1;
+    ub32 ftcom_flags_0x48_b4 : 1;
+    ub32 ftcom_flags_0x48_b5 : 1;
+    ub32 ftcom_flags_0x48_b6 : 1;
+    ub32 ftcom_flags_0x48_b7 : 1;
+    ub32 is_within_vertical_bounds : 1;
+    ub32 ftcom_flags_0x49_b1 : 1;
+    ub32 ftcom_flags_0x49_b2 : 1;
+    ub32 ftcom_flags_0x49_b3 : 1;
+    ub32 is_counterattack : 1;
+    ub32 is_shield_item_weapon : 1;
+    ub32 is_opponent_ra : 1;
+    ub32 is_attempt_specialhi_recovery : 1;
+    ub32 ftcom_flags_0x4A_b0 : 1;
+    ub32 ftcom_flags_0x4A_b1 : 1;
+    ub32 is_stop_stand : 1;
+    Vec2f cliff_left_pos;
+    Vec2f cliff_right_pos;
+    s32 target_line_id;
+    Vec2f target_pos;
+    f32 target_dist;
+    void *target_user;
+    Vec2f origin_pos;
+    Vec2f edge_pos;
+    Vec2f stand_pos;
+    s32 floor_line_id;
+    f32 dash_predict;
+    f32 jump_predict;
+} FTComputer;
+
+typedef struct FTKey {
+    s32 input_wait;
+    FTKeyEvent *script;
+} FTKey;
+
+typedef struct ftCommonDeadStatusVars {
+    s32 wait;
+    Vec3f pos;
+} ftCommonDeadStatusVars;
+
+typedef struct ftCommonRebirthStatusVars {
+    Vec3f halo_offset;
+    Vec3f pos;
+    s32 halo_despawn_wait;
+    s32 halo_number;
+    s32 halo_lower_wait;
+} ftCommonRebirthStatusVars;
+
+typedef struct ftCommonSleepStatusVars {
+    s32 stock_steal_wait;
+} ftCommonSleepStatusVars;
+
+typedef struct ftCommonEntryStatusVars {
+    s32 entry_wait;
+    s32 lr;
+    s32 floor_line_id;
+    sb32 is_rotate;
+} ftCommonEntryStatusVars;
+
+typedef struct ftCommonTurnStatusVars {
+    sb32 is_allow_turn_direction;
+    sb32 is_disable_sa_interrupts;
+    u16 button_mask;
+    s32 lr_dash;
+    s32 lr_turn;
+    s32 attacks4_buffer;
+} ftCommonTurnStatusVars;
+
+typedef struct ftCommonKneeBendStatusVars {
+    f32 jump_force;
+    f32 anim_frame;
+    s32 input_source;
+    sb32 is_shorthop;
+} ftCommonKneeBendStatusVars;
+
+typedef struct ftCommonJumpAerialStatusVars {
+    f32 drift;
+    f32 vel_x;
+    s32 turn_tics;
+} ftCommonJumpAerialStatusVars;
+
+typedef struct ftCommonDamageStatusVars {
+    s32 hitstun_tics;
+    s32 dust_effect_int;
+    f32 public_knockback;
+    u16 coll_mask_curr;
+    u16 coll_mask_prev;
+    u16 coll_mask_ignore;
+    Vec3f wall_collide_angle;
+    s32 unk_0xB38;
+    s32 unk_0xB3C;
+    s32 script_id;
+    s32 status_id;
+    sb32 is_knockback_over;
+} ftCommonDamageStatusVars;
+
+typedef struct ftCommonSquatStatusVars {
+    sb32 is_allow_pass;
+    s32 pass_wait;
+    s32 unk_0x8;
+} ftCommonSquatStatusVars;
+
+typedef struct ftCommonDokanStatusVars {
+    s32 material;
+    s32 mapobj_kind;
+    Vec3f pos_curr;
+    Vec3f target_pos;
+    s32 pos_adjust_wait;
+    s32 playertag_wait;
+    s32 turn_stop_wait;
+} ftCommonDokanStatusVars;
+
+typedef struct ftCommonLandingStatusVars {
+    sb32 is_allow_interrupt;
+} ftCommonLandingStatusVars;
+
+typedef struct ftCommonFallSpecialStatusVars {
+    f32 drift;
+    sb32 is_allow_pass;
+    sb32 is_goto_landing;
+    f32 landing_lag;
+    sb32 is_allow_interrupt;
+    sb32 is_fall_accelerate;
+} ftCommonFallSpecialStatusVars;
+
+typedef struct ftCommonTwisterStatusVars {
+    s32 release_wait;
+    GObj *tornado_gobj;
+} ftCommonTwisterStatusVars;
+
+typedef struct ftCommonTaruCannStatusVars {
+    s32 release_wait;
+    s32 shoot_wait;
+    GObj *tarucann_gobj;
+} ftCommonTaruCannStatusVars;
+
+typedef struct ftCommonDownWaITStatusVars {
+    s32 stand_wait;
+} ftCommonDownWaITStatusVars;
+
+typedef struct ftCommonDownBounceStatusVars {
+    s32 attack_buffer;
+} ftCommonDownBounceStatusVars;
+
+typedef struct ftCommonReboundStatusVars {
+    f32 anim_speed;
+    f32 rebound_timer;
+} ftCommonReboundStatusVars;
+
+typedef struct ftCommonCliffWaitStatusVars {
+    sb32 is_allow_interrupt;
+    s32 fall_wait;
+} ftCommonCliffWaitStatusVars;
+
+typedef struct ftCommonCliffMotionStatusVars {
+    s32 status_id;
+    s32 cliff_id;
+} ftCommonCliffMotionStatusVars;
+
+typedef struct ftCommonLiftStatusVars {
+    s32 turn_tics;
+} ftCommonLiftStatusVars;
+
+typedef struct ftCommonItemThrowStatusVars {
+    s32 turn_rotate_step;
+    s32 turn_tics;
+    s32 turn_invert_lr_wait;
+    f32 throw_vel;
+    s32 throw_angle;
+    f32 throw_damage;
+} ftCommonItemThrowStatusVars;
+
+typedef struct ftCommonItemSwingStatusVars {
+    s32 harisen_scale_reset_wait;
+} ftCommonItemSwingStatusVars;
+
+typedef struct ftCommonFireFlowerStatusVars {
+    s32 flame_vel_index;
+    s32 ammo_sub;
+    s32 effect_make_int;
+    s32 ammo_fire_count;
+    sb32 is_release;
+    s32 release_lag;
+} ftCommonFireFlowerStatusVars;
+
+typedef struct ftCommonHammerStatusVars {
+    union {
+        f32 landing_anim_frame;
+        f32 jump_force;
+    };
+    f32 kneebend_anim_frame;
+    s32 input_source;
+    sb32 is_shorthop;
+} ftCommonHammerStatusVars;
+
+typedef struct ftCommonGuardStatusVars {
+    s32 release_lag;
+    s32 shield_decay_wait;
+    GObj *effect_gobj;
+    sb32 is_release;
+    s32 angle_i;
+    f32 angle_f;
+    f32 shield_rotate_range;
+    f32 setoff_frames;
+    s32 slide_tics;
+    sb32 is_setoff;
+} ftCommonGuardStatusVars;
+
+typedef struct ftCommonEscapeStatusVars {
+    s32 itemthrow_buffer_tics;
+} ftCommonEscapeStatusVars;
+
+typedef struct ftCommonCatchStatusVars {
+    f32 catch_pull_frame_begin;
+    f32 catch_pull_anim_frames;
+    u8 filler_0x8[0xB3C - 0xB20];
+    u32 unk_0x24;
+} ftCommonCatchStatusVars;
+
+typedef struct ftCommonCatchWaITStatusVars {
+    s32 throw_wait;
+} ftCommonCatchWaITStatusVars;
+
+typedef struct ftCommonCaptureStatusVars {
+    sb32 is_goto_pulled_wait;
+} ftCommonCaptureStatusVars;
+
+typedef struct ftCommonThrownStatusVars {
+    s32 status_id;
+} ftCommonThrownStatusVars;
+
+typedef struct ftCommonCaptureKirbyStatusVars {
+    sb16 is_goto_capturewait;
+    s16 lr;
+    sb16 is_kirby;
+} ftCommonCaptureKirbyStatusVars;
+
+typedef struct ftCommonCaptureYoshiStatusVars {
+    GObj *effect_gobj;
+    s16 stage;
+    s16 breakout_wait;
+    s8 lr;
+    sb8 is_damagefloor;
+} ftCommonCaptureYoshiStatusVars;
+
+typedef struct ftCommonCaptureCaptainStatusVars {
+    u16 capture_flag;
+} ftCommonCaptureCaptainStatusVars;
+
+typedef struct ftCommonThrowFStatusVars {
+    union {
+        f32 landing_anim_frame;
+        f32 jump_force;
+    };
+    f32 kneebend_anim_frame;
+    s32 input_source;
+    sb32 is_shorthop;
+} ftCommonThrowFStatusVars;
+
+typedef struct ftCommonThrowFFStatusVars {
+    sb32 is_turn;
+    s32 turn_tics;
+} ftCommonThrowFFStatusVars;
+
+typedef struct ftCommonThrowFDamageStatusVars {
+    s32 hitstun_tics;
+    s32 dust_effect_int;
+    f32 public_knockback;
+    u16 coll_mask;
+    u8 filler_0xE[0x28 - 0xE];
+    s32 unk_index;
+    s32 status_id;
+    sb32 is_knockback_over;
+} ftCommonThrowFDamageStatusVars;
+
+typedef struct ftCommonAttack1StatusVars {
+    sb32 is_goto_followup;
+    s32 interrupt_catch_timer;
+} ftCommonAttack1StatusVars;
+
+typedef struct ftCommonAttack100StatusVars {
+    sb32 is_anim_end;
+    sb32 is_goto_loop;
+} ftCommonAttack100StatusVars;
+
+typedef struct ftCommonAttackLw3StatusVars {
+    sb32 is_goto_attacklw3;
+} ftCommonAttackLw3StatusVars;
+
+typedef struct ftCommonAttack4StatusVars {
+    s32 gfx_id;
+    s32 unk_0x4;
+    sb32 is_goto_attacklw4;
+    s32 unk_0xC;
+    s32 lr;
+} ftCommonAttack4StatusVars;
+
+typedef struct ftCommonAttackAirStatusVars {
+    s32 rehit_timer;
+} ftCommonAttackAirStatusVars;
+
+typedef union FTCommonStatusVars {
+    ftCommonDeadStatusVars dead;
+    ftCommonRebirthStatusVars rebirth;
+    ftCommonSleepStatusVars sleep;
+    ftCommonEntryStatusVars entry;
+    ftCommonTurnStatusVars turn;
+    ftCommonKneeBendStatusVars kneebend;
+    ftCommonJumpAerialStatusVars jumpaerial;
+    ftCommonDamageStatusVars damage;
+    ftCommonSquatStatusVars squat;
+    ftCommonDokanStatusVars dokan;
+    ftCommonLandingStatusVars landing;
+    ftCommonFallSpecialStatusVars fallspecial;
+    ftCommonTwisterStatusVars twister;
+    ftCommonTaruCannStatusVars tarucann;
+    ftCommonDownWaITStatusVars downwait;
+    ftCommonDownBounceStatusVars downbounce;
+    ftCommonReboundStatusVars rebound;
+    ftCommonCliffWaitStatusVars cliffwait;
+    ftCommonCliffMotionStatusVars cliffmotion;
+    ftCommonLiftStatusVars lift;
+    ftCommonItemThrowStatusVars itemthrow;
+    ftCommonItemSwingStatusVars itemswing;
+    ftCommonFireFlowerStatusVars fireflower;
+    ftCommonHammerStatusVars hammer;
+    ftCommonGuardStatusVars guard;
+    ftCommonEscapeStatusVars escape;
+    ftCommonCatchStatusVars catchmain;
+    ftCommonCatchWaITStatusVars catchwait;
+    ftCommonCaptureStatusVars capture;
+    ftCommonThrownStatusVars thrown;
+    ftCommonCaptureKirbyStatusVars capturekirby;
+    ftCommonCaptureYoshiStatusVars captureyoshi;
+    ftCommonCaptureCaptainStatusVars capturecaptain;
+    ftCommonThrowFStatusVars throwf;
+    ftCommonThrowFFStatusVars throwff;
+    ftCommonThrowFDamageStatusVars throwfdamage;
+    ftCommonAttack1StatusVars attack1;
+    ftCommonAttack100StatusVars attack100;
+    ftCommonAttackLw3StatusVars attacklw3;
+    ftCommonAttack4StatusVars attack4;
+    ftCommonAttackAirStatusVars attackair;
+} FTCommonStatusVars;
+
+typedef struct FTMarioPassiveVars { sb32 is_expend_tornado; } FTMarioPassiveVars;
+typedef struct FTDonkeyPassiveVars { s32 charge_level; } FTDonkeyPassiveVars;
+typedef struct FTSamusPassiveVars { s32 charge_level; s32 charge_recoil; } FTSamusPassiveVars;
+typedef struct FTLinkPassiveVars { GObj *boomerang_gobj; } FTLinkPassiveVars;
+typedef struct FTCaptainPassiveVars { s32 falcon_punch_unk; } FTCaptainPassiveVars;
+typedef struct FTKirbyPassiveVars {
+    s32 copy_id;
+    s32 copysamus_charge_level;
+    s32 copysamus_charge_recoil;
+    s32 copydonkey_charge_level;
+    s32 copycaptain_falcon_punch_unk;
+    s32 copypurin_unk;
+    sb32 is_ignore_losecopy;
+    GObj *copylink_boomerang_gobj;
+} FTKirbyPassiveVars;
+typedef struct FTPikachuPassiveVars { sb32 is_thunder_destroy; } FTPikachuPassiveVars;
+typedef struct FTPurinPassiveVars { u32 unk_0x0; } FTPurinPassiveVars;
+
+#define WPPKTHUNDER_PARTS_COUNT 5
+#define FTNESS_PKTHUNDER_TRAIL_POS_COUNT \
+    ((WPPKTHUNDER_PARTS_COUNT * 2) + \
+     ((WPPKTHUNDER_PARTS_COUNT * 2) / WPPKTHUNDER_PARTS_COUNT))
+
+typedef struct FTNessPassiveVars {
+    sb32 is_thunder_destroy;
+    s32 pkthunder_trail_id;
+    s16 pkthunder_trail_x[FTNESS_PKTHUNDER_TRAIL_POS_COUNT];
+    s16 pkthunder_trail_y[FTNESS_PKTHUNDER_TRAIL_POS_COUNT];
+} FTNessPassiveVars;
+
+typedef struct ftBossInfo {
+    GObj *target_gobj;
+    s32 current_line_id;
+    s32 default_line_id;
+    f32 wait_div;
+    u32 wait_timer;
+    s8 status_id;
+    s8 status_id_random;
+    u8 status_id_guard;
+} ftBossInfo;
+
+typedef struct FTBossPassiveVars {
+    ftBossInfo *p, s;
+} FTBossPassiveVars;
+
+typedef union FTPassiveVars {
+    FTMarioPassiveVars mario;
+    FTDonkeyPassiveVars donkey;
+    FTSamusPassiveVars samus;
+    FTLinkPassiveVars link;
+    FTCaptainPassiveVars captain;
+    FTKirbyPassiveVars kirby;
+    FTPikachuPassiveVars pikachu;
+    FTPurinPassiveVars purin;
+    FTNessPassiveVars ness;
+    FTBossPassiveVars boss;
+} FTPassiveVars;
+
+typedef struct ftMarioSpecialHiStatusVars { sb32 is_air_bool; } ftMarioSpecialHiStatusVars;
+typedef struct ftMarioSpecialLwStatusVars { f32 friction; s32 dust_effect_int; } ftMarioSpecialLwStatusVars;
+typedef union FTMarioStatusVars {
+    ftMarioSpecialHiStatusVars specialhi;
+    ftMarioSpecialLwStatusVars speciallw;
+} FTMarioStatusVars;
+
+typedef struct ftFoxSpecialHiStatusVars {
+    s32 launch_delay;
+    s32 gravity_delay;
+    f32 angle;
+    s32 anim_frames;
+    s32 decelerate_wait;
+    s32 pass_timer;
+} ftFoxSpecialHiStatusVars;
+typedef struct ftFoxSpecialLwStatusVars {
+    s32 release_lag;
+    s32 turn_tics;
+    sb32 is_release;
+    GObj *effect_gobj;
+    s32 gravity_delay;
+} ftFoxSpecialLwStatusVars;
+typedef union FTFoxStatusVars {
+    ftFoxSpecialHiStatusVars specialhi;
+    ftFoxSpecialLwStatusVars speciallw;
+} FTFoxStatusVars;
+
+typedef struct ftDonkeySpecialNStatusVars {
+    sb32 is_release;
+    s32 charge_level;
+    sb32 is_charging;
+    sb32 is_cancel;
+} ftDonkeySpecialNStatusVars;
+typedef struct ftDonkeySpecialHiStatusVars { s32 unk_0x0; } ftDonkeySpecialHiStatusVars;
+typedef struct ftDonkeySpecialLwStatusVars { sb32 is_loop; } ftDonkeySpecialLwStatusVars;
+typedef union FTDonkeyStatusVars {
+    ftDonkeySpecialNStatusVars specialn;
+    ftDonkeySpecialHiStatusVars specialhi;
+    ftDonkeySpecialLwStatusVars speciallw;
+} FTDonkeyStatusVars;
+
+typedef struct ftSamusSpecialNStatusVars {
+    sb32 is_release;
+    s32 charge_int;
+    GObj *charge_gobj;
+} ftSamusSpecialNStatusVars;
+typedef struct ftSamusSpecialLwStatusVars { sb32 unused; } ftSamusSpecialLwStatusVars;
+typedef union FTSamusStatusVars {
+    ftSamusSpecialNStatusVars specialn;
+    ftSamusSpecialLwStatusVars speciallw;
+} FTSamusStatusVars;
+
+typedef struct ftLinkSpecialNStatusVars { sb32 is_smash; } ftLinkSpecialNStatusVars;
+typedef struct ftLinkSpecialHiStatusVars { GObj *spin_attack_gobj; } ftLinkSpecialHiStatusVars;
+typedef union FTLinkStatusVars {
+    ftLinkSpecialNStatusVars specialn;
+    ftLinkSpecialHiStatusVars specialhi;
+} FTLinkStatusVars;
+
+typedef struct ftYoshiSpecialNStatusVars { u32 unk_0x0; u16 unk_0x4; } ftYoshiSpecialNStatusVars;
+typedef struct ftYoshiSpecialHiStatusVars { GObj *egg_gobj; s16 throw_force; } ftYoshiSpecialHiStatusVars;
+typedef union FTYoshiStatusVars {
+    ftYoshiSpecialHiStatusVars specialhi;
+} FTYoshiStatusVars;
+
+typedef struct ftCaptainSpecialHiStatusVars { u16 flags; Vec3f vel; } ftCaptainSpecialHiStatusVars;
+typedef struct ftCaptainSpecialLwStatusVars { u16 scale_apply_timer; f32 vel_scale; } ftCaptainSpecialLwStatusVars;
+typedef union FTCaptainStatusVars {
+    ftCaptainSpecialHiStatusVars specialhi;
+    ftCaptainSpecialLwStatusVars speciallw;
+} FTCaptainStatusVars;
+
+typedef struct ftKirbySpecialNStatusVars { s16 copy_id; s16 release_lag; Vec3f dist; } ftKirbySpecialNStatusVars;
+typedef struct ftKirbySpecialLwStatusVars { s16 duration; s16 unk_0x2; s16 colanim_id; } ftKirbySpecialLwStatusVars;
+typedef struct ftKirbyCopyDonkeySpecialNStatusVars {
+    sb32 is_release;
+    s32 charge_level;
+    sb32 is_charging;
+    sb32 is_cancel;
+} ftKirbyCopyDonkeySpecialNStatusVars;
+typedef struct ftKirbyCopySamusSpecialNStatusVars {
+    sb32 is_release;
+    s32 charge_int;
+    GObj *charge_gobj;
+} ftKirbyCopySamusSpecialNStatusVars;
+typedef struct ftKirbyCopyLinkSpecialNStatusVars { sb32 is_smash; } ftKirbyCopyLinkSpecialNStatusVars;
+typedef union FTKirbyStatusVars {
+    ftKirbySpecialNStatusVars specialn;
+    ftKirbySpecialLwStatusVars speciallw;
+    ftKirbyCopyDonkeySpecialNStatusVars copydonkey_specialn;
+    ftKirbyCopySamusSpecialNStatusVars copysamus_specialn;
+    ftKirbyCopyLinkSpecialNStatusVars copylink_specialn;
+} FTKirbyStatusVars;
+
+typedef struct ftPikachuSpecialHiStatusVars {
+    s32 anim_frames;
+    sb32 is_subsequent_zip;
+    u32 unk_0x8;
+    Vec2i stick_range;
+    s32 pass_timer;
+    f32 vel_x_bak;
+    f32 vel_y_bak;
+    f32 vel_ground_bak;
+} ftPikachuSpecialHiStatusVars;
+typedef struct ftPikachuSpecialLwStatusVars { GObj *thunder_gobj; } ftPikachuSpecialLwStatusVars;
+typedef union FTPikachuStatusVars {
+    ftPikachuSpecialHiStatusVars specialhi;
+    ftPikachuSpecialLwStatusVars speciallw;
+} FTPikachuStatusVars;
+
+typedef struct ftNessSpecialHiStatusVars {
+    s32 pkjibaku_delay;
+    s32 pkthunder_end_delay;
+    s32 pkthunder_gravity_delay;
+    GObj *pkthunder_gobj;
+    s32 pkjibaku_anim_length;
+    f32 pkjibaku_angle;
+    Vec3f pkthunder_pos;
+} ftNessSpecialHiStatusVars;
+typedef struct ftNessSpecialLwStatusVars {
+    s32 release_lag;
+    sb32 is_release;
+    s32 gravity_delay;
+} ftNessSpecialLwStatusVars;
+typedef union FTNessStatusVars {
+    ftNessSpecialHiStatusVars specialhi;
+    ftNessSpecialLwStatusVars speciallw;
+} FTNessStatusVars;
+
+typedef struct ftBossWaITStatusVars { Vec3f pos; } ftBossWaITStatusVars;
+typedef struct ftBossMoveStatusVars { void (*proc_setstatus)(GObj *); Vec3f vel; f32 magnitude; } ftBossMoveStatusVars;
+typedef struct ftBossOkuhikoukiStatusVars { Vec3f pos; } ftBossOkuhikoukiStatusVars;
+typedef struct ftBossGootsubusuStatusVars { s16 wait_timer; f32 edgeleft_pos_x; f32 edgeright_pos_x; } ftBossGootsubusuStatusVars;
+typedef struct ftBossTsutsukuStatusVars { s16 wait_timer; } ftBossTsutsukuStatusVars;
+typedef struct ftBossDrillStatusVars { s16 follow_timer; f32 edgeleft_pos_x; f32 edgeright_pos_x; } ftBossDrillStatusVars;
+typedef struct ftBossYubideppouStatusVars { s16 wait_timer; s16 bullet_count; u8 shoot_timer; } ftBossYubideppouStatusVars;
+typedef struct ftBossOkupunchStatusVars { Vec3f pos; } ftBossOkupunchStatusVars;
+typedef struct ftBossOkutsubushiStatusVars { Vec3f pos; u16 follow_timer; } ftBossOkutsubushiStatusVars;
+typedef struct ftBossDeadStatusVars { s16 dead_timer; } ftBossDeadStatusVars;
+typedef union FTBossStatusVars {
+    ftBossWaITStatusVars wait;
+    ftBossMoveStatusVars move;
+    ftBossOkuhikoukiStatusVars okuhikouki;
+    ftBossGootsubusuStatusVars gootsubu;
+    ftBossTsutsukuStatusVars tsutsuku;
+    ftBossDrillStatusVars drill;
+    ftBossYubideppouStatusVars yubideppou;
+    ftBossOkupunchStatusVars okupunch;
+    ftBossOkutsubushiStatusVars okutsubushi;
+    ftBossDeadStatusVars dead;
+} FTBossStatusVars;
+
 typedef union FTStatusVars {
-    struct {
-        struct {
-            sb32 is_allow_turn_direction;
-            sb32 is_disable_sa_interrupts;
-            u16 button_mask;
-            s32 lr_dash;
-            s32 lr_turn;
-            s32 attacks4_buffer;
-        } turn;
-        struct {
-            s32 jump_force;
-            f32 anim_frame;
-            s32 input_source;
-            sb32 is_shorthop;
-        } kneebend;
-        struct {
-            sb32 is_allow_interrupt;
-        } landing;
-        struct {
-            s32 hitstun_tics;
-            s32 dust_effect_int;
-            f32 public_knockback;
-            u16 coll_mask_curr;
-            u16 coll_mask_prev;
-            u16 coll_mask_ignore;
-            Vec3f wall_collide_angle;
-            s32 unk_0xB38;
-            s32 unk_0xB3C;
-            s32 script_id;
-            s32 status_id;
-            sb32 is_knockback_over;
-        } damage;
-        struct {
-            sb32 is_allow_pass;
-            s32 pass_wait;
-            s32 unk_0x8;
-        } squat;
-        struct {
-            sb32 is_allow_interrupt;
-            s32 fall_wait;
-        } cliffwait;
-        struct {
-            s32 status_id;
-            s32 cliff_id;
-        } cliffmotion;
-        struct {
-            s32 stand_wait;
-        } downwait;
-        struct {
-            s32 attack_buffer;
-        } downbounce;
-        struct {
-            sb32 is_goto_followup;
-            s32 interrupt_catch_timer;
-        } attack1;
-        struct {
-            sb32 is_anim_end;
-            sb32 is_goto_loop;
-        } attack100;
-        struct {
-            s32 release_lag;
-            s32 shield_decay_wait;
-            GObj *effect_gobj;
-            sb32 is_release;
-            s32 angle_i;
-            f32 angle_f;
-            f32 shield_rotate_range;
-            f32 setoff_frames;
-            s32 slide_tics;
-            sb32 is_setoff;
-        } guard;
-        struct {
-            f32 catch_pull_frame_begin;
-            f32 catch_pull_anim_frames;
-        } catchmain;
-        struct {
-            s32 throw_wait;
-        } catchwait;
-        struct {
-            sb32 is_goto_pulled_wait;
-        } capture;
-        struct {
-            s32 status_id;
-        } thrown;
-        struct {
-            s32 itemthrow_buffer_tics;
-        } escape;
-        struct {
-            f32 anim_speed;
-            f32 rebound_timer;
-        } rebound;
-        struct {
-            s32 rehit_timer;
-        } attackair;
-        struct {
-            s32 release_wait;
-            GObj *tornado_gobj;
-        } twister;
-        struct {
-            s32 release_wait;
-            s32 shoot_wait;
-            GObj *tarucann_gobj;
-        } tarucann;
-    } common;
+    FTCommonStatusVars common;
+    FTMarioStatusVars mario;
+    FTFoxStatusVars fox;
+    FTDonkeyStatusVars donkey;
+    FTSamusStatusVars samus;
+    FTLinkStatusVars link;
+    FTYoshiStatusVars yoshi;
+    FTCaptainStatusVars captain;
+    FTKirbyStatusVars kirby;
+    FTPikachuStatusVars pikachu;
+    FTNessStatusVars ness;
+    FTBossStatusVars boss;
 } FTStatusVars;
 
 typedef struct ftKirbyAttack100Effect {
@@ -1728,224 +2211,203 @@ typedef struct FTTexturePartContainer {
 } FTTexturePartContainer;
 
 typedef struct FTStruct {
-    s32 pkind;
+    struct FTStruct *next;
     GObj *fighter_gobj;
     s32 fkind;
-    FTData *data;
-    FTAttributes *attr;
-    void *figatree_heap;
-    void *figatree;
-
     u8 team;
     u8 player;
-    u8 stock_count;
     u8 detail_curr;
     u8 detail_base;
     u8 costume;
     u8 shade;
-    SYColorRGBA shade_color;
-
     u8 handicap;
     u8 level;
-    s32 lr;
-    s32 damage;
-    f32 damage_mul;
-
+    s8 stock_count;
+    u8 team_order;
+    u8 dl_link;
+    s32 player_num;
+    u32 status_total_tics;
+    s32 pkind;
     s32 status_id;
-    s32 status_prev;
-    s32 status_total_tics;
-    f32 motion_frame;
-    f32 anim_frame;
-    f32 anim_speed;
-    FTAnimDesc anim_desc;
-    Vec3f anim_vel;
-
-    sb32 is_invisible;
-    sb32 is_shadow_hide;
-    sb32 is_magnify_ignore;
-    sb32 is_have_translate_scale;
-    sb32 is_playertag_hide;
-    sb32 is_ghost;
-    sb32 is_control_disable;
-    sb32 is_rebirth;
-    sb32 is_effect_skip;
-    sb32 is_muted;
-    sb32 is_item_show;
-    sb32 is_events_forward;
-    sb32 is_menu_ignore;
-    s32 slope_contour;
-    s32 camera_mode;
-
-    s32 display_mode;
-    s32 dl_link;
-
-    f32 camera_zoom_frame;
-
-    FTInput input;
-    u8 tap_stick_x;
-    u8 tap_stick_y;
-    u8 hold_stick_x;
-    u8 hold_stick_y;
-    f32 camera_zoom_range;
-    FTCollisionData coll_data;
-
-    DObj *joints[nFTPartsJointNumMax];
-    FTModelPartStatus modelpart_status[nFTPartsJointNumMax -
-                                       nFTPartsJointCommonStart];
-    FTTexturePartStatus texturepart_status[2];
-    FTAttackColl attack_colls[FTATTACKCOLL_NUM_MAX];
-    FTDamageColl damage_colls[FTDAMAGECOLL_NUM_MAX];
-
+    s32 motion_id;
     s32 percent_damage;
     s32 damage_resist;
     s32 shield_health;
     f32 unk_ft_0x38;
     s32 unk_ft_0x3C;
-    s32 hitlag_tics;
-    sb32 is_knockback_paused;
-
-    Vec3f vel_air;
-    Vec3f vel_ground;
-    Vec3f vel_push;
+    u32 hitlag_tics;
+    s32 lr;
     FTPhysics physics;
-
-    s32 ga;
-    s32 jumps_used;
+    MPCollData coll_data;
+    u8 jumps_used;
     u8 unk_ft_0x149;
-    sb32 is_reflect;
-    sb32 is_absorb;
-    sb32 is_shield;
-    sb32 is_attack_active;
-    sb32 is_hitstatus_nodamage;
-    sb32 is_damage_coll_modify;
-    sb32 is_modelpart_modify;
-    sb32 is_texturepart_modify;
-    sb32 is_effect_attach;
-    sb32 is_jostle_ignore;
-    sb32 is_cliff_hold;
-    sb32 is_ignore_dead;
-    sb32 is_damage_resist;
-    u8 capture_immune_mask;
-    u8 catch_mask;
-
+    sb32 ga;
+    f32 attack1_followup_frames;
+    s32 attack1_status_id;
+    s32 attack1_input_count;
     s32 cliffcatch_wait;
-    s32 breakout_wait;
-    s32 breakout_lr;
-    s32 breakout_ud;
     s32 tics_since_last_z;
     s32 acid_wait;
     s32 twister_wait;
     s32 tarucann_wait;
     s32 damagefloor_wait;
-
-    s32 attack_damage;
-    s32 attack_count;
-    s32 attack_shield_push;
-    s32 hit_lr;
-    s32 shield_damage;
-    s32 shield_damage_total;
-    s32 shield_lr;
-    s32 shield_player;
-    s32 damage_lag;
-    s32 damage_queue;
-    s32 damage_angle;
-    s32 damage_element;
-    s32 damage_lr;
-    s32 damage_index;
-    s32 damage_player_num;
-    s32 damage_player;
-    s32 damage_object_class;
-    s32 damage_object_kind;
-    s32 damage_count;
-    s32 damage_kind;
-    s32 damage_heal;
-    s32 damage_joint_id;
-
-    s32 invincible_tics;
-    s32 intangible_tics;
-    s32 star_invincible_tics;
-
-    s32 hitstatus;
-    s32 star_hitstatus;
-    s32 special_hitstatus;
-
+    s32 playertag_wait;
+    s32 card_anim_frame_id;
+    FTMotionVars motion_vars;
+    ub32 is_attack_active : 1;
+    ub32 is_hitstatus_nodamage : 1;
+    ub32 is_damage_coll_modify : 1;
+    ub32 is_modelpart_modify : 1;
+    ub32 is_texturepart_modify : 1;
+    ub32 is_reflect : 1;
+    s32 reflect_lr : 2;
+    ub32 is_absorb : 1;
+    s32 absorb_lr : 2;
+    ub32 is_goto_attack100 : 1;
+    ub32 is_fastfall : 1;
+    ub32 is_magnify_show : 1;
+    ub32 is_limit_map_bounds : 1;
+    ub32 is_invisible : 1;
+    ub32 is_shadow_hide : 1;
+    ub32 is_rebirth : 1;
+    ub32 is_magnify_ignore : 1;
+    ub32 is_playertag_hide : 1;
+    ub32 is_playertag_bossend : 1;
+    ub32 is_effect_skip : 1;
+    u32 effect_joint_array_id : 4;
+    ub32 is_shield : 1;
+    ub32 is_effect_attach : 1;
+    ub32 is_jostle_ignore : 1;
+    ub32 is_have_translate_scale : 1;
+    ub32 is_control_disable : 1;
+    ub32 is_hitstun : 1;
+    u32 slope_contour : 3;
+    ub32 is_use_animlocks : 1;
+    ub32 is_muted : 1;
+    ub32 unk_ft_0x190_b5 : 1;
+    ub32 is_item_show : 1;
+    ub32 is_cliff_hold : 1;
+    ub32 is_events_forward : 1;
+    ub32 is_ghost : 1;
+    ub32 is_damage_resist : 1;
+    ub32 is_menu_ignore : 1;
+    u32 camera_mode : 4;
+    ub32 is_special_interrupt : 1;
+    ub32 is_ignore_dead : 1;
+    ub32 is_catchstatus : 1;
+    ub32 is_catch_or_capture : 1;
+    ub32 is_use_fogcolor : 1;
+    ub32 is_shield_catch : 1;
+    ub32 is_knockback_paused : 1;
+    u8 capture_immune_mask;
+    u8 catch_mask;
+    FTAnimDesc anim_desc;
+    Vec3f anim_vel;
+    Vec2f magnify_pos;
+    FTInput input;
+    FTComputer computer;
+    Vec2f damage_coll_size;
+    u8 tap_stick_x;
+    u8 tap_stick_y;
+    u8 hold_stick_x;
+    u8 hold_stick_y;
+    s32 breakout_wait;
+    s8 breakout_lr;
+    s8 breakout_ud;
+    u8 shuffle_frame_index;
+    u8 shuffle_index_max;
+    ub8 is_shuffle_electric;
+    u16 shuffle_tics;
     GObj *throw_gobj;
     s32 throw_fkind;
     u8 throw_team;
     u8 throw_player;
     s32 throw_player_num;
-    FTThrowHitDesc *throw_desc;
+    u32 motion_attack_id;
+    u16 motion_count;
+    GMStatFlags stat_flags;
+    u16 stat_count;
+    FTAttackColl attack_colls[4];
+    s32 invincible_tics;
+    s32 intangible_tics;
+    s32 special_hitstatus;
+    s32 star_invincible_tics;
+    s32 star_hitstatus;
+    s32 hitstatus;
+    FTDamageColl damage_colls[11];
+    f32 unk_ft_0x7A0;
+    f32 hitlag_mul;
+    f32 shield_heal_wait;
+    s32 unk_ft_0x7AC;
+    s32 attack_damage;
+    f32 attack_knockback;
+    u16 attack_count;
+    s32 attack_shield_push;
+    f32 attack_rebound;
+    s32 hit_lr;
+    s32 shield_damage;
+    s32 shield_damage_total;
+    s32 shield_lr;
+    s32 shield_player;
+    s32 reflect_damage;
+    s32 damage_lag;
+    f32 damage_knockback;
+    f32 knockback_resist_passive;
+    f32 knockback_resist_status;
+    f32 damage_knockback_stack;
+    s32 damage_queue;
+    s32 damage_angle;
+    s32 damage_element;
+    s32 damage_lr;
+    s32 damage_index;
+    s32 damage_joint_id;
+    s32 damage_player_num;
+    s32 damage_player;
+    u16 damage_count;
+    s32 damage_kind;
+    s32 damage_heal;
+    f32 damage_mul;
+    s32 damage_object_class;
+    s32 damage_object_kind;
+    GMStatFlags damage_stat_flags;
+    u16 damage_stat_count;
+    f32 public_knockback;
     GObj *search_gobj;
     f32 search_gobj_dist;
     void (*proc_catch)(GObj *);
     void (*proc_capture)(GObj *, GObj *);
     GObj *catch_gobj;
     GObj *capture_gobj;
-    sb32 is_catchstatus;
-    sb32 is_catch_or_capture;
-    sb32 is_shield_catch;
+    FTThrowHitDesc *throw_desc;
     GObj *item_gobj;
     FTSpecialColl *special_coll;
-
-    s32 reflect_lr;
-    s32 absorb_lr;
-    s32 reflect_damage;
-
-    f32 attack1_followup_frames;
-    s32 attack1_status_id;
-    s32 attack1_input_count;
-    f32 attack_knockback;
-    f32 attack_rebound;
-    f32 damage_knockback_stack;
-    f32 knockback_resist_status;
-    f32 knockback_resist_passive;
-    f32 damage_knockback;
-    f32 hitlag_mul;
-    f32 shield_heal_wait;
-    f32 unk_ft_0x7A0;
-    s32 unk_ft_0x7AC;
-
-    sb32 is_fastfall;
-    s32 player_num;
-    f32 public_knockback;
-    sb32 is_hitstun;
-    sb32 is_use_animlocks;
-    s32 shuffle_frame_index;
-    s32 shuffle_index_max;
-    sb32 is_use_fogcolor;
-    sb32 is_shuffle_electric;
-    s32 shuffle_tics;
-
-    s32 motion_attack_id;
-    s32 motion_id;
-    s32 motion_script_id;
+    Vec3f entry_pos;
+    f32 camera_zoom_frame;
+    f32 camera_zoom_range;
     FTMotionScript motion_scripts[2][2];
-    s32 status_attack_id;
-    s32 status_is_smash;
-    s32 status_is_projectile;
-    u32 status_flags;
-    s32 motion_count;
-    s32 stat_attack_id;
-    s32 stat_count;
-    s32 damage_stat_count;
-    GMStatFlags stat_flags;
-
+    DObj *joints[FTPARTS_JOINT_NUM_MAX];
+    FTModelPartStatus modelpart_status[FTPARTS_JOINT_NUM_MAX -
+                                       nFTPartsJointCommonStart];
+    FTTexturePartStatus texturepart_status[2];
+    FTData *data;
+    FTAttributes *attr;
+    void **figatree;
+    void **figatree_heap;
     void (*proc_update)(GObj *);
+    void (*proc_accessory)(GObj *);
     void (*proc_interrupt)(GObj *);
     void (*proc_physics)(GObj *);
     void (*proc_map)(GObj *);
     void (*proc_slope)(GObj *);
-    void (*proc_status)(GObj *);
-    void (*proc_accessory)(GObj *);
     void (*proc_damage)(GObj *);
     void (*proc_trap)(GObj *);
     void (*proc_shield)(GObj *);
     void (*proc_hit)(GObj *);
-    void (*proc_lagstart)(GObj *);
-    void (*proc_lagupdate)(GObj *);
     void (*proc_passive)(GObj *);
+    void (*proc_lagupdate)(GObj *);
+    void (*proc_lagstart)(GObj *);
     void (*proc_lagend)(GObj *);
-
+    void (*proc_status)(GObj *);
     alSoundEffect *p_sfx;
     u16 sfx_id;
     alSoundEffect *p_voice;
@@ -1953,36 +2415,37 @@ typedef struct FTStruct {
     alSoundEffect *p_loop_sfx;
     u16 loop_sfx_id;
     GMColAnim colanim;
-
+    SYColorRGBA fog_color;
+    SYColorRGBA shade_color;
+    FTKey key;
     struct {
         ub8 is_itemswing;
         s8 drawstatus;
         u8 desc_id;
         FTAfterImage desc[3];
     } afterimage;
-
-    FTMotionVars motion_vars;
+    FTPassiveVars passive_vars;
+    s32 hammer_tics;
     FTStatusVars status_vars;
+    s32 display_mode;
 
-    sb32 is_special_interrupt;
-    s32 playertag_wait;
+    /* Port-only extension: keep all non-BattleShip fields after source layout. */
+    s32 damage;
+    s32 status_prev;
+    f32 motion_frame;
+    f32 anim_frame;
+    f32 anim_speed;
+    Vec3f vel_air;
+    Vec3f vel_ground;
+    Vec3f vel_push;
+    s32 motion_script_id;
+    s32 status_attack_id;
+    s32 status_is_smash;
+    s32 status_is_projectile;
+    u32 status_flags;
+    s32 stat_attack_id;
     sb32 is_wait_status_setup;
     sb32 is_wait_motion_setup;
-    sb32 is_goto_attack100;
-
-    union {
-        struct {
-            sb32 is_expend_tornado;
-        } mario;
-        struct {
-            s32 reserved;
-        } fox;
-        struct {
-            s32 copy_id;
-            sb32 is_ignore_losecopy;
-        } kirby;
-    } passive_vars;
-
     u32 nds_magic;
     u32 nds_slot;
     u32 nds_joint_count;
@@ -1992,86 +2455,124 @@ typedef struct FTStruct {
     u32 nds_init_floor_project_result;
 } FTStruct;
 
-#define NDS_FTSTRUCT_LAYOUT_SIZE 3232u
-#define NDS_FTSTRUCT_OFF_STATUS_ID 56u
-#define NDS_FTSTRUCT_OFF_STATUS_PREV 60u
-#define NDS_FTSTRUCT_OFF_COLL_DATA 204u
-#define NDS_FTSTRUCT_OFF_JOINTS 412u
-#define NDS_FTSTRUCT_OFF_MODELPART_STATUS 560u
-#define NDS_FTSTRUCT_OFF_ATTACK_COLLS 632u
-#define NDS_FTSTRUCT_OFF_MOTION_ATTACK_ID 2504u
-#define NDS_FTSTRUCT_OFF_MOTION_ID 2508u
-#define NDS_FTSTRUCT_OFF_MOTION_COUNT 2660u
-#define NDS_FTSTRUCT_OFF_STAT_FLAGS 2676u
-#define NDS_FTSTRUCT_OFF_PROC_UPDATE 2680u
-#define NDS_FTSTRUCT_OFF_PROC_INTERRUPT 2684u
-#define NDS_FTSTRUCT_OFF_PROC_PHYSICS 2688u
-#define NDS_FTSTRUCT_OFF_PROC_MAP 2692u
-#define NDS_FTSTRUCT_OFF_PROC_SLOPE 2696u
-#define NDS_FTSTRUCT_OFF_PROC_STATUS 2700u
-#define NDS_FTSTRUCT_OFF_PROC_DAMAGE 2708u
-#define NDS_FTSTRUCT_OFF_PROC_LAGSTART 2724u
-#define NDS_FTSTRUCT_OFF_PROC_LAGUPDATE 2728u
-#define NDS_FTSTRUCT_OFF_PROC_PASSIVE 2732u
-#define NDS_FTSTRUCT_OFF_PROC_LAGEND 2736u
+#define NDS_FTSTRUCT_SOURCE_SIZE 2896u
+#define NDS_FTSTRUCT_LAYOUT_SIZE 3012u
+#define NDS_FTSTRUCT_OFF_NEXT 0u
+#define NDS_FTSTRUCT_OFF_FIGHTER_GOBJ 4u
+#define NDS_FTSTRUCT_OFF_FKIND 8u
+#define NDS_FTSTRUCT_OFF_TEAM 12u
+#define NDS_FTSTRUCT_OFF_PLAYER 13u
+#define NDS_FTSTRUCT_OFF_STATUS_ID 36u
+#define NDS_FTSTRUCT_OFF_MOTION_ID 40u
+#define NDS_FTSTRUCT_OFF_PERCENT_DAMAGE 44u
+#define NDS_FTSTRUCT_OFF_HITLAG_TICS 64u
+#define NDS_FTSTRUCT_OFF_PHYSICS 72u
+#define NDS_FTSTRUCT_OFF_COLL_DATA 120u
+#define NDS_FTSTRUCT_OFF_JUMPS_USED 328u
+#define NDS_FTSTRUCT_OFF_GA 332u
+#define NDS_FTSTRUCT_OFF_MOTION_VARS 380u
+#define NDS_FTSTRUCT_OFF_INPUT 432u
+#define NDS_FTSTRUCT_OFF_COMPUTER 460u
+#define NDS_FTSTRUCT_OFF_MOTION_ATTACK_ID 648u
+#define NDS_FTSTRUCT_OFF_STAT_FLAGS 654u
+#define NDS_FTSTRUCT_OFF_ATTACK_COLLS 660u
+#define NDS_FTSTRUCT_OFF_DAMAGE_COLLS 1468u
+#define NDS_FTSTRUCT_OFF_DAMAGE_STAT_FLAGS 2088u
+#define NDS_FTSTRUCT_OFF_MOTION_SCRIPTS 2152u
+#define NDS_FTSTRUCT_OFF_JOINTS 2280u
+#define NDS_FTSTRUCT_OFF_MODELPART_STATUS 2428u
+#define NDS_FTSTRUCT_OFF_DATA 2500u
+#define NDS_FTSTRUCT_OFF_ATTR 2504u
+#define NDS_FTSTRUCT_OFF_FIGATREE 2508u
+#define NDS_FTSTRUCT_OFF_FIGATREE_HEAP 2512u
+#define NDS_FTSTRUCT_OFF_PROC_UPDATE 2516u
+#define NDS_FTSTRUCT_OFF_PROC_ACCESSORY 2520u
+#define NDS_FTSTRUCT_OFF_PROC_INTERRUPT 2524u
+#define NDS_FTSTRUCT_OFF_PROC_PHYSICS 2528u
+#define NDS_FTSTRUCT_OFF_PROC_MAP 2532u
+#define NDS_FTSTRUCT_OFF_PROC_DAMAGE 2540u
+#define NDS_FTSTRUCT_OFF_PROC_LAGUPDATE 2560u
+#define NDS_FTSTRUCT_OFF_PROC_LAGSTART 2564u
+#define NDS_FTSTRUCT_OFF_PROC_STATUS 2572u
+#define NDS_FTSTRUCT_OFF_FOG_COLOR 2700u
+#define NDS_FTSTRUCT_OFF_KEY 2708u
+#define NDS_FTSTRUCT_OFF_PASSIVE_VARS 2780u
+#define NDS_FTSTRUCT_OFF_HAMMER_TICS 2836u
+#define NDS_FTSTRUCT_OFF_STATUS_VARS 2840u
+#define NDS_FTSTRUCT_OFF_DISPLAY_MODE 2892u
+#define NDS_FTSTRUCT_OFF_EXT_DAMAGE 2896u
+#define NDS_FTSTRUCT_OFF_EXT_STATUS_PREV 2900u
+#define NDS_FTSTRUCT_OFF_EXT_MOTION_FRAME 2904u
+#define NDS_FTSTRUCT_OFF_EXT_ANIM_FRAME 2908u
+#define NDS_FTSTRUCT_OFF_EXT_ANIM_SPEED 2912u
+#define NDS_FTSTRUCT_OFF_EXT_VEL_AIR 2916u
+#define NDS_FTSTRUCT_OFF_EXT_MOTION_SCRIPT_ID 2952u
+#define NDS_FTSTRUCT_OFF_EXT_NDS_MAGIC 2984u
+
+#define NDS_FTSTRUCT_ASSERT_OFF(field, expected)                           \
+    _Static_assert(offsetof(FTStruct, field) == (expected),                 \
+                   "FTStruct " #field " offset changed")
 
 _Static_assert(sizeof(FTStruct) == NDS_FTSTRUCT_LAYOUT_SIZE,
                "FTStruct size changed");
-_Static_assert(offsetof(FTStruct, status_id) == NDS_FTSTRUCT_OFF_STATUS_ID,
-               "FTStruct status_id offset changed");
-_Static_assert(offsetof(FTStruct, status_prev) == NDS_FTSTRUCT_OFF_STATUS_PREV,
-               "FTStruct status_prev offset changed");
-_Static_assert(offsetof(FTStruct, coll_data) == NDS_FTSTRUCT_OFF_COLL_DATA,
-               "FTStruct coll_data offset changed");
-_Static_assert(offsetof(FTStruct, joints) == NDS_FTSTRUCT_OFF_JOINTS,
-               "FTStruct joints offset changed");
-_Static_assert(offsetof(FTStruct, modelpart_status) ==
-                   NDS_FTSTRUCT_OFF_MODELPART_STATUS,
-               "FTStruct modelpart_status offset changed");
-_Static_assert(offsetof(FTStruct, attack_colls) ==
-                   NDS_FTSTRUCT_OFF_ATTACK_COLLS,
-               "FTStruct attack_colls offset changed");
-_Static_assert(offsetof(FTStruct, motion_attack_id) ==
-                   NDS_FTSTRUCT_OFF_MOTION_ATTACK_ID,
-               "FTStruct motion_attack_id offset changed");
-_Static_assert(offsetof(FTStruct, motion_id) == NDS_FTSTRUCT_OFF_MOTION_ID,
-               "FTStruct motion_id offset changed");
-_Static_assert(offsetof(FTStruct, motion_count) ==
-                   NDS_FTSTRUCT_OFF_MOTION_COUNT,
-               "FTStruct motion_count offset changed");
-_Static_assert(offsetof(FTStruct, stat_flags) == NDS_FTSTRUCT_OFF_STAT_FLAGS,
-               "FTStruct stat_flags offset changed");
-_Static_assert(offsetof(FTStruct, proc_update) ==
-                   NDS_FTSTRUCT_OFF_PROC_UPDATE,
-               "FTStruct proc_update offset changed");
-_Static_assert(offsetof(FTStruct, proc_interrupt) ==
-                   NDS_FTSTRUCT_OFF_PROC_INTERRUPT,
-               "FTStruct proc_interrupt offset changed");
-_Static_assert(offsetof(FTStruct, proc_physics) ==
-                   NDS_FTSTRUCT_OFF_PROC_PHYSICS,
-               "FTStruct proc_physics offset changed");
-_Static_assert(offsetof(FTStruct, proc_map) == NDS_FTSTRUCT_OFF_PROC_MAP,
-               "FTStruct proc_map offset changed");
-_Static_assert(offsetof(FTStruct, proc_slope) == NDS_FTSTRUCT_OFF_PROC_SLOPE,
-               "FTStruct proc_slope offset changed");
-_Static_assert(offsetof(FTStruct, proc_status) ==
-                   NDS_FTSTRUCT_OFF_PROC_STATUS,
-               "FTStruct proc_status offset changed");
-_Static_assert(offsetof(FTStruct, proc_damage) ==
-                   NDS_FTSTRUCT_OFF_PROC_DAMAGE,
-               "FTStruct proc_damage offset changed");
-_Static_assert(offsetof(FTStruct, proc_lagstart) ==
-                   NDS_FTSTRUCT_OFF_PROC_LAGSTART,
-               "FTStruct proc_lagstart offset changed");
-_Static_assert(offsetof(FTStruct, proc_lagupdate) ==
-                   NDS_FTSTRUCT_OFF_PROC_LAGUPDATE,
-               "FTStruct proc_lagupdate offset changed");
-_Static_assert(offsetof(FTStruct, proc_passive) ==
-                   NDS_FTSTRUCT_OFF_PROC_PASSIVE,
-               "FTStruct proc_passive offset changed");
-_Static_assert(offsetof(FTStruct, proc_lagend) ==
-                   NDS_FTSTRUCT_OFF_PROC_LAGEND,
-               "FTStruct proc_lagend offset changed");
+NDS_FTSTRUCT_ASSERT_OFF(damage, NDS_FTSTRUCT_SOURCE_SIZE);
+NDS_FTSTRUCT_ASSERT_OFF(next, NDS_FTSTRUCT_OFF_NEXT);
+NDS_FTSTRUCT_ASSERT_OFF(fighter_gobj, NDS_FTSTRUCT_OFF_FIGHTER_GOBJ);
+NDS_FTSTRUCT_ASSERT_OFF(fkind, NDS_FTSTRUCT_OFF_FKIND);
+NDS_FTSTRUCT_ASSERT_OFF(team, NDS_FTSTRUCT_OFF_TEAM);
+NDS_FTSTRUCT_ASSERT_OFF(player, NDS_FTSTRUCT_OFF_PLAYER);
+NDS_FTSTRUCT_ASSERT_OFF(status_id, NDS_FTSTRUCT_OFF_STATUS_ID);
+NDS_FTSTRUCT_ASSERT_OFF(motion_id, NDS_FTSTRUCT_OFF_MOTION_ID);
+NDS_FTSTRUCT_ASSERT_OFF(percent_damage, NDS_FTSTRUCT_OFF_PERCENT_DAMAGE);
+NDS_FTSTRUCT_ASSERT_OFF(hitlag_tics, NDS_FTSTRUCT_OFF_HITLAG_TICS);
+NDS_FTSTRUCT_ASSERT_OFF(physics, NDS_FTSTRUCT_OFF_PHYSICS);
+NDS_FTSTRUCT_ASSERT_OFF(coll_data, NDS_FTSTRUCT_OFF_COLL_DATA);
+NDS_FTSTRUCT_ASSERT_OFF(jumps_used, NDS_FTSTRUCT_OFF_JUMPS_USED);
+NDS_FTSTRUCT_ASSERT_OFF(ga, NDS_FTSTRUCT_OFF_GA);
+NDS_FTSTRUCT_ASSERT_OFF(motion_vars, NDS_FTSTRUCT_OFF_MOTION_VARS);
+NDS_FTSTRUCT_ASSERT_OFF(input, NDS_FTSTRUCT_OFF_INPUT);
+NDS_FTSTRUCT_ASSERT_OFF(computer, NDS_FTSTRUCT_OFF_COMPUTER);
+NDS_FTSTRUCT_ASSERT_OFF(motion_attack_id,
+                        NDS_FTSTRUCT_OFF_MOTION_ATTACK_ID);
+NDS_FTSTRUCT_ASSERT_OFF(stat_flags, NDS_FTSTRUCT_OFF_STAT_FLAGS);
+NDS_FTSTRUCT_ASSERT_OFF(attack_colls, NDS_FTSTRUCT_OFF_ATTACK_COLLS);
+NDS_FTSTRUCT_ASSERT_OFF(damage_colls, NDS_FTSTRUCT_OFF_DAMAGE_COLLS);
+NDS_FTSTRUCT_ASSERT_OFF(damage_stat_flags,
+                        NDS_FTSTRUCT_OFF_DAMAGE_STAT_FLAGS);
+NDS_FTSTRUCT_ASSERT_OFF(motion_scripts, NDS_FTSTRUCT_OFF_MOTION_SCRIPTS);
+NDS_FTSTRUCT_ASSERT_OFF(joints, NDS_FTSTRUCT_OFF_JOINTS);
+NDS_FTSTRUCT_ASSERT_OFF(modelpart_status,
+                        NDS_FTSTRUCT_OFF_MODELPART_STATUS);
+NDS_FTSTRUCT_ASSERT_OFF(data, NDS_FTSTRUCT_OFF_DATA);
+NDS_FTSTRUCT_ASSERT_OFF(attr, NDS_FTSTRUCT_OFF_ATTR);
+NDS_FTSTRUCT_ASSERT_OFF(figatree, NDS_FTSTRUCT_OFF_FIGATREE);
+NDS_FTSTRUCT_ASSERT_OFF(figatree_heap, NDS_FTSTRUCT_OFF_FIGATREE_HEAP);
+NDS_FTSTRUCT_ASSERT_OFF(proc_update, NDS_FTSTRUCT_OFF_PROC_UPDATE);
+NDS_FTSTRUCT_ASSERT_OFF(proc_accessory, NDS_FTSTRUCT_OFF_PROC_ACCESSORY);
+NDS_FTSTRUCT_ASSERT_OFF(proc_interrupt, NDS_FTSTRUCT_OFF_PROC_INTERRUPT);
+NDS_FTSTRUCT_ASSERT_OFF(proc_physics, NDS_FTSTRUCT_OFF_PROC_PHYSICS);
+NDS_FTSTRUCT_ASSERT_OFF(proc_map, NDS_FTSTRUCT_OFF_PROC_MAP);
+NDS_FTSTRUCT_ASSERT_OFF(proc_damage, NDS_FTSTRUCT_OFF_PROC_DAMAGE);
+NDS_FTSTRUCT_ASSERT_OFF(proc_lagupdate, NDS_FTSTRUCT_OFF_PROC_LAGUPDATE);
+NDS_FTSTRUCT_ASSERT_OFF(proc_lagstart, NDS_FTSTRUCT_OFF_PROC_LAGSTART);
+NDS_FTSTRUCT_ASSERT_OFF(proc_status, NDS_FTSTRUCT_OFF_PROC_STATUS);
+NDS_FTSTRUCT_ASSERT_OFF(fog_color, NDS_FTSTRUCT_OFF_FOG_COLOR);
+NDS_FTSTRUCT_ASSERT_OFF(key, NDS_FTSTRUCT_OFF_KEY);
+NDS_FTSTRUCT_ASSERT_OFF(passive_vars, NDS_FTSTRUCT_OFF_PASSIVE_VARS);
+NDS_FTSTRUCT_ASSERT_OFF(hammer_tics, NDS_FTSTRUCT_OFF_HAMMER_TICS);
+NDS_FTSTRUCT_ASSERT_OFF(status_vars, NDS_FTSTRUCT_OFF_STATUS_VARS);
+NDS_FTSTRUCT_ASSERT_OFF(display_mode, NDS_FTSTRUCT_OFF_DISPLAY_MODE);
+NDS_FTSTRUCT_ASSERT_OFF(damage, NDS_FTSTRUCT_OFF_EXT_DAMAGE);
+NDS_FTSTRUCT_ASSERT_OFF(status_prev, NDS_FTSTRUCT_OFF_EXT_STATUS_PREV);
+NDS_FTSTRUCT_ASSERT_OFF(motion_frame, NDS_FTSTRUCT_OFF_EXT_MOTION_FRAME);
+NDS_FTSTRUCT_ASSERT_OFF(anim_frame, NDS_FTSTRUCT_OFF_EXT_ANIM_FRAME);
+NDS_FTSTRUCT_ASSERT_OFF(anim_speed, NDS_FTSTRUCT_OFF_EXT_ANIM_SPEED);
+NDS_FTSTRUCT_ASSERT_OFF(vel_air, NDS_FTSTRUCT_OFF_EXT_VEL_AIR);
+NDS_FTSTRUCT_ASSERT_OFF(motion_script_id,
+                        NDS_FTSTRUCT_OFF_EXT_MOTION_SCRIPT_ID);
+NDS_FTSTRUCT_ASSERT_OFF(nds_magic, NDS_FTSTRUCT_OFF_EXT_NDS_MAGIC);
+
+#undef NDS_FTSTRUCT_ASSERT_OFF
 
 typedef struct FTCommonPart {
     DObjDesc *dobjdesc;

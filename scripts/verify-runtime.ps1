@@ -2320,18 +2320,18 @@ try {
         [int]$openingRoomDLPreviewRendererTex.Groups[3].Value -ne 4 -or
         [int]$openingRoomDLPreviewRendererTex.Groups[4].Value -ne 2 -or
         [int]$openingRoomDLPreviewRendererTex.Groups[5].Value -ne 1 -or
-        [int]$openingRoomDLPreviewRendererTex.Groups[6].Value -ne 256 -or
+        [int]$openingRoomDLPreviewRendererTex.Groups[6].Value -ne 512 -or
         [int]$openingRoomDLPreviewRendererTex.Groups[7].Value -ne 4 -or
         [int]$openingRoomDLPreviewRendererTex.Groups[8].Value -ne 1 -or
         $openingRoomDLPreviewRendererTex.Groups[9].Value.ToLowerInvariant() -ne '0xf' -or`
         -not $openingRoomDLPreviewRendererTile.Success -or
-        [int]$openingRoomDLPreviewRendererTile.Groups[1].Value -ne 16 -or
+        [int]$openingRoomDLPreviewRendererTile.Groups[1].Value -ne 32 -or
         [int]$openingRoomDLPreviewRendererTile.Groups[2].Value -ne 32 -or
         [int]$openingRoomDLPreviewRendererTile.Groups[3].Value -ne 0 -or
         [int]$openingRoomDLPreviewRendererTile.Groups[4].Value -ne 4 -or
         $openingRoomDLPreviewRendererTile.Groups[5].Value.ToLowerInvariant() -ne '0xb7' -or
-        [int]$openingRoomDLPreviewRendererTile.Groups[6].Value -ne 255 -or
-        [int]$openingRoomDLPreviewRendererTile.Groups[7].Value -ne 1024 -or`
+        [int]$openingRoomDLPreviewRendererTile.Groups[6].Value -ne 511 -or
+        [int]$openingRoomDLPreviewRendererTile.Groups[7].Value -ne 512 -or`
         -not $openingRoomDLPreviewPresent.Success -or
         [int]$openingRoomDLPreviewPresent.Groups[1].Value -ne 1 -or
         [int]$openingRoomDLPreviewPresent.Groups[2].Value -ne 96 -or

@@ -17321,7 +17321,6 @@ static void ndsFighterMarioFoxInitStateFromOriginalOrder(
     }
     else if (fp->fkind == nFTKindFox)
     {
-        fp->passive_vars.fox.reserved = 0;
     }
 
     ftParamClearAttackCollAll(fighter_gobj);

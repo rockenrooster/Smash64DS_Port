@@ -16089,3 +16089,35 @@ Still deferred:
   local `ftMain*` seam because the source-layout probe shows BattleShip
   `fttypes.h` places shared fields such as `joints` and callbacks at very
   different offsets.
+
+## 2026-07-02 - Converged FTStruct Source Layout
+
+- Moved `include/ft/fighter.h` to a BattleShip-layout `FTStruct` source region
+  through `display_mode`: `coll_data=120`, `motion_attack_id=648`,
+  `attack_colls=660`, `joints=2280`, callback slots at `2516+`, and
+  source-region size `2896`. Port-only DS/proof state now starts at offset
+  `2896`, and `sizeof(FTStruct)` is guarded at `3012`.
+- Added permanent `_Static_assert` guards for the imported-TU field surface,
+  including collision, status/damage/kinetics, attack-collision, joints,
+  modelpart, callback, passive/status var, and extension-boundary offsets.
+  `docs/FTSTRUCT_PARITY.md` records the before/after parity report.
+- Adjusted the stage MP cliff-climb/cliff-attack verifier expectations to the
+  source union layout: BattleShip `ftcommoncliffclimb.c:70,73-78` calls
+  `ftMainSetStatus` and writes `status_vars.common.cliffmotion.status_id` /
+  `cliff_id`; `ftcommoncliffattack.c:10,36-45,60-64` routes the attack path
+  through that same quick/slow status setup.
+- Refreshed Opening Room renderer texture-state expectations for the
+  adapter-owned material path that now follows source `gcDrawMObjForDObj`
+  ordering before DObj display-list submission (`sys/objdisplay.c:1517-1519`
+  and `1627-1628`).
+- Default verification passed: `make NDS_DEV_SCENE_HARNESS=normal -j16`, the
+  battle Mario/Fox init/wait/dash-run ladder, `.\scripts\verify-boundary.ps1
+  -DelaySeconds 3`, and the 4-way sharded Regression profile after
+  `.\scripts\build-verify-profile.ps1 -Profile Regression -Force`.
+- Fenced `NDS_IMPORT_BATTLESHIP_FTMAIN=1` retest: init passes and the old
+  data-abort signature is gone for init/wait/dash-run retests, but ftmain is
+  not green. Wait doubles proof counts, Dash-run reports
+  `DASH_RUN_PROCPARAMS=0xfffdf3ff`, and the continuous live-hit target still
+  fails to link because remaining local `ftMain*` seams duplicate symbols from
+  `battleship_ftmain.o`. The import remains fenced; no ftmain graduation was
+  committed.

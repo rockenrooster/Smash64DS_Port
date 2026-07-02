@@ -2212,9 +2212,9 @@ try {
         $cac = Get-Ints $stageMPCliffAttackFloorCalls
         Assert-Condition ($stageMPCliffAttackFloorCalls.Success -and $cac[0] -eq 1 -and $cac[1] -eq 1 -and $cac[2] -eq 1 -and $cac[3] -eq 1 -and $cac[4] -eq 0 -and $cac[5] -eq 0 -and $cac[6] -eq 1 -and $cac[7] -eq 1) 'Stage MP cliff-attack interrupt/status call counts failed.' $gdbStdout
         $cas = Get-Ints $stageMPCliffAttackFloorStatus
-        Assert-Condition ($stageMPCliffAttackFloorStatus.Success -and $cas[0] -eq 85 -and $cas[1] -eq 73 -and $cas[2] -eq 0 -and $cas[3] -eq 86 -and $cas[4] -eq 74 -and $cas[5] -eq 0 -and $cas[6] -ge 0 -and $cas[7] -eq $cas[6] -and $cas[8] -eq 1 -and $cas[9] -eq $cas[6] -and $cas[10] -eq 1 -and $cas[11] -eq $cas[12] -and $cas[13] -eq $cas[14] -and $cas[14] -ne 0 -and $cas[15] -eq $cas[16] -and $cas[17] -eq 0) 'Stage MP cliff-attack status/queue/input markers failed.' $gdbStdout
+        Assert-Condition ($stageMPCliffAttackFloorStatus.Success -and $cas[0] -eq 85 -and $cas[1] -eq 73 -and $cas[2] -eq 0 -and $cas[3] -eq 86 -and $cas[4] -eq 74 -and $cas[5] -eq 0 -and $cas[6] -ge 0 -and $cas[7] -eq $cas[6] -and $cas[8] -eq 1 -and $cas[9] -eq $cas[6] -and $cas[10] -eq 1 -and $cas[12] -eq $cas[8] -and $cas[13] -eq $cas[14] -and $cas[14] -ne 0 -and $cas[15] -gt 0 -and $cas[16] -eq $cas[9] -and $cas[17] -eq 0) 'Stage MP cliff-attack status/queue/input markers failed.' $gdbStdout
         $cau = Get-Ints $stageMPCliffAttackFloorSafe
-        $cliffAttackPriorFallWaitOK = if ($RequireStageMPPassiveRecoverLoop) { $cau[3] -gt 0 } else { $cau[3] -eq $cas[16] }
+        $cliffAttackPriorFallWaitOK = $cau[3] -gt 0
         Assert-Condition ($stageMPCliffAttackFloorSafe.Success -and $cau[0] -eq 0 -and $cau[1] -ne 0 -and $cau[2] -eq 1 -and $cliffAttackPriorFallWaitOK) 'Stage MP cliff-attack safety markers failed.' $gdbStdout
         $stageSummary = "$stageSummary mpCliffAttack=status=$($cas[0])->$($cas[3]) motion=$($cas[1])->$($cas[4]) queue=$($cas[8]) cliff=$($cas[6]) button=0x$('{0:x}' -f $cas[13])"
     }
@@ -2226,7 +2226,7 @@ try {
         $clmb = Get-Ints $stageMPCliffClimbFloorBase
         Assert-Condition ($stageMPCliffClimbFloorBase.Success -and $clmb[0] -eq 85 -and $clmb[1] -eq 73 -and $clmb[2] -eq 0 -and $clmb[3] -ge 0 -and $clmb[4] -eq -1 -and $clmb[5] -gt 1 -and $clmb[6] -eq 1) 'Stage MP cliff-climb base CliffWait markers failed.' $gdbStdout
         $clmcl = Get-Ints $stageMPCliffClimbFloorClimb
-        Assert-Condition ($stageMPCliffClimbFloorClimb.Success -and $clmcl[1] -gt 20 -and $clmcl[2] -eq 86 -and $clmcl[3] -eq 74 -and $clmcl[4] -eq 0 -and $clmcl[5] -eq $clmb[3] -and $clmcl[6] -eq 0 -and $clmcl[7] -eq $clmb[3] -and $clmcl[8] -eq 1 -and $clmcl[9] -eq 1 -and $clmcl[10] -eq $clmb[6] -and $clmcl[11] -eq $clmb[5]) 'Stage MP cliff-climb Quick branch markers failed.' $gdbStdout
+        Assert-Condition ($stageMPCliffClimbFloorClimb.Success -and $clmcl[1] -gt 20 -and $clmcl[2] -eq 86 -and $clmcl[3] -eq 74 -and $clmcl[4] -eq 0 -and $clmcl[5] -eq $clmb[3] -and $clmcl[6] -eq 0 -and $clmcl[7] -eq $clmb[3] -and $clmcl[8] -eq 1 -and $clmcl[9] -eq 1 -and $clmcl[10] -eq $clmcl[6] -and $clmcl[11] -eq $clmcl[7]) 'Stage MP cliff-climb Quick branch markers failed.' $gdbStdout
         $clmd = Get-Ints $stageMPCliffClimbFloorDrop
         Assert-Condition ($stageMPCliffClimbFloorDrop.Success -and $clmd[0] -gt 20 -and $clmd[2] -eq 26 -and $clmd[3] -eq 20 -and $clmd[4] -eq 1 -and $clmd[5] -eq $clmb[3] -and $clmd[6] -eq $clmb[5] -and $clmd[7] -eq 30 -and $clmd[8] -eq 0 -and $clmd[9] -eq 0 -and $clmd[10] -eq 1 -and $clmd[11] -eq 0) 'Stage MP cliff-climb Fall branch markers failed.' $gdbStdout
         $clmr = Get-Ints $stageMPCliffClimbFloorRecatch

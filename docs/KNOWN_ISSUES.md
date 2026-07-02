@@ -45,20 +45,25 @@
 
 ## Active Stub Boundaries
 
-- Full `gm/gmcollision.c` is now imported through
+- Full `gm/gmcollision.c` is imported through
   `src/import/battleship_gmcollision.c`, replacing the local
   `gmCollisionGetFighterPartsWorldPosition`, `func_ovl2_800EDA0C`, and
-  `gmCollisionGetWorldPosition` copies. A full `ft/ftmain.c` wrapper now
-  compiles behind `NDS_IMPORT_BATTLESHIP_FTMAIN=1`, but default builds keep the
-  guarded local `ftMain*` seam active. The current blocker is FTStruct source
-  layout: imported and port TUs both resolve `FTStruct` to
-  `include/ft/fighter.h`, with guards freezing `sizeof(FTStruct)=3232`,
-  `coll_data=204`, `attack_colls=632`, `joints=412`, and callbacks at
-  `2680+`; BattleShip `src/ft/fttypes.h` places the same shared fields at
-  `coll_data=120`, `motion_attack_id=648`, `attack_colls=660`,
-  `joints=2280`, and callbacks at `2516+`. Fix the shared layout before
-  re-enabling the imported runtime path or deleting the project-owned
-  `ftMain*` definitions.
+  `gmCollisionGetWorldPosition` copies. `FTStruct` now has a BattleShip-layout
+  source region through `display_mode` (`coll_data=120`,
+  `motion_attack_id=648`, `attack_colls=660`, `joints=2280`, callbacks at
+  `2516+`, source-region size `2896`) and the port-only DS/proof extension
+  begins at offset `2896`. A full `ft/ftmain.c` wrapper remains fenced behind
+  `NDS_IMPORT_BATTLESHIP_FTMAIN=1`: the init harness passes and the old
+  data-abort signature is not reproduced in the wait/dash-run retest, but the
+  fenced import is not green. Wait reports doubled proof counts
+  (`FTR_WAIT count=4`, `FTR_WAIT_CALLS=4,4,4,0,0,4,0,0,0,0,0,0`), Dash-run
+  reaches the verifier with `DASH_RUN_PROCPARAMS=0xfffdf3ff` instead of the
+  default full mask, and the continuous live-hit target fails to link because
+  `battleship_ftmain.o` still collides with local `ftMain*` seams such as
+  `ftMainSetStatus`, `ftMainProcParams`, `ftMainProcSearchHitAll`,
+  `ftMainSearchHitFighter`, and hit/stat helpers. The next runtime slice should
+  delete or fence those replaced local definitions before attempting ftmain
+  graduation.
 - Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
   billboard/recalc DObj matrix seed coverage, first bounded Opening Room
   RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is
