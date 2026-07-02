@@ -83,6 +83,10 @@
 #define NDS_RENDERER_ACMUX_PRIMITIVE 3u
 #define NDS_RENDERER_ACMUX_SHADE 4u
 #define NDS_RENDERER_ACMUX_ENVIRONMENT 5u
+#define NDS_RENDERER_MDSFT_TEXTFILT 12u
+#define NDS_RENDERER_TF_POINT (0u << NDS_RENDERER_MDSFT_TEXTFILT)
+#define NDS_RENDERER_TEXTFILT_MASK (3u << NDS_RENDERER_MDSFT_TEXTFILT)
+#define NDS_RENDERER_TEXCOORD_FILTER_OFFSET (1 << 4)
 #define NDS_RENDERER_GEOM_CULL_FRONT 0x00000200u
 #define NDS_RENDERER_GEOM_CULL_BACK 0x00000400u
 
@@ -476,9 +480,14 @@ static void ndsRendererRecordUnsupported(NDSRendererStats *stats, u32 op)
     stats->unsupported_command_count++;
 }
 
-static void ndsRendererRecordIgnoredOtherMode(NDSRendererStats *stats,
-                                              u32 op, u32 w0, u32 w1)
+static void ndsRendererRecordOtherMode(NDSRendererStats *stats,
+                                       u32 op, u32 w0, u32 w1)
 {
+    u32 bits;
+    u32 pos;
+    u32 shift;
+    u32 mask;
+
     stats->state_command_count++;
     stats->othermode_command_count++;
     stats->ignored_state_command_count++;
@@ -487,6 +496,35 @@ static void ndsRendererRecordIgnoredOtherMode(NDSRendererStats *stats,
         stats->first_othermode_opcode = op;
         stats->first_othermode_w0 = w0;
         stats->first_othermode_w1 = w1;
+    }
+
+    if (op == NDS_RENDERER_OP_RDPSETOTHERMODE)
+    {
+        stats->othermode_h = w0 & 0x00ffffffu;
+        stats->othermode_l = w1;
+        return;
+    }
+    if ((op != NDS_RENDERER_OP_SETOTHERMODE_H) &&
+        (op != NDS_RENDERER_OP_SETOTHERMODE_L))
+    {
+        return;
+    }
+
+    bits = (w0 & 0xffu) + 1u;
+    pos = (w0 >> 8) & 0xffu;
+    if ((bits > 32u) || (pos >= 32u) || ((bits + pos) > 32u))
+    {
+        return;
+    }
+    shift = 32u - pos - bits;
+    mask = (bits >= 32u) ? 0xffffffffu : (((1u << bits) - 1u) << shift);
+    if (op == NDS_RENDERER_OP_SETOTHERMODE_H)
+    {
+        stats->othermode_h = (stats->othermode_h & ~mask) | (w1 & mask);
+    }
+    else
+    {
+        stats->othermode_l = (stats->othermode_l & ~mask) | (w1 & mask);
     }
 }
 
@@ -1326,6 +1364,23 @@ static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
     return poly_fmt;
 }
 
+static s32 ndsRendererHardwareTextureFilterOffset(
+    const NDSRendererStats *stats)
+{
+    if ((stats != NULL) &&
+        ((stats->othermode_h & NDS_RENDERER_TEXTFILT_MASK) !=
+         NDS_RENDERER_TF_POINT))
+    {
+        return NDS_RENDERER_TEXCOORD_FILTER_OFFSET;
+    }
+    return 0;
+}
+
+static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, s32 offset)
+{
+    return (s16)((((s32)coord * (s32)scale) >> 17) + offset);
+}
+
 static void ndsRendererHardwareColorVertex(
     const NDSRendererInputVertex *vtx,
     u32 material_color)
@@ -1875,6 +1930,7 @@ static void ndsRendererSubmitHardwareTriangle(
     u32 scale_world;
     u32 material_color;
     u32 poly_alpha;
+    s32 texture_offset;
 
     if (stats == NULL)
     {
@@ -1908,6 +1964,7 @@ static void ndsRendererSubmitHardwareTriangle(
         return;
     }
     scale_world = TRUE;
+    texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
 
     ndsRendererLoadHardwareMatrices(state, scale_world);
     if (use_texture != FALSE)
@@ -1923,9 +1980,10 @@ static void ndsRendererSubmitHardwareTriangle(
     ndsRendererHardwareColorVertex(v0, material_color);
     if (use_texture != FALSE)
     {
-        glTexCoord2t16(
-            (s16)(((s32)v0->s * (s32)stats->texture_scale_s) >> 17),
-            (s16)(((s32)v0->t * (s32)stats->texture_scale_t) >> 17));
+        glTexCoord2t16(ndsRendererHardwareTexCoord(
+                           v0->s, stats->texture_scale_s, texture_offset),
+                       ndsRendererHardwareTexCoord(
+                           v0->t, stats->texture_scale_t, texture_offset));
     }
     glVertex3v16(ndsRendererHardwareVertexCoord(v0->x, scale_world),
                  ndsRendererHardwareVertexCoord(v0->y, scale_world),
@@ -1933,9 +1991,10 @@ static void ndsRendererSubmitHardwareTriangle(
     ndsRendererHardwareColorVertex(v1, material_color);
     if (use_texture != FALSE)
     {
-        glTexCoord2t16(
-            (s16)(((s32)v1->s * (s32)stats->texture_scale_s) >> 17),
-            (s16)(((s32)v1->t * (s32)stats->texture_scale_t) >> 17));
+        glTexCoord2t16(ndsRendererHardwareTexCoord(
+                           v1->s, stats->texture_scale_s, texture_offset),
+                       ndsRendererHardwareTexCoord(
+                           v1->t, stats->texture_scale_t, texture_offset));
     }
     glVertex3v16(ndsRendererHardwareVertexCoord(v1->x, scale_world),
                  ndsRendererHardwareVertexCoord(v1->y, scale_world),
@@ -1943,9 +2002,10 @@ static void ndsRendererSubmitHardwareTriangle(
     ndsRendererHardwareColorVertex(v2, material_color);
     if (use_texture != FALSE)
     {
-        glTexCoord2t16(
-            (s16)(((s32)v2->s * (s32)stats->texture_scale_s) >> 17),
-            (s16)(((s32)v2->t * (s32)stats->texture_scale_t) >> 17));
+        glTexCoord2t16(ndsRendererHardwareTexCoord(
+                           v2->s, stats->texture_scale_s, texture_offset),
+                       ndsRendererHardwareTexCoord(
+                           v2->t, stats->texture_scale_t, texture_offset));
     }
     glVertex3v16(ndsRendererHardwareVertexCoord(v2->x, scale_world),
                  ndsRendererHardwareVertexCoord(v2->y, scale_world),
@@ -2229,7 +2289,7 @@ static void ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_SETOTHERMODE_H:
         case NDS_RENDERER_OP_SETOTHERMODE_L:
         case NDS_RENDERER_OP_RDPSETOTHERMODE:
-            ndsRendererRecordIgnoredOtherMode(stats, op, w0, w1);
+            ndsRendererRecordOtherMode(stats, op, w0, w1);
             break;
 
         case NDS_RENDERER_OP_CULLDL:

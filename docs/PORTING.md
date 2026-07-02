@@ -15849,3 +15849,17 @@ Still deferred:
   `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Remaining combiner
   behavior, depth/material policy, broader texture coverage, and renderer
   cutover stay deferred.
+
+## 2026-07-02 - Applied HW Texture Filter Bias
+
+- Recorded current `G_SETOTHERMODE_H` / `G_SETOTHERMODE_L` state in renderer
+  stats, preserving existing command diagnostics while exposing texture-filter
+  state to the hardware submit path.
+- Applied the sm64-nds texture-filter coordinate-bias rule: point filtering uses
+  raw scaled coordinates, while non-point filtering adds the `1 << 4` DS
+  texcoord offset before `glTexCoord2t16`.
+- Reverified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  with `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8` and refreshed
+  `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. Remaining combiner
+  behavior, depth/material policy, broader texture coverage, and renderer
+  cutover stay deferred.

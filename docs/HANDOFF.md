@@ -63,8 +63,8 @@ key now includes the source render/load tile, TMEM, palette, and tile-origin
 state for that opt-in path. The hardware triangle path now applies recorded
 primitive/environment material color and alpha from the current combine state,
 maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits, and
-uses the sm64-nds decal-combine rule to select DS `POLY_DECAL`; that is the
-latest gate.
+uses the sm64-nds decal-combine and texture-filter coordinate-bias rules; that
+is the latest gate.
 The next renderer pass should finish remaining combiner behavior, depth/material
 policy, broader texture-format coverage, and renderer cutover. Default builds
 still use the software preview.

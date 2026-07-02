@@ -166,6 +166,8 @@ typedef struct NDSRendererStats
     u32 first_othermode_opcode;
     u32 first_othermode_w0;
     u32 first_othermode_w1;
+    u32 othermode_h;
+    u32 othermode_l;
     u32 first_cull_w0;
     u32 first_cull_w1;
     const Gfx *first_branch_dl;

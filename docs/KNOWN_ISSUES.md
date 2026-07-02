@@ -73,7 +73,8 @@
   recorded primitive/environment material color and alpha from the current
   combine state, maps recorded F3DEX2 front/back cull geometry mode to DS
   polygon cull bits, applies the sm64-nds decal-combine rule to DS
-  `POLY_DECAL`, and the all-DL verifier proves one hardware texture
+  `POLY_DECAL`, applies its texture-filter coordinate-bias rule, and the
+  all-DL verifier proves one hardware texture
   upload/bind (`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`).
   Hardware all-DL stats prove triangle submission and matrix seeds, but the
   direct all-DL scene emits no matrix-word stream
