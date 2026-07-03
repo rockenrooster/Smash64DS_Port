@@ -78,8 +78,9 @@ proves `hwdepth=z316/314/proj0/0/decal0/0` and
 stage gcDrawAll verifier proves a post-proof hardware replay, actual hardware
 triangles, and frame flush (`hwsubmit=252`, `hwtri=1152`, `hwflush=1/1`).
 The stage hardware replay now seeds the source display-wrapper depth mode and
-proves `hwdepth=z456/proj696/decal0`. Full visual fidelity still needs
-remaining combiner/material behavior, broader texture/no-z/decal source-scene
+proves `hwdepth=z456/proj696/decal0` plus source-scene texture activity
+`hwtex=bind528/upload42/ready528/reject594/fmt4/max32x32`. Full visual fidelity
+still needs remaining combiner/material behavior, unsupported texture-state
 coverage, and renderer cutover work. Default builds still use the software
 preview.
 

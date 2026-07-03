@@ -50,8 +50,8 @@ sm64-nds-style no-z / decal-depth submission. Current captures:
 reports `hwdepth=z316/314/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
 stage gcDrawAll verifier reports `hwsubmit=252`, `hwtri=1152`, and
-`hwdepth=z456/proj696/decal0` with `hwflush=1/1`. Default builds still use
-the software preview.
+`hwdepth=z456/proj696/decal0`, `hwtex=bind528/upload42/ready528/reject594/fmt4/max32x32`,
+and `hwflush=1/1`. Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local
@@ -89,7 +89,8 @@ the work reaches a scene-level boundary such as `battle_playable` or
    proofs graduate.
 3. Broaden hardware texture coverage now that all-DL CI/TLUT upload is proven
    and material DL emission reaches the hardware traversal where source MObjs
-   expose branchable material state.
+   expose branchable material state; the Pupupu stage hardware path now proves
+   ready texture activity but still reports unsupported texture-state rejects.
 
 ## Verification
 

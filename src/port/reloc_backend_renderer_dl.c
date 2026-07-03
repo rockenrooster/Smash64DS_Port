@@ -3197,6 +3197,34 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         stats.hardware_projected_depth_triangle_count;
     gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
         stats.hardware_decal_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+        stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+        stats.hardware_texture_upload_count;
+    gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
+        stats.hardware_texture_ready_count;
+    gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
+        stats.hardware_texture_reject_count;
+    if (stats.hardware_texture_ready_count != 0u)
+    {
+        if (stats.hardware_texture_format < 32u)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureFormatMask |=
+                1u << stats.hardware_texture_format;
+        }
+        if (stats.hardware_texture_width >
+            gNdsStageGCDrawAllLoopHardwareTextureMaxWidth)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureMaxWidth =
+                stats.hardware_texture_width;
+        }
+        if (stats.hardware_texture_height >
+            gNdsStageGCDrawAllLoopHardwareTextureMaxHeight)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureMaxHeight =
+                stats.hardware_texture_height;
+        }
+    }
 }
 
 void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,

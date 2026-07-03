@@ -16248,3 +16248,15 @@ Still deferred:
 - The existing opt-in Pupupu stage hardware verifier now checks the z/projected
   accounting and passed with `hwsubmit=252`, `hwtri=1152`,
   `hwdepth=z456/proj696/decal0`, and `hwflush=1/1`.
+
+## 2026-07-03 - Stage Hardware Texture Stats
+
+- Reused the existing hardware texture stats path for the opt-in Pupupu
+  stage-inclusive `gcDrawAll` replay, resetting and accumulating the stage
+  counters alongside the existing submit/depth counters.
+- The existing stage hardware verifier now checks ready texture bind/upload
+  activity and passed with `hwsubmit=252`, `hwtri=1152`,
+  `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind528/upload42/ready528/reject594/fmt4/max32x32`, and
+  `hwflush=1/1`. The reject count remains a follow-up signal for unsupported
+  stage texture states, not a hard failure for this proof.

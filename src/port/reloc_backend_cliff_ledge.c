@@ -15484,6 +15484,13 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount = 0u;
     gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount = 0u;
     gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount = 0u;
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount = 0u;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount = 0u;
+    gNdsStageGCDrawAllLoopHardwareTextureReadyCount = 0u;
+    gNdsStageGCDrawAllLoopHardwareTextureRejectCount = 0u;
+    gNdsStageGCDrawAllLoopHardwareTextureFormatMask = 0u;
+    gNdsStageGCDrawAllLoopHardwareTextureMaxWidth = 0u;
+    gNdsStageGCDrawAllLoopHardwareTextureMaxHeight = 0u;
     sNdsStageGCDrawAllLoopCurrentDisplayLinkID = -1;
 #if NDS_RENDERER_HW_TRIANGLES
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;

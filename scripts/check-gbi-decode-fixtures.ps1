@@ -422,6 +422,7 @@ Assert-True ($rendererHeader.Contains('ndsRendererHardwareConsumeSubmittedFrame'
 $startupHeader = Get-Content (Join-Path $root 'include/nds/nds_startup.h') -Raw
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawHardwareTextureReadyCount')) 'All-DL hardware texture diagnostics are missing from the startup header.'
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount')) 'All-DL hardware z-buffer diagnostics are missing from the startup header.'
+Assert-True ($startupHeader.Contains('gNdsStageGCDrawAllLoopHardwareTextureReadyCount')) 'Stage gcDrawAll hardware texture startup diagnostics are missing.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Battle DL renderer matrix adapter is missing.'
 Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL renderer does not route DObj prep through original matrix helpers.'
@@ -445,6 +446,7 @@ Assert-True ($rendererAdapter.Contains('NDS_FIGHTER_DL_OP_LOADTLUT')) 'Battle DL
 Assert-True ($rendererAdapter.Contains('HardwareZBufferTriangleCount')) 'All-DL renderer does not expose hardware z-buffer stats.'
 Assert-True ($rendererAdapter.Contains('HardwareProjectedDepthTriangleCount')) 'All-DL renderer does not expose hardware projected-depth stats.'
 Assert-True ($rendererAdapter.Contains('HardwareDecalDepthTriangleCount')) 'All-DL renderer does not expose hardware decal-depth stats.'
+Assert-True ($rendererAdapter.Contains('gNdsStageGCDrawAllLoopHardwareTextureReadyCount')) 'Stage gcDrawAll renderer does not expose hardware texture stats.'
 $compatShims = Get-Content (Join-Path $root 'src/port/reloc_backend_compat_shims.c') -Raw
 Assert-True ($compatShims.Contains('gcAddXObjForCamera(cobj, 0x4C, 0)')) 'VSBattle compatibility camera no longer exposes the BattleShip 0x4C matrix kind.'
 $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c') -Raw
@@ -463,6 +465,7 @@ Assert-True ($stageGCDrawVerifier.Contains('STAGE_GCDRAWALL_HW')) 'gcDrawAll ver
 Assert-True ($stageGCDrawVerifier.Contains('hwsubmit=')) 'gcDrawAll verifier hardware submit-count summary is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('hwtri=')) 'gcDrawAll verifier hardware triangle-count summary is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('hwdepth=')) 'gcDrawAll verifier hardware depth summary is missing.'
+Assert-True ($stageGCDrawVerifier.Contains('hwtex=')) 'gcDrawAll verifier hardware texture summary is missing.'
 $stageGCDrawWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1') -Raw
 Assert-True ($stageGCDrawWrapper.Contains('HardwareTriangles')) 'Stage gcDrawAll verifier hardware switch is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1')) 'Stage gcDrawAll verifier does not enable hardware renderer builds.'

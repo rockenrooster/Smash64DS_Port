@@ -568,7 +568,7 @@ try {
             'printf "STAGE_GCDRAWALL_DOBJ=%u,%#x,%#x,%#x,%#x,%#x\n", gNdsStageGCDrawAllLoopDObjDrawCallbackCount, gNdsStageGCDrawAllLoopDObjDrawKindMask, gNdsStageGCDrawAllLoopLayerDObjMask, gNdsStageGCDrawAllLoopMapDObjMask, gNdsStageGCDrawAllLoopLayerDLReadyMask, gNdsStageGCDrawAllLoopMapDLReadyMask',
             'printf "STAGE_GCDRAWALL_SAFE=%u,%u,%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopPrepared, gNdsStageGCDrawAllLoopBaseResultSeen, gNdsStageGCDrawAllLoopManualDisplayCallCount, gNdsStageGCDrawAllLoopUnexpectedSceneCount, gNdsStageGCDrawAllLoopNonStageCaptureCount, gNdsStageGCDrawAllLoopGObjCountDelta',
             'printf "STAGE_GCDRAWALL_PIXELS=%u,%u,%#x\n", gNdsStageGCDrawAllLoopPreviewCommitDelta, gNdsStageGCDrawAllLoopTotalPixelCount, gNdsStageGCDrawAllLoopCompatMask',
-            'printf "STAGE_GCDRAWALL_HW=%u,%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount, gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount'
+            'printf "STAGE_GCDRAWALL_HW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount, gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareTextureBindCount, gNdsStageGCDrawAllLoopHardwareTextureUploadCount, gNdsStageGCDrawAllLoopHardwareTextureReadyCount, gNdsStageGCDrawAllLoopHardwareTextureRejectCount, gNdsStageGCDrawAllLoopHardwareTextureFormatMask, gNdsStageGCDrawAllLoopHardwareTextureMaxWidth, gNdsStageGCDrawAllLoopHardwareTextureMaxHeight'
         )
         $gdbCommands = @($gdbCommands[0..($gdbCommands.Count - 3)] + $stageCommands + $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)])
     }
@@ -1196,7 +1196,7 @@ try {
     $stageDObj = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_DOBJ=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $stageSafe = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_SAFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
     $stagePixels = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_PIXELS=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
-    $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $stageCollision = [regex]::Match($gdbStdout, 'STAGE_COLLISION=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $stageCollisionGeom = [regex]::Match($gdbStdout, 'STAGE_COLLISION_GEOM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageCollisionProject = [regex]::Match($gdbStdout, 'STAGE_COLLISION_PROJECT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1747,7 +1747,8 @@ try {
             Assert-Condition ($shw[1] -gt 0) 'Stage-inclusive hardware replay did not submit hardware triangles.' $gdbStdout
             Assert-Condition ($shw[1] -eq ($shw[2] + $shw[3])) 'Stage-inclusive hardware depth accounting does not match submitted triangles.' $gdbStdout
             Assert-Condition ($shw[3] -gt 0) 'Stage-inclusive hardware replay did not preserve source no-z projected-depth submission.' $gdbStdout
-            $stageSummary = "$stageSummary hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4])"
+            Assert-Condition ($shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[9] -ne 0 -and $shw[10] -gt 0 -and $shw[11] -gt 0) 'Stage-inclusive hardware replay did not bind/upload a ready texture.' $gdbStdout
+            $stageSummary = "$stageSummary hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11])"
         }
     }
     $stageSummary = "$stageSummary$dashRunSummary$mpDamageRecoverSummary$mpLiveHitSummary"
