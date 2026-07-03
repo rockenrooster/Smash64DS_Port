@@ -1041,10 +1041,19 @@ extern void gcPlayDObjAnimJoint(DObj *dobj);
 extern void gcParseMObjMatAnimJoint(MObj *mobj);
 extern void gcPlayMObjMatAnim(MObj *mobj);
 void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale);
+void battleship_ftAnimParseDObjFigatree(DObj *root_dobj);
+void battleship_ftAnimEndSetWait(GObj *fighter_gobj);
+void battleship_ftAnimEndSetFall(GObj *fighter_gobj);
+sb32 battleship_ftAnimEndCheckSetStatus(GObj *fighter_gobj,
+                                        void (*proc_status)(GObj*));
 
 void ftAnimParseDObjFigatree(DObj *root_dobj)
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    battleship_ftAnimParseDObjFigatree(root_dobj);
+#else
     (void)root_dobj;
+#endif
 }
 
 static s32 ndsFTStructJointLoopLimit(const FTStruct *fp)
@@ -2337,6 +2346,10 @@ sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj)
 
 void ftAnimEndSetWait(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    battleship_ftAnimEndSetWait(fighter_gobj);
+    return;
+#endif
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttackDashUpdateActive != FALSE))
     {
@@ -2446,6 +2459,10 @@ void ftAnimEndSetWait(GObj *fighter_gobj)
 
 void ftAnimEndSetFall(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    battleship_ftAnimEndSetFall(fighter_gobj);
+    return;
+#endif
     if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
         (sNdsFighterJumpAttackAirRefreshActive != FALSE))
     {
@@ -2499,6 +2516,9 @@ static void ndsFTCommonCliffWaitApplyOriginalPostStatus(GObj *fighter_gobj)
 
 sb32 ftAnimEndCheckSetStatus(GObj *fighter_gobj, void (*proc_status)(GObj*))
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    return battleship_ftAnimEndCheckSetStatus(fighter_gobj, proc_status);
+#endif
     if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
