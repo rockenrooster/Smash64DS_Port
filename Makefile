@@ -19,7 +19,7 @@ BUILD := build
 NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
-NDS_IMPORT_BATTLESHIP_FTMAIN ?= 0
+override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	battle_mariofox_stage_inishie_scale_loop \
 	menu_chain_mariofox_stage_inishie_scale_loop \
@@ -477,9 +477,7 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downattack.c \
 	battleship_ftcommon_downforwardback.c \
 	battleship_ftcommon_downstand.c
-ifeq ($(NDS_IMPORT_BATTLESHIP_FTMAIN),1)
 CFILES += battleship_ftmain.c
-endif
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
 CFILES += battleship_grmodelsetup.c
 endif
