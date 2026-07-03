@@ -478,6 +478,8 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
 NDS_MENU_RELOC_SYMBOLS(NDS_DECLARE_MENU_RELOC_SYMBOL)
 #undef NDS_DECLARE_MENU_RELOC_SYMBOL
 
+#include <reloc_data_ftdata_symbols.h>
+
 void lbRelocInitSetup(LBRelocSetup *setup);
 size_t lbRelocGetFileSize(const void *file_id);
 void *lbRelocGetExternHeapFile(const void *file_id, void *heap);

@@ -10,6 +10,7 @@
 #include <PR/ultratypes.h>
 #include <PR/gbi.h>
 #include <stddef.h>
+#include <macros.h>
 #include <ssb_types.h>
 #include <mp/map.h>
 #include <sys/controller.h>
@@ -34,6 +35,8 @@
 typedef struct GObj GObj;
 typedef struct FTData FTData;
 typedef struct alSoundEffect alSoundEffect;
+
+#include <ft/ftdata_file_slots.h>
 
 typedef enum FTKind {
     nFTKindPlayableStart,
@@ -1217,11 +1220,36 @@ typedef enum FTMotionEvent {
     nFTMotionEventSetAfterImage
 } FTMotionEvent;
 
+#define FTANIM_FLAG_TRANSN_JOINT 0x80000000u
+#define FTANIM_FLAG_XROTN_JOINT 0x40000000u
+#define FTANIM_FLAG_YROTN_JOINT 0x20000000u
 #define FTANIM_FLAG_SUBMOTION_SCRIPT 0x00000010u
 #define FTANIM_FLAG_ANIMJOINT 0x00000008u
 #define FTANIM_FLAG_TRANSLATE_SCALES 0x00000004u
 #define FTANIM_FLAG_SHIELDPOSE 0x00000002u
 #define FTANIM_FLAG_ANIMLOCKS 0x00000001u
+#define FTANIM_FLAG_NONE 0x00000000u
+
+#define ftMotionCommandEnd() GC_FIELDSET(nFTMotionEventEnd, 26, 6)
+#define ftMotionCommandWait(frames) \
+    (GC_FIELDSET(nFTMotionEventSyncWait, 26, 6) | GC_FIELDSET(frames, 0, 26))
+#define ftMotionCommandWaitAsync(frames) \
+    (GC_FIELDSET(nFTMotionEventAsyncWait, 26, 6) | GC_FIELDSET(frames, 0, 26))
+#define ftMotionPlayFGM(fgm_id) \
+    (GC_FIELDSET(nFTMotionEventPlayFGM, 26, 6) | GC_FIELDSET(fgm_id, 0, 26))
+#define ftMotionCommandSubroutineS1() \
+    GC_FIELDSET(nFTMotionEventSubroutine, 26, 6)
+#define ftMotionCommandSubroutineS2(addr) ((uintptr_t)addr)
+#define ftMotionCommandSubroutine(addr) \
+    ftMotionCommandSubroutineS1(), ftMotionCommandSubroutineS2(addr)
+#define ftMotionCommandReturn() GC_FIELDSET(nFTMotionEventReturn, 26, 6)
+#define ftMotionCommandGotoS1() GC_FIELDSET(nFTMotionEventGoto, 26, 6)
+#define ftMotionCommandGotoS2(addr) ((uintptr_t)addr)
+#define ftMotionCommandGoto(addr) \
+    ftMotionCommandGotoS1(), ftMotionCommandGotoS2(addr)
+#define ftMotionCommandSetSlopeContour(flag) \
+    (GC_FIELDSET(nFTMotionEventSetSlopeContour, 26, 6) | \
+     GC_FIELDSET(flag, 0, 26))
 
 #define ftMotionEventAdvance(event, type) \
     ((event)->p_script = \

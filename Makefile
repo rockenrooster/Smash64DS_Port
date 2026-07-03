@@ -477,6 +477,9 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downattack.c \
 	battleship_ftcommon_downforwardback.c \
 	battleship_ftcommon_downstand.c
+CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
+	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
+	reloc_backend_ftdata_symbols.c
 CFILES += battleship_ftanim.c battleship_ftanimend.c battleship_ftkey.c
 CFILES += battleship_ftmain.c
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)

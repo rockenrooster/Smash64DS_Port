@@ -6204,35 +6204,6 @@ volatile u32 gNdsOpeningRoomRelocMObjSubFirstTextureFlags;
 
 SYAudioPublicSettings dSYAudioPublicSettings;
 size_t gFTManagerFigatreeHeapSize;
-FTDesc dFTManagerDefaultFighterDesc = {
-    .fkind = nFTKindNull,
-    .pos = { 0.0F, 0.0F, 0.0F },
-    .lr = 1,
-    .team = 0,
-    .player = 0,
-    .detail = nFTPartsDetailHigh,
-    .costume = 0,
-    .shade = 0,
-    .handicap = 9,
-    .level = 3,
-    .stock_count = 0,
-    .unk_rebirth_0x1C = 0,
-    .unk_rebirth_0x1D = 3,
-    .team_order = 0,
-    .is_skip_entry = FALSE,
-    .is_skip_shadow_setup = FALSE,
-    .is_magnify_ignore = FALSE,
-    .copy_kind = nFTKindMario,
-    .damage = 0,
-    .pkind = nFTPlayerKindDemo,
-    .controller = NULL,
-    .button_mask_a = 0x8000,
-    .button_mask_b = 0x4000,
-    .button_mask_z = 0x2000,
-    .button_mask_l = 0x0020,
-    .figatree_heap = NULL,
-    .proc_display = ftDisplayMainProcDisplay
-};
 f32 gMPCollisionLightAngleX;
 f32 gMPCollisionLightAngleY;
 MPGroundData *gMPCollisionGroundData;
@@ -6282,7 +6253,6 @@ uintptr_t llMarioModelStockSprite = 0x72d0u;
 uintptr_t llMarioModelFTEmblemSprite = 0x74c8u;
 uintptr_t llFoxModelStockSprite = 0x7c28u;
 uintptr_t llFoxModelFTEmblemSprite = 0x7e08u;
-void *gFTDataKirbyMainMotion;
 uintptr_t llKirbyMainMotionftKirbyAttack100Effect;
 uintptr_t llMVCommonFileID;
 uintptr_t llMVOpeningCommonFileID;

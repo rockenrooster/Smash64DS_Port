@@ -62,12 +62,15 @@ relocation ownership.
 
 ## Result
 
-Importing `ftanim.c`, `ftanimend.c`, and `ftkey.c` can be staged after symbol
-collision cleanup. Importing and graduating `ftmanager.c` plus full original
-status tables is blocked until the port first expands the fighter-data asset
-slice: full `FTData` layout, source `ftdata.c` or an equivalent original-data
-bridge, and `lbRelocGetStatusBufferFile` semantics for the Mario/Fox payloads.
+The fighter-data asset slice has now unblocked the data half: `FTData` matches
+the BattleShip layout, `ft/ftdata.c` is imported whole, and the tiny
+`ftchar/*/*.c` storage TUs plus `sc/scsubsys/scsubsysdata*.c` descriptor data
+provide `dFTManagerDataFiles` and the Mario/Fox submotion descriptors. The
+remaining manager blocker is runtime ownership: implement
+`lbRelocGetStatusBufferFile` semantics for the Mario/Fox payloads, then compile
+and prove fenced `ftmanager.c` without deleting the current DS manager/motion
+seams yet.
 
 Do not replace the current status table or delete the manager/motion seams
-until that data/reloc slice exists; otherwise the build would either fail to
-link or silently run a hand-authored manager under original status names.
+until the fenced manager proof is green; otherwise the build would either fail
+to link or silently run a hand-authored manager under original status names.

@@ -65,6 +65,13 @@
   scout in `docs/FT_ANIM_STATUS_SCOUT.md` shows that full `ftmanager.c` and
   status-table graduation first needs original `FTData`/`ftdata.c` plus
   `lbRelocGetStatusBufferFile` semantics for the fighter payloads.
+- `ft/ftdata.c` is imported, but its particle ROM banks are link stubs in
+  `src/port/reloc_backend_ftdata_stubs.c` because the current DS O2R manifest
+  has no particle bank assets. The generated
+  `src/port/reloc_backend_ftdata_symbols.c` also lists every upstream-stubbed
+  fighter submotion `ll*` token that BattleShip's US reloc symbol table leaves
+  at zero. Mario/Fox manager payload file IDs are real; broader fighter
+  submotion asset loading remains a later slice.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and

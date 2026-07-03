@@ -16619,3 +16619,15 @@ Still deferred:
 - Verified a normal build with the compile-only `battleship_ftanim.c`,
   `battleship_ftanimend.c`, and `battleship_ftkey.c` wrappers. No verifier
   expectations were changed.
+
+## 2026-07-03 - BattleShip ftdata Import
+
+- Imported `ft/ftdata.c` whole through `src/import/battleship_ftdata.c` and
+  source-owned the descriptor support it needs: tiny `ftchar/*/*.c` file-slot
+  storage TUs, `sc/scsubsys/scsubsysdata*.c` submotion descriptor arrays, the
+  generated BattleShip main-motion offset header, and addressable reloc-token
+  declarations for every imported `ll*` reference.
+- Kept missing asset behavior explicit: particle ROM bank boundaries are local
+  stubs, and upstream-stubbed fighter submotion tokens remain zero in the
+  generated reloc-symbol source. Mario/Fox main manager payload file IDs remain
+  real and are the target for the fenced `ftmanager.c` proof.

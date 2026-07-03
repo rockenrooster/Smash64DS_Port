@@ -10,6 +10,8 @@ typedef enum gmMusicID
 
 typedef enum gmFGMID
 {
+    nSYAudioFGMFireShoot1 = 2,
+    nSYAudioFGMUnkSmallPing1 = 6,
     nSYAudioFGMGuardOn = 13,
     nSYAudioFGMGuardOff = 14,
     nSYAudioFGMShieldBreak = 15,
@@ -26,9 +28,13 @@ typedef enum gmFGMID
     nSYAudioFGMPunchL = 37,
     nSYAudioFGMPunchM = 38,
     nSYAudioFGMPunchS = 40,
+    nSYAudioFGMLightSwingS = 51,
     nSYAudioFGMHarisenHit = 51,
     nSYAudioFGMBatHit = 52,
     nSYAudioFGMStarGet = 54,
+    nSYAudioFGMNessLanding = 86,
+    nSYAudioFGMGroundGrind3 = 106,
+    nSYAudioFGMNessJump = 108,
     nSYAudioFGMMarioDash = 121,
     nSYAudioFGMSamusDash = 127,
     nSYAudioFGMMenuSelect = 168,
@@ -44,6 +50,9 @@ typedef enum gmFGMID
     nSYAudioFGMSlashL = 261,
     nSYAudioFGMSlashM = 262,
     nSYAudioFGMSlashS = 263,
+    nSYAudioFGMBladeSwing4 = 268,
+    nSYAudioFGMBladeSwing3 = 269,
+    nSYAudioFGMBladeDraw = 274,
     nSYAudioFGMPlayerHeal = 274,
     nSYAudioFGMJungleTaruCannShoot = 281,
     nSYAudioFGMJungleTaruCannEnter = 282,
@@ -55,6 +64,15 @@ typedef enum gmFGMID
 
 typedef enum gmVoiceID
 {
+    nSYAudioVoiceDonkeySmash1 = 336,
+    nSYAudioVoiceCaptainAttackS4 = 355,
+    nSYAudioVoiceCaptainJumpAerial = 363,
+    nSYAudioVoiceCaptainHeavyGet = 364,
+    nSYAudioVoiceFoxSelected = 375,
+    nSYAudioVoiceFoxWin = 378,
+    nSYAudioVoiceLinkSmash1 = 411,
+    nSYAudioVoiceLuigiFuraFura = 431,
+    nSYAudioVoiceMarioHereWe = 451,
     nSYAudioVoiceAnnounceBlueTeam = 566,
     nSYAudioVoiceAnnounceDonkey = 574,
     nSYAudioVoiceAnnounceCaptain = 576,
@@ -69,9 +87,14 @@ typedef enum gmVoiceID
     nSYAudioVoiceAnnouncePurin = 599,
     nSYAudioVoiceAnnounceRedTeam = 601,
     nSYAudioVoiceAnnounceFreeForAll = 521,
+    nSYAudioVoicePikachuFuraSleep = 563,
     nSYAudioVoiceAnnounceSamus = 604,
     nSYAudioVoiceAnnounceTeamBattle = 535,
     nSYAudioVoiceAnnounceYoshi = 626,
+    nSYAudioVoiceSamusSmash1 = 585,
+    nSYAudioVoiceYoshiAppeal = 595,
+    nSYAudioVoiceYoshiSmash1 = 596,
+    nSYAudioVoiceYoshiSmash2 = 597,
     nSYAudioVoicePublicCheer = 618,
     nSYAudioVoicePublicExcited = 626,
     nSYAudioFGMVoiceEnd = 0x2B7
