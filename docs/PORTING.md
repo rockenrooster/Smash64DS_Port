@@ -16674,3 +16674,21 @@ Still deferred:
 - Verified the direct/menu init/wait/dash-run ladder, `.\scripts\verify-boundary.ps1
   -DelaySeconds 3`, and
   `.\scripts\verify-stage-mplivehit-continuous-runtime.ps1 -DelaySeconds 3`.
+
+## 2026-07-03 - Default ftmanager Regression Gate Follow-up
+
+- Extended the default-manager natural-motion gate to the gcDrawAll/stage/MP
+  regression family. Under `NDS_IMPORT_BATTLESHIP_FTMANAGER=1`, those modes now
+  prove Mario/Fox manager creation, figatree-backed Wait animation for 300+
+  frames, and one Wait -> Walk transition through imported `ftanim.c`/`ftkey.c`
+  before returning from the verifier.
+- [coverage-reduced] This replaces the old DS synthetic
+  gcDrawAll/stage/MP marker stacks in the default path. Rebuild that coverage on
+  top of original-manager live structs; do not reintroduce the deleted
+  motion-extract seam or parallel synthetic fighter execution.
+- Verified direct and menu-chain gcDrawAll targeted checks,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`,
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`,
+  `.\scripts\verify-stage-mplivehit-continuous-runtime.ps1 -DelaySeconds 3`, a
+  refreshed Regression prebuild, and all four sharded Regression `-NoBuild`
+  runs.

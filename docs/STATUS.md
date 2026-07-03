@@ -43,8 +43,8 @@ ftmanager natural-motion: wait=300/300, anim=299/299,
 walk=8/8, updates=308, mask=0x3ff
 ```
 
-The older gcRunAll, dash, and selected Fox Jab2 live-hit/status marker stacks
-are now documented as coverage-reduced follow-up work in
+The older gcRunAll, gcDrawAll/stage/MP, dash, and selected Fox Jab2
+live-hit/status marker stacks are now documented as coverage-reduced follow-up work in
 `docs/KNOWN_ISSUES.md`.
 
 ## Latest Proof
@@ -75,10 +75,11 @@ import `ft/ftmanager.c`, the original common/Mario/Fox status descriptor
 tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. Mario/Fox are created
 through original manager descriptors and status-buffer payload loading, and the
 natural-motion proof advances Wait animation for 300+ frames with valid joints
-before driving Wait -> Walk through the same imported runtime. The remaining
-stage compat-replay/cliffmotion seams in `ftMainSetStatus` are deliberately
-kept as documented follow-up because removing them still needs status-by-status
-proofs.
+before driving Wait -> Walk through the same imported runtime. The refreshed
+Regression prebuild plus all four sharded `-NoBuild` Regression runs passed on
+this default path. The remaining stage compat-replay/cliffmotion seams in
+`ftMainSetStatus` are deliberately kept as documented follow-up because
+removing them still needs status-by-status proofs.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 It covers the current matrix, material, texture, depth/fog/alpha, primitive-Z,
@@ -95,8 +96,8 @@ setup/physics tick remains preserved as older regression coverage.
 ## Current Blocker
 
 The active boundary is still bounded proof scaffolding, not continuous gameplay.
-The next useful gameplay work is to rebuild the reduced dash/live-hit proof
-coverage on top of the natural original-manager runtime, then move toward
+The next useful gameplay work is to rebuild the reduced gcDrawAll/stage/MP,
+dash, and live-hit proof coverage on top of the natural original-manager runtime, then move toward
 `battle_playable` camera, HUD, match-flow, and renderer cutover work.
 
 - renderer follow-up: finish opt-in hardware combiner/material policy,

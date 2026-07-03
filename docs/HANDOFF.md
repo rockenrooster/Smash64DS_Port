@@ -66,9 +66,10 @@ Runtime slice 2 graduated the original manager/status/animation path. Default
 builds import `ft/ftmanager.c`, the full original common/Mario/Fox status
 descriptor tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. The current
 natural-motion gate proves Mario/Fox manager creation, valid figatree-backed
-joints, 300+ Wait animation frames, and Wait -> Walk on input. The old
-gcRunAll/dash/live-hit synthetic marker stacks are now coverage-reduced
-follow-up work; do not resurrect their motion-extract seam.
+joints, 300+ Wait animation frames, and Wait -> Walk on input. A refreshed
+Regression prebuild plus all four sharded `-NoBuild` Regression runs passed.
+The old gcRunAll/gcDrawAll/stage/MP/dash/live-hit synthetic marker stacks are
+now coverage-reduced follow-up work; do not resurrect their motion-extract seam.
 
 ## Process Change
 
@@ -81,8 +82,8 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Runtime follow-up: rebuild dash/live-hit proof coverage on top of the
-   natural original-manager runtime, then remove the remaining
+1. Runtime follow-up: rebuild gcDrawAll/stage/MP/dash/live-hit proof coverage
+   on top of the natural original-manager runtime, then remove the remaining
    `ftMainSetStatus` compat-replay/cliffmotion seams status-by-status.
 2. Renderer follow-up: finish opt-in hardware combiner/material policy, broaden
    remaining texture-state and no-z/decal/prim-depth source-scene coverage, then

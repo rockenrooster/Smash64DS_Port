@@ -6142,11 +6142,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         {
             u32 i;
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER && \
-    ((NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
-     (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP))
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
             ndsFighterMarioFoxNaturalMotionPrepare();
             for (i = 0u; i < NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX; i++)
             {

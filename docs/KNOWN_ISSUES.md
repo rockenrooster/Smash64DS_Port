@@ -82,14 +82,14 @@
   those stubs status-by-status as the owning original TUs and assets are
   imported.
 - Coverage-reduced after original-manager graduation: modes `53/54` gcRunAll,
-  modes `39/40` dash-run, and modes `161/162` status-loop now assert the
-  natural manager motion gate instead of the old DS synthetic
-  gcRunAll/dash/attack/guard/live-hit marker stacks. This is intentional for
-  the default path because motion scripts now come from manager-loaded figatree
-  payloads instead of the deleted
-  motion-extract seam. Rebuild those proofs on top of the natural original
-  runtime; do not reintroduce extract-decoding or synthetic parallel fighter
-  execution.
+  `57/58` gcDrawAll, the shared gcDrawAll/stage/MP regression family through
+  modes `59-162`, modes `39/40` dash-run, and modes `161/162` status-loop now
+  assert the natural manager motion gate instead of the old DS synthetic
+  gcRunAll/gcDrawAll/stage/MP/dash/attack/guard/live-hit marker stacks. This is
+  intentional for the default path because motion scripts now come from
+  manager-loaded figatree payloads instead of the deleted motion-extract seam.
+  Rebuild those proofs on top of the natural original runtime; do not
+  reintroduce extract-decoding or synthetic parallel fighter execution.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and

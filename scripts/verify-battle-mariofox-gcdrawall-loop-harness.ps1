@@ -5,6 +5,7 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
+    [switch]$ImportBattleShipFTManager,
     [string]$Harness = 'battle_mariofox_gcdrawall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcdrawall-loop',
     [string]$Build = 'build-battle-mariofox-gcdrawall-loop-harness',
@@ -70,6 +71,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
+$ImportBattleShipFTManager = $true
 if ($RequireStageMPCrossFloor) {
     $RequireStageMPSweepFloor = $true
 }
@@ -411,6 +413,9 @@ function Assert-CliffCommon2BridgeRoot {
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
+if ($ImportBattleShipFTManager) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
+}
 if ($HardwareTriangles) { $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1' }
 & make @makeArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -447,6 +452,10 @@ try {
         'printf "PREVIEW_LOOP=%#x,%#x,%#x,%#x,%u\n", gNdsFighterMarioFoxPreviewLoopResult, gNdsFighterMarioFoxPreviewLoopSafeResult, gNdsFighterMarioFoxPreviewLoopMask, gNdsFighterMarioFoxPreviewLoopDeferredMask, gNdsFighterMarioFoxPreviewLoopCount',
         'printf "GCRUNALL_LOOP=%#x,%#x,%#x,%#x,%u\n", gNdsFighterMarioFoxGCRunAllLoopResult, gNdsFighterMarioFoxGCRunAllLoopSafeResult, gNdsFighterMarioFoxGCRunAllLoopMask, gNdsFighterMarioFoxGCRunAllLoopDeferredMask, gNdsFighterMarioFoxGCRunAllLoopCount',
         'printf "GCDRAWALL_LOOP=%#x,%#x,%#x,%#x,%u,%u,%u\n", gNdsFighterMarioFoxGCDrawAllLoopResult, gNdsFighterMarioFoxGCDrawAllLoopSafeResult, gNdsFighterMarioFoxGCDrawAllLoopMask, gNdsFighterMarioFoxGCDrawAllLoopDeferredMask, gNdsFighterMarioFoxGCDrawAllLoopCount, gNdsFighterGCDrawAllLoopFrameMax, gNdsFighterGCDrawAllLoopUpdateMax',
+        'printf "NAT_MOTION=%#x,%#x,%#x,%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsFighterNaturalMotionResult, gNdsFighterNaturalMotionSafeResult, gNdsFighterNaturalMotionMask, gNdsFighterNaturalMotionPrepared, gNdsFighterNaturalMotionUpdateCount, gNdsFighterNaturalMotionBaseVSBattleUpdateCount, gNdsFighterNaturalMotionRunAllCount, gNdsFighterNaturalMotionControllerReadCount, gNdsFighterNaturalMotionManagerMask, gNdsFighterNaturalMotionGObjDelta, gNdsFighterNaturalMotionUnsafeCount',
+        'printf "NAT_FIG=%u,%u,%u,%u\n", gNdsFighterNaturalMotionFigatreeAttachCount, gNdsFighterNaturalMotionFigatreeNullCount, gNdsFighterNaturalMotionFigatreeTableInvalidCount, gNdsFighterNaturalMotionFigatreeAnimInvalidCount',
+        'printf "NAT_WAIT=%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x\n", gNdsFighterNaturalMotionP0WaitFrameCount, gNdsFighterNaturalMotionP1WaitFrameCount, gNdsFighterNaturalMotionP0AnimAdvanceCount, gNdsFighterNaturalMotionP1AnimAdvanceCount, gNdsFighterNaturalMotionP0ValidJointCount, gNdsFighterNaturalMotionP1ValidJointCount, gNdsFighterNaturalMotionP0AnimStartBits, gNdsFighterNaturalMotionP1AnimStartBits, gNdsFighterNaturalMotionP0AnimFinalBits, gNdsFighterNaturalMotionP1AnimFinalBits',
+        'printf "NAT_WALK=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterNaturalMotionWalkInputFrame, gNdsFighterNaturalMotionP0WalkFrameCount, gNdsFighterNaturalMotionP1WalkFrameCount, gNdsFighterNaturalMotionP0StatusStart, gNdsFighterNaturalMotionP1StatusStart, gNdsFighterNaturalMotionP0StatusFinal, gNdsFighterNaturalMotionP1StatusFinal, gNdsFighterNaturalMotionP0WalkStatus, gNdsFighterNaturalMotionP1WalkStatus, gNdsFighterNaturalMotionP0WalkMotion, gNdsFighterNaturalMotionP1WalkMotion',
         'printf "GCDRAWALL_TASKMAN=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterGCDrawAllLoopPrepared, gNdsFighterGCDrawAllLoopTaskmanUpdateCount, gNdsFighterGCDrawAllLoopVSBattleUpdateCount, gNdsFighterGCDrawAllLoopBaseVSBattleUpdateCount, gNdsFighterGCDrawAllLoopRunAllCount, gNdsFighterGCDrawAllLoopDrawAllCount, gNdsFighterGCDrawAllLoopCameraCallbackCount, gNdsTaskmanBoundedUpdateCount',
         'printf "GCDRAWALL_RUN=%u,%u,%u,%u,%u,%u\n", gNdsFighterGCDrawAllLoopOldProcessPauseCount, gNdsFighterGCDrawAllLoopNonTargetGObjVisitCount, gNdsFighterGCDrawAllLoopNonTargetProcessPauseCount, gNdsFighterGCDrawAllLoopTargetProcessPreserveCount, gNdsFighterGCDrawAllLoopGObjCountBefore, gNdsFighterGCDrawAllLoopGObjCountAfter',
         'printf "GCDRAWALL_PROCESS=%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterGCDrawAllLoopP0ProcessAttachCount, gNdsFighterGCDrawAllLoopP1ProcessAttachCount, gNdsFighterGCDrawAllLoopP0GObjProcessRunCount, gNdsFighterGCDrawAllLoopP1GObjProcessRunCount, gNdsFighterGCDrawAllLoopP0ProcCallbackCount, gNdsFighterGCDrawAllLoopP1ProcCallbackCount, gNdsFighterGCDrawAllLoopProcessAttachEscapeCount',
@@ -1178,6 +1187,10 @@ try {
     $maps = [regex]::Match($gdbStdout, 'MAPS_TRANS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $prev = [regex]::Match($gdbStdout, 'GCRUNALL_LOOP=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $loop = [regex]::Match($gdbStdout, 'GCDRAWALL_LOOP=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
+    $natural = [regex]::Match($gdbStdout, 'NAT_MOTION=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+    $naturalFig = [regex]::Match($gdbStdout, 'NAT_FIG=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $naturalWait = [regex]::Match($gdbStdout, 'NAT_WAIT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $naturalWalk = [regex]::Match($gdbStdout, 'NAT_WALK=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $taskman = [regex]::Match($gdbStdout, 'GCDRAWALL_TASKMAN=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $run = [regex]::Match($gdbStdout, 'GCDRAWALL_RUN=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $process = [regex]::Match($gdbStdout, 'GCDRAWALL_PROCESS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1493,6 +1506,19 @@ try {
         Assert-Condition ($vs.Success -and (Convert-MarkerUInt32 $vs.Groups[1].Value) -eq 0x56535452 -and ((Convert-MarkerUInt32 $vs.Groups[2].Value) -band 0xff) -eq 0xff) 'Menu-chain VS Mode -> PlayersVS transition did not pass.' $gdbStdout
         Assert-Condition ($pv.Success -and (Convert-MarkerUInt32 $pv.Groups[1].Value) -eq 0x50565452 -and ((Convert-MarkerUInt32 $pv.Groups[2].Value) -band 0xff) -eq 0xff) 'Menu-chain PlayersVS -> Maps transition did not pass.' $gdbStdout
         Assert-Condition ($maps.Success -and (Convert-MarkerUInt32 $maps.Groups[1].Value) -eq 0x4d53454c -and ((Convert-MarkerUInt32 $maps.Groups[2].Value) -band 0xff) -eq 0xff -and [int]$maps.Groups[3].Value -eq 6) 'Menu-chain Maps -> VSBattle transition did not pass.' $gdbStdout
+    }
+    if ($ImportBattleShipFTManager) {
+        $nat = Get-Ints $natural
+        $nfig = Get-Ints $naturalFig
+        $nw = Get-Ints $naturalWait
+        $nwalk = Get-Ints $naturalWalk
+        Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and (($nat[2] -band 0x3ff) -eq 0x3ff) -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Natural-motion manager runtime proof failed.' $gdbStdout
+        Assert-Condition ($naturalFig.Success -and $nfig[0] -gt 0 -and $nfig[2] -eq 0 -and $nfig[3] -eq 0) 'Natural-motion figatree attach proof failed.' $gdbStdout
+        Assert-Condition ($naturalWait.Success -and $nw[0] -ge 300 -and $nw[1] -ge 300 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -ge 300 -and $nw[5] -ge 300 -and $nw[6] -ne $nw[8] -and $nw[7] -ne $nw[9]) 'Natural-motion Wait animation proof failed.' $gdbStdout
+        Assert-Condition ($naturalWalk.Success -and $nwalk[0] -gt 0 -and $nwalk[1] -ge 8 -and $nwalk[2] -ge 8 -and $nwalk[7] -gt 0 -and $nwalk[8] -gt 0 -and $nwalk[9] -gt 0 -and $nwalk[10] -gt 0) 'Natural-motion Walk transition proof failed.' $gdbStdout
+        Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
+        Write-Output ("$Label ftmanager natural-motion harness passed: wait={0}/{1} anim={2}/{3} walk={4}/{5} updates={6} mask=0x{7:x}" -f $nw[0], $nw[1], $nw[2], $nw[3], $nwalk[1], $nwalk[2], $nat[4], $nat[2])
+        return
     }
     $pr = Get-Ints $prev
     Assert-Condition ($prev.Success -and $pr[0] -eq 0x4647414c -and $pr[1] -eq 0x46474153 -and (($pr[2] -band 0x1fff) -eq 0x1fff) -and $pr[3] -eq 0xff -and $pr[4] -eq 2) 'Prerequisite gcRunAll-loop proof did not pass.' $gdbStdout
