@@ -568,7 +568,7 @@ try {
             'printf "STAGE_GCDRAWALL_DOBJ=%u,%#x,%#x,%#x,%#x,%#x\n", gNdsStageGCDrawAllLoopDObjDrawCallbackCount, gNdsStageGCDrawAllLoopDObjDrawKindMask, gNdsStageGCDrawAllLoopLayerDObjMask, gNdsStageGCDrawAllLoopMapDObjMask, gNdsStageGCDrawAllLoopLayerDLReadyMask, gNdsStageGCDrawAllLoopMapDLReadyMask',
             'printf "STAGE_GCDRAWALL_SAFE=%u,%u,%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopPrepared, gNdsStageGCDrawAllLoopBaseResultSeen, gNdsStageGCDrawAllLoopManualDisplayCallCount, gNdsStageGCDrawAllLoopUnexpectedSceneCount, gNdsStageGCDrawAllLoopNonStageCaptureCount, gNdsStageGCDrawAllLoopGObjCountDelta',
             'printf "STAGE_GCDRAWALL_PIXELS=%u,%u,%#x\n", gNdsStageGCDrawAllLoopPreviewCommitDelta, gNdsStageGCDrawAllLoopTotalPixelCount, gNdsStageGCDrawAllLoopCompatMask',
-            'printf "STAGE_GCDRAWALL_HW=%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount'
+            'printf "STAGE_GCDRAWALL_HW=%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount'
         )
         $gdbCommands = @($gdbCommands[0..($gdbCommands.Count - 3)] + $stageCommands + $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)])
     }
@@ -1196,7 +1196,7 @@ try {
     $stageDObj = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_DOBJ=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $stageSafe = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_SAFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
     $stagePixels = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_PIXELS=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
-    $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+)')
+    $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+)')
     $stageCollision = [regex]::Match($gdbStdout, 'STAGE_COLLISION=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $stageCollisionGeom = [regex]::Match($gdbStdout, 'STAGE_COLLISION_GEOM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageCollisionProject = [regex]::Match($gdbStdout, 'STAGE_COLLISION_PROJECT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1744,7 +1744,8 @@ try {
             Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Stage-inclusive hardware draw did not flush submitted DS 3D frames.' $gdbStdout
             $shw = Get-Ints $stageHardware
             Assert-Condition ($stageHardware.Success -and $shw[0] -gt 8) 'Stage-inclusive hardware replay did not exceed the old bounded DObj submit slice.' $gdbStdout
-            $stageSummary = "$stageSummary hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0])"
+            Assert-Condition ($shw[1] -gt 0) 'Stage-inclusive hardware replay did not submit hardware triangles.' $gdbStdout
+            $stageSummary = "$stageSummary hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1])"
         }
     }
     $stageSummary = "$stageSummary$dashRunSummary$mpDamageRecoverSummary$mpLiveHitSummary"

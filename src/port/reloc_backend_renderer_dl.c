@@ -3184,6 +3184,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                   ndsFighterMarioFoxVisitDLDrawCommand,
                                   &state,
                                   &stats);
+    gNdsStageGCDrawAllLoopHardwareTriangleCount +=
+        stats.hardware_triangle_count;
 }
 
 void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,

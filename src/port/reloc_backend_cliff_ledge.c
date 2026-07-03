@@ -15480,6 +15480,7 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsStageGCDrawAllLoopTotalPixelCount = 0u;
     gNdsStageGCDrawAllLoopCompatMask = 0u;
     gNdsStageGCDrawAllLoopHardwareSubmitCount = 0u;
+    gNdsStageGCDrawAllLoopHardwareTriangleCount = 0u;
 #if NDS_RENDERER_HW_TRIANGLES
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
     sNdsStageGCDrawAllLoopHardwareSubmitCount = 0u;

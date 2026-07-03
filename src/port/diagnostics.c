@@ -2691,6 +2691,7 @@ volatile u32 gNdsStageGCDrawAllLoopPreviewCommitDelta;
 volatile u32 gNdsStageGCDrawAllLoopTotalPixelCount;
 volatile u32 gNdsStageGCDrawAllLoopCompatMask;
 volatile u32 gNdsStageGCDrawAllLoopHardwareSubmitCount;
+volatile u32 gNdsStageGCDrawAllLoopHardwareTriangleCount;
 volatile u32 gNdsFighterMarioFoxStageCollisionLoopResult;
 volatile u32 gNdsFighterMarioFoxStageCollisionLoopSafeResult;
 volatile u32 gNdsFighterMarioFoxStageCollisionLoopMask;

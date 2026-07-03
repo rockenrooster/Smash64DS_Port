@@ -16229,3 +16229,11 @@ Still deferred:
 - Added `STAGE_GCDRAWALL_HW` to the existing stage verifier and require the
   hardware submit count to exceed the old bounded slice while still proving
   `hwsubmit=252` and `hwflush=1/1`.
+
+## 2026-07-03 - Stage Hardware Triangle Count
+
+- Reused the existing stage hardware replay stats object instead of adding a
+  new harness mode, and accumulated actual DS hardware triangle submissions
+  across the source `gcDrawAll` DObj display-list replay.
+- The opt-in Pupupu stage gcDrawAll verifier now requires nonzero hardware
+  triangles and passed with `hwsubmit=252`, `hwtri=1152`, and `hwflush=1/1`.

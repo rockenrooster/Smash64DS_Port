@@ -3724,6 +3724,7 @@ extern volatile u32 gNdsStageGCDrawAllLoopPreviewCommitDelta;
 extern volatile u32 gNdsStageGCDrawAllLoopTotalPixelCount;
 extern volatile u32 gNdsStageGCDrawAllLoopCompatMask;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareSubmitCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareTriangleCount;
 void ndsFighterMarioFoxStageGCDrawAllLoopPrepare(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopFinalize(void);
 s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void);

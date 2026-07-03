@@ -49,8 +49,8 @@ sm64-nds-style no-z / decal-depth submission. Current captures:
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
 reports `hwdepth=z316/314/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
-stage gcDrawAll verifier reports `hwsubmit=252` and `hwflush=1/1`. Default
-builds still use the software preview.
+stage gcDrawAll verifier reports `hwsubmit=252`, `hwtri=1152`, and
+`hwflush=1/1`. Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local

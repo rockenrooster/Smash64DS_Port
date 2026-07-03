@@ -460,6 +460,7 @@ Assert-True ($stageGCDrawVerifier.Contains('PLATFORM_HW')) 'gcDrawAll verifier h
 Assert-True ($stageGCDrawVerifier.Contains('hwflush=')) 'gcDrawAll verifier hardware frame-flush summary is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('STAGE_GCDRAWALL_HW')) 'gcDrawAll verifier hardware submit-count marker is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('hwsubmit=')) 'gcDrawAll verifier hardware submit-count summary is missing.'
+Assert-True ($stageGCDrawVerifier.Contains('hwtri=')) 'gcDrawAll verifier hardware triangle-count summary is missing.'
 $stageGCDrawWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1') -Raw
 Assert-True ($stageGCDrawWrapper.Contains('HardwareTriangles')) 'Stage gcDrawAll verifier hardware switch is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1')) 'Stage gcDrawAll verifier does not enable hardware renderer builds.'
