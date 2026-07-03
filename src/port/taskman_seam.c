@@ -2514,6 +2514,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsStageGCDrawAllLoopPreviewCommitDelta = 0;
     gNdsStageGCDrawAllLoopTotalPixelCount = 0;
     gNdsStageGCDrawAllLoopCompatMask = 0;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount = 0;
     gNdsFighterMarioFoxStageCollisionLoopResult = 0;
     gNdsFighterMarioFoxStageCollisionLoopSafeResult = 0;
     gNdsFighterMarioFoxStageCollisionLoopMask = 0;

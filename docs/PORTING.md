@@ -16219,3 +16219,13 @@ Still deferred:
 - Reverified `.\scripts\check-gbi-decode-fixtures.ps1` and
   `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
   which passed with `hwflush=1/1`.
+
+## 2026-07-03 - Stage Hardware Replay After CPU Oracle
+
+- Moved opt-in Pupupu stage hardware submission out of the software preview
+  draw callback and into a post-proof `gcDrawAll` replay. The CPU preview
+  remains the oracle, and the hardware path now reuses the original display
+  callback wrappers without the previous 8-DObj submit cap.
+- Added `STAGE_GCDRAWALL_HW` to the existing stage verifier and require the
+  hardware submit count to exceed the old bounded slice while still proving
+  `hwsubmit=252` and `hwflush=1/1`.

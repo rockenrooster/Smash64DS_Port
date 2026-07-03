@@ -75,10 +75,10 @@ captures are `artifacts\renderer-stage-gcdrawall-hw.png` and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
 proves `hwdepth=z316/314/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
-stage gcDrawAll verifier proves a bounded stage hardware frame flush
-(`hwflush=1/1`). Full visual fidelity still needs remaining combiner/material
-behavior, broader texture/no-z/decal source-scene coverage, and renderer
-cutover work. Default builds still use the software preview.
+stage gcDrawAll verifier proves a post-proof hardware replay and frame flush
+(`hwsubmit=252`, `hwflush=1/1`). Full visual fidelity still needs remaining
+combiner/material behavior, broader texture/no-z/decal source-scene coverage,
+and renderer cutover work. Default builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
