@@ -73,18 +73,18 @@ It covers BattleShip billboard/recalc matrix seeds, Pupupu stage-inclusive
 submission, material branch packets, CI/IA/I/RGBA textures, source culling,
 reset geometry/filter seeds, no-z/decal depth, fog, alpha-test threshold,
 constant-alpha muxes, alpha-only `TEXEL0` texture binding, 2-cycle
-final-output material color/alpha selection, and 2-cycle `COMBINED` color
-fallback. It also treats blend alpha-memory as an exact cycle-aware two-bit
-field.
-Latest capture: `artifacts\renderer-stage-gcdrawall-hw-alpha-texture.png`. The
+final-output material color/alpha selection, 2-cycle `COMBINED` color
+fallback, and `G_SETPRIMDEPTH` / `G_ZS_PRIM` primitive-depth state. It also
+treats blend alpha-memory as an exact cycle-aware two-bit field.
+Latest capture: `artifacts\renderer-stage-gcdrawall-hw-prim-depth.png`. The
 opt-in all-DL verifier proves `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`; the opt-in Pupupu stage
 gcDrawAll verifier proves hardware replay/triangles/frame flush
 (`hwsubmit=252`, `hwtri=1140`, `hwflush=1/1`), `hwdepth=z456/proj684/decal0`,
 and `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`. Full visual
-fidelity still needs remaining combiner/material behavior, broader texture
-source-scene coverage, and renderer cutover work. Default builds still use the
-software preview.
+fidelity still needs remaining combiner/material behavior, broader texture and
+primitive-depth source-scene coverage, and renderer cutover work. Default builds
+still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
@@ -97,7 +97,8 @@ The next useful work is not another proof bit. It is one of:
   cliffmotion restore duplicate-behavior seams status-by-status as source
   proofs graduate;
 - renderer follow-up: finish opt-in hardware combiner/material policy,
-  broaden remaining texture-state and no-z/decal source-scene coverage after
+  broaden remaining texture-state and no-z/decal/prim-depth source-scene
+  coverage after
   the first all-DL CI/TLUT gate plus IA/I decoders, then plan renderer cutover
   work;
 - continuous-runtime verifier for unbounded battle frames.

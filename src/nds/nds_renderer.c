@@ -29,6 +29,7 @@
 #define NDS_RENDERER_OP_SETOTHERMODE_H 0xe3u
 #define NDS_RENDERER_OP_SETOTHERMODE_L 0xe2u
 #define NDS_RENDERER_OP_SETSCISSOR 0xedu
+#define NDS_RENDERER_OP_SETPRIMDEPTH 0xeeu
 #define NDS_RENDERER_OP_SETCOMBINE 0xfcu
 #define NDS_RENDERER_OP_SETCIMG 0xffu
 #define NDS_RENDERER_OP_SETFOGCOLOR 0xf8u
@@ -106,6 +107,8 @@
 #define NDS_RENDERER_TEXCOORD_FILTER_OFFSET (1 << 4)
 #define NDS_RENDERER_ALPHA_COMPARE_MASK 0x3u
 #define NDS_RENDERER_ALPHA_COMPARE_THRESHOLD 0x1u
+#define NDS_RENDERER_ZSOURCE_PRIM 0x00000004u
+#define NDS_RENDERER_ZSOURCE_MASK 0x00000004u
 #define NDS_RENDERER_ZMODE_DEC 0x00000c00u
 #define NDS_RENDERER_G_BL_A_MEM 1u
 #define NDS_RENDERER_BLEND_ALPHA_BITS_MASK 0x3u
@@ -555,6 +558,19 @@ static void ndsRendererRecordOtherMode(NDSRendererStats *stats,
     {
         stats->othermode_l = (stats->othermode_l & ~mask) | (w1 & mask);
     }
+}
+
+static void ndsRendererRecordPrimDepth(NDSRendererStats *stats, u32 w1)
+{
+    if (stats == NULL)
+    {
+        return;
+    }
+
+    stats->prim_depth = (w1 >> 16) & 0xffffu;
+    stats->prim_depth_delta = w1 & 0xffffu;
+    stats->prim_depth_command_count++;
+    stats->state_command_count++;
 }
 
 static void ndsRendererRecordCull(NDSRendererStats *stats, u32 w0, u32 w1)
@@ -1415,6 +1431,13 @@ static s32 ndsRendererHardwareUseDecal(const NDSRendererStats *stats)
     w1 = stats->texture_combine_w1;
     return ((((w1 >> 28) & 0x0fu) == ((w1 >> 15) & 0x07u)) ?
         TRUE : FALSE);
+}
+
+static s32 ndsRendererHardwareUsePrimDepth(const NDSRendererStats *stats)
+{
+    return ((stats != NULL) &&
+            ((stats->othermode_l & NDS_RENDERER_ZSOURCE_MASK) ==
+             NDS_RENDERER_ZSOURCE_PRIM)) ? TRUE : FALSE;
 }
 
 static s32 ndsRendererHardwarePrimitiveDecal(const NDSRendererStats *stats)
@@ -2384,6 +2407,7 @@ static void ndsRendererHardwareSubmitVertex(
     u32 scale_world,
     s32 zbuffered,
     s32 decal_depth,
+    s32 prim_depth,
     s32 projected_z)
 {
     if (vtx == NULL)
@@ -2400,11 +2424,17 @@ static void ndsRendererHardwareSubmitVertex(
                        ndsRendererHardwareTexCoord(vtx->t, scale_t,
                                                    texture_offset));
     }
-    if ((zbuffered != FALSE) && (decal_depth == FALSE))
+    if ((zbuffered != FALSE) &&
+        (decal_depth == FALSE) &&
+        (prim_depth == FALSE))
     {
         glVertex3v16(ndsRendererHardwareVertexCoord(vtx->x, scale_world),
                      ndsRendererHardwareVertexCoord(vtx->y, scale_world),
                      ndsRendererHardwareVertexCoord(vtx->z, scale_world));
+    }
+    else if (prim_depth != FALSE)
+    {
+        ndsRendererHardwareClipVertex(clip_vtx, projected_z);
     }
     else if (decal_depth != FALSE)
     {
@@ -2467,6 +2497,7 @@ static void ndsRendererSubmitHardwareTriangle(
     s32 texture_offset;
     s32 zbuffered;
     s32 decal_depth;
+    s32 prim_depth;
     s32 transformed_ready;
     s32 projected_z = 0;
 
@@ -2498,7 +2529,12 @@ static void ndsRendererSubmitHardwareTriangle(
     decal_depth = ((zbuffered != FALSE) &&
                    ((stats->othermode_l & NDS_RENDERER_ZMODE_DEC) ==
                     NDS_RENDERER_ZMODE_DEC)) ? TRUE : FALSE;
-    if (((zbuffered == FALSE) || (decal_depth != FALSE)) &&
+    prim_depth = ((zbuffered != FALSE) &&
+                  (ndsRendererHardwareUsePrimDepth(stats) != FALSE)) ?
+        TRUE : FALSE;
+    if (((zbuffered == FALSE) ||
+         (decal_depth != FALSE) ||
+         (prim_depth != FALSE)) &&
         (transformed_ready == FALSE))
     {
         stats->hardware_oracle_reject_count++;
@@ -2520,9 +2556,15 @@ static void ndsRendererSubmitHardwareTriangle(
     }
     scale_world = TRUE;
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
-    if ((zbuffered != FALSE) && (decal_depth == FALSE))
+    if ((zbuffered != FALSE) &&
+        (decal_depth == FALSE) &&
+        (prim_depth == FALSE))
     {
         ndsRendererLoadHardwareMatrices(state, scale_world);
+    }
+    else if (prim_depth != FALSE)
+    {
+        projected_z = (s32)(stats->prim_depth & 0xffffu);
     }
     else
     {
@@ -2544,17 +2586,17 @@ static void ndsRendererSubmitHardwareTriangle(
         v0, &state->vertices[i0], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
         stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        decal_depth, projected_z);
+        decal_depth, prim_depth, projected_z);
     ndsRendererHardwareSubmitVertex(
         v1, &state->vertices[i1], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
         stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        decal_depth, projected_z);
+        decal_depth, prim_depth, projected_z);
     ndsRendererHardwareSubmitVertex(
         v2, &state->vertices[i2], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
         stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        decal_depth, projected_z);
+        decal_depth, prim_depth, projected_z);
     glEnd();
     glDisable(GL_ALPHA_TEST);
 
@@ -2566,6 +2608,10 @@ static void ndsRendererSubmitHardwareTriangle(
         if (decal_depth != FALSE)
         {
             stats->hardware_decal_depth_triangle_count++;
+        }
+        if (prim_depth != FALSE)
+        {
+            stats->hardware_prim_depth_triangle_count++;
         }
     }
     else
@@ -2780,6 +2826,10 @@ static void ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_SETCIMG:
             stats->state_command_count++;
             stats->ignored_state_command_count++;
+            break;
+
+        case NDS_RENDERER_OP_SETPRIMDEPTH:
+            ndsRendererRecordPrimDepth(stats, w1);
             break;
 
         case NDS_RENDERER_OP_GEOMETRYMODE:

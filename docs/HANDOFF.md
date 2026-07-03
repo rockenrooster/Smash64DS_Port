@@ -51,9 +51,11 @@ alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state, plus BattleShip
 material color/alpha selection. Alpha-only `TEXEL0` combines now bind their
 source texture, two-cycle color output falls back through `COMBINED` for
 `G_CC_*, G_CC_PASS2` style lists, and blend alpha-memory is now an exact
-cycle-aware two-bit field instead of a cycle-1-only bit test.
+cycle-aware two-bit field instead of a cycle-1-only bit test. The renderer also
+decodes `G_SETPRIMDEPTH` and routes source `G_ZS_PRIM` triangles through the
+existing projected hardware vertex path with the source primitive Z value.
 Current captures:
-`artifacts\renderer-stage-gcdrawall-hw-alpha-texture.png` and
+`artifacts\renderer-stage-gcdrawall-hw-prim-depth.png` and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
 reports `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
@@ -90,7 +92,8 @@ the work reaches a scene-level boundary such as `battle_playable` or
 ## Recommended Next Work
 
 1. Renderer follow-up: finish opt-in hardware combiner/material policy,
-   broaden remaining texture-state and no-z/decal source-scene coverage after
+   broaden remaining texture-state and no-z/decal/prim-depth source-scene
+   coverage after
    the first all-DL CI/TLUT gate plus IA/I decoders, then plan renderer
    cutover.
 2. Runtime follow-up: delete the remaining `ftMainSetStatus` compat-replay and

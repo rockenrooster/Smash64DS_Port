@@ -144,6 +144,7 @@ typedef struct NDSRendererStats
     u32 hardware_zbuffer_triangle_count;
     u32 hardware_projected_depth_triangle_count;
     u32 hardware_decal_depth_triangle_count;
+    u32 hardware_prim_depth_triangle_count;
     u32 hardware_oracle_triangle_count;
     u32 hardware_oracle_reject_count;
     u32 hardware_matrix_seed_count;
@@ -239,6 +240,9 @@ typedef struct NDSRendererStats
     u32 prim_color;
     u32 env_color;
     u32 blend_color;
+    u32 prim_depth;
+    u32 prim_depth_delta;
+    u32 prim_depth_command_count;
     u32 fog_color;
     s32 fog_min;
     s32 fog_max;
