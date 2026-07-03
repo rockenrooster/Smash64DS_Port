@@ -88,6 +88,7 @@
 #define NDS_RENDERER_CCMUX_PRIMITIVE 3u
 #define NDS_RENDERER_CCMUX_SHADE 4u
 #define NDS_RENDERER_CCMUX_ENVIRONMENT 5u
+#define NDS_RENDERER_ACMUX_COMBINED 0u
 #define NDS_RENDERER_ACMUX_TEXEL0 1u
 #define NDS_RENDERER_ACMUX_PRIMITIVE 3u
 #define NDS_RENDERER_ACMUX_SHADE 4u
@@ -1355,6 +1356,40 @@ static s32 ndsRendererCombineUsesAlpha(u32 w0, u32 w1, u32 source)
             (((w1 >> 9) & 0x07u) == source)) ? TRUE : FALSE;
 }
 
+static s32 ndsRendererCombineSecondOutputUsesAlpha(u32 w1, u32 source)
+{
+    return ((((w1 >> 18) & 0x07u) == source) ||
+            (((w1 >> 0) & 0x07u) == source)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererHardwareOutputUsesAlpha(const NDSRendererStats *stats,
+                                              u32 source)
+{
+    u32 w0;
+    u32 w1;
+
+    if ((stats == NULL) || (stats->texture_combine_count == 0u))
+    {
+        return FALSE;
+    }
+    w0 = stats->texture_combine_w0;
+    w1 = stats->texture_combine_w1;
+    if (ndsRendererHardwareUseSecondCycle(stats) == FALSE)
+    {
+        return ndsRendererCombineUsesAlpha(w0, w1, source);
+    }
+    if (ndsRendererCombineSecondOutputUsesAlpha(w1, source) != FALSE)
+    {
+        return TRUE;
+    }
+    if (ndsRendererCombineSecondOutputUsesAlpha(
+            w1, NDS_RENDERER_ACMUX_COMBINED) != FALSE)
+    {
+        return ndsRendererCombineUsesAlpha(w0, w1, source);
+    }
+    return FALSE;
+}
+
 static s32 ndsRendererHardwareUseDecal(const NDSRendererStats *stats)
 {
     u32 w1;
@@ -1463,26 +1498,23 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     }
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
-        u32 w0 = stats->texture_combine_w0;
-        u32 w1 = stats->texture_combine_w1;
-
-        if (ndsRendererCombineUsesAlpha(
-                w0, w1, NDS_RENDERER_ACMUX_PRIMITIVE) != FALSE)
+        if (ndsRendererHardwareOutputUsesAlpha(
+                stats, NDS_RENDERER_ACMUX_PRIMITIVE) != FALSE)
         {
             alpha = stats->prim_color & 0xffu;
         }
-        else if (ndsRendererCombineUsesAlpha(
-                     w0, w1, NDS_RENDERER_ACMUX_ENVIRONMENT) != FALSE)
+        else if (ndsRendererHardwareOutputUsesAlpha(
+                     stats, NDS_RENDERER_ACMUX_ENVIRONMENT) != FALSE)
         {
             alpha = stats->env_color & 0xffu;
         }
-        else if ((ndsRendererCombineUsesAlpha(
-                      w0, w1, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
-                 (ndsRendererCombineUsesAlpha(
-                      w0, w1, NDS_RENDERER_ACMUX_SHADE) == FALSE))
+        else if ((ndsRendererHardwareOutputUsesAlpha(
+                      stats, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
+                 (ndsRendererHardwareOutputUsesAlpha(
+                      stats, NDS_RENDERER_ACMUX_SHADE) == FALSE))
         {
-            alpha = (ndsRendererCombineUsesAlpha(
-                         w0, w1, NDS_RENDERER_ACMUX_0) != FALSE) ?
+            alpha = (ndsRendererHardwareOutputUsesAlpha(
+                         stats, NDS_RENDERER_ACMUX_0) != FALSE) ?
                 0u : 0xffu;
         }
     }

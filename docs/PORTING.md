@@ -16416,3 +16416,24 @@ Still deferred:
   the current alpha-pruned values: all-DL `hwdepth=z260/217/proj0/0/decal0/0`
   and Pupupu stage `hwsubmit=252`, `hwtri=1140`,
   `hwdepth=z456/proj684/decal0`.
+
+## 2026-07-03 - Hardware 2-Cycle Alpha Output
+
+- Made opt-in hardware material-alpha selection honor source `G_CYC_2CYCLE` by
+  reading the second combine cycle's final alpha output fields before choosing
+  primitive/env/vertex/constant alpha. If the second cycle outputs
+  `COMBINED`, the hardware path falls back to the existing cycle-0
+  approximation instead of treating mux value `0` as literal alpha zero.
+  BattleShip's alpha mux values and second-cycle packing are in
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:496-505,3099-3123`; fighter
+  display lists exercise both combined fallback and primitive final alpha in
+  `decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c:203,207,336,1176`.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-cycle2-alpha.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Hardware counters stayed at
+  all-DL `hwdepth=z260/217/proj0/0/decal0/0` and Pupupu stage
+  `hwsubmit=252`, `hwtri=1140`, `hwdepth=z456/proj684/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.

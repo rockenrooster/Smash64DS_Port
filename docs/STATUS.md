@@ -69,27 +69,19 @@ the motion-stale evidence. Details are in `docs/FTSTRUCT_PARITY.md` and
 `docs/KNOWN_ISSUES.md`.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
-The hardware path has BattleShip billboard/recalc matrix seeds, Pupupu
-stage-inclusive submission, source-shaped material branch packets, CI/IA/I/RGBA
-texture upload coverage, recorded material color/alpha, source culling, reset
-geometry/filter seeds, sm64-nds-style no-z / decal-depth submission,
-F3DEX `G_FOG`/`G_MW_FOG`/`G_SETFOGCOLOR` -> DS fog state, and
-`G_SETBLENDCOLOR` alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state,
-plus BattleShip `G_ACMUX_0`/`G_ACMUX_1` constant-alpha mux handling and
-2-cycle final-output material color selection.
-Current captures are `artifacts\renderer-stage-gcdrawall-hw-cycle2-combine.png`,
-`artifacts\renderer-stage-gcdrawall-hw-alpha-mux.png`, and
-`artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
-proves `hwdepth=z260/217/proj0/0/decal0/0` and
-`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
-stage gcDrawAll verifier proves a post-proof hardware replay, actual hardware
-triangles, and frame flush (`hwsubmit=252`, `hwtri=1140`, `hwflush=1/1`).
-The stage hardware replay now seeds the source display-wrapper depth mode and
-proves `hwdepth=z456/proj684/decal0` plus source-scene texture activity
-`hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`. Full visual fidelity
-still needs remaining combiner/material behavior, broader texture source-scene
-coverage, and renderer cutover work. Default builds still use the software
-preview.
+It covers BattleShip billboard/recalc matrix seeds, Pupupu stage-inclusive
+submission, material branch packets, CI/IA/I/RGBA textures, source culling,
+reset geometry/filter seeds, no-z/decal depth, fog, alpha-test threshold,
+constant-alpha muxes, and 2-cycle final-output material color/alpha selection.
+Latest capture: `artifacts\renderer-stage-gcdrawall-hw-cycle2-alpha.png`. The
+opt-in all-DL verifier proves `hwdepth=z260/217/proj0/0/decal0/0` and
+`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`; the opt-in Pupupu stage
+gcDrawAll verifier proves hardware replay/triangles/frame flush
+(`hwsubmit=252`, `hwtri=1140`, `hwflush=1/1`), `hwdepth=z456/proj684/decal0`,
+and `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`. Full visual
+fidelity still needs remaining combiner/material behavior, broader texture
+source-scene coverage, and renderer cutover work. Default builds still use the
+software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 
