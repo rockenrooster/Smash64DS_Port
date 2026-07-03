@@ -107,7 +107,9 @@
 #define NDS_RENDERER_ALPHA_COMPARE_THRESHOLD 0x1u
 #define NDS_RENDERER_ZMODE_DEC 0x00000c00u
 #define NDS_RENDERER_G_BL_A_MEM 1u
-#define NDS_RENDERER_BLEND_ALPHA_MEM_MASK (NDS_RENDERER_G_BL_A_MEM << 18)
+#define NDS_RENDERER_BLEND_ALPHA_BITS_MASK 0x3u
+#define NDS_RENDERER_BLEND_ALPHA_CYCLE1_SHIFT 18u
+#define NDS_RENDERER_BLEND_ALPHA_CYCLE2_SHIFT 16u
 #define NDS_RENDERER_POLY_ID_MASK 0x3fu
 
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1482,6 +1484,27 @@ static s32 ndsRendererHardwareUseVertexColor(const NDSRendererStats *stats)
         NDS_RENDERER_CCMUX_SHADE);
 }
 
+static s32 ndsRendererHardwareBlendAlphaUsesMemory(
+    const NDSRendererStats *stats)
+{
+    u32 mode;
+
+    if (stats == NULL)
+    {
+        return FALSE;
+    }
+    mode = stats->othermode_l;
+    if (((mode >> NDS_RENDERER_BLEND_ALPHA_CYCLE1_SHIFT) &
+         NDS_RENDERER_BLEND_ALPHA_BITS_MASK) == NDS_RENDERER_G_BL_A_MEM)
+    {
+        return TRUE;
+    }
+    return ((ndsRendererHardwareUseSecondCycle(stats) != FALSE) &&
+            (((mode >> NDS_RENDERER_BLEND_ALPHA_CYCLE2_SHIFT) &
+              NDS_RENDERER_BLEND_ALPHA_BITS_MASK) ==
+             NDS_RENDERER_G_BL_A_MEM)) ? TRUE : FALSE;
+}
+
 static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
                                     const NDSRendererInputVertex *vtx)
 {
@@ -1491,8 +1514,7 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     {
         alpha = vtx->a;
     }
-    if ((stats != NULL) &&
-        ((stats->othermode_l & NDS_RENDERER_BLEND_ALPHA_MEM_MASK) != 0u))
+    if (ndsRendererHardwareBlendAlphaUsesMemory(stats) != FALSE)
     {
         return 31u;
     }

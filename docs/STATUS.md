@@ -73,7 +73,8 @@ It covers BattleShip billboard/recalc matrix seeds, Pupupu stage-inclusive
 submission, material branch packets, CI/IA/I/RGBA textures, source culling,
 reset geometry/filter seeds, no-z/decal depth, fog, alpha-test threshold,
 constant-alpha muxes, and 2-cycle final-output material color/alpha selection.
-Latest capture: `artifacts\renderer-stage-gcdrawall-hw-cycle2-alpha.png`. The
+It also treats blend alpha-memory as an exact cycle-aware two-bit field.
+Latest capture: `artifacts\renderer-stage-gcdrawall-hw-blend-cycle2.png`. The
 opt-in all-DL verifier proves `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`; the opt-in Pupupu stage
 gcDrawAll verifier proves hardware replay/triangles/frame flush

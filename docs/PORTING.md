@@ -16437,3 +16437,24 @@ Still deferred:
   all-DL `hwdepth=z260/217/proj0/0/decal0/0` and Pupupu stage
   `hwsubmit=252`, `hwtri=1140`, `hwdepth=z456/proj684/decal0`,
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+
+## 2026-07-03 - Hardware Cycle-Aware Blend Alpha Memory
+
+- Replaced the opt-in hardware alpha-memory one-bit test with exact cycle-1 and
+  cycle-2 two-bit field decoding. This lets BattleShip `G_RM_PASS,
+  G_RM_AA_ZB_*2` two-cycle display paths inherit the second-cycle
+  `G_BL_A_MEM` alpha behavior, while avoiding the old false positive where
+  `G_BL_0` also had bit 18 set. Source packing is in
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:704-716,3033-3038`;
+  fighter/item display paths use the second-cycle render modes in
+  `decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c:203-224,693,1178`
+  and `decomp/BattleShip-main/decomp/src/it/itdisplay.c:242-255,288-311`.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-blend-cycle2.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Hardware counters stayed at
+  all-DL `hwdepth=z260/217/proj0/0/decal0/0` and Pupupu stage
+  `hwsubmit=252`, `hwtri=1140`, `hwdepth=z456/proj684/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.

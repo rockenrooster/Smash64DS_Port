@@ -48,9 +48,10 @@ sm64-nds-style no-z / decal-depth submission, F3DEX
 `G_FOG`/`G_MW_FOG`/`G_SETFOGCOLOR` -> DS fog state, and `G_SETBLENDCOLOR`
 alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state, plus BattleShip
 `G_ACMUX_0`/`G_ACMUX_1` constant-alpha mux handling and 2-cycle final-output
-material color/alpha selection.
+material color/alpha selection. Blend alpha-memory is now an exact
+cycle-aware two-bit field instead of a cycle-1-only bit test.
 Current captures:
-`artifacts\renderer-stage-gcdrawall-hw-cycle2-alpha.png` and
+`artifacts\renderer-stage-gcdrawall-hw-blend-cycle2.png` and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
 reports `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
