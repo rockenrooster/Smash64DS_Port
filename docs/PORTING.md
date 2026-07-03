@@ -16282,3 +16282,14 @@ Still deferred:
   `hwdepth=z456/proj696/decal0`,
   `hwtex=bind618/upload72/ready618/reject0/fmt4/max32x32`, and
   `hwflush=1/1`.
+
+## 2026-07-03 - Fresh Regression Green on Current Master
+
+- Confirmed the ftmain-default runtime state and later renderer follow-ups still
+  pass the sharded Regression profile after a fresh prebuild. Ran
+  `.\scripts\New-MelonDSRunnerSlots.ps1 -Count 4`, then
+  `.\scripts\build-verify-profile.ps1 -Profile Regression`, then the four
+  `.\scripts\verify-all.ps1 -Profile Regression -ShardCount 4 ... -NoBuild`
+  shards.
+- Reran the historically failing shard 1 first, then shard 3, then shards 0 and
+  2 in parallel. All four shards passed from the fresh prebuild.

@@ -61,10 +61,12 @@ Full BattleShip `ft/ftmain.c` is now imported by default through
 `src/import/battleship_ftmain.c`; the duplicate local `ftMain*` seams are gone
 or routed through the imported original once. The init/wait/dash-run ladder,
 boundary profile, continuous live-hit verifier, and four-way sharded Regression
-passed after a fresh Regression prebuild. The only regression-cycle fix was a
-proof-recorder correction that preserves the first selected cross-floor target
-match so later wall/cliff MP updates cannot erase the motion-stale evidence.
-Details are in `docs/FTSTRUCT_PARITY.md` and `docs/KNOWN_ISSUES.md`.
+passed after a fresh Regression prebuild, and the four Regression shards were
+rerun green on current `master` after the renderer follow-ups. The only
+regression-cycle fix was a proof-recorder correction that preserves the first
+selected cross-floor target match so later wall/cliff MP updates cannot erase
+the motion-stale evidence. Details are in `docs/FTSTRUCT_PARITY.md` and
+`docs/KNOWN_ISSUES.md`.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 The hardware path has BattleShip billboard/recalc matrix seeds, Pupupu

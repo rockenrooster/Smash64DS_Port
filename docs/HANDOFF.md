@@ -64,9 +64,10 @@ Full BattleShip `ft/ftmain.c` is now imported by default through
 `src/import/battleship_ftmain.c`; the duplicate local `ftMain*` seams are gone
 or routed through the imported original once. The default ladder, boundary,
 continuous live-hit verifier, and four-way sharded Regression passed after a
-fresh Regression prebuild. The regression-cycle fix preserves the first
-selected cross-floor target match so later wall/cliff MP updates cannot erase
-motion-stale proof evidence.
+fresh Regression prebuild, and all four Regression shards were rerun green on
+current `master` after the renderer follow-ups. The regression-cycle fix
+preserves the first selected cross-floor target match so later wall/cliff MP
+updates cannot erase motion-stale proof evidence.
 
 ## Process Change
 
