@@ -16458,3 +16458,22 @@ Still deferred:
   all-DL `hwdepth=z260/217/proj0/0/decal0/0` and Pupupu stage
   `hwsubmit=252`, `hwtri=1140`, `hwdepth=z456/proj684/decal0`,
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+
+## 2026-07-03 - Hardware 2-Cycle Combined Color Fallback
+
+- Made opt-in hardware material-color selection fall back to the first cycle
+  when the second cycle outputs `COMBINED`. This matches BattleShip's
+  `G_CC_PASS2` definition, where the final cycle emits the first-cycle result;
+  the packing is in
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:564,3099-3123`, and the
+  source sprite path uses `G_CC_YUV2RGB, G_CC_PASS2` in
+  `decomp/BattleShip-main/decomp/src/libultra/sp/sprite.c:259`.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-combined-color.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Hardware counters stayed at
+  all-DL `hwdepth=z260/217/proj0/0/decal0/0` and Pupupu stage
+  `hwsubmit=252`, `hwtri=1140`, `hwdepth=z456/proj684/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.

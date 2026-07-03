@@ -591,11 +591,11 @@ Renderer stage 3 keeps the DS 3D path build-flagged behind
 `NDS_RENDERER_HW_TRIANGLES=1`. Default builds still use the software preview.
 The hardware path now imports the original BattleShip sine/matrix helpers,
 seeds traversal with source-shaped DObj and camera projection/modelview
-matrices, encodes untextured DL vertices into DS `v16` units for GX, and uploads
-the first bounded RGBA16/I16 Opening Room texture slice. The stage-2 temporary
-no-matrix scale fallback is gone. Remaining renderer work is the BattleShip
-recalc/billboard DObj matrix family, stage-inclusive Pupupu hardware draw,
-palette/CI texture formats, combiner/material/depth fidelity, and full cutover.
+matrices, encodes DL vertices into DS `v16` units for GX, handles the proven
+Pupupu stage-inclusive draw, and uploads the currently proven CI/IA/I/RGBA
+texture families. The stage-2 temporary no-matrix scale fallback is gone.
+Remaining renderer work is broader combiner/material/depth source-scene
+coverage and full cutover.
 
 ## Scene And Startup
 

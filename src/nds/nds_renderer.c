@@ -84,6 +84,7 @@
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
+#define NDS_RENDERER_CCMUX_COMBINED 0u
 #define NDS_RENDERER_CCMUX_TEXEL0 1u
 #define NDS_RENDERER_CCMUX_PRIMITIVE 3u
 #define NDS_RENDERER_CCMUX_SHADE 4u
@@ -1347,9 +1348,20 @@ static s32 ndsRendererHardwareOutputUsesColor(const NDSRendererStats *stats,
     }
     w0 = stats->texture_combine_w0;
     w1 = stats->texture_combine_w1;
-    return (ndsRendererHardwareUseSecondCycle(stats) != FALSE) ?
-        ndsRendererCombineSecondOutputUsesColor(w0, w1, source) :
-        ndsRendererCombineOutputUsesColor(w0, w1, source);
+    if (ndsRendererHardwareUseSecondCycle(stats) == FALSE)
+    {
+        return ndsRendererCombineOutputUsesColor(w0, w1, source);
+    }
+    if (ndsRendererCombineSecondOutputUsesColor(w0, w1, source) != FALSE)
+    {
+        return TRUE;
+    }
+    if (ndsRendererCombineSecondOutputUsesColor(
+            w0, w1, NDS_RENDERER_CCMUX_COMBINED) != FALSE)
+    {
+        return ndsRendererCombineOutputUsesColor(w0, w1, source);
+    }
+    return FALSE;
 }
 
 static s32 ndsRendererCombineUsesAlpha(u32 w0, u32 w1, u32 source)
