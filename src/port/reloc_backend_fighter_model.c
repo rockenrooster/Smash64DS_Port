@@ -1549,6 +1549,58 @@ static FTStruct *ndsFighterManagerSnapshotLiveStruct(FTStruct *fp, u32 player)
 
 #endif
 
+static sb32 ndsFighterStructIsTrackedPointer(const void *ptr)
+{
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    const FTStruct *fp = ptr;
+    u32 i;
+#endif
+
+    if (ndsFighterStructIsPoolPointer(ptr) != FALSE)
+    {
+        return TRUE;
+    }
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    for (i = 0u; i < 2u; i++)
+    {
+        if ((fp == ndsFighterManagerLiveStruct(i)) &&
+            (fp != NULL) &&
+            (fp->nds_magic == NDS_FTSTRUCT_MAGIC))
+        {
+            return TRUE;
+        }
+    }
+#endif
+    return FALSE;
+}
+
+static FTStruct *ndsFighterMarioFoxProofStructForSlot(u32 slot)
+{
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    FTStruct *live_fp = ndsFighterManagerLiveStruct(slot);
+
+    if (live_fp != NULL)
+    {
+        return live_fp;
+    }
+#endif
+    return (slot < GMCOMMON_PLAYERS_MAX) ? &sNdsFighterStructPool[slot] : NULL;
+}
+
+static GObj *ndsFighterMarioFoxProofGObjForSlot(u32 slot)
+{
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    GObj *live_gobj = ndsFighterManagerLiveGObj(slot);
+
+    if (live_gobj != NULL)
+    {
+        return live_gobj;
+    }
+#endif
+    return (slot < GMCOMMON_PLAYERS_MAX) ?
+        sNdsFighterStructPool[slot].fighter_gobj : NULL;
+}
+
 static GObj *ndsFighterGetPlayerNumGObj(s32 player_num)
 {
     if ((player_num < 0) || (player_num >= GMCOMMON_PLAYERS_MAX))

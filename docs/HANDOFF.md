@@ -43,11 +43,12 @@ throw-hit data.
 Latest renderer detail: opt-in DS 3D hardware submission remains behind
 `NDS_RENDERER_HW_TRIANGLES=1`. The current Pupupu stage-inclusive gate proves
 matrix, material, texture, depth/fog/alpha, primitive-Z, and
-texture-perspective hardware submission with zero texture rejects. The older
-direct all-DL hardware proof is coverage-reduced after original-manager
-graduation and needs a live-manager rebuild before cutover. Captures remain
-under `artifacts\renderer-*-hw*.png`. Default builds still use the software
-preview.
+texture-perspective hardware submission with zero texture rejects. Direct
+all-DL modes now reach live manager-created Mario/Fox structs and submit
+opt-in hardware triangles for both fighters, but the strict direct all-DL
+verifier is still coverage-reduced because live-manager DObj/DL blockers remain
+unsupported. Captures remain under `artifacts\renderer-*-hw*.png`. Default
+builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local
@@ -88,9 +89,9 @@ the work reaches a scene-level boundary such as `battle_playable` or
 1. Runtime follow-up: rebuild gcDrawAll/stage/MP/dash/live-hit proof coverage
    on top of the natural original-manager runtime, then remove the remaining
    `ftMainSetStatus` compat-replay/cliffmotion seams status-by-status.
-2. Renderer follow-up: rebuild the direct all-DL hardware verifier on the
-   natural original-manager runtime, broaden source-scene coverage, then plan
-   renderer cutover.
+2. Renderer follow-up: finish the direct all-DL live-manager hardware verifier
+   by handling the remaining unsupported DObj/DL blockers, broaden source-scene
+   coverage, then plan renderer cutover.
 3. Camera/HUD/match-flow work for the next `battle_playable` milestone.
 
 ## Verification

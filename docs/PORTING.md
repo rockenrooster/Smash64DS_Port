@@ -16712,3 +16712,24 @@ Still deferred:
 - Refreshed active docs to identify the Pupupu stage-inclusive hardware gate as
   the current zero-reject proof and the direct all-DL path as coverage-reduced
   after original-manager graduation.
+
+## 2026-07-03 - Live-Manager All-DL HW Bridge Progress
+
+- Rewired the immediate direct all-DL proof bridge to use the live
+  manager-created Mario/Fox `FTStruct` / `GObj` pointers when
+  `NDS_IMPORT_BATTLESHIP_FTMANAGER=1`, while keeping the old pool fallback for
+  non-manager builds.
+- Fixed the opt-in DS hardware alpha path so source opaque render modes submit
+  as fully opaque instead of letting zero vertex/material alpha suppress DS
+  polygons. BattleShip fighter display uses opaque render-mode setup around the
+  main draw path in `ft/ftdisplaymain.c:1176-1236`.
+- Targeted evidence: the direct all-DL hardware run now reaches live-manager
+  all-DL markers and reports `FTR_DL_ALL_HW=56,56,56,56,0,8,14,18` with
+  `FTR_DL_ALL_HWTEX=16,1,16,0,0x4,8,8`. It remains coverage-reduced because the
+  strict verifier still sees live-manager selected-DObj blockers and
+  unsupported opcodes (`0xbd`, `0x3e`) instead of the old fully clean synthetic
+  stack.
+- Verified the active stage-inclusive hardware gate:
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1
+  -HardwareTriangles -DelaySeconds 3`, which passed with
+  `hwsubmit=252`, `hwtri=1152`, and `hwtex=.../reject0/...`.

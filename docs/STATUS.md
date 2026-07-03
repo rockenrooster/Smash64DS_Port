@@ -84,12 +84,13 @@ removing them still needs status-by-status proofs.
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 The current Pupupu stage-inclusive hardware gate proves matrix, material,
 texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
-zero hardware texture rejects. The older direct all-DL hardware proof is
-coverage-reduced after original-manager graduation and must be rebuilt on the
-live manager fighter structs before it can be a current cutover gate. Latest
-captures remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity still
-needs broader source-scene coverage and renderer cutover work. Default builds
-still use the software preview.
+zero hardware texture rejects. Direct all-DL modes now reach the live
+manager-created Mario/Fox structs and the opt-in hardware path submits both
+fighters, but the strict direct all-DL verifier remains coverage-reduced until
+the live-manager unsupported DObj/DL blockers are handled. Latest captures
+remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity still needs
+broader source-scene coverage and renderer cutover work. Default builds still
+use the software preview.
 
 Latest gameplay proof is now original-manager Mario/Fox creation plus imported
 animation/key runtime for Wait -> Walk. The TaruCannon status `61`
@@ -102,9 +103,9 @@ The next useful gameplay work is to rebuild the reduced gcDrawAll/stage/MP,
 dash, and live-hit proof coverage on top of the natural original-manager runtime, then move toward
 `battle_playable` camera, HUD, match-flow, and renderer cutover work.
 
-- renderer follow-up: rebuild the direct all-DL hardware verifier on the
-  natural original-manager runtime, broaden source-scene coverage, then plan
-  renderer cutover work;
+- renderer follow-up: finish the live-manager direct all-DL hardware verifier
+  by handling the remaining unsupported DObj/DL blockers, broaden source-scene
+  coverage, then plan renderer cutover work;
 - continuous-runtime verifier for unbounded battle frames.
 
 ## Runtime Target

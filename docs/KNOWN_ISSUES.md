@@ -117,17 +117,18 @@
   `LOADTLUT`, CI4/CI8 palette conversion, IA4/IA8/IA16, I4/I8/I16, and
   RGBA32 conversion for source material records; the opt-in hardware path applies
   recorded primitive/environment material color and alpha from the current
-  combine state, maps recorded F3DEX2 front/back cull geometry mode to DS
-  polygon cull bits, applies the sm64-nds decal-combine rule to DS
-  `POLY_DECAL`, and applies its texture-filter coordinate-bias rule. After
-  original-manager graduation, direct all-DL verifier modes `33/34` are
-  coverage-reduced: the old immediate proof chain still depends on the
-  synthetic `sNdsFighterStructPool` proof stack, so the current mode parks at
-  VSBattle with zero `FTR_DL_MULTI` / `FTR_DL_ALL` markers. Treat prior direct
-  all-DL hardware stats and captures as regression history until that verifier
-  is rebuilt on live manager fighter structs. Remaining renderer work is the
-  live-manager all-DL rebuild, broader combiner/material/depth/texture
-  source-scene coverage, and cutover policy.
+  combine state, forces opaque DS poly alpha for source opaque render modes,
+  maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits,
+  applies the sm64-nds decal-combine rule to DS `POLY_DECAL`, and applies its
+  texture-filter coordinate-bias rule. After original-manager graduation,
+  direct all-DL verifier modes `33/34` are coverage-reduced: the live-manager
+  bridge now reaches the original manager-created Mario/Fox structs and
+  hardware-submits both fighters, but the strict verifier still fails because
+  selected live-manager DObjs expose unsupported blockers/opcodes (`0xbd`,
+  `0x3e`) instead of the old fully clean synthetic stack. Treat direct all-DL
+  hardware stats as partial renderer evidence until those blockers are handled.
+  Remaining renderer work is the live-manager all-DL cleanup, broader
+  combiner/material/depth/texture source-scene coverage, and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

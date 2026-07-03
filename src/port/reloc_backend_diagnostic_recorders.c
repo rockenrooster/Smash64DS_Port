@@ -17848,6 +17848,20 @@ void ndsFighterMarioFoxRunImmediateProofChain(void)
 {
     u32 i;
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    if ((gNdsFighterManagerResult == NDS_FIGHTER_MANAGER_PASS) &&
+        ((gNdsFighterManagerWaitMask & 0x3u) == 0x3u))
+    {
+        ndsFighterMarioFoxRunDLMultiDrawProbe();
+        ndsFighterMarioFoxRunDLAllDrawProbe();
+        if ((gNdsFighterMarioFoxDLMultiDrawResult != 0u) ||
+            (gNdsFighterMarioFoxDLAllDrawResult != 0u))
+        {
+            return;
+        }
+    }
+#endif
+
     for (i = 0u; i < 2u; i++)
     {
         FTStruct *fp = &sNdsFighterStructPool[i];

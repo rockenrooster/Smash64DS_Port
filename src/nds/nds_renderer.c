@@ -113,7 +113,11 @@
 #define NDS_RENDERER_ALPHA_COMPARE_THRESHOLD 0x1u
 #define NDS_RENDERER_ZSOURCE_PRIM 0x00000004u
 #define NDS_RENDERER_ZSOURCE_MASK 0x00000004u
+#define NDS_RENDERER_ZMODE_MASK 0x00000c00u
+#define NDS_RENDERER_ZMODE_XLU 0x00000800u
 #define NDS_RENDERER_ZMODE_DEC 0x00000c00u
+#define NDS_RENDERER_CVG_X_ALPHA 0x00001000u
+#define NDS_RENDERER_FORCE_BL 0x00004000u
 #define NDS_RENDERER_G_BL_A_MEM 1u
 #define NDS_RENDERER_BLEND_ALPHA_BITS_MASK 0x3u
 #define NDS_RENDERER_BLEND_ALPHA_CYCLE1_SHIFT 18u
@@ -1595,6 +1599,16 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     if (vtx != NULL)
     {
         alpha = vtx->a;
+    }
+    if ((stats != NULL) &&
+        ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) !=
+         NDS_RENDERER_ALPHA_COMPARE_THRESHOLD) &&
+        ((stats->othermode_l & NDS_RENDERER_FORCE_BL) == 0u) &&
+        ((stats->othermode_l & NDS_RENDERER_CVG_X_ALPHA) == 0u) &&
+        ((stats->othermode_l & NDS_RENDERER_ZMODE_MASK) !=
+         NDS_RENDERER_ZMODE_XLU))
+    {
+        return 31u;
     }
     if (ndsRendererHardwareBlendAlphaUsesMemory(stats) != FALSE)
     {

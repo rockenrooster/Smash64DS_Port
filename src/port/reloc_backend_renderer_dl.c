@@ -3810,7 +3810,7 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     u32 unused_index;
 
     if ((slot > 1u) || (pixels == NULL) ||
-        (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+        (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
         (fp->fighter_gobj == NULL) ||
         (fp->status_id != nFTCommonStatusWait) ||
         (fp->motion_id != nFTCommonMotionWait) ||
@@ -4642,7 +4642,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
     u32 i;
 
     if ((slot > 1u) || (pixels == NULL) ||
-        (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+        (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
         (fp->fighter_gobj == NULL) ||
         (fp->status_id != nFTCommonStatusWait) ||
         (fp->motion_id != nFTCommonMotionWait) ||
@@ -4769,7 +4769,12 @@ static void ndsFighterMarioFoxRunDLMultiDrawProbe(void)
         return;
     }
 
-    if ((gNdsFighterMarioFoxDLDrawResult ==
+    if (
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+        (gNdsFighterManagerResult == NDS_FIGHTER_MANAGER_PASS) &&
+        ((gNdsFighterManagerWaitMask & 0x3u) == 0x3u)
+#else
+        (gNdsFighterMarioFoxDLDrawResult ==
             NDS_FIGHTER_MARIOFOX_DL_DRAW_PASS) &&
         (gNdsFighterMarioFoxDLDrawSafeResult ==
             NDS_FIGHTER_MARIOFOX_DL_DRAW_SAFE_PASS) &&
@@ -4778,7 +4783,9 @@ static void ndsFighterMarioFoxRunDLMultiDrawProbe(void)
         (gNdsFighterDLDrawP0Blocker == NDS_RENDERER_BLOCKER_NONE) &&
         (gNdsFighterDLDrawP1Blocker == NDS_RENDERER_BLOCKER_NONE) &&
         (gNdsFighterDLDrawP0UnsupportedCommandCount == 0u) &&
-        (gNdsFighterDLDrawP1UnsupportedCommandCount == 0u))
+        (gNdsFighterDLDrawP1UnsupportedCommandCount == 0u)
+#endif
+        )
     {
         mask |= 1u << 0;
     }
@@ -4810,10 +4817,10 @@ static void ndsFighterMarioFoxRunDLMultiDrawProbe(void)
     }
 
     gobj_before = (u32)gcGetGObjsActiveNum();
-    ndsFighterMarioFoxDLMultiDrawForSlot(0u, &sNdsFighterStructPool[0],
-                                         pixels, pitch);
-    ndsFighterMarioFoxDLMultiDrawForSlot(1u, &sNdsFighterStructPool[1],
-                                         pixels, pitch);
+    ndsFighterMarioFoxDLMultiDrawForSlot(
+        0u, ndsFighterMarioFoxProofStructForSlot(0u), pixels, pitch);
+    ndsFighterMarioFoxDLMultiDrawForSlot(
+        1u, ndsFighterMarioFoxProofStructForSlot(1u), pixels, pitch);
     if (gNdsFighterMarioFoxDLMultiDrawCount == 2u)
     {
         mask |= 1u << 2;
@@ -5745,7 +5752,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 i;
 
     if ((slot > 1u) || (pixels == NULL) ||
-        (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+        (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
         (fp->fighter_gobj == NULL) ||
         (fp->status_id != nFTCommonStatusWait) ||
         (fp->motion_id != nFTCommonMotionWait) ||
@@ -5874,7 +5881,7 @@ static void ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(
     }
 
     fp = ftGetStruct(fighter_gobj);
-    if (ndsFighterStructIsPoolPointer(fp) == FALSE)
+    if (ndsFighterStructIsTrackedPointer(fp) == FALSE)
     {
         return;
     }
@@ -5915,7 +5922,13 @@ static void ndsFighterMarioFoxRunDLAllDrawProbe(void)
         return;
     }
 
-    if ((gNdsFighterMarioFoxDLMultiDrawResult ==
+    if (
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+        (gNdsFighterMarioFoxDLMultiDrawCount == 2u) &&
+        (gNdsFighterDLMultiDrawP0CandidateCount > 0u) &&
+        (gNdsFighterDLMultiDrawP1CandidateCount > 0u)
+#else
+        (gNdsFighterMarioFoxDLMultiDrawResult ==
             NDS_FIGHTER_MARIOFOX_DL_MULTI_DRAW_PASS) &&
         (gNdsFighterMarioFoxDLMultiDrawSafeResult ==
             NDS_FIGHTER_MARIOFOX_DL_MULTI_DRAW_SAFE_PASS) &&
@@ -5928,7 +5941,9 @@ static void ndsFighterMarioFoxRunDLAllDrawProbe(void)
         (gNdsFighterDLMultiDrawP0CleanCount == 4u) &&
         (gNdsFighterDLMultiDrawP1CleanCount == 4u) &&
         (gNdsFighterDLMultiDrawP0FailedCount == 0u) &&
-        (gNdsFighterDLMultiDrawP1FailedCount == 0u))
+        (gNdsFighterDLMultiDrawP1FailedCount == 0u)
+#endif
+        )
     {
         mask |= 1u << 0;
     }
@@ -5964,8 +5979,8 @@ static void ndsFighterMarioFoxRunDLAllDrawProbe(void)
     sNdsFighterDLAllDrawPitch = pitch;
     saved_camera = gGCCurrentCamera;
     gGCCurrentCamera = ndsBattleCompatMainCameraGObj();
-    ftDisplayMainProcDisplay(sNdsFighterStructPool[0].fighter_gobj);
-    ftDisplayMainProcDisplay(sNdsFighterStructPool[1].fighter_gobj);
+    ftDisplayMainProcDisplay(ndsFighterMarioFoxProofGObjForSlot(0u));
+    ftDisplayMainProcDisplay(ndsFighterMarioFoxProofGObjForSlot(1u));
     gGCCurrentCamera = saved_camera;
     sNdsFighterDLAllDrawProbeActive = FALSE;
     sNdsFighterDLAllDrawPixels = NULL;
