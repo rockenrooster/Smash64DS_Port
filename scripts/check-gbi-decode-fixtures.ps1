@@ -419,6 +419,7 @@ Assert-True ($rendererHeader.Contains('transformed_vertices')) 'Renderer command
 Assert-True ($rendererHeader.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Renderer hardware submit-latch API is missing.'
 $startupHeader = Get-Content (Join-Path $root 'include/nds/nds_startup.h') -Raw
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawHardwareTextureReadyCount')) 'All-DL hardware texture diagnostics are missing from the startup header.'
+Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount')) 'All-DL hardware z-buffer diagnostics are missing from the startup header.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Battle DL renderer matrix adapter is missing.'
 Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL renderer does not route DObj prep through original matrix helpers.'
@@ -439,6 +440,9 @@ Assert-True ($rendererAdapter.Contains('ndsRendererMtxMul20p12(&dobj_world, &cam
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareMaterialSegment')) 'Battle DL renderer material segment emission is missing.'
 Assert-True ($rendererAdapter.Contains('segment_e_base')) 'Battle DL renderer segment 0x0E material resolver is missing.'
 Assert-True ($rendererAdapter.Contains('NDS_FIGHTER_DL_OP_LOADTLUT')) 'Battle DL renderer material TLUT packet emission is missing.'
+Assert-True ($rendererAdapter.Contains('HardwareZBufferTriangleCount')) 'All-DL renderer does not expose hardware z-buffer stats.'
+Assert-True ($rendererAdapter.Contains('HardwareProjectedDepthTriangleCount')) 'All-DL renderer does not expose hardware projected-depth stats.'
+Assert-True ($rendererAdapter.Contains('HardwareDecalDepthTriangleCount')) 'All-DL renderer does not expose hardware decal-depth stats.'
 $compatShims = Get-Content (Join-Path $root 'src/port/reloc_backend_compat_shims.c') -Raw
 Assert-True ($compatShims.Contains('gcAddXObjForCamera(cobj, 0x4C, 0)')) 'VSBattle compatibility camera no longer exposes the BattleShip 0x4C matrix kind.'
 $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c') -Raw
@@ -447,6 +451,8 @@ $allDLVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-dl
 Assert-True ($allDLVerifier.Contains('HardwareTriangles')) 'All-DL verifier hardware-triangle switch is missing.'
 Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HWTEX')) 'All-DL verifier hardware texture marker is missing.'
 Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HW')) 'All-DL verifier hardware triangle marker is missing.'
+Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HW_DEPTH')) 'All-DL verifier hardware depth marker is missing.'
+Assert-True ($allDLVerifier.Contains('hwdepth=z')) 'All-DL verifier summary does not report hardware depth stats.'
 Assert-True ($allDLVerifier.Contains('gNdsFighterDLAllDrawP0HardwareMatrixSeedCount')) 'All-DL verifier hardware matrix-seed diagnostics are missing.'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'

@@ -94,6 +94,7 @@ try {
         'printf "FTR_DL_ALL_GEOM=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0VertexDecodedCount, gNdsFighterDLAllDrawP1VertexDecodedCount, gNdsFighterDLAllDrawP0TriangleCount, gNdsFighterDLAllDrawP1TriangleCount, gNdsFighterDLAllDrawP0TriangleValidCount, gNdsFighterDLAllDrawP1TriangleValidCount, gNdsFighterDLAllDrawP0TriangleDrawnCount, gNdsFighterDLAllDrawP1TriangleDrawnCount, gNdsFighterDLAllDrawP0PixelCount, gNdsFighterDLAllDrawP1PixelCount, gNdsFighterDLAllDrawTotalPixelCount',
         'printf "FTR_DL_ALL_RENDER=%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0RealTriangleDrawnCount, gNdsFighterDLAllDrawP1RealTriangleDrawnCount, gNdsFighterDLAllDrawP0MarkerTriangleDrawnCount, gNdsFighterDLAllDrawP1MarkerTriangleDrawnCount',
         'printf "FTR_DL_ALL_HW=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0HardwareTriangleCount, gNdsFighterDLAllDrawP1HardwareTriangleCount, gNdsFighterDLAllDrawP0HardwareOracleTriangleCount, gNdsFighterDLAllDrawP1HardwareOracleTriangleCount, gNdsFighterDLAllDrawP0HardwareOracleRejectCount, gNdsFighterDLAllDrawP1HardwareOracleRejectCount, gNdsFighterDLAllDrawP0HardwareMatrixSeedCount, gNdsFighterDLAllDrawP1HardwareMatrixSeedCount',
+        'printf "FTR_DL_ALL_HW_DEPTH=%u,%u,%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount, gNdsFighterDLAllDrawP1HardwareZBufferTriangleCount, gNdsFighterDLAllDrawP0HardwareProjectedDepthTriangleCount, gNdsFighterDLAllDrawP1HardwareProjectedDepthTriangleCount, gNdsFighterDLAllDrawP0HardwareDecalDepthTriangleCount, gNdsFighterDLAllDrawP1HardwareDecalDepthTriangleCount',
         'printf "FTR_DL_ALL_HWTEX=%u,%u,%u,%u,%#x,%u,%u\n", gNdsFighterDLAllDrawHardwareTextureBindCount, gNdsFighterDLAllDrawHardwareTextureUploadCount, gNdsFighterDLAllDrawHardwareTextureReadyCount, gNdsFighterDLAllDrawHardwareTextureRejectCount, gNdsFighterDLAllDrawHardwareTextureFormatMask, gNdsFighterDLAllDrawHardwareTextureMaxWidth, gNdsFighterDLAllDrawHardwareTextureMaxHeight',
         'printf "FTR_DL_ALL_AXIS=%u,%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsFighterDLAllDrawP0Axis, gNdsFighterDLAllDrawP1Axis, gNdsFighterDLAllDrawP0Area, gNdsFighterDLAllDrawP1Area, gNdsFighterDLAllDrawP0MinA, gNdsFighterDLAllDrawP0MaxA, gNdsFighterDLAllDrawP0MinB, gNdsFighterDLAllDrawP0MaxB, gNdsFighterDLAllDrawP1MinA, gNdsFighterDLAllDrawP1MaxA, gNdsFighterDLAllDrawP1MinB, gNdsFighterDLAllDrawP1MaxB',
         'printf "FTR_DL_ALL_SCREEN=%d,%d,%d,%d,%d,%d,%d,%d,%#x,%#x\n", gNdsFighterDLAllDrawP0ScreenMinX, gNdsFighterDLAllDrawP0ScreenMaxX, gNdsFighterDLAllDrawP0ScreenMinY, gNdsFighterDLAllDrawP0ScreenMaxY, gNdsFighterDLAllDrawP1ScreenMinX, gNdsFighterDLAllDrawP1ScreenMaxX, gNdsFighterDLAllDrawP1ScreenMinY, gNdsFighterDLAllDrawP1ScreenMaxY, gNdsFighterDLAllDrawP0ColorChecksum, gNdsFighterDLAllDrawP1ColorChecksum',
@@ -121,6 +122,7 @@ try {
     $geom = [regex]::Match($gdbStdout, 'FTR_DL_ALL_GEOM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $render = [regex]::Match($gdbStdout, 'FTR_DL_ALL_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $hw = [regex]::Match($gdbStdout, 'FTR_DL_ALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $hwDepth = [regex]::Match($gdbStdout, 'FTR_DL_ALL_HW_DEPTH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $hwTexture = [regex]::Match($gdbStdout, 'FTR_DL_ALL_HWTEX=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $axis = [regex]::Match($gdbStdout, 'FTR_DL_ALL_AXIS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $screen = [regex]::Match($gdbStdout, 'FTR_DL_ALL_SCREEN=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
@@ -144,6 +146,12 @@ try {
     if ($HardwareTriangles) {
         Assert-Condition ([int]$hw.Groups[1].Value -gt 0 -and [int]$hw.Groups[2].Value -gt 0 -and [int]$hw.Groups[3].Value -gt 0 -and [int]$hw.Groups[4].Value -gt 0 -and [int]$hw.Groups[7].Value -gt 0 -and [int]$hw.Groups[8].Value -gt 0) 'Hardware all-DL draw did not submit triangles from seeded matrices.' $gdbStdout
     }
+    Assert-Condition ($hwDepth.Success) 'All-DL hardware depth diagnostics were not printed.' $gdbStdout
+    if ($HardwareTriangles) {
+        $p0Depth = [int]$hwDepth.Groups[1].Value + [int]$hwDepth.Groups[3].Value
+        $p1Depth = [int]$hwDepth.Groups[2].Value + [int]$hwDepth.Groups[4].Value
+        Assert-Condition ($p0Depth -eq [int]$hw.Groups[1].Value -and $p1Depth -eq [int]$hw.Groups[2].Value -and [int]$hwDepth.Groups[1].Value -gt 0 -and [int]$hwDepth.Groups[2].Value -gt 0) 'Hardware all-DL depth classification did not account for submitted triangles.' $gdbStdout
+    }
     Assert-Condition ($hwTexture.Success) 'All-DL hardware texture diagnostics were not printed.' $gdbStdout
     if ($HardwareTriangles) {
         Assert-Condition ([int]$hwTexture.Groups[1].Value -gt 0 -and [int]$hwTexture.Groups[2].Value -gt 0 -and [int]$hwTexture.Groups[3].Value -gt 0 -and (Convert-MarkerUInt32 $hwTexture.Groups[5].Value) -ne 0 -and [int]$hwTexture.Groups[6].Value -gt 0 -and [int]$hwTexture.Groups[7].Value -gt 0) 'Hardware all-DL draw did not bind/upload a texture.' $gdbStdout
@@ -157,7 +165,7 @@ try {
     Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after all-DL draw.' $gdbStdout
     $summary = ("Battle Mario/Fox all-DL draw harness passed: scene=22/21 callbacks=2 candidates=14/18 selected=14/18 pixels={0}/{1} tris={2}/{3} real={4}/{5} marker={6}/{7} clean=14/18 failed=0/0 preview=96x72 safe=1" -f $geom.Groups[9].Value, $geom.Groups[10].Value, $geom.Groups[3].Value, $geom.Groups[4].Value, $render.Groups[1].Value, $render.Groups[2].Value, $render.Groups[3].Value, $render.Groups[4].Value)
     if ($HardwareTriangles) {
-        $summary += (" hw={0}/{1} oracle={2}/{3} reject={4}/{5} seed={6}/{7} hwtex=bind{8}/upload{9}/ready{10}/reject{11}/fmt{12}/max{13}x{14}" -f $hw.Groups[1].Value, $hw.Groups[2].Value, $hw.Groups[3].Value, $hw.Groups[4].Value, $hw.Groups[5].Value, $hw.Groups[6].Value, $hw.Groups[7].Value, $hw.Groups[8].Value, $hwTexture.Groups[1].Value, $hwTexture.Groups[2].Value, $hwTexture.Groups[3].Value, $hwTexture.Groups[4].Value, $hwTexture.Groups[5].Value, $hwTexture.Groups[6].Value, $hwTexture.Groups[7].Value)
+        $summary += (" hw={0}/{1} oracle={2}/{3} reject={4}/{5} seed={6}/{7} hwdepth=z{8}/{9}/proj{10}/{11}/decal{12}/{13} hwtex=bind{14}/upload{15}/ready{16}/reject{17}/fmt{18}/max{19}x{20}" -f $hw.Groups[1].Value, $hw.Groups[2].Value, $hw.Groups[3].Value, $hw.Groups[4].Value, $hw.Groups[5].Value, $hw.Groups[6].Value, $hw.Groups[7].Value, $hw.Groups[8].Value, $hwDepth.Groups[1].Value, $hwDepth.Groups[2].Value, $hwDepth.Groups[3].Value, $hwDepth.Groups[4].Value, $hwDepth.Groups[5].Value, $hwDepth.Groups[6].Value, $hwTexture.Groups[1].Value, $hwTexture.Groups[2].Value, $hwTexture.Groups[3].Value, $hwTexture.Groups[4].Value, $hwTexture.Groups[5].Value, $hwTexture.Groups[6].Value, $hwTexture.Groups[7].Value)
     }
     Write-Output $summary
 } finally {

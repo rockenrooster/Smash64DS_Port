@@ -5602,6 +5602,12 @@ static void ndsFighterDLAllDrawAccumulateStats(
             stats->matrix_move_word_count;
         gNdsFighterDLAllDrawP0HardwareTriangleCount +=
             stats->hardware_triangle_count;
+        gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount +=
+            stats->hardware_zbuffer_triangle_count;
+        gNdsFighterDLAllDrawP0HardwareProjectedDepthTriangleCount +=
+            stats->hardware_projected_depth_triangle_count;
+        gNdsFighterDLAllDrawP0HardwareDecalDepthTriangleCount +=
+            stats->hardware_decal_depth_triangle_count;
         gNdsFighterDLAllDrawP0HardwareOracleTriangleCount +=
             stats->hardware_oracle_triangle_count;
         gNdsFighterDLAllDrawP0HardwareOracleRejectCount +=
@@ -5655,6 +5661,12 @@ static void ndsFighterDLAllDrawAccumulateStats(
             stats->matrix_move_word_count;
         gNdsFighterDLAllDrawP1HardwareTriangleCount +=
             stats->hardware_triangle_count;
+        gNdsFighterDLAllDrawP1HardwareZBufferTriangleCount +=
+            stats->hardware_zbuffer_triangle_count;
+        gNdsFighterDLAllDrawP1HardwareProjectedDepthTriangleCount +=
+            stats->hardware_projected_depth_triangle_count;
+        gNdsFighterDLAllDrawP1HardwareDecalDepthTriangleCount +=
+            stats->hardware_decal_depth_triangle_count;
         gNdsFighterDLAllDrawP1HardwareOracleTriangleCount +=
             stats->hardware_oracle_triangle_count;
         gNdsFighterDLAllDrawP1HardwareOracleRejectCount +=

@@ -16192,3 +16192,16 @@ Still deferred:
   `.\scripts\build-verify-profile.ps1 -Profile Regression`, and all four
   `.\scripts\verify-all.ps1 -Profile Regression -ShardCount 4 ... -NoBuild`
   shards.
+
+## 2026-07-03 - Hardware All-DL Depth Marker
+
+- Surfaced the existing opt-in hardware renderer z-buffer, projected-depth, and
+  decal-depth triangle counters through the Mario/Fox all-DL draw diagnostics.
+- Reused the existing `-HardwareTriangles` all-DL verifier; it now proves the
+  direct Pupupu Mario/Fox hardware scene submits `316/314` z-buffered triangles
+  and no projected/decal-depth triangles
+  (`hwdepth=z316/314/proj0/0/decal0/0`), alongside the existing texture marker
+  `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`.
+- Reverified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  and `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.

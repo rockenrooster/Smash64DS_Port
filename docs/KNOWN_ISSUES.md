@@ -92,13 +92,14 @@
   combine state, maps recorded F3DEX2 front/back cull geometry mode to DS
   polygon cull bits, applies the sm64-nds decal-combine rule to DS
   `POLY_DECAL`, applies its texture-filter coordinate-bias rule, and the
-  all-DL verifier proves one hardware texture
-  upload/bind (`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`).
-  Hardware all-DL stats prove triangle submission and matrix seeds, but the
-  direct all-DL scene emits no matrix-word stream
+  all-DL verifier proves z-buffer depth classification plus one hardware
+  texture upload/bind (`hwdepth=z316/314/proj0/0/decal0/0`,
+  `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`). Hardware all-DL stats
+  prove triangle submission and matrix seeds, but the direct all-DL scene emits
+  no matrix-word stream
   (`MW=0/0/0/0`) and many texture states still reject. Remaining renderer work
-  is remaining combiner/material behavior, broader texture/no-z source-scene
-  coverage, and cutover policy.
+  is remaining combiner/material behavior, broader texture/no-z/decal
+  source-scene coverage, and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

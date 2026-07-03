@@ -73,8 +73,9 @@ texture upload coverage, recorded material color/alpha, source culling, reset
 geometry/filter seeds, and sm64-nds-style no-z / decal-depth submission. Current
 captures are `artifacts\renderer-stage-gcdrawall-hw.png` and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
-proves `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Full visual
-fidelity still needs remaining combiner/material behavior, broader texture/no-z
+proves `hwdepth=z316/314/proj0/0/decal0/0` and
+`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Full visual fidelity
+still needs remaining combiner/material behavior, broader texture/no-z/decal
 source-scene coverage, and renderer cutover work. Default builds still use the
 software preview.
 
@@ -89,8 +90,9 @@ The next useful work is not another proof bit. It is one of:
   cliffmotion restore duplicate-behavior seams status-by-status as source
   proofs graduate;
 - renderer follow-up: finish opt-in hardware combiner/material policy,
-  broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
-  plus IA/I decoders, then plan renderer cutover work;
+  broaden remaining texture-state and no-z/decal source-scene coverage after
+  the first all-DL CI/TLUT gate plus IA/I decoders, then plan renderer cutover
+  work;
 - continuous-runtime verifier for unbounded battle frames.
 
 ## Runtime Target

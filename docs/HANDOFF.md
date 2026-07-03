@@ -47,8 +47,9 @@ uploads, material color/alpha, source culling, reset geometry/filter seeds, and
 sm64-nds-style no-z / decal-depth submission. Current captures:
 `artifacts\renderer-stage-gcdrawall-hw.png` and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
-reports `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Default builds
-still use the software preview.
+reports `hwdepth=z316/314/proj0/0/decal0/0` and
+`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`. Default builds still use
+the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local
@@ -78,8 +79,9 @@ the work reaches a scene-level boundary such as `battle_playable` or
 ## Recommended Next Work
 
 1. Renderer follow-up: finish opt-in hardware combiner/material policy,
-   broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
-   plus IA/I decoders, then plan renderer cutover.
+   broaden remaining texture-state and no-z/decal source-scene coverage after
+   the first all-DL CI/TLUT gate plus IA/I decoders, then plan renderer
+   cutover.
 2. Runtime follow-up: delete the remaining `ftMainSetStatus` compat-replay and
    cliffmotion restore duplicate-behavior seams status-by-status as those source
    proofs graduate.
