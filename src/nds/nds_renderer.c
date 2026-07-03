@@ -95,6 +95,8 @@
 #define NDS_RENDERER_TF_BILERP (2u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TEXTFILT_MASK (3u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TEXCOORD_FILTER_OFFSET (1 << 4)
+#define NDS_RENDERER_ALPHA_COMPARE_MASK 0x3u
+#define NDS_RENDERER_ALPHA_COMPARE_THRESHOLD 0x1u
 #define NDS_RENDERER_ZMODE_DEC 0x00000c00u
 #define NDS_RENDERER_G_BL_A_MEM 1u
 #define NDS_RENDERER_BLEND_ALPHA_MEM_MASK (NDS_RENDERER_G_BL_A_MEM << 18)
@@ -1429,6 +1431,21 @@ static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
     return poly_fmt;
 }
 
+static void ndsRendererHardwareApplyAlphaTest(const NDSRendererStats *stats)
+{
+    if ((stats != NULL) &&
+        ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) ==
+         NDS_RENDERER_ALPHA_COMPARE_THRESHOLD))
+    {
+        glEnable(GL_ALPHA_TEST);
+        glAlphaFunc(0);
+    }
+    else
+    {
+        glDisable(GL_ALPHA_TEST);
+    }
+}
+
 static s32 ndsRendererHardwareTextureFilterOffset(
     const NDSRendererStats *stats)
 {
@@ -2316,6 +2333,7 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         glDisable(GL_TEXTURE_2D);
     }
+    ndsRendererHardwareApplyAlphaTest(stats);
     glPolyFmt(ndsRendererHardwarePolyFmt(stats, poly_alpha));
     glBegin(GL_TRIANGLE);
     ndsRendererHardwareSubmitVertex(
@@ -2334,6 +2352,7 @@ static void ndsRendererSubmitHardwareTriangle(
         stats->texture_scale_t, texture_offset, scale_world, zbuffered,
         decal_depth, projected_z);
     glEnd();
+    glDisable(GL_ALPHA_TEST);
 
     sNdsRendererHardwareSubmitted = TRUE;
     stats->hardware_triangle_count++;

@@ -73,7 +73,8 @@ The hardware path has BattleShip billboard/recalc matrix seeds, Pupupu
 stage-inclusive submission, source-shaped material branch packets, CI/IA/I/RGBA
 texture upload coverage, recorded material color/alpha, source culling, reset
 geometry/filter seeds, sm64-nds-style no-z / decal-depth submission, and
-F3DEX `G_FOG` -> DS `POLY_FOG` polygon format mapping. Current
+F3DEX `G_FOG` -> DS `POLY_FOG` plus `G_AC_THRESHOLD` -> DS alpha-test
+polygon state mapping. Current
 captures are `artifacts\renderer-stage-gcdrawall-hw.png` and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
 proves `hwdepth=z316/314/proj0/0/decal0/0` and

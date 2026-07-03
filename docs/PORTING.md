@@ -16322,3 +16322,18 @@ Still deferred:
   refreshed `artifacts\renderer-stage-gcdrawall-hw.png`, and passed
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`. Current source scenes
   keep the existing all-DL and Pupupu stage markers unchanged.
+
+## 2026-07-03 - Hardware Alpha-Compare Threshold Mapping
+
+- Mapped source `G_AC_THRESHOLD` othermode-L state to DS `GL_ALPHA_TEST` with a
+  zero cutoff in the opt-in hardware renderer, and disabled DS alpha test when
+  the source alpha-compare mode is not threshold. This covers BattleShip's
+  texture-edge fighter collision display lists
+  (`decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c:247-248,306-307`) and
+  keeps the reset `G_AC_NONE` state from `decomp/BattleShip-main/decomp/src/sys/rdp.c:46`.
+- Reverified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  refreshed `artifacts\renderer-stage-gcdrawall-hw.png`, and passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`. Current source scenes
+  keep the existing all-DL and Pupupu stage markers unchanged.
