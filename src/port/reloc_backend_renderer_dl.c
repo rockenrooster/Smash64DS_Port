@@ -3169,7 +3169,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              &initial_modelview_ptr);
 
     config.max_depth = 8u;
-    config.max_commands = 2048u;
+    config.max_commands = 8192u;
     config.max_list_commands = 512u;
     config.initial_projection = initial_projection_ptr;
     config.initial_modelview = initial_modelview_ptr;

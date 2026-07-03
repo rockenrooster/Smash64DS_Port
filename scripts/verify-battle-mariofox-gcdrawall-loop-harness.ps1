@@ -13,6 +13,7 @@ param(
     [int]$ExpectedHarnessScenePrev = 21,
     [string]$Label = 'Battle Mario/Fox gcDrawAll-loop',
     [string]$HarnessSelectMessage = 'Direct gcDrawAll-loop harness did not select VSBattle from Maps.',
+    [switch]$HardwareTriangles,
     [switch]$RequireStageDraw,
     [switch]$RequireStageCollision,
     [switch]$RequireStageFloorFollow,
@@ -409,7 +410,9 @@ function Assert-CliffCommon2BridgeRoot {
 }
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-& make -C $root TARGET=$Target BUILD=$Build NDS_DEV_SCENE_HARNESS=$Harness -j16
+$makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
+if ($HardwareTriangles) { $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1' }
+& make @makeArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw "$Label harness build did not produce the expected ROM and ELF."
@@ -455,6 +458,7 @@ try {
         'printf "GCDRAWALL_TRANS=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterGCDrawAllLoopFallDetectCount, gNdsFighterGCDrawAllLoopLandingDetectCount, gNdsFighterGCDrawAllLoopSetGroundCount, gNdsFighterGCDrawAllLoopSetAirCount, gNdsFighterGCDrawAllLoopWaitSetStatusCount, gNdsFighterGCDrawAllLoopRunBrakeEndCount, gNdsFighterGCDrawAllLoopJumpAnimEndCount, gNdsFighterGCDrawAllLoopLandingEndCount, gNdsFighterGCDrawAllLoopDeferredInterruptCheckCount',
         'printf "GCDRAWALL_SAFE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterGCDrawAllLoopGObjDelta, gNdsFighterGCDrawAllLoopUnexpectedStatusCount, gNdsFighterGCDrawAllLoopDeniedStatusCount, gNdsFighterGCDrawAllLoopProcessAttachEscapeCount, gNdsFighterGCDrawAllLoopDisplayProbeCount, gNdsFighterGCDrawAllLoopGameplayUpdateCount, gNdsFighterGCDrawAllLoopDrawCallCount, gNdsFighterGCDrawAllLoopMatrixCallCount, gNdsFighterGCDrawAllLoopRootYDriftCount, gNdsFighterGCDrawAllLoopGADriftCount',
         'printf "PLATFORM_DL_PREVIEW=%u,%u,%u,%u\n", gNdsOriginalDLPreviewReady, gNdsOriginalDLPreviewWidth, gNdsOriginalDLPreviewHeight, gNdsOriginalDLPreviewCommitCount',
+        'printf "PLATFORM_HW=%u,%u\n", gNdsHardwareRendererSubmittedFrameCount, gNdsHardwareRendererFlushCount',
         'printf "BOUNDARY=%#x,%u\n", gNdsSceneBoundaryResult, gNdsSceneBoundaryKind',
         'detach',
         'quit'
@@ -1184,6 +1188,7 @@ try {
     $trans = [regex]::Match($gdbStdout, 'GCDRAWALL_TRANS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $safe = [regex]::Match($gdbStdout, 'GCDRAWALL_SAFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $platform = [regex]::Match($gdbStdout, 'PLATFORM_DL_PREVIEW=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $platformHw = [regex]::Match($gdbStdout, 'PLATFORM_HW=([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     $stage = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $stageCapture = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_CAPTURE=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
@@ -1732,6 +1737,11 @@ try {
         $sp = Get-Ints $stagePixels
         Assert-Condition ($stagePixels.Success -and $sp[0] -gt 0 -and $sp[1] -gt 0) 'Stage-inclusive preview pixel markers failed.' $gdbStdout
         $stageSummary = (" stageCapture=0x{0:x}/0x{1:x} stageDObj=0x{2:x}/0x{3:x} stageDL=0x{4:x}/0x{5:x} stagePixels={6} compat=0x{7:x}" -f $cap[2], $cap[3], $dob[2], $dob[3], $dob[4], $dob[5], $sp[1], $sp[2])
+        if ($HardwareTriangles) {
+            $hw = Get-Ints $platformHw
+            Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Stage-inclusive hardware draw did not flush submitted DS 3D frames.' $gdbStdout
+            $stageSummary = "$stageSummary hwflush=$($hw[0])/$($hw[1])"
+        }
     }
     $stageSummary = "$stageSummary$dashRunSummary$mpDamageRecoverSummary$mpLiveHitSummary"
     if ($RequireStageCollision -and -not $RequireStageFloorEdge) {

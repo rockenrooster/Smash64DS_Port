@@ -16205,3 +16205,17 @@ Still deferred:
 - Reverified `.\scripts\check-gbi-decode-fixtures.ps1`,
   `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
   and `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-03 - Stage gcDrawAll Hardware Flush Proof
+
+- Added an opt-in `-HardwareTriangles` path to the existing Pupupu stage
+  gcDrawAll verifier. It builds with `NDS_RENDERER_HW_TRIANGLES=1`, keeps the
+  software preview proof as the default oracle, and checks the DS 3D frame
+  submit/flush counters.
+- Bounded the stage hardware submission to the first small DObj slice for this
+  proof so the source `gcDrawAll` traversal still reaches the existing
+  verifier boundary under the fast melonDS window. The stage submitter keeps a
+  larger display-list command budget for the broader Pupupu DLs.
+- Reverified `.\scripts\check-gbi-decode-fixtures.ps1` and
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  which passed with `hwflush=1/1`.

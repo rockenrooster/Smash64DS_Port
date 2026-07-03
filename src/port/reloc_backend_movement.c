@@ -9338,6 +9338,10 @@ s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void)
 
 static GObj *sNdsStageGCDrawAllLoopCurrentCameraGObj;
 static GObj *sNdsStageGCDrawAllLoopCurrentDisplayGObj;
+#if NDS_RENDERER_HW_TRIANGLES
+#define NDS_STAGE_GCDRAWALL_HW_SUBMIT_LIMIT 8u
+static u32 sNdsStageGCDrawAllLoopHardwareSubmitCount;
+#endif
 
 static sb32 ndsStageGCDrawAllLoopClassifyGObj(GObj *gobj, u32 *mask,
                                               sb32 *is_layer)
@@ -9454,6 +9458,8 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
         }
 #if NDS_RENDERER_HW_TRIANGLES
         if ((dobj->dv != NULL) &&
+            (sNdsStageGCDrawAllLoopHardwareSubmitCount <
+             NDS_STAGE_GCDRAWALL_HW_SUBMIT_LIMIT) &&
             ((callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) ||
              (callback_kind ==
                  NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS) ||
@@ -9471,6 +9477,7 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                 (gobj == sNdsStageGCDrawAllLoopCurrentDisplayGObj) ?
                     sNdsStageGCDrawAllLoopCurrentCameraGObj :
                     NULL);
+            sNdsStageGCDrawAllLoopHardwareSubmitCount++;
         }
 #endif
         if ((dobj->sib_next != NULL) && (stack_count < ARRAY_COUNT(stack)))
@@ -9570,4 +9577,3 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     ndsStageGCDrawAllLoopScanDObjs(stage_gobj, mask, is_layer, kind,
                                    callback_kind);
 }
-

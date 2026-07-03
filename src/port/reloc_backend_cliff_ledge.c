@@ -15479,6 +15479,9 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsStageGCDrawAllLoopPreviewCommitDelta = 0u;
     gNdsStageGCDrawAllLoopTotalPixelCount = 0u;
     gNdsStageGCDrawAllLoopCompatMask = 0u;
+#if NDS_RENDERER_HW_TRIANGLES
+    sNdsStageGCDrawAllLoopHardwareSubmitCount = 0u;
+#endif
 }
 
 void ndsFighterMarioFoxStageGCDrawAllLoopPrepare(void)

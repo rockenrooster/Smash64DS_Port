@@ -403,6 +403,7 @@ Assert-True ($platform.Contains('VRAM_A_TEXTURE')) 'Platform texture VRAM bank A
 Assert-True ($platform.Contains('VRAM_E_TEX_PALETTE')) 'Platform texture palette VRAM bank init is missing.'
 Assert-True ($platform.Contains('glFlush(0)')) 'Platform hardware renderer frame flush is missing.'
 Assert-True ($platform.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Platform does not guard hardware flushes with the renderer submit latch.'
+Assert-True ($platform.Contains('gNdsHardwareRendererFlushCount')) 'Platform hardware renderer flush diagnostic is missing.'
 $makefile = Get-Content (Join-Path $root 'Makefile') -Raw
 Assert-True ($makefile.Contains('NDS_RENDERER_HW_TRIANGLES ?= 0')) 'Makefile hardware renderer flag default is missing.'
 Assert-True ($makefile.Contains('battleship_sys_matrix.c')) 'Makefile original sys/matrix import is missing.'
@@ -454,6 +455,12 @@ Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HW')) 'All-DL verifier hardware
 Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HW_DEPTH')) 'All-DL verifier hardware depth marker is missing.'
 Assert-True ($allDLVerifier.Contains('hwdepth=z')) 'All-DL verifier summary does not report hardware depth stats.'
 Assert-True ($allDLVerifier.Contains('gNdsFighterDLAllDrawP0HardwareMatrixSeedCount')) 'All-DL verifier hardware matrix-seed diagnostics are missing.'
+$stageGCDrawVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcdrawall-loop-harness.ps1') -Raw
+Assert-True ($stageGCDrawVerifier.Contains('PLATFORM_HW')) 'gcDrawAll verifier hardware frame-flush marker is missing.'
+Assert-True ($stageGCDrawVerifier.Contains('hwflush=')) 'gcDrawAll verifier hardware frame-flush summary is missing.'
+$stageGCDrawWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1') -Raw
+Assert-True ($stageGCDrawWrapper.Contains('HardwareTriangles')) 'Stage gcDrawAll verifier hardware switch is missing.'
+Assert-True ($stageGCDrawVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1')) 'Stage gcDrawAll verifier does not enable hardware renderer builds.'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
 Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'

@@ -92,6 +92,8 @@ volatile u32 gNdsPerfPreviewCommitFps;
 volatile u32 gNdsPerfPreviewCommitCount;
 volatile u32 gNdsPerfSampleCount;
 volatile u32 gNdsPerfSampleWindowTicks;
+volatile u32 gNdsHardwareRendererSubmittedFrameCount;
+volatile u32 gNdsHardwareRendererFlushCount;
 
 void ndsPlatformInit(void)
 {
@@ -911,7 +913,9 @@ void ndsPlatformEndFrame(void)
 #if NDS_RENDERER_HW_TRIANGLES
     if (ndsRendererHardwareConsumeSubmittedFrame() != 0u)
     {
+        gNdsHardwareRendererSubmittedFrameCount++;
         glFlush(0);
+        gNdsHardwareRendererFlushCount++;
     }
     swiWaitForVBlank();
     sTicks++;
