@@ -60,6 +60,8 @@
 #define NDS_RENDERER_MTX_LOAD 0x02u
 #define NDS_RENDERER_MTX_PROJECTION 0x04u
 #define NDS_RENDERER_MOVEWORD_MATRIX 0x00u
+#define NDS_RENDERER_MOVEWORD_FOG 0x08u
+#define NDS_RENDERER_MOVEWORD_FOG_OFFSET 0x00u
 #define NDS_RENDERER_MOVEWORD_OFFSET_SHIFT 8u
 #define NDS_RENDERER_MOVEWORD_OFFSET_MASK 0xffffu
 #define NDS_RENDERER_MOVEWORD_INDEX_MASK 0xffu
@@ -1001,6 +1003,46 @@ static void ndsRendererApplyMvpRecalcCommand(
     ndsRendererInitMatrixWordRaw(state);
 }
 
+static void ndsRendererRecordFogMoveWord(NDSRendererStats *stats, u32 w1)
+{
+    s32 mul;
+    s32 ofs;
+    s32 fog_min;
+    s32 fog_max;
+
+    if ((stats == NULL) || (stats->fog_status >= 2u))
+    {
+        return;
+    }
+
+    mul = (s16)(w1 >> 16);
+    ofs = (s16)w1;
+    if (mul == 0)
+    {
+        stats->ignored_state_command_count++;
+        return;
+    }
+
+    fog_min = 500 - ((ofs * 500) / mul);
+    fog_max = (128000 / mul) + fog_min;
+    if ((stats->fog_status == 0u) ||
+        (stats->fog_min != fog_min) ||
+        (stats->fog_max != fog_max))
+    {
+        stats->fog_status++;
+        stats->fog_min = fog_min;
+        stats->fog_max = fog_max;
+    }
+}
+
+static void ndsRendererRecordFogColor(NDSRendererStats *stats, u32 w1)
+{
+    if ((stats != NULL) && (stats->fog_status < 2u))
+    {
+        stats->fog_color = w1;
+    }
+}
+
 static void ndsRendererApplyMatrixMoveWordCommand(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
@@ -1021,6 +1063,12 @@ static void ndsRendererApplyMatrixMoveWordCommand(
     index = w0 & NDS_RENDERER_MOVEWORD_INDEX_MASK;
     offset = (w0 >> NDS_RENDERER_MOVEWORD_OFFSET_SHIFT) &
         NDS_RENDERER_MOVEWORD_OFFSET_MASK;
+    if ((index == NDS_RENDERER_MOVEWORD_FOG) &&
+        (offset == NDS_RENDERER_MOVEWORD_FOG_OFFSET))
+    {
+        ndsRendererRecordFogMoveWord(stats, w1);
+        return;
+    }
     if ((index != NDS_RENDERER_MOVEWORD_MATRIX) ||
         ((offset % NDS_RENDERER_MATRIX_WORD_BYTES) != 0u) ||
         ((offset / NDS_RENDERER_MATRIX_WORD_BYTES) >=
@@ -1444,6 +1492,54 @@ static void ndsRendererHardwareApplyAlphaTest(const NDSRendererStats *stats)
     {
         glDisable(GL_ALPHA_TEST);
     }
+}
+
+static void ndsRendererHardwareApplyFog(const NDSRendererStats *stats)
+{
+    s32 range;
+    s32 shift;
+    s32 density;
+    s32 inc;
+    s32 i;
+    u32 color;
+
+    if ((stats == NULL) ||
+        (stats->fog_status == 0u) ||
+        (stats->fog_max <= stats->fog_min))
+    {
+        glDisable(GL_FOG);
+        return;
+    }
+
+    range = stats->fog_max - stats->fog_min;
+    shift = 0;
+    for (i = 500; (i >= range) && (i > 0); i >>= 1)
+    {
+        shift++;
+    }
+
+    density = 0;
+    inc = (((128 * 1000) << 1) / (range * 32) + 1) >> (shift + 1);
+    if (inc < 1)
+    {
+        inc = 1;
+    }
+    for (i = 0; i < 32; i++)
+    {
+        glFogDensity(i, density);
+        density += inc;
+        if (density > 127)
+        {
+            density = 127;
+        }
+    }
+
+    color = stats->fog_color;
+    glFogShift(shift);
+    glFogOffset((stats->fog_min * 0x7fff / 1000) - (0x400 >> shift));
+    glFogColor((color >> 27) & 0x1fu, (color >> 19) & 0x1fu,
+               (color >> 11) & 0x1fu, (color >> 3) & 0x1fu);
+    glEnable(GL_FOG);
 }
 
 static s32 ndsRendererHardwareTextureFilterOffset(
@@ -2334,6 +2430,7 @@ static void ndsRendererSubmitHardwareTriangle(
         glDisable(GL_TEXTURE_2D);
     }
     ndsRendererHardwareApplyAlphaTest(stats);
+    ndsRendererHardwareApplyFog(stats);
     glPolyFmt(ndsRendererHardwarePolyFmt(stats, poly_alpha));
     glBegin(GL_TRIANGLE);
     ndsRendererHardwareSubmitVertex(
@@ -2617,6 +2714,11 @@ static void ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_SETFOGCOLOR:
+            ndsRendererRecordFogColor(stats, w1);
+            stats->state_command_count++;
+            stats->color_command_count++;
+            break;
+
         case NDS_RENDERER_OP_SETBLENDCOLOR:
         case NDS_RENDERER_OP_SETENVCOLOR:
         case NDS_RENDERER_OP_SETPRIMCOLOR:

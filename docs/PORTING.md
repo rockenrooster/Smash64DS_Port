@@ -16337,3 +16337,22 @@ Still deferred:
   refreshed `artifacts\renderer-stage-gcdrawall-hw.png`, and passed
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`. Current source scenes
   keep the existing all-DL and Pupupu stage markers unchanged.
+
+## 2026-07-03 - Hardware Fog State Programming
+
+- Reused the existing renderer state path to record BattleShip `G_MW_FOG`
+  factor/position state and `G_SETFOGCOLOR`, then program libnds fog density,
+  offset, and color for opt-in hardware triangles; the per-polygon `POLY_FOG`
+  bit still comes from source `G_FOG` geometry mode. This follows sm64-nds fog handling
+  (`decomp/sm64-nds/src/nds/nds_renderer.c:630-643,896-903,1253-1273`) and
+  BattleShip's GBI macros
+  (`decomp/BattleShip-main/decomp/include/PR/gbi.h:1273,2739-2755,3183-3186`);
+  fighter display fog colors are emitted from
+  `decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c:655-682`.
+- Reverified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-fogstate.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Existing all-DL and Pupupu
+  hardware triangle/depth/texture marker counts stayed unchanged.
