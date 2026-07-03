@@ -304,3 +304,15 @@ build still conflicts with remaining local ftMain seam definitions.
 - Make the original-field region match `fttypes.h` order, types, and nesting.
 - Keep port-only `nds_*` and proof-only state at the end of `FTStruct` or in a side table so original offsets cannot move.
 - Replace the current active-layout static asserts with source-layout guards for the original region plus explicit guards for the extension boundary.
+
+## FTData Parity
+
+`include/ft/fighter.h` now matches BattleShip `src/ft/fttypes.h:86-118` for
+`FTData`: source fields run from `file_main_id` at offset `0` through
+`file_anim_size` at offset `116`, with total size `120` bytes on ARM9. The
+previous DS seed layout only exposed `mainmotion`, `submotion`,
+`p_file_shieldpose`, `p_file_mainmotion`, and `p_file_submotion`; those are now
+source-layout fields, and no DS-only `FTData` extension fields are present.
+
+Static guards in `include/ft/fighter.h` assert every `FTData` source offset so
+`ft/ftdata.c` and `ft/ftmanager.c` imports cannot drift silently.

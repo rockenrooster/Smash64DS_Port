@@ -1264,12 +1264,113 @@ typedef struct FTMotionDescArray {
 } FTMotionDescArray;
 
 struct FTData {
-    FTMotionDescArray *mainmotion;
-    FTMotionDescArray *submotion;
-    void *p_file_shieldpose;
+    u32 file_main_id;
+    u32 file_mainmotion_id;
+    u32 file_submotion_id;
+    u32 file_model_id;
+    u32 file_shieldpose_id;
+    u32 file_special1_id;
+    u32 file_special2_id;
+    u32 file_special3_id;
+    u32 file_special4_id;
+    size_t file_main_size;
+    void **p_file_main;
     void **p_file_mainmotion;
     void **p_file_submotion;
+    void **p_file_model;
+    void **p_file_shieldpose;
+    void **p_file_special1;
+    void **p_file_special2;
+    void **p_file_special3;
+    void **p_file_special4;
+    s32 *p_particle;
+    uintptr_t particles_script_lo;
+    uintptr_t particles_script_hi;
+    uintptr_t particles_texture_lo;
+    uintptr_t particles_texture_hi;
+    intptr_t o_attributes;
+    FTMotionDescArray *mainmotion;
+    FTMotionDescArray *submotion;
+    s32 mainmotion_array_count;
+    s32 *submotion_array_count;
+    size_t file_anim_size;
 };
+
+#define NDS_FTDATA_SIZE 120u
+#define NDS_FTDATA_OFF_FILE_MAIN_ID 0u
+#define NDS_FTDATA_OFF_FILE_MAINMOTION_ID 4u
+#define NDS_FTDATA_OFF_FILE_SUBMOTION_ID 8u
+#define NDS_FTDATA_OFF_FILE_MODEL_ID 12u
+#define NDS_FTDATA_OFF_FILE_SHIELDPOSE_ID 16u
+#define NDS_FTDATA_OFF_FILE_SPECIAL1_ID 20u
+#define NDS_FTDATA_OFF_FILE_SPECIAL2_ID 24u
+#define NDS_FTDATA_OFF_FILE_SPECIAL3_ID 28u
+#define NDS_FTDATA_OFF_FILE_SPECIAL4_ID 32u
+#define NDS_FTDATA_OFF_FILE_MAIN_SIZE 36u
+#define NDS_FTDATA_OFF_P_FILE_MAIN 40u
+#define NDS_FTDATA_OFF_P_FILE_MAINMOTION 44u
+#define NDS_FTDATA_OFF_P_FILE_SUBMOTION 48u
+#define NDS_FTDATA_OFF_P_FILE_MODEL 52u
+#define NDS_FTDATA_OFF_P_FILE_SHIELDPOSE 56u
+#define NDS_FTDATA_OFF_P_FILE_SPECIAL1 60u
+#define NDS_FTDATA_OFF_P_FILE_SPECIAL2 64u
+#define NDS_FTDATA_OFF_P_FILE_SPECIAL3 68u
+#define NDS_FTDATA_OFF_P_FILE_SPECIAL4 72u
+#define NDS_FTDATA_OFF_P_PARTICLE 76u
+#define NDS_FTDATA_OFF_PARTICLES_SCRIPT_LO 80u
+#define NDS_FTDATA_OFF_PARTICLES_SCRIPT_HI 84u
+#define NDS_FTDATA_OFF_PARTICLES_TEXTURE_LO 88u
+#define NDS_FTDATA_OFF_PARTICLES_TEXTURE_HI 92u
+#define NDS_FTDATA_OFF_O_ATTRIBUTES 96u
+#define NDS_FTDATA_OFF_MAINMOTION 100u
+#define NDS_FTDATA_OFF_SUBMOTION 104u
+#define NDS_FTDATA_OFF_MAINMOTION_ARRAY_COUNT 108u
+#define NDS_FTDATA_OFF_SUBMOTION_ARRAY_COUNT 112u
+#define NDS_FTDATA_OFF_FILE_ANIM_SIZE 116u
+
+#define NDS_FTDATA_ASSERT_OFF(field, expected)                              \
+    _Static_assert(offsetof(FTData, field) == (expected),                    \
+                   "FTData " #field " offset changed")
+
+_Static_assert(sizeof(FTData) == NDS_FTDATA_SIZE, "FTData size changed");
+NDS_FTDATA_ASSERT_OFF(file_main_id, NDS_FTDATA_OFF_FILE_MAIN_ID);
+NDS_FTDATA_ASSERT_OFF(file_mainmotion_id,
+                      NDS_FTDATA_OFF_FILE_MAINMOTION_ID);
+NDS_FTDATA_ASSERT_OFF(file_submotion_id, NDS_FTDATA_OFF_FILE_SUBMOTION_ID);
+NDS_FTDATA_ASSERT_OFF(file_model_id, NDS_FTDATA_OFF_FILE_MODEL_ID);
+NDS_FTDATA_ASSERT_OFF(file_shieldpose_id, NDS_FTDATA_OFF_FILE_SHIELDPOSE_ID);
+NDS_FTDATA_ASSERT_OFF(file_special1_id, NDS_FTDATA_OFF_FILE_SPECIAL1_ID);
+NDS_FTDATA_ASSERT_OFF(file_special2_id, NDS_FTDATA_OFF_FILE_SPECIAL2_ID);
+NDS_FTDATA_ASSERT_OFF(file_special3_id, NDS_FTDATA_OFF_FILE_SPECIAL3_ID);
+NDS_FTDATA_ASSERT_OFF(file_special4_id, NDS_FTDATA_OFF_FILE_SPECIAL4_ID);
+NDS_FTDATA_ASSERT_OFF(file_main_size, NDS_FTDATA_OFF_FILE_MAIN_SIZE);
+NDS_FTDATA_ASSERT_OFF(p_file_main, NDS_FTDATA_OFF_P_FILE_MAIN);
+NDS_FTDATA_ASSERT_OFF(p_file_mainmotion, NDS_FTDATA_OFF_P_FILE_MAINMOTION);
+NDS_FTDATA_ASSERT_OFF(p_file_submotion, NDS_FTDATA_OFF_P_FILE_SUBMOTION);
+NDS_FTDATA_ASSERT_OFF(p_file_model, NDS_FTDATA_OFF_P_FILE_MODEL);
+NDS_FTDATA_ASSERT_OFF(p_file_shieldpose, NDS_FTDATA_OFF_P_FILE_SHIELDPOSE);
+NDS_FTDATA_ASSERT_OFF(p_file_special1, NDS_FTDATA_OFF_P_FILE_SPECIAL1);
+NDS_FTDATA_ASSERT_OFF(p_file_special2, NDS_FTDATA_OFF_P_FILE_SPECIAL2);
+NDS_FTDATA_ASSERT_OFF(p_file_special3, NDS_FTDATA_OFF_P_FILE_SPECIAL3);
+NDS_FTDATA_ASSERT_OFF(p_file_special4, NDS_FTDATA_OFF_P_FILE_SPECIAL4);
+NDS_FTDATA_ASSERT_OFF(p_particle, NDS_FTDATA_OFF_P_PARTICLE);
+NDS_FTDATA_ASSERT_OFF(particles_script_lo,
+                      NDS_FTDATA_OFF_PARTICLES_SCRIPT_LO);
+NDS_FTDATA_ASSERT_OFF(particles_script_hi,
+                      NDS_FTDATA_OFF_PARTICLES_SCRIPT_HI);
+NDS_FTDATA_ASSERT_OFF(particles_texture_lo,
+                      NDS_FTDATA_OFF_PARTICLES_TEXTURE_LO);
+NDS_FTDATA_ASSERT_OFF(particles_texture_hi,
+                      NDS_FTDATA_OFF_PARTICLES_TEXTURE_HI);
+NDS_FTDATA_ASSERT_OFF(o_attributes, NDS_FTDATA_OFF_O_ATTRIBUTES);
+NDS_FTDATA_ASSERT_OFF(mainmotion, NDS_FTDATA_OFF_MAINMOTION);
+NDS_FTDATA_ASSERT_OFF(submotion, NDS_FTDATA_OFF_SUBMOTION);
+NDS_FTDATA_ASSERT_OFF(mainmotion_array_count,
+                      NDS_FTDATA_OFF_MAINMOTION_ARRAY_COUNT);
+NDS_FTDATA_ASSERT_OFF(submotion_array_count,
+                      NDS_FTDATA_OFF_SUBMOTION_ARRAY_COUNT);
+NDS_FTDATA_ASSERT_OFF(file_anim_size, NDS_FTDATA_OFF_FILE_ANIM_SIZE);
+#undef NDS_FTDATA_ASSERT_OFF
 
 typedef struct FTMotionEventDefault {
     u32 opcode : 6;
