@@ -50,7 +50,7 @@ sm64-nds-style no-z / decal-depth submission. Current captures:
 reports `hwdepth=z316/314/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
 stage gcDrawAll verifier reports `hwsubmit=252`, `hwtri=1152`, and
-`hwdepth=z456/proj696/decal0`, `hwtex=bind618/upload72/ready618/reject0/fmt4/max32x32`,
+`hwdepth=z456/proj696/decal0`, `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`,
 and `hwflush=1/1`. Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU

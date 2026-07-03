@@ -1300,7 +1300,7 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
     }
     if (stats->texture_combine_count == 0u)
     {
-        return TRUE;
+        return FALSE;
     }
     if (ndsRendererHardwarePrimitiveDecal(stats) != FALSE)
     {

@@ -16293,3 +16293,18 @@ Still deferred:
   shards.
 - Reran the historically failing shard 1 first, then shard 3, then shards 0 and
   2 in parallel. All four shards passed from the fresh prebuild.
+
+## 2026-07-03 - Reset-Combine HW Texture Gate
+
+- Matched the hardware path's no-combine state to BattleShip's reset display
+  list (`sys/rdp.c:38`, `G_CC_SHADE`) and the sm64-nds renderer's default
+  `use_texture=false`: source `G_TEXTURE` no longer binds/uploads texture data
+  unless a current combine mode actually references `TEXEL0`.
+- Reverified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  refreshed `artifacts\renderer-stage-gcdrawall-hw.png`, and passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`. The all-DL hardware
+  texture proof stayed `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`;
+  the Pupupu stage proof now reports the narrower source-combined texture set
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
