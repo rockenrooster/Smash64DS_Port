@@ -101,6 +101,9 @@
 #define NDS_RENDERER_MDSFT_CYCLETYPE 20u
 #define NDS_RENDERER_CYCLETYPE_MASK (3u << NDS_RENDERER_MDSFT_CYCLETYPE)
 #define NDS_RENDERER_CYC_2CYCLE (1u << NDS_RENDERER_MDSFT_CYCLETYPE)
+#define NDS_RENDERER_MDSFT_TEXTPERSP 19u
+#define NDS_RENDERER_TP_PERSP (1u << NDS_RENDERER_MDSFT_TEXTPERSP)
+#define NDS_RENDERER_TEXTPERSP_MASK (1u << NDS_RENDERER_MDSFT_TEXTPERSP)
 #define NDS_RENDERER_MDSFT_TEXTFILT 12u
 #define NDS_RENDERER_TF_POINT (0u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TF_BILERP (2u << NDS_RENDERER_MDSFT_TEXTFILT)
@@ -1723,6 +1726,14 @@ static s32 ndsRendererHardwareTextureFilterOffset(
     return 0;
 }
 
+static s32 ndsRendererHardwareUseTextureMatrix(
+    const NDSRendererStats *stats)
+{
+    return ((stats == NULL) ||
+            ((stats->othermode_h & NDS_RENDERER_TEXTPERSP_MASK) ==
+             NDS_RENDERER_TP_PERSP)) ? TRUE : FALSE;
+}
+
 static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, u32 origin,
                                        s32 offset)
 {
@@ -2344,7 +2355,8 @@ static s32 ndsRendererHardwareBindTexture(
         }
     }
 
-    params = TEXGEN_TEXCOORD;
+    params = (ndsRendererHardwareUseTextureMatrix(stats) != FALSE) ?
+        TEXGEN_TEXCOORD : TEXGEN_OFF;
     if ((stats->texture_render_tile_cms & NDS_RENDERER_TX_CLAMP) == 0u)
     {
         params |= GL_TEXTURE_WRAP_S;
@@ -3034,7 +3046,7 @@ void ndsRendererInitStats(NDSRendererStats *stats)
     {
         memset(stats, 0, sizeof(*stats));
         stats->geometry_mode = NDS_RENDERER_GEOM_RESET_MODE;
-        stats->othermode_h = NDS_RENDERER_TF_BILERP;
+        stats->othermode_h = NDS_RENDERER_TP_PERSP | NDS_RENDERER_TF_BILERP;
     }
 }
 

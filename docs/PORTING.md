@@ -16579,3 +16579,28 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Current proof scenes still
   report all-DL `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8` and
   Pupupu stage `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+
+## 2026-07-03 - Hardware Texture Perspective State
+
+- Seeded the renderer othermode-H state with BattleShip's reset
+  `G_TP_PERSP | G_TF_BILERP` state and made the opt-in DS hardware texture
+  upload choose `TEXGEN_OFF` for explicit source `G_TP_NONE` lists. BattleShip
+  defines `G_MDSFT_TEXTPERSP`, `G_TP_NONE`, and `G_TP_PERSP` in
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:607,623-624,2962-2965`,
+  resets to perspective textures in
+  `decomp/BattleShip-main/decomp/src/sys/rdp.c:42-43`, and uses both
+  no-perspective sprite/UI lists
+  (`decomp/BattleShip-main/decomp/src/if/ifcommon.c:1414`,
+  `decomp/BattleShip-main/decomp/src/libultra/sp/sprite.c:107`) and
+  perspective effect/common lists
+  (`decomp/BattleShip-main/decomp/src/ef/efdisplay.c:46`,
+  `decomp/BattleShip-main/decomp/src/if/ifcommon.c:1488`). sm64-nds carries
+  the same GBI texture-perspective definitions in
+  `decomp/sm64-nds/include/PR/gbi.h:614,630-631,3019-3022`.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-textpersp.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Current all-DL and Pupupu
+  stage hardware counters stayed unchanged.
