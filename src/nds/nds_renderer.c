@@ -92,6 +92,8 @@
 #define NDS_RENDERER_ACMUX_PRIMITIVE 3u
 #define NDS_RENDERER_ACMUX_SHADE 4u
 #define NDS_RENDERER_ACMUX_ENVIRONMENT 5u
+#define NDS_RENDERER_ACMUX_1 6u
+#define NDS_RENDERER_ACMUX_0 7u
 #define NDS_RENDERER_MDSFT_TEXTFILT 12u
 #define NDS_RENDERER_TF_POINT (0u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TF_BILERP (2u << NDS_RENDERER_MDSFT_TEXTFILT)
@@ -1447,7 +1449,9 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
                  (ndsRendererCombineUsesAlpha(
                       w0, w1, NDS_RENDERER_ACMUX_SHADE) == FALSE))
         {
-            alpha = 0xffu;
+            alpha = (ndsRendererCombineUsesAlpha(
+                         w0, w1, NDS_RENDERER_ACMUX_0) != FALSE) ?
+                0u : 0xffu;
         }
     }
     return alpha >> 3;

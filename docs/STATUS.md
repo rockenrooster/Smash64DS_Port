@@ -74,16 +74,17 @@ stage-inclusive submission, source-shaped material branch packets, CI/IA/I/RGBA
 texture upload coverage, recorded material color/alpha, source culling, reset
 geometry/filter seeds, sm64-nds-style no-z / decal-depth submission,
 F3DEX `G_FOG`/`G_MW_FOG`/`G_SETFOGCOLOR` -> DS fog state, and
-`G_SETBLENDCOLOR` alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state.
-Current captures are `artifacts\renderer-stage-gcdrawall-hw-blend-alpha.png`,
-`artifacts\renderer-stage-gcdrawall-hw-fogstate.png`, and
+`G_SETBLENDCOLOR` alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state,
+plus BattleShip `G_ACMUX_0`/`G_ACMUX_1` constant-alpha mux handling.
+Current captures are `artifacts\renderer-stage-gcdrawall-hw-alpha-mux.png`,
+`artifacts\renderer-stage-gcdrawall-hw-blend-alpha.png`, and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
-proves `hwdepth=z316/314/proj0/0/decal0/0` and
+proves `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
 stage gcDrawAll verifier proves a post-proof hardware replay, actual hardware
-triangles, and frame flush (`hwsubmit=252`, `hwtri=1152`, `hwflush=1/1`).
+triangles, and frame flush (`hwsubmit=252`, `hwtri=1140`, `hwflush=1/1`).
 The stage hardware replay now seeds the source display-wrapper depth mode and
-proves `hwdepth=z456/proj696/decal0` plus source-scene texture activity
+proves `hwdepth=z456/proj684/decal0` plus source-scene texture activity
 `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`. Full visual fidelity
 still needs remaining combiner/material behavior, broader texture source-scene
 coverage, and renderer cutover work. Default builds still use the software

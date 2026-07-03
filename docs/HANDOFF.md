@@ -46,15 +46,17 @@ stage-inclusive submission, material branch packets, CI/IA/I/RGBA texture
 uploads, material color/alpha, source culling, reset geometry/filter seeds,
 sm64-nds-style no-z / decal-depth submission, F3DEX
 `G_FOG`/`G_MW_FOG`/`G_SETFOGCOLOR` -> DS fog state, and `G_SETBLENDCOLOR`
-alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state.
+alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state, plus BattleShip
+`G_ACMUX_0`/`G_ACMUX_1` constant-alpha mux handling.
 Current captures:
+`artifacts\renderer-stage-gcdrawall-hw-alpha-mux.png`,
 `artifacts\renderer-stage-gcdrawall-hw-blend-alpha.png`,
 `artifacts\renderer-stage-gcdrawall-hw-fogstate.png`, and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
-reports `hwdepth=z316/314/proj0/0/decal0/0` and
+reports `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
-stage gcDrawAll verifier reports `hwsubmit=252`, `hwtri=1152`, and
-`hwdepth=z456/proj696/decal0`, `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`,
+stage gcDrawAll verifier reports `hwsubmit=252`, `hwtri=1140`, and
+`hwdepth=z456/proj684/decal0`, `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`,
 and `hwflush=1/1`. Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU

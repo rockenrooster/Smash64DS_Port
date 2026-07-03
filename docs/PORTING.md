@@ -16374,3 +16374,23 @@ Still deferred:
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Existing all-DL and Pupupu
   hardware triangle/depth/texture marker counts stayed unchanged.
+
+## 2026-07-03 - Hardware Constant Alpha Mux
+
+- Added BattleShip `G_ACMUX_0`/`G_ACMUX_1` constants to the opt-in DS hardware
+  alpha helper. Primitive/env alpha still wins first, texture/shade alpha keep
+  the existing vertex/texture approximation, and constant-zero now drops fully
+  transparent hardware triangles only when no texture/shade alpha source is
+  active. Source constants are in
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:496-505`; sm64-nds keeps the
+  same alpha path simpler by switching only on env-alpha and alpha-memory state
+  (`decomp/sm64-nds/src/nds/nds_renderer.c:307,920-924`).
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-alpha-mux.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Current all-DL hardware
+  depth is `hwdepth=z260/217/proj0/0/decal0/0`; the Pupupu stage hardware path
+  now reports constant-alpha-pruned `hwtri=1140` and
+  `hwdepth=z456/proj684/decal0`.
