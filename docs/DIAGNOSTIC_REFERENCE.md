@@ -3952,7 +3952,7 @@ Marker groups:
   texture bind count, unsupported texture reject count, texture format mask,
   and max ready texture dimensions. Current direct-stage hardware pass values
   are `252`, `1152`, `456`, `696`, `0`,
-  `528`, `42`, `528`, `594`, `0x4`, and `32x32`.
+  `528`, `42`, `528`, `90`, `0x4`, and `32x32`.
 - `STAGE_COLLISION`: geometry-backed floor-collision result, safe result, proof
   mask, deferred mask, and selected fighter count. Current pass values are
   `0x4653434c`, `0x46534353`, mask `0xffff`, deferred mask `0xff`, and count

@@ -1294,6 +1294,10 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
     {
         return FALSE;
     }
+    if ((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_ON) == 0u)
+    {
+        return FALSE;
+    }
     if (stats->texture_combine_count == 0u)
     {
         return TRUE;

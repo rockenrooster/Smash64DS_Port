@@ -16260,3 +16260,14 @@ Still deferred:
   `hwtex=bind528/upload42/ready528/reject594/fmt4/max32x32`, and
   `hwflush=1/1`. The reject count remains a follow-up signal for unsupported
   stage texture states, not a hard failure for this proof.
+
+## 2026-07-03 - Ignored Inactive HW Texture States
+
+- Matched the sm64-nds hardware draw policy by only binding/uploading textures
+  when the source `G_TEXTURE` state is active; inactive/default texture state
+  now draws flat-shaded instead of inflating unsupported-texture rejects.
+- The existing stage hardware verifier now requires the reject count to stay
+  below ready texture binds and passed with `hwsubmit=252`, `hwtri=1152`,
+  `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind528/upload42/ready528/reject90/fmt4/max32x32`, and
+  `hwflush=1/1`.

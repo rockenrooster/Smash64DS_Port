@@ -1748,6 +1748,7 @@ try {
             Assert-Condition ($shw[1] -eq ($shw[2] + $shw[3])) 'Stage-inclusive hardware depth accounting does not match submitted triangles.' $gdbStdout
             Assert-Condition ($shw[3] -gt 0) 'Stage-inclusive hardware replay did not preserve source no-z projected-depth submission.' $gdbStdout
             Assert-Condition ($shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[9] -ne 0 -and $shw[10] -gt 0 -and $shw[11] -gt 0) 'Stage-inclusive hardware replay did not bind/upload a ready texture.' $gdbStdout
+            Assert-Condition ($shw[8] -lt $shw[7]) 'Stage-inclusive hardware replay still treats inactive texture state as unsupported.' $gdbStdout
             $stageSummary = "$stageSummary hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11])"
         }
     }
