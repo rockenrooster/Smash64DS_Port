@@ -97,6 +97,27 @@
 #define NDS_FIGHTER_MARIOFOX_SETUP_DISPLAY (1u << 10)
 #define NDS_FIGHTER_MARIOFOX_SETUP_PROCESS_DEFER (1u << 11)
 
+#define NDS_FIGHTER_MANAGER_EXTERN_COMMON (1u << 0)
+#define NDS_FIGHTER_MANAGER_EXTERN_COMMON_MOVESET (1u << 1)
+#define NDS_FIGHTER_MANAGER_EXTERN_MARIO_MAIN (1u << 2)
+#define NDS_FIGHTER_MANAGER_EXTERN_FOX_MAIN (1u << 3)
+#define NDS_FIGHTER_MANAGER_EXTERN_REQUIRED_MASK 0x0fu
+
+#define NDS_FIGHTER_MANAGER_STATUS_MARIO_MAINMOTION (1u << 0)
+#define NDS_FIGHTER_MANAGER_STATUS_MARIO_MODEL (1u << 1)
+#define NDS_FIGHTER_MANAGER_STATUS_MARIO_SHIELD (1u << 2)
+#define NDS_FIGHTER_MANAGER_STATUS_MARIO_SPECIAL1 (1u << 3)
+#define NDS_FIGHTER_MANAGER_STATUS_MARIO_SPECIAL2 (1u << 4)
+#define NDS_FIGHTER_MANAGER_STATUS_MARIO_SPECIAL3 (1u << 5)
+#define NDS_FIGHTER_MANAGER_STATUS_FOX_MAINMOTION (1u << 6)
+#define NDS_FIGHTER_MANAGER_STATUS_FOX_MODEL (1u << 7)
+#define NDS_FIGHTER_MANAGER_STATUS_FOX_SHIELD (1u << 8)
+#define NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL1 (1u << 9)
+#define NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL2 (1u << 10)
+#define NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL3 (1u << 11)
+#define NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL4 (1u << 12)
+#define NDS_FIGHTER_MANAGER_STATUS_REQUIRED_MASK 0x1fffu
+
 #define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 64u
 
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_MOBJ 0x042f8u
@@ -482,6 +503,12 @@ typedef struct NDSOpeningActionPreviewCache {
 
 static NDSRelocLoadedFile sNdsRelocLoadedFiles[NDS_RELOC_LOADED_FILE_CAPACITY];
 static u32 sNdsRelocLoadedFileCount;
+static LBFileNode *sNdsRelocStatusBuffer;
+static s32 sNdsRelocStatusBufferCount;
+static s32 sNdsRelocStatusBufferMax;
+static LBFileNode *sNdsRelocForceStatusBuffer;
+static s32 sNdsRelocForceStatusBufferCount;
+static s32 sNdsRelocForceStatusBufferMax;
 
 static u8 sNdsTitleFileBuffer[NDS_TITLE_FILE_BUFFER_SIZE];
 static u8 sNdsOpeningActionPreviewFileBuffer[
@@ -812,6 +839,166 @@ static u32 ndsRelocFileID(const void *file_id)
     return (u32)(uintptr_t)file_id;
 }
 
+static u32 ndsFighterManagerExternBit(u32 token)
+{
+    if (token == ndsRelocFileID(&llFTManagerCommonFileID))
+    {
+        return NDS_FIGHTER_MANAGER_EXTERN_COMMON;
+    }
+    if (token == ndsRelocFileID(&llFTCommonMovesetFileID))
+    {
+        return NDS_FIGHTER_MANAGER_EXTERN_COMMON_MOVESET;
+    }
+    if (token == ndsRelocFileID(&llMarioMainFileID))
+    {
+        return NDS_FIGHTER_MANAGER_EXTERN_MARIO_MAIN;
+    }
+    if (token == ndsRelocFileID(&llFoxMainFileID))
+    {
+        return NDS_FIGHTER_MANAGER_EXTERN_FOX_MAIN;
+    }
+    return 0u;
+}
+
+static u32 ndsFighterManagerStatusBit(u32 token)
+{
+    if (token == ndsRelocFileID(&llMarioMainMotionFileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_MARIO_MAINMOTION;
+    }
+    if (token == ndsRelocFileID(&llMarioModelFileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_MARIO_MODEL;
+    }
+    if (token == ndsRelocFileID(&llMarioShieldPoseFileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_MARIO_SHIELD;
+    }
+    if (token == ndsRelocFileID(&llMarioSpecial1FileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_MARIO_SPECIAL1;
+    }
+    if (token == ndsRelocFileID(&llMarioSpecial2FileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_MARIO_SPECIAL2;
+    }
+    if (token == ndsRelocFileID(&llMarioSpecial3FileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_MARIO_SPECIAL3;
+    }
+    if (token == ndsRelocFileID(&llFoxMainMotionFileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_FOX_MAINMOTION;
+    }
+    if (token == ndsRelocFileID(&llFoxModelFileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_FOX_MODEL;
+    }
+    if (token == ndsRelocFileID(&llFoxShieldPoseFileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_FOX_SHIELD;
+    }
+    if (token == ndsRelocFileID(&llFoxSpecial1FileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL1;
+    }
+    if (token == ndsRelocFileID(&llFoxSpecial2FileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL2;
+    }
+    if (token == ndsRelocFileID(&llFoxSpecial3FileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL3;
+    }
+    if (token == ndsRelocFileID(&llFoxSpecial4FileID))
+    {
+        return NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL4;
+    }
+    return 0u;
+}
+
+static void ndsFighterManagerRefreshProof(void)
+{
+    u32 mask = 0u;
+
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    mask |= 1u << 0;
+#endif
+    if ((gNdsFighterManagerExternMask &
+         NDS_FIGHTER_MANAGER_EXTERN_REQUIRED_MASK) ==
+        NDS_FIGHTER_MANAGER_EXTERN_REQUIRED_MASK)
+    {
+        mask |= 1u << 1;
+    }
+    if ((gNdsFighterManagerStatusBufferMask &
+         NDS_FIGHTER_MANAGER_STATUS_REQUIRED_MASK) ==
+        NDS_FIGHTER_MANAGER_STATUS_REQUIRED_MASK)
+    {
+        mask |= 1u << 2;
+    }
+    gNdsFighterManagerFigatreeHeapSize = (u32)gFTManagerFigatreeHeapSize;
+    if (gNdsFighterManagerFigatreeHeapSize != 0u)
+    {
+        mask |= 1u << 3;
+    }
+    if ((gNdsFighterManagerFighterMask & 0x3u) == 0x3u)
+    {
+        mask |= 1u << 4;
+    }
+    if ((gNdsFighterManagerDataMask & 0x3u) == 0x3u)
+    {
+        mask |= 1u << 5;
+    }
+    if (((gNdsFighterManagerWaitMask | gNdsFighterManagerEntryMask) & 0x3u) ==
+        0x3u)
+    {
+        mask |= 1u << 6;
+    }
+    if (gNdsFighterManagerStatusBufferHitCount >= 13u)
+    {
+        mask |= 1u << 7;
+    }
+
+    gNdsFighterManagerMask = mask;
+    if ((mask & 0xffu) == 0xffu)
+    {
+        gNdsFighterManagerResult = NDS_FIGHTER_MANAGER_PASS;
+    }
+}
+
+static void ndsFighterManagerRecordExternToken(u32 token, const void *file)
+{
+    u32 bit;
+
+    if (file == NULL)
+    {
+        return;
+    }
+    bit = ndsFighterManagerExternBit(token);
+    if (bit != 0u)
+    {
+        gNdsFighterManagerExternMask |= bit;
+        ndsFighterManagerRefreshProof();
+    }
+}
+
+static void ndsFighterManagerRecordStatusToken(u32 token, const void *file)
+{
+    u32 bit;
+
+    if (file == NULL)
+    {
+        return;
+    }
+    bit = ndsFighterManagerStatusBit(token);
+    if (bit != 0u)
+    {
+        gNdsFighterManagerStatusBufferMask |= bit;
+        gNdsFighterManagerStatusBufferHitCount++;
+        ndsFighterManagerRefreshProof();
+    }
+}
+
 static u32 ndsFloatBits(f32 value)
 {
     union {
@@ -1002,6 +1189,7 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llFoxShieldPoseFileID)) return NDS_RELOC_ASSET_FOX_SHIELD_POSE;
     if (token == ndsRelocFileID(&llFoxSpecial4FileID)) return NDS_RELOC_ASSET_FOX_SPECIAL4;
     if (token == ndsRelocFileID(&llFoxSpecial2FileID)) return NDS_RELOC_ASSET_FOX_SPECIAL2;
+    if (token == ndsRelocFileID(&llFTCommonMovesetFileID)) return NDS_RELOC_ASSET_MISC_DATA_201;
     if (token == NDS_RELOC_ASSET_FT_MANAGER_COMMON) return NDS_RELOC_ASSET_FT_MANAGER_COMMON;
     if (token == NDS_RELOC_ASSET_MARIO_MAIN_MOTION) return NDS_RELOC_ASSET_MARIO_MAIN_MOTION;
     if (token == NDS_RELOC_ASSET_MARIO_MAIN) return NDS_RELOC_ASSET_MARIO_MAIN;
@@ -1091,6 +1279,55 @@ static s32 ndsRelocRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
         return FALSE;
     }
     return TRUE;
+}
+
+static void *ndsRelocFindStatusNode(LBFileNode *nodes, s32 count, u32 token)
+{
+    s32 i;
+
+    for (i = 0; i < count; i++)
+    {
+        if (nodes[i].id == token)
+        {
+            return nodes[i].addr;
+        }
+    }
+    return NULL;
+}
+
+static void ndsRelocAddStatusNode(LBFileNode *nodes, s32 *count,
+                                  s32 max_count, u32 token, void *addr)
+{
+    if ((nodes == NULL) || (count == NULL) || (addr == NULL) ||
+        (max_count <= 0))
+    {
+        return;
+    }
+    if (ndsRelocFindStatusNode(nodes, *count, token) != NULL)
+    {
+        return;
+    }
+    if (*count >= max_count)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return;
+    }
+    nodes[*count].id = token;
+    nodes[*count].addr = addr;
+    (*count)++;
+}
+
+static void ndsRelocAddStatusBufferFile(u32 token, void *addr)
+{
+    ndsRelocAddStatusNode(sNdsRelocStatusBuffer, &sNdsRelocStatusBufferCount,
+                          sNdsRelocStatusBufferMax, token, addr);
+}
+
+static void ndsRelocAddForceStatusBufferFile(u32 token, void *addr)
+{
+    ndsRelocAddStatusNode(sNdsRelocForceStatusBuffer,
+                          &sNdsRelocForceStatusBufferCount,
+                          sNdsRelocForceStatusBufferMax, token, addr);
 }
 
 static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
@@ -1282,6 +1519,10 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
 static size_t ndsRelocAssetAllocSize(u32 asset_id);
 static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded);
+static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
+                                          u32 *seen_count);
+static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
+                                                       uintptr_t *heap_ptr);
 
 static void *ndsRelocStaticBufferForAsset(u32 asset_id, size_t asset_size)
 {
@@ -2865,10 +3106,184 @@ static size_t ndsRelocAssetAllocSize(u32 asset_id)
     return 0;
 }
 
+static s32 ndsRelocSeenAsset(u32 *seen, u32 seen_count, u32 asset_id)
+{
+    u32 i;
+
+    for (i = 0; i < seen_count; i++)
+    {
+        if (seen[i] == asset_id)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static s32 ndsRelocAddSeenAsset(u32 *seen, u32 *seen_count, u32 asset_id)
+{
+    if ((seen == NULL) || (seen_count == NULL))
+    {
+        return FALSE;
+    }
+    if (ndsRelocSeenAsset(seen, *seen_count, asset_id) != FALSE)
+    {
+        return FALSE;
+    }
+    if (*seen_count >= NDS_RELOC_EXTERN_FILE_ID_CAPACITY)
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return FALSE;
+    }
+    seen[*seen_count] = asset_id;
+    (*seen_count)++;
+    return TRUE;
+}
+
+static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
+                                          u32 *seen_count)
+{
+    NDSRelocAssetHeader header;
+    u32 extern_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u32 extern_count = 0;
+    size_t total;
+    u32 i;
+
+    if ((asset_id == NDS_RELOC_ASSET_INVALID) ||
+        (ndsRelocAddSeenAsset(seen, seen_count, asset_id) == FALSE))
+    {
+        return 0;
+    }
+    if (ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                               sNdsRelocStatusBufferCount,
+                               asset_id) != NULL)
+    {
+        return 0;
+    }
+    if (ndsRelocAssetReadHeader(asset_id, &header) == FALSE)
+    {
+        return 0;
+    }
+
+    total = (size_t)NDS_RELOC_ALIGN(header.data_size);
+    if ((header.extern_file_ids_num == 0u) ||
+        (header.extern_file_ids_num > NDS_RELOC_EXTERN_FILE_ID_CAPACITY) ||
+        (ndsRelocAssetReadExternFileIDs(asset_id,
+                                        extern_ids,
+                                        NDS_RELOC_EXTERN_FILE_ID_CAPACITY,
+                                        &extern_count) == FALSE))
+    {
+        return total;
+    }
+
+    for (i = 0; i < extern_count; i++)
+    {
+        u32 dep_asset_id = ndsRelocAssetIDForToken(extern_ids[i]);
+
+        total = (size_t)NDS_RELOC_ALIGN(total);
+        total += ndsRelocExternTreeAllocSize(dep_asset_id, seen, seen_count);
+    }
+    return total;
+}
+
+static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
+                                                       uintptr_t *heap_ptr)
+{
+    NDSRelocLoadedFile *loaded;
+    NDSRelocAssetHeader header;
+    u32 i;
+    void *status_file;
+    void *file_alloc;
+    size_t asset_size;
+
+    if ((asset_id == NDS_RELOC_ASSET_INVALID) || (heap_ptr == NULL))
+    {
+        return NULL;
+    }
+
+    status_file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                         sNdsRelocStatusBufferCount,
+                                         asset_id);
+    if (status_file != NULL)
+    {
+        return ndsRelocFindLoadedFileByData(status_file);
+    }
+
+    loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    if (loaded != NULL)
+    {
+        if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
+        {
+            return NULL;
+        }
+        ndsRelocAddStatusBufferFile(asset_id, loaded->data);
+        return loaded;
+    }
+
+    asset_size = ndsRelocAssetAllocSize(asset_id);
+    if ((asset_size == 0u) ||
+        (ndsRelocAssetReadHeader(asset_id, &header) == FALSE))
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return NULL;
+    }
+
+    *heap_ptr = NDS_RELOC_ALIGN(*heap_ptr);
+    file_alloc = (void *)*heap_ptr;
+    *heap_ptr += asset_size;
+
+    if (ndsRelocAssetLoadData(asset_id, file_alloc, asset_size, &header) ==
+        FALSE)
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return NULL;
+    }
+
+    loaded = ndsRelocRegisterLoadedFile(asset_id, 0, file_alloc, &header);
+    if (loaded == NULL)
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return NULL;
+    }
+    ndsRelocAddStatusBufferFile(asset_id, file_alloc);
+
+    if (ndsRelocApplyWordByteSwap(loaded) == FALSE)
+    {
+        return NULL;
+    }
+
+    for (i = 0; i < loaded->extern_count; i++)
+    {
+        u32 dep_asset_id = ndsRelocAssetIDForToken(loaded->extern_file_ids[i]);
+
+        if (ndsRelocLoadExternTreeAsset(dep_asset_id, heap_ptr) == NULL)
+        {
+            loaded->external_fixup_fail_count++;
+            ndsRelocRecordExternalFixupFail(asset_id);
+            return NULL;
+        }
+    }
+
+    if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
+    {
+        return NULL;
+    }
+    return loaded;
+}
+
 void lbRelocInitSetup(LBRelocSetup *setup)
 {
-    (void)setup;
     sNdsRelocInitCount++;
+
+    if (setup != NULL)
+    {
+        sNdsRelocStatusBuffer = setup->status_buffer;
+        sNdsRelocStatusBufferMax = setup->status_buffer_size;
+        sNdsRelocStatusBufferCount = 0;
+        sNdsRelocForceStatusBuffer = setup->force_status_buffer;
+        sNdsRelocForceStatusBufferMax = setup->force_status_buffer_size;
+        sNdsRelocForceStatusBufferCount = 0;
+    }
 
     if (gSCManagerSceneData.scene_curr == nSCKindOpeningRoom)
     {
@@ -2878,8 +3293,16 @@ void lbRelocInitSetup(LBRelocSetup *setup)
 
 size_t lbRelocGetFileSize(const void *file_id)
 {
-    u32 asset_id = ndsRelocAssetIDForToken(ndsRelocFileID(file_id));
+    u32 token = ndsRelocFileID(file_id);
+    u32 asset_id = ndsRelocAssetIDForToken(token);
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u32 seen_count = 0;
+    size_t asset_size = ndsRelocExternTreeAllocSize(asset_id, seen,
+                                                    &seen_count);
+#else
     size_t asset_size = ndsRelocAssetAllocSize(asset_id);
+#endif
 
     if (asset_size != 0)
     {
@@ -2891,16 +3314,36 @@ size_t lbRelocGetFileSize(const void *file_id)
 
 void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
 {
-    u32 asset_id = ndsRelocAssetIDForToken(ndsRelocFileID(file_id));
+    u32 token = ndsRelocFileID(file_id);
+    u32 asset_id = ndsRelocAssetIDForToken(token);
+    NDSRelocLoadedFile *loaded;
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    uintptr_t heap_ptr = (uintptr_t)heap;
+#else
     size_t asset_size;
     NDSRelocAssetHeader header;
-    NDSRelocLoadedFile *loaded;
+#endif
 
     if ((asset_id == NDS_RELOC_ASSET_INVALID) || (heap == NULL))
     {
         return heap;
     }
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    loaded = ndsRelocLoadExternTreeAsset(asset_id, &heap_ptr);
+    if (loaded == NULL)
+    {
+        return heap;
+    }
+    if (asset_id == NDS_RELOC_ASSET_N64_LOGO)
+    {
+        ndsRelocNormalizeN64LogoSprite(loaded);
+        gNdsStartupLogoRelocResult = NDS_STARTUP_LOGO_RELOC_PASS;
+        gNdsStartupLogoRelocSize = loaded->data_size;
+    }
+    ndsFighterManagerRecordExternToken(token, loaded->data);
+    return loaded->data;
+#else
     asset_size = ndsRelocAssetAllocSize(asset_id);
     if (asset_size == 0)
     {
@@ -2924,12 +3367,56 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
         gNdsStartupLogoRelocResult = NDS_STARTUP_LOGO_RELOC_PASS;
         gNdsStartupLogoRelocSize = header.data_size;
     }
+    ndsFighterManagerRecordExternToken(token, heap);
+    ndsRelocAddStatusBufferFile(token, heap);
     return heap;
+#endif
 }
 
 void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
 {
-    return lbRelocGetExternHeapFile(file_id, heap);
+    void *file = lbRelocGetExternHeapFile(file_id, heap);
+
+    ndsRelocAddForceStatusBufferFile(ndsRelocFileID(file_id), file);
+    return file;
+}
+
+void *lbRelocGetStatusBufferFile(const void *file_id)
+{
+    u32 token = ndsRelocFileID(file_id);
+    u32 asset_id = ndsRelocAssetIDForToken(token);
+    void *file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                        sNdsRelocStatusBufferCount,
+                                        token);
+    size_t asset_size;
+    void *heap;
+
+    if ((file == NULL) && (asset_id != NDS_RELOC_ASSET_INVALID))
+    {
+        file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                      sNdsRelocStatusBufferCount,
+                                      asset_id);
+    }
+    if (file != NULL)
+    {
+        ndsFighterManagerRecordStatusToken(token, file);
+        return file;
+    }
+
+    asset_size = ndsRelocAssetAllocSize(asset_id);
+    if ((asset_id == NDS_RELOC_ASSET_INVALID) || (asset_size == 0u))
+    {
+        return NULL;
+    }
+
+    heap = syTaskmanMalloc(asset_size, 0x10);
+    if (heap == NULL)
+    {
+        return NULL;
+    }
+    file = lbRelocGetExternHeapFile(file_id, heap);
+    ndsFighterManagerRecordStatusToken(token, file);
+    return file;
 }
 
 size_t lbRelocGetAllocSize(u32 *ids, u32 len)
@@ -3014,6 +3501,7 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
                     }
 
                     loaded = ndsRelocRegisterLoadedFile(asset_id, bit, file_alloc, &header);
+                    ndsRelocAddStatusBufferFile(token, file_alloc);
                     if (ndsRelocApplyWordByteSwap(loaded) != FALSE)
                     {
                         word_swap_mask |= bit;

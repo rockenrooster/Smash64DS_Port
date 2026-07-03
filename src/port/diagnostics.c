@@ -384,6 +384,17 @@ volatile u32 gNdsFighterMarioFoxRelocDependencyMask;
 volatile u32 gNdsFighterMarioFoxLoadedFileCount;
 volatile u32 gNdsFighterMarioFoxExternalFixupCount;
 volatile u32 gNdsFighterMarioFoxExternalFixupFailCount;
+volatile u32 gNdsFighterManagerResult;
+volatile u32 gNdsFighterManagerMask;
+volatile u32 gNdsFighterManagerExternMask;
+volatile u32 gNdsFighterManagerStatusBufferMask;
+volatile u32 gNdsFighterManagerFighterMask;
+volatile u32 gNdsFighterManagerDataMask;
+volatile u32 gNdsFighterManagerWaitMask;
+volatile u32 gNdsFighterManagerEntryMask;
+volatile u32 gNdsFighterManagerStatusBufferHitCount;
+volatile u32 gNdsFighterManagerFighterCount;
+volatile u32 gNdsFighterManagerFigatreeHeapSize;
 volatile u32 gNdsFighterMarioFoxModelResult;
 volatile u32 gNdsFighterMarioFoxGObjResult;
 volatile u32 gNdsFighterMarioFoxSetupMask;
@@ -6203,7 +6214,9 @@ volatile u32 gNdsOpeningRoomRelocMObjSubFirstTextureOffset;
 volatile u32 gNdsOpeningRoomRelocMObjSubFirstTextureFlags;
 
 SYAudioPublicSettings dSYAudioPublicSettings;
+#if !NDS_IMPORT_BATTLESHIP_FTMANAGER
 size_t gFTManagerFigatreeHeapSize;
+#endif
 f32 gMPCollisionLightAngleX;
 f32 gMPCollisionLightAngleY;
 MPGroundData *gMPCollisionGroundData;
@@ -6234,6 +6247,7 @@ uintptr_t llSYKseg1ValidateFileID;
 uintptr_t llSYKseg1ValidateFunc;
 uintptr_t llSYKseg1ValidateNBytes;
 uintptr_t llFTManagerCommonFileID;
+uintptr_t llFTCommonMovesetFileID = 0xc9u;
 uintptr_t llMarioMainMotionFileID;
 uintptr_t llMarioMainFileID;
 uintptr_t llMarioSpecial1FileID;

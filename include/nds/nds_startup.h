@@ -122,6 +122,7 @@
 #define NDS_PUPUPU_GROUND_GOBJ_PASS 0x5055474fu
 #define NDS_PUPUPU_UPDATE_PASS 0x50555550u
 #define NDS_FIGHTER_MARIOFOX_RELOC_PASS 0x4654524cu
+#define NDS_FIGHTER_MANAGER_PASS 0x46544d47u
 #define NDS_FIGHTER_MARIOFOX_MODEL_PASS 0x46544d44u
 #define NDS_FIGHTER_MARIOFOX_GOBJ_PASS 0x4654474fu
 #define NDS_FIGHTER_MARIOFOX_STRUCT_PASS 0x46545348u
@@ -1401,6 +1402,17 @@ extern volatile u32 gNdsFighterMarioFoxRelocDependencyMask;
 extern volatile u32 gNdsFighterMarioFoxLoadedFileCount;
 extern volatile u32 gNdsFighterMarioFoxExternalFixupCount;
 extern volatile u32 gNdsFighterMarioFoxExternalFixupFailCount;
+extern volatile u32 gNdsFighterManagerResult;
+extern volatile u32 gNdsFighterManagerMask;
+extern volatile u32 gNdsFighterManagerExternMask;
+extern volatile u32 gNdsFighterManagerStatusBufferMask;
+extern volatile u32 gNdsFighterManagerFighterMask;
+extern volatile u32 gNdsFighterManagerDataMask;
+extern volatile u32 gNdsFighterManagerWaitMask;
+extern volatile u32 gNdsFighterManagerEntryMask;
+extern volatile u32 gNdsFighterManagerStatusBufferHitCount;
+extern volatile u32 gNdsFighterManagerFighterCount;
+extern volatile u32 gNdsFighterManagerFigatreeHeapSize;
 extern volatile u32 gNdsFighterMarioFoxModelResult;
 extern volatile u32 gNdsFighterMarioFoxGObjResult;
 extern volatile u32 gNdsFighterMarioFoxSetupMask;

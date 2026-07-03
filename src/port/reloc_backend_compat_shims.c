@@ -196,6 +196,7 @@ static FTParts sNdsFTManagerPartsAllocPool[64];
 static FTParts *sNdsFTManagerPartsAllocFree;
 static sb32 sNdsFTManagerPartsAllocInit;
 
+#if !NDS_IMPORT_BATTLESHIP_FTMANAGER
 static void ndsFTManagerInitPartsAllocPool(void)
 {
     s32 i;
@@ -240,6 +241,7 @@ void ftManagerSetPrevPartsAlloc(FTParts *parts)
     parts->next = sNdsFTManagerPartsAllocFree;
     sNdsFTManagerPartsAllocFree = parts;
 }
+#endif
 
 void syAudioStopBGMAll(void)
 {
@@ -347,6 +349,7 @@ sb32 syAudioGetRestarting(void)
     return FALSE;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_FTMANAGER
 void ftManagerSetupFileSize(void)
 {
 }
@@ -443,6 +446,7 @@ void ftManagerDestroyFighter(GObj *fighter_gobj)
         gcEjectGObj(fighter_gobj);
     }
 }
+#endif
 
 void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
 {
@@ -6392,6 +6396,138 @@ void lbCommonInitDObj(DObj *dobj, u8 tk1, u8 tk2, u8 tk3, u8 arg4)
     }
 }
 
+void lbCommonInitDObj3Transforms(DObj *dobj, u8 tk1, u8 tk2, u8 tk3)
+{
+    if (dobj == NULL)
+    {
+        return;
+    }
+    if (tk1 != nGCMatrixKindNull)
+    {
+        gcAddXObjForDObjFixed(dobj, tk1, 0);
+    }
+    if (tk2 != nGCMatrixKindNull)
+    {
+        gcAddXObjForDObjFixed(dobj, tk2, 0);
+    }
+    if (tk3 != nGCMatrixKindNull)
+    {
+        gcAddXObjForDObjFixed(dobj, tk3, 0);
+    }
+    dobj->translate.vec.f.x = 0.0F;
+    dobj->translate.vec.f.y = 0.0F;
+    dobj->translate.vec.f.z = 0.0F;
+    dobj->rotate.vec.f.x = 0.0F;
+    dobj->rotate.vec.f.y = 0.0F;
+    dobj->rotate.vec.f.z = 0.0F;
+    dobj->scale.vec.f.x = 1.0F;
+    dobj->scale.vec.f.y = 1.0F;
+    dobj->scale.vec.f.z = 1.0F;
+}
+
+void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
+                                    FTCommonPartContainer *commonparts_container,
+                                    s32 detail_curr, DObj **dobjs,
+                                    u32 *setup_parts, u8 tk1, u8 tk2,
+                                    u8 tk3, f32 anim_frame, u8 arg9)
+{
+    DObj *array_dobjs[DOBJ_ARRAY_MAX];
+    DObjDesc *dobjdesc;
+    u32 flags0;
+    u32 flags1;
+    s32 i;
+
+    if ((root_dobj == NULL) || (commonparts_container == NULL) ||
+        (setup_parts == NULL))
+    {
+        return;
+    }
+    dobjdesc = commonparts_container
+                   ->commonparts[detail_curr - nFTPartsDetailStart]
+                   .dobjdesc;
+    if (dobjdesc == NULL)
+    {
+        return;
+    }
+    for (i = 0; i < DOBJ_ARRAY_MAX; i++)
+    {
+        array_dobjs[i] = NULL;
+    }
+    flags0 = setup_parts[0];
+    flags1 = setup_parts[1];
+    for (i = 0; ((flags0 != 0u) || (flags1 != 0u)) &&
+                (dobjdesc->id != DOBJ_ARRAY_MAX);
+         i++, dobjdesc++)
+    {
+        const u32 current_flags = (i < 32) ? flags0 : flags1;
+        if (current_flags & (1u << 31))
+        {
+            const s32 id = dobjdesc->id & 0xFFF;
+            s32 detail_id = nFTPartsDetailHigh - nFTPartsDetailStart;
+            DObj *parent = (id != 0) ? array_dobjs[id - 1] : root_dobj;
+            DObj *current_dobj;
+
+            if ((detail_curr != nFTPartsDetailHigh) &&
+                (commonparts_container
+                     ->commonparts[nFTPartsDetailLow - nFTPartsDetailStart]
+                     .dobjdesc != NULL) &&
+                (commonparts_container
+                     ->commonparts[nFTPartsDetailLow - nFTPartsDetailStart]
+                     .dobjdesc[i]
+                     .dl != NULL))
+            {
+                detail_id = nFTPartsDetailLow - nFTPartsDetailStart;
+            }
+            if (parent == NULL)
+            {
+                goto advance_flags;
+            }
+            current_dobj = gcAddChildForDObj(
+                parent,
+                commonparts_container->commonparts[detail_id].dobjdesc[i].dl);
+            if (current_dobj == NULL)
+            {
+                goto advance_flags;
+            }
+            array_dobjs[id] = current_dobj;
+            lbCommonInitDObj(current_dobj, tk1, tk2, tk3, arg9);
+            current_dobj->translate.vec.f = dobjdesc->translate;
+            current_dobj->rotate.vec.f = dobjdesc->rotate;
+            current_dobj->scale.vec.f = dobjdesc->scale;
+            lbCommonAddMObjForFighterPartsDObj(
+                current_dobj,
+                (commonparts_container->commonparts[detail_id].p_mobjsubs !=
+                 NULL)
+                    ? commonparts_container->commonparts[detail_id]
+                          .p_mobjsubs[i]
+                    : NULL,
+                (commonparts_container->commonparts[detail_id]
+                     .p_costume_matanim_joints != NULL)
+                    ? commonparts_container->commonparts[detail_id]
+                          .p_costume_matanim_joints[i]
+                    : NULL,
+                NULL, (s32)anim_frame);
+            if (dobjs != NULL)
+            {
+                *dobjs = current_dobj;
+            }
+        }
+advance_flags:
+        if (dobjs != NULL)
+        {
+            dobjs++;
+        }
+        if (i < 32)
+        {
+            flags0 <<= 1;
+        }
+        else
+        {
+            flags1 <<= 1;
+        }
+    }
+}
+
 void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
                                         AObjEvent32 **costume_matanim_joints,
                                         AObjEvent32 **main_matanim_joints,
@@ -9985,6 +10121,12 @@ FTStruct *ftGetStruct(GObj *fighter_gobj)
     {
         return fighter_gobj->user_data.p;
     }
+    if ((fighter_gobj != NULL) &&
+        (fighter_gobj->id == nGCCommonKindFighter) &&
+        ((uintptr_t)fighter_gobj->user_data.p > 0x1000u))
+    {
+        return fighter_gobj->user_data.p;
+    }
 
     if (fighter_gobj != NULL)
     {
@@ -10062,8 +10204,7 @@ void ftParamInitGame(void)
 
 void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj)
 {
-    (void)player;
-    (void)fighter_gobj;
+    ndsFighterManagerRecordCreatedFighter(fighter_gobj, player);
     gNdsSCVSBattleCompatManagerMask |= 1u << 6;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
 }
@@ -10118,6 +10259,102 @@ s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
         return 1;
     }
     return 0;
+}
+
+s32 efParticleGetBankID(uintptr_t scripts_lo)
+{
+    (void)scripts_lo;
+    return 0;
+}
+
+void ftKirbyCopyLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftBossCommonSetNextAttackWait(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftBossCommonSetDefaultLineID(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
+                                  s32 modelpart_id)
+{
+    ftParamSetModelPartID(fighter_gobj, joint_id, modelpart_id);
+}
+
+void ftParamLockPlayerControl(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftComputerSetupAll(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftComputerProcessAll(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void ftComputerSetFighterDamageDetectSize(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+}
+
+void battleship_ftKeyProcessKeyEvents(GObj *fighter_gobj);
+
+void ftKeyProcessKeyEvents(GObj *fighter_gobj)
+{
+    battleship_ftKeyProcessKeyEvents(fighter_gobj);
+}
+
+void ftParamTryUpdateItemMusic(void)
+{
+}
+
+void ftCommonEntrySetStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    ftMainSetStatus(fighter_gobj, nFTCommonStatusEntry, 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
+    if (fp != NULL)
+    {
+        fp->is_invisible = TRUE;
+        fp->is_shadow_hide = TRUE;
+        fp->is_ghost = TRUE;
+        fp->is_playertag_hide = TRUE;
+    }
+}
+
+void scSubsysFighterProcUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    ftMainPlayAnimEventsAll(fighter_gobj);
+    ftMainRunUpdateColAnim(fighter_gobj);
+    if ((fp != NULL) && (fp->proc_update != NULL))
+    {
+        fp->proc_update(fighter_gobj);
+    }
+}
+
+GObj *ftShadowMakeShadow(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    return NULL;
 }
 
 LBParticle *lbParticleMakeScriptID(s32 bank_id, s32 script_id)

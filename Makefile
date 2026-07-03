@@ -20,6 +20,7 @@ NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
+NDS_IMPORT_BATTLESHIP_FTMANAGER ?= 0
 NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	battle_mariofox_stage_inishie_scale_loop \
 	menu_chain_mariofox_stage_inishie_scale_loop \
@@ -406,6 +407,7 @@ endif
 CFLAGS += -DNDS_DEV_LIVE_INPUT_PREVIEW=$(NDS_DEV_LIVE_INPUT_PREVIEW)
 CFLAGS += -DNDS_RENDERER_HW_TRIANGLES=$(NDS_RENDERER_HW_TRIANGLES)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMAIN=$(NDS_IMPORT_BATTLESHIP_FTMAIN)
+CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMANAGER=$(NDS_IMPORT_BATTLESHIP_FTMANAGER)
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
@@ -481,6 +483,9 @@ CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
 	reloc_backend_ftdata_symbols.c
 CFILES += battleship_ftanim.c battleship_ftanimend.c battleship_ftkey.c
+ifeq ($(NDS_IMPORT_BATTLESHIP_FTMANAGER),1)
+CFILES += battleship_ftmanager.c
+endif
 CFILES += battleship_ftmain.c
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
 CFILES += battleship_grmodelsetup.c

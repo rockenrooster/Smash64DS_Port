@@ -126,11 +126,22 @@ typedef enum FTKeyEventKind {
     (LBBACKUP_CHARACTER_MASK_ALL & ~LBBACKUP_CHARACTER_MASK_UNLOCK)
 
 enum {
-    nFTDemoStatusStance = 0,
+    nFTDemoStatusNull = 0x10000,
     nFTDemoStatusWin1,
     nFTDemoStatusWin2,
     nFTDemoStatusWin3,
-    nFTDemoStatusWin4
+    nFTDemoStatusWin4,
+    nFTDemoStatusLose,
+    nFTDemoStatusRun,
+    nFTDemoStatusJump,
+    nFTDemoStatusFigurePulled,
+    nFTDemoStatusFigureDropped,
+    nFTDemoStatusFigureStand,
+    nFTDemoStatusClash,
+    nFTDemoStatusStance,
+    nFTDemoStatusIntroL,
+    nFTDemoStatusIntroR,
+    nFTDemoStatusSpecialStart
 };
 
 enum {
@@ -162,6 +173,7 @@ enum {
 
 #define FTCOMMON_DOWNWAIT_STAND_STICK_RANGE_MIN 20
 #define FTCOMMON_DAMAGE_CATCH_RELEASE_THRESHOLD 6
+#define FTKIRBY_COPY_MODELPARTS_JOINT 6
 
 typedef union FTKeyEvent {
     u16 halfword;
@@ -203,6 +215,7 @@ typedef struct FTDesc {
 } FTDesc;
 
 typedef struct FTAttributes FTAttributes;
+typedef struct FTAccessPart FTAccessPart;
 
 #ifndef SSB64_NDS_MPOBJECTCOLL_DECLARED
 #define SSB64_NDS_MPOBJECTCOLL_DECLARED
@@ -353,6 +366,20 @@ typedef struct FTSpecialColl {
     Vec3f size;
     s32 damage_resist;
 } FTSpecialColl;
+
+typedef struct FTItemPickup {
+    Vec2f pickup_offset_light;
+    Vec2f pickup_range_light;
+    Vec2f pickup_offset_heavy;
+    Vec2f pickup_range_heavy;
+} FTItemPickup;
+
+typedef struct FTKirbyCopy {
+    u16 copy_id;
+    s16 copy_modelpart_id;
+    f32 effect_scale;
+    s32 star_damage;
+} FTKirbyCopy;
 
 typedef struct FTParts {
     s32 transform_update_mode;
@@ -2731,6 +2758,13 @@ typedef struct FTModelPartContainer {
                                      nFTPartsJointCommonStart];
 } FTModelPartContainer;
 
+struct FTAccessPart {
+    s32 joint_id;
+    Gfx *dl;
+    MObjSub **mobjsubs;
+    AObjEvent32 **costume_matanim_joints;
+};
+
 typedef struct FTAttributes {
     f32 size;
     f32 walkslow_anim_length;
@@ -2777,7 +2811,13 @@ typedef struct FTAttributes {
     u16 deadup_sfx;
     u16 damage_sfx;
     u16 smash_sfx[3];
-    u8 filler_0x0C2[0x100 - 0x0C2];
+    FTItemPickup item_pickup;
+    u16 itemthrow_vel_scale;
+    u16 itemthrow_damage_scale;
+    u16 heavyget_sfx;
+    f32 halo_size;
+    SYColorRGBA shade_color[3];
+    SYColorRGBA fog_color;
     ub32 filler_flags_low    : 10;
     ub32 is_have_voice       : 1;
     ub32 is_have_catch       : 1;
@@ -2821,7 +2861,7 @@ typedef struct FTAttributes {
     f32 unk_0x320;
     Vec3f *translate_scales;
     FTModelPartContainer *modelparts_container;
-    void *accesspart;
+    FTAccessPart *accesspart;
     FTTexturePartContainer *textureparts_container;
     s32 joint_itemheavy_id;
     FTThrownStatusArray *thrown_status;
@@ -2832,6 +2872,7 @@ typedef struct FTAttributes {
 
 extern size_t gFTManagerFigatreeHeapSize;
 extern FTDesc dFTManagerDefaultFighterDesc;
+extern FTData *dFTManagerDataFiles[nFTKindEnumCount + 1];
 extern f32 dSCSubsysFighterScales[];
 extern GObj *gGCCommonLinks[GC_COMMON_MAX_LINKS];
 extern FTOpeningDesc *D_ovl1_80390D20[];
@@ -2870,6 +2911,8 @@ void ftParamResetModelPartAll(GObj *fighter_gobj);
 void ftParamHideModelPartAll(GObj *fighter_gobj);
 void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
                            s32 modelpart_id);
+void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
+                                  s32 modelpart_id);
 void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail);
 void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
                              s32 texture_id);
@@ -2893,11 +2936,16 @@ void ftParamSetStatUpdate(FTStruct *fp, u16 stat_flags);
 void ftParamUpdate1PGameAttackStats(FTStruct *fp, u16 stat_flags);
 void ftParamSetAnimLocks(FTStruct *fp);
 void ftParamClearAnimLocks(FTStruct *fp);
+void ftParamLockPlayerControl(GObj *fighter_gobj);
 void gmRumbleStopRumbleID(s32 player, s32 rumble_id);
+void ftComputerSetupAll(GObj *fighter_gobj);
+void ftComputerSetFighterDamageDetectSize(GObj *fighter_gobj);
 void ftComputerProcessAll(GObj *fighter_gobj);
 void ftKeyProcessKeyEvents(GObj *fighter_gobj);
 sb32 ftCommonDeadCheckInterruptCommon(GObj *fighter_gobj);
 void ftBossCommonUpdateDamageStats(GObj *fighter_gobj);
+void ftBossCommonSetNextAttackWait(GObj *fighter_gobj);
+void ftBossCommonSetDefaultLineID(GObj *fighter_gobj);
 void ftCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj);
 void ftCommonGuardSetOffSetStatus(GObj *fighter_gobj);
 void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj);
@@ -2912,13 +2960,24 @@ void ftManagerSetPrevPartsAlloc(FTParts *parts);
 FTParts *ftManagerGetNextPartsAlloc(void);
 void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap);
 void lbCommonInitDObj(DObj *dobj, u8 tk1, u8 tk2, u8 tk3, u8 arg4);
+void lbCommonInitDObj3Transforms(DObj *dobj, u8 tk1, u8 tk2, u8 tk3);
+void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
+                                    FTCommonPartContainer *commonparts_container,
+                                    s32 detail_curr, DObj **dobjs,
+                                    u32 *setup_parts, u8 tk1, u8 tk2,
+                                    u8 tk3, f32 anim_frame, u8 arg9);
 void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
                                         AObjEvent32 **costume_matanim_joints,
                                         AObjEvent32 **main_matanim_joints,
                                         s32 costume);
 DObj *gcAddDObjForGObj(GObj *gobj, void *dvar);
+DObj *gcAddChildForDObj(DObj *dobj, void *dvar);
+XObj *gcAddXObjForDObjFixed(DObj *dobj, u8 kind, u8 arg2);
 void gcEjectDObj(DObj *dobj);
 void ftMainRunUpdateColAnim(GObj *fighter_gobj);
+void ftMainProcUpdateInterrupt(GObj *fighter_gobj);
+void ftMainProcPhysicsMapDefault(GObj *fighter_gobj);
+void ftMainProcPhysicsMapCapture(GObj *fighter_gobj);
 void ftCommonDamageSetPublic(FTStruct *fp, f32 knockback, f32 angle);
 void ftCommonDamageSetDustEffectInterval(FTStruct *fp);
 f32 ftCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga, f32 knockback);
@@ -3411,9 +3470,18 @@ void ftPhysicsApplyAirVelFriction(GObj *fighter_gobj);
 void ftPhysicsApplyAirVelDriftFastFall(GObj *fighter_gobj);
 void ftParamMakeRumble(FTStruct *fp, s32 rumble_id, s32 length);
 extern u16 dFTCommonDataDownBounceSFX[];
+extern u16 gMPCollisionUpdateTic;
 f32 scSubsysFighterGetLightAngleX(void);
 f32 scSubsysFighterGetLightAngleY(void);
+void scSubsysFighterProcUpdate(GObj *fighter_gobj);
 void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id);
+void ftCommonEntrySetStatus(GObj *fighter_gobj);
+GObj *ftShadowMakeShadow(GObj *fighter_gobj);
+void ftKirbyCopyLinkSpecialNDestroyBoomerang(GObj *fighter_gobj);
+void ftLinkSpecialNDestroyBoomerang(GObj *fighter_gobj);
+s32 efParticleGetBankID(uintptr_t scripts_lo);
+s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
+                            void *texture_lo, void *texture_hi);
 
 #ifndef ABS
 #define ABS(x) (((x) < 0) ? -(x) : (x))

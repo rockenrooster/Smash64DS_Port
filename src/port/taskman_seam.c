@@ -373,6 +373,17 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterMarioFoxLoadedFileCount = 0;
     gNdsFighterMarioFoxExternalFixupCount = 0;
     gNdsFighterMarioFoxExternalFixupFailCount = 0;
+    gNdsFighterManagerResult = 0;
+    gNdsFighterManagerMask = 0;
+    gNdsFighterManagerExternMask = 0;
+    gNdsFighterManagerStatusBufferMask = 0;
+    gNdsFighterManagerFighterMask = 0;
+    gNdsFighterManagerDataMask = 0;
+    gNdsFighterManagerWaitMask = 0;
+    gNdsFighterManagerEntryMask = 0;
+    gNdsFighterManagerStatusBufferHitCount = 0;
+    gNdsFighterManagerFighterCount = 0;
+    gNdsFighterManagerFigatreeHeapSize = 0;
     gNdsFighterMarioFoxModelResult = 0;
     gNdsFighterMarioFoxGObjResult = 0;
     gNdsFighterMarioFoxSetupMask = 0;

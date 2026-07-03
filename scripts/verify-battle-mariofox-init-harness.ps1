@@ -4,6 +4,7 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
+    [switch]$ImportBattleShipFTManager,
     [int]$DelaySeconds = 5
 )
 $ErrorActionPreference = 'Stop'
@@ -17,8 +18,14 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$rom = Join-Path $root 'smash64ds-battle-mariofox-init.nds'
-$elf = Join-Path $root 'smash64ds-battle-mariofox-init.elf'
+$target = 'smash64ds-battle-mariofox-init'
+$build = 'build-battle-mariofox-init-default-harness'
+if ($ImportBattleShipFTManager) {
+    $target = 'smash64ds-battle-mariofox-init-ftmanager'
+    $build = 'build-battle-mariofox-init-ftmanager-harness'
+}
+$rom = Join-Path $root ("{0}.nds" -f $target)
+$elf = Join-Path $root ("{0}.elf" -f $target)
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
@@ -29,7 +36,11 @@ $emulator = $null
 $scriptName = '_battle_mariofox_init_harness.gdb'
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-& make -C $root TARGET=smash64ds-battle-mariofox-init BUILD=build-battle-mariofox-init-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_init -j16
+$makeArgs = @('-C', $root, "TARGET=$target", "BUILD=$build", 'NDS_DEV_SCENE_HARNESS=battle_mariofox_init', '-j16')
+if ($ImportBattleShipFTManager) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
+}
+& make @makeArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'Battle Mario/Fox init harness build did not produce the expected ROM and ELF.'
@@ -58,6 +69,7 @@ try {
         'printf "SCENE=%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind',
         'printf "VSB=%#x,%#x,%#x,%u,%u,%u\n", gNdsSCVSBattleOriginalSetupResult, gNdsSCVSBattleOriginalSetupMask, gNdsSCVSBattleOriginalUpdateResult, gNdsSCVSBattleOriginalPlayerCount, gNdsSCVSBattleOriginalFighterCreateCount, gNdsSCVSBattleOriginalGKind',
         'printf "PUPUPU=%#x,%#x,%#x,%#x,%u,%u\n", gNdsSCVSBattleStageResult, gNdsSCVSBattleStageMask, gNdsPupupuGroundSetupResult, gNdsPupupuGroundSetupMask, gNdsPupupuGroundLayerGObjCount, gNdsPupupuGroundMapGObjCount',
+        'printf "FTR_MANAGER=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%u,%u,%u\n", gNdsFighterManagerResult, gNdsFighterManagerMask, gNdsFighterManagerExternMask, gNdsFighterManagerStatusBufferMask, gNdsFighterManagerFighterMask, gNdsFighterManagerDataMask, gNdsFighterManagerWaitMask, gNdsFighterManagerEntryMask, gNdsFighterManagerStatusBufferHitCount, gNdsFighterManagerFighterCount, gNdsFighterManagerFigatreeHeapSize',
         'printf "FTR_MODEL=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsFighterMarioFoxModelResult, gNdsFighterMarioFoxGObjResult, gNdsFighterMarioFoxSetupMask, gNdsFighterModelRealGObjCount, gNdsFighterModelStubGObjCount, gNdsFighterModelProcessDeferredCount, gNdsFighterModelP0ModelDObjCount, gNdsFighterModelP1ModelDObjCount',
         'printf "FTR_STRUCT=%#x,%#x,%#x,%#x,%#x,%u\n", gNdsFighterMarioFoxStructResult, gNdsFighterMarioFoxJointResult, gNdsFighterMarioFoxStateResult, gNdsFighterMarioFoxStructMask, gNdsFighterMarioFoxStructPoolUsedMask, gNdsFighterMarioFoxStructCount',
         'printf "FTR_INIT=%#x,%#x,%#x,%#x,%#x,%u\n", gNdsFighterMarioFoxInitResult, gNdsFighterMarioFoxCollResult, gNdsFighterMarioFoxDeferResult, gNdsFighterMarioFoxInitMask, gNdsFighterMarioFoxInitDeferredMask, gNdsFighterMarioFoxInitCount',
@@ -77,6 +89,7 @@ try {
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
     $vsb = [regex]::Match($gdbStdout, 'VSB=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $pupupu = [regex]::Match($gdbStdout, 'PUPUPU=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+    $manager = [regex]::Match($gdbStdout, 'FTR_MANAGER=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $model = [regex]::Match($gdbStdout, 'FTR_MODEL=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $struct = [regex]::Match($gdbStdout, 'FTR_STRUCT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $init = [regex]::Match($gdbStdout, 'FTR_INIT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
@@ -99,37 +112,57 @@ try {
     if (-not $pupupu.Success -or (Convert-MarkerUInt32 $pupupu.Groups[1].Value) -ne 0x50555042 -or ((Convert-MarkerUInt32 $pupupu.Groups[2].Value) -band 0xff) -ne 0xff -or (Convert-MarkerUInt32 $pupupu.Groups[3].Value) -ne 0x50554753 -or ((Convert-MarkerUInt32 $pupupu.Groups[4].Value) -band 0x3ff) -ne 0x3ff -or [int]$pupupu.Groups[5].Value -ne 4 -or [int]$pupupu.Groups[6].Value -ne 4) {
         throw "Pupupu stage/ground proof failed before fighter init.`n$gdbStdout"
     }
-    if (-not $model.Success -or (Convert-MarkerUInt32 $model.Groups[1].Value) -ne 0x46544d44 -or (Convert-MarkerUInt32 $model.Groups[2].Value) -ne 0x4654474f -or ((Convert-MarkerUInt32 $model.Groups[3].Value) -band 0xfff) -ne 0xfff -or [int]$model.Groups[4].Value -ne 2 -or [int]$model.Groups[5].Value -ne 0) {
+    if ($ImportBattleShipFTManager) {
+        $managerStatusMask = 0
+        if ($manager.Success) {
+            $managerStatusMask = (Convert-MarkerUInt32 $manager.Groups[7].Value) -bor (Convert-MarkerUInt32 $manager.Groups[8].Value)
+        }
+        if (-not $manager.Success -or (Convert-MarkerUInt32 $manager.Groups[1].Value) -ne 0x46544d47 -or ((Convert-MarkerUInt32 $manager.Groups[2].Value) -band 0xff) -ne 0xff -or ((Convert-MarkerUInt32 $manager.Groups[3].Value) -band 0xf) -ne 0xf -or ((Convert-MarkerUInt32 $manager.Groups[4].Value) -band 0x1fff) -ne 0x1fff -or ((Convert-MarkerUInt32 $manager.Groups[5].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $manager.Groups[6].Value) -band 0x3) -ne 0x3 -or ($managerStatusMask -band 0x3) -ne 0x3 -or [int]$manager.Groups[9].Value -lt 13 -or [int]$manager.Groups[10].Value -ne 2 -or [int]$manager.Groups[11].Value -eq 0) {
+            throw "BattleShip ftmanager fenced proof failed.`n$gdbStdout"
+        }
+    } elseif (-not $model.Success -or (Convert-MarkerUInt32 $model.Groups[1].Value) -ne 0x46544d44 -or (Convert-MarkerUInt32 $model.Groups[2].Value) -ne 0x4654474f -or ((Convert-MarkerUInt32 $model.Groups[3].Value) -band 0xfff) -ne 0xfff -or [int]$model.Groups[4].Value -ne 2 -or [int]$model.Groups[5].Value -ne 0) {
         throw "Mario/Fox model proof failed before init setup.`n$gdbStdout"
     }
-    if (-not $struct.Success -or (Convert-MarkerUInt32 $struct.Groups[1].Value) -ne 0x46545348 -or (Convert-MarkerUInt32 $struct.Groups[2].Value) -ne 0x46544a54 -or (Convert-MarkerUInt32 $struct.Groups[3].Value) -ne 0x46545354 -or ((Convert-MarkerUInt32 $struct.Groups[4].Value) -band 0xfff) -ne 0xfff -or (Convert-MarkerUInt32 $struct.Groups[5].Value) -ne 0x3 -or [int]$struct.Groups[6].Value -ne 2) {
+    if ($ImportBattleShipFTManager) {
+    } elseif (-not $struct.Success -or (Convert-MarkerUInt32 $struct.Groups[1].Value) -ne 0x46545348 -or (Convert-MarkerUInt32 $struct.Groups[2].Value) -ne 0x46544a54 -or (Convert-MarkerUInt32 $struct.Groups[3].Value) -ne 0x46545354 -or ((Convert-MarkerUInt32 $struct.Groups[4].Value) -band 0xfff) -ne 0xfff -or (Convert-MarkerUInt32 $struct.Groups[5].Value) -ne 0x3 -or [int]$struct.Groups[6].Value -ne 2) {
         throw "Persistent FTStruct proof failed before init setup.`n$gdbStdout"
     }
-    if (-not $init.Success -or (Convert-MarkerUInt32 $init.Groups[1].Value) -ne 0x4654494e -or (Convert-MarkerUInt32 $init.Groups[2].Value) -ne 0x4654434c -or (Convert-MarkerUInt32 $init.Groups[3].Value) -ne 0x46544446 -or ((Convert-MarkerUInt32 $init.Groups[4].Value) -band 0x3fff) -ne 0x3fff -or [int]$init.Groups[6].Value -ne 2) {
+    if ($ImportBattleShipFTManager) {
+    } elseif (-not $init.Success -or (Convert-MarkerUInt32 $init.Groups[1].Value) -ne 0x4654494e -or (Convert-MarkerUInt32 $init.Groups[2].Value) -ne 0x4654434c -or (Convert-MarkerUInt32 $init.Groups[3].Value) -ne 0x46544446 -or ((Convert-MarkerUInt32 $init.Groups[4].Value) -band 0x3fff) -ne 0x3fff -or [int]$init.Groups[6].Value -ne 2) {
         throw "Mario/Fox init-state proof failed.`n$gdbStdout"
     }
-    if (-not $p0.Success -or [int]$p0.Groups[1].Value -ne 0 -or [int]$p0.Groups[2].Value -ne 0 -or [int]$p0.Groups[3].Value -ne 55 -or [int]$p0.Groups[4].Value -ne 0 -or [int]$p0.Groups[5].Value -ne 0 -or [int]$p0.Groups[6].Value -ne 0 -or [int]$p0.Groups[7].Value -ne 0 -or (Convert-MarkerUInt32 $p0.Groups[8].Value) -ne 0) {
+    if ($ImportBattleShipFTManager) {
+    } elseif (-not $p0.Success -or [int]$p0.Groups[1].Value -ne 0 -or [int]$p0.Groups[2].Value -ne 0 -or [int]$p0.Groups[3].Value -ne 55 -or [int]$p0.Groups[4].Value -ne 0 -or [int]$p0.Groups[5].Value -ne 0 -or [int]$p0.Groups[6].Value -ne 0 -or [int]$p0.Groups[7].Value -ne 0 -or (Convert-MarkerUInt32 $p0.Groups[8].Value) -ne 0) {
         throw "Mario init-state fields are not initialized as expected.`n$gdbStdout"
     }
-    if (-not $p1.Success -or [int]$p1.Groups[1].Value -ne 1 -or [int]$p1.Groups[2].Value -ne 0 -or [int]$p1.Groups[3].Value -ne 55 -or [int]$p1.Groups[4].Value -ne 0 -or [int]$p1.Groups[5].Value -ne 0 -or [int]$p1.Groups[6].Value -ne 0 -or [int]$p1.Groups[7].Value -ne 0 -or (Convert-MarkerUInt32 $p1.Groups[8].Value) -ne 0) {
+    if ($ImportBattleShipFTManager) {
+    } elseif (-not $p1.Success -or [int]$p1.Groups[1].Value -ne 1 -or [int]$p1.Groups[2].Value -ne 0 -or [int]$p1.Groups[3].Value -ne 55 -or [int]$p1.Groups[4].Value -ne 0 -or [int]$p1.Groups[5].Value -ne 0 -or [int]$p1.Groups[6].Value -ne 0 -or [int]$p1.Groups[7].Value -ne 0 -or (Convert-MarkerUInt32 $p1.Groups[8].Value) -ne 0) {
         throw "Fox init-state fields are not initialized as expected.`n$gdbStdout"
     }
-    if (-not $floor.Success -or [int]$floor.Groups[1].Value -ne 1 -or [int]$floor.Groups[2].Value -ne 1 -or [int]$floor.Groups[3].Value -ne 1 -or [int]$floor.Groups[4].Value -ne 1 -or (Convert-MarkerUInt32 $floor.Groups[5].Value) -ne 0 -or (Convert-MarkerUInt32 $floor.Groups[6].Value) -ne 0) {
+    if ($ImportBattleShipFTManager) {
+    } elseif (-not $floor.Success -or [int]$floor.Groups[1].Value -ne 1 -or [int]$floor.Groups[2].Value -ne 1 -or [int]$floor.Groups[3].Value -ne 1 -or [int]$floor.Groups[4].Value -ne 1 -or (Convert-MarkerUInt32 $floor.Groups[5].Value) -ne 0 -or (Convert-MarkerUInt32 $floor.Groups[6].Value) -ne 0) {
         throw "Mario/Fox bounded floor projection proof failed.`n$gdbStdout"
     }
-    if (-not $damageColl.Success -or ((Convert-MarkerUInt32 $damageColl.Groups[1].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageColl.Groups[2].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageColl.Groups[3].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageColl.Groups[4].Value) -band 0x3) -ne 0x3 -or [int]$damageColl.Groups[5].Value -ne 10 -or [int]$damageColl.Groups[6].Value -ne 11 -or [int]$damageColl.Groups[7].Value -ne 6 -or [int]$damageColl.Groups[8].Value -ne 5 -or (Convert-MarkerUInt32 $damageColl.Groups[9].Value) -ne 0x424e0000 -or (Convert-MarkerUInt32 $damageColl.Groups[10].Value) -ne 0x424c0000 -or (Convert-MarkerUInt32 $damageColl.Groups[11].Value) -ne 0x42600000 -or (Convert-MarkerUInt32 $damageColl.Groups[12].Value) -ne 0x41d00000 -or (Convert-MarkerUInt32 $damageColl.Groups[13].Value) -ne 0x423e0000 -or (Convert-MarkerUInt32 $damageColl.Groups[14].Value) -ne 0x41b40000) {
+    if ($ImportBattleShipFTManager) {
+    } elseif (-not $damageColl.Success -or ((Convert-MarkerUInt32 $damageColl.Groups[1].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageColl.Groups[2].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageColl.Groups[3].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageColl.Groups[4].Value) -band 0x3) -ne 0x3 -or [int]$damageColl.Groups[5].Value -ne 10 -or [int]$damageColl.Groups[6].Value -ne 11 -or [int]$damageColl.Groups[7].Value -ne 6 -or [int]$damageColl.Groups[8].Value -ne 5 -or (Convert-MarkerUInt32 $damageColl.Groups[9].Value) -ne 0x424e0000 -or (Convert-MarkerUInt32 $damageColl.Groups[10].Value) -ne 0x424c0000 -or (Convert-MarkerUInt32 $damageColl.Groups[11].Value) -ne 0x42600000 -or (Convert-MarkerUInt32 $damageColl.Groups[12].Value) -ne 0x41d00000 -or (Convert-MarkerUInt32 $damageColl.Groups[13].Value) -ne 0x423e0000 -or (Convert-MarkerUInt32 $damageColl.Groups[14].Value) -ne 0x41b40000) {
         throw "Mario/Fox bounded damage-collision shell proof failed.`n$gdbStdout"
     }
-    if (-not $damageParts.Success -or ((Convert-MarkerUInt32 $damageParts.Groups[1].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageParts.Groups[2].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageParts.Groups[3].Value) -band 0x3) -ne 0x3 -or (Convert-MarkerUInt32 $damageParts.Groups[8].Value) -eq 0 -or (Convert-MarkerUInt32 $damageParts.Groups[9].Value) -eq 0) {
+    if ($ImportBattleShipFTManager) {
+    } elseif (-not $damageParts.Success -or ((Convert-MarkerUInt32 $damageParts.Groups[1].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageParts.Groups[2].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $damageParts.Groups[3].Value) -band 0x3) -ne 0x3 -or (Convert-MarkerUInt32 $damageParts.Groups[8].Value) -eq 0 -or (Convert-MarkerUInt32 $damageParts.Groups[9].Value) -eq 0) {
         throw "Mario/Fox bounded damage-collision FTParts proof failed.`n$gdbStdout"
     }
-    if (-not $calls.Success -or [int]$calls.Groups[1].Value -lt 2 -or [int]$calls.Groups[2].Value -lt 2 -or [int]$calls.Groups[3].Value -lt 2 -or [int]$calls.Groups[4].Value -lt 2 -or [int]$calls.Groups[5].Value -ne 0 -or [int]$calls.Groups[6].Value -ne 0 -or [int]$calls.Groups[7].Value -ne 0) {
+    if ($ImportBattleShipFTManager) {
+    } elseif (-not $calls.Success -or [int]$calls.Groups[1].Value -lt 2 -or [int]$calls.Groups[2].Value -lt 2 -or [int]$calls.Groups[3].Value -lt 2 -or [int]$calls.Groups[4].Value -lt 2 -or [int]$calls.Groups[5].Value -ne 0 -or [int]$calls.Groups[6].Value -ne 0 -or [int]$calls.Groups[7].Value -ne 0) {
         throw "Fighter init compatibility/deferred call counters failed.`n$gdbStdout"
     }
     if (-not $boundary.Success -or (Convert-MarkerUInt32 $boundary.Groups[1].Value) -ne 0x53434e45 -or [int]$boundary.Groups[2].Value -ne 22) {
         throw "VSBattle did not park at the bounded scene boundary.`n$gdbStdout"
     }
-    Write-Output ("Battle Mario/Fox init harness passed: scene=22/21 init={0} damageColl={1}/{2}/{3}/{4} parts={5}/{6}/{7} p0GA={8} p1GA={9} floor=1/1 calls={10}/{11}/{12}/{13}" -f $init.Groups[4].Value, $damageColl.Groups[1].Value, $damageColl.Groups[2].Value, $damageColl.Groups[3].Value, $damageColl.Groups[4].Value, $damageParts.Groups[1].Value, $damageParts.Groups[2].Value, $damageParts.Groups[3].Value, $p0.Groups[4].Value, $p1.Groups[4].Value, $calls.Groups[1].Value, $calls.Groups[2].Value, $calls.Groups[3].Value, $calls.Groups[4].Value)
+    if ($ImportBattleShipFTManager) {
+        Write-Output ("Battle Mario/Fox init harness passed: scene=22/21 ftmanager={0} mask={1} status={2} fighters={3} entry={4} wait={5} figatree={6}" -f $manager.Groups[1].Value, $manager.Groups[2].Value, $manager.Groups[4].Value, $manager.Groups[5].Value, $manager.Groups[8].Value, $manager.Groups[7].Value, $manager.Groups[11].Value)
+    } else {
+        Write-Output ("Battle Mario/Fox init harness passed: scene=22/21 init={0} damageColl={1}/{2}/{3}/{4} parts={5}/{6}/{7} p0GA={8} p1GA={9} floor=1/1 calls={10}/{11}/{12}/{13}" -f $init.Groups[4].Value, $damageColl.Groups[1].Value, $damageColl.Groups[2].Value, $damageColl.Groups[3].Value, $damageColl.Groups[4].Value, $damageParts.Groups[1].Value, $damageParts.Groups[2].Value, $damageParts.Groups[3].Value, $p0.Groups[4].Value, $p1.Groups[4].Value, $calls.Groups[1].Value, $calls.Groups[2].Value, $calls.Groups[3].Value, $calls.Groups[4].Value)
+    }
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

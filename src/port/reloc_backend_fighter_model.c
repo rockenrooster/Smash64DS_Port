@@ -1780,6 +1780,73 @@ static void ndsFighterRecordModelGObj(FTDesc *desc, GObj *fighter_gobj,
     }
 }
 
+static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
+                                                  s32 player)
+{
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    FTStruct *fp;
+    u32 bit;
+
+    if ((fighter_gobj == NULL) || (player < 0) || (player > 1))
+    {
+        return;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if (fp == NULL)
+    {
+        return;
+    }
+    bit = 1u << player;
+
+    if (((player == 0) && (fp->fkind == nFTKindMario)) ||
+        ((player == 1) && (fp->fkind == nFTKindFox)))
+    {
+        gNdsFighterManagerFighterMask |= bit;
+        gNdsSCVSBattleOriginalActivePlayerMask |= bit;
+    }
+    if ((fp->fkind >= 0) && (fp->fkind < nFTKindEnumCount) &&
+        (fp->data == dFTManagerDataFiles[fp->fkind]) &&
+        (fp->attr != NULL) && (fp->figatree_heap != NULL))
+    {
+        gNdsFighterManagerDataMask |= bit;
+    }
+    if (fp->status_id == nFTCommonStatusWait)
+    {
+        gNdsFighterManagerWaitMask |= bit;
+    }
+    if (fp->status_id == nFTCommonStatusEntry)
+    {
+        gNdsFighterManagerEntryMask |= bit;
+    }
+
+    gNdsFighterManagerFighterCount =
+        (gNdsFighterManagerFighterMask & 1u) +
+        ((gNdsFighterManagerFighterMask >> 1) & 1u);
+    gNdsSCVSBattleOriginalFighterGObjCount =
+        gNdsFighterManagerFighterCount;
+    gNdsSCVSBattleOriginalFighterCreateCount =
+        gNdsFighterManagerFighterCount;
+    gNdsSCVSBattleOriginalActivePlayerCount =
+        gNdsFighterManagerFighterCount;
+    if (player == 0)
+    {
+        gNdsSCVSBattleOriginalP0FKind = (u32)fp->fkind;
+        gNdsSCVSBattleOriginalP0LR = (u32)fp->lr;
+    }
+    else
+    {
+        gNdsSCVSBattleOriginalP1FKind = (u32)fp->fkind;
+        gNdsSCVSBattleOriginalP1LR = (u32)fp->lr;
+    }
+    gNdsSCVSBattleCompatManagerMask |= 1u << 3;
+    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+    ndsFighterManagerRefreshProof();
+#else
+    (void)fighter_gobj;
+    (void)player;
+#endif
+}
+
 static u32 ndsFighterStructPoolCount(void)
 {
     u32 count = 0;

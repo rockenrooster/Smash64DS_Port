@@ -258,8 +258,11 @@ static void ndsFighterMarioFoxRunDLAllDrawProbe(void);
 static void ndsFighterMarioFoxRunWalkInputProof(void);
 static void ndsFighterMarioFoxRunWalkLoopProof(void);
 static void ndsFighterMarioFoxRunDashRunProof(void);
+static void ndsFighterManagerRefreshProof(void);
+static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
+                                                  s32 player);
 static void ndsFighterJumpAttackAirProbeMapLanding(GObj *fighter_gobj,
-                                                   FTStruct *fp, DObj *root);
+                                                    FTStruct *fp, DObj *root);
 static void ndsFighterJumpAttackAirProbeDirections(GObj *fighter_gobj,
                                                    FTStruct *fp, DObj *root);
 static void ndsFighterMarioFoxRunJumpLoopProof(void);
