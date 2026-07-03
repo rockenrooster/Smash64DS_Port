@@ -52,17 +52,17 @@
   source region through `display_mode` (`coll_data=120`,
   `motion_attack_id=648`, `attack_colls=660`, `joints=2280`, callbacks at
   `2516+`, source-region size `2896`) and the port-only DS/proof extension
-  begins at offset `2896`. A full `ft/ftmain.c` wrapper is fenced behind
-  `NDS_IMPORT_BATTLESHIP_FTMAIN=1` and passes the init/wait/dash-run ladder,
-  boundary, and continuous live-hit verifier after routing the public
-  `ftMain*` entry points through imported BattleShip code plus bounded
-  diagnostics.
+  begins at offset `2896`. Full `ft/ftmain.c` is imported by default through
+  `src/import/battleship_ftmain.c` and passes the init/wait/dash-run ladder,
+  boundary, continuous live-hit verifier, and four-way sharded Regression after
+  routing the public `ftMain*` entry points through imported BattleShip code
+  plus bounded diagnostics.
 - The imported `ftMainSetStatus` path still contains two deliberate
   duplicate-behavior seams: stage compat replay in the imported post-hook and
   the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Delete them
   status-by-status as those source proofs graduate; do not treat either hook as
   a completed subsystem.
-- Fenced ftmain verifier coverage is reduced in these follow-up areas until the
+- Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and
   damage-status-setup bits; damage setup masks skip status, expire, and

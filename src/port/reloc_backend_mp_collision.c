@@ -5784,13 +5784,21 @@ static sb32 ndsStageMPUpdateFloorLoopUpdateFighter(GObj *fighter_gobj)
         sNdsStageMPUpdateFloorLoopPrevRootValid[0] = 1u;
         if (ndsFighterMarioFoxStageMPCrossFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCrossFloorLoopP0FinalLineID =
-                fp->coll_data.floor_line_id;
-            gNdsStageMPCrossFloorLoopP0FinalFloorOK =
-                gNdsStageMPUpdateFloorLoopP0FloorOK;
-            if ((gNdsStageMPCrossFloorLoopTargetLineID >= 0) &&
-                (fp->coll_data.floor_line_id ==
+            sb32 target_match =
+                ((gNdsStageMPCrossFloorLoopTargetLineID >= 0) &&
+                 (fp->coll_data.floor_line_id ==
                     gNdsStageMPCrossFloorLoopTargetLineID))
+                    ? TRUE : FALSE;
+
+            if ((target_match != FALSE) ||
+                (gNdsStageMPCrossFloorLoopP0TargetLineMatchCount == 0u))
+            {
+                gNdsStageMPCrossFloorLoopP0FinalLineID =
+                    fp->coll_data.floor_line_id;
+                gNdsStageMPCrossFloorLoopP0FinalFloorOK =
+                    gNdsStageMPUpdateFloorLoopP0FloorOK;
+            }
+            if (target_match != FALSE)
             {
                 gNdsStageMPCrossFloorLoopP0TargetLineMatchCount++;
             }

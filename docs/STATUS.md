@@ -55,12 +55,16 @@ collision helpers now resolve to the original source. The shared `FTStruct`
 source region in `include/ft/fighter.h` now matches BattleShip `fttypes.h`
 through `display_mode` (`joints=2280`, callbacks at `2516+`,
 source-region size `2896`), with DS/proof-only fields moved to the extension
-block at offset `2896` and compile-time guards freezing the layout. The
-`NDS_IMPORT_BATTLESHIP_FTMAIN=1` retest no longer reproduces the earlier
-init/wait/dash-run data abort, but the import is not graduated: Wait/Dash-run
-proof counters drift under the fenced import and the continuous live-hit target
-still links against remaining local `ftMain*` seam definitions. Details are in
-`docs/FTSTRUCT_PARITY.md` and `docs/KNOWN_ISSUES.md`.
+block at offset `2896` and compile-time guards freezing the layout.
+
+Full BattleShip `ft/ftmain.c` is now imported by default through
+`src/import/battleship_ftmain.c`; the duplicate local `ftMain*` seams are gone
+or routed through the imported original once. The init/wait/dash-run ladder,
+boundary profile, continuous live-hit verifier, and four-way sharded Regression
+passed after a fresh Regression prebuild. The only regression-cycle fix was a
+proof-recorder correction that preserves the first selected cross-floor target
+match so later wall/cliff MP updates cannot erase the motion-stale evidence.
+Details are in `docs/FTSTRUCT_PARITY.md` and `docs/KNOWN_ISSUES.md`.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 The hardware path has BattleShip billboard/recalc matrix seeds, Pupupu
@@ -81,9 +85,9 @@ Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 The active boundary is still bounded proof scaffolding, not continuous gameplay.
 The next useful work is not another proof bit. It is one of:
 
-- runtime follow-up: delete or fence the remaining project-owned `ftMain*`
-  definitions replaced by the BattleShip `ftmain.c` TU, then re-test the
-  opt-in import before making it default;
+- runtime follow-up: remove the remaining `ftMainSetStatus` compat-replay and
+  cliffmotion restore duplicate-behavior seams status-by-status as source
+  proofs graduate;
 - renderer follow-up: finish opt-in hardware combiner/material policy,
   broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
   plus IA/I decoders, then plan renderer cutover work;

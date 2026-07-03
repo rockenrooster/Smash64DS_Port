@@ -57,10 +57,13 @@ matrix/world-position helper copies. The shared `FTStruct` source region in
 `display_mode`; `joints` is at `2280`, callback slots start at `2516`, the
 source region is `2896` bytes, and DS/proof-only fields live after that
 boundary. Static layout guards freeze the source offsets and extension boundary.
-The fenced `NDS_IMPORT_BATTLESHIP_FTMAIN=1` retest no longer reproduces the
-old init/wait/dash-run data abort, but it is not green: Wait/Dash-run proof
-counters drift and the continuous live-hit target still has duplicate symbol
-conflicts with remaining local `ftMain*` seam definitions.
+Full BattleShip `ft/ftmain.c` is now imported by default through
+`src/import/battleship_ftmain.c`; the duplicate local `ftMain*` seams are gone
+or routed through the imported original once. The default ladder, boundary,
+continuous live-hit verifier, and four-way sharded Regression passed after a
+fresh Regression prebuild. The regression-cycle fix preserves the first
+selected cross-floor target match so later wall/cliff MP updates cannot erase
+motion-stale proof evidence.
 
 ## Process Change
 
@@ -77,9 +80,9 @@ the work reaches a scene-level boundary such as `battle_playable` or
 1. Renderer follow-up: finish opt-in hardware combiner/material policy,
    broaden remaining texture-state coverage after the first all-DL CI/TLUT gate
    plus IA/I decoders, then plan renderer cutover.
-2. Runtime slice 1 follow-up: remove or fence the remaining local `ftMain*`
-   definitions now replaced by the BattleShip `ftmain.c` TU, then re-test the
-   opt-in import before graduating it to default.
+2. Runtime follow-up: delete the remaining `ftMainSetStatus` compat-replay and
+   cliffmotion restore duplicate-behavior seams status-by-status as those source
+   proofs graduate.
 3. Broaden hardware texture coverage now that all-DL CI/TLUT upload is proven
    and material DL emission reaches the hardware traversal where source MObjs
    expose branchable material state.

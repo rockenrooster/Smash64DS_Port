@@ -16177,3 +16177,18 @@ Still deferred:
 | Damage common-callback mask narrows from `0x3fff` to `0x3bfd`, dropping `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE` and `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE_ORIGINAL`. | Reprove the air-update callback pair under imported ftmain. |
 | Catch-resist, damage-kind, and sleep masks drop the original catch-resist mirror, Twister procparams mirror, and sleep motion mirror. | Replace diagnostic mirrors with direct source observations. |
 | Live-hit diagnostic mirror bits now synthesize private hitlog state from the proven base path instead of observing BattleShip's private static storage. | Expose or replace private-static hitlog evidence without parallel behavior. |
+
+## 2026-07-02 - Default ftmain Import Regression Green
+
+- Flipped full BattleShip `ft/ftmain.c` import on by default after removing the
+  duplicate local `ftMain*` seams or routing compatibility entry points through
+  the imported original exactly once.
+- Fixed the fresh-prebuild Regression shard-1 failure in
+  `battle_mariofox_stage_mpwallhit_floor_loop` by preserving the first selected
+  cross-floor target match, so later wall/cliff MP updates cannot overwrite the
+  motion-stale proof recorder.
+- Reverified the targeted wall-hit floor verifier,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, a fresh
+  `.\scripts\build-verify-profile.ps1 -Profile Regression`, and all four
+  `.\scripts\verify-all.ps1 -Profile Regression -ShardCount 4 ... -NoBuild`
+  shards.
