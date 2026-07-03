@@ -16477,3 +16477,23 @@ Still deferred:
   all-DL `hwdepth=z260/217/proj0/0/decal0/0` and Pupupu stage
   `hwsubmit=252`, `hwtri=1140`, `hwdepth=z456/proj684/decal0`,
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+
+## 2026-07-03 - Hardware Alpha-Only Texture Binding
+
+- Let the opt-in hardware texture gate bind the source texture when the final
+  alpha output uses `TEXEL0`, even if the color combiner is primitive-only.
+  BattleShip uses this exact primitive-color / texture-alpha pattern for
+  player damage digits and generic I-format sprite prep in
+  `decomp/BattleShip-main/decomp/src/if/ifcommon.c:844` and
+  `decomp/BattleShip-main/decomp/src/lb/lbcommon.c:2595`; the alpha mux and
+  combine packing are in
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:496-505,3099-3123`.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-alpha-texture.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Hardware counters stayed at
+  all-DL `hwdepth=z260/217/proj0/0/decal0/0` and Pupupu stage
+  `hwsubmit=252`, `hwtri=1140`, `hwdepth=z456/proj684/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.

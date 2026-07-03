@@ -381,6 +381,7 @@ Assert-True ($renderer.Contains('NDS_RENDERER_ACMUX_0')) 'Renderer hardware alph
 Assert-True ($renderer.Contains('0u : 0xffu')) 'Renderer hardware alpha does not map constant-zero mux to transparent alpha.'
 Assert-True (-not $renderer.Contains('if (stats->texture_combine_w0 == 0)')) 'Renderer combine state recorder still keeps first combine instead of current combine.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseDecal')) 'Renderer hardware combine decal helper is missing.'
+Assert-True ($renderer -match '(?s)static s32 ndsRendererHardwareUseTexture.*return ndsRendererHardwareOutputUsesAlpha\(\s*stats, NDS_RENDERER_ACMUX_TEXEL0\);') 'Renderer hardware texture binding does not honor TEXEL0 alpha-only combines.'
 Assert-True ($renderer.Contains('NDS_RENDERER_MDSFT_TEXTFILT')) 'Renderer hardware texture-filter othermode constant is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureFilterOffset')) 'Renderer hardware texture-filter coordinate offset helper is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_BLEND_ALPHA_CYCLE1_SHIFT')) 'Renderer hardware blend alpha-memory cycle-1 field is missing.'

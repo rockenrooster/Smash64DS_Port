@@ -1445,9 +1445,14 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
     {
         return FALSE;
     }
-    return ndsRendererCombineUsesColor(
-        stats->texture_combine_w0, stats->texture_combine_w1,
-        NDS_RENDERER_CCMUX_TEXEL0);
+    if (ndsRendererCombineUsesColor(
+            stats->texture_combine_w0, stats->texture_combine_w1,
+            NDS_RENDERER_CCMUX_TEXEL0) != FALSE)
+    {
+        return TRUE;
+    }
+    return ndsRendererHardwareOutputUsesAlpha(
+        stats, NDS_RENDERER_ACMUX_TEXEL0);
 }
 
 static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
