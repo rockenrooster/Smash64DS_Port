@@ -43,8 +43,9 @@ Latest renderer detail: opt-in DS 3D hardware submission lives behind
 `NDS_RENDERER_HW_TRIANGLES=1` and is fed by source-shaped DObj, camera, and
 material state. It now covers BattleShip billboard/recalc matrix seeds, Pupupu
 stage-inclusive submission, material branch packets, CI/IA/I/RGBA texture
-uploads, material color/alpha, source culling, reset geometry/filter seeds, and
-sm64-nds-style no-z / decal-depth submission. Current captures:
+uploads, material color/alpha, source culling, reset geometry/filter seeds,
+sm64-nds-style no-z / decal-depth submission, and F3DEX `G_FOG` -> DS
+`POLY_FOG` polygon format mapping. Current captures:
 `artifacts\renderer-stage-gcdrawall-hw.png` and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
 reports `hwdepth=z316/314/proj0/0/decal0/0` and

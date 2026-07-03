@@ -16308,3 +16308,17 @@ Still deferred:
   texture proof stayed `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`;
   the Pupupu stage proof now reports the narrower source-combined texture set
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+
+## 2026-07-03 - Hardware Fog Geometry Mapping
+
+- Added the decoded F3DEX `G_FOG` geometry bit (`0x00010000`, matching
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:383`) to the opt-in DS
+  hardware renderer and map it to libnds `POLY_FOG` when composing polygon
+  format. This follows the sm64-nds hardware renderer policy at
+  `decomp/sm64-nds/src/nds/nds_renderer.c:327-333`.
+- Reverified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  refreshed `artifacts\renderer-stage-gcdrawall-hw.png`, and passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`. Current source scenes
+  keep the existing all-DL and Pupupu stage markers unchanged.

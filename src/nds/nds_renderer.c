@@ -1414,6 +1414,10 @@ static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
     {
         poly_fmt |= POLY_DECAL;
     }
+    if ((mode & NDS_RENDERER_GEOM_FOG) != 0u)
+    {
+        poly_fmt |= POLY_FOG;
+    }
     if ((mode & NDS_RENDERER_GEOM_CULL_FRONT) != 0u)
     {
         poly_fmt &= ~((u32)POLY_CULL_BACK);

@@ -384,6 +384,8 @@ Assert-True ($renderer.Contains('NDS_RENDERER_ZMODE_DEC')) 'Renderer hardware de
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_DECAL_DEPTH_BIAS')) 'Renderer hardware decal depth bias is missing.'
 Assert-True ($renderer.Contains('hardware_decal_depth_triangle_count')) 'Renderer hardware decal-depth stats are missing.'
 Assert-True ($renderer.Contains('stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER')) 'Renderer hardware path does not branch on source G_ZBUFFER state.'
+Assert-True ($renderer.Contains('NDS_RENDERER_GEOM_FOG')) 'Renderer hardware fog geometry flag is missing.'
+Assert-True ($renderer.Contains('poly_fmt |= POLY_FOG')) 'Renderer hardware path does not map source G_FOG to DS POLY_FOG.'
 Assert-True ($renderer.Contains('NDS_RENDERER_GEOM_CULL_BACK')) 'Renderer hardware cull-back geometry flag is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwarePolyFmt')) 'Renderer hardware poly-format helper is missing.'
 Assert-True ($renderer.Contains('config->initial_geometry_mode')) 'Renderer hardware initial geometry-mode seed is missing.'
