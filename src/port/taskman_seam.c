@@ -6162,6 +6162,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     break;
                 }
             }
+#if NDS_RENDERER_HW_TRIANGLES && \
+    ((NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_GCDRAWALL_LOOP) || \
+     (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_GCDRAWALL_LOOP))
+            ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
+#endif
 #else
             u32 live_update_max =
                 (NDS_DEV_LIVE_INPUT_PREVIEW != 0) ?

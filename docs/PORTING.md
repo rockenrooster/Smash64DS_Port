@@ -16692,3 +16692,10 @@ Still deferred:
   `.\scripts\verify-stage-mplivehit-continuous-runtime.ps1 -DelaySeconds 3`, a
   refreshed Regression prebuild, and all four sharded Regression `-NoBuild`
   runs.
+
+## 2026-07-03 - Preserved Stage HW Gate Under ftmanager Default
+
+- Kept the existing stage gcDrawAll `-HardwareTriangles` verifier meaningful
+  after the default-manager natural-motion early return: hardware stage runs now
+  still assert DS 3D flush, submit, depth, and texture counters before returning.
+- This is a verifier-path fix only; renderer cutover remains deferred.

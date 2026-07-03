@@ -9960,3 +9960,11 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
 }
 #endif
+
+void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
+    ndsStageGCDrawAllLoopSubmitHardwareFrame();
+#endif
+}

@@ -3796,6 +3796,7 @@ extern volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxWidth;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxHeight;
 void ndsFighterMarioFoxStageGCDrawAllLoopPrepare(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopFinalize(void);
+void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void);
 s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void);
 s32 ndsFighterMarioFoxGCDrawAllLoopDisplayActive(void);
 void ndsStageGCDrawAllLoopRecordCameraCallback(void);
