@@ -85,9 +85,8 @@ updates cannot erase motion-stale proof evidence.
 
 ## Process Change
 
-Do not continue one-bit proof-mask increments. Future gameplay slices should
-import one whole BattleShip TU, or a coherent adjacent group of TUs, prove it at
-the boundary, then graduate it to live runtime by removing the guarded seam.
+Future gameplay slices should import one whole BattleShip TU, or a coherent
+adjacent TU group, prove it at the boundary, then graduate it to live runtime.
 
 New harness modes are exceptional. Fold new proofs into the current pair unless
 the work reaches a scene-level boundary such as `battle_playable` or
@@ -95,12 +94,12 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Renderer follow-up: finish opt-in hardware combiner/material policy, broaden
+1. Runtime follow-up: use `docs/FT_ANIM_STATUS_SCOUT.md` for the fighter
+   animation/status asset slice. Full `ftmanager.c` and original status tables
+   need original `FTData`/`ftdata.c` plus `lbRelocGetStatusBufferFile`.
+2. Renderer follow-up: finish opt-in hardware combiner/material policy, broaden
    remaining texture-state and no-z/decal/prim-depth source-scene coverage, then
    plan renderer cutover.
-2. Runtime follow-up: delete the remaining `ftMainSetStatus` compat-replay and
-   cliffmotion restore duplicate-behavior seams status-by-status as those source
-   proofs graduate.
 3. Broaden hardware texture coverage where source MObjs expose branchable
    material state; the Pupupu hardware path now proves zero texture rejects.
 

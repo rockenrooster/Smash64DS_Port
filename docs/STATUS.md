@@ -69,17 +69,10 @@ the motion-stale evidence. Details are in `docs/FTSTRUCT_PARITY.md` and
 `docs/KNOWN_ISSUES.md`.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
-It covers BattleShip billboard/recalc matrix seeds, Pupupu stage-inclusive
-submission, material branch packets, CI/IA/I/RGBA textures, source culling,
-reset geometry/filter seeds, no-z/decal depth, fog, alpha-test threshold,
-constant-alpha muxes, alpha-only `TEXEL0` texture binding, 2-cycle
-final-output material color/alpha selection, 2-cycle `COMBINED` color
-fallback, `G_LOADTILE` texture-load state, and `G_SETPRIMDEPTH` / `G_ZS_PRIM`
-primitive-depth state. It also treats blend alpha-memory as an exact
-cycle-aware two-bit field, honors source texture-perspective state when choosing
-GX texgen, and keeps `LOADBLOCK` uploads contiguous while sampling `LOADTILE`
-sub-rects with source image stride and tile-origin-adjusted GX texture
-coordinates.
+It covers BattleShip billboard/recalc matrix seeds, stage-inclusive submission,
+material branch packets, CI/IA/I/RGBA textures, culling, depth/fog/alpha state,
+2-cycle combiner fallbacks, `G_LOADTILE`, `G_SETPRIMDEPTH` / `G_ZS_PRIM`, and
+texture-perspective-aware GX texgen.
 Latest captures: `artifacts\renderer-stage-gcdrawall-hw-textpersp.png` and
 `artifacts\renderer-menu-chain-stage-gcdrawall-hw.png`. The
 opt-in all-DL verifier proves `hwdepth=z260/217/proj0/0/decal0/0` and
@@ -96,11 +89,11 @@ Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 ## Current Blocker
 
 The active boundary is still bounded proof scaffolding, not continuous gameplay.
-The next useful work is not another proof bit. It is one of:
+The next useful gameplay work is not another proof bit. It is the
+`docs/FT_ANIM_STATUS_SCOUT.md` asset slice: expand original `FTData`/`ftdata.c`
+and status-buffer loading so BattleShip `ftmanager.c` plus full status tables
+can replace the current Mario/Fox manager and motion-script seams.
 
-- runtime follow-up: remove the remaining `ftMainSetStatus` compat-replay and
-  cliffmotion restore duplicate-behavior seams status-by-status as source
-  proofs graduate;
 - renderer follow-up: finish opt-in hardware combiner/material policy,
   broaden remaining texture-state and no-z/decal/prim-depth source-scene
   coverage after

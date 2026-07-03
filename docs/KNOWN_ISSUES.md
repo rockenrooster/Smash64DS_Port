@@ -60,8 +60,11 @@
 - The imported `ftMainSetStatus` path still contains two deliberate
   duplicate-behavior seams: stage compat replay in the imported post-hook and
   the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Delete them
-  status-by-status as those source proofs graduate; do not treat either hook as
-  a completed subsystem.
+  status-by-status as the original status descriptor path graduates; do not
+  treat either hook as a completed subsystem. The fighter animation/status
+  scout in `docs/FT_ANIM_STATUS_SCOUT.md` shows that full `ftmanager.c` and
+  status-table graduation first needs original `FTData`/`ftdata.c` plus
+  `lbRelocGetStatusBufferFile` semantics for the fighter payloads.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and

@@ -16604,3 +16604,18 @@ Still deferred:
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Current all-DL and Pupupu
   stage hardware counters stayed unchanged.
+
+## 2026-07-03 - Fighter Animation/Status Scout
+
+- Scouted BattleShip `ft/ftmanager.c`, `ft/ftanim.c`, `ft/ftanimend.c`, and
+  `ft/ftkey.c` before import. The low-dependency animation/key TUs now compile
+  through renamed `battleship_*` wrappers, but they are not live runtime yet.
+  Full `ftmanager.c` and original status descriptor table graduation is blocked
+  on the source fighter-data asset slice: BattleShip manager uses
+  `dFTManagerDataFiles`, full `FTData`, `ftdata.c` motion descriptor arrays,
+  `gSCManagerFighterFileSizes`, and `lbRelocGetStatusBufferFile`; the port
+  currently has a trimmed Mario/Fox data seed and direct asset loader. Detailed
+  citations live in `docs/FT_ANIM_STATUS_SCOUT.md`.
+- Verified a normal build with the compile-only `battleship_ftanim.c`,
+  `battleship_ftanimend.c`, and `battleship_ftkey.c` wrappers. No verifier
+  expectations were changed.
