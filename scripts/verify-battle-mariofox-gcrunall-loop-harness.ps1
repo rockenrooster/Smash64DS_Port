@@ -19,14 +19,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-if ($ImportBattleShipFTManager) {
-    if ($Target -notlike '*-ftmanager') {
-        $Target = "$Target-ftmanager"
-    }
-    if ($Build -notlike '*-ftmanager-harness') {
-        $Build = $Build -replace '-harness$', '-ftmanager-harness'
-    }
-}
+$ImportBattleShipFTManager = $true
 $verifierContext = Initialize-MelonDSVerifierContext `
     -Root $root `
     -MelonDS $MelonDS `

@@ -59,9 +59,10 @@
   plus bounded diagnostics.
 - The imported `ftMainSetStatus` path still contains two deliberate
   duplicate-behavior seams: stage compat replay in the imported post-hook and
-  the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Delete them
-  status-by-status as original status descriptors graduate; do not treat either
-  hook as a completed subsystem.
+  the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Original
+  status descriptors are now live by default, but deleting these hooks still
+  needs status-by-status proof because they preserve older stage/cliff
+  regression behavior. Do not treat either hook as a completed subsystem.
 - `ft/ftdata.c` is imported, but its particle ROM banks are link stubs in
   `src/port/reloc_backend_ftdata_stubs.c` because the current DS O2R manifest
   has no particle bank assets. The generated
@@ -70,21 +71,25 @@
   at zero. Mario/Fox manager payloads load for the fenced `ftmanager.c` proof;
   non-Mario/Fox broader fighter payloads may still fail-soft until future
   slices import their active runtime.
-- Full `ftmanager.c` is compile/proof-only behind
-  `NDS_IMPORT_BATTLESHIP_FTMANAGER=1`. The fenced proof loads Mario/Fox extern
-  and status-buffer payloads through `lbRelocGetStatusBufferFile`, creates both
-  fighters through original `ftmanager.c`, and records the source Entry path
-  plus figatree heap sizing. Default builds still use the DS manager,
-  motion-extract seams, and trimmed status tables until runtime slice 2
-  graduates the manager/status/animation subsystem.
-- Under the same fence, the common/Mario/Fox status descriptor headers can now
-  include BattleShip's original tables. Older bounded source imports and DS
-  compatibility seams provide the active Wait/Walk/Dash/Run/damage/catch/guard
-  callback symbols, but inactive statuses whose TUs pull HUD, items/weapons,
-  stage hazards, other fighters, or Mario/Fox special weapon/effect chains are
-  weak no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`.
-  Delete those stubs status-by-status as the owning original TUs and assets are
-  imported; they are link boundaries, not completed gameplay.
+- Full `ftmanager.c`, original common/Mario/Fox status descriptor tables, and
+  live `ftanim.c`/`ftanimend.c`/`ftkey.c` are now default runtime. Mario/Fox
+  manager payloads load through `lbRelocGetStatusBufferFile`, fighters are
+  created through original `ftmanager.c`, and the Boundary/Latest pair proves
+  300+ Wait frames plus Wait -> Walk through imported animation/key runtime.
+  Inactive statuses whose TUs pull HUD, items/weapons, stage hazards, other
+  fighters, or Mario/Fox special weapon/effect chains still use documented weak
+  no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
+  those stubs status-by-status as the owning original TUs and assets are
+  imported.
+- Coverage-reduced after original-manager graduation: modes `53/54` gcRunAll,
+  modes `39/40` dash-run, and modes `161/162` status-loop now assert the
+  natural manager motion gate instead of the old DS synthetic
+  gcRunAll/dash/attack/guard/live-hit marker stacks. This is intentional for
+  the default path because motion scripts now come from manager-loaded figatree
+  payloads instead of the deleted
+  motion-extract seam. Rebuild those proofs on top of the natural original
+  runtime; do not reintroduce extract-decoding or synthetic parallel fighter
+  execution.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and
@@ -1054,8 +1059,10 @@ isolating the compatibility type that causes the warning.
 - The DS has much tighter memory constraints than the N64. Do not optimize
   memory layout before proving the original code path, but expect overlays,
   assets, and display lists to need a deliberate memory plan.
-- The DS taskman arena is currently 1 MiB to prove the Opening Room O2R payload
-  path. This is not a final overlay/memory strategy.
+- The DS taskman arena is currently `0x130000` when the imported fighter manager
+  is enabled, because original Mario/Fox manager creation plus the inherited
+  stage proof chain exceeded the old 1 MiB diagnostic arena. This is not a
+  final overlay/memory strategy.
 - The N64 framebuffer dimensions and fixed memory addresses are unsafe on DS.
   Any original code that writes fixed `0x80xxxxxx` ranges must be inspected and
   guarded.

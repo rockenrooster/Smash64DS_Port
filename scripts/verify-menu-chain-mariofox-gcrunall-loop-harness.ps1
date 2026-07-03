@@ -8,6 +8,7 @@ param(
     [int]$DelaySeconds = 5
 )
 $ErrorActionPreference = 'Stop'
+$ImportBattleShipFTManager = $true
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `

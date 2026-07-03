@@ -30,20 +30,22 @@ Current pair:
 .\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
 ```
 
-Modes `161/162` are the legacy live-hit regression anchor. They keep the
-Pupupu/Dream Land Mario/Fox battle root stable and prove a bounded selected Fox
-Jab2 live-hit lifecycle through damage-status follow-through. They inherit the
-current MP, cliff/ledge, passive/recover, wall/rebound, catch/throw, shield,
-damage setup/recover, and TaruCannon hazard setup/physics proofs.
+Modes `161/162` are still the Boundary/Latest pair, but the default-manager
+path now uses them as the natural fighter-motion gate. They keep the
+Pupupu/Dream Land Mario/Fox battle root stable, create Mario/Fox through the
+original manager, and prove 300+ Wait frames plus one input-driven Wait -> Walk
+transition through imported `ftanim.c`/`ftkey.c` runtime.
 
 The current public summary is:
 
 ```text
-status=17->52/45, hitlag=6->0, callbacks=1/6/1,
-search=0xf, repeat=1/1, gate=0x3f, catchSearch=0xffffffff/s3
+ftmanager natural-motion: wait=300/300, anim=299/299,
+walk=8/8, updates=308, mask=0x3ff
 ```
 
-Full diagnostic marker strings live in `docs/DIAGNOSTIC_REFERENCE.md`, not here.
+The older gcRunAll, dash, and selected Fox Jab2 live-hit/status marker stacks
+are now documented as coverage-reduced follow-up work in
+`docs/KNOWN_ISSUES.md`.
 
 ## Latest Proof
 
@@ -68,40 +70,34 @@ selected cross-floor target match so later wall/cliff MP updates cannot erase
 the motion-stale evidence. Details are in `docs/FTSTRUCT_PARITY.md` and
 `docs/KNOWN_ISSUES.md`.
 
-The fighter-data asset slice landed: `FTData` now matches BattleShip
-`fttypes.h:86-118`, `ft/ftdata.c` is imported whole, and
-`lbRelocGetStatusBufferFile` loads Mario/Fox status-buffer payloads through the
-O2R/NitroFS path. With `NDS_IMPORT_BATTLESHIP_FTMANAGER=1`, the fenced manager
-proof creates both fighters through original `ftmanager.c`, records
-`extern=0xf`, `status=0x1fff`, fighter/data masks `0x3`, Entry mask `0x3`,
-and figatree heap `68`. Default builds still use the DS manager/motion seams
-until runtime slice 2 graduates the original manager/status/animation path.
+Runtime slice 2 graduated the manager/status/animation path. Default builds now
+import `ft/ftmanager.c`, the original common/Mario/Fox status descriptor
+tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. Mario/Fox are created
+through original manager descriptors and status-buffer payload loading, and the
+natural-motion proof advances Wait animation for 300+ frames with valid joints
+before driving Wait -> Walk through the same imported runtime. The remaining
+stage compat-replay/cliffmotion seams in `ftMainSetStatus` are deliberately
+kept as documented follow-up because removing them still needs status-by-status
+proofs.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
-It covers BattleShip billboard/recalc matrix seeds, stage-inclusive submission,
-material branch packets, CI/IA/I/RGBA textures, culling, depth/fog/alpha state,
-2-cycle combiner fallbacks, `G_LOADTILE`, `G_SETPRIMDEPTH` / `G_ZS_PRIM`, and
-texture-perspective-aware GX texgen.
-Latest captures: `artifacts\renderer-stage-gcdrawall-hw-textpersp.png` and
-`artifacts\renderer-menu-chain-stage-gcdrawall-hw.png`. The
-opt-in all-DL verifier proves `hwdepth=z260/217/proj0/0/decal0/0` and
-`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`; the opt-in Pupupu stage
-gcDrawAll verifiers prove direct and menu-chain hardware replay/triangles/frame
-flush (`hwsubmit=252`, `hwtri=1140`, `hwflush=1/1`),
-`hwdepth=z456/proj684/decal0`, and `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
-Full visual fidelity still needs remaining combiner/material behavior, broader
-texture and primitive-depth source-scene coverage, and renderer cutover work.
-Default builds still use the software preview.
+It covers the current matrix, material, texture, depth/fog/alpha, primitive-Z,
+and texture-perspective proofs for all-DL and Pupupu stage hardware scenes.
+Latest captures remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity
+still needs remaining combiner/material behavior, broader texture and
+primitive-depth source-scene coverage, and renderer cutover work. Default builds
+still use the software preview.
 
-Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
+Latest gameplay proof is now original-manager Mario/Fox creation plus imported
+animation/key runtime for Wait -> Walk. The TaruCannon status `61`
+setup/physics tick remains preserved as older regression coverage.
 
 ## Current Blocker
 
 The active boundary is still bounded proof scaffolding, not continuous gameplay.
-The next useful gameplay work is runtime slice 2 completion: graduate fenced
-BattleShip `ftmanager.c`, swap in original status tables, run
-`ftanim.c`/`ftanimend.c`/`ftkey.c` live, prove natural Entry/Wait/Walk motion,
-and delete the DS manager/motion seams as source-owned paths take over.
+The next useful gameplay work is to rebuild the reduced dash/live-hit proof
+coverage on top of the natural original-manager runtime, then move toward
+`battle_playable` camera, HUD, match-flow, and renderer cutover work.
 
 - renderer follow-up: finish opt-in hardware combiner/material policy,
   broaden remaining texture-state and no-z/decal/prim-depth source-scene
@@ -125,17 +121,8 @@ For normal 30-60 minute work:
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
 ```
 
-Docs-only changes also run:
-
-```powershell
-.\scripts\check-docs.ps1
-```
-
-Harness registry/script changes also run:
-
-```powershell
-.\scripts\check-harness-registry.ps1
-```
+Docs-only changes also run `.\scripts\check-docs.ps1`; harness registry/script
+changes also run `.\scripts\check-harness-registry.ps1`.
 
 Runtime/subsystem changes that touch shared architecture should graduate to:
 

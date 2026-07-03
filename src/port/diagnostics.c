@@ -6555,7 +6555,11 @@ extern OSMesgQueue sSYTaskmanResetMesgQueue;
 extern OSMesgQueue sSYTaskmanGameTicMesgQueue;
 extern void func_80005BFC(void);
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#define NDS_TASKMAN_ARENA_SIZE 0x130000u
+#else
 #define NDS_TASKMAN_ARENA_SIZE (1024u * 1024u)
+#endif
 #define NDS_STARTUP_BOUNDED_UPDATES 55u
 #define NDS_STARTUP_LOGO_DRAW_UPDATE 17u
 #define NDS_STARTUP_PRESENT_INTERVAL 10u

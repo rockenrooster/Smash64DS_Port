@@ -4,12 +4,14 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
+    [switch]$ImportBattleShipFTManager,
     [int]$DelaySeconds = 5
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$ImportBattleShipFTManager = $true
 $verifierContext = Initialize-MelonDSVerifierContext `
     -Root $root `
     -MelonDS $MelonDS `
@@ -17,8 +19,10 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$rom = Join-Path $root 'smash64ds-menu-chain-mariofox-init.nds'
-$elf = Join-Path $root 'smash64ds-menu-chain-mariofox-init.elf'
+$target = 'smash64ds-menu-chain-mariofox-init'
+$build = 'build-menu-chain-mariofox-init-harness'
+$rom = Join-Path $root ("{0}.nds" -f $target)
+$elf = Join-Path $root ("{0}.elf" -f $target)
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
@@ -29,7 +33,11 @@ $emulator = $null
 $scriptName = '_menu_chain_mariofox_init_harness.gdb'
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-& make -C $root TARGET=smash64ds-menu-chain-mariofox-init BUILD=build-menu-chain-mariofox-init-harness NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_init -j16
+$makeArgs = @('-C', $root, "TARGET=$target", "BUILD=$build", 'NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_init', '-j16')
+if ($ImportBattleShipFTManager) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
+}
+& make @makeArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'Menu-chain Mario/Fox init harness build did not produce the expected ROM and ELF.'
@@ -58,6 +66,7 @@ try {
         'printf "SCENE=%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind',
         'printf "CHAIN=%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsVSModeStartTransitionResult, gNdsVSModeStartTransitionMask, gNdsPlayersVSReadyTransitionResult, gNdsPlayersVSReadyTransitionMask, gNdsMapsSelectTransitionResult, gNdsMapsSelectTransitionMask',
         'printf "CHAIN_FINAL=%u,%u,%u,%u,%u\n", gNdsVSModeStartTransitionSceneCurrFinal, gNdsPlayersVSReadyTransitionSceneCurrFinal, gNdsMapsSelectTransitionSceneCurrFinal, gNdsMapsSelectTransitionScenePrevFinal, gNdsMapsSelectTransitionSelectedGKind',
+        'printf "FTR_MANAGER=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%u,%u,%u\n", gNdsFighterManagerResult, gNdsFighterManagerMask, gNdsFighterManagerExternMask, gNdsFighterManagerStatusBufferMask, gNdsFighterManagerFighterMask, gNdsFighterManagerDataMask, gNdsFighterManagerWaitMask, gNdsFighterManagerEntryMask, gNdsFighterManagerStatusBufferHitCount, gNdsFighterManagerFighterCount, gNdsFighterManagerFigatreeHeapSize',
         'printf "FTR_MODEL=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsFighterMarioFoxModelResult, gNdsFighterMarioFoxGObjResult, gNdsFighterMarioFoxSetupMask, gNdsFighterModelRealGObjCount, gNdsFighterModelStubGObjCount, gNdsFighterModelProcessDeferredCount, gNdsFighterModelP0ModelDObjCount, gNdsFighterModelP1ModelDObjCount',
         'printf "FTR_STRUCT=%#x,%#x,%#x,%#x,%#x,%u\n", gNdsFighterMarioFoxStructResult, gNdsFighterMarioFoxJointResult, gNdsFighterMarioFoxStateResult, gNdsFighterMarioFoxStructMask, gNdsFighterMarioFoxStructPoolUsedMask, gNdsFighterMarioFoxStructCount',
         'printf "FTR_INIT=%#x,%#x,%#x,%#x,%#x,%u\n", gNdsFighterMarioFoxInitResult, gNdsFighterMarioFoxCollResult, gNdsFighterMarioFoxDeferResult, gNdsFighterMarioFoxInitMask, gNdsFighterMarioFoxInitDeferredMask, gNdsFighterMarioFoxInitCount',
@@ -75,6 +84,7 @@ try {
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
     $chain = [regex]::Match($gdbStdout, 'CHAIN=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $final = [regex]::Match($gdbStdout, 'CHAIN_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $manager = [regex]::Match($gdbStdout, 'FTR_MANAGER=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $model = [regex]::Match($gdbStdout, 'FTR_MODEL=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $struct = [regex]::Match($gdbStdout, 'FTR_STRUCT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $init = [regex]::Match($gdbStdout, 'FTR_INIT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
@@ -95,6 +105,27 @@ try {
     }
     if (-not $scene.Success -or [int]$scene.Groups[1].Value -ne 22 -or [int]$scene.Groups[2].Value -ne 21 -or [int]$scene.Groups[3].Value -ne 6) {
         throw "Live scene state is not VSBattle after menu chain.`n$gdbStdout"
+    }
+    if ($ImportBattleShipFTManager) {
+        $managerStatusMask = 0
+        if ($manager.Success) {
+            $managerStatusMask = (Convert-MarkerUInt32 $manager.Groups[7].Value) -bor (Convert-MarkerUInt32 $manager.Groups[8].Value)
+        }
+        if (-not $manager.Success -or
+            (Convert-MarkerUInt32 $manager.Groups[1].Value) -ne 0x46544d47 -or
+            ((Convert-MarkerUInt32 $manager.Groups[2].Value) -band 0xff) -ne 0xff -or
+            ((Convert-MarkerUInt32 $manager.Groups[3].Value) -band 0xf) -ne 0xf -or
+            ((Convert-MarkerUInt32 $manager.Groups[4].Value) -band 0x1fff) -ne 0x1fff -or
+            ((Convert-MarkerUInt32 $manager.Groups[5].Value) -band 0x3) -ne 0x3 -or
+            ((Convert-MarkerUInt32 $manager.Groups[6].Value) -band 0x3) -ne 0x3 -or
+            ($managerStatusMask -band 0x3) -ne 0x3 -or
+            [int]$manager.Groups[9].Value -lt 13 -or
+            [int]$manager.Groups[10].Value -ne 2 -or
+            [int]$manager.Groups[11].Value -eq 0) {
+            throw "BattleShip ftmanager menu-chain init proof failed.`n$gdbStdout"
+        }
+        Write-Output ("Menu-chain Mario/Fox init ftmanager harness passed: chain final=22/21 manager={0} mask={1} status={2} fighters={3} entry={4} wait={5} figatree={6}" -f $manager.Groups[1].Value, $manager.Groups[2].Value, $manager.Groups[4].Value, $manager.Groups[5].Value, $manager.Groups[8].Value, $manager.Groups[7].Value, $manager.Groups[11].Value)
+        return
     }
     if (-not $model.Success -or (Convert-MarkerUInt32 $model.Groups[1].Value) -ne 0x46544d44 -or (Convert-MarkerUInt32 $model.Groups[2].Value) -ne 0x4654474f -or ((Convert-MarkerUInt32 $model.Groups[3].Value) -band 0xfff) -ne 0xfff -or [int]$model.Groups[4].Value -ne 2 -or [int]$model.Groups[5].Value -ne 0) {
         throw "Mario/Fox model proof failed after menu chain.`n$gdbStdout"

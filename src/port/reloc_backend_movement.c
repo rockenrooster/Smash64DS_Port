@@ -8997,6 +8997,12 @@ typedef struct NDSFighterNaturalMotionState {
 static NDSFighterNaturalMotionState sNdsFighterNaturalMotionStates[2];
 static u32 sNdsFighterNaturalMotionWalkInputActive;
 
+static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
+{
+    return ((ndsFighterMarioFoxGCRunAllLoopProofEnabled() != FALSE) ||
+            (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)) ? TRUE : FALSE;
+}
+
 static sb32 ndsFighterNaturalMotionStatusIsWalk(s32 status_id)
 {
     return ((status_id == nFTCommonStatusWalkSlow) ||
@@ -9145,7 +9151,7 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     FTStruct *p0 = ndsFighterManagerLiveStruct(0u);
     FTStruct *p1 = ndsFighterManagerLiveStruct(1u);
 
-    if ((ndsFighterMarioFoxGCRunAllLoopProofEnabled() == FALSE) ||
+    if ((ndsFighterMarioFoxNaturalMotionProofEnabled() == FALSE) ||
         (gNdsFighterNaturalMotionPrepared != 0u))
     {
         return;
@@ -9173,7 +9179,7 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
 
 s32 ndsFighterMarioFoxNaturalMotionUpdateEnabled(void)
 {
-    return ((ndsFighterMarioFoxGCRunAllLoopProofEnabled() != FALSE) &&
+    return ((ndsFighterMarioFoxNaturalMotionProofEnabled() != FALSE) &&
             (gNdsFighterNaturalMotionPrepared != 0u) &&
             (gNdsFighterNaturalMotionResult == 0u)) ? TRUE : FALSE;
 }

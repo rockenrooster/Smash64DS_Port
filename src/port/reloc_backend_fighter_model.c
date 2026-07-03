@@ -1529,6 +1529,24 @@ static u32 ndsFighterManagerLiveMask(void)
     }
     return mask;
 }
+
+static FTStruct *ndsFighterManagerSnapshotLiveStruct(FTStruct *fp, u32 player)
+{
+    FTStruct *snapshot;
+
+    if ((fp == NULL) || (player >= GMCOMMON_PLAYERS_MAX))
+    {
+        return NULL;
+    }
+
+    snapshot = &sNdsFighterStructPool[player];
+    *snapshot = *fp;
+    snapshot->nds_magic = NDS_FTSTRUCT_MAGIC;
+    snapshot->nds_slot = player;
+    sNdsFighterStructPoolUsedMask |= 1u << player;
+    return snapshot;
+}
+
 #endif
 
 static GObj *ndsFighterGetPlayerNumGObj(s32 player_num)
@@ -1537,6 +1555,16 @@ static GObj *ndsFighterGetPlayerNumGObj(s32 player_num)
     {
         return NULL;
     }
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    {
+        GObj *fighter_gobj = ndsFighterManagerLiveGObj((u32)player_num);
+
+        if (fighter_gobj != NULL)
+        {
+            return fighter_gobj;
+        }
+    }
+#endif
     if ((sNdsFighterStructPoolUsedMask & (1u << player_num)) == 0u)
     {
         return NULL;
@@ -1838,6 +1866,9 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
     }
     bit = 1u << player;
     sNdsFighterManagerLiveGObjs[player] = fighter_gobj;
+    fp->nds_magic = NDS_FTSTRUCT_MAGIC;
+    fp->nds_slot = (u32)player;
+    ndsFighterManagerSnapshotLiveStruct(fp, (u32)player);
 
     if (((player == 0) && (fp->fkind == nFTKindMario)) ||
         ((player == 1) && (fp->fkind == nFTKindFox)))

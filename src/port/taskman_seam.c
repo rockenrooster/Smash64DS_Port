@@ -6141,6 +6141,32 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP)
         {
             u32 i;
+
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER && \
+    ((NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+     (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP))
+            ndsFighterMarioFoxNaturalMotionPrepare();
+            for (i = 0u; i < NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterNaturalMotionResult ==
+                    NDS_FIGHTER_NATURAL_MOTION_PASS)
+                {
+                    break;
+                }
+            }
+#else
             u32 live_update_max =
                 (NDS_DEV_LIVE_INPUT_PREVIEW != 0) ?
                 NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX :
@@ -6877,6 +6903,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     }
                 }
             }
+#endif
         }
 #elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_MODEL) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_MODEL) || \
@@ -7162,7 +7189,35 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LANDING_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_PROCESS_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PROCESS_LOOP)
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER && \
+    ((NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_DASH_RUN) || \
+     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DASH_RUN))
+        {
+            u32 i;
+
+            ndsFighterMarioFoxNaturalMotionPrepare();
+            for (i = 0u; i < NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterNaturalMotionResult ==
+                    NDS_FIGHTER_NATURAL_MOTION_PASS)
+                {
+                    break;
+                }
+            }
+        }
+#else
         ndsRunMarioFoxProcessPrerequisiteLoop();
+#endif
 #else
         scVSBattleFuncUpdate();
         dSYTaskmanUpdateCount++;

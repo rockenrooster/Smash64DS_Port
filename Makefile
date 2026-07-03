@@ -20,7 +20,7 @@ NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
-NDS_IMPORT_BATTLESHIP_FTMANAGER ?= 0
+override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
 NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	battle_mariofox_stage_inishie_scale_loop \
 	menu_chain_mariofox_stage_inishie_scale_loop \

@@ -16653,3 +16653,24 @@ Still deferred:
   -DelaySeconds 3`, `.\scripts\verify-stage-mplivehit-continuous-runtime.ps1
   -DelaySeconds 3`, a fresh Regression prebuild, and all four sharded
   Regression `-NoBuild` runs.
+
+## 2026-07-03 - BattleShip ftmanager Default
+
+- Made the original fighter manager/status/animation path the default:
+  `ftmanager.c` creates Mario/Fox, the original common/Mario/Fox status
+  descriptor tables are active, and imported `ftanim.c`/`ftanimend.c`/`ftkey.c`
+  drive Wait animation and Wait -> Walk motion. The Makefile now forces
+  `NDS_IMPORT_BATTLESHIP_FTMANAGER=1`.
+- Replaced the old gcRunAll, dash-run, and live-hit status-loop verifier
+  expectations with the natural-motion gate in the existing modes. This is
+  coverage-reduced, not a source-corrected expectation change: modes `53/54`,
+  `39/40`, and `161/162` now prove manager-loaded figatree motion
+  (`wait=300/300`, `anim=299/299`, `walk=8/8`) instead of the old DS synthetic
+  gcRunAll/dash/attack/guard/live-hit marker stacks.
+- Kept the remaining imported `ftMainSetStatus` stage compat-replay and
+  cliffmotion restore hooks documented as follow-up seams. The original status
+  descriptors are live, but removing those hooks still needs status-by-status
+  proof.
+- Verified the direct/menu init/wait/dash-run ladder, `.\scripts\verify-boundary.ps1
+  -DelaySeconds 3`, and
+  `.\scripts\verify-stage-mplivehit-continuous-runtime.ps1 -DelaySeconds 3`.

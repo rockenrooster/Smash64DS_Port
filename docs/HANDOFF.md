@@ -24,13 +24,14 @@ full marker strings, and `docs/PORTING.md` for history.
 
 ## Current Boundary
 
-Modes `161/162` are the active legacy regression anchor. They prove selected
-Fox Jab2 live-hit damage lifecycle plus selected damage-status follow-through
-on the Pupupu Mario/Fox battle root. The current short marker summary is:
+Modes `161/162` are the active Boundary/Latest pair. In the default
+original-manager build they now prove natural Mario/Fox Wait animation plus one
+input-driven Wait -> Walk transition through imported `ftanim.c`/`ftkey.c`, on
+the Pupupu Mario/Fox battle root. The current short marker summary is:
 
 ```text
-status=17->52/45, hitlag=6->0, callbacks=1/6/1,
-search=0xf, repeat=1/1, gate=0x3f, catchSearch=0xffffffff/s3
+ftmanager natural-motion: wait=300/300, anim=299/299,
+walk=8/8, updates=308, mask=0x3ff
 ```
 
 Latest verified source-backed detail: TaruCannon kind `3` now routes through
@@ -39,32 +40,10 @@ physics tick copying fighter root position from the barrel root. Continuous
 TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
-Latest renderer detail: opt-in DS 3D hardware submission lives behind
-`NDS_RENDERER_HW_TRIANGLES=1` and is fed by source-shaped DObj, camera, and
-material state. It now covers BattleShip billboard/recalc matrix seeds, Pupupu
-stage-inclusive submission, material branch packets, CI/IA/I/RGBA texture
-uploads, material color/alpha, source culling, reset geometry/filter seeds,
-sm64-nds-style no-z / decal-depth submission, F3DEX
-`G_FOG`/`G_MW_FOG`/`G_SETFOGCOLOR` -> DS fog state, and `G_SETBLENDCOLOR`
-alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state, plus BattleShip
-`G_ACMUX_0`/`G_ACMUX_1` constant-alpha mux handling and 2-cycle final-output
-material color/alpha selection. Alpha-only `TEXEL0` combines now bind their
-source texture, two-cycle color output falls back through `COMBINED` for
-`G_CC_*, G_CC_PASS2` style lists, and blend alpha-memory is now an exact
-cycle-aware two-bit field instead of a cycle-1-only bit test. The renderer also
-decodes `G_LOADTILE` texture-load windows, and decodes `G_SETPRIMDEPTH` to
-route source `G_ZS_PRIM` triangles through the existing projected hardware
-vertex path with the source primitive Z value. Hardware texture upload now
-keeps `LOADBLOCK` data contiguous and uses source image stride plus tile-origin
-adjusted GX texture coordinates for `LOADTILE` sub-rects, while using source
-texture-perspective state to choose DS GX texgen.
-Current captures: `artifacts\renderer-stage-gcdrawall-hw-textpersp.png`,
-`artifacts\renderer-menu-chain-stage-gcdrawall-hw.png`, and
-`artifacts\battle-mariofox-dl-draw-all-hwtri.png`. The opt-in all-DL verifier
-reports `hwdepth=z260/217/proj0/0/decal0/0` and `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`;
-direct and menu-chain Pupupu stage gcDrawAll report `hwsubmit=252`,
-`hwtri=1140`, `hwdepth=z456/proj684/decal0`,
-`hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and `hwflush=1/1`.
+Latest renderer detail: opt-in DS 3D hardware submission remains behind
+`NDS_RENDERER_HW_TRIANGLES=1`. It covers the current all-DL and Pupupu
+stage-inclusive matrix, material, texture, depth/fog/alpha, primitive-Z, and
+texture-perspective proofs, with captures under `artifacts\renderer-*-hw*.png`.
 Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
@@ -83,14 +62,13 @@ current `master` after the renderer follow-ups. The regression-cycle fix
 preserves the first selected cross-floor target match so later wall/cliff MP
 updates cannot erase motion-stale proof evidence.
 
-The fighter-data asset slice is also landed. `FTData` matches BattleShip
-`fttypes.h:86-118`, `ft/ftdata.c` is imported whole, and
-`lbRelocGetStatusBufferFile` loads Mario/Fox status-buffer files through
-O2R/NitroFS. The fenced `NDS_IMPORT_BATTLESHIP_FTMANAGER=1` proof creates both
-fighters through original `ftmanager.c` with `extern=0xf`, `status=0x1fff`,
-fighter/data masks `0x3`, Entry mask `0x3`, and figatree heap `68`. Default
-builds still use DS manager/motion seams until runtime slice 2 graduates the
-manager/status/animation path.
+Runtime slice 2 graduated the original manager/status/animation path. Default
+builds import `ft/ftmanager.c`, the full original common/Mario/Fox status
+descriptor tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. The current
+natural-motion gate proves Mario/Fox manager creation, valid figatree-backed
+joints, 300+ Wait animation frames, and Wait -> Walk on input. The old
+gcRunAll/dash/live-hit synthetic marker stacks are now coverage-reduced
+follow-up work; do not resurrect their motion-extract seam.
 
 ## Process Change
 
@@ -103,25 +81,18 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Runtime follow-up: graduate fenced `ftmanager.c`, original status tables,
-   and live `ftanim.c`/`ftanimend.c`/`ftkey.c`; prove natural Entry/Wait/Walk
-   motion and delete the DS manager/motion seams as source paths take over.
+1. Runtime follow-up: rebuild dash/live-hit proof coverage on top of the
+   natural original-manager runtime, then remove the remaining
+   `ftMainSetStatus` compat-replay/cliffmotion seams status-by-status.
 2. Renderer follow-up: finish opt-in hardware combiner/material policy, broaden
    remaining texture-state and no-z/decal/prim-depth source-scene coverage, then
    plan renderer cutover.
-3. Broaden hardware texture coverage where source MObjs expose branchable
-   material state; the Pupupu hardware path now proves zero texture rejects.
+3. Camera/HUD/match-flow work for the next `battle_playable` milestone.
 
 ## Verification
 
-For docs-only edits:
-
-```powershell
-.\scripts\check-docs.ps1
-.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
-```
-
-For mechanical split chunks:
+For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical split
+chunks:
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

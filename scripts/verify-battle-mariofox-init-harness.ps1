@@ -11,6 +11,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$ImportBattleShipFTManager = $true
 $verifierContext = Initialize-MelonDSVerifierContext `
     -Root $root `
     -MelonDS $MelonDS `
@@ -19,11 +20,7 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
 $target = 'smash64ds-battle-mariofox-init'
-$build = 'build-battle-mariofox-init-default-harness'
-if ($ImportBattleShipFTManager) {
-    $target = 'smash64ds-battle-mariofox-init-ftmanager'
-    $build = 'build-battle-mariofox-init-ftmanager-harness'
-}
+$build = 'build-battle-mariofox-init-harness'
 $rom = Join-Path $root ("{0}.nds" -f $target)
 $elf = Join-Path $root ("{0}.elf" -f $target)
 $melonDsPath = $verifierContext.MelonDSPath

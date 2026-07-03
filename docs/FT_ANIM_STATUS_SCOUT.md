@@ -84,3 +84,12 @@ to BattleShip's original descriptor tables
 imported bounded callbacks back to their original names and by keeping inactive
 status callbacks as documented weak stubs until their owning HUD/item/stage/
 special dependencies are imported.
+
+Runtime slice 2 graduation made that path the default: `ftmanager.c` creates
+Mario/Fox, the original common/Mario/Fox status tables are active, and
+`ftanim.c`/`ftanimend.c`/`ftkey.c` drive the natural-motion proof. The current
+Boundary/Latest pair proves 300+ Wait frames with valid joints and an
+input-driven Wait -> Walk transition through the imported runtime. Follow-up
+work is to rebuild the older gcRunAll/dash/live-hit proof marker coverage on
+top of this natural path and then remove the remaining `ftMainSetStatus` compat
+hooks status-by-status.
