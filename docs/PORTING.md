@@ -16519,3 +16519,23 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Current all-DL and Pupupu
   stage hardware counters stayed unchanged because those selected proof scenes
   do not exercise `G_ZS_PRIM`.
+
+## 2026-07-03 - Hardware LoadTile State
+
+- Decoded `G_LOADTILE` into the renderer texture-load state, using the packed
+  tile rectangle to infer the loaded texel window and including the load command
+  family in the hardware texture cache key. This keeps existing `LOADBLOCK`
+  uploads unchanged while letting future `gDPLoadTextureTile*` source lists
+  traverse without a fatal unsupported opcode. BattleShip defines the opcode
+  and load-tile packing in
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:183,3319-3342,3922-4151`;
+  sm64-nds carries the same opcode/macro shape in
+  `decomp/sm64-nds/include/PR/gbi.h:190,3376-3399`.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-loadtile.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Current all-DL and Pupupu
+  stage hardware counters stayed unchanged because the selected proof scenes
+  still use the existing `LOADBLOCK` texture path.

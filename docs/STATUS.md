@@ -74,9 +74,10 @@ submission, material branch packets, CI/IA/I/RGBA textures, source culling,
 reset geometry/filter seeds, no-z/decal depth, fog, alpha-test threshold,
 constant-alpha muxes, alpha-only `TEXEL0` texture binding, 2-cycle
 final-output material color/alpha selection, 2-cycle `COMBINED` color
-fallback, and `G_SETPRIMDEPTH` / `G_ZS_PRIM` primitive-depth state. It also
-treats blend alpha-memory as an exact cycle-aware two-bit field.
-Latest capture: `artifacts\renderer-stage-gcdrawall-hw-prim-depth.png`. The
+fallback, `G_LOADTILE` texture-load state, and `G_SETPRIMDEPTH` / `G_ZS_PRIM`
+primitive-depth state. It also treats blend alpha-memory as an exact
+cycle-aware two-bit field.
+Latest capture: `artifacts\renderer-stage-gcdrawall-hw-loadtile.png`. The
 opt-in all-DL verifier proves `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`; the opt-in Pupupu stage
 gcDrawAll verifier proves hardware replay/triangles/frame flush

@@ -38,6 +38,7 @@
 #define NDS_RENDERER_OP_SETPRIMCOLOR 0xfau
 #define NDS_RENDERER_OP_SETTIMG 0xfdu
 #define NDS_RENDERER_OP_SETTILE 0xf5u
+#define NDS_RENDERER_OP_LOADTILE 0xf4u
 #define NDS_RENDERER_OP_LOADBLOCK 0xf3u
 #define NDS_RENDERER_OP_LOADTLUT 0xf0u
 #define NDS_RENDERER_OP_SETTILESIZE 0xf2u
@@ -722,6 +723,41 @@ static void ndsRendererRecordLoadBlock(NDSRendererStats *stats,
     stats->texture_load_block_lrs = (w1 >> 12) & 0x0FFFu;
     stats->texture_load_block_dxt = w1 & 0x0FFFu;
     stats->texture_load_texels = stats->texture_load_block_lrs + 1u;
+}
+
+static void ndsRendererRecordLoadTile(NDSRendererStats *stats,
+                                      u32 w0, u32 w1)
+{
+    u32 uls;
+    u32 ult;
+    u32 lrs;
+    u32 lrt;
+    u32 width;
+    u32 height;
+
+    if (stats == NULL)
+    {
+        return;
+    }
+
+    uls = (w0 >> 12) & 0x0FFFu;
+    ult = w0 & 0x0FFFu;
+    lrs = (w1 >> 12) & 0x0FFFu;
+    lrt = w1 & 0x0FFFu;
+
+    stats->texture_mask |= NDS_RENDERER_TEXTURE_LOADTILE;
+    stats->texture_load_tile = (w1 >> 24) & 0x7u;
+    stats->texture_load_block_uls = uls;
+    stats->texture_load_block_ult = ult;
+    stats->texture_load_block_lrs = lrs;
+    stats->texture_load_block_dxt = lrt;
+    stats->texture_load_texels = 0u;
+    if ((lrs >= uls) && (lrt >= ult))
+    {
+        width = ((lrs - uls) >> 2) + 1u;
+        height = ((lrt - ult) >> 2) + 1u;
+        stats->texture_load_texels = width * height;
+    }
 }
 
 static void ndsRendererRecordSetTileSize(NDSRendererStats *stats,
@@ -2165,7 +2201,10 @@ static s32 ndsRendererHardwareBindTexture(
     key.tile_uls = stats->texture_tile_size_uls;
     key.tile_ult = stats->texture_tile_size_ult;
     key.line = stats->texture_render_tile_line;
-    key.flags = stats->texture_render_tile_flags;
+    key.flags = stats->texture_render_tile_flags |
+        ((stats->texture_mask &
+          (NDS_RENDERER_TEXTURE_LOADBLOCK |
+           NDS_RENDERER_TEXTURE_LOADTILE)) << 8);
 
     if ((sNdsRendererHardwareTextureReady != 0u) &&
         (ndsRendererHardwareTextureKeyEqual(
@@ -2852,6 +2891,11 @@ static void ndsRendererScanList(const Gfx *dl,
 
         case NDS_RENDERER_OP_SETTILE:
             ndsRendererRecordSetTile(stats, w0, w1);
+            stats->state_command_count++;
+            break;
+
+        case NDS_RENDERER_OP_LOADTILE:
+            ndsRendererRecordLoadTile(stats, w0, w1);
             stats->state_command_count++;
             break;
 

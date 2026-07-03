@@ -52,10 +52,11 @@ material color/alpha selection. Alpha-only `TEXEL0` combines now bind their
 source texture, two-cycle color output falls back through `COMBINED` for
 `G_CC_*, G_CC_PASS2` style lists, and blend alpha-memory is now an exact
 cycle-aware two-bit field instead of a cycle-1-only bit test. The renderer also
-decodes `G_SETPRIMDEPTH` and routes source `G_ZS_PRIM` triangles through the
-existing projected hardware vertex path with the source primitive Z value.
+decodes `G_LOADTILE` texture-load windows, and decodes `G_SETPRIMDEPTH` to
+route source `G_ZS_PRIM` triangles through the existing projected hardware
+vertex path with the source primitive Z value.
 Current captures:
-`artifacts\renderer-stage-gcdrawall-hw-prim-depth.png` and
+`artifacts\renderer-stage-gcdrawall-hw-loadtile.png` and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
 reports `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
