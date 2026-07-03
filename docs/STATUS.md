@@ -77,9 +77,11 @@ proves `hwdepth=z316/314/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
 stage gcDrawAll verifier proves a post-proof hardware replay, actual hardware
 triangles, and frame flush (`hwsubmit=252`, `hwtri=1152`, `hwflush=1/1`).
-Full visual fidelity still needs remaining combiner/material behavior, broader
-texture/no-z/decal source-scene coverage, and renderer cutover work. Default
-builds still use the software preview.
+The stage hardware replay now seeds the source display-wrapper depth mode and
+proves `hwdepth=z456/proj696/decal0`. Full visual fidelity still needs
+remaining combiner/material behavior, broader texture/no-z/decal source-scene
+coverage, and renderer cutover work. Default builds still use the software
+preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 

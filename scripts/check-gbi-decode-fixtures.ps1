@@ -386,6 +386,7 @@ Assert-True ($renderer.Contains('hardware_decal_depth_triangle_count')) 'Rendere
 Assert-True ($renderer.Contains('stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER')) 'Renderer hardware path does not branch on source G_ZBUFFER state.'
 Assert-True ($renderer.Contains('NDS_RENDERER_GEOM_CULL_BACK')) 'Renderer hardware cull-back geometry flag is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwarePolyFmt')) 'Renderer hardware poly-format helper is missing.'
+Assert-True ($renderer.Contains('config->initial_geometry_mode')) 'Renderer hardware initial geometry-mode seed is missing.'
 Assert-True ($renderer.Contains('POLY_ID(poly_id)')) 'Renderer hardware polygon ID state is missing.'
 Assert-True ($renderer.Contains('stats->texture_combine_count & NDS_RENDERER_POLY_ID_MASK')) 'Renderer hardware polygon ID does not follow combine sequencing.'
 Assert-True ($renderer.Contains('stats->env_color = w1')) 'Renderer env-color material state tracking is missing.'
@@ -461,6 +462,7 @@ Assert-True ($stageGCDrawVerifier.Contains('hwflush=')) 'gcDrawAll verifier hard
 Assert-True ($stageGCDrawVerifier.Contains('STAGE_GCDRAWALL_HW')) 'gcDrawAll verifier hardware submit-count marker is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('hwsubmit=')) 'gcDrawAll verifier hardware submit-count summary is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('hwtri=')) 'gcDrawAll verifier hardware triangle-count summary is missing.'
+Assert-True ($stageGCDrawVerifier.Contains('hwdepth=')) 'gcDrawAll verifier hardware depth summary is missing.'
 $stageGCDrawWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1') -Raw
 Assert-True ($stageGCDrawWrapper.Contains('HardwareTriangles')) 'Stage gcDrawAll verifier hardware switch is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1')) 'Stage gcDrawAll verifier does not enable hardware renderer builds.'

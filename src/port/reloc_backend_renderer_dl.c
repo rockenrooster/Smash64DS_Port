@@ -1325,6 +1325,7 @@ static void ndsFighterMarioFoxScanDLForSlot(u32 slot, FTStruct *fp)
     config.max_list_commands = 512u;
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
+    config.initial_geometry_mode = 0u;
     config.validate_range = ndsFighterDLScanValidateRange;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
     config.resolve_data = ndsFighterDLScanResolveDataPointer;
@@ -1869,6 +1870,7 @@ static void ndsFighterMarioFoxExecuteDLForSlot(u32 slot, FTStruct *fp)
     config.max_list_commands = 512u;
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
+    config.initial_geometry_mode = 0u;
     config.validate_range = ndsFighterDLExecValidateRange;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
     config.resolve_data = ndsFighterDLExecResolveRendererData;
@@ -3129,7 +3131,8 @@ static sb32 ndsRendererAdapterPrepareMaterialSegment(
 }
 
 static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
-                                            GObj *camera_gobj)
+                                            GObj *camera_gobj,
+                                            u32 initial_geometry_mode)
 {
     NDSRelocLoadedFile *loaded;
     NDSRendererConfig config;
@@ -3173,6 +3176,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     config.max_list_commands = 512u;
     config.initial_projection = initial_projection_ptr;
     config.initial_modelview = initial_modelview_ptr;
+    config.initial_geometry_mode = 0u;
+    config.initial_geometry_mode = initial_geometry_mode;
     config.validate_range = ndsRendererAdapterStageValidateRange;
     config.resolve_branch = ndsFighterDLDrawResolveBranch;
     config.resolve_data = ndsFighterDLDrawResolveRendererData;
@@ -3186,10 +3191,17 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                   &stats);
     gNdsStageGCDrawAllLoopHardwareTriangleCount +=
         stats.hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        stats.hardware_zbuffer_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount +=
+        stats.hardware_projected_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
+        stats.hardware_decal_depth_triangle_count;
 }
 
 void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
-                                       void *camera_gobj_ptr)
+                                       void *camera_gobj_ptr,
+                                       u32 initial_geometry_mode)
 {
     DObj *dobj = dobj_ptr;
     GObj *camera_gobj = camera_gobj_ptr;
@@ -3208,7 +3220,8 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
     case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1:
         if (dobj->dv != NULL)
         {
-            ndsRendererAdapterSubmitStageDL(dobj, dobj->dl, camera_gobj);
+            ndsRendererAdapterSubmitStageDL(dobj, dobj->dl, camera_gobj,
+                                            initial_geometry_mode);
         }
         break;
 
@@ -3230,7 +3243,8 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
                 (dl_link->dl != NULL))
             {
                 ndsRendererAdapterSubmitStageDL(dobj, dl_link->dl,
-                                                camera_gobj);
+                                                camera_gobj,
+                                                initial_geometry_mode);
             }
         }
         break;
@@ -3241,11 +3255,13 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
 }
 #else
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
-                                       void *camera_gobj)
+                                       void *camera_gobj,
+                                       u32 initial_geometry_mode)
 {
     (void)dobj;
     (void)kind;
     (void)camera_gobj;
+    (void)initial_geometry_mode;
 }
 #endif
 
@@ -4668,6 +4684,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         config.max_list_commands = 512u;
         config.initial_projection = initial_projection_ptr;
         config.initial_modelview = initial_modelview_ptr;
+        config.initial_geometry_mode = 0u;
         config.validate_range = ndsFighterDLMultiDrawValidateRange;
         config.resolve_branch = ndsFighterDLMultiDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;
@@ -5773,6 +5790,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.max_list_commands = 512u;
         config.initial_projection = initial_projection_ptr;
         config.initial_modelview = initial_modelview_ptr;
+        config.initial_geometry_mode = 0u;
         config.validate_range = ndsFighterDLAllDrawValidateRange;
         config.resolve_branch = ndsFighterDLAllDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;

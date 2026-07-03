@@ -9338,9 +9338,18 @@ s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void)
 
 static GObj *sNdsStageGCDrawAllLoopCurrentCameraGObj;
 static GObj *sNdsStageGCDrawAllLoopCurrentDisplayGObj;
+static s32 sNdsStageGCDrawAllLoopCurrentDisplayLinkID;
 #if NDS_RENDERER_HW_TRIANGLES
 static sb32 sNdsStageGCDrawAllLoopHardwareSubmitActive;
 static u32 sNdsStageGCDrawAllLoopHardwareSubmitCount;
+
+static u32 ndsStageGCDrawAllLoopInitialGeometryMode(void)
+{
+    u32 mode = NDS_RENDERER_GEOM_RESET_MODE;
+
+    return (sNdsStageGCDrawAllLoopCurrentDisplayLinkID == 6) ?
+        mode : (mode & ~NDS_RENDERER_GEOM_ZBUFFER);
+}
 #endif
 
 static sb32 ndsStageGCDrawAllLoopClassifyGObj(GObj *gobj, u32 *mask,
@@ -9473,7 +9482,8 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
             ndsRendererAdapterSubmitStageDObj(
                 dobj,
                 callback_kind,
-                sNdsStageGCDrawAllLoopCurrentCameraGObj);
+                sNdsStageGCDrawAllLoopCurrentCameraGObj,
+                ndsStageGCDrawAllLoopInitialGeometryMode());
             sNdsStageGCDrawAllLoopHardwareSubmitCount++;
             gNdsStageGCDrawAllLoopHardwareSubmitCount =
                 sNdsStageGCDrawAllLoopHardwareSubmitCount;
@@ -9515,7 +9525,6 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     u32 mask;
     sb32 is_layer;
 
-    (void)link_id;
     if ((ndsFighterMarioFoxStageGCDrawAllLoopProofActive() == FALSE) ||
         (gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
 #if NDS_RENDERER_HW_TRIANGLES
@@ -9530,6 +9539,7 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     gNdsStageGCDrawAllLoopCapturedDisplayCount++;
     sNdsStageGCDrawAllLoopCurrentCameraGObj = camera_gobj;
     sNdsStageGCDrawAllLoopCurrentDisplayGObj = display;
+    sNdsStageGCDrawAllLoopCurrentDisplayLinkID = link_id;
     if (ndsStageGCDrawAllLoopClassifyGObj(display, &mask,
                                           &is_layer) != FALSE)
     {

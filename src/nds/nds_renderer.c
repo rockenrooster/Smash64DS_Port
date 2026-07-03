@@ -98,14 +98,6 @@
 #define NDS_RENDERER_ZMODE_DEC 0x00000c00u
 #define NDS_RENDERER_G_BL_A_MEM 1u
 #define NDS_RENDERER_BLEND_ALPHA_MEM_MASK (NDS_RENDERER_G_BL_A_MEM << 18)
-#define NDS_RENDERER_GEOM_ZBUFFER 0x00000001u
-#define NDS_RENDERER_GEOM_SHADE 0x00000004u
-#define NDS_RENDERER_GEOM_CULL_FRONT 0x00000200u
-#define NDS_RENDERER_GEOM_CULL_BACK 0x00000400u
-#define NDS_RENDERER_GEOM_SHADING_SMOOTH 0x00200000u
-#define NDS_RENDERER_GEOM_RESET_MODE \
-    (NDS_RENDERER_GEOM_ZBUFFER | NDS_RENDERER_GEOM_SHADE | \
-     NDS_RENDERER_GEOM_CULL_BACK | NDS_RENDERER_GEOM_SHADING_SMOOTH)
 #define NDS_RENDERER_POLY_ID_MASK 0x3fu
 
 #if NDS_RENDERER_HW_TRIANGLES
@@ -855,6 +847,10 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
     if (config == NULL)
     {
         return;
+    }
+    if ((stats != NULL) && (config->initial_geometry_mode != 0u))
+    {
+        stats->geometry_mode = config->initial_geometry_mode;
     }
     if (config->initial_projection != NULL)
     {

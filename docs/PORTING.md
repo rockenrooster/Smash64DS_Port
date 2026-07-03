@@ -16237,3 +16237,14 @@ Still deferred:
   across the source `gcDrawAll` DObj display-list replay.
 - The opt-in Pupupu stage gcDrawAll verifier now requires nonzero hardware
   triangles and passed with `hwsubmit=252`, `hwtri=1152`, and `hwflush=1/1`.
+
+## 2026-07-03 - Stage Hardware Source Depth Seed
+
+- Added an optional renderer initial-geometry-mode seed and set it from the
+  captured stage display link before submitting each source `gcDrawAll` DObj
+  display-list replay. This preserves the BattleShip `grdisplay.c` wrapper
+  depth policy: layer 1 sets `G_ZBUFFER`, while the other Pupupu layer/map
+  wrappers clear it (`grdisplay.c:52-154`).
+- The existing opt-in Pupupu stage hardware verifier now checks the z/projected
+  accounting and passed with `hwsubmit=252`, `hwtri=1152`,
+  `hwdepth=z456/proj696/decal0`, and `hwflush=1/1`.

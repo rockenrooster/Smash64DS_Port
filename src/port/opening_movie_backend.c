@@ -2237,6 +2237,7 @@ static void ndsOpeningRoomProbeMaterialDLExpandedShape(void)
     config.max_list_commands = NDS_MATERIAL_DL_EXPAND_MAX_LIST_COMMANDS;
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
+    config.initial_geometry_mode = 0u;
     config.validate_range = ndsOpeningRoomRendererValidateRange;
     config.resolve_branch = ndsOpeningRoomRendererResolveBranch;
     config.resolve_data = ndsOpeningRoomRendererResolveData;
@@ -3458,6 +3459,7 @@ static void ndsOpeningRoomRenderDLPreview(DObj *dobj, Gfx *dl)
         NDS_MATERIAL_DL_EXPAND_MAX_LIST_COMMANDS;
     renderer_config.initial_projection = initial_projection_ptr;
     renderer_config.initial_modelview = initial_modelview_ptr;
+    renderer_config.initial_geometry_mode = 0u;
     renderer_config.validate_range = ndsOpeningRoomRendererValidateRange;
     renderer_config.resolve_branch = ndsOpeningRoomRendererResolveBranch;
     renderer_config.resolve_data = ndsOpeningRoomRendererResolveData;

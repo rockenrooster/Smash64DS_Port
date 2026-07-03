@@ -11568,6 +11568,7 @@ static void ndsStageInishieScaleLoopScanSourceDObj(
     config.max_list_commands = 128u;
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
+    config.initial_geometry_mode = 0u;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
     config.resolve_data = NULL;
@@ -11933,6 +11934,7 @@ static void ndsStageInishieScaleLoopPreviewSourceDObj(
     config.max_list_commands = 128u;
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
+    config.initial_geometry_mode = 0u;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
     config.resolve_data = NULL;

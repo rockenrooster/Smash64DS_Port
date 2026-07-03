@@ -39,6 +39,15 @@
 
 #define NDS_RENDERER_VERTEX_CACHE_SIZE 32u
 
+#define NDS_RENDERER_GEOM_ZBUFFER 0x00000001u
+#define NDS_RENDERER_GEOM_SHADE 0x00000004u
+#define NDS_RENDERER_GEOM_CULL_FRONT 0x00000200u
+#define NDS_RENDERER_GEOM_CULL_BACK 0x00000400u
+#define NDS_RENDERER_GEOM_SHADING_SMOOTH 0x00200000u
+#define NDS_RENDERER_GEOM_RESET_MODE \
+    (NDS_RENDERER_GEOM_ZBUFFER | NDS_RENDERER_GEOM_SHADE | \
+     NDS_RENDERER_GEOM_CULL_BACK | NDS_RENDERER_GEOM_SHADING_SMOOTH)
+
 typedef s32 (*NDSRendererValidateRange)(const Gfx *dl, size_t bytes,
                                         void *user);
 typedef const Gfx *(*NDSRendererResolveBranch)(const Gfx *dl,
@@ -100,6 +109,7 @@ typedef struct NDSRendererConfig
     u32 max_list_commands;
     const NDSRendererMatrix20p12 *initial_projection;
     const NDSRendererMatrix20p12 *initial_modelview;
+    u32 initial_geometry_mode;
     NDSRendererValidateRange validate_range;
     NDSRendererResolveBranch resolve_branch;
     NDSRendererResolveData resolve_data;

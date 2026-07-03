@@ -3725,6 +3725,9 @@ extern volatile u32 gNdsStageGCDrawAllLoopTotalPixelCount;
 extern volatile u32 gNdsStageGCDrawAllLoopCompatMask;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareSubmitCount;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareTriangleCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount;
 void ndsFighterMarioFoxStageGCDrawAllLoopPrepare(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopFinalize(void);
 s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void);
@@ -3735,7 +3738,8 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                                 s32 link_id);
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind);
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
-                                       void *camera_gobj);
+                                       void *camera_gobj,
+                                       u32 initial_geometry_mode);
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopMask;
