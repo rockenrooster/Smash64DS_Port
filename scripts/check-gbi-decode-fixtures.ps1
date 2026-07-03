@@ -375,6 +375,8 @@ Assert-True ($renderer.Contains('NDS_RENDERER_BLEND_ALPHA_MEM_MASK')) 'Renderer 
 Assert-True ($renderer.Contains('stats->othermode_l & NDS_RENDERER_BLEND_ALPHA_MEM_MASK')) 'Renderer hardware alpha does not honor current blend alpha-memory state.'
 Assert-True ($renderer.Contains('NDS_RENDERER_ALPHA_COMPARE_THRESHOLD')) 'Renderer hardware alpha-compare threshold constant is missing.'
 Assert-True ($renderer.Contains('glEnable(GL_ALPHA_TEST)')) 'Renderer hardware path does not enable DS alpha test for source threshold compare.'
+Assert-True ($renderer.Contains('stats->blend_color = w1')) 'Renderer SETBLENDCOLOR state is not recorded.'
+Assert-True ($renderer.Contains('stats->blend_color & 0xffu')) 'Renderer hardware alpha-test threshold does not use source blend-color alpha.'
 Assert-True ($renderer.Contains('glDisable(GL_ALPHA_TEST)')) 'Renderer hardware path does not clear DS alpha test when source threshold compare is inactive.'
 Assert-True ($renderer.Contains('NDS_RENDERER_GEOM_RESET_MODE')) 'Renderer BattleShip reset geometry seed is missing.'
 Assert-True ($renderer.Contains('stats->geometry_mode = NDS_RENDERER_GEOM_RESET_MODE')) 'Renderer stats do not start from BattleShip reset geometry state.'

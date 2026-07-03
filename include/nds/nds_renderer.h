@@ -238,6 +238,7 @@ typedef struct NDSRendererStats
     u32 texture_combine_count;
     u32 prim_color;
     u32 env_color;
+    u32 blend_color;
     u32 fog_color;
     s32 fog_min;
     s32 fog_max;

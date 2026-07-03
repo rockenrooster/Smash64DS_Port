@@ -45,10 +45,11 @@ material state. It now covers BattleShip billboard/recalc matrix seeds, Pupupu
 stage-inclusive submission, material branch packets, CI/IA/I/RGBA texture
 uploads, material color/alpha, source culling, reset geometry/filter seeds,
 sm64-nds-style no-z / decal-depth submission, F3DEX
-`G_FOG`/`G_MW_FOG`/`G_SETFOGCOLOR` -> DS fog state, and `G_AC_THRESHOLD` ->
-DS alpha-test polygon state mapping.
+`G_FOG`/`G_MW_FOG`/`G_SETFOGCOLOR` -> DS fog state, and `G_SETBLENDCOLOR`
+alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state.
 Current captures:
-`artifacts\renderer-stage-gcdrawall-hw-fogstate.png` and
+`artifacts\renderer-stage-gcdrawall-hw-blend-alpha.png`,
+`artifacts\renderer-stage-gcdrawall-hw-fogstate.png`, and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
 reports `hwdepth=z316/314/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu

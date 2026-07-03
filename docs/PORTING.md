@@ -16356,3 +16356,21 @@ Still deferred:
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Existing all-DL and Pupupu
   hardware triangle/depth/texture marker counts stayed unchanged.
+
+## 2026-07-03 - Hardware Blend-Alpha Threshold
+
+- Recorded source `G_SETBLENDCOLOR` in renderer state and used its alpha byte
+  as the libnds `glAlphaFunc` threshold when source othermode selects
+  `G_AC_THRESHOLD`. BattleShip emits blend color from MObj material state
+  (`decomp/BattleShip-main/decomp/src/sys/objdisplay.c:1341-1349`) and the GBI
+  macro packs it as `G_SETBLENDCOLOR`
+  (`decomp/BattleShip-main/decomp/include/PR/gbi.h:178,3179-3182`);
+  libnds documents `glAlphaFunc` as a 0-15 cutoff
+  (`C:\devkitPro\libnds\include\nds\arm9\videoGL.h:1278-1283`).
+- Reverified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-blend-alpha.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Existing all-DL and Pupupu
+  hardware triangle/depth/texture marker counts stayed unchanged.

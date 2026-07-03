@@ -1486,7 +1486,7 @@ static void ndsRendererHardwareApplyAlphaTest(const NDSRendererStats *stats)
          NDS_RENDERER_ALPHA_COMPARE_THRESHOLD))
     {
         glEnable(GL_ALPHA_TEST);
-        glAlphaFunc(0);
+        glAlphaFunc((stats->blend_color & 0xffu) >> 4);
     }
     else
     {
@@ -2731,6 +2731,10 @@ static void ndsRendererScanList(const Gfx *dl,
             else if (op == NDS_RENDERER_OP_SETENVCOLOR)
             {
                 stats->env_color = w1;
+            }
+            else
+            {
+                stats->blend_color = w1;
             }
             break;
 
