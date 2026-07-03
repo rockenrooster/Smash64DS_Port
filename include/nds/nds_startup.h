@@ -172,6 +172,8 @@
 #define NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_SAFE_PASS 0x46505653u
 #define NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_PASS 0x4647414cu
 #define NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_SAFE_PASS 0x46474153u
+#define NDS_FIGHTER_NATURAL_MOTION_PASS 0x464e4d50u
+#define NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS 0x464e4d53u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_PASS 0x46444150u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_SAFE_PASS 0x46444153u
 #define NDS_FIGHTER_MARIOFOX_STAGE_GCDRAWALL_LOOP_PASS 0x46534744u
@@ -3545,6 +3547,51 @@ extern volatile u32 gNdsFighterGCRunAllLoopGADriftCount;
 void ndsFighterMarioFoxGCRunAllLoopPrepare(void);
 s32 ndsFighterMarioFoxGCRunAllLoopUpdateEnabled(void);
 void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void);
+extern volatile u32 gNdsFighterNaturalMotionResult;
+extern volatile u32 gNdsFighterNaturalMotionSafeResult;
+extern volatile u32 gNdsFighterNaturalMotionMask;
+extern volatile u32 gNdsFighterNaturalMotionPrepared;
+extern volatile u32 gNdsFighterNaturalMotionUpdateCount;
+extern volatile u32 gNdsFighterNaturalMotionBaseVSBattleUpdateCount;
+extern volatile u32 gNdsFighterNaturalMotionRunAllCount;
+extern volatile u32 gNdsFighterNaturalMotionControllerReadCount;
+extern volatile u32 gNdsFighterNaturalMotionManagerMask;
+extern volatile u32 gNdsFighterNaturalMotionGObjCountBefore;
+extern volatile u32 gNdsFighterNaturalMotionGObjCountAfter;
+extern volatile u32 gNdsFighterNaturalMotionGObjDelta;
+extern volatile u32 gNdsFighterNaturalMotionP0StatusStart;
+extern volatile u32 gNdsFighterNaturalMotionP1StatusStart;
+extern volatile u32 gNdsFighterNaturalMotionP0StatusFinal;
+extern volatile u32 gNdsFighterNaturalMotionP1StatusFinal;
+extern volatile u32 gNdsFighterNaturalMotionP0MotionFinal;
+extern volatile u32 gNdsFighterNaturalMotionP1MotionFinal;
+extern volatile u32 gNdsFighterNaturalMotionP0GAFinal;
+extern volatile u32 gNdsFighterNaturalMotionP1GAFinal;
+extern volatile u32 gNdsFighterNaturalMotionP0WaitFrameCount;
+extern volatile u32 gNdsFighterNaturalMotionP1WaitFrameCount;
+extern volatile u32 gNdsFighterNaturalMotionP0AnimAdvanceCount;
+extern volatile u32 gNdsFighterNaturalMotionP1AnimAdvanceCount;
+extern volatile u32 gNdsFighterNaturalMotionP0ValidJointCount;
+extern volatile u32 gNdsFighterNaturalMotionP1ValidJointCount;
+extern volatile u32 gNdsFighterNaturalMotionP0AnimStartBits;
+extern volatile u32 gNdsFighterNaturalMotionP1AnimStartBits;
+extern volatile u32 gNdsFighterNaturalMotionP0AnimFinalBits;
+extern volatile u32 gNdsFighterNaturalMotionP1AnimFinalBits;
+extern volatile u32 gNdsFighterNaturalMotionWalkInputFrame;
+extern volatile u32 gNdsFighterNaturalMotionP0WalkFrameCount;
+extern volatile u32 gNdsFighterNaturalMotionP1WalkFrameCount;
+extern volatile u32 gNdsFighterNaturalMotionP0WalkStatus;
+extern volatile u32 gNdsFighterNaturalMotionP1WalkStatus;
+extern volatile u32 gNdsFighterNaturalMotionP0WalkMotion;
+extern volatile u32 gNdsFighterNaturalMotionP1WalkMotion;
+extern volatile u32 gNdsFighterNaturalMotionFigatreeAttachCount;
+extern volatile u32 gNdsFighterNaturalMotionFigatreeNullCount;
+extern volatile u32 gNdsFighterNaturalMotionFigatreeTableInvalidCount;
+extern volatile u32 gNdsFighterNaturalMotionFigatreeAnimInvalidCount;
+extern volatile u32 gNdsFighterNaturalMotionUnsafeCount;
+void ndsFighterMarioFoxNaturalMotionPrepare(void);
+s32 ndsFighterMarioFoxNaturalMotionUpdateEnabled(void);
+void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void);
 extern volatile u32 gNdsFighterMarioFoxGCDrawAllLoopResult;
 extern volatile u32 gNdsFighterMarioFoxGCDrawAllLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxGCDrawAllLoopMask;

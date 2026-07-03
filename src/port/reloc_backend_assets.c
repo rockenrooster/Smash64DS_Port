@@ -13,7 +13,7 @@
  * and are reported separately. */
 #define NDS_RELOC_OPENING_ROOM_FILE_COUNT 8u
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
-#define NDS_RELOC_LOADED_FILE_CAPACITY 48u
+#define NDS_RELOC_LOADED_FILE_CAPACITY 64u
 
 #define NDS_RELOC_ASSET_INVALID 0xffffffffu
 #define NDS_RELOC_ASSET_MN_COMMON 0u
@@ -82,6 +82,16 @@
 #define NDS_RELOC_ASSET_MISC_DATA_299 0x12bu
 #define NDS_RELOC_ASSET_MISC_DATA_315 0x13bu
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_109 0x6du
+#define NDS_RELOC_ASSET_MARIO_ANIM_WAIT 0x1f3u
+#define NDS_RELOC_ASSET_MARIO_ANIM_WALK1 0x1f4u
+#define NDS_RELOC_ASSET_MARIO_ANIM_WALK2 0x1f5u
+#define NDS_RELOC_ASSET_MARIO_ANIM_WALK3 0x1f6u
+#define NDS_RELOC_ASSET_MARIO_ANIM_WALK_END 0x1f7u
+#define NDS_RELOC_ASSET_FOX_ANIM_EGGLAY 0x282u
+#define NDS_RELOC_ASSET_FOX_ANIM_WALK1 0x283u
+#define NDS_RELOC_ASSET_FOX_ANIM_WALK2 0x284u
+#define NDS_RELOC_ASSET_FOX_ANIM_WALK3 0x285u
+#define NDS_RELOC_ASSET_FOX_ANIM_WALK_END 0x286u
 
 #define NDS_FIGHTER_MARIOFOX_FILE_MASK 0x7fffu
 #define NDS_FIGHTER_MARIOFOX_SETUP_FILES (1u << 0)
@@ -361,6 +371,7 @@ typedef struct NDSRelocLoadedFile {
     u32 internal_fixup_count;
     u8 internal_fixups_applied;
     u8 external_fixups_applied;
+    u8 format_fixups_applied;
     u8 fixups_applying;
 } NDSRelocLoadedFile;
 
@@ -1210,6 +1221,26 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_MISC_DATA_299) return NDS_RELOC_ASSET_MISC_DATA_299;
     if (token == NDS_RELOC_ASSET_MISC_DATA_315) return NDS_RELOC_ASSET_MISC_DATA_315;
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_109) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_109;
+    if (token == ndsRelocFileID(&llFTMarioAnimWaitFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
+    if (token == ndsRelocFileID(&llFTMarioAnimWalk1FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK1;
+    if (token == ndsRelocFileID(&llFTMarioAnimWalk2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK2;
+    if (token == ndsRelocFileID(&llFTMarioAnimWalk3FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK3;
+    if (token == ndsRelocFileID(&llFTMarioAnimWalkEndFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK_END;
+    if (token == ndsRelocFileID(&llFTFoxAnimEggLayFileID)) return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY;
+    if (token == ndsRelocFileID(&llFTFoxAnimWalk1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK1;
+    if (token == ndsRelocFileID(&llFTFoxAnimWalk2FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK2;
+    if (token == ndsRelocFileID(&llFTFoxAnimWalk3FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK3;
+    if (token == ndsRelocFileID(&llFTFoxAnimWalkEndFileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK_END;
+    if (token == NDS_RELOC_ASSET_MARIO_ANIM_WAIT) return NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
+    if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK1) return NDS_RELOC_ASSET_MARIO_ANIM_WALK1;
+    if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK2) return NDS_RELOC_ASSET_MARIO_ANIM_WALK2;
+    if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK3) return NDS_RELOC_ASSET_MARIO_ANIM_WALK3;
+    if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK_END) return NDS_RELOC_ASSET_MARIO_ANIM_WALK_END;
+    if (token == NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY;
+    if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK1) return NDS_RELOC_ASSET_FOX_ANIM_WALK1;
+    if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK2) return NDS_RELOC_ASSET_FOX_ANIM_WALK2;
+    if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK3) return NDS_RELOC_ASSET_FOX_ANIM_WALK3;
+    if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK_END) return NDS_RELOC_ASSET_FOX_ANIM_WALK_END;
     return NDS_RELOC_ASSET_INVALID;
 }
 
@@ -1367,6 +1398,148 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(const void *ptr,
     return NULL;
 }
 
+s32 ndsRelocPointerRangeInLoadedFiles(const void *ptr, size_t size)
+{
+    return (ndsRelocFindLoadedFileContaining(ptr, size) != NULL) ? TRUE :
+                                                                  FALSE;
+}
+
+static size_t ndsRelocStatusNodeDataSize(const LBFileNode *node)
+{
+    NDSRelocLoadedFile *loaded;
+    u32 asset_id;
+
+    if ((node == NULL) || (node->addr == NULL))
+    {
+        return 0u;
+    }
+
+    loaded = ndsRelocFindLoadedFileByData(node->addr);
+    if (loaded != NULL)
+    {
+        return loaded->data_size;
+    }
+
+    asset_id = ndsRelocAssetIDForToken((u32)node->id);
+    loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    if (loaded != NULL)
+    {
+        return loaded->data_size;
+    }
+
+    loaded = ndsRelocFindLoadedFileByAsset((u32)node->id);
+    return (loaded != NULL) ? loaded->data_size : 0u;
+}
+
+static s32 ndsRelocPointerRangeInBuffer(const void *base, size_t data_size,
+                                        const void *ptr, size_t size)
+{
+    uintptr_t start;
+    uintptr_t addr;
+
+    if ((base == NULL) || (ptr == NULL))
+    {
+        return FALSE;
+    }
+
+    start = (uintptr_t)base;
+    addr = (uintptr_t)ptr;
+    if ((addr < start) || (addr > (start + data_size)))
+    {
+        return FALSE;
+    }
+    return (((addr - start) <= data_size) &&
+            (size <= (size_t)(data_size - (addr - start)))) ? TRUE : FALSE;
+}
+
+static s32 ndsRelocFindStatusNodeContaining(LBFileNode *nodes, s32 count,
+                                            const void *ptr, size_t size,
+                                            const void **out_base,
+                                            size_t *out_size)
+{
+    s32 i;
+
+    for (i = 0; i < count; i++)
+    {
+        size_t data_size = ndsRelocStatusNodeDataSize(&nodes[i]);
+
+        if ((data_size != 0u) &&
+            (ndsRelocPointerRangeInBuffer(nodes[i].addr, data_size, ptr,
+                                          size) != FALSE))
+        {
+            if (out_base != NULL)
+            {
+                *out_base = nodes[i].addr;
+            }
+            if (out_size != NULL)
+            {
+                *out_size = data_size;
+            }
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static s32 ndsRelocFindKnownFileContaining(const void *ptr, size_t size,
+                                           const void **out_base,
+                                           size_t *out_size)
+{
+    NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileContaining(ptr, size);
+
+    if (loaded != NULL)
+    {
+        if (out_base != NULL)
+        {
+            *out_base = loaded->data;
+        }
+        if (out_size != NULL)
+        {
+            *out_size = loaded->data_size;
+        }
+        return TRUE;
+    }
+    if (ndsRelocFindStatusNodeContaining(sNdsRelocForceStatusBuffer,
+                                         sNdsRelocForceStatusBufferCount,
+                                         ptr, size, out_base, out_size) != FALSE)
+    {
+        return TRUE;
+    }
+    return ndsRelocFindStatusNodeContaining(sNdsRelocStatusBuffer,
+                                            sNdsRelocStatusBufferCount,
+                                            ptr, size, out_base, out_size);
+}
+
+void *ndsRelocResolvePointerFromFileBase(const void *file_base,
+                                         const void *ptr,
+                                         size_t size)
+{
+    const void *base = NULL;
+    size_t data_size = 0u;
+    uintptr_t raw;
+
+    if (ptr == NULL)
+    {
+        return NULL;
+    }
+    if (ndsRelocFindKnownFileContaining(ptr, size, NULL, NULL) != FALSE)
+    {
+        return (void *)ptr;
+    }
+    if (ndsRelocFindKnownFileContaining(file_base, 1u, &base, &data_size) ==
+        FALSE)
+    {
+        return NULL;
+    }
+
+    raw = (uintptr_t)ptr;
+    if ((raw > data_size) || (size > (size_t)(data_size - raw)))
+    {
+        return NULL;
+    }
+    return (u8 *)base + raw;
+}
+
 static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(u32 asset_id, u32 bit,
                                                        void *data,
                                                        const NDSRelocAssetHeader *header)
@@ -1396,6 +1569,7 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(u32 asset_id, u32 bit,
     loaded->internal_fixup_count = 0;
     loaded->internal_fixups_applied = FALSE;
     loaded->external_fixups_applied = FALSE;
+    loaded->format_fixups_applied = FALSE;
     loaded->fixups_applying = FALSE;
 
     if (header->extern_file_ids_num > 0u)
@@ -1514,6 +1688,210 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
     {
         gNdsStagePupupuInternalFixupCount += fixed_count;
     }
+    return TRUE;
+}
+
+static s32 ndsRelocIsFighterAObj16Asset(u32 asset_id)
+{
+    return ((asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WAIT) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WALK1) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WALK2) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WALK3) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WALK_END) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_WALK1) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_WALK2) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_WALK3) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_WALK_END)) ? TRUE :
+                                                               FALSE;
+}
+
+static u16 ndsRelocReadNative16(const void *addr)
+{
+    u16 value;
+
+    memcpy(&value, addr, sizeof(value));
+    return value;
+}
+
+static void ndsRelocWriteNative16(void *addr, u16 value)
+{
+    memcpy(addr, &value, sizeof(value));
+}
+
+static u16 ndsRelocAObj16EncodeForNativeBitfields(u16 source)
+{
+    u16 opcode = (u16)((source >> 11) & 0x1fu);
+    u16 flags = (u16)((source >> 1) & 0x3ffu);
+    u16 toggle = (u16)(source & 1u);
+
+    return (u16)(opcode | (flags << 5) | (toggle << 15));
+}
+
+static u32 ndsRelocAObj16FlagCount(u16 flags)
+{
+    u32 count = 0;
+
+    while (flags != 0u)
+    {
+        if ((flags & 1u) != 0u)
+        {
+            count++;
+        }
+        flags = (u16)(flags >> 1);
+    }
+    return count;
+}
+
+static u32 ndsRelocAObj16CommandWords(u16 opcode, u16 flags, u16 toggle)
+{
+    u32 words = 1u;
+    u32 flagged = ndsRelocAObj16FlagCount(flags);
+
+    if (toggle != 0u)
+    {
+        words++;
+    }
+
+    switch (opcode)
+    {
+    case nGCAnimEvent16SetValBlock:
+    case nGCAnimEvent16SetVal:
+    case nGCAnimEvent16SetVal0RateBlock:
+    case nGCAnimEvent16SetVal0Rate:
+    case nGCAnimEvent16SetValAfterBlock:
+    case nGCAnimEvent16SetValAfter:
+        words += flagged;
+        break;
+
+    case nGCAnimEvent16SetValRateBlock:
+    case nGCAnimEvent16SetValRate:
+        words += flagged * 2u;
+        break;
+
+    case nGCAnimEvent16SetTargetRate:
+        words += flagged;
+        break;
+
+    case nGCAnimEvent16Loop:
+    case nGCAnimEvent16SetTranslateInterp:
+        words = 2u;
+        break;
+
+    default:
+        break;
+    }
+    return words;
+}
+
+static void ndsRelocNormalizeAObj16Script(u16 *script, u32 word_count)
+{
+    u32 index = 0;
+    u32 guard = word_count;
+
+    while ((index < word_count) && (guard != 0u))
+    {
+        u16 source = script[index];
+        u16 opcode = (u16)((source >> 11) & 0x1fu);
+        u16 flags = (u16)((source >> 1) & 0x3ffu);
+        u16 toggle = (u16)(source & 1u);
+        u32 step = ndsRelocAObj16CommandWords(opcode, flags, toggle);
+
+        script[index] = ndsRelocAObj16EncodeForNativeBitfields(source);
+        if (opcode == nGCAnimEvent16End)
+        {
+            return;
+        }
+        if ((step == 0u) || ((index + step) > word_count))
+        {
+            return;
+        }
+        index += step;
+        guard--;
+    }
+}
+
+static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
+{
+    uintptr_t base;
+    uintptr_t table_bytes;
+    u32 i;
+
+    if ((loaded == NULL) || (loaded->data == NULL) ||
+        (ndsRelocIsFighterAObj16Asset(loaded->asset_id) == FALSE))
+    {
+        return TRUE;
+    }
+    if (loaded->format_fixups_applied != FALSE)
+    {
+        return TRUE;
+    }
+
+    base = (uintptr_t)loaded->data;
+    table_bytes = loaded->data_size;
+    for (i = 0; ((i * sizeof(u32)) < table_bytes) &&
+                (((i + 1u) * sizeof(u32)) <= loaded->data_size); i++)
+    {
+        uintptr_t value =
+            (uintptr_t)ndsRelocReadNative32((u8 *)loaded->data +
+                                            (i * sizeof(u32)));
+
+        if ((value >= base) && ((value - base) < table_bytes))
+        {
+            table_bytes = value - base;
+        }
+    }
+    if ((table_bytes == 0u) || (table_bytes >= loaded->data_size) ||
+        ((table_bytes % sizeof(u32)) != 0u))
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+
+    for (i = (u32)table_bytes; (i + sizeof(u32)) <= loaded->data_size;
+         i += sizeof(u32))
+    {
+        u16 first = ndsRelocReadNative16((u8 *)loaded->data + i);
+        u16 second = ndsRelocReadNative16((u8 *)loaded->data + i + sizeof(u16));
+
+        ndsRelocWriteNative16((u8 *)loaded->data + i, second);
+        ndsRelocWriteNative16((u8 *)loaded->data + i + sizeof(u16), first);
+    }
+
+    for (i = 0; (i * sizeof(u32)) < table_bytes; i++)
+    {
+        uintptr_t value =
+            (uintptr_t)ndsRelocReadNative32((u8 *)loaded->data +
+                                            (i * sizeof(u32)));
+
+        if ((value >= (base + table_bytes)) &&
+            ((value - base) < (uintptr_t)loaded->data_size))
+        {
+            u32 script_offset = (u32)(value - base);
+            uintptr_t script_end = base + loaded->data_size;
+            u32 j;
+            u32 word_count;
+
+            for (j = 0; (j * sizeof(u32)) < table_bytes; j++)
+            {
+                uintptr_t next =
+                    (uintptr_t)ndsRelocReadNative32((u8 *)loaded->data +
+                                                    (j * sizeof(u32)));
+
+                if ((next > value) && (next < script_end))
+                {
+                    script_end = next;
+                }
+            }
+            word_count = (u32)((script_end - value) / sizeof(u16));
+
+            ndsRelocNormalizeAObj16Script((u16 *)((u8 *)loaded->data +
+                                                  script_offset),
+                                          word_count);
+        }
+    }
+
+    loaded->format_fixups_applied = TRUE;
     return TRUE;
 }
 
@@ -1694,6 +2072,7 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
 
     loaded->fixups_applying = TRUE;
     if ((ndsRelocApplyInternalPointerFixups(loaded) == FALSE) ||
+        (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE) ||
         (ndsRelocApplyExternalPointerFixups(loaded) == FALSE))
     {
         loaded->fixups_applying = FALSE;
@@ -3373,11 +3752,60 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
 #endif
 }
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+static void ndsRelocCopyLoadedFileToHeap(const NDSRelocLoadedFile *loaded,
+                                         void *heap)
+{
+    uintptr_t src_base;
+    uintptr_t dst_base;
+    u32 words;
+    u32 i;
+
+    if ((loaded == NULL) || (loaded->data == NULL) || (heap == NULL))
+    {
+        return;
+    }
+
+    memcpy(heap, loaded->data, loaded->data_size);
+
+    src_base = (uintptr_t)loaded->data;
+    dst_base = (uintptr_t)heap;
+    words = loaded->data_size / sizeof(u32);
+    for (i = 0; i < words; i++)
+    {
+        void *slot = (u8 *)heap + (i * sizeof(u32));
+        uintptr_t value = (uintptr_t)ndsRelocReadNative32(slot);
+
+        if ((value >= src_base) &&
+            ((value - src_base) < (uintptr_t)loaded->data_size))
+        {
+            ndsRelocWriteNativePointer(slot,
+                                       (void *)(dst_base +
+                                                (value - src_base)));
+        }
+    }
+}
+#endif
+
 void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
 {
+    u32 token = ndsRelocFileID(file_id);
     void *file = lbRelocGetExternHeapFile(file_id, heap);
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    NDSRelocLoadedFile *loaded;
 
-    ndsRelocAddForceStatusBufferFile(ndsRelocFileID(file_id), file);
+    if ((file != NULL) && (heap != NULL) && (file != heap))
+    {
+        loaded = ndsRelocFindLoadedFileByData(file);
+        if (loaded != NULL)
+        {
+            ndsRelocCopyLoadedFileToHeap(loaded, heap);
+            file = heap;
+        }
+    }
+#endif
+
+    ndsRelocAddForceStatusBufferFile(token, file);
     return file;
 }
 

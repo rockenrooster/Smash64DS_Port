@@ -89,6 +89,16 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
     { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
+    { 0x1f3, 0x1f3, "nitro:/reloc/reloc_animations/FTMarioAnimWait" },
+    { 0x1f4, 0x1f4, "nitro:/reloc/reloc_animations/FTMarioAnim001" },
+    { 0x1f5, 0x1f5, "nitro:/reloc/reloc_animations/FTMarioAnim002" },
+    { 0x1f6, 0x1f6, "nitro:/reloc/reloc_animations/FTMarioAnim003" },
+    { 0x1f7, 0x1f7, "nitro:/reloc/reloc_animations/FTMarioAnim004" },
+    { 0x282, 0x282, "nitro:/reloc/reloc_animations/FTFoxAnim000" },
+    { 0x283, 0x283, "nitro:/reloc/reloc_animations/FTFoxAnim001" },
+    { 0x284, 0x284, "nitro:/reloc/reloc_animations/FTFoxAnim002" },
+    { 0x285, 0x285, "nitro:/reloc/reloc_animations/FTFoxAnim003" },
+    { 0x286, 0x286, "nitro:/reloc/reloc_animations/FTFoxAnim004" },
 };
 
 static u16 ndsReadLe16(const u8 *bytes)

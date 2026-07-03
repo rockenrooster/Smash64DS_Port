@@ -4,6 +4,7 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
+    [switch]$ImportBattleShipFTManager,
     [int]$DelaySeconds = 5
 )
 $ErrorActionPreference = 'Stop'
@@ -13,6 +14,7 @@ $ErrorActionPreference = 'Stop'
     -GdbPort $GdbPort `
     -RunnerSlot $RunnerSlot `
     -NoBuild:$NoBuild `
+    -ImportBattleShipFTManager:$ImportBattleShipFTManager `
     -DelaySeconds $DelaySeconds `
     -Harness 'menu_chain_mariofox_gcrunall_loop' `
     -Target 'smash64ds-menu-chain-mariofox-gcrunall-loop' `

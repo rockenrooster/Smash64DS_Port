@@ -586,7 +586,17 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_extern_data/MiscData201 \
 	reloc_extern_data/MiscData299 \
 	reloc_extern_data/MiscData315 \
-	reloc_extern_data/ExternDataBank109
+	reloc_extern_data/ExternDataBank109 \
+	reloc_animations/FTMarioAnimWait \
+	reloc_animations/FTMarioAnim001 \
+	reloc_animations/FTMarioAnim002 \
+	reloc_animations/FTMarioAnim003 \
+	reloc_animations/FTMarioAnim004 \
+	reloc_animations/FTFoxAnim000 \
+	reloc_animations/FTFoxAnim001 \
+	reloc_animations/FTFoxAnim002 \
+	reloc_animations/FTFoxAnim003 \
+	reloc_animations/FTFoxAnim004
 
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \

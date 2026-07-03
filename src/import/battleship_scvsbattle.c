@@ -56,11 +56,17 @@ void gmRumbleInitPlayers(void);
 #define scVSBattleStartBattle ndsBaseSCVSBattleStartBattle
 #define scVSBattleStartSuddenDeath ndsBaseSCVSBattleStartSuddenDeath
 #define scVSBattleFuncUpdate ndsBaseSCVSBattleFuncUpdate
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#define ftManagerMakeFighter ndsSCVSBattleFTManagerMakeFighter
+#endif
 
 void ndsBaseSCVSBattleStartScene(void);
 void ndsBaseSCVSBattleStartBattle(void);
 void ndsBaseSCVSBattleStartSuddenDeath(void);
 void ndsBaseSCVSBattleFuncUpdate(void);
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc);
+#endif
 
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c"
@@ -69,6 +75,23 @@ void ndsBaseSCVSBattleFuncUpdate(void);
 #undef scVSBattleStartBattle
 #undef scVSBattleStartSuddenDeath
 #undef scVSBattleFuncUpdate
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#undef ftManagerMakeFighter
+#endif
+
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc)
+{
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_GCRUNALL_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCRUNALL_LOOP)
+    if (desc != NULL)
+    {
+        desc->is_skip_entry = TRUE;
+    }
+#endif
+    return ftManagerMakeFighter(desc);
+}
+#endif
 
 static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
 {
@@ -139,6 +162,14 @@ void scVSBattleFuncUpdate(void)
 {
     ndsBaseSCVSBattleFuncUpdate();
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    if (ndsFighterMarioFoxNaturalMotionUpdateEnabled() != FALSE)
+    {
+        gNdsFighterNaturalMotionBaseVSBattleUpdateCount++;
+        ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate();
+    }
+    else
+#endif
     if (ndsFighterMarioFoxLivePreviewUpdateEnabled() != FALSE)
     {
         gNdsFighterLivePreviewBaseVSBattleUpdateCount++;

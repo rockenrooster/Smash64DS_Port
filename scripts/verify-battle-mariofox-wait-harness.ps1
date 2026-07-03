@@ -4,6 +4,7 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
+    [switch]$ImportBattleShipFTManager,
     [int]$DelaySeconds = 5
 )
 $ErrorActionPreference = 'Stop'
@@ -17,8 +18,14 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$rom = Join-Path $root 'smash64ds-battle-mariofox-wait.nds'
-$elf = Join-Path $root 'smash64ds-battle-mariofox-wait.elf'
+$target = 'smash64ds-battle-mariofox-wait'
+$build = 'build-battle-mariofox-wait-harness'
+if ($ImportBattleShipFTManager) {
+    $target = 'smash64ds-battle-mariofox-wait-ftmanager'
+    $build = 'build-battle-mariofox-wait-ftmanager-harness'
+}
+$rom = Join-Path $root ("{0}.nds" -f $target)
+$elf = Join-Path $root ("{0}.elf" -f $target)
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
@@ -29,7 +36,11 @@ $emulator = $null
 $scriptName = '_battle_mariofox_wait_harness.gdb'
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-& make -C $root TARGET=smash64ds-battle-mariofox-wait BUILD=build-battle-mariofox-wait-harness NDS_DEV_SCENE_HARNESS=battle_mariofox_wait -j16
+$makeArgs = @('-C', $root, "TARGET=$target", "BUILD=$build", 'NDS_DEV_SCENE_HARNESS=battle_mariofox_wait', '-j16')
+if ($ImportBattleShipFTManager) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
+}
+& make @makeArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'Battle Mario/Fox Wait harness build did not produce the expected ROM and ELF.'
@@ -57,6 +68,7 @@ try {
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
         'printf "SCENE=%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind',
         'printf "VSB=%#x,%#x,%#x,%u,%u,%u\n", gNdsSCVSBattleOriginalSetupResult, gNdsSCVSBattleOriginalSetupMask, gNdsSCVSBattleOriginalUpdateResult, gNdsSCVSBattleOriginalPlayerCount, gNdsSCVSBattleOriginalFighterCreateCount, gNdsSCVSBattleOriginalGKind',
+        'printf "FTR_MANAGER=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%u,%u,%u\n", gNdsFighterManagerResult, gNdsFighterManagerMask, gNdsFighterManagerExternMask, gNdsFighterManagerStatusBufferMask, gNdsFighterManagerFighterMask, gNdsFighterManagerDataMask, gNdsFighterManagerWaitMask, gNdsFighterManagerEntryMask, gNdsFighterManagerStatusBufferHitCount, gNdsFighterManagerFighterCount, gNdsFighterManagerFigatreeHeapSize',
         'printf "FTR_BASE=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%u,%u,%u\n", gNdsFighterMarioFoxModelResult, gNdsFighterMarioFoxGObjResult, gNdsFighterMarioFoxStructResult, gNdsFighterMarioFoxJointResult, gNdsFighterMarioFoxStateResult, gNdsFighterMarioFoxInitResult, gNdsFighterMarioFoxCollResult, gNdsFighterModelRealGObjCount, gNdsFighterMarioFoxStructCount, gNdsFighterMarioFoxInitCount',
         'printf "FTR_MASKS=%#x,%#x,%#x\n", gNdsFighterMarioFoxSetupMask, gNdsFighterMarioFoxStructMask, gNdsFighterMarioFoxInitMask',
         'printf "FTR_WAIT=%#x,%#x,%#x,%#x,%#x,%u\n", gNdsFighterMarioFoxWaitStatusResult, gNdsFighterMarioFoxWaitMotionResult, gNdsFighterMarioFoxWaitDeferResult, gNdsFighterMarioFoxWaitMask, gNdsFighterMarioFoxWaitDeferredMask, gNdsFighterMarioFoxWaitCount',
@@ -71,6 +83,7 @@ try {
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
     $vsb = [regex]::Match($gdbStdout, 'VSB=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
+    $manager = [regex]::Match($gdbStdout, 'FTR_MANAGER=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $base = [regex]::Match($gdbStdout, 'FTR_BASE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $masks = [regex]::Match($gdbStdout, 'FTR_MASKS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $wait = [regex]::Match($gdbStdout, 'FTR_WAIT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
@@ -86,6 +99,20 @@ try {
     }
     if (-not $vsb.Success -or (Convert-MarkerUInt32 $vsb.Groups[1].Value) -ne 0x56425355 -or ((Convert-MarkerUInt32 $vsb.Groups[2].Value) -band 0x7f) -ne 0x7f -or (Convert-MarkerUInt32 $vsb.Groups[3].Value) -ne 0x56425550 -or [int]$vsb.Groups[4].Value -ne 2 -or [int]$vsb.Groups[5].Value -ne 2 -or [int]$vsb.Groups[6].Value -ne 6) {
         throw "Imported VSBattle setup did not reach the Wait boundary.`n$gdbStdout"
+    }
+    if ($ImportBattleShipFTManager) {
+        if (-not $manager.Success -or
+            (Convert-MarkerUInt32 $manager.Groups[1].Value) -ne 0x46544d47 -or
+            ((Convert-MarkerUInt32 $manager.Groups[2].Value) -band 0xff) -ne 0xff -or
+            ((Convert-MarkerUInt32 $manager.Groups[5].Value) -band 0x3) -ne 0x3 -or
+            ((Convert-MarkerUInt32 $manager.Groups[6].Value) -band 0x3) -ne 0x3 -or
+            [int]$manager.Groups[9].Value -lt 13 -or
+            [int]$manager.Groups[10].Value -ne 2 -or
+            [int]$manager.Groups[11].Value -eq 0) {
+            throw "BattleShip ftmanager Wait harness proof failed.`n$gdbStdout"
+        }
+        Write-Output ("Battle Mario/Fox Wait ftmanager harness passed: mask={0} wait={1} entry={2} fighters={3}" -f $manager.Groups[2].Value, $manager.Groups[7].Value, $manager.Groups[8].Value, $manager.Groups[10].Value)
+        return
     }
     if (-not $base.Success -or (Convert-MarkerUInt32 $base.Groups[1].Value) -ne 0x46544d44 -or (Convert-MarkerUInt32 $base.Groups[2].Value) -ne 0x4654474f -or (Convert-MarkerUInt32 $base.Groups[3].Value) -ne 0x46545348 -or (Convert-MarkerUInt32 $base.Groups[4].Value) -ne 0x46544a54 -or (Convert-MarkerUInt32 $base.Groups[5].Value) -ne 0x46545354 -or (Convert-MarkerUInt32 $base.Groups[6].Value) -ne 0x4654494e -or (Convert-MarkerUInt32 $base.Groups[7].Value) -ne 0x4654434c -or [int]$base.Groups[8].Value -ne 2 -or [int]$base.Groups[9].Value -ne 2 -or [int]$base.Groups[10].Value -ne 2) {
         throw "Mario/Fox model/struct/init base proof failed before Wait.`n$gdbStdout"

@@ -8980,6 +8980,345 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
     }
 }
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#define NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED 300u
+#define NDS_FIGHTER_NATURAL_MOTION_WALK_FRAMES_REQUIRED 8u
+
+typedef struct NDSFighterNaturalMotionState {
+    f32 first_wait_anim;
+    f32 prev_anim;
+    u32 has_wait_anim;
+    u32 wait_frames;
+    u32 anim_advance_count;
+    u32 valid_joint_count;
+    u32 walk_frames;
+} NDSFighterNaturalMotionState;
+
+static NDSFighterNaturalMotionState sNdsFighterNaturalMotionStates[2];
+static u32 sNdsFighterNaturalMotionWalkInputActive;
+
+static sb32 ndsFighterNaturalMotionStatusIsWalk(s32 status_id)
+{
+    return ((status_id == nFTCommonStatusWalkSlow) ||
+            (status_id == nFTCommonStatusWalkMiddle) ||
+            (status_id == nFTCommonStatusWalkFast)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMotionMotionIsWalk(s32 motion_id)
+{
+    return ((motion_id == nFTCommonMotionWalkSlow) ||
+            (motion_id == nFTCommonMotionWalkMiddle) ||
+            (motion_id == nFTCommonMotionWalkFast)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMotionHasValidJoints(FTStruct *fp)
+{
+    return ((fp != NULL) &&
+            (fp->fighter_gobj != NULL) &&
+            (fp->joints[nFTPartsJointTopN] != NULL) &&
+            (fp->joints[nFTPartsJointCommonStart] != NULL)) ? TRUE : FALSE;
+}
+
+static void ndsFighterNaturalMotionPauseNonTargetVisitor(GObj *gobj,
+                                                         u32 param)
+{
+    GObj *target0 = ndsFighterManagerLiveGObj(0u);
+    GObj *target1 = ndsFighterManagerLiveGObj(1u);
+    (void)param;
+
+    if (gobj == NULL)
+    {
+        return;
+    }
+    if ((gobj == target0) || (gobj == target1))
+    {
+        return;
+    }
+    if (gobj->gobjproc_head != NULL)
+    {
+        gcPauseGObjProcessAll(gobj);
+    }
+    gobj->flags |= GOBJ_FLAG_NORUN;
+}
+
+static void ndsFighterNaturalMotionRecordSlot(u32 slot, FTStruct *fp)
+{
+    NDSFighterNaturalMotionState *state;
+    f32 anim_frame;
+
+    if ((slot >= ARRAY_COUNT(sNdsFighterNaturalMotionStates)) ||
+        (fp == NULL) ||
+        (fp->fighter_gobj == NULL))
+    {
+        gNdsFighterNaturalMotionUnsafeCount++;
+        return;
+    }
+    state = &sNdsFighterNaturalMotionStates[slot];
+    anim_frame = fp->fighter_gobj->anim_frame;
+
+    if (slot == 0u)
+    {
+        gNdsFighterNaturalMotionP0StatusFinal = (u32)fp->status_id;
+        gNdsFighterNaturalMotionP0MotionFinal = (u32)fp->motion_id;
+        gNdsFighterNaturalMotionP0GAFinal = (u32)fp->ga;
+        gNdsFighterNaturalMotionP0AnimFinalBits =
+            ndsFloatBits(anim_frame);
+    }
+    else
+    {
+        gNdsFighterNaturalMotionP1StatusFinal = (u32)fp->status_id;
+        gNdsFighterNaturalMotionP1MotionFinal = (u32)fp->motion_id;
+        gNdsFighterNaturalMotionP1GAFinal = (u32)fp->ga;
+        gNdsFighterNaturalMotionP1AnimFinalBits =
+            ndsFloatBits(anim_frame);
+    }
+
+    if (ndsFighterNaturalMotionHasValidJoints(fp) != FALSE)
+    {
+        state->valid_joint_count++;
+    }
+    if ((fp->status_id == nFTCommonStatusWait) &&
+        (fp->motion_id == nFTCommonMotionWait))
+    {
+        if (state->has_wait_anim == 0u)
+        {
+            state->first_wait_anim = anim_frame;
+            state->prev_anim = anim_frame;
+            state->has_wait_anim = 1u;
+            if (slot == 0u)
+            {
+                gNdsFighterNaturalMotionP0AnimStartBits =
+                    ndsFloatBits(anim_frame);
+            }
+            else
+            {
+                gNdsFighterNaturalMotionP1AnimStartBits =
+                    ndsFloatBits(anim_frame);
+            }
+        }
+        else if (anim_frame != state->prev_anim)
+        {
+            state->anim_advance_count++;
+            state->prev_anim = anim_frame;
+        }
+        state->wait_frames++;
+    }
+    else if ((sNdsFighterNaturalMotionWalkInputActive != 0u) &&
+             (ndsFighterNaturalMotionStatusIsWalk(fp->status_id) != FALSE) &&
+             (ndsFighterNaturalMotionMotionIsWalk(fp->motion_id) != FALSE))
+    {
+        state->walk_frames++;
+        if (slot == 0u)
+        {
+            gNdsFighterNaturalMotionP0WalkStatus = (u32)fp->status_id;
+            gNdsFighterNaturalMotionP0WalkMotion = (u32)fp->motion_id;
+        }
+        else
+        {
+            gNdsFighterNaturalMotionP1WalkStatus = (u32)fp->status_id;
+            gNdsFighterNaturalMotionP1WalkMotion = (u32)fp->motion_id;
+        }
+    }
+
+    if (slot == 0u)
+    {
+        gNdsFighterNaturalMotionP0WaitFrameCount = state->wait_frames;
+        gNdsFighterNaturalMotionP0AnimAdvanceCount =
+            state->anim_advance_count;
+        gNdsFighterNaturalMotionP0ValidJointCount =
+            state->valid_joint_count;
+        gNdsFighterNaturalMotionP0WalkFrameCount = state->walk_frames;
+    }
+    else
+    {
+        gNdsFighterNaturalMotionP1WaitFrameCount = state->wait_frames;
+        gNdsFighterNaturalMotionP1AnimAdvanceCount =
+            state->anim_advance_count;
+        gNdsFighterNaturalMotionP1ValidJointCount =
+            state->valid_joint_count;
+        gNdsFighterNaturalMotionP1WalkFrameCount = state->walk_frames;
+    }
+}
+
+void ndsFighterMarioFoxNaturalMotionPrepare(void)
+{
+    FTStruct *p0 = ndsFighterManagerLiveStruct(0u);
+    FTStruct *p1 = ndsFighterManagerLiveStruct(1u);
+
+    if ((ndsFighterMarioFoxGCRunAllLoopProofEnabled() == FALSE) ||
+        (gNdsFighterNaturalMotionPrepared != 0u))
+    {
+        return;
+    }
+    gNdsFighterNaturalMotionManagerMask = ndsFighterManagerLiveMask();
+    if ((gNdsFighterNaturalMotionManagerMask & 0x3u) != 0x3u)
+    {
+        return;
+    }
+
+    bzero(sNdsFighterNaturalMotionStates,
+          sizeof(sNdsFighterNaturalMotionStates));
+    sNdsFighterNaturalMotionWalkInputActive = 0u;
+    ndsControllerPlaybackReset();
+    ndsControllerPlaybackSetConnectedMask(0x3u);
+    ndsControllerPlaybackSetEnabled(TRUE);
+    gNdsFighterNaturalMotionGObjCountBefore = (u32)gcGetGObjsActiveNum();
+
+    gcFuncGObjAll(ndsFighterNaturalMotionPauseNonTargetVisitor, 0u);
+
+    gNdsFighterNaturalMotionP0StatusStart = (u32)p0->status_id;
+    gNdsFighterNaturalMotionP1StatusStart = (u32)p1->status_id;
+    gNdsFighterNaturalMotionPrepared = 1u;
+}
+
+s32 ndsFighterMarioFoxNaturalMotionUpdateEnabled(void)
+{
+    return ((ndsFighterMarioFoxGCRunAllLoopProofEnabled() != FALSE) &&
+            (gNdsFighterNaturalMotionPrepared != 0u) &&
+            (gNdsFighterNaturalMotionResult == 0u)) ? TRUE : FALSE;
+}
+
+void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
+{
+    FTStruct *fp[2];
+    u32 i;
+    u32 mask = 0u;
+
+    if (ndsFighterMarioFoxNaturalMotionUpdateEnabled() == FALSE)
+    {
+        return;
+    }
+    fp[0] = ndsFighterManagerLiveStruct(0u);
+    fp[1] = ndsFighterManagerLiveStruct(1u);
+    if ((fp[0] == NULL) || (fp[1] == NULL))
+    {
+        gNdsFighterNaturalMotionUnsafeCount++;
+        return;
+    }
+
+    if ((sNdsFighterNaturalMotionWalkInputActive == 0u) &&
+        (sNdsFighterNaturalMotionStates[0].wait_frames >=
+            NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED) &&
+        (sNdsFighterNaturalMotionStates[1].wait_frames >=
+            NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED))
+    {
+        sNdsFighterNaturalMotionWalkInputActive = 1u;
+        gNdsFighterNaturalMotionWalkInputFrame =
+            gNdsFighterNaturalMotionUpdateCount + 1u;
+    }
+
+    for (i = 0u; i < 2u; i++)
+    {
+        s8 stick_x = 0;
+
+        if (sNdsFighterNaturalMotionWalkInputActive != 0u)
+        {
+            stick_x = (fp[i]->lr >= 0.0F) ? 40 : -40;
+        }
+        ndsControllerPlaybackSetPad(i, 0u, stick_x, 0);
+    }
+    ndsControllerPlaybackCommitFrame();
+    syControllerReadDeviceData();
+    syControllerUpdateGlobalData();
+    gNdsFighterNaturalMotionControllerReadCount++;
+
+    gcRunAll();
+    gNdsFighterNaturalMotionRunAllCount++;
+    gNdsFighterNaturalMotionUpdateCount++;
+
+    for (i = 0u; i < 2u; i++)
+    {
+        ndsFighterNaturalMotionRecordSlot(i, fp[i]);
+    }
+
+    if ((gNdsFighterNaturalMotionManagerMask & 0x3u) == 0x3u)
+    {
+        mask |= 1u << 0;
+    }
+    if (gNdsFighterNaturalMotionPrepared != 0u)
+    {
+        mask |= 1u << 1;
+    }
+    if ((gNdsControllerPlaybackEnabled == 1u) &&
+        ((gNdsControllerPlaybackConnectedMask & 0x3u) == 0x3u) &&
+        (gNdsControllerPlaybackReadCount > 0u) &&
+        (gNdsFighterNaturalMotionControllerReadCount > 0u))
+    {
+        mask |= 1u << 2;
+    }
+    if (gNdsFighterNaturalMotionRunAllCount > 0u)
+    {
+        mask |= 1u << 3;
+    }
+    if ((gNdsFighterNaturalMotionP0WaitFrameCount >=
+            NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED) &&
+        (gNdsFighterNaturalMotionP1WaitFrameCount >=
+            NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED))
+    {
+        mask |= 1u << 4;
+    }
+    if ((gNdsFighterNaturalMotionP0ValidJointCount >=
+            NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED) &&
+        (gNdsFighterNaturalMotionP1ValidJointCount >=
+            NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED))
+    {
+        mask |= 1u << 5;
+    }
+    if ((gNdsFighterNaturalMotionP0AnimAdvanceCount > 0u) &&
+        (gNdsFighterNaturalMotionP1AnimAdvanceCount > 0u) &&
+        (gNdsFighterNaturalMotionP0AnimStartBits !=
+            gNdsFighterNaturalMotionP0AnimFinalBits) &&
+        (gNdsFighterNaturalMotionP1AnimStartBits !=
+            gNdsFighterNaturalMotionP1AnimFinalBits))
+    {
+        mask |= 1u << 6;
+    }
+    if (gNdsFighterNaturalMotionWalkInputFrame != 0u)
+    {
+        mask |= 1u << 7;
+    }
+    if ((gNdsFighterNaturalMotionP0WalkFrameCount >=
+            NDS_FIGHTER_NATURAL_MOTION_WALK_FRAMES_REQUIRED) &&
+        (gNdsFighterNaturalMotionP1WalkFrameCount >=
+            NDS_FIGHTER_NATURAL_MOTION_WALK_FRAMES_REQUIRED) &&
+        (ndsFighterNaturalMotionStatusIsWalk(
+            (s32)gNdsFighterNaturalMotionP0WalkStatus) != FALSE) &&
+        (ndsFighterNaturalMotionStatusIsWalk(
+            (s32)gNdsFighterNaturalMotionP1WalkStatus) != FALSE) &&
+        (ndsFighterNaturalMotionMotionIsWalk(
+            (s32)gNdsFighterNaturalMotionP0WalkMotion) != FALSE) &&
+        (ndsFighterNaturalMotionMotionIsWalk(
+            (s32)gNdsFighterNaturalMotionP1WalkMotion) != FALSE))
+    {
+        mask |= 1u << 8;
+    }
+    if ((gNdsFighterNaturalMotionP0GAFinal == (u32)nMPKineticsGround) &&
+        (gNdsFighterNaturalMotionP1GAFinal == (u32)nMPKineticsGround) &&
+        (gNdsFighterNaturalMotionUnsafeCount == 0u))
+    {
+        mask |= 1u << 9;
+    }
+
+    gNdsFighterNaturalMotionGObjCountAfter = (u32)gcGetGObjsActiveNum();
+    gNdsFighterNaturalMotionGObjDelta =
+        (gNdsFighterNaturalMotionGObjCountAfter >=
+         gNdsFighterNaturalMotionGObjCountBefore) ?
+        (gNdsFighterNaturalMotionGObjCountAfter -
+         gNdsFighterNaturalMotionGObjCountBefore) :
+        (gNdsFighterNaturalMotionGObjCountBefore -
+         gNdsFighterNaturalMotionGObjCountAfter);
+
+    gNdsFighterNaturalMotionMask = mask;
+    if ((mask & 0x3ffu) == 0x3ffu)
+    {
+        gNdsFighterNaturalMotionResult =
+            NDS_FIGHTER_NATURAL_MOTION_PASS;
+        gNdsFighterNaturalMotionSafeResult =
+            NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS;
+    }
+}
+#endif
+
 static void ndsFighterGCDrawAllLoopCopyFromPreview(void)
 {
     gNdsFighterGCDrawAllLoopP0PlaybackApplyCount =

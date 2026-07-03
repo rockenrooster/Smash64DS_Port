@@ -384,6 +384,48 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterManagerStatusBufferHitCount = 0;
     gNdsFighterManagerFighterCount = 0;
     gNdsFighterManagerFigatreeHeapSize = 0;
+    gNdsFighterNaturalMotionResult = 0;
+    gNdsFighterNaturalMotionSafeResult = 0;
+    gNdsFighterNaturalMotionMask = 0;
+    gNdsFighterNaturalMotionPrepared = 0;
+    gNdsFighterNaturalMotionUpdateCount = 0;
+    gNdsFighterNaturalMotionBaseVSBattleUpdateCount = 0;
+    gNdsFighterNaturalMotionRunAllCount = 0;
+    gNdsFighterNaturalMotionControllerReadCount = 0;
+    gNdsFighterNaturalMotionManagerMask = 0;
+    gNdsFighterNaturalMotionGObjCountBefore = 0;
+    gNdsFighterNaturalMotionGObjCountAfter = 0;
+    gNdsFighterNaturalMotionGObjDelta = 0;
+    gNdsFighterNaturalMotionP0StatusStart = 0;
+    gNdsFighterNaturalMotionP1StatusStart = 0;
+    gNdsFighterNaturalMotionP0StatusFinal = 0;
+    gNdsFighterNaturalMotionP1StatusFinal = 0;
+    gNdsFighterNaturalMotionP0MotionFinal = 0;
+    gNdsFighterNaturalMotionP1MotionFinal = 0;
+    gNdsFighterNaturalMotionP0GAFinal = 0;
+    gNdsFighterNaturalMotionP1GAFinal = 0;
+    gNdsFighterNaturalMotionP0WaitFrameCount = 0;
+    gNdsFighterNaturalMotionP1WaitFrameCount = 0;
+    gNdsFighterNaturalMotionP0AnimAdvanceCount = 0;
+    gNdsFighterNaturalMotionP1AnimAdvanceCount = 0;
+    gNdsFighterNaturalMotionP0ValidJointCount = 0;
+    gNdsFighterNaturalMotionP1ValidJointCount = 0;
+    gNdsFighterNaturalMotionP0AnimStartBits = 0;
+    gNdsFighterNaturalMotionP1AnimStartBits = 0;
+    gNdsFighterNaturalMotionP0AnimFinalBits = 0;
+    gNdsFighterNaturalMotionP1AnimFinalBits = 0;
+    gNdsFighterNaturalMotionWalkInputFrame = 0;
+    gNdsFighterNaturalMotionP0WalkFrameCount = 0;
+    gNdsFighterNaturalMotionP1WalkFrameCount = 0;
+    gNdsFighterNaturalMotionP0WalkStatus = 0;
+    gNdsFighterNaturalMotionP1WalkStatus = 0;
+    gNdsFighterNaturalMotionP0WalkMotion = 0;
+    gNdsFighterNaturalMotionP1WalkMotion = 0;
+    gNdsFighterNaturalMotionFigatreeAttachCount = 0;
+    gNdsFighterNaturalMotionFigatreeNullCount = 0;
+    gNdsFighterNaturalMotionFigatreeTableInvalidCount = 0;
+    gNdsFighterNaturalMotionFigatreeAnimInvalidCount = 0;
+    gNdsFighterNaturalMotionUnsafeCount = 0;
     gNdsFighterMarioFoxModelResult = 0;
     gNdsFighterMarioFoxGObjResult = 0;
     gNdsFighterMarioFoxSetupMask = 0;
@@ -3627,6 +3669,7 @@ extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 #define NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX 200u
 #define NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX 220u
 #define NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX 240u
+#define NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX 720u
 #define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
 #define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
 #define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
@@ -6870,6 +6913,27 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         {
             u32 i;
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+            ndsFighterMarioFoxNaturalMotionPrepare();
+            for (i = 0u; i < NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX; i++)
+            {
+                scVSBattleFuncUpdate();
+                dSYTaskmanUpdateCount++;
+                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
+                gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateCount++;
+                gNdsSCVSBattleOriginalUpdateResult =
+                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
+                gNdsSCVSBattleOriginalSetupMask |=
+                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+
+                if (gNdsFighterNaturalMotionResult ==
+                    NDS_FIGHTER_NATURAL_MOTION_PASS)
+                {
+                    break;
+                }
+            }
+#else
             ndsRunMarioFoxProcessPrerequisiteLoop();
             ndsFighterMarioFoxSchedulerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
@@ -6950,6 +7014,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     break;
                 }
             }
+#endif
         }
 #elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_PREVIEW_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PREVIEW_LOOP)

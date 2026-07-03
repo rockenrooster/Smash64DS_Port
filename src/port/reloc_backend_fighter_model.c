@@ -18,6 +18,9 @@ static FTStruct sNdsFighterStructPool[GMCOMMON_PLAYERS_MAX];
 static FTParts sNdsFighterPartsPool[GMCOMMON_PLAYERS_MAX]
                                    [nFTPartsJointNumMax];
 static u32 sNdsFighterStructPoolUsedMask;
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+static GObj *sNdsFighterManagerLiveGObjs[2];
+#endif
 extern u16 gMPCollisionUpdateTic;
 
 #define NDS_FIGHTER_MOTION_DESC_SEED_COUNT 256
@@ -58,6 +61,10 @@ static FTData *ndsFighterGetDataSeed(void)
 
 static void ndsFighterMarioFoxResetFileSlots(void)
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    sNdsFighterManagerLiveGObjs[0] = NULL;
+    sNdsFighterManagerLiveGObjs[1] = NULL;
+#endif
     sNdsFighterFTManagerCommonFile = NULL;
     sNdsFighterMarioMainMotionFile = NULL;
     sNdsFighterMarioMainFile = NULL;
@@ -1491,6 +1498,39 @@ static sb32 ndsFighterStructIsPoolPointer(const void *ptr)
     return FALSE;
 }
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+static GObj *ndsFighterManagerLiveGObj(u32 slot)
+{
+    if (slot >= ARRAY_COUNT(sNdsFighterManagerLiveGObjs))
+    {
+        return NULL;
+    }
+    return sNdsFighterManagerLiveGObjs[slot];
+}
+
+static FTStruct *ndsFighterManagerLiveStruct(u32 slot)
+{
+    GObj *fighter_gobj = ndsFighterManagerLiveGObj(slot);
+
+    return (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+}
+
+static u32 ndsFighterManagerLiveMask(void)
+{
+    u32 mask = 0u;
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(sNdsFighterManagerLiveGObjs); i++)
+    {
+        if (ndsFighterManagerLiveStruct(i) != NULL)
+        {
+            mask |= 1u << i;
+        }
+    }
+    return mask;
+}
+#endif
+
 static GObj *ndsFighterGetPlayerNumGObj(s32 player_num)
 {
     if ((player_num < 0) || (player_num >= GMCOMMON_PLAYERS_MAX))
@@ -1797,6 +1837,7 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
         return;
     }
     bit = 1u << player;
+    sNdsFighterManagerLiveGObjs[player] = fighter_gobj;
 
     if (((player == 0) && (fp->fkind == nFTKindMario)) ||
         ((player == 1) && (fp->fkind == nFTKindFox)))

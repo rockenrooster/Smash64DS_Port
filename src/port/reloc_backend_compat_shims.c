@@ -1357,6 +1357,32 @@ void ftHammerSetStatusHammerWait(GObj *fighter_gobj)
 
 sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    if (ndsFighterMarioFoxNaturalMotionUpdateEnabled() != FALSE)
+    {
+        return ((ftCommonSpecialNCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonSpecialHiCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonSpecialLwCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonCatchCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonAttackS4CheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonAttackHi4CheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonAttackLw4CheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonAttackS3CheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonAttackHi3CheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonAttackLw3CheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonAttack1CheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonGuardOnCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonAppealCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonKneeBendCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonDashCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonPassCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonDokanStartCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonSquatCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonTurnCheckInterruptCommon(fighter_gobj) != FALSE) ||
+                (ftCommonWalkCheckInterruptCommon(fighter_gobj) != FALSE)) ? TRUE :
+                                                                             FALSE;
+    }
+#endif
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
     {
@@ -6386,14 +6412,97 @@ void ftParamMoveDLLink(GObj *fighter_gobj, u8 dl_link)
     }
 }
 
+extern void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
+                               f32 anim_frame);
+extern void *ndsRelocResolvePointerFromFileBase(const void *file_base,
+                                                const void *ptr,
+                                                size_t size);
+
+static DObj *ndsLBCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root_dobj)
+{
+    if (dobj == NULL)
+    {
+        return NULL;
+    }
+    if (dobj->child != NULL)
+    {
+        return dobj->child;
+    }
+    if (dobj->sib_next != NULL)
+    {
+        return dobj->sib_next;
+    }
+    while (dobj != NULL)
+    {
+        if (dobj->parent == root_dobj)
+        {
+            return NULL;
+        }
+        if ((dobj->parent != NULL) && (dobj->parent->sib_next != NULL))
+        {
+            return dobj->parent->sib_next;
+        }
+        dobj = dobj->parent;
+    }
+    return NULL;
+}
+
 void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                      f32 anim_frame)
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    void **figatree_entries = figatree;
+    DObj *current_dobj = root_dobj;
+
+    if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
+    {
+        root_dobj->parent_gobj->anim_frame = anim_frame;
+    }
+    while ((current_dobj != NULL) && (figatree_entries != NULL))
+    {
+        AObjEvent32 *anim_joint = *figatree_entries;
+        FTParts *parts = ftGetParts(current_dobj);
+
+        anim_joint = ndsRelocResolvePointerFromFileBase(figatree,
+                                                        anim_joint,
+                                                        sizeof(*anim_joint));
+        if (anim_joint != NULL)
+        {
+            gcAddDObjAnimJoint(current_dobj, anim_joint, anim_frame);
+            gNdsFighterNaturalMotionFigatreeAttachCount++;
+            if (parts != NULL)
+            {
+                parts->is_have_anim = TRUE;
+            }
+        }
+        else
+        {
+            if (anim_joint == NULL)
+            {
+                gNdsFighterNaturalMotionFigatreeNullCount++;
+            }
+            else
+            {
+                gNdsFighterNaturalMotionFigatreeAnimInvalidCount++;
+                gNdsFighterNaturalMotionUnsafeCount++;
+            }
+            current_dobj->anim_wait = AOBJ_ANIM_NULL;
+            if (parts != NULL)
+            {
+                parts->is_have_anim = FALSE;
+            }
+        }
+        figatree_entries++;
+        current_dobj =
+            ndsLBCommonGetTreeDObjNextFromRoot(current_dobj, root_dobj);
+    }
+#else
     (void)figatree;
     if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
     {
         root_dobj->parent_gobj->anim_frame = anim_frame;
     }
+#endif
 }
 
 void lbCommonInitDObj(DObj *dobj, u8 tk1, u8 tk2, u8 tk3, u8 arg4)
