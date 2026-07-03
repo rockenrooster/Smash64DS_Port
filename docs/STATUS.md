@@ -77,15 +77,16 @@ final-output material color/alpha selection, 2-cycle `COMBINED` color
 fallback, `G_LOADTILE` texture-load state, and `G_SETPRIMDEPTH` / `G_ZS_PRIM`
 primitive-depth state. It also treats blend alpha-memory as an exact
 cycle-aware two-bit field.
-Latest capture: `artifacts\renderer-stage-gcdrawall-hw-loadtile.png`. The
+Latest captures: `artifacts\renderer-stage-gcdrawall-hw-loadtile.png` and
+`artifacts\renderer-menu-chain-stage-gcdrawall-hw.png`. The
 opt-in all-DL verifier proves `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`; the opt-in Pupupu stage
-gcDrawAll verifier proves hardware replay/triangles/frame flush
-(`hwsubmit=252`, `hwtri=1140`, `hwflush=1/1`), `hwdepth=z456/proj684/decal0`,
-and `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`. Full visual
-fidelity still needs remaining combiner/material behavior, broader texture and
-primitive-depth source-scene coverage, and renderer cutover work. Default builds
-still use the software preview.
+gcDrawAll verifiers prove direct and menu-chain hardware replay/triangles/frame
+flush (`hwsubmit=252`, `hwtri=1140`, `hwflush=1/1`),
+`hwdepth=z456/proj684/decal0`, and `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+Full visual fidelity still needs remaining combiner/material behavior, broader
+texture and primitive-depth source-scene coverage, and renderer cutover work.
+Default builds still use the software preview.
 
 Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 

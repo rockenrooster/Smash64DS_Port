@@ -16539,3 +16539,19 @@ Still deferred:
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Current all-DL and Pupupu
   stage hardware counters stayed unchanged because the selected proof scenes
   still use the existing `LOADBLOCK` texture path.
+
+## 2026-07-03 - Menu-Chain Hardware Stage Gate
+
+- Reused the existing menu-chain Pupupu stage `gcDrawAll` verifier with a new
+  opt-in `-HardwareTriangles` switch instead of adding a harness mode. It builds
+  `smash64ds-menu-chain-mariofox-stage-gcdrawall-loop-hwtri` with
+  `NDS_RENDERER_HW_TRIANGLES=1` and runs through the shared stage gcDrawAll
+  hardware marker checks after the Title -> VS Mode -> Maps transition.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-menu-chain-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-menu-chain-stage-gcdrawall-hw.png`, passed
+  `.\scripts\check-harness-registry.ps1`, and passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`. The menu-chain
+  hardware stage gate reports `hwsubmit=252`, `hwtri=1140`,
+  `hwdepth=z456/proj684/decal0`, and
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.

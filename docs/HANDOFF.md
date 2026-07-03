@@ -55,14 +55,14 @@ cycle-aware two-bit field instead of a cycle-1-only bit test. The renderer also
 decodes `G_LOADTILE` texture-load windows, and decodes `G_SETPRIMDEPTH` to
 route source `G_ZS_PRIM` triangles through the existing projected hardware
 vertex path with the source primitive Z value.
-Current captures:
-`artifacts\renderer-stage-gcdrawall-hw-loadtile.png` and
-`artifacts\battle-mariofox-dl-draw-all-hwtri.png`; the opt-in all-DL verifier
-reports `hwdepth=z260/217/proj0/0/decal0/0` and
-`hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`, and the opt-in Pupupu
-stage gcDrawAll verifier reports `hwsubmit=252`, `hwtri=1140`, and
-`hwdepth=z456/proj684/decal0`, `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`,
-and `hwflush=1/1`. Default builds still use the software preview.
+Current captures: `artifacts\renderer-stage-gcdrawall-hw-loadtile.png`,
+`artifacts\renderer-menu-chain-stage-gcdrawall-hw.png`, and
+`artifacts\battle-mariofox-dl-draw-all-hwtri.png`. The opt-in all-DL verifier
+reports `hwdepth=z260/217/proj0/0/decal0/0` and `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`;
+direct and menu-chain Pupupu stage gcDrawAll report `hwsubmit=252`,
+`hwtri=1140`, `hwdepth=z456/proj684/decal0`,
+`hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and `hwflush=1/1`.
+Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local
@@ -92,18 +92,14 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Renderer follow-up: finish opt-in hardware combiner/material policy,
-   broaden remaining texture-state and no-z/decal/prim-depth source-scene
-   coverage after
-   the first all-DL CI/TLUT gate plus IA/I decoders, then plan renderer
-   cutover.
+1. Renderer follow-up: finish opt-in hardware combiner/material policy, broaden
+   remaining texture-state and no-z/decal/prim-depth source-scene coverage, then
+   plan renderer cutover.
 2. Runtime follow-up: delete the remaining `ftMainSetStatus` compat-replay and
    cliffmotion restore duplicate-behavior seams status-by-status as those source
    proofs graduate.
-3. Broaden hardware texture coverage now that all-DL CI/TLUT upload is proven
-   and material DL emission reaches the hardware traversal where source MObjs
-   expose branchable material state; the Pupupu stage hardware path now proves
-   zero rejects for its current source-loaded texture states.
+3. Broaden hardware texture coverage where source MObjs expose branchable
+   material state; the Pupupu hardware path now proves zero texture rejects.
 
 ## Verification
 

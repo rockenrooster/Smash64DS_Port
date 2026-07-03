@@ -4,9 +4,12 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$HardwareTriangles
 )
 $ErrorActionPreference = 'Stop'
+$target = if ($HardwareTriangles) { 'smash64ds-menu-chain-mariofox-stage-gcdrawall-loop-hwtri' } else { 'smash64ds-menu-chain-mariofox-stage-gcdrawall-loop' }
+$build = if ($HardwareTriangles) { 'build-menu-chain-mariofox-stage-gcdrawall-loop-hwtri-harness' } else { 'build-menu-chain-mariofox-stage-gcdrawall-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcdrawall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -15,11 +18,12 @@ $ErrorActionPreference = 'Stop'
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
     -Harness 'menu_chain_mariofox_stage_gcdrawall_loop' `
-    -Target 'smash64ds-menu-chain-mariofox-stage-gcdrawall-loop' `
-    -Build 'build-menu-chain-mariofox-stage-gcdrawall-loop-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 60 `
     -ExpectedHarnessSceneCurr 9 `
     -ExpectedHarnessScenePrev 1 `
     -Label 'Menu-chain Mario/Fox stage gcDrawAll-loop' `
     -HarnessSelectMessage 'Menu-chain stage gcDrawAll-loop harness did not start at VS Mode from Title.' `
+    -HardwareTriangles:$HardwareTriangles `
     -RequireStageDraw
