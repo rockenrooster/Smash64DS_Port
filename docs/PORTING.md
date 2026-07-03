@@ -16271,3 +16271,14 @@ Still deferred:
   `hwdepth=z456/proj696/decal0`,
   `hwtex=bind528/upload42/ready528/reject90/fmt4/max32x32`, and
   `hwflush=1/1`.
+
+## 2026-07-03 - Loaded Stage HW Texture Dimensions
+
+- Matched sm64-nds texture sizing more closely by falling back from oversized
+  render-tile dimensions to the source `G_LOADBLOCK` row/texel dimensions when
+  the tile asks for more texels than were loaded.
+- The existing stage hardware verifier now requires zero texture rejects and
+  passed with `hwsubmit=252`, `hwtri=1152`,
+  `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind618/upload72/ready618/reject0/fmt4/max32x32`, and
+  `hwflush=1/1`.

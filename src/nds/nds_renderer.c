@@ -1855,9 +1855,16 @@ static s32 ndsRendererHardwareBindTexture(
         return FALSE;
     }
 
+    loaded_bytes = (size == NDS_RENDERER_HW_TEXTURE_SIZ_32B) ?
+        stats->texture_load_texels * sizeof(u32) :
+        stats->texture_load_texels * sizeof(u16);
     width = stats->texture_tile_width;
     height = stats->texture_tile_height;
-    if ((width == 0u) || (height == 0u))
+    if ((width == 0u) || (height == 0u) ||
+        (width > NDS_RENDERER_HW_TEXTURE_MAX_WIDTH) ||
+        (height > NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT) ||
+        (ndsRendererHardwareTextureSourceBytes(format, size, width * height) >
+         loaded_bytes))
     {
         width = ndsRendererHardwareTextureLinePixels(
             size, stats->texture_render_tile_line);
@@ -1928,9 +1935,6 @@ static s32 ndsRendererHardwareBindTexture(
 
     texels = width * height;
     bytes = ndsRendererHardwareTextureSourceBytes(format, size, texels);
-    loaded_bytes = (size == NDS_RENDERER_HW_TEXTURE_SIZ_32B) ?
-        stats->texture_load_texels * sizeof(u32) :
-        stats->texture_load_texels * sizeof(u16);
     if ((bytes == 0u) || (bytes > loaded_bytes))
     {
         stats->hardware_texture_reject_count++;
