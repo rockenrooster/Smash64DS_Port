@@ -16699,3 +16699,16 @@ Still deferred:
   after the default-manager natural-motion early return: hardware stage runs now
   still assert DS 3D flush, submit, depth, and texture counters before returning.
 - This is a verifier-path fix only; renderer cutover remains deferred.
+
+## 2026-07-03 - Documented All-DL HW Gate Coverage Gap
+
+- Checked the direct all-DL hardware gate before tightening texture rejects.
+  `verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -NoBuild
+  -DelaySeconds 3` failed before texture assertions: mode `33` parked at
+  VSBattle with zero `FTR_DL_MULTI` and `FTR_DL_ALL` markers.
+- Kept the verifier's previous bind/upload assertion instead of promoting
+  `reject0`; the direct all-DL proof needs a live-manager rebuild before it is
+  a current cutover gate.
+- Refreshed active docs to identify the Pupupu stage-inclusive hardware gate as
+  the current zero-reject proof and the direct all-DL path as coverage-reduced
+  after original-manager graduation.

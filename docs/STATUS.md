@@ -82,11 +82,13 @@ this default path. The remaining stage compat-replay/cliffmotion seams in
 removing them still needs status-by-status proofs.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
-It covers the current matrix, material, texture, depth/fog/alpha, primitive-Z,
-and texture-perspective proofs for all-DL and Pupupu stage hardware scenes.
-Latest captures remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity
-still needs remaining combiner/material behavior, broader texture and
-primitive-depth source-scene coverage, and renderer cutover work. Default builds
+The current Pupupu stage-inclusive hardware gate proves matrix, material,
+texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
+zero hardware texture rejects. The older direct all-DL hardware proof is
+coverage-reduced after original-manager graduation and must be rebuilt on the
+live manager fighter structs before it can be a current cutover gate. Latest
+captures remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity still
+needs broader source-scene coverage and renderer cutover work. Default builds
 still use the software preview.
 
 Latest gameplay proof is now original-manager Mario/Fox creation plus imported
@@ -100,11 +102,9 @@ The next useful gameplay work is to rebuild the reduced gcDrawAll/stage/MP,
 dash, and live-hit proof coverage on top of the natural original-manager runtime, then move toward
 `battle_playable` camera, HUD, match-flow, and renderer cutover work.
 
-- renderer follow-up: finish opt-in hardware combiner/material policy,
-  broaden remaining texture-state and no-z/decal/prim-depth source-scene
-  coverage after
-  the first all-DL CI/TLUT gate plus IA/I decoders, then plan renderer cutover
-  work;
+- renderer follow-up: rebuild the direct all-DL hardware verifier on the
+  natural original-manager runtime, broaden source-scene coverage, then plan
+  renderer cutover work;
 - continuous-runtime verifier for unbounded battle frames.
 
 ## Runtime Target

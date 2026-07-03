@@ -105,9 +105,9 @@
 - Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
   billboard/recalc DObj matrix seed coverage, first bounded Opening Room
   RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is
-  not a full renderer cutover. Stage-inclusive `gcDrawAll` and direct all-DL
-  hardware paths now use the BattleShip battle-camera `0x4C` matrix seed, and
-  the Mario/Fox all-DL capture is no longer framed by a bounded proof camera.
+  not a full renderer cutover. Stage-inclusive `gcDrawAll` hardware remains the
+  current default-manager gate and uses the BattleShip battle-camera `0x4C`
+  matrix seed.
   BattleShip
   `gSPMvpRecalc` / `G_MW_MATRIX` display-list
   streams are now decoded when emitted, fighter-parts matrix kind `0x4B` has a
@@ -119,14 +119,14 @@
   recorded primitive/environment material color and alpha from the current
   combine state, maps recorded F3DEX2 front/back cull geometry mode to DS
   polygon cull bits, applies the sm64-nds decal-combine rule to DS
-  `POLY_DECAL`, applies its texture-filter coordinate-bias rule, and the
-  all-DL verifier proves z-buffer depth classification plus one hardware
-  texture upload/bind (`hwdepth=z316/314/proj0/0/decal0/0`,
-  `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`). Hardware all-DL stats
-  prove triangle submission and matrix seeds, but the direct all-DL scene emits
-  no matrix-word stream
-  (`MW=0/0/0/0`) and many texture states still reject. Remaining renderer work
-  is remaining combiner/material behavior, broader texture/no-z/decal
+  `POLY_DECAL`, and applies its texture-filter coordinate-bias rule. After
+  original-manager graduation, direct all-DL verifier modes `33/34` are
+  coverage-reduced: the old immediate proof chain still depends on the
+  synthetic `sNdsFighterStructPool` proof stack, so the current mode parks at
+  VSBattle with zero `FTR_DL_MULTI` / `FTR_DL_ALL` markers. Treat prior direct
+  all-DL hardware stats and captures as regression history until that verifier
+  is rebuilt on live manager fighter structs. Remaining renderer work is the
+  live-manager all-DL rebuild, broader combiner/material/depth/texture
   source-scene coverage, and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
