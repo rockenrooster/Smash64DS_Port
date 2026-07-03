@@ -1,0 +1,76 @@
+#include <ft/fighter.h>
+
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#define NDS_STATUS_ALIAS(original, base)          \
+    void base(GObj *fighter_gobj);                \
+    __attribute__((weak)) void original(          \
+        GObj *fighter_gobj)                       \
+    {                                             \
+        base(fighter_gobj);                       \
+    }
+
+NDS_STATUS_ALIAS(ftCommonAppealProcInterrupt, ndsBaseFTCommonAppealProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonAttack11ProcInterrupt, ndsBaseFTCommonAttack11ProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonAttack11ProcUpdate, ndsBaseFTCommonAttack11ProcUpdate)
+NDS_STATUS_ALIAS(ftCommonAttack12ProcInterrupt, ndsBaseFTCommonAttack12ProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonAttack12ProcUpdate, ndsBaseFTCommonAttack12ProcUpdate)
+NDS_STATUS_ALIAS(ftCommonAttackAirLwProcUpdate, ndsBaseFTCommonAttackAirLwProcUpdate)
+NDS_STATUS_ALIAS(ftCommonAttackAirProcMap, ndsBaseFTCommonAttackAirProcMap)
+NDS_STATUS_ALIAS(ftCommonCapturePulledProcMap, ndsBaseFTCommonCapturePulledProcMap)
+NDS_STATUS_ALIAS(ftCommonCapturePulledProcPhysics, ndsBaseFTCommonCapturePulledProcPhysics)
+NDS_STATUS_ALIAS(ftCommonCaptureWaitProcMap, ndsBaseFTCommonCaptureWaitProcMap)
+NDS_STATUS_ALIAS(ftCommonCatchProcMap, ndsBaseFTCommonCatchProcMap)
+NDS_STATUS_ALIAS(ftCommonCatchProcUpdate, ndsBaseFTCommonCatchProcUpdate)
+NDS_STATUS_ALIAS(ftCommonCatchPullProcUpdate, ndsBaseFTCommonCatchPullProcUpdate)
+NDS_STATUS_ALIAS(ftCommonCatchWaitProcInterrupt, ndsBaseFTCommonCatchWaitProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonDamageFallProcInterrupt, ndsBaseFTCommonDamageFallProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonDamageFallProcMap, ndsBaseFTCommonDamageFallProcMap)
+NDS_STATUS_ALIAS(ftCommonDashProcInterrupt, ndsBaseFTCommonDashProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonDashProcMap, ndsBaseFTCommonDashProcMap)
+NDS_STATUS_ALIAS(ftCommonDashProcPhysics, ndsBaseFTCommonDashProcPhysics)
+NDS_STATUS_ALIAS(ftCommonDashProcUpdate, ndsBaseFTCommonDashProcUpdate)
+NDS_STATUS_ALIAS(ftCommonDownBounceProcUpdate, ndsBaseFTCommonDownBounceProcUpdate)
+NDS_STATUS_ALIAS(ftCommonDownWaitProcInterrupt, ndsBaseFTCommonDownWaitProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonDownWaitProcUpdate, ndsBaseFTCommonDownWaitProcUpdate)
+NDS_STATUS_ALIAS(ftCommonEscapeProcInterrupt, ndsBaseFTCommonEscapeProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonEscapeProcUpdate, ndsBaseFTCommonEscapeProcUpdate)
+NDS_STATUS_ALIAS(ftCommonFallProcInterrupt, ndsBaseFTCommonFallProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonFuraSleepProcUpdate, ndsBaseFTCommonFuraSleepProcUpdate)
+NDS_STATUS_ALIAS(ftCommonGuardOffProcUpdate, ndsBaseFTCommonGuardOffProcUpdate)
+NDS_STATUS_ALIAS(ftCommonGuardOnProcUpdate, ndsBaseFTCommonGuardOnProcUpdate)
+NDS_STATUS_ALIAS(ftCommonGuardCommonProcInterrupt, ndsBaseFTCommonGuardCommonProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonGuardProcUpdate, ndsBaseFTCommonGuardProcUpdate)
+NDS_STATUS_ALIAS(ftCommonGuardSetOffProcUpdate, ndsBaseFTCommonGuardSetOffProcUpdate)
+NDS_STATUS_ALIAS(ftCommonJumpProcInterrupt, ndsBaseFTCommonJumpProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonKneeBendProcInterrupt, ndsBaseFTCommonKneeBendProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonKneeBendProcUpdate, ndsBaseFTCommonKneeBendProcUpdate)
+NDS_STATUS_ALIAS(ftCommonLandingProcInterrupt, ndsBaseFTCommonLandingProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonOttottoProcInterrupt, ndsBaseFTCommonOttottoProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonOttottoProcMap, ndsBaseFTCommonOttottoProcMap)
+NDS_STATUS_ALIAS(ftCommonOttottoProcUpdate, ndsBaseFTCommonOttottoProcUpdate)
+NDS_STATUS_ALIAS(ftCommonPassProcInterrupt, ndsBaseFTCommonPassProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonReboundProcUpdate, ndsBaseFTCommonReboundProcUpdate)
+NDS_STATUS_ALIAS(ftCommonReboundWaitProcUpdate, ndsBaseFTCommonReboundWaitProcUpdate)
+NDS_STATUS_ALIAS(ftCommonRunBrakeProcInterrupt, ndsBaseFTCommonRunBrakeProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonRunBrakeProcPhysics, ndsBaseFTCommonRunBrakeProcPhysics)
+NDS_STATUS_ALIAS(ftCommonRunProcInterrupt, ndsBaseFTCommonRunProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonSquatProcInterrupt, ndsBaseFTCommonSquatProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonSquatProcUpdate, ndsBaseFTCommonSquatProcUpdate)
+NDS_STATUS_ALIAS(ftCommonSquatRvProcInterrupt, ndsBaseFTCommonSquatRvProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonSquatWaitProcInterrupt, ndsBaseFTCommonSquatWaitProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonSquatWaitProcUpdate, ndsBaseFTCommonSquatWaitProcUpdate)
+NDS_STATUS_ALIAS(ftCommonThrowProcUpdate, ndsBaseFTCommonThrowProcUpdate)
+NDS_STATUS_ALIAS(ftCommonThrownProcMap, ndsBaseFTCommonThrownProcMap)
+NDS_STATUS_ALIAS(ftCommonThrownProcPhysics, ndsBaseFTCommonThrownProcPhysics)
+NDS_STATUS_ALIAS(ftCommonThrownProcUpdate, ndsBaseFTCommonThrownProcUpdate)
+NDS_STATUS_ALIAS(ftCommonTurnProcInterrupt, ndsBaseFTCommonTurnProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonTurnProcUpdate, ndsBaseFTCommonTurnProcUpdate)
+NDS_STATUS_ALIAS(ftCommonTurnRunProcInterrupt, ndsBaseFTCommonTurnRunProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonTurnRunProcUpdate, ndsBaseFTCommonTurnRunProcUpdate)
+NDS_STATUS_ALIAS(ftCommonTwisterProcPhysics, ndsBaseFTCommonTwisterProcPhysics)
+NDS_STATUS_ALIAS(ftCommonTwisterProcUpdate, ndsBaseFTCommonTwisterProcUpdate)
+NDS_STATUS_ALIAS(ftCommonWallDamageProcUpdate, ndsBaseFTCommonWallDamageProcUpdate)
+
+#undef NDS_STATUS_ALIAS
+
+#endif

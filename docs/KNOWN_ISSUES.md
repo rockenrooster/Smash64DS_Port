@@ -77,6 +77,14 @@
   plus figatree heap sizing. Default builds still use the DS manager,
   motion-extract seams, and trimmed status tables until runtime slice 2
   graduates the manager/status/animation subsystem.
+- Under the same fence, the common/Mario/Fox status descriptor headers can now
+  include BattleShip's original tables. Older bounded source imports and DS
+  compatibility seams provide the active Wait/Walk/Dash/Run/damage/catch/guard
+  callback symbols, but inactive statuses whose TUs pull HUD, items/weapons,
+  stage hazards, other fighters, or Mario/Fox special weapon/effect chains are
+  weak no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`.
+  Delete those stubs status-by-status as the owning original TUs and assets are
+  imported; they are link boundaries, not completed gameplay.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and

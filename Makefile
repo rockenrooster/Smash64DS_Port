@@ -484,7 +484,10 @@ CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	reloc_backend_ftdata_symbols.c
 CFILES += battleship_ftanim.c battleship_ftanimend.c battleship_ftkey.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_FTMANAGER),1)
-CFILES += battleship_ftmanager.c
+CFILES += battleship_ftmanager.c \
+	battleship_ftstatus_callback_aliases.c \
+	battleship_ftstatus_map_physics_shims.c \
+	battleship_ftstatus_inactive_stubs.c
 endif
 CFILES += battleship_ftmain.c
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)

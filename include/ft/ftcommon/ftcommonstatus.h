@@ -1,4 +1,8 @@
 #ifndef _FTCOMMON_STATUS_H_
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#include <ft/ftstatus_callbacks.h>
+#include "../../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonstatus.h"
+#else
 #define _FTCOMMON_STATUS_H_
 
 #include <ft/ftchar/ftcompat_status.h>
@@ -402,5 +406,7 @@ FTStatusDesc dFTCommonActionStatusDescs[NDS_FT_COMMON_ACTION_STATUS_COUNT] = {
                             ftPhysicsApplyAirVelDrift,
                             ftCommonAttackAirProcMap)
 };
+
+#endif
 
 #endif

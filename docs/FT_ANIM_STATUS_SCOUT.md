@@ -76,3 +76,11 @@ VSBattle descriptors because `ftdata.c:75-96` leaves `is_skip_entry` false and
 should graduate the original manager/status/animation path, then prove natural
 Entry -> Wait and Wait -> Walk motion before deleting the current DS manager and
 motion-extract seams.
+
+Runtime slice 2 started by swapping the fenced common/Mario/Fox status headers
+to BattleShip's original descriptor tables
+(`ftcommonstatus.h:7-131`, `ftmariostatus.h:23`,
+`ftfoxstatus.h:63,283`). The first fenced gate links by bridging already
+imported bounded callbacks back to their original names and by keeping inactive
+status callbacks as documented weak stubs until their owning HUD/item/stage/
+special dependencies are imported.
