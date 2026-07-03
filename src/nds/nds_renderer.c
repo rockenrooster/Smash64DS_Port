@@ -124,6 +124,7 @@ static s32 sNdsRendererHardwareProjectedDepth;
 typedef struct NDSRendererHardwareTextureKey
 {
     u32 image;
+    u32 image_width;
     u32 tlut_image;
     u32 tlut_count;
     u32 format;
@@ -717,6 +718,7 @@ static void ndsRendererRecordLoadBlock(NDSRendererStats *stats,
     }
 
     stats->texture_mask |= NDS_RENDERER_TEXTURE_LOADBLOCK;
+    stats->texture_load_kind = NDS_RENDERER_TEXTURE_LOADBLOCK;
     stats->texture_load_tile = (w1 >> 24) & 0x7u;
     stats->texture_load_block_uls = (w0 >> 12) & 0x0FFFu;
     stats->texture_load_block_ult = w0 & 0x0FFFu;
@@ -746,6 +748,7 @@ static void ndsRendererRecordLoadTile(NDSRendererStats *stats,
     lrt = w1 & 0x0FFFu;
 
     stats->texture_mask |= NDS_RENDERER_TEXTURE_LOADTILE;
+    stats->texture_load_kind = NDS_RENDERER_TEXTURE_LOADTILE;
     stats->texture_load_tile = (w1 >> 24) & 0x7u;
     stats->texture_load_block_uls = uls;
     stats->texture_load_block_ult = ult;
@@ -1720,9 +1723,12 @@ static s32 ndsRendererHardwareTextureFilterOffset(
     return 0;
 }
 
-static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, s32 offset)
+static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, u32 origin,
+                                       s32 offset)
 {
-    return (s16)((((s32)coord * (s32)scale) >> 17) + offset);
+    s64 relative = (s64)coord - ((s64)origin << 3);
+
+    return (s16)(((relative * (s64)scale) >> 17) + offset);
 }
 
 static void ndsRendererHardwareColorVertex(
@@ -1775,6 +1781,7 @@ static s32 ndsRendererHardwareTextureKeyEqual(
         return FALSE;
     }
     return ((a->image == b->image) &&
+            (a->image_width == b->image_width) &&
             (a->tlut_image == b->tlut_image) &&
             (a->tlut_count == b->tlut_count) &&
             (a->format == b->format) &&
@@ -1963,6 +1970,18 @@ static u32 ndsRendererHardwareTextureSourceBytes(u32 format, u32 size,
     return 0u;
 }
 
+static u32 ndsRendererHardwareTextureSourceWidthPixels(u32 render_size,
+                                                       u32 image_size,
+                                                       u32 image_width)
+{
+    if ((render_size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
+        (image_size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))
+    {
+        return image_width * 2u;
+    }
+    return image_width;
+}
+
 static u16 ndsRendererHardwarePaletteColor(const u16 *palette, u32 index,
                                            u32 count)
 {
@@ -2079,6 +2098,12 @@ static s32 ndsRendererHardwareBindTexture(
     u32 texels;
     u32 bytes;
     u32 loaded_bytes;
+    u32 source_width;
+    u32 source_origin_s;
+    u32 source_origin_t;
+    u32 source_last_index;
+    u32 source_texels;
+    u32 source_bytes;
     u32 palette_base;
     u32 params;
     int size_x;
@@ -2181,8 +2206,41 @@ static s32 ndsRendererHardwareBindTexture(
         return FALSE;
     }
 
+    if (stats->texture_load_kind == NDS_RENDERER_TEXTURE_LOADTILE)
+    {
+        source_origin_s = stats->texture_tile_size_uls >> 2;
+        source_origin_t = stats->texture_tile_size_ult >> 2;
+        source_width = ndsRendererHardwareTextureSourceWidthPixels(
+            size, stats->texture_size, stats->texture_image_width);
+    }
+    else
+    {
+        source_origin_s = 0u;
+        source_origin_t = 0u;
+        source_width = width;
+    }
+    if ((source_width == 0u) ||
+        (source_origin_s >= source_width) ||
+        (width > (source_width - source_origin_s)))
+    {
+        stats->hardware_texture_reject_count++;
+        return FALSE;
+    }
+    source_last_index =
+        ((source_origin_t + height - 1u) * source_width) +
+        source_origin_s + width - 1u;
+    source_texels = source_last_index + 1u;
+    source_bytes = ndsRendererHardwareTextureSourceBytes(format, size,
+                                                        source_texels);
+    if (source_bytes == 0u)
+    {
+        stats->hardware_texture_reject_count++;
+        return FALSE;
+    }
+
     memset(&key, 0, sizeof(key));
     key.image = stats->texture_image;
+    key.image_width = stats->texture_image_width;
     key.tlut_image = stats->texture_tlut_image;
     key.tlut_count = stats->texture_tlut_count;
     key.format = format;
@@ -2202,9 +2260,7 @@ static s32 ndsRendererHardwareBindTexture(
     key.tile_ult = stats->texture_tile_size_ult;
     key.line = stats->texture_render_tile_line;
     key.flags = stats->texture_render_tile_flags |
-        ((stats->texture_mask &
-          (NDS_RENDERER_TEXTURE_LOADBLOCK |
-           NDS_RENDERER_TEXTURE_LOADTILE)) << 8);
+        (stats->texture_load_kind << 8);
 
     if ((sNdsRendererHardwareTextureReady != 0u) &&
         (ndsRendererHardwareTextureKeyEqual(
@@ -2227,7 +2283,7 @@ static s32 ndsRendererHardwareBindTexture(
         return FALSE;
     }
     texels_src = ndsRendererResolveTextureDataPointer(
-        config, (const void *)(uintptr_t)stats->texture_image, bytes);
+        config, (const void *)(uintptr_t)stats->texture_image, source_bytes);
     if (texels_src == NULL)
     {
         stats->hardware_texture_reject_count++;
@@ -2267,7 +2323,8 @@ static s32 ndsRendererHardwareBindTexture(
     {
         for (x = 0u; x < width; x++)
         {
-            u32 src_index = (y * width) + x;
+            u32 src_index =
+                ((source_origin_t + y) * source_width) + source_origin_s + x;
             u32 dst_index = (y * upload_width) + x;
             sNdsRendererHardwareTextureScratch[dst_index] =
                 ndsRendererHardwareTextureColor(format, size, texels_src,
@@ -2442,6 +2499,8 @@ static void ndsRendererHardwareSubmitVertex(
     s32 use_texture,
     u32 scale_s,
     u32 scale_t,
+    u32 texture_origin_s,
+    u32 texture_origin_t,
     s32 texture_offset,
     u32 scale_world,
     s32 zbuffered,
@@ -2459,8 +2518,10 @@ static void ndsRendererHardwareSubmitVertex(
     if (use_texture != FALSE)
     {
         glTexCoord2t16(ndsRendererHardwareTexCoord(vtx->s, scale_s,
+                                                   texture_origin_s,
                                                    texture_offset),
                        ndsRendererHardwareTexCoord(vtx->t, scale_t,
+                                                   texture_origin_t,
                                                    texture_offset));
     }
     if ((zbuffered != FALSE) &&
@@ -2624,18 +2685,21 @@ static void ndsRendererSubmitHardwareTriangle(
     ndsRendererHardwareSubmitVertex(
         v0, &state->vertices[i0], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
-        stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        decal_depth, prim_depth, projected_z);
+        stats->texture_scale_t, stats->texture_tile_size_uls,
+        stats->texture_tile_size_ult, texture_offset, scale_world,
+        zbuffered, decal_depth, prim_depth, projected_z);
     ndsRendererHardwareSubmitVertex(
         v1, &state->vertices[i1], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
-        stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        decal_depth, prim_depth, projected_z);
+        stats->texture_scale_t, stats->texture_tile_size_uls,
+        stats->texture_tile_size_ult, texture_offset, scale_world,
+        zbuffered, decal_depth, prim_depth, projected_z);
     ndsRendererHardwareSubmitVertex(
         v2, &state->vertices[i2], material_color, use_material_color,
         use_vertex_color, use_texture, stats->texture_scale_s,
-        stats->texture_scale_t, texture_offset, scale_world, zbuffered,
-        decal_depth, prim_depth, projected_z);
+        stats->texture_scale_t, stats->texture_tile_size_uls,
+        stats->texture_tile_size_ult, texture_offset, scale_world,
+        zbuffered, decal_depth, prim_depth, projected_z);
     glEnd();
     glDisable(GL_ALPHA_TEST);
 

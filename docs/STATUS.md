@@ -76,8 +76,10 @@ constant-alpha muxes, alpha-only `TEXEL0` texture binding, 2-cycle
 final-output material color/alpha selection, 2-cycle `COMBINED` color
 fallback, `G_LOADTILE` texture-load state, and `G_SETPRIMDEPTH` / `G_ZS_PRIM`
 primitive-depth state. It also treats blend alpha-memory as an exact
-cycle-aware two-bit field.
-Latest captures: `artifacts\renderer-stage-gcdrawall-hw-loadtile.png` and
+cycle-aware two-bit field, and keeps `LOADBLOCK` uploads contiguous while
+sampling `LOADTILE` sub-rects with source image stride and tile-origin-adjusted
+GX texture coordinates.
+Latest captures: `artifacts\renderer-stage-gcdrawall-hw-tile-origin.png` and
 `artifacts\renderer-menu-chain-stage-gcdrawall-hw.png`. The
 opt-in all-DL verifier proves `hwdepth=z260/217/proj0/0/decal0/0` and
 `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`; the opt-in Pupupu stage

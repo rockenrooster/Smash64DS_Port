@@ -16555,3 +16555,27 @@ Still deferred:
   hardware stage gate reports `hwsubmit=252`, `hwtri=1140`,
   `hwdepth=z456/proj684/decal0`, and
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+
+## 2026-07-03 - Hardware Texture Tile Origin
+
+- Split the opt-in hardware texture upload path on the current source load
+  command: `LOADBLOCK` keeps the existing contiguous uploaded block, while
+  `LOADTILE` samples the source image with `SETTIMG` row stride and the
+  `G_SETTILESIZE` tile origin. GX texture coordinates now subtract that tile
+  origin before applying the source texture scale. This follows BattleShip GBI
+  packing: `gSetImage` stores `(width)-1`
+  (`decomp/BattleShip-main/decomp/include/PR/gbi.h:3040-3047`),
+  block loaders use a contiguous image width of `1`
+  (`gbi.h:3416-3430`), and tile loaders preserve `(uls,ult)` through
+  `G_LOADTILE` / `G_SETTILESIZE` (`gbi.h:3922-3946,4056-4080`). sm64-nds uses
+  the same GX coordinate submission shape but ignores `G_SETTILESIZE`
+  (`decomp/sm64-nds/src/nds/nds_renderer.c:352,1016`), so this is the local
+  BattleShip source-stride extension.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-tile-origin.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Current proof scenes still
+  report all-DL `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8` and
+  Pupupu stage `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.

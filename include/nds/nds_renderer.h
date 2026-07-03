@@ -193,6 +193,7 @@ typedef struct NDSRendererStats
     u32 geometry_set_mask;
     u32 geometry_command_count;
     u32 texture_mask;
+    u32 texture_load_kind;
     u32 texture_command_count;
     u32 texture_scale_s;
     u32 texture_scale_t;

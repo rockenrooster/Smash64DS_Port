@@ -54,8 +54,10 @@ source texture, two-cycle color output falls back through `COMBINED` for
 cycle-aware two-bit field instead of a cycle-1-only bit test. The renderer also
 decodes `G_LOADTILE` texture-load windows, and decodes `G_SETPRIMDEPTH` to
 route source `G_ZS_PRIM` triangles through the existing projected hardware
-vertex path with the source primitive Z value.
-Current captures: `artifacts\renderer-stage-gcdrawall-hw-loadtile.png`,
+vertex path with the source primitive Z value. Hardware texture upload now
+keeps `LOADBLOCK` data contiguous and uses source image stride plus tile-origin
+adjusted GX texture coordinates for `LOADTILE` sub-rects.
+Current captures: `artifacts\renderer-stage-gcdrawall-hw-tile-origin.png`,
 `artifacts\renderer-menu-chain-stage-gcdrawall-hw.png`, and
 `artifacts\battle-mariofox-dl-draw-all-hwtri.png`. The opt-in all-DL verifier
 reports `hwdepth=z260/217/proj0/0/decal0/0` and `hwtex=bind16/upload1/ready16/reject0/fmt0x4/max8x8`;
