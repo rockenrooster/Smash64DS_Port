@@ -659,6 +659,12 @@ VSBattle boundary, creates asset-backed Mario/Fox GObjs with persistent
 `FTStruct` shells, runs the bounded source-order init helper, and verifies
 damage/shield/GA/floor projection/deferred runtime markers.
 
+With `-ImportBattleShipFTManager`, the same verifier builds
+`TARGET=smash64ds-battle-mariofox-init-ftmanager
+BUILD=build-battle-mariofox-init-ftmanager-harness
+NDS_IMPORT_BATTLESHIP_FTMANAGER=1` and proves the fenced original
+`ftmanager.c` Mario/Fox creation path without changing the default manager.
+
 `verify-menu-chain-mariofox-init-harness.ps1` builds
 `TARGET=smash64ds-menu-chain-mariofox-init
 BUILD=build-menu-chain-mariofox-init-harness
@@ -1326,6 +1332,21 @@ Opening movie / Opening Portraits:
   harnesses; setup-only VSBattle harnesses still use stub fighter GObjs.
 - `gNdsFighterModelProcessDeferredCount`: expected at least `2`, documenting
   that real fighter processes/gameplay remain parked after model GObj creation.
+- `gNdsFighterManagerResult`: expected `0x46544D47` (`FTMG`) only in the
+  fenced `-ImportBattleShipFTManager` init proof.
+- `gNdsFighterManagerMask`: expected `0xFF`, covering manager extern payloads,
+  status-buffer payloads, nonzero figatree heap, both Mario/Fox fighters,
+  `dFTManagerDataFiles` ownership, source Entry/Wait status ownership, and
+  repeated status-buffer hits.
+- `gNdsFighterManagerExternMask` / `StatusBufferMask`: expected `0xF` and
+  `0x1FFF`, respectively, for the Mario/Fox manager/common/mainmotion/submotion
+  file set loaded through `lbRelocGetStatusBufferFile` semantics.
+- `gNdsFighterManagerFighterMask` / `DataMask` / `EntryMask`: expected `0x3`;
+  the normal VSBattle descriptors install Entry, not Wait, because source
+  `ftdata.c:75-96` leaves `is_skip_entry` false and `ftmanager.c:867-899`
+  chooses Entry unless that flag is set.
+- `gNdsFighterManagerStatusBufferHitCount` / `FighterCount` /
+  `FigatreeHeapSize`: currently `29`, `2`, and `68` in the fenced proof.
 - `gNdsFighterModelP0*` / `P1*`: model proof details for Mario/Fox fighter
   kind, GObj ID, top DObj readiness, DObj/MObj/AObj counts, and display
   callback attachment. Current direct proof records `p0DObjs=25` and

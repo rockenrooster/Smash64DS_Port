@@ -60,18 +60,23 @@
 - The imported `ftMainSetStatus` path still contains two deliberate
   duplicate-behavior seams: stage compat replay in the imported post-hook and
   the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Delete them
-  status-by-status as the original status descriptor path graduates; do not
-  treat either hook as a completed subsystem. The fighter animation/status
-  scout in `docs/FT_ANIM_STATUS_SCOUT.md` shows that full `ftmanager.c` and
-  status-table graduation first needs original `FTData`/`ftdata.c` plus
-  `lbRelocGetStatusBufferFile` semantics for the fighter payloads.
+  status-by-status as original status descriptors graduate; do not treat either
+  hook as a completed subsystem.
 - `ft/ftdata.c` is imported, but its particle ROM banks are link stubs in
   `src/port/reloc_backend_ftdata_stubs.c` because the current DS O2R manifest
   has no particle bank assets. The generated
   `src/port/reloc_backend_ftdata_symbols.c` also lists every upstream-stubbed
   fighter submotion `ll*` token that BattleShip's US reloc symbol table leaves
-  at zero. Mario/Fox manager payload file IDs are real; broader fighter
-  submotion asset loading remains a later slice.
+  at zero. Mario/Fox manager payloads load for the fenced `ftmanager.c` proof;
+  non-Mario/Fox broader fighter payloads may still fail-soft until future
+  slices import their active runtime.
+- Full `ftmanager.c` is compile/proof-only behind
+  `NDS_IMPORT_BATTLESHIP_FTMANAGER=1`. The fenced proof loads Mario/Fox extern
+  and status-buffer payloads through `lbRelocGetStatusBufferFile`, creates both
+  fighters through original `ftmanager.c`, and records the source Entry path
+  plus figatree heap sizing. Default builds still use the DS manager,
+  motion-extract seams, and trimmed status tables until runtime slice 2
+  graduates the manager/status/animation subsystem.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and

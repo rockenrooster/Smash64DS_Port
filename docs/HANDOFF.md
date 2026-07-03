@@ -83,6 +83,15 @@ current `master` after the renderer follow-ups. The regression-cycle fix
 preserves the first selected cross-floor target match so later wall/cliff MP
 updates cannot erase motion-stale proof evidence.
 
+The fighter-data asset slice is also landed. `FTData` matches BattleShip
+`fttypes.h:86-118`, `ft/ftdata.c` is imported whole, and
+`lbRelocGetStatusBufferFile` loads Mario/Fox status-buffer files through
+O2R/NitroFS. The fenced `NDS_IMPORT_BATTLESHIP_FTMANAGER=1` proof creates both
+fighters through original `ftmanager.c` with `extern=0xf`, `status=0x1fff`,
+fighter/data masks `0x3`, Entry mask `0x3`, and figatree heap `68`. Default
+builds still use DS manager/motion seams until runtime slice 2 graduates the
+manager/status/animation path.
+
 ## Process Change
 
 Future gameplay slices should import one whole BattleShip TU, or a coherent
@@ -94,9 +103,9 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Runtime follow-up: use `docs/FT_ANIM_STATUS_SCOUT.md` for the fighter
-   animation/status asset slice. Full `ftmanager.c` and original status tables
-   need original `FTData`/`ftdata.c` plus `lbRelocGetStatusBufferFile`.
+1. Runtime follow-up: graduate fenced `ftmanager.c`, original status tables,
+   and live `ftanim.c`/`ftanimend.c`/`ftkey.c`; prove natural Entry/Wait/Walk
+   motion and delete the DS manager/motion seams as source paths take over.
 2. Renderer follow-up: finish opt-in hardware combiner/material policy, broaden
    remaining texture-state and no-z/decal/prim-depth source-scene coverage, then
    plan renderer cutover.

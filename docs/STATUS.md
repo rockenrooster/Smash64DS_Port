@@ -68,6 +68,15 @@ selected cross-floor target match so later wall/cliff MP updates cannot erase
 the motion-stale evidence. Details are in `docs/FTSTRUCT_PARITY.md` and
 `docs/KNOWN_ISSUES.md`.
 
+The fighter-data asset slice landed: `FTData` now matches BattleShip
+`fttypes.h:86-118`, `ft/ftdata.c` is imported whole, and
+`lbRelocGetStatusBufferFile` loads Mario/Fox status-buffer payloads through the
+O2R/NitroFS path. With `NDS_IMPORT_BATTLESHIP_FTMANAGER=1`, the fenced manager
+proof creates both fighters through original `ftmanager.c`, records
+`extern=0xf`, `status=0x1fff`, fighter/data masks `0x3`, Entry mask `0x3`,
+and figatree heap `68`. Default builds still use the DS manager/motion seams
+until runtime slice 2 graduates the original manager/status/animation path.
+
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 It covers BattleShip billboard/recalc matrix seeds, stage-inclusive submission,
 material branch packets, CI/IA/I/RGBA textures, culling, depth/fog/alpha state,
@@ -89,10 +98,10 @@ Latest gameplay proof remains the TaruCannon status `61` setup/physics tick.
 ## Current Blocker
 
 The active boundary is still bounded proof scaffolding, not continuous gameplay.
-The next useful gameplay work is not another proof bit. It is the
-`docs/FT_ANIM_STATUS_SCOUT.md` asset slice: expand original `FTData`/`ftdata.c`
-and status-buffer loading so BattleShip `ftmanager.c` plus full status tables
-can replace the current Mario/Fox manager and motion-script seams.
+The next useful gameplay work is runtime slice 2 completion: graduate fenced
+BattleShip `ftmanager.c`, swap in original status tables, run
+`ftanim.c`/`ftanimend.c`/`ftkey.c` live, prove natural Entry/Wait/Walk motion,
+and delete the DS manager/motion seams as source-owned paths take over.
 
 - renderer follow-up: finish opt-in hardware combiner/material policy,
   broaden remaining texture-state and no-z/decal/prim-depth source-scene

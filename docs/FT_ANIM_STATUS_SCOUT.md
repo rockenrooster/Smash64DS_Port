@@ -62,15 +62,17 @@ relocation ownership.
 
 ## Result
 
-The fighter-data asset slice has now unblocked the data half: `FTData` matches
-the BattleShip layout, `ft/ftdata.c` is imported whole, and the tiny
+The fighter-data asset slice is now unblocked. `FTData` matches BattleShip
+`fttypes.h:86-118`, `ft/ftdata.c` is imported whole, and the tiny
 `ftchar/*/*.c` storage TUs plus `sc/scsubsys/scsubsysdata*.c` descriptor data
-provide `dFTManagerDataFiles` and the Mario/Fox submotion descriptors. The
-remaining manager blocker is runtime ownership: implement
-`lbRelocGetStatusBufferFile` semantics for the Mario/Fox payloads, then compile
-and prove fenced `ftmanager.c` without deleting the current DS manager/motion
-seams yet.
+provide `dFTManagerDataFiles` and the Mario/Fox submotion descriptors.
+`lbRelocGetStatusBufferFile` now loads Mario/Fox manager/status payloads through
+the O2R/NitroFS path, and fenced `ftmanager.c` proves original fighter creation
+for Mario/Fox under `NDS_IMPORT_BATTLESHIP_FTMANAGER=1`.
 
-Do not replace the current status table or delete the manager/motion seams
-until the fenced manager proof is green; otherwise the build would either fail
-to link or silently run a hand-authored manager under original status names.
+The fenced proof source-correctly reaches Entry rather than Wait for the normal
+VSBattle descriptors because `ftdata.c:75-96` leaves `is_skip_entry` false and
+`ftmanager.c:867-899` installs Entry unless that flag is set. Runtime slice 2
+should graduate the original manager/status/animation path, then prove natural
+Entry -> Wait and Wait -> Walk motion before deleting the current DS manager and
+motion-extract seams.

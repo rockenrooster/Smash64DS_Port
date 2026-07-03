@@ -16631,3 +16631,25 @@ Still deferred:
   stubs, and upstream-stubbed fighter submotion tokens remain zero in the
   generated reloc-symbol source. Mario/Fox main manager payload file IDs remain
   real and are the target for the fenced `ftmanager.c` proof.
+
+## 2026-07-03 - Fenced BattleShip ftmanager Proof
+
+- Implemented the BattleShip status-buffer loading contract for the port reloc
+  layer: `lbRelocGetStatusBufferFile` now maps caller file-ID tokens through the
+  existing O2R/NitroFS assets, allocates status buffers, and records the loaded
+  Mario/Fox manager payloads. The fenced path also supports the recursive extern
+  tree shape BattleShip `lbreloc.c:134-206,208-272` uses for manager/common
+  file dependencies.
+- Added `NDS_IMPORT_BATTLESHIP_FTMANAGER=1` and imported `ft/ftmanager.c` whole
+  through `src/import/battleship_ftmanager.c` for a proof-only build. The
+  fenced init verifier creates Mario/Fox through original `ftmanager.c`, with
+  `extern=0xf`, `status=0x1fff`, fighter/data masks `0x3`, Entry mask `0x3`,
+  status-buffer hits `29`, fighter count `2`, and figatree heap `68`.
+- The proof expects Entry rather than Wait because normal BattleShip VSBattle
+  descriptors leave `is_skip_entry` false (`ftdata.c:75-96`) and
+  `ftmanager.c:867-899` installs Entry unless that flag is set. No verifier
+  expectations were relaxed.
+- Verified the default init/wait/dash-run ladder, `.\scripts\verify-boundary.ps1
+  -DelaySeconds 3`, `.\scripts\verify-stage-mplivehit-continuous-runtime.ps1
+  -DelaySeconds 3`, a fresh Regression prebuild, and all four sharded
+  Regression `-NoBuild` runs.
