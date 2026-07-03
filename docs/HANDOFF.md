@@ -47,8 +47,10 @@ uploads, material color/alpha, source culling, reset geometry/filter seeds,
 sm64-nds-style no-z / decal-depth submission, F3DEX
 `G_FOG`/`G_MW_FOG`/`G_SETFOGCOLOR` -> DS fog state, and `G_SETBLENDCOLOR`
 alpha / `G_AC_THRESHOLD` -> DS alpha-test threshold state, plus BattleShip
-`G_ACMUX_0`/`G_ACMUX_1` constant-alpha mux handling.
+`G_ACMUX_0`/`G_ACMUX_1` constant-alpha mux handling and 2-cycle final-output
+material color selection.
 Current captures:
+`artifacts\renderer-stage-gcdrawall-hw-cycle2-combine.png`,
 `artifacts\renderer-stage-gcdrawall-hw-alpha-mux.png`,
 `artifacts\renderer-stage-gcdrawall-hw-blend-alpha.png`,
 `artifacts\renderer-stage-gcdrawall-hw-fogstate.png`, and

@@ -16394,3 +16394,25 @@ Still deferred:
   depth is `hwdepth=z260/217/proj0/0/decal0/0`; the Pupupu stage hardware path
   now reports constant-alpha-pruned `hwtri=1140` and
   `hwdepth=z456/proj684/decal0`.
+
+## 2026-07-03 - Hardware 2-Cycle Color Output
+
+- Made opt-in hardware material-color selection honor source `G_CYC_2CYCLE` by
+  reading the second combine cycle's final color output fields for prim/env
+  material decisions. Texture and shade scans now cover both cycles so
+  BattleShip two-cycle display lists can keep their first-cycle texture input
+  while using the final cycle for the hardware vertex/material color choice.
+  BattleShip defines the cycle-type field in
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h:608,617-620` and the combine
+  packing in `decomp/BattleShip-main/decomp/include/PR/gbi.h:3088-3123`; the
+  fighter collision/fog display paths use 2-cycle state in
+  `decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c:203,207,1176`.
+- Verified `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`,
+  captured `artifacts\renderer-stage-gcdrawall-hw-cycle2-combine.png`, passed
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and passed
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Hardware counters stayed at
+  the current alpha-pruned values: all-DL `hwdepth=z260/217/proj0/0/decal0/0`
+  and Pupupu stage `hwsubmit=252`, `hwtri=1140`,
+  `hwdepth=z456/proj684/decal0`.

@@ -94,6 +94,9 @@
 #define NDS_RENDERER_ACMUX_ENVIRONMENT 5u
 #define NDS_RENDERER_ACMUX_1 6u
 #define NDS_RENDERER_ACMUX_0 7u
+#define NDS_RENDERER_MDSFT_CYCLETYPE 20u
+#define NDS_RENDERER_CYCLETYPE_MASK (3u << NDS_RENDERER_MDSFT_CYCLETYPE)
+#define NDS_RENDERER_CYC_2CYCLE (1u << NDS_RENDERER_MDSFT_CYCLETYPE)
 #define NDS_RENDERER_MDSFT_TEXTFILT 12u
 #define NDS_RENDERER_TF_POINT (0u << NDS_RENDERER_MDSFT_TEXTFILT)
 #define NDS_RENDERER_TF_BILERP (2u << NDS_RENDERER_MDSFT_TEXTFILT)
@@ -1302,13 +1305,48 @@ static s32 ndsRendererCombineUsesColor(u32 w0, u32 w1, u32 source)
     return ((((w0 >> 20) & 0x0fu) == source) ||
             (((w1 >> 28) & 0x0fu) == source) ||
             (((w0 >> 15) & 0x1fu) == source) ||
-            (((w1 >> 15) & 0x07u) == source)) ? TRUE : FALSE;
+            (((w1 >> 15) & 0x07u) == source) ||
+            (((w0 >> 5) & 0x0fu) == source) ||
+            (((w1 >> 24) & 0x0fu) == source) ||
+            (((w0 >> 0) & 0x1fu) == source) ||
+            (((w1 >> 6) & 0x07u) == source)) ? TRUE : FALSE;
 }
 
 static s32 ndsRendererCombineOutputUsesColor(u32 w0, u32 w1, u32 source)
 {
     return ((((w0 >> 15) & 0x1fu) == source) ||
             (((w1 >> 15) & 0x07u) == source)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererCombineSecondOutputUsesColor(u32 w0, u32 w1,
+                                                   u32 source)
+{
+    return ((((w0 >> 0) & 0x1fu) == source) ||
+            (((w1 >> 6) & 0x07u) == source)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererHardwareUseSecondCycle(const NDSRendererStats *stats)
+{
+    return ((stats != NULL) &&
+            ((stats->othermode_h & NDS_RENDERER_CYCLETYPE_MASK) ==
+             NDS_RENDERER_CYC_2CYCLE)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererHardwareOutputUsesColor(const NDSRendererStats *stats,
+                                              u32 source)
+{
+    u32 w0;
+    u32 w1;
+
+    if ((stats == NULL) || (stats->texture_combine_count == 0u))
+    {
+        return FALSE;
+    }
+    w0 = stats->texture_combine_w0;
+    w1 = stats->texture_combine_w1;
+    return (ndsRendererHardwareUseSecondCycle(stats) != FALSE) ?
+        ndsRendererCombineSecondOutputUsesColor(w0, w1, source) :
+        ndsRendererCombineOutputUsesColor(w0, w1, source);
 }
 
 static s32 ndsRendererCombineUsesAlpha(u32 w0, u32 w1, u32 source)
@@ -1367,16 +1405,13 @@ static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
 {
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
-        u32 w0 = stats->texture_combine_w0;
-        u32 w1 = stats->texture_combine_w1;
-
-        if (ndsRendererCombineOutputUsesColor(
-                w0, w1, NDS_RENDERER_CCMUX_ENVIRONMENT) != FALSE)
+        if (ndsRendererHardwareOutputUsesColor(
+                stats, NDS_RENDERER_CCMUX_ENVIRONMENT) != FALSE)
         {
             return stats->env_color;
         }
-        if (ndsRendererCombineOutputUsesColor(
-                w0, w1, NDS_RENDERER_CCMUX_PRIMITIVE) != FALSE)
+        if (ndsRendererHardwareOutputUsesColor(
+                stats, NDS_RENDERER_CCMUX_PRIMITIVE) != FALSE)
         {
             return stats->prim_color;
         }
@@ -1388,13 +1423,10 @@ static s32 ndsRendererHardwareUseMaterialColor(const NDSRendererStats *stats)
 {
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
-        u32 w0 = stats->texture_combine_w0;
-        u32 w1 = stats->texture_combine_w1;
-
-        return ((ndsRendererCombineOutputUsesColor(
-                     w0, w1, NDS_RENDERER_CCMUX_ENVIRONMENT) != FALSE) ||
-                (ndsRendererCombineOutputUsesColor(
-                     w0, w1, NDS_RENDERER_CCMUX_PRIMITIVE) != FALSE)) ?
+        return ((ndsRendererHardwareOutputUsesColor(
+                     stats, NDS_RENDERER_CCMUX_ENVIRONMENT) != FALSE) ||
+                (ndsRendererHardwareOutputUsesColor(
+                     stats, NDS_RENDERER_CCMUX_PRIMITIVE) != FALSE)) ?
             TRUE : FALSE;
     }
     return FALSE;
