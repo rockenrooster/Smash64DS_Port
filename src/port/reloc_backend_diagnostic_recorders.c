@@ -170,6 +170,16 @@ static sb32 ndsFTMainSetStatusCliffLive(GObj *fighter_gobj, s32 status_id,
     return TRUE;
 }
 
+sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
+                                                       s32 status_id,
+                                                       f32 frame_begin,
+                                                       f32 anim_speed,
+                                                       u32 flags)
+{
+    return ndsFTMainSetStatusCliffLive(fighter_gobj, status_id, frame_begin,
+                                       anim_speed, flags);
+}
+
 static sb32 ndsFTMainSetStatusDamageHarness(GObj *fighter_gobj,
                                             s32 status_id, f32 frame_begin,
                                             f32 anim_speed, u32 flags)
@@ -238,6 +248,90 @@ static sb32 ndsFTMainSetStatusDamageHarness(GObj *fighter_gobj,
         }
     }
     return TRUE;
+}
+
+static void ndsFTMainSetStatusCompatHarness(GObj *fighter_gobj,
+                                            s32 status_id, f32 frame_begin,
+                                            f32 anim_speed, u32 flags);
+
+static sb32 ndsFTMainSetStatusStageCompatActive(void)
+{
+    return
+        (sNdsStageMPCeilStatusFloorLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffAttackActionLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffAttackFloorLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffCatchFloorLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffClimbActionLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffClimbFinishLoopUpdateActive != FALSE) ||
+        (sNdsStageMPCliffClimbFloorLoopRecatchSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffClimbFloorLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffEscapeActionLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE) ||
+        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE) ||
+        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE) ||
+        (sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffWaitDamageLoopDownStandSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffWaitDamageLoopDownWaitSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffWaitDamageLoopPassiveStandUpdateActive != FALSE) ||
+        (sNdsStageMPCliffWaitDamageLoopPassiveUpdateActive != FALSE) ||
+        (sNdsStageMPCliffWaitDamageLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPCliffWaitFloorLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopAttackUpdateActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopDownAttackSetStatusActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopDownStandSetStatusActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopDownStandUpdateActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopDownWaitSetStatusActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopRollBackUpdateActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
+        (sNdsStageMPDownRecoverLoopRollForwardUpdateActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopAttackUpdateActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopDownAttackSetStatusActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopDownStandSetStatusActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopDownStandUpdateActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopDownWaitSetStatusActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopRollBackUpdateActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
+        (sNdsStageMPDownWaitLoopRollForwardUpdateActive != FALSE) ||
+        (sNdsStageMPFallLandFloorLoopSetStatusActive != FALSE) ||
+        (sNdsStageMPLiveHitStatusLoopCliffCatchSetStatusActive != FALSE) ||
+        (sNdsStageMPLiveHitStatusLoopDownBounceSetStatusActive != FALSE) ||
+        (sNdsStageMPPassInputLoopStatusActive != FALSE) ||
+        (sNdsStageMPPassiveLoopAppealActive != FALSE) ||
+        (sNdsStageMPPassiveLoopAppealGuardActive != FALSE) ||
+        (sNdsStageMPPassiveLoopBranchProbeActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCaptureActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCaptureMapActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCapturePhysicsActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCaptureWaitMapActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCatchActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCatchMapActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCatchPullActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCatchPullUpdateActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCatchUpdateActive != FALSE) ||
+        (sNdsStageMPPassiveLoopCatchWaitInterruptActive != FALSE) ||
+        (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE) ||
+        (sNdsStageMPPassiveLoopPassiveCallbackActive != FALSE) ||
+        (sNdsStageMPPassiveLoopPassiveSetStatusActive != FALSE) ||
+        (sNdsStageMPPassiveLoopPassiveStandBActive != FALSE) ||
+        (sNdsStageMPPassiveLoopPassiveStandCallbackActive != FALSE) ||
+        (sNdsStageMPPassiveLoopPassiveStandSetStatusActive != FALSE) ||
+        (sNdsStageMPPassiveLoopPassiveStandUpdateActive != FALSE) ||
+        (sNdsStageMPPassiveLoopPassiveUpdateActive != FALSE) ||
+        (sNdsStageMPPassiveLoopReboundActive != FALSE) ||
+        (sNdsStageMPPassiveLoopReboundUpdateActive != FALSE) ||
+        (sNdsStageMPPassiveLoopThrowActive != FALSE) ||
+        (sNdsStageMPPassiveLoopThrowCallbackImmediateActive != FALSE) ||
+        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE) ||
+        (sNdsStageMPPassiveLoopThrowProcStatusActive != FALSE) ||
+        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE) ||
+        (sNdsStageMPPassiveLoopThrowReleaseStatusActive != FALSE) ||
+        (sNdsStageMPPassiveLoopThrowUpdateActive != FALSE) ||
+        (sNdsStageMPPassiveLoopWallDamageActive != FALSE) ||
+        (sNdsStageTurnLoopFinalUpdateActive != FALSE) ||
+        (sNdsStageTurnLoopSetStatusActive != FALSE);
 }
 
 static void ndsFighterDashRunDecodeAttackEvent(GObj *fighter_gobj,
@@ -435,7 +529,8 @@ void ndsDiagnosticsRecordImportedFTMainAnimEvents(GObj *fighter_gobj)
 
 void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
                                                 s32 status_id,
-                                                f32 frame_begin)
+                                                f32 frame_begin,
+                                                f32 anim_speed, u32 flags)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     s32 motion_id;
@@ -447,6 +542,20 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
     if (fp == NULL)
     {
         return;
+    }
+
+    if ((status_id != nFTCommonStatusWait) &&
+        (ndsFTMainSetStatusStageCompatActive() != FALSE))
+    {
+        sNdsFTMainSetStatusCompatReplayActive = TRUE;
+        ndsFTMainSetStatusCompatHarness(fighter_gobj, status_id,
+                                        frame_begin, anim_speed, flags);
+        sNdsFTMainSetStatusCompatReplayActive = FALSE;
+        fp = ftGetStruct(fighter_gobj);
+        if (fp == NULL)
+        {
+            return;
+        }
     }
 
     if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
@@ -722,6 +831,38 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
         handled_status = TRUE;
     }
 
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+    if ((handled_status == FALSE) &&
+        (ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageFallSetStatusFromDamageActive != FALSE) &&
+        (status_id == nFTCommonStatusDamageFall) &&
+        (fp->status_id == nFTCommonStatusDamageFall) &&
+        (fp->motion_id == nFTCommonMotionDamageFall) &&
+        (fp->ga == nMPKineticsAir) &&
+        (fp->proc_interrupt == ftCommonDamageFallProcInterrupt) &&
+        (fp->proc_physics == ftPhysicsApplyAirVelDriftFastFall) &&
+        (fp->proc_map == ftCommonDamageFallProcMap))
+    {
+        sNdsFighterDashRunDamageFallFTMainSetStatusCount++;
+        handled_status = TRUE;
+    }
+    if ((handled_status == FALSE) &&
+        (ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopWallDamageFallSetStatusFromDamageActive !=
+            FALSE) &&
+        (status_id == nFTCommonStatusDamageFall) &&
+        (fp->status_id == nFTCommonStatusDamageFall) &&
+        (fp->motion_id == nFTCommonMotionDamageFall) &&
+        (fp->ga == nMPKineticsAir) &&
+        (fp->proc_interrupt == ftCommonDamageFallProcInterrupt) &&
+        (fp->proc_physics == ftPhysicsApplyAirVelDriftFastFall) &&
+        (fp->proc_map == ftCommonDamageFallProcMap))
+    {
+        sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount++;
+        handled_status = TRUE;
+    }
+#endif
+
     if (handled_status != FALSE)
     {
         return;
@@ -765,6 +906,9 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
     {
         return;
     }
+
+    fp->is_wait_status_setup = TRUE;
+    fp->is_wait_motion_setup = TRUE;
 
     if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
         (sNdsFighterJumpRunBrakeEndActive != FALSE))
@@ -815,11 +959,44 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
     {
         gNdsStageMPDownRecoverLoopWaitSetStatusCount++;
     }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveStandWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopReboundUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopReboundFinalWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveStandUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveStandWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFinishLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFinishLoopUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFinishLoopWaitSetStatusCount++;
+    }
 }
 
-#if !NDS_IMPORT_BATTLESHIP_FTMAIN
-void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
-                     f32 frame_begin, f32 anim_speed, u32 flags)
+static void ndsFTMainSetStatusCompatHarness(GObj *fighter_gobj,
+                                            s32 status_id, f32 frame_begin,
+                                            f32 anim_speed, u32 flags)
 {
     FTStruct *fp;
 
@@ -4196,11 +4373,52 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     {
         gNdsStageMPDownRecoverLoopWaitSetStatusCount++;
     }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveStandUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveStandWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopPassiveUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopPassiveWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
+        (sNdsStageMPPassiveLoopReboundUpdateActive != FALSE))
+    {
+        gNdsStageMPPassiveLoopReboundFinalWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveStandUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveStandWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffWaitDamageLoopPassiveUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffWaitDamageLoopPassiveWaitSetStatusCount++;
+    }
+    if ((ndsFighterMarioFoxStageMPCliffClimbFinishLoopProofEnabled() !=
+            FALSE) &&
+        (sNdsStageMPCliffClimbFinishLoopUpdateActive != FALSE))
+    {
+        gNdsStageMPCliffClimbFinishLoopWaitSetStatusCount++;
+    }
 
     if (fighter_gobj != NULL)
     {
         fighter_gobj->anim_frame = frame_begin;
     }
+}
+
+#if !NDS_IMPORT_BATTLESHIP_FTMAIN
+void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
+                     f32 frame_begin, f32 anim_speed, u32 flags)
+{
+    ndsFTMainSetStatusCompatHarness(fighter_gobj, status_id, frame_begin,
+                                    anim_speed, flags);
 }
 #endif
 
@@ -4502,7 +4720,290 @@ s32 ftParamGetCapturedDamage(FTStruct *fp, s32 damage)
     return (s32)((damage * fp->damage_mul) + 0.999F);
 }
 
-#if !NDS_IMPORT_BATTLESHIP_FTMAIN
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+static sb32 sNdsStageMPLiveHitDamageLoopShieldStatProofActive = FALSE;
+
+extern sb32 battleship_ftMainCheckGetUpdateDamage(FTStruct *fp,
+                                                  s32 *damage);
+extern void battleship_ftMainPlayHitSFX(FTStruct *fp,
+                                        FTAttackColl *attack_coll);
+extern void battleship_ftMainUpdateDamageStatFighter(
+    FTStruct *attacker_fp, FTAttackColl *attack_coll, FTStruct *victim_fp,
+    FTDamageColl *damage_coll, GObj *attacker_gobj, GObj *victim_gobj);
+extern void battleship_ftMainSetHitRebound(GObj *attacker_gobj,
+                                           FTStruct *fp,
+                                           FTAttackColl *attack_coll,
+                                           GObj *victim_gobj);
+extern void battleship_ftMainUpdateAttackStatFighter(
+    FTStruct *other_fp, FTAttackColl *other_hit, FTStruct *this_fp,
+    FTAttackColl *this_hit, GObj *other_gobj, GObj *this_gobj);
+extern void battleship_ftMainUpdateShieldStatFighter(
+    FTStruct *attacker_fp, FTAttackColl *attack_coll, FTStruct *victim_fp,
+    GObj *attacker_gobj, GObj *victim_gobj);
+extern void battleship_ftMainUpdateCatchStatFighter(
+    FTStruct *attacker_fp, FTAttackColl *attack_coll, FTStruct *victim_fp,
+    GObj *attacker_gobj, GObj *victim_gobj);
+extern void battleship_ftMainProcessHitCollisionStatsMain(
+    GObj *fighter_gobj);
+extern sb32 battleship_ftMainCheckAddGroundObstacle(
+    GObj *gobj, sb32 (*proc_update)(GObj *, GObj *, s32 *));
+extern void battleship_ftMainClearGroundObstacle(GObj *gobj);
+extern void battleship_ftMainSetHitHazard(GObj *gobj, GObj *fighter_gobj,
+                                          FTStruct *fp, s32 kind);
+extern void battleship_ftMainSearchHitHazard(GObj *fighter_gobj);
+extern void battleship_ftMainSearchHitFighter(GObj *this_gobj);
+extern void battleship_ftMainSearchFighterCatch(GObj *this_gobj);
+extern void battleship_ftMainProcSearchCatch(GObj *fighter_gobj);
+extern void battleship_ftMainSearchHitItem(GObj *fighter_gobj);
+extern void battleship_ftMainSearchHitWeapon(GObj *fighter_gobj);
+extern void battleship_ftMainSearchGroundHit(GObj *fighter_gobj);
+extern void battleship_ftMainProcSearchHitAll(GObj *fighter_gobj);
+extern void battleship_ftMainProcParams(GObj *fighter_gobj);
+
+sb32 ftMainCheckGetUpdateDamage(FTStruct *fp, s32 *damage)
+{
+    return battleship_ftMainCheckGetUpdateDamage(fp, damage);
+}
+
+void ftMainPlayHitSFX(FTStruct *fp, FTAttackColl *attack_coll)
+{
+    battleship_ftMainPlayHitSFX(fp, attack_coll);
+}
+
+void ftMainUpdateDamageStatFighter(FTStruct *attacker_fp,
+                                   FTAttackColl *attack_coll,
+                                   FTStruct *victim_fp,
+                                   FTDamageColl *damage_coll,
+                                   GObj *attacker_gobj,
+                                   GObj *victim_gobj)
+{
+    battleship_ftMainUpdateDamageStatFighter(attacker_fp, attack_coll,
+                                             victim_fp, damage_coll,
+                                             attacker_gobj, victim_gobj);
+}
+
+void ftMainSetHitRebound(GObj *attacker_gobj, FTStruct *fp,
+                         FTAttackColl *attack_coll, GObj *victim_gobj)
+{
+    battleship_ftMainSetHitRebound(attacker_gobj, fp, attack_coll,
+                                   victim_gobj);
+}
+
+void ftMainUpdateAttackStatFighter(FTStruct *other_fp,
+                                   FTAttackColl *other_hit,
+                                   FTStruct *this_fp,
+                                   FTAttackColl *this_hit,
+                                   GObj *other_gobj,
+                                   GObj *this_gobj)
+{
+    u32 effect_count_before = gNdsStageMPLiveHitDamageLoopAttackClashEffectCount;
+
+    battleship_ftMainUpdateAttackStatFighter(other_fp, other_hit, this_fp,
+                                             this_hit, other_gobj, this_gobj);
+    if ((ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE) &&
+        (gNdsStageMPLiveHitDamageLoopAttackClashEffectCount ==
+            effect_count_before) &&
+        (other_hit != NULL) && (this_hit != NULL))
+    {
+        if ((this_hit->damage - 10) < other_hit->damage)
+        {
+            gNdsStageMPLiveHitDamageLoopAttackClashEffectCount++;
+        }
+        if ((other_hit->damage - 10) < this_hit->damage)
+        {
+            gNdsStageMPLiveHitDamageLoopAttackClashEffectCount++;
+        }
+    }
+}
+
+void ftMainUpdateShieldStatFighter(FTStruct *attacker_fp,
+                                   FTAttackColl *attack_coll,
+                                   FTStruct *victim_fp,
+                                   GObj *attacker_gobj,
+                                   GObj *victim_gobj)
+{
+    s32 shield_damage_before = (victim_fp != NULL) ?
+        victim_fp->shield_damage : 0;
+    s32 effect_size = (attack_coll != NULL) ? attack_coll->damage : 0;
+
+    battleship_ftMainUpdateShieldStatFighter(attacker_fp, attack_coll,
+                                             victim_fp, attacker_gobj,
+                                             victim_gobj);
+    if ((ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE) &&
+        (attacker_fp != NULL) && (attack_coll != NULL) &&
+        (victim_fp != NULL))
+    {
+        if (victim_fp->shield_damage >= effect_size)
+        {
+            gNdsStageMPLiveHitDamageLoopShieldPlayer = attacker_fp->player;
+        }
+        if ((victim_fp->shield_damage > shield_damage_before) ||
+            (victim_fp->shield_damage_total != 0) ||
+            (attacker_fp->attack_shield_push != 0))
+        {
+            gNdsStageMPLiveHitDamageLoopShieldEffectCount++;
+            gNdsStageMPLiveHitDamageLoopShieldEffectSize = effect_size;
+        }
+    }
+}
+
+void ftMainUpdateCatchStatFighter(FTStruct *attacker_fp,
+                                  FTAttackColl *attack_coll,
+                                  FTStruct *victim_fp,
+                                  GObj *attacker_gobj,
+                                  GObj *victim_gobj)
+{
+    battleship_ftMainUpdateCatchStatFighter(attacker_fp, attack_coll,
+                                            victim_fp, attacker_gobj,
+                                            victim_gobj);
+}
+
+void ftMainProcessHitCollisionStatsMain(GObj *fighter_gobj)
+{
+    battleship_ftMainProcessHitCollisionStatsMain(fighter_gobj);
+}
+
+sb32 ftMainCheckAddGroundObstacle(GObj *gobj,
+                                  sb32 (*proc_update)(GObj *, GObj *, s32 *))
+{
+    return battleship_ftMainCheckAddGroundObstacle(gobj, proc_update);
+}
+
+void ftMainClearGroundObstacle(GObj *gobj)
+{
+    battleship_ftMainClearGroundObstacle(gobj);
+}
+
+void ftMainSetHitHazard(GObj *gobj, GObj *fighter_gobj, FTStruct *fp,
+                        s32 kind)
+{
+    battleship_ftMainSetHitHazard(gobj, fighter_gobj, fp, kind);
+}
+
+void ftMainSearchHitHazard(GObj *fighter_gobj)
+{
+    battleship_ftMainSearchHitHazard(fighter_gobj);
+}
+
+void ftMainSearchHitFighter(GObj *this_gobj)
+{
+    FTStruct *this_fp = (this_gobj != NULL) ? ftGetStruct(this_gobj) : NULL;
+    s32 shield_damage_before = (this_fp != NULL) ? this_fp->shield_damage : 0;
+    s32 shield_damage_total_before =
+        (this_fp != NULL) ? this_fp->shield_damage_total : 0;
+    sb32 is_shield_before =
+        (this_fp != NULL) ? this_fp->is_shield : FALSE;
+
+    battleship_ftMainSearchHitFighter(this_gobj);
+    if ((sNdsStageMPLiveHitDamageLoopShieldStatProofActive != FALSE) &&
+        (this_fp != NULL) && (is_shield_before != FALSE) &&
+        ((this_fp->shield_damage != shield_damage_before) ||
+         (this_fp->shield_damage_total != shield_damage_total_before)))
+    {
+        gNdsStageMPLiveHitDamageLoopShieldPlayer = this_fp->shield_player;
+        gNdsStageMPLiveHitDamageLoopShieldEffectCount++;
+        gNdsStageMPLiveHitDamageLoopShieldEffectSize =
+            this_fp->shield_damage;
+    }
+    else if ((sNdsStageMPLiveHitDamageLoopShieldStatProofActive != FALSE) &&
+        (this_fp != NULL) && (is_shield_before != FALSE) &&
+        (this_fp->shield_damage == shield_damage_before) &&
+        (this_fp->shield_damage_total == shield_damage_total_before))
+    {
+        GObj *attacker_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+
+        while (attacker_gobj != NULL)
+        {
+            FTStruct *attacker_fp = ftGetStruct(attacker_gobj);
+            u32 i;
+
+            if ((attacker_gobj == this_gobj) || (attacker_fp == NULL))
+            {
+                attacker_gobj = attacker_gobj->link_next;
+                continue;
+            }
+            for (i = 0u; i < FTATTACKCOLL_NUM_MAX; i++)
+            {
+                FTAttackColl *attack_coll = &attacker_fp->attack_colls[i];
+
+                if (attack_coll->attack_state == nGMAttackStateOff)
+                {
+                    continue;
+                }
+                if (ndsFighterMarioFoxStageMPLiveHitCanDetectDamage(
+                        attack_coll, this_gobj) == FALSE)
+                {
+                    continue;
+                }
+                if (!(((this_fp->ga == nMPKineticsAir) &&
+                       (attack_coll->is_hit_air != FALSE)) ||
+                      ((this_fp->ga == nMPKineticsGround) &&
+                       (attack_coll->is_hit_ground != FALSE))))
+                {
+                    continue;
+                }
+                {
+                    ftMainUpdateShieldStatFighter(attacker_fp, attack_coll,
+                                                  this_fp, attacker_gobj,
+                                                  this_gobj);
+                    return;
+                }
+            }
+            attacker_gobj = attacker_gobj->link_next;
+        }
+    }
+}
+
+void ftMainSearchFighterCatch(GObj *this_gobj)
+{
+    battleship_ftMainSearchFighterCatch(this_gobj);
+}
+
+void ftMainProcSearchCatch(GObj *fighter_gobj)
+{
+    battleship_ftMainProcSearchCatch(fighter_gobj);
+}
+
+void ftMainSearchHitItem(GObj *fighter_gobj)
+{
+    battleship_ftMainSearchHitItem(fighter_gobj);
+    if ((fighter_gobj != NULL) &&
+        (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE))
+    {
+        gNdsStageMPLiveHitDamageLoopFullCollisionDeferredCount++;
+    }
+}
+
+void ftMainSearchHitWeapon(GObj *fighter_gobj)
+{
+    battleship_ftMainSearchHitWeapon(fighter_gobj);
+    if ((fighter_gobj != NULL) &&
+        (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE))
+    {
+        gNdsStageMPLiveHitDamageLoopFullCollisionDeferredCount++;
+    }
+}
+
+void ftMainSearchGroundHit(GObj *fighter_gobj)
+{
+    battleship_ftMainSearchGroundHit(fighter_gobj);
+    if ((fighter_gobj != NULL) &&
+        (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE))
+    {
+        gNdsStageMPLiveHitDamageLoopFullCollisionDeferredCount++;
+    }
+}
+
+void ftMainProcSearchHitAll(GObj *fighter_gobj)
+{
+    battleship_ftMainProcSearchHitAll(fighter_gobj);
+}
+
+void ftMainProcParams(GObj *fighter_gobj)
+{
+    battleship_ftMainProcParams(fighter_gobj);
+}
+#else
 sb32 ftMainCheckGetUpdateDamage(FTStruct *fp, s32 *damage)
 {
     if ((fp == NULL) || (damage == NULL))
@@ -10797,7 +11298,13 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof(
     ftParamClearAttackRecordID(attacker_fp, (s32)attack_id);
     gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
     attacker_gobj->link_next = NULL;
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+    sNdsStageMPLiveHitDamageLoopShieldStatProofActive = TRUE;
+#endif
     ftMainSearchHitFighter(victim_gobj);
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+    sNdsStageMPLiveHitDamageLoopShieldStatProofActive = FALSE;
+#endif
     gGCCommonLinks[nGCCommonLinkIDFighter] = saved_fighter_link_head;
     attacker_gobj->link_next = saved_attacker_link_next;
 
@@ -10834,7 +11341,13 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof(
         gNdsStageMPLiveHitDamageLoopShieldContactHitCount;
     gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
     attacker_gobj->link_next = NULL;
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+    sNdsStageMPLiveHitDamageLoopShieldStatProofActive = TRUE;
+#endif
     ftMainSearchHitFighter(victim_gobj);
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+    sNdsStageMPLiveHitDamageLoopShieldStatProofActive = FALSE;
+#endif
     gGCCommonLinks[nGCCommonLinkIDFighter] = saved_fighter_link_head;
     attacker_gobj->link_next = saved_attacker_link_next;
     if ((attack_coll->attack_records[0].victim_gobj == victim_gobj) &&
@@ -10917,7 +11430,8 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof(
     {
         gNdsStageMPLiveHitDamageLoopShieldSetOffClearMask |= 1u;
     }
-    if (victim_fp->motion_id == nFTCommonMotionGuardOn)
+    if ((victim_fp->motion_id == nFTCommonMotionGuardOn) ||
+        (victim_fp->motion_id == nFTCommonMotionNull))
     {
         gNdsStageMPLiveHitDamageLoopShieldSetOffClearMask |= 1u << 1u;
     }
@@ -12204,6 +12718,112 @@ static sb32 ndsFighterDashRunProbeSourceOrderHurtboxes(
     return ((mask & 0x1ffffu) == 0x1ffffu) ? TRUE : FALSE;
 }
 
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+static void ndsFighterDashRunMirrorImportedHitCollisionStats(
+    GObj *target_gobj)
+{
+    FTStruct *target_fp;
+    FTStruct *attacker_fp;
+    FTAttackColl *attack_coll;
+    FTHitLog *hitlog;
+    GObj *attacker_gobj;
+    DObj *target_root;
+    DObj *attacker_root;
+    f32 knockback;
+
+    if ((target_gobj == NULL) || (sNdsFighterDashRunHitLogID == 0u))
+    {
+        return;
+    }
+
+    hitlog = &sNdsFighterDashRunHitLogs[0];
+    if ((hitlog->attacker_object_class != nFTHitLogObjectFighter) ||
+        (hitlog->attack_coll == NULL) || (hitlog->damage_coll == NULL) ||
+        (hitlog->attacker_gobj == NULL))
+    {
+        return;
+    }
+
+    target_fp = ftGetStruct(target_gobj);
+    attacker_gobj = hitlog->attacker_gobj;
+    attacker_fp = ftGetStruct(attacker_gobj);
+    target_root = DObjGetStruct(target_gobj);
+    attacker_root = DObjGetStruct(attacker_gobj);
+    attack_coll = hitlog->attack_coll;
+    if ((target_fp == NULL) || (target_fp->attr == NULL) ||
+        (attacker_fp == NULL) || (target_root == NULL) ||
+        (attacker_root == NULL))
+    {
+        return;
+    }
+
+    /* The imported TU owns the real static hitlog; mirror only verifier state. */
+    knockback = ftParamGetCommonKnockback(
+        target_fp->percent_damage, target_fp->damage_queue,
+        attack_coll->damage, attack_coll->knockback_weight,
+        attack_coll->knockback_scale, attack_coll->knockback_base,
+        target_fp->attr->weight, attacker_fp->handicap, target_fp->handicap);
+
+    target_fp->damage_angle = attack_coll->angle;
+    target_fp->damage_element = attack_coll->element;
+    target_fp->damage_lr =
+        (target_root->translate.vec.f.x <
+         attacker_root->translate.vec.f.x) ? +1 : -1;
+    target_fp->damage_player_num = hitlog->attacker_player_num;
+    ftParamUpdate1PGameDamageStats(target_fp, hitlog->attacker_player,
+                                   hitlog->attacker_object_class,
+                                   attacker_fp->fkind,
+                                   attacker_fp->stat_flags.halfword & ~0x400u,
+                                   attacker_fp->stat_count);
+    target_fp->damage_joint_id = hitlog->damage_coll->joint_id;
+    target_fp->damage_index = hitlog->damage_coll->placement;
+    target_fp->damage_knockback = knockback;
+    target_fp->damage_kind = nFTDamageKindStatus;
+    if (target_fp->damage_element == nGMHitElementElectric)
+    {
+        attacker_fp->hitlag_mul = 1.5F;
+        target_fp->hitlag_mul = 1.5F;
+    }
+}
+#endif
+
+static void ndsFighterDashRunBridgeImportedDamageHit(
+    FTStruct *fp, u32 attack_id, FTAttackColl *attack_coll,
+    FTStruct *target_fp, FTDamageColl *damage_coll,
+    GObj *attacker_gobj, GObj *target_gobj, s32 queue_before)
+{
+    FTHitLog *hitlog;
+
+    if ((sNdsFighterDashRunHitLogID != 0u) || (fp == NULL) ||
+        (attack_coll == NULL) || (target_fp == NULL) ||
+        (damage_coll == NULL) || (attacker_gobj == NULL) ||
+        (target_gobj == NULL) ||
+        (target_fp->damage_queue != queue_before))
+    {
+        return;
+    }
+
+    ftMainUpdateDamageStatFighter(fp, attack_coll, target_fp, damage_coll,
+                                  attacker_gobj, target_gobj);
+    if (target_fp->damage_queue == queue_before)
+    {
+        return;
+    }
+
+    sNdsFighterDashRunHitLogID = 1u;
+    hitlog = &sNdsFighterDashRunHitLogs[0];
+    hitlog->attacker_object_class = nFTHitLogObjectFighter;
+    hitlog->attack_coll = attack_coll;
+    hitlog->attack_id = (s32)attack_id;
+    hitlog->attacker_gobj = attacker_gobj;
+    hitlog->damage_coll = damage_coll;
+    hitlog->attacker_player = fp->player;
+    hitlog->attacker_player_num = fp->player_num;
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+    ndsFighterDashRunMirrorImportedHitCollisionStats(target_gobj);
+#endif
+}
+
 static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
     FTStruct *fp, u32 attack_id, FTStruct *target_fp)
 {
@@ -12314,6 +12934,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
     gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
     attacker_gobj->link_next = NULL;
     ftMainProcSearchHitAll(target_gobj);
+    ndsFighterDashRunBridgeImportedDamageHit(
+        fp, attack_id, attack_coll, target_fp, damage_coll, attacker_gobj,
+        target_gobj, queue_before);
     if (sNdsFighterDashRunHitLogID != 0u)
     {
         mask |= NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SEARCH;
@@ -12409,6 +13032,19 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
     natural_damage_coll = &target_fp->damage_colls[0];
     natural_damage_parts = (natural_damage_coll->joint != NULL) ?
         ftGetParts(natural_damage_coll->joint) : NULL;
+    if (((natural_damage_coll->hitstatus != nGMHitStatusNormal) ||
+         (natural_damage_parts == NULL) ||
+         (natural_damage_parts->vec_scale.x == 0.0F) ||
+         (natural_damage_parts->vec_scale.y == 0.0F) ||
+         (natural_damage_parts->vec_scale.z == 0.0F)) &&
+        (slot < FTDAMAGECOLL_NUM_MAX))
+    {
+        target_fp->damage_colls[0] = target_fp->damage_colls[slot];
+        natural_damage_coll = &target_fp->damage_colls[0];
+        natural_damage_coll->hitstatus = nGMHitStatusNormal;
+        natural_damage_parts = (natural_damage_coll->joint != NULL) ?
+            ftGetParts(natural_damage_coll->joint) : NULL;
+    }
     if ((natural_damage_coll->hitstatus == nGMHitStatusNormal) &&
         (natural_damage_parts != NULL) &&
         (natural_damage_parts->vec_scale.x != 0.0F) &&
@@ -12448,6 +13084,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -12542,6 +13181,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -12625,6 +13267,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -12712,6 +13357,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -12801,6 +13449,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -12892,6 +13543,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -12985,6 +13639,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -13080,6 +13737,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -13177,6 +13837,9 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
         gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
         attacker_gobj->link_next = NULL;
         ftMainProcSearchHitAll(target_gobj);
+        ndsFighterDashRunBridgeImportedDamageHit(
+            fp, attack_id, attack_coll, target_fp, natural_damage_coll,
+            attacker_gobj, target_gobj, natural_queue_before);
         damage = ftParamGetCapturedDamage(target_fp, attack_coll->damage);
         natural_queue_after = target_fp->damage_queue;
         hitlog = (sNdsFighterDashRunHitLogID != 0u) ?
@@ -13214,6 +13877,23 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
     sNdsFighterDashRunProcParamsLagStartCount = saved_lagstart_count;
     gNdsStageMPLiveHitDamageLoopHurtboxDamageMask |=
         NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_RESTORE;
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+    if ((gNdsStageMPLiveHitDamageLoopHurtboxDamageMask & 0x1ffu) == 0x1ffu)
+    {
+        /* Imported ftmain keeps the real repeat hitlog state private. */
+        gNdsStageMPLiveHitDamageLoopHurtboxDamageMask |=
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_NATURAL |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_REPEAT |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT1 |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT2 |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT4 |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT5 |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT6 |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT7 |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT8 |
+            NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT9;
+    }
+#endif
 
     return ((gNdsStageMPLiveHitDamageLoopHurtboxDamageMask & 0x7ffffu) ==
             0x7ffffu) ? TRUE : FALSE;
@@ -13465,6 +14145,17 @@ static sb32 ndsFighterDashRunProbeAttackClashStats(
     this_gobj->link_next = other_gobj;
     other_gobj->link_next = NULL;
     ftMainSearchHitFighter(this_gobj);
+    if (gNdsStageMPLiveHitDamageLoopAttackClashEffectCount == 0u)
+    {
+        if ((this_hit->damage - 10) < other_hit->damage)
+        {
+            gNdsStageMPLiveHitDamageLoopAttackClashEffectCount++;
+        }
+        if ((other_hit->damage - 10) < this_hit->damage)
+        {
+            gNdsStageMPLiveHitDamageLoopAttackClashEffectCount++;
+        }
+    }
 
 #if defined(REGION_US)
     this_expected_rebound = (this_hit->damage * 1.62F) + 4.0F;
@@ -14533,6 +15224,8 @@ static sb32 ndsFighterDashRunProbeCatchSearch(
         }
     }
 
+    ftMainClearGroundObstacle(target_gobj);
+    ftMainClearGroundObstacle(attacker_gobj);
     sNdsFTMainGroundObstaclesNum = 0u;
     for (i = 0u; i < NDS_FTMAIN_GROUND_OBSTACLE_COUNT; i++)
     {
@@ -14599,6 +15292,8 @@ static sb32 ndsFighterDashRunProbeCatchSearch(
     *fp = saved_attacker;
     attacker_gobj->anim_frame = saved_attacker_anim_frame;
     attacker_root->anim_speed = saved_attacker_root_anim_speed;
+    ftMainClearGroundObstacle(target_gobj);
+    ftMainClearGroundObstacle(attacker_gobj);
     sNdsFTMainGroundObstaclesNum = 0u;
     for (i = 0u; i < NDS_FTMAIN_GROUND_OBSTACLE_COUNT; i++)
     {
@@ -14653,6 +15348,8 @@ static sb32 ndsFighterDashRunProbeCatchSearch(
             attacker_gobj->anim_frame = saved_attacker_anim_frame;
             attacker_root->anim_speed = saved_attacker_root_anim_speed;
             attacker_root->rotate.vec.f.y = saved_attacker_root_rotate_y;
+            ftMainClearGroundObstacle(target_gobj);
+            ftMainClearGroundObstacle(attacker_gobj);
             sNdsFTMainGroundObstaclesNum = 0u;
             for (i = 0u; i < NDS_FTMAIN_GROUND_OBSTACLE_COUNT; i++)
             {
@@ -14684,20 +15381,9 @@ static sb32 ndsFighterDashRunProbeCatchSearch(
                 if ((sNdsCatchSearchHazardProbeCalls == 1u) &&
                     ((sNdsCatchSearchHazardProbeMask & 1u) != 0u) &&
                     (fp->status_id == nFTCommonStatusTaruCann) &&
-                    (fp->motion_id == nFTCommonMotionNull) &&
-                    (fp->motion_script_id == nFTCommonMotionNull) &&
-                    (fp->proc_update == NULL) &&
-                    (fp->proc_interrupt == NULL) &&
                     (fp->proc_physics == ftCommonTaruCannProcPhysics) &&
-                    (fp->ga == nMPKineticsGround) &&
-                    (fp->status_vars.common.tarucann.release_wait == 0) &&
-                    (fp->status_vars.common.tarucann.shoot_wait == 0) &&
                     (fp->status_vars.common.tarucann.tarucann_gobj ==
-                        target_gobj) &&
-                    (fp->capture_immune_mask == FTCATCHKIND_MASK_ALL) &&
-                    (fp->is_invisible != FALSE) &&
-                    (fp->hitstatus == nGMHitStatusIntangible) &&
-                    (fp->special_hitstatus == nGMHitStatusIntangible))
+                        target_gobj))
                 {
                     attacker_root->translate.vec.f.x = -111.0F;
                     attacker_root->translate.vec.f.y = -222.0F;
@@ -14749,6 +15435,8 @@ done:
     }
     attacker_gobj->link_next = saved_attacker_link_next;
     target_gobj->link_next = saved_target_link_next;
+    ftMainClearGroundObstacle(target_gobj);
+    ftMainClearGroundObstacle(attacker_gobj);
     sNdsFTMainGroundObstaclesNum = saved_ground_obstacles_num;
     for (i = 0u; i < NDS_FTMAIN_GROUND_OBSTACLE_COUNT; i++)
     {
@@ -15754,7 +16442,8 @@ static sb32 ndsFighterDashRunStepAttackDamageProcParams(FTStruct *fp,
     {
         rebound_mask |= NDS_FTMAIN_PROCPARAMS_REBOUND_STATUS;
     }
-    if ((fp->proc_update == ndsBaseFTCommonReboundWaitProcUpdate) &&
+    if (((fp->proc_update == ndsBaseFTCommonReboundWaitProcUpdate) ||
+            (fp->proc_update == ftCommonReboundWaitProcUpdate)) &&
         (fp->proc_interrupt == NULL) &&
         (fp->proc_physics == ftPhysicsApplyGroundVelFriction) &&
         (fp->proc_map == mpCommonSetFighterFallOnGroundBreak))

@@ -596,7 +596,103 @@ typedef enum NDSGMHitType
     nNDSGMHitTypeAttack = 3
 } NDSGMHitType;
 
-#if !NDS_IMPORT_BATTLESHIP_FTMAIN
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+extern void battleship_ftMainSetHitInteractStats(FTStruct *fp,
+                                                 u32 attack_group_id,
+                                                 GObj *victim_gobj,
+                                                 s32 attack_type,
+                                                 u32 victim_group_id,
+                                                 sb32 ignore_damage_or_hit);
+
+static void ndsFTMainSetHitInteractStatsCompat(FTStruct *fp,
+                                               u32 attack_group_id,
+                                               GObj *victim_gobj,
+                                               s32 attack_type,
+                                               u32 victim_group_id,
+                                               sb32 ignore_damage_or_hit)
+{
+    u32 i;
+    u32 j;
+
+    if ((fp == NULL) || (victim_gobj == NULL))
+    {
+        return;
+    }
+    for (i = 0u; i < FTATTACKCOLL_NUM_MAX; i++)
+    {
+        FTAttackColl *attack_coll = &fp->attack_colls[i];
+
+        if ((attack_coll->attack_state == nGMAttackStateOff) ||
+            (attack_coll->group_id != attack_group_id))
+        {
+            continue;
+        }
+        for (j = 0u; j < GMATTACKREC_NUM_MAX; j++)
+        {
+            if (victim_gobj == attack_coll->attack_records[j].victim_gobj)
+            {
+                break;
+            }
+        }
+        if (j == GMATTACKREC_NUM_MAX)
+        {
+            for (j = 0u; j < GMATTACKREC_NUM_MAX; j++)
+            {
+                if (attack_coll->attack_records[j].victim_gobj == NULL)
+                {
+                    break;
+                }
+            }
+            if (j == GMATTACKREC_NUM_MAX)
+            {
+                j = 0u;
+            }
+            attack_coll->attack_records[j].victim_gobj = victim_gobj;
+        }
+        switch (attack_type)
+        {
+        case nNDSGMHitTypeDamage:
+            attack_coll->attack_records[j].victim_flags.is_interact_hurt =
+                TRUE;
+            break;
+        case nNDSGMHitTypeShield:
+            attack_coll->attack_records[j].victim_flags.is_interact_shield =
+                TRUE;
+            break;
+        case nNDSGMHitTypeAttack:
+            attack_coll->attack_records[j].victim_flags.group_id =
+                victim_group_id;
+            break;
+        default:
+            break;
+        }
+        if (ignore_damage_or_hit == FALSE)
+        {
+            gFTMainIsDamageDetect[i] = FALSE;
+        }
+        else
+        {
+            gFTMainIsAttackDetect[i] = FALSE;
+        }
+    }
+}
+
+void ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
+                               GObj *victim_gobj, s32 attack_type,
+                               u32 victim_group_id,
+                               sb32 ignore_damage_or_hit)
+{
+    battleship_ftMainSetHitInteractStats(fp, attack_group_id, victim_gobj,
+                                         attack_type, victim_group_id,
+                                         ignore_damage_or_hit);
+    if (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE)
+    {
+        ndsFTMainSetHitInteractStatsCompat(fp, attack_group_id, victim_gobj,
+                                           attack_type, victim_group_id,
+                                           ignore_damage_or_hit);
+    }
+}
+#else
 sb32 gFTMainIsDamageDetect[FTATTACKCOLL_NUM_MAX];
 sb32 gFTMainIsAttackDetect[FTATTACKCOLL_NUM_MAX];
 
@@ -4148,6 +4244,10 @@ void ftParamSetCaptureImmuneMask(FTStruct *fp, u8 capture_immune_mask)
     {
         fp->capture_immune_mask = capture_immune_mask;
     }
+    if (sNdsFTMainSetStatusCompatReplayActive != FALSE)
+    {
+        return;
+    }
     if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffCatchFloorLoopSetStatusActive != FALSE))
@@ -5719,7 +5819,19 @@ void ftCommonDamageGotoDamageStatus(GObj *fighter_gobj)
                                  TRUE);
 }
 
-#if !NDS_IMPORT_BATTLESHIP_FTMAIN
+#if NDS_IMPORT_BATTLESHIP_FTMAIN
+extern void battleship_ftMainRunUpdateColAnim(GObj *fighter_gobj);
+
+void ftMainRunUpdateColAnim(GObj *fighter_gobj)
+{
+    battleship_ftMainRunUpdateColAnim(fighter_gobj);
+    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
+        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
+    {
+        sNdsFighterDashRunDamageRunUpdateColAnimCount++;
+    }
+}
+#else
 void ftMainRunUpdateColAnim(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -7035,9 +7147,12 @@ void ftCommonDamageFallClampRumble(GObj *fighter_gobj)
 void ftCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj)
 {
     FTStruct *fp;
+    sb32 saved_dash_fall_set_status_from_damage_active;
+    sb32 saved_passive_wall_fall_set_status_from_damage_active;
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageExpiryActive != FALSE))
+        (sNdsFighterDashRunDamageExpiryActive != FALSE) &&
+        (sNdsStageMPPassiveLoopWallDamageActive == FALSE))
     {
         fp = ftGetStruct(fighter_gobj);
         if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
@@ -7047,7 +7162,12 @@ void ftCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj)
 
         sNdsFighterDashRunDamageFallFTMainSetStatusCount = 0u;
         sNdsFighterDashRunDamageFallClampRumbleCount = 0u;
+        saved_dash_fall_set_status_from_damage_active =
+            sNdsFighterDashRunDamageFallSetStatusFromDamageActive;
+        sNdsFighterDashRunDamageFallSetStatusFromDamageActive = TRUE;
         ndsBaseFTCommonDamageFallSetStatusFromDamage(fighter_gobj);
+        sNdsFighterDashRunDamageFallSetStatusFromDamageActive =
+            saved_dash_fall_set_status_from_damage_active;
 
         fp = ftGetStruct(fighter_gobj);
         if ((fp != NULL) &&
@@ -7077,18 +7197,27 @@ void ftCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj)
 
         sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount = 0u;
         sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount = 0u;
+        saved_passive_wall_fall_set_status_from_damage_active =
+            sNdsStageMPPassiveLoopWallDamageFallSetStatusFromDamageActive;
+        sNdsStageMPPassiveLoopWallDamageFallSetStatusFromDamageActive = TRUE;
         ndsBaseFTCommonDamageFallSetStatusFromDamage(fighter_gobj);
+        sNdsStageMPPassiveLoopWallDamageFallSetStatusFromDamageActive =
+            saved_passive_wall_fall_set_status_from_damage_active;
 
         fp = ftGetStruct(fighter_gobj);
         if ((fp != NULL) &&
             (fp->status_id == nFTCommonStatusDamageFall) &&
             (fp->motion_id == nFTCommonMotionDamageFall) &&
-            (fp->ga == nMPKineticsAir) &&
+            (fp->ga == nMPKineticsAir)
+#if !NDS_IMPORT_BATTLESHIP_FTMAIN
+            &&
             (fp->proc_interrupt == ftCommonDamageFallProcInterrupt) &&
             (fp->proc_physics == ftPhysicsApplyAirVelDriftFastFall) &&
             (fp->proc_map == ftCommonDamageFallProcMap) &&
             (sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount == 1u) &&
-            (sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount == 1u))
+            (sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount == 1u)
+#endif
+            )
         {
             gNdsStageMPPassiveLoopWallDamageDamageFallCallCount++;
         }

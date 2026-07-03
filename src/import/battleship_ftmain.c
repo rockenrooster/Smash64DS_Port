@@ -26,7 +26,13 @@ alSoundEffect *lbCommonMakePositionFGM(u16 fgm, f32 pos);
 void ndsDiagnosticsRecordImportedFTMainAnimEvents(GObj *fighter_gobj);
 void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
                                                 s32 status_id,
-                                                f32 frame_begin);
+                                                f32 frame_begin,
+                                                f32 anim_speed, u32 flags);
+sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
+                                                       s32 status_id,
+                                                       f32 frame_begin,
+                                                       f32 anim_speed,
+                                                       u32 flags);
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -38,9 +44,53 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
 #define lbRelocGetFileData(type, file, offset) \
     ((type)((uintptr_t)(file) + (intptr_t)(offset)))
 
+#define ftMainCheckGetUpdateDamage battleship_ftMainCheckGetUpdateDamage
+#define ftMainPlayHitSFX battleship_ftMainPlayHitSFX
+#define ftMainUpdateDamageStatFighter battleship_ftMainUpdateDamageStatFighter
+#define ftMainSetHitInteractStats battleship_ftMainSetHitInteractStats
+#define ftMainSetHitRebound battleship_ftMainSetHitRebound
+#define ftMainUpdateAttackStatFighter battleship_ftMainUpdateAttackStatFighter
+#define ftMainUpdateShieldStatFighter battleship_ftMainUpdateShieldStatFighter
+#define ftMainUpdateCatchStatFighter battleship_ftMainUpdateCatchStatFighter
+#define ftMainProcessHitCollisionStatsMain battleship_ftMainProcessHitCollisionStatsMain
+#define ftMainCheckAddGroundObstacle battleship_ftMainCheckAddGroundObstacle
+#define ftMainClearGroundObstacle battleship_ftMainClearGroundObstacle
+#define ftMainSetHitHazard battleship_ftMainSetHitHazard
+#define ftMainSearchHitHazard battleship_ftMainSearchHitHazard
+#define ftMainSearchHitFighter battleship_ftMainSearchHitFighter
+#define ftMainSearchFighterCatch battleship_ftMainSearchFighterCatch
+#define ftMainProcSearchCatch battleship_ftMainProcSearchCatch
+#define ftMainSearchHitItem battleship_ftMainSearchHitItem
+#define ftMainSearchHitWeapon battleship_ftMainSearchHitWeapon
+#define ftMainSearchGroundHit battleship_ftMainSearchGroundHit
+#define ftMainProcSearchHitAll battleship_ftMainProcSearchHitAll
+#define ftMainProcParams battleship_ftMainProcParams
+#define ftMainRunUpdateColAnim battleship_ftMainRunUpdateColAnim
 #define ftMainPlayAnimEventsAll battleship_ftMainPlayAnimEventsAll
 #define ftMainSetStatus battleship_ftMainSetStatus
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
+#undef ftMainCheckGetUpdateDamage
+#undef ftMainPlayHitSFX
+#undef ftMainUpdateDamageStatFighter
+#undef ftMainSetHitInteractStats
+#undef ftMainSetHitRebound
+#undef ftMainUpdateAttackStatFighter
+#undef ftMainUpdateShieldStatFighter
+#undef ftMainUpdateCatchStatFighter
+#undef ftMainProcessHitCollisionStatsMain
+#undef ftMainCheckAddGroundObstacle
+#undef ftMainClearGroundObstacle
+#undef ftMainSetHitHazard
+#undef ftMainSearchHitHazard
+#undef ftMainSearchHitFighter
+#undef ftMainSearchFighterCatch
+#undef ftMainProcSearchCatch
+#undef ftMainSearchHitItem
+#undef ftMainSearchHitWeapon
+#undef ftMainSearchGroundHit
+#undef ftMainProcSearchHitAll
+#undef ftMainProcParams
+#undef ftMainRunUpdateColAnim
 #undef ftMainPlayAnimEventsAll
 #undef ftMainSetStatus
 
@@ -50,11 +100,56 @@ void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
     ndsDiagnosticsRecordImportedFTMainAnimEvents(fighter_gobj);
 }
 
+static sb32 ndsImportedFTMainShouldPreserveCliffMotion(s32 status_id)
+{
+    return ((status_id == nFTCommonStatusCliffClimbQuick1) ||
+            (status_id == nFTCommonStatusCliffClimbQuick2) ||
+            (status_id == nFTCommonStatusCliffClimbSlow1) ||
+            (status_id == nFTCommonStatusCliffClimbSlow2) ||
+            (status_id == nFTCommonStatusCliffAttackQuick1) ||
+            (status_id == nFTCommonStatusCliffAttackQuick2) ||
+            (status_id == nFTCommonStatusCliffAttackSlow1) ||
+            (status_id == nFTCommonStatusCliffAttackSlow2) ||
+            (status_id == nFTCommonStatusCliffEscapeQuick1) ||
+            (status_id == nFTCommonStatusCliffEscapeQuick2) ||
+            (status_id == nFTCommonStatusCliffEscapeSlow1) ||
+            (status_id == nFTCommonStatusCliffEscapeSlow2)) ? TRUE : FALSE;
+}
+
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags)
 {
+    FTStruct *fp;
+    s32 cliff_status_id_saved = 0;
+    s32 cliff_id_saved = -1;
+    sb32 preserve_cliffmotion = FALSE;
+
+    if (ndsDiagnosticsHandleImportedFTMainSetStatusBefore(fighter_gobj,
+            status_id, frame_begin, anim_speed, flags) != FALSE)
+    {
+        return;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if ((fp != NULL) &&
+        (ndsImportedFTMainShouldPreserveCliffMotion(status_id) != FALSE))
+    {
+        preserve_cliffmotion = TRUE;
+        cliff_status_id_saved = fp->status_vars.common.cliffmotion.status_id;
+        cliff_id_saved = fp->status_vars.common.cliffmotion.cliff_id;
+    }
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
     ndsDiagnosticsRecordImportedFTMainSetStatus(fighter_gobj, status_id,
-                                                frame_begin);
+                                                frame_begin, anim_speed,
+                                                flags);
+    if (preserve_cliffmotion != FALSE)
+    {
+        fp = ftGetStruct(fighter_gobj);
+        if (fp != NULL)
+        {
+            fp->status_vars.common.cliffmotion.status_id =
+                cliff_status_id_saved;
+            fp->status_vars.common.cliffmotion.cliff_id = cliff_id_saved;
+        }
+    }
 }

@@ -3078,6 +3078,8 @@ void ndsBaseFTCommonAttack12SetStatus(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttack1CheckInterruptCommon(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttack11CheckGoto(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttack12CheckGoto(GObj *fighter_gobj);
+void ndsBaseFTCommonAttackAirLwProcHit(GObj *fighter_gobj);
+void ndsBaseFTCommonAttackAirLwProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonCatchProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonCatchCaptureSetStatusRelease(GObj *fighter_gobj);
 void ndsBaseFTCommonCatchProcMap(GObj *fighter_gobj);

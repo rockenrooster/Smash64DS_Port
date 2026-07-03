@@ -290,6 +290,17 @@ FTStatusDesc dFTCommonActionStatusDescs[NDS_FT_COMMON_ACTION_STATUS_COUNT] = {
                             ftCommonDamageFallProcInterrupt,
                             ftPhysicsApplyAirVelDriftFastFall,
                             ftCommonDamageFallProcMap),
+    [NDS_FT_ACTION_INDEX(nFTCommonStatusTwister)] =
+        NDS_FT_STATUS_ENTRY(nFTCommonMotionTwister,
+                            nFTMotionAttackIDNone, nMPKineticsGround, FALSE,
+                            nFTStatusAttackIDNone,
+                            ndsBaseFTCommonTwisterProcUpdate, NULL,
+                            ndsBaseFTCommonTwisterProcPhysics, NULL),
+    [NDS_FT_ACTION_INDEX(nFTCommonStatusTaruCann)] =
+        NDS_FT_STATUS_ENTRY(nFTCommonMotionNull,
+                            nFTMotionAttackIDNone, nMPKineticsGround, FALSE,
+                            nFTStatusAttackIDNone, NULL, NULL,
+                            ftCommonTaruCannProcPhysics, NULL),
     [NDS_FT_ACTION_INDEX(nFTCommonStatusReboundWait)] =
         NDS_FT_STATUS_ENTRY(nFTCommonMotionNull, nFTMotionAttackIDNone,
                             nMPKineticsGround, FALSE,
@@ -381,7 +392,15 @@ FTStatusDesc dFTCommonActionStatusDescs[NDS_FT_COMMON_ACTION_STATUS_COUNT] = {
                             FALSE, nFTStatusAttackIDAttackDash,
                             ftAnimEndSetWait, NULL,
                             ftPhysicsApplyGroundVelTransN,
-                            mpCommonSetFighterFallOnEdgeBreak)
+                            mpCommonSetFighterFallOnEdgeBreak),
+
+    [NDS_FT_ACTION_INDEX(nFTCommonStatusAttackAirLw)] =
+        NDS_FT_STATUS_ENTRY(nFTCommonMotionAttackAirLw,
+                            nFTMotionAttackIDAttackAirLw, nMPKineticsAir,
+                            FALSE, nFTStatusAttackIDAttackAirLw,
+                            ndsBaseFTCommonAttackAirLwProcUpdate, NULL,
+                            ftPhysicsApplyAirVelDrift,
+                            ftCommonAttackAirProcMap)
 };
 
 #endif

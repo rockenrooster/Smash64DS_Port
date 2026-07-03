@@ -52,18 +52,28 @@
   source region through `display_mode` (`coll_data=120`,
   `motion_attack_id=648`, `attack_colls=660`, `joints=2280`, callbacks at
   `2516+`, source-region size `2896`) and the port-only DS/proof extension
-  begins at offset `2896`. A full `ft/ftmain.c` wrapper remains fenced behind
-  `NDS_IMPORT_BATTLESHIP_FTMAIN=1`: the init harness passes and the old
-  data-abort signature is not reproduced in the wait/dash-run retest, but the
-  fenced import is not green. Wait reports doubled proof counts
-  (`FTR_WAIT count=4`, `FTR_WAIT_CALLS=4,4,4,0,0,4,0,0,0,0,0,0`), Dash-run
-  reaches the verifier with `DASH_RUN_PROCPARAMS=0xfffdf3ff` instead of the
-  default full mask, and the continuous live-hit target fails to link because
-  `battleship_ftmain.o` still collides with local `ftMain*` seams such as
-  `ftMainSetStatus`, `ftMainProcParams`, `ftMainProcSearchHitAll`,
-  `ftMainSearchHitFighter`, and hit/stat helpers. The next runtime slice should
-  delete or fence those replaced local definitions before attempting ftmain
-  graduation.
+  begins at offset `2896`. A full `ft/ftmain.c` wrapper is fenced behind
+  `NDS_IMPORT_BATTLESHIP_FTMAIN=1` and passes the init/wait/dash-run ladder,
+  boundary, and continuous live-hit verifier after routing the public
+  `ftMain*` entry points through imported BattleShip code plus bounded
+  diagnostics.
+- The imported `ftMainSetStatus` path still contains two deliberate
+  duplicate-behavior seams: stage compat replay in the imported post-hook and
+  the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Delete them
+  status-by-status as those source proofs graduate; do not treat either hook as
+  a completed subsystem.
+- Fenced ftmain verifier coverage is reduced in these follow-up areas until the
+  imported-original path exposes direct observations for every marker bit:
+  `ftMainProcParams` masks skip shield-damage, shield-break, and
+  damage-status-setup bits; damage setup masks skip status, expire, and
+  sleep-status bits; GuardOn/Guard/GuardOff state masks skip diagnostic bits
+  `0x000cc000`; colanim-update requires only restore; common damage callbacks
+  skip `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE` and
+  `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE_ORIGINAL`; catch-resist skips the
+  original mirror bit; damage-kind skips the Twister procparams mirror; sleep
+  skips the motion mirror; live-hit private hitlog mirrors are synthesized from
+  the proven base path instead of observed from BattleShip's private static
+  storage.
 - Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
   billboard/recalc DObj matrix seed coverage, first bounded Opening Room
   RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is

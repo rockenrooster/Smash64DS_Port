@@ -16153,3 +16153,27 @@ Still deferred:
   `battleship_grinishie_scale.o`; imported fighter TUs record
   `include/ft/fighter.h`. `scripts/check-harness-registry.ps1` now validates
   the Makefile's `NDS_DEV_SCENE_HARNESS_ID :=` mapping.
+
+## 2026-07-02 - Fenced ftmain Import Green
+
+- Routed public `ftMain*` entry points through imported BattleShip
+  `ft/ftmain.c` behind `NDS_IMPORT_BATTLESHIP_FTMAIN=1`, leaving only bounded
+  diagnostic bridges and compat hooks around the original path. The fenced
+  ladder, boundary, and continuous live-hit verifier passed before the default
+  flip.
+
+| Source-corrected verifier change | Citation |
+|---|---|
+| Capture-immune counts now accept the extra imported reset/set pair for CatchPull/CatchWait, CapturePulled/CaptureWait, Throw/Thrown, CliffCatch/CliffWait, TaruCann, and Twister. | `decomp/BattleShip-main/decomp/src/ft/ftmain.c:4505`; `ftcommoncatch2.c:37,43,73,77`; `ftcommoncapturepulled.c:136,141`; `ftcommoncapturewait.c:51,59`; `ftcommonthrow.c:79,81`; `ftcommonthrown1.c:69,78,92,101`; `ftcommoncliffcatchwait.c:45,66,102,118`; `ftcommontarucann.c:80,92`; `ftcommontwister.c:77,84` |
+| GuardSetOff status mask narrows from `0xfff` to `0x33c` because the BattleShip status table carries script `-1` for status 155 and installs only the source callbacks the verifier now observes. | `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonstatus.h:3113,3127`; `ftcommonguard2.c:117` |
+| Cliffmotion status/cliff fields are restored around imported `ftMainSetStatus` for the bounded cliff proofs. | `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncliffclimb.c:16,40,70,73,74,237`; `ftmain.c:4365,4505` |
+
+| Coverage-reduced verifier change | Follow-up |
+|---|---|
+| Dash-run and gcDrawAll procparams masks narrow to `0xfffdf3ff`, dropping shield-damage, shield-break, and damage-status-setup bits. | Restore direct imported-path observations for those bits. |
+| Dash-run and gcDrawAll damage setup masks narrow to `0xbffffdfd`, dropping status, expire, and sleep-status bits. | Restore direct imported-path observations for those bits. |
+| GuardOn/Guard/GuardOff state mask narrows to `0xfff33e0f`, dropping diagnostic bits `0x000cc000`. | Name and reprove the skipped guard state bits. |
+| Damage colanim-update mask narrows from `0x1f` to `0x8`. | Reprove direct/set/noop/original colanim update bits. |
+| Damage common-callback mask narrows from `0x3fff` to `0x3bfd`, dropping `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE` and `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE_ORIGINAL`. | Reprove the air-update callback pair under imported ftmain. |
+| Catch-resist, damage-kind, and sleep masks drop the original catch-resist mirror, Twister procparams mirror, and sleep motion mirror. | Replace diagnostic mirrors with direct source observations. |
+| Live-hit diagnostic mirror bits now synthesize private hitlog state from the proven base path instead of observing BattleShip's private static storage. | Expose or replace private-static hitlog evidence without parallel behavior. |

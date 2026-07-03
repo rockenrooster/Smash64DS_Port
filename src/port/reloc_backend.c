@@ -411,6 +411,7 @@ static u32 sNdsFighterDashRunDamageFallSpecialAirCheckCount;
 static u32 sNdsFighterDashRunDamageFallAttackAirCheckCount;
 static u32 sNdsFighterDashRunDamageFallJumpAerialCheckCount;
 static u32 sNdsFighterDashRunDamageFallHammerCheckCount;
+static sb32 sNdsFighterDashRunDamageFallSetStatusFromDamageActive;
 static u32 sNdsFighterDashRunDamageFallSetStatusCount;
 static u32 sNdsFighterDashRunDamageFallFTMainSetStatusCount;
 static u32 sNdsFighterDashRunDamageFallClampRumbleCount;
@@ -605,6 +606,7 @@ static sb32 sNdsStageMPPassiveLoopThrowReleaseStatusActive = FALSE;
 static sb32 sNdsStageMPPassiveLoopThrowProcStatusActive = FALSE;
 static sb32 sNdsStageMPPassiveLoopThrowDeadResultActive = FALSE;
 static sb32 sNdsStageMPPassiveLoopWallDamageActive = FALSE;
+static sb32 sNdsStageMPPassiveLoopWallDamageFallSetStatusFromDamageActive;
 static u32 sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount;
 static u32 sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount;
 static sb32 sNdsStageMPPassiveLoopReboundActive = FALSE;
@@ -851,6 +853,7 @@ typedef struct NDSFighterLivePreviewState
 } NDSFighterLivePreviewState;
 
 static NDSFighterLivePreviewState sNdsFighterLivePreviewStates[2];
+static sb32 sNdsFTMainSetStatusCompatReplayActive = FALSE;
 
 /* Compatibility/proof shims. */
 #include "reloc_backend_compat_shims.c"
