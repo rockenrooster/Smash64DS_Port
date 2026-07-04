@@ -417,8 +417,12 @@ if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
 }
 if ($HardwareTriangles) { $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1' }
-& make @makeArgs
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (-not $NoBuild) {
+    & make @makeArgs
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+} else {
+    Write-Output 'Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.'
+}
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw "$Label harness build did not produce the expected ROM and ELF."
 }
