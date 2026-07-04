@@ -93,9 +93,9 @@ selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
 texture path reports `bind119/upload8/ready119/reject0`. That proof carries
 original fighter-part MObjs, the source-equivalent segment `0xE` material
 register, RSP vertex/render state, and CI TLUT seeds from the current material
-palette. Latest captures remain in `artifacts\renderer-*-hw*.png`. Full visual
-fidelity still needs broader source-scene coverage and renderer cutover work.
-Default builds still use the software preview.
+palette. Latest captures include `artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png`.
+Full visual fidelity still needs broader source-scene coverage and renderer
+cutover work. Default builds still use the software preview.
 
 Latest gameplay proof is now original-manager Mario/Fox combat flow through
 natural input: Wait -> movement chain, Fox Attack11, live hitbox search,

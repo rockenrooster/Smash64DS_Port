@@ -16846,6 +16846,8 @@ Still deferred:
   the menu-chain route reaches Pupupu VSBattle from Title, keeps all 14/18
   selected Mario/Fox DObjs clean, submits `hw=284/298` fighter triangles, and
   reports `hwtex=bind119/upload8/ready119/reject0/fmt0x4/max32x32`.
+- Captured the same opt-in HW ROM with
+  `.\scripts\capture-melonds.ps1 -Rom .\smash64ds-menu-chain-mariofox-dl-draw-all-hwtri.nds -Output artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png -DelaySeconds 8`.
 - Static gates passed:
   `.\scripts\check-gbi-decode-fixtures.ps1` and
   `.\scripts\check-harness-registry.ps1`.

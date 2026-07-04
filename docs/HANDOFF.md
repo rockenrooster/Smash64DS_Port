@@ -54,8 +54,9 @@ source-equivalent segment `0xE` material register, RSP vertex/render state,
 original fighter-part MObjs, and CI TLUT seeds from the current material
 palette. All-DL now reports `bind119/upload8/ready119/reject0`;
 stage-inclusive gcDrawAll reports `bind582/upload66/ready582/reject0`.
-Captures remain under
-`artifacts\renderer-*-hw*.png`. Default builds still use the software preview.
+Latest captures include
+`artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png`. Default builds still use
+the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local
