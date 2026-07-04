@@ -45,7 +45,7 @@ TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
-`33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale-floor modes `59-84`, and Boundary/Latest pair
+`33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair
 `161/162`; pass `-SoftwarePreview` to those wrappers for comparison runs. The
 Pupupu stage-inclusive gate proves matrix, material, texture, depth/fog/alpha,
 primitive-Z, and texture-perspective HW submission with zero rejects. The strict
@@ -55,13 +55,13 @@ submits 284/298 fighter triangles. The all-DL proof carries the
 source-equivalent segment `0xE` material register, RSP vertex/render state,
 original fighter-part MObjs, and CI TLUT seeds from the current material
 palette. All-DL now reports `bind119/upload8/ready119/reject0`. The
-stage-inclusive `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale-floor defaults now submit the Pupupu stage plus
+stage-inclusive `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor defaults now submit the Pupupu stage plus
 both selected live fighters in one frame: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active boundary
 wrappers assert that stage + both-fighter DS 3D replay after the imported
 manager combat chain passes. Latest captures include
 `artifacts\boundary-combat-hwtri.png`,
-`artifacts\stage-floor-follow-hwtri.png`, `artifacts\stage-floor-edge-hwtri.png`, `artifacts\stage-mpprocess-floor-hwtri.png`, `artifacts\stage-mpupdate-floor-hwtri.png`, `artifacts\stage-mpsweep-floor-hwtri.png`, `artifacts\stage-mpcross-floor-hwtri.png`, `artifacts\stage-mpadjust-floor-hwtri.png`, `artifacts\stage-mpedge-floor-hwtri.png`, `artifacts\stage-mpwall-floor-hwtri.png`, `artifacts\stage-mpstale-floor-hwtri.png`, `artifacts\stage-mplivestale-floor-hwtri.png`,
+`artifacts\stage-floor-follow-hwtri.png`, `artifacts\stage-floor-edge-hwtri.png`, `artifacts\stage-mpprocess-floor-hwtri.png`, `artifacts\stage-mpupdate-floor-hwtri.png`, `artifacts\stage-mpsweep-floor-hwtri.png`, `artifacts\stage-mpcross-floor-hwtri.png`, `artifacts\stage-mpadjust-floor-hwtri.png`, `artifacts\stage-mpedge-floor-hwtri.png`, `artifacts\stage-mpwall-floor-hwtri.png`, `artifacts\stage-mpstale-floor-hwtri.png`, `artifacts\stage-mplivestale-floor-hwtri.png`, `artifacts\stage-mpmotionstale-floor-hwtri.png`,
 `artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png` and
 `artifacts\renderer-stage-gcdrawall-hw-fighters.png`. Global normal builds
 still use the software preview.

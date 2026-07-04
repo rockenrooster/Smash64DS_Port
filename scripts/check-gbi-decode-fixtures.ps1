@@ -581,6 +581,8 @@ Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpstale-floor-l
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpstale-floor-loop-hwtri')) 'Menu-chain stage MP stale-floor registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mplivestale-floor-loop-hwtri')) 'Stage MP live-stale-floor registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mplivestale-floor-loop-hwtri')) 'Menu-chain stage MP live-stale-floor registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpmotionstale-floor-loop-hwtri')) 'Stage MP motion-stale-floor registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpmotionstale-floor-loop-hwtri')) 'Menu-chain stage MP motion-stale-floor registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary direct registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary menu registry target is not hardware-renderer default.'
 $buildProfile = Get-Content (Join-Path $root 'scripts/build-verify-profile.ps1') -Raw
@@ -705,6 +707,16 @@ Assert-True ($menuStageMPLiveStaleFloorWrapper.Contains('HardwareTriangles')) 'M
 Assert-True ($menuStageMPLiveStaleFloorWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP live-stale-floor verifier software-preview opt-out is missing.'
 Assert-True ($menuStageMPLiveStaleFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP live-stale-floor verifier no longer defaults to hardware.'
 Assert-True ($menuStageMPLiveStaleFloorWrapper.Contains('menu-chain-mariofox-stage-mplivestale-floor-loop-hwtri')) 'Menu-chain stage MP live-stale-floor verifier hardware target is missing.'
+$stageMPMotionStaleFloorWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-mpmotionstale-floor-loop-harness.ps1') -Raw
+Assert-True ($stageMPMotionStaleFloorWrapper.Contains('HardwareTriangles')) 'Stage MP motion-stale-floor verifier hardware switch is missing.'
+Assert-True ($stageMPMotionStaleFloorWrapper.Contains('SoftwarePreview')) 'Stage MP motion-stale-floor verifier software-preview opt-out is missing.'
+Assert-True ($stageMPMotionStaleFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Stage MP motion-stale-floor verifier no longer defaults to hardware.'
+Assert-True ($stageMPMotionStaleFloorWrapper.Contains('battle-mariofox-stage-mpmotionstale-floor-loop-hwtri')) 'Stage MP motion-stale-floor verifier hardware target is missing.'
+$menuStageMPMotionStaleFloorWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-mpmotionstale-floor-loop-harness.ps1') -Raw
+Assert-True ($menuStageMPMotionStaleFloorWrapper.Contains('HardwareTriangles')) 'Menu-chain stage MP motion-stale-floor verifier hardware switch is missing.'
+Assert-True ($menuStageMPMotionStaleFloorWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP motion-stale-floor verifier software-preview opt-out is missing.'
+Assert-True ($menuStageMPMotionStaleFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP motion-stale-floor verifier no longer defaults to hardware.'
+Assert-True ($menuStageMPMotionStaleFloorWrapper.Contains('menu-chain-mariofox-stage-mpmotionstale-floor-loop-hwtri')) 'Menu-chain stage MP motion-stale-floor verifier hardware target is missing.'
 $menuAllDLVerifier = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($menuAllDLVerifier.Contains('HardwareTriangles')) 'Menu-chain all-DL verifier hardware switch is missing.'
 Assert-True ($menuAllDLVerifier.Contains('SoftwarePreview')) 'Menu-chain all-DL verifier software-preview opt-out is missing.'
