@@ -76,14 +76,16 @@ if ($needsDefault) {
 }
 
 if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
+    $forcedSharedBuilds = @{}
     foreach ($record in $buildRecords) {
         $build = $record.Build
         $usesSharedBuild = $false
-        if ((-not $Force) -and (-not $NoSharedBuild)) {
+        if (-not $NoSharedBuild) {
+            $rendererSuffix = if ($record.Target -like '*-hwtri') { '-hwtri' } else { '' }
             if ($optSizeHarnessModes -contains [int]$record.Mode) {
-                $build = $optSizeSharedBuild
+                $build = "$optSizeSharedBuild$rendererSuffix"
             } else {
-                $build = $sharedBuild
+                $build = "$sharedBuild$rendererSuffix"
             }
             $usesSharedBuild = $true
         }
@@ -97,7 +99,15 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
         if ($record.Target -like '*-hwtri') {
             $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
         }
-        if ($Force) {
+        $forceThisBuild = [bool]$Force
+        if ($usesSharedBuild -and $Force) {
+            if ($forcedSharedBuilds.ContainsKey($build)) {
+                $forceThisBuild = $false
+            } else {
+                $forcedSharedBuilds[$build] = $true
+            }
+        }
+        if ($forceThisBuild) {
             $makeArgs += '-B'
         }
         $makeArgs += "-j$ParallelBuildJobs"
@@ -160,14 +170,16 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
             if ($devkitArm) { $env:DEVKITARM = $devkitArm }
             $records = @(ConvertFrom-Json -InputObject $sliceJson)
             $optSizeHarnessModes = @(159, 160, 161, 162)
+            $forcedSharedBuilds = @{}
             foreach ($record in $records) {
                 $build = $record.Build
                 $usesSharedBuild = $false
-                if ((-not $force) -and (-not $noSharedBuild)) {
+                if (-not $noSharedBuild) {
+                    $rendererSuffix = if ($record.Target -like '*-hwtri') { '-hwtri' } else { '' }
                     if ($optSizeHarnessModes -contains [int]$record.Mode) {
-                        $build = "build-verify-$profileKey-optsize-shared-$worker"
+                        $build = "build-verify-$profileKey-optsize-shared-$worker$rendererSuffix"
                     } else {
-                        $build = "build-verify-$profileKey-shared-$worker"
+                        $build = "build-verify-$profileKey-shared-$worker$rendererSuffix"
                     }
                     $usesSharedBuild = $true
                 }
@@ -180,7 +192,15 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
                 if ($record.Target -like '*-hwtri') {
                     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
                 }
-                if ($force) {
+                $forceThisBuild = [bool]$force
+                if ($usesSharedBuild -and $force) {
+                    if ($forcedSharedBuilds.ContainsKey($build)) {
+                        $forceThisBuild = $false
+                    } else {
+                        $forcedSharedBuilds[$build] = $true
+                    }
+                }
+                if ($forceThisBuild) {
                     $makeArgs += '-B'
                 }
                 $makeArgs += "-j$parallelBuildJobs"

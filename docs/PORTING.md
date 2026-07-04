@@ -17274,3 +17274,17 @@ Still deferred:
   `.\scripts\check-harness-registry.ps1`,
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-04 - Regression Force Shared Prebuild Fix
+
+- Fixed `scripts/build-verify-profile.ps1 -Profile Regression -Force` so
+  `-Force` no longer disables the shared-build fast path. Each shared build
+  slot now gets one full `make -B` rebuild, then later targets in that slot
+  reuse the common object tree and rebuild only harness-aware files. Hardware
+  `*-hwtri` targets use separate shared build slots so
+  `NDS_RENDERER_HW_TRIANGLES` cannot leak between software and hardware ROMs.
+- Added a static fixture guard for the `-Force` shared-build path.
+- Verified:
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\check-harness-registry.ps1`, parser check, and
+  `.\scripts\build-verify-profile.ps1 -Profile Regression -Only battle_mariofox_stage_mpmotionstale_floor_loop,menu_chain_mariofox_stage_mpmotionstale_floor_loop -Force -ParallelBuilds 1 -ParallelBuildJobs 16 -TimingPath artifacts\verifier-cost\build-force-shared-smoke.json`.
