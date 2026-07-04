@@ -7,6 +7,7 @@ param(
     [int]$DelaySeconds = 5,
     [switch]$ImportBattleShipFTManager,
     [switch]$ImportBattleShipBattlePlayable,
+    [switch]$ImportBattleShipIFCommon,
     [switch]$HardwareTriangles,
     [switch]$BattlePlayable,
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
@@ -57,6 +58,22 @@ function Get-Ints {
     }
     return $values
 }
+function Test-DamageDigits {
+    param([int64]$Damage, [int64]$DigitCount, [int64]$DigitsPack)
+    if ($Damage -le 0) { return $false }
+    if ($Damage -gt 999) { $Damage = 999 }
+    $damageText = [string]$Damage
+    $expected = @(10)
+    for ($i = $damageText.Length - 1; $i -ge 0; $i--) {
+        $expected += [int]([string]$damageText[$i])
+    }
+    if ($DigitCount -ne $expected.Count) { return $false }
+    for ($i = 0; $i -lt $expected.Count; $i++) {
+        $digit = ($DigitsPack -shr (8 * $i)) -band 0xff
+        if ($digit -ne $expected[$i]) { return $false }
+    }
+    return $true
+}
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
@@ -65,6 +82,9 @@ if ($ImportBattleShipFTManager) {
 }
 if ($ImportBattleShipBattlePlayable) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1'
+}
+if ($ImportBattleShipIFCommon) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_IFCOMMON=1'
 }
 if ($HardwareTriangles) {
     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
@@ -137,6 +157,14 @@ try {
         'detach',
         'quit'
     )
+    if ($ImportBattleShipIFCommon) {
+        $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
+        $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
+        $hudCommands = @(
+            'printf "IFHUD=%u,%#x,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%u\n", gNdsIFCommonHUDRecordCount, gNdsIFCommonHUDObjectMask, gNdsIFCommonHUDP0DamageCurrent, gNdsIFCommonHUDP1DamageCurrent, gNdsIFCommonHUDP0DamageMax, gNdsIFCommonHUDP1DamageMax, gNdsIFCommonHUDP0DigitCount, gNdsIFCommonHUDP1DigitCount, gNdsIFCommonHUDP0Digits, gNdsIFCommonHUDP1Digits, gNdsIFCommonHUDP0StockCurrent, gNdsIFCommonHUDP1StockCurrent, gNdsIFCommonHUDP0StockMin, gNdsIFCommonHUDP1StockMin, gNdsIFCommonHUDP0StockMax, gNdsIFCommonHUDP1StockMax'
+        )
+        $gdbCommands = @($beforeDetach + $hudCommands + $afterDetach)
+    }
     $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root -Commands $gdbCommands -ScriptName $scriptName).Stdout
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
@@ -171,6 +199,7 @@ try {
     $platformHw = [regex]::Match($gdbStdout, 'PLATFORM_HW=([0-9]+),([0-9]+)')
     $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
+    $ifHud = [regex]::Match($gdbStdout, 'IFHUD=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     Assert-Condition ($harn.Success -and (Convert-MarkerUInt32 $harn.Groups[1].Value) -eq 0x4841524e -and [int]$harn.Groups[2].Value -eq $ExpectedMode -and [int]$harn.Groups[3].Value -eq $ExpectedHarnessSceneCurr -and [int]$harn.Groups[4].Value -eq $ExpectedHarnessScenePrev -and (Convert-MarkerUInt32 $harn.Groups[5].Value) -eq 0) $HarnessSelectMessage $gdbStdout
     Assert-Condition ($scene.Success -and [int]$scene.Groups[1].Value -eq 22 -and [int]$scene.Groups[2].Value -eq 21 -and [int]$scene.Groups[3].Value -eq 6) 'Live scene is not Pupupu VSBattle from Maps.' $gdbStdout
@@ -208,6 +237,19 @@ try {
             Assert-Condition ($battlePlayableKO.Success -and $bpk[0] -eq 0x42504c59 -and (($bpk[1] -band 0xff) -eq 0xff) -and $bpk[3] -eq 2 -and $bpk[4] -eq 1 -and $bpk[5] -eq 2 -and $bpk[6] -eq 1 -and $bpk[8] -eq ($bpk[7] + 1)) 'battle_playable stock/fall KO proof failed.' $gdbStdout
             Assert-Condition ($battlePlayableStatus.Success -and $bps[0] -gt 0 -and $bps[1] -gt 0 -and $bps[2] -gt 0 -and $bps[3] -gt 0 -and $bps[5] -ge 8 -and $bps[6] -eq 10 -and $bps[7] -eq 0 -and $bps[8] -eq 0 -and $bps[9] -gt 0) 'battle_playable Dead/Rebirth/return-control proof failed.' $gdbStdout
             $battlePlayableSummary = " bplay=stock$($bpk[3])->$($bpk[4]) falls$($bpk[7])->$($bpk[8]) dead=$($bps[0]) rebirth=$($bps[1])/$($bps[2])/$($bps[3]) recover=$($bps[4])/$($bps[5])"
+            if ($ImportBattleShipIFCommon) {
+                $ih = Get-Ints $ifHud
+                $victimSlot = [int]$bpk[2]
+                $damageMax = @($ih[4], $ih[5])
+                $digitCounts = @($ih[6], $ih[7])
+                $digitPacks = @($ih[8], $ih[9])
+                $stockMin = @($ih[12], $ih[13])
+                $stockMax = @($ih[14], $ih[15])
+                Assert-Condition ($ifHud.Success -and $ih[0] -gt 0 -and (($ih[1] -band 0x33) -eq 0x33)) 'Imported IFCommon HUD objects were not observed for both players.' $gdbStdout
+                Assert-Condition ((Test-DamageDigits -Damage $damageMax[$victimSlot] -DigitCount $digitCounts[$victimSlot] -DigitsPack $digitPacks[$victimSlot])) 'Imported IFCommon percent digit images did not match the victim damage value.' $gdbStdout
+                Assert-Condition ($stockMax[$victimSlot] -eq ($bpk[3] + 1) -and $stockMin[$victimSlot] -eq ($bpk[4] + 1)) 'Imported IFCommon stock icon display did not decrement after KO.' $gdbStdout
+                $battlePlayableSummary += " hud=dmg$($damageMax[$victimSlot])/digits0x$('{0:x}' -f $digitPacks[$victimSlot]) stock$($stockMax[$victimSlot])->$($stockMin[$victimSlot])"
+            }
         }
         if ($HardwareTriangles) {
             $hw = Get-Ints $platformHw

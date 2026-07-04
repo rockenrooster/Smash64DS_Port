@@ -27,6 +27,8 @@ void lbCommonPrepSObjDraw(Gfx **dls, SObj *sobj)
     (void)sobj;
 }
 
+extern void ndsIFCommonRecordHUDState(void);
+
 DObj *lbCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root)
 {
     if (dobj->child != NULL)
@@ -821,6 +823,7 @@ void lbCommonDrawSObjAttr(GObj *gobj)
         gNdsStartupLogoDrawBlocker =
             NDS_STARTUP_LOGO_BLOCKER_NO_VISIBLE_SOBJ;
     }
+    ndsIFCommonRecordHUDState();
 }
 
 void lbCommonDrawSObjNoAttr(GObj *gobj)

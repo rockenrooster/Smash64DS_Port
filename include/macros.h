@@ -15,6 +15,7 @@
 #define ARRAY_COUNT(a) ((s32)(sizeof(a) / sizeof((a)[0])))
 #endif
 #define U8_MAX 0xFF
+#define S8_MAX 0x7F
 #define M_PI_F ((f32)M_PI)
 #define M_DTOR_F(x) ((f32)((x) * (f32)M_DTOR))
 #ifndef PI32
@@ -34,6 +35,7 @@
 #define TIME_MIN (TIME_SEC * 60)
 #define I_SEC_TO_TICS(q) ((int)((q) * TIME_SEC))
 #define I_MIN_TO_TICS(q) ((int)((q) * TIME_MIN))
+#define F_SEC_TO_TICS(q) ((float)((q) * TIME_SEC))
 
 #ifdef __GNUC__
 #define UNUSED __attribute__((unused))

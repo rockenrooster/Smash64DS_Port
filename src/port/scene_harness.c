@@ -21,6 +21,19 @@ static void ndsSceneHarnessSetDefaultScene(SCKind scene_curr, SCKind scene_prev)
     gNdsSceneHarnessScenePrev = (u32)scene_prev;
 }
 
+static void ndsSceneHarnessSyncSingleStockIconFlags(void)
+{
+    s32 i;
+    ub8 is_single_stockicon =
+        (gSCManagerTransferBattleState.game_rules & SCBATTLE_GAMERULE_TIME) ? TRUE : FALSE;
+
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        /* BattleShip mnplayersvs.c:4417 derives this from the time-rule bit. */
+        gSCManagerTransferBattleState.players[i].is_single_stockicon = is_single_stockicon;
+    }
+}
+
 static void ndsSceneHarnessSeedVSDefaults(void)
 {
     s32 i;
@@ -56,6 +69,8 @@ static void ndsSceneHarnessSeedVSDefaults(void)
         gSCManagerTransferBattleState.players[i].shade = 0;
         gSCManagerTransferBattleState.players[i].color = 0;
     }
+
+    ndsSceneHarnessSyncSingleStockIconFlags();
 }
 
 static void ndsSceneHarnessSeedBattleFDDefaults(void)
@@ -90,6 +105,8 @@ static void ndsSceneHarnessSeedBattleFDDefaults(void)
         gSCManagerTransferBattleState.players[i].color = 0;
         gSCManagerTransferBattleState.players[i].stock_count = 0;
     }
+
+    ndsSceneHarnessSyncSingleStockIconFlags();
 
     gSCManagerTransferBattleState.players[0].pkind = nFTPlayerKindMan;
     gSCManagerTransferBattleState.players[0].fkind = nFTKindMario;
@@ -137,6 +154,8 @@ static void ndsSceneHarnessSeedBattlePupupuStageDefaults(void)
         gSCManagerTransferBattleState.players[i].stock_count = 0;
     }
 
+    ndsSceneHarnessSyncSingleStockIconFlags();
+
     gSCManagerTransferBattleState.players[0].pkind = nFTPlayerKindMan;
     gSCManagerTransferBattleState.players[0].fkind = nFTKindMario;
     gSCManagerTransferBattleState.players[0].handicap = 9;
@@ -166,6 +185,7 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
     gSCManagerTransferBattleState.stocks = 2;
     gSCManagerTransferBattleState.players[0].stock_count = 2;
     gSCManagerTransferBattleState.players[1].stock_count = 2;
+    ndsSceneHarnessSyncSingleStockIconFlags();
 
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
 }

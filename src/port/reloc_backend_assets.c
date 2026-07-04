@@ -493,6 +493,12 @@ typedef struct NDSRelocKnownSymbol {
     u32 offset;
 } NDSRelocKnownSymbol;
 
+typedef struct NDSRelocKnownAssetSymbol {
+    u32 asset_id;
+    const void *symbol;
+    u32 offset;
+} NDSRelocKnownAssetSymbol;
+
 typedef struct NDSOpeningActionPreviewDesc {
     u32 scene_kind;
     u32 asset_id;
@@ -855,6 +861,12 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
     { &llMNVSModeConsoleIconDarkSprite, NDS_RELOC_SYMBOL_MNVSMODE_CONSOLE_ICON_DARK },
     { &llMNVSModeVSTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_VS_TEXT },
 };
+
+#define NDS_IFCOMMON_ASSET_SYMBOL(asset, name, value) { asset, &name, value },
+static const NDSRelocKnownAssetSymbol sNdsIFCommonSymbols[] = {
+    NDS_IFCOMMON_RELOC_SYMBOLS(NDS_IFCOMMON_ASSET_SYMBOL)
+};
+#undef NDS_IFCOMMON_ASSET_SYMBOL
 
 static u32 ndsRelocFileID(const void *file_id)
 {
@@ -3014,6 +3026,16 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
         }
         *out_offset = NDS_RELOC_SYMBOL_N64_LOGO_SPRITE;
         return TRUE;
+    }
+    for (i = 0; i < ARRAY_COUNT(sNdsIFCommonSymbols); i++)
+    {
+        if ((sNdsIFCommonSymbols[i].asset_id != NDS_RELOC_ASSET_INVALID) &&
+            (loaded->asset_id == sNdsIFCommonSymbols[i].asset_id) &&
+            (symbol == sNdsIFCommonSymbols[i].symbol))
+        {
+            *out_offset = sNdsIFCommonSymbols[i].offset;
+            return TRUE;
+        }
     }
     if (loaded->asset_id == NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE)
     {

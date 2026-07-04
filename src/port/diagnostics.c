@@ -2619,6 +2619,22 @@ volatile s32 gNdsFighterBattlePlayableFinalYMilli;
 volatile s32 gNdsFighterBattlePlayableFinalVelXMilli;
 volatile s32 gNdsFighterBattlePlayableFinalVelYMilli;
 volatile s32 gNdsFighterBattlePlayableFinalFloorDistMilli;
+volatile u32 gNdsIFCommonHUDRecordCount;
+volatile u32 gNdsIFCommonHUDObjectMask;
+volatile u32 gNdsIFCommonHUDP0DamageCurrent;
+volatile u32 gNdsIFCommonHUDP1DamageCurrent;
+volatile u32 gNdsIFCommonHUDP0DamageMax;
+volatile u32 gNdsIFCommonHUDP1DamageMax;
+volatile u32 gNdsIFCommonHUDP0DigitCount;
+volatile u32 gNdsIFCommonHUDP1DigitCount;
+volatile u32 gNdsIFCommonHUDP0Digits;
+volatile u32 gNdsIFCommonHUDP1Digits;
+volatile u32 gNdsIFCommonHUDP0StockCurrent;
+volatile u32 gNdsIFCommonHUDP1StockCurrent;
+volatile u32 gNdsIFCommonHUDP0StockMin;
+volatile u32 gNdsIFCommonHUDP1StockMin;
+volatile u32 gNdsIFCommonHUDP0StockMax;
+volatile u32 gNdsIFCommonHUDP1StockMax;
 volatile u32 gNdsFighterMarioFoxGCDrawAllLoopResult;
 volatile u32 gNdsFighterMarioFoxGCDrawAllLoopSafeResult;
 volatile u32 gNdsFighterMarioFoxGCDrawAllLoopMask;
@@ -6539,6 +6555,11 @@ uintptr_t llIFCommonAnnounceCommonLetterSSprite;
 uintptr_t llIFCommonAnnounceCommonLetterUSprite;
 uintptr_t llIFCommonAnnounceCommonLetterXSprite;
 uintptr_t llIFCommonAnnounceCommonLetterYSprite;
+
+#define NDS_DEFINE_IFCOMMON_RELOC_SYMBOL(asset, name, value) uintptr_t name = value;
+NDS_IFCOMMON_RELOC_SYMBOLS(NDS_DEFINE_IFCOMMON_RELOC_SYMBOL)
+#undef NDS_DEFINE_IFCOMMON_RELOC_SYMBOL
+
 uintptr_t llMVOpeningCommonMarioCamAnimJoint;
 uintptr_t llMVOpeningCommonDonkeyCamAnimJoint;
 uintptr_t llMVOpeningCommonSamusCamAnimJoint;
@@ -6552,7 +6573,9 @@ uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
 NDS_MENU_RELOC_SYMBOLS(NDS_DEFINE_MENU_RELOC_SYMBOL)
 #undef NDS_DEFINE_MENU_RELOC_SYMBOL
 
+#if !NDS_IMPORT_BATTLESHIP_IFCOMMON
 u8 dIFCommonPlayerTeamColorIDs[] = { 0, 1, 3, 4, 0 };
+#endif
 
 extern s32 sMNStartupSkipAllowWait;
 extern sb32 sMNStartupIsProceedOpening;

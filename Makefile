@@ -22,6 +22,7 @@ NDS_RENDERER_HW_TRIANGLES ?= 0
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
 NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE ?= 1
+NDS_IMPORT_BATTLESHIP_IFCOMMON ?= 0
 NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	battle_mariofox_stage_inishie_scale_loop \
 	menu_chain_mariofox_stage_inishie_scale_loop \
@@ -414,6 +415,7 @@ CFLAGS += -DNDS_RENDERER_HW_TRIANGLES=$(NDS_RENDERER_HW_TRIANGLES)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMAIN=$(NDS_IMPORT_BATTLESHIP_FTMAIN)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMANAGER=$(NDS_IMPORT_BATTLESHIP_FTMANAGER)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=$(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE)
+CFLAGS += -DNDS_IMPORT_BATTLESHIP_IFCOMMON=$(NDS_IMPORT_BATTLESHIP_IFCOMMON)
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
@@ -498,6 +500,9 @@ endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE),1)
 CFILES += battleship_gmcamera.c battleship_ftcommon_dead.c \
 	battleship_ftcommon_rebirth.c battle_playable_compat_stubs.c
+endif
+ifeq ($(NDS_IMPORT_BATTLESHIP_IFCOMMON),1)
+CFILES += battleship_ifcommon.c
 endif
 CFILES += battleship_ftmain.c
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)

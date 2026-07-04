@@ -6887,6 +6887,17 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
     {
         fp->percent_damage += damage;
         fp->damage += damage;
+        if (gSCManagerBattleState != NULL)
+        {
+            gSCManagerBattleState->players[fp->player].total_damage_all +=
+                damage;
+            if (fp->percent_damage > 999)
+            {
+                fp->percent_damage = 999;
+            }
+            gSCManagerBattleState->players[fp->player].stock_damage_all =
+                fp->percent_damage;
+        }
     }
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
@@ -6898,9 +6909,18 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
 void ftParamUpdatePlayerBattleStats(s32 attack_player, s32 defend_player,
                                     s32 attack_damage)
 {
-    (void)attack_player;
-    (void)defend_player;
-    (void)attack_damage;
+    if ((gSCManagerBattleState != NULL) &&
+        (attack_player != GMCOMMON_PLAYERS_MAX) &&
+        (attack_player != defend_player))
+    {
+        gSCManagerBattleState->players[attack_player].total_damage_given +=
+            attack_damage;
+        gSCManagerBattleState->players[defend_player].
+            total_damage_players[attack_player] += attack_damage;
+        gSCManagerBattleState->players[defend_player].combo_damage_foe +=
+            attack_damage;
+        gSCManagerBattleState->players[defend_player].combo_count_foe++;
+    }
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
     {
@@ -11560,6 +11580,12 @@ void ftParamInitGame(void)
 
 void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj)
 {
+    if ((gSCManagerBattleState != NULL) &&
+        (player >= 0) &&
+        (player < (s32)ARRAY_COUNT(gSCManagerBattleState->players)))
+    {
+        gSCManagerBattleState->players[player].fighter_gobj = fighter_gobj;
+    }
     ndsFighterManagerRecordCreatedFighter(fighter_gobj, player);
     gNdsSCVSBattleCompatManagerMask |= 1u << 6;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
@@ -11851,7 +11877,9 @@ void mpCollisionInitGroundData(void)
 
 #if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 extern GObj *gGMCameraGObj;
+#if !NDS_IMPORT_BATTLESHIP_IFCOMMON
 IFPlayerCommon gIFCommonPlayerInterface;
+#endif
 
 static GObj *ndsBattleCompatMainCameraGObj(void)
 {
@@ -12936,6 +12964,7 @@ void efManagerInitEffects(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_IFCOMMON
 static void ndsSCVSBattleMarkInterface(u32 bit)
 {
     gNdsSCVSBattleCompatInterfaceMask |= bit;
@@ -12996,9 +13025,10 @@ void ifCommonTimerMakeInterface(void (*func_init)(void))
     }
 }
 
-void ifCommonTimerMakeDigits(void)
+SObj *ifCommonTimerMakeDigits(void)
 {
     ndsSCVSBattleMarkInterface(1u << 10);
+    return NULL;
 }
 
 void ifCommonSuddenDeathMakeInterface(void)
@@ -13016,6 +13046,7 @@ void ifScreenFlashMakeInterface(u8 alpha)
     (void)alpha;
     ndsSCVSBattleMarkInterface(1u << 13);
 }
+#endif
 
 void lbBackupIsSramValid(void)
 {

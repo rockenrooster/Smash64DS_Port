@@ -222,6 +222,103 @@ extern uintptr_t llIFCommonAnnounceCommonLetterSSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterUSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterXSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterYSprite;
+
+#define NDS_IFCOMMON_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonLetterTSprite, 0x5bd0u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonSymbolExclaimSprite, 0x7d98u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalAButtonSprite, 0x958u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalArrowsSprite, 0x1538u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalBButtonSprite, 0xa88u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalControlStickSprite, 0x17a8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalLTriggerSprite, 0x18c8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalPauseSprite, 0x438u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalPlusSprite, 0x4d8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalResetSprite, 0x610u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalRetrySprite, 0x828u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalRTriggerSprite, 0xcf8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalSmashBallSprite, 0x6d8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalZTriggerSprite, 0xbd8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePausePlayerNum1PSprite, 0x78u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePausePlayerNum2PSprite, 0x138u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePausePlayerNum3PSprite, 0x1f8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePausePlayerNum4PSprite, 0x2b8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits0Sprite, 0x68u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits1Sprite, 0x118u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits2Sprite, 0x1c8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits3Sprite, 0x278u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits4Sprite, 0x328u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits5Sprite, 0x3d8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits6Sprite, 0x488u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits7Sprite, 0x538u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits8Sprite, 0x5e8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits9Sprite, 0x698u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigitsCrossSprite, 0x828u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterASprite, 0x1de68u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterESprite, 0x144e0u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterGSprite, 0x20788u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterISprite, 0xf740u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterMSprite, 0x127e0u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterPSprite, 0x18fe8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterSSprite, 0x1b5f8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterTSprite, 0xe4a8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterUSprite, 0x16eb8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusFrameSprite, 0x21760u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampBlueContourSprite, 0x25290u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampBlueDimSprite, 0x21ba8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampBlueLightSprite, 0x22f18u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampRedContourSprite, 0x23a28u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampRedDimSprite, 0x21950u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampRedLightSprite, 0x22128u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampYellowContourSprite, 0x24620u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampYellowDimSprite, 0x21a10u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusLampYellowLightSprite, 0x22588u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusOrangeExclamationMarkSprite, 0xc370u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusOrangeLetterGSprite, 0x4d78u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusOrangeLetterOSprite, 0xa730u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusRodShadowSprite, 0x21878u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusRodSprite, 0x20990u) \
+    X(NDS_RELOC_ASSET_INVALID, llIFCommonItemArrowSprite, 0x50u) \
+    X(NDS_RELOC_ASSET_INVALID, llIFCommonItemFileID, 0x57u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER, llIFCommonPlayerArrowsAnimJoint, 0x270u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER, llIFCommonPlayerArrowsDObjDesc, 0x188u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit0Sprite, 0x148u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit1Sprite, 0x2d8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit2Sprite, 0x500u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit3Sprite, 0x698u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit4Sprite, 0x8c0u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit5Sprite, 0xa58u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit6Sprite, 0xc80u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit7Sprite, 0xe18u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit8Sprite, 0x1040u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit9Sprite, 0x1270u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageSymbolHPSprite, 0x15d8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageSymbolPercentSprite, 0x1458u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER, llIFCommonPlayerMagnifyDisplayList, 0x030u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER, llIFCommonPlayerMagnifyFrameImage, 0x2c8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS, llIFCommonPlayerTags1PSprite, 0x258u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS, llIFCommonPlayerTags2PSprite, 0x4f8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS, llIFCommonPlayerTags3PSprite, 0x798u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS, llIFCommonPlayerTags4PSprite, 0xa38u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS, llIFCommonPlayerTagsAllySprite, 0xeb8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS, llIFCommonPlayerTagsCPSprite, 0xcd8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit0Sprite, 0x138u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit1Sprite, 0x228u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit2Sprite, 0x3a8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit3Sprite, 0x528u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit4Sprite, 0x6a8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit5Sprite, 0x828u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit6Sprite, 0x9a8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit7Sprite, 0xb28u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit8Sprite, 0xca8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerDigit9Sprite, 0xe28u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerSymbolColonSprite, 0xf08u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerSymbolCSecSprite, 0x1238u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerSymbolSecSprite, 0x1140u)
+
+#define NDS_DECLARE_IFCOMMON_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_IFCOMMON_RELOC_SYMBOLS(NDS_DECLARE_IFCOMMON_RELOC_SYMBOL)
+#undef NDS_DECLARE_IFCOMMON_RELOC_SYMBOL
+
 extern uintptr_t llMVOpeningCommonMarioCamAnimJoint;
 extern uintptr_t llMVOpeningCommonDonkeyCamAnimJoint;
 extern uintptr_t llMVOpeningCommonSamusCamAnimJoint;

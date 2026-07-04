@@ -489,6 +489,22 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterBattlePlayableFinalVelXMilli = 0;
     gNdsFighterBattlePlayableFinalVelYMilli = 0;
     gNdsFighterBattlePlayableFinalFloorDistMilli = 0;
+    gNdsIFCommonHUDRecordCount = 0;
+    gNdsIFCommonHUDObjectMask = 0;
+    gNdsIFCommonHUDP0DamageCurrent = 0;
+    gNdsIFCommonHUDP1DamageCurrent = 0;
+    gNdsIFCommonHUDP0DamageMax = 0;
+    gNdsIFCommonHUDP1DamageMax = 0;
+    gNdsIFCommonHUDP0DigitCount = 0;
+    gNdsIFCommonHUDP1DigitCount = 0;
+    gNdsIFCommonHUDP0Digits = 0;
+    gNdsIFCommonHUDP1Digits = 0;
+    gNdsIFCommonHUDP0StockCurrent = 0;
+    gNdsIFCommonHUDP1StockCurrent = 0;
+    gNdsIFCommonHUDP0StockMin = 0;
+    gNdsIFCommonHUDP1StockMin = 0;
+    gNdsIFCommonHUDP0StockMax = 0;
+    gNdsIFCommonHUDP1StockMax = 0;
     gNdsFighterMarioFoxModelResult = 0;
     gNdsFighterMarioFoxGObjResult = 0;
     gNdsFighterMarioFoxSetupMask = 0;
@@ -6219,6 +6235,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsStageCollisionLoopPrepareRuntime();
             }
             ndsFighterMarioFoxNaturalMotionPrepare();
+#if NDS_IMPORT_BATTLESHIP_IFCOMMON
+            if (NDS_DEV_SCENE_HARNESS ==
+                NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+            {
+                gcDrawAll();
+            }
+#endif
             update_max =
                 (NDS_DEV_SCENE_HARNESS ==
                     NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE) ?

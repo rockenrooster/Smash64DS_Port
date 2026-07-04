@@ -79,7 +79,7 @@ typedef struct ITStruct {
         f32 vel_ground;
         Vec3f vel_air;
     } physics;
-    u8 coll_data[0x80];
+    MPCollData coll_data;
     sb32 ga;
     ITAttackColl attack_coll;
     ITDamageColl damage_coll;
@@ -127,6 +127,8 @@ typedef struct ITStruct {
     void *attr;
     u8 colanim[0x20];
     ub32 is_hitlag_victim : 1;
+    GObj *arrow_gobj;
+    u8 arrow_timer;
 } ITStruct;
 
 typedef enum ITKind {

@@ -38,6 +38,12 @@ typedef struct alSoundEffect alSoundEffect;
 
 #include <ft/ftdata_file_slots.h>
 
+typedef struct FTSprites {
+    Sprite *stock_sprite;
+    int **stock_luts;
+    Sprite *emblem;
+} FTSprites;
+
 typedef enum FTKind {
     nFTKindPlayableStart,
     nFTKindMario = nFTKindPlayableStart,
@@ -3436,7 +3442,7 @@ typedef struct FTAttributes {
     s32 joint_itemheavy_id;
     FTThrownStatusArray *thrown_status;
     s32 joint_itemlight_id;
-    void *sprites;
+    FTSprites *sprites;
     void *skeleton;
 } FTAttributes;
 

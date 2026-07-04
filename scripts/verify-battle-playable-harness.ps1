@@ -15,6 +15,7 @@ $ErrorActionPreference = 'Stop'
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
     -BattlePlayable `
+    -ImportBattleShipIFCommon `
     -HardwareTriangles `
     -Harness 'battle_playable' `
     -Target 'smash64ds-battle-playable-hwtri' `

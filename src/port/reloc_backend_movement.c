@@ -1,3 +1,5 @@
+extern void ndsIFCommonRecordHUDState(void);
+
 static void ndsFighterWalkRecordBefore(u32 slot, FTStruct *fp, DObj *root,
                                        s32 stick_x)
 {
@@ -9491,6 +9493,7 @@ static void ndsFighterNaturalCombatRecordPair(FTStruct *attacker,
     }
 
     ndsFighterBattlePlayableRecordVictim(victim);
+    ndsIFCommonRecordHUDState();
 
     if (attacker->status_id == nFTCommonStatusAttack11)
     {

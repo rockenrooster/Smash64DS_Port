@@ -100,6 +100,7 @@ typedef union {
 #define ZERO         31
 
 #define G_CYC_1CYCLE 0u
+#define G_CYC_FILL 0u
 #define G_RM_AA_OPA_SURF 0u
 #define G_RM_AA_OPA_SURF2 0u
 #define G_RM_AA_XLU_SURF 0u
@@ -108,10 +109,23 @@ typedef union {
 #define G_RM_AA_ZB_OPA_SURF2 0u
 #define G_RM_AA_ZB_XLU_SURF 0u
 #define G_RM_AA_ZB_XLU_SURF2 0u
+#define G_RM_OPA_SURF 0u
+#define G_RM_OPA_SURF2 0u
+#define G_RM_NOOP 0u
+#define G_RM_NOOP2 0u
+#define G_AC_NONE 0u
+#define G_AC_THRESHOLD 0u
 #define G_TP_PERSP 0u
+#define G_TP_NONE 0u
 #define G_ZS_PIXEL 0u
 #define G_TX_WRAP 0u
+#define G_TX_MIRROR 0u
+#define G_TX_NOLOD 0u
+#define G_TX_LOADTILE 0u
+#define G_TX_RENDERTILE 0u
 #define G_CC_PRIMITIVE 0u
+#define G_CC_DECALRGBA 0u
+#define G_CC_BLENDPEDECALA 0u
 #define G_MTX_MODELVIEW 0x00u
 #define G_MTX_PROJECTION 0x01u
 #define G_MTX_MUL 0x00u
@@ -119,6 +133,8 @@ typedef union {
 #define G_MTX_NOPUSH 0x00u
 #define G_MTX_PUSH 0x04u
 #define G_SC_NON_INTERLACE 0u
+
+#define GPACK_FILL16(w) (((w) << 16) | ((w) << 0))
 
 /* Segment base register indexes / move-word targets used by the task manager's
  * segment setup (gSPSegment). The DS has no segment registers, but the macros
@@ -141,9 +157,16 @@ typedef union {
 } while (0)
 
 /* Static (initializer) DL macros produce zero display-list words. */
-#define gsSPSetGeometryMode(mode) { 0 }
-#define gsSPSetLights1(light)     { 0 }
-#define gsSPEndDisplayList()      { 0 }
+#define gsSPSetGeometryMode(mode)       { 0 }
+#define gsSPClearGeometryMode(mode)     { 0 }
+#define gsSPSetLights1(light)           { 0 }
+#define gsDPPipeSync()                  { 0 }
+#define gsDPSetRenderMode(mode1, mode2) { 0 }
+#define gsDPSetAlphaCompare(type)       { 0 }
+#define gsDPSetBlendColor(r, g, b, a)   { 0 }
+#define gsDPSetPrimColor(m, l, r, g, b, a) { 0 }
+#define gsDPSetCombineMode(mode1, mode2) { 0 }
+#define gsSPEndDisplayList()            { 0 }
 
 /* Runtime DL macros operate on a Gfx* cursor that the caller advances (e.g.
  * gSPDisplayList(dls[0]++, dl)). The DS has no RSP, so these stubs only zero
@@ -220,6 +243,10 @@ typedef union {
     NDS_GBI_ZERO_PACKET(pkt); \
 } while (0)
 
+#define gDPLoadSync(pkt) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+} while (0)
+
 #define gDPFillRectangle(pkt, ulx, uly, lrx, lry) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
     (void)(ulx); (void)(uly); (void)(lrx); (void)(lry); \
@@ -238,6 +265,16 @@ typedef union {
 #define gDPSetPrimColor(pkt, m, l, r, g, b, a) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
     (void)(m); (void)(l); (void)(r); (void)(g); (void)(b); (void)(a); \
+} while (0)
+
+#define gDPSetFillColor(pkt, color) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(color); \
+} while (0)
+
+#define gDPSetBlendColor(pkt, r, g, b, a) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(r); (void)(g); (void)(b); (void)(a); \
 } while (0)
 
 #define gDPSetEnvColor(pkt, r, g, b, a) do { \
@@ -264,6 +301,11 @@ typedef union {
     (void)(mode1); (void)(mode2); \
 } while (0)
 
+#define gDPSetAlphaCompare(pkt, type) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(type); \
+} while (0)
+
 #define gDPSetTexturePersp(pkt, type) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
     (void)(type); \
@@ -272,6 +314,40 @@ typedef union {
 #define gDPSetDepthSource(pkt, src) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
     (void)(src); \
+} while (0)
+
+#define gDPSetColorImage(pkt, fmt, siz, width, image) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(fmt); (void)(siz); (void)(width); (void)(image); \
+} while (0)
+
+#define gDPSetTextureImage(pkt, fmt, siz, width, image) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(fmt); (void)(siz); (void)(width); (void)(image); \
+} while (0)
+
+#define gDPSetTile(pkt, fmt, siz, line, tmem, tile, palette, cm_t, mask_t, \
+                   shift_t, cm_s, mask_s, shift_s) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(fmt); (void)(siz); (void)(line); (void)(tmem); (void)(tile); \
+    (void)(palette); (void)(cm_t); (void)(mask_t); (void)(shift_t); \
+    (void)(cm_s); (void)(mask_s); (void)(shift_s); \
+} while (0)
+
+#define gDPLoadBlock(pkt, tile, uls, ult, lrs, dxt) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(tile); (void)(uls); (void)(ult); (void)(lrs); (void)(dxt); \
+} while (0)
+
+#define gSPTextureRectangle(pkt, ulx, uly, lrx, lry, tile, s, t, dsdx, dtdy) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(ulx); (void)(uly); (void)(lrx); (void)(lry); (void)(tile); \
+    (void)(s); (void)(t); (void)(dsdx); (void)(dtdy); \
+} while (0)
+
+#define gDPSetTileSize(pkt, tile, uls, ult, lrs, lrt) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(tile); (void)(uls); (void)(ult); (void)(lrs); (void)(lrt); \
 } while (0)
 
 #endif
