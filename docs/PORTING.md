@@ -16989,3 +16989,29 @@ Still deferred:
   `.\scripts\check-harness-registry.ps1`,
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-04 - Stage Floor-Edge Hardware Cutover
+
+- Made the adjacent stage floor-edge wrappers for modes `65/66` default to
+  their `*-hwtri` targets, keeping `-SoftwarePreview` for the software
+  comparison path. The registry now prebuilds the hardware outputs by default.
+- Extended the existing post-natural-motion hardware submit allowlist so the
+  floor-edge modes submit the Pupupu stage plus both manager-created fighters
+  after the imported manager proof passes. The older floor-edge marker stack
+  remains part of the documented natural-runtime migration work; this cutover
+  only changes the DS 3D replay default for the already-bounded scene.
+- Verified a targeted `RegressionFast` prebuild for both affected targets,
+  then `.\scripts\verify-battle-mariofox-stage-floor-edge-loop-harness.ps1
+  -NoBuild -DelaySeconds 3` and
+  `.\scripts\verify-menu-chain-mariofox-stage-floor-edge-loop-harness.ps1
+  -NoBuild`. Both report `hwsubmit=252`, `hwtri=1152`,
+  `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and `hwftr=2/582`.
+  The menu-chain route uses the wrapper's default delay; a 3-second run can
+  stop before the boundary/frame-flush marker.
+- Captured the direct HW ROM at `artifacts\stage-floor-edge-hwtri.png`.
+- Gates passed:
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
