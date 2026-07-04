@@ -47,11 +47,5 @@ sb32 ndsBaseFTCommonDeadCheckInterruptCommon(GObj *fighter_gobj);
 
 sb32 ftCommonDeadCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP)
-    (void)fighter_gobj;
-    return FALSE;
-#else
     return ndsBaseFTCommonDeadCheckInterruptCommon(fighter_gobj);
-#endif
 }

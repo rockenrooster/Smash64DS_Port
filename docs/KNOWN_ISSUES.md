@@ -85,13 +85,15 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
-- The `battle_playable` fence links original `gm/gmcamera.c`,
-  `ftcommondead.c`, and `ftcommonrebirth.c`. Fenced modes `161/162` now prove
-  the original battle camera over normalized Pupupu `MPGroundData` while HW
-  fighter replay stays green, but legacy status-loop proofs still suppress the
-  Dead/Rebirth interrupt until a natural KO -> stock -> Rebirth -> Wait proof
-  lands. Weak stubs in `src/port/battle_playable_compat_stubs.c` still cover
-  `sys/objdisplay`, `lbcommon`, HUD, effects, items, and 1P-only callbacks.
+- `battle_playable` is default for original `gm/gmcamera.c`,
+  `ftcommondead.c`, and `ftcommonrebirth.c`. Mode `163` now proves natural
+  attack/damage -> KO -> stock decrement -> Rebirth -> Wait plus a hardware
+  stage/fighter frame. Real battle HUD is still a separate interface slice:
+  whole-TU `if/ifcommon.c` spans damage digits, stock icons, magnify/arrows,
+  tags, timer, pause/end UI, effects/items, SObj/RDP helpers, and collides with
+  the current weak `ifCommon*` stubs in
+  `src/port/battle_playable_compat_stubs.c`. Keep those weak HUD/interface
+  stubs documented until the coherent interface TU group is imported.
 - Coverage-reduced after original-manager graduation, still pending natural
   rebuild: modes `57/58` gcDrawAll, the older shared gcDrawAll/stage/MP
   regression family, selected Fox Jab2 modes `159/160`, and older aggregate

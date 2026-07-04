@@ -12,11 +12,12 @@ to do next.
 .\scripts\verify-all.ps1 -Profile Boundary -List
 ```
 
-2. Current pair is expected to be:
+2. Current Boundary/Latest entries are expected to be:
 
 ```powershell
 .\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
 .\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
+.\scripts\verify-battle-playable-harness.ps1 -DelaySeconds 3
 ```
 
 3. Read `docs/STATUS.md` for current truth, `docs/DIAGNOSTIC_REFERENCE.md` for
@@ -24,8 +25,8 @@ full marker strings, and `docs/PORTING.md` for history.
 
 ## Current Boundary
 
-Modes `161/162` are the active Boundary/Latest pair. In the default
-original-manager build they now prove natural Mario/Fox combat on the Pupupu
+Modes `161/162` are the bounded natural-combat pair. In the default
+original-manager build they prove natural Mario/Fox combat on the Pupupu
 Mario/Fox battle root: Wait -> Walk -> Dash -> Run -> RunBrake -> Turn,
 Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
 GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
@@ -37,6 +38,12 @@ dash=13/11, run=8/10, attack=22, hitbox=7,
 damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff,
 hwsubmit=252, hwtri=1152, hwftr=2/582
 ```
+
+Mode `163` is the scene-level `battle_playable` Boundary/Latest anchor. It runs
+Pupupu Mario/Fox stock battle with the imported battle camera, Dead, and
+Rebirth live by default, then proves natural attack/damage, KO, stock
+decrement, falls increment, RebirthDown -> RebirthStand -> RebirthWait, return
+to Wait, and a DS 3D hardware stage + fighter frame.
 
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
 `33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair
@@ -83,12 +90,13 @@ gcDrawAll/stage/MP synthetic marker stacks and selected Fox Jab2 modes
 `159/160` still need natural-runtime migration; do not resurrect their
 motion-extract seam.
 
-First `battle_playable` fence: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now
-links original `gm/gmcamera.c`, `ftcommondead.c`, and `ftcommonrebirth.c` as
-whole TUs. Fenced `161/162` prove the original battle camera runs live over
-normalized Pupupu `MPGroundData`, tracks the Mario/Fox midpoint, and preserves
-HW fighter replay. Default builds remain unfenced; KO/Rebirth and HUD still
-depend on weak `sys/objdisplay`/`lbcommon`/effect/item/interface stubs.
+`battle_playable` default: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now links
+original `gm/gmcamera.c`, `ftcommondead.c`, and `ftcommonrebirth.c` as whole
+TUs. The mode-163 proof reports `stock2->1`, `falls0->1`,
+Dead/Rebirth/return-control frames, and `hwsubmit=42`, `hwtri=192`,
+`hwftr=2/582`. Real battle HUD remains deferred because `if/ifcommon.c` pulls a
+coherent interface dependency slice: damage digits, stock icons, timer,
+arrows/tags, pause/end UI, effects, items, and SObj/RDP helpers.
 
 ## Process Change
 
@@ -104,8 +112,8 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. Replace the `battle_playable` fence stubs with original `sys/objdisplay`,
-   `lbcommon`, `ifcommon`, effects/items as needed for natural KO -> respawn.
+1. Import the original HUD/interface slice around `if/ifcommon.c`, then remove
+   the weak interface stubs.
 2. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
 3. Renderer follow-up: broaden source-scene coverage, then plan cutover.
@@ -135,13 +143,3 @@ runtime, use sharded regression, not the serial 45-minute run:
 
 After verified progress, inspect status, optionally commit, then run
 `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` as the last project command.
-
-## Avoid
-
-- one-bit proof-mask increments;
-- per-branch seed/restore proofs when the whole function can run naturally;
-- permanent state restore around already-proven code;
-- new harness modes for individual feature bits;
-- broad gameplay rewrites outside original BattleShip source;
-- broad compatibility headers to make imports easier;
-- editing `decomp/`, generated outputs, emulator configs, logs, or runner slots.

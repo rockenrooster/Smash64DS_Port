@@ -157,6 +157,19 @@ static void ndsSceneHarnessSeedBattlePupupuStageDefaults(void)
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
 }
 
+static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
+{
+    ndsSceneHarnessSeedBattlePupupuStageDefaults();
+
+    gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_STOCK;
+    gSCManagerTransferBattleState.time_limit = SCBATTLE_TIMELIMIT_INFINITE;
+    gSCManagerTransferBattleState.stocks = 2;
+    gSCManagerTransferBattleState.players[0].stock_count = 2;
+    gSCManagerTransferBattleState.players[1].stock_count = 2;
+
+    dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
+}
+
 void ndsDevSceneHarnessApply(void)
 {
     gNdsSceneHarnessMode = (u32)NDS_DEV_SCENE_HARNESS;
@@ -449,6 +462,12 @@ void ndsDevSceneHarnessApply(void)
     case NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP:
         ndsSceneHarnessSetDefaultScene(nSCKindVSBattle, nSCKindMaps);
         ndsSceneHarnessSeedBattlePupupuStageDefaults();
+        gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
+        return;
+
+    case NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE:
+        ndsSceneHarnessSetDefaultScene(nSCKindVSBattle, nSCKindMaps);
+        ndsSceneHarnessSeedBattlePlayableDefaults();
         gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
         return;
 

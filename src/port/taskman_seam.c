@@ -455,6 +455,40 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterNaturalCombatGuardOnFrames = 0;
     gNdsFighterNaturalCombatGuardFrames = 0;
     gNdsFighterNaturalCombatGuardOffFrames = 0;
+    gNdsFighterBattlePlayableResult = 0;
+    gNdsFighterBattlePlayableMask = 0;
+    gNdsFighterBattlePlayableVictimSlot = 0;
+    gNdsFighterBattlePlayableVictimStockStart = 0;
+    gNdsFighterBattlePlayableVictimStockFinal = 0;
+    gNdsFighterBattlePlayableBattleStockStart = 0;
+    gNdsFighterBattlePlayableBattleStockFinal = 0;
+    gNdsFighterBattlePlayableFallsStart = 0;
+    gNdsFighterBattlePlayableFallsFinal = 0;
+    gNdsFighterBattlePlayableDeadFrames = 0;
+    gNdsFighterBattlePlayableRebirthDownFrames = 0;
+    gNdsFighterBattlePlayableRebirthStandFrames = 0;
+    gNdsFighterBattlePlayableRebirthWaitFrames = 0;
+    gNdsFighterBattlePlayableFallAfterRebirthFrames = 0;
+    gNdsFighterBattlePlayableWaitAfterRebirthFrames = 0;
+    gNdsFighterBattlePlayableFinalStatus = 0;
+    gNdsFighterBattlePlayableFinalGA = 0;
+    gNdsFighterBattlePlayableFinalFloor = 0;
+    gNdsFighterBattlePlayableFinalIsRebirth = 0;
+    gNdsFighterBattlePlayableFinalIsGhost = 0;
+    gNdsFighterBattlePlayableFinalCameraMode = 0;
+    gNdsFighterBattlePlayableKOStickFrames = 0;
+    gNdsFighterBattlePlayableMapCallCount = 0;
+    gNdsFighterBattlePlayableMapHitCount = 0;
+    gNdsFighterBattlePlayableMapFloorHitCount = 0;
+    gNdsFighterBattlePlayableMapCliffHitCount = 0;
+    gNdsFighterBattlePlayableMapCeilHitCount = 0;
+    gNdsFighterBattlePlayableMapLastMaskStat = 0;
+    gNdsFighterBattlePlayableMapLastMaskCurr = 0;
+    gNdsFighterBattlePlayableFinalXMilli = 0;
+    gNdsFighterBattlePlayableFinalYMilli = 0;
+    gNdsFighterBattlePlayableFinalVelXMilli = 0;
+    gNdsFighterBattlePlayableFinalVelYMilli = 0;
+    gNdsFighterBattlePlayableFinalFloorDistMilli = 0;
     gNdsFighterMarioFoxModelResult = 0;
     gNdsFighterMarioFoxGObjResult = 0;
     gNdsFighterMarioFoxSetupMask = 0;
@@ -3703,6 +3737,7 @@ extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 /* The natural combat chain (wait/walk/dash-run/brake/turn/approach/attack/
  * damage/guard) needs more scripted frames than the old wait+walk proof. */
 #define NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX 2400u
+#define NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX 6000u
 #define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
 #define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
 #define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
@@ -6171,13 +6206,25 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_DAMAGE_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP)
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
         {
             u32 i;
+            u32 update_max;
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
+            if (NDS_DEV_SCENE_HARNESS ==
+                NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+            {
+                ndsStageCollisionLoopPrepareRuntime();
+            }
             ndsFighterMarioFoxNaturalMotionPrepare();
-            for (i = 0u; i < NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX; i++)
+            update_max =
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE) ?
+                NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX :
+                NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX;
+            for (i = 0u; i < update_max; i++)
             {
                 scVSBattleFuncUpdate();
                 dSYTaskmanUpdateCount++;
@@ -6255,7 +6302,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      (NDS_DEV_SCENE_HARNESS == \
         NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
      (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP))
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE))
             ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
 #endif
 #else

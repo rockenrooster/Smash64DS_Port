@@ -22,20 +22,26 @@ The registry decides the active Boundary/Latest set:
 .\scripts\verify-all.ps1 -Profile Boundary -List
 ```
 
-Current pair:
+Current Boundary/Latest entries:
 
 ```powershell
 .\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
 .\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
+.\scripts\verify-battle-playable-harness.ps1 -DelaySeconds 3
 ```
 
-Modes `161/162` are still the Boundary/Latest pair, but the default-manager
-path now uses them as the natural fighter-combat gate. They keep the
+Modes `161/162` remain the bounded natural-combat pair. They keep the
 Pupupu/Dream Land Mario/Fox battle root stable, create Mario/Fox through the
 original manager, and drive Wait -> Walk -> Dash -> Run -> RunBrake -> Turn,
 Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
 GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 `ftmain.c`, and `gmcollision.c`.
+
+Mode `163` is the new scene-level `battle_playable` anchor. It runs Pupupu
+Mario/Fox stock battle with imported battle camera, Dead, and Rebirth live by
+default, then proves a natural attack/damage chain, KO, stock decrement,
+falls increment, RebirthDown -> RebirthStand -> RebirthWait, return to Wait,
+and a DS 3D hardware stage + fighter frame.
 
 The current public summary is:
 
@@ -45,11 +51,6 @@ dash=13/11, run=8/10, attack=22, hitbox=7,
 damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff,
 hwsubmit=252, hwtri=1152, hwftr=2/582
 ```
-
-Modes `39/40`, `53/54`, and `161/162` now share this restored natural-combat
-coverage. Older gcDrawAll/stage/MP marker stacks and the selected Fox Jab2
-synthetic live-hit family remain documented as follow-up work in
-`docs/KNOWN_ISSUES.md`.
 
 ## Latest Proof
 
@@ -75,12 +76,13 @@ The remaining stage compat-replay/cliffmotion seams in `ftMainSetStatus` are
 scoped away from those proven statuses but still documented as follow-up for
 older stage/cliff proofs.
 
-The first `battle_playable` fence now proves the original battle camera in
-fenced modes `161/162`: `gm/gmcamera.c` runs live, normalized Pupupu
-`MPGroundData` bounds let it track the Mario/Fox midpoint, and HW replay still
-submits both fighters. Default builds keep the fence off. KO/Rebirth and HUD
-remain behind weak `sys/objdisplay`, `lbcommon`, effects/items, and interface
-stubs.
+`battle_playable` graduated to default for `gm/gmcamera.c`,
+`ftcommondead.c`, and `ftcommonrebirth.c`. The mode-163 proof reports
+`stock2->1`, `falls0->1`, Dead/Rebirth/return-control frames, and
+`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. HUD is not imported yet:
+`if/ifcommon.c` is a broad interface dependency slice covering damage digits,
+stock icons, timer, arrows/tags, pause/end UI, effects, items, and SObj/RDP
+helpers.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage
 draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair `161/162`;
@@ -104,22 +106,19 @@ the imported manager combat chain passes. Latest captures include
 menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
 Full visual fidelity still needs broader source-scene coverage and cutover work.
 
-Latest gameplay proof is now original-manager Mario/Fox combat flow through
-natural input: Wait -> movement chain, Fox Attack11, live hitbox search,
-Mario damage/recover, and guard. The TaruCannon status `61` setup/physics tick
-remains preserved as older regression coverage.
-
 ## Current Blocker
 
-The active boundary is still bounded proof scaffolding, not continuous gameplay.
+The active `161/162` boundary is still bounded proof scaffolding, while
+`battle_playable` is the first scene-level unbounded stock/KO anchor.
 Legacy bounded modes are migrate-or-delete: when a runtime slice obsoletes a
 marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
 `KNOWN_ISSUES` line instead of reproducing old markers. Next useful gameplay
-work is to replace the fenced `battle_playable` weak stubs with original
-`sys/objdisplay`/`lbcommon`/`ifcommon` and effect/item-backed KO/respawn flow.
+work is a dedicated HUD/interface slice for original `if/ifcommon.c` and its
+coherent dependencies.
 
 - renderer follow-up: broaden source-scene coverage and HW default coverage;
-- continuous-runtime verifier for unbounded `battle_playable` frames.
+- HUD follow-up: import battle interface percent/stock rendering and remove
+  the remaining weak interface stubs.
 
 ## Verification
 

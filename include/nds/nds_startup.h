@@ -174,6 +174,7 @@
 #define NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_SAFE_PASS 0x46474153u
 #define NDS_FIGHTER_NATURAL_MOTION_PASS 0x464e4d50u
 #define NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS 0x464e4d53u
+#define NDS_FIGHTER_BATTLE_PLAYABLE_PASS 0x42504c59u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_PASS 0x46444150u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_SAFE_PASS 0x46444153u
 #define NDS_FIGHTER_MARIOFOX_STAGE_GCDRAWALL_LOOP_PASS 0x46534744u
@@ -3618,6 +3619,40 @@ extern volatile u32 gNdsFighterNaturalCombatVictimRecoverWaitFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardOnFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardOffFrames;
+extern volatile u32 gNdsFighterBattlePlayableResult;
+extern volatile u32 gNdsFighterBattlePlayableMask;
+extern volatile u32 gNdsFighterBattlePlayableVictimSlot;
+extern volatile u32 gNdsFighterBattlePlayableVictimStockStart;
+extern volatile u32 gNdsFighterBattlePlayableVictimStockFinal;
+extern volatile u32 gNdsFighterBattlePlayableBattleStockStart;
+extern volatile u32 gNdsFighterBattlePlayableBattleStockFinal;
+extern volatile u32 gNdsFighterBattlePlayableFallsStart;
+extern volatile u32 gNdsFighterBattlePlayableFallsFinal;
+extern volatile u32 gNdsFighterBattlePlayableDeadFrames;
+extern volatile u32 gNdsFighterBattlePlayableRebirthDownFrames;
+extern volatile u32 gNdsFighterBattlePlayableRebirthStandFrames;
+extern volatile u32 gNdsFighterBattlePlayableRebirthWaitFrames;
+extern volatile u32 gNdsFighterBattlePlayableFallAfterRebirthFrames;
+extern volatile u32 gNdsFighterBattlePlayableWaitAfterRebirthFrames;
+extern volatile u32 gNdsFighterBattlePlayableFinalStatus;
+extern volatile u32 gNdsFighterBattlePlayableFinalGA;
+extern volatile u32 gNdsFighterBattlePlayableFinalFloor;
+extern volatile u32 gNdsFighterBattlePlayableFinalIsRebirth;
+extern volatile u32 gNdsFighterBattlePlayableFinalIsGhost;
+extern volatile u32 gNdsFighterBattlePlayableFinalCameraMode;
+extern volatile u32 gNdsFighterBattlePlayableKOStickFrames;
+extern volatile u32 gNdsFighterBattlePlayableMapCallCount;
+extern volatile u32 gNdsFighterBattlePlayableMapHitCount;
+extern volatile u32 gNdsFighterBattlePlayableMapFloorHitCount;
+extern volatile u32 gNdsFighterBattlePlayableMapCliffHitCount;
+extern volatile u32 gNdsFighterBattlePlayableMapCeilHitCount;
+extern volatile u32 gNdsFighterBattlePlayableMapLastMaskStat;
+extern volatile u32 gNdsFighterBattlePlayableMapLastMaskCurr;
+extern volatile s32 gNdsFighterBattlePlayableFinalXMilli;
+extern volatile s32 gNdsFighterBattlePlayableFinalYMilli;
+extern volatile s32 gNdsFighterBattlePlayableFinalVelXMilli;
+extern volatile s32 gNdsFighterBattlePlayableFinalVelYMilli;
+extern volatile s32 gNdsFighterBattlePlayableFinalFloorDistMilli;
 void ndsFighterMarioFoxNaturalMotionPrepare(void);
 s32 ndsFighterMarioFoxNaturalMotionUpdateEnabled(void);
 void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void);
@@ -3907,6 +3942,7 @@ extern volatile u32 gNdsStageCollisionLoopUnexpectedSceneCount;
 extern volatile u32 gNdsStageCollisionLoopUnexpectedStatusCount;
 extern volatile u32 gNdsStageCollisionLoopUnsafeFallbackAfterPrepareCount;
 void ndsFighterMarioFoxStageCollisionLoopPrepare(void);
+void ndsStageCollisionLoopPrepareRuntime(void);
 void ndsFighterMarioFoxStageCollisionLoopFinalize(void);
 extern volatile u32 gNdsFighterMarioFoxStageFloorFollowLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageFloorFollowLoopSafeResult;

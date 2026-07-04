@@ -2059,6 +2059,15 @@ void ndsFighterMarioFoxStageCollisionLoopPrepare(void)
     ndsStageCollisionLoopRunProbe(probe, 2u);
 }
 
+void ndsStageCollisionLoopPrepareRuntime(void)
+{
+    if (gNdsStageCollisionLoopPrepared == 0u)
+    {
+        gNdsStageCollisionLoopPrepared = 1u;
+    }
+    ndsStageCollisionLoopCountLines();
+}
+
 void ndsFighterMarioFoxStageCollisionLoopFinalize(void)
 {
     u32 mask = 0u;

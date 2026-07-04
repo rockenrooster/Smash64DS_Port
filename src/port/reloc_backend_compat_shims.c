@@ -10530,23 +10530,151 @@ static sb32 ndsStageMPCliffClimbFloorLoopRecatchSpecialCollisions(
     return TRUE;
 }
 
+static sb32 ndsMPProcessRunFloorCollisionAdjNewNULL(MPCollData *coll_data)
+{
+    MPObjectColl *map_coll;
+    MPObjectColl *p_map_coll;
+    Vec3f *translate;
+    Vec3f sp4C;
+    Vec3f sp40;
+    sb32 hit;
+
+    if ((coll_data == NULL) || (coll_data->p_translate == NULL))
+    {
+        return FALSE;
+    }
+
+    map_coll = &coll_data->map_coll;
+    p_map_coll = (coll_data->p_map_coll != NULL) ? coll_data->p_map_coll :
+        map_coll;
+    translate = coll_data->p_translate;
+    coll_data->mask_stat &= (u16)~MAP_FLAG_FLOOR;
+
+    sp4C.x = coll_data->pos_prev.x;
+    sp4C.y = coll_data->pos_prev.y + p_map_coll->bottom;
+    sp4C.z = coll_data->pos_prev.z;
+    sp40.x = translate->x;
+    sp40.y = translate->y + map_coll->bottom;
+    sp40.z = translate->z;
+
+    hit = (coll_data->update_tic != gMPCollisionUpdateTic) ?
+        mpCollisionCheckFloorLineCollisionDiff(&sp4C, &sp40,
+            &coll_data->line_coll_dist, &coll_data->floor_line_id,
+            &coll_data->floor_flags, &coll_data->floor_angle) :
+        mpCollisionCheckFloorLineCollisionSame(&sp4C, &sp40,
+            &coll_data->line_coll_dist, &coll_data->floor_line_id,
+            &coll_data->floor_flags, &coll_data->floor_angle);
+
+    if ((hit != FALSE) &&
+        (((coll_data->floor_flags & MAP_VERTEX_COLL_PASS) == 0u) ||
+         (coll_data->floor_line_id != coll_data->ignore_line_id)))
+    {
+        coll_data->mask_curr |= MAP_FLAG_FLOOR;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static sb32 ndsMPCommonRunFighterCliffFloorCeilCollisions(
+    MPCollData *coll_data, GObj *fighter_gobj, u32 flags)
+{
+    FTStruct *this_fp = ftGetStruct(fighter_gobj);
+    GObj *cliffcatch_gobj;
+    sb32 is_ceilstop = FALSE;
+
+    if ((coll_data == NULL) || (this_fp == NULL))
+    {
+        return FALSE;
+    }
+
+    if (mpProcessCheckTestCeilCollisionAdjNew(coll_data) != FALSE)
+    {
+        mpProcessRunCeilCollisionAdjNew(coll_data);
+        if (((flags & MAP_PROC_TYPE_CEILHEAVY) != 0u) &&
+            (this_fp->physics.vel_air.y >= 30.0F))
+        {
+            coll_data->mask_curr |= MAP_FLAG_CEILHEAVY;
+            is_ceilstop = TRUE;
+            coll_data->is_coll_end = TRUE;
+        }
+    }
+
+    if (ndsMPProcessRunFloorCollisionAdjNewNULL(coll_data) != FALSE)
+    {
+        mpProcessSetLandingFloor(coll_data);
+        mpCommonSetFighterLandingParams(fighter_gobj);
+        if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+        {
+            mpProcessRunFloorEdgeAdjust(coll_data);
+            coll_data->is_coll_end = TRUE;
+            return TRUE;
+        }
+    }
+    else
+    {
+        mpProcessSetCollProjectFloorID(coll_data);
+    }
+
+    if (((flags & MAP_PROC_TYPE_CLIFF) == 0u) ||
+        (this_fp->cliffcatch_wait != 0))
+    {
+        return is_ceilstop;
+    }
+    if ((mpProcessCheckTestLCliffCollision(coll_data) == FALSE) &&
+        (mpProcessCheckTestRCliffCollision(coll_data) == FALSE))
+    {
+        return is_ceilstop;
+    }
+
+    cliffcatch_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+    while (cliffcatch_gobj != NULL)
+    {
+        if (cliffcatch_gobj != fighter_gobj)
+        {
+            FTStruct *cliffcatch_fp = ftGetStruct(cliffcatch_gobj);
+
+            if ((cliffcatch_fp != NULL) &&
+                (cliffcatch_fp->is_cliff_hold != FALSE) &&
+                (this_fp->coll_data.cliff_id ==
+                 cliffcatch_fp->coll_data.cliff_id) &&
+                (this_fp->lr == cliffcatch_fp->lr))
+            {
+                return is_ceilstop;
+            }
+        }
+        cliffcatch_gobj = cliffcatch_gobj->link_next;
+    }
+    mpCommonSetFighterLandingParams(fighter_gobj);
+    coll_data->is_coll_end = TRUE;
+    return TRUE;
+}
+
 void mpCommonProcFighterCliffFloorCeil(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    gNdsFighterBattlePlayableMapCallCount++;
     if ((fp != NULL) &&
-        (mpProcessUpdateMain(&fp->coll_data, mpCommonRunFighterAllCollisions,
+        (mpProcessUpdateMain(&fp->coll_data,
+                             ndsMPCommonRunFighterCliffFloorCeilCollisions,
                              fighter_gobj,
                              MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF) !=
          FALSE))
     {
+        gNdsFighterBattlePlayableMapHitCount++;
+        gNdsFighterBattlePlayableMapLastMaskStat =
+            (u32)fp->coll_data.mask_stat;
+        gNdsFighterBattlePlayableMapLastMaskCurr =
+            (u32)fp->coll_data.mask_curr;
         if ((fp->coll_data.mask_stat & MAP_FLAG_CLIFF_MASK) != 0u)
         {
+            gNdsFighterBattlePlayableMapCliffHitCount++;
             ftCommonCliffCatchSetStatus(fighter_gobj);
         }
         else if ((fp->coll_data.mask_stat & MAP_FLAG_FLOOR) != 0u)
         {
+            gNdsFighterBattlePlayableMapFloorHitCount++;
             if (fp->physics.vel_air.y >
                 FTCOMMON_ATTACKAIR_SKIPLANDING_VEL_Y_MAX)
             {
@@ -10559,6 +10687,7 @@ void mpCommonProcFighterCliffFloorCeil(GObj *fighter_gobj)
         }
         else if ((fp->coll_data.mask_curr & MAP_FLAG_CEILHEAVY) != 0u)
         {
+            gNdsFighterBattlePlayableMapCeilHitCount++;
             ftCommonStopCeilSetStatus(fighter_gobj);
         }
     }
@@ -12703,6 +12832,38 @@ sb32 mpCollisionCheckProjectFloor(Vec3f *pos, s32 *floor_line_id,
             gNdsStageCollisionLoopLegacyFlatFallbackCount++;
             gNdsStageCollisionLoopUnsafeFallbackAfterPrepareCount++;
         }
+    }
+#endif
+
+#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+    if ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
+        (ndsStageCollisionLoopGeometryReady() != FALSE))
+    {
+        Vec3f angle = { 0.0F, 1.0F, 0.0F };
+        s32 line_id = -1;
+        f32 dist = 0.0F;
+        u32 flags = 0u;
+
+        is_floor = ndsMPProjectFloorGeometry(pos, &line_id, &dist,
+                                             &flags, &angle);
+        if (floor_line_id != NULL)
+        {
+            *floor_line_id = (is_floor != FALSE) ? line_id : -1;
+        }
+        if (floor_dist != NULL)
+        {
+            *floor_dist = (is_floor != FALSE) ? dist : 0.0F;
+        }
+        if (floor_flags != NULL)
+        {
+            *floor_flags = (is_floor != FALSE) ? flags : 0u;
+        }
+        if (floor_angle != NULL)
+        {
+            *floor_angle = angle;
+        }
+        return is_floor;
     }
 #endif
 

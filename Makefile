@@ -21,7 +21,7 @@ NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
-NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE ?= 0
+NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE ?= 1
 NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	battle_mariofox_stage_inishie_scale_loop \
 	menu_chain_mariofox_stage_inishie_scale_loop \
@@ -401,6 +401,10 @@ CFLAGS += -Os
 else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mplivehit_status_loop)
 NDS_DEV_SCENE_HARNESS_ID := 162
 # Mode 162 links the full menu chain plus the latest battle boundary.
+CFLAGS += -Os
+else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable)
+NDS_DEV_SCENE_HARNESS_ID := 163
+# Mode 163 links the battle_playable scene-level stock/KO proof.
 CFLAGS += -Os
 else
 $(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use a harness name from scripts/lib/harness-registry.ps1, including battle_mariofox_stage_mplivehit_status_loop or menu_chain_mariofox_stage_mplivehit_status_loop)

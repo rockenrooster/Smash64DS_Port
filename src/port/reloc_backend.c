@@ -145,6 +145,11 @@ static u32 ndsMPVertexLinkCount(MPVertexLinks *links, u32 line_id);
 static u32 ndsMPVertexID(MPVertexArray *ids, u32 index);
 static s32 ndsMPVertexX(MPVertexPosContainer *verts, u32 vertex_id);
 static s32 ndsMPVertexY(MPVertexPosContainer *verts, u32 vertex_id);
+static sb32 ndsMPProjectFloorGeometry(Vec3f *position,
+                                      s32 *project_line_id,
+                                      f32 *ga_dist,
+                                      u32 *stand_coll_flags,
+                                      Vec3f *angle);
 static sb32 ndsFighterMarioFoxStageMPStaleFloorLoopProofEnabled(void);
 static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id);
 static sb32 ndsFighterMarioFoxStageMPLiveStaleFloorLoopProofEnabled(void);

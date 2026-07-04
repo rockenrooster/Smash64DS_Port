@@ -17339,3 +17339,40 @@ Still deferred:
   `battle_playable` scene-level modes still use imported Dead/Rebirth.
 - Verified fenced direct and menu-chain `161/162` hardware-triangle routes plus
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+
+## 2026-07-04 - Battle Playable KO/Rebirth Graduation
+
+- Flipped `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE` to default on and registered
+  scene-level mode `163` as `battle_playable` in the Boundary/Latest profiles.
+  The wrapper reuses the natural gcRunAll combat verifier path with
+  `-HardwareTriangles` and adds stock KO -> Rebirth -> Wait assertions.
+- Kept the path source-shaped instead of seeding gameplay state: Pupupu stock
+  battle uses imported `gm/gmcamera.c`, `ftcommondead.c`, and
+  `ftcommonrebirth.c`; the verifier drives natural Attack11 damage, then
+  pushes the victim through blast-zone death and original rebirth status flow.
+- Fixed the DS map/floor side that blocked the original RebirthWait return:
+  runtime stage-collision line counts are prepared for `battle_playable`, and
+  the local cliff/floor helper now follows BattleShip's floor-segment path from
+  `mp/mpprocess.c:1995-2085` and the caller shape in
+  `mp/mpcommon.c:472-567`.
+- Source citations for verifier expectations: `ftcommondead.c:51-79` makes the
+  stock snap, increments falls, then decrements fighter and battle stock;
+  `ftcommondead.c:95-120` routes surviving stock to RebirthDown; and
+  `ftcommondead.c:154-162` checks rebirth from the Dead wait update.
+  `ftcommonrebirth.c:20-105` rebuilds the fighter at the rebirth halo,
+  `ftcommonrebirth.c:124-137` advances Down -> Stand,
+  `ftcommonrebirth.c:150-162` advances Stand -> RebirthWait, and
+  `ftcommonrebirth.c:173-194` allows either RebirthWait -> Fall on timer expiry
+  or a direct interrupt-controlled return to Wait. The direct Wait return is why
+  the mode-163 verifier no longer requires a Fall frame after RebirthWait.
+- Focused proof passed:
+  `.\scripts\verify-battle-playable-harness.ps1 -NoBuild -DelaySeconds 3`
+  reported `stock2->1`, `falls0->1`, `dead=45`,
+  `rebirth=75/39/276`, `recover=0/9`, `mask=0x6ffff`,
+  `hwsubmit=42`, `hwtri=192`, and `hwftr=2/582`.
+- Captured the hardware-triangle ROM at `artifacts\battle-playable-hwtri.png`.
+- HUD was scoped out of this slice after scouting `if/ifcommon.c`: it is a
+  broad interface TU covering damage digits, stock icons, magnify/arrows, tags,
+  timer, pause/end UI, effects/items, and SObj/RDP helpers. The weak
+  `ifCommon*` stubs remain ledgered until a coherent HUD/interface import
+  slice lands.

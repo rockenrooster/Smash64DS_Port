@@ -969,7 +969,9 @@ static sb32 ndsFighterMarioFoxGCDrawAllLoopProofEnabled(void)
 
 static sb32 ndsFighterMarioFoxStageGCDrawAllLoopProofEnabled(void)
 {
-#if NDS_MARIOFOX_STAGE_GCDRAWALL_LOOP_HARNESS
+#if NDS_MARIOFOX_STAGE_GCDRAWALL_LOOP_HARNESS || \
+    (NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
+     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE))
     return TRUE;
 #else
     return FALSE;

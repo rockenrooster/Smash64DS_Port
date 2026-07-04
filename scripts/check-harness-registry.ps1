@@ -80,6 +80,7 @@ foreach ($record in $harnessRecords) {
 $latestExpect = @{
     battle_mariofox_stage_mplivehit_status_loop = 161
     menu_chain_mariofox_stage_mplivehit_status_loop = 162
+    battle_playable = 163
 }
 foreach ($name in $latestExpect.Keys) {
     $record = $registry | Where-Object { $_.Name -eq $name } | Select-Object -First 1
@@ -93,13 +94,15 @@ Assert-ProfilePlan 'BoundaryDirect' @(
 )
 Assert-ProfilePlan 'Boundary' @(
     'battle_mariofox_stage_mplivehit_status_loop',
-    'menu_chain_mariofox_stage_mplivehit_status_loop'
+    'menu_chain_mariofox_stage_mplivehit_status_loop',
+    'battle_playable'
 )
 Assert-ProfilePlan 'Latest' @(
     'runtime',
     'title',
     'battle_mariofox_stage_mplivehit_status_loop',
-    'menu_chain_mariofox_stage_mplivehit_status_loop'
+    'menu_chain_mariofox_stage_mplivehit_status_loop',
+    'battle_playable'
 )
 Assert-ProfilePlan 'Regression' @(
     'runtime',
@@ -210,7 +213,8 @@ Assert-ProfilePlan 'Regression' @(
     'battle_mariofox_stage_mplivehit_damage_loop',
     'menu_chain_mariofox_stage_mplivehit_damage_loop',
     'battle_mariofox_stage_mplivehit_status_loop',
-    'menu_chain_mariofox_stage_mplivehit_status_loop'
+    'menu_chain_mariofox_stage_mplivehit_status_loop',
+    'battle_playable'
 )
 foreach ($suffix in @('model','struct','init','wait','wait_tick','wait_ground','display_probe','dl_scan','dl_execute','dl_draw','dl_draw_multi','dl_draw_all','walk_input','walk_loop','dash_run','jump_loop','landing_loop','process_loop','scheduler_loop','controller_loop','preview_loop','gcrunall_loop','live_preview','gcdrawall_loop','stage_gcdrawall_loop','stage_collision_loop','stage_floor_follow_loop','stage_floor_edge_loop','stage_mpprocess_floor_loop','stage_mpupdate_floor_loop','stage_mpsweep_floor_loop','stage_mpcross_floor_loop','stage_mpadjust_floor_loop','stage_mpedge_floor_loop','stage_mpwall_floor_loop','stage_mpwallhit_floor_loop','stage_mpwallcopy_floor_loop','stage_mppass_floor_loop','stage_mpplatform_floor_loop','stage_mpplatform_active_floor_loop','stage_mpplatform_tick_floor_loop','stage_mppass_input_loop','stage_mpplatform_pos_floor_loop','stage_mpplatform_speed_floor_loop','stage_inishie_scale_loop','stage_mppassive_recover_loop','stage_mpdamage_recover_loop','stage_mplivehit_damage_loop','stage_mplivehit_status_loop','stage_mpstale_floor_loop','stage_mplivestale_floor_loop','stage_mpmotionstale_floor_loop','stage_mpcliffstatus_floor_loop','stage_mpclifftick_floor_loop','stage_mpfallmap_floor_loop','stage_mpfallland_floor_loop','stage_mpceil_floor_loop','stage_mpceilstatus_floor_loop','stage_mpcliffcatch_floor_loop','stage_mpcliffwait_floor_loop','stage_mpcliffattack_floor_loop','stage_mpcliffattack_action_loop','stage_mpcliffcommon2_loop','stage_mpcliffescape_action_loop','stage_mpcliffescape_common2_loop','stage_mpcliffclimb_floor_loop','stage_mpcliffclimb_action_loop','stage_mpcliffclimb_common2_loop','stage_mpcliffclimb_finish_loop','stage_mpcliffwait_damage_loop','stage_mppassive_loop','stage_mpdownwait_loop','stage_turn_loop','stage_mpdownrecover_loop','stage_mpcliffledge_loop','stage_mpclifflive_loop')) {
     $direct = "battle_mariofox_$suffix"

@@ -17,11 +17,12 @@ mappings, mode defines, wrapper scripts, and profile plans stay in sync.
 
 ## Current Boundary
 
-The current Boundary and Latest playable-spine pair is:
+The current Boundary and Latest playable-spine set is:
 
 ```text
 battle_mariofox_stage_mplivehit_status_loop      mode 161
 menu_chain_mariofox_stage_mplivehit_status_loop  mode 162
+battle_playable                                  mode 163
 ```
 
 These modes keep the live battle scene on Pupupu/Dream Land, create Mario/Fox
@@ -36,6 +37,10 @@ They now build and verify DS 3D hardware submission by default:
 `-SoftwarePreview` to the wrappers only for comparison runs. Use
 `-DelaySeconds 3` for the current Boundary/Latest profiles so the menu-chain
 finalizer markers are captured.
+
+Mode `163` is the scene-level `battle_playable` anchor. It reuses the gcRunAll
+natural-combat verifier path, adds stock KO -> Rebirth -> Wait assertions, and
+requires a hardware-triangle stage + fighter frame.
 
 ## Naming Rules
 
@@ -70,9 +75,10 @@ For a normal direct/menu-chain pair:
 
 ## Profiles
 
-- `Latest`: runtime, Title, and the current direct/menu boundary pair.
+- `Latest`: runtime, Title, the current direct/menu boundary pair, and
+  `battle_playable`.
 - `BoundaryDirect`: current direct boundary only.
-- `Boundary`: current direct/menu boundary pair.
+- `Boundary`: current direct/menu boundary pair plus `battle_playable`.
 - `Regression`: historical playable-spine coverage plus the current boundary.
 - `Full`: all registered verifiers.
 
