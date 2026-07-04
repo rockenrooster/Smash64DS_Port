@@ -33,10 +33,10 @@ GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 `ftmain.c`, and `gmcollision.c`. The current short marker summary is:
 
 ```text
-ftmanager natural-combat: wait=357/380, walk=8/8,
-dash=13/11, run=8/10, attack=22, hitbox=7,
-damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff,
-hwsubmit=252, hwtri=1152, hwftr=2/582
+ftmanager natural-combat: wait=354/372, walk=8/8,
+dash=7/6, run=8/9, attack=11, hitbox=4,
+damage=0->4 status=40, guard=2/10/6, updates=427, mask=0xfffff,
+hwsubmit=42, hwtri=192, hwftr=2/582
 ```
 
 Mode `163` is the scene-level `battle_playable` Boundary/Latest anchor. It runs
@@ -85,18 +85,17 @@ Runtime slice 2 graduated the original manager/status/animation path. Default
 builds import `ft/ftmanager.c`, the full original common/Mario/Fox status
 descriptor tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. Modes `39/40`,
 `53/54`, and `161/162` now rebuild movement, attack, live-hit,
-damage/recover, and guard coverage on that natural runtime. The old
-gcDrawAll/stage/MP synthetic marker stacks and selected Fox Jab2 modes
-`159/160` still need natural-runtime migration; do not resurrect their
-motion-extract seam.
+damage/recover, and guard coverage on that natural runtime. Legacy standalone
+gcDrawAll modes `57/58` and selected Fox Jab2 modes `159/160` were deleted
+instead of resurrecting their motion-extract and synthetic marker seams.
 
 `battle_playable` default: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now links
-original `gm/gmcamera.c`, `ftcommondead.c`, and `ftcommonrebirth.c` as whole
-TUs. The mode-163 proof reports `stock2->1`, `falls0->1`,
-Dead/Rebirth/return-control frames, and `hwsubmit=42`, `hwtri=192`,
-`hwftr=2/582`. Real battle HUD remains deferred because `if/ifcommon.c` pulls a
-coherent interface dependency slice: damage digits, stock icons, timer,
-arrows/tags, pause/end UI, effects, items, and SObj/RDP helpers.
+original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`, and
+battle-critical `if/ifcommon.c` HUD paths. The mode-163 proof reports
+`stock2->1`, `falls0->1`, Dead/Rebirth/return-control frames,
+`hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`, `hwtri=192`,
+`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, screen flash,
+effects/items, and broader SObj/RDP helper coverage remain follow-up.
 
 ## Process Change
 
@@ -112,8 +111,9 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. Import the original HUD/interface slice around `if/ifcommon.c`, then remove
-   the weak interface stubs.
+1. Finish the non-critical interface perimeter around timer, pause/end UI,
+   magnify/arrows, tags, screen flash, effects/items, and broader SObj/RDP
+   helpers.
 2. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
 3. Renderer follow-up: broaden source-scene coverage, then plan cutover.

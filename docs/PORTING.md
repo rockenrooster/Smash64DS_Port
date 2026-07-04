@@ -17376,3 +17376,25 @@ Still deferred:
   timer, pause/end UI, effects/items, and SObj/RDP helpers. The weak
   `ifCommon*` stubs remain ledgered until a coherent HUD/interface import
   slice lands.
+
+## 2026-07-04 - IFCommon HUD Import And Legacy Mode Cleanup
+
+- Imported original `if/ifcommon.c` behind `NDS_IMPORT_BATTLESHIP_IFCOMMON`,
+  then flipped it on by default for battle-critical HUD. Mode `163` now asserts
+  rendered percent digit values follow `fp->percent_damage` and stock icons
+  decrement after the natural KO.
+- Removed the weak/local `ifCommon*` interface stubs now owned by the imported
+  TU. `ifScreenFlashMakeInterface` remains a weak boundary for a future
+  `if/ifscreenflash.c` slice.
+- Deleted the old `ftMainSetStatus` cliffmotion preserve/restore hook after
+  direct and menu-chain cliff-family Regression modes stayed green without it.
+- Deleted legacy modes `57/58` and `159/160` from the harness registry,
+  Makefile, and harness header. The shared gcDrawAll verifier engine remains
+  parameterized for active stage wrappers; old standalone mode exposure and
+  selected Fox Jab2 live-hit wrappers are gone.
+- Deleted the legacy dash-run attack-word motion-script scanner from
+  `reloc_backend_diagnostic_recorders.c`; live combat markers now come from
+  natural runtime attack collision state instead of decoded seeded words.
+- Verified: `verify-battle-playable-harness`, `verify-dev-fast -Build`,
+  `verify-boundary`, `check-harness-registry`, and selected cliff-family
+  Regression prebuild/verification.

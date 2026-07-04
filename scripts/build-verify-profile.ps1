@@ -21,7 +21,7 @@ if ($plan.Count -eq 0) {
 $profileKey = $Profile.ToLowerInvariant()
 $sharedBuild = "build-verify-$profileKey-shared"
 $optSizeSharedBuild = "build-verify-$profileKey-optsize-shared"
-$optSizeHarnessModes = @(159, 160, 161, 162, 163)
+$optSizeHarnessModes = @(161, 162, 163)
 if ($ParallelBuilds -le 0) {
     $ParallelBuilds = if ($Profile -in @('Full','Regression')) { 4 } else { 1 }
 }
@@ -169,7 +169,7 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
             if ($devkitPro) { $env:DEVKITPRO = $devkitPro }
             if ($devkitArm) { $env:DEVKITARM = $devkitArm }
             $records = @(ConvertFrom-Json -InputObject $sliceJson)
-            $optSizeHarnessModes = @(159, 160, 161, 162, 163)
+            $optSizeHarnessModes = @(161, 162, 163)
             $forcedSharedBuilds = @{}
             foreach ($record in $records) {
                 $build = $record.Build

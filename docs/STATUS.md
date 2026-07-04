@@ -46,10 +46,10 @@ and a DS 3D hardware stage + fighter frame.
 The current public summary is:
 
 ```text
-ftmanager natural-combat: wait=357/380, walk=8/8,
-dash=13/11, run=8/10, attack=22, hitbox=7,
-damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff,
-hwsubmit=252, hwtri=1152, hwftr=2/582
+ftmanager natural-combat: wait=354/372, walk=8/8,
+dash=7/6, run=8/9, attack=11, hitbox=4,
+damage=0->4 status=40, guard=2/10/6, updates=427, mask=0xfffff,
+hwsubmit=42, hwtri=192, hwftr=2/582
 ```
 
 ## Latest Proof
@@ -72,17 +72,17 @@ tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. Mario/Fox are created
 through original manager descriptors and status-buffer payload loading. The
 natural-combat proof now rebuilds movement, attack, live-hit, damage/recover,
 and guard coverage on that runtime for modes `39/40`, `53/54`, and `161/162`.
-The remaining stage compat-replay/cliffmotion seams in `ftMainSetStatus` are
-scoped away from those proven statuses but still documented as follow-up for
-older stage/cliff proofs.
+The old cliffmotion restore hook is deleted after the direct and menu-chain
+cliff-family Regression modes stayed green. The remaining stage compat-replay
+seam in `ftMainSetStatus` is still documented as follow-up.
 
 `battle_playable` graduated to default for `gm/gmcamera.c`,
-`ftcommondead.c`, and `ftcommonrebirth.c`. The mode-163 proof reports
-`stock2->1`, `falls0->1`, Dead/Rebirth/return-control frames, and
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. HUD is not imported yet:
-`if/ifcommon.c` is a broad interface dependency slice covering damage digits,
-stock icons, timer, arrows/tags, pause/end UI, effects, items, and SObj/RDP
-helpers.
+`ftcommondead.c`, `ftcommonrebirth.c`, and battle-critical `if/ifcommon.c`
+HUD. The mode-163 proof reports `stock2->1`, `falls0->1`, Dead/Rebirth/
+return-control frames, `hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`,
+`hwtri=192`, `hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags,
+screen flash, effects/items, and broader SObj/RDP helper coverage remain
+interface follow-up.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage
 draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair `161/162`;
@@ -112,13 +112,13 @@ The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.
 Legacy bounded modes are migrate-or-delete: when a runtime slice obsoletes a
 marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
-`KNOWN_ISSUES` line instead of reproducing old markers. Next useful gameplay
-work is a dedicated HUD/interface slice for original `if/ifcommon.c` and its
-coherent dependencies.
+`KNOWN_ISSUES` line instead of reproducing old markers. Modes `57/58` and
+`159/160` have been deleted instead of recreating old synthetic marker stacks.
 
 - renderer follow-up: broaden source-scene coverage and HW default coverage;
-- HUD follow-up: import battle interface percent/stock rendering and remove
-  the remaining weak interface stubs.
+- interface follow-up: finish the non-critical HUD perimeter around timer,
+  pause/end UI, magnify/arrows, tags, screen flash, effects/items, and broader
+  SObj/RDP helpers.
 
 ## Verification
 

@@ -57,13 +57,14 @@
   boundary, continuous live-hit verifier, and four-way sharded Regression after
   routing the public `ftMain*` entry points through imported BattleShip code
   plus bounded diagnostics.
-- The imported `ftMainSetStatus` path still contains two deliberate
-  duplicate-behavior seams: stage compat replay in the imported post-hook and
-  the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Natural
-  combat now covers Wait, Walk, Dash, Run, RunBrake, Turn/TurnRun, Attack11,
-  common damage, GuardOn, Guard, and GuardOff without the compat replay
-  early-return path, but older stage/cliff proofs still depend on scoped hooks.
-  Delete the remaining hooks status-by-status only after matching natural
+- The imported `ftMainSetStatus` path still contains one deliberate
+  duplicate-behavior seam: stage compat replay in the imported post-hook.
+  The old cliffmotion restore hook in `src/import/battleship_ftmain.c` was
+  deleted after direct and menu-chain cliff-family Regression stayed green.
+  Natural combat now covers Wait, Walk, Dash, Run, RunBrake, Turn/TurnRun,
+  Attack11, common damage, GuardOn, Guard, and GuardOff without the compat
+  replay early-return path, but older stage proofs still depend on scoped
+  hooks. Delete the remaining hook status-by-status only after matching natural
   proofs are green.
 - `ft/ftdata.c` is imported, but its particle ROM banks are link stubs in
   `src/port/reloc_backend_ftdata_stubs.c` because the current DS O2R manifest
@@ -86,23 +87,21 @@
   those stubs status-by-status as the owning original TUs and assets are
   imported.
 - `battle_playable` is default for original `gm/gmcamera.c`,
-  `ftcommondead.c`, and `ftcommonrebirth.c`. Mode `163` now proves natural
-  attack/damage -> KO -> stock decrement -> Rebirth -> Wait plus a hardware
-  stage/fighter frame. Real battle HUD is still a separate interface slice:
-  whole-TU `if/ifcommon.c` spans damage digits, stock icons, magnify/arrows,
-  tags, timer, pause/end UI, effects/items, SObj/RDP helpers, and collides with
-  the current weak `ifCommon*` stubs in
-  `src/port/battle_playable_compat_stubs.c`. Keep those weak HUD/interface
-  stubs documented until the coherent interface TU group is imported.
-- Coverage-reduced after original-manager graduation, still pending natural
-  rebuild: modes `57/58` gcDrawAll, the older shared gcDrawAll/stage/MP
-  regression family, selected Fox Jab2 modes `159/160`, and older aggregate
-  marker stacks still carry synthetic or synthesized proof pieces. Modes
-  `39/40`, `53/54`, and `161/162` have been rebuilt on the natural runtime and
-  now assert Wait -> movement chain -> Attack11 -> hit -> damage/recover ->
-  guard. Keep migrating the remaining older stacks on top of original-manager
-  live structs; do not reintroduce extract-decoding or synthetic parallel
-  fighter execution.
+  `ftcommondead.c`, `ftcommonrebirth.c`, and battle-critical `if/ifcommon.c`
+  HUD paths. Mode `163` now proves natural attack/damage -> KO -> stock
+  decrement -> Rebirth -> Wait, rendered percent digits, stock icon decrement,
+  and a hardware stage/fighter frame. Timer, pause/end UI, magnify/arrows,
+  tags, screen flash, effects/items, and broader SObj/RDP helper coverage stay
+  as documented interface follow-up.
+- [coverage-reduced] Deleted legacy standalone modes `57/58`
+  (`battle_mariofox_gcdrawall_loop` /
+  `menu_chain_mariofox_gcdrawall_loop`). Active stage gcDrawAll, natural-combat
+  Boundary, and `battle_playable` retain live scene coverage; the old
+  standalone moving-preview marker stack is not reproduced.
+- [coverage-reduced] Deleted legacy selected Fox Jab2 live-hit modes `159/160`.
+  Modes `161/162` and `163` prove natural Attack11 hitbox, hit/damage/recover,
+  guard, KO, and HUD stock updates through the original manager/runtime; the
+  older synthetic source-order/private-hitlog marker stack is not reproduced.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and
@@ -113,9 +112,9 @@
   `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE_ORIGINAL`; catch-resist skips the
   original mirror bit; damage-kind skips the Twister procparams mirror; sleep
   skips the motion mirror. Modes `161/162` now prove a natural Attack11 hit and
-  damage/recover cycle, but older selected live-hit private hitlog mirrors in
-  modes `159/160` are still synthesized from the proven base path instead of
-  observed from BattleShip's private static storage.
+  damage/recover cycle, but the deleted selected live-hit private hitlog mirrors
+  from modes `159/160` are no longer reproduced from BattleShip's private
+  static storage.
 - Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
   billboard/recalc DObj matrix seed coverage, first bounded Opening Room
   RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is
@@ -150,11 +149,10 @@
   search hits Mario, both fighters enter hitlag, Mario installs a common damage
   status through the original tables, takes damage/knockback, recovers to Wait,
   and then Fox runs GuardOn -> Guard -> GuardOff. This replaces the former
-  selected Fox Jab2 status-loop verifier for the Boundary/Latest pair. Older
-  selected Fox Jab2 modes `159/160` still carry source-order hitbox/contact/
-  repeat-gate diagnostics as regression coverage until migrated to natural
-  input. Continuous multi-hitbox runtime, arbitrary damage-state duration,
-  items/weapons, HUD, audio, and unbounded gameplay scheduling remain deferred.
+  selected Fox Jab2 status-loop verifier for the Boundary/Latest pair. The old
+  selected Fox Jab2 modes `159/160` were deleted as coverage-reduced legacy
+  proof. Continuous multi-hitbox runtime, arbitrary damage-state duration,
+  items/weapons, audio, and unbounded gameplay scheduling remain deferred.
   The current menu-chain verifier needs `-DelaySeconds 3` so post-loop
   finalizer markers are captured after the longer VS Mode -> PlayersVS -> Maps
   -> VSBattle path.
@@ -180,7 +178,7 @@
   `155/156` is an aggregate regression guard for older bounded Dash-Run
   attack/guard status proofs plus the selected Fox Jab2 hitbox
   position/range/rectangle/collide/record/hit-log/SFX/stats/proc-params and
-  damage-status selector/setup/proc-passive invincible and electric-status dispatch/sleep-element imported FuraSleep setup/update handoff/physics/flyroll/knockback-invincible/lag-update/hitlag-lifecycle/air-map/interrupt/expiry/fall-physics/fastfall/map-floor-cliff/hammer-interrupt/setup-tail proofs, plus the first source-shaped `ftCommonDamageUpdateMain` catch-resist/keep-hold branch, sibling catch-resist release/lose-grip branch, catch-side and capture-side non-resist keep-hold stats branches, catch-side non-resist zero-knockback damage-release branch, first capture keep-hold branch, capture-side keep-hold false lose-grip branch, capture-side keep-hold false zero-knockback no-damage release branch, zero-knockback catch branch, capture zero-knockback branch, no-grab/no-capture tail colanim and damage-status branches, and DK-family heavy-item catch-resist/drop branches. Modes `159/160` also add a selected source-order shield-contact gate summarized by `shc=0x7fffff/3142`. It keeps Run -> TurnRun -> Run,
+  damage-status selector/setup/proc-passive invincible and electric-status dispatch/sleep-element imported FuraSleep setup/update handoff/physics/flyroll/knockback-invincible/lag-update/hitlag-lifecycle/air-map/interrupt/expiry/fall-physics/fastfall/map-floor-cliff/hammer-interrupt/setup-tail proofs, plus the first source-shaped `ftCommonDamageUpdateMain` catch-resist/keep-hold branch, sibling catch-resist release/lose-grip branch, catch-side and capture-side non-resist keep-hold stats branches, catch-side non-resist zero-knockback damage-release branch, first capture keep-hold branch, capture-side keep-hold false lose-grip branch, capture-side keep-hold false zero-knockback no-damage release branch, zero-knockback catch branch, capture zero-knockback branch, no-grab/no-capture tail colanim and damage-status branches, and DK-family heavy-item catch-resist/drop branches. The selected source-order shield-contact gate summarized by `shc=0x7fffff/3142` is retired with modes `159/160`. It keeps Run -> TurnRun -> Run,
   Attack11/Attack12/Mario Attack13/Fox Attack100, AttackDash,
   GuardOn/Guard/GuardOff/GuardSetOff, and EscapeF/EscapeB callback/update
   slices covered by the current boundary, but it does not enable full attack
@@ -190,9 +188,8 @@
   damage/hitlag lifecycle, continuous `ftCommonDamageUpdateMain` runtime, continuous multi-frame FuraSleep breakout scheduling and real color-animation runtime, real DS audio, positional audio balance, continuous
   TurnRun/Attack100/Guard/SetOff runtime, continuous shield collision beyond
   the selected contact/set-off proof, or player-driven attack/shield gameplay.
-  This aggregate remains because Regression still consumes modes `159/160` and
-  older selected diagnostics; it is not used by the rebuilt natural-combat
-  proof in modes `39/40`, `53/54`, or `161/162`.
+  This aggregate is historical; Regression no longer consumes modes `159/160`
+  or older selected diagnostics.
 - The standalone Jump-loop `JUMP_ATTACKAIR` refresh proof now carries and
   clears the original four-slot fighter attack records for the bounded
   AttackAirLw rehit branch and proves the installed original AttackAir map
@@ -450,16 +447,10 @@
   loop. Attacks, specials, guard, catch, items, full collision/ledge/platform
   behavior, real battle HUD, audio, full `ftmain.c`, and unbounded taskman
   scheduling remain deferred.
-  `NDS_DEV_SCENE_HARNESS=battle_mariofox_gcdrawall_loop` and
-  `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_gcdrawall_loop` now call original
-  `gcDrawAll()` for bounded Mario/Fox moving-preview keyframes after masking
-  non-target display callbacks. This proves selected Mario/Fox
-  `ftDisplayMainProcDisplay` callbacks are reached through object-manager draw
-  traversal, but it does not enable full-scene rendering yet. Unpaused
-  full-scene `gcDrawAll`, DS hardware polygon rendering, camera-correct
-  matrices, full `ftdisplaymain.c`, full collision/platform/ledge logic,
-  attacks, specials, guard, catch, items, hit/search, HUD, audio, and full
-  imported `ftmain.c` remain deferred.
+  Retired standalone gcDrawAll modes `battle_mariofox_gcdrawall_loop` and
+  `menu_chain_mariofox_gcdrawall_loop` were deleted as coverage-reduced legacy
+  proof. Use the active stage gcDrawAll wrappers and `battle_playable` for live
+  scene coverage.
   `NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_gcdrawall_loop` and
   `NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_stage_gcdrawall_loop` add selected
   Pupupu display-layer and map GObjs to that bounded original `gcDrawAll`

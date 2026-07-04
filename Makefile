@@ -30,8 +30,6 @@ NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	menu_chain_mariofox_stage_mppassive_recover_loop \
 	battle_mariofox_stage_mpdamage_recover_loop \
 	menu_chain_mariofox_stage_mpdamage_recover_loop \
-	battle_mariofox_stage_mplivehit_damage_loop \
-	menu_chain_mariofox_stage_mplivehit_damage_loop \
 	battle_mariofox_stage_mplivehit_status_loop \
 	menu_chain_mariofox_stage_mplivehit_status_loop
 NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP ?= $(if $(filter $(NDS_INISHIE_SOURCE_SCALE_HARNESSES),$(NDS_DEV_SCENE_HARNESS)),1,0)
@@ -183,10 +181,6 @@ else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_live_preview)
 NDS_DEV_SCENE_HARNESS_ID := 55
 else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_live_preview)
 NDS_DEV_SCENE_HARNESS_ID := 56
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_gcdrawall_loop)
-NDS_DEV_SCENE_HARNESS_ID := 57
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_gcdrawall_loop)
-NDS_DEV_SCENE_HARNESS_ID := 58
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_gcdrawall_loop)
 NDS_DEV_SCENE_HARNESS_ID := 59
 else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_gcdrawall_loop)
@@ -387,14 +381,6 @@ else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpdamage_recover_loop)
 NDS_DEV_SCENE_HARNESS_ID := 157
 else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpdamage_recover_loop)
 NDS_DEV_SCENE_HARNESS_ID := 158
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mplivehit_damage_loop)
-NDS_DEV_SCENE_HARNESS_ID := 159
-# Mode 159 links the full live-hit damage proof boundary.
-CFLAGS += -Os
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mplivehit_damage_loop)
-NDS_DEV_SCENE_HARNESS_ID := 160
-# Mode 160 links the full menu chain plus the latest battle boundary.
-CFLAGS += -Os
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mplivehit_status_loop)
 NDS_DEV_SCENE_HARNESS_ID := 161
 # Mode 161 links the latest battle boundary plus inherited proof setup.
