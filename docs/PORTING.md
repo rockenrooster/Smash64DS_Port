@@ -16733,3 +16733,22 @@ Still deferred:
   `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1
   -HardwareTriangles -DelaySeconds 3`, which passed with
   `hwsubmit=252`, `hwtri=1152`, and `hwtex=.../reject0/...`.
+
+## 2026-07-03 - Live-Manager Direct All-DL HW Gate
+
+- Fixed the strict direct Mario/Fox all-DL hardware verifier on the
+  original-manager path. Segment `0xE` material branches without a DObj MObj no
+  longer fall back to model-file offset zero, and the multi/all-DL probes now
+  preserve source-equivalent segment `0xE` state plus RSP vertex-cache state
+  across selected DObjs in traversal order.
+- Source basis: BattleShip `gcDrawMObjForDObj` emits segment `0xE` material
+  state immediately before DObj display-list submission when `dobj->mobj` is
+  present, while `gcDrawDObjTree` submits DObj DLs through the same persistent
+  RSP state (`decomp/BattleShip-main/decomp/src/sys/objdisplay.c:1221-1225`,
+  `1557-1571`). The invalid-triangle tail came from isolated DObj traversal
+  losing that persistent vertex cache; the unsupported `0xbd`/`0x3e` tail came
+  from scanning the model file's pointer table as a DL.
+- Verified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1
+  -HardwareTriangles -DelaySeconds 3`: all 14/18 selected DObjs are clean,
+  hardware submits `284/298` fighter triangles, and texture diagnostics report
+  `bind64/upload5/ready64/reject55/fmt0x4/max32x32`.

@@ -120,15 +120,12 @@
   combine state, forces opaque DS poly alpha for source opaque render modes,
   maps recorded F3DEX2 front/back cull geometry mode to DS polygon cull bits,
   applies the sm64-nds decal-combine rule to DS `POLY_DECAL`, and applies its
-  texture-filter coordinate-bias rule. After original-manager graduation,
-  direct all-DL verifier modes `33/34` are coverage-reduced: the live-manager
-  bridge now reaches the original manager-created Mario/Fox structs and
-  hardware-submits both fighters, but the strict verifier still fails because
-  selected live-manager DObjs expose unsupported blockers/opcodes (`0xbd`,
-  `0x3e`) instead of the old fully clean synthetic stack. Treat direct all-DL
-  hardware stats as partial renderer evidence until those blockers are handled.
-  Remaining renderer work is the live-manager all-DL cleanup, broader
-  combiner/material/depth/texture source-scene coverage, and cutover policy.
+  texture-filter coordinate-bias rule. After original-manager graduation, the
+  strict direct Mario/Fox all-DL hardware verifier is green on live-manager
+  fighters by preserving source-equivalent segment `0xE` material state and RSP
+  vertex-cache state across selected DObjs. Remaining renderer work is broader
+  combiner/material/depth/texture source-scene coverage, fighter all-DL
+  texture-reject cleanup, and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

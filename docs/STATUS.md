@@ -84,13 +84,15 @@ removing them still needs status-by-status proofs.
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 The current Pupupu stage-inclusive hardware gate proves matrix, material,
 texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
-zero hardware texture rejects. Direct all-DL modes now reach the live
-manager-created Mario/Fox structs and the opt-in hardware path submits both
-fighters, but the strict direct all-DL verifier remains coverage-reduced until
-the live-manager unsupported DObj/DL blockers are handled. Latest captures
-remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity still needs
-broader source-scene coverage and renderer cutover work. Default builds still
-use the software preview.
+zero hardware texture rejects. The strict direct Mario/Fox all-DL hardware
+verifier now also passes on live manager-created fighters: all 14/18 selected
+DObjs are clean and the opt-in hardware path submits 284/298 fighter triangles.
+That proof now preserves the source-equivalent segment `0xE` material register
+and RSP vertex cache across selected DObjs instead of scanning isolated DObj
+DLs as independent lists. Latest captures remain in
+`artifacts\renderer-*-hw*.png`. Full visual fidelity still needs broader
+source-scene coverage, texture-reject cleanup for the fighter all-DL path, and
+renderer cutover work. Default builds still use the software preview.
 
 Latest gameplay proof is now original-manager Mario/Fox creation plus imported
 animation/key runtime for Wait -> Walk. The TaruCannon status `61`
@@ -103,9 +105,8 @@ The next useful gameplay work is to rebuild the reduced gcDrawAll/stage/MP,
 dash, and live-hit proof coverage on top of the natural original-manager runtime, then move toward
 `battle_playable` camera, HUD, match-flow, and renderer cutover work.
 
-- renderer follow-up: finish the live-manager direct all-DL hardware verifier
-  by handling the remaining unsupported DObj/DL blockers, broaden source-scene
-  coverage, then plan renderer cutover work;
+- renderer follow-up: broaden source-scene coverage, reduce remaining fighter
+  all-DL texture rejects, then plan renderer cutover work;
 - continuous-runtime verifier for unbounded battle frames.
 
 ## Runtime Target

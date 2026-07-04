@@ -26,6 +26,24 @@
 /* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
 
+static const Gfx sNdsRendererAdapterEmptySegmentEDL[1] = {
+    { { NDS_FIGHTER_DL_OP_ENDDL << 24, 0u } }
+};
+
+static sb32 ndsRendererAdapterRangeIsEmptySegmentEDL(const Gfx *dl,
+                                                     size_t bytes)
+{
+    uintptr_t base = (uintptr_t)sNdsRendererAdapterEmptySegmentEDL;
+    uintptr_t addr = (uintptr_t)dl;
+    size_t size = sizeof(sNdsRendererAdapterEmptySegmentEDL);
+
+    if ((dl == NULL) || (addr < base) || (addr > (base + size)))
+    {
+        return FALSE;
+    }
+    return (bytes <= (size - (size_t)(addr - base))) ? TRUE : FALSE;
+}
+
 static void ndsRendererAdapterMtxIdentity20p12(
     NDSRendererMatrix20p12 *out)
 {
@@ -1060,7 +1078,8 @@ static s32 ndsFighterDLScanValidateRange(const Gfx *dl, size_t bytes,
 
     if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
         ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
-         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE)))
+         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+         (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
         gNdsFighterDLScanRangeRejectCount++;
         return FALSE;
@@ -1527,7 +1546,8 @@ static s32 ndsFighterDLExecValidateRange(const Gfx *dl, size_t bytes,
 
     if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
         ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
-         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE)))
+         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+         (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
         gNdsFighterDLExecRangeRejectCount++;
         return FALSE;
@@ -2074,6 +2094,14 @@ static const Gfx *ndsFighterDLDrawResolveBranch(const Gfx *dl,
             return (const Gfx *)(base + offset);
         }
     }
+    if ((raw >> 24) == 0x0eu)
+    {
+        if (resolve_kind != NULL)
+        {
+            *resolve_kind = NDS_RENDERER_RESOLVE_SEGMENT;
+        }
+        return sNdsRendererAdapterEmptySegmentEDL;
+    }
     if ((state != NULL) &&
         (state->primary_file != NULL) &&
         (ndsRelocRangeInLoadedFile(state->primary_file,
@@ -2128,6 +2156,10 @@ static const void *ndsFighterDLDrawResolveDataPointer(uintptr_t raw,
             return (const void *)(base + offset);
         }
     }
+    if ((raw >> 24) == 0x0eu)
+    {
+        return NULL;
+    }
     if ((state != NULL) &&
         (state->primary_file != NULL) &&
         (ndsRelocRangeInLoadedFile(state->primary_file,
@@ -2162,7 +2194,8 @@ static s32 ndsFighterDLDrawValidateRange(const Gfx *dl, size_t bytes,
 
     if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
         ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
-         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE)))
+         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+         (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
         gNdsFighterDLDrawRangeRejectCount++;
         return FALSE;
@@ -2212,6 +2245,49 @@ static void ndsFighterDLDrawDecodeVtx(NDSFighterDLDrawState *state,
         (state->color_checksum * 33u) ^
         (u32)((u16)dst->x + ((u16)dst->y << 1) + ((u16)dst->z << 2)) ^
         rgba;
+}
+
+static u32 ndsFighterDLDrawCountValidVertices(u32 mask)
+{
+    u32 count = 0u;
+
+    while (mask != 0u)
+    {
+        count += mask & 1u;
+        mask >>= 1;
+    }
+    return count;
+}
+
+static void ndsFighterDLDrawSeedPersistentState(
+    NDSFighterDLDrawState *state, const NDSFighterDLDrawState *persistent)
+{
+    if ((state == NULL) || (persistent == NULL))
+    {
+        return;
+    }
+
+    state->segment_e_base = persistent->segment_e_base;
+    state->segment_e_end = persistent->segment_e_end;
+    memcpy(state->vertices, persistent->vertices, sizeof(state->vertices));
+    state->vertex_valid_mask = persistent->vertex_valid_mask;
+    state->vertex_decoded_count =
+        ndsFighterDLDrawCountValidVertices(state->vertex_valid_mask);
+}
+
+static void ndsFighterDLDrawCapturePersistentState(
+    NDSFighterDLDrawState *persistent, const NDSFighterDLDrawState *state)
+{
+    if ((persistent == NULL) || (state == NULL))
+    {
+        return;
+    }
+
+    persistent->segment_e_base = state->segment_e_base;
+    persistent->segment_e_end = state->segment_e_end;
+    memcpy(persistent->vertices, state->vertices,
+           sizeof(persistent->vertices));
+    persistent->vertex_valid_mask = state->vertex_valid_mask;
 }
 
 static sb32 ndsFighterDLDrawAppendTriangle(NDSFighterDLDrawState *state,
@@ -2364,7 +2440,8 @@ static s32 ndsRendererAdapterStageValidateRange(const Gfx *dl, size_t bytes,
 
     if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
         ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
-         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE)))
+         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+         (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
         return FALSE;
     }
@@ -4124,7 +4201,8 @@ static s32 ndsFighterDLMultiDrawValidateRange(const Gfx *dl, size_t bytes,
 
     if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
         ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
-         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE)))
+         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+         (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
         gNdsFighterDLMultiDrawRangeRejectCount++;
         return FALSE;
@@ -4635,6 +4713,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
     NDSFighterDLMultiDrawCollection collection;
     NDSFighterDLDrawState states[
         NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
+    NDSFighterDLDrawState persistent_state;
     NDSRendererStats stats[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     u8 clean[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     u32 root_x_before;
@@ -4672,6 +4751,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
     }
 
     bzero(states, sizeof(states));
+    bzero(&persistent_state, sizeof(persistent_state));
     bzero(stats, sizeof(stats));
     bzero(clean, sizeof(clean));
 
@@ -4694,6 +4774,8 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
+        ndsFighterDLDrawSeedPersistentState(&states[i],
+                                            &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
         ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
                                                  &states[i]);
@@ -4724,6 +4806,8 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                       ndsFighterMarioFoxVisitDLDrawCommand,
                                       &states[i],
                                       &stats[i]);
+        ndsFighterDLDrawCapturePersistentState(&persistent_state,
+                                               &states[i]);
         ndsFighterDLMultiDrawAccumulateStats(slot, i, &states[i],
                                              &stats[i], clean);
     }
@@ -5026,7 +5110,8 @@ static s32 ndsFighterDLAllDrawValidateRange(const Gfx *dl, size_t bytes,
 
     if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
         ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
-         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE)))
+         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+         (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
         gNdsFighterDLAllDrawRangeRejectCount++;
         return FALSE;
@@ -5745,6 +5830,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     DObj *root;
     NDSFighterDLAllDrawCollection collection;
     NDSFighterDLDrawState *states;
+    NDSFighterDLDrawState persistent_state;
     NDSRendererStats *stats;
     u8 *clean;
     u32 root_x_before;
@@ -5785,6 +5871,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     stats = sNdsFighterDLAllDrawStats[slot];
     clean = sNdsFighterDLAllDrawClean[slot];
     bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
+    bzero(&persistent_state, sizeof(persistent_state));
     bzero(stats, sizeof(sNdsFighterDLAllDrawStats[slot]));
     bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
 
@@ -5807,6 +5894,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
+        ndsFighterDLDrawSeedPersistentState(&states[i],
+                                            &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
         ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
                                                  &states[i]);
@@ -5837,6 +5926,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                       ndsFighterMarioFoxVisitDLDrawCommand,
                                       &states[i],
                                       &stats[i]);
+        ndsFighterDLDrawCapturePersistentState(&persistent_state,
+                                               &states[i]);
         ndsFighterDLAllDrawAccumulateStats(slot, i, collection.indices[i],
                                            collection.dobjs[i], dl,
                                            &states[i], &stats[i], clean);
