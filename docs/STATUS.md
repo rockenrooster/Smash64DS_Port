@@ -87,13 +87,13 @@ texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
 zero hardware texture rejects. The strict direct Mario/Fox all-DL hardware
 verifier now also passes on live manager-created fighters: all 14/18 selected
 DObjs are clean and the opt-in hardware path submits 284/298 fighter triangles.
-That proof now preserves the source-equivalent segment `0xE` material register
-plus RSP vertex/render state across selected DObjs instead of scanning isolated
-DObj DLs as independent lists. Latest captures remain in
-`artifacts\renderer-*-hw*.png`. Full visual fidelity still needs broader
-source-scene coverage, the remaining fighter all-DL texture-reject cleanup
-(`reject46`), and renderer cutover work. Default builds still use the software
-preview.
+That proof now attaches original fighter-part MObjs, preserves the
+source-equivalent segment `0xE` material register plus RSP vertex/render state,
+and seeds missing direct-list CI TLUT state from the current material palette so
+the all-DL hardware texture path reports `bind119/upload8/ready119/reject0`.
+Latest captures remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity
+still needs broader source-scene coverage and renderer cutover work. Default
+builds still use the software preview.
 
 Latest gameplay proof is now original-manager Mario/Fox creation plus imported
 animation/key runtime for Wait -> Walk. The TaruCannon status `61`
@@ -106,8 +106,8 @@ The next useful gameplay work is to rebuild the reduced gcDrawAll/stage/MP,
 dash, and live-hit proof coverage on top of the natural original-manager runtime, then move toward
 `battle_playable` camera, HUD, match-flow, and renderer cutover work.
 
-- renderer follow-up: reduce remaining fighter all-DL texture rejects, broaden
-  source-scene coverage, then plan renderer cutover work;
+- renderer follow-up: broaden source-scene coverage, then plan renderer cutover
+  work;
 - continuous-runtime verifier for unbounded battle frames.
 
 ## Runtime Target

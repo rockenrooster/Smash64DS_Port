@@ -3310,7 +3310,7 @@ void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
 void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
                                         AObjEvent32 **costume_matanim_joints,
                                         AObjEvent32 **main_matanim_joints,
-                                        s32 costume);
+                                        f32 anim_frame);
 DObj *gcAddDObjForGObj(GObj *gobj, void *dvar);
 DObj *gcAddChildForDObj(DObj *dobj, void *dvar);
 XObj *gcAddXObjForDObjFixed(DObj *dobj, u8 kind, u8 arg2);

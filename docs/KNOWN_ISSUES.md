@@ -123,9 +123,10 @@
   texture-filter coordinate-bias rule. After original-manager graduation, the
   strict direct Mario/Fox all-DL hardware verifier is green on live-manager
   fighters by preserving source-equivalent segment `0xE` material state plus
-  RSP vertex/render state across selected DObjs. Remaining renderer work is the
-  fighter all-DL `reject46` texture tail, broader combiner/material/depth/
-  texture source-scene coverage, and cutover policy.
+  RSP vertex/render state across selected DObjs, attaching original
+  fighter-part MObjs, and seeding missing direct-list CI TLUT state from the
+  current material palette. Remaining renderer work is broader
+  combiner/material/depth/texture source-scene coverage and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

@@ -16764,3 +16764,26 @@ Still deferred:
   -HardwareTriangles -DelaySeconds 3`: the direct all-DL hardware gate remains
   green and texture diagnostics improve to
   `bind73/upload6/ready73/reject46/fmt0x4/max32x32`.
+
+## 2026-07-03 - Fighter MObj Material TLUT Cleanup
+
+- Replaced the empty local `lbCommonAddMObjForFighterPartsDObj` stub with the
+  BattleShip material attachment loop, preserving the original
+  `gcAddMObjForDObj` plus costume/main material-animation handling
+  (`decomp/BattleShip-main/decomp/src/lb/lbcommon.c:955-999`).
+- The direct hardware material segment now emits a palette `G_SETTIMG` seed
+  from the current MObj when source model data carries a palette pointer but no
+  `MOBJ_FLAG_PALETTE`; the following original raw display-list `LOADTLUT`
+  still performs the TLUT load. This covers Mario/Fox model records that have
+  prim-color-only flags with palette pointers, while keeping the source
+  `MOBJ_FLAG_PALETTE` path unchanged
+  (`decomp/BattleShip-main/decomp/src/sys/objdisplay.c:1261-1285`).
+- Verified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1
+  -HardwareTriangles -DelaySeconds 3`: all-DL hardware texture diagnostics are
+  now `bind119/upload8/ready119/reject0/fmt0x4/max32x32`.
+- Verified `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1
+  -HardwareTriangles -DelaySeconds 3`: stage-inclusive hardware reports
+  `hwsubmit=252`, `hwtri=1152`, and
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+- Default gates stayed green with `.\scripts\verify-dev-fast.ps1 -Build
+  -DelaySeconds 3` and `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.

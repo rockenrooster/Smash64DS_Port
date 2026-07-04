@@ -2613,10 +2613,16 @@ static void ndsRendererAdapterMaterialLoadBlock(const MObj *mobj,
     *dxt = (divisor + 0x7ffu) / divisor;
 }
 
-static u32 ndsRendererAdapterMaterialCommandCount(u32 flags)
+static u32 ndsRendererAdapterMaterialCommandCount(const MObj *mobj, u32 flags)
 {
     u32 count = 1u;
 
+    if (((flags & MOBJ_FLAG_PALETTE) == 0u) &&
+        (mobj != NULL) &&
+        (mobj->sub.palettes != NULL))
+    {
+        count++;
+    }
     if ((flags & MOBJ_FLAG_PALETTE) != 0)
     {
         count++;
@@ -2693,7 +2699,7 @@ static sb32 ndsRendererAdapterCountMaterialCommands(DObj *dobj,
             return FALSE;
         }
         commands += ndsRendererAdapterMaterialCommandCount(
-            ndsRendererAdapterMaterialFlags(mobj));
+            mobj, ndsRendererAdapterMaterialFlags(mobj));
     }
     *mobj_count = count;
     *branch_commands = commands;
@@ -3033,6 +3039,18 @@ static Gfx *ndsRendererAdapterEmitMaterialCommands(Gfx *branch_dl, MObj *mobj)
     ndsRendererAdapterMaterialTextureState(
         mobj, flags, &scau, &scav, &trau, &trav, &scrollu, &scrollv);
 
+    if (((flags & MOBJ_FLAG_PALETTE) == 0u) &&
+        (mobj->sub.palettes != NULL))
+    {
+        const void *palette = ndsRendererAdapterReadPointerEntry(
+            mobj->sub.palettes, (s32)mobj->palette_id);
+
+        if (palette != NULL)
+        {
+            ndsRendererAdapterEmitTextureImage(
+                branch_dl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1u, palette);
+        }
+    }
     if ((flags & MOBJ_FLAG_PALETTE) != 0)
     {
         ndsRendererAdapterEmitTextureImage(

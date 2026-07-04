@@ -1040,6 +1040,8 @@ extern void gcParseDObjAnimJoint(DObj *dobj);
 extern void gcPlayDObjAnimJoint(DObj *dobj);
 extern void gcParseMObjMatAnimJoint(MObj *mobj);
 extern void gcPlayMObjMatAnim(MObj *mobj);
+extern void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
+                                  f32 anim_frame);
 void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale);
 void battleship_ftAnimParseDObjFigatree(DObj *root_dobj);
 void battleship_ftAnimEndSetWait(GObj *fighter_gobj);
@@ -6635,7 +6637,7 @@ void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
                     ? commonparts_container->commonparts[detail_id]
                           .p_costume_matanim_joints[i]
                     : NULL,
-                NULL, (s32)anim_frame);
+                NULL, anim_frame);
             if (dobjs != NULL)
             {
                 *dobjs = current_dobj;
@@ -6660,13 +6662,49 @@ advance_flags:
 void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
                                         AObjEvent32 **costume_matanim_joints,
                                         AObjEvent32 **main_matanim_joints,
-                                        s32 costume)
+                                        f32 anim_frame)
 {
-    (void)dobj;
-    (void)mobjsubs;
-    (void)costume_matanim_joints;
-    (void)main_matanim_joints;
-    (void)costume;
+    if ((dobj == NULL) || (mobjsubs == NULL))
+    {
+        return;
+    }
+
+    while (*mobjsubs != NULL)
+    {
+        MObj *mobj = gcAddMObjForDObj(dobj, *mobjsubs);
+
+        if (mobj == NULL)
+        {
+            return;
+        }
+        if (costume_matanim_joints != NULL)
+        {
+            AObjEvent32 *costume_matanim_joint = *costume_matanim_joints;
+
+            if (costume_matanim_joint != NULL)
+            {
+                gcAddMObjMatAnimJoint(mobj, costume_matanim_joint,
+                                      anim_frame);
+                gcParseMObjMatAnimJoint(mobj);
+                gcPlayMObjMatAnim(mobj);
+                gcRemoveAObjFromMObj(mobj);
+            }
+            costume_matanim_joints++;
+        }
+        if (main_matanim_joints != NULL)
+        {
+            AObjEvent32 *main_matanim_joint = *main_matanim_joints;
+
+            if (main_matanim_joint != NULL)
+            {
+                gcAddMObjMatAnimJoint(mobj, main_matanim_joint, 0.0F);
+                gcParseMObjMatAnimJoint(mobj);
+                gcPlayMObjMatAnim(mobj);
+            }
+            main_matanim_joints++;
+        }
+        mobjsubs++;
+    }
 }
 
 void mpCommonUpdateFighterSlopeContour(GObj *fighter_gobj)
