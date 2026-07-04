@@ -76,9 +76,10 @@ The remaining stage compat-replay/cliffmotion seams in `ftMainSetStatus` are
 scoped away from those proven statuses but still documented as follow-up for
 older stage/cliff proofs.
 
-Renderer hardware is now default for the active Boundary/Latest combat pair
-`161/162`; global normal builds still default to software preview. Use
-`-SoftwarePreview` on those wrappers for comparisons. The current Pupupu
+Renderer hardware is now default for stage draw/collision modes `59-62` and
+the active Boundary/Latest combat pair `161/162`; global normal builds still
+default to software preview. Use `-SoftwarePreview` on those wrappers for
+comparisons. The current Pupupu
 stage-inclusive hardware gate proves matrix, material,
 texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
 zero hardware texture rejects. The strict direct and menu-chain Mario/Fox
@@ -87,7 +88,7 @@ selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
 texture path reports `bind119/upload8/ready119/reject0`. That proof carries
 original fighter-part MObjs, the source-equivalent segment `0xE` material
 register, RSP vertex/render state, and CI TLUT seeds from the current material
-palette. The same opt-in stage `gcDrawAll` hardware replay now submits the
+palette. The stage `gcDrawAll`/collision hardware defaults now submit the
 Pupupu stage and both selected manager-created fighters in one hardware frame
 on direct and menu-chain routes: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
@@ -110,8 +111,7 @@ The next useful gameplay work is to migrate the remaining older gcDrawAll/stage/
 MP marker families and selected Fox Jab2 modes `159/160` onto natural runtime,
 then move toward `battle_playable` camera, HUD, match-flow, and renderer cutover.
 
-- renderer follow-up: broaden source-scene coverage, then plan renderer cutover
-  work;
+- renderer follow-up: broaden source-scene coverage and HW default coverage;
 - continuous-runtime verifier for unbounded battle frames.
 
 ## Runtime Target

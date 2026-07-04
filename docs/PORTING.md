@@ -16930,3 +16930,20 @@ Still deferred:
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and
   `hwftr=2/582`.
 - Captured the cutover ROM at `artifacts\boundary-combat-hwtri.png`.
+
+## 2026-07-04 - Stage Draw/Collision Hardware Cutover
+
+- Made the proven adjacent stage draw/collision wrappers for modes `59-62`
+  default to their `*-hwtri` targets, keeping `-SoftwarePreview` as the narrow
+  comparison path. Updated the registry target/build entries so profile
+  prebuilds produce the DS 3D hardware outputs by default.
+- Verified a targeted `RegressionFast` prebuild for the four affected targets,
+  direct wrappers with `-NoBuild -DelaySeconds 3`, and menu-chain wrappers with
+  `-NoBuild` using their default delay. All four report `hwsubmit=252`,
+  `hwtri=1152`, `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and `hwftr=2/582`.
+- Gates passed:
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.

@@ -44,19 +44,19 @@ physics tick copying fighter root position from the barrel root. Continuous
 TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
-Latest renderer detail: DS 3D hardware submission is now the default for the
-active Boundary/Latest combat pair `161/162`; pass `-SoftwarePreview` to those
-wrappers only for comparison runs. The current Pupupu stage-inclusive gate proves
-matrix, material, texture, depth/fog/alpha, primitive-Z, and
-texture-perspective hardware submission with zero texture rejects. The strict
+Latest renderer detail: DS 3D hardware submission defaults to stage
+draw/collision modes `59-62` and active Boundary/Latest pair `161/162`; pass
+`-SoftwarePreview` to those wrappers for comparison runs. The Pupupu
+stage-inclusive gate proves matrix, material, texture, depth/fog/alpha,
+primitive-Z, and texture-perspective HW submission with zero rejects. The strict
 direct and menu-chain Mario/Fox all-DL hardware verifiers now pass on live
 manager-created fighters: all 14/18 selected DObjs are clean and hardware
 submits 284/298 fighter triangles. The all-DL proof carries the
 source-equivalent segment `0xE` material register, RSP vertex/render state,
 original fighter-part MObjs, and CI TLUT seeds from the current material
 palette. All-DL now reports `bind119/upload8/ready119/reject0`. The
-stage-inclusive `gcDrawAll` hardware gate now submits the Pupupu stage plus both
-selected live fighters in one frame: `hwsubmit=252`, `hwtri=1152`,
+stage-inclusive `gcDrawAll`/collision defaults now submit the Pupupu stage plus
+both selected live fighters in one frame: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active boundary
 wrappers assert that stage + both-fighter DS 3D replay after the imported
 manager combat chain passes. Latest captures include

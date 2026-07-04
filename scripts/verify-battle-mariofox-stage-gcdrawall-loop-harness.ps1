@@ -5,9 +5,11 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [switch]$HardwareTriangles
+    [switch]$HardwareTriangles,
+    [switch]$SoftwarePreview
 )
 $ErrorActionPreference = 'Stop'
+$HardwareTriangles = -not $SoftwarePreview
 $target = if ($HardwareTriangles) { 'smash64ds-battle-mariofox-stage-gcdrawall-loop-hwtri' } else { 'smash64ds-battle-mariofox-stage-gcdrawall-loop' }
 $build = if ($HardwareTriangles) { 'build-battle-mariofox-stage-gcdrawall-loop-hwtri-harness' } else { 'build-battle-mariofox-stage-gcdrawall-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcdrawall-loop-harness.ps1') `
