@@ -11877,9 +11877,6 @@ void mpCollisionInitGroundData(void)
 
 #if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 extern GObj *gGMCameraGObj;
-#if !NDS_IMPORT_BATTLESHIP_IFCOMMON
-IFPlayerCommon gIFCommonPlayerInterface;
-#endif
 
 static GObj *ndsBattleCompatMainCameraGObj(void)
 {
@@ -12963,90 +12960,6 @@ void efManagerInitEffects(void)
 {
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
 }
-
-#if !NDS_IMPORT_BATTLESHIP_IFCOMMON
-static void ndsSCVSBattleMarkInterface(u32 bit)
-{
-    gNdsSCVSBattleCompatInterfaceMask |= bit;
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_INTERFACE;
-}
-
-void ifCommonBattleUpdateInterfaceAll(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 0);
-}
-
-void ifCommonBattleSetGameStatusWait(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 1);
-}
-
-void ifCommonPlayerArrowsInitInterface(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 2);
-}
-
-void ifCommonPlayerMagnifyMakeInterface(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 3);
-}
-
-void ifCommonPlayerTagMakeInterface(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 4);
-}
-
-void ifCommonPlayerDamageSetDigitPositions(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 5);
-}
-
-void ifCommonPlayerDamageInitInterface(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 6);
-}
-
-void ifCommonPlayerStockInitInterface(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 7);
-}
-
-void ifCommonEntryAllMakeInterface(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 8);
-}
-
-void ifCommonTimerMakeInterface(void (*func_init)(void))
-{
-    ndsSCVSBattleMarkInterface(1u << 9);
-    if (func_init != NULL)
-    {
-        func_init();
-    }
-}
-
-SObj *ifCommonTimerMakeDigits(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 10);
-    return NULL;
-}
-
-void ifCommonSuddenDeathMakeInterface(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 11);
-}
-
-void ifCommonAnnounceTimeUpInitInterface(void)
-{
-    ndsSCVSBattleMarkInterface(1u << 12);
-}
-
-void ifScreenFlashMakeInterface(u8 alpha)
-{
-    (void)alpha;
-    ndsSCVSBattleMarkInterface(1u << 13);
-}
-#endif
 
 void lbBackupIsSramValid(void)
 {

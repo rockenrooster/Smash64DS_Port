@@ -6573,10 +6573,6 @@ uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
 NDS_MENU_RELOC_SYMBOLS(NDS_DEFINE_MENU_RELOC_SYMBOL)
 #undef NDS_DEFINE_MENU_RELOC_SYMBOL
 
-#if !NDS_IMPORT_BATTLESHIP_IFCOMMON
-u8 dIFCommonPlayerTeamColorIDs[] = { 0, 1, 3, 4, 0 };
-#endif
-
 extern s32 sMNStartupSkipAllowWait;
 extern sb32 sMNStartupIsProceedOpening;
 extern void mnStartupActorFuncRun(GObj *gobj);

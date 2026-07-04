@@ -66,48 +66,9 @@ NDS_WEAK void grZebesAcidGetLevelInfo(f32 *current, f32 *step)
     }
 }
 
-NDS_WEAK void ifCommonBattleEndAddSoundQueueID(u16 sfx_id)
-{
-    (void)sfx_id;
-}
-
-NDS_WEAK void ifCommonPlayerDamageStartBreakAnim(FTStruct *fp)
-{
-    (void)fp;
-}
-
-NDS_WEAK void ifCommonPlayerDamageStopBreakAnim(FTStruct *fp)
-{
-    (void)fp;
-}
-
-NDS_WEAK void ifCommonPlayerStockMakeStockSnap(FTStruct *fp)
-{
-    (void)fp;
-}
-
-NDS_WEAK void ifCommonPlayerScoreMakeEffect(FTStruct *fp, s32 score)
-{
-    (void)fp;
-    (void)score;
-}
-
-NDS_WEAK void ifCommonBattleUpdateScoreStocks(FTStruct *fp)
-{
-    (void)fp;
-}
-
-NDS_WEAK void ifCommonAnnounceEndMessage(void)
-{
-}
-
 NDS_WEAK void ifScreenFlashMakeInterface(u8 alpha)
 {
     (void)alpha;
-}
-
-NDS_WEAK void ndsIFCommonRecordHUDState(void)
-{
 }
 
 NDS_WEAK void sc1PGameSetPlayerDefeatStats(s32 player, s32 team_order)
