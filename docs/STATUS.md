@@ -76,14 +76,14 @@ The remaining stage compat-replay/cliffmotion seams in `ftMainSetStatus` are
 scoped away from those proven statuses but still documented as follow-up for
 older stage/cliff proofs.
 
-Renderer hardware is now default for stage draw/collision modes `59-62` and
-the active Boundary/Latest combat pair `161/162`; global normal builds still
-default to software preview. Use `-SoftwarePreview` on those wrappers for
-comparisons. The current Pupupu
+Renderer hardware is now default for all-DL modes `33/34`, stage
+draw/collision modes `59-62`, and active Boundary/Latest pair `161/162`;
+global normal builds still default to software preview. Use `-SoftwarePreview`
+on those wrappers for comparisons. The current Pupupu
 stage-inclusive hardware gate proves matrix, material,
 texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
-zero hardware texture rejects. The strict direct and menu-chain Mario/Fox
-all-DL hardware verifiers now pass on live manager-created fighters: all 14/18
+zero hardware texture rejects. The direct/menu Mario/Fox all-DL hardware
+defaults now pass on live manager-created fighters: all 14/18
 selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
 texture path reports `bind119/upload8/ready119/reject0`. That proof carries
 original fighter-part MObjs, the source-equivalent segment `0xE` material

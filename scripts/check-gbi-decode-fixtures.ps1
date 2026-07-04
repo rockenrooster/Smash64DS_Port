@@ -506,6 +506,10 @@ $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c
 Assert-True ($openingBackend.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Opening-room renderer seed hook is missing.'
 $allDLVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($allDLVerifier.Contains('HardwareTriangles')) 'All-DL verifier hardware-triangle switch is missing.'
+Assert-True ($allDLVerifier.Contains('SoftwarePreview')) 'All-DL verifier software-preview opt-out is missing.'
+Assert-True ($allDLVerifier.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'All-DL verifier no longer defaults to hardware.'
+Assert-True ($allDLVerifier.Contains('smash64ds-battle-mariofox-dl-draw-all-hwtri')) 'All-DL verifier hardware target is missing.'
+Assert-True ($allDLVerifier.Contains("if (-not `$NoBuild)")) 'All-DL verifier no-build skip is missing.'
 Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HWTEX')) 'All-DL verifier hardware texture marker is missing.'
 Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HW')) 'All-DL verifier hardware triangle marker is missing.'
 Assert-True ($allDLVerifier.Contains('FTR_DL_ALL_HW_DEPTH')) 'All-DL verifier hardware depth marker is missing.'
@@ -548,6 +552,8 @@ Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('SoftwarePreview')) 'Menu
 Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP live-hit status verifier no longer defaults to hardware.'
 Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Menu-chain stage MP live-hit status verifier hardware target is missing.'
 $registry = Get-Content (Join-Path $root 'scripts/lib/harness-registry.ps1') -Raw
+Assert-True ($registry.Contains('smash64ds-battle-mariofox-dl-draw-all-hwtri')) 'Direct all-DL registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-dl-draw-all-hwtri')) 'Menu-chain all-DL registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-gcdrawall-loop-hwtri')) 'Stage gcDrawAll registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-gcdrawall-loop-hwtri')) 'Menu-chain stage gcDrawAll registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-collision-loop-hwtri')) 'Stage collision registry target is not hardware-renderer default.'
@@ -568,6 +574,10 @@ Assert-True ($menuStageCollisionWrapper.Contains('$HardwareTriangles = -not $Sof
 Assert-True ($menuStageCollisionWrapper.Contains('menu-chain-mariofox-stage-collision-loop-hwtri')) 'Menu-chain stage collision verifier hardware target is missing.'
 $menuAllDLVerifier = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($menuAllDLVerifier.Contains('HardwareTriangles')) 'Menu-chain all-DL verifier hardware switch is missing.'
+Assert-True ($menuAllDLVerifier.Contains('SoftwarePreview')) 'Menu-chain all-DL verifier software-preview opt-out is missing.'
+Assert-True ($menuAllDLVerifier.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain all-DL verifier no longer defaults to hardware.'
+Assert-True ($menuAllDLVerifier.Contains('smash64ds-menu-chain-mariofox-dl-draw-all-hwtri')) 'Menu-chain all-DL verifier hardware target is missing.'
+Assert-True ($menuAllDLVerifier.Contains("if (-not `$NoBuild)")) 'Menu-chain all-DL verifier no-build skip is missing.'
 Assert-True ($menuAllDLVerifier.Contains('FTR_DL_ALL_HWTEX')) 'Menu-chain all-DL verifier hardware texture marker is missing.'
 Assert-True ($menuAllDLVerifier.Contains('FTR_DL_ALL_HW_DEPTH')) 'Menu-chain all-DL verifier hardware depth marker is missing.'
 $movement = Get-Content (Join-Path $root 'src/port/reloc_backend_movement.c') -Raw

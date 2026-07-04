@@ -16947,3 +16947,17 @@ Still deferred:
   `.\scripts\check-harness-registry.ps1`,
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-04 - All-DL Hardware Cutover
+
+- Made direct/menu Mario/Fox all-DL modes `33/34` default to their proven
+  `*-hwtri` targets, keeping `-SoftwarePreview` as the comparison path. The
+  all-DL wrappers now honor `-NoBuild`, so targeted profile prebuilds are not
+  rebuilt during verifier runs.
+- Verified a targeted `RegressionFast` prebuild for both affected targets, then
+  `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1 -NoBuild -DelaySeconds 3`
+  and
+  `.\scripts\verify-menu-chain-mariofox-dl-draw-all-harness.ps1 -NoBuild -DelaySeconds 3`.
+  Both report all 14/18 selected DObjs clean, `hw=284/298`,
+  `hwdepth=z284/298/proj0/0/decal0/0`, and
+  `hwtex=bind119/upload8/ready119/reject0/fmt0x4/max32x32`.

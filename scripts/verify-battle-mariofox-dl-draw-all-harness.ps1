@@ -5,9 +5,11 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [switch]$HardwareTriangles
+    [switch]$HardwareTriangles,
+    [switch]$SoftwarePreview
 )
 $ErrorActionPreference = 'Stop'
+$HardwareTriangles = -not $SoftwarePreview
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -54,8 +56,12 @@ $makeArgs = @(
 if ($HardwareTriangles) {
     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
 }
-& make @makeArgs
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (-not $NoBuild) {
+    & make @makeArgs
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+} else {
+    Write-Output 'Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.'
+}
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'Battle Mario/Fox all-DL draw harness build did not produce the expected ROM and ELF.'
 }
