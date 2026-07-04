@@ -100,56 +100,17 @@ void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
     ndsDiagnosticsRecordImportedFTMainAnimEvents(fighter_gobj);
 }
 
-static sb32 ndsImportedFTMainShouldPreserveCliffMotion(s32 status_id)
-{
-    return ((status_id == nFTCommonStatusCliffClimbQuick1) ||
-            (status_id == nFTCommonStatusCliffClimbQuick2) ||
-            (status_id == nFTCommonStatusCliffClimbSlow1) ||
-            (status_id == nFTCommonStatusCliffClimbSlow2) ||
-            (status_id == nFTCommonStatusCliffAttackQuick1) ||
-            (status_id == nFTCommonStatusCliffAttackQuick2) ||
-            (status_id == nFTCommonStatusCliffAttackSlow1) ||
-            (status_id == nFTCommonStatusCliffAttackSlow2) ||
-            (status_id == nFTCommonStatusCliffEscapeQuick1) ||
-            (status_id == nFTCommonStatusCliffEscapeQuick2) ||
-            (status_id == nFTCommonStatusCliffEscapeSlow1) ||
-            (status_id == nFTCommonStatusCliffEscapeSlow2)) ? TRUE : FALSE;
-}
-
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags)
 {
-    FTStruct *fp;
-    s32 cliff_status_id_saved = 0;
-    s32 cliff_id_saved = -1;
-    sb32 preserve_cliffmotion = FALSE;
-
     if (ndsDiagnosticsHandleImportedFTMainSetStatusBefore(fighter_gobj,
             status_id, frame_begin, anim_speed, flags) != FALSE)
     {
         return;
     }
-    fp = ftGetStruct(fighter_gobj);
-    if ((fp != NULL) &&
-        (ndsImportedFTMainShouldPreserveCliffMotion(status_id) != FALSE))
-    {
-        preserve_cliffmotion = TRUE;
-        cliff_status_id_saved = fp->status_vars.common.cliffmotion.status_id;
-        cliff_id_saved = fp->status_vars.common.cliffmotion.cliff_id;
-    }
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
     ndsDiagnosticsRecordImportedFTMainSetStatus(fighter_gobj, status_id,
-                                                frame_begin, anim_speed,
-                                                flags);
-    if (preserve_cliffmotion != FALSE)
-    {
-        fp = ftGetStruct(fighter_gobj);
-        if (fp != NULL)
-        {
-            fp->status_vars.common.cliffmotion.status_id =
-                cliff_status_id_saved;
-            fp->status_vars.common.cliffmotion.cliff_id = cliff_id_saved;
-        }
-    }
+                                                 frame_begin, anim_speed,
+                                                 flags);
 }
