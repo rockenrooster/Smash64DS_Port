@@ -17216,3 +17216,32 @@ Still deferred:
   `.\scripts\check-harness-registry.ps1`,
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-04 - Stage MP Live-Stale-Floor Hardware Cutover
+
+- Made the adjacent stage MP live-stale-floor wrappers for modes `83/84`
+  default to their `*-hwtri` targets, keeping `-SoftwarePreview` for the
+  software comparison path. The registry now prebuilds the hardware outputs by
+  default.
+- Extended the existing post-natural-motion hardware submit allowlist so the
+  MP live-stale-floor modes submit the Pupupu stage plus both manager-created
+  fighters after the imported manager proof passes. The older MP live-stale
+  marker stack remains part of the documented natural-runtime migration work;
+  this cutover only changes the DS 3D replay default for the already-bounded
+  scene.
+- Verified a targeted `RegressionFast` prebuild for both affected targets,
+  then
+  `.\scripts\verify-battle-mariofox-stage-mplivestale-floor-loop-harness.ps1
+  -NoBuild -DelaySeconds 3` and
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivestale-floor-loop-harness.ps1
+  -NoBuild`. Both report `hwsubmit=252`, `hwtri=1152`,
+  `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and `hwftr=2/582`.
+  The menu-chain route uses the wrapper's default delay.
+- Captured the direct HW ROM at
+  `artifacts\stage-mplivestale-floor-hwtri.png`.
+- Gates passed:
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
