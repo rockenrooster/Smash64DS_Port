@@ -12,16 +12,20 @@
         (void)fighter_gobj;                   \
     }
 
+#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 NDS_INACTIVE_STATUS_STUB(ftCommonDeadCommonProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpStarProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpFallProcUpdate)
+#endif
 NDS_INACTIVE_STATUS_STUB(ftCommonSleepProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonEntryNullProcUpdate)
+#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthDownProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthCommonProcMap)
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthStandProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthWaitProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthWaitProcInterrupt)
+#endif
 NDS_INACTIVE_STATUS_STUB(ftCommonJumpAerialProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonJumpAerialProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonFallSpecialProcInterrupt)

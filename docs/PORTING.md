@@ -17303,3 +17303,23 @@ Still deferred:
   -Force` completed, then all four `.\scripts\verify-all.ps1 -Profile
   Regression -ShardCount 4 -ShardIndex N -RunnerSlot N -NoBuild` shards
   passed.
+
+## 2026-07-04 - Battle Playable Camera/KO Fence
+
+- Added `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE`, default off, as the first
+  `battle_playable` subsystem fence.
+- Imported original `gm/gmcamera.c`, `ft/ftcommon/ftcommondead.c`, and
+  `ft/ftcommon/ftcommonrebirth.c` as whole TUs behind the fence. The default
+  runtime still uses the existing battle camera and inactive Dead/Rebirth
+  seams.
+- Added source-backed narrow ABI constants/types required by those TUs:
+  camera state, `IFPlayerCommon`, Dead/Rebirth frame constants, Rebirth map
+  object kind, Dead/Rebirth color animation IDs, Dead SFX IDs, and the weapon
+  camera-follow bit.
+- Added fenced weak stubs for the not-yet-imported dependency boundary:
+  `sys/objdisplay`, `lbcommon`, HUD, effects, items, and 1P-only callbacks.
+  These are placeholders for future subsystem imports, not completed behavior.
+- Verified:
+  `make TARGET=smash64ds-battle-playable-fence BUILD=build-battle-playable-fence NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_status_loop NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1 -j16`,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.

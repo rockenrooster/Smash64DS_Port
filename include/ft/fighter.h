@@ -171,6 +171,14 @@ enum {
     FTKEY_EVENT_INSTRUCTION(nFTKeyEventButton, (t)), ((u16)(b))
 #define FTKEY_EVENT_END() FTKEY_EVENT_INSTRUCTION(nFTKeyEventEnd, 0)
 
+#define FTCOMMON_DEAD_WAIT 45
+#define FTCOMMON_DEADUP_WAIT 180
+#define FTCOMMON_DEADUPSTAR_VEL_Z (-83.333336F)
+#define FTCOMMON_REBIRTH_INVINCIBLE_FRAMES 120
+#define FTCOMMON_REBIRTH_HALO_LOWER_WAIT 90
+#define FTCOMMON_REBIRTH_HALO_DESPAWN_WAIT 390
+#define FTCOMMON_REBIRTH_HALO_UNK_WAIT 45
+#define FTCOMMON_REBIRTH_HALO_STAND_WAIT 75
 #define FTCOMMON_DOWNWAIT_STAND_STICK_RANGE_MIN 20
 #define FTCOMMON_DAMAGE_CATCH_RELEASE_THRESHOLD 6
 #define FTKIRBY_COPY_MODELPARTS_JOINT 6
@@ -3167,6 +3175,12 @@ typedef struct FTStruct {
     u32 nds_init_floor_project_result;
 } FTStruct;
 
+typedef struct FTCamera {
+    FTStruct *target_fp;
+    Vec3f target_pos;
+    f32 unk_ftcobj_0x10;
+} FTCamera;
+
 #define NDS_FTSTRUCT_SOURCE_SIZE 2896u
 #define NDS_FTSTRUCT_LAYOUT_SIZE 3012u
 #define NDS_FTSTRUCT_OFF_NEXT 0u
@@ -4056,11 +4070,13 @@ enum {
     nGMColAnimFighterComPlayer = 1,
     nGMColAnimFighterDamageCommon = 5,
     nGMColAnimFighterFastFall = 8,
+    nGMColAnimFighterRebirth = 11,
     nGMColAnimFighterDamageFireStart = 12,
     nGMColAnimFighterDamageIceStart = 32,
     nGMColAnimFighterShieldBreakFly = 36,
     nGMColAnimFighterFuraFura = 37,
     nGMColAnimFighterFuraSleep = 38,
+    nGMColAnimScreenFlashDeadExplode = 57,
     nGMColAnimScreenFlashDamageNormal = 58,
     nGMColAnimScreenFlashDamageFire = 59,
     nGMColAnimScreenFlashDamageElectric = 60,

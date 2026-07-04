@@ -75,6 +75,13 @@ The remaining stage compat-replay/cliffmotion seams in `ftMainSetStatus` are
 scoped away from those proven statuses but still documented as follow-up for
 older stage/cliff proofs.
 
+The first `battle_playable` fence is link-green with
+`NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1`: original `gm/gmcamera.c`,
+`ftcommondead.c`, and `ftcommonrebirth.c` compile as whole TUs behind the flag.
+Default builds keep the fence off. Weak stubs in
+`src/port/battle_playable_compat_stubs.c` mark the remaining `sys/objdisplay`,
+`lbcommon`, HUD, effects, items, and 1P-only callback boundary.
+
 Renderer hardware is now default for all-DL modes `33/34`, stage
 draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair `161/162`;
 global normal builds still default to software preview. Use `-SoftwarePreview`
@@ -93,9 +100,8 @@ on direct and menu-chain routes: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
 combat boundary wrappers assert that stage + both-fighter DS 3D replay after
 the imported manager combat chain passes. Latest captures include
-`artifacts\boundary-combat-hwtri.png`,
-`artifacts\stage-floor-follow-hwtri.png`, `artifacts\stage-floor-edge-hwtri.png`, `artifacts\stage-mpprocess-floor-hwtri.png`, `artifacts\stage-mpupdate-floor-hwtri.png`, `artifacts\stage-mpsweep-floor-hwtri.png`, `artifacts\stage-mpcross-floor-hwtri.png`, `artifacts\stage-mpadjust-floor-hwtri.png`, `artifacts\stage-mpedge-floor-hwtri.png`, `artifacts\stage-mpwall-floor-hwtri.png`, `artifacts\stage-mpstale-floor-hwtri.png`, `artifacts\stage-mplivestale-floor-hwtri.png`, `artifacts\stage-mpmotionstale-floor-hwtri.png`, menu-chain all-DL HW, and
-`artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
+`artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures,
+menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
 Full visual fidelity still needs broader source-scene coverage and cutover work.
 
 Latest gameplay proof is now original-manager Mario/Fox combat flow through
@@ -109,18 +115,11 @@ The active boundary is still bounded proof scaffolding, not continuous gameplay.
 Legacy bounded modes are migrate-or-delete: when a runtime slice obsoletes a
 marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
 `KNOWN_ISSUES` line instead of reproducing old markers. Next useful gameplay
-work is `battle_playable` camera, HUD, match-flow, KO/respawn, and renderer
-cutover.
+work is to replace the fenced `battle_playable` weak stubs with original
+`sys/objdisplay`/`lbcommon`/`ifcommon` and effect/item-backed KO/respawn flow.
 
 - renderer follow-up: broaden source-scene coverage and HW default coverage;
-- continuous-runtime verifier for unbounded battle frames.
-
-## Runtime Target
-
-Next major gameplay milestone is `battle_playable`: continuous unbounded
-VSBattle Mario vs Fox on Pupupu/Dream Land with live input, `gcRunAll` and
-`gcDrawAll` every frame, no state restore around proven code, and the DS
-hardware renderer path active enough for the scene.
+- continuous-runtime verifier for unbounded `battle_playable` frames.
 
 ## Verification
 

@@ -85,6 +85,12 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
+- The `battle_playable` fence links original `gm/gmcamera.c`,
+  `ftcommondead.c`, and `ftcommonrebirth.c`, but still uses weak stubs in
+  `src/port/battle_playable_compat_stubs.c` for `sys/objdisplay`, `lbcommon`,
+  HUD, effects, items, and 1P-only callbacks. The flag defaults off; delete
+  these stubs only by importing the owning original subsystem or replacing the
+  dependency with a proven DS backend equivalent.
 - Coverage-reduced after original-manager graduation, still pending natural
   rebuild: modes `57/58` gcDrawAll, the older shared gcDrawAll/stage/MP
   regression family, selected Fox Jab2 modes `159/160`, and older aggregate

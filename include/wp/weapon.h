@@ -82,6 +82,8 @@ typedef struct WPStruct {
     ub32 is_hitlag_victim : 1;
     ub32 is_hitlag_weapon : 1;
     u32 group_id;
+    s32 lifetime;
+    ub32 is_camera_follow : 1;
 } WPStruct;
 
 #define wpGetStruct(weapon_gobj) ((WPStruct *)(weapon_gobj)->user_data.p)

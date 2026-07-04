@@ -38,12 +38,6 @@ damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff,
 hwsubmit=252, hwtri=1152, hwftr=2/582
 ```
 
-Latest verified source-backed detail: TaruCannon kind `3` now routes through
-the source-ordered setup shell, installs status `61`, and runs one original
-physics tick copying fighter root position from the barrel root. Continuous
-TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
-throw-hit data.
-
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
 `33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair
 `161/162`; pass `-SoftwarePreview` to those wrappers for comparison runs. The
@@ -60,11 +54,9 @@ both selected live fighters in one frame: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active boundary
 wrappers assert that stage + both-fighter DS 3D replay after the imported
 manager combat chain passes. Latest captures include
-`artifacts\boundary-combat-hwtri.png`,
-`artifacts\stage-floor-follow-hwtri.png`, `artifacts\stage-floor-edge-hwtri.png`, `artifacts\stage-mpprocess-floor-hwtri.png`, `artifacts\stage-mpupdate-floor-hwtri.png`, `artifacts\stage-mpsweep-floor-hwtri.png`, `artifacts\stage-mpcross-floor-hwtri.png`, `artifacts\stage-mpadjust-floor-hwtri.png`, `artifacts\stage-mpedge-floor-hwtri.png`, `artifacts\stage-mpwall-floor-hwtri.png`, `artifacts\stage-mpstale-floor-hwtri.png`, `artifacts\stage-mplivestale-floor-hwtri.png`, `artifacts\stage-mpmotionstale-floor-hwtri.png`,
-`artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png` and
-`artifacts\renderer-stage-gcdrawall-hw-fighters.png`. Global normal builds
-still use the software preview.
+`artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures,
+menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
+Global normal builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local
@@ -91,6 +83,12 @@ gcDrawAll/stage/MP synthetic marker stacks and selected Fox Jab2 modes
 `159/160` still need natural-runtime migration; do not resurrect their
 motion-extract seam.
 
+First `battle_playable` fence: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now
+links original `gm/gmcamera.c`, `ftcommondead.c`, and `ftcommonrebirth.c` as
+whole TUs. The default path remains unchanged. Weak stubs in
+`src/port/battle_playable_compat_stubs.c` mark the remaining
+`sys/objdisplay`/`lbcommon`/HUD/effect/item/1P dependency boundary.
+
 ## Process Change
 
 Future gameplay slices are runtime-first subsystem groups aimed at scene-level
@@ -105,8 +103,8 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. `battle_playable`: camera, gmcommon battle flow, KO/respawn, HUD, continuous
-   unbounded Mario/Fox battle gate, and hardware-renderer capture.
+1. Replace the `battle_playable` fence stubs with original `sys/objdisplay`,
+   `lbcommon`, `ifcommon`, effects/items as needed for natural KO -> respawn.
 2. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
 3. Renderer follow-up: broaden source-scene coverage, then plan cutover.

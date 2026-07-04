@@ -7095,11 +7095,13 @@ void ftHammerUpdateStats(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 sb32 ftCommonDeadCheckInterruptCommon(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
     return FALSE;
 }
+#endif
 
 void ftParamKirbyTryMakeMapStarEffect(GObj *fighter_gobj)
 {
@@ -11718,6 +11720,15 @@ void mpCollisionInitGroundData(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
 }
 
+#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
+extern GObj *gGMCameraGObj;
+IFPlayerCommon gIFCommonPlayerInterface;
+
+static GObj *ndsBattleCompatMainCameraGObj(void)
+{
+    return gGMCameraGObj;
+}
+#else
 void gmCameraSetViewportDimensions(s32 ulx, s32 uly, s32 lrx, s32 lry)
 {
     (void)ulx;
@@ -11842,6 +11853,7 @@ GObj *gmCameraMakeMovieCamera(void (*func_camera)(GObj *))
                             1,
                             FALSE);
 }
+#endif
 
 void grWallpaperMakeDecideKind(void)
 {

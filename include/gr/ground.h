@@ -57,7 +57,8 @@ typedef enum MPMapObjKind
     nMPMapObjKindDokanWall,
     nMPMapObjKindMoviePlayer1,
     nMPMapObjKindMoviePlayer2,
-    nMPMapObjKindMoviePlayer3
+    nMPMapObjKindMoviePlayer3,
+    nMPMapObjKindRebirth = 0x20
 } MPMapObjKind;
 
 typedef enum MPLineType

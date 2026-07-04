@@ -1,0 +1,39 @@
+#include <ef/effect.h>
+#include <ft/fighter.h>
+#include <gm/gmsound.h>
+#include <if/interface.h>
+#include <it/item.h>
+#include <sc/scene.h>
+
+#ifndef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+#endif
+
+#ifndef CObjGetStruct
+#define CObjGetStruct(gobj) ((CObj *)((gobj)->obj))
+#endif
+
+extern GObj *gGMCameraGObj;
+typedef struct alSoundEffect alSoundEffect;
+
+alSoundEffect *func_800269C0_275C0(u16 sfx_id);
+void ifCommonBattleEndAddSoundQueueID(u16 sfx_id);
+void ifCommonPlayerDamageStartBreakAnim(FTStruct *fp);
+void ifCommonPlayerStockMakeStockSnap(FTStruct *fp);
+void ifCommonPlayerScoreMakeEffect(FTStruct *fp, s32 score);
+void ifCommonBattleUpdateScoreStocks(FTStruct *fp);
+void ifCommonAnnounceEndMessage(void);
+void sc1PGameSetPlayerDefeatStats(s32 player, s32 team_order);
+void sc1PGameSpawnEnemyTeamNext(GObj *fighter_gobj);
+void ftCommonSleepSetStatus(GObj *fighter_gobj);
+void ftCommonRebirthDownSetStatus(GObj *fighter_gobj);
+void ftManagerDestroyFighterWeapons(GObj *fighter_gobj);
+void itMainDestroyItem(GObj *item_gobj);
+void efManagerQuakeMakeEffect(s32 quake_id);
+void efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, s32 kind);
+void efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale);
+void ifScreenFlashSetColAnimID(s32 colanim_id, s32 colanim_duration);
+void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj);
+void ftParamTryUpdateItemMusic(void);
+
+#include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondead.c"

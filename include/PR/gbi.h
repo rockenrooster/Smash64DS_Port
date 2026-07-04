@@ -112,6 +112,13 @@ typedef union {
 #define G_ZS_PIXEL 0u
 #define G_TX_WRAP 0u
 #define G_CC_PRIMITIVE 0u
+#define G_MTX_MODELVIEW 0x00u
+#define G_MTX_PROJECTION 0x01u
+#define G_MTX_MUL 0x00u
+#define G_MTX_LOAD 0x02u
+#define G_MTX_NOPUSH 0x00u
+#define G_MTX_PUSH 0x04u
+#define G_SC_NON_INTERLACE 0u
 
 /* Segment base register indexes / move-word targets used by the task manager's
  * segment setup (gSPSegment). The DS has no segment registers, but the macros
@@ -170,6 +177,31 @@ typedef union {
     (void)(dl); \
 } while (0)
 
+#define gSPMatrix(pkt, mtx, params) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(mtx); (void)(params); \
+} while (0)
+
+#define gSPViewport(pkt, vp) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(vp); \
+} while (0)
+
+#define gSPLookAtX(pkt, lookat) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(lookat); \
+} while (0)
+
+#define gSPLookAtY(pkt, lookat) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(lookat); \
+} while (0)
+
+#define gSPPerspNormalize(pkt, norm) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(norm); \
+} while (0)
+
 #define gSPSetGeometryMode(pkt, mode) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
     (void)(mode); \
@@ -191,6 +223,11 @@ typedef union {
 #define gDPFillRectangle(pkt, ulx, uly, lrx, lry) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
     (void)(ulx); (void)(uly); (void)(lrx); (void)(lry); \
+} while (0)
+
+#define gDPSetScissor(pkt, mode, ulx, uly, lrx, lry) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(mode); (void)(ulx); (void)(uly); (void)(lrx); (void)(lry); \
 } while (0)
 
 #define gDPSetCycleType(pkt, cycle) do { \

@@ -15,7 +15,19 @@ typedef struct LBGenerator {
     DObj *dobj;
 } LBGenerator;
 
+typedef struct IFPlayerCommon {
+    ub8 is_magnify_display;
+    u8 magnify_mode;
+    f32 magnify_scale;
+    s32 *player_pos_x;
+    u16 player_pos_y;
+    u8 arrows_flags;
+    u8 arrows_left_status;
+    u8 arrows_right_status;
+} IFPlayerCommon;
+
 extern u8 dIFCommonPlayerTeamColorIDs[];
+extern IFPlayerCommon gIFCommonPlayerInterface;
 
 void efParticleInitAll(void);
 s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
