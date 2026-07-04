@@ -53,25 +53,16 @@ synthetic live-hit family remain documented as follow-up work in
 
 ## Latest Proof
 
-Runtime slice 1 landed the full BattleShip `gm/gmcollision.c` translation unit
-through `src/import/battleship_gmcollision.c`. The old project-owned
-`gmCollisionGetFighterPartsWorldPosition`, `func_ovl2_800EDA0C`, and
-`gmCollisionGetWorldPosition` copies were removed, so matrix/world-position
-collision helpers now resolve to the original source. The shared `FTStruct`
-source region in `include/ft/fighter.h` now matches BattleShip `fttypes.h`
-through `display_mode` (`joints=2280`, callbacks at `2516+`,
-source-region size `2896`), with DS/proof-only fields moved to the extension
-block at offset `2896` and compile-time guards freezing the layout.
+Runtime slice 1 landed full BattleShip `gm/gmcollision.c`, replacing the local
+matrix/world-position collision helpers. The shared `FTStruct` source region in
+`include/ft/fighter.h` matches BattleShip `fttypes.h` through `display_mode`
+(`joints=2280`, callbacks at `2516+`, source region `2896`), with DS/proof
+fields moved to the tail extension and compile-time guards freezing layout.
 
-Full BattleShip `ft/ftmain.c` is now imported by default through
-`src/import/battleship_ftmain.c`; the duplicate local `ftMain*` seams are gone
-or routed through the imported original once. The init/wait/dash-run ladder,
-boundary profile, continuous live-hit verifier, and four-way sharded Regression
-passed after a fresh Regression prebuild, and the four Regression shards were
-rerun green on current `master` after the renderer follow-ups. The only
-regression-cycle fix was a proof-recorder correction that preserves the first
-selected cross-floor target match so later wall/cliff MP updates cannot erase
-the motion-stale evidence. Details are in `docs/FTSTRUCT_PARITY.md` and
+Full BattleShip `ft/ftmain.c` is imported by default; duplicate local
+`ftMain*` seams are gone or call the original once. The ladder, boundary,
+continuous live-hit verifier, and four-way sharded Regression passed after a
+fresh Regression prebuild; details are in `docs/FTSTRUCT_PARITY.md` and
 `docs/KNOWN_ISSUES.md`.
 
 Runtime slice 2 graduated the manager/status/animation path. Default builds now
@@ -93,10 +84,12 @@ selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
 texture path reports `bind119/upload8/ready119/reject0`. That proof carries
 original fighter-part MObjs, the source-equivalent segment `0xE` material
 register, RSP vertex/render state, and CI TLUT seeds from the current material
-palette. The same opt-in stage hardware replay now passes direct and menu-chain
-stage-collision scenes with `hwsubmit=252`, `hwtri=1152`, and
-`bind582/upload66/ready582/reject0`. Latest captures include
-`artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png`.
+palette. The same opt-in stage `gcDrawAll` hardware replay now submits the
+Pupupu stage and both selected manager-created fighters in one hardware frame
+on direct and menu-chain routes: `hwsubmit=252`, `hwtri=1152`,
+`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. Latest captures
+include `artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png` and
+`artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
 Full visual fidelity still needs broader source-scene coverage and renderer
 cutover work. Default builds still use the software preview.
 

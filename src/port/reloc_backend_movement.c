@@ -10541,6 +10541,7 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     gcDrawAll();
+    ndsFighterMarioFoxDLAllDrawSubmitStageHardwareFighters();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
 }
 #endif

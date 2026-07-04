@@ -16866,3 +16866,29 @@ Still deferred:
   both preserve the natural-motion and stage-collision proofs while submitting
   `hwsubmit=252`, `hwtri=1152`, `hwdepth=z456/proj696/decal0`, and
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
+
+## 2026-07-04 - Stage-Inclusive Fighter Hardware Submit
+
+- Reused the existing all-DL fighter traversal for the opt-in stage
+  `gcDrawAll` hardware frame instead of adding a new harness mode or draw path.
+  The software all-DL preview still requires Wait/MotionWait/Ground, while the
+  hardware-only submitter can draw the current live manager pose with
+  `pixels == NULL`.
+- Added stage hardware fighter diagnostics and verifier assertions for
+  `STAGE_GCDRAWALL_HW_FTR`. The direct route passes with
+  `.\scripts\verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`:
+  `hwsubmit=252`, `hwtri=1152`, `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and
+  `hwftr=2/582`.
+- Verified the menu-chain route with
+  `.\scripts\verify-menu-chain-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles`
+  using the wrapper's existing default delay; it reports the same stage and
+  fighter hardware counts. A 3-second menu-chain run can stop before the
+  pre-existing boundary marker.
+- Captured the opt-in HW ROM with
+  `.\scripts\capture-melonds.ps1 -Rom .\smash64ds-battle-mariofox-stage-gcdrawall-loop-hwtri.nds -Output artifacts\renderer-stage-gcdrawall-hw-fighters.png -DelaySeconds 12`.
+- Gates passed:
+  `.\scripts\check-gbi-decode-fixtures.ps1`,
+  `.\scripts\check-harness-registry.ps1`,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.

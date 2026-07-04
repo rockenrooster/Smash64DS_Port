@@ -475,6 +475,7 @@ $startupHeader = Get-Content (Join-Path $root 'include/nds/nds_startup.h') -Raw
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawHardwareTextureReadyCount')) 'All-DL hardware texture diagnostics are missing from the startup header.'
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount')) 'All-DL hardware z-buffer diagnostics are missing from the startup header.'
 Assert-True ($startupHeader.Contains('gNdsStageGCDrawAllLoopHardwareTextureReadyCount')) 'Stage gcDrawAll hardware texture startup diagnostics are missing.'
+Assert-True ($startupHeader.Contains('gNdsStageGCDrawAllLoopHardwareFighterTriangleCount')) 'Stage gcDrawAll hardware fighter diagnostics are missing from the startup header.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Battle DL renderer matrix adapter is missing.'
 Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL renderer does not route DObj prep through original matrix helpers.'
@@ -518,6 +519,8 @@ Assert-True ($stageGCDrawVerifier.Contains('hwsubmit=')) 'gcDrawAll verifier har
 Assert-True ($stageGCDrawVerifier.Contains('hwtri=')) 'gcDrawAll verifier hardware triangle-count summary is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('hwdepth=')) 'gcDrawAll verifier hardware depth summary is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('hwtex=')) 'gcDrawAll verifier hardware texture summary is missing.'
+Assert-True ($stageGCDrawVerifier.Contains('STAGE_GCDRAWALL_HW_FTR')) 'gcDrawAll verifier hardware fighter marker is missing.'
+Assert-True ($stageGCDrawVerifier.Contains('hwftr=')) 'gcDrawAll verifier hardware fighter summary is missing.'
 $stageGCDrawWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1') -Raw
 Assert-True ($stageGCDrawWrapper.Contains('HardwareTriangles')) 'Stage gcDrawAll verifier hardware switch is missing.'
 Assert-True ($stageGCDrawVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1')) 'Stage gcDrawAll verifier does not enable hardware renderer builds.'

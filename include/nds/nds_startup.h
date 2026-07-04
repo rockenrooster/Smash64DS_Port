@@ -3823,6 +3823,8 @@ extern volatile u32 gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareTextureFormatMask;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxWidth;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxHeight;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareFighterSubmitCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareFighterTriangleCount;
 void ndsFighterMarioFoxStageGCDrawAllLoopPrepare(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopFinalize(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void);

@@ -5934,12 +5934,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 root_x_after;
     u32 i;
 
-    if ((slot > 1u) || (pixels == NULL) ||
+    if ((slot > 1u) ||
         (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
         (fp->fighter_gobj == NULL) ||
-        (fp->status_id != nFTCommonStatusWait) ||
-        (fp->motion_id != nFTCommonMotionWait) ||
-        (fp->ga != nMPKineticsGround))
+        ((pixels != NULL) &&
+         ((fp->status_id != nFTCommonStatusWait) ||
+          (fp->motion_id != nFTCommonMotionWait) ||
+          (fp->ga != nMPKineticsGround))))
     {
         return;
     }
@@ -6035,10 +6036,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                            &states[i], &stats[i], clean);
     }
 
-    ndsFighterDLAllDrawRasterizeStates(slot, states, clean,
-                                       collection.selected_count,
-                                       pixels,
-                                       pitch);
+    if (pixels != NULL)
+    {
+        ndsFighterDLAllDrawRasterizeStates(slot, states, clean,
+                                           collection.selected_count,
+                                           pixels,
+                                           pitch);
+    }
 
     root_x_after = (root != NULL) ? ndsFloatBits(root->translate.vec.f.x) :
         0u;
@@ -6061,6 +6065,41 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
     gNdsFighterMarioFoxDLAllDrawCount++;
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+static void ndsFighterMarioFoxDLAllDrawSubmitStageHardwareFighters(void)
+{
+    GObj *saved_camera = gGCCurrentCamera;
+    u32 slot;
+
+    gGCCurrentCamera = ndsBattleCompatMainCameraGObj();
+    for (slot = 0u; slot < 2u; slot++)
+    {
+        u32 count_before = gNdsFighterMarioFoxDLAllDrawCount;
+        u32 triangle_before =
+            gNdsFighterDLAllDrawP0HardwareTriangleCount +
+            gNdsFighterDLAllDrawP1HardwareTriangleCount;
+        u32 triangle_after;
+
+        ndsFighterMarioFoxDLAllDrawForSlot(slot, &sNdsFighterStructPool[slot],
+                                           NULL, 0u);
+        if (gNdsFighterMarioFoxDLAllDrawCount == count_before)
+        {
+            continue;
+        }
+        gNdsStageGCDrawAllLoopHardwareFighterSubmitCount++;
+        triangle_after =
+            gNdsFighterDLAllDrawP0HardwareTriangleCount +
+            gNdsFighterDLAllDrawP1HardwareTriangleCount;
+        if (triangle_after > triangle_before)
+        {
+            gNdsStageGCDrawAllLoopHardwareFighterTriangleCount +=
+                triangle_after - triangle_before;
+        }
+    }
+    gGCCurrentCamera = saved_camera;
+}
+#endif
 
 static void ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(
     GObj *fighter_gobj)
