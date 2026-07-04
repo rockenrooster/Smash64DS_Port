@@ -4,9 +4,14 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$HardwareTriangles,
+    [switch]$SoftwarePreview
 )
 $ErrorActionPreference = 'Stop'
+$HardwareTriangles = -not $SoftwarePreview
+$target = if ($HardwareTriangles) { 'smash64ds-battle-mariofox-stage-mpcross-floor-loop-hwtri' } else { 'smash64ds-battle-mariofox-stage-mpcross-floor-loop' }
+$build = if ($HardwareTriangles) { 'build-battle-mariofox-stage-mpcross-floor-loop-hwtri-harness' } else { 'build-battle-mariofox-stage-mpcross-floor-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcdrawall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -15,13 +20,14 @@ $ErrorActionPreference = 'Stop'
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
     -Harness 'battle_mariofox_stage_mpcross_floor_loop' `
-    -Target 'smash64ds-battle-mariofox-stage-mpcross-floor-loop' `
-    -Build 'build-battle-mariofox-stage-mpcross-floor-loop-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 73 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
     -Label 'Battle Mario/Fox Stage MP cross-floor-loop' `
     -HarnessSelectMessage 'Direct Mario/Fox Stage MP cross-floor-loop harness did not select VSBattle from Maps.' `
+    -HardwareTriangles:$HardwareTriangles `
     -RequireStageDraw `
     -RequireStageCollision `
     -RequireStageFloorEdge `
