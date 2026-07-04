@@ -47,9 +47,9 @@ texture-perspective hardware submission with zero texture rejects. The strict
 direct Mario/Fox all-DL hardware verifier now passes on live manager-created
 fighters: all 14/18 selected DObjs are clean and hardware submits 284/298
 fighter triangles. The direct proof now carries the source-equivalent segment
-`0xE` material register and RSP vertex cache across selected DObjs. Captures
-remain under `artifacts\renderer-*-hw*.png`. Default builds still use the
-software preview.
+`0xE` material register plus RSP vertex/render state across selected DObjs,
+dropping fighter all-DL texture rejects to `46`. Captures remain under
+`artifacts\renderer-*-hw*.png`. Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local
@@ -90,8 +90,8 @@ the work reaches a scene-level boundary such as `battle_playable` or
 1. Runtime follow-up: rebuild gcDrawAll/stage/MP/dash/live-hit proof coverage
    on top of the natural original-manager runtime, then remove the remaining
    `ftMainSetStatus` compat-replay/cliffmotion seams status-by-status.
-2. Renderer follow-up: broaden source-scene coverage, reduce remaining fighter
-   all-DL texture rejects, then plan renderer cutover.
+2. Renderer follow-up: reduce remaining fighter all-DL texture rejects, broaden
+   source-scene coverage, then plan renderer cutover.
 3. Camera/HUD/match-flow work for the next `battle_playable` milestone.
 
 ## Verification

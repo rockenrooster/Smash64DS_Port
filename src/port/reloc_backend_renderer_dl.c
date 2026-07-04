@@ -2290,6 +2290,78 @@ static void ndsFighterDLDrawCapturePersistentState(
     persistent->vertex_valid_mask = state->vertex_valid_mask;
 }
 
+static void ndsFighterDLDrawCopyPersistentRendererState(
+    NDSRendererStats *dst, const NDSRendererStats *src)
+{
+#define NDS_RENDERER_COPY_STATE(field) dst->field = src->field
+
+    if ((dst == NULL) || (src == NULL))
+    {
+        return;
+    }
+
+    NDS_RENDERER_COPY_STATE(othermode_h);
+    NDS_RENDERER_COPY_STATE(othermode_l);
+    NDS_RENDERER_COPY_STATE(geometry_mode);
+    NDS_RENDERER_COPY_STATE(geometry_clear_mask);
+    NDS_RENDERER_COPY_STATE(geometry_set_mask);
+    NDS_RENDERER_COPY_STATE(texture_load_kind);
+    NDS_RENDERER_COPY_STATE(texture_scale_s);
+    NDS_RENDERER_COPY_STATE(texture_scale_t);
+    NDS_RENDERER_COPY_STATE(texture_level);
+    NDS_RENDERER_COPY_STATE(texture_tile);
+    NDS_RENDERER_COPY_STATE(texture_on);
+    NDS_RENDERER_COPY_STATE(texture_xparam);
+    NDS_RENDERER_COPY_STATE(texture_state_flags);
+    NDS_RENDERER_COPY_STATE(texture_image);
+    NDS_RENDERER_COPY_STATE(texture_format);
+    NDS_RENDERER_COPY_STATE(texture_size);
+    NDS_RENDERER_COPY_STATE(texture_image_width);
+    NDS_RENDERER_COPY_STATE(texture_tlut_image);
+    NDS_RENDERER_COPY_STATE(texture_tlut_count);
+    NDS_RENDERER_COPY_STATE(texture_tlut_tile);
+    NDS_RENDERER_COPY_STATE(texture_render_tile);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_format);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_size);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_line);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_tmem);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_palette);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_cms);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_cmt);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_masks);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_maskt);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_shifts);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_shiftt);
+    NDS_RENDERER_COPY_STATE(texture_render_tile_flags);
+    NDS_RENDERER_COPY_STATE(texture_load_tile);
+    NDS_RENDERER_COPY_STATE(texture_load_block_uls);
+    NDS_RENDERER_COPY_STATE(texture_load_block_ult);
+    NDS_RENDERER_COPY_STATE(texture_load_block_lrs);
+    NDS_RENDERER_COPY_STATE(texture_load_block_dxt);
+    NDS_RENDERER_COPY_STATE(texture_load_texels);
+    NDS_RENDERER_COPY_STATE(texture_tile_size_tile);
+    NDS_RENDERER_COPY_STATE(texture_tile_size_uls);
+    NDS_RENDERER_COPY_STATE(texture_tile_size_ult);
+    NDS_RENDERER_COPY_STATE(texture_tile_size_lrs);
+    NDS_RENDERER_COPY_STATE(texture_tile_size_lrt);
+    NDS_RENDERER_COPY_STATE(texture_tile_width);
+    NDS_RENDERER_COPY_STATE(texture_tile_height);
+    NDS_RENDERER_COPY_STATE(texture_combine_w0);
+    NDS_RENDERER_COPY_STATE(texture_combine_w1);
+    NDS_RENDERER_COPY_STATE(texture_combine_count);
+    NDS_RENDERER_COPY_STATE(prim_color);
+    NDS_RENDERER_COPY_STATE(env_color);
+    NDS_RENDERER_COPY_STATE(blend_color);
+    NDS_RENDERER_COPY_STATE(prim_depth);
+    NDS_RENDERER_COPY_STATE(prim_depth_delta);
+    NDS_RENDERER_COPY_STATE(fog_color);
+    NDS_RENDERER_COPY_STATE(fog_min);
+    NDS_RENDERER_COPY_STATE(fog_max);
+    NDS_RENDERER_COPY_STATE(fog_status);
+
+#undef NDS_RENDERER_COPY_STATE
+}
+
 static sb32 ndsFighterDLDrawAppendTriangle(NDSFighterDLDrawState *state,
                                            u32 packed)
 {
@@ -4715,6 +4787,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     NDSFighterDLDrawState persistent_state;
     NDSRendererStats stats[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
+    NDSRendererStats persistent_stats;
     u8 clean[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     u32 root_x_before;
     u32 root_x_after;
@@ -4753,6 +4826,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
     bzero(states, sizeof(states));
     bzero(&persistent_state, sizeof(persistent_state));
     bzero(stats, sizeof(stats));
+    ndsRendererInitStats(&persistent_stats);
     bzero(clean, sizeof(clean));
 
     for (i = 0u; i < collection.selected_count; i++)
@@ -4801,6 +4875,8 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         config.user = &states[i];
 
         ndsRendererInitStats(&stats[i]);
+        ndsFighterDLDrawCopyPersistentRendererState(&stats[i],
+                                                    &persistent_stats);
         ndsRendererExecuteDisplayList(dl,
                                       &config,
                                       ndsFighterMarioFoxVisitDLDrawCommand,
@@ -4808,6 +4884,8 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                       &stats[i]);
         ndsFighterDLDrawCapturePersistentState(&persistent_state,
                                                &states[i]);
+        ndsFighterDLDrawCopyPersistentRendererState(&persistent_stats,
+                                                    &stats[i]);
         ndsFighterDLMultiDrawAccumulateStats(slot, i, &states[i],
                                              &stats[i], clean);
     }
@@ -5832,6 +5910,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     NDSFighterDLDrawState *states;
     NDSFighterDLDrawState persistent_state;
     NDSRendererStats *stats;
+    NDSRendererStats persistent_stats;
     u8 *clean;
     u32 root_x_before;
     u32 root_x_after;
@@ -5873,6 +5952,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
     bzero(&persistent_state, sizeof(persistent_state));
     bzero(stats, sizeof(sNdsFighterDLAllDrawStats[slot]));
+    ndsRendererInitStats(&persistent_stats);
     bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
 
     for (i = 0u; i < collection.selected_count; i++)
@@ -5921,6 +6001,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.user = &states[i];
 
         ndsRendererInitStats(&stats[i]);
+        ndsFighterDLDrawCopyPersistentRendererState(&stats[i],
+                                                    &persistent_stats);
         ndsRendererExecuteDisplayList(dl,
                                       &config,
                                       ndsFighterMarioFoxVisitDLDrawCommand,
@@ -5928,6 +6010,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                       &stats[i]);
         ndsFighterDLDrawCapturePersistentState(&persistent_state,
                                                &states[i]);
+        ndsFighterDLDrawCopyPersistentRendererState(&persistent_stats,
+                                                    &stats[i]);
         ndsFighterDLAllDrawAccumulateStats(slot, i, collection.indices[i],
                                            collection.dobjs[i], dl,
                                            &states[i], &stats[i], clean);

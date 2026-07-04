@@ -122,10 +122,10 @@
   applies the sm64-nds decal-combine rule to DS `POLY_DECAL`, and applies its
   texture-filter coordinate-bias rule. After original-manager graduation, the
   strict direct Mario/Fox all-DL hardware verifier is green on live-manager
-  fighters by preserving source-equivalent segment `0xE` material state and RSP
-  vertex-cache state across selected DObjs. Remaining renderer work is broader
-  combiner/material/depth/texture source-scene coverage, fighter all-DL
-  texture-reject cleanup, and cutover policy.
+  fighters by preserving source-equivalent segment `0xE` material state plus
+  RSP vertex/render state across selected DObjs. Remaining renderer work is the
+  fighter all-DL `reject46` texture tail, broader combiner/material/depth/
+  texture source-scene coverage, and cutover policy.
 - Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
   Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
   damage scheduling -> damage-recover consumption -> selected status follow-

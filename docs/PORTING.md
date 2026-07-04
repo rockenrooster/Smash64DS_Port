@@ -16752,3 +16752,15 @@ Still deferred:
   -HardwareTriangles -DelaySeconds 3`: all 14/18 selected DObjs are clean,
   hardware submits `284/298` fighter triangles, and texture diagnostics report
   `bind64/upload5/ready64/reject55/fmt0x4/max32x32`.
+
+## 2026-07-03 - Carry All-DL Render State
+
+- Extended the direct multi/all-DL probes to carry persistent renderer state
+  across selected DObjs, matching the same BattleShip source display-list
+  state model as the segment and vertex-cache fix. Per-DObj counters still stay
+  isolated; only geometry/othermode/texture/material/fog state is seeded into
+  the next selected DObj.
+- Verified `.\scripts\verify-battle-mariofox-dl-draw-all-harness.ps1
+  -HardwareTriangles -DelaySeconds 3`: the direct all-DL hardware gate remains
+  green and texture diagnostics improve to
+  `bind73/upload6/ready73/reject46/fmt0x4/max32x32`.
