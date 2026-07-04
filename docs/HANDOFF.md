@@ -85,9 +85,10 @@ motion-extract seam.
 
 First `battle_playable` fence: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now
 links original `gm/gmcamera.c`, `ftcommondead.c`, and `ftcommonrebirth.c` as
-whole TUs. The default path remains unchanged. Weak stubs in
-`src/port/battle_playable_compat_stubs.c` mark the remaining
-`sys/objdisplay`/`lbcommon`/HUD/effect/item/1P dependency boundary.
+whole TUs. Fenced `161/162` prove the original battle camera runs live over
+normalized Pupupu `MPGroundData`, tracks the Mario/Fox midpoint, and preserves
+HW fighter replay. Default builds remain unfenced; KO/Rebirth and HUD still
+depend on weak `sys/objdisplay`/`lbcommon`/effect/item/interface stubs.
 
 ## Process Change
 

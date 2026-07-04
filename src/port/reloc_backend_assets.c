@@ -2169,6 +2169,79 @@ static void ndsRelocSwapS16Pair(s16 *a, s16 *b)
     *b = tmp;
 }
 
+static void ndsRelocNormalizeS16Range(s16 *min_value, s16 *max_value)
+{
+    if ((min_value != NULL) &&
+        (max_value != NULL) &&
+        (*min_value > *max_value))
+    {
+        ndsRelocSwapS16Pair(min_value, max_value);
+    }
+}
+
+static void ndsRelocNormalizeGroundDataBounds(MPGroundData *ground_data)
+{
+    if (ground_data == NULL)
+    {
+        return;
+    }
+    ndsRelocNormalizeS16Range(&ground_data->camera_bound_bottom,
+                              &ground_data->camera_bound_top);
+    ndsRelocNormalizeS16Range(&ground_data->camera_bound_left,
+                              &ground_data->camera_bound_right);
+    ndsRelocNormalizeS16Range(&ground_data->map_bound_bottom,
+                              &ground_data->map_bound_top);
+    ndsRelocNormalizeS16Range(&ground_data->map_bound_left,
+                              &ground_data->map_bound_right);
+    ndsRelocNormalizeS16Range(&ground_data->camera_bound_team_bottom,
+                              &ground_data->camera_bound_team_top);
+    ndsRelocNormalizeS16Range(&ground_data->camera_bound_team_left,
+                              &ground_data->camera_bound_team_right);
+    ndsRelocNormalizeS16Range(&ground_data->map_bound_team_bottom,
+                              &ground_data->map_bound_team_top);
+    ndsRelocNormalizeS16Range(&ground_data->map_bound_team_left,
+                              &ground_data->map_bound_team_right);
+}
+
+static void ndsRelocNormalizeGroundMapHeader(NDSRelocLoadedFile *loaded,
+                                             u32 offset)
+{
+    if ((loaded == NULL) ||
+        (loaded->data == NULL) ||
+        ((offset + sizeof(MPGroundData)) > loaded->data_size))
+    {
+        return;
+    }
+    ndsRelocNormalizeGroundDataBounds(
+        (MPGroundData *)((u8 *)loaded->data + offset));
+}
+
+static void ndsRelocNormalizeGroundMapAsset(NDSRelocLoadedFile *loaded)
+{
+    if (loaded == NULL)
+    {
+        return;
+    }
+    if (loaded->asset_id == NDS_RELOC_ASSET_GR_PUPUPU_MAP)
+    {
+        ndsRelocNormalizeGroundMapHeader(
+            loaded,
+            NDS_RELOC_SYMBOL_GR_PUPUPU_MAP_HEADER);
+    }
+    if (loaded->asset_id == NDS_RELOC_ASSET_GR_HYRULE_MAP)
+    {
+        ndsRelocNormalizeGroundMapHeader(
+            loaded,
+            NDS_RELOC_SYMBOL_GR_HYRULE_MAP_HEADER);
+    }
+    if (loaded->asset_id == NDS_RELOC_ASSET_GR_INISHIE_MAP)
+    {
+        ndsRelocNormalizeGroundMapHeader(
+            loaded,
+            NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER);
+    }
+}
+
 static void ndsRelocSwapSpriteAttrZDepth(Sprite *sprite)
 {
     u16 attr = sprite->attr;
@@ -3646,6 +3719,7 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
         {
             return NULL;
         }
+        ndsRelocNormalizeGroundMapAsset(loaded);
         ndsRelocAddStatusBufferFile(asset_id, loaded->data);
         return loaded;
     }
@@ -3698,6 +3772,7 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     {
         return NULL;
     }
+    ndsRelocNormalizeGroundMapAsset(loaded);
     return loaded;
 }
 
@@ -4010,6 +4085,7 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
                             {
                                 ndsRelocNormalizeTitleFireSprites(loaded);
                             }
+                            ndsRelocNormalizeGroundMapAsset(loaded);
                         }
                     }
                     heap_ptr += asset_size;

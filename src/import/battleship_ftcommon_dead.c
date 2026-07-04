@@ -36,4 +36,22 @@ void ifScreenFlashSetColAnimID(s32 colanim_id, s32 colanim_duration);
 void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj);
 void ftParamTryUpdateItemMusic(void);
 
+#define ftCommonDeadCheckInterruptCommon \
+    ndsBaseFTCommonDeadCheckInterruptCommon
+
+sb32 ndsBaseFTCommonDeadCheckInterruptCommon(GObj *fighter_gobj);
+
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondead.c"
+
+#undef ftCommonDeadCheckInterruptCommon
+
+sb32 ftCommonDeadCheckInterruptCommon(GObj *fighter_gobj)
+{
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP)
+    (void)fighter_gobj;
+    return FALSE;
+#else
+    return ndsBaseFTCommonDeadCheckInterruptCommon(fighter_gobj);
+#endif
+}

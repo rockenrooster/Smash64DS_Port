@@ -9094,6 +9094,16 @@ static void ndsFighterNaturalMotionPauseNonTargetVisitor(GObj *gobj,
     {
         return;
     }
+#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
+    {
+        extern GObj *gGMCameraGObj;
+
+        if (gobj == gGMCameraGObj)
+        {
+            return;
+        }
+    }
+#endif
     if (gobj->gobjproc_head != NULL)
     {
         gcPauseGObjProcessAll(gobj);

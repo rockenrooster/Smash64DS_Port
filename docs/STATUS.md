@@ -75,12 +75,12 @@ The remaining stage compat-replay/cliffmotion seams in `ftMainSetStatus` are
 scoped away from those proven statuses but still documented as follow-up for
 older stage/cliff proofs.
 
-The first `battle_playable` fence is link-green with
-`NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1`: original `gm/gmcamera.c`,
-`ftcommondead.c`, and `ftcommonrebirth.c` compile as whole TUs behind the flag.
-Default builds keep the fence off. Weak stubs in
-`src/port/battle_playable_compat_stubs.c` mark the remaining `sys/objdisplay`,
-`lbcommon`, HUD, effects, items, and 1P-only callback boundary.
+The first `battle_playable` fence now proves the original battle camera in
+fenced modes `161/162`: `gm/gmcamera.c` runs live, normalized Pupupu
+`MPGroundData` bounds let it track the Mario/Fox midpoint, and HW replay still
+submits both fighters. Default builds keep the fence off. KO/Rebirth and HUD
+remain behind weak `sys/objdisplay`, `lbcommon`, effects/items, and interface
+stubs.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage
 draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair `161/162`;

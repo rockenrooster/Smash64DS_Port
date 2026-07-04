@@ -17323,3 +17323,19 @@ Still deferred:
   `make TARGET=smash64ds-battle-playable-fence BUILD=build-battle-playable-fence NDS_DEV_SCENE_HARNESS=battle_mariofox_stage_mplivehit_status_loop NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1 -j16`,
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-04 - Battle Playable Camera Fence Proof
+
+- Let the fenced natural-motion proof keep BattleShip's main battle camera GObj
+  running instead of pausing it with the non-target process freeze.
+- Normalized loaded stage `MPGroundData` bounds for Pupupu/Hyrule/Inishie map
+  headers in the reloc asset layer so original `gm/gmcamera.c` sees
+  source-facing top/bottom and left/right ranges. The direct proof samples
+  `BPLAY_CAM ... at=(-5.89,919.69,0)` with fighter midpoint
+  `(-5.96,771)`, showing the camera left its default `(0,300,0)` target and
+  tracks the live Mario/Fox midpoint.
+- Kept `ftCommonDeadCheckInterruptCommon` suppressed only for legacy `161/162`
+  fenced proofs until the natural KO/Rebirth proof lands; future
+  `battle_playable` scene-level modes still use imported Dead/Rebirth.
+- Verified fenced direct and menu-chain `161/162` hardware-triangle routes plus
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
