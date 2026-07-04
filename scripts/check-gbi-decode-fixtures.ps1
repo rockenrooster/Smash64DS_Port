@@ -534,10 +534,19 @@ Assert-True ($gcRunAllVerifier.Contains('STAGE_GCDRAWALL_HW_FTR')) 'gcRunAll ver
 Assert-True ($gcRunAllVerifier.Contains('hwftr=')) 'gcRunAll verifier hardware fighter summary is missing.'
 $stageMPLiveHitStatusWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1') -Raw
 Assert-True ($stageMPLiveHitStatusWrapper.Contains('HardwareTriangles')) 'Stage MP live-hit status verifier hardware switch is missing.'
+Assert-True ($stageMPLiveHitStatusWrapper.Contains('SoftwarePreview')) 'Stage MP live-hit status verifier software-preview opt-out is missing.'
+Assert-True ($stageMPLiveHitStatusWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Stage MP live-hit status verifier no longer defaults to hardware.'
 Assert-True ($stageMPLiveHitStatusWrapper.Contains('battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Stage MP live-hit status verifier hardware target is missing.'
 $menuStageMPLiveHitStatusWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1') -Raw
 Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('HardwareTriangles')) 'Menu-chain stage MP live-hit status verifier hardware switch is missing.'
+Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP live-hit status verifier software-preview opt-out is missing.'
+Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP live-hit status verifier no longer defaults to hardware.'
 Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Menu-chain stage MP live-hit status verifier hardware target is missing.'
+$registry = Get-Content (Join-Path $root 'scripts/lib/harness-registry.ps1') -Raw
+Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary direct registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary menu registry target is not hardware-renderer default.'
+$buildProfile = Get-Content (Join-Path $root 'scripts/build-verify-profile.ps1') -Raw
+Assert-True ($buildProfile.Contains("NDS_RENDERER_HW_TRIANGLES=1")) 'Profile prebuild does not enable hardware renderer for hwtri targets.'
 $stageCollisionWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-collision-loop-harness.ps1') -Raw
 Assert-True ($stageCollisionWrapper.Contains('HardwareTriangles')) 'Stage collision verifier hardware switch is missing.'
 Assert-True ($stageCollisionWrapper.Contains('battle-mariofox-stage-collision-loop-hwtri')) 'Stage collision verifier hardware target is missing.'

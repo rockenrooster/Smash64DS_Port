@@ -34,7 +34,8 @@ GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 ```text
 ftmanager natural-combat: wait=357/380, walk=8/8,
 dash=13/11, run=8/10, attack=22, hitbox=7,
-damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff
+damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff,
+hwsubmit=252, hwtri=1152, hwftr=2/582
 ```
 
 Latest verified source-backed detail: TaruCannon kind `3` now routes through
@@ -43,8 +44,9 @@ physics tick copying fighter root position from the barrel root. Continuous
 TaruCannon update/shoot runtime still waits for Jungle barrel helpers and map
 throw-hit data.
 
-Latest renderer detail: opt-in DS 3D hardware submission remains behind
-`NDS_RENDERER_HW_TRIANGLES=1`. The current Pupupu stage-inclusive gate proves
+Latest renderer detail: DS 3D hardware submission is now the default for the
+active Boundary/Latest combat pair `161/162`; pass `-SoftwarePreview` to those
+wrappers only for comparison runs. The current Pupupu stage-inclusive gate proves
 matrix, material, texture, depth/fog/alpha, primitive-Z, and
 texture-perspective hardware submission with zero texture rejects. The strict
 direct and menu-chain Mario/Fox all-DL hardware verifiers now pass on live
@@ -55,13 +57,13 @@ original fighter-part MObjs, and CI TLUT seeds from the current material
 palette. All-DL now reports `bind119/upload8/ready119/reject0`. The
 stage-inclusive `gcDrawAll` hardware gate now submits the Pupupu stage plus both
 selected live fighters in one frame: `hwsubmit=252`, `hwtri=1152`,
-`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
-combat boundary wrappers `161/162` also accept `-HardwareTriangles` and assert
-that same stage + both-fighter DS 3D replay after the imported manager combat
-chain passes. Latest captures include
+`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active boundary
+wrappers assert that stage + both-fighter DS 3D replay after the imported
+manager combat chain passes. Latest captures include
+`artifacts\boundary-combat-hwtri.png`,
 `artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png` and
-`artifacts\renderer-stage-gcdrawall-hw-fighters.png`. Default builds still use
-the software preview.
+`artifacts\renderer-stage-gcdrawall-hw-fighters.png`. Global normal builds
+still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local

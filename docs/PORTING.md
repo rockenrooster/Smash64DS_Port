@@ -16913,3 +16913,20 @@ Still deferred:
   `hwdepth=z456/proj696/decal0`,
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and
   `hwftr=2/582`.
+
+## 2026-07-04 - Boundary Hardware Cutover
+
+- Made the active Boundary/Latest combat wrappers default to the proven
+  `*-hwtri` targets while keeping `-SoftwarePreview` as the narrow comparison
+  escape hatch. Global normal builds still default to the software preview.
+- Updated the registry target/build entries for modes `161/162` to the hardware
+  outputs and taught `build-verify-profile.ps1` to add
+  `NDS_RENDERER_HW_TRIANGLES=1` for any registry target ending in `-hwtri`.
+- Verified the software opt-out, targeted profile prebuild,
+  `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
+  `.\scripts\verify-boundary.ps1 -DelaySeconds 3`. Default Boundary now
+  reports `hwflush=1/1`, `hwsubmit=252`, `hwtri=1152`,
+  `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and
+  `hwftr=2/582`.
+- Captured the cutover ROM at `artifacts\boundary-combat-hwtri.png`.

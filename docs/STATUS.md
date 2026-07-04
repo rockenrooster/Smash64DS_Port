@@ -43,7 +43,8 @@ The current public summary is:
 ```text
 ftmanager natural-combat: wait=357/380, walk=8/8,
 dash=13/11, run=8/10, attack=22, hitbox=7,
-damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff
+damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff,
+hwsubmit=252, hwtri=1152, hwftr=2/582
 ```
 
 Modes `39/40`, `53/54`, and `161/162` now share this restored natural-combat
@@ -75,8 +76,10 @@ The remaining stage compat-replay/cliffmotion seams in `ftMainSetStatus` are
 scoped away from those proven statuses but still documented as follow-up for
 older stage/cliff proofs.
 
-Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
-The current Pupupu stage-inclusive hardware gate proves matrix, material,
+Renderer hardware is now default for the active Boundary/Latest combat pair
+`161/162`; global normal builds still default to software preview. Use
+`-SoftwarePreview` on those wrappers for comparisons. The current Pupupu
+stage-inclusive hardware gate proves matrix, material,
 texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
 zero hardware texture rejects. The strict direct and menu-chain Mario/Fox
 all-DL hardware verifiers now pass on live manager-created fighters: all 14/18
@@ -88,13 +91,12 @@ palette. The same opt-in stage `gcDrawAll` hardware replay now submits the
 Pupupu stage and both selected manager-created fighters in one hardware frame
 on direct and menu-chain routes: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
-combat boundary wrappers `161/162` can now be rerun with `-HardwareTriangles`
-and assert the same stage + both-fighter DS 3D replay after the imported
-manager combat chain passes. Latest captures include
-`artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png` and
+combat boundary wrappers assert that stage + both-fighter DS 3D replay after
+the imported manager combat chain passes. Latest captures include
+`artifacts\boundary-combat-hwtri.png`, menu-chain all-DL HW, and
 `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
-Full visual fidelity still needs broader source-scene coverage and renderer
-cutover work. Default builds still use the software preview.
+Full visual fidelity still needs broader source-scene coverage and more cutover
+work.
 
 Latest gameplay proof is now original-manager Mario/Fox combat flow through
 natural input: Wait -> movement chain, Fox Attack11, live hitbox search,

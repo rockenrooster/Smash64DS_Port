@@ -94,6 +94,9 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
             "BUILD=$build",
             "NDS_DEV_SCENE_HARNESS=$($record.Harness)"
         )
+        if ($record.Target -like '*-hwtri') {
+            $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
+        }
         if ($Force) {
             $makeArgs += '-B'
         }
@@ -174,6 +177,9 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
                     "BUILD=$build",
                     "NDS_DEV_SCENE_HARNESS=$($record.Harness)"
                 )
+                if ($record.Target -like '*-hwtri') {
+                    $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
+                }
                 if ($force) {
                     $makeArgs += '-B'
                 }

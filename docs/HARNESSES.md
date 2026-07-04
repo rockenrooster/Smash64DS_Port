@@ -24,41 +24,18 @@ battle_mariofox_stage_mplivehit_status_loop      mode 161
 menu_chain_mariofox_stage_mplivehit_status_loop  mode 162
 ```
 
-These modes keep the live battle scene on Pupupu/Dream Land, inherit the
-current MP, cliff, passive/recover, wall/rebound, catch/throw, ledge, dash-run
-damage setup, and `mpDamageRecover` proof stack, then add a bounded selected
-Fox Jab2 live-hit lifecycle proof through Attack12, original event-backed
-hitbox metadata, attack-state `Off -> New -> Transfer -> Interpolate`,
-selected contact, repeat-hit rejection, source-shaped hit-interact record
-updates, source-order hit-record detect gate, source-shaped same-group
-attack-record carry/clear, attack-record refresh clearing, bounded global-hitstatus,
-damage-detect, and slot-order hurtbox gates, a bounded shield-stat ->
-GuardSetOff branch, a bounded source-order shield-contact gate plus
-shield-health decrement, ShieldBreakFly branch and hitlag/input/transient
-clear tail, normal shield-contact common tail clear including
-special/rebound transients and `hitlag_mul` reset, shield-heal branch,
-source-shaped catch-stat distance/search, shield-off and damage-detect-off
-skips, damage scheduling, and
-recovery consumption, plus the non-normal hitstatus and damage-resist
-effect/SFX no-damage branches. Modes `161/162` inherit that damage-loop proof
-and add bounded selected damage-status follow-through: status `17->52/45`,
-hitlag `6->0`, callbacks `1/6/1`, post-hitlag original damage update ticks
-`2->1`, one installed original damage physics tick `phys=11500/-1000`,
-one installed original damage interrupt tick `interrupt=1`, one installed
-original damage map no-collision tick `map=1/1`, one installed original damage
-map floor-collision branch through passive checks into DownBounce
-`floor=1/1/1/1`, one installed original damage map left/right-wall and
-ceiling WallDamage short-circuit `wall=0x3ffff`, post-expiry DamageFall
-map no-collision/floor fallback plus imported DownBounce handoff
-`fallmap=0x7ff` plus cliff-catch branch and imported CliffCatch handoff
-`cliff=0x3f`, selected air/fly expiry `57/50`,
-source-shaped search mask `0xf`, and repeat suppression `1/1 gate=0x3f`. The current proof records
-`mpLiveHit=atk=191/166 hitbox=1/j14 dmg=4 second=0/j14/x140
-hurt=3/10 hbdmg=0->4/6 eff=0x1ff/0->0 resist=0xfff/7->3 rbreak=0x7f/2->-2/q2 throwAttr=0x1f/1->0 clash=0x3f/24/18 catchStat=0x1f/160000 catchSearch=0xffffffff/s3 shield=4->4/4 shc=0x7fffff/3142
-so=155/134 contact=1 repeat=1 carry=0xf gate=0x3f rehit=5->0
-origRehit=hit30/v40000 30->29->0 clear=1/3 ids=0x3 dmg=0->4 hitlag=6
-status=17->52/45 hitlag=6->0 callbacks=1/6/1 update=2->1 phys=11500/-1000 interrupt=1 map=1/1 floor=1/1/1/1 wall=0x3ffff cliff=0x3f fallmap=0x7ff finish=57/50 search=0xf repeat=1/1 gate=0x3f`. Use `-DelaySeconds 3` for the current
-Boundary/Latest profiles so the menu-chain finalizer markers are captured.
+These modes keep the live battle scene on Pupupu/Dream Land, create Mario/Fox
+through the imported original manager, and drive Wait -> Walk -> Dash -> Run ->
+RunBrake -> Turn, Fox Attack11, live hitbox search, Mario damage/recover, and
+GuardOn/Guard/GuardOff through imported `ftanim.c`/`ftkey.c`, original status
+descriptors, `ftmain.c`, and `gmcollision.c`.
+
+They now build and verify DS 3D hardware submission by default:
+`hwsubmit=252`, `hwtri=1152`, `hwftr=2/582`, and
+`hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`. Pass
+`-SoftwarePreview` to the wrappers only for comparison runs. Use
+`-DelaySeconds 3` for the current Boundary/Latest profiles so the menu-chain
+finalizer markers are captured.
 
 ## Naming Rules
 
