@@ -17288,3 +17288,18 @@ Still deferred:
   `.\scripts\check-gbi-decode-fixtures.ps1`,
   `.\scripts\check-harness-registry.ps1`, parser check, and
   `.\scripts\build-verify-profile.ps1 -Profile Regression -Only battle_mariofox_stage_mpmotionstale_floor_loop,menu_chain_mariofox_stage_mpmotionstale_floor_loop -Force -ParallelBuilds 1 -ParallelBuildJobs 16 -TimingPath artifacts\verifier-cost\build-force-shared-smoke.json`.
+
+## 2026-07-04 - Runtime-First Slice Policy
+
+- Adopted the runtime-first subsystem policy: future gameplay slices target
+  scene-level capability, prove through the continuous natural-runtime verifier
+  plus captures, and graduate original TU groups live.
+- Documented the migrate-or-delete rule for legacy bounded modes: when a slice
+  obsoletes a marker stack, delete the mode/verifier and leave a one-line
+  `[coverage-reduced]` `KNOWN_ISSUES` ledger entry instead of rebuilding old
+  synthetic coverage.
+- Cleared the unpaid Regression debt for the shared fighter-runtime and hwtri
+  cutover work: fresh `.\scripts\build-verify-profile.ps1 -Profile Regression
+  -Force` completed, then all four `.\scripts\verify-all.ps1 -Profile
+  Regression -ShardCount 4 -ShardIndex N -RunnerSlot N -NoBuild` shards
+  passed.

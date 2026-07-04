@@ -7,10 +7,9 @@ This is the short current-truth document for active development. Keep it under
 ## Direction
 
 Target remains a full 1:1 playable Nintendo DS source port of BattleShip Smash
-64. The process is changing because one-bit proof-mask increments are too
-expensive for that goal. Future gameplay work should move by whole original
-translation units, or coherent adjacent TU groups, then graduate proven code to
-live runtime.
+64. Gameplay work now moves by runtime-first subsystem slices aimed at
+scene-level capability: import coherent original TU groups, prove with the
+continuous natural-runtime verifier plus captures, then graduate live.
 
 Keep `decomp/` read-only. Do not hand-author gameplay when BattleShip source can
 be ported.
@@ -107,9 +106,11 @@ remains preserved as older regression coverage.
 ## Current Blocker
 
 The active boundary is still bounded proof scaffolding, not continuous gameplay.
-The next useful gameplay work is to migrate the remaining older gcDrawAll/stage/
-MP marker families and selected Fox Jab2 modes `159/160` onto natural runtime,
-then move toward `battle_playable` camera, HUD, match-flow, and renderer cutover.
+Legacy bounded modes are migrate-or-delete: when a runtime slice obsoletes a
+marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
+`KNOWN_ISSUES` line instead of reproducing old markers. Next useful gameplay
+work is `battle_playable` camera, HUD, match-flow, KO/respawn, and renderer
+cutover.
 
 - renderer follow-up: broaden source-scene coverage and HW default coverage;
 - continuous-runtime verifier for unbounded battle frames.
@@ -123,11 +124,8 @@ hardware renderer path active enough for the scene.
 
 ## Verification
 
-For normal 30-60 minute work:
-
-```powershell
-.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
-```
+For normal 30-60 minute work, run
+`.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
 
 Docs-only changes also run `.\scripts\check-docs.ps1`; harness registry/script
 changes also run `.\scripts\check-harness-registry.ps1`.

@@ -17,9 +17,8 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - Inspect relevant BattleShip source before importing or replacing behavior.
 - Inspect `decomp/sm64-nds` before DS backend architecture changes.
 - Prefer importing original BattleShip translation units through `src/import`.
-- Minimum gameplay slice is one whole original translation unit, or a coherent
-  adjacent group of TUs, imported through the existing
-  `src/import/battleship_*.c` include pattern and proven at a harness boundary.
+- Runtime-first gameplay slices import coherent original subsystem TU groups
+  for a scene-level capability, then graduate them live.
 - Ban new one-bit proof-mask increments. Do not add per-branch seed/restore
   proofs when the whole function or TU can run naturally.
 - Do not add proof code whose only purpose is to rerun one already-imported
@@ -27,9 +26,12 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - When a subsystem's TUs are fully imported, remove the guarded seam and let
   the original code run live in-scene. Keep the old proof as a regression
   marker only; no permanent state-restore around proven runtime.
-- New harness modes are exceptional. Fold new proofs into the current
-  Latest/Boundary pair unless the work reaches a scene-level boundary such as
-  `battle_playable` or `results_screen`.
+- Legacy bounded modes are migrate-or-delete. When a runtime slice obsoletes
+  a marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
+  `KNOWN_ISSUES` line instead of reproducing old markers.
+- New harness modes are only for scene-level capabilities such as
+  `battle_playable`; otherwise use Boundary/Latest or continuous natural-runtime
+  verifier plus captures.
 - Keep DS/backend behavior in `src/nds` or `src/port`.
 - Keep compatibility declarations in `include/`.
 - Do not edit generated build outputs or local emulator payloads.
@@ -105,25 +107,21 @@ Tiered verifiers:
 Use `verify-dev-fast.ps1 -Build -DelaySeconds 3` while iterating. Run
 `verify-boundary.ps1 -DelaySeconds 3` when a runtime slice appears done. Run
 `verify-current` or `verify-regression` only for shared runtime, common fighter
-code, scene-manager, allocator/linker, harness registry, or broad renderer
-changes. Run Full only when risk requires it or the user asks:
-
-```powershell
-.\scripts\verify-all.ps1 -Profile Full
-```
+code, scene-manager, allocator/linker, harness registry, or broad renderer changes.
 
 Do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
 
 ## Slice And Doc Policy
 
-Future gameplay progress should move by whole original TUs or coherent
-subsystems: import, wire narrow seams, prove end-to-end, then graduate to live
-runtime. Mechanical file splits and docs/tooling may stay smaller when they do
-not claim gameplay progress.
+Future gameplay progress should move by runtime-first subsystem groups, not
+one-bit markers: import original TUs, wire narrow seams, prove with continuous
+natural-runtime/capture gates, then graduate live. Legacy bounded modes are
+migrate-or-delete when superseded. Mechanical file splits and docs/tooling may
+stay smaller when they do not claim gameplay progress.
 
-New proofs should fold into the current Latest/Boundary pair. Add a new
-harness mode only for scene-level milestones. Registry changes go through
-`scripts/lib/harness-registry.ps1` and `.\scripts\check-harness-registry.ps1`.
+New harness modes are only for scene-level milestones. Registry changes go
+through `scripts/lib/harness-registry.ps1` and
+`.\scripts\check-harness-registry.ps1`.
 
 Docs stay short. Keep `docs/STATUS.md` and `docs/HANDOFF.md` at or under 150
 lines each. Put full marker strings in `docs/DIAGNOSTIC_REFERENCE.md`; append

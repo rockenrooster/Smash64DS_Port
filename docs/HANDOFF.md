@@ -93,22 +93,23 @@ motion-extract seam.
 
 ## Process Change
 
-Future gameplay slices should import one whole BattleShip TU, or a coherent
-adjacent TU group, prove it at the boundary, then graduate it to live runtime.
+Future gameplay slices are runtime-first subsystem groups aimed at scene-level
+capability: import original TUs, wire narrow seams, prove with the continuous
+natural-runtime verifier plus captures, then graduate live.
 
-New harness modes are exceptional. Fold new proofs into the current pair unless
-the work reaches a scene-level boundary such as `battle_playable` or
-`results_screen`.
+Legacy bounded modes are migrate-or-delete. When a slice obsoletes an old
+marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
+`KNOWN_ISSUES` ledger line instead of reproducing old markers.
+
+New harness modes are only for scene-level capabilities such as `battle_playable`.
 
 ## Recommended Next Work
 
-1. Runtime follow-up: migrate the remaining gcDrawAll/stage/MP synthetic marker
-   families and selected Fox Jab2 modes `159/160` onto the natural original-
-   manager runtime, then remove the remaining `ftMainSetStatus` compat-replay/
-   cliffmotion seams status-by-status.
-2. Renderer follow-up: broaden source-scene coverage, then plan renderer
-   cutover.
-3. Camera/HUD/match-flow work for the next `battle_playable` milestone.
+1. `battle_playable`: camera, gmcommon battle flow, KO/respawn, HUD, continuous
+   unbounded Mario/Fox battle gate, and hardware-renderer capture.
+2. As subsystem slices obsolete old marker stacks, migrate-or-delete their
+   modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
+3. Renderer follow-up: broaden source-scene coverage, then plan cutover.
 
 ## Verification
 
@@ -133,11 +134,8 @@ runtime, use sharded regression, not the serial 45-minute run:
 .\scripts\check-gbi-decode-fixtures.ps1
 ```
 
-After verified progress, inspect status, optionally commit, then run snapshot as the last project command:
-
-```powershell
-.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean
-```
+After verified progress, inspect status, optionally commit, then run
+`.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` as the last project command.
 
 ## Avoid
 
