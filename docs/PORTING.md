@@ -16892,3 +16892,24 @@ Still deferred:
   `.\scripts\check-harness-registry.ps1`,
   `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`, and
   `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-04 - Boundary Combat Hardware Gate
+
+- Threaded `-HardwareTriangles` through the active Boundary/Latest wrappers
+  `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1` and
+  `verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1` without
+  adding a harness mode. The shared gcrunall verifier now builds those opt-in
+  targets with `NDS_RENDERER_HW_TRIANGLES=1` and asserts the same platform,
+  stage, texture, depth, and fighter hardware counters used by the stage
+  `gcDrawAll` hardware gate.
+- Extended the existing post-natural-combat hardware submit allowlist so modes
+  `161/162` submit the Pupupu stage plus both manager-created fighters after
+  the imported manager combat proof passes.
+- Verified direct and menu-chain boundary hardware runs:
+  `.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  and
+  `.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  both report `hwflush=1/1`, `hwsubmit=252`, `hwtri=1152`,
+  `hwdepth=z456/proj696/decal0`,
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`, and
+  `hwftr=2/582`.

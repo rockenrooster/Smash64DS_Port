@@ -87,8 +87,11 @@ register, RSP vertex/render state, and CI TLUT seeds from the current material
 palette. The same opt-in stage `gcDrawAll` hardware replay now submits the
 Pupupu stage and both selected manager-created fighters in one hardware frame
 on direct and menu-chain routes: `hwsubmit=252`, `hwtri=1152`,
-`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. Latest captures
-include `artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png` and
+`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
+combat boundary wrappers `161/162` can now be rerun with `-HardwareTriangles`
+and assert the same stage + both-fighter DS 3D replay after the imported
+manager combat chain passes. Latest captures include
+`artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png` and
 `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
 Full visual fidelity still needs broader source-scene coverage and renderer
 cutover work. Default builds still use the software preview.

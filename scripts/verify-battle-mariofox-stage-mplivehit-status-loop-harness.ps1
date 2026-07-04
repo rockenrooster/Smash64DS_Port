@@ -5,10 +5,13 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [switch]$ImportBattleShipFTManager
+    [switch]$ImportBattleShipFTManager,
+    [switch]$HardwareTriangles
 )
 $ErrorActionPreference = 'Stop'
 $ImportBattleShipFTManager = $true
+$target = if ($HardwareTriangles) { 'smash64ds-battle-mariofox-stage-mplivehit-status-loop-hwtri' } else { 'smash64ds-battle-mariofox-stage-mplivehit-status-loop' }
+$build = if ($HardwareTriangles) { 'build-battle-mariofox-stage-mplivehit-status-loop-hwtri-harness' } else { 'build-battle-mariofox-stage-mplivehit-status-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -17,9 +20,10 @@ $ImportBattleShipFTManager = $true
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
     -ImportBattleShipFTManager:$ImportBattleShipFTManager `
+    -HardwareTriangles:$HardwareTriangles `
     -Harness 'battle_mariofox_stage_mplivehit_status_loop' `
-    -Target 'smash64ds-battle-mariofox-stage-mplivehit-status-loop' `
-    -Build 'build-battle-mariofox-stage-mplivehit-status-loop-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 161 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `

@@ -55,7 +55,10 @@ original fighter-part MObjs, and CI TLUT seeds from the current material
 palette. All-DL now reports `bind119/upload8/ready119/reject0`. The
 stage-inclusive `gcDrawAll` hardware gate now submits the Pupupu stage plus both
 selected live fighters in one frame: `hwsubmit=252`, `hwtri=1152`,
-`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. Latest captures include
+`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
+combat boundary wrappers `161/162` also accept `-HardwareTriangles` and assert
+that same stage + both-fighter DS 3D replay after the imported manager combat
+chain passes. Latest captures include
 `artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png` and
 `artifacts\renderer-stage-gcdrawall-hw-fighters.png`. Default builds still use
 the software preview.

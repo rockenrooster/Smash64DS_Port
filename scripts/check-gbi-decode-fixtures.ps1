@@ -527,6 +527,17 @@ Assert-True ($stageGCDrawVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1')) 'Stag
 $menuStageGCDrawWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-gcdrawall-loop-harness.ps1') -Raw
 Assert-True ($menuStageGCDrawWrapper.Contains('HardwareTriangles')) 'Menu-chain stage gcDrawAll verifier hardware switch is missing.'
 Assert-True ($menuStageGCDrawWrapper.Contains('menu-chain-mariofox-stage-gcdrawall-loop-hwtri')) 'Menu-chain stage gcDrawAll verifier hardware target is missing.'
+$gcRunAllVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
+Assert-True ($gcRunAllVerifier.Contains('HardwareTriangles')) 'gcRunAll verifier hardware switch is missing.'
+Assert-True ($gcRunAllVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1')) 'gcRunAll verifier does not enable hardware renderer builds.'
+Assert-True ($gcRunAllVerifier.Contains('STAGE_GCDRAWALL_HW_FTR')) 'gcRunAll verifier hardware fighter marker is missing.'
+Assert-True ($gcRunAllVerifier.Contains('hwftr=')) 'gcRunAll verifier hardware fighter summary is missing.'
+$stageMPLiveHitStatusWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1') -Raw
+Assert-True ($stageMPLiveHitStatusWrapper.Contains('HardwareTriangles')) 'Stage MP live-hit status verifier hardware switch is missing.'
+Assert-True ($stageMPLiveHitStatusWrapper.Contains('battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Stage MP live-hit status verifier hardware target is missing.'
+$menuStageMPLiveHitStatusWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1') -Raw
+Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('HardwareTriangles')) 'Menu-chain stage MP live-hit status verifier hardware switch is missing.'
+Assert-True ($menuStageMPLiveHitStatusWrapper.Contains('menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Menu-chain stage MP live-hit status verifier hardware target is missing.'
 $stageCollisionWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-collision-loop-harness.ps1') -Raw
 Assert-True ($stageCollisionWrapper.Contains('HardwareTriangles')) 'Stage collision verifier hardware switch is missing.'
 Assert-True ($stageCollisionWrapper.Contains('battle-mariofox-stage-collision-loop-hwtri')) 'Stage collision verifier hardware target is missing.'
