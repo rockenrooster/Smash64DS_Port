@@ -59,10 +59,12 @@
   plus bounded diagnostics.
 - The imported `ftMainSetStatus` path still contains two deliberate
   duplicate-behavior seams: stage compat replay in the imported post-hook and
-  the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Original
-  status descriptors are now live by default, but deleting these hooks still
-  needs status-by-status proof because they preserve older stage/cliff
-  regression behavior. Do not treat either hook as a completed subsystem.
+  the cliffmotion restore hook in `src/import/battleship_ftmain.c`. Natural
+  combat now covers Wait, Walk, Dash, Run, RunBrake, Turn/TurnRun, Attack11,
+  common damage, GuardOn, Guard, and GuardOff without the compat replay
+  early-return path, but older stage/cliff proofs still depend on scoped hooks.
+  Delete the remaining hooks status-by-status only after matching natural
+  proofs are green.
 - `ft/ftdata.c` is imported, but its particle ROM banks are link stubs in
   `src/port/reloc_backend_ftdata_stubs.c` because the current DS O2R manifest
   has no particle bank assets. The generated
@@ -74,22 +76,24 @@
 - Full `ftmanager.c`, original common/Mario/Fox status descriptor tables, and
   live `ftanim.c`/`ftanimend.c`/`ftkey.c` are now default runtime. Mario/Fox
   manager payloads load through `lbRelocGetStatusBufferFile`, fighters are
-  created through original `ftmanager.c`, and the Boundary/Latest pair proves
-  300+ Wait frames plus Wait -> Walk through imported animation/key runtime.
+  created through original `ftmanager.c`, and modes `39/40`, `53/54`, and
+  `161/162` now prove natural movement, Attack11 hitbox spawn, live
+  hit/damage/recover, and guard through imported animation/key/status/main/
+  collision runtime.
   Inactive statuses whose TUs pull HUD, items/weapons, stage hazards, other
   fighters, or Mario/Fox special weapon/effect chains still use documented weak
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
-- Coverage-reduced after original-manager graduation: modes `53/54` gcRunAll,
-  `57/58` gcDrawAll, the shared gcDrawAll/stage/MP regression family through
-  modes `59-162`, modes `39/40` dash-run, and modes `161/162` status-loop now
-  assert the natural manager motion gate instead of the old DS synthetic
-  gcRunAll/gcDrawAll/stage/MP/dash/attack/guard/live-hit marker stacks. This is
-  intentional for the default path because motion scripts now come from
-  manager-loaded figatree payloads instead of the deleted motion-extract seam.
-  Rebuild those proofs on top of the natural original runtime; do not
-  reintroduce extract-decoding or synthetic parallel fighter execution.
+- Coverage-reduced after original-manager graduation, still pending natural
+  rebuild: modes `57/58` gcDrawAll, the older shared gcDrawAll/stage/MP
+  regression family, selected Fox Jab2 modes `159/160`, and older aggregate
+  marker stacks still carry synthetic or synthesized proof pieces. Modes
+  `39/40`, `53/54`, and `161/162` have been rebuilt on the natural runtime and
+  now assert Wait -> movement chain -> Attack11 -> hit -> damage/recover ->
+  guard. Keep migrating the remaining older stacks on top of original-manager
+  live structs; do not reintroduce extract-decoding or synthetic parallel
+  fighter execution.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and
@@ -99,9 +103,10 @@
   skip `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE` and
   `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE_ORIGINAL`; catch-resist skips the
   original mirror bit; damage-kind skips the Twister procparams mirror; sleep
-  skips the motion mirror; live-hit private hitlog mirrors are synthesized from
-  the proven base path instead of observed from BattleShip's private static
-  storage.
+  skips the motion mirror. Modes `161/162` now prove a natural Attack11 hit and
+  damage/recover cycle, but older selected live-hit private hitlog mirrors in
+  modes `159/160` are still synthesized from the proven base path instead of
+  observed from BattleShip's private static storage.
 - Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
   billboard/recalc DObj matrix seed coverage, first bounded Opening Room
   RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is
@@ -127,22 +132,16 @@
   fighter-part MObjs, and seeding missing direct-list CI TLUT state from the
   current material palette. Remaining renderer work is broader
   combiner/material/depth/texture source-scene coverage and cutover policy.
-- Live-hit status lifecycle modes `161/162` prove one bounded selected Fox Jab2
-  Attack12 hitbox activation -> selected contact -> repeat-hit reject ->
-  damage scheduling -> damage-recover consumption -> selected status follow-
-  through path, with final safe floor state. This consumes the modes `157/158`
-  damage-recover aggregate, Dash-Run selected contact/damage setup proof, and
-  modes `159/160` live-hit damage-loop proof, then proves status `17->52/45`,
-  hitlag `6->0`, callbacks `1/6/1`, map `1/1`, floor `1/1/1/1`,
-  left/right-wall and ceiling `0x3ffff`, cliff-catch branch `0x1f`,
-  DamageFall no-collision/floor fallback `0x7f`,
-  source-shaped search/proc masks, and repeat gate `1/1 gate=0x3f`, but it is
-  still a selected proof.
-  The sibling Fox Jab2 hitbox `0` marker is only a bounded decode/contact-gate
-  diagnostic and does not enable continuous multi-hitbox runtime. Full
-  `gmcollision.c`, full `ftmain.c`, continuous multi-hitbox runtime, rehit
-  timers beyond the selected refresh-clear proof, arbitrary damage-state duration,
-  complete hitlag/damage runtime,
+- Live-hit status lifecycle modes `161/162` now prove a natural original-
+  manager cycle: Fox reaches Attack11 from controller A input, imported
+  motion-command runtime spawns the hitbox, imported `ftmain.c`/`gmcollision.c`
+  search hits Mario, both fighters enter hitlag, Mario installs a common damage
+  status through the original tables, takes damage/knockback, recovers to Wait,
+  and then Fox runs GuardOn -> Guard -> GuardOff. This replaces the former
+  selected Fox Jab2 status-loop verifier for the Boundary/Latest pair. Older
+  selected Fox Jab2 modes `159/160` still carry source-order hitbox/contact/
+  repeat-gate diagnostics as regression coverage until migrated to natural
+  input. Continuous multi-hitbox runtime, arbitrary damage-state duration,
   items/weapons, HUD, audio, and unbounded gameplay scheduling remain deferred.
   The current menu-chain verifier needs `-DelaySeconds 3` so post-loop
   finalizer markers are captured after the longer VS Mode -> PlayersVS -> Maps
@@ -179,6 +178,9 @@
   damage/hitlag lifecycle, continuous `ftCommonDamageUpdateMain` runtime, continuous multi-frame FuraSleep breakout scheduling and real color-animation runtime, real DS audio, positional audio balance, continuous
   TurnRun/Attack100/Guard/SetOff runtime, continuous shield collision beyond
   the selected contact/set-off proof, or player-driven attack/shield gameplay.
+  This aggregate remains because Regression still consumes modes `159/160` and
+  older selected diagnostics; it is not used by the rebuilt natural-combat
+  proof in modes `39/40`, `53/54`, or `161/162`.
 - The standalone Jump-loop `JUMP_ATTACKAIR` refresh proof now carries and
   clears the original four-slot fighter attack records for the bounded
   AttackAirLw rehit branch and proves the installed original AttackAir map

@@ -592,11 +592,44 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTMarioAnim002 \
 	reloc_animations/FTMarioAnim003 \
 	reloc_animations/FTMarioAnim004 \
+	reloc_animations/FTMarioAnim005 \
+	reloc_animations/FTMarioAnim006 \
+	reloc_animations/FTMarioAnim007 \
+	reloc_animations/FTMarioAnim008 \
+	reloc_animations/FTMarioAnim009 \
+	reloc_animations/FTMarioAnim020 \
+	reloc_animations/FTMarioAnim024 \
+	reloc_animations/FTMarioAnim025 \
+	reloc_animations/FTMarioAnim026 \
+	reloc_animations/FTMarioAnim027 \
+	reloc_animations/FTMarioAnim028 \
+	reloc_animations/FTMarioAnim029 \
+	reloc_animations/FTMarioAnim030 \
+	reloc_animations/FTMarioAnim031 \
+	reloc_animations/FTMarioAnim032 \
+	reloc_animations/FTMarioAnim033 \
+	reloc_animations/FTMarioAnim034 \
+	reloc_animations/FTMarioAnim035 \
+	reloc_animations/FTMarioAnim036 \
+	reloc_animations/FTMarioAnim037 \
+	reloc_animations/FTMarioAnim038 \
+	reloc_animations/FTMarioAnim039 \
+	reloc_animations/FTMarioAnim040 \
+	reloc_animations/FTMarioAnim041 \
+	reloc_animations/FTMarioAnim058 \
+	reloc_animations/FTMarioAnim059 \
+	reloc_animations/FTMarioAnim141 \
 	reloc_animations/FTFoxAnim000 \
 	reloc_animations/FTFoxAnim001 \
 	reloc_animations/FTFoxAnim002 \
 	reloc_animations/FTFoxAnim003 \
-	reloc_animations/FTFoxAnim004
+	reloc_animations/FTFoxAnim004 \
+	reloc_animations/FTFoxAnim005 \
+	reloc_animations/FTFoxAnim006 \
+	reloc_animations/FTFoxAnim007 \
+	reloc_animations/FTFoxAnim008 \
+	reloc_animations/FTFoxAnim009 \
+	reloc_animations/FTFoxAnim109
 
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \

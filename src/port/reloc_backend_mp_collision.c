@@ -4960,6 +4960,11 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
     {
         if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
         {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+            mpProcessRunFloorEdgeAdjust(coll_data);
+            coll_data->mask_stat &= (u16)~MAP_FLAG_FLOOREDGE;
+            coll_data->is_coll_end = FALSE;
+#endif
             if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
             {
                 gNdsStageMPUpdateFloorLoopAllCollisionsFloorHitCount++;

@@ -8983,6 +8983,40 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #define NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED 300u
 #define NDS_FIGHTER_NATURAL_MOTION_WALK_FRAMES_REQUIRED 8u
+#define NDS_FIGHTER_NATURAL_COMBAT_SETTLE_FRAMES_REQUIRED 10u
+#define NDS_FIGHTER_NATURAL_COMBAT_DASH_FRAMES_REQUIRED 2u
+#define NDS_FIGHTER_NATURAL_COMBAT_RUN_FRAMES_REQUIRED 8u
+#define NDS_FIGHTER_NATURAL_COMBAT_RUNBRAKE_FRAMES_REQUIRED 2u
+#define NDS_FIGHTER_NATURAL_COMBAT_TURN_FRAMES_REQUIRED 1u
+#define NDS_FIGHTER_NATURAL_COMBAT_GUARD_FRAMES_REQUIRED 10u
+#define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_DASH_RANGE 400.0F
+#define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_STOP_RANGE 170.0F
+#define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_STEP 15.0F
+#define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_MIN 50.0F
+#define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_TIMEOUT 45u
+#define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_RETRY_MAX 6u
+#define NDS_FIGHTER_NATURAL_COMBAT_PHASE_TIMEOUT 600u
+
+/* Scripted input phases for the natural original-runtime combat chain.
+ * Input only flows through controller playback into the original
+ * syController/ftkey path; state is observed, never written. */
+enum {
+    nNDSNaturalCombatPhaseWait = 0,
+    nNDSNaturalCombatPhaseWalk,
+    nNDSNaturalCombatPhaseSettleWalk,
+    nNDSNaturalCombatPhaseDashRun,
+    nNDSNaturalCombatPhaseRunBrake,
+    nNDSNaturalCombatPhaseSettleRun,
+    nNDSNaturalCombatPhaseTurn,
+    nNDSNaturalCombatPhaseSettleTurn,
+    nNDSNaturalCombatPhaseApproach,
+    nNDSNaturalCombatPhaseSettleApproach,
+    nNDSNaturalCombatPhaseAttack,
+    nNDSNaturalCombatPhaseSettleDamage,
+    nNDSNaturalCombatPhaseGuard,
+    nNDSNaturalCombatPhaseGuardOff,
+    nNDSNaturalCombatPhaseDone
+};
 
 typedef struct NDSFighterNaturalMotionState {
     f32 first_wait_anim;
@@ -8992,15 +9026,35 @@ typedef struct NDSFighterNaturalMotionState {
     u32 anim_advance_count;
     u32 valid_joint_count;
     u32 walk_frames;
+    u32 dash_frames;
+    u32 run_frames;
+    u32 runbrake_frames;
+    u32 turn_frames;
+    u32 hitlag_frames;
 } NDSFighterNaturalMotionState;
 
 static NDSFighterNaturalMotionState sNdsFighterNaturalMotionStates[2];
 static u32 sNdsFighterNaturalMotionWalkInputActive;
+static u32 sNdsNaturalCombatPhase;
+static u32 sNdsNaturalCombatPhaseFrames;
+static u32 sNdsNaturalCombatSettleFrames;
+static u32 sNdsNaturalCombatAttackerSlot;
+static u32 sNdsNaturalCombatVictimSlot;
+static u32 sNdsNaturalCombatAttackFrames;
+static u32 sNdsNaturalCombatAttackPressed;
+static f32 sNdsNaturalCombatApproachStopRange;
+static u32 sNdsNaturalCombatVictimStartPercent;
+static f32 sNdsNaturalCombatVictimHitPosX;
+static u32 sNdsNaturalCombatVictimHitSeen;
 
 static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
 {
-    return ((ndsFighterMarioFoxGCRunAllLoopProofEnabled() != FALSE) ||
-            (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)) ? TRUE : FALSE;
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER && NDS_MARIOFOX_DASH_RUN_HARNESS
+    return TRUE;
+#else
+    return (ndsFighterMarioFoxGCRunAllLoopProofEnabled() != FALSE) ? TRUE :
+                                                                    FALSE;
+#endif
 }
 
 static sb32 ndsFighterNaturalMotionStatusIsWalk(s32 status_id)
@@ -9126,6 +9180,28 @@ static void ndsFighterNaturalMotionRecordSlot(u32 slot, FTStruct *fp)
         }
     }
 
+    if (fp->status_id == nFTCommonStatusDash)
+    {
+        state->dash_frames++;
+    }
+    else if (fp->status_id == nFTCommonStatusRun)
+    {
+        state->run_frames++;
+    }
+    else if (fp->status_id == nFTCommonStatusRunBrake)
+    {
+        state->runbrake_frames++;
+    }
+    else if ((fp->status_id == nFTCommonStatusTurn) ||
+             (fp->status_id == nFTCommonStatusTurnRun))
+    {
+        state->turn_frames++;
+    }
+    if (fp->hitlag_tics > 0u)
+    {
+        state->hitlag_frames++;
+    }
+
     if (slot == 0u)
     {
         gNdsFighterNaturalMotionP0WaitFrameCount = state->wait_frames;
@@ -9134,6 +9210,11 @@ static void ndsFighterNaturalMotionRecordSlot(u32 slot, FTStruct *fp)
         gNdsFighterNaturalMotionP0ValidJointCount =
             state->valid_joint_count;
         gNdsFighterNaturalMotionP0WalkFrameCount = state->walk_frames;
+        gNdsFighterNaturalCombatP0DashFrames = state->dash_frames;
+        gNdsFighterNaturalCombatP0RunFrames = state->run_frames;
+        gNdsFighterNaturalCombatP0RunBrakeFrames = state->runbrake_frames;
+        gNdsFighterNaturalCombatP0TurnFrames = state->turn_frames;
+        gNdsFighterNaturalCombatP0HitlagFrames = state->hitlag_frames;
     }
     else
     {
@@ -9143,6 +9224,168 @@ static void ndsFighterNaturalMotionRecordSlot(u32 slot, FTStruct *fp)
         gNdsFighterNaturalMotionP1ValidJointCount =
             state->valid_joint_count;
         gNdsFighterNaturalMotionP1WalkFrameCount = state->walk_frames;
+        gNdsFighterNaturalCombatP1DashFrames = state->dash_frames;
+        gNdsFighterNaturalCombatP1RunFrames = state->run_frames;
+        gNdsFighterNaturalCombatP1RunBrakeFrames = state->runbrake_frames;
+        gNdsFighterNaturalCombatP1TurnFrames = state->turn_frames;
+        gNdsFighterNaturalCombatP1HitlagFrames = state->hitlag_frames;
+    }
+}
+
+static f32 ndsFighterNaturalCombatPosX(FTStruct *fp)
+{
+    if ((fp == NULL) || (fp->coll_data.p_translate == NULL))
+    {
+        return 0.0F;
+    }
+    return fp->coll_data.p_translate->x;
+}
+
+static sb32 ndsFighterNaturalCombatStatusIsDamage(s32 status_id)
+{
+    return ((status_id >= nFTCommonStatusDamageStart) &&
+            (status_id <= nFTCommonStatusDamageEnd)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalCombatStatusIsGuard(s32 status_id)
+{
+    return ((status_id >= nFTCommonStatusGuardStart) &&
+            (status_id <= nFTCommonStatusGuardEnd)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalCombatHitboxActive(FTStruct *fp)
+{
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(fp->attack_colls); i++)
+    {
+        if (fp->attack_colls[i].attack_state != nGMAttackStateOff)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void ndsFighterNaturalCombatRecordAttackColl(FTStruct *fp)
+{
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(fp->attack_colls); i++)
+    {
+        FTAttackColl *attack_coll = &fp->attack_colls[i];
+
+        if (attack_coll->attack_state == nGMAttackStateOff)
+        {
+            continue;
+        }
+        gNdsFighterDashRunAttackEventLastPlayer = fp->player;
+        gNdsFighterDashRunAttackEventLastStatus = (u32)fp->status_id;
+        gNdsFighterDashRunAttackEventLastState =
+            (u32)attack_coll->attack_state;
+        gNdsFighterDashRunAttackEventLastAttackID = i;
+        gNdsFighterDashRunAttackEventLastGroupID = attack_coll->group_id;
+        gNdsFighterDashRunAttackEventLastJointID =
+            (u32)attack_coll->joint_id;
+        gNdsFighterDashRunAttackEventLastDamage = attack_coll->damage;
+        gNdsFighterDashRunAttackEventLastSize = (s32)attack_coll->size;
+        gNdsFighterDashRunAttackEventLastOffsetX =
+            (s32)attack_coll->offset.x;
+        gNdsFighterDashRunAttackEventLastOffsetY =
+            (s32)attack_coll->offset.y;
+        gNdsFighterDashRunAttackEventLastOffsetZ =
+            (s32)attack_coll->offset.z;
+        gNdsFighterDashRunAttackEventLastAngle = attack_coll->angle;
+        gNdsFighterDashRunAttackEventLastKBG =
+            attack_coll->knockback_scale;
+        gNdsFighterDashRunAttackEventLastKBW =
+            attack_coll->knockback_weight;
+        gNdsFighterDashRunAttackEventLastBKB =
+            attack_coll->knockback_base;
+        gNdsFighterDashRunAttackEventLastShield =
+            attack_coll->shield_damage;
+        gNdsFighterDashRunAttackEventLastFlags =
+            (attack_coll->is_hit_air ? 0x1u : 0u) |
+            (attack_coll->is_hit_ground ? 0x2u : 0u) |
+            (attack_coll->can_rebound ? 0x4u : 0u) |
+            (attack_coll->is_scale_pos ? 0x8u : 0u);
+        break;
+    }
+}
+
+/* Observe the attacker/victim pair while the combat phases run. All state
+ * transitions below happen inside the original imported runtime; this only
+ * counts what it sees. */
+static void ndsFighterNaturalCombatRecordPair(FTStruct *attacker,
+                                              FTStruct *victim)
+{
+    if ((attacker == NULL) || (victim == NULL))
+    {
+        gNdsFighterNaturalMotionUnsafeCount++;
+        return;
+    }
+
+    if (attacker->status_id == nFTCommonStatusAttack11)
+    {
+        gNdsFighterNaturalCombatAttackStatusFrames++;
+        gNdsFighterNaturalCombatAttackMotionFinal =
+            (u32)attacker->motion_id;
+        if (ndsFighterNaturalCombatHitboxActive(attacker) != FALSE)
+        {
+            gNdsFighterNaturalCombatHitboxActiveFrames++;
+            ndsFighterNaturalCombatRecordAttackColl(attacker);
+        }
+    }
+
+    if (ndsFighterNaturalCombatStatusIsDamage(victim->status_id) != FALSE)
+    {
+        if (sNdsNaturalCombatVictimHitSeen == 0u)
+        {
+            sNdsNaturalCombatVictimHitSeen = 1u;
+            sNdsNaturalCombatVictimHitPosX =
+                ndsFighterNaturalCombatPosX(victim);
+            gNdsFighterNaturalCombatVictimDamageStatus =
+                (u32)victim->status_id;
+        }
+        gNdsFighterNaturalCombatVictimDamageFrames++;
+    }
+    if (sNdsNaturalCombatVictimHitSeen != 0u)
+    {
+        f32 delta = ndsFighterNaturalCombatPosX(victim) -
+            sNdsNaturalCombatVictimHitPosX;
+
+        if (delta < 0.0F)
+        {
+            delta = -delta;
+        }
+        if (ndsFloatToMilliSigned(delta) >
+            (s32)gNdsFighterNaturalCombatVictimKnockbackMilli)
+        {
+            gNdsFighterNaturalCombatVictimKnockbackMilli =
+                (u32)ndsFloatToMilliSigned(delta);
+        }
+        if ((victim->status_id == nFTCommonStatusWait) &&
+            (ndsFighterNaturalCombatStatusIsGuard(victim->status_id) ==
+                FALSE))
+        {
+            gNdsFighterNaturalCombatVictimRecoverWaitFrames++;
+        }
+    }
+    gNdsFighterNaturalCombatVictimFinalPercent =
+        (u32)victim->percent_damage;
+
+    if (victim->status_id == nFTCommonStatusGuardOn)
+    {
+        gNdsFighterNaturalCombatGuardOnFrames++;
+    }
+    else if (victim->status_id == nFTCommonStatusGuard)
+    {
+        gNdsFighterNaturalCombatGuardFrames++;
+    }
+    else if ((victim->status_id == nFTCommonStatusGuardOff) ||
+             (victim->status_id == nFTCommonStatusGuardSetOff))
+    {
+        gNdsFighterNaturalCombatGuardOffFrames++;
     }
 }
 
@@ -9165,6 +9408,23 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     bzero(sNdsFighterNaturalMotionStates,
           sizeof(sNdsFighterNaturalMotionStates));
     sNdsFighterNaturalMotionWalkInputActive = 0u;
+    sNdsNaturalCombatPhase = nNDSNaturalCombatPhaseWait;
+    sNdsNaturalCombatPhaseFrames = 0u;
+    sNdsNaturalCombatSettleFrames = 0u;
+    sNdsNaturalCombatAttackFrames = 0u;
+    sNdsNaturalCombatAttackPressed = 0u;
+    sNdsNaturalCombatApproachStopRange =
+        NDS_FIGHTER_NATURAL_COMBAT_APPROACH_STOP_RANGE;
+    sNdsNaturalCombatVictimHitSeen = 0u;
+    sNdsNaturalCombatVictimHitPosX = 0.0F;
+    sNdsNaturalCombatAttackerSlot = (p1->fkind == nFTKindFox) ? 1u : 0u;
+    sNdsNaturalCombatVictimSlot = 1u - sNdsNaturalCombatAttackerSlot;
+    sNdsNaturalCombatVictimStartPercent =
+        (u32)((sNdsNaturalCombatVictimSlot == 0u) ? p0 : p1)->percent_damage;
+    gNdsFighterNaturalCombatAttackerSlot = sNdsNaturalCombatAttackerSlot;
+    gNdsFighterNaturalCombatVictimSlot = sNdsNaturalCombatVictimSlot;
+    gNdsFighterNaturalCombatVictimStartPercent =
+        sNdsNaturalCombatVictimStartPercent;
     ndsControllerPlaybackReset();
     ndsControllerPlaybackSetConnectedMask(0x3u);
     ndsControllerPlaybackSetEnabled(TRUE);
@@ -9175,6 +9435,278 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsFighterNaturalMotionP0StatusStart = (u32)p0->status_id;
     gNdsFighterNaturalMotionP1StatusStart = (u32)p1->status_id;
     gNdsFighterNaturalMotionPrepared = 1u;
+}
+
+static sb32 ndsFighterNaturalCombatBothWait(FTStruct *fp[2])
+{
+    return ((fp[0]->status_id == nFTCommonStatusWait) &&
+            (fp[1]->status_id == nFTCommonStatusWait)) ? TRUE : FALSE;
+}
+
+static void ndsFighterNaturalCombatSetPhase(u32 phase)
+{
+    sNdsNaturalCombatPhase = phase;
+    sNdsNaturalCombatPhaseFrames = 0u;
+    sNdsNaturalCombatSettleFrames = 0u;
+    gNdsFighterNaturalCombatPhase = phase;
+}
+
+static sb32 ndsFighterNaturalCombatSettled(FTStruct *fp[2])
+{
+    if ((ndsFighterNaturalCombatBothWait(fp) != FALSE) &&
+        (ABS(fp[0]->input.pl.stick_range.x) < 20) &&
+        (ABS(fp[1]->input.pl.stick_range.x) < 20) &&
+        (fp[0]->tap_stick_x == FTINPUT_STICKBUFFER_TICS_MAX) &&
+        (fp[1]->tap_stick_x == FTINPUT_STICKBUFFER_TICS_MAX))
+    {
+        sNdsNaturalCombatSettleFrames++;
+    }
+    else
+    {
+        sNdsNaturalCombatSettleFrames = 0u;
+    }
+    return (sNdsNaturalCombatSettleFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_SETTLE_FRAMES_REQUIRED) ?
+        TRUE : FALSE;
+}
+
+static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
+{
+    NDSFighterNaturalMotionState *s0 = &sNdsFighterNaturalMotionStates[0];
+    NDSFighterNaturalMotionState *s1 = &sNdsFighterNaturalMotionStates[1];
+    FTStruct *victim = fp[sNdsNaturalCombatVictimSlot];
+    f32 dx = ndsFighterNaturalCombatPosX(fp[0]) -
+        ndsFighterNaturalCombatPosX(fp[1]);
+
+    if (dx < 0.0F)
+    {
+        dx = -dx;
+    }
+    gNdsFighterNaturalCombatApproachDXMilli =
+        (u32)ndsFloatToMilliSigned(dx);
+
+    sNdsNaturalCombatPhaseFrames++;
+    gNdsFighterNaturalCombatPhaseFrames = sNdsNaturalCombatPhaseFrames;
+    if ((sNdsNaturalCombatPhase != nNDSNaturalCombatPhaseDone) &&
+        (sNdsNaturalCombatPhaseFrames ==
+            (NDS_FIGHTER_NATURAL_COMBAT_PHASE_TIMEOUT + 1u)))
+    {
+        gNdsFighterNaturalCombatStallCount++;
+    }
+
+    switch (sNdsNaturalCombatPhase)
+    {
+    case nNDSNaturalCombatPhaseWait:
+        if ((s0->wait_frames >=
+                NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED) &&
+            (s1->wait_frames >=
+                NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED))
+        {
+            gNdsFighterNaturalMotionWalkInputFrame =
+                gNdsFighterNaturalMotionUpdateCount + 1u;
+            ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseWalk);
+        }
+        break;
+    case nNDSNaturalCombatPhaseWalk:
+        if ((s0->walk_frames >=
+                NDS_FIGHTER_NATURAL_MOTION_WALK_FRAMES_REQUIRED) &&
+            (s1->walk_frames >=
+                NDS_FIGHTER_NATURAL_MOTION_WALK_FRAMES_REQUIRED))
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseSettleWalk);
+        }
+        break;
+    case nNDSNaturalCombatPhaseSettleWalk:
+        if (ndsFighterNaturalCombatSettled(fp) != FALSE)
+        {
+            ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseDashRun);
+        }
+        break;
+    case nNDSNaturalCombatPhaseDashRun:
+        if ((s0->dash_frames >=
+                NDS_FIGHTER_NATURAL_COMBAT_DASH_FRAMES_REQUIRED) &&
+            (s1->dash_frames >=
+                NDS_FIGHTER_NATURAL_COMBAT_DASH_FRAMES_REQUIRED) &&
+            (s0->run_frames >=
+                NDS_FIGHTER_NATURAL_COMBAT_RUN_FRAMES_REQUIRED) &&
+            (s1->run_frames >=
+                NDS_FIGHTER_NATURAL_COMBAT_RUN_FRAMES_REQUIRED))
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseRunBrake);
+        }
+        break;
+    case nNDSNaturalCombatPhaseRunBrake:
+        if ((s0->runbrake_frames >=
+                NDS_FIGHTER_NATURAL_COMBAT_RUNBRAKE_FRAMES_REQUIRED) &&
+            (s1->runbrake_frames >=
+                NDS_FIGHTER_NATURAL_COMBAT_RUNBRAKE_FRAMES_REQUIRED))
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseSettleRun);
+        }
+        break;
+    case nNDSNaturalCombatPhaseSettleRun:
+        if (ndsFighterNaturalCombatSettled(fp) != FALSE)
+        {
+            ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseTurn);
+        }
+        break;
+    case nNDSNaturalCombatPhaseTurn:
+        if ((s0->turn_frames >=
+                NDS_FIGHTER_NATURAL_COMBAT_TURN_FRAMES_REQUIRED) &&
+            (s1->turn_frames >=
+                NDS_FIGHTER_NATURAL_COMBAT_TURN_FRAMES_REQUIRED))
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseSettleTurn);
+        }
+        break;
+    case nNDSNaturalCombatPhaseSettleTurn:
+        if (ndsFighterNaturalCombatSettled(fp) != FALSE)
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseApproach);
+        }
+        break;
+    case nNDSNaturalCombatPhaseApproach:
+        if (dx <= sNdsNaturalCombatApproachStopRange)
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseSettleApproach);
+        }
+        break;
+    case nNDSNaturalCombatPhaseSettleApproach:
+        if (ndsFighterNaturalCombatSettled(fp) != FALSE)
+        {
+            sNdsNaturalCombatAttackPressed = 0u;
+            ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseAttack);
+        }
+        break;
+    case nNDSNaturalCombatPhaseAttack:
+        if (sNdsNaturalCombatVictimHitSeen != 0u)
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseSettleDamage);
+        }
+        else if (sNdsNaturalCombatPhaseFrames >
+                 NDS_FIGHTER_NATURAL_COMBAT_ATTACK_TIMEOUT)
+        {
+            gNdsFighterNaturalCombatAttackRetryCount++;
+            if (gNdsFighterNaturalCombatAttackRetryCount >
+                NDS_FIGHTER_NATURAL_COMBAT_ATTACK_RETRY_MAX)
+            {
+                gNdsFighterNaturalCombatStallCount++;
+                ndsFighterNaturalCombatSetPhase(
+                    nNDSNaturalCombatPhaseDone);
+            }
+            else
+            {
+                sNdsNaturalCombatApproachStopRange -=
+                    NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_STEP;
+                if (sNdsNaturalCombatApproachStopRange <
+                    NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_MIN)
+                {
+                    sNdsNaturalCombatApproachStopRange =
+                        NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_MIN;
+                }
+                ndsFighterNaturalCombatSetPhase(
+                    nNDSNaturalCombatPhaseApproach);
+            }
+        }
+        break;
+    case nNDSNaturalCombatPhaseSettleDamage:
+        if ((victim->status_id == nFTCommonStatusWait) &&
+            (ndsFighterNaturalCombatSettled(fp) != FALSE))
+        {
+            ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseGuard);
+        }
+        break;
+    case nNDSNaturalCombatPhaseGuard:
+        if (gNdsFighterNaturalCombatGuardFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_GUARD_FRAMES_REQUIRED)
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseGuardOff);
+        }
+        break;
+    case nNDSNaturalCombatPhaseGuardOff:
+        if ((victim->status_id == nFTCommonStatusWait) &&
+            (gNdsFighterNaturalCombatGuardOffFrames > 0u))
+        {
+            ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseDone);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
+{
+    u16 button[2];
+    s8 stick[2];
+    u32 i;
+
+    button[0] = button[1] = 0u;
+    stick[0] = stick[1] = 0;
+
+    switch (sNdsNaturalCombatPhase)
+    {
+    case nNDSNaturalCombatPhaseWalk:
+        for (i = 0u; i < 2u; i++)
+        {
+            stick[i] = (fp[i]->lr >= 0) ? 40 : -40;
+        }
+        break;
+    case nNDSNaturalCombatPhaseDashRun:
+        for (i = 0u; i < 2u; i++)
+        {
+            stick[i] = (fp[i]->lr >= 0) ? 80 : -80;
+        }
+        break;
+    case nNDSNaturalCombatPhaseTurn:
+        for (i = 0u; i < 2u; i++)
+        {
+            stick[i] = (fp[i]->lr >= 0) ? -40 : 40;
+        }
+        break;
+    case nNDSNaturalCombatPhaseApproach:
+        for (i = 0u; i < 2u; i++)
+        {
+            f32 self_x = ndsFighterNaturalCombatPosX(fp[i]);
+            f32 other_x = ndsFighterNaturalCombatPosX(fp[1u - i]);
+            f32 adx = other_x - self_x;
+            s8 mag;
+
+            if (adx < 0.0F)
+            {
+                adx = -adx;
+            }
+            mag = (adx > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_DASH_RANGE) ?
+                80 : 40;
+            stick[i] = (other_x >= self_x) ? mag : (s8)-mag;
+        }
+        break;
+    case nNDSNaturalCombatPhaseAttack:
+        if (sNdsNaturalCombatAttackPressed == 0u)
+        {
+            button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
+            sNdsNaturalCombatAttackPressed = 1u;
+        }
+        break;
+    case nNDSNaturalCombatPhaseGuard:
+        button[sNdsNaturalCombatVictimSlot] = Z_TRIG;
+        break;
+    default:
+        break;
+    }
+
+    for (i = 0u; i < 2u; i++)
+    {
+        ndsControllerPlaybackSetPad(i, button[i], stick[i], 0);
+    }
 }
 
 s32 ndsFighterMarioFoxNaturalMotionUpdateEnabled(void)
@@ -9202,27 +9734,10 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
         return;
     }
 
-    if ((sNdsFighterNaturalMotionWalkInputActive == 0u) &&
-        (sNdsFighterNaturalMotionStates[0].wait_frames >=
-            NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED) &&
-        (sNdsFighterNaturalMotionStates[1].wait_frames >=
-            NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED))
-    {
-        sNdsFighterNaturalMotionWalkInputActive = 1u;
-        gNdsFighterNaturalMotionWalkInputFrame =
-            gNdsFighterNaturalMotionUpdateCount + 1u;
-    }
+    sNdsFighterNaturalMotionWalkInputActive =
+        (sNdsNaturalCombatPhase == nNDSNaturalCombatPhaseWalk) ? 1u : 0u;
 
-    for (i = 0u; i < 2u; i++)
-    {
-        s8 stick_x = 0;
-
-        if (sNdsFighterNaturalMotionWalkInputActive != 0u)
-        {
-            stick_x = (fp[i]->lr >= 0.0F) ? 40 : -40;
-        }
-        ndsControllerPlaybackSetPad(i, 0u, stick_x, 0);
-    }
+    ndsFighterNaturalCombatApplyInput(fp);
     ndsControllerPlaybackCommitFrame();
     syControllerReadDeviceData();
     syControllerUpdateGlobalData();
@@ -9236,6 +9751,9 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
     {
         ndsFighterNaturalMotionRecordSlot(i, fp[i]);
     }
+    ndsFighterNaturalCombatRecordPair(fp[sNdsNaturalCombatAttackerSlot],
+                                      fp[sNdsNaturalCombatVictimSlot]);
+    ndsFighterNaturalCombatAdvancePhase(fp);
 
     if ((gNdsFighterNaturalMotionManagerMask & 0x3u) == 0x3u)
     {
@@ -9304,6 +9822,72 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
     {
         mask |= 1u << 9;
     }
+    if ((gNdsFighterNaturalCombatP0DashFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_DASH_FRAMES_REQUIRED) &&
+        (gNdsFighterNaturalCombatP1DashFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_DASH_FRAMES_REQUIRED))
+    {
+        mask |= 1u << 10;
+    }
+    if ((gNdsFighterNaturalCombatP0RunFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_RUN_FRAMES_REQUIRED) &&
+        (gNdsFighterNaturalCombatP1RunFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_RUN_FRAMES_REQUIRED))
+    {
+        mask |= 1u << 11;
+    }
+    if ((gNdsFighterNaturalCombatP0RunBrakeFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_RUNBRAKE_FRAMES_REQUIRED) &&
+        (gNdsFighterNaturalCombatP1RunBrakeFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_RUNBRAKE_FRAMES_REQUIRED))
+    {
+        mask |= 1u << 12;
+    }
+    if ((gNdsFighterNaturalCombatP0TurnFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_TURN_FRAMES_REQUIRED) &&
+        (gNdsFighterNaturalCombatP1TurnFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_TURN_FRAMES_REQUIRED))
+    {
+        mask |= 1u << 13;
+    }
+    if (sNdsNaturalCombatPhase > nNDSNaturalCombatPhaseApproach)
+    {
+        mask |= 1u << 14;
+    }
+    if ((gNdsFighterNaturalCombatAttackStatusFrames > 0u) &&
+        (gNdsFighterNaturalCombatHitboxActiveFrames > 0u))
+    {
+        mask |= 1u << 15;
+    }
+    if ((gNdsFighterNaturalCombatVictimFinalPercent >
+            gNdsFighterNaturalCombatVictimStartPercent) &&
+        (ndsFighterNaturalCombatStatusIsDamage(
+            (s32)gNdsFighterNaturalCombatVictimDamageStatus) != FALSE))
+    {
+        mask |= 1u << 16;
+    }
+    if ((sNdsFighterNaturalMotionStates[
+            sNdsNaturalCombatAttackerSlot].hitlag_frames > 0u) &&
+        (sNdsFighterNaturalMotionStates[
+            sNdsNaturalCombatVictimSlot].hitlag_frames > 0u))
+    {
+        mask |= 1u << 17;
+    }
+    if ((gNdsFighterNaturalCombatVictimKnockbackMilli > 0u) &&
+        (gNdsFighterNaturalCombatVictimRecoverWaitFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_SETTLE_FRAMES_REQUIRED))
+    {
+        mask |= 1u << 18;
+    }
+    if ((gNdsFighterNaturalCombatGuardOnFrames > 0u) &&
+        (gNdsFighterNaturalCombatGuardFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_GUARD_FRAMES_REQUIRED) &&
+        (gNdsFighterNaturalCombatGuardOffFrames > 0u) &&
+        (sNdsNaturalCombatPhase == nNDSNaturalCombatPhaseDone) &&
+        (gNdsFighterNaturalCombatStallCount == 0u))
+    {
+        mask |= 1u << 19;
+    }
 
     gNdsFighterNaturalMotionGObjCountAfter = (u32)gcGetGObjsActiveNum();
     gNdsFighterNaturalMotionGObjDelta =
@@ -9315,7 +9899,7 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
          gNdsFighterNaturalMotionGObjCountAfter);
 
     gNdsFighterNaturalMotionMask = mask;
-    if ((mask & 0x3ffu) == 0x3ffu)
+    if ((mask & 0xfffffu) == 0xfffffu)
     {
         gNdsFighterNaturalMotionResult =
             NDS_FIGHTER_NATURAL_MOTION_PASS;

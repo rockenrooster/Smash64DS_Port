@@ -49,6 +49,24 @@ static void ndsFTMainApplyCommonStatusReset(FTStruct *fp, u32 flags)
     fp->damage_knockback_stack = 0.0F;
 }
 
+static sb32 ndsFTMainSetStatusNaturalCombatCovered(s32 status_id)
+{
+    return ((status_id == nFTCommonStatusWait) ||
+            ((status_id >= nFTCommonStatusWalkSlow) &&
+             (status_id <= nFTCommonStatusWalkFast)) ||
+            (status_id == nFTCommonStatusDash) ||
+            (status_id == nFTCommonStatusRun) ||
+            (status_id == nFTCommonStatusRunBrake) ||
+            (status_id == nFTCommonStatusTurn) ||
+            (status_id == nFTCommonStatusTurnRun) ||
+            (status_id == nFTCommonStatusAttack11) ||
+            ((status_id >= nFTCommonStatusDamageStart) &&
+             (status_id <= nFTCommonStatusDamageEnd)) ||
+            (status_id == nFTCommonStatusGuardOn) ||
+            (status_id == nFTCommonStatusGuard) ||
+            (status_id == nFTCommonStatusGuardOff)) ? TRUE : FALSE;
+}
+
 static sb32 ndsFTMainSetStatusCliffLive(GObj *fighter_gobj, s32 status_id,
                                         f32 frame_begin, f32 anim_speed,
                                         u32 flags)
@@ -58,6 +76,10 @@ static sb32 ndsFTMainSetStatusCliffLive(GObj *fighter_gobj, s32 status_id,
 
     if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() == FALSE) ||
         (sNdsStageMPCliffLiveLoopSetStatusActive == FALSE))
+    {
+        return FALSE;
+    }
+    if (ndsFTMainSetStatusNaturalCombatCovered(status_id) != FALSE)
     {
         return FALSE;
     }
@@ -545,6 +567,7 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
     }
 
     if ((status_id != nFTCommonStatusWait) &&
+        (ndsFTMainSetStatusNaturalCombatCovered(status_id) == FALSE) &&
         (ndsFTMainSetStatusStageCompatActive() != FALSE))
     {
         sNdsFTMainSetStatusCompatReplayActive = TRUE;

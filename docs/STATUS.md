@@ -31,20 +31,24 @@ Current pair:
 ```
 
 Modes `161/162` are still the Boundary/Latest pair, but the default-manager
-path now uses them as the natural fighter-motion gate. They keep the
+path now uses them as the natural fighter-combat gate. They keep the
 Pupupu/Dream Land Mario/Fox battle root stable, create Mario/Fox through the
-original manager, and prove 300+ Wait frames plus one input-driven Wait -> Walk
-transition through imported `ftanim.c`/`ftkey.c` runtime.
+original manager, and drive Wait -> Walk -> Dash -> Run -> RunBrake -> Turn,
+Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
+GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
+`ftmain.c`, and `gmcollision.c`.
 
 The current public summary is:
 
 ```text
-ftmanager natural-motion: wait=300/300, anim=299/299,
-walk=8/8, updates=308, mask=0x3ff
+ftmanager natural-combat: wait=357/380, walk=8/8,
+dash=13/11, run=8/10, attack=22, hitbox=7,
+damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff
 ```
 
-The older gcRunAll, gcDrawAll/stage/MP, dash, and selected Fox Jab2
-live-hit/status marker stacks are now documented as coverage-reduced follow-up work in
+Modes `39/40`, `53/54`, and `161/162` now share this restored natural-combat
+coverage. Older gcDrawAll/stage/MP marker stacks and the selected Fox Jab2
+synthetic live-hit family remain documented as follow-up work in
 `docs/KNOWN_ISSUES.md`.
 
 ## Latest Proof
@@ -73,13 +77,12 @@ the motion-stale evidence. Details are in `docs/FTSTRUCT_PARITY.md` and
 Runtime slice 2 graduated the manager/status/animation path. Default builds now
 import `ft/ftmanager.c`, the original common/Mario/Fox status descriptor
 tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. Mario/Fox are created
-through original manager descriptors and status-buffer payload loading, and the
-natural-motion proof advances Wait animation for 300+ frames with valid joints
-before driving Wait -> Walk through the same imported runtime. The refreshed
-Regression prebuild plus all four sharded `-NoBuild` Regression runs passed on
-this default path. The remaining stage compat-replay/cliffmotion seams in
-`ftMainSetStatus` are deliberately kept as documented follow-up because
-removing them still needs status-by-status proofs.
+through original manager descriptors and status-buffer payload loading. The
+natural-combat proof now rebuilds movement, attack, live-hit, damage/recover,
+and guard coverage on that runtime for modes `39/40`, `53/54`, and `161/162`.
+The remaining stage compat-replay/cliffmotion seams in `ftMainSetStatus` are
+scoped away from those proven statuses but still documented as follow-up for
+older stage/cliff proofs.
 
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 The current Pupupu stage-inclusive hardware gate proves matrix, material,
@@ -95,16 +98,17 @@ Latest captures remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity
 still needs broader source-scene coverage and renderer cutover work. Default
 builds still use the software preview.
 
-Latest gameplay proof is now original-manager Mario/Fox creation plus imported
-animation/key runtime for Wait -> Walk. The TaruCannon status `61`
-setup/physics tick remains preserved as older regression coverage.
+Latest gameplay proof is now original-manager Mario/Fox combat flow through
+natural input: Wait -> movement chain, Fox Attack11, live hitbox search,
+Mario damage/recover, and guard. The TaruCannon status `61` setup/physics tick
+remains preserved as older regression coverage.
 
 ## Current Blocker
 
 The active boundary is still bounded proof scaffolding, not continuous gameplay.
-The next useful gameplay work is to rebuild the reduced gcDrawAll/stage/MP,
-dash, and live-hit proof coverage on top of the natural original-manager runtime, then move toward
-`battle_playable` camera, HUD, match-flow, and renderer cutover work.
+The next useful gameplay work is to migrate the remaining older gcDrawAll/stage/
+MP marker families and selected Fox Jab2 modes `159/160` onto natural runtime,
+then move toward `battle_playable` camera, HUD, match-flow, and renderer cutover.
 
 - renderer follow-up: broaden source-scene coverage, then plan renderer cutover
   work;

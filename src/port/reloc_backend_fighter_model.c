@@ -879,7 +879,7 @@ static sb32 ndsFighterMarioFoxWalkLoopProofEnabled(void)
 
 static sb32 ndsFighterMarioFoxDashRunProofEnabled(void)
 {
-#if NDS_MARIOFOX_DASH_RUN_HARNESS
+#if NDS_MARIOFOX_DASH_RUN_HARNESS && !NDS_IMPORT_BATTLESHIP_FTMANAGER
     return TRUE;
 #else
     return FALSE;

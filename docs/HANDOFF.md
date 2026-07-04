@@ -25,13 +25,16 @@ full marker strings, and `docs/PORTING.md` for history.
 ## Current Boundary
 
 Modes `161/162` are the active Boundary/Latest pair. In the default
-original-manager build they now prove natural Mario/Fox Wait animation plus one
-input-driven Wait -> Walk transition through imported `ftanim.c`/`ftkey.c`, on
-the Pupupu Mario/Fox battle root. The current short marker summary is:
+original-manager build they now prove natural Mario/Fox combat on the Pupupu
+Mario/Fox battle root: Wait -> Walk -> Dash -> Run -> RunBrake -> Turn,
+Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
+GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
+`ftmain.c`, and `gmcollision.c`. The current short marker summary is:
 
 ```text
-ftmanager natural-motion: wait=300/300, anim=299/299,
-walk=8/8, updates=308, mask=0x3ff
+ftmanager natural-combat: wait=357/380, walk=8/8,
+dash=13/11, run=8/10, attack=22, hitbox=7,
+damage=0->4 status=40, guard=3/10/11, updates=471, mask=0xfffff
 ```
 
 Latest verified source-backed detail: TaruCannon kind `3` now routes through
@@ -72,12 +75,12 @@ updates cannot erase motion-stale proof evidence.
 
 Runtime slice 2 graduated the original manager/status/animation path. Default
 builds import `ft/ftmanager.c`, the full original common/Mario/Fox status
-descriptor tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. The current
-natural-motion gate proves Mario/Fox manager creation, valid figatree-backed
-joints, 300+ Wait animation frames, and Wait -> Walk on input. A refreshed
-Regression prebuild plus all four sharded `-NoBuild` Regression runs passed.
-The old gcRunAll/gcDrawAll/stage/MP/dash/live-hit synthetic marker stacks are
-now coverage-reduced follow-up work; do not resurrect their motion-extract seam.
+descriptor tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. Modes `39/40`,
+`53/54`, and `161/162` now rebuild movement, attack, live-hit,
+damage/recover, and guard coverage on that natural runtime. The old
+gcDrawAll/stage/MP synthetic marker stacks and selected Fox Jab2 modes
+`159/160` still need natural-runtime migration; do not resurrect their
+motion-extract seam.
 
 ## Process Change
 
@@ -90,9 +93,10 @@ the work reaches a scene-level boundary such as `battle_playable` or
 
 ## Recommended Next Work
 
-1. Runtime follow-up: rebuild gcDrawAll/stage/MP/dash/live-hit proof coverage
-   on top of the natural original-manager runtime, then remove the remaining
-   `ftMainSetStatus` compat-replay/cliffmotion seams status-by-status.
+1. Runtime follow-up: migrate the remaining gcDrawAll/stage/MP synthetic marker
+   families and selected Fox Jab2 modes `159/160` onto the natural original-
+   manager runtime, then remove the remaining `ftMainSetStatus` compat-replay/
+   cliffmotion seams status-by-status.
 2. Renderer follow-up: broaden source-scene coverage, then plan renderer
    cutover.
 3. Camera/HUD/match-flow work for the next `battle_playable` milestone.

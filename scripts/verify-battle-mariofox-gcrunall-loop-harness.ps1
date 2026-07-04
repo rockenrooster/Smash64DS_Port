@@ -76,7 +76,9 @@ try {
         -WindowStyle Hidden `
         -PassThru
     Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort | Out-Null
-    Start-Sleep -Seconds ([Math]::Max($DelaySeconds, 1))
+    # The natural combat chain (wait/walk/dash-run/brake/turn/approach/attack/
+    # damage/guard) runs ~1000+ bounded updates before the markers settle.
+    Start-Sleep -Seconds ([Math]::Max($DelaySeconds, 15))
     $gdbCommands = @(
         'set pagination off',
         'set confirm off',
@@ -94,6 +96,11 @@ try {
         'printf "NAT_FIG=%u,%u,%u,%u\n", gNdsFighterNaturalMotionFigatreeAttachCount, gNdsFighterNaturalMotionFigatreeNullCount, gNdsFighterNaturalMotionFigatreeTableInvalidCount, gNdsFighterNaturalMotionFigatreeAnimInvalidCount',
         'printf "NAT_WAIT=%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x\n", gNdsFighterNaturalMotionP0WaitFrameCount, gNdsFighterNaturalMotionP1WaitFrameCount, gNdsFighterNaturalMotionP0AnimAdvanceCount, gNdsFighterNaturalMotionP1AnimAdvanceCount, gNdsFighterNaturalMotionP0ValidJointCount, gNdsFighterNaturalMotionP1ValidJointCount, gNdsFighterNaturalMotionP0AnimStartBits, gNdsFighterNaturalMotionP1AnimStartBits, gNdsFighterNaturalMotionP0AnimFinalBits, gNdsFighterNaturalMotionP1AnimFinalBits',
         'printf "NAT_WALK=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterNaturalMotionWalkInputFrame, gNdsFighterNaturalMotionP0WalkFrameCount, gNdsFighterNaturalMotionP1WalkFrameCount, gNdsFighterNaturalMotionP0StatusStart, gNdsFighterNaturalMotionP1StatusStart, gNdsFighterNaturalMotionP0StatusFinal, gNdsFighterNaturalMotionP1StatusFinal, gNdsFighterNaturalMotionP0WalkStatus, gNdsFighterNaturalMotionP1WalkStatus, gNdsFighterNaturalMotionP0WalkMotion, gNdsFighterNaturalMotionP1WalkMotion',
+        'printf "NAT_CHAIN=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterNaturalCombatPhase, gNdsFighterNaturalCombatPhaseFrames, gNdsFighterNaturalCombatStallCount, gNdsFighterNaturalCombatP0DashFrames, gNdsFighterNaturalCombatP1DashFrames, gNdsFighterNaturalCombatP0RunFrames, gNdsFighterNaturalCombatP1RunFrames, gNdsFighterNaturalCombatP0RunBrakeFrames, gNdsFighterNaturalCombatP1RunBrakeFrames, gNdsFighterNaturalCombatP0TurnFrames, gNdsFighterNaturalCombatP1TurnFrames, gNdsFighterNaturalCombatApproachDXMilli',
+        'printf "NAT_ATTACK=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterNaturalCombatAttackerSlot, gNdsFighterNaturalCombatVictimSlot, gNdsFighterNaturalCombatAttackStatusFrames, gNdsFighterNaturalCombatAttackMotionFinal, gNdsFighterNaturalCombatHitboxActiveFrames, gNdsFighterNaturalCombatAttackRetryCount, gNdsFighterNaturalCombatVictimDamageStatus, gNdsFighterNaturalCombatVictimDamageFrames, gNdsFighterNaturalCombatVictimStartPercent, gNdsFighterNaturalCombatVictimFinalPercent, gNdsFighterNaturalCombatVictimKnockbackMilli, gNdsFighterNaturalCombatVictimRecoverWaitFrames',
+        'printf "NAT_HITBOX=%u,%u,%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%#x\n", gNdsFighterDashRunAttackEventLastPlayer, gNdsFighterDashRunAttackEventLastStatus, gNdsFighterDashRunAttackEventLastState, gNdsFighterDashRunAttackEventLastAttackID, gNdsFighterDashRunAttackEventLastGroupID, gNdsFighterDashRunAttackEventLastDamage, gNdsFighterDashRunAttackEventLastSize, gNdsFighterDashRunAttackEventLastOffsetX, gNdsFighterDashRunAttackEventLastOffsetY, gNdsFighterDashRunAttackEventLastOffsetZ, gNdsFighterDashRunAttackEventLastAngle, gNdsFighterDashRunAttackEventLastKBG, gNdsFighterDashRunAttackEventLastKBW, gNdsFighterDashRunAttackEventLastBKB, gNdsFighterDashRunAttackEventLastFlags',
+        'printf "NAT_HITLAG=%u,%u\n", gNdsFighterNaturalCombatP0HitlagFrames, gNdsFighterNaturalCombatP1HitlagFrames',
+        'printf "NAT_GUARD=%u,%u,%u\n", gNdsFighterNaturalCombatGuardOnFrames, gNdsFighterNaturalCombatGuardFrames, gNdsFighterNaturalCombatGuardOffFrames',
         'printf "GCRUNALL_RUN=%u,%u,%u,%u,%u,%u\n", gNdsFighterGCRunAllLoopOldProcessPauseCount, gNdsFighterGCRunAllLoopNonTargetGObjVisitCount, gNdsFighterGCRunAllLoopNonTargetProcessPauseCount, gNdsFighterGCRunAllLoopTargetProcessPreserveCount, gNdsFighterGCRunAllLoopGObjCountBefore, gNdsFighterGCRunAllLoopGObjCountAfter',
         'printf "GCRUNALL_PROCESS=%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterGCRunAllLoopP0ProcessAttachCount, gNdsFighterGCRunAllLoopP1ProcessAttachCount, gNdsFighterGCRunAllLoopP0GObjProcessRunCount, gNdsFighterGCRunAllLoopP1GObjProcessRunCount, gNdsFighterGCRunAllLoopP0ProcCallbackCount, gNdsFighterGCRunAllLoopP1ProcCallbackCount, gNdsFighterGCRunAllLoopProcessAttachEscapeCount',
         'printf "GCRUNALL_INPUT=%u,%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%u,%u\n", gNdsFighterGCRunAllLoopP0PlaybackApplyCount, gNdsFighterGCRunAllLoopP1PlaybackApplyCount, gNdsFighterGCRunAllLoopP0ControllerToFTInputCount, gNdsFighterGCRunAllLoopP1ControllerToFTInputCount, gNdsFighterGCRunAllLoopP0DirectFTInputWriteCount, gNdsFighterGCRunAllLoopP1DirectFTInputWriteCount, gNdsFighterGCRunAllLoopP0DashTapEligibleCount, gNdsFighterGCRunAllLoopP1DashTapEligibleCount, gNdsFighterGCRunAllLoopP0ButtonTapMask, gNdsFighterGCRunAllLoopP1ButtonTapMask, gNdsFighterGCRunAllLoopP0ButtonHoldMask, gNdsFighterGCRunAllLoopP1ButtonHoldMask, gNdsFighterGCRunAllLoopP0JumpButtonTapCount, gNdsFighterGCRunAllLoopP1JumpButtonTapCount',
@@ -123,6 +130,10 @@ try {
     $naturalFig = [regex]::Match($gdbStdout, 'NAT_FIG=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $naturalWait = [regex]::Match($gdbStdout, 'NAT_WAIT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $naturalWalk = [regex]::Match($gdbStdout, 'NAT_WALK=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $naturalChain = [regex]::Match($gdbStdout, 'NAT_CHAIN=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $naturalAttack = [regex]::Match($gdbStdout, 'NAT_ATTACK=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $naturalHitlag = [regex]::Match($gdbStdout, 'NAT_HITLAG=([0-9]+),([0-9]+)')
+    $naturalGuard = [regex]::Match($gdbStdout, 'NAT_GUARD=([0-9]+),([0-9]+),([0-9]+)')
     $run = [regex]::Match($gdbStdout, 'GCRUNALL_RUN=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $process = [regex]::Match($gdbStdout, 'GCRUNALL_PROCESS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $input = [regex]::Match($gdbStdout, 'GCRUNALL_INPUT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
@@ -148,12 +159,21 @@ try {
         $nfig = Get-Ints $naturalFig
         $nw = Get-Ints $naturalWait
         $nwalk = Get-Ints $naturalWalk
-        Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and (($nat[2] -band 0x3ff) -eq 0x3ff) -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Natural-motion manager runtime proof failed.' $gdbStdout
+        $nc = Get-Ints $naturalChain
+        $na = Get-Ints $naturalAttack
+        $nh = Get-Ints $naturalHitlag
+        $ng = Get-Ints $naturalGuard
+        Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and (($nat[2] -band 0xfffff) -eq 0xfffff) -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Natural-motion manager runtime proof failed.' $gdbStdout
         Assert-Condition ($naturalFig.Success -and $nfig[0] -gt 0 -and $nfig[2] -eq 0 -and $nfig[3] -eq 0) 'Natural-motion figatree attach proof failed.' $gdbStdout
         Assert-Condition ($naturalWait.Success -and $nw[0] -ge 300 -and $nw[1] -ge 300 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -ge 300 -and $nw[5] -ge 300 -and $nw[6] -ne $nw[8] -and $nw[7] -ne $nw[9]) 'Natural-motion Wait animation proof failed.' $gdbStdout
         Assert-Condition ($naturalWalk.Success -and $nwalk[0] -gt 0 -and $nwalk[1] -ge 8 -and $nwalk[2] -ge 8 -and $nwalk[7] -gt 0 -and $nwalk[8] -gt 0 -and $nwalk[9] -gt 0 -and $nwalk[10] -gt 0) 'Natural-motion Walk transition proof failed.' $gdbStdout
+        # Phase 14 == nNDSNaturalCombatPhaseDone; stall counter must stay zero.
+        Assert-Condition ($naturalChain.Success -and $nc[0] -eq 14 -and $nc[2] -eq 0 -and $nc[3] -ge 2 -and $nc[4] -ge 2 -and $nc[5] -ge 8 -and $nc[6] -ge 8 -and $nc[7] -ge 2 -and $nc[8] -ge 2 -and $nc[9] -ge 1 -and $nc[10] -ge 1) 'Natural combat movement chain (dash/run/brake/turn) proof failed.' $gdbStdout
+        Assert-Condition ($naturalAttack.Success -and $na[2] -gt 0 -and $na[4] -gt 0 -and $na[6] -gt 0 -and $na[7] -gt 0 -and $na[9] -gt $na[8] -and $na[10] -gt 0 -and $na[11] -gt 0) 'Natural attack->hit->damage lifecycle proof failed.' $gdbStdout
+        Assert-Condition ($naturalHitlag.Success -and $nh[0] -gt 0 -and $nh[1] -gt 0) 'Natural hitlag proof failed on attacker/victim.' $gdbStdout
+        Assert-Condition ($naturalGuard.Success -and $ng[0] -gt 0 -and $ng[1] -ge 10 -and $ng[2] -gt 0) 'Natural guard on/hold/off proof failed.' $gdbStdout
         Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
-        Write-Output ("$Label ftmanager natural-motion harness passed: wait={0}/{1} anim={2}/{3} walk={4}/{5} updates={6} mask=0x{7:x}" -f $nw[0], $nw[1], $nw[2], $nw[3], $nwalk[1], $nwalk[2], $nat[4], $nat[2])
+        Write-Output ("$Label ftmanager natural-combat harness passed: wait={0}/{1} walk={2}/{3} dash={4}/{5} run={6}/{7} attack={8} hitbox={9} dmg={10}->{11} status={12} knock={13} guard={14}/{15}/{16} retries={17} updates={18} mask=0x{19:x}" -f $nw[0], $nw[1], $nwalk[1], $nwalk[2], $nc[3], $nc[4], $nc[5], $nc[6], $na[2], $na[4], $na[8], $na[9], $na[6], $na[10], $ng[0], $ng[1], $ng[2], $na[5], $nat[4], $nat[2])
         return
     }
     $prv = Get-Ints $prev

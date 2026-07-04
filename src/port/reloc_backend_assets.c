@@ -87,11 +87,22 @@
 #define NDS_RELOC_ASSET_MARIO_ANIM_WALK2 0x1f5u
 #define NDS_RELOC_ASSET_MARIO_ANIM_WALK3 0x1f6u
 #define NDS_RELOC_ASSET_MARIO_ANIM_WALK_END 0x1f7u
+#define NDS_RELOC_ASSET_MARIO_ANIM_DASH 0x1f8u
+#define NDS_RELOC_ASSET_MARIO_ANIM_TURN_RUN 0x1fcu
+#define NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_DROP 0x207u
+#define NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST 0x20bu
+#define NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_LAST 0x21cu
+#define NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON 0x22du
+#define NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_OFF 0x22eu
+#define NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE 0x280u
 #define NDS_RELOC_ASSET_FOX_ANIM_EGGLAY 0x282u
 #define NDS_RELOC_ASSET_FOX_ANIM_WALK1 0x283u
 #define NDS_RELOC_ASSET_FOX_ANIM_WALK2 0x284u
 #define NDS_RELOC_ASSET_FOX_ANIM_WALK3 0x285u
 #define NDS_RELOC_ASSET_FOX_ANIM_WALK_END 0x286u
+#define NDS_RELOC_ASSET_FOX_ANIM_DASH 0x287u
+#define NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN 0x28bu
+#define NDS_RELOC_ASSET_FOX_ANIM_JAB1 0x2efu
 
 #define NDS_FIGHTER_MARIOFOX_FILE_MASK 0x7fffu
 #define NDS_FIGHTER_MARIOFOX_SETUP_FILES (1u << 0)
@@ -1133,6 +1144,22 @@ static void ndsRelocWriteNativePointer(void *addr, void *target)
     ndsRelocWriteNative32(addr, (u32)(uintptr_t)target);
 }
 
+static s32 ndsRelocIsMarioFoxNaturalCombatAnimID(u32 asset_id)
+{
+    return (((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_WAIT) &&
+             (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_TURN_RUN)) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_DROP) ||
+            ((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST) &&
+             (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_LAST)) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_OFF) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE) ||
+            ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
+             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN)) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_JAB1)) ? TRUE :
+                                                           FALSE;
+}
+
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
@@ -1226,11 +1253,44 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llFTMarioAnimWalk2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK2;
     if (token == ndsRelocFileID(&llFTMarioAnimWalk3FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK3;
     if (token == ndsRelocFileID(&llFTMarioAnimWalkEndFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK_END;
+    if (token == ndsRelocFileID(&llFTMarioAnimDashFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DASH;
+    if (token == ndsRelocFileID(&llFTMarioAnimRunFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DASH + 1u;
+    if (token == ndsRelocFileID(&llFTMarioAnimRunBrakeFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DASH + 2u;
+    if (token == ndsRelocFileID(&llFTMarioAnimTurnFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DASH + 3u;
+    if (token == ndsRelocFileID(&llFTMarioAnimTurnRunFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_TURN_RUN;
+    if (token == ndsRelocFileID(&llFTMarioAnimShieldDropFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_DROP;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamaged1FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamaged2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 1u;
+    if (token == ndsRelocFileID(&llFTMarioAnimFalconDivePulledFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 2u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamageX1FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 3u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamageX2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 4u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamageX3FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 5u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamaged3FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 6u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamaged4FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 7u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamaged5FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 8u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamaged6FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 9u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamageAirFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 10u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamaged7FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 11u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamageFlyX1FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 12u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamageFlyX2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 13u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamage2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 14u;
+    if (token == ndsRelocFileID(&llFTMarioAnimShieldBreakFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 15u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamageFlyTopFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 16u;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamagedFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_LAST;
+    if (token == ndsRelocFileID(&llFTMarioAnimShieldOnFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON;
+    if (token == ndsRelocFileID(&llFTMarioAnimShieldOffFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_OFF;
+    if (token == ndsRelocFileID(&llFTMarioAnimDamageFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE;
     if (token == ndsRelocFileID(&llFTFoxAnimEggLayFileID)) return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY;
     if (token == ndsRelocFileID(&llFTFoxAnimWalk1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK1;
     if (token == ndsRelocFileID(&llFTFoxAnimWalk2FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK2;
     if (token == ndsRelocFileID(&llFTFoxAnimWalk3FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK3;
     if (token == ndsRelocFileID(&llFTFoxAnimWalkEndFileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK_END;
+    if (token == ndsRelocFileID(&llFTFoxAnimDashFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH;
+    if (token == ndsRelocFileID(&llFTFoxAnimRunFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 1u;
+    if (token == ndsRelocFileID(&llFTFoxAnimRunBrakeFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 2u;
+    if (token == ndsRelocFileID(&llFTFoxAnimTurnFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 3u;
+    if (token == ndsRelocFileID(&llFTFoxAnimTurnRunFileID)) return NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN;
+    if (token == ndsRelocFileID(&llFTFoxAnimJab1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_JAB1;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WAIT) return NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK1) return NDS_RELOC_ASSET_MARIO_ANIM_WALK1;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK2) return NDS_RELOC_ASSET_MARIO_ANIM_WALK2;
@@ -1241,6 +1301,7 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK2) return NDS_RELOC_ASSET_FOX_ANIM_WALK2;
     if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK3) return NDS_RELOC_ASSET_FOX_ANIM_WALK3;
     if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK_END) return NDS_RELOC_ASSET_FOX_ANIM_WALK_END;
+    if (ndsRelocIsMarioFoxNaturalCombatAnimID(token) != FALSE) return token;
     return NDS_RELOC_ASSET_INVALID;
 }
 
@@ -1693,17 +1754,7 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
 static s32 ndsRelocIsFighterAObj16Asset(u32 asset_id)
 {
-    return ((asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WAIT) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WALK1) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WALK2) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WALK3) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_WALK_END) ||
-            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) ||
-            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_WALK1) ||
-            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_WALK2) ||
-            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_WALK3) ||
-            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_WALK_END)) ? TRUE :
-                                                               FALSE;
+    return ndsRelocIsMarioFoxNaturalCombatAnimID(asset_id);
 }
 
 static u16 ndsRelocReadNative16(const void *addr)

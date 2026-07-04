@@ -16787,3 +16787,47 @@ Still deferred:
   `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.
 - Default gates stayed green with `.\scripts\verify-dev-fast.ps1 -Build
   -DelaySeconds 3` and `.\scripts\verify-boundary.ps1 -DelaySeconds 3`.
+
+## 2026-07-04 - Natural Manager Combat Proof Rebuild
+
+- Rebuilt the reduced default-manager combat coverage without resurrecting
+  synthetic fighter execution or motion-extract seeding. Modes `39/40`,
+  `53/54`, and Boundary/Latest modes `161/162` now drive controller/key input
+  through manager-created Mario/Fox and original status tables: Wait -> Walk ->
+  Dash -> Run -> RunBrake -> Turn, Fox Attack11, imported motion-command
+  hitbox spawn, imported `ftmain.c`/`gmcollision.c` live hit search, Mario
+  common damage/recover, and GuardOn -> Guard -> GuardOff.
+- Source basis: `ftkey.c:10-48` drives scripted button/stick inputs into
+  computer input, `ftmain.c:1248-1295` converts controller/CPU inputs into tap
+  and hold state, `ftcommonwalk.c:106-143`, `ftcommondash.c:112-138`,
+  `ftcommonrun.c:15-49`, `ftcommonrunbrake.c:31-61`, and
+  `ftcommonturnrun.c:36-53` select the movement chain,
+  `ftcommonattack1.c:127-136` installs Attack11, `ftcommonguard1.c:415-452`
+  and `ftcommonguard2.c:78-105` install guard statuses, and
+  `ftcommondamage.c:101-124,662-840` covers damage update/status follow-through.
+- [source-corrected] Fixed the local common-knockback shim to use BattleShip's
+  formula and handicap table (`ftparam.c:1451-1476`,
+  `ftcommondata.c:4-78`, `ftdef.h:5`), fixed `FTAnimDesc` bitfield ordering
+  against the original animation flags (`ftdef.h:28-36`,
+  `fttypes.h:54-62`), and changed local `lbCommonInitDObj` to allocate the
+  transform XObjs the hidden-part path expects (`lbcommon.c:894-910`,
+  `ftmain.c:4198`, `203_MarioMain.c:77-81`, `209_FoxMain.c:85-89`).
+- [source-corrected] The natural-combat verifier expectation is now
+  `wait=357/380 walk=8/8 dash=13/11 run=8/10 attack=22 hitbox=7
+  dmg=0->4 status=40 guard=3/10/11 updates=471 mask=0xfffff`. Direct/menu
+  `39/40` and `53/54` report `knock=11124`; Boundary/Latest `161/162` report
+  `knock=11924`. These values come from the live imported path above, not from
+  relaxed masks.
+- [coverage-reduced] Older selected Fox Jab2 modes `159/160`, modes `57/58`,
+  and broader gcDrawAll/stage/MP aggregate marker stacks still need the same
+  natural-runtime migration. The legacy dash-run attack-word decoder remains in
+  place because those Regression modes still consume it; it is not used by the
+  rebuilt natural-combat proof.
+- Scoped the imported `ftMainSetStatus` compat-replay away from statuses now
+  proven natural: Wait, Walk, Dash, Run, RunBrake, Turn/TurnRun, Attack11,
+  common damage, GuardOn, Guard, and GuardOff. The cliffmotion restore hook and
+  older stage/cliff compat hooks remain documented follow-up work.
+- Targeted evidence before the broad gates: direct and menu dash-run, direct
+  and menu gcRunAll, and
+  `.\scripts\verify-stage-mplivehit-continuous-runtime.ps1 -DelaySeconds 15`
+  all passed with the natural-combat marker.

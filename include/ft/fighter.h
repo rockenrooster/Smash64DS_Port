@@ -1598,6 +1598,16 @@ typedef enum FTMotionEvent {
 #define FTANIM_FLAG_ANIMLOCKS 0x00000001u
 #define FTANIM_FLAG_NONE 0x00000000u
 
+/*
+ * BattleShip animation and motion payloads are stored with the first declared
+ * bitfield in the high bits, as encoded by the original ft* macros.
+ */
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define NDS_FTMOTION_BIGFIELD_ORDER 0
+#else
+#define NDS_FTMOTION_BIGFIELD_ORDER 1
+#endif
+
 #define ftMotionCommandEnd() GC_FIELDSET(nFTMotionEventEnd, 26, 6)
 #define ftMotionCommandWait(frames) \
     (GC_FIELDSET(nFTMotionEventSyncWait, 26, 6) | GC_FIELDSET(frames, 0, 26))
@@ -1637,6 +1647,7 @@ typedef struct FTPhysics {
 typedef union FTAnimDesc {
     u32 word;
     struct {
+#if NDS_FTMOTION_BIGFIELD_ORDER
         ub32 is_use_xrotn_joint : 1;
         ub32 is_use_transn_joint : 1;
         ub32 is_use_yrotn_joint : 1;
@@ -1646,6 +1657,17 @@ typedef union FTAnimDesc {
         ub32 is_have_translate_scale : 1;
         ub32 is_use_shieldpose : 1;
         ub32 is_use_animlocks : 1;
+#else
+        ub32 is_use_animlocks : 1;
+        ub32 is_use_shieldpose : 1;
+        ub32 is_have_translate_scale : 1;
+        ub32 is_anim_joint : 1;
+        ub32 is_use_submotion_script : 1;
+        ub32 is_enabled_joints : 24;
+        ub32 is_use_yrotn_joint : 1;
+        ub32 is_use_transn_joint : 1;
+        ub32 is_use_xrotn_joint : 1;
+#endif
     } flags;
 } FTAnimDesc;
 
@@ -1769,17 +1791,28 @@ NDS_FTDATA_ASSERT_OFF(file_anim_size, NDS_FTDATA_OFF_FILE_ANIM_SIZE);
 #undef NDS_FTDATA_ASSERT_OFF
 
 typedef struct FTMotionEventDefault {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 value : 26;
+#else
+    u32 value : 26;
+    u32 opcode : 6;
+#endif
 } FTMotionEventDefault;
 
 typedef struct FTMotionEventDouble {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 pad1 : 26;
+#else
+    u32 pad1 : 26;
+    u32 opcode : 6;
+#endif
     u32 pad2 : 32;
 } FTMotionEventDouble;
 
 typedef struct FTMotionEventMakeAttack1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 attack_id : 3;
     u32 group_id : 3;
@@ -1787,30 +1820,64 @@ typedef struct FTMotionEventMakeAttack1 {
     u32 damage : 8;
     ub32 can_rebound : 1;
     u32 element : 4;
+#else
+    u32 element : 4;
+    ub32 can_rebound : 1;
+    u32 damage : 8;
+    s32 joint_id : 7;
+    u32 group_id : 3;
+    u32 attack_id : 3;
+    u32 opcode : 6;
+#endif
 } FTMotionEventMakeAttack1;
 
 typedef struct FTMotionEventMakeAttack2 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 size : 16;
     s32 off_x : 16;
+#else
+    s32 off_x : 16;
+    u32 size : 16;
+#endif
 } FTMotionEventMakeAttack2;
 
 typedef struct FTMotionEventMakeAttack3 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 off_y : 16;
     s32 off_z : 16;
+#else
+    s32 off_z : 16;
+    s32 off_y : 16;
+#endif
 } FTMotionEventMakeAttack3;
 
 typedef struct FTMotionEventMakeAttack4 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 angle : 10;
     u32 knockback_scale : 10;
     u32 knockback_weight : 10;
     u32 is_hit_ground_air : 2;
+#else
+    u32 is_hit_ground_air : 2;
+    u32 knockback_weight : 10;
+    u32 knockback_scale : 10;
+    s32 angle : 10;
+#endif
 } FTMotionEventMakeAttack4;
 
 typedef struct FTMotionEventMakeAttack5 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 shield_damage : 8;
     u32 fgm_level : 3;
     u32 fgm_kind : 4;
     u32 knockback_base : 10;
+#else
+    u32 pad : 7;
+    u32 knockback_base : 10;
+    u32 fgm_kind : 4;
+    u32 fgm_level : 3;
+    s32 shield_damage : 8;
+#endif
 } FTMotionEventMakeAttack5;
 
 typedef struct FTMotionEventMakeAttack {
@@ -1822,14 +1889,26 @@ typedef struct FTMotionEventMakeAttack {
 } FTMotionEventMakeAttack;
 
 typedef struct FTMotionEventSetAttackOffset1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 attack_id : 3;
     s32 off_x : 16;
+#else
+    u32 pad : 7;
+    s32 off_x : 16;
+    u32 attack_id : 3;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetAttackOffset1;
 
 typedef struct FTMotionEventSetAttackOffset2 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 off_y : 16;
     s32 off_z : 16;
+#else
+    s32 off_z : 16;
+    s32 off_y : 16;
+#endif
 } FTMotionEventSetAttackOffset2;
 
 typedef struct FTMotionEventSetAttackOffset {
@@ -1838,25 +1917,51 @@ typedef struct FTMotionEventSetAttackOffset {
 } FTMotionEventSetAttackOffset;
 
 typedef struct FTMotionEventSetAttackCollDamage {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 attack_id : 3;
     u32 damage : 8;
+#else
+    u32 pad : 15;
+    u32 damage : 8;
+    u32 attack_id : 3;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetAttackCollDamage;
 
 typedef struct FTMotionEventSetAttackCollSize {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 attack_id : 3;
     u32 size : 16;
+#else
+    u32 pad : 7;
+    u32 size : 16;
+    u32 attack_id : 3;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetAttackCollSize;
 
 typedef struct FTMotionEventSetAttackCollSound {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 attack_id : 3;
     u32 fgm_level : 3;
+#else
+    u32 pad : 20;
+    u32 fgm_level : 3;
+    u32 attack_id : 3;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetAttackCollSound;
 
 typedef struct FTMotionEventSetThrow1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
+#else
+    u32 pad : 26;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetThrow1;
 
 typedef struct FTMotionEventSetThrow2 {
@@ -1869,25 +1974,47 @@ typedef struct FTMotionEventSetThrow {
 } FTMotionEventSetThrow;
 
 typedef struct FTMotionEventMakeEffect1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     s32 joint_id : 7;
     u32 effect_id : 9;
     u32 flag : 10;
+#else
+    u32 flag : 10;
+    u32 effect_id : 9;
+    s32 joint_id : 7;
+    u32 opcode : 6;
+#endif
 } FTMotionEventMakeEffect1;
 
 typedef struct FTMotionEventMakeEffect2 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 off_x : 16;
     s32 off_y : 16;
+#else
+    s32 off_y : 16;
+    s32 off_x : 16;
+#endif
 } FTMotionEventMakeEffect2;
 
 typedef struct FTMotionEventMakeEffect3 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 off_z : 16;
     s32 rng_x : 16;
+#else
+    s32 rng_x : 16;
+    s32 off_z : 16;
+#endif
 } FTMotionEventMakeEffect3;
 
 typedef struct FTMotionEventMakeEffect4 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 rng_y : 16;
     s32 rng_z : 16;
+#else
+    s32 rng_z : 16;
+    s32 rng_y : 16;
+#endif
 } FTMotionEventMakeEffect4;
 
 typedef struct FTMotionEventMakeEffect {
@@ -1898,29 +2025,56 @@ typedef struct FTMotionEventMakeEffect {
 } FTMotionEventMakeEffect;
 
 typedef struct FTMotionEventSetHitStatusPartID {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     s32 joint_id : 7;
     u32 hitstatus : 19;
+#else
+    u32 hitstatus : 19;
+    s32 joint_id : 7;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetHitStatusPartID;
 
 typedef struct FTMotionEventSetDamageCollPartID1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     s32 joint_id : 7;
+#else
+    u32 pad : 19;
+    s32 joint_id : 7;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetDamageCollPartID1;
 
 typedef struct FTMotionEventSetDamageCollPartID2 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 off_x : 16;
     s32 off_y : 16;
+#else
+    s32 off_y : 16;
+    s32 off_x : 16;
+#endif
 } FTMotionEventSetDamageCollPartID2;
 
 typedef struct FTMotionEventSetDamageCollPartID3 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 off_z : 16;
     s32 size_x : 16;
+#else
+    s32 size_x : 16;
+    s32 off_z : 16;
+#endif
 } FTMotionEventSetDamageCollPartID3;
 
 typedef struct FTMotionEventSetDamageCollPartID4 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     s32 size_y : 16;
     s32 size_z : 16;
+#else
+    s32 size_z : 16;
+    s32 size_y : 16;
+#endif
 } FTMotionEventSetDamageCollPartID4;
 
 typedef struct FTMotionEventSetDamageCollPartID {
@@ -1931,7 +2085,12 @@ typedef struct FTMotionEventSetDamageCollPartID {
 } FTMotionEventSetDamageCollPartID;
 
 typedef struct FTMotionEventSubroutine1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
+#else
+    u32 pad : 26;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSubroutine1;
 
 typedef struct FTMotionEventSubroutine2 {
@@ -1944,7 +2103,12 @@ typedef struct FTMotionEventSubroutine {
 } FTMotionEventSubroutine;
 
 typedef struct FTMotionEventSetDamageThrown1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
+#else
+    u32 pad : 26;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetDamageThrown1;
 
 typedef struct FTMotionEventSetDamageThrown2 {
@@ -1961,7 +2125,12 @@ typedef struct FTMotionEventSetDamageThrown {
 } FTMotionEventSetDamageThrown;
 
 typedef struct FTMotionEventGoto1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
+#else
+    u32 pad : 26;
+    u32 opcode : 6;
+#endif
 } FTMotionEventGoto1;
 
 typedef struct FTMotionEventGoto2 {
@@ -1974,7 +2143,12 @@ typedef struct FTMotionEventGoto {
 } FTMotionEventGoto;
 
 typedef struct FTMotionEventParallel1 {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
+#else
+    u32 pad : 26;
+    u32 opcode : 6;
+#endif
 } FTMotionEventParallel1;
 
 typedef struct FTMotionEventParallel2 {
@@ -1987,44 +2161,85 @@ typedef struct FTMotionEventParallel {
 } FTMotionEventParallel;
 
 typedef struct FTMotionEventSetModelPartID {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     s32 joint_id : 7;
     s32 modelpart_id : 19;
+#else
+    s32 modelpart_id : 19;
+    s32 joint_id : 7;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetModelPartID;
 
 typedef struct FTMotionEventSetTexturePartID {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 texturepart_id : 6;
     u32 frame : 20;
+#else
+    u32 frame : 20;
+    u32 texturepart_id : 6;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetTexturePartID;
 
 typedef struct FTMotionEventSetColAnimID {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 colanim_id : 8;
     u32 length : 18;
+#else
+    u32 length : 18;
+    u32 colanim_id : 8;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetColAnimID;
 
 typedef struct FTMotionEventSetSlopeContour {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 pad : 23;
     u32 flags : 3;
+#else
+    u32 flags : 3;
+    u32 pad : 23;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetSlopeContour;
 
 typedef struct FTMotionEventSetAfterImage {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 is_itemswing : 8;
     s32 drawstatus : 18;
+#else
+    s32 drawstatus : 18;
+    u32 is_itemswing : 8;
+    u32 opcode : 6;
+#endif
 } FTMotionEventSetAfterImage;
 
 typedef struct FTMotionEventMakeRumble {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 length : 13;
     u32 rumble_id : 13;
+#else
+    u32 rumble_id : 13;
+    u32 length : 13;
+    u32 opcode : 6;
+#endif
 } FTMotionEventMakeRumble;
 
 typedef struct FTMotionEventStopRumble {
+#if NDS_FTMOTION_BIGFIELD_ORDER
     u32 opcode : 6;
     u32 rumble_id : 26;
+#else
+    u32 rumble_id : 26;
+    u32 opcode : 6;
+#endif
 } FTMotionEventStopRumble;
 
 typedef union FTMotionVars {

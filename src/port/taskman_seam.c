@@ -426,6 +426,35 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterNaturalMotionFigatreeTableInvalidCount = 0;
     gNdsFighterNaturalMotionFigatreeAnimInvalidCount = 0;
     gNdsFighterNaturalMotionUnsafeCount = 0;
+    gNdsFighterNaturalCombatPhase = 0;
+    gNdsFighterNaturalCombatPhaseFrames = 0;
+    gNdsFighterNaturalCombatStallCount = 0;
+    gNdsFighterNaturalCombatApproachDXMilli = 0;
+    gNdsFighterNaturalCombatAttackerSlot = 0;
+    gNdsFighterNaturalCombatVictimSlot = 0;
+    gNdsFighterNaturalCombatP0DashFrames = 0;
+    gNdsFighterNaturalCombatP1DashFrames = 0;
+    gNdsFighterNaturalCombatP0RunFrames = 0;
+    gNdsFighterNaturalCombatP1RunFrames = 0;
+    gNdsFighterNaturalCombatP0RunBrakeFrames = 0;
+    gNdsFighterNaturalCombatP1RunBrakeFrames = 0;
+    gNdsFighterNaturalCombatP0TurnFrames = 0;
+    gNdsFighterNaturalCombatP1TurnFrames = 0;
+    gNdsFighterNaturalCombatP0HitlagFrames = 0;
+    gNdsFighterNaturalCombatP1HitlagFrames = 0;
+    gNdsFighterNaturalCombatAttackStatusFrames = 0;
+    gNdsFighterNaturalCombatAttackMotionFinal = 0;
+    gNdsFighterNaturalCombatHitboxActiveFrames = 0;
+    gNdsFighterNaturalCombatAttackRetryCount = 0;
+    gNdsFighterNaturalCombatVictimDamageStatus = 0;
+    gNdsFighterNaturalCombatVictimDamageFrames = 0;
+    gNdsFighterNaturalCombatVictimStartPercent = 0;
+    gNdsFighterNaturalCombatVictimFinalPercent = 0;
+    gNdsFighterNaturalCombatVictimKnockbackMilli = 0;
+    gNdsFighterNaturalCombatVictimRecoverWaitFrames = 0;
+    gNdsFighterNaturalCombatGuardOnFrames = 0;
+    gNdsFighterNaturalCombatGuardFrames = 0;
+    gNdsFighterNaturalCombatGuardOffFrames = 0;
     gNdsFighterMarioFoxModelResult = 0;
     gNdsFighterMarioFoxGObjResult = 0;
     gNdsFighterMarioFoxSetupMask = 0;
@@ -3669,7 +3698,9 @@ extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 #define NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX 200u
 #define NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX 220u
 #define NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX 240u
-#define NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX 720u
+/* The natural combat chain (wait/walk/dash-run/brake/turn/approach/attack/
+ * damage/guard) needs more scripted frames than the old wait+walk proof. */
+#define NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX 2400u
 #define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
 #define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
 #define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
