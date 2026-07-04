@@ -563,6 +563,8 @@ Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-floor-follow-lo
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-floor-follow-loop-hwtri')) 'Menu-chain stage floor-follow registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-floor-edge-loop-hwtri')) 'Stage floor-edge registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-floor-edge-loop-hwtri')) 'Menu-chain stage floor-edge registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpprocess-floor-loop-hwtri')) 'Stage MP process-floor registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpprocess-floor-loop-hwtri')) 'Menu-chain stage MP process-floor registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary direct registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary menu registry target is not hardware-renderer default.'
 $buildProfile = Get-Content (Join-Path $root 'scripts/build-verify-profile.ps1') -Raw
@@ -597,6 +599,16 @@ Assert-True ($menuStageFloorEdgeWrapper.Contains('HardwareTriangles')) 'Menu-cha
 Assert-True ($menuStageFloorEdgeWrapper.Contains('SoftwarePreview')) 'Menu-chain stage floor-edge verifier software-preview opt-out is missing.'
 Assert-True ($menuStageFloorEdgeWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage floor-edge verifier no longer defaults to hardware.'
 Assert-True ($menuStageFloorEdgeWrapper.Contains('menu-chain-mariofox-stage-floor-edge-loop-hwtri')) 'Menu-chain stage floor-edge verifier hardware target is missing.'
+$stageMPProcessFloorWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-mpprocess-floor-loop-harness.ps1') -Raw
+Assert-True ($stageMPProcessFloorWrapper.Contains('HardwareTriangles')) 'Stage MP process-floor verifier hardware switch is missing.'
+Assert-True ($stageMPProcessFloorWrapper.Contains('SoftwarePreview')) 'Stage MP process-floor verifier software-preview opt-out is missing.'
+Assert-True ($stageMPProcessFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Stage MP process-floor verifier no longer defaults to hardware.'
+Assert-True ($stageMPProcessFloorWrapper.Contains('battle-mariofox-stage-mpprocess-floor-loop-hwtri')) 'Stage MP process-floor verifier hardware target is missing.'
+$menuStageMPProcessFloorWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-mpprocess-floor-loop-harness.ps1') -Raw
+Assert-True ($menuStageMPProcessFloorWrapper.Contains('HardwareTriangles')) 'Menu-chain stage MP process-floor verifier hardware switch is missing.'
+Assert-True ($menuStageMPProcessFloorWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP process-floor verifier software-preview opt-out is missing.'
+Assert-True ($menuStageMPProcessFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP process-floor verifier no longer defaults to hardware.'
+Assert-True ($menuStageMPProcessFloorWrapper.Contains('menu-chain-mariofox-stage-mpprocess-floor-loop-hwtri')) 'Menu-chain stage MP process-floor verifier hardware target is missing.'
 $menuAllDLVerifier = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($menuAllDLVerifier.Contains('HardwareTriangles')) 'Menu-chain all-DL verifier hardware switch is missing.'
 Assert-True ($menuAllDLVerifier.Contains('SoftwarePreview')) 'Menu-chain all-DL verifier software-preview opt-out is missing.'
