@@ -16851,3 +16851,18 @@ Still deferred:
 - Static gates passed:
   `.\scripts\check-gbi-decode-fixtures.ps1` and
   `.\scripts\check-harness-registry.ps1`.
+
+## 2026-07-04 - Stage Collision Hardware Gate
+
+- Extended the existing opt-in stage `gcDrawAll` hardware replay from the
+  stage draw modes `59/60` to the adjacent stage-collision modes `61/62`
+  without adding a new harness mode. The direct and menu-chain stage-collision
+  wrappers now accept `-HardwareTriangles` and reuse the shared stage draw HW
+  assertions.
+- Verified
+  `.\scripts\verify-battle-mariofox-stage-collision-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`
+  and
+  `.\scripts\verify-menu-chain-mariofox-stage-collision-loop-harness.ps1 -HardwareTriangles -DelaySeconds 3`:
+  both preserve the natural-motion and stage-collision proofs while submitting
+  `hwsubmit=252`, `hwtri=1152`, `hwdepth=z456/proj696/decal0`, and
+  `hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`.

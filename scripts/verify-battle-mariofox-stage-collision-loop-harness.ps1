@@ -4,9 +4,12 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$HardwareTriangles
 )
 $ErrorActionPreference = 'Stop'
+$target = if ($HardwareTriangles) { 'smash64ds-battle-mariofox-stage-collision-loop-hwtri' } else { 'smash64ds-battle-mariofox-stage-collision-loop' }
+$build = if ($HardwareTriangles) { 'build-battle-mariofox-stage-collision-loop-hwtri-harness' } else { 'build-battle-mariofox-stage-collision-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcdrawall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -15,12 +18,13 @@ $ErrorActionPreference = 'Stop'
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
     -Harness 'battle_mariofox_stage_collision_loop' `
-    -Target 'smash64ds-battle-mariofox-stage-collision-loop' `
-    -Build 'build-battle-mariofox-stage-collision-loop-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 61 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
     -Label 'Battle Mario/Fox stage collision-loop' `
     -HarnessSelectMessage 'Direct stage collision-loop harness did not select VSBattle from Maps.' `
+    -HardwareTriangles:$HardwareTriangles `
     -RequireStageDraw `
     -RequireStageCollision

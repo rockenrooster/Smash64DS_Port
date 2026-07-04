@@ -524,6 +524,12 @@ Assert-True ($stageGCDrawVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1')) 'Stag
 $menuStageGCDrawWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-gcdrawall-loop-harness.ps1') -Raw
 Assert-True ($menuStageGCDrawWrapper.Contains('HardwareTriangles')) 'Menu-chain stage gcDrawAll verifier hardware switch is missing.'
 Assert-True ($menuStageGCDrawWrapper.Contains('menu-chain-mariofox-stage-gcdrawall-loop-hwtri')) 'Menu-chain stage gcDrawAll verifier hardware target is missing.'
+$stageCollisionWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-collision-loop-harness.ps1') -Raw
+Assert-True ($stageCollisionWrapper.Contains('HardwareTriangles')) 'Stage collision verifier hardware switch is missing.'
+Assert-True ($stageCollisionWrapper.Contains('battle-mariofox-stage-collision-loop-hwtri')) 'Stage collision verifier hardware target is missing.'
+$menuStageCollisionWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-collision-loop-harness.ps1') -Raw
+Assert-True ($menuStageCollisionWrapper.Contains('HardwareTriangles')) 'Menu-chain stage collision verifier hardware switch is missing.'
+Assert-True ($menuStageCollisionWrapper.Contains('menu-chain-mariofox-stage-collision-loop-hwtri')) 'Menu-chain stage collision verifier hardware target is missing.'
 $menuAllDLVerifier = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($menuAllDLVerifier.Contains('HardwareTriangles')) 'Menu-chain all-DL verifier hardware switch is missing.'
 Assert-True ($menuAllDLVerifier.Contains('FTR_DL_ALL_HWTEX')) 'Menu-chain all-DL verifier hardware texture marker is missing.'

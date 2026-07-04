@@ -130,8 +130,10 @@
   fighters by preserving source-equivalent segment `0xE` material state plus
   RSP vertex/render state across selected DObjs, attaching original
   fighter-part MObjs, and seeding missing direct-list CI TLUT state from the
-  current material palette. Remaining renderer work is broader
-  combiner/material/depth/texture source-scene coverage and cutover policy.
+  current material palette. The same opt-in stage hardware replay now also
+  covers direct and menu-chain stage-collision scenes. Remaining renderer work
+  is broader combiner/material/depth/texture source-scene coverage and cutover
+  policy.
 - Live-hit status lifecycle modes `161/162` now prove a natural original-
   manager cycle: Fox reaches Attack11 from controller A input, imported
   motion-command runtime spawns the hitbox, imported `ftmain.c`/`gmcollision.c`

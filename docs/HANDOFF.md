@@ -53,7 +53,8 @@ submits 284/298 fighter triangles. The all-DL proof carries the
 source-equivalent segment `0xE` material register, RSP vertex/render state,
 original fighter-part MObjs, and CI TLUT seeds from the current material
 palette. All-DL now reports `bind119/upload8/ready119/reject0`;
-stage-inclusive gcDrawAll reports `bind582/upload66/ready582/reject0`.
+stage-inclusive gcDrawAll and stage-collision hardware gates report
+`bind582/upload66/ready582/reject0`.
 Latest captures include
 `artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png`. Default builds still use
 the software preview.

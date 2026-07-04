@@ -93,7 +93,10 @@ selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
 texture path reports `bind119/upload8/ready119/reject0`. That proof carries
 original fighter-part MObjs, the source-equivalent segment `0xE` material
 register, RSP vertex/render state, and CI TLUT seeds from the current material
-palette. Latest captures include `artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png`.
+palette. The same opt-in stage hardware replay now passes direct and menu-chain
+stage-collision scenes with `hwsubmit=252`, `hwtri=1152`, and
+`bind582/upload66/ready582/reject0`. Latest captures include
+`artifacts\menu-chain-mariofox-dl-draw-all-hwtri.png`.
 Full visual fidelity still needs broader source-scene coverage and renderer
 cutover work. Default builds still use the software preview.
 

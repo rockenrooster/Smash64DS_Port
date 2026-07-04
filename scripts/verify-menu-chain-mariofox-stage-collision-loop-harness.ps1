@@ -4,9 +4,12 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$HardwareTriangles
 )
 $ErrorActionPreference = 'Stop'
+$target = if ($HardwareTriangles) { 'smash64ds-menu-chain-mariofox-stage-collision-loop-hwtri' } else { 'smash64ds-menu-chain-mariofox-stage-collision-loop' }
+$build = if ($HardwareTriangles) { 'build-menu-chain-mariofox-stage-collision-loop-hwtri-harness' } else { 'build-menu-chain-mariofox-stage-collision-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcdrawall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -15,12 +18,13 @@ $ErrorActionPreference = 'Stop'
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
     -Harness 'menu_chain_mariofox_stage_collision_loop' `
-    -Target 'smash64ds-menu-chain-mariofox-stage-collision-loop' `
-    -Build 'build-menu-chain-mariofox-stage-collision-loop-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 62 `
     -ExpectedHarnessSceneCurr 9 `
     -ExpectedHarnessScenePrev 1 `
     -Label 'Menu-chain Mario/Fox stage collision-loop' `
     -HarnessSelectMessage 'Menu-chain stage collision-loop harness did not select VS Mode from Title.' `
+    -HardwareTriangles:$HardwareTriangles `
     -RequireStageDraw `
     -RequireStageCollision
