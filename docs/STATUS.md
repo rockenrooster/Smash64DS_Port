@@ -87,16 +87,15 @@ older stage/cliff proofs.
 Renderer hardware work remains opt-in behind `NDS_RENDERER_HW_TRIANGLES=1`.
 The current Pupupu stage-inclusive hardware gate proves matrix, material,
 texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
-zero hardware texture rejects. The strict direct Mario/Fox all-DL hardware
-verifier now also passes on live manager-created fighters: all 14/18 selected
-DObjs are clean and the opt-in hardware path submits 284/298 fighter triangles.
-That proof now attaches original fighter-part MObjs, preserves the
-source-equivalent segment `0xE` material register plus RSP vertex/render state,
-and seeds missing direct-list CI TLUT state from the current material palette so
-the all-DL hardware texture path reports `bind119/upload8/ready119/reject0`.
-Latest captures remain in `artifacts\renderer-*-hw*.png`. Full visual fidelity
-still needs broader source-scene coverage and renderer cutover work. Default
-builds still use the software preview.
+zero hardware texture rejects. The strict direct and menu-chain Mario/Fox
+all-DL hardware verifiers now pass on live manager-created fighters: all 14/18
+selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
+texture path reports `bind119/upload8/ready119/reject0`. That proof carries
+original fighter-part MObjs, the source-equivalent segment `0xE` material
+register, RSP vertex/render state, and CI TLUT seeds from the current material
+palette. Latest captures remain in `artifacts\renderer-*-hw*.png`. Full visual
+fidelity still needs broader source-scene coverage and renderer cutover work.
+Default builds still use the software preview.
 
 Latest gameplay proof is now original-manager Mario/Fox combat flow through
 natural input: Wait -> movement chain, Fox Attack11, live hitbox search,

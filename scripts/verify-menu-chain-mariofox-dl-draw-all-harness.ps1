@@ -4,12 +4,23 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$HardwareTriangles
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$target = if ($HardwareTriangles) {
+    'smash64ds-menu-chain-mariofox-dl-draw-all-hwtri'
+} else {
+    'smash64ds-menu-chain-mariofox-dl-draw-all'
+}
+$build = if ($HardwareTriangles) {
+    'build-menu-chain-mariofox-dl-draw-all-hwtri'
+} else {
+    'build-menu-chain-mariofox-dl-draw-all-harness'
+}
 $verifierContext = Initialize-MelonDSVerifierContext `
     -Root $root `
     -MelonDS $MelonDS `
@@ -17,8 +28,8 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$rom = Join-Path $root 'smash64ds-menu-chain-mariofox-dl-draw-all.nds'
-$elf = Join-Path $root 'smash64ds-menu-chain-mariofox-dl-draw-all.elf'
+$rom = Join-Path $root "$target.nds"
+$elf = Join-Path $root "$target.elf"
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
@@ -33,7 +44,17 @@ function Assert-Condition {
 }
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-& make -C $root TARGET=smash64ds-menu-chain-mariofox-dl-draw-all BUILD=build-menu-chain-mariofox-dl-draw-all-harness NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_dl_draw_all -j16
+$makeArgs = @(
+    '-C', $root,
+    "TARGET=$target",
+    "BUILD=$build",
+    'NDS_DEV_SCENE_HARNESS=menu_chain_mariofox_dl_draw_all',
+    '-j16'
+)
+if ($HardwareTriangles) {
+    $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
+}
+& make @makeArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw 'Menu-chain Mario/Fox all-DL draw harness build did not produce the expected ROM and ELF.'
@@ -74,6 +95,9 @@ try {
         'printf "FTR_DL_ALL_STATS=%u,%u,%#x,%#x,%u,%u,%#x,%#x,%#x,%#x,%u,%u\n", gNdsFighterDLAllDrawP0FirstBlocker, gNdsFighterDLAllDrawP1FirstBlocker, gNdsFighterDLAllDrawP0BlockerMask, gNdsFighterDLAllDrawP1BlockerMask, gNdsFighterDLAllDrawP0CommandCount, gNdsFighterDLAllDrawP1CommandCount, gNdsFighterDLAllDrawP0FirstOpcode, gNdsFighterDLAllDrawP1FirstOpcode, gNdsFighterDLAllDrawP0UnsupportedOpcode, gNdsFighterDLAllDrawP1UnsupportedOpcode, gNdsFighterDLAllDrawP0UnsupportedCommandCount, gNdsFighterDLAllDrawP1UnsupportedCommandCount',
         'printf "FTR_DL_ALL_GEOM=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0VertexDecodedCount, gNdsFighterDLAllDrawP1VertexDecodedCount, gNdsFighterDLAllDrawP0TriangleCount, gNdsFighterDLAllDrawP1TriangleCount, gNdsFighterDLAllDrawP0TriangleValidCount, gNdsFighterDLAllDrawP1TriangleValidCount, gNdsFighterDLAllDrawP0TriangleDrawnCount, gNdsFighterDLAllDrawP1TriangleDrawnCount, gNdsFighterDLAllDrawP0PixelCount, gNdsFighterDLAllDrawP1PixelCount, gNdsFighterDLAllDrawTotalPixelCount',
         'printf "FTR_DL_ALL_RENDER=%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0RealTriangleDrawnCount, gNdsFighterDLAllDrawP1RealTriangleDrawnCount, gNdsFighterDLAllDrawP0MarkerTriangleDrawnCount, gNdsFighterDLAllDrawP1MarkerTriangleDrawnCount',
+        'printf "FTR_DL_ALL_HW=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0HardwareTriangleCount, gNdsFighterDLAllDrawP1HardwareTriangleCount, gNdsFighterDLAllDrawP0HardwareOracleTriangleCount, gNdsFighterDLAllDrawP1HardwareOracleTriangleCount, gNdsFighterDLAllDrawP0HardwareOracleRejectCount, gNdsFighterDLAllDrawP1HardwareOracleRejectCount, gNdsFighterDLAllDrawP0HardwareMatrixSeedCount, gNdsFighterDLAllDrawP1HardwareMatrixSeedCount',
+        'printf "FTR_DL_ALL_HW_DEPTH=%u,%u,%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount, gNdsFighterDLAllDrawP1HardwareZBufferTriangleCount, gNdsFighterDLAllDrawP0HardwareProjectedDepthTriangleCount, gNdsFighterDLAllDrawP1HardwareProjectedDepthTriangleCount, gNdsFighterDLAllDrawP0HardwareDecalDepthTriangleCount, gNdsFighterDLAllDrawP1HardwareDecalDepthTriangleCount',
+        'printf "FTR_DL_ALL_HWTEX=%u,%u,%u,%u,%#x,%u,%u\n", gNdsFighterDLAllDrawHardwareTextureBindCount, gNdsFighterDLAllDrawHardwareTextureUploadCount, gNdsFighterDLAllDrawHardwareTextureReadyCount, gNdsFighterDLAllDrawHardwareTextureRejectCount, gNdsFighterDLAllDrawHardwareTextureFormatMask, gNdsFighterDLAllDrawHardwareTextureMaxWidth, gNdsFighterDLAllDrawHardwareTextureMaxHeight',
         'printf "FTR_DL_ALL_AXIS=%u,%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsFighterDLAllDrawP0Axis, gNdsFighterDLAllDrawP1Axis, gNdsFighterDLAllDrawP0Area, gNdsFighterDLAllDrawP1Area, gNdsFighterDLAllDrawP0MinA, gNdsFighterDLAllDrawP0MaxA, gNdsFighterDLAllDrawP0MinB, gNdsFighterDLAllDrawP0MaxB, gNdsFighterDLAllDrawP1MinA, gNdsFighterDLAllDrawP1MaxA, gNdsFighterDLAllDrawP1MinB, gNdsFighterDLAllDrawP1MaxB',
         'printf "FTR_DL_ALL_SCREEN=%d,%d,%d,%d,%d,%d,%d,%d,%#x,%#x\n", gNdsFighterDLAllDrawP0ScreenMinX, gNdsFighterDLAllDrawP0ScreenMaxX, gNdsFighterDLAllDrawP0ScreenMinY, gNdsFighterDLAllDrawP0ScreenMaxY, gNdsFighterDLAllDrawP1ScreenMinX, gNdsFighterDLAllDrawP1ScreenMaxX, gNdsFighterDLAllDrawP1ScreenMinY, gNdsFighterDLAllDrawP1ScreenMaxY, gNdsFighterDLAllDrawP0ColorChecksum, gNdsFighterDLAllDrawP1ColorChecksum',
         'printf "FTR_DL_ALL_STATE=%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x\n", gNdsFighterDLAllDrawP0StatusAfter, gNdsFighterDLAllDrawP1StatusAfter, gNdsFighterDLAllDrawP0MotionAfter, gNdsFighterDLAllDrawP1MotionAfter, gNdsFighterDLAllDrawP0GAAfter, gNdsFighterDLAllDrawP1GAAfter, gNdsFighterDLAllDrawP0RootXBeforeBits, gNdsFighterDLAllDrawP0RootXAfterBits, gNdsFighterDLAllDrawP1RootXBeforeBits, gNdsFighterDLAllDrawP1RootXAfterBits',
@@ -101,6 +125,9 @@ try {
     $stats = [regex]::Match($gdbStdout, 'FTR_DL_ALL_STATS=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $geom = [regex]::Match($gdbStdout, 'FTR_DL_ALL_GEOM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $render = [regex]::Match($gdbStdout, 'FTR_DL_ALL_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $hw = [regex]::Match($gdbStdout, 'FTR_DL_ALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $hwDepth = [regex]::Match($gdbStdout, 'FTR_DL_ALL_HW_DEPTH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $hwTexture = [regex]::Match($gdbStdout, 'FTR_DL_ALL_HWTEX=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $axis = [regex]::Match($gdbStdout, 'FTR_DL_ALL_AXIS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $screen = [regex]::Match($gdbStdout, 'FTR_DL_ALL_SCREEN=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $state = [regex]::Match($gdbStdout, 'FTR_DL_ALL_STATE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
@@ -121,6 +148,20 @@ try {
     Assert-Condition ($stats.Success -and $multiStats.Success -and [int]$stats.Groups[1].Value -eq 0 -and [int]$stats.Groups[2].Value -eq 0 -and (Convert-MarkerUInt32 $stats.Groups[3].Value) -eq 0 -and (Convert-MarkerUInt32 $stats.Groups[4].Value) -eq 0 -and [int]$stats.Groups[5].Value -gt [int]$multiStats.Groups[5].Value -and [int]$stats.Groups[6].Value -gt [int]$multiStats.Groups[6].Value -and (Convert-MarkerUInt32 $stats.Groups[7].Value) -ne 0 -and (Convert-MarkerUInt32 $stats.Groups[8].Value) -ne 0 -and (Convert-MarkerUInt32 $stats.Groups[9].Value) -eq 0 -and (Convert-MarkerUInt32 $stats.Groups[10].Value) -eq 0 -and [int]$stats.Groups[11].Value -eq 0 -and [int]$stats.Groups[12].Value -eq 0) 'All-DL renderer stats were not clean or did not exceed multi-DL command counts.' $gdbStdout
     Assert-Condition ($geom.Success -and $multiGeom.Success -and [int]$geom.Groups[1].Value -gt [int]$multiGeom.Groups[1].Value -and [int]$geom.Groups[2].Value -gt [int]$multiGeom.Groups[2].Value -and [int]$geom.Groups[3].Value -gt [int]$multiGeom.Groups[3].Value -and [int]$geom.Groups[4].Value -gt [int]$multiGeom.Groups[4].Value -and [int]$geom.Groups[5].Value -gt [int]$multiGeom.Groups[5].Value -and [int]$geom.Groups[6].Value -gt [int]$multiGeom.Groups[6].Value -and [int]$geom.Groups[7].Value -gt [int]$multiGeom.Groups[7].Value -and [int]$geom.Groups[8].Value -gt [int]$multiGeom.Groups[8].Value -and [int]$geom.Groups[9].Value -ge [int]$multiGeom.Groups[9].Value -and [int]$geom.Groups[10].Value -ge [int]$multiGeom.Groups[10].Value -and [int]$geom.Groups[11].Value -ge [int]$multiGeom.Groups[11].Value) 'All-DL geometry/pixels did not exceed the first-four-DL baseline.' $gdbStdout
     Assert-Condition ($render.Success -and $multiRender.Success -and [int]$render.Groups[1].Value -gt [int]$multiRender.Groups[1].Value -and [int]$render.Groups[2].Value -gt [int]$multiRender.Groups[2].Value) 'All-DL real non-degenerate triangle count did not exceed first-four-DL baseline.' $gdbStdout
+    Assert-Condition ($hw.Success) 'All-DL hardware triangle diagnostics were not printed.' $gdbStdout
+    if ($HardwareTriangles) {
+        Assert-Condition ([int]$hw.Groups[1].Value -gt 0 -and [int]$hw.Groups[2].Value -gt 0 -and [int]$hw.Groups[3].Value -gt 0 -and [int]$hw.Groups[4].Value -gt 0 -and [int]$hw.Groups[7].Value -gt 0 -and [int]$hw.Groups[8].Value -gt 0) 'Hardware all-DL draw did not submit triangles from seeded matrices.' $gdbStdout
+    }
+    Assert-Condition ($hwDepth.Success) 'All-DL hardware depth diagnostics were not printed.' $gdbStdout
+    if ($HardwareTriangles) {
+        $p0Depth = [int]$hwDepth.Groups[1].Value + [int]$hwDepth.Groups[3].Value
+        $p1Depth = [int]$hwDepth.Groups[2].Value + [int]$hwDepth.Groups[4].Value
+        Assert-Condition ($p0Depth -eq [int]$hw.Groups[1].Value -and $p1Depth -eq [int]$hw.Groups[2].Value -and [int]$hwDepth.Groups[1].Value -gt 0 -and [int]$hwDepth.Groups[2].Value -gt 0) 'Hardware all-DL depth classification did not account for submitted triangles.' $gdbStdout
+    }
+    Assert-Condition ($hwTexture.Success) 'All-DL hardware texture diagnostics were not printed.' $gdbStdout
+    if ($HardwareTriangles) {
+        Assert-Condition ([int]$hwTexture.Groups[1].Value -gt 0 -and [int]$hwTexture.Groups[2].Value -gt 0 -and [int]$hwTexture.Groups[3].Value -gt 0 -and [int]$hwTexture.Groups[4].Value -eq 0 -and (Convert-MarkerUInt32 $hwTexture.Groups[5].Value) -ne 0 -and [int]$hwTexture.Groups[6].Value -gt 0 -and [int]$hwTexture.Groups[7].Value -gt 0) 'Hardware all-DL draw did not bind/upload clean textures.' $gdbStdout
+    }
     Assert-Condition ($axis.Success -and [int]$axis.Groups[1].Value -le 2 -and [int]$axis.Groups[2].Value -le 2 -and [int]$axis.Groups[3].Value -gt 0 -and [int]$axis.Groups[4].Value -gt 0 -and (([int]$axis.Groups[6].Value -ne [int]$axis.Groups[5].Value) -or ([int]$axis.Groups[8].Value -ne [int]$axis.Groups[7].Value)) -and (([int]$axis.Groups[10].Value -ne [int]$axis.Groups[9].Value) -or ([int]$axis.Groups[12].Value -ne [int]$axis.Groups[11].Value))) 'All-DL shared projection axes/bounds were not usable.' $gdbStdout
     Assert-Condition ($screen.Success -and [int]$screen.Groups[1].Value -ge 0 -and [int]$screen.Groups[2].Value -le 95 -and [int]$screen.Groups[3].Value -ge 0 -and [int]$screen.Groups[4].Value -le 71 -and [int]$screen.Groups[5].Value -ge 0 -and [int]$screen.Groups[6].Value -le 95 -and [int]$screen.Groups[7].Value -ge 0 -and [int]$screen.Groups[8].Value -le 71 -and (Convert-MarkerUInt32 $screen.Groups[9].Value) -ne 0 -and (Convert-MarkerUInt32 $screen.Groups[10].Value) -ne 0) 'All-DL screen bounds/checksums were not valid.' $gdbStdout
     Assert-Condition ($state.Success -and [int]$state.Groups[1].Value -eq 10 -and [int]$state.Groups[2].Value -eq 10 -and [int]$state.Groups[3].Value -eq 4 -and [int]$state.Groups[4].Value -eq 4 -and [int]$state.Groups[5].Value -eq 0 -and [int]$state.Groups[6].Value -eq 0 -and (Convert-MarkerUInt32 $state.Groups[7].Value) -eq (Convert-MarkerUInt32 $state.Groups[8].Value) -and (Convert-MarkerUInt32 $state.Groups[9].Value) -eq (Convert-MarkerUInt32 $state.Groups[10].Value)) 'All-DL draw mutated fighter state or root position.' $gdbStdout
@@ -128,7 +169,11 @@ try {
     Assert-Condition ($fail.Success -and [uint64]$fail.Groups[1].Value -eq 4294967295 -and [uint64]$fail.Groups[2].Value -eq 4294967295 -and [uint64]$fail.Groups[3].Value -eq 4294967295 -and [uint64]$fail.Groups[4].Value -eq 4294967295 -and (Convert-MarkerUInt32 $fail.Groups[5].Value) -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[6].Value) -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[7].Value) -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[8].Value) -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[9].Value) -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[10].Value) -eq 0 -and [int]$fail.Groups[11].Value -eq 0 -and [int]$fail.Groups[12].Value -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[13].Value) -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[14].Value) -eq 0 -and [int]$fail.Groups[15].Value -eq 0 -and [int]$fail.Groups[16].Value -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[17].Value) -eq 0 -and (Convert-MarkerUInt32 $fail.Groups[18].Value) -eq 0 -and [int]$fail.Groups[19].Value -eq 0 -and [int]$fail.Groups[20].Value -eq 0 -and [int]$fail.Groups[21].Value -eq 0 -and [int]$fail.Groups[22].Value -eq 0 -and [int]$fail.Groups[23].Value -eq 0 -and [int]$fail.Groups[24].Value -eq 0 -and [int]$fail.Groups[25].Value -eq 0 -and [int]$fail.Groups[26].Value -eq 0 -and [int]$fail.Groups[27].Value -eq 0 -and [int]$fail.Groups[28].Value -eq 0) 'All-DL first-failure diagnostics were not fully clear after strict F3DEX2 decode.' $gdbStdout
     Assert-Condition ($platform.Success -and [int]$platform.Groups[1].Value -eq 1 -and [int]$platform.Groups[2].Value -eq 96 -and [int]$platform.Groups[3].Value -eq 72 -and [int]$platform.Groups[4].Value -ge [int]$preview.Groups[6].Value) 'Platform original-DL preview state is not ready after all-DL draw.' $gdbStdout
     Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after all-DL draw.' $gdbStdout
-    Write-Output ("Menu-chain Mario/Fox all-DL draw harness passed: chain final=22/21 callbacks=2 candidates=14/18 selected=14/18 pixels={0}/{1} tris={2}/{3} real={4}/{5} marker={6}/{7} clean=14/18 failed=0/0 preview=96x72 safe=1" -f $geom.Groups[9].Value, $geom.Groups[10].Value, $geom.Groups[3].Value, $geom.Groups[4].Value, $render.Groups[1].Value, $render.Groups[2].Value, $render.Groups[3].Value, $render.Groups[4].Value)
+    $summary = ("Menu-chain Mario/Fox all-DL draw harness passed: chain final=22/21 callbacks=2 candidates=14/18 selected=14/18 pixels={0}/{1} tris={2}/{3} real={4}/{5} marker={6}/{7} clean=14/18 failed=0/0 preview=96x72 safe=1" -f $geom.Groups[9].Value, $geom.Groups[10].Value, $geom.Groups[3].Value, $geom.Groups[4].Value, $render.Groups[1].Value, $render.Groups[2].Value, $render.Groups[3].Value, $render.Groups[4].Value)
+    if ($HardwareTriangles) {
+        $summary += (" hw={0}/{1} oracle={2}/{3} reject={4}/{5} seed={6}/{7} hwdepth=z{8}/{9}/proj{10}/{11}/decal{12}/{13} hwtex=bind{14}/upload{15}/ready{16}/reject{17}/fmt{18}/max{19}x{20}" -f $hw.Groups[1].Value, $hw.Groups[2].Value, $hw.Groups[3].Value, $hw.Groups[4].Value, $hw.Groups[5].Value, $hw.Groups[6].Value, $hw.Groups[7].Value, $hw.Groups[8].Value, $hwDepth.Groups[1].Value, $hwDepth.Groups[2].Value, $hwDepth.Groups[3].Value, $hwDepth.Groups[4].Value, $hwDepth.Groups[5].Value, $hwDepth.Groups[6].Value, $hwTexture.Groups[1].Value, $hwTexture.Groups[2].Value, $hwTexture.Groups[3].Value, $hwTexture.Groups[4].Value, $hwTexture.Groups[5].Value, $hwTexture.Groups[6].Value, $hwTexture.Groups[7].Value)
+    }
+    Write-Output $summary
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

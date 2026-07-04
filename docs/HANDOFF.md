@@ -47,14 +47,14 @@ Latest renderer detail: opt-in DS 3D hardware submission remains behind
 `NDS_RENDERER_HW_TRIANGLES=1`. The current Pupupu stage-inclusive gate proves
 matrix, material, texture, depth/fog/alpha, primitive-Z, and
 texture-perspective hardware submission with zero texture rejects. The strict
-direct Mario/Fox all-DL hardware verifier now passes on live manager-created
-fighters: all 14/18 selected DObjs are clean and hardware submits 284/298
-fighter triangles. The direct proof now carries the source-equivalent segment
-`0xE` material register plus RSP vertex/render state across selected DObjs,
-attaches original fighter-part MObjs, and seeds missing CI TLUT state from the
-current material palette. Direct all-DL now reports
-`bind119/upload8/ready119/reject0`; stage-inclusive gcDrawAll reports
-`bind582/upload66/ready582/reject0`. Captures remain under
+direct and menu-chain Mario/Fox all-DL hardware verifiers now pass on live
+manager-created fighters: all 14/18 selected DObjs are clean and hardware
+submits 284/298 fighter triangles. The all-DL proof carries the
+source-equivalent segment `0xE` material register, RSP vertex/render state,
+original fighter-part MObjs, and CI TLUT seeds from the current material
+palette. All-DL now reports `bind119/upload8/ready119/reject0`;
+stage-inclusive gcDrawAll reports `bind582/upload66/ready582/reject0`.
+Captures remain under
 `artifacts\renderer-*-hw*.png`. Default builds still use the software preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU

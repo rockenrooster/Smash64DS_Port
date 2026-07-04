@@ -16831,3 +16831,21 @@ Still deferred:
   and menu gcRunAll, and
   `.\scripts\verify-stage-mplivehit-continuous-runtime.ps1 -DelaySeconds 15`
   all passed with the natural-combat marker.
+
+## 2026-07-04 - Menu-Chain All-DL Hardware Gate
+
+- Reused the existing all-DL hardware diagnostics in
+  `scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1` instead of
+  adding a new harness mode. The menu-chain path now supports
+  `-HardwareTriangles`, builds
+  `smash64ds-menu-chain-mariofox-dl-draw-all-hwtri` with
+  `NDS_RENDERER_HW_TRIANGLES=1`, and asserts the same hardware submit, depth,
+  and texture markers as the direct all-DL gate.
+- Verified
+  `.\scripts\verify-menu-chain-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles -DelaySeconds 3`:
+  the menu-chain route reaches Pupupu VSBattle from Title, keeps all 14/18
+  selected Mario/Fox DObjs clean, submits `hw=284/298` fighter triangles, and
+  reports `hwtex=bind119/upload8/ready119/reject0/fmt0x4/max32x32`.
+- Static gates passed:
+  `.\scripts\check-gbi-decode-fixtures.ps1` and
+  `.\scripts\check-harness-registry.ps1`.
