@@ -22,6 +22,7 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | `NEXT_BOUNDARY_QUEUE.md` | Current truth | Compact next-boundary candidate queue. |
 | `PORTING.md` | Append-only | Chronological porting history. Do not use as primary planning. |
 | `ROADMAP.md` | Maintained | Milestone-level project roadmap. |
+| `SPECIALS_WEAPONS_SCOUT.md` | Maintained | Source-backed scout for Mario/Fox specials and weapon-manager runtime work. |
 | `STATUS.md` | Current truth | Short active planning state. |
 | `VERIFYING.md` | Maintained | Build, static-check, verifier, emulator, and snapshot workflow. |
 
