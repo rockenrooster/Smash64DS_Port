@@ -17460,3 +17460,14 @@ Still deferred:
 - Verified: direct MP cliff-status hardware with `-DelaySeconds 3`, menu-chain
   MP cliff-status hardware with `-DelaySeconds 8`, and menu-chain MP
   motion-stale hardware comparison with `-NoBuild -DelaySeconds 8`.
+
+## 2026-07-05 - Default MP Cliff-Tick Stage Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `89/90`, matching
+  the already-proven mode `87/88` hardware path, then made the direct and
+  menu-chain MP cliff-tick wrappers default to `-hwtri` targets with
+  `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry and GBI fixture checks so the MP cliff-tick stage
+  pair is covered by the hardware-default guardrails.
+- Verified: direct MP cliff-tick hardware with `-DelaySeconds 8` and menu-chain
+  MP cliff-tick hardware with `-DelaySeconds 8`.
