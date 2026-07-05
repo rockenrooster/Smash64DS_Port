@@ -84,6 +84,10 @@ return-control frames, `hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`,
 screen flash, effects/items, and broader SObj/RDP helper coverage remain
 interface follow-up.
 
+The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
+cache eviction. Mode `163` reports headroom `235396`, resident reloc `618448`
+bytes, stale `0/0`, and source VSBattle buffers from `scvsbattle.c:31-41`.
+
 Renderer hardware is now default for all-DL modes `33/34`, stage
 draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair `161/162`;
 global normal builds still default to software preview. Use `-SoftwarePreview`

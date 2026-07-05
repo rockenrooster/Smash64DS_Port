@@ -5317,6 +5317,21 @@ continuous rehit gameplay beyond the selected Link down-air timer window,
 arbitrary damage-state duration, complete hitlag/damage runtime, items/weapons,
 HUD, audio, or unbounded gameplay scheduling.
 
+## Battle Memory Ledger Markers
+
+Mode `163` prints the battle memory ledger through the existing
+`battle_playable` verifier. `MEMARENA` records result marker, scene, reloc
+generation, taskman arena capacity, current/high-water arena use, arena
+headroom, VSBattle DL bytes, graphics bytes, RDP bytes, and
+`gFTManagerFigatreeHeapSize`. `MEMRELOC` records loaded reloc file count,
+resident bytes, stage/fighter/interface/menu/opening/other bytes, and stale
+file/byte counts. `MEMEVICT` records the last scene-generation eviction
+file/byte count. The current passing proof reports `head=235396`,
+`reloc=618448`, `stage=202816`, `fighter=206960`, `if=208672`,
+`stale=0/0`, and direct-route `evict=0/0`. The source-sized VSBattle taskman
+buffer assertions come from `scvsbattle.c:31-41`; the original taskman heap
+setup/allocator path is `sys/taskman.c:267-383`.
+
 - `STAGE_MPDOWNWAIT`: direct/menu DownWait-loop result, safe result, proof
   mask, deferred mask, and selected fighter count. Current pass values are
   `0x46445749`, `0x46445755`, mask `0x3ffff`, deferred mask `0x3ffff`, and

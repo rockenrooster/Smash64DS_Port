@@ -17398,3 +17398,32 @@ Still deferred:
 - Verified: `verify-battle-playable-harness`, `verify-dev-fast -Build`,
   `verify-boundary`, `check-harness-registry`, and selected cliff-family
   Regression prebuild/verification.
+
+## 2026-07-04 - Battle Memory Ledger And Scene Reloc Eviction
+
+- Added the pre-breadth VSBattle memory ledger behind existing diagnostics:
+  arena capacity/current/high-water/headroom, source-sized VSBattle
+  DL/graphics/RDP buffers, figatree heap size, resident reloc bytes grouped as
+  stage/fighter/interface/menu/opening/other, and stale cache bytes. The
+  battle-playable verifier now asserts the 128 KiB reserve and zero stale
+  menu/opening payloads.
+- Added scene-generation ownership to the reloc cache. Files registered in an
+  earlier scene are dropped from the pointer-identity table when the scene
+  changes, and status-buffer node counts are cleared with the same generation
+  boundary.
+- Source citations for the verifier expectations: VSBattle's two contexts,
+  `sizeof(Gfx) * 7680`, `sizeof(Gfx) * 2560`, `0xD000` graphics heap, and
+  `0xC000` RDP buffer come from
+  `decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c:31-41`;
+  original taskman heap setup/allocation/buffer setup is
+  `decomp/BattleShip-main/decomp/src/sys/taskman.c:267-383`.
+- Ledger delta: the scout's staged battle reloc payload set was `680386`
+  bytes. The live mode-163 VSBattle ledger reports resident reloc `618448`
+  bytes (`stage=202816`, `fighter=206960`, `if=208672`), arena headroom
+  `235396`, stale menu/opening bytes `0/0`, and direct-route last eviction
+  `0/0`.
+- Verified: `verify-battle-playable-harness -DelaySeconds 3`,
+  `verify-dev-fast -Build -DelaySeconds 3`,
+  `verify-boundary -DelaySeconds 3`,
+  `build-verify-profile -Profile Regression -Force`, all four sharded
+  Regression `-NoBuild` runs, `check-harness-registry`, and `check-docs`.

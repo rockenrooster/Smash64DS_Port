@@ -9492,6 +9492,7 @@ static void ndsFighterNaturalCombatRecordPair(FTStruct *attacker,
         return;
     }
 
+    ndsRelocUpdateMemoryLedger();
     ndsFighterBattlePlayableRecordVictim(victim);
     ndsIFCommonRecordHUDState();
 

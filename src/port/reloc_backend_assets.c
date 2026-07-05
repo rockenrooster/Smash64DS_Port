@@ -14,6 +14,7 @@
 #define NDS_RELOC_OPENING_ROOM_FILE_COUNT 8u
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 64u
+#define NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES (128u * 1024u)
 
 #define NDS_RELOC_ASSET_INVALID 0xffffffffu
 #define NDS_RELOC_ASSET_MN_COMMON 0u
@@ -373,6 +374,8 @@ typedef struct NDSRelocLoadedFile {
     u32 bit;
     void *data;
     u32 data_size;
+    u32 owner_scene;
+    u32 owner_generation;
     u16 reloc_intern_offset;
     u16 reloc_extern_offset;
     u32 extern_count;
@@ -531,6 +534,8 @@ typedef struct NDSOpeningActionPreviewCache {
 
 static NDSRelocLoadedFile sNdsRelocLoadedFiles[NDS_RELOC_LOADED_FILE_CAPACITY];
 static u32 sNdsRelocLoadedFileCount;
+static u32 sNdsRelocOwnerScene = NDS_RELOC_ASSET_INVALID;
+static u32 sNdsRelocSceneGeneration;
 static LBFileNode *sNdsRelocStatusBuffer;
 static s32 sNdsRelocStatusBufferCount;
 static s32 sNdsRelocStatusBufferMax;
@@ -1342,6 +1347,251 @@ static void ndsRelocResetLoadedFiles(void)
     ndsFighterMarioFoxResetFileSlots();
 }
 
+static void ndsRelocPrepareSceneCache(void)
+{
+    u32 scene = (u32)gSCManagerSceneData.scene_curr;
+    u32 evicted_files = 0u;
+    u32 evicted_bytes = 0u;
+    u32 i;
+
+    if (sNdsRelocOwnerScene == scene)
+    {
+        return;
+    }
+
+    for (i = 0; i < sNdsRelocLoadedFileCount; i++)
+    {
+        evicted_files++;
+        evicted_bytes += sNdsRelocLoadedFiles[i].data_size;
+    }
+
+    if (evicted_files != 0u)
+    {
+        ndsRelocResetLoadedFiles();
+    }
+    sNdsRelocStatusBufferCount = 0;
+    sNdsRelocForceStatusBufferCount = 0;
+
+    sNdsRelocOwnerScene = scene;
+    sNdsRelocSceneGeneration++;
+    gNdsMemoryLedgerEvictedFiles = evicted_files;
+    gNdsMemoryLedgerEvictedBytes = evicted_bytes;
+}
+
+static s32 ndsRelocAssetIsInterface(u32 asset_id)
+{
+    switch (asset_id)
+    {
+    case NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE:
+    case NDS_RELOC_ASSET_IF_COMMON_PLAYER:
+    case NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS:
+    case NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE:
+    case NDS_RELOC_ASSET_IF_COMMON_TIMER:
+    case NDS_RELOC_ASSET_IF_COMMON_DIGITS:
+    case NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE:
+    case NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS:
+    case NDS_RELOC_ASSET_SY_KSEG1_VALIDATE:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static s32 ndsRelocAssetIsStage(u32 asset_id)
+{
+    switch (asset_id)
+    {
+    case NDS_RELOC_ASSET_STAGE_CASTLE:
+    case NDS_RELOC_ASSET_STAGE_DREAM_LAND:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_113:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_103:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_104:
+    case NDS_RELOC_ASSET_MISC_DATA_BANK_152:
+    case NDS_RELOC_ASSET_GR_PUPUPU_MAP:
+    case NDS_RELOC_ASSET_GR_INISHIE_MAP:
+    case NDS_RELOC_ASSET_GR_HYRULE_MAP:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static s32 ndsRelocAssetIsFighter(u32 asset_id)
+{
+    switch (asset_id)
+    {
+    case NDS_RELOC_ASSET_FT_MANAGER_COMMON:
+    case NDS_RELOC_ASSET_MARIO_MAIN:
+    case NDS_RELOC_ASSET_MARIO_MAIN_MOTION:
+    case NDS_RELOC_ASSET_MARIO_MODEL:
+    case NDS_RELOC_ASSET_MARIO_SHIELD_POSE:
+    case NDS_RELOC_ASSET_MARIO_SPECIAL1:
+    case NDS_RELOC_ASSET_MARIO_SPECIAL2:
+    case NDS_RELOC_ASSET_MARIO_SPECIAL3:
+    case NDS_RELOC_ASSET_FOX_MAIN:
+    case NDS_RELOC_ASSET_FOX_MAIN_MOTION:
+    case NDS_RELOC_ASSET_FOX_MODEL:
+    case NDS_RELOC_ASSET_FOX_SHIELD_POSE:
+    case NDS_RELOC_ASSET_FOX_SPECIAL1:
+    case NDS_RELOC_ASSET_FOX_SPECIAL2:
+    case NDS_RELOC_ASSET_FOX_SPECIAL3:
+    case NDS_RELOC_ASSET_FOX_SPECIAL4:
+    case NDS_RELOC_ASSET_MISC_DATA_201:
+    case NDS_RELOC_ASSET_MISC_DATA_299:
+    case NDS_RELOC_ASSET_MISC_DATA_315:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_109:
+        return TRUE;
+    default:
+        break;
+    }
+    if (((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_WAIT) &&
+         (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE)) ||
+        ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
+         (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JAB1)))
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static s32 ndsRelocAssetIsMenu(u32 asset_id)
+{
+    switch (asset_id)
+    {
+    case NDS_RELOC_ASSET_MN_COMMON:
+    case NDS_RELOC_ASSET_MN_TITLE:
+    case NDS_RELOC_ASSET_MN_TITLE_FIRE_ANIM:
+    case NDS_RELOC_ASSET_MN_VS_MODE:
+    case NDS_RELOC_ASSET_MN_PLAYERS_COMMON:
+    case NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES:
+    case NDS_RELOC_ASSET_MN_PLAYERS_PORTRAITS:
+    case NDS_RELOC_ASSET_FT_EMBLEM_SPRITES:
+    case NDS_RELOC_ASSET_MN_SELECT_COMMON:
+    case NDS_RELOC_ASSET_MN_PLAYERS_SPOTLIGHT:
+    case NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLACK:
+    case NDS_RELOC_ASSET_MN_MAPS:
+    case NDS_RELOC_ASSET_MN_COMMON_FONTS:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static s32 ndsRelocAssetIsOpening(u32 asset_id)
+{
+    switch (asset_id)
+    {
+    case NDS_RELOC_ASSET_N64_LOGO:
+    case NDS_RELOC_ASSET_MV_COMMON:
+    case NDS_RELOC_ASSET_OPENING_COMMON:
+    case NDS_RELOC_ASSET_OPENING_ROOM_TRANSITION:
+    case NDS_RELOC_ASSET_OPENING_ROOM_SCENE1:
+    case NDS_RELOC_ASSET_OPENING_ROOM_SCENE2:
+    case NDS_RELOC_ASSET_OPENING_ROOM_SCENE3:
+    case NDS_RELOC_ASSET_OPENING_ROOM_SCENE4:
+    case NDS_RELOC_ASSET_OPENING_RUN:
+    case NDS_RELOC_ASSET_OPENING_YAMABUKI:
+    case NDS_RELOC_ASSET_OPENING_SECTOR:
+    case NDS_RELOC_ASSET_OPENING_RUN_CRASH:
+    case NDS_RELOC_ASSET_OPENING_ROOM_WALLPAPER:
+    case NDS_RELOC_ASSET_OPENING_PORTRAITS_SET1:
+    case NDS_RELOC_ASSET_OPENING_PORTRAITS_SET2:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static void ndsRelocUpdateMemoryLedger(void)
+{
+    u32 scene = (u32)gSCManagerSceneData.scene_curr;
+    u32 capacity = (u32)ndsTaskmanArenaSize();
+    u32 used = gNdsTaskmanGeneralHeapUsed;
+    u32 i;
+
+    if ((gSYTaskmanGeneralHeap.start != NULL) &&
+        (gSYTaskmanGeneralHeap.ptr != NULL) &&
+        ((uintptr_t)gSYTaskmanGeneralHeap.ptr >=
+         (uintptr_t)gSYTaskmanGeneralHeap.start))
+    {
+        used = (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
+                     (uintptr_t)gSYTaskmanGeneralHeap.start);
+    }
+
+    gNdsMemoryLedgerResult = 0;
+    gNdsMemoryLedgerScene = scene;
+    gNdsMemoryLedgerGeneration = sNdsRelocSceneGeneration;
+    gNdsMemoryLedgerArenaCapacity = capacity;
+    gNdsMemoryLedgerArenaUsed = used;
+    if (used > gNdsMemoryLedgerArenaHighWater)
+    {
+        gNdsMemoryLedgerArenaHighWater = used;
+    }
+    gNdsMemoryLedgerArenaHeadroom = (capacity > used) ? (capacity - used) : 0u;
+    gNdsMemoryLedgerDLBytes =
+        gNdsTaskmanContexts * (u32)((sizeof(Gfx) * 7680u) +
+                                    (sizeof(Gfx) * 2560u));
+    gNdsMemoryLedgerGraphicsBytes =
+        gNdsTaskmanContexts * gNdsTaskmanGraphicsHeapSize;
+    gNdsMemoryLedgerRdpBytes = gNdsTaskmanRdpBufferSize;
+    gNdsMemoryLedgerFigatreeHeapSize = (u32)gFTManagerFigatreeHeapSize;
+    gNdsMemoryLedgerRelocFiles = sNdsRelocLoadedFileCount;
+    gNdsMemoryLedgerRelocBytes = 0u;
+    gNdsMemoryLedgerRelocStageBytes = 0u;
+    gNdsMemoryLedgerRelocFighterBytes = 0u;
+    gNdsMemoryLedgerRelocInterfaceBytes = 0u;
+    gNdsMemoryLedgerRelocMenuBytes = 0u;
+    gNdsMemoryLedgerRelocOpeningBytes = 0u;
+    gNdsMemoryLedgerRelocOtherBytes = 0u;
+    gNdsMemoryLedgerRelocStaleFiles = 0u;
+    gNdsMemoryLedgerRelocStaleBytes = 0u;
+
+    for (i = 0; i < sNdsRelocLoadedFileCount; i++)
+    {
+        NDSRelocLoadedFile *loaded = &sNdsRelocLoadedFiles[i];
+        u32 bytes = loaded->data_size;
+
+        gNdsMemoryLedgerRelocBytes += bytes;
+        if (loaded->owner_scene != scene)
+        {
+            gNdsMemoryLedgerRelocStaleFiles++;
+            gNdsMemoryLedgerRelocStaleBytes += bytes;
+        }
+        if (ndsRelocAssetIsInterface(loaded->asset_id) != FALSE)
+        {
+            gNdsMemoryLedgerRelocInterfaceBytes += bytes;
+        }
+        else if (ndsRelocAssetIsStage(loaded->asset_id) != FALSE)
+        {
+            gNdsMemoryLedgerRelocStageBytes += bytes;
+        }
+        else if (ndsRelocAssetIsFighter(loaded->asset_id) != FALSE)
+        {
+            gNdsMemoryLedgerRelocFighterBytes += bytes;
+        }
+        else if (ndsRelocAssetIsMenu(loaded->asset_id) != FALSE)
+        {
+            gNdsMemoryLedgerRelocMenuBytes += bytes;
+        }
+        else if (ndsRelocAssetIsOpening(loaded->asset_id) != FALSE)
+        {
+            gNdsMemoryLedgerRelocOpeningBytes += bytes;
+        }
+        else
+        {
+            gNdsMemoryLedgerRelocOtherBytes += bytes;
+        }
+    }
+
+    if ((gNdsMemoryLedgerArenaHeadroom >=
+         NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES) &&
+        (gNdsMemoryLedgerRelocStaleFiles == 0u) &&
+        (gNdsMemoryLedgerRelocStaleBytes == 0u))
+    {
+        gNdsMemoryLedgerResult = NDS_MEMORY_LEDGER_PASS;
+    }
+}
+
 static NDSRelocLoadedFile *ndsRelocFindLoadedFileByAsset(u32 asset_id)
 {
     u32 i;
@@ -1634,6 +1884,8 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(u32 asset_id, u32 bit,
     loaded->bit = bit;
     loaded->data = data;
     loaded->data_size = header->data_size;
+    loaded->owner_scene = (u32)gSCManagerSceneData.scene_curr;
+    loaded->owner_generation = sNdsRelocSceneGeneration;
     loaded->reloc_intern_offset = header->reloc_intern_offset;
     loaded->reloc_extern_offset = header->reloc_extern_offset;
     loaded->extern_count = 0;
@@ -1991,10 +2243,13 @@ static void *ndsRelocStaticBufferForAsset(u32 asset_id, size_t asset_size)
 
 static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
 {
-    NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    NDSRelocLoadedFile *loaded;
     size_t asset_size;
     NDSRelocAssetHeader header;
     void *heap;
+
+    ndsRelocPrepareSceneCache();
+    loaded = ndsRelocFindLoadedFileByAsset(asset_id);
 
     if (loaded != NULL)
     {
@@ -3801,6 +4056,7 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
 void lbRelocInitSetup(LBRelocSetup *setup)
 {
     sNdsRelocInitCount++;
+    ndsRelocPrepareSceneCache();
 
     if (setup != NULL)
     {
@@ -3855,6 +4111,7 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
     {
         return heap;
     }
+    ndsRelocPrepareSceneCache();
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     loaded = ndsRelocLoadExternTreeAsset(asset_id, &heap_ptr);
@@ -3961,12 +4218,15 @@ void *lbRelocGetStatusBufferFile(const void *file_id)
 {
     u32 token = ndsRelocFileID(file_id);
     u32 asset_id = ndsRelocAssetIDForToken(token);
-    void *file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
-                                        sNdsRelocStatusBufferCount,
-                                        token);
+    void *file;
     size_t asset_size;
     void *heap;
 
+    ndsRelocPrepareSceneCache();
+
+    file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                  sNdsRelocStatusBufferCount,
+                                  token);
     if ((file == NULL) && (asset_id != NDS_RELOC_ASSET_INVALID))
     {
         file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
@@ -4029,18 +4289,7 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
     uintptr_t heap_ptr = (uintptr_t)heap;
     uintptr_t heap_start = (uintptr_t)heap;
 
-    if ((gSCManagerSceneData.scene_curr == nSCKindOpeningRoom) ||
-        (gSCManagerSceneData.scene_curr == nSCKindOpeningPortraits) ||
-        (ndsOpeningIsImportedNameScene(gSCManagerSceneData.scene_curr) !=
-         FALSE) ||
-        (gSCManagerSceneData.scene_curr == nSCKindTitle) ||
-        (gSCManagerSceneData.scene_curr == nSCKindVSMode) ||
-        (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
-        (gSCManagerSceneData.scene_curr == nSCKindMaps) ||
-        (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
-    {
-        ndsRelocResetLoadedFiles();
-    }
+    ndsRelocPrepareSceneCache();
 
     for (i = 0; i < len; i++)
     {

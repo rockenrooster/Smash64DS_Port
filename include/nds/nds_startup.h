@@ -175,6 +175,7 @@
 #define NDS_FIGHTER_NATURAL_MOTION_PASS 0x464e4d50u
 #define NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS 0x464e4d53u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PASS 0x42504c59u
+#define NDS_MEMORY_LEDGER_PASS 0x4d4c4544u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_PASS 0x46444150u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_SAFE_PASS 0x46444153u
 #define NDS_FIGHTER_MARIOFOX_STAGE_GCDRAWALL_LOOP_PASS 0x46534744u
@@ -773,6 +774,29 @@ extern volatile u32 gNdsTaskmanCleanupResult;
 extern volatile u32 gNdsTaskmanCleanupQueuesEmpty;
 extern volatile u32 gNdsTaskmanCleanupMode;
 extern volatile u32 gNdsTaskmanReturnCount;
+extern volatile u32 gNdsMemoryLedgerResult;
+extern volatile u32 gNdsMemoryLedgerScene;
+extern volatile u32 gNdsMemoryLedgerGeneration;
+extern volatile u32 gNdsMemoryLedgerArenaCapacity;
+extern volatile u32 gNdsMemoryLedgerArenaUsed;
+extern volatile u32 gNdsMemoryLedgerArenaHighWater;
+extern volatile u32 gNdsMemoryLedgerArenaHeadroom;
+extern volatile u32 gNdsMemoryLedgerDLBytes;
+extern volatile u32 gNdsMemoryLedgerGraphicsBytes;
+extern volatile u32 gNdsMemoryLedgerRdpBytes;
+extern volatile u32 gNdsMemoryLedgerFigatreeHeapSize;
+extern volatile u32 gNdsMemoryLedgerRelocFiles;
+extern volatile u32 gNdsMemoryLedgerRelocBytes;
+extern volatile u32 gNdsMemoryLedgerRelocStageBytes;
+extern volatile u32 gNdsMemoryLedgerRelocFighterBytes;
+extern volatile u32 gNdsMemoryLedgerRelocInterfaceBytes;
+extern volatile u32 gNdsMemoryLedgerRelocMenuBytes;
+extern volatile u32 gNdsMemoryLedgerRelocOpeningBytes;
+extern volatile u32 gNdsMemoryLedgerRelocOtherBytes;
+extern volatile u32 gNdsMemoryLedgerRelocStaleFiles;
+extern volatile u32 gNdsMemoryLedgerRelocStaleBytes;
+extern volatile u32 gNdsMemoryLedgerEvictedFiles;
+extern volatile u32 gNdsMemoryLedgerEvictedBytes;
 extern volatile u32 gNdsOpeningRoomDispatchCount;
 extern volatile u32 gNdsOpeningRoomStartResult;
 extern volatile u32 gNdsOpeningRoomFuncStartResult;

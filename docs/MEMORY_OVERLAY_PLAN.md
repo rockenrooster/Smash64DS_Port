@@ -271,6 +271,11 @@ Implementation shape:
 5. Add debug-cart/DSi optional cache only as an optimization layer. Retail 4 MiB
    behavior must stream/evict the same way.
 
+Status: slices 1 and 2 landed in the live port. The current mode-163 ledger
+reports arena headroom `235396`, resident reloc `618448` bytes
+(`stage=202816`, `fighter=206960`, `if=208672`), stale menu/opening bytes
+`0/0`, and direct-route last eviction `0/0`.
+
 ## Gate Before Breadth
 
 Before adding more fighters or stages, the port needs a memory gate that reports
@@ -292,12 +297,12 @@ after item/effect/weapon managers become live.
 
 ## Proposed /task-Sized Slice Sequence
 
-1. `/task Memory ledger gate`: Add a read-only runtime memory ledger for battle
+1. Done: `/task Memory ledger gate`: Add a read-only runtime memory ledger for battle
    that reports taskman arena capacity, high-water usage, loaded reloc owners,
    renderer/taskman buffer sizes, active fighter payload bytes, stage payload
    bytes, and figatree heap size. Gate current Mario/Fox/Pupupu without changing
    gameplay.
-2. `/task Scene-owned reloc eviction`: Add scene generation ownership to the
+2. Done: `/task Scene-owned reloc eviction`: Add scene generation ownership to the
    reloc cache and evict menu/opening/stage-scout payloads before VSBattle owns
    the arena. Gate by proving current battle still loads naturally and stale
    scene files are not retained.
