@@ -272,7 +272,7 @@ Implementation shape:
    behavior must stream/evict the same way.
 
 Status: slices 1 and 2 landed in the live port. The current mode-163 ledger
-reports arena headroom `235396`, resident reloc `618448` bytes
+reports arena headroom `235220`, resident reloc `618448` bytes
 (`stage=202816`, `fighter=206960`, `if=208672`), stale menu/opening bytes
 `0/0`, and direct-route last eviction `0/0`.
 

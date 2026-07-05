@@ -5326,7 +5326,7 @@ headroom, VSBattle DL bytes, graphics bytes, RDP bytes, and
 `gFTManagerFigatreeHeapSize`. `MEMRELOC` records loaded reloc file count,
 resident bytes, stage/fighter/interface/menu/opening/other bytes, and stale
 file/byte counts. `MEMEVICT` records the last scene-generation eviction
-file/byte count. The current passing proof reports `head=235396`,
+file/byte count. The current passing proof reports `head=235220`,
 `reloc=618448`, `stage=202816`, `fighter=206960`, `if=208672`,
 `stale=0/0`, and direct-route `evict=0/0`. The source-sized VSBattle taskman
 buffer assertions come from `scvsbattle.c:31-41`; the original taskman heap

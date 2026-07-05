@@ -97,7 +97,7 @@ The mode-163 proof reports
 `hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`, `hwtri=192`,
 `hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, effects/items, and
 broader SObj/RDP helper coverage remain follow-up.
-It also gates the memory ledger: current arena headroom is `235396`, resident
+It also gates the memory ledger: current arena headroom is `235220`, resident
 reloc payloads are `618448` bytes (`stage=202816`, `fighter=206960`,
 `if=208672`), and stale menu/opening payload bytes are `0/0`.
 
