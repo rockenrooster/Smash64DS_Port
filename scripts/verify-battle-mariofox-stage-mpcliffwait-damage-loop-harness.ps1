@@ -4,9 +4,14 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$HardwareTriangles,
+    [switch]$SoftwarePreview
 )
 $ErrorActionPreference = 'Stop'
+$HardwareTriangles = -not $SoftwarePreview
+$target = if ($HardwareTriangles) { 'smash64ds-battle-mariofox-stage-mpcliffwait-damage-loop-hwtri' } else { 'smash64ds-battle-mariofox-stage-mpcliffwait-damage-loop' }
+$build = if ($HardwareTriangles) { 'build-battle-mariofox-stage-mpcliffwait-damage-loop-hwtri-harness' } else { 'build-battle-mariofox-stage-mpcliffwait-damage-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcdrawall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -14,9 +19,10 @@ $ErrorActionPreference = 'Stop'
     -RunnerSlot $RunnerSlot `
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
+    -HardwareTriangles:$HardwareTriangles `
     -Harness 'battle_mariofox_stage_mpcliffwait_damage_loop' `
-    -Target 'smash64ds-battle-mariofox-stage-mpcliffwait-damage-loop' `
-    -Build 'build-battle-mariofox-stage-mpcliffwait-damage-loop-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 121 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
