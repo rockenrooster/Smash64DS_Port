@@ -89,7 +89,7 @@ cache eviction. Mode `163` reports headroom `235396`, resident reloc `618448`
 bytes, stale `0/0`, and source VSBattle buffers from `scvsbattle.c:31-41`.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage
-draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack modes `59-104`, and Boundary/Latest pair `161/162`;
+draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action modes `59-106`, and Boundary/Latest pair `161/162`;
 global normal builds still default to software preview. Use `-SoftwarePreview`
 on those wrappers for comparisons. The current Pupupu
 stage-inclusive hardware gate proves matrix, material,
@@ -100,13 +100,13 @@ selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
 texture path reports `bind119/upload8/ready119/reject0`. That proof carries
 original fighter-part MObjs, the source-equivalent segment `0xE` material
 register, RSP vertex/render state, and CI TLUT seeds from the current material
-palette. The stage `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack hardware defaults now submit the
+palette. The stage `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action hardware defaults now submit the
 Pupupu stage and both selected manager-created fighters in one hardware frame
 on direct and menu-chain routes: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
 combat boundary wrappers assert that stage + both-fighter DS 3D replay after
 the imported manager combat chain passes. Latest captures include
-`artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures through cliff-attack,
+`artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures through cliff-attack-action,
 menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
 Full visual fidelity still needs broader source-scene coverage and cutover work.
 
