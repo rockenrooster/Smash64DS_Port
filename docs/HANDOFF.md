@@ -30,14 +30,7 @@ original-manager build they prove natural Mario/Fox combat on the Pupupu
 Mario/Fox battle root: Wait -> Walk -> Dash -> Run -> RunBrake -> Turn,
 Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
 GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
-`ftmain.c`, and `gmcollision.c`. The current short marker summary is:
-
-```text
-ftmanager natural-combat: wait=354/372, walk=8/8,
-dash=7/6, run=8/9, attack=11, hitbox=4,
-damage=0->4 status=40, guard=2/10/6, updates=427, mask=0xfffff,
-hwsubmit=42, hwtri=192, hwftr=2/582
-```
+`ftmain.c`, and `gmcollision.c`.
 
 Mode `163` is the scene-level `battle_playable` Boundary/Latest anchor. It runs
 Pupupu Mario/Fox stock battle with the imported battle camera, Dead, and
@@ -101,6 +94,11 @@ It also gates the memory ledger: current arena headroom is `235220`, resident
 reloc payloads are `618448` bytes (`stage=202816`, `fighter=206960`,
 `if=208672`), and stale menu/opening payload bytes are `0/0`.
 
+Default-off neutral-projectile gates now drive Mario fireball and Fox blaster
+from B input through original common SpecialN, imported character callbacks,
+and imported weapon factories. Effects and broader projectile collision routes
+remain open.
+
 ## Process Change
 
 Future gameplay slices are runtime-first subsystem groups aimed at scene-level
@@ -115,11 +113,13 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. Finish the non-critical interface perimeter around timer, pause/end UI,
+1. Continue specials/weapons: broaden projectile victim-damage, shield,
+   reflector, rebound, effects, and remaining Mario/Fox special statuses.
+2. Finish the non-critical interface perimeter around timer, pause/end UI,
    magnify/arrows, tags, effects/items, and broader SObj/RDP helpers.
-2. As subsystem slices obsolete old marker stacks, migrate-or-delete their
+3. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
-3. Renderer follow-up: broaden source-scene coverage, then plan cutover.
+4. Renderer follow-up: broaden source-scene coverage, then plan cutover.
 
 ## Verification
 

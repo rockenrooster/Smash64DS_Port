@@ -5332,6 +5332,32 @@ file/byte count. The current passing proof reports `head=235220`,
 buffer assertions come from `scvsbattle.c:31-41`; the original taskman heap
 setup/allocator path is `sys/taskman.c:267-383`.
 
+## Projectile Proof Markers
+
+When `verify-battle-playable-harness.ps1` is run with
+`-ImportBattleShipMarioFireball` and/or `-ImportBattleShipFoxBlaster`, mode
+`163` also prints `PROJECTILE`. It records result, mask, selected actor slot,
+selected weapon kind, B-press frames, special-status frames, special motion,
+accessory frames, motion `flag0` frames, spawn calls, successful spawns,
+update/map/hit destroy counts, resident weapon frames, max weapon count,
+weapon-kind mask, attack-state mask, max damage, max lifetime, and map mask.
+
+Current fenced passes:
+
+- Mario fireball:
+  `projectile=actor0/kind0 b=1 status=23 accessory=23 flag0=0 spawn=1 ok=1 destroy=0/0/1 weaponFrames=0 max=1 kindMask=0x1 attackMask=0x4 dmg=113 life=140 map=0x0`.
+- Fox blaster:
+  `projectile=actor1/kind1 b=1 status=27 accessory=0 flag0=0 spawn=1 ok=1 destroy=0/0/0 weaponFrames=27 max=1 kindMask=0x2 attackMask=0x8 dmg=96 life=0 map=0x0`.
+
+The source path is original common B dispatch in
+`ftcommonspecialn.c:88`-`:101`, motion-event `flag0` in `ftmain.c:624`,
+accessory/update execution in `ftmain.c:1855`-`:1857`, Mario spawn at
+`ftmariospecialn.c:17`-`:53`, Fox spawn at `ftfoxspecialn.c:11`-`:25`,
+weapon creation/attack metadata in `wpmanager.c:87`-`:104` and
+`:191`-`:236`, and weapon processes at `wpmanager.c:304`-`:306`. Mario's
+immediate hit-destroy path follows `wpmariofireball.c:126`-`:131` and
+`wpprocess.c:469`-`:474`.
+
 - `STAGE_MPDOWNWAIT`: direct/menu DownWait-loop result, safe result, proof
   mask, deferred mask, and selected fighter count. Current pass values are
   `0x46445749`, `0x46445755`, mask `0x3ffff`, deferred mask `0x3ffff`, and

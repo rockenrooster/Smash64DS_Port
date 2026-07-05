@@ -95,6 +95,8 @@
 #define NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_LAST 0x21cu
 #define NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON 0x22du
 #define NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_OFF 0x22eu
+#define NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND 0x27bu
+#define NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_AIR 0x27cu
 #define NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE 0x280u
 #define NDS_RELOC_ASSET_FOX_ANIM_EGGLAY 0x282u
 #define NDS_RELOC_ASSET_FOX_ANIM_WALK1 0x283u
@@ -104,6 +106,8 @@
 #define NDS_RELOC_ASSET_FOX_ANIM_DASH 0x287u
 #define NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN 0x28bu
 #define NDS_RELOC_ASSET_FOX_ANIM_JAB1 0x2efu
+#define NDS_RELOC_ASSET_FOX_ANIM_LASER 0x30bu
+#define NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL 0x30cu
 
 #define NDS_FIGHTER_MARIOFOX_FILE_MASK 0x7fffu
 #define NDS_FIGHTER_MARIOFOX_SETUP_FILES (1u << 0)
@@ -1170,10 +1174,14 @@ static s32 ndsRelocIsMarioFoxNaturalCombatAnimID(u32 asset_id)
              (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_LAST)) ||
             (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON) ||
             (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_OFF) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_AIR) ||
             (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
              (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN)) ||
-            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_JAB1)) ? TRUE :
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_JAB1) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL)) ? TRUE :
                                                            FALSE;
 }
 
@@ -1296,6 +1304,8 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llFTMarioAnimDamagedFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_LAST;
     if (token == ndsRelocFileID(&llFTMarioAnimShieldOnFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON;
     if (token == ndsRelocFileID(&llFTMarioAnimShieldOffFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_OFF;
+    if (token == ndsRelocFileID(&llFTMarioAnimFireballGroundFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND;
+    if (token == ndsRelocFileID(&llFTMarioAnimFireballAirFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_AIR;
     if (token == ndsRelocFileID(&llFTMarioAnimDamageFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE;
     if (token == ndsRelocFileID(&llFTFoxAnimEggLayFileID)) return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY;
     if (token == ndsRelocFileID(&llFTFoxAnimWalk1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK1;
@@ -1308,6 +1318,8 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llFTFoxAnimTurnFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 3u;
     if (token == ndsRelocFileID(&llFTFoxAnimTurnRunFileID)) return NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN;
     if (token == ndsRelocFileID(&llFTFoxAnimJab1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_JAB1;
+    if (token == ndsRelocFileID(&llFTFoxAnimLaserFileID)) return NDS_RELOC_ASSET_FOX_ANIM_LASER;
+    if (token == ndsRelocFileID(&llFTFoxAnimLaserAerialFileID)) return NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WAIT) return NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK1) return NDS_RELOC_ASSET_MARIO_ANIM_WALK1;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK2) return NDS_RELOC_ASSET_MARIO_ANIM_WALK2;
@@ -1447,7 +1459,11 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
     if (((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_WAIT) &&
          (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE)) ||
         ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
-         (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JAB1)))
+         (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JAB1)) ||
+        (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND) ||
+        (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_AIR) ||
+        (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER) ||
+        (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL))
     {
         return TRUE;
     }

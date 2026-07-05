@@ -43,15 +43,6 @@ default, then proves a natural attack/damage chain, KO, stock decrement,
 falls increment, RebirthDown -> RebirthStand -> RebirthWait, return to Wait,
 and a DS 3D hardware stage + fighter frame.
 
-The current public summary is:
-
-```text
-ftmanager natural-combat: wait=354/372, walk=8/8,
-dash=7/6, run=8/9, attack=11, hitbox=4,
-damage=0->4 status=40, guard=2/10/6, updates=427, mask=0xfffff,
-hwsubmit=42, hwtri=192, hwftr=2/582
-```
-
 ## Latest Proof
 
 Runtime slice 1 landed full BattleShip `gm/gmcollision.c`, replacing the local
@@ -83,6 +74,12 @@ and original `if/ifscreenflash.c`. The mode-163 proof reports `stock2->1`,
 `hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`, `hwtri=192`,
 `hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, effects/items, and
 broader SObj/RDP helper coverage remain interface follow-up.
+
+Default-off neutral-projectile gates now prove natural B input through original
+common SpecialN into imported Mario fireball and Fox blaster creation:
+Mario records immediate hit-callback destroy, and Fox records a 27-frame live
+blaster. Effects and broader shield/reflect/rebound/victim-damage routes stay
+follow-up.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `235220`, resident reloc `618448`

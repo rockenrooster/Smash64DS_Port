@@ -506,6 +506,9 @@ endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER),1)
 CFILES += battleship_wpmanager_core.c
 endif
+ifneq ($(filter 1,$(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL) $(NDS_IMPORT_BATTLESHIP_FOX_BLASTER)),)
+CFILES += battleship_special_common.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL),1)
 CFILES += battleship_mario_fireball.c
 endif
@@ -641,6 +644,8 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTMarioAnim041 \
 	reloc_animations/FTMarioAnim058 \
 	reloc_animations/FTMarioAnim059 \
+	reloc_animations/FTMarioAnim136 \
+	reloc_animations/FTMarioAnim137 \
 	reloc_animations/FTMarioAnim141 \
 	reloc_animations/FTFoxAnim000 \
 	reloc_animations/FTFoxAnim001 \
@@ -652,7 +657,9 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim007 \
 	reloc_animations/FTFoxAnim008 \
 	reloc_animations/FTFoxAnim009 \
-	reloc_animations/FTFoxAnim109
+	reloc_animations/FTFoxAnim109 \
+	reloc_animations/FTFoxAnim137 \
+	reloc_animations/FTFoxAnim138
 
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \

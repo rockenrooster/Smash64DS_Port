@@ -1821,7 +1821,7 @@ static sb32 ndsFighterWalkDeferredInterrupt(GObj *fighter_gobj)
     return FALSE;
 }
 
-#if !NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL
+#if !(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || NDS_IMPORT_BATTLESHIP_FOX_BLASTER)
 sb32 ftCommonSpecialNCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
@@ -4111,7 +4111,7 @@ void ftCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
     }
 }
 
-#if !NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL
+#if !(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || NDS_IMPORT_BATTLESHIP_FOX_BLASTER)
 sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
 {
     (void)fighter_gobj;

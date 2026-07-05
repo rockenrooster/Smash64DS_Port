@@ -8997,6 +8997,9 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_MIN 50.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_TIMEOUT 45u
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_RETRY_MAX 6u
+#define NDS_FIGHTER_PROJECTILE_FIRE_TIMEOUT 120u
+#define NDS_FIGHTER_PROJECTILE_OBSERVE_TIMEOUT 180u
+#define NDS_FIGHTER_PROJECTILE_WEAPON_FRAMES_REQUIRED 3u
 #define NDS_FIGHTER_NATURAL_COMBAT_PHASE_TIMEOUT 600u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PHASE_TIMEOUT 3600u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_WAIT_AFTER_REBIRTH_REQUIRED 8u
@@ -9025,7 +9028,10 @@ enum {
     nNDSNaturalCombatPhaseBattlePlayableDead,
     nNDSNaturalCombatPhaseBattlePlayableRebirth,
     nNDSNaturalCombatPhaseBattlePlayableRecover,
-    nNDSNaturalCombatPhaseBattlePlayableDone
+    nNDSNaturalCombatPhaseBattlePlayableDone,
+    nNDSNaturalCombatPhaseProjectileSettle,
+    nNDSNaturalCombatPhaseProjectileFire,
+    nNDSNaturalCombatPhaseProjectileObserve
 };
 
 typedef struct NDSFighterNaturalMotionState {
@@ -9061,12 +9067,26 @@ static u32 sNdsBattlePlayableBattleStockStart;
 static u32 sNdsBattlePlayableFallsStart;
 static u32 sNdsBattlePlayableRebirthSeen;
 static s8 sNdsBattlePlayableKOStickX;
+static u32 sNdsNaturalProjectileActorSlot;
+static u32 sNdsNaturalProjectileButtonPressed;
+static u32 sNdsNaturalProjectileExpectedKind;
 
 static sb32 ndsFighterBattlePlayableProofEnabled(void)
 {
 #if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
     return TRUE;
+#else
+    return FALSE;
+#endif
+}
+
+static sb32 ndsFighterNaturalProjectileProofEnabled(void)
+{
+#if NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER && \
+    (NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || \
+     NDS_IMPORT_BATTLESHIP_FOX_BLASTER)
+    return (ndsFighterBattlePlayableProofEnabled() != FALSE) ? TRUE : FALSE;
 #else
     return FALSE;
 #endif
@@ -9290,6 +9310,169 @@ static sb32 ndsFighterNaturalCombatStatusIsGuard(s32 status_id)
 {
     return ((status_id >= nFTCommonStatusGuardStart) &&
             (status_id <= nFTCommonStatusGuardEnd)) ? TRUE : FALSE;
+}
+
+static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
+{
+    u32 i;
+
+#if NDS_IMPORT_BATTLESHIP_FOX_BLASTER
+    for (i = 0u; i < 2u; i++)
+    {
+        if (fp[i]->fkind == nFTKindFox)
+        {
+            return i;
+        }
+    }
+#endif
+#if NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL
+    for (i = 0u; i < 2u; i++)
+    {
+        if (fp[i]->fkind == nFTKindMario)
+        {
+            return i;
+        }
+    }
+#endif
+    return sNdsNaturalCombatAttackerSlot;
+}
+
+static u32 ndsFighterNaturalProjectileExpectedKind(FTStruct *fp)
+{
+#if NDS_IMPORT_BATTLESHIP_FOX_BLASTER
+    if ((fp != NULL) && (fp->fkind == nFTKindFox))
+    {
+        return nWPKindBlaster;
+    }
+#endif
+    return nWPKindFireball;
+}
+
+static sb32 ndsFighterNaturalProjectileStatusIsSpecialN(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    if (fp->fkind == nFTKindFox)
+    {
+        return ((fp->status_id == nFTFoxStatusSpecialN) ||
+                (fp->status_id == nFTFoxStatusSpecialAirN)) ? TRUE : FALSE;
+    }
+    if (fp->fkind == nFTKindMario)
+    {
+        return ((fp->status_id == nFTMarioStatusSpecialN) ||
+                (fp->status_id == nFTMarioStatusSpecialAirN)) ? TRUE : FALSE;
+    }
+    return FALSE;
+}
+
+static void ndsFighterNaturalProjectileRecord(FTStruct *fp[2])
+{
+#if NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
+    GObj *weapon_gobj;
+    FTStruct *actor;
+    u32 mask;
+    u32 count = 0u;
+
+    if (ndsFighterNaturalProjectileProofEnabled() == FALSE)
+    {
+        return;
+    }
+    actor = fp[sNdsNaturalProjectileActorSlot];
+    mask = gNdsFighterProjectileProofMask;
+    if (actor != NULL)
+    {
+        gNdsFighterProjectileProofActorSlot =
+            sNdsNaturalProjectileActorSlot;
+        gNdsFighterProjectileProofActorKind = (u32)actor->fkind;
+        mask |= 1u << 0;
+        if (ndsFighterNaturalProjectileStatusIsSpecialN(actor) != FALSE)
+        {
+            gNdsFighterProjectileProofSpecialStatusFrames++;
+            gNdsFighterProjectileProofSpecialMotion = (u32)actor->motion_id;
+            mask |= 1u << 2;
+        }
+        if (actor->proc_accessory != NULL)
+        {
+            gNdsFighterProjectileProofAccessoryFrames++;
+        }
+        if (actor->motion_vars.flags.flag0 != 0)
+        {
+            gNdsFighterProjectileProofFlag0Frames++;
+        }
+    }
+    if (gNdsFighterProjectileProofBPressFrames > 0u)
+    {
+        mask |= 1u << 1;
+    }
+
+    weapon_gobj = gGCCommonLinks[nGCCommonLinkIDWeapon];
+    while (weapon_gobj != NULL)
+    {
+        WPStruct *wp = wpGetStruct(weapon_gobj);
+
+        if (wp != NULL)
+        {
+            count++;
+            if ((wp->kind >= 0) && (wp->kind < 32))
+            {
+                gNdsFighterProjectileProofKindMask |= 1u << wp->kind;
+            }
+            if ((wp->attack_coll.attack_state >= 0) &&
+                (wp->attack_coll.attack_state < 32))
+            {
+                gNdsFighterProjectileProofAttackStateMask |=
+                    1u << wp->attack_coll.attack_state;
+            }
+            if ((u32)wp->attack_coll.damage >
+                gNdsFighterProjectileProofDamageMax)
+            {
+                gNdsFighterProjectileProofDamageMax =
+                    (u32)wp->attack_coll.damage;
+            }
+            if ((u32)wp->lifetime > gNdsFighterProjectileProofLifetimeMax)
+            {
+                gNdsFighterProjectileProofLifetimeMax = (u32)wp->lifetime;
+            }
+            gNdsFighterProjectileProofMapMask |=
+                wp->coll_data.mask_prev | wp->coll_data.mask_curr |
+                wp->coll_data.mask_stat;
+        }
+        weapon_gobj = weapon_gobj->link_next;
+    }
+    if (count > 0u)
+    {
+        gNdsFighterProjectileProofWeaponFrames++;
+        mask |= 1u << 3;
+    }
+    else if (gNdsFighterProjectileProofHitDestroyCount > 0u)
+    {
+        mask |= 1u << 3;
+    }
+    if (count > gNdsFighterProjectileProofWeaponCountMax)
+    {
+        gNdsFighterProjectileProofWeaponCountMax = count;
+    }
+    if ((gNdsFighterProjectileProofKindMask &
+         (1u << sNdsNaturalProjectileExpectedKind)) != 0u)
+    {
+        mask |= 1u << 4;
+    }
+    if ((gNdsFighterProjectileProofAttackStateMask != 0u) &&
+        (gNdsFighterProjectileProofDamageMax > 0u))
+    {
+        mask |= 1u << 5;
+    }
+    gNdsFighterProjectileProofMask = mask;
+    if ((mask & 0x3fu) == 0x3fu)
+    {
+        gNdsFighterProjectileProofResult =
+            NDS_FIGHTER_PROJECTILE_PROOF_PASS;
+    }
+#else
+    (void)fp;
+#endif
 }
 
 static sb32 ndsFighterNaturalCombatHitboxActive(FTStruct *fp)
@@ -9564,6 +9747,7 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
 {
     FTStruct *p0 = ndsFighterManagerLiveStruct(0u);
     FTStruct *p1 = ndsFighterManagerLiveStruct(1u);
+    FTStruct *fp[2];
 
     if ((ndsFighterMarioFoxNaturalMotionProofEnabled() == FALSE) ||
         (gNdsFighterNaturalMotionPrepared != 0u))
@@ -9575,6 +9759,8 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     {
         return;
     }
+    fp[0] = p0;
+    fp[1] = p1;
 
     bzero(sNdsFighterNaturalMotionStates,
           sizeof(sNdsFighterNaturalMotionStates));
@@ -9594,6 +9780,11 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         (u32)((sNdsNaturalCombatVictimSlot == 0u) ? p0 : p1)->percent_damage;
     sNdsBattlePlayableRebirthSeen = 0u;
     sNdsBattlePlayableKOStickX = 80;
+    sNdsNaturalProjectileButtonPressed = 0u;
+    sNdsNaturalProjectileActorSlot =
+        ndsFighterNaturalProjectileSelectSlot(fp);
+    sNdsNaturalProjectileExpectedKind =
+        ndsFighterNaturalProjectileExpectedKind(fp[sNdsNaturalProjectileActorSlot]);
     if (ndsFighterBattlePlayableProofEnabled() != FALSE)
     {
         FTStruct *victim =
@@ -9645,6 +9836,14 @@ static void ndsFighterNaturalCombatSetPhase(u32 phase)
     sNdsNaturalCombatPhaseFrames = 0u;
     sNdsNaturalCombatSettleFrames = 0u;
     gNdsFighterNaturalCombatPhase = phase;
+}
+
+static void ndsFighterNaturalCombatStartKOExit(FTStruct *victim)
+{
+    sNdsBattlePlayableKOStickX =
+        (ndsFighterNaturalCombatPosX(victim) < 0.0F) ? -80 : 80;
+    ndsFighterNaturalCombatSetPhase(
+        nNDSNaturalCombatPhaseBattlePlayableKOExit);
 }
 
 static sb32 ndsFighterNaturalCombatSettled(FTStruct *fp[2])
@@ -9837,15 +10036,60 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         {
             if (ndsFighterBattlePlayableProofEnabled() != FALSE)
             {
-                sNdsBattlePlayableKOStickX =
-                    (ndsFighterNaturalCombatPosX(victim) < 0.0F) ? -80 : 80;
-                ndsFighterNaturalCombatSetPhase(
-                    nNDSNaturalCombatPhaseBattlePlayableKOExit);
+                if (ndsFighterNaturalProjectileProofEnabled() != FALSE)
+                {
+                    ndsFighterNaturalCombatSetPhase(
+                        nNDSNaturalCombatPhaseProjectileSettle);
+                }
+                else
+                {
+                    ndsFighterNaturalCombatStartKOExit(victim);
+                }
             }
             else
             {
                 ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseDone);
             }
+        }
+        break;
+    case nNDSNaturalCombatPhaseProjectileSettle:
+        if (ndsFighterNaturalCombatSettled(fp) != FALSE)
+        {
+            sNdsNaturalProjectileButtonPressed = 0u;
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseProjectileFire);
+        }
+        break;
+    case nNDSNaturalCombatPhaseProjectileFire:
+        if ((gNdsFighterProjectileProofSpecialStatusFrames > 0u) &&
+            ((gNdsFighterProjectileProofWeaponFrames > 0u) ||
+             (gNdsFighterProjectileProofHitDestroyCount > 0u) ||
+             (gNdsFighterProjectileProofResult ==
+                NDS_FIGHTER_PROJECTILE_PROOF_PASS)))
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseProjectileObserve);
+        }
+        else if (sNdsNaturalCombatPhaseFrames >
+                 NDS_FIGHTER_PROJECTILE_FIRE_TIMEOUT)
+        {
+            gNdsFighterNaturalCombatStallCount++;
+            ndsFighterNaturalCombatStartKOExit(victim);
+        }
+        break;
+    case nNDSNaturalCombatPhaseProjectileObserve:
+        if (gNdsFighterProjectileProofResult ==
+            NDS_FIGHTER_PROJECTILE_PROOF_PASS)
+        {
+            ndsFighterNaturalCombatStartKOExit(victim);
+        }
+        else if ((gNdsFighterProjectileProofWeaponFrames >=
+                  NDS_FIGHTER_PROJECTILE_WEAPON_FRAMES_REQUIRED) &&
+                 (sNdsNaturalCombatPhaseFrames >
+                  NDS_FIGHTER_PROJECTILE_OBSERVE_TIMEOUT))
+        {
+            gNdsFighterNaturalCombatStallCount++;
+            ndsFighterNaturalCombatStartKOExit(victim);
         }
         break;
     case nNDSNaturalCombatPhaseBattlePlayableKOExit:
@@ -9938,6 +10182,14 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
     case nNDSNaturalCombatPhaseGuard:
         button[sNdsNaturalCombatVictimSlot] = Z_TRIG;
         break;
+    case nNDSNaturalCombatPhaseProjectileFire:
+        if (sNdsNaturalProjectileButtonPressed == 0u)
+        {
+            button[sNdsNaturalProjectileActorSlot] = B_BUTTON;
+            sNdsNaturalProjectileButtonPressed = 1u;
+            gNdsFighterProjectileProofBPressFrames++;
+        }
+        break;
     case nNDSNaturalCombatPhaseBattlePlayableKOExit:
         stick[sNdsNaturalCombatVictimSlot] = sNdsBattlePlayableKOStickX;
         gNdsFighterBattlePlayableKOStickFrames++;
@@ -9996,6 +10248,7 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
     }
     ndsFighterNaturalCombatRecordPair(fp[sNdsNaturalCombatAttackerSlot],
                                       fp[sNdsNaturalCombatVictimSlot]);
+    ndsFighterNaturalProjectileRecord(fp);
     ndsFighterNaturalCombatAdvancePhase(fp);
 
     if ((gNdsFighterNaturalMotionManagerMask & 0x3u) == 0x3u)

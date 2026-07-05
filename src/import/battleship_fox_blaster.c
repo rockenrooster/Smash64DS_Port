@@ -2,6 +2,7 @@
 
 #include <ef/effect.h>
 #include <ft/fighter.h>
+#include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <wp/weapon.h>
 
@@ -48,7 +49,23 @@ __attribute__((weak)) LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
     return NULL;
 }
 
+#define wpFoxBlasterMakeWeapon battleship_wpFoxBlasterMakeWeapon
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c"
+#undef wpFoxBlasterMakeWeapon
+
+GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
+{
+    GObj *weapon_gobj;
+
+    gNdsFighterProjectileProofSpawnCallCount++;
+    weapon_gobj = battleship_wpFoxBlasterMakeWeapon(fighter_gobj, pos);
+    if (weapon_gobj != NULL)
+    {
+        gNdsFighterProjectileProofSpawnSuccessCount++;
+    }
+    return weapon_gobj;
+}
+
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftfox/ftfoxspecialn.c"
 
 #endif

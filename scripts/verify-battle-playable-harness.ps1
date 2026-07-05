@@ -4,9 +4,20 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$ImportBattleShipMarioFireball,
+    [switch]$ImportBattleShipFoxBlaster
 )
 $ErrorActionPreference = 'Stop'
+$target = 'smash64ds-battle-playable-hwtri'
+$build = 'build-battle-playable-hwtri-harness'
+if ($ImportBattleShipMarioFireball -or $ImportBattleShipFoxBlaster) {
+    $suffix = @()
+    if ($ImportBattleShipMarioFireball) { $suffix += 'fireball' }
+    if ($ImportBattleShipFoxBlaster) { $suffix += 'blaster' }
+    $target = "$target-$($suffix -join '-')"
+    $build = "$build-$($suffix -join '-')"
+}
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -16,10 +27,12 @@ $ErrorActionPreference = 'Stop'
     -DelaySeconds $DelaySeconds `
     -BattlePlayable `
     -ImportBattleShipIFCommon `
+    -ImportBattleShipMarioFireball:$ImportBattleShipMarioFireball `
+    -ImportBattleShipFoxBlaster:$ImportBattleShipFoxBlaster `
     -HardwareTriangles `
     -Harness 'battle_playable' `
-    -Target 'smash64ds-battle-playable-hwtri' `
-    -Build 'build-battle-playable-hwtri-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `

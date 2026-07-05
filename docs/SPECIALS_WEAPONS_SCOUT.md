@@ -6,28 +6,45 @@ emulator, or snapshot was run for the initial scout document.
 
 ## Current Checkpoint
 
-As of 2026-07-05, default-off `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`
-compiles the original Mario neutral-special TU plus the Mario fireball
-projectile TU, and also compiles original `ftcommonspecialn.c` and
-`ftcommonspecialair.c` so ground and air B input reach Mario's imported
-neutral-special status setters under the fence. The air path is the original
-`ftCommonSpecialAirCheckInterruptCommon` B-input branch at
-`decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialair.c:157`,
-neutral-special dispatch at `:183`-`:185`, and Mario's
-`ftMarioSpecialAirNSetStatus` at
-`decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospecialn.c:111`.
-Non-Mario neutral-special setters and unowned air Hi/Lw special setters remain
-weak until their character TUs land. The fence still uses weak bridge stubs for
-heavy map adjustment, display-scale, and particle-effect calls.
+As of 2026-07-05, default-off
+`NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1` and
+`NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1` share
+`src/import/battleship_special_common.c`, which imports original
+`ftcommonspecialn.c` and `ftcommonspecialair.c` exactly once for Mario-only,
+Fox-only, and combined projectile builds. Ground B-input reaches
+`ftCommonSpecialNCheckInterruptCommon` at
+`decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialn.c:88`,
+tests B at `:93`, and dispatches the fighter neutral-special status at `:101`.
+Air B-input reaches `ftCommonSpecialAirCheckInterruptCommon` at
+`decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialair.c:152`,
+tests B at `:157`, and dispatches neutral air special at `:185`.
 
-Default-off `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1` now compiles original
-`ftfoxspecialn.c` and `wpfoxblaster.c` through
-`src/import/battleship_fox_blaster.c`, backed by the same fenced weapon-manager
-core. The original Fox source path is `ftfoxspecialn.c:11` for blaster spawn,
-`:34` for repeat-shot interrupt, and `wpfoxblaster.c:106` for weapon creation.
-Blaster glow remains a weak no-op until the effect-manager memory gate. The
-next proof remains projectile spawn -> map/lifetime -> hit/damage through
-imported weapon processes for Mario fireball and Fox blaster.
+Mario fireball imports original `ftmariospecialn.c` and
+`wpmariofireball.c`. The source path is BattleShip motion-event `flag0`
+assignment in `ftmain.c:624`, accessory dispatch in `ftmain.c:1855`-`:1857`,
+Mario's fireball accessory at `ftmariospecialn.c:17`, its `flag0` check at
+`:23`, and `wpMarioFireballMakeWeapon` at `:53`. The weapon factory creates a
+fighter-owned projectile through `wpManagerMakeWeapon` at
+`wpmariofireball.c:160`-`:170`; the original hit callback returns `TRUE` at
+`:126`-`:131`, so `wpprocess.c:469`-`:474` destroys it on a hit callback.
+The fenced battle-playable proof now records:
+`projectile=actor0/kind0 b=1 status=23 accessory=23 spawn=1 ok=1 destroy=0/0/1 weaponFrames=0 max=1 kindMask=0x1 attackMask=0x4 dmg=113 life=140`.
+
+Fox blaster imports original `ftfoxspecialn.c` and `wpfoxblaster.c`. The source
+path is BattleShip `flag0` assignment in `ftmain.c:624`, Fox update callback
+at `ftfoxspecialn.c:11`, its `flag0` check at `:16`, and
+`wpFoxBlasterMakeWeapon` at `:25`. The blaster descriptor/factory are
+`wpfoxblaster.c:11`-`:32` and `:106`-`:123`; weapon creation enters
+`wpManagerMakeWeapon` at `wpmanager.c:87`, creates a weapon GObj at `:104`,
+seeds attack state/damage/metadata at `:191`-`:236`, and installs weapon
+processes at `:304`-`:306`. The fenced battle-playable proof now records:
+`projectile=actor1/kind1 b=1 status=27 spawn=1 ok=1 weaponFrames=27 max=1 kindMask=0x2 attackMask=0x8 dmg=96`.
+
+Blaster glow and fireball particles remain weak no-ops until the effect-manager
+memory gate. Broader projectile victim-damage, shield, reflector, rebound, and
+free-flight coverage are still follow-up; the current proof is natural
+input/status/motion-command spawn plus live weapon creation and first callback
+behavior.
 
 ## Current Import Boundary
 

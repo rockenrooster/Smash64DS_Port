@@ -3,6 +3,7 @@
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_scene_harness.h>
 #include <sys/utils.h>
+#include <wp/weapon.h>
 
 extern void syUtilsSetRandomSeed(s32 seed);
 extern s32 syUtilsRandSeed(void);

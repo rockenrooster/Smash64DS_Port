@@ -175,6 +175,7 @@
 #define NDS_FIGHTER_NATURAL_MOTION_PASS 0x464e4d50u
 #define NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS 0x464e4d53u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PASS 0x42504c59u
+#define NDS_FIGHTER_PROJECTILE_PROOF_PASS 0x50524f4au
 #define NDS_MEMORY_LEDGER_PASS 0x4d4c4544u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_PASS 0x46444150u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_SAFE_PASS 0x46444153u
@@ -3643,6 +3644,27 @@ extern volatile u32 gNdsFighterNaturalCombatVictimRecoverWaitFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardOnFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardOffFrames;
+extern volatile u32 gNdsFighterProjectileProofResult;
+extern volatile u32 gNdsFighterProjectileProofMask;
+extern volatile u32 gNdsFighterProjectileProofActorSlot;
+extern volatile u32 gNdsFighterProjectileProofActorKind;
+extern volatile u32 gNdsFighterProjectileProofBPressFrames;
+extern volatile u32 gNdsFighterProjectileProofSpecialStatusFrames;
+extern volatile u32 gNdsFighterProjectileProofSpecialMotion;
+extern volatile u32 gNdsFighterProjectileProofAccessoryFrames;
+extern volatile u32 gNdsFighterProjectileProofFlag0Frames;
+extern volatile u32 gNdsFighterProjectileProofSpawnCallCount;
+extern volatile u32 gNdsFighterProjectileProofSpawnSuccessCount;
+extern volatile u32 gNdsFighterProjectileProofUpdateDestroyCount;
+extern volatile u32 gNdsFighterProjectileProofMapDestroyCount;
+extern volatile u32 gNdsFighterProjectileProofHitDestroyCount;
+extern volatile u32 gNdsFighterProjectileProofWeaponFrames;
+extern volatile u32 gNdsFighterProjectileProofWeaponCountMax;
+extern volatile u32 gNdsFighterProjectileProofKindMask;
+extern volatile u32 gNdsFighterProjectileProofAttackStateMask;
+extern volatile u32 gNdsFighterProjectileProofDamageMax;
+extern volatile u32 gNdsFighterProjectileProofLifetimeMax;
+extern volatile u32 gNdsFighterProjectileProofMapMask;
 extern volatile u32 gNdsFighterBattlePlayableResult;
 extern volatile u32 gNdsFighterBattlePlayableMask;
 extern volatile u32 gNdsFighterBattlePlayableVictimSlot;

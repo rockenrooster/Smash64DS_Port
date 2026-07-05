@@ -17781,3 +17781,25 @@ Still deferred:
   battle-playable build, and combined Mario+Fox projectile fenced
   battle-playable build; `git diff --check`, `check-docs`, and
   `verify-dev-fast -Build -DelaySeconds 3`.
+
+## 2026-07-05 - Fenced Neutral Projectile Proof
+
+- Split original common neutral-special input into
+  `src/import/battleship_special_common.c` so Mario-only, Fox-only, and
+  combined projectile fences all import `ftcommonspecialn.c` and
+  `ftcommonspecialair.c` exactly once.
+- Added Mario/Fox special animation payload IDs to the DS reloc manifest and
+  natural battle-playable projectile diagnostics for B input, special status,
+  spawn calls, live weapon metadata, callback destroy counts, and resident
+  weapon frames.
+- The source-backed proofs now show Mario fireball creation through
+  `ftmariospecialn.c` -> `wpmariofireball.c` with immediate original
+  hit-callback destroy, and Fox blaster creation through `ftfoxspecialn.c` ->
+  `wpfoxblaster.c` with 27 observed live weapon frames. Effects, shield,
+  reflector, rebound, and broader projectile victim-damage routes remain
+  follow-up.
+- Verified: `verify-battle-playable-harness.ps1 -ImportBattleShipFoxBlaster`,
+  `verify-battle-playable-harness.ps1 -ImportBattleShipMarioFireball
+  -ImportBattleShipFoxBlaster`, and
+  `verify-battle-playable-harness.ps1 -ImportBattleShipMarioFireball` with
+  `-DelaySeconds 3`.
