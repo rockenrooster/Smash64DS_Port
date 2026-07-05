@@ -10,6 +10,7 @@ param(
     [switch]$ImportBattleShipFoxBlaster
 )
 $ErrorActionPreference = 'Stop'
+$ImportBattleShipNormalMoveset = $true
 $target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 if ($ImportBattleShipNormalMoveset -or
