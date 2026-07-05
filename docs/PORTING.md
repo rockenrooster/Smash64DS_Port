@@ -17448,3 +17448,15 @@ Still deferred:
 - Verified: `verify-dev-fast -Build -DelaySeconds 3`,
   `verify-battle-playable-harness -DelaySeconds 3`, and
   `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Default MP Cliff-Status Stage Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `87/88`, matching
+  the already-proven mode `85/86` hardware path, then made the direct and
+  menu-chain MP cliff-status wrappers default to `-hwtri` targets with
+  `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry and GBI fixture checks so the MP cliff-status
+  stage pair is covered by the hardware-default guardrails.
+- Verified: direct MP cliff-status hardware with `-DelaySeconds 3`, menu-chain
+  MP cliff-status hardware with `-DelaySeconds 8`, and menu-chain MP
+  motion-stale hardware comparison with `-NoBuild -DelaySeconds 8`.

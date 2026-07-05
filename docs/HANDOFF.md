@@ -46,7 +46,7 @@ decrement, falls increment, RebirthDown -> RebirthStand -> RebirthWait, return
 to Wait, and a DS 3D hardware stage + fighter frame.
 
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
-`33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair
+`33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status-floor modes `59-88`, and Boundary/Latest pair
 `161/162`; pass `-SoftwarePreview` to those wrappers for comparison runs. The
 Pupupu stage-inclusive gate proves matrix, material, texture, depth/fog/alpha,
 primitive-Z, and texture-perspective HW submission with zero rejects. The strict
@@ -56,7 +56,7 @@ submits 284/298 fighter triangles. The all-DL proof carries the
 source-equivalent segment `0xE` material register, RSP vertex/render state,
 original fighter-part MObjs, and CI TLUT seeds from the current material
 palette. All-DL now reports `bind119/upload8/ready119/reject0`. The
-stage-inclusive `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor defaults now submit the Pupupu stage plus
+stage-inclusive `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status-floor defaults now submit the Pupupu stage plus
 both selected live fighters in one frame: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active boundary
 wrappers assert that stage + both-fighter DS 3D replay after the imported

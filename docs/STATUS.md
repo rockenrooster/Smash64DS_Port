@@ -89,7 +89,7 @@ cache eviction. Mode `163` reports headroom `235396`, resident reloc `618448`
 bytes, stale `0/0`, and source VSBattle buffers from `scvsbattle.c:31-41`.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage
-draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale-floor modes `59-86`, and Boundary/Latest pair `161/162`;
+draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status-floor modes `59-88`, and Boundary/Latest pair `161/162`;
 global normal builds still default to software preview. Use `-SoftwarePreview`
 on those wrappers for comparisons. The current Pupupu
 stage-inclusive hardware gate proves matrix, material,
@@ -106,7 +106,7 @@ on direct and menu-chain routes: `hwsubmit=252`, `hwtri=1152`,
 `hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
 combat boundary wrappers assert that stage + both-fighter DS 3D replay after
 the imported manager combat chain passes. Latest captures include
-`artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures,
+`artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures through cliff-status,
 menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
 Full visual fidelity still needs broader source-scene coverage and cutover work.
 
