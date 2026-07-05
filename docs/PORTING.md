@@ -17658,6 +17658,19 @@ Still deferred:
   `check-docs`, `git diff --check`, `verify-dev-fast -Build -DelaySeconds 3`,
   and `verify-boundary -DelaySeconds 3`.
 
+## 2026-07-05 - Default MP Cliff-Climb Finish Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `119/120` and
+  made the direct/menu MP cliff-climb finish wrappers default to `-hwtri`,
+  with `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry, GBI fixture checks, and current-truth docs so
+  the hardware-default stage coverage now runs through cliff-climb finish.
+- Verified: direct MP cliff-climb finish hardware with `-DelaySeconds 8`,
+  menu-chain MP cliff-climb finish hardware with `-DelaySeconds 8`,
+  `check-gbi-decode-fixtures`, `check-harness-registry`, `check-docs`,
+  `git diff --check`, `verify-dev-fast -Build -DelaySeconds 3`, and
+  `verify-boundary -DelaySeconds 3`.
+
 ## 2026-07-05 - Default MP Cliff-Climb Common2 Proofs To Hardware
 
 - Extended the stage `gcDrawAll` hardware submit path to modes `117/118` and
