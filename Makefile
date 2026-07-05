@@ -487,6 +487,7 @@ ifeq ($(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE),1)
 CFILES += battleship_gmcamera.c battleship_ftcommon_dead.c \
 	battleship_ftcommon_rebirth.c battle_playable_compat_stubs.c
 endif
+CFILES += battleship_ifscreenflash.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_IFCOMMON),1)
 CFILES += battleship_ifcommon.c
 endif

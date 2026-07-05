@@ -66,11 +66,6 @@ NDS_WEAK void grZebesAcidGetLevelInfo(f32 *current, f32 *step)
     }
 }
 
-NDS_WEAK void ifScreenFlashMakeInterface(u8 alpha)
-{
-    (void)alpha;
-}
-
 NDS_WEAK void sc1PGameSetPlayerDefeatStats(s32 player, s32 team_order)
 {
     (void)player;

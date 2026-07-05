@@ -87,12 +87,12 @@
   those stubs status-by-status as the owning original TUs and assets are
   imported.
 - `battle_playable` is default for original `gm/gmcamera.c`,
-  `ftcommondead.c`, `ftcommonrebirth.c`, and battle-critical `if/ifcommon.c`
-  HUD paths. Mode `163` now proves natural attack/damage -> KO -> stock
-  decrement -> Rebirth -> Wait, rendered percent digits, stock icon decrement,
-  and a hardware stage/fighter frame. Timer, pause/end UI, magnify/arrows,
-  tags, screen flash, effects/items, and broader SObj/RDP helper coverage stay
-  as documented interface follow-up.
+  `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD
+  paths, and original `if/ifscreenflash.c`. Mode `163` now proves natural
+  attack/damage -> KO -> stock decrement -> Rebirth -> Wait, rendered percent
+  digits, stock icon decrement, and a hardware stage/fighter frame. Timer,
+  pause/end UI, magnify/arrows, tags, effects/items, and broader SObj/RDP
+  helper coverage stay as documented interface follow-up.
 - [coverage-reduced] Deleted legacy standalone modes `57/58`
   (`battle_mariofox_gcdrawall_loop` /
   `menu_chain_mariofox_gcdrawall_loop`). Active stage gcDrawAll, natural-combat

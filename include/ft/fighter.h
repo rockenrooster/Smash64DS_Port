@@ -3584,6 +3584,9 @@ void ftParamResetFighterColAnim(GObj *fighter_gobj);
 void ftParamSetPlayerTagWait(GObj *fighter_gobj, s32 wait);
 FTStruct *ftGetStruct(GObj *fighter_gobj);
 void ftParamSetVelPush(GObj *fighter_gobj, Vec3f *vel);
+sb32 ftParamCheckSetColAnimID(GMColAnim *colanim, s32 colanim_id,
+                              s32 length);
+void ftParamResetColAnim(GMColAnim *colanim);
 void ftDisplayLightsDrawReflect(Gfx **display_list, f32 light_angle_x,
                                 f32 light_angle_y);
 void ftDisplayMainProcDisplay(GObj *fighter_gobj);

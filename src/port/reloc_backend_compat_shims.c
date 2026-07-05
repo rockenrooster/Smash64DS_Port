@@ -103,6 +103,7 @@ sb32 ndsBaseFTCommonDamageCheckCaptureKeepHold(FTStruct *fp);
 sb32 ndsBaseFTCommonDamageCheckElementSetColAnim(GObj *fighter_gobj, s32 element, s32 damage_level);
 void ndsBaseFTCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element);
 void ndsBaseFTCommonDamageInitDamageVars(GObj *fighter_gobj, s32 status_id_replace, s32 damage, f32 knockback, s32 angle_start, s32 damage_lr, s32 damage_index, s32 element, s32 damage_player_num, s32 arg9, sb32 unk_bool, sb32 is_public);
+void ndsBattleShipIFScreenFlashSetColAnimID(s32 colanim_id, s32 colanim_duration);
 void ndsBaseFTCommonDamageGotoDamageStatus(GObj *fighter_gobj);
 void ndsBaseFTCommonDamageUpdateDamageColAnim(GObj *fighter_gobj, f32 knockback, s32 element);
 void ndsBaseFTCommonDamageSetDamageColAnim(GObj *fighter_gobj);
@@ -351,7 +352,82 @@ FTOpeningDesc *D_ovl1_80390D20[] = {
     &sNdsDefaultOpeningDesc
 };
 
-GMColDesc dGMColScriptsDescs[64];
+#define NDS_GM_COL_FIELD(value, start, len) \
+    ((((u32)(value)) & ((1u << (len)) - 1u)) << (start))
+#define NDS_GM_COL_COMMAND_END() NDS_GM_COL_FIELD(nGMColEventEnd, 26, 6)
+#define NDS_GM_COL_COMMAND_WAIT(frames) \
+    (NDS_GM_COL_FIELD(nGMColEventWait, 26, 6) | \
+     NDS_GM_COL_FIELD(frames, 0, 26))
+#define NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL() \
+    NDS_GM_COL_FIELD(nGMColEventClearColorAll, 26, 6)
+#define NDS_GM_COL_COMMAND_SET_COLOR1_S1() \
+    NDS_GM_COL_FIELD(nGMColEventSetColor1, 26, 6)
+#define NDS_GM_COL_COMMAND_SET_COLOR1_S2(r, g, b, a) \
+    (NDS_GM_COL_FIELD(r, 24, 8) | NDS_GM_COL_FIELD(g, 16, 8) | \
+     NDS_GM_COL_FIELD(b, 8, 8) | NDS_GM_COL_FIELD(a, 0, 8))
+#define NDS_GM_COL_COMMAND_SET_COLOR1(r, g, b, a) \
+    NDS_GM_COL_COMMAND_SET_COLOR1_S1(), \
+        NDS_GM_COL_COMMAND_SET_COLOR1_S2(r, g, b, a)
+#define NDS_GM_COL_COMMAND_BLEND_COLOR1_S1(frames) \
+    (NDS_GM_COL_FIELD(nGMColEventBlendColor1, 26, 6) | \
+     NDS_GM_COL_FIELD(frames, 0, 26))
+#define NDS_GM_COL_COMMAND_BLEND_COLOR1_S2(r, g, b, a) \
+    (NDS_GM_COL_FIELD(r, 24, 8) | NDS_GM_COL_FIELD(g, 16, 8) | \
+     NDS_GM_COL_FIELD(b, 8, 8) | NDS_GM_COL_FIELD(a, 0, 8))
+#define NDS_GM_COL_COMMAND_BLEND_COLOR1(frames, r, g, b, a) \
+    NDS_GM_COL_COMMAND_BLEND_COLOR1_S1(frames), \
+        NDS_GM_COL_COMMAND_BLEND_COLOR1_S2(r, g, b, a)
+
+static u32 sNdsGMColScriptsScreenFlashDeadExplode[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x00),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(6, 0xFF, 0xFF, 0xFF, 0x6E),
+    NDS_GM_COL_COMMAND_WAIT(6),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(30, 0xFF, 0xFF, 0xFF, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(30),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_END()
+};
+
+static u32 sNdsGMColScriptsScreenFlashDamageNormal[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x46),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(6, 0xFF, 0xFF, 0xFF, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(6),
+    NDS_GM_COL_COMMAND_END()
+};
+
+static u32 sNdsGMColScriptsScreenFlashDamageFire[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0x8C, 0x78, 0x50),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(8, 0xFF, 0x8C, 0x78, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(8),
+    NDS_GM_COL_COMMAND_END()
+};
+
+static u32 sNdsGMColScriptsScreenFlashDamageElectric[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x8C, 0x8C, 0xFF, 0x50),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(8, 0x8C, 0x8C, 0xFF, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(8),
+    NDS_GM_COL_COMMAND_END()
+};
+
+static u32 sNdsGMColScriptsScreenFlashDamageIce[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0x80, 0xFF, 0x8C),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(6, 0x00, 0x80, 0xFF, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(6),
+    NDS_GM_COL_COMMAND_END()
+};
+
+GMColDesc dGMColScriptsDescs[64] = {
+    [nGMColAnimScreenFlashDeadExplode] =
+        { sNdsGMColScriptsScreenFlashDeadExplode, 60, TRUE },
+    [nGMColAnimScreenFlashDamageNormal] =
+        { sNdsGMColScriptsScreenFlashDamageNormal, 60, TRUE },
+    [nGMColAnimScreenFlashDamageFire] =
+        { sNdsGMColScriptsScreenFlashDamageFire, 60, TRUE },
+    [nGMColAnimScreenFlashDamageElectric] =
+        { sNdsGMColScriptsScreenFlashDamageElectric, 60, TRUE },
+    [nGMColAnimScreenFlashDamageIce] =
+        { sNdsGMColScriptsScreenFlashDamageIce, 60, TRUE }
+};
 
 static FTParts sNdsFTManagerPartsAllocPool[64];
 static FTParts *sNdsFTManagerPartsAllocFree;
@@ -614,6 +690,35 @@ void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
     (void)fighter_gobj;
     (void)costume;
     (void)shade;
+}
+
+sb32 ftParamCheckSetColAnimID(GMColAnim *colanim, s32 colanim_id, s32 length)
+{
+    s32 i;
+
+    if (colanim == NULL)
+    {
+        return FALSE;
+    }
+    if (dGMColScriptsDescs[colanim_id].priority <
+        dGMColScriptsDescs[colanim->colanim_id].priority)
+    {
+        return FALSE;
+    }
+    colanim->colanim_id = colanim_id;
+    colanim->length = length;
+    colanim->cs[0].p_script = dGMColScriptsDescs[colanim_id].p_script;
+    colanim->cs[0].color_event_timer = 0;
+    colanim->cs[0].script_id = 0;
+    for (i = 1; i < ARRAY_COUNT(colanim->cs); i++)
+    {
+        colanim->cs[i].p_script = NULL;
+    }
+    colanim->is_use_color1 = 0;
+    colanim->is_use_light = 0;
+    colanim->is_use_color2 = 0;
+    colanim->skeleton_id = 0;
+    return TRUE;
 }
 
 sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
@@ -1443,27 +1548,37 @@ void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
 void ftParamResetFighterColAnim(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
-    s32 i;
 
     if (fp != NULL)
     {
-        for (i = 0; i < ARRAY_COUNT(fp->colanim.cs); i++)
-        {
-            fp->colanim.cs[i].p_script = NULL;
-            fp->colanim.cs[i].color_event_timer = 0;
-            fp->colanim.cs[i].script_id = 0;
-        }
-        fp->colanim.length = 0;
-        fp->colanim.colanim_id = 0;
-        fp->colanim.is_use_color1 = 0;
-        fp->colanim.is_use_color2 = 0;
-        fp->colanim.is_use_light = 0;
-        fp->colanim.skeleton_id = 0;
+        ftParamResetColAnim(&fp->colanim);
     }
     if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
     {
         gNdsFighterInitColAnimResetCount++;
     }
+}
+
+void ftParamResetColAnim(GMColAnim *colanim)
+{
+    s32 i;
+
+    if (colanim == NULL)
+    {
+        return;
+    }
+    for (i = 0; i < ARRAY_COUNT(colanim->cs); i++)
+    {
+        colanim->cs[i].p_script = NULL;
+        colanim->cs[i].color_event_timer = 0;
+        colanim->cs[i].script_id = 0;
+    }
+    colanim->length = 0;
+    colanim->colanim_id = 0;
+    colanim->is_use_color1 = 0;
+    colanim->is_use_color2 = 0;
+    colanim->is_use_light = 0;
+    colanim->skeleton_id = 0;
 }
 
 void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
@@ -6217,6 +6332,7 @@ void ifScreenFlashSetColAnimID(s32 colanim_id, s32 colanim_duration)
         sNdsFighterDashRunDamageScreenFlashLastDuration = colanim_duration;
         sNdsFighterDashRunDamageSetupScreenFlashCount++;
     }
+    ndsBattleShipIFScreenFlashSetColAnimID(colanim_id, colanim_duration);
 }
 
 static void ndsFTCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element)

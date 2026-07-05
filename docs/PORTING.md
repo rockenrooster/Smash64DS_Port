@@ -17427,3 +17427,24 @@ Still deferred:
   `verify-boundary -DelaySeconds 3`,
   `build-verify-profile -Profile Regression -Force`, all four sharded
   Regression `-NoBuild` runs, `check-harness-registry`, and `check-docs`.
+
+## 2026-07-05 - Import IF Screen Flash
+
+- Imported original `if/ifscreenflash.c` through
+  `src/import/battleship_ifscreenflash.c`, removing the weak
+  `ifScreenFlashMakeInterface` boundary from the battle-playable compatibility
+  stubs.
+- Added the two source-shaped `ftparam.c` colanim helpers needed by that TU:
+  `ftParamCheckSetColAnimID` and `ftParamResetColAnim`, matching
+  `decomp/BattleShip-main/decomp/src/ft/ftparam.c:1192-1243`.
+- Replaced the empty colanim descriptor placeholder for screen flash with the
+  five original screen-flash command streams and descriptor slots from
+  `decomp/BattleShip-main/decomp/src/gm/gmcolscripts.c:1119-1256`.
+- Kept the existing screen-flash diagnostic bridge as a thin wrapper around the
+  imported original `ifScreenFlashSetColAnimID`; the synthetic dash-run probe
+  saves/restores imported screen-flash colanim state.
+- Source citations: interface object creation and screen-flash display/update
+  come from `decomp/BattleShip-main/decomp/src/if/ifscreenflash.c:25-71`.
+- Verified: `verify-dev-fast -Build -DelaySeconds 3`,
+  `verify-battle-playable-harness -DelaySeconds 3`, and
+  `verify-boundary -DelaySeconds 3`.

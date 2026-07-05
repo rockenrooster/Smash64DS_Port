@@ -91,11 +91,12 @@ instead of resurrecting their motion-extract and synthetic marker seams.
 
 `battle_playable` default: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now links
 original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`, and
-battle-critical `if/ifcommon.c` HUD paths. The mode-163 proof reports
+battle-critical `if/ifcommon.c` HUD paths plus original `if/ifscreenflash.c`.
+The mode-163 proof reports
 `stock2->1`, `falls0->1`, Dead/Rebirth/return-control frames,
 `hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`, `hwtri=192`,
-`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, screen flash,
-effects/items, and broader SObj/RDP helper coverage remain follow-up.
+`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, effects/items, and
+broader SObj/RDP helper coverage remain follow-up.
 It also gates the memory ledger: current arena headroom is `235396`, resident
 reloc payloads are `618448` bytes (`stage=202816`, `fighter=206960`,
 `if=208672`), and stale menu/opening payload bytes are `0/0`.
@@ -115,8 +116,7 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 ## Recommended Next Work
 
 1. Finish the non-critical interface perimeter around timer, pause/end UI,
-   magnify/arrows, tags, screen flash, effects/items, and broader SObj/RDP
-   helpers.
+   magnify/arrows, tags, effects/items, and broader SObj/RDP helpers.
 2. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
 3. Renderer follow-up: broaden source-scene coverage, then plan cutover.

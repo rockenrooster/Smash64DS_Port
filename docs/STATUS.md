@@ -77,12 +77,12 @@ cliff-family Regression modes stayed green. The remaining stage compat-replay
 seam in `ftMainSetStatus` is still documented as follow-up.
 
 `battle_playable` graduated to default for `gm/gmcamera.c`,
-`ftcommondead.c`, `ftcommonrebirth.c`, and battle-critical `if/ifcommon.c`
-HUD. The mode-163 proof reports `stock2->1`, `falls0->1`, Dead/Rebirth/
-return-control frames, `hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`,
-`hwtri=192`, `hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags,
-screen flash, effects/items, and broader SObj/RDP helper coverage remain
-interface follow-up.
+`ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD,
+and original `if/ifscreenflash.c`. The mode-163 proof reports `stock2->1`,
+`falls0->1`, Dead/Rebirth/return-control frames,
+`hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`, `hwtri=192`,
+`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, effects/items, and
+broader SObj/RDP helper coverage remain interface follow-up.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `235396`, resident reloc `618448`
@@ -121,8 +121,8 @@ marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
 
 - renderer follow-up: broaden source-scene coverage and HW default coverage;
 - interface follow-up: finish the non-critical HUD perimeter around timer,
-  pause/end UI, magnify/arrows, tags, screen flash, effects/items, and broader
-  SObj/RDP helpers.
+  pause/end UI, magnify/arrows, tags, effects/items, and broader SObj/RDP
+  helpers.
 
 ## Verification
 

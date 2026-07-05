@@ -7755,8 +7755,10 @@ static sb32 ndsFighterDashRunProbeDamageLagUpdate(GObj *fighter_gobj,
 
 static sb32 ndsFighterDashRunProbeDamageScreenFlash(void)
 {
+    extern GMColAnim sIFScreenFlashColAnim;
     sb32 saved_status_setup_active =
         sNdsFighterDashRunDamageStatusSetupActive;
+    GMColAnim saved_colanim = sIFScreenFlashColAnim;
     u32 saved_flash_count = sNdsFighterDashRunDamageSetupScreenFlashCount;
     s32 saved_flash_id = sNdsFighterDashRunDamageScreenFlashLastID;
     s32 saved_flash_duration =
@@ -7814,6 +7816,7 @@ static sb32 ndsFighterDashRunProbeDamageScreenFlash(void)
 
     sNdsFighterDashRunDamageStatusSetupActive =
         saved_status_setup_active;
+    sIFScreenFlashColAnim = saved_colanim;
     sNdsFighterDashRunDamageSetupScreenFlashCount = saved_flash_count;
     sNdsFighterDashRunDamageScreenFlashLastID = saved_flash_id;
     sNdsFighterDashRunDamageScreenFlashLastDuration = saved_flash_duration;
