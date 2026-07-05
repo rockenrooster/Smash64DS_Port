@@ -17471,3 +17471,17 @@ Still deferred:
   pair is covered by the hardware-default guardrails.
 - Verified: direct MP cliff-tick hardware with `-DelaySeconds 8` and menu-chain
   MP cliff-tick hardware with `-DelaySeconds 8`.
+
+## 2026-07-05 - Default MP Fall-Map Stage Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `91/92`, matching
+  the already-proven mode `89/90` hardware path, then made the direct and
+  menu-chain MP fall-map wrappers default to `-hwtri` targets with
+  `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry and GBI fixture checks so the MP fall-map stage
+  pair is covered by the hardware-default guardrails.
+- Verified: direct MP fall-map software baseline with `-DelaySeconds 8`,
+  direct MP fall-map hardware with `-DelaySeconds 8`, and menu-chain MP
+  fall-map hardware with `-DelaySeconds 8`; `check-gbi-decode-fixtures`,
+  `check-harness-registry`, `check-docs`, `verify-dev-fast -Build
+  -DelaySeconds 3`, and `verify-boundary -DelaySeconds 3`.
