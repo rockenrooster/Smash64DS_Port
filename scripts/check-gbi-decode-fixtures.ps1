@@ -312,6 +312,7 @@ foreach ($file in $files) {
     }
 }
 $renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
+$taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_OP_MTX 0xdau')) 'Renderer G_MTX opcode support is missing.'
@@ -619,8 +620,14 @@ Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffclimb-fi
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffclimb-finish-loop-hwtri')) 'Menu-chain stage MP cliff-climb-finish registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffwait-damage-loop-hwtri')) 'Stage MP cliff-wait-damage registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffwait-damage-loop-hwtri')) 'Menu-chain stage MP cliff-wait-damage registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mppassive-loop-hwtri')) 'Stage MP passive registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mppassive-loop-hwtri')) 'Menu-chain stage MP passive registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary direct registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary menu registry target is not hardware-renderer default.'
+$hwSubmitAllowlist = [regex]::Match($taskman, '(?s)NDS_RENDERER_HW_TRIANGLES.*?ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame\(\)')
+Assert-True ($hwSubmitAllowlist.Success) 'Stage gcDrawAll hardware submit allowlist was not found.'
+Assert-True ($hwSubmitAllowlist.Value.Contains('NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_LOOP')) 'Stage MP passive direct mode is not in the hardware submit allowlist.'
+Assert-True ($hwSubmitAllowlist.Value.Contains('NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP')) 'Stage MP passive menu mode is not in the hardware submit allowlist.'
 $buildProfile = Get-Content (Join-Path $root 'scripts/build-verify-profile.ps1') -Raw
 Assert-True ($buildProfile.Contains("NDS_RENDERER_HW_TRIANGLES=1")) 'Profile prebuild does not enable hardware renderer for hwtri targets.'
 Assert-True ($buildProfile.Contains('if (-not $NoSharedBuild)')) 'Profile prebuild -Force path disables shared builds.'
@@ -936,6 +943,16 @@ Assert-True ($menuStageMPCliffWaitDamageWrapper.Contains('HardwareTriangles')) '
 Assert-True ($menuStageMPCliffWaitDamageWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP cliff-wait-damage verifier software-preview opt-out is missing.'
 Assert-True ($menuStageMPCliffWaitDamageWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP cliff-wait-damage verifier no longer defaults to hardware.'
 Assert-True ($menuStageMPCliffWaitDamageWrapper.Contains('menu-chain-mariofox-stage-mpcliffwait-damage-loop-hwtri')) 'Menu-chain stage MP cliff-wait-damage verifier hardware target is missing.'
+$stageMPPassiveWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-mppassive-loop-harness.ps1') -Raw
+Assert-True ($stageMPPassiveWrapper.Contains('HardwareTriangles')) 'Stage MP passive verifier hardware switch is missing.'
+Assert-True ($stageMPPassiveWrapper.Contains('SoftwarePreview')) 'Stage MP passive verifier software-preview opt-out is missing.'
+Assert-True ($stageMPPassiveWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Stage MP passive verifier no longer defaults to hardware.'
+Assert-True ($stageMPPassiveWrapper.Contains('battle-mariofox-stage-mppassive-loop-hwtri')) 'Stage MP passive verifier hardware target is missing.'
+$menuStageMPPassiveWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-mppassive-loop-harness.ps1') -Raw
+Assert-True ($menuStageMPPassiveWrapper.Contains('HardwareTriangles')) 'Menu-chain stage MP passive verifier hardware switch is missing.'
+Assert-True ($menuStageMPPassiveWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP passive verifier software-preview opt-out is missing.'
+Assert-True ($menuStageMPPassiveWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP passive verifier no longer defaults to hardware.'
+Assert-True ($menuStageMPPassiveWrapper.Contains('menu-chain-mariofox-stage-mppassive-loop-hwtri')) 'Menu-chain stage MP passive verifier hardware target is missing.'
 $menuAllDLVerifier = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($menuAllDLVerifier.Contains('HardwareTriangles')) 'Menu-chain all-DL verifier hardware switch is missing.'
 Assert-True ($menuAllDLVerifier.Contains('SoftwarePreview')) 'Menu-chain all-DL verifier software-preview opt-out is missing.'

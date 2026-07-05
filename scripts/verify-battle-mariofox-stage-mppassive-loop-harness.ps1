@@ -4,9 +4,14 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$HardwareTriangles,
+    [switch]$SoftwarePreview
 )
 $ErrorActionPreference = 'Stop'
+$HardwareTriangles = -not $SoftwarePreview
+$target = if ($HardwareTriangles) { 'smash64ds-battle-mariofox-stage-mppassive-loop-hwtri' } else { 'smash64ds-battle-mariofox-stage-mppassive-loop' }
+$build = if ($HardwareTriangles) { 'build-battle-mariofox-stage-mppassive-loop-hwtri-harness' } else { 'build-battle-mariofox-stage-mppassive-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcdrawall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -14,9 +19,10 @@ $ErrorActionPreference = 'Stop'
     -RunnerSlot $RunnerSlot `
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
+    -HardwareTriangles:$HardwareTriangles `
     -Harness 'battle_mariofox_stage_mppassive_loop' `
-    -Target 'smash64ds-battle-mariofox-stage-mppassive-loop' `
-    -Build 'build-battle-mariofox-stage-mppassive-loop-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 123 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `

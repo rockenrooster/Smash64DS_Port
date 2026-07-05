@@ -17658,6 +17658,19 @@ Still deferred:
   `check-docs`, `git diff --check`, `verify-dev-fast -Build -DelaySeconds 3`,
   and `verify-boundary -DelaySeconds 3`.
 
+## 2026-07-05 - Default MP Passive Proofs To Hardware
+
+- Made the direct/menu MP Passive wrappers for modes `123/124` default to the
+  `-hwtri` harness builds, with `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry, GBI fixture guardrails, and current-truth docs
+  so hardware-default stage coverage now runs through MP Passive.
+- Verified: direct MP Passive software baseline with `-SoftwarePreview
+  -DelaySeconds 8`, direct MP Passive hardware with `-DelaySeconds 8`, and
+  menu-chain MP Passive hardware with `-DelaySeconds 8`;
+  `check-gbi-decode-fixtures`, `check-harness-registry`, `git diff --check`,
+  `verify-dev-fast -Build -DelaySeconds 3`, and
+  `verify-boundary -DelaySeconds 3`.
+
 ## 2026-07-05 - Default MP Cliff-Wait Damage Proofs To Hardware
 
 - Extended the stage `gcDrawAll` hardware submit path to modes `121/122` and
