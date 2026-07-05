@@ -7,6 +7,7 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | Doc | Status | Purpose |
 |---|---|---|
 | `ARCHITECTURE.md` | Maintained | Port architecture, ownership boundaries, and large-file split plan. |
+| `AUDIO_BACKEND_SCOUT.md` | Maintained | Source-backed scout for future DS audio backend work. |
 | `DECOMP_MAP.md` | Maintained | Read-only upstream reference map for `decomp/`. |
 | `DIAGNOSTIC_REFERENCE.md` | Maintained | Runtime marker and diagnostic contracts. |
 | `EMULATOR_STRATEGY.md` | Maintained | melonDS/no$gba usage boundaries. |
@@ -16,6 +17,7 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | `HANDOFF.md` | Current truth | Detailed current handoff and latest proof evidence. |
 | `HARNESSES.md` | Maintained | Harness naming, registry, and generated-index policy. |
 | `KNOWN_ISSUES.md` | Maintained | Known blockers, stubs, and deferred systems. |
+| `MEMORY_OVERLAY_PLAN.md` | Maintained | Source-backed memory budget and reloc eviction plan. |
 | `MP_PASS_THROUGH_SCOUT.md` | Maintained | Source-order scout for the next pass-through floor/platform boundary. |
 | `NEXT_BOUNDARY_QUEUE.md` | Current truth | Compact next-boundary candidate queue. |
 | `PORTING.md` | Append-only | Chronological porting history. Do not use as primary planning. |
