@@ -21,6 +21,7 @@ NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
+NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET ?= 0
 NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE ?= 1
 override NDS_IMPORT_BATTLESHIP_IFCOMMON := 1
 NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER ?= 0
@@ -409,6 +410,7 @@ CFLAGS += -DNDS_DEV_LIVE_INPUT_PREVIEW=$(NDS_DEV_LIVE_INPUT_PREVIEW)
 CFLAGS += -DNDS_RENDERER_HW_TRIANGLES=$(NDS_RENDERER_HW_TRIANGLES)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMAIN=$(NDS_IMPORT_BATTLESHIP_FTMAIN)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_FTMANAGER=$(NDS_IMPORT_BATTLESHIP_FTMANAGER)
+CFLAGS += -DNDS_IMPORT_BATTLESHIP_NORMAL_MOVESET=$(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=$(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_IFCOMMON=$(NDS_IMPORT_BATTLESHIP_IFCOMMON)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_WEAPON_MANAGER=$(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER)
@@ -485,6 +487,9 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downattack.c \
 	battleship_ftcommon_downforwardback.c \
 	battleship_ftcommon_downstand.c
+ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
+CFILES += battleship_ftcommon_normal_moveset.c
+endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
 	reloc_backend_ftdata_symbols.c
@@ -657,7 +662,26 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim007 \
 	reloc_animations/FTFoxAnim008 \
 	reloc_animations/FTFoxAnim009 \
+	reloc_animations/FTFoxAnim016 \
+	reloc_animations/FTFoxAnim017 \
+	reloc_animations/FTFoxAnim018 \
+	reloc_animations/FTFoxAnim019 \
+	reloc_animations/FTFoxAnim090 \
+	reloc_animations/FTFoxAnim091 \
+	reloc_animations/FTFoxAnim092 \
+	reloc_animations/FTFoxAnim093 \
 	reloc_animations/FTFoxAnim109 \
+	reloc_animations/FTFoxAnim112 \
+	reloc_animations/FTFoxAnim113 \
+	reloc_animations/FTFoxAnim114 \
+	reloc_animations/FTFoxAnim115 \
+	reloc_animations/FTFoxAnim116 \
+	reloc_animations/FTFoxAnim117 \
+	reloc_animations/FTFoxAnim118 \
+	reloc_animations/FTFoxAnim119 \
+	reloc_animations/FTFoxAnim120 \
+	reloc_animations/FTFoxAnim121 \
+	reloc_animations/FTFoxAnim122 \
 	reloc_animations/FTFoxAnim137 \
 	reloc_animations/FTFoxAnim138
 

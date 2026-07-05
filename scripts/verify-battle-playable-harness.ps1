@@ -5,14 +5,18 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
+    [switch]$ImportBattleShipNormalMoveset,
     [switch]$ImportBattleShipMarioFireball,
     [switch]$ImportBattleShipFoxBlaster
 )
 $ErrorActionPreference = 'Stop'
 $target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
-if ($ImportBattleShipMarioFireball -or $ImportBattleShipFoxBlaster) {
+if ($ImportBattleShipNormalMoveset -or
+    $ImportBattleShipMarioFireball -or
+    $ImportBattleShipFoxBlaster) {
     $suffix = @()
+    if ($ImportBattleShipNormalMoveset) { $suffix += 'moveset' }
     if ($ImportBattleShipMarioFireball) { $suffix += 'fireball' }
     if ($ImportBattleShipFoxBlaster) { $suffix += 'blaster' }
     $target = "$target-$($suffix -join '-')"
@@ -27,6 +31,7 @@ if ($ImportBattleShipMarioFireball -or $ImportBattleShipFoxBlaster) {
     -DelaySeconds $DelaySeconds `
     -BattlePlayable `
     -ImportBattleShipIFCommon `
+    -ImportBattleShipNormalMoveset:$ImportBattleShipNormalMoveset `
     -ImportBattleShipMarioFireball:$ImportBattleShipMarioFireball `
     -ImportBattleShipFoxBlaster:$ImportBattleShipFoxBlaster `
     -HardwareTriangles `

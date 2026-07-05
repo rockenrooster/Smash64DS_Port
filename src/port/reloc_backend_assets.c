@@ -105,7 +105,17 @@
 #define NDS_RELOC_ASSET_FOX_ANIM_WALK_END 0x286u
 #define NDS_RELOC_ASSET_FOX_ANIM_DASH 0x287u
 #define NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN 0x28bu
+#define NDS_RELOC_ASSET_FOX_ANIM_JUMP_F 0x292u
+#define NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B 0x295u
+#define NDS_RELOC_ASSET_FOX_ANIM_CATCH 0x2dcu
+#define NDS_RELOC_ASSET_FOX_ANIM_THROW_B 0x2dfu
 #define NDS_RELOC_ASSET_FOX_ANIM_JAB1 0x2efu
+#define NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH 0x2f2u
+#define NDS_RELOC_ASSET_FOX_ANIM_FTILT_LOW 0x2f6u
+#define NDS_RELOC_ASSET_FOX_ANIM_UTILT 0x2f7u
+#define NDS_RELOC_ASSET_FOX_ANIM_DTILT 0x2f8u
+#define NDS_RELOC_ASSET_FOX_ANIM_FSMASH 0x2f9u
+#define NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_N 0x2fcu
 #define NDS_RELOC_ASSET_FOX_ANIM_LASER 0x30bu
 #define NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL 0x30cu
 
@@ -1179,10 +1189,16 @@ static s32 ndsRelocIsMarioFoxNaturalCombatAnimID(u32 asset_id)
             (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
              (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN)) ||
+            ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JUMP_F) &&
+             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B)) ||
+            ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_CATCH) &&
+             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_THROW_B)) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_JAB1) ||
+            ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH) &&
+             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_N)) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL)) ? TRUE :
-                                                           FALSE;
+        FALSE;
 }
 
 static u32 ndsRelocAssetIDForToken(u32 token)
@@ -1317,7 +1333,26 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llFTFoxAnimRunBrakeFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 2u;
     if (token == ndsRelocFileID(&llFTFoxAnimTurnFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 3u;
     if (token == ndsRelocFileID(&llFTFoxAnimTurnRunFileID)) return NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN;
+    if (token == ndsRelocFileID(&llFTFoxAnimJumpFFileID)) return NDS_RELOC_ASSET_FOX_ANIM_JUMP_F;
+    if (token == ndsRelocFileID(&llFTFoxAnimJumpBFileID)) return NDS_RELOC_ASSET_FOX_ANIM_JUMP_F + 1u;
+    if (token == ndsRelocFileID(&llFTFoxAnimJumpAerialFFileID)) return NDS_RELOC_ASSET_FOX_ANIM_JUMP_F + 2u;
+    if (token == ndsRelocFileID(&llFTFoxAnimJumpAerialBFileID)) return NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B;
+    if (token == ndsRelocFileID(&llFTFoxAnimCatchFileID)) return NDS_RELOC_ASSET_FOX_ANIM_CATCH;
+    if (token == ndsRelocFileID(&llFTFoxAnimCatchPullFileID)) return NDS_RELOC_ASSET_FOX_ANIM_CATCH + 1u;
+    if (token == ndsRelocFileID(&llFTFoxAnimThrowFFileID)) return NDS_RELOC_ASSET_FOX_ANIM_CATCH + 2u;
+    if (token == ndsRelocFileID(&llFTFoxAnimThrowBFileID)) return NDS_RELOC_ASSET_FOX_ANIM_THROW_B;
     if (token == ndsRelocFileID(&llFTFoxAnimJab1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_JAB1;
+    if (token == ndsRelocFileID(&llFTFoxAnimFTiltHighFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH;
+    if (token == ndsRelocFileID(&llFTFoxAnimFTiltMidHighFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH + 1u;
+    if (token == ndsRelocFileID(&llFTFoxAnimFTiltFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH + 2u;
+    if (token == ndsRelocFileID(&llFTFoxAnimFTiltMidLowFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH + 3u;
+    if (token == ndsRelocFileID(&llFTFoxAnimFTiltLowFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_LOW;
+    if (token == ndsRelocFileID(&llFTFoxAnimUTiltFileID)) return NDS_RELOC_ASSET_FOX_ANIM_UTILT;
+    if (token == ndsRelocFileID(&llFTFoxAnimDTiltFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DTILT;
+    if (token == ndsRelocFileID(&llFTFoxAnimFSmashFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FSMASH;
+    if (token == ndsRelocFileID(&llFTFoxAnimUSmashFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FSMASH + 1u;
+    if (token == ndsRelocFileID(&llFTFoxAnimDSmashFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FSMASH + 2u;
+    if (token == ndsRelocFileID(&llFTFoxAnimAttackAirNFileID)) return NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_N;
     if (token == ndsRelocFileID(&llFTFoxAnimLaserFileID)) return NDS_RELOC_ASSET_FOX_ANIM_LASER;
     if (token == ndsRelocFileID(&llFTFoxAnimLaserAerialFileID)) return NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WAIT) return NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
@@ -1460,6 +1495,10 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
          (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE)) ||
         ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
          (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JAB1)) ||
+        ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JUMP_F) &&
+         (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B)) ||
+        ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH) &&
+         (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_N)) ||
         (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND) ||
         (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_AIR) ||
         (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER) ||
@@ -4534,4 +4573,3 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
     }
     return (u8 *)file + offset;
 }
-

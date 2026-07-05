@@ -85,6 +85,19 @@ void ndsBaseFTCommonLandingAirSetStatus(GObj *fighter_gobj);
 void ndsBaseFTCommonLandingFallSpecialSetStatus(GObj *fighter_gobj, sb32 is_allow_interrupt, f32 anim_speed);
 sb32 ndsBaseFTCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj);
 void ndsBaseFTCommonAttackAirProcMap(GObj *fighter_gobj);
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+sb32 ndsBaseFTCommonAttackS4CheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackS4CheckInterruptTurn(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackHi4CheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackLw4CheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackLw4CheckInterruptSquat(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackS3CheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackHi3CheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackLw3CheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackS4CheckInterruptDash(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonAttackHi4CheckInterruptKneeBend(GObj *fighter_gobj);
+sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
+#endif
 void ndsBaseFTCommonCatchPullProcCatch(GObj *fighter_gobj);
 void ndsBaseFTCommonCapturePulledProcCapture(GObj *fighter_gobj, GObj *capture_gobj);
 void ndsBaseFTCommonThrownSetStatusDamageRelease(GObj *fighter_gobj);
@@ -1091,6 +1104,15 @@ void ftParamRefreshAttackCollID(GObj *fighter_gobj, s32 attack_id)
         gNdsStageMPLiveHitDamageLoopOriginalRehitRefreshIDMask |=
             1u << (u32)attack_id;
     }
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    if (((gNdsFighterNaturalMovesetPhase == 9u) ||
+         (gNdsFighterNaturalMovesetPhase == 10u)) &&
+        (fp->status_id >= nFTCommonStatusAttackAirStart) &&
+        (fp->status_id <= nFTCommonStatusAttackAirEnd))
+    {
+        gNdsFighterNaturalMovesetAerialHitboxFrames++;
+    }
+#endif
 }
 
 s32 ftParamGetJointID(FTStruct *fp, s32 joint_id)
@@ -1873,41 +1895,73 @@ sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonAttackS4CheckInterruptCommon(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackS4CheckInterruptCommon(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackS4CheckInterruptTurn(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackS4CheckInterruptTurn(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackHi4CheckInterruptCommon(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackHi4CheckInterruptCommon(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw4CheckInterruptCommon(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackLw4CheckInterruptCommon(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw4CheckInterruptSquat(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackLw4CheckInterruptSquat(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackS3CheckInterruptCommon(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackS3CheckInterruptCommon(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackHi3CheckInterruptCommon(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackHi3CheckInterruptCommon(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw3CheckInterruptCommon(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackLw3CheckInterruptCommon(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
@@ -2450,6 +2504,10 @@ sb32 ftCommonDashCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonAttackS4CheckInterruptDash(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackS4CheckInterruptDash(fighter_gobj);
+#endif
+
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
@@ -3597,14 +3655,19 @@ sb32 ftCommonGuardKneeBendCheckInterruptGuard(GObj *fighter_gobj)
 
 sb32 ftCommonAttackHi4CheckInterruptKneeBend(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
     if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
     {
         gNdsFighterJumpAttackHi4KneeBendCheckCount++;
         gNdsFighterJumpDeferredInterruptCheckCount++;
         gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 2;
+        return FALSE;
     }
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonAttackHi4CheckInterruptKneeBend(fighter_gobj);
+#else
+    (void)fighter_gobj;
     return FALSE;
+#endif
 }
 
 sb32 ftCommonHammerKneeBendCheckInterruptCommon(GObj *fighter_gobj)
@@ -4155,9 +4218,19 @@ sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
 sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    return ndsBaseFTCommonAttackAirCheckInterruptCommon(fighter_gobj);
+    sb32 result = ndsBaseFTCommonAttackAirCheckInterruptCommon(fighter_gobj);
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    if ((gNdsFighterNaturalMovesetPhase == 9u) ||
+        (gNdsFighterNaturalMovesetPhase == 10u))
+    {
+        if (result != FALSE)
+        {
+            gNdsFighterNaturalMovesetAerialFrames++;
+        }
+    }
 #endif
-
+    return result;
+#else
     sb32 result;
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
@@ -4204,6 +4277,7 @@ sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj)
         gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 4;
     }
     return FALSE;
+#endif
 }
 
 void ftCommonAttackAirProcMap(GObj *fighter_gobj)
@@ -4218,7 +4292,6 @@ void ftCommonAttackAirProcMap(GObj *fighter_gobj)
 
 sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
     {
@@ -4251,8 +4324,14 @@ sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
         gNdsFighterJumpAerialCheckCount++;
         gNdsFighterJumpDeferredInterruptCheckCount++;
         gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 5;
+        return FALSE;
     }
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    return ndsBaseFTCommonJumpAerialCheckInterruptCommon(fighter_gobj);
+#else
+    (void)fighter_gobj;
     return FALSE;
+#endif
 }
 
 #define NDS_DAMAGE_LOSEGRIP_SELECT 0x1u
@@ -11357,7 +11436,7 @@ sb32 mpCommonCheckFighterLanding(GObj *fighter_gobj)
     if (fp != NULL)
     {
         return mpProcessUpdateMain(&fp->coll_data,
-                                   mpCommonRunFighterAllCollisions,
+                                   ndsMPCommonRunFighterCliffFloorCeilCollisions,
                                    fighter_gobj, MAP_PROC_TYPE_DEFAULT);
     }
 #endif

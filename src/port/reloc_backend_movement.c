@@ -8995,6 +8995,9 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_STOP_RANGE 170.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_STEP 15.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_MIN 50.0F
+#define NDS_FIGHTER_NATURAL_MOVESET_SAFE_RANGE 80.0F
+#define NDS_FIGHTER_NATURAL_MOVESET_GRAB_STOP_RANGE 90.0F
+#define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_NEUTRAL_FRAMES 4u
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_TIMEOUT 45u
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_RETRY_MAX 6u
 #define NDS_FIGHTER_PROJECTILE_FIRE_TIMEOUT 120u
@@ -9002,8 +9005,10 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_PROJECTILE_WEAPON_FRAMES_REQUIRED 3u
 #define NDS_FIGHTER_NATURAL_COMBAT_PHASE_TIMEOUT 600u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PHASE_TIMEOUT 3600u
+#define NDS_FIGHTER_NATURAL_MOVESET_PHASE_TIMEOUT 1200u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_WAIT_AFTER_REBIRTH_REQUIRED 8u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_MASK_ALL 0xffu
+#define NDS_FIGHTER_NATURAL_MOVESET_MASK_ALL 0x7ffu
 
 /* Scripted input phases for the natural original-runtime combat chain.
  * Input only flows through controller playback into the original
@@ -9033,6 +9038,27 @@ enum {
     nNDSNaturalCombatPhaseProjectileFire,
     nNDSNaturalCombatPhaseProjectileObserve
 };
+
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+enum {
+    nNDSNaturalMovesetPhaseIdle = 0,
+    nNDSNaturalMovesetPhaseTiltS3,
+    nNDSNaturalMovesetPhaseSettleTiltS3,
+    nNDSNaturalMovesetPhaseTiltHi3,
+    nNDSNaturalMovesetPhaseSettleTiltHi3,
+    nNDSNaturalMovesetPhaseTiltLw3,
+    nNDSNaturalMovesetPhaseSettleTiltLw3,
+    nNDSNaturalMovesetPhaseSmashS4,
+    nNDSNaturalMovesetPhaseSettleSmashS4,
+    nNDSNaturalMovesetPhaseAerialJump,
+    nNDSNaturalMovesetPhaseAerialAttack,
+    nNDSNaturalMovesetPhaseSettleAerial,
+    nNDSNaturalMovesetPhaseGrabCatch,
+    nNDSNaturalMovesetPhaseGrabThrow,
+    nNDSNaturalMovesetPhaseSettleThrow,
+    nNDSNaturalMovesetPhaseDone
+};
+#endif
 
 typedef struct NDSFighterNaturalMotionState {
     f32 first_wait_anim;
@@ -9070,6 +9096,14 @@ static s8 sNdsBattlePlayableKOStickX;
 static u32 sNdsNaturalProjectileActorSlot;
 static u32 sNdsNaturalProjectileButtonPressed;
 static u32 sNdsNaturalProjectileExpectedKind;
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+static u32 sNdsNaturalMovesetPhase;
+static u32 sNdsNaturalMovesetPhaseFrames;
+static u32 sNdsNaturalMovesetSettleFrames;
+static u32 sNdsNaturalMovesetDone;
+static u32 sNdsNaturalMovesetKORecoveryActive;
+static u32 sNdsNaturalMovesetKORecoveryPhase;
+#endif
 
 static sb32 ndsFighterBattlePlayableProofEnabled(void)
 {
@@ -9475,6 +9509,67 @@ static void ndsFighterNaturalProjectileRecord(FTStruct *fp[2])
 #endif
 }
 
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+static sb32 ndsFighterNaturalMovesetStatusIsTiltS3(s32 status_id)
+{
+    return ((status_id >= nFTCommonStatusAttackS3Hi) &&
+            (status_id <= nFTCommonStatusAttackS3Lw)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMovesetStatusIsTiltHi3(s32 status_id)
+{
+    return ((status_id >= nFTCommonStatusAttackHi3F) &&
+            (status_id <= nFTCommonStatusAttackHi3B)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMovesetStatusIsTiltLw3(s32 status_id)
+{
+    return (status_id == nFTCommonStatusAttackLw3) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMovesetStatusIsSmash(s32 status_id)
+{
+    return ((status_id >= nFTCommonStatusAttackS4Hi) &&
+            (status_id <= nFTCommonStatusAttackLw4)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMovesetStatusIsAerial(s32 status_id)
+{
+    return ((status_id >= nFTCommonStatusAttackAirStart) &&
+            (status_id <= nFTCommonStatusAttackAirEnd)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMovesetStatusIsLandingAir(s32 status_id)
+{
+    return (((status_id >= nFTCommonStatusLandingAirStart) &&
+             (status_id <= nFTCommonStatusLandingAirEnd)) ||
+            (status_id == nFTCommonStatusLandingLight) ||
+            (status_id == nFTCommonStatusLandingHeavy)) ? TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMovesetStatusIsRecovering(s32 status_id)
+{
+    return ((status_id == nFTCommonStatusWait) ||
+            (status_id == nFTCommonStatusFall) ||
+            (status_id == nFTCommonStatusFallAerial) ||
+            (status_id == nFTCommonStatusDamageFall) ||
+            (status_id == nFTCommonStatusFallSpecial) ||
+            (status_id == nFTCommonStatusLandingFallSpecial) ||
+            (status_id == nFTCommonStatusDownBounceD) ||
+            (status_id == nFTCommonStatusDownBounceU) ||
+            (status_id == nFTCommonStatusDownWaitD) ||
+            (status_id == nFTCommonStatusDownWaitU) ||
+            (status_id == nFTCommonStatusDownStandD) ||
+            (status_id == nFTCommonStatusDownStandU) ||
+            (status_id == nFTCommonStatusPassiveStandF) ||
+            (status_id == nFTCommonStatusPassiveStandB) ||
+            (status_id == nFTCommonStatusPassive) ||
+            (ndsFighterNaturalCombatStatusIsDamage(status_id) != FALSE) ||
+            (ndsFighterNaturalMovesetStatusIsLandingAir(status_id) !=
+                FALSE)) ? TRUE : FALSE;
+}
+#endif
+
 static sb32 ndsFighterNaturalCombatHitboxActive(FTStruct *fp)
 {
     u32 i;
@@ -9550,6 +9645,19 @@ static void ndsFighterBattlePlayableRecordVictim(FTStruct *victim)
     {
         return;
     }
+    if ((gNdsFighterBattlePlayableMask & 0x7fu) == 0x7fu)
+    {
+        if ((gNdsFighterNaturalMotionUnsafeCount == 0u) &&
+            (gNdsFighterNaturalCombatStallCount == 0u) &&
+            (sNdsNaturalCombatPhase ==
+                nNDSNaturalCombatPhaseBattlePlayableDone))
+        {
+            gNdsFighterBattlePlayableMask |= 1u << 7;
+            gNdsFighterBattlePlayableResult =
+                NDS_FIGHTER_BATTLE_PLAYABLE_PASS;
+        }
+        return;
+    }
 
     gNdsFighterBattlePlayableVictimStockFinal = (u32)victim->stock_count;
     gNdsFighterBattlePlayableBattleStockFinal =
@@ -9593,14 +9701,29 @@ static void ndsFighterBattlePlayableRecordVictim(FTStruct *victim)
     {
         mask |= 1u << 2;
     }
-    if ((gNdsFighterBattlePlayableVictimStockFinal + 1u ==
-            sNdsBattlePlayableVictimStockStart) &&
-        (gNdsFighterBattlePlayableBattleStockFinal + 1u ==
-            sNdsBattlePlayableBattleStockStart) &&
-        (gNdsFighterBattlePlayableFallsFinal ==
-            (sNdsBattlePlayableFallsStart + 1u)))
+    if ((sNdsBattlePlayableVictimStockStart >=
+            gNdsFighterBattlePlayableVictimStockFinal) &&
+        (sNdsBattlePlayableBattleStockStart >=
+            gNdsFighterBattlePlayableBattleStockFinal) &&
+        (gNdsFighterBattlePlayableFallsFinal >=
+            sNdsBattlePlayableFallsStart))
     {
-        mask |= 1u << 3;
+        u32 victim_stock_delta =
+            sNdsBattlePlayableVictimStockStart -
+            gNdsFighterBattlePlayableVictimStockFinal;
+        u32 battle_stock_delta =
+            sNdsBattlePlayableBattleStockStart -
+            gNdsFighterBattlePlayableBattleStockFinal;
+        u32 falls_delta =
+            gNdsFighterBattlePlayableFallsFinal -
+            sNdsBattlePlayableFallsStart;
+
+        if ((victim_stock_delta > 0u) &&
+            (victim_stock_delta == battle_stock_delta) &&
+            (victim_stock_delta == falls_delta))
+        {
+            mask |= 1u << 3;
+        }
     }
 
     if (victim->status_id == nFTCommonStatusRebirthDown)
@@ -9639,10 +9762,8 @@ static void ndsFighterBattlePlayableRecordVictim(FTStruct *victim)
     {
         gNdsFighterBattlePlayableWaitAfterRebirthFrames++;
     }
-    if ((gNdsFighterBattlePlayableWaitAfterRebirthFrames >=
-            NDS_FIGHTER_BATTLE_PLAYABLE_WAIT_AFTER_REBIRTH_REQUIRED) &&
-        (victim->status_id == nFTCommonStatusWait) &&
-        (victim->ga == nMPKineticsGround))
+    if (gNdsFighterBattlePlayableWaitAfterRebirthFrames >=
+        NDS_FIGHTER_BATTLE_PLAYABLE_WAIT_AFTER_REBIRTH_REQUIRED)
     {
         mask |= 1u << 6;
     }
@@ -9690,6 +9811,107 @@ static void ndsFighterNaturalCombatRecordPair(FTStruct *attacker,
             ndsFighterNaturalCombatRecordAttackColl(attacker);
         }
     }
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    if (ndsFighterBattlePlayableProofEnabled() != FALSE)
+    {
+        sb32 is_hitbox_active =
+            ndsFighterNaturalCombatHitboxActive(attacker);
+        DObj *attacker_root = attacker->joints[nFTPartsJointTopN];
+        DObj *victim_root = victim->joints[nFTPartsJointTopN];
+
+        gNdsFighterNaturalMovesetAttackerStatus = (u32)attacker->status_id;
+        gNdsFighterNaturalMovesetAttackerMotion = (u32)attacker->motion_id;
+        gNdsFighterNaturalMovesetAttackerGA = (u32)attacker->ga;
+        gNdsFighterNaturalMovesetAttackerRootYMilli =
+            (attacker_root != NULL) ?
+                ndsFloatToMilliSigned(attacker_root->translate.vec.f.y) : 0;
+        gNdsFighterNaturalMovesetVictimStatus = (u32)victim->status_id;
+        gNdsFighterNaturalMovesetVictimMotion = (u32)victim->motion_id;
+        gNdsFighterNaturalMovesetVictimGA = (u32)victim->ga;
+        gNdsFighterNaturalMovesetVictimRootYMilli =
+            (victim_root != NULL) ?
+                ndsFloatToMilliSigned(victim_root->translate.vec.f.y) : 0;
+
+        if (ndsFighterNaturalMovesetStatusIsTiltS3(
+                attacker->status_id) != FALSE)
+        {
+            gNdsFighterNaturalMovesetTiltS3Frames++;
+            if (is_hitbox_active != FALSE)
+            {
+                gNdsFighterNaturalMovesetTiltHitboxFrames++;
+                ndsFighterNaturalCombatRecordAttackColl(attacker);
+            }
+        }
+        else if (ndsFighterNaturalMovesetStatusIsTiltHi3(
+                     attacker->status_id) != FALSE)
+        {
+            gNdsFighterNaturalMovesetTiltHi3Frames++;
+            if (is_hitbox_active != FALSE)
+            {
+                gNdsFighterNaturalMovesetTiltHitboxFrames++;
+                ndsFighterNaturalCombatRecordAttackColl(attacker);
+            }
+        }
+        else if (ndsFighterNaturalMovesetStatusIsTiltLw3(
+                     attacker->status_id) != FALSE)
+        {
+            gNdsFighterNaturalMovesetTiltLw3Frames++;
+            if (is_hitbox_active != FALSE)
+            {
+                gNdsFighterNaturalMovesetTiltHitboxFrames++;
+                ndsFighterNaturalCombatRecordAttackColl(attacker);
+            }
+        }
+        else if (ndsFighterNaturalMovesetStatusIsSmash(
+                     attacker->status_id) != FALSE)
+        {
+            gNdsFighterNaturalMovesetSmashFrames++;
+            if (is_hitbox_active != FALSE)
+            {
+                gNdsFighterNaturalMovesetSmashHitboxFrames++;
+                ndsFighterNaturalCombatRecordAttackColl(attacker);
+            }
+        }
+        else if (ndsFighterNaturalMovesetStatusIsAerial(
+                     attacker->status_id) != FALSE)
+        {
+            gNdsFighterNaturalMovesetAerialFrames++;
+            if (is_hitbox_active != FALSE)
+            {
+                gNdsFighterNaturalMovesetAerialHitboxFrames++;
+                ndsFighterNaturalCombatRecordAttackColl(attacker);
+            }
+        }
+        else if (ndsFighterNaturalMovesetStatusIsLandingAir(
+                     attacker->status_id) != FALSE)
+        {
+            gNdsFighterNaturalMovesetLandingFrames++;
+        }
+        else if (attacker->status_id == nFTCommonStatusCatch)
+        {
+            gNdsFighterNaturalMovesetCatchFrames++;
+        }
+        else if (attacker->status_id == nFTCommonStatusCatchWait)
+        {
+            gNdsFighterNaturalMovesetCatchWaitFrames++;
+        }
+        else if ((attacker->status_id == nFTCommonStatusThrowF) ||
+                 (attacker->status_id == nFTCommonStatusThrowB))
+        {
+            gNdsFighterNaturalMovesetThrowFrames++;
+        }
+        if ((victim->status_id >= nFTCommonStatusThrownStart) &&
+            (victim->status_id <= nFTCommonStatusThrownEnd))
+        {
+            gNdsFighterNaturalMovesetThrownFrames++;
+        }
+        if ((gNdsFighterNaturalMovesetThrownFrames > 0u) &&
+            (victim->status_id == nFTCommonStatusWait))
+        {
+            gNdsFighterNaturalMovesetThrowRecoverFrames++;
+        }
+    }
+#endif
 
     if (ndsFighterNaturalCombatStatusIsDamage(victim->status_id) != FALSE)
     {
@@ -9774,6 +9996,14 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         NDS_FIGHTER_NATURAL_COMBAT_APPROACH_STOP_RANGE;
     sNdsNaturalCombatVictimHitSeen = 0u;
     sNdsNaturalCombatVictimHitPosX = 0.0F;
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    sNdsNaturalMovesetPhase = nNDSNaturalMovesetPhaseIdle;
+    sNdsNaturalMovesetPhaseFrames = 0u;
+    sNdsNaturalMovesetSettleFrames = 0u;
+    sNdsNaturalMovesetDone = 0u;
+    sNdsNaturalMovesetKORecoveryActive = 0u;
+    sNdsNaturalMovesetKORecoveryPhase = nNDSNaturalMovesetPhaseIdle;
+#endif
     sNdsNaturalCombatAttackerSlot = (p1->fkind == nFTKindFox) ? 1u : 0u;
     sNdsNaturalCombatVictimSlot = 1u - sNdsNaturalCombatAttackerSlot;
     sNdsNaturalCombatVictimStartPercent =
@@ -9838,13 +10068,266 @@ static void ndsFighterNaturalCombatSetPhase(u32 phase)
     gNdsFighterNaturalCombatPhase = phase;
 }
 
+static sb32 ndsFighterBattlePlayableHasRecoveredKO(void)
+{
+    return ((gNdsFighterBattlePlayableDeadFrames > 0u) &&
+            (gNdsFighterBattlePlayableRebirthDownFrames > 0u) &&
+            (gNdsFighterBattlePlayableRebirthStandFrames > 0u) &&
+            (gNdsFighterBattlePlayableRebirthWaitFrames > 0u) &&
+            (gNdsFighterBattlePlayableWaitAfterRebirthFrames >=
+                NDS_FIGHTER_BATTLE_PLAYABLE_WAIT_AFTER_REBIRTH_REQUIRED)) ?
+        TRUE : FALSE;
+}
+
 static void ndsFighterNaturalCombatStartKOExit(FTStruct *victim)
 {
+    if (ndsFighterBattlePlayableHasRecoveredKO() != FALSE)
+    {
+        ndsFighterNaturalCombatSetPhase(
+            nNDSNaturalCombatPhaseBattlePlayableDone);
+        return;
+    }
     sNdsBattlePlayableKOStickX =
         (ndsFighterNaturalCombatPosX(victim) < 0.0F) ? -80 : 80;
     ndsFighterNaturalCombatSetPhase(
         nNDSNaturalCombatPhaseBattlePlayableKOExit);
 }
+
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+static void ndsFighterNaturalMovesetSetPhase(u32 phase)
+{
+    sNdsNaturalMovesetPhase = phase;
+    sNdsNaturalMovesetPhaseFrames = 0u;
+    sNdsNaturalMovesetSettleFrames = 0u;
+    gNdsFighterNaturalMovesetPhase = phase;
+}
+
+static u32 ndsFighterNaturalMovesetRetryPhase(u32 phase)
+{
+    switch (phase)
+    {
+    case nNDSNaturalMovesetPhaseSettleTiltS3:
+        return nNDSNaturalMovesetPhaseTiltS3;
+    case nNDSNaturalMovesetPhaseSettleTiltHi3:
+        return nNDSNaturalMovesetPhaseTiltHi3;
+    case nNDSNaturalMovesetPhaseSettleTiltLw3:
+        return nNDSNaturalMovesetPhaseTiltLw3;
+    case nNDSNaturalMovesetPhaseSettleSmashS4:
+        return nNDSNaturalMovesetPhaseSmashS4;
+    case nNDSNaturalMovesetPhaseAerialAttack:
+    case nNDSNaturalMovesetPhaseSettleAerial:
+        return nNDSNaturalMovesetPhaseAerialJump;
+    case nNDSNaturalMovesetPhaseGrabThrow:
+    case nNDSNaturalMovesetPhaseSettleThrow:
+        return nNDSNaturalMovesetPhaseGrabCatch;
+    default:
+        return phase;
+    }
+}
+
+static u32 ndsFighterNaturalMovesetRecoveryPhase(u32 phase)
+{
+    switch (phase)
+    {
+    case nNDSNaturalMovesetPhaseTiltS3:
+        if ((gNdsFighterNaturalMovesetTiltS3Frames > 0u) &&
+            (gNdsFighterNaturalMovesetTiltHitboxFrames > 0u))
+        {
+            return nNDSNaturalMovesetPhaseSettleTiltS3;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleTiltS3:
+        return nNDSNaturalMovesetPhaseTiltHi3;
+    case nNDSNaturalMovesetPhaseTiltHi3:
+        if ((gNdsFighterNaturalMovesetTiltHi3Frames > 0u) &&
+            (gNdsFighterNaturalMovesetTiltHitboxFrames > 0u))
+        {
+            return nNDSNaturalMovesetPhaseSettleTiltHi3;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleTiltHi3:
+        return nNDSNaturalMovesetPhaseTiltLw3;
+    case nNDSNaturalMovesetPhaseTiltLw3:
+        if ((gNdsFighterNaturalMovesetTiltLw3Frames > 0u) &&
+            (gNdsFighterNaturalMovesetTiltHitboxFrames > 0u))
+        {
+            return nNDSNaturalMovesetPhaseSettleTiltLw3;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleTiltLw3:
+        return nNDSNaturalMovesetPhaseSmashS4;
+    case nNDSNaturalMovesetPhaseSmashS4:
+        if ((gNdsFighterNaturalMovesetSmashFrames > 0u) &&
+            (gNdsFighterNaturalMovesetSmashHitboxFrames > 0u))
+        {
+            return nNDSNaturalMovesetPhaseSettleSmashS4;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleSmashS4:
+        return nNDSNaturalMovesetPhaseAerialJump;
+    case nNDSNaturalMovesetPhaseAerialJump:
+        if (gNdsFighterNaturalMovesetAerialFrames > 0u)
+        {
+            return nNDSNaturalMovesetPhaseSettleAerial;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseAerialAttack:
+        if (gNdsFighterNaturalMovesetAerialFrames > 0u)
+        {
+            return nNDSNaturalMovesetPhaseSettleAerial;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleAerial:
+        if (gNdsFighterNaturalMovesetLandingFrames > 0u)
+        {
+            return nNDSNaturalMovesetPhaseDone;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseGrabCatch:
+        if (gNdsFighterNaturalMovesetCatchWaitFrames > 0u)
+        {
+            return nNDSNaturalMovesetPhaseGrabThrow;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseGrabThrow:
+        if (gNdsFighterNaturalMovesetThrowFrames > 0u)
+        {
+            return nNDSNaturalMovesetPhaseSettleThrow;
+        }
+        break;
+    default:
+        break;
+    }
+    return ndsFighterNaturalMovesetRetryPhase(phase);
+}
+
+static sb32 ndsFighterNaturalMovesetBothGroundWait(FTStruct *fp[2])
+{
+    return ((ndsFighterNaturalCombatBothWait(fp) != FALSE) &&
+            (fp[0]->ga == nMPKineticsGround) &&
+            (fp[1]->ga == nMPKineticsGround) &&
+            (ABS(fp[0]->input.pl.stick_range.x) < 20) &&
+            (ABS(fp[1]->input.pl.stick_range.x) < 20) &&
+            (ABS(fp[0]->input.pl.stick_range.y) < 20) &&
+            (ABS(fp[1]->input.pl.stick_range.y) < 20) &&
+            (fp[0]->tap_stick_x == FTINPUT_STICKBUFFER_TICS_MAX) &&
+            (fp[1]->tap_stick_x == FTINPUT_STICKBUFFER_TICS_MAX) &&
+            (fp[0]->tap_stick_y == FTINPUT_STICKBUFFER_TICS_MAX) &&
+            (fp[1]->tap_stick_y == FTINPUT_STICKBUFFER_TICS_MAX)) ?
+        TRUE : FALSE;
+}
+
+static sb32 ndsFighterNaturalMovesetPhaseReadyToStart(FTStruct *fp[2])
+{
+    FTStruct *attacker = fp[sNdsNaturalCombatAttackerSlot];
+
+    if (attacker == NULL)
+    {
+        return FALSE;
+    }
+    switch (sNdsNaturalMovesetPhase)
+    {
+    case nNDSNaturalMovesetPhaseTiltS3:
+        if ((gNdsFighterNaturalMovesetTiltS3Frames > 0u) ||
+            (ndsFighterNaturalMovesetStatusIsTiltS3(attacker->status_id) !=
+                FALSE))
+        {
+            return TRUE;
+        }
+        return ndsFighterNaturalMovesetBothGroundWait(fp);
+    case nNDSNaturalMovesetPhaseTiltHi3:
+        if ((gNdsFighterNaturalMovesetTiltHi3Frames > 0u) ||
+            (ndsFighterNaturalMovesetStatusIsTiltHi3(attacker->status_id) !=
+                FALSE))
+        {
+            return TRUE;
+        }
+        return ndsFighterNaturalMovesetBothGroundWait(fp);
+    case nNDSNaturalMovesetPhaseTiltLw3:
+        if ((gNdsFighterNaturalMovesetTiltLw3Frames > 0u) ||
+            (ndsFighterNaturalMovesetStatusIsTiltLw3(attacker->status_id) !=
+                FALSE))
+        {
+            return TRUE;
+        }
+        return ndsFighterNaturalMovesetBothGroundWait(fp);
+    case nNDSNaturalMovesetPhaseSmashS4:
+        if ((gNdsFighterNaturalMovesetSmashFrames > 0u) ||
+            (ndsFighterNaturalMovesetStatusIsSmash(attacker->status_id) !=
+                FALSE))
+        {
+            return TRUE;
+        }
+        return ndsFighterNaturalMovesetBothGroundWait(fp);
+    case nNDSNaturalMovesetPhaseAerialJump:
+    case nNDSNaturalMovesetPhaseAerialAttack:
+        if ((gNdsFighterNaturalMovesetAerialFrames > 0u) ||
+            (attacker->status_id == nFTCommonStatusKneeBend) ||
+            (attacker->status_id == nFTCommonStatusJumpF) ||
+            (attacker->status_id == nFTCommonStatusJumpB) ||
+            (attacker->status_id == nFTCommonStatusJumpAerialF) ||
+            (attacker->status_id == nFTCommonStatusJumpAerialB) ||
+            (attacker->status_id == nFTCommonStatusFall) ||
+            (attacker->status_id == nFTCommonStatusFallAerial) ||
+            (ndsFighterNaturalMovesetStatusIsAerial(attacker->status_id) !=
+                FALSE))
+        {
+            return TRUE;
+        }
+        return ndsFighterNaturalMovesetBothGroundWait(fp);
+    case nNDSNaturalMovesetPhaseGrabCatch:
+        if ((gNdsFighterNaturalMovesetCatchFrames > 0u) ||
+            (gNdsFighterNaturalMovesetCatchWaitFrames > 0u))
+        {
+            return TRUE;
+        }
+        return ndsFighterNaturalMovesetBothGroundWait(fp);
+    default:
+        return TRUE;
+    }
+}
+
+static sb32 ndsFighterNaturalMovesetHandleKORecovery(FTStruct *fp[2])
+{
+    FTStruct *victim = fp[sNdsNaturalCombatVictimSlot];
+
+    if ((victim == NULL) ||
+        (sNdsNaturalMovesetPhase == nNDSNaturalMovesetPhaseIdle) ||
+        (sNdsNaturalMovesetPhase == nNDSNaturalMovesetPhaseDone))
+    {
+        return FALSE;
+    }
+    if ((sNdsNaturalMovesetKORecoveryActive == 0u) &&
+        (ndsFighterBattlePlayableStatusIsDead(victim->status_id) != FALSE))
+    {
+        sNdsNaturalMovesetKORecoveryActive = 1u;
+        sNdsNaturalMovesetKORecoveryPhase =
+            ndsFighterNaturalMovesetRecoveryPhase(sNdsNaturalMovesetPhase);
+    }
+    if (sNdsNaturalMovesetKORecoveryActive == 0u)
+    {
+        return FALSE;
+    }
+    if (ndsFighterBattlePlayableHasRecoveredKO() != FALSE)
+    {
+        u32 phase = sNdsNaturalMovesetKORecoveryPhase;
+
+        sNdsNaturalMovesetKORecoveryActive = 0u;
+        sNdsNaturalMovesetKORecoveryPhase = nNDSNaturalMovesetPhaseIdle;
+        ndsFighterNaturalMovesetSetPhase(phase);
+        return FALSE;
+    }
+    if (ndsFighterNaturalMovesetBothGroundWait(fp) != FALSE)
+    {
+        u32 phase = sNdsNaturalMovesetKORecoveryPhase;
+
+        sNdsNaturalMovesetKORecoveryActive = 0u;
+        sNdsNaturalMovesetKORecoveryPhase = nNDSNaturalMovesetPhaseIdle;
+        ndsFighterNaturalMovesetSetPhase(phase);
+    }
+    return TRUE;
+}
+#endif
 
 static sb32 ndsFighterNaturalCombatSettled(FTStruct *fp[2])
 {
@@ -9864,6 +10347,275 @@ static sb32 ndsFighterNaturalCombatSettled(FTStruct *fp[2])
             NDS_FIGHTER_NATURAL_COMBAT_SETTLE_FRAMES_REQUIRED) ?
         TRUE : FALSE;
 }
+
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+static sb32 ndsFighterNaturalMovesetSettled(FTStruct *fp[2])
+{
+    FTStruct *victim = fp[sNdsNaturalCombatVictimSlot];
+
+    if (ndsFighterNaturalMovesetBothGroundWait(fp) != FALSE)
+    {
+        sNdsNaturalMovesetSettleFrames++;
+    }
+    else if ((victim != NULL) &&
+             (ndsFighterNaturalMovesetStatusIsRecovering(
+                 victim->status_id) != FALSE))
+    {
+        sNdsNaturalMovesetSettleFrames = 0u;
+    }
+    else
+    {
+        sNdsNaturalMovesetSettleFrames = 0u;
+    }
+    return (sNdsNaturalMovesetSettleFrames >=
+            NDS_FIGHTER_NATURAL_COMBAT_SETTLE_FRAMES_REQUIRED) ?
+        TRUE : FALSE;
+}
+
+static void ndsFighterNaturalMovesetUpdateMask(void)
+{
+    u32 mask = 0u;
+
+    if (gNdsFighterNaturalMovesetTiltS3Frames > 0u)
+    {
+        mask |= 1u << 0;
+    }
+    if (gNdsFighterNaturalMovesetTiltHi3Frames > 0u)
+    {
+        mask |= 1u << 1;
+    }
+    if (gNdsFighterNaturalMovesetTiltLw3Frames > 0u)
+    {
+        mask |= 1u << 2;
+    }
+    if (gNdsFighterNaturalMovesetTiltHitboxFrames > 0u)
+    {
+        mask |= 1u << 3;
+    }
+    if ((gNdsFighterNaturalMovesetSmashFrames > 0u) &&
+        (gNdsFighterNaturalMovesetSmashHitboxFrames > 0u))
+    {
+        mask |= 1u << 4;
+    }
+    if (gNdsFighterNaturalMovesetAerialFrames > 0u)
+    {
+        mask |= 1u << 5;
+    }
+    if (gNdsFighterNaturalMovesetLandingFrames > 0u)
+    {
+        mask |= 1u << 6;
+    }
+    if ((gNdsFighterNaturalMovesetCatchFrames > 0u) &&
+        (gNdsFighterNaturalMovesetCatchWaitFrames > 0u))
+    {
+        mask |= 1u << 7;
+    }
+    if (gNdsFighterNaturalMovesetThrowFrames > 0u)
+    {
+        mask |= 1u << 8;
+    }
+    if (gNdsFighterNaturalMovesetThrownFrames > 0u)
+    {
+        mask |= 1u << 9;
+    }
+    if (gNdsFighterNaturalMovesetThrowRecoverFrames >=
+        NDS_FIGHTER_NATURAL_COMBAT_SETTLE_FRAMES_REQUIRED)
+    {
+        mask |= 1u << 10;
+    }
+    gNdsFighterNaturalMovesetMask = mask;
+}
+
+static sb32 ndsFighterNaturalMovesetAdvance(FTStruct *fp[2])
+{
+    FTStruct *attacker = fp[sNdsNaturalCombatAttackerSlot];
+
+    if (sNdsNaturalMovesetDone != 0u)
+    {
+        return TRUE;
+    }
+    if (sNdsNaturalMovesetPhase == nNDSNaturalMovesetPhaseIdle)
+    {
+        ndsFighterNaturalMovesetSetPhase(nNDSNaturalMovesetPhaseTiltS3);
+    }
+    if (ndsFighterNaturalMovesetHandleKORecovery(fp) != FALSE)
+    {
+        return FALSE;
+    }
+    if (ndsFighterNaturalMovesetPhaseReadyToStart(fp) == FALSE)
+    {
+        ndsFighterNaturalMovesetUpdateMask();
+        return FALSE;
+    }
+
+    sNdsNaturalMovesetPhaseFrames++;
+    gNdsFighterNaturalMovesetPhaseFrames = sNdsNaturalMovesetPhaseFrames;
+    ndsFighterNaturalMovesetUpdateMask();
+    if (sNdsNaturalMovesetPhaseFrames >
+        NDS_FIGHTER_NATURAL_MOVESET_PHASE_TIMEOUT)
+    {
+        u32 recovery_phase =
+            ndsFighterNaturalMovesetRecoveryPhase(sNdsNaturalMovesetPhase);
+
+        if (recovery_phase != sNdsNaturalMovesetPhase)
+        {
+            ndsFighterNaturalMovesetSetPhase(recovery_phase);
+            return FALSE;
+        }
+        gNdsFighterNaturalCombatStallCount++;
+        ndsFighterNaturalMovesetSetPhase(
+            ndsFighterNaturalMovesetRetryPhase(sNdsNaturalMovesetPhase));
+        return FALSE;
+    }
+    if (ndsFighterNaturalMovesetPhaseReadyToStart(fp) == FALSE)
+    {
+        return TRUE;
+    }
+
+    switch (sNdsNaturalMovesetPhase)
+    {
+    case nNDSNaturalMovesetPhaseTiltS3:
+        if ((gNdsFighterNaturalMovesetTiltS3Frames > 0u) &&
+            (ndsFighterNaturalMovesetStatusIsTiltS3(attacker->status_id) ==
+                FALSE))
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseSettleTiltS3);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleTiltS3:
+        if (ndsFighterNaturalMovesetSettled(fp) != FALSE)
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseTiltHi3);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseTiltHi3:
+        if ((gNdsFighterNaturalMovesetTiltHi3Frames > 0u) &&
+            (ndsFighterNaturalMovesetStatusIsTiltHi3(attacker->status_id) ==
+                FALSE))
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseSettleTiltHi3);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleTiltHi3:
+        if (ndsFighterNaturalMovesetSettled(fp) != FALSE)
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseTiltLw3);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseTiltLw3:
+        if ((gNdsFighterNaturalMovesetTiltLw3Frames > 0u) &&
+            (ndsFighterNaturalMovesetStatusIsTiltLw3(attacker->status_id) ==
+                FALSE))
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseSettleTiltLw3);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleTiltLw3:
+        if (ndsFighterNaturalMovesetSettled(fp) != FALSE)
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseSmashS4);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSmashS4:
+        if ((gNdsFighterNaturalMovesetSmashFrames > 0u) &&
+            (ndsFighterNaturalMovesetStatusIsSmash(attacker->status_id) ==
+                FALSE))
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseSettleSmashS4);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleSmashS4:
+        if (ndsFighterNaturalMovesetSettled(fp) != FALSE)
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseAerialJump);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseAerialJump:
+        if (gNdsFighterNaturalMovesetAerialFrames > 0u)
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseSettleAerial);
+        }
+        else if ((attacker->status_id == nFTCommonStatusJumpF) ||
+            (attacker->status_id == nFTCommonStatusJumpB) ||
+            (attacker->status_id == nFTCommonStatusJumpAerialF) ||
+            (attacker->status_id == nFTCommonStatusJumpAerialB) ||
+            (attacker->status_id == nFTCommonStatusFall) ||
+            (attacker->status_id == nFTCommonStatusFallAerial))
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseAerialAttack);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseAerialAttack:
+        if ((gNdsFighterNaturalMovesetAerialFrames > 0u) &&
+            (ndsFighterNaturalMovesetStatusIsAerial(attacker->status_id) ==
+                FALSE))
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseSettleAerial);
+        }
+        else if ((gNdsFighterNaturalMovesetAerialFrames == 0u) &&
+                 (gNdsFighterNaturalMovesetLandingFrames > 0u) &&
+                  (attacker->ga == nMPKineticsGround) &&
+                  (attacker->status_id == nFTCommonStatusWait))
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseAerialJump);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleAerial:
+        if ((gNdsFighterNaturalMovesetLandingFrames > 0u) &&
+            (ndsFighterNaturalMovesetSettled(fp) != FALSE))
+        {
+            ndsFighterNaturalMovesetUpdateMask();
+            sNdsNaturalMovesetDone = 1u;
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseDone);
+            return TRUE;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseGrabCatch:
+        if (gNdsFighterNaturalMovesetCatchWaitFrames > 0u)
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseGrabThrow);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseGrabThrow:
+        if (gNdsFighterNaturalMovesetThrowFrames > 0u)
+        {
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseSettleThrow);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSettleThrow:
+        if ((gNdsFighterNaturalMovesetThrowRecoverFrames >=
+                NDS_FIGHTER_NATURAL_COMBAT_SETTLE_FRAMES_REQUIRED) ||
+            ((gNdsFighterNaturalMovesetThrownFrames > 0u) &&
+             (ndsFighterNaturalMovesetSettled(fp) != FALSE)))
+        {
+            ndsFighterNaturalMovesetUpdateMask();
+            sNdsNaturalMovesetDone = 1u;
+            ndsFighterNaturalMovesetSetPhase(
+                nNDSNaturalMovesetPhaseDone);
+            return TRUE;
+        }
+        break;
+    default:
+        break;
+    }
+    return FALSE;
+}
+#endif
 
 static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
 {
@@ -10117,6 +10869,25 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         if (gNdsFighterBattlePlayableWaitAfterRebirthFrames >=
             NDS_FIGHTER_BATTLE_PLAYABLE_WAIT_AFTER_REBIRTH_REQUIRED)
         {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+            if (sNdsNaturalMovesetDone == 0u)
+            {
+                if ((sNdsNaturalMovesetPhase != nNDSNaturalMovesetPhaseIdle) ||
+                    ((ndsFighterNaturalCombatBothWait(fp) != FALSE) &&
+                     (fp[0]->ga == nMPKineticsGround) &&
+                     (fp[1]->ga == nMPKineticsGround)))
+                {
+                    if (ndsFighterNaturalMovesetAdvance(fp) == FALSE)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+#endif
             ndsFighterNaturalCombatSetPhase(
                 nNDSNaturalCombatPhaseBattlePlayableDone);
         }
@@ -10126,14 +10897,188 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
     }
 }
 
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+static sb32 ndsFighterNaturalMovesetKeepSeparated(FTStruct *fp[2],
+                                                  s8 stick_x[2])
+{
+    FTStruct *attacker = fp[sNdsNaturalCombatAttackerSlot];
+    FTStruct *victim = fp[sNdsNaturalCombatVictimSlot];
+    u32 victim_slot = sNdsNaturalCombatVictimSlot;
+    f32 self_x = ndsFighterNaturalCombatPosX(attacker);
+    f32 other_x = ndsFighterNaturalCombatPosX(victim);
+    f32 dx = self_x - other_x;
+    f32 adx = (dx < 0.0F) ? -dx : dx;
+
+    if (adx >= NDS_FIGHTER_NATURAL_MOVESET_SAFE_RANGE)
+    {
+        return FALSE;
+    }
+    if (dx > 0.0F)
+    {
+        stick_x[sNdsNaturalCombatAttackerSlot] = 40;
+        stick_x[victim_slot] = -40;
+    }
+    else if (dx < 0.0F)
+    {
+        stick_x[sNdsNaturalCombatAttackerSlot] = -40;
+        stick_x[victim_slot] = 40;
+    }
+    else
+    {
+        stick_x[sNdsNaturalCombatAttackerSlot] =
+            (attacker->lr >= 0.0F) ? -40 : 40;
+        stick_x[victim_slot] = -stick_x[sNdsNaturalCombatAttackerSlot];
+    }
+    return TRUE;
+}
+
+static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
+                                               u16 button[2],
+                                               s8 stick_x[2],
+                                               s8 stick_y[2])
+{
+    FTStruct *attacker = fp[sNdsNaturalCombatAttackerSlot];
+    s8 forward_stick = (attacker->lr >= 0.0F) ? 1 : -1;
+
+    if ((ndsFighterBattlePlayableProofEnabled() == FALSE) ||
+        (sNdsNaturalMovesetPhase == nNDSNaturalMovesetPhaseIdle) ||
+        (sNdsNaturalMovesetPhase == nNDSNaturalMovesetPhaseDone))
+    {
+        return FALSE;
+    }
+
+    switch (sNdsNaturalMovesetPhase)
+    {
+    case nNDSNaturalMovesetPhaseTiltS3:
+        if (ndsFighterNaturalMovesetKeepSeparated(fp, stick_x) != FALSE)
+        {
+            break;
+        }
+        if ((sNdsNaturalMovesetPhaseFrames % 12u) == 0u)
+        {
+            button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
+            stick_x[sNdsNaturalCombatAttackerSlot] = (s8)(40 * forward_stick);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseTiltHi3:
+        if (ndsFighterNaturalMovesetKeepSeparated(fp, stick_x) != FALSE)
+        {
+            break;
+        }
+        if ((sNdsNaturalMovesetPhaseFrames % 12u) == 0u)
+        {
+            button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
+            stick_x[sNdsNaturalCombatAttackerSlot] = 0;
+            stick_y[sNdsNaturalCombatAttackerSlot] = 40;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseTiltLw3:
+        if (ndsFighterNaturalMovesetKeepSeparated(fp, stick_x) != FALSE)
+        {
+            break;
+        }
+        if ((sNdsNaturalMovesetPhaseFrames % 12u) == 0u)
+        {
+            button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
+            stick_x[sNdsNaturalCombatAttackerSlot] = 0;
+            stick_y[sNdsNaturalCombatAttackerSlot] = -40;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseSmashS4:
+        if (sNdsNaturalMovesetPhaseFrames <= 3u)
+        {
+            button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
+            stick_x[sNdsNaturalCombatAttackerSlot] = (s8)(80 * forward_stick);
+        }
+        break;
+    case nNDSNaturalMovesetPhaseAerialJump:
+        if ((attacker->status_id == nFTCommonStatusWait) &&
+            (attacker->ga == nMPKineticsGround) &&
+            ((sNdsNaturalMovesetPhaseFrames % 12u) == 0u))
+        {
+            button[sNdsNaturalCombatAttackerSlot] = U_CBUTTONS;
+        }
+        else if (attacker->status_id == nFTCommonStatusKneeBend)
+        {
+            break;
+        }
+        else if ((attacker->status_id == nFTCommonStatusJumpF) ||
+                 (attacker->status_id == nFTCommonStatusJumpB) ||
+                 (attacker->status_id == nFTCommonStatusFall) ||
+                 (attacker->status_id == nFTCommonStatusFallAerial))
+        {
+            button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseAerialAttack:
+        if ((attacker->ga == nMPKineticsAir) &&
+            (gNdsFighterNaturalMovesetAerialFrames == 0u))
+        {
+            button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
+        }
+        break;
+    case nNDSNaturalMovesetPhaseGrabCatch:
+        {
+            f32 self_x = ndsFighterNaturalCombatPosX(attacker);
+            f32 other_x =
+                ndsFighterNaturalCombatPosX(fp[sNdsNaturalCombatVictimSlot]);
+            f32 dx = other_x - self_x;
+            f32 adx = (dx < 0.0F) ? -dx : dx;
+            sb32 wait_ready = ndsFighterNaturalMovesetBothGroundWait(fp);
+
+            if (adx > NDS_FIGHTER_NATURAL_MOVESET_GRAB_STOP_RANGE)
+            {
+                stick_x[sNdsNaturalCombatAttackerSlot] =
+                    (dx >= 0.0F) ? 40 : -40;
+            }
+            else if (wait_ready == FALSE)
+            {
+                break;
+            }
+            else
+            {
+                if ((sNdsNaturalMovesetPhaseFrames % 4u) == 0u)
+                {
+                    button[sNdsNaturalCombatAttackerSlot] = Z_TRIG | A_BUTTON;
+                }
+            }
+        }
+        break;
+    case nNDSNaturalMovesetPhaseGrabThrow:
+        if (sNdsNaturalMovesetPhaseFrames <= 3u)
+        {
+            button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
+        }
+        break;
+    default:
+        break;
+    }
+    return TRUE;
+}
+#endif
+
 static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 {
     u16 button[2];
     s8 stick[2];
+    s8 stick_y[2];
     u32 i;
 
     button[0] = button[1] = 0u;
     stick[0] = stick[1] = 0;
+    stick_y[0] = stick_y[1] = 0;
+
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    if (ndsFighterNaturalMovesetApplyInput(fp, button, stick, stick_y) !=
+        FALSE)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
+        }
+        return;
+    }
+#endif
 
     switch (sNdsNaturalCombatPhase)
     {
@@ -10173,6 +11118,11 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         }
         break;
     case nNDSNaturalCombatPhaseAttack:
+        if (sNdsNaturalCombatPhaseFrames <
+            NDS_FIGHTER_NATURAL_COMBAT_ATTACK_NEUTRAL_FRAMES)
+        {
+            break;
+        }
         if (sNdsNaturalCombatAttackPressed == 0u)
         {
             button[sNdsNaturalCombatAttackerSlot] = A_BUTTON;
@@ -10200,7 +11150,7 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 
     for (i = 0u; i < 2u; i++)
     {
-        ndsControllerPlaybackSetPad(i, button[i], stick[i], 0);
+        ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
     }
 }
 

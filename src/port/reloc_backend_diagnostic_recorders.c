@@ -359,6 +359,32 @@ static sb32 ndsFTMainSetStatusStageCompatActive(void)
 
 void ndsDiagnosticsRecordImportedFTMainAnimEvents(GObj *fighter_gobj)
 {
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    FTStruct *moveset_fp;
+    u32 moveset_i;
+#endif
+
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+    moveset_fp = ftGetStruct(fighter_gobj);
+    if (((gNdsFighterNaturalMovesetPhase == 9u) ||
+         (gNdsFighterNaturalMovesetPhase == 10u)) &&
+        (moveset_fp != NULL) &&
+        (moveset_fp->status_id >= nFTCommonStatusAttackAirStart) &&
+        (moveset_fp->status_id <= nFTCommonStatusAttackAirEnd))
+    {
+        for (moveset_i = 0u; moveset_i < ARRAY_COUNT(moveset_fp->attack_colls);
+             moveset_i++)
+        {
+            if (moveset_fp->attack_colls[moveset_i].attack_state !=
+                nGMAttackStateOff)
+            {
+                gNdsFighterNaturalMovesetAerialHitboxFrames++;
+                break;
+            }
+        }
+    }
+#endif
+
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowCallbackImmediateActive != FALSE))
     {

@@ -182,9 +182,9 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
 
     gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_STOCK;
     gSCManagerTransferBattleState.time_limit = SCBATTLE_TIMELIMIT_INFINITE;
-    gSCManagerTransferBattleState.stocks = 2;
-    gSCManagerTransferBattleState.players[0].stock_count = 2;
-    gSCManagerTransferBattleState.players[1].stock_count = 2;
+    gSCManagerTransferBattleState.stocks = 8;
+    gSCManagerTransferBattleState.players[0].stock_count = 8;
+    gSCManagerTransferBattleState.players[1].stock_count = 8;
     ndsSceneHarnessSyncSingleStockIconFlags();
 
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
