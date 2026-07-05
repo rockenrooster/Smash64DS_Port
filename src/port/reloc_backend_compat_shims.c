@@ -1843,13 +1843,6 @@ static sb32 ndsFighterWalkDeferredInterrupt(GObj *fighter_gobj)
     return FALSE;
 }
 
-#if !(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || NDS_IMPORT_BATTLESHIP_FOX_BLASTER)
-sb32 ftCommonSpecialNCheckInterruptCommon(GObj *fighter_gobj)
-{
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
-}
-#endif
-
 sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
 {
     if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
@@ -4174,47 +4167,6 @@ void ftCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
     }
 }
 
-#if !(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || NDS_IMPORT_BATTLESHIP_FOX_BLASTER)
-sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
-    {
-        sNdsFighterDashRunDamageFallSpecialAirCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopDamageFallSpecialAirCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffTickFloorLoopFallSpecialAirCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingFallInterruptActive != FALSE))
-    {
-        gNdsFighterLandingDeferredInterruptCheckCount++;
-        gNdsFighterMarioFoxLandingLoopDeferredMask |= 1u << 0;
-        return FALSE;
-    }
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        gNdsFighterJumpSpecialAirCheckCount++;
-        gNdsFighterJumpDeferredInterruptCheckCount++;
-        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 3;
-    }
-    return FALSE;
-}
-#endif
-
 sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
@@ -5301,17 +5253,6 @@ s32 itMainGetDamageOutput(ITStruct *ip)
     return (s32)((ip->attack_coll.damage * ip->attack_coll.stale) + 0.999F);
 }
 
-#if !NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
-s32 wpMainGetStaledDamage(WPStruct *wp)
-{
-    if (wp == NULL)
-    {
-        return 0;
-    }
-    return (s32)((wp->attack_coll.damage * wp->attack_coll.stale) + 0.999F);
-}
-#endif
-
 static void ndsCompatSetHitInteractStats(GMAttackRecord *records,
                                          GObj *victim_gobj, s32 attack_type,
                                          u32 group_id, u32 rehit_time)
@@ -5382,43 +5323,6 @@ static void ndsCompatSetHitInteractStats(GMAttackRecord *records,
         break;
     }
 }
-
-#if !NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
-void wpProcessUpdateHitInteractStats(WPStruct *wp, WPAttackColl *attack_coll,
-                                     GObj *victim_gobj, s32 attack_type,
-                                     u32 victim_group_id)
-{
-    GObj *weapon_gobj;
-
-    if (wp == NULL)
-    {
-        return;
-    }
-    if (wp->group_id == 0)
-    {
-        ndsCompatSetHitInteractStats(
-            (attack_coll != NULL) ? attack_coll->attack_records :
-                                    wp->attack_coll.attack_records,
-            victim_gobj, attack_type, victim_group_id,
-            WEAPON_REHIT_TIME_DEFAULT);
-        return;
-    }
-
-    weapon_gobj = gGCCommonLinks[nGCCommonLinkIDWeapon];
-    while (weapon_gobj != NULL)
-    {
-        WPStruct *other_wp = wpGetStruct(weapon_gobj);
-
-        if ((other_wp != NULL) && (other_wp->group_id == wp->group_id))
-        {
-            ndsCompatSetHitInteractStats(
-                other_wp->attack_coll.attack_records, victim_gobj,
-                attack_type, victim_group_id, WEAPON_REHIT_TIME_DEFAULT);
-        }
-        weapon_gobj = weapon_gobj->link_next;
-    }
-}
-#endif
 
 void itProcessSetHitInteractStats(ITAttackColl *attack_coll,
                                   GObj *victim_gobj, s32 attack_type,
@@ -13165,14 +13069,6 @@ void gmRumbleInitPlayers(void)
 {
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
 }
-
-#if !NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
-void wpManagerAllocWeapons(void)
-{
-    gNdsSCVSBattleCompatManagerMask |= 1u << 7;
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
-}
-#endif
 
 void itManagerInitItems(void)
 {

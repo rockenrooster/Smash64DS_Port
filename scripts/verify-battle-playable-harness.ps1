@@ -11,6 +11,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $ImportBattleShipNormalMoveset = $true
+$ImportBattleShipMarioFireball = $true
+$ImportBattleShipFoxBlaster = $true
 $target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 if ($ImportBattleShipNormalMoveset -or
