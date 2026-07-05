@@ -4111,6 +4111,7 @@ void ftCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
     }
 }
 
+#if !NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL
 sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -4149,6 +4150,7 @@ sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
     }
     return FALSE;
 }
+#endif
 
 sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj)
 {

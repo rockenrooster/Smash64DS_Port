@@ -17749,3 +17749,17 @@ Still deferred:
   character special TU.
 - Verified: fenced Mario fireball battle-playable build,
   `git diff --check`, and `verify-dev-fast -Build -DelaySeconds 3`.
+
+## 2026-07-05 - Fenced Mario Air Neutral-Special Input
+
+- Added original `ftcommonspecialair.c` to the same default-off Mario fireball
+  fence, replacing the local deferred `ftCommonSpecialAirCheckInterruptCommon`
+  only when `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`.
+- The source path is BattleShip's air B-input check at
+  `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialair.c:157`,
+  neutral dispatch at `:183`-`:185`, and Mario's imported
+  `ftMarioSpecialAirNSetStatus` at
+  `decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospecialn.c:111`.
+  Non-Mario neutral and unowned air Hi/Lw setters remain weak inside the fence.
+- Verified: fenced Mario fireball battle-playable build, `git diff --check`,
+  `check-docs`, and `verify-dev-fast -Build -DelaySeconds 3`.
