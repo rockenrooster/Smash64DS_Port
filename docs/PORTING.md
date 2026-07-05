@@ -17628,3 +17628,18 @@ Still deferred:
   `-DelaySeconds 8`; `check-gbi-decode-fixtures`, `check-harness-registry`,
   `check-docs`, `verify-dev-fast -Build -DelaySeconds 3`, and
   `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Default MP Cliff-Climb Floor Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `113/114`,
+  matching the adjacent cliff-escape-common2 hardware path, then made the
+  direct and menu-chain MP cliff-climb floor wrappers default to `-hwtri`
+  targets with `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry and GBI fixture checks so the MP cliff-climb
+  floor pair is covered by the hardware-default guardrails.
+- Verified: direct MP cliff-climb floor software baseline with
+  `-DelaySeconds 8`, direct MP cliff-climb floor hardware with
+  `-DelaySeconds 8`, and menu-chain MP cliff-climb floor hardware with
+  `-DelaySeconds 8`; `check-gbi-decode-fixtures`, `check-harness-registry`,
+  `check-docs`, `verify-dev-fast -Build -DelaySeconds 3`, and
+  `verify-boundary -DelaySeconds 3`.

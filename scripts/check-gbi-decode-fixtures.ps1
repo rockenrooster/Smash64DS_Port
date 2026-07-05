@@ -609,6 +609,8 @@ Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffescape-a
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffescape-action-loop-hwtri')) 'Menu-chain stage MP cliff-escape-action registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffescape-common2-loop-hwtri')) 'Stage MP cliff-escape-common2 registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffescape-common2-loop-hwtri')) 'Menu-chain stage MP cliff-escape-common2 registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffclimb-floor-loop-hwtri')) 'Stage MP cliff-climb-floor registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffclimb-floor-loop-hwtri')) 'Menu-chain stage MP cliff-climb-floor registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary direct registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary menu registry target is not hardware-renderer default.'
 $buildProfile = Get-Content (Join-Path $root 'scripts/build-verify-profile.ps1') -Raw
@@ -876,6 +878,16 @@ Assert-True ($menuStageMPCliffEscapeCommon2Wrapper.Contains('HardwareTriangles')
 Assert-True ($menuStageMPCliffEscapeCommon2Wrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP cliff-escape-common2 verifier software-preview opt-out is missing.'
 Assert-True ($menuStageMPCliffEscapeCommon2Wrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP cliff-escape-common2 verifier no longer defaults to hardware.'
 Assert-True ($menuStageMPCliffEscapeCommon2Wrapper.Contains('menu-chain-mariofox-stage-mpcliffescape-common2-loop-hwtri')) 'Menu-chain stage MP cliff-escape-common2 verifier hardware target is missing.'
+$stageMPCliffClimbFloorWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1') -Raw
+Assert-True ($stageMPCliffClimbFloorWrapper.Contains('HardwareTriangles')) 'Stage MP cliff-climb-floor verifier hardware switch is missing.'
+Assert-True ($stageMPCliffClimbFloorWrapper.Contains('SoftwarePreview')) 'Stage MP cliff-climb-floor verifier software-preview opt-out is missing.'
+Assert-True ($stageMPCliffClimbFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Stage MP cliff-climb-floor verifier no longer defaults to hardware.'
+Assert-True ($stageMPCliffClimbFloorWrapper.Contains('battle-mariofox-stage-mpcliffclimb-floor-loop-hwtri')) 'Stage MP cliff-climb-floor verifier hardware target is missing.'
+$menuStageMPCliffClimbFloorWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1') -Raw
+Assert-True ($menuStageMPCliffClimbFloorWrapper.Contains('HardwareTriangles')) 'Menu-chain stage MP cliff-climb-floor verifier hardware switch is missing.'
+Assert-True ($menuStageMPCliffClimbFloorWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP cliff-climb-floor verifier software-preview opt-out is missing.'
+Assert-True ($menuStageMPCliffClimbFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP cliff-climb-floor verifier no longer defaults to hardware.'
+Assert-True ($menuStageMPCliffClimbFloorWrapper.Contains('menu-chain-mariofox-stage-mpcliffclimb-floor-loop-hwtri')) 'Menu-chain stage MP cliff-climb-floor verifier hardware target is missing.'
 $menuAllDLVerifier = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($menuAllDLVerifier.Contains('HardwareTriangles')) 'Menu-chain all-DL verifier hardware switch is missing.'
 Assert-True ($menuAllDLVerifier.Contains('SoftwarePreview')) 'Menu-chain all-DL verifier software-preview opt-out is missing.'
