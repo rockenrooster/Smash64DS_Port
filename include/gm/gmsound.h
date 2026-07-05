@@ -11,6 +11,7 @@ typedef enum gmMusicID
 
 typedef enum gmFGMID
 {
+    nSYAudioFGMExplodeS = 0,
     nSYAudioFGMFireShoot1 = 2,
     nSYAudioFGMUnkSmallPing1 = 6,
     nSYAudioFGMGuardOn = 13,

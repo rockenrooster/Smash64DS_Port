@@ -7156,6 +7156,25 @@ LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
     return NULL;
 }
 
+LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
+{
+    (void)pos;
+    (void)f_index;
+    return NULL;
+}
+
+LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
+{
+    (void)pos;
+    return NULL;
+}
+
+LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos)
+{
+    (void)pos;
+    return NULL;
+}
+
 LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
                                                  s32 size, sb32 is_static)
 {

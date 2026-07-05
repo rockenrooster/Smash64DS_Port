@@ -45,6 +45,26 @@ void mpCommonProcFighterWaitOrLanding(GObj *fighter_gobj)
     }
 }
 
+sb32 mpCommonProcFighterOnEdge(GObj *fighter_gobj, void (*proc_map)(GObj *))
+{
+    if (mpCommonCheckFighterOnEdge(fighter_gobj) == FALSE)
+    {
+        proc_map(fighter_gobj);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+sb32 mpCommonProcFighterLanding(GObj *fighter_gobj, void (*proc_map)(GObj *))
+{
+    if (mpCommonCheckFighterLanding(fighter_gobj) != FALSE)
+    {
+        proc_map(fighter_gobj);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 void mpCommonProcFighterProject(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);

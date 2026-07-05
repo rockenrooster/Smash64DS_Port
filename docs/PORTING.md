@@ -17723,3 +17723,18 @@ Still deferred:
 - Verified: fenced weapon-manager battle-playable build,
   `git diff --check`, `verify-dev-fast -Build -DelaySeconds 3`, and
   `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Fenced Mario Fireball Import
+
+- Added default-off `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL`, which forces the
+  fenced weapon-manager core and imports original `ftmariospecialn.c` plus
+  `wpmariofireball.c` through `src/import/battleship_mario_fireball.c`.
+- Removed the inactive Mario neutral-special status stubs only when that fence
+  is enabled, and added narrow declarations/effect no-ops needed by the
+  original TUs.
+- The fenced build still uses weak bridge stubs for heavy map adjustment,
+  display-scale, and particle effects; natural B-input/fireball spawn, map
+  rebound, and hit proof remain the next slice.
+- Verified: fenced Mario fireball battle-playable build,
+  `git diff --check`, `verify-dev-fast -Build -DelaySeconds 3`, and
+  `verify-boundary -DelaySeconds 3`.

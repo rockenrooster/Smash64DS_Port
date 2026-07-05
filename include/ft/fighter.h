@@ -4023,10 +4023,15 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
 void mpCommonSetFighterGround(FTStruct *fp);
 void mpCommonSetFighterAir(FTStruct *fp);
 void mpCommonSetFighterWaitOrFall(GObj *fighter_gobj);
+sb32 mpCommonProcFighterOnEdge(GObj *fighter_gobj,
+                               void (*proc_map)(GObj *));
+sb32 mpCommonProcFighterLanding(GObj *fighter_gobj,
+                                void (*proc_map)(GObj *));
 void mpCommonSetFighterLandingParams(GObj *fighter_gobj);
 void mpCommonRunFighterCollisionDefault(GObj *fighter_gobj, Vec3f *pos,
                                         FTCollisionData *coll_data);
 sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj);
+sb32 mpCommonCheckFighterOnEdge(GObj *fighter_gobj);
 sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj);
 sb32 mpCommonCheckFighterLanding(GObj *fighter_gobj);
 void mpCommonProcFighterOnCliffEdge(GObj *fighter_gobj);

@@ -28,6 +28,9 @@ void LBParticleProcessStruct(LBParticle *pc);
 void lbParticleEjectStruct(LBParticle *pc);
 void lbParticleEjectStructID(s32 generator_id, s32 index);
 LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos);
+LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
+LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos);
+LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos);
 LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
 LBParticle *efManagerSetOffMakeEffect(Vec3f *pos, s32 size);
 LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,

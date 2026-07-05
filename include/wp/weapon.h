@@ -113,6 +113,21 @@ typedef struct WPAttributes {
     u32 knockback_base : 10;
 } WPAttributes;
 
+typedef struct wpMarioFireballAttributes {
+    s32 lifetime;
+    f32 vel_terminal;
+    f32 vel_min;
+    f32 gravity;
+    f32 collide_rebound;
+    f32 rotate_speed;
+    f32 angle_ground;
+    f32 angle_air;
+    f32 vel_base;
+    void *p_weapon;
+    intptr_t offset;
+    f32 anim_frame;
+} wpMarioFireballAttributes;
+
 #ifndef SSB64_NDS_WP_ATTACK_COLL_DECLARED
 #define SSB64_NDS_WP_ATTACK_COLL_DECLARED
 typedef struct WPAttackPos {
@@ -224,6 +239,11 @@ void wpManagerSetPrevStructAlloc(WPStruct *wp);
 u32 wpManagerGetGroupID(void);
 GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc,
                           Vec3f *spawn_pos, u32 flags);
+sb32 wpMainDecLifeCheckExpire(WPStruct *wp);
+void wpMainApplyGravityClampTVel(WPStruct *wp, f32 gravity,
+                                 f32 terminal_velocity);
+void wpMainVelSetModelPitch(GObj *weapon_gobj);
+void wpMainReflectorSetLR(WPStruct *wp, FTStruct *fp);
 s32 wpMainGetStaledDamage(WPStruct *wp);
 void wpMainClearAttackRecord(WPStruct *wp);
 void wpMainDestroyWeapon(GObj *weapon_gobj);
@@ -234,6 +254,15 @@ void wpProcessUpdateHitPositions(GObj *weapon_gobj);
 void wpProcessProcWeaponMain(GObj *weapon_gobj);
 void wpProcessProcSearchHitWeapon(GObj *weapon_gobj);
 void wpProcessProcHitCollisions(GObj *weapon_gobj);
+sb32 wpMapTestAll(GObj *weapon_gobj);
+sb32 wpMapCheckAllRebound(GObj *weapon_gobj, u32 check_flags, f32 mod_vel,
+                          Vec3f *pos);
+sb32 wpMarioFireballProcUpdate(GObj *weapon_gobj);
+sb32 wpMarioFireballProcMap(GObj *weapon_gobj);
+sb32 wpMarioFireballProcHit(GObj *weapon_gobj);
+sb32 wpMarioFireballProcHop(GObj *weapon_gobj);
+sb32 wpMarioFireballProcReflector(GObj *weapon_gobj);
+GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index);
 sb32 gmCollisionCheckWeaponInFighterRange(WPAttackColl *attack_coll,
                                           s32 attack_id, GObj *fighter_gobj);
 sb32 gmCollisionCheckWeaponAttackFighterAttackCollide(

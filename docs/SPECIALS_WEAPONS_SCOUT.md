@@ -1,8 +1,17 @@
 # Specials And Weapons Scout
 
-Read-only scout for Mario/Fox specials, their projectile/effect requirements,
-and the minimum DS memory-risk plan. No verifier, build, emulator, or snapshot
-was run for this document.
+Initial read-only scout for Mario/Fox specials, their projectile/effect
+requirements, and the minimum DS memory-risk plan. No verifier, build,
+emulator, or snapshot was run for the initial scout document.
+
+## Current Checkpoint
+
+As of 2026-07-05, default-off `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`
+compiles the original Mario neutral-special TU plus the Mario fireball
+projectile TU. The fence still uses weak bridge stubs for heavy map adjustment,
+display-scale, and particle-effect calls, so the next proof remains natural
+B-input -> fireball spawn -> map rebound/lifetime -> hit/damage through
+imported weapon processes.
 
 ## Current Import Boundary
 
