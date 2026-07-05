@@ -607,6 +607,8 @@ Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffcommon2-
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffcommon2-loop-hwtri')) 'Menu-chain stage MP cliff-common2 registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffescape-action-loop-hwtri')) 'Stage MP cliff-escape-action registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffescape-action-loop-hwtri')) 'Menu-chain stage MP cliff-escape-action registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffescape-common2-loop-hwtri')) 'Stage MP cliff-escape-common2 registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffescape-common2-loop-hwtri')) 'Menu-chain stage MP cliff-escape-common2 registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary direct registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary menu registry target is not hardware-renderer default.'
 $buildProfile = Get-Content (Join-Path $root 'scripts/build-verify-profile.ps1') -Raw
@@ -864,6 +866,16 @@ Assert-True ($menuStageMPCliffEscapeActionWrapper.Contains('HardwareTriangles'))
 Assert-True ($menuStageMPCliffEscapeActionWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP cliff-escape-action verifier software-preview opt-out is missing.'
 Assert-True ($menuStageMPCliffEscapeActionWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP cliff-escape-action verifier no longer defaults to hardware.'
 Assert-True ($menuStageMPCliffEscapeActionWrapper.Contains('menu-chain-mariofox-stage-mpcliffescape-action-loop-hwtri')) 'Menu-chain stage MP cliff-escape-action verifier hardware target is missing.'
+$stageMPCliffEscapeCommon2Wrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-mpcliffescape-common2-loop-harness.ps1') -Raw
+Assert-True ($stageMPCliffEscapeCommon2Wrapper.Contains('HardwareTriangles')) 'Stage MP cliff-escape-common2 verifier hardware switch is missing.'
+Assert-True ($stageMPCliffEscapeCommon2Wrapper.Contains('SoftwarePreview')) 'Stage MP cliff-escape-common2 verifier software-preview opt-out is missing.'
+Assert-True ($stageMPCliffEscapeCommon2Wrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Stage MP cliff-escape-common2 verifier no longer defaults to hardware.'
+Assert-True ($stageMPCliffEscapeCommon2Wrapper.Contains('battle-mariofox-stage-mpcliffescape-common2-loop-hwtri')) 'Stage MP cliff-escape-common2 verifier hardware target is missing.'
+$menuStageMPCliffEscapeCommon2Wrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-mpcliffescape-common2-loop-harness.ps1') -Raw
+Assert-True ($menuStageMPCliffEscapeCommon2Wrapper.Contains('HardwareTriangles')) 'Menu-chain stage MP cliff-escape-common2 verifier hardware switch is missing.'
+Assert-True ($menuStageMPCliffEscapeCommon2Wrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP cliff-escape-common2 verifier software-preview opt-out is missing.'
+Assert-True ($menuStageMPCliffEscapeCommon2Wrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP cliff-escape-common2 verifier no longer defaults to hardware.'
+Assert-True ($menuStageMPCliffEscapeCommon2Wrapper.Contains('menu-chain-mariofox-stage-mpcliffescape-common2-loop-hwtri')) 'Menu-chain stage MP cliff-escape-common2 verifier hardware target is missing.'
 $menuAllDLVerifier = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($menuAllDLVerifier.Contains('HardwareTriangles')) 'Menu-chain all-DL verifier hardware switch is missing.'
 Assert-True ($menuAllDLVerifier.Contains('SoftwarePreview')) 'Menu-chain all-DL verifier software-preview opt-out is missing.'

@@ -17613,3 +17613,18 @@ Still deferred:
   `-DelaySeconds 8`; `check-gbi-decode-fixtures`, `check-harness-registry`,
   `check-docs`, `verify-dev-fast -Build -DelaySeconds 3`, and
   `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Default MP Cliff-Escape Common2 Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `111/112`,
+  matching the adjacent cliff-escape-action hardware path, then made the direct
+  and menu-chain MP cliff-escape common2 wrappers default to `-hwtri` targets
+  with `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry and GBI fixture checks so the MP cliff-escape
+  common2 pair is covered by the hardware-default guardrails.
+- Verified: direct MP cliff-escape common2 software baseline with
+  `-DelaySeconds 8`, direct MP cliff-escape common2 hardware with
+  `-DelaySeconds 8`, and menu-chain MP cliff-escape common2 hardware with
+  `-DelaySeconds 8`; `check-gbi-decode-fixtures`, `check-harness-registry`,
+  `check-docs`, `verify-dev-fast -Build -DelaySeconds 3`, and
+  `verify-boundary -DelaySeconds 3`.
