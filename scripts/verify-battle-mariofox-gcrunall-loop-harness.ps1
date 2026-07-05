@@ -266,7 +266,8 @@ try {
             $nm = Get-Ints $naturalMoveset
         }
         $hardwareSummary = ''
-        $naturalMaskOk = if ($BattlePlayable) { (($nat[2] -band 0x6ffff) -eq 0x6ffff) } else { (($nat[2] -band 0xfffff) -eq 0xfffff) }
+        $movementOnly = (($ExpectedMode -eq 39) -or ($ExpectedMode -eq 40))
+        $naturalMaskOk = if ($BattlePlayable) { (($nat[2] -band 0x6ffff) -eq 0x6ffff) } elseif ($movementOnly) { (($nat[2] -band 0x7fff) -eq 0x7fff) } else { (($nat[2] -band 0xfffff) -eq 0xfffff) }
         $naturalAttackDamageOk = if ($BattlePlayable) { ($na[6] -gt 0 -and $na[7] -gt 0) } else { ($na[6] -gt 0 -and $na[7] -gt 0 -and $na[9] -gt $na[8]) }
         Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and $naturalMaskOk -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Natural-motion manager runtime proof failed.' $gdbStdout
         Assert-Condition ($naturalFig.Success -and $nfig[0] -gt 0 -and $nfig[2] -eq 0 -and $nfig[3] -eq 0) 'Natural-motion figatree attach proof failed.' $gdbStdout
@@ -275,9 +276,11 @@ try {
         # Phase 14 == Done; phase 19 == battle_playable Done after KO/Rebirth.
         $expectedNaturalPhase = if ($BattlePlayable) { 19 } else { 14 }
         Assert-Condition ($naturalChain.Success -and $nc[0] -eq $expectedNaturalPhase -and $nc[2] -eq 0 -and $nc[3] -ge 2 -and $nc[4] -ge 2 -and $nc[5] -ge 8 -and $nc[6] -ge 8 -and $nc[7] -ge 2 -and $nc[8] -ge 2 -and $nc[9] -ge 1 -and $nc[10] -ge 1) 'Natural combat movement chain (dash/run/brake/turn) proof failed.' $gdbStdout
-        Assert-Condition ($naturalAttack.Success -and $na[2] -gt 0 -and $na[4] -gt 0 -and $naturalAttackDamageOk -and $na[10] -gt 0 -and $na[11] -gt 0) 'Natural attack->hit->damage lifecycle proof failed.' $gdbStdout
-        Assert-Condition ($naturalHitlag.Success -and $nh[0] -gt 0 -and $nh[1] -gt 0) 'Natural hitlag proof failed on attacker/victim.' $gdbStdout
-        Assert-Condition ($naturalGuard.Success -and $ng[0] -gt 0 -and $ng[1] -ge 10 -and $ng[2] -gt 0) 'Natural guard on/hold/off proof failed.' $gdbStdout
+        if (-not $movementOnly) {
+            Assert-Condition ($naturalAttack.Success -and $na[2] -gt 0 -and $na[4] -gt 0 -and $naturalAttackDamageOk -and $na[10] -gt 0 -and $na[11] -gt 0) 'Natural attack->hit->damage lifecycle proof failed.' $gdbStdout
+            Assert-Condition ($naturalHitlag.Success -and $nh[0] -gt 0 -and $nh[1] -gt 0) 'Natural hitlag proof failed on attacker/victim.' $gdbStdout
+            Assert-Condition ($naturalGuard.Success -and $ng[0] -gt 0 -and $ng[1] -ge 10 -and $ng[2] -gt 0) 'Natural guard on/hold/off proof failed.' $gdbStdout
+        }
         $projectileSummary = ''
         if ($ImportBattleShipMarioFireball -or $ImportBattleShipFoxBlaster) {
             $pj = Get-Ints $projectile

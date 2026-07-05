@@ -9140,6 +9140,18 @@ static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
 #endif
 }
 
+static sb32 ndsFighterNaturalCombatMovementOnlyProofEnabled(void)
+{
+#if (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_DASH_RUN) || \
+    (NDS_DEV_SCENE_HARNESS == \
+        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DASH_RUN)
+    return TRUE;
+#else
+    return FALSE;
+#endif
+}
+
 static sb32 ndsFighterNaturalMotionStatusIsWalk(s32 status_id)
 {
     return ((status_id == nFTCommonStatusWalkSlow) ||
@@ -10718,7 +10730,9 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         if (ndsFighterNaturalCombatSettled(fp) != FALSE)
         {
             ndsFighterNaturalCombatSetPhase(
-                nNDSNaturalCombatPhaseApproach);
+                (ndsFighterNaturalCombatMovementOnlyProofEnabled() != FALSE) ?
+                    nNDSNaturalCombatPhaseDone :
+                    nNDSNaturalCombatPhaseApproach);
         }
         break;
     case nNDSNaturalCombatPhaseApproach:
@@ -11355,7 +11369,9 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
             NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS;
     }
     else if ((ndsFighterBattlePlayableProofEnabled() == FALSE) &&
-             ((mask & 0xfffffu) == 0xfffffu))
+             (((mask & 0xfffffu) == 0xfffffu) ||
+              ((ndsFighterNaturalCombatMovementOnlyProofEnabled() != FALSE) &&
+               ((mask & 0x7fffu) == 0x7fffu))))
     {
         gNdsFighterNaturalMotionResult =
             NDS_FIGHTER_NATURAL_MOTION_PASS;

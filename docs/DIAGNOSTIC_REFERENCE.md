@@ -1272,10 +1272,12 @@ Opening movie / Opening Portraits:
   files load.
 - `gNdsSCVSBattleOriginalSetupResult`: bounded original VSBattle setup marker,
   expected `0x56425355` (`VBSU`).
-- `gNdsSCVSBattleOriginalSetupMask`: expected `0x7F`. It proves common file
+- `gNdsSCVSBattleOriginalSetupMask`: expected `0x6F`. It proves common file
   load, default battle camera path, manager compatibility stubs, active fighter
-  descriptor construction, interface/HUD compatibility stubs, audio/BGM
-  compatibility stubs, and the one bounded taskman update tick.
+  descriptor construction, audio/BGM compatibility stubs, and the one bounded
+  taskman update tick. Bit `0x10` was the old interface/HUD compatibility-stub
+  marker; with imported `if/ifcommon.c` default, BattleShip `scvsbattle.c:204`
+  and `scvsbattle.c:212-220` create the original interface path instead.
 - `gNdsSCVSBattleOriginalLoadedFileCount`: expected `8`.
 - `gNdsSCVSBattleOriginalGObjCount` / `CameraCount` / `MainGObjID`: bounded
   VSBattle setup object evidence after imported `scVSBattleStartBattle`.

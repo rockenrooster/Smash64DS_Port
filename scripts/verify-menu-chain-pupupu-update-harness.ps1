@@ -119,7 +119,7 @@ try {
     }
     if (-not $setup.Success -or
         (Convert-MarkerUInt32 $setup.Groups[1].Value) -ne 0x56425355 -or
-        ((Convert-MarkerUInt32 $setup.Groups[2].Value) -band 0x7f) -ne 0x7f -or
+        ((Convert-MarkerUInt32 $setup.Groups[2].Value) -band 0x6f) -ne 0x6f -or
         [int]$setup.Groups[3].Value -ne 8 -or
         [int]$setup.Groups[4].Value -lt 2 -or
         [int]$setup.Groups[5].Value -lt 2 -or

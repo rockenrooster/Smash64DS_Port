@@ -181,7 +181,7 @@ try {
         (Convert-MarkerUInt32 $vsbSetup.Groups[2].Value) -ne 0x56424653 -or
         (Convert-MarkerUInt32 $vsbSetup.Groups[3].Value) -ne 0x5642524c -or
         (Convert-MarkerUInt32 $vsbSetup.Groups[4].Value) -ne 0x56425355 -or
-        ((Convert-MarkerUInt32 $vsbSetup.Groups[5].Value) -band 0x7f) -ne 0x7f -or
+        ((Convert-MarkerUInt32 $vsbSetup.Groups[5].Value) -band 0x6f) -ne 0x6f -or
         [int]$vsbSetup.Groups[6].Value -ne 8 -or
         [int]$vsbSetup.Groups[8].Value -lt 1 -or
         [int]$vsbSetup.Groups[9].Value -lt 2 -or

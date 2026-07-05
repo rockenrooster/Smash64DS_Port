@@ -88,7 +88,7 @@ try {
         (Convert-MarkerUInt32 $setup.Groups[2].Value) -ne 0x56424653 -or
         (Convert-MarkerUInt32 $setup.Groups[3].Value) -ne 0x5642524c -or
         (Convert-MarkerUInt32 $setup.Groups[4].Value) -ne 0x56425355 -or
-        ((Convert-MarkerUInt32 $setup.Groups[5].Value) -band 0x7f) -ne 0x7f -or
+        ((Convert-MarkerUInt32 $setup.Groups[5].Value) -band 0x6f) -ne 0x6f -or
         [int]$setup.Groups[6].Value -ne 8 -or
         [int]$setup.Groups[8].Value -lt 1 -or
         [int]$setup.Groups[9].Value -ne 1 -or

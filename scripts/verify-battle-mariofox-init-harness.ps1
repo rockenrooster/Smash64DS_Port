@@ -103,7 +103,7 @@ try {
     if (-not $scene.Success -or [int]$scene.Groups[1].Value -ne 22 -or [int]$scene.Groups[2].Value -ne 21 -or [int]$scene.Groups[3].Value -ne 6) {
         throw "Live scene state is not Pupupu VSBattle from Maps.`n$gdbStdout"
     }
-    if (-not $vsb.Success -or (Convert-MarkerUInt32 $vsb.Groups[1].Value) -ne 0x56425355 -or ((Convert-MarkerUInt32 $vsb.Groups[2].Value) -band 0x7f) -ne 0x7f -or (Convert-MarkerUInt32 $vsb.Groups[3].Value) -ne 0x56425550 -or [int]$vsb.Groups[4].Value -ne 2 -or [int]$vsb.Groups[5].Value -ne 2 -or [int]$vsb.Groups[6].Value -ne 6) {
+    if (-not $vsb.Success -or (Convert-MarkerUInt32 $vsb.Groups[1].Value) -ne 0x56425355 -or ((Convert-MarkerUInt32 $vsb.Groups[2].Value) -band 0x6f) -ne 0x6f -or (Convert-MarkerUInt32 $vsb.Groups[3].Value) -ne 0x56425550 -or [int]$vsb.Groups[4].Value -ne 2 -or [int]$vsb.Groups[5].Value -ne 2 -or [int]$vsb.Groups[6].Value -ne 6) {
         throw "Imported VSBattle setup did not reach the Mario/Fox init boundary.`n$gdbStdout"
     }
     if (-not $pupupu.Success -or (Convert-MarkerUInt32 $pupupu.Groups[1].Value) -ne 0x50555042 -or ((Convert-MarkerUInt32 $pupupu.Groups[2].Value) -band 0xff) -ne 0xff -or (Convert-MarkerUInt32 $pupupu.Groups[3].Value) -ne 0x50554753 -or ((Convert-MarkerUInt32 $pupupu.Groups[4].Value) -band 0x3ff) -ne 0x3ff -or [int]$pupupu.Groups[5].Value -ne 4 -or [int]$pupupu.Groups[6].Value -ne 4) {
