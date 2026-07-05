@@ -91,12 +91,152 @@ extern void guMtxL2F(float mf[4][4], Mtx *m);
 extern void guMtxCatF(float mf[4][4], float nf[4][4], float res[4][4]);
 extern void guMtxXFMF(float mf[4][4], float x, float y, float z, float *ox,
                       float *oy, float *oz);
+extern u16 gFTManagerMotionCount;
+extern u16 gFTManagerStatUpdateCount;
 
 Gfx dFTDisplayMainHitCollisionEdgeDL[1];
 Gfx dFTDisplayMainHitCollisionBlendDL[1];
 Gfx dFTDisplayMainHitCollisionCubeDL[1];
 Gfx dFTDisplayMainMapCollisionBottomDL[1];
 Gfx dFTDisplayMainMapCollisionTopDL[1];
+
+#define NDS_WPMANAGER_BRIDGE __attribute__((weak))
+
+static const f32 dNDSWeaponStaleTable[] = { 0.75F, 0.82F, 0.89F, 0.96F };
+
+NDS_WPMANAGER_BRIDGE f32 lbCommonNormDist2D(Vec3f *vec)
+{
+    f32 magnitude = sqrtf(SQUARE(vec->x) + SQUARE(vec->y));
+
+    if (magnitude == 0.0F)
+    {
+        return 0.0F;
+    }
+    vec->x *= 1.0F / magnitude;
+    vec->y *= 1.0F / magnitude;
+    return magnitude;
+}
+
+NDS_WPMANAGER_BRIDGE f32 lbCommonSim2D(Vec3f *a, Vec3f *b)
+{
+    f32 magnitude_a = sqrtf(SQUARE(a->x) + SQUARE(a->y));
+    f32 magnitude_b = sqrtf(SQUARE(b->x) + SQUARE(b->y));
+
+    return (a->x * b->x + a->y * b->y) / (magnitude_b + magnitude_a);
+}
+
+NDS_WPMANAGER_BRIDGE void lbCommonDObjScaleXProcDisplay(GObj *gobj)
+{
+    (void)gobj;
+}
+
+NDS_WPMANAGER_BRIDGE f32 ftParamGetStale(s32 player, s32 attack_id,
+                                         s32 motion_count)
+{
+    s32 stale_id;
+    s32 start_array_id;
+    s32 current_array_id;
+    s32 i;
+
+    if ((gSCManagerBattleState == NULL) ||
+        (player >= (s32)ARRAY_COUNT(gSCManagerBattleState->players)) ||
+        (attack_id == nFTMotionAttackIDNone))
+    {
+        return 1.0F;
+    }
+    stale_id = gSCManagerBattleState->players[player].stale_id;
+    current_array_id = start_array_id =
+        (stale_id != 0) ?
+            stale_id - 1 :
+            ARRAY_COUNT(gSCManagerBattleState->players[player].stale_info) - 1;
+
+    for (i = 0; i < (s32)ARRAY_COUNT(dNDSWeaponStaleTable); i++)
+    {
+        if (attack_id ==
+            gSCManagerBattleState->players[player]
+                .stale_info[current_array_id]
+                .attack_id)
+        {
+            if ((u16)motion_count !=
+                gSCManagerBattleState->players[player]
+                    .stale_info[current_array_id]
+                    .motion_count)
+            {
+                return dNDSWeaponStaleTable[i];
+            }
+            if (current_array_id == start_array_id)
+            {
+                i--;
+            }
+        }
+        current_array_id =
+            (current_array_id != 0) ? current_array_id - 1 :
+                                      ARRAY_COUNT(gSCManagerBattleState->players[player].stale_info) - 1;
+    }
+    return 1.0F;
+}
+
+NDS_WPMANAGER_BRIDGE u16 ftParamGetMotionCount(void)
+{
+    u16 motion_count = gFTManagerMotionCount++;
+
+    if (gFTManagerMotionCount == 0)
+    {
+        gFTManagerMotionCount = 1;
+    }
+    return motion_count;
+}
+
+NDS_WPMANAGER_BRIDGE u16 ftParamGetStatUpdateCount(void)
+{
+    u16 update_count = gFTManagerStatUpdateCount++;
+
+    if (gFTManagerStatUpdateCount == 0)
+    {
+        gFTManagerStatUpdateCount = 1;
+    }
+    return update_count;
+}
+
+NDS_WPMANAGER_BRIDGE void mpProcessRunLWallCollisionAdjNew(
+    MPCollData *coll_data)
+{
+    (void)mpProcessCheckTestLWallCollisionAdjNew(coll_data);
+}
+
+NDS_WPMANAGER_BRIDGE void mpProcessRunRWallCollisionAdjNew(
+    MPCollData *coll_data)
+{
+    (void)mpProcessCheckTestRWallCollisionAdjNew(coll_data);
+}
+
+NDS_WPMANAGER_BRIDGE void mpProcessRunCeilEdgeAdjust(MPCollData *coll_data)
+{
+    (void)coll_data;
+}
+
+NDS_WPMANAGER_BRIDGE sb32 mpProcessRunFloorCollisionAdjNewNULL(
+    MPCollData *coll_data)
+{
+    (void)coll_data;
+    return FALSE;
+}
+
+NDS_WPMANAGER_BRIDGE void mpCommonRunWeaponCollisionDefault(
+    GObj *weapon_gobj, Vec3f *pos, MPCollData *coll_data)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    if ((wp == NULL) || (pos == NULL) || (coll_data == NULL))
+    {
+        return;
+    }
+    wp->coll_data.pos_prev = *pos;
+    wp->coll_data.p_map_coll = &coll_data->map_coll;
+    wp->coll_data.update_tic = coll_data->update_tic;
+}
+
+#undef NDS_WPMANAGER_BRIDGE
 
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmanager.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmain.c"

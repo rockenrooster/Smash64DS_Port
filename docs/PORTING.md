@@ -17763,3 +17763,21 @@ Still deferred:
   Non-Mario neutral and unowned air Hi/Lw setters remain weak inside the fence.
 - Verified: fenced Mario fireball battle-playable build, `git diff --check`,
   `check-docs`, and `verify-dev-fast -Build -DelaySeconds 3`.
+
+## 2026-07-05 - Fenced Fox Blaster Import
+
+- Added default-off `NDS_IMPORT_BATTLESHIP_FOX_BLASTER`, which forces the
+  fenced weapon-manager core and imports original `ftfoxspecialn.c` plus
+  `wpfoxblaster.c` through `src/import/battleship_fox_blaster.c`.
+- Moved the shared weak weapon-manager bridges out of the Mario fireball
+  wrapper and into `src/import/battleship_wpmanager_core.c`, so Mario fireball
+  and Fox blaster use the same fenced helper boundary.
+- The source path is BattleShip's blaster spawn in
+  `decomp/BattleShip-main/decomp/src/ft/ftchar/ftfox/ftfoxspecialn.c:11`,
+  repeat-shot interrupt at `:34`, and weapon creation in
+  `decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c:106`. Blaster
+  glow remains a weak no-op until the effect-manager memory gate.
+- Verified: fenced Fox blaster battle-playable build, fenced Mario fireball
+  battle-playable build, and combined Mario+Fox projectile fenced
+  battle-playable build; `git diff --check`, `check-docs`, and
+  `verify-dev-fast -Build -DelaySeconds 3`.

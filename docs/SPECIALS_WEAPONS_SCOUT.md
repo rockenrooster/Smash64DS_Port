@@ -18,9 +18,16 @@ neutral-special dispatch at `:183`-`:185`, and Mario's
 `decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospecialn.c:111`.
 Non-Mario neutral-special setters and unowned air Hi/Lw special setters remain
 weak until their character TUs land. The fence still uses weak bridge stubs for
-heavy map adjustment, display-scale, and particle-effect calls, so the next
-proof remains fireball spawn -> map rebound/lifetime -> hit/damage through
-imported weapon processes.
+heavy map adjustment, display-scale, and particle-effect calls.
+
+Default-off `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1` now compiles original
+`ftfoxspecialn.c` and `wpfoxblaster.c` through
+`src/import/battleship_fox_blaster.c`, backed by the same fenced weapon-manager
+core. The original Fox source path is `ftfoxspecialn.c:11` for blaster spawn,
+`:34` for repeat-shot interrupt, and `wpfoxblaster.c:106` for weapon creation.
+Blaster glow remains a weak no-op until the effect-manager memory gate. The
+next proof remains projectile spawn -> map/lifetime -> hit/damage through
+imported weapon processes for Mario fireball and Fox blaster.
 
 ## Current Import Boundary
 

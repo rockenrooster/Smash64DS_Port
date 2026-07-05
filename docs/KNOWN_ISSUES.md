@@ -93,10 +93,15 @@
   interrupts now reach Mario's imported status setters under the fence, while
   unowned non-Mario neutral-special and air Hi/Lw status setters stay weak. It
   still uses weak fenced bridge stubs for heavy map adjustment, display-scale,
-  and fireball particle effects, and it is not yet a fireball-hit proof. The
-  next Mario fireball slice should import or replace the
-  `mpcommon`/`mpprocess` map helpers with original behavior, prove
-  spawn/rebound/hit, then delete the bridge stubs.
+  and fireball particle effects, and it is not yet a fireball-hit proof.
+- Default-off `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1` compiles the original
+  `ftfoxspecialn.c` and `wpfoxblaster.c` through
+  `src/import/battleship_fox_blaster.c`, backed by the same fenced
+  weapon-manager core. The Fox neutral-special callbacks replace the inactive
+  stubs only under the fence. Blaster glow remains a weak no-op until the
+  effect-manager memory gate. The next projectile slice should import or
+  replace the `mpcommon`/`mpprocess` map helpers with original behavior, prove
+  Mario/Fox projectile spawn/rebound/hit, then delete the bridge stubs.
 - `battle_playable` is default for original `gm/gmcamera.c`,
   `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD
   paths, and original `if/ifscreenflash.c`. Mode `163` now proves natural
