@@ -2,11 +2,116 @@
 #define SSB64_NDS_WEAPON_H
 
 #include <ft/fighter.h>
+#include <sys/develop.h>
+#include <sys/objman.h>
 
 #ifndef WEAPON_ATKCOLL_NUM_MAX
 #define WEAPON_ATKCOLL_NUM_MAX 2
 #endif
+#define WEAPON_ALLOC_MAX 32
+#define WEAPON_ALLOC_ALIGN 0x8
 #define WEAPON_REHIT_TIME_DEFAULT 16
+#define WEAPON_STALE_DEFAULT 1.0F
+#define WEAPON_TEAM_DEFAULT 4
+#define WEAPON_PORT_DEFAULT GMCOMMON_PLAYERS_MAX
+#define WEAPON_HANDICAP_DEFAULT 9
+#define WEAPON_FLAG_DOBJDESC 0x1
+#define WEAPON_FLAG_DOBJLINKS 0x2
+#define WEAPON_FLAG_COLLPROJECT (1u << 31)
+#define WEAPON_FLAG_PARENT_FIGHTER 0
+#define WEAPON_FLAG_PARENT_GROUND 1
+#define WEAPON_FLAG_PARENT_WEAPON 2
+#define WEAPON_FLAG_PARENT_ITEM 3
+#define WEAPON_MASK_PARENT 0xF
+#define WEAPON_REFLECT_TIME_DEFAULT 100
+#define WEAPON_REFLECT_MUL_DEFAULT 1.8F
+#define WEAPON_REFLECT_ADD_DEFAULT 0.99F
+#define WEAPON_HOP_ANGLE_DEFAULT F_CLC_DTOR32(135.0F)
+
+typedef enum WPKind {
+    nWPKindFireball,
+    nWPKindBlaster,
+    nWPKindChargeShot,
+    nWPKindSamusBomb,
+    nWPKindCutter,
+    nWPKindEggThrow,
+    nWPKindYoshiStar,
+    nWPKindBoomerang,
+    nWPKindSpinAttack,
+    nWPKindThunderJoltAir,
+    nWPKindThunderJoltGround,
+    nWPKindThunderHead,
+    nWPKindThunderTrail,
+    nWPKindPKFire,
+    nWPKindPKThunderHead,
+    nWPKindPKThunderTrail,
+    nWPKindBulletNormal,
+    nWPKindBulletHard,
+    nWPKindArwingLaser2D,
+    nWPKindArwingLaser3D,
+    nWPKindLGunAmmo,
+    nWPKindFFlowerFlame,
+    nWPKindStarRodStar,
+    nWPKindMonsterStart,
+    nWPKindIwarkRock = nWPKindMonsterStart,
+    nWPKindNyarsCoin,
+    nWPKindLizardonFlame,
+    nWPKindSpearSwarm,
+    nWPKindKamexHydro,
+    nWPKindStarmieSwift,
+    nWPKindDogasSmog,
+    nWPKindHitokageFlame,
+    nWPKindFushigibanaRazor,
+    nWPKindMonsterEnd = nWPKindFushigibanaRazor
+} WPKind;
+
+typedef struct WPDesc {
+    u8 flags;
+    s32 kind;
+    void **p_weapon;
+    intptr_t o_attributes;
+    DObjTransformTypes transform_types;
+    sb32 (*proc_update)(GObj *);
+    sb32 (*proc_map)(GObj *);
+    sb32 (*proc_hit)(GObj *);
+    sb32 (*proc_shield)(GObj *);
+    sb32 (*proc_hop)(GObj *);
+    sb32 (*proc_setoff)(GObj *);
+    sb32 (*proc_reflector)(GObj *);
+    sb32 (*proc_absorb)(GObj *);
+} WPDesc;
+
+typedef struct WPAttributes {
+    void *data;
+    MObjSub ***p_mobjsubs;
+    AObjEvent32 **anim_joints;
+    AObjEvent32 ***p_matanim_joints;
+    Vec3h attack_offsets[2];
+    s16 map_coll_top;
+    s16 map_coll_center;
+    s16 map_coll_bottom;
+    s16 map_coll_width;
+    u32 size : 16;
+    s32 angle : 10;
+    u32 knockback_scale : 10;
+    u32 damage : 8;
+    u32 element : 4;
+    u32 knockback_weight : 10;
+    s32 shield_damage : 8;
+    u32 attack_count : 2;
+    ub32 can_setoff : 1;
+    u32 sfx : 10;
+    u32 priority : 3;
+    ub32 can_rehit_item : 1;
+    ub32 can_rehit_fighter : 1;
+    ub32 can_hop : 1;
+    ub32 can_reflect : 1;
+    ub32 can_absorb : 1;
+    ub32 can_shield : 1;
+    ub32 unused_0x2F_b6 : 1;
+    ub32 unused_0x2F_b7 : 1;
+    u32 knockback_base : 10;
+} WPAttributes;
 
 #ifndef SSB64_NDS_WP_ATTACK_COLL_DECLARED
 #define SSB64_NDS_WP_ATTACK_COLL_DECLARED
@@ -66,7 +171,7 @@ typedef struct WPStruct {
         f32 vel_ground;
         Vec3f vel_air;
     } physics;
-    u8 coll_data[0x80];
+    MPCollData coll_data;
     sb32 ga;
     WPAttackColl attack_coll;
     s32 hit_normal_damage;
@@ -84,14 +189,51 @@ typedef struct WPStruct {
     u32 group_id;
     s32 lifetime;
     ub32 is_camera_follow : 1;
+    ub32 is_static_damage : 1;
+    alSoundEffect *p_sfx;
+    u16 sfx_id;
+    sb32 (*proc_update)(GObj *);
+    sb32 (*proc_map)(GObj *);
+    sb32 (*proc_hit)(GObj *);
+    sb32 (*proc_shield)(GObj *);
+    sb32 (*proc_hop)(GObj *);
+    sb32 (*proc_setoff)(GObj *);
+    sb32 (*proc_reflector)(GObj *);
+    sb32 (*proc_absorb)(GObj *);
+    sb32 (*proc_dead)(GObj *);
+    union {
+        struct {
+            s32 index;
+        } fireball;
+        struct {
+            s32 status;
+            s32 trail_id;
+            GObj *parent_gobj;
+            GObj *head_gobj;
+        } pkthunder_trail;
+        u8 raw[32];
+    } weapon_vars;
+    s32 display_mode;
 } WPStruct;
 
 #define wpGetStruct(weapon_gobj) ((WPStruct *)(weapon_gobj)->user_data.p)
 
+void wpManagerAllocWeapons(void);
+WPStruct *wpManagerGetNextStructAlloc(void);
+void wpManagerSetPrevStructAlloc(WPStruct *wp);
+u32 wpManagerGetGroupID(void);
+GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc,
+                          Vec3f *spawn_pos, u32 flags);
 s32 wpMainGetStaledDamage(WPStruct *wp);
+void wpMainClearAttackRecord(WPStruct *wp);
+void wpMainDestroyWeapon(GObj *weapon_gobj);
 void wpProcessUpdateHitInteractStats(WPStruct *wp, WPAttackColl *attack_coll,
                                      GObj *victim_gobj, s32 attack_type,
                                      u32 victim_group_id);
+void wpProcessUpdateHitPositions(GObj *weapon_gobj);
+void wpProcessProcWeaponMain(GObj *weapon_gobj);
+void wpProcessProcSearchHitWeapon(GObj *weapon_gobj);
+void wpProcessProcHitCollisions(GObj *weapon_gobj);
 sb32 gmCollisionCheckWeaponInFighterRange(WPAttackColl *attack_coll,
                                           s32 attack_id, GObj *fighter_gobj);
 sb32 gmCollisionCheckWeaponAttackFighterAttackCollide(
@@ -116,5 +258,14 @@ void gmCollisionGetWeaponAttackShieldPosition(Vec3f *dst,
                                               WPAttackColl *attack_coll,
                                               s32 attack_id, GObj *gobj,
                                               DObj *dobj);
+sb32 gmCollisionCheckWeaponAttacksCollide(WPAttackColl *attack_coll1,
+                                          s32 atk1_id,
+                                          WPAttackColl *attack_coll2,
+                                          s32 atk2_id);
+void gmCollisionGetWeaponAttacksPosition(Vec3f *dst,
+                                         WPAttackColl *attack_coll1,
+                                         s32 atk1_id,
+                                         WPAttackColl *attack_coll2,
+                                         s32 atk2_id);
 
 #endif

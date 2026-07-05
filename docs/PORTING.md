@@ -17711,3 +17711,15 @@ Still deferred:
   `-DelaySeconds 8`; `check-gbi-decode-fixtures`, `check-harness-registry`,
   `check-docs`, `git diff --check`, `verify-dev-fast -Build -DelaySeconds 3`,
   and `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Fenced Weapon Manager Core Import
+
+- Added default-off `NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER` support for the
+  original `wpmanager`, `wpmain`, `wpmap`, `wpprocess`, and `wpdisplay` core
+  TUs, with the local `wp*` seams fenced out when the import is enabled.
+- Expanded the narrow weapon ABI enough for original manager allocation and
+  empty-battle compilation while leaving projectile specials/effects for the
+  next slice.
+- Verified: fenced weapon-manager battle-playable build,
+  `git diff --check`, `verify-dev-fast -Build -DelaySeconds 3`, and
+  `verify-boundary -DelaySeconds 3`.

@@ -70,19 +70,44 @@ typedef struct MPCollData {
 #define MAP_VERTEX_COLL_PASS 0x00004000u
 #endif
 
+#ifndef MAP_FLAG_FLOOR
+#define MAP_FLAG_FLOOR 0x00000800u
+#endif
+#ifndef MAP_FLAG_CEIL
+#define MAP_FLAG_CEIL 0x00000400u
+#endif
+#ifndef MAP_FLAG_RWALL
+#define MAP_FLAG_RWALL 0x00000020u
+#endif
+#ifndef MAP_FLAG_LWALL
+#define MAP_FLAG_LWALL 0x00000001u
+#endif
+#ifndef MAP_FLAG_MAIN_MASK
+#define MAP_FLAG_MAIN_MASK \
+    (MAP_FLAG_FLOOR | MAP_FLAG_CEIL | MAP_FLAG_RWALL | MAP_FLAG_LWALL)
+#endif
+
 void mpProcessSetCollProjectFloorID(MPCollData *coll_data);
 void mpProcessResetMultiWallCount(void);
 void mpProcessSetMultiWallLineID(s32 line_id);
+sb32 mpProcessCheckTestLWallCollision(MPCollData *coll_data);
+void mpProcessRunLWallCollision(MPCollData *coll_data);
+sb32 mpProcessCheckTestRWallCollision(MPCollData *coll_data);
+void mpProcessRunRWallCollision(MPCollData *coll_data);
 sb32 mpProcessCheckTestFloorCollisionNew(MPCollData *coll_data);
 sb32 mpProcessCheckTestFloorCollision(MPCollData *coll_data, s32 line_id);
 sb32 mpProcessCheckTestLCliffCollision(MPCollData *coll_data);
 sb32 mpProcessCheckTestRCliffCollision(MPCollData *coll_data);
 sb32 mpProcessCheckTestLWallCollisionAdjNew(MPCollData *coll_data);
+void mpProcessRunLWallCollisionAdjNew(MPCollData *coll_data);
 sb32 mpProcessCheckTestRWallCollisionAdjNew(MPCollData *coll_data);
+void mpProcessRunRWallCollisionAdjNew(MPCollData *coll_data);
 void mpProcessSetLandingFloor(MPCollData *coll_data);
 void mpProcessSetCollideFloor(MPCollData *coll_data);
 sb32 mpProcessCheckTestCeilCollisionAdjNew(MPCollData *coll_data);
 void mpProcessRunCeilCollisionAdjNew(MPCollData *coll_data);
+void mpProcessRunCeilEdgeAdjust(MPCollData *coll_data);
+sb32 mpProcessRunFloorCollisionAdjNewNULL(MPCollData *coll_data);
 sb32 mpProcessCheckFloorEdgeCollisionL(MPCollData *coll_data);
 void mpProcessFloorEdgeLAdjust(MPCollData *coll_data);
 sb32 mpProcessCheckFloorEdgeCollisionR(MPCollData *coll_data);
@@ -146,6 +171,8 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
 sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
                                       GObj *fighter_gobj,
                                       u32 flags);
+void mpCommonRunWeaponCollisionDefault(GObj *weapon_gobj, Vec3f *pos,
+                                       MPCollData *coll_data);
 u16 mpCollisionGetVertexFlagsLineID(s32 line_id);
 sb32 mpCollisionCheckExistPlatformLineID(s32 line_id);
 sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj);

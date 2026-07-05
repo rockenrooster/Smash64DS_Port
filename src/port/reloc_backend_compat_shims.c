@@ -5218,6 +5218,7 @@ s32 itMainGetDamageOutput(ITStruct *ip)
     return (s32)((ip->attack_coll.damage * ip->attack_coll.stale) + 0.999F);
 }
 
+#if !NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
 s32 wpMainGetStaledDamage(WPStruct *wp)
 {
     if (wp == NULL)
@@ -5226,6 +5227,7 @@ s32 wpMainGetStaledDamage(WPStruct *wp)
     }
     return (s32)((wp->attack_coll.damage * wp->attack_coll.stale) + 0.999F);
 }
+#endif
 
 static void ndsCompatSetHitInteractStats(GMAttackRecord *records,
                                          GObj *victim_gobj, s32 attack_type,
@@ -5298,6 +5300,7 @@ static void ndsCompatSetHitInteractStats(GMAttackRecord *records,
     }
 }
 
+#if !NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
 void wpProcessUpdateHitInteractStats(WPStruct *wp, WPAttackColl *attack_coll,
                                      GObj *victim_gobj, s32 attack_type,
                                      u32 victim_group_id)
@@ -5332,6 +5335,7 @@ void wpProcessUpdateHitInteractStats(WPStruct *wp, WPAttackColl *attack_coll,
         weapon_gobj = weapon_gobj->link_next;
     }
 }
+#endif
 
 void itProcessSetHitInteractStats(ITAttackColl *attack_coll,
                                   GObj *victim_gobj, s32 attack_type,
@@ -13060,11 +13064,13 @@ void gmRumbleInitPlayers(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
 void wpManagerAllocWeapons(void)
 {
     gNdsSCVSBattleCompatManagerMask |= 1u << 7;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
 }
+#endif
 
 void itManagerInitItems(void)
 {

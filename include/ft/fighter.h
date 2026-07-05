@@ -34,7 +34,10 @@
 
 typedef struct GObj GObj;
 typedef struct FTData FTData;
+#ifndef SSB64_NDS_ALSOUNDEFFECT_TYPEDEF
+#define SSB64_NDS_ALSOUNDEFFECT_TYPEDEF
 typedef struct alSoundEffect alSoundEffect;
+#endif
 
 #include <ft/ftdata_file_slots.h>
 

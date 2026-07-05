@@ -8,6 +8,12 @@
 #include <ft/fighter.h>
 #include <reloc_data.h>
 #include <string.h>
+#include <sys/debug.h>
+#include <sys/objman.h>
+
+#ifndef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+#endif
 
 /*
  * Keep this fenced import on the port's narrow headers. The original

@@ -129,6 +129,7 @@ typedef struct ITStruct {
     ub32 is_hitlag_victim : 1;
     GObj *arrow_gobj;
     u8 arrow_timer;
+    s32 display_mode;
 } ITStruct;
 
 typedef enum ITKind {

@@ -20,7 +20,14 @@ typedef struct SYAudioPublicSettings {
     u8 unk31;
 } SYAudioPublicSettings;
 
-typedef struct alSoundEffect {
+#ifndef SSB64_NDS_ALSOUNDEFFECT_TYPEDEF
+#define SSB64_NDS_ALSOUNDEFFECT_TYPEDEF
+typedef struct alSoundEffect alSoundEffect;
+#endif
+
+#ifndef SSB64_NDS_ALSOUNDEFFECT_STRUCT
+#define SSB64_NDS_ALSOUNDEFFECT_STRUCT
+struct alSoundEffect {
     void *unk_0x0;
     void *unk_0x4;
     void *unk_0x8;
@@ -41,7 +48,8 @@ typedef struct alSoundEffect {
     u16 sfx_max;
     u8 filler_0x2A[0x2F - 0x2A];
     u8 balance;
-} alSoundEffect;
+};
+#endif
 
 extern SYAudioPublicSettings dSYAudioPublicSettings;
 
