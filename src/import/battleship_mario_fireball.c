@@ -170,4 +170,38 @@ NDS_FIREBALL_BRIDGE void mpCommonRunWeaponCollisionDefault(
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmario/wpmariofireball.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospecialn.c"
 
+#define NDS_FIREBALL_WEAK_STATUS(name)                 \
+    __attribute__((weak)) void name(GObj *fighter_gobj) \
+    {                                                   \
+        (void)fighter_gobj;                             \
+    }
+
+// ponytail: unowned neutral-special setters stay weak until their TUs land.
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyMarioSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyFoxSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyDonkeySpecialNStartSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopySamusSpecialNStartSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyLinkSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyYoshiSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyCaptainSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbySpecialNStartSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyPikachuSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyPurinSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftKirbyCopyNessSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftFoxSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftDonkeySpecialNStartSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftSamusSpecialNStartSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftLinkSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftYoshiSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftCaptainSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftPikachuSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftPurinSpecialNSetStatus)
+NDS_FIREBALL_WEAK_STATUS(ftNessSpecialNSetStatus)
+
+#undef NDS_FIREBALL_WEAK_STATUS
+
+void ftKirbySpecialNSetStatusSelect(GObj *fighter_gobj);
+
+#include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialn.c"
+
 #endif

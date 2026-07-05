@@ -1821,10 +1821,12 @@ static sb32 ndsFighterWalkDeferredInterrupt(GObj *fighter_gobj)
     return FALSE;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL
 sb32 ftCommonSpecialNCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
+#endif
 
 sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
 {

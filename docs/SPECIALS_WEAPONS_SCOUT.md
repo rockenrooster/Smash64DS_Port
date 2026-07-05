@@ -8,10 +8,12 @@ emulator, or snapshot was run for the initial scout document.
 
 As of 2026-07-05, default-off `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`
 compiles the original Mario neutral-special TU plus the Mario fireball
-projectile TU. The fence still uses weak bridge stubs for heavy map adjustment,
-display-scale, and particle-effect calls, so the next proof remains natural
-B-input -> fireball spawn -> map rebound/lifetime -> hit/damage through
-imported weapon processes.
+projectile TU, and also compiles original `ftcommonspecialn.c` so ground B
+input reaches Mario's imported neutral-special status setter under the fence.
+Non-Mario neutral-special setters remain weak until their character TUs land.
+The fence still uses weak bridge stubs for heavy map adjustment, display-scale,
+and particle-effect calls, so the next proof remains fireball spawn -> map
+rebound/lifetime -> hit/damage through imported weapon processes.
 
 ## Current Import Boundary
 

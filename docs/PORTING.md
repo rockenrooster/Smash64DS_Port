@@ -17738,3 +17738,14 @@ Still deferred:
 - Verified: fenced Mario fireball battle-playable build,
   `git diff --check`, `verify-dev-fast -Build -DelaySeconds 3`, and
   `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Fenced Mario Neutral-Special Input
+
+- Added original `ftcommonspecialn.c` to the default-off Mario fireball fence,
+  replacing the local deferred `ftCommonSpecialNCheckInterruptCommon` only when
+  `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`.
+- Kept unowned non-Mario neutral-special setters as weak no-ops inside the
+  fence, so this compiles Mario's ground B-input path without pulling every
+  character special TU.
+- Verified: fenced Mario fireball battle-playable build,
+  `git diff --check`, and `verify-dev-fast -Build -DelaySeconds 3`.

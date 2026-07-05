@@ -87,13 +87,15 @@
   those stubs status-by-status as the owning original TUs and assets are
   imported.
 - Default-off `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1` compiles the original
-  `ftmariospecialn.c` and `wpmariofireball.c` through
+  `ftmariospecialn.c`, `wpmariofireball.c`, and `ftcommonspecialn.c` through
   `src/import/battleship_mario_fireball.c`, backed by the fenced weapon-manager
-  core. It still uses weak fenced bridge stubs for heavy map adjustment,
-  display-scale, and fireball particle effects, and it is not yet a natural
-  B-input/fireball-hit proof. The next Mario fireball slice should import or
-  replace the `mpcommon`/`mpprocess` map helpers with original behavior, wire
-  common special input, prove spawn/rebound/hit, then delete the bridge stubs.
+  core. The ground neutral-special interrupt now reaches Mario's imported
+  status setter under the fence, while unowned non-Mario neutral-special status
+  setters stay weak. It still uses weak fenced bridge stubs for heavy map
+  adjustment, display-scale, and fireball particle effects, and it is not yet a
+  fireball-hit proof. The next Mario fireball slice should import or replace
+  the `mpcommon`/`mpprocess` map helpers with original behavior, prove
+  spawn/rebound/hit, then delete the bridge stubs.
 - `battle_playable` is default for original `gm/gmcamera.c`,
   `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD
   paths, and original `if/ifscreenflash.c`. Mode `163` now proves natural
