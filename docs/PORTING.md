@@ -17527,3 +17527,17 @@ Still deferred:
   ceiling-status hardware with `-DelaySeconds 8`; `check-gbi-decode-fixtures`,
   `check-harness-registry`, `check-docs`, `verify-dev-fast -Build
   -DelaySeconds 3`, and `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Default MP Cliff-Catch Stage Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `99/100`,
+  matching the already-proven mode `97/98` hardware path, then made the direct
+  and menu-chain MP cliff-catch wrappers default to `-hwtri` targets with
+  `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry and GBI fixture checks so the MP cliff-catch
+  stage pair is covered by the hardware-default guardrails.
+- Verified: direct MP cliff-catch software baseline with `-DelaySeconds 8`,
+  direct MP cliff-catch hardware with `-DelaySeconds 8`, and menu-chain MP
+  cliff-catch hardware with `-DelaySeconds 8`; `check-gbi-decode-fixtures`,
+  `check-harness-registry`, `check-docs`, `verify-dev-fast -Build
+  -DelaySeconds 3`, and `verify-boundary -DelaySeconds 3`.
