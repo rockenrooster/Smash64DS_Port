@@ -599,6 +599,8 @@ Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffcatch-fl
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffcatch-floor-loop-hwtri')) 'Menu-chain stage MP cliff-catch-floor registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffwait-floor-loop-hwtri')) 'Stage MP cliff-wait-floor registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffwait-floor-loop-hwtri')) 'Menu-chain stage MP cliff-wait-floor registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mpcliffattack-floor-loop-hwtri')) 'Stage MP cliff-attack-floor registry target is not hardware-renderer default.'
+Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mpcliffattack-floor-loop-hwtri')) 'Menu-chain stage MP cliff-attack-floor registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-battle-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary direct registry target is not hardware-renderer default.'
 Assert-True ($registry.Contains('smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri')) 'Boundary menu registry target is not hardware-renderer default.'
 $buildProfile = Get-Content (Join-Path $root 'scripts/build-verify-profile.ps1') -Raw
@@ -816,6 +818,16 @@ Assert-True ($menuStageMPCliffWaitFloorWrapper.Contains('HardwareTriangles')) 'M
 Assert-True ($menuStageMPCliffWaitFloorWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP cliff-wait-floor verifier software-preview opt-out is missing.'
 Assert-True ($menuStageMPCliffWaitFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP cliff-wait-floor verifier no longer defaults to hardware.'
 Assert-True ($menuStageMPCliffWaitFloorWrapper.Contains('menu-chain-mariofox-stage-mpcliffwait-floor-loop-hwtri')) 'Menu-chain stage MP cliff-wait-floor verifier hardware target is missing.'
+$stageMPCliffAttackFloorWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-mpcliffattack-floor-loop-harness.ps1') -Raw
+Assert-True ($stageMPCliffAttackFloorWrapper.Contains('HardwareTriangles')) 'Stage MP cliff-attack-floor verifier hardware switch is missing.'
+Assert-True ($stageMPCliffAttackFloorWrapper.Contains('SoftwarePreview')) 'Stage MP cliff-attack-floor verifier software-preview opt-out is missing.'
+Assert-True ($stageMPCliffAttackFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Stage MP cliff-attack-floor verifier no longer defaults to hardware.'
+Assert-True ($stageMPCliffAttackFloorWrapper.Contains('battle-mariofox-stage-mpcliffattack-floor-loop-hwtri')) 'Stage MP cliff-attack-floor verifier hardware target is missing.'
+$menuStageMPCliffAttackFloorWrapper = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-stage-mpcliffattack-floor-loop-harness.ps1') -Raw
+Assert-True ($menuStageMPCliffAttackFloorWrapper.Contains('HardwareTriangles')) 'Menu-chain stage MP cliff-attack-floor verifier hardware switch is missing.'
+Assert-True ($menuStageMPCliffAttackFloorWrapper.Contains('SoftwarePreview')) 'Menu-chain stage MP cliff-attack-floor verifier software-preview opt-out is missing.'
+Assert-True ($menuStageMPCliffAttackFloorWrapper.Contains('$HardwareTriangles = -not $SoftwarePreview')) 'Menu-chain stage MP cliff-attack-floor verifier no longer defaults to hardware.'
+Assert-True ($menuStageMPCliffAttackFloorWrapper.Contains('menu-chain-mariofox-stage-mpcliffattack-floor-loop-hwtri')) 'Menu-chain stage MP cliff-attack-floor verifier hardware target is missing.'
 $menuAllDLVerifier = Get-Content (Join-Path $root 'scripts/verify-menu-chain-mariofox-dl-draw-all-harness.ps1') -Raw
 Assert-True ($menuAllDLVerifier.Contains('HardwareTriangles')) 'Menu-chain all-DL verifier hardware switch is missing.'
 Assert-True ($menuAllDLVerifier.Contains('SoftwarePreview')) 'Menu-chain all-DL verifier software-preview opt-out is missing.'

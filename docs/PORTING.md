@@ -17555,3 +17555,17 @@ Still deferred:
   cliff-wait hardware with `-DelaySeconds 8`; `check-gbi-decode-fixtures`,
   `check-harness-registry`, `check-docs`, `verify-dev-fast -Build
   -DelaySeconds 3`, and `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Default MP Cliff-Attack Stage Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `103/104`,
+  matching the already-proven mode `101/102` hardware path, then made the
+  direct and menu-chain MP cliff-attack wrappers default to `-hwtri` targets
+  with `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry and GBI fixture checks so the MP cliff-attack
+  stage pair is covered by the hardware-default guardrails.
+- Verified: direct MP cliff-attack software baseline with `-DelaySeconds 8`,
+  direct MP cliff-attack hardware with `-DelaySeconds 8`, and menu-chain MP
+  cliff-attack hardware with `-DelaySeconds 8`; `check-gbi-decode-fixtures`,
+  `check-harness-registry`, `check-docs`, `verify-dev-fast -Build
+  -DelaySeconds 3`, and `verify-boundary -DelaySeconds 3`.
