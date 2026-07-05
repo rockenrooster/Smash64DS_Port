@@ -4,9 +4,14 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
+    [switch]$HardwareTriangles,
+    [switch]$SoftwarePreview,
     [int]$DelaySeconds = 5
 )
 $ErrorActionPreference = 'Stop'
+$HardwareTriangles = -not $SoftwarePreview
+$target = if ($HardwareTriangles) { 'smash64ds-battle-mariofox-stage-mpfallland-floor-loop-hwtri' } else { 'smash64ds-battle-mariofox-stage-mpfallland-floor-loop' }
+$build = if ($HardwareTriangles) { 'build-battle-mariofox-stage-mpfallland-floor-loop-hwtri-harness' } else { 'build-battle-mariofox-stage-mpfallland-floor-loop-harness' }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcdrawall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -15,13 +20,14 @@ $ErrorActionPreference = 'Stop'
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
     -Harness 'battle_mariofox_stage_mpfallland_floor_loop' `
-    -Target 'smash64ds-battle-mariofox-stage-mpfallland-floor-loop' `
-    -Build 'build-battle-mariofox-stage-mpfallland-floor-loop-harness' `
+    -Target $target `
+    -Build $build `
     -ExpectedMode 93 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
     -Label 'Battle Mario/Fox Stage MP Fall-landing-floor-loop' `
     -HarnessSelectMessage 'Direct Mario/Fox Stage MP Fall-landing-floor-loop harness did not select VSBattle from Maps.' `
     -RequireStageDraw `
-    -RequireStageMPFallLandFloor
+    -RequireStageMPFallLandFloor `
+    -HardwareTriangles:$HardwareTriangles
 exit $LASTEXITCODE

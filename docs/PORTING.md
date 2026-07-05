@@ -17485,3 +17485,17 @@ Still deferred:
   fall-map hardware with `-DelaySeconds 8`; `check-gbi-decode-fixtures`,
   `check-harness-registry`, `check-docs`, `verify-dev-fast -Build
   -DelaySeconds 3`, and `verify-boundary -DelaySeconds 3`.
+
+## 2026-07-05 - Default MP Fall-Landing Stage Proofs To Hardware
+
+- Extended the stage `gcDrawAll` hardware submit path to modes `93/94`, matching
+  the already-proven mode `91/92` hardware path, then made the direct and
+  menu-chain MP fall-landing wrappers default to `-hwtri` targets with
+  `-SoftwarePreview` retained as the opt-out.
+- Updated the harness registry and GBI fixture checks so the MP fall-landing
+  stage pair is covered by the hardware-default guardrails.
+- Verified: direct MP fall-landing software baseline with `-DelaySeconds 8`,
+  direct MP fall-landing hardware with `-DelaySeconds 8`, and menu-chain MP
+  fall-landing hardware with `-DelaySeconds 8`; `check-gbi-decode-fixtures`,
+  `check-harness-registry`, `check-docs`, `verify-dev-fast -Build
+  -DelaySeconds 3`, and `verify-boundary -DelaySeconds 3`.
