@@ -9004,6 +9004,7 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_PROJECTILE_FIRE_TIMEOUT 120u
 #define NDS_FIGHTER_PROJECTILE_OBSERVE_TIMEOUT 180u
 #define NDS_FIGHTER_PROJECTILE_WEAPON_FRAMES_REQUIRED 3u
+#define NDS_FIGHTER_REFLECTOR_PROOF_PASS 0x52464c43u
 #define NDS_FIGHTER_NATURAL_COMBAT_PHASE_TIMEOUT 600u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PHASE_TIMEOUT 3600u
 #define NDS_FIGHTER_NATURAL_MOVESET_PHASE_TIMEOUT 1200u
@@ -9097,6 +9098,11 @@ static s8 sNdsBattlePlayableKOStickX;
 static u32 sNdsNaturalProjectileActorSlot;
 static u32 sNdsNaturalProjectileButtonPressed;
 static u32 sNdsNaturalProjectileExpectedKind;
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+static u32 sNdsNaturalReflectorFoxSlot;
+static u32 sNdsNaturalReflectorProjectileSlot;
+static u32 sNdsNaturalReflectorButtonPressed;
+#endif
 #if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 static u32 sNdsNaturalMovesetPhase;
 static u32 sNdsNaturalMovesetPhaseFrames;
@@ -9126,6 +9132,13 @@ static sb32 ndsFighterNaturalProjectileProofEnabled(void)
     return FALSE;
 #endif
 }
+
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+static sb32 ndsFighterNaturalReflectorProofEnabled(void)
+{
+    return ndsFighterNaturalProjectileProofEnabled();
+}
+#endif
 
 static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
 {
@@ -9389,6 +9402,15 @@ static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
 {
     u32 i;
 
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+    for (i = 0u; i < 2u; i++)
+    {
+        if (fp[i]->fkind == nFTKindMario)
+        {
+            return i;
+        }
+    }
+#endif
 #if NDS_IMPORT_BATTLESHIP_FOX_BLASTER
     for (i = 0u; i < 2u; i++)
     {
@@ -9410,8 +9432,30 @@ static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
     return sNdsNaturalCombatAttackerSlot;
 }
 
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+static u32 ndsFighterNaturalReflectorSelectFoxSlot(FTStruct *fp[2])
+{
+    u32 i;
+
+    for (i = 0u; i < 2u; i++)
+    {
+        if (fp[i]->fkind == nFTKindFox)
+        {
+            return i;
+        }
+    }
+    return 1u - sNdsNaturalProjectileActorSlot;
+}
+#endif
+
 static u32 ndsFighterNaturalProjectileExpectedKind(FTStruct *fp)
 {
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+    if ((fp != NULL) && (fp->fkind == nFTKindMario))
+    {
+        return nWPKindFireball;
+    }
+#endif
 #if NDS_IMPORT_BATTLESHIP_FOX_BLASTER
     if ((fp != NULL) && (fp->fkind == nFTKindFox))
     {
@@ -9439,6 +9483,165 @@ static sb32 ndsFighterNaturalProjectileStatusIsSpecialN(FTStruct *fp)
     }
     return FALSE;
 }
+
+static sb32 ndsFighterNaturalProjectileStatusIsSpecialLw(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    if (fp->fkind == nFTKindFox)
+    {
+        return ((fp->status_id == nFTFoxStatusSpecialLwStart) ||
+                (fp->status_id == nFTFoxStatusSpecialLwHit) ||
+                (fp->status_id == nFTFoxStatusSpecialLwEnd) ||
+                (fp->status_id == nFTFoxStatusSpecialLwLoop) ||
+                (fp->status_id == nFTFoxStatusSpecialLwTurn) ||
+                (fp->status_id == nFTFoxStatusSpecialAirLwStart) ||
+                (fp->status_id == nFTFoxStatusSpecialAirLwHit) ||
+                (fp->status_id == nFTFoxStatusSpecialAirLwEnd) ||
+                (fp->status_id == nFTFoxStatusSpecialAirLwLoop) ||
+                (fp->status_id == nFTFoxStatusSpecialAirLwTurn)) ? TRUE :
+                                                                  FALSE;
+    }
+    return FALSE;
+}
+
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+static void ndsFighterNaturalReflectorRecordFireball(FTStruct *fox)
+{
+    GObj *weapon_gobj;
+    DObj *fox_root;
+
+    if (fox == NULL)
+    {
+        return;
+    }
+    if (fox->special_coll != NULL)
+    {
+        gNdsFighterReflectorProofSpecialSizeMilli =
+            (u32)ndsFloatToMilliSigned(fox->special_coll->size.x);
+        gNdsFighterReflectorProofSpecialResist =
+            (u32)fox->special_coll->damage_resist;
+    }
+    weapon_gobj = gGCCommonLinks[nGCCommonLinkIDWeapon];
+    while (weapon_gobj != NULL)
+    {
+        WPStruct *wp = wpGetStruct(weapon_gobj);
+
+        if ((wp != NULL) && (wp->kind == nWPKindFireball))
+        {
+            gNdsFighterReflectorProofFireballCanReflect =
+                (wp->attack_coll.can_reflect != FALSE) ? 1u : 0u;
+            gNdsFighterReflectorProofFireballCanAbsorb =
+                (wp->attack_coll.can_absorb != FALSE) ? 1u : 0u;
+            gNdsFighterReflectorProofFireballCanShield =
+                (wp->attack_coll.can_shield != FALSE) ? 1u : 0u;
+            gNdsFighterReflectorProofFireballAttackCount =
+                (u32)wp->attack_coll.attack_count;
+            gNdsFighterReflectorProofFireballDamage =
+                (u32)wp->attack_coll.damage;
+            gNdsFighterReflectorProofFireballSizeMilli =
+                (u32)ndsFloatToMilliSigned(wp->attack_coll.size);
+            fox_root = DObjGetStruct(fox->fighter_gobj);
+            if ((fox_root != NULL) && (DObjGetStruct(weapon_gobj) != NULL))
+            {
+                Vec3f *weapon_pos = &DObjGetStruct(weapon_gobj)->translate.vec.f;
+                Vec3f *fox_pos = &fox_root->translate.vec.f;
+
+                gNdsFighterReflectorProofFireballDXMilli =
+                    ndsFloatToMilliSigned(weapon_pos->x - fox_pos->x);
+                gNdsFighterReflectorProofFireballDYMilli =
+                    ndsFloatToMilliSigned(weapon_pos->y - fox_pos->y);
+            }
+        }
+        weapon_gobj = weapon_gobj->link_next;
+    }
+}
+
+static void ndsFighterNaturalReflectorRecord(FTStruct *fp[2])
+{
+    FTStruct *fox;
+    u32 mask;
+
+    if (ndsFighterNaturalReflectorProofEnabled() == FALSE)
+    {
+        return;
+    }
+    fox = fp[sNdsNaturalReflectorFoxSlot];
+    gNdsFighterReflectorProofFoxSlot = sNdsNaturalReflectorFoxSlot;
+    gNdsFighterReflectorProofProjectileSlot =
+        sNdsNaturalReflectorProjectileSlot;
+    mask = gNdsFighterReflectorProofMask;
+    ndsFighterNaturalReflectorRecordFireball(fox);
+    if (gNdsFighterReflectorProofDownBPressFrames > 0u)
+    {
+        mask |= 1u << 0;
+    }
+    if (fox != NULL)
+    {
+        if ((fox->status_id == nFTFoxStatusSpecialLwStart) ||
+            (fox->status_id == nFTFoxStatusSpecialAirLwStart))
+        {
+            gNdsFighterReflectorProofStartFrames++;
+        }
+        if ((fox->status_id == nFTFoxStatusSpecialLwLoop) ||
+            (fox->status_id == nFTFoxStatusSpecialAirLwLoop))
+        {
+            gNdsFighterReflectorProofLoopFrames++;
+        }
+        if ((fox->status_id == nFTFoxStatusSpecialLwHit) ||
+            (fox->status_id == nFTFoxStatusSpecialAirLwHit))
+        {
+            gNdsFighterReflectorProofHitFrames++;
+        }
+        if (ndsFighterNaturalProjectileStatusIsSpecialLw(fox) != FALSE)
+        {
+            mask |= 1u << 1;
+        }
+        if ((fox->is_reflect != FALSE) &&
+            (fox->special_coll != NULL) &&
+            (fox->special_coll->kind == nFTSpecialCollKindFoxReflector))
+        {
+            gNdsFighterReflectorProofIsReflectFrames++;
+            mask |= 1u << 2;
+        }
+        if ((gNdsFighterReflectorProofHitSetCallCount > 0u) &&
+            (gNdsFighterReflectorProofReflectLRBeforeHit != 0))
+        {
+            mask |= 1u << 3;
+        }
+        if (gNdsFighterReflectorProofHitFrames > 0u)
+        {
+            mask |= 1u << 4;
+        }
+        if ((gNdsFighterReflectorProofHitSetCallCount > 0u) &&
+            (fox->reflect_lr == 0))
+        {
+            gNdsFighterReflectorProofReflectLRClearFrames++;
+            mask |= 1u << 7;
+        }
+    }
+    if ((gNdsFighterReflectorProofFireballProcCount > 0u) &&
+        (gNdsFighterReflectorProofFireballOwnerKind == nFTKindFox))
+    {
+        mask |= 1u << 5;
+    }
+    if (((gNdsFighterReflectorProofFireballVelXBefore < 0) &&
+         (gNdsFighterReflectorProofFireballVelXAfter > 0)) ||
+        ((gNdsFighterReflectorProofFireballVelXBefore > 0) &&
+         (gNdsFighterReflectorProofFireballVelXAfter < 0)))
+    {
+        mask |= 1u << 6;
+    }
+    gNdsFighterReflectorProofMask = mask;
+    if ((mask & 0xffu) == 0xffu)
+    {
+        gNdsFighterReflectorProofResult =
+            NDS_FIGHTER_REFLECTOR_PROOF_PASS;
+    }
+}
+#endif
 
 static void ndsFighterNaturalProjectileRecord(FTStruct *fp[2])
 {
@@ -9543,6 +9746,9 @@ static void ndsFighterNaturalProjectileRecord(FTStruct *fp[2])
         gNdsFighterProjectileProofResult =
             NDS_FIGHTER_PROJECTILE_PROOF_PASS;
     }
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+    ndsFighterNaturalReflectorRecord(fp);
+#endif
 #else
     (void)fp;
 #endif
@@ -10055,6 +10261,12 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         ndsFighterNaturalProjectileSelectSlot(fp);
     sNdsNaturalProjectileExpectedKind =
         ndsFighterNaturalProjectileExpectedKind(fp[sNdsNaturalProjectileActorSlot]);
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+    sNdsNaturalReflectorProjectileSlot = sNdsNaturalProjectileActorSlot;
+    sNdsNaturalReflectorFoxSlot =
+        ndsFighterNaturalReflectorSelectFoxSlot(fp);
+    sNdsNaturalReflectorButtonPressed = 0u;
+#endif
     if (ndsFighterBattlePlayableProofEnabled() != FALSE)
     {
         FTStruct *victim =
@@ -10869,6 +11081,23 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         }
         break;
     case nNDSNaturalCombatPhaseProjectileObserve:
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+        if (ndsFighterNaturalReflectorProofEnabled() != FALSE)
+        {
+            if (gNdsFighterReflectorProofResult ==
+                NDS_FIGHTER_REFLECTOR_PROOF_PASS)
+            {
+                ndsFighterNaturalCombatStartKOExit(victim);
+            }
+            else if (sNdsNaturalCombatPhaseFrames >
+                     NDS_FIGHTER_PROJECTILE_OBSERVE_TIMEOUT)
+            {
+                gNdsFighterNaturalCombatStallCount++;
+                ndsFighterNaturalCombatStartKOExit(victim);
+            }
+            break;
+        }
+#endif
         if (gNdsFighterProjectileProofResult ==
             NDS_FIGHTER_PROJECTILE_PROOF_PASS)
         {
@@ -11172,12 +11401,36 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         button[sNdsNaturalCombatVictimSlot] = Z_TRIG;
         break;
     case nNDSNaturalCombatPhaseProjectileFire:
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+        if (ndsFighterNaturalReflectorProofEnabled() != FALSE)
+        {
+            button[sNdsNaturalReflectorFoxSlot] = B_BUTTON;
+            if (sNdsNaturalReflectorButtonPressed == 0u)
+            {
+                stick_y[sNdsNaturalReflectorFoxSlot] = -80;
+                sNdsNaturalReflectorButtonPressed = 1u;
+                gNdsFighterReflectorProofDownBPressFrames++;
+            }
+            if (gNdsFighterReflectorProofLoopFrames < 6u)
+            {
+                break;
+            }
+        }
+#endif
         if (sNdsNaturalProjectileButtonPressed == 0u)
         {
             button[sNdsNaturalProjectileActorSlot] = B_BUTTON;
             sNdsNaturalProjectileButtonPressed = 1u;
             gNdsFighterProjectileProofBPressFrames++;
         }
+        break;
+    case nNDSNaturalCombatPhaseProjectileObserve:
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+        if (ndsFighterNaturalReflectorProofEnabled() != FALSE)
+        {
+            button[sNdsNaturalReflectorFoxSlot] = B_BUTTON;
+        }
+#endif
         break;
     case nNDSNaturalCombatPhaseBattlePlayableKOExit:
         stick[sNdsNaturalCombatVictimSlot] = sNdsBattlePlayableKOStickX;

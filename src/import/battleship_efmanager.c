@@ -157,6 +157,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerStockStealEndMakeEffect ndsBaseEFManagerStockStealEndMakeEffect
 #define efManagerBattleScoreMakeEffect ndsBaseEFManagerBattleScoreMakeEffect
 #define efManagerEggBreakMakeEffect ndsBaseEFManagerEggBreakMakeEffect
+#define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
 
 #include "../../decomp/BattleShip-main/decomp/src/ef/efmanager.c"
 
@@ -190,3 +191,13 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerStockStealEndMakeEffect
 #undef efManagerBattleScoreMakeEffect
 #undef efManagerEggBreakMakeEffect
+#undef efManagerFoxReflectorMakeEffect
+
+GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
+{
+    dEFManagerFoxReflectorEffectDesc.o_dobjsetup =
+        (intptr_t)llFoxSpecial2ReflectorDObjDesc;
+    dEFManagerFoxReflectorEffectDesc.o_anim_joint =
+        (intptr_t)llFoxSpecial2ReflectorStartAnimJoint;
+    return ndsBaseEFManagerFoxReflectorMakeEffect(fighter_gobj);
+}

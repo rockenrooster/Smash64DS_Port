@@ -1509,6 +1509,7 @@ void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj)
     ftCommonShieldBreakFlyCommonSetStatus(fighter_gobj);
 }
 
+#if !NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 void ftFoxSpecialLwHitSetStatus(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -1519,6 +1520,7 @@ void ftFoxSpecialLwHitSetStatus(GObj *fighter_gobj)
         fp->is_reflect = TRUE;
     }
 }
+#endif
 
 void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
 {
@@ -1889,10 +1891,12 @@ sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
+#if !NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 sb32 ftCommonSpecialLwCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
+#endif
 
 sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
 {

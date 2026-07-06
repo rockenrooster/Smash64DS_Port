@@ -32,6 +32,32 @@ void ftMarioSpecialNSwitchStatusAir(GObj *fighter_gobj);
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmario/wpmariofireball.c"
 #undef wpMarioFireballMakeWeapon
 
+static sb32 ndsMarioFireballProcReflectorProbe(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+    sb32 result;
+
+    if (wp != NULL)
+    {
+        gNdsFighterReflectorProofFireballVelXBefore =
+            (s32)(wp->physics.vel_air.x * 1000.0F);
+    }
+    result = wpMarioFireballProcReflector(weapon_gobj);
+    if (wp != NULL)
+    {
+        FTStruct *owner = ftGetStruct(wp->owner_gobj);
+
+        gNdsFighterReflectorProofFireballProcCount++;
+        gNdsFighterReflectorProofFireballVelXAfter =
+            (s32)(wp->physics.vel_air.x * 1000.0F);
+        if (owner != NULL)
+        {
+            gNdsFighterReflectorProofFireballOwnerKind = (u32)owner->fkind;
+        }
+    }
+    return result;
+}
+
 static sb32 ndsMarioFireballProcUpdateProbe(GObj *weapon_gobj)
 {
     sb32 result = wpMarioFireballProcUpdate(weapon_gobj);
@@ -89,6 +115,18 @@ static void ndsMarioFireballRecordCreatedWeapon(GObj *weapon_gobj)
         gNdsFighterProjectileProofDamageMax =
             (u32)wp->attack_coll.damage;
     }
+    gNdsFighterReflectorProofFireballCanReflect =
+        (wp->attack_coll.can_reflect != FALSE) ? 1u : 0u;
+    gNdsFighterReflectorProofFireballCanAbsorb =
+        (wp->attack_coll.can_absorb != FALSE) ? 1u : 0u;
+    gNdsFighterReflectorProofFireballCanShield =
+        (wp->attack_coll.can_shield != FALSE) ? 1u : 0u;
+    gNdsFighterReflectorProofFireballAttackCount =
+        (u32)wp->attack_coll.attack_count;
+    gNdsFighterReflectorProofFireballDamage =
+        (u32)wp->attack_coll.damage;
+    gNdsFighterReflectorProofFireballSizeMilli =
+        (u32)(wp->attack_coll.size * 1000.0F);
     if ((u32)wp->lifetime > gNdsFighterProjectileProofLifetimeMax)
     {
         gNdsFighterProjectileProofLifetimeMax = (u32)wp->lifetime;
@@ -110,6 +148,8 @@ GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index)
     dWPMarioFireballWeaponDesc.proc_shield = ndsMarioFireballProcHitProbe;
     dWPMarioFireballWeaponDesc.proc_setoff = ndsMarioFireballProcHitProbe;
     dWPMarioFireballWeaponDesc.proc_absorb = ndsMarioFireballProcHitProbe;
+    dWPMarioFireballWeaponDesc.proc_reflector =
+        ndsMarioFireballProcReflectorProbe;
     weapon_gobj = battleship_wpMarioFireballMakeWeapon(fighter_gobj, pos,
                                                        index);
     if (weapon_gobj != NULL)

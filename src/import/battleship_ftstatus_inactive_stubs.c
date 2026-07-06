@@ -113,6 +113,7 @@ NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiEndProcMap)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcMap)
+#if !NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialLwStartProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialLwHitProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialLwEndProcUpdate)
@@ -120,6 +121,7 @@ NDS_INACTIVE_STATUS_STUB(ftFoxSpecialLwLoopProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialLwLoopProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialLwTurnProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirLwCommonProcPhysics)
+#endif
 
 #undef NDS_INACTIVE_STATUS_STUB
 #endif

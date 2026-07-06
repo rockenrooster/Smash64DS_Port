@@ -6,6 +6,7 @@ param(
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
     [switch]$ImportBattleShipEffectManager,
+    [switch]$ImportBattleShipFoxReflector,
     [switch]$ImportBattleShipNormalMoveset,
     [switch]$ImportBattleShipMarioFireball,
     [switch]$ImportBattleShipFoxBlaster
@@ -19,12 +20,14 @@ $build = 'build-battle-playable-hwtri-harness'
 if ($ImportBattleShipNormalMoveset -or
     $ImportBattleShipMarioFireball -or
     $ImportBattleShipFoxBlaster -or
-    $ImportBattleShipEffectManager) {
+    $ImportBattleShipEffectManager -or
+    $ImportBattleShipFoxReflector) {
     $suffix = @()
     if ($ImportBattleShipNormalMoveset) { $suffix += 'moveset' }
     if ($ImportBattleShipMarioFireball) { $suffix += 'fireball' }
     if ($ImportBattleShipFoxBlaster) { $suffix += 'blaster' }
     if ($ImportBattleShipEffectManager) { $suffix += 'effect' }
+    if ($ImportBattleShipFoxReflector) { $suffix += 'reflector' }
     $target = "$target-$($suffix -join '-')"
     $build = "$build-$($suffix -join '-')"
 }
@@ -41,6 +44,7 @@ if ($ImportBattleShipNormalMoveset -or
     -ImportBattleShipMarioFireball:$ImportBattleShipMarioFireball `
     -ImportBattleShipFoxBlaster:$ImportBattleShipFoxBlaster `
     -ImportBattleShipEffectManager:$ImportBattleShipEffectManager `
+    -ImportBattleShipFoxReflector:$ImportBattleShipFoxReflector `
     -HardwareTriangles `
     -Harness 'battle_playable' `
     -Target $target `

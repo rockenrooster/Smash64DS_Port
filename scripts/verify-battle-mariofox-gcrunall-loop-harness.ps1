@@ -11,6 +11,7 @@ param(
     [switch]$ImportBattleShipMarioFireball,
     [switch]$ImportBattleShipFoxBlaster,
     [switch]$ImportBattleShipEffectManager,
+    [switch]$ImportBattleShipFoxReflector,
     [switch]$ImportBattleShipNormalMoveset,
     [switch]$HardwareTriangles,
     [switch]$BattlePlayable,
@@ -98,6 +99,9 @@ if ($ImportBattleShipFoxBlaster) {
 }
 if ($ImportBattleShipEffectManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=1'
+}
+if ($ImportBattleShipFoxReflector) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR=1'
 }
 if ($ImportBattleShipNormalMoveset) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET=1'
@@ -209,6 +213,14 @@ try {
         )
         $gdbCommands = @($beforeDetach + $projectileCommands + $afterDetach)
     }
+    if ($ImportBattleShipFoxReflector) {
+        $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
+        $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
+        $reflectorCommands = @(
+            'printf "REFLECTOR=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%d,%d,%u,%u,%u,%u,%u,%u,%u,%d,%d,%u,%u\n", gNdsFighterReflectorProofResult, gNdsFighterReflectorProofMask, gNdsFighterReflectorProofFoxSlot, gNdsFighterReflectorProofProjectileSlot, gNdsFighterReflectorProofDownBPressFrames, gNdsFighterReflectorProofStartFrames, gNdsFighterReflectorProofLoopFrames, gNdsFighterReflectorProofHitFrames, gNdsFighterReflectorProofIsReflectFrames, gNdsFighterReflectorProofReflectLRBeforeHit, gNdsFighterReflectorProofReflectLRClearFrames, gNdsFighterReflectorProofHitSetCallCount, gNdsFighterReflectorProofFireballProcCount, gNdsFighterReflectorProofFireballVelXBefore, gNdsFighterReflectorProofFireballVelXAfter, gNdsFighterReflectorProofFireballOwnerKind, gNdsFighterReflectorProofFireballCanReflect, gNdsFighterReflectorProofFireballCanAbsorb, gNdsFighterReflectorProofFireballCanShield, gNdsFighterReflectorProofFireballAttackCount, gNdsFighterReflectorProofFireballDamage, gNdsFighterReflectorProofFireballSizeMilli, gNdsFighterReflectorProofFireballDXMilli, gNdsFighterReflectorProofFireballDYMilli, gNdsFighterReflectorProofSpecialSizeMilli, gNdsFighterReflectorProofSpecialResist'
+        )
+        $gdbCommands = @($beforeDetach + $reflectorCommands + $afterDetach)
+    }
     $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root -Commands $gdbCommands -ScriptName $scriptName).Stdout
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
@@ -249,6 +261,7 @@ try {
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
     $ifHud = [regex]::Match($gdbStdout, 'IFHUD=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $projectile = [regex]::Match($gdbStdout, 'PROJECTILE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
+    $reflector = [regex]::Match($gdbStdout, 'REFLECTOR=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     Assert-Condition ($harn.Success -and (Convert-MarkerUInt32 $harn.Groups[1].Value) -eq 0x4841524e -and [int]$harn.Groups[2].Value -eq $ExpectedMode -and [int]$harn.Groups[3].Value -eq $ExpectedHarnessSceneCurr -and [int]$harn.Groups[4].Value -eq $ExpectedHarnessScenePrev -and (Convert-MarkerUInt32 $harn.Groups[5].Value) -eq 0) $HarnessSelectMessage $gdbStdout
     Assert-Condition ($scene.Success -and [int]$scene.Groups[1].Value -eq 22 -and [int]$scene.Groups[2].Value -eq 21 -and [int]$scene.Groups[3].Value -eq 6) 'Live scene is not Pupupu VSBattle from Maps.' $gdbStdout
@@ -293,10 +306,15 @@ try {
         $projectileSummary = ''
         if ($ImportBattleShipMarioFireball -or $ImportBattleShipFoxBlaster) {
             $pj = Get-Ints $projectile
-            $expectedKind = if ($ImportBattleShipFoxBlaster) { 1 } else { 0 }
+            $expectedKind = if ($ImportBattleShipFoxReflector) { 0 } elseif ($ImportBattleShipFoxBlaster) { 1 } else { 0 }
             $projectileObserved = ($pj[14] -ge 3) -or ($pj[13] -gt 0)
             Assert-Condition ($projectile.Success -and $pj[0] -eq 0x50524f4a -and (($pj[1] -band 0x3f) -eq 0x3f) -and $pj[4] -gt 0 -and $pj[5] -gt 0 -and $projectileObserved -and $pj[15] -gt 0 -and (($pj[16] -band (1 -shl $expectedKind)) -ne 0) -and $pj[17] -ne 0 -and $pj[18] -gt 0) 'Natural projectile special proof failed.' $gdbStdout
             $projectileSummary = " projectile=actor$($pj[2])/kind$($pj[3]) b=$($pj[4]) status=$($pj[5]) accessory=$($pj[7]) flag0=$($pj[8]) spawn=$($pj[9]) ok=$($pj[10]) destroy=$($pj[11])/$($pj[12])/$($pj[13]) weaponFrames=$($pj[14]) max=$($pj[15]) kindMask=0x$('{0:x}' -f $pj[16]) attackMask=0x$('{0:x}' -f $pj[17]) dmg=$($pj[18]) life=$($pj[19]) map=0x$('{0:x}' -f $pj[20])"
+        }
+        if ($ImportBattleShipFoxReflector) {
+            $rf = Get-Ints $reflector
+            Assert-Condition ($reflector.Success -and $rf[0] -eq 0x52464c43 -and (($rf[1] -band 0xff) -eq 0xff) -and $rf[4] -gt 0 -and $rf[5] -gt 0 -and $rf[6] -gt 0 -and $rf[7] -gt 0 -and $rf[8] -gt 0 -and $rf[9] -ne 0 -and $rf[10] -gt 0 -and $rf[11] -gt 0 -and $rf[12] -gt 0 -and (($rf[13] -lt 0 -and $rf[14] -gt 0) -or ($rf[13] -gt 0 -and $rf[14] -lt 0)) -and $rf[15] -eq 1 -and $rf[16] -eq 1 -and $rf[19] -gt 0 -and $rf[20] -gt 0 -and $rf[21] -gt 0 -and $rf[24] -gt 0) 'Natural Fox reflector projectile proof failed.' $gdbStdout
+            $projectileSummary += " reflector=0x$('{0:x}' -f $rf[1]) fox$($rf[2]) proj$($rf[3]) shine=$($rf[5])/$($rf[6])/$($rf[7]) reflect=$($rf[8]) lr=$($rf[9]) clear=$($rf[10]) proc=$($rf[12]) vx=$($rf[13])->$($rf[14]) owner=$($rf[15]) attrs=ref$($rf[16])/abs$($rf[17])/shield$($rf[18])/count$($rf[19])/dmg$($rf[20])/size$($rf[21]) delta=$($rf[22])/$($rf[23]) special=$($rf[24])/$($rf[25])"
         }
         $movesetSummary = ''
         if ($ImportBattleShipNormalMoveset) {
