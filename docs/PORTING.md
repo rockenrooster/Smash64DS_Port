@@ -17858,3 +17858,25 @@ does not assert.
   `verify-all -Profile RegressionFast -Only battle_playable -DelaySeconds 3`,
   `verify-all -Profile Regression -Only battle_playable -DelaySeconds 3`,
   `check-harness-registry`, `check-docs`, and `git diff --check`.
+
+## 2026-07-06 - Effect Manager And Fox Reflector Defaults
+
+- Documented the effect-manager memory gate, grew the VSBattle taskman arena to
+  `0x150000`, imported original `ef/efmanager.c` plus `efdisplay.c`, and staged
+  `EFCommonEffects1/2/3` in the NitroFS/reloc map. Common particle script/texture
+  banks remain non-resident.
+- Imported Fox reflector through original `ftfoxspeciallw.c` on top of the live
+  weapon/projectile path. Mode `163` now drives Mario fireball into Fox shine,
+  proves original special-collision reflection, calls the weapon reflector
+  callback, flips projectile velocity/owner, enters real `SpecialLwHit`, and
+  clears `reflect_lr`.
+- Graduated both defaults and deleted the local `efManagerInitEffects`,
+  `ftFoxSpecialLwHitSetStatus`, `ftCommonSpecialLwCheckInterruptCommon`, and
+  inactive Fox Lw status stubs. The current battle-playable ledger is
+  `head240332 reloc747472 stage202816 fighter241280 if208672 stale0/0`.
+
+- Verified: `build-verify-profile -Profile Regression -Force`, all four
+  sharded Regression `-NoBuild` runs, `verify-dev-fast -Build -DelaySeconds 3`,
+  `verify-boundary -NoBuild -DelaySeconds 3`,
+  `verify-battle-playable-harness -NoBuild -DelaySeconds 45`,
+  `check-harness-registry`, `check-docs`, and `git diff --check`.

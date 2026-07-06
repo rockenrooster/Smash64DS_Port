@@ -86,22 +86,18 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
-- Default `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1` and
-  `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1` import the original common
-  neutral-special B-input TUs through `src/import/battleship_special_common.c`
-  and then import Mario `ftmariospecialn.c`/`wpmariofireball.c` or Fox
-  `ftfoxspecialn.c`/`wpfoxblaster.c`. The mode-163 projectile proof drives
-  natural B input through original status tables and motion commands:
-  Mario creates a fireball and exercises the original immediate hit-destroy
-  callback path; Fox creates a live blaster that remains resident for 27
-  observed weapon frames. Heavy map adjustment, display-scale, particle/glow
-  effects, broader projectile victim-damage, shield, reflector, rebound, and
-  free-flight proofs remain follow-up.
-- Effect-manager import may load the original common effect banks only after the
-  taskman arena is grown enough to keep the fixed 128 KiB reserve. Common
-  particle script/texture banks remain non-resident for now; particle calls stay
-  on diagnostic/no-op shims until a dedicated particle asset gate budgets or
-  streams the 326 KiB bank pair.
+- Default `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`,
+  `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1`, original `efmanager.c`, and Fox
+  `ftfoxspeciallw.c` import the natural projectile/effect/reflector path for
+  mode `163`. The proof drives B input through original status tables and
+  motion commands, loads `EFCommonEffects1/2/3`, then proves a live Mario
+  fireball reflected by Fox's reflector through imported `ftmain`/`wpmain`
+  code. Heavy map adjustment, display-scale, common particle/glow visuals,
+  broader projectile victim-damage, shield, rebound, and free-flight proofs
+  remain follow-up.
+- Common particle script/texture banks remain non-resident for now; particle
+  calls stay on diagnostic/no-op shims until a dedicated particle asset gate
+  budgets or streams the 326 KiB bank pair.
 - `battle_playable` is default for original `gm/gmcamera.c`,
   `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD
   paths, and original `if/ifscreenflash.c`. Mode `163` now proves natural

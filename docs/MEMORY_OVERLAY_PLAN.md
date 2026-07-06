@@ -289,8 +289,9 @@ For the effect-manager gate, grow the explicit taskman arena from `0x130000` to
 `0x150000` and keep the reserve assertion unchanged. This is still within the
 retail DS 4 MiB target; current renderer/DL/RDP buffers are already ledgered
 from VSBattle setup, and the hardware texture scratch remains opt-in rather
-than an always-resident arena owner. Record before/after mode-163 ledger
-numbers in the effect-manager commit.
+than an always-resident arena owner. The pre-gate mode-163 ledger reported
+`head208224 reloc646352`; after the effect-manager and reflector defaults it
+reports `head240332 reloc747472 stage202816 fighter241280 if208672 stale0/0`.
 
 Common particle script/texture banks stay non-resident in this slice. They are
 about 326 KiB together and are reached from `efDisplayInitAll` through

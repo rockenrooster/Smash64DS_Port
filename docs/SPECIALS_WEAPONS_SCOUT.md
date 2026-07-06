@@ -6,12 +6,11 @@ emulator, or snapshot was run for the initial scout document.
 
 ## Current Checkpoint
 
-As of 2026-07-05, default-off
-`NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1` and
-`NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1` share
-`src/import/battleship_special_common.c`, which imports original
-`ftcommonspecialn.c` and `ftcommonspecialair.c` exactly once for Mario-only,
-Fox-only, and combined projectile builds. Ground B-input reaches
+As of 2026-07-06, default builds import the original common neutral-special
+input, Mario fireball, Fox blaster, original `efmanager.c`, and Fox reflector.
+`src/import/battleship_special_common.c` imports original `ftcommonspecialn.c`
+and `ftcommonspecialair.c` exactly once for Mario-only, Fox-only, and combined
+projectile builds. Ground B-input reaches
 `ftCommonSpecialNCheckInterruptCommon` at
 `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialn.c:88`,
 tests B at `:93`, and dispatches the fighter neutral-special status at `:101`.
@@ -27,8 +26,9 @@ Mario's fireball accessory at `ftmariospecialn.c:17`, its `flag0` check at
 fighter-owned projectile through `wpManagerMakeWeapon` at
 `wpmariofireball.c:160`-`:170`; the original hit callback returns `TRUE` at
 `:126`-`:131`, so `wpprocess.c:469`-`:474` destroys it on a hit callback.
-The fenced battle-playable proof now records:
-`projectile=actor0/kind0 b=1 status=23 accessory=23 spawn=1 ok=1 destroy=0/0/1 weaponFrames=0 max=1 kindMask=0x1 attackMask=0x4 dmg=113 life=140`.
+The default battle-playable proof now records:
+`projectile=actor0/kind0 b=1 status=23 accessory=23 flag0=0 spawn=1 ok=1 destroy=0/0/0 weaponFrames=46 max=1 kindMask=0x1 attackMask=0xc dmg=13 life=140 map=0x401`
+when the default reflector choreography drives Mario fireball into Fox shine.
 
 Fox blaster imports original `ftfoxspecialn.c` and `wpfoxblaster.c`. The source
 path is BattleShip `flag0` assignment in `ftmain.c:624`, Fox update callback
@@ -37,14 +37,19 @@ at `ftfoxspecialn.c:11`, its `flag0` check at `:16`, and
 `wpfoxblaster.c:11`-`:32` and `:106`-`:123`; weapon creation enters
 `wpManagerMakeWeapon` at `wpmanager.c:87`, creates a weapon GObj at `:104`,
 seeds attack state/damage/metadata at `:191`-`:236`, and installs weapon
-processes at `:304`-`:306`. The fenced battle-playable proof now records:
-`projectile=actor1/kind1 b=1 status=27 spawn=1 ok=1 weaponFrames=27 max=1 kindMask=0x2 attackMask=0x8 dmg=96`.
+processes at `:304`-`:306`. The earlier default blaster proof recorded
+status `27`, one live blaster GObj, and 27 observed weapon frames; rerun a
+blaster-only proof if a current post-bitfield damage value matters.
 
-Blaster glow and fireball particles remain weak no-ops until the effect-manager
-memory gate. Broader projectile victim-damage, shield, reflector, rebound, and
-free-flight coverage are still follow-up; the current proof is natural
-input/status/motion-command spawn plus live weapon creation and first callback
-behavior.
+The default reflector proof imports `ftfoxspeciallw.c`, loads the FoxSpecial2
+reflector effect through original `efManagerFoxReflectorMakeEffect`, and
+records:
+`reflector=0xff fox1 proj0 shine=9/14/9 reflect=23 lr=-1 clear=1688 proc=1 vx=49809->-49809 owner=1 attrs=ref1/abs1/shield1/count1/dmg13/size100000`.
+
+Blaster glow and fireball particle scripts remain weak no-ops; the original
+effect manager now loads `EFCommonEffects1/2/3`, but the common particle
+script/texture banks are still non-resident. Broader projectile victim-damage,
+shield, rebound, and free-flight coverage remain follow-up.
 
 ## Current Import Boundary
 
@@ -145,9 +150,9 @@ Filesystem-measured BattleShip_o2r payload sizes:
 | `decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/FoxSpecial2` | 3,712 | Fox reflector DObj/animations at `efmanager.c:411`-`:416`, `:443`, `:445`, and `:4035`; also entry Arwing anim references at `efmanager.c:5734`-`:5736`. | Present and staged. |
 | `decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/FoxSpecial3` | 12,246 | Fox entry Arwing model/effect references at `efmanager.c:1559`, `:1578`, and `:5730`; not required for blaster/reflector itself. | Present and staged. |
 | `decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/FoxSpecial4` | 224 | Staged fighter special payload; no direct Mario/Fox special path found in this scout. | Present and staged. |
-| `decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects1` | 52,816 | Loaded unconditionally by original effect init at `efmanager.c:1754`; provides common effect descriptors such as damage slash/spark/orbs at `efmanager.c:104`-`:107`, `:224`-`:227`, and `:254`-`:257`. | Present in BattleShip_o2r; no current port NitroFS/reloc map entry found for this scout. |
-| `decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects2` | 28,432 | Loaded at `efmanager.c:1755`; provides fire spark and reflector-break/catch-style common data at `efmanager.c:404`-`:407`, `:543`-`:546`, and `:573`-`:576`. | Present in BattleShip_o2r; no current port NitroFS/reloc map entry found for this scout. |
-| `decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects3` | 13,696 | Loaded at `efmanager.c:1756`; provides MBall/rebirth/item-get common effects at `efmanager.c:1275`-`:1278`, `:1671`-`:1674`, and `:1701`-`:1704`. | Present in BattleShip_o2r; no current port NitroFS/reloc map entry found for this scout. |
+| `decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects1` | 52,816 | Loaded unconditionally by original effect init at `efmanager.c:1754`; provides common effect descriptors such as damage slash/spark/orbs at `efmanager.c:104`-`:107`, `:224`-`:227`, and `:254`-`:257`. | Present and staged in NitroFS/reloc map. |
+| `decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects2` | 28,432 | Loaded at `efmanager.c:1755`; provides fire spark and reflector-break/catch-style common data at `efmanager.c:404`-`:407`, `:543`-`:546`, and `:573`-`:576`. | Present and staged in NitroFS/reloc map. |
+| `decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects3` | 13,696 | Loaded at `efmanager.c:1756`; provides MBall/rebirth/item-get common effects at `efmanager.c:1275`-`:1278`, `:1671`-`:1674`, and `:1701`-`:1704`. | Present and staged in NitroFS/reloc map. |
 | `decomp/BattleShip-main/BattleShip_o2r/particles/efcommon_particle_scb` | 10,980 | Common particle scripts registered by `efParticleGetLoadBankID` at `efparticle.c:77`-`:108`. | Present in BattleShip_o2r; current port only has placeholder particle ROM symbols at `src/port/reloc_backend_ftdata_stubs.c:8`-`:19`. |
 | `decomp/BattleShip-main/BattleShip_o2r/particles/efcommon_particle_txb` | 315,108 | Common particle textures registered by `efParticleGetLoadBankID` at `efparticle.c:77`-`:108`. | Present in BattleShip_o2r; current port only has placeholder particle ROM symbols at `src/port/reloc_backend_ftdata_stubs.c:8`-`:19`. |
 
@@ -229,50 +234,41 @@ Delete or supersede these only when their original TU group is live:
 - Special callback inactive stubs:
   `src/import/battleship_ftstatus_inactive_stubs.c:92`-`:104` for Mario and
   `:105`-`:132` for Fox.
-- Weapon/effect scene-manager shims:
+- Weapon/particle scene-manager shims:
   `wpManagerAllocWeapons` in `src/port/reloc_backend_compat_shims.c:13063`-`:13067`,
-  `efParticleInitAll` in `:11738`-`:11741`, and `efManagerInitEffects` in
-  `:13075`-`:13078`.
+  and `efParticleInitAll` in `:11738`-`:11741`.
 - Current partial weapon common shims:
   `wpMainGetStaledDamage` in `src/port/reloc_backend_compat_shims.c:5221`-`:5228`
   and `wpProcessUpdateHitInteractStats` in `:5301`-`:5334`, once `wpmain.c`
   and `wpprocess.c` are imported.
-- Effect/particle no-op shims:
+- Particle no-op shims:
   `ftParamMakeEffect` in `src/port/reloc_backend_compat_shims.c:7096`-`:7122`,
-  particle helpers in `:11858`-`:11929`, common effect stubs in `:7124`-`:7222`
-  and `:11894`-`:11917`, and weak battle-playable effect/particle stubs in
-  `src/port/battle_playable_compat_stubs.c:90`-`:103`, `:187`-`:212`, and
-  `:215`-`:225`.
-- Fox reflector proof seam:
-  `ftFoxSpecialLwHitSetStatus` in `src/port/reloc_backend_compat_shims.c:1490`
-  through `:1498` once `ftfoxspeciallw.c` owns the real status.
+  particle helpers in `:11858`-`:11929`, and weak battle-playable particle
+  stubs in `src/port/battle_playable_compat_stubs.c:215`-`:229`.
 - Special input interrupt shims:
-  `ftCommonSpecialNCheckInterruptCommon`, `ftCommonSpecialHiCheckInterruptCommon`,
-  and `ftCommonSpecialLwCheckInterruptCommon` in
-  `src/port/reloc_backend_compat_shims.c:1824`-`:1842`. These are not a weapon
-  manager blocker, but they should not survive a natural special-input slice.
+  `ftCommonSpecialHiCheckInterruptCommon` in
+  `src/port/reloc_backend_compat_shims.c:1871`-`:1875`. This is not a weapon
+  manager blocker, but it should not survive the up-special slice.
 
 ## Resident Bytes Estimate
 
-Use the memory ledger's 235 KiB headroom as 240,640 bytes. This is an estimate
-only; no build map was generated.
+Current mode `163` reports 240,332 bytes of headroom after the effect-manager
+and reflector defaults, with resident reloc bytes `747472`. The fixed reserve
+remains 128 KiB.
 
 | Component | Bytes | Headroom impact |
 |---|---:|---|
 | Mario/Fox special payloads already staged (`MarioSpecial1/2/3` + `FoxSpecial1/2/3/4`) | 19,148 | If current fighter loading already keeps these resident, enabling callbacks adds 0 new file bytes. If a future scene trims them out, restoring all seven costs 18.7 KiB. |
 | Weapon struct pool | unknown exact; source allocates `sizeof(WPStruct) * 32` | Source-backed bound is `wpmanager.c:35` plus `wpdef.h:5`. Budget 32-48 KiB until measured because original `WPStruct` includes `MPCollData`, `WPAttackColl`, callbacks, status vars, SFX, and display mode at `wptypes.h:115`-`:198`. |
-| Full original `EFCommonEffects1/2/3` heap load | 94,944 | Fits inside 235 KiB by itself; loaded unconditionally by original `efManagerInitEffects` at `efmanager.c:1754`-`:1756`. |
-| Common particle scripts/textures (`efcommon_particle_scb` + `efcommon_particle_txb`) | 326,088 | Does not fit. It exceeds 235 KiB by 85,448 bytes before any weapon pool, common effects, or runtime objects. |
-| Full common effects plus common particles | 421,032 | Exceeds 235 KiB by 180,392 bytes. This is the hard memory gate for a naive effect-manager import. |
+| Full original `EFCommonEffects1/2/3` heap load | 94,944 | Now resident by default; loaded unconditionally by original `efManagerInitEffects` at `efmanager.c:1754`-`:1756`. |
+| Common particle scripts/textures (`efcommon_particle_scb` + `efcommon_particle_txb`) | 326,088 | Still does not fit inside the current reserve plan without streaming or another memory decision. |
+| Full common effects plus common particles | 421,032 | Common effects are live; particles remain the hard memory gate for a naive visual-effects import. |
 
-Practical conclusion: manager-first is fine only if the first slice keeps the
-existing particle/effect calls behind current no-op or diagnostic shims. A
-full `efparticle` + common particle texture residency is over budget before
-gameplay value appears. The first visual effect slice must either stream/defer
-the 315 KiB TXB, trim to a DS-native effect replacement for these specific
-particles, or move the common particle bank into the optional extra 4 MiB
-DSi/debug-cart profile. Under normal 4 MiB DS budget, do not make common
-particles resident as part of the first projectile slice.
+Practical conclusion: the effect manager is live, but a full `efparticle` +
+common particle texture residency is still over budget before gameplay value
+appears. The first particle slice must either stream/defer the 315 KiB TXB,
+trim to a DS-native effect replacement for these specific particles, or move
+the common particle bank into the optional extra 4 MiB DSi/debug-cart profile.
 
 ## Proposed /task Slice Sequence
 
@@ -304,21 +300,17 @@ particles resident as part of the first projectile slice.
 
 4. `/task Minimal effect manager gate`
 
-   Decide the DS effect backend before importing full `efmanager.c`. A whole-TU
-   import of `efmanager.c` plus `efparticle.c` is source-pure but memory-risky:
-   `EFCommonEffects1/2/3` fit, common particles do not. Gate this slice on a
-   documented memory choice: no-particle visual no-ops, streamed particle TXB,
-   DS-native replacements for the specific dust/spark/glow calls, or optional
-   DSi/debug-cart residency.
+   Landed: the DS taskman arena was grown to `0x150000`, `efmanager.c` imports
+   whole, and `EFCommonEffects1/2/3` load by default. Common particles remain
+   non-resident.
 
 5. `/task Fox reflector and remaining non-projectile specials`
 
-   Import `ftfoxspeciallw.c`, then `ftmariospecialhi.c`, `ftmariospeciallw.c`,
-   and `ftfoxspecialhi.c` in small fighter-special groups. Fox reflector should
-   come after the weapon collision path is live because it depends on
-   `fp->special_coll`, `is_reflect`, `reflect_lr`, and `ftMain` weapon special
-   collision handling. Gate: reflector can alter a live projectile, enter the
-   real hit status, and retire the current `ftFoxSpecialLwHitSetStatus` seam.
+   Landed for Fox reflector: `ftfoxspeciallw.c` imports whole, mode `163`
+   proves a live Mario fireball reflection, and the old
+   `ftFoxSpecialLwHitSetStatus` seam is deleted. Remaining non-projectile
+   specials are still future small groups: `ftmariospecialhi.c`,
+   `ftmariospeciallw.c`, and `ftfoxspecialhi.c`.
 
 Manager-first beats per-special-first here. Mario fireball and Fox blaster both
 need the same weapon manager, GObj link, process, map, and hit-collision
