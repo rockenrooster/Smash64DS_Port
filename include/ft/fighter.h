@@ -4079,6 +4079,8 @@ void mpCommonSetFighterAir(FTStruct *fp);
 void mpCommonSetFighterWaitOrFall(GObj *fighter_gobj);
 sb32 mpCommonProcFighterOnEdge(GObj *fighter_gobj,
                                void (*proc_map)(GObj *));
+sb32 mpCommonProcFighterOnFloor(GObj *fighter_gobj,
+                                void (*proc_map)(GObj *));
 sb32 mpCommonProcFighterLanding(GObj *fighter_gobj,
                                 void (*proc_map)(GObj *));
 void mpCommonSetFighterLandingParams(GObj *fighter_gobj);
@@ -4088,19 +4090,38 @@ sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj);
 sb32 mpCommonCheckFighterOnEdge(GObj *fighter_gobj);
 sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj);
 sb32 mpCommonCheckFighterLanding(GObj *fighter_gobj);
+sb32 mpCommonCheckFighterProject(GObj *fighter_gobj);
+sb32 mpCommonCheckFighterPass(GObj *fighter_gobj,
+                              sb32 (*proc_map)(GObj *));
+sb32 mpCommonCheckFighterPassCliff(GObj *fighter_gobj,
+                                   sb32 (*proc_map)(GObj *));
+sb32 mpCommonProcFighterCliff(GObj *fighter_gobj,
+                              void (*proc_map)(GObj *));
 void mpCommonProcFighterOnCliffEdge(GObj *fighter_gobj);
 void mpCommonProcFighterCliffFloorCeil(GObj *fighter_gobj);
 void mpCommonSetFighterFallOnGroundBreak(GObj *fighter_gobj);
 void mpCommonSetFighterFallOnEdgeBreak(GObj *fighter_gobj);
+void ftCommonFallSpecialSetStatus(GObj *fighter_gobj, f32 drift,
+                                  sb32 unknown,
+                                  sb32 is_fall_accelerate,
+                                  sb32 is_goto_landing, f32 landing_lag,
+                                  sb32 is_allow_interrupt);
 void ftPhysicsApplyGravityClampTVel(FTStruct *fp, f32 gravity, f32 tvel);
 void ftPhysicsApplyGravityDefault(FTStruct *fp, FTAttributes *attr);
 void ftPhysicsApplyFastFall(FTStruct *fp, FTAttributes *attr);
+void ftPhysicsClampGroundVel(FTStruct *fp, f32 clamp);
+void ftPhysicsApplyClampGroundVelStickRange(FTStruct *fp, s32 stick_x_min,
+                                            f32 vel, f32 clamp);
 void ftPhysicsApplyGroundVelTransN(GObj *fighter_gobj);
 void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
                               f32 *vel_z);
 void ftPhysicsApplyAirVelTransNAll(GObj *fighter_gobj);
+void ftPhysicsApplyAirVelTransNYZ(GObj *fighter_gobj);
 void ftPhysicsClampAirVelX(FTStruct *fp, f32 clamp);
 void ftPhysicsClampAirVelXMax(FTStruct *fp);
+void ftPhysicsClampAirVelY(FTStruct *fp, f32 clamp);
+void ftPhysicsAddClampAirVelY(FTStruct *fp, f32 vel, f32 clamp);
+sb32 ftPhysicsCheckClampAirVelXDec(FTStruct *fp, f32 clamp);
 sb32 ftPhysicsCheckClampAirVelXDecMax(FTStruct *fp, FTAttributes *attr);
 void ftPhysicsClampAirVelXStickRange(FTStruct *fp, s32 stick_range_min,
                                      f32 vel, f32 clamp);
@@ -4110,6 +4131,7 @@ void ftPhysicsCheckSetFastFall(FTStruct *fp);
 void ftPhysicsApplyAirVelFriction(GObj *fighter_gobj);
 void ftPhysicsApplyAirVelDriftFastFall(GObj *fighter_gobj);
 void ftParamMakeRumble(FTStruct *fp, s32 rumble_id, s32 length);
+sb32 lbCommonCheckAdjustSim2D(Vec3f *a, Vec3f *b, f32 angle);
 extern u16 dFTCommonDataDownBounceSFX[];
 extern u16 gMPCollisionUpdateTic;
 f32 scSubsysFighterGetLightAngleX(void);
@@ -4140,6 +4162,7 @@ enum {
     nGMColAnimCommonNull = 0,
     nGMColAnimFighterComPlayer = 1,
     nGMColAnimFighterDamageCommon = 5,
+    nGMColAnimFighterFallSpecial = 7,
     nGMColAnimFighterFastFall = 8,
     nGMColAnimFighterRebirth = 11,
     nGMColAnimFighterDamageFireStart = 12,

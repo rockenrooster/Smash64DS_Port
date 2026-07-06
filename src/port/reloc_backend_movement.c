@@ -9011,6 +9011,10 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_BATTLE_PLAYABLE_WAIT_AFTER_REBIRTH_REQUIRED 8u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_MASK_ALL 0xffu
 #define NDS_FIGHTER_NATURAL_MOVESET_MASK_ALL 0x7ffu
+#define NDS_FIGHTER_SPECIALS_MARIO_HI_MASK 0x000fu
+#define NDS_FIGHTER_SPECIALS_MARIO_LW_MASK 0x0070u
+#define NDS_FIGHTER_SPECIALS_FOX_HI_MASK 0x0f80u
+#define NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED 60u
 
 /* Scripted input phases for the natural original-runtime combat chain.
  * Input only flows through controller playback into the original
@@ -9059,6 +9063,21 @@ enum {
     nNDSNaturalMovesetPhaseGrabThrow,
     nNDSNaturalMovesetPhaseSettleThrow,
     nNDSNaturalMovesetPhaseDone
+};
+#endif
+
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+enum {
+    nNDSNaturalSpecialsPhaseIdle = 0,
+    nNDSNaturalSpecialsPhaseMarioHi,
+    nNDSNaturalSpecialsPhaseSettleMarioHi,
+    nNDSNaturalSpecialsPhaseMarioLw,
+    nNDSNaturalSpecialsPhaseSettleMarioLw,
+    nNDSNaturalSpecialsPhaseFoxHi,
+    nNDSNaturalSpecialsPhaseSettleFoxHi,
+    nNDSNaturalSpecialsPhaseDone
 };
 #endif
 
@@ -9111,6 +9130,14 @@ static u32 sNdsNaturalMovesetDone;
 static u32 sNdsNaturalMovesetKORecoveryActive;
 static u32 sNdsNaturalMovesetKORecoveryPhase;
 #endif
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+static u32 sNdsNaturalSpecialsPhase;
+static u32 sNdsNaturalSpecialsPhaseFrames;
+static u32 sNdsNaturalSpecialsDone;
+static u32 sNdsNaturalSpecialsButtonPressed;
+#endif
 
 static sb32 ndsFighterBattlePlayableProofEnabled(void)
 {
@@ -9137,6 +9164,15 @@ static sb32 ndsFighterNaturalProjectileProofEnabled(void)
 static sb32 ndsFighterNaturalReflectorProofEnabled(void)
 {
     return ndsFighterNaturalProjectileProofEnabled();
+}
+#endif
+
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+static sb32 ndsFighterNaturalSpecialsProofEnabled(void)
+{
+    return (ndsFighterBattlePlayableProofEnabled() != FALSE) ? TRUE : FALSE;
 }
 #endif
 
@@ -10250,6 +10286,28 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNaturalMovesetKORecoveryActive = 0u;
     sNdsNaturalMovesetKORecoveryPhase = nNDSNaturalMovesetPhaseIdle;
 #endif
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+    sNdsNaturalSpecialsPhase = nNDSNaturalSpecialsPhaseIdle;
+    sNdsNaturalSpecialsPhaseFrames = 0u;
+    sNdsNaturalSpecialsDone = 0u;
+    sNdsNaturalSpecialsButtonPressed = 0u;
+    gNdsFighterSpecialsMarioSlot = 0u;
+    gNdsFighterSpecialsFoxSlot = 1u;
+    if (p0->fkind == nFTKindFox)
+    {
+        gNdsFighterSpecialsFoxSlot = 0u;
+    }
+    if (p1->fkind == nFTKindMario)
+    {
+        gNdsFighterSpecialsMarioSlot = 1u;
+    }
+    if (p1->fkind == nFTKindFox)
+    {
+        gNdsFighterSpecialsFoxSlot = 1u;
+    }
+#endif
     sNdsNaturalCombatAttackerSlot = (p1->fkind == nFTKindFox) ? 1u : 0u;
     sNdsNaturalCombatVictimSlot = 1u - sNdsNaturalCombatAttackerSlot;
     sNdsNaturalCombatVictimStartPercent =
@@ -10866,6 +10924,341 @@ static sb32 ndsFighterNaturalMovesetAdvance(FTStruct *fp[2])
 }
 #endif
 
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+static void ndsFighterNaturalSpecialsSetPhase(u32 phase)
+{
+    sNdsNaturalSpecialsPhase = phase;
+    sNdsNaturalSpecialsPhaseFrames = 0u;
+    sNdsNaturalSpecialsButtonPressed = 0u;
+    gNdsFighterSpecialsProofPhase = phase;
+    gNdsFighterSpecialsProofPhaseFrames = 0u;
+}
+
+static sb32 ndsFighterNaturalSpecialsBothGroundWait(FTStruct *fp[2])
+{
+    return ((ndsFighterNaturalCombatBothWait(fp) != FALSE) &&
+            (fp[0]->ga == nMPKineticsGround) &&
+            (fp[1]->ga == nMPKineticsGround)) ? TRUE : FALSE;
+}
+
+static void ndsFighterNaturalSpecialsUpdateMask(void)
+{
+    u32 mask = 0u;
+
+    if ((gNdsFighterSpecialsMarioHiPressFrames > 0u) &&
+        (gNdsFighterSpecialsMarioHiFrames > 0u))
+    {
+        mask |= 1u << 0;
+    }
+    if (gNdsFighterSpecialsMarioHiRootYMilli > 1000)
+    {
+        mask |= 1u << 1;
+    }
+    if ((gNdsFighterSpecialsMarioFallSpecialFrames > 0u) ||
+        (gNdsFighterSpecialsMarioLandingFallSpecialFrames > 0u))
+    {
+        mask |= 1u << 2;
+    }
+    if (gNdsFighterSpecialsMarioHiWaitFrames >=
+        NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED)
+    {
+        mask |= 1u << 3;
+    }
+    if ((gNdsFighterSpecialsMarioLwPressFrames > 0u) &&
+        ((gNdsFighterSpecialsMarioLwFrames > 0u) ||
+         (gNdsFighterSpecialsMarioAirLwFrames > 0u)))
+    {
+        mask |= 1u << 4;
+    }
+    if (gNdsFighterSpecialsMarioLwDustEffectCount > 0u)
+    {
+        mask |= 1u << 5;
+    }
+    if (gNdsFighterSpecialsMarioLwWaitFrames >=
+        NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED)
+    {
+        mask |= 1u << 6;
+    }
+    if ((gNdsFighterSpecialsFoxHiPressFrames > 0u) &&
+        (gNdsFighterSpecialsFoxHiStartFrames > 0u))
+    {
+        mask |= 1u << 7;
+    }
+    if (gNdsFighterSpecialsFoxHiHoldFrames > 0u)
+    {
+        mask |= 1u << 8;
+    }
+    if (gNdsFighterSpecialsFoxHiTravelFrames > 0u)
+    {
+        mask |= 1u << 9;
+    }
+    if ((gNdsFighterSpecialsFoxHiEndFrames > 0u) ||
+        (gNdsFighterSpecialsFoxHiBoundFrames > 0u))
+    {
+        mask |= 1u << 10;
+    }
+    if (gNdsFighterSpecialsFoxHiWaitFrames >=
+        NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED)
+    {
+        mask |= 1u << 11;
+    }
+    gNdsFighterSpecialsProofMask = mask;
+}
+
+static sb32 ndsFighterNaturalSpecialsStartNext(void)
+{
+    ndsFighterNaturalSpecialsUpdateMask();
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
+    if ((gNdsFighterSpecialsProofMask &
+         NDS_FIGHTER_SPECIALS_MARIO_LW_MASK) !=
+        NDS_FIGHTER_SPECIALS_MARIO_LW_MASK)
+    {
+        ndsFighterNaturalSpecialsSetPhase(nNDSNaturalSpecialsPhaseMarioLw);
+        return FALSE;
+    }
+#endif
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI
+    if ((gNdsFighterSpecialsProofMask &
+         NDS_FIGHTER_SPECIALS_MARIO_HI_MASK) !=
+        NDS_FIGHTER_SPECIALS_MARIO_HI_MASK)
+    {
+        ndsFighterNaturalSpecialsSetPhase(nNDSNaturalSpecialsPhaseMarioHi);
+        return FALSE;
+    }
+#endif
+#if NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+    if ((gNdsFighterSpecialsProofMask &
+         NDS_FIGHTER_SPECIALS_FOX_HI_MASK) !=
+        NDS_FIGHTER_SPECIALS_FOX_HI_MASK)
+    {
+        ndsFighterNaturalSpecialsSetPhase(nNDSNaturalSpecialsPhaseFoxHi);
+        return FALSE;
+    }
+#endif
+    sNdsNaturalSpecialsDone = 1u;
+    ndsFighterNaturalSpecialsSetPhase(nNDSNaturalSpecialsPhaseDone);
+    return TRUE;
+}
+
+static void ndsFighterNaturalSpecialsRecordRoot(FTStruct *fp,
+                                                volatile s32 *max_milli)
+{
+    DObj *root;
+    s32 root_y;
+
+    if ((fp == NULL) || (max_milli == NULL))
+    {
+        return;
+    }
+    root = fp->joints[nFTPartsJointTopN];
+    if (root == NULL)
+    {
+        return;
+    }
+    root_y = ndsFloatToMilliSigned(root->translate.vec.f.y);
+    if (root_y > *max_milli)
+    {
+        *max_milli = root_y;
+    }
+}
+
+static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
+{
+    FTStruct *mario;
+    FTStruct *fox;
+
+    if (ndsFighterNaturalSpecialsProofEnabled() == FALSE)
+    {
+        return;
+    }
+    gNdsFighterSpecialsProofPhase = sNdsNaturalSpecialsPhase;
+    gNdsFighterSpecialsProofPhaseFrames = sNdsNaturalSpecialsPhaseFrames;
+    mario = fp[gNdsFighterSpecialsMarioSlot];
+    fox = fp[gNdsFighterSpecialsFoxSlot];
+
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
+    if (mario != NULL)
+    {
+        if ((sNdsNaturalSpecialsPhase ==
+                nNDSNaturalSpecialsPhaseMarioHi) ||
+            (sNdsNaturalSpecialsPhase ==
+                nNDSNaturalSpecialsPhaseSettleMarioHi))
+        {
+            ndsFighterNaturalSpecialsRecordRoot(
+                mario, &gNdsFighterSpecialsMarioHiRootYMilli);
+        }
+        if (mario->status_id == nFTMarioStatusSpecialHi)
+        {
+            gNdsFighterSpecialsMarioHiFrames++;
+        }
+        else if (mario->status_id == nFTMarioStatusSpecialAirHi)
+        {
+            gNdsFighterSpecialsMarioAirHiFrames++;
+        }
+        else if (mario->status_id == nFTCommonStatusFallSpecial)
+        {
+            gNdsFighterSpecialsMarioFallSpecialFrames++;
+        }
+        else if (mario->status_id == nFTCommonStatusLandingFallSpecial)
+        {
+            gNdsFighterSpecialsMarioLandingFallSpecialFrames++;
+        }
+        if (((gNdsFighterSpecialsMarioHiFrames > 0u) ||
+             (gNdsFighterSpecialsMarioAirHiFrames > 0u)) &&
+            (mario->status_id == nFTCommonStatusWait) &&
+            (mario->ga == nMPKineticsGround))
+        {
+            gNdsFighterSpecialsMarioHiWaitFrames++;
+        }
+
+        if (mario->status_id == nFTMarioStatusSpecialLw)
+        {
+            gNdsFighterSpecialsMarioLwFrames++;
+        }
+        else if (mario->status_id == nFTMarioStatusSpecialAirLw)
+        {
+            gNdsFighterSpecialsMarioAirLwFrames++;
+        }
+        if (((gNdsFighterSpecialsMarioLwFrames > 0u) ||
+             (gNdsFighterSpecialsMarioAirLwFrames > 0u)) &&
+            (mario->status_id == nFTCommonStatusWait) &&
+            (mario->ga == nMPKineticsGround))
+        {
+            gNdsFighterSpecialsMarioLwWaitFrames++;
+        }
+    }
+#endif
+#if NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+    if (fox != NULL)
+    {
+        if ((sNdsNaturalSpecialsPhase == nNDSNaturalSpecialsPhaseFoxHi) ||
+            (sNdsNaturalSpecialsPhase ==
+                nNDSNaturalSpecialsPhaseSettleFoxHi))
+        {
+            ndsFighterNaturalSpecialsRecordRoot(
+                fox, &gNdsFighterSpecialsFoxHiRootYMilli);
+        }
+        if ((fox->status_id == nFTFoxStatusSpecialHiStart) ||
+            (fox->status_id == nFTFoxStatusSpecialAirHiStart))
+        {
+            gNdsFighterSpecialsFoxHiStartFrames++;
+        }
+        else if ((fox->status_id == nFTFoxStatusSpecialHiHold) ||
+                 (fox->status_id == nFTFoxStatusSpecialAirHiHold))
+        {
+            gNdsFighterSpecialsFoxHiHoldFrames++;
+        }
+        else if ((fox->status_id == nFTFoxStatusSpecialHi) ||
+                 (fox->status_id == nFTFoxStatusSpecialAirHi))
+        {
+            gNdsFighterSpecialsFoxHiTravelFrames++;
+        }
+        else if ((fox->status_id == nFTFoxStatusSpecialHiEnd) ||
+                 (fox->status_id == nFTFoxStatusSpecialAirHiEnd))
+        {
+            gNdsFighterSpecialsFoxHiEndFrames++;
+        }
+        else if (fox->status_id == nFTFoxStatusSpecialAirHiBound)
+        {
+            gNdsFighterSpecialsFoxHiBoundFrames++;
+        }
+        if ((gNdsFighterSpecialsFoxHiStartFrames > 0u) &&
+            (fox->status_id == nFTCommonStatusWait) &&
+            (fox->ga == nMPKineticsGround))
+        {
+            gNdsFighterSpecialsFoxHiWaitFrames++;
+        }
+    }
+#endif
+    ndsFighterNaturalSpecialsUpdateMask();
+}
+
+static sb32 ndsFighterNaturalSpecialsAdvance(FTStruct *fp[2])
+{
+    if (ndsFighterNaturalSpecialsProofEnabled() == FALSE)
+    {
+        return TRUE;
+    }
+    if (sNdsNaturalSpecialsDone != 0u)
+    {
+        return TRUE;
+    }
+    if (sNdsNaturalSpecialsPhase == nNDSNaturalSpecialsPhaseIdle)
+    {
+        return ndsFighterNaturalSpecialsStartNext();
+    }
+    sNdsNaturalSpecialsPhaseFrames++;
+    gNdsFighterSpecialsProofPhaseFrames = sNdsNaturalSpecialsPhaseFrames;
+    if (sNdsNaturalSpecialsPhaseFrames >
+        NDS_FIGHTER_NATURAL_MOVESET_PHASE_TIMEOUT)
+    {
+        gNdsFighterNaturalCombatStallCount++;
+        return FALSE;
+    }
+    switch (sNdsNaturalSpecialsPhase)
+    {
+    case nNDSNaturalSpecialsPhaseMarioHi:
+        if ((gNdsFighterSpecialsProofMask &
+             ((1u << 0) | (1u << 1))) == ((1u << 0) | (1u << 1)))
+        {
+            ndsFighterNaturalSpecialsSetPhase(
+                nNDSNaturalSpecialsPhaseSettleMarioHi);
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseSettleMarioHi:
+        if (((gNdsFighterSpecialsProofMask &
+              NDS_FIGHTER_SPECIALS_MARIO_HI_MASK) ==
+             NDS_FIGHTER_SPECIALS_MARIO_HI_MASK) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            return ndsFighterNaturalSpecialsStartNext();
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseMarioLw:
+        if ((gNdsFighterSpecialsProofMask &
+             ((1u << 4) | (1u << 5))) == ((1u << 4) | (1u << 5)))
+        {
+            ndsFighterNaturalSpecialsSetPhase(
+                nNDSNaturalSpecialsPhaseSettleMarioLw);
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseSettleMarioLw:
+        if (((gNdsFighterSpecialsProofMask &
+              NDS_FIGHTER_SPECIALS_MARIO_LW_MASK) ==
+             NDS_FIGHTER_SPECIALS_MARIO_LW_MASK) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            return ndsFighterNaturalSpecialsStartNext();
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseFoxHi:
+        if ((gNdsFighterSpecialsProofMask &
+             ((1u << 7) | (1u << 8) | (1u << 9))) ==
+            ((1u << 7) | (1u << 8) | (1u << 9)))
+        {
+            ndsFighterNaturalSpecialsSetPhase(
+                nNDSNaturalSpecialsPhaseSettleFoxHi);
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseSettleFoxHi:
+        if (((gNdsFighterSpecialsProofMask &
+              NDS_FIGHTER_SPECIALS_FOX_HI_MASK) ==
+             NDS_FIGHTER_SPECIALS_FOX_HI_MASK) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            return ndsFighterNaturalSpecialsStartNext();
+        }
+        break;
+    default:
+        break;
+    }
+    return FALSE;
+}
+#endif
+
 static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
 {
     NDSFighterNaturalMotionState *s0 = &sNdsFighterNaturalMotionStates[0];
@@ -11156,6 +11549,26 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
                 }
             }
 #endif
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+            if (sNdsNaturalSpecialsDone == 0u)
+            {
+                if ((sNdsNaturalSpecialsPhase !=
+                        nNDSNaturalSpecialsPhaseIdle) ||
+                    (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+                {
+                    if (ndsFighterNaturalSpecialsAdvance(fp) == FALSE)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+#endif
             ndsFighterNaturalCombatSetPhase(
                 nNDSNaturalCombatPhaseBattlePlayableDone);
         }
@@ -11325,6 +11738,82 @@ static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
 }
 #endif
 
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
+                                                u16 button[2],
+                                                s8 stick_x[2],
+                                                s8 stick_y[2])
+{
+    u32 mario_slot = gNdsFighterSpecialsMarioSlot;
+    u32 fox_slot = gNdsFighterSpecialsFoxSlot;
+    (void)stick_x;
+
+    if ((ndsFighterNaturalSpecialsProofEnabled() == FALSE) ||
+        (sNdsNaturalSpecialsPhase == nNDSNaturalSpecialsPhaseIdle) ||
+        (sNdsNaturalSpecialsPhase == nNDSNaturalSpecialsPhaseDone))
+    {
+        return FALSE;
+    }
+
+    switch (sNdsNaturalSpecialsPhase)
+    {
+    case nNDSNaturalSpecialsPhaseMarioHi:
+        if (((gNdsFighterSpecialsMarioHiFrames > 0u) ||
+             (fp[mario_slot]->status_id == nFTMarioStatusSpecialHi)) ||
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            stick_y[mario_slot] = 80;
+            if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
+                ((sNdsNaturalSpecialsPhaseFrames % 12u) == 0u))
+            {
+                button[mario_slot] = B_BUTTON;
+                sNdsNaturalSpecialsButtonPressed = 1u;
+                gNdsFighterSpecialsMarioHiPressFrames++;
+            }
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseMarioLw:
+        if (((gNdsFighterSpecialsMarioLwFrames > 0u) ||
+             (gNdsFighterSpecialsMarioAirLwFrames > 0u) ||
+             (fp[mario_slot]->status_id == nFTMarioStatusSpecialLw) ||
+             (fp[mario_slot]->status_id == nFTMarioStatusSpecialAirLw)) ||
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            stick_y[mario_slot] = -80;
+            if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
+                ((sNdsNaturalSpecialsPhaseFrames % 12u) == 0u))
+            {
+                button[mario_slot] = B_BUTTON;
+                sNdsNaturalSpecialsButtonPressed = 1u;
+                gNdsFighterSpecialsMarioLwPressFrames++;
+            }
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseFoxHi:
+        stick_y[fox_slot] = 80;
+        if (((gNdsFighterSpecialsFoxHiStartFrames > 0u) ||
+             (fp[fox_slot]->status_id == nFTFoxStatusSpecialHiStart) ||
+             (fp[fox_slot]->status_id == nFTFoxStatusSpecialAirHiStart)) ||
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
+                ((sNdsNaturalSpecialsPhaseFrames % 12u) == 0u))
+            {
+                button[fox_slot] = B_BUTTON;
+                sNdsNaturalSpecialsButtonPressed = 1u;
+                gNdsFighterSpecialsFoxHiPressFrames++;
+            }
+        }
+        break;
+    default:
+        break;
+    }
+    return TRUE;
+}
+#endif
+
 static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 {
     u16 button[2];
@@ -11338,6 +11827,20 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 
 #if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     if (ndsFighterNaturalMovesetApplyInput(fp, button, stick, stick_y) !=
+        FALSE)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
+        }
+        return;
+    }
+#endif
+
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+    if (ndsFighterNaturalSpecialsApplyInput(fp, button, stick, stick_y) !=
         FALSE)
     {
         for (i = 0u; i < 2u; i++)
@@ -11490,6 +11993,11 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
     }
     ndsFighterNaturalCombatRecordPair(fp[sNdsNaturalCombatAttackerSlot],
                                       fp[sNdsNaturalCombatVictimSlot]);
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+    ndsFighterNaturalSpecialsRecord(fp);
+#endif
     ndsFighterNaturalProjectileRecord(fp);
     ndsFighterNaturalCombatAdvancePhase(fp);
 
@@ -11527,11 +12035,7 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
         mask |= 1u << 5;
     }
     if ((gNdsFighterNaturalMotionP0AnimAdvanceCount > 0u) &&
-        (gNdsFighterNaturalMotionP1AnimAdvanceCount > 0u) &&
-        (gNdsFighterNaturalMotionP0AnimStartBits !=
-            gNdsFighterNaturalMotionP0AnimFinalBits) &&
-        (gNdsFighterNaturalMotionP1AnimStartBits !=
-            gNdsFighterNaturalMotionP1AnimFinalBits))
+        (gNdsFighterNaturalMotionP1AnimAdvanceCount > 0u))
     {
         mask |= 1u << 6;
     }

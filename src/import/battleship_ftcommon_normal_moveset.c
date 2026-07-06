@@ -44,11 +44,6 @@ __attribute__((weak)) void ftParamProcResumeEffect(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
-__attribute__((weak)) void ftPhysicsApplyAirVelTransNYZ(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-}
-
 #define ftCommonAttackS3SetStatus ndsBaseFTCommonAttackS3SetStatus
 #define ftCommonAttackS3CheckInterruptCommon \
     ndsBaseFTCommonAttackS3CheckInterruptCommon

@@ -46,6 +46,21 @@ reflector effect through original `efManagerFoxReflectorMakeEffect`, and
 records:
 `reflector=0xff fox1 proj0 shine=9/14/9 reflect=23 lr=-1 clear=1688 proc=1 vx=49809->-49809 owner=1 attrs=ref1/abs1/shield1/count1/dmg13/size100000`.
 
+Standing packed-data audit for the remaining specials: `ftmariospecialhi.c`,
+`ftmariospeciallw.c`, and `ftfoxspecialhi.c` do not decode a new packed or
+bitfield payload class. They read the already-converged fighter motion
+descriptors (`ftdata.c:341`-`:344` and `:1079`-`:1088`), status descriptor
+tables (`ftmariostatus.h:109`-`:186`, `ftfoxstatus.h:149`-`:326`), and the
+motion-command stream that the live `ftanim` runtime already decodes. The
+missing data problem is the animation ID surface: the Mario Super Jump Punch
+and Tornado descriptors point at `llFTMarioAnimSuperJumpPunchAirFileID`,
+`llFTMarioAnimMarioTornadoGroundFileID`, and
+`llFTMarioAnimMarioTornadoAirFileID` in `ftdata.c:341`-`:344`, while Fire Fox
+points at `llFTFoxAnimFireFox*FileID` in `ftdata.c:1079`-`:1088`. Those map to
+`FTMarioAnim138`-`140` and `FTFoxAnim139`-`147` in
+`port/resource/RelocFileTable.us.cpp:650`-`:652` and `:794`-`:802`; the port
+must stage those exact O2R files instead of leaving the symbols zero-stubbed.
+
 Blaster glow and fireball particle scripts remain weak no-ops; the original
 effect manager now loads `EFCommonEffects1/2/3`, but the common particle
 script/texture banks are still non-resident. Broader projectile victim-damage,

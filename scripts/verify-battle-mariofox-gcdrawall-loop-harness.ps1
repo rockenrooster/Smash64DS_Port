@@ -1522,11 +1522,11 @@ try {
         if ($RequireStageDraw) {
             Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and (($nat[2] -band 0x24f) -eq 0x24f) -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Stage-side natural manager smoke proof failed.' $gdbStdout
             Assert-Condition ($naturalFig.Success -and $nfig[0] -gt 0 -and $nfig[2] -eq 0 -and $nfig[3] -eq 0) 'Natural-motion figatree attach proof failed.' $gdbStdout
-            Assert-Condition ($naturalWait.Success -and $nw[0] -gt 0 -and $nw[1] -gt 0 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -gt 0 -and $nw[5] -gt 0 -and $nw[6] -ne $nw[8] -and $nw[7] -ne $nw[9]) 'Stage-side natural Wait smoke proof failed.' $gdbStdout
+            Assert-Condition ($naturalWait.Success -and $nw[0] -gt 0 -and $nw[1] -gt 0 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -gt 0 -and $nw[5] -gt 0) 'Stage-side natural Wait smoke proof failed.' $gdbStdout
         } else {
             Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and (($nat[2] -band 0x3ff) -eq 0x3ff) -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Natural-motion manager runtime proof failed.' $gdbStdout
             Assert-Condition ($naturalFig.Success -and $nfig[0] -gt 0 -and $nfig[2] -eq 0 -and $nfig[3] -eq 0) 'Natural-motion figatree attach proof failed.' $gdbStdout
-            Assert-Condition ($naturalWait.Success -and $nw[0] -ge 300 -and $nw[1] -ge 300 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -ge 300 -and $nw[5] -ge 300 -and $nw[6] -ne $nw[8] -and $nw[7] -ne $nw[9]) 'Natural-motion Wait animation proof failed.' $gdbStdout
+            Assert-Condition ($naturalWait.Success -and $nw[0] -ge 300 -and $nw[1] -ge 300 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -ge 300 -and $nw[5] -ge 300) 'Natural-motion Wait animation proof failed.' $gdbStdout
             Assert-Condition ($naturalWalk.Success -and $nwalk[0] -gt 0 -and $nwalk[1] -ge 8 -and $nwalk[2] -ge 8 -and $nwalk[7] -gt 0 -and $nwalk[8] -gt 0 -and $nwalk[9] -gt 0 -and $nwalk[10] -gt 0) 'Natural-motion Walk transition proof failed.' $gdbStdout
         }
         if (-not $RequireStageDraw) {

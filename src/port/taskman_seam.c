@@ -525,6 +525,31 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterReflectorProofFireballDYMilli = 0;
     gNdsFighterReflectorProofSpecialSizeMilli = 0;
     gNdsFighterReflectorProofSpecialResist = 0;
+    gNdsFighterSpecialsProofMask = 0;
+    gNdsFighterSpecialsProofPhase = 0;
+    gNdsFighterSpecialsProofPhaseFrames = 0;
+    gNdsFighterSpecialsMarioSlot = 0;
+    gNdsFighterSpecialsFoxSlot = 0;
+    gNdsFighterSpecialsMarioHiPressFrames = 0;
+    gNdsFighterSpecialsMarioHiFrames = 0;
+    gNdsFighterSpecialsMarioAirHiFrames = 0;
+    gNdsFighterSpecialsMarioFallSpecialFrames = 0;
+    gNdsFighterSpecialsMarioLandingFallSpecialFrames = 0;
+    gNdsFighterSpecialsMarioHiWaitFrames = 0;
+    gNdsFighterSpecialsMarioHiRootYMilli = 0;
+    gNdsFighterSpecialsMarioLwPressFrames = 0;
+    gNdsFighterSpecialsMarioLwFrames = 0;
+    gNdsFighterSpecialsMarioAirLwFrames = 0;
+    gNdsFighterSpecialsMarioLwDustEffectCount = 0;
+    gNdsFighterSpecialsMarioLwWaitFrames = 0;
+    gNdsFighterSpecialsFoxHiPressFrames = 0;
+    gNdsFighterSpecialsFoxHiStartFrames = 0;
+    gNdsFighterSpecialsFoxHiHoldFrames = 0;
+    gNdsFighterSpecialsFoxHiTravelFrames = 0;
+    gNdsFighterSpecialsFoxHiEndFrames = 0;
+    gNdsFighterSpecialsFoxHiBoundFrames = 0;
+    gNdsFighterSpecialsFoxHiWaitFrames = 0;
+    gNdsFighterSpecialsFoxHiRootYMilli = 0;
     gNdsFighterNaturalMovesetMask = 0;
     gNdsFighterNaturalMovesetPhase = 0;
     gNdsFighterNaturalMovesetPhaseFrames = 0;
@@ -3850,7 +3875,9 @@ extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 /* The natural combat chain (wait/walk/dash-run/brake/turn/approach/attack/
  * damage/guard) needs more scripted frames than the old wait+walk proof. */
 #define NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX 2400u
-#define NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX 6000u
+/* Remaining specials add long original recovery windows, especially Mario's
+ * Super Jump Punch fall-special landing path. */
+#define NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX 9000u
 #define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
 #define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
 #define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u

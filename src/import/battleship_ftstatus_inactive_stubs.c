@@ -26,9 +26,12 @@ NDS_INACTIVE_STATUS_STUB(ftCommonRebirthStandProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthWaitProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthWaitProcInterrupt)
 #endif
+#if !(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+      NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)
 NDS_INACTIVE_STATUS_STUB(ftCommonFallSpecialProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonFallSpecialProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonFallSpecialProcMap)
+#endif
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcPhysics)
@@ -84,16 +87,21 @@ NDS_INACTIVE_STATUS_STUB(ftCommonCaptureCaptainProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureShoulderedProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonAppearProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonAppearProcPhysics)
+#if !NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcMap)
+#endif
+#if !NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialLwProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialLwProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialLwProcMap)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialAirLwProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialAirLwProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialAirLwProcMap)
+#endif
+#if !NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiStartProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiStartProcMap)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiStartProcUpdate)
@@ -113,5 +121,6 @@ NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiEndProcMap)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcMap)
+#endif
 #undef NDS_INACTIVE_STATUS_STUB
 #endif

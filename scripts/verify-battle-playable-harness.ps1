@@ -9,7 +9,10 @@ param(
     [switch]$ImportBattleShipFoxReflector,
     [switch]$ImportBattleShipNormalMoveset,
     [switch]$ImportBattleShipMarioFireball,
-    [switch]$ImportBattleShipFoxBlaster
+    [switch]$ImportBattleShipFoxBlaster,
+    [switch]$ImportBattleShipMarioSpecialHi,
+    [switch]$ImportBattleShipMarioSpecialLw,
+    [switch]$ImportBattleShipFoxSpecialHi
 )
 $ErrorActionPreference = 'Stop'
 $ImportBattleShipNormalMoveset = $true
@@ -23,13 +26,19 @@ if ($ImportBattleShipNormalMoveset -or
     $ImportBattleShipMarioFireball -or
     $ImportBattleShipFoxBlaster -or
     $ImportBattleShipEffectManager -or
-    $ImportBattleShipFoxReflector) {
+    $ImportBattleShipFoxReflector -or
+    $ImportBattleShipMarioSpecialHi -or
+    $ImportBattleShipMarioSpecialLw -or
+    $ImportBattleShipFoxSpecialHi) {
     $suffix = @()
     if ($ImportBattleShipNormalMoveset) { $suffix += 'moveset' }
     if ($ImportBattleShipMarioFireball) { $suffix += 'fireball' }
     if ($ImportBattleShipFoxBlaster) { $suffix += 'blaster' }
     if ($ImportBattleShipEffectManager) { $suffix += 'effect' }
     if ($ImportBattleShipFoxReflector) { $suffix += 'reflector' }
+    if ($ImportBattleShipMarioSpecialHi) { $suffix += 'mariohi' }
+    if ($ImportBattleShipMarioSpecialLw) { $suffix += 'mariolw' }
+    if ($ImportBattleShipFoxSpecialHi) { $suffix += 'foxhi' }
     $target = "$target-$($suffix -join '-')"
     $build = "$build-$($suffix -join '-')"
 }
@@ -47,6 +56,9 @@ if ($ImportBattleShipNormalMoveset -or
     -ImportBattleShipFoxBlaster:$ImportBattleShipFoxBlaster `
     -ImportBattleShipEffectManager:$ImportBattleShipEffectManager `
     -ImportBattleShipFoxReflector:$ImportBattleShipFoxReflector `
+    -ImportBattleShipMarioSpecialHi:$ImportBattleShipMarioSpecialHi `
+    -ImportBattleShipMarioSpecialLw:$ImportBattleShipMarioSpecialLw `
+    -ImportBattleShipFoxSpecialHi:$ImportBattleShipFoxSpecialHi `
     -HardwareTriangles `
     -Harness 'battle_playable' `
     -Target $target `

@@ -1875,7 +1875,17 @@ sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
     {
         gNdsFighterJumpSpecialHiCheckCount++;
     }
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+    {
+        extern sb32 ndsBaseFTCommonSpecialHiCheckInterruptCommon(
+            GObj *fighter_gobj);
+
+        return ndsBaseFTCommonSpecialHiCheckInterruptCommon(fighter_gobj);
+    }
+#else
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
+#endif
 }
 
 sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
@@ -4438,6 +4448,37 @@ void ftPhysicsApplyFastFall(FTStruct *fp, FTAttributes *attr)
     fp->physics.vel_air.y = -attr->tvel_fast;
 }
 
+void ftPhysicsClampGroundVel(FTStruct *fp, f32 clamp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->physics.vel_ground.x < -clamp)
+    {
+        fp->physics.vel_ground.x = -clamp;
+    }
+    else if (fp->physics.vel_ground.x > clamp)
+    {
+        fp->physics.vel_ground.x = clamp;
+    }
+}
+
+void ftPhysicsApplyClampGroundVelStickRange(FTStruct *fp, s32 stick_x_min,
+                                            f32 vel, f32 clamp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (ABS(fp->input.pl.stick_range.x) >= stick_x_min)
+    {
+        fp->physics.vel_ground.x +=
+            (fp->input.pl.stick_range.x * vel * fp->lr);
+        ftPhysicsClampGroundVel(fp, clamp);
+    }
+}
+
 void ftPhysicsClampAirVelX(FTStruct *fp, f32 clamp)
 {
     if (fp == NULL)
@@ -4452,6 +4493,28 @@ void ftPhysicsClampAirVelX(FTStruct *fp, f32 clamp)
     {
         fp->physics.vel_air.x = clamp;
     }
+}
+
+void ftPhysicsClampAirVelY(FTStruct *fp, f32 clamp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->physics.vel_air.y > clamp)
+    {
+        fp->physics.vel_air.y = clamp;
+    }
+}
+
+void ftPhysicsAddClampAirVelY(FTStruct *fp, f32 vel, f32 clamp)
+{
+    if (fp == NULL)
+    {
+        return;
+    }
+    fp->physics.vel_air.y += vel;
+    ftPhysicsClampAirVelY(fp, clamp);
 }
 
 void ftPhysicsClampAirVelXMax(FTStruct *fp)
@@ -4525,23 +4588,33 @@ void ftParamMakeRumble(FTStruct *fp, s32 rumble_id, s32 length)
     }
 }
 
-sb32 ftPhysicsCheckClampAirVelXDecMax(FTStruct *fp, FTAttributes *attr)
+sb32 ftPhysicsCheckClampAirVelXDec(FTStruct *fp, f32 clamp)
 {
-    f32 clamp;
-
-    if ((fp == NULL) || (attr == NULL))
+    if (fp == NULL)
     {
         return FALSE;
     }
-    clamp = attr->air_speed_max_x;
     if (ABSF(fp->physics.vel_air.x) > clamp)
     {
         fp->physics.vel_air.x +=
             (fp->physics.vel_air.x >= 0.0F) ? -1.0F : 1.0F;
-        ftPhysicsClampAirVelX(fp, clamp);
+        if (ABSF(fp->physics.vel_air.x) < clamp)
+        {
+            fp->physics.vel_air.x =
+                (fp->physics.vel_air.x >= 0.0F) ? clamp : -clamp;
+        }
         return TRUE;
     }
     return FALSE;
+}
+
+sb32 ftPhysicsCheckClampAirVelXDecMax(FTStruct *fp, FTAttributes *attr)
+{
+    if ((fp == NULL) || (attr == NULL))
+    {
+        return FALSE;
+    }
+    return ftPhysicsCheckClampAirVelXDec(fp, attr->air_speed_max_x);
 }
 
 void ftPhysicsClampAirVelXStickRange(FTStruct *fp, s32 stick_range_min,
@@ -7153,6 +7226,13 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         gNdsStageMPCliffWaitDamageLoopDownBounceEffectCount++;
         gNdsStageMPCliffWaitDamageLoopDownBounceEffectKind = (u32)effect_id;
     }
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
+    if ((gNdsFighterSpecialsProofPhase == 3u) &&
+        (effect_id == nEFKindDustLight))
+    {
+        gNdsFighterSpecialsMarioLwDustEffectCount++;
+    }
+#endif
     return NULL;
 }
 
@@ -11411,6 +11491,84 @@ sb32 mpCommonCheckFighterLanding(GObj *fighter_gobj)
     return FALSE;
 }
 
+sb32 mpCommonProcFighterOnFloor(GObj *fighter_gobj,
+                                void (*proc_map)(GObj *))
+{
+    if (mpCommonCheckFighterOnFloor(fighter_gobj) == FALSE)
+    {
+        if (proc_map != NULL)
+        {
+            proc_map(fighter_gobj);
+        }
+        return FALSE;
+    }
+    return TRUE;
+}
+
+sb32 mpCommonCheckFighterProject(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    return mpProcessUpdateMain(&fp->coll_data,
+                               ndsMPCommonRunFighterCliffFloorCeilCollisions,
+                               fighter_gobj, MAP_PROC_TYPE_PROJECT);
+}
+
+sb32 mpCommonCheckFighterPass(GObj *fighter_gobj,
+                              sb32 (*proc_map)(GObj *))
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    (void)proc_map;
+
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    return mpProcessUpdateMain(&fp->coll_data,
+                               ndsMPCommonRunFighterCliffFloorCeilCollisions,
+                               fighter_gobj, MAP_PROC_TYPE_PASS);
+}
+
+sb32 mpCommonCheckFighterPassCliff(GObj *fighter_gobj,
+                                   sb32 (*proc_map)(GObj *))
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    (void)proc_map;
+
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    return mpProcessUpdateMain(&fp->coll_data,
+                               ndsMPCommonRunFighterCliffFloorCeilCollisions,
+                               fighter_gobj,
+                               MAP_PROC_TYPE_PASS | MAP_PROC_TYPE_CLIFF);
+}
+
+sb32 mpCommonProcFighterCliff(GObj *fighter_gobj,
+                              void (*proc_map)(GObj *))
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if ((fp != NULL) && (mpCommonCheckFighterCliff(fighter_gobj) != FALSE))
+    {
+        if ((fp->coll_data.mask_stat & MAP_FLAG_CLIFF_MASK) != 0u)
+        {
+            ftCommonCliffCatchSetStatus(fighter_gobj);
+        }
+        else if (proc_map != NULL)
+        {
+            proc_map(fighter_gobj);
+        }
+        return TRUE;
+    }
+    return FALSE;
+}
+
 f32 ftParamGetStickAngleRads(FTStruct *fp)
 {
     if (fp == NULL)
@@ -11428,6 +11586,36 @@ f32 lbCommonMag2D(Vec3f *vec)
         return 0.0F;
     }
     return sqrtf((vec->x * vec->x) + (vec->y * vec->y));
+}
+
+sb32 lbCommonCheckAdjustSim2D(Vec3f *a, Vec3f *b, f32 angle)
+{
+    f32 similarity;
+    f32 orientation;
+    f32 magnitude;
+    f32 denom;
+
+    if ((a == NULL) || (b == NULL))
+    {
+        return FALSE;
+    }
+    denom = lbCommonMag2D(a) + lbCommonMag2D(b);
+    if (denom == 0.0F)
+    {
+        return FALSE;
+    }
+    similarity = ((b->x * a->x) + (b->y * a->y)) / denom;
+    if ((similarity <= 0.0F) &&
+        (similarity >= cosf(angle + F_CST_DTOR32(90.0F))))
+    {
+        orientation = (b->x * a->y) - (b->y * a->x);
+        orientation = (orientation < 0.0F) ? -1.0F : 1.0F;
+        magnitude = lbCommonMag2D(a) * orientation;
+        a->x = -b->y * magnitude;
+        a->y = b->x * magnitude;
+        return TRUE;
+    }
+    return FALSE;
 }
 
 Vec3f *lbCommonAdd2D(Vec3f *a, Vec3f *b)
@@ -11596,23 +11784,60 @@ void ftPhysicsApplyGroundVelTransN(GObj *fighter_gobj)
 void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
                               f32 *vel_z)
 {
+    DObj *topn_joint;
+    DObj *transn_joint;
+    f32 next_x = 0.0F;
+    f32 next_y = 0.0F;
+    f32 next_z = 0.0F;
+
+    if ((fp != NULL) &&
+        (fp->joints[nFTPartsJointTopN] != NULL) &&
+        (fp->joints[nFTPartsJointTransN] != NULL))
+    {
+        topn_joint = fp->joints[nFTPartsJointTopN];
+        transn_joint = fp->joints[nFTPartsJointTransN];
+        next_x = (transn_joint->translate.vec.f.x - fp->anim_vel.x) *
+            topn_joint->scale.vec.f.x;
+        next_y = (transn_joint->translate.vec.f.y - fp->anim_vel.y) *
+            topn_joint->scale.vec.f.y;
+        next_z = (transn_joint->translate.vec.f.z - fp->anim_vel.z) *
+            topn_joint->scale.vec.f.z;
+    }
     if (vel_x != NULL)
     {
-        *vel_x = (fp != NULL) ? fp->physics.vel_air.x : 0.0F;
+        *vel_x = next_x;
     }
     if (vel_y != NULL)
     {
-        *vel_y = (fp != NULL) ? fp->physics.vel_air.y : 0.0F;
+        *vel_y = next_y;
     }
     if (vel_z != NULL)
     {
-        *vel_z = (fp != NULL) ? fp->physics.vel_air.z : 0.0F;
+        *vel_z = next_z;
     }
 }
 
 void ftPhysicsApplyAirVelTransNAll(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if (fp != NULL)
+    {
+        ftPhysicsGetAirVelTransN(fp, &fp->physics.vel_air.x,
+                                 &fp->physics.vel_air.y,
+                                 &fp->physics.vel_air.z);
+    }
+}
+
+void ftPhysicsApplyAirVelTransNYZ(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if (fp != NULL)
+    {
+        ftPhysicsGetAirVelTransN(fp, NULL, &fp->physics.vel_air.y,
+                                 &fp->physics.vel_air.z);
+    }
 }
 
 void mpCollisionGetSpeedLineID(s32 line_id, Vec3f *vel)

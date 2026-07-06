@@ -1,4 +1,7 @@
-#if NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || NDS_IMPORT_BATTLESHIP_FOX_BLASTER
+#if NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || \
+    NDS_IMPORT_BATTLESHIP_FOX_BLASTER || \
+    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
 
 #include <ft/fighter.h>
 
@@ -51,6 +54,17 @@ NDS_SPECIAL_COMMON_WEAK_STATUS(ftCaptainSpecialAirNSetStatus)
 NDS_SPECIAL_COMMON_WEAK_STATUS(ftPikachuSpecialAirNSetStatus)
 NDS_SPECIAL_COMMON_WEAK_STATUS(ftPurinSpecialAirNSetStatus)
 NDS_SPECIAL_COMMON_WEAK_STATUS(ftNessSpecialAirNSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftMarioSpecialHiSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftFoxSpecialHiStartSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftDonkeySpecialHiSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftSamusSpecialHiSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftLinkSpecialHiSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftYoshiSpecialHiSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftCaptainSpecialHiSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftKirbySpecialHiSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftPikachuSpecialHiStartSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftPurinSpecialHiSetStatus)
+NDS_SPECIAL_COMMON_WEAK_STATUS(ftNessSpecialHiStartSetStatus)
 NDS_SPECIAL_COMMON_WEAK_STATUS(ftMarioSpecialAirHiSetStatus)
 NDS_SPECIAL_COMMON_WEAK_STATUS(ftFoxSpecialAirHiStartSetStatus)
 NDS_SPECIAL_COMMON_WEAK_STATUS(ftDonkeySpecialAirHiSetStatus)
@@ -80,5 +94,14 @@ void ftKirbySpecialAirNSetStatusSelect(GObj *fighter_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialn.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialair.c"
+
+#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+#define ftCommonSpecialHiCheckInterruptCommon \
+    ndsBaseFTCommonSpecialHiCheckInterruptCommon
+sb32 ndsBaseFTCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj);
+#include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialhi.c"
+#undef ftCommonSpecialHiCheckInterruptCommon
+#endif
 
 #endif
