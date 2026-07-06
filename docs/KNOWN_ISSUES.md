@@ -97,6 +97,11 @@
   observed weapon frames. Heavy map adjustment, display-scale, particle/glow
   effects, broader projectile victim-damage, shield, reflector, rebound, and
   free-flight proofs remain follow-up.
+- Effect-manager import may load the original common effect banks only after the
+  taskman arena is grown enough to keep the fixed 128 KiB reserve. Common
+  particle script/texture banks remain non-resident for now; particle calls stay
+  on diagnostic/no-op shims until a dedicated particle asset gate budgets or
+  streams the 326 KiB bank pair.
 - `battle_playable` is default for original `gm/gmcamera.c`,
   `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD
   paths, and original `if/ifscreenflash.c`. Mode `163` now proves natural

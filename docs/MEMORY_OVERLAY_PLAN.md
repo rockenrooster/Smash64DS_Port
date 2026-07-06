@@ -272,9 +272,30 @@ Implementation shape:
    behavior must stream/evict the same way.
 
 Status: slices 1 and 2 landed in the live port. The current mode-163 ledger
-reports arena headroom `235220`, resident reloc `618448` bytes
-(`stage=202816`, `fighter=206960`, `if=208672`), stale menu/opening bytes
+reports arena headroom `207900`, resident reloc `653968` bytes
+(`stage=202816`, `fighter=242480`, `if=208672`), stale menu/opening bytes
 `0/0`, and direct-route last eviction `0/0`.
+
+## Effect Manager Gate Decision
+
+BattleShip `efManagerInitEffects` allocates the effect struct pool, creates the
+effect display roots, and unconditionally loads `EFCommonEffects1/2/3`
+(`decomp/BattleShip-main/decomp/src/ef/efmanager.c:1734,1754-1756`). Those
+three common effect banks add 94,944 resident bytes. Current mode-163 headroom
+is about 208 KiB, only about 77 KiB above the fixed 128 KiB reserve, so loading
+the full common effect bank set would miss the reserve by roughly 18 KiB.
+
+For the effect-manager gate, grow the explicit taskman arena from `0x130000` to
+`0x150000` and keep the reserve assertion unchanged. This is still within the
+retail DS 4 MiB target; current renderer/DL/RDP buffers are already ledgered
+from VSBattle setup, and the hardware texture scratch remains opt-in rather
+than an always-resident arena owner. Record before/after mode-163 ledger
+numbers in the effect-manager commit.
+
+Common particle script/texture banks stay non-resident in this slice. They are
+about 326 KiB together and are reached from `efDisplayInitAll` through
+`efParticleGetLoadBankID`; keep particle calls on diagnostic/no-op shims until
+a dedicated particle asset gate can stream or budget them explicitly.
 
 ## Gate Before Breadth
 
