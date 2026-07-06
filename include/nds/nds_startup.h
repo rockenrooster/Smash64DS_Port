@@ -3682,6 +3682,8 @@ extern volatile u32 gNdsFighterNaturalMovesetCatchWaitFrames;
 extern volatile u32 gNdsFighterNaturalMovesetThrowFrames;
 extern volatile u32 gNdsFighterNaturalMovesetThrownFrames;
 extern volatile u32 gNdsFighterNaturalMovesetThrowRecoverFrames;
+extern volatile u32 gNdsFighterNaturalMovesetThrowDamageBefore;
+extern volatile u32 gNdsFighterNaturalMovesetThrowDamageAfter;
 extern volatile u32 gNdsFighterNaturalMovesetAttackerStatus;
 extern volatile u32 gNdsFighterNaturalMovesetAttackerMotion;
 extern volatile u32 gNdsFighterNaturalMovesetAttackerGA;

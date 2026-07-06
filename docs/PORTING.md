@@ -17824,3 +17824,37 @@ Still deferred:
   `verify-battle-playable-harness`, `build-verify-profile -Profile Regression
   -Force`, all four sharded Regression `-NoBuild` runs, and the four targeted
   stage gcDrawAll/collision front-door harnesses.
+
+## 2026-07-05 - Proved Natural Grab/Throw On Battle Playable
+
+- Paid the default-flip Regression debt first with a fresh Regression prebuild
+  and all four sharded `-NoBuild` runs green, then kept the direct/menu
+  init-wait-dash ladder and `verify-boundary` green.
+- Extended mode `163` from the default normal-moveset aerial landing phase into
+  the already-imported natural Catch -> CatchWait -> ThrowF path. The verifier
+  now requires `NAT_MOVESET` mask `0x7ff`, grab/catchwait, throw, thrown,
+  recovery, and a throw-specific victim damage delta.
+- Current proof summary: `moveset=0x7ff phase=15`, `grab=3/1`,
+  `throw=12/5/11`, `throwDmg=0->12`, `bplay=stock8->5 falls0->3`,
+  `hud=dmg12/digits0x1020a stock9->6`, and memory ledger
+  `head207900 reloc653968 stage202816 fighter242480 if208672 stale0/0`.
+
+[source-corrected]
+
+| Change | BattleShip citation |
+|---|---|
+| Mode `163` normal-moveset expectation raised from `0x7f` to `0x7ff`, adding Catch/CatchWait, ThrowF/ThrowB, ThrownCommon, and throw recovery. | `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncatch1.c:111-136`; `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncatch2.c:57-76`; `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrow.c:56-126`; `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonstatus.h:3347-3430` |
+| Mode `163` now asserts throw victim damage increases during the natural throw phase. | `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown2.c:129-180`; `decomp/BattleShip-main/decomp/src/ft/ftparam.c:1527-1537` |
+
+[coverage-reduced]
+
+None. The previous grab/throw ledger reduction is removed. Modes `155/156`
+stay because they still prove bounded ThrowB, ThrownCommon callback/update/map,
+release/update-stats, and dead-result cleanup marker stacks that mode `163`
+does not assert.
+
+- Verified: `verify-dev-fast -Build -DelaySeconds 3`, `verify-boundary
+  -DelaySeconds 3`, `verify-battle-playable-harness -DelaySeconds 3`,
+  `verify-all -Profile RegressionFast -Only battle_playable -DelaySeconds 3`,
+  `verify-all -Profile Regression -Only battle_playable -DelaySeconds 3`,
+  `check-harness-registry`, `check-docs`, and `git diff --check`.

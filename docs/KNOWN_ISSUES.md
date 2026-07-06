@@ -117,11 +117,6 @@
   the stage-side original-manager/animation/ground mask `0x24f` plus stage and
   fighter hardware submission. The 300-frame Wait, Walk, live-hit, and full
   combat ownership stays with modes `39/40`, `161/162`, and `163`.
-- [coverage-reduced] Mode `163` default normal-moveset coverage proves tilts
-  S3/Hi3/Lw3, charged S4, aerial, landing, guard, projectiles, and KO/rebirth,
-  but it does not yet include a complete natural grab/throw phase. Bounded
-  throw helper coverage remains in modes `155/156`; continuous player-driven
-  grab/throw stays follow-up.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and

@@ -5360,6 +5360,21 @@ weapon creation/attack metadata in `wpmanager.c:87`-`:104` and
 immediate hit-destroy path follows `wpmariofireball.c:126`-`:131` and
 `wpprocess.c:469`-`:474`.
 
+## Natural Moveset Marker
+
+Mode `163` prints `NAT_MOVESET` when the default original normal-moveset path
+is active. The required mask is now `0x7ff`: tilts S3/Hi3/Lw3, tilt hitbox,
+charged S4 and hitbox, aerial, landing, Catch/CatchWait, ThrowF/ThrowB,
+ThrownCommon, and throw recovery. The current battle-playable proof reports
+`moveset=0x7ff phase=15`, `grab=3/1`, `throw=12/5/11`, and
+`throwDmg=0->12`.
+
+Catch input and status entry follow `ftcommoncatch1.c:111-136`; CatchWait
+throw dispatch follows `ftcommoncatch2.c:57-76`; ThrowF/ThrowB selection and
+victim thrown setup follow `ftcommonthrow.c:56-126`; throw damage updates
+follow `ftcommonthrown2.c:129-180`; the source descriptor table wiring is
+`ftcommonstatus.h:3347-3430`.
+
 - `STAGE_MPDOWNWAIT`: direct/menu DownWait-loop result, safe result, proof
   mask, deferred mask, and selected fighter count. Current pass values are
   `0x46445749`, `0x46445755`, mask `0x3ffff`, deferred mask `0x3ffff`, and

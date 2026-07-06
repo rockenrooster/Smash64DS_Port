@@ -516,6 +516,8 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterNaturalMovesetThrowFrames = 0;
     gNdsFighterNaturalMovesetThrownFrames = 0;
     gNdsFighterNaturalMovesetThrowRecoverFrames = 0;
+    gNdsFighterNaturalMovesetThrowDamageBefore = 0;
+    gNdsFighterNaturalMovesetThrowDamageAfter = 0;
     gNdsFighterNaturalMovesetAttackerStatus = 0;
     gNdsFighterNaturalMovesetAttackerMotion = 0;
     gNdsFighterNaturalMovesetAttackerGA = 0;

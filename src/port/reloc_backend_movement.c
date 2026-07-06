@@ -9684,19 +9684,6 @@ static void ndsFighterBattlePlayableRecordVictim(FTStruct *victim)
     {
         return;
     }
-    if ((gNdsFighterBattlePlayableMask & 0x7fu) == 0x7fu)
-    {
-        if ((gNdsFighterNaturalMotionUnsafeCount == 0u) &&
-            (gNdsFighterNaturalCombatStallCount == 0u) &&
-            (sNdsNaturalCombatPhase ==
-                nNDSNaturalCombatPhaseBattlePlayableDone))
-        {
-            gNdsFighterBattlePlayableMask |= 1u << 7;
-            gNdsFighterBattlePlayableResult =
-                NDS_FIGHTER_BATTLE_PLAYABLE_PASS;
-        }
-        return;
-    }
 
     gNdsFighterBattlePlayableVictimStockFinal = (u32)victim->stock_count;
     gNdsFighterBattlePlayableBattleStockFinal =
@@ -9722,6 +9709,20 @@ static void ndsFighterBattlePlayableRecordVictim(FTStruct *victim)
             ndsFloatToMilliSigned(victim->coll_data.p_translate->x);
         gNdsFighterBattlePlayableFinalYMilli =
             ndsFloatToMilliSigned(victim->coll_data.p_translate->y);
+    }
+
+    if ((gNdsFighterBattlePlayableMask & 0x7fu) == 0x7fu)
+    {
+        if ((gNdsFighterNaturalMotionUnsafeCount == 0u) &&
+            (gNdsFighterNaturalCombatStallCount == 0u) &&
+            (sNdsNaturalCombatPhase ==
+                nNDSNaturalCombatPhaseBattlePlayableDone))
+        {
+            gNdsFighterBattlePlayableMask |= 1u << 7;
+            gNdsFighterBattlePlayableResult =
+                NDS_FIGHTER_BATTLE_PLAYABLE_PASS;
+        }
+        return;
     }
 
     if ((gSCManagerBattleState->game_rules & SCBATTLE_GAMERULE_STOCK) != 0)
@@ -10615,11 +10616,8 @@ static sb32 ndsFighterNaturalMovesetAdvance(FTStruct *fp[2])
         if ((gNdsFighterNaturalMovesetLandingFrames > 0u) &&
             (ndsFighterNaturalMovesetSettled(fp) != FALSE))
         {
-            ndsFighterNaturalMovesetUpdateMask();
-            sNdsNaturalMovesetDone = 1u;
             ndsFighterNaturalMovesetSetPhase(
-                nNDSNaturalMovesetPhaseDone);
-            return TRUE;
+                nNDSNaturalMovesetPhaseGrabCatch);
         }
         break;
     case nNDSNaturalMovesetPhaseGrabCatch:

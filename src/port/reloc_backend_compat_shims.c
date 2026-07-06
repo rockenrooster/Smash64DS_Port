@@ -6992,6 +6992,17 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
 {
     if (fp != NULL)
     {
+        s32 percent_before = fp->percent_damage;
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+        if (((gNdsFighterNaturalMovesetPhase == 13u) ||
+             (gNdsFighterNaturalMovesetPhase == 14u)) &&
+            (gNdsFighterNaturalMovesetThrowDamageAfter == 0u) &&
+            (gNdsFighterNaturalMovesetThrowDamageBefore == 0u))
+        {
+            gNdsFighterNaturalMovesetThrowDamageBefore =
+                (u32)percent_before;
+        }
+#endif
         fp->percent_damage += damage;
         fp->damage += damage;
         if (gSCManagerBattleState != NULL)
@@ -7005,6 +7016,17 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
             gSCManagerBattleState->players[fp->player].stock_damage_all =
                 fp->percent_damage;
         }
+#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
+        if (((gNdsFighterNaturalMovesetPhase == 13u) ||
+             (gNdsFighterNaturalMovesetPhase == 14u)) &&
+            (damage > 0) &&
+            ((u32)fp->percent_damage >
+                gNdsFighterNaturalMovesetThrowDamageAfter))
+        {
+            gNdsFighterNaturalMovesetThrowDamageAfter =
+                (u32)fp->percent_damage;
+        }
+#endif
     }
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))

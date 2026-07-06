@@ -42,7 +42,8 @@ Mario/Fox stock battle with imported battle camera, Dead, and Rebirth live by
 default, then proves a natural attack/damage chain, KO, stock decrement,
 falls increment, RebirthDown -> RebirthStand -> RebirthWait, return to Wait,
 normal tilts/smash/aerial coverage, Mario fireball, Fox blaster, guard, and a
-DS 3D hardware stage + fighter frame.
+natural grab/throw damage/recover phase plus a DS 3D hardware stage + fighter
+frame.
 
 ## Latest Proof
 
@@ -71,16 +72,17 @@ seam in `ftMainSetStatus` is still documented as follow-up.
 `battle_playable` graduated to default for `gm/gmcamera.c`,
 `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD,
 original `if/ifscreenflash.c`, normal moveset TUs, the weapon manager, Mario
-fireball, and Fox blaster. The mode-163 proof reports `stock8->7`,
-`falls0->1`, `moveset=0x7f phase=15`, `tilt=23/17/17`, `smash=13`,
-`aerial=19`, `landing=26`, `hud=dmg12/digits0x1020a stock9->7`,
+fireball, and Fox blaster. The mode-163 proof reports `stock8->5`,
+`falls0->3`, `moveset=0x7ff phase=15`, `tilt=23/17/17`, `smash=13`,
+`aerial=19`, `landing=26`, `grab=3/1`, `throw=12/5/11`,
+`throwDmg=0->12`, `hud=dmg12/digits0x1020a stock9->6`,
 `projectile=... spawn=1`, and `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`.
-Timer, pause/end UI, magnify/arrows, tags, effects/items, broader SObj/RDP
-helpers, and continuous player-driven grab/throw remain follow-up.
+Timer, pause/end UI, magnify/arrows, tags, effects/items, and broader
+SObj/RDP helpers remain follow-up.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
-cache eviction. Mode `163` reports headroom `208224`, resident reloc `646352`
-bytes (`stage=202816`, `fighter=234864`, `if=208672`), stale `0/0`, and
+cache eviction. Mode `163` reports headroom `207900`, resident reloc `653968`
+bytes (`stage=202816`, `fighter=242480`, `if=208672`), stale `0/0`, and
 source VSBattle buffers from `scvsbattle.c:31-41`.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage

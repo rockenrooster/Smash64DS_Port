@@ -37,7 +37,8 @@ Pupupu Mario/Fox stock battle with the imported battle camera, Dead, and
 Rebirth live by default, then proves natural attack/damage, KO, stock
 decrement, falls increment, RebirthDown -> RebirthStand -> RebirthWait, return
 to Wait, normal tilts/smash/aerial coverage, Mario fireball, Fox blaster,
-guard, and a DS 3D hardware stage + fighter frame.
+guard, natural grab/throw damage/recover, and a DS 3D hardware stage +
+fighter frame.
 
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
 `33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair
@@ -87,14 +88,15 @@ instead of resurrecting their motion-extract and synthetic marker seams.
 original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`,
 battle-critical `if/ifcommon.c` HUD paths, original `if/ifscreenflash.c`, the
 normal moveset imports, the weapon manager, Mario fireball, and Fox blaster.
-The mode-163 proof reports `stock8->7`, `falls0->1`,
-`moveset=0x7f phase=15`, `tilt=23/17/17`, `smash=13`, `aerial=19`,
-`landing=26`, `hud=dmg12/digits0x1020a stock9->7`, `projectile=... spawn=1`,
-and `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. Timer, pause/end UI,
-magnify/arrows, tags, effects/items, broader SObj/RDP helper coverage, and
-continuous player-driven grab/throw remain follow-up.
-It also gates the memory ledger: current arena headroom is `208224`, resident
-reloc payloads are `646352` bytes (`stage=202816`, `fighter=234864`,
+The mode-163 proof reports `stock8->5`, `falls0->3`,
+`moveset=0x7ff phase=15`, `tilt=23/17/17`, `smash=13`, `aerial=19`,
+`landing=26`, `grab=3/1`, `throw=12/5/11`, `throwDmg=0->12`,
+`hud=dmg12/digits0x1020a stock9->6`, `projectile=... spawn=1`, and
+`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. Timer, pause/end UI,
+magnify/arrows, tags, effects/items, and broader SObj/RDP helper coverage
+remain follow-up.
+It also gates the memory ledger: current arena headroom is `207900`, resident
+reloc payloads are `653968` bytes (`stage=202816`, `fighter=242480`,
 `if=208672`), and stale menu/opening payload bytes are `0/0`.
 
 ## Process Change
