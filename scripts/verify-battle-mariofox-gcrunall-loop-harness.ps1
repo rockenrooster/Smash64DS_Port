@@ -10,6 +10,7 @@ param(
     [switch]$ImportBattleShipIFCommon,
     [switch]$ImportBattleShipMarioFireball,
     [switch]$ImportBattleShipFoxBlaster,
+    [switch]$ImportBattleShipEffectManager,
     [switch]$ImportBattleShipNormalMoveset,
     [switch]$HardwareTriangles,
     [switch]$BattlePlayable,
@@ -94,6 +95,9 @@ if ($ImportBattleShipMarioFireball) {
 }
 if ($ImportBattleShipFoxBlaster) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1'
+}
+if ($ImportBattleShipEffectManager) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=1'
 }
 if ($ImportBattleShipNormalMoveset) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET=1'

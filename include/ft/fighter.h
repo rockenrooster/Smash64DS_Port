@@ -4121,8 +4121,8 @@ GObj *ftShadowMakeShadow(GObj *fighter_gobj);
 void ftKirbyCopyLinkSpecialNDestroyBoomerang(GObj *fighter_gobj);
 void ftLinkSpecialNDestroyBoomerang(GObj *fighter_gobj);
 s32 efParticleGetBankID(uintptr_t scripts_lo);
-s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
-                            void *texture_lo, void *texture_hi);
+s32 efParticleGetLoadBankID(uintptr_t script_lo, uintptr_t script_hi,
+                            uintptr_t texture_lo, uintptr_t texture_hi);
 
 #ifndef ABS
 #define ABS(x) (((x) < 0) ? -(x) : (x))

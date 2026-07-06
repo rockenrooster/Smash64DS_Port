@@ -27,6 +27,7 @@ override NDS_IMPORT_BATTLESHIP_IFCOMMON := 1
 override NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER := 1
 override NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL := 1
 override NDS_IMPORT_BATTLESHIP_FOX_BLASTER := 1
+NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER ?= 0
 ifeq ($(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL),1)
 override NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER := 1
 endif
@@ -416,6 +417,7 @@ CFLAGS += -DNDS_IMPORT_BATTLESHIP_IFCOMMON=$(NDS_IMPORT_BATTLESHIP_IFCOMMON)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_WEAPON_MANAGER=$(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=$(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_FOX_BLASTER=$(NDS_IMPORT_BATTLESHIP_FOX_BLASTER)
+CFLAGS += -DNDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=$(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER)
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
@@ -519,6 +521,9 @@ CFILES += battleship_mario_fireball.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_BLASTER),1)
 CFILES += battleship_fox_blaster.c
+endif
+ifeq ($(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER),1)
+CFILES += battleship_efmanager.c
 endif
 CFILES += battleship_ftmain.c
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
@@ -685,6 +690,11 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim137 \
 	reloc_animations/FTFoxAnim138
 
+NDS_EFFECT_RELOC_FILES := \
+	reloc_effects/EFCommonEffects1 \
+	reloc_effects/EFCommonEffects2 \
+	reloc_effects/EFCommonEffects3
+
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \
 	reloc_interface/IFCommonGameStatus \
@@ -718,6 +728,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_PUPUPU_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_EFFECT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
 export NDS_NITROFS_RELOCDATA_FILES := \

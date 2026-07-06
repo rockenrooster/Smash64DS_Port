@@ -222,6 +222,12 @@ typedef struct WPStruct {
         } fireball;
         struct {
             s32 status;
+            f32 angle;
+            GObj *parent_gobj;
+            GObj *trail_gobj[WPPKTHUNDER_PARTS_COUNT];
+        } pkthunder;
+        struct {
+            s32 status;
             s32 trail_id;
             GObj *parent_gobj;
             GObj *head_gobj;

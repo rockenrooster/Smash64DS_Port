@@ -43,7 +43,7 @@ extern void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
                               f32 anim_frame);
 extern void gcPlayAnimAll(GObj *gobj);
 extern void gcSetupCustomDObjs(GObj *gobj, DObjDesc *dobjdesc, DObj **dobjs,
-                               u32 matrix_kind, u32 mobj_kind, u32 aobj_kind);
+                               u8 matrix_kind, u8 mobj_kind, u8 aobj_kind);
 extern void grWallpaperResumePerspUpdate(void);
 extern void grWallpaperPausePerspUpdate(void);
 extern void grWallpaperRunProcessAll(void);

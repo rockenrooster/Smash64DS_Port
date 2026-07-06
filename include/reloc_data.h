@@ -5,6 +5,7 @@
 
 #include <PR/ultratypes.h>
 
+#ifndef _LBTYPES_H_
 typedef struct LBFileNode {
     u32 id;
     void *addr;
@@ -20,6 +21,7 @@ typedef struct LBRelocSetup {
     LBFileNode *force_status_buffer;
     s32 force_status_buffer_size;
 } LBRelocSetup;
+#endif
 
 extern uintptr_t lLBRelocTableAddr;
 extern u32 llRelocFileCount;
@@ -39,6 +41,9 @@ extern uintptr_t llSYKseg1ValidateNBytes;
 extern uintptr_t llFTManagerCommonFileID;
 extern uintptr_t llFTCommonMovesetFileID;
 extern uintptr_t llKirbyMainMotionSpecialNFTKirbyCopy;
+extern uintptr_t llEFCommonEffects1FileID;
+extern uintptr_t llEFCommonEffects2FileID;
+extern uintptr_t llEFCommonEffects3FileID;
 extern uintptr_t llMarioMainMotionFileID;
 extern uintptr_t llMarioMainFileID;
 extern uintptr_t llMarioSpecial1FileID;

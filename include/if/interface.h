@@ -108,8 +108,8 @@ extern u8 dIFCommonPlayerTagEnvColorsB[];
 extern IFPlayerCommon gIFCommonPlayerInterface;
 
 void efParticleInitAll(void);
-s32 efParticleGetLoadBankID(void *script_lo, void *script_hi,
-                            void *texture_lo, void *texture_hi);
+s32 efParticleGetLoadBankID(uintptr_t script_lo, uintptr_t script_hi,
+                            uintptr_t texture_lo, uintptr_t texture_hi);
 LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 generator_id);
 void lbParticleDrawTextures(GObj *gobj);
 void ifCommonPlayerDamageSetShowInterface(void);

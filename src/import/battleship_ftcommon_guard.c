@@ -23,6 +23,7 @@ typedef struct EFStruct {
         } shield;
     } effect_vars;
 } EFStruct;
+typedef struct LBParticle LBParticle;
 
 void ftParamSetHitStatusPartID(GObj *fighter_gobj, s32 joint_id,
                                s32 hitstatus);
@@ -33,7 +34,7 @@ void ftParamsUpdateFighterPartsTransform(DObj *joint);
 void ftParamsUpdateFighterPartsTransformAll(DObj *joint);
 void ftCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj);
 void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec);
-void efManagerEggBreakMakeEffect(Vec3f *pos);
+LBParticle *efManagerEggBreakMakeEffect(Vec3f *pos);
 GObj *efManagerShieldMakeEffect(GObj *fighter_gobj);
 GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj);
 EFStruct *efGetStruct(GObj *effect_gobj);

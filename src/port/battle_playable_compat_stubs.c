@@ -87,17 +87,21 @@ NDS_WEAK void itMainDestroyItem(GObj *item_gobj)
     (void)item_gobj;
 }
 
-NDS_WEAK void efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, s32 kind)
+NDS_WEAK GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player,
+                                              u32 kind)
 {
     (void)pos;
     (void)player;
     (void)kind;
+    return NULL;
 }
 
-NDS_WEAK void efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale)
+NDS_WEAK LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos,
+                                                         f32 scale)
 {
     (void)pos;
     (void)scale;
+    return NULL;
 }
 
 NDS_WEAK GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)

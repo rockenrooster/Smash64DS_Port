@@ -6442,6 +6442,9 @@ uintptr_t llSYKseg1ValidateFunc;
 uintptr_t llSYKseg1ValidateNBytes;
 uintptr_t llFTManagerCommonFileID;
 uintptr_t llFTCommonMovesetFileID = 0xc9u;
+uintptr_t llEFCommonEffects1FileID;
+uintptr_t llEFCommonEffects2FileID;
+uintptr_t llEFCommonEffects3FileID;
 uintptr_t llMarioMainMotionFileID;
 uintptr_t llMarioMainFileID;
 uintptr_t llMarioSpecial1FileID;
@@ -6711,7 +6714,7 @@ extern OSMesgQueue sSYTaskmanGameTicMesgQueue;
 extern void func_80005BFC(void);
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
-#define NDS_TASKMAN_ARENA_SIZE 0x130000u
+#define NDS_TASKMAN_ARENA_SIZE 0x150000u
 #else
 #define NDS_TASKMAN_ARENA_SIZE (1024u * 1024u)
 #endif

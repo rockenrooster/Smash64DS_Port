@@ -50,6 +50,7 @@ typedef enum gmFGMID
     nSYAudioFGMDeadExplodeS = 155,
     nSYAudioFGMPlayerSlotClose = 176,
     nSYAudioFGMPlayerSlotWhoosh = 177,
+    nSYAudioFGMKirbyStarPing1 = 200,
     nSYAudioFGMKirbySpecialNLoseCopy = 204,
     nSYAudioFGMMarioSpecialHiCoin = 216,
     nSYAudioFGMMagnify = 271,

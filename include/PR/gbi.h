@@ -109,8 +109,12 @@ typedef union {
 #define G_RM_AA_ZB_OPA_SURF2 0u
 #define G_RM_AA_ZB_XLU_SURF 0u
 #define G_RM_AA_ZB_XLU_SURF2 0u
+#define G_RM_CLD_SURF 0u
+#define G_RM_CLD_SURF2 0u
 #define G_RM_OPA_SURF 0u
 #define G_RM_OPA_SURF2 0u
+#define G_RM_XLU_SURF 0u
+#define G_RM_XLU_SURF2 0u
 #define G_RM_NOOP 0u
 #define G_RM_NOOP2 0u
 #define G_AC_NONE 0u

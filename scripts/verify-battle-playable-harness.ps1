@@ -5,6 +5,7 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
+    [switch]$ImportBattleShipEffectManager,
     [switch]$ImportBattleShipNormalMoveset,
     [switch]$ImportBattleShipMarioFireball,
     [switch]$ImportBattleShipFoxBlaster
@@ -17,11 +18,13 @@ $target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 if ($ImportBattleShipNormalMoveset -or
     $ImportBattleShipMarioFireball -or
-    $ImportBattleShipFoxBlaster) {
+    $ImportBattleShipFoxBlaster -or
+    $ImportBattleShipEffectManager) {
     $suffix = @()
     if ($ImportBattleShipNormalMoveset) { $suffix += 'moveset' }
     if ($ImportBattleShipMarioFireball) { $suffix += 'fireball' }
     if ($ImportBattleShipFoxBlaster) { $suffix += 'blaster' }
+    if ($ImportBattleShipEffectManager) { $suffix += 'effect' }
     $target = "$target-$($suffix -join '-')"
     $build = "$build-$($suffix -join '-')"
 }
@@ -37,6 +40,7 @@ if ($ImportBattleShipNormalMoveset -or
     -ImportBattleShipNormalMoveset:$ImportBattleShipNormalMoveset `
     -ImportBattleShipMarioFireball:$ImportBattleShipMarioFireball `
     -ImportBattleShipFoxBlaster:$ImportBattleShipFoxBlaster `
+    -ImportBattleShipEffectManager:$ImportBattleShipEffectManager `
     -HardwareTriangles `
     -Harness 'battle_playable' `
     -Target $target `
