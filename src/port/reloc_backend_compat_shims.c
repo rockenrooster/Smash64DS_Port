@@ -1509,19 +1509,6 @@ void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj)
     ftCommonShieldBreakFlyCommonSetStatus(fighter_gobj);
 }
 
-#if !NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
-void ftFoxSpecialLwHitSetStatus(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp != NULL)
-    {
-        fp->lr = fp->reflect_lr;
-        fp->is_reflect = TRUE;
-    }
-}
-#endif
-
 void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -1890,13 +1877,6 @@ sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
     }
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
-
-#if !NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
-sb32 ftCommonSpecialLwCheckInterruptCommon(GObj *fighter_gobj)
-{
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
-}
-#endif
 
 sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
 {
@@ -13176,13 +13156,6 @@ void itManagerInitItems(void)
     gNdsSCVSBattleCompatManagerMask |= 1u << 8;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
 }
-
-#if !NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER
-void efManagerInitEffects(void)
-{
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
-}
-#endif
 
 void lbBackupIsSramValid(void)
 {
