@@ -21,6 +21,7 @@ $ImportBattleShipFoxBlaster = $true
 $ImportBattleShipEffectManager = $true
 $ImportBattleShipFoxReflector = $true
 $ImportBattleShipMarioSpecialHi = $true
+$ImportBattleShipMarioSpecialLw = $true
 $target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 if ($ImportBattleShipNormalMoveset -or
