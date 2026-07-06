@@ -17803,3 +17803,24 @@ Still deferred:
   -ImportBattleShipFoxBlaster`, and
   `verify-battle-playable-harness.ps1 -ImportBattleShipMarioFireball` with
   `-DelaySeconds 3`.
+
+## 2026-07-05 - Normal Moveset And Projectile Defaults
+
+- Rebased and consolidated the parked normal-moveset branch, then graduated
+  `NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET`, `NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER`,
+  `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL`, and
+  `NDS_IMPORT_BATTLESHIP_FOX_BLASTER` to default.
+- Mode `163` now proves movement, Fox Jab, tilts S3/Hi3/Lw3, charged S4,
+  aerial/landing, Mario fireball, Fox blaster, guard, and a natural KO/rebirth
+  cycle in one `battle_playable` scene. Current memory ledger:
+  `head208224 reloc646352 stage202816 fighter234864 if208672 stale0/0`.
+- Scoped stage gcDrawAll/collision/floor/MP routes to a stage-side
+  original-manager smoke proof (`mask=0x24f`) plus DS 3D stage/fighter hardware
+  submission. Full Wait/Walk/live-hit/combat ownership remains with the
+  movement, boundary, and `battle_playable` modes.
+- [coverage-reduced] Continuous player-driven grab/throw is still deferred;
+  bounded throw helper coverage remains in modes `155/156`.
+- Verified: direct/menu init-wait-dash ladder, `verify-boundary`,
+  `verify-battle-playable-harness`, `build-verify-profile -Profile Regression
+  -Force`, all four sharded Regression `-NoBuild` runs, and the four targeted
+  stage gcDrawAll/collision front-door harnesses.

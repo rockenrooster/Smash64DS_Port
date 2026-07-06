@@ -86,12 +86,12 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
-- Default-off `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1` and
+- Default `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1` and
   `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1` import the original common
   neutral-special B-input TUs through `src/import/battleship_special_common.c`
   and then import Mario `ftmariospecialn.c`/`wpmariofireball.c` or Fox
-  `ftfoxspecialn.c`/`wpfoxblaster.c`. The mode-163 fenced projectile proof
-  drives natural B input through original status tables and motion commands:
+  `ftfoxspecialn.c`/`wpfoxblaster.c`. The mode-163 projectile proof drives
+  natural B input through original status tables and motion commands:
   Mario creates a fireball and exercises the original immediate hit-destroy
   callback path; Fox creates a live blaster that remains resident for 27
   observed weapon frames. Heavy map adjustment, display-scale, particle/glow
@@ -113,6 +113,15 @@
   Modes `161/162` and `163` prove natural Attack11 hitbox, hit/damage/recover,
   guard, KO, and HUD stock updates through the original manager/runtime; the
   older synthetic source-order/private-hitlog marker stack is not reproduced.
+- [coverage-reduced] Stage gcDrawAll/collision/floor/MP smoke modes now assert
+  the stage-side original-manager/animation/ground mask `0x24f` plus stage and
+  fighter hardware submission. The 300-frame Wait, Walk, live-hit, and full
+  combat ownership stays with modes `39/40`, `161/162`, and `163`.
+- [coverage-reduced] Mode `163` default normal-moveset coverage proves tilts
+  S3/Hi3/Lw3, charged S4, aerial, landing, guard, projectiles, and KO/rebirth,
+  but it does not yet include a complete natural grab/throw phase. Bounded
+  throw helper coverage remains in modes `155/156`; continuous player-driven
+  grab/throw stays follow-up.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and

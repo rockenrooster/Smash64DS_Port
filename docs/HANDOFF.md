@@ -36,7 +36,8 @@ Mode `163` is the scene-level `battle_playable` Boundary/Latest anchor. It runs
 Pupupu Mario/Fox stock battle with the imported battle camera, Dead, and
 Rebirth live by default, then proves natural attack/damage, KO, stock
 decrement, falls increment, RebirthDown -> RebirthStand -> RebirthWait, return
-to Wait, and a DS 3D hardware stage + fighter frame.
+to Wait, normal tilts/smash/aerial coverage, Mario fireball, Fox blaster,
+guard, and a DS 3D hardware stage + fighter frame.
 
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
 `33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair
@@ -49,11 +50,11 @@ submits 284/298 fighter triangles. The all-DL proof carries the
 source-equivalent segment `0xE` material register, RSP vertex/render state,
 original fighter-part MObjs, and CI TLUT seeds from the current material
 palette. All-DL now reports `bind119/upload8/ready119/reject0`. The
-stage-inclusive `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive defaults now submit the Pupupu stage plus
-both selected live fighters in one frame: `hwsubmit=252`, `hwtri=1152`,
-`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active boundary
-wrappers assert that stage + both-fighter DS 3D replay after the imported
-manager combat chain passes. Latest captures include
+stage-inclusive `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive defaults now use a stage-side original-manager smoke proof
+(`mask=0x24f`) and submit the Pupupu stage plus both selected live fighters in
+one frame: `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, and
+`bind97/upload11/ready97/reject0`. The active boundary wrappers and mode `163`
+keep fuller movement/live-hit/combat ownership. Latest captures include
 `artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures through MP Passive,
 menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
 Global normal builds still use the software preview.
@@ -83,21 +84,18 @@ gcDrawAll modes `57/58` and selected Fox Jab2 modes `159/160` were deleted
 instead of resurrecting their motion-extract and synthetic marker seams.
 
 `battle_playable` default: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now links
-original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`, and
-battle-critical `if/ifcommon.c` HUD paths plus original `if/ifscreenflash.c`.
-The mode-163 proof reports
-`stock2->1`, `falls0->1`, Dead/Rebirth/return-control frames,
-`hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`, `hwtri=192`,
-`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, effects/items, and
-broader SObj/RDP helper coverage remain follow-up.
-It also gates the memory ledger: current arena headroom is `235220`, resident
-reloc payloads are `618448` bytes (`stage=202816`, `fighter=206960`,
+original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`,
+battle-critical `if/ifcommon.c` HUD paths, original `if/ifscreenflash.c`, the
+normal moveset imports, the weapon manager, Mario fireball, and Fox blaster.
+The mode-163 proof reports `stock8->7`, `falls0->1`,
+`moveset=0x7f phase=15`, `tilt=23/17/17`, `smash=13`, `aerial=19`,
+`landing=26`, `hud=dmg12/digits0x1020a stock9->7`, `projectile=... spawn=1`,
+and `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. Timer, pause/end UI,
+magnify/arrows, tags, effects/items, broader SObj/RDP helper coverage, and
+continuous player-driven grab/throw remain follow-up.
+It also gates the memory ledger: current arena headroom is `208224`, resident
+reloc payloads are `646352` bytes (`stage=202816`, `fighter=234864`,
 `if=208672`), and stale menu/opening payload bytes are `0/0`.
-
-Default-off neutral-projectile gates now drive Mario fireball and Fox blaster
-from B input through original common SpecialN, imported character callbacks,
-and imported weapon factories. Effects and broader projectile collision routes
-remain open.
 
 ## Process Change
 

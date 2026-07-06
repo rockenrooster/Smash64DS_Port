@@ -41,7 +41,8 @@ Mode `163` is the new scene-level `battle_playable` anchor. It runs Pupupu
 Mario/Fox stock battle with imported battle camera, Dead, and Rebirth live by
 default, then proves a natural attack/damage chain, KO, stock decrement,
 falls increment, RebirthDown -> RebirthStand -> RebirthWait, return to Wait,
-and a DS 3D hardware stage + fighter frame.
+normal tilts/smash/aerial coverage, Mario fireball, Fox blaster, guard, and a
+DS 3D hardware stage + fighter frame.
 
 ## Latest Proof
 
@@ -69,21 +70,18 @@ seam in `ftMainSetStatus` is still documented as follow-up.
 
 `battle_playable` graduated to default for `gm/gmcamera.c`,
 `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD,
-and original `if/ifscreenflash.c`. The mode-163 proof reports `stock2->1`,
-`falls0->1`, Dead/Rebirth/return-control frames,
-`hud=dmg4/digits0x40a stock3->2`, and `hwsubmit=42`, `hwtri=192`,
-`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, effects/items, and
-broader SObj/RDP helper coverage remain interface follow-up.
-
-Default-off neutral-projectile gates now prove natural B input through original
-common SpecialN into imported Mario fireball and Fox blaster creation:
-Mario records immediate hit-callback destroy, and Fox records a 27-frame live
-blaster. Effects and broader shield/reflect/rebound/victim-damage routes stay
-follow-up.
+original `if/ifscreenflash.c`, normal moveset TUs, the weapon manager, Mario
+fireball, and Fox blaster. The mode-163 proof reports `stock8->7`,
+`falls0->1`, `moveset=0x7f phase=15`, `tilt=23/17/17`, `smash=13`,
+`aerial=19`, `landing=26`, `hud=dmg12/digits0x1020a stock9->7`,
+`projectile=... spawn=1`, and `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`.
+Timer, pause/end UI, magnify/arrows, tags, effects/items, broader SObj/RDP
+helpers, and continuous player-driven grab/throw remain follow-up.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
-cache eviction. Mode `163` reports headroom `235220`, resident reloc `618448`
-bytes, stale `0/0`, and source VSBattle buffers from `scvsbattle.c:31-41`.
+cache eviction. Mode `163` reports headroom `208224`, resident reloc `646352`
+bytes (`stage=202816`, `fighter=234864`, `if=208672`), stale `0/0`, and
+source VSBattle buffers from `scvsbattle.c:31-41`.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage
 draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair `161/162`;
@@ -97,12 +95,13 @@ selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
 texture path reports `bind119/upload8/ready119/reject0`. That proof carries
 original fighter-part MObjs, the source-equivalent segment `0xE` material
 register, RSP vertex/render state, and CI TLUT seeds from the current material
-palette. The stage `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive hardware defaults now submit the
-Pupupu stage and both selected manager-created fighters in one hardware frame
-on direct and menu-chain routes: `hwsubmit=252`, `hwtri=1152`,
-`hwftr=2/582`, and `bind582/upload66/ready582/reject0`. The active natural-
-combat boundary wrappers assert that stage + both-fighter DS 3D replay after
-the imported manager combat chain passes. Latest captures include
+palette. The stage `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive hardware defaults now use a
+stage-side original-manager smoke proof (`mask=0x24f`) and submit the Pupupu
+stage plus both selected fighters in one hardware frame on direct and menu-chain
+routes: `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, and
+`bind97/upload11/ready97/reject0`. The active natural-combat boundary wrappers
+and mode `163` retain the fuller movement/live-hit/combat ownership. Latest
+captures include
 `artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures through MP Passive,
 menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
 Full visual fidelity still needs broader source-scene coverage and cutover work.
