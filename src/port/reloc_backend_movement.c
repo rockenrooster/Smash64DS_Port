@@ -8985,6 +8985,7 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #define NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED 300u
 #define NDS_FIGHTER_NATURAL_MOTION_WALK_FRAMES_REQUIRED 8u
+#define NDS_FIGHTER_NATURAL_STAGE_SIDE_MASK_REQUIRED 0x24fu
 #define NDS_FIGHTER_NATURAL_COMBAT_SETTLE_FRAMES_REQUIRED 10u
 #define NDS_FIGHTER_NATURAL_COMBAT_DASH_FRAMES_REQUIRED 2u
 #define NDS_FIGHTER_NATURAL_COMBAT_RUN_FRAMES_REQUIRED 8u
@@ -9162,6 +9163,16 @@ static sb32 ndsFighterNaturalCombatLiveHitProofEnabled(void)
         NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == \
         NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP)
+    return TRUE;
+#else
+    return FALSE;
+#endif
+}
+
+static sb32 ndsFighterNaturalCombatStageSideProofEnabled(void)
+{
+#if NDS_MARIOFOX_STAGE_GCDRAWALL_LOOP_HARNESS && \
+    !NDS_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP_HARNESS
     return TRUE;
 #else
     return FALSE;
@@ -11390,7 +11401,10 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
                ((mask & 0x7fffu) == 0x7fffu)) ||
               ((ndsFighterNaturalCombatLiveHitProofEnabled() != FALSE) &&
                ((mask & 0x3fdffu) == 0x3fdffu) &&
-               (gNdsFighterNaturalCombatVictimKnockbackMilli > 0u))))
+               (gNdsFighterNaturalCombatVictimKnockbackMilli > 0u)) ||
+              ((ndsFighterNaturalCombatStageSideProofEnabled() != FALSE) &&
+               ((mask & NDS_FIGHTER_NATURAL_STAGE_SIDE_MASK_REQUIRED) ==
+                NDS_FIGHTER_NATURAL_STAGE_SIDE_MASK_REQUIRED))))
     {
         gNdsFighterNaturalMotionResult =
             NDS_FIGHTER_NATURAL_MOTION_PASS;

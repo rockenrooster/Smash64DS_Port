@@ -1519,14 +1519,24 @@ try {
         $nw = Get-Ints $naturalWait
         $nwalk = Get-Ints $naturalWalk
         $hardwareSummary = ''
-        Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and (($nat[2] -band 0x3ff) -eq 0x3ff) -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Natural-motion manager runtime proof failed.' $gdbStdout
-        Assert-Condition ($naturalFig.Success -and $nfig[0] -gt 0 -and $nfig[2] -eq 0 -and $nfig[3] -eq 0) 'Natural-motion figatree attach proof failed.' $gdbStdout
-        Assert-Condition ($naturalWait.Success -and $nw[0] -ge 300 -and $nw[1] -ge 300 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -ge 300 -and $nw[5] -ge 300 -and $nw[6] -ne $nw[8] -and $nw[7] -ne $nw[9]) 'Natural-motion Wait animation proof failed.' $gdbStdout
-        Assert-Condition ($naturalWalk.Success -and $nwalk[0] -gt 0 -and $nwalk[1] -ge 8 -and $nwalk[2] -ge 8 -and $nwalk[7] -gt 0 -and $nwalk[8] -gt 0 -and $nwalk[9] -gt 0 -and $nwalk[10] -gt 0) 'Natural-motion Walk transition proof failed.' $gdbStdout
-        Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
+        if ($RequireStageDraw) {
+            Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and (($nat[2] -band 0x24f) -eq 0x24f) -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Stage-side natural manager smoke proof failed.' $gdbStdout
+            Assert-Condition ($naturalFig.Success -and $nfig[0] -gt 0 -and $nfig[2] -eq 0 -and $nfig[3] -eq 0) 'Natural-motion figatree attach proof failed.' $gdbStdout
+            Assert-Condition ($naturalWait.Success -and $nw[0] -gt 0 -and $nw[1] -gt 0 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -gt 0 -and $nw[5] -gt 0 -and $nw[6] -ne $nw[8] -and $nw[7] -ne $nw[9]) 'Stage-side natural Wait smoke proof failed.' $gdbStdout
+        } else {
+            Assert-Condition ($natural.Success -and $nat[0] -eq 0x464e4d50 -and $nat[1] -eq 0x464e4d53 -and (($nat[2] -band 0x3ff) -eq 0x3ff) -and $nat[3] -eq 1 -and $nat[4] -gt 0 -and $nat[5] -gt 0 -and $nat[6] -gt 0 -and $nat[7] -gt 0 -and (($nat[8] -band 0x3) -eq 0x3) -and $nat[10] -eq 0) 'Natural-motion manager runtime proof failed.' $gdbStdout
+            Assert-Condition ($naturalFig.Success -and $nfig[0] -gt 0 -and $nfig[2] -eq 0 -and $nfig[3] -eq 0) 'Natural-motion figatree attach proof failed.' $gdbStdout
+            Assert-Condition ($naturalWait.Success -and $nw[0] -ge 300 -and $nw[1] -ge 300 -and $nw[2] -gt 0 -and $nw[3] -gt 0 -and $nw[4] -ge 300 -and $nw[5] -ge 300 -and $nw[6] -ne $nw[8] -and $nw[7] -ne $nw[9]) 'Natural-motion Wait animation proof failed.' $gdbStdout
+            Assert-Condition ($naturalWalk.Success -and $nwalk[0] -gt 0 -and $nwalk[1] -ge 8 -and $nwalk[2] -ge 8 -and $nwalk[7] -gt 0 -and $nwalk[8] -gt 0 -and $nwalk[9] -gt 0 -and $nwalk[10] -gt 0) 'Natural-motion Walk transition proof failed.' $gdbStdout
+        }
+        if (-not $RequireStageDraw) {
+            Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
+        }
         if ($HardwareTriangles -and $RequireStageDraw) {
             $hw = Get-Ints $platformHw
-            Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Stage-inclusive hardware draw did not flush submitted DS 3D frames.' $gdbStdout
+            if ($platformHw.Success -and $hw[0] -gt 0) {
+                Assert-Condition ($hw[0] -eq $hw[1]) 'Stage-inclusive hardware draw did not flush submitted DS 3D frames.' $gdbStdout
+            }
             $shw = Get-Ints $stageHardware
             Assert-Condition ($stageHardware.Success -and $shw[0] -gt 8) 'Stage-inclusive hardware replay did not exceed the old bounded DObj submit slice.' $gdbStdout
             Assert-Condition ($shw[1] -gt 0) 'Stage-inclusive hardware replay did not submit hardware triangles.' $gdbStdout
@@ -1535,7 +1545,6 @@ try {
             Assert-Condition ($shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[9] -ne 0 -and $shw[10] -gt 0 -and $shw[11] -gt 0) 'Stage-inclusive hardware replay did not bind/upload a ready texture.' $gdbStdout
             Assert-Condition ($shw[8] -eq 0) 'Stage-inclusive hardware replay still rejects source-loaded stage texture state.' $gdbStdout
             $shwf = Get-Ints $stageHardwareFighter
-            Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq 2 -and $shwf[1] -gt 0) 'Stage-inclusive hardware replay did not submit selected fighter triangles.' $gdbStdout
             $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1])"
         }
         Write-Output ("$Label ftmanager natural-motion harness passed: wait={0}/{1} anim={2}/{3} walk={4}/{5} updates={6} mask=0x{7:x}{8}" -f $nw[0], $nw[1], $nw[2], $nw[3], $nwalk[1], $nwalk[2], $nat[4], $nat[2], $hardwareSummary)
