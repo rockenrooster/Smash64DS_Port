@@ -104,10 +104,12 @@ Tiered verifiers:
 .\scripts\verify-regression.ps1
 ```
 
-Use `verify-dev-fast.ps1 -Build -DelaySeconds 3` while iterating. Run
-`verify-boundary.ps1 -DelaySeconds 3` when a runtime slice appears done. Run
-`verify-current` or `verify-regression` only for shared runtime, common fighter
-code, scene-manager, allocator/linker, harness registry, or broad renderer changes.
+Use `verify-dev-fast.ps1 -Build -DelaySeconds 3` while iterating, and
+`verify-boundary.ps1 -DelaySeconds 3` when a runtime slice appears done.
+For shared-TU work, gate during the session on `RegressionCore`; run one full
+fresh Regression prebuild plus four sharded `-NoBuild` runs at the end. Builds
+expected to exceed 90 seconds should use `build-verify-profile.ps1 -Detach`,
+then confirm completion with `build-verify-profile.ps1 -VerifyStamp`.
 
 Do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
 

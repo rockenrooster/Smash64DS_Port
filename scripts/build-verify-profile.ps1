@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
+    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
     [string]$Profile = 'Boundary',
     [string[]]$Only,
     [string]$From,
@@ -7,18 +7,205 @@ param(
     [switch]$NoSharedBuild,
     [int]$ParallelBuilds = 0,
     [int]$ParallelBuildJobs = 0,
-    [string]$TimingPath
+    [string]$TimingPath,
+    [switch]$VerifyStamp,
+    [switch]$Detach
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 . (Join-Path $PSScriptRoot 'lib\harness-registry.ps1')
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
+$profileKey = $Profile.ToLowerInvariant()
+$costDir = Join-Path $root 'artifacts\verifier-cost'
+$stampPath = Join-Path $costDir 'prebuild-stamp.json'
+
+function Get-GitHead {
+    $rev = (& git -C $root rev-parse HEAD 2>$null)
+    if ($LASTEXITCODE -ne 0) { return 'unknown' }
+    return ([string]$rev).Trim()
+}
+
+function Convert-ToHexString {
+    param([byte[]]$Bytes)
+    return (($Bytes | ForEach-Object { $_.ToString('x2') }) -join '')
+}
+
+function Get-BuildConfigHash {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $configs = @()
+        Get-ChildItem -LiteralPath $root -Directory -Filter 'build*' -ErrorAction SilentlyContinue | ForEach-Object {
+            $candidate = Join-Path $_.FullName 'nds_build_config.h'
+            if (Test-Path -LiteralPath $candidate) {
+                $configs += (Get-Item -LiteralPath $candidate)
+            }
+        }
+        foreach ($config in @($configs | Sort-Object FullName)) {
+            $relative = $config.FullName.Substring($root.Length).TrimStart([char[]]@('\','/'))
+            $prefix = [System.Text.Encoding]::UTF8.GetBytes("$relative`n")
+            [void]$sha.TransformBlock($prefix, 0, $prefix.Length, $null, 0)
+            $bytes = [System.IO.File]::ReadAllBytes($config.FullName)
+            [void]$sha.TransformBlock($bytes, 0, $bytes.Length, $null, 0)
+        }
+        [void]$sha.TransformFinalBlock([byte[]]::new(0), 0, 0)
+        return Convert-ToHexString $sha.Hash
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+function Get-TargetArtifactRecord {
+    param([string]$Target)
+    $items = @()
+    foreach ($extension in @('.nds', '.elf')) {
+        $path = Join-Path $root "$Target$extension"
+        if (Test-Path -LiteralPath $path) {
+            $item = Get-Item -LiteralPath $path
+            $items += [PSCustomObject]@{
+                name = $item.Name
+                path = $item.FullName.Substring($root.Length).TrimStart([char[]]@('\','/'))
+                mtimeUtc = $item.LastWriteTimeUtc.ToString('o')
+                size = $item.Length
+            }
+        }
+    }
+    return [PSCustomObject]@{
+        target = $Target
+        artifacts = $items
+    }
+}
+
+function Write-PrebuildStamp {
+    param(
+        [object[]]$Timings,
+        [double]$TotalSeconds
+    )
+    New-Item -ItemType Directory -Force -Path $costDir | Out-Null
+    $targets = @($Timings | ForEach-Object { $_.target } | Where-Object { $_ } | Sort-Object -Unique)
+    [PSCustomObject]@{
+        generatedAt = (Get-Date).ToUniversalTime().ToString('o')
+        gitRev = Get-GitHead
+        profile = $Profile
+        force = [bool]$Force
+        noSharedBuild = [bool]$NoSharedBuild
+        configHash = Get-BuildConfigHash
+        totalSeconds = [Math]::Round($TotalSeconds, 3)
+        count = $targets.Count
+        targets = @($targets | ForEach-Object { Get-TargetArtifactRecord $_ })
+    } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $stampPath -Encoding UTF8
+    Write-Output "Wrote prebuild stamp: $stampPath"
+}
+
+function Test-PrebuildStamp {
+    if (-not (Test-Path -LiteralPath $stampPath)) {
+        Write-Error "Missing prebuild stamp: $stampPath"
+        return $false
+    }
+    $stamp = Get-Content -LiteralPath $stampPath -Raw | ConvertFrom-Json
+    $currentRev = Get-GitHead
+    if ($stamp.gitRev -ne $currentRev) {
+        Write-Error "Prebuild stamp git rev mismatch: stamp=$($stamp.gitRev) current=$currentRev"
+        return $false
+    }
+    $currentHash = Get-BuildConfigHash
+    if ($stamp.configHash -ne $currentHash) {
+        Write-Error "Prebuild stamp config hash mismatch: stamp=$($stamp.configHash) current=$currentHash"
+        return $false
+    }
+    foreach ($target in @($stamp.targets)) {
+        foreach ($artifact in @($target.artifacts)) {
+            $path = Join-Path $root $artifact.path
+            if (-not (Test-Path -LiteralPath $path)) {
+                Write-Error "Missing stamped artifact: $($artifact.path)"
+                return $false
+            }
+            $item = Get-Item -LiteralPath $path
+            $stampedMtimeUtc = if ($artifact.mtimeUtc -is [datetime]) {
+                $artifact.mtimeUtc.ToUniversalTime().ToString('o')
+            } else {
+                [string]$artifact.mtimeUtc
+            }
+            if (($item.Length -ne [int64]$artifact.size) -or ($item.LastWriteTimeUtc.ToString('o') -ne $stampedMtimeUtc)) {
+                Write-Error "Stamped artifact changed: $($artifact.path)"
+                return $false
+            }
+        }
+    }
+    Write-Host ("Prebuild stamp valid: profile={0} targets={1} generatedAt={2}" -f $stamp.profile, $stamp.count, $stamp.generatedAt)
+    return $true
+}
+
+function Quote-DetachedProcessArg {
+    param([string]$Value)
+    if ($Value -notmatch '[\s"]') {
+        return $Value
+    }
+    return '"' + $Value.Replace('"', '\"') + '"'
+}
+
+function Add-DetachedProcessArg {
+    param(
+        [System.Collections.Generic.List[string]]$Words,
+        [string]$Name,
+        [object]$Value
+    )
+    if ($null -eq $Value) { return }
+    if ($Value -is [array]) {
+        if ($Value.Count -eq 0) { return }
+        $Words.Add($Name)
+        foreach ($entry in $Value) { $Words.Add((Quote-DetachedProcessArg ([string]$entry))) }
+        return
+    }
+    if ([string]$Value -ne '') {
+        $Words.Add($Name)
+        $Words.Add((Quote-DetachedProcessArg ([string]$Value)))
+    }
+}
+
+if ($VerifyStamp) {
+    if ($Detach) { throw '-VerifyStamp and -Detach cannot be combined.' }
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $ok = Test-PrebuildStamp
+    $stopwatch.Stop()
+    Write-Output ("Prebuild stamp check took {0:N2}s." -f $stopwatch.Elapsed.TotalSeconds)
+    if ($ok) { exit 0 }
+    exit 1
+}
+
+if ($Detach) {
+    New-Item -ItemType Directory -Force -Path (Join-Path $costDir 'build-logs') | Out-Null
+    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $stdoutLog = Join-Path $costDir "build-logs\prebuild-$profileKey-$stamp.out.log"
+    $stderrLog = Join-Path $costDir "build-logs\prebuild-$profileKey-$stamp.err.log"
+    $powerShellExe = (Get-Process -Id $PID).Path
+    $words = [System.Collections.Generic.List[string]]::new()
+    $words.Add('-NoProfile')
+    $words.Add('-ExecutionPolicy')
+    $words.Add('Bypass')
+    $words.Add('-File')
+    $words.Add((Quote-DetachedProcessArg $PSCommandPath))
+    Add-DetachedProcessArg $words '-Profile' $Profile
+    Add-DetachedProcessArg $words '-Only' $Only
+    Add-DetachedProcessArg $words '-From' $From
+    if ($Force) { $words.Add('-Force') }
+    if ($NoSharedBuild) { $words.Add('-NoSharedBuild') }
+    Add-DetachedProcessArg $words '-ParallelBuilds' $ParallelBuilds
+    Add-DetachedProcessArg $words '-ParallelBuildJobs' $ParallelBuildJobs
+    Add-DetachedProcessArg $words '-TimingPath' $TimingPath
+    $argumentLine = $words -join ' '
+    $process = Start-Process -FilePath $powerShellExe -ArgumentList $argumentLine -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WindowStyle Hidden -PassThru
+    Write-Output "Detached prebuild started: pid=$($process.Id)"
+    Write-Output "stdout: $stdoutLog"
+    Write-Output "stderr: $stderrLog"
+    Write-Output "stamp on success: $stampPath"
+    exit 0
+}
+
 $plan = @(Get-Smash64DSVerifyPlan -Profile $Profile -Only $Only -From $From)
 if ($plan.Count -eq 0) {
     throw "No verifiers selected for profile '$Profile'."
 }
-$profileKey = $Profile.ToLowerInvariant()
 $sharedBuild = "build-verify-$profileKey-shared"
 $optSizeSharedBuild = "build-verify-$profileKey-optsize-shared"
 $optSizeHarnessModes = @(161, 162, 163)
@@ -35,7 +222,7 @@ function Test-OptSizeHarnessMode {
     return $false
 }
 if ($ParallelBuilds -le 0) {
-    $ParallelBuilds = if ($Profile -in @('Full','Regression')) { 4 } else { 1 }
+    $ParallelBuilds = if ($Profile -in @('Full','Regression','RegressionCore')) { 4 } else { 1 }
 }
 if ($ParallelBuildJobs -le 0) {
     $ParallelBuildJobs = if ($ParallelBuilds -gt 1) { 4 } else { 16 }
@@ -60,6 +247,7 @@ $totalStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 if ($needsDefault) {
     Write-Output 'Building default verification ROM.'
+    $defaultBuildJobs = [Math]::Max($ParallelBuildJobs, 16)
     $makeArgs = @(
         '-C', $root,
         'TARGET=smash64ds',
@@ -70,7 +258,7 @@ if ($needsDefault) {
     if ($Force) {
         $makeArgs += '-B'
     }
-    $makeArgs += "-j$ParallelBuildJobs"
+    $makeArgs += "-j$defaultBuildJobs"
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     & make @makeArgs
     $stopwatch.Stop()
@@ -93,12 +281,14 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
     foreach ($record in $buildRecords) {
         $build = $record.Build
         $usesSharedBuild = $false
+        $fastLogicValue = if (@($record.Tags) -contains 'realtime') { '0' } else { '1' }
+        $logicSuffix = if ($fastLogicValue -eq '0') { '-realtime' } else { '' }
         if (-not $NoSharedBuild) {
             $rendererSuffix = if ($record.Target -like '*-hwtri') { '-hwtri' } else { '' }
             if (Test-OptSizeHarnessMode $record.Mode) {
-                $build = "$optSizeSharedBuild$rendererSuffix"
+                $build = "$optSizeSharedBuild$logicSuffix$rendererSuffix"
             } else {
-                $build = "$sharedBuild$rendererSuffix"
+                $build = "$sharedBuild$logicSuffix$rendererSuffix"
             }
             $usesSharedBuild = $true
         }
@@ -108,7 +298,7 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
             "TARGET=$($record.Target)",
             "BUILD=$build",
             "NDS_DEV_SCENE_HARNESS=$($record.Harness)",
-            "NDS_HARNESS_FAST_LOGIC=1"
+            "NDS_HARNESS_FAST_LOGIC=$fastLogicValue"
         )
         if ($record.Target -like '*-hwtri') {
             $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
@@ -203,12 +393,14 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
             foreach ($record in $records) {
                 $build = $record.Build
                 $usesSharedBuild = $false
+                $fastLogicValue = if (@($record.Tags) -contains 'realtime') { '0' } else { '1' }
+                $logicSuffix = if ($fastLogicValue -eq '0') { '-realtime' } else { '' }
                 if (-not $noSharedBuild) {
                     $rendererSuffix = if ($record.Target -like '*-hwtri') { '-hwtri' } else { '' }
                     if (Test-OptSizeHarnessMode $record.Mode) {
-                        $build = "build-verify-$profileKey-optsize-shared-$worker$rendererSuffix"
+                        $build = "build-verify-$profileKey-optsize-shared-$worker$logicSuffix$rendererSuffix"
                     } else {
-                        $build = "build-verify-$profileKey-shared-$worker$rendererSuffix"
+                        $build = "build-verify-$profileKey-shared-$worker$logicSuffix$rendererSuffix"
                     }
                     $usesSharedBuild = $true
                 }
@@ -217,7 +409,7 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
                     "TARGET=$($record.Target)",
                     "BUILD=$build",
                     "NDS_DEV_SCENE_HARNESS=$($record.Harness)",
-                    "NDS_HARNESS_FAST_LOGIC=1"
+                    "NDS_HARNESS_FAST_LOGIC=$fastLogicValue"
                 )
                 if ($record.Target -like '*-hwtri') {
                     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
@@ -293,6 +485,7 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
     }
 }
 $totalStopwatch.Stop()
+Write-PrebuildStamp -Timings $timings -TotalSeconds $totalStopwatch.Elapsed.TotalSeconds
 if ($TimingPath) {
     $resolvedTimingPath = if ([System.IO.Path]::IsPathRooted($TimingPath)) {
         $TimingPath

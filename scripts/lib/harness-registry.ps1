@@ -188,6 +188,7 @@ function Get-Smash64DSHarnessRegistry {
         New-HarnessRecord 'menu_chain_mariofox_stage_mpdamage_recover_loop' 158 'menu_chain_mariofox_stage_mpdamage_recover_loop' 'verify-menu-chain-mariofox-stage-mpdamage-recover-loop-harness.ps1' 'smash64ds-menu-chain-mariofox-stage-mpdamage-recover-loop' 'build-menu-chain-mariofox-stage-mpdamage-recover-loop-harness' @('full','latest','fighter','menu_chain','mariofox','stage','collision','floor','floor_follow','floor_edge','mp_query','mpprocess','mpupdate','damage','damage_lifecycle','damagefall','hitlag','procparams','attack_contact','passive','recover','mppassive','mppassive_recover','mpdamage_recover','callback','physics','map','gcdrawall','gcrunall','controller','preview','visual','playable_slice','stage_mpdamage_recover_loop')
         New-HarnessRecord 'menu_chain_mariofox_stage_mplivehit_status_loop' 162 'menu_chain_mariofox_stage_mplivehit_status_loop' 'verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1' 'smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri' 'build-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri-harness' @('full','latest','fighter','menu_chain','mariofox','stage','collision','floor','floor_follow','floor_edge','mp_query','mpprocess','mpupdate','damage','damage_lifecycle','hitlag','procparams','attack_contact','attack_event','live_hit','hitbox','repeat_hit','status','status_loop','callback','physics','map','gcdrawall','gcrunall','controller','preview','visual','playable_slice','stage_mplivehit_status_loop')
         New-HarnessRecord 'battle_playable' 163 'battle_playable' 'verify-battle-playable-harness.ps1' 'smash64ds-battle-playable-hwtri' 'build-battle-playable-hwtri-harness' @('full','latest','fighter','direct','mariofox','stage','damage','damage_lifecycle','hitlag','attack_contact','attack_event','live_hit','hitbox','status','stock','ko','rebirth','battle_playable','playable_slice','gcrunall','controller','visual','hardware')
+        New-HarnessRecord 'battle_playable_realtime' 163 'battle_playable_realtime' 'verify-battle-playable-realtime-harness.ps1' 'smash64ds-battle-playable-realtime' 'build-battle-playable-realtime-harness' @('core','regression_core','fighter','direct','mariofox','stage','battle_playable','playable_slice','gcrunall','controller','visual','realtime')
     )
 
     return $records
@@ -210,7 +211,7 @@ function Select-Smash64DSRegistryEntriesByName {
 
 function Get-Smash64DSVerifyPlan {
     param(
-        [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
+        [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
         [string]$Profile = 'Full',
         [string[]]$Only,
         [string]$From
@@ -355,6 +356,16 @@ function Get-Smash64DSVerifyPlan {
                 'battle_mariofox_stage_mplivehit_status_loop',
                 'menu_chain_mariofox_stage_mplivehit_status_loop',
                 'battle_playable'
+            )
+        }
+        'RegressionCore' {
+            Select-Smash64DSRegistryEntriesByName $registry @(
+                'runtime',
+                'title',
+                'battle_playable_realtime',
+                'battle_mariofox_stage_mpcliffstatus_floor_loop',
+                'battle_mariofox_stage_mpupdate_floor_loop',
+                'menu_chain_mariofox_stage_mpupdate_floor_loop'
             )
         }
         'Smoke' { $registry | Where-Object { $_.Name -in @('runtime','opening_skip','title','vs_setup','vs_start_transition') } }

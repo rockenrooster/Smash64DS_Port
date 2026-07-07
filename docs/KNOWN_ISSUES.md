@@ -5,9 +5,10 @@
 - The Full verifier profile is large enough to time out under short command
   limits. This is a workflow/runtime-cost issue, not a source-boundary failure.
   Use `scripts/verify-dev-fast.ps1`, `scripts/verify-boundary.ps1`,
-  `scripts/verify-current.ps1`, and `scripts/verify-regression.ps1` for normal
-  iteration. Run or resume `scripts/verify-all.ps1 -Profile Full` when change
-  risk requires it, and report timeouts honestly instead of claiming Full green.
+  `RegressionCore`, and detached `scripts/build-verify-profile.ps1` prebuilds
+  with `-VerifyStamp` for normal iteration. Run or resume
+  `scripts/verify-all.ps1 -Profile Full` when change risk requires it, and
+  report timeouts honestly instead of claiming Full green.
 - Snapshots created without `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` can
   include hundreds of MB of generated build directories, root ROM/ELF outputs,
   artifacts, emulator payloads, and GDB scratch files.
@@ -177,6 +178,11 @@
   The current menu-chain verifier needs `-DelaySeconds 3` so post-loop
   finalizer markers are captured after the longer VS Mode -> PlayersVS -> Maps
   -> VSBattle path.
+- [active blocker] As of the 2026-07-07 verification-cost checkpoint,
+  `verify-boundary` fails the direct mode `161` before live-hit/status markers:
+  `NAT_MOTION=0,0,0x22f` after ~2358 frames while natural Wait/Walk counters
+  advance. No verifier expectation was changed; repair this runtime proof before
+  claiming Boundary green.
 - PassiveStand/Passive recover-loop modes `155/156` prove guarded stable
   update/physics/map frames for PassiveStandF/Ground, PassiveStandB/Ground,
   and Passive/Ground, followed by the original `ftAnimEndSetWait` handoff into

@@ -122,11 +122,14 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. Build the FGM/voice backend slice on top of the parsed assets.
-2. Continue non-critical interface/particle perimeter.
-3. As subsystem slices obsolete old marker stacks, migrate-or-delete their
+1. Repair the current red Boundary gate: direct mode `161` reaches
+   `NAT_MOTION=0,0,0x22f` after ~2358 frames and fails before the live-hit
+   status markers.
+2. Build the FGM/voice backend slice on top of the parsed assets.
+3. Continue non-critical interface/particle perimeter.
+4. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
-4. Renderer follow-up: broaden source-scene coverage, then plan cutover.
+5. Renderer follow-up: broaden source-scene coverage, then plan cutover.
 
 ## Verification
 
@@ -138,12 +141,13 @@ chunks:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-For shared runtime/common fighter/renderer/harness registry changes, add the
-smallest broader check that matches the touched area. For shared fighter
-runtime, use sharded regression, not the serial 45-minute run:
+For shared-TU changes, use `RegressionCore` during the session and one full
+fresh Regression prebuild plus sharded `-NoBuild` runs at the end. Prebuilds
+expected to exceed 90 seconds should be detached and confirmed by stamp:
 
 ```powershell
-.\scripts\verify-current.ps1 -Build -DelaySeconds 3
+.\scripts\build-verify-profile.ps1 -Profile RegressionCore -Detach
+.\scripts\build-verify-profile.ps1 -Profile RegressionCore -VerifyStamp
 .\scripts\New-MelonDSRunnerSlots.ps1 -Count 4
 .\scripts\build-verify-profile.ps1 -Profile Regression -Force
 .\scripts\verify-all.ps1 -Profile Regression -ShardCount 4 -ShardIndex N -RunnerSlot N -NoBuild

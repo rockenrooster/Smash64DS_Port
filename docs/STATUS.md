@@ -120,6 +120,14 @@ Full visual fidelity still needs broader source-scene coverage and cutover work.
 
 ## Current Blocker
 
+Infrastructure checkpoint 2026-07-07: `RegressionCore` is available for
+session-time shared-TU gating and passes in 175 seconds no-build after a
+detached 596-second prebuild, with `-VerifyStamp` validating the completion
+stamp in 0.36 seconds. The final task gate is not green: `verify-boundary`
+and `verify-dev-fast` currently fail mode `161` with
+`NAT_MOTION=0,0,0x22f` after ~2358 frames, so no Lean snapshot was taken for
+that checkpoint.
+
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.
 Legacy bounded modes are migrate-or-delete: when a runtime slice obsoletes a
@@ -142,12 +150,15 @@ changes also run `.\scripts\check-harness-registry.ps1`.
 Runtime/subsystem changes that touch shared architecture should graduate to:
 
 ```powershell
+.\scripts\verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Run `verify-current` or `verify-regression` only for shared runtime behavior,
-common fighter code, scene-manager flow, allocator/linker behavior, harness
-registry behavior, or broad renderer changes.
+For prebuilds expected to exceed 90 seconds, run
+`.\scripts\build-verify-profile.ps1 -Profile <Profile> -Detach` and confirm
+completion with `.\scripts\build-verify-profile.ps1 -Profile <Profile>
+-VerifyStamp`. Run one full fresh Regression prebuild plus four sharded
+`-NoBuild` runs at the end of a shared-TU session.
 
 After verified progress, inspect status, optionally commit, then run the Lean
 snapshot as the final project command:

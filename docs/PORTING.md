@@ -18014,3 +18014,30 @@ does not assert.
   while workers completed), all four sharded Regression `-NoBuild` runs green
   after rerunning shards `0` and `1` sequentially, plus the current
   `check-harness-registry` and `check-docs` gates for this slice.
+
+## 2026-07-07 - Verification-Cost Infrastructure Checkpoint
+
+- Replaced command-line-only build options with a generated per-build-dir
+  `nds_build_config.h` dependency. The header carries harness id, fast/realtime
+  presentation, hardware-triangle, live-input-preview, and graduated import
+  flags, so stale object files can no longer survive a config change silently.
+- Added `RegressionCore`, a six-target session gate: runtime, title,
+  battle-playable realtime smoke, direct cliff-status, direct MP update, and
+  menu-chain MP update. It passed no-build in `175.2s`. The originally requested
+  boundary pair was not included because current `verify-boundary` is red on
+  mode `161` (`NAT_MOTION=0,0,0x22f` after ~2358 frames); no proof expectation
+  was relaxed for this infrastructure work.
+- Added successful prebuild stamps at `artifacts/verifier-cost/prebuild-stamp.json`.
+  A detached `RegressionCore` prebuild wrote a fresh six-target stamp in
+  `595.93s`; `build-verify-profile.ps1 -Profile RegressionCore -VerifyStamp`
+  validated it in `0.36s`.
+- Added `-Detach` to `build-verify-profile.ps1` and transport-class shard retry
+  handling in `verify-all.ps1`. Transport retries are limited to one retry for
+  GDB/connect/zero-marker startup failures; marker mismatches still fail
+  immediately.
+- Verified for this checkpoint: `check-harness-registry`, detached
+  `RegressionCore` prebuild plus `-VerifyStamp`, and
+  `verify-all -Profile RegressionCore -NoBuild -DelaySeconds 3`. Final task
+  gates are not complete: `verify-dev-fast -Build -DelaySeconds 3` and
+  `verify-boundary -DelaySeconds 3` fail mode `161`, so no Lean snapshot was
+  taken.

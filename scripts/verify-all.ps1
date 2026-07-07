@@ -3,7 +3,7 @@ param(
     [switch]$NoBuild,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
-    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
+    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
     [string]$Profile = 'Full',
     [string[]]$Only,
     [string]$From,
@@ -59,7 +59,29 @@ function Select-VerifyPlanShard {
     }
     return @($selected)
 }
-function Invoke-VerifyScript {
+function Test-TransportVerifierFailure {
+    param([string]$Text)
+    if (-not $Text) { return $false }
+    $patterns = @(
+        'gdb.*timed out',
+        'timed out.*gdb',
+        'connect.*timeout',
+        'connection timed out',
+        'unable to connect',
+        'remote replied unexpectedly',
+        'ignoring packet error',
+        'target disconnected',
+        'no connection could be made',
+        'zero markers',
+        'HARN=0,0,0,0,0',
+        'SCENE=0,0,0'
+    )
+    foreach ($pattern in $patterns) {
+        if ($Text -match $pattern) { return $true }
+    }
+    return $false
+}
+function Invoke-VerifyScriptOnce {
     param(
         [string]$Script,
         [string[]]$Arguments
@@ -69,15 +91,47 @@ function Invoke-VerifyScript {
         '-ExecutionPolicy', 'Bypass',
         '-File', $Script
     ) + $Arguments
+    $tempBase = Join-Path ([System.IO.Path]::GetTempPath()) ("smash64ds-verify-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
+    $stdoutPath = "$tempBase.out"
+    $stderrPath = "$tempBase.err"
     $process = Start-Process -FilePath $powerShellExe `
         -ArgumentList $argList `
         -WorkingDirectory $root `
-        -NoNewWindow `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath `
         -Wait `
         -PassThru
-    if ($process.ExitCode -ne 0) {
-        exit $process.ExitCode
+    $stdout = if (Test-Path -LiteralPath $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw } else { '' }
+    $stderr = if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw } else { '' }
+    if ($stdout) { [Console]::Out.Write($stdout) }
+    if ($stderr) { [Console]::Error.Write($stderr) }
+    Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
+    return [PSCustomObject]@{
+        ExitCode = $process.ExitCode
+        Output = "$stdout`n$stderr"
     }
+}
+function Invoke-VerifyScript {
+    param(
+        [string]$Script,
+        [string[]]$Arguments,
+        [string]$Label,
+        [switch]$RetryTransport
+    )
+    $result = Invoke-VerifyScriptOnce -Script $Script -Arguments $Arguments
+    if ($result.ExitCode -eq 0) {
+        return
+    }
+    if ($RetryTransport -and (Test-TransportVerifierFailure -Text $result.Output)) {
+        Write-Warning "Transport-class verifier failure for '$Label'; retrying once."
+        $retry = Invoke-VerifyScriptOnce -Script $Script -Arguments $Arguments
+        if ($retry.ExitCode -eq 0) {
+            Write-Output "Transport retry passed: $Label"
+            return
+        }
+        exit $retry.ExitCode
+    }
+    exit $result.ExitCode
 }
 if ($Build -and $NoBuild) {
     throw 'Use either -Build or -NoBuild, not both.'
@@ -111,6 +165,11 @@ try {
             -MelonDS $MelonDS `
             -GdbPort $selectedGdbPort `
             -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') | Out-Null
+    }
+    if ($ShardCount -gt 1 -and $RunnerSlot -gt 0 -and -not $List) {
+        $staggerSeconds = 3 * $RunnerSlot
+        Write-Output "Staggering shard startup by $staggerSeconds seconds for runner slot $RunnerSlot."
+        Start-Sleep -Seconds $staggerSeconds
     }
     if ($Build) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
@@ -156,7 +215,7 @@ try {
         if ($NoBuild -and (Test-ScriptParameter -ScriptPath $scriptPath -Name 'NoBuild')) {
             $arguments += '-NoBuild'
         }
-        Invoke-VerifyScript -Script $scriptPath -Arguments $arguments
+        Invoke-VerifyScript -Script $scriptPath -Arguments $arguments -Label $record.Name -RetryTransport
     }
     if ($Profile -eq 'Full' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
         Write-Output 'Full verification passed.'
@@ -168,6 +227,8 @@ try {
         Write-Output 'Boundary verification profile passed.'
     } elseif ($Profile -eq 'Regression' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
         Write-Output 'Regression verification profile passed.'
+    } elseif ($Profile -eq 'RegressionCore' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
+        Write-Output 'RegressionCore verification profile passed.'
     } else {
         Write-Output "Verification profile '$Profile' shard $ShardIndex/$ShardCount passed."
     }
