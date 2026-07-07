@@ -1,8 +1,7 @@
 # Current Status
 
-This is the short current-truth document for active development. Keep it under
-150 lines. Use `docs/DIAGNOSTIC_REFERENCE.md` for full marker strings and
-`docs/PORTING.md` for append-only increment history.
+This is the short current-truth document for active development. Keep it under 150 lines.
+Use `docs/DIAGNOSTIC_REFERENCE.md` for full marker strings; append history in `docs/PORTING.md`.
 
 ## Direction
 
@@ -40,8 +39,8 @@ GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 Mode `163` is the scene-level `battle_playable` anchor. It runs Pupupu Mario/Fox
 stock battle with imported camera/Dead/Rebirth live by default, then proves
 natural attack/damage, KO/rebirth, normal moves, Mario fireball, Fox blaster,
-guard, reflector, grab/throw, Mario/Fox specials, audio asset parsing, and a DS
-3D hardware stage + fighter frame.
+guard, reflector, grab/throw, Mario/Fox specials, audio asset parsing, one-track
+Pupupu BGM playback, and a DS 3D hardware stage + fighter frame.
 
 ## Latest Proof
 
@@ -69,21 +68,25 @@ seam in `ftMainSetStatus` is still documented as follow-up.
 `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD,
 original `if/ifscreenflash.c`, normal moveset TUs, the weapon manager, Mario
 fireball, Fox blaster, the original effect manager, Fox reflector, Mario Super
-Jump Punch, Mario Tornado, and Fox Fire Fox. The mode-163 proof reports
+Jump Punch, Mario Tornado, Fox Fire Fox, original audio asset parsing, and
+one-track Pupupu BGM playback. The mode-163 proof reports
 `stock8->3`, `falls0->5`, `moveset=0x7ff phase=15`, `tilt=23/17/17`,
-`smash=13`, `aerial=19`, `landing=26`, `grab=3/1`, `throw=12/5/265`,
+`smash=13`, `aerial=19`, `landing=26`, `grab=3/1`, `throw=12/5/175`,
 `throwDmg=0->12`, `hud=dmg16/digits0x1060a stock9->4`,
 `projectile=... dmg=13`, `reflector=0xff proc=1 vx=49809->-49809`, and
-`specials=0xfff phase=7` (`mhi=1/14/7/0/195`, `mlw=1/14/0 dust=1`,
-`foxhi=1/12/17/9/12/0/61`), `audio=seq47 bank1=1/42/117@32000
+`specials=0xfff phase=7` (`mhi=1/31/0/72/105`, `mlw=1/43/0 dust=1 wait=165`,
+`foxhi=1/3/17/20/10/0/61`), `audio=seq47 bank1=1/42/117@32000
 bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=64416`,
-plus `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. Audio playback and non-critical
-HUD/SObj/particle perimeter remain follow-up.
+`bgm=track0 play=1 stop=1 chunks=34 read=2228224 resident=65536`, plus
+`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. FGM/voice playback, original
+sequence-player import, and non-critical HUD/SObj/particle perimeter remain
+follow-up.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
-cache eviction. Mode `163` reports headroom `240332`, resident reloc `750528`
-bytes (`stage=202816`, `fighter=244336`, `if=208672`), stale `0/0`, and
-source VSBattle buffers from `scvsbattle.c:31-41`.
+cache eviction. Mode `163` reports headroom `237836`, resident reloc `770896`
+bytes (`stage=202816`, `fighter=264704`, `if=208672`), stale `0/0`, and source
+VSBattle buffers from `scvsbattle.c:31-41`. The BGM stream adds a separate
+64 KiB resident buffer while still leaving `172300` bytes above the reserve.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage
 draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair `161/162`;
@@ -118,8 +121,8 @@ marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
 `159/160` have been deleted instead of recreating old synthetic marker stacks.
 
 - renderer follow-up: broaden source-scene coverage and HW default coverage;
-- audio/interface follow-up: BGM/SFX playback plus the non-critical HUD/SObj
-  and particle perimeter.
+- audio/interface follow-up: FGM/voice, original sequence-player playback, and
+  the non-critical HUD/SObj and particle perimeter.
 
 ## Verification
 

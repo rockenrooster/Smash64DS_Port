@@ -17932,3 +17932,30 @@ does not assert.
   init-wait-dash ladder, `verify-boundary -DelaySeconds 3`, default
   `verify-battle-playable-harness -DelaySeconds 3`, `check-harness-registry`,
   `check-docs`, and `git diff --check`.
+
+## 2026-07-07 - Minimal Pupupu BGM Backend Default
+
+- Added `scripts/render-audio-bgm-pupupu.py`, a repeatable converter that
+  derives a DS-streamable PCM16LE Pupupu/Dream Land track from original O2R
+  `S1_music_sbk` sequence 0 plus `B1_sounds1_ctl/tbl`, using the read-only
+  BattleShip CSEQ, CTL, and VADPCM tools. Output:
+  `assets/audio/bgm_pupupu_pcm16.raw`, 2,886,710 bytes at 22050 Hz, SHA-256
+  `581191127a00c8ddbd4395cc00b5d4722bbeca734a0990e778a2ea5e9138effa`;
+  `sox stat` reports RMS amplitude `0.078523`.
+- Added a DS-owned one-track BGM backend for `syAudioPlayBGM`,
+  `syAudioStopBGMAll`, `syAudioCheckBGMPlaying`, and `syAudioSetBGMVolume`,
+  streaming the derived track from NitroFS through a 64 KiB buffer. The natural
+  caller path is BattleShip battle entry `scvsbattle.c:217` ->
+  `mpCollisionSetPlayBGM` (`mpcollision.c:4013-4020`), with VSBattle cleanup
+  mirroring the original stop/check/reset flow at `scvsbattle.c:530-556`.
+- Graduated `NDS_IMPORT_BATTLESHIP_AUDIO_BGM` to default. Mode `163` reports
+  `bgm=track0 play=1 stop=1 chunks=34 read=2228224 resident=65536`; the memory
+  reserve holds with `237836 - 65536 = 172300` bytes above the gate. This is a
+  compatibility backend for exactly one track; FGM/voice and the original
+  sequence-player import remain follow-up.
+- Verified: corrected-stream `verify-dev-fast -Build -DelaySeconds 3`,
+  `verify-boundary -DelaySeconds 3`, default `verify-battle-playable-harness
+  -DelaySeconds 3`, fresh Regression prebuild launched with
+  `build-verify-profile -Profile Regression -Force` (the wrapper exceeded the
+  tool timeout, workers completed in the background), all four sharded
+  Regression `-NoBuild` runs green, `check-harness-registry`, and `check-docs`.

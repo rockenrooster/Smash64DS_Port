@@ -1003,9 +1003,13 @@
   record, and no first texture offset for that selected source set. General mixed-width
   struct fixups, external dependency recursion, texture/display-list fixups,
   fighter data, and full symbol coverage are not implemented yet.
-- Audio asset parsing is default and source-shaped, but playback remains a
-  stub. No BGM, SFX, sequence player, sample streamer, mixer, or positional
-  audio backend is implemented yet.
+- Minimal BGM playback is a default compatibility backend for exactly one
+  track, Dream Land/Pupupu (`nSYAudioBGMPupupu`). `syAudioPlayBGM`,
+  `syAudioStopBGMAll`, `syAudioCheckBGMPlaying`, and `syAudioSetBGMVolume` are
+  the permanent seam, but the current DS streamer behind them is interim and is
+  superseded by the future original sequence-player import. FGM/voice playback,
+  positional audio, broader BGM IDs, mixer behavior, and original sequence
+  envelopes remain unimplemented.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite

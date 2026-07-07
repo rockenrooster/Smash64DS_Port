@@ -1302,9 +1302,15 @@ Opening movie / Opening Portraits:
   bounded compatibility stubs.
 - `gNdsSCVSBattleCompatManagerMask`: manager setup calls reached as bounded
   compatibility stubs, including fighter setup and stub fighter creation.
-- `gNdsSCVSBattleCompatAudioMask` / `LastAudioVolume` / `LastFGM`: audio/BGM
-  compatibility evidence. `syAudioCheckBGMPlaying` currently returns false and
-  volume/FGM calls are diagnostic only.
+- `gNdsSCVSBattleCompatAudioMask` / `LastAudioVolume` / `LastFGM`: shared
+  audio compatibility evidence. FGM/voice calls are diagnostic only; BGM calls
+  now route through the one-track Pupupu backend when enabled.
+- `AUDIO_BGM`: mode `163` BGM backend marker. Expected default proof:
+  result `0x42474d31`, low mask bits `0x3`, playing `0` after teardown,
+  track `0`, volume `0x7800`, at least one play and stop call, no open/read/
+  unsupported-track failures, read bytes at least one 64 KiB chunk, resident
+  bytes `65536`, chunk size `1..65536`, at least one played chunk, and
+  stopped-on-teardown `1`.
 - `gNdsSCVSBattleCompatSpawnMask`: deterministic spawn-position queries from
   `mpCollisionGetPlayerMapObjPosition`.
 - `gNdsSCVSBattleOriginalUpdateResult` / `UpdateCount`: one bounded

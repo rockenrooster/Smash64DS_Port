@@ -2,8 +2,8 @@
 
 This is a read-only planning scout for replacing the current silent audio seams
 with a DS backend while keeping BattleShip gameplay code as the source of truth.
-The original scout was read-only; slice 1 has since landed as a default
-parse-only asset loader.
+The original scout was read-only; slices 1 and 2 have since landed as default
+audio asset parsing plus one-track compatibility BGM playback.
 
 ## Landed Slice 1
 
@@ -17,30 +17,51 @@ FGM package counts without playback.
 
 Mode `163` reports:
 `audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=64416`.
-This keeps the VSBattle memory reserve intact. BGM/SFX playback, sequence
-player, sample streaming/mixing, and positional audio remain future slices.
+This keeps the VSBattle memory reserve intact.
+
+## Landed Slice 2
+
+`NDS_IMPORT_BATTLESHIP_AUDIO_BGM` now defaults on for one track:
+Dream Land/Pupupu (`nSYAudioBGMPupupu`). `scripts/render-audio-bgm-pupupu.py`
+derives `assets/audio/bgm_pupupu_pcm16.raw` from original O2R
+`S1_music_sbk` sequence 0 plus `B1_sounds1_ctl/tbl`, using the read-only
+BattleShip CSEQ, CTL, and VADPCM tools. The output is PCM16LE mono at 22050 Hz,
+2,886,710 bytes, SHA-256
+`581191127a00c8ddbd4395cc00b5d4722bbeca734a0990e778a2ea5e9138effa`;
+`sox stat` reports RMS amplitude `0.078523`, so the committed stream is not
+silent.
+
+The DS backend implements real `syAudioPlayBGM`, `syAudioStopBGMAll`,
+`syAudioCheckBGMPlaying`, and `syAudioSetBGMVolume` over a 64 KiB stream buffer.
+Mode `163` naturally starts BGM through `mpCollisionSetPlayBGM` and stops it on
+VSBattle cleanup, reporting:
+`bgm=track0 play=1 stop=1 chunks=34 read=2228224 resident=65536`.
+The arena reserve still holds after subtracting the 64 KiB stream buffer.
+FGM/voice playback, positional audio, and the original sequence-player import
+remain future slices.
 
 ## Current Port Surface
 
 The DS port currently exposes only a narrowed audio compatibility surface:
 `syAudioThreadMain`, BGM control, FGM/voice start and stop, settings flags, and
 restart state are declared in `include/sys/audio.h:48-59`. The DS gmsound enum is
-also narrowed to the IDs currently needed by the port: three BGM IDs at
+also narrowed to the IDs currently needed by the port: four BGM IDs at
 `include/gm/gmsound.h:4-9`, selected FGM IDs at `include/gm/gmsound.h:11-66`,
 and selected voice IDs at `include/gm/gmsound.h:68-104`.
 
-The implemented surface is still a stub/diagnostic layer:
+The implemented surface is still mostly a diagnostic layer, except for the
+one-track BGM compatibility backend:
 
 | Entry point | Current behavior | Citations |
 |---|---|---|
 | `syAudioThreadMain` | Boot service thread placeholder. | `src/port/boot_stubs.c:40`, `include/sys/audio.h:48` |
-| `syAudioStopBGMAll` | Empty. | `src/port/reloc_backend_compat_shims.c:407`, `include/sys/audio.h:49` |
-| `syAudioPlayBGM` | Records the latest battle BGM/stage mask, does not play audio. | `src/port/reloc_backend_compat_shims.c:411`, `include/sys/audio.h:50` |
+| `syAudioStopBGMAll` | Stops the default Pupupu BGM stream; other sound players remain future work. | `src/port/reloc_backend_compat_shims.c`, `include/sys/audio.h:49` |
+| `syAudioPlayBGM` | Plays `nSYAudioBGMPupupu` through the DS BGM backend and records diagnostics; unsupported IDs fail softly. | `src/port/reloc_backend_compat_shims.c`, `include/sys/audio.h:50` |
 | `func_800266A0_272A0` | Empty stop/all-sound compatibility hook. | `src/port/reloc_backend_compat_shims.c:419`, `include/sys/audio.h:53` |
 | `func_80026738_27338` | Clears an `alSoundEffect` ID field. | `src/port/reloc_backend_compat_shims.c:425`, `include/sys/audio.h:54` |
 | `func_800269C0_275C0` | Returns a static `alSoundEffect`, records FGM/voice diagnostics. | `src/port/reloc_backend_compat_shims.c:433`, `include/sys/audio.h:55` |
-| `syAudioCheckBGMPlaying` | Always false. | `src/port/reloc_backend_compat_shims.c:466`, `include/sys/audio.h:51` |
-| `syAudioSetBGMVolume` | Records the last volume only. | `src/port/reloc_backend_compat_shims.c:474`, `include/sys/audio.h:52` |
+| `syAudioCheckBGMPlaying` | Reports the one-track backend state when BGM is enabled. | `src/port/reloc_backend_compat_shims.c`, `include/sys/audio.h:51` |
+| `syAudioSetBGMVolume` | Applies volume to the active DS sample channel and records diagnostics. | `src/port/reloc_backend_compat_shims.c`, `include/sys/audio.h:52` |
 | `syAudioSetSettingsUpdated` / `syAudioGetSettingsUpdated` | Setter is empty, getter returns false. | `src/port/reloc_backend_compat_shims.c:494`, `src/port/reloc_backend_compat_shims.c:498`, `include/sys/audio.h:56-57` |
 | `syAudioSetFXType` / `syAudioGetRestarting` | FX type ignored; restarting false. | `src/port/reloc_backend_compat_shims.c:503`, `src/port/reloc_backend_compat_shims.c:508`, `include/sys/audio.h:58-59` |
 | `ftParamPlayVoice` | Starts voice through `func_800269C0_275C0`. | `src/port/reloc_backend_compat_shims.c:5048`, `include/ft/fighter.h:3469` |
@@ -236,10 +257,10 @@ reduced once live audio owns those calls.
    into NitroFS, parses `S1_music_sbk`, both `.ctl` files, and `fgm_*`, and
    gates counts/offsets from the `alSeqFileNew` / `alBnkfNew` source shapes
    without playback.
-2. `/task Minimal BGM backend`: Implement real `syAudioPlayBGM`,
+2. Done: `/task Minimal BGM backend` implements real `syAudioPlayBGM`,
    `syAudioStopBGMAll`, `syAudioCheckBGMPlaying`, and `syAudioSetBGMVolume`
-   using either maxmod or a tiny DS streamer for one stage/menu BGM, gated by
-   natural `mpCollisionSetPlayBGM` battle entry and battle teardown.
+   with a tiny DS streamer for Pupupu BGM, gated by natural
+   `mpCollisionSetPlayBGM` battle entry and VSBattle cleanup.
 3. `/task Minimal FGM/voice backend`: Replace `func_800269C0_275C0` static
    handle with a real playable handle for battle start crowd voice, Pupupu wind,
    Hyrule twister, and fighter loop stop semantics.
