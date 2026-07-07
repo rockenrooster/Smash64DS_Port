@@ -495,11 +495,18 @@ void ftManagerSetPrevPartsAlloc(FTParts *parts)
 
 void syAudioStopBGMAll(void)
 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    ndsAudioBgmStopAll();
+#endif
 }
 
 void syAudioPlayBGM(s32 player, s32 bgm_id)
 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    ndsAudioBgmPlay(player, bgm_id);
+#else
     (void)player;
+#endif
     gNdsSCVSBattleStageBGM = (u32)bgm_id;
     gNdsSCVSBattleCompatAudioMask |= 1u << 0;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
@@ -554,15 +561,27 @@ void *func_800269C0_275C0(u16 fgm_id)
 
 s32 syAudioCheckBGMPlaying(s32 sngplayer)
 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    s32 is_playing = ndsAudioBgmCheckPlaying(sngplayer);
+#else
     (void)sngplayer;
+#endif
     gNdsSCVSBattleCompatAudioMask |= 1u << 2;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    return is_playing;
+#else
     return FALSE;
+#endif
 }
 
 void syAudioSetBGMVolume(s32 sngplayer, u32 vol)
 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    ndsAudioBgmSetVolume(sngplayer, vol);
+#else
     (void)sngplayer;
+#endif
     gNdsSCVSBattleLastAudioVolume = vol;
     gNdsSCVSBattleCompatAudioMask |= 1u << 3;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
@@ -13361,6 +13380,9 @@ void mpCollisionSetPlayBGM(void)
         gMPCollisionBGMCurrent = gMPCollisionGroundData->bgm_id;
         gNdsSCVSBattleStageBGM = gMPCollisionGroundData->bgm_id;
         gNdsStagePupupuBGM = gMPCollisionGroundData->bgm_id;
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+        syAudioPlayBGM(0, gMPCollisionBGMDefault);
+#endif
     }
     gNdsSCVSBattleCompatAudioMask |= 1u << 4;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;

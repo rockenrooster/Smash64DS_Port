@@ -33,6 +33,7 @@ override NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI := 1
 override NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW := 1
 override NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
+NDS_IMPORT_BATTLESHIP_AUDIO_BGM ?= 0
 ifeq ($(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL),1)
 override NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER := 1
 endif
@@ -431,6 +432,7 @@ CFLAGS += -DNDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI=$(NDS_IMPORT_BATTLESHIP_MARIO
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW=$(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI=$(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)
 CFLAGS += -DNDS_IMPORT_BATTLESHIP_AUDIO_ASSETS=$(NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS)
+CFLAGS += -DNDS_IMPORT_BATTLESHIP_AUDIO_BGM=$(NDS_IMPORT_BATTLESHIP_AUDIO_BGM)
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
@@ -445,7 +447,7 @@ export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
 
 # Keep this list explicit. Adding an original subsystem is a deliberate port step.
-CFILES := main.c nds_platform.c nds_reloc_assets.c nds_audio_assets.c nds_renderer.c port_probe.c n64_stubs.c coroutine.c \
+CFILES := main.c nds_platform.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_renderer.c port_probe.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -759,6 +761,12 @@ NDS_AUDIO_FILES := \
 	audio/fgm_tbl \
 	audio/fgm_ucd
 
+NDS_AUDIO_DERIVED_FILES :=
+ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_BGM),1)
+NDS_AUDIO_DERIVED_FILES := \
+	audio/bgm_pupupu_pcm16.raw
+endif
+
 NDS_INISHIE_SCALE_RELOCDATA_FILES :=
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
 NDS_INISHIE_SCALE_RELOCDATA_FILES := \
@@ -782,7 +790,8 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
 export NDS_NITROFS_AUDIO_FILES := \
-	$(foreach file,$(NDS_AUDIO_FILES),$(NITROFS_DIR)/$(file))
+	$(foreach file,$(NDS_AUDIO_FILES),$(NITROFS_DIR)/$(file)) \
+	$(foreach file,$(NDS_AUDIO_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
 export NDS_NITROFS_RELOCDATA_FILES := \
 	$(foreach file,$(NDS_INISHIE_SCALE_RELOCDATA_FILES),$(NITROFS_DIR)/relocdata/us/$(file))
@@ -854,6 +863,10 @@ $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 	@cp $< $@
 
 $(NITROFS_DIR)/relocdata/us/%: $(BATTLESHIP_RELOCDATA)/%
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/audio/bgm_pupupu_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_pupupu_pcm16.raw
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

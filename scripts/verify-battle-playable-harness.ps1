@@ -13,7 +13,8 @@ param(
     [switch]$ImportBattleShipMarioSpecialHi,
     [switch]$ImportBattleShipMarioSpecialLw,
     [switch]$ImportBattleShipFoxSpecialHi,
-    [switch]$ImportBattleShipAudioAssets
+    [switch]$ImportBattleShipAudioAssets,
+    [switch]$ImportBattleShipAudioBGM
 )
 $ErrorActionPreference = 'Stop'
 $ImportBattleShipNormalMoveset = $true
@@ -25,6 +26,7 @@ $ImportBattleShipMarioSpecialHi = $true
 $ImportBattleShipMarioSpecialLw = $true
 $ImportBattleShipFoxSpecialHi = $true
 $ImportBattleShipAudioAssets = $true
+$ImportBattleShipAudioBGM = $true
 $target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 if ($ImportBattleShipNormalMoveset -or
@@ -45,6 +47,7 @@ if ($ImportBattleShipNormalMoveset -or
     if ($ImportBattleShipMarioSpecialLw) { $suffix += 'mariolw' }
     if ($ImportBattleShipFoxSpecialHi) { $suffix += 'foxhi' }
     if ($ImportBattleShipAudioAssets) { $suffix += 'audio' }
+    if ($ImportBattleShipAudioBGM) { $suffix += 'bgm' }
     $target = "$target-$($suffix -join '-')"
     $build = "$build-$($suffix -join '-')"
 }
@@ -66,6 +69,7 @@ if ($ImportBattleShipNormalMoveset -or
     -ImportBattleShipMarioSpecialLw:$ImportBattleShipMarioSpecialLw `
     -ImportBattleShipFoxSpecialHi:$ImportBattleShipFoxSpecialHi `
     -ImportBattleShipAudioAssets:$ImportBattleShipAudioAssets `
+    -ImportBattleShipAudioBGM:$ImportBattleShipAudioBGM `
     -HardwareTriangles `
     -Harness 'battle_playable' `
     -Target $target `

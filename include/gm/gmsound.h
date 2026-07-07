@@ -3,6 +3,7 @@
 
 typedef enum gmMusicID
 {
+    nSYAudioBGMPupupu = 0,
     nSYAudioBGMInishieHurry = 3,
     nSYAudioBGMModeSelect = 43,
     nSYAudioBGMBattleSelect,

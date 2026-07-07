@@ -99,6 +99,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsMemoryLedgerEvictedFiles = 0;
     gNdsMemoryLedgerEvictedBytes = 0;
     ndsAudioAssetDiagnosticsReset();
+    ndsAudioBgmDiagnosticsReset();
     gNdsOpeningRoomDispatchCount = 0;
     gNdsOpeningRoomStartResult = 0;
     gNdsOpeningRoomFuncStartResult = 0;
@@ -3886,6 +3887,9 @@ extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 {
     scVSBattleFuncUpdate();
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    ndsAudioBgmUpdate();
+#endif
     dSYTaskmanUpdateCount++;
     gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
     if (counter != NULL)
@@ -5484,6 +5488,12 @@ static void ndsPrepareTaskmanRun(void)
 
 static void ndsFinishTaskmanRun(void)
 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+    {
+        syAudioStopBGMAll();
+    }
+#endif
     func_80005BFC();
     ndsDrainTaskmanQueue(&sSYTaskmanContextMesgQueue);
     ndsDrainTaskmanQueue(&sSYTaskmanResetMesgQueue);
@@ -6366,6 +6376,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             for (i = 0u; i < update_max; i++)
             {
                 scVSBattleFuncUpdate();
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+                ndsAudioBgmUpdate();
+#endif
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
