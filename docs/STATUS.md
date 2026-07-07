@@ -37,14 +37,11 @@ Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
 GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 `ftmain.c`, and `gmcollision.c`.
 
-Mode `163` is the new scene-level `battle_playable` anchor. It runs Pupupu
-Mario/Fox stock battle with imported battle camera, Dead, and Rebirth live by
-default, then proves a natural attack/damage chain, KO, stock decrement,
-falls increment, RebirthDown -> RebirthStand -> RebirthWait, return to Wait,
-normal tilts/smash/aerial coverage, Mario fireball, Fox blaster, guard, and a
-natural Fox reflector hit on a live Mario fireball, natural grab/throw
-damage/recover phase, Mario Super Jump Punch, Mario Tornado, Fox Fire Fox, and
-a DS 3D hardware stage + fighter frame.
+Mode `163` is the scene-level `battle_playable` anchor. It runs Pupupu Mario/Fox
+stock battle with imported camera/Dead/Rebirth live by default, then proves
+natural attack/damage, KO/rebirth, normal moves, Mario fireball, Fox blaster,
+guard, reflector, grab/throw, Mario/Fox specials, audio asset parsing, and a DS
+3D hardware stage + fighter frame.
 
 ## Latest Proof
 
@@ -78,9 +75,10 @@ Jump Punch, Mario Tornado, and Fox Fire Fox. The mode-163 proof reports
 `throwDmg=0->12`, `hud=dmg16/digits0x1060a stock9->4`,
 `projectile=... dmg=13`, `reflector=0xff proc=1 vx=49809->-49809`, and
 `specials=0xfff phase=7` (`mhi=1/14/7/0/195`, `mlw=1/14/0 dust=1`,
-`foxhi=1/12/17/9/12/0/61`), plus `hwsubmit=42`, `hwtri=192`,
-`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, item UI, common
-particles, and broader SObj/RDP helpers remain follow-up.
+`foxhi=1/12/17/9/12/0/61`), `audio=seq47 bank1=1/42/117@32000
+bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=64416`,
+plus `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. Audio playback and non-critical
+HUD/SObj/particle perimeter remain follow-up.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `240332`, resident reloc `750528`
@@ -120,9 +118,8 @@ marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
 `159/160` have been deleted instead of recreating old synthetic marker stacks.
 
 - renderer follow-up: broaden source-scene coverage and HW default coverage;
-- interface follow-up: finish the non-critical HUD perimeter around timer,
-  pause/end UI, magnify/arrows, tags, item UI, common particles, and broader
-  SObj/RDP helpers.
+- audio/interface follow-up: BGM/SFX playback plus the non-critical HUD/SObj
+  and particle perimeter.
 
 ## Verification
 

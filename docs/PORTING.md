@@ -17912,3 +17912,23 @@ does not assert.
   `verify-boundary -NoBuild -DelaySeconds 3`,
   `verify-battle-playable-harness -NoBuild -DelaySeconds 45`,
   `check-harness-registry`, `check-docs`, and `git diff --check`.
+
+## 2026-07-06 - Audio Asset Parser Default
+
+- Added a DS-owned parse-only audio asset loader behind
+  `NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS`, then graduated it to default. The
+  Makefile stages `S1_music_sbk`, `B1_sounds1/2_ctl`, both multi-MB sample
+  `.tbl` banks, and `fgm_unk`/`fgm_tbl`/`fgm_ucd` under NitroFS.
+- The loader treats the O2R payloads as raw N64 big-endian data, not relocated
+  byte-swapped data, matching BattleShip's `alSeqFileNew` / `alBnkfNew`
+  patch-in-place source shape in `sys/audio.c`.
+- Mode `163` now reports the default audio marker:
+  `audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695
+  raw=4422960 resident=0 scratch=64416`. The `.tbl` sample banks are verified
+  present on NitroFS but stay non-resident, preserving the 128 KiB arena
+  reserve. Playback is still deferred.
+- Verified: forced Regression prebuild work completed after the tool call
+  timeout, all four sharded Regression `-NoBuild` runs, direct/menu
+  init-wait-dash ladder, `verify-boundary -DelaySeconds 3`, default
+  `verify-battle-playable-harness -DelaySeconds 3`, `check-harness-registry`,
+  `check-docs`, and `git diff --check`.

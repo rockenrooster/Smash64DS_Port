@@ -2,7 +2,23 @@
 
 This is a read-only planning scout for replacing the current silent audio seams
 with a DS backend while keeping BattleShip gameplay code as the source of truth.
-No build, verifier, emulator, or snapshot was run for this document.
+The original scout was read-only; slice 1 has since landed as a default
+parse-only asset loader.
+
+## Landed Slice 1
+
+`NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS` now defaults on. The Makefile stages the
+original O2R audio blobs under `nitro:/audio`, including the multi-MB `.tbl`
+sample banks, while the DS loader keeps those sample banks non-resident. The
+loader explicitly reads the raw N64 big-endian payloads inside the O2R wrappers;
+they do not pass through the reloc byte-swap path. It validates all eight staged
+files open, then parses source-shaped sequence, bank, instrument/wavetable, and
+FGM package counts without playback.
+
+Mode `163` reports:
+`audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=64416`.
+This keeps the VSBattle memory reserve intact. BGM/SFX playback, sequence
+player, sample streaming/mixing, and positional audio remain future slices.
 
 ## Current Port Surface
 
@@ -216,10 +232,10 @@ reduced once live audio owns those calls.
 
 ## Proposed /task-Sized Slice Sequence
 
-1. `/task Audio asset loader scout implementation`: Stage O2R audio files into
-   NitroFS, add a DS-owned loader that reads `S1_music_sbk`, both `.ctl` files,
-   and `fgm_*`, then gate on parsed counts/offsets from `alSeqFileNew`,
-   `alBnkfNew`, and the FGM packages without playback.
+1. Done: `/task Audio asset loader scout implementation` stages O2R audio files
+   into NitroFS, parses `S1_music_sbk`, both `.ctl` files, and `fgm_*`, and
+   gates counts/offsets from the `alSeqFileNew` / `alBnkfNew` source shapes
+   without playback.
 2. `/task Minimal BGM backend`: Implement real `syAudioPlayBGM`,
    `syAudioStopBGMAll`, `syAudioCheckBGMPlaying`, and `syAudioSetBGMVolume`
    using either maxmod or a tiny DS streamer for one stage/menu BGM, gated by

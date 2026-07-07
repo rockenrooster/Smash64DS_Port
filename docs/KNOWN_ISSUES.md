@@ -1003,8 +1003,9 @@
   record, and no first texture offset for that selected source set. General mixed-width
   struct fixups, external dependency recursion, texture/display-list fixups,
   fighter data, and full symbol coverage are not implemented yet.
-- Audio functions are stubs. No BGM, SFX, sequence, sample, or mixer backend is
-  implemented.
+- Audio asset parsing is default and source-shaped, but playback remains a
+  stub. No BGM, SFX, sequence player, sample streamer, mixer, or positional
+  audio backend is implemented yet.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite

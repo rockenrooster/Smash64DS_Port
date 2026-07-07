@@ -33,13 +33,10 @@ GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 `ftmain.c`, and `gmcollision.c`.
 
 Mode `163` is the scene-level `battle_playable` Boundary/Latest anchor. It runs
-Pupupu Mario/Fox stock battle with the imported battle camera, Dead, and
-Rebirth live by default, then proves natural attack/damage, KO, stock
-decrement, falls increment, RebirthDown -> RebirthStand -> RebirthWait, return
-to Wait, normal tilts/smash/aerial coverage, Mario fireball, Fox blaster,
-guard, natural Fox reflector hit on a live Mario fireball, natural grab/throw
-damage/recover, Mario Super Jump Punch, Mario Tornado, Fox Fire Fox, and a DS
-3D hardware stage + fighter frame.
+Pupupu Mario/Fox stock battle with imported camera/Dead/Rebirth live by default,
+then proves natural attack/damage, KO/rebirth, normal moves, Mario fireball,
+Fox blaster, guard, reflector, grab/throw, Mario/Fox specials, audio asset
+parsing, and a DS 3D hardware stage + fighter frame.
 
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
 `33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair
@@ -93,10 +90,11 @@ The mode-163 proof reports `stock8->3`, `falls0->5`,
 `moveset=0x7ff phase=15`, `tilt=23/17/17`, `smash=13`, `aerial=19`,
 `landing=26`, `grab=3/1`, `throw=12/5/265`, `throwDmg=0->12`,
 `hud=dmg16/digits0x1060a stock9->4`, `projectile=... dmg=13`,
-`reflector=0xff proc=1 vx=49809->-49809`, `specials=0xfff phase=7`, and
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. Timer, pause/end UI,
-magnify/arrows, tags, item UI, common particles, and broader SObj/RDP helper
-coverage remain follow-up.
+`reflector=0xff proc=1 vx=49809->-49809`, `specials=0xfff phase=7`,
+`audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695
+raw=4422960 resident=0 scratch=64416`, and `hwsubmit=42`, `hwtri=192`,
+`hwftr=2/582`. Audio playback and non-critical HUD/SObj/particle perimeter
+remain follow-up.
 It also gates the memory ledger: current arena headroom is `240332`, resident
 reloc payloads are `750528` bytes (`stage=202816`, `fighter=244336`,
 `if=208672`), and stale menu/opening payload bytes are `0/0`.
@@ -115,10 +113,8 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. Continue specials/weapons: broaden projectile victim-damage, shield,
-   rebound, common particles, and non-Mario/Fox special perimeter.
-2. Finish the non-critical interface perimeter around timer, pause/end UI,
-   magnify/arrows, tags, item UI, and broader SObj/RDP helpers.
+1. Build the first audio playback slice on top of the parsed assets.
+2. Continue specials/weapons and non-critical interface/particle perimeter.
 3. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
 4. Renderer follow-up: broaden source-scene coverage, then plan cutover.
