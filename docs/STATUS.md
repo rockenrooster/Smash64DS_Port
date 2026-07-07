@@ -43,7 +43,8 @@ default, then proves a natural attack/damage chain, KO, stock decrement,
 falls increment, RebirthDown -> RebirthStand -> RebirthWait, return to Wait,
 normal tilts/smash/aerial coverage, Mario fireball, Fox blaster, guard, and a
 natural Fox reflector hit on a live Mario fireball, natural grab/throw
-damage/recover phase, and a DS 3D hardware stage + fighter frame.
+damage/recover phase, Mario Super Jump Punch, Mario Tornado, Fox Fire Fox, and
+a DS 3D hardware stage + fighter frame.
 
 ## Latest Proof
 
@@ -54,10 +55,8 @@ matrix/world-position collision helpers. The shared `FTStruct` source region in
 fields moved to the tail extension and compile-time guards freezing layout.
 
 Full BattleShip `ft/ftmain.c` is imported by default; duplicate local
-`ftMain*` seams are gone or call the original once. The ladder, boundary,
-continuous live-hit verifier, and four-way sharded Regression passed after a
-fresh Regression prebuild; details are in `docs/FTSTRUCT_PARITY.md` and
-`docs/KNOWN_ISSUES.md`.
+`ftMain*` seams are gone or call the original once. Current layout and coverage
+notes are in `docs/FTSTRUCT_PARITY.md` and `docs/KNOWN_ISSUES.md`.
 
 Runtime slice 2 graduated the manager/status/animation path. Default builds now
 import `ft/ftmanager.c`, the original common/Mario/Fox status descriptor
@@ -72,19 +71,20 @@ seam in `ftMainSetStatus` is still documented as follow-up.
 `battle_playable` graduated to default for `gm/gmcamera.c`,
 `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD,
 original `if/ifscreenflash.c`, normal moveset TUs, the weapon manager, Mario
-fireball, Fox blaster, the original effect manager, and Fox reflector. The
-mode-163 proof reports `stock8->5`,
-`falls0->3`, `moveset=0x7ff phase=15`, `tilt=23/17/17`, `smash=13`,
-`aerial=19`, `landing=26`, `grab=3/1`, `throw=12/5/11`,
-`throwDmg=0->12`, `hud=dmg12/digits0x1020a stock9->6`,
+fireball, Fox blaster, the original effect manager, Fox reflector, Mario Super
+Jump Punch, Mario Tornado, and Fox Fire Fox. The mode-163 proof reports
+`stock8->3`, `falls0->5`, `moveset=0x7ff phase=15`, `tilt=23/17/17`,
+`smash=13`, `aerial=19`, `landing=26`, `grab=3/1`, `throw=12/5/265`,
+`throwDmg=0->12`, `hud=dmg16/digits0x1060a stock9->4`,
 `projectile=... dmg=13`, `reflector=0xff proc=1 vx=49809->-49809`, and
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. Timer, pause/end UI,
-magnify/arrows, tags, item UI, common particles, and broader SObj/RDP helpers
-remain follow-up.
+`specials=0xfff phase=7` (`mhi=1/14/7/0/195`, `mlw=1/14/0 dust=1`,
+`foxhi=1/12/17/9/12/0/61`), plus `hwsubmit=42`, `hwtri=192`,
+`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, item UI, common
+particles, and broader SObj/RDP helpers remain follow-up.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
-cache eviction. Mode `163` reports headroom `240332`, resident reloc `747472`
-bytes (`stage=202816`, `fighter=241280`, `if=208672`), stale `0/0`, and
+cache eviction. Mode `163` reports headroom `240332`, resident reloc `750528`
+bytes (`stage=202816`, `fighter=244336`, `if=208672`), stale `0/0`, and
 source VSBattle buffers from `scvsbattle.c:31-41`.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage

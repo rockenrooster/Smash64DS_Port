@@ -22,6 +22,18 @@ $profileKey = $Profile.ToLowerInvariant()
 $sharedBuild = "build-verify-$profileKey-shared"
 $optSizeSharedBuild = "build-verify-$profileKey-optsize-shared"
 $optSizeHarnessModes = @(161, 162, 163)
+function Test-OptSizeHarnessMode {
+    param($Mode)
+
+    foreach ($modeValue in @($Mode)) {
+        [int]$parsedMode = 0
+        if ([int]::TryParse([string]$modeValue, [ref]$parsedMode) -and
+            ($optSizeHarnessModes -contains $parsedMode)) {
+            return $true
+        }
+    }
+    return $false
+}
 if ($ParallelBuilds -le 0) {
     $ParallelBuilds = if ($Profile -in @('Full','Regression')) { 4 } else { 1 }
 }
@@ -82,7 +94,7 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
         $usesSharedBuild = $false
         if (-not $NoSharedBuild) {
             $rendererSuffix = if ($record.Target -like '*-hwtri') { '-hwtri' } else { '' }
-            if ($optSizeHarnessModes -contains [int]$record.Mode) {
+            if (Test-OptSizeHarnessMode $record.Mode) {
                 $build = "$optSizeSharedBuild$rendererSuffix"
             } else {
                 $build = "$sharedBuild$rendererSuffix"
@@ -168,15 +180,30 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
             $ErrorActionPreference = 'Stop'
             if ($devkitPro) { $env:DEVKITPRO = $devkitPro }
             if ($devkitArm) { $env:DEVKITARM = $devkitArm }
-            $records = @(ConvertFrom-Json -InputObject $sliceJson)
+            $records = ConvertFrom-Json -InputObject $sliceJson
+            if ($null -eq $records) {
+                $records = @()
+            }
             $optSizeHarnessModes = @(161, 162, 163)
+            function Test-OptSizeHarnessMode {
+                param($Mode)
+
+                foreach ($modeValue in @($Mode)) {
+                    [int]$parsedMode = 0
+                    if ([int]::TryParse([string]$modeValue, [ref]$parsedMode) -and
+                        ($optSizeHarnessModes -contains $parsedMode)) {
+                        return $true
+                    }
+                }
+                return $false
+            }
             $forcedSharedBuilds = @{}
             foreach ($record in $records) {
                 $build = $record.Build
                 $usesSharedBuild = $false
                 if (-not $noSharedBuild) {
                     $rendererSuffix = if ($record.Target -like '*-hwtri') { '-hwtri' } else { '' }
-                    if ($optSizeHarnessModes -contains [int]$record.Mode) {
+                    if (Test-OptSizeHarnessMode $record.Mode) {
                         $build = "build-verify-$profileKey-optsize-shared-$worker$rendererSuffix"
                     } else {
                         $build = "build-verify-$profileKey-shared-$worker$rendererSuffix"
@@ -207,8 +234,11 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
                 $logPath = Join-Path $logDir ("worker{0}-{1}.log" -f $worker, $record.Name)
                 Write-Output ("[worker {0}] Building verifier output: {1}" -f $worker, $record.Name)
                 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+                $previousErrorActionPreference = $ErrorActionPreference
+                $ErrorActionPreference = 'Continue'
                 & make @makeArgs *> $logPath
                 $exitCode = $LASTEXITCODE
+                $ErrorActionPreference = $previousErrorActionPreference
                 $stopwatch.Stop()
                 [PSCustomObject]@{
                     kind = 'timing'

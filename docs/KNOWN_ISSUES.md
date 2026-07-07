@@ -95,6 +95,11 @@
   code. Heavy map adjustment, display-scale, common particle/glow visuals,
   broader projectile victim-damage, shield, rebound, and free-flight proofs
   remain follow-up.
+- Mario Super Jump Punch, Mario Tornado, and Fox Fire Fox are default through
+  original `ftmariospecialhi.c`, `ftmariospeciallw.c`, `ftfoxspecialhi.c`, and
+  `ftcommonfallspecial.c`. The fall-special public reaction call remains a
+  weak no-op until `ftpublic.c`/audio reaction behavior is imported
+  (`ftcommonfallspecial.c:96`, `ftpublic.c:261`).
 - Common particle script/texture banks remain non-resident for now; particle
   calls stay on diagnostic/no-op shims until a dedicated particle asset gate
   budgets or streams the 326 KiB bank pair.

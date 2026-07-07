@@ -38,7 +38,8 @@ Rebirth live by default, then proves natural attack/damage, KO, stock
 decrement, falls increment, RebirthDown -> RebirthStand -> RebirthWait, return
 to Wait, normal tilts/smash/aerial coverage, Mario fireball, Fox blaster,
 guard, natural Fox reflector hit on a live Mario fireball, natural grab/throw
-damage/recover, and a DS 3D hardware stage + fighter frame.
+damage/recover, Mario Super Jump Punch, Mario Tornado, Fox Fire Fox, and a DS
+3D hardware stage + fighter frame.
 
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
 `33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair
@@ -72,9 +73,7 @@ Full BattleShip `ft/ftmain.c` is now imported by default through
 or routed through the imported original once. The default ladder, boundary,
 continuous live-hit verifier, and four-way sharded Regression passed after a
 fresh Regression prebuild, and all four Regression shards were rerun green on
-current `master` after the renderer follow-ups. The regression-cycle fix
-preserves the first selected cross-floor target match so later wall/cliff MP
-updates cannot erase motion-stale proof evidence.
+current `master`.
 
 Runtime slice 2 graduated the original manager/status/animation path. Default
 builds import `ft/ftmanager.c`, the full original common/Mario/Fox status
@@ -88,16 +87,18 @@ instead of resurrecting their motion-extract and synthetic marker seams.
 original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`,
 battle-critical `if/ifcommon.c` HUD paths, original `if/ifscreenflash.c`, the
 normal moveset imports, the weapon manager, Mario fireball, Fox blaster, the
-original effect manager, and Fox reflector.
-The mode-163 proof reports `stock8->5`, `falls0->3`,
+original effect manager, Fox reflector, Mario Super Jump Punch, Mario Tornado,
+and Fox Fire Fox.
+The mode-163 proof reports `stock8->3`, `falls0->5`,
 `moveset=0x7ff phase=15`, `tilt=23/17/17`, `smash=13`, `aerial=19`,
-`landing=26`, `grab=3/1`, `throw=12/5/11`, `throwDmg=0->12`,
-`hud=dmg12/digits0x1020a stock9->6`, `projectile=... dmg=13`,
-`reflector=0xff proc=1 vx=49809->-49809`, and `hwsubmit=42`, `hwtri=192`,
-`hwftr=2/582`. Timer, pause/end UI, magnify/arrows, tags, item UI, common
-particles, and broader SObj/RDP helper coverage remain follow-up.
+`landing=26`, `grab=3/1`, `throw=12/5/265`, `throwDmg=0->12`,
+`hud=dmg16/digits0x1060a stock9->4`, `projectile=... dmg=13`,
+`reflector=0xff proc=1 vx=49809->-49809`, `specials=0xfff phase=7`, and
+`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. Timer, pause/end UI,
+magnify/arrows, tags, item UI, common particles, and broader SObj/RDP helper
+coverage remain follow-up.
 It also gates the memory ledger: current arena headroom is `240332`, resident
-reloc payloads are `747472` bytes (`stage=202816`, `fighter=241280`,
+reloc payloads are `750528` bytes (`stage=202816`, `fighter=244336`,
 `if=208672`), and stale menu/opening payload bytes are `0/0`.
 
 ## Process Change
@@ -115,7 +116,7 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 ## Recommended Next Work
 
 1. Continue specials/weapons: broaden projectile victim-damage, shield,
-   rebound, common particles, and remaining Mario/Fox special statuses.
+   rebound, common particles, and non-Mario/Fox special perimeter.
 2. Finish the non-critical interface perimeter around timer, pause/end UI,
    magnify/arrows, tags, item UI, and broader SObj/RDP helpers.
 3. As subsystem slices obsolete old marker stacks, migrate-or-delete their

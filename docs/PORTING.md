@@ -17880,3 +17880,35 @@ does not assert.
   `verify-boundary -NoBuild -DelaySeconds 3`,
   `verify-battle-playable-harness -NoBuild -DelaySeconds 45`,
   `check-harness-registry`, `check-docs`, and `git diff --check`.
+
+## 2026-07-06 - Remaining Mario/Fox Special Defaults
+
+- Imported original `ftmariospecialhi.c`, `ftmariospeciallw.c`,
+  `ftfoxspecialhi.c`, and `ftcommonfallspecial.c` through `src/import`, then
+  graduated `NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI`,
+  `NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW`, and
+  `NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI` to default as separate commits.
+- The standing packed-data audit found no new packed/bitfield payload class in
+  these three specials. They consume the existing manager-loaded motion/status
+  payloads cited in `docs/SPECIALS_WEAPONS_SCOUT.md`.
+- Mode `163` now proves natural controller-input Mario Super Jump Punch,
+  Mario Tornado, and Fox Fire Fox on the original-manager runtime:
+  `specials=0xfff phase=7`, `mhi=1/14/7/0/195`, `mlw=1/14/0 dust=1`,
+  and `foxhi=1/12/17/9/12/0/61`.
+- The fresh Regression prebuild exposed missing NitroFS staging for the
+  already-referenced special animation O2Rs (`RELOC_OPEN_FAILS=44`). Added
+  `FTMarioAnim138`-`140` and `FTFoxAnim139`-`147` to the packaged
+  Mario/Fox fighter reloc set; no verifier expectation was relaxed.
+- Repaired the forced parallel Regression prebuild worker path so JSON-decoded
+  shard records are enumerated correctly and compiler warnings on stderr do not
+  abort successful `make` jobs under `$ErrorActionPreference = 'Stop'`.
+- Current mode-163 memory ledger after the special defaults:
+  `head240332 reloc750528 stage202816 fighter244336 if208672 stale0/0`, keeping
+  the 128 KiB reserve intact. The fall-special public reaction call remains a
+  documented no-op until `ftpublic.c`/audio reaction behavior is imported
+  (`ftcommonfallspecial.c:96`, `ftpublic.c:261`).
+- Verified: fresh `build-verify-profile -Profile Regression -Force`, all four
+  sharded Regression `-NoBuild` runs, direct/menu init-wait-dash ladder,
+  `verify-boundary -NoBuild -DelaySeconds 3`,
+  `verify-battle-playable-harness -NoBuild -DelaySeconds 45`,
+  `check-harness-registry`, `check-docs`, and `git diff --check`.

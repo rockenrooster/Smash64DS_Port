@@ -262,8 +262,8 @@ Delete or supersede these only when their original TU group is live:
   stubs in `src/port/battle_playable_compat_stubs.c:215`-`:229`.
 - Special input interrupt shims:
   `ftCommonSpecialHiCheckInterruptCommon` in
-  `src/port/reloc_backend_compat_shims.c:1871`-`:1875`. This is not a weapon
-  manager blocker, but it should not survive the up-special slice.
+  `src/port/reloc_backend_compat_shims.c:1871`-`:1875` now routes to the
+  imported original when `NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI=1`.
 
 ## Resident Bytes Estimate
 
@@ -323,9 +323,11 @@ the common particle bank into the optional extra 4 MiB DSi/debug-cart profile.
 
    Landed for Fox reflector: `ftfoxspeciallw.c` imports whole, mode `163`
    proves a live Mario fireball reflection, and the old
-   `ftFoxSpecialLwHitSetStatus` seam is deleted. Remaining non-projectile
-   specials are still future small groups: `ftmariospecialhi.c`,
-   `ftmariospeciallw.c`, and `ftfoxspecialhi.c`.
+   `ftFoxSpecialLwHitSetStatus` seam is deleted. Landed for remaining
+   non-projectile Mario/Fox specials: `ftmariospecialhi.c`,
+   `ftmariospeciallw.c`, and `ftfoxspecialhi.c` import whole, mode `163`
+   proves Mario Super Jump Punch, Mario Tornado, and Fox Fire Fox through
+   natural controller input, and all three fences now default on.
 
 Manager-first beats per-special-first here. Mario fireball and Fox blaster both
 need the same weapon manager, GObj link, process, map, and hit-collision

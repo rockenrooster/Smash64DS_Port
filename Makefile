@@ -682,6 +682,9 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTMarioAnim059 \
 	reloc_animations/FTMarioAnim136 \
 	reloc_animations/FTMarioAnim137 \
+	reloc_animations/FTMarioAnim138 \
+	reloc_animations/FTMarioAnim139 \
+	reloc_animations/FTMarioAnim140 \
 	reloc_animations/FTMarioAnim141 \
 	reloc_animations/FTFoxAnim000 \
 	reloc_animations/FTFoxAnim001 \
@@ -714,7 +717,16 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim121 \
 	reloc_animations/FTFoxAnim122 \
 	reloc_animations/FTFoxAnim137 \
-	reloc_animations/FTFoxAnim138
+	reloc_animations/FTFoxAnim138 \
+	reloc_animations/FTFoxAnim139 \
+	reloc_animations/FTFoxAnim140 \
+	reloc_animations/FTFoxAnim141 \
+	reloc_animations/FTFoxAnim142 \
+	reloc_animations/FTFoxAnim143 \
+	reloc_animations/FTFoxAnim144 \
+	reloc_animations/FTFoxAnim145 \
+	reloc_animations/FTFoxAnim146 \
+	reloc_animations/FTFoxAnim147
 
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
