@@ -17980,3 +17980,37 @@ does not assert.
   `verify-dev-fast -Build -DelaySeconds 3`, `verify-boundary -DelaySeconds 3`,
   `verify-all -Profile RegressionFast -Only battle_playable -DelaySeconds 3`,
   `check-docs`, and `git diff --check`.
+
+## 2026-07-07 - Realtime Battle Presentation
+
+- Split mode `163` into explicit presentation modes. Harness builds pass
+  `NDS_HARNESS_FAST_LOGIC=1` and keep the deep proof chain unthrottled; normal
+  battle-playable builds run one `scVSBattleFuncUpdate`, one scene draw, and
+  one `ndsPlatformEndFrame` vblank wait per frame. This follows the original
+  scheduler/taskman retrace contract in `sys/scheduler.c:1038-1055,1249,1258-1263`
+  and `sys/taskman.c:993-1018`.
+- Re-anchored the Pupupu BGM stream to libnds CPU timer time instead of logic
+  frames. The stream still uses the unchanged PCM16 asset
+  `581191127a00c8ddbd4395cc00b5d4722bbeca734a0990e778a2ea5e9138effa`,
+  with the `44100` B/s expectation from
+  `scripts/render-audio-bgm-pupupu.py:22,283-284`. Mode `163` now reports
+  `bgm=track0 play=1 stop=1 refills=32 read=1114112 rate=44099 loop=0 hwloop=0
+  resident=65536` in fast verification, and realtime smoke reports
+  `frames=600 fps=598/598 ticks=335878400`.
+- Fixed a stale fighter AObj16/figatree heap alias in forced reloc loads. The
+  failure manifested as Fox Fire Fox holding forever while audio hardware kept
+  repeating the last ring-buffer slice; BattleShip `ftmain.c:4615-4624,4704,4751-4759`
+  reloads the requested motion file into `fp->figatree_heap`, so the DS force
+  path now reloads fighter AObj16 assets into the supplied heap instead of
+  reusing an earlier heap pointer by file identity.
+- Made the diagnostic taskman arena allocator tiered for smaller non-battle
+  harnesses while preserving the full mode-163 battle arena assertion. This
+  fixed startup/title Regression failures where a zero-sized arena reached the
+  original `syTaskmanMalloc` path.
+- Verified: `verify-dev-fast -Build -DelaySeconds 3`,
+  `verify-boundary -DelaySeconds 3`,
+  `verify-battle-playable-harness -RealtimePresentation -DelaySeconds 3`,
+  fresh `build-verify-profile -Profile Regression -Force` (wrapper timed out
+  while workers completed), all four sharded Regression `-NoBuild` runs green
+  after rerunning shards `0` and `1` sequentially, plus the current
+  `check-harness-registry` and `check-docs` gates for this slice.

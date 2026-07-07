@@ -175,6 +175,7 @@
 #define NDS_FIGHTER_NATURAL_MOTION_PASS 0x464e4d50u
 #define NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS 0x464e4d53u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PASS 0x42504c59u
+#define NDS_BATTLE_PLAYABLE_PACING_PASS 0x42505443u
 #define NDS_FIGHTER_PROJECTILE_PROOF_PASS 0x50524f4au
 #define NDS_MEMORY_LEDGER_PASS 0x4d4c4544u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_PASS 0x46444150u
@@ -3811,6 +3812,14 @@ extern volatile s32 gNdsFighterBattlePlayableFinalYMilli;
 extern volatile s32 gNdsFighterBattlePlayableFinalVelXMilli;
 extern volatile s32 gNdsFighterBattlePlayableFinalVelYMilli;
 extern volatile s32 gNdsFighterBattlePlayableFinalFloorDistMilli;
+extern volatile u32 gNdsBattlePlayablePacingResult;
+extern volatile u32 gNdsBattlePlayablePacingMode;
+extern volatile u32 gNdsBattlePlayablePacingLogicFrames;
+extern volatile u32 gNdsBattlePlayablePacingPresentedFrames;
+extern volatile u32 gNdsBattlePlayablePacingDrawCalls;
+extern volatile u32 gNdsBattlePlayablePacingTimerTicks;
+extern volatile u32 gNdsBattlePlayablePacingPresentFpsX10;
+extern volatile u32 gNdsBattlePlayablePacingLogicFpsX10;
 extern volatile u32 gNdsIFCommonHUDRecordCount;
 extern volatile u32 gNdsIFCommonHUDObjectMask;
 extern volatile u32 gNdsIFCommonHUDP0DamageCurrent;
@@ -4037,6 +4046,7 @@ extern volatile u32 gNdsStageGCDrawAllLoopHardwareFighterTriangleCount;
 void ndsFighterMarioFoxStageGCDrawAllLoopPrepare(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopFinalize(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void);
+void ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame(void);
 s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void);
 s32 ndsFighterMarioFoxGCDrawAllLoopDisplayActive(void);
 void ndsStageGCDrawAllLoopRecordCameraCallback(void);

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 
+#include <nds/timers.h>
 #include <PR/os.h>
 #include <db/debug.h>
 #include <ef/effect.h>
@@ -17,6 +18,7 @@
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_audio_bgm.h>
 #include <nds/nds_controller.h>
+#include <nds/nds_os.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>

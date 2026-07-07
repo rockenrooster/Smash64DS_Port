@@ -2741,6 +2741,14 @@ volatile s32 gNdsFighterBattlePlayableFinalYMilli;
 volatile s32 gNdsFighterBattlePlayableFinalVelXMilli;
 volatile s32 gNdsFighterBattlePlayableFinalVelYMilli;
 volatile s32 gNdsFighterBattlePlayableFinalFloorDistMilli;
+volatile u32 gNdsBattlePlayablePacingResult;
+volatile u32 gNdsBattlePlayablePacingMode;
+volatile u32 gNdsBattlePlayablePacingLogicFrames;
+volatile u32 gNdsBattlePlayablePacingPresentedFrames;
+volatile u32 gNdsBattlePlayablePacingDrawCalls;
+volatile u32 gNdsBattlePlayablePacingTimerTicks;
+volatile u32 gNdsBattlePlayablePacingPresentFpsX10;
+volatile u32 gNdsBattlePlayablePacingLogicFpsX10;
 volatile u32 gNdsIFCommonHUDRecordCount;
 volatile u32 gNdsIFCommonHUDObjectMask;
 volatile u32 gNdsIFCommonHUDP0DamageCurrent;
@@ -6784,6 +6792,7 @@ extern void func_80005BFC(void);
 #define NDS_OPENING_MOVIE_DRAW_INTERVAL 30u
 static void *sNdsTaskmanArenaAlloc;
 static u8 *sNdsTaskmanArenaBytes;
+static size_t sNdsTaskmanArenaSize;
 
 #define NDS_OPENING_ROOM_PENCILS_DOBJ_ENTRIES 4u
 #define NDS_OPENING_ROOM_PENCILS_RENDER_DOBJS 3u
@@ -6808,11 +6817,30 @@ static u8 *ndsTaskmanArenaBytes(void)
 {
     if (sNdsTaskmanArenaBytes == NULL)
     {
-        sNdsTaskmanArenaAlloc = calloc(1, NDS_TASKMAN_ARENA_SIZE + 0x10u);
-        if (sNdsTaskmanArenaAlloc != NULL)
+        static const size_t arena_sizes[] =
         {
-            uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
-            sNdsTaskmanArenaBytes = (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
+            NDS_TASKMAN_ARENA_SIZE,
+            0x100000u,
+            0xc0000u,
+            0x80000u,
+            0x40000u
+        };
+        size_t i;
+
+        for (i = 0; i < (sizeof(arena_sizes) / sizeof(arena_sizes[0])); i++)
+        {
+            if (arena_sizes[i] > NDS_TASKMAN_ARENA_SIZE)
+            {
+                continue;
+            }
+            sNdsTaskmanArenaAlloc = calloc(1, arena_sizes[i] + 0x10u);
+            if (sNdsTaskmanArenaAlloc != NULL)
+            {
+                uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
+                sNdsTaskmanArenaBytes = (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
+                sNdsTaskmanArenaSize = arena_sizes[i];
+                break;
+            }
         }
     }
     return sNdsTaskmanArenaBytes;
@@ -6825,7 +6853,7 @@ void *ndsTaskmanArenaStart(void)
 
 size_t ndsTaskmanArenaSize(void)
 {
-    return (ndsTaskmanArenaBytes() != NULL) ? NDS_TASKMAN_ARENA_SIZE : 0u;
+    return (ndsTaskmanArenaBytes() != NULL) ? sNdsTaskmanArenaSize : 0u;
 }
 
 #define NDS_OVERLAY_LIST(X) \

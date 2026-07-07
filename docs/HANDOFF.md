@@ -94,14 +94,19 @@ The mode-163 proof reports `stock8->3`, `falls0->5`,
 `reflector=0xff proc=1 vx=49809->-49809`, `specials=0xfff phase=7`,
 `audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695
 raw=4422960 resident=0 scratch=64416`,
-`bgm=track0 play=1 stop=1 refills=88 read=2949120 rate=44046 loop=1 resident=65536`, and
+`bgm=track0 play=1 stop=1 refills=32 read=1114112 rate=44099 loop=0 hwloop=0 resident=65536`, and
 `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. FGM/voice playback, original
 sequence-player import, and non-critical HUD/SObj/particle perimeter remain
 follow-up.
-It also gates the memory ledger: current arena headroom is `237836`, resident
-reloc payloads are `770896` bytes (`stage=202816`, `fighter=264704`,
+It also gates the memory ledger: current arena headroom is `237948`, resident
+reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 `if=208672`), stale menu/opening payload bytes are `0/0`, and the separate
-64 KiB BGM stream buffer still leaves `172300` bytes above the reserve.
+64 KiB BGM stream buffer leaves `172412` bytes against the 128 KiB reserve.
+
+Realtime presentation is now default for normal/manual battle-playable builds:
+one `scVSBattleFuncUpdate`, one scene draw, and one DS vblank per frame. The
+latest realtime smoke reports `frames=600 fps=598/598 ticks=335878400`. Harness
+builds keep `NDS_HARNESS_FAST_LOGIC=1` for the deep proof chain.
 
 ## Process Change
 

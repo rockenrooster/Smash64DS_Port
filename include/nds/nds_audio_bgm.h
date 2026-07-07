@@ -12,6 +12,7 @@
 #define NDS_AUDIO_BGM_HALF_BYTES (NDS_AUDIO_BGM_CHUNK_BYTES / 2u)
 #define NDS_AUDIO_BGM_BYTES_PER_SECOND (NDS_AUDIO_BGM_SAMPLE_RATE * 2u)
 #define NDS_AUDIO_BGM_TRACK_FRAMES 3928u
+#define NDS_AUDIO_BGM_RATE_GUARD_FRAMES 3200u
 
 void ndsAudioBgmDiagnosticsReset(void);
 void ndsAudioBgmUpdate(void);
@@ -48,5 +49,9 @@ extern volatile u32 gNdsAudioBgmWritePositionBytes;
 extern volatile u32 gNdsAudioBgmPlaybackHalf;
 extern volatile u32 gNdsAudioBgmWriteHalf;
 extern volatile u32 gNdsAudioBgmUnsafeWriteCount;
+extern volatile u32 gNdsAudioBgmTimerTicks;
+extern volatile u32 gNdsAudioBgmPlaybackBytes;
+extern volatile u32 gNdsAudioBgmPlaybackLoopCount;
+extern volatile u32 gNdsAudioBgmOverrunCount;
 
 #endif

@@ -74,19 +74,26 @@ one-track Pupupu BGM playback. The mode-163 proof reports
 `smash=13`, `aerial=19`, `landing=26`, `grab=3/1`, `throw=12/5/175`,
 `throwDmg=0->12`, `hud=dmg16/digits0x1060a stock9->4`,
 `projectile=... dmg=13`, `reflector=0xff proc=1 vx=49809->-49809`, and
-`specials=0xfff phase=7` (`mhi=1/31/0/72/105`, `mlw=1/43/0 dust=1 wait=165`,
+`specials=0xfff phase=7` (`mhi=1/31/0/72/105`, `mlw=1/41/0 dust=1 wait=165`,
 `foxhi=1/3/17/20/10/0/61`), `audio=seq47 bank1=1/42/117@32000
 bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=64416`,
-`bgm=track0 play=1 stop=1 refills=88 read=2949120 rate=44046 loop=1 resident=65536`, plus
+`bgm=track0 play=1 stop=1 refills=32 read=1114112 rate=44099 loop=0 hwloop=0 resident=65536`, plus
 `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. FGM/voice playback, original
 sequence-player import, and non-critical HUD/SObj/particle perimeter remain
 follow-up.
 
+Mode `163` now has two presentation paths: the default fast verifier keeps the
+deep proof chain unthrottled, while realtime presentation runs one battle
+update, one draw, and one DS vblank per frame. The realtime smoke reports
+`frames=600 fps=598/598 ticks=335878400`; normal/manual builds use that
+realtime path.
+
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
-cache eviction. Mode `163` reports headroom `237836`, resident reloc `770896`
-bytes (`stage=202816`, `fighter=264704`, `if=208672`), stale `0/0`, and source
+cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
+bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. The BGM stream adds a separate
-64 KiB resident buffer while still leaving `172300` bytes above the reserve.
+64 KiB resident buffer; after subtracting it, `172412` bytes remain against
+the 128 KiB reserve.
 
 Renderer hardware is now default for all-DL modes `33/34`, stage
 draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair `161/162`;

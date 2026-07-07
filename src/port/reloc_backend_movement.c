@@ -9143,7 +9143,11 @@ static sb32 ndsFighterBattlePlayableProofEnabled(void)
 {
 #if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+#if NDS_HARNESS_FAST_LOGIC
     return TRUE;
+#else
+    return FALSE;
+#endif
 #else
     return FALSE;
 #endif
@@ -12591,9 +12595,14 @@ static sb32 ndsStageGCDrawAllLoopIsSelectedFighter(GObj *gobj)
 {
     FTStruct *fp;
 
-    if (gobj == NULL)
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindFighter))
     {
         return FALSE;
+    }
+    fp = gobj->user_data.p;
+    if (ndsFighterStructIsPoolPointer(fp) != FALSE)
+    {
+        return TRUE;
     }
     fp = ftGetStruct(gobj);
     return (ndsFighterStructIsPoolPointer(fp) != FALSE) ? TRUE : FALSE;
@@ -12804,6 +12813,21 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
     ndsFighterMarioFoxDLAllDrawSubmitStageHardwareFighters();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
 }
+
+static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
+{
+    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    {
+        return;
+    }
+
+    sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
+    ndsRendererHardwareSetNoOracle(TRUE);
+    gcDrawAll();
+    ndsFighterMarioFoxDLAllDrawSubmitStageHardwareFighters();
+    ndsRendererHardwareSetNoOracle(FALSE);
+    sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
+}
 #endif
 
 void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void)
@@ -12811,5 +12835,13 @@ void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void)
 #if NDS_RENDERER_HW_TRIANGLES
     ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
     ndsStageGCDrawAllLoopSubmitHardwareFrame();
+#endif
+}
+
+void ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
+    ndsStageGCDrawAllLoopPresentHardwareFrame();
 #endif
 }

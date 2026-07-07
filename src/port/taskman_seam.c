@@ -613,6 +613,14 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterBattlePlayableFinalVelXMilli = 0;
     gNdsFighterBattlePlayableFinalVelYMilli = 0;
     gNdsFighterBattlePlayableFinalFloorDistMilli = 0;
+    gNdsBattlePlayablePacingResult = 0;
+    gNdsBattlePlayablePacingMode = 0;
+    gNdsBattlePlayablePacingLogicFrames = 0;
+    gNdsBattlePlayablePacingPresentedFrames = 0;
+    gNdsBattlePlayablePacingDrawCalls = 0;
+    gNdsBattlePlayablePacingTimerTicks = 0;
+    gNdsBattlePlayablePacingPresentFpsX10 = 0;
+    gNdsBattlePlayablePacingLogicFpsX10 = 0;
     gNdsIFCommonHUDRecordCount = 0;
     gNdsIFCommonHUDObjectMask = 0;
     gNdsIFCommonHUDP0DamageCurrent = 0;
@@ -3880,9 +3888,13 @@ extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 /* Remaining specials add long original recovery windows, especially Mario's
  * Super Jump Punch fall-special landing path. */
 #define NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX 9000u
+#define NDS_FIGHTER_BATTLE_PLAYABLE_REALTIME_SMOKE_UPDATE_MAX 600u
+#define NDS_FIGHTER_BATTLE_PLAYABLE_LIVE_UPDATE_MAX 216000u
 #define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
 #define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
 #define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
+
+static u32 sNdsBattlePlayablePacingStartTick;
 
 static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 {
@@ -3901,6 +3913,51 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
         NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
     gNdsSCVSBattleOriginalSetupMask |=
         NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+}
+
+static void ndsBattlePlayablePacingStart(u32 fast_logic)
+{
+    sNdsBattlePlayablePacingStartTick = cpuGetTiming();
+    gNdsBattlePlayablePacingResult = 0;
+    gNdsBattlePlayablePacingMode = fast_logic;
+    gNdsBattlePlayablePacingLogicFrames = 0;
+    gNdsBattlePlayablePacingPresentedFrames = 0;
+    gNdsBattlePlayablePacingDrawCalls = 0;
+    gNdsBattlePlayablePacingTimerTicks = 0;
+    gNdsBattlePlayablePacingPresentFpsX10 = 0;
+    gNdsBattlePlayablePacingLogicFpsX10 = 0;
+}
+
+static void ndsBattlePlayablePacingFinish(void)
+{
+    u32 ticks = cpuGetTiming() - sNdsBattlePlayablePacingStartTick;
+
+    gNdsBattlePlayablePacingTimerTicks = ticks;
+    if (ticks != 0u)
+    {
+        gNdsBattlePlayablePacingPresentFpsX10 =
+            (u32)(((u64)gNdsBattlePlayablePacingPresentedFrames *
+                   BUS_CLOCK * 10u) / ticks);
+        gNdsBattlePlayablePacingLogicFpsX10 =
+            (u32)(((u64)gNdsBattlePlayablePacingLogicFrames *
+                   BUS_CLOCK * 10u) / ticks);
+    }
+    gNdsBattlePlayablePacingResult = NDS_BATTLE_PLAYABLE_PACING_PASS;
+}
+
+static void ndsBattlePlayablePresentFrame(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame();
+#else
+    gcDrawAll();
+#endif
+    gNdsBattlePlayablePacingDrawCalls++;
+    ndsPlatformEndFrame();
+    ndsOsPostVBlank();
+    ndsOsRunThreads();
+    gNdsFrameCounter++;
+    gNdsBattlePlayablePacingPresentedFrames++;
 }
 
 static void ndsRunMarioFoxProcessPrerequisiteLoop(void)
@@ -6350,10 +6407,15 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         {
             u32 i;
             u32 update_max;
+            u32 is_battle_playable =
+                (NDS_DEV_SCENE_HARNESS ==
+                    NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE);
+            u32 use_realtime_presentation =
+                ((is_battle_playable != 0u) &&
+                 (NDS_HARNESS_FAST_LOGIC == 0));
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
-            if (NDS_DEV_SCENE_HARNESS ==
-                NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+            if (is_battle_playable != 0u)
             {
                 ndsStageCollisionLoopPrepareRuntime();
 #if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
@@ -6362,47 +6424,76 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             }
             ndsFighterMarioFoxNaturalMotionPrepare();
 #if NDS_IMPORT_BATTLESHIP_IFCOMMON
-            if (NDS_DEV_SCENE_HARNESS ==
-                NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+            if ((is_battle_playable != 0u) &&
+                (use_realtime_presentation == 0u))
             {
                 gcDrawAll();
+                gNdsBattlePlayablePacingDrawCalls++;
             }
 #endif
-            update_max =
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE) ?
-                NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX :
-                NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX;
+            if (is_battle_playable == 0u)
+            {
+                update_max = NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX;
+            }
+            else if (use_realtime_presentation == 0u)
+            {
+                update_max = NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX;
+            }
+            else if (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+            {
+                update_max = NDS_FIGHTER_BATTLE_PLAYABLE_LIVE_UPDATE_MAX;
+            }
+            else
+            {
+                update_max = NDS_FIGHTER_BATTLE_PLAYABLE_REALTIME_SMOKE_UPDATE_MAX;
+            }
+            if (is_battle_playable != 0u)
+            {
+                ndsBattlePlayablePacingStart(
+                    (NDS_HARNESS_FAST_LOGIC != 0) ? 1u : 0u);
+            }
             for (i = 0u; i < update_max; i++)
             {
-                scVSBattleFuncUpdate();
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
-                ndsAudioBgmUpdate();
-#endif
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
+                ndsRunMarioFoxProofUpdate(
+                    &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+                if (is_battle_playable != 0u)
+                {
+                    gNdsBattlePlayablePacingLogicFrames++;
+                    if (use_realtime_presentation != 0u)
+                    {
+                        ndsBattlePlayablePresentFrame();
+                    }
+                }
 
                 if (gNdsFighterNaturalMotionResult ==
                     NDS_FIGHTER_NATURAL_MOTION_PASS)
                 {
+                    if ((is_battle_playable != 0u) &&
+                        (NDS_DEV_LIVE_INPUT_PREVIEW != 0))
+                    {
+                        continue;
+                    }
+                    if ((is_battle_playable != 0u) &&
+                        (use_realtime_presentation != 0u) &&
+                        ((i + 1u) < update_max))
+                    {
+                        continue;
+                    }
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
-                    if ((NDS_DEV_SCENE_HARNESS ==
-                            NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE) &&
-                        ((gNdsAudioBgmLoopCount == 0u) ||
-                         (gNdsAudioBgmElapsedFrames <
-                            NDS_AUDIO_BGM_TRACK_FRAMES)))
+                    if ((is_battle_playable != 0u) &&
+                        (use_realtime_presentation == 0u) &&
+                        (gNdsAudioBgmElapsedFrames <
+                            NDS_AUDIO_BGM_RATE_GUARD_FRAMES))
                     {
                         continue;
                     }
 #endif
                     break;
                 }
+            }
+            if (is_battle_playable != 0u)
+            {
+                ndsBattlePlayablePacingFinish();
             }
 #if NDS_RENDERER_HW_TRIANGLES && \
     ((NDS_DEV_SCENE_HARNESS == \
@@ -6542,7 +6633,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      (NDS_DEV_SCENE_HARNESS == \
         NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
      (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE))
-            ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
+            if ((NDS_DEV_SCENE_HARNESS !=
+                    NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE) ||
+                (NDS_HARNESS_FAST_LOGIC != 0))
+            {
+                ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
+            }
 #endif
 #else
             u32 live_update_max =

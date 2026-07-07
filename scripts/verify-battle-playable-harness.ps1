@@ -14,7 +14,8 @@ param(
     [switch]$ImportBattleShipMarioSpecialLw,
     [switch]$ImportBattleShipFoxSpecialHi,
     [switch]$ImportBattleShipAudioAssets,
-    [switch]$ImportBattleShipAudioBGM
+    [switch]$ImportBattleShipAudioBGM,
+    [switch]$RealtimePresentation
 )
 $ErrorActionPreference = 'Stop'
 $ImportBattleShipNormalMoveset = $true
@@ -29,27 +30,9 @@ $ImportBattleShipAudioAssets = $true
 $ImportBattleShipAudioBGM = $true
 $target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
-if ($ImportBattleShipNormalMoveset -or
-    $ImportBattleShipMarioFireball -or
-    $ImportBattleShipFoxBlaster -or
-    $ImportBattleShipEffectManager -or
-    $ImportBattleShipFoxReflector -or
-    $ImportBattleShipMarioSpecialHi -or
-    $ImportBattleShipMarioSpecialLw -or
-    $ImportBattleShipFoxSpecialHi) {
-    $suffix = @()
-    if ($ImportBattleShipNormalMoveset) { $suffix += 'moveset' }
-    if ($ImportBattleShipMarioFireball) { $suffix += 'fireball' }
-    if ($ImportBattleShipFoxBlaster) { $suffix += 'blaster' }
-    if ($ImportBattleShipEffectManager) { $suffix += 'effect' }
-    if ($ImportBattleShipFoxReflector) { $suffix += 'reflector' }
-    if ($ImportBattleShipMarioSpecialHi) { $suffix += 'mariohi' }
-    if ($ImportBattleShipMarioSpecialLw) { $suffix += 'mariolw' }
-    if ($ImportBattleShipFoxSpecialHi) { $suffix += 'foxhi' }
-    if ($ImportBattleShipAudioAssets) { $suffix += 'audio' }
-    if ($ImportBattleShipAudioBGM) { $suffix += 'bgm' }
-    $target = "$target-$($suffix -join '-')"
-    $build = "$build-$($suffix -join '-')"
+if ($RealtimePresentation) {
+    $target = 'smash64ds-battle-playable-realtime'
+    $build = 'build-battle-playable-realtime-harness'
 }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
@@ -70,7 +53,8 @@ if ($ImportBattleShipNormalMoveset -or
     -ImportBattleShipFoxSpecialHi:$ImportBattleShipFoxSpecialHi `
     -ImportBattleShipAudioAssets:$ImportBattleShipAudioAssets `
     -ImportBattleShipAudioBGM:$ImportBattleShipAudioBGM `
-    -HardwareTriangles `
+    -HardwareTriangles:(!$RealtimePresentation) `
+    -RealtimePresentation:$RealtimePresentation `
     -Harness 'battle_playable' `
     -Target $target `
     -Build $build `

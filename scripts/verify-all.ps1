@@ -115,7 +115,7 @@ try {
     if ($Build) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-        & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal -B -j16
+        & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=1 -B -j16
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     $plan = @(Get-Smash64DSVerifyPlan -Profile $Profile -Only $Only -From $From)

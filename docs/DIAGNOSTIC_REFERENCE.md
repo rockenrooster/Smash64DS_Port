@@ -1305,16 +1305,23 @@ Opening movie / Opening Portraits:
 - `gNdsSCVSBattleCompatAudioMask` / `LastAudioVolume` / `LastFGM`: shared
   audio compatibility evidence. FGM/voice calls are diagnostic only; BGM calls
   now route through the one-track Pupupu backend when enabled.
+- `BPLAY_PACE`: mode `163` presentation marker. Fast harness builds use
+  `NDS_HARNESS_FAST_LOGIC=1` and expect mode `1`, at least 3200 logic frames,
+  zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
+  builds use mode `0` and expect one logic update, one scene draw, and one DS
+  vblank-presented frame per iteration, with presented and logic rates in
+  `59.3..60.3` fps.
 - `AUDIO_BGM`: mode `163` BGM backend marker. Expected default proof:
   result `0x42474d31`, low mask bits `0x3`, playing `0` after teardown,
   track `0`, volume `0x7800`, at least one play and stop call, no open/read/
   unsupported-track failures, read bytes at least one 64 KiB chunk, resident
   bytes `65536`, 32 KiB refill size, at least one played chunk, and
-  stopped-on-teardown `1`. The extended rate guard expects at least 3928
-  emulated frames, streamed rate within `42100..46100` B/s around the PCM16
-  mono `44100` B/s target from `scripts/render-audio-bgm-pupupu.py`,
-  at least one whole-track wrap, safe opposite-half writes, and zero unsafe
-  write attempts.
+  stopped-on-teardown `1`. The hardware-timer rate guard expects at least 3200
+  fast-logic frames, streamed rate within `42100..46100` B/s around the PCM16
+  mono `44100` B/s target from `scripts/render-audio-bgm-pupupu.py`, safe
+  opposite-half writes, and zero unsafe write attempts. Realtime smoke uses the
+  same timer-derived byte-rate guard; whole-track wrap is supported and is only
+  expected when a run outlasts the 65.5-second rendered track.
 - `gNdsSCVSBattleCompatSpawnMask`: deterministic spawn-position queries from
   `mpCollisionGetPlayerMapObjPosition`.
 - `gNdsSCVSBattleOriginalUpdateResult` / `UpdateCount`: one bounded

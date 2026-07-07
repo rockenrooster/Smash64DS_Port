@@ -1011,6 +1011,10 @@
   by wrapping the whole rendered track; original CSEQ loop-point extraction is
   still follow-up. FGM/voice playback, positional audio, broader BGM IDs, mixer
   behavior, and original sequence envelopes remain unimplemented.
+- Realtime battle presentation is paced to DS vblank. The original N64
+  scheduler drives gameplay from retrace; the DS hardware vblank is 59.8261 Hz,
+  about 0.3% slower than N64 60 Hz. This is an inherent platform difference,
+  not a gameplay rewrite.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite
@@ -1090,9 +1094,11 @@ isolating the compatibility type that causes the warning.
 - The DS has much tighter memory constraints than the N64. Do not optimize
   memory layout before proving the original code path, but expect overlays,
   assets, and display lists to need a deliberate memory plan.
-- The DS taskman arena is currently `0x130000` when the imported fighter manager
-  is enabled, because original Mario/Fox manager creation plus the inherited
-  stage proof chain exceeded the old 1 MiB diagnostic arena. This is not a
+- The DS taskman arena targets `0x150000` when the imported fighter manager is
+  enabled, because original Mario/Fox manager creation plus the inherited stage
+  proof chain exceeded the old 1 MiB diagnostic arena. Smaller non-battle
+  harnesses may tier down if that full allocation is unavailable, but mode
+  `163` still asserts the full battle arena and 128 KiB reserve. This is not a
   final overlay/memory strategy.
 - The N64 framebuffer dimensions and fixed memory addresses are unsafe on DS.
   Any original code that writes fixed `0x80xxxxxx` ranges must be inspected and

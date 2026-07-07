@@ -3305,10 +3305,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     NDSRendererConfig config;
     NDSRendererStats stats;
     NDSFighterDLDrawState state;
+    NDSRendererCommandCallback callback;
     NDSRendererMatrix20p12 initial_projection;
     NDSRendererMatrix20p12 initial_modelview;
     const NDSRendererMatrix20p12 *initial_projection_ptr;
     const NDSRendererMatrix20p12 *initial_modelview_ptr;
+#if NDS_RENDERER_HW_TRIANGLES
+    void *saved_graphics_heap_ptr;
+#endif
 
     if ((dobj == NULL) || (dl == NULL))
     {
@@ -3325,6 +3329,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     bzero(&state, sizeof(state));
     state.primary_file = loaded;
     state.slot = 0u;
+#if NDS_RENDERER_HW_TRIANGLES
+    saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+#endif
     ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
     ndsRendererAdapterPrepareInitialMatrices(dobj,
                                              (camera_gobj != NULL) ?
@@ -3349,13 +3356,18 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     config.resolve_branch = ndsFighterDLDrawResolveBranch;
     config.resolve_data = ndsFighterDLDrawResolveRendererData;
     config.user = &state;
+    callback = (ndsRendererHardwareNoOracleEnabled() != FALSE) ?
+        NULL : ndsFighterMarioFoxVisitDLDrawCommand;
 
     ndsRendererInitStats(&stats);
     ndsRendererExecuteDisplayList(dl,
                                   &config,
-                                  ndsFighterMarioFoxVisitDLDrawCommand,
+                                  callback,
                                   &state,
                                   &stats);
+#if NDS_RENDERER_HW_TRIANGLES
+    gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+#endif
     gNdsStageGCDrawAllLoopHardwareTriangleCount +=
         stats.hardware_triangle_count;
     gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
@@ -3972,6 +3984,9 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     NDSRendererMatrix20p12 initial_modelview;
     const NDSRendererMatrix20p12 *initial_projection_ptr;
     const NDSRendererMatrix20p12 *initial_modelview_ptr;
+#if NDS_RENDERER_HW_TRIANGLES
+    void *saved_graphics_heap_ptr;
+#endif
     u32 root_x_before;
     u32 root_x_after;
     u32 unused_index;
@@ -4007,6 +4022,7 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     state.primary_file = loaded;
     state.slot = slot;
 #if NDS_RENDERER_HW_TRIANGLES
+    saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
     ndsRendererAdapterPrepareMaterialSegment(selected, &state);
 #endif
     ndsRendererAdapterPrepareInitialMatrices(selected,
@@ -4035,6 +4051,9 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
                                   ndsFighterMarioFoxVisitDLDrawCommand,
                                   &state,
                                   &stats);
+#if NDS_RENDERER_HW_TRIANGLES
+    gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+#endif
     ndsFighterMarioFoxCopyDLDrawStats(slot, &state, &stats);
     if ((stats.blocker == NDS_RENDERER_BLOCKER_NONE) &&
         (state.unsupported_command_count == 0u) &&
@@ -4857,6 +4876,9 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         NDSRendererMatrix20p12 initial_modelview;
         const NDSRendererMatrix20p12 *initial_projection_ptr;
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
+#if NDS_RENDERER_HW_TRIANGLES
+        void *saved_graphics_heap_ptr;
+#endif
 
         if ((loaded == NULL) &&
             (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
@@ -4869,6 +4891,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         ndsFighterDLDrawSeedPersistentState(&states[i],
                                             &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
+        saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
         ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
                                                  &states[i]);
 #endif
@@ -4900,6 +4923,9 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                       ndsFighterMarioFoxVisitDLDrawCommand,
                                       &states[i],
                                       &stats[i]);
+#if NDS_RENDERER_HW_TRIANGLES
+        gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+#endif
         ndsFighterDLDrawCapturePersistentState(&persistent_state,
                                                &states[i]);
         ndsFighterDLDrawCopyPersistentRendererState(&persistent_stats,
@@ -5930,6 +5956,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     NDSRendererStats *stats;
     NDSRendererStats persistent_stats;
     u8 *clean;
+    sb32 no_oracle;
     u32 root_x_before;
     u32 root_x_after;
     u32 i;
@@ -5968,6 +5995,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     states = sNdsFighterDLAllDrawStates[slot];
     stats = sNdsFighterDLAllDrawStats[slot];
     clean = sNdsFighterDLAllDrawClean[slot];
+    no_oracle = (ndsRendererHardwareNoOracleEnabled() != FALSE) ? TRUE :
+                                                                    FALSE;
     bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
     bzero(&persistent_state, sizeof(persistent_state));
     bzero(stats, sizeof(sNdsFighterDLAllDrawStats[slot]));
@@ -5984,6 +6013,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         NDSRendererMatrix20p12 initial_modelview;
         const NDSRendererMatrix20p12 *initial_projection_ptr;
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
+#if NDS_RENDERER_HW_TRIANGLES
+        void *saved_graphics_heap_ptr;
+#endif
 
         if ((loaded == NULL) &&
             (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
@@ -5993,9 +6025,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
-        ndsFighterDLDrawSeedPersistentState(&states[i],
-                                            &persistent_state);
+        if (no_oracle == FALSE)
+        {
+            ndsFighterDLDrawSeedPersistentState(&states[i],
+                                                &persistent_state);
+        }
 #if NDS_RENDERER_HW_TRIANGLES
+        saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
         ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
                                                  &states[i]);
 #endif
@@ -6024,11 +6060,19 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                     &persistent_stats);
         ndsRendererExecuteDisplayList(dl,
                                       &config,
-                                      ndsFighterMarioFoxVisitDLDrawCommand,
+                                      (no_oracle != FALSE) ?
+                                          NULL :
+                                          ndsFighterMarioFoxVisitDLDrawCommand,
                                       &states[i],
                                       &stats[i]);
-        ndsFighterDLDrawCapturePersistentState(&persistent_state,
-                                               &states[i]);
+#if NDS_RENDERER_HW_TRIANGLES
+        gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+#endif
+        if (no_oracle == FALSE)
+        {
+            ndsFighterDLDrawCapturePersistentState(&persistent_state,
+                                                   &states[i]);
+        }
         ndsFighterDLDrawCopyPersistentRendererState(&persistent_stats,
                                                     &stats[i]);
         ndsFighterDLAllDrawAccumulateStats(slot, i, collection.indices[i],

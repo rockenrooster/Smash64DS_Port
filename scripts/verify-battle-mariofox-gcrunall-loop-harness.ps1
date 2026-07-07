@@ -20,6 +20,7 @@ param(
     [switch]$ImportBattleShipNormalMoveset,
     [switch]$HardwareTriangles,
     [switch]$BattlePlayable,
+    [switch]$RealtimePresentation,
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
     [string]$Build = 'build-battle-mariofox-gcrunall-loop-harness',
@@ -129,6 +130,11 @@ if ($ImportBattleShipNormalMoveset) {
 if ($HardwareTriangles) {
     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
 }
+if ($RealtimePresentation) {
+    $makeArgs += 'NDS_HARNESS_FAST_LOGIC=0'
+} else {
+    $makeArgs += 'NDS_HARNESS_FAST_LOGIC=1'
+}
 if (-not $NoBuild) {
     & make @makeArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -152,7 +158,7 @@ try {
     Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort | Out-Null
     # The natural combat chain runs ~1000+ bounded updates; battle_playable
     # continues into an input-driven KO -> Rebirth -> Wait cycle.
-    $minimumDelay = if ($BattlePlayable) { 25 } else { 15 }
+    $minimumDelay = if ($BattlePlayable -and $RealtimePresentation) { 12 } elseif ($BattlePlayable) { 25 } else { 15 }
     Start-Sleep -Seconds ([Math]::Max($DelaySeconds, $minimumDelay))
     $gdbCommands = @(
         'set pagination off',
@@ -211,6 +217,7 @@ try {
             'printf "BPLAY_KO=%#x,%#x,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterBattlePlayableResult, gNdsFighterBattlePlayableMask, gNdsFighterBattlePlayableVictimSlot, gNdsFighterBattlePlayableVictimStockStart, gNdsFighterBattlePlayableVictimStockFinal, gNdsFighterBattlePlayableBattleStockStart, gNdsFighterBattlePlayableBattleStockFinal, gNdsFighterBattlePlayableFallsStart, gNdsFighterBattlePlayableFallsFinal',
             'printf "BPLAY_STATUS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterBattlePlayableDeadFrames, gNdsFighterBattlePlayableRebirthDownFrames, gNdsFighterBattlePlayableRebirthStandFrames, gNdsFighterBattlePlayableRebirthWaitFrames, gNdsFighterBattlePlayableFallAfterRebirthFrames, gNdsFighterBattlePlayableWaitAfterRebirthFrames, gNdsFighterBattlePlayableFinalStatus, gNdsFighterBattlePlayableFinalGA, gNdsFighterBattlePlayableFinalIsRebirth, gNdsFighterBattlePlayableKOStickFrames',
             'printf "BPLAY_MAP=%u,%u,%u,%u,%u,%#x,%#x,%d,%d,%d,%d,%d,%u,%u\n", gNdsFighterBattlePlayableMapCallCount, gNdsFighterBattlePlayableMapHitCount, gNdsFighterBattlePlayableMapFloorHitCount, gNdsFighterBattlePlayableMapCliffHitCount, gNdsFighterBattlePlayableMapCeilHitCount, gNdsFighterBattlePlayableMapLastMaskStat, gNdsFighterBattlePlayableMapLastMaskCurr, gNdsFighterBattlePlayableFinalXMilli, gNdsFighterBattlePlayableFinalYMilli, gNdsFighterBattlePlayableFinalVelXMilli, gNdsFighterBattlePlayableFinalVelYMilli, gNdsFighterBattlePlayableFinalFloorDistMilli, gNdsFighterBattlePlayableFinalFloor, gNdsFighterBattlePlayableFinalIsGhost',
+            'printf "BPLAY_PACE=%#x,%u,%u,%u,%u,%u,%u,%u\n", gNdsBattlePlayablePacingResult, gNdsBattlePlayablePacingMode, gNdsBattlePlayablePacingLogicFrames, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingDrawCalls, gNdsBattlePlayablePacingTimerTicks, gNdsBattlePlayablePacingPresentFpsX10, gNdsBattlePlayablePacingLogicFpsX10',
             'printf "MEMARENA=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerGeneration, gNdsMemoryLedgerArenaCapacity, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater, gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerDLBytes, gNdsMemoryLedgerGraphicsBytes, gNdsMemoryLedgerRdpBytes, gNdsMemoryLedgerFigatreeHeapSize',
             'printf "MEMRELOC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerRelocFiles, gNdsMemoryLedgerRelocBytes, gNdsMemoryLedgerRelocStageBytes, gNdsMemoryLedgerRelocFighterBytes, gNdsMemoryLedgerRelocInterfaceBytes, gNdsMemoryLedgerRelocMenuBytes, gNdsMemoryLedgerRelocOpeningBytes, gNdsMemoryLedgerRelocOtherBytes, gNdsMemoryLedgerRelocStaleFiles, gNdsMemoryLedgerRelocStaleBytes',
             'printf "MEMEVICT=%u,%u\n", gNdsMemoryLedgerEvictedFiles, gNdsMemoryLedgerEvictedBytes'
@@ -261,7 +268,7 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $audioBgmCommands = @(
-            'printf "AUDIO_BGM=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmMask, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmVolume, gNdsAudioBgmPlayCalls, gNdsAudioBgmStopCalls, gNdsAudioBgmCheckCalls, gNdsAudioBgmSetVolumeCalls, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsupportedTrackCount, gNdsAudioBgmReadBytes, gNdsAudioBgmResidentBytes, gNdsAudioBgmChunkBytes, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmStoppedOnTeardown, gNdsAudioBgmElapsedFrames, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmExpectedBytesPerSecond, gNdsAudioBgmLoopCount, gNdsAudioBgmRefillCount, gNdsAudioBgmPlaybackPositionBytes, gNdsAudioBgmWritePositionBytes, gNdsAudioBgmPlaybackHalf, gNdsAudioBgmWriteHalf, gNdsAudioBgmUnsafeWriteCount'
+            'printf "AUDIO_BGM=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmMask, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmVolume, gNdsAudioBgmPlayCalls, gNdsAudioBgmStopCalls, gNdsAudioBgmCheckCalls, gNdsAudioBgmSetVolumeCalls, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsupportedTrackCount, gNdsAudioBgmReadBytes, gNdsAudioBgmResidentBytes, gNdsAudioBgmChunkBytes, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmStoppedOnTeardown, gNdsAudioBgmElapsedFrames, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmExpectedBytesPerSecond, gNdsAudioBgmLoopCount, gNdsAudioBgmRefillCount, gNdsAudioBgmPlaybackPositionBytes, gNdsAudioBgmWritePositionBytes, gNdsAudioBgmPlaybackHalf, gNdsAudioBgmWriteHalf, gNdsAudioBgmUnsafeWriteCount, gNdsAudioBgmTimerTicks, gNdsAudioBgmPlaybackBytes, gNdsAudioBgmPlaybackLoopCount, gNdsAudioBgmOverrunCount'
         )
         $gdbCommands = @($beforeDetach + $audioBgmCommands + $afterDetach)
     }
@@ -285,6 +292,7 @@ try {
     $naturalGuard = [regex]::Match($gdbStdout, 'NAT_GUARD=([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayableKO = [regex]::Match($gdbStdout, 'BPLAY_KO=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayableStatus = [regex]::Match($gdbStdout, 'BPLAY_STATUS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $battlePlayablePacing = [regex]::Match($gdbStdout, 'BPLAY_PACE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryArena = [regex]::Match($gdbStdout, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryReloc = [regex]::Match($gdbStdout, 'MEMRELOC=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryEvict = [regex]::Match($gdbStdout, 'MEMEVICT=([0-9]+),([0-9]+)')
@@ -308,7 +316,7 @@ try {
     $reflector = [regex]::Match($gdbStdout, 'REFLECTOR=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $specials = [regex]::Match($gdbStdout, 'SPECIALS=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
     $audioAsset = [regex]::Match($gdbStdout, 'AUDIO_ASSET=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     Assert-Condition ($harn.Success -and (Convert-MarkerUInt32 $harn.Groups[1].Value) -eq 0x4841524e -and [int]$harn.Groups[2].Value -eq $ExpectedMode -and [int]$harn.Groups[3].Value -eq $ExpectedHarnessSceneCurr -and [int]$harn.Groups[4].Value -eq $ExpectedHarnessScenePrev -and (Convert-MarkerUInt32 $harn.Groups[5].Value) -eq 0) $HarnessSelectMessage $gdbStdout
     Assert-Condition ($scene.Success -and [int]$scene.Groups[1].Value -eq 22 -and [int]$scene.Groups[2].Value -eq 21 -and [int]$scene.Groups[3].Value -eq 6) 'Live scene is not Pupupu VSBattle from Maps.' $gdbStdout
@@ -330,6 +338,16 @@ try {
             $nm = Get-Ints $naturalMoveset
         }
         $hardwareSummary = ''
+        if ($BattlePlayable -and $RealtimePresentation) {
+            $bp = Get-Ints $battlePlayablePacing
+            Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and $bp[2] -eq $bp[3] -and $bp[3] -ge 120 -and $bp[4] -eq $bp[3] -and $bp[5] -gt 0 -and $bp[6] -ge 593 -and $bp[6] -le 603 -and $bp[7] -ge 593 -and $bp[7] -le 603) 'battle_playable realtime pacing failed 59.3..60.3 presented/logic fps or one draw per update.' $gdbStdout
+            if ($ImportBattleShipAudioBGM) {
+                $ab = Get-Ints $audioBgm
+                Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x1) -eq 0x1) -and (($ab[2] -eq 1) -or ($ab[6] -ge 1)) -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0) 'Minimal BGM backend realtime smoke failed hardware-timer byte-rate or safe half refill guard.' $gdbStdout
+            }
+            Write-Output ("$Label realtime pacing smoke passed: frames=$($bp[3]) fps=$($bp[6])/$($bp[7]) ticks=$($bp[5])")
+            return
+        }
         $movementOnly = (($ExpectedMode -eq 39) -or ($ExpectedMode -eq 40))
         $liveHitOnly = (($ExpectedMode -eq 53) -or ($ExpectedMode -eq 54) -or ($ExpectedMode -eq 161) -or ($ExpectedMode -eq 162))
         $naturalMaskOk = if ($BattlePlayable) { (($nat[2] -band 0x6ffff) -eq 0x6ffff) } elseif ($movementOnly) { (($nat[2] -band 0x7fff) -eq 0x7fff) } elseif ($liveHitOnly) { (($nat[2] -band 0x3fdff) -eq 0x3fdff) } else { (($nat[2] -band 0xfffff) -eq 0xfffff) }
@@ -393,8 +411,8 @@ try {
         if ($ImportBattleShipAudioBGM) {
             $ab = Get-Ints $audioBgm
             $audioBgmResidentBytes = $ab[13]
-            Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x13) -eq 0x13) -and $ab[2] -eq 0 -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[6] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[12] -ge 2886710 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[15] -ge 1 -and $ab[16] -eq 1 -and $ab[17] -ge 3928 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[21] -ge 1 -and $ab[22] -ge 1 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0) 'Minimal BGM backend proof failed natural start/stop, loop, or 44100 B/s stream-rate guard.' $gdbStdout
-            $audioBgmSummary = " bgm=track$($ab[3]) play=$($ab[5]) stop=$($ab[6]) refills=$($ab[22]) read=$($ab[12]) rate=$($ab[19]) loop=$($ab[21]) resident=$($ab[13])"
+            Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x3) -eq 0x3) -and $ab[2] -eq 0 -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[6] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[12] -gt 65536 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[15] -ge 1 -and $ab[16] -eq 1 -and $ab[17] -ge 3200 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0 -and $ab[31] -eq 0) 'Minimal BGM backend proof failed natural start/stop or hardware-timer 44100 B/s stream-rate guard.' $gdbStdout
+            $audioBgmSummary = " bgm=track$($ab[3]) play=$($ab[5]) stop=$($ab[6]) refills=$($ab[22]) read=$($ab[12]) rate=$($ab[19]) loop=$($ab[21]) hwloop=$($ab[30]) resident=$($ab[13])"
         }
         $movesetSummary = ''
         if ($ImportBattleShipNormalMoveset) {
@@ -408,9 +426,11 @@ try {
             $ma = Get-Ints $memoryArena
             $mr = Get-Ints $memoryReloc
             $me = Get-Ints $memoryEvict
+            $bp = Get-Ints $battlePlayablePacing
             $victimStockDelta = $bpk[3] - $bpk[4]
             $battleStockDelta = $bpk[5] - $bpk[6]
             $fallsDelta = $bpk[8] - $bpk[7]
+            Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq 0x42505443 -and $bp[1] -eq 1 -and $bp[2] -ge 3200 -and $bp[3] -eq 0 -and $bp[4] -eq 0 -and $bp[5] -gt 0) 'battle_playable fast-logic pacing marker did not prove explicit unthrottled verification mode.' $gdbStdout
             Assert-Condition ($battlePlayableKO.Success -and $bpk[0] -eq 0x42504c59 -and (($bpk[1] -band 0xff) -eq 0xff) -and $victimStockDelta -gt 0 -and $victimStockDelta -eq $battleStockDelta -and $victimStockDelta -eq $fallsDelta) 'battle_playable stock/fall KO proof failed.' $gdbStdout
             Assert-Condition ($battlePlayableStatus.Success -and $bps[0] -gt 0 -and $bps[1] -gt 0 -and $bps[2] -gt 0 -and $bps[3] -gt 0 -and $bps[5] -ge 8 -and $bps[6] -eq 10 -and $bps[7] -eq 0 -and $bps[8] -eq 0 -and $bps[9] -gt 0) 'battle_playable Dead/Rebirth/return-control proof failed.' $gdbStdout
             $interfaceBytesOk = if ($ImportBattleShipIFCommon) { $mr[4] -gt 0 } else { $true }
@@ -418,6 +438,7 @@ try {
             Assert-Condition ($memoryReloc.Success -and $mr[0] -gt 0 -and $mr[1] -gt 0 -and $mr[2] -gt 0 -and $mr[3] -gt 0 -and $interfaceBytesOk -and $mr[5] -eq 0 -and $mr[6] -eq 0 -and $mr[8] -eq 0 -and $mr[9] -eq 0) 'battle_playable reloc memory ledger found stale or missing resident groups.' $gdbStdout
             Assert-Condition ($memoryEvict.Success) 'battle_playable reloc eviction ledger was not printed.' $gdbStdout
             $battlePlayableSummary = " bplay=stock$($bpk[3])->$($bpk[4]) falls$($bpk[7])->$($bpk[8]) dead=$($bps[0]) rebirth=$($bps[1])/$($bps[2])/$($bps[3]) recover=$($bps[4])/$($bps[5])"
+            $battlePlayableSummary += " pace=fast logic$($bp[2]) draw$($bp[4])"
             $battlePlayableSummary += " mem=head$($ma[6]) reloc$($mr[1]) stage$($mr[2]) fighter$($mr[3]) if$($mr[4]) stale$($mr[8])/$($mr[9]) evict$($me[0])/$($me[1])"
             $battlePlayableSummary += $movesetSummary
             $battlePlayableSummary += $specialsSummary

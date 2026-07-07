@@ -64,7 +64,8 @@ if ($needsDefault) {
         '-C', $root,
         'TARGET=smash64ds',
         'BUILD=build',
-        'NDS_DEV_SCENE_HARNESS=normal'
+        'NDS_DEV_SCENE_HARNESS=normal',
+        'NDS_HARNESS_FAST_LOGIC=1'
     )
     if ($Force) {
         $makeArgs += '-B'
@@ -106,7 +107,8 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
             '-C', $root,
             "TARGET=$($record.Target)",
             "BUILD=$build",
-            "NDS_DEV_SCENE_HARNESS=$($record.Harness)"
+            "NDS_DEV_SCENE_HARNESS=$($record.Harness)",
+            "NDS_HARNESS_FAST_LOGIC=1"
         )
         if ($record.Target -like '*-hwtri') {
             $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
@@ -214,7 +216,8 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
                     '-C', $root,
                     "TARGET=$($record.Target)",
                     "BUILD=$build",
-                    "NDS_DEV_SCENE_HARNESS=$($record.Harness)"
+                    "NDS_DEV_SCENE_HARNESS=$($record.Harness)",
+                    "NDS_HARNESS_FAST_LOGIC=1"
                 )
                 if ($record.Target -like '*-hwtri') {
                     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'

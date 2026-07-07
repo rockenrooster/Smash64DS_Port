@@ -269,6 +269,8 @@ void ndsRendererExecuteDisplayList(const Gfx *dl,
                                    NDSRendererCommandCallback callback,
                                    void *callback_user,
                                    NDSRendererStats *stats);
+void ndsRendererHardwareSetNoOracle(u32 enabled);
+u32 ndsRendererHardwareNoOracleEnabled(void);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);
 
 #endif
