@@ -12,7 +12,8 @@ param(
     [switch]$ImportBattleShipFoxBlaster,
     [switch]$ImportBattleShipMarioSpecialHi,
     [switch]$ImportBattleShipMarioSpecialLw,
-    [switch]$ImportBattleShipFoxSpecialHi
+    [switch]$ImportBattleShipFoxSpecialHi,
+    [switch]$ImportBattleShipAudioAssets
 )
 $ErrorActionPreference = 'Stop'
 $ImportBattleShipNormalMoveset = $true
@@ -42,6 +43,7 @@ if ($ImportBattleShipNormalMoveset -or
     if ($ImportBattleShipMarioSpecialHi) { $suffix += 'mariohi' }
     if ($ImportBattleShipMarioSpecialLw) { $suffix += 'mariolw' }
     if ($ImportBattleShipFoxSpecialHi) { $suffix += 'foxhi' }
+    if ($ImportBattleShipAudioAssets) { $suffix += 'audio' }
     $target = "$target-$($suffix -join '-')"
     $build = "$build-$($suffix -join '-')"
 }
@@ -62,6 +64,7 @@ if ($ImportBattleShipNormalMoveset -or
     -ImportBattleShipMarioSpecialHi:$ImportBattleShipMarioSpecialHi `
     -ImportBattleShipMarioSpecialLw:$ImportBattleShipMarioSpecialLw `
     -ImportBattleShipFoxSpecialHi:$ImportBattleShipFoxSpecialHi `
+    -ImportBattleShipAudioAssets:$ImportBattleShipAudioAssets `
     -HardwareTriangles `
     -Harness 'battle_playable' `
     -Target $target `

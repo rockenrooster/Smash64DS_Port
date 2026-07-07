@@ -98,6 +98,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsMemoryLedgerRelocStaleBytes = 0;
     gNdsMemoryLedgerEvictedFiles = 0;
     gNdsMemoryLedgerEvictedBytes = 0;
+    ndsAudioAssetDiagnosticsReset();
     gNdsOpeningRoomDispatchCount = 0;
     gNdsOpeningRoomStartResult = 0;
     gNdsOpeningRoomFuncStartResult = 0;
@@ -6345,6 +6346,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
             {
                 ndsStageCollisionLoopPrepareRuntime();
+#if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
+                ndsAudioAssetLoadFenced();
+#endif
             }
             ndsFighterMarioFoxNaturalMotionPrepare();
 #if NDS_IMPORT_BATTLESHIP_IFCOMMON

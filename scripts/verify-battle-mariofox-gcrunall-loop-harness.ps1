@@ -15,6 +15,7 @@ param(
     [switch]$ImportBattleShipMarioSpecialHi,
     [switch]$ImportBattleShipMarioSpecialLw,
     [switch]$ImportBattleShipFoxSpecialHi,
+    [switch]$ImportBattleShipAudioAssets,
     [switch]$ImportBattleShipNormalMoveset,
     [switch]$HardwareTriangles,
     [switch]$BattlePlayable,
@@ -114,6 +115,9 @@ if ($ImportBattleShipMarioSpecialLw) {
 }
 if ($ImportBattleShipFoxSpecialHi) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI=1'
+}
+if ($ImportBattleShipAudioAssets) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS=1'
 }
 if ($ImportBattleShipNormalMoveset) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET=1'
@@ -241,6 +245,14 @@ try {
         )
         $gdbCommands = @($beforeDetach + $specialsCommands + $afterDetach)
     }
+    if ($ImportBattleShipAudioAssets) {
+        $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
+        $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
+        $audioCommands = @(
+            'printf "AUDIO_ASSET=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioAssetResult, gNdsAudioAssetMask, gNdsAudioAssetOpenCount, gNdsAudioAssetOpenFailCount, gNdsAudioAssetFormatFailCount, gNdsAudioAssetShortReadCount, gNdsAudioAssetRawBytes, gNdsAudioAssetResidentBytes, gNdsAudioAssetScratchMaxBytes, gNdsAudioAssetSeqCount, gNdsAudioAssetSeqFirstOffset, gNdsAudioAssetSeqFirstLength, gNdsAudioAssetSeqMaxLength, gNdsAudioAssetBank1BankCount, gNdsAudioAssetBank1InstrumentCount, gNdsAudioAssetBank1WaveCount, gNdsAudioAssetBank1SampleRate, gNdsAudioAssetBank2BankCount, gNdsAudioAssetBank2InstrumentCount, gNdsAudioAssetBank2WaveCount, gNdsAudioAssetBank2SampleRate, gNdsAudioAssetFgmUnkCount, gNdsAudioAssetFgmTableCount, gNdsAudioAssetFgmUcodeCount'
+        )
+        $gdbCommands = @($beforeDetach + $audioCommands + $afterDetach)
+    }
     $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root -Commands $gdbCommands -ScriptName $scriptName).Stdout
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
@@ -283,6 +295,7 @@ try {
     $projectile = [regex]::Match($gdbStdout, 'PROJECTILE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $reflector = [regex]::Match($gdbStdout, 'REFLECTOR=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $specials = [regex]::Match($gdbStdout, 'SPECIALS=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
+    $audioAsset = [regex]::Match($gdbStdout, 'AUDIO_ASSET=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     Assert-Condition ($harn.Success -and (Convert-MarkerUInt32 $harn.Groups[1].Value) -eq 0x4841524e -and [int]$harn.Groups[2].Value -eq $ExpectedMode -and [int]$harn.Groups[3].Value -eq $ExpectedHarnessSceneCurr -and [int]$harn.Groups[4].Value -eq $ExpectedHarnessScenePrev -and (Convert-MarkerUInt32 $harn.Groups[5].Value) -eq 0) $HarnessSelectMessage $gdbStdout
     Assert-Condition ($scene.Success -and [int]$scene.Groups[1].Value -eq 22 -and [int]$scene.Groups[2].Value -eq 21 -and [int]$scene.Groups[3].Value -eq 6) 'Live scene is not Pupupu VSBattle from Maps.' $gdbStdout
@@ -356,6 +369,12 @@ try {
             }
             $specialsSummary = " specials=0x$('{0:x}' -f $sp[0]) phase=$($sp[1]) mhi=$($sp[5])/$($sp[6])/$($sp[8])/$($sp[9])/$($sp[10]) y=$($sp[11]) mlw=$($sp[12])/$($sp[13])/$($sp[14]) dust=$($sp[15]) wait=$($sp[16]) foxhi=$($sp[17])/$($sp[18])/$($sp[19])/$($sp[20])/$($sp[21])/$($sp[22])/$($sp[23]) y=$($sp[24])"
         }
+        $audioSummary = ''
+        if ($ImportBattleShipAudioAssets) {
+            $aa = Get-Ints $audioAsset
+            Assert-Condition ($audioAsset.Success -and $aa[0] -eq 0x41554431 -and $aa[1] -eq 0xff -and $aa[2] -eq 8 -and $aa[3] -eq 0 -and $aa[4] -eq 0 -and $aa[5] -eq 0 -and $aa[6] -eq 4422960 -and $aa[7] -eq 0 -and $aa[8] -le 65536 -and $aa[9] -eq 47 -and $aa[10] -eq 380 -and $aa[11] -eq 7999 -and $aa[12] -gt 0 -and $aa[13] -eq 1 -and $aa[14] -eq 42 -and $aa[15] -eq 117 -and $aa[16] -eq 32000 -and $aa[17] -eq 1 -and $aa[18] -eq 1 -and $aa[19] -eq 322 -and $aa[20] -eq 44100 -and $aa[21] -eq 100 -and $aa[22] -eq 464 -and $aa[23] -eq 695) 'Original audio asset parse-only proof failed.' $gdbStdout
+            $audioSummary = " audio=seq$($aa[9]) bank1=$($aa[13])/$($aa[14])/$($aa[15])@$($aa[16]) bank2=$($aa[17])/$($aa[18])/$($aa[19])@$($aa[20]) fgm=$($aa[21])/$($aa[22])/$($aa[23]) raw=$($aa[6]) resident=$($aa[7]) scratch=$($aa[8])"
+        }
         $movesetSummary = ''
         if ($ImportBattleShipNormalMoveset) {
             Assert-Condition ($naturalMoveset.Success -and (($nm[0] -band 0x7ff) -eq 0x7ff) -and $nm[1] -eq 15 -and $nm[3] -gt 0 -and $nm[4] -gt 0 -and $nm[5] -gt 0 -and $nm[6] -gt 0 -and $nm[7] -gt 0 -and $nm[8] -gt 0 -and $nm[9] -gt 0 -and $nm[11] -gt 0 -and $nm[12] -gt 0 -and $nm[13] -gt 0 -and $nm[14] -gt 0 -and $nm[15] -gt 0 -and $nm[16] -ge 10 -and $nm[26] -gt $nm[25]) 'Natural normal-moveset tilt/smash/aerial/grab/throw proof failed.' $gdbStdout
@@ -381,6 +400,7 @@ try {
             $battlePlayableSummary += " mem=head$($ma[6]) reloc$($mr[1]) stage$($mr[2]) fighter$($mr[3]) if$($mr[4]) stale$($mr[8])/$($mr[9]) evict$($me[0])/$($me[1])"
             $battlePlayableSummary += $movesetSummary
             $battlePlayableSummary += $specialsSummary
+            $battlePlayableSummary += $audioSummary
             if ($ImportBattleShipIFCommon) {
                 $ih = Get-Ints $ifHud
                 $victimSlot = [int]$bpk[2]
