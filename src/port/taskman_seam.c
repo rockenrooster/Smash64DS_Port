@@ -6391,6 +6391,16 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 if (gNdsFighterNaturalMotionResult ==
                     NDS_FIGHTER_NATURAL_MOTION_PASS)
                 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+                    if ((NDS_DEV_SCENE_HARNESS ==
+                            NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE) &&
+                        ((gNdsAudioBgmLoopCount == 0u) ||
+                         (gNdsAudioBgmElapsedFrames <
+                            NDS_AUDIO_BGM_TRACK_FRAMES)))
+                    {
+                        continue;
+                    }
+#endif
                     break;
                 }
             }

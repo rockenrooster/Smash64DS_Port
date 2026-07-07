@@ -94,7 +94,7 @@ The mode-163 proof reports `stock8->3`, `falls0->5`,
 `reflector=0xff proc=1 vx=49809->-49809`, `specials=0xfff phase=7`,
 `audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695
 raw=4422960 resident=0 scratch=64416`,
-`bgm=track0 play=1 stop=1 chunks=34 read=2228224 resident=65536`, and
+`bgm=track0 play=1 stop=1 refills=88 read=2949120 rate=44046 loop=1 resident=65536`, and
 `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. FGM/voice playback, original
 sequence-player import, and non-critical HUD/SObj/particle perimeter remain
 follow-up.

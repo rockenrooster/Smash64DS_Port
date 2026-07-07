@@ -1007,9 +1007,10 @@
   track, Dream Land/Pupupu (`nSYAudioBGMPupupu`). `syAudioPlayBGM`,
   `syAudioStopBGMAll`, `syAudioCheckBGMPlaying`, and `syAudioSetBGMVolume` are
   the permanent seam, but the current DS streamer behind them is interim and is
-  superseded by the future original sequence-player import. FGM/voice playback,
-  positional audio, broader BGM IDs, mixer behavior, and original sequence
-  envelopes remain unimplemented.
+  superseded by the future original sequence-player import. It currently loops
+  by wrapping the whole rendered track; original CSEQ loop-point extraction is
+  still follow-up. FGM/voice playback, positional audio, broader BGM IDs, mixer
+  behavior, and original sequence envelopes remain unimplemented.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite

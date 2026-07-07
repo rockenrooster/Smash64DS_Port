@@ -1309,8 +1309,12 @@ Opening movie / Opening Portraits:
   result `0x42474d31`, low mask bits `0x3`, playing `0` after teardown,
   track `0`, volume `0x7800`, at least one play and stop call, no open/read/
   unsupported-track failures, read bytes at least one 64 KiB chunk, resident
-  bytes `65536`, chunk size `1..65536`, at least one played chunk, and
-  stopped-on-teardown `1`.
+  bytes `65536`, 32 KiB refill size, at least one played chunk, and
+  stopped-on-teardown `1`. The extended rate guard expects at least 3928
+  emulated frames, streamed rate within `42100..46100` B/s around the PCM16
+  mono `44100` B/s target from `scripts/render-audio-bgm-pupupu.py`,
+  at least one whole-track wrap, safe opposite-half writes, and zero unsafe
+  write attempts.
 - `gNdsSCVSBattleCompatSpawnMask`: deterministic spawn-position queries from
   `mpCollisionGetPlayerMapObjPosition`.
 - `gNdsSCVSBattleOriginalUpdateResult` / `UpdateCount`: one bounded

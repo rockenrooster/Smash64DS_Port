@@ -17959,3 +17959,24 @@ does not assert.
   `build-verify-profile -Profile Regression -Force` (the wrapper exceeded the
   tool timeout, workers completed in the background), all four sharded
   Regression `-NoBuild` runs green, `check-harness-registry`, and `check-docs`.
+
+## 2026-07-07 - Pupupu BGM Streamer Timing Hotfix
+
+- Replaced the first BGM backend's chunk-restart path with one looped 64 KiB
+  ring buffer and 32 KiB half-buffer refills. Each refill writes the half that
+  elapsed playback has left behind, flushes that half for the ARM7 sound
+  hardware, advances the file offset by exactly the bytes written, and wraps to
+  the start of `assets/audio/bgm_pupupu_pcm16.raw` on exhaustion.
+- Added `AUDIO_BGM` rate markers and verifier guards. The committed asset is
+  unchanged (`581191127a00c8ddbd4395cc00b5d4722bbeca734a0990e778a2ea5e9138effa`);
+  `scripts/render-audio-bgm-pupupu.py:22,283-284` define PCM16 mono at 22050 Hz,
+  so the expected stream rate is `44100` B/s. Mode `163` now reports
+  `bgm=track0 play=1 stop=1 refills=88 read=2949120 rate=44046 loop=1
+  resident=65536` and rejects rates outside `42100..46100` B/s.
+- Whole-track wrap is the interim loop behavior; original CSEQ loop-point
+  extraction remains documented as future sequence-player work. Ear
+  confirmation is still a user/manual check.
+- Verified: `verify-battle-playable-harness -DelaySeconds 3`,
+  `verify-dev-fast -Build -DelaySeconds 3`, `verify-boundary -DelaySeconds 3`,
+  `verify-all -Profile RegressionFast -Only battle_playable -DelaySeconds 3`,
+  `check-docs`, and `git diff --check`.

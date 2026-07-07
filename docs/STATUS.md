@@ -77,7 +77,7 @@ one-track Pupupu BGM playback. The mode-163 proof reports
 `specials=0xfff phase=7` (`mhi=1/31/0/72/105`, `mlw=1/43/0 dust=1 wait=165`,
 `foxhi=1/3/17/20/10/0/61`), `audio=seq47 bank1=1/42/117@32000
 bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=64416`,
-`bgm=track0 play=1 stop=1 chunks=34 read=2228224 resident=65536`, plus
+`bgm=track0 play=1 stop=1 refills=88 read=2949120 rate=44046 loop=1 resident=65536`, plus
 `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. FGM/voice playback, original
 sequence-player import, and non-critical HUD/SObj/particle perimeter remain
 follow-up.

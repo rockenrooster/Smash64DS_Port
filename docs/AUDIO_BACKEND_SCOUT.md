@@ -35,7 +35,7 @@ The DS backend implements real `syAudioPlayBGM`, `syAudioStopBGMAll`,
 `syAudioCheckBGMPlaying`, and `syAudioSetBGMVolume` over a 64 KiB stream buffer.
 Mode `163` naturally starts BGM through `mpCollisionSetPlayBGM` and stops it on
 VSBattle cleanup, reporting:
-`bgm=track0 play=1 stop=1 chunks=34 read=2228224 resident=65536`.
+`bgm=track0 play=1 stop=1 refills=88 read=2949120 rate=44046 loop=1 resident=65536`.
 The arena reserve still holds after subtracting the 64 KiB stream buffer.
 FGM/voice playback, positional audio, and the original sequence-player import
 remain future slices.
@@ -260,7 +260,8 @@ reduced once live audio owns those calls.
 2. Done: `/task Minimal BGM backend` implements real `syAudioPlayBGM`,
    `syAudioStopBGMAll`, `syAudioCheckBGMPlaying`, and `syAudioSetBGMVolume`
    with a tiny DS streamer for Pupupu BGM, gated by natural
-   `mpCollisionSetPlayBGM` battle entry and VSBattle cleanup.
+   `mpCollisionSetPlayBGM` battle entry, VSBattle cleanup, 44100 B/s stream
+   rate, and whole-track wrap.
 3. `/task Minimal FGM/voice backend`: Replace `func_800269C0_275C0` static
    handle with a real playable handle for battle start crowd voice, Pupupu wind,
    Hyrule twister, and fighter loop stop semantics.
