@@ -50,6 +50,7 @@ foreach ($command in $commands) {
             -WorkingDirectory $root `
             -RedirectStandardOutput $stdout `
             -RedirectStandardError $stderr `
+            -WindowStyle Hidden `
             -PassThru
         Stdout = $stdout
         Stderr = $stderr

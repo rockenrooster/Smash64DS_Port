@@ -25,6 +25,7 @@
 #include <nds/nds_scene.h>
 #include <nds/nds_scene_harness.h>
 #include "nds_build_config.h"
+#include "nds_scene_harness_config.h"
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>

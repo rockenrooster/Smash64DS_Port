@@ -18066,3 +18066,46 @@ does not assert.
   Regression `-NoBuild -DelaySeconds 3` runs. Shard `1` first hit an
   all-zero/GDB-timeout transport failure and passed on the sequential rerun;
   no verifier expectation changed.
+
+## 2026-07-08 - Split Scene Harness Build Config
+
+- Split generated build configuration so per-mode harness state no longer
+  invalidates every object in a shared build dir. `nds_build_config.h` now
+  carries stable import/input/fast-logic/HW-triangle flags and stays
+  force-included everywhere; `nds_scene_harness_config.h` carries only
+  `NDS_DEV_SCENE_HARNESS` and `NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP` for
+  scene-aware sources.
+- Added `-Wundef` to the DS C flags and a hard
+  `check-harness-registry.ps1` scan that fails if `src/` references the scene
+  harness macros without including `nds_scene_harness_config.h`. `-Werror=undef`
+  was tried first, but libnds/calico headers intentionally probe undefined
+  `__ASSEMBLER__` and `__cplusplus`, so the compiler guard remains warning-only
+  and the registry scan is the hard project-owned check.
+- Recorded per-target timings in `artifacts/verifier-cost/prebuild-stamp.json`.
+  Measured economics after the split: previous full Regression prebuild stamp
+  was `18203.607s` for `105` targets; `RegressionCore -Force` measured
+  `1893.130s` for `6` targets; a no-op `RegressionCore` rerun measured
+  `39.377s`; a shared HW-tri mode switch rebuilt `scene_backend.c`,
+  `scene_harness.c`, `battleship_grinishie_scale.c`, and relinked in
+  `29.590s`.
+- Canonical ROM investigation checkpoint: `src/port/taskman_seam.c:6415-6466`
+  already selects realtime presentation and calls one present path per loop, so
+  the blank top screen is not simply a missing draw call. Source inspection
+  points at `src/port/reloc_backend_movement.c:9144-9155` gating
+  battle-playable proof preparation to `NDS_HARNESS_FAST_LOGIC`, and the HW
+  realtime presentation still routes through the stage-gcDrawAll proof helper
+  instead of a canonical full-scene renderer path. No renderer or input fix was
+  attempted in this infrastructure slice.
+- Verified before the final full sweep: `verify-dev-fast.ps1 -Build
+  -DelaySeconds 3`, `verify-boundary.ps1 -DelaySeconds 3`, detached
+  `build-verify-profile.ps1 -Profile RegressionCore -Force` plus
+  `-VerifyStamp`, no-op `RegressionCore` prebuild, the shared HW-tri mode-switch
+  build, and `verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3`.
+- Final sweep: detached `build-verify-profile.ps1 -Profile Regression -Force`
+  wrote a valid 105-target stamp in `4773.933s`, down from the prior
+  `18203.607s` full prebuild. Shards `0`, `2`, and `3` passed in the parallel
+  `-NoBuild` run; shard `1` first hit a transport/all-zero startup failure and
+  passed on the sequential rerun. No verifier expectation changed.
+- Hidden the verifier child PowerShell launches in `verify-all.ps1` and
+  `Start-VerifyRegressionShards.ps1` so redirected verifier/shard subprocesses
+  no longer foreground `pwsh` windows during long sweeps.

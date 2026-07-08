@@ -2,15 +2,12 @@
 #include <it/item.h>
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_scene_harness.h>
+#include "nds_scene_harness_config.h"
 #include <sys/utils.h>
 #include <wp/weapon.h>
 
 extern void syUtilsSetRandomSeed(s32 seed);
 extern s32 syUtilsRandSeed(void);
-
-#ifndef NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
-#define NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP 0
-#endif
 
 static u32 ndsFloatBits(f32 value);
 static f32 ndsFloatFromBits(u32 value);

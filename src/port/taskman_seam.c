@@ -1,3 +1,5 @@
+#include "nds_scene_harness_config.h"
+
 void ndsResetStartupDiagnostics(void)
 {
     gNdsSceneBoundaryResult = 0;

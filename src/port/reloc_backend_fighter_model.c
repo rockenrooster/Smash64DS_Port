@@ -1,3 +1,5 @@
+#include "nds_scene_harness_config.h"
+
 static void *sNdsFighterFTManagerCommonFile;
 static void *sNdsFighterMarioMainMotionFile;
 static void *sNdsFighterMarioMainFile;

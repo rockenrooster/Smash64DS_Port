@@ -11,6 +11,8 @@
  * mixed-width normalizers; general mixed-width struct fixups, external
  * dependencies, and renderer-safe texture/display-list fixups remain deferred
  * and are reported separately. */
+#include "nds_scene_harness_config.h"
+
 #define NDS_RELOC_OPENING_ROOM_FILE_COUNT 8u
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 96u

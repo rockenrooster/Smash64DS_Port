@@ -1,3 +1,5 @@
+#include "nds_scene_harness_config.h"
+
 extern void ndsIFCommonRecordHUDState(void);
 
 static void ndsFighterWalkRecordBefore(u32 slot, FTStruct *fp, DObj *root,

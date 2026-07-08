@@ -1,3 +1,5 @@
+#include "nds_scene_harness_config.h"
+
 static sb32 ndsStageCollisionLoopGeometryReady(void)
 {
     return ((gSCManagerSceneData.gkind == nGRKindPupupu) &&

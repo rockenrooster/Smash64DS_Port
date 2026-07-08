@@ -96,6 +96,10 @@ one `scVSBattleFuncUpdate`, one scene draw, and one DS vblank per frame. The
 latest realtime smoke reports `frames=600 fps=598/598 ticks=335878400`. Harness
 builds keep `NDS_HARNESS_FAST_LOGIC=1` for the deep proof chain.
 
+Build-cost status: stable flags are in `nds_build_config.h`; scene harness ID
+and Inishie scale are in `nds_scene_harness_config.h`. Measurements:
+Core force `1893.130s`, no-op `39.377s`, switch `29.590s`, full `4773.933s`.
+
 ## Process Change
 
 Future gameplay slices are runtime-first subsystem groups aimed at scene-level
@@ -110,11 +114,13 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. Build the FGM/voice backend slice on top of the parsed assets.
-2. Continue non-critical interface/particle perimeter.
-3. As subsystem slices obsolete old marker stacks, migrate-or-delete their
+1. Fix the canonical realtime + live-input + HW-tri ROM; current inspection
+   points at FAST_LOGIC-gated proof prep and the stage-gcDrawAll proof helper.
+2. Build the FGM/voice backend slice on top of the parsed assets.
+3. Continue non-critical interface/particle perimeter.
+4. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
-4. Renderer follow-up: broaden source-scene coverage, then plan cutover.
+5. Renderer follow-up: broaden source-scene coverage, then plan cutover.
 
 ## Verification
 

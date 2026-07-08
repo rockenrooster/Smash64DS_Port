@@ -15,16 +15,12 @@
 #include <gr/ground.h>
 #include <macros.h>
 #include <nds/nds_renderer.h>
-#include "nds_build_config.h"
+#include "nds_scene_harness_config.h"
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/objanim.h>
 #include <sys/objman.h>
 #include <stdio.h>
-
-#ifndef NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
-#define NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP 0
-#endif
 
 #define NDS_RELOC_LVALUE(offset) (*(uintptr_t *)(uintptr_t)(offset))
 #define llGRInishieMapScaleDObjDesc NDS_RELOC_LVALUE(0x380u)

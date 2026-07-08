@@ -99,6 +99,7 @@ function Invoke-VerifyScriptOnce {
         -WorkingDirectory $root `
         -RedirectStandardOutput $stdoutPath `
         -RedirectStandardError $stderrPath `
+        -WindowStyle Hidden `
         -Wait `
         -PassThru
     $stdout = if (Test-Path -LiteralPath $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw } else { '' }

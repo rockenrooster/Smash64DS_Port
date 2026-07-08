@@ -1,4 +1,6 @@
 /* NDS_NATURAL_COMBAT_ROUTED_EXTERNS */
+#include "nds_scene_harness_config.h"
+
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 /* Imported BattleShip originals exported by src/import wrappers. */
 sb32 ndsBaseFTCommonCatchCheckInterruptCommon(GObj *fighter_gobj);

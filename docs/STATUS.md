@@ -97,20 +97,20 @@ still needs broader source-scene coverage and cutover work.
 
 ## Current Notes
 
-Infrastructure checkpoint 2026-07-07: `RegressionCore` is available for
-session-time shared-TU gating and passes in 175 seconds no-build after a
-detached 596-second prebuild, with `-VerifyStamp` validating the completion
-stamp in 0.36 seconds.
+Infrastructure checkpoint 2026-07-08: stable flags stay in force-included
+`nds_build_config.h`; per-mode harness ID and Inishie scale now live in
+`nds_scene_harness_config.h`. `RegressionCore -Force` measured `1893.130s`,
+no-op `39.377s`, and shared HW-tri mode switch `29.590s` for three scene-aware
+objects plus relink. Full Regression prebuild now stamps in `4773.933s`.
 
 The config-header mode `161` regression is fixed without verifier expectation
 changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
 wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
-The battle-playable verifier now waits 30 seconds so its 3200-frame BGM proof
-can complete with audio enabled.
 
-The required full Regression prebuild completed detached with a valid stamp for
-105 targets in `18203.607s`. All four `-NoBuild` shards are green; shard `1`
-needed a sequential rerun after an all-zero/GDB-timeout transport failure.
+Canonical realtime + live-input + HW-tri ROM investigation is open. The
+realtime loop does draw once per vblank, but mode-163 proof preparation is
+`NDS_HARNESS_FAST_LOGIC`-gated and the HW presentation still routes through the
+stage-gcDrawAll proof helper, not a canonical full-scene renderer path.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.

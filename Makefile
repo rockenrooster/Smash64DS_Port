@@ -87,7 +87,7 @@ ARCH := -march=armv5te -mtune=arm946e-s -mthumb
 CFLAGS := -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections \
 	$(ARCH) $(INCLUDE) -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS \
 	-DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types \
-	-Wno-error=int-conversion -Wno-error=maybe-uninitialized
+	-Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef
 CFLAGS += -include $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
 ifeq ($(NDS_DEV_SCENE_HARNESS),normal)
 NDS_DEV_SCENE_HARNESS_ID := 0
@@ -809,6 +809,7 @@ else
 
 DEPENDS := $(OFILES:.o=.d)
 NDS_BUILD_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
+NDS_SCENE_HARNESS_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_scene_harness_config.h
 SCENE_BACKEND_SLICES := \
 	$(PROJECT_ROOT)/src/port/diagnostics.c \
 	$(PROJECT_ROOT)/src/port/taskman_seam.c \
@@ -834,8 +835,6 @@ $(NDS_BUILD_CONFIG): FORCE
 	{ \
 		echo '#ifndef NDS_BUILD_CONFIG_H'; \
 		echo '#define NDS_BUILD_CONFIG_H'; \
-		echo '#define NDS_DEV_SCENE_HARNESS $(NDS_DEV_SCENE_HARNESS_ID)'; \
-		echo '#define NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP $(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)'; \
 		echo '#define NDS_DEV_LIVE_INPUT_PREVIEW $(NDS_DEV_LIVE_INPUT_PREVIEW)'; \
 		echo '#define NDS_HARNESS_FAST_LOGIC $(NDS_HARNESS_FAST_LOGIC)'; \
 		echo '#define NDS_RENDERER_HW_TRIANGLES $(NDS_RENDERER_HW_TRIANGLES)'; \
@@ -858,10 +857,22 @@ $(NDS_BUILD_CONFIG): FORCE
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
+$(NDS_SCENE_HARNESS_CONFIG): FORCE
+	@tmp="$@.tmp"; \
+	{ \
+		echo '#ifndef NDS_SCENE_HARNESS_CONFIG_H'; \
+		echo '#define NDS_SCENE_HARNESS_CONFIG_H'; \
+		echo '#define NDS_DEV_SCENE_HARNESS $(NDS_DEV_SCENE_HARNESS_ID)'; \
+		echo '#define NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP $(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)'; \
+		echo '#endif'; \
+	} > "$$tmp"; \
+	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
+
 $(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES)
 $(OUTPUT).elf: $(OFILES)
 $(OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
-scene_backend.o: $(SCENE_BACKEND_SLICES)
+scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
+scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 
 $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 	@mkdir -p $(dir $@)

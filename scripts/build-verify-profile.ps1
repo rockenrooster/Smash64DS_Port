@@ -92,6 +92,20 @@ function Write-PrebuildStamp {
         configHash = Get-BuildConfigHash
         totalSeconds = [Math]::Round($TotalSeconds, 3)
         count = $targets.Count
+        timings = @($Timings | ForEach-Object {
+            [PSCustomObject]@{
+                name = $_.name
+                target = $_.target
+                build = $_.build
+                registryBuild = $_.registryBuild
+                harness = $_.harness
+                sharedBuild = $_.sharedBuild
+                worker = $_.worker
+                durationSeconds = $_.durationSeconds
+                exitCode = $_.exitCode
+                logPath = $_.logPath
+            }
+        })
         targets = @($targets | ForEach-Object { Get-TargetArtifactRecord $_ })
     } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $stampPath -Encoding UTF8
     Write-Output "Wrote prebuild stamp: $stampPath"

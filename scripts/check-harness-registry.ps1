@@ -87,6 +87,21 @@ foreach ($record in $harnessRecords) {
         Fail-Check "Makefile mode mismatch for '$($record.Harness)': registry=$($record.Mode), Makefile=$($makefileModes[$record.Harness])"
     }
 }
+$sceneConfigMacroPattern = '\b(?:NDS_DEV_SCENE_HARNESS|NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)\b'
+$sceneConfigIncludePattern = '#\s*include\s+["<]nds_scene_harness_config\.h[">]'
+$sceneConfigViolations = @()
+Get-ChildItem -LiteralPath (Join-Path $root 'src') -Recurse -File |
+    Where-Object { $_.Extension -in @('.c', '.h') } |
+    ForEach-Object {
+        $text = Get-Content -LiteralPath $_.FullName -Raw
+        if (($text -match $sceneConfigMacroPattern) -and
+            ($text -notmatch $sceneConfigIncludePattern)) {
+            $sceneConfigViolations += $_.FullName.Substring($root.Length).TrimStart([char[]]@('\','/'))
+        }
+    }
+if ($sceneConfigViolations.Count -gt 0) {
+    Fail-Check "scene harness macro reference(s) missing nds_scene_harness_config.h include: $($sceneConfigViolations -join ', ')"
+}
 $latestExpect = @{
     battle_mariofox_stage_mplivehit_status_loop = 161
     menu_chain_mariofox_stage_mplivehit_status_loop = 162
