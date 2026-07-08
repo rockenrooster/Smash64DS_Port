@@ -452,9 +452,11 @@ $platform = Get-Content (Join-Path $root 'src/nds/nds_platform.c') -Raw
 Assert-True ($platform.Contains('MODE_0_3D')) 'Platform hardware renderer mode init is missing.'
 Assert-True ($platform.Contains('VRAM_A_TEXTURE')) 'Platform texture VRAM bank A init is missing.'
 Assert-True ($platform.Contains('VRAM_E_TEX_PALETTE')) 'Platform texture palette VRAM bank init is missing.'
-Assert-True ($platform.Contains('glFlush(0)')) 'Platform hardware renderer frame flush is missing.'
+Assert-True ($platform.Contains('glFlush(GL_TRANS_MANUALSORT)')) 'Platform hardware renderer manual-sort frame flush is missing.'
 Assert-True ($platform.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Platform does not guard hardware flushes with the renderer submit latch.'
 Assert-True ($platform.Contains('gNdsHardwareRendererFlushCount')) 'Platform hardware renderer flush diagnostic is missing.'
+Assert-True ($platform.Contains('gNdsHardwareRendererPolyRamCount')) 'Platform hardware renderer polygon RAM diagnostic is missing.'
+Assert-True ($platform.Contains('gNdsHardwareRendererVertexRamCount')) 'Platform hardware renderer vertex RAM diagnostic is missing.'
 $makefile = Get-Content (Join-Path $root 'Makefile') -Raw
 Assert-True ($makefile.Contains('NDS_RENDERER_HW_TRIANGLES ?= 0')) 'Makefile hardware renderer flag default is missing.'
 Assert-True ($makefile.Contains('battleship_sys_matrix.c')) 'Makefile original sys/matrix import is missing.'

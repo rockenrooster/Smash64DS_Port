@@ -18134,3 +18134,36 @@ does not assert.
   smoke is `frames=67 fps=59/59 ticks=376165888` (about 5.9fps), so the next
   renderer task is the cached draw-state replay/cutover. The strict 60fps
   assertion remains available as `-RequireRealtime60Fps`.
+
+## 2026-07-08 - Canonical HW Pixel-Proof Gate
+
+- Reproduced Tyler's playtest symptom with screenshots: both
+  `smash64ds-battle-playable-canonical-hwtri.nds` and the shipped
+  `smash64ds-battle-playable-hwtri.nds` initially showed only the top-screen
+  clear color. A direct DS sentinel triangle proved the screen routing and 3D
+  setup were functional, so the blank frame was in submitted scene geometry.
+- Added hardware-side visibility markers to the canonical realtime verifier.
+  `PLATFORM_HW` now reports submitted frames, flushes, pre-flush GX polygon RAM,
+  pre-flush GX vertex RAM, `GFX_STATUS`, and `GFX_CONTROL`; the useful sample
+  point is after the renderer batch closes and before `glFlush`, because
+  post-flush/post-vblank reads were zero even for the visible sentinel.
+- Fixed canonical no-oracle HW submission so it still computes transformed
+  vertices for readiness and respects the source DL state's depth choice. The
+  previous path forced every no-oracle triangle through the raw z-buffered
+  route; Pupupu/fighter content that needed the projected-depth path could be
+  submitted on the CPU side while producing no visible hardware polygons.
+- Upgraded the permanent realtime gate with screenshot evidence. The current
+  canonical smoke passes with `frames=59 fps=54/54 ticks=365969728`,
+  `gxram=66/226`, `tri=415`, and
+  `36551/49152` top-screen pixels different from clear color. The rebuilt
+  shipped ROM `smash64ds-battle-playable-hwtri.nds` passes the same pixel
+  assertion with `33595/49152` non-clear pixels.
+- Fixed the realtime wrapper so `RegressionCore` actually runs the screenshot
+  assertion instead of exiting after the nested marker verifier. Verified
+  `RegressionCore -NoBuild -DelaySeconds 3` now prints and passes the pixel
+  gate. A full detached Regression prebuild was started for the shared renderer
+  sweep, then stopped at the user's request; no full Regression shards were run
+  for this checkpoint.
+- This checkpoint intentionally stops before renderer-cache/performance work.
+  The frame is no longer blank, but visual fidelity is still wrong/overbright
+  and the strict 60fps cache gate remains follow-up.

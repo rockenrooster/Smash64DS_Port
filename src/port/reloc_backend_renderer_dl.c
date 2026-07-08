@@ -4,6 +4,10 @@
 #define NDS_RENDERER_HW_TRIANGLES 0
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES
+#include <nds/timers.h>
+#endif
+
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
 #define NDS_RENDERER_ADAPTER_HW_WORLD_SCALE 256.0F
@@ -3312,6 +3316,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
     void *saved_graphics_heap_ptr;
+    u32 adapter_start;
+    u32 step_start;
 #endif
 
     if ((dobj == NULL) || (dl == NULL))
@@ -3331,8 +3337,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     state.slot = 0u;
 #if NDS_RENDERER_HW_TRIANGLES
     saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+    adapter_start = cpuGetTiming();
+    step_start = adapter_start;
 #endif
     ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
+#if NDS_RENDERER_HW_TRIANGLES
+    gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
+    step_start = cpuGetTiming();
+#endif
     ndsRendererAdapterPrepareInitialMatrices(dobj,
                                              (camera_gobj != NULL) ?
                                                  CObjGetStruct(camera_gobj) :
@@ -3344,6 +3356,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              &initial_projection_ptr,
                                              &initial_modelview,
                                              &initial_modelview_ptr);
+#if NDS_RENDERER_HW_TRIANGLES
+    gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
+#endif
 
     config.max_depth = 8u;
     config.max_commands = 8192u;
@@ -3360,13 +3375,23 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         NULL : ndsFighterMarioFoxVisitDLDrawCommand;
 
     ndsRendererInitStats(&stats);
+#if NDS_RENDERER_HW_TRIANGLES
+    step_start = cpuGetTiming();
+#endif
     ndsRendererExecuteDisplayList(dl,
                                   &config,
                                   callback,
                                   &state,
                                   &stats);
 #if NDS_RENDERER_HW_TRIANGLES
+    gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
+    gNdsRendererProfileStageAdapterTicks += cpuGetTiming() - adapter_start;
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+    if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
+        (gNdsRendererProfileHardwareVertices > 6144u))
+    {
+        gNdsRendererProfileHardwareOverLimit = 1u;
+    }
 #endif
     gNdsStageGCDrawAllLoopHardwareTriangleCount +=
         stats.hardware_triangle_count;
@@ -4878,6 +4903,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
+        u32 step_start;
 #endif
 
         if ((loaded == NULL) &&
@@ -4892,8 +4918,13 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                             &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+        step_start = cpuGetTiming();
         ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
                                                  &states[i]);
+        gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+        step_start = cpuGetTiming();
 #endif
         ndsRendererAdapterPrepareInitialMatrices(collection.dobjs[i],
                                                  (gGCCurrentCamera != NULL) ?
@@ -4904,6 +4935,9 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
                                                  &initial_modelview_ptr);
+#if NDS_RENDERER_HW_TRIANGLES
+        gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
+#endif
         config.max_depth = 8u;
         config.max_commands = 2048u;
         config.max_list_commands = 512u;
@@ -6015,6 +6049,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
+        u32 step_start;
 #endif
 
         if ((loaded == NULL) &&
@@ -6025,15 +6060,15 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
-        if (no_oracle == FALSE)
-        {
-            ndsFighterDLDrawSeedPersistentState(&states[i],
-                                                &persistent_state);
-        }
+        ndsFighterDLDrawSeedPersistentState(&states[i],
+                                            &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+        step_start = cpuGetTiming();
         ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
                                                  &states[i]);
+        gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
+        step_start = cpuGetTiming();
 #endif
         ndsRendererAdapterPrepareInitialMatrices(collection.dobjs[i],
                                                  (gGCCurrentCamera != NULL) ?
@@ -6044,6 +6079,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
                                                  &initial_modelview_ptr);
+#if NDS_RENDERER_HW_TRIANGLES
+        gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
+#endif
         config.max_depth = 8u;
         config.max_commands = 2048u;
         config.max_list_commands = 512u;
@@ -6058,6 +6096,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         ndsRendererInitStats(&stats[i]);
         ndsFighterDLDrawCopyPersistentRendererState(&stats[i],
                                                     &persistent_stats);
+#if NDS_RENDERER_HW_TRIANGLES
+        step_start = cpuGetTiming();
+#endif
         ndsRendererExecuteDisplayList(dl,
                                       &config,
                                       (no_oracle != FALSE) ?
@@ -6066,13 +6107,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                       &states[i],
                                       &stats[i]);
 #if NDS_RENDERER_HW_TRIANGLES
+        gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 #endif
-        if (no_oracle == FALSE)
-        {
-            ndsFighterDLDrawCapturePersistentState(&persistent_state,
-                                                   &states[i]);
-        }
+        ndsFighterDLDrawCapturePersistentState(&persistent_state,
+                                               &states[i]);
         ndsFighterDLDrawCopyPersistentRendererState(&persistent_stats,
                                                     &stats[i]);
         ndsFighterDLAllDrawAccumulateStats(slot, i, collection.indices[i],

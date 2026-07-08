@@ -1312,6 +1312,23 @@ Opening movie / Opening Portraits:
   completed update, and nonzero timer-derived rates. The canonical HW smoke
   currently reports about `5.9` fps; pass `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
+- `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
+  flushes, pre-flush GX polygon RAM count, pre-flush GX vertex RAM count,
+  `GFX_STATUS`, and `GFX_CONTROL`. The verifier requires submitted frames to
+  flush one-for-one and GX RAM counts to be nonzero, so CPU-side submission
+  counters cannot pass while the hardware receives zero polygons.
+- `RENDER_PROFILE`: canonical HW present timing/counter marker. It reports
+  frame/update/present timer splits plus texture, upload, matrix, vertex, and
+  triangle counts; the realtime smoke asserts the scene stays under DS limits
+  of 2048 polygons and 6144 vertices.
+- `RENDER_MATRIX` / `RENDER_VERTEX`: canonical HW matrix and vertex-range
+  markers. They record loaded projection/modelview seeds and raw/HW vertex
+  ranges so blank-screen failures can be sorted into matrix/clip issues versus
+  display/attribute issues.
+- `scripts/verify-battle-playable-realtime-harness.ps1` now captures
+  `artifacts/visibility/canonical-hwtri-verified.png` and runs
+  `scripts/assert-melonds-top-visible.ps1`. The current top-screen gate expects
+  at least 1% of the 256x192 crop to differ from clear color `(20,28,52)`.
 - `LIVE_PAD`: canonical realtime live-input marker. It records DS live read and
   map counts, connected controller mask, raw held-key bits, mapped P0 buttons
   and stick, playback-enabled flag, and playback read count. The canonical ROM

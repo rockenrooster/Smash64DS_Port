@@ -99,6 +99,10 @@ volatile u32 gNdsPerfSampleCount;
 volatile u32 gNdsPerfSampleWindowTicks;
 volatile u32 gNdsHardwareRendererSubmittedFrameCount;
 volatile u32 gNdsHardwareRendererFlushCount;
+volatile u32 gNdsHardwareRendererPolyRamCount;
+volatile u32 gNdsHardwareRendererVertexRamCount;
+volatile u32 gNdsHardwareRendererStatus;
+volatile u32 gNdsHardwareRendererControl;
 
 void ndsPlatformInit(void)
 {
@@ -923,7 +927,11 @@ void ndsPlatformEndFrame(void)
     if (ndsRendererHardwareConsumeSubmittedFrame() != 0u)
     {
         gNdsHardwareRendererSubmittedFrameCount++;
-        glFlush(0);
+        gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;
+        gNdsHardwareRendererVertexRamCount = GFX_VERTEX_RAM_USAGE;
+        gNdsHardwareRendererStatus = GFX_STATUS;
+        gNdsHardwareRendererControl = GFX_CONTROL;
+        glFlush(GL_TRANS_MANUALSORT);
         gNdsHardwareRendererFlushCount++;
     }
     swiWaitForVBlank();

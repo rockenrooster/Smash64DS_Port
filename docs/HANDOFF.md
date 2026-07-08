@@ -92,13 +92,11 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 64 KiB BGM stream buffer leaves `172412` bytes against the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri is verifier-covered and no longer
-blank/dead-input: it checks live pads, BGM timer rate, textured HW submission,
-and one draw per completed update. Latest smoke is
-`frames=67 fps=59/59 ticks=376165888`; 60fps still needs cached draw-state.
-
-Build-cost status: stable flags are in `nds_build_config.h`; scene harness ID
-and Inishie scale are in `nds_scene_harness_config.h`. Measurements:
-Core force `1893.130s`, no-op `39.377s`, switch `29.590s`, full `4773.933s`.
+blank/dead-input. It checks live pads, BGM timer rate, textured HW submission,
+pre-flush GX RAM, one draw per completed update, and screenshot pixels. Latest:
+`frames=59 fps=54/54 ticks=365969728 gxram=66/226`, canonical screenshot
+`36551/49152` non-clear pixels, shipped ROM `33595/49152`. Visual fidelity is
+still wrong/overbright, and 60fps still needs cached draw-state.
 
 ## Process Change
 
@@ -110,17 +108,19 @@ Legacy bounded modes are migrate-or-delete. When a slice obsoletes an old
 marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
 `KNOWN_ISSUES` ledger line instead of reproducing old markers.
 
-New harness modes are only for scene-level capabilities such as `battle_playable`.
+New harness modes are only for scene-level capabilities.
 
 ## Recommended Next Work
 
-1. Land renderer-cache submission for canonical realtime + live-input + HW-tri
-   so textured stage/fighters move from the measured ~5.9fps to 60fps.
-2. Build the FGM/voice backend slice on top of the parsed assets.
-3. Continue non-critical interface/particle perimeter.
-4. As subsystem slices obsolete old marker stacks, migrate-or-delete their
+1. Fix canonical HW material/matrix visual fidelity now that visibility is
+   pixel-proven.
+2. Land renderer-cache submission for canonical realtime + live-input + HW-tri
+   so textured stage/fighters move from the measured sub-60fps smoke to 60fps.
+3. Build the FGM/voice backend slice on top of the parsed assets.
+4. Continue non-critical interface/particle perimeter.
+5. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
-5. Renderer follow-up: broaden source-scene coverage, then plan cutover.
+6. Renderer follow-up: broaden source-scene coverage, then plan cutover.
 
 ## Verification
 
@@ -133,8 +133,8 @@ chunks:
 ```
 
 For shared-TU changes, use `RegressionCore` during the session and one full
-fresh Regression prebuild plus sharded `-NoBuild` runs at the end. Prebuilds
-expected to exceed 90 seconds should be detached and confirmed by stamp:
+fresh Regression prebuild plus sharded `-NoBuild` runs at the end. Detach
+prebuilds expected to exceed 90 seconds and confirm by stamp:
 
 ```powershell
 .\scripts\build-verify-profile.ps1 -Profile RegressionCore -Detach
@@ -146,5 +146,4 @@ expected to exceed 90 seconds should be detached and confirmed by stamp:
 .\scripts\check-gbi-decode-fixtures.ps1
 ```
 
-After verified progress, inspect status, optionally commit, then run
-`.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` as the last project command.
+After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

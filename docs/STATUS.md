@@ -75,10 +75,11 @@ HUD percent/stock, audio asset parsing, BGM playback, and HW stage/fighter
 submission. FGM/voice playback, original sequence-player import, and
 non-critical HUD/SObj/particle perimeter remain follow-up.
 
-Mode `163` has two presentation paths: fast verifier for the deep proof chain,
-and canonical realtime + live input + HW triangles for idle presentation. The
-latest smoke reports live pads, BGM timer rate, textured stage/fighter HW, and
-`frames=67 fps=59/59 ticks=376165888`; 60fps still needs cached draw-state.
+Mode `163` has fast verifier and canonical realtime + live-input + HW-triangle
+paths. Canonical HW is now pixel-proven: the gate asserts pre-flush GX RAM
+`66/226` and `36551/49152` non-clear screenshot pixels; the rebuilt shipped
+`smash64ds-battle-playable-hwtri.nds` shows `33595/49152`. Visual fidelity is
+still wrong/overbright, and 60fps still needs cached draw-state.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -107,9 +108,9 @@ changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
 wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
 
 Canonical realtime + live-input + HW-tri now renders through `gcDrawAll`, polls
-live DS pads before each update, and updates the debug HUD. The measured
-bottleneck is immediate per-frame DL traversal/submission: textured HW runs at
-about 5.9fps until the renderer-cache cutover lands.
+live DS pads before each update, and has a hard screenshot gate. Latest smoke:
+`frames=59 fps=54/54 ticks=365969728 gxram=66/226`. Immediate per-frame DL
+traversal/submission still keeps textured HW below 60fps.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.
@@ -117,8 +118,9 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-- follow-ups: renderer source-scene/HW cutover; FGM/voice, original sequence
-  player, and non-critical HUD/SObj/particle perimeter.
+- follow-ups: renderer material/matrix visual fidelity, renderer-cache 60fps
+  cutover, FGM/voice, original sequence player, and non-critical
+  HUD/SObj/particle perimeter.
 
 ## Verification
 
@@ -128,18 +130,16 @@ For normal 30-60 minute work, run
 Docs-only changes also run `.\scripts\check-docs.ps1`; harness registry/script
 changes also run `.\scripts\check-harness-registry.ps1`.
 
-Runtime/subsystem changes that touch shared architecture should graduate to:
+Shared architecture changes should graduate to:
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-For prebuilds expected to exceed 90 seconds, run
-`.\scripts\build-verify-profile.ps1 -Profile <Profile> -Detach` and confirm
-completion with `.\scripts\build-verify-profile.ps1 -Profile <Profile>
--VerifyStamp`. Run one full fresh Regression prebuild plus four sharded
-`-NoBuild` runs at the end of a shared-TU session.
+For prebuilds over 90 seconds, run `build-verify-profile.ps1 -Detach`, confirm
+with `-VerifyStamp`, and run one full fresh Regression prebuild plus four
+sharded `-NoBuild` runs at the end of a shared-TU session.
 
 After verified progress, inspect status, optionally commit, then run the Lean
 snapshot as the final project command:

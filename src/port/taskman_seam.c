@@ -623,6 +623,49 @@ void ndsResetStartupDiagnostics(void)
     gNdsBattlePlayablePacingTimerTicks = 0;
     gNdsBattlePlayablePacingPresentFpsX10 = 0;
     gNdsBattlePlayablePacingLogicFpsX10 = 0;
+    gNdsRendererProfileFrameCount = 0;
+    gNdsRendererProfileUpdateTicks = 0;
+    gNdsRendererProfilePresentTicks = 0;
+    gNdsRendererProfileDrawTicks = 0;
+    gNdsRendererProfileHudTicks = 0;
+    gNdsRendererProfileStageAdapterTicks = 0;
+    gNdsRendererProfileMaterialTicks = 0;
+    gNdsRendererProfileMatrixTicks = 0;
+    gNdsRendererProfileDLTicks = 0;
+    gNdsRendererProfileTextureTicks = 0;
+    gNdsRendererProfileTextureConvertTicks = 0;
+    gNdsRendererProfileTextureUploadTicks = 0;
+    gNdsRendererProfileTextureUploads = 0;
+    gNdsRendererProfileTextureUploadBytes = 0;
+    gNdsRendererProfileTextureBinds = 0;
+    gNdsRendererProfileHardwareVertices = 0;
+    gNdsRendererProfileHardwareTriangles = 0;
+    gNdsRendererProfileHardwareOverLimit = 0;
+    gNdsRendererProfileMatrixLoadCount = 0;
+    gNdsRendererProfileMatrixScaleWorld = 0;
+    gNdsRendererProfileProjectionM00 = 0;
+    gNdsRendererProfileProjectionM11 = 0;
+    gNdsRendererProfileProjectionM22 = 0;
+    gNdsRendererProfileProjectionM32 = 0;
+    gNdsRendererProfileModelviewM00 = 0;
+    gNdsRendererProfileModelviewM11 = 0;
+    gNdsRendererProfileModelviewM22 = 0;
+    gNdsRendererProfileModelviewM30 = 0;
+    gNdsRendererProfileModelviewM31 = 0;
+    gNdsRendererProfileModelviewM32 = 0;
+    gNdsRendererProfileRawVertexMinX = 0;
+    gNdsRendererProfileRawVertexMaxX = 0;
+    gNdsRendererProfileRawVertexMinY = 0;
+    gNdsRendererProfileRawVertexMaxY = 0;
+    gNdsRendererProfileRawVertexMinZ = 0;
+    gNdsRendererProfileRawVertexMaxZ = 0;
+    gNdsRendererProfileHWVertexMinX = 0;
+    gNdsRendererProfileHWVertexMaxX = 0;
+    gNdsRendererProfileHWVertexMinY = 0;
+    gNdsRendererProfileHWVertexMaxY = 0;
+    gNdsRendererProfileHWVertexMinZ = 0;
+    gNdsRendererProfileHWVertexMaxZ = 0;
+    gNdsRendererProfileHWVertexSaturateCount = 0;
     gNdsIFCommonHUDRecordCount = 0;
     gNdsIFCommonHUDObjectMask = 0;
     gNdsIFCommonHUDP0DamageCurrent = 0;
@@ -3900,10 +3943,13 @@ static u32 sNdsBattlePlayablePacingStartTick;
 
 static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 {
+    u32 start = cpuGetTiming();
+
     scVSBattleFuncUpdate();
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmUpdate();
 #endif
+    gNdsRendererProfileUpdateTicks = cpuGetTiming() - start;
     dSYTaskmanUpdateCount++;
     gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
     if (counter != NULL)
@@ -3944,7 +3990,7 @@ static void ndsBattlePlayablePacingUpdate(void)
             (u32)(((u64)gNdsBattlePlayablePacingLogicFrames *
                    BUS_CLOCK * 10u) / ticks);
     }
-    if ((gNdsBattlePlayablePacingPresentedFrames >= 60u) ||
+    if ((gNdsBattlePlayablePacingPresentedFrames >= 45u) ||
         (gNdsBattlePlayablePacingMode != 0u))
     {
         gNdsBattlePlayablePacingResult = NDS_BATTLE_PLAYABLE_PACING_PASS;
@@ -3959,19 +4005,59 @@ static void ndsBattlePlayablePacingFinish(void)
 
 static void ndsBattlePlayablePresentFrame(void)
 {
+    u32 start = cpuGetTiming();
+    u32 draw_start;
+    u32 hud_start;
+
+    gNdsRendererProfileFrameCount++;
+    gNdsRendererProfileDrawTicks = 0;
+    gNdsRendererProfileHudTicks = 0;
+    gNdsRendererProfileStageAdapterTicks = 0;
+    gNdsRendererProfileMaterialTicks = 0;
+    gNdsRendererProfileMatrixTicks = 0;
+    gNdsRendererProfileDLTicks = 0;
+    gNdsRendererProfileTextureTicks = 0;
+    gNdsRendererProfileTextureConvertTicks = 0;
+    gNdsRendererProfileTextureUploadTicks = 0;
+    gNdsRendererProfileTextureUploads = 0;
+    gNdsRendererProfileTextureUploadBytes = 0;
+    gNdsRendererProfileTextureBinds = 0;
+    gNdsRendererProfileHardwareVertices = 0;
+    gNdsRendererProfileHardwareTriangles = 0;
+    gNdsRendererProfileHardwareOverLimit = 0;
+    gNdsRendererProfileMatrixLoadCount = 0;
+    gNdsRendererProfileRawVertexMinX = 32767;
+    gNdsRendererProfileRawVertexMaxX = -32768;
+    gNdsRendererProfileRawVertexMinY = 32767;
+    gNdsRendererProfileRawVertexMaxY = -32768;
+    gNdsRendererProfileRawVertexMinZ = 32767;
+    gNdsRendererProfileRawVertexMaxZ = -32768;
+    gNdsRendererProfileHWVertexMinX = 32767;
+    gNdsRendererProfileHWVertexMaxX = -32768;
+    gNdsRendererProfileHWVertexMinY = 32767;
+    gNdsRendererProfileHWVertexMaxY = -32768;
+    gNdsRendererProfileHWVertexMinZ = 32767;
+    gNdsRendererProfileHWVertexMaxZ = -32768;
+    gNdsRendererProfileHWVertexSaturateCount = 0;
+
     ndsPlatformBeginFrame();
+    draw_start = cpuGetTiming();
 #if NDS_RENDERER_HW_TRIANGLES
     ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame();
 #else
     gcDrawAll();
 #endif
+    gNdsRendererProfileDrawTicks = cpuGetTiming() - draw_start;
     gNdsBattlePlayablePacingDrawCalls++;
+    hud_start = cpuGetTiming();
     ndsPlatformRenderDebugHud();
+    gNdsRendererProfileHudTicks = cpuGetTiming() - hud_start;
     ndsPlatformEndFrame();
     ndsOsPostVBlank();
     ndsOsRunThreads();
     gNdsFrameCounter++;
     gNdsBattlePlayablePacingPresentedFrames++;
+    gNdsRendererProfilePresentTicks = cpuGetTiming() - start;
     ndsBattlePlayablePacingUpdate();
 }
 

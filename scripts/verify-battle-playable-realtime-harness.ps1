@@ -5,16 +5,46 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [switch]$RequireRealtime60Fps
+    [switch]$RequireRealtime60Fps,
+    [switch]$SkipScreenshot,
+    [int]$ScreenshotDelaySeconds = 8
 )
 $ErrorActionPreference = 'Stop'
-& (Join-Path $PSScriptRoot 'verify-battle-playable-harness.ps1') `
-    -MelonDS $MelonDS `
-    -Gdb $Gdb `
-    -GdbPort $GdbPort `
-    -RunnerSlot $RunnerSlot `
-    -NoBuild:$NoBuild `
-    -DelaySeconds $DelaySeconds `
-    -RealtimePresentation `
-    -RequireRealtime60Fps:$RequireRealtime60Fps
-exit $LASTEXITCODE
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$powerShellExe = (Get-Process -Id $PID).Path
+$harnessArgs = @(
+    '-NoProfile',
+    '-ExecutionPolicy', 'Bypass',
+    '-File', (Join-Path $PSScriptRoot 'verify-battle-playable-harness.ps1'),
+    '-MelonDS', $MelonDS,
+    '-Gdb', $Gdb,
+    '-GdbPort', "$GdbPort",
+    '-RunnerSlot', "$RunnerSlot",
+    '-DelaySeconds', "$DelaySeconds",
+    '-RealtimePresentation'
+)
+if ($NoBuild) { $harnessArgs += '-NoBuild' }
+if ($RequireRealtime60Fps) { $harnessArgs += '-RequireRealtime60Fps' }
+& $powerShellExe @harnessArgs
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
+if (-not $SkipScreenshot) {
+    $rom = Join-Path $root 'smash64ds-battle-playable-canonical-hwtri.nds'
+    $output = Join-Path $root 'artifacts\visibility\canonical-hwtri-verified.png'
+    & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
+        -MelonDS $MelonDS `
+        -Rom $rom `
+        -Output $output `
+        -DelaySeconds $ScreenshotDelaySeconds
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+        -Image $output `
+        -MinDifferentFraction 0.01
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+}
+exit 0
