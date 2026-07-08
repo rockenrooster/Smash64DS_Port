@@ -36,6 +36,7 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - Keep compatibility declarations in `include/`.
 - Do not edit generated build outputs or local emulator payloads.
 - Keep changes source-backed, buildable, and verifier-backed.
+- User-facing ROMs must be verifier-covered build configurations.
 - After successful verified progress, run
   `.\scripts\New-Smash64DSSnapshot.ps1` as the final project action/tool call.
   Finish docs, static checks, verifiers, and status inspection first; never run

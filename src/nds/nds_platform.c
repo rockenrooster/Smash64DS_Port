@@ -17,6 +17,10 @@
 #define NDS_RENDERER_HW_TRIANGLES 0
 #endif
 
+#ifndef NDS_DEBUG_HUD
+#define NDS_DEBUG_HUD 1
+#endif
+
 extern volatile u32 gNdsBootSelfTestResult;
 extern volatile u32 gNdsFrameCounter;
 
@@ -42,6 +46,7 @@ static u32 sDrawFramebufferIndex;
 #endif
 static u32 sTicks;
 static u32 sHeldKeys;
+volatile u32 gNdsPlatformHeldKeys;
 static u32 sPerfSampleReady;
 static u32 sPerfLastTick;
 static u32 sPerfLastFrameCounter;
@@ -149,6 +154,7 @@ u32 ndsPlatformReadInput(void)
     scanKeys();
     held = keysHeld();
     sHeldKeys = held;
+    gNdsPlatformHeldKeys = held;
 
     if (held & KEY_LEFT) input |= NDS_INPUT_LEFT;
     if (held & KEY_RIGHT) input |= NDS_INPUT_RIGHT;
@@ -805,6 +811,9 @@ void ndsPlatformRenderDebugHud(void)
 {
     u32 debug_text_fingerprint;
 
+#if !NDS_DEBUG_HUD
+    return;
+#endif
 #if !NDS_RENDERER_HW_TRIANGLES
     ndsPlatformDrawOriginalDLPreview();
     ndsPlatformDrawOriginalSpritePreview();

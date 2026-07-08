@@ -317,6 +317,9 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
         if ($record.Target -like '*-hwtri') {
             $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
         }
+        if (@($record.Tags) -contains 'live_input') {
+            $makeArgs += 'NDS_DEV_LIVE_INPUT_PREVIEW=1'
+        }
         $forceThisBuild = [bool]$Force
         if ($usesSharedBuild -and $Force) {
             if ($forcedSharedBuilds.ContainsKey($build)) {
@@ -427,6 +430,9 @@ if (($ParallelBuilds -le 1) -or ($buildRecords.Count -le 1)) {
                 )
                 if ($record.Target -like '*-hwtri') {
                     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
+                }
+                if (@($record.Tags) -contains 'live_input') {
+                    $makeArgs += 'NDS_DEV_LIVE_INPUT_PREVIEW=1'
                 }
                 $forceThisBuild = [bool]$force
                 if ($usesSharedBuild -and $force) {

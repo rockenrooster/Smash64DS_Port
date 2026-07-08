@@ -75,11 +75,10 @@ HUD percent/stock, audio asset parsing, BGM playback, and HW stage/fighter
 submission. FGM/voice playback, original sequence-player import, and
 non-critical HUD/SObj/particle perimeter remain follow-up.
 
-Mode `163` now has two presentation paths: the default fast verifier keeps the
-deep proof chain unthrottled, while realtime presentation runs one battle
-update, one draw, and one DS vblank per frame. The realtime smoke reports
-`frames=600 fps=598/598 ticks=335878400`; normal/manual builds use that
-realtime path.
+Mode `163` has two presentation paths: fast verifier for the deep proof chain,
+and canonical realtime + live input + HW triangles for idle presentation. The
+latest smoke reports live pads, BGM timer rate, textured stage/fighter HW, and
+`frames=67 fps=59/59 ticks=376165888`; 60fps still needs cached draw-state.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -107,10 +106,10 @@ The config-header mode `161` regression is fixed without verifier expectation
 changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
 wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
 
-Canonical realtime + live-input + HW-tri ROM investigation is open. The
-realtime loop does draw once per vblank, but mode-163 proof preparation is
-`NDS_HARNESS_FAST_LOGIC`-gated and the HW presentation still routes through the
-stage-gcDrawAll proof helper, not a canonical full-scene renderer path.
+Canonical realtime + live-input + HW-tri now renders through `gcDrawAll`, polls
+live DS pads before each update, and updates the debug HUD. The measured
+bottleneck is immediate per-frame DL traversal/submission: textured HW runs at
+about 5.9fps until the renderer-cache cutover lands.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.

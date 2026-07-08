@@ -4,7 +4,8 @@ param(
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
-    [int]$DelaySeconds = 5
+    [int]$DelaySeconds = 5,
+    [switch]$RequireRealtime60Fps
 )
 $ErrorActionPreference = 'Stop'
 & (Join-Path $PSScriptRoot 'verify-battle-playable-harness.ps1') `
@@ -14,5 +15,6 @@ $ErrorActionPreference = 'Stop'
     -RunnerSlot $RunnerSlot `
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
-    -RealtimePresentation
+    -RealtimePresentation `
+    -RequireRealtime60Fps:$RequireRealtime60Fps
 exit $LASTEXITCODE

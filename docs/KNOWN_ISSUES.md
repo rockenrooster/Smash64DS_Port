@@ -1016,12 +1016,15 @@
   scheduler drives gameplay from retrace; the DS hardware vblank is 59.8261 Hz,
   about 0.3% slower than N64 60 Hz. This is an inherent platform difference,
   not a gameplay rewrite.
-- The canonical realtime + live-input + HW-tri battle-playable ROM is still
-  under investigation. Source inspection shows the realtime loop does present a
-  frame per vblank, but battle-playable proof setup is gated to
-  `NDS_HARNESS_FAST_LOGIC` in `src/port/reloc_backend_movement.c`, and the HW
-  presentation path still calls the stage-gcDrawAll proof helper rather than a
-  canonical full-scene renderer path.
+- The canonical realtime + live-input + HW-tri battle-playable ROM now renders,
+  polls live DS input, submits textured stage/fighter triangles, and keeps BGM
+  timer-paced, but immediate per-frame `gcDrawAll` display-list traversal is
+  too slow. Current smoke measured `frames=67 fps=59/59 ticks=376165888`,
+  `STAGE_GCDRAWALL_HW=2772,12672,...,bind726/upload11/ready6402`, and
+  `STAGE_GCDRAWALL_HW_FTR=130/37830`; the renderer-cache cutover must parse
+  source DLs once and replay cached draw state before this is a 60fps demo.
+- The live diagnostic HUD is now behind `NDS_DEBUG_HUD`; packaging should turn
+  it off for a clean demo ROM after the renderer-cache performance gate passes.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite

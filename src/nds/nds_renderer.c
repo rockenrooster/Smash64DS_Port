@@ -129,6 +129,12 @@
 static u32 sNdsRendererHardwareSubmitted;
 static u32 sNdsRendererHardwareNoOracle;
 static u32 sNdsRendererHardwareTriangleBatchOpen;
+static u32 sNdsRendererHardwareTriangleBatchTextured;
+static u32 sNdsRendererHardwareTriangleBatchTextureName;
+static u32 sNdsRendererHardwareTriangleBatchPolyFmt;
+static u32 sNdsRendererHardwareTriangleBatchAlphaKey;
+static u32 sNdsRendererHardwareTriangleBatchFogKey;
+static u32 sNdsRendererHardwareBoundTextureName;
 static s32 sNdsRendererHardwareProjectedDepth;
 static u32 sNdsRendererHardwareMatrixLoaded;
 static u32 sNdsRendererHardwareMatrixScaleWorld;
@@ -172,6 +178,8 @@ static NDSRendererHardwareTextureCacheEntry
 static u32 sNdsRendererHardwareTextureCacheNext;
 static u16 sNdsRendererHardwareTextureScratch[
     NDS_RENDERER_HW_TEXTURE_MAX_TEXELS];
+
+static void ndsRendererHardwareEndBatch(void);
 #endif
 
 typedef struct NDSRendererTraversalState
@@ -1918,6 +1926,49 @@ static u32 ndsRendererHardwareTextureNextPow2(u32 value)
     return out;
 }
 
+static u32 ndsRendererHardwareAlphaStateKey(const NDSRendererStats *stats)
+{
+    if (stats == NULL)
+    {
+        return 0u;
+    }
+    return (stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) |
+           ((stats->blend_color & 0xffu) << 8);
+}
+
+static u32 ndsRendererHardwareFogStateKey(const NDSRendererStats *stats)
+{
+    if ((stats == NULL) ||
+        (stats->fog_status == 0u) ||
+        (stats->fog_max <= stats->fog_min))
+    {
+        return 0u;
+    }
+    return ((u32)stats->fog_min & 0x3ffu) |
+           (((u32)stats->fog_max & 0x3ffu) << 10) |
+           ((stats->fog_color & 0xfffu) << 20);
+}
+
+static void ndsRendererHardwareBindTextureName(
+    NDSRendererStats *stats,
+    u32 texture_name)
+{
+    if (texture_name == 0u)
+    {
+        return;
+    }
+    if (sNdsRendererHardwareBoundTextureName != texture_name)
+    {
+        ndsRendererHardwareEndBatch();
+        glBindTexture(GL_TEXTURE_2D, texture_name);
+        sNdsRendererHardwareBoundTextureName = texture_name;
+        if (stats != NULL)
+        {
+            stats->hardware_texture_bind_count++;
+        }
+    }
+}
+
 static u16 ndsRendererHardwareConvertRgba16(u16 n64_color)
 {
     u16 red;
@@ -2349,8 +2400,7 @@ static s32 ndsRendererHardwareBindTexture(
     entry = ndsRendererHardwareFindTexture(&key);
     if (entry != NULL)
     {
-        glBindTexture(GL_TEXTURE_2D, entry->name);
-        stats->hardware_texture_bind_count++;
+        ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
         stats->hardware_texture_ready_count++;
         stats->hardware_texture_format = format;
         stats->hardware_texture_width = width;
@@ -2452,7 +2502,8 @@ static s32 ndsRendererHardwareBindTexture(
         params |= GL_TEXTURE_FLIP_T;
     }
 
-    glBindTexture(GL_TEXTURE_2D, entry->name);
+    ndsRendererHardwareEndBatch();
+    ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
     if (glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size_x, size_y, 0,
                      params, sNdsRendererHardwareTextureScratch) == 0)
     {
@@ -2464,7 +2515,6 @@ static s32 ndsRendererHardwareBindTexture(
     entry->key = key;
     entry->ready = TRUE;
     stats->hardware_texture_upload_count++;
-    stats->hardware_texture_bind_count++;
     stats->hardware_texture_ready_count++;
     stats->hardware_texture_format = format;
     stats->hardware_texture_width = width;
@@ -2607,7 +2657,53 @@ static void ndsRendererHardwareEndBatch(void)
         glEnd();
         glDisable(GL_ALPHA_TEST);
         sNdsRendererHardwareTriangleBatchOpen = FALSE;
+        sNdsRendererHardwareTriangleBatchTextured = FALSE;
+        sNdsRendererHardwareTriangleBatchTextureName = 0u;
+        sNdsRendererHardwareTriangleBatchPolyFmt = 0u;
+        sNdsRendererHardwareTriangleBatchAlphaKey = 0u;
+        sNdsRendererHardwareTriangleBatchFogKey = 0u;
     }
+}
+
+static void ndsRendererHardwareBeginTriangleBatch(
+    const NDSRendererStats *stats,
+    u32 textured,
+    u32 texture_name,
+    u32 poly_fmt)
+{
+    u32 alpha_key = ndsRendererHardwareAlphaStateKey(stats);
+    u32 fog_key = ndsRendererHardwareFogStateKey(stats);
+
+    if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
+        (sNdsRendererHardwareTriangleBatchTextured == textured) &&
+        (sNdsRendererHardwareTriangleBatchTextureName == texture_name) &&
+        (sNdsRendererHardwareTriangleBatchPolyFmt == poly_fmt) &&
+        (sNdsRendererHardwareTriangleBatchAlphaKey == alpha_key) &&
+        (sNdsRendererHardwareTriangleBatchFogKey == fog_key))
+    {
+        return;
+    }
+
+    ndsRendererHardwareEndBatch();
+    if (textured != 0u)
+    {
+        glEnable(GL_TEXTURE_2D);
+    }
+    else
+    {
+        glDisable(GL_TEXTURE_2D);
+    }
+    ndsRendererHardwareApplyAlphaTest(stats);
+    ndsRendererHardwareApplyFog(stats);
+    glPolyFmt(poly_fmt);
+    glBegin(GL_TRIANGLE);
+
+    sNdsRendererHardwareTriangleBatchOpen = TRUE;
+    sNdsRendererHardwareTriangleBatchTextured = textured;
+    sNdsRendererHardwareTriangleBatchTextureName = texture_name;
+    sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
+    sNdsRendererHardwareTriangleBatchAlphaKey = alpha_key;
+    sNdsRendererHardwareTriangleBatchFogKey = fog_key;
 }
 
 static void ndsRendererHardwareSubmitVertex(
@@ -2712,6 +2808,7 @@ static void ndsRendererSubmitHardwareTriangle(
     u32 scale_world;
     u32 material_color;
     u32 poly_alpha;
+    u32 poly_fmt;
     s32 use_material_color;
     s32 use_vertex_color;
     s32 texture_offset;
@@ -2788,28 +2885,50 @@ static void ndsRendererSubmitHardwareTriangle(
     scale_world = TRUE;
     if (no_oracle != FALSE)
     {
+        use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
+            ndsRendererHardwareBindTexture(stats, config) : FALSE;
+        texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
         ndsRendererLoadHardwareMatrices(state, scale_world);
-        if (sNdsRendererHardwareTriangleBatchOpen == 0u)
+        poly_fmt = ndsRendererHardwarePolyFmt(stats, poly_alpha);
+        if (use_texture != FALSE)
         {
-            glDisable(GL_TEXTURE_2D);
-            glDisable(GL_ALPHA_TEST);
-            ndsRendererHardwareApplyFog(stats);
-            glPolyFmt(ndsRendererHardwarePolyFmt(stats, poly_alpha));
-            glBegin(GL_TRIANGLE);
-            sNdsRendererHardwareTriangleBatchOpen = TRUE;
+            ndsRendererHardwareBeginTriangleBatch(
+                stats, TRUE, sNdsRendererHardwareBoundTextureName, poly_fmt);
+            ndsRendererHardwareSubmitVertex(
+                v0, NULL, material_color, use_material_color,
+                use_vertex_color, TRUE, stats->texture_scale_s,
+                stats->texture_scale_t, stats->texture_tile_size_uls,
+                stats->texture_tile_size_ult, texture_offset, scale_world,
+                TRUE, FALSE, FALSE, 0);
+            ndsRendererHardwareSubmitVertex(
+                v1, NULL, material_color, use_material_color,
+                use_vertex_color, TRUE, stats->texture_scale_s,
+                stats->texture_scale_t, stats->texture_tile_size_uls,
+                stats->texture_tile_size_ult, texture_offset, scale_world,
+                TRUE, FALSE, FALSE, 0);
+            ndsRendererHardwareSubmitVertex(
+                v2, NULL, material_color, use_material_color,
+                use_vertex_color, TRUE, stats->texture_scale_s,
+                stats->texture_scale_t, stats->texture_tile_size_uls,
+                stats->texture_tile_size_ult, texture_offset, scale_world,
+                TRUE, FALSE, FALSE, 0);
         }
-        ndsRendererHardwareSubmitVertex(
-            v0, NULL, material_color, use_material_color,
-            use_vertex_color, FALSE, 0u, 0u, 0u, 0u, 0,
-            scale_world, TRUE, FALSE, FALSE, 0);
-        ndsRendererHardwareSubmitVertex(
-            v1, NULL, material_color, use_material_color,
-            use_vertex_color, FALSE, 0u, 0u, 0u, 0u, 0,
-            scale_world, TRUE, FALSE, FALSE, 0);
-        ndsRendererHardwareSubmitVertex(
-            v2, NULL, material_color, use_material_color,
-            use_vertex_color, FALSE, 0u, 0u, 0u, 0u, 0,
-            scale_world, TRUE, FALSE, FALSE, 0);
+        else
+        {
+            ndsRendererHardwareBeginTriangleBatch(stats, FALSE, 0u, poly_fmt);
+            ndsRendererHardwareSubmitVertex(
+                v0, NULL, material_color, use_material_color,
+                use_vertex_color, FALSE, 0u, 0u, 0u, 0u, 0,
+                scale_world, TRUE, FALSE, FALSE, 0);
+            ndsRendererHardwareSubmitVertex(
+                v1, NULL, material_color, use_material_color,
+                use_vertex_color, FALSE, 0u, 0u, 0u, 0u, 0,
+                scale_world, TRUE, FALSE, FALSE, 0);
+            ndsRendererHardwareSubmitVertex(
+                v2, NULL, material_color, use_material_color,
+                use_vertex_color, FALSE, 0u, 0u, 0u, 0u, 0,
+                scale_world, TRUE, FALSE, FALSE, 0);
+        }
         sNdsRendererHardwareSubmitted = TRUE;
         stats->hardware_triangle_count++;
         stats->hardware_zbuffer_triangle_count++;
@@ -2977,27 +3096,6 @@ static void ndsRendererScanList(const Gfx *dl,
             stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
             return;
         }
-
-#if NDS_RENDERER_HW_TRIANGLES
-        if (sNdsRendererHardwareNoOracle != 0u)
-        {
-            switch (op)
-            {
-            case NDS_RENDERER_OP_NOOP:
-            case NDS_RENDERER_OP_VTX:
-            case NDS_RENDERER_OP_TRI1:
-            case NDS_RENDERER_OP_TRI2:
-            case NDS_RENDERER_OP_DL:
-            case NDS_RENDERER_OP_ENDDL:
-                break;
-
-            default:
-                stats->state_command_count++;
-                stats->skip_command_count++;
-                continue;
-            }
-        }
-#endif
 
         switch (op)
         {

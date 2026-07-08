@@ -3930,7 +3930,7 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     gNdsBattlePlayablePacingLogicFpsX10 = 0;
 }
 
-static void ndsBattlePlayablePacingFinish(void)
+static void ndsBattlePlayablePacingUpdate(void)
 {
     u32 ticks = cpuGetTiming() - sNdsBattlePlayablePacingStartTick;
 
@@ -3944,22 +3944,35 @@ static void ndsBattlePlayablePacingFinish(void)
             (u32)(((u64)gNdsBattlePlayablePacingLogicFrames *
                    BUS_CLOCK * 10u) / ticks);
     }
+    if ((gNdsBattlePlayablePacingPresentedFrames >= 60u) ||
+        (gNdsBattlePlayablePacingMode != 0u))
+    {
+        gNdsBattlePlayablePacingResult = NDS_BATTLE_PLAYABLE_PACING_PASS;
+    }
+}
+
+static void ndsBattlePlayablePacingFinish(void)
+{
+    ndsBattlePlayablePacingUpdate();
     gNdsBattlePlayablePacingResult = NDS_BATTLE_PLAYABLE_PACING_PASS;
 }
 
 static void ndsBattlePlayablePresentFrame(void)
 {
+    ndsPlatformBeginFrame();
 #if NDS_RENDERER_HW_TRIANGLES
     ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame();
 #else
     gcDrawAll();
 #endif
     gNdsBattlePlayablePacingDrawCalls++;
+    ndsPlatformRenderDebugHud();
     ndsPlatformEndFrame();
     ndsOsPostVBlank();
     ndsOsRunThreads();
     gNdsFrameCounter++;
     gNdsBattlePlayablePacingPresentedFrames++;
+    ndsBattlePlayablePacingUpdate();
 }
 
 static void ndsRunMarioFoxProcessPrerequisiteLoop(void)
@@ -6456,6 +6469,10 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             }
             for (i = 0u; i < update_max; i++)
             {
+                if (use_realtime_presentation != 0u)
+                {
+                    (void)ndsPlatformReadInput();
+                }
                 ndsRunMarioFoxProofUpdate(
                     &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
                 if (is_battle_playable != 0u)

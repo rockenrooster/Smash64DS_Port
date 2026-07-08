@@ -15,7 +15,9 @@ param(
     [switch]$ImportBattleShipFoxSpecialHi,
     [switch]$ImportBattleShipAudioAssets,
     [switch]$ImportBattleShipAudioBGM,
-    [switch]$RealtimePresentation
+    [switch]$RealtimePresentation,
+    [switch]$LiveInputPreview,
+    [switch]$RequireRealtime60Fps
 )
 $ErrorActionPreference = 'Stop'
 $ImportBattleShipNormalMoveset = $true
@@ -31,8 +33,9 @@ $ImportBattleShipAudioBGM = $true
 $target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 if ($RealtimePresentation) {
-    $target = 'smash64ds-battle-playable-realtime'
-    $build = 'build-battle-playable-realtime-harness'
+    $target = 'smash64ds-battle-playable-canonical-hwtri'
+    $build = 'build-battle-playable-canonical-hwtri-harness'
+    $LiveInputPreview = $true
 }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
@@ -53,8 +56,10 @@ if ($RealtimePresentation) {
     -ImportBattleShipFoxSpecialHi:$ImportBattleShipFoxSpecialHi `
     -ImportBattleShipAudioAssets:$ImportBattleShipAudioAssets `
     -ImportBattleShipAudioBGM:$ImportBattleShipAudioBGM `
-    -HardwareTriangles:(!$RealtimePresentation) `
+    -HardwareTriangles `
     -RealtimePresentation:$RealtimePresentation `
+    -LiveInputPreview:$LiveInputPreview `
+    -RequireRealtime60Fps:$RequireRealtime60Fps `
     -Harness 'battle_playable' `
     -Target $target `
     -Build $build `

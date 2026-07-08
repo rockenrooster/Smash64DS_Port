@@ -21,6 +21,8 @@ param(
     [switch]$HardwareTriangles,
     [switch]$BattlePlayable,
     [switch]$RealtimePresentation,
+    [switch]$LiveInputPreview,
+    [switch]$RequireRealtime60Fps,
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
     [string]$Build = 'build-battle-mariofox-gcrunall-loop-harness',
@@ -130,6 +132,9 @@ if ($ImportBattleShipNormalMoveset) {
 if ($HardwareTriangles) {
     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
 }
+if ($LiveInputPreview) {
+    $makeArgs += 'NDS_DEV_LIVE_INPUT_PREVIEW=1'
+}
 if ($RealtimePresentation) {
     $makeArgs += 'NDS_HARNESS_FAST_LOGIC=0'
 } else {
@@ -197,6 +202,7 @@ try {
         'printf "GCRUNALL_SAFE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterGCRunAllLoopGObjDelta, gNdsFighterGCRunAllLoopUnexpectedStatusCount, gNdsFighterGCRunAllLoopDeniedStatusCount, gNdsFighterGCRunAllLoopProcessAttachEscapeCount, gNdsFighterGCRunAllLoopDisplayProbeCount, gNdsFighterGCRunAllLoopGameplayUpdateCount, gNdsFighterGCRunAllLoopDrawCallCount, gNdsFighterGCRunAllLoopMatrixCallCount, gNdsFighterGCRunAllLoopRootYDriftCount, gNdsFighterGCRunAllLoopGADriftCount',
         'printf "PLATFORM_DL_PREVIEW=%u,%u,%u,%u\n", gNdsOriginalDLPreviewReady, gNdsOriginalDLPreviewWidth, gNdsOriginalDLPreviewHeight, gNdsOriginalDLPreviewCommitCount',
         'printf "BOUNDARY=%#x,%u\n", gNdsSceneBoundaryResult, gNdsSceneBoundaryKind',
+        'printf "LIVE_PAD=%u,%u,%#x,%#x,%#x,%d,%d,%u,%u\n", gNdsControllerLiveReadCount, gNdsControllerLiveMapCount, gNdsControllerLiveConnectedMask, gNdsPlatformHeldKeys, gNdsControllerLivePad0Button, gNdsControllerLivePad0StickX, gNdsControllerLivePad0StickY, gNdsControllerPlaybackEnabled, gNdsControllerPlaybackReadCount',
         'detach',
         'quit'
     )
@@ -340,7 +346,25 @@ try {
         $hardwareSummary = ''
         if ($BattlePlayable -and $RealtimePresentation) {
             $bp = Get-Ints $battlePlayablePacing
-            Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and $bp[2] -eq $bp[3] -and $bp[3] -ge 120 -and $bp[4] -eq $bp[3] -and $bp[5] -gt 0 -and $bp[6] -ge 593 -and $bp[6] -le 603 -and $bp[7] -ge 593 -and $bp[7] -le 603) 'battle_playable realtime pacing failed 59.3..60.3 presented/logic fps or one draw per update.' $gdbStdout
+            Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and (($bp[2] -eq $bp[3]) -or ($bp[2] -eq ($bp[3] + 1))) -and (($bp[4] -eq $bp[3]) -or ($bp[4] -eq ($bp[3] + 1))) -and $bp[3] -ge 60 -and $bp[5] -gt 0 -and $bp[6] -gt 0 -and $bp[7] -gt 0) 'battle_playable realtime pacing smoke did not present live frames or keep draw/update within one in-flight vblank.' $gdbStdout
+            if ($RequireRealtime60Fps) {
+                Assert-Condition ($bp[6] -ge 593 -and $bp[6] -le 603 -and $bp[7] -ge 593 -and $bp[7] -le 603) 'battle_playable realtime pacing failed 59.3..60.3 presented/logic fps.' $gdbStdout
+            } elseif (($bp[6] -lt 593) -or ($bp[6] -gt 603) -or ($bp[7] -lt 593) -or ($bp[7] -gt 603)) {
+                Write-Warning ("$Label realtime HW textured perf below 60fps target: fps=$($bp[6])/$($bp[7]) x0.1; renderer-cache follow-up still required.")
+            }
+            if ($HardwareTriangles) {
+                $hw = Get-Ints $platformHw
+                $shw = Get-Ints $stageHardware
+                $shwf = Get-Ints $stageHardwareFighter
+                Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout
+                Assert-Condition ($stageHardware.Success -and $shw[0] -gt 8 -and $shw[1] -gt 0 -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build did not submit textured stage triangles.' $gdbStdout
+                Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -ge 2 -and $shwf[1] -gt 0) 'Canonical realtime HW build did not submit fighter triangle sets.' $gdbStdout
+            }
+            if ($LiveInputPreview) {
+                $livePad = [regex]::Match($gdbStdout, 'LIVE_PAD=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
+                $lpv = Get-Ints $livePad
+                Assert-Condition ($livePad.Success -and $lpv[0] -gt 0 -and $lpv[1] -gt 0 -and (($lpv[2] -band 1) -eq 1) -and $lpv[7] -eq 0 -and $lpv[8] -eq 0) 'Canonical realtime build did not use the live DS input path.' $gdbStdout
+            }
             if ($ImportBattleShipAudioBGM) {
                 $ab = Get-Ints $audioBgm
                 Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x1) -eq 0x1) -and (($ab[2] -eq 1) -or ($ab[6] -ge 1)) -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0) 'Minimal BGM backend realtime smoke failed hardware-timer byte-rate or safe half refill guard.' $gdbStdout

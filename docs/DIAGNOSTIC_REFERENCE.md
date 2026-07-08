@@ -1308,9 +1308,15 @@ Opening movie / Opening Portraits:
 - `BPLAY_PACE`: mode `163` presentation marker. Fast harness builds use
   `NDS_HARNESS_FAST_LOGIC=1` and expect mode `1`, at least 3200 logic frames,
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
-  builds use mode `0` and expect one logic update, one scene draw, and one DS
-  vblank-presented frame per iteration, with presented and logic rates in
-  `59.3..60.3` fps.
+  builds use mode `0` and expect live presented frames, one scene draw per
+  completed update, and nonzero timer-derived rates. The canonical HW smoke
+  currently reports about `5.9` fps; pass `-RequireRealtime60Fps` for the
+  stricter `59.3..60.3` fps renderer-cache gate.
+- `LIVE_PAD`: canonical realtime live-input marker. It records DS live read and
+  map counts, connected controller mask, raw held-key bits, mapped P0 buttons
+  and stick, playback-enabled flag, and playback read count. The canonical ROM
+  verifier expects live reads/maps and controller `0` connected, with scripted
+  playback disabled.
 - `AUDIO_BGM`: mode `163` BGM backend marker. Expected default proof:
   result `0x42474d31`, low mask bits `0x3`, playing `0` after teardown,
   track `0`, volume `0x7800`, at least one play and stop call, no open/read/

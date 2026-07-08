@@ -91,10 +91,10 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 `if=208672`), stale menu/opening payload bytes are `0/0`, and the separate
 64 KiB BGM stream buffer leaves `172412` bytes against the 128 KiB reserve.
 
-Realtime presentation is now default for normal/manual battle-playable builds:
-one `scVSBattleFuncUpdate`, one scene draw, and one DS vblank per frame. The
-latest realtime smoke reports `frames=600 fps=598/598 ticks=335878400`. Harness
-builds keep `NDS_HARNESS_FAST_LOGIC=1` for the deep proof chain.
+Canonical realtime + live-input + HW-tri is verifier-covered and no longer
+blank/dead-input: it checks live pads, BGM timer rate, textured HW submission,
+and one draw per completed update. Latest smoke is
+`frames=67 fps=59/59 ticks=376165888`; 60fps still needs cached draw-state.
 
 Build-cost status: stable flags are in `nds_build_config.h`; scene harness ID
 and Inishie scale are in `nds_scene_harness_config.h`. Measurements:
@@ -114,8 +114,8 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. Fix the canonical realtime + live-input + HW-tri ROM; current inspection
-   points at FAST_LOGIC-gated proof prep and the stage-gcDrawAll proof helper.
+1. Land renderer-cache submission for canonical realtime + live-input + HW-tri
+   so textured stage/fighters move from the measured ~5.9fps to 60fps.
 2. Build the FGM/voice backend slice on top of the parsed assets.
 3. Continue non-critical interface/particle perimeter.
 4. As subsystem slices obsolete old marker stacks, migrate-or-delete their

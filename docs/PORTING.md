@@ -18109,3 +18109,28 @@ does not assert.
 - Hidden the verifier child PowerShell launches in `verify-all.ps1` and
   `Start-VerifyRegressionShards.ps1` so redirected verifier/shard subprocesses
   no longer foreground `pwsh` windows during long sweeps.
+
+## 2026-07-08 - Canonical HW Realtime Visibility Checkpoint
+
+- Covered the exact user-facing battle-playable configuration:
+  realtime presentation, `NDS_DEV_LIVE_INPUT_PREVIEW=1`, and
+  `NDS_RENDERER_HW_TRIANGLES=1`. The verifier now builds
+  `smash64ds-battle-playable-canonical-hwtri`, asserts live DS pad polling,
+  scripted playback disabled, BGM hardware-timer byte rate, hardware frame
+  flushes, textured Pupupu stage triangles, and selected fighter HW triangle
+  submission.
+- Fixed the blank/dead-input class by polling `ndsPlatformReadInput()` before
+  each realtime battle update, presenting the debug HUD during realtime draws,
+  and keeping the presentation marker live instead of waiting for the long
+  manual loop to exit. BattleShip draw ownership remains the original
+  `gcDrawAll` traversal (`decomp/.../sys/objman.c:2087`) reached through the
+  scene draw loop (`decomp/.../sc/scmanager.c:1299`).
+- Enabled textured no-oracle HW submission for the canonical path by preserving
+  texture-state decoding and batching same-state DS triangle submissions. The
+  focused smoke now reports `LIVE_PAD=72/72 connected=0x1 playback=0`,
+  `PLATFORM_HW=65/65`, `STAGE_GCDRAWALL_HW=2772/12672 bind726 upload11
+  ready6402 reject0`, and `STAGE_GCDRAWALL_HW_FTR=130/37830`.
+- 60fps textured HW is not solved in this checkpoint. The measured realtime
+  smoke is `frames=67 fps=59/59 ticks=376165888` (about 5.9fps), so the next
+  renderer task is the cached draw-state replay/cutover. The strict 60fps
+  assertion remains available as `-RequireRealtime60Fps`.
