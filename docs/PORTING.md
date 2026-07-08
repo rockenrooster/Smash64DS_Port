@@ -18041,3 +18041,28 @@ does not assert.
   gates are not complete: `verify-dev-fast -Build -DelaySeconds 3` and
   `verify-boundary -DelaySeconds 3` fail mode `161`, so no Lean snapshot was
   taken.
+
+## 2026-07-07 - Config-Header Mode 161 Hotfix
+
+- Fixed the mode `161` regression introduced by making `nds_build_config.h`
+  visible to every TU. The broad seed-era `ftmanager.c` wrapper guard is
+  deleted; it is not source behavior for every fighter creation path.
+- Preserved the source-correct VSBattle fighter descriptor setup in
+  `src/import/battleship_scvsbattle.c`: BattleShip
+  `decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c:468` sets
+  `desc.is_skip_entry = TRUE` before `ftManagerMakeFighter`, so the DS wrapper
+  now does the same for VSBattle-created fighters. No mode `161/162` verifier
+  expectation changed.
+- Raised the fast battle-playable verifier wait floor from 25 to 30 seconds so
+  the existing 3200-frame BGM rate/teardown guard reaches its natural stop
+  marker with audio enabled. The audio marker contract and stream expectations
+  are unchanged.
+- Verified: `verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1
+  -DelaySeconds 3`, `verify-dev-fast.ps1 -Build -DelaySeconds 3`,
+  `verify-battle-playable-harness.ps1 -NoBuild -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`, detached
+  `build-verify-profile.ps1 -Profile Regression -Detach` plus
+  `-VerifyStamp` (`105` targets, `18203.607s`), and all four sharded
+  Regression `-NoBuild -DelaySeconds 3` runs. Shard `1` first hit an
+  all-zero/GDB-timeout transport failure and passed on the sequential rerun;
+  no verifier expectation changed.

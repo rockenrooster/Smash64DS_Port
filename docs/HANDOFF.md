@@ -40,24 +40,12 @@ parsing, one-track Pupupu BGM playback, and a DS 3D hardware stage + fighter
 frame.
 
 Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
-`33/34`, stage draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair
-`161/162`; pass `-SoftwarePreview` to those wrappers for comparison runs. The
-Pupupu stage-inclusive gate proves matrix, material, texture, depth/fog/alpha,
-primitive-Z, and texture-perspective HW submission with zero rejects. The strict
-direct/menu Mario/Fox all-DL hardware defaults now pass on live
-manager-created fighters: all 14/18 selected DObjs are clean and hardware
-submits 284/298 fighter triangles. The all-DL proof carries the
-source-equivalent segment `0xE` material register, RSP vertex/render state,
-original fighter-part MObjs, and CI TLUT seeds from the current material
-palette. All-DL now reports `bind119/upload8/ready119/reject0`. The
-stage-inclusive `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive defaults now use a stage-side original-manager smoke proof
-(`mask=0x24f`) and submit the Pupupu stage plus both selected live fighters in
-one frame: `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, and
-`bind97/upload11/ready97/reject0`. The active boundary wrappers and mode `163`
-keep fuller movement/live-hit/combat ownership. Latest captures include
-`artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures through MP Passive,
-menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
-Global normal builds still use the software preview.
+`33/34`, stage MP family modes `59-124`, and Boundary/Latest pair `161/162`;
+pass `-SoftwarePreview` to those wrappers for comparison runs. The current
+Pupupu gate submits the stage plus both selected live fighters in one frame:
+`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, and
+`bind97/upload11/ready97/reject0`. Global normal builds still use software
+preview.
 
 Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
 via `src/import/battleship_gmcollision.c`, replacing the local
@@ -122,14 +110,11 @@ New harness modes are only for scene-level capabilities such as `battle_playable
 
 ## Recommended Next Work
 
-1. Repair the current red Boundary gate: direct mode `161` reaches
-   `NAT_MOTION=0,0,0x22f` after ~2358 frames and fails before the live-hit
-   status markers.
-2. Build the FGM/voice backend slice on top of the parsed assets.
-3. Continue non-critical interface/particle perimeter.
-4. As subsystem slices obsolete old marker stacks, migrate-or-delete their
+1. Build the FGM/voice backend slice on top of the parsed assets.
+2. Continue non-critical interface/particle perimeter.
+3. As subsystem slices obsolete old marker stacks, migrate-or-delete their
    modes/verifiers and record one-line `[coverage-reduced]` follow-ups.
-5. Renderer follow-up: broaden source-scene coverage, then plan cutover.
+4. Renderer follow-up: broaden source-scene coverage, then plan cutover.
 
 ## Verification
 

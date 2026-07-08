@@ -178,11 +178,6 @@
   The current menu-chain verifier needs `-DelaySeconds 3` so post-loop
   finalizer markers are captured after the longer VS Mode -> PlayersVS -> Maps
   -> VSBattle path.
-- [active blocker] As of the 2026-07-07 verification-cost checkpoint,
-  `verify-boundary` fails the direct mode `161` before live-hit/status markers:
-  `NAT_MOTION=0,0,0x22f` after ~2358 frames while natural Wait/Walk counters
-  advance. No verifier expectation was changed; repair this runtime proof before
-  claiming Boundary green.
 - PassiveStand/Passive recover-loop modes `155/156` prove guarded stable
   update/physics/map frames for PassiveStandF/Ground, PassiveStandB/Ground,
   and Passive/Ground, followed by the original `ftAnimEndSetWait` handoff into

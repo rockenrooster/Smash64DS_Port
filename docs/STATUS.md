@@ -69,18 +69,11 @@ seam in `ftMainSetStatus` is still documented as follow-up.
 original `if/ifscreenflash.c`, normal moveset TUs, the weapon manager, Mario
 fireball, Fox blaster, the original effect manager, Fox reflector, Mario Super
 Jump Punch, Mario Tornado, Fox Fire Fox, original audio asset parsing, and
-one-track Pupupu BGM playback. The mode-163 proof reports
-`stock8->3`, `falls0->5`, `moveset=0x7ff phase=15`, `tilt=23/17/17`,
-`smash=13`, `aerial=19`, `landing=26`, `grab=3/1`, `throw=12/5/175`,
-`throwDmg=0->12`, `hud=dmg16/digits0x1060a stock9->4`,
-`projectile=... dmg=13`, `reflector=0xff proc=1 vx=49809->-49809`, and
-`specials=0xfff phase=7` (`mhi=1/31/0/72/105`, `mlw=1/41/0 dust=1 wait=165`,
-`foxhi=1/3/17/20/10/0/61`), `audio=seq47 bank1=1/42/117@32000
-bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=64416`,
-`bgm=track0 play=1 stop=1 refills=32 read=1114112 rate=44099 loop=0 hwloop=0 resident=65536`, plus
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. FGM/voice playback, original
-sequence-player import, and non-critical HUD/SObj/particle perimeter remain
-follow-up.
+one-track Pupupu BGM playback. Mode `163` proves stock/KO, natural combat,
+normal moves, projectiles, reflector, grab/throw, remaining Mario/Fox specials,
+HUD percent/stock, audio asset parsing, BGM playback, and HW stage/fighter
+submission. FGM/voice playback, original sequence-player import, and
+non-critical HUD/SObj/particle perimeter remain follow-up.
 
 Mode `163` now has two presentation paths: the default fast verifier keeps the
 deep proof chain unthrottled, while realtime presentation runs one battle
@@ -95,49 +88,38 @@ VSBattle buffers from `scvsbattle.c:31-41`. The BGM stream adds a separate
 64 KiB resident buffer; after subtracting it, `172412` bytes remain against
 the 128 KiB reserve.
 
-Renderer hardware is now default for all-DL modes `33/34`, stage
-draw/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive modes `59-124`, and Boundary/Latest pair `161/162`;
-global normal builds still default to software preview. Use `-SoftwarePreview`
-on those wrappers for comparisons. The current Pupupu
-stage-inclusive hardware gate proves matrix, material,
-texture, depth/fog/alpha, primitive-Z, and texture-perspective submission with
-zero hardware texture rejects. The direct/menu Mario/Fox all-DL hardware
-defaults now pass on live manager-created fighters: all 14/18
-selected DObjs are clean, hardware submits 284/298 fighter triangles, and the
-texture path reports `bind119/upload8/ready119/reject0`. That proof carries
-original fighter-part MObjs, the source-equivalent segment `0xE` material
-register, RSP vertex/render state, and CI TLUT seeds from the current material
-palette. The stage `gcDrawAll`/collision/floor-follow/floor-edge/MP process/update/sweep/cross/adjust/edge/wall/stale/live-stale/motion-stale/cliff-status/cliff-tick/fall-map/fall-landing/ceiling/ceiling-status/cliff-catch/cliff-wait/cliff-attack/cliff-attack-action/cliff-common2/cliff-escape-action/common2/cliff-climb floor/action/common2/finish/cliff-wait damage/MP Passive hardware defaults now use a
-stage-side original-manager smoke proof (`mask=0x24f`) and submit the Pupupu
-stage plus both selected fighters in one hardware frame on direct and menu-chain
-routes: `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, and
-`bind97/upload11/ready97/reject0`. The active natural-combat boundary wrappers
-and mode `163` retain the fuller movement/live-hit/combat ownership. Latest
-captures include
-`artifacts\boundary-combat-hwtri.png`, the stage MP hardware captures through MP Passive,
-menu-chain all-DL HW, and `artifacts\renderer-stage-gcdrawall-hw-fighters.png`.
-Full visual fidelity still needs broader source-scene coverage and cutover work.
+Renderer hardware is default for all-DL modes `33/34`, stage MP family modes
+`59-124`, and Boundary/Latest pair `161/162`; global normal builds still use
+software preview. The Pupupu stage-inclusive gate submits the stage plus both
+selected fighters in one hardware frame: `hwsubmit=42`, `hwtri=192`,
+`hwftr=2/582`, and `bind97/upload11/ready97/reject0`. Full visual fidelity
+still needs broader source-scene coverage and cutover work.
 
-## Current Blocker
+## Current Notes
 
 Infrastructure checkpoint 2026-07-07: `RegressionCore` is available for
 session-time shared-TU gating and passes in 175 seconds no-build after a
 detached 596-second prebuild, with `-VerifyStamp` validating the completion
-stamp in 0.36 seconds. The final task gate is not green: `verify-boundary`
-and `verify-dev-fast` currently fail mode `161` with
-`NAT_MOTION=0,0,0x22f` after ~2358 frames, so no Lean snapshot was taken for
-that checkpoint.
+stamp in 0.36 seconds.
+
+The config-header mode `161` regression is fixed without verifier expectation
+changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
+wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
+The battle-playable verifier now waits 30 seconds so its 3200-frame BGM proof
+can complete with audio enabled.
+
+The required full Regression prebuild completed detached with a valid stamp for
+105 targets in `18203.607s`. All four `-NoBuild` shards are green; shard `1`
+needed a sequential rerun after an all-zero/GDB-timeout transport failure.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.
-Legacy bounded modes are migrate-or-delete: when a runtime slice obsoletes a
-marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
-`KNOWN_ISSUES` line instead of reproducing old markers. Modes `57/58` and
-`159/160` have been deleted instead of recreating old synthetic marker stacks.
+Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
+deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
+`159/160` have already been deleted.
 
-- renderer follow-up: broaden source-scene coverage and HW default coverage;
-- audio/interface follow-up: FGM/voice, original sequence-player playback, and
-  the non-critical HUD/SObj and particle perimeter.
+- follow-ups: renderer source-scene/HW cutover; FGM/voice, original sequence
+  player, and non-critical HUD/SObj/particle perimeter.
 
 ## Verification
 

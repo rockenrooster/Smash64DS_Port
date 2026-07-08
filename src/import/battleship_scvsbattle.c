@@ -89,13 +89,11 @@ GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc);
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc)
 {
-#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_GCRUNALL_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCRUNALL_LOOP)
     if (desc != NULL)
     {
+        /* BattleShip scVSBattleFuncStart sets this before ftManagerMakeFighter. */
         desc->is_skip_entry = TRUE;
     }
-#endif
     return ftManagerMakeFighter(desc);
 }
 #endif

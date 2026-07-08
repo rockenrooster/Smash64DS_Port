@@ -158,7 +158,7 @@ try {
     Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort | Out-Null
     # The natural combat chain runs ~1000+ bounded updates; battle_playable
     # continues into an input-driven KO -> Rebirth -> Wait cycle.
-    $minimumDelay = if ($BattlePlayable -and $RealtimePresentation) { 12 } elseif ($BattlePlayable) { 25 } else { 15 }
+    $minimumDelay = if ($BattlePlayable -and $RealtimePresentation) { 12 } elseif ($BattlePlayable) { 30 } else { 15 }
     Start-Sleep -Seconds ([Math]::Max($DelaySeconds, $minimumDelay))
     $gdbCommands = @(
         'set pagination off',

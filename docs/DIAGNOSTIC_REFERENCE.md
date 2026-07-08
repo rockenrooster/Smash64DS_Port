@@ -1317,11 +1317,13 @@ Opening movie / Opening Portraits:
   unsupported-track failures, read bytes at least one 64 KiB chunk, resident
   bytes `65536`, 32 KiB refill size, at least one played chunk, and
   stopped-on-teardown `1`. The hardware-timer rate guard expects at least 3200
-  fast-logic frames, streamed rate within `42100..46100` B/s around the PCM16
-  mono `44100` B/s target from `scripts/render-audio-bgm-pupupu.py`, safe
-  opposite-half writes, and zero unsafe write attempts. Realtime smoke uses the
-  same timer-derived byte-rate guard; whole-track wrap is supported and is only
-  expected when a run outlasts the 65.5-second rendered track.
+  fast-logic frames; the verifier waits 30 seconds in fast mode so teardown
+  can be observed with audio enabled. The streamed rate must stay within
+  `42100..46100` B/s around the PCM16 mono `44100` B/s target from
+  `scripts/render-audio-bgm-pupupu.py`, with safe opposite-half writes and zero
+  unsafe write attempts. Realtime smoke uses the same timer-derived byte-rate
+  guard; whole-track wrap is supported and is only expected when a run outlasts
+  the 65.5-second rendered track.
 - `gNdsSCVSBattleCompatSpawnMask`: deterministic spawn-position queries from
   `mpCollisionGetPlayerMapObjPosition`.
 - `gNdsSCVSBattleOriginalUpdateResult` / `UpdateCount`: one bounded
