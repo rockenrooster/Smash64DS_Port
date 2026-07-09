@@ -156,7 +156,7 @@ try {
     if ($HardwareTriangles) {
         $p0Depth = [int]$hwDepth.Groups[1].Value + [int]$hwDepth.Groups[3].Value
         $p1Depth = [int]$hwDepth.Groups[2].Value + [int]$hwDepth.Groups[4].Value
-        Assert-Condition ($p0Depth -eq [int]$hw.Groups[1].Value -and $p1Depth -eq [int]$hw.Groups[2].Value -and [int]$hwDepth.Groups[1].Value -gt 0 -and [int]$hwDepth.Groups[2].Value -gt 0) 'Hardware all-DL depth classification did not account for submitted triangles.' $gdbStdout
+        Assert-Condition ($p0Depth -eq [int]$hw.Groups[1].Value -and $p1Depth -eq [int]$hw.Groups[2].Value -and $p0Depth -gt 0 -and $p1Depth -gt 0) 'Hardware all-DL depth classification did not account for submitted triangles.' $gdbStdout
     }
     Assert-Condition ($hwTexture.Success) 'All-DL hardware texture diagnostics were not printed.' $gdbStdout
     if ($HardwareTriangles) {

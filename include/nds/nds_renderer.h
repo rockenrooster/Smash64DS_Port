@@ -132,6 +132,12 @@ typedef struct NDSRendererTileState
 typedef s32 (*NDSRendererCommandCallback)(const NDSRendererCommand *command,
                                           void *user);
 
+typedef enum NDSRendererTextureDataLayout
+{
+    NDS_RENDERER_TEXTURE_DATA_NATIVE = 0,
+    NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED = 1
+} NDSRendererTextureDataLayout;
+
 typedef struct NDSRendererConfig
 {
     u32 max_depth;
@@ -140,6 +146,7 @@ typedef struct NDSRendererConfig
     const NDSRendererMatrix20p12 *initial_projection;
     const NDSRendererMatrix20p12 *initial_modelview;
     u32 initial_geometry_mode;
+    NDSRendererTextureDataLayout texture_data_layout;
     NDSRendererValidateRange validate_range;
     NDSRendererResolveBranch resolve_branch;
     NDSRendererResolveData resolve_data;

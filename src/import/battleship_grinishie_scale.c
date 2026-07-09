@@ -317,6 +317,7 @@ static sb32 ndsGRInishieScaleScanNativeDL(const Gfx *dl)
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
     config.initial_geometry_mode = 0u;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_NATIVE;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
     config.resolve_data = NULL;

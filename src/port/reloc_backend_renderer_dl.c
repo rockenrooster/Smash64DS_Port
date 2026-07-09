@@ -1349,6 +1349,7 @@ static void ndsFighterMarioFoxScanDLForSlot(u32 slot, FTStruct *fp)
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
     config.initial_geometry_mode = 0u;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsFighterDLScanValidateRange;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
     config.resolve_data = ndsFighterDLScanResolveDataPointer;
@@ -1895,6 +1896,7 @@ static void ndsFighterMarioFoxExecuteDLForSlot(u32 slot, FTStruct *fp)
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
     config.initial_geometry_mode = 0u;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsFighterDLExecValidateRange;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
     config.resolve_data = ndsFighterDLExecResolveRendererData;
@@ -3375,6 +3377,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     config.initial_modelview = initial_modelview_ptr;
     config.initial_geometry_mode = 0u;
     config.initial_geometry_mode = initial_geometry_mode;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsRendererAdapterStageValidateRange;
     config.resolve_branch = ndsFighterDLDrawResolveBranch;
     config.resolve_data = ndsFighterDLDrawResolveRendererData;
@@ -4073,6 +4076,8 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     config.max_list_commands = 512u;
     config.initial_projection = initial_projection_ptr;
     config.initial_modelview = initial_modelview_ptr;
+    config.initial_geometry_mode = 0u;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsFighterDLDrawValidateRange;
     config.resolve_branch = ndsFighterDLDrawResolveBranch;
     config.resolve_data = ndsFighterDLDrawResolveRendererData;
@@ -4952,6 +4957,8 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         config.initial_projection = initial_projection_ptr;
         config.initial_modelview = initial_modelview_ptr;
         config.initial_geometry_mode = 0u;
+        config.texture_data_layout =
+            NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
         config.validate_range = ndsFighterDLMultiDrawValidateRange;
         config.resolve_branch = ndsFighterDLMultiDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;
@@ -6096,6 +6103,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.initial_projection = initial_projection_ptr;
         config.initial_modelview = initial_modelview_ptr;
         config.initial_geometry_mode = 0u;
+        config.texture_data_layout =
+            NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
         config.validate_range = ndsFighterDLAllDrawValidateRange;
         config.resolve_branch = ndsFighterDLAllDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;

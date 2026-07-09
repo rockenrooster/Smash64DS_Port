@@ -4106,6 +4106,13 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileTextureCoordMaxS = -32768;
     gNdsRendererProfileTextureCoordMinT = 32767;
     gNdsRendererProfileTextureCoordMaxT = -32768;
+    gNdsRendererProfileTextureLaneLayoutMask = 0;
+    gNdsRendererProfileTextureLaneByteAccessCount = 0;
+    gNdsRendererProfileTextureLaneHalfwordAccessCount = 0;
+    gNdsRendererProfileTextureLaneByteFormatMask = 0;
+    gNdsRendererProfileTextureLaneHalfwordFormatMask = 0;
+    gNdsRendererProfileTextureLaneByteMap = 0;
+    gNdsRendererProfileTextureLaneHalfwordMap = 0;
     gNdsRendererProfileUseTextureRejectNoStatsCount = 0;
     gNdsRendererProfileUseTextureRejectStateOffCount = 0;
     gNdsRendererProfileUseTextureRejectNoCombineCount = 0;

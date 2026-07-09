@@ -11585,6 +11585,7 @@ static void ndsStageInishieScaleLoopScanSourceDObj(
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
     config.initial_geometry_mode = 0u;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
     config.resolve_data = NULL;
@@ -11951,6 +11952,7 @@ static void ndsStageInishieScaleLoopPreviewSourceDObj(
     config.initial_projection = NULL;
     config.initial_modelview = NULL;
     config.initial_geometry_mode = 0u;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = NULL;
     config.resolve_branch = NULL;
     config.resolve_data = NULL;

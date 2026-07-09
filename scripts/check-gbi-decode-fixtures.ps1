@@ -20,6 +20,36 @@ function Assert-True {
         throw $Message
     }
 }
+function Get-TextureByte {
+    param(
+        [byte[]]$Bytes,
+        [int]$LogicalIndex,
+        [string]$Layout
+    )
+    $physical = if ($Layout -eq 'O2R') { $LogicalIndex -bxor 3 } else { $LogicalIndex }
+    return $Bytes[$physical]
+}
+function Get-TextureNibble {
+    param(
+        [byte[]]$Bytes,
+        [int]$LogicalTexelIndex,
+        [string]$Layout
+    )
+    $packed = Get-TextureByte $Bytes ([Math]::Floor($LogicalTexelIndex / 2)) $Layout
+    if (($LogicalTexelIndex -band 1) -eq 0) {
+        return ($packed -shr 4)
+    }
+    return ($packed -band 0x0f)
+}
+function Get-TextureHalfword {
+    param(
+        [uint16[]]$Halfwords,
+        [int]$LogicalIndex,
+        [string]$Layout
+    )
+    $physical = if ($Layout -eq 'O2R') { $LogicalIndex -bxor 1 } else { $LogicalIndex }
+    return $Halfwords[$physical]
+}
 function New-F3DEX2VtxW0 {
     param(
         [int]$Count,
@@ -313,6 +343,32 @@ foreach ($file in $files) {
 }
 $renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
+$o2rCi8 = [byte[]](3, 2, 1, 0)
+Assert-Equal (Get-TextureByte $o2rCi8 0 'O2R') 0 'O2R CI8 logical byte 0 lane decode failed.'
+Assert-Equal (Get-TextureByte $o2rCi8 1 'O2R') 1 'O2R CI8 logical byte 1 lane decode failed.'
+Assert-Equal (Get-TextureByte $o2rCi8 2 'O2R') 2 'O2R CI8 logical byte 2 lane decode failed.'
+Assert-Equal (Get-TextureByte $o2rCi8 3 'O2R') 3 'O2R CI8 logical byte 3 lane decode failed.'
+$nativeCi8 = [byte[]](0, 1, 2, 3)
+Assert-Equal (Get-TextureByte $nativeCi8 0 'Native') 0 'Native CI8 byte 0 should not lane-remap.'
+Assert-Equal (Get-TextureByte $nativeCi8 3 'Native') 3 'Native CI8 byte 3 should not lane-remap.'
+$o2rCi4 = [byte[]](0x78, 0x56, 0x34, 0x12)
+for ($i = 0; $i -lt 8; $i++) {
+    Assert-Equal (Get-TextureNibble $o2rCi4 $i 'O2R') ($i + 1) "O2R CI4 nibble $i lane decode failed."
+}
+$nativeCi4 = [byte[]](0x12, 0x34, 0x56, 0x78)
+for ($i = 0; $i -lt 8; $i++) {
+    Assert-Equal (Get-TextureNibble $nativeCi4 $i 'Native') ($i + 1) "Native CI4 nibble $i should not lane-remap."
+}
+Assert-Equal (Get-TextureNibble $o2rCi4 0 'O2R') 1 'O2R IA4/I4 share the CI4 packed-byte lane rule.'
+Assert-Equal (Get-TextureByte $o2rCi8 2 'O2R') 2 'O2R IA8/I8 share the CI8 byte lane rule.'
+$o2rHalfwords = [uint16[]](0x3344, 0x1122)
+Assert-Equal (Get-TextureHalfword $o2rHalfwords 0 'O2R') 0x1122 'O2R RGBA16/TLUT halfword 0 lane decode failed.'
+Assert-Equal (Get-TextureHalfword $o2rHalfwords 1 'O2R') 0x3344 'O2R RGBA16/TLUT halfword 1 lane decode failed.'
+$nativeHalfwords = [uint16[]](0x1122, 0x3344)
+Assert-Equal (Get-TextureHalfword $nativeHalfwords 0 'Native') 0x1122 'Native halfword 0 should not lane-remap.'
+Assert-Equal (Get-TextureHalfword $nativeHalfwords 1 'Native') 0x3344 'Native halfword 1 should not lane-remap.'
+$rgba32Control = [uint32[]](0x11223344)
+Assert-Equal $rgba32Control[0] 0x11223344 'RGBA32 control must stay on the native 32-bit read path.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
@@ -353,6 +409,18 @@ Assert-True ($renderer.Contains('glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA')) 'Rend
 Assert-True ($renderer.Contains('texture_tlut_image')) 'Renderer CI texture palette pointer tracking is missing.'
 Assert-True ($renderer.Contains('texture_render_tile_size')) 'Renderer render-tile pixel size tracking is missing.'
 Assert-True ($renderer.Contains('hardware_texture_upload_count')) 'Renderer hardware texture upload stats are missing.'
+Assert-True ($rendererHeader.Contains('NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED')) 'Renderer texture data-layout enum is missing.'
+Assert-True ($rendererHeader.Contains('texture_data_layout')) 'Renderer config does not carry texture data layout.'
+Assert-True ($renderer.Contains('ndsRendererReadTextureByte')) 'Renderer byte-packed texture reader is not centralized.'
+Assert-True ($renderer.Contains('ndsRendererReadTexturePackedNibble')) 'Renderer packed-nibble texture reader is not centralized.'
+Assert-True ($renderer.Contains('ndsRendererReadTextureHalfword')) 'Renderer halfword texture reader is not centralized.'
+Assert-True ($renderer.Contains('logical_index ^ 3u')) 'Renderer O2R byte-lane correction is missing.'
+Assert-True ($renderer.Contains('logical_index ^ 1u')) 'Renderer O2R halfword-lane correction is missing.'
+Assert-True ($renderer.Contains('key.data_layout')) 'Renderer texture cache key does not distinguish data layout.'
+Assert-True ($renderer.Contains('source_physical_bytes')) 'Renderer texture source range does not validate the physical lane-mapped word span.'
+Assert-True ($renderer.Contains('gNdsRendererProfileTextureLaneByteMap')) 'Renderer texture-lane diagnostics are missing.'
+Assert-True (-not ($renderer -match 'texels\s*\[\s*index\s*\]')) 'Renderer byte-packed texture path returned to direct texels[index] reads.'
+Assert-True (-not ($renderer -match 'texels\s*\[\s*index\s*>>\s*1\s*\]')) 'Renderer packed-nibble texture path returned to direct texels[index >> 1] reads.'
 Assert-True ($renderer.Contains('key.render_tmem = render_tile->tmem')) 'Renderer hardware texture cache key is not wired directly to render-tile TMEM state.'
 Assert-True ($renderer.Contains('key.image_width = stats->texture_image_width')) 'Renderer hardware texture cache key is missing source image width.'
 Assert-True ($renderer.Contains('palette_base = render_tile->palette * 16u')) 'Renderer CI4 palette bank is not applied from the active render tile.'
