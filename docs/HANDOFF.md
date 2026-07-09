@@ -93,17 +93,18 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 
 Canonical realtime + live-input + HW-tri is verifier-covered and no longer
 blank/dead-input, but the visual frame is still not demo-fidelity. Latest:
-`frames=65 fps=34/34 ticks=635312768 gxram=368/1138`, `tri=438`,
-`texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`, and
-`texUse=0/214/26/0/0/impl57`. The capture shows `43849/49152`
-non-clear, `11619/49152` green, `13766/49152` detail,
-`1136/5616` fighter-region pixels, and adjacent-frame delta `1181/49152`,
-but Dream Land surfaces are still
-white/misplaced and fighters are still visibly broken. The input bridge maps
-B/X/Y/L/R in addition to arrows/A/START; the debug HUD/`LIVE_PAD` marker shows
-held keys -> live pad0 -> original P0 controller/root-x. Raw DS matrix/depth and
-fighter assembly remain renderer debt; canonical HW still uses the projected
-fallback and 60fps still needs cached draw-state.
+`frames=62 fps=32/32 ticks=639899904 gxram=372/1152`, `tri=609`,
+`texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`,
+`texLane=layout0x2/byte290/half290`, and
+`stageCarry=2646/2646/tex2016/tile2142/short378/378/seg189`. The late capture
+shows `42335/49152` non-clear, `22557/49152` green,
+`19640/49152` detail, and adjacent-frame delta `0/49152`; Dream Land is
+recognizable with visible fighters, but fighter assembly and remaining draw
+classes are still visually wrong. The input bridge maps B/X/Y/L/R in addition
+to arrows/A/START; the debug HUD/`LIVE_PAD` marker shows held keys -> live
+pad0 -> original P0 controller/root-x. Raw DS matrix/depth remain renderer
+debt; canonical HW still uses the projected fallback and 60fps still needs
+cached draw-state.
 
 ## Process Change
 

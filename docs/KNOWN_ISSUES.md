@@ -1019,11 +1019,16 @@
 - The canonical realtime + live-input + HW-tri battle-playable ROM now polls
   live DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
   pixel-gated by melonDS top-screen screenshots, but the frame is not yet
-  demo-fidelity. Latest gate: pre-flush GX RAM `373/1153`, `44723/49152`
-  non-clear top-screen pixels, `10301/49152` dominant-green pixels,
-  `10239/49152` non-white/non-green detail pixels, `968/5616` fighter-region
-  pixels, and adjacent-frame delta `0/49152`. White/misplaced Dream Land
-  surfaces and broken fighter assembly remain active renderer debt.
+  demo-fidelity. Latest gate: pre-flush GX RAM `372/1152`, `42335/49152`
+  non-clear top-screen pixels, `22557/49152` dominant-green pixels,
+  `19640/49152` non-white/non-green detail pixels, visible fighter-region
+  pixels, and adjacent-frame delta `0/49152`. Dream Land is recognizable, but
+  fighter assembly, remaining draw classes, and exact texture placement remain
+  active renderer debt. The unflagged palette seed is an intentional
+  compatibility path until command-order proof removes it; it is no longer the
+  confirmed visual root cause. Remaining texture debt includes padding, exact
+  LOADBLOCK origin/stride/DXT semantics, mask/shift edge cases, and 60fps
+  cached-present work.
 - Canonical HW currently uses the CPU-oracle projected-submit fallback for
   z-buffered triangles, so `RENDER_ORACLE=.../0/0` is not independent proof of
   raw DS matrix/depth correctness in this path. The scratch projected-submit

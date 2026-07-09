@@ -18279,3 +18279,30 @@ does not assert.
   `-VerifyStamp`, `verify-all.ps1 -Profile RegressionCore -NoBuild
   -DelaySeconds 3`, `check-docs.ps1`, and `check-harness-registry.ps1`.
   Cache/perf and remaining fidelity stay next.
+
+## 2026-07-09 - Renderer fidelity iter-4
+
+- Fixed O2R texture byte-lane decoding behind explicit renderer data-layout
+  state. O2R byte-packed texture data now maps logical bytes with
+  `logical_index ^ 3`, packed-nibble data maps the containing byte with
+  `(logical_texel_index >> 1) ^ 3`, halfword data maps with
+  `logical_index ^ 1`, and RGBA32 remains native. The texture cache key now
+  includes the source layout and validates the physical lane-mapped span.
+- Added fixtures and runtime markers for the lane contract. Focused gates:
+  `check-gbi-decode-fixtures.ps1`,
+  `verify-battle-mariofox-dl-draw-all-harness.ps1 -HardwareTriangles`,
+  `verify-battle-mariofox-stage-gcdrawall-loop-harness.ps1 -HardwareTriangles`,
+  and `verify-battle-playable-realtime-harness.ps1 -SkipScreenshot`.
+  Canonical realtime reports `RENDER_TEXLANE=layout0x2/byte290/half290`.
+- Preserved texture/tile/segment state across sibling stage DObj display-list
+  heads within one enclosing stage GObj traversal. The focused stage gate
+  reports `carry=42/42/tex32/tile34/short6/6/seg3`; canonical realtime reports
+  `stageCarry=2646/2646/tex2016/tile2142/short378/378/seg189` with zero sampled
+  texture uploads after increasing the fixed HW texture cache to 64 entries.
+- Capture evidence:
+  `artifacts/visibility/2026-07-09_iter4_stagecarry_after_late.png` shows
+  recognizable Dream Land with visible fighters, `42335/49152` non-clear
+  pixels, `22557/49152` green pixels, `19640/49152` detail pixels, and
+  `0/49152` adjacent-frame delta. Remaining renderer debt is raw DS
+  matrix/depth, fighter assembly, exact texture placement, and cached 60fps
+  present.

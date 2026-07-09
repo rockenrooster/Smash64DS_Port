@@ -49,18 +49,36 @@ Get-ChildItem -LiteralPath $srcRoot -Directory | ForEach-Object {
 }
 $sourceFiles = @(Get-ChildItem -LiteralPath (Join-Path $root 'src') -Recurse -Include *.c,*.h -File) +
     @(Get-ChildItem -LiteralPath (Join-Path $root 'include') -Recurse -Include *.h -File)
+$allowedDecompHeaderIncludes = @(
+    # Runtime slice 2 imports the original descriptor tables through these
+    # narrow wrappers; see docs/FT_ANIM_STATUS_SCOUT.md.
+    'include/ft/ftcommon/ftcommonstatus.h',
+    'include/ft/ftchar/ftmario/ftmariostatus.h',
+    'include/ft/ftchar/ftfox/ftfoxstatus.h'
+)
 foreach ($file in $sourceFiles) {
     $relative = Get-RelativePath $file.FullName
     $text = Get-Content -LiteralPath $file.FullName -Raw
     $hasDecompInclude = ($text -match 'decomp/BattleShip-main/decomp/src') -or ($text -match '\.\./\.\./decomp/')
-    if ($hasDecompInclude -and ($relative -notmatch '^src/import/')) {
+    if ($hasDecompInclude -and ($relative -notmatch '^src/import/') -and
+        ($allowedDecompHeaderIncludes -notcontains $relative)) {
         Add-Failure "decomp source include outside src/import: $relative"
     }
 }
 Get-ChildItem -LiteralPath (Join-Path $root 'src/import') -Filter '*.c' -File | ForEach-Object {
+    $relative = Get-RelativePath $_.FullName
+    $allowedImportHelpers = @(
+        # Weak callback aliases that let original descriptor-table headers link
+        # against macro-renamed imported status callbacks, plus documented
+        # inactive/map/physics seams for not-yet-imported status dependencies.
+        'src/import/battleship_ftstatus_callback_aliases.c',
+        'src/import/battleship_ftstatus_inactive_stubs.c',
+        'src/import/battleship_ftstatus_map_physics_shims.c'
+    )
     $text = Get-Content -LiteralPath $_.FullName -Raw
-    if ($text -notmatch 'decomp/BattleShip-main') {
-        Add-Failure "import wrapper lacks original BattleShip source path: $(Get-RelativePath $_.FullName)"
+    if (($text -notmatch 'decomp/BattleShip-main') -and
+        ($allowedImportHelpers -notcontains $relative)) {
+        Add-Failure "import wrapper lacks original BattleShip source path: $relative"
     }
 }
 $registry = @(Get-Smash64DSHarnessRegistry)

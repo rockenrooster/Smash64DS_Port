@@ -76,14 +76,16 @@ non-critical HUD/SObj/particle perimeter remain follow-up.
 
 Mode `163` has fast verifier and canonical realtime + live-input + HW-triangle
 paths. Canonical HW is pixel-gated and stable but not fidelity-complete:
-the current capture still has white/misplaced Dream Land surfaces and broken
-fighter assembly. Latest smoke after active-tile, implicit texture, and input
-work: `frames=65 fps=34/34 ticks=635312768 gxram=368/1138`, `tri=438`,
-`43849/49152` non-clear, `11619/49152` green, `13766/49152` detail,
-`1136/5616` fighter-region pixels, and adjacent-frame delta `1181/49152`.
-Raw DS matrix/depth still needs repair,
-so canonical HW uses the CPU-oracle projected-submit fallback until a renderer
-fidelity slice replaces it with source-correct raw or cached submission.
+the current capture is recognizable Dream Land with visible fighters, but the
+fighter assembly and remaining draw classes still need fidelity work. Latest
+smoke after O2R texture-lane and stage DObj carry fixes:
+`frames=62 fps=32/32 ticks=639899904 gxram=372/1152`, `tri=609`.
+Capture metrics: early `30699/49152` non-clear, `16692/49152` green,
+`13876/49152` detail; late `42335/49152` non-clear, `22557/49152` green,
+`19640/49152` detail, and `0/49152` adjacent-frame delta. Raw DS matrix/depth
+still needs repair, so canonical HW uses the CPU-oracle projected-submit
+fallback until a renderer fidelity slice replaces it with source-correct raw
+or cached submission.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -96,9 +98,11 @@ Renderer hardware is default for all-DL modes `33/34`, stage MP family modes
 `59-124`, and Boundary/Latest pair `161/162`; global normal builds still use
 software preview. The Pupupu gate submits the stage plus both fighters:
 `hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, `bind97/upload11/ready97/reject0`.
-Canonical realtime adds texture-format/reject markers
-(`conv0x100/bind0x100/pal0x100/rej0x0/why0x0`) and strict screenshots; raw
-matrix/depth fidelity and cached 60fps cutover remain follow-up.
+Canonical realtime adds texture-format/reject, texture-lane, and stage-carry
+markers (`conv0x100/bind0x100/pal0x100/rej0x0/why0x0`,
+`texLane=layout0x2/byte290/half290`, `stageCarry=2646/2646/...`) plus strict
+screenshots; raw matrix/depth fidelity and cached 60fps cutover remain
+follow-up.
 
 ## Current Notes
 
@@ -116,9 +120,10 @@ Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
 live pads before each update, and has hard GX RAM/screenshot gates. The input
 bridge now maps B/X/Y/L/R in addition to arrows/A/START and the HUD/markers
 show held keys, live pad0, original controller state, and P0 root-x. Latest:
-`combine=4655/2917/lit0/mat0/proj43684`,
-`texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`; it remains below 60fps
-and visually incomplete.
+`combine=4395/2761/lit0/mat0/proj41289`,
+`texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`,
+`stageCarry=2646/2646/tex2016/tile2142/short378/378/seg189`; it remains
+below 60fps and visually incomplete.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.

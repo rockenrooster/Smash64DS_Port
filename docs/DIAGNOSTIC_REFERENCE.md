@@ -1310,7 +1310,7 @@ Opening movie / Opening Portraits:
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
   completed update, and nonzero timer-derived rates. The canonical HW smoke
-  currently reports about `3.9` fps; pass `-RequireRealtime60Fps` for the
+  currently reports about `32-34` fps; pass `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
 - `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
   flushes, pre-flush GX polygon RAM count, pre-flush GX vertex RAM count,
@@ -1337,6 +1337,17 @@ Opening movie / Opening Portraits:
   rejected-format mask, and reject-reason mask. The canonical gate currently
   requires converted/bound/palette masks to be nonzero and unexplained rejects
   to be zero.
+- `RENDER_TEXLANE`: canonical HW O2R texture-lane marker. Fields are source
+  data-layout mask, byte-reader sample count, halfword-reader sample count,
+  byte-format mask, halfword-format mask, byte physical-lane map, and halfword
+  physical-lane map. O2R byte-packed texture formats use `logical_index ^ 3`,
+  packed-nibble formats use `(logical_texel_index >> 1) ^ 3`, and halfword
+  formats use `logical_index ^ 1`; RGBA32 stays native.
+- `RENDER_STAGE_CARRY`: stage `gcDrawAll` HW marker. Fields are persistent
+  state seed count, capture count, texture-seed count, tile-seed count,
+  short-DL texture-seed count, short-DL tile-seed count, and inherited segment
+  seed count. It proves sibling DObjs inside one stage GObj traversal carry
+  source texture/tile state instead of resetting each display-list head.
 - `RENDER_COMBINE`: canonical HW combine-state trace marker. Fields are total
   combine commands, distinct combine commands captured, lit-SHADE combines,
   material-color combines, projected-submit fallback count, and the first four
@@ -1350,7 +1361,7 @@ Opening movie / Opening Portraits:
   `artifacts/visibility/canonical-hwtri-verified.png` and runs
   `scripts/assert-melonds-top-visible.ps1`. The current top-screen gate expects
   at least 1% of the 256x192 crop to differ from clear color `(20,28,52)`,
-  at least 3% dominant-green pixels, at least 5% non-white/non-green detail
+  at least 3% dominant-green pixels, at least 25% non-white/non-green detail
   pixels, nonzero fighter-region pixels in the expected Mario/Fox region, and
   no more than 25% adjacent-frame delta in the settled capture window.
 - `LIVE_PAD`: canonical realtime live-input marker. It records DS live read and
