@@ -3842,6 +3842,7 @@ extern volatile u32 gNdsRendererProfileTexturedVertexCount;
 extern volatile u32 gNdsRendererProfileTextureSampleCount;
 extern volatile u32 gNdsRendererProfileTextureSampleGreenCount;
 extern volatile u32 gNdsRendererProfileTextureSampleNonWhiteCount;
+extern volatile u32 gNdsRendererProfileTextureCacheAliasAvoidCount;
 extern volatile s32 gNdsRendererProfileTextureCoordMinS;
 extern volatile s32 gNdsRendererProfileTextureCoordMaxS;
 extern volatile s32 gNdsRendererProfileTextureCoordMinT;

@@ -2771,6 +2771,7 @@ volatile u32 gNdsRendererProfileTexturedVertexCount;
 volatile u32 gNdsRendererProfileTextureSampleCount;
 volatile u32 gNdsRendererProfileTextureSampleGreenCount;
 volatile u32 gNdsRendererProfileTextureSampleNonWhiteCount;
+volatile u32 gNdsRendererProfileTextureCacheAliasAvoidCount;
 volatile s32 gNdsRendererProfileTextureCoordMinS;
 volatile s32 gNdsRendererProfileTextureCoordMaxS;
 volatile s32 gNdsRendererProfileTextureCoordMinT;

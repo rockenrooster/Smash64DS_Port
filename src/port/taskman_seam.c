@@ -645,6 +645,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileTextureSampleCount = 0;
     gNdsRendererProfileTextureSampleGreenCount = 0;
     gNdsRendererProfileTextureSampleNonWhiteCount = 0;
+    gNdsRendererProfileTextureCacheAliasAvoidCount = 0;
     gNdsRendererProfileTextureCoordMinS = 32767;
     gNdsRendererProfileTextureCoordMaxS = -32768;
     gNdsRendererProfileTextureCoordMinT = 32767;
@@ -4064,6 +4065,7 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileTextureSampleCount = 0;
     gNdsRendererProfileTextureSampleGreenCount = 0;
     gNdsRendererProfileTextureSampleNonWhiteCount = 0;
+    gNdsRendererProfileTextureCacheAliasAvoidCount = 0;
     gNdsRendererProfileTextureCoordMinS = 32767;
     gNdsRendererProfileTextureCoordMaxS = -32768;
     gNdsRendererProfileTextureCoordMinT = 32767;
