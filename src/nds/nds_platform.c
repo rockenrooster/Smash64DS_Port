@@ -931,7 +931,7 @@ void ndsPlatformEndFrame(void)
         gNdsHardwareRendererVertexRamCount = GFX_VERTEX_RAM_USAGE;
         gNdsHardwareRendererStatus = GFX_STATUS;
         gNdsHardwareRendererControl = GFX_CONTROL;
-        glFlush(GL_TRANS_MANUALSORT);
+        glFlush(GL_TRANS_MANUALSORT | GL_WBUFFERING);
         gNdsHardwareRendererFlushCount++;
     }
     swiWaitForVBlank();

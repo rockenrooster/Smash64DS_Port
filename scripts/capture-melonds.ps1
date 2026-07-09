@@ -3,7 +3,10 @@ param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Rom = (Join-Path $PSScriptRoot '..\smash64ds.nds'),
     [string]$Output,
-    [int]$DelaySeconds = 32
+    [int]$DelaySeconds = 32,
+    [string]$SecondOutput,
+    [int]$SecondDelaySeconds = 1,
+    [int]$SecondDelayMilliseconds = 0
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -40,6 +43,13 @@ if ([string]::IsNullOrWhiteSpace($Output)) {
 }
 $outputDirectory = Split-Path -Parent $Output
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
+if (-not [string]::IsNullOrWhiteSpace($SecondOutput)) {
+    if (-not [System.IO.Path]::IsPathRooted($SecondOutput)) {
+        $SecondOutput = Join-Path $root $SecondOutput
+    }
+    $secondOutputDirectory = Split-Path -Parent $SecondOutput
+    New-Item -ItemType Directory -Path $secondOutputDirectory -Force | Out-Null
+}
 Add-Type -AssemblyName System.Drawing
 Add-Type @'
 using System;
@@ -66,6 +76,34 @@ public static class Smash64DSWindowCapture
         uint flags);
 }
 '@
+function Save-MelonDSWindowCapture {
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.IntPtr]$WindowHandle,
+        [Parameter(Mandatory=$true)]
+        [string]$Path
+    )
+    $rect = New-Object Smash64DSWindowCapture+Rect
+    if (-not [Smash64DSWindowCapture]::GetWindowRect(
+            $WindowHandle, [ref]$rect)) {
+        throw 'Could not read the melonDS window bounds.'
+    }
+    $width = $rect.Right - $rect.Left
+    $height = $rect.Bottom - $rect.Top
+    if ($width -le 0 -or $height -le 0) {
+        throw "Invalid melonDS window bounds: ${width}x${height}."
+    }
+    $bitmap = New-Object System.Drawing.Bitmap $width, $height
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    try {
+        $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+        $bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+    } finally {
+        $graphics.Dispose()
+        $bitmap.Dispose()
+    }
+    return "${width}x${height}"
+}
 $emulator = $null
 try {
     if (Test-Path $config) {
@@ -97,28 +135,26 @@ try {
         $emulator.MainWindowHandle, [IntPtr](-1), 0, 0, 0, 0, 0x43)
     Start-Sleep -Seconds $DelaySeconds
     $emulator.Refresh()
-    $rect = New-Object Smash64DSWindowCapture+Rect
-    if (-not [Smash64DSWindowCapture]::GetWindowRect(
-            $emulator.MainWindowHandle, [ref]$rect)) {
-        throw 'Could not read the melonDS window bounds.'
+    $size = Save-MelonDSWindowCapture -WindowHandle $emulator.MainWindowHandle `
+        -Path $Output
+    if (-not [string]::IsNullOrWhiteSpace($SecondOutput)) {
+        if ($SecondDelayMilliseconds -gt 0) {
+            Start-Sleep -Milliseconds $SecondDelayMilliseconds
+        } else {
+            Start-Sleep -Seconds ([Math]::Max($SecondDelaySeconds, 0))
+        }
+        $emulator.Refresh()
+        $secondSize = Save-MelonDSWindowCapture `
+            -WindowHandle $emulator.MainWindowHandle -Path $SecondOutput
+        Write-Output "Captured live melonDS window: $SecondOutput ($secondSize)"
     }
-    $width = $rect.Right - $rect.Left
-    $height = $rect.Bottom - $rect.Top
-    if ($width -le 0 -or $height -le 0) {
-        throw "Invalid melonDS window bounds: ${width}x${height}."
-    }
-    $bitmap = New-Object System.Drawing.Bitmap $width, $height
-    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     try {
-        $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
-        $bitmap.Save($Output, [System.Drawing.Imaging.ImageFormat]::Png)
-    } finally {
-        $graphics.Dispose()
-        $bitmap.Dispose()
         [void][Smash64DSWindowCapture]::SetWindowPos(
             $emulator.MainWindowHandle, [IntPtr](-2), 0, 0, 0, 0, 0x43)
+    } catch {
+        Write-Warning "Could not lower melonDS window: $_"
     }
-    Write-Output "Captured live melonDS window: $Output (${width}x${height})"
+    Write-Output "Captured live melonDS window: $Output ($size)"
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

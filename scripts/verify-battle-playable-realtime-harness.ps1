@@ -7,7 +7,10 @@ param(
     [int]$DelaySeconds = 5,
     [switch]$RequireRealtime60Fps,
     [switch]$SkipScreenshot,
-    [int]$ScreenshotDelaySeconds = 8
+    [int]$ScreenshotDelaySeconds = 8,
+    [int]$ScreenshotSecondDelaySeconds = 1,
+    [double]$MaxScreenshotChangedFraction = 0.25,
+    [double]$MinScreenshotGreenFraction = 0.03
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -32,16 +35,22 @@ if ($LASTEXITCODE -ne 0) {
 if (-not $SkipScreenshot) {
     $rom = Join-Path $root 'smash64ds-battle-playable-canonical-hwtri.nds'
     $output = Join-Path $root 'artifacts\visibility\canonical-hwtri-verified.png'
+    $secondOutput = Join-Path $root 'artifacts\visibility\canonical-hwtri-verified-next.png'
     & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
         -MelonDS $MelonDS `
         -Rom $rom `
         -Output $output `
+        -SecondOutput $secondOutput `
+        -SecondDelaySeconds $ScreenshotSecondDelaySeconds `
         -DelaySeconds $ScreenshotDelaySeconds
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
     & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
         -Image $output `
+        -CompareImage $secondOutput `
+        -MinDominantGreenFraction $MinScreenshotGreenFraction `
+        -MaxCompareChangedFraction $MaxScreenshotChangedFraction `
         -MinDifferentFraction 0.01
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE

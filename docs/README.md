@@ -16,6 +16,7 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | `GOAL_DEBUGGING.md` | Maintained | Debugging and verifier workflow notes. |
 | `HANDOFF.md` | Current truth | Detailed current handoff and latest proof evidence. |
 | `HARNESSES.md` | Maintained | Harness naming, registry, and generated-index policy. |
+| `HW_RENDERER_VISIBILITY_FINDINGS.md` | Maintained | Canonical HW realtime visibility measurements and current blocker. |
 | `KNOWN_ISSUES.md` | Maintained | Known blockers, stubs, and deferred systems. |
 | `MEMORY_OVERLAY_PLAN.md` | Maintained | Source-backed memory budget and reloc eviction plan. |
 | `MP_PASS_THROUGH_SCOUT.md` | Maintained | Source-order scout for the next pass-through floor/platform boundary. |

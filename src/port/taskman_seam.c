@@ -641,6 +641,9 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileHardwareVertices = 0;
     gNdsRendererProfileHardwareTriangles = 0;
     gNdsRendererProfileHardwareOverLimit = 0;
+    gNdsRendererProfileOracleSamples = 0;
+    gNdsRendererProfileOracleMismatches = 0;
+    gNdsRendererProfileOracleMaxDelta = 0;
     gNdsRendererProfileMatrixLoadCount = 0;
     gNdsRendererProfileMatrixScaleWorld = 0;
     gNdsRendererProfileProjectionM00 = 0;
@@ -4025,6 +4028,9 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileHardwareVertices = 0;
     gNdsRendererProfileHardwareTriangles = 0;
     gNdsRendererProfileHardwareOverLimit = 0;
+    gNdsRendererProfileOracleSamples = 0;
+    gNdsRendererProfileOracleMismatches = 0;
+    gNdsRendererProfileOracleMaxDelta = 0;
     gNdsRendererProfileMatrixLoadCount = 0;
     gNdsRendererProfileRawVertexMinX = 32767;
     gNdsRendererProfileRawVertexMaxX = -32768;

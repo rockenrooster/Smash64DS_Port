@@ -214,6 +214,7 @@ try {
             'printf "STAGE_GCDRAWALL_HW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount, gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareTextureBindCount, gNdsStageGCDrawAllLoopHardwareTextureUploadCount, gNdsStageGCDrawAllLoopHardwareTextureReadyCount, gNdsStageGCDrawAllLoopHardwareTextureRejectCount, gNdsStageGCDrawAllLoopHardwareTextureFormatMask, gNdsStageGCDrawAllLoopHardwareTextureMaxWidth, gNdsStageGCDrawAllLoopHardwareTextureMaxHeight',
             'printf "STAGE_GCDRAWALL_HW_FTR=%u,%u\n", gNdsStageGCDrawAllLoopHardwareFighterSubmitCount, gNdsStageGCDrawAllLoopHardwareFighterTriangleCount',
             'printf "RENDER_PROFILE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileUpdateTicks, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTextureConvertTicks, gNdsRendererProfileTextureUploadTicks, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes, gNdsRendererProfileTextureBinds, gNdsRendererProfileHardwareVertices, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileHardwareOverLimit',
+            'printf "RENDER_ORACLE=%u,%u,%u\n", gNdsRendererProfileOracleSamples, gNdsRendererProfileOracleMismatches, gNdsRendererProfileOracleMaxDelta',
             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
             'printf "RENDER_VERTEX=%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%u\n", gNdsRendererProfileRawVertexMinX, gNdsRendererProfileRawVertexMaxX, gNdsRendererProfileRawVertexMinY, gNdsRendererProfileRawVertexMaxY, gNdsRendererProfileRawVertexMinZ, gNdsRendererProfileRawVertexMaxZ, gNdsRendererProfileHWVertexMinX, gNdsRendererProfileHWVertexMaxX, gNdsRendererProfileHWVertexMinY, gNdsRendererProfileHWVertexMaxY, gNdsRendererProfileHWVertexMinZ, gNdsRendererProfileHWVertexMaxZ, gNdsRendererProfileHWVertexSaturateCount'
         )
@@ -321,6 +322,7 @@ try {
     $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
     $renderProfile = [regex]::Match($gdbStdout, 'RENDER_PROFILE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
     $renderMatrix = [regex]::Match($gdbStdout, 'RENDER_MATRIX=([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderVertex = [regex]::Match($gdbStdout, 'RENDER_VERTEX=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+)')
     $ifHud = [regex]::Match($gdbStdout, 'IFHUD=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -364,6 +366,7 @@ try {
                 $shw = Get-Ints $stageHardware
                 $shwf = Get-Ints $stageHardwareFighter
                 $rp = Get-Ints $renderProfile
+                $ro = Get-Ints $renderOracle
                 $rm = Get-Ints $renderMatrix
                 $rv = Get-Ints $renderVertex
                 Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout
@@ -371,9 +374,10 @@ try {
                 Assert-Condition ($stageHardware.Success -and $shw[0] -gt 8 -and $shw[1] -gt 0 -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build did not submit textured stage triangles.' $gdbStdout
                 Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -ge 2 -and $shwf[1] -gt 0) 'Canonical realtime HW build did not submit fighter triangle sets.' $gdbStdout
                 Assert-Condition ($renderProfile.Success -and $rp[15] -le 6144 -and $rp[16] -le 2048 -and $rp[17] -eq 0) 'Canonical realtime HW build exceeded DS poly/vertex limits.' $gdbStdout
+                Assert-Condition ($renderOracle.Success -and $ro[0] -gt 0 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Canonical realtime HW submitted vertex positions drifted from the CPU 20.12 oracle.' $gdbStdout
                 Assert-Condition ($renderMatrix.Success) 'Canonical realtime HW build did not report loaded GX matrix ranges.' $gdbStdout
                 Assert-Condition ($renderVertex.Success) 'Canonical realtime HW build did not report submitted vertex ranges.' $gdbStdout
-                $hardwareSummary = " gxram=$($hw[2])/$($hw[3]) gxstat=0x{0:x}/ctrl=0x{1:x} mtx=load$($rm[0])/scale$($rm[1])/p$($rm[2]),$($rm[3]),$($rm[4]),$($rm[5])/mv$($rm[6]),$($rm[7]),$($rm[8]),$($rm[9]),$($rm[10]),$($rm[11]) vraw=$($rv[0])..$($rv[1])/$($rv[2])..$($rv[3])/$($rv[4])..$($rv[5]) vhw=$($rv[6])..$($rv[7])/$($rv[8])..$($rv[9])/$($rv[10])..$($rv[11]) sat=$($rv[12]) profile=present$($rp[2])/draw$($rp[3])/stage$($rp[5])/mat$($rp[6])/mtx$($rp[7])/dl$($rp[8])/tex$($rp[9])/conv$($rp[10])/upload$($rp[11]) texUploads=$($rp[12])/$($rp[13]) binds=$($rp[14]) vtx=$($rp[15]) tri=$($rp[16])" -f $hw[4], $hw[5]
+                $hardwareSummary = " gxram=$($hw[2])/$($hw[3]) gxstat=0x{0:x}/ctrl=0x{1:x} oracle=$($ro[0])/$($ro[1])/$($ro[2]) mtx=load$($rm[0])/scale$($rm[1])/p$($rm[2]),$($rm[3]),$($rm[4]),$($rm[5])/mv$($rm[6]),$($rm[7]),$($rm[8]),$($rm[9]),$($rm[10]),$($rm[11]) vraw=$($rv[0])..$($rv[1])/$($rv[2])..$($rv[3])/$($rv[4])..$($rv[5]) vhw=$($rv[6])..$($rv[7])/$($rv[8])..$($rv[9])/$($rv[10])..$($rv[11]) sat=$($rv[12]) profile=present$($rp[2])/draw$($rp[3])/stage$($rp[5])/mat$($rp[6])/mtx$($rp[7])/dl$($rp[8])/tex$($rp[9])/conv$($rp[10])/upload$($rp[11]) texUploads=$($rp[12])/$($rp[13]) binds=$($rp[14]) vtx=$($rp[15]) tri=$($rp[16])" -f $hw[4], $hw[5]
             }
             if ($LiveInputPreview) {
                 $livePad = [regex]::Match($gdbStdout, 'LIVE_PAD=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
@@ -502,6 +506,7 @@ try {
         }
         if ($HardwareTriangles) {
             $hw = Get-Ints $platformHw
+            $ro = Get-Ints $renderOracle
             Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Boundary hardware draw did not flush submitted DS 3D frames.' $gdbStdout
             $shw = Get-Ints $stageHardware
             Assert-Condition ($stageHardware.Success -and $shw[0] -gt 8) 'Boundary hardware replay did not exceed the old bounded DObj submit slice.' $gdbStdout
@@ -512,7 +517,8 @@ try {
             Assert-Condition ($shw[8] -eq 0) 'Boundary hardware replay still rejects source-loaded stage texture state.' $gdbStdout
             $shwf = Get-Ints $stageHardwareFighter
             Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq 2 -and $shwf[1] -gt 0) 'Boundary hardware replay did not submit selected fighter triangles.' $gdbStdout
-            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1])"
+            Assert-Condition ($renderOracle.Success -and $ro[0] -gt 0 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Boundary hardware submitted vertex positions drifted from the CPU 20.12 oracle.' $gdbStdout
+            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1]) oracle=$($ro[0])/$($ro[1])/$($ro[2])"
         }
         Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
         Write-Output ("$Label ftmanager natural-combat harness passed: wait={0}/{1} walk={2}/{3} dash={4}/{5} run={6}/{7} attack={8} hitbox={9} dmg={10}->{11} status={12} knock={13} guard={14}/{15}/{16} retries={17} updates={18} mask=0x{19:x}{20}{21}{22}" -f $nw[0], $nw[1], $nwalk[1], $nwalk[2], $nc[3], $nc[4], $nc[5], $nc[6], $na[2], $na[4], $na[8], $na[9], $na[6], $na[10], $ng[0], $ng[1], $ng[2], $na[5], $nat[4], $nat[2], $projectileSummary, $battlePlayableSummary, $hardwareSummary)

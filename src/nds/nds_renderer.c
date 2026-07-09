@@ -87,6 +87,7 @@
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
+#define NDS_RENDERER_HW_ORACLE_EPSILON 0u
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 32u
 #define NDS_RENDERER_CCMUX_COMBINED 0u
 #define NDS_RENDERER_CCMUX_TEXEL0 1u
@@ -1389,6 +1390,19 @@ static v16 ndsRendererHardwareVertexCoord(s16 value, u32 scale_world)
     return ndsRendererHardwareCoordToV16(value);
 }
 
+static v16 ndsRendererHardwareClampS64ToV16(s64 value)
+{
+    if (value > 32767)
+    {
+        return (v16)32767;
+    }
+    if (value < -32768)
+    {
+        return (v16)-32768;
+    }
+    return (v16)value;
+}
+
 static void ndsRendererProfileVertexRange(
     const NDSRendererInputVertex *vtx, v16 x, v16 y, v16 z)
 {
@@ -1415,6 +1429,85 @@ static void ndsRendererProfileVertexRange(
     {
         gNdsRendererProfileHWVertexSaturateCount++;
     }
+}
+
+static void ndsRendererProfileHWVertexRange(v16 x, v16 y, v16 z)
+{
+    if ((s32)x < gNdsRendererProfileHWVertexMinX) { gNdsRendererProfileHWVertexMinX = x; }
+    if ((s32)x > gNdsRendererProfileHWVertexMaxX) { gNdsRendererProfileHWVertexMaxX = x; }
+    if ((s32)y < gNdsRendererProfileHWVertexMinY) { gNdsRendererProfileHWVertexMinY = y; }
+    if ((s32)y > gNdsRendererProfileHWVertexMaxY) { gNdsRendererProfileHWVertexMaxY = y; }
+    if ((s32)z < gNdsRendererProfileHWVertexMinZ) { gNdsRendererProfileHWVertexMinZ = z; }
+    if ((s32)z > gNdsRendererProfileHWVertexMaxZ) { gNdsRendererProfileHWVertexMaxZ = z; }
+    if ((x == (v16)32767) || (x == (v16)-32768) ||
+        (y == (v16)32767) || (y == (v16)-32768) ||
+        (z == (v16)32767) || (z == (v16)-32768))
+    {
+        gNdsRendererProfileHWVertexSaturateCount++;
+    }
+}
+
+static u32 ndsRendererAbsDiffS32(s32 lhs, s32 rhs)
+{
+    s64 diff = (s64)lhs - (s64)rhs;
+
+    if (diff < 0)
+    {
+        diff = -diff;
+    }
+    return (diff > (s64)0xffffffffu) ? 0xffffffffu : (u32)diff;
+}
+
+static void ndsRendererHardwareRecordOracleVertex(
+    const NDSRendererTraversalState *state, u32 index)
+{
+    NDSRendererClipVertex20p12 expected;
+    const NDSRendererClipVertex20p12 *actual;
+    u32 dx;
+    u32 dy;
+    u32 dz;
+    u32 dw;
+    u32 max_delta;
+
+    if ((state == NULL) ||
+        (index >= NDS_RENDERER_MAX_VTX) ||
+        ((state->input_vertex_valid_mask & (1u << index)) == 0u) ||
+        ((state->vertex_valid_mask & (1u << index)) == 0u) ||
+        (state->matrix_valid == 0u))
+    {
+        return;
+    }
+
+    ndsRendererTransformVertex20p12(&state->matrix,
+                                    &state->input_vertices[index],
+                                    &expected);
+    actual = &state->vertices[index];
+    dx = ndsRendererAbsDiffS32(expected.x, actual->x);
+    dy = ndsRendererAbsDiffS32(expected.y, actual->y);
+    dz = ndsRendererAbsDiffS32(expected.z, actual->z);
+    dw = ndsRendererAbsDiffS32(expected.w, actual->w);
+    max_delta = dx;
+    if (dy > max_delta) { max_delta = dy; }
+    if (dz > max_delta) { max_delta = dz; }
+    if (dw > max_delta) { max_delta = dw; }
+
+    gNdsRendererProfileOracleSamples++;
+    if (max_delta > gNdsRendererProfileOracleMaxDelta)
+    {
+        gNdsRendererProfileOracleMaxDelta = max_delta;
+    }
+    if (max_delta > NDS_RENDERER_HW_ORACLE_EPSILON)
+    {
+        gNdsRendererProfileOracleMismatches++;
+    }
+}
+
+static void ndsRendererHardwareRecordOracleTriangle(
+    const NDSRendererTraversalState *state, u32 i0, u32 i1, u32 i2)
+{
+    ndsRendererHardwareRecordOracleVertex(state, i0);
+    ndsRendererHardwareRecordOracleVertex(state, i1);
+    ndsRendererHardwareRecordOracleVertex(state, i2);
 }
 
 static s32 ndsRendererCombineUsesColor(u32 w0, u32 w1, u32 source)
@@ -2675,30 +2768,20 @@ static s32 ndsRendererHardwareNextProjectedDepth(void)
 static void ndsRendererHardwareClipVertex(
     const NDSRendererClipVertex20p12 *vtx, s32 z)
 {
-    m4x4 vertex;
+    v16 x;
+    v16 y;
+    v16 out_z;
 
-    if (vtx == NULL)
+    if ((vtx == NULL) || (vtx->w == 0))
     {
         return;
     }
 
-    vertex.m[0] = vtx->x; vertex.m[1] = 0;      vertex.m[2] = 0; vertex.m[3] = 0;
-    vertex.m[4] = 0;      vertex.m[5] = vtx->y; vertex.m[6] = 0; vertex.m[7] = 0;
-    vertex.m[8] = 0;      vertex.m[9] = 0;      vertex.m[10] = z; vertex.m[11] = 0;
-    vertex.m[12] = 0;     vertex.m[13] = 0;     vertex.m[14] = 0; vertex.m[15] = vtx->w;
-
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadMatrix4x4(&vertex);
-    glVertex3v16(NDS_RENDERER_HW_PROJECTED_VERTEX,
-                 NDS_RENDERER_HW_PROJECTED_VERTEX,
-                 NDS_RENDERER_HW_PROJECTED_VERTEX);
-    glPopMatrix(1);
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix(1);
+    x = ndsRendererHardwareClampS64ToV16(((s64)vtx->x << 12) / vtx->w);
+    y = ndsRendererHardwareClampS64ToV16(((s64)vtx->y << 12) / vtx->w);
+    out_z = ndsRendererHardwareClampS64ToV16(((s64)z << 12) / vtx->w);
+    ndsRendererProfileHWVertexRange(x, y, out_z);
+    glVertex3v16(x, y, out_z);
 }
 
 static void ndsRendererHardwareEndBatch(void)
@@ -2862,7 +2945,6 @@ static void ndsRendererSubmitHardwareTriangle(
     u32 scale_world;
     u32 material_color;
     u32 poly_alpha;
-    u32 poly_fmt;
     s32 use_material_color;
     s32 use_vertex_color;
     s32 texture_offset;
@@ -2932,10 +3014,10 @@ static void ndsRendererSubmitHardwareTriangle(
         stats->hardware_oracle_reject_count++;
         return;
     }
-
     v0 = &state->input_vertices[i0];
     v1 = &state->input_vertices[i1];
     v2 = &state->input_vertices[i2];
+    ndsRendererHardwareRecordOracleTriangle(state, i0, i1, i2);
     material_color = ndsRendererHardwareColorSource(stats);
     use_material_color = ndsRendererHardwareUseMaterialColor(stats);
     use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
@@ -2954,7 +3036,11 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         ndsRendererLoadHardwareMatrices(state, scale_world);
     }
-    else if (prim_depth != FALSE)
+    else
+    {
+        ndsRendererLoadHardwareMatrices(NULL, FALSE);
+    }
+    if (prim_depth != FALSE)
     {
         projected_z = (s32)(stats->prim_depth & 0xffffu);
     }
