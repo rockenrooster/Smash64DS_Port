@@ -19,7 +19,44 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerShellExe = (Get-Process -Id $PID).Path
 $smokeDelaySeconds = [Math]::Max($DelaySeconds, 20)
-$screenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 30)
+$earlyScreenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 8)
+$lateScreenshotDelaySeconds = 30
+function Invoke-VisibleCaptureAssert {
+    param(
+        [string]$Rom,
+        [string]$Stem,
+        [int]$Delay
+    )
+    $output = Join-Path $root "artifacts\visibility\2026-07-09_${Stem}.png"
+    $nextOutput = Join-Path $root "artifacts\visibility\2026-07-09_${Stem}_next.png"
+    & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
+        -MelonDS $MelonDS `
+        -Rom $Rom `
+        -Output $output `
+        -SecondOutput $nextOutput `
+        -SecondDelaySeconds $ScreenshotSecondDelaySeconds `
+        -SecondDelayMilliseconds $ScreenshotSecondDelayMilliseconds `
+        -DelaySeconds $Delay
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+        -Image $output `
+        -CompareImage $nextOutput `
+        -MinDominantGreenFraction $MinScreenshotGreenFraction `
+        -MinNonWhiteNonGreenFraction $MinScreenshotDetailFraction `
+        -RequiredRegionX 92 `
+        -RequiredRegionY 70 `
+        -RequiredRegionWidth 78 `
+        -RequiredRegionHeight 72 `
+        -MinRequiredRegionFraction 0.05 `
+        -MinRequiredRegionFighterFraction $MinFighterRegionFraction `
+        -MaxCompareChangedFraction $MaxScreenshotChangedFraction `
+        -MinDifferentFraction 0.01
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+}
 $harnessArgs = @(
     '-NoProfile',
     '-ExecutionPolicy', 'Bypass',
@@ -38,35 +75,11 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 if (-not $SkipScreenshot) {
-    $rom = Join-Path $root 'smash64ds-battle-playable-canonical-hwtri.nds'
-    $output = Join-Path $root 'artifacts\visibility\canonical-hwtri-verified.png'
-    $secondOutput = Join-Path $root 'artifacts\visibility\canonical-hwtri-verified-next.png'
-    & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
-        -MelonDS $MelonDS `
-        -Rom $rom `
-        -Output $output `
-        -SecondOutput $secondOutput `
-        -SecondDelaySeconds $ScreenshotSecondDelaySeconds `
-        -SecondDelayMilliseconds $ScreenshotSecondDelayMilliseconds `
-        -DelaySeconds $screenshotDelaySeconds
-    if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
-    }
-    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
-        -Image $output `
-        -CompareImage $secondOutput `
-        -MinDominantGreenFraction $MinScreenshotGreenFraction `
-        -MinNonWhiteNonGreenFraction $MinScreenshotDetailFraction `
-        -RequiredRegionX 92 `
-        -RequiredRegionY 70 `
-        -RequiredRegionWidth 78 `
-        -RequiredRegionHeight 72 `
-        -MinRequiredRegionFraction 0.05 `
-        -MinRequiredRegionFighterFraction $MinFighterRegionFraction `
-        -MaxCompareChangedFraction $MaxScreenshotChangedFraction `
-        -MinDifferentFraction 0.01
-    if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
-    }
+    $canonicalRom = Join-Path $root 'smash64ds-battle-playable-canonical-hwtri.nds'
+    $shippedRom = Join-Path $root 'smash64ds-battle-playable-hwtri.nds'
+    Invoke-VisibleCaptureAssert -Rom $canonicalRom -Stem 'canonical_parity_early' -Delay $earlyScreenshotDelaySeconds
+    Invoke-VisibleCaptureAssert -Rom $canonicalRom -Stem 'canonical_parity_late' -Delay $lateScreenshotDelaySeconds
+    Invoke-VisibleCaptureAssert -Rom $shippedRom -Stem 'shipped_parity_early' -Delay $earlyScreenshotDelaySeconds
+    Invoke-VisibleCaptureAssert -Rom $shippedRom -Stem 'shipped_parity_late' -Delay $lateScreenshotDelaySeconds
 }
 exit 0

@@ -837,6 +837,11 @@ SCENE_BACKEND_SLICES := \
 .PHONY: all FORCE
 
 all: $(OUTPUT).nds
+ifeq ($(TARGET),smash64ds-battle-playable-canonical-hwtri)
+all: $(PROJECT_ROOT)/smash64ds-battle-playable-hwtri.nds
+$(PROJECT_ROOT)/smash64ds-battle-playable-hwtri.nds: $(OUTPUT).nds
+	@cp $< $@
+endif
 
 $(NDS_BUILD_CONFIG): FORCE
 	@tmp="$@.tmp"; \

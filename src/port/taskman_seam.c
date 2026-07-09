@@ -623,6 +623,20 @@ void ndsResetStartupDiagnostics(void)
     gNdsBattlePlayablePacingTimerTicks = 0;
     gNdsBattlePlayablePacingPresentFpsX10 = 0;
     gNdsBattlePlayablePacingLogicFpsX10 = 0;
+#if (NDS_HARNESS_FAST_LOGIC == 0) && \
+    (NDS_RENDERER_HW_TRIANGLES != 0) && \
+    (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+    gNdsBuildModeCanonicalWord = NDS_BUILD_MODE_CANO_WORD;
+    gNdsBuildModeShippedWord = NDS_BUILD_MODE_SHIP_WORD;
+#else
+    gNdsBuildModeCanonicalWord = 0;
+    gNdsBuildModeShippedWord = 0;
+#endif
+#if NDS_HARNESS_FAST_LOGIC != 0
+    gNdsBuildModeFastWord = NDS_BUILD_MODE_FAST_WORD;
+#else
+    gNdsBuildModeFastWord = 0;
+#endif
     gNdsRendererProfileFrameCount = 0;
     gNdsRendererProfileUpdateTicks = 0;
     gNdsRendererProfilePresentTicks = 0;
@@ -4015,6 +4029,17 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     sNdsBattlePlayablePacingStartTick = cpuGetTiming();
     gNdsBattlePlayablePacingResult = 0;
     gNdsBattlePlayablePacingMode = fast_logic;
+#if (NDS_RENDERER_HW_TRIANGLES != 0) && (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+    gNdsBuildModeCanonicalWord =
+        (fast_logic == 0u) ? NDS_BUILD_MODE_CANO_WORD : 0u;
+    gNdsBuildModeShippedWord =
+        (fast_logic == 0u) ? NDS_BUILD_MODE_SHIP_WORD : 0u;
+#else
+    gNdsBuildModeCanonicalWord = 0;
+    gNdsBuildModeShippedWord = 0;
+#endif
+    gNdsBuildModeFastWord =
+        (fast_logic != 0u) ? NDS_BUILD_MODE_FAST_WORD : 0u;
     gNdsBattlePlayablePacingLogicFrames = 0;
     gNdsBattlePlayablePacingPresentedFrames = 0;
     gNdsBattlePlayablePacingDrawCalls = 0;

@@ -21,6 +21,9 @@ volatile u32 gNdsControllerLiveConnectedMask;
 volatile u32 gNdsControllerLivePad0Button;
 volatile s32 gNdsControllerLivePad0StickX;
 volatile s32 gNdsControllerLivePad0StickY;
+volatile u32 gNdsControllerLivePad1Button;
+volatile s32 gNdsControllerLivePad1StickX;
+volatile s32 gNdsControllerLivePad1StickY;
 volatile u32 gNdsControllerLiveMapCount;
 volatile u32 gNdsControllerPlaybackPad0Button;
 volatile u32 gNdsControllerPlaybackPad1Button;
@@ -103,6 +106,9 @@ void ndsControllerPlaybackReset(void)
     gNdsControllerLivePad0Button = 0u;
     gNdsControllerLivePad0StickX = 0;
     gNdsControllerLivePad0StickY = 0;
+    gNdsControllerLivePad1Button = 0u;
+    gNdsControllerLivePad1StickX = 0;
+    gNdsControllerLivePad1StickY = 0;
     gNdsControllerLiveMapCount = 0u;
     gNdsControllerPlaybackPad0Button = 0u;
     gNdsControllerPlaybackPad1Button = 0u;
@@ -170,13 +176,14 @@ s32 osContInit(OSMesgQueue *queue, u8 *controller_bits,
     } else {
         memset(sControllerStatus, 0, sizeof(sControllerStatus));
         sControllerStatus[0].type = CONT_TYPE_NORMAL;
-        for (i = 1; i < MAXCONTROLLERS; i++) {
+        sControllerStatus[1].type = CONT_TYPE_NORMAL;
+        for (i = 2; i < MAXCONTROLLERS; i++) {
             sControllerStatus[i].errno = CONT_NO_RESPONSE_ERROR;
         }
     }
     if (controller_bits != NULL) {
         *controller_bits = (sControllerPlaybackEnabled != FALSE) ?
-            (u8)sControllerPlaybackConnectedMask : 1;
+            (u8)sControllerPlaybackConnectedMask : 3;
     }
     if (status != NULL) {
         memcpy(status, sControllerStatus, sizeof(sControllerStatus));
@@ -232,14 +239,18 @@ void osContGetReadData(OSContPad *pad)
     keys = ndsPlatformHeldKeys();
     ndsControllerMapPad(keys, &pad[0]);
     pad[0].errno = 0u;
+    pad[1].errno = 0u;
 
-    for (i = 1; i < MAXCONTROLLERS; i++) {
+    for (i = 2; i < MAXCONTROLLERS; i++) {
         pad[i].errno = CONT_NO_RESPONSE_ERROR;
     }
-    gNdsControllerLiveConnectedMask = 1u;
+    gNdsControllerLiveConnectedMask = 3u;
     gNdsControllerLivePad0Button = pad[0].button;
     gNdsControllerLivePad0StickX = pad[0].stick_x;
     gNdsControllerLivePad0StickY = pad[0].stick_y;
+    gNdsControllerLivePad1Button = pad[1].button;
+    gNdsControllerLivePad1StickX = pad[1].stick_x;
+    gNdsControllerLivePad1StickY = pad[1].stick_y;
     gNdsControllerLiveMapCount++;
     gNdsControllerLiveReadCount++;
     gNdsControllerPollCount++;

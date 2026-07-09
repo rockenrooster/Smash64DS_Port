@@ -176,6 +176,9 @@
 #define NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS 0x464e4d53u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PASS 0x42504c59u
 #define NDS_BATTLE_PLAYABLE_PACING_PASS 0x42505443u
+#define NDS_BUILD_MODE_CANO_WORD 0x43414e4fu
+#define NDS_BUILD_MODE_SHIP_WORD 0x53484950u
+#define NDS_BUILD_MODE_FAST_WORD 0x46415354u
 #define NDS_FIGHTER_PROJECTILE_PROOF_PASS 0x50524f4au
 #define NDS_MEMORY_LEDGER_PASS 0x4d4c4544u
 #define NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_PASS 0x46444150u
@@ -3820,6 +3823,9 @@ extern volatile u32 gNdsBattlePlayablePacingDrawCalls;
 extern volatile u32 gNdsBattlePlayablePacingTimerTicks;
 extern volatile u32 gNdsBattlePlayablePacingPresentFpsX10;
 extern volatile u32 gNdsBattlePlayablePacingLogicFpsX10;
+extern volatile u32 gNdsBuildModeCanonicalWord;
+extern volatile u32 gNdsBuildModeShippedWord;
+extern volatile u32 gNdsBuildModeFastWord;
 extern volatile u32 gNdsRendererProfileFrameCount;
 extern volatile u32 gNdsRendererProfileUpdateTicks;
 extern volatile u32 gNdsRendererProfilePresentTicks;
