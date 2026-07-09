@@ -6634,6 +6634,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 if (use_realtime_presentation != 0u)
                 {
                     (void)ndsPlatformReadInput();
+                    if (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+                    {
+                        syControllerReadDeviceData();
+                        syControllerUpdateGlobalData();
+                    }
                 }
                 ndsRunMarioFoxProofUpdate(
                     &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
