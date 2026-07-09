@@ -45,6 +45,9 @@
 #define NDS_RENDERER_GEOM_CULL_FRONT 0x00000200u
 #define NDS_RENDERER_GEOM_CULL_BACK 0x00000400u
 #define NDS_RENDERER_GEOM_FOG 0x00010000u
+#define NDS_RENDERER_GEOM_LIGHTING 0x00020000u
+#define NDS_RENDERER_GEOM_TEXTURE_GEN 0x00040000u
+#define NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR 0x00080000u
 #define NDS_RENDERER_GEOM_SHADING_SMOOTH 0x00200000u
 #define NDS_RENDERER_GEOM_RESET_MODE \
     (NDS_RENDERER_GEOM_ZBUFFER | NDS_RENDERER_GEOM_SHADE | \
@@ -172,6 +175,9 @@ typedef struct NDSRendererStats
     u32 segment_resolve_count;
     u32 othermode_command_count;
     u32 color_command_count;
+    u32 light_color_command_count;
+    u32 light_direction_command_count;
+    u32 light_fallback_count;
     u32 unsupported_command_count;
     u32 state_command_count;
     u32 skip_command_count;
@@ -242,6 +248,13 @@ typedef struct NDSRendererStats
     u32 prim_color;
     u32 env_color;
     u32 blend_color;
+    u32 light_color_1;
+    u32 light_color_2;
+    u32 light_color_mask;
+    s32 light_dir_x;
+    s32 light_dir_y;
+    s32 light_dir_z;
+    u32 light_dir_mask;
     u32 prim_depth;
     u32 prim_depth_delta;
     u32 prim_depth_command_count;

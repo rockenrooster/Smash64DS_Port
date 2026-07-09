@@ -593,7 +593,13 @@ The hardware path now imports the original BattleShip sine/matrix helpers,
 seeds traversal with source-shaped DObj and camera projection/modelview
 matrices, encodes DL vertices into DS `v16` units for GX, handles the proven
 Pupupu stage-inclusive draw, and uploads the currently proven CI/IA/I/RGBA
-texture families. The stage-2 temporary no-matrix scale fallback is gone.
+texture families. Lit display lists now honor `G_LIGHTING`: vertex `cn` bytes
+are treated as signed normals, `G_MOVEMEM/G_MV_LIGHT` and `G_MW_LIGHTCOL`
+update the active source lights, and only lighting-off lists use raw vertex
+colors. Untextured HW batches keep libnds texturing globally enabled and bind
+`GL_NOTEXTURE`, matching the `sm64-nds` renderer pattern, because
+`glDisable(GL_TEXTURE_2D)` mutates global `GFX_CONTROL` for the whole frame.
+The stage-2 temporary no-matrix scale fallback is gone.
 Remaining renderer work is broader combiner/material/depth source-scene
 coverage and full cutover.
 

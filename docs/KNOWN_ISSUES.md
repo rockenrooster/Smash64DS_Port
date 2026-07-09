@@ -1019,12 +1019,13 @@
 - The canonical realtime + live-input + HW-tri battle-playable ROM now renders,
   polls live DS input, submits textured stage/fighter triangles, keeps BGM
   timer-paced, and is pixel-gated by a melonDS top-screen screenshot. The
-  latest gate observes pre-flush GX RAM `66/226` and `36551/49152` top-screen
-  pixels different from the clear color, while the rebuilt shipped ROM shows
-  `33595/49152` non-clear pixels. The visual is still wrong/overbright, and
-  immediate per-frame `gcDrawAll` display-list traversal is too slow; the next
-  renderer pass must fix material/matrix fidelity, then parse source DLs once
-  and replay cached draw state before this is a 60fps demo.
+  latest gate observes pre-flush GX RAM `68/233`, `40117/49152` top-screen
+  pixels different from the clear color, `9096/49152` dominant-green pixels,
+  and `235/49152` adjacent-frame delta. The rebuilt shipped ROM passes the
+  same settled pixel proof. The visual is still overbright, and immediate
+  per-frame `gcDrawAll` display-list traversal is too slow; the next renderer
+  pass must fix material/depth fidelity, then parse source DLs once and replay
+  cached draw state before this is a 60fps demo.
 - The live diagnostic HUD is now behind `NDS_DEBUG_HUD`; packaging should turn
   it off for a clean demo ROM after the renderer-cache performance gate passes.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.

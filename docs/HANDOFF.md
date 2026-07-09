@@ -94,9 +94,10 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 Canonical realtime + live-input + HW-tri is verifier-covered and no longer
 blank/dead-input. It checks live pads, BGM timer rate, textured HW submission,
 pre-flush GX RAM, one draw per completed update, and screenshot pixels. Latest:
-`frames=59 fps=54/54 ticks=365969728 gxram=66/226`, canonical screenshot
-`36551/49152` non-clear pixels, shipped ROM `33595/49152`. Visual fidelity is
-still wrong/overbright, and 60fps still needs cached draw-state.
+`frames=55 fps=39/39 ticks=463315072 gxram=68/233`, canonical and shipped
+screenshots both show `40117/49152` non-clear pixels, `9096/49152`
+dominant-green pixels, and `235/49152` adjacent-frame delta. Visual fidelity
+is still overbright and slow, and 60fps still needs cached draw-state.
 
 ## Process Change
 
@@ -112,7 +113,7 @@ New harness modes are only for scene-level capabilities.
 
 ## Recommended Next Work
 
-1. Fix canonical HW material/matrix visual fidelity now that visibility is
+1. Fix canonical HW material/depth fidelity now that Dream Land is
    pixel-proven.
 2. Land renderer-cache submission for canonical realtime + live-input + HW-tri
    so textured stage/fighters move from the measured sub-60fps smoke to 60fps.

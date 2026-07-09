@@ -77,9 +77,11 @@ non-critical HUD/SObj/particle perimeter remain follow-up.
 
 Mode `163` has fast verifier and canonical realtime + live-input + HW-triangle
 paths. Canonical HW is now pixel-proven: the gate asserts pre-flush GX RAM
-`66/226` and `36551/49152` non-clear screenshot pixels; the rebuilt shipped
-`smash64ds-battle-playable-hwtri.nds` shows `33595/49152`. Visual fidelity is
-still wrong/overbright, and 60fps still needs cached draw-state.
+`68/233`, `40117/49152` non-clear screenshot pixels, `9096/49152`
+dominant-green pixels, and `235/49152` adjacent-frame delta; the rebuilt
+shipped `smash64ds-battle-playable-hwtri.nds` shows the same settled-frame
+pixel proof. Visual fidelity is still overbright and the realtime smoke is
+about 3.9fps, so 60fps still needs cached draw-state.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -109,8 +111,8 @@ wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
 
 Canonical realtime + live-input + HW-tri now renders through `gcDrawAll`, polls
 live DS pads before each update, and has a hard screenshot gate. Latest smoke:
-`frames=59 fps=54/54 ticks=365969728 gxram=66/226`. Immediate per-frame DL
-traversal/submission still keeps textured HW below 60fps.
+`frames=55 fps=39/39 ticks=463315072 gxram=68/233`, oracle mismatches `0`.
+Immediate per-frame DL traversal/submission still keeps textured HW below 60fps.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.
@@ -118,9 +120,8 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-- follow-ups: renderer material/matrix visual fidelity, renderer-cache 60fps
-  cutover, FGM/voice, original sequence player, and non-critical
-  HUD/SObj/particle perimeter.
+- follow-ups: renderer material/depth fidelity, renderer-cache 60fps cutover,
+  FGM/voice, original sequence player, and non-critical HUD/SObj/particles.
 
 ## Verification
 

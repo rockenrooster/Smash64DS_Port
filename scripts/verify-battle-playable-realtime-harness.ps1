@@ -9,12 +9,15 @@ param(
     [switch]$SkipScreenshot,
     [int]$ScreenshotDelaySeconds = 8,
     [int]$ScreenshotSecondDelaySeconds = 1,
+    [int]$ScreenshotSecondDelayMilliseconds = 100,
     [double]$MaxScreenshotChangedFraction = 0.25,
     [double]$MinScreenshotGreenFraction = 0.03
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerShellExe = (Get-Process -Id $PID).Path
+$smokeDelaySeconds = [Math]::Max($DelaySeconds, 15)
+$screenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 30)
 $harnessArgs = @(
     '-NoProfile',
     '-ExecutionPolicy', 'Bypass',
@@ -23,7 +26,7 @@ $harnessArgs = @(
     '-Gdb', $Gdb,
     '-GdbPort', "$GdbPort",
     '-RunnerSlot', "$RunnerSlot",
-    '-DelaySeconds', "$DelaySeconds",
+    '-DelaySeconds', "$smokeDelaySeconds",
     '-RealtimePresentation'
 )
 if ($NoBuild) { $harnessArgs += '-NoBuild' }
@@ -42,7 +45,8 @@ if (-not $SkipScreenshot) {
         -Output $output `
         -SecondOutput $secondOutput `
         -SecondDelaySeconds $ScreenshotSecondDelaySeconds `
-        -DelaySeconds $ScreenshotDelaySeconds
+        -SecondDelayMilliseconds $ScreenshotSecondDelayMilliseconds `
+        -DelaySeconds $screenshotDelaySeconds
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

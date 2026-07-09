@@ -18167,3 +18167,42 @@ does not assert.
 - This checkpoint intentionally stops before renderer-cache/performance work.
   The frame is no longer blank, but visual fidelity is still wrong/overbright
   and the strict 60fps cache gate remains follow-up.
+
+## 2026-07-08 - Canonical HW Dream Land Texture Visibility
+
+- Validated the lighting hypothesis against the active renderer code: the
+  hardware submitter had treated `Vtx.cn` as raw RGB even when `G_LIGHTING` was
+  set, but BattleShip GBI defines those bytes as signed normals on lit lists.
+  The HW path now tracks `G_LIGHTING`, decodes source-submitted
+  `G_MOVEMEM/G_MV_LIGHT` and `G_MW_LIGHTCOL` state, and only uses raw vertex
+  colors when lighting is off. Source citations: `include/PR/gbi.h`
+  `G_LIGHTING`, `gSPLight`, and `gSPLightColor`;
+  `sc/sccommon/scvsbattle.c:505-510`; `ft/ftdisplaylights.c:10-26`; and the
+  BattleShip fallback colors in `ft/ftdisplaymain.c:205-206`.
+- Fixed the white-texture failure by stopping untextured batches from calling
+  `glDisable(GL_TEXTURE_2D)`. Libnds writes that to global `GFX_CONTROL`, so a
+  later textured batch could submit good texture coordinates and still render
+  white. The renderer now follows the `sm64-nds` pattern and binds a
+  `GL_NOTEXTURE` texture for untextured geometry while keeping texturing
+  enabled globally.
+- Added `RENDER_TEXTURE` and `RENDER_LIGHT` markers to the canonical realtime
+  verifier. The texture marker proves converted source texels, dominant-green
+  source texels, non-white source texels, in-range submitted S/T, and active
+  textured vertices; the screenshot gate remains the pixel-level proof.
+- Removed the per-cache diagnostic texel copy after `RegressionCore` exposed
+  memory pressure in a cliffstatus HW target. The proof now uses conversion
+  counters, S/T range, GX RAM, oracle, and screenshot pixels without carrying
+  copied texture pixels in every cache entry.
+- Rebuilt the shipped HUD-off ROM:
+  `smash64ds-battle-playable-hwtri.nds`. The canonical and shipped settled
+  captures both pass with `40117/49152` non-clear pixels, `9096/49152`
+  dominant-green pixels, and `235/49152` adjacent-frame delta. The canonical
+  smoke reports `frames=55 fps=39/39 ticks=463315072 gxram=68/233` with
+  `RENDER_ORACLE=2001/0/0`; visual fidelity remains overbright and the
+  renderer-cache 60fps work is still follow-up.
+- Verified: `verify-dev-fast.ps1 -Build -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`, `build-verify-profile.ps1 -Profile
+  RegressionCore`, `verify-all.ps1 -Profile RegressionCore -NoBuild`, shipped
+  ROM screenshot assertion, `check-harness-registry.ps1`, and `check-docs.ps1`.
+  No full Regression sweep was run in-session; Tyler owns the daily overnight
+  sweep.

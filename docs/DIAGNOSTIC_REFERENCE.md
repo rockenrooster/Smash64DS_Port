@@ -1310,7 +1310,7 @@ Opening movie / Opening Portraits:
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
   completed update, and nonzero timer-derived rates. The canonical HW smoke
-  currently reports about `5.9` fps; pass `-RequireRealtime60Fps` for the
+  currently reports about `3.9` fps; pass `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
 - `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
   flushes, pre-flush GX polygon RAM count, pre-flush GX vertex RAM count,
@@ -1325,10 +1325,23 @@ Opening movie / Opening Portraits:
   markers. They record loaded projection/modelview seeds and raw/HW vertex
   ranges so blank-screen failures can be sorted into matrix/clip issues versus
   display/attribute issues.
+- `RENDER_TEXTURE`: canonical HW texture trace marker. Fields are converted
+  source texels, dominant-green converted texels, non-white converted texels,
+  textured vertices, in-range texture-coordinate sample count, samples over a
+  texture with green texels, samples over a texture with non-white texels, and
+  S/T min/max. The screenshot gate is the pixel-level proof; this marker proves
+  converted source texture content and sane submitted S/T without keeping a
+  copied texel cache resident.
+- `RENDER_LIGHT`: canonical HW light-state marker. Fields are decoded
+  light-color commands, decoded light-direction commands, and source-backed
+  fallback-color uses. Lighting-on display lists treat `Vtx.cn` as signed
+  normals; lighting-off display lists keep raw vertex colors.
 - `scripts/verify-battle-playable-realtime-harness.ps1` now captures
   `artifacts/visibility/canonical-hwtri-verified.png` and runs
   `scripts/assert-melonds-top-visible.ps1`. The current top-screen gate expects
-  at least 1% of the 256x192 crop to differ from clear color `(20,28,52)`.
+  at least 1% of the 256x192 crop to differ from clear color `(20,28,52)`,
+  at least 3% dominant-green pixels, and no more than 25% adjacent-frame delta
+  in the settled capture window.
 - `LIVE_PAD`: canonical realtime live-input marker. It records DS live read and
   map counts, connected controller mask, raw held-key bits, mapped P0 buttons
   and stick, playback-enabled flag, and playback read count. The canonical ROM
