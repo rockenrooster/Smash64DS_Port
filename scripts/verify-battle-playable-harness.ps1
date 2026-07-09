@@ -30,7 +30,7 @@ $ImportBattleShipMarioSpecialLw = $true
 $ImportBattleShipFoxSpecialHi = $true
 $ImportBattleShipAudioAssets = $true
 $ImportBattleShipAudioBGM = $true
-$target = 'smash64ds-battle-playable-hwtri'
+$target = 'smash64ds-battle-playable-fast-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 if ($RealtimePresentation) {
     $target = 'smash64ds-battle-playable-canonical-hwtri'

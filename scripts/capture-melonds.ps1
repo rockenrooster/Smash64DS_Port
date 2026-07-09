@@ -129,12 +129,16 @@ try {
     }
     [void][Smash64DSWindowCapture]::ShowWindow($emulator.MainWindowHandle, 9)
     [void][Smash64DSWindowCapture]::SetForegroundWindow($emulator.MainWindowHandle)
-    # Keep the emulator above Codex/terminal activity while CopyFromScreen reads
-    # its pixels. SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW = 0x43.
+    # Keep capture geometry stable between samples. melonDS can otherwise
+    # auto-resize after the first frame and create a false pixel-delta failure.
+    # SWP_NOMOVE | SWP_SHOWWINDOW = 0x42.
     [void][Smash64DSWindowCapture]::SetWindowPos(
-        $emulator.MainWindowHandle, [IntPtr](-1), 0, 0, 0, 0, 0x43)
+        $emulator.MainWindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
     Start-Sleep -Seconds $DelaySeconds
     $emulator.Refresh()
+    [void][Smash64DSWindowCapture]::SetWindowPos(
+        $emulator.MainWindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
+    Start-Sleep -Milliseconds 100
     $size = Save-MelonDSWindowCapture -WindowHandle $emulator.MainWindowHandle `
         -Path $Output
     if (-not [string]::IsNullOrWhiteSpace($SecondOutput)) {
@@ -144,6 +148,9 @@ try {
             Start-Sleep -Seconds ([Math]::Max($SecondDelaySeconds, 0))
         }
         $emulator.Refresh()
+        [void][Smash64DSWindowCapture]::SetWindowPos(
+            $emulator.MainWindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
+        Start-Sleep -Milliseconds 100
         $secondSize = Save-MelonDSWindowCapture `
             -WindowHandle $emulator.MainWindowHandle -Path $SecondOutput
         Write-Output "Captured live melonDS window: $SecondOutput ($secondSize)"

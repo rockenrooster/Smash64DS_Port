@@ -1,11 +1,3 @@
-void ftDisplayLightsDrawReflect(Gfx **display_list, f32 light_angle_x,
-                                f32 light_angle_y)
-{
-    (void)display_list;
-    (void)light_angle_x;
-    (void)light_angle_y;
-}
-
 void lbCommonClearExternSpriteParams(void)
 {
 }

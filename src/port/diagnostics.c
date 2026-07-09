@@ -2749,9 +2749,20 @@ volatile u32 gNdsBattlePlayablePacingDrawCalls;
 volatile u32 gNdsBattlePlayablePacingTimerTicks;
 volatile u32 gNdsBattlePlayablePacingPresentFpsX10;
 volatile u32 gNdsBattlePlayablePacingLogicFpsX10;
+#if (NDS_HARNESS_FAST_LOGIC == 0) && \
+    (NDS_RENDERER_HW_TRIANGLES != 0) && \
+    (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+volatile u32 gNdsBuildModeCanonicalWord = NDS_BUILD_MODE_CANO_WORD;
+volatile u32 gNdsBuildModeShippedWord = NDS_BUILD_MODE_SHIP_WORD;
+#else
 volatile u32 gNdsBuildModeCanonicalWord;
 volatile u32 gNdsBuildModeShippedWord;
+#endif
+#if NDS_HARNESS_FAST_LOGIC != 0
+volatile u32 gNdsBuildModeFastWord = NDS_BUILD_MODE_FAST_WORD;
+#else
 volatile u32 gNdsBuildModeFastWord;
+#endif
 volatile u32 gNdsRendererProfileFrameCount;
 volatile u32 gNdsRendererProfileUpdateTicks;
 volatile u32 gNdsRendererProfilePresentTicks;
@@ -3066,6 +3077,18 @@ volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxWidth;
 volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxHeight;
 volatile u32 gNdsStageGCDrawAllLoopHardwareFighterSubmitCount;
 volatile u32 gNdsStageGCDrawAllLoopHardwareFighterTriangleCount;
+volatile u32 gNdsFighterDisplayContractSelectedCount;
+volatile u32 gNdsFighterDisplayContractHiddenCount;
+volatile u32 gNdsFighterDisplayContractNoTextureCount;
+volatile u32 gNdsFighterDisplayContractSubmittedCount;
+volatile u32 gNdsFighterDisplayContractGeometryMode;
+volatile u32 gNdsFighterDisplayContractLightCount;
+volatile u32 gNdsFighterDisplayContractLightDirectionCount;
+volatile u32 gNdsFighterDisplayContractBoundsPassCount;
+volatile u32 gNdsFighterDisplayContractBoundsFailCount;
+volatile u32 gNdsFighterDisplayContractBoundsXBits;
+volatile u32 gNdsFighterDisplayContractBoundsYBits;
+Vec3f gLBCommonScale;
 volatile u32 gNdsStageGCDrawAllLoopHardwareCarrySeedCount;
 volatile u32 gNdsStageGCDrawAllLoopHardwareCarryCaptureCount;
 volatile u32 gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount;
@@ -6927,6 +6950,8 @@ static u8 *ndsTaskmanArenaBytes(void)
         static const size_t arena_sizes[] =
         {
             NDS_TASKMAN_ARENA_SIZE,
+            0x140000u,
+            0x130000u,
             0x100000u,
             0xc0000u,
             0x80000u,

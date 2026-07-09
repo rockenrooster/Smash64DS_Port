@@ -2898,6 +2898,17 @@ void ndsResetStartupDiagnostics(void)
     gNdsStageGCDrawAllLoopHardwareTextureMaxHeight = 0;
     gNdsStageGCDrawAllLoopHardwareFighterSubmitCount = 0;
     gNdsStageGCDrawAllLoopHardwareFighterTriangleCount = 0;
+    gNdsFighterDisplayContractSelectedCount = 0;
+    gNdsFighterDisplayContractHiddenCount = 0;
+    gNdsFighterDisplayContractNoTextureCount = 0;
+    gNdsFighterDisplayContractSubmittedCount = 0;
+    gNdsFighterDisplayContractGeometryMode = 0;
+    gNdsFighterDisplayContractLightCount = 0;
+    gNdsFighterDisplayContractLightDirectionCount = 0;
+    gNdsFighterDisplayContractBoundsPassCount = 0;
+    gNdsFighterDisplayContractBoundsFailCount = 0;
+    gNdsFighterDisplayContractBoundsXBits = 0;
+    gNdsFighterDisplayContractBoundsYBits = 0;
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount = 0;
     gNdsStageGCDrawAllLoopHardwareCarryCaptureCount = 0;
     gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount = 0;

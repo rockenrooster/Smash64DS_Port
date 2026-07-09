@@ -12838,7 +12838,7 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     gcDrawAll();
-    ndsFighterMarioFoxDLAllDrawSubmitStageHardwareFighters();
+    ndsFighterDisplayContractSubmitStageFighters();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
 }
 
@@ -12852,7 +12852,7 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererHardwareSetNoOracle(TRUE);
     gcDrawAll();
-    ndsFighterMarioFoxDLAllDrawSubmitStageHardwareFighters();
+    ndsFighterDisplayContractSubmitStageFighters();
     ndsRendererHardwareSetNoOracle(FALSE);
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
 }

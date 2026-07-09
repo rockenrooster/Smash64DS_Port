@@ -784,7 +784,8 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u], &local) !=
             FALSE)
         {
-            ndsRendererMtxMul20p12(out, &local, out);
+            /* objdisplay.c:1183-1191 left-multiplies each child local matrix. */
+            ndsRendererMtxMul20p12(&local, out, out);
         }
     }
     return TRUE;
@@ -5367,18 +5368,319 @@ static void ndsFighterCollectAllDObjsWithDLRecursive(
     }
 }
 
+typedef struct NDSFighterDisplayContractEvent {
+    DObj *dobj;
+    DObj *matrix_dobj;
+    DObj *material_dobj;
+    const Gfx *dl;
+    u32 geometry_mode;
+    u32 prim_color;
+    u32 env_color;
+    Light light;
+    u32 light_valid;
+} NDSFighterDisplayContractEvent;
+
+typedef struct NDSFighterDisplayContract {
+    NDSFighterDisplayContractEvent events[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    Gfx scratch[4][128];
+    Gfx *saved_heads[4];
+    void *saved_graphics_heap_ptr;
+    DObj *current_dobj;
+    DObj *material_dobj;
+    s32 pending_event;
+    u32 event_count;
+    u32 geometry_mode;
+    u32 prim_color;
+    u32 env_color;
+    u32 light_count;
+    Light light;
+    u32 light_valid;
+    u32 active;
+    u32 matrix_ready;
+    u32 material_ready;
+} NDSFighterDisplayContract;
+
+static NDSFighterDisplayContract sNdsFighterDisplayContract;
+static sb32 sNdsFighterDisplayContractPlayback;
+static u32 sNdsFighterDisplayContractLastFrame[2] = {
+    0xffffffffu, 0xffffffffu
+};
+
+static u32 ndsFighterDisplayContractPackColor(u8 r, u8 g, u8 b, u8 a)
+{
+    return ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
+}
+
+static void ndsFighterDisplayContractCountFlags(DObj *dobj)
+{
+    while (dobj != NULL)
+    {
+        if ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0)
+        {
+            gNdsFighterDisplayContractHiddenCount++;
+        }
+        if ((dobj->flags & DOBJ_FLAG_NOTEXTURE) != 0)
+        {
+            gNdsFighterDisplayContractNoTextureCount++;
+        }
+        ndsFighterDisplayContractCountFlags(dobj->child);
+        dobj = dobj->sib_next;
+    }
+}
+
+void ndsFighterDisplayContractSetGeometryMode(u32 clear_mask, u32 set_mask)
+{
+    if (sNdsFighterDisplayContract.active == 0u)
+    {
+        return;
+    }
+    sNdsFighterDisplayContract.geometry_mode &= ~clear_mask;
+    sNdsFighterDisplayContract.geometry_mode |= set_mask;
+    gNdsFighterDisplayContractGeometryMode =
+        sNdsFighterDisplayContract.geometry_mode;
+}
+
+void ndsFighterDisplayContractSetEnvColor(u8 r, u8 g, u8 b, u8 a)
+{
+    if (sNdsFighterDisplayContract.active != 0u)
+    {
+        sNdsFighterDisplayContract.env_color =
+            ndsFighterDisplayContractPackColor(r, g, b, a);
+    }
+}
+
+void ndsFighterDisplayContractSetPrimColor(u8 r, u8 g, u8 b, u8 a)
+{
+    if (sNdsFighterDisplayContract.active != 0u)
+    {
+        sNdsFighterDisplayContract.prim_color =
+            ndsFighterDisplayContractPackColor(r, g, b, a);
+    }
+}
+
+void ndsFighterDisplayContractSetLightCount(u32 count)
+{
+    if (sNdsFighterDisplayContract.active != 0u)
+    {
+        sNdsFighterDisplayContract.light_count = count;
+        gNdsFighterDisplayContractLightCount += count;
+    }
+}
+
+void ndsFighterDisplayContractSetLight(const Light *light, u32 slot)
+{
+    if ((sNdsFighterDisplayContract.active == 0u) || (light == NULL) ||
+        (slot != 1u))
+    {
+        return;
+    }
+    sNdsFighterDisplayContract.light = *light;
+    sNdsFighterDisplayContract.light_valid = TRUE;
+    gNdsFighterDisplayContractLightDirectionCount++;
+}
+
+u8 ndsFighterDisplayContractSetStageEnvColor(Gfx **dls)
+{
+    (void)dls;
+    /* mpCollisionInitGroundData sets this source color to opaque white. */
+    ndsFighterDisplayContractSetEnvColor(0xffu, 0xffu, 0xffu, 0xffu);
+    return 0xffu;
+}
+
+sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y)
+{
+    extern sb32 gmCameraCheckTargetInBounds(f32 pos_x, f32 pos_y);
+    sb32 is_in_bounds;
+
+    gNdsFighterDisplayContractBoundsXBits = ndsFloatBits(pos_x);
+    gNdsFighterDisplayContractBoundsYBits = ndsFloatBits(pos_y);
+    is_in_bounds = gmCameraCheckTargetInBounds(pos_x, pos_y);
+    if (is_in_bounds != FALSE)
+    {
+        gNdsFighterDisplayContractBoundsPassCount++;
+    }
+    else
+    {
+        gNdsFighterDisplayContractBoundsFailCount++;
+    }
+    return is_in_bounds;
+}
+
+void ndsFighterDisplayContractProjectTarget(CObj *cobj,
+                                            Mtx44f matrix,
+                                            Vec3f *pos,
+                                            f32 *dist_x,
+                                            f32 *dist_y)
+{
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 projected_x;
+    f32 projected_y;
+    f32 scale;
+
+    if ((cobj == NULL) || (pos == NULL) || (dist_x == NULL) ||
+        (dist_y == NULL))
+    {
+        return;
+    }
+    /* BattleShip ftparam.c:2421-2439, used by fighter magnify culling. */
+    x = pos->x;
+    y = pos->y;
+    z = pos->z;
+    projected_x = ((matrix[0][0] * x) + (matrix[1][0] * y) +
+                   (matrix[2][0] * z)) + matrix[3][0];
+    projected_y = ((matrix[0][1] * x) + (matrix[1][1] * y) +
+                   (matrix[2][1] * z)) + matrix[3][1];
+    scale = ((matrix[0][3] * x) + (matrix[1][3] * y) +
+             (matrix[2][3] * z)) + matrix[3][3];
+    if (ABSF(scale) < 0.1F)
+    {
+        scale = (scale < 0.0F) ? -0.1F : 0.1F;
+    }
+    scale = 1.0F / scale;
+    *dist_x = (cobj->viewport.vp.vscale[0] / 4) *
+              (projected_x * scale);
+    *dist_y = (cobj->viewport.vp.vscale[1] / 4) *
+              (projected_y * scale);
+}
+
+void ndsFighterDisplayContractSelectDL(const Gfx *dl)
+{
+    NDSFighterDisplayContractEvent *event;
+
+    if ((sNdsFighterDisplayContract.active == 0u) || (dl == NULL) ||
+        (sNdsFighterDisplayContract.event_count >=
+            NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return;
+    }
+    event = &sNdsFighterDisplayContract.events[
+        sNdsFighterDisplayContract.event_count++];
+    event->dl = dl;
+    event->dobj = (sNdsFighterDisplayContract.matrix_ready != 0u) ?
+        sNdsFighterDisplayContract.current_dobj : NULL;
+    event->matrix_dobj = event->dobj;
+    event->material_dobj =
+        (sNdsFighterDisplayContract.material_ready != 0u) ?
+            sNdsFighterDisplayContract.material_dobj : NULL;
+    event->geometry_mode = sNdsFighterDisplayContract.geometry_mode;
+    event->prim_color = sNdsFighterDisplayContract.prim_color;
+    event->env_color = sNdsFighterDisplayContract.env_color;
+    event->light = sNdsFighterDisplayContract.light;
+    event->light_valid = sNdsFighterDisplayContract.light_valid;
+    if (event->dobj == NULL)
+    {
+        sNdsFighterDisplayContract.pending_event =
+            (s32)sNdsFighterDisplayContract.event_count - 1;
+    }
+    sNdsFighterDisplayContract.matrix_ready = FALSE;
+    sNdsFighterDisplayContract.material_ready = FALSE;
+    gNdsFighterDisplayContractSelectedCount++;
+}
+
+s32 gcPrepDObjMatrix(Gfx **dls, DObj *dobj)
+{
+    (void)dls;
+    if (sNdsFighterDisplayContract.active == 0u)
+    {
+        return FALSE;
+    }
+    if ((sNdsFighterDisplayContract.pending_event >= 0) &&
+        ((u32)sNdsFighterDisplayContract.pending_event <
+            sNdsFighterDisplayContract.event_count))
+    {
+        NDSFighterDisplayContractEvent *event =
+            &sNdsFighterDisplayContract.events[
+                sNdsFighterDisplayContract.pending_event];
+
+        event->dobj = dobj;
+        event->matrix_dobj =
+            (dobj->parent != DOBJ_PARENT_NULL) ? dobj->parent : NULL;
+        sNdsFighterDisplayContract.pending_event = -1;
+    }
+    sNdsFighterDisplayContract.current_dobj = dobj;
+    sNdsFighterDisplayContract.matrix_ready = TRUE;
+    return FALSE;
+}
+
+void gcDrawMObjForDObj(DObj *dobj, Gfx **dls)
+{
+    (void)dls;
+    if (sNdsFighterDisplayContract.active != 0u)
+    {
+        sNdsFighterDisplayContract.material_dobj = dobj;
+        sNdsFighterDisplayContract.material_ready = TRUE;
+    }
+}
+
+static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
+{
+    extern void ndsBaseFTDisplayMainProcDisplay(GObj *fighter_gobj);
+    extern sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls);
+    Mtx camera_mtx;
+    u32 i;
+
+    bzero(&sNdsFighterDisplayContract, sizeof(sNdsFighterDisplayContract));
+    sNdsFighterDisplayContract.pending_event = -1;
+    sNdsFighterDisplayContract.prim_color = 0xffffffffu;
+    sNdsFighterDisplayContract.env_color = 0xffffffffu;
+    sNdsFighterDisplayContract.saved_graphics_heap_ptr =
+        gSYTaskmanGraphicsHeap.ptr;
+    for (i = 0u; i < 4u; i++)
+    {
+        sNdsFighterDisplayContract.saved_heads[i] = gSYTaskmanDLHeads[i];
+        gSYTaskmanDLHeads[i] = sNdsFighterDisplayContract.scratch[i];
+    }
+    sNdsFighterDisplayContract.active = TRUE;
+    if ((gGMCameraGObj != NULL) &&
+        (CObjGetStruct(gGMCameraGObj) != NULL))
+    {
+        /* BattleShip gmcamera.c:985-1015 prepares the visibility matrix. */
+        gmCameraLookAtFuncMatrix(&camera_mtx,
+                                 CObjGetStruct(gGMCameraGObj),
+                                 gSYTaskmanDLHeads);
+    }
+    ndsFighterDisplayContractCountFlags(DObjGetStruct(fighter_gobj));
+    ndsBaseFTDisplayMainProcDisplay(fighter_gobj);
+    sNdsFighterDisplayContract.active = FALSE;
+    for (i = 0u; i < 4u; i++)
+    {
+        gSYTaskmanDLHeads[i] = sNdsFighterDisplayContract.saved_heads[i];
+    }
+    gSYTaskmanGraphicsHeap.ptr =
+        sNdsFighterDisplayContract.saved_graphics_heap_ptr;
+}
+
 static void ndsFighterCollectAllDObjsWithDL(
     DObj *root, NDSFighterDLAllDrawCollection *collection)
 {
     u32 traversal_index = 0u;
+    u32 i;
 
     if (collection == NULL)
     {
         return;
     }
     bzero(collection, sizeof(*collection));
+    if (sNdsFighterDisplayContractPlayback != FALSE)
+    {
+        for (i = 0u; i < sNdsFighterDisplayContract.event_count; i++)
+        {
+            if (sNdsFighterDisplayContract.events[i].dobj == NULL)
+            {
+                continue;
+            }
+            collection->dobjs[collection->selected_count] =
+                sNdsFighterDisplayContract.events[i].dobj;
+            collection->indices[collection->selected_count] = i;
+            collection->selected_count++;
+            collection->total_count++;
+        }
+        return;
+    }
     ndsFighterCollectAllDObjsWithDLRecursive(root, collection,
-                                             &traversal_index);
+                                              &traversal_index);
 }
 
 static s32 ndsFighterDLAllDrawValidateRange(const Gfx *dl, size_t bytes,
@@ -6157,11 +6459,34 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     bzero(&persistent_state, sizeof(persistent_state));
     bzero(stats, sizeof(sNdsFighterDLAllDrawStats[slot]));
     ndsRendererInitStats(&persistent_stats);
+    if (sNdsFighterDisplayContractPlayback != FALSE)
+    {
+        persistent_stats.geometry_mode =
+            sNdsFighterDisplayContract.geometry_mode;
+        persistent_stats.prim_color = sNdsFighterDisplayContract.prim_color;
+        persistent_stats.env_color = sNdsFighterDisplayContract.env_color;
+        if (sNdsFighterDisplayContract.light_valid != 0u)
+        {
+            persistent_stats.light_dir_x =
+                sNdsFighterDisplayContract.light.l.dir[0];
+            persistent_stats.light_dir_y =
+                sNdsFighterDisplayContract.light.l.dir[1];
+            persistent_stats.light_dir_z =
+                sNdsFighterDisplayContract.light.l.dir[2];
+            persistent_stats.light_dir_mask = 1u;
+        }
+    }
     bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
 
     for (i = 0u; i < collection.selected_count; i++)
     {
-        const Gfx *dl = collection.dobjs[i]->dl;
+        const NDSFighterDisplayContractEvent *contract_event =
+            (sNdsFighterDisplayContractPlayback != FALSE) ?
+                &sNdsFighterDisplayContract.events[collection.indices[i]] :
+                NULL;
+        const Gfx *dl = (sNdsFighterDisplayContractPlayback != FALSE) ?
+            contract_event->dl :
+            collection.dobjs[i]->dl;
         NDSRelocLoadedFile *loaded =
             ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
         NDSRendererConfig config;
@@ -6182,17 +6507,42 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
         states[i].primary_file = loaded;
         states[i].slot = slot;
+        if (contract_event != NULL)
+        {
+            persistent_stats.geometry_mode = contract_event->geometry_mode;
+            persistent_stats.prim_color = contract_event->prim_color;
+            persistent_stats.env_color = contract_event->env_color;
+            if (contract_event->light_valid != 0u)
+            {
+                persistent_stats.light_dir_x = contract_event->light.l.dir[0];
+                persistent_stats.light_dir_y = contract_event->light.l.dir[1];
+                persistent_stats.light_dir_z = contract_event->light.l.dir[2];
+                persistent_stats.light_dir_mask = 1u;
+            }
+        }
         ndsFighterDLDrawSeedPersistentState(&states[i],
                                             &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
         step_start = cpuGetTiming();
-        ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
-                                                 &states[i]);
+        if ((sNdsFighterDisplayContractPlayback == FALSE) ||
+            (contract_event->material_dobj != NULL))
+        {
+            DObj *material_dobj =
+                (sNdsFighterDisplayContractPlayback != FALSE) ?
+                    contract_event->material_dobj :
+                    collection.dobjs[i];
+
+            ndsRendererAdapterPrepareMaterialSegment(material_dobj,
+                                                     &states[i]);
+        }
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
         step_start = cpuGetTiming();
 #endif
-        ndsRendererAdapterPrepareInitialMatrices(collection.dobjs[i],
+        ndsRendererAdapterPrepareInitialMatrices(
+                                                 (sNdsFighterDisplayContractPlayback != FALSE) ?
+                                                     contract_event->matrix_dobj :
+                                                     collection.dobjs[i],
                                                  (gGCCurrentCamera != NULL) ?
                                                      CObjGetStruct(
                                                          gGCCurrentCamera) :
@@ -6209,7 +6559,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.max_list_commands = 512u;
         config.initial_projection = initial_projection_ptr;
         config.initial_modelview = initial_modelview_ptr;
-        config.initial_geometry_mode = 0u;
+        config.initial_geometry_mode =
+            (sNdsFighterDisplayContractPlayback != FALSE) ?
+                contract_event->geometry_mode : 0u;
         config.texture_data_layout =
             NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
         config.validate_range = ndsFighterDLAllDrawValidateRange;
@@ -6273,8 +6625,64 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     gNdsFighterMarioFoxDLAllDrawCount++;
 }
 
+void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
+{
 #if NDS_RENDERER_HW_TRIANGLES
-static void ndsFighterMarioFoxDLAllDrawSubmitStageHardwareFighters(void)
+    FTStruct *fp;
+    u32 submitted_before;
+    u32 triangles_before;
+    u32 triangles_after;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if ((ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
+        ((u32)fp->nds_slot > 1u))
+    {
+        return;
+    }
+    if (sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] ==
+        gNdsRendererProfileFrameCount)
+    {
+        return;
+    }
+    sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] =
+        gNdsRendererProfileFrameCount;
+    ndsFighterDisplayContractCapture(fighter_gobj);
+    if (sNdsFighterDisplayContract.event_count == 0u)
+    {
+        return;
+    }
+    submitted_before = gNdsFighterMarioFoxDLAllDrawCount;
+    triangles_before =
+        gNdsFighterDLAllDrawP0HardwareTriangleCount +
+        gNdsFighterDLAllDrawP1HardwareTriangleCount;
+    sNdsFighterDisplayContractPlayback = TRUE;
+    ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp, NULL, 0u);
+    sNdsFighterDisplayContractPlayback = FALSE;
+    if (gNdsFighterMarioFoxDLAllDrawCount != submitted_before)
+    {
+        gNdsFighterDisplayContractSubmittedCount +=
+            sNdsFighterDisplayContract.event_count;
+        gNdsStageGCDrawAllLoopHardwareFighterSubmitCount++;
+        triangles_after =
+            gNdsFighterDLAllDrawP0HardwareTriangleCount +
+            gNdsFighterDLAllDrawP1HardwareTriangleCount;
+        if (triangles_after > triangles_before)
+        {
+            gNdsStageGCDrawAllLoopHardwareFighterTriangleCount +=
+                triangles_after - triangles_before;
+        }
+    }
+#else
+    (void)fighter_gobj;
+#endif
+}
+
+#if NDS_RENDERER_HW_TRIANGLES
+static void ndsFighterDisplayContractSubmitStageFighters(void)
 {
     GObj *saved_camera = gGCCurrentCamera;
     u32 slot;
@@ -6282,27 +6690,14 @@ static void ndsFighterMarioFoxDLAllDrawSubmitStageHardwareFighters(void)
     gGCCurrentCamera = ndsBattleCompatMainCameraGObj();
     for (slot = 0u; slot < 2u; slot++)
     {
-        u32 count_before = gNdsFighterMarioFoxDLAllDrawCount;
-        u32 triangle_before =
-            gNdsFighterDLAllDrawP0HardwareTriangleCount +
-            gNdsFighterDLAllDrawP1HardwareTriangleCount;
-        u32 triangle_after;
+        FTStruct *fp = &sNdsFighterStructPool[slot];
 
-        ndsFighterMarioFoxDLAllDrawForSlot(slot, &sNdsFighterStructPool[slot],
-                                           NULL, 0u);
-        if (gNdsFighterMarioFoxDLAllDrawCount == count_before)
+        if ((ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
+            (fp->fighter_gobj == NULL))
         {
             continue;
         }
-        gNdsStageGCDrawAllLoopHardwareFighterSubmitCount++;
-        triangle_after =
-            gNdsFighterDLAllDrawP0HardwareTriangleCount +
-            gNdsFighterDLAllDrawP1HardwareTriangleCount;
-        if (triangle_after > triangle_before)
-        {
-            gNdsStageGCDrawAllLoopHardwareFighterTriangleCount +=
-                triangle_after - triangle_before;
-        }
+        ndsFighterDisplayContractSubmit(fp->fighter_gobj);
     }
     gGCCurrentCamera = saved_camera;
 }

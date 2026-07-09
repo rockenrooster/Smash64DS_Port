@@ -1019,12 +1019,19 @@
 - The canonical realtime + live-input + HW-tri battle-playable ROM now polls
   live DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
   pixel-gated by melonDS top-screen screenshots, but the frame is not yet
-  demo-fidelity. Latest gate: pre-flush GX RAM `372/1152`, `42335/49152`
-  non-clear top-screen pixels, `22557/49152` dominant-green pixels,
-  `19640/49152` non-white/non-green detail pixels, visible fighter-region
-  pixels, and adjacent-frame delta `0/49152`. Dream Land is recognizable, but
-  fighter assembly, remaining draw classes, and exact texture placement remain
-  active renderer debt. The unflagged palette seed is an intentional
+  demo-fidelity. Latest gate: pre-flush GX RAM `658/2010`, `44489/49152`
+  non-clear top-screen pixels, `13454/49152` dominant-green pixels,
+  `30474/49152` non-white/non-green detail pixels, `3465/5616` visible
+  fighter-region pixels, and adjacent-frame delta `928/49152`. Dream Land is
+  recognizable. The
+  original fighter-display preamble and part-selection contract are now live;
+  Mario and Fox render as more coherent bodies, but residual lower-body
+  fragments and incomplete fighter materials/textures remain visible. The
+  canonical compatibility spawns are still close together. Using Dream Land's
+  source player map objects (`mpcollision.c:3405-3425`) exposes a separate
+  entry/floor bug: Fox reaches Wait at `(6,-2460)` while retaining floor line
+  `3`, then falls. Source spawn graduation is deferred until that runtime path
+  is fixed without a position-restore seam. The unflagged palette seed is an intentional
   compatibility path until command-order proof removes it; it is no longer the
   confirmed visual root cause. Remaining texture debt includes padding, exact
   LOADBLOCK origin/stride/DXT semantics, mask/shift edge cases, and 60fps
@@ -1033,10 +1040,10 @@
   z-buffered triangles, so `RENDER_ORACLE=.../0/0` is not independent proof of
   raw DS matrix/depth correctness in this path. The scratch projected-submit
   probe proved fighters/platforms/background DLs reach the HW submitter; the
-  raw DS matrix/z-buffered path is still the missing-pixel class. The next
-  renderer pass must repair raw matrix/depth and fighter assembly fidelity,
-  then parse source DLs once and replay cached draw state before this is a
-  60fps demo.
+  raw DS matrix/z-buffered path remains deferred. Full source-selected fighter
+  submission currently presents at about `3.1fps`; the next renderer pass must
+  parse source DLs once and replay cached draw state, then repair raw
+  matrix/depth before this is a 60fps demo.
 - Dream Land wallpaper/background is still the stage `wallpaper` Sprite/SObj
   path, not the HW triangle path. `gNdsStagePupupuWallpaperPtrReady` proves the
   original pointer is loaded; composition into a DS 2D BG layer or textured

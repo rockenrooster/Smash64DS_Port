@@ -93,12 +93,11 @@ extern void guMtxXFMF(float mf[4][4], float x, float y, float z, float *ox,
                       float *oy, float *oz);
 extern u16 gFTManagerMotionCount;
 extern u16 gFTManagerStatUpdateCount;
-
-Gfx dFTDisplayMainHitCollisionEdgeDL[1];
-Gfx dFTDisplayMainHitCollisionBlendDL[1];
-Gfx dFTDisplayMainHitCollisionCubeDL[1];
-Gfx dFTDisplayMainMapCollisionBottomDL[1];
-Gfx dFTDisplayMainMapCollisionTopDL[1];
+extern Gfx dFTDisplayMainHitCollisionEdgeDL[];
+extern Gfx dFTDisplayMainHitCollisionBlendDL[];
+extern Gfx dFTDisplayMainHitCollisionCubeDL[];
+extern Gfx dFTDisplayMainMapCollisionBottomDL[];
+extern Gfx dFTDisplayMainMapCollisionTopDL[];
 
 #define NDS_WPMANAGER_BRIDGE __attribute__((weak))
 

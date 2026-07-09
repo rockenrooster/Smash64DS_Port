@@ -1348,6 +1348,12 @@ Opening movie / Opening Portraits:
   short-DL texture-seed count, short-DL tile-seed count, and inherited segment
   seed count. It proves sibling DObjs inside one stage GObj traversal carry
   source texture/tile state instead of resetting each display-list head.
+- `FTR_DISPLAY_CONTRACT`: original fighter-display contract marker. It reports
+  selected, hidden, no-texture, and submitted part events; source geometry and
+  light state; source visibility-bound pass/fail counts; and the latest
+  Mario/Fox selected-part counts. Canonical HW requires selected/submitted
+  parts for both fighters, geometry mode `0x222005`, nonzero source light
+  color/direction state, and no visibility-bound failures.
 - `RENDER_COMBINE`: canonical HW combine-state trace marker. Fields are total
   combine commands, distinct combine commands captured, lit-SHADE combines,
   material-color combines, projected-submit fallback count, and the first four

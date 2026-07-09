@@ -1,6 +1,7 @@
 #include <ef/effect.h>
 #include <it/item.h>
 #include <nds/nds_gbi_decode.h>
+#include <nds/nds_fighter_display.h>
 #include <nds/nds_scene_harness.h>
 #include "nds_scene_harness_config.h"
 #include <sys/utils.h>

@@ -451,11 +451,12 @@ CFILES := main.c nds_platform.c nds_reloc_assets.c nds_audio_assets.c nds_audio_
 	battleship_sys_video.c battleship_sys_malloc.c \
 	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c \
 	battleship_sys_sintable.c battleship_sys_matrix.c \
-	battleship_libultra_gu_normalize.c \
+	battleship_libultra_gu_normalize.c battleship_libultra_gu_mtxcatf.c \
 	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c utils.c vector.c \
 	battleship_scsubsyscontroller.c \
 	battleship_sys_taskman.c battleship_sys_objman.c \
 	battleship_sys_objhelper.c battleship_sys_objanim.c \
+	battleship_ftdisplaylights.c battleship_ftdisplaymain.c \
 	battleship_sys_interp.c battleship_mvopeningroom.c \
 	battleship_mvopeningportraits.c battleship_mvopeningmario.c \
 	battleship_mvopeningdonkey.c battleship_mvopeninglink.c \

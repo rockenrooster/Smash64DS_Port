@@ -18306,3 +18306,68 @@ does not assert.
   `0/49152` adjacent-frame delta. Remaining renderer debt is raw DS
   matrix/depth, fighter assembly, exact texture placement, and cached 60fps
   present.
+
+## 2026-07-19 - Original fighter display contract
+
+- Imported BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`, and `guMtxCatF`.
+  The original fighter callback now owns its lighting/Z-buffer/geometry
+  preamble, visibility checks, hidden/no-texture flags, color-animation state,
+  and single-`dl` versus ordered-`dls[]` part selection.
+- Replaced live manual all-DObj fighter collection with a narrow event bridge
+  beneath the original callback. The manual collector remains only as the CPU
+  fixture oracle. Added compact selected/hidden/no-texture/submitted and
+  geometry/light diagnostics without a new harness mode.
+- Prepared the source camera matrix/projection before fighter visibility and
+  retained child-to-parent world-chain composition from `objdisplay.c:1183-1191`.
+  Event/joint GDB sampling confirmed the selected Fox lists map to the expected
+  live joints, with anim-locks off, matrix kind `0x4B`, and transform-update
+  mode `0`.
+- Preserved source order for ordered two-list parts: pre-matrix `dls[0]` events
+  use the parent transform without the child MObj, while post-matrix `dls[1]`
+  events use the child transform/material. Geometry, prim, env, and light state
+  are now snapshotted per selected event. The current idle pose did not exercise
+  a pre-matrix list or change pixels, so this is contract correctness rather
+  than a visual-completion claim.
+- Canonical proof reports `gxram=658/2010`, geometry `0x222005`, Mario/Fox
+  selected parts `14/18`, and zero oracle mismatches. Capture
+  `artifacts/visibility/2026-07-09_iter4_canonical_late_172505.png` remains
+  visually incomplete: the close fighters overlap, lower-body fragments and
+  incomplete materials remain, and full submission presents near `3.1fps`.
+- Initialized the build-mode diagnostic words from the generated stable build
+  flags. Mode `161` does not enter the battle-playable pacing initializer, so
+  leaving the fast word in BSS made a correctly configured fast ROM report
+  `BUILD_MODE=0,0,0`; the diagnostic now reports its compiled configuration
+  without changing runtime behavior or expectations.
+- Renamed the fast scripted mode-163 verifier target to
+  `smash64ds-battle-playable-fast-hwtri.nds`. It previously shared the shipped
+  `smash64ds-battle-playable-hwtri.nds` filename, so running Boundary could
+  replace the realtime/live-input demo with a fast-logic ROM that intentionally
+  presents no frames. Only the canonical realtime build now copies to the
+  shipped filename.
+- Probed Dream Land's source player map objects (`mpcollision.c:3405-3425`):
+  the loaded values are `(0,6)`, `(-1397,906)`, `(1,1545)`, and `(1421,909)`.
+  The live entry/floor path then leaves Fox in Wait at `(6,-2460)` with stale
+  floor line `3`. The source-spawn experiment was removed rather than landing
+  a gameplay position-restore seam; the close compatibility spawns remain a
+  documented runtime blocker.
+- Corrected controller discovery after the live-preview two-pad bridge. Commit
+  `6936cc710` made every non-playback build report two connected pads; the
+  backend now reports pad 2 only when `NDS_DEV_LIVE_INPUT_PREVIEW=1` and keeps
+  normal boot at the original one-controller proof shape. The unchanged
+  runtime gate passes again, while the exact canonical live-input/HW build
+  remains green.
+- RegressionCore exposed the display-import memory cost in mode `87`: a failed
+  `0x150000` runtime allocation jumped directly to the legacy 1 MiB taskman arena,
+  while original scene setup needed `0x10cb90`, overflowing by `0xcb90`.
+  `ndsTaskmanArenaBytes` now tries `0x140000` and `0x130000` first; the failed
+  cliff target passes unchanged and either size retains at least the 128 KiB
+  reserve. The final incremental RegressionCore prebuild took `109.27s` for
+  six targets and its stamp validated in `0.38s`.
+- Latest canonical captures are
+  `artifacts/visibility/2026-07-09_iter4_canonical_early_182536_next.png` and
+  `artifacts/visibility/2026-07-09_iter4_canonical_late_182536.png`; these are
+  the complete samples from each adjacent-frame pair.
+- Rebuilt the shipped HUD-off canonical ROM and captured
+  `artifacts/visibility/2026-07-09_fighter-display-contract-hudoff-final.png`.
+  It confirms recognizable Dream Land but also confirms that the centered
+  fighters still overlap and retain incomplete lower-body/material fidelity.

@@ -43,49 +43,37 @@ Pupupu BGM playback, and a DS 3D hardware stage + fighter frame.
 
 ## Latest Proof
 
-Runtime slice 1 landed full BattleShip `gm/gmcollision.c`, replacing the local
-matrix/world-position collision helpers. The shared `FTStruct` source region in
-`include/ft/fighter.h` matches BattleShip `fttypes.h` through `display_mode`
-(`joints=2280`, callbacks at `2516+`, source region `2896`), with DS/proof
-fields moved to the tail extension and compile-time guards freezing layout.
+The original fighter runtime is live: `gmcollision.c`, `ftmain.c`,
+`ftmanager.c`, `ftanim.c`, `ftanimend.c`, `ftkey.c`, common/Mario/Fox status
+tables, normal moves, weapons, effects, and Mario/Fox specials run through
+imported BattleShip code. `FTStruct` and `FTData` retain source-layout guards;
+mode `163` proves natural combat, KO/rebirth, HUD, audio parsing, one-track
+Pupupu BGM, and the current hardware-rendered battle scene.
 
-Full BattleShip `ft/ftmain.c` is imported by default; duplicate local
-`ftMain*` seams are gone or call the original once. Current layout and coverage
-notes are in `docs/FTSTRUCT_PARITY.md` and `docs/KNOWN_ISSUES.md`.
+The fighter renderer now imports BattleShip `ftdisplaymain.c`,
+`ftdisplaylights.c`, and `guMtxCatF`. The live DS path enters the original
+display preamble, uses its lighting/geometry state, and follows its hidden,
+no-texture, single-`dl`, and ordered `dls[]` part-selection contract. Only the
+selected display lists cross a narrow DS hardware-submission seam; the old
+manual all-DObj collector remains only as the CPU/software fixture oracle.
 
-Runtime slice 2 graduated the manager/status/animation path. Default builds now
-import `ft/ftmanager.c`, the original common/Mario/Fox status descriptor
-tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. Mario/Fox are created
-through original manager descriptors and status-buffer payload loading. The
-natural-combat proof now rebuilds movement, attack, live-hit, damage/recover,
-and guard coverage on that runtime for modes `39/40`, `53/54`, and `161/162`.
-The old cliffmotion restore hook is deleted after the direct and menu-chain
-cliff-family Regression modes stayed green. The remaining stage compat-replay
-seam in `ftMainSetStatus` is still documented as follow-up.
+The source camera matrix/projection path is prepared before fighter visibility
+selection. Source-selected events retain their matrix/material owner and
+per-draw geometry/prim/env/light state; `dls[0]` remains in parent matrix state
+as in `ftdisplaymain.c:789-805,883-899`. Canonical proof reports
+`gxram=658/2010`, geometry mode `0x222005`, selected parts `14/18`, submitted
+parts, and zero CPU-oracle mismatches. The current late capture is
+`artifacts/visibility/2026-07-09_fighter-display-contract-hudoff-final.png`;
+Mario and Fox
+are improved over the manual collector, but close compatibility spawns,
+lower-body fragments, and incomplete materials/textures still prevent final
+visual acceptance.
 
-`battle_playable` graduated to default for `gm/gmcamera.c`,
-`ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD,
-original `if/ifscreenflash.c`, normal moveset TUs, the weapon manager, Mario
-fireball, Fox blaster, the original effect manager, Fox reflector, Mario Super
-Jump Punch, Mario Tornado, Fox Fire Fox, original audio asset parsing, and
-one-track Pupupu BGM playback. Mode `163` proves stock/KO, natural combat,
-normal moves, projectiles, reflector, grab/throw, remaining Mario/Fox specials,
-HUD percent/stock, audio asset parsing, BGM playback, and HW stage/fighter
-submission. FGM/voice playback, original sequence-player import, and
-non-critical HUD/SObj/particle perimeter remain follow-up.
-
-Mode `163` has fast verifier and canonical realtime + live-input + HW-triangle
-paths. Canonical HW is pixel-gated and stable but not fidelity-complete:
-the current capture is recognizable Dream Land with visible fighters, but the
-fighter assembly and remaining draw classes still need fidelity work. Latest
-smoke after O2R texture-lane and stage DObj carry fixes:
-`frames=62 fps=32/32 ticks=639899904 gxram=372/1152`, `tri=609`.
-Capture metrics: early `30699/49152` non-clear, `16692/49152` green,
-`13876/49152` detail; late `42335/49152` non-clear, `22557/49152` green,
-`19640/49152` detail, and `0/49152` adjacent-frame delta. Raw DS matrix/depth
-still needs repair, so canonical HW uses the CPU-oracle projected-submit
-fallback until a renderer fidelity slice replaces it with source-correct raw
-or cached submission.
+Canonical screenshot gates remain strict: `44489/49152` non-clear,
+`13454/49152` dominant-green, `30474/49152` detail, `3465/5616`
+fighter-region color, and `928/49152` adjacent-frame delta. Raw DS
+matrix/depth and cached submission remain renderer debt; the source-correct
+full fighter body currently reduces canonical presentation to about `3.1fps`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -94,15 +82,10 @@ VSBattle buffers from `scvsbattle.c:31-41`. The BGM stream adds a separate
 64 KiB resident buffer; after subtracting it, `172412` bytes remain against
 the 128 KiB reserve.
 
-Renderer hardware is default for all-DL modes `33/34`, stage MP family modes
-`59-124`, and Boundary/Latest pair `161/162`; global normal builds still use
-software preview. The Pupupu gate submits the stage plus both fighters:
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, `bind97/upload11/ready97/reject0`.
-Canonical realtime adds texture-format/reject, texture-lane, and stage-carry
-markers (`conv0x100/bind0x100/pal0x100/rej0x0/why0x0`,
-`texLane=layout0x2/byte290/half290`, `stageCarry=2646/2646/...`) plus strict
-screenshots; raw matrix/depth fidelity and cached 60fps cutover remain
-follow-up.
+Renderer hardware is default for all-DL modes `33/34`, stage MP modes
+`59-124`, and Boundary pair `161/162`; global normal builds keep software
+preview. Texture-format/lane, stage-carry, GX RAM, oracle, fighter-contract,
+and screenshot gates cover the canonical renderer.
 
 ## Current Notes
 
@@ -115,15 +98,17 @@ no-op `39.377s`, shared HW-tri switch `29.590s`, and full prebuild
 The config-header mode `161` regression is fixed without verifier expectation
 changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
 wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
+Normal boot again exposes one controller; the neutral second pad is now limited
+to `NDS_DEV_LIVE_INPUT_PREVIEW=1` canonical builds.
+The taskman allocator now tries `0x140000` and `0x130000` before its legacy
+1 MiB fallback, preventing source-display builds from overflowing after a
+failed `0x150000` allocation while preserving the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
-live pads before each update, and has hard GX RAM/screenshot gates. The input
-bridge now maps B/X/Y/L/R in addition to arrows/A/START and the HUD/markers
-show held keys, live pad0, original controller state, and P0 root-x. Latest:
-`combine=4395/2761/lit0/mat0/proj41289`,
-`texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`,
-`stageCarry=2646/2646/tex2016/tile2142/short378/378/seg189`; it remains
-below 60fps and visually incomplete.
+live pads before each update, and has hard GX RAM, oracle, display-contract,
+and screenshot gates. The input bridge maps B/X/Y/L/R plus arrows/A/START.
+The fast scripted mode-163 ROM uses a distinct `-fast-hwtri` filename so
+Boundary/Regression builds cannot overwrite the shipped realtime ROM.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.
@@ -131,8 +116,9 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Follow-ups: raw DS matrix/depth and fighter assembly, wallpaper/SObj
-composition, renderer-cache 60fps cutover, FGM/voice, and sequence player.
+Follow-ups: remaining fighter material/part fidelity, source-spawn entry/floor
+runtime, raw DS matrix/depth, wallpaper/SObj composition, renderer-cache 60fps
+cutover, FGM/voice, and the original sequence player.
 
 ## Verification
 

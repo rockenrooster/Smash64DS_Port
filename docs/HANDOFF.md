@@ -39,27 +39,17 @@ Fox blaster, guard, reflector, grab/throw, Mario/Fox specials, audio asset
 parsing, one-track Pupupu BGM playback, and a DS 3D hardware stage + fighter
 frame.
 
-Latest renderer detail: DS 3D hardware submission defaults to all-DL modes
-`33/34`, stage MP family modes `59-124`, and Boundary/Latest pair `161/162`;
-pass `-SoftwarePreview` to those wrappers for comparison runs. The current
-Pupupu gate submits the stage plus both selected live fighters in one frame:
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, and
-`bind97/upload11/ready97/reject0`. Global normal builds still use software
-preview.
+Latest renderer detail: BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`, and
+`guMtxCatF` are imported. The live fighter path now uses the original display
+preamble, light state, visibility flags, and `dl`/ordered-`dls[]` selection;
+only those selected DLs cross the narrow DS hardware-submission seam. The
+manual all-DObj collector remains only as the software fixture oracle.
 
-Latest runtime detail: `gm/gmcollision.c` is imported as a whole BattleShip TU
-via `src/import/battleship_gmcollision.c`, replacing the local
-matrix/world-position helper copies. The shared `FTStruct` source region in
-`include/ft/fighter.h` now matches BattleShip `fttypes.h` through
-`display_mode`; `joints` is at `2280`, callback slots start at `2516`, the
-source region is `2896` bytes, and DS/proof-only fields live after that
-boundary. Static layout guards freeze the source offsets and extension boundary.
-Full BattleShip `ft/ftmain.c` is now imported by default through
-`src/import/battleship_ftmain.c`; the duplicate local `ftMain*` seams are gone
-or routed through the imported original once. The default ladder, boundary,
-continuous live-hit verifier, and four-way sharded Regression passed after a
-fresh Regression prebuild, and all four Regression shards were rerun green on
-current `master`.
+The source camera matrix/projection is prepared before fighter visibility
+selection. Each selected event retains its source matrix/material owner and
+per-draw geometry/prim/env/light state; pre-matrix `dls[0]` uses parent state.
+Latest canonical proof reports `gxram=658/2010`, geometry mode `0x222005`,
+selected parts `14/18`, nonzero submitted counts, and zero oracle mismatches.
 
 Runtime slice 2 graduated the original manager/status/animation path. Default
 builds import `ft/ftmanager.c`, the full original common/Mario/Fox status
@@ -91,20 +81,22 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 `if=208672`), stale menu/opening payload bytes are `0/0`, and the separate
 64 KiB BGM stream buffer leaves `172412` bytes against the 128 KiB reserve.
 
-Canonical realtime + live-input + HW-tri is verifier-covered and no longer
-blank/dead-input, but the visual frame is still not demo-fidelity. Latest:
-`frames=62 fps=32/32 ticks=639899904 gxram=372/1152`, `tri=609`,
-`texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`,
-`texLane=layout0x2/byte290/half290`, and
-`stageCarry=2646/2646/tex2016/tile2142/short378/378/seg189`. The late capture
-shows `42335/49152` non-clear, `22557/49152` green,
-`19640/49152` detail, and adjacent-frame delta `0/49152`; Dream Land is
-recognizable with visible fighters, but fighter assembly and remaining draw
-classes are still visually wrong. The input bridge maps B/X/Y/L/R in addition
-to arrows/A/START; the debug HUD/`LIVE_PAD` marker shows held keys -> live
-pad0 -> original P0 controller/root-x. Raw DS matrix/depth remain renderer
-debt; canonical HW still uses the projected fallback and 60fps still needs
-cached draw-state.
+Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
+improved but not yet accepted Mario and Fox bodies. The late proof capture is
+`artifacts/visibility/2026-07-09_fighter-display-contract-hudoff-final.png`.
+Screenshot metrics are `44489/49152` non-clear, `13454/49152` green,
+`30474/49152` detail, `3465/5616` fighter-region color, and `928/49152`
+adjacent-frame delta. Residual lower-body fragments, incomplete fighter
+materials/textures, and close compatibility spawns remain. Raw DS matrix/depth
+also remain renderer debt; full source fighter submission currently measures
+about `3.1fps`.
+The scripted fast mode-163 target is
+`smash64ds-battle-playable-fast-hwtri.nds`; the user-facing realtime ROM is
+`smash64ds-battle-playable-hwtri.nds`, so verifier builds no longer collide
+with the shipped artifact.
+Normal builds expose one controller; the canonical live-input build alone
+exposes the connected-neutral second pad. Intermediate taskman arena fallbacks
+keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Process Change
 
@@ -120,13 +112,11 @@ New harness modes are only for scene-level capabilities.
 
 ## Recommended Next Work
 
-1. Fix renderer fidelity: fighter assembly, per-tile/TMEM sampling, and raw DS matrix/depth.
-2. Add wallpaper/SObj background composition for Dream Land.
-3. Land renderer-cache submission for canonical realtime + live-input + HW-tri
-   so textured stage/fighters move from the measured sub-60fps smoke to 60fps.
-4. Build the FGM/voice backend slice on top of the parsed assets.
-5. Continue non-critical interface/particle perimeter.
-6. Migrate-or-delete obsolete modes and record `[coverage-reduced]` follow-ups.
+1. Finish fighter material/part fidelity and fix the source-spawn entry/floor path.
+2. Cache source-selected stage/fighter draw state and restore canonical 60fps.
+3. Add wallpaper/SObj background composition for Dream Land.
+4. Replace projected-submit with source-correct raw DS matrix/depth submission.
+5. Build the FGM/voice backend slice on top of the parsed assets.
 
 ## Verification
 

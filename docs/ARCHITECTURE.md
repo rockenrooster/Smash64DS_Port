@@ -1059,6 +1059,27 @@ and timing. The smoke verifier only proves launch/window capture. It is not the
 automated runtime verifier; keep using the melonDS GDB scripts for pass/fail
 state evidence.
 
+## Fighter Display Contract
+
+Canonical hardware fighter rendering imports BattleShip `ftdisplaymain.c`,
+`ftdisplaylights.c`, and `guMtxCatF`. The original display callback owns camera
+visibility, the fighter lighting/Z-buffer/render preamble, hidden/no-texture
+flags, color-animation substitution, and single-`dl` versus ordered-`dls[]`
+selection. A narrow DS seam records only those source-selected display events
+and submits them through the platform renderer; it does not rediscover parts by
+walking every non-null DObj display list.
+
+The DS bridge prepares the source camera matrix/projection and composes fighter
+DObj matrices child-to-parent following `sys/objdisplay.c:1183-1191`. Captured
+events keep separate matrix and material owners: ordered `dls[0]` entries drawn
+before `gcPrepDObjMatrix` use the parent matrix and no child MObj, while
+`dls[1]` uses the prepared child matrix and material. Geometry, prim, env, and
+light state are snapshotted per source draw rather than collapsed after the
+traversal. The CPU 20.12 path remains the fixture oracle.
+Canonical HW still uses projected submission rather than the final raw DS
+matrix/depth path, and full source-selected fighter submission is not cached;
+those are renderer backend limits, not alternative fighter display behavior.
+
 ## Compatibility Layer Policy
 
 Compatibility code should be treated as scaffolding for original code, not as

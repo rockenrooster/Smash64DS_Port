@@ -17937,11 +17937,9 @@ void ftDisplayMainProcDisplay(GObj *fighter_gobj)
     {
         gNdsFighterWalkDisplayProbeCount++;
     }
-    /*
-     * The Mario/Fox model milestone proves original asset-backed DObj creation.
-     * Full fighter display traversal is a later renderer boundary; running it
-     * here can escape the bounded setup proof when the menu-chain harness draws.
-     */
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsFighterDisplayContractSubmit(fighter_gobj);
+#endif
 }
 
 sb32 (*dLBCommonFuncMatrixList[])(void) = { NULL };

@@ -421,7 +421,17 @@ typedef struct FTParts {
     GObj *gobj;
 } FTParts;
 
+typedef struct FTSkeleton {
+    union {
+        Gfx *dl;
+        Gfx **dls;
+    };
+    u8 flags;
+} FTSkeleton;
+
 #define ftGetParts(fighter_dobj) ((FTParts *)(fighter_dobj)->user_data.p)
+#define FTPARTS_FLAG_NOFOG 0x40
+#define FTPARTS_FLAG_TOGGLEFOG 0x80
 
 typedef struct FTMotionScript {
     f32 script_wait;
@@ -3500,7 +3510,7 @@ typedef struct FTAttributes {
     FTThrownStatusArray *thrown_status;
     s32 joint_itemlight_id;
     FTSprites *sprites;
-    void *skeleton;
+    FTSkeleton **skeleton;
 } FTAttributes;
 
 extern size_t gFTManagerFigatreeHeapSize;
