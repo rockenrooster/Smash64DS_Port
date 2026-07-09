@@ -582,6 +582,7 @@ try {
             'printf "STAGE_GCDRAWALL_SAFE=%u,%u,%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopPrepared, gNdsStageGCDrawAllLoopBaseResultSeen, gNdsStageGCDrawAllLoopManualDisplayCallCount, gNdsStageGCDrawAllLoopUnexpectedSceneCount, gNdsStageGCDrawAllLoopNonStageCaptureCount, gNdsStageGCDrawAllLoopGObjCountDelta',
             'printf "STAGE_GCDRAWALL_PIXELS=%u,%u,%#x\n", gNdsStageGCDrawAllLoopPreviewCommitDelta, gNdsStageGCDrawAllLoopTotalPixelCount, gNdsStageGCDrawAllLoopCompatMask',
             'printf "STAGE_GCDRAWALL_HW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount, gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareTextureBindCount, gNdsStageGCDrawAllLoopHardwareTextureUploadCount, gNdsStageGCDrawAllLoopHardwareTextureReadyCount, gNdsStageGCDrawAllLoopHardwareTextureRejectCount, gNdsStageGCDrawAllLoopHardwareTextureFormatMask, gNdsStageGCDrawAllLoopHardwareTextureMaxWidth, gNdsStageGCDrawAllLoopHardwareTextureMaxHeight',
+            'printf "RENDER_STAGE_CARRY=%u,%u,%u,%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareCarrySeedCount, gNdsStageGCDrawAllLoopHardwareCarryCaptureCount, gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount, gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount, gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount, gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount, gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount',
             'printf "STAGE_GCDRAWALL_HW_FTR=%u,%u\n", gNdsStageGCDrawAllLoopHardwareFighterSubmitCount, gNdsStageGCDrawAllLoopHardwareFighterTriangleCount'
         )
         $gdbCommands = @($gdbCommands[0..($gdbCommands.Count - 3)] + $stageCommands + $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)])
@@ -1215,6 +1216,7 @@ try {
     $stageSafe = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_SAFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
     $stagePixels = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_PIXELS=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+    $stageCarry = [regex]::Match($gdbStdout, 'RENDER_STAGE_CARRY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
     $stageCollision = [regex]::Match($gdbStdout, 'STAGE_COLLISION=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $stageCollisionGeom = [regex]::Match($gdbStdout, 'STAGE_COLLISION_GEOM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1544,8 +1546,10 @@ try {
             Assert-Condition ($shw[3] -gt 0) 'Stage-inclusive hardware replay did not preserve source no-z projected-depth submission.' $gdbStdout
             Assert-Condition ($shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[9] -ne 0 -and $shw[10] -gt 0 -and $shw[11] -gt 0) 'Stage-inclusive hardware replay did not bind/upload a ready texture.' $gdbStdout
             Assert-Condition ($shw[8] -eq 0) 'Stage-inclusive hardware replay still rejects source-loaded stage texture state.' $gdbStdout
+            $scarry = Get-Ints $stageCarry
+            Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Stage-inclusive hardware replay did not prove persistent DObj texture/tile carry.' $gdbStdout
             $shwf = Get-Ints $stageHardwareFighter
-            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1])"
+            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) carry=$($scarry[0])/$($scarry[1])/tex$($scarry[2])/tile$($scarry[3])/short$($scarry[4])/$($scarry[5])/seg$($scarry[6]) hwftr=$($shwf[0])/$($shwf[1])"
         }
         Write-Output ("$Label ftmanager natural-motion harness passed: wait={0}/{1} anim={2}/{3} walk={4}/{5} updates={6} mask=0x{7:x}{8}" -f $nw[0], $nw[1], $nw[2], $nw[3], $nwalk[1], $nwalk[2], $nat[4], $nat[2], $hardwareSummary)
         return
@@ -1805,9 +1809,11 @@ try {
             Assert-Condition ($shw[3] -gt 0) 'Stage-inclusive hardware replay did not preserve source no-z projected-depth submission.' $gdbStdout
             Assert-Condition ($shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[9] -ne 0 -and $shw[10] -gt 0 -and $shw[11] -gt 0) 'Stage-inclusive hardware replay did not bind/upload a ready texture.' $gdbStdout
             Assert-Condition ($shw[8] -eq 0) 'Stage-inclusive hardware replay still rejects source-loaded stage texture state.' $gdbStdout
+            $scarry = Get-Ints $stageCarry
+            Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Stage-inclusive hardware replay did not prove persistent DObj texture/tile carry.' $gdbStdout
             $shwf = Get-Ints $stageHardwareFighter
             Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq 2 -and $shwf[1] -gt 0) 'Stage-inclusive hardware replay did not submit selected fighter triangles.' $gdbStdout
-            $stageSummary = "$stageSummary hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1])"
+            $stageSummary = "$stageSummary hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) carry=$($scarry[0])/$($scarry[1])/tex$($scarry[2])/tile$($scarry[3])/short$($scarry[4])/$($scarry[5])/seg$($scarry[6]) hwftr=$($shwf[0])/$($shwf[1])"
         }
     }
     $stageSummary = "$stageSummary$dashRunSummary$mpDamageRecoverSummary$mpLiveHitSummary"

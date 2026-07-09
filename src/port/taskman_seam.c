@@ -2898,6 +2898,13 @@ void ndsResetStartupDiagnostics(void)
     gNdsStageGCDrawAllLoopHardwareTextureMaxHeight = 0;
     gNdsStageGCDrawAllLoopHardwareFighterSubmitCount = 0;
     gNdsStageGCDrawAllLoopHardwareFighterTriangleCount = 0;
+    gNdsStageGCDrawAllLoopHardwareCarrySeedCount = 0;
+    gNdsStageGCDrawAllLoopHardwareCarryCaptureCount = 0;
+    gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount = 0;
+    gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount = 0;
+    gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount = 0;
+    gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount = 0;
+    gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount = 0;
     gNdsFighterMarioFoxStageCollisionLoopResult = 0;
     gNdsFighterMarioFoxStageCollisionLoopSafeResult = 0;
     gNdsFighterMarioFoxStageCollisionLoopMask = 0;

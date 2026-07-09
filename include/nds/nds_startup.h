@@ -4146,6 +4146,13 @@ extern volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxWidth;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxHeight;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareFighterSubmitCount;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareFighterTriangleCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarrySeedCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryCaptureCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount;
+extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount;
 void ndsFighterMarioFoxStageGCDrawAllLoopPrepare(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopFinalize(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void);
@@ -4157,6 +4164,8 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                                 void *display_gobj,
                                                 s32 link_id);
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind);
+void ndsRendererAdapterBeginStageTraversal(void);
+void ndsRendererAdapterEndStageTraversal(void);
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
                                        void *camera_gobj,
                                        u32 initial_geometry_mode);

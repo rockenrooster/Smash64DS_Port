@@ -12811,8 +12811,20 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
         return;
     }
     gNdsStageGCDrawAllLoopDObjDrawCallbackCount++;
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
+    {
+        ndsRendererAdapterBeginStageTraversal();
+    }
+#endif
     ndsStageGCDrawAllLoopScanDObjs(stage_gobj, mask, is_layer, kind,
                                    callback_kind);
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
+    {
+        ndsRendererAdapterEndStageTraversal();
+    }
+#endif
 }
 
 #if NDS_RENDERER_HW_TRIANGLES

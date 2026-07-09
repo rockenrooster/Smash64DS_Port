@@ -2519,6 +2519,55 @@ static s32 ndsFighterMarioFoxVisitDLDrawCommand(
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
 
+static NDSFighterDLDrawState sNdsRendererAdapterStagePersistentState;
+static NDSRendererStats sNdsRendererAdapterStagePersistentStats;
+static sb32 sNdsRendererAdapterStagePersistentActive;
+
+static sb32 ndsRendererAdapterStatsHasArmedTexture(
+    const NDSRendererStats *stats)
+{
+    return ((stats != NULL) &&
+            ((stats->texture_image != 0u) ||
+             (stats->texture_tlut_image != 0u) ||
+             (stats->texture_on != 0u))) ? TRUE : FALSE;
+}
+
+static sb32 ndsRendererAdapterStatsHasArmedTile(
+    const NDSRendererStats *stats)
+{
+    u32 i;
+
+    if (stats == NULL)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < NDS_RENDERER_TILE_COUNT; i++)
+    {
+        const NDSRendererTileState *tile = &stats->texture_tiles[i];
+
+        if ((tile->set_seen != 0u) || (tile->size_seen != 0u) ||
+            (tile->line != 0u) || (tile->width != 0u) ||
+            (tile->height != 0u))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void ndsRendererAdapterBeginStageTraversal(void)
+{
+    bzero(&sNdsRendererAdapterStagePersistentState,
+          sizeof(sNdsRendererAdapterStagePersistentState));
+    ndsRendererInitStats(&sNdsRendererAdapterStagePersistentStats);
+    sNdsRendererAdapterStagePersistentActive = TRUE;
+}
+
+void ndsRendererAdapterEndStageTraversal(void)
+{
+    sNdsRendererAdapterStagePersistentActive = FALSE;
+}
+
 static s32 ndsRendererAdapterStageValidateRange(const Gfx *dl, size_t bytes,
                                                 void *user)
 {
@@ -3328,6 +3377,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     void *saved_graphics_heap_ptr;
     u32 adapter_start;
     u32 step_start;
+    sb32 inherited_texture = FALSE;
+    sb32 inherited_tile = FALSE;
+    sb32 inherited_segment = FALSE;
 #endif
 
     if ((dobj == NULL) || (dl == NULL))
@@ -3346,6 +3398,29 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     state.primary_file = loaded;
     state.slot = 0u;
 #if NDS_RENDERER_HW_TRIANGLES
+    if (sNdsRendererAdapterStagePersistentActive != FALSE)
+    {
+        inherited_texture = ndsRendererAdapterStatsHasArmedTexture(
+            &sNdsRendererAdapterStagePersistentStats);
+        inherited_tile = ndsRendererAdapterStatsHasArmedTile(
+            &sNdsRendererAdapterStagePersistentStats);
+        ndsFighterDLDrawSeedPersistentState(
+            &state, &sNdsRendererAdapterStagePersistentState);
+        inherited_segment = (state.segment_e_base != NULL) ? TRUE : FALSE;
+        gNdsStageGCDrawAllLoopHardwareCarrySeedCount++;
+        if (inherited_texture != FALSE)
+        {
+            gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount++;
+        }
+        if (inherited_tile != FALSE)
+        {
+            gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount++;
+        }
+        if (inherited_segment != FALSE)
+        {
+            gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount++;
+        }
+    }
     saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
     adapter_start = cpuGetTiming();
     step_start = adapter_start;
@@ -3387,6 +3462,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 
     ndsRendererInitStats(&stats);
 #if NDS_RENDERER_HW_TRIANGLES
+    if (sNdsRendererAdapterStagePersistentActive != FALSE)
+    {
+        ndsFighterDLDrawCopyPersistentRendererState(
+            &stats, &sNdsRendererAdapterStagePersistentStats);
+    }
     step_start = cpuGetTiming();
 #endif
     ndsRendererExecuteDisplayList(dl,
@@ -3398,6 +3478,25 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
     gNdsRendererProfileStageAdapterTicks += cpuGetTiming() - adapter_start;
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+    if (sNdsRendererAdapterStagePersistentActive != FALSE)
+    {
+        ndsFighterDLDrawCapturePersistentState(
+            &sNdsRendererAdapterStagePersistentState, &state);
+        ndsFighterDLDrawCopyPersistentRendererState(
+            &sNdsRendererAdapterStagePersistentStats, &stats);
+        gNdsStageGCDrawAllLoopHardwareCarryCaptureCount++;
+        if (stats.command_count <= 5u)
+        {
+            if (inherited_texture != FALSE)
+            {
+                gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount++;
+            }
+            if (inherited_tile != FALSE)
+            {
+                gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount++;
+            }
+        }
+    }
     if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
         (gNdsRendererProfileHardwareVertices > 6144u))
     {
@@ -3497,6 +3596,14 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
     }
 }
 #else
+void ndsRendererAdapterBeginStageTraversal(void)
+{
+}
+
+void ndsRendererAdapterEndStageTraversal(void)
+{
+}
+
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
                                        void *camera_gobj,
                                        u32 initial_geometry_mode)
