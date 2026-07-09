@@ -15,8 +15,7 @@ $repoRoot = if ($Source) {
     (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 }
 function New-PathSet {
-    $set = New-Object 'System.Collections.Generic.HashSet[string]'
-        ([System.StringComparer]::OrdinalIgnoreCase)
+    $set = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
     return ,$set
 }
 function Add-PathSet {

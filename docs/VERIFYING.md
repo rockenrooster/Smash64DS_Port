@@ -15,8 +15,9 @@ make NDS_DEV_SCENE_HARNESS=normal -j16
 
 Use `NDS_DEV_SCENE_HARNESS=normal` for the shared `smash64ds.nds` target.
 Harness builds should use their own `TARGET=` and `BUILD=` directories. The
-profile `-Build` path forces a normal rebuild of the shared target so runtime
-verification cannot accidentally sample a harness-flavored ROM.
+Makefile stores plain `BUILD=build*` outputs under `builds/` so root stays
+readable. The profile `-Build` path forces a normal rebuild of the shared
+target so runtime verification cannot accidentally sample a harness-flavored ROM.
 
 ## Static Checks
 

@@ -16,6 +16,12 @@ GAME_SUBTITLE2 := Built with devkitPro/libnds
 PROJECT_ROOT ?= $(CURDIR)
 TARGET := smash64ds
 BUILD := build
+BUILD_OUTPUT_ROOT ?= builds
+ifeq ($(BUILD),$(notdir $(BUILD)))
+ifneq ($(filter build%,$(BUILD)),)
+override BUILD := $(BUILD_OUTPUT_ROOT)/$(BUILD)
+endif
+endif
 NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_HARNESS_FAST_LOGIC ?= 0
@@ -431,7 +437,7 @@ LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sectio
 LIBS := -lfat -lfilesystem -lnds9 -lm
 LIBDIRS := $(LIBNDS)
 
-ifneq ($(BUILD),$(notdir $(CURDIR)))
+ifneq ($(abspath $(PROJECT_ROOT)/$(BUILD)),$(abspath $(CURDIR)))
 
 export OUTPUT := $(CURDIR)/$(TARGET)
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
@@ -793,7 +799,7 @@ all: $(BUILD)
 
 $(BUILD):
 	@mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile PROJECT_ROOT=$(PROJECT_ROOT) BUILD=$(BUILD) BUILD_OUTPUT_ROOT=$(BUILD_OUTPUT_ROOT)
 
 clean:
 	@echo clean ...

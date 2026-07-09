@@ -1,5 +1,6 @@
 /build/
 /build-*/
+/builds/
 /smash64ds.elf
 /smash64ds.nds
 /smash64ds.ds.gba

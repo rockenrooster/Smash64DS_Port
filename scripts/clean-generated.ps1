@@ -9,6 +9,15 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $latestKeepPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $latestKeepLabels = [System.Collections.Generic.List[string]]::new()
+function Resolve-BuildPath {
+    param([string]$Build)
+    if (-not $Build) { return $null }
+    if ([System.IO.Path]::IsPathRooted($Build)) { return $Build }
+    if (($Build -like 'build*') -and (-not $Build.Contains('\')) -and (-not $Build.Contains('/'))) {
+        return (Join-Path (Join-Path $root 'builds') $Build)
+    }
+    return (Join-Path $root $Build)
+}
 function Add-LatestKeepPath {
     param(
         [string]$Path,
@@ -32,7 +41,7 @@ if ($KeepLatestBuilds) {
     }
     foreach ($entry in $latestPlan) {
         if ($entry.Build) {
-            Add-LatestKeepPath -Path (Join-Path $root $entry.Build) -Label ("{0} build" -f $entry.Name)
+            Add-LatestKeepPath -Path (Resolve-BuildPath $entry.Build) -Label ("{0} build" -f $entry.Name)
         }
         if ($entry.Target) {
             foreach ($ext in @('.elf', '.nds', '.ds.gba', '.map', '.sym')) {
@@ -94,6 +103,13 @@ if ($KeepLatestBuilds) {
 Add-Candidate -Candidates $candidates -Path (Join-Path $root 'build') -Reason 'normal build directory'
 Get-ChildItem -LiteralPath $root -Force -Directory -Filter 'build-*' | ForEach-Object {
     Add-Candidate -Candidates $candidates -Path $_.FullName -Reason 'harness build directory'
+}
+$buildsRoot = Join-Path $root 'builds'
+if (Test-Path -LiteralPath $buildsRoot) {
+    Add-Candidate -Candidates $candidates -Path (Join-Path $buildsRoot 'build') -Reason 'normal build directory'
+    Get-ChildItem -LiteralPath $buildsRoot -Force -Directory -Filter 'build-*' | ForEach-Object {
+        Add-Candidate -Candidates $candidates -Path $_.FullName -Reason 'harness build directory'
+    }
 }
 foreach ($pattern in @('smash64ds*.elf', 'smash64ds*.nds', 'smash64ds*.ds.gba', 'smash64ds*.map', 'smash64ds*.sym', '_*.gdb', '_*.gdb.out', '_*.gdb.err', 'melonds.*.log', 'rtc.bin')) {
     Get-ChildItem -LiteralPath $root -Force -File -Filter $pattern | ForEach-Object {

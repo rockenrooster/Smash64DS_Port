@@ -35,10 +35,13 @@ function Get-BuildConfigHash {
     $sha = [System.Security.Cryptography.SHA256]::Create()
     try {
         $configs = @()
-        Get-ChildItem -LiteralPath $root -Directory -Filter 'build*' -ErrorAction SilentlyContinue | ForEach-Object {
-            $candidate = Join-Path $_.FullName 'nds_build_config.h'
-            if (Test-Path -LiteralPath $candidate) {
-                $configs += (Get-Item -LiteralPath $candidate)
+        foreach ($base in @($root, (Join-Path $root 'builds'))) {
+            if (-not (Test-Path -LiteralPath $base)) { continue }
+            Get-ChildItem -LiteralPath $base -Directory -Filter 'build*' -ErrorAction SilentlyContinue | ForEach-Object {
+                $candidate = Join-Path $_.FullName 'nds_build_config.h'
+                if (Test-Path -LiteralPath $candidate) {
+                    $configs += (Get-Item -LiteralPath $candidate)
+                }
             }
         }
         foreach ($config in @($configs | Sort-Object FullName)) {

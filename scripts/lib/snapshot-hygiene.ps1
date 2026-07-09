@@ -84,7 +84,10 @@ function Get-Smash64DSSnapshotPathCategory {
         return [PSCustomObject]@{ Include = $false; Category = 'git'; Reason = '.git repository metadata' }
     }
 
-    if (($path -match '^build($|/)') -or ($path -match '^build-[^/]*($|/)')) {
+    if (($path -match '^build($|/)') -or
+        ($path -match '^build-[^/]*($|/)') -or
+        ($path -match '^builds($|/)'))
+    {
         return [PSCustomObject]@{ Include = $false; Category = 'build_directory'; Reason = 'generated build directory' }
     }
 
