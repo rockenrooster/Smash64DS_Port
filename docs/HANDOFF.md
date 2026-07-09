@@ -12,7 +12,7 @@ to do next.
 .\scripts\verify-all.ps1 -Profile Boundary -List
 ```
 
-2. Current Boundary/Latest entries are expected to be:
+2. Expected Boundary/Latest entries:
 
 ```powershell
 .\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
@@ -92,14 +92,18 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 64 KiB BGM stream buffer leaves `172412` bytes against the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri is verifier-covered and no longer
-blank/dead-input. Latest: `frames=67 fps=35/35 ticks=639162944 gxram=375/1163`,
-`oracle=1080/0/0`, `texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`, and
-`combine=4723/2959/lit0/mat0/proj44330`. Canonical and shipped HUD-off captures
-both show `44723/49152` non-clear, `10301/49152` green,
-`10239/49152` non-white/non-green detail, and `968/5616` fighter-region
-pixels. Raw DS matrix/depth still misses fighter/platform pixels, so canonical
-HW uses the CPU-oracle projected-submit fallback; 60fps still needs cached
-draw-state.
+blank/dead-input, but the visual frame is still not demo-fidelity. Latest:
+`frames=66 fps=35/35 ticks=629824384 gxram=373/1153`, `tri=372`,
+`texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`, and
+`combine=4655/2917/lit0/mat0/proj43684`. The capture shows
+`44723/49152` non-clear, `10301/49152` green,
+`10239/49152` non-white/non-green detail, `968/5616` fighter-region pixels,
+and adjacent-frame delta `0/49152`, but Dream Land surfaces are still
+white/misplaced and fighters are still visibly broken. The input bridge maps
+B/X/Y/L/R in addition to arrows/A/START; the debug HUD/`LIVE_PAD` marker shows
+held keys -> live pad0 -> original P0 controller/root-x. Raw DS matrix/depth and
+fighter assembly remain renderer debt; canonical HW still uses the projected
+fallback and 60fps still needs cached draw-state.
 
 ## Process Change
 
@@ -115,34 +119,29 @@ New harness modes are only for scene-level capabilities.
 
 ## Recommended Next Work
 
-1. Fix raw DS matrix/depth now that Dream Land/fighter pixels are pixel-proven.
-2. Land renderer-cache submission for canonical realtime + live-input + HW-tri
+1. Fix renderer fidelity: fighter assembly, per-tile/TMEM sampling, and raw DS matrix/depth.
+2. Add wallpaper/SObj background composition for Dream Land.
+3. Land renderer-cache submission for canonical realtime + live-input + HW-tri
    so textured stage/fighters move from the measured sub-60fps smoke to 60fps.
-3. Build the FGM/voice backend slice on top of the parsed assets.
-4. Continue non-critical interface/particle perimeter.
-5. Migrate-or-delete obsolete modes and record `[coverage-reduced]` follow-ups.
-6. Renderer follow-up: broaden source-scene coverage, then plan cutover.
+4. Build the FGM/voice backend slice on top of the parsed assets.
+5. Continue non-critical interface/particle perimeter.
+6. Migrate-or-delete obsolete modes and record `[coverage-reduced]` follow-ups.
 
 ## Verification
 
-For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical split
-chunks:
+For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical chunks:
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-For shared-TU changes, use `RegressionCore` during the session and one full
-fresh Regression prebuild plus sharded `-NoBuild` runs at the end. Detach
-prebuilds expected to exceed 90 seconds and confirm by stamp:
+For shared-TU changes, use `RegressionCore` during the session. Tyler runs the full Regression sweep overnight with `scripts/start-overnight-regression.ps1`.
+Detach prebuilds expected to exceed 90 seconds and confirm by stamp:
 
 ```powershell
 .\scripts\build-verify-profile.ps1 -Profile RegressionCore -Detach
 .\scripts\build-verify-profile.ps1 -Profile RegressionCore -VerifyStamp
-.\scripts\New-MelonDSRunnerSlots.ps1 -Count 4
-.\scripts\build-verify-profile.ps1 -Profile Regression -Force
-.\scripts\verify-all.ps1 -Profile Regression -ShardCount 4 -ShardIndex N -RunnerSlot N -NoBuild
 .\scripts\check-harness-registry.ps1
 .\scripts\check-gbi-decode-fixtures.ps1
 ```

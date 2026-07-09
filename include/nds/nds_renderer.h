@@ -39,6 +39,7 @@
 #define NDS_RENDERER_TILE_T_MASKED (1u << 7)
 
 #define NDS_RENDERER_VERTEX_CACHE_SIZE 32u
+#define NDS_RENDERER_TILE_COUNT 8u
 
 #define NDS_RENDERER_GEOM_ZBUFFER 0x00000001u
 #define NDS_RENDERER_GEOM_SHADE 0x00000004u
@@ -103,6 +104,30 @@ typedef struct NDSRendererCommand
     u32 transformed_vertex_valid_mask;
     u32 matrix_valid;
 } NDSRendererCommand;
+
+typedef struct NDSRendererTileState
+{
+    u32 set_seen;
+    u32 size_seen;
+    u32 format;
+    u32 size;
+    u32 line;
+    u32 tmem;
+    u32 palette;
+    u32 cms;
+    u32 cmt;
+    u32 masks;
+    u32 maskt;
+    u32 shifts;
+    u32 shiftt;
+    u32 uls;
+    u32 ult;
+    u32 lrs;
+    u32 lrt;
+    u32 width;
+    u32 height;
+    u32 flags;
+} NDSRendererTileState;
 
 typedef s32 (*NDSRendererCommandCallback)(const NDSRendererCommand *command,
                                           void *user);
@@ -242,6 +267,7 @@ typedef struct NDSRendererStats
     u32 texture_tile_size_lrt;
     u32 texture_tile_width;
     u32 texture_tile_height;
+    NDSRendererTileState texture_tiles[NDS_RENDERER_TILE_COUNT];
     u32 texture_combine_w0;
     u32 texture_combine_w1;
     u32 texture_combine_count;

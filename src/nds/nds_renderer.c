@@ -9,6 +9,10 @@
 #define NDS_RENDERER_HW_TRIANGLES 0
 #endif
 
+#ifndef NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
+#define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY 0
+#endif
+
 #if NDS_RENDERER_HW_TRIANGLES
 #include <nds.h>
 #endif
@@ -196,6 +200,10 @@ typedef struct NDSRendererHardwareTextureKey
     u32 render_palette;
     u32 render_tile_cms;
     u32 render_tile_cmt;
+    u32 render_tile_masks;
+    u32 render_tile_maskt;
+    u32 render_tile_shifts;
+    u32 render_tile_shiftt;
     u32 load_tile;
     u32 load_uls;
     u32 load_ult;
@@ -665,6 +673,8 @@ static void ndsRendererRecordCull(NDSRendererStats *stats, u32 w0, u32 w1)
     }
 }
 
+static void ndsRendererSyncTextureTile(NDSRendererStats *stats);
+
 static void ndsRendererRecordTextureState(NDSRendererStats *stats,
                                           u32 w0, u32 w1)
 {
@@ -694,6 +704,74 @@ static void ndsRendererRecordTextureState(NDSRendererStats *stats,
     {
         stats->texture_state_flags |= NDS_RENDERER_TEXTURE_STATE_SCALE_T;
     }
+    ndsRendererSyncTextureTile(stats);
+}
+
+static u32 ndsRendererTileFlags(u32 cms, u32 cmt, u32 masks, u32 maskt)
+{
+    u32 flags = 0u;
+
+    if ((cms & NDS_RENDERER_TX_CLAMP) != 0) { flags |= NDS_RENDERER_TILE_S_CLAMP; }
+    if ((cms & NDS_RENDERER_TX_MIRROR) != 0) { flags |= NDS_RENDERER_TILE_S_MIRROR; }
+    if (masks != 0u) { flags |= NDS_RENDERER_TILE_S_MASKED; }
+    if ((cmt & NDS_RENDERER_TX_CLAMP) != 0) { flags |= NDS_RENDERER_TILE_T_CLAMP; }
+    if ((cmt & NDS_RENDERER_TX_MIRROR) != 0) { flags |= NDS_RENDERER_TILE_T_MIRROR; }
+    if (maskt != 0u) { flags |= NDS_RENDERER_TILE_T_MASKED; }
+    return flags;
+}
+
+static u32 ndsRendererActiveTextureTile(const NDSRendererStats *stats)
+{
+    if ((stats != NULL) &&
+        ((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_SEEN) != 0u))
+    {
+        return stats->texture_tile & 0x7u;
+    }
+    return NDS_RENDERER_RENDER_TILE;
+}
+
+static void ndsRendererSyncTextureTile(NDSRendererStats *stats)
+{
+    u32 tile_index;
+    const NDSRendererTileState *tile;
+    u32 flags = 0u;
+
+    if (stats == NULL)
+    {
+        return;
+    }
+
+    tile_index = ndsRendererActiveTextureTile(stats);
+    tile = &stats->texture_tiles[tile_index];
+
+    stats->texture_render_tile = tile_index;
+    stats->texture_render_tile_format = tile->format;
+    stats->texture_render_tile_size = tile->size;
+    stats->texture_render_tile_line = tile->line;
+    stats->texture_render_tile_tmem = tile->tmem;
+    stats->texture_render_tile_palette = tile->palette;
+    stats->texture_render_tile_cms = tile->cms;
+    stats->texture_render_tile_cmt = tile->cmt;
+    stats->texture_render_tile_masks = tile->masks;
+    stats->texture_render_tile_maskt = tile->maskt;
+    stats->texture_render_tile_shifts = tile->shifts;
+    stats->texture_render_tile_shiftt = tile->shiftt;
+    stats->texture_tile_size_tile = tile_index;
+    stats->texture_tile_size_uls = tile->uls;
+    stats->texture_tile_size_ult = tile->ult;
+    stats->texture_tile_size_lrs = tile->lrs;
+    stats->texture_tile_size_lrt = tile->lrt;
+    stats->texture_tile_width = tile->width;
+    stats->texture_tile_height = tile->height;
+    if (tile->set_seen != 0u)
+    {
+        flags |= NDS_RENDERER_TILE_RENDER_SEEN | tile->flags;
+    }
+    if (stats->texture_tiles[NDS_RENDERER_LOAD_TILE].set_seen != 0u)
+    {
+        flags |= NDS_RENDERER_TILE_LOAD_SEEN;
+    }
+    stats->texture_render_tile_flags = flags;
 }
 
 static void ndsRendererRecordSetTile(NDSRendererStats *stats,
@@ -711,6 +789,7 @@ static void ndsRendererRecordSetTile(NDSRendererStats *stats,
     u32 cms;
     u32 masks;
     u32 shifts;
+    NDSRendererTileState *tile_state;
 
     if (stats == NULL)
     {
@@ -733,59 +812,27 @@ static void ndsRendererRecordSetTile(NDSRendererStats *stats,
     stats->texture_mask |= NDS_RENDERER_TEXTURE_SETTILE;
     stats->texture_set_tile_count++;
 
-    if (tile == NDS_RENDERER_RENDER_TILE)
-    {
-        u32 flags = NDS_RENDERER_TILE_RENDER_SEEN;
+    tile_state = &stats->texture_tiles[tile];
+    tile_state->set_seen = 1u;
+    tile_state->format = fmt;
+    tile_state->size = siz;
+    tile_state->line = line;
+    tile_state->tmem = tmem;
+    tile_state->palette = palette;
+    tile_state->cms = cms;
+    tile_state->cmt = cmt;
+    tile_state->masks = masks;
+    tile_state->maskt = maskt;
+    tile_state->shifts = shifts;
+    tile_state->shiftt = shiftt;
+    tile_state->flags = ndsRendererTileFlags(cms, cmt, masks, maskt);
 
-        stats->texture_render_tile = tile;
-        stats->texture_render_tile_format = fmt;
-        stats->texture_render_tile_size = siz;
-        stats->texture_render_tile_line = line;
-        stats->texture_render_tile_tmem = tmem;
-        stats->texture_render_tile_palette = palette;
-        stats->texture_render_tile_cms = cms;
-        stats->texture_render_tile_cmt = cmt;
-        stats->texture_render_tile_masks = masks;
-        stats->texture_render_tile_maskt = maskt;
-        stats->texture_render_tile_shifts = shifts;
-        stats->texture_render_tile_shiftt = shiftt;
-
-        if ((cms & NDS_RENDERER_TX_CLAMP) != 0)
-        {
-            flags |= NDS_RENDERER_TILE_S_CLAMP;
-        }
-        if ((cms & NDS_RENDERER_TX_MIRROR) != 0)
-        {
-            flags |= NDS_RENDERER_TILE_S_MIRROR;
-        }
-        if (masks != 0)
-        {
-            flags |= NDS_RENDERER_TILE_S_MASKED;
-        }
-        if ((cmt & NDS_RENDERER_TX_CLAMP) != 0)
-        {
-            flags |= NDS_RENDERER_TILE_T_CLAMP;
-        }
-        if ((cmt & NDS_RENDERER_TX_MIRROR) != 0)
-        {
-            flags |= NDS_RENDERER_TILE_T_MIRROR;
-        }
-        if (maskt != 0)
-        {
-            flags |= NDS_RENDERER_TILE_T_MASKED;
-        }
-        stats->texture_render_tile_flags =
-            (stats->texture_render_tile_flags & NDS_RENDERER_TILE_LOAD_SEEN) |
-            flags;
-    }
-    else if (tile == NDS_RENDERER_LOAD_TILE)
+    if (tile == NDS_RENDERER_LOAD_TILE)
     {
         stats->texture_load_tile = tile;
-        stats->texture_render_tile_flags |= NDS_RENDERER_TILE_LOAD_SEEN;
     }
 
-    (void)fmt;
-    (void)siz;
+    ndsRendererSyncTextureTile(stats);
 }
 
 static void ndsRendererRecordLoadBlock(NDSRendererStats *stats,
@@ -845,10 +892,12 @@ static void ndsRendererRecordLoadTile(NDSRendererStats *stats,
 static void ndsRendererRecordSetTileSize(NDSRendererStats *stats,
                                          u32 w0, u32 w1)
 {
+    u32 tile_index;
     u32 uls;
     u32 ult;
     u32 lrs;
     u32 lrt;
+    NDSRendererTileState *tile;
 
     if (stats == NULL)
     {
@@ -862,21 +911,24 @@ static void ndsRendererRecordSetTileSize(NDSRendererStats *stats,
     lrs = (w1 >> 12) & 0x0FFFu;
     lrt = w1 & 0x0FFFu;
 
-    stats->texture_tile_size_tile = (w1 >> 24) & 0x7u;
-    stats->texture_tile_size_uls = uls;
-    stats->texture_tile_size_ult = ult;
-    stats->texture_tile_size_lrs = lrs;
-    stats->texture_tile_size_lrt = lrt;
-    stats->texture_tile_width = 0u;
-    stats->texture_tile_height = 0u;
+    tile_index = (w1 >> 24) & 0x7u;
+    tile = &stats->texture_tiles[tile_index];
+    tile->size_seen = 1u;
+    tile->uls = uls;
+    tile->ult = ult;
+    tile->lrs = lrs;
+    tile->lrt = lrt;
+    tile->width = 0u;
+    tile->height = 0u;
     if (lrs >= uls)
     {
-        stats->texture_tile_width = ((lrs - uls) >> 2) + 1u;
+        tile->width = ((lrs - uls) >> 2) + 1u;
     }
     if (lrt >= ult)
     {
-        stats->texture_tile_height = ((lrt - ult) >> 2) + 1u;
+        tile->height = ((lrt - ult) >> 2) + 1u;
     }
+    ndsRendererSyncTextureTile(stats);
 }
 
 static void ndsRendererRecordSetImage(NDSRendererStats *stats,
@@ -2308,6 +2360,12 @@ static s32 ndsRendererHardwareTextureKeyEqual(
             (a->render_tile == b->render_tile) &&
             (a->render_tmem == b->render_tmem) &&
             (a->render_palette == b->render_palette) &&
+            (a->render_tile_cms == b->render_tile_cms) &&
+            (a->render_tile_cmt == b->render_tile_cmt) &&
+            (a->render_tile_masks == b->render_tile_masks) &&
+            (a->render_tile_maskt == b->render_tile_maskt) &&
+            (a->render_tile_shifts == b->render_tile_shifts) &&
+            (a->render_tile_shiftt == b->render_tile_shiftt) &&
             (a->load_tile == b->load_tile) &&
             (a->load_uls == b->load_uls) &&
             (a->load_ult == b->load_ult) &&
@@ -2960,6 +3018,7 @@ static s32 ndsRendererHardwareBindTexture(
     {
         return FALSE;
     }
+    ndsRendererSyncTextureTile(stats);
     if (((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_ON) == 0u) ||
         (stats->texture_image == 0u) ||
         (stats->texture_render_tile_line == 0u) ||
@@ -3063,8 +3122,8 @@ static s32 ndsRendererHardwareBindTexture(
 
     if (stats->texture_load_kind == NDS_RENDERER_TEXTURE_LOADTILE)
     {
-        source_origin_s = stats->texture_tile_size_uls >> 2;
-        source_origin_t = stats->texture_tile_size_ult >> 2;
+        source_origin_s = stats->texture_load_block_uls >> 2;
+        source_origin_t = stats->texture_load_block_ult >> 2;
         source_width = ndsRendererHardwareTextureSourceWidthPixels(
             size, stats->texture_size, stats->texture_image_width);
     }
@@ -3111,6 +3170,10 @@ static s32 ndsRendererHardwareBindTexture(
     key.render_palette = stats->texture_render_tile_palette;
     key.render_tile_cms = stats->texture_render_tile_cms;
     key.render_tile_cmt = stats->texture_render_tile_cmt;
+    key.render_tile_masks = stats->texture_render_tile_masks;
+    key.render_tile_maskt = stats->texture_render_tile_maskt;
+    key.render_tile_shifts = stats->texture_render_tile_shifts;
+    key.render_tile_shiftt = stats->texture_render_tile_shiftt;
     key.load_tile = stats->texture_load_tile;
     key.load_uls = stats->texture_load_block_uls;
     key.load_ult = stats->texture_load_block_ult;
@@ -3686,6 +3749,13 @@ static void ndsRendererSubmitHardwareTriangle(
     scale_world = TRUE;
     use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
         ndsRendererHardwareBindTexture(stats, config) : FALSE;
+#if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
+    if (use_texture != FALSE)
+    {
+        use_material_color = FALSE;
+        use_vertex_color = FALSE;
+    }
+#endif
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
     if ((zbuffered != FALSE) &&
         (decal_depth == FALSE) &&

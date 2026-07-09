@@ -312,6 +312,7 @@ foreach ($file in $files) {
     }
 }
 $renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
+$rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
@@ -362,8 +363,8 @@ Assert-True ($renderer.Contains('texture_load_kind = NDS_RENDERER_TEXTURE_LOADBL
 Assert-True ($renderer.Contains('texture_load_kind = NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer G_LOADTILE does not mark the current texture load kind.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureSourceWidthPixels')) 'Renderer hardware upload does not derive source row stride.'
 Assert-True ($renderer.Contains('stats->texture_load_kind == NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer hardware upload does not limit source row stride to G_LOADTILE.'
-Assert-True ($renderer.Contains('source_origin_s = stats->texture_tile_size_uls >> 2')) 'Renderer hardware upload does not honor tile S origin.'
-Assert-True ($renderer.Contains('source_origin_t = stats->texture_tile_size_ult >> 2')) 'Renderer hardware upload does not honor tile T origin.'
+Assert-True ($renderer.Contains('source_origin_s = stats->texture_load_block_uls >> 2')) 'Renderer hardware upload does not honor LoadTile S origin.'
+Assert-True ($renderer.Contains('source_origin_t = stats->texture_load_block_ult >> 2')) 'Renderer hardware upload does not honor LoadTile T origin.'
 Assert-True ($renderer.Contains('((source_origin_t + y) * source_width) + source_origin_s + x')) 'Renderer hardware upload does not sample source sub-rect rows.'
 Assert-True ($renderer.Contains('((s64)origin << 3)')) 'Renderer hardware texcoords do not subtract tile origin in vertex coord units.'
 Assert-True ($renderer.Contains('stats->texture_tile_size_uls,') -and $renderer.Contains('stats->texture_tile_size_ult,')) 'Renderer hardware texcoord submission is missing tile origin.'
@@ -373,8 +374,10 @@ Assert-True ($renderer.Contains('NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer G_LO
 Assert-True ($renderer.Contains('(stats->texture_load_kind << 8)')) 'Renderer texture cache key does not distinguish current LOADBLOCK and LOADTILE state.'
 Assert-True (-not $renderer.Contains('if (stats->texture_load_texels == 0)')) 'Renderer load-block state still freezes on the first texture load.'
 Assert-True (-not $renderer.Contains('stats->texture_tile_width != 0) &&')) 'Renderer tile-size state still freezes on the first tile size.'
-Assert-True ($renderer.Contains('stats->texture_tile_width = 0u;')) 'Renderer tile-size state does not clear stale width.'
-Assert-True ($renderer.Contains('stats->texture_tile_height = 0u;')) 'Renderer tile-size state does not clear stale height.'
+Assert-True ($rendererHeader.Contains('texture_tiles[NDS_RENDERER_TILE_COUNT]')) 'Renderer texture state is not tracked per GBI tile.'
+Assert-True ($renderer.Contains('ndsRendererSyncTextureTile(stats)')) 'Renderer per-tile texture state is not synced into the hardware bind view.'
+Assert-True ($renderer.Contains('tile->width = 0u;')) 'Renderer per-tile size state does not clear stale width.'
+Assert-True ($renderer.Contains('tile->height = 0u;')) 'Renderer per-tile size state does not clear stale height.'
 Assert-True ($renderer.Contains('ndsRendererHardwareColorSource')) 'Renderer hardware material color source helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseMaterialColor')) 'Renderer hardware material color presence helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererCombineOutputUsesColor')) 'Renderer hardware material color selection is not limited to combine output slots.'

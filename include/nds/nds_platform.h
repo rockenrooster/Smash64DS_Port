@@ -9,7 +9,12 @@ enum NDSInput {
     NDS_INPUT_UP    = 1u << 2,
     NDS_INPUT_DOWN  = 1u << 3,
     NDS_INPUT_A     = 1u << 4,
-    NDS_INPUT_START = 1u << 5
+    NDS_INPUT_START = 1u << 5,
+    NDS_INPUT_B     = 1u << 6,
+    NDS_INPUT_X     = 1u << 7,
+    NDS_INPUT_Y     = 1u << 8,
+    NDS_INPUT_L     = 1u << 9,
+    NDS_INPUT_R     = 1u << 10
 };
 
 void ndsPlatformInit(void);

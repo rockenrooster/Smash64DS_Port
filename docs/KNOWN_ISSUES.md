@@ -1016,20 +1016,26 @@
   scheduler drives gameplay from retrace; the DS hardware vblank is 59.8261 Hz,
   about 0.3% slower than N64 60 Hz. This is an inherent platform difference,
   not a gameplay rewrite.
-- The canonical realtime + live-input + HW-tri battle-playable ROM now renders,
-  polls live DS input, submits textured stage/fighter triangles, keeps BGM
-  timer-paced, and is pixel-gated by melonDS top-screen screenshots. The latest
-  gate observes pre-flush GX RAM `375/1163`, `44723/49152` top-screen pixels
-  different from clear color, `10301/49152` dominant-green pixels,
-  `10239/49152` non-white/non-green detail pixels, and `968/5616`
-  fighter-region pixels. The rebuilt shipped HUD-off ROM passes the same
-  settled pixel proof.
+- The canonical realtime + live-input + HW-tri battle-playable ROM now polls
+  live DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
+  pixel-gated by melonDS top-screen screenshots, but the frame is not yet
+  demo-fidelity. Latest gate: pre-flush GX RAM `373/1153`, `44723/49152`
+  non-clear top-screen pixels, `10301/49152` dominant-green pixels,
+  `10239/49152` non-white/non-green detail pixels, `968/5616` fighter-region
+  pixels, and adjacent-frame delta `0/49152`. White/misplaced Dream Land
+  surfaces and broken fighter assembly remain active renderer debt.
 - Canonical HW currently uses the CPU-oracle projected-submit fallback for
-  z-buffered triangles. The scratch projected-submit probe proved fighters,
-  platforms, and background DLs reach the HW submitter; the raw DS
-  matrix/z-buffered path is still the missing-pixel class. The next renderer
-  pass must repair raw matrix/depth fidelity, then parse source DLs once and
-  replay cached draw state before this is a 60fps demo.
+  z-buffered triangles, so `RENDER_ORACLE=.../0/0` is not independent proof of
+  raw DS matrix/depth correctness in this path. The scratch projected-submit
+  probe proved fighters/platforms/background DLs reach the HW submitter; the
+  raw DS matrix/z-buffered path is still the missing-pixel class. The next
+  renderer pass must repair raw matrix/depth and fighter assembly fidelity,
+  then parse source DLs once and replay cached draw state before this is a
+  60fps demo.
+- Dream Land wallpaper/background is still the stage `wallpaper` Sprite/SObj
+  path, not the HW triangle path. `gNdsStagePupupuWallpaperPtrReady` proves the
+  original pointer is loaded; composition into a DS 2D BG layer or textured
+  quads is deferred.
 - The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`.
   Packaging still needs a clean-demo pass for any remaining bottom-screen boot
   status text after the renderer-cache performance gate passes.

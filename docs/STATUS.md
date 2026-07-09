@@ -75,12 +75,15 @@ submission. FGM/voice playback, original sequence-player import, and
 non-critical HUD/SObj/particle perimeter remain follow-up.
 
 Mode `163` has fast verifier and canonical realtime + live-input + HW-triangle
-paths. Canonical HW is pixel-proven with Dream Land and fighter pixels:
-GX RAM `375/1163`, `44723/49152` non-clear, `10301/49152` green,
-`10239/49152` non-white/non-green detail, and `968/5616` fighter-region
-pixels; the rebuilt shipped `smash64ds-battle-playable-hwtri.nds` passes the
-same HUD-off gate. Raw DS matrix/depth still needs repair, so canonical HW uses
-the CPU-oracle projected-submit fallback until the next renderer slice.
+paths. Canonical HW is pixel-gated and stable but not fidelity-complete:
+the current capture still has white/misplaced Dream Land surfaces and broken
+fighter assembly. Latest smoke after per-tile state/input work:
+`frames=66 fps=35/35 ticks=629824384 gxram=373/1153`, `tri=372`,
+`44723/49152` non-clear, `10301/49152` green,
+`10239/49152` non-white/non-green detail, `968/5616` fighter-region pixels,
+and adjacent-frame delta `0/49152`. Raw DS matrix/depth still needs repair,
+so canonical HW uses the CPU-oracle projected-submit fallback until a renderer
+fidelity slice replaces it with source-correct raw or cached submission.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -110,9 +113,12 @@ changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
 wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
 
 Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
-live pads before each update, and has hard GX RAM/screenshot gates. Latest:
-`frames=67 fps=35/35 ticks=639162944 gxram=375/1163`, `oracle=1080/0/0`,
-`combine=4723/2959/lit0/mat0/proj44330`; it remains below 60fps.
+live pads before each update, and has hard GX RAM/screenshot gates. The input
+bridge now maps B/X/Y/L/R in addition to arrows/A/START and the HUD/markers
+show held keys, live pad0, original controller state, and P0 root-x. Latest:
+`combine=4655/2917/lit0/mat0/proj43684`,
+`texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`; it remains below 60fps
+and visually incomplete.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.
@@ -120,30 +126,24 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Follow-ups: raw DS matrix/depth fidelity, renderer-cache 60fps cutover,
-FGM/voice, original sequence player, and non-critical HUD/SObj/particles.
+Follow-ups: raw DS matrix/depth and fighter assembly, wallpaper/SObj
+composition, renderer-cache 60fps cutover, FGM/voice, and sequence player.
 
 ## Verification
 
-For normal 30-60 minute work, run
-`.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
-
-Docs-only changes also run `.\scripts\check-docs.ps1`; harness registry/script
-changes also run `.\scripts\check-harness-registry.ps1`.
-
-Shared architecture changes should graduate to:
+Quick iteration uses `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
+Docs-only changes also run `check-docs`; registry/script changes run
+`check-harness-registry`. Shared architecture changes graduate to:
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-For prebuilds over 90 seconds, run `build-verify-profile.ps1 -Detach`, confirm
-with `-VerifyStamp`, and run one full fresh Regression prebuild plus four
-sharded `-NoBuild` runs at the end of a shared-TU session.
+For prebuilds over 90 seconds, detach, confirm with `-VerifyStamp`, and run the
+daily full Regression sweep overnight.
 
-After verified progress, inspect status, optionally commit, then run the Lean
-snapshot as the final project command:
+After verified progress, commit if requested, then run the Lean snapshot last:
 
 ```powershell
 .\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean

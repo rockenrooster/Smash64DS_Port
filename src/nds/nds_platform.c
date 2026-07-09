@@ -168,6 +168,11 @@ u32 ndsPlatformReadInput(void)
     if (held & KEY_DOWN) input |= NDS_INPUT_DOWN;
     if (held & KEY_A) input |= NDS_INPUT_A;
     if (held & KEY_START) input |= NDS_INPUT_START;
+    if (held & KEY_B) input |= NDS_INPUT_B;
+    if (held & KEY_X) input |= NDS_INPUT_X;
+    if (held & KEY_Y) input |= NDS_INPUT_Y;
+    if (held & KEY_L) input |= NDS_INPUT_L;
+    if (held & KEY_R) input |= NDS_INPUT_R;
 
     return input;
 }
@@ -748,6 +753,17 @@ static u32 ndsPlatformDebugTextFingerprint(void)
     hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDLPreviewTextureMask);
     hash = ndsPlatformMixDebugValue(hash, ndsPlatformOpeningHudTickMilestone());
     hash = ndsPlatformMixDebugValue(hash, sHeldKeys & 0xfffu);
+    hash = ndsPlatformMixDebugValue(hash, gNdsControllerLivePad0Button);
+    hash = ndsPlatformMixDebugValue(hash, (u32)gNdsControllerLivePad0StickX);
+    hash = ndsPlatformMixDebugValue(hash, (u32)gNdsControllerLivePad0StickY);
+    hash = ndsPlatformMixDebugValue(hash, gSYControllerDevices[0].button_hold);
+    hash = ndsPlatformMixDebugValue(hash, gSYControllerDevices[0].button_tap);
+    hash = ndsPlatformMixDebugValue(hash,
+                                    (u32)gSYControllerDevices[0].stick_range.x);
+    hash = ndsPlatformMixDebugValue(hash,
+                                    (u32)gSYControllerDevices[0].stick_range.y);
+    hash = ndsPlatformMixDebugValue(hash,
+                                    (u32)gNdsFighterBattlePlayableFinalXMilli);
     hash = ndsPlatformMixDebugValue(hash, gNdsPerfSampleCount);
     hash = ndsPlatformMixDebugValue(hash, gNdsPerfPresentFps);
     hash = ndsPlatformMixDebugValue(hash, gNdsPerfLogicFps);
@@ -921,6 +937,17 @@ void ndsPlatformRenderDebugHud(void)
                                               0xfffu),
                               (unsigned long)(gNdsPerfSampleCount & 0xffu),
                               (unsigned long)(gNdsPerfSampleWindowTicks & 0xffu));
+    ndsPlatformPrintDebugLine(22, "inp k=%03lx p=%04lx %ld,%ld",
+                              (unsigned long)(sHeldKeys & 0xfffu),
+                              (unsigned long)gNdsControllerLivePad0Button,
+                              (long)gNdsControllerLivePad0StickX,
+                              (long)gNdsControllerLivePad0StickY);
+    ndsPlatformPrintDebugLine(23, "sy h=%04x t=%04x %d,%d x=%ld",
+                              (unsigned int)gSYControllerDevices[0].button_hold,
+                              (unsigned int)gSYControllerDevices[0].button_tap,
+                              (int)gSYControllerDevices[0].stick_range.x,
+                              (int)gSYControllerDevices[0].stick_range.y,
+                              (long)gNdsFighterBattlePlayableFinalXMilli);
 }
 
 void ndsPlatformEndFrame(void)

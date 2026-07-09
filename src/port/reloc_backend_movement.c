@@ -10357,7 +10357,16 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         sNdsNaturalCombatVictimStartPercent;
     ndsControllerPlaybackReset();
     ndsControllerPlaybackSetConnectedMask(0x3u);
-    ndsControllerPlaybackSetEnabled(TRUE);
+#if NDS_DEV_LIVE_INPUT_PREVIEW
+    if (ndsFighterBattlePlayableProofEnabled() != FALSE)
+    {
+        ndsControllerPlaybackSetEnabled(FALSE);
+    }
+    else
+#endif
+    {
+        ndsControllerPlaybackSetEnabled(TRUE);
+    }
     gNdsFighterNaturalMotionGObjCountBefore = (u32)gcGetGObjsActiveNum();
 
     if (ndsFighterBattlePlayableProofEnabled() == FALSE)
@@ -11822,6 +11831,10 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
 
 static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 {
+#if NDS_DEV_LIVE_INPUT_PREVIEW
+    (void)fp;
+    return;
+#else
     u16 button[2];
     s8 stick[2];
     s8 stick_y[2];
@@ -11953,6 +11966,7 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
     {
         ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
     }
+#endif
 }
 
 s32 ndsFighterMarioFoxNaturalMotionUpdateEnabled(void)

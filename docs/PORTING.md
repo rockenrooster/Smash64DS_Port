@@ -18213,3 +18213,34 @@ does not assert.
   `verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3`.
   No full Regression sweep was run in-session; Tyler owns the daily overnight
   sweep.
+
+## 2026-07-09 - Canonical HW per-tile and input checkpoint
+
+- Added a per-tile renderer state array for all eight N64 RDP tiles and routed
+  `gSPTexture` active-tile selection, `gDPSetTile`, and `gDPSetTileSize` through
+  that state. The texture cache key now includes the active render tile's
+  wrap/mask/shift state, and `LoadTile` sampling uses the load rectangle origin
+  rather than the render tile's `SetTileSize` origin. Source reference:
+  `decomp/BattleShip-main/decomp/include/PR/gbi.h` for `gSPTexture`,
+  `gDPSetTile`, and `gDPSetTileSize` field layout.
+- Added default-off `NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY` for local
+  classification builds. The probe capture
+  `artifacts/visibility/canonical-hwtri-textureonly.png` still showed the same
+  white/misplaced object classes, so the remaining fidelity gap is not just
+  material/lighting washing out otherwise-correct texels.
+- Preserved decoded light color/direction state across persistent fighter DObj
+  renderer stats. The copy was a field-list copy, not a whole-struct assignment.
+- Completed the DS live-input bridge by mapping B/X/Y/L/R in
+  `ndsPlatformReadInput`, keeping canonical live-preview builds from rearming
+  scripted playback, and expanding the HUD/`LIVE_PAD` marker to show held keys,
+  live pad0, original P0 controller state, and P0 root-x. A HUD debug ROM is
+  built as `smash64ds-battle-playable-hwtri-inputhud.nds`; the normal playtest
+  ROM remains `smash64ds-battle-playable-hwtri.nds`.
+- Added canonical verifier markers for the loaded Dream Land wallpaper pointer
+  and all-DObj fighter screen boxes. The wallpaper is still deferred SObj/2D-BG
+  composition, and the fighter assembly/raw DS matrix path remains renderer
+  debt. Latest canonical smoke is stable but still visually incomplete:
+  `frames=66 fps=35/35 gxram=373/1153`, `tri=372`,
+  `44723/49152` non-clear, `10301/49152` green,
+  `10239/49152` detail, `968/5616` fighter-region pixels, and
+  `0/49152` adjacent-frame delta.
