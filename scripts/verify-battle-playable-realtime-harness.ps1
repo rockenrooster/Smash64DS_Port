@@ -12,7 +12,7 @@ param(
     [int]$ScreenshotSecondDelayMilliseconds = 100,
     [double]$MaxScreenshotChangedFraction = 0.25,
     [double]$MinScreenshotGreenFraction = 0.03,
-    [double]$MinScreenshotDetailFraction = 0.05,
+    [double]$MinScreenshotDetailFraction = 0.25,
     [double]$MinFighterRegionFraction = 0.02
 )
 $ErrorActionPreference = 'Stop'
