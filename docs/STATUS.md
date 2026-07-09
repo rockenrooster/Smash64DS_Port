@@ -77,11 +77,11 @@ non-critical HUD/SObj/particle perimeter remain follow-up.
 Mode `163` has fast verifier and canonical realtime + live-input + HW-triangle
 paths. Canonical HW is pixel-gated and stable but not fidelity-complete:
 the current capture still has white/misplaced Dream Land surfaces and broken
-fighter assembly. Latest smoke after per-tile state/input work:
-`frames=66 fps=35/35 ticks=629824384 gxram=373/1153`, `tri=372`,
-`44723/49152` non-clear, `10301/49152` green,
-`10239/49152` non-white/non-green detail, `968/5616` fighter-region pixels,
-and adjacent-frame delta `0/49152`. Raw DS matrix/depth still needs repair,
+fighter assembly. Latest smoke after active-tile, implicit texture, and input
+work: `frames=65 fps=34/34 ticks=635312768 gxram=368/1138`, `tri=438`,
+`43849/49152` non-clear, `11619/49152` green, `13766/49152` detail,
+`1136/5616` fighter-region pixels, and adjacent-frame delta `1181/49152`.
+Raw DS matrix/depth still needs repair,
 so canonical HW uses the CPU-oracle projected-submit fallback until a renderer
 fidelity slice replaces it with source-correct raw or cached submission.
 

@@ -18244,3 +18244,38 @@ does not assert.
   `44723/49152` non-clear, `10301/49152` green,
   `10239/49152` detail, `968/5616` fighter-region pixels, and
   `0/49152` adjacent-frame delta.
+
+## 2026-07-09 - Renderer fidelity fast iteration
+
+- Wired HW texture binding directly to the active render tile for dimensions,
+  wrap/mirror params, palette bank, cache-key rectangle, and submitted texcoord
+  origin. Capture: `artifacts/visibility/2026-07-09_fixA_per_tile_bind.png`.
+  The canonical detail gate moved from `10239/49152` to `12762/49152`, and
+  fighter-region color moved from `968/5616` to `1058/5616`.
+- Surfaced `RENDER_CLIP` from the existing HW vertex saturation counter. The
+  canonical scene reports `clip=0`, so near-plane clipping was not evidence-
+  backed for this slice and remains deferred until a scene shows saturation.
+- Added `RENDER_TEXUSE` rejection-class markers for the five
+  `ndsRendererHardwareUseTexture` false paths. The white-class evidence showed
+  state-off/no-combine rejects, not TEXEL0 rejects. A strict implicit texture-on
+  path now accepts only armed image/load/render-tile/tile-size state and uses the
+  GBI 16-bit full-scale fallback when no `G_TEXTURE` scale was recorded.
+  Capture: `artifacts/visibility/2026-07-09_fixC_implicit_texture_on.png`.
+  Detail rose to `13763/49152`; the final HUD-on/off rebuilt ROM smoke reports
+  `13766/49152` detail, `11619/49152` green, `1136/5616` fighter-region pixels,
+  `texUse=0/214/26/0/0/impl57`, and `texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`.
+- Completed the realtime live-input controller bridge for the shipped config:
+  after DS key scan, `NDS_DEV_LIVE_INPUT_PREVIEW=1` builds now call
+  `syControllerReadDeviceData()` and `syControllerUpdateGlobalData()` so held
+  keys flow through the original controller path into `gSYControllerDevices`.
+  Rebuilt `smash64ds-battle-playable-hwtri.nds` and
+  `smash64ds-battle-playable-hwtri-inputhud.nds`.
+- Ratcheted the canonical screenshot detail floor to 25% by default. Final
+  gates: `check-gbi-decode-fixtures.ps1`,
+  `verify-battle-playable-realtime-harness.ps1 -DelaySeconds 3`,
+  `verify-dev-fast.ps1 -Build -DelaySeconds 3`,
+  `verify-boundary.ps1 -DelaySeconds 3`,
+  `build-verify-profile.ps1 -Profile RegressionCore -Detach` +
+  `-VerifyStamp`, `verify-all.ps1 -Profile RegressionCore -NoBuild
+  -DelaySeconds 3`, `check-docs.ps1`, and `check-harness-registry.ps1`.
+  Cache/perf and remaining fidelity stay next.

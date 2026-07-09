@@ -93,12 +93,12 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 
 Canonical realtime + live-input + HW-tri is verifier-covered and no longer
 blank/dead-input, but the visual frame is still not demo-fidelity. Latest:
-`frames=66 fps=35/35 ticks=629824384 gxram=373/1153`, `tri=372`,
+`frames=65 fps=34/34 ticks=635312768 gxram=368/1138`, `tri=438`,
 `texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0`, and
-`combine=4655/2917/lit0/mat0/proj43684`. The capture shows
-`44723/49152` non-clear, `10301/49152` green,
-`10239/49152` non-white/non-green detail, `968/5616` fighter-region pixels,
-and adjacent-frame delta `0/49152`, but Dream Land surfaces are still
+`texUse=0/214/26/0/0/impl57`. The capture shows `43849/49152`
+non-clear, `11619/49152` green, `13766/49152` detail,
+`1136/5616` fighter-region pixels, and adjacent-frame delta `1181/49152`,
+but Dream Land surfaces are still
 white/misplaced and fighters are still visibly broken. The input bridge maps
 B/X/Y/L/R in addition to arrows/A/START; the debug HUD/`LIVE_PAD` marker shows
 held keys -> live pad0 -> original P0 controller/root-x. Raw DS matrix/depth and
