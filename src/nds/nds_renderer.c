@@ -112,6 +112,12 @@
 #define NDS_RENDERER_HW_TEXREJECT_ALLOC (1u << 10)
 #define NDS_RENDERER_HW_TEXREJECT_GENTEX (1u << 11)
 #define NDS_RENDERER_HW_TEXREJECT_TEXIMAGE (1u << 12)
+#define NDS_RENDERER_HW_USETEX_REJECT_NO_STATS (1u << 0)
+#define NDS_RENDERER_HW_USETEX_REJECT_STATE_OFF (1u << 1)
+#define NDS_RENDERER_HW_USETEX_REJECT_NO_COMBINE (1u << 2)
+#define NDS_RENDERER_HW_USETEX_REJECT_PRIMITIVE_DECAL (1u << 3)
+#define NDS_RENDERER_HW_USETEX_REJECT_NO_TEXEL0 (1u << 4)
+#define NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE 0xffffu
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_START (0x1000 * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
@@ -1892,22 +1898,108 @@ static s32 ndsRendererHardwarePrimitiveDecal(const NDSRendererStats *stats)
              NDS_RENDERER_CCMUX_PRIMITIVE) ? TRUE : FALSE);
 }
 
+static void ndsRendererHardwareRecordUseTextureReject(
+    const NDSRendererStats *stats,
+    u32 reason)
+{
+    switch (reason)
+    {
+    case NDS_RENDERER_HW_USETEX_REJECT_NO_STATS:
+        gNdsRendererProfileUseTextureRejectNoStatsCount++;
+        break;
+    case NDS_RENDERER_HW_USETEX_REJECT_STATE_OFF:
+        gNdsRendererProfileUseTextureRejectStateOffCount++;
+        break;
+    case NDS_RENDERER_HW_USETEX_REJECT_NO_COMBINE:
+        gNdsRendererProfileUseTextureRejectNoCombineCount++;
+        break;
+    case NDS_RENDERER_HW_USETEX_REJECT_PRIMITIVE_DECAL:
+        gNdsRendererProfileUseTextureRejectPrimitiveDecalCount++;
+        break;
+    case NDS_RENDERER_HW_USETEX_REJECT_NO_TEXEL0:
+        gNdsRendererProfileUseTextureRejectNoTexel0Count++;
+        break;
+    default:
+        break;
+    }
+    if (gNdsRendererProfileUseTextureRejectFirstReason == 0u)
+    {
+        gNdsRendererProfileUseTextureRejectFirstReason = reason;
+        if (stats != NULL)
+        {
+            gNdsRendererProfileUseTextureRejectFirstFlags =
+                stats->texture_state_flags;
+            gNdsRendererProfileUseTextureRejectFirstW0 =
+                stats->texture_combine_w0;
+            gNdsRendererProfileUseTextureRejectFirstW1 =
+                stats->texture_combine_w1;
+            gNdsRendererProfileUseTextureRejectFirstGeometry =
+                stats->geometry_mode;
+        }
+    }
+}
+
+static s32 ndsRendererHardwareTextureImplicitStateOn(
+    const NDSRendererStats *stats)
+{
+    const NDSRendererTileState *render_tile;
+    u32 required_mask;
+
+    if ((stats == NULL) ||
+        ((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_ON) != 0u))
+    {
+        return FALSE;
+    }
+
+    required_mask = NDS_RENDERER_TEXTURE_SETTIMG |
+        NDS_RENDERER_TEXTURE_SETTILE |
+        NDS_RENDERER_TEXTURE_SETTILESIZE;
+    if (((stats->texture_mask & required_mask) != required_mask) ||
+        ((stats->texture_mask &
+          (NDS_RENDERER_TEXTURE_LOADBLOCK | NDS_RENDERER_TEXTURE_LOADTILE)) ==
+         0u) ||
+        (stats->texture_image == 0u) ||
+        (stats->texture_load_texels == 0u))
+    {
+        return FALSE;
+    }
+
+    render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
+    return ((render_tile->set_seen != 0u) &&
+            (render_tile->size_seen != 0u) &&
+            (render_tile->line != 0u) &&
+            (render_tile->width != 0u) &&
+            (render_tile->height != 0u)) ? TRUE : FALSE;
+}
+
 static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
 {
     if (stats == NULL)
     {
+        ndsRendererHardwareRecordUseTextureReject(
+            NULL, NDS_RENDERER_HW_USETEX_REJECT_NO_STATS);
         return FALSE;
     }
     if ((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_ON) == 0u)
     {
-        return FALSE;
+        if (ndsRendererHardwareTextureImplicitStateOn(stats) == FALSE)
+        {
+            ndsRendererHardwareRecordUseTextureReject(
+                stats, NDS_RENDERER_HW_USETEX_REJECT_STATE_OFF);
+            return FALSE;
+        }
+        gNdsRendererProfileUseTextureImplicitOnCount++;
     }
     if (stats->texture_combine_count == 0u)
     {
+        ndsRendererHardwareRecordUseTextureReject(
+            stats, NDS_RENDERER_HW_USETEX_REJECT_NO_COMBINE);
         return FALSE;
     }
     if (ndsRendererHardwarePrimitiveDecal(stats) != FALSE)
     {
+        ndsRendererHardwareRecordUseTextureReject(
+            stats, NDS_RENDERER_HW_USETEX_REJECT_PRIMITIVE_DECAL);
         return FALSE;
     }
     if (ndsRendererCombineUsesColor(
@@ -1916,8 +2008,14 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
     {
         return TRUE;
     }
-    return ndsRendererHardwareOutputUsesAlpha(
-        stats, NDS_RENDERER_ACMUX_TEXEL0);
+    if (ndsRendererHardwareOutputUsesAlpha(
+            stats, NDS_RENDERER_ACMUX_TEXEL0) != FALSE)
+    {
+        return TRUE;
+    }
+    ndsRendererHardwareRecordUseTextureReject(
+        stats, NDS_RENDERER_HW_USETEX_REJECT_NO_TEXEL0);
+    return FALSE;
 }
 
 static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
@@ -3083,7 +3181,8 @@ static s32 ndsRendererHardwareBindTexture(
     {
         render_tile_flags |= NDS_RENDERER_TILE_LOAD_SEEN;
     }
-    if (((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_ON) == 0u) ||
+    if ((((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_ON) == 0u) &&
+         (ndsRendererHardwareTextureImplicitStateOn(stats) == FALSE)) ||
         (stats->texture_image == 0u) ||
         (render_tile->line == 0u) ||
         (stats->texture_load_texels == 0u))
@@ -3705,6 +3804,9 @@ static void ndsRendererSubmitHardwareTriangle(
     const NDSRendererInputVertex *v2;
     const NDSRendererTileState *render_tile;
     s32 use_texture;
+    s32 implicit_texture_on;
+    u32 texture_scale_s;
+    u32 texture_scale_t;
     u32 scale_world;
     u32 material_color;
     u32 poly_alpha;
@@ -3813,8 +3915,24 @@ static void ndsRendererSubmitHardwareTriangle(
         prim_depth = FALSE;
     }
     scale_world = TRUE;
+    implicit_texture_on = ndsRendererHardwareTextureImplicitStateOn(stats);
     use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
         ndsRendererHardwareBindTexture(stats, config) : FALSE;
+    texture_scale_s = stats->texture_scale_s;
+    texture_scale_t = stats->texture_scale_t;
+    if ((use_texture != FALSE) && (implicit_texture_on != FALSE))
+    {
+        if ((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_SCALE_S) ==
+            0u)
+        {
+            texture_scale_s = NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
+        }
+        if ((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_SCALE_T) ==
+            0u)
+        {
+            texture_scale_t = NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
+        }
+    }
 #if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
     if (use_texture != FALSE)
     {
@@ -3856,20 +3974,20 @@ static void ndsRendererSubmitHardwareTriangle(
     glBegin(GL_TRIANGLE);
     ndsRendererHardwareSubmitVertex(
         stats, v0, &state->vertices[i0], material_color, use_material_color,
-        use_vertex_color, use_texture, stats->texture_scale_s,
-        stats->texture_scale_t, render_tile->uls, render_tile->ult,
+        use_vertex_color, use_texture, texture_scale_s,
+        texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z);
     ndsRendererHardwareSubmitVertex(
         stats, v1, &state->vertices[i1], material_color, use_material_color,
-        use_vertex_color, use_texture, stats->texture_scale_s,
-        stats->texture_scale_t, render_tile->uls, render_tile->ult,
+        use_vertex_color, use_texture, texture_scale_s,
+        texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z);
     ndsRendererHardwareSubmitVertex(
         stats, v2, &state->vertices[i2], material_color, use_material_color,
-        use_vertex_color, use_texture, stats->texture_scale_s,
-        stats->texture_scale_t, render_tile->uls, render_tile->ult,
+        use_vertex_color, use_texture, texture_scale_s,
+        texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z);
     glEnd();
