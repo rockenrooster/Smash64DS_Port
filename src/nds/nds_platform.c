@@ -144,10 +144,12 @@ void ndsPlatformInit(void)
     vramSetBankH(VRAM_H_SUB_BG);
     consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 15, 0, false, true);
 
+#if NDS_DEBUG_HUD
     iprintf("\x1b[?25l");
     iprintf("Smash 64 DS Port\n");
     iprintf("================\n");
     iprintf("melonDS visual debug active\n");
+#endif
 }
 
 u32 ndsPlatformReadInput(void)

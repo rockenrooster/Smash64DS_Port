@@ -1018,16 +1018,21 @@
   not a gameplay rewrite.
 - The canonical realtime + live-input + HW-tri battle-playable ROM now renders,
   polls live DS input, submits textured stage/fighter triangles, keeps BGM
-  timer-paced, and is pixel-gated by a melonDS top-screen screenshot. The
-  latest gate observes pre-flush GX RAM `68/233`, `40117/49152` top-screen
-  pixels different from the clear color, `9096/49152` dominant-green pixels,
-  and `235/49152` adjacent-frame delta. The rebuilt shipped ROM passes the
-  same settled pixel proof. The visual is still overbright, and immediate
-  per-frame `gcDrawAll` display-list traversal is too slow; the next renderer
-  pass must fix material/depth fidelity, then parse source DLs once and replay
-  cached draw state before this is a 60fps demo.
-- The live diagnostic HUD is now behind `NDS_DEBUG_HUD`; packaging should turn
-  it off for a clean demo ROM after the renderer-cache performance gate passes.
+  timer-paced, and is pixel-gated by melonDS top-screen screenshots. The latest
+  gate observes pre-flush GX RAM `375/1163`, `44723/49152` top-screen pixels
+  different from clear color, `10301/49152` dominant-green pixels,
+  `10239/49152` non-white/non-green detail pixels, and `968/5616`
+  fighter-region pixels. The rebuilt shipped HUD-off ROM passes the same
+  settled pixel proof.
+- Canonical HW currently uses the CPU-oracle projected-submit fallback for
+  z-buffered triangles. The scratch projected-submit probe proved fighters,
+  platforms, and background DLs reach the HW submitter; the raw DS
+  matrix/z-buffered path is still the missing-pixel class. The next renderer
+  pass must repair raw matrix/depth fidelity, then parse source DLs once and
+  replay cached draw state before this is a 60fps demo.
+- The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`.
+  Packaging still needs a clean-demo pass for any remaining bottom-screen boot
+  status text after the renderer-cache performance gate passes.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite

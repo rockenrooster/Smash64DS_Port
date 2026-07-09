@@ -1332,6 +1332,16 @@ Opening movie / Opening Portraits:
   S/T min/max. The screenshot gate is the pixel-level proof; this marker proves
   converted source texture content and sane submitted S/T without keeping a
   copied texel cache resident.
+- `RENDER_TEXFMT`: canonical HW texture-format trace marker. Fields are
+  converted-format mask, bound-format mask, palette-bound-format mask,
+  rejected-format mask, and reject-reason mask. The canonical gate currently
+  requires converted/bound/palette masks to be nonzero and unexplained rejects
+  to be zero.
+- `RENDER_COMBINE`: canonical HW combine-state trace marker. Fields are total
+  combine commands, distinct combine commands captured, lit-SHADE combines,
+  material-color combines, projected-submit fallback count, and the first four
+  distinct combine word pairs. The projected fallback count is intentional
+  renderer debt until the raw DS matrix/z path is pixel-proven.
 - `RENDER_LIGHT`: canonical HW light-state marker. Fields are decoded
   light-color commands, decoded light-direction commands, and source-backed
   fallback-color uses. Lighting-on display lists treat `Vtx.cn` as signed
@@ -1340,8 +1350,9 @@ Opening movie / Opening Portraits:
   `artifacts/visibility/canonical-hwtri-verified.png` and runs
   `scripts/assert-melonds-top-visible.ps1`. The current top-screen gate expects
   at least 1% of the 256x192 crop to differ from clear color `(20,28,52)`,
-  at least 3% dominant-green pixels, and no more than 25% adjacent-frame delta
-  in the settled capture window.
+  at least 3% dominant-green pixels, at least 5% non-white/non-green detail
+  pixels, nonzero fighter-region pixels in the expected Mario/Fox region, and
+  no more than 25% adjacent-frame delta in the settled capture window.
 - `LIVE_PAD`: canonical realtime live-input marker. It records DS live read and
   map counts, connected controller mask, raw held-key bits, mapped P0 buttons
   and stick, playback-enabled flag, and playback read count. The canonical ROM

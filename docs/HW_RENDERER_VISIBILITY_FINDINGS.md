@@ -13,14 +13,16 @@ HW battle visibility.
 - Determinism is stable by scene time; the fault is deterministic frame-level
   presentation/state, not random memory corruption.
 - Current canonical settled-frame gate:
-  - `gxram=68/233`
-  - `RENDER_ORACLE=2001/0/0`
-  - `RENDER_TEXTURE=... sample=63/600/600`
+  - `gxram=375/1163`
+  - `RENDER_ORACLE=1080/0/0`
+  - `RENDER_TEXFMT=0x100,0x100,0x100,0x0,0x0`
+  - `RENDER_COMBINE=4723,2959,0,0,44330,...`
   - `artifacts/visibility/canonical-hwtri-verified.png`
-  - 40117/49152 non-clear pixels, 9096/49152 dominant-green pixels,
-    and 235/49152 changed pixels against the adjacent capture.
+  - 44723/49152 non-clear pixels, 10301/49152 dominant-green pixels,
+    10239/49152 non-white/non-green pixels, 968/5616 fighter-region pixels,
+    and 0/49152 changed pixels against the adjacent capture.
 - The rebuilt shipped HUD-off ROM passes the same pixel assertion at
-  `artifacts/visibility/shipped-hwtri-hudoff-verified.png`.
+  `artifacts/visibility/shipped-hwtri-hudoff-fixed.png`.
 
 ## Findings
 
@@ -47,7 +49,12 @@ HW battle visibility.
   counters, in-range S/T sample counters, GX RAM, oracle, and screenshot pixels
   instead of keeping copied texture pixels resident.
 - Probes that did not solve it:
-  - Raw matrix submission: GX RAM stayed empty.
+  - Raw matrix submission: Dream Land reached pixels, but fighters, platforms,
+    and background stayed missing.
+  - Force-projected submit on a scratch branch: fighters/platforms/background
+    appeared, proving their DLs reach the HW submitter and isolating the
+    remaining missing-pixel class to the raw matrix/z path. The probe was
+    reverted; the landed path records the projected-submit fallback count.
   - Clip-space Z for no-Z projected triangles: scene clipped out.
   - Skipping no-Z projected triangles: scene clipped out.
   - Forcing no-Z projected triangles translucent: stable but dropped most
@@ -58,8 +65,9 @@ HW battle visibility.
 
 ## Current Blocker
 
-The frame is now identifiable as Dream Land and the shipped ROM is no longer
-blank, but fidelity and speed are still not demo-grade. The material/depth
-mapping is overbright, and immediate per-frame `gcDrawAll` traversal is about
-3.9fps in the realtime smoke. Renderer-cache/performance work remains the next
-slice after Tyler's playtest.
+The frame is now identifiable as Dream Land with fighter pixels and the shipped
+ROM is no longer blank, but fidelity and speed are still not demo-grade. The
+raw DS matrix/depth path still needs repair, and immediate per-frame
+`gcDrawAll` traversal plus projected fallback are below 60fps in the realtime
+smoke. Renderer-cache/performance work remains the next slice after Tyler's
+playtest.

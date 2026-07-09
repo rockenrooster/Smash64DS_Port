@@ -95,6 +95,19 @@
 #define NDS_RENDERER_HW_TEXTURE_SIZ_8B 1u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_16B 2u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_32B 3u
+#define NDS_RENDERER_HW_TEXREJECT_MISSING_STATE (1u << 0)
+#define NDS_RENDERER_HW_TEXREJECT_BAD_CI_SIZE (1u << 1)
+#define NDS_RENDERER_HW_TEXREJECT_UNSUPPORTED_FORMAT (1u << 2)
+#define NDS_RENDERER_HW_TEXREJECT_BAD_DIMENSIONS (1u << 3)
+#define NDS_RENDERER_HW_TEXREJECT_BAD_UPLOAD_SIZE (1u << 4)
+#define NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_RANGE (1u << 5)
+#define NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_BYTES (1u << 6)
+#define NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_PTR (1u << 7)
+#define NDS_RENDERER_HW_TEXREJECT_BAD_TLUT (1u << 8)
+#define NDS_RENDERER_HW_TEXREJECT_BAD_TLUT_PTR (1u << 9)
+#define NDS_RENDERER_HW_TEXREJECT_ALLOC (1u << 10)
+#define NDS_RENDERER_HW_TEXREJECT_GENTEX (1u << 11)
+#define NDS_RENDERER_HW_TEXREJECT_TEXIMAGE (1u << 12)
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_START (0x1000 * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
@@ -897,6 +910,45 @@ static void ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
     }
 }
 
+static void ndsRendererProfileCombineMode(u32 w0, u32 w1)
+{
+    gNdsRendererProfileCombineModeCount++;
+    if (((gNdsRendererProfileCombineMode0W0 == w0) &&
+         (gNdsRendererProfileCombineMode0W1 == w1)) ||
+        ((gNdsRendererProfileCombineMode1W0 == w0) &&
+         (gNdsRendererProfileCombineMode1W1 == w1)) ||
+        ((gNdsRendererProfileCombineMode2W0 == w0) &&
+         (gNdsRendererProfileCombineMode2W1 == w1)) ||
+        ((gNdsRendererProfileCombineMode3W0 == w0) &&
+         (gNdsRendererProfileCombineMode3W1 == w1)))
+    {
+        return;
+    }
+
+    switch (gNdsRendererProfileCombineModeDistinctCount)
+    {
+    case 0:
+        gNdsRendererProfileCombineMode0W0 = w0;
+        gNdsRendererProfileCombineMode0W1 = w1;
+        break;
+    case 1:
+        gNdsRendererProfileCombineMode1W0 = w0;
+        gNdsRendererProfileCombineMode1W1 = w1;
+        break;
+    case 2:
+        gNdsRendererProfileCombineMode2W0 = w0;
+        gNdsRendererProfileCombineMode2W1 = w1;
+        break;
+    case 3:
+        gNdsRendererProfileCombineMode3W0 = w0;
+        gNdsRendererProfileCombineMode3W1 = w1;
+        break;
+    default:
+        break;
+    }
+    gNdsRendererProfileCombineModeDistinctCount++;
+}
+
 static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
                                         u32 w0, u32 w1)
 {
@@ -909,6 +961,7 @@ static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
     stats->texture_combine_count++;
     stats->texture_combine_w0 = w0;
     stats->texture_combine_w1 = w1;
+    ndsRendererProfileCombineMode(w0, w1);
 }
 
 static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
@@ -1831,10 +1884,25 @@ static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
     return 0u;
 }
 
+static s32 ndsRendererHardwareLitShadeCombine(const NDSRendererStats *stats)
+{
+    return ((stats != NULL) &&
+            (stats->texture_combine_count != 0u) &&
+            ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
+            (ndsRendererCombineUsesColor(stats->texture_combine_w0,
+                                         stats->texture_combine_w1,
+                                         NDS_RENDERER_CCMUX_SHADE) != FALSE)) ?
+        TRUE : FALSE;
+}
+
 static s32 ndsRendererHardwareUseMaterialColor(const NDSRendererStats *stats)
 {
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
+        if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
+        {
+            return FALSE;
+        }
         return ((ndsRendererHardwareOutputUsesColor(
                      stats, NDS_RENDERER_CCMUX_ENVIRONMENT) != FALSE) ||
                 (ndsRendererHardwareOutputUsesColor(
@@ -1847,6 +1915,10 @@ static s32 ndsRendererHardwareUseMaterialColor(const NDSRendererStats *stats)
 static s32 ndsRendererHardwareUseVertexColor(const NDSRendererStats *stats)
 {
     if ((stats == NULL) || (stats->texture_combine_count == 0u))
+    {
+        return TRUE;
+    }
+    if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
     {
         return TRUE;
     }
@@ -2071,13 +2143,6 @@ static u32 ndsRendererHardwareColorByte(u32 color, u32 shift)
     return (color >> shift) & 0xffu;
 }
 
-static u32 ndsRendererHardwareColorBrightness(u32 color)
-{
-    return ndsRendererHardwareColorByte(color, 24) +
-        ndsRendererHardwareColorByte(color, 16) +
-        ndsRendererHardwareColorByte(color, 8);
-}
-
 static u8 ndsRendererHardwareClampColor(s32 value)
 {
     if (value < 0)
@@ -2160,18 +2225,8 @@ static u32 ndsRendererHardwareLitShadeColor(NDSRendererStats *stats,
     light_2 = ndsRendererHardwareLightColor(
         stats, NDS_RENDERER_LIGHT_COLOR_2_MASK, stats->light_color_2,
         NDS_RENDERER_LIGHT_COLOR_2_FALLBACK);
-
-    if (ndsRendererHardwareColorBrightness(light_1) <=
-        ndsRendererHardwareColorBrightness(light_2))
-    {
-        ambient = light_1;
-        diffuse = light_2;
-    }
-    else
-    {
-        ambient = light_2;
-        diffuse = light_1;
-    }
+    diffuse = light_1;
+    ambient = light_2;
 
     diffuse_numer = ndsRendererHardwareLitDiffuseNumer(stats, vtx);
     r = (s32)ndsRendererHardwareColorByte(ambient, 24) +
@@ -2837,6 +2892,35 @@ static void ndsRendererProfileTextureSample(s16 s, s16 t)
     }
 }
 
+static u32 ndsRendererHardwareTextureFormatBit(u32 format, u32 size)
+{
+    u32 index = (format * 4u) + size;
+
+    return (index < 32u) ? (1u << index) : 0u;
+}
+
+static void ndsRendererProfileTextureFormat(volatile u32 *mask,
+                                            u32 format, u32 size)
+{
+    if (mask != NULL)
+    {
+        *mask |= ndsRendererHardwareTextureFormatBit(format, size);
+    }
+}
+
+static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
+                                             u32 format, u32 size,
+                                             u32 reason)
+{
+    if (stats != NULL)
+    {
+        stats->hardware_texture_reject_count++;
+    }
+    ndsRendererProfileTextureFormat(
+        &gNdsRendererProfileTextureRejectFormatMask, format, size);
+    gNdsRendererProfileTextureRejectReasonMask |= reason;
+}
+
 static s32 ndsRendererHardwareBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config)
@@ -2881,7 +2965,9 @@ static s32 ndsRendererHardwareBindTexture(
         (stats->texture_render_tile_line == 0u) ||
         (stats->texture_load_texels == 0u))
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, stats->texture_format, stats->texture_size,
+            NDS_RENDERER_HW_TEXREJECT_MISSING_STATE);
         return FALSE;
     }
 
@@ -2911,7 +2997,9 @@ static s32 ndsRendererHardwareBindTexture(
         }
         else
         {
-            stats->hardware_texture_reject_count++;
+            ndsRendererHardwareRejectTexture(
+                stats, format, size,
+                NDS_RENDERER_HW_TEXREJECT_BAD_CI_SIZE);
             return FALSE;
         }
     }
@@ -2920,7 +3008,9 @@ static s32 ndsRendererHardwareBindTexture(
         (format != NDS_RENDERER_HW_TEXTURE_FMT_IA) &&
         (format != NDS_RENDERER_HW_TEXTURE_FMT_I16))
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size,
+            NDS_RENDERER_HW_TEXREJECT_UNSUPPORTED_FORMAT);
         return FALSE;
     }
 
@@ -2953,7 +3043,9 @@ static s32 ndsRendererHardwareBindTexture(
         (width > NDS_RENDERER_HW_TEXTURE_MAX_WIDTH) ||
         (height > NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT))
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size,
+            NDS_RENDERER_HW_TEXREJECT_BAD_DIMENSIONS);
         return FALSE;
     }
 
@@ -2963,7 +3055,9 @@ static s32 ndsRendererHardwareBindTexture(
         (ndsRendererHardwareTextureSizeEnum(upload_width, &size_x) == FALSE) ||
         (ndsRendererHardwareTextureSizeEnum(upload_height, &size_y) == FALSE))
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size,
+            NDS_RENDERER_HW_TEXREJECT_BAD_UPLOAD_SIZE);
         return FALSE;
     }
 
@@ -2984,7 +3078,9 @@ static s32 ndsRendererHardwareBindTexture(
         (source_origin_s >= source_width) ||
         (width > (source_width - source_origin_s)))
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size,
+            NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_RANGE);
         return FALSE;
     }
     source_last_index =
@@ -2995,7 +3091,9 @@ static s32 ndsRendererHardwareBindTexture(
                                                         source_texels);
     if (source_bytes == 0u)
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size,
+            NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_BYTES);
         return FALSE;
     }
 
@@ -3036,6 +3134,8 @@ static s32 ndsRendererHardwareBindTexture(
         stats->hardware_texture_format = format;
         stats->hardware_texture_width = width;
         stats->hardware_texture_height = height;
+        ndsRendererProfileTextureFormat(
+            &gNdsRendererProfileTextureBindFormatMask, format, size);
         ndsRendererProfileTextureCacheEntry(entry);
         gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
         return TRUE;
@@ -3045,14 +3145,18 @@ static s32 ndsRendererHardwareBindTexture(
     bytes = ndsRendererHardwareTextureSourceBytes(format, size, texels);
     if ((bytes == 0u) || (bytes > loaded_bytes))
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size,
+            NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_BYTES);
         return FALSE;
     }
     texels_src = ndsRendererResolveTextureDataPointer(
         config, (const void *)(uintptr_t)stats->texture_image, source_bytes);
     if (texels_src == NULL)
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size,
+            NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_PTR);
         return FALSE;
     }
     tlut_src = NULL;
@@ -3070,7 +3174,9 @@ static s32 ndsRendererHardwareBindTexture(
         if ((stats->texture_tlut_image == 0u) ||
             (stats->texture_tlut_count < palette_entries))
         {
-            stats->hardware_texture_reject_count++;
+            ndsRendererHardwareRejectTexture(
+                stats, format, size,
+                NDS_RENDERER_HW_TEXREJECT_BAD_TLUT);
             return FALSE;
         }
         tlut_src = ndsRendererResolveTextureDataPointer(
@@ -3078,9 +3184,13 @@ static s32 ndsRendererHardwareBindTexture(
             palette_entries * sizeof(u16));
         if (tlut_src == NULL)
         {
-            stats->hardware_texture_reject_count++;
+            ndsRendererHardwareRejectTexture(
+                stats, format, size,
+                NDS_RENDERER_HW_TEXREJECT_BAD_TLUT_PTR);
             return FALSE;
         }
+        ndsRendererProfileTextureFormat(
+            &gNdsRendererProfileTexturePaletteFormatMask, format, size);
     }
 
     convert_start = cpuGetTiming();
@@ -3104,19 +3214,23 @@ static s32 ndsRendererHardwareBindTexture(
                                            &nonwhite_texels);
         }
     }
+    ndsRendererProfileTextureFormat(
+        &gNdsRendererProfileTextureConvertFormatMask, format, size);
     gNdsRendererProfileTextureConvertTicks += cpuGetTiming() - convert_start;
 
     entry = ndsRendererHardwareAllocTexture();
     if (entry == NULL)
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size, NDS_RENDERER_HW_TEXREJECT_ALLOC);
         return FALSE;
     }
     if (entry->name == 0)
     {
         if (glGenTextures(1, &entry->name) == 0)
         {
-            stats->hardware_texture_reject_count++;
+            ndsRendererHardwareRejectTexture(
+                stats, format, size, NDS_RENDERER_HW_TEXREJECT_GENTEX);
             return FALSE;
         }
     }
@@ -3127,7 +3241,8 @@ static s32 ndsRendererHardwareBindTexture(
     if (glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size_x, size_y, 0,
                      params, sNdsRendererHardwareTextureScratch) == 0)
     {
-        stats->hardware_texture_reject_count++;
+        ndsRendererHardwareRejectTexture(
+            stats, format, size, NDS_RENDERER_HW_TEXREJECT_TEXIMAGE);
         entry->ready = FALSE;
         return FALSE;
     }
@@ -3147,6 +3262,8 @@ static s32 ndsRendererHardwareBindTexture(
     stats->hardware_texture_format = format;
     stats->hardware_texture_width = width;
     stats->hardware_texture_height = height;
+    ndsRendererProfileTextureFormat(
+        &gNdsRendererProfileTextureBindFormatMask, format, size);
     ndsRendererHardwareApplyTextureParams(entry->params);
     gNdsRendererProfileTextureUploads++;
     gNdsRendererProfileTextureUploadBytes += upload_width * upload_height *
@@ -3344,6 +3461,14 @@ static void ndsRendererHardwareBeginTriangleBatch(
     sNdsRendererHardwareTriangleBatchFogKey = fog_key;
 }
 
+static s32 ndsRendererHardwareUseProjectedSubmitFallback(
+    const NDSRendererStats *stats, s32 zbuffered, s32 transformed_ready)
+{
+    (void)stats;
+    return ((zbuffered != FALSE) && (transformed_ready != FALSE)) ?
+        TRUE : FALSE;
+}
+
 static void ndsRendererHardwareSubmitVertex(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
@@ -3462,6 +3587,7 @@ static void ndsRendererSubmitHardwareTriangle(
     s32 decal_depth;
     s32 prim_depth;
     s32 transformed_ready;
+    s32 projected_submit;
     s32 no_oracle;
     s32 projected_z = 0;
 
@@ -3516,9 +3642,12 @@ static void ndsRendererSubmitHardwareTriangle(
     prim_depth = ((zbuffered != FALSE) &&
                   (ndsRendererHardwareUsePrimDepth(stats) != FALSE)) ?
         TRUE : FALSE;
+    projected_submit = ndsRendererHardwareUseProjectedSubmitFallback(
+        stats, zbuffered, transformed_ready);
     if (((zbuffered == FALSE) ||
          (decal_depth != FALSE) ||
-         (prim_depth != FALSE)) &&
+         (prim_depth != FALSE) ||
+         (projected_submit != FALSE)) &&
         (transformed_ready == FALSE))
     {
         stats->hardware_oracle_reject_count++;
@@ -3531,10 +3660,28 @@ static void ndsRendererSubmitHardwareTriangle(
     material_color = ndsRendererHardwareColorSource(stats);
     use_material_color = ndsRendererHardwareUseMaterialColor(stats);
     use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
+    if (stats->texture_combine_count != 0u)
+    {
+        if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
+        {
+            gNdsRendererProfileLitShadeCombineCount++;
+        }
+        if (use_material_color != FALSE)
+        {
+            gNdsRendererProfileMaterialCombineCount++;
+        }
+    }
     poly_alpha = ndsRendererHardwareAlpha(stats, v0);
     if (poly_alpha == 0u)
     {
         return;
+    }
+    if (projected_submit != FALSE)
+    {
+        gNdsRendererProfileProjectedSubmitFallbackCount++;
+        zbuffered = FALSE;
+        decal_depth = FALSE;
+        prim_depth = FALSE;
     }
     scale_world = TRUE;
     use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?

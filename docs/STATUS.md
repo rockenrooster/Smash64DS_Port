@@ -1,8 +1,7 @@
 # Current Status
 
-This is the short current-truth document for active development. Keep it under 150 lines.
-Use `docs/DIAGNOSTIC_REFERENCE.md` for full marker strings; append history in `docs/PORTING.md`.
-
+This is the short current-truth document. Use `docs/DIAGNOSTIC_REFERENCE.md`
+for full marker strings; append history in `docs/PORTING.md`.
 ## Direction
 
 Target remains a full 1:1 playable Nintendo DS source port of BattleShip Smash
@@ -76,12 +75,12 @@ submission. FGM/voice playback, original sequence-player import, and
 non-critical HUD/SObj/particle perimeter remain follow-up.
 
 Mode `163` has fast verifier and canonical realtime + live-input + HW-triangle
-paths. Canonical HW is now pixel-proven: the gate asserts pre-flush GX RAM
-`68/233`, `40117/49152` non-clear screenshot pixels, `9096/49152`
-dominant-green pixels, and `235/49152` adjacent-frame delta; the rebuilt
-shipped `smash64ds-battle-playable-hwtri.nds` shows the same settled-frame
-pixel proof. Visual fidelity is still overbright and the realtime smoke is
-about 3.9fps, so 60fps still needs cached draw-state.
+paths. Canonical HW is pixel-proven with Dream Land and fighter pixels:
+GX RAM `375/1163`, `44723/49152` non-clear, `10301/49152` green,
+`10239/49152` non-white/non-green detail, and `968/5616` fighter-region
+pixels; the rebuilt shipped `smash64ds-battle-playable-hwtri.nds` passes the
+same HUD-off gate. Raw DS matrix/depth still needs repair, so canonical HW uses
+the CPU-oracle projected-submit fallback until the next renderer slice.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -92,27 +91,28 @@ the 128 KiB reserve.
 
 Renderer hardware is default for all-DL modes `33/34`, stage MP family modes
 `59-124`, and Boundary/Latest pair `161/162`; global normal builds still use
-software preview. The Pupupu stage-inclusive gate submits the stage plus both
-selected fighters in one hardware frame: `hwsubmit=42`, `hwtri=192`,
-`hwftr=2/582`, and `bind97/upload11/ready97/reject0`. Full visual fidelity
-still needs broader source-scene coverage and cutover work.
+software preview. The Pupupu gate submits the stage plus both fighters:
+`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`, `bind97/upload11/ready97/reject0`.
+Canonical realtime adds texture-format/reject markers
+(`conv0x100/bind0x100/pal0x100/rej0x0/why0x0`) and strict screenshots; raw
+matrix/depth fidelity and cached 60fps cutover remain follow-up.
 
 ## Current Notes
 
-Infrastructure checkpoint 2026-07-08: stable flags stay in force-included
-`nds_build_config.h`; per-mode harness ID and Inishie scale now live in
+Infrastructure checkpoint 2026-07-08: stable flags stay in
+`nds_build_config.h`; per-mode harness ID/Inishie scale live in
 `nds_scene_harness_config.h`. `RegressionCore -Force` measured `1893.130s`,
-no-op `39.377s`, and shared HW-tri mode switch `29.590s` for three scene-aware
-objects plus relink. Full Regression prebuild now stamps in `4773.933s`.
+no-op `39.377s`, shared HW-tri switch `29.590s`, and full prebuild
+`4773.933s`.
 
 The config-header mode `161` regression is fixed without verifier expectation
 changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
 wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
 
-Canonical realtime + live-input + HW-tri now renders through `gcDrawAll`, polls
-live DS pads before each update, and has a hard screenshot gate. Latest smoke:
-`frames=55 fps=39/39 ticks=463315072 gxram=68/233`, oracle mismatches `0`.
-Immediate per-frame DL traversal/submission still keeps textured HW below 60fps.
+Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
+live pads before each update, and has hard GX RAM/screenshot gates. Latest:
+`frames=67 fps=35/35 ticks=639162944 gxram=375/1163`, `oracle=1080/0/0`,
+`combine=4723/2959/lit0/mat0/proj44330`; it remains below 60fps.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the first scene-level unbounded stock/KO anchor.
@@ -120,8 +120,8 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-- follow-ups: renderer material/depth fidelity, renderer-cache 60fps cutover,
-  FGM/voice, original sequence player, and non-critical HUD/SObj/particles.
+Follow-ups: raw DS matrix/depth fidelity, renderer-cache 60fps cutover,
+FGM/voice, original sequence player, and non-critical HUD/SObj/particles.
 
 ## Verification
 

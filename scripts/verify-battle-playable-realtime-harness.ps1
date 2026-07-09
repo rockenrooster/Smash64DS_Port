@@ -11,12 +11,14 @@ param(
     [int]$ScreenshotSecondDelaySeconds = 1,
     [int]$ScreenshotSecondDelayMilliseconds = 100,
     [double]$MaxScreenshotChangedFraction = 0.25,
-    [double]$MinScreenshotGreenFraction = 0.03
+    [double]$MinScreenshotGreenFraction = 0.03,
+    [double]$MinScreenshotDetailFraction = 0.05,
+    [double]$MinFighterRegionFraction = 0.02
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerShellExe = (Get-Process -Id $PID).Path
-$smokeDelaySeconds = [Math]::Max($DelaySeconds, 15)
+$smokeDelaySeconds = [Math]::Max($DelaySeconds, 20)
 $screenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 30)
 $harnessArgs = @(
     '-NoProfile',
@@ -54,6 +56,13 @@ if (-not $SkipScreenshot) {
         -Image $output `
         -CompareImage $secondOutput `
         -MinDominantGreenFraction $MinScreenshotGreenFraction `
+        -MinNonWhiteNonGreenFraction $MinScreenshotDetailFraction `
+        -RequiredRegionX 92 `
+        -RequiredRegionY 70 `
+        -RequiredRegionWidth 78 `
+        -RequiredRegionHeight 72 `
+        -MinRequiredRegionFraction 0.05 `
+        -MinRequiredRegionFighterFraction $MinFighterRegionFraction `
         -MaxCompareChangedFraction $MaxScreenshotChangedFraction `
         -MinDifferentFraction 0.01
     if ($LASTEXITCODE -ne 0) {
