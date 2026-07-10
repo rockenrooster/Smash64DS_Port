@@ -52,7 +52,10 @@ inputs, `303` live-hitbox frames, `6366` guard frames, recovery selection, and
 `124%` maximum Mario damage. Original `ifcommon.c:2472-2529,3144-3152,3342-3345`
 consumes all `18000` timer ticks and requests `LoadScene`; imported
 `scvsbattle.c:513-560` returns through taskman cleanup and changes scene
-`VSBattle(22) -> VSResults(24)`. The actual VS Results scene remains stubbed.
+`VSBattle(22) -> VSResults(24)`. Imported `mnvsresults.c`, `lbtransition.c`,
+and the source subsystem fighter/data support now run Results by default. The
+gate reports tick `124`, all eight files, two fighters, 12 SObjs, and source
+Win/Lose statuses installed through original `ftMainSetStatus`.
 
 The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
 and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
@@ -66,19 +69,21 @@ transformed vertex cache across those per-part lists, matching BattleShip's
 single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
 all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
 Canonical proof reports `gxram=729/2209`, geometry `0x222005`, selected parts
-`14/18`, and zero CPU-oracle mismatches.
+`14/18`, and zero CPU-oracle mismatches. Projected submission now computes
+source NDC Z in two 64-bit matrix stages and uses the DS Z buffer; triangle
+submission order no longer substitutes for source depth.
 
 O2R `MObjSub` mixed-width lanes, aligned Dream Land starts, original floor
 adoption, and the observed one-cycle `PRIMITIVE * SHADE` material path remain
 live. Capture
-`artifacts/visibility/2026-07-09_fighter-vertex-cache-hudoff-final.png` shows
+`artifacts/visibility/2026-07-10_source-depth-canonical-hudoff.png` shows
 more connected limbs for red/blue Mario and olive/brown Fox. Residual fragments,
 incomplete textures, and direction-light fidelity still block visual acceptance.
 
-Canonical screenshot gates report `32687/49152` non-clear, `15627/49152`
-dominant-green, `16920/49152` detail, `758/5616` fighter-region color, and
-`595/49152` adjacent-frame delta. Raw DS matrix/depth and cached submission
-remain debt; full fighter presentation currently runs at about `2.9fps`.
+Canonical screenshot gates report `35277/49152` non-clear, `17332/49152`
+dominant-green, `17848/49152` detail, `790/5616` fighter-region color, and
+`1271/49152` adjacent-frame delta. Raw GX matrix submission and cached draw
+state remain debt; full fighter presentation currently runs at about `2.5fps`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -99,11 +104,6 @@ live in `nds_scene_harness_config.h`. The lifecycle shared-header rebuild took
 `1406.40s`; its stamp validated in `0.38s` and RegressionCore passed in
 `434.7s`.
 
-The config-header mode `161` regression is fixed without verifier expectation
-changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
-wrapper preserves the source-correct setup from `decomp/.../scvsbattle.c:468`.
-Normal boot again exposes one controller; the neutral second pad is now limited
-to `NDS_DEV_LIVE_INPUT_PREVIEW=1` canonical builds.
 The taskman allocator now tries `0x140000` and `0x130000` before its legacy
 1 MiB fallback, preventing source-display builds from overflowing after a
 failed `0x150000` allocation while preserving the 128 KiB reserve.
@@ -123,12 +123,10 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Follow-ups: import the actual VS Results scene, natural CPU offstage recovery,
-fighter fidelity, source entry behavior, raw DS matrix/depth, renderer-cache
-60fps cutover, FGM/voice, and the original sequence player.
-The former mode-161 Attack11 and mode-163 reflector blockers are closed;
-direct/menu Boundary and RegressionCore pass without expectation changes.
-
+Follow-ups: normalize Dream Land stage `MObjSub` lanes, preserve source DL-head
+order, finish texture-window and fighter RDP/anim-lock semantics, add wallpaper/
+shadows, prove CPU offstage recovery, then cache correct draw state for 60fps.
+FGM/voice and the original sequence player remain.
 ## Verification
 
 Quick iteration uses `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.

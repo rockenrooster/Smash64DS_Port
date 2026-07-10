@@ -122,11 +122,14 @@
   attack/damage -> KO -> stock decrement -> Rebirth -> Wait, rendered percent
   digits, stock icon decrement, and a hardware stage/fighter frame. The
   live-input path now also runs the original five-minute timer, Time Up/end
-  interface, taskman return, scoring check, and `VSBattle -> VSResults` scene
-  selection. `mnVSResultsStartScene` is still a strong compatibility stub in
-  `src/port/title_backend.c`; importing the coherent results scene and its
-  missing assets is the next P1 scene boundary. Pause, magnify/arrows, tags,
-  effects/items, and broader SObj/RDP helpers remain interface follow-up.
+  interface, taskman return, scoring check, and `VSBattle -> VSResults` scene.
+  Original `mnvsresults.c`, `lbtransition.c`, and its subsystem fighter/data
+  support now run by default with all eight source files and source Win/Lose
+  statuses. The DS compositor preserves source 2D layers around the fighter
+  camera, but exact per-SObj RDP/camera interleave remains follow-up.
+- The imported `scsubsysdata.c` opening-fighter callback is redirected to a
+  narrow no-op because Opening Room actor behavior is outside the Results
+  slice. Results data tables and fighter status dispatch remain original.
 - [coverage-reduced] Deleted legacy standalone modes `57/58`
   (`battle_mariofox_gcdrawall_loop` /
   `menu_chain_mariofox_gcdrawall_loop`). Active stage gcDrawAll, natural-combat
@@ -910,9 +913,9 @@
   material/texture upload/sampling, full
   collision line
   processing, Whispy wind, yakumono/stage object runtime,
-  item/weapon runtime, interface rendering, audio backend, and the actual VS
-  Results/sudden-death scene presentation remain deferred. The live-input
-  battle path now reaches the source timer/end and VS Results selection tail.
+  broader Opening Room gameplay/rendering and exact scene presentation remain
+  deferred. The battle path now reaches and runs the imported VS Results scene;
+  sudden-death presentation remains separate follow-up.
 - `mvopeningroom.c` is imported with an NDS entry slice. Original video/task
   setup, relocation setup/file-list resolution, actor/default-camera,
   Scene 1 camera, close-up overlay camera, wallpaper-camera, and logo-camera
@@ -1033,14 +1036,12 @@
   scheduler drives gameplay from retrace; the DS hardware vblank is 59.8261 Hz,
   about 0.3% slower than N64 60 Hz. This is an inherent platform difference,
   not a gameplay rewrite.
-- The canonical realtime + live-input + HW-tri battle-playable ROM now polls
-  live DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
-  pixel-gated by melonDS top-screen screenshots, but the frame is not yet
-  demo-fidelity. Latest gate: pre-flush GX RAM `685/2077`, `32630/49152`
-  non-clear top-screen pixels, `15598/49152` dominant-green pixels,
-  `16887/49152` non-white/non-green detail pixels, `764/5616` visible
-  fighter-region pixels, and adjacent-frame delta `155/49152`. Dream Land is
-  recognizable. The
+- The canonical realtime + live-input + HW-tri battle-playable ROM polls live
+  DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
+  pixel-gated, but the frame is not yet demo-fidelity. Latest gate: GX RAM
+  `729/2209`, `35277/49152` non-clear, `17332/49152` dominant-green,
+  `17848/49152` detail, `790/5616` fighter-region, and `1271/49152` adjacent-
+  frame delta. Dream Land is recognizable. The
   original fighter-display preamble and part-selection contract are now live;
   fighter attachment restores mixed-width O2R `MObjSub` lanes before the
   original object manager copies each record. The evidenced one-cycle
@@ -1053,25 +1054,32 @@
   source starts. The VSBattle wrapper's forced `is_skip_entry` remains a
   separate compatibility slice; normal BattleShip VSBattle does not set it.
   The unflagged palette seed is an intentional
-  compatibility path until command-order proof removes it; it is no longer the
-  confirmed visual root cause. Remaining texture debt includes padding, exact
-  LOADBLOCK origin/stride/DXT semantics, mask/shift edge cases, and 60fps
-  cached-present work.
-- Canonical HW currently uses the CPU-oracle projected-submit fallback for
-  z-buffered triangles, so `RENDER_ORACLE=.../0/0` is not independent proof of
-  raw DS matrix/depth correctness. Source-selected fighter lists now preserve
-  the RSP vertex cache across parts, restoring the full `320/306` Mario/Fox
-  triangle set with zero rejects, but residual visual fragments remain. Raw DS
-  matrix/depth is deferred. Full fighter submission presents at about `3.0fps`;
-  the next renderer pass must cache decoded draw state before this can become a
-  60fps demo.
+  compatibility path until command-order proof removes it. Remaining texture
+  debt includes exact LOADBLOCK origin/stride/DXT, mask/shift, and padding.
+- Projected HW submission now preserves source geometric depth: camera matrix
+  order follows `objdisplay.c:3007-3026`, NDC Z is computed in two 64-bit stages
+  before fixed-point clamp, and the DS Z buffer replaces synthetic submission-
+  order depth. The raw GX matrix path remains deferred. Full source-selected
+  fighter submission presents at about `2.5fps`; cache work follows fidelity.
+- Dream Land stage `MObjSub` mixed-width fields remain unnormalized. The
+  relocation normalizer currently covers MVCommon and fighter-local copies,
+  not the Pupupu stage assets, so Whispy face and material fields can retain
+  swapped `u16/u8` lanes. Normalize once at the relocation boundary with exact
+  eyes/mouth fixtures; do not compensate in the renderer.
+- Stage submission currently validates but discards `DObjDLLink::list_id` and
+  begins persistent state per stage GObj. BattleShip instead builds global
+  opaque/translucent heads per camera pass. Preserve source layer preambles and
+  replay head 0 before head 1 rather than flattening per-DObj lists.
+- Fighter events still omit semantic cycle/render/fog/alpha state, and the DS
+  matrix bridge lacks the `is_use_animlocks` inverse-scale branch from
+  `lbcommon.c:1369-1441`. These are separate from the now-correct depth path and
+  need fixed-pose plus anim-lock visual gates.
 - Dream Land wallpaper/background is still the stage `wallpaper` Sprite/SObj
   path, not the HW triangle path. `gNdsStagePupupuWallpaperPtrReady` proves the
   original pointer is loaded; composition into a DS 2D BG layer or textured
   quads is deferred.
-- The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`.
-  Packaging still needs a clean-demo pass for any remaining bottom-screen boot
-  status text after the renderer-cache performance gate passes.
+- The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`; the
+  canonical/shipped target forces it off while verifier markers remain active.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite

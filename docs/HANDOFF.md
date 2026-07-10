@@ -37,8 +37,10 @@ configuration retains the scripted two-human stock chain. Canonical realtime/
 live-input presents the source five-minute, items-off Mario human versus Fox
 level-3 CPU match. `battle_playable_match_lifecycle` runs the same source setup
 with fast logic through all `18000` timer ticks, Time Up, taskman cleanup, and
-the original `VSBattle(22) -> VSResults(24)` transition. The destination
-`mnVSResultsStartScene` is still a port stub and is the next scene import.
+the original `VSBattle(22) -> VSResults(24)` transition. Imported
+`mnvsresults.c`, `lbtransition.c`, `scsubsysfighter.c`, and `scsubsysdata.c`
+now own Results by default. The gate reaches tick `124`, loads all eight files,
+creates two fighters and 12 SObjs, and installs source Win/Lose statuses.
 
 Latest renderer detail: BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`, and
 `guMtxCatF` are imported. The live fighter path now uses the original display
@@ -91,7 +93,7 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
 separated but not yet accepted Mario and Fox bodies. The HUD-off capture is
-`artifacts/visibility/2026-07-09_fighter-vertex-cache-hudoff-final.png`; the
+`artifacts/visibility/2026-07-10_source-depth-canonical-hudoff.png`; the
 pre-fix baseline is
 `artifacts/visibility/2026-07-09_fighter-lit-material-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
@@ -101,8 +103,9 @@ record. The HW combiner also preserves the proven one-cycle
 `PRIMITIVE * SHADE` formula, so Mario remains red/blue and Fox now uses his
 source olive/brown palette. Persistent source vertex slots restore 44 previously
 dropped cross-joint triangles and visibly connect more limb strips. Residual
-fragments, incomplete textures, direction-light decoding, and raw DS
-matrix/depth remain debt; full fighter submission measures about `3.0fps`.
+fragments, incomplete textures, direction-light decoding, and the raw GX matrix
+path remain debt; projected submission now preserves source NDC depth through
+the DS Z buffer. Full fighter submission measures about `2.5fps`.
 The scripted fast mode-163 target is
 `smash64ds-battle-playable-fast-hwtri.nds`; the user-facing realtime ROM is
 `smash64ds-battle-playable-hwtri.nds`, so verifier builds no longer collide
@@ -113,11 +116,11 @@ keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Recommended Next Work
 
-1. Import and display the original VS Results scene; prove the natural handoff.
-2. Prove natural CPU offstage recovery through the source AI.
-3. Finish fighter part/texture/light fidelity; handle source entry separately.
-4. Cache source-selected stage/fighter draw state and restore canonical 60fps.
-5. Add Dream Land wallpaper/SObj composition and FGM/voice playback.
+1. Normalize Dream Land stage `MObjSub` mixed-width lanes at relocation.
+2. Preserve source stage layer and opaque/translucent DL-head ordering.
+3. Finish texture-window plus fighter RDP/anim-lock fidelity.
+4. Add Dream Land wallpaper/shadows and prove CPU offstage recovery.
+5. Cache corrected draw state for 60fps, then add FGM/voice playback.
 
 ## Verification
 

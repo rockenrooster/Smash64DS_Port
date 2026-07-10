@@ -1310,7 +1310,7 @@ Opening movie / Opening Portraits:
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
   completed update, and nonzero timer-derived rates. The canonical HW smoke
-  currently reports about `32-34` fps; pass `-RequireRealtime60Fps` for the
+  currently reports about `2.5` fps; pass `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
 - `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
   flushes, pre-flush GX polygon RAM count, pre-flush GX vertex RAM count,
@@ -1324,7 +1324,8 @@ Opening movie / Opening Portraits:
 - `RENDER_MATRIX` / `RENDER_VERTEX`: canonical HW matrix and vertex-range
   markers. They record loaded projection/modelview seeds and raw/HW vertex
   ranges so blank-screen failures can be sorted into matrix/clip issues versus
-  display/attribute issues.
+  display/attribute issues. Projected draws compute source NDC Z in separate
+  64-bit modelview/projection stages before fixed-point clamp and use DS Z.
 - `RENDER_TEXTURE`: canonical HW texture trace marker. Fields are converted
   source texels, dominant-green converted texels, non-white converted texels,
   textured vertices, in-range texture-coordinate sample count, samples over a
@@ -1357,8 +1358,8 @@ Opening movie / Opening Portraits:
 - `RENDER_COMBINE`: canonical HW combine-state trace marker. Fields are total
   combine commands, distinct combine commands captured, lit-SHADE combines,
   material-color combines, projected-submit fallback count, and the first four
-  distinct combine word pairs. The projected fallback count is intentional
-  renderer debt until the raw DS matrix/z path is pixel-proven.
+  distinct combine word pairs. The projected fallback count remains until the
+  raw GX matrix path is pixel-proven; it no longer implies synthetic depth.
 - `RENDER_LIGHT`: canonical HW light-state marker. Fields are decoded
   light-color commands, decoded light-direction commands, and source-backed
   fallback-color uses. Lighting-on display lists treat `Vtx.cn` as signed
@@ -6081,6 +6082,17 @@ scheduling.
   status, source time limit/remain/passed, game status, scene previous/current,
   and sudden-death flag. The five-minute gate expects `VBEN`, `1+`, `1+`,
   `LoadScene`, `5/0/18000+`, game status `Set`, and scene `22 -> 24`.
+- `VS_RESULTS`: imported Results result/mask, start count, tick count, loaded
+  file count, fighter count, GObj count, SObj count, and result kind. The
+  lifecycle gate expects `VSR1`, low mask `0x1f`, tick `120+`, eight files,
+  two or more fighters, and nonzero GObj/SObj counts.
+- `VS_RESULTS_FIGHTERS`: place, status, and motion for Results fighters 0/1.
+  Place zero must use source Win1..Win3 status/motion; the other place must use
+  Lose status/motion, following `mnvsresults.c:869-928` and status installation
+  through `scsubsysfighter.c:74-77`.
+- `VS_RESULTS_DISPLAY`: current scratch readiness, committed frame count, and
+  last committed width/height. A passed lifecycle requires a positive commit
+  count and a retained `256x192` source-SObj composition.
 
 ## Debugging Principle
 

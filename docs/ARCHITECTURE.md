@@ -1087,9 +1087,36 @@ in Mario/Fox DLs, the DS backend multiplies source primitive RGB by its
 computed light shade. This follows the packed LERP contract in
 `include/PR/gbi.h:508-543`; unobserved two-cycle LERPs remain outside this
 narrow approximation.
-Canonical HW still uses projected submission rather than the final raw DS
-matrix/depth path, and full source-selected fighter submission is not cached;
-those are renderer backend limits, not alternative fighter display behavior.
+Canonical HW still uses projected submission rather than the final raw GX
+matrix path. It now preserves source depth: the adapter applies projection and
+look-at in the order emitted by `objdisplay.c:3007-3026`, computes NDC Z in two
+64-bit stages before v16 clamping, and flushes the DS Z buffer. Full source-
+selected fighter submission is not cached; that is a backend limit, not
+alternative fighter behavior.
+
+Remaining fidelity boundaries stay source-shaped. Dream Land stage material
+records need one mixed-width normalization pass at relocation; stage traversal
+must retain layer and opaque/translucent DL-head identity across the camera
+pass; fighter events must retain semantic render/fog/alpha state; and anim-lock
+motions need the inverse-scale matrix branch from `lbcommon.c:1369-1441`.
+These contracts are repaired before caching so wrong flattened state is never
+made permanent.
+
+## VS Results Runtime
+
+The default Results path imports BattleShip `mnvsresults.c`, `lbtransition.c`,
+`scsubsysfighter.c`, and `scsubsysdata.c`. VSBattle returns through original
+taskman cleanup and selects scene 24; the DS scene loop then runs the source
+Results update and draw pairing. Source tick gates create the wallpaper,
+results text, fighters, lighting, and BGM as in `mnvsresults.c:3227-3277`, while
+`:3321-3379` owns relocation, fighter setup, cameras, emblem, and wallpaper.
+
+The DS presentation seam converts source SObjs into a 256x192 retained frame
+and composes the 3D fighter camera between source backplane and foreground
+layers. It does not replace Results logic or status selection. Exact per-SObj
+RDP/camera interleave is still a presentation limit; the imported
+`scsubsysdata.c` Opening Room callback remains a narrow no-op because that
+actor subsystem is outside this scene slice.
 
 ## Compatibility Layer Policy
 

@@ -18528,3 +18528,31 @@ does not assert.
   verifier passed. Detached RegressionCore prebuild took `1406.40s`, its stamp
   validated in `0.38s`, and the seven-entry no-build profile passed in
   `434.7s`. The actual `mnVSResultsStartScene` remains the next P1 import.
+
+## 2026-07-10 - Original VS Results and source HW depth
+
+- Imported `mn/mnvsmode/mnvsresults.c`, `lb/lbtransition.c`,
+  `scsubsysfighter.c`, and `scsubsysdata.c` behind one fence, staged all eight
+  source Results payloads, then graduated the scene by default. Source ticks
+  now create its wallpaper, text, fighters, lighting, and audio; source
+  Win/Lose statuses install through original `ftMainSetStatus`.
+- The mode-163 lifecycle reaches `18000` battle ticks, scene `22 -> 24`, Results
+  tick `124`, eight files, two fighters, 12 SObjs, and a retained `256x192`
+  composition. The original Fox CPU proof remains green. `MatchLifecycleProof`
+  now implies its required CPU proof control flow; no expectation changed.
+- Results rendering exposed submission-order depth in the projected HW path.
+  A direct clipped-Z probe was rejected after measuring saturated source clip
+  values. The accepted fix follows `objdisplay.c:3007-3026`, applies look-at and
+  projection in source order, computes NDC Z in two 64-bit stages, and uses DS
+  Z-buffer flushes. `RENDER_ORACLE` remains zero-mismatch.
+- Capture `artifacts/visibility/2026-07-10_vs-results-source-depth-fixed-plus1s.png`
+  shows the source Results backdrop, Fox win pose, and Mario lose pose without
+  the prior giant fighter plane. Canonical capture
+  `artifacts/visibility/2026-07-09_iter4_canonical_early_104845.png` visibly
+  improves stage/fighter overlap while retaining known texture/material debt.
+  The verifier-covered HUD-off shipped frame is
+  `artifacts/visibility/2026-07-10_source-depth-canonical-hudoff.png`.
+- A source audit confirmed the next fidelity order: normalize Dream Land stage
+  `MObjSub` mixed lanes, preserve opaque/translucent DL heads, finish texture
+  windows and fighter RDP/anim-lock state, then wallpaper/shadows. These are
+  recorded as separate boundaries instead of being mixed into Results.
