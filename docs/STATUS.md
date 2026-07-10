@@ -61,22 +61,23 @@ The source camera matrix/projection path is prepared before fighter visibility
 selection. Source-selected events retain their matrix/material owner and
 per-draw geometry/prim/env/light state; `dls[0]` remains in parent matrix state
 as in `ftdisplaymain.c:789-805,883-899`. Canonical proof reports
-`gxram=658/2010`, geometry mode `0x222005`, selected parts `14/18`, submitted
+`gxram=685/2077`, geometry mode `0x222005`, selected parts `14/18`, submitted
 parts, and zero CPU-oracle mismatches. Fighter attachment now restores the
 mixed-width lanes in O2R `MObjSub` records before the original object manager
 copies them, so source flags, texture formats, and material colors reach the
 live display path. Dream Land player starts now decode
 from the aligned O2R map-object array and the original manager adopts both
-fighters onto source floors. The HUD-off capture
-`artifacts/visibility/2026-07-09_fighter-mobj-lanes-hudoff-final.png` shows Fox
-on the left platform and a more coherent red/blue Mario on the right floor.
-Fox's mostly gray material, lower-body fragments, and incomplete textures still
+fighters onto source floors. The HW combiner now preserves the live one-cycle
+`PRIMITIVE * SHADE` contract (`gbi.h:508-543`) by multiplying source material
+RGB with the computed fighter light shade. Capture
+`artifacts/visibility/2026-07-09_fighter-lit-material-hudoff-final.png` shows
+red/blue Mario and olive/brown Fox at their separated starts. Residual
+lower-body fragments, incomplete textures, and direction-light fidelity still
 prevent final visual acceptance.
 
 Canonical screenshot gates remain strict: `32630/49152` non-clear,
-`15596/49152` dominant-green, `16869/49152` detail, `642/5616`
-fighter-region color before the material-lane fix (`660/5616` after), and
-`147/49152` adjacent-frame delta. Raw DS
+`15598/49152` dominant-green, `16887/49152` detail, `764/5616`
+fighter-region color, and `155/49152` adjacent-frame delta. Raw DS
 matrix/depth and cached submission remain renderer debt; the source-correct
 full fighter body currently reduces canonical presentation to about `3.1fps`.
 
@@ -124,7 +125,7 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Follow-ups: remaining fighter material/part fidelity, source entry behavior,
+Follow-ups: remaining fighter part/texture/light fidelity, source entry behavior,
 raw DS matrix/depth, wallpaper/SObj composition, renderer-cache 60fps
 cutover, FGM/voice, and the original sequence player.
 

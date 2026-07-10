@@ -130,6 +130,8 @@
 #define NDS_RENDERER_CCMUX_PRIMITIVE 3u
 #define NDS_RENDERER_CCMUX_SHADE 4u
 #define NDS_RENDERER_CCMUX_ENVIRONMENT 5u
+#define NDS_RENDERER_CCMUX_ZERO_AB 15u
+#define NDS_RENDERER_CCMUX_ZERO_D 7u
 #define NDS_RENDERER_ACMUX_COMBINED 0u
 #define NDS_RENDERER_ACMUX_TEXEL0 1u
 #define NDS_RENDERER_ACMUX_PRIMITIVE 3u
@@ -2019,8 +2021,41 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
     return FALSE;
 }
 
+static s32 ndsRendererHardwareUsesLitPrimitiveModulate(
+    const NDSRendererStats *stats)
+{
+    u32 a;
+    u32 b;
+    u32 c;
+    u32 d;
+
+    if ((stats == NULL) || (stats->texture_combine_count == 0u) ||
+        (ndsRendererHardwareUseSecondCycle(stats) != FALSE))
+    {
+        return FALSE;
+    }
+
+    a = (stats->texture_combine_w0 >> 20) & 0x0fu;
+    b = (stats->texture_combine_w1 >> 28) & 0x0fu;
+    c = (stats->texture_combine_w0 >> 15) & 0x1fu;
+    d = (stats->texture_combine_w1 >> 15) & 0x07u;
+    if ((b != NDS_RENDERER_CCMUX_ZERO_AB) ||
+        (d != NDS_RENDERER_CCMUX_ZERO_D))
+    {
+        return FALSE;
+    }
+    return (((a == NDS_RENDERER_CCMUX_PRIMITIVE) &&
+             (c == NDS_RENDERER_CCMUX_SHADE)) ||
+            ((a == NDS_RENDERER_CCMUX_SHADE) &&
+             (c == NDS_RENDERER_CCMUX_PRIMITIVE))) ? TRUE : FALSE;
+}
+
 static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
 {
+    if (ndsRendererHardwareUsesLitPrimitiveModulate(stats) != FALSE)
+    {
+        return stats->prim_color;
+    }
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
         if (ndsRendererHardwareOutputUsesColor(
@@ -2054,7 +2089,7 @@ static s32 ndsRendererHardwareUseMaterialColor(const NDSRendererStats *stats)
     {
         if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
         {
-            return FALSE;
+            return ndsRendererHardwareUsesLitPrimitiveModulate(stats);
         }
         return ((ndsRendererHardwareOutputUsesColor(
                      stats, NDS_RENDERER_CCMUX_ENVIRONMENT) != FALSE) ||
@@ -2406,7 +2441,7 @@ static void ndsRendererHardwareColorVertex(
 {
     u32 color;
 
-    if (use_material_color != FALSE)
+    if ((use_material_color != FALSE) && (use_vertex_color == FALSE))
     {
         glColor3b((u8)(material_color >> 24),
                   (u8)(material_color >> 16),
@@ -2419,6 +2454,21 @@ static void ndsRendererHardwareColorVertex(
         return;
     }
     color = ndsRendererHardwareLitShadeColor(stats, vtx);
+    if (use_material_color != FALSE)
+    {
+        u32 r = ((ndsRendererHardwareColorByte(color, 24) *
+                  ndsRendererHardwareColorByte(material_color, 24)) + 127u) /
+            255u;
+        u32 g = ((ndsRendererHardwareColorByte(color, 16) *
+                  ndsRendererHardwareColorByte(material_color, 16)) + 127u) /
+            255u;
+        u32 b = ((ndsRendererHardwareColorByte(color, 8) *
+                  ndsRendererHardwareColorByte(material_color, 8)) + 127u) /
+            255u;
+
+        glColor3b((u8)r, (u8)g, (u8)b);
+        return;
+    }
     glColor3b((u8)(color >> 24), (u8)(color >> 16), (u8)(color >> 8));
 }
 

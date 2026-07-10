@@ -18421,3 +18421,21 @@ does not assert.
   `artifacts/visibility/2026-07-09_fighter-mobj-lanes-hudoff-final.png` shows a
   more connected red/blue Mario at the source-separated start. Fox remains
   mostly gray, and lower-body/material-texture fidelity is not complete.
+
+## 2026-07-09 - Fighter lit primitive material modulation
+
+- Live per-part traces proved fighter assets, MObj animation, primitive colors,
+  and texture binds were source-shaped; the gray Fox parts used packed combiner
+  `0xfc327e05/0xff17fdff`, or one-cycle
+  `(PRIMITIVE - 0) * SHADE + 0` per `include/PR/gbi.h:508-543`.
+- The DS hardware path now multiplies computed fighter shade by submitted
+  primitive RGB only for that direct one-cycle formula. `TEXEL0 * SHADE`,
+  SHADE-only, two-cycle, and unrelated combiner paths remain unchanged.
+- GBI fixtures cover all three observed formulas. All-DL, stage-inclusive, and
+  canonical realtime/pixel gates passed with zero oracle mismatches and no
+  expectation changes; canonical material-combine use is now nonzero.
+- Rebuilt `smash64ds-battle-playable-hwtri.nds`. Capture
+  `artifacts/visibility/2026-07-09_fighter-lit-material-hudoff-final.png`
+  visibly restores Fox's olive/brown source palette while preserving Mario and
+  Dream Land. Lower-body assembly, incomplete textures/light direction, and
+  the measured ~3.1fps presentation remain open.

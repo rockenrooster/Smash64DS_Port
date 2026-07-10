@@ -1019,17 +1019,18 @@
 - The canonical realtime + live-input + HW-tri battle-playable ROM now polls
   live DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
   pixel-gated by melonDS top-screen screenshots, but the frame is not yet
-  demo-fidelity. Latest gate: pre-flush GX RAM `658/2010`, `44489/49152`
-  non-clear top-screen pixels, `13454/49152` dominant-green pixels,
-  `30474/49152` non-white/non-green detail pixels, `3465/5616` visible
-  fighter-region pixels, and adjacent-frame delta `928/49152`. Dream Land is
+  demo-fidelity. Latest gate: pre-flush GX RAM `685/2077`, `32630/49152`
+  non-clear top-screen pixels, `15598/49152` dominant-green pixels,
+  `16887/49152` non-white/non-green detail pixels, `764/5616` visible
+  fighter-region pixels, and adjacent-frame delta `155/49152`. Dream Land is
   recognizable. The
   original fighter-display preamble and part-selection contract are now live;
-  fighter attachment now restores the mixed-width O2R `MObjSub` lanes before
-  the original object manager copies each record. Mario is visibly more
-  coherent and uses red/blue source material colors, but Fox remains mostly
-  gray and both fighters retain residual lower-body fragments and incomplete
-  textures. The
+  fighter attachment restores mixed-width O2R `MObjSub` lanes before the
+  original object manager copies each record. The evidenced one-cycle
+  `PRIMITIVE * SHADE` LERP now multiplies source primitive RGB by computed
+  shade, restoring red/blue Mario and olive/brown Fox. Both fighters retain
+  residual lower-body fragments, incomplete textures, and incomplete
+  directional-light fidelity. The
   Dream Land's source player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated
   source starts. The VSBattle wrapper's forced `is_skip_entry` remains a

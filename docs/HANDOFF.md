@@ -48,7 +48,7 @@ manual all-DObj collector remains only as the software fixture oracle.
 The source camera matrix/projection is prepared before fighter visibility
 selection. Each selected event retains its source matrix/material owner and
 per-draw geometry/prim/env/light state; pre-matrix `dls[0]` uses parent state.
-Latest canonical proof reports `gxram=658/2010`, geometry mode `0x222005`,
+Latest canonical proof reports `gxram=685/2077`, geometry mode `0x222005`,
 selected parts `14/18`, nonzero submitted counts, and zero oracle mismatches.
 
 Runtime slice 2 graduated the original manager/status/animation path. Default
@@ -83,15 +83,16 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
 separated but not yet accepted Mario and Fox bodies. The HUD-off capture is
-`artifacts/visibility/2026-07-09_fighter-mobj-lanes-hudoff-final.png`; the
+`artifacts/visibility/2026-07-09_fighter-lit-material-hudoff-final.png`; the
 pre-fix baseline is
 `artifacts/visibility/2026-07-09_source-starts-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
-record; Mario is visibly more coherent and red/blue. Fox's mostly gray
-material, residual lower-body fragments, and incomplete textures remain. Raw
-DS matrix/depth
+record. The HW combiner also preserves the proven one-cycle
+`PRIMITIVE * SHADE` formula, so Mario remains red/blue and Fox now uses his
+source olive/brown palette. Residual lower-body fragments, incomplete textures,
+direction-light decoding, and raw DS matrix/depth
 also remain renderer debt; full source fighter submission currently measures
 about `3.1fps`.
 The scripted fast mode-163 target is
@@ -116,7 +117,7 @@ New harness modes are only for scene-level capabilities.
 
 ## Recommended Next Work
 
-1. Finish fighter material/part fidelity; handle source entry behavior separately.
+1. Finish fighter part/texture/light fidelity; handle source entry behavior separately.
 2. Cache source-selected stage/fighter draw state and restore canonical 60fps.
 3. Add wallpaper/SObj background composition for Dream Land.
 4. Replace projected-submit with source-correct raw DS matrix/depth submission.

@@ -1076,6 +1076,11 @@ before `gcPrepDObjMatrix` use the parent matrix and no child MObj, while
 `dls[1]` uses the prepared child matrix and material. Geometry, prim, env, and
 light state are snapshotted per source draw rather than collapsed after the
 traversal. The CPU 20.12 path remains the fixture oracle.
+For the live one-cycle `(PRIMITIVE - 0) * SHADE + 0` fighter combiner observed
+in Mario/Fox DLs, the DS backend multiplies source primitive RGB by its
+computed light shade. This follows the packed LERP contract in
+`include/PR/gbi.h:508-543`; unobserved two-cycle LERPs remain outside this
+narrow approximation.
 Canonical HW still uses projected submission rather than the final raw DS
 matrix/depth path, and full source-selected fighter submission is not cached;
 those are renderer backend limits, not alternative fighter display behavior.

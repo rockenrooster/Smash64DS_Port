@@ -85,6 +85,21 @@ function Decode-F3DEX2TriPacked {
         V2 = (($Packed -band 0xff) / 2)
     }
 }
+function Test-LitPrimitiveModulate {
+    param(
+        [uint32]$W0,
+        [uint32]$W1,
+        [bool]$TwoCycle = $false
+    )
+    if ($TwoCycle) { return 0 }
+    $a = ($W0 -shr 20) -band 0x0f
+    $b = ($W1 -shr 28) -band 0x0f
+    $c = ($W0 -shr 15) -band 0x1f
+    $d = ($W1 -shr 15) -band 0x07
+    if (($b -ne 15) -or ($d -ne 7)) { return 0 }
+    return (($a -eq 3) -and ($c -eq 4)) -or
+        (($a -eq 4) -and ($c -eq 3))
+}
 function New-F3DEX2MtxW0 {
     param([int]$Flags)
     return [uint32](([int64]0xda -shl 24) -bor ([int64]7 -shl 19) -bor (($Flags -bxor 1) -band 0xff))
@@ -454,6 +469,11 @@ Assert-True ($renderer.Contains('tile->width = 0u;')) 'Renderer per-tile size st
 Assert-True ($renderer.Contains('tile->height = 0u;')) 'Renderer per-tile size state does not clear stale height.'
 Assert-True ($renderer.Contains('ndsRendererHardwareColorSource')) 'Renderer hardware material color source helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseMaterialColor')) 'Renderer hardware material color presence helper is missing.'
+Assert-True ($renderer.Contains('ndsRendererHardwareUsesLitPrimitiveModulate')) 'Renderer hardware direct lit-primitive modulation helper is missing.'
+Assert-True (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc327e05', 16)) ([Convert]::ToUInt32('ff17fdff', 16))) 'Fox/Mario PRIMITIVE * SHADE combine did not retain primitive material color.'
+Assert-True (-not (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc127e05', 16)) ([Convert]::ToUInt32('ff17f3ff', 16)))) 'TEXEL0 * SHADE combine incorrectly selected a material color.'
+Assert-True (-not (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fcfffe05', 16)) ([Convert]::ToUInt32('ff167dff', 16)))) 'SHADE-only combine incorrectly selected a material color.'
+Assert-True (-not (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc327e05', 16)) ([Convert]::ToUInt32('ff17fdff', 16)) $true)) 'Unproven two-cycle lit-material combine was enabled.'
 Assert-True ($renderer.Contains('ndsRendererCombineOutputUsesColor')) 'Renderer hardware material color selection is not limited to combine output slots.'
 Assert-True ($renderer.Contains('NDS_RENDERER_CYCLETYPE_MASK')) 'Renderer hardware cycle-type mask is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_CYC_2CYCLE')) 'Renderer hardware 2-cycle combiner constant is missing.'
