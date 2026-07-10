@@ -9001,7 +9001,9 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_MIN 50.0F
 #define NDS_FIGHTER_NATURAL_MOVESET_SAFE_RANGE 80.0F
 #define NDS_FIGHTER_NATURAL_MOVESET_GRAB_STOP_RANGE (260.0F + 30.0F)
-#define NDS_FIGHTER_NATURAL_PROJECTILE_STOP_RANGE 350.0F
+#define NDS_FIGHTER_NATURAL_PROJECTILE_STOP_RANGE \
+    ((112.5F * 2.0F) + 350.0F)
+#define NDS_FIGHTER_NATURAL_PROJECTILE_CENTER_RANGE 300.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_NEUTRAL_FRAMES 4u
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_TIMEOUT 45u
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_RETRY_MAX 6u
@@ -11538,10 +11540,18 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         {
             FTStruct *actor = fp[sNdsNaturalProjectileActorSlot];
             FTStruct *target = fp[1u - sNdsNaturalProjectileActorSlot];
+            f32 midpoint = (ndsFighterNaturalCombatPosX(actor) +
+                            ndsFighterNaturalCombatPosX(target)) * 0.5F;
             f32 face_dx = ndsFighterNaturalCombatPosX(target) -
                 ndsFighterNaturalCombatPosX(actor);
 
+            if (midpoint < 0.0F)
+            {
+                midpoint = -midpoint;
+            }
+
             if ((dx <= NDS_FIGHTER_NATURAL_PROJECTILE_STOP_RANGE) &&
+                (midpoint <= NDS_FIGHTER_NATURAL_PROJECTILE_CENTER_RANGE) &&
                 (dy <= NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE) &&
                 ((face_dx * actor->lr) >= 0.0F) &&
                 (ndsFighterNaturalCombatBothGroundWait(fp) != FALSE) &&
@@ -12034,6 +12044,7 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
             f32 self_y = actor->coll_data.p_translate->y;
             f32 other_y = target->coll_data.p_translate->y;
             f32 adx = other_x - self_x;
+            f32 midpoint = (self_x + other_x) * 0.5F;
 
             if (sNdsNaturalProjectileKORecoveryActive != 0u)
             {
@@ -12048,6 +12059,19 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
                     stick_y[sNdsNaturalProjectileActorSlot] = -80;
                     sNdsNaturalCombatPassPressed = 1u;
                 }
+                break;
+            }
+            if ((actor->status_id == nFTCommonStatusWait) &&
+                (target->status_id == nFTCommonStatusWait) &&
+                (actor->ga == nMPKineticsGround) &&
+                (target->ga == nMPKineticsGround) &&
+                ((midpoint < -NDS_FIGHTER_NATURAL_PROJECTILE_CENTER_RANGE) ||
+                 (midpoint > NDS_FIGHTER_NATURAL_PROJECTILE_CENTER_RANGE)))
+            {
+                s8 center_stick = (midpoint < 0.0F) ? 40 : -40;
+
+                stick[sNdsNaturalProjectileActorSlot] = center_stick;
+                stick[1u - sNdsNaturalProjectileActorSlot] = center_stick;
                 break;
             }
             if (adx < 0.0F)

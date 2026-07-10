@@ -87,14 +87,10 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
-- WIP branch `codex/wip-natural-combat-source-start-collision` restores exact
-  source floor-segment sweeps and live ground friction; direct/menu modes
-  `161/162` are green without expectation changes. Mode `163` now completes
-  moveset `0x7ff`, projectile `0x3f`, and specials `0xfff`, but its post-KO
-  fireball still passes Fox without entering the live reflector callback
-  (`REFLECTOR=0x7`, proc count `0`). Continue from the first/minimum
-  fireball-to-reflector collision trace; do not seed positions or relax the
-  reflector expectation.
+- Full `ft/ftparam.c` remains deferred. Its two fighter-part transform cache
+  invalidators are now source-shaped in the narrow compatibility layer
+  (`ftparam.c:2161-2349`), replacing no-op stubs; mode `163` proves the
+  resulting joint world position with a natural fireball/reflector cycle.
 - Default `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`,
   `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1`, original `efmanager.c`, and Fox
   `ftfoxspeciallw.c` import the natural projectile/effect/reflector path for

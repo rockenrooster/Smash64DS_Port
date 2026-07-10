@@ -18461,3 +18461,25 @@ does not assert.
   `NAT_ATTACK=1,0` before any renderer draw. An isolated clean build of starting
   commit `b1a9d839a` reproduces it, so Boundary/RegressionCore are queued behind
   that pre-existing runtime debt rather than reported green or retuned here.
+
+## 2026-07-10 - Fighter transform cache and natural reflector
+
+- Replaced the no-op `ftParamsUpdateFighterPartsTransform*` seams with the
+  source cache invalidation split from `ftparam.c:2161-2349`. This restores the
+  contract used by `ftmain.c:942` and consumed by fighter world-position
+  reconstruction in `gmcollision.c:491-528`.
+- The first live trace proved Fox's source hit-detect range was intact but the
+  stale Mario hand matrix spawned the fireball about `4131` units left and
+  `1599` below Fox. With invalidation active, the original spawn path
+  (`ftmariospecialn.c:23-54`, `wpmariofireball.c:160-193`) reaches the imported
+  reflector collision naturally.
+- Mode `163` now recenters through controller input and stops at the
+  source-derived Mario/Fox jostle plus reflector reach: `112.5 + 112.5 + 350`
+  (`203_MarioMain.c:267`, `209_FoxMain.c:288`,
+  `208_FoxMainMotion.c:1605-1614`). No positions, statuses, floors, or verifier
+  expectations were changed.
+- Final proof: reflector mask `0xff`, callback count `1`, velocity
+  `49809 -> -49809`, owner kind Fox; moveset `0x7ff`, specials `0xfff`, and
+  stock `8 -> 6`. `verify-dev-fast -Build` (`359.8s`), Boundary (`124.1s`),
+  detached RegressionCore prebuild (`404.917s`, stamp `0.44s`), and no-build
+  RegressionCore (`255.4s`) all passed.

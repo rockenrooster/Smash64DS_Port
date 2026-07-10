@@ -46,9 +46,11 @@ Pupupu BGM playback, and a DS 3D hardware stage + fighter frame.
 The original fighter runtime is live: `gmcollision.c`, `ftmain.c`,
 `ftmanager.c`, `ftanim.c`, `ftanimend.c`, `ftkey.c`, common/Mario/Fox status
 tables, normal moves, weapons, effects, and Mario/Fox specials run through
-imported BattleShip code. `FTStruct` and `FTData` retain source-layout guards;
-mode `163` proves natural combat, KO/rebirth, HUD, audio parsing, one-track
-Pupupu BGM, and the current hardware-rendered battle scene.
+imported BattleShip code. The two fighter-part transform invalidators now
+follow `ftparam.c:2161-2349` instead of leaving cached joint matrices pinned.
+Mode `163` naturally centers the pair through controller input, then proves a
+Mario fireball reflected by Fox through imported `ftmain.c`/`gmcollision.c`:
+mask `0xff`, velocity `49809 -> -49809`, and owner kind Fox.
 
 The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
 and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
@@ -71,10 +73,10 @@ live. Capture
 more connected limbs for red/blue Mario and olive/brown Fox. Residual fragments,
 incomplete textures, and direction-light fidelity still block visual acceptance.
 
-Canonical screenshot gates report `32679/49152` non-clear, `15616/49152`
-dominant-green, `16917/49152` detail, `791/5616` fighter-region color, and
-`159/49152` adjacent-frame delta. Raw DS matrix/depth and cached submission
-remain debt; full fighter presentation currently runs at about `3.0fps`.
+Canonical screenshot gates report `32687/49152` non-clear, `15627/49152`
+dominant-green, `16920/49152` detail, `758/5616` fighter-region color, and
+`595/49152` adjacent-frame delta. Raw DS matrix/depth and cached submission
+remain debt; full fighter presentation currently runs at about `2.9fps`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -123,8 +125,8 @@ deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 Follow-ups: remaining fighter part/texture/light fidelity, source entry behavior,
 raw DS matrix/depth, wallpaper/SObj composition, renderer-cache 60fps
 cutover, FGM/voice, and the original sequence player.
-Mode `161` also has pre-existing natural Attack11 timeout debt at
-`NAT_ATTACK=1,0`; clean commit `b1a9d839a` reproduces it before renderer draw.
+The former mode-161 Attack11 and mode-163 reflector blockers are closed;
+direct/menu Boundary and RegressionCore pass without expectation changes.
 
 ## Verification
 

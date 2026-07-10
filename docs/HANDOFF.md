@@ -54,13 +54,14 @@ stream does. All-DL HW output is the full `320/306` Mario/Fox triangle set with
 zero rejects; canonical proof reports `gxram=729/2209`, geometry `0x222005`,
 selected parts `14/18`, and zero oracle mismatches.
 
-Runtime slice 2 graduated the original manager/status/animation path. Default
-builds import `ft/ftmanager.c`, the full original common/Mario/Fox status
-descriptor tables, and live `ftanim.c`/`ftanimend.c`/`ftkey.c`. Modes `39/40`,
-`53/54`, and `161/162` now rebuild movement, attack, live-hit,
-damage/recover, and guard coverage on that natural runtime. Legacy standalone
-gcDrawAll modes `57/58` and selected Fox Jab2 modes `159/160` were deleted
-instead of resurrecting their motion-extract and synthetic marker seams.
+Runtime slice 2 imports the original manager, common/Mario/Fox status tables,
+and live animation/key runtime. Modes `39/40`, `53/54`, and `161/162` rebuild
+movement, attack, damage/recover, and guard naturally; obsolete gcDrawAll modes
+`57/58` and selected Jab2 modes `159/160` were deleted.
+
+The local `ftParamsUpdateFighterPartsTransform*` seams now follow
+`ftparam.c:2161-2349`; mode `163` walks both fighters toward stage center and
+uses the source-derived jostle plus reflector reach before firing.
 
 `battle_playable` default: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now links
 original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`,
@@ -68,15 +69,15 @@ battle-critical `if/ifcommon.c` HUD paths, original `if/ifscreenflash.c`, the
 normal moveset imports, the weapon manager, Mario fireball, Fox blaster, the
 original effect manager, Fox reflector, Mario Super Jump Punch, Mario Tornado,
 Fox Fire Fox, original audio asset parsing, and one-track Pupupu BGM playback.
-The mode-163 proof reports `stock8->3`, `falls0->5`,
-`moveset=0x7ff phase=15`, `tilt=23/17/17`, `smash=13`, `aerial=19`,
-`landing=26`, `grab=3/1`, `throw=12/5/175`, `throwDmg=0->12`,
-`hud=dmg16/digits0x1060a stock9->4`, `projectile=... dmg=13`,
-`reflector=0xff proc=1 vx=49809->-49809`, `specials=0xfff phase=7`,
+The mode-163 proof reports `stock8->6`, `falls0->2`,
+`moveset=0x7ff phase=15`, `grab=18/1`, `throw=12/5/618`,
+`throwDmg=13->25`, `hud=dmg25/digits0x2050a stock9->7`,
+`projectile=spawn1/ok1/dmg7`, `reflector=0xff proc=1
+vx=49809->-49809 owner=Fox`, `specials=0xfff phase=7`,
 `audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695
 raw=4422960 resident=0 scratch=64416`,
-`bgm=track0 play=1 stop=1 refills=32 read=1114112 rate=44099 loop=0 hwloop=0 resident=65536`, and
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/582`. FGM/voice playback, original
+`bgm=track0 play=1 stop=1 rate=44099 resident=65536`, and
+`hwsubmit=42`, `hwtri=192`, `hwftr=2/626`. FGM/voice playback, original
 sequence-player import, and non-critical HUD/SObj/particle perimeter remain
 follow-up.
 It also gates the memory ledger: current arena headroom is `237948`, resident
@@ -136,13 +137,12 @@ For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical chunks:
 ```
 
 For shared-TU changes, use `RegressionCore` during the session. Tyler runs the full Regression sweep overnight with `scripts/start-overnight-regression.ps1`.
-Current mode `161` stalls at `NAT_ATTACK=1,0`; clean `b1a9d839a` reproduces it
-before renderer draw. Repair it before Boundary/RegressionCore; full stays overnight.
 Detach prebuilds expected to exceed 90 seconds and confirm by stamp:
 
 ```powershell
 .\scripts\build-verify-profile.ps1 -Profile RegressionCore -Detach
 .\scripts\build-verify-profile.ps1 -Profile RegressionCore -VerifyStamp
+.\scripts\verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3
 .\scripts\check-harness-registry.ps1
 .\scripts\check-gbi-decode-fixtures.ps1
 ```

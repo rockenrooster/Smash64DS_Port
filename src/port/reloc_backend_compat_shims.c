@@ -1332,14 +1332,56 @@ void ftParamProcStopEffect(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
+static void ndsFTParamsInvalidateFighterParts(DObj *joint, sb32 reset_mode)
+{
+    DObj *child;
+    FTParts *parts;
+
+    if (joint == NULL)
+    {
+        return;
+    }
+    parts = joint->user_data.p;
+    if (parts != NULL)
+    {
+        if ((reset_mode != FALSE) && (parts->transform_update_mode == 1))
+        {
+            parts->transform_update_mode = 0;
+        }
+        parts->unk_dobjtrans_word = 0;
+    }
+    for (child = joint->child; child != NULL; child = child->sib_next)
+    {
+        ndsFTParamsInvalidateFighterParts(child, reset_mode);
+    }
+}
+
 void ftParamsUpdateFighterPartsTransform(DObj *joint)
 {
-    (void)joint;
+    ndsFTParamsInvalidateFighterParts(joint, TRUE);
 }
 
 void ftParamsUpdateFighterPartsTransformAll(DObj *joint)
 {
-    (void)joint;
+    FTParts *parts;
+    DObj *child;
+
+    if (joint != NULL)
+    {
+        parts = joint->user_data.p;
+        if (parts != NULL)
+        {
+            if (parts->transform_update_mode == 1)
+            {
+                parts->transform_update_mode = 0;
+            }
+            parts->unk_dobjtrans_word = 0;
+        }
+        for (child = joint->child; child != NULL; child = child->sib_next)
+        {
+            ndsFTParamsInvalidateFighterParts(child, FALSE);
+        }
+    }
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunGuardOnActive != FALSE))
     {
