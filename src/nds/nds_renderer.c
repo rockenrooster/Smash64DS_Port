@@ -3849,11 +3849,102 @@ static void ndsRendererHardwareClipVertex(
         return;
     }
 
-    x = ndsRendererHardwareClampS64ToV16(((s64)vtx->x << 12) / vtx->w);
-    y = ndsRendererHardwareClampS64ToV16(((s64)vtx->y << 12) / vtx->w);
-    out_z = ndsRendererHardwareClampS64ToV16(((s64)z << 12) / vtx->w);
+    x = ndsRendererHardwareClampS64ToV16(
+        ((s64)vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
+    y = ndsRendererHardwareClampS64ToV16(
+        ((s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
+    out_z = ndsRendererHardwareClampS64ToV16(
+        ((s64)z * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
     ndsRendererProfileHWVertexRange(x, y, out_z);
     glVertex3v16(x, y, out_z);
+}
+
+static void ndsRendererHardwareClipVertexNdcDepth(
+    const NDSRendererClipVertex20p12 *vtx, v16 z)
+{
+    v16 x;
+    v16 y;
+
+    if ((vtx == NULL) || (vtx->w == 0))
+    {
+        return;
+    }
+
+    x = ndsRendererHardwareClampS64ToV16(
+        ((s64)vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
+    y = ndsRendererHardwareClampS64ToV16(
+        ((s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
+    ndsRendererProfileHWVertexRange(x, y, z);
+    glVertex3v16(x, y, z);
+}
+
+/* Keep the two matrix stages wide: the composed 20.12 clip Z can exceed s32
+ * before the perspective divide even when the final NDC depth is valid. */
+static s32 ndsRendererHardwareSourceNdcDepth(
+    const NDSRendererTraversalState *state,
+    const NDSRendererInputVertex *vtx,
+    v16 *out_depth)
+{
+    s64 eye[4];
+    s64 clip_z;
+    s64 clip_w;
+
+    if ((state == NULL) || (vtx == NULL) || (out_depth == NULL))
+    {
+        return FALSE;
+    }
+
+    if (state->modelview_valid != 0u)
+    {
+        const NDSRendererMatrix20p12 *m = &state->modelview;
+
+        eye[0] = (s64)m->m[0][0] * vtx->x +
+                 (s64)m->m[1][0] * vtx->y +
+                 (s64)m->m[2][0] * vtx->z + m->m[3][0];
+        eye[1] = (s64)m->m[0][1] * vtx->x +
+                 (s64)m->m[1][1] * vtx->y +
+                 (s64)m->m[2][1] * vtx->z + m->m[3][1];
+        eye[2] = (s64)m->m[0][2] * vtx->x +
+                 (s64)m->m[1][2] * vtx->y +
+                 (s64)m->m[2][2] * vtx->z + m->m[3][2];
+        eye[3] = (s64)m->m[0][3] * vtx->x +
+                 (s64)m->m[1][3] * vtx->y +
+                 (s64)m->m[2][3] * vtx->z + m->m[3][3];
+    }
+    else
+    {
+        eye[0] = (s64)vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX;
+        eye[1] = (s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX;
+        eye[2] = (s64)vtx->z * NDS_RENDERER_HW_PROJECTED_VERTEX;
+        eye[3] = NDS_RENDERER_HW_PROJECTED_VERTEX;
+    }
+
+    if (state->projection_valid != 0u)
+    {
+        const NDSRendererMatrix20p12 *p = &state->projection;
+
+        clip_z = ndsRendererRoundShiftS64(
+            eye[0] * p->m[0][2] + eye[1] * p->m[1][2] +
+            eye[2] * p->m[2][2] + eye[3] * p->m[3][2],
+            NDS_RENDERER_DS_MTX_FRAC_BITS);
+        clip_w = ndsRendererRoundShiftS64(
+            eye[0] * p->m[0][3] + eye[1] * p->m[1][3] +
+            eye[2] * p->m[2][3] + eye[3] * p->m[3][3],
+            NDS_RENDERER_DS_MTX_FRAC_BITS);
+    }
+    else
+    {
+        clip_z = eye[2];
+        clip_w = eye[3];
+    }
+    if (clip_w == 0)
+    {
+        return FALSE;
+    }
+
+    *out_depth = ndsRendererHardwareClampS64ToV16(
+        (clip_z * NDS_RENDERER_HW_PROJECTED_VERTEX) / clip_w);
+    return TRUE;
 }
 
 static void ndsRendererHardwareEndBatch(void)
@@ -3938,7 +4029,8 @@ static void ndsRendererHardwareSubmitVertex(
     s32 zbuffered,
     s32 decal_depth,
     s32 prim_depth,
-    s32 projected_z)
+    s32 projected_z,
+    s32 projected_z_is_ndc)
 {
     if (vtx == NULL)
     {
@@ -3986,7 +4078,15 @@ static void ndsRendererHardwareSubmitVertex(
     }
     else
     {
-        ndsRendererHardwareClipVertex(clip_vtx, projected_z);
+        if (projected_z_is_ndc != FALSE)
+        {
+            ndsRendererHardwareClipVertexNdcDepth(
+                clip_vtx, (v16)projected_z);
+        }
+        else
+        {
+            ndsRendererHardwareClipVertex(clip_vtx, projected_z);
+        }
     }
 }
 
@@ -4045,7 +4145,7 @@ static void ndsRendererSubmitHardwareTriangle(
     s32 transformed_ready;
     s32 projected_submit;
     s32 no_oracle;
-    s32 projected_z = 0;
+    s32 projected_z[3] = { 0, 0, 0 };
 
     if (stats == NULL)
     {
@@ -4177,13 +4277,38 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
     }
-    if (prim_depth != FALSE)
+    if (projected_submit != FALSE)
     {
-        projected_z = (s32)(stats->prim_depth & 0xffffu);
+        v16 depth;
+
+        if (ndsRendererHardwareSourceNdcDepth(state, v0, &depth) == FALSE)
+        {
+            stats->hardware_oracle_reject_count++;
+            return;
+        }
+        projected_z[0] = depth;
+        if (ndsRendererHardwareSourceNdcDepth(state, v1, &depth) == FALSE)
+        {
+            stats->hardware_oracle_reject_count++;
+            return;
+        }
+        projected_z[1] = depth;
+        if (ndsRendererHardwareSourceNdcDepth(state, v2, &depth) == FALSE)
+        {
+            stats->hardware_oracle_reject_count++;
+            return;
+        }
+        projected_z[2] = depth;
+    }
+    else if (prim_depth != FALSE)
+    {
+        projected_z[0] = projected_z[1] = projected_z[2] =
+            (s32)(stats->prim_depth & 0xffffu);
     }
     else
     {
-        projected_z = ndsRendererHardwareNextProjectedDepth();
+        projected_z[0] = projected_z[1] = projected_z[2] =
+            ndsRendererHardwareNextProjectedDepth();
     }
     if (use_texture != FALSE)
     {
@@ -4203,19 +4328,19 @@ static void ndsRendererSubmitHardwareTriangle(
         use_vertex_color, use_texture, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z);
+        zbuffered, decal_depth, prim_depth, projected_z[0], projected_submit);
     ndsRendererHardwareSubmitVertex(
         stats, v1, &state->vertices[i1], material_color, use_material_color,
         use_vertex_color, use_texture, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z);
+        zbuffered, decal_depth, prim_depth, projected_z[1], projected_submit);
     ndsRendererHardwareSubmitVertex(
         stats, v2, &state->vertices[i2], material_color, use_material_color,
         use_vertex_color, use_texture, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z);
+        zbuffered, decal_depth, prim_depth, projected_z[2], projected_submit);
     glEnd();
     glDisable(GL_ALPHA_TEST);
 

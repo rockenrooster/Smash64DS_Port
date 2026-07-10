@@ -179,7 +179,11 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
 
 #if NDS_DEV_LIVE_INPUT_PREVIEW
     gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_TIME;
+#if NDS_DEV_RESULTS_VISUAL_SMOKE
+    gSCManagerTransferBattleState.time_limit = 1;
+#else
     gSCManagerTransferBattleState.time_limit = 5;
+#endif
     gSCManagerTransferBattleState.item_toggles = 0u;
     gSCManagerTransferBattleState.item_appearance_rate =
         nSCBattleItemSwitchNone;

@@ -103,6 +103,24 @@ enum {
 };
 
 #define LBBACKUP_UNLOCK_MASK_INISHIE (1u << nLBBackupUnlockInishie)
+#define LBBACKUP_UNLOCK_MASK_ITEMSWITCH (1u << nLBBackupUnlockItemSwitch)
+#define LBBACKUP_MASK_STAGE(kind) (1u << (kind))
+#define LBBACKUP_GROUND_MASK_ALL \
+    (LBBACKUP_MASK_STAGE(nGRKindCastle) | \
+     LBBACKUP_MASK_STAGE(nGRKindSector) | \
+     LBBACKUP_MASK_STAGE(nGRKindJungle) | \
+     LBBACKUP_MASK_STAGE(nGRKindZebes) | \
+     LBBACKUP_MASK_STAGE(nGRKindHyrule) | \
+     LBBACKUP_MASK_STAGE(nGRKindYoster) | \
+     LBBACKUP_MASK_STAGE(nGRKindPupupu) | \
+     LBBACKUP_MASK_STAGE(nGRKindYamabuki))
+
+typedef enum SCBattleGameRules {
+    nSCBattleGameRuleTime,
+    nSCBattleGameRuleStock,
+    nSCBattleGameRuleBonus,
+    nSCBattleGameRule1PGame
+} SCBattleGameRules;
 
 enum {
     nSCBattleGameStatusWait,

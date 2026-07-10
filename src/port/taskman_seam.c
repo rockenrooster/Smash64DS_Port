@@ -3,6 +3,12 @@
 extern u32 sySchedulerGetTicCount(void);
 extern void sySchedulerSetTicCount(u32 tics);
 
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+extern void ndsMNVSResultsRecordFrame(void);
+extern void ndsSObjPreviewBeginFrame(void);
+extern void ndsSObjPreviewEndFrame(void);
+#endif
+
 void ndsResetStartupDiagnostics(void)
 {
     gNdsSceneBoundaryResult = 0;
@@ -6081,6 +6087,61 @@ static void ndsRunBoundedOpeningPortraitsDraw(struct SYTaskFunction *tfunc)
 void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 {
     ndsPrepareTaskmanRun();
+
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+    {
+        const u32 fast_update_max = 132u;
+        u32 updates = 0;
+
+        ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
+        while ((tfunc != NULL) && (tfunc->task_update != NULL) &&
+               (sSYTaskmanStatus != nSYTaskmanStatusLoadScene) &&
+               ((NDS_HARNESS_FAST_LOGIC == 0) ||
+                (updates < fast_update_max)))
+        {
+            if (NDS_HARNESS_FAST_LOGIC == 0)
+            {
+                (void)ndsPlatformReadInput();
+                syControllerReadDeviceData();
+                syControllerUpdateGlobalData();
+            }
+            tfunc->task_update(tfunc);
+            dSYTaskmanUpdateCount++;
+            updates++;
+            ndsMNVSResultsRecordFrame();
+
+            /* Results owns fade progression in display callbacks; preserve the
+             * source one-update/one-draw contract in fast verification too. */
+            {
+                gNdsRendererProfileFrameCount++;
+                /* taskman.c:1093-1100 resets these arenas before every
+                 * source scene draw. */
+                syTaskmanResetGraphicsHeap();
+                func_80004AB0();
+                ndsSObjPreviewBeginFrame();
+                if (tfunc->scene_draw != NULL)
+                {
+                    tfunc->scene_draw();
+                    dSYTaskmanFrameCount++;
+                }
+                ndsSObjPreviewEndFrame();
+                ndsPlatformEndFrame();
+            }
+        }
+
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
+        {
+            ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
+            return;
+        }
+        osStopThread(NULL);
+        return;
+    }
+#endif
 
     if (gSCManagerSceneData.scene_curr == nSCKindOpeningRoom)
     {

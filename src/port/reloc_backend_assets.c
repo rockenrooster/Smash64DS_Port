@@ -56,6 +56,20 @@
 #define NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLACK 0x1au
 #define NDS_RELOC_ASSET_MN_MAPS 0x1eu
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
+#define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
+#define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_FT_EMBLEM_MODELS 0x23u
+#define NDS_RELOC_ASSET_TRANSITION_AEROPLANE 0x28u
+#define NDS_RELOC_ASSET_TRANSITION_CHECK 0x29u
+#define NDS_RELOC_ASSET_TRANSITION_GAKUBUTHI 0x2au
+#define NDS_RELOC_ASSET_TRANSITION_KANNON 0x2bu
+#define NDS_RELOC_ASSET_TRANSITION_STAR 0x2cu
+#define NDS_RELOC_ASSET_TRANSITION_SUDARE1 0x2du
+#define NDS_RELOC_ASSET_TRANSITION_SUDARE2 0x2eu
+#define NDS_RELOC_ASSET_TRANSITION_BLOCK 0x30u
+#define NDS_RELOC_ASSET_TRANSITION_ROTSCALE 0x31u
+#define NDS_RELOC_ASSET_TRANSITION_CURTAIN 0x32u
+#define NDS_RELOC_ASSET_TRANSITION_CAMERA 0x33u
 #define NDS_RELOC_ASSET_STAGE_CASTLE 0x1005fu
 #define NDS_RELOC_ASSET_STAGE_DREAM_LAND 0x10058u
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_113 0x71u
@@ -199,17 +213,23 @@
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_G 0x1f08u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_H 0x2408u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_I 0x26b8u
+#define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_J 0x2a90u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_K 0x2f98u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_L 0x3358u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_M 0x3980u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_N 0x3e88u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_O 0x44b0u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_P 0x4890u
+#define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_Q 0x4f10u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_R 0x5418u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_S 0x57f0u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_U 0x60d8u
+#define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_V 0x65d8u
+#define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_W 0x6c00u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_X 0x7108u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_Y 0x7608u
+#define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_Z 0x7ae8u
+#define NDS_RELOC_SYMBOL_IF_ANNOUNCE_PERIOD 0x7e50u
 #define NDS_RELOC_SYMBOL_OPENING_COMMON_MARIO_CAM_ANIM 0x0000u
 #define NDS_RELOC_SYMBOL_OPENING_COMMON_DONKEY_CAM_ANIM 0x0030u
 #define NDS_RELOC_SYMBOL_OPENING_COMMON_SAMUS_CAM_ANIM 0x0060u
@@ -540,6 +560,15 @@ typedef struct NDSOpeningActionPreviewDesc {
     s16 y;
 } NDSOpeningActionPreviewDesc;
 
+typedef struct NDSVSResultsSpriteDesc {
+    u32 offset;
+    u16 width;
+    u16 height;
+    u16 bitmap_count;
+    u8 bmfmt;
+    u8 bmsiz;
+} NDSVSResultsSpriteDesc;
+
 typedef struct NDSOpeningActionPreviewCache {
     u32 asset_id;
     u32 offset;
@@ -747,6 +776,19 @@ static const NDSRelocSymbolProbe sNdsRelocSymbolProbes[] = {
     },
 };
 
+static const NDSVSResultsSpriteDesc sNdsVSResultsSpriteDescs[] = {
+    { 0x0358u, 62u, 13u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
+    { 0x0990u, 83u, 17u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
+    { 0x0d38u, 62u, 13u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
+    { 0x10d8u, 62u, 13u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
+    { 0x49e8u, 15u, 12u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
+    { 0x4b08u, 15u, 12u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
+    { 0x4c28u, 15u, 12u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
+    { 0x4d48u, 15u, 12u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
+    { 0xd5c8u, 300u, 220u, 9u, G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0xe2a0u, 42u, 35u, 2u, G_IM_FMT_RGBA, G_IM_SIZ_16b }
+};
+
 static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
     {
         &llMNTitleCutoutSprite,
@@ -891,11 +933,12 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
     { &llMNVSModeVSTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_VS_TEXT },
 };
 
-#define NDS_IFCOMMON_ASSET_SYMBOL(asset, name, value) { asset, &name, value },
-static const NDSRelocKnownAssetSymbol sNdsIFCommonSymbols[] = {
-    NDS_IFCOMMON_RELOC_SYMBOLS(NDS_IFCOMMON_ASSET_SYMBOL)
+#define NDS_KNOWN_ASSET_SYMBOL(asset, name, value) { asset, &name, value },
+static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
+    NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
 };
-#undef NDS_IFCOMMON_ASSET_SYMBOL
+#undef NDS_KNOWN_ASSET_SYMBOL
 
 static u32 ndsRelocFileID(const void *file_id)
 {
@@ -1227,6 +1270,20 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonBattlePauseFileID)) return NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE;
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
+    if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llFTEmblemModelsFileID)) return NDS_RELOC_ASSET_FT_EMBLEM_MODELS;
+    if (token == ndsRelocFileID(&llFTStocksZakoFileID)) return NDS_RELOC_ASSET_FT_STOCKS_ZAKO;
+    if (token == ndsRelocFileID(&llLBTransitionAeroplaneFileID)) return NDS_RELOC_ASSET_TRANSITION_AEROPLANE;
+    if (token == ndsRelocFileID(&llLBTransitionCheckFileID)) return NDS_RELOC_ASSET_TRANSITION_CHECK;
+    if (token == ndsRelocFileID(&llLBTransitionGakubuthiFileID)) return NDS_RELOC_ASSET_TRANSITION_GAKUBUTHI;
+    if (token == ndsRelocFileID(&llLBTransitionKannonFileID)) return NDS_RELOC_ASSET_TRANSITION_KANNON;
+    if (token == ndsRelocFileID(&llLBTransitionStarFileID)) return NDS_RELOC_ASSET_TRANSITION_STAR;
+    if (token == ndsRelocFileID(&llLBTransitionSudare1FileID)) return NDS_RELOC_ASSET_TRANSITION_SUDARE1;
+    if (token == ndsRelocFileID(&llLBTransitionSudare2FileID)) return NDS_RELOC_ASSET_TRANSITION_SUDARE2;
+    if (token == ndsRelocFileID(&llLBTransitionBlockFileID)) return NDS_RELOC_ASSET_TRANSITION_BLOCK;
+    if (token == ndsRelocFileID(&llLBTransitionRotScaleFileID)) return NDS_RELOC_ASSET_TRANSITION_ROTSCALE;
+    if (token == ndsRelocFileID(&llLBTransitionCurtainFileID)) return NDS_RELOC_ASSET_TRANSITION_CURTAIN;
+    if (token == ndsRelocFileID(&llLBTransitionCameraFileID)) return NDS_RELOC_ASSET_TRANSITION_CAMERA;
     if (token == ndsRelocFileID(&llSYKseg1ValidateFileID)) return NDS_RELOC_ASSET_SY_KSEG1_VALIDATE;
     if (token == ndsRelocFileID(&llMVCommonFileID)) return NDS_RELOC_ASSET_MV_COMMON;
     if (token == ndsRelocFileID(&llMVOpeningCommonFileID)) return NDS_RELOC_ASSET_OPENING_COMMON;
@@ -2784,6 +2841,43 @@ static s32 ndsRelocNormalizeSpriteBitmapTable(NDSRelocLoadedFile *loaded,
     return TRUE;
 }
 
+static void ndsRelocNormalizeVSResultsSprites(NDSRelocLoadedFile *loaded)
+{
+    u32 i;
+
+    if ((loaded == NULL) ||
+        (loaded->asset_id != NDS_RELOC_ASSET_MN_VS_RESULTS))
+    {
+        return;
+    }
+
+    for (i = 0; i < ARRAY_COUNT(sNdsVSResultsSpriteDescs); i++)
+    {
+        const NDSVSResultsSpriteDesc *desc =
+            &sNdsVSResultsSpriteDescs[i];
+        Sprite *sprite;
+
+        if (ndsRelocRangeInLoadedFile(loaded, desc->offset,
+                                      sizeof(Sprite)) == FALSE)
+        {
+            continue;
+        }
+        sprite = (Sprite *)((u8 *)loaded->data + desc->offset);
+        if (((u32)(u16)sprite->width == desc->width) &&
+            ((u32)(u16)sprite->height == desc->height) &&
+            ((u32)(u16)sprite->nbitmaps == desc->bitmap_count) &&
+            (sprite->bmfmt == desc->bmfmt) &&
+            (sprite->bmsiz == desc->bmsiz))
+        {
+            continue;
+        }
+        ndsRelocNormalizeSpriteHeaderFields(sprite, desc->bmfmt,
+                                            desc->bmsiz);
+        (void)ndsRelocNormalizeSpriteBitmapTable(loaded, sprite,
+                                                 desc->bitmap_count);
+    }
+}
+
 static void ndsRelocNormalizeN64LogoSprite(NDSRelocLoadedFile *loaded)
 {
     Sprite *sprite;
@@ -2982,6 +3076,8 @@ static void ndsRelocNormalizeIFAnnounceMarioSprites(NDSRelocLoadedFile *loaded)
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_I);
     ndsRelocNormalizeIFAnnounceSprite(
+        loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_J);
+    ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_K);
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_L);
@@ -2994,15 +3090,25 @@ static void ndsRelocNormalizeIFAnnounceMarioSprites(NDSRelocLoadedFile *loaded)
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_P);
     ndsRelocNormalizeIFAnnounceSprite(
+        loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_Q);
+    ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_R);
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_S);
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_U);
     ndsRelocNormalizeIFAnnounceSprite(
+        loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_V);
+    ndsRelocNormalizeIFAnnounceSprite(
+        loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_W);
+    ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_X);
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_Y);
+    ndsRelocNormalizeIFAnnounceSprite(
+        loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_Z);
+    ndsRelocNormalizeIFAnnounceSprite(
+        loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_PERIOD);
 }
 
 static s32 ndsRelocNormalizeTitleSprite(NDSRelocLoadedFile *loaded,
@@ -3502,13 +3608,13 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
         *out_offset = NDS_RELOC_SYMBOL_N64_LOGO_SPRITE;
         return TRUE;
     }
-    for (i = 0; i < ARRAY_COUNT(sNdsIFCommonSymbols); i++)
+    for (i = 0; i < ARRAY_COUNT(sNdsKnownAssetSymbols); i++)
     {
-        if ((sNdsIFCommonSymbols[i].asset_id != NDS_RELOC_ASSET_INVALID) &&
-            (loaded->asset_id == sNdsIFCommonSymbols[i].asset_id) &&
-            (symbol == sNdsIFCommonSymbols[i].symbol))
+        if ((sNdsKnownAssetSymbols[i].asset_id != NDS_RELOC_ASSET_INVALID) &&
+            (loaded->asset_id == sNdsKnownAssetSymbols[i].asset_id) &&
+            (symbol == sNdsKnownAssetSymbols[i].symbol))
         {
-            *out_offset = sNdsIFCommonSymbols[i].offset;
+            *out_offset = sNdsKnownAssetSymbols[i].offset;
             return TRUE;
         }
     }
@@ -4628,6 +4734,10 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
                             {
                                 ndsRelocNormalizeIFAnnounceMarioSprites(
                                     loaded);
+                            }
+                            if (asset_id == NDS_RELOC_ASSET_MN_VS_RESULTS)
+                            {
+                                ndsRelocNormalizeVSResultsSprites(loaded);
                             }
                             if (asset_id ==
                                 NDS_RELOC_ASSET_MN_TITLE_FIRE_ANIM)

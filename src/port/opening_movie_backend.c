@@ -4443,7 +4443,28 @@ static void ndsOpeningRoomRecordDrawCamera(GObj *gobj, CObj *cobj)
 
 void func_80017DBC(GObj *gobj)
 {
-    (void)gobj;
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    extern volatile u32 gNdsVSResultsCameraProcCount;
+#endif
+    CObj *cobj;
+
+    if (gobj == NULL)
+    {
+        return;
+    }
+    cobj = CObjGetStruct(gobj);
+    if (cobj == NULL)
+    {
+        return;
+    }
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+    {
+        gNdsVSResultsCameraProcCount++;
+    }
+#endif
+    gcCaptureCameraGObj(
+        gobj, (cobj->flags & COBJ_FLAG_IDENTIFIER) ? TRUE : FALSE);
 }
 
 void func_80017EC0(GObj *gobj)

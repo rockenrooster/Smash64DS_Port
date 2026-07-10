@@ -24,6 +24,8 @@ void lbCommonDrawSObjNoAttr(GObj *gobj);
 void lbCommonPrepSObjAttr(Gfx **dls, SObj *sobj);
 void lbCommonPrepSObjDraw(Gfx **dls, SObj *sobj);
 void lbCommonClearExternSpriteParams(void);
+void ndsSObjPreviewBeginFrame(void);
+void ndsSObjPreviewEndFrame(void);
 void lbCommonSetExternSpriteParams(Sprite *sprite);
 SObj *lbCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite);
 GObj *lbCommonMakeSpriteGObj(u32 id, void (*func_run)(GObj *), s32 link,
@@ -68,5 +70,6 @@ void mnVSModeStartScene(void);
 void mnVSOptionsStartScene(void);
 void mnVSRecordStartScene(void);
 void mnVSResultsStartScene(void);
+void ndsMNVSResultsRecordFrame(void);
 
 #endif

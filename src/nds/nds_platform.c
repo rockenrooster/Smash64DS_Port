@@ -61,6 +61,12 @@ static u32 sOriginalSpritePreviewHeight;
 static s32 sOriginalSpritePreviewX;
 static s32 sOriginalSpritePreviewY;
 static u32 sOriginalSpritePreviewReady;
+#if NDS_RENDERER_HW_TRIANGLES
+static int sOriginalSpriteOverlayBg = -1;
+static int sOriginalSpriteOverlayForegroundBg = -1;
+static s32 sOriginalSpriteOverlayEnabled;
+static s32 sOriginalSpriteOverlayNeedsFlush;
+#endif
 static u16 sOriginalSpriteDisplayPreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT];
@@ -83,6 +89,7 @@ static u32 sDebugTextReady;
 volatile u32 gNdsOriginalSpritePreviewReady;
 volatile u32 gNdsOriginalSpritePreviewCommitCount;
 volatile u32 gNdsOriginalSpritePreviewDrawCount;
+/* These retain the last committed frame while a new scratch layer is built. */
 volatile u32 gNdsOriginalSpritePreviewDisplayWidth;
 volatile u32 gNdsOriginalSpritePreviewDisplayHeight;
 volatile u32 gNdsOriginalDLPreviewReady;
@@ -111,7 +118,7 @@ void ndsPlatformInit(void)
     cpuStartTiming(0);
 
 #if NDS_RENDERER_HW_TRIANGLES
-    videoSetMode(MODE_0_3D);
+    videoSetMode(MODE_5_3D | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
     vramSetBankA(VRAM_A_TEXTURE);
     vramSetBankB(VRAM_B_TEXTURE);
     vramSetBankE(VRAM_E_TEX_PALETTE);
@@ -126,6 +133,21 @@ void ndsPlatformInit(void)
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    vramSetBankC(VRAM_C_MAIN_BG_0x06000000);
+    vramSetBankD(VRAM_D_MAIN_BG_0x06020000);
+    sOriginalSpriteOverlayBg =
+        bgInit(2, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
+    sOriginalSpriteOverlayForegroundBg =
+        bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 8, 0);
+    bgSetPriority(sOriginalSpriteOverlayForegroundBg, 0);
+    bgSetPriority(0, 1);
+    bgSetPriority(sOriginalSpriteOverlayBg, 2);
+    REG_BLDCNT = BLEND_ALPHA | BLEND_SRC_BG0 | BLEND_DST_BG2;
+    REG_BLDALPHA = 16u | (16u << 8);
+    dmaFillHalfWords(0, bgGetGfxPtr(sOriginalSpriteOverlayBg),
+                     256u * 256u * sizeof(u16));
+    dmaFillHalfWords(0, bgGetGfxPtr(sOriginalSpriteOverlayForegroundBg),
+                     256u * 256u * sizeof(u16));
 #else
     videoSetMode(MODE_FB0);
     vramSetBankA(VRAM_A_LCD);
@@ -238,8 +260,6 @@ u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
     sOriginalSpriteDisplayPreviewWidth = 0;
     sOriginalSpriteDisplayPreviewHeight = 0;
     gNdsOriginalSpritePreviewReady = 0;
-    gNdsOriginalSpritePreviewDisplayWidth = 0;
-    gNdsOriginalSpritePreviewDisplayHeight = 0;
     for (row = 0; row < height; row++)
     {
         memset(&sOriginalSpritePreview[
@@ -315,7 +335,7 @@ static void ndsPlatformScaleOriginalSpritePreviewNearest(s32 dst_w, s32 dst_h)
     }
 }
 
-void ndsPlatformCommitOriginalSpritePreview(void)
+void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
 {
     s32 dst_w;
     s32 dst_h;
@@ -368,6 +388,71 @@ void ndsPlatformCommitOriginalSpritePreview(void)
     gNdsOriginalSpritePreviewDisplayWidth = (u32)dst_w;
     gNdsOriginalSpritePreviewDisplayHeight = (u32)dst_h;
     gNdsOriginalSpritePreviewCommitCount++;
+
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sOriginalSpriteOverlayEnabled != FALSE)
+    {
+        int bg = (is_foreground != FALSE) ?
+            sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
+        u16 *overlay;
+        s32 y;
+
+        if (bg < 0)
+        {
+            return;
+        }
+        overlay = (u16 *)bgGetGfxPtr(bg);
+        dmaFillHalfWords(0, overlay, 256u * 256u * sizeof(u16));
+        for (y = 0; y < dst_h; y++)
+        {
+            memcpy(&overlay[y * 256],
+                   &sOriginalSpriteDisplayPreview[
+                       y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH],
+                   (size_t)dst_w * sizeof(u16));
+        }
+    }
+#endif
+}
+
+void ndsPlatformCommitOriginalSpritePreview(void)
+{
+    ndsPlatformCommitOriginalSpritePreviewLayer(FALSE);
+}
+
+void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    int bg = (is_foreground != FALSE) ?
+        sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
+
+    if (bg >= 0)
+    {
+        dmaFillHalfWords(0, bgGetGfxPtr(bg),
+                         256u * 256u * sizeof(u16));
+    }
+#else
+    (void)is_foreground;
+#endif
+}
+
+void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if ((is_enabled != FALSE) &&
+        (sOriginalSpriteOverlayEnabled == FALSE))
+    {
+        sOriginalSpriteOverlayNeedsFlush = TRUE;
+    }
+    sOriginalSpriteOverlayEnabled = is_enabled;
+    glClearColor(2, 3, 6, (is_enabled != FALSE) ? 0 : 31);
+    if ((is_enabled == FALSE) && (sOriginalSpriteOverlayBg >= 0))
+    {
+        ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
+        ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
+    }
+#else
+    (void)is_enabled;
+#endif
 }
 
 void ndsPlatformClearOriginalSpritePreview(void)
@@ -380,8 +465,6 @@ void ndsPlatformClearOriginalSpritePreview(void)
     sOriginalSpriteDisplayPreviewWidth = 0;
     sOriginalSpriteDisplayPreviewHeight = 0;
     gNdsOriginalSpritePreviewReady = 0;
-    gNdsOriginalSpritePreviewDisplayWidth = 0;
-    gNdsOriginalSpritePreviewDisplayHeight = 0;
     memset(sOriginalSpritePreview, 0, sizeof(sOriginalSpritePreview));
     memset(sOriginalSpriteDisplayPreview, 0,
            sizeof(sOriginalSpriteDisplayPreview));
@@ -953,15 +1036,21 @@ void ndsPlatformRenderDebugHud(void)
 void ndsPlatformEndFrame(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
-    if (ndsRendererHardwareConsumeSubmittedFrame() != 0u)
+    u32 submitted = ndsRendererHardwareConsumeSubmittedFrame();
+
+    if ((submitted != 0u) || (sOriginalSpriteOverlayNeedsFlush != FALSE))
     {
-        gNdsHardwareRendererSubmittedFrameCount++;
+        if (submitted != 0u)
+        {
+            gNdsHardwareRendererSubmittedFrameCount++;
+        }
         gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;
         gNdsHardwareRendererVertexRamCount = GFX_VERTEX_RAM_USAGE;
         gNdsHardwareRendererStatus = GFX_STATUS;
         gNdsHardwareRendererControl = GFX_CONTROL;
-        glFlush(GL_TRANS_MANUALSORT | GL_WBUFFERING);
+        glFlush(GL_TRANS_MANUALSORT);
         gNdsHardwareRendererFlushCount++;
+        sOriginalSpriteOverlayNeedsFlush = FALSE;
     }
     swiWaitForVBlank();
     sTicks++;

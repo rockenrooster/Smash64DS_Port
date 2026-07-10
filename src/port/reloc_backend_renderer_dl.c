@@ -10,7 +10,6 @@
 
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
-#define NDS_RENDERER_ADAPTER_HW_WORLD_SCALE 256.0F
 #define NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX 64u
 #define NDS_RENDERER_ADAPTER_G_TX_LOADTILE 7u
 #define NDS_RENDERER_ADAPTER_G_TX_RENDERTILE 0u
@@ -85,6 +84,26 @@ static void ndsRendererAdapterMulInto(NDSRendererMatrix20p12 *target,
     }
 }
 
+static void ndsRendererAdapterMulBefore(NDSRendererMatrix20p12 *target,
+                                        const NDSRendererMatrix20p12 *incoming,
+                                        u32 *valid)
+{
+    if ((target == NULL) || (incoming == NULL) || (valid == NULL))
+    {
+        return;
+    }
+
+    if (*valid != 0u)
+    {
+        ndsRendererMtxMul20p12(incoming, target, target);
+    }
+    else
+    {
+        *target = *incoming;
+        *valid = TRUE;
+    }
+}
+
 static void ndsRendererAdapterMtxFromN64(
     const Mtx *src, NDSRendererMatrix20p12 *dst)
 {
@@ -135,15 +154,6 @@ static void ndsRendererAdapterMtxFromF(
             dst->m[row][col] = ndsRendererAdapterFloatTo20p12(value);
         }
     }
-}
-
-static f32 ndsRendererAdapterProjectionDepth(f32 value)
-{
-#if NDS_RENDERER_HW_TRIANGLES
-    return value / NDS_RENDERER_ADAPTER_HW_WORLD_SCALE;
-#else
-    return value;
-#endif
 }
 
 static void ndsRendererAdapterBuildDObjFallbackMtx(DObj *dobj, Mtx *mtx)
@@ -848,10 +858,8 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
             syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
                               cobj->projection.persp.fovy,
                               cobj->projection.persp.aspect,
-                              ndsRendererAdapterProjectionDepth(
-                                  cobj->projection.persp.near),
-                              ndsRendererAdapterProjectionDepth(
-                                  cobj->projection.persp.far),
+                              cobj->projection.persp.near,
+                              cobj->projection.persp.far,
                               cobj->projection.persp.scale);
             ndsRendererAdapterMtxFromN64(&mtx, &persp);
             ndsRendererMtxMul20p12(&lookat, &persp, projection);
@@ -862,10 +870,8 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
             syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
                               cobj->projection.persp.fovy,
                               cobj->projection.persp.aspect,
-                              ndsRendererAdapterProjectionDepth(
-                                  cobj->projection.persp.near),
-                              ndsRendererAdapterProjectionDepth(
-                                  cobj->projection.persp.far),
+                              cobj->projection.persp.near,
+                              cobj->projection.persp.far,
                               cobj->projection.persp.scale);
             ndsRendererAdapterMtxFromN64(&mtx, projection);
             *projection_valid = TRUE;
@@ -874,10 +880,8 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
             syMatrixPersp(&mtx, &cobj->projection.persp.norm,
                           cobj->projection.persp.fovy,
                           cobj->projection.persp.aspect,
-                          ndsRendererAdapterProjectionDepth(
-                              cobj->projection.persp.near),
-                          ndsRendererAdapterProjectionDepth(
-                              cobj->projection.persp.far),
+                          cobj->projection.persp.near,
+                          cobj->projection.persp.far,
                           cobj->projection.persp.scale);
             ndsRendererAdapterMtxFromN64(&mtx, projection);
             *projection_valid = TRUE;
@@ -888,17 +892,16 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
                           cobj->projection.ortho.r,
                           cobj->projection.ortho.b,
                           cobj->projection.ortho.t,
-                          ndsRendererAdapterProjectionDepth(
-                              cobj->projection.ortho.n),
-                          ndsRendererAdapterProjectionDepth(
-                              cobj->projection.ortho.f),
+                          cobj->projection.ortho.n,
+                          cobj->projection.ortho.f,
                           cobj->projection.ortho.scale);
             ndsRendererAdapterMtxFromN64(&mtx, projection);
             *projection_valid = TRUE;
             break;
         case 6:
         case 7:
-            syMatrixLookAt(&mtx, cobj->vec.eye.x, cobj->vec.eye.y,
+            syMatrixLookAt(&mtx,
+                           cobj->vec.eye.x, cobj->vec.eye.y,
                            cobj->vec.eye.z, cobj->vec.at.x,
                            cobj->vec.at.y, cobj->vec.at.z,
                            cobj->vec.up.x, cobj->vec.up.y,
@@ -906,8 +909,8 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
             ndsRendererAdapterMtxFromN64(&mtx, &incoming);
             if (xobj->kind == 6)
             {
-                ndsRendererAdapterMulInto(projection, &incoming,
-                                          projection_valid);
+                ndsRendererAdapterMulBefore(projection, &incoming,
+                                            projection_valid);
             }
             else
             {
@@ -917,15 +920,16 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
             break;
         case 8:
         case 9:
-            syMatrixModLookAt(&mtx, cobj->vec.eye.x, cobj->vec.eye.y,
+            syMatrixModLookAt(&mtx,
+                              cobj->vec.eye.x, cobj->vec.eye.y,
                               cobj->vec.eye.z, cobj->vec.at.x,
                               cobj->vec.at.y, cobj->vec.at.z,
                               cobj->vec.up.x, 0.0F, 1.0F, 0.0F);
             ndsRendererAdapterMtxFromN64(&mtx, &incoming);
             if (xobj->kind == 8)
             {
-                ndsRendererAdapterMulInto(projection, &incoming,
-                                          projection_valid);
+                ndsRendererAdapterMulBefore(projection, &incoming,
+                                            projection_valid);
             }
             else
             {
@@ -935,15 +939,16 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
             break;
         case 10:
         case 11:
-            syMatrixModLookAt(&mtx, cobj->vec.eye.x, cobj->vec.eye.y,
+            syMatrixModLookAt(&mtx,
+                              cobj->vec.eye.x, cobj->vec.eye.y,
                               cobj->vec.eye.z, cobj->vec.at.x,
                               cobj->vec.at.y, cobj->vec.at.z,
                               cobj->vec.up.x, 0.0F, 0.0F, 1.0F);
             ndsRendererAdapterMtxFromN64(&mtx, &incoming);
             if (xobj->kind == 10)
             {
-                ndsRendererAdapterMulInto(projection, &incoming,
-                                          projection_valid);
+                ndsRendererAdapterMulBefore(projection, &incoming,
+                                            projection_valid);
             }
             else
             {
@@ -977,9 +982,7 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
     }
 
     syMatrixPerspFast(&mtx, &norm, 38.0F, 15.0F / 11.0F,
-                      ndsRendererAdapterProjectionDepth(256.0F),
-                      ndsRendererAdapterProjectionDepth(39936.0F),
-                      1.0F);
+                      256.0F, 39936.0F, 1.0F);
     ndsRendererAdapterMtxFromN64(&mtx, projection);
     *projection_valid = TRUE;
 
@@ -5618,6 +5621,7 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
 {
     extern void ndsBaseFTDisplayMainProcDisplay(GObj *fighter_gobj);
     extern sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
     Mtx camera_mtx;
     u32 i;
 
@@ -5633,7 +5637,13 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
         gSYTaskmanDLHeads[i] = sNdsFighterDisplayContract.scratch[i];
     }
     sNdsFighterDisplayContract.active = TRUE;
-    if ((gGMCameraGObj != NULL) &&
+    /* ftdisplaymain.c:1093-1129 only needs the battle visibility matrix for
+     * player/CPU/game-key fighters. Results fighters are Demo fighters. */
+    if ((fp != NULL) &&
+        ((fp->pkind == nFTPlayerKindMan) ||
+         (fp->pkind == nFTPlayerKindCom) ||
+         (fp->pkind == nFTPlayerKindGameKey)) &&
+        (gGMCameraGObj != NULL) &&
         (CObjGetStruct(gGMCameraGObj) != NULL))
     {
         /* BattleShip gmcamera.c:985-1015 prepares the visibility matrix. */
@@ -6632,6 +6642,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    extern volatile u32 gNdsVSResultsFighterSubmitCount;
+#endif
     FTStruct *fp;
     u32 submitted_before;
     u32 triangles_before;
@@ -6641,6 +6654,12 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     {
         return;
     }
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+    {
+        gNdsVSResultsFighterSubmitCount++;
+    }
+#endif
     fp = ftGetStruct(fighter_gobj);
     if ((ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
         ((u32)fp->nds_slot > 1u))

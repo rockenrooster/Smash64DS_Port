@@ -1511,6 +1511,25 @@ static FTStruct *ndsFighterManagerLiveStruct(u32 slot)
     return (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
 }
 
+void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj, u32 slot)
+{
+    FTStruct *fp;
+
+    if ((fighter_gobj == NULL) ||
+        (slot >= ARRAY_COUNT(sNdsFighterManagerLiveGObjs)))
+    {
+        return;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if (fp == NULL)
+    {
+        return;
+    }
+    sNdsFighterManagerLiveGObjs[slot] = fighter_gobj;
+    fp->nds_magic = NDS_FTSTRUCT_MAGIC;
+    fp->nds_slot = slot;
+}
+
 static u32 ndsFighterManagerLiveMask(void)
 {
     u32 mask = 0u;

@@ -14,6 +14,13 @@ typedef struct MNTitleSpriteDesc
     intptr_t offset;
 } MNTitleSpriteDesc;
 
+typedef struct MNVSResultsScore
+{
+    s32 score;
+    s32 place;
+    s32 player;
+} MNVSResultsScore;
+
 typedef struct MNPlayersSlotVS
 {
     GObj *cursor;

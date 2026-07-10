@@ -5,6 +5,11 @@
 #include <ssb_types.h>
 
 #define AL_FX_CUSTOM 6
+#define AL_STOPPED 0
+
+typedef struct SYAudioCSPlayerCompat {
+    s32 state;
+} SYAudioCSPlayerCompat;
 
 enum {
     nSYAudioBGMExplain = 0
@@ -52,6 +57,7 @@ struct alSoundEffect {
 #endif
 
 extern SYAudioPublicSettings dSYAudioPublicSettings;
+extern SYAudioCSPlayerCompat *gSYAudioCSPlayers[1];
 
 void syAudioThreadMain(void *arg);
 void syAudioStopBGMAll(void);

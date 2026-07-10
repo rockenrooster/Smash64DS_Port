@@ -25,7 +25,10 @@ u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
                                            s32 n64_x, s32 n64_y,
                                            u32 *out_pitch);
 void ndsPlatformCommitOriginalSpritePreview(void);
+void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground);
+void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpritePreview(void);
+void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
 u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height,
                                        u32 *out_pitch);
 void ndsPlatformCommitOriginalDLPreview(void);

@@ -6671,6 +6671,20 @@ uintptr_t llIFCommonDigitsFileID;
 uintptr_t llIFCommonBattlePauseFileID;
 uintptr_t llIFCommonPlayerTagsFileID;
 uintptr_t llIFCommonAnnounceCommonFileID;
+uintptr_t llMNVSResultsFileID;
+uintptr_t llFTEmblemModelsFileID;
+uintptr_t llFTStocksZakoFileID;
+uintptr_t llLBTransitionAeroplaneFileID;
+uintptr_t llLBTransitionCheckFileID;
+uintptr_t llLBTransitionGakubuthiFileID;
+uintptr_t llLBTransitionKannonFileID;
+uintptr_t llLBTransitionStarFileID;
+uintptr_t llLBTransitionSudare1FileID;
+uintptr_t llLBTransitionSudare2FileID;
+uintptr_t llLBTransitionBlockFileID;
+uintptr_t llLBTransitionRotScaleFileID;
+uintptr_t llLBTransitionCurtainFileID;
+uintptr_t llLBTransitionCameraFileID;
 uintptr_t llSYKseg1ValidateFileID;
 uintptr_t llSYKseg1ValidateFunc;
 uintptr_t llSYKseg1ValidateNBytes;
@@ -6867,6 +6881,14 @@ uintptr_t llIFCommonAnnounceCommonLetterYSprite;
 #define NDS_DEFINE_IFCOMMON_RELOC_SYMBOL(asset, name, value) uintptr_t name = value;
 NDS_IFCOMMON_RELOC_SYMBOLS(NDS_DEFINE_IFCOMMON_RELOC_SYMBOL)
 #undef NDS_DEFINE_IFCOMMON_RELOC_SYMBOL
+
+#define NDS_DEFINE_VS_RESULTS_RELOC_SYMBOL(asset, name, value) uintptr_t name = value;
+NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_DEFINE_VS_RESULTS_RELOC_SYMBOL)
+#undef NDS_DEFINE_VS_RESULTS_RELOC_SYMBOL
+
+#define NDS_DEFINE_TRANSITION_RELOC_SYMBOL(asset, name, value) uintptr_t name = value;
+NDS_TRANSITION_RELOC_SYMBOLS(NDS_DEFINE_TRANSITION_RELOC_SYMBOL)
+#undef NDS_DEFINE_TRANSITION_RELOC_SYMBOL
 
 uintptr_t llMVOpeningCommonMarioCamAnimJoint;
 uintptr_t llMVOpeningCommonDonkeyCamAnimJoint;

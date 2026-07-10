@@ -80,6 +80,16 @@ typedef enum MNPlayersCursorStatus
     nMNPlayersCursorStatusHover
 } MNPlayersCursorStatus;
 
+typedef enum MNVSResultsKind
+{
+    nMNVSResultsKindTimeRoyal,
+    nMNVSResultsKindStockRoyal,
+    nMNVSResultsKindTimeTeam,
+    nMNVSResultsKindStockTeam,
+    nMNVSResultsKindNoContest,
+    nMNVSResultsKindEnumCount
+} MNVSResultsKind;
+
 #define mnCommonCheckGetOptionButtonInput(wait, is_button, mask) \
     (((wait) == 0) && (((is_button) = scSubsysControllerGetPlayerHoldButtons(mask)), (is_button) != FALSE))
 #define mnCommonCheckGetOptionStickInputUD(wait, stick_range, min, b) \

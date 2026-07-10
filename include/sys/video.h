@@ -21,6 +21,9 @@
 #define SYVIDEO_FLAG_DIVOT          0x10000
 #define SYVIDEO_FLAG_NODIVOT        0x20000
 
+#define SYVIDEO_BORDER_SIZE(dimension, pixels, type) \
+    ((dimension) * (pixels) * sizeof(type))
+
 #include <ssb_types.h>
 
 typedef struct SYVideoSetup {
@@ -57,5 +60,6 @@ extern s32 gSYVideoResHeight;
 
 void syVideoInit(SYVideoSetup *video_setup);
 void syVideoApplySettingsNoBlock(SYTaskVi *vi);
+u32 syVideoGetFillColor(u32 color);
 
 #endif

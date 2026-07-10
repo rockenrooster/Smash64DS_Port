@@ -100,7 +100,7 @@ static void ndsTitleRenderPreview(void)
             }
             if (ndsDrawSObjIntoPreview(
                     &sobjs[i], 0, preview, preview_pitch, 320u, 240u,
-                    (s32)sobjs[i].pos.x, (s32)sobjs[i].pos.y) != FALSE)
+                    (s32)sobjs[i].pos.x, (s32)sobjs[i].pos.y, 0u) != FALSE)
             {
                 drew_any++;
             }
@@ -331,7 +331,7 @@ static s32 ndsOpeningActionPreviewRender(u32 scene_kind)
                 NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH,
                 NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH,
                 NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT,
-                desc->x, desc->y) == FALSE)
+                desc->x, desc->y, 0u) == FALSE)
         {
             cache->ready = 0;
             return FALSE;
@@ -407,7 +407,9 @@ NDS_SCENE_STUB(mnUnusedFightersStartScene)
 NDS_SCENE_STUB(mnVSItemSwitchStartScene)
 NDS_SCENE_STUB(mnVSOptionsStartScene)
 NDS_SCENE_STUB(mnVSRecordStartScene)
+#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
 NDS_SCENE_STUB(mnVSResultsStartScene)
+#endif
 NDS_SCENE_STUB(mvEndingStartScene)
 NDS_SCENE_STUB(mvUnknownMarioStartScene)
 NDS_SCENE_STUB(sc1PBonusStageStartScene)

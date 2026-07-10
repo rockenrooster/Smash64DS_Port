@@ -122,31 +122,24 @@ static u16 ndsStartupLogoConvertRgba16(u16 n64_color)
     return (u16)((1u << 15) | red | (green << 5) | (blue << 10));
 }
 
-static u16 ndsSpriteConvertIA8(u8 ia)
+static u16 ndsSpritePackRgb15(u8 red, u8 green, u8 blue)
 {
-    u16 intensity4 = (u16)((ia >> 4) & 0x0fu);
-    u16 alpha4 = (u16)(ia & 0x0fu);
-    u16 value5;
-
-    if (alpha4 == 0)
-    {
-        return 0;
-    }
-
-    value5 = (u16)((intensity4 << 1) | (intensity4 >> 3));
-    return (u16)((1u << 15) | value5 | (value5 << 5) | (value5 << 10));
+    return (u16)((1u << 15) | ((u16)(red >> 3)) |
+                 ((u16)(green >> 3) << 5) |
+                 ((u16)(blue >> 3) << 10));
 }
 
-static u16 ndsSpriteConvertI4(u8 intensity4)
+static u16 ndsSpriteLerpPrimEnv(const SObj *sobj, u8 intensity)
 {
-    u16 value5 = (u16)(((intensity4 & 0x0fu) << 1) |
-                       ((intensity4 & 0x0fu) >> 3));
+    u32 inverse = 255u - intensity;
+    u8 red = (u8)(((u32)sobj->sprite.red * intensity +
+                   (u32)sobj->envcolor.r * inverse + 127u) / 255u);
+    u8 green = (u8)(((u32)sobj->sprite.green * intensity +
+                     (u32)sobj->envcolor.g * inverse + 127u) / 255u);
+    u8 blue = (u8)(((u32)sobj->sprite.blue * intensity +
+                    (u32)sobj->envcolor.b * inverse + 127u) / 255u);
 
-    if (intensity4 == 0)
-    {
-        return 0;
-    }
-    return (u16)((1u << 15) | value5 | (value5 << 5) | (value5 << 10));
+    return ndsSpritePackRgb15(red, green, blue);
 }
 
 static u16 ndsSpriteConvertRgba32(u32 rgba)
@@ -257,7 +250,8 @@ static s32 ndsSObjPreviewBasicSupported(SObj *sobj)
 static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                                   u16 *preview, u32 preview_pitch,
                                   u32 preview_width, u32 preview_height,
-                                  s32 origin_x, s32 origin_y)
+                                  s32 origin_x, s32 origin_y,
+                                  u32 results_wallpaper_combine)
 {
     Sprite *sprite;
     Bitmap *bitmap;
@@ -477,10 +471,15 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                          (sprite->bmsiz == G_IM_SIZ_32b))
                 {
                     const u32 *src_rgba32 = (const u32 *)src;
+                    u32 source_x = x;
                     u32 rgba;
 
+                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    {
+                        source_x ^= 1u;
+                    }
                     memcpy(&rgba,
-                           &src_rgba32[(row * src_width) + x],
+                           &src_rgba32[(row * src_width) + source_x],
                            sizeof(rgba));
                     color = ndsSpriteConvertRgba32(rgba);
                 }
@@ -488,22 +487,36 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                          (sprite->bmsiz == G_IM_SIZ_8b))
                 {
                     const u8 *src_ia = (const u8 *)src;
-                    color = ndsSpriteConvertIA8(
-                        src_ia[(row * src_width) + x]);
+                    u32 source_x = x;
+                    size_t source_index;
+                    u8 ia;
+
+                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    {
+                        source_x ^= 4u;
+                    }
+                    source_index = ((size_t)row * src_row_bytes) + source_x;
+                    ia = src_ia[source_index ^ 3u];
+                    color = (((ia & 0x0fu) != 0u) &&
+                             (sprite->alpha != 0u)) ?
+                        ndsSpriteLerpPrimEnv(
+                            sobj, (u8)(((ia >> 4) * 255u) / 15u)) : 0;
                 }
                 else if ((sprite->bmfmt == G_IM_FMT_CI) &&
                          (sprite->bmsiz == G_IM_SIZ_8b))
                 {
                     const u8 *src_ci = (const u8 *)src;
                     const u16 *palette = (const u16 *)sprite->LUT;
-                    u32 raw_x = (x & ~3u) | (3u - (x & 3u));
+                    u32 source_x = x;
+                    size_t source_index;
                     u8 index;
 
-                    if (raw_x >= src_width)
+                    if ((is_texshuf != 0) && ((row & 1u) != 0))
                     {
-                        raw_x = x;
+                        source_x ^= 4u;
                     }
-                    index = src_ci[(row * (u32)src_row_bytes) + raw_x];
+                    source_index = ((size_t)row * src_row_bytes) + source_x;
+                    index = src_ci[source_index ^ 3u];
                     color = (ci_palette_ready != 0) ?
                         ndsStartupLogoConvertRgba16(
                             palette[((u32)index) ^ 1u]) : 0;
@@ -512,13 +525,33 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                          (sprite->bmsiz == G_IM_SIZ_4b))
                 {
                     const u8 *src_i4 = (const u8 *)src;
-                    u8 packed = src_i4[
-                        (row * (u32)src_row_bytes) + (x >> 1)];
+                    u32 source_x = x;
+                    size_t source_index;
+                    u8 packed;
                     u8 intensity =
-                        ((x & 1u) == 0) ? (u8)(packed >> 4) :
-                                          (u8)(packed & 0x0fu);
+                        0;
 
-                    color = ndsSpriteConvertI4(intensity);
+                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    {
+                        source_x ^= 8u;
+                    }
+                    source_index = ((size_t)row * src_row_bytes) +
+                                   (source_x >> 1);
+                    packed = src_i4[source_index ^ 3u];
+                    intensity = ((source_x & 1u) == 0) ?
+                        (u8)(packed >> 4) : (u8)(packed & 0x0fu);
+                    if (results_wallpaper_combine != 0u)
+                    {
+                        color = ndsSpriteLerpPrimEnv(
+                            sobj, (u8)(((u32)intensity * 255u) / 15u));
+                    }
+                    else
+                    {
+                        color = ((intensity != 0u) &&
+                                 (sprite->alpha != 0u)) ?
+                            ndsSpritePackRgb15(sprite->red, sprite->green,
+                                               sprite->blue) : 0;
+                    }
                 }
                 else
                 {
@@ -650,12 +683,76 @@ static s32 ndsDrawSObjPreview(SObj *sobj, u32 record_startup)
         return FALSE;
     }
     if (ndsDrawSObjIntoPreview(sobj, record_startup, preview, preview_pitch,
-                               width, height, 0, 0) == FALSE)
+                               width, height, 0, 0, 0u) == FALSE)
     {
         return FALSE;
     }
     ndsPlatformCommitOriginalSpritePreview();
     return TRUE;
+}
+
+static u16 *sNdsSObjFramePreview;
+static u32 sNdsSObjFramePreviewPitch;
+static u32 sNdsSObjFramePreviewDrawCount;
+static u32 sNdsSObjFrameForeground;
+
+static void ndsSObjPreviewCommitLayer(void)
+{
+    if ((sNdsSObjFramePreview != NULL) &&
+        (sNdsSObjFramePreviewDrawCount != 0u))
+    {
+        ndsPlatformCommitOriginalSpritePreviewLayer(
+            sNdsSObjFrameForeground != 0u);
+    }
+}
+
+static void ndsDrawResultsSObjFrame(GObj *gobj,
+                                    u32 results_wallpaper_combine)
+{
+    SObj *sobj = (gobj != NULL) ? SObjGetStruct(gobj) : NULL;
+    u32 foreground = ((gobj != NULL) && (gobj->dl_link_id != 26u)) ?
+        TRUE : FALSE;
+
+    if ((foreground != FALSE) && (sNdsSObjFrameForeground == FALSE))
+    {
+        ndsSObjPreviewCommitLayer();
+        sNdsSObjFramePreview = ndsPlatformBeginOriginalSpritePreview(
+            320u, 240u, 0, 0, &sNdsSObjFramePreviewPitch);
+        sNdsSObjFramePreviewDrawCount = 0u;
+        sNdsSObjFrameForeground = TRUE;
+    }
+
+    while (sobj != NULL)
+    {
+        if (((sobj->sprite.attr & SP_HIDDEN) == 0) &&
+            (ndsDrawSObjIntoPreview(
+                sobj, 0u, sNdsSObjFramePreview,
+                sNdsSObjFramePreviewPitch, 320u, 240u,
+                (s32)sobj->pos.x, (s32)sobj->pos.y,
+                results_wallpaper_combine) != FALSE))
+        {
+            sNdsSObjFramePreviewDrawCount++;
+        }
+        sobj = sobj->next;
+    }
+}
+
+void ndsSObjPreviewBeginFrame(void)
+{
+    sNdsSObjFramePreview = ndsPlatformBeginOriginalSpritePreview(
+        320u, 240u, 0, 0, &sNdsSObjFramePreviewPitch);
+    sNdsSObjFramePreviewDrawCount = 0;
+    sNdsSObjFrameForeground = FALSE;
+    ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
+}
+
+void ndsSObjPreviewEndFrame(void)
+{
+    ndsSObjPreviewCommitLayer();
+    sNdsSObjFramePreview = NULL;
+    sNdsSObjFramePreviewPitch = 0;
+    sNdsSObjFramePreviewDrawCount = 0;
+    sNdsSObjFrameForeground = FALSE;
 }
 
 void lbCommonDrawSObjAttr(GObj *gobj)
@@ -694,6 +791,13 @@ void lbCommonDrawSObjAttr(GObj *gobj)
     if (record_startup != 0)
     {
         gNdsStartupLogoDrawSObjAttr = sobj->sprite.attr;
+    }
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSResults) &&
+        (sNdsSObjFramePreview != NULL) &&
+        (sNdsSObjFramePreviewPitch != 0u))
+    {
+        ndsDrawResultsSObjFrame(gobj, 0u);
+        return;
     }
 
     if ((gSCManagerSceneData.scene_curr == nSCKindOpeningPortraits) ||
@@ -762,7 +866,7 @@ void lbCommonDrawSObjAttr(GObj *gobj)
                 if (ndsDrawSObjIntoPreview(
                         scan_sobj, record_startup, preview, preview_pitch,
                         320u, 240u, (s32)scan_sobj->pos.x,
-                        (s32)scan_sobj->pos.y) != FALSE)
+                        (s32)scan_sobj->pos.y, 0u) != FALSE)
                 {
                     drew_any++;
                 }
@@ -820,6 +924,13 @@ void lbCommonDrawSObjAttr(GObj *gobj)
 
 void lbCommonDrawSObjNoAttr(GObj *gobj)
 {
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSResults) &&
+        (sNdsSObjFramePreview != NULL) &&
+        (sNdsSObjFramePreviewPitch != 0u))
+    {
+        ndsDrawResultsSObjFrame(gobj, 1u);
+        return;
+    }
     lbCommonDrawSObjAttr(gobj);
 }
 

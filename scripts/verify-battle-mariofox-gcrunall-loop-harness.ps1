@@ -7,6 +7,7 @@ param(
     [int]$DelaySeconds = 5,
     [switch]$ImportBattleShipFTManager,
     [switch]$ImportBattleShipFTComputer,
+    [switch]$ImportBattleShipVSResults,
     [switch]$ImportBattleShipBattlePlayable,
     [switch]$ImportBattleShipIFCommon,
     [switch]$ImportBattleShipMarioFireball,
@@ -46,6 +47,9 @@ if ($BattlePlayable) {
 if ($CPUOpponentProof -or $MatchLifecycleProof) {
     $ImportBattleShipFTComputer = $true
     $LiveInputPreview = $true
+}
+if ($MatchLifecycleProof) {
+    $ImportBattleShipVSResults = $true
 }
 $verifierContext = Initialize-MelonDSVerifierContext `
     -Root $root `
@@ -102,6 +106,9 @@ if ($ImportBattleShipFTManager) {
 }
 if ($ImportBattleShipFTComputer) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTCOMPUTER=1'
+}
+if ($ImportBattleShipVSResults) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_VS_RESULTS=1'
 }
 if ($ImportBattleShipBattlePlayable) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1'
@@ -173,7 +180,9 @@ try {
     Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort | Out-Null
     # The natural combat chain runs ~1000+ bounded updates; battle_playable
     # continues into an input-driven KO -> Rebirth -> Wait cycle.
-    $minimumDelay = if ($MatchLifecycleProof) { 180 } elseif ($BattlePlayable -and $RealtimePresentation) { 12 } elseif ($BattlePlayable) { 30 } else { 15 }
+    # A measured 45-second run reaches source tick 10608; 90 seconds covers
+    # all 18,000 ticks plus the Results tick-120 fighter creation boundary.
+    $minimumDelay = if ($MatchLifecycleProof) { 90 } elseif ($BattlePlayable -and $RealtimePresentation) { 12 } elseif ($BattlePlayable) { 30 } else { 15 }
     Start-Sleep -Seconds ([Math]::Max($DelaySeconds, $minimumDelay))
     $gdbCommands = @(
         'set pagination off',
@@ -269,7 +278,10 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $lifecycleCommands = @(
-            'printf "VSB_END=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSCVSBattleLifecycleResult, gNdsSCVSBattleLifecycleArenaAdapterCount, gNdsSCVSBattleLifecycleTaskmanExitCount, gNdsSCVSBattleLifecycleTaskmanStatus, gNdsSCVSBattleLifecycleTimeLimit, gNdsSCVSBattleLifecycleTimeRemain, gNdsSCVSBattleLifecycleTimePassed, gNdsSCVSBattleLifecycleGameStatus, gNdsSCVSBattleLifecycleScenePrev, gNdsSCVSBattleLifecycleSceneCurr, gNdsSCVSBattleLifecycleIsSuddenDeath'
+            'printf "VSB_END=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSCVSBattleLifecycleResult, gNdsSCVSBattleLifecycleArenaAdapterCount, gNdsSCVSBattleLifecycleTaskmanExitCount, gNdsSCVSBattleLifecycleTaskmanStatus, gNdsSCVSBattleLifecycleTimeLimit, gNdsSCVSBattleLifecycleTimeRemain, gNdsSCVSBattleLifecycleTimePassed, gNdsSCVSBattleLifecycleGameStatus, gNdsSCVSBattleLifecycleScenePrev, gNdsSCVSBattleLifecycleSceneCurr, gNdsSCVSBattleLifecycleIsSuddenDeath',
+            'printf "VS_RESULTS=%#x,%#x,%u,%u,%u,%u,%u,%u,%u\n", gNdsVSResultsResult, gNdsVSResultsMask, gNdsVSResultsStartCount, gNdsVSResultsTickCount, gNdsVSResultsLoadedFileCount, gNdsVSResultsFighterCount, gNdsVSResultsGObjCount, gNdsVSResultsSObjCount, gNdsVSResultsKind',
+            'printf "VS_RESULTS_FIGHTERS=%u,%#x,%d,%u,%#x,%d\n", gNdsVSResultsFighterPlace[0], gNdsVSResultsFighterStatus[0], gNdsVSResultsFighterMotion[0], gNdsVSResultsFighterPlace[1], gNdsVSResultsFighterStatus[1], gNdsVSResultsFighterMotion[1]',
+            'printf "VS_RESULTS_DISPLAY=%u,%u,%u,%u\n", gNdsOriginalSpritePreviewReady, gNdsOriginalSpritePreviewCommitCount, gNdsOriginalSpritePreviewDisplayWidth, gNdsOriginalSpritePreviewDisplayHeight'
         )
         $gdbCommands = @($beforeDetach + $lifecycleCommands + $afterDetach)
     }
@@ -349,6 +361,9 @@ try {
     $computerConfig = [regex]::Match($gdbStdout, 'CPU_CONFIG=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $computerAI = [regex]::Match($gdbStdout, 'CPU_AI=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $battleLifecycle = [regex]::Match($gdbStdout, 'VSB_END=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $vsResults = [regex]::Match($gdbStdout, 'VS_RESULTS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $vsResultsFighters = [regex]::Match($gdbStdout, 'VS_RESULTS_FIGHTERS=([0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+)')
+    $vsResultsDisplay = [regex]::Match($gdbStdout, 'VS_RESULTS_DISPLAY=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $run = [regex]::Match($gdbStdout, 'GCRUNALL_RUN=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $process = [regex]::Match($gdbStdout, 'GCRUNALL_PROCESS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $input = [regex]::Match($gdbStdout, 'GCRUNALL_INPUT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
@@ -492,11 +507,21 @@ try {
             Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and $cpu[2] -ge 1000 -and $cpu[3] -gt 0 -and (($cpu[4] -band 0x4) -eq 0x4) -and $cpu[6] -gt 0 -and $cpu[7] -gt 0 -and $cpu[8] -gt 0 -and $cpu[9] -gt 0 -and $cpu[10] -gt 0 -and $cpu[11] -gt 0 -and $cpu[12] -gt 0 -and $cpu[13] -gt 0 -and $cpu[15] -gt 0 -and $cpu[19] -gt 0 -and $cpu[20] -gt 0 -and ($cpu[23] - $cpu[22]) -ge 50000) 'Imported Fox CPU did not naturally target, move, attack with live hitboxes, guard, and damage Mario on Dream Land.' $gdbStdout
             if ($MatchLifecycleProof) {
                 $life = Get-Ints $battleLifecycle
+                $results = Get-Ints $vsResults
+                $resultsFighters = Get-Ints $vsResultsFighters
+                $resultsDisplay = Get-Ints $vsResultsDisplay
                 # ifcommon.c:2472-2529 decrements the source timer and dispatches
                 # Time Up at zero; :3144-3152 requests LoadScene after the end
                 # interface; scvsbattle.c:513-560 owns the VS Results transition.
                 Assert-Condition ($battleLifecycle.Success -and $life[0] -eq 0x5642454e -and $life[1] -ge 1 -and $life[2] -ge 1 -and $life[3] -eq 1 -and $life[4] -eq 5 -and $life[5] -eq 0 -and $life[6] -ge 18000 -and $life[7] -eq 7 -and $life[8] -eq 22 -and $life[9] -eq 24 -and ($life[10] -eq 0 -or $life[10] -eq 1)) 'Original five-minute timer/end flow did not return through LoadScene and transition VSBattle to VS Results.' $gdbStdout
-                Write-Output ("$Label five-minute lifecycle passed: adapter=$($life[1]) taskman=$($life[2]) ticks=$($life[6]) sudden=$($life[10]) scene=$($life[8])->$($life[9])")
+                Assert-Condition ($vsResults.Success -and $results[0] -eq 0x56535231 -and (($results[1] -band 0x1f) -eq 0x1f) -and $results[2] -ge 1 -and $results[3] -ge 120 -and $results[4] -eq 8 -and $results[5] -ge 2 -and $results[6] -gt 0 -and $results[7] -gt 0) 'Original VS Results scene did not load all source assets and advance through wallpaper/results/fighter creation.' $gdbStdout
+                # mnvsresults.c:869-928 selects Win1..Win3 for place 0 and
+                # Lose for other places; scsubsysfighter.c:74-77 installs it.
+                $fighter0StatusOk = if ($resultsFighters[0] -eq 0) { $resultsFighters[1] -ge 0x10001 -and $resultsFighters[1] -le 0x10003 -and $resultsFighters[2] -ge 1 -and $resultsFighters[2] -le 3 } else { $resultsFighters[1] -eq 0x10005 -and $resultsFighters[2] -eq 5 }
+                $fighter1StatusOk = if ($resultsFighters[3] -eq 0) { $resultsFighters[4] -ge 0x10001 -and $resultsFighters[4] -le 0x10003 -and $resultsFighters[5] -ge 1 -and $resultsFighters[5] -le 3 } else { $resultsFighters[4] -eq 0x10005 -and $resultsFighters[5] -eq 5 }
+                Assert-Condition ($vsResultsFighters.Success -and $resultsFighters[0] -ne $resultsFighters[3] -and $fighter0StatusOk -and $fighter1StatusOk) 'Original VS Results fighters did not enter the source win/lose status and submotion paths.' $gdbStdout
+                Assert-Condition ($vsResultsDisplay.Success -and $resultsDisplay[1] -gt 0 -and $resultsDisplay[2] -eq 256 -and $resultsDisplay[3] -eq 192) 'Original VS Results SObj display did not commit a full DS frame.' $gdbStdout
+                Write-Output ("$Label five-minute lifecycle passed: adapter=$($life[1]) taskman=$($life[2]) ticks=$($life[6]) sudden=$($life[10]) scene=$($life[8])->$($life[9]) results=$($results[3])/files$($results[4])/fighters$($results[5])/sobjs$($results[7])")
             }
             Write-Output ("$Label original CPU proof passed: setup=$($cpu[0]) process=$($cpu[2]) target=$($cpu[3]) objective=0x$('{0:x}' -f $cpu[4]) behavior=0x$('{0:x}' -f $cpu[5]) inputs=$($cpu[6]) stick=$($cpu[7]) buttons=$($cpu[8])/$($cpu[9])/$($cpu[10]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) status=$($cpu[15]) damage=$($cpu[19]) x=$($cpu[21])/$($cpu[22])..$($cpu[23])/$($cpu[24])")
             return

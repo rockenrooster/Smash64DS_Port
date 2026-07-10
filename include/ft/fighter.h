@@ -3537,7 +3537,7 @@ extern FTData *dFTManagerDataFiles[nFTKindEnumCount + 1];
 extern f32 dSCSubsysFighterScales[];
 extern GObj *gGCCommonLinks[GC_COMMON_MAX_LINKS];
 extern FTOpeningDesc *D_ovl1_80390D20[];
-extern FTOpeningDesc D_ovl1_80390BE8;
+extern FTOpeningDesc D_ovl1_80390BE8[];
 extern GMColDesc dGMColScriptsDescs[];
 
 void ftManagerSetupFileSize(void);

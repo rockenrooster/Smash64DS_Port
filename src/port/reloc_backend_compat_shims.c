@@ -346,9 +346,10 @@ f32 dMPCollisionMaterialFrictions[16] = {
 u8 gSC1PGameBonusStarCount;
 u8 gSC1PGameBonusGiantImpact;
 
+#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
 static FTOpeningDesc sNdsDefaultOpeningDesc = { 0xFFFFFFFF, NULL };
 
-FTOpeningDesc D_ovl1_80390BE8 = { 0x00010000, NULL };
+FTOpeningDesc D_ovl1_80390BE8[] = { { 0x00010000, NULL } };
 
 FTOpeningDesc *D_ovl1_80390D20[] = {
     &sNdsDefaultOpeningDesc,
@@ -368,6 +369,7 @@ FTOpeningDesc *D_ovl1_80390D20[] = {
     &sNdsDefaultOpeningDesc,
     &sNdsDefaultOpeningDesc
 };
+#endif
 
 #define NDS_GM_COL_FIELD(value, start, len) \
     ((((u32)(value)) & ((1u << (len)) - 1u)) << (start))
@@ -497,19 +499,28 @@ void ftManagerSetPrevPartsAlloc(FTParts *parts)
 }
 #endif
 
+static SYAudioCSPlayerCompat sNdsAudioCSPlayerCompat;
+SYAudioCSPlayerCompat *gSYAudioCSPlayers[1] = {
+    &sNdsAudioCSPlayerCompat
+};
+
 void syAudioStopBGMAll(void)
 {
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmStopAll();
 #endif
+    sNdsAudioCSPlayerCompat.state = AL_STOPPED;
 }
 
 void syAudioPlayBGM(s32 player, s32 bgm_id)
 {
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmPlay(player, bgm_id);
+    sNdsAudioCSPlayerCompat.state =
+        (ndsAudioBgmCheckPlaying(player) != FALSE) ? 1 : AL_STOPPED;
 #else
     (void)player;
+    sNdsAudioCSPlayerCompat.state = AL_STOPPED;
 #endif
     gNdsSCVSBattleStageBGM = (u32)bgm_id;
     gNdsSCVSBattleCompatAudioMask |= 1u << 0;
@@ -12099,6 +12110,7 @@ s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
     return color;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
 void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     (void)fighter_gobj;
@@ -12108,6 +12120,7 @@ void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id)
         gNdsFighterInitStatusSetCount++;
     }
 }
+#endif
 
 void efParticleInitAll(void)
 {
@@ -12213,6 +12226,7 @@ void ftCommonEntrySetStatus(GObj *fighter_gobj)
     }
 }
 
+#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
 void scSubsysFighterProcUpdate(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -12224,6 +12238,7 @@ void scSubsysFighterProcUpdate(GObj *fighter_gobj)
         fp->proc_update(fighter_gobj);
     }
 }
+#endif
 
 GObj *ftShadowMakeShadow(GObj *fighter_gobj)
 {

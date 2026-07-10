@@ -216,21 +216,33 @@ extern uintptr_t llIFCommonAnnounceCommonLetterFSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterGSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterHSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterISprite;
+extern uintptr_t llIFCommonAnnounceCommonLetterJSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterKSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterLSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterMSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterNSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterOSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterPSprite;
+extern uintptr_t llIFCommonAnnounceCommonLetterQSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterRSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterSSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterUSprite;
+extern uintptr_t llIFCommonAnnounceCommonLetterVSprite;
+extern uintptr_t llIFCommonAnnounceCommonLetterWSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterXSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterYSprite;
+extern uintptr_t llIFCommonAnnounceCommonLetterZSprite;
+extern uintptr_t llIFCommonAnnounceCommonSymbolPeriodSprite;
 
 #define NDS_IFCOMMON_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonLetterJSprite, 0x2a90u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonLetterQSprite, 0x4f10u) \
     X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonLetterTSprite, 0x5bd0u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonLetterVSprite, 0x65d8u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonLetterWSprite, 0x6c00u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonLetterZSprite, 0x7ae8u) \
     X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonSymbolExclaimSprite, 0x7d98u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE, llIFCommonAnnounceCommonSymbolPeriodSprite, 0x7e50u) \
     X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalAButtonSprite, 0x958u) \
     X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalArrowsSprite, 0x1538u) \
     X(NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, llIFCommonBattlePauseDecalBButtonSprite, 0xa88u) \
@@ -257,6 +269,7 @@ extern uintptr_t llIFCommonAnnounceCommonLetterYSprite;
     X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits7Sprite, 0x538u) \
     X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits8Sprite, 0x5e8u) \
     X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigits9Sprite, 0x698u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigitsDashSprite, 0x710u) \
     X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigitsCrossSprite, 0x828u) \
     X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterASprite, 0x1de68u) \
     X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusBlueLetterESprite, 0x144e0u) \
@@ -323,6 +336,96 @@ extern uintptr_t llIFCommonAnnounceCommonLetterYSprite;
 #define NDS_DECLARE_IFCOMMON_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
 NDS_IFCOMMON_RELOC_SYMBOLS(NDS_DECLARE_IFCOMMON_RELOC_SYMBOL)
 #undef NDS_DECLARE_IFCOMMON_RELOC_SYMBOL
+
+extern uintptr_t llMNVSResultsFileID;
+extern uintptr_t llFTEmblemModelsFileID;
+extern uintptr_t llFTStocksZakoFileID;
+
+#define NDS_VS_RESULTS_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResultsTKOTextSprite, 0x0358u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResultsPlaceTextSprite, 0x0990u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResultsKOsTextSprite, 0x0d38u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResultsPtsTextSprite, 0x10d8u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResults1PArrowSprite, 0x49e8u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResults2PArrowSprite, 0x4b08u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResults3PArrowSprite, 0x4c28u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResults4PArrowSprite, 0x4d48u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResultsWallpaperSprite, 0xd5c8u) \
+    X(NDS_RELOC_ASSET_MN_VS_RESULTS, llMNVSResultsWinnerSprite, 0xe2a0u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMarioMObjSub, 0x0000u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMarioDObjDesc, 0x0990u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMarioMatAnimJoint, 0x0a14u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsDonkeyMObjSub, 0x0b00u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsDonkeyDObjDesc, 0x1348u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsDonkeyMatAnimJoint, 0x13ccu) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMetroidMObjSub, 0x1470u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMetroidDObjDesc, 0x1860u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMetroidMatAnimJoint, 0x18e4u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsFoxMObjSub, 0x1940u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsFoxDObjDesc, 0x21d0u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsFoxMatAnimJoint, 0x2254u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsZeldaMObjSub, 0x22b0u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsZeldaDObjDesc, 0x2520u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsZeldaMatAnimJoint, 0x25a4u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsYoshiMObjSub, 0x2690u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsYoshiDObjDesc, 0x2f10u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsYoshiMatAnimJoint, 0x2f94u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsFZeroMObjSub, 0x2ff0u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsFZeroDObjDesc, 0x3828u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsFZeroMatAnimJoint, 0x38acu) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsKirbyMObjSub, 0x3900u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsKirbyDObjDesc, 0x3e68u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsKirbyMatAnimJoint, 0x3eecu) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsPMonstersMObjSub, 0x3f40u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsPMonstersDObjDesc, 0x4710u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsPMonstersMatAnimJoint, 0x4794u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMotherMObjSub, 0x4840u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMotherDObjDesc, 0x5a00u) \
+    X(NDS_RELOC_ASSET_FT_EMBLEM_MODELS, llFTEmblemModelsMotherMatAnimJoint, 0x5a84u)
+
+#define NDS_DECLARE_VS_RESULTS_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_DECLARE_VS_RESULTS_RELOC_SYMBOL)
+#undef NDS_DECLARE_VS_RESULTS_RELOC_SYMBOL
+
+extern uintptr_t llLBTransitionAeroplaneFileID;
+extern uintptr_t llLBTransitionCheckFileID;
+extern uintptr_t llLBTransitionGakubuthiFileID;
+extern uintptr_t llLBTransitionKannonFileID;
+extern uintptr_t llLBTransitionStarFileID;
+extern uintptr_t llLBTransitionSudare1FileID;
+extern uintptr_t llLBTransitionSudare2FileID;
+extern uintptr_t llLBTransitionBlockFileID;
+extern uintptr_t llLBTransitionRotScaleFileID;
+extern uintptr_t llLBTransitionCurtainFileID;
+extern uintptr_t llLBTransitionCameraFileID;
+
+#define NDS_TRANSITION_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_TRANSITION_AEROPLANE, llLBTransitionAeroplaneDObjDesc, 0xb3f8u) \
+    X(NDS_RELOC_ASSET_TRANSITION_AEROPLANE, llLBTransitionAeroplaneAnimJoint, 0xb710u) \
+    X(NDS_RELOC_ASSET_TRANSITION_CHECK, llLBTransitionCheckDObjDesc, 0x3e80u) \
+    X(NDS_RELOC_ASSET_TRANSITION_CHECK, llLBTransitionCheckAnimJoint, 0x4038u) \
+    X(NDS_RELOC_ASSET_TRANSITION_GAKUBUTHI, llLBTransitionGakubuthiDObjDesc, 0x0f98u) \
+    X(NDS_RELOC_ASSET_TRANSITION_GAKUBUTHI, llLBTransitionGakubuthiAnimJoint, 0x101cu) \
+    X(NDS_RELOC_ASSET_TRANSITION_KANNON, llLBTransitionKannonDObjDesc, 0x1f00u) \
+    X(NDS_RELOC_ASSET_TRANSITION_KANNON, llLBTransitionKannonAnimJoint, 0x1fb0u) \
+    X(NDS_RELOC_ASSET_TRANSITION_STAR, llLBTransitionStarDObjDesc, 0x2450u) \
+    X(NDS_RELOC_ASSET_TRANSITION_STAR, llLBTransitionStarAnimJoint, 0x24d4u) \
+    X(NDS_RELOC_ASSET_TRANSITION_SUDARE1, llLBTransitionSudare1DObjDesc, 0x74a8u) \
+    X(NDS_RELOC_ASSET_TRANSITION_SUDARE1, llLBTransitionSudare1AnimJoint, 0x7660u) \
+    X(NDS_RELOC_ASSET_TRANSITION_SUDARE2, llLBTransitionSudare2DObjDesc, 0x3ea0u) \
+    X(NDS_RELOC_ASSET_TRANSITION_SUDARE2, llLBTransitionSudare2AnimJoint, 0x3f50u) \
+    X(NDS_RELOC_ASSET_TRANSITION_BLOCK, llLBTransitionBlockDObjDesc, 0x4e18u) \
+    X(NDS_RELOC_ASSET_TRANSITION_BLOCK, llLBTransitionBlockAnimJoint, 0x536cu) \
+    X(NDS_RELOC_ASSET_TRANSITION_ROTSCALE, llLBTransitionRotScaleDObjDesc, 0x0f98u) \
+    X(NDS_RELOC_ASSET_TRANSITION_ROTSCALE, llLBTransitionRotScaleAnimJoint, 0x101cu) \
+    X(NDS_RELOC_ASSET_TRANSITION_CURTAIN, llLBTransitionCurtainDObjDesc, 0x7ae0u) \
+    X(NDS_RELOC_ASSET_TRANSITION_CURTAIN, llLBTransitionCurtainAnimJoint, 0x7c98u) \
+    X(NDS_RELOC_ASSET_TRANSITION_CAMERA, llLBTransitionCameraDObjDesc, 0x3f90u) \
+    X(NDS_RELOC_ASSET_TRANSITION_CAMERA, llLBTransitionCameraAnimJoint, 0x4148u)
+
+#define NDS_DECLARE_TRANSITION_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
+#undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
 extern uintptr_t llMVOpeningCommonMarioCamAnimJoint;
 extern uintptr_t llMVOpeningCommonDonkeyCamAnimJoint;

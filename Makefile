@@ -23,6 +23,7 @@ override BUILD := $(BUILD_OUTPUT_ROOT)/$(BUILD)
 endif
 endif
 NDS_DEV_SCENE_HARNESS ?= normal
+NDS_DEV_RESULTS_VISUAL_SMOKE ?= 0
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_HARNESS_FAST_LOGIC ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
@@ -33,6 +34,7 @@ override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
 override NDS_IMPORT_BATTLESHIP_FTCOMPUTER := 1
 override NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET := 1
 NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE ?= 1
+NDS_IMPORT_BATTLESHIP_VS_RESULTS ?= 0
 override NDS_IMPORT_BATTLESHIP_IFCOMMON := 1
 override NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER := 1
 override NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL := 1
@@ -527,6 +529,10 @@ ifeq ($(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE),1)
 CFILES += battleship_gmcamera.c battleship_ftcommon_dead.c \
 	battleship_ftcommon_rebirth.c battle_playable_compat_stubs.c
 endif
+ifeq ($(NDS_IMPORT_BATTLESHIP_VS_RESULTS),1)
+CFILES += battleship_lbtransition.c battleship_mnvsresults.c \
+	battleship_scsubsysfighter.c battleship_scsubsysdata.c
+endif
 CFILES += battleship_ifscreenflash.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_IFCOMMON),1)
 CFILES += battleship_ifcommon.c
@@ -754,6 +760,25 @@ NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonAnnounceCommon \
 	reloc_misc_named/SYKseg1Validate
 
+NDS_VS_RESULTS_RELOC_FILES :=
+ifeq ($(NDS_IMPORT_BATTLESHIP_VS_RESULTS),1)
+NDS_VS_RESULTS_RELOC_FILES := \
+	reloc_menus/MNVSResults \
+	reloc_fighters_common/FTEmblemModels \
+	reloc_fighters_common/FTStocksZako \
+	reloc_transitions/LBTransitionAeroplane \
+	reloc_transitions/LBTransitionCheck \
+	reloc_transitions/LBTransitionGakubuthi \
+	reloc_transitions/LBTransitionKannon \
+	reloc_transitions/LBTransitionStar \
+	reloc_transitions/LBTransitionSudare1 \
+	reloc_transitions/LBTransitionSudare2 \
+	reloc_transitions/LBTransitionCamera \
+	reloc_transitions/LBTransitionBlock \
+	reloc_transitions/LBTransitionRotScale \
+	reloc_transitions/LBTransitionCurtain
+endif
+
 NDS_STARTUP_RELOC_FILES := \
 	reloc_misc_named/N64Logo
 
@@ -793,7 +818,8 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_EFFECT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
-	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
+	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_VS_RESULTS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
 export NDS_NITROFS_AUDIO_FILES := \
 	$(foreach file,$(NDS_AUDIO_FILES),$(NITROFS_DIR)/$(file)) \
@@ -867,6 +893,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_FTCOMPUTER $(NDS_IMPORT_BATTLESHIP_FTCOMPUTER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET $(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE $(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE)'; \
+		echo '#define NDS_IMPORT_BATTLESHIP_VS_RESULTS $(NDS_IMPORT_BATTLESHIP_VS_RESULTS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_IFCOMMON $(NDS_IMPORT_BATTLESHIP_IFCOMMON)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER $(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL $(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL)'; \
@@ -888,6 +915,7 @@ $(NDS_SCENE_HARNESS_CONFIG): FORCE
 		echo '#ifndef NDS_SCENE_HARNESS_CONFIG_H'; \
 		echo '#define NDS_SCENE_HARNESS_CONFIG_H'; \
 		echo '#define NDS_DEV_SCENE_HARNESS $(NDS_DEV_SCENE_HARNESS_ID)'; \
+		echo '#define NDS_DEV_RESULTS_VISUAL_SMOKE $(NDS_DEV_RESULTS_VISUAL_SMOKE)'; \
 		echo '#define NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP $(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)'; \
 		echo '#endif'; \
 	} > "$$tmp"; \

@@ -14,6 +14,7 @@ typedef struct SYController {
 
 void syControllerThreadMain(void *arg);
 void syControllerInitRumble(s32 controller);
+void syControllerStartRumble(s32 controller);
 void syControllerStopRumble(s32 controller);
 void syControllerFuncRead(void);
 void syControllerReadDeviceData(void);
