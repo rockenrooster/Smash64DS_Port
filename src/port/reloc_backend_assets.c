@@ -3213,6 +3213,59 @@ static void ndsRelocReverseColorPackBytes(SYColorPack *color)
     color->s.a = red;
 }
 
+static void ndsRelocNormalizeMObjSubWordSwapped(MObjSub *mobjsub)
+{
+    u16 old_pad00;
+    u8 old_fmt;
+    u8 old_siz;
+    u16 old_flags;
+    u8 old_block_fmt;
+    u8 old_block_siz;
+    u8 old_prim_l;
+    u8 old_prim_m;
+    u8 old_prim_pad0;
+    u8 old_prim_pad1;
+
+    if (mobjsub == NULL)
+    {
+        return;
+    }
+
+    old_pad00 = mobjsub->pad00;
+    old_fmt = mobjsub->fmt;
+    old_siz = mobjsub->siz;
+    old_flags = mobjsub->flags;
+    old_block_fmt = mobjsub->block_fmt;
+    old_block_siz = mobjsub->block_siz;
+    old_prim_l = mobjsub->prim_l;
+    old_prim_m = mobjsub->prim_m;
+    old_prim_pad0 = mobjsub->prim_pad[0];
+    old_prim_pad1 = mobjsub->prim_pad[1];
+
+    mobjsub->pad00 = ((u16)old_siz << 8) | old_fmt;
+    mobjsub->fmt = (u8)(old_pad00 >> 8);
+    mobjsub->siz = (u8)(old_pad00 & 0xffu);
+    ndsRelocSwapS16Pair((s16 *)&mobjsub->unk08, (s16 *)&mobjsub->unk0A);
+    ndsRelocSwapS16Pair((s16 *)&mobjsub->unk0C, (s16 *)&mobjsub->unk0E);
+
+    mobjsub->flags = ((u16)old_block_siz << 8) | old_block_fmt;
+    mobjsub->block_fmt = (u8)(old_flags >> 8);
+    mobjsub->block_siz = (u8)(old_flags & 0xffu);
+    ndsRelocSwapS16Pair((s16 *)&mobjsub->block_dxt,
+                        (s16 *)&mobjsub->unk36);
+    ndsRelocSwapS16Pair((s16 *)&mobjsub->unk38, (s16 *)&mobjsub->unk3A);
+
+    mobjsub->prim_l = old_prim_pad1;
+    mobjsub->prim_m = old_prim_pad0;
+    mobjsub->prim_pad[0] = old_prim_m;
+    mobjsub->prim_pad[1] = old_prim_l;
+    ndsRelocReverseColorPackBytes(&mobjsub->primcolor);
+    ndsRelocReverseColorPackBytes(&mobjsub->envcolor);
+    ndsRelocReverseColorPackBytes(&mobjsub->blendcolor);
+    ndsRelocReverseColorPackBytes(&mobjsub->light1color);
+    ndsRelocReverseColorPackBytes(&mobjsub->light2color);
+}
+
 static u32 ndsRelocEffectiveMObjSubFlags(const MObjSub *mobjsub)
 {
     u32 flags;
@@ -3320,17 +3373,6 @@ static s32 ndsRelocMObjSubMixedFieldsLookNative(const MObjSub *mobjsub)
 static void ndsRelocNormalizeMObjSubMixedFields(NDSRelocLoadedFile *loaded,
                                                 MObjSub *mobjsub)
 {
-    u16 old_pad00;
-    u8 old_fmt;
-    u8 old_siz;
-    u16 old_flags;
-    u8 old_block_fmt;
-    u8 old_block_siz;
-    u8 old_prim_l;
-    u8 old_prim_m;
-    u8 old_prim_pad0;
-    u8 old_prim_pad1;
-
     if (mobjsub == NULL)
     {
         gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
@@ -3343,40 +3385,7 @@ static void ndsRelocNormalizeMObjSubMixedFields(NDSRelocLoadedFile *loaded,
         return;
     }
 
-    old_pad00 = mobjsub->pad00;
-    old_fmt = mobjsub->fmt;
-    old_siz = mobjsub->siz;
-    old_flags = mobjsub->flags;
-    old_block_fmt = mobjsub->block_fmt;
-    old_block_siz = mobjsub->block_siz;
-    old_prim_l = mobjsub->prim_l;
-    old_prim_m = mobjsub->prim_m;
-    old_prim_pad0 = mobjsub->prim_pad[0];
-    old_prim_pad1 = mobjsub->prim_pad[1];
-
-    mobjsub->pad00 = ((u16)old_siz << 8) | old_fmt;
-    mobjsub->fmt = (u8)(old_pad00 >> 8);
-    mobjsub->siz = (u8)(old_pad00 & 0xffu);
-    ndsRelocSwapS16Pair((s16 *)&mobjsub->unk08, (s16 *)&mobjsub->unk0A);
-    ndsRelocSwapS16Pair((s16 *)&mobjsub->unk0C, (s16 *)&mobjsub->unk0E);
-
-    mobjsub->flags = ((u16)old_block_siz << 8) | old_block_fmt;
-    mobjsub->block_fmt = (u8)(old_flags >> 8);
-    mobjsub->block_siz = (u8)(old_flags & 0xffu);
-    ndsRelocSwapS16Pair((s16 *)&mobjsub->block_dxt,
-                        (s16 *)&mobjsub->unk36);
-    ndsRelocSwapS16Pair((s16 *)&mobjsub->unk38, (s16 *)&mobjsub->unk3A);
-
-    mobjsub->prim_l = old_prim_pad1;
-    mobjsub->prim_m = old_prim_pad0;
-    mobjsub->prim_pad[0] = old_prim_m;
-    mobjsub->prim_pad[1] = old_prim_l;
-    ndsRelocReverseColorPackBytes(&mobjsub->primcolor);
-    ndsRelocReverseColorPackBytes(&mobjsub->envcolor);
-    ndsRelocReverseColorPackBytes(&mobjsub->blendcolor);
-    ndsRelocReverseColorPackBytes(&mobjsub->light1color);
-    ndsRelocReverseColorPackBytes(&mobjsub->light2color);
-
+    ndsRelocNormalizeMObjSubWordSwapped(mobjsub);
     ndsRelocRecordMObjSubNormalize(loaded, mobjsub);
 }
 

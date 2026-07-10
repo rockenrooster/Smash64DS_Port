@@ -1025,8 +1025,11 @@
   fighter-region pixels, and adjacent-frame delta `928/49152`. Dream Land is
   recognizable. The
   original fighter-display preamble and part-selection contract are now live;
-  Mario and Fox render as more coherent bodies, but residual lower-body
-  fragments and incomplete fighter materials/textures remain visible. The
+  fighter attachment now restores the mixed-width O2R `MObjSub` lanes before
+  the original object manager copies each record. Mario is visibly more
+  coherent and uses red/blue source material colors, but Fox remains mostly
+  gray and both fighters retain residual lower-body fragments and incomplete
+  textures. The
   Dream Land's source player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated
   source starts. The VSBattle wrapper's forced `is_skip_entry` remains a

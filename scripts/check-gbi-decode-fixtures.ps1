@@ -589,6 +589,12 @@ Assert-True ($rendererAdapter.Contains('HardwareDecalDepthTriangleCount')) 'All-
 Assert-True ($rendererAdapter.Contains('gNdsStageGCDrawAllLoopHardwareTextureReadyCount')) 'Stage gcDrawAll renderer does not expose hardware texture stats.'
 $compatShims = Get-Content (Join-Path $root 'src/port/reloc_backend_compat_shims.c') -Raw
 Assert-True ($compatShims.Contains('gcAddXObjForCamera(cobj, 0x4C, 0)')) 'VSBattle compatibility camera no longer exposes the BattleShip 0x4C matrix kind.'
+Assert-True ($compatShims.Contains('MObjSub normalized_mobjsub = **mobjsubs;')) 'Fighter material attachment no longer copies the O2R MObjSub before lane normalization.'
+Assert-True ($compatShims.Contains('ndsRelocNormalizeMObjSubWordSwapped(&normalized_mobjsub);')) 'Fighter material attachment no longer normalizes mixed-width O2R lanes.'
+Assert-True ($compatShims.Contains('gcAddMObjForDObj(dobj, &normalized_mobjsub)')) 'Fighter material attachment no longer gives the normalized record to the original object manager.'
+$relocAssets = Get-Content (Join-Path $root 'src/port/reloc_backend_assets.c') -Raw
+Assert-True ($relocAssets.Contains('mobjsub->flags = ((u16)old_block_siz << 8) | old_block_fmt;')) 'MObjSub flags/block format lane restoration regressed.'
+Assert-True ($relocAssets.Contains('ndsRelocReverseColorPackBytes(&mobjsub->primcolor);')) 'MObjSub primary-color lane restoration regressed.'
 $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c') -Raw
 Assert-True ($openingBackend.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Opening-room renderer seed hook is missing.'
 $allDLVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-dl-draw-all-harness.ps1') -Raw

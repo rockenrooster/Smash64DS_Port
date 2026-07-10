@@ -62,16 +62,21 @@ selection. Source-selected events retain their matrix/material owner and
 per-draw geometry/prim/env/light state; `dls[0]` remains in parent matrix state
 as in `ftdisplaymain.c:789-805,883-899`. Canonical proof reports
 `gxram=658/2010`, geometry mode `0x222005`, selected parts `14/18`, submitted
-parts, and zero CPU-oracle mismatches. Dream Land player starts now decode
+parts, and zero CPU-oracle mismatches. Fighter attachment now restores the
+mixed-width lanes in O2R `MObjSub` records before the original object manager
+copies them, so source flags, texture formats, and material colors reach the
+live display path. Dream Land player starts now decode
 from the aligned O2R map-object array and the original manager adopts both
 fighters onto source floors. The HUD-off capture
-`artifacts/visibility/2026-07-09_source-starts-hudoff-final.png` shows Fox on
-the left platform and Mario on the right floor. Lower-body fragments and
-incomplete materials/textures still prevent final visual acceptance.
+`artifacts/visibility/2026-07-09_fighter-mobj-lanes-hudoff-final.png` shows Fox
+on the left platform and a more coherent red/blue Mario on the right floor.
+Fox's mostly gray material, lower-body fragments, and incomplete textures still
+prevent final visual acceptance.
 
 Canonical screenshot gates remain strict: `32630/49152` non-clear,
 `15596/49152` dominant-green, `16869/49152` detail, `642/5616`
-fighter-region color, and `147/49152` adjacent-frame delta. Raw DS
+fighter-region color before the material-lane fix (`660/5616` after), and
+`147/49152` adjacent-frame delta. Raw DS
 matrix/depth and cached submission remain renderer debt; the source-correct
 full fighter body currently reduces canonical presentation to about `3.1fps`.
 

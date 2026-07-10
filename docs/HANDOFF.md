@@ -83,11 +83,15 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
 separated but not yet accepted Mario and Fox bodies. The HUD-off capture is
-`artifacts/visibility/2026-07-09_source-starts-hudoff-final.png`; the baseline
-comparison is `artifacts/visibility/2026-07-09_source-starts-comparison.png`.
+`artifacts/visibility/2026-07-09_fighter-mobj-lanes-hudoff-final.png`; the
+pre-fix baseline is
+`artifacts/visibility/2026-07-09_source-starts-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
-Mario/Fox on lines `3/2` at X `0/-1397`. Residual lower-body fragments and
-incomplete fighter materials/textures remain. Raw DS matrix/depth
+Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
+normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
+record; Mario is visibly more coherent and red/blue. Fox's mostly gray
+material, residual lower-body fragments, and incomplete textures remain. Raw
+DS matrix/depth
 also remain renderer debt; full source fighter submission currently measures
 about `3.1fps`.
 The scripted fast mode-163 target is

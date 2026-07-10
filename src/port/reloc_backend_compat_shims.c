@@ -7765,7 +7765,11 @@ void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
 
     while (*mobjsubs != NULL)
     {
-        MObj *mobj = gcAddMObjForDObj(dobj, *mobjsubs);
+        MObjSub normalized_mobjsub = **mobjsubs;
+        MObj *mobj;
+
+        ndsRelocNormalizeMObjSubWordSwapped(&normalized_mobjsub);
+        mobj = gcAddMObjForDObj(dobj, &normalized_mobjsub);
 
         if (mobj == NULL)
         {

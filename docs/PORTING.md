@@ -18397,3 +18397,27 @@ does not assert.
   `artifacts/visibility/2026-07-09_source-starts-hudoff-final.png` and
   `artifacts/visibility/2026-07-09_source-starts-comparison.png`. Fighter
   lower-body/material defects remain explicitly unresolved.
+
+## 2026-07-09 - Fighter MObjSub mixed-width lanes
+
+- Rejected the Dream Land mask/POT-padding sampler hypothesis and removed its
+  temporary probes; no texture-sampler behavior changed.
+- Traced fighter material creation through BattleShip
+  `lbcommon.c:955-1000` into `gcAddMObjForDObj` (`objman.c:1302-1335`). O2R's
+  word swap left the mixed `u16`/`u8` fields and color packs from
+  `objtypes.h:300-342` in reversed lanes. Live samples included flags `0x200`
+  with block format `4` where the source-shaped record is flags `0x4` with
+  block format `2`.
+- Reused the existing MObjSub lane normalizer on a local fighter record before
+  calling the original object manager. The original asset remains immutable,
+  while `lfrac`, material animation, texture flags/formats, and colors now use
+  source-shaped values. The opening-room normalizer routes through the same
+  helper with unchanged behavior.
+- Focused GBI fixtures, all-DL HW rendering, stage-inclusive HW rendering, and
+  canonical realtime screenshot gates passed without expectation changes.
+  Stage totals stayed fixed; fighter-region color rose from `642/5616` to
+  `660/5616`, with zero CPU-oracle mismatches.
+- Rebuilt `smash64ds-battle-playable-hwtri.nds`. Capture
+  `artifacts/visibility/2026-07-09_fighter-mobj-lanes-hudoff-final.png` shows a
+  more connected red/blue Mario at the source-separated start. Fox remains
+  mostly gray, and lower-body/material-texture fidelity is not complete.
