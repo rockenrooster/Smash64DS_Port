@@ -1,5 +1,4 @@
 # Handoff
-
 Use this file for the active handoff only. Keep it under 150 lines. The harness
 registry decides the current Boundary/Latest profile; this file summarizes what
 to do next.
@@ -95,18 +94,20 @@ Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
 separated but not yet accepted Mario and Fox bodies. Imported
 `grwallpaper.c:45-159,267-301` now owns the original 300x220 dynamic wallpaper;
 the DS SObj compositor places it behind the 3D stage and HUD. Latest HUD-off
-capture: `artifacts/visibility/2026-07-10_noz-depth-units-hudoff-final.png`.
+capture: `artifacts/visibility/2026-07-10_fighter-costume-aobj-hudoff-candidate.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
 record. The HW combiner also preserves the proven one-cycle
-`PRIMITIVE * SHADE` formula, but Mario's green cap/mismatched clothing proves
-fighter material/texture selection is still wrong. Persistent source vertex
-slots restore 44 cross-joint triangles. Source-depth X/Y/Z now share one clip
-vertex, and no-Z stage layers use direct signed 20.12 NDC instead of the bad
-extra `<< 4`; oracle mismatch stays zero. Residual fragments, texture ribbons,
-lighting, exact no-Z/head ordering, and raw GX matrices remain debt. Uncached
-wallpaper scaling runs about `1.2fps` and can make BGM resynchronize audibly.
+`PRIMITIVE * SHADE` formula. N64 MSB-first `AObjEvent32` costume commands are
+temporarily translated into ARM bitfield order around BattleShip's original
+one-shot parser; Mario costume `0` now resolves red/blue instead of the final
+green/orange frame. Persistent source vertex slots restore 44 cross-joint
+triangles. Source-depth X/Y/Z share one clip vertex, and no-Z stage layers use
+direct signed 20.12 NDC; oracle mismatch stays zero. Residual fragments,
+texture ribbons, ongoing AObj scripts, lighting, exact DL-head ordering, and
+raw GX matrices remain debt. Uncached wallpaper scaling runs about `1.2fps`
+and can make BGM resynchronize audibly.
 The scripted fast mode-163 target is
 `smash64ds-battle-playable-fast-hwtri.nds`; the user-facing realtime ROM is
 `smash64ds-battle-playable-hwtri.nds`, so verifier builds no longer collide

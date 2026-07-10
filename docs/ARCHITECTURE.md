@@ -1094,6 +1094,15 @@ in Mario/Fox DLs, the DS backend multiplies source primitive RGB by its
 computed light shade. This follows the packed LERP contract in
 `include/PR/gbi.h:508-543`; unobserved two-cycle LERPs remain outside this
 narrow approximation.
+
+BattleShip `objdef.h:272-281` stores `AObjEvent32` opcode/flags/payload in
+bits `31..25/24..15/14..0`, but ARM GCC allocates the unchanged bitfield union
+from the low bit. Fighter costume material scripts are one-shot setup data, so
+the DS compatibility layer validates their linear command stream, temporarily
+re-packs command words for the original parser/player, then restores the O2R
+bytes. No costume colors are hardcoded. Ongoing object/material animation needs
+a separate general bridge for jumps/interpolation and remains a fidelity limit.
+
 Canonical HW still uses projected submission rather than the final raw GX
 matrix path. Source-depth X/Y/Z now come from the same current composed clip
 vertex, including matrix-word updates, before the perspective divide. Stage

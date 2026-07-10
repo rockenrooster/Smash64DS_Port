@@ -18614,3 +18614,21 @@ does not assert.
 - Focused GBI fixtures, stage-inclusive HW draw, and canonical realtime marker
   gates passed. The capture pair changed `0.519%` meaningfully; broad nightly
   verification remains queued.
+
+## 2026-07-10 - Fighter costume AObj command-order repair
+
+- Live GDB inspection proved both fighters selected costume/shade `0`, while
+  Mario red and blue MObj tracks had consumed through their final green and
+  orange values. The raw first command remained source word `0x24008000`.
+- BattleShip `objtypes.h:94-107` declares opcode/flags/payload bitfields, while
+  `objdef.h:272-281` documents their N64 MSB-first word encoding. The DS bridge
+  now validates and temporarily repacks one-shot fighter costume command words
+  around the unchanged original `gcParseMObjMatAnimJoint` /
+  `gcPlayMObjMatAnim`, then restores the O2R bytes.
+- Mario costume `0` now reads source red `0xFF0000FF`, blue `0x0000F7FF`, and
+  source light values from `296_MarioModel.c:968-1165`. The focused HW all-DL
+  gate remains `320/306` triangles with zero oracle rejects.
+- Native HUD-off capture
+  `artifacts/visibility/2026-07-10_fighter-costume-aobj-hudoff-candidate.png`
+  visibly removes Mario's green-cap error. Stage ribbons, fighter fragments,
+  and the general ongoing AObj animation bridge remain open.

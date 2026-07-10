@@ -1,9 +1,7 @@
 # Current Status
-
 This is the short current-truth document. Use `docs/DIAGNOSTIC_REFERENCE.md`
 for full marker strings; append history in `docs/PORTING.md`.
 ## Direction
-
 Target remains a full 1:1 playable Nintendo DS source port of BattleShip Smash
 64. Gameplay work now moves by runtime-first subsystem slices aimed at
 scene-level capability: import coherent original TU groups, prove with the
@@ -11,9 +9,7 @@ continuous natural-runtime verifier plus captures, then graduate live.
 
 Keep `decomp/` read-only. Do not hand-author gameplay when BattleShip source can
 be ported.
-
 ## Current Boundary
-
 The registry decides the active Boundary/Latest set:
 
 ```powershell
@@ -61,6 +57,9 @@ The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
 and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
 single-`dl`/ordered-`dls[]` selection run live; only selected lists cross the DS
 submission seam. The manual all-DObj collector remains a software fixture.
+Fighter costume MObj scripts now bridge N64 MSB-first `AObjEvent32` command
+words around the original one-shot parser. Costume `0` resolves Mario's source
+red/blue materials instead of consuming through the green/orange final frame.
 
 Selected events retain source matrix/material and geometry/prim/env/light
 state; pre-matrix `dls[0]` keeps parent state as in
@@ -82,9 +81,10 @@ keeps HUD SObjs in front. Capture
 `artifacts/visibility/2026-07-10_dream-land-wallpaper-hudoff-final.png` shows
 the source sky. The depth-unit capture
 `artifacts/visibility/2026-07-10_noz-depth-units-hudoff-final.png` changes only
-`0.519%` meaningfully against its adjacent sample. Texture ribbons, Mario's
-green cap/mismatched clothing, lower-body fragments, and lighting remain open.
-The uncached wallpaper lowers presentation to about `1.2fps` and can trigger
+`0.519%` meaningfully against its adjacent sample. The costume-AObj capture
+`artifacts/visibility/2026-07-10_fighter-costume-aobj-hudoff-candidate.png`
+shows Mario's source red/blue; texture ribbons, lower-body fragments, and
+lighting remain open. Uncached presentation is about `1.2fps` and can trigger
 audible BGM resyncs; caching remains P1 debt after fidelity.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
@@ -125,9 +125,9 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-The five-record stage `MObjSub` normalization probe changed no pixels and was
-reverted. Follow-ups: texture-window/fighter material state, exact no-Z/head
-ordering, shadows, CPU recovery, then correct draw/SObj caching for 60fps.
+The five-record stage `MObjSub` probe changed no pixels and was reverted.
+Follow-ups: ongoing AObj scripts, texture windows, exact DL-head ordering,
+shadows/CPU recovery, then draw/SObj caching for 60fps.
 FGM/voice and the original sequence player remain.
 ## Verification
 

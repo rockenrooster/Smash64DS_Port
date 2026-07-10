@@ -1054,11 +1054,12 @@
   fighter attachment restores mixed-width O2R `MObjSub` lanes before the
   original object manager copies each record. The evidenced one-cycle
   `PRIMITIVE * SHADE` LERP now multiplies source primitive RGB by computed
-  shade. Mario still presents an incorrect green cap/mismatched clothing, so
-  fighter MObj material, texture, and palette selection is not yet accepted;
-  both fighters also retain lower-body fragments and incomplete directional
-  light fidelity. The
-  Dream Land's source player map objects now decode through an aligned O2R
+  shade. Fighter costume scripts now translate N64 MSB-first `AObjEvent32`
+  command words around the original one-shot parser, restoring Mario costume
+  `0` red/blue material values. Ongoing DObj/MObj scripts still use the
+  little-endian bitfield union directly and need a general source-backed bridge;
+  both fighters retain lower-body fragments and incomplete directional light
+  fidelity. Dream Land's source player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated
   source starts. The VSBattle wrapper's forced `is_skip_entry` remains a
   separate compatibility slice; normal BattleShip VSBattle does not set it.
