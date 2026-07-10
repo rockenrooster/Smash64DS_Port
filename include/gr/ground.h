@@ -335,6 +335,10 @@ extern u32 gMPCollisionBGMCurrent;
 extern u32 gMPCollisionBGMDefault;
 
 void grWallpaperMakeDecideKind(void);
+void grWallpaperPausePerspUpdate(void);
+void grWallpaperResumePerspUpdate(void);
+void grWallpaperRunProcessAll(void);
+void grWallpaperResumeProcessAll(void);
 void grCommonSetupInitAll(void);
 void ndsGRCompatibilityNonPupupuSetup(void);
 void grDisplayLayer0PriProcDisplay(GObj *ground_gobj);

@@ -949,6 +949,13 @@ captures do not show partially drawn debug overlays.
   nearest-neighbor `320x240 -> 256x192` copy. This is a presentation-side
   optimization only; original Sprite decode, object traversal, and scene flow
   remain BattleShip-owned.
+- Pupupu VSBattle imports `grwallpaper.c`; `scvsbattle.c:152-159` calls the
+  original selector, while `grwallpaper.c:45-159` creates and updates the
+  source 300x220 `StageDreamLand` Sprite. Relocation normalizes that Sprite and
+  its 44 mixed-width Bitmap records once. The SObj compositor classifies the
+  source wallpaper GObj as the back layer and other battle SObjs as foreground,
+  and applies source `scalex/scaley` unless `SP_FASTCOPY` requests the 1:1 path.
+  `SP_TEXSHUF` remains a source texel-layout attribute, not a scaling signal.
 - The top screen also overlays an Opening Room DObj display-list preview from
   the first material-bearing link-27 `gcDrawDObjDLHead1` candidate after
   bounded branch expansion succeeds. The preview samples the original DObj
@@ -1093,6 +1100,12 @@ look-at in the order emitted by `objdisplay.c:3007-3026`, computes NDC Z in two
 64-bit stages before v16 clamping, and flushes the DS Z buffer. Full source-
 selected fighter submission is not cached; that is a backend limit, not
 alternative fighter behavior.
+
+Canonical GDB reads are synchronized to
+`ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,
+GX flush, vblank, and per-frame profile finalization. Sampling the same globals
+at an arbitrary PC can observe the intentional reset at frame start and must
+not be interpreted as zero geometry or a failed CPU oracle.
 
 Remaining fidelity boundaries stay source-shaped. Dream Land stage material
 records need one mixed-width normalization pass at relocation; stage traversal

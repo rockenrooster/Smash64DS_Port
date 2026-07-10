@@ -20,6 +20,8 @@ param(
     [double]$MinRequiredRegionFighterFraction = -1.0,
     [double]$MinCompareChangedFraction = -1.0,
     [double]$MaxCompareChangedFraction = -1.0,
+    [int]$CompareChannelThreshold = 1,
+    [double]$MaxCompareMeanChannelDelta = -1.0,
     [string[]]$NamedRegion = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -101,9 +103,12 @@ function Measure-TopRegion {
             if (Test-FighterDetailPixel $pixel) { $fighterDetail++ }
             if ($null -ne $CompareBitmap) {
                 $other = $CompareBitmap.GetPixel($rx, $ry)
-                if (($pixel.R -ne $other.R) -or
-                    ($pixel.G -ne $other.G) -or
-                    ($pixel.B -ne $other.B)) {
+                $delta = [Math]::Max(
+                    [Math]::Abs([int]$pixel.R - [int]$other.R),
+                    [Math]::Max(
+                        [Math]::Abs([int]$pixel.G - [int]$other.G),
+                        [Math]::Abs([int]$pixel.B - [int]$other.B)))
+                if ($delta -ge $CompareChannelThreshold) {
                     $changed++
                 }
             }
@@ -140,6 +145,8 @@ try {
     $dominantGreen = 0
     $nonWhiteNonGreen = 0
     $changed = 0
+    $rawChanged = 0
+    [long]$compareMaxDeltaSum = 0
     $total = $Width * $Height
     for ($y = $TopY; $y -lt ($TopY + $Height); $y++) {
         for ($x = $TopX; $x -lt ($TopX + $Width); $x++) {
@@ -155,11 +162,18 @@ try {
             }
             if ($null -ne $compareBitmap) {
                 $other = $compareBitmap.GetPixel($x, $y)
-                if (($pixel.R -ne $other.R) -or
-                    ($pixel.G -ne $other.G) -or
-                    ($pixel.B -ne $other.B)) {
+                $delta = [Math]::Max(
+                    [Math]::Abs([int]$pixel.R - [int]$other.R),
+                    [Math]::Max(
+                        [Math]::Abs([int]$pixel.G - [int]$other.G),
+                        [Math]::Abs([int]$pixel.B - [int]$other.B)))
+                if ($delta -gt 0) {
+                    $rawChanged++
+                }
+                if ($delta -ge $CompareChannelThreshold) {
                     $changed++
                 }
+                $compareMaxDeltaSum += $delta
             }
         }
     }
@@ -246,6 +260,8 @@ try {
     }
     if ($null -ne $compareBitmap) {
         $changedFraction = [double]$changed / [double]$total
+        $rawChangedFraction = [double]$rawChanged / [double]$total
+        $meanChannelDelta = [double]$compareMaxDeltaSum / [double]$total
         if (($MinCompareChangedFraction -ge 0.0) -and
             ($changedFraction -lt $MinCompareChangedFraction)) {
             throw ("Top screen delta too small: {0}/{1} changed pixels ({2:P3}) below required {3:P3}." -f
@@ -256,8 +272,15 @@ try {
             throw ("Top screen delta too large: {0}/{1} changed pixels ({2:P3}) above allowed {3:P3}." -f
                 $changed, $total, $changedFraction, $MaxCompareChangedFraction)
         }
-        Write-Output ("Top screen delta: {0}/{1} changed pixels ({2:P3})." -f
-            $changed, $total, $changedFraction)
+        if (($MaxCompareMeanChannelDelta -ge 0.0) -and
+            ($meanChannelDelta -gt $MaxCompareMeanChannelDelta)) {
+            throw ("Top screen mean max-channel delta {0:F2} exceeds allowed {1:F2}." -f
+                $meanChannelDelta, $MaxCompareMeanChannelDelta)
+        }
+        Write-Output ("Top screen delta: raw={0}/{1} ({2:P3}) meaningful={3}/{1} ({4:P3}, channel>={5}) mean={6:F2}." -f
+            $rawChanged, $total, $rawChangedFraction,
+            $changed, $changedFraction, $CompareChannelThreshold,
+            $meanChannelDelta)
     }
     foreach ($regionSpec in $NamedRegion) {
         $region = Convert-NamedRegionSpec $regionSpec

@@ -2841,6 +2841,35 @@ static s32 ndsRelocNormalizeSpriteBitmapTable(NDSRelocLoadedFile *loaded,
     return TRUE;
 }
 
+static void ndsRelocNormalizeStageDreamLandSprite(
+    NDSRelocLoadedFile *loaded)
+{
+    Sprite *sprite;
+
+    if ((loaded == NULL) ||
+        (loaded->asset_id != NDS_RELOC_ASSET_STAGE_DREAM_LAND) ||
+        (ndsRelocRangeInLoadedFile(
+            loaded, NDS_RELOC_SYMBOL_STAGE_DREAM_LAND_SPRITE,
+            sizeof(Sprite)) == FALSE))
+    {
+        return;
+    }
+
+    sprite = (Sprite *)((u8 *)loaded->data +
+                        NDS_RELOC_SYMBOL_STAGE_DREAM_LAND_SPRITE);
+    if ((sprite->width == 300) && (sprite->height == 220) &&
+        (sprite->nbitmaps == 44) &&
+        (sprite->bmfmt == G_IM_FMT_RGBA) &&
+        (sprite->bmsiz == G_IM_SIZ_16b))
+    {
+        return;
+    }
+
+    ndsRelocNormalizeSpriteHeaderFields(sprite, G_IM_FMT_RGBA,
+                                        G_IM_SIZ_16b);
+    (void)ndsRelocNormalizeSpriteBitmapTable(loaded, sprite, 44u);
+}
+
 static void ndsRelocNormalizeVSResultsSprites(NDSRelocLoadedFile *loaded)
 {
     u32 i;
@@ -4323,6 +4352,7 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
             return NULL;
         }
         ndsRelocNormalizeGroundMapAsset(loaded);
+        ndsRelocNormalizeStageDreamLandSprite(loaded);
         ndsRelocAddStatusBufferFile(asset_id, loaded->data);
         return loaded;
     }
@@ -4376,6 +4406,7 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
         return NULL;
     }
     ndsRelocNormalizeGroundMapAsset(loaded);
+    ndsRelocNormalizeStageDreamLandSprite(loaded);
     return loaded;
 }
 
@@ -4745,6 +4776,7 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
                                 ndsRelocNormalizeTitleFireSprites(loaded);
                             }
                             ndsRelocNormalizeGroundMapAsset(loaded);
+                            ndsRelocNormalizeStageDreamLandSprite(loaded);
                         }
                     }
                     heap_ptr += asset_size;

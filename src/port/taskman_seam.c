@@ -4146,6 +4146,12 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     gNdsBattlePlayablePacingTimerTicks = 0;
     gNdsBattlePlayablePacingPresentFpsX10 = 0;
     gNdsBattlePlayablePacingLogicFpsX10 = 0;
+#if NDS_RENDERER_HW_TRIANGLES
+    if (fast_logic == 0u)
+    {
+        ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
+    }
+#endif
 }
 
 static void ndsBattlePlayablePacingUpdate(void)
@@ -4173,6 +4179,11 @@ static void ndsBattlePlayablePacingFinish(void)
 {
     ndsBattlePlayablePacingUpdate();
     gNdsBattlePlayablePacingResult = NDS_BATTLE_PLAYABLE_PACING_PASS;
+}
+
+void __attribute__((noinline, used)) ndsBattlePlayableFrameCompleteMarker(void)
+{
+    __asm__ volatile("" ::: "memory");
 }
 
 static void ndsBattlePlayablePresentFrame(void)
@@ -4249,12 +4260,14 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileHWVertexSaturateCount = 0;
 
     ndsPlatformBeginFrame();
+    ndsSObjPreviewBeginFrame();
     draw_start = cpuGetTiming();
 #if NDS_RENDERER_HW_TRIANGLES
     ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame();
 #else
     gcDrawAll();
 #endif
+    ndsSObjPreviewEndFrame();
     gNdsRendererProfileDrawTicks = cpuGetTiming() - draw_start;
     gNdsBattlePlayablePacingDrawCalls++;
     hud_start = cpuGetTiming();
@@ -4267,6 +4280,7 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsBattlePlayablePacingPresentedFrames++;
     gNdsRendererProfilePresentTicks = cpuGetTiming() - start;
     ndsBattlePlayablePacingUpdate();
+    ndsBattlePlayableFrameCompleteMarker();
 }
 
 static void ndsRunMarioFoxProcessPrerequisiteLoop(void)

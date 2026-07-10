@@ -228,6 +228,14 @@ try {
         'detach',
         'quit'
     )
+    if ($BattlePlayable -and $RealtimePresentation -and $HardwareTriangles -and -not $MatchLifecycleProof) {
+        $gdbCommands = @(
+            $gdbCommands[0..3]
+            'tbreak ndsBattlePlayableFrameCompleteMarker'
+            'continue'
+            $gdbCommands[4..($gdbCommands.Count - 1)]
+        )
+    }
     if ($HardwareTriangles) {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]

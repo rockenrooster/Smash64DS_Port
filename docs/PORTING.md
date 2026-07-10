@@ -18559,3 +18559,35 @@ does not assert.
 - Final gates passed: dev-fast, all Boundary entries, canonical HUD-off pixels,
   and six-entry RegressionCore. Its detached seven-target prebuild took
   `1408.83s`, stamp validation `0.35s`, and no-build verification `344s`.
+
+## 2026-07-10 - Original Dream Land wallpaper runtime
+
+- Imported `gr/grwallpaper.c` whole. The natural VSBattle call at
+  `scvsbattle.c:152-159` now reaches the source Pupupu selector; creation and
+  camera-driven position/scale remain owned by `grwallpaper.c:45-159,267-301`.
+  Training/Boss loaders and the unreachable Bonus3 fill DL remain documented
+  narrow boundaries rather than invented replacements.
+- Normalized the exact `StageDreamLand` 300x220 RGBA16 Sprite and its 44 Bitmap
+  records at relocation, then generalized the Results SObj compositor for
+  VSBattle: wallpaper GObj on BG2, other source SObjs on BG3. Non-`SP_FASTCOPY`
+  Sprites now honor source `scalex/scaley`; `SP_TEXSHUF` remains independent
+  texel-layout state.
+- Added a completed-frame GDB sync point before canonical renderer markers.
+  This prevents the intentional frame-start profile reset from producing
+  false `RENDER_ORACLE=0,0,0` failures. Screenshot comparison now ignores
+  sub-25-channel noise while retaining a mean-delta ceiling that rejects the
+  archived flashing frame.
+- The accepted shipped capture is
+  `artifacts/visibility/2026-07-10_dream-land-wallpaper-hudoff-final.png`.
+  Canonical proof reports `gxram=729/2209`, oracle `2388/0/0`, source-sky
+  detail `82.597%`, meaningful adjacent-frame change `16.099%`, and mean
+  max-channel delta `14.99`. An 8-second first-frame capture was incomplete;
+  the stable minimum is now 12 seconds instead of the former 30.
+- An exact five-record Dream Land stage `MObjSub` normalization probe passed
+  its data checks but changed `0/49152` canonical pixels, so it was fully
+  reverted and recorded as a rejected visual hypothesis.
+- Gates passed without expectation reductions: GBI fixtures, canonical
+  realtime/pixels, dev-fast (`564.9s`), Boundary (`498.8s`), docs,
+  architecture, registry, and detached seven-target RegressionCore prebuild
+  (`1592.139s`, stamp `0.79s`) plus no-build run (`307.7s`). Full Regression
+  remains Tyler's once-daily overnight action.

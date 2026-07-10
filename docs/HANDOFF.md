@@ -92,10 +92,13 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 64 KiB BGM stream buffer leaves `172412` bytes against the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
-separated but not yet accepted Mario and Fox bodies. The HUD-off capture is
-`artifacts/visibility/2026-07-10_source-depth-canonical-hudoff.png`; the
-pre-fix baseline is
-`artifacts/visibility/2026-07-09_fighter-lit-material-hudoff-final.png`.
+separated but not yet accepted Mario and Fox bodies. Imported
+`grwallpaper.c:45-159,267-301` now owns the original 300x220 dynamic wallpaper;
+the DS SObj compositor places it behind the 3D stage and HUD. The HUD-off
+capture is
+`artifacts/visibility/2026-07-10_dream-land-wallpaper-hudoff-final.png`; the
+pre-wallpaper baseline is
+`artifacts/visibility/2026-07-10_source-depth-canonical-hudoff.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
@@ -105,7 +108,9 @@ source olive/brown palette. Persistent source vertex slots restore 44 previously
 dropped cross-joint triangles and visibly connect more limb strips. Residual
 fragments, incomplete textures, direction-light decoding, and the raw GX matrix
 path remain debt; projected submission now preserves source NDC depth through
-the DS Z buffer. Full fighter submission measures about `2.5fps`.
+the DS Z buffer. Source wallpaper scaling currently lowers presentation to
+about `1.2fps`. The canonical verifier stops GDB at the next completed frame
+before reading reset-per-frame renderer diagnostics.
 The scripted fast mode-163 target is
 `smash64ds-battle-playable-fast-hwtri.nds`; the user-facing realtime ROM is
 `smash64ds-battle-playable-hwtri.nds`, so verifier builds no longer collide
@@ -116,11 +121,14 @@ keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Recommended Next Work
 
-1. Normalize Dream Land stage `MObjSub` mixed-width lanes at relocation.
-2. Preserve source stage layer and opaque/translucent DL-head ordering.
-3. Finish texture-window plus fighter RDP/anim-lock fidelity.
-4. Add Dream Land wallpaper/shadows and prove CPU offstage recovery.
-5. Cache corrected draw state for 60fps, then add FGM/voice playback.
+1. Preserve source stage layer and opaque/translucent DL-head ordering.
+2. Finish texture-window plus fighter RDP/anim-lock fidelity.
+3. Add Dream Land shadows and prove CPU offstage recovery.
+4. Cache corrected draw and SObj state for 60fps.
+5. Add FGM/voice playback.
+
+Do not repeat the exact five-record stage `MObjSub` normalization as a visual
+fix: its canonical probe changed `0/49152` pixels and was fully reverted.
 
 ## Verification
 

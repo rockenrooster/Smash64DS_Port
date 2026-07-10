@@ -263,6 +263,9 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
     u32 out_y = 0;
     u32 drawn_pixels = 0;
     u32 is_texshuf;
+    u32 is_scaled;
+    u32 scale_x_q16;
+    u32 scale_y_q16;
 
     if (sobj == NULL)
     {
@@ -301,6 +304,22 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
     height = (u32)(u16)sprite->height;
     bitmap_count = (u32)(u16)sprite->nbitmaps;
     is_texshuf = ((sprite->attr & SP_TEXSHUF) != 0) ? 1u : 0u;
+    if ((sprite->scalex < 0.0001F) || (sprite->scaley < 0.0001F))
+    {
+        return FALSE;
+    }
+    if ((sprite->attr & SP_FASTCOPY) != 0)
+    {
+        scale_x_q16 = 1u << 16;
+        scale_y_q16 = 1u << 16;
+    }
+    else
+    {
+        scale_x_q16 = (u32)((sprite->scalex * 65536.0F) + 0.5F);
+        scale_y_q16 = (u32)((sprite->scaley * 65536.0F) + 0.5F);
+    }
+    is_scaled = ((scale_x_q16 != (1u << 16)) ||
+                 (scale_y_q16 != (1u << 16))) ? TRUE : FALSE;
     if (record_startup != 0)
     {
         gNdsStartupLogoDrawTexshuf = is_texshuf;
@@ -449,16 +468,28 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         for (row = 0; (row < draw_rows) && ((draw_y + row) < height); row++)
         {
             u32 x;
-            s32 dst_y = origin_y + (s32)draw_y + (s32)row;
+            u32 dst_x_q16 = 0u;
+            u32 source_y = draw_y + row;
+            s32 dst_y_start = origin_y +
+                (s32)(((u64)source_y * scale_y_q16) >> 16);
+            s32 dst_y_end = origin_y +
+                (s32)((((u64)(source_y + 1u) * scale_y_q16) +
+                       0xffffu) >> 16);
 
-            if ((dst_y < 0) || (dst_y >= (s32)preview_height))
+            if ((dst_y_end <= 0) ||
+                (dst_y_start >= (s32)preview_height))
             {
                 continue;
             }
             for (x = 0; x < src_draw_width; x++)
             {
-                s32 dst_x = origin_x + (s32)x;
+                s32 dst_x_start = origin_x + (s32)(dst_x_q16 >> 16);
+                s32 dst_x_end;
                 u16 color;
+
+                dst_x_q16 += scale_x_q16;
+                dst_x_end = origin_x +
+                    (s32)((dst_x_q16 + 0xffffu) >> 16);
 
                 if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
                     (sprite->bmsiz == G_IM_SIZ_16b))
@@ -567,10 +598,40 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                 }
                 if (color != 0)
                 {
-                    if ((dst_x >= 0) && (dst_x < (s32)preview_width))
+                    if (is_scaled == FALSE)
                     {
-                        preview[((u32)dst_y * preview_pitch) + (u32)dst_x] =
-                            color;
+                        if ((dst_x_start >= 0) &&
+                            (dst_x_start < (s32)preview_width))
+                        {
+                            preview[((u32)dst_y_start * preview_pitch) +
+                                    (u32)dst_x_start] = color;
+                        }
+                    }
+                    else
+                    {
+                        s32 dst_y;
+
+                        for (dst_y = dst_y_start;
+                             dst_y < dst_y_end; dst_y++)
+                        {
+                            s32 dst_x;
+
+                            if ((dst_y < 0) ||
+                                (dst_y >= (s32)preview_height))
+                            {
+                                continue;
+                            }
+                            for (dst_x = dst_x_start;
+                                 dst_x < dst_x_end; dst_x++)
+                            {
+                                if ((dst_x >= 0) &&
+                                    (dst_x < (s32)preview_width))
+                                {
+                                    preview[((u32)dst_y * preview_pitch) +
+                                            (u32)dst_x] = color;
+                                }
+                            }
+                        }
                     }
                     drawn_pixels++;
                 }
@@ -706,12 +767,18 @@ static void ndsSObjPreviewCommitLayer(void)
     }
 }
 
-static void ndsDrawResultsSObjFrame(GObj *gobj,
-                                    u32 results_wallpaper_combine)
+static void ndsDrawLayeredSObjFrame(GObj *gobj,
+                                    u32 wallpaper_combine)
 {
     SObj *sobj = (gobj != NULL) ? SObjGetStruct(gobj) : NULL;
-    u32 foreground = ((gobj != NULL) && (gobj->dl_link_id != 26u)) ?
-        TRUE : FALSE;
+    u32 foreground = FALSE;
+
+    if (gobj != NULL)
+    {
+        foreground = (gSCManagerSceneData.scene_curr == nSCKindVSResults) ?
+            ((gobj->dl_link_id != 26u) ? TRUE : FALSE) :
+            ((gobj->id != nGCCommonKindWallpaper) ? TRUE : FALSE);
+    }
 
     if ((foreground != FALSE) && (sNdsSObjFrameForeground == FALSE))
     {
@@ -729,7 +796,7 @@ static void ndsDrawResultsSObjFrame(GObj *gobj,
                 sobj, 0u, sNdsSObjFramePreview,
                 sNdsSObjFramePreviewPitch, 320u, 240u,
                 (s32)sobj->pos.x, (s32)sobj->pos.y,
-                results_wallpaper_combine) != FALSE))
+                wallpaper_combine) != FALSE))
         {
             sNdsSObjFramePreviewDrawCount++;
         }
@@ -792,11 +859,12 @@ void lbCommonDrawSObjAttr(GObj *gobj)
     {
         gNdsStartupLogoDrawSObjAttr = sobj->sprite.attr;
     }
-    if ((gSCManagerSceneData.scene_curr == nSCKindVSResults) &&
+    if (((gSCManagerSceneData.scene_curr == nSCKindVSResults) ||
+         (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) &&
         (sNdsSObjFramePreview != NULL) &&
         (sNdsSObjFramePreviewPitch != 0u))
     {
-        ndsDrawResultsSObjFrame(gobj, 0u);
+        ndsDrawLayeredSObjFrame(gobj, 0u);
         return;
     }
 
@@ -924,11 +992,12 @@ void lbCommonDrawSObjAttr(GObj *gobj)
 
 void lbCommonDrawSObjNoAttr(GObj *gobj)
 {
-    if ((gSCManagerSceneData.scene_curr == nSCKindVSResults) &&
+    if (((gSCManagerSceneData.scene_curr == nSCKindVSResults) ||
+         (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) &&
         (sNdsSObjFramePreview != NULL) &&
         (sNdsSObjFramePreviewPitch != 0u))
     {
-        ndsDrawResultsSObjFrame(gobj, 1u);
+        ndsDrawLayeredSObjFrame(gobj, 1u);
         return;
     }
     lbCommonDrawSObjAttr(gobj);

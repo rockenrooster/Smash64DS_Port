@@ -131,6 +131,10 @@
   support now run by default with all eight source files and source Win/Lose
   statuses. The DS compositor preserves source 2D layers around the fighter
   camera, but exact per-SObj RDP/camera interleave remains follow-up.
+- Imported `gr/grwallpaper.c` owns the live Pupupu wallpaper. Its 1P Training
+  and Boss wallpaper-loader calls remain weak no-ops, and the Bonus3 fill DL
+  initializer remains an unreachable zero placeholder, until those separate
+  scenes and assets are imported.
 - The imported `scsubsysdata.c` opening-fighter callback is redirected to a
   narrow no-op because Opening Room actor behavior is outside the Results
   slice. Results data tables and fighter status dispatch remain original.
@@ -1043,9 +1047,10 @@
 - The canonical realtime + live-input + HW-tri battle-playable ROM polls live
   DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
   pixel-gated, but the frame is not yet demo-fidelity. Latest gate: GX RAM
-  `729/2209`, `35277/49152` non-clear, `17332/49152` dominant-green,
-  `17848/49152` detail, `790/5616` fighter-region, and `1271/49152` adjacent-
-  frame delta. Dream Land is recognizable. The
+  `729/2209`, `16509/49152` dominant-green, `30583/49152` detail, `82.597%`
+  source-sky detail, `16.099%` meaningful adjacent-frame change, and mean
+  max-channel delta `14.99`. Dream Land and its original wallpaper are
+  recognizable. The
   original fighter-display preamble and part-selection contract are now live;
   fighter attachment restores mixed-width O2R `MObjSub` lanes before the
   original object manager copies each record. The evidenced one-cycle
@@ -1064,12 +1069,14 @@
   order follows `objdisplay.c:3007-3026`, NDC Z is computed in two 64-bit stages
   before fixed-point clamp, and the DS Z buffer replaces synthetic submission-
   order depth. The raw GX matrix path remains deferred. Full source-selected
-  fighter submission presents at about `2.5fps`; cache work follows fidelity.
+  fighter submission plus the current CPU-scaled 300x220 wallpaper presents at
+  about `1.2fps`; cache work follows fidelity.
 - Dream Land stage `MObjSub` mixed-width fields remain unnormalized. The
   relocation normalizer currently covers MVCommon and fighter-local copies,
   not the Pupupu stage assets, so Whispy face and material fields can retain
-  swapped `u16/u8` lanes. Normalize once at the relocation boundary with exact
-  eyes/mouth fixtures; do not compensate in the renderer.
+  swapped `u16/u8` lanes. An exact five-record normalization probe passed data
+  fixtures but changed `0/49152` canonical pixels, so it was reverted and is
+  not an active explanation for the visible texture defects.
 - Stage submission currently validates but discards `DObjDLLink::list_id` and
   begins persistent state per stage GObj. BattleShip instead builds global
   opaque/translucent heads per camera pass. Preserve source layer preambles and
@@ -1078,10 +1085,11 @@
   matrix bridge lacks the `is_use_animlocks` inverse-scale branch from
   `lbcommon.c:1369-1441`. These are separate from the now-correct depth path and
   need fixed-pose plus anim-lock visual gates.
-- Dream Land wallpaper/background is still the stage `wallpaper` Sprite/SObj
-  path, not the HW triangle path. `gNdsStagePupupuWallpaperPtrReady` proves the
-  original pointer is loaded; composition into a DS 2D BG layer or textured
-  quads is deferred.
+- Dream Land wallpaper now runs through imported `grwallpaper.c` and the source
+  Sprite/SObj path, composed on the DS 2D back layer behind the HW stage. The
+  compositor is source-correct but uncached; its per-pixel scale currently
+  dominates frame time and must be cached without changing camera-driven
+  position/scale behavior.
 - The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`; the
   canonical/shipped target forces it off while verifier markers remain active.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.

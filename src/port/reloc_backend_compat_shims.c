@@ -12543,10 +12543,6 @@ GObj *gmCameraMakeMovieCamera(void (*func_camera)(GObj *))
 }
 #endif
 
-void grWallpaperMakeDecideKind(void)
-{
-}
-
 void ndsGRCompatibilityNonPupupuSetup(void)
 {
     if ((gSCManagerBattleState != NULL) &&

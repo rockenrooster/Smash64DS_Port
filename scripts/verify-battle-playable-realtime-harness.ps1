@@ -20,8 +20,8 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerShellExe = (Get-Process -Id $PID).Path
 $smokeDelaySeconds = [Math]::Max($DelaySeconds, 20)
-$earlyScreenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 30)
-$lateScreenshotDelaySeconds = 30
+$earlyScreenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 12)
+$lateScreenshotDelaySeconds = 12
 $captureStamp = Get-Date -Format 'HHmmss'
 $visibleRegions = @(
     'left_bush:45,120,60,50',
@@ -62,9 +62,23 @@ function Invoke-VisibleCaptureAssert {
         -RequiredRegionHeight 72 `
         -MinRequiredRegionFraction $MinRegionFraction `
         -MinRequiredRegionFighterFraction $MinRegionFighterFraction `
+        -CompareChannelThreshold 25 `
+        -MaxCompareMeanChannelDelta 32 `
         -MaxCompareChangedFraction $MaxScreenshotChangedFraction `
         -MinDifferentFraction 0.01 `
         -NamedRegion $visibleRegions
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+    # scvsbattle.c:152-159 creates the wallpaper camera/object path;
+    # grwallpaper.c:45-123,132-159 keeps this sky Sprite covering the viewport.
+    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+        -Image $output `
+        -RequiredRegionX 0 `
+        -RequiredRegionY 0 `
+        -RequiredRegionWidth 80 `
+        -RequiredRegionHeight 90 `
+        -MinRequiredRegionFraction 0.50
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

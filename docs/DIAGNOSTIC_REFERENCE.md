@@ -1310,7 +1310,8 @@ Opening movie / Opening Portraits:
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
   completed update, and nonzero timer-derived rates. The canonical HW smoke
-  currently reports about `2.5` fps; pass `-RequireRealtime60Fps` for the
+  currently reports about `1.2` fps with the source wallpaper; pass
+  `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
 - `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
   flushes, pre-flush GX polygon RAM count, pre-flush GX vertex RAM count,
@@ -1320,7 +1321,9 @@ Opening movie / Opening Portraits:
 - `RENDER_PROFILE`: canonical HW present timing/counter marker. It reports
   frame/update/present timer splits plus texture, upload, matrix, vertex, and
   triangle counts; the realtime smoke asserts the scene stays under DS limits
-  of 2048 polygons and 6144 vertices.
+  of 2048 polygons and 6144 vertices. The verifier first breaks at
+  `ndsBattlePlayableFrameCompleteMarker`; reading during the frame-start reset
+  can otherwise produce a false zero-sample oracle result.
 - `RENDER_MATRIX` / `RENDER_VERTEX`: canonical HW matrix and vertex-range
   markers. They record loaded projection/modelview seeds and raw/HW vertex
   ranges so blank-screen failures can be sorted into matrix/clip issues versus
@@ -1370,7 +1373,13 @@ Opening movie / Opening Portraits:
   at least 1% of the 256x192 crop to differ from clear color `(20,28,52)`,
   at least 3% dominant-green pixels, at least 25% non-white/non-green detail
   pixels, nonzero fighter-region pixels in the expected Mario/Fox region, and
-  no more than 25% adjacent-frame delta in the settled capture window.
+  at least 50% detail in the source-sky region. Temporal comparison counts
+  channel deltas of at least 25, allows no more than 25% meaningful changed
+  pixels, and caps mean max-channel delta at 32; the latter keeps the archived
+  flashing frame red while allowing detailed wallpaper parallax. Keep the
+  first capture delay at 12 seconds or more: an 8-second shipped-ROM probe
+  reached the first source wallpaper BG commit before the first complete 3D
+  frame, while the 12-second rerun was stable.
 - `LIVE_PAD`: canonical realtime live-input marker. It records DS live read and
   map counts, connected controller mask, raw held-key bits, mapped P0 buttons
   and stick, playback-enabled flag, and playback read count. The canonical ROM

@@ -75,15 +75,20 @@ submission order no longer substitutes for source depth.
 
 O2R `MObjSub` mixed-width lanes, aligned Dream Land starts, original floor
 adoption, and the observed one-cycle `PRIMITIVE * SHADE` material path remain
-live. Capture
-`artifacts/visibility/2026-07-10_source-depth-canonical-hudoff.png` shows
-more connected limbs for red/blue Mario and olive/brown Fox. Residual fragments,
-incomplete textures, and direction-light fidelity still block visual acceptance.
+live. Imported `grwallpaper.c` now creates and updates Dream Land's original
+300x220 source Sprite; the DS SObj compositor places it behind the 3D stage and
+keeps HUD SObjs in front. Capture
+`artifacts/visibility/2026-07-10_dream-land-wallpaper-hudoff-final.png` shows
+the source sky filling the viewport. Residual fighter fragments, incomplete
+textures, and direction-light fidelity remain unchanged.
 
-Canonical screenshot gates report `35277/49152` non-clear, `17332/49152`
-dominant-green, `17848/49152` detail, `790/5616` fighter-region color, and
-`1271/49152` adjacent-frame delta. Raw GX matrix submission and cached draw
-state remain debt; full fighter presentation currently runs at about `2.5fps`.
+Canonical proof reports `gxram=729/2209`, `16509/49152` dominant-green and
+`30583/49152` detail pixels, plus `82.597%` source-sky detail. Adjacent frames
+have `16.099%` meaningful pixel change and mean max-channel delta `14.99`, while
+the archived flashing frame fails the retained mean-delta ceiling. GDB marker
+reads stop at an explicit completed-frame symbol so reset-in-progress renderer
+counters cannot create false oracle failures. The CPU-scaled wallpaper lowers
+presentation to about `1.2fps`; caching remains P1 debt after fidelity.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -100,9 +105,9 @@ and screenshot gates cover the canonical renderer.
 ## Current Notes
 
 Stable flags stay in `nds_build_config.h`; per-mode harness ID/Inishie scale
-live in `nds_scene_harness_config.h`. The Results RegressionCore prebuild took
-`1408.83s`; its stamp validated in `0.35s`, and the six-entry no-build profile
-passed in `344s`.
+live in `nds_scene_harness_config.h`. This slice's seven-target RegressionCore
+prebuild took `1592.139s`; its stamp validated in `0.79s`, and the no-build
+profile passed in `307.7s`.
 
 The taskman allocator now tries `0x140000` and `0x130000` before its legacy
 1 MiB fallback, preventing source-display builds from overflowing after a
@@ -123,10 +128,12 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Follow-ups: normalize Dream Land stage `MObjSub` lanes, preserve source DL-head
-order, finish texture-window and fighter RDP/anim-lock semantics, add wallpaper/
-shadows, prove CPU offstage recovery, then cache correct draw state for 60fps.
-FGM/voice and the original sequence player remain.
+An exact five-record Dream Land stage `MObjSub` normalization probe changed no
+canonical pixels and was reverted; do not repeat it as a visual hypothesis.
+Follow-ups: preserve source DL-head order, finish texture-window and fighter
+RDP/anim-lock semantics, add shadows, prove CPU offstage recovery, then cache
+correct draw/SObj state for 60fps. FGM/voice and the original sequence player
+remain.
 ## Verification
 
 Quick iteration uses `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.

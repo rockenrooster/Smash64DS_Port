@@ -137,19 +137,11 @@ NDS_WEAK GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
     return NULL;
 }
 
-NDS_WEAK void grWallpaperResumePerspUpdate(void)
+NDS_WEAK void sc1PTrainingModeLoadWallpaper(void)
 {
 }
 
-NDS_WEAK void grWallpaperPausePerspUpdate(void)
-{
-}
-
-NDS_WEAK void grWallpaperRunProcessAll(void)
-{
-}
-
-NDS_WEAK void grWallpaperResumeProcessAll(void)
+NDS_WEAK void sc1PGameBossInitWallpaper(void)
 {
 }
 
