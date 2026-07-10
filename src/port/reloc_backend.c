@@ -361,6 +361,7 @@ static void ndsFighterMarioFoxRecordStubFighter(FTDesc *desc,
 static void ndsFighterMarioFoxResetFileSlots(void);
 static void ndsFighterStructResetPool(void);
 static sb32 ndsFighterStructIsPoolPointer(const void *ptr);
+static sb32 ndsFighterStructIsTrackedPointer(const void *ptr);
 static GObj *ndsFighterGetPlayerNumGObj(s32 player_num);
 static void ndsFighterPartsSyncDObj(FTStruct *fp, DObj *dobj, u32 joint_id);
 

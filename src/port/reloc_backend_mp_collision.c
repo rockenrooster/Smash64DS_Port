@@ -716,6 +716,10 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
     u32 vertex_first;
     u32 vertex_count;
     u32 segment_count;
+    u32 yakumono_id = 0u;
+    DObj *yakumono_dobj = NULL;
+    f32 object_x;
+    f32 object_y;
     u32 j;
 
     if (ndsFighterMarioFoxStageFloorEdgeLoopProofEnabled() != FALSE)
@@ -745,6 +749,25 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
     links = geometry->vertex_links;
     ids = geometry->vertex_id;
     verts = geometry->vertex_data;
+    object_x = object_pos->x;
+    object_y = object_pos->y;
+    if ((ndsMPFindLineYakumonoID(line_id, &yakumono_id) != FALSE) &&
+        (gMPCollisionYakumonoDObjs != NULL) &&
+        (yakumono_id < NDS_MP_YAKUMONO_DOBJ_SLOTS))
+    {
+        yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+    }
+    if ((yakumono_dobj == NULL) ||
+        (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+    {
+        return FALSE;
+    }
+    if ((yakumono_dobj->anim_joint.event32 != NULL) ||
+        (yakumono_dobj->user_data.s != nMPYakumonoStatusNone))
+    {
+        object_x -= yakumono_dobj->translate.vec.f.x;
+        object_y -= yakumono_dobj->translate.vec.f.y;
+    }
     vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
     vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
     if ((vertex_count < 2u) || (vertex_count > 128u))
@@ -764,10 +787,8 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
         s32 y2 = ndsMPVertexY(verts, v2_id);
         f32 floor_y;
 
-        if (!(((f32)x1 <= object_pos->x &&
-               (f32)x2 >= object_pos->x) ||
-              ((f32)x2 <= object_pos->x &&
-               (f32)x1 >= object_pos->x)))
+        if (!(((f32)x1 <= object_x && (f32)x2 >= object_x) ||
+              ((f32)x2 <= object_x && (f32)x1 >= object_x)))
         {
             continue;
         }
@@ -776,14 +797,14 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
             gNdsStageCollisionLoopDivisionGuardCount++;
             continue;
         }
-        floor_y = ndsMPLineDistanceFC(object_pos->x, x1, y1, x2, y2);
+        floor_y = ndsMPLineDistanceFC(object_x, x1, y1, x2, y2);
         if (floor_dist != NULL)
         {
-            *floor_dist = floor_y - object_pos->y;
+            *floor_dist = floor_y - object_y;
         }
         if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
         {
-            f32 signed_dist = floor_y - object_pos->y;
+            f32 signed_dist = floor_y - object_y;
 
             if (signed_dist > 0.0F)
             {
@@ -3566,6 +3587,12 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     s32 max_line = gNdsStageCollisionLoopFloorLineMaxExclusive;
     s32 line_id;
 
+    if ((min_line < 0) || (max_line <= min_line))
+    {
+        ndsStageCollisionLoopCountLines();
+        min_line = gNdsStageCollisionLoopFloorLineMin;
+        max_line = gNdsStageCollisionLoopFloorLineMaxExclusive;
+    }
     if ((position == NULL) || (translate == NULL) ||
         (min_line < 0) || (max_line <= min_line))
     {
@@ -3640,11 +3667,13 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             continue;
         }
         gNdsStageMPSweepFloorLoopLineSweepCandidateCount++;
-        if (ndsStageFloorEdgeLoopFloorYAtX(line_id, sweep_translate.x,
+        if (ndsStageFloorEdgeLoopFloorYAtX(line_id,
+                sweep_translate.x + vedge_x,
                 &floor_y) == FALSE)
         {
             continue;
         }
+        floor_y -= vedge_y;
         ndsMPGetFCAngle(&floor_angle, (s32)left.x, (s32)left.y,
                         (s32)right.x, (s32)right.y, 1);
         if (is_diff != FALSE)

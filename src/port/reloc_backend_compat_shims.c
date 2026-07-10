@@ -10456,7 +10456,7 @@ void ftPhysicsSetGroundVelTransferAir(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
+    if ((fp == NULL) || (ndsFighterStructIsTrackedPointer(fp) == FALSE))
     {
         return;
     }
