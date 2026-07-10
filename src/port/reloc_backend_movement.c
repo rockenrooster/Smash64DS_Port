@@ -8994,8 +8994,9 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_NATURAL_COMBAT_RUNBRAKE_FRAMES_REQUIRED 2u
 #define NDS_FIGHTER_NATURAL_COMBAT_TURN_FRAMES_REQUIRED 1u
 #define NDS_FIGHTER_NATURAL_COMBAT_GUARD_FRAMES_REQUIRED 10u
-#define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_DASH_RANGE 400.0F
+#define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_DASH_RANGE 1000.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_STOP_RANGE 170.0F
+#define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE 100.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_STEP 15.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_MIN 50.0F
 #define NDS_FIGHTER_NATURAL_MOVESET_SAFE_RANGE 80.0F
@@ -9107,6 +9108,7 @@ static u32 sNdsNaturalCombatAttackerSlot;
 static u32 sNdsNaturalCombatVictimSlot;
 static u32 sNdsNaturalCombatAttackFrames;
 static u32 sNdsNaturalCombatAttackPressed;
+static u32 sNdsNaturalCombatPassPressed;
 static f32 sNdsNaturalCombatApproachStopRange;
 static u32 sNdsNaturalCombatVictimStartPercent;
 static f32 sNdsNaturalCombatVictimHitPosX;
@@ -10280,6 +10282,7 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNaturalCombatSettleFrames = 0u;
     sNdsNaturalCombatAttackFrames = 0u;
     sNdsNaturalCombatAttackPressed = 0u;
+    sNdsNaturalCombatPassPressed = 0u;
     sNdsNaturalCombatApproachStopRange =
         NDS_FIGHTER_NATURAL_COMBAT_APPROACH_STOP_RANGE;
     sNdsNaturalCombatVictimHitSeen = 0u;
@@ -11281,10 +11284,16 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
     FTStruct *victim = fp[sNdsNaturalCombatVictimSlot];
     f32 dx = ndsFighterNaturalCombatPosX(fp[0]) -
         ndsFighterNaturalCombatPosX(fp[1]);
+    f32 dy = fp[0]->coll_data.p_translate->y -
+        fp[1]->coll_data.p_translate->y;
 
     if (dx < 0.0F)
     {
         dx = -dx;
+    }
+    if (dy < 0.0F)
+    {
+        dy = -dy;
     }
     gNdsFighterNaturalCombatApproachDXMilli =
         (u32)ndsFloatToMilliSigned(dx);
@@ -11381,7 +11390,8 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         }
         break;
     case nNDSNaturalCombatPhaseApproach:
-        if (dx <= sNdsNaturalCombatApproachStopRange)
+        if ((dx <= sNdsNaturalCombatApproachStopRange) &&
+            (dy <= NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE))
         {
             ndsFighterNaturalCombatSetPhase(
                 nNDSNaturalCombatPhaseSettleApproach);
@@ -11390,8 +11400,23 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
     case nNDSNaturalCombatPhaseSettleApproach:
         if (ndsFighterNaturalCombatSettled(fp) != FALSE)
         {
-            sNdsNaturalCombatAttackPressed = 0u;
-            ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseAttack);
+            if ((ABSF(fp[0]->physics.vel_ground.x) < 0.01F) &&
+                (ABSF(fp[1]->physics.vel_ground.x) < 0.01F))
+            {
+                if ((dx <= sNdsNaturalCombatApproachStopRange) &&
+                    (dy <=
+                     NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE))
+                {
+                    sNdsNaturalCombatAttackPressed = 0u;
+                    ndsFighterNaturalCombatSetPhase(
+                        nNDSNaturalCombatPhaseAttack);
+                }
+                else
+                {
+                    ndsFighterNaturalCombatSetPhase(
+                        nNDSNaturalCombatPhaseApproach);
+                }
+            }
         }
         break;
     case nNDSNaturalCombatPhaseAttack:
@@ -11891,20 +11916,41 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         }
         break;
     case nNDSNaturalCombatPhaseApproach:
-        for (i = 0u; i < 2u; i++)
         {
-            f32 self_x = ndsFighterNaturalCombatPosX(fp[i]);
-            f32 other_x = ndsFighterNaturalCombatPosX(fp[1u - i]);
-            f32 adx = other_x - self_x;
-            s8 mag;
+            f32 self_x = ndsFighterNaturalCombatPosX(
+                fp[sNdsNaturalCombatAttackerSlot]);
+            f32 other_x = ndsFighterNaturalCombatPosX(
+                fp[sNdsNaturalCombatVictimSlot]);
+            f32 self_y = fp[sNdsNaturalCombatAttackerSlot]->
+                coll_data.p_translate->y;
+            f32 other_y = fp[sNdsNaturalCombatVictimSlot]->
+                coll_data.p_translate->y;
 
-            if (adx < 0.0F)
+            if ((self_y - other_y) >
+                NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE)
             {
-                adx = -adx;
+                if ((sNdsNaturalCombatPassPressed == 0u) &&
+                    (fp[sNdsNaturalCombatAttackerSlot]->status_id ==
+                     nFTCommonStatusWait))
+                {
+                    stick_y[sNdsNaturalCombatAttackerSlot] = -80;
+                    sNdsNaturalCombatPassPressed = 1u;
+                }
             }
-            mag = (adx > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_DASH_RANGE) ?
-                80 : 40;
-            stick[i] = (other_x >= self_x) ? mag : (s8)-mag;
+            else
+            {
+                f32 adx = other_x - self_x;
+                s8 mag;
+
+                if (adx < 0.0F)
+                {
+                    adx = -adx;
+                }
+                mag = (adx > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_DASH_RANGE) ?
+                    80 : 8;
+                stick[sNdsNaturalCombatAttackerSlot] =
+                    (other_x >= self_x) ? mag : (s8)-mag;
+            }
         }
         break;
     case nNDSNaturalCombatPhaseAttack:

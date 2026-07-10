@@ -87,13 +87,16 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
-- Current mode `161` stalls in its natural Attack11 driver at
-  `NAT_ATTACK=1,0` and times out around update `2120`; renderer markers remain
-  zero because the draw phase is never reached. A clean isolated build of
-  starting commit `b1a9d839a` reproduces the same failure, so this predates the
-  fighter vertex-cache checkpoint. Repair the natural choreography/runtime
-  path without relaxing expectations before claiming dev-fast, Boundary, or
-  RegressionCore green.
+- Current mode `161` remains red after Dream Land source starts exposed live
+  movement/collision gaps. WIP branch
+  `codex/wip-natural-combat-source-start-collision` fixes original-manager
+  eligibility in ground-velocity transfer, removes the floor sweep's harness-
+  prepare dependency, and restores dynamic yakumono translation in
+  `mpCollisionGetFCCommonFloor`. Fox now reaches source Pass/Fall callbacks,
+  but still misses the main floor and reaches `DeadDown` near `Y=-3558`
+  (`NAT_CHAIN=9`, floor sweep `1147/373/3`). Continue from that collision
+  trace without relaxing mode `161/162` expectations before claiming
+  dev-fast, Boundary, or RegressionCore green.
 - Default `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`,
   `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1`, original `efmanager.c`, and Fox
   `ftfoxspeciallw.c` import the natural projectile/effect/reflector path for
