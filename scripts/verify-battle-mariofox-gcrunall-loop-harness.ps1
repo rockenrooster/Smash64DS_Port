@@ -49,6 +49,7 @@ if ($CPUOpponentProof -or $MatchLifecycleProof) {
     $LiveInputPreview = $true
 }
 if ($MatchLifecycleProof) {
+    $CPUOpponentProof = $true
     $ImportBattleShipVSResults = $true
 }
 $verifierContext = Initialize-MelonDSVerifierContext `
