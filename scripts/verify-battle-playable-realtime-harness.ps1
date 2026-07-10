@@ -78,7 +78,8 @@ $harnessArgs = @(
     '-GdbPort', "$GdbPort",
     '-RunnerSlot', "$RunnerSlot",
     '-DelaySeconds', "$smokeDelaySeconds",
-    '-RealtimePresentation'
+    '-RealtimePresentation',
+    '-ImportBattleShipFTComputer'
 )
 if ($NoBuild) { $harnessArgs += '-NoBuild' }
 if ($RequireRealtime60Fps) { $harnessArgs += '-RequireRealtime60Fps' }

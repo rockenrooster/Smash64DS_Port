@@ -10,6 +10,13 @@
  */
 #include <gr/ground.h>
 
+typedef struct MPLineGroup {
+    u16 line_count;
+    u16 *line_id;
+} MPLineGroup;
+
+extern MPLineGroup gMPCollisionLineGroups[nMPLineKindEnumCount];
+
 #ifndef SSB64_NDS_MPOBJECTCOLL_DECLARED
 #define SSB64_NDS_MPOBJECTCOLL_DECLARED
 typedef struct MPObjectColl {

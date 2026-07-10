@@ -66,6 +66,32 @@ NDS_WEAK void grZebesAcidGetLevelInfo(f32 *current, f32 *step)
     }
 }
 
+NDS_WEAK sb32 grHyruleTwisterCheckGetPosition(Vec3f *position)
+{
+    if (position != NULL)
+    {
+        position->x = 0.0F;
+        position->y = 0.0F;
+        position->z = 0.0F;
+    }
+    return FALSE;
+}
+
+NDS_WEAK void grJungleTaruCannGetPosition(Vec3f *position)
+{
+    if (position != NULL)
+    {
+        position->x = 0.0F;
+        position->y = 0.0F;
+        position->z = 0.0F;
+    }
+}
+
+NDS_WEAK f32 grJungleTaruCannGetRotate(void)
+{
+    return 0.0F;
+}
+
 NDS_WEAK void sc1PGameSetPlayerDefeatStats(s32 player, s32 team_order)
 {
     (void)player;

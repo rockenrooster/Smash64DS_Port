@@ -1,5 +1,8 @@
 #include "nds_scene_harness_config.h"
 
+MPLineGroup gMPCollisionLineGroups[nMPLineKindEnumCount];
+static MPGeometryData *sNdsMPLineGroupGeometry;
+
 static sb32 ndsStageCollisionLoopGeometryReady(void)
 {
     return ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
@@ -110,6 +113,69 @@ static u32 ndsMPLineInfoGroupID(MPLineInfo *line_info, u32 kind)
 static u32 ndsMPLineInfoLineCount(MPLineInfo *line_info, u32 kind)
 {
     return ndsMPO2RReadU16(line_info, 2u + (kind * 2u));
+}
+
+void ndsMPCollisionEnsureLineGroups(void)
+{
+    MPGeometryData *geometry = gMPCollisionGeometry;
+    u32 line_counts[nMPLineKindEnumCount] = { 0u };
+    u32 write_counts[nMPLineKindEnumCount] = { 0u };
+    u32 yakumono_count;
+    u32 i;
+    u32 kind;
+
+    if ((geometry == sNdsMPLineGroupGeometry) &&
+        ((geometry == NULL) ||
+         (gMPCollisionLineGroups[nMPLineKindFloor].line_id != NULL)))
+    {
+        return;
+    }
+    for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+    {
+        gMPCollisionLineGroups[kind].line_count = 0u;
+        gMPCollisionLineGroups[kind].line_id = NULL;
+    }
+    sNdsMPLineGroupGeometry = geometry;
+    if (ndsStageCollisionLoopGeometryReady() == FALSE)
+    {
+        return;
+    }
+    yakumono_count = ndsMPGeometryYakumonoCount(geometry);
+    for (i = 0u; i < yakumono_count; i++)
+    {
+        MPLineInfo *info = ndsMPLineInfoAt(geometry->line_info, i);
+
+        for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+        {
+            line_counts[kind] += ndsMPLineInfoLineCount(info, kind);
+        }
+    }
+    for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+    {
+        gMPCollisionLineGroups[kind].line_count = (u16)line_counts[kind];
+        if (line_counts[kind] != 0u)
+        {
+            gMPCollisionLineGroups[kind].line_id =
+                syTaskmanMalloc(line_counts[kind] * sizeof(u16), 2u);
+        }
+    }
+    for (i = 0u; i < yakumono_count; i++)
+    {
+        MPLineInfo *info = ndsMPLineInfoAt(geometry->line_info, i);
+
+        for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+        {
+            u32 first = ndsMPLineInfoGroupID(info, kind);
+            u32 count = ndsMPLineInfoLineCount(info, kind);
+            u32 line_id;
+
+            for (line_id = first; line_id < first + count; line_id++)
+            {
+                gMPCollisionLineGroups[kind].line_id[write_counts[kind]++] =
+                    (u16)line_id;
+            }
+        }
+    }
 }
 
 static u32 ndsMPVertexLinkFirst(MPVertexLinks *links, u32 line_id)
@@ -829,6 +895,30 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
             gNdsStageFloorEdgeLoopFCCommonHitCount++;
         }
         return TRUE;
+    }
+    return FALSE;
+}
+
+sb32 func_ovl2_800F8FFC(Vec3f *position)
+{
+    MPLineGroup *floors = &gMPCollisionLineGroups[nMPLineKindFloor];
+    u32 i;
+
+    if (position == NULL)
+    {
+        return FALSE;
+    }
+    ndsMPCollisionEnsureLineGroups();
+    for (i = 0u; i < floors->line_count; i++)
+    {
+        f32 floor_dist;
+
+        if ((mpCollisionGetFCCommonFloor(floors->line_id[i], position,
+                 &floor_dist, NULL, NULL) != FALSE) &&
+            (floor_dist < 0.001F))
+        {
+            return TRUE;
+        }
     }
     return FALSE;
 }

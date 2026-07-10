@@ -12170,6 +12170,7 @@ void ftParamLockPlayerControl(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_FTCOMPUTER
 void ftComputerSetupAll(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -12184,6 +12185,7 @@ void ftComputerSetFighterDamageDetectSize(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
 }
+#endif
 
 void battleship_ftKeyProcessKeyEvents(GObj *fighter_gobj);
 

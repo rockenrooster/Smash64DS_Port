@@ -2418,6 +2418,24 @@ typedef struct FTComputer {
     f32 jump_predict;
 } FTComputer;
 
+#define NDS_FTCOMPUTER_ASSERT_OFF(field, expected)                         \
+    _Static_assert(offsetof(FTComputer, field) == (expected),               \
+                   "FTComputer " #field " offset changed")
+
+_Static_assert(sizeof(FTComputer) == 0x94u, "FTComputer size changed");
+NDS_FTCOMPUTER_ASSERT_OFF(p_command, 0x08u);
+NDS_FTCOMPUTER_ASSERT_OFF(proc_com, 0x0Cu);
+NDS_FTCOMPUTER_ASSERT_OFF(target_gobj, 0x30u);
+NDS_FTCOMPUTER_ASSERT_OFF(unk_ftcom_0x44, 0x44u);
+NDS_FTCOMPUTER_ASSERT_OFF(cliff_left_pos, 0x4Cu);
+NDS_FTCOMPUTER_ASSERT_OFF(target_line_id, 0x5Cu);
+NDS_FTCOMPUTER_ASSERT_OFF(target_pos, 0x60u);
+NDS_FTCOMPUTER_ASSERT_OFF(origin_pos, 0x70u);
+NDS_FTCOMPUTER_ASSERT_OFF(floor_line_id, 0x88u);
+NDS_FTCOMPUTER_ASSERT_OFF(jump_predict, 0x90u);
+
+#undef NDS_FTCOMPUTER_ASSERT_OFF
+
 typedef struct FTKey {
     s32 input_wait;
     FTKeyEvent *script;

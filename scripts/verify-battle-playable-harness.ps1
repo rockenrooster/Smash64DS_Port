@@ -15,8 +15,10 @@ param(
     [switch]$ImportBattleShipFoxSpecialHi,
     [switch]$ImportBattleShipAudioAssets,
     [switch]$ImportBattleShipAudioBGM,
+    [switch]$ImportBattleShipFTComputer,
     [switch]$RealtimePresentation,
     [switch]$LiveInputPreview,
+    [switch]$CPUOpponentProof,
     [switch]$RequireRealtime60Fps
 )
 $ErrorActionPreference = 'Stop'
@@ -35,6 +37,10 @@ $build = 'build-battle-playable-hwtri-harness'
 if ($RealtimePresentation) {
     $target = 'smash64ds-battle-playable-canonical-hwtri'
     $build = 'build-battle-playable-canonical-hwtri-harness'
+    $LiveInputPreview = $true
+} elseif ($CPUOpponentProof) {
+    $target = 'smash64ds-battle-playable-cpu-proof'
+    $build = 'build-battle-playable-cpu-proof-harness'
     $LiveInputPreview = $true
 }
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
@@ -56,9 +62,11 @@ if ($RealtimePresentation) {
     -ImportBattleShipFoxSpecialHi:$ImportBattleShipFoxSpecialHi `
     -ImportBattleShipAudioAssets:$ImportBattleShipAudioAssets `
     -ImportBattleShipAudioBGM:$ImportBattleShipAudioBGM `
+    -ImportBattleShipFTComputer:$ImportBattleShipFTComputer `
     -HardwareTriangles `
     -RealtimePresentation:$RealtimePresentation `
     -LiveInputPreview:$LiveInputPreview `
+    -CPUOpponentProof:$CPUOpponentProof `
     -RequireRealtime60Fps:$RequireRealtime60Fps `
     -Harness 'battle_playable' `
     -Target $target `
@@ -66,5 +74,5 @@ if ($RealtimePresentation) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label 'battle_playable Pupupu stock KO' `
+    -Label 'battle_playable Pupupu' `
     -HarnessSelectMessage 'battle_playable harness did not select Pupupu VSBattle from Maps.'

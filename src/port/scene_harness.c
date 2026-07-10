@@ -177,11 +177,23 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
 {
     ndsSceneHarnessSeedBattlePupupuStageDefaults();
 
+#if NDS_DEV_LIVE_INPUT_PREVIEW
+    gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_TIME;
+    gSCManagerTransferBattleState.time_limit = 5;
+    gSCManagerTransferBattleState.item_toggles = 0u;
+    gSCManagerTransferBattleState.item_appearance_rate =
+        nSCBattleItemSwitchNone;
+    gSCManagerTransferBattleState.pl_count = 1;
+    gSCManagerTransferBattleState.cp_count = 1;
+    gSCManagerTransferBattleState.players[1].pkind = nFTPlayerKindCom;
+    gSCManagerTransferBattleState.players[1].level = 3;
+#else
     gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_STOCK;
     gSCManagerTransferBattleState.time_limit = SCBATTLE_TIMELIMIT_INFINITE;
     gSCManagerTransferBattleState.stocks = 8;
     gSCManagerTransferBattleState.players[0].stock_count = 8;
     gSCManagerTransferBattleState.players[1].stock_count = 8;
+#endif
     ndsSceneHarnessSyncSingleStockIconFlags();
 
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;

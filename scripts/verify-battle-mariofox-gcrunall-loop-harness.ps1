@@ -6,6 +6,7 @@ param(
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
     [switch]$ImportBattleShipFTManager,
+    [switch]$ImportBattleShipFTComputer,
     [switch]$ImportBattleShipBattlePlayable,
     [switch]$ImportBattleShipIFCommon,
     [switch]$ImportBattleShipMarioFireball,
@@ -22,6 +23,7 @@ param(
     [switch]$BattlePlayable,
     [switch]$RealtimePresentation,
     [switch]$LiveInputPreview,
+    [switch]$CPUOpponentProof,
     [switch]$RequireRealtime60Fps,
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
@@ -39,6 +41,10 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ImportBattleShipFTManager = $true
 if ($BattlePlayable) {
     $ImportBattleShipBattlePlayable = $true
+}
+if ($CPUOpponentProof) {
+    $ImportBattleShipFTComputer = $true
+    $LiveInputPreview = $true
 }
 $verifierContext = Initialize-MelonDSVerifierContext `
     -Root $root `
@@ -92,6 +98,9 @@ if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
+}
+if ($ImportBattleShipFTComputer) {
+    $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTCOMPUTER=1'
 }
 if ($ImportBattleShipBattlePlayable) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1'
@@ -246,6 +255,15 @@ try {
         )
         $gdbCommands = @($beforeDetach + $battlePlayableCommands + $afterDetach)
     }
+    if ($ImportBattleShipFTComputer) {
+        $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
+        $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
+        $computerCommands = @(
+            'printf "CPU_CONFIG=%u,%u,%u,%u,%u,%u,%#x,%u\n", gSCManagerBattleState->players[0].pkind, gSCManagerBattleState->players[1].pkind, gSCManagerBattleState->players[1].level, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count, gSCManagerBattleState->time_limit, gSCManagerBattleState->item_toggles, gSCManagerBattleState->item_appearance_rate',
+            'printf "CPU_AI=%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%d,%d\n", gNdsFTComputerSetupCount, gNdsFTComputerDamageDetectCount, gNdsFTComputerProcessCount, gNdsFTComputerTargetFrames, gNdsFTComputerObjectiveMask, gNdsFTComputerBehaviorMask, gNdsFTComputerInputChangeCount, gNdsFTComputerStickFrames, gNdsFTComputerButtonAFrames, gNdsFTComputerButtonBFrames, gNdsFTComputerButtonZFrames, gNdsFTComputerAttackFrames, gNdsFTComputerHitboxFrames, gNdsFTComputerGuardFrames, gNdsFTComputerRecoveryFrames, gNdsFTComputerStatusChangeCount, gNdsFTComputerFinalStatus, gNdsFTComputerFinalGA, gNdsFTComputerFinalInputKind, gNdsFTComputerMarioDamageMax, gNdsFTComputerFloorLineCount, gNdsFTComputerStartXMilli, gNdsFTComputerMinXMilli, gNdsFTComputerMaxXMilli, gNdsFTComputerFinalXMilli'
+        )
+        $gdbCommands = @($beforeDetach + $computerCommands + $afterDetach)
+    }
     if ($ImportBattleShipIFCommon) {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
@@ -319,6 +337,8 @@ try {
     $memoryArena = [regex]::Match($gdbStdout, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryReloc = [regex]::Match($gdbStdout, 'MEMRELOC=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryEvict = [regex]::Match($gdbStdout, 'MEMEVICT=([0-9]+),([0-9]+)')
+    $computerConfig = [regex]::Match($gdbStdout, 'CPU_CONFIG=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+)')
+    $computerAI = [regex]::Match($gdbStdout, 'CPU_AI=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $run = [regex]::Match($gdbStdout, 'GCRUNALL_RUN=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $process = [regex]::Match($gdbStdout, 'GCRUNALL_PROCESS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $input = [regex]::Match($gdbStdout, 'GCRUNALL_INPUT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
@@ -362,6 +382,10 @@ try {
     } elseif (-not $RealtimePresentation) {
         $bm = Get-Ints $buildMode
         Assert-Condition ($buildMode.Success -and $bm[2] -eq 0x46415354) 'Fast-logic verifier build marker did not report FAST config.' $gdbStdout
+    }
+    if ($ImportBattleShipFTComputer) {
+        $cc = Get-Ints $computerConfig
+        Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq 3 -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq 5 -and $cc[6] -eq 0 -and $cc[7] -eq 0) 'Mode 163 did not configure the source five-minute, items-off Mario human versus Fox level-3 CPU match.' $gdbStdout
     }
     if ($ExpectedMode -eq 54) {
         Assert-Condition ($vs.Success -and (Convert-MarkerUInt32 $vs.Groups[1].Value) -eq 0x56535452 -and ((Convert-MarkerUInt32 $vs.Groups[2].Value) -band 0xff) -eq 0xff) 'Menu-chain VS Mode -> PlayersVS transition did not pass.' $gdbStdout
@@ -433,11 +457,25 @@ try {
                 $lpv = Get-Ints $livePad
                 Assert-Condition ($livePad.Success -and $lpv[0] -gt 0 -and $lpv[1] -gt 0 -and (($lpv[2] -band 3) -eq 3) -and $lpv[7] -eq 0 -and $lpv[8] -eq 0 -and $lpv[9] -eq 0 -and $lpv[10] -eq 0 -and $lpv[11] -eq 0 -and $lpv[16] -eq 0 -and $lpv[17] -eq 0 -and $lpv[18] -eq 0 -and $lpv[19] -eq 0) 'Canonical realtime build did not use live DS input with connected-neutral pad1.' $gdbStdout
             }
+            if ($ImportBattleShipFTComputer) {
+                $cpu = Get-Ints $computerAI
+                Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and $cpu[2] -gt 0 -and $cpu[3] -gt 0 -and $cpu[7] -gt 0 -and $cpu[20] -gt 0) 'Canonical realtime build did not run the imported Fox CPU setup/process/target/movement path.' $gdbStdout
+                $hardwareSummary += " cpu=setup$($cpu[0])/proc$($cpu[2])/target$($cpu[3])/stick$($cpu[7])/obj0x$('{0:x}' -f $cpu[4])"
+            }
             if ($ImportBattleShipAudioBGM) {
                 $ab = Get-Ints $audioBgm
                 Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x1) -eq 0x1) -and (($ab[2] -eq 1) -or ($ab[6] -ge 1)) -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0) 'Minimal BGM backend realtime smoke failed hardware-timer byte-rate or safe half refill guard.' $gdbStdout
             }
             Write-Output ("$Label realtime pacing smoke passed: frames=$($bp[3]) fps=$($bp[6])/$($bp[7]) ticks=$($bp[5])$hardwareSummary")
+            return
+        }
+        if ($CPUOpponentProof) {
+            $cpu = Get-Ints $computerAI
+            # ftcomputer.c:6326 selects Attack inside 350 units; :7591-7592
+            # dispatches that objective, and :3440-3460 emits A/B/Z commands.
+            # ftmain.c:198-327 owns the resulting live attack-collision state.
+            Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and $cpu[2] -ge 1000 -and $cpu[3] -gt 0 -and (($cpu[4] -band 0x4) -eq 0x4) -and $cpu[6] -gt 0 -and $cpu[7] -gt 0 -and $cpu[8] -gt 0 -and $cpu[9] -gt 0 -and $cpu[10] -gt 0 -and $cpu[11] -gt 0 -and $cpu[12] -gt 0 -and $cpu[13] -gt 0 -and $cpu[15] -gt 0 -and $cpu[19] -gt 0 -and $cpu[20] -gt 0 -and ($cpu[23] - $cpu[22]) -ge 50000) 'Imported Fox CPU did not naturally target, move, attack with live hitboxes, guard, and damage Mario on Dream Land.' $gdbStdout
+            Write-Output ("$Label original CPU proof passed: setup=$($cpu[0]) process=$($cpu[2]) target=$($cpu[3]) objective=0x$('{0:x}' -f $cpu[4]) behavior=0x$('{0:x}' -f $cpu[5]) inputs=$($cpu[6]) stick=$($cpu[7]) buttons=$($cpu[8])/$($cpu[9])/$($cpu[10]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) status=$($cpu[15]) damage=$($cpu[19]) x=$($cpu[21])/$($cpu[22])..$($cpu[23])/$($cpu[24])")
             return
         }
         $movementOnly = (($ExpectedMode -eq 39) -or ($ExpectedMode -eq 40))
