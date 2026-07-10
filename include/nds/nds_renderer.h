@@ -88,6 +88,15 @@ typedef struct NDSRendererClipVertex20p12
     s32 w;
 } NDSRendererClipVertex20p12;
 
+typedef struct NDSRendererVertexCache
+{
+    NDSRendererInputVertex input_vertices[NDS_RENDERER_VERTEX_CACHE_SIZE];
+    NDSRendererClipVertex20p12
+        transformed_vertices[NDS_RENDERER_VERTEX_CACHE_SIZE];
+    u32 input_valid_mask;
+    u32 transformed_valid_mask;
+} NDSRendererVertexCache;
+
 typedef struct NDSRendererCommand
 {
     const Gfx *dl;
@@ -315,6 +324,13 @@ void ndsRendererExecuteDisplayList(const Gfx *dl,
                                    NDSRendererCommandCallback callback,
                                    void *callback_user,
                                    NDSRendererStats *stats);
+void ndsRendererExecuteDisplayListWithVertexCache(
+    const Gfx *dl,
+    const NDSRendererConfig *config,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache);
 void ndsRendererHardwareSetNoOracle(u32 enabled);
 u32 ndsRendererHardwareNoOracleEnabled(void);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);

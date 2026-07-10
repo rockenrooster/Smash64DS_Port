@@ -1076,6 +1076,12 @@ before `gcPrepDObjMatrix` use the parent matrix and no child MObj, while
 `dls[1]` uses the prepared child matrix and material. Geometry, prim, env, and
 light state are snapshotted per source draw rather than collapsed after the
 traversal. The CPU 20.12 path remains the fixture oracle.
+BattleShip appends each selected part list to the same display-list head
+(`ftdisplaymain.c:780-805,871-899`), so the RSP's 32 transformed vertex slots
+survive matrix changes and later parts can join against earlier slots. The DS
+adapter preserves both input attributes and transformed clip coordinates across
+its per-event renderer calls; changing matrices invalidates only same-matrix
+oracle recomputation, not the cached transformed vertices.
 For the live one-cycle `(PRIMITIVE - 0) * SHADE + 0` fighter combiner observed
 in Mario/Fox DLs, the DS backend multiplies source primitive RGB by its
 computed light shade. This follows the packed LERP contract in

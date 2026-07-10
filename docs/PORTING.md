@@ -18439,3 +18439,25 @@ does not assert.
   visibly restores Fox's olive/brown source palette while preserving Mario and
   Dream Land. Lower-body assembly, incomplete textures/light direction, and
   the measured ~3.1fps presentation remain open.
+
+## 2026-07-09 - Fighter cross-part RSP vertex cache
+
+- A live source-selected trace found Mario limb lists that load cache slots
+  `4..7` or `4..9` and form triangles with earlier slots `0..3`; executing each
+  part with a fresh renderer traversal dropped `36/8` Mario/Fox triangles.
+- BattleShip emits the selected lists into one `gSYTaskmanDLHeads[0]` stream
+  around each part's matrix prep (`ftdisplaymain.c:780-805,871-899`). The DS
+  adapter now carries the 32 input and CPU-transformed vertex slots across that
+  same ordered event sequence. Matrix changes preserve transformed slots while
+  limiting oracle recomputation to vertices loaded under the current matrix.
+- The GBI fixture locks the observed Mario `gSPVertex(4,4)` cross-cache shape.
+  Focused all-DL proof now submits the full `320/306` triangles with `0/0`
+  rejects; stage-inclusive and canonical realtime gates remain green with zero
+  oracle mismatches. Canonical GX RAM rises from `685/2077` to `729/2209`.
+- Capture `artifacts/visibility/2026-07-09_fighter-vertex-cache-hudoff-final.png`
+  visibly reconnects additional Fox arm and Mario lower-leg strips. Remaining
+  fragments, material/texture fidelity, and the measured ~3.0fps are still open.
+- `verify-dev-fast -Build` exposed a mode-161 natural Attack11 timeout at
+  `NAT_ATTACK=1,0` before any renderer draw. An isolated clean build of starting
+  commit `b1a9d839a` reproduces it, so Boundary/RegressionCore are queued behind
+  that pre-existing runtime debt rather than reported green or retuned here.

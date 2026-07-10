@@ -267,6 +267,7 @@ typedef struct NDSRendererTraversalState
     u32 vertex_valid_mask;
 #if NDS_RENDERER_HW_TRIANGLES
     u32 input_vertex_valid_mask;
+    u32 current_transform_vertex_mask;
 #endif
     u32 projection_valid;
     u32 modelview_valid;
@@ -1060,6 +1061,10 @@ static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
         ((state->projection_valid != 0u) ||
          (state->modelview_valid != 0u)) ? TRUE : FALSE;
     state->matrix_word_valid = FALSE;
+#if NDS_RENDERER_HW_TRIANGLES
+    /* Cached RSP vertices retain the transform active when they were loaded. */
+    state->current_transform_vertex_mask = 0u;
+#endif
 }
 
 static void ndsRendererInitMatrixWordRaw(NDSRendererTraversalState *state)
@@ -1444,6 +1449,9 @@ static void ndsRendererApplyMatrixMoveWordCommand(
     words[word_index] = w1;
     ndsRendererMtxLoadN64ToDS20p12(&state->matrix_word_raw, &state->matrix);
     state->matrix_valid = TRUE;
+#if NDS_RENDERER_HW_TRIANGLES
+    state->current_transform_vertex_mask = 0u;
+#endif
     stats->matrix_command_count++;
     stats->matrix_move_word_count++;
 }
@@ -1543,6 +1551,7 @@ static void ndsRendererApplyVertexCommand(
 #if NDS_RENDERER_HW_TRIANGLES
         state->input_vertices[v0 + i] = input;
         state->input_vertex_valid_mask |= 1u << (v0 + i);
+        state->current_transform_vertex_mask |= 1u << (v0 + i);
 #endif
         if (state->matrix_valid == 0u)
         {
@@ -1734,6 +1743,7 @@ static void ndsRendererHardwareRecordOracleVertex(
         (index >= NDS_RENDERER_MAX_VTX) ||
         ((state->input_vertex_valid_mask & (1u << index)) == 0u) ||
         ((state->vertex_valid_mask & (1u << index)) == 0u) ||
+        ((state->current_transform_vertex_mask & (1u << index)) == 0u) ||
         (state->matrix_valid == 0u))
     {
         return;
@@ -4645,11 +4655,13 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 #endif
 }
 
-void ndsRendererExecuteDisplayList(const Gfx *dl,
-                                   const NDSRendererConfig *config,
-                                   NDSRendererCommandCallback callback,
-                                   void *callback_user,
-                                   NDSRendererStats *stats)
+void ndsRendererExecuteDisplayListWithVertexCache(
+    const Gfx *dl,
+    const NDSRendererConfig *config,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache)
 {
     NDSRendererTraversalState state;
 
@@ -4665,8 +4677,30 @@ void ndsRendererExecuteDisplayList(const Gfx *dl,
     }
 
     ndsRendererInitTraversalState(&state, config, stats);
+    if (vertex_cache != NULL)
+    {
+        memcpy(state.vertices, vertex_cache->transformed_vertices,
+               sizeof(state.vertices));
+        state.vertex_valid_mask = vertex_cache->transformed_valid_mask;
+#if NDS_RENDERER_HW_TRIANGLES
+        memcpy(state.input_vertices, vertex_cache->input_vertices,
+               sizeof(state.input_vertices));
+        state.input_vertex_valid_mask = vertex_cache->input_valid_mask;
+#endif
+    }
     ndsRendererScanList(dl, config, stats, &state, 0, callback,
                         callback_user);
+    if (vertex_cache != NULL)
+    {
+        memcpy(vertex_cache->transformed_vertices, state.vertices,
+               sizeof(vertex_cache->transformed_vertices));
+        vertex_cache->transformed_valid_mask = state.vertex_valid_mask;
+#if NDS_RENDERER_HW_TRIANGLES
+        memcpy(vertex_cache->input_vertices, state.input_vertices,
+               sizeof(vertex_cache->input_vertices));
+        vertex_cache->input_valid_mask = state.input_vertex_valid_mask;
+#endif
+    }
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererHardwareEndBatch();
 #endif
@@ -4684,4 +4718,14 @@ void ndsRendererExecuteDisplayList(const Gfx *dl,
         stats->blocker = NDS_RENDERER_BLOCKER_NO_END;
         return;
     }
+}
+
+void ndsRendererExecuteDisplayList(const Gfx *dl,
+                                   const NDSRendererConfig *config,
+                                   NDSRendererCommandCallback callback,
+                                   void *callback_user,
+                                   NDSRendererStats *stats)
+{
+    ndsRendererExecuteDisplayListWithVertexCache(dl, config, callback,
+                                                 callback_user, stats, NULL);
 }

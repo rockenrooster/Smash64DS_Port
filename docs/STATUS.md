@@ -50,36 +50,31 @@ imported BattleShip code. `FTStruct` and `FTData` retain source-layout guards;
 mode `163` proves natural combat, KO/rebirth, HUD, audio parsing, one-track
 Pupupu BGM, and the current hardware-rendered battle scene.
 
-The fighter renderer now imports BattleShip `ftdisplaymain.c`,
-`ftdisplaylights.c`, and `guMtxCatF`. The live DS path enters the original
-display preamble, uses its lighting/geometry state, and follows its hidden,
-no-texture, single-`dl`, and ordered `dls[]` part-selection contract. Only the
-selected display lists cross a narrow DS hardware-submission seam; the old
-manual all-DObj collector remains only as the CPU/software fixture oracle.
+The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
+and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
+single-`dl`/ordered-`dls[]` selection run live; only selected lists cross the DS
+submission seam. The manual all-DObj collector remains a software fixture.
 
-The source camera matrix/projection path is prepared before fighter visibility
-selection. Source-selected events retain their matrix/material owner and
-per-draw geometry/prim/env/light state; `dls[0]` remains in parent matrix state
-as in `ftdisplaymain.c:789-805,883-899`. Canonical proof reports
-`gxram=685/2077`, geometry mode `0x222005`, selected parts `14/18`, submitted
-parts, and zero CPU-oracle mismatches. Fighter attachment now restores the
-mixed-width lanes in O2R `MObjSub` records before the original object manager
-copies them, so source flags, texture formats, and material colors reach the
-live display path. Dream Land player starts now decode
-from the aligned O2R map-object array and the original manager adopts both
-fighters onto source floors. The HW combiner now preserves the live one-cycle
-`PRIMITIVE * SHADE` contract (`gbi.h:508-543`) by multiplying source material
-RGB with the computed fighter light shade. Capture
-`artifacts/visibility/2026-07-09_fighter-lit-material-hudoff-final.png` shows
-red/blue Mario and olive/brown Fox at their separated starts. Residual
-lower-body fragments, incomplete textures, and direction-light fidelity still
-prevent final visual acceptance.
+Selected events retain source matrix/material and geometry/prim/env/light
+state; pre-matrix `dls[0]` keeps parent state as in
+`ftdisplaymain.c:789-805,883-899`. The DS bridge also carries the RSP input and
+transformed vertex cache across those per-part lists, matching BattleShip's
+single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
+all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
+Canonical proof reports `gxram=729/2209`, geometry `0x222005`, selected parts
+`14/18`, and zero CPU-oracle mismatches.
 
-Canonical screenshot gates remain strict: `32630/49152` non-clear,
-`15598/49152` dominant-green, `16887/49152` detail, `764/5616`
-fighter-region color, and `155/49152` adjacent-frame delta. Raw DS
-matrix/depth and cached submission remain renderer debt; the source-correct
-full fighter body currently reduces canonical presentation to about `3.1fps`.
+O2R `MObjSub` mixed-width lanes, aligned Dream Land starts, original floor
+adoption, and the observed one-cycle `PRIMITIVE * SHADE` material path remain
+live. Capture
+`artifacts/visibility/2026-07-09_fighter-vertex-cache-hudoff-final.png` shows
+more connected limbs for red/blue Mario and olive/brown Fox. Residual fragments,
+incomplete textures, and direction-light fidelity still block visual acceptance.
+
+Canonical screenshot gates report `32679/49152` non-clear, `15616/49152`
+dominant-green, `16917/49152` detail, `791/5616` fighter-region color, and
+`159/49152` adjacent-frame delta. Raw DS matrix/depth and cached submission
+remain debt; full fighter presentation currently runs at about `3.0fps`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -128,6 +123,8 @@ deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 Follow-ups: remaining fighter part/texture/light fidelity, source entry behavior,
 raw DS matrix/depth, wallpaper/SObj composition, renderer-cache 60fps
 cutover, FGM/voice, and the original sequence player.
+Mode `161` also has pre-existing natural Attack11 timeout debt at
+`NAT_ATTACK=1,0`; clean commit `b1a9d839a` reproduces it before renderer draw.
 
 ## Verification
 

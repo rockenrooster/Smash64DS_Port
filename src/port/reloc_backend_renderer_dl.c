@@ -6411,6 +6411,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     NDSFighterDLAllDrawCollection collection;
     NDSFighterDLDrawState *states;
     NDSFighterDLDrawState persistent_state;
+    NDSRendererVertexCache persistent_renderer_vertices;
     NDSRendererStats *stats;
     NDSRendererStats persistent_stats;
     u8 *clean;
@@ -6457,6 +6458,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                                     FALSE;
     bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
     bzero(&persistent_state, sizeof(persistent_state));
+    bzero(&persistent_renderer_vertices, sizeof(persistent_renderer_vertices));
     bzero(stats, sizeof(sNdsFighterDLAllDrawStats[slot]));
     ndsRendererInitStats(&persistent_stats);
     if (sNdsFighterDisplayContractPlayback != FALSE)
@@ -6575,13 +6577,15 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_HW_TRIANGLES
         step_start = cpuGetTiming();
 #endif
-        ndsRendererExecuteDisplayList(dl,
-                                      &config,
-                                      (no_oracle != FALSE) ?
-                                          NULL :
-                                          ndsFighterMarioFoxVisitDLDrawCommand,
-                                      &states[i],
-                                      &stats[i]);
+        ndsRendererExecuteDisplayListWithVertexCache(
+            dl,
+            &config,
+            (no_oracle != FALSE) ?
+                NULL :
+                ndsFighterMarioFoxVisitDLDrawCommand,
+            &states[i],
+            &stats[i],
+            &persistent_renderer_vertices);
 #if NDS_RENDERER_HW_TRIANGLES
         gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;

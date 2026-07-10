@@ -252,6 +252,25 @@ $triReadyMask = (1 -shl $decodedTri2First.V0) -bor (1 -shl $decodedTri2First.V1)
 Assert-True (($validMask -band $triReadyMask) -eq $triReadyMask) 'Transformed triangle readiness mask did not accept the first TRI2 fixture.'
 $triMissingMask = (1 -shl $decodedTri2Second.V0) -bor (1 -shl $decodedTri2Second.V1) -bor (1 -shl $decodedTri2Second.V2)
 Assert-True (($validMask -band $triMissingMask) -ne $triMissingMask) 'Transformed triangle readiness mask did not reject the second TRI2 fixture.'
+$marioJointVtx = Decode-F3DEX2Vtx -W0 0x01004010 -MaxVtx 32
+Assert-Equal $marioJointVtx.V0 4 'Mario joint cache fixture decoded v0 mismatch.'
+Assert-Equal $marioJointVtx.Count 4 'Mario joint cache fixture decoded count mismatch.'
+$marioPriorMask = 0x0f
+$marioJointMask = $marioPriorMask
+for ($i = 0; $i -lt $marioJointVtx.Count; $i++) {
+    $marioJointMask = $marioJointMask -bor (1 -shl ($marioJointVtx.V0 + $i))
+}
+$marioJointTriangles = @(0x06040e, 0x0c060e, 0x0e0402, 0x060c0a)
+foreach ($packed in $marioJointTriangles) {
+    $tri = Decode-F3DEX2TriPacked -Packed $packed
+    $mask = (1 -shl $tri.V0) -bor (1 -shl $tri.V1) -bor (1 -shl $tri.V2)
+    Assert-True (($marioJointMask -band $mask) -eq $mask) 'Mario cross-part vertex-cache fixture rejected a source triangle.'
+}
+$firstMarioJointTri = Decode-F3DEX2TriPacked -Packed $marioJointTriangles[0]
+$firstMarioJointMask = (1 -shl $firstMarioJointTri.V0) -bor
+    (1 -shl $firstMarioJointTri.V1) -bor
+    (1 -shl $firstMarioJointTri.V2)
+Assert-True ((0xf0 -band $firstMarioJointMask) -ne $firstMarioJointMask) 'Mario cross-part fixture must require a prior cached vertex.'
 $mtxProjectionLoadW0 = New-F3DEX2MtxW0 -Flags (0x04 -bor 0x02)
 $mtxModelViewLoadW0 = New-F3DEX2MtxW0 -Flags 0x02
 $mtxModelViewPushMulW0 = New-F3DEX2MtxW0 -Flags 0x01

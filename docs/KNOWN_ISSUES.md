@@ -87,6 +87,13 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
+- Current mode `161` stalls in its natural Attack11 driver at
+  `NAT_ATTACK=1,0` and times out around update `2120`; renderer markers remain
+  zero because the draw phase is never reached. A clean isolated build of
+  starting commit `b1a9d839a` reproduces the same failure, so this predates the
+  fighter vertex-cache checkpoint. Repair the natural choreography/runtime
+  path without relaxing expectations before claiming dev-fast, Boundary, or
+  RegressionCore green.
 - Default `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`,
   `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1`, original `efmanager.c`, and Fox
   `ftfoxspeciallw.c` import the natural projectile/effect/reflector path for
@@ -1042,12 +1049,12 @@
   cached-present work.
 - Canonical HW currently uses the CPU-oracle projected-submit fallback for
   z-buffered triangles, so `RENDER_ORACLE=.../0/0` is not independent proof of
-  raw DS matrix/depth correctness in this path. The scratch projected-submit
-  probe proved fighters/platforms/background DLs reach the HW submitter; the
-  raw DS matrix/z-buffered path remains deferred. Full source-selected fighter
-  submission currently presents at about `3.1fps`; the next renderer pass must
-  parse source DLs once and replay cached draw state, then repair raw
-  matrix/depth before this is a 60fps demo.
+  raw DS matrix/depth correctness. Source-selected fighter lists now preserve
+  the RSP vertex cache across parts, restoring the full `320/306` Mario/Fox
+  triangle set with zero rejects, but residual visual fragments remain. Raw DS
+  matrix/depth is deferred. Full fighter submission presents at about `3.0fps`;
+  the next renderer pass must cache decoded draw state before this can become a
+  60fps demo.
 - Dream Land wallpaper/background is still the stage `wallpaper` Sprite/SObj
   path, not the HW triangle path. `gNdsStagePupupuWallpaperPtrReady` proves the
   original pointer is loaded; composition into a DS 2D BG layer or textured

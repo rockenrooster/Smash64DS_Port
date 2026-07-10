@@ -48,8 +48,11 @@ manual all-DObj collector remains only as the software fixture oracle.
 The source camera matrix/projection is prepared before fighter visibility
 selection. Each selected event retains its source matrix/material owner and
 per-draw geometry/prim/env/light state; pre-matrix `dls[0]` uses parent state.
-Latest canonical proof reports `gxram=685/2077`, geometry mode `0x222005`,
-selected parts `14/18`, nonzero submitted counts, and zero oracle mismatches.
+The adapter now preserves the 32-slot input/transformed RSP vertex cache across
+the selected part sequence, as BattleShip's common `gSYTaskmanDLHeads[0]`
+stream does. All-DL HW output is the full `320/306` Mario/Fox triangle set with
+zero rejects; canonical proof reports `gxram=729/2209`, geometry `0x222005`,
+selected parts `14/18`, and zero oracle mismatches.
 
 Runtime slice 2 graduated the original manager/status/animation path. Default
 builds import `ft/ftmanager.c`, the full original common/Mario/Fox status
@@ -83,18 +86,18 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
 separated but not yet accepted Mario and Fox bodies. The HUD-off capture is
-`artifacts/visibility/2026-07-09_fighter-lit-material-hudoff-final.png`; the
+`artifacts/visibility/2026-07-09_fighter-vertex-cache-hudoff-final.png`; the
 pre-fix baseline is
-`artifacts/visibility/2026-07-09_source-starts-hudoff-final.png`.
+`artifacts/visibility/2026-07-09_fighter-lit-material-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
 record. The HW combiner also preserves the proven one-cycle
 `PRIMITIVE * SHADE` formula, so Mario remains red/blue and Fox now uses his
-source olive/brown palette. Residual lower-body fragments, incomplete textures,
-direction-light decoding, and raw DS matrix/depth
-also remain renderer debt; full source fighter submission currently measures
-about `3.1fps`.
+source olive/brown palette. Persistent source vertex slots restore 44 previously
+dropped cross-joint triangles and visibly connect more limb strips. Residual
+fragments, incomplete textures, direction-light decoding, and raw DS
+matrix/depth remain debt; full fighter submission measures about `3.0fps`.
 The scripted fast mode-163 target is
 `smash64ds-battle-playable-fast-hwtri.nds`; the user-facing realtime ROM is
 `smash64ds-battle-playable-hwtri.nds`, so verifier builds no longer collide
@@ -133,8 +136,8 @@ For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical chunks:
 ```
 
 For shared-TU changes, use `RegressionCore` during the session. Tyler runs the full Regression sweep overnight with `scripts/start-overnight-regression.ps1`.
-For this daytime source-start checkpoint, dev-fast, Boundary, RegressionCore,
-and full Regression are queued for that overnight verification task.
+Current mode `161` stalls at `NAT_ATTACK=1,0`; clean `b1a9d839a` reproduces it
+before renderer draw. Repair it before Boundary/RegressionCore; full stays overnight.
 Detach prebuilds expected to exceed 90 seconds and confirm by stamp:
 
 ```powershell
