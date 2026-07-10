@@ -10379,6 +10379,22 @@ void ftPhysicsApplyGroundVelFriction(GObj *fighter_gobj)
     {
         gNdsFighterWaitTickPhysicsCallbackCount++;
     }
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) &&
+            (ndsFighterStructIsPoolPointer(fp) == FALSE) &&
+            (ndsFighterStructIsTrackedPointer(fp) != FALSE) &&
+            (fp->attr != NULL))
+        {
+            u32 material = fp->coll_data.floor_flags & MAP_VERTEX_MAT_MASK;
+
+            ftPhysicsSetGroundVelFriction(fp,
+                dMPCollisionMaterialFrictions[material & 0x0fu] *
+                fp->attr->traction);
+            ftPhysicsSetGroundVelTransferAir(fighter_gobj);
+        }
+    }
 }
 
 void ftPhysicsSetGroundVelAbsStickRange(FTStruct *fp, f32 vel, f32 friction)

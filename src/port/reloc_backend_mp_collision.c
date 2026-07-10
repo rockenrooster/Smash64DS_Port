@@ -3583,63 +3583,72 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                                           Vec3f *angle,
                                           sb32 is_diff)
 {
-    s32 min_line = gNdsStageCollisionLoopFloorLineMin;
-    s32 max_line = gNdsStageCollisionLoopFloorLineMaxExclusive;
-    s32 line_id;
+    MPGeometryData *geometry = gMPCollisionGeometry;
+    MPLineInfo *line_info;
+    MPVertexLinks *links;
+    MPVertexArray *ids;
+    MPVertexPosContainer *verts;
+    u32 yakumono_count;
+    u32 i;
+    f32 best_dist = 3.402823466e+38F;
+    s32 best_line = -1;
+    u32 best_flags = 0u;
+    u32 best_yakumono_id = 0u;
+    sb32 best_is_dynamic = FALSE;
+    Vec3f best_pos = { 0.0F, 0.0F, 0.0F };
+    Vec3f best_angle = { 0.0F, 1.0F, 0.0F };
 
-    if ((min_line < 0) || (max_line <= min_line))
-    {
-        ndsStageCollisionLoopCountLines();
-        min_line = gNdsStageCollisionLoopFloorLineMin;
-        max_line = gNdsStageCollisionLoopFloorLineMaxExclusive;
-    }
     if ((position == NULL) || (translate == NULL) ||
-        (min_line < 0) || (max_line <= min_line))
+        (ndsStageCollisionLoopGeometryReady() == FALSE))
     {
         return FALSE;
     }
-    for (line_id = min_line; line_id < max_line; line_id++)
+    line_info = geometry->line_info;
+    links = geometry->vertex_links;
+    ids = geometry->vertex_id;
+    verts = geometry->vertex_data;
+    yakumono_count = ndsMPGeometryYakumonoCount(geometry);
+    if (yakumono_count > 64u)
     {
-        Vec3f left;
-        Vec3f right;
-        Vec3f sweep_position;
-        Vec3f sweep_translate;
-        f32 floor_y;
+        yakumono_count = 64u;
+    }
+    for (i = 0u; i < yakumono_count; i++)
+    {
+        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        s32 first = (s32)ndsMPLineInfoGroupID(info, nMPLineKindFloor);
+        s32 count = (s32)ndsMPLineInfoLineCount(info, nMPLineKindFloor);
+        u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
+        DObj *yakumono_dobj = NULL;
         f32 vedge_x = 0.0F;
         f32 vedge_y = 0.0F;
-        u32 flags = 0u;
-        Vec3f floor_angle;
-        u32 yakumono_id = 0u;
-        DObj *yakumono_dobj = NULL;
+        f32 speed_x = 0.0F;
+        f32 speed_y = 0.0F;
         sb32 is_dynamic = FALSE;
-        sb32 hit;
+        s32 end;
+        s32 line_id;
 
-        if (ndsMPLineIDIsFloor(line_id) == FALSE)
+        if (count <= 0)
         {
             continue;
         }
-        gNdsStageMPSweepFloorLoopLineSweepVisitCount++;
-        if (ndsMPFindLineEndpoints(line_id, &left, &right, &flags,
-                NULL) == FALSE)
+        if (count > 4096)
         {
-            continue;
+            count = 4096;
         }
-        sweep_position = *position;
-        sweep_translate = *translate;
-        if ((ndsMPFindLineYakumonoID(line_id, &yakumono_id) != FALSE) &&
-            (gMPCollisionYakumonoDObjs != NULL) &&
+        if ((gMPCollisionYakumonoDObjs != NULL) &&
             (yakumono_id < NDS_MP_YAKUMONO_DOBJ_SLOTS))
         {
             yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
         }
         if ((yakumono_dobj != NULL) &&
-            (yakumono_dobj->user_data.s < nMPYakumonoStatusOff) &&
+            (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+        {
+            continue;
+        }
+        if ((yakumono_dobj != NULL) &&
             ((yakumono_dobj->anim_joint.event32 != NULL) ||
              (yakumono_dobj->user_data.s != nMPYakumonoStatusNone)))
         {
-            f32 speed_x = 0.0F;
-            f32 speed_y = 0.0F;
-
             vedge_x = yakumono_dobj->translate.vec.f.x;
             vedge_y = yakumono_dobj->translate.vec.f.y;
             if ((is_diff != FALSE) && (gMPCollisionSpeeds != NULL))
@@ -3656,75 +3665,111 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                         ndsFloatToMilliSigned(speed_y);
                 }
             }
-            sweep_position.x = (position->x - vedge_x) + speed_x;
-            sweep_position.y = (position->y - vedge_y) + speed_y;
-            sweep_translate.x = translate->x - vedge_x;
-            sweep_translate.y = translate->y - vedge_y;
             is_dynamic = TRUE;
         }
-        if ((sweep_translate.x < left.x) || (sweep_translate.x > right.x))
+        end = first + count;
+        for (line_id = first; line_id < end; line_id++)
         {
-            continue;
+            u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
+            u32 vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
+            Vec3f sweep_position = *position;
+            Vec3f sweep_translate = *translate;
+            u32 j;
+
+            gNdsStageMPSweepFloorLoopLineSweepVisitCount++;
+            if ((vertex_count < 2u) || (vertex_count > 128u))
+            {
+                gNdsStageCollisionLoopBadVertexCount++;
+                continue;
+            }
+            if (is_dynamic != FALSE)
+            {
+                sweep_position.x = (position->x - vedge_x) + speed_x;
+                sweep_position.y = (position->y - vedge_y) + speed_y;
+                sweep_translate.x = translate->x - vedge_x;
+                sweep_translate.y = translate->y - vedge_y;
+            }
+            for (j = 0u; j + 1u < vertex_count; j++)
+            {
+                u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
+                u32 v2_id = ndsMPVertexID(ids, vertex_first + j + 1u);
+                Vec3f v1 = { (f32)ndsMPVertexX(verts, v1_id),
+                             (f32)ndsMPVertexY(verts, v1_id), 0.0F };
+                Vec3f v2 = { (f32)ndsMPVertexX(verts, v2_id),
+                             (f32)ndsMPVertexY(verts, v2_id), 0.0F };
+                f32 line_x = v2.x - v1.x;
+                f32 line_y = v2.y - v1.y;
+                f32 prev_side = (line_x * (sweep_position.y - v1.y)) -
+                    (line_y * (sweep_position.x - v1.x));
+                f32 curr_side = (line_x * (sweep_translate.y - v1.y)) -
+                    (line_y * (sweep_translate.x - v1.x));
+                f32 hit_x;
+                f32 hit_y;
+                f32 hit_dist;
+
+                if ((prev_side < -0.001F) || (curr_side > 0.001F))
+                {
+                    continue;
+                }
+                gNdsStageMPSweepFloorLoopLineSweepCandidateCount++;
+                if (ndsStageMPSegmentIntersection2D(&sweep_position,
+                        &sweep_translate, &v1, &v2, NULL, NULL, &hit_x,
+                        &hit_y) == FALSE)
+                {
+                    continue;
+                }
+                hit_dist = fabsf(hit_y - (sweep_position.y - speed_y));
+                if (hit_dist >= best_dist)
+                {
+                    continue;
+                }
+                best_dist = hit_dist;
+                best_line = line_id;
+                best_flags = ndsMPVertexFlags(verts, v1_id);
+                best_yakumono_id = yakumono_id;
+                best_is_dynamic = is_dynamic;
+                best_pos.x = hit_x + vedge_x;
+                best_pos.y = hit_y + vedge_y;
+                best_pos.z = 0.0F;
+                ndsMPGetFCAngle(&best_angle, (s32)v1.x, (s32)v1.y,
+                                (s32)v2.x, (s32)v2.y, 1);
+            }
         }
-        gNdsStageMPSweepFloorLoopLineSweepCandidateCount++;
-        if (ndsStageFloorEdgeLoopFloorYAtX(line_id,
-                sweep_translate.x + vedge_x,
-                &floor_y) == FALSE)
-        {
-            continue;
-        }
-        floor_y -= vedge_y;
-        ndsMPGetFCAngle(&floor_angle, (s32)left.x, (s32)left.y,
-                        (s32)right.x, (s32)right.y, 1);
-        if (is_diff != FALSE)
-        {
-            hit = (((sweep_position.y >= floor_y) &&
-                    (sweep_translate.y <= (floor_y + 8.0F))) ||
-                   (fabsf(sweep_translate.y - floor_y) <= 64.0F)) ?
-                TRUE : FALSE;
-        }
-        else
-        {
-            hit = (fabsf(sweep_translate.y - floor_y) <= 128.0F) ?
-                TRUE : FALSE;
-        }
-        if (hit == FALSE)
-        {
-            continue;
-        }
-        if (ga_last != NULL)
-        {
-            ga_last->x = sweep_translate.x + vedge_x;
-            ga_last->y = floor_y + vedge_y;
-            ga_last->z = translate->z;
-        }
-        if ((is_dynamic != FALSE) &&
-            (ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() !=
-                FALSE))
-        {
-            gNdsStageMPPlatformSpeedFloorLoopDynamicHitCount++;
-            gNdsStageMPPlatformSpeedFloorLoopDynamicLineID = line_id;
-            gNdsStageMPPlatformSpeedFloorLoopDynamicYakumonoID = yakumono_id;
-            gNdsStageMPPlatformSpeedFloorLoopDynamicGaXMilli =
-                ndsFloatToMilliSigned(sweep_translate.x + vedge_x);
-            gNdsStageMPPlatformSpeedFloorLoopDynamicGaYMilli =
-                ndsFloatToMilliSigned(floor_y + vedge_y);
-        }
-        if (stand_line_id != NULL)
-        {
-            *stand_line_id = line_id;
-        }
-        if (stand_coll_flags != NULL)
-        {
-            *stand_coll_flags = flags;
-        }
-        if (angle != NULL)
-        {
-            *angle = floor_angle;
-        }
-        return TRUE;
     }
-    return FALSE;
+    if (best_line < 0)
+    {
+        return FALSE;
+    }
+    if (ga_last != NULL)
+    {
+        *ga_last = best_pos;
+    }
+    if (stand_line_id != NULL)
+    {
+        *stand_line_id = best_line;
+    }
+    if (stand_coll_flags != NULL)
+    {
+        *stand_coll_flags = best_flags;
+    }
+    if (angle != NULL)
+    {
+        *angle = best_angle;
+    }
+    if ((best_is_dynamic != FALSE) &&
+        (ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() !=
+            FALSE))
+    {
+        gNdsStageMPPlatformSpeedFloorLoopDynamicHitCount++;
+        gNdsStageMPPlatformSpeedFloorLoopDynamicLineID = best_line;
+        gNdsStageMPPlatformSpeedFloorLoopDynamicYakumonoID =
+            best_yakumono_id;
+        gNdsStageMPPlatformSpeedFloorLoopDynamicGaXMilli =
+            ndsFloatToMilliSigned(best_pos.x);
+        gNdsStageMPPlatformSpeedFloorLoopDynamicGaYMilli =
+            ndsFloatToMilliSigned(best_pos.y);
+    }
+    return TRUE;
 }
 
 sb32 mpCollisionCheckFloorLineCollisionSame(Vec3f *position,
