@@ -947,6 +947,14 @@ $(NITROFS_DIR)/audio/%: $(BATTLESHIP_O2R)/audio/%
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
+# A killed compiler can leave its .d file before ERROR_FILTER gets a chance to
+# repair Windows drive paths. Sanitize existing dependency files before make
+# parses them so the next incremental build can recover without a clean.
+NDS_EXISTING_DEPENDS := $(wildcard $(DEPENDS))
+ifneq ($(strip $(NDS_EXISTING_DEPENDS)),)
+$(shell sed -i -e 's!\([A-Za-z]\):devkitPro!\1:/devkitPro!g' $(NDS_EXISTING_DEPENDS))
+endif
+
 -include $(DEPENDS)
 
 endif

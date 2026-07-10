@@ -6314,6 +6314,7 @@ static void ndsFighterDLAllDrawAccumulateStats(
         return;
     }
 
+#if NDS_RENDERER_HW_TRIANGLES
     if (slot == 0u)
     {
         ndsRendererAdapterAccumulateDepth(
@@ -6334,6 +6335,7 @@ static void ndsFighterDLAllDrawAccumulateStats(
             &gNdsRendererDepthFighterP1WMin,
             &gNdsRendererDepthFighterP1WMax);
     }
+#endif
 
     gNdsFighterDLAllDrawHardwareTextureBindCount +=
         stats->hardware_texture_bind_count;
