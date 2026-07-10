@@ -1027,11 +1027,11 @@
   original fighter-display preamble and part-selection contract are now live;
   Mario and Fox render as more coherent bodies, but residual lower-body
   fragments and incomplete fighter materials/textures remain visible. The
-  canonical compatibility spawns are still close together. Using Dream Land's
-  source player map objects (`mpcollision.c:3405-3425`) exposes a separate
-  entry/floor bug: Fox reaches Wait at `(6,-2460)` while retaining floor line
-  `3`, then falls. Source spawn graduation is deferred until that runtime path
-  is fixed without a position-restore seam. The unflagged palette seed is an intentional
+  Dream Land's source player map objects now decode through an aligned O2R
+  halfword accessor, and the original manager grounds Mario/Fox at separated
+  source starts. The VSBattle wrapper's forced `is_skip_entry` remains a
+  separate compatibility slice; normal BattleShip VSBattle does not set it.
+  The unflagged palette seed is an intentional
   compatibility path until command-order proof removes it; it is no longer the
   confirmed visual root cause. Remaining texture debt includes padding, exact
   LOADBLOCK origin/stride/DXT semantics, mask/shift edge cases, and 60fps

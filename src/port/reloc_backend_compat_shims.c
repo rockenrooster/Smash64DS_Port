@@ -1,6 +1,8 @@
 /* NDS_NATURAL_COMBAT_ROUTED_EXTERNS */
 #include "nds_scene_harness_config.h"
 
+static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
+
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 /* Imported BattleShip originals exported by src/import wrappers. */
 sb32 ndsBaseFTCommonCatchCheckInterruptCommon(GObj *fighter_gobj);
@@ -13089,48 +13091,41 @@ void efGroundMakeAppearActor(void)
 
 s32 mpCollisionGetMapObjCountKind(s32 kind)
 {
-#if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
     u32 i;
     u32 count = 0u;
     u32 mapobj_count;
 
+#if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
     if (sNdsStageInishieScaleSourceSetupActive != FALSE)
     {
         return ((kind == nMPMapObjKindScaleL) ||
                 (kind == nMPMapObjKindScaleR)) ? 1 : 0;
     }
+#endif
 
     mapobj_count = ndsMPGeometryMapObjCount(gMPCollisionGeometry);
-    if ((mapobj_count == 0u) || (gMPCollisionMapObjs == NULL))
-    {
-        return 1;
-    }
-
     for (i = 0; i < mapobj_count; i++)
     {
-        MPMapObjData *mapobj = &gMPCollisionMapObjs->mapobjs[i];
+        u16 mapobj_kind;
 
-        if ((s32)ndsMPO2RReadU16(mapobj, 0u) == kind)
+        if ((ndsMPReadMapObj((s32)i, &mapobj_kind, NULL, NULL) != FALSE) &&
+            ((s32)mapobj_kind == kind))
         {
             count++;
         }
     }
     return (s32)count;
-#else
-    (void)kind;
-    return 1;
-#endif
 }
 
 void mpCollisionGetMapObjIDsKind(s32 kind, s32 *ids)
 {
-#if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
     u32 i;
     u32 count = 0u;
     u32 mapobj_count;
 
     if (ids != NULL)
     {
+#if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
         if (sNdsStageInishieScaleSourceSetupActive != FALSE)
         {
             if (kind == nMPMapObjKindScaleL)
@@ -13147,32 +13142,21 @@ void mpCollisionGetMapObjIDsKind(s32 kind, s32 *ids)
             }
             return;
         }
+#endif
 
         mapobj_count = ndsMPGeometryMapObjCount(gMPCollisionGeometry);
-        if ((mapobj_count == 0u) || (gMPCollisionMapObjs == NULL))
-        {
-            ids[0] = 0;
-            return;
-        }
-
         for (i = 0; i < mapobj_count; i++)
         {
-            MPMapObjData *mapobj = &gMPCollisionMapObjs->mapobjs[i];
+            u16 mapobj_kind;
 
-            if ((s32)ndsMPO2RReadU16(mapobj, 0u) == kind)
+            if ((ndsMPReadMapObj((s32)i, &mapobj_kind, NULL, NULL) != FALSE) &&
+                ((s32)mapobj_kind == kind))
             {
                 ids[count] = (s32)i;
                 count++;
             }
         }
     }
-#else
-    (void)kind;
-    if (ids != NULL)
-    {
-        ids[0] = 0;
-    }
-#endif
 }
 
 void mpCollisionGetMapObjPositionID(s32 id, Vec3f *pos)
@@ -13180,8 +13164,6 @@ void mpCollisionGetMapObjPositionID(s32 id, Vec3f *pos)
     if (pos != NULL)
     {
 #if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
-        u32 mapobj_count;
-
         if (sNdsStageInishieScaleSourceSetupActive != FALSE)
         {
             if (id == 0)
@@ -13199,21 +13181,20 @@ void mpCollisionGetMapObjPositionID(s32 id, Vec3f *pos)
                 return;
             }
         }
-
-        mapobj_count = ndsMPGeometryMapObjCount(gMPCollisionGeometry);
-        if ((id >= 0) && ((u32)id < mapobj_count) &&
-            (gMPCollisionMapObjs != NULL))
-        {
-            MPMapObjData *mapobj = &gMPCollisionMapObjs->mapobjs[id];
-
-            pos->x = (f32)ndsMPO2RReadS16(mapobj, 1u);
-            pos->y = (f32)ndsMPO2RReadS16(mapobj, 2u);
-            pos->z = 0.0F;
-            return;
-        }
-#else
-        (void)id;
 #endif
+
+        {
+            s16 x;
+            s16 y;
+
+            if (ndsMPReadMapObj(id, NULL, &x, &y) != FALSE)
+            {
+                pos->x = (f32)x;
+                pos->y = (f32)y;
+                pos->z = 0.0F;
+                return;
+            }
+        }
 
         pos->x = 0.0F;
         pos->y = 0.0F;
@@ -13223,17 +13204,30 @@ void mpCollisionGetMapObjPositionID(s32 id, Vec3f *pos)
 
 void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos)
 {
-    static const Vec3f spawns[GMCOMMON_PLAYERS_MAX] = {
-        { -80.0F, 0.0F, 0.0F },
-        { 80.0F, 0.0F, 0.0F },
-        { -40.0F, 0.0F, 0.0F },
-        { 40.0F, 0.0F, 0.0F },
-    };
-
     if (pos != NULL)
     {
-        s32 index = (player >= 0 && player < GMCOMMON_PLAYERS_MAX) ? player : 0;
-        *pos = spawns[index];
+        sb32 found = FALSE;
+        u32 i;
+        u32 mapobj_count = ndsMPGeometryMapObjCount(gMPCollisionGeometry);
+
+        pos->x = 0.0F;
+        pos->y = 0.0F;
+        pos->z = 0.0F;
+        for (i = 0; i < mapobj_count; i++)
+        {
+            u16 kind;
+            s16 x;
+            s16 y;
+
+            if ((ndsMPReadMapObj((s32)i, &kind, &x, &y) != FALSE) &&
+                (found == FALSE) &&
+                ((s32)kind == player))
+            {
+                pos->x = (f32)x;
+                pos->y = (f32)y;
+                found = TRUE;
+            }
+        }
     }
     gNdsSCVSBattleCompatSpawnMask |= 1u << (player & 3);
 }
@@ -13313,8 +13307,6 @@ sb32 mpCollisionCheckProjectFloor(Vec3f *pos, s32 *floor_line_id,
     }
 #endif
 
-#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
-    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
     if ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
         (ndsStageCollisionLoopGeometryReady() != FALSE))
     {
@@ -13343,7 +13335,6 @@ sb32 mpCollisionCheckProjectFloor(Vec3f *pos, s32 *floor_line_id,
         }
         return is_floor;
     }
-#endif
 
     if ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
         (pos != NULL) &&

@@ -82,12 +82,12 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 64 KiB BGM stream buffer leaves `172412` bytes against the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
-improved but not yet accepted Mario and Fox bodies. The late proof capture is
-`artifacts/visibility/2026-07-09_fighter-display-contract-hudoff-final.png`.
-Screenshot metrics are `44489/49152` non-clear, `13454/49152` green,
-`30474/49152` detail, `3465/5616` fighter-region color, and `928/49152`
-adjacent-frame delta. Residual lower-body fragments, incomplete fighter
-materials/textures, and close compatibility spawns remain. Raw DS matrix/depth
+separated but not yet accepted Mario and Fox bodies. The HUD-off capture is
+`artifacts/visibility/2026-07-09_source-starts-hudoff-final.png`; the baseline
+comparison is `artifacts/visibility/2026-07-09_source-starts-comparison.png`.
+Source map-object kinds `0..3` decode exactly, and the original manager grounds
+Mario/Fox on lines `3/2` at X `0/-1397`. Residual lower-body fragments and
+incomplete fighter materials/textures remain. Raw DS matrix/depth
 also remain renderer debt; full source fighter submission currently measures
 about `3.1fps`.
 The scripted fast mode-163 target is
@@ -112,7 +112,7 @@ New harness modes are only for scene-level capabilities.
 
 ## Recommended Next Work
 
-1. Finish fighter material/part fidelity and fix the source-spawn entry/floor path.
+1. Finish fighter material/part fidelity; handle source entry behavior separately.
 2. Cache source-selected stage/fighter draw state and restore canonical 60fps.
 3. Add wallpaper/SObj background composition for Dream Land.
 4. Replace projected-submit with source-correct raw DS matrix/depth submission.
@@ -128,6 +128,8 @@ For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical chunks:
 ```
 
 For shared-TU changes, use `RegressionCore` during the session. Tyler runs the full Regression sweep overnight with `scripts/start-overnight-regression.ps1`.
+For this daytime source-start checkpoint, dev-fast, Boundary, RegressionCore,
+and full Regression are queued for that overnight verification task.
 Detach prebuilds expected to exceed 90 seconds and confirm by stamp:
 
 ```powershell

@@ -62,16 +62,16 @@ selection. Source-selected events retain their matrix/material owner and
 per-draw geometry/prim/env/light state; `dls[0]` remains in parent matrix state
 as in `ftdisplaymain.c:789-805,883-899`. Canonical proof reports
 `gxram=658/2010`, geometry mode `0x222005`, selected parts `14/18`, submitted
-parts, and zero CPU-oracle mismatches. The current late capture is
-`artifacts/visibility/2026-07-09_fighter-display-contract-hudoff-final.png`;
-Mario and Fox
-are improved over the manual collector, but close compatibility spawns,
-lower-body fragments, and incomplete materials/textures still prevent final
-visual acceptance.
+parts, and zero CPU-oracle mismatches. Dream Land player starts now decode
+from the aligned O2R map-object array and the original manager adopts both
+fighters onto source floors. The HUD-off capture
+`artifacts/visibility/2026-07-09_source-starts-hudoff-final.png` shows Fox on
+the left platform and Mario on the right floor. Lower-body fragments and
+incomplete materials/textures still prevent final visual acceptance.
 
-Canonical screenshot gates remain strict: `44489/49152` non-clear,
-`13454/49152` dominant-green, `30474/49152` detail, `3465/5616`
-fighter-region color, and `928/49152` adjacent-frame delta. Raw DS
+Canonical screenshot gates remain strict: `32630/49152` non-clear,
+`15596/49152` dominant-green, `16869/49152` detail, `642/5616`
+fighter-region color, and `147/49152` adjacent-frame delta. Raw DS
 matrix/depth and cached submission remain renderer debt; the source-correct
 full fighter body currently reduces canonical presentation to about `3.1fps`.
 
@@ -103,6 +103,9 @@ to `NDS_DEV_LIVE_INPUT_PREVIEW=1` canonical builds.
 The taskman allocator now tries `0x140000` and `0x130000` before its legacy
 1 MiB fallback, preventing source-display builds from overflowing after a
 failed `0x150000` allocation while preserving the 128 KiB reserve.
+Pupupu map-object kinds `0..3` now decode as `(0,6)`, `(-1397,906)`,
+`(1,1545)`, and `(1421,909)` with no duplicates or unaligned reads. Mario and
+Fox enter Wait grounded on lines `3/2` at X `0/-1397`.
 
 Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
 live pads before each update, and has hard GX RAM, oracle, display-contract,
@@ -116,8 +119,8 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Follow-ups: remaining fighter material/part fidelity, source-spawn entry/floor
-runtime, raw DS matrix/depth, wallpaper/SObj composition, renderer-cache 60fps
+Follow-ups: remaining fighter material/part fidelity, source entry behavior,
+raw DS matrix/depth, wallpaper/SObj composition, renderer-cache 60fps
 cutover, FGM/voice, and the original sequence player.
 
 ## Verification

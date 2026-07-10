@@ -1918,6 +1918,30 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
     fp->nds_slot = (u32)player;
     ndsFighterManagerSnapshotLiveStruct(fp, (u32)player);
 
+    if (fp->joints[nFTPartsJointTopN] != NULL)
+    {
+        DObj *root_dobj = fp->joints[nFTPartsJointTopN];
+
+        if (player == 0)
+        {
+            gNdsFighterInitP0GA = (u32)fp->ga;
+            gNdsFighterInitP0FloorLineID = (u32)fp->coll_data.floor_line_id;
+            gNdsFighterInitP0RootTranslateXBits =
+                ndsFloatBits(root_dobj->translate.vec.f.x);
+            gNdsFighterInitP0RootTranslateYBits =
+                ndsFloatBits(root_dobj->translate.vec.f.y);
+        }
+        else
+        {
+            gNdsFighterInitP1GA = (u32)fp->ga;
+            gNdsFighterInitP1FloorLineID = (u32)fp->coll_data.floor_line_id;
+            gNdsFighterInitP1RootTranslateXBits =
+                ndsFloatBits(root_dobj->translate.vec.f.x);
+            gNdsFighterInitP1RootTranslateYBits =
+                ndsFloatBits(root_dobj->translate.vec.f.y);
+        }
+    }
+
     if (((player == 0) && (fp->fkind == nFTKindMario)) ||
         ((player == 1) && (fp->fkind == nFTKindFox)))
     {

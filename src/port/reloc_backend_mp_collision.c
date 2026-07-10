@@ -36,6 +36,62 @@ static u32 ndsMPGeometryMapObjCount(MPGeometryData *geometry)
         ndsMPO2RReadU16((u8 *)geometry + 20u, 0u) : 0u;
 }
 
+static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y)
+{
+    const void *base;
+    u32 half_index;
+    u32 mapobj_count = ndsMPGeometryMapObjCount(gMPCollisionGeometry);
+    u16 value_kind;
+    s16 value_x;
+    s16 value_y;
+
+    gNdsStagePupupuMapObjSourceCount = mapobj_count;
+    if ((index < 0) || ((u32)index >= mapobj_count) ||
+        (gMPCollisionMapObjs == NULL))
+    {
+        return FALSE;
+    }
+    base = gMPCollisionMapObjs->mapobjs;
+    if (((uintptr_t)base & (sizeof(u32) - 1u)) != 0u)
+    {
+        gNdsStagePupupuMapObjUnalignedReadCount++;
+        return FALSE;
+    }
+    half_index = (u32)index * 3u;
+    value_kind = ndsMPO2RReadU16(base, half_index);
+    value_x = ndsMPO2RReadS16(base, half_index + 1u);
+    value_y = ndsMPO2RReadS16(base, half_index + 2u);
+    if ((u32)value_kind < ARRAY_COUNT(gNdsStagePupupuMapObjSourceIndices))
+    {
+        u32 bit = 1u << value_kind;
+
+        if ((gNdsStagePupupuMapObjDecodedMask & bit) == 0u)
+        {
+            gNdsStagePupupuMapObjSourceIndices[value_kind] = (u32)index;
+            gNdsStagePupupuMapObjXs[value_kind] = value_x;
+            gNdsStagePupupuMapObjYs[value_kind] = value_y;
+            gNdsStagePupupuMapObjDecodedMask |= bit;
+        }
+        else if (gNdsStagePupupuMapObjSourceIndices[value_kind] != (u32)index)
+        {
+            gNdsStagePupupuMapObjDuplicateMask |= bit;
+        }
+    }
+    if (kind != NULL)
+    {
+        *kind = value_kind;
+    }
+    if (x != NULL)
+    {
+        *x = value_x;
+    }
+    if (y != NULL)
+    {
+        *y = value_y;
+    }
+    return TRUE;
+}
+
 static MPLineInfo *ndsMPLineInfoAt(MPLineInfo *line_info, u32 index)
 {
     return (MPLineInfo *)((u8 *)line_info + (index * sizeof(MPLineInfo)));

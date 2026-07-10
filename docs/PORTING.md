@@ -18371,3 +18371,29 @@ does not assert.
   `artifacts/visibility/2026-07-09_fighter-display-contract-hudoff-final.png`.
   It confirms recognizable Dream Land but also confirms that the centered
   fighters still overlap and retain incomplete lower-body/material fidelity.
+
+## 2026-07-19 - Source Dream Land fighter starts
+
+- Fixed six-byte `MPMapObjData` decoding (`mptypes.h:83-87`) by indexing
+  halfwords from the aligned map-object array base. Count, ID, position, and
+  player-start APIs now share that accessor; ordinary Pupupu decoding no
+  longer depends on the Inishie source-scale flag.
+- Restored BattleShip's player-kind scan (`mpcollision.c:3405-3425`) and
+  removed the `-80/+80` compatibility table. Kinds `0..3` decode as `(0,6)`,
+  `(-1397,906)`, `(1,1545)`, and `(1421,909)`, with duplicate and unaligned
+  masks both zero.
+- Made the existing Pupupu geometry projector available to ordinary loaded
+  Pupupu scenes. Imported `ftmanager.c:541-563` still owns projection and
+  adoption: Mario/Fox reach Wait grounded on lines `3/2` at X `0/-1397`.
+  No clamp, teleport, render offset, recurring restore, or spawn table remains.
+- Focused gates passed:
+  `verify-battle-mariofox-init-harness.ps1 -DelaySeconds 3` and one
+  `verify-battle-playable-realtime-harness.ps1 -DelaySeconds 3` run. The
+  latter retained existing stage/detail thresholds and reported 31.7% green,
+  34.3% detail, and 0.3% adjacent-frame delta. Broader tiers are queued for
+  the separate overnight verification task.
+- Rebuilt `smash64ds-battle-playable-hwtri.nds` with the canonical HUD-off
+  configuration. Final capture and baseline comparison are
+  `artifacts/visibility/2026-07-09_source-starts-hudoff-final.png` and
+  `artifacts/visibility/2026-07-09_source-starts-comparison.png`. Fighter
+  lower-body/material defects remain explicitly unresolved.

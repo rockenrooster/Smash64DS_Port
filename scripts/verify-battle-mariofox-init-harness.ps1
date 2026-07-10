@@ -66,6 +66,7 @@ try {
         'printf "SCENE=%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind',
         'printf "VSB=%#x,%#x,%#x,%u,%u,%u\n", gNdsSCVSBattleOriginalSetupResult, gNdsSCVSBattleOriginalSetupMask, gNdsSCVSBattleOriginalUpdateResult, gNdsSCVSBattleOriginalPlayerCount, gNdsSCVSBattleOriginalFighterCreateCount, gNdsSCVSBattleOriginalGKind',
         'printf "PUPUPU=%#x,%#x,%#x,%#x,%u,%u\n", gNdsSCVSBattleStageResult, gNdsSCVSBattleStageMask, gNdsPupupuGroundSetupResult, gNdsPupupuGroundSetupMask, gNdsPupupuGroundLayerGObjCount, gNdsPupupuGroundMapGObjCount',
+        'printf "MAPOBJ=%u,%#x,%#x,%d,%d,%d,%d,%d,%d,%d,%d,%u\n", gNdsStagePupupuMapObjSourceCount, gNdsStagePupupuMapObjDecodedMask, gNdsStagePupupuMapObjDuplicateMask, gNdsStagePupupuMapObjXs[0], gNdsStagePupupuMapObjYs[0], gNdsStagePupupuMapObjXs[1], gNdsStagePupupuMapObjYs[1], gNdsStagePupupuMapObjXs[2], gNdsStagePupupuMapObjYs[2], gNdsStagePupupuMapObjXs[3], gNdsStagePupupuMapObjYs[3], gNdsStagePupupuMapObjUnalignedReadCount',
         'printf "FTR_MANAGER=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%u,%u,%u\n", gNdsFighterManagerResult, gNdsFighterManagerMask, gNdsFighterManagerExternMask, gNdsFighterManagerStatusBufferMask, gNdsFighterManagerFighterMask, gNdsFighterManagerDataMask, gNdsFighterManagerWaitMask, gNdsFighterManagerEntryMask, gNdsFighterManagerStatusBufferHitCount, gNdsFighterManagerFighterCount, gNdsFighterManagerFigatreeHeapSize',
         'printf "FTR_MODEL=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsFighterMarioFoxModelResult, gNdsFighterMarioFoxGObjResult, gNdsFighterMarioFoxSetupMask, gNdsFighterModelRealGObjCount, gNdsFighterModelStubGObjCount, gNdsFighterModelProcessDeferredCount, gNdsFighterModelP0ModelDObjCount, gNdsFighterModelP1ModelDObjCount',
         'printf "FTR_STRUCT=%#x,%#x,%#x,%#x,%#x,%u\n", gNdsFighterMarioFoxStructResult, gNdsFighterMarioFoxJointResult, gNdsFighterMarioFoxStateResult, gNdsFighterMarioFoxStructMask, gNdsFighterMarioFoxStructPoolUsedMask, gNdsFighterMarioFoxStructCount',
@@ -73,7 +74,7 @@ try {
         'printf "FTR_INIT_P0=%u,%u,%u,%u,%u,%u,%u,%#x,%#x\n", gNdsFighterInitP0FKind, gNdsFighterInitP0PercentDamage, gNdsFighterInitP0ShieldHealth, gNdsFighterInitP0GA, gNdsFighterInitP0JumpsUsed, gNdsFighterInitP0HitStatus, gNdsFighterInitP0DamageKind, gNdsFighterInitP0MotionAttackID, gNdsFighterInitP0PassiveMarioTornado',
         'printf "FTR_INIT_P1=%u,%u,%u,%u,%u,%u,%u,%#x,%#x\n", gNdsFighterInitP1FKind, gNdsFighterInitP1PercentDamage, gNdsFighterInitP1ShieldHealth, gNdsFighterInitP1GA, gNdsFighterInitP1JumpsUsed, gNdsFighterInitP1HitStatus, gNdsFighterInitP1DamageKind, gNdsFighterInitP1MotionAttackID, gNdsFighterInitP1PassiveMarioTornado',
         'printf "FTR_INIT_FLOOR=%u,%u,%u,%u,%#x,%#x,%#x,%#x\n", gNdsFighterInitP0FloorProjectAttempt, gNdsFighterInitP1FloorProjectAttempt, gNdsFighterInitP0FloorProjectResult, gNdsFighterInitP1FloorProjectResult, gNdsFighterInitP0FloorLineID, gNdsFighterInitP1FloorLineID, gNdsFighterInitP0FloorDistBits, gNdsFighterInitP1FloorDistBits',
-        'printf "FTR_INIT_ROOT=%#x,%#x,%#x,%#x\n", gNdsFighterInitP0RootTranslateYBits, gNdsFighterInitP1RootTranslateYBits, gNdsFighterInitP0RootScaleXBits, gNdsFighterInitP1RootScaleXBits',
+        'printf "FTR_SOURCE=%#x,%#x,%#x,%#x,%u,%u,%#x,%#x\n", gNdsFighterInitP0RootTranslateXBits, gNdsFighterInitP1RootTranslateXBits, gNdsFighterInitP0RootTranslateYBits, gNdsFighterInitP1RootTranslateYBits, gNdsFighterInitP0GA, gNdsFighterInitP1GA, gNdsFighterInitP0FloorLineID, gNdsFighterInitP1FloorLineID',
         'printf "FTR_INIT_DAMAGECOLL=%#x,%#x,%#x,%#x,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsFighterInitDamageCollMask, gNdsFighterInitDamageCollNormalMask, gNdsFighterInitDamageCollJointMask, gNdsFighterInitDamageCollHalfSizeMask, gNdsFighterInitP0DamageCollCount, gNdsFighterInitP1DamageCollCount, gNdsFighterInitP0DamageCollJoint0, gNdsFighterInitP1DamageCollJoint0, gNdsFighterInitP0DamageCollSizeXBits, gNdsFighterInitP1DamageCollSizeXBits, gNdsFighterInitP0DamageCollSizeYBits, gNdsFighterInitP1DamageCollSizeYBits, gNdsFighterInitP0DamageCollSizeZBits, gNdsFighterInitP1DamageCollSizeZBits',
         'printf "FTR_INIT_DAMAGEPARTS=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsFighterInitDamageCollPartsMask, gNdsFighterInitDamageCollMatrixMask, gNdsFighterInitDamageCollScaleMask, gNdsFighterInitP0DamageCollWorldXBits, gNdsFighterInitP1DamageCollWorldXBits, gNdsFighterInitP0DamageCollWorldYBits, gNdsFighterInitP1DamageCollWorldYBits, gNdsFighterInitP0DamageCollScaleXBits, gNdsFighterInitP1DamageCollScaleXBits',
         'printf "FTR_INIT_CALLS=%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterInitPhysicsStopCount, gNdsFighterInitAttackClearCount, gNdsFighterInitHitStatusPartCount, gNdsFighterInitColAnimResetCount, gNdsFighterInitProcessAttachCount, gNdsFighterInitStatusSetCount, gNdsFighterInitDisplayProbeCount',
@@ -86,6 +87,7 @@ try {
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
     $vsb = [regex]::Match($gdbStdout, 'VSB=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $pupupu = [regex]::Match($gdbStdout, 'PUPUPU=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+    $mapObj = [regex]::Match($gdbStdout, 'MAPOBJ=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+)')
     $manager = [regex]::Match($gdbStdout, 'FTR_MANAGER=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $model = [regex]::Match($gdbStdout, 'FTR_MODEL=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $struct = [regex]::Match($gdbStdout, 'FTR_STRUCT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+)')
@@ -93,6 +95,7 @@ try {
     $p0 = [regex]::Match($gdbStdout, 'FTR_INIT_P0=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $p1 = [regex]::Match($gdbStdout, 'FTR_INIT_P1=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $floor = [regex]::Match($gdbStdout, 'FTR_INIT_FLOOR=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $sourceStart = [regex]::Match($gdbStdout, 'FTR_SOURCE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $damageColl = [regex]::Match($gdbStdout, 'FTR_INIT_DAMAGECOLL=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $damageParts = [regex]::Match($gdbStdout, 'FTR_INIT_DAMAGEPARTS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $calls = [regex]::Match($gdbStdout, 'FTR_INIT_CALLS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -109,6 +112,9 @@ try {
     if (-not $pupupu.Success -or (Convert-MarkerUInt32 $pupupu.Groups[1].Value) -ne 0x50555042 -or ((Convert-MarkerUInt32 $pupupu.Groups[2].Value) -band 0xff) -ne 0xff -or (Convert-MarkerUInt32 $pupupu.Groups[3].Value) -ne 0x50554753 -or ((Convert-MarkerUInt32 $pupupu.Groups[4].Value) -band 0x3ff) -ne 0x3ff -or [int]$pupupu.Groups[5].Value -ne 4 -or [int]$pupupu.Groups[6].Value -ne 4) {
         throw "Pupupu stage/ground proof failed before fighter init.`n$gdbStdout"
     }
+    if (-not $mapObj.Success -or [int]$mapObj.Groups[1].Value -lt 4 -or (Convert-MarkerUInt32 $mapObj.Groups[2].Value) -ne 0xf -or (Convert-MarkerUInt32 $mapObj.Groups[3].Value) -ne 0 -or [int]$mapObj.Groups[4].Value -ne 0 -or [int]$mapObj.Groups[5].Value -ne 6 -or [int]$mapObj.Groups[6].Value -ne -1397 -or [int]$mapObj.Groups[7].Value -ne 906 -or [int]$mapObj.Groups[8].Value -ne 1 -or [int]$mapObj.Groups[9].Value -ne 1545 -or [int]$mapObj.Groups[10].Value -ne 1421 -or [int]$mapObj.Groups[11].Value -ne 909 -or [int]$mapObj.Groups[12].Value -ne 0) {
+        throw "Pupupu source map-object records did not decode from the aligned O2R array base.`n$gdbStdout"
+    }
     if ($ImportBattleShipFTManager) {
         $managerStatusMask = 0
         if ($manager.Success) {
@@ -116,6 +122,9 @@ try {
         }
         if (-not $manager.Success -or (Convert-MarkerUInt32 $manager.Groups[1].Value) -ne 0x46544d47 -or ((Convert-MarkerUInt32 $manager.Groups[2].Value) -band 0xff) -ne 0xff -or ((Convert-MarkerUInt32 $manager.Groups[3].Value) -band 0xf) -ne 0xf -or ((Convert-MarkerUInt32 $manager.Groups[4].Value) -band 0x1fff) -ne 0x1fff -or ((Convert-MarkerUInt32 $manager.Groups[5].Value) -band 0x3) -ne 0x3 -or ((Convert-MarkerUInt32 $manager.Groups[6].Value) -band 0x3) -ne 0x3 -or ($managerStatusMask -band 0x3) -ne 0x3 -or [int]$manager.Groups[9].Value -lt 13 -or [int]$manager.Groups[10].Value -ne 2 -or [int]$manager.Groups[11].Value -eq 0) {
             throw "BattleShip ftmanager fenced proof failed.`n$gdbStdout"
+        }
+        if (-not $sourceStart.Success -or (Convert-MarkerUInt32 $sourceStart.Groups[1].Value) -ne 0 -or (Convert-MarkerUInt32 $sourceStart.Groups[2].Value) -ne 3299778560 -or (Convert-MarkerUInt32 $sourceStart.Groups[3].Value) -ne 0 -or (Convert-MarkerUInt32 $sourceStart.Groups[4].Value) -ne 0x44620000 -or [int]$sourceStart.Groups[5].Value -ne 0 -or [int]$sourceStart.Groups[6].Value -ne 0 -or (Convert-MarkerUInt32 $sourceStart.Groups[7].Value) -eq 4294967295 -or (Convert-MarkerUInt32 $sourceStart.Groups[8].Value) -eq 4294967295) {
+            throw "Original ftmanager did not adopt both decoded Pupupu starts onto valid floors.`n$gdbStdout"
         }
     } elseif (-not $model.Success -or (Convert-MarkerUInt32 $model.Groups[1].Value) -ne 0x46544d44 -or (Convert-MarkerUInt32 $model.Groups[2].Value) -ne 0x4654474f -or ((Convert-MarkerUInt32 $model.Groups[3].Value) -band 0xfff) -ne 0xfff -or [int]$model.Groups[4].Value -ne 2 -or [int]$model.Groups[5].Value -ne 0) {
         throw "Mario/Fox model proof failed before init setup.`n$gdbStdout"
