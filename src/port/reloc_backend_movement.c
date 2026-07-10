@@ -9000,7 +9000,8 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_STEP 15.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_APPROACH_RANGE_MIN 50.0F
 #define NDS_FIGHTER_NATURAL_MOVESET_SAFE_RANGE 80.0F
-#define NDS_FIGHTER_NATURAL_MOVESET_GRAB_STOP_RANGE 90.0F
+#define NDS_FIGHTER_NATURAL_MOVESET_GRAB_STOP_RANGE (260.0F + 30.0F)
+#define NDS_FIGHTER_NATURAL_PROJECTILE_STOP_RANGE 350.0F
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_NEUTRAL_FRAMES 4u
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_TIMEOUT 45u
 #define NDS_FIGHTER_NATURAL_COMBAT_ATTACK_RETRY_MAX 6u
@@ -9121,6 +9122,7 @@ static s8 sNdsBattlePlayableKOStickX;
 static u32 sNdsNaturalProjectileActorSlot;
 static u32 sNdsNaturalProjectileButtonPressed;
 static u32 sNdsNaturalProjectileExpectedKind;
+static u32 sNdsNaturalProjectileKORecoveryActive;
 #if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 static u32 sNdsNaturalReflectorFoxSlot;
 static u32 sNdsNaturalReflectorProjectileSlot;
@@ -10324,6 +10326,7 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsBattlePlayableRebirthSeen = 0u;
     sNdsBattlePlayableKOStickX = 80;
     sNdsNaturalProjectileButtonPressed = 0u;
+    sNdsNaturalProjectileKORecoveryActive = 0u;
     sNdsNaturalProjectileActorSlot =
         ndsFighterNaturalProjectileSelectSlot(fp);
     sNdsNaturalProjectileExpectedKind =
@@ -10388,6 +10391,13 @@ static sb32 ndsFighterNaturalCombatBothWait(FTStruct *fp[2])
             (fp[1]->status_id == nFTCommonStatusWait)) ? TRUE : FALSE;
 }
 
+static sb32 ndsFighterNaturalCombatBothGroundWait(FTStruct *fp[2])
+{
+    return ((ndsFighterNaturalCombatBothWait(fp) != FALSE) &&
+            (fp[0]->ga == nMPKineticsGround) &&
+            (fp[1]->ga == nMPKineticsGround)) ? TRUE : FALSE;
+}
+
 static void ndsFighterNaturalCombatSetPhase(u32 phase)
 {
     sNdsNaturalCombatPhase = phase;
@@ -10412,13 +10422,53 @@ static void ndsFighterNaturalCombatStartKOExit(FTStruct *victim)
     if (ndsFighterBattlePlayableHasRecoveredKO() != FALSE)
     {
         ndsFighterNaturalCombatSetPhase(
-            nNDSNaturalCombatPhaseBattlePlayableDone);
+            nNDSNaturalCombatPhaseBattlePlayableRecover);
         return;
     }
     sNdsBattlePlayableKOStickX =
         (ndsFighterNaturalCombatPosX(victim) < 0.0F) ? -80 : 80;
     ndsFighterNaturalCombatSetPhase(
         nNDSNaturalCombatPhaseBattlePlayableKOExit);
+}
+
+static sb32 ndsFighterNaturalProjectileHandleKORecovery(FTStruct *fp[2])
+{
+    u32 i;
+
+    if ((sNdsNaturalCombatPhase != nNDSNaturalCombatPhaseProjectileSettle) &&
+        (sNdsNaturalCombatPhase != nNDSNaturalCombatPhaseProjectileFire) &&
+        (sNdsNaturalCombatPhase != nNDSNaturalCombatPhaseProjectileObserve))
+    {
+        return FALSE;
+    }
+    if (sNdsNaturalProjectileKORecoveryActive == 0u)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            if (ndsFighterBattlePlayableStatusIsDead(fp[i]->status_id) !=
+                FALSE)
+            {
+                sNdsNaturalProjectileKORecoveryActive = 1u;
+                break;
+            }
+        }
+    }
+    if (sNdsNaturalProjectileKORecoveryActive == 0u)
+    {
+        return FALSE;
+    }
+    if (ndsFighterNaturalCombatBothGroundWait(fp) != FALSE)
+    {
+        sNdsNaturalProjectileKORecoveryActive = 0u;
+        sNdsNaturalProjectileButtonPressed = 0u;
+        sNdsNaturalCombatPassPressed = 0u;
+#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
+        sNdsNaturalReflectorButtonPressed = 0u;
+#endif
+        ndsFighterNaturalCombatSetPhase(
+            nNDSNaturalCombatPhaseProjectileSettle);
+    }
+    return TRUE;
 }
 
 #if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
@@ -10634,15 +10684,6 @@ static sb32 ndsFighterNaturalMovesetHandleKORecovery(FTStruct *fp[2])
     }
     if (sNdsNaturalMovesetKORecoveryActive == 0u)
     {
-        return FALSE;
-    }
-    if (ndsFighterBattlePlayableHasRecoveredKO() != FALSE)
-    {
-        u32 phase = sNdsNaturalMovesetKORecoveryPhase;
-
-        sNdsNaturalMovesetKORecoveryActive = 0u;
-        sNdsNaturalMovesetKORecoveryPhase = nNDSNaturalMovesetPhaseIdle;
-        ndsFighterNaturalMovesetSetPhase(phase);
         return FALSE;
     }
     if (ndsFighterNaturalMovesetBothGroundWait(fp) != FALSE)
@@ -11298,6 +11339,11 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
     gNdsFighterNaturalCombatApproachDXMilli =
         (u32)ndsFloatToMilliSigned(dx);
 
+    if (ndsFighterNaturalProjectileHandleKORecovery(fp) != FALSE)
+    {
+        return;
+    }
+
     sNdsNaturalCombatPhaseFrames++;
     gNdsFighterNaturalCombatPhaseFrames = sNdsNaturalCombatPhaseFrames;
     if ((sNdsNaturalCombatPhase != nNDSNaturalCombatPhaseDone) &&
@@ -11489,11 +11535,22 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         }
         break;
     case nNDSNaturalCombatPhaseProjectileSettle:
-        if (ndsFighterNaturalCombatSettled(fp) != FALSE)
         {
-            sNdsNaturalProjectileButtonPressed = 0u;
-            ndsFighterNaturalCombatSetPhase(
-                nNDSNaturalCombatPhaseProjectileFire);
+            FTStruct *actor = fp[sNdsNaturalProjectileActorSlot];
+            FTStruct *target = fp[1u - sNdsNaturalProjectileActorSlot];
+            f32 face_dx = ndsFighterNaturalCombatPosX(target) -
+                ndsFighterNaturalCombatPosX(actor);
+
+            if ((dx <= NDS_FIGHTER_NATURAL_PROJECTILE_STOP_RANGE) &&
+                (dy <= NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE) &&
+                ((face_dx * actor->lr) >= 0.0F) &&
+                (ndsFighterNaturalCombatBothGroundWait(fp) != FALSE) &&
+                (ndsFighterNaturalCombatSettled(fp) != FALSE))
+            {
+                sNdsNaturalProjectileButtonPressed = 0u;
+                ndsFighterNaturalCombatSetPhase(
+                    nNDSNaturalCombatPhaseProjectileFire);
+            }
         }
         break;
     case nNDSNaturalCombatPhaseProjectileFire:
@@ -11968,7 +12025,56 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
     case nNDSNaturalCombatPhaseGuard:
         button[sNdsNaturalCombatVictimSlot] = Z_TRIG;
         break;
+    case nNDSNaturalCombatPhaseProjectileSettle:
+        {
+            FTStruct *actor = fp[sNdsNaturalProjectileActorSlot];
+            FTStruct *target = fp[1u - sNdsNaturalProjectileActorSlot];
+            f32 self_x = ndsFighterNaturalCombatPosX(actor);
+            f32 other_x = ndsFighterNaturalCombatPosX(target);
+            f32 self_y = actor->coll_data.p_translate->y;
+            f32 other_y = target->coll_data.p_translate->y;
+            f32 adx = other_x - self_x;
+
+            if (sNdsNaturalProjectileKORecoveryActive != 0u)
+            {
+                break;
+            }
+            if ((self_y - other_y) >
+                NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE)
+            {
+                if ((sNdsNaturalCombatPassPressed == 0u) &&
+                    (actor->status_id == nFTCommonStatusWait))
+                {
+                    stick_y[sNdsNaturalProjectileActorSlot] = -80;
+                    sNdsNaturalCombatPassPressed = 1u;
+                }
+                break;
+            }
+            if (adx < 0.0F)
+            {
+                adx = -adx;
+            }
+            if (adx > NDS_FIGHTER_NATURAL_PROJECTILE_STOP_RANGE)
+            {
+                s8 mag =
+                    (adx > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_DASH_RANGE) ?
+                        80 : 8;
+
+                stick[1u - sNdsNaturalProjectileActorSlot] =
+                    (self_x >= other_x) ? mag : (s8)-mag;
+            }
+            else if (((other_x - self_x) * actor->lr) < 0.0F)
+            {
+                stick[sNdsNaturalProjectileActorSlot] =
+                    (other_x >= self_x) ? 40 : -40;
+            }
+        }
+        break;
     case nNDSNaturalCombatPhaseProjectileFire:
+        if (sNdsNaturalProjectileKORecoveryActive != 0u)
+        {
+            break;
+        }
 #if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
         if (ndsFighterNaturalReflectorProofEnabled() != FALSE)
         {
@@ -11993,6 +12099,10 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         }
         break;
     case nNDSNaturalCombatPhaseProjectileObserve:
+        if (sNdsNaturalProjectileKORecoveryActive != 0u)
+        {
+            break;
+        }
 #if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
         if (ndsFighterNaturalReflectorProofEnabled() != FALSE)
         {

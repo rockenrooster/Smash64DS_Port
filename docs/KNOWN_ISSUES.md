@@ -87,16 +87,14 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
-- Current mode `161` remains red after Dream Land source starts exposed live
-  movement/collision gaps. WIP branch
-  `codex/wip-natural-combat-source-start-collision` fixes original-manager
-  eligibility in ground-velocity transfer, removes the floor sweep's harness-
-  prepare dependency, and restores dynamic yakumono translation in
-  `mpCollisionGetFCCommonFloor`. Fox now reaches source Pass/Fall callbacks,
-  but still misses the main floor and reaches `DeadDown` near `Y=-3558`
-  (`NAT_CHAIN=9`, floor sweep `1147/373/3`). Continue from that collision
-  trace without relaxing mode `161/162` expectations before claiming
-  dev-fast, Boundary, or RegressionCore green.
+- WIP branch `codex/wip-natural-combat-source-start-collision` restores exact
+  source floor-segment sweeps and live ground friction; direct/menu modes
+  `161/162` are green without expectation changes. Mode `163` now completes
+  moveset `0x7ff`, projectile `0x3f`, and specials `0xfff`, but its post-KO
+  fireball still passes Fox without entering the live reflector callback
+  (`REFLECTOR=0x7`, proc count `0`). Continue from the first/minimum
+  fireball-to-reflector collision trace; do not seed positions or relax the
+  reflector expectation.
 - Default `NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1`,
   `NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1`, original `efmanager.c`, and Fox
   `ftfoxspeciallw.c` import the natural projectile/effect/reflector path for
