@@ -41,6 +41,9 @@ finalizer markers are captured.
 Mode `163` is the scene-level `battle_playable` anchor. It reuses the gcRunAll
 natural-combat verifier path, adds stock KO -> Rebirth -> Wait assertions, and
 requires a hardware-triangle stage + fighter frame.
+`battle_playable_match_lifecycle` is a registry alias for the same scene mode,
+not a new gameplay mode. It uses the source CPU/live setup and fast logic to
+prove the complete five-minute timer/end transition to VS Results.
 
 ## Naming Rules
 
@@ -80,6 +83,8 @@ For a normal direct/menu-chain pair:
 - `BoundaryDirect`: current direct boundary only.
 - `Boundary`: current direct/menu boundary pair plus `battle_playable`.
 - `Regression`: historical playable-spine coverage plus the current boundary.
+- `RegressionCore`: runtime/title, canonical realtime presentation, the
+  five-minute lifecycle, one cliff proof, and the direct/menu MP floor pair.
 - `Full`: all registered verifiers.
 
 Use `docs/VERIFYING.md` for when to run each profile.

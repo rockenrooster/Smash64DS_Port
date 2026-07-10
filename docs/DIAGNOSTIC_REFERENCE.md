@@ -6077,6 +6077,10 @@ scheduling.
   requires source Attack dispatch, all three action buttons, live hitboxes,
   guard, positive damage, valid floors, and substantial movement. Recover is
   reported continuously but is not required until selected naturally.
+- `VSB_END`: lifecycle result, DS arena-adapter count, taskman-return count and
+  status, source time limit/remain/passed, game status, scene previous/current,
+  and sudden-death flag. The five-minute gate expects `VBEN`, `1+`, `1+`,
+  `LoadScene`, `5/0/18000+`, game status `Set`, and scene `22 -> 24`.
 
 ## Debugging Principle
 

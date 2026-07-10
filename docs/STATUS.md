@@ -35,20 +35,24 @@ Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
 GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 `ftmain.c`, and `gmcollision.c`.
 
-Mode `163` has two verifier-covered configurations. The fast harness keeps its
-scripted two-human stock chain. Canonical realtime/live-input runs the source
-five-minute, items-off Mario human versus Fox level-3 CPU match. Together they
-cover natural combat/KO/rebirth, normal moves, specials, audio, and a DS 3D
-hardware stage + fighter frame.
+Mode `163` has three verifier-covered configurations. The fast harness keeps
+its scripted two-human stock chain; canonical realtime/live-input presents the
+source five-minute, items-off Mario human versus Fox level-3 CPU match. The
+fast lifecycle configuration runs that source match through Time Up and the
+original VSBattle-to-VSResults scene transition. Together they cover natural
+combat/KO/rebirth, normal moves, specials, audio, and a DS 3D hardware frame.
 
 ## Latest Proof
 
 The original fighter runtime is live: `gmcollision.c`, `ftmain.c`,
 `ftmanager.c`, `ftcomputer.c`, animation/key, common/Mario/Fox statuses, normal
 moves, weapons, effects, and specials run through imported BattleShip code.
-The canonical smoke proves original Fox CPU setup/process/target/movement;
-the fast natural match records `7003` process/target frames, Attack plus A/B/Z,
-`142` live-hitbox frames, `1403` guard frames, and `108%` dealt to Mario.
+The lifecycle gate records `36394` source CPU process/target frames, all A/B/Z
+inputs, `303` live-hitbox frames, `6366` guard frames, recovery selection, and
+`124%` maximum Mario damage. Original `ifcommon.c:2472-2529,3144-3152,3342-3345`
+consumes all `18000` timer ticks and requests `LoadScene`; imported
+`scvsbattle.c:513-560` returns through taskman cleanup and changes scene
+`VSBattle(22) -> VSResults(24)`. The actual VS Results scene remains stubbed.
 
 The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
 and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
@@ -90,11 +94,10 @@ and screenshot gates cover the canonical renderer.
 
 ## Current Notes
 
-Infrastructure checkpoint 2026-07-08: stable flags stay in
-`nds_build_config.h`; per-mode harness ID/Inishie scale live in
-`nds_scene_harness_config.h`. `RegressionCore -Force` measured `1893.130s`,
-no-op `39.377s`, shared HW-tri switch `29.590s`, and full prebuild
-`4773.933s`.
+Stable flags stay in `nds_build_config.h`; per-mode harness ID/Inishie scale
+live in `nds_scene_harness_config.h`. The lifecycle shared-header rebuild took
+`1406.40s`; its stamp validated in `0.38s` and RegressionCore passed in
+`434.7s`.
 
 The config-header mode `161` regression is fixed without verifier expectation
 changes: the broad `ftmanager.c` skip-entry guard is gone, and the VSBattle
@@ -120,9 +123,9 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Follow-ups: natural CPU offstage recovery coverage, five-minute end/results
-flow, fighter fidelity, source entry behavior, raw DS matrix/depth,
-renderer-cache 60fps cutover, FGM/voice, and the original sequence player.
+Follow-ups: import the actual VS Results scene, natural CPU offstage recovery,
+fighter fidelity, source entry behavior, raw DS matrix/depth, renderer-cache
+60fps cutover, FGM/voice, and the original sequence player.
 The former mode-161 Attack11 and mode-163 reflector blockers are closed;
 direct/menu Boundary and RegressionCore pass without expectation changes.
 

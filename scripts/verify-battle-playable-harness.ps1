@@ -19,6 +19,7 @@ param(
     [switch]$RealtimePresentation,
     [switch]$LiveInputPreview,
     [switch]$CPUOpponentProof,
+    [switch]$MatchLifecycleProof,
     [switch]$RequireRealtime60Fps
 )
 $ErrorActionPreference = 'Stop'
@@ -67,6 +68,7 @@ if ($RealtimePresentation) {
     -RealtimePresentation:$RealtimePresentation `
     -LiveInputPreview:$LiveInputPreview `
     -CPUOpponentProof:$CPUOpponentProof `
+    -MatchLifecycleProof:$MatchLifecycleProof `
     -RequireRealtime60Fps:$RequireRealtime60Fps `
     -Harness 'battle_playable' `
     -Target $target `

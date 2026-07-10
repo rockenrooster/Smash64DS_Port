@@ -34,9 +34,11 @@ GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 
 Mode `163` is the scene-level `battle_playable` Boundary/Latest anchor. Its fast
 configuration retains the scripted two-human stock chain. Canonical realtime/
-live-input is now the source five-minute, items-off Mario human versus Fox
-level-3 CPU match; original CPU setup/process/target/movement and the existing
-audio/hardware frame remain verifier-covered.
+live-input presents the source five-minute, items-off Mario human versus Fox
+level-3 CPU match. `battle_playable_match_lifecycle` runs the same source setup
+with fast logic through all `18000` timer ticks, Time Up, taskman cleanup, and
+the original `VSBattle(22) -> VSResults(24)` transition. The destination
+`mnVSResultsStartScene` is still a port stub and is the next scene import.
 
 Latest renderer detail: BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`, and
 `guMtxCatF` are imported. The live fighter path now uses the original display
@@ -68,8 +70,9 @@ battle-critical `if/ifcommon.c` HUD paths, original `if/ifscreenflash.c`, the
 normal moveset imports, the weapon manager, Mario fireball, Fox blaster, the
 original effect manager, Fox reflector, Mario Super Jump Punch, Mario Tornado,
 Fox Fire Fox, `ftcomputer.c`, original audio parsing, and Pupupu BGM playback.
-The fast CPU gate records `7003` original process/target frames, Attack plus
-A/B/Z, `142` live-hitbox frames, `1403` guard frames, and `108%` dealt.
+The lifecycle CPU gate records `36394` original process/target frames, all
+A/B/Z inputs, `303` live-hitbox frames, `6366` guard frames, recovery selection,
+and `124%` maximum Mario damage.
 The mode-163 proof reports `stock8->6`, `falls0->2`,
 `moveset=0x7ff phase=15`, `grab=18/1`, `throw=12/5/618`,
 `throwDmg=13->25`, `hud=dmg25/digits0x2050a stock9->7`,
@@ -108,23 +111,13 @@ Normal builds expose one controller; the canonical live-input build alone
 exposes the connected-neutral second pad. Intermediate taskman arena fallbacks
 keep fighter-runtime modes above the 128 KiB memory reserve.
 
-## Process Change
-
-Future gameplay slices are runtime-first subsystem groups aimed at scene-level
-capability: import original TUs, wire narrow seams, prove with the continuous
-natural-runtime verifier plus captures, then graduate live.
-
-Legacy bounded modes are migrate-or-delete. When a slice obsoletes an old
-marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
-`KNOWN_ISSUES` ledger line instead of reproducing old markers.
-
 ## Recommended Next Work
 
-1. Complete five-minute timer/end/results flow and natural CPU recovery coverage.
-2. Finish fighter part/texture/light fidelity; handle source entry separately.
-3. Cache source-selected stage/fighter draw state and restore canonical 60fps.
-4. Add Dream Land wallpaper/SObj composition and raw DS matrix/depth.
-5. Build the FGM/voice backend slice on top of the parsed assets.
+1. Import and display the original VS Results scene; prove the natural handoff.
+2. Prove natural CPU offstage recovery through the source AI.
+3. Finish fighter part/texture/light fidelity; handle source entry separately.
+4. Cache source-selected stage/fighter draw state and restore canonical 60fps.
+5. Add Dream Land wallpaper/SObj composition and FGM/voice playback.
 
 ## Verification
 

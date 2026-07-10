@@ -189,6 +189,7 @@ function Get-Smash64DSHarnessRegistry {
         New-HarnessRecord 'menu_chain_mariofox_stage_mplivehit_status_loop' 162 'menu_chain_mariofox_stage_mplivehit_status_loop' 'verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1' 'smash64ds-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri' 'build-menu-chain-mariofox-stage-mplivehit-status-loop-hwtri-harness' @('full','latest','fighter','menu_chain','mariofox','stage','collision','floor','floor_follow','floor_edge','mp_query','mpprocess','mpupdate','damage','damage_lifecycle','hitlag','procparams','attack_contact','attack_event','live_hit','hitbox','repeat_hit','status','status_loop','callback','physics','map','gcdrawall','gcrunall','controller','preview','visual','playable_slice','stage_mplivehit_status_loop')
         New-HarnessRecord 'battle_playable' 163 'battle_playable' 'verify-battle-playable-harness.ps1' 'smash64ds-battle-playable-fast-hwtri' 'build-battle-playable-hwtri-harness' @('full','latest','fighter','direct','mariofox','stage','damage','damage_lifecycle','hitlag','attack_contact','attack_event','live_hit','hitbox','status','stock','ko','rebirth','battle_playable','playable_slice','gcrunall','controller','visual','hardware')
         New-HarnessRecord 'battle_playable_realtime' 163 'battle_playable_realtime' 'verify-battle-playable-realtime-harness.ps1' 'smash64ds-battle-playable-canonical-hwtri' 'build-battle-playable-canonical-hwtri-harness' @('core','regression_core','fighter','direct','mariofox','stage','battle_playable','playable_slice','gcrunall','controller','visual','hardware','live_input','realtime')
+        New-HarnessRecord 'battle_playable_match_lifecycle' 163 'battle_playable_match_lifecycle' 'verify-battle-playable-match-lifecycle-harness.ps1' 'smash64ds-battle-playable-cpu-proof' 'build-battle-playable-cpu-proof-harness' @('full','core','regression_core','fighter','direct','mariofox','stage','battle_playable','playable_slice','gcrunall','controller','live_input','cpu','timer','match_end','results')
     )
 
     return $records
@@ -355,7 +356,8 @@ function Get-Smash64DSVerifyPlan {
                 'menu_chain_mariofox_stage_mpdamage_recover_loop',
                 'battle_mariofox_stage_mplivehit_status_loop',
                 'menu_chain_mariofox_stage_mplivehit_status_loop',
-                'battle_playable'
+                'battle_playable',
+                'battle_playable_match_lifecycle'
             )
         }
         'RegressionCore' {
@@ -363,6 +365,7 @@ function Get-Smash64DSVerifyPlan {
                 'runtime',
                 'title',
                 'battle_playable_realtime',
+                'battle_playable_match_lifecycle',
                 'battle_mariofox_stage_mpcliffstatus_floor_loop',
                 'battle_mariofox_stage_mpupdate_floor_loop',
                 'menu_chain_mariofox_stage_mpupdate_floor_loop'

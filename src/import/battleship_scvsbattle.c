@@ -1,10 +1,6 @@
-/* Compile the original BattleShip VS Battle setup translation unit.
- *
- * The DS entry is deliberately bounded: it runs original common battle file
- * loading and setup through fighter-descriptor creation, then parks before
- * continuous gameplay/update/draw, sudden death, results, or audio backend
- * behavior.
- */
+/* Compile the original BattleShip VS Battle translation unit. Live-input
+ * battle_playable uses the original scene tail through a DS arena adapter;
+ * bounded harness builds retain their short taskman path below. */
 #include <PR/gbi.h>
 #include <PR/os.h>
 #include <PR/ultratypes.h>
@@ -58,11 +54,13 @@ void wpManagerAllocWeapons(void);
 void efManagerInitEffects(void);
 void gmRumbleMakeActor(void);
 void gmRumbleInitPlayers(void);
+void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup);
 
 #define scVSBattleStartScene ndsBaseSCVSBattleStartScene
 #define scVSBattleStartBattle ndsBaseSCVSBattleStartBattle
 #define scVSBattleStartSuddenDeath ndsBaseSCVSBattleStartSuddenDeath
 #define scVSBattleFuncUpdate ndsBaseSCVSBattleFuncUpdate
+#define scManagerFuncUpdate ndsSCVSBattleManagerFuncUpdate
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #define ftManagerMakeFighter ndsSCVSBattleFTManagerMakeFighter
 #endif
@@ -82,9 +80,28 @@ GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc);
 #undef scVSBattleStartBattle
 #undef scVSBattleStartSuddenDeath
 #undef scVSBattleFuncUpdate
+#undef scManagerFuncUpdate
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #undef ftManagerMakeFighter
 #endif
+
+void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup)
+{
+    SYTaskmanSetup ds_setup = *setup;
+
+    ds_setup.scene_setup.arena_start = ndsTaskmanArenaStart();
+    ds_setup.scene_setup.arena_size = ndsTaskmanArenaSize();
+    if (ds_setup.scene_setup.func_update == ndsBaseSCVSBattleFuncUpdate)
+    {
+        ds_setup.scene_setup.func_update = scVSBattleFuncUpdate;
+    }
+    if (ds_setup.func_start == ndsBaseSCVSBattleStartBattle)
+    {
+        ds_setup.func_start = scVSBattleStartBattle;
+    }
+    gNdsSCVSBattleLifecycleArenaAdapterCount++;
+    scManagerFuncUpdate(&ds_setup);
+}
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc)
@@ -98,6 +115,7 @@ GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc)
 }
 #endif
 
+#if !NDS_DEV_LIVE_INPUT_PREVIEW
 static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
 {
     SYTaskmanSetup setup = dSCVSBattleTaskmanSetup;
@@ -107,6 +125,7 @@ static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
     setup.func_start = scVSBattleStartBattle;
     return setup;
 }
+#endif
 
 void scVSBattleStartBattle(void)
 {
@@ -209,6 +228,29 @@ void scVSBattleFuncUpdate(void)
 
 void scVSBattleStartScene(void)
 {
+#if NDS_DEV_LIVE_INPUT_PREVIEW
+    gNdsSCVSBattleOriginalStartResult =
+        NDS_SCVSBATTLE_ORIGINAL_START_PASS;
+
+    /* The N64 validation overlay is not staged on DS. */
+    gSCManagerBackupData.boot = 0;
+    ndsBaseSCVSBattleStartScene();
+
+    gNdsSCVSBattleLifecycleScenePrev = gSCManagerSceneData.scene_prev;
+    gNdsSCVSBattleLifecycleSceneCurr = gSCManagerSceneData.scene_curr;
+    gNdsSCVSBattleLifecycleIsSuddenDeath =
+        (u32)gSCManagerSceneData.is_suddendeath;
+    if ((gNdsSCVSBattleLifecycleTaskmanExitCount != 0u) &&
+        (gNdsSCVSBattleLifecycleTaskmanStatus ==
+            nSYTaskmanStatusLoadScene) &&
+        (gNdsSCVSBattleLifecycleTimeRemain == 0u) &&
+        (gSCManagerSceneData.scene_prev == nSCKindVSBattle) &&
+        (gSCManagerSceneData.scene_curr == nSCKindVSResults))
+    {
+        gNdsSCVSBattleLifecycleResult =
+            NDS_SCVSBATTLE_LIFECYCLE_PASS;
+    }
+#else
     SYTaskmanSetup setup;
 
     gNdsSCVSBattleOriginalStartResult =
@@ -230,4 +272,5 @@ void scVSBattleStartScene(void)
 
     setup = ndsSCVSBattleMakeTaskmanSetup();
     scManagerFuncUpdate(&setup);
+#endif
 }

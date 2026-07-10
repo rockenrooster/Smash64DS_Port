@@ -1,5 +1,8 @@
 #include "nds_scene_harness_config.h"
 
+extern u32 sySchedulerGetTicCount(void);
+extern void sySchedulerSetTicCount(u32 tics);
+
 void ndsResetStartupDiagnostics(void)
 {
     gNdsSceneBoundaryResult = 0;
@@ -372,6 +375,17 @@ void ndsResetStartupDiagnostics(void)
     gNdsSCVSBattleOriginalSceneCurr = 0;
     gNdsSCVSBattleOriginalUpdateResult = 0;
     gNdsSCVSBattleOriginalUpdateCount = 0;
+    gNdsSCVSBattleLifecycleResult = 0;
+    gNdsSCVSBattleLifecycleArenaAdapterCount = 0;
+    gNdsSCVSBattleLifecycleTaskmanExitCount = 0;
+    gNdsSCVSBattleLifecycleTaskmanStatus = 0;
+    gNdsSCVSBattleLifecycleTimeLimit = 0;
+    gNdsSCVSBattleLifecycleTimeRemain = 0;
+    gNdsSCVSBattleLifecycleTimePassed = 0;
+    gNdsSCVSBattleLifecycleGameStatus = 0;
+    gNdsSCVSBattleLifecycleScenePrev = 0;
+    gNdsSCVSBattleLifecycleSceneCurr = 0;
+    gNdsSCVSBattleLifecycleIsSuddenDeath = 0;
     gNdsSCVSBattleCompatMask = 0;
     gNdsSCVSBattleCompatCameraMask = 0;
     gNdsSCVSBattleCompatInterfaceMask = 0;
@@ -4063,6 +4077,25 @@ extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 
 static u32 sNdsBattlePlayablePacingStartTick;
 
+static void ndsBattlePlayableAdvanceFastLogicClock(void)
+{
+#if NDS_HARNESS_FAST_LOGIC
+    /* BattleShip scheduler.c:1038-1043 advances one tic per retrace. The
+     * verifier removes the wait, not that one-update/one-tic contract. */
+    sySchedulerSetTicCount(sySchedulerGetTicCount() + 1u);
+#endif
+}
+
+static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
+{
+    gNdsSCVSBattleLifecycleTaskmanExitCount++;
+    gNdsSCVSBattleLifecycleTaskmanStatus = (u32)sSYTaskmanStatus;
+    gNdsSCVSBattleLifecycleTimeLimit = gSCManagerBattleState->time_limit;
+    gNdsSCVSBattleLifecycleTimeRemain = gSCManagerBattleState->time_remain;
+    gNdsSCVSBattleLifecycleTimePassed = gSCManagerBattleState->time_passed;
+    gNdsSCVSBattleLifecycleGameStatus = gSCManagerBattleState->game_status;
+}
+
 static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 {
     u32 start = cpuGetTiming();
@@ -6705,6 +6738,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             {
                 update_max = NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX;
             }
+            else if ((use_realtime_presentation == 0u) &&
+                     (NDS_DEV_LIVE_INPUT_PREVIEW != 0))
+            {
+                update_max = NDS_FIGHTER_BATTLE_PLAYABLE_LIVE_UPDATE_MAX;
+            }
             else if (use_realtime_presentation == 0u)
             {
                 update_max = NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX;
@@ -6735,6 +6773,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 }
                 ndsRunMarioFoxProofUpdate(
                     &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+                if ((is_battle_playable != 0u) &&
+                    (use_realtime_presentation == 0u))
+                {
+                    ndsBattlePlayableAdvanceFastLogicClock();
+                }
                 if (is_battle_playable != 0u)
                 {
                     gNdsBattlePlayablePacingLogicFrames++;
@@ -6742,6 +6785,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     {
                         ndsBattlePlayablePresentFrame();
                     }
+                }
+
+                if ((is_battle_playable != 0u) &&
+                    (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
+                {
+                    break;
                 }
 
                 if (gNdsFighterNaturalMotionResult ==
@@ -6772,6 +6821,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             }
             if (is_battle_playable != 0u)
             {
+                ndsBattlePlayableRecordLifecycleTaskmanExit();
                 ndsBattlePlayablePacingFinish();
             }
 #if NDS_RENDERER_HW_TRIANGLES && \
@@ -7980,6 +8030,14 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
 
+#if NDS_DEV_LIVE_INPUT_PREVIEW
+        if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
+        {
+            /* The original task loop returns after its cleanup tail. Resume
+             * scVSBattleStartScene so it can score and select VS Results. */
+            return;
+        }
+#endif
         osStopThread(NULL);
         return;
     }

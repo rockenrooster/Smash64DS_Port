@@ -18509,3 +18509,22 @@ does not assert.
   changes. The detached core prebuild took `523.13s`, its stamp validated in
   `0.37s`, and all six no-build entries passed. Full Regression remains in
   Tyler's nightly queue.
+
+## 2026-07-10 - Original VS battle timer/end lifecycle
+
+- Routed imported `scVSBattleStartScene` through a narrow DS taskman-arena
+  adapter, then resumed its source tail after taskman cleanup instead of
+  parking the live-input build. Bounded harness paths remain unchanged.
+- Fast logic now advances one source scheduler tic per update, preserving the
+  retrace contract from `scheduler.c:1038-1043`. Original
+  `ifcommon.c:2472-2529,3144-3152,3342-3345` consumes the five-minute timer,
+  runs Time Up/end, and requests `LoadScene`; `scvsbattle.c:513-560` performs
+  the scoring/sudden-death check and selects VS Results.
+- Added the mode-163 `battle_playable_match_lifecycle` registry alias and
+  `VSB_END` marker. The green proof reaches `18000` ticks, game status `Set`,
+  and scene `22 -> 24` while the original level-3 Fox CPU completes `36394`
+  process frames. No verifier expectation was reduced.
+- `verify-dev-fast -Build`, Boundary, canonical realtime, and the lifecycle
+  verifier passed. Detached RegressionCore prebuild took `1406.40s`, its stamp
+  validated in `0.38s`, and the seven-entry no-build profile passed in
+  `434.7s`. The actual `mnVSResultsStartScene` remains the next P1 import.

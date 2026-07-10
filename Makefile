@@ -428,6 +428,10 @@ else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable_realtime)
 NDS_DEV_SCENE_HARNESS_ID := 163
 # Mode 163, built with realtime verifier presentation smoke defaults.
 CFLAGS += -Os
+else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable_match_lifecycle)
+NDS_DEV_SCENE_HARNESS_ID := 163
+# Mode 163, built for the original five-minute timer/results lifecycle.
+CFLAGS += -Os
 else
 $(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use a harness name from scripts/lib/harness-registry.ps1, including battle_mariofox_stage_mplivehit_status_loop or menu_chain_mariofox_stage_mplivehit_status_loop)
 endif

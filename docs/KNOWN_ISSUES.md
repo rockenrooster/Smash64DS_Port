@@ -120,9 +120,13 @@
   `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD
   paths, and original `if/ifscreenflash.c`. Mode `163` now proves natural
   attack/damage -> KO -> stock decrement -> Rebirth -> Wait, rendered percent
-  digits, stock icon decrement, and a hardware stage/fighter frame. Timer,
-  pause/end UI, magnify/arrows, tags, effects/items, and broader SObj/RDP
-  helper coverage stay as documented interface follow-up.
+  digits, stock icon decrement, and a hardware stage/fighter frame. The
+  live-input path now also runs the original five-minute timer, Time Up/end
+  interface, taskman return, scoring check, and `VSBattle -> VSResults` scene
+  selection. `mnVSResultsStartScene` is still a strong compatibility stub in
+  `src/port/title_backend.c`; importing the coherent results scene and its
+  missing assets is the next P1 scene boundary. Pause, magnify/arrows, tags,
+  effects/items, and broader SObj/RDP helpers remain interface follow-up.
 - [coverage-reduced] Deleted legacy standalone modes `57/58`
   (`battle_mariofox_gcdrawall_loop` /
   `menu_chain_mariofox_gcdrawall_loop`). Active stage gcDrawAll, natural-combat
@@ -906,8 +910,9 @@
   material/texture upload/sampling, full
   collision line
   processing, Whispy wind, yakumono/stage object runtime,
-  item/weapon runtime, interface rendering, audio backend, and
-  results/sudden-death tails remain deferred.
+  item/weapon runtime, interface rendering, audio backend, and the actual VS
+  Results/sudden-death scene presentation remain deferred. The live-input
+  battle path now reaches the source timer/end and VS Results selection tail.
 - `mvopeningroom.c` is imported with an NDS entry slice. Original video/task
   setup, relocation setup/file-list resolution, actor/default-camera,
   Scene 1 camera, close-up overlay camera, wallpaper-camera, and logo-camera

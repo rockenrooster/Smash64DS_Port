@@ -56,7 +56,7 @@ $modeDupes = @($registry |
     Where-Object { $_.Count -gt 1 })
 foreach ($dupe in $modeDupes) {
     $names = @($dupe.Group | ForEach-Object { $_.Name } | Sort-Object)
-    if (($dupe.Name -ne '163') -or (($names -join ',') -ne 'battle_playable,battle_playable_realtime')) {
+    if (($dupe.Name -ne '163') -or (($names -join ',') -ne 'battle_playable,battle_playable_match_lifecycle,battle_playable_realtime')) {
         Fail-Check "duplicate Mode value '$($dupe.Name)' for unexpected aliases: $($names -join ', ')"
     }
 }
@@ -235,12 +235,14 @@ Assert-ProfilePlan 'Regression' @(
     'menu_chain_mariofox_stage_mpdamage_recover_loop',
     'battle_mariofox_stage_mplivehit_status_loop',
     'menu_chain_mariofox_stage_mplivehit_status_loop',
-    'battle_playable'
+    'battle_playable',
+    'battle_playable_match_lifecycle'
 )
 Assert-ProfilePlan 'RegressionCore' @(
     'runtime',
     'title',
     'battle_playable_realtime',
+    'battle_playable_match_lifecycle',
     'battle_mariofox_stage_mpcliffstatus_floor_loop',
     'battle_mariofox_stage_mpupdate_floor_loop',
     'menu_chain_mariofox_stage_mpupdate_floor_loop'

@@ -112,6 +112,7 @@
 #define NDS_SCVSBATTLE_ORIGINAL_RELOC_PASS 0x5642524cu
 #define NDS_SCVSBATTLE_ORIGINAL_SETUP_PASS 0x56425355u
 #define NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS 0x56425550u
+#define NDS_SCVSBATTLE_LIFECYCLE_PASS 0x5642454Eu
 #define NDS_STAGE_PUPUPU_RELOC_PASS 0x50555052u
 #define NDS_STAGE_INISHIE_RELOC_PASS 0x494e4952u
 #define NDS_STAGE_PUPUPU_PREVIEW_PASS 0x50555056u
@@ -1399,6 +1400,17 @@ extern volatile u32 gNdsSCVSBattleOriginalScenePrev;
 extern volatile u32 gNdsSCVSBattleOriginalSceneCurr;
 extern volatile u32 gNdsSCVSBattleOriginalUpdateResult;
 extern volatile u32 gNdsSCVSBattleOriginalUpdateCount;
+extern volatile u32 gNdsSCVSBattleLifecycleResult;
+extern volatile u32 gNdsSCVSBattleLifecycleArenaAdapterCount;
+extern volatile u32 gNdsSCVSBattleLifecycleTaskmanExitCount;
+extern volatile u32 gNdsSCVSBattleLifecycleTaskmanStatus;
+extern volatile u32 gNdsSCVSBattleLifecycleTimeLimit;
+extern volatile u32 gNdsSCVSBattleLifecycleTimeRemain;
+extern volatile u32 gNdsSCVSBattleLifecycleTimePassed;
+extern volatile u32 gNdsSCVSBattleLifecycleGameStatus;
+extern volatile u32 gNdsSCVSBattleLifecycleScenePrev;
+extern volatile u32 gNdsSCVSBattleLifecycleSceneCurr;
+extern volatile u32 gNdsSCVSBattleLifecycleIsSuddenDeath;
 extern volatile u32 gNdsSCVSBattleCompatMask;
 extern volatile u32 gNdsSCVSBattleCompatCameraMask;
 extern volatile u32 gNdsSCVSBattleCompatInterfaceMask;
