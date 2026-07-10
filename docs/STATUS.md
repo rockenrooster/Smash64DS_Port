@@ -100,9 +100,9 @@ and screenshot gates cover the canonical renderer.
 ## Current Notes
 
 Stable flags stay in `nds_build_config.h`; per-mode harness ID/Inishie scale
-live in `nds_scene_harness_config.h`. The lifecycle shared-header rebuild took
-`1406.40s`; its stamp validated in `0.38s` and RegressionCore passed in
-`434.7s`.
+live in `nds_scene_harness_config.h`. The Results RegressionCore prebuild took
+`1408.83s`; its stamp validated in `0.35s`, and the six-entry no-build profile
+passed in `344s`.
 
 The taskman allocator now tries `0x140000` and `0x130000` before its legacy
 1 MiB fallback, preventing source-display builds from overflowing after a

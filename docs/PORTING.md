@@ -18556,3 +18556,6 @@ does not assert.
   `MObjSub` mixed lanes, preserve opaque/translucent DL heads, finish texture
   windows and fighter RDP/anim-lock state, then wallpaper/shadows. These are
   recorded as separate boundaries instead of being mixed into Results.
+- Final gates passed: dev-fast, all Boundary entries, canonical HUD-off pixels,
+  and six-entry RegressionCore. Its detached seven-target prebuild took
+  `1408.83s`, stamp validation `0.35s`, and no-build verification `344s`.

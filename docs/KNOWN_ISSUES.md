@@ -9,6 +9,10 @@
   with `-VerifyStamp` for normal iteration. Run or resume
   `scripts/verify-all.ps1 -Profile Full` when change risk requires it, and
   report timeouts honestly instead of claiming Full green.
+- RegressionCore's two shared-slot mode switches still took `477.31s` and
+  `474.68s` after their first slot builds, rather than rebuilding only the
+  harness-aware objects. Investigate that invalidation in the next tooling
+  slice; it is build-cost debt, not a runtime correctness blocker.
 - Snapshots created without `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` can
   include hundreds of MB of generated build directories, root ROM/ELF outputs,
   artifacts, emulator payloads, and GDB scratch files.
