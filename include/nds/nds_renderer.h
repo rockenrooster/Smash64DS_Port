@@ -188,6 +188,11 @@ typedef struct NDSRendererStats
     u32 hardware_triangle_count;
     u32 hardware_zbuffer_triangle_count;
     u32 hardware_projected_depth_triangle_count;
+    u32 hardware_projected_depth_sample_count;
+    s32 hardware_projected_depth_min;
+    s32 hardware_projected_depth_max;
+    s32 hardware_projected_w_min;
+    s32 hardware_projected_w_max;
     u32 hardware_decal_depth_triangle_count;
     u32 hardware_prim_depth_triangle_count;
     u32 hardware_oracle_triangle_count;

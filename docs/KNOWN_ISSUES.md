@@ -1047,17 +1047,17 @@
 - The canonical realtime + live-input + HW-tri battle-playable ROM polls live
   DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
   pixel-gated, but the frame is not yet demo-fidelity. Latest gate: GX RAM
-  `729/2209`, `16509/49152` dominant-green, `30583/49152` detail, `82.597%`
-  source-sky detail, `16.099%` meaningful adjacent-frame change, and mean
-  max-channel delta `14.99`. Dream Land and its original wallpaper are
-  recognizable. The
+  `729/2209`, source depth for stage/Mario/Fox, zero oracle mismatches, and a
+  HUD-off capture with `0.519%` meaningful adjacent-frame change. Dream Land
+  and its original wallpaper are recognizable. The
   original fighter-display preamble and part-selection contract are now live;
   fighter attachment restores mixed-width O2R `MObjSub` lanes before the
   original object manager copies each record. The evidenced one-cycle
   `PRIMITIVE * SHADE` LERP now multiplies source primitive RGB by computed
-  shade, restoring red/blue Mario and olive/brown Fox. Both fighters retain
-  residual lower-body fragments, incomplete textures, and incomplete
-  directional-light fidelity. The
+  shade. Mario still presents an incorrect green cap/mismatched clothing, so
+  fighter MObj material, texture, and palette selection is not yet accepted;
+  both fighters also retain lower-body fragments and incomplete directional
+  light fidelity. The
   Dream Land's source player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated
   source starts. The VSBattle wrapper's forced `is_skip_entry` remains a
@@ -1065,10 +1065,11 @@
   The unflagged palette seed is an intentional
   compatibility path until command-order proof removes it. Remaining texture
   debt includes exact LOADBLOCK origin/stride/DXT, mask/shift, and padding.
-- Projected HW submission now preserves source geometric depth: camera matrix
-  order follows `objdisplay.c:3007-3026`, NDC Z is computed in two 64-bit stages
-  before fixed-point clamp, and the DS Z buffer replaces synthetic submission-
-  order depth. The raw GX matrix path remains deferred. Full source-selected
+- Projected HW submission now takes X/Y/Z from one current composed clip vertex.
+  No-Z layers submit their synthetic far order directly in signed 20.12 NDC;
+  the removed extra `<< 4` had made those layers occlude source-depth geometry.
+  Exact source no-Z write/ordering behavior and the raw GX matrix path remain
+  deferred. Full source-selected
   fighter submission plus the current CPU-scaled 300x220 wallpaper presents at
   about `1.2fps`; cache work follows fidelity.
 - Dream Land stage `MObjSub` mixed-width fields remain unnormalized. The
@@ -1088,8 +1089,9 @@
 - Dream Land wallpaper now runs through imported `grwallpaper.c` and the source
   Sprite/SObj path, composed on the DS 2D back layer behind the HW stage. The
   compositor is source-correct but uncached; its per-pixel scale currently
-  dominates frame time and must be cached without changing camera-driven
-  position/scale behavior.
+  dominates frame time and can miss the 0.74-second BGM half-buffer deadline;
+  audible resyncs remain possible until it is cached without changing
+  camera-driven position/scale behavior.
 - The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`; the
   canonical/shipped target forces it off while verifier markers remain active.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.

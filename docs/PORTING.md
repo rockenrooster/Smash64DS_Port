@@ -18591,3 +18591,26 @@ does not assert.
   architecture, registry, and detached seven-target RegressionCore prebuild
   (`1592.139s`, stamp `0.79s`) plus no-build run (`307.7s`). Full Regression
   remains Tyler's once-daily overnight action.
+
+## 2026-07-10 - Canonical projected-depth unit repair
+
+- Removed the separate source-Z recomputation that could lag the renderer's
+  current composed matrix after matrix-word updates. Projected X/Y/Z now share
+  one clip vertex and one perspective divide; continuous stage/Mario/Fox NDC
+  and W markers guard the contract.
+- Corrected the no-Z synthetic depth domain. The generator already represented
+  signed 20.12 NDC, so its old extra `<< 4` placed layers near the camera and
+  hid source-depth geometry. The first far-order value is now `4095`, matching
+  the direct NDC submit path. Global depth reversal and W-buffer probes were
+  rejected and did not land.
+- BattleShip source keeps layer 0/2/3 no-Z and layer 1 Z-buffered in
+  `grdisplay.c:52-151`. The accepted capture
+  `artifacts/visibility/2026-07-10_noz-depth-units-hudoff-final.png` visibly
+  restores stage objects and both fighter regions with zero oracle mismatch;
+  texture smearing and fighter materials remain open.
+- Full-screen SObj commits now overwrite the staged 256x192 image without first
+  clearing visible VRAM, closing a black-band scanout window. Added an opt-in
+  unthrottled, JIT-off capture mode for faster native-renderer iteration.
+- Focused GBI fixtures, stage-inclusive HW draw, and canonical realtime marker
+  gates passed. The capture pair changed `0.519%` meaningfully; broad nightly
+  verification remains queued.

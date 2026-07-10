@@ -609,7 +609,13 @@ Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL rend
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterBuildDefaultBattleCameraMatrices')) 'Battle DL renderer default battle camera seed is missing.'
 Assert-True (-not $rendererAdapter.Contains('NDS_RENDERER_ADAPTER_HW_WORLD_SCALE')) 'Battle DL renderer must keep source camera near/far planes in the CPU projection domain.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterMulBefore(projection, &incoming')) 'Battle DL renderer camera look-at no longer left-multiplies the loaded projection.'
-Assert-True ($renderer.Contains('ndsRendererHardwareSourceNdcDepth')) 'Renderer source-depth projection helper is missing.'
+Assert-True (-not $renderer.Contains('ndsRendererHardwareSourceNdcDepth')) 'Renderer source depth still recomputes stale projection/modelview state.'
+Assert-True ($renderer -match '(?s)source_clip_depth != FALSE.*projected_z = clip_vtx->z;.*ndsRendererHardwareClipVertex\(clip_vtx, projected_z\)') 'Renderer projected X/Y/Z no longer share the composed clip vertex.'
+Assert-True ($renderer -match '(?s)if \(source_clip_depth != FALSE\).*?ndsRendererHardwareClipVertex\(clip_vtx, projected_z\);\s*}\s*else\s*{\s*ndsRendererHardwareClipVertexNdcDepth\(clip_vtx, projected_z\);') 'Renderer no-Z stage layers no longer submit synthetic depth directly in signed 20.12 NDC.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareNextProjectedDepth\(void\).*return sNdsRendererHardwareProjectedDepth /\s*NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;') 'Renderer synthetic no-Z depth regained the erroneous extra 12.4-to-20.12 shift.'
+$projectedDepthStart = 0x1000 * 6
+$projectedDepthStep = 6
+Assert-Equal ([math]::Floor(($projectedDepthStart - 1) / $projectedDepthStep)) 4095 'Renderer first synthetic no-Z depth must be the far signed 20.12 NDC endpoint.'
 Assert-True ($rendererAdapter.Contains('nGCMatrixKindVecTraRotRpyRSca')) 'Battle DL renderer vector DObj matrix cases are missing.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterBuildBillboardMtx')) 'Battle DL renderer billboard DObj matrix cases are missing.'
 Assert-True ($rendererAdapter.Contains('nGCMatrixKindRecalcRotRpyRSca')) 'Battle DL renderer recalc DObj matrix cases are missing.'

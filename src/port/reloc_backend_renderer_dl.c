@@ -2527,6 +2527,72 @@ static NDSFighterDLDrawState sNdsRendererAdapterStagePersistentState;
 static NDSRendererStats sNdsRendererAdapterStagePersistentStats;
 static sb32 sNdsRendererAdapterStagePersistentActive;
 
+volatile u32 gNdsRendererDepthStageSamples;
+volatile s32 gNdsRendererDepthStageMin;
+volatile s32 gNdsRendererDepthStageMax;
+volatile s32 gNdsRendererDepthStageWMin;
+volatile s32 gNdsRendererDepthStageWMax;
+volatile u32 gNdsRendererDepthFighterP0Samples;
+volatile s32 gNdsRendererDepthFighterP0Min;
+volatile s32 gNdsRendererDepthFighterP0Max;
+volatile s32 gNdsRendererDepthFighterP0WMin;
+volatile s32 gNdsRendererDepthFighterP0WMax;
+volatile u32 gNdsRendererDepthFighterP1Samples;
+volatile s32 gNdsRendererDepthFighterP1Min;
+volatile s32 gNdsRendererDepthFighterP1Max;
+volatile s32 gNdsRendererDepthFighterP1WMin;
+volatile s32 gNdsRendererDepthFighterP1WMax;
+
+static void ndsRendererAdapterAccumulateDepth(
+    const NDSRendererStats *stats,
+    volatile u32 *samples,
+    volatile s32 *depth_min,
+    volatile s32 *depth_max,
+    volatile s32 *w_min,
+    volatile s32 *w_max)
+{
+    if ((stats == NULL) || (samples == NULL) || (depth_min == NULL) ||
+        (depth_max == NULL) || (w_min == NULL) || (w_max == NULL) ||
+        (stats->hardware_projected_depth_sample_count == 0u))
+    {
+        return;
+    }
+    if (*samples == 0u)
+    {
+        *depth_min = stats->hardware_projected_depth_min;
+        *depth_max = stats->hardware_projected_depth_max;
+        *w_min = stats->hardware_projected_w_min;
+        *w_max = stats->hardware_projected_w_max;
+    }
+    else
+    {
+        if (stats->hardware_projected_depth_min < *depth_min)
+        {
+            *depth_min = stats->hardware_projected_depth_min;
+        }
+        if (stats->hardware_projected_depth_max > *depth_max)
+        {
+            *depth_max = stats->hardware_projected_depth_max;
+        }
+        if (stats->hardware_projected_w_min < *w_min)
+        {
+            *w_min = stats->hardware_projected_w_min;
+        }
+        if (stats->hardware_projected_w_max > *w_max)
+        {
+            *w_max = stats->hardware_projected_w_max;
+        }
+    }
+    *samples += stats->hardware_projected_depth_sample_count;
+}
+
+void ndsRendererAdapterResetDepthDiagnostics(void)
+{
+    gNdsRendererDepthStageSamples = 0u;
+    gNdsRendererDepthFighterP0Samples = 0u;
+    gNdsRendererDepthFighterP1Samples = 0u;
+}
+
 static sb32 ndsRendererAdapterStatsHasArmedTexture(
     const NDSRendererStats *stats)
 {
@@ -3479,6 +3545,13 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                   &state,
                                   &stats);
 #if NDS_RENDERER_HW_TRIANGLES
+    ndsRendererAdapterAccumulateDepth(
+        &stats,
+        &gNdsRendererDepthStageSamples,
+        &gNdsRendererDepthStageMin,
+        &gNdsRendererDepthStageMax,
+        &gNdsRendererDepthStageWMin,
+        &gNdsRendererDepthStageWMax);
     gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
     gNdsRendererProfileStageAdapterTicks += cpuGetTiming() - adapter_start;
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
@@ -6239,6 +6312,27 @@ static void ndsFighterDLAllDrawAccumulateStats(
     if ((state == NULL) || (stats == NULL) || (clean == NULL))
     {
         return;
+    }
+
+    if (slot == 0u)
+    {
+        ndsRendererAdapterAccumulateDepth(
+            stats,
+            &gNdsRendererDepthFighterP0Samples,
+            &gNdsRendererDepthFighterP0Min,
+            &gNdsRendererDepthFighterP0Max,
+            &gNdsRendererDepthFighterP0WMin,
+            &gNdsRendererDepthFighterP0WMax);
+    }
+    else if (slot == 1u)
+    {
+        ndsRendererAdapterAccumulateDepth(
+            stats,
+            &gNdsRendererDepthFighterP1Samples,
+            &gNdsRendererDepthFighterP1Min,
+            &gNdsRendererDepthFighterP1Max,
+            &gNdsRendererDepthFighterP1WMin,
+            &gNdsRendererDepthFighterP1WMax);
     }
 
     gNdsFighterDLAllDrawHardwareTextureBindCount +=

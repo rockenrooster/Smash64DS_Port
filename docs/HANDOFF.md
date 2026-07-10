@@ -94,23 +94,19 @@ reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
 separated but not yet accepted Mario and Fox bodies. Imported
 `grwallpaper.c:45-159,267-301` now owns the original 300x220 dynamic wallpaper;
-the DS SObj compositor places it behind the 3D stage and HUD. The HUD-off
-capture is
-`artifacts/visibility/2026-07-10_dream-land-wallpaper-hudoff-final.png`; the
-pre-wallpaper baseline is
-`artifacts/visibility/2026-07-10_source-depth-canonical-hudoff.png`.
+the DS SObj compositor places it behind the 3D stage and HUD. Latest HUD-off
+capture: `artifacts/visibility/2026-07-10_noz-depth-units-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
 record. The HW combiner also preserves the proven one-cycle
-`PRIMITIVE * SHADE` formula, so Mario remains red/blue and Fox now uses his
-source olive/brown palette. Persistent source vertex slots restore 44 previously
-dropped cross-joint triangles and visibly connect more limb strips. Residual
-fragments, incomplete textures, direction-light decoding, and the raw GX matrix
-path remain debt; projected submission now preserves source NDC depth through
-the DS Z buffer. Source wallpaper scaling currently lowers presentation to
-about `1.2fps`. The canonical verifier stops GDB at the next completed frame
-before reading reset-per-frame renderer diagnostics.
+`PRIMITIVE * SHADE` formula, but Mario's green cap/mismatched clothing proves
+fighter material/texture selection is still wrong. Persistent source vertex
+slots restore 44 cross-joint triangles. Source-depth X/Y/Z now share one clip
+vertex, and no-Z stage layers use direct signed 20.12 NDC instead of the bad
+extra `<< 4`; oracle mismatch stays zero. Residual fragments, texture ribbons,
+lighting, exact no-Z/head ordering, and raw GX matrices remain debt. Uncached
+wallpaper scaling runs about `1.2fps` and can make BGM resynchronize audibly.
 The scripted fast mode-163 target is
 `smash64ds-battle-playable-fast-hwtri.nds`; the user-facing realtime ROM is
 `smash64ds-battle-playable-hwtri.nds`, so verifier builds no longer collide
@@ -121,10 +117,10 @@ keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Recommended Next Work
 
-1. Preserve source stage layer and opaque/translucent DL-head ordering.
-2. Finish texture-window plus fighter RDP/anim-lock fidelity.
-3. Add Dream Land shadows and prove CPU offstage recovery.
-4. Cache corrected draw and SObj state for 60fps.
+1. Finish texture-window and fighter material/RDP/anim-lock fidelity.
+2. Preserve exact no-Z layer and opaque/translucent DL-head ordering.
+3. Cache corrected draw/SObj state for stable audio and 60fps.
+4. Add Dream Land shadows and prove CPU offstage recovery.
 5. Add FGM/voice playback.
 
 Do not repeat the exact five-record stage `MObjSub` normalization as a visual

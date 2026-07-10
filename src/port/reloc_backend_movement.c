@@ -12731,6 +12731,7 @@ static s32 sNdsStageGCDrawAllLoopCurrentDisplayLinkID;
 #if NDS_RENDERER_HW_TRIANGLES
 static sb32 sNdsStageGCDrawAllLoopHardwareSubmitActive;
 static u32 sNdsStageGCDrawAllLoopHardwareSubmitCount;
+extern void ndsRendererAdapterResetDepthDiagnostics(void);
 
 static u32 ndsStageGCDrawAllLoopInitialGeometryMode(void)
 {
@@ -13017,6 +13018,7 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
     }
 
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
+    ndsRendererAdapterResetDepthDiagnostics();
     gcDrawAll();
     ndsFighterDisplayContractSubmitStageFighters();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
@@ -13030,6 +13032,7 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     }
 
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
+    ndsRendererAdapterResetDepthDiagnostics();
     ndsRendererHardwareSetNoOracle(TRUE);
     gcDrawAll();
     ndsFighterDisplayContractSubmitStageFighters();

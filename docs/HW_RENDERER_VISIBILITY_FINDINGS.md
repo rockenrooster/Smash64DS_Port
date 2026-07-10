@@ -71,3 +71,25 @@ raw DS matrix/depth path still needs repair, and immediate per-frame
 `gcDrawAll` traversal plus projected fallback are below 60fps in the realtime
 smoke. Renderer-cache/performance work remains the next slice after Tyler's
 playtest.
+
+## 2026-07-10 Source-Depth Unit Checkpoint
+
+- Source projected X/Y/Z now use the same composed clip vertex. The removed
+  helper recomputed Z from stale projection/modelview fields and missed matrix
+  word updates.
+- No-Z stage triangles previously shifted their synthetic signed 20.12 NDC
+  depth left by four before direct submission. The resulting near-plane layers
+  hid Mario, Fox, platforms, Whispy, and stage details. The first synthetic
+  depth is now the far endpoint `4095`; source stage/Mario/Fox samples remain
+  inside the same NDC domain with zero oracle mismatches.
+- BattleShip explicitly clears `G_ZBUFFER` for layers 0, 2, and 3 and enables
+  it for layer 1 (`grdisplay.c:52-151`). Exact no-Z write/ordering semantics
+  remain fidelity debt; neither global depth reversal nor W-buffering landed.
+- Accepted capture:
+  `artifacts/visibility/2026-07-10_noz-depth-units-hudoff-final.png`.
+  Its adjacent sample changes `0.519%` of pixels meaningfully. Texture ribbons,
+  fighter materials, and exact layer ordering remain visibly incorrect.
+- The full-screen SObj commit no longer clears visible VRAM immediately before
+  its row copy, removing a scanout window that could expose black bands.
+- Pixel gates use native-resolution melonDS software rendering. Optional
+  unthrottled capture changes wall time only; JIT remains disabled.

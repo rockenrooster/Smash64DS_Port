@@ -402,7 +402,13 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
             return;
         }
         overlay = (u16 *)bgGetGfxPtr(bg);
-        dmaFillHalfWords(0, overlay, 256u * 256u * sizeof(u16));
+        /* A full-screen staging image already contains transparent zeroes.
+         * Clearing visible VRAM before the row copy exposes black bands when
+         * scanout catches the single-buffered overlay mid-commit. */
+        if ((dst_w < SCREEN_WIDTH) || (dst_h < SCREEN_HEIGHT))
+        {
+            dmaFillHalfWords(0, overlay, 256u * 256u * sizeof(u16));
+        }
         for (y = 0; y < dst_h; y++)
         {
             memcpy(&overlay[y * 256],

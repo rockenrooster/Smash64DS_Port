@@ -4,6 +4,7 @@ param(
     [string]$Rom = (Join-Path $PSScriptRoot '..\smash64ds.nds'),
     [string]$Output,
     [int]$DelaySeconds = 32,
+    [switch]$Unthrottled,
     [string]$SecondOutput,
     [int]$SecondDelaySeconds = 1,
     [int]$SecondDelayMilliseconds = 0
@@ -112,6 +113,12 @@ try {
             '(?s)(\[Instance0\.Gdb\]\s*Enabled\s*=\s*)true', '${1}false'
         $visibleConfig = $visibleConfig -replace
             '(?s)(\[Instance0\.Gdb\]\s*Enable\s*=\s*)true', '${1}false'
+        if ($Unthrottled) {
+            $visibleConfig = $visibleConfig -replace
+                '(?m)^(LimitFPS\s*=\s*)true\s*$', '${1}false'
+            $visibleConfig = $visibleConfig -replace
+                '(?ms)(\[JIT\].*?^Enable\s*=\s*)true\s*$', '${1}false'
+        }
         if ($visibleConfig -ne $originalConfig) {
             Set-Content $config -Value $visibleConfig -NoNewline
         }

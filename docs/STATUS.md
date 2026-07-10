@@ -69,9 +69,10 @@ transformed vertex cache across those per-part lists, matching BattleShip's
 single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
 all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
 Canonical proof reports `gxram=729/2209`, geometry `0x222005`, selected parts
-`14/18`, and zero CPU-oracle mismatches. Projected submission now computes
-source NDC Z in two 64-bit matrix stages and uses the DS Z buffer; triangle
-submission order no longer substitutes for source depth.
+`14/18`, and zero CPU-oracle mismatches. Source-depth X/Y/Z share one current
+composed clip vertex. No-Z layers submit synthetic far order directly in
+signed 20.12 NDC; removing an erroneous extra `<< 4` restores stage/fighter
+occlusion without the rejected global-depth-reversal or W-buffer probes.
 
 O2R `MObjSub` mixed-width lanes, aligned Dream Land starts, original floor
 adoption, and the observed one-cycle `PRIMITIVE * SHADE` material path remain
@@ -79,16 +80,12 @@ live. Imported `grwallpaper.c` now creates and updates Dream Land's original
 300x220 source Sprite; the DS SObj compositor places it behind the 3D stage and
 keeps HUD SObjs in front. Capture
 `artifacts/visibility/2026-07-10_dream-land-wallpaper-hudoff-final.png` shows
-the source sky filling the viewport. Residual fighter fragments, incomplete
-textures, and direction-light fidelity remain unchanged.
-
-Canonical proof reports `gxram=729/2209`, `16509/49152` dominant-green and
-`30583/49152` detail pixels, plus `82.597%` source-sky detail. Adjacent frames
-have `16.099%` meaningful pixel change and mean max-channel delta `14.99`, while
-the archived flashing frame fails the retained mean-delta ceiling. GDB marker
-reads stop at an explicit completed-frame symbol so reset-in-progress renderer
-counters cannot create false oracle failures. The CPU-scaled wallpaper lowers
-presentation to about `1.2fps`; caching remains P1 debt after fidelity.
+the source sky. The depth-unit capture
+`artifacts/visibility/2026-07-10_noz-depth-units-hudoff-final.png` changes only
+`0.519%` meaningfully against its adjacent sample. Texture ribbons, Mario's
+green cap/mismatched clothing, lower-body fragments, and lighting remain open.
+The uncached wallpaper lowers presentation to about `1.2fps` and can trigger
+audible BGM resyncs; caching remains P1 debt after fidelity.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -128,12 +125,10 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-An exact five-record Dream Land stage `MObjSub` normalization probe changed no
-canonical pixels and was reverted; do not repeat it as a visual hypothesis.
-Follow-ups: preserve source DL-head order, finish texture-window and fighter
-RDP/anim-lock semantics, add shadows, prove CPU offstage recovery, then cache
-correct draw/SObj state for 60fps. FGM/voice and the original sequence player
-remain.
+The five-record stage `MObjSub` normalization probe changed no pixels and was
+reverted. Follow-ups: texture-window/fighter material state, exact no-Z/head
+ordering, shadows, CPU recovery, then correct draw/SObj caching for 60fps.
+FGM/voice and the original sequence player remain.
 ## Verification
 
 Quick iteration uses `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.

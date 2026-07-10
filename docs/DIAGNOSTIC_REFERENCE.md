@@ -1327,8 +1327,12 @@ Opening movie / Opening Portraits:
 - `RENDER_MATRIX` / `RENDER_VERTEX`: canonical HW matrix and vertex-range
   markers. They record loaded projection/modelview seeds and raw/HW vertex
   ranges so blank-screen failures can be sorted into matrix/clip issues versus
-  display/attribute issues. Projected draws compute source NDC Z in separate
-  64-bit modelview/projection stages before fixed-point clamp and use DS Z.
+  display/attribute issues. Projected draws divide the current composed clip
+  vertex for X/Y/Z together and use DS Z.
+- `RENDER_DEPTH`: source-depth sample count, signed 20.12 NDC min/max, and
+  clip-W min/max for stage, player 0, and player 1. Canonical HW requires all
+  three classes, NDC within `-4096..4095`, and positive ordered W ranges. This
+  catches stale matrix-field depth recomputation and depth-unit regressions.
 - `RENDER_TEXTURE`: canonical HW texture trace marker. Fields are converted
   source texels, dominant-green converted texels, non-white converted texels,
   textured vertices, in-range texture-coordinate sample count, samples over a

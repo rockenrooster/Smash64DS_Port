@@ -1095,11 +1095,13 @@ computed light shade. This follows the packed LERP contract in
 `include/PR/gbi.h:508-543`; unobserved two-cycle LERPs remain outside this
 narrow approximation.
 Canonical HW still uses projected submission rather than the final raw GX
-matrix path. It now preserves source depth: the adapter applies projection and
-look-at in the order emitted by `objdisplay.c:3007-3026`, computes NDC Z in two
-64-bit stages before v16 clamping, and flushes the DS Z buffer. Full source-
-selected fighter submission is not cached; that is a backend limit, not
-alternative fighter behavior.
+matrix path. Source-depth X/Y/Z now come from the same current composed clip
+vertex, including matrix-word updates, before the perspective divide. Stage
+layers that clear `G_ZBUFFER` in `grdisplay.c:52-72,111-151` use a synthetic
+far-order value expressed directly in signed 20.12 NDC; the former extra
+`<< 4` placed those layers near the camera and hid source-depth fighters and
+stage objects. Full source-selected fighter submission is not cached; that is
+a backend limit, not alternative fighter behavior.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,

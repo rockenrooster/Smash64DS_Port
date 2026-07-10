@@ -108,6 +108,12 @@ BG/3D registers, DMA, or timing.
 .\scripts\verify-nogba-smoke.ps1 -Build
 ```
 
+For faster visual iteration, pass `-Unthrottled` to `capture-melonds.ps1`.
+It temporarily disables melonDS FPS limiting, keeps JIT disabled, and restores
+the config afterward. Native-resolution melonDS software-renderer captures
+remain authoritative; OpenGL rendering and 4x scaling are secondary inspection
+views because they can change edge/depth pixels without adding source detail.
+
 See `docs/EMULATOR_STRATEGY.md` for the emulator decision boundary.
 
 ## Snapshots
