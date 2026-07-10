@@ -16,7 +16,10 @@ files open, then parses source-shaped sequence, bank, instrument/wavetable, and
 FGM package counts without playback.
 
 Mode `163` reports:
-`audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=64416`.
+`audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100
+fgm=100/464/695 raw=4422960 resident=0 scratch=16`. The `.ctl` parser now
+seeks directly to validated big-endian records instead of copying the
+64,416-byte second bank.
 This keeps the VSBattle memory reserve intact.
 
 ## Landed Slice 2

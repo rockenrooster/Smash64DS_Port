@@ -1,7 +1,6 @@
 #include <nds/nds_audio_assets.h>
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <PR/ultratypes.h>
@@ -139,39 +138,24 @@ static s32 ndsAudioOpenWrapped(const char *path, u32 expected_raw_size,
     return TRUE;
 }
 
-static s32 ndsAudioLoadRaw(const char *path, u32 expected_raw_size,
-                           u8 **out_data, u32 *out_raw_size)
+static s32 ndsAudioReadAt(FILE *file, u32 raw_size, u32 offset, void *dst,
+                          size_t size)
 {
-    FILE *file;
-    u8 *data;
-    u32 raw_size;
-
-    if (ndsAudioOpenWrapped(path, expected_raw_size, &file, &raw_size) == FALSE)
+    if ((offset > raw_size) || (size > (size_t)(raw_size - offset)))
     {
-        return FALSE;
-    }
-    data = malloc(raw_size);
-    if (data == NULL)
-    {
-        fclose(file);
         gNdsAudioAssetFormatFailCount++;
         return FALSE;
     }
-    if (raw_size > gNdsAudioAssetScratchMaxBytes)
+    if (fseek(file, NDS_AUDIO_O2R_DATA_OFFSET + (long)offset, SEEK_SET) != 0)
     {
-        gNdsAudioAssetScratchMaxBytes = raw_size;
-    }
-    if (ndsAudioReadExact(file, data, raw_size) == FALSE)
-    {
-        free(data);
-        fclose(file);
+        gNdsAudioAssetShortReadCount++;
         return FALSE;
     }
-    fclose(file);
-
-    *out_data = data;
-    *out_raw_size = raw_size;
-    return TRUE;
+    if (size > gNdsAudioAssetScratchMaxBytes)
+    {
+        gNdsAudioAssetScratchMaxBytes = (u32)size;
+    }
+    return ndsAudioReadExact(file, dst, size);
 }
 
 static s32 ndsAudioOffsetSetAdd(NDSAudioOffsetSet *set, u32 offset)
@@ -198,10 +182,11 @@ static s32 ndsAudioOffsetSetAdd(NDSAudioOffsetSet *set, u32 offset)
     return TRUE;
 }
 
-static s32 ndsAudioParseSound(const u8 *raw, u32 raw_size, u32 sound_offset,
+static s32 ndsAudioParseSound(FILE *file, u32 raw_size, u32 sound_offset,
                               NDSAudioOffsetSet *sounds,
                               NDSAudioOffsetSet *waves)
 {
+    u8 word[4];
     u32 wave_offset;
 
     if (sound_offset == 0u)
@@ -217,7 +202,12 @@ static s32 ndsAudioParseSound(const u8 *raw, u32 raw_size, u32 sound_offset,
     {
         return TRUE;
     }
-    wave_offset = ndsAudioReadBe32(&raw[sound_offset + 8u]);
+    if (ndsAudioReadAt(file, raw_size, sound_offset + 8u, word,
+                       sizeof(word)) == FALSE)
+    {
+        return FALSE;
+    }
+    wave_offset = ndsAudioReadBe32(word);
     if ((wave_offset == 0u) || ((wave_offset + 24u) > raw_size))
     {
         gNdsAudioAssetFormatFailCount++;
@@ -227,12 +217,14 @@ static s32 ndsAudioParseSound(const u8 *raw, u32 raw_size, u32 sound_offset,
     return TRUE;
 }
 
-static s32 ndsAudioParseInstrument(const u8 *raw, u32 raw_size,
+static s32 ndsAudioParseInstrument(FILE *file, u32 raw_size,
                                    u32 inst_offset,
                                    NDSAudioOffsetSet *instruments,
                                    NDSAudioOffsetSet *sounds,
                                    NDSAudioOffsetSet *waves)
 {
+    u8 header[16];
+    u8 word[4];
     s16 sound_count;
     u32 i;
 
@@ -250,7 +242,12 @@ static s32 ndsAudioParseInstrument(const u8 *raw, u32 raw_size,
         return TRUE;
     }
 
-    sound_count = (s16)ndsAudioReadBe16(&raw[inst_offset + 14u]);
+    if (ndsAudioReadAt(file, raw_size, inst_offset, header,
+                       sizeof(header)) == FALSE)
+    {
+        return FALSE;
+    }
+    sound_count = (s16)ndsAudioReadBe16(&header[14]);
     if ((sound_count < 0) ||
         ((inst_offset + 16u + ((u32)sound_count * 4u)) > raw_size))
     {
@@ -259,9 +256,15 @@ static s32 ndsAudioParseInstrument(const u8 *raw, u32 raw_size,
     }
     for (i = 0u; i < (u32)sound_count; i++)
     {
-        u32 sound_offset = ndsAudioReadBe32(&raw[inst_offset + 16u + (i * 4u)]);
+        u32 sound_offset;
 
-        if (ndsAudioParseSound(raw, raw_size, sound_offset, sounds, waves) ==
+        if (ndsAudioReadAt(file, raw_size, inst_offset + 16u + (i * 4u),
+                           word, sizeof(word)) == FALSE)
+        {
+            return FALSE;
+        }
+        sound_offset = ndsAudioReadBe32(word);
+        if (ndsAudioParseSound(file, raw_size, sound_offset, sounds, waves) ==
             FALSE)
         {
             return FALSE;
@@ -276,7 +279,9 @@ static s32 ndsAudioParseCtl(const char *path, u32 raw_expected,
                             volatile u32 *out_wave_count,
                             volatile u32 *out_sample_rate)
 {
-    u8 *raw;
+    FILE *file;
+    u8 header[12];
+    u8 word[4];
     u32 raw_size;
     u16 revision;
     u16 bank_count;
@@ -285,76 +290,90 @@ static s32 ndsAudioParseCtl(const char *path, u32 raw_expected,
     NDSAudioOffsetSet sounds = { { 0 }, 0u };
     NDSAudioOffsetSet waves = { { 0 }, 0u };
 
-    if (ndsAudioLoadRaw(path, raw_expected, &raw, &raw_size) == FALSE)
+    if (ndsAudioOpenWrapped(path, raw_expected, &file, &raw_size) == FALSE)
     {
         return FALSE;
     }
     if (raw_size < 8u)
     {
-        free(raw);
         gNdsAudioAssetFormatFailCount++;
-        return FALSE;
+        goto fail;
     }
-    revision = ndsAudioReadBe16(raw);
-    bank_count = ndsAudioReadBe16(&raw[2]);
+    if (ndsAudioReadAt(file, raw_size, 0u, header, 4u) == FALSE)
+    {
+        goto fail;
+    }
+    revision = ndsAudioReadBe16(header);
+    bank_count = ndsAudioReadBe16(&header[2]);
     if ((revision != NDS_AUDIO_REV_B1) || (bank_count == 0u) ||
         ((4u + ((u32)bank_count * 4u)) > raw_size))
     {
-        free(raw);
         gNdsAudioAssetFormatFailCount++;
-        return FALSE;
+        goto fail;
     }
 
     for (i = 0u; i < bank_count; i++)
     {
-        u32 bank_offset = ndsAudioReadBe32(&raw[4u + (i * 4u)]);
+        u32 bank_offset;
         s16 inst_count;
         u32 sample_rate;
         u32 percussion;
         u32 j;
 
+        if (ndsAudioReadAt(file, raw_size, 4u + (i * 4u), word,
+                           sizeof(word)) == FALSE)
+        {
+            goto fail;
+        }
+        bank_offset = ndsAudioReadBe32(word);
         if ((bank_offset + 12u) > raw_size)
         {
-            free(raw);
             gNdsAudioAssetFormatFailCount++;
-            return FALSE;
+            goto fail;
         }
-        inst_count = (s16)ndsAudioReadBe16(&raw[bank_offset]);
+        if (ndsAudioReadAt(file, raw_size, bank_offset, header,
+                           sizeof(header)) == FALSE)
+        {
+            goto fail;
+        }
+        inst_count = (s16)ndsAudioReadBe16(header);
         if (inst_count < 0)
         {
-            free(raw);
             gNdsAudioAssetFormatFailCount++;
-            return FALSE;
+            goto fail;
         }
-        sample_rate = ndsAudioReadBe32(&raw[bank_offset + 4u]);
-        percussion = ndsAudioReadBe32(&raw[bank_offset + 8u]);
+        sample_rate = ndsAudioReadBe32(&header[4]);
+        percussion = ndsAudioReadBe32(&header[8]);
         if (i == 0u)
         {
             *out_sample_rate = sample_rate;
         }
         if ((bank_offset + 12u + ((u32)inst_count * 4u)) > raw_size)
         {
-            free(raw);
             gNdsAudioAssetFormatFailCount++;
-            return FALSE;
+            goto fail;
         }
-        if (ndsAudioParseInstrument(raw, raw_size, percussion, &instruments,
+        if (ndsAudioParseInstrument(file, raw_size, percussion, &instruments,
                                     &sounds, &waves) == FALSE)
         {
-            free(raw);
-            return FALSE;
+            goto fail;
         }
         for (j = 0u; j < (u32)inst_count; j++)
         {
-            u32 inst_offset =
-                ndsAudioReadBe32(&raw[bank_offset + 12u + (j * 4u)]);
+            u32 inst_offset;
 
-            if (ndsAudioParseInstrument(raw, raw_size, inst_offset,
+            if (ndsAudioReadAt(file, raw_size,
+                               bank_offset + 12u + (j * 4u), word,
+                               sizeof(word)) == FALSE)
+            {
+                goto fail;
+            }
+            inst_offset = ndsAudioReadBe32(word);
+            if (ndsAudioParseInstrument(file, raw_size, inst_offset,
                                         &instruments, &sounds, &waves) ==
                 FALSE)
             {
-                free(raw);
-                return FALSE;
+                goto fail;
             }
         }
     }
@@ -362,8 +381,12 @@ static s32 ndsAudioParseCtl(const char *path, u32 raw_expected,
     *out_bank_count = bank_count;
     *out_instrument_count = instruments.count;
     *out_wave_count = waves.count;
-    free(raw);
+    fclose(file);
     return TRUE;
+
+fail:
+    fclose(file);
+    return FALSE;
 }
 
 static s32 ndsAudioParseSeq(void)
