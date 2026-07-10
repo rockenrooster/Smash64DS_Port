@@ -35,22 +35,20 @@ Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
 GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 `ftmain.c`, and `gmcollision.c`.
 
-Mode `163` is the scene-level `battle_playable` anchor. It runs Pupupu Mario/Fox
-stock battle with imported camera/Dead/Rebirth live by default, then proves
-natural attack/damage, KO/rebirth, normal moves, Mario fireball, Fox blaster,
-guard, reflector, grab/throw, Mario/Fox specials, audio asset parsing, one-track
-Pupupu BGM playback, and a DS 3D hardware stage + fighter frame.
+Mode `163` has two verifier-covered configurations. The fast harness keeps its
+scripted two-human stock chain. Canonical realtime/live-input runs the source
+five-minute, items-off Mario human versus Fox level-3 CPU match. Together they
+cover natural combat/KO/rebirth, normal moves, specials, audio, and a DS 3D
+hardware stage + fighter frame.
 
 ## Latest Proof
 
 The original fighter runtime is live: `gmcollision.c`, `ftmain.c`,
-`ftmanager.c`, `ftanim.c`, `ftanimend.c`, `ftkey.c`, common/Mario/Fox status
-tables, normal moves, weapons, effects, and Mario/Fox specials run through
-imported BattleShip code. The two fighter-part transform invalidators now
-follow `ftparam.c:2161-2349` instead of leaving cached joint matrices pinned.
-Mode `163` naturally centers the pair through controller input, then proves a
-Mario fireball reflected by Fox through imported `ftmain.c`/`gmcollision.c`:
-mask `0xff`, velocity `49809 -> -49809`, and owner kind Fox.
+`ftmanager.c`, `ftcomputer.c`, animation/key, common/Mario/Fox statuses, normal
+moves, weapons, effects, and specials run through imported BattleShip code.
+The canonical smoke proves original Fox CPU setup/process/target/movement;
+the fast natural match records `7003` process/target frames, Attack plus A/B/Z,
+`142` live-hitbox frames, `1403` guard frames, and `108%` dealt to Mario.
 
 The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
 and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
@@ -81,9 +79,9 @@ remain debt; full fighter presentation currently runs at about `2.9fps`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
-VSBattle buffers from `scvsbattle.c:31-41`. The BGM stream adds a separate
-64 KiB resident buffer; after subtracting it, `172412` bytes remain against
-the 128 KiB reserve.
+VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
+`16` bytes of scratch. The separate 64 KiB BGM buffer leaves `172412` bytes
+against the 128 KiB reserve.
 
 Renderer hardware is default for all-DL modes `33/34`, stage MP modes
 `59-124`, and Boundary pair `161/162`; global normal builds keep software
@@ -117,14 +115,14 @@ The fast scripted mode-163 ROM uses a distinct `-fast-hwtri` filename so
 Boundary/Regression builds cannot overwrite the shipped realtime ROM.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
-`battle_playable` is the first scene-level unbounded stock/KO anchor.
+`battle_playable` is the scene-level battle anchor.
 Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Follow-ups: remaining fighter part/texture/light fidelity, source entry behavior,
-raw DS matrix/depth, wallpaper/SObj composition, renderer-cache 60fps
-cutover, FGM/voice, and the original sequence player.
+Follow-ups: natural CPU offstage recovery coverage, five-minute end/results
+flow, fighter fidelity, source entry behavior, raw DS matrix/depth,
+renderer-cache 60fps cutover, FGM/voice, and the original sequence player.
 The former mode-161 Attack11 and mode-163 reflector blockers are closed;
 direct/menu Boundary and RegressionCore pass without expectation changes.
 

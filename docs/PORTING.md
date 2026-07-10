@@ -18483,3 +18483,29 @@ does not assert.
   stock `8 -> 6`. `verify-dev-fast -Build` (`359.8s`), Boundary (`124.1s`),
   detached RegressionCore prebuild (`404.917s`, stamp `0.44s`), and no-build
   RegressionCore (`255.4s`) all passed.
+
+## 2026-07-10 - Original Fox level-3 CPU runtime
+
+- Imported `ft/ftcomputer.c` whole and made it default. Permanent guards freeze
+  the source `FTComputer` layout from `fttypes.h:746-822`; original setup and
+  per-frame input ownership remain at `ftmanager.c:869-903` and
+  `ftmain.c:1268-1285`.
+- Reconstructed the collision line groups consumed by the AI using
+  `mpcollision.c:3898-3954` and its floor-presence query from `:2584-2650`.
+  Canonical mode `163` now configures the source five-minute, items-off Mario
+  human versus Fox level-3 CPU match. The separate fast scripted two-human
+  stock proof remains unchanged.
+- The deep natural CPU gate records `7003` process/target frames, objective
+  mask `0x504`, `91` command changes, A/B/Z `72/45/2806`, attack/live-hitbox
+  `1203/142`, guard `1403`, and `108%` dealt to Mario. This follows Attack and
+  command dispatch in `ftcomputer.c:6326,7591-7592,3440-3460`; Recover was not
+  selected naturally and is not claimed.
+- The added source code exposed a real libc-heap limit in the parse-only audio
+  gate. `B1_sounds2_ctl` now parses through bounded NitroFS seeks instead of a
+  64,416-byte copy. All original bank/FGM counts remain identical and peak
+  parser scratch falls to `16` bytes without consuming battle-arena reserve.
+- Verified the deep CPU gate, exact canonical realtime configuration,
+  `verify-dev-fast -Build`, Boundary, and RegressionCore without expectation
+  changes. The detached core prebuild took `523.13s`, its stamp validated in
+  `0.37s`, and all six no-build entries passed. Full Regression remains in
+  Tyler's nightly queue.

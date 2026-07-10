@@ -19,6 +19,9 @@ motivated the slice. The converged result section records the landed layout.
   `damage_stat_flags`, `motion_scripts`, `joints`, `modelpart_status`,
   callback slots, `fog_color`, `key`, `passive_vars`, `hammer_tics`,
   `status_vars`, and the DS extension boundary.
+- Nested `FTComputer` is separately frozen at `0x94` bytes with guards spanning
+  command/callback, target, cliff, objective-position, floor, and prediction
+  fields used by the whole `ftcomputer.c` import.
 
 | Field | Converged port offset | BattleShip source-layout offset |
 |---|---:|---:|

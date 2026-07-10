@@ -32,12 +32,11 @@ Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
 GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 `ftmain.c`, and `gmcollision.c`.
 
-Mode `163` is the scene-level `battle_playable` Boundary/Latest anchor. It runs
-Pupupu Mario/Fox stock battle with imported camera/Dead/Rebirth live by default,
-then proves natural attack/damage, KO/rebirth, normal moves, Mario fireball,
-Fox blaster, guard, reflector, grab/throw, Mario/Fox specials, audio asset
-parsing, one-track Pupupu BGM playback, and a DS 3D hardware stage + fighter
-frame.
+Mode `163` is the scene-level `battle_playable` Boundary/Latest anchor. Its fast
+configuration retains the scripted two-human stock chain. Canonical realtime/
+live-input is now the source five-minute, items-off Mario human versus Fox
+level-3 CPU match; original CPU setup/process/target/movement and the existing
+audio/hardware frame remain verifier-covered.
 
 Latest renderer detail: BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`, and
 `guMtxCatF` are imported. The live fighter path now uses the original display
@@ -68,14 +67,16 @@ original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`,
 battle-critical `if/ifcommon.c` HUD paths, original `if/ifscreenflash.c`, the
 normal moveset imports, the weapon manager, Mario fireball, Fox blaster, the
 original effect manager, Fox reflector, Mario Super Jump Punch, Mario Tornado,
-Fox Fire Fox, original audio asset parsing, and one-track Pupupu BGM playback.
+Fox Fire Fox, `ftcomputer.c`, original audio parsing, and Pupupu BGM playback.
+The fast CPU gate records `7003` original process/target frames, Attack plus
+A/B/Z, `142` live-hitbox frames, `1403` guard frames, and `108%` dealt.
 The mode-163 proof reports `stock8->6`, `falls0->2`,
 `moveset=0x7ff phase=15`, `grab=18/1`, `throw=12/5/618`,
 `throwDmg=13->25`, `hud=dmg25/digits0x2050a stock9->7`,
 `projectile=spawn1/ok1/dmg7`, `reflector=0xff proc=1
 vx=49809->-49809 owner=Fox`, `specials=0xfff phase=7`,
 `audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695
-raw=4422960 resident=0 scratch=64416`,
+raw=4422960 resident=0 scratch=16`,
 `bgm=track0 play=1 stop=1 rate=44099 resident=65536`, and
 `hwsubmit=42`, `hwtri=192`, `hwftr=2/626`. FGM/voice playback, original
 sequence-player import, and non-critical HUD/SObj/particle perimeter remain
@@ -117,14 +118,12 @@ Legacy bounded modes are migrate-or-delete. When a slice obsoletes an old
 marker stack, delete its mode/verifier and leave one `[coverage-reduced]`
 `KNOWN_ISSUES` ledger line instead of reproducing old markers.
 
-New harness modes are only for scene-level capabilities.
-
 ## Recommended Next Work
 
-1. Finish fighter part/texture/light fidelity; handle source entry behavior separately.
-2. Cache source-selected stage/fighter draw state and restore canonical 60fps.
-3. Add wallpaper/SObj background composition for Dream Land.
-4. Replace projected-submit with source-correct raw DS matrix/depth submission.
+1. Complete five-minute timer/end/results flow and natural CPU recovery coverage.
+2. Finish fighter part/texture/light fidelity; handle source entry separately.
+3. Cache source-selected stage/fighter draw state and restore canonical 60fps.
+4. Add Dream Land wallpaper/SObj composition and raw DS matrix/depth.
 5. Build the FGM/voice backend slice on top of the parsed assets.
 
 ## Verification

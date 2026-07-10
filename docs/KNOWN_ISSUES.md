@@ -87,6 +87,14 @@
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
   those stubs status-by-status as the owning original TUs and assets are
   imported.
+- Full `ft/ftcomputer.c` is imported by default. Canonical mode `163` configures
+  Mario human versus Fox level-3 CPU and the fast natural gate proves target
+  acquisition, movement, attack/live hitboxes, defense, and damage through the
+  source AI. The fixed proof did not naturally select the Recover objective, so
+  offstage recovery remains coverage debt rather than a synthetic claim.
+  `grHyruleTwisterCheckGetPosition` and the two `grJungleTaruCann*` helpers are
+  weak fail-soft boundaries until those stage runtimes are imported; they are
+  unreachable in the current items-off Dream Land P1 match.
 - Full `ft/ftparam.c` remains deferred. Its two fighter-part transform cache
   invalidators are now source-shaped in the narrow compatibility layer
   (`ftparam.c:2161-2349`), replacing no-op stubs; mode `163` proves the

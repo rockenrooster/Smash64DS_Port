@@ -6065,6 +6065,19 @@ continuous Mushroom Kingdom runtime, Pakkun, Power Block, item/monster
 behavior, hardware texture upload/material application, or unbounded stage
 scheduling.
 
+## Original Fighter CPU Markers
+
+- `CPU_CONFIG`: player-0/player-1 kinds, CPU level, human/CPU counts, time
+  limit, item toggle mask, and item appearance rate. Canonical mode `163`
+  expects Mario Man, Fox Com level `3`, `1/1`, five minutes, and items off.
+- `CPU_AI`: setup and damage-detect calls, process/target frames, objective and
+  behavior masks, input changes, stick/A/B/Z frames, attack/live-hitbox/guard/
+  recover frames, status changes/final status/kinetics/input, maximum Mario
+  damage, floor-line count, and Fox start/min/max/final X. The deep fast proof
+  requires source Attack dispatch, all three action buttons, live hitboxes,
+  guard, positive damage, valid floors, and substantial movement. Recover is
+  reported continuously but is not required until selected naturally.
+
 ## Debugging Principle
 
 A passing probe proves only the boundary it checks. Do not use a narrow marker
