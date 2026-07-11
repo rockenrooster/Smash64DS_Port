@@ -4681,9 +4681,12 @@ static s32 ndsRendererHardwareBindTexture(
     if (entry != NULL)
     {
         entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
-        ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
-        ndsRendererHardwareApplyTextureParams(entry->params);
-        sNdsRendererHardwareActiveTextureEntry = entry;
+        if (sNdsRendererHardwareActiveTextureEntry != entry)
+        {
+            ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
+            ndsRendererHardwareApplyTextureParams(entry->params);
+            sNdsRendererHardwareActiveTextureEntry = entry;
+        }
         stats->hardware_texture_ready_count++;
         stats->hardware_texture_format = format;
         stats->hardware_texture_width = width;
@@ -5069,8 +5072,11 @@ static void ndsRendererHardwareEndBatch(void)
 {
     if (sNdsRendererHardwareTriangleBatchOpen != 0u)
     {
-        glEnd();
+        /* libnds documents glEnd() as a dummy FIFO write. A later glBegin()
+         * starts the next primitive group, so only restore state owned by the
+         * logical source-triangle batch here. */
         glDisable(GL_ALPHA_TEST);
+        gNdsRendererProfileHardwareBatchEndCount++;
         sNdsRendererHardwareTriangleBatchOpen = FALSE;
         sNdsRendererHardwareTriangleBatchTextured = FALSE;
         sNdsRendererHardwareTriangleBatchTextureName = 0u;
@@ -5096,6 +5102,7 @@ static void ndsRendererHardwareBeginTriangleBatch(
         (sNdsRendererHardwareTriangleBatchAlphaKey == alpha_key) &&
         (sNdsRendererHardwareTriangleBatchFogKey == fog_key))
     {
+        gNdsRendererProfileHardwareBatchReuseCount++;
         return;
     }
 
@@ -5113,6 +5120,7 @@ static void ndsRendererHardwareBeginTriangleBatch(
     ndsRendererHardwareApplyFog(stats);
     glPolyFmt(poly_fmt);
     glBegin(GL_TRIANGLE);
+    gNdsRendererProfileHardwareBatchBeginCount++;
 
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
     sNdsRendererHardwareTriangleBatchTextured = textured;
@@ -5295,6 +5303,8 @@ static void ndsRendererSubmitHardwareTriangle(
     u32 scale_world;
     u32 material_color;
     u32 poly_alpha;
+    u32 poly_fmt;
+    u32 texture_name;
     s32 use_material_color;
     s32 use_vertex_color;
     s32 texture_offset;
@@ -5454,19 +5464,12 @@ static void ndsRendererSubmitHardwareTriangle(
         projected_z[0] = projected_z[1] = projected_z[2] =
             ndsRendererHardwareNextProjectedDepth();
     }
-    if (use_texture != FALSE)
-    {
-        glEnable(GL_TEXTURE_2D);
-    }
-    else
-    {
-        glEnable(GL_TEXTURE_2D);
-        ndsRendererHardwareBindNoTexture(stats);
-    }
-    ndsRendererHardwareApplyAlphaTest(stats);
-    ndsRendererHardwareApplyFog(stats);
-    glPolyFmt(ndsRendererHardwarePolyFmt(stats, poly_alpha));
-    glBegin(GL_TRIANGLE);
+    poly_fmt = ndsRendererHardwarePolyFmt(stats, poly_alpha);
+    texture_name = (use_texture != FALSE) ?
+        sNdsRendererHardwareBoundTextureName : 0u;
+    ndsRendererHardwareBeginTriangleBatch(
+        stats, (use_texture != FALSE) ? TRUE : FALSE,
+        texture_name, poly_fmt);
     ndsRendererHardwareSubmitVertex(
         stats, v0, &state->vertices[i0], material_color, use_material_color,
         use_vertex_color, state->vertex_colors[i0],
@@ -5491,8 +5494,6 @@ static void ndsRendererSubmitHardwareTriangle(
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z[2], projected_submit);
-    glEnd();
-    glDisable(GL_ALPHA_TEST);
     if (source_zbuffered != FALSE)
     {
         ndsRendererHardwareEnterProjectedForeground();
@@ -5577,6 +5578,17 @@ static void ndsRendererScanList(const Gfx *dl,
         w0 = dl->words.w0;
         w1 = dl->words.w1;
         op = w0 >> 24;
+#if NDS_RENDERER_HW_TRIANGLES
+        /* Preserve the source-command boundary: only adjacent TRI1/TRI2
+         * opcodes may share a GX triangle group. In particular, close before
+         * VTX/MODIFYVTX mutate the cached vertices and before any matrix,
+         * texture, state, branch, sync, or ENDDL command. */
+        if ((op != NDS_RENDERER_OP_TRI1) &&
+            (op != NDS_RENDERER_OP_TRI2))
+        {
+            ndsRendererHardwareEndBatch();
+        }
+#endif
         memset(&command, 0, sizeof(command));
         command.dl = dl;
         command.w0 = w0;
@@ -5874,6 +5886,9 @@ void ndsRendererScanDisplayList(const Gfx *dl,
 
     ndsRendererInitTraversalState(&state, config, stats);
     ndsRendererScanList(dl, config, stats, &state, 0, NULL, NULL);
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsRendererHardwareEndBatch();
+#endif
     if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
     {
         return;

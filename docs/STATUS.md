@@ -84,8 +84,7 @@ precomposes its CI4 pair with a DS RGBA5551/A1 approximation. Compatible
 animated state refreshes resident VRAM with frame pinning. The 184-frame gate
 has positive scene-lifetime refresh, zero eviction/reject/oracle drift, and a
 terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
-`27.997%/105px`. Accepted capture:
-`artifacts/visibility/2026-07-11_canonical_fast_152053-8952067-p21188.png`.
+`27.997%/105px`.
 Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
 plus `G_MWO_POINT_ST` restores five flower groups and adds ten source triangles
 (`192 -> 202`); Tyler accepts both flowers and foreground fences. Texture
@@ -93,7 +92,12 @@ conversion retains exact `37200/37200` lane observations and oracle `2403/0/0`.
 The immutable 300x220 wallpaper now decodes once into the retained HW buffer;
 source position/scale stay live and composed content is never cached. Proof is
 `build1/hit44/fast45/fallback0/opaque66000`; present fell
-`34,839,424 -> 24,764,160` ticks (`-28.9%`) and pacing rose `9 -> 13 x0.1`.
+`34,839,424 -> 24,764,160` ticks (`-28.9%`). Same-state GX triangle batching
+now spans only adjacent TRI1/TRI2 commands and closes at every other opcode or
+list exit. Canonical proves `begin103/reuse725/end103` with all `828` triangles
+and oracle results unchanged; present fell again to `24,238,464` (`-2.1%`),
+draw to `23,877,568` (`-0.8%`), while pacing remains `13/13 x0.1`. The dated
+capture is `artifacts/visibility/2026-07-11_canonical_fast_154544-4627518-p18756.png`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -124,16 +128,14 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Next P1 work is safe consecutive-triangle batching. Whispy, Mario light A/B,
-phase/shifts,
-fog, and gameplay-critical FGM/voice remain visual/audio debt.
-FGM/voice and the original sequence player remain deferred.
+Next P1 work is Whispy and Mario light A/B, then measured renderer work,
+phase/shifts, fog, and gameplay-critical FGM/voice.
 ## Verification
 
-All four `P1Gate` legs pass: compact opening-to-Title, canonical live battle/
-capture, supplemental mode-163 combat, and one-minute Results (`18.2s/89.1s`
-for the last two split reruns). Fresh Boundary passed in `202.7s`. This is not
-the five-minute P1 soak; Full Regression was skipped for Tyler's fast cadence.
+All four `P1Gate` legs pass in `278.9s`: compact opening-to-Title, canonical
+live battle/capture, supplemental mode-163 combat, and one-minute Results.
+Fresh Boundary passes in `152.2s`. This is not the five-minute P1 soak; Full
+Regression was skipped for Tyler's fast cadence.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

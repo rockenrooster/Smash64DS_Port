@@ -1325,6 +1325,10 @@ Opening movie / Opening Portraits:
   of 2048 polygons and 6144 vertices. The verifier first breaks at
   `ndsBattlePlayableFrameCompleteMarker`; reading during the frame-start reset
   can otherwise produce a false zero-sample oracle result.
+- `RENDER_BATCH`: canonical HW adjacent-triangle marker. Fields are logical GX
+  batch begins, reused triangle submissions, and batch ends. Canonical requires
+  begin plus reuse to equal submitted hardware triangles, positive reuse, fewer
+  begins than triangles, and ends equal begins at the completed-frame marker.
 - `SOBJ_WALL_CACHE`: immutable Dream Land decode-cache marker. Fields are
   build/hit/fast-draw/fallback counts, source width/height/opaque pixels, and
   build/last-draw ticks. Canonical expects exactly one build, one or more hits,

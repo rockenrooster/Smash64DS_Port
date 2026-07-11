@@ -1240,6 +1240,17 @@ buffer and never caches water, Whispy, flowers, fences, fighters, or a composed
 stage frame. A direct affine BG was rejected: lossless 300x220 RGB15 needs both
 bitmap banks and would displace the foreground layer.
 
+Hardware triangles retain the source command boundary. Only consecutive
+F3DEX2 TRI1/TRI2 opcodes may share a `GL_TRIANGLE` group, and the derived
+texture name, polygon format/alpha/ID, and fog state must match. Every other
+opcode, display-list recursion/return, matrix or texture mutation, scan exit,
+and frame flush closes the logical batch. Cache-hit texture parameters are
+reapplied only when the active immutable texture entry changes, so no texture
+state command lands inside a reused batch. Color, texture coordinates, and
+positions remain per vertex; polygon/vertex RAM accounting is unchanged.
+Libnds documents `glEnd` as a dummy FIFO write, so closure restores owned alpha
+state and records diagnostics without emitting it.
+
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,
 GX flush, vblank, and per-frame profile finalization. Sampling the same globals

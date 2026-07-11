@@ -101,9 +101,11 @@ gate proves positive scene-lifetime compatible-state refresh, zero eviction/
 reject/oracle drift, and terminal `12/12` matches. Pond detail is
 `46.053%/23px` versus white `27.997%/105px`.
 Canonical lanes remain `37200/37200` and oracle `2403/0/0`. The exact 300x220
-wallpaper decodes once into the retained HW buffer; source position/scale and
-composed content stay live. Cache proof is `1/44/45/fallback0/opaque66000`;
-present fell `34,839,424 -> 24,764,160` (`-28.9%`), pacing `9 -> 13 x0.1`.
+wallpaper cache remains `1/44/45/fallback0/opaque66000`. Adjacent TRI1/TRI2
+commands now share a same-state GX batch, with every other source opcode and
+list exit as a hard boundary; proof is `begin103/reuse725/end103` for the
+unchanged `828` triangles. Present fell `24,764,160 -> 24,238,464` (`-2.1%`);
+draw fell `0.8%`, pacing remains `13/13 x0.1`, and the accepted capture is `artifacts/visibility/2026-07-11_canonical_fast_154544-4627518-p18756.png`.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -120,8 +122,8 @@ realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Restore same-state triangle batching only across consecutive TRI commands.
-2. Refine Whispy and Mario light A/B; cover phase/shifts and fog/color animation.
+1. Refine Whispy and Mario light A/B; cover phase/shifts and fog/color animation.
+2. Continue measured renderer work; batching alone leaves pacing at `1.3fps`.
 3. Keep the full five-minute soak for milestones rather than each edit.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
@@ -141,8 +143,8 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-All four compact legs pass; split combat/lifecycle reruns were `18.2s/89.1s`,
-and fresh Boundary passed in `202.7s`. The lifecycle is not the five-minute P1
-soak. Keep historical harnesses for localization; Full Regression was skipped.
+All four compact P1Gate legs pass in `278.9s`, and fresh Boundary passes in
+`152.2s`. The lifecycle is not the five-minute P1 soak. Keep historical
+harnesses for localization; Full Regression was skipped.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

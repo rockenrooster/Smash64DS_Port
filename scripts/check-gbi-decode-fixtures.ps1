@@ -1043,7 +1043,13 @@ Assert-True ($renderer -match '(?s)source_clip_depth != FALSE.*projected_z = cli
 Assert-True ($renderer -match '(?s)if \(source_clip_depth != FALSE\).*?ndsRendererHardwareClipVertex\(clip_vtx, projected_z\);\s*}\s*else\s*{\s*ndsRendererHardwareClipVertexNdcDepth\(clip_vtx, projected_z\);') 'Renderer no-Z stage layers no longer submit synthetic depth directly in signed 20.12 NDC.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareNextProjectedDepth\(void\).*return sNdsRendererHardwareProjectedDepth /\s*NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;') 'Renderer synthetic no-Z depth regained the erroneous extra 12.4-to-20.12 shift.'
 Assert-True ($renderer -match '(?s)source_zbuffered = zbuffered;.*?if \(source_zbuffered != FALSE\)\s*\{\s*/\* Source-Z projected submissions use the composed clip Z below and\s*\* must not consume the synthetic no-Z painter counter\. \*/\s*projected_z\[0\].*?else.*?ndsRendererHardwareNextProjectedDepth\(\);') 'Renderer source-Z submissions consume the synthetic no-Z painter counter.'
-Assert-True ($renderer -match '(?s)glEnd\(\);\s*glDisable\(GL_ALPHA_TEST\);\s*if \(source_zbuffered != FALSE\)\s*\{\s*ndsRendererHardwareEnterProjectedForeground\(\);') 'Renderer projected foreground phase must begin only after a submitted source-Z triangle.'
+Assert-True ($renderer.Contains('ndsRendererHardwareBeginTriangleBatch')) 'Renderer adjacent source-triangle batch helper is missing.'
+Assert-True ($renderer.Contains('gNdsRendererProfileHardwareBatchReuseCount++')) 'Renderer adjacent source-triangle reuse diagnostic is missing.'
+Assert-True ($renderer -match '(?s)if \(sNdsRendererHardwareActiveTextureEntry != entry\).*?ndsRendererHardwareApplyTextureParams\(entry->params\);') 'Renderer cache-hit texture parameters are still programmed inside an unchanged triangle batch.'
+Assert-True ($renderer -match '(?s)if \(\(op != NDS_RENDERER_OP_TRI1\) &&\s*\(op != NDS_RENDERER_OP_TRI2\)\)\s*\{\s*ndsRendererHardwareEndBatch\(\);') 'Renderer does not terminate a triangle batch before every non-triangle source command.'
+Assert-True ($renderer -match '(?s)ndsRendererScanList\(dl, config, stats, &state, 0, NULL, NULL\);\s*#if NDS_RENDERER_HW_TRIANGLES\s*ndsRendererHardwareEndBatch\(\);') 'Renderer scan-only display-list entry point can leak an open triangle batch.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareBeginTriangleBatch\(.*?ndsRendererHardwareSubmitVertex\(.*?ndsRendererHardwareSubmitVertex\(.*?ndsRendererHardwareSubmitVertex\(.*?if \(source_zbuffered != FALSE\)\s*\{\s*ndsRendererHardwareEnterProjectedForeground\(\);') 'Renderer batch submission or projected foreground phase no longer follows all three source vertices.'
+Assert-True (-not $renderer.Contains('glEnd();')) 'Renderer restored libnds dummy glEnd FIFO writes.'
 $projectedDepthStart = 0x1000 * 6
 $projectedForegroundStart = (128 - 0x1000) * 6
 $projectedDepthStep = 6

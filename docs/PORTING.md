@@ -19118,3 +19118,35 @@ fixtures, oracle, depth, and pixel contracts remain unchanged.
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none; cache reuse is asserted only in canonical HW runtime, while
 the generic/SW SObj path and historical profiles remain available.
+
+## 2026-07-11 - Adjacent source-triangle GX batching
+
+- Audited BattleShip's F3DEX2 TRI macros and display traversal plus the bundled
+  sm64-nds renderer. TRI2 is two independent complete triplets; only maximal
+  adjacent TRI1/TRI2 runs can share GX state without crossing vertex, material,
+  matrix, branch, sync, or list boundaries.
+- Activated the renderer's state-keyed triangle batch for the live submission
+  path. Every non-triangle opcode and renderer entry-point exit closes the
+  logical batch. Texture cache hits skip an unchanged `glTexParameter`, while
+  uploads, entry changes, matrix changes, and no-texture transitions retain
+  their explicit boundaries. The libnds-documented dummy `glEnd` write is gone.
+- Added per-frame begin/reuse/end diagnostics and a canonical invariant:
+  `begin + reuse == triangles`, positive reuse, fewer begins than triangles,
+  and `end == begin`. Host GBI fixtures pin non-TRI closure, scan-only cleanup,
+  texture-parameter safety, three-vertex submission, and foreground-depth
+  transition ordering.
+- Canonical proves `103/725/103` batches with unchanged `2484/828` hardware
+  vertices/triangles and oracle `2403/0/0`. Deterministic samples reduce present
+  `24,764,160 -> 24,238,464` ticks (`-2.1%`), draw
+  `24,074,560 -> 23,877,568` (`-0.8%`), and DL
+  `18,424,128 -> 18,364,480` (`-0.3%`). Pacing remains `13/13 x0.1`.
+- The dated FastIteration capture is
+  `artifacts/visibility/2026-07-11_canonical_fast_154544-4627518-p18756.png`;
+  pond, flowers, foreground fence ordering, fighters, oracle, depth, GX RAM,
+  and canonical/shipped byte parity pass. P1Gate passes in `278.9s` and fresh
+  Boundary in `152.2s`; Full Regression remains skipped for Tyler's faster P1
+  cadence.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: none; the integrated canonical gate adds batch invariants without
+removing historical diagnostics.

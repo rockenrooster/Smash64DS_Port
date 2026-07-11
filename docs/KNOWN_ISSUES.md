@@ -1155,8 +1155,10 @@
   proves one build, 44 hits, 45 exact opaque inverse draws, zero fallback, and
   all 66,000 pixels opaque. It never retains the composed stage frame, water,
   Whispy, flowers, fences, or fighters. Canonical present cost fell from
-  `34,839,424` to `24,764,160` ticks (`-28.9%`), but pacing remains only
-  `13/13 x0.1`; safe DL/triangle batching and broader renderer work remain.
+  `34,839,424` to `24,764,160` ticks (`-28.9%`). Adjacent same-state triangle
+  batching proves `103/725/103` begin/reuse/end for all `828` triangles and
+  reduces present again to `24,238,464` (`-2.1%`), but pacing remains only
+  `13/13 x0.1`; broader renderer work remains.
   Audible BGM resyncs remain possible while frames exceed the half-buffer
   deadline. Lane totals remain aggregate conversion observations covered by
   host byte/halfword fixtures.
