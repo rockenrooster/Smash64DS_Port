@@ -147,6 +147,9 @@ if ($ImportBattleShipAudioBGM) {
 if ($ImportBattleShipNormalMoveset) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET=1'
 }
+if ($MatchLifecycleProof) {
+    $makeArgs += 'NDS_DEV_RESULTS_VISUAL_SMOKE=1'
+}
 if ($HardwareTriangles) {
     $makeArgs += 'NDS_RENDERER_HW_TRIANGLES=1'
 }
@@ -180,16 +183,18 @@ try {
         -PassThru
     Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort | Out-Null
     # The natural combat chain runs ~1000+ bounded updates; battle_playable
-    # continues into an input-driven KO -> Rebirth -> Wait cycle.
-    # A measured 45-second run reaches source tick 10608; 90 seconds covers
-    # all 18,000 ticks plus the Results tick-120 fighter creation boundary.
-    $minimumDelay = if ($MatchLifecycleProof) { 90 } elseif ($BattlePlayable -and $RealtimePresentation) { 12 } elseif ($BattlePlayable) { 30 } else { 15 }
+    # continues into an input-driven KO -> Rebirth -> Wait. The lifecycle ROM
+    # uses a one-minute source timer and gets one GDB session after startup;
+    # repeated attach/detach cycles are unreliable in the melonDS GDB stub.
+    $minimumDelay = if ($MatchLifecycleProof) { 85 } elseif ($BattlePlayable -and $RealtimePresentation) { 12 } elseif ($BattlePlayable) { 3 } else { 15 }
     Start-Sleep -Seconds ([Math]::Max($DelaySeconds, $minimumDelay))
     $gdbCommands = @(
         'set pagination off',
         'set confirm off',
         'set remotetimeout 5',
         ("target remote 127.0.0.1:{0}" -f (Get-MelonDSActiveGdbPort)),
+        'printf "AOBJ32=%u,%u,%u,%u,%#x,%#x\n", gNdsAObjEvent32NormalizeScriptCount, gNdsAObjEvent32NormalizeCommandCount, gNdsAObjEvent32NormalizeReuseCount, gNdsAObjEvent32NormalizeFailCount, gNdsAObjEvent32NormalizeFirstSourceWord, gNdsAObjEvent32NormalizeFirstNativeWord',
+        'printf "AOBJ32_FAIL=%u,%u,%#x,%#x,%u,%#x\n", gNdsAObjEvent32NormalizeLastFailReason, gNdsAObjEvent32NormalizeLastFailOwner, gNdsAObjEvent32NormalizeLastFailAddress, gNdsAObjEvent32NormalizeLastFailWord, gNdsAObjEvent32NormalizeLastFailOpcode, gNdsAObjEvent32NormalizeLastFailFlags',
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
         'printf "SCENE=%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind',
         'printf "BUILD_MODE=%#x,%#x,%#x\n", gNdsBuildModeCanonicalWord, gNdsBuildModeShippedWord, gNdsBuildModeFastWord',
@@ -231,7 +236,18 @@ try {
     if ($BattlePlayable -and $RealtimePresentation -and $HardwareTriangles -and -not $MatchLifecycleProof) {
         $gdbCommands = @(
             $gdbCommands[0..3]
-            'tbreak ndsBattlePlayableFrameCompleteMarker'
+            'tbreak ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingResult != 0'
+            'continue'
+            $gdbCommands[4..($gdbCommands.Count - 1)]
+        )
+    }
+    elseif ($BattlePlayable -and -not $RealtimePresentation -and -not $MatchLifecycleProof) {
+        # Fast-logic mode can still be inside its expensive final draw after
+        # the gameplay proof completes. Sample only after taskman teardown has
+        # stopped BGM and published the scene boundary.
+        $gdbCommands = @(
+            $gdbCommands[0..3]
+            'tbreak osStopThread if gNdsSceneBoundaryResult != 0'
             'continue'
             $gdbCommands[4..($gdbCommands.Count - 1)]
         )
@@ -344,6 +360,7 @@ try {
         $gdbCommands = @($beforeDetach + $audioBgmCommands + $afterDetach)
     }
     $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root -Commands $gdbCommands -ScriptName $scriptName).Stdout
+    $aobj32 = [regex]::Match($gdbStdout, 'AOBJ32=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
     $buildMode = [regex]::Match($gdbStdout, 'BUILD_MODE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
@@ -410,6 +427,8 @@ try {
     $audioAsset = [regex]::Match($gdbStdout, 'AUDIO_ASSET=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
+    Assert-Condition ($aobj32.Success -and [int]$aobj32.Groups[4].Value -eq 0) 'AObjEvent32 source-command normalization rejected a live script.' $gdbStdout
+    $aobjSummary = " aobj32=$($aobj32.Groups[1].Value)/$($aobj32.Groups[2].Value)/reuse$($aobj32.Groups[3].Value)/fail0"
     Assert-Condition ($harn.Success -and (Convert-MarkerUInt32 $harn.Groups[1].Value) -eq 0x4841524e -and [int]$harn.Groups[2].Value -eq $ExpectedMode -and [int]$harn.Groups[3].Value -eq $ExpectedHarnessSceneCurr -and [int]$harn.Groups[4].Value -eq $ExpectedHarnessScenePrev -and (Convert-MarkerUInt32 $harn.Groups[5].Value) -eq 0) $HarnessSelectMessage $gdbStdout
     if ($MatchLifecycleProof) {
         # scvsbattle.c:559-560 changes VSBattle to VS Results after task return.
@@ -426,7 +445,8 @@ try {
     }
     if ($ImportBattleShipFTComputer) {
         $cc = Get-Ints $computerConfig
-        Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq 3 -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq 5 -and $cc[6] -eq 0 -and $cc[7] -eq 0) 'Mode 163 did not configure the source five-minute, items-off Mario human versus Fox level-3 CPU match.' $gdbStdout
+        $expectedTimeLimit = if ($MatchLifecycleProof) { 1 } else { 5 }
+        Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq 3 -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0) 'Mode 163 did not configure the expected items-off Mario human versus Fox level-3 CPU match.' $gdbStdout
     }
     if ($ExpectedMode -eq 54) {
         Assert-Condition ($vs.Success -and (Convert-MarkerUInt32 $vs.Groups[1].Value) -eq 0x56535452 -and ((Convert-MarkerUInt32 $vs.Groups[2].Value) -band 0xff) -eq 0xff) 'Menu-chain VS Mode -> PlayersVS transition did not pass.' $gdbStdout
@@ -510,7 +530,7 @@ try {
                 $ab = Get-Ints $audioBgm
                 Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x1) -eq 0x1) -and (($ab[2] -eq 1) -or ($ab[6] -ge 1)) -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0) 'Minimal BGM backend realtime smoke failed hardware-timer byte-rate or safe half refill guard.' $gdbStdout
             }
-            Write-Output ("$Label realtime pacing smoke passed: frames=$($bp[3]) fps=$($bp[6])/$($bp[7]) ticks=$($bp[5])$hardwareSummary")
+            Write-Output ("$Label realtime pacing smoke passed: frames=$($bp[3]) fps=$($bp[6])/$($bp[7]) ticks=$($bp[5])$hardwareSummary$aobjSummary")
             return
         }
         if ($CPUOpponentProof) {
@@ -527,7 +547,9 @@ try {
                 # ifcommon.c:2472-2529 decrements the source timer and dispatches
                 # Time Up at zero; :3144-3152 requests LoadScene after the end
                 # interface; scvsbattle.c:513-560 owns the VS Results transition.
-                Assert-Condition ($battleLifecycle.Success -and $life[0] -eq 0x5642454e -and $life[1] -ge 1 -and $life[2] -ge 1 -and $life[3] -eq 1 -and $life[4] -eq 5 -and $life[5] -eq 0 -and $life[6] -ge 18000 -and $life[7] -eq 7 -and $life[8] -eq 22 -and $life[9] -eq 24 -and ($life[10] -eq 0 -or $life[10] -eq 1)) 'Original five-minute timer/end flow did not return through LoadScene and transition VSBattle to VS Results.' $gdbStdout
+                # ifcommon.c:2486-2537 converts the configured minute count to
+                # source tics and expires through the unchanged timer path.
+                Assert-Condition ($battleLifecycle.Success -and $life[0] -eq 0x5642454e -and $life[1] -ge 1 -and $life[2] -ge 1 -and $life[3] -eq 1 -and $life[4] -eq 1 -and $life[5] -eq 0 -and $life[6] -ge 3600 -and $life[7] -eq 7 -and $life[8] -eq 22 -and $life[9] -eq 24 -and ($life[10] -eq 0 -or $life[10] -eq 1)) 'Original one-minute timer/end flow did not return through LoadScene and transition VSBattle to VS Results.' $gdbStdout
                 Assert-Condition ($vsResults.Success -and $results[0] -eq 0x56535231 -and (($results[1] -band 0x1f) -eq 0x1f) -and $results[2] -ge 1 -and $results[3] -ge 120 -and $results[4] -eq 8 -and $results[5] -ge 2 -and $results[6] -gt 0 -and $results[7] -gt 0) 'Original VS Results scene did not load all source assets and advance through wallpaper/results/fighter creation.' $gdbStdout
                 # mnvsresults.c:869-928 selects Win1..Win3 for place 0 and
                 # Lose for other places; scsubsysfighter.c:74-77 installs it.
@@ -535,7 +557,7 @@ try {
                 $fighter1StatusOk = if ($resultsFighters[3] -eq 0) { $resultsFighters[4] -ge 0x10001 -and $resultsFighters[4] -le 0x10003 -and $resultsFighters[5] -ge 1 -and $resultsFighters[5] -le 3 } else { $resultsFighters[4] -eq 0x10005 -and $resultsFighters[5] -eq 5 }
                 Assert-Condition ($vsResultsFighters.Success -and $resultsFighters[0] -ne $resultsFighters[3] -and $fighter0StatusOk -and $fighter1StatusOk) 'Original VS Results fighters did not enter the source win/lose status and submotion paths.' $gdbStdout
                 Assert-Condition ($vsResultsDisplay.Success -and $resultsDisplay[1] -gt 0 -and $resultsDisplay[2] -eq 256 -and $resultsDisplay[3] -eq 192) 'Original VS Results SObj display did not commit a full DS frame.' $gdbStdout
-                Write-Output ("$Label five-minute lifecycle passed: adapter=$($life[1]) taskman=$($life[2]) ticks=$($life[6]) sudden=$($life[10]) scene=$($life[8])->$($life[9]) results=$($results[3])/files$($results[4])/fighters$($results[5])/sobjs$($results[7])")
+                Write-Output ("$Label one-minute lifecycle passed: adapter=$($life[1]) taskman=$($life[2]) ticks=$($life[6]) sudden=$($life[10]) scene=$($life[8])->$($life[9]) results=$($results[3])/files$($results[4])/fighters$($results[5])/sobjs$($results[7])")
             }
             Write-Output ("$Label original CPU proof passed: setup=$($cpu[0]) process=$($cpu[2]) target=$($cpu[3]) objective=0x$('{0:x}' -f $cpu[4]) behavior=0x$('{0:x}' -f $cpu[5]) inputs=$($cpu[6]) stick=$($cpu[7]) buttons=$($cpu[8])/$($cpu[9])/$($cpu[10]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) status=$($cpu[15]) damage=$($cpu[19]) x=$($cpu[21])/$($cpu[22])..$($cpu[23])/$($cpu[24])")
             return
@@ -670,7 +692,7 @@ try {
             $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1]) oracle=$($ro[0])/$($ro[1])/$($ro[2])"
         }
         Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
-        Write-Output ("$Label ftmanager natural-combat harness passed: wait={0}/{1} walk={2}/{3} dash={4}/{5} run={6}/{7} attack={8} hitbox={9} dmg={10}->{11} status={12} knock={13} guard={14}/{15}/{16} retries={17} updates={18} mask=0x{19:x}{20}{21}{22}" -f $nw[0], $nw[1], $nwalk[1], $nwalk[2], $nc[3], $nc[4], $nc[5], $nc[6], $na[2], $na[4], $na[8], $na[9], $na[6], $na[10], $ng[0], $ng[1], $ng[2], $na[5], $nat[4], $nat[2], $projectileSummary, $battlePlayableSummary, $hardwareSummary)
+        Write-Output ("$Label ftmanager natural-combat harness passed: wait={0}/{1} walk={2}/{3} dash={4}/{5} run={6}/{7} attack={8} hitbox={9} dmg={10}->{11} status={12} knock={13} guard={14}/{15}/{16} retries={17} updates={18} mask=0x{19:x}{20}{21}{22}{23}" -f $nw[0], $nw[1], $nwalk[1], $nwalk[2], $nc[3], $nc[4], $nc[5], $nc[6], $na[2], $na[4], $na[8], $na[9], $na[6], $na[10], $ng[0], $ng[1], $ng[2], $na[5], $nat[4], $nat[2], $projectileSummary, $battlePlayableSummary, $hardwareSummary, $aobjSummary)
         return
     }
     $prv = Get-Ints $prev
@@ -705,7 +727,7 @@ try {
     $pd = Get-Ints $platform
     Assert-Condition ($pd[0] -eq 1 -and $pd[1] -eq 96 -and $pd[2] -eq 72 -and $pd[3] -ge $dr[4]) 'Platform original-DL preview markers failed.' $gdbStdout
     Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after gcRunAll proof.' $gdbStdout
-    Write-Output ("$Label harness passed: scene=22/21 gcRunAll={0} callbacks={1}/{2} draws={3} pixels={4} visits=0x{5:x}/0x{6:x} transitions=0x{7:x}/0x{8:x} screen-dx={9}/{10} screen-rise={11}/{12} final=Wait/Ground safe=1" -f $tm[4], $pc[4], $pc[5], $dr[5], $dr[13], $st[10], $st[11], $st[12], $st[13], $sc[4], $sc[5], $sc[8], $sc[9])
+    Write-Output ("$Label harness passed: scene=22/21 gcRunAll={0} callbacks={1}/{2} draws={3} pixels={4} visits=0x{5:x}/0x{6:x} transitions=0x{7:x}/0x{8:x} screen-dx={9}/{10} screen-rise={11}/{12} final=Wait/Ground safe=1{13}" -f $tm[4], $pc[4], $pc[5], $dr[5], $dr[13], $st[10], $st[11], $st[12], $st[13], $sc[4], $sc[5], $sc[8], $sc[9], $aobjSummary)
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

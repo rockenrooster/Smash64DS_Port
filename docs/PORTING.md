@@ -18632,3 +18632,51 @@ does not assert.
   `artifacts/visibility/2026-07-10_fighter-costume-aobj-hudoff-candidate.png`
   visibly removes Mario's green-cap error. Stage ribbons, fighter fragments,
   and the general ongoing AObj animation bridge remain open.
+
+## 2026-07-10 - General AObj32 graph decoding and packed-color parity
+
+- Replaced the costume-only temporary patch/restore seam with wrappers around
+  the imported `sys/objanim.c` attachment APIs. They validate complete DObj,
+  MObj, and CObj source command graphs, follow Jump/SetAnim edges, repack only
+  `objdef.h:272-281` command words once per reloc generation, and leave
+  relocated payloads/pointers unchanged. Fighter AObj16 assets are identified
+  from their owning loaded file and bypass the AObj32 bridge.
+- Preserved the original `gcPlayMObjMatAnim` timing/state path, then corrected
+  its endian-dependent packed-RGBA output from source bit positions. The
+  compatibility is limited to the five color tracks handled by
+  `objanim.c:1244-1426`; no material values are invented.
+- Added continuous `AOBJ32`, `AOBJ32_FAIL`, and `AOBJ32_COLOR` gates. Direct,
+  menu-chain, and deep mode-163 proofs report `32/240`, `34/288`, and
+  `66/514/reuse416`, all with zero failures. Normal boot records
+  `17/220/reuse3`, exercises packed-color correction, and remains green.
+- Fast mode 163 now samples after the published scene boundary instead of a
+  fixed 30-second sleep, preventing a race with the expensive final draw while
+  retaining BGM teardown proof.
+
+Source-corrected verifier expectations:
+
+| Marker | Old | New | BattleShip source |
+|---|---:|---:|---|
+| Opening Room projection | `0x1f/2/6` | `0x7f/1/0` | `mvopeningroom.c:325-338`; `objanim.c:2488-2813` |
+| Opening Room projected tris | `0` | `4` | same original Scene1 camera path |
+| Pencils AObj delta | `0` | `18` | `mvopeningroom.c:317-322` |
+
+Coverage-reduced verifier expectations: none. The primitive-color expectation
+remains source white `0xffffffff`; the packed-color fix restores it rather than
+relaxing the gate.
+
+- Interrupted compiler recovery now sanitizes malformed `C:devkitPro` paths in
+  existing `.d` files before make parses them. Software builds also exclude
+  hardware-only fighter-depth diagnostics.
+- Focused normal build/dev-fast, normal boot, and all Boundary entries passed.
+  The final detached RegressionCore prebuild took `72.70s`, its stamp validated
+  in `0.37s`, and the full no-build profile passed, including canonical pixel
+  proof and direct/menu MP representatives.
+- The software match-lifecycle target no longer asks GDB for hardware-only
+  renderer symbols. Its automated time limit is now one minute: BattleShip
+  `ifcommon.c:2486-2537` converts that configured minute to `3600` source tics,
+  and the unchanged Time Up/taskman/Results path passes at scene `22 -> 24`.
+  Canonical/manual match length remains independently configurable.
+- Verifier-launched melonDS now temporarily disables FPS limiting while keeping
+  JIT off. Assertions remain tied to emulated frames/timers, and the user config
+  is restored after non-runner verification.

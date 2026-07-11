@@ -115,6 +115,9 @@ try {
         'set pagination off',
         'set confirm off',
         "target remote 127.0.0.1:$selectedGdbPort",
+        'printf "AOBJ32=%u,%u,%u,%u,%#x,%#x\n", gNdsAObjEvent32NormalizeScriptCount, gNdsAObjEvent32NormalizeCommandCount, gNdsAObjEvent32NormalizeReuseCount, gNdsAObjEvent32NormalizeFailCount, gNdsAObjEvent32NormalizeFirstSourceWord, gNdsAObjEvent32NormalizeFirstNativeWord',
+        'printf "AOBJ32_FAIL=%u,%u,%#x,%#x,%u,%#x\n", gNdsAObjEvent32NormalizeLastFailReason, gNdsAObjEvent32NormalizeLastFailOwner, gNdsAObjEvent32NormalizeLastFailAddress, gNdsAObjEvent32NormalizeLastFailWord, gNdsAObjEvent32NormalizeLastFailOpcode, gNdsAObjEvent32NormalizeLastFailFlags',
+        'printf "AOBJ32_COLOR=%u\n", gNdsAObjEvent32ColorCorrectionCount',
         'printf "SELFTEST=%#x\n", gNdsBootSelfTestResult',
         'printf "BOOT=%#x\n", gNdsOriginalBootStage',
         'printf "SCHED=%u\n", sSYSchedulerTicCount',
@@ -639,6 +642,8 @@ try {
                "`nstdout:$gdbStdout`nstderr:$gdbStderr")
     }
     $gdbOutput = $gdbStdout
+    $aobj32 = [regex]::Match($gdbOutput, 'AOBJ32=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $aobj32Color = [regex]::Match($gdbOutput, 'AOBJ32_COLOR=([0-9]+)')
     $selfTest = [regex]::Match($gdbOutput, 'SELFTEST=(0x[0-9a-fA-F]+)')
     $boot = [regex]::Match($gdbOutput, 'BOOT=(0x[0-9a-fA-F]+)')
     $scheduler = [regex]::Match($gdbOutput, 'SCHED=([0-9]+)')
@@ -1136,6 +1141,14 @@ try {
     $perfFps = [regex]::Match($gdbOutput, 'PERF_FPS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $perfContent = [regex]::Match($gdbOutput, 'PERF_CONTENT=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $frames = [regex]::Match($gdbOutput, 'FRAMES=([0-9]+)')
+    if (-not $aobj32.Success -or
+        [int]$aobj32.Groups[1].Value -le 0 -or
+        [int]$aobj32.Groups[2].Value -le 0 -or
+        [int]$aobj32.Groups[4].Value -ne 0 -or
+        -not $aobj32Color.Success -or
+        [int]$aobj32Color.Groups[1].Value -le 0) {
+        throw "Source AObjEvent32 command/color decoding did not remain active and failure-free.`n$gdbOutput"
+    }
     if (-not $selfTest.Success -or $selfTest.Groups[1].Value -ne '0x50415353') {
         throw "Queue/thread self-test failed.`n$gdbOutput"
     }
@@ -2284,12 +2297,14 @@ try {
         [int]$openingRoomDLPreviewBounds.Groups[2].Value -le [int]$openingRoomDLPreviewBounds.Groups[1].Value -or
         [int]$openingRoomDLPreviewBounds.Groups[4].Value -le [int]$openingRoomDLPreviewBounds.Groups[3].Value -or`
         -not $openingRoomDLPreviewProjection.Success -or
-        $openingRoomDLPreviewProjection.Groups[1].Value.ToLowerInvariant() -ne '0x1f' -or
-        [int]$openingRoomDLPreviewProjection.Groups[2].Value -ne 2 -or
-        [int]$openingRoomDLPreviewProjection.Groups[3].Value -ne 6 -or`
+        # mvopeningroom.c:325-338 installs the original Scene1 camera
+        # animation, which objanim.c:2488-2813 parses before this preview.
+        $openingRoomDLPreviewProjection.Groups[1].Value.ToLowerInvariant() -ne '0x7f' -or
+        [int]$openingRoomDLPreviewProjection.Groups[2].Value -ne 1 -or
+        [int]$openingRoomDLPreviewProjection.Groups[3].Value -ne 0 -or`
         -not $openingRoomDLPreviewProjected.Success -or
         [int]$openingRoomDLPreviewProjected.Groups[1].Value -ne 4 -or
-        [int]$openingRoomDLPreviewProjected.Groups[2].Value -ne 0 -or`
+        [int]$openingRoomDLPreviewProjected.Groups[2].Value -ne 4 -or`
         -not $openingRoomDLPreviewProjectedBounds.Success -or
         [int]$openingRoomDLPreviewProjectedBounds.Groups[2].Value -le [int]$openingRoomDLPreviewProjectedBounds.Groups[1].Value -or
         [int]$openingRoomDLPreviewProjectedBounds.Groups[4].Value -le [int]$openingRoomDLPreviewProjectedBounds.Groups[3].Value -or`
@@ -2673,7 +2688,9 @@ try {
         -not $openingRoomPencilsXObjDelta.Success -or
         [int]$openingRoomPencilsXObjDelta.Groups[1].Value -ne 6 -or`
         -not $openingRoomPencilsAObjDelta.Success -or
-        [int]$openingRoomPencilsAObjDelta.Groups[1].Value -ne 0 -or`
+        # mvopeningroom.c:317-322 attaches and immediately plays the source
+        # pencils animation instead of leaving its AObj table dormant.
+        [int]$openingRoomPencilsAObjDelta.Groups[1].Value -ne 18 -or`
         -not $openingRoomPencilsProcess.Success -or
         [int]$openingRoomPencilsProcess.Groups[1].Value -ne 1 -or`
         -not $openingRoomPencilsDisplay.Success -or

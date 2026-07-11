@@ -7806,146 +7806,6 @@ advance_flags:
     }
 }
 
-/* BattleShip objdef.h:272-281 encodes AObjEvent32 commands MSB-first in the
- * N64 word, while GCC lays out objtypes.h:94-107 command bitfields from the
- * LSB on ARM. Fighter costume material scripts are parsed once during setup,
- * so translate only their command words around the original parser and leave
- * the O2R payload intact. */
-#define NDS_AOBJ_EVENT32_PATCH_COMMAND_MAX 64u
-
-typedef struct NDSAObjEvent32Patch
-{
-    AObjEvent32 *commands[NDS_AOBJ_EVENT32_PATCH_COMMAND_MAX];
-    u32 source_words[NDS_AOBJ_EVENT32_PATCH_COMMAND_MAX];
-    u32 command_count;
-} NDSAObjEvent32Patch;
-
-extern s32 ndsRelocPointerRangeInLoadedFiles(const void *ptr, size_t size);
-
-static u32 ndsAObjEvent32CountFlags(u32 flags)
-{
-    u32 count = 0u;
-
-    while (flags != 0u)
-    {
-        count += flags & 1u;
-        flags >>= 1;
-    }
-    return count;
-}
-
-static sb32 ndsAObjEvent32PatchFighterCostumeScript(
-    AObjEvent32 *script, NDSAObjEvent32Patch *patch)
-{
-    AObjEvent32 *cursor = script;
-    u32 i;
-
-    if ((script == NULL) || (patch == NULL))
-    {
-        return FALSE;
-    }
-    patch->command_count = 0u;
-
-    while (patch->command_count < NDS_AOBJ_EVENT32_PATCH_COMMAND_MAX)
-    {
-        u32 source_word;
-        u32 opcode;
-        u32 flags;
-        u32 payload;
-        u32 value_words;
-        sb32 is_end = FALSE;
-
-        if (ndsRelocPointerRangeInLoadedFiles(cursor, sizeof(*cursor)) == FALSE)
-        {
-            return FALSE;
-        }
-        source_word = cursor->u;
-        opcode = (source_word >> 25) & 0x7fu;
-        flags = (source_word >> 15) & 0x03ffu;
-        payload = source_word & 0x7fffu;
-
-        switch (opcode)
-        {
-        case nGCAnimEvent32End:
-            value_words = 0u;
-            is_end = TRUE;
-            break;
-
-        case nGCAnimEvent32Wait:
-        case ANIM_CMD_12:
-            value_words = 0u;
-            break;
-
-        case nGCAnimEvent32SetVal0RateBlock:
-        case nGCAnimEvent32SetVal0Rate:
-        case nGCAnimEvent32SetValBlock:
-        case nGCAnimEvent32SetVal:
-        case nGCAnimEvent32SetTargetRate:
-        case nGCAnimEvent32SetValAfterBlock:
-        case nGCAnimEvent32SetValAfter:
-        case nGCAnimEvent32SetExtValAfterBlock:
-        case nGCAnimEvent32SetExtValAfter:
-        case nGCAnimEvent32SetExtValBlock:
-        case nGCAnimEvent32SetExtVal:
-            value_words = ndsAObjEvent32CountFlags(flags);
-            break;
-
-        case nGCAnimEvent32SetValRateBlock:
-        case nGCAnimEvent32SetValRate:
-            value_words = ndsAObjEvent32CountFlags(flags) * 2u;
-            break;
-
-        case ANIM_CMD_22:
-            value_words = ndsAObjEvent32CountFlags(flags & 0x1fu);
-            break;
-
-        default:
-            return FALSE;
-        }
-
-        if ((value_words != 0u) &&
-            (ndsRelocPointerRangeInLoadedFiles(
-                 cursor + 1, value_words * sizeof(*cursor)) == FALSE))
-        {
-            return FALSE;
-        }
-        patch->commands[patch->command_count] = cursor;
-        patch->source_words[patch->command_count] = source_word;
-        patch->command_count++;
-
-        if (is_end != FALSE)
-        {
-            for (i = 0u; i < patch->command_count; i++)
-            {
-                source_word = patch->source_words[i];
-                opcode = (source_word >> 25) & 0x7fu;
-                flags = (source_word >> 15) & 0x03ffu;
-                payload = source_word & 0x7fffu;
-                patch->commands[i]->u = opcode | (flags << 7) |
-                                        (payload << 17);
-            }
-            return TRUE;
-        }
-        cursor += 1u + value_words;
-    }
-    return FALSE;
-}
-
-static void ndsAObjEvent32RestoreFighterCostumeScript(
-    NDSAObjEvent32Patch *patch)
-{
-    u32 i;
-
-    if (patch == NULL)
-    {
-        return;
-    }
-    for (i = 0u; i < patch->command_count; i++)
-    {
-        patch->commands[i]->u = patch->source_words[i];
-    }
-}
-
 void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
                                         AObjEvent32 **costume_matanim_joints,
                                         AObjEvent32 **main_matanim_joints,
@@ -7974,18 +7834,10 @@ void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
 
             if (costume_matanim_joint != NULL)
             {
-                NDSAObjEvent32Patch patch;
-
                 gcAddMObjMatAnimJoint(mobj, costume_matanim_joint,
                                       anim_frame);
-                if (ndsAObjEvent32PatchFighterCostumeScript(
-                        costume_matanim_joint, &patch) != FALSE)
-                {
-                    gcParseMObjMatAnimJoint(mobj);
-                    gcPlayMObjMatAnim(mobj);
-                    ndsAObjEvent32RestoreFighterCostumeScript(&patch);
-                    mobj->matanim_joint.event32 = costume_matanim_joint;
-                }
+                gcParseMObjMatAnimJoint(mobj);
+                gcPlayMObjMatAnim(mobj);
                 gcRemoveAObjFromMObj(mobj);
             }
             costume_matanim_joints++;

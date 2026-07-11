@@ -44,6 +44,7 @@ if ($RealtimePresentation) {
     $build = 'build-battle-playable-cpu-proof-harness'
     $LiveInputPreview = $true
 }
+$hardwareTriangles = $target -like '*-hwtri'
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -64,7 +65,7 @@ if ($RealtimePresentation) {
     -ImportBattleShipAudioAssets:$ImportBattleShipAudioAssets `
     -ImportBattleShipAudioBGM:$ImportBattleShipAudioBGM `
     -ImportBattleShipFTComputer:$ImportBattleShipFTComputer `
-    -HardwareTriangles `
+    -HardwareTriangles:$hardwareTriangles `
     -RealtimePresentation:$RealtimePresentation `
     -LiveInputPreview:$LiveInputPreview `
     -CPUOpponentProof:$CPUOpponentProof `

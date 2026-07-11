@@ -34,33 +34,33 @@ GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
 Mode `163` has three verifier-covered configurations. The fast harness keeps
 its scripted two-human stock chain; canonical realtime/live-input presents the
 source five-minute, items-off Mario human versus Fox level-3 CPU match. The
-fast lifecycle configuration runs that source match through Time Up and the
-original VSBattle-to-VSResults scene transition. Together they cover natural
-combat/KO/rebirth, normal moves, specials, audio, and a DS 3D hardware frame.
+fast lifecycle configuration uses a one-minute test limit, then runs the same
+source Time Up and VSBattle-to-VSResults transition. Together they cover
+natural combat/KO/rebirth, normal moves, specials, audio, and a DS 3D frame.
 
 ## Latest Proof
 
 The original fighter runtime is live: `gmcollision.c`, `ftmain.c`,
 `ftmanager.c`, `ftcomputer.c`, animation/key, common/Mario/Fox statuses, normal
 moves, weapons, effects, and specials run through imported BattleShip code.
-The lifecycle gate records `36394` source CPU process/target frames, all A/B/Z
-inputs, `303` live-hitbox frames, `6366` guard frames, recovery selection, and
-`124%` maximum Mario damage. Original `ifcommon.c:2472-2529,3144-3152,3342-3345`
-consumes all `18000` timer ticks and requests `LoadScene`; imported
+The lifecycle gate records source CPU process/target frames, A/B/Z inputs,
+live hitboxes, guard, and positive Mario damage. Original
+`ifcommon.c:2472-2537,3144-3152,3342-3345` consumes all `3600` one-minute test
+ticks and requests `LoadScene`; imported
 `scvsbattle.c:513-560` returns through taskman cleanup and changes scene
 `VSBattle(22) -> VSResults(24)`. Imported `mnvsresults.c`, `lbtransition.c`,
 and the source subsystem fighter/data support now run Results by default. The
-gate reports tick `124`, all eight files, two fighters, 12 SObjs, and source
+gate reports tick `120+`, all eight files, two fighters, 12 SObjs, and source
 Win/Lose statuses installed through original `ftMainSetStatus`.
 
 The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
 and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
 single-`dl`/ordered-`dls[]` selection run live; only selected lists cross the DS
 submission seam. The manual all-DObj collector remains a software fixture.
-Fighter costume MObj scripts now bridge N64 MSB-first `AObjEvent32` command
-words around the original one-shot parser. Costume `0` resolves Mario's source
-red/blue materials instead of consuming through the green/orange final frame.
-
+Imported `sys/objanim.c` now receives source-shaped DObj/MObj/CObj AObj32
+graphs: the wrapper repacks only MSB-first commands once per reloc generation,
+follows branches, preserves payloads/pointers, and excludes fighter AObj16.
+Original timing stays live; a post-step corrects N64-endian packed RGBA.
 Selected events retain source matrix/material and geometry/prim/env/light
 state; pre-matrix `dls[0]` keeps parent state as in
 `ftdisplaymain.c:789-805,883-899`. The DS bridge also carries the RSP input and
@@ -81,7 +81,7 @@ keeps HUD SObjs in front. Capture
 `artifacts/visibility/2026-07-10_dream-land-wallpaper-hudoff-final.png` shows
 the source sky. The depth-unit capture
 `artifacts/visibility/2026-07-10_noz-depth-units-hudoff-final.png` changes only
-`0.519%` meaningfully against its adjacent sample. The costume-AObj capture
+`0.519%` meaningfully against its adjacent sample. The pre-generalization capture
 `artifacts/visibility/2026-07-10_fighter-costume-aobj-hudoff-candidate.png`
 shows Mario's source red/blue; texture ribbons, lower-body fragments, and
 lighting remain open. Uncached presentation is about `1.2fps` and can trigger
@@ -102,9 +102,9 @@ and screenshot gates cover the canonical renderer.
 ## Current Notes
 
 Stable flags stay in `nds_build_config.h`; per-mode harness ID/Inishie scale
-live in `nds_scene_harness_config.h`. This slice's seven-target RegressionCore
-prebuild took `1592.139s`; its stamp validated in `0.79s`, and the no-build
-profile passed in `307.7s`.
+live in `nds_scene_harness_config.h`. Interrupted compiler dependency files
+are sanitized before make parses them, so incremental builds recover without
+cleaning. Current RegressionCore timing is recorded in `docs/PORTING.md`.
 
 The taskman allocator now tries `0x140000` and `0x130000` before its legacy
 1 MiB fallback, preventing source-display builds from overflowing after a
@@ -126,9 +126,9 @@ deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
 The five-record stage `MObjSub` probe changed no pixels and was reverted.
-Follow-ups: ongoing AObj scripts, texture windows, exact DL-head ordering,
-shadows/CPU recovery, then draw/SObj caching for 60fps.
-FGM/voice and the original sequence player remain.
+Follow-ups: exact texture-coordinate order, high-bit fighter DObj transforms,
+wallpaper atomic commits, stage DL-head ordering, audio queueing, then caching.
+FGM/voice and the original sequence player remain deferred.
 ## Verification
 
 Quick iteration uses `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.

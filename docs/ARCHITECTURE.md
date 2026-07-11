@@ -796,7 +796,7 @@ Current startup boundary records:
 - `gNdsOpeningRoomBossShadowEjectUnlinkedMask == 0x3`
 - `gNdsOpeningRoomPencilsCreateResult == 0x4F525043` (`ORPC`)
 - `gNdsOpeningRoomPencilsCreateMask == 0x3F`
-- pencils object creation deltas: one GObj, three DObjs, six XObjs, zero AObjs
+- pencils object creation deltas: one GObj, three DObjs, six XObjs, 18 AObjs
 - pencils object links: process set, display callback set, three DObj tree
   nodes, one animation root
 - `gNdsOpeningRoomTick380DeferredResult == 0x4F523338` (`OR38`)
@@ -1097,11 +1097,19 @@ narrow approximation.
 
 BattleShip `objdef.h:272-281` stores `AObjEvent32` opcode/flags/payload in
 bits `31..25/24..15/14..0`, but ARM GCC allocates the unchanged bitfield union
-from the low bit. Fighter costume material scripts are one-shot setup data, so
-the DS compatibility layer validates their linear command stream, temporarily
-re-packs command words for the original parser/player, then restores the O2R
-bytes. No costume colors are hardcoded. Ongoing object/material animation needs
-a separate general bridge for jumps/interpolation and remains a fidelity limit.
+from the low bit. Imported DObj/MObj/CObj attachment entrypoints therefore
+validate the source graph, follow Jump/SetAnim edges, and repack only command
+words once per reloc generation before calling the original parser. Relocated
+payloads and pointers remain untouched; fighter AObj16 assets bypass this
+bridge. `objanim.c:1244-1426` also interpolates packed RGBA through host byte
+lanes, so the wrapper retains original timing/state then rewrites only those
+five color outputs from source `0xRRGGBBAA` bits. No colors are hardcoded.
+
+Serialized bitfields are decoded from documented source bit positions, not
+host compiler layout. Mixed-width O2R records are normalized by schema once
+per generation, and unit-conversion order is explicit. Counters prove routing,
+not pixels; visual claims still require captures. Partial display lists inherit
+source state and global head order unless the source explicitly resets them.
 
 Canonical HW still uses projected submission rather than the final raw GX
 matrix path. Source-depth X/Y/Z now come from the same current composed clip

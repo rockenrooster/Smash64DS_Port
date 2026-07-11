@@ -446,6 +446,8 @@ try {
         'set confirm off',
         'set remotetimeout 5',`
         ("target remote 127.0.0.1:{0}" -f (Get-MelonDSActiveGdbPort)),
+        'printf "AOBJ32=%u,%u,%u,%u,%#x,%#x\n", gNdsAObjEvent32NormalizeScriptCount, gNdsAObjEvent32NormalizeCommandCount, gNdsAObjEvent32NormalizeReuseCount, gNdsAObjEvent32NormalizeFailCount, gNdsAObjEvent32NormalizeFirstSourceWord, gNdsAObjEvent32NormalizeFirstNativeWord',
+        'printf "AOBJ32_FAIL=%u,%u,%#x,%#x,%u,%#x\n", gNdsAObjEvent32NormalizeLastFailReason, gNdsAObjEvent32NormalizeLastFailOwner, gNdsAObjEvent32NormalizeLastFailAddress, gNdsAObjEvent32NormalizeLastFailWord, gNdsAObjEvent32NormalizeLastFailOpcode, gNdsAObjEvent32NormalizeLastFailFlags',
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
         'printf "SCENE=%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind',
         'printf "VS_TRANS=%#x,%#x\n", gNdsVSModeStartTransitionResult, gNdsVSModeStartTransitionMask',
@@ -1186,6 +1188,7 @@ try {
     $stageMPLiveHitStatusCallback = [regex]::Match($gdbStdout, 'STAGE_MPLIVEHIT_STATUS_CALLBACK=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $stageMPLiveHitStatusRepeat = [regex]::Match($gdbStdout, 'STAGE_MPLIVEHIT_STATUS_REPEAT=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $stageMPLiveHitStatusSafe = [regex]::Match($gdbStdout, 'STAGE_MPLIVEHIT_STATUS_SAFE=(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $aobj32 = [regex]::Match($gdbStdout, 'AOBJ32=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
     $vs = [regex]::Match($gdbStdout, 'VS_TRANS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
@@ -1508,6 +1511,7 @@ try {
     $stageMPCliffEscapeCommon2Calls = [regex]::Match($gdbStdout, 'STAGE_MPCLIFFESCAPE_COMMON2_CALLS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageMPCliffEscapeCommon2Status = [regex]::Match($gdbStdout, 'STAGE_MPCLIFFESCAPE_COMMON2_STATUS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageMPCliffEscapeCommon2Flags = [regex]::Match($gdbStdout, 'STAGE_MPCLIFFESCAPE_COMMON2_FLAGS=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    Assert-Condition ($aobj32.Success -and [int]$aobj32.Groups[4].Value -eq 0) 'AObjEvent32 source-command normalization rejected a live script.' $gdbStdout
     Assert-Condition ($harn.Success -and (Convert-MarkerUInt32 $harn.Groups[1].Value) -eq 0x4841524e -and [int]$harn.Groups[2].Value -eq $ExpectedMode -and [int]$harn.Groups[3].Value -eq $ExpectedHarnessSceneCurr -and [int]$harn.Groups[4].Value -eq $ExpectedHarnessScenePrev -and (Convert-MarkerUInt32 $harn.Groups[5].Value) -eq 0) $HarnessSelectMessage $gdbStdout
     Assert-Condition ($scene.Success -and [int]$scene.Groups[1].Value -eq 22 -and [int]$scene.Groups[2].Value -eq 21 -and [int]$scene.Groups[3].Value -eq 6) 'Live scene is not Pupupu VSBattle from Maps.' $gdbStdout
     if (($ExpectedMode -ge 58) -and (($ExpectedMode % 2) -eq 0)) {
@@ -2619,7 +2623,7 @@ try {
         $stageSummary = "$stageSummary mpCliffEscapeCommon2=status=$($ce2s[0])->$($ce2s[3])->$($ce2s[6])->$($ce2s[9]) motion=$($ce2s[1])->$($ce2s[4])->$($ce2s[7])->$($ce2s[10]) cliff=$($ce2f[0]) floor=$($ce2f[1])->$($ce2f[3]) calls=$($ce2c[2])/$($ce2c[5])/$($ce2c[7])"
     }
     Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after gcDrawAll proof.' $gdbStdout
-    Write-Output ("$Label harness passed: scene=22/21 gcRunAll={0} gcDrawAll={1} display={2}/{3} draws={4} pixels={5} visits=0x{6:x}/0x{7:x} transitions=0x{8:x}/0x{9:x} screen-dx={10}/{11} screen-rise={12}/{13} final=Wait/Ground safe=1{14}" -f $tm[4], $tm[5], $dr[7], $dr[8], $dr[5], $dr[13], $st[10], $st[11], $st[12], $st[13], $sc[4], $sc[5], $sc[8], $sc[9], $stageSummary)
+    Write-Output ("$Label harness passed: scene=22/21 gcRunAll={0} gcDrawAll={1} display={2}/{3} draws={4} pixels={5} visits=0x{6:x}/0x{7:x} transitions=0x{8:x}/0x{9:x} screen-dx={10}/{11} screen-rise={12}/{13} final=Wait/Ground safe=1 aobj32={14}/{15}/fail0{16}" -f $tm[4], $tm[5], $dr[7], $dr[8], $dr[5], $dr[13], $st[10], $st[11], $st[12], $st[13], $sc[4], $sc[5], $sc[8], $sc[9], $aobj32.Groups[1].Value, $aobj32.Groups[2].Value, $stageSummary)
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

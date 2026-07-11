@@ -1395,13 +1395,24 @@ Opening movie / Opening Portraits:
   unsupported-track failures, read bytes at least one 64 KiB chunk, resident
   bytes `65536`, 32 KiB refill size, at least one played chunk, and
   stopped-on-teardown `1`. The hardware-timer rate guard expects at least 3200
-  fast-logic frames; the verifier waits 30 seconds in fast mode so teardown
-  can be observed with audio enabled. The streamed rate must stay within
+  fast-logic frames; the verifier breaks only after the published scene
+  boundary so teardown is sampled deterministically. The streamed rate stays within
   `42100..46100` B/s around the PCM16 mono `44100` B/s target from
   `scripts/render-audio-bgm-pupupu.py`, with safe opposite-half writes and zero
   unsafe write attempts. Realtime smoke uses the same timer-derived byte-rate
   guard; whole-track wrap is supported and is only expected when a run outlasts
   the 65.5-second rendered track.
+- `AOBJ32`: source-command normalization totals: scripts, commands, graph
+  reuses, failures, first source word, and first ARM-native word. Live proofs
+  require positive script/command counts and zero failures; current direct,
+  menu, and deep battle samples are `32/240`, `34/288`, and
+  `66/514/reuse416`. Normal boot records `17/220/reuse3`.
+- `AOBJ32_FAIL`: last reject reason, owner kind, address, word, opcode, and
+  flags. Reasons cover invalid root/depth, out-of-range data, changed normalized
+  words, owner/opcode mismatch, unsupported opcode, span/plan overflow, and
+  generation-registry overflow. A green run leaves all values zero.
+- `AOBJ32_COLOR`: number of host-independent packed-RGBA output corrections
+  applied after original `gcPlayMObjMatAnim`; normal boot requires it positive.
 - `gNdsSCVSBattleCompatSpawnMask`: deterministic spawn-position queries from
   `mpCollisionGetPlayerMapObjPosition`.
 - `gNdsSCVSBattleOriginalUpdateResult` / `UpdateCount`: one bounded
@@ -2936,7 +2947,7 @@ Scene and startup:
 - `gNdsOpeningRoomPencilsXObjDelta`: XObj increase from original transform
   setup, expected `6`.
 - `gNdsOpeningRoomPencilsAObjDelta`: AObj increase during the first
-  `gcPlayAnimAll`, expected `0` for this first `SetValBlock` slice.
+  `gcPlayAnimAll`, expected `18` after source AObj32 command decoding.
 - `gNdsOpeningRoomPencilsProcessSet`: original common update process attached,
   expected `1`.
 - `gNdsOpeningRoomPencilsDisplaySet`: parked `gcDrawDObjTreeForGObj` display
@@ -6093,8 +6104,9 @@ scheduling.
   reported continuously but is not required until selected naturally.
 - `VSB_END`: lifecycle result, DS arena-adapter count, taskman-return count and
   status, source time limit/remain/passed, game status, scene previous/current,
-  and sudden-death flag. The five-minute gate expects `VBEN`, `1+`, `1+`,
-  `LoadScene`, `5/0/18000+`, game status `Set`, and scene `22 -> 24`.
+  and sudden-death flag. The accelerated gate expects `VBEN`, `1+`, `1+`,
+  `LoadScene`, `1/0/3600+`, game status `Set`, and scene `22 -> 24`; source
+  conversion/expiry is `ifcommon.c:2486-2537`.
 - `VS_RESULTS`: imported Results result/mask, start count, tick count, loaded
   file count, fighter count, GObj count, SObj count, and result kind. The
   lifecycle gate expects `VSR1`, low mask `0x1f`, tick `120+`, eight files,

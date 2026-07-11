@@ -18,6 +18,9 @@ Harness builds should use their own `TARGET=` and `BUILD=` directories. The
 Makefile stores plain `BUILD=build*` outputs under `builds/` so root stays
 readable. The profile `-Build` path forces a normal rebuild of the shared
 target so runtime verification cannot accidentally sample a harness-flavored ROM.
+If a compiler is killed after writing a dependency file, the Makefile repairs
+malformed Windows `C:devkitPro` paths before parsing existing `.d` files; do
+not clean the build directory merely for that recoverable signature.
 
 ## Static Checks
 
@@ -113,6 +116,12 @@ It temporarily disables melonDS FPS limiting, keeps JIT disabled, and restores
 the config afterward. Native-resolution melonDS software-renderer captures
 remain authoritative; OpenGL rendering and 4x scaling are secondary inspection
 views because they can change edge/depth pixels without adding source detail.
+Verifier launches use the same unthrottled interpreter policy automatically;
+their assertions are tied to emulated frames/timers, not host wall time. The
+non-runner config is restored after each verifier, while dedicated runner-slot
+configs remain verifier-owned.
+The match-lifecycle gate uses a one-minute harness setting (`3600` source
+ticks) while retaining the original timer-expiry and Results transition path.
 
 See `docs/EMULATOR_STRATEGY.md` for the emulator decision boundary.
 

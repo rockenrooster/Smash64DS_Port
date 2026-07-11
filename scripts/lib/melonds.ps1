@@ -173,6 +173,26 @@ function Set-MelonDSTomlValue {
         $Text.Substring($sectionMatch.Index + $sectionMatch.Length)
 }
 
+function Set-MelonDSTomlRootValue {
+    param(
+        [string]$Text,
+        [string]$Key,
+        [string]$Value
+    )
+
+    $firstSection = [regex]::Match($Text, '(?m)^\[')
+    $rootLength = if ($firstSection.Success) { $firstSection.Index } else { $Text.Length }
+    $root = $Text.Substring(0, $rootLength)
+    $keyPattern = '(?m)^(' + [regex]::Escape($Key) + '\s*=\s*).*$'
+    if ($root -match $keyPattern) {
+        $root = [regex]::Replace($root, $keyPattern, "`${1}$Value")
+    } else {
+        $root = $root.TrimEnd() + "`r`n$Key = $Value`r`n`r`n"
+    }
+
+    return $root + $Text.Substring($rootLength)
+}
+
 function Set-MelonDSGdbConfig {
     param(
         [string]$MelonDSPath,
@@ -205,6 +225,10 @@ function Set-MelonDSGdbConfig {
     $text = Set-MelonDSTomlValue -Text $text -Section 'Instance0.Gdb.ARM9' -Key 'Port' -Value "$GdbPort"
     $text = Set-MelonDSTomlValue -Text $text -Section 'Instance0.Gdb.ARM7' -Key 'BreakOnStartup' -Value 'false'
     $text = Set-MelonDSTomlValue -Text $text -Section 'Instance0.Gdb.ARM7' -Key 'Port' -Value "$Arm7Port"
+    # Verification logic is timer-relative and should not inherit a user's
+    # wall-clock limiter or JIT setting. The interpreter remains the reference.
+    $text = Set-MelonDSTomlRootValue -Text $text -Key 'LimitFPS' -Value 'false'
+    $text = Set-MelonDSTomlValue -Text $text -Section 'JIT' -Key 'Enable' -Value 'false'
     Set-Content $config -Value $text -NoNewline
 
     return [PSCustomObject]@{

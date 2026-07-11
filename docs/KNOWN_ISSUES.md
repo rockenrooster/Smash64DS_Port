@@ -127,6 +127,8 @@
   digits, stock icon decrement, and a hardware stage/fighter frame. The
   live-input path now also runs the original five-minute timer, Time Up/end
   interface, taskman return, scoring check, and `VSBattle -> VSResults` scene.
+  The automated lifecycle gate uses a one-minute harness limit for iteration;
+  canonical/manual match length remains independently configurable.
   Original `mnvsresults.c`, `lbtransition.c`, and its subsystem fighter/data
   support now run by default with all eight source files and source Win/Lose
   statuses. The DS compositor preserves source 2D layers around the fighter
@@ -1054,12 +1056,12 @@
   fighter attachment restores mixed-width O2R `MObjSub` lanes before the
   original object manager copies each record. The evidenced one-cycle
   `PRIMITIVE * SHADE` LERP now multiplies source primitive RGB by computed
-  shade. Fighter costume scripts now translate N64 MSB-first `AObjEvent32`
-  command words around the original one-shot parser, restoring Mario costume
-  `0` red/blue material values. Ongoing DObj/MObj scripts still use the
-  little-endian bitfield union directly and need a general source-backed bridge;
-  both fighters retain lower-body fragments and incomplete directional light
-  fidelity. Dream Land's source player map objects now decode through an aligned O2R
+  shade. Imported DObj/MObj/CObj AObj32 attachments now normalize complete
+  source command graphs once per reloc generation, and packed RGBA output is
+  corrected without replacing original animation timing. Fighter AObj16 data
+  remains on its separate original parser. Both fighters retain lower-body
+  fragments and incomplete directional light fidelity. Dream Land's source
+  player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated
   source starts. The VSBattle wrapper's forced `is_skip_entry` remains a
   separate compatibility slice; normal BattleShip VSBattle does not set it.

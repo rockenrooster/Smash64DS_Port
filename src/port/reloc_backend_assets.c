@@ -1477,8 +1477,11 @@ static s32 ndsRelocIsOpeningRoomAsset(u32 asset_id)
     return (ndsRelocOpeningRoomBitForAsset(asset_id) != 0u) ? TRUE : FALSE;
 }
 
+extern void ndsAObjEvent32ResetNormalizedScripts(void);
+
 static void ndsRelocResetLoadedFiles(void)
 {
+    ndsAObjEvent32ResetNormalizedScripts();
     memset(sNdsRelocLoadedFiles, 0, sizeof(sNdsRelocLoadedFiles));
     sNdsRelocLoadedFileCount = 0;
     ndsFighterMarioFoxResetFileSlots();
@@ -2205,6 +2208,16 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 static s32 ndsRelocIsFighterAObj16Asset(u32 asset_id)
 {
     return ndsRelocIsMarioFoxNaturalCombatAnimID(asset_id);
+}
+
+s32 ndsRelocPointerIsFighterAObj16(const void *ptr)
+{
+    NDSRelocLoadedFile *loaded =
+        ndsRelocFindLoadedFileContaining(ptr, sizeof(u16));
+
+    return ((loaded != NULL) &&
+            (ndsRelocIsFighterAObj16Asset(loaded->asset_id) != FALSE)) ?
+               TRUE : FALSE;
 }
 
 static void ndsRelocRemoveStatusNodeAt(LBFileNode *nodes, s32 *count, s32 index)
