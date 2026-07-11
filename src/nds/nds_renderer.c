@@ -80,6 +80,7 @@
 #define NDS_RENDERER_MOVEWORD_OFFSET_SHIFT 8u
 #define NDS_RENDERER_MOVEWORD_OFFSET_MASK 0xffffu
 #define NDS_RENDERER_MOVEWORD_INDEX_MASK 0xffu
+#define NDS_RENDERER_MWO_POINT_ST 0x14u
 #define NDS_RENDERER_MOVEMEM_LIGHT 10u
 #define NDS_RENDERER_MOVEMEM_OFFSET_SHIFT 8u
 #define NDS_RENDERER_MOVEMEM_OFFSET_MASK 0xffu
@@ -130,7 +131,9 @@
 #define NDS_RENDERER_HW_USETEX_REJECT_NO_TEXEL0 (1u << 4)
 #define NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE 0xffffu
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
-#define NDS_RENDERER_HW_PROJECTED_DEPTH_START (0x1000 * 6)
+#define NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START (0x1000 * 6)
+#define NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START \
+    ((128 - 0x1000) * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
@@ -201,7 +204,9 @@ static u32 sNdsRendererHardwareTriangleBatchAlphaKey;
 static u32 sNdsRendererHardwareTriangleBatchFogKey;
 static u32 sNdsRendererHardwareBoundTextureName;
 static int sNdsRendererHardwareNoTextureName;
-static s32 sNdsRendererHardwareProjectedDepth;
+static s32 sNdsRendererHardwareProjectedDepth =
+    NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
+static u32 sNdsRendererHardwareProjectedBackground = TRUE;
 static u32 sNdsRendererHardwareMatrixLoaded;
 static u32 sNdsRendererHardwareMatrixScaleWorld;
 static NDSRendererMatrix20p12 sNdsRendererHardwareMatrixProjection;
@@ -1686,6 +1691,46 @@ static void ndsRendererApplyVertexCommand(
             stats->first_transformed_w = out->w;
         }
     }
+}
+
+static void ndsRendererApplyModifyVertexCommand(
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 w0,
+    u32 w1)
+{
+    u32 where;
+    u32 packed_index;
+    u32 index;
+
+    if ((stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+
+    stats->state_command_count++;
+    where = (w0 >> 16) & 0xffu;
+    packed_index = w0 & 0xffffu;
+    index = packed_index / 2u;
+
+#if NDS_RENDERER_HW_TRIANGLES
+    if ((where == NDS_RENDERER_MWO_POINT_ST) &&
+        ((packed_index & 1u) == 0u) &&
+        (index < NDS_RENDERER_MAX_VTX) &&
+        ((state->input_vertex_valid_mask & (1u << index)) != 0u))
+    {
+        state->input_vertices[index].s = (s16)(w1 >> 16);
+        state->input_vertices[index].t = (s16)(w1 & 0xffffu);
+        return;
+    }
+#else
+    (void)where;
+    (void)packed_index;
+    (void)index;
+    (void)w1;
+#endif
+
+    stats->skip_command_count++;
 }
 
 static s32 ndsRendererTransformedTriangleReady(
@@ -4918,14 +4963,25 @@ static void ndsRendererLoadHardwareMatrices(
 
 static s32 ndsRendererHardwareNextProjectedDepth(void)
 {
-    if (sNdsRendererHardwareProjectedDepth <= 0)
-    {
-        sNdsRendererHardwareProjectedDepth =
-            NDS_RENDERER_HW_PROJECTED_DEPTH_START;
-    }
     sNdsRendererHardwareProjectedDepth--;
     return sNdsRendererHardwareProjectedDepth /
         NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
+}
+
+static void ndsRendererHardwareEnterProjectedForeground(void)
+{
+    if (sNdsRendererHardwareProjectedBackground == FALSE)
+    {
+        return;
+    }
+
+    /* The DS cannot disable depth testing per polygon. Mirror sm64-nds'
+     * source G_ZBUFFER transition: early no-Z background draws count down
+     * from the far endpoint, then the first source-Z triangle moves later
+     * no-Z painter passes in front of the source depth range. */
+    sNdsRendererHardwareProjectedDepth =
+        NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START;
+    sNdsRendererHardwareProjectedBackground = FALSE;
 }
 
 static void ndsRendererHardwareClipVertex(
@@ -5204,6 +5260,7 @@ static void ndsRendererSubmitHardwareTriangle(
     s32 use_vertex_color;
     s32 texture_offset;
     s32 zbuffered;
+    s32 source_zbuffered;
     s32 decal_depth;
     s32 prim_depth;
     s32 transformed_ready;
@@ -5256,6 +5313,7 @@ static void ndsRendererSubmitHardwareTriangle(
     }
     zbuffered = ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) != 0u) ?
         TRUE : FALSE;
+    source_zbuffered = zbuffered;
     decal_depth = ((zbuffered != FALSE) &&
                    ((stats->othermode_l & NDS_RENDERER_ZMODE_DEC) ==
                     NDS_RENDERER_ZMODE_DEC)) ? TRUE : FALSE;
@@ -5341,7 +5399,13 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
     }
-    if (prim_depth != FALSE)
+    if (source_zbuffered != FALSE)
+    {
+        /* Source-Z projected submissions use the composed clip Z below and
+         * must not consume the synthetic no-Z painter counter. */
+        projected_z[0] = projected_z[1] = projected_z[2] = 0;
+    }
+    else if (prim_depth != FALSE)
     {
         projected_z[0] = projected_z[1] = projected_z[2] =
             (s32)(stats->prim_depth & 0xffffu);
@@ -5390,6 +5454,10 @@ static void ndsRendererSubmitHardwareTriangle(
         zbuffered, decal_depth, prim_depth, projected_z[2], projected_submit);
     glEnd();
     glDisable(GL_ALPHA_TEST);
+    if (source_zbuffered != FALSE)
+    {
+        ndsRendererHardwareEnterProjectedForeground();
+    }
 
     sNdsRendererHardwareSubmitted = TRUE;
     stats->hardware_triangle_count++;
@@ -5517,8 +5585,7 @@ static void ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_MODIFYVTX:
-            stats->state_command_count++;
-            stats->skip_command_count++;
+            ndsRendererApplyModifyVertexCommand(stats, state, w0, w1);
             break;
 
         case NDS_RENDERER_OP_VTX:
@@ -5819,7 +5886,9 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 
     ndsRendererHardwareEndBatch();
     sNdsRendererHardwareSubmitted = FALSE;
-    sNdsRendererHardwareProjectedDepth = 0;
+    sNdsRendererHardwareProjectedDepth =
+        NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
+    sNdsRendererHardwareProjectedBackground = TRUE;
     sNdsRendererHardwareMatrixLoaded = FALSE;
     sNdsRendererHardwareBoundTextureName = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;

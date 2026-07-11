@@ -1334,6 +1334,8 @@ Opening movie / Opening Portraits:
   clip-W min/max for stage, player 0, and player 1. Canonical HW requires all
   three classes, NDC within `-4096..4095`, and positive ordered W ranges. This
   catches stale matrix-field depth recomputation and depth-unit regressions.
+  Synthetic no-Z depth begins in the far background range and switches to the
+  near foreground range only after the first submitted source-Z triangle.
 - `RENDER_TEXTURE`: canonical HW texture trace marker. Fields are converted
   source texels, dominant-green converted texels, non-white converted texels,
   textured vertices, in-range texture-coordinate sample count, samples over a
@@ -1363,7 +1365,9 @@ Opening movie / Opening Portraits:
   state seed count, capture count, texture-seed count, tile-seed count,
   short-DL texture-seed count, short-DL tile-seed count, and inherited segment
   seed count. It proves sibling DObjs inside one stage GObj traversal carry
-  source texture/tile state instead of resetting each display-list head.
+  source texture/tile state instead of resetting each display-list head. The
+  same traversal carries `NDSRendererVertexCache` and applies `G_MWO_POINT_ST`;
+  fixtures plus the ten restored File3 triangles cover that unextended marker.
 - `FTR_DISPLAY_CONTRACT`: original fighter-display contract marker. It reports
   selected, hidden, no-texture, and submitted part events; source geometry and
   light state; source visibility-bound pass/fail counts; and the latest
@@ -4103,6 +4107,8 @@ Marker groups:
   and max ready texture dimensions. Current direct-stage hardware pass values
   are `252`, `1152`, `456`, `696`, `0`,
   `618`, `72`, `618`, `0`, `0x4`, and `32x32`.
+  Mode-163 now reports `202` projected stage triangles per draw; the ten-triangle
+  increase is the five original File3 flower quads restored by RSP cache carry.
 - `STAGE_COLLISION`: geometry-backed floor-collision result, safe result, proof
   mask, deferred mask, and selected fighter count. Current pass values are
   `0x4653434c`, `0x46534353`, mask `0xffff`, deferred mask `0xff`, and count

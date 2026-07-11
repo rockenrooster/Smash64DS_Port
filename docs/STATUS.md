@@ -71,8 +71,9 @@ Fighter playback seeds its initial light pair from the first selected source
 `MObjSub` (`0xffffff00/0x4c4c4c00`); overrides carry and fallback use is zero.
 Canonical proof reports `gxram=730/2214`, geometry `0x222005`, source cycle/
 render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
-Source-depth X/Y/Z share one composed clip vertex. No-Z layers use signed 20.12
-NDC; removing an extra `<< 4` restores stage/fighter occlusion.
+Source-depth X/Y/Z share one composed clip vertex. Projected no-Z depth has
+source-backed background/foreground phases around the first source-Z triangle,
+restoring layer-3 foreground fences over layer-1 floor/path.
 
 A source-shaped `gcAddMObjAll` wrapper now normalizes mixed-width O2R lanes by
 loaded-file and asset/generation provenance. Canonical Dream Land observes at
@@ -84,9 +85,10 @@ animated state refreshes resident VRAM with frame pinning. The 184-frame gate
 has positive scene-lifetime refresh, zero eviction/reject/oracle drift, and a
 terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
 `27.997%/105px`. Accepted capture:
-`artifacts/visibility/2026-07-11_dream-land-texel1-materials-hudoff-final.png`.
-Fox's DXT tail fix remains; Tyler accepts the water. Debt: flowers, floor/path
-occlusion of front fences, Whispy face, fractional phase, shifts, fog, and speed.
+`artifacts/visibility/2026-07-11_dream-land-fences-flowers-hudoff-final.png`.
+Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
+plus `G_MWO_POINT_ST` restores five flower groups and adds ten source triangles
+(`192 -> 202`). Debt: Whispy face, phase/shifts/fog, Mario light A/B, and speed.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -125,23 +127,20 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-The rejected five-address load-time `MObjSub` mutation remains reverted; the attachment seam is live-path and address-independent.
-The accepted S-axis trace found masked `CLAMP` ownership; the high-bit fighter branch is live, but Mario/Fox select `0/0` such descriptors.
-Follow-ups: flower/fence draw classes, Whispy face acceptance, Mario facing/light A/B, quarter-phase water, then caching.
+Rejected load-time MObj and inactive camera-head probes stay reverted; follow-ups are Whispy, Mario light A/B, phase/shifts, then caching.
 FGM/voice and the original sequence player remain deferred.
 ## Verification
 
-Quick iteration uses `.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3`.
-Docs-only changes also run `check-docs`; registry/script changes run
-`check-harness-registry`. Shared architecture changes graduate to:
+This slice passed fixtures, focused `battle_playable`, DevFast, and Boundary at
+202 triangles. A fresh RegressionCore prebuild stamp passed; optional shards
+then found two verifier-infrastructure failures (moving crop and unsigned Int32
+parse), not ROM marker failures. Full Regression was skipped per Tyler's faster
+iteration request. Re-run the compact gates with:
 
 ```powershell
-.\scripts\verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3
+.\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
-
-For prebuilds over 90 seconds, detach, confirm with `-VerifyStamp`, and run the
-daily full Regression sweep overnight.
 
 After verified progress, commit if requested, then run the Lean snapshot last:
 

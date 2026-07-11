@@ -1193,13 +1193,20 @@ scene-lifetime. Relative 10.2 tile-origin phase still rounds to whole texels,
 so smooth bilerp water motion remains fidelity/performance debt.
 
 Canonical HW still uses projected submission rather than the final raw GX
-matrix path. Source-depth X/Y/Z now come from the same current composed clip
-vertex, including matrix-word updates, before the perspective divide. Stage
-layers that clear `G_ZBUFFER` in `grdisplay.c:52-72,111-151` use a synthetic
-far-order value expressed directly in signed 20.12 NDC; the former extra
-`<< 4` placed those layers near the camera and hid source-depth fighters and
-stage objects. Full source-selected fighter submission is not cached; that is
-a backend limit, not alternative fighter behavior.
+matrix path. Source-depth X/Y/Z come from one composed clip vertex. Because DS
+cannot disable depth testing per polygon, synthetic no-Z depth is phase-aware:
+layer-0/background draws begin at far NDC; the first submitted source-Z triangle
+moves subsequent layer-3/no-Z painter draws to near NDC without itself consuming
+a synthetic slot. This preserves BattleShip's `G_ZBUFFER` transition and
+restores the foreground fence over layer 1.
+
+BattleShip `gcDrawDObjTree` also retains the 32-slot RSP vertex cache across its
+DObj lists. File3's five flower cards reuse vertices 0/1 from each base list,
+replace their ST through `G_MWO_POINT_ST`, load only 2/3, then issue `TRI2`. The
+stage adapter now uses `NDSRendererVertexCache` for that traversal and applies
+ST, restoring ten textured triangles without new geometry, assets, or MObjs.
+Full source-selected fighter submission is not cached; that is a backend limit,
+not alternative fighter behavior.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,

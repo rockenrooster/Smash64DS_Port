@@ -22,6 +22,7 @@
 #define NDS_RENDERER_ADAPTER_G_MWO_B_LIGHT_1 0x04u
 #define NDS_RENDERER_ADAPTER_G_MWO_A_LIGHT_2 0x18u
 #define NDS_RENDERER_ADAPTER_G_MWO_B_LIGHT_2 0x1cu
+#define NDS_RENDERER_ADAPTER_G_MWO_POINT_ST 0x14u
 #define NDS_RENDERER_ADAPTER_G_TX_LDBLK_MAX_TXL 2047u
 /* dLBCommonFuncMatrixList is consumed as syMtxProcess pairs; kind 0x4B maps
  * to lbCommonFighterPartsFuncMatrix in BattleShip. */
@@ -1666,7 +1667,26 @@ static s32 ndsFighterMarioFoxVisitDLExecuteCommand(
         return TRUE;
 
     case NDS_FIGHTER_DL_OP_MODIFYVTX:
+    {
+        u32 where = (command->w0 >> 16) & 0xffu;
+        u32 packed_index = command->w0 & 0xffffu;
+        u32 index = packed_index / 2u;
+
+        if (where != NDS_RENDERER_ADAPTER_G_MWO_POINT_ST)
+        {
+            return TRUE;
+        }
+        if (((packed_index & 1u) != 0u) ||
+            (index >= NDS_FIGHTER_DL_DRAW_MAX_VTX) ||
+            ((state->vertex_valid_mask & (1u << index)) == 0u))
+        {
+            state->vertex_range_reject_count++;
+            return TRUE;
+        }
+        state->vertices[index].s = (s16)(command->w1 >> 16);
+        state->vertices[index].t = (s16)(command->w1 & 0xffffu);
         return TRUE;
+    }
 
     case NDS_FIGHTER_DL_OP_VTX:
     {
@@ -2530,6 +2550,7 @@ static s32 ndsFighterMarioFoxVisitDLDrawCommand(
 
 static NDSFighterDLDrawState sNdsRendererAdapterStagePersistentState;
 static NDSRendererStats sNdsRendererAdapterStagePersistentStats;
+static NDSRendererVertexCache sNdsRendererAdapterStageVertexCache;
 static sb32 sNdsRendererAdapterStagePersistentActive;
 
 volatile u32 gNdsRendererDepthStageSamples;
@@ -2635,6 +2656,8 @@ void ndsRendererAdapterBeginStageTraversal(void)
     bzero(&sNdsRendererAdapterStagePersistentState,
           sizeof(sNdsRendererAdapterStagePersistentState));
     ndsRendererInitStats(&sNdsRendererAdapterStagePersistentStats);
+    bzero(&sNdsRendererAdapterStageVertexCache,
+          sizeof(sNdsRendererAdapterStageVertexCache));
     sNdsRendererAdapterStagePersistentActive = TRUE;
 }
 
@@ -3558,11 +3581,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     }
     step_start = cpuGetTiming();
 #endif
-    ndsRendererExecuteDisplayList(dl,
-                                  &config,
-                                  callback,
-                                  &state,
-                                  &stats);
+    ndsRendererExecuteDisplayListWithVertexCache(
+        dl,
+        &config,
+        callback,
+        &state,
+        &stats,
+        (sNdsRendererAdapterStagePersistentActive != FALSE) ?
+            &sNdsRendererAdapterStageVertexCache : NULL);
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererAdapterAccumulateDepth(
         &stats,

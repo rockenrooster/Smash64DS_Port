@@ -80,15 +80,16 @@ vx=49809->-49809 owner=Fox`, `specials=0xfff phase=7`,
 `audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695
 raw=4422960 resident=0 scratch=16`,
 `bgm=track0 play=1 stop=1 rate=44099 resident=65536`, and
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/626`. FGM/voice, original sequence-player,
+`hwsubmit=42`, `hwtri=202`, `hwftr=2/626`. FGM/voice, original sequence-player,
 and non-critical HUD/SObj/particle work remain follow-up.
 The memory ledger reports headroom `237948`, resident reloc `681632` bytes
 (`stage=202816`, `fighter=175440`, `if=208672`), stale bytes `0/0`, and
 `172412` bytes after the 64 KiB BGM buffer against the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land;
-source-separated Mario/Fox bodies are broadly accepted on DS. Latest capture:
-`artifacts/visibility/2026-07-11_dream-land-texel1-materials-hudoff-final.png`.
+source-separated Mario/Fox bodies are broadly accepted on DS. The current
+capture restores the foreground fence and all five flower groups:
+`artifacts/visibility/2026-07-11_dream-land-fences-flowers-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. A source-shaped `gcAddMObjAll` wrapper
 uses loaded-file/asset-generation provenance for local O2R lane restoration.
@@ -99,27 +100,25 @@ tile-6/TMEM-0x40 TEXEL1 and tile-7/TMEM-0 TEXEL0, recognizes exact
 gate proves positive scene-lifetime compatible-state refresh, zero eviction/
 reject/oracle drift, and terminal `12/12` matches. Pond detail is
 `46.053%/23px` versus white `27.997%/105px`.
-Imported DObj/MObj/CObj AObj32 attachments now
-normalize complete N64 MSB-first command graphs once per reloc generation;
-fighter AObj16 streams bypass that path. Original timing/state stays live, and
-a host-independent post-step corrects packed RGBA byte arithmetic. Persistent
-source vertex slots restore 44 cross-joint triangles. Source depth shares one
-clip vertex; no-Z layers use signed 20.12 NDC. Masked-clamp axes through 128
-texels materialize source addressing; six CI4 stars render correctly. Nonzero
-`LOADBLOCK` DXT reconstructs source DRAM stride and removes Fox tail's
-alternating CI4 padding rows. The 192-wide island remains masked-clamp debt.
-Source scene light, selected material light seed, and N64 RGBA order are live.
-Debt: flowers, confirmed floor/path occlusion of foreground fences, Whispy face
-acceptance, fractional water phase, shifts, other TEXEL1 formulas, fog/color
-animation/raw GX matrices/speed, and Mario's unclassified pant lighting.
+Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
+command graphs once per reloc generation; fighter AObj16 bypasses that path.
+Original timing remains live, and a post-step corrects packed RGBA. Persistent
+fighter vertex slots retain 44 cross-joint triangles. Source depth shares one
+clip vertex. Projected no-Z depth now has background/foreground phases: layer 0
+remains far before source-Z; layer 3 moves near afterward, restoring the fence
+over layer-1 floor/path. Stage traversal carries its 32-slot RSP vertex cache
+and applies `G_MWO_POINT_ST`; File3's five flower groups add ten source textured
+triangles (`192 -> 202`). Masked-clamp axes through 128 texels, six CI4 stars,
+and the DXT tail stride remain fixed. Debt: Whispy face acceptance, water phase/
+shifts/other TEXEL1, fog/color animation/raw GX matrices/speed, and Mario light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped
 realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Fix floor/path depth ordering over foreground fences; restore flowers.
-2. Accept or refine the changed Whispy face; preserve 10.2 water phase.
-3. Turn Mario under a fixed light to classify the pant-leg asymmetry.
+1. Accept or refine the changed Whispy face; preserve 10.2 water phase.
+2. Turn Mario under a fixed light to classify the pant-leg asymmetry.
+3. Cover phase/shifts, other TEXEL1 formulas, and fog/color animation.
 4. Cache corrected draw/SObj/material state for stable audio and 60fps.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
@@ -136,7 +135,7 @@ For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical chunks:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Stamped RegressionCore passed; Tyler skipped full Regression for faster iteration. Run the overnight sweep later if desired.
+Focused battle, DevFast, and Boundary passed at 202; the fresh RegressionCore prebuild stamp is valid. Full Regression was skipped per Tyler.
 Detach prebuilds expected to exceed 90 seconds and confirm by stamp:
 
 ```powershell

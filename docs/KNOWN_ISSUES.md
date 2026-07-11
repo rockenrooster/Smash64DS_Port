@@ -1067,7 +1067,7 @@
   source-ordered. Canonical fallback use is zero. Both fighters are broadly
   recognizable on DS; Mario's pant-leg asymmetry remains unclassified until a
   fixed-light opposite-facing A/B. Anim-lock, fog/color-animation coverage,
-  and exact global RSP state ownership remain active debt.
+  and exact cross-GObj/camera-wide RSP state ownership remain active debt.
   Dream Land's source
   player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated
@@ -1088,18 +1088,19 @@
   The large pond now recognizes its exact TEXEL0/TEXEL1 mux and runs a DS
   RGBA5551/A1 precomposition approximation. Whispy material lanes now normalize
   on the live path; Tyler accepts the corrected water. Final face-strip
-  comparison and missing ground flowers remain visual work. Foreground fence
-  geometry is present but is drawn over by the floor/path, a confirmed depth/
-  ordering defect. Other texture debt
+  comparison remains visual work. Ground flowers and the foreground fence are
+  no longer active issues: per-traversal RSP cache/ST carry restores all five
+  flower groups, while two-phase no-Z ordering restores the fence over the
+  floor/path. Other texture debt
   includes fractional relative tile-origin phase, nonzero shifts,
   DXT-zero/pre-swizzled loads, other TEXEL1 formulas, unmasked POT padding, and
   camera-wide state ownership. Do not conflate mask, load, logical, or upload
   extents again.
-- Projected HW submission now takes X/Y/Z from one current composed clip vertex.
-  No-Z layers submit their synthetic far order directly in signed 20.12 NDC;
-  the removed extra `<< 4` had made those layers occlude source-depth geometry.
-  Exact source no-Z write/ordering behavior and the raw GX matrix path remain
-  deferred. Full source-selected
+- Projected HW submission takes X/Y/Z from one composed clip vertex. Early no-Z
+  background draws count down from far signed 20.12 NDC; the first submitted
+  source-Z triangle switches later no-Z painter draws to the near foreground
+  range without consuming a synthetic slot. This restores source layer-3 over
+  layer-1 ordering. Exact raw-GX/no-Z behavior remains deferred. Full source-selected
   fighter submission plus the current CPU-scaled 300x220 wallpaper and water
   precomposition presents at about `0.8fps`; caching remains P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R

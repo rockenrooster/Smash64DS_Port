@@ -18964,3 +18964,29 @@ and a `35%/60px` pond-detail ratchet. Coverage-reduced verifier expectations:
 the global registered temporal ceiling moved `25% -> 30%` after the corrected
 source scene measured `26.555%`; the new pond ratchet prevents a white-water
 regression that the broader temporal ceiling could not detect.
+
+## 2026-07-11 - Dream Land depth phases and flower RSP cache
+
+- `grdisplay.c` makes layer 0 a no-Z background, layer 1 source-Z, and layer 3
+  a no-Z foreground. DS projected depth now begins far, switches only after the
+  first submitted source-Z triangle, and does not spend synthetic slots on
+  source-Z draws. This restores both foreground fence cards over the floor/path.
+- File3 descriptors `0x2A80/0x31F8` contain five textured child lists that reuse
+  cached vertices 0/1, replace their ST with `G_MWO_POINT_ST`, load only 2/3,
+  and issue `TRI2`. Stage submission had carried diagnostic state but passed no
+  renderer vertex cache. It now shares `NDSRendererVertexCache` across the
+  traversal and implements the source ST replacement in renderer/diagnostics.
+- All five original flower groups are visible. The ten restored textured
+  triangles raise canonical stage output from `192` to `202`; there is no new
+  geometry, asset, MObj, or gameplay rewrite. Tyler accepted both flowers and
+  the foreground fences in the canonical capture.
+- GBI fixtures, focused `battle_playable`, DevFast, and Boundary passed with
+  zero texture rejects and oracle `2403/0/0`. A fresh RegressionCore prebuild
+  stamp passed. Optional no-build shards exposed a moving fixed fighter crop
+  and an unsigned-to-Int32 verifier parse overflow, not ROM marker failures.
+  Full Regression was intentionally skipped for faster iteration per Tyler.
+
+Source-corrected verifier expectations: stage HW output gains ten original
+flower triangles (`192 -> 202`) and fixtures require source-Z draws not to
+consume synthetic painter depth. Coverage-reduced verifier expectations: none;
+full Regression was not run by explicit user choice.
