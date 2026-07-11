@@ -6,6 +6,7 @@ param(
     [int]$Width = 256,
     [int]$Height = 192,
     [int]$ChannelThreshold = 20,
+    [switch]$WindowScaledCapture,
     [Parameter(Mandatory=$true)]
     [string[]]$Region
 )
@@ -17,6 +18,7 @@ if ($ChannelThreshold -lt 1) {
     throw 'ChannelThreshold must be positive.'
 }
 Add-Type -AssemblyName System.Drawing
+. (Join-Path $PSScriptRoot 'lib\melonds-screenshot.ps1')
 function Convert-RegionSpec($Spec) {
     if ($Spec -notmatch '^([^:]+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]*\.?[0-9]+),([0-9]+)$') {
         throw "Invalid detail region '$Spec'. Expected name:x,y,width,height,minVariation,maxFlatRun."
@@ -48,12 +50,12 @@ function Measure-HorizontalDetail {
     for ($y = 0; $y -lt $Spec.Height; $y++) {
         $flatRun = 1
         $previous = $Bitmap.GetPixel(
-            $TopX + $Spec.X,
-            $TopY + $Spec.Y + $y)
+            $Spec.X,
+            $Spec.Y + $y)
         for ($x = 1; $x -lt $Spec.Width; $x++) {
             $current = $Bitmap.GetPixel(
-                $TopX + $Spec.X + $x,
-                $TopY + $Spec.Y + $y)
+                $Spec.X + $x,
+                $Spec.Y + $y)
             $delta = [Math]::Max(
                 [Math]::Abs([int]$current.R - [int]$previous.R),
                 [Math]::Max(
@@ -89,15 +91,19 @@ function Measure-HorizontalDetail {
             $Spec.Name, $maxFlatRun, $Spec.MaxFlatRun)
     }
 }
-$bitmap = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Image).Path)
+$windowBitmap = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Image).Path)
+$bitmap = $null
 try {
-    if (($TopX + $Width) -gt $bitmap.Width -or
-        ($TopY + $Height) -gt $bitmap.Height) {
-        throw "Top-screen crop ${TopX},${TopY} ${Width}x${Height} exceeds image $($bitmap.Width)x$($bitmap.Height)."
-    }
+    $bitmap = Convert-MelonDSWindowTopToNativeBitmap `
+        -Bitmap $windowBitmap -Width $Width -Height $Height `
+        -TopX $TopX -TopY $TopY `
+        -WindowScaledCapture:$WindowScaledCapture
     foreach ($specText in $Region) {
         Measure-HorizontalDetail -Bitmap $bitmap -Spec (Convert-RegionSpec $specText)
     }
 } finally {
-    $bitmap.Dispose()
+    if ($null -ne $bitmap) {
+        $bitmap.Dispose()
+    }
+    $windowBitmap.Dispose()
 }

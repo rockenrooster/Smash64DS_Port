@@ -22,6 +22,9 @@ param(
     [double]$MaxCompareChangedFraction = -1.0,
     [int]$CompareChannelThreshold = 1,
     [double]$MaxCompareMeanChannelDelta = -1.0,
+    [switch]$RegisterCompareCamera,
+    [double]$MinCompareOverlapFraction = 0.95,
+    [switch]$WindowScaledCapture,
     [string[]]$NamedRegion = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -33,6 +36,7 @@ if (-not [string]::IsNullOrWhiteSpace($CompareImage) -and
     throw "Comparison screenshot not found: $CompareImage"
 }
 Add-Type -AssemblyName System.Drawing
+. (Join-Path $PSScriptRoot 'lib\melonds-screenshot.ps1')
 function Test-DominantGreenPixel($Pixel) {
     return (($Pixel.G -ge 80) -and
         ($Pixel.G -gt ($Pixel.R + 20)) -and
@@ -59,6 +63,68 @@ function Test-FighterDetailPixel($Pixel) {
     return ((Test-SceneDetailPixel $Pixel) -ne $false) -and
         ($range -gt 80) -and
         ($yellowStage -eq $false)
+}
+function Find-TopCompareRegistration {
+    param(
+        [Parameter(Mandatory=$true)]$Bitmap,
+        [Parameter(Mandatory=$true)]$CompareBitmap,
+        [int]$ChannelThreshold
+    )
+    $centerX = ([double]$Width - 1.0) / 2.0
+    $centerY = ([double]$Height - 1.0) / 2.0
+    $best = $null
+    for ($scaleStep = -2; $scaleStep -le 2; $scaleStep++) {
+        $scale = 1.0 + ([double]$scaleStep * 0.01)
+        for ($offsetY = -2; $offsetY -le 2; $offsetY++) {
+            for ($offsetX = -2; $offsetX -le 2; $offsetX++) {
+                $changed = 0
+                $compared = 0
+                [long]$deltaSum = 0
+                for ($y = 2; $y -lt ($Height - 2); $y += 4) {
+                    $compareY = [Math]::Round(
+                        $centerY + (($y - $centerY) * $scale) + $offsetY)
+                    if (($compareY -lt 0) -or ($compareY -ge $Height)) {
+                        continue
+                    }
+                    for ($x = 2; $x -lt ($Width - 2); $x += 4) {
+                        $compareX = [Math]::Round(
+                            $centerX + (($x - $centerX) * $scale) +
+                            $offsetX)
+                        if (($compareX -lt 0) -or ($compareX -ge $Width)) {
+                            continue
+                        }
+                        $pixel = $Bitmap.GetPixel($x, $y)
+                        $other = $CompareBitmap.GetPixel($compareX, $compareY)
+                        $delta = [Math]::Max(
+                            [Math]::Abs([int]$pixel.R - [int]$other.R),
+                            [Math]::Max(
+                                [Math]::Abs([int]$pixel.G - [int]$other.G),
+                                [Math]::Abs([int]$pixel.B - [int]$other.B)))
+                        if ($delta -ge $ChannelThreshold) { $changed++ }
+                        $deltaSum += $delta
+                        $compared++
+                    }
+                }
+                if ($compared -eq 0) { continue }
+                $score = [double]$changed / [double]$compared
+                $mean = [double]$deltaSum / [double]$compared
+                if (($null -eq $best) -or ($score -lt $best.Score) -or
+                    (($score -eq $best.Score) -and ($mean -lt $best.Mean))) {
+                    $best = [pscustomobject]@{
+                        Scale = $scale
+                        OffsetX = $offsetX
+                        OffsetY = $offsetY
+                        Score = $score
+                        Mean = $mean
+                    }
+                }
+            }
+        }
+    }
+    if ($null -eq $best) {
+        throw 'Could not register comparison screenshot camera motion.'
+    }
+    return $best
 }
 function Convert-NamedRegionSpec($Spec) {
     if ($Spec -notmatch '^([^:]+):([0-9]+),([0-9]+),([0-9]+),([0-9]+)$') {
@@ -94,8 +160,8 @@ function Measure-TopRegion {
     $fighterDetail = 0
     $changed = 0
     $total = $RegionWidth * $RegionHeight
-    for ($ry = ($TopY + $RegionY); $ry -lt ($TopY + $RegionY + $RegionHeight); $ry++) {
-        for ($rx = ($TopX + $RegionX); $rx -lt ($TopX + $RegionX + $RegionWidth); $rx++) {
+    for ($ry = $RegionY; $ry -lt ($RegionY + $RegionHeight); $ry++) {
+        for ($rx = $RegionX; $rx -lt ($RegionX + $RegionWidth); $rx++) {
             $pixel = $Bitmap.GetPixel($rx, $ry)
             if ((Test-ClearPixel $pixel) -eq $false) { $different++ }
             if (Test-DominantGreenPixel $pixel) { $dominantGreen++ }
@@ -126,30 +192,44 @@ function Measure-TopRegion {
     }
     Write-Output $message
 }
-$bitmap = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Image).Path)
+$windowBitmap = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Image).Path)
+$bitmap = $null
+$compareWindowBitmap = $null
 $compareBitmap = $null
 try {
-    if (($TopX + $Width) -gt $bitmap.Width -or
-        ($TopY + $Height) -gt $bitmap.Height) {
-        throw "Top-screen crop ${TopX},${TopY} ${Width}x${Height} exceeds image $($bitmap.Width)x$($bitmap.Height)."
-    }
+    $bitmap = Convert-MelonDSWindowTopToNativeBitmap `
+        -Bitmap $windowBitmap -Width $Width -Height $Height `
+        -TopX $TopX -TopY $TopY `
+        -WindowScaledCapture:$WindowScaledCapture
     if (-not [string]::IsNullOrWhiteSpace($CompareImage)) {
-        $compareBitmap = [System.Drawing.Bitmap]::FromFile(
+        $compareWindowBitmap = [System.Drawing.Bitmap]::FromFile(
             (Resolve-Path $CompareImage).Path)
-        if (($TopX + $Width) -gt $compareBitmap.Width -or
-            ($TopY + $Height) -gt $compareBitmap.Height) {
-            throw "Top-screen crop ${TopX},${TopY} ${Width}x${Height} exceeds comparison image $($compareBitmap.Width)x$($compareBitmap.Height)."
-        }
+        $compareBitmap = Convert-MelonDSWindowTopToNativeBitmap `
+            -Bitmap $compareWindowBitmap -Width $Width -Height $Height `
+            -TopX $TopX -TopY $TopY `
+            -WindowScaledCapture:$WindowScaledCapture
+    }
+    $compareRegistration = $null
+    if (($null -ne $compareBitmap) -and $RegisterCompareCamera) {
+        $compareRegistration = Find-TopCompareRegistration `
+            -Bitmap $bitmap -CompareBitmap $compareBitmap `
+            -ChannelThreshold $CompareChannelThreshold
+        Write-Output ("Top screen camera registration: scale={0:F2} dx={1} dy={2} sample={3:P3}." -f
+            $compareRegistration.Scale,
+            $compareRegistration.OffsetX,
+            $compareRegistration.OffsetY,
+            $compareRegistration.Score)
     }
     $different = 0
     $dominantGreen = 0
     $nonWhiteNonGreen = 0
     $changed = 0
     $rawChanged = 0
+    $compareTotal = 0
     [long]$compareMaxDeltaSum = 0
     $total = $Width * $Height
-    for ($y = $TopY; $y -lt ($TopY + $Height); $y++) {
-        for ($x = $TopX; $x -lt ($TopX + $Width); $x++) {
+    for ($y = 0; $y -lt $Height; $y++) {
+        for ($x = 0; $x -lt $Width; $x++) {
             $pixel = $bitmap.GetPixel($x, $y)
             if ((Test-ClearPixel $pixel) -eq $false) {
                 $different++
@@ -161,7 +241,25 @@ try {
                 $nonWhiteNonGreen++
             }
             if ($null -ne $compareBitmap) {
-                $other = $compareBitmap.GetPixel($x, $y)
+                $compareX = $x
+                $compareY = $y
+                if ($null -ne $compareRegistration) {
+                    $centerX = ([double]$Width - 1.0) / 2.0
+                    $centerY = ([double]$Height - 1.0) / 2.0
+                    $compareX = [Math]::Round(
+                        $centerX + (($x - $centerX) *
+                        $compareRegistration.Scale) +
+                        $compareRegistration.OffsetX)
+                    $compareY = [Math]::Round(
+                        $centerY + (($y - $centerY) *
+                        $compareRegistration.Scale) +
+                        $compareRegistration.OffsetY)
+                }
+                if (($compareX -lt 0) -or ($compareY -lt 0) -or
+                    ($compareX -ge $Width) -or ($compareY -ge $Height)) {
+                    continue
+                }
+                $other = $compareBitmap.GetPixel($compareX, $compareY)
                 $delta = [Math]::Max(
                     [Math]::Abs([int]$pixel.R - [int]$other.R),
                     [Math]::Max(
@@ -174,6 +272,7 @@ try {
                     $changed++
                 }
                 $compareMaxDeltaSum += $delta
+                $compareTotal++
             }
         }
     }
@@ -223,8 +322,8 @@ try {
         $regionDetail = 0
         $regionFighterDetail = 0
         $regionTotal = $RequiredRegionWidth * $RequiredRegionHeight
-        for ($ry = ($TopY + $RequiredRegionY); $ry -lt ($TopY + $RequiredRegionY + $RequiredRegionHeight); $ry++) {
-            for ($rx = ($TopX + $RequiredRegionX); $rx -lt ($TopX + $RequiredRegionX + $RequiredRegionWidth); $rx++) {
+        for ($ry = $RequiredRegionY; $ry -lt ($RequiredRegionY + $RequiredRegionHeight); $ry++) {
+            for ($rx = $RequiredRegionX; $rx -lt ($RequiredRegionX + $RequiredRegionWidth); $rx++) {
                 $regionPixel = $bitmap.GetPixel($rx, $ry)
                 if (Test-SceneDetailPixel $regionPixel) {
                     $regionDetail++
@@ -259,9 +358,18 @@ try {
         }
     }
     if ($null -ne $compareBitmap) {
-        $changedFraction = [double]$changed / [double]$total
-        $rawChangedFraction = [double]$rawChanged / [double]$total
-        $meanChannelDelta = [double]$compareMaxDeltaSum / [double]$total
+        if ($compareTotal -eq 0) {
+            throw 'Comparison screenshot has no overlapping top-screen pixels.'
+        }
+        $overlapFraction = [double]$compareTotal / [double]$total
+        if ($overlapFraction -lt $MinCompareOverlapFraction) {
+            throw ("Top screen comparison overlap {0:P3} is below required {1:P3}." -f
+                $overlapFraction, $MinCompareOverlapFraction)
+        }
+        $changedFraction = [double]$changed / [double]$compareTotal
+        $rawChangedFraction = [double]$rawChanged / [double]$compareTotal
+        $meanChannelDelta = [double]$compareMaxDeltaSum /
+            [double]$compareTotal
         if (($MinCompareChangedFraction -ge 0.0) -and
             ($changedFraction -lt $MinCompareChangedFraction)) {
             throw ("Top screen delta too small: {0}/{1} changed pixels ({2:P3}) below required {3:P3}." -f
@@ -277,10 +385,10 @@ try {
             throw ("Top screen mean max-channel delta {0:F2} exceeds allowed {1:F2}." -f
                 $meanChannelDelta, $MaxCompareMeanChannelDelta)
         }
-        Write-Output ("Top screen delta: raw={0}/{1} ({2:P3}) meaningful={3}/{1} ({4:P3}, channel>={5}) mean={6:F2}." -f
-            $rawChanged, $total, $rawChangedFraction,
+        Write-Output ("Top screen delta: raw={0}/{1} ({2:P3}) meaningful={3}/{1} ({4:P3}, channel>={5}) mean={6:F2} overlap={7:P3}." -f
+            $rawChanged, $compareTotal, $rawChangedFraction,
             $changed, $changedFraction, $CompareChannelThreshold,
-            $meanChannelDelta)
+            $meanChannelDelta, $overlapFraction)
     }
     foreach ($regionSpec in $NamedRegion) {
         $region = Convert-NamedRegionSpec $regionSpec
@@ -292,5 +400,11 @@ try {
     if ($null -ne $compareBitmap) {
         $compareBitmap.Dispose()
     }
-    $bitmap.Dispose()
+    if ($null -ne $compareWindowBitmap) {
+        $compareWindowBitmap.Dispose()
+    }
+    if ($null -ne $bitmap) {
+        $bitmap.Dispose()
+    }
+    $windowBitmap.Dispose()
 }

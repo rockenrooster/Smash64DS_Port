@@ -18822,3 +18822,29 @@ expectations: none.
 Source-corrected verifier expectations: texture-detail crop now measures the
 named shrub with unchanged thresholds. Coverage-reduced verifier expectations:
 none.
+
+## 2026-07-11 - Deterministic canonical screenshot backend
+
+- Reproduced an all-white `-OpenGL4x` capture with both the current candidate
+  and the untouched shipped ROM; software 3D rendered the shipped frame
+  correctly. Added `capture-melonds.ps1 -SoftwareRenderer` and pinned the
+  canonical pixel ratchet to software 3D. Tall window captures are normalized
+  to the actual native `256x192` top screen before analysis; OpenGL4x remains
+  a manual inspection option only.
+- Removed the old partial-screen crop blind spot. The canonical gate now probes
+  separate Fox/Mario regions at the source-start camera, raises right-shrub
+  horizontal detail from `27%/32px` to `50%/16px`, and raises island-body
+  variation from `18%` to `30%`. A bounded `0.98..1.02` scale and `-2..2px`
+  translation registration removes coherent source camera motion, requires
+  at least 95% overlap, then applies the unchanged 25% flashing ceiling.
+  Fresh proof measured Fox/Mario fighter-color `29.293%/22.707%`, shrub
+  `60.000%/11px`, island `38.028%`, and registered delta `24.237%` over
+  `96.004%` overlap.
+- Rejected a LOADBLOCK-DXT source-stride candidate: broad activation removed
+  Dream Land pixels, while an exact load-span/TMEM-owned restriction changed
+  zero canonical pixels. The renderer and fixtures were restored rather than
+  landing a counters-only change.
+
+Source-corrected verifier expectations: obsolete partial-window object regions
+now measure the native source-start frame; all content floors stayed equal or
+became stricter. Coverage-reduced verifier expectations: none.

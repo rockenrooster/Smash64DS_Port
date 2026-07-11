@@ -1246,7 +1246,9 @@ isolating the compatibility type that causes the warning.
 - `scripts/capture-melonds.ps1` captures pixels from the visible desktop window.
   Keep melonDS unobstructed; the script foregrounds it and temporarily disables
   GDB for visible capture, but Windows focus policy and hidden-window launches
-  can still affect captures in remote or locked sessions.
+  can still affect captures in remote or locked sessions. The host OpenGL
+  renderer can produce a white frame for a known-good ROM on this setup, so
+  automated pixel gates pin software 3D and normalize the scaled top screen.
 - The current ledge action proofs clear `is_cliff_hold` and
   `is_jostle_ignore` through the bounded `ftMainSetStatus` seam, and the
   CliffClimb finish proof now verifies the broader current common-reset mask

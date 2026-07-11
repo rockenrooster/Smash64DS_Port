@@ -6,12 +6,16 @@ param(
     [int]$DelaySeconds = 32,
     [switch]$Unthrottled,
     [switch]$OpenGL4x,
+    [switch]$SoftwareRenderer,
     [switch]$MaximizeVertical,
     [string]$SecondOutput,
     [int]$SecondDelaySeconds = 1,
     [int]$SecondDelayMilliseconds = 0
 )
 $ErrorActionPreference = 'Stop'
+if ($OpenGL4x -and $SoftwareRenderer) {
+    throw '-OpenGL4x and -SoftwareRenderer are mutually exclusive.'
+}
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $melonDsPath = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
     $MelonDS
@@ -146,7 +150,10 @@ try {
             $visibleConfig = $visibleConfig -replace
                 '(?ms)(\[JIT\].*?^Enable\s*=\s*)true\s*$', '${1}false'
         }
-        if ($OpenGL4x) {
+        if ($SoftwareRenderer) {
+            $visibleConfig = $visibleConfig -replace
+                '(?m)^(Renderer\s*=\s*)[0-9]+\s*$', '${1}0'
+        } elseif ($OpenGL4x) {
             $visibleConfig = $visibleConfig -replace
                 '(?m)^(Renderer\s*=\s*)[0-9]+\s*$', '${1}1'
             $visibleConfig = $visibleConfig -replace

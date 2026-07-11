@@ -115,9 +115,14 @@ For faster visual iteration, pass `-Unthrottled` to `capture-melonds.ps1`.
 It temporarily disables melonDS FPS limiting, keeps JIT disabled, and restores
 the config afterward. The native software renderer remains the marker/geometry
 baseline. The canonical texture-detail pixel ratchet explicitly passes
-`-OpenGL4x` and restores the config afterward; never compare its percentages
-with native-runner captures. Use `-OpenGL4x -MaximizeVertical` to expand a
-secondary inspection view to desktop height while preserving aspect ratio.
+`-SoftwareRenderer -MaximizeVertical`, then normalizes the displayed top
+screen back to native `256x192`; user-local window/OpenGL settings therefore
+cannot move its source-backed regions or turn a known-good ROM white. Its
+frame-delta gate registers only bounded source-camera motion (plus or minus
+2% scale and 2px translation) and requires at least 95% overlap before applying
+the unchanged 25% flashing ceiling. `-OpenGL4x` remains an optional secondary
+inspection mode, not a pixel oracle; never compare its percentages with
+software-renderer captures.
 After resizing an OpenGL window, allow at least one presented frame before a
 comparison capture; a 100ms sample can catch the resize transition at 12fps.
 Verifier launches use the same unthrottled interpreter policy automatically;

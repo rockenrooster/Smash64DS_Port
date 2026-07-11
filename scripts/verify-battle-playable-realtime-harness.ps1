@@ -13,7 +13,7 @@ param(
     [double]$MaxScreenshotChangedFraction = 0.25,
     [double]$MinScreenshotGreenFraction = 0.03,
     [double]$MinScreenshotDetailFraction = 0.25,
-    [double]$MinFighterRegionFraction = 0.02,
+    [double]$MinFighterRegionFraction = 0.10,
     [switch]$IncludeShippedParity
 )
 $ErrorActionPreference = 'Stop'
@@ -24,16 +24,17 @@ $earlyScreenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 12)
 $lateScreenshotDelaySeconds = 12
 $captureStamp = Get-Date -Format 'HHmmss'
 $visibleRegions = @(
-    'left_bush:45,120,60,50',
-    'right_bush:150,120,65,50',
-    'fighter_center:95,95,65,65',
-    'stage_body:45,145,170,45'
+    'left_bush:70,82,50,35',
+    'right_bush:165,82,50,35',
+    'fox:80,55,45,55',
+    'mario:125,85,45,55',
+    'stage_body:50,110,165,45'
 )
 $textureDetailRegions = @(
     # StagePupupuFile2.c:423-424 and StagePupupuImages.c:103-113 place the
     # flowering side object below the platform; keep this texture gate on it.
-    'right_bush:150,145,65,30,0.27,32',
-    'stage_body:40,135,180,30,0.18,0'
+    'right_bush:170,88,40,20,0.50,16',
+    'stage_body:50,115,165,30,0.30,0'
 )
 function Invoke-VisibleCaptureAssert {
     param(
@@ -50,7 +51,8 @@ function Invoke-VisibleCaptureAssert {
     & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
         -MelonDS $MelonDS `
         -Rom $Rom `
-        -OpenGL4x `
+        -SoftwareRenderer `
+        -MaximizeVertical `
         -Output $output `
         -SecondOutput $nextOutput `
         -SecondDelaySeconds $ScreenshotSecondDelaySeconds `
@@ -64,24 +66,42 @@ function Invoke-VisibleCaptureAssert {
         -CompareImage $nextOutput `
         -MinDominantGreenFraction $MinScreenshotGreenFraction `
         -MinNonWhiteNonGreenFraction $MinDetailFraction `
-        -RequiredRegionX 92 `
-        -RequiredRegionY 70 `
-        -RequiredRegionWidth 78 `
-        -RequiredRegionHeight 72 `
+        -RequiredRegionX 80 `
+        -RequiredRegionY 55 `
+        -RequiredRegionWidth 45 `
+        -RequiredRegionHeight 55 `
         -MinRequiredRegionFraction $MinRegionFraction `
         -MinRequiredRegionFighterFraction $MinRegionFighterFraction `
         -CompareChannelThreshold 25 `
         -MaxCompareMeanChannelDelta 32 `
+        -RegisterCompareCamera `
         -MaxCompareChangedFraction $MaxScreenshotChangedFraction `
         -MinDifferentFraction 0.01 `
+        -WindowScaledCapture `
         -NamedRegion $visibleRegions
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
+    }
+    if ($MinRegionFighterFraction -ge 0.0) {
+        & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+            -Image $output `
+            -RequiredRegionX 125 `
+            -RequiredRegionY 85 `
+            -RequiredRegionWidth 45 `
+            -RequiredRegionHeight 55 `
+            -MinRequiredRegionFraction $MinRegionFraction `
+            -MinRequiredRegionFighterFraction $MinRegionFighterFraction `
+            -MinDifferentFraction 0.01 `
+            -WindowScaledCapture
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
     }
     if ($RequireTextureDetail) {
         & (Join-Path $PSScriptRoot 'assert-melonds-horizontal-detail.ps1') `
             -Image $output `
             -ChannelThreshold 20 `
+            -WindowScaledCapture `
             -Region $textureDetailRegions
         if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
