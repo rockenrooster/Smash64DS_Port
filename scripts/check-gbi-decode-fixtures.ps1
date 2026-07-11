@@ -1041,6 +1041,15 @@ Assert-True ($renderer.Contains('ndsRendererRecordLightMoveMem')) 'Renderer ligh
 Assert-True ($renderer.Contains('NDS_RENDERER_MOVEWORD_LIGHTCOL')) 'Renderer G_MW_LIGHTCOL state target is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordLightColorMoveWord')) 'Renderer light-color move-word state recorder is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareLitShadeColor')) 'Renderer lit SHADE path is missing.'
+$litPrepare = $renderer.LastIndexOf('static void ndsRendererHardwarePrepareLitDirection(')
+$litDiffuse = $renderer.IndexOf('static u32 ndsRendererHardwareLitDiffuseNumer(', $litPrepare)
+$litSqrt = $renderer.IndexOf('sqrtf(', $litPrepare)
+$litPreparedCall = $renderer.IndexOf('prepared_light_direction = &light_direction;')
+$litVertexLoop = $renderer.IndexOf('for (i = 0u; i < count; i++)', $litPreparedCall)
+Assert-True ($litPrepare -ge 0 -and $litDiffuse -gt $litPrepare -and $litSqrt -gt $litPrepare -and $litSqrt -lt $litDiffuse) 'Renderer light normalization is not isolated from the per-vertex diffuse dot product.'
+Assert-True ($litPreparedCall -ge 0 -and $litVertexLoop -gt $litPreparedCall) 'Renderer does not prepare the invariant light direction before each source G_VTX loop.'
+Assert-Equal ([regex]::Matches($renderer, 'sqrtf\(').Count) 1 'Renderer restored more than one light-normalization square root site.'
+Assert-True ($renderer.Contains('stats, &input, prepared_light_direction')) 'Renderer vertex colors do not consume the source-command prepared light direction.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPackColor(&mobj->sub.light1color)')) 'Fighter material light 1 still depends on host-endian SYColorPack.pack layout.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPackColor(&mobj->sub.light2color)')) 'Fighter material light 2 still depends on host-endian SYColorPack.pack layout.'

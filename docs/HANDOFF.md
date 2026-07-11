@@ -53,7 +53,7 @@ geometry/prim/env/light and cycle/render state; `dls[0]` uses parent state.
 The adapter now preserves the 32-slot input/transformed RSP vertex cache across
 the selected part sequence, as BattleShip's common `gSYTaskmanDLHeads[0]`
 stream does. All-DL HW output is the full `320/306` Mario/Fox triangle set with
-zero rejects; canonical reports `gxram=730/2214`, geometry `0x222005`, cycle/
+zero rejects; canonical reports `gxram=742/2251`, geometry `0x222005`, cycle/
 render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
 Initial diffuse/ambient state comes from the first selected source `MObjSub`
 (`0xffffff00/0x4c4c4c00`); per-part overrides carry and fallback use is zero.
@@ -103,9 +103,9 @@ Canonical lanes remain `37200/37200` and oracle `2403/0/0`. The exact 300x220
 wallpaper cache remains `1/44/45/fallback0/opaque66000`. Adjacent TRI1/TRI2
 commands now share a same-state GX batch, with every other source opcode and
 list exit as a hard boundary; proof is `begin103/reuse725/end103` for the
-unchanged `828` triangles. The CI4 pair table then cuts present
-`24,238,464 -> 20,285,888` (`-16.3%`), draw `16.2%`, and texture conversion
-`42.8%`; pacing is `16/16 x0.1`. Accepted capture: `artifacts/visibility/2026-07-11_canonical_fast_162528-9583521-p27704.png`.
+unchanged `828` triangles. After the CI4 table reaches `20,285,888` ticks,
+one exact light normalization per `G_VTX` cuts present to `19,725,696` (`-2.8%`),
+draw `3.0%`, and DL `4.3%`. Capture: `artifacts/visibility/2026-07-11_canonical_fast_170758-1981780-p35312.png`.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -122,9 +122,9 @@ realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Continue measured renderer work; the exact water lookup leaves `1.6fps`.
-2. Refine Whispy and Mario light A/B; cover phase/shifts and fog/color animation.
-3. Keep the full five-minute soak for milestones rather than each edit.
+1. Add review-driven profile levels and separate no-oracle performance proof.
+2. Prove corrected hybrid raw GX for compatible ordinary source-Z triangles.
+3. Cut software 2D to exact final-resolution output; soak only at milestones.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
@@ -143,8 +143,8 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-All four compact P1Gate legs pass in `180.8s`, and fresh Boundary passes in
-`77.6s`. The lifecycle is not the five-minute P1 soak. Keep historical
+All four compact P1Gate legs pass in `177.2s`, and fresh Boundary passes in
+`83.5s`. The lifecycle is not the five-minute P1 soak. Keep historical
 harnesses for localization; Full Regression was skipped.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

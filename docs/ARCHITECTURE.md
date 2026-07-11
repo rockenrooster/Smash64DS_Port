@@ -1117,6 +1117,11 @@ source-selected material's copied `MObjSub` (`objman.c:1302-1335`), then keeps
 the original `objdisplay.c:1289-1295` light-color commands authoritative in
 event order. This is confined to the fighter display seam; generic lit lists
 retain their own state and fallback policy.
+The transformed/normalized light direction is invariant for all vertices in a
+single source `G_VTX` command. The DS adapter now evaluates the unchanged float
+transform, `sqrtf`, and divisions once before that command's loop, then retains
+the exact per-vertex normal dot and color math. This matches sm64-nds' dirty-
+light architecture without changing the resulting integer direction.
 BattleShip appends each selected part list to the same display-list head
 (`ftdisplaymain.c:780-805,871-899`), so the RSP's 32 transformed vertex slots
 survive matrix changes and later parts can join against earlier slots. The DS

@@ -1160,7 +1160,9 @@
   reduces present again to `24,238,464` (`-2.1%`). An exact 256-entry CI4
   palette-pair table preserves source addressing/coverage while reducing
   present to `20,285,888` (`-16.3%`) and conversion to `5,035,776` (`-42.8%`);
-  pacing is still only `16/16 x0.1`, so broader renderer work remains.
+  command-hoisted exact light normalization reduces present again to
+  `19,725,696` (`-2.8%`) and DL work `4.3%`. Pacing is still only
+  `16/16 x0.1`, so profile/no-oracle, raw-GX, and software-2D work remain.
   Audible BGM resyncs remain possible while frames exceed the half-buffer
   deadline. Lane totals remain aggregate conversion observations covered by
   host byte/halfword fixtures.

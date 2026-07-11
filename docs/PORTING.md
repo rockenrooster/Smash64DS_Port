@@ -19184,3 +19184,33 @@ removing historical diagnostics.
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none; the lookup is exact against the prior pixel oracle and the
 generic path remains available.
+
+## 2026-07-11 - Source-command light normalization
+
+- Audited BattleShip `ftdisplaylights.c`, `libultra/gu/normalize.c`, and the
+  bundled sm64-nds `g_vtx` path. Modelview and source light state are invariant
+  across one `G_VTX`; only the dot against each vertex normal varies. The DS
+  path had repeated the same transform, `sqrtf`, and three divides per vertex.
+- Split exact direction preparation from the unchanged diffuse dot/color math
+  and prepare it once before each source vertex loop. Generic fallback coloring
+  retains the previous raw-direction behavior. Host fixtures pin preparation
+  before the loop, the single square-root site, and prepared-direction use.
+- Canonical keeps `2484/828` hardware output, `103/725/103` batches,
+  `2403/0/0` oracle, `37200/37200` texture lanes, two water uploads, and all
+  pixel/depth contracts. Present falls `20,285,888 -> 19,725,696` (`-2.8%`),
+  draw `20,014,528 -> 19,412,800` (`-3.0%`), and DL
+  `14,508,800 -> 13,881,152` (`-4.3%`); pacing still rounds to `1.6fps`.
+- Reconciled Tyler's four 17:00 optimization reviews without modifying them.
+  A broader dirty-state light cache measured slightly worse and was removed.
+  The review-backed next architectural sequence is performance/forensic profile
+  separation, a corrected hybrid raw-GX matrix proof, then exact final-resolution
+  2D composition; the reviews predate the landed wallpaper/water optimizations.
+- DevFast, all four P1Gate legs (`177.2s`), and fresh Boundary (`83.5s`) pass.
+  Canonical/shipped parity is `11,581,440` bytes at SHA-256
+  `50FBD84612C47E94122D8C54396D0C5C0F47F2939D808107C7233963752E1CB3`.
+  Accepted capture: `artifacts/visibility/2026-07-11_canonical_fast_170758-1981780-p35312.png`.
+  Full Regression remains skipped for Tyler's faster P1 cadence.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: none; the normalization result and all integrated gates remain
+unchanged while repeated command-local work is removed.

@@ -311,6 +311,13 @@ typedef struct NDSRendererHardwareTexel1Source
     s32 materialize_t;
 } NDSRendererHardwareTexel1Source;
 
+typedef struct NDSRendererHardwareLightDirection
+{
+    s32 x;
+    s32 y;
+    s32 z;
+} NDSRendererHardwareLightDirection;
+
 static NDSRendererHardwareTextureCacheEntry
     sNdsRendererHardwareTextureCache[NDS_RENDERER_HW_TEXTURE_CACHE_COUNT];
 static u32 sNdsRendererHardwareTextureCacheNext;
@@ -352,6 +359,14 @@ typedef struct NDSRendererTraversalState
 } NDSRendererTraversalState;
 
 #if NDS_RENDERER_HW_TRIANGLES
+static void ndsRendererHardwarePrepareLitDirection(
+    const NDSRendererStats *stats,
+    const NDSRendererMatrix20p12 *modelview,
+    NDSRendererHardwareLightDirection *out);
+static u32 ndsRendererHardwareLitShadeColorPrepared(
+    NDSRendererStats *stats,
+    const NDSRendererInputVertex *vtx,
+    const NDSRendererHardwareLightDirection *direction);
 static u32 ndsRendererHardwareLitShadeColor(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
@@ -1631,6 +1646,10 @@ static void ndsRendererApplyVertexCommand(
     u32 count;
     const u8 *src;
     u32 i;
+#if NDS_RENDERER_HW_TRIANGLES
+    NDSRendererHardwareLightDirection light_direction;
+    const NDSRendererHardwareLightDirection *prepared_light_direction = NULL;
+#endif
 
     if ((stats == NULL) || (state == NULL))
     {
@@ -1665,6 +1684,18 @@ static void ndsRendererApplyVertexCommand(
         return;
     }
 
+#if NDS_RENDERER_HW_TRIANGLES
+    if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
+        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
+    {
+        ndsRendererHardwarePrepareLitDirection(
+            stats,
+            (state->modelview_valid != 0u) ? &state->modelview : NULL,
+            &light_direction);
+        prepared_light_direction = &light_direction;
+    }
+#endif
+
     for (i = 0u; i < count; i++)
     {
         NDSRendererInputVertex input;
@@ -1674,9 +1705,9 @@ static void ndsRendererApplyVertexCommand(
 #if NDS_RENDERER_HW_TRIANGLES
         state->input_vertices[v0 + i] = input;
         state->input_vertex_valid_mask |= 1u << (v0 + i);
-        state->vertex_colors[v0 + i] = ndsRendererHardwareLitShadeColor(
-            stats, &input,
-            (state->modelview_valid != 0u) ? &state->modelview : NULL);
+        state->vertex_colors[v0 + i] =
+            ndsRendererHardwareLitShadeColorPrepared(
+                stats, &input, prepared_light_direction);
         state->vertex_color_valid_mask |= 1u << (v0 + i);
         state->current_transform_vertex_mask |= 1u << (v0 + i);
 #endif
@@ -2630,26 +2661,26 @@ static u32 ndsRendererHardwareLightColor(NDSRendererStats *stats, u32 mask,
     return color;
 }
 
-static u32 ndsRendererHardwareLitDiffuseNumer(
+static void ndsRendererHardwarePrepareLitDirection(
     const NDSRendererStats *stats,
-    const NDSRendererInputVertex *vtx,
-    const NDSRendererMatrix20p12 *modelview)
+    const NDSRendererMatrix20p12 *modelview,
+    NDSRendererHardwareLightDirection *out)
 {
     s32 light_x;
     s32 light_y;
     s32 light_z;
-    s32 dot;
 
-    if ((stats == NULL) || (vtx == NULL) ||
-        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) == 0u))
+    if (out == NULL)
     {
-        return 127u;
+        return;
     }
 
-    light_x = stats->light_dir_x;
-    light_y = stats->light_dir_y;
-    light_z = stats->light_dir_z;
-    if (modelview != NULL)
+    light_x = (stats != NULL) ? stats->light_dir_x : 0;
+    light_y = (stats != NULL) ? stats->light_dir_y : 0;
+    light_z = (stats != NULL) ? stats->light_dir_z : 0;
+    if ((stats != NULL) &&
+        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
+        (modelview != NULL))
     {
         f32 transformed_x = (f32)(
             (s64)light_x * modelview->m[0][0] +
@@ -2675,6 +2706,31 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
         }
     }
 
+    out->x = light_x;
+    out->y = light_y;
+    out->z = light_z;
+}
+
+static u32 ndsRendererHardwareLitDiffuseNumer(
+    const NDSRendererStats *stats,
+    const NDSRendererInputVertex *vtx,
+    const NDSRendererHardwareLightDirection *direction)
+{
+    s32 light_x;
+    s32 light_y;
+    s32 light_z;
+    s32 dot;
+
+    if ((stats == NULL) || (vtx == NULL) ||
+        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) == 0u))
+    {
+        return 127u;
+    }
+
+    light_x = (direction != NULL) ? direction->x : stats->light_dir_x;
+    light_y = (direction != NULL) ? direction->y : stats->light_dir_y;
+    light_z = (direction != NULL) ? direction->z : stats->light_dir_z;
+
     dot = ((s32)(s8)vtx->r * light_x) +
         ((s32)(s8)vtx->g * light_y) +
         ((s32)(s8)vtx->b * light_z);
@@ -2689,9 +2745,10 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
     return (u32)((dot * 127) / (127 * 127));
 }
 
-static u32 ndsRendererHardwareLitShadeColor(NDSRendererStats *stats,
-                                            const NDSRendererInputVertex *vtx,
-                                            const NDSRendererMatrix20p12 *modelview)
+static u32 ndsRendererHardwareLitShadeColorPrepared(
+    NDSRendererStats *stats,
+    const NDSRendererInputVertex *vtx,
+    const NDSRendererHardwareLightDirection *direction)
 {
     u32 light_1;
     u32 light_2;
@@ -2722,7 +2779,7 @@ static u32 ndsRendererHardwareLitShadeColor(NDSRendererStats *stats,
     diffuse = light_1;
     ambient = light_2;
 
-    diffuse_numer = ndsRendererHardwareLitDiffuseNumer(stats, vtx, modelview);
+    diffuse_numer = ndsRendererHardwareLitDiffuseNumer(stats, vtx, direction);
     r = (s32)ndsRendererHardwareColorByte(ambient, 24) +
         (s32)((ndsRendererHardwareColorByte(diffuse, 24) * diffuse_numer) /
               127u);
@@ -2736,6 +2793,25 @@ static u32 ndsRendererHardwareLitShadeColor(NDSRendererStats *stats,
     return ((u32)ndsRendererHardwareClampColor(r) << 24) |
         ((u32)ndsRendererHardwareClampColor(g) << 16) |
         ((u32)ndsRendererHardwareClampColor(b) << 8) | (u32)vtx->a;
+}
+
+static u32 ndsRendererHardwareLitShadeColor(
+    NDSRendererStats *stats,
+    const NDSRendererInputVertex *vtx,
+    const NDSRendererMatrix20p12 *modelview)
+{
+    NDSRendererHardwareLightDirection direction;
+    const NDSRendererHardwareLightDirection *prepared_direction = NULL;
+
+    if ((stats != NULL) &&
+        ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
+        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
+    {
+        ndsRendererHardwarePrepareLitDirection(stats, modelview, &direction);
+        prepared_direction = &direction;
+    }
+    return ndsRendererHardwareLitShadeColorPrepared(
+        stats, vtx, prepared_direction);
 }
 
 static void ndsRendererHardwareColorVertex(
