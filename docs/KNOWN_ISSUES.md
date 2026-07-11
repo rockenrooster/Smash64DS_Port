@@ -1050,7 +1050,7 @@
   DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
   pixel-gated, but the frame is not yet demo-fidelity. Latest gate: GX RAM
   `729/2209`, source depth for stage/Mario/Fox, zero oracle mismatches, and a
-  HUD-off capture with `0.519%` meaningful adjacent-frame change. Dream Land
+  HUD-off capture with `21.179%` meaningful 100ms frame change. Dream Land
   and its original wallpaper are recognizable. The
   original fighter-display preamble and part-selection contract are now live;
   fighter attachment restores mixed-width O2R `MObjSub` lanes before the
@@ -1059,8 +1059,13 @@
   shade. Imported DObj/MObj/CObj AObj32 attachments now normalize complete
   source command graphs once per reloc generation, and packed RGBA output is
   corrected without replacing original animation timing. Fighter AObj16 data
-  remains on its separate original parser. Both fighters retain lower-body
-  fragments and incomplete directional light fidelity. Dream Land's source
+  remains on its separate original parser. The source VSBattle pre-render
+  light callback and modelview-transformed direction are live, and material
+  light words are rebuilt from named RGBA bytes instead of little-endian
+  `SYColorPack.pack`. A disposable full-light probe changed Mario's shoe from
+  dark `(65,20,24)` to source brown `(166,52,36)`, proving the material while
+  leaving harsh directional contrast and lower-body fragments as active debt.
+  Dream Land's source
   player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated
   source starts. The VSBattle wrapper's forced `is_skip_entry` remains a

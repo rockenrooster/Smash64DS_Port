@@ -2892,6 +2892,18 @@ static u32 ndsRendererAdapterClampU8F32(f32 value)
     return ndsRendererAdapterClampU8S32((s32)value);
 }
 
+static u32 ndsRendererAdapterPackColor(const SYColorPack *color)
+{
+    if (color == NULL)
+    {
+        return 0u;
+    }
+    return ((u32)color->s.r << 24) |
+           ((u32)color->s.g << 16) |
+           ((u32)color->s.b << 8) |
+           (u32)color->s.a;
+}
+
 static const void *ndsRendererAdapterReadPointerEntry(void **items,
                                                       s32 index)
 {
@@ -3214,12 +3226,14 @@ static Gfx *ndsRendererAdapterEmitMaterialCommands(Gfx *branch_dl, MObj *mobj)
     if ((flags & MOBJ_FLAG_LIGHT1) != 0)
     {
         branch_dl = ndsRendererAdapterEmitLightColor(
-            branch_dl, 1u, mobj->sub.light1color.pack);
+            branch_dl, 1u,
+            ndsRendererAdapterPackColor(&mobj->sub.light1color));
     }
     if ((flags & MOBJ_FLAG_LIGHT2) != 0)
     {
         branch_dl = ndsRendererAdapterEmitLightColor(
-            branch_dl, 2u, mobj->sub.light2color.pack);
+            branch_dl, 2u,
+            ndsRendererAdapterPackColor(&mobj->sub.light2color));
     }
     if ((flags & (MOBJ_FLAG_PRIMCOLOR | MOBJ_FLAG_FRAC | 0x8u)) != 0)
     {
@@ -5477,6 +5491,9 @@ typedef struct NDSFighterDisplayContract {
 } NDSFighterDisplayContract;
 
 static NDSFighterDisplayContract sNdsFighterDisplayContract;
+static Light sNdsFighterDisplayCurrentLight;
+static u32 sNdsFighterDisplayCurrentLightCount;
+static u32 sNdsFighterDisplayCurrentLightValid;
 static sb32 sNdsFighterDisplayContractPlayback;
 static u32 sNdsFighterDisplayContractLastFrame[2] = {
     0xffffffffu, 0xffffffffu
@@ -5536,6 +5553,7 @@ void ndsFighterDisplayContractSetPrimColor(u8 r, u8 g, u8 b, u8 a)
 
 void ndsFighterDisplayContractSetLightCount(u32 count)
 {
+    sNdsFighterDisplayCurrentLightCount = count;
     if (sNdsFighterDisplayContract.active != 0u)
     {
         sNdsFighterDisplayContract.light_count = count;
@@ -5545,14 +5563,24 @@ void ndsFighterDisplayContractSetLightCount(u32 count)
 
 void ndsFighterDisplayContractSetLight(const Light *light, u32 slot)
 {
-    if ((sNdsFighterDisplayContract.active == 0u) || (light == NULL) ||
-        (slot != 1u))
+    if ((light == NULL) || (slot != 1u))
     {
         return;
     }
-    sNdsFighterDisplayContract.light = *light;
-    sNdsFighterDisplayContract.light_valid = TRUE;
-    gNdsFighterDisplayContractLightDirectionCount++;
+    sNdsFighterDisplayCurrentLight = *light;
+    sNdsFighterDisplayCurrentLightValid = TRUE;
+    if (sNdsFighterDisplayContract.active != 0u)
+    {
+        sNdsFighterDisplayContract.light = *light;
+        sNdsFighterDisplayContract.light_valid = TRUE;
+        gNdsFighterDisplayContractLightDirectionCount++;
+    }
+}
+
+void ndsFighterDisplayContractResetSceneLight(void)
+{
+    sNdsFighterDisplayCurrentLightCount = 0u;
+    sNdsFighterDisplayCurrentLightValid = FALSE;
 }
 
 u8 ndsFighterDisplayContractSetStageEnvColor(Gfx **dls)
@@ -5702,6 +5730,13 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     sNdsFighterDisplayContract.pending_event = -1;
     sNdsFighterDisplayContract.prim_color = 0xffffffffu;
     sNdsFighterDisplayContract.env_color = 0xffffffffu;
+    sNdsFighterDisplayContract.light_count =
+        sNdsFighterDisplayCurrentLightCount;
+    if (sNdsFighterDisplayCurrentLightValid != 0u)
+    {
+        sNdsFighterDisplayContract.light = sNdsFighterDisplayCurrentLight;
+        sNdsFighterDisplayContract.light_valid = TRUE;
+    }
     sNdsFighterDisplayContract.saved_graphics_heap_ptr =
         gSYTaskmanGraphicsHeap.ptr;
     for (i = 0u; i < 4u; i++)

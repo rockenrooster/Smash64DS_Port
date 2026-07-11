@@ -13009,6 +13009,18 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 }
 
 #if NDS_RENDERER_HW_TRIANGLES
+static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
+{
+    Gfx scratch[2];
+    Gfx *head = scratch;
+    void *saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+
+    /* BattleShip sys/rdp.c:112-115 invokes the registered scene-light
+     * callback before drawing. DS owns the rest of the frame reset. */
+    syRdpResetSettings(&head);
+    gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+}
+
 static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
     if ((sNdsStageGCDrawAllLoopHardwareSubmitCount != 0u) ||
@@ -13017,6 +13029,7 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
         return;
     }
 
+    ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererAdapterResetDepthDiagnostics();
     gcDrawAll();
@@ -13031,6 +13044,7 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
         return;
     }
 
+    ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererAdapterResetDepthDiagnostics();
     ndsRendererHardwareSetNoOracle(TRUE);

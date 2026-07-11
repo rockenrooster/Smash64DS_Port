@@ -92,7 +92,7 @@ The memory ledger reports headroom `237948`, resident reloc `681632` bytes
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
 separated but not yet accepted Mario/Fox bodies. Imported `grwallpaper.c`
 owns the original 300x220 wallpaper behind the 3D stage and HUD. Latest capture:
-`artifacts/visibility/2026-07-10_masked-clamp-repeat-hudoff-final.png`.
+`artifacts/visibility/2026-07-10_source-fighter-light-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
@@ -105,9 +105,9 @@ source vertex slots restore 44 cross-joint triangles. Source-depth X/Y/Z share
 one clip vertex, and no-Z layers use direct signed 20.12 NDC. Dream Land now
 repeats/mirrors mask-sized uploads inside larger clamped logical tiles, removing
 broad canopy/shrub/island ribbons; native pixel gates reject the old frame.
-Fighter fragments/materials, shifts, TEXEL1/water, lighting, DL-head ordering,
-and raw GX matrices remain debt. Uncached wallpaper scaling runs about `1.2fps`
-and can make BGM resynchronize audibly.
+Source scene light now seeds each fighter draw; modelview vertex lighting and
+N64 RGBA material-light order are live. Harsh contrast, fragments, shifts,
+TEXEL1/water, DL-head order, raw GX matrices, and `1.2fps` output remain debt.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; the shipped
 realtime ROM is `smash64ds-battle-playable-hwtri.nds`, avoiding collisions.
 Normal builds expose one controller; the canonical live-input build alone

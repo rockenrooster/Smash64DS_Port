@@ -18761,3 +18761,34 @@ expectations: none.
 
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none.
+
+## 2026-07-10 - Source fighter-light callback and material color parity
+
+- Restored the source task pre-render contract: `scvsbattle.c:42,505-509`
+  registers the battle light callback and `sys/rdp.c:88-115` invokes it before
+  drawing. The DS hardware frame now runs that callback before the imported
+  fighter display contract, carrying Dream Land's source direction
+  `(24,70,66)` into every selected Mario/Fox draw.
+- Lit vertex colors are fixed when `G_VTX` fills the shared RSP vertex cache.
+  The light direction is transformed through that draw's current modelview and
+  normalized first, following
+  `libultraship/src/fast/interpreter.cpp:2477-2499,2651-2721` and
+  `decomp/sm64-nds/src/nds/nds_renderer.c:464-487`.
+- Removed a host-endian material-color error. `SYColorPack.pack` reads runtime
+  RGBA bytes as `AABBGGRR` on ARM, so the adapter now rebuilds GBI light words
+  from `s.r/g/b/a`. This restores MarioModel's source shoe lights
+  `0x83271400/0x240F1100` (`296_MarioModel.c:1072-1081`). A disposable
+  full-directional probe changed a shoe pixel from `(65,20,24)` to source
+  brown `(166,52,36)` and was reverted; remaining darkness is directional
+  response, not the costume or texture.
+- Added explicit `capture-melonds.ps1 -OpenGL4x -MaximizeVertical` inspection;
+  the script restores the user config. The canonical detail gate now requests
+  GL4 explicitly, while native runner metrics remain a separate baseline.
+  Focused GBI, all-DL `320/306`, stage-inclusive `192+626`, and canonical
+  gates pass with zero oracle rejects. The final canonical capture
+  `artifacts/visibility/2026-07-10_source-fighter-light-hudoff-final.png`
+  retains `29.931%` right-shrub and `20.540%` stage-body detail; canonical and
+  shipped ROM SHA-256 hashes match.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: none.

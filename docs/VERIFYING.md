@@ -113,9 +113,11 @@ BG/3D registers, DMA, or timing.
 
 For faster visual iteration, pass `-Unthrottled` to `capture-melonds.ps1`.
 It temporarily disables melonDS FPS limiting, keeps JIT disabled, and restores
-the config afterward. Native-resolution melonDS software-renderer captures
-remain authoritative; OpenGL rendering and 4x scaling are secondary inspection
-views because they can change edge/depth pixels without adding source detail.
+the config afterward. The native software renderer remains the marker/geometry
+baseline. The canonical texture-detail pixel ratchet explicitly passes
+`-OpenGL4x` and restores the config afterward; never compare its percentages
+with native-runner captures. Use `-OpenGL4x -MaximizeVertical` to expand a
+secondary inspection view to desktop height while preserving aspect ratio.
 Verifier launches use the same unthrottled interpreter policy automatically;
 their assertions are tied to emulated frames/timers, not host wall time. The
 non-runner config is restored after each verifier, while dedicated runner-slot

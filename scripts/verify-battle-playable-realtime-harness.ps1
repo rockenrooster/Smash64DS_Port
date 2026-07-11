@@ -48,6 +48,7 @@ function Invoke-VisibleCaptureAssert {
     & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
         -MelonDS $MelonDS `
         -Rom $Rom `
+        -OpenGL4x `
         -Output $output `
         -SecondOutput $nextOutput `
         -SecondDelaySeconds $ScreenshotSecondDelaySeconds `

@@ -14,6 +14,7 @@
 #endif
 
 #if NDS_RENDERER_HW_TRIANGLES
+#include <math.h>
 #include <nds.h>
 #endif
 
@@ -261,12 +262,14 @@ typedef struct NDSRendererTraversalState
     NDSRendererClipVertex20p12 vertices[NDS_RENDERER_MAX_VTX];
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererInputVertex input_vertices[NDS_RENDERER_MAX_VTX];
+    u32 vertex_colors[NDS_RENDERER_MAX_VTX];
 #endif
     u32 modelview_valid_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     u32 modelview_stack_depth;
     u32 vertex_valid_mask;
 #if NDS_RENDERER_HW_TRIANGLES
     u32 input_vertex_valid_mask;
+    u32 vertex_color_valid_mask;
     u32 current_transform_vertex_mask;
 #endif
     u32 projection_valid;
@@ -274,6 +277,13 @@ typedef struct NDSRendererTraversalState
     u32 matrix_valid;
     u32 matrix_word_valid;
 } NDSRendererTraversalState;
+
+#if NDS_RENDERER_HW_TRIANGLES
+static u32 ndsRendererHardwareLitShadeColor(
+    NDSRendererStats *stats,
+    const NDSRendererInputVertex *vtx,
+    const NDSRendererMatrix20p12 *modelview);
+#endif
 
 static s32 ndsRendererClampS64ToS32(s64 value)
 {
@@ -1551,6 +1561,10 @@ static void ndsRendererApplyVertexCommand(
 #if NDS_RENDERER_HW_TRIANGLES
         state->input_vertices[v0 + i] = input;
         state->input_vertex_valid_mask |= 1u << (v0 + i);
+        state->vertex_colors[v0 + i] = ndsRendererHardwareLitShadeColor(
+            stats, &input,
+            (state->modelview_valid != 0u) ? &state->modelview : NULL);
+        state->vertex_color_valid_mask |= 1u << (v0 + i);
         state->current_transform_vertex_mask |= 1u << (v0 + i);
 #endif
         if (state->matrix_valid == 0u)
@@ -2385,8 +2399,13 @@ static u32 ndsRendererHardwareLightColor(NDSRendererStats *stats, u32 mask,
 }
 
 static u32 ndsRendererHardwareLitDiffuseNumer(
-    const NDSRendererStats *stats, const NDSRendererInputVertex *vtx)
+    const NDSRendererStats *stats,
+    const NDSRendererInputVertex *vtx,
+    const NDSRendererMatrix20p12 *modelview)
 {
+    s32 light_x;
+    s32 light_y;
+    s32 light_z;
     s32 dot;
 
     if ((stats == NULL) || (vtx == NULL) ||
@@ -2395,9 +2414,38 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
         return 127u;
     }
 
-    dot = ((s32)(s8)vtx->r * stats->light_dir_x) +
-        ((s32)(s8)vtx->g * stats->light_dir_y) +
-        ((s32)(s8)vtx->b * stats->light_dir_z);
+    light_x = stats->light_dir_x;
+    light_y = stats->light_dir_y;
+    light_z = stats->light_dir_z;
+    if (modelview != NULL)
+    {
+        f32 transformed_x = (f32)(
+            (s64)light_x * modelview->m[0][0] +
+            (s64)light_y * modelview->m[0][1] +
+            (s64)light_z * modelview->m[0][2]);
+        f32 transformed_y = (f32)(
+            (s64)light_x * modelview->m[1][0] +
+            (s64)light_y * modelview->m[1][1] +
+            (s64)light_z * modelview->m[1][2]);
+        f32 transformed_z = (f32)(
+            (s64)light_x * modelview->m[2][0] +
+            (s64)light_y * modelview->m[2][1] +
+            (s64)light_z * modelview->m[2][2]);
+        f32 length = sqrtf((transformed_x * transformed_x) +
+                           (transformed_y * transformed_y) +
+                           (transformed_z * transformed_z));
+
+        if (length > 0.0F)
+        {
+            light_x = (s32)((transformed_x * 127.0F) / length);
+            light_y = (s32)((transformed_y * 127.0F) / length);
+            light_z = (s32)((transformed_z * 127.0F) / length);
+        }
+    }
+
+    dot = ((s32)(s8)vtx->r * light_x) +
+        ((s32)(s8)vtx->g * light_y) +
+        ((s32)(s8)vtx->b * light_z);
     if (dot <= 0)
     {
         return 0u;
@@ -2410,7 +2458,8 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
 }
 
 static u32 ndsRendererHardwareLitShadeColor(NDSRendererStats *stats,
-                                            const NDSRendererInputVertex *vtx)
+                                            const NDSRendererInputVertex *vtx,
+                                            const NDSRendererMatrix20p12 *modelview)
 {
     u32 light_1;
     u32 light_2;
@@ -2441,7 +2490,7 @@ static u32 ndsRendererHardwareLitShadeColor(NDSRendererStats *stats,
     diffuse = light_1;
     ambient = light_2;
 
-    diffuse_numer = ndsRendererHardwareLitDiffuseNumer(stats, vtx);
+    diffuse_numer = ndsRendererHardwareLitDiffuseNumer(stats, vtx, modelview);
     r = (s32)ndsRendererHardwareColorByte(ambient, 24) +
         (s32)((ndsRendererHardwareColorByte(diffuse, 24) * diffuse_numer) /
               127u);
@@ -2462,7 +2511,9 @@ static void ndsRendererHardwareColorVertex(
     const NDSRendererInputVertex *vtx,
     u32 material_color,
     s32 use_material_color,
-    s32 use_vertex_color)
+    s32 use_vertex_color,
+    u32 vertex_color,
+    s32 vertex_color_valid)
 {
     u32 color;
 
@@ -2478,7 +2529,8 @@ static void ndsRendererHardwareColorVertex(
         glColor3b(0xffu, 0xffu, 0xffu);
         return;
     }
-    color = ndsRendererHardwareLitShadeColor(stats, vtx);
+    color = (vertex_color_valid != FALSE) ? vertex_color :
+        ndsRendererHardwareLitShadeColor(stats, vtx, NULL);
     if (use_material_color != FALSE)
     {
         u32 r = ((ndsRendererHardwareColorByte(color, 24) *
@@ -4007,6 +4059,8 @@ static void ndsRendererHardwareSubmitVertex(
     u32 material_color,
     s32 use_material_color,
     s32 use_vertex_color,
+    u32 vertex_color,
+    s32 vertex_color_valid,
     s32 use_texture,
     const NDSRendererTileState *render_tile,
     u32 scale_s,
@@ -4028,7 +4082,8 @@ static void ndsRendererHardwareSubmitVertex(
 
     ndsRendererHardwareColorVertex(stats, vtx, material_color,
                                    use_material_color,
-                                   use_vertex_color);
+                                   use_vertex_color, vertex_color,
+                                   vertex_color_valid);
     if ((use_texture != FALSE) && (render_tile != NULL))
     {
         s16 s = ndsRendererHardwareTexCoord(vtx->s, scale_s,
@@ -4332,19 +4387,25 @@ static void ndsRendererSubmitHardwareTriangle(
     glBegin(GL_TRIANGLE);
     ndsRendererHardwareSubmitVertex(
         stats, v0, &state->vertices[i0], material_color, use_material_color,
-        use_vertex_color, use_texture, render_tile, texture_scale_s,
+        use_vertex_color, state->vertex_colors[i0],
+        ((state->vertex_color_valid_mask & (1u << i0)) != 0u),
+        use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z[0], projected_submit);
     ndsRendererHardwareSubmitVertex(
         stats, v1, &state->vertices[i1], material_color, use_material_color,
-        use_vertex_color, use_texture, render_tile, texture_scale_s,
+        use_vertex_color, state->vertex_colors[i1],
+        ((state->vertex_color_valid_mask & (1u << i1)) != 0u),
+        use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z[1], projected_submit);
     ndsRendererHardwareSubmitVertex(
         stats, v2, &state->vertices[i2], material_color, use_material_color,
-        use_vertex_color, use_texture, render_tile, texture_scale_s,
+        use_vertex_color, state->vertex_colors[i2],
+        ((state->vertex_color_valid_mask & (1u << i2)) != 0u),
+        use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z[2], projected_submit);
@@ -4818,6 +4879,10 @@ void ndsRendererExecuteDisplayListWithVertexCache(
         memcpy(state.input_vertices, vertex_cache->input_vertices,
                sizeof(state.input_vertices));
         state.input_vertex_valid_mask = vertex_cache->input_valid_mask;
+        memcpy(state.vertex_colors, vertex_cache->vertex_colors,
+               sizeof(state.vertex_colors));
+        state.vertex_color_valid_mask =
+            vertex_cache->vertex_color_valid_mask;
 #endif
     }
     ndsRendererScanList(dl, config, stats, &state, 0, callback,
@@ -4831,6 +4896,10 @@ void ndsRendererExecuteDisplayListWithVertexCache(
         memcpy(vertex_cache->input_vertices, state.input_vertices,
                sizeof(vertex_cache->input_vertices));
         vertex_cache->input_valid_mask = state.input_vertex_valid_mask;
+        memcpy(vertex_cache->vertex_colors, state.vertex_colors,
+               sizeof(vertex_cache->vertex_colors));
+        vertex_cache->vertex_color_valid_mask =
+            state.vertex_color_valid_mask;
 #endif
     }
 #if NDS_RENDERER_HW_TRIANGLES

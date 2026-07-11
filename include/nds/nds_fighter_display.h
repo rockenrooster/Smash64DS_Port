@@ -12,6 +12,7 @@ void ndsFighterDisplayContractSetEnvColor(u8 r, u8 g, u8 b, u8 a);
 void ndsFighterDisplayContractSetPrimColor(u8 r, u8 g, u8 b, u8 a);
 void ndsFighterDisplayContractSetLightCount(u32 count);
 void ndsFighterDisplayContractSetLight(const Light *light, u32 slot);
+void ndsFighterDisplayContractResetSceneLight(void);
 void ndsFighterDisplayContractSelectDL(const Gfx *dl);
 u8 ndsFighterDisplayContractSetStageEnvColor(Gfx **dls);
 sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y);

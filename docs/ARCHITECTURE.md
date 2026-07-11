@@ -1083,6 +1083,13 @@ before `gcPrepDObjMatrix` use the parent matrix and no child MObj, while
 `dls[1]` uses the prepared child matrix and material. Geometry, prim, env, and
 light state are snapshotted per source draw rather than collapsed after the
 traversal. The CPU 20.12 path remains the fixture oracle.
+BattleShip registers `scVSBattleFuncLights` as the task pre-render callback
+(`scvsbattle.c:42,505-509`), and `sys/rdp.c:88-115` invokes it before scene
+drawing. The DS frame seam preserves that order, then transforms the submitted
+direction through the current modelview when each `G_VTX` fills the RSP cache,
+matching the bundled Ship interpreter and `sm64-nds` renderer. Runtime
+`SYColorPack.pack` is host-endian; GBI material light words must be rebuilt
+from the named RGBA bytes instead of reading that integer union member.
 BattleShip appends each selected part list to the same display-list head
 (`ftdisplaymain.c:780-805,871-899`), so the RSP's 32 transformed vertex slots
 survive matrix changes and later parts can join against earlier slots. The DS

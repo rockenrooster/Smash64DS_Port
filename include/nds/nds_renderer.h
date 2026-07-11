@@ -93,8 +93,10 @@ typedef struct NDSRendererVertexCache
     NDSRendererInputVertex input_vertices[NDS_RENDERER_VERTEX_CACHE_SIZE];
     NDSRendererClipVertex20p12
         transformed_vertices[NDS_RENDERER_VERTEX_CACHE_SIZE];
+    u32 vertex_colors[NDS_RENDERER_VERTEX_CACHE_SIZE];
     u32 input_valid_mask;
     u32 transformed_valid_mask;
+    u32 vertex_color_valid_mask;
 } NDSRendererVertexCache;
 
 typedef struct NDSRendererCommand

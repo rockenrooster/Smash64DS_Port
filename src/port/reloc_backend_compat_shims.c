@@ -13529,12 +13529,20 @@ void syRdpSetViewport(Vp *viewport, f32 ulx, f32 uly, f32 lrx, f32 lry)
     viewport->vp.vtrans[2] = (s16)(0x03FF / 2);
 }
 
+void (*dSYRdpFuncLights)(Gfx **);
+
 void syRdpSetFuncLights(void (*func_lights)(Gfx **))
 {
-    (void)func_lights;
+    dSYRdpFuncLights = func_lights;
+    ndsFighterDisplayContractResetSceneLight();
 }
 
 void syRdpResetSettings(Gfx **dl)
 {
-    (void)dl;
+    /* BattleShip sys/rdp.c:112-115 applies the scene light callback before
+     * scene drawing. The DS backend consumes its GBI light state directly. */
+    if ((dl != NULL) && (dSYRdpFuncLights != NULL))
+    {
+        dSYRdpFuncLights(dl);
+    }
 }

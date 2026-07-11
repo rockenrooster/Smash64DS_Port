@@ -604,6 +604,14 @@ Assert-True ($renderer.Contains('ndsRendererRecordLightMoveMem')) 'Renderer ligh
 Assert-True ($renderer.Contains('NDS_RENDERER_MOVEWORD_LIGHTCOL')) 'Renderer G_MW_LIGHTCOL state target is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordLightColorMoveWord')) 'Renderer light-color move-word state recorder is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareLitShadeColor')) 'Renderer lit SHADE path is missing.'
+$rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
+Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPackColor(&mobj->sub.light1color)')) 'Fighter material light 1 still depends on host-endian SYColorPack.pack layout.'
+Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPackColor(&mobj->sub.light2color)')) 'Fighter material light 2 still depends on host-endian SYColorPack.pack layout.'
+Assert-True ($rendererAdapter.Contains('((u32)color->s.r << 24)')) 'Fighter material color repack does not place R in the N64 high byte.'
+Assert-True ($rendererAdapter.Contains('((u32)color->s.g << 16)')) 'Fighter material color repack does not place G in the N64 second byte.'
+$marioModel = Get-Content (Join-Path $root 'decomp/BattleShip-main/decomp/src/relocData/296_MarioModel.c') -Raw
+Assert-True ($marioModel.Contains('0x83271400,  /* RGBA(131, 39, 20, 0) */')) 'Mario source shoe diffuse-light fixture changed.'
+Assert-True ($marioModel.Contains('0x240F1100,  /* RGBA(36, 15, 17, 0) */')) 'Mario source shoe ambient-light fixture changed.'
 Assert-True ($renderer.Contains('NDS_RENDERER_MOVEWORD_FOG')) 'Renderer G_MW_FOG state target is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordFogMoveWord')) 'Renderer fog move-word state recorder is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordFogColor')) 'Renderer fog color recorder is missing.'

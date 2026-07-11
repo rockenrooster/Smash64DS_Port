@@ -79,13 +79,13 @@ live. Imported `grwallpaper.c` owns the original 300x220 source Sprite behind
 the 3D stage. The renderer now separates physical mask periods from logical
 `SetTileSize` extents: mask-backed `CLAMP` materials repeat/mirror on DS while
 coordinates still clamp at the logical edge. Capture
-`artifacts/visibility/2026-07-10_masked-clamp-repeat-hudoff-final.png` restores
-localized canopy, shrub, and island-body detail. Its native gate reports right
-shrub variation `29.479%` with a 23px maximum flat run and island-body
-variation `20.950%`; the striped baseline fails at `24.444%`/46px. Mario's
-source red/blue remains live, but fighter fragments/materials, water/TEXEL1,
-nonzero shifts, and lighting remain open. Uncached presentation is about
-`1.2fps` and can trigger audible BGM resyncs; caching follows fidelity.
+`artifacts/visibility/2026-07-10_source-fighter-light-hudoff-final.png` retains
+localized canopy, shrub, and island-body detail. Its fixed-window GL4 gate
+reports shrub variation `29.931%` with a 28px maximum flat run and island-body
+variation `20.540%`; the striped baseline fails at `24.444%`/46px. Mario's
+source red/blue remains; VSBattle source light, modelview lighting, and RGBA
+material-light order are live. Harsh contrast, fragments, water/TEXEL1, and
+shifts remain; `1.2fps` presentation can trigger BGM resyncs.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`

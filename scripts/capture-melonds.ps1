@@ -5,6 +5,8 @@ param(
     [string]$Output,
     [int]$DelaySeconds = 32,
     [switch]$Unthrottled,
+    [switch]$OpenGL4x,
+    [switch]$MaximizeVertical,
     [string]$SecondOutput,
     [int]$SecondDelaySeconds = 1,
     [int]$SecondDelayMilliseconds = 0
@@ -52,6 +54,7 @@ if (-not [string]::IsNullOrWhiteSpace($SecondOutput)) {
     New-Item -ItemType Directory -Path $secondOutputDirectory -Force | Out-Null
 }
 Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.Windows.Forms
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -105,6 +108,30 @@ function Save-MelonDSWindowCapture {
     }
     return "${width}x${height}"
 }
+function Set-MelonDSCaptureWindow {
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.IntPtr]$WindowHandle
+    )
+    if ($MaximizeVertical) {
+        # Preserve the verifier window's aspect ratio while using the desktop's
+        # available vertical resolution for close visual inspection.
+        $workArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+        $height = $workArea.Height
+        $width = [Math]::Round($height * (488.0 / 675.0))
+        [void][Smash64DSWindowCapture]::ShowWindow($WindowHandle, 9)
+        [void][Smash64DSWindowCapture]::SetWindowPos(
+            $WindowHandle, [IntPtr](-1), $workArea.X, $workArea.Y,
+            $width, $height, 0x40)
+        return
+    }
+    [void][Smash64DSWindowCapture]::ShowWindow($WindowHandle, 9)
+    # Keep capture geometry stable between samples. melonDS can otherwise
+    # auto-resize after the first frame and create a false pixel-delta failure.
+    # SWP_NOMOVE | SWP_SHOWWINDOW = 0x42.
+    [void][Smash64DSWindowCapture]::SetWindowPos(
+        $WindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
+}
 $emulator = $null
 try {
     if (Test-Path $config) {
@@ -118,6 +145,12 @@ try {
                 '(?m)^(LimitFPS\s*=\s*)true\s*$', '${1}false'
             $visibleConfig = $visibleConfig -replace
                 '(?ms)(\[JIT\].*?^Enable\s*=\s*)true\s*$', '${1}false'
+        }
+        if ($OpenGL4x) {
+            $visibleConfig = $visibleConfig -replace
+                '(?m)^(Renderer\s*=\s*)[0-9]+\s*$', '${1}1'
+            $visibleConfig = $visibleConfig -replace
+                '(?m)^(ScaleFactor\s*=\s*)[0-9]+\s*$', '${1}4'
         }
         if ($visibleConfig -ne $originalConfig) {
             Set-Content $config -Value $visibleConfig -NoNewline
@@ -134,17 +167,11 @@ try {
     if ($emulator.HasExited -or $emulator.MainWindowHandle -eq [IntPtr]::Zero) {
         throw 'melonDS did not expose a capturable window.'
     }
-    [void][Smash64DSWindowCapture]::ShowWindow($emulator.MainWindowHandle, 9)
+    Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
     [void][Smash64DSWindowCapture]::SetForegroundWindow($emulator.MainWindowHandle)
-    # Keep capture geometry stable between samples. melonDS can otherwise
-    # auto-resize after the first frame and create a false pixel-delta failure.
-    # SWP_NOMOVE | SWP_SHOWWINDOW = 0x42.
-    [void][Smash64DSWindowCapture]::SetWindowPos(
-        $emulator.MainWindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
     Start-Sleep -Seconds $DelaySeconds
     $emulator.Refresh()
-    [void][Smash64DSWindowCapture]::SetWindowPos(
-        $emulator.MainWindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
+    Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
     Start-Sleep -Milliseconds 100
     $size = Save-MelonDSWindowCapture -WindowHandle $emulator.MainWindowHandle `
         -Path $Output
@@ -155,8 +182,7 @@ try {
             Start-Sleep -Seconds ([Math]::Max($SecondDelaySeconds, 0))
         }
         $emulator.Refresh()
-        [void][Smash64DSWindowCapture]::SetWindowPos(
-            $emulator.MainWindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
+        Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
         Start-Sleep -Milliseconds 100
         $secondSize = Save-MelonDSWindowCapture `
             -WindowHandle $emulator.MainWindowHandle -Path $SecondOutput
