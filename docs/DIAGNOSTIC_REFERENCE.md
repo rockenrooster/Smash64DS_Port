@@ -1363,6 +1363,9 @@ Opening movie / Opening Portraits:
   render mode. Canonical HW requires selected/submitted parts for both fighters,
   geometry `0x222005`, cycle `0x00100000`, render mode `0xc4112078`, nonzero
   source light state, and no visibility-bound failures.
+- `FTR_LIGHT_SEED`: selected fighter material light seed marker. Fields are
+  seed count, diffuse color, and ambient color. Canonical Mario/Fox requires
+  nonzero seeds and source `MObjSub` values `0xffffff00/0x4c4c4c00`.
 - `RENDER_COMBINE`: canonical HW combine-state trace marker. Fields are total
   combine commands, distinct combine commands captured, lit-SHADE combines,
   material-color combines, projected-submit fallback count, and the first four
@@ -1370,8 +1373,9 @@ Opening movie / Opening Portraits:
   raw GX matrix path is pixel-proven; it no longer implies synthetic depth.
 - `RENDER_LIGHT`: canonical HW light-state marker. Fields are decoded
   light-color commands, decoded light-direction commands, and source-backed
-  fallback-color uses. Lighting-on display lists treat `Vtx.cn` as signed
-  normals; lighting-off display lists keep raw vertex colors.
+  fallback-color uses. Canonical fighter playback requires zero fallback uses.
+  Lighting-on display lists treat `Vtx.cn` as signed normals; lighting-off
+  display lists keep raw vertex colors.
 - `scripts/verify-battle-playable-realtime-harness.ps1` now captures
   `artifacts/visibility/canonical-hwtri-verified.png` and runs
   `scripts/assert-melonds-top-visible.ps1`. The current top-screen gate expects

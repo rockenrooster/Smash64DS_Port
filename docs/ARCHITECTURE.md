@@ -1091,6 +1091,13 @@ direction through the current modelview when each `G_VTX` fills the RSP cache,
 matching the bundled Ship interpreter and `sm64-nds` renderer. Runtime
 `SYColorPack.pack` is host-endian; GBI material light words must be rebuilt
 from the named RGBA bytes instead of reading that integer union member.
+`ftDisplayLightsDrawReflect` writes only direction into its dynamic `Light`
+(`ftdisplaylights.c:10-26`), so its heap color bytes do not define a portable
+initial RSP light pair. The DS playback seeds that pair once from the first
+source-selected material's copied `MObjSub` (`objman.c:1302-1335`), then keeps
+the original `objdisplay.c:1289-1295` light-color commands authoritative in
+event order. This is confined to the fighter display seam; generic lit lists
+retain their own state and fallback policy.
 BattleShip appends each selected part list to the same display-list head
 (`ftdisplaymain.c:780-805,871-899`), so the RSP's 32 transformed vertex slots
 survive matrix changes and later parts can join against earlier slots. The DS

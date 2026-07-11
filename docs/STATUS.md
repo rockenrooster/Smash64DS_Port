@@ -67,11 +67,12 @@ cycle/render state; pre-matrix `dls[0]` keeps parent state as in
 transformed vertex cache across those per-part lists, matching BattleShip's
 single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
 all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
+Fighter playback seeds its initial light pair from the first selected source
+`MObjSub` (`0xffffff00/0x4c4c4c00`); overrides carry and fallback use is zero.
 Canonical proof reports `gxram=730/2214`, geometry `0x222005`, source cycle/
 render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
-Source-depth X/Y/Z share one composed clip vertex. No-Z layers submit far order in
-signed 20.12 NDC; removing an erroneous extra `<< 4` restores stage/fighter
-occlusion without the rejected global-depth-reversal or W-buffer probes.
+Source-depth X/Y/Z share one composed clip vertex. No-Z layers use signed 20.12
+NDC; removing an extra `<< 4` restores stage/fighter occlusion.
 
 O2R `MObjSub` lanes, aligned Dream Land starts, original floor adoption, and
 the one-cycle `PRIMITIVE * SHADE` path remain live. Imported `grwallpaper.c`
@@ -83,9 +84,9 @@ remains bounded debt. Capture
 `artifacts/visibility/2026-07-11_masked-clamp-linear-sampler-hudoff-stability-next.png`
 retains canopy/shrub/island detail. The fixed-window GL4 gate reports actual
 shrub variation `57.292%`/20px, stage-body `20.540%`, meaningful delta
-`22.166%`, and zero texture rejects/oracle mismatches. Source fighter light and
-RGBA order remain live. Harsh contrast, fragments, water/TEXEL1, shifts, and
-slow presentation remain.
+`22.166%`, and zero texture rejects/oracle mismatches. Latest fighter-light capture:
+`artifacts/visibility/2026-07-11_fighter-material-light-seed-hudoff.png`.
+Fragments, water/TEXEL1, shifts, fog/color animation, and slow output remain.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -94,10 +95,9 @@ VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
 `16` bytes of scratch. The separate 64 KiB BGM buffer leaves `172412` bytes
 against the 128 KiB reserve.
 
-Renderer hardware is default for all-DL modes `33/34`, stage MP modes
-`59-124`, and Boundary pair `161/162`; global normal builds keep software
-preview. Texture-format/lane, stage-carry, GX RAM, oracle, fighter-contract,
-and screenshot gates cover the canonical renderer.
+Renderer hardware is default for all-DL modes `33/34`, stage MP modes `59-124`,
+and Boundary pair `161/162`; global normal builds keep software preview. Texture,
+stage-carry, GX RAM, oracle, fighter-contract, and screenshot gates cover it.
 
 ## Current Notes
 
@@ -125,8 +125,8 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-The five-record stage `MObjSub` probe changed no pixels and was reverted. The source-correct tile-origin conversion changed only `18/49152` canonical pixels.
-The accepted S-axis trace instead found masked `CLAMP` sampler ownership; its pixel gate is permanent. The high-bit fighter branch is live, but Mario/Fox select `0/0` such descriptors.
+The five-record stage `MObjSub` probe changed no pixels and was reverted; the source-correct tile-origin conversion changed only `18/49152` pixels.
+The accepted S-axis trace found masked `CLAMP` ownership; the high-bit fighter branch is live, but Mario/Fox select `0/0` such descriptors.
 Follow-ups: fighter anim-lock/state, shifts and TEXEL1/water, wallpaper/audio timing, then caching.
 FGM/voice and the original sequence player remain deferred.
 ## Verification

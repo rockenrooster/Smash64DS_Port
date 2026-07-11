@@ -1060,11 +1060,13 @@
   source command graphs once per reloc generation, and packed RGBA output is
   corrected without replacing original animation timing. Fighter AObj16 data
   remains on its separate original parser. The source VSBattle pre-render
-  light callback and modelview-transformed direction are live, and material
-  light words are rebuilt from named RGBA bytes instead of little-endian
-  `SYColorPack.pack`. A disposable full-light probe changed Mario's shoe from
-  dark `(65,20,24)` to source brown `(166,52,36)`, proving the material while
-  leaving harsh directional contrast and lower-body fragments as active debt.
+  light callback and modelview-transformed direction are live. Fighter playback
+  seeds initial diffuse/ambient colors from the first selected source `MObjSub`
+  (`0xffffff00/0x4c4c4c00`) because `ftDisplayLightsDrawReflect` writes only
+  direction into its dynamic heap `Light`; later material light commands remain
+  source-ordered. Canonical fallback use is zero. Lower-body fragments,
+  anim-lock, fog/color-animation coverage, and exact global RSP state ownership
+  remain active debt.
   Dream Land's source
   player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated

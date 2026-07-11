@@ -55,6 +55,8 @@ the selected part sequence, as BattleShip's common `gSYTaskmanDLHeads[0]`
 stream does. All-DL HW output is the full `320/306` Mario/Fox triangle set with
 zero rejects; canonical reports `gxram=730/2214`, geometry `0x222005`, cycle/
 render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
+Initial diffuse/ambient state comes from the first selected source `MObjSub`
+(`0xffffff00/0x4c4c4c00`); per-part overrides carry and fallback use is zero.
 
 Runtime slice 2 imports the original manager, common/Mario/Fox status tables,
 and live animation/key runtime. Modes `39/40`, `53/54`, and `161/162` rebuild
@@ -82,17 +84,15 @@ vx=49809->-49809 owner=Fox`, `specials=0xfff phase=7`,
 `audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695
 raw=4422960 resident=0 scratch=16`,
 `bgm=track0 play=1 stop=1 rate=44099 resident=65536`, and
-`hwsubmit=42`, `hwtri=192`, `hwftr=2/626`. FGM/voice playback, original
-sequence-player import, and non-critical HUD/SObj/particle perimeter remain
-follow-up.
+`hwsubmit=42`, `hwtri=192`, `hwftr=2/626`. FGM/voice, original sequence-player,
+and non-critical HUD/SObj/particle work remain follow-up.
 The memory ledger reports headroom `237948`, resident reloc `681632` bytes
 (`stage=202816`, `fighter=175440`, `if=208672`), stale bytes `0/0`, and
 `172412` bytes after the 64 KiB BGM buffer against the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
-separated but not yet accepted Mario/Fox bodies. Imported `grwallpaper.c`
-owns the original 300x220 wallpaper behind the 3D stage and HUD. Latest capture:
-`artifacts/visibility/2026-07-10_source-fighter-light-hudoff-final.png`.
+separated but not yet accepted Mario/Fox bodies. Latest fighter-light capture:
+`artifacts/visibility/2026-07-11_fighter-material-light-seed-hudoff.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
@@ -101,13 +101,13 @@ record. The HW combiner also preserves the proven one-cycle
 normalize complete N64 MSB-first command graphs once per reloc generation;
 fighter AObj16 streams bypass that path. Original timing/state stays live, and
 a host-independent post-step corrects packed RGBA byte arithmetic. Persistent
-source vertex slots restore 44 cross-joint triangles. Source-depth X/Y/Z share one
-clip vertex; no-Z layers use signed 20.12 NDC. Dream Land texture varyings stay
-linear; masked-clamp axes through 128 texels materialize source addressing inside
-the logical tile. Its six CI4 decorations now render as recognizable stars; the
-192-wide island remains bounded debt. Latest capture: `artifacts/visibility/2026-07-11_masked-clamp-linear-sampler-hudoff-stability-next.png`.
-Source scene light and N64 RGBA order are live. Harsh contrast, fragments, shifts,
-TEXEL1/water, DL-head order, raw GX matrices, and slow output remain debt.
+source vertex slots restore 44 cross-joint triangles. Source depth shares one clip
+vertex; no-Z layers use signed 20.12 NDC. Masked-clamp axes through 128 texels
+materialize source addressing; six CI4 stars render correctly, while the 192-wide
+island remains debt. Latest: `artifacts/visibility/2026-07-11_masked-clamp-linear-sampler-hudoff-stability-next.png`.
+Source scene light, selected material light seed, and N64 RGBA order are live.
+Fragments, shifts, TEXEL1/water, fog/color animation, DL-head order, raw GX
+matrices, and slow output remain debt.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; the shipped
 realtime ROM is `smash64ds-battle-playable-hwtri.nds`, avoiding collisions.
 Normal builds expose one controller; the canonical live-input build alone

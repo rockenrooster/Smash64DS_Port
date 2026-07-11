@@ -5473,6 +5473,8 @@ typedef struct NDSFighterDisplayContractEvent {
 } NDSFighterDisplayContractEvent;
 
 #define NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK (3u << 20)
+#define NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK (1u << 0)
+#define NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK (1u << 1)
 
 typedef struct NDSFighterDisplayContract {
     NDSFighterDisplayContractEvent events[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
@@ -5829,6 +5831,49 @@ static void ndsFighterCollectAllDObjsWithDL(
     }
     ndsFighterCollectAllDObjsWithDLRecursive(root, collection,
                                               &traversal_index);
+}
+
+static void ndsFighterDisplayContractSeedMaterialLights(
+    NDSRendererStats *stats)
+{
+    u32 i;
+
+    if ((stats == NULL) ||
+        ((stats->light_color_mask &
+          (NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK |
+           NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK)) ==
+         (NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK |
+          NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK)))
+    {
+        return;
+    }
+    for (i = 0u; i < sNdsFighterDisplayContract.event_count; i++)
+    {
+        DObj *dobj = sNdsFighterDisplayContract.events[i].material_dobj;
+        MObj *mobj = (dobj != NULL) ? dobj->mobj : NULL;
+
+        if (mobj == NULL)
+        {
+            continue;
+        }
+        /* gcAddMObjForDObj copies the source MObjSub verbatim
+         * (objman.c:1302-1335). Use its first selected material as the
+         * initial RSP light state; later objdisplay.c:1289-1295 commands
+         * remain authoritative and carry in original event order. */
+        stats->light_color_1 = ndsFighterDisplayContractPackColor(
+            mobj->sub.light1color.s.r, mobj->sub.light1color.s.g,
+            mobj->sub.light1color.s.b, mobj->sub.light1color.s.a);
+        stats->light_color_2 = ndsFighterDisplayContractPackColor(
+            mobj->sub.light2color.s.r, mobj->sub.light2color.s.g,
+            mobj->sub.light2color.s.b, mobj->sub.light2color.s.a);
+        stats->light_color_mask |=
+            NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK |
+            NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK;
+        gNdsFighterDisplayContractMaterialLightSeedCount++;
+        gNdsFighterDisplayContractMaterialLight1 = stats->light_color_1;
+        gNdsFighterDisplayContractMaterialLight2 = stats->light_color_2;
+        return;
+    }
 }
 
 static s32 ndsFighterDLAllDrawValidateRange(const Gfx *dl, size_t bytes,
@@ -6648,6 +6693,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 sNdsFighterDisplayContract.light.l.dir[2];
             persistent_stats.light_dir_mask = 1u;
         }
+        ndsFighterDisplayContractSeedMaterialLights(&persistent_stats);
     }
     bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
 

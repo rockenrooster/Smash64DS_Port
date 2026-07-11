@@ -18868,3 +18868,27 @@ became stricter. Coverage-reduced verifier expectations: none.
 Source-corrected verifier expectations: the existing fighter-display marker now
 requires BattleShip's source cycle/render preamble. Coverage-reduced verifier
 expectations: none.
+
+## 2026-07-11 - Source-selected fighter material light seed
+
+- `ftDisplayLightsDrawReflect` writes only direction into its dynamic graphics-
+  heap `Light` (`ftdisplaylights.c:10-26`); on DS its color bytes were zero, so
+  28 of 32 selected Mario/Fox part events used the renderer's generic fallback.
+- Fighter contract playback now seeds diffuse/ambient once from the first
+  selected material's source `MObjSub`, copied by `gcAddMObjForDObj`
+  (`objman.c:1302-1335`). Mario and Fox both provide
+  `0xffffff00/0x4c4c4c00`; later `objdisplay.c:1289-1295` light commands remain
+  authoritative in original order.
+- Canonical diagnostics now require a nonzero `FTR_LIGHT_SEED` with those exact
+  colors and `RENDER_LIGHT` fallback count zero. The prior run reported `940`
+  fallback uses; the accepted run reports `8/0/0` color/direction/fallback.
+- Focused gates passed: GBI fixtures; all-DL HW `320/306` with zero rejects;
+  stage-inclusive HW `192+626`; canonical realtime markers, source seed, zero
+  oracle mismatches, and fixed-window screenshot thresholds. Capture:
+  `artifacts/visibility/2026-07-11_fighter-material-light-seed-hudoff.png`.
+- Remaining fighter debt is unchanged: lower-body fragments, anim-lock matrix
+  kinds, fog/color-animation coverage, and exact cross-GObj RSP state ownership.
+
+Source-corrected verifier expectations: canonical light state now requires the
+selected source material seed and zero generic fallback use. Coverage-reduced
+verifier expectations: none.
