@@ -477,6 +477,68 @@ function Transform-Vertex20p12 {
         W = $Mtx[0][3] * $X + $Mtx[1][3] * $Y + $Mtx[2][3] * $Z + $Mtx[3][3]
     }
 }
+function Convert-ToRawGXCombinedMtx20p12 {
+    param([object[]]$Mtx)
+    $out = @()
+    for ($row = 0; $row -lt 4; $row++) {
+        $outRow = @()
+        for ($col = 0; $col -lt 4; $col++) {
+            $value = [Int64]$Mtx[$row][$col]
+            if ($row -eq 3) {
+                $value = Round-Shift-S64 -Value $value -Shift 8
+            }
+            $outRow += [int]$value
+        }
+        $out += ,$outRow
+    }
+    return $out
+}
+function Transform-RawGXVertex20p12 {
+    param(
+        [object[]]$Mtx,
+        [int]$X,
+        [int]$Y,
+        [int]$Z
+    )
+    $raw = @(
+        ([Int64]$X -shl 4),
+        ([Int64]$Y -shl 4),
+        ([Int64]$Z -shl 4)
+    )
+    $result = @()
+    for ($col = 0; $col -lt 4; $col++) {
+        [Int64]$sum = 0
+        for ($row = 0; $row -lt 3; $row++) {
+            $sum += [Int64]$Mtx[$row][$col] * $raw[$row]
+        }
+        $result += [Int64](Round-Shift-S64 -Value $sum -Shift 12) +
+            [Int64]$Mtx[3][$col]
+    }
+    return @{ X=$result[0]; Y=$result[1]; Z=$result[2]; W=$result[3] }
+}
+function Assert-RawGXHomogeneousEquivalent {
+    param(
+        [object[]]$Mtx,
+        [int]$X,
+        [int]$Y,
+        [int]$Z,
+        [string]$Label
+    )
+    $cpu = Transform-Vertex20p12 -Mtx $Mtx -X $X -Y $Y -Z $Z
+    $hardwareMtx = Convert-ToRawGXCombinedMtx20p12 -Mtx $Mtx
+    $hardware = Transform-RawGXVertex20p12 -Mtx $hardwareMtx -X $X -Y $Y -Z $Z
+    foreach ($axis in @('X','Y','Z')) {
+        [Int64]$lhs = [Int64]$hardware[$axis] * [Int64]$cpu.W
+        [Int64]$rhs = [Int64]$cpu[$axis] * [Int64]$hardware.W
+        [Int64]$delta = [Math]::Abs($lhs - $rhs)
+        [Int64]$scale = [Math]::Abs([Int64]$cpu[$axis]) + [Math]::Abs([Int64]$cpu.W)
+        if ($scale -eq 0) { $scale = 1 }
+        [Int64]$error = [Math]::Ceiling([double]$delta / [double]$scale)
+        Assert-True ($error -le 16) "$Label raw GX $axis/W cross-product error exceeded 16 fixed LSBs."
+    }
+    Assert-True (([Math]::Sign([Int64]$hardware.W) -eq [Math]::Sign([Int64]$cpu.W))) `
+        "$Label raw GX W sign drifted."
+}
 $vtxW0 = New-F3DEX2VtxW0 -Count 4 -V0 12
 Assert-Equal $vtxW0 0x01004020 'F3DEX2 gSPVertex(4,12) fixture packed word mismatch.'
 $decodedVtx = Decode-F3DEX2Vtx -W0 $vtxW0 -MaxVtx 32
@@ -588,6 +650,18 @@ Assert-Equal $combinedVtx.X 237568 'Modelview-projection composed transformed X 
 Assert-Equal $combinedVtx.Y 16384 'Modelview-projection composed transformed Y mismatch.'
 Assert-Equal $combinedVtx.Z 61440 'Modelview-projection composed transformed Z mismatch.'
 Assert-Equal $combinedVtx.W 4096 'Modelview-projection composed transformed W mismatch.'
+Assert-RawGXHomogeneousEquivalent -Mtx $identity -X -2048 -Y 0 -Z 2047 -Label 'Identity/range-edge'
+Assert-RawGXHomogeneousEquivalent -Mtx $transform -X 12 -Y -3 -Z 8 -Label 'Scale/translation'
+Assert-RawGXHomogeneousEquivalent -Mtx $combined -X 12 -Y -3 -Z 8 -Label 'Composed modelview/projection'
+$perspectiveRows = @(
+    @(1.25, 0.0, 0.0, 0.0),
+    @(0.0, -0.75, 0.0, 0.0),
+    @(0.0, 0.0, 1.5, -1.0),
+    @(3.123, -2.251, 0.503, 7.0)
+)
+$perspective = Convert-N64PackedMtxTo20p12 (New-N64PackedMtx -Rows $perspectiveRows)
+Assert-RawGXHomogeneousEquivalent -Mtx $perspective -X 100 -Y -200 -Z 2 -Label 'Perspective/positive-W'
+Assert-RawGXHomogeneousEquivalent -Mtx $perspective -X -300 -Y 400 -Z 10 -Label 'Perspective/negative-W'
 $modelviewStack = @()
 $modelviewStack += ,$transform
 $innerRows = @(
@@ -1129,6 +1203,15 @@ Assert-True ($renderer -match '(?s)ndsRendererHardwareNextProjectedDepth\(void\)
 Assert-True ($renderer -match '(?s)source_zbuffered = zbuffered;.*?if \(source_zbuffered != FALSE\)\s*\{\s*/\* Source-Z projected submissions use the composed clip Z below and\s*\* must not consume the synthetic no-Z painter counter\. \*/\s*projected_z\[0\].*?else.*?ndsRendererHardwareNextProjectedDepth\(\);') 'Renderer source-Z submissions consume the synthetic no-Z painter counter.'
 Assert-True ($renderer.Contains('ndsRendererHardwareBeginTriangleBatch')) 'Renderer adjacent source-triangle batch helper is missing.'
 Assert-True ($renderer.Contains('gNdsRendererProfileHardwareBatchReuseCount++')) 'Renderer adjacent source-triangle reuse diagnostic is missing.'
+Assert-True ($renderer.Contains('matrix_generation = ndsRendererNextMatrixGeneration()')) 'Renderer composed matrix generations are not refreshed on matrix changes.'
+Assert-True ($renderer -match '(?s)sNdsRendererMatrixGenerationSerial == 0u.*?sNdsRendererHardwareMatrixLoaded = FALSE.*?sNdsRendererHardwareMatrixGeneration = 0u') 'Renderer matrix-generation wrap does not invalidate the GX matrix cache.'
+Assert-True (-not $renderer.Contains('sNdsRendererHardwareMatrixProjection')) 'Renderer still compares full projection matrices in the triangle hot path.'
+Assert-True (-not $renderer.Contains('sNdsRendererHardwareMatrixModelview')) 'Renderer still compares full modelview matrices in the triangle hot path.'
+Assert-True ($renderer -match '(?s)ndsRendererBuildRawHardwareMatrix\(.*?\*hardware = \*composed;.*?for \(col = 0u; col < 4u; col\+\+\).*?NDS_RENDERER_HW_WORLD_UNIT_SHIFT') 'Renderer corrected raw matrix does not scale the complete homogeneous row.'
+Assert-True ($renderer -match '(?s)current_transform_vertex_mask & mask.*?ndsRendererHardwareRawVertexFits.*?ndsRendererProfileRecordRawCurrentCandidate') 'Renderer raw candidate classification does not require current-matrix slots and unclamped coordinates.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2.*?ndsRendererHardwareQueueRawMatrixPosTest.*?#endif') 'Renderer raw GX PosTest capture is not forensic-only.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareQueueMatrixWordPosTestFixture.*?ndsRendererApplyMvpRecalcCommand.*?ndsRendererApplyMatrixMoveWordCommand') 'Renderer device PosTest coverage omits the MVP-recalc matrix-word reconstruction case.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareEndBatch\(\);\s*#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*ndsRendererHardwareRunRawMatrixPosTests\(\);') 'Renderer raw GX PosTests do not run after the final source triangle batch closes.'
 Assert-True ($renderer.Contains('NDSRendererRuntimeFrameSummary')) 'Performance renderer compact frame summary is missing.'
 Assert-True ($renderer.Contains('ndsRendererProfileFramePublish')) 'Performance renderer frame-summary publication is missing.'
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*if \(sNdsRendererHardwareNoOracle == 0u\).*?ndsRendererHardwareRecordOracleTriangle') 'Renderer oracle is not compile-time excluded from profile 0/1 or does not honor no-oracle.'
@@ -1139,6 +1222,8 @@ Assert-True ($rendererMovement -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2\s*
 $rendererVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
 Assert-True ($rendererVerifier.Contains('RENDER_PROFILE_LEVEL=%u')) 'Realtime verifier does not identify the compiled renderer profile.'
 Assert-True ($rendererVerifier.Contains('RENDER_BENCH=%u')) 'Realtime verifier lacks the optional warm-frame renderer sampler.'
+Assert-True ($rendererVerifier.Contains('RENDER_RAW_MATRIX=%u')) 'Realtime verifier does not report raw-candidate and GX PosTest diagnostics.'
+Assert-True ($rendererVerifier.Contains('corrected composed GX matrix PosTest')) 'Realtime verifier does not require the corrected GX matrix oracle.'
 Assert-True ($rendererVerifier.Contains('still performed forensic oracle transforms')) 'Realtime performance verifier does not require zero oracle work.'
 $forensicVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-renderer-forensic.ps1') -Raw
 Assert-True ($forensicVerifier.Contains('-RendererProfileLevel 2')) 'Separate profile-2 canonical oracle verifier is missing.'

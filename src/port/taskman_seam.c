@@ -785,6 +785,16 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileOracleMismatches = 0;
     gNdsRendererProfileOracleMaxDelta = 0;
     gNdsRendererProfileMatrixLoadCount = 0;
+    gNdsRendererProfileRawCurrentCandidateCount = 0;
+    gNdsRendererProfileRawCurrentRangeRejectCount = 0;
+    gNdsRendererProfileRawCrossMatrixCount = 0;
+    gNdsRendererProfileMatrixPosTestSamples = 0;
+    gNdsRendererProfileMatrixPosTestMismatches = 0;
+    gNdsRendererProfileMatrixPosTestMaxError = 0;
+    gNdsRendererProfileMatrixPosTestWSignMismatches = 0;
+    gNdsRendererProfileMatrixPosTestClipMismatches = 0;
+    gNdsRendererProfileMatrixPosTestMatrixWordSamples = 0;
+    gNdsRendererProfileMatrixPosTestDropped = 0;
     gNdsRendererProfileMatrixScaleWorld = 0;
     gNdsRendererProfileProjectionM00 = 0;
     gNdsRendererProfileProjectionM11 = 0;

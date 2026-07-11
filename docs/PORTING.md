@@ -19252,3 +19252,45 @@ unchanged while repeated command-local work is removed.
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: profiles 0/1 intentionally zero detailed renderer proofs; the
 same-source profile-2 configuration retains the complete assertions.
+
+## 2026-07-11 - Generation-keyed GX matrices and device raw-matrix proof
+
+- Audited BattleShip `sys/matrix.c`, `gm/gmcamera.c`, `lb/lbcommon.c`,
+  `ft/ftdisplaymain.c`, and `gu/mtxcatf.c` plus the bundled sm64-nds raw-Z/
+  projected-exception renderer before changing the backend. Production remains
+  the same projected path; this is the review playbook's isolated Patch 4, not
+  the raw-submission cutover.
+- Replaced the triangle hot path's two 64-byte matrix comparisons with GX mode
+  plus a nonzero traversal generation. Projection/modelview/pop/matrix-word
+  changes issue new generations; wrap invalidates the hardware cache before
+  restarting at one. The canonical frame still loads one identity matrix.
+- Classified compatible ordinary source-Z traffic without changing submission:
+  `648` raw-current candidates, `44` cross-matrix cached-slot triangles, and
+  `10` raw-v16 coordinate-range fallbacks out of `702` projected source-Z
+  triangles. The remaining `126` of `828` retain their existing exceptional
+  depth classes.
+- Corrected the composed raw-GX algebra for source/256 input: rows 0--2 remain
+  unchanged and all four entries of homogeneous row 3, including W, round
+  right by eight. Host fixtures cover range edges, scale/translation,
+  projection, non-aligned translation, and positive/negative W.
+- Added a profile-2-only libnds `PosTest` oracle after the final triangle batch.
+  It samples one natural vertex per matrix generation and compares X/W, Y/W,
+  Z/W, W sign, and clip class by homogeneous cross-products. Because this
+  Pupupu frame naturally issues no matrix-word commands, one backend fixture
+  derives from its first natural matrix and runs BattleShip's MVP-recalc plus
+  matrix-word reconstruction. Profiles 0/1 contain no probe loop.
+- Device proof is `32/0/e2/w0/c0/mw1/drop0`; the existing CPU oracle remains
+  `2403/0/0`. Warm profile-0 present median/p95 is
+  `17,220,704/17,500,608` versus `17,346,720/17,475,520` before the generation
+  key (about `0.7%` median improvement, with p95 effectively unchanged).
+- DevFast passes in `78.5s`. Clean-prebuilt P1Gate passes all four legs in
+  `459.7s`; clean-prebuilt Boundary passes all three entries in `385.5s`.
+  Canonical/shipped parity is `11,578,368` bytes at SHA-256
+  `6954F4316079BBBF555873DEBA3588DC4023D6AD2BC2A58B7A45CD59EBEDDD09`.
+  Accepted capture:
+  `artifacts/visibility/2026-07-11_canonical_fast_183846-0107333-p39400.png`.
+  Full Regression remains skipped for Tyler's faster P1 cadence.
+
+Source-corrected verifier expectations: none; production output remains
+projected. Coverage-reduced verifier expectations: none; profiles 0/1 retain
+classification health while profile 2 owns the bounded hardware oracle.

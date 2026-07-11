@@ -92,14 +92,15 @@ source position/scale stay live and composed content is never cached. Proof is
 `34,839,424 -> 24,764,160` ticks (`-28.9%`). Same-state GX triangle batching
 now spans only adjacent TRI1/TRI2 commands and closes at every other opcode or
 list exit. Proof remains `begin103/reuse725/end103` for all `828` triangles.
-The CI4 table first cuts present to `20,285,888`; preparing the invariant light
-once per `G_VTX` then cuts present to `19,725,696` (`-2.8%`), draw `3.0%`, and
-DL `4.3%`. Shipped/canonical profile 0 now compiles out oracle, vertex/texture
-ranges, and detailed volatile writes, then publishes one compact frame summary.
-Warm 8-frame present median/p95 is `17,346,720/17,475,520`; pacing is
-`19/19 x0.1`. Profile 1 is statistically equal while retaining coarse timers.
-Separate profile 2 proves full oracle/ranges at `20,282,080/20,578,944`.
-Capture: `artifacts/visibility/2026-07-11_canonical_fast_174928-5579684-p21988.png`.
+The CI4 table first cuts present to `20,285,888`; command-hoisted light and
+compile-time profile separation reduce shipped/profile-0 work further. Matrix
+loads now use nonzero traversal generations instead of two 64-byte compares.
+Warm 8-frame present median/p95 is `17,220,704/17,500,608`; pacing remains
+`19/19 x0.1`. Profile 2 classifies ordinary-Z as `648` raw-current, `44`
+cross-matrix, and `10` range fallbacks. Its corrected composed matrix passes
+device `PosTest` at `32/0/e2/w0/c0/mw1/drop0`, plus full oracle `2403/0/0`, at
+`20,273,728/20,578,688`. Production still uses projected submission.
+Capture: `artifacts/visibility/2026-07-11_canonical_fast_183846-0107333-p39400.png`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `236100`, resident reloc `681632`
@@ -131,12 +132,12 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Next P1 work is a hybrid raw-GX matrix proof, then direct final-resolution 2D;
-visual/audio debt remains afterward.
+Next P1 work is hybrid raw-current GX, then final-resolution 2D; visual/audio debt follows.
+
 ## Verification
 
-All four `P1Gate` legs pass in `379.9s`: opening-to-Title, canonical battle,
-mode-163 combat, and one-minute Results. Boundary passes in `289.9s`. This is
+All four `P1Gate` legs pass in `459.7s` including clean prebuild: opening-to-Title,
+canonical battle, mode-163 combat, and one-minute Results. Boundary passes in `385.5s`.
 not the five-minute P1 soak; Full Regression was skipped for Tyler's fast cadence.
 
 ```powershell

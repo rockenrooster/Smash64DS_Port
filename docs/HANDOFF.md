@@ -101,10 +101,11 @@ reject/oracle drift, and terminal `12/12` matches. Pond detail is
 `46.053%/23px` versus white `27.997%/105px`.
 Profile-0 canonical/shipped retains `828` triangles, `103/725/103` batches, and
 the exact wallpaper/water output while compiling out oracle/range hot work.
-Warm present median/p95 is `17,346,720/17,475,520` at `1.9fps`; profile 1 is
-statistically equal with coarse timers. Same-source profile 2 retains exact
-`37200/37200` lanes and `2403/0/0` oracle at `20,282,080/20,578,944` ticks.
-Capture: `artifacts/visibility/2026-07-11_canonical_fast_174928-5579684-p21988.png`.
+Generation-keyed GX loads replace two 64-byte matrix compares per triangle; warm present median/p95 is `17,220,704/17,500,608` at `1.9fps`.
+Profile 2 reports `648/10/44` raw-current/range/cross-matrix classification;
+its corrected composed raw matrix passes device `PosTest` at
+`32/0/e2/w0/c0/mw1/drop0` and oracle `2403/0/0`. Raw submission is not live yet.
+Capture: `artifacts/visibility/2026-07-11_canonical_fast_183846-0107333-p39400.png`.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -115,13 +116,13 @@ over layer-1 floor/path. Stage traversal carries its 32-slot RSP vertex cache
 and applies `G_MWO_POINT_ST`; File3's five flower groups add ten source textured
 triangles (`192 -> 202`). Masked-clamp axes through 128 texels, six CI4 stars,
 and the DXT tail stride remain fixed. Debt: Whispy face acceptance, water phase/
-shifts/other TEXEL1, fog/color animation/raw GX matrices/speed, and Mario light A/B.
+shifts/other TEXEL1, fog/color animation/raw-GX cutover/speed, and Mario light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped
 realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Prove corrected hybrid raw GX for compatible ordinary source-Z triangles.
+1. Enable hybrid raw GX only for the 648 compatible ordinary source-Z triangles.
 2. Cut software 2D to exact final-resolution output; soak only at milestones.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
@@ -142,8 +143,8 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-All four compact P1Gate legs pass in `379.9s`, and fresh Boundary passes in
-`289.9s`. The lifecycle is not the five-minute P1 soak. Keep historical
+All four compact P1Gate legs pass in `459.7s` including clean prebuild, and
+fresh Boundary passes in `385.5s`. The lifecycle is not the five-minute P1 soak. Keep historical
 harnesses for localization; Full Regression was skipped.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

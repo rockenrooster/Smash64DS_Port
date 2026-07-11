@@ -1310,7 +1310,7 @@ Opening movie / Opening Portraits:
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
   completed update, and nonzero timer-derived rates. The canonical HW smoke
-  currently reports about `1.3` fps with source wallpaper and water
+  currently reports about `1.9` fps with source wallpaper and water
   precomposition; pass
   `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
@@ -1339,6 +1339,13 @@ Opening movie / Opening Portraits:
   ranges so blank-screen failures can be sorted into matrix/clip issues versus
   display/attribute issues. Projected draws divide the current composed clip
   vertex for X/Y/Z together and use DS Z.
+- `RENDER_RAW_MATRIX`: hybrid-raw readiness and corrected-matrix marker. Fields
+  are raw-current candidates, range fallbacks, cross-matrix fallbacks, device
+  `PosTest` samples/mismatches/max normalized error/W-sign mismatches/clip-class
+  mismatches/matrix-word samples/dropped samples. Profile 2 requires positive
+  candidates and samples, error at most 16, one natural-or-derived matrix-word
+  reconstruction, and all mismatch/drop fields zero. Profiles 0/1 retain only
+  the three classification totals and must perform zero `PosTest` work.
 - `RENDER_DEPTH`: source-depth sample count, signed 20.12 NDC min/max, and
   clip-W min/max for stage, player 0, and player 1. Canonical HW requires all
   three classes, NDC within `-4096..4095`, and positive ordered W ranges. This

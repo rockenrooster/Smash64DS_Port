@@ -16,6 +16,7 @@
 #if NDS_RENDERER_HW_TRIANGLES
 #include <math.h>
 #include <nds.h>
+#include <nds/arm9/postest.h>
 #endif
 
 #define NDS_RENDERER_OP_NOOP 0x00u
@@ -134,6 +135,14 @@
 #define NDS_RENDERER_HW_USETEX_REJECT_NO_TEXEL0 (1u << 4)
 #define NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE 0xffffu
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
+#define NDS_RENDERER_HW_RAW_COORD_MIN (-2048)
+#define NDS_RENDERER_HW_RAW_COORD_MAX 2047
+#define NDS_RENDERER_HW_MATRIX_MODE_NONE 0u
+#define NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY 1u
+#define NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED 2u
+#define NDS_RENDERER_HW_POS_TEST_MAX 64u
+#define NDS_RENDERER_HW_POS_TEST_TOLERANCE 16u
+#define NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA 4352
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START (0x1000 * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START \
     ((128 - 0x1000) * 6)
@@ -211,9 +220,9 @@ static s32 sNdsRendererHardwareProjectedDepth =
     NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
 static u32 sNdsRendererHardwareProjectedBackground = TRUE;
 static u32 sNdsRendererHardwareMatrixLoaded;
-static u32 sNdsRendererHardwareMatrixScaleWorld;
-static NDSRendererMatrix20p12 sNdsRendererHardwareMatrixProjection;
-static NDSRendererMatrix20p12 sNdsRendererHardwareMatrixModelview;
+static u32 sNdsRendererHardwareMatrixMode;
+static u32 sNdsRendererHardwareMatrixGeneration;
+static u32 sNdsRendererMatrixGenerationSerial;
 
 /* Profile levels 0/1 accumulate the small runtime health summary in ordinary
  * memory and publish it once at frame completion. The performance build never
@@ -238,6 +247,9 @@ typedef struct NDSRendererRuntimeFrameSummary
     u32 hardware_batch_end_count;
     u32 hardware_over_limit;
     u32 hardware_vertex_saturate_count;
+    u32 raw_current_candidate_count;
+    u32 raw_current_range_reject_count;
+    u32 raw_cross_matrix_count;
 } NDSRendererRuntimeFrameSummary;
 
 static NDSRendererRuntimeFrameSummary sNdsRendererRuntimeFrameSummary;
@@ -372,6 +384,33 @@ static inline void ndsRendererProfileRecordProjectedSubmit(void)
     gNdsRendererProfileProjectedSubmitFallbackCount++;
 #else
     sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordRawCurrentCandidate(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileRawCurrentCandidateCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.raw_current_candidate_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordRawCurrentRangeReject(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileRawCurrentRangeRejectCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.raw_current_range_reject_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordRawCrossMatrix(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileRawCrossMatrixCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count++;
 #endif
 }
 
@@ -532,12 +571,29 @@ typedef struct NDSRendererTraversalState
     u32 input_vertex_valid_mask;
     u32 vertex_color_valid_mask;
     u32 current_transform_vertex_mask;
+    u32 matrix_generation;
 #endif
     u32 projection_valid;
     u32 modelview_valid;
     u32 matrix_valid;
     u32 matrix_word_valid;
 } NDSRendererTraversalState;
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+typedef struct NDSRendererHardwarePendingPosTest
+{
+    NDSRendererMatrix20p12 matrix;
+    NDSRendererInputVertex input;
+    NDSRendererClipVertex20p12 clip;
+    u32 generation;
+    u32 matrix_word;
+} NDSRendererHardwarePendingPosTest;
+
+static NDSRendererHardwarePendingPosTest
+    sNdsRendererHardwarePendingPosTests[NDS_RENDERER_HW_POS_TEST_MAX];
+static u32 sNdsRendererHardwarePendingPosTestCount;
+static u32 sNdsRendererHardwarePendingPosTestLastGeneration;
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES
 static void ndsRendererHardwarePrepareLitDirection(
@@ -802,6 +858,21 @@ static void ndsRendererMtxIdentity20p12(NDSRendererMatrix20p12 *out)
         out->m[i][i] = 1 << NDS_RENDERER_DS_MTX_FRAC_BITS;
     }
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+static u32 ndsRendererNextMatrixGeneration(void)
+{
+    sNdsRendererMatrixGenerationSerial++;
+    if (sNdsRendererMatrixGenerationSerial == 0u)
+    {
+        sNdsRendererMatrixGenerationSerial = 1u;
+        sNdsRendererHardwareMatrixLoaded = FALSE;
+        sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+        sNdsRendererHardwareMatrixGeneration = 0u;
+    }
+    return sNdsRendererMatrixGenerationSerial;
+}
+#endif
 
 static u32 ndsRendererReadU32(const void *ptr)
 {
@@ -1387,6 +1458,7 @@ static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
 #if NDS_RENDERER_HW_TRIANGLES
     /* Cached RSP vertices retain the transform active when they were loaded. */
     state->current_transform_vertex_mask = 0u;
+    state->matrix_generation = ndsRendererNextMatrixGeneration();
 #endif
 }
 
@@ -1780,6 +1852,7 @@ static void ndsRendererApplyMatrixMoveWordCommand(
     state->matrix_valid = TRUE;
 #if NDS_RENDERER_HW_TRIANGLES
     state->current_transform_vertex_mask = 0u;
+    state->matrix_generation = ndsRendererNextMatrixGeneration();
 #endif
     stats->matrix_command_count++;
     stats->matrix_move_word_count++;
@@ -5353,7 +5426,7 @@ static s32 ndsRendererHardwareBindTexture(
 static void ndsRendererHardwareEndBatch(void);
 
 static void ndsRendererCopyMtx20p12ToM4x4(
-    const NDSRendererMatrix20p12 *src, m4x4 *dst, u32 scale_translation)
+    const NDSRendererMatrix20p12 *src, m4x4 *dst)
 {
     u32 row;
     u32 col;
@@ -5367,64 +5440,54 @@ static void ndsRendererCopyMtx20p12ToM4x4(
     {
         for (col = 0u; col < 4u; col++)
         {
-            s32 value = src->m[row][col];
-
-            if ((scale_translation != 0u) && (row == 3u) && (col < 3u))
-            {
-                value = ndsRendererRoundShiftS32Signed(
-                    value, NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
-            }
-            dst->m[(row * 4u) + col] = value;
+            dst->m[(row * 4u) + col] = src->m[row][col];
         }
     }
 }
 
-static void ndsRendererLoadHardwareMatrices(
-    const NDSRendererTraversalState *state, u32 scale_world)
+static void ndsRendererBuildRawHardwareMatrix(
+    const NDSRendererMatrix20p12 *composed,
+    NDSRendererMatrix20p12 *hardware)
 {
-    NDSRendererMatrix20p12 projection;
-    NDSRendererMatrix20p12 modelview;
+    u32 col;
+
+    if ((composed == NULL) || (hardware == NULL))
+    {
+        return;
+    }
+
+    /* Source coordinates are submitted as source / 256 in DS 4.12. Keep
+     * composed rows 0..2 unchanged and divide the complete homogeneous row 3
+     * by the same factor. The GX clip vector is then CPU clip / 256, preserving
+     * X/W, Y/W, and Z/W for arbitrary composed/matrix-word state. */
+    *hardware = *composed;
+    for (col = 0u; col < 4u; col++)
+    {
+        hardware->m[3][col] = ndsRendererRoundShiftS32Signed(
+            hardware->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+}
+
+static void ndsRendererLoadHardwareMatrixPair(
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *modelview,
+    u32 mode, u32 generation, u32 scale_world)
+{
     m4x4 projection_hw;
     m4x4 modelview_hw;
 
-    ndsRendererMtxIdentity20p12(&projection);
-    ndsRendererMtxIdentity20p12(&modelview);
-
-    if (state != NULL)
-    {
-        if ((state->matrix_word_valid != 0u) &&
-            (state->matrix_valid != 0u))
-        {
-            modelview = state->matrix;
-        }
-        else
-        {
-            if (state->projection_valid != 0u)
-            {
-                projection = state->projection;
-            }
-            if (state->modelview_valid != 0u)
-            {
-                modelview = state->modelview;
-            }
-        }
-    }
+    (void)scale_world;
 
     if ((sNdsRendererHardwareMatrixLoaded != 0u) &&
-        (sNdsRendererHardwareMatrixScaleWorld == scale_world) &&
-        (memcmp(&sNdsRendererHardwareMatrixProjection,
-                &projection,
-                sizeof(projection)) == 0) &&
-        (memcmp(&sNdsRendererHardwareMatrixModelview,
-                &modelview,
-                sizeof(modelview)) == 0))
+        (sNdsRendererHardwareMatrixMode == mode) &&
+        (sNdsRendererHardwareMatrixGeneration == generation))
     {
         return;
     }
 
     ndsRendererHardwareEndBatch();
-    ndsRendererCopyMtx20p12ToM4x4(&projection, &projection_hw, FALSE);
-    ndsRendererCopyMtx20p12ToM4x4(&modelview, &modelview_hw, scale_world);
+    ndsRendererCopyMtx20p12ToM4x4(projection, &projection_hw);
+    ndsRendererCopyMtx20p12ToM4x4(modelview, &modelview_hw);
 
     glMatrixMode(GL_PROJECTION);
     glLoadMatrix4x4(&projection_hw);
@@ -5434,23 +5497,314 @@ static void ndsRendererLoadHardwareMatrices(
     ndsRendererProfileRecordMatrixLoad();
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileMatrixScaleWorld = scale_world;
-    gNdsRendererProfileProjectionM00 = projection.m[0][0];
-    gNdsRendererProfileProjectionM11 = projection.m[1][1];
-    gNdsRendererProfileProjectionM22 = projection.m[2][2];
-    gNdsRendererProfileProjectionM32 = projection.m[3][2];
-    gNdsRendererProfileModelviewM00 = modelview.m[0][0];
-    gNdsRendererProfileModelviewM11 = modelview.m[1][1];
-    gNdsRendererProfileModelviewM22 = modelview.m[2][2];
-    gNdsRendererProfileModelviewM30 = modelview.m[3][0];
-    gNdsRendererProfileModelviewM31 = modelview.m[3][1];
-    gNdsRendererProfileModelviewM32 = modelview.m[3][2];
+    gNdsRendererProfileProjectionM00 = projection->m[0][0];
+    gNdsRendererProfileProjectionM11 = projection->m[1][1];
+    gNdsRendererProfileProjectionM22 = projection->m[2][2];
+    gNdsRendererProfileProjectionM32 = projection->m[3][2];
+    gNdsRendererProfileModelviewM00 = modelview->m[0][0];
+    gNdsRendererProfileModelviewM11 = modelview->m[1][1];
+    gNdsRendererProfileModelviewM22 = modelview->m[2][2];
+    gNdsRendererProfileModelviewM30 = modelview->m[3][0];
+    gNdsRendererProfileModelviewM31 = modelview->m[3][1];
+    gNdsRendererProfileModelviewM32 = modelview->m[3][2];
 #endif
 
-    sNdsRendererHardwareMatrixProjection = projection;
-    sNdsRendererHardwareMatrixModelview = modelview;
-    sNdsRendererHardwareMatrixScaleWorld = scale_world;
+    sNdsRendererHardwareMatrixMode = mode;
+    sNdsRendererHardwareMatrixGeneration = generation;
     sNdsRendererHardwareMatrixLoaded = TRUE;
 }
+
+static void ndsRendererLoadHardwareRawComposedMatrix(
+    const NDSRendererMatrix20p12 *composed, u32 generation)
+{
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+
+    ndsRendererMtxIdentity20p12(&projection);
+    ndsRendererBuildRawHardwareMatrix(composed, &modelview);
+    ndsRendererLoadHardwareMatrixPair(
+        &projection, &modelview, NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED,
+        generation, TRUE);
+}
+
+static void ndsRendererLoadHardwareMatrices(
+    const NDSRendererTraversalState *state, u32 scale_world)
+{
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+
+    if ((state != NULL) && (scale_world != 0u) &&
+        (state->matrix_valid != 0u))
+    {
+        ndsRendererLoadHardwareRawComposedMatrix(
+            &state->matrix, state->matrix_generation);
+        return;
+    }
+
+    ndsRendererMtxIdentity20p12(&projection);
+    ndsRendererMtxIdentity20p12(&modelview);
+    ndsRendererLoadHardwareMatrixPair(
+        &projection, &modelview,
+        NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY, 0u, FALSE);
+}
+
+static s32 ndsRendererHardwareRawVertexFits(
+    const NDSRendererInputVertex *vtx)
+{
+    if (vtx == NULL)
+    {
+        return FALSE;
+    }
+    return ((vtx->x >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
+            (vtx->x <= NDS_RENDERER_HW_RAW_COORD_MAX) &&
+            (vtx->y >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
+            (vtx->y <= NDS_RENDERER_HW_RAW_COORD_MAX) &&
+            (vtx->z >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
+            (vtx->z <= NDS_RENDERER_HW_RAW_COORD_MAX)) ? TRUE : FALSE;
+}
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static u64 ndsRendererHardwareAbsS64(s64 value)
+{
+    return (value < 0) ? (u64)(-(value + 1)) + 1u : (u64)value;
+}
+
+static u64 ndsRendererHardwareAbsDiffS64(s64 lhs, s64 rhs)
+{
+    if ((lhs < 0) == (rhs < 0))
+    {
+        return (lhs >= rhs) ? (u64)(lhs - rhs) : (u64)(rhs - lhs);
+    }
+    return ndsRendererHardwareAbsS64(lhs) + ndsRendererHardwareAbsS64(rhs);
+}
+
+static u32 ndsRendererHardwarePosTestCrossError(
+    s32 hardware_axis, s32 hardware_w,
+    s32 cpu_axis, s32 cpu_w)
+{
+    s64 lhs = (s64)hardware_axis * cpu_w;
+    s64 rhs = (s64)cpu_axis * hardware_w;
+    u64 error = ndsRendererHardwareAbsDiffS64(lhs, rhs);
+    u64 scale = ndsRendererHardwareAbsS64(cpu_axis) +
+                ndsRendererHardwareAbsS64(cpu_w);
+    u64 normalized;
+
+    if (scale == 0u)
+    {
+        scale = 1u;
+    }
+    normalized = (error / scale) + ((error % scale) != 0u);
+    return (normalized > UINT_MAX) ? UINT_MAX : (u32)normalized;
+}
+
+static u32 ndsRendererHardwarePosTestInside(s32 axis, s32 w)
+{
+    return (ndsRendererHardwareAbsS64(axis) <=
+            ndsRendererHardwareAbsS64(w)) ? TRUE : FALSE;
+}
+
+static void ndsRendererHardwareQueueRawMatrixPosTest(
+    const NDSRendererTraversalState *state, u32 index)
+{
+    NDSRendererHardwarePendingPosTest *probe;
+
+    if ((state == NULL) || (index >= NDS_RENDERER_MAX_VTX) ||
+        (state->matrix_valid == 0u) ||
+        (state->matrix_generation ==
+         sNdsRendererHardwarePendingPosTestLastGeneration))
+    {
+        return;
+    }
+    sNdsRendererHardwarePendingPosTestLastGeneration =
+        state->matrix_generation;
+    if (sNdsRendererHardwarePendingPosTestCount >=
+        NDS_RENDERER_HW_POS_TEST_MAX)
+    {
+        gNdsRendererProfileMatrixPosTestDropped++;
+        return;
+    }
+
+    probe = &sNdsRendererHardwarePendingPosTests[
+        sNdsRendererHardwarePendingPosTestCount++];
+    probe->matrix = state->matrix;
+    probe->input = state->input_vertices[index];
+    probe->clip = state->vertices[index];
+    probe->generation = state->matrix_generation;
+    probe->matrix_word = state->matrix_word_valid;
+}
+
+static void ndsRendererHardwareQueueMatrixWordPosTestFixture(void)
+{
+    NDSRendererHardwarePendingPosTest *base;
+    NDSRendererHardwarePendingPosTest *probe;
+    NDSRendererTraversalState state;
+    NDSRendererStats stats;
+    NDSRendererMatrix20p12 target_matrix;
+    Mtx target_raw;
+    const u32 *target_words;
+    u32 *current_words;
+    u32 i;
+
+    if (sNdsRendererHardwarePendingPosTestCount == 0u)
+    {
+        return;
+    }
+    for (i = 0u; i < sNdsRendererHardwarePendingPosTestCount; i++)
+    {
+        if (sNdsRendererHardwarePendingPosTests[i].matrix_word != 0u)
+        {
+            return;
+        }
+    }
+
+    /*
+     * The current Pupupu frame does not naturally issue G_MW_MATRIX. Derive
+     * one backend-only fixture from its first eligible matrix so profile 2
+     * still proves the exact MVP-recalc + matrix-word reconstruction used by
+     * BattleShip. This runs after the submitted triangle batch has closed and
+     * cannot alter production geometry.
+     */
+    base = &sNdsRendererHardwarePendingPosTests[0];
+    memset(&state, 0, sizeof(state));
+    memset(&stats, 0, sizeof(stats));
+    state.matrix = base->matrix;
+    state.matrix_valid = TRUE;
+    ndsRendererApplyMvpRecalcCommand(&stats, &state, 1u, 0u);
+
+    target_matrix = state.matrix;
+    if (target_matrix.m[3][0] <=
+        (INT_MAX - NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA))
+    {
+        target_matrix.m[3][0] +=
+            NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA;
+    }
+    else
+    {
+        target_matrix.m[3][0] -=
+            NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA;
+    }
+    ndsRendererMtxStoreDS20p12ToN64(&target_matrix, &target_raw);
+    target_words = (const u32 *)&target_raw.m[0][0];
+    current_words = (u32 *)&state.matrix_word_raw.m[0][0];
+    for (i = 0u; i < NDS_RENDERER_MATRIX_WORD_COUNT; i++)
+    {
+        if (current_words[i] != target_words[i])
+        {
+            ndsRendererApplyMatrixMoveWordCommand(
+                &stats, &state,
+                (i * NDS_RENDERER_MATRIX_WORD_BYTES) <<
+                    NDS_RENDERER_MOVEWORD_OFFSET_SHIFT,
+                target_words[i]);
+            current_words = (u32 *)&state.matrix_word_raw.m[0][0];
+        }
+    }
+    if ((stats.matrix_mvp_recalc_count != 1u) ||
+        (stats.matrix_move_word_count == 0u))
+    {
+        gNdsRendererProfileMatrixPosTestDropped++;
+        return;
+    }
+
+    if (sNdsRendererHardwarePendingPosTestCount <
+        NDS_RENDERER_HW_POS_TEST_MAX)
+    {
+        probe = &sNdsRendererHardwarePendingPosTests[
+            sNdsRendererHardwarePendingPosTestCount++];
+    }
+    else
+    {
+        probe = &sNdsRendererHardwarePendingPosTests[
+            NDS_RENDERER_HW_POS_TEST_MAX - 1u];
+    }
+    probe->matrix = state.matrix;
+    probe->input = base->input;
+    ndsRendererTransformVertex20p12(&probe->matrix, &probe->input,
+                                    &probe->clip);
+    probe->generation = state.matrix_generation;
+    probe->matrix_word = TRUE;
+}
+
+static void ndsRendererHardwareRunRawMatrixPosTests(void)
+{
+    u32 i;
+
+    ndsRendererHardwareQueueMatrixWordPosTestFixture();
+
+    for (i = 0u; i < sNdsRendererHardwarePendingPosTestCount; i++)
+    {
+        const NDSRendererHardwarePendingPosTest *probe =
+            &sNdsRendererHardwarePendingPosTests[i];
+        v16 x = ndsRendererHardwareVertexCoord(probe->input.x, TRUE);
+        v16 y = ndsRendererHardwareVertexCoord(probe->input.y, TRUE);
+        v16 z = ndsRendererHardwareVertexCoord(probe->input.z, TRUE);
+        s32 hardware_x;
+        s32 hardware_y;
+        s32 hardware_z;
+        s32 hardware_w;
+        u32 error_x;
+        u32 error_y;
+        u32 error_z;
+        u32 max_error;
+        u32 w_sign_mismatch;
+        u32 clip_mismatch;
+
+        ndsRendererLoadHardwareRawComposedMatrix(
+            &probe->matrix, probe->generation);
+        PosTest(x, y, z);
+        hardware_x = PosTestXresult();
+        hardware_y = PosTestYresult();
+        hardware_z = PosTestZresult();
+        hardware_w = PosTestWresult();
+        error_x = ndsRendererHardwarePosTestCrossError(
+            hardware_x, hardware_w, probe->clip.x, probe->clip.w);
+        error_y = ndsRendererHardwarePosTestCrossError(
+            hardware_y, hardware_w, probe->clip.y, probe->clip.w);
+        error_z = ndsRendererHardwarePosTestCrossError(
+            hardware_z, hardware_w, probe->clip.z, probe->clip.w);
+        max_error = error_x;
+        if (error_y > max_error) { max_error = error_y; }
+        if (error_z > max_error) { max_error = error_z; }
+        w_sign_mismatch = (((hardware_w < 0) != (probe->clip.w < 0)) ||
+                           ((hardware_w == 0) != (probe->clip.w == 0))) ?
+                              TRUE : FALSE;
+        clip_mismatch =
+            ((ndsRendererHardwarePosTestInside(hardware_x, hardware_w) !=
+              ndsRendererHardwarePosTestInside(probe->clip.x,
+                                               probe->clip.w)) ||
+             (ndsRendererHardwarePosTestInside(hardware_y, hardware_w) !=
+              ndsRendererHardwarePosTestInside(probe->clip.y,
+                                               probe->clip.w)) ||
+             (ndsRendererHardwarePosTestInside(hardware_z, hardware_w) !=
+              ndsRendererHardwarePosTestInside(probe->clip.z,
+                                               probe->clip.w))) ? TRUE : FALSE;
+
+        gNdsRendererProfileMatrixPosTestSamples++;
+        if (probe->matrix_word != 0u)
+        {
+            gNdsRendererProfileMatrixPosTestMatrixWordSamples++;
+        }
+        if (max_error > gNdsRendererProfileMatrixPosTestMaxError)
+        {
+            gNdsRendererProfileMatrixPosTestMaxError = max_error;
+        }
+        if (w_sign_mismatch != FALSE)
+        {
+            gNdsRendererProfileMatrixPosTestWSignMismatches++;
+        }
+        if (clip_mismatch != FALSE)
+        {
+            gNdsRendererProfileMatrixPosTestClipMismatches++;
+        }
+        if ((max_error > NDS_RENDERER_HW_POS_TEST_TOLERANCE) ||
+            (w_sign_mismatch != FALSE) || (clip_mismatch != FALSE))
+        {
+            gNdsRendererProfileMatrixPosTestMismatches++;
+        }
+    }
+    sNdsRendererHardwarePendingPosTestCount = 0u;
+    sNdsRendererHardwarePendingPosTestLastGeneration = 0u;
+}
+#endif
 
 static s32 ndsRendererHardwareNextProjectedDepth(void)
 {
@@ -5736,6 +6090,43 @@ static s32 ndsRendererInputTriangleReady(
     return ((state->input_vertex_valid_mask & mask) == mask) ? TRUE : FALSE;
 }
 
+static void ndsRendererHardwareRecordRawCurrentCandidate(
+    const NDSRendererTraversalState *state,
+    u32 i0, u32 i1, u32 i2,
+    s32 source_zbuffered, s32 decal_depth, s32 prim_depth)
+{
+    u32 mask;
+
+    if ((state == NULL) || (source_zbuffered == FALSE) ||
+        (decal_depth != FALSE) || (prim_depth != FALSE) ||
+        (state->matrix_valid == 0u))
+    {
+        return;
+    }
+
+    mask = (1u << i0) | (1u << i1) | (1u << i2);
+    if ((state->current_transform_vertex_mask & mask) != mask)
+    {
+        ndsRendererProfileRecordRawCrossMatrix();
+        return;
+    }
+    if ((ndsRendererHardwareRawVertexFits(&state->input_vertices[i0]) ==
+         FALSE) ||
+        (ndsRendererHardwareRawVertexFits(&state->input_vertices[i1]) ==
+         FALSE) ||
+        (ndsRendererHardwareRawVertexFits(&state->input_vertices[i2]) ==
+         FALSE))
+    {
+        ndsRendererProfileRecordRawCurrentRangeReject();
+        return;
+    }
+
+    ndsRendererProfileRecordRawCurrentCandidate();
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    ndsRendererHardwareQueueRawMatrixPosTest(state, i0);
+#endif
+}
+
 static void ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
@@ -5836,6 +6227,8 @@ static void ndsRendererSubmitHardwareTriangle(
     v0 = &state->input_vertices[i0];
     v1 = &state->input_vertices[i1];
     v2 = &state->input_vertices[i2];
+    ndsRendererHardwareRecordRawCurrentCandidate(
+        state, i0, i1, i2, source_zbuffered, decal_depth, prim_depth);
     render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     if (sNdsRendererHardwareNoOracle == 0u)
@@ -6392,6 +6785,16 @@ u32 ndsRendererHardwareNoOracleEnabled(void)
 void ndsRendererProfileFrameBegin(void)
 {
     gNdsRendererProfileLevel = NDS_RENDERER_PROFILE_LEVEL;
+    gNdsRendererProfileRawCurrentCandidateCount = 0u;
+    gNdsRendererProfileRawCurrentRangeRejectCount = 0u;
+    gNdsRendererProfileRawCrossMatrixCount = 0u;
+    gNdsRendererProfileMatrixPosTestSamples = 0u;
+    gNdsRendererProfileMatrixPosTestMismatches = 0u;
+    gNdsRendererProfileMatrixPosTestMaxError = 0u;
+    gNdsRendererProfileMatrixPosTestWSignMismatches = 0u;
+    gNdsRendererProfileMatrixPosTestClipMismatches = 0u;
+    gNdsRendererProfileMatrixPosTestMatrixWordSamples = 0u;
+    gNdsRendererProfileMatrixPosTestDropped = 0u;
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     memset(&sNdsRendererRuntimeFrameSummary, 0,
            sizeof(sNdsRendererRuntimeFrameSummary));
@@ -6400,6 +6803,10 @@ void ndsRendererProfileFrameBegin(void)
         sNdsRendererRuntimeTexel1FractionRefreshCount = 0u;
         sNdsRendererRuntimeTextureCacheEvictCount = 0u;
     }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+    sNdsRendererHardwarePendingPosTestCount = 0u;
+    sNdsRendererHardwarePendingPosTestLastGeneration = 0u;
 #endif
 }
 
@@ -6443,6 +6850,12 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererRuntimeFrameSummary.hardware_over_limit;
     gNdsRendererProfileHWVertexSaturateCount =
         sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count;
+    gNdsRendererProfileRawCurrentCandidateCount =
+        sNdsRendererRuntimeFrameSummary.raw_current_candidate_count;
+    gNdsRendererProfileRawCurrentRangeRejectCount =
+        sNdsRendererRuntimeFrameSummary.raw_current_range_reject_count;
+    gNdsRendererProfileRawCrossMatrixCount =
+        sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count;
     gNdsRendererProfileOracleSamples = 0u;
     gNdsRendererProfileOracleMismatches = 0u;
     gNdsRendererProfileOracleMaxDelta = 0u;
@@ -6455,11 +6868,16 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
     u32 submitted = sNdsRendererHardwareSubmitted;
 
     ndsRendererHardwareEndBatch();
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    ndsRendererHardwareRunRawMatrixPosTests();
+#endif
     sNdsRendererHardwareSubmitted = FALSE;
     sNdsRendererHardwareProjectedDepth =
         NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
     sNdsRendererHardwareProjectedBackground = TRUE;
     sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    sNdsRendererHardwareMatrixGeneration = 0u;
     sNdsRendererHardwareBoundTextureName = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     sNdsRendererHardwareFrameSerial++;

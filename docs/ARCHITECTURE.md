@@ -1224,8 +1224,26 @@ scene-lifetime. Relative 10.2 tile-origin phase still rounds to whole texels,
 so smooth bilerp water motion remains fidelity/performance debt.
 
 Canonical HW still uses projected submission rather than the final raw GX
-matrix path. Source-depth X/Y/Z come from one composed clip vertex. Because DS
-cannot disable depth testing per polygon, synthetic no-Z depth is phase-aware:
+cutover. The renderer now assigns a nonzero generation whenever projection,
+modelview, pop, or matrix-word state changes; GX caches mode plus generation
+instead of comparing two 64-byte matrices per eligible triangle. Wrap to
+generation one invalidates the cache. Current-slot/range classification finds
+`648` compatible ordinary-Z triangles, `44` cross-matrix cache joins, and `10`
+raw-v16 range fallbacks in the stable `828`-triangle frame.
+
+For raw input submitted as source/256, rows 0--2 of the composed 20.12 matrix
+stay unchanged and the complete homogeneous row 3, including W, is rounded
+right by eight. Profile 2 closes the final GX batch, loads that candidate, and
+uses libnds `PosTest` on one vertex per natural generation. When the sampled
+frame has no natural `G_MW_MATRIX`, a backend-only fixture applies BattleShip's
+MVP-recalc plus matrix-word reconstruction to its first natural matrix. The
+stable proof is `32/0/e2/w0/c0/mw1/drop0`: samples/mismatches/max error/W-sign/
+clip/matrix-word/dropped. This fixture cannot affect submitted geometry and is
+absent from profiles 0/1. Production raw submission remains disabled until the
+separate hybrid cutover.
+
+Source-depth X/Y/Z still come from one composed clip vertex. Because DS cannot
+disable depth testing per polygon, synthetic no-Z depth is phase-aware:
 layer-0/background draws begin at far NDC; the first submitted source-Z triangle
 moves subsequent layer-3/no-Z painter draws to near NDC without itself consuming
 a synthetic slot. This preserves BattleShip's `G_ZBUFFER` transition and
