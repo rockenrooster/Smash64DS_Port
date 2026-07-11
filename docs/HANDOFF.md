@@ -100,6 +100,10 @@ tile-6/TMEM-0x40 TEXEL1 and tile-7/TMEM-0 TEXEL0, recognizes exact
 gate proves positive scene-lifetime compatible-state refresh, zero eviction/
 reject/oracle drift, and terminal `12/12` matches. Pond detail is
 `46.053%/23px` versus white `27.997%/105px`.
+Canonical lane counters are now aggregated once per conversion, and the common
+TEXEL1 address path avoids division. Canonical present cost is
+`40,452,480 -> 34,839,424` ticks (`-13.9%`) with oracle `2403/0/0`; `9/9 x0.1`
+remains far below real time.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -116,10 +120,11 @@ realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Accept or refine the changed Whispy face; preserve 10.2 water phase.
-2. Turn Mario under a fixed light to classify the pant-leg asymmetry.
-3. Cover phase/shifts, other TEXEL1 formulas, and fog/color animation.
-4. Cache corrected draw/SObj/material state for stable audio and 60fps.
+1. Cache the immutable decoded wallpaper asset below the SObj compositor while
+   keeping imported camera-driven position/scale live; never cache the composed
+   stage frame, animated water, Whispy, flowers, or fence ordering.
+2. Restore same-state triangle batching only across consecutive TRI commands.
+3. Refine Whispy and Mario light A/B; cover phase/shifts and fog/color animation.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
@@ -138,8 +143,7 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-All four `P1Gate` legs passed; warm DevFast is `63.6s` with no compiler work,
-and unchanged Boundary passed. The scripted battle leg is supplemental and the
+All four `P1Gate` legs passed in `296.4s`; latest DevFast is `50.4s`, and Boundary passed in `75.7s`. The scripted battle leg is supplemental and the
 one-minute lifecycle is not the five-minute P1 soak. Keep historical harnesses
 for localization; Full Regression was skipped for Tyler's faster cadence.
 

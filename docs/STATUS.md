@@ -88,7 +88,11 @@ terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
 `artifacts/visibility/2026-07-11_dream-land-fences-flowers-hudoff-final.png`.
 Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
 plus `G_MWO_POINT_ST` restores five flower groups and adds ten source triangles
-(`192 -> 202`). Debt: Whispy face, phase/shifts/fog, Mario light A/B, and speed.
+(`192 -> 202`); Tyler accepts both flowers and foreground fences. The texture
+converter now aggregates exact lane diagnostics per texture and bypasses
+interior TEXEL1 address division. Canonical present cost fell
+`40,452,480 -> 34,839,424` ticks (`-13.9%`), while lane counters remain
+`37200/37200`, oracle stays `2403/0/0`, and pacing is still only `9/9 x0.1`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -97,15 +101,7 @@ VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
 `16` bytes of scratch. The separate 64 KiB BGM buffer leaves `172412` bytes
 against the 128 KiB reserve.
 
-Renderer hardware is default for all-DL modes `33/34`, stage MP modes `59-124`,
-and Boundary pair `161/162`; global normal builds keep software preview. Texture,
-stage-carry, GX RAM, oracle, fighter-contract, and screenshot gates cover it.
-
 ## Current Notes
-
-Stable flags stay in `nds_build_config.h`; per-mode harness ID/Inishie scale
-live in `nds_scene_harness_config.h`. Interrupted dependency files are sanitized
-before make parses them, so incremental builds recover without cleaning.
 
 The taskman allocator now tries `0x140000` and `0x130000` before its legacy
 1 MiB fallback, preventing source-display builds from overflowing after a
@@ -127,15 +123,17 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Rejected load-time MObj and inactive camera-head probes stay reverted; follow-ups are Whispy, Mario light A/B, phase/shifts, then caching.
+Next P1 work is the immutable wallpaper decode cache with live SObj camera
+transform, then safe triangle batching. Whispy, Mario light A/B, phase/shifts,
+fog, and gameplay-critical FGM/voice remain visual/audio debt.
 FGM/voice and the original sequence player remain deferred.
 ## Verification
 
 All four `P1Gate` legs passed: compact opening-to-Title, canonical live battle/
-capture, supplemental scripted mode-163 combat, and one-minute Results. Warm
-DevFast passed in `63.6s` with no compiler work; unchanged Boundary stayed green.
-The shadow profile changes no existing profile and is not the five-minute P1
-soak. Full Regression was skipped per Tyler's faster iteration request.
+capture, supplemental scripted mode-163 combat, and one-minute Results. Latest
+DevFast passed in `50.4s`, P1Gate in `296.4s`, and Boundary in `75.7s`. The
+shadow profile is not the five-minute P1 soak. Full Regression was skipped per
+Tyler's faster iteration request.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

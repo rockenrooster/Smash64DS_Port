@@ -3487,23 +3487,23 @@ static u32 ndsRendererTexturePackMap(
     return map;
 }
 
-static void ndsRendererRecordTextureLane(
+static void ndsRendererRecordTextureLaneCount(
     NDSRendererTextureDataLayout layout, u32 is_halfword,
-    u32 format, u32 size)
+    u32 format, u32 size, u32 count)
 {
     u32 format_bit = ndsRendererHardwareTextureFormatBit(format, size);
 
     gNdsRendererProfileTextureLaneLayoutMask |= 1u << (u32)layout;
     if (is_halfword != 0u)
     {
-        gNdsRendererProfileTextureLaneHalfwordAccessCount++;
+        gNdsRendererProfileTextureLaneHalfwordAccessCount += count;
         gNdsRendererProfileTextureLaneHalfwordFormatMask |= format_bit;
         gNdsRendererProfileTextureLaneHalfwordMap =
             ndsRendererTexturePackMap(layout, 1u);
     }
     else
     {
-        gNdsRendererProfileTextureLaneByteAccessCount++;
+        gNdsRendererProfileTextureLaneByteAccessCount += count;
         gNdsRendererProfileTextureLaneByteFormatMask |= format_bit;
         gNdsRendererProfileTextureLaneByteMap =
             ndsRendererTexturePackMap(layout, 3u);
@@ -3541,7 +3541,12 @@ static u8 ndsRendererReadTextureByte(
 {
     NDSRendererTextureDataLayout layout = ndsRendererTextureDataLayout(config);
 
-    ndsRendererRecordTextureLane(layout, FALSE, format, size);
+    /* The conversion loop aggregates this access after rasterization. Do not
+     * update volatile diagnostics for every converted texel: animated
+     * TEXEL0/TEXEL1 water reads this path tens of thousands of times per
+     * frame, while the lane contract is invariant for the conversion. */
+    (void)format;
+    (void)size;
     return texels[ndsRendererTextureLogicalByteIndex(layout, logical_index)];
 }
 
@@ -3562,29 +3567,38 @@ static u16 ndsRendererReadTextureHalfword(
 {
     NDSRendererTextureDataLayout layout = ndsRendererTextureDataLayout(config);
 
-    ndsRendererRecordTextureLane(layout, TRUE, format, size);
+    (void)format;
+    (void)size;
     return data[ndsRendererTextureLogicalHalfwordIndex(layout, logical_index)];
 }
 
-static void ndsRendererRecordTextureLaneUse(
-    const NDSRendererConfig *config, u32 format, u32 size)
+static void ndsRendererRecordTextureLaneUseCount(
+    const NDSRendererConfig *config, u32 format, u32 size, u32 count)
 {
     NDSRendererTextureDataLayout layout = ndsRendererTextureDataLayout(config);
 
     if ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
         (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))
     {
-        ndsRendererRecordTextureLane(layout, FALSE, format, size);
+        ndsRendererRecordTextureLaneCount(
+            layout, FALSE, format, size, count);
     }
     else if (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B)
     {
-        ndsRendererRecordTextureLane(layout, TRUE, format, size);
+        ndsRendererRecordTextureLaneCount(
+            layout, TRUE, format, size, count);
     }
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
     {
-        ndsRendererRecordTextureLane(
-            layout, TRUE, format, NDS_RENDERER_HW_TEXTURE_SIZ_16B);
+        ndsRendererRecordTextureLaneCount(
+            layout, TRUE, format, NDS_RENDERER_HW_TEXTURE_SIZ_16B, count);
     }
+}
+
+static void ndsRendererRecordTextureLaneUse(
+    const NDSRendererConfig *config, u32 format, u32 size)
+{
+    ndsRendererRecordTextureLaneUseCount(config, format, size, 1u);
 }
 
 static u16 ndsRendererHardwarePaletteColor(
@@ -4110,6 +4124,16 @@ static u32 ndsRendererHardwareTextureAddressCoord(
     {
         return 0u;
     }
+    /* The common interior case is already in the first source/mask period.
+     * Return it directly instead of paying signed divide/modulo for every
+     * TEXEL1 pixel; edge, wrap and mirror coordinates retain the full path. */
+    if ((coord >= 0) && ((u32)coord < source_extent) &&
+        ((logical_extent == 0u) || ((u32)coord < logical_extent)) &&
+        ((mask == 0u) || (mask >= 31u) ||
+         ((u32)coord < (1u << mask))))
+    {
+        return (u32)coord;
+    }
     if ((mode & NDS_RENDERER_TX_CLAMP) != 0u)
     {
         if (coord < 0)
@@ -4158,7 +4182,8 @@ static u16 ndsRendererHardwareTexel1Color(
     const NDSRendererConfig *config,
     const u16 *palette,
     u32 palette_count,
-    const NDSRendererTileState *primary_tile,
+    s32 origin_delta_s,
+    s32 origin_delta_t,
     u32 x,
     u32 y)
 {
@@ -4169,16 +4194,12 @@ static u16 ndsRendererHardwareTexel1Color(
     u32 index;
 
     if ((source == NULL) || (source->render_tile == NULL) ||
-        (source->texels == NULL) || (primary_tile == NULL))
+        (source->texels == NULL))
     {
         return 0u;
     }
-    source_x = (s32)x + ndsRendererHardwareQuarterToTexel(
-        ndsRendererHardwareTileOriginDelta(
-            primary_tile->uls, source->render_tile->uls));
-    source_y = (s32)y + ndsRendererHardwareQuarterToTexel(
-        ndsRendererHardwareTileOriginDelta(
-            primary_tile->ult, source->render_tile->ult));
+    source_x = (s32)x + origin_delta_s;
+    source_y = (s32)y + origin_delta_t;
     addressed_x = ndsRendererHardwareTextureAddressCoord(
         source_x, source->render_tile->width,
         source->source_extent_width, source->render_tile->cms,
@@ -4309,6 +4330,8 @@ static s32 ndsRendererHardwareBindTexture(
     s32 materialize_t;
     s32 wants_texel1;
     s32 use_texel1 = FALSE;
+    s32 texel1_origin_delta_s = 0;
+    s32 texel1_origin_delta_t = 0;
     const NDSRendererTileState *render_tile;
     u32 green_texels = 0u;
     u32 nonwhite_texels = 0u;
@@ -4562,6 +4585,12 @@ static s32 ndsRendererHardwareBindTexture(
                 &texel1_source) != FALSE)
         {
             use_texel1 = TRUE;
+            texel1_origin_delta_s = ndsRendererHardwareQuarterToTexel(
+                ndsRendererHardwareTileOriginDelta(
+                    render_tile->uls, texel1_source.render_tile->uls));
+            texel1_origin_delta_t = ndsRendererHardwareQuarterToTexel(
+                ndsRendererHardwareTileOriginDelta(
+                    render_tile->ult, texel1_source.render_tile->ult));
             gNdsRendererProfileTexel1CompositeCount++;
             gNdsRendererProfileTexel1LoadMatchCount++;
             gNdsRendererProfileTexel1LastFraction =
@@ -4733,14 +4762,15 @@ static s32 ndsRendererHardwareBindTexture(
            sizeof(sNdsRendererHardwareTextureScratch));
     for (y = 0u; y < height; y++)
     {
+        u32 source_y = (materialize_t != FALSE) ?
+            ndsRendererHardwareTextureMaskedAddress(
+                y, render_tile->cmt, render_tile->maskt) : y;
+
         for (x = 0u; x < width; x++)
         {
             u32 source_x = (materialize_s != FALSE) ?
                 ndsRendererHardwareTextureMaskedAddress(
                     x, render_tile->cms, render_tile->masks) : x;
-            u32 source_y = (materialize_t != FALSE) ?
-                ndsRendererHardwareTextureMaskedAddress(
-                    y, render_tile->cmt, render_tile->maskt) : y;
             u32 src_index =
                 ((source_origin_t + source_y) * source_width) +
                 source_origin_s + source_x;
@@ -4756,7 +4786,8 @@ static s32 ndsRendererHardwareBindTexture(
             {
                 u16 color1 = ndsRendererHardwareTexel1Color(
                     &texel1_source, config, tlut_src,
-                    stats->texture_tlut_count, render_tile, x, y);
+                    stats->texture_tlut_count,
+                    texel1_origin_delta_s, texel1_origin_delta_t, x, y);
 
                 color = ndsRendererHardwareBlendTexel01(
                     color, color1, stats->prim_lod_fraction, x, y);
@@ -4765,6 +4796,14 @@ static s32 ndsRendererHardwareBindTexture(
             ndsRendererProfileTexturePixel(color, &green_texels,
                                            &nonwhite_texels);
         }
+    }
+    /* Preserve the canonical lane-observation totals while paying one volatile
+     * update per converted texture instead of one per texel. */
+    ndsRendererRecordTextureLaneUseCount(config, format, size, texels);
+    if (use_texel1 != FALSE)
+    {
+        ndsRendererRecordTextureLaneUseCount(
+            config, texel1_source.format, texel1_source.size, texels);
     }
     ndsRendererProfileTextureFormat(
         &gNdsRendererProfileTextureConvertFormatMask, format, size);

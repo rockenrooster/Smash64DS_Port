@@ -1153,7 +1153,14 @@
   compositor is source-correct but uncached; its per-pixel scale currently
   dominates frame time and can miss the 0.74-second BGM half-buffer deadline;
   audible resyncs remain possible until it is cached without changing
-  camera-driven position/scale behavior.
+  camera-driven position/scale behavior. Cache only the immutable decoded
+  wallpaper asset below `ndsDrawSObjIntoPreview`; camera/SObj transform and
+  composition must remain live so water, Whispy, flowers, and fence ordering do
+  not stale. Aggregating canonical texture-lane diagnostics and fast-pathing common
+  TEXEL1 coordinates reduced canonical present cost from `40,452,480` to
+  `34,839,424` ticks, but measured pacing remains only `9/9 x0.1`. Lane access
+  totals are now aggregate conversion observations rather than per-read writes;
+  host fixtures still cover the byte/halfword reader maps directly.
 - The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`; the
   canonical/shipped target forces it off while verifier markers remain active.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.

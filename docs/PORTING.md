@@ -19039,3 +19039,39 @@ moving fighters to remain inside fixed color crops because the preceding GDB
 pass hard-proves selected/submitted/in-bounds fighter geometry; FastIteration
 uses camera-tolerant shrub/pond variation floors `40%/30%` while retaining the
 default `50%/35%` gate and both `16px/60px` flat-run caps.
+
+## 2026-07-11 - Texture conversion hot-path cleanup
+
+- Profiled the canonical mode-163 ROM through the new visible DevFast loop.
+  The initial accepted sample was `8/8 x0.1`, present `40,452,480`, draw
+  `40,065,728`, texture conversion `14,230,400`, and two animated-water uploads
+  totaling `36,864` bytes. This confirms performance remains P1-blocking.
+- Removed per-texel volatile diagnostic writes from O2R byte/halfword reads.
+  The conversion loop now adds the canonical conversion count once per primary
+  and TEXEL1 texture, so the observed lane totals remain `37200/37200` with the
+  same format masks and physical lane maps. Host fixtures continue to exercise
+  the byte/halfword reader maps directly.
+- Hoisted invariant TEXEL1 tile-origin deltas and the primary masked Y address
+  out of the inner loop. Interior source coordinates now bypass signed divide/
+  modulo while clamp, wrap, mirror, mask, and negative-edge cases retain the
+  original address path.
+- Final canonical sample is `9/9 x0.1`, present `34,839,424` (`-13.9%`), draw
+  `34,485,632`, and texture conversion `8,964,544` (`-37.0%`). Hardware output
+  remains `2484/828`, source depth bounds remain green, texture rejects remain
+  zero, and oracle stays `2403/0/0`. Canonical/shipped byte parity is
+  `11,578,368` bytes at SHA-256
+  `94E388E1B672BD3289C52B1FAE498B80445F0444E5D53737D6C78E06CC14C749`.
+- The accepted DevFast capture retains both foreground fences and all flower
+  groups. BattleShip `grwallpaper.c` and sm64-nds renderer inspection identify
+  the next safe cache boundary: retain only the immutable decoded wallpaper
+  asset while imported camera-driven SObj position/scale and all composed
+  stage/fighter animation remain live. Same-state consecutive-triangle batching
+  is the next renderer-state candidate; no composed stage-frame cache is safe.
+- GBI fixtures, DevFast (`50.4s`), all four P1Gate legs (`296.4s`), and Boundary
+  (`75.7s`) passed. Full Regression was intentionally skipped for Tyler's
+  faster P1 iteration cadence.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: texture-lane totals are aggregate conversion observations rather
+than literal per-read volatile writes; canonical totals, format/lane maps,
+fixtures, oracle, depth, and pixel contracts remain unchanged.
