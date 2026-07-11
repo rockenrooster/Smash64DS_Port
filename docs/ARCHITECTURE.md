@@ -1156,6 +1156,16 @@ effective DS wrap/flip flags rather than inferring them from source `CLAMP`.
 The fixed-camera gates measure the actual shrub and island body so routing
 counters alone cannot validate sampler regressions.
 
+`G_LOADBLOCK` source stride is also independent of the render tile. BattleShip
+`gbi.h:3291,3309-3317` defines DXT as the rounded 1.11 reciprocal of 64-bit
+words per source row, while standard load macros deliberately use a
+`G_SETTIMG` width of one. For nonzero DXT the DS loader recovers the qword count
+as `ceil(2048 / dxt)` and converts it to logical pixels using the render
+format/size. The render tile still owns visible dimensions and sampling. This
+keeps O2R byte/halfword lanes orthogonal and prevents Fox's 8x8 CI4 tail from
+stepping through an 8-texel half-row of zero padding instead of its physical
+16-texel source row. DXT-zero/pre-swizzled material paths remain separate debt.
+
 Canonical HW still uses projected submission rather than the final raw GX
 matrix path. Source-depth X/Y/Z now come from the same current composed clip
 vertex, including matrix-word updates, before the perspective divide. Stage

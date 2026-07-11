@@ -76,17 +76,17 @@ NDC; removing an extra `<< 4` restores stage/fighter occlusion.
 
 O2R `MObjSub` lanes, aligned Dream Land starts, original floor adoption, and
 the one-cycle `PRIMITIVE * SHADE` path remain live. Imported `grwallpaper.c`
-owns the source Sprite. Texture varyings now remain linear until sampling;
+owns the source Sprite. Texture varyings remain linear until sampling;
 masked-clamp axes through 128 texels materialize their logical extent through
-the source mask/mirror address function. Dream Land's six CI4 decorations are
-recognizable stars instead of filled triangles, while the 192-wide island axis
-remains bounded debt. Capture
-`artifacts/visibility/2026-07-11_masked-clamp-linear-sampler-hudoff-stability-next.png`
-retains canopy/shrub/island detail. The fixed-window GL4 gate reports actual
-shrub variation `57.292%`/20px, stage-body `20.540%`, meaningful delta
-`22.166%`, and zero texture rejects/oracle mismatches. Latest fighter-light capture:
-`artifacts/visibility/2026-07-11_fighter-material-light-seed-hudoff.png`.
-Fragments, water/TEXEL1, shifts, fog/color animation, and slow output remain.
+the source mask/mirror address function. Nonzero `LOADBLOCK` DXT now recovers
+the source DRAM row stride independently of the render-tile width. Fox's 8x8
+CI4 tail no longer alternates its real 16-texel rows with zero padding; Tyler
+accepted the visible fix in
+`artifacts/visibility/2026-07-11_fox-tail-dxt-hudoff-candidate.png`.
+Canonical proof retains zero texture rejects/oracle mismatches and 73.077%
+flowering-bush detail. Both fighters are broadly recognizable on DS. The large
+white pond, missing ground flowers, tree-face strips, front fences, shifts,
+fog/color animation, and slow output remain.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -127,7 +127,7 @@ deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 
 The five-record stage `MObjSub` probe changed no pixels and was reverted; the source-correct tile-origin conversion changed only `18/49152` pixels.
 The accepted S-axis trace found masked `CLAMP` ownership; the high-bit fighter branch is live, but Mario/Fox select `0/0` such descriptors.
-Follow-ups: fighter anim-lock/state, shifts and TEXEL1/water, wallpaper/audio timing, then caching.
+Follow-ups: pond/TEXEL1, flower rows, tree-face/fence draw classes, Mario facing/light A/B, wallpaper/audio timing, then caching.
 FGM/voice and the original sequence player remain deferred.
 ## Verification
 

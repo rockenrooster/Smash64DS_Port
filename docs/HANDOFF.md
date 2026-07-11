@@ -90,9 +90,9 @@ The memory ledger reports headroom `237948`, resident reloc `681632` bytes
 (`stage=202816`, `fighter=175440`, `if=208672`), stale bytes `0/0`, and
 `172412` bytes after the 64 KiB BGM buffer against the 128 KiB reserve.
 
-Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
-separated but not yet accepted Mario/Fox bodies. Latest fighter-light capture:
-`artifacts/visibility/2026-07-11_fighter-material-light-seed-hudoff.png`.
+Canonical realtime + live-input + HW-tri shows recognizable Dream Land;
+source-separated Mario/Fox bodies are broadly accepted on DS. Latest capture:
+`artifacts/visibility/2026-07-11_fox-tail-dxt-hudoff-candidate.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
@@ -101,26 +101,26 @@ record. The HW combiner also preserves the proven one-cycle
 normalize complete N64 MSB-first command graphs once per reloc generation;
 fighter AObj16 streams bypass that path. Original timing/state stays live, and
 a host-independent post-step corrects packed RGBA byte arithmetic. Persistent
-source vertex slots restore 44 cross-joint triangles. Source depth shares one clip
-vertex; no-Z layers use signed 20.12 NDC. Masked-clamp axes through 128 texels
-materialize source addressing; six CI4 stars render correctly, while the 192-wide
-island remains debt. Latest: `artifacts/visibility/2026-07-11_masked-clamp-linear-sampler-hudoff-stability-next.png`.
+source vertex slots restore 44 cross-joint triangles. Source depth shares one
+clip vertex; no-Z layers use signed 20.12 NDC. Masked-clamp axes through 128
+texels materialize source addressing; six CI4 stars render correctly. Nonzero
+`LOADBLOCK` DXT reconstructs source DRAM stride and removes Fox tail's
+alternating CI4 padding rows. The 192-wide island remains masked-clamp debt.
 Source scene light, selected material light seed, and N64 RGBA order are live.
-Fragments, shifts, TEXEL1/water, fog/color animation, DL-head order, raw GX
-matrices, and slow output remain debt.
-The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; the shipped
-realtime ROM is `smash64ds-battle-playable-hwtri.nds`, avoiding collisions.
-Normal builds expose one controller; the canonical live-input build alone
-exposes the connected-neutral second pad. Intermediate taskman arena fallbacks
-keep fighter-runtime modes above the 128 KiB memory reserve.
+Debt: white pond, flower rows, tree-face strips, front fences, shifts,
+TEXEL1/water, fog/color animation, raw GX matrices, and slow output. Mario's
+pant lighting needs an opposite-facing A/B before classification.
+The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped
+realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
+exposes a connected-neutral second pad; normal builds expose one controller.
+Arena fallbacks keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Recommended Next Work
-
-1. Prove fighter anim-lock matrices and remaining fog/alpha/non-white-ENV state against fixed-pose crops.
-2. Prove nonzero shift, TEXEL1/water, DXT-zero, and unmasked POT-padding texture semantics.
-3. Make wallpaper commits atomic and separate audio producer/consumer timing.
-4. Cache corrected draw/SObj state for stable audio and 60fps.
-5. Add Dream Land shadows, CPU recovery, and FGM/voice playback.
+1. Fix the large white pond through source TEXEL1/material/pass semantics.
+2. Restore the missing ground flower batches and their alpha path.
+3. Resolve tree-face strips and verify front-fence faces/culling.
+4. Turn Mario under a fixed light to classify the pant-leg asymmetry.
+5. Cache corrected draw/SObj state for stable audio and 60fps.
 
 Do not repeat the exact five-record stage `MObjSub` normalization as a visual fix: its canonical probe changed `0/49152` pixels and was fully reverted.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.

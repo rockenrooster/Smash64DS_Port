@@ -33,7 +33,7 @@ $visibleRegions = @(
 $textureDetailRegions = @(
     # StagePupupuFile2.c:423-424 and StagePupupuImages.c:103-113 place the
     # flowering side object below the platform; keep this texture gate on it.
-    'right_bush:170,88,40,20,0.50,16',
+    'left_bush:70,88,40,20,0.50,16',
     'stage_body:50,115,165,30,0.30,0'
 )
 function Invoke-VisibleCaptureAssert {

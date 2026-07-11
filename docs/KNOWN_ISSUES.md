@@ -1064,9 +1064,10 @@
   seeds initial diffuse/ambient colors from the first selected source `MObjSub`
   (`0xffffff00/0x4c4c4c00`) because `ftDisplayLightsDrawReflect` writes only
   direction into its dynamic heap `Light`; later material light commands remain
-  source-ordered. Canonical fallback use is zero. Lower-body fragments,
-  anim-lock, fog/color-animation coverage, and exact global RSP state ownership
-  remain active debt.
+  source-ordered. Canonical fallback use is zero. Both fighters are broadly
+  recognizable on DS; Mario's pant-leg asymmetry remains unclassified until a
+  fixed-light opposite-facing A/B. Anim-lock, fog/color-animation coverage,
+  and exact global RSP state ownership remain active debt.
   Dream Land's source
   player map objects now decode through an aligned O2R
   halfword accessor, and the original manager grounds Mario/Fox at separated
@@ -1081,7 +1082,12 @@
   vertex before interpolation. Varyings now stay linear, and masked-clamp
   logical axes through 128 texels are materialized through the source address
   function before DS clamp. Dream Land's 192-wide island axis remains above
-  that bound. Other texture debt includes nonzero shifts,
+  that bound. Nonzero `LOADBLOCK` DXT now reconstructs 64-bit words per source
+  row from BattleShip `gbi.h:3291,3309-3317`, independent of render-tile width;
+  this fixes Fox's 8x8 CI4 tail reading every other zero-padding half-row.
+  Remaining stage defects are the white large pond, missing ground flowers,
+  tree-face strips, and incomplete-looking front fences. Other texture debt
+  includes nonzero shifts,
   DXT-zero/pre-swizzled loads, TEXEL1/water, unmasked POT padding, and
   camera-wide state ownership. Do not conflate mask, load, logical, or upload
   extents again.

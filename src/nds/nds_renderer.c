@@ -100,6 +100,7 @@
 #define NDS_RENDERER_HW_TEXTURE_SIZ_8B 1u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_16B 2u
 #define NDS_RENDERER_HW_TEXTURE_SIZ_32B 3u
+#define NDS_RENDERER_G_TX_DXT_ONE (1u << 11)
 #define NDS_RENDERER_HW_TEXREJECT_MISSING_STATE (1u << 0)
 #define NDS_RENDERER_HW_TEXREJECT_BAD_CI_SIZE (1u << 1)
 #define NDS_RENDERER_HW_TEXREJECT_UNSUPPORTED_FORMAT (1u << 2)
@@ -3679,9 +3680,20 @@ static s32 ndsRendererHardwareBindTexture(
     }
     else
     {
+        u32 dxt = stats->texture_load_block_dxt;
+
         source_origin_s = 0u;
         source_origin_t = 0u;
         source_width = source_extent_width;
+        if (dxt != 0u)
+        {
+            u32 qwords = (NDS_RENDERER_G_TX_DXT_ONE + dxt - 1u) / dxt;
+
+            /* BattleShip gbi.h:3291,3309-3317 encodes DXT as the rounded
+             * 1.11 reciprocal of 64-bit source words per row. LOADBLOCK's
+             * SETTIMG width is one, so DXT owns the DRAM row stride. */
+            source_width = ndsRendererHardwareTextureLinePixels(size, qwords);
+        }
     }
     source_read_width = (materialize_s != FALSE) ?
         (1u << render_tile->masks) : width;

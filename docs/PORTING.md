@@ -18892,3 +18892,27 @@ expectations: none.
 Source-corrected verifier expectations: canonical light state now requires the
 selected source material seed and zero generic fallback use. Coverage-reduced
 verifier expectations: none.
+
+## 2026-07-11 - LOADBLOCK DXT source-row ownership
+
+- Traced Fox tail body/tip lists to an 8x8 CI4 render tile backed by a physical
+  16x8 source. Both lists use `DXT=0x800`; every source row contains four
+  nonzero CI4 bytes followed by four padding bytes. Treating render width as
+  source stride therefore alternated real and zero rows, producing the visible
+  horizontal tail bands.
+- The hardware texture loader now reconstructs nonzero-DXT source qwords from
+  BattleShip `gbi.h:3291,3309-3317`, then derives the DRAM row width from the
+  logical texture size. Render dimensions, O2R lane conversion, coordinates,
+  palette handling, and DXT-zero paths are unchanged.
+- Fixtures cover DXT=1024 row widths for CI4/CI8/RGBA16/RGBA32 and native/O2R
+  Fox-tail row stepping. Focused all-DL HW passed `320/306` with zero rejects;
+  stage-inclusive HW passed `192+626`; canonical realtime retained zero oracle
+  and texture rejects. Tyler visually accepted the corrected tail in
+  `artifacts/visibility/2026-07-11_fox-tail-dxt-hudoff-candidate.png`.
+- The source-start camera had made the old texture-detail crop measure trunk/
+  sky. It now targets the actual flowering left bush with the unchanged 50%
+  floor and measures `73.077%` variation.
+
+Source-corrected verifier expectations: the texture-detail crop follows the
+same source flowering object at the current camera; its threshold is unchanged.
+Coverage-reduced verifier expectations: none.

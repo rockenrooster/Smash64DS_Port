@@ -50,6 +50,24 @@ function Get-TextureHalfword {
     $physical = if ($Layout -eq 'O2R') { $LogicalIndex -bxor 1 } else { $LogicalIndex }
     return $Halfwords[$physical]
 }
+function Get-LoadBlockDxtSourceWidth {
+    param(
+        [int]$Size,
+        [int]$Dxt,
+        [int]$FallbackWidth
+    )
+    if ($Dxt -eq 0) {
+        return $FallbackWidth
+    }
+    $qwords = [Math]::Floor((2048 + $Dxt - 1) / $Dxt)
+    switch ($Size) {
+        0 { return $qwords * 16 }
+        1 { return $qwords * 8 }
+        2 { return $qwords * 4 }
+        3 { return $qwords * 2 }
+        default { return 0 }
+    }
+}
 function Convert-N64TexCoordToDsT16 {
     param(
         [int]$Coord,
@@ -474,6 +492,25 @@ Assert-Equal (Get-TextureHalfword $nativeHalfwords 0 'Native') 0x1122 'Native ha
 Assert-Equal (Get-TextureHalfword $nativeHalfwords 1 'Native') 0x3344 'Native halfword 1 should not lane-remap.'
 $rgba32Control = [uint32[]](0x11223344)
 Assert-Equal $rgba32Control[0] 0x11223344 'RGBA32 control must stay on the native 32-bit read path.'
+# BattleShip gbi.h:3291,3309-3317 defines DXT as the rounded 1.11
+# reciprocal of 64-bit words per source row. At dxt=1024, two qwords give
+# these logical row strides even when the render tile is narrower.
+Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 0 -Dxt 1024 -FallbackWidth 8) 32 'CI4 LOADBLOCK DXT source width mismatch.'
+Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 1 -Dxt 1024 -FallbackWidth 4) 16 'CI8 LOADBLOCK DXT source width mismatch.'
+Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 2 -Dxt 1024 -FallbackWidth 2) 8 'RGBA16 LOADBLOCK DXT source width mismatch.'
+Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 3 -Dxt 1024 -FallbackWidth 1) 4 'RGBA32 LOADBLOCK DXT source width mismatch.'
+Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 0 -Dxt 0 -FallbackWidth 8) 8 'DXT-zero LOADBLOCK must retain its bounded fallback width.'
+# FoxModel DLs 0x2718/0x2818 use an 8x8 CI4 render tile over a physical
+# 16-texel row (dxt=0x800). The right half is row padding; compact width-8
+# stepping would incorrectly alternate real and zero rows.
+$foxTailRow = [byte[]](0x55, 0x8f, 0xff, 0x23, 0, 0, 0, 0)
+$foxTailNative = [byte[]]($foxTailRow + $foxTailRow)
+$foxTailO2R = [byte[]](0x23, 0xff, 0x8f, 0x55, 0, 0, 0, 0,
+                       0x23, 0xff, 0x8f, 0x55, 0, 0, 0, 0)
+Assert-Equal (Get-TextureNibble $foxTailNative 16 'Native') 5 'Fox tail native row 1 did not start at the DXT-derived stride.'
+Assert-Equal (Get-TextureNibble $foxTailO2R 16 'O2R') 5 'Fox tail O2R row 1 did not preserve CI4 lane decoding at the DXT-derived stride.'
+Assert-Equal (Get-TextureNibble $foxTailNative 8 'Native') 0 'Fox tail compact-width control no longer reaches row padding.'
+Assert-Equal (Get-TextureNibble $foxTailO2R 8 'O2R') 0 'Fox tail O2R compact-width control no longer reaches row padding.'
 # StagePupupuFile2.c:651-679 and objdisplay.c:1432-1499 produce this
 # render-tile origin and gSPTexture scale for the 32x64 CI4 surface.
 Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 2048 -Scale 0xCCCC -Origin 205) -1 'Dream Land CI4 vertex S=2048 did not land at the source tile edge.'
@@ -563,6 +600,8 @@ Assert-True ($renderer.Contains('palette_base = render_tile->palette * 16u')) 'R
 Assert-True ($renderer.Contains('key.load_tile = stats->texture_load_tile')) 'Renderer hardware texture cache key is missing load-tile state.'
 Assert-True ($renderer.Contains('key.load_uls = stats->texture_load_block_uls')) 'Renderer hardware texture cache key is missing load-block ULS state.'
 Assert-True ($renderer.Contains('key.load_dxt = stats->texture_load_block_dxt')) 'Renderer hardware texture cache key is missing load-block DXT state.'
+Assert-True ($renderer.Contains('NDS_RENDERER_G_TX_DXT_ONE + dxt - 1u')) 'Renderer LOADBLOCK source rows do not reconstruct 1.11 DXT qwords.'
+Assert-True ($renderer.Contains('source_width = ndsRendererHardwareTextureLinePixels(size, qwords)')) 'Renderer LOADBLOCK source width does not use the DXT-derived logical row stride.'
 Assert-True ($renderer.Contains('texture_load_kind = NDS_RENDERER_TEXTURE_LOADBLOCK')) 'Renderer G_LOADBLOCK does not mark the current texture load kind.'
 Assert-True ($renderer.Contains('texture_load_kind = NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer G_LOADTILE does not mark the current texture load kind.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureSourceWidthPixels')) 'Renderer hardware upload does not derive source row stride.'
