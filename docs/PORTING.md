@@ -18680,3 +18680,24 @@ relaxing the gate.
 - Verifier-launched melonDS now temporarily disables FPS limiting while keeping
   JIT off. Assertions remain tied to emulated frames/timers, and the user config
   is restored after non-runner verification.
+
+## 2026-07-10 - Source-order texture-coordinate conversion
+
+- Corrected the hardware texture-coordinate adapter to preserve BattleShip's
+  independent source units: signed 10.5 `Vtx.s/t`, 10.2 render-tile origin,
+  0.16 `gSPTexture` scale, and DS 12.4 texel coordinates. The resulting formula
+  scales the vertex first, then subtracts the origin converted directly to DS
+  `t16`, following `objdisplay.c:1432-1499`.
+- Added an exact Dream Land CI4 fixture from
+  `104_StagePupupuFile2.c:651-679`: `S=2048/3072`, scale `0xCCCC`, and origin
+  `205` resolve to DS coordinates `-1/408`. The fixture also rejects the old
+  ordering that converted the origin into vertex units before applying scale.
+- GBI fixtures, stage-inclusive HW traversal, and canonical realtime proof pass.
+  The fixed-camera candidate
+  `artifacts/visibility/2026-07-10_texcoord-origin-candidate.png` differs from
+  baseline by only `18/49152` pixels (`0.037%`), so the correction lands as
+  source parity and explicitly rejects tile-origin order as the active cause of
+  Dream Land's broad horizontal ribbons.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: none.

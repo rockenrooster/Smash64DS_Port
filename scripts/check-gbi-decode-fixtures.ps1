@@ -50,6 +50,17 @@ function Get-TextureHalfword {
     $physical = if ($Layout -eq 'O2R') { $LogicalIndex -bxor 1 } else { $LogicalIndex }
     return $Halfwords[$physical]
 }
+function Convert-N64TexCoordToDsT16 {
+    param(
+        [int]$Coord,
+        [uint32]$Scale,
+        [uint32]$Origin,
+        [int]$Offset = 0
+    )
+    [Int64]$scaledT16 = ([Int64]$Coord * [Int64]$Scale) -shr 17
+    [Int64]$originT16 = [Int64]$Origin -shl 2
+    return [int]($scaledT16 - $originT16 + $Offset)
+}
 function New-F3DEX2VtxW0 {
     param(
         [int]$Count,
@@ -403,6 +414,10 @@ Assert-Equal (Get-TextureHalfword $nativeHalfwords 0 'Native') 0x1122 'Native ha
 Assert-Equal (Get-TextureHalfword $nativeHalfwords 1 'Native') 0x3344 'Native halfword 1 should not lane-remap.'
 $rgba32Control = [uint32[]](0x11223344)
 Assert-Equal $rgba32Control[0] 0x11223344 'RGBA32 control must stay on the native 32-bit read path.'
+# StagePupupuFile2.c:651-679 and objdisplay.c:1432-1499 produce this
+# render-tile origin and gSPTexture scale for the 32x64 CI4 surface.
+Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 2048 -Scale 0xCCCC -Origin 205) -1 'Dream Land CI4 vertex S=2048 did not land at the source tile edge.'
+Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 3072 -Scale 0xCCCC -Origin 205) 408 'Dream Land CI4 vertex S=3072 did not preserve its source tile-relative coordinate.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
@@ -468,7 +483,9 @@ Assert-True ($renderer.Contains('stats->texture_load_kind == NDS_RENDERER_TEXTUR
 Assert-True ($renderer.Contains('source_origin_s = stats->texture_load_block_uls >> 2')) 'Renderer hardware upload does not honor LoadTile S origin.'
 Assert-True ($renderer.Contains('source_origin_t = stats->texture_load_block_ult >> 2')) 'Renderer hardware upload does not honor LoadTile T origin.'
 Assert-True ($renderer.Contains('((source_origin_t + y) * source_width) + source_origin_s + x')) 'Renderer hardware upload does not sample source sub-rect rows.'
-Assert-True ($renderer.Contains('((s64)origin << 3)')) 'Renderer hardware texcoords do not subtract tile origin in vertex coord units.'
+Assert-True ($renderer.Contains('((s64)coord * (s64)scale) >> 17')) 'Renderer hardware texcoords do not scale N64 vertex coordinates into DS t16 first.'
+Assert-True ($renderer.Contains('(s64)origin << 2')) 'Renderer hardware texcoords do not convert the 10.2 tile origin directly to DS t16.'
+Assert-True (-not $renderer.Contains('((s64)origin << 3)')) 'Renderer hardware texcoords still scale a tile origin converted into vertex-coordinate units.'
 Assert-True ($renderer.Contains('render_tile->uls, render_tile->ult')) 'Renderer hardware texcoord submission is not using the active render-tile origin.'
 Assert-True ($renderer.Contains('NDS_RENDERER_OP_LOADTILE 0xf4u')) 'Renderer G_LOADTILE opcode decode is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordLoadTile')) 'Renderer G_LOADTILE state recorder is missing.'

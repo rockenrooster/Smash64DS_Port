@@ -1107,9 +1107,15 @@ five color outputs from source `0xRRGGBBAA` bits. No colors are hardcoded.
 
 Serialized bitfields are decoded from documented source bit positions, not
 host compiler layout. Mixed-width O2R records are normalized by schema once
-per generation, and unit-conversion order is explicit. Counters prove routing,
-not pixels; visual claims still require captures. Partial display lists inherit
-source state and global head order unless the source explicitly resets them.
+per generation, and unit-conversion order is explicit. For texture coordinates,
+`Vtx.s/t` is signed 10.5, tile `uls/ult` is 10.2, `gSPTexture` scale is 0.16,
+and DS `t16` is 1/16 texel. The source-shaped conversion is therefore
+`((coord * scale) >> 17) - (origin << 2)`: scale the vertex coordinate and
+convert the tile origin independently before subtraction. This follows
+`objdisplay.c:1432-1499`; the Dream Land fixture comes from
+`104_StagePupupuFile2.c:651-679`. Counters prove routing, not pixels; visual
+claims still require captures. Partial display lists inherit source state and
+global head order unless the source explicitly resets them.
 
 Canonical HW still uses projected submission rather than the final raw GX
 matrix path. Source-depth X/Y/Z now come from the same current composed clip

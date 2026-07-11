@@ -2310,9 +2310,10 @@ static s32 ndsRendererHardwareUseTextureMatrix(
 static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, u32 origin,
                                        s32 offset)
 {
-    s64 relative = (s64)coord - ((s64)origin << 3);
+    s64 scaled_t16 = ((s64)coord * (s64)scale) >> 17;
+    s64 origin_t16 = (s64)origin << 2;
 
-    return (s16)(((relative * (s64)scale) >> 17) + offset);
+    return (s16)(scaled_t16 - origin_t16 + offset);
 }
 
 static void ndsRendererProfileTextureCoord(s16 s, s16 t)
