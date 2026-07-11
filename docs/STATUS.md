@@ -126,8 +126,8 @@ deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
 The five-record stage `MObjSub` probe changed no pixels and was reverted. The source-correct tile-origin conversion changed only `18/49152` canonical pixels,
-so it remains for parity but is not the ribbon explanation. Follow-ups: high-bit fighter DObj transforms, stage DL-head ordering, wallpaper atomic commits,
-audio queueing, then caching.
+so it remains for parity but is not the ribbon explanation. The source high-bit fighter transform branch is restored, but Mario/Fox select `0/0` such descriptors.
+Follow-ups: stage DL-head ordering, fighter anim-lock matrices, wallpaper atomic commits, audio queueing, then caching.
 FGM/voice and the original sequence player remain deferred.
 ## Verification
 

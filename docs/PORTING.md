@@ -18701,3 +18701,17 @@ relaxing the gate.
 
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none.
+
+## 2026-07-10 - Fighter high-bit transform contract audit
+
+- Restored the exact `lbcommon.c:1067-1071` branch in the port-owned fighter
+  part constructor: descriptors carrying `0x8000` now call the imported
+  `gcDecideDObj3TransformsKind`; ordinary descriptors retain
+  `lbCommonInitDObj` and its original compatibility argument.
+- A temporary continuous counter on the live Mario/Fox all-DL path measured
+  `0/0` selected high-bit descriptors, matching the reconstructed Mario/Fox
+  model tables. The probe was removed after the result. This restores source
+  behavior for future assets but rejects the branch as the cause of current
+  Mario/Fox lower-body fragments.
+- The focused all-DL HW gate remains `320/306` triangles with zero oracle
+  rejects. No verifier expectation or coverage changed.

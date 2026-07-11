@@ -1091,8 +1091,10 @@
   replay head 0 before head 1 rather than flattening per-DObj lists.
 - Fighter events still omit semantic cycle/render/fog/alpha state, and the DS
   matrix bridge lacks the `is_use_animlocks` inverse-scale branch from
-  `lbcommon.c:1369-1441`. These are separate from the now-correct depth path and
-  need fixed-pose plus anim-lock visual gates.
+  `lbcommon.c:1369-1441`. The port now retains the source high-bit descriptor
+  branch from `lbcommon.c:1067-1071`, but active Mario/Fox measured `0/0` such
+  descriptors, rejecting it as their current fragment cause. Fixed-pose plus
+  anim-lock visual gates remain required.
 - Dream Land wallpaper now runs through imported `grwallpaper.c` and the source
   Sprite/SObj path, composed on the DS 2D back layer behind the HW stage. The
   compositor is source-correct but uncached; its per-pixel scale currently

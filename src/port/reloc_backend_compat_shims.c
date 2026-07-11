@@ -7703,6 +7703,9 @@ void lbCommonInitDObj3Transforms(DObj *dobj, u8 tk1, u8 tk2, u8 tk3)
     dobj->scale.vec.f.z = 1.0F;
 }
 
+extern void gcDecideDObj3TransformsKind(DObj *dobj, u8 tk1, u8 tk2,
+                                         u8 tk3, s32 flags);
+
 void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
                                     FTCommonPartContainer *commonparts_container,
                                     s32 detail_curr, DObj **dobjs,
@@ -7768,7 +7771,15 @@ void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
                 goto advance_flags;
             }
             array_dobjs[id] = current_dobj;
-            lbCommonInitDObj(current_dobj, tk1, tk2, tk3, arg9);
+            if ((dobjdesc->id & 0x8000) != 0)
+            {
+                gcDecideDObj3TransformsKind(current_dobj, tk1, tk2, tk3,
+                                             0x8000);
+            }
+            else
+            {
+                lbCommonInitDObj(current_dobj, tk1, tk2, tk3, arg9);
+            }
             current_dobj->translate.vec.f = dobjdesc->translate;
             current_dobj->rotate.vec.f = dobjdesc->rotate;
             current_dobj->scale.vec.f = dobjdesc->scale;

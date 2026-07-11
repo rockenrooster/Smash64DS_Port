@@ -117,15 +117,15 @@ keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Recommended Next Work
 
-1. Restore high-bit fighter DObj transforms, then preserve stage DL-head order.
+1. Preserve stage layer and opaque/translucent DL-head order across each camera pass.
 2. Make wallpaper commits atomic and separate audio producer/consumer timing.
 3. Prove mask/shift/POT texture semantics against native stage crops.
 4. Cache corrected draw/SObj state for stable audio and 60fps.
 5. Add Dream Land shadows, CPU recovery, and FGM/voice playback.
 
-Do not repeat the exact five-record stage `MObjSub` normalization as a visual
-fix: its canonical probe changed `0/49152` pixels and was fully reverted.
+Do not repeat the exact five-record stage `MObjSub` normalization as a visual fix: its canonical probe changed `0/49152` pixels and was fully reverted.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
+Do not revisit the high-bit fighter branch for current fragments: the exact source branch is restored, but active Mario/Fox descriptors measured `0/0` high-bit selections.
 
 ## Verification
 

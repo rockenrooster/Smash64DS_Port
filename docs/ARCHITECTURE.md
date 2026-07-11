@@ -1089,6 +1089,11 @@ survive matrix changes and later parts can join against earlier slots. The DS
 adapter preserves both input attributes and transformed clip coordinates across
 its per-event renderer calls; changing matrices invalidates only same-matrix
 oracle recomputation, not the cached transformed vertices.
+Fighter part construction also retains `lbcommon.c:1067-1071`: descriptors with
+bit `0x8000` call the imported `gcDecideDObj3TransformsKind`, while ordinary
+descriptors keep `lbCommonInitDObj`. Current Mario/Fox source tables select no
+high-bit descriptors, so that parity branch does not explain their residual
+fragments; anim-lock and display-state work remain separate.
 For the live one-cycle `(PRIMITIVE - 0) * SHADE + 0` fighter combiner observed
 in Mario/Fox DLs, the DS backend multiplies source primitive RGB by its
 computed light shade. This follows the packed LERP contract in
