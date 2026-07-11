@@ -1144,6 +1144,11 @@ pass; fighter events must retain semantic render/fog/alpha state; and anim-lock
 motions need the inverse-scale matrix branch from `lbcommon.c:1369-1441`.
 These contracts are repaired before caching so wrong flattened state is never
 made permanent.
+The generic DL-head rule is not evidence that Pupupu currently uses head 1:
+`255_GRPupupuMap.c:25-35` has `layer_mask=0`, so `grdisplay.c:193-200`
+selects four primary head-0 callbacks. A measured camera-wide queue replayed
+`42/0` head-0/head-1 lists and changed `0/49152` canonical pixels; it was
+reverted rather than adding an inactive ordering layer.
 
 ## VS Results Runtime
 

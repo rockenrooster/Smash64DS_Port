@@ -18715,3 +18715,18 @@ expectations: none.
   Mario/Fox lower-body fragments.
 - The focused all-DL HW gate remains `320/306` triangles with zero oracle
   rejects. No verifier expectation or coverage changed.
+
+## 2026-07-10 - Dream Land camera-head hypothesis rejected
+
+- Tested the generic BattleShip camera-wide DL-head contract against the live
+  Pupupu scene. `255_GRPupupuMap.c:25-35` sets `layer_mask=0`, and
+  `grdisplay.c:193-200` therefore selects the primary head-0 callback for each
+  of its four layers rather than the secondary `DObjDLLink` path.
+- A bounded queue recorded and replayed all `42/0` head-0/head-1 submissions,
+  flushed four source layer passes in order (`0x1111`), and reported zero
+  overflow. Stage traversal and canonical realtime gates passed.
+- The resulting fixed-camera frame changed `0/49152` pixels from
+  `artifacts/visibility/2026-07-09_iter4_canonical_late_194424_next.png`.
+  The queue, diagnostics, and verifier additions were fully reverted. Generic
+  multi-head support remains future-stage architecture debt, not the active
+  Dream Land ribbon or visibility cause.

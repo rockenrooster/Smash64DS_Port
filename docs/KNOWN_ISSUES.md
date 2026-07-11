@@ -1085,10 +1085,12 @@
   swapped `u16/u8` lanes. An exact five-record normalization probe passed data
   fixtures but changed `0/49152` canonical pixels, so it was reverted and is
   not an active explanation for the visible texture defects.
-- Stage submission currently validates but discards `DObjDLLink::list_id` and
-  begins persistent state per stage GObj. BattleShip instead builds global
-  opaque/translucent heads per camera pass. Preserve source layer preambles and
-  replay head 0 before head 1 rather than flattening per-DObj lists.
+- Stage submission still validates but discards `DObjDLLink::list_id` for
+  stages that use secondary callbacks. Dream Land is not such a case:
+  `255_GRPupupuMap.c:25-35` sets `layer_mask=0`, selecting four primary head-0
+  callbacks. A camera-wide `42/0` head-0/head-1 queue changed `0/49152`
+  canonical pixels and was reverted. Preserve global heads when a live stage
+  actually supplies them; do not attribute Pupupu's current ribbons to head 1.
 - Fighter events still omit semantic cycle/render/fog/alpha state, and the DS
   matrix bridge lacks the `is_use_animlocks` inverse-scale branch from
   `lbcommon.c:1369-1441`. The port now retains the source high-bit descriptor
