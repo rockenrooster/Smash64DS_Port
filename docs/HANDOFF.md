@@ -88,8 +88,8 @@ The memory ledger reports headroom `237948`, resident reloc `681632` bytes
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land;
 source-separated Mario/Fox bodies are broadly accepted on DS. The current
-capture restores the foreground fence and all five flower groups:
-`artifacts/visibility/2026-07-11_dream-land-fences-flowers-hudoff-final.png`.
+capture retains the foreground fence and all five flower groups:
+`artifacts/visibility/2026-07-11_canonical_fast_152053-8952067-p21188.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. A source-shaped `gcAddMObjAll` wrapper
 uses loaded-file/asset-generation provenance for local O2R lane restoration.
@@ -100,10 +100,10 @@ tile-6/TMEM-0x40 TEXEL1 and tile-7/TMEM-0 TEXEL0, recognizes exact
 gate proves positive scene-lifetime compatible-state refresh, zero eviction/
 reject/oracle drift, and terminal `12/12` matches. Pond detail is
 `46.053%/23px` versus white `27.997%/105px`.
-Canonical lane counters are now aggregated once per conversion, and the common
-TEXEL1 address path avoids division. Canonical present cost is
-`40,452,480 -> 34,839,424` ticks (`-13.9%`) with oracle `2403/0/0`; `9/9 x0.1`
-remains far below real time.
+Canonical lanes remain `37200/37200` and oracle `2403/0/0`. The exact 300x220
+wallpaper decodes once into the retained HW buffer; source position/scale and
+composed content stay live. Cache proof is `1/44/45/fallback0/opaque66000`;
+present fell `34,839,424 -> 24,764,160` (`-28.9%`), pacing `9 -> 13 x0.1`.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -120,11 +120,9 @@ realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Cache the immutable decoded wallpaper asset below the SObj compositor while
-   keeping imported camera-driven position/scale live; never cache the composed
-   stage frame, animated water, Whispy, flowers, or fence ordering.
-2. Restore same-state triangle batching only across consecutive TRI commands.
-3. Refine Whispy and Mario light A/B; cover phase/shifts and fog/color animation.
+1. Restore same-state triangle batching only across consecutive TRI commands.
+2. Refine Whispy and Mario light A/B; cover phase/shifts and fog/color animation.
+3. Keep the full five-minute soak for milestones rather than each edit.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
@@ -143,8 +141,8 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-All four `P1Gate` legs passed in `296.4s`; latest DevFast is `50.4s`, and Boundary passed in `75.7s`. The scripted battle leg is supplemental and the
-one-minute lifecycle is not the five-minute P1 soak. Keep historical harnesses
-for localization; Full Regression was skipped for Tyler's faster cadence.
+All four compact legs pass; split combat/lifecycle reruns were `18.2s/89.1s`,
+and fresh Boundary passed in `202.7s`. The lifecycle is not the five-minute P1
+soak. Keep historical harnesses for localization; Full Regression was skipped.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

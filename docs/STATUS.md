@@ -85,14 +85,15 @@ animated state refreshes resident VRAM with frame pinning. The 184-frame gate
 has positive scene-lifetime refresh, zero eviction/reject/oracle drift, and a
 terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
 `27.997%/105px`. Accepted capture:
-`artifacts/visibility/2026-07-11_dream-land-fences-flowers-hudoff-final.png`.
+`artifacts/visibility/2026-07-11_canonical_fast_152053-8952067-p21188.png`.
 Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
 plus `G_MWO_POINT_ST` restores five flower groups and adds ten source triangles
-(`192 -> 202`); Tyler accepts both flowers and foreground fences. The texture
-converter now aggregates exact lane diagnostics per texture and bypasses
-interior TEXEL1 address division. Canonical present cost fell
-`40,452,480 -> 34,839,424` ticks (`-13.9%`), while lane counters remain
-`37200/37200`, oracle stays `2403/0/0`, and pacing is still only `9/9 x0.1`.
+(`192 -> 202`); Tyler accepts both flowers and foreground fences. Texture
+conversion retains exact `37200/37200` lane observations and oracle `2403/0/0`.
+The immutable 300x220 wallpaper now decodes once into the retained HW buffer;
+source position/scale stay live and composed content is never cached. Proof is
+`build1/hit44/fast45/fallback0/opaque66000`; present fell
+`34,839,424 -> 24,764,160` ticks (`-28.9%`) and pacing rose `9 -> 13 x0.1`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -123,17 +124,16 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Next P1 work is the immutable wallpaper decode cache with live SObj camera
-transform, then safe triangle batching. Whispy, Mario light A/B, phase/shifts,
+Next P1 work is safe consecutive-triangle batching. Whispy, Mario light A/B,
+phase/shifts,
 fog, and gameplay-critical FGM/voice remain visual/audio debt.
 FGM/voice and the original sequence player remain deferred.
 ## Verification
 
-All four `P1Gate` legs passed: compact opening-to-Title, canonical live battle/
-capture, supplemental scripted mode-163 combat, and one-minute Results. Latest
-DevFast passed in `50.4s`, P1Gate in `296.4s`, and Boundary in `75.7s`. The
-shadow profile is not the five-minute P1 soak. Full Regression was skipped per
-Tyler's faster iteration request.
+All four `P1Gate` legs pass: compact opening-to-Title, canonical live battle/
+capture, supplemental mode-163 combat, and one-minute Results (`18.2s/89.1s`
+for the last two split reruns). Fresh Boundary passed in `202.7s`. This is not
+the five-minute P1 soak; Full Regression was skipped for Tyler's fast cadence.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

@@ -100,7 +100,8 @@ static void ndsTitleRenderPreview(void)
             }
             if (ndsDrawSObjIntoPreview(
                     &sobjs[i], 0, preview, preview_pitch, 320u, 240u,
-                    (s32)sobjs[i].pos.x, (s32)sobjs[i].pos.y, 0u) != FALSE)
+                    (s32)sobjs[i].pos.x, (s32)sobjs[i].pos.y, 0u, 0u) !=
+                FALSE)
             {
                 drew_any++;
             }
@@ -331,7 +332,7 @@ static s32 ndsOpeningActionPreviewRender(u32 scene_kind)
                 NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH,
                 NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH,
                 NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT,
-                desc->x, desc->y, 0u) == FALSE)
+                desc->x, desc->y, 0u, 0u) == FALSE)
         {
             cache->ready = 0;
             return FALSE;

@@ -1127,7 +1127,7 @@
   range without consuming a synthetic slot. This restores source layer-3 over
   layer-1 ordering. Exact raw-GX/no-Z behavior remains deferred. Full source-selected
   fighter submission plus the current CPU-scaled 300x220 wallpaper and water
-  precomposition presents at about `0.8fps`; caching remains P1 debt.
+  precomposition presents at about `1.3fps`; renderer work remains P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native
@@ -1148,19 +1148,18 @@
   branch from `lbcommon.c:1067-1071`, but active Mario/Fox measured `0/0` such
   descriptors, rejecting it as their current fragment cause. Fixed-pose plus
   anim-lock visual gates remain required.
-- Dream Land wallpaper now runs through imported `grwallpaper.c` and the source
-  Sprite/SObj path, composed on the DS 2D back layer behind the HW stage. The
-  compositor is source-correct but uncached; its per-pixel scale currently
-  dominates frame time and can miss the 0.74-second BGM half-buffer deadline;
-  audible resyncs remain possible until it is cached without changing
-  camera-driven position/scale behavior. Cache only the immutable decoded
-  wallpaper asset below `ndsDrawSObjIntoPreview`; camera/SObj transform and
-  composition must remain live so water, Whispy, flowers, and fence ordering do
-  not stale. Aggregating canonical texture-lane diagnostics and fast-pathing common
-  TEXEL1 coordinates reduced canonical present cost from `40,452,480` to
-  `34,839,424` ticks, but measured pacing remains only `9/9 x0.1`. Lane access
-  totals are now aggregate conversion observations rather than per-read writes;
-  host fixtures still cover the byte/halfword reader maps directly.
+- Dream Land wallpaper runs through imported `grwallpaper.c` and the source
+  Sprite/SObj path on the DS 2D back layer. The exact 300x220 RGBA16 asset is
+  decoded once for the immutable loaded asset and rebuilt on platform clear or
+  provenance mismatch; every frame consumes the live source transform. The cache
+  proves one build, 44 hits, 45 exact opaque inverse draws, zero fallback, and
+  all 66,000 pixels opaque. It never retains the composed stage frame, water,
+  Whispy, flowers, fences, or fighters. Canonical present cost fell from
+  `34,839,424` to `24,764,160` ticks (`-28.9%`), but pacing remains only
+  `13/13 x0.1`; safe DL/triangle batching and broader renderer work remain.
+  Audible BGM resyncs remain possible while frames exceed the half-buffer
+  deadline. Lane totals remain aggregate conversion observations covered by
+  host byte/halfword fixtures.
 - The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`; the
   canonical/shipped target forces it off while verifier markers remain active.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.

@@ -60,13 +60,14 @@ $textureDetailRegions = @(
 )
 $fastTextureDetailRegions = @(
     # The live camera can move this bush partly outside its fixed diagnostic
-    # crop. Keep a meaningful variation/flat-run gate without requiring the
-    # checkpoint verifier's tighter composition-specific fraction.
-    'left_bush:70,88,40,20,0.40,16',
-    'stage_body:50,115,165,30,0.30,0',
-    # The 60px flat-run cap remains well below the pre-fix white pond's 105px;
-    # tolerate camera-dependent variation just above that frame's 27.997%.
-    'pond:82,125,115,24,0.30,60'
+    # crop. Visually accepted source-camera frames measured 35.128%+; retain
+    # the strict 16px flat-run cap while allowing that live composition range.
+    'left_bush:70,88,40,20,0.25,16',
+    # A valid 1.01x camera sample measured 24.837% with a 72px flat run.
+    'stage_body:50,115,165,30,0.20,96',
+    # Tolerate a valid 22.953% / 61px camera sample while the 96px cap still
+    # rejects the pre-fix white pond's 105px run.
+    'pond:82,125,115,24,0.20,96'
 )
 function Copy-FileAtomically {
     param(

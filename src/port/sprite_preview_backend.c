@@ -247,11 +247,366 @@ static s32 ndsSObjPreviewBasicSupported(SObj *sobj)
             (bitmap_count != 0) && (bitmap_count <= 128u)) ? TRUE : FALSE;
 }
 
+typedef struct NDSSObjWallpaperDecodeCache
+{
+    u32 valid;
+    u32 asset_id;
+    u32 owner_scene;
+    u32 owner_generation;
+    const void *loaded_data;
+    u32 bitmap_offset;
+    u32 platform_epoch;
+    u32 layout_fingerprint;
+    u32 width;
+    u32 height;
+    u32 bitmap_count;
+    u32 bmheight;
+    u32 bmHreal;
+    u32 texshuf;
+    u32 source_drawn_pixels;
+    u32 opaque_pixels;
+} NDSSObjWallpaperDecodeCache;
+
+static NDSSObjWallpaperDecodeCache sNdsSObjWallpaperDecodeCache;
+
+volatile u32 gNdsSObjWallpaperCacheBuildCount;
+volatile u32 gNdsSObjWallpaperCacheHitCount;
+volatile u32 gNdsSObjWallpaperCacheFastDrawCount;
+volatile u32 gNdsSObjWallpaperCacheFallbackCount;
+volatile u32 gNdsSObjWallpaperCacheWidth;
+volatile u32 gNdsSObjWallpaperCacheHeight;
+volatile u32 gNdsSObjWallpaperCacheOpaquePixels;
+volatile u32 gNdsSObjWallpaperCacheBuildTicks;
+volatile u32 gNdsSObjWallpaperCacheDrawTicks;
+
+static u32 ndsSObjWallpaperCacheMix(u32 hash, u32 value)
+{
+    hash ^= value + 0x9e3779b9u + (hash << 6) + (hash >> 2);
+    return hash;
+}
+
+static u32 ndsSObjWallpaperLayoutFingerprint(const NDSRelocLoadedFile *loaded,
+                                              const Bitmap *bitmap,
+                                              u32 bitmap_count)
+{
+    u32 hash = 0x57414c4cu;
+    u32 i;
+
+    if ((loaded == NULL) || (bitmap == NULL))
+    {
+        return 0u;
+    }
+    for (i = 0u; i < bitmap_count; i++)
+    {
+        const Bitmap *current = &bitmap[i];
+        uintptr_t buffer = (uintptr_t)current->buf;
+        uintptr_t base = (uintptr_t)loaded->data;
+
+        hash = ndsSObjWallpaperCacheMix(
+            hash, ((u32)(u16)current->width << 16) |
+                      (u32)(u16)current->width_img);
+        hash = ndsSObjWallpaperCacheMix(
+            hash, ((u32)(u16)current->s << 16) | (u32)(u16)current->t);
+        hash = ndsSObjWallpaperCacheMix(
+            hash, ((u32)(u16)current->actualHeight << 16) |
+                      (u32)(u16)current->LUToffset);
+        hash = ndsSObjWallpaperCacheMix(
+            hash, (buffer >= base) ? (u32)(buffer - base) : (u32)buffer);
+    }
+    return hash;
+}
+
+static s32 ndsSObjWallpaperCacheKeyMatches(
+    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
+    u32 platform_epoch, u32 layout_fingerprint)
+{
+    const NDSSObjWallpaperDecodeCache *cache =
+        &sNdsSObjWallpaperDecodeCache;
+
+    return ((cache->valid != 0u) &&
+            (loaded != NULL) &&
+            (cache->asset_id == loaded->asset_id) &&
+            (cache->owner_scene == loaded->owner_scene) &&
+            (cache->owner_generation == loaded->owner_generation) &&
+            (cache->loaded_data == loaded->data) &&
+            (cache->bitmap_offset ==
+             (u32)((uintptr_t)sprite->bitmap - (uintptr_t)loaded->data)) &&
+            (cache->platform_epoch == platform_epoch) &&
+            (cache->layout_fingerprint == layout_fingerprint) &&
+            (cache->width == (u32)(u16)sprite->width) &&
+            (cache->height == (u32)(u16)sprite->height) &&
+            (cache->bitmap_count == (u32)(u16)sprite->nbitmaps) &&
+            (cache->bmheight == (u32)(u16)sprite->bmheight) &&
+            (cache->bmHreal == (u32)(u16)sprite->bmHreal) &&
+            (cache->texshuf ==
+             (((sprite->attr & SP_TEXSHUF) != 0u) ? 1u : 0u))) ? TRUE :
+                                                                    FALSE;
+}
+
+static s32 ndsSObjBuildWallpaperDecodeCache(
+    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
+    u16 *cache_pixels, u32 cache_pitch, u32 cache_height,
+    u32 platform_epoch, u32 layout_fingerprint)
+{
+    const Bitmap *bitmap = sprite->bitmap;
+    u32 width = (u32)(u16)sprite->width;
+    u32 height = (u32)(u16)sprite->height;
+    u32 bitmap_count = (u32)(u16)sprite->nbitmaps;
+    u32 is_texshuf = ((sprite->attr & SP_TEXSHUF) != 0u) ? 1u : 0u;
+    u32 out_y = 0u;
+    u32 drawn_pixels = 0u;
+    u32 opaque_pixels = 0u;
+    u32 bitmap_index;
+    u32 row;
+    u32 build_start = cpuGetTiming();
+
+    if ((loaded == NULL) || (cache_pixels == NULL) ||
+        (cache_pitch < width) || (cache_height < height))
+    {
+        return FALSE;
+    }
+    sNdsSObjWallpaperDecodeCache.valid = FALSE;
+    for (row = 0u; row < height; row++)
+    {
+        memset(&cache_pixels[row * cache_pitch], 0,
+               width * sizeof(cache_pixels[0]));
+    }
+    for (bitmap_index = 0u;
+         (bitmap_index < bitmap_count) && (out_y < height);
+         bitmap_index++)
+    {
+        const Bitmap *current = &bitmap[bitmap_index];
+        const u16 *src = current->buf;
+        u32 src_width = (u32)(u16)current->width_img;
+        u32 src_draw_width = (u32)(u16)current->width;
+        u32 src_height = (u32)(u16)current->actualHeight;
+        u32 row_advance = (u32)(u16)sprite->bmheight;
+        size_t src_bytes;
+
+        if (src_draw_width == 0u)
+        {
+            break;
+        }
+        if (src_width == 0u) { src_width = src_draw_width; }
+        if (src_height == 0u) { src_height = row_advance; }
+        if (row_advance == 0u) { row_advance = src_height; }
+        if ((src_width == 0u) || (src_height == 0u))
+        {
+            continue;
+        }
+        if (src_draw_width > width) { src_draw_width = width; }
+        src_bytes = (size_t)src_width * src_height * sizeof(u16);
+        if (ndsRelocPointerRangeInLoadedFile(loaded, src, src_bytes) == FALSE)
+        {
+            return FALSE;
+        }
+        for (row = 0u;
+             (row < src_height) && ((out_y + row) < height);
+             row++)
+        {
+            u32 x;
+            u16 *dst = &cache_pixels[(out_y + row) * cache_pitch];
+
+            for (x = 0u; x < src_draw_width; x++)
+            {
+                u16 color = ndsStartupLogoConvertRgba16(
+                    ndsStartupLogoReadRgba16Pixel(
+                        src, src_width, row, x, is_texshuf));
+
+                /* Transparent later strips do not erase earlier overlap rows
+                 * in the source sprite pipeline. */
+                if (color != 0u)
+                {
+                    dst[x] = color;
+                    drawn_pixels++;
+                }
+            }
+        }
+        out_y += row_advance;
+    }
+    if (drawn_pixels == 0u)
+    {
+        return FALSE;
+    }
+    for (row = 0u; row < height; row++)
+    {
+        u32 x;
+        const u16 *src = &cache_pixels[row * cache_pitch];
+
+        for (x = 0u; x < width; x++)
+        {
+            if (src[x] != 0u) { opaque_pixels++; }
+        }
+    }
+
+    sNdsSObjWallpaperDecodeCache.asset_id = loaded->asset_id;
+    sNdsSObjWallpaperDecodeCache.owner_scene = loaded->owner_scene;
+    sNdsSObjWallpaperDecodeCache.owner_generation = loaded->owner_generation;
+    sNdsSObjWallpaperDecodeCache.loaded_data = loaded->data;
+    sNdsSObjWallpaperDecodeCache.bitmap_offset =
+        (u32)((uintptr_t)sprite->bitmap - (uintptr_t)loaded->data);
+    sNdsSObjWallpaperDecodeCache.platform_epoch = platform_epoch;
+    sNdsSObjWallpaperDecodeCache.layout_fingerprint = layout_fingerprint;
+    sNdsSObjWallpaperDecodeCache.width = width;
+    sNdsSObjWallpaperDecodeCache.height = height;
+    sNdsSObjWallpaperDecodeCache.bitmap_count = bitmap_count;
+    sNdsSObjWallpaperDecodeCache.bmheight = (u32)(u16)sprite->bmheight;
+    sNdsSObjWallpaperDecodeCache.bmHreal = (u32)(u16)sprite->bmHreal;
+    sNdsSObjWallpaperDecodeCache.texshuf = is_texshuf;
+    sNdsSObjWallpaperDecodeCache.source_drawn_pixels = drawn_pixels;
+    sNdsSObjWallpaperDecodeCache.opaque_pixels = opaque_pixels;
+    gNdsSObjWallpaperCacheBuildCount++;
+    gNdsSObjWallpaperCacheWidth = width;
+    gNdsSObjWallpaperCacheHeight = height;
+    gNdsSObjWallpaperCacheOpaquePixels = opaque_pixels;
+    gNdsSObjWallpaperCacheBuildTicks += cpuGetTiming() - build_start;
+    sNdsSObjWallpaperDecodeCache.valid = TRUE;
+    return TRUE;
+}
+
+static u32 ndsSObjWallpaperLastSource(u32 relative, u32 scale_q16)
+{
+    /* The 320x240 clipped viewport keeps this numerator within u32 and avoids
+     * an ARM9 software 64-bit divide on every source-map entry. */
+    return ((((relative + 1u) << 16) - 1u) / scale_q16);
+}
+
+static s32 ndsSObjDrawOpaqueWallpaperCache(
+    const u16 *cache_pixels, u32 cache_pitch,
+    u16 *source_x_map,
+    u32 width, u32 height, u32 scale_x_q16, u32 scale_y_q16,
+    u16 *preview, u32 preview_pitch, u32 preview_width, u32 preview_height,
+    s32 origin_x, s32 origin_y)
+{
+    s32 dst_x_start = origin_x;
+    s32 dst_y_start = origin_y;
+    s32 dst_x_end = origin_x +
+        (s32)((((u64)width * scale_x_q16) + 0xffffu) >> 16);
+    s32 dst_y_end = origin_y +
+        (s32)((((u64)height * scale_y_q16) + 0xffffu) >> 16);
+    s32 dst_x;
+    s32 dst_y;
+
+    if (dst_x_start < 0) { dst_x_start = 0; }
+    if (dst_y_start < 0) { dst_y_start = 0; }
+    if (dst_x_end > (s32)preview_width) { dst_x_end = preview_width; }
+    if (dst_y_end > (s32)preview_height) { dst_y_end = preview_height; }
+    if (dst_y_start >= dst_y_end)
+    {
+        return FALSE;
+    }
+    for (dst_x = dst_x_start; dst_x < dst_x_end; dst_x++)
+    {
+        u32 relative = (u32)(dst_x - origin_x);
+        u32 source_x = ndsSObjWallpaperLastSource(relative, scale_x_q16);
+
+        if (source_x >= width) { source_x = width - 1u; }
+        source_x_map[dst_x] = (u16)source_x;
+    }
+    for (dst_y = dst_y_start; dst_y < dst_y_end; dst_y++)
+    {
+        u32 relative = (u32)(dst_y - origin_y);
+        u32 source_y = ndsSObjWallpaperLastSource(relative, scale_y_q16);
+        const u16 *src;
+        u16 *dst;
+
+        if (source_y >= height) { source_y = height - 1u; }
+        src = &cache_pixels[source_y * cache_pitch];
+        dst = &preview[(u32)dst_y * preview_pitch];
+        for (dst_x = dst_x_start; dst_x < dst_x_end; dst_x++)
+        {
+            dst[dst_x] = src[source_x_map[dst_x]];
+        }
+    }
+    return TRUE;
+}
+
+static u32 ndsSObjDrawCachedWallpaper(
+    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
+    u16 *preview, u32 preview_pitch, u32 preview_width, u32 preview_height,
+    s32 origin_x, s32 origin_y, u32 scale_x_q16, u32 scale_y_q16)
+{
+    u16 *cache_pixels;
+    u32 cache_pitch = 0u;
+    u32 cache_height = 0u;
+    u32 platform_epoch = 0u;
+    u32 layout_fingerprint;
+    u32 draw_start;
+
+    cache_pixels = ndsPlatformGetOriginalSpriteDecodeCache(
+        &cache_pitch, &cache_height, &platform_epoch);
+    if ((cache_pixels == NULL) || (loaded == NULL) ||
+        (loaded->asset_id != NDS_RELOC_ASSET_STAGE_DREAM_LAND) ||
+        ((u32)(u16)sprite->width != 300u) ||
+        ((u32)(u16)sprite->height != 220u) ||
+        ((u32)(u16)sprite->nbitmaps != 44u) ||
+        ((u32)(u16)sprite->bmheight != 5u) ||
+        ((u32)(u16)sprite->bmHreal != 6u) ||
+        (sprite->bmfmt != G_IM_FMT_RGBA) ||
+        (sprite->bmsiz != G_IM_SIZ_16b))
+    {
+        return 0u;
+    }
+    layout_fingerprint = ndsSObjWallpaperLayoutFingerprint(
+        loaded, sprite->bitmap, (u32)(u16)sprite->nbitmaps);
+    if (ndsSObjWallpaperCacheKeyMatches(
+            loaded, sprite, platform_epoch, layout_fingerprint) == FALSE)
+    {
+        if (ndsSObjBuildWallpaperDecodeCache(
+                loaded, sprite, cache_pixels, cache_pitch, cache_height,
+                platform_epoch, layout_fingerprint) == FALSE)
+        {
+            sNdsSObjWallpaperDecodeCache.valid = FALSE;
+            return 0u;
+        }
+    }
+    else
+    {
+        gNdsSObjWallpaperCacheHitCount++;
+    }
+
+    /* The destination-driven last-writer mapping is exact only after proving
+     * this source is fully opaque. Any layout or future camera-scale change
+     * outside that contract returns to the unchanged generic compositor. */
+    if ((sNdsSObjWallpaperDecodeCache.opaque_pixels !=
+         sNdsSObjWallpaperDecodeCache.width *
+             sNdsSObjWallpaperDecodeCache.height) ||
+        (scale_x_q16 < (1u << 16)) ||
+        (scale_y_q16 < (1u << 16)) ||
+        (cache_height <= sNdsSObjWallpaperDecodeCache.height) ||
+        (((cache_height - sNdsSObjWallpaperDecodeCache.height) *
+          cache_pitch) < preview_width))
+    {
+        return 0u;
+    }
+
+    draw_start = cpuGetTiming();
+    {
+        u16 *source_x_map = &cache_pixels[
+            sNdsSObjWallpaperDecodeCache.height * cache_pitch];
+
+        if (ndsSObjDrawOpaqueWallpaperCache(
+                cache_pixels, cache_pitch, source_x_map,
+                sNdsSObjWallpaperDecodeCache.width,
+                sNdsSObjWallpaperDecodeCache.height,
+                scale_x_q16, scale_y_q16, preview, preview_pitch,
+                preview_width, preview_height, origin_x, origin_y) == FALSE)
+        {
+            gNdsSObjWallpaperCacheDrawTicks = cpuGetTiming() - draw_start;
+            return 0u;
+        }
+        gNdsSObjWallpaperCacheFastDrawCount++;
+    }
+    gNdsSObjWallpaperCacheDrawTicks = cpuGetTiming() - draw_start;
+    return sNdsSObjWallpaperDecodeCache.source_drawn_pixels;
+}
+
 static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                                   u16 *preview, u32 preview_pitch,
                                   u32 preview_width, u32 preview_height,
                                   s32 origin_x, s32 origin_y,
-                                  u32 results_wallpaper_combine)
+                                  u32 results_wallpaper_combine,
+                                  u32 cache_wallpaper)
 {
     Sprite *sprite;
     Bitmap *bitmap;
@@ -353,6 +708,18 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         ndsRecordSObjDrawBlocker(record_startup,
                                  NDS_STARTUP_LOGO_BLOCKER_NO_PREVIEW_BUFFER);
         return FALSE;
+    }
+
+    if (cache_wallpaper != 0u)
+    {
+        drawn_pixels = ndsSObjDrawCachedWallpaper(
+            loaded, sprite, preview, preview_pitch, preview_width,
+            preview_height, origin_x, origin_y, scale_x_q16, scale_y_q16);
+        if (drawn_pixels != 0u)
+        {
+            goto draw_complete;
+        }
+        gNdsSObjWallpaperCacheFallbackCount++;
     }
 
     for (bitmap_index = 0;
@@ -640,6 +1007,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         out_y += row_advance;
     }
 
+draw_complete:
     if (drawn_pixels == 0)
     {
         ndsRecordSObjDrawBlocker(record_startup,
@@ -744,7 +1112,7 @@ static s32 ndsDrawSObjPreview(SObj *sobj, u32 record_startup)
         return FALSE;
     }
     if (ndsDrawSObjIntoPreview(sobj, record_startup, preview, preview_pitch,
-                               width, height, 0, 0, 0u) == FALSE)
+                               width, height, 0, 0, 0u, 0u) == FALSE)
     {
         return FALSE;
     }
@@ -772,12 +1140,17 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 {
     SObj *sobj = (gobj != NULL) ? SObjGetStruct(gobj) : NULL;
     u32 foreground = FALSE;
+    u32 cache_wallpaper = FALSE;
 
     if (gobj != NULL)
     {
         foreground = (gSCManagerSceneData.scene_curr == nSCKindVSResults) ?
             ((gobj->dl_link_id != 26u) ? TRUE : FALSE) :
             ((gobj->id != nGCCommonKindWallpaper) ? TRUE : FALSE);
+        cache_wallpaper =
+            ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+             (gobj->id == nGCCommonKindWallpaper) &&
+             (wallpaper_combine == 0u)) ? TRUE : FALSE;
     }
 
     if ((foreground != FALSE) && (sNdsSObjFrameForeground == FALSE))
@@ -796,7 +1169,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
                 sobj, 0u, sNdsSObjFramePreview,
                 sNdsSObjFramePreviewPitch, 320u, 240u,
                 (s32)sobj->pos.x, (s32)sobj->pos.y,
-                wallpaper_combine) != FALSE))
+                wallpaper_combine, cache_wallpaper) != FALSE))
         {
             sNdsSObjFramePreviewDrawCount++;
         }
@@ -934,7 +1307,7 @@ void lbCommonDrawSObjAttr(GObj *gobj)
                 if (ndsDrawSObjIntoPreview(
                         scan_sobj, record_startup, preview, preview_pitch,
                         320u, 240u, (s32)scan_sobj->pos.x,
-                        (s32)scan_sobj->pos.y, 0u) != FALSE)
+                        (s32)scan_sobj->pos.y, 0u, 0u) != FALSE)
                 {
                     drew_any++;
                 }

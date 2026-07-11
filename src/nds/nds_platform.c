@@ -70,6 +70,7 @@ static s32 sOriginalSpriteOverlayNeedsFlush;
 static u16 sOriginalSpriteDisplayPreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT];
+static u32 sOriginalSpriteDecodeCacheEpoch = 1u;
 static u32 sOriginalSpriteDisplayPreviewWidth;
 static u32 sOriginalSpriteDisplayPreviewHeight;
 static u16 sOriginalDLPreview[
@@ -274,28 +275,62 @@ u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
     return sOriginalSpritePreview;
 }
 
-static void ndsPlatformCopyOriginalSpritePreviewNative(s32 dst_w, s32 dst_h)
+u16 *ndsPlatformGetOriginalSpriteDecodeCache(u32 *out_pitch,
+                                              u32 *out_height,
+                                              u32 *out_epoch)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if (out_pitch != NULL)
+    {
+        *out_pitch = NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH;
+    }
+    if (out_height != NULL)
+    {
+        *out_height = NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT;
+    }
+    if (out_epoch != NULL)
+    {
+        *out_epoch = sOriginalSpriteDecodeCacheEpoch;
+    }
+    return sOriginalSpriteDisplayPreview;
+#else
+    if (out_pitch != NULL) { *out_pitch = 0u; }
+    if (out_height != NULL) { *out_height = 0u; }
+    if (out_epoch != NULL) { *out_epoch = sOriginalSpriteDecodeCacheEpoch; }
+    return NULL;
+#endif
+}
+
+#if !NDS_RENDERER_HW_TRIANGLES
+static void ndsPlatformCopyOriginalSpritePreviewNative(
+    u16 *destination, u32 destination_pitch, s32 dst_w, s32 dst_h)
 {
     s32 y;
 
+    if ((destination == NULL) || (destination_pitch < (u32)dst_w))
+    {
+        return;
+    }
     for (y = 0; y < dst_h; y++)
     {
-        memcpy(&sOriginalSpriteDisplayPreview[
-                   y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH],
+        memcpy(&destination[y * destination_pitch],
                &sOriginalSpritePreview[
                    y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH],
-               (size_t)dst_w * sizeof(sOriginalSpriteDisplayPreview[0]));
+               (size_t)dst_w * sizeof(destination[0]));
     }
 }
+#endif
 
-static void ndsPlatformScaleOriginalSpritePreviewNearest(s32 dst_w, s32 dst_h)
+static void ndsPlatformScaleOriginalSpritePreviewNearest(
+    u16 *destination, u32 destination_pitch, s32 dst_w, s32 dst_h)
 {
     u32 step_x;
     u32 step_y;
     u32 src_y_q16;
     s32 y;
 
-    if ((dst_w <= 0) || (dst_h <= 0))
+    if ((destination == NULL) || (dst_w <= 0) || (dst_h <= 0) ||
+        (destination_pitch < (u32)dst_w))
     {
         return;
     }
@@ -308,8 +343,7 @@ static void ndsPlatformScaleOriginalSpritePreviewNearest(s32 dst_w, s32 dst_h)
     {
         u32 src_y = src_y_q16 >> 16;
         u32 src_x_q16 = step_x >> 1;
-        u16 *dst = &sOriginalSpriteDisplayPreview[
-            y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH];
+        u16 *dst = &destination[y * destination_pitch];
         const u16 *src;
         s32 x;
 
@@ -339,6 +373,9 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
 {
     s32 dst_w;
     s32 dst_h;
+#if NDS_RENDERER_HW_TRIANGLES
+    const u16 *display_preview = sOriginalSpritePreview;
+#endif
 
     if ((sOriginalSpritePreviewWidth == 0) ||
         (sOriginalSpritePreviewHeight == 0))
@@ -346,11 +383,8 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         return;
     }
 
-    /*
-     * Keep the retained visual diagnostic at native asset resolution. The N64
-     * logical position still maps to the DS screen when drawing, but the copy
-     * itself stays 128x108 so melonDS captures are useful for texture work.
-     */
+    /* SW keeps its retained visual diagnostic at native asset resolution. HW
+     * consumes staging directly into BG VRAM and owns no retained frame copy. */
     dst_w = (s32)sOriginalSpritePreviewWidth;
     dst_h = (s32)sOriginalSpritePreviewHeight;
     if (dst_w <= 0) dst_w = 1;
@@ -372,15 +406,37 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         dst_h = NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT;
     }
 
+#if NDS_RENDERER_HW_TRIANGLES
+    /* Hardware layers consume staging immediately. Downscaling in place is
+     * safe because both source coordinates advance at least as quickly as the
+     * destination; it leaves the retained display buffer free for immutable
+     * decoded sprite data without adding a second pixel buffer. */
+    if ((dst_w != (s32)sOriginalSpritePreviewWidth) ||
+        (dst_h != (s32)sOriginalSpritePreviewHeight))
+    {
+        ndsPlatformScaleOriginalSpritePreviewNearest(
+            sOriginalSpritePreview,
+            NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH, dst_w, dst_h);
+        /* Staging now contains the compacted image. Publish its new extent so
+         * a repeated commit is idempotent until the next Begin call. */
+        sOriginalSpritePreviewWidth = (u32)dst_w;
+        sOriginalSpritePreviewHeight = (u32)dst_h;
+    }
+#else
     if ((dst_w == (s32)sOriginalSpritePreviewWidth) &&
         (dst_h == (s32)sOriginalSpritePreviewHeight))
     {
-        ndsPlatformCopyOriginalSpritePreviewNative(dst_w, dst_h);
+        ndsPlatformCopyOriginalSpritePreviewNative(
+            sOriginalSpriteDisplayPreview,
+            NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH, dst_w, dst_h);
     }
     else
     {
-        ndsPlatformScaleOriginalSpritePreviewNearest(dst_w, dst_h);
+        ndsPlatformScaleOriginalSpritePreviewNearest(
+            sOriginalSpriteDisplayPreview,
+            NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH, dst_w, dst_h);
     }
+#endif
     sOriginalSpriteDisplayPreviewWidth = (u32)dst_w;
     sOriginalSpriteDisplayPreviewHeight = (u32)dst_h;
     sOriginalSpritePreviewReady = 1;
@@ -412,7 +468,7 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         for (y = 0; y < dst_h; y++)
         {
             memcpy(&overlay[y * 256],
-                   &sOriginalSpriteDisplayPreview[
+                   &display_preview[
                        y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH],
                    (size_t)dst_w * sizeof(u16));
         }
@@ -474,6 +530,11 @@ void ndsPlatformClearOriginalSpritePreview(void)
     memset(sOriginalSpritePreview, 0, sizeof(sOriginalSpritePreview));
     memset(sOriginalSpriteDisplayPreview, 0,
            sizeof(sOriginalSpriteDisplayPreview));
+    sOriginalSpriteDecodeCacheEpoch++;
+    if (sOriginalSpriteDecodeCacheEpoch == 0u)
+    {
+        sOriginalSpriteDecodeCacheEpoch = 1u;
+    }
 }
 
 u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height, u32 *out_pitch)

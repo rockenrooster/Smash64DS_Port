@@ -19075,3 +19075,46 @@ Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: texture-lane totals are aggregate conversion observations rather
 than literal per-read volatile writes; canonical totals, format/lane maps,
 fixtures, oracle, depth, and pixel contracts remain unchanged.
+
+## 2026-07-11 - Exact Dream Land wallpaper decode cache
+
+- Audited imported BattleShip `grwallpaper.c`: the Dream Land bitmap is
+  immutable while `grWallpaperCalcPersp` updates SObj position and scale every
+  tick. The shipped asset is exactly 300x220 RGBA16, 44 overlapping strips, and
+  all 66,000 logical pixels are opaque. The sm64-nds reference retains decoded
+  assets but has no composed-frame cache or applicable 2D affine precedent.
+- In HW builds, repurposed the existing 320x240 retained sprite-preview buffer
+  for the decoded wallpaper. HW commit now downscales staging in place before
+  row copies to BG VRAM; SW retained-preview behavior is unchanged. Platform
+  clears advance an epoch, and the cache key copies relocation asset/scene/
+  generation/data plus Sprite fields and a bitmap-layout fingerprint.
+- Kept source camera behavior live. The opaque hot path maps each destination
+  pixel to the exact last source writer from the existing floor/ceil scaler;
+  any unsupported layout, opacity, capacity, or scale returns to the unchanged
+  generic SObj compositor. Water, Whispy, flowers, fences, fighters, and the
+  composed stage frame are never cached.
+- A fast host oracle compares the generic forward and inverse last-writer maps
+  at native, 1.004x, 1.5x, and 2x scale with positive/negative clipping, plus a
+  synthetic one-row strip overlap. It also pins both C axes to the shared
+  proven 32-bit equation, avoiding ARM9 software 64-bit division.
+- Canonical proof reports `build1/hit44/fast45/fallback0`, source
+  `300x220/66000`, positive timings, exact canonical/shipped ROM parity, GX
+  `2484/828`, zero texture reject/oracle drift, and pacing `13/13 x0.1`.
+  Present ticks fell `34,839,424 -> 24,764,160` (`-28.9%`); draw ticks fell
+  `34,485,632 -> 24,074,560` (`-30.2%`). The accepted FastIteration capture is
+  `artifacts/visibility/2026-07-11_canonical_fast_152053-8952067-p21188.png`;
+  pond, flowers, and foreground fences pass their visual gates.
+- Canonical/shipped parity is `11,580,416` bytes at SHA-256
+  `147F8EAE0148F1FABA15F6F48CF197DE7120BD7578042946B227BDBA78164679`.
+  All four compact P1 legs pass in final state; split combat/lifecycle reruns
+  took `18.2s/89.1s`, and fresh Boundary passed in `202.7s`. Full Regression
+  remains intentionally skipped for Tyler's faster P1 iteration request.
+- Two P1Gate visual runs reached every runtime/cache contract but valid live
+  camera samples put fixed shrub/stage/pond crops at `35.128%/24.837%/22.953%`.
+  Visual inspection confirmed their detail. FastIteration now uses variation
+  floors `25%/20%/20%` and flat-run caps `16/96/96px`; the known white pond's
+  `105px` run still fails. Non-fast `50%/30%/35%` thresholds are unchanged.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: none; cache reuse is asserted only in canonical HW runtime, while
+the generic/SW SObj path and historical profiles remain available.

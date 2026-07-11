@@ -20,6 +20,49 @@ function Assert-True {
         throw $Message
     }
 }
+function Get-WallpaperForwardLastWriterMap {
+    param(
+        [int]$Length,
+        [uint32]$ScaleQ16,
+        [int]$Origin,
+        [int]$Viewport
+    )
+    $map = [int[]]::new($Viewport)
+    for ($i = 0; $i -lt $Viewport; $i++) { $map[$i] = -1 }
+    for ($source = 0; $source -lt $Length; $source++) {
+        $start = $Origin + [int]((([int64]$source * $ScaleQ16) -shr 16))
+        $end = $Origin + [int]((((([int64]($source + 1) * $ScaleQ16) +
+            0xffff) -shr 16)))
+        for ($destination = $start; $destination -lt $end; $destination++) {
+            if (($destination -ge 0) -and ($destination -lt $Viewport)) {
+                $map[$destination] = $source
+            }
+        }
+    }
+    return ,$map
+}
+function Get-WallpaperInverseLastWriterMap {
+    param(
+        [int]$Length,
+        [uint32]$ScaleQ16,
+        [int]$Origin,
+        [int]$Viewport
+    )
+    $map = [int[]]::new($Viewport)
+    for ($i = 0; $i -lt $Viewport; $i++) { $map[$i] = -1 }
+    $start = [Math]::Max($Origin, 0)
+    $end = [Math]::Min(
+        $Origin + [int]((((([int64]$Length * $ScaleQ16) + 0xffff) -shr 16))),
+        $Viewport)
+    for ($destination = $start; $destination -lt $end; $destination++) {
+        $relative = $destination - $Origin
+        $source = [int][Math]::Floor(
+            [double]((((([int64]$relative + 1) -shl 16) - 1)) /
+                [double]$ScaleQ16))
+        $map[$destination] = [Math]::Min($source, $Length - 1)
+    }
+    return ,$map
+}
 function Get-TextureByte {
     param(
         [byte[]]$Bytes,
@@ -673,6 +716,59 @@ Assert-True (-not (Test-N64MaskedClampMaterialization -Mode 2 -Mask 5 -SourceExt
 Assert-Equal (Convert-N64MaskedTextureAddress -Coord 32 -Mode 3 -Mask 5) 31 'Dream Land platform mirror boundary did not reverse the second mask period.'
 Assert-Equal (Convert-N64MaskedTextureAddress -Coord 63 -Mode 3 -Mask 5) 0 'Dream Land platform logical edge did not resolve to the mirrored source edge.'
 Assert-Equal (Convert-N64MaskedTextureAddress -Coord 127 -Mode 3 -Mask 6) 0 'Dream Land canopy logical edge did not resolve to the mirrored source edge.'
+$wallpaperMapCases = @(
+    @{ Length = 300; Scale = 65536; Origin = 0; Viewport = 320 },
+    @{ Length = 300; Scale = 65798; Origin = -17; Viewport = 320 },
+    @{ Length = 300; Scale = 65798; Origin = 9; Viewport = 320 },
+    @{ Length = 300; Scale = 98304; Origin = -83; Viewport = 320 },
+    @{ Length = 300; Scale = 131072; Origin = -150; Viewport = 320 },
+    @{ Length = 220; Scale = 65798; Origin = -11; Viewport = 240 },
+    @{ Length = 220; Scale = 131072; Origin = 7; Viewport = 240 }
+)
+foreach ($case in $wallpaperMapCases) {
+    $forward = Get-WallpaperForwardLastWriterMap @case
+    $inverse = Get-WallpaperInverseLastWriterMap @case
+    Assert-Equal ($inverse -join ',') ($forward -join ',') `
+        "Wallpaper inverse last-writer mapping drifted at length=$($case.Length) scale=$($case.Scale) origin=$($case.Origin)."
+}
+# Synthetic six-row/two-strip input with a one-row logical overlap. The later
+# strip's first row must replace the earlier strip's last row before scaling.
+$overlapRows = @(
+    @{ LogicalY = 0; Color = 10 },
+    @{ LogicalY = 1; Color = 11 },
+    @{ LogicalY = 1; Color = 20 },
+    @{ LogicalY = 2; Color = 21 }
+)
+foreach ($origin in @(-1, 1)) {
+    $viewport = 6
+    $scale = 65798
+    $forwardColors = [int[]]::new($viewport)
+    foreach ($row in $overlapRows) {
+        $start = $origin + [int]((([int64]$row.LogicalY * $scale) -shr 16))
+        $end = $origin + [int]((((([int64]($row.LogicalY + 1) * $scale) +
+            0xffff) -shr 16)))
+        for ($destination = $start; $destination -lt $end; $destination++) {
+            if (($destination -ge 0) -and ($destination -lt $viewport)) {
+                $forwardColors[$destination] = $row.Color
+            }
+        }
+    }
+    $inverseSources = Get-WallpaperInverseLastWriterMap `
+        -Length 3 -ScaleQ16 $scale -Origin $origin -Viewport $viewport
+    $flattenedColors = @(10, 20, 21)
+    $inverseColors = [int[]]::new($viewport)
+    for ($destination = 0; $destination -lt $viewport; $destination++) {
+        if ($inverseSources[$destination] -ge 0) {
+            $inverseColors[$destination] =
+                $flattenedColors[$inverseSources[$destination]]
+        }
+    }
+    Assert-Equal ($inverseColors -join ',') ($forwardColors -join ',') `
+        "Wallpaper overlapping-strip flattening drifted at origin=$origin."
+}
+$spritePreview = Get-Content (Join-Path $root 'src/port/sprite_preview_backend.c') -Raw
+Assert-True ($spritePreview.Contains('return ((((relative + 1u) << 16) - 1u) / scale_q16);')) 'Wallpaper inverse helper no longer uses the proven last-writer equation.'
+Assert-True ([regex]::Matches($spritePreview, 'ndsSObjWallpaperLastSource\(').Count -ge 3) 'Wallpaper fast path no longer routes both axes through the proven inverse helper.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
@@ -1457,4 +1553,4 @@ Assert-True (-not $movement.Contains('NDS_STAGE_GCDRAWALL_HW_SUBMIT_LIMIT')) 'St
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
 Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'
-Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.'
+Write-Output 'GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, wallpaper inverse/overlap oracle, and source snippets verified.'

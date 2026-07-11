@@ -1227,6 +1227,19 @@ ST, restoring ten textured triangles without new geometry, assets, or MObjs.
 Full source-selected fighter submission is not cached; that is a backend limit,
 not alternative fighter behavior.
 
+Dream Land's source wallpaper remains an SObj controlled each tick by imported
+`grWallpaperCalcPersp`. In HW builds, the otherwise redundant 320x240 retained
+preview buffer stores one decoded 300x220 RGBA16 source image. Its key copies
+relocation asset/scene/generation/data and a bitmap-layout fingerprint; platform
+clear increments an epoch. Position and scale remain live. Because the shipped
+44-strip asset proves all 66,000 logical pixels opaque, the compositor uses an
+exact destination-to-last-source inverse map; any key, opacity, capacity, or
+scale mismatch returns to the generic SObj decoder. HW preview commit scales
+the staging buffer in place before its row copies, so this adds no second frame
+buffer and never caches water, Whispy, flowers, fences, fighters, or a composed
+stage frame. A direct affine BG was rejected: lossless 300x220 RGB15 needs both
+bitmap banks and would displace the foreground layer.
+
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,
 GX flush, vblank, and per-frame profile finalization. Sampling the same globals

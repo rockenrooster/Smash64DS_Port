@@ -1310,7 +1310,7 @@ Opening movie / Opening Portraits:
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
   completed update, and nonzero timer-derived rates. The canonical HW smoke
-  currently reports about `0.7` fps with source wallpaper and water
+  currently reports about `1.3` fps with source wallpaper and water
   precomposition; pass
   `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
@@ -1325,6 +1325,11 @@ Opening movie / Opening Portraits:
   of 2048 polygons and 6144 vertices. The verifier first breaks at
   `ndsBattlePlayableFrameCompleteMarker`; reading during the frame-start reset
   can otherwise produce a false zero-sample oracle result.
+- `SOBJ_WALL_CACHE`: immutable Dream Land decode-cache marker. Fields are
+  build/hit/fast-draw/fallback counts, source width/height/opaque pixels, and
+  build/last-draw ticks. Canonical expects exactly one build, one or more hits,
+  fast draws equal to builds plus hits, `0 / 300 / 220 / 66000`, and positive
+  timings; live SObj position/scale are deliberately not part of the key.
 - `RENDER_MATRIX` / `RENDER_VERTEX`: canonical HW matrix and vertex-range
   markers. They record loaded projection/modelview seeds and raw/HW vertex
   ranges so blank-screen failures can be sorted into matrix/clip issues versus

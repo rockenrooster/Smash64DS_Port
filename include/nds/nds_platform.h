@@ -24,6 +24,9 @@ void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color);
 u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
                                            s32 n64_x, s32 n64_y,
                                            u32 *out_pitch);
+u16 *ndsPlatformGetOriginalSpriteDecodeCache(u32 *out_pitch,
+                                              u32 *out_height,
+                                              u32 *out_epoch);
 void ndsPlatformCommitOriginalSpritePreview(void);
 void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
