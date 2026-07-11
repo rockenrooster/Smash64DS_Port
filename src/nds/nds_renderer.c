@@ -2308,12 +2308,26 @@ static s32 ndsRendererHardwareUseTextureMatrix(
 }
 
 static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, u32 origin,
-                                       s32 offset)
+                                       s32 offset, u32 extent, u32 mode)
 {
     s64 scaled_t16 = ((s64)coord * (s64)scale) >> 17;
     s64 origin_t16 = (s64)origin << 2;
+    s64 result = scaled_t16 - origin_t16 + offset;
 
-    return (s16)(scaled_t16 - origin_t16 + offset);
+    if (((mode & NDS_RENDERER_TX_CLAMP) != 0u) && (extent != 0u))
+    {
+        s64 max_t16 = ((s64)extent << 4) - 1;
+
+        if (result < 0)
+        {
+            result = 0;
+        }
+        else if (result > max_t16)
+        {
+            result = max_t16;
+        }
+    }
+    return (s16)result;
 }
 
 static void ndsRendererProfileTextureCoord(s16 s, s16 t)
@@ -2658,11 +2672,41 @@ static u32 ndsRendererHardwareTextureNextPow2(u32 value)
     return out;
 }
 
+static s32 ndsRendererHardwareTextureMaskedClampNeedsWrap(
+    u32 mode, u32 mask, u32 upload_extent, u32 tile_extent)
+{
+    u32 mask_extent;
+    u32 sampler_extent;
+
+    /* RDP mask repeat/mirror can occur before the logical tile clamp edge. */
+    if (((mode & NDS_RENDERER_TX_CLAMP) == 0u) || (mask == 0u) ||
+        (mask >= 31u) || (upload_extent == 0u) || (tile_extent == 0u))
+    {
+        return FALSE;
+    }
+    mask_extent = 1u << mask;
+    if (upload_extent != mask_extent)
+    {
+        return FALSE;
+    }
+    sampler_extent = upload_extent;
+    if ((mode & NDS_RENDERER_TX_MIRROR) != 0u)
+    {
+        sampler_extent <<= 1;
+    }
+    return (((mode & NDS_RENDERER_TX_MIRROR) != 0u) ||
+            (sampler_extent != tile_extent)) ? TRUE : FALSE;
+}
+
 static u32 ndsRendererHardwareTextureParams(
     const NDSRendererStats *stats,
-    const NDSRendererTileState *render_tile)
+    const NDSRendererTileState *render_tile,
+    u32 upload_width,
+    u32 upload_height)
 {
     u32 params;
+    s32 wrap_s;
+    s32 wrap_t;
 
     if (render_tile == NULL)
     {
@@ -2671,19 +2715,29 @@ static u32 ndsRendererHardwareTextureParams(
 
     params = (ndsRendererHardwareUseTextureMatrix(stats) != FALSE) ?
         TEXGEN_TEXCOORD : TEXGEN_OFF;
-    if ((render_tile->cms & NDS_RENDERER_TX_CLAMP) == 0u)
+    wrap_s = ((render_tile->cms & NDS_RENDERER_TX_CLAMP) == 0u) ||
+        ndsRendererHardwareTextureMaskedClampNeedsWrap(
+            render_tile->cms, render_tile->masks, upload_width,
+            render_tile->width);
+    wrap_t = ((render_tile->cmt & NDS_RENDERER_TX_CLAMP) == 0u) ||
+        ndsRendererHardwareTextureMaskedClampNeedsWrap(
+            render_tile->cmt, render_tile->maskt, upload_height,
+            render_tile->height);
+    if (wrap_s != FALSE)
     {
         params |= GL_TEXTURE_WRAP_S;
     }
-    if ((render_tile->cms & NDS_RENDERER_TX_MIRROR) != 0u)
+    if ((wrap_s != FALSE) &&
+        ((render_tile->cms & NDS_RENDERER_TX_MIRROR) != 0u))
     {
         params |= GL_TEXTURE_FLIP_S;
     }
-    if ((render_tile->cmt & NDS_RENDERER_TX_CLAMP) == 0u)
+    if (wrap_t != FALSE)
     {
         params |= GL_TEXTURE_WRAP_T;
     }
-    if ((render_tile->cmt & NDS_RENDERER_TX_MIRROR) != 0u)
+    if ((wrap_t != FALSE) &&
+        ((render_tile->cmt & NDS_RENDERER_TX_MIRROR) != 0u))
     {
         params |= GL_TEXTURE_FLIP_T;
     }
@@ -3573,7 +3627,8 @@ static s32 ndsRendererHardwareBindTexture(
     key.flags = render_tile_flags | (stats->texture_load_kind << 8);
 
     entry = ndsRendererHardwareFindTexture(&key);
-    params = ndsRendererHardwareTextureParams(stats, render_tile);
+    params = ndsRendererHardwareTextureParams(stats, render_tile,
+                                               upload_width, upload_height);
     if (entry != NULL)
     {
         ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
@@ -3953,6 +4008,7 @@ static void ndsRendererHardwareSubmitVertex(
     s32 use_material_color,
     s32 use_vertex_color,
     s32 use_texture,
+    const NDSRendererTileState *render_tile,
     u32 scale_s,
     u32 scale_t,
     u32 texture_origin_s,
@@ -3973,14 +4029,18 @@ static void ndsRendererHardwareSubmitVertex(
     ndsRendererHardwareColorVertex(stats, vtx, material_color,
                                    use_material_color,
                                    use_vertex_color);
-    if (use_texture != FALSE)
+    if ((use_texture != FALSE) && (render_tile != NULL))
     {
         s16 s = ndsRendererHardwareTexCoord(vtx->s, scale_s,
                                             texture_origin_s,
-                                            texture_offset);
+                                            texture_offset,
+                                            render_tile->width,
+                                            render_tile->cms);
         s16 t = ndsRendererHardwareTexCoord(vtx->t, scale_t,
                                             texture_origin_t,
-                                            texture_offset);
+                                            texture_offset,
+                                            render_tile->height,
+                                            render_tile->cmt);
 
         ndsRendererProfileTextureCoord(s, t);
         ndsRendererProfileTextureSample(s, t);
@@ -4272,19 +4332,19 @@ static void ndsRendererSubmitHardwareTriangle(
     glBegin(GL_TRIANGLE);
     ndsRendererHardwareSubmitVertex(
         stats, v0, &state->vertices[i0], material_color, use_material_color,
-        use_vertex_color, use_texture, texture_scale_s,
+        use_vertex_color, use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z[0], projected_submit);
     ndsRendererHardwareSubmitVertex(
         stats, v1, &state->vertices[i1], material_color, use_material_color,
-        use_vertex_color, use_texture, texture_scale_s,
+        use_vertex_color, use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z[1], projected_submit);
     ndsRendererHardwareSubmitVertex(
         stats, v2, &state->vertices[i2], material_color, use_material_color,
-        use_vertex_color, use_texture, texture_scale_s,
+        use_vertex_color, use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
         zbuffered, decal_depth, prim_depth, projected_z[2], projected_submit);

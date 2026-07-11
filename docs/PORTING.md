@@ -18730,3 +18730,34 @@ expectations: none.
   The queue, diagnostics, and verifier additions were fully reverted. Generic
   multi-head support remains future-stage architecture debt, not the active
   Dream Land ribbon or visibility cause.
+
+## 2026-07-10 - Dream Land masked-clamp sampler repair
+
+- Traced adjacent Dream Land materials through file 104 and the live DS texture
+  cache. The canopy carries a 64-wide CI4 physical upload, mask 6,
+  `MIRROR|CLAMP`, and a 128-wide logical tile; the island material carries a
+  32-wide CI4 upload, mask 5, `CLAMP`, and a 192-wide logical tile. Ordinary
+  shrub tiles remain 32-wide clamp-only surfaces.
+- BattleShip's bundled `libultraship/src/fast/interpreter.cpp:3059-3099`
+  preserves physical and logical extents separately. `include/PR/gbi.h:411-414`
+  defines wrap/mirror/clamp bits; libnds requires `GL_TEXTURE_WRAP_*` for its
+  mirror flag to operate. The old DS mapping suppressed wrap whenever source
+  clamp was set, so every masked period after the first sampled an edge column.
+- The DS sampler now enables repeat/mirror only when the physical upload equals
+  `1 << mask` and the logical tile needs the extra period, while generated 12.4
+  coordinates still clamp to the source `SetTileSize` edge. Ordinary clamped
+  tiles and the established O2R lane conversion remain unchanged.
+- Added exact fixtures for 64-in-128 mirrored, 32-in-192 repeated, and ordinary
+  32-in-32 clamped axes. A native screenshot ratchet now measures horizontal
+  detail: the right shrub improves from `24.444%` variation/46px flat run to
+  `29.479%`/23px; island-body variation improves from `11.825%` to `20.950%`.
+  Final capture:
+  `artifacts/visibility/2026-07-10_masked-clamp-repeat-hudoff-final.png`.
+- Focused GBI, all-DL, stage-inclusive, and canonical realtime gates passed;
+  `verify-dev-fast -Build` passed in `370s`, Boundary in `111s`, the detached
+  seven-target RegressionCore prebuild in `94.083s`, stamp validation in
+  `0.33s`, and the no-build RegressionCore profile in `307.8s`. No verifier
+  expectation or gameplay behavior changed.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: none.

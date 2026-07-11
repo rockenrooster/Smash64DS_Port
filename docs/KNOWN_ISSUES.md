@@ -1065,13 +1065,16 @@
   halfword accessor, and the original manager grounds Mario/Fox at separated
   source starts. The VSBattle wrapper's forced `is_skip_entry` remains a
   separate compatibility slice; normal BattleShip VSBattle does not set it.
-  The unflagged palette seed is an intentional
-  compatibility path until command-order proof removes it. Tile-origin math now
-  scales signed 10.5 vertex coordinates before subtracting the independently
-  converted 10.2 origin; its fixed-camera probe changed only `18/49152` pixels,
-  so the visible horizontal ribbons are not attributed to that equation.
-  Remaining texture debt includes LOADBLOCK stride/DXT, mask/shift, padding,
-  and camera-wide state ownership.
+  The unflagged palette seed is an intentional compatibility path until
+  command-order proof removes it. Tile-origin math now scales signed 10.5
+  vertex coordinates before subtracting the independently converted 10.2
+  origin; its fixed-camera probe changed only `18/49152` pixels. The broad
+  horizontal ribbons were instead caused by treating N64 `CLAMP` as excluding
+  DS wrap even when a mask repeats or mirrors a smaller physical upload inside
+  a larger logical tile. That path is fixed and pixel-gated. Remaining texture
+  debt includes nonzero shifts, DXT-zero/pre-swizzled loads, TEXEL1/water, POT
+  padding without a mask period, and camera-wide state ownership. Do not
+  conflate physical upload dimensions with logical `SetTileSize` extents again.
 - Projected HW submission now takes X/Y/Z from one current composed clip vertex.
   No-Z layers submit their synthetic far order directly in signed 20.12 NDC;
   the removed extra `<< 4` had made those layers occlude source-depth geometry.

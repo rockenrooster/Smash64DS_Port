@@ -85,16 +85,14 @@ raw=4422960 resident=0 scratch=16`,
 `hwsubmit=42`, `hwtri=192`, `hwftr=2/626`. FGM/voice playback, original
 sequence-player import, and non-critical HUD/SObj/particle perimeter remain
 follow-up.
-It also gates the memory ledger: current arena headroom is `237948`, resident
-reloc payloads are `681632` bytes (`stage=202816`, `fighter=175440`,
-`if=208672`), stale menu/opening payload bytes are `0/0`, and the separate
-64 KiB BGM stream buffer leaves `172412` bytes against the 128 KiB reserve.
+The memory ledger reports headroom `237948`, resident reloc `681632` bytes
+(`stage=202816`, `fighter=175440`, `if=208672`), stale bytes `0/0`, and
+`172412` bytes after the 64 KiB BGM buffer against the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land with
-separated but not yet accepted Mario and Fox bodies. Imported
-`grwallpaper.c:45-159,267-301` now owns the original 300x220 dynamic wallpaper;
-the DS SObj compositor places it behind the 3D stage and HUD. Latest HUD-off
-capture: `artifacts/visibility/2026-07-10_fighter-costume-aobj-hudoff-candidate.png`.
+separated but not yet accepted Mario/Fox bodies. Imported `grwallpaper.c`
+owns the original 300x220 wallpaper behind the 3D stage and HUD. Latest capture:
+`artifacts/visibility/2026-07-10_masked-clamp-repeat-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
 normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
@@ -104,27 +102,29 @@ normalize complete N64 MSB-first command graphs once per reloc generation;
 fighter AObj16 streams bypass that path. Original timing/state stays live, and
 a host-independent post-step corrects packed RGBA byte arithmetic. Persistent
 source vertex slots restore 44 cross-joint triangles. Source-depth X/Y/Z share
-one clip vertex, and no-Z layers use direct signed 20.12 NDC. Residual
-fragments, texture ribbons, high-bit DObj transforms, lighting, exact DL-head
-ordering, and raw GX matrices remain debt. Uncached wallpaper scaling runs
-about `1.2fps` and can make BGM resynchronize audibly.
-The scripted fast mode-163 target is `smash64ds-battle-playable-fast-hwtri.nds`; the user-facing realtime ROM is
-`smash64ds-battle-playable-hwtri.nds`, so verifier builds no longer collide
-with the shipped artifact.
+one clip vertex, and no-Z layers use direct signed 20.12 NDC. Dream Land now
+repeats/mirrors mask-sized uploads inside larger clamped logical tiles, removing
+broad canopy/shrub/island ribbons; native pixel gates reject the old frame.
+Fighter fragments/materials, shifts, TEXEL1/water, lighting, DL-head ordering,
+and raw GX matrices remain debt. Uncached wallpaper scaling runs about `1.2fps`
+and can make BGM resynchronize audibly.
+The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; the shipped
+realtime ROM is `smash64ds-battle-playable-hwtri.nds`, avoiding collisions.
 Normal builds expose one controller; the canonical live-input build alone
 exposes the connected-neutral second pad. Intermediate taskman arena fallbacks
 keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Recommended Next Work
 
-1. Trace S ranges and `gSPTexture` ownership for adjacent correct/striped stage materials; fix only the first source-proven divergence.
-2. Make wallpaper commits atomic and separate audio producer/consumer timing.
-3. Prove mask/shift/POT texture semantics against native stage crops.
+1. Prove fighter anim-lock matrices and semantic render/fog/alpha state against fixed-pose crops.
+2. Prove nonzero shift, TEXEL1/water, DXT-zero, and unmasked POT-padding texture semantics.
+3. Make wallpaper commits atomic and separate audio producer/consumer timing.
 4. Cache corrected draw/SObj state for stable audio and 60fps.
 5. Add Dream Land shadows, CPU recovery, and FGM/voice playback.
 
 Do not repeat the exact five-record stage `MObjSub` normalization as a visual fix: its canonical probe changed `0/49152` pixels and was fully reverted.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
+Do not translate N64 `CLAMP` as clamp-only when a nonzero mask owns a smaller physical period; preserve logical tile clamp and masked repeat/mirror separately.
 Do not revisit the high-bit fighter branch for current fragments (`0/0` active Mario/Fox descriptors), or queue Dream Land by generic head assumptions (`layer_mask=0`, `42/0` lists, `0/49152` changed pixels).
 
 ## Verification

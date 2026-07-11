@@ -1122,6 +1122,20 @@ convert the tile origin independently before subtraction. This follows
 claims still require captures. Partial display lists inherit source state and
 global head order unless the source explicitly resets them.
 
+Physical upload size and logical tile extent are separate contracts. N64
+`G_TX_CLAMP` bounds the logical `SetTileSize` range; a nonzero mask can still
+repeat or mirror a smaller physical upload inside that range. BattleShip's
+bundled `libultraship/src/fast/interpreter.cpp:3059-3099` computes those
+extents independently and removes sampler clamp when masked repeat/mirror is
+needed. The DS backend follows that rule only when the uploaded axis exactly
+matches `1 << mask`: it enables libnds wrap/flip for the physical period while
+clamping generated 12.4 coordinates to the logical tile edge. Ordinary
+clamp-only tiles remain unchanged. Dream Land file 104 proves both forms: a
+64-wide mirrored CI4 canopy upload inside a 128-wide tile and a 32-wide CI4
+stage upload repeated inside a 192-wide tile. Native screenshot gates measure
+horizontal detail in the right shrub and island body so routing counters alone
+cannot reintroduce the edge-column ribbons.
+
 Canonical HW still uses projected submission rather than the final raw GX
 matrix path. Source-depth X/Y/Z now come from the same current composed clip
 vertex, including matrix-word updates, before the perspective divide. Stage
@@ -1137,10 +1151,11 @@ GX flush, vblank, and per-frame profile finalization. Sampling the same globals
 at an arbitrary PC can observe the intentional reset at frame start and must
 not be interpreted as zero geometry or a failed CPU oracle.
 
-Remaining fidelity boundaries stay source-shaped. Dream Land stage material
-records need one mixed-width normalization pass at relocation; stage traversal
-must retain layer and opaque/translucent DL-head identity across the camera
-pass; fighter events must retain semantic render/fog/alpha state; and anim-lock
+Remaining fidelity boundaries stay source-shaped. Dream Land still needs
+proof for nonzero texture shifts, DXT-zero/pre-swizzled loads, TEXEL1/water,
+and POT padding when no mask defines the physical period. Stage traversal must
+retain layer and opaque/translucent DL-head identity across the camera pass;
+fighter events must retain semantic render/fog/alpha state; and anim-lock
 motions need the inverse-scale matrix branch from `lbcommon.c:1369-1441`.
 These contracts are repaired before caching so wrong flattened state is never
 made permanent.

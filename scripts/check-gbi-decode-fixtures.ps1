@@ -55,11 +55,37 @@ function Convert-N64TexCoordToDsT16 {
         [int]$Coord,
         [uint32]$Scale,
         [uint32]$Origin,
-        [int]$Offset = 0
+        [int]$Offset = 0,
+        [uint32]$Extent = 0,
+        [uint32]$Mode = 0
     )
     [Int64]$scaledT16 = ([Int64]$Coord * [Int64]$Scale) -shr 17
     [Int64]$originT16 = [Int64]$Origin -shl 2
-    return [int]($scaledT16 - $originT16 + $Offset)
+    [Int64]$result = $scaledT16 - $originT16 + $Offset
+    if ((($Mode -band 2) -ne 0) -and ($Extent -ne 0)) {
+        [Int64]$maxT16 = ([Int64]$Extent -shl 4) - 1
+        if ($result -lt 0) { $result = 0 }
+        if ($result -gt $maxT16) { $result = $maxT16 }
+    }
+    return [int]$result
+}
+function Test-N64MaskedClampNeedsWrap {
+    param(
+        [uint32]$Mode,
+        [uint32]$Mask,
+        [uint32]$UploadExtent,
+        [uint32]$TileExtent
+    )
+    if ((($Mode -band 2) -eq 0) -or ($Mask -eq 0) -or
+        ($Mask -ge 31) -or ($UploadExtent -eq 0) -or
+        ($TileExtent -eq 0)) {
+        return $false
+    }
+    [uint32]$maskExtent = 1 -shl $Mask
+    if ($UploadExtent -ne $maskExtent) { return $false }
+    [uint32]$samplerExtent = $UploadExtent
+    if (($Mode -band 1) -ne 0) { $samplerExtent = $samplerExtent -shl 1 }
+    return (($Mode -band 1) -ne 0) -or ($samplerExtent -ne $TileExtent)
 }
 function New-F3DEX2VtxW0 {
     param(
@@ -418,6 +444,13 @@ Assert-Equal $rgba32Control[0] 0x11223344 'RGBA32 control must stay on the nativ
 # render-tile origin and gSPTexture scale for the 32x64 CI4 surface.
 Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 2048 -Scale 0xCCCC -Origin 205) -1 'Dream Land CI4 vertex S=2048 did not land at the source tile edge.'
 Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 3072 -Scale 0xCCCC -Origin 205) 408 'Dream Land CI4 vertex S=3072 did not preserve its source tile-relative coordinate.'
+# Dream Land file 104 DL 0x0820 uses a 64-wide CI4 upload, mask 6,
+# MIRROR|CLAMP, and a 128-wide SetTileSize extent. The physical mask period
+# repeats inside the logical tile; clamp still applies at the logical edge.
+Assert-True (Test-N64MaskedClampNeedsWrap -Mode 3 -Mask 6 -UploadExtent 64 -TileExtent 128) 'Dream Land mirrored canopy axis did not enable masked repeat inside its logical tile.'
+Assert-True (Test-N64MaskedClampNeedsWrap -Mode 2 -Mask 5 -UploadExtent 32 -TileExtent 192) 'Dream Land repeated stage axis did not enable masked repeat inside its logical tile.'
+Assert-True (-not (Test-N64MaskedClampNeedsWrap -Mode 2 -Mask 5 -UploadExtent 32 -TileExtent 32)) 'Ordinary 32-wide clamped texture incorrectly enabled masked repeat.'
+Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 6144 -Scale 0xFFFF -Origin 0 -Offset 16 -Extent 192 -Mode 2) 3071 'Dream Land repeated stage coordinate escaped the source SetTileSize clamp.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
@@ -532,6 +565,9 @@ Assert-True ($renderer.Contains('ndsRendererHardwareUseDecal')) 'Renderer hardwa
 Assert-True ($renderer -match '(?s)static s32 ndsRendererHardwareUseTexture.*ndsRendererHardwareOutputUsesAlpha\(\s*stats, NDS_RENDERER_ACMUX_TEXEL0\) != FALSE') 'Renderer hardware texture binding does not honor TEXEL0 alpha-only combines.'
 Assert-True ($renderer.Contains('NDS_RENDERER_MDSFT_TEXTFILT')) 'Renderer hardware texture-filter othermode constant is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureFilterOffset')) 'Renderer hardware texture-filter coordinate offset helper is missing.'
+Assert-True ($renderer.Contains('ndsRendererHardwareTextureMaskedClampNeedsWrap')) 'Renderer masked clamp/repeat ownership helper is missing.'
+Assert-True ($renderer.Contains('render_tile->masks, upload_width')) 'Renderer S sampler state does not compare the N64 mask period with the uploaded extent.'
+Assert-True ($renderer.Contains('max_t16 = ((s64)extent << 4) - 1')) 'Renderer texture coordinates are not clamped to the source SetTileSize extent.'
 Assert-True ($renderer.Contains('NDS_RENDERER_MDSFT_TEXTPERSP')) 'Renderer hardware texture-perspective othermode constant is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseTextureMatrix')) 'Renderer hardware texture-perspective GX texgen helper is missing.'
 Assert-True ($renderer.Contains('TEXGEN_TEXCOORD : TEXGEN_OFF')) 'Renderer hardware texture upload does not honor source texture-perspective state.'

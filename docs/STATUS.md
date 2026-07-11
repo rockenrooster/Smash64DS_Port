@@ -75,17 +75,17 @@ occlusion without the rejected global-depth-reversal or W-buffer probes.
 
 O2R `MObjSub` mixed-width lanes, aligned Dream Land starts, original floor
 adoption, and the observed one-cycle `PRIMITIVE * SHADE` material path remain
-live. Imported `grwallpaper.c` now creates and updates Dream Land's original
-300x220 source Sprite; the DS SObj compositor places it behind the 3D stage and
-keeps HUD SObjs in front. Capture
-`artifacts/visibility/2026-07-10_dream-land-wallpaper-hudoff-final.png` shows
-the source sky. The depth-unit capture
-`artifacts/visibility/2026-07-10_noz-depth-units-hudoff-final.png` changes only
-`0.519%` meaningfully against its adjacent sample. The pre-generalization capture
-`artifacts/visibility/2026-07-10_fighter-costume-aobj-hudoff-candidate.png`
-shows Mario's source red/blue; texture ribbons, lower-body fragments, and
-lighting remain open. Uncached presentation is about `1.2fps` and can trigger
-audible BGM resyncs; caching remains P1 debt after fidelity.
+live. Imported `grwallpaper.c` owns the original 300x220 source Sprite behind
+the 3D stage. The renderer now separates physical mask periods from logical
+`SetTileSize` extents: mask-backed `CLAMP` materials repeat/mirror on DS while
+coordinates still clamp at the logical edge. Capture
+`artifacts/visibility/2026-07-10_masked-clamp-repeat-hudoff-final.png` restores
+localized canopy, shrub, and island-body detail. Its native gate reports right
+shrub variation `29.479%` with a 23px maximum flat run and island-body
+variation `20.950%`; the striped baseline fails at `24.444%`/46px. Mario's
+source red/blue remains live, but fighter fragments/materials, water/TEXEL1,
+nonzero shifts, and lighting remain open. Uncached presentation is about
+`1.2fps` and can trigger audible BGM resyncs; caching follows fidelity.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -125,9 +125,9 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-The five-record stage `MObjSub` probe changed no pixels and was reverted. The source-correct tile-origin conversion changed only `18/49152` canonical pixels,
-so it remains for parity but is not the ribbon explanation. The source high-bit fighter transform branch is restored, but Mario/Fox select `0/0` such descriptors.
-Follow-ups: per-material S-axis/texture-state tracing, fighter anim-lock matrices, wallpaper atomic commits, audio queueing, then caching.
+The five-record stage `MObjSub` probe changed no pixels and was reverted. The source-correct tile-origin conversion changed only `18/49152` canonical pixels.
+The accepted S-axis trace instead found masked `CLAMP` sampler ownership; its pixel gate is permanent. The high-bit fighter branch is live, but Mario/Fox select `0/0` such descriptors.
+Follow-ups: fighter anim-lock/state, shifts and TEXEL1/water, wallpaper/audio timing, then caching.
 FGM/voice and the original sequence player remain deferred.
 ## Verification
 

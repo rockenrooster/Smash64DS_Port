@@ -29,6 +29,10 @@ $visibleRegions = @(
     'fighter_center:95,95,65,65',
     'stage_body:45,145,170,45'
 )
+$textureDetailRegions = @(
+    'right_bush:150,100,65,45,0.27,32',
+    'stage_body:40,135,180,30,0.18,0'
+)
 function Invoke-VisibleCaptureAssert {
     param(
         [string]$Rom,
@@ -36,7 +40,8 @@ function Invoke-VisibleCaptureAssert {
         [int]$Delay,
         [double]$MinDetailFraction = -1.0,
         [double]$MinRegionFraction = -1.0,
-        [double]$MinRegionFighterFraction = -1.0
+        [double]$MinRegionFighterFraction = -1.0,
+        [switch]$RequireTextureDetail
     )
     $output = Join-Path $root "artifacts\visibility\2026-07-09_${Stem}_${captureStamp}.png"
     $nextOutput = Join-Path $root "artifacts\visibility\2026-07-09_${Stem}_${captureStamp}_next.png"
@@ -69,6 +74,15 @@ function Invoke-VisibleCaptureAssert {
         -NamedRegion $visibleRegions
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
+    }
+    if ($RequireTextureDetail) {
+        & (Join-Path $PSScriptRoot 'assert-melonds-horizontal-detail.ps1') `
+            -Image $output `
+            -ChannelThreshold 20 `
+            -Region $textureDetailRegions
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
     }
     # scvsbattle.c:152-159 creates the wallpaper camera/object path;
     # grwallpaper.c:45-123,132-159 keeps this sky Sprite covering the viewport.
@@ -109,7 +123,8 @@ if (-not $SkipScreenshot) {
         -Delay $earlyScreenshotDelaySeconds `
         -MinDetailFraction $MinScreenshotDetailFraction `
         -MinRegionFraction 0.05 `
-        -MinRegionFighterFraction $MinFighterRegionFraction
+        -MinRegionFighterFraction $MinFighterRegionFraction `
+        -RequireTextureDetail
     Invoke-VisibleCaptureAssert -Rom $canonicalRom `
         -Stem 'iter4_canonical_late' `
         -Delay $lateScreenshotDelaySeconds
@@ -119,7 +134,8 @@ if (-not $SkipScreenshot) {
             -Delay $earlyScreenshotDelaySeconds `
             -MinDetailFraction $MinScreenshotDetailFraction `
             -MinRegionFraction 0.05 `
-            -MinRegionFighterFraction $MinFighterRegionFraction
+            -MinRegionFighterFraction $MinFighterRegionFraction `
+            -RequireTextureDetail
         Invoke-VisibleCaptureAssert -Rom $shippedRom `
             -Stem 'iter4_shipped_late' `
             -Delay $lateScreenshotDelaySeconds
