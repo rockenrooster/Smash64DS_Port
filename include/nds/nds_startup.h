@@ -4197,6 +4197,8 @@ extern volatile u32 gNdsFighterDisplayContractHiddenCount;
 extern volatile u32 gNdsFighterDisplayContractNoTextureCount;
 extern volatile u32 gNdsFighterDisplayContractSubmittedCount;
 extern volatile u32 gNdsFighterDisplayContractGeometryMode;
+extern volatile u32 gNdsFighterDisplayContractCycleType;
+extern volatile u32 gNdsFighterDisplayContractRenderMode;
 extern volatile u32 gNdsFighterDisplayContractLightCount;
 extern volatile u32 gNdsFighterDisplayContractLightDirectionCount;
 extern volatile u32 gNdsFighterDisplayContractBoundsPassCount;

@@ -61,15 +61,15 @@ Imported `sys/objanim.c` now receives source-shaped DObj/MObj/CObj AObj32
 graphs: the wrapper repacks only MSB-first commands once per reloc generation,
 follows branches, preserves payloads/pointers, and excludes fighter AObj16.
 Original timing stays live; a post-step corrects N64-endian packed RGBA.
-Selected events retain source matrix/material and geometry/prim/env/light
-state; pre-matrix `dls[0]` keeps parent state as in
+Selected events retain source matrix/material, geometry/prim/env/light, and
+cycle/render state; pre-matrix `dls[0]` keeps parent state as in
 `ftdisplaymain.c:789-805,883-899`. The DS bridge also carries the RSP input and
 transformed vertex cache across those per-part lists, matching BattleShip's
 single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
 all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
-Canonical proof reports `gxram=729/2209`, geometry `0x222005`, selected parts
-`14/18`, and zero CPU-oracle mismatches. Source-depth X/Y/Z share one current
-composed clip vertex. No-Z layers submit synthetic far order directly in
+Canonical proof reports `gxram=730/2214`, geometry `0x222005`, source cycle/
+render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
+Source-depth X/Y/Z share one composed clip vertex. No-Z layers submit far order in
 signed 20.12 NDC; removing an erroneous extra `<< 4` restores stage/fighter
 occlusion without the rejected global-depth-reversal or W-buffer probes.
 

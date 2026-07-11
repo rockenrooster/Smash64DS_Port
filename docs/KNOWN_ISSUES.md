@@ -1102,9 +1102,10 @@
   callbacks. A camera-wide `42/0` head-0/head-1 queue changed `0/49152`
   canonical pixels and was reverted. Preserve global heads when a live stage
   actually supplies them; do not attribute Pupupu's current ribbons to head 1.
-- Fighter events still omit semantic cycle/render/fog/alpha state, and the DS
-  matrix bridge lacks the `is_use_animlocks` inverse-scale branch from
-  `lbcommon.c:1369-1441`. The port now retains the source high-bit descriptor
+- Fighter events now retain source cycle/render mode, including the normal
+  `0x00100000 / 0xc4112078` preamble. Fog color, alpha behavior, non-white ENV
+  second-cycle multiplication, and the `is_use_animlocks` inverse-scale branch
+  from `lbcommon.c:1369-1441` remain open. The port retains the high-bit descriptor
   branch from `lbcommon.c:1067-1071`, but active Mario/Fox measured `0/0` such
   descriptors, rejecting it as their current fragment cause. Fixed-pose plus
   anim-lock visual gates remain required.

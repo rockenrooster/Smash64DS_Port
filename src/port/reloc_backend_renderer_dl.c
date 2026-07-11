@@ -5464,11 +5464,15 @@ typedef struct NDSFighterDisplayContractEvent {
     DObj *material_dobj;
     const Gfx *dl;
     u32 geometry_mode;
+    u32 cycle_type;
+    u32 render_mode;
     u32 prim_color;
     u32 env_color;
     Light light;
     u32 light_valid;
 } NDSFighterDisplayContractEvent;
+
+#define NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK (3u << 20)
 
 typedef struct NDSFighterDisplayContract {
     NDSFighterDisplayContractEvent events[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
@@ -5480,6 +5484,8 @@ typedef struct NDSFighterDisplayContract {
     s32 pending_event;
     u32 event_count;
     u32 geometry_mode;
+    u32 cycle_type;
+    u32 render_mode;
     u32 prim_color;
     u32 env_color;
     u32 light_count;
@@ -5531,6 +5537,22 @@ void ndsFighterDisplayContractSetGeometryMode(u32 clear_mask, u32 set_mask)
     sNdsFighterDisplayContract.geometry_mode |= set_mask;
     gNdsFighterDisplayContractGeometryMode =
         sNdsFighterDisplayContract.geometry_mode;
+}
+
+void ndsFighterDisplayContractSetCycleType(u32 cycle_type)
+{
+    if (sNdsFighterDisplayContract.active != 0u)
+    {
+        sNdsFighterDisplayContract.cycle_type = cycle_type;
+    }
+}
+
+void ndsFighterDisplayContractSetRenderMode(u32 mode1, u32 mode2)
+{
+    if (sNdsFighterDisplayContract.active != 0u)
+    {
+        sNdsFighterDisplayContract.render_mode = mode1 | mode2;
+    }
 }
 
 void ndsFighterDisplayContractSetEnvColor(u8 r, u8 g, u8 b, u8 a)
@@ -5669,10 +5691,18 @@ void ndsFighterDisplayContractSelectDL(const Gfx *dl)
         (sNdsFighterDisplayContract.material_ready != 0u) ?
             sNdsFighterDisplayContract.material_dobj : NULL;
     event->geometry_mode = sNdsFighterDisplayContract.geometry_mode;
+    event->cycle_type = sNdsFighterDisplayContract.cycle_type;
+    event->render_mode = sNdsFighterDisplayContract.render_mode;
     event->prim_color = sNdsFighterDisplayContract.prim_color;
     event->env_color = sNdsFighterDisplayContract.env_color;
     event->light = sNdsFighterDisplayContract.light;
     event->light_valid = sNdsFighterDisplayContract.light_valid;
+    if (gNdsFighterDisplayContractSelectedCount == 0u)
+    {
+        /* ftdisplaymain.c:1176-1178 establishes the normal fighter preamble. */
+        gNdsFighterDisplayContractCycleType = event->cycle_type;
+        gNdsFighterDisplayContractRenderMode = event->render_mode;
+    }
     if (event->dobj == NULL)
     {
         sNdsFighterDisplayContract.pending_event =
@@ -6653,6 +6683,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         if (contract_event != NULL)
         {
             persistent_stats.geometry_mode = contract_event->geometry_mode;
+            persistent_stats.othermode_h =
+                (persistent_stats.othermode_h &
+                 ~NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK) |
+                contract_event->cycle_type;
+            persistent_stats.othermode_l = contract_event->render_mode;
             persistent_stats.prim_color = contract_event->prim_color;
             persistent_stats.env_color = contract_event->env_color;
             if (contract_event->light_valid != 0u)

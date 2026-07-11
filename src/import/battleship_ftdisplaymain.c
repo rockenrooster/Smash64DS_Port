@@ -45,16 +45,22 @@ extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
 
 #define LIGHT_1 1
 #define LIGHT_2 2
-#define G_CYC_2CYCLE 1
+/* Preserve the source GBI encodings before the narrow port header stubs them. */
+#undef G_CYC_1CYCLE
+#define G_CYC_1CYCLE 0x00000000u
+#define G_CYC_2CYCLE 0x00100000u
 #define G_ON 1
 #define G_TX_NOMIRROR 0
-#define G_RM_PASS 0
-#define G_RM_FOG_PRIM_A 0
+#define G_RM_PASS 0x0c080000u
+#define G_RM_FOG_PRIM_A 0xc4000000u
 #define G_RM_AA_ZB_TEX_EDGE 0
 #define G_RM_AA_ZB_TEX_EDGE2 0
-#ifndef G_RM_AA_ZB_XLU_SURF2
-#define G_RM_AA_ZB_XLU_SURF2 0
-#endif
+#undef G_RM_AA_ZB_OPA_SURF
+#define G_RM_AA_ZB_OPA_SURF 0x00442078u
+#undef G_RM_AA_ZB_OPA_SURF2
+#define G_RM_AA_ZB_OPA_SURF2 0x00112078u
+#undef G_RM_AA_ZB_XLU_SURF2
+#define G_RM_AA_ZB_XLU_SURF2 0x001049d8u
 #define GBL_c1(...) 0
 #define GBL_c2(...) 0
 #define AA_EN 0
@@ -97,6 +103,12 @@ extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
 #undef gSPDisplayList
 #define gSPDisplayList(pkt, dl) \
     ndsFighterDisplayContractSelectDL((const Gfx *)(dl))
+#undef gDPSetCycleType
+#define gDPSetCycleType(pkt, cycle) \
+    ndsFighterDisplayContractSetCycleType((u32)(cycle))
+#undef gDPSetRenderMode
+#define gDPSetRenderMode(pkt, mode1, mode2) \
+    ndsFighterDisplayContractSetRenderMode((u32)(mode1), (u32)(mode2))
 #undef gSPSetGeometryMode
 #define gSPSetGeometryMode(pkt, mode) \
     ndsFighterDisplayContractSetGeometryMode(0u, (u32)(mode))

@@ -1827,6 +1827,37 @@ static s32 ndsRendererHardwareUseSecondCycle(const NDSRendererStats *stats)
              NDS_RENDERER_CYC_2CYCLE)) ? TRUE : FALSE;
 }
 
+static s32 ndsRendererHardwareSecondCyclePassesCombined(
+    const NDSRendererStats *stats)
+{
+    u32 w0;
+    u32 w1;
+
+    if (stats == NULL)
+    {
+        return FALSE;
+    }
+    if (ndsRendererHardwareUseSecondCycle(stats) == FALSE)
+    {
+        return TRUE;
+    }
+    if (stats->env_color != 0xffffffffu)
+    {
+        return FALSE;
+    }
+
+    w0 = stats->texture_combine_w0;
+    w1 = stats->texture_combine_w1;
+    /* BattleShip's normal fighter mode uses (COMBINED - 0) * ENV + 0.
+     * With the opaque-white environment selected at ftdisplaymain.c:1192-1196,
+     * cycle 2 preserves the source material/shade result from cycle 1. */
+    return ((((w0 >> 5) & 0x0fu) == NDS_RENDERER_CCMUX_COMBINED) &&
+            (((w1 >> 24) & 0x0fu) == NDS_RENDERER_CCMUX_ZERO_AB) &&
+            (((w0 >> 0) & 0x1fu) == NDS_RENDERER_CCMUX_ENVIRONMENT) &&
+            (((w1 >> 6) & 0x07u) == NDS_RENDERER_CCMUX_ZERO_D)) ? TRUE :
+                                                                  FALSE;
+}
+
 static s32 ndsRendererHardwareOutputUsesColor(const NDSRendererStats *stats,
                                               u32 source)
 {
@@ -2054,7 +2085,7 @@ static s32 ndsRendererHardwareUsesLitPrimitiveModulate(
     u32 d;
 
     if ((stats == NULL) || (stats->texture_combine_count == 0u) ||
-        (ndsRendererHardwareUseSecondCycle(stats) != FALSE))
+        (ndsRendererHardwareSecondCyclePassesCombined(stats) == FALSE))
     {
         return FALSE;
     }

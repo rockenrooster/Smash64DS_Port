@@ -2966,6 +2966,8 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterDisplayContractNoTextureCount = 0;
     gNdsFighterDisplayContractSubmittedCount = 0;
     gNdsFighterDisplayContractGeometryMode = 0;
+    gNdsFighterDisplayContractCycleType = 0;
+    gNdsFighterDisplayContractRenderMode = 0;
     gNdsFighterDisplayContractLightCount = 0;
     gNdsFighterDisplayContractLightDirectionCount = 0;
     gNdsFighterDisplayContractBoundsPassCount = 0;

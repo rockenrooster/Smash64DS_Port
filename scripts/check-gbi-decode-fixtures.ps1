@@ -149,9 +149,20 @@ function Test-LitPrimitiveModulate {
     param(
         [uint32]$W0,
         [uint32]$W1,
-        [bool]$TwoCycle = $false
+        [bool]$TwoCycle = $false,
+        [uint32]$EnvColor = [uint32]::MaxValue
     )
-    if ($TwoCycle) { return 0 }
+    if ($TwoCycle) {
+        $a1 = ($W0 -shr 5) -band 0x0f
+        $b1 = ($W1 -shr 24) -band 0x0f
+        $c1 = $W0 -band 0x1f
+        $d1 = ($W1 -shr 6) -band 0x07
+        if (($EnvColor -ne [uint32]::MaxValue) -or
+            ($a1 -ne 0) -or ($b1 -ne 15) -or
+            ($c1 -ne 5) -or ($d1 -ne 7)) {
+            return 0
+        }
+    }
     $a = ($W0 -shr 20) -band 0x0f
     $b = ($W1 -shr 28) -band 0x0f
     $c = ($W0 -shr 15) -band 0x1f
@@ -585,7 +596,9 @@ Assert-True ($renderer.Contains('ndsRendererHardwareUsesLitPrimitiveModulate')) 
 Assert-True (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc327e05', 16)) ([Convert]::ToUInt32('ff17fdff', 16))) 'Fox/Mario PRIMITIVE * SHADE combine did not retain primitive material color.'
 Assert-True (-not (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc127e05', 16)) ([Convert]::ToUInt32('ff17f3ff', 16)))) 'TEXEL0 * SHADE combine incorrectly selected a material color.'
 Assert-True (-not (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fcfffe05', 16)) ([Convert]::ToUInt32('ff167dff', 16)))) 'SHADE-only combine incorrectly selected a material color.'
-Assert-True (-not (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc327e05', 16)) ([Convert]::ToUInt32('ff17fdff', 16)) $true)) 'Unproven two-cycle lit-material combine was enabled.'
+Assert-True (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc327e05', 16)) ([Convert]::ToUInt32('ff17fdff', 16)) $true) 'BattleShip white-ENV two-cycle pass-through discarded PRIMITIVE * SHADE.'
+Assert-True (-not (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc327e05', 16)) ([Convert]::ToUInt32('ff17fdff', 16)) $true ([Convert]::ToUInt32('fffefeff', 16)))) 'Non-white two-cycle ENV incorrectly passed material modulation unchanged.'
+Assert-True (-not (Test-LitPrimitiveModulate ([Convert]::ToUInt32('fc327e04', 16)) ([Convert]::ToUInt32('ff17fdff', 16)) $true)) 'Non-pass-through second cycle incorrectly retained first-cycle material modulation.'
 Assert-True ($renderer.Contains('ndsRendererCombineOutputUsesColor')) 'Renderer hardware material color selection is not limited to combine output slots.'
 Assert-True ($renderer.Contains('NDS_RENDERER_CYCLETYPE_MASK')) 'Renderer hardware cycle-type mask is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_CYC_2CYCLE')) 'Renderer hardware 2-cycle combiner constant is missing.'

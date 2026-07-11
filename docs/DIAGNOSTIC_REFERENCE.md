@@ -1359,9 +1359,10 @@ Opening movie / Opening Portraits:
 - `FTR_DISPLAY_CONTRACT`: original fighter-display contract marker. It reports
   selected, hidden, no-texture, and submitted part events; source geometry and
   light state; source visibility-bound pass/fail counts; and the latest
-  Mario/Fox selected-part counts. Canonical HW requires selected/submitted
-  parts for both fighters, geometry mode `0x222005`, nonzero source light
-  color/direction state, and no visibility-bound failures.
+  Mario/Fox selected-part counts, first selected cycle type, and first selected
+  render mode. Canonical HW requires selected/submitted parts for both fighters,
+  geometry `0x222005`, cycle `0x00100000`, render mode `0xc4112078`, nonzero
+  source light state, and no visibility-bound failures.
 - `RENDER_COMBINE`: canonical HW combine-state trace marker. Fields are total
   combine commands, distinct combine commands captured, lit-SHADE combines,
   material-color combines, projected-submit fallback count, and the first four

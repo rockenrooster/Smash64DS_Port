@@ -1081,8 +1081,9 @@ DObj matrices child-to-parent following `sys/objdisplay.c:1183-1191`. Captured
 events keep separate matrix and material owners: ordered `dls[0]` entries drawn
 before `gcPrepDObjMatrix` use the parent matrix and no child MObj, while
 `dls[1]` uses the prepared child matrix and material. Geometry, prim, env, and
-light state are snapshotted per source draw rather than collapsed after the
-traversal. The CPU 20.12 path remains the fixture oracle.
+light state plus semantic cycle/render mode are snapshotted per source draw
+rather than collapsed after the traversal. The CPU 20.12 path remains the
+fixture oracle.
 BattleShip registers `scVSBattleFuncLights` as the task pre-render callback
 (`scvsbattle.c:42,505-509`), and `sys/rdp.c:88-115` invokes it before scene
 drawing. The DS frame seam preserves that order, then transforms the submitted
@@ -1101,11 +1102,14 @@ bit `0x8000` call the imported `gcDecideDObj3TransformsKind`, while ordinary
 descriptors keep `lbCommonInitDObj`. Current Mario/Fox source tables select no
 high-bit descriptors, so that parity branch does not explain their residual
 fragments; anim-lock and display-state work remain separate.
-For the live one-cycle `(PRIMITIVE - 0) * SHADE + 0` fighter combiner observed
-in Mario/Fox DLs, the DS backend multiplies source primitive RGB by its
-computed light shade. This follows the packed LERP contract in
-`include/PR/gbi.h:508-543`; unobserved two-cycle LERPs remain outside this
-narrow approximation.
+BattleShip's normal fighter preamble selects two-cycle mode and
+`G_RM_FOG_PRIM_A | G_RM_AA_ZB_OPA_SURF2`
+(`ftdisplaymain.c:1164-1178`). Its observed second color cycle is
+`(COMBINED - 0) * ENV + 0`; with the source opaque-white environment this
+passes the first-cycle result unchanged. The DS backend recognizes only that
+exact pass-through, so the observed `(PRIMITIVE - 0) * SHADE + 0` first cycle
+still multiplies source primitive RGB by computed shade. Non-white ENV and
+other two-cycle formulas remain explicit fidelity debt.
 
 BattleShip `objdef.h:272-281` stores `AObjEvent32` opcode/flags/payload in
 bits `31..25/24..15/14..0`, but ARM GCC allocates the unchanged bitfield union
@@ -1164,7 +1168,7 @@ Remaining fidelity boundaries stay source-shaped. Dream Land still needs
 proof for nonzero texture shifts, DXT-zero/pre-swizzled loads, TEXEL1/water,
 and POT padding when no mask defines the physical period. Stage traversal must
 retain layer and opaque/translucent DL-head identity across the camera pass;
-fighter events must retain semantic render/fog/alpha state; and anim-lock
+fighter events still need fog-color/alpha and non-white ENV semantics; anim-lock
 motions need the inverse-scale matrix branch from `lbcommon.c:1369-1441`.
 These contracts are repaired before caching so wrong flattened state is never
 made permanent.

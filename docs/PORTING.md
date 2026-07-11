@@ -18848,3 +18848,23 @@ none.
 Source-corrected verifier expectations: obsolete partial-window object regions
 now measure the native source-start frame; all content floors stayed equal or
 became stricter. Coverage-reduced verifier expectations: none.
+
+## 2026-07-11 - Source fighter cycle and render-mode ownership
+
+- Preserved the exact GBI cycle/render encodings used by imported
+  `ftdisplaymain.c:687-720,1164-1236` before the narrow compatibility header
+  stubs them, then snapshotted and replayed that state per source-selected part.
+- The normal first event now continuously proves cycle `0x00100000` and render
+  mode `0xc4112078`. Its second color cycle is the source
+  `(COMBINED - 0) * ENV + 0`; the renderer retains first-cycle
+  `PRIMITIVE * SHADE` only for the observed opaque-white ENV pass-through.
+  Fixtures reject non-white ENV and different second-cycle formulas.
+- Focused stage and canonical gates stayed green with zero oracle/texture
+  regressions. The fixed stage capture was byte-identical to its baseline, so
+  this closes source-state ownership and the prior white-fighter regression;
+  it does not claim a new visual improvement. Fog/alpha/non-white ENV and
+  anim-lock matrices remain separate work.
+
+Source-corrected verifier expectations: the existing fighter-display marker now
+requires BattleShip's source cycle/render preamble. Coverage-reduced verifier
+expectations: none.

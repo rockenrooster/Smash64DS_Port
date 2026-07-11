@@ -48,13 +48,13 @@ only those selected DLs cross the narrow DS hardware-submission seam. The
 manual all-DObj collector remains only as the software fixture oracle.
 
 The source camera matrix/projection is prepared before fighter visibility
-selection. Each selected event retains its source matrix/material owner and
-per-draw geometry/prim/env/light state; pre-matrix `dls[0]` uses parent state.
+selection. Each selected event retains its matrix/material owner plus per-draw
+geometry/prim/env/light and cycle/render state; `dls[0]` uses parent state.
 The adapter now preserves the 32-slot input/transformed RSP vertex cache across
 the selected part sequence, as BattleShip's common `gSYTaskmanDLHeads[0]`
 stream does. All-DL HW output is the full `320/306` Mario/Fox triangle set with
-zero rejects; canonical proof reports `gxram=729/2209`, geometry `0x222005`,
-selected parts `14/18`, and zero oracle mismatches.
+zero rejects; canonical reports `gxram=730/2214`, geometry `0x222005`, cycle/
+render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
 
 Runtime slice 2 imports the original manager, common/Mario/Fox status tables,
 and live animation/key runtime. Modes `39/40`, `53/54`, and `161/162` rebuild
@@ -116,7 +116,7 @@ keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Recommended Next Work
 
-1. Prove fighter anim-lock matrices and semantic render/fog/alpha state against fixed-pose crops.
+1. Prove fighter anim-lock matrices and remaining fog/alpha/non-white-ENV state against fixed-pose crops.
 2. Prove nonzero shift, TEXEL1/water, DXT-zero, and unmasked POT-padding texture semantics.
 3. Make wallpaper commits atomic and separate audio producer/consumer timing.
 4. Cache corrected draw/SObj state for stable audio and 60fps.
