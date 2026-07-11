@@ -4,6 +4,14 @@
 #include <stddef.h>
 #include <PR/gbi.h>
 
+#ifndef NDS_RENDERER_PROFILE_LEVEL
+#define NDS_RENDERER_PROFILE_LEVEL 2
+#endif
+
+#if (NDS_RENDERER_PROFILE_LEVEL < 0) || (NDS_RENDERER_PROFILE_LEVEL > 2)
+#error "NDS_RENDERER_PROFILE_LEVEL must be 0, 1, or 2"
+#endif
+
 #define NDS_RENDERER_BLOCKER_NONE 0u
 #define NDS_RENDERER_BLOCKER_BAD_BRANCH 1u
 #define NDS_RENDERER_BLOCKER_TOO_DEEP 2u
@@ -365,5 +373,7 @@ void ndsRendererExecuteDisplayListWithVertexCache(
 void ndsRendererHardwareSetNoOracle(u32 enabled);
 u32 ndsRendererHardwareNoOracleEnabled(void);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);
+void ndsRendererProfileFrameBegin(void);
+void ndsRendererProfileFramePublish(void);
 
 #endif

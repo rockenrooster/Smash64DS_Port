@@ -68,6 +68,20 @@ canonical build, `check-battle-playable-rom-parity.ps1` requires identical byte
 length and SHA-256 for the canonical and shipped ROM names. Runner-slot captures
 use that slot's emulator/config; stable alias rotation is serialized and atomic.
 
+The shipped/canonical target is renderer profile 0. Renderer changes also need
+the internal profile-2 correctness run; this is the same mode-163 scene and
+source configuration, not another harness mode:
+
+```powershell
+.\scripts\verify-battle-playable-renderer-forensic.ps1 -DelaySeconds 3
+```
+
+For a warm 8-frame level-0/1/2 median and p95 comparison, add
+`-RendererBenchmarkSamples 8`; invoke profile 1 through
+`verify-battle-playable-harness.ps1 -RealtimePresentation
+-RendererProfileLevel 1`. Ordinary DevFast does not run the forensic build, so
+the visible one-ROM edit loop remains fast.
+
 The fast capture tolerates camera-dependent left-shrub and pond variation at
 40% and 30%, versus the checkpoint path's 50% and 35%; their 16px and 60px
 flat-run caps remain unchanged. Fixed fighter-color crops are not gates because

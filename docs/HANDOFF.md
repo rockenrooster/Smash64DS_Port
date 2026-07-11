@@ -99,13 +99,12 @@ builds all 256 pair values per change; addressing and Bayer A1 stay exact. A 184
 gate proves positive scene-lifetime compatible-state refresh, zero eviction/
 reject/oracle drift, and terminal `12/12` matches. Pond detail is
 `46.053%/23px` versus white `27.997%/105px`.
-Canonical lanes remain `37200/37200` and oracle `2403/0/0`. The exact 300x220
-wallpaper cache remains `1/44/45/fallback0/opaque66000`. Adjacent TRI1/TRI2
-commands now share a same-state GX batch, with every other source opcode and
-list exit as a hard boundary; proof is `begin103/reuse725/end103` for the
-unchanged `828` triangles. After the CI4 table reaches `20,285,888` ticks,
-one exact light normalization per `G_VTX` cuts present to `19,725,696` (`-2.8%`),
-draw `3.0%`, and DL `4.3%`. Capture: `artifacts/visibility/2026-07-11_canonical_fast_170758-1981780-p35312.png`.
+Profile-0 canonical/shipped retains `828` triangles, `103/725/103` batches, and
+the exact wallpaper/water output while compiling out oracle/range hot work.
+Warm present median/p95 is `17,346,720/17,475,520` at `1.9fps`; profile 1 is
+statistically equal with coarse timers. Same-source profile 2 retains exact
+`37200/37200` lanes and `2403/0/0` oracle at `20,282,080/20,578,944` ticks.
+Capture: `artifacts/visibility/2026-07-11_canonical_fast_174928-5579684-p21988.png`.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -122,9 +121,8 @@ realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Add review-driven profile levels and separate no-oracle performance proof.
-2. Prove corrected hybrid raw GX for compatible ordinary source-Z triangles.
-3. Cut software 2D to exact final-resolution output; soak only at milestones.
+1. Prove corrected hybrid raw GX for compatible ordinary source-Z triangles.
+2. Cut software 2D to exact final-resolution output; soak only at milestones.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
@@ -139,12 +137,13 @@ work:
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
+.\scripts\verify-battle-playable-renderer-forensic.ps1 -DelaySeconds 3
 .\scripts\verify-p1-gate.ps1 -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-All four compact P1Gate legs pass in `177.2s`, and fresh Boundary passes in
-`83.5s`. The lifecycle is not the five-minute P1 soak. Keep historical
+All four compact P1Gate legs pass in `379.9s`, and fresh Boundary passes in
+`289.9s`. The lifecycle is not the five-minute P1 soak. Keep historical
 harnesses for localization; Full Regression was skipped.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

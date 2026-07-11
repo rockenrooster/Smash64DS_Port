@@ -215,6 +215,187 @@ static u32 sNdsRendererHardwareMatrixScaleWorld;
 static NDSRendererMatrix20p12 sNdsRendererHardwareMatrixProjection;
 static NDSRendererMatrix20p12 sNdsRendererHardwareMatrixModelview;
 
+/* Profile levels 0/1 accumulate the small runtime health summary in ordinary
+ * memory and publish it once at frame completion. The performance build never
+ * writes the exported volatile profile globals from command, triangle, or
+ * vertex loops. Level 2 retains the exact forensic counters below. */
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+typedef struct NDSRendererRuntimeFrameSummary
+{
+    u32 texture_binds;
+    u32 texture_uploads;
+    u32 texture_upload_bytes;
+    u32 texture_cache_alias_avoid_count;
+    u32 texel1_composite_count;
+    u32 texel1_load_match_count;
+    u32 texel1_reject_count;
+    u32 projected_submit_fallback_count;
+    u32 matrix_load_count;
+    u32 hardware_vertices;
+    u32 hardware_triangles;
+    u32 hardware_batch_begin_count;
+    u32 hardware_batch_reuse_count;
+    u32 hardware_batch_end_count;
+    u32 hardware_over_limit;
+    u32 hardware_vertex_saturate_count;
+} NDSRendererRuntimeFrameSummary;
+
+static NDSRendererRuntimeFrameSummary sNdsRendererRuntimeFrameSummary;
+static u32 sNdsRendererRuntimeTexel1FractionRefreshCount;
+static u32 sNdsRendererRuntimeTextureCacheEvictCount;
+#endif
+
+static inline void ndsRendererProfileRecordTextureBind(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTextureBinds++;
+#else
+    sNdsRendererRuntimeFrameSummary.texture_binds++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTextureUpload(u32 bytes)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTextureUploads++;
+    gNdsRendererProfileTextureUploadBytes += bytes;
+#else
+    sNdsRendererRuntimeFrameSummary.texture_uploads++;
+    sNdsRendererRuntimeFrameSummary.texture_upload_bytes += bytes;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTextureAliasAvoid(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTextureCacheAliasAvoidCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTextureEvict(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTextureCacheEvictCount++;
+#else
+    sNdsRendererRuntimeTextureCacheEvictCount++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTexel1Composite(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTexel1CompositeCount++;
+    gNdsRendererProfileTexel1LoadMatchCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.texel1_composite_count++;
+    sNdsRendererRuntimeFrameSummary.texel1_load_match_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTexel1Reject(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTexel1RejectCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.texel1_reject_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTexel1RejectReason(u32 reason)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTexel1RejectReasonMask |= reason;
+#else
+    (void)reason;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTexel1Refresh(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTexel1FractionRefreshCount++;
+#else
+    sNdsRendererRuntimeTexel1FractionRefreshCount++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordMatrixLoad(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileMatrixLoadCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.matrix_load_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordBatchBegin(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileHardwareBatchBeginCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordBatchReuse(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileHardwareBatchReuseCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordBatchEnd(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileHardwareBatchEndCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.hardware_batch_end_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordVertexSaturate(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileHWVertexSaturateCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordProjectedSubmit(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileProjectedSubmitFallbackCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordHardwareTriangle(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileHardwareTriangles++;
+    gNdsRendererProfileHardwareVertices += 3u;
+    if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
+        (gNdsRendererProfileHardwareVertices > 6144u))
+    {
+        gNdsRendererProfileHardwareOverLimit = 1u;
+    }
+#else
+    sNdsRendererRuntimeFrameSummary.hardware_triangles++;
+    sNdsRendererRuntimeFrameSummary.hardware_vertices += 3u;
+    if ((sNdsRendererRuntimeFrameSummary.hardware_triangles > 2048u) ||
+        (sNdsRendererRuntimeFrameSummary.hardware_vertices > 6144u))
+    {
+        sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
+    }
+#endif
+}
+
 typedef struct NDSRendererHardwareTextureKey
 {
     u32 image;
@@ -1112,6 +1293,7 @@ static void ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
     }
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static void ndsRendererProfileCombineMode(u32 w0, u32 w1)
 {
     gNdsRendererProfileCombineModeCount++;
@@ -1150,6 +1332,7 @@ static void ndsRendererProfileCombineMode(u32 w0, u32 w1)
     }
     gNdsRendererProfileCombineModeDistinctCount++;
 }
+#endif
 
 static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
                                         u32 w0, u32 w1)
@@ -1163,7 +1346,9 @@ static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
     stats->texture_combine_count++;
     stats->texture_combine_w0 = w0;
     stats->texture_combine_w1 = w1;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererProfileCombineMode(w0, w1);
+#endif
 }
 
 static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
@@ -1451,14 +1636,18 @@ static void ndsRendererRecordLightColor(NDSRendererStats *stats,
         stats->light_color_1 = color;
         stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_1_MASK;
         stats->light_color_command_count++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileLightColorCommands++;
+#endif
     }
     else if (light == 2u)
     {
         stats->light_color_2 = color;
         stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_2_MASK;
         stats->light_color_command_count++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileLightColorCommands++;
+#endif
     }
 }
 
@@ -1533,7 +1722,9 @@ static void ndsRendererRecordLightMoveMem(
         stats->light_dir_z = src->l.dir[2];
         stats->light_dir_mask |= NDS_RENDERER_LIGHT_DIR_1_MASK;
         stats->light_direction_command_count++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileLightDirectionCommands++;
+#endif
     }
 }
 
@@ -1874,6 +2065,7 @@ static v16 ndsRendererHardwareClampS64ToV16(s64 value)
 static void ndsRendererProfileVertexRange(
     const NDSRendererInputVertex *vtx, v16 x, v16 y, v16 z)
 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     if (vtx == NULL)
     {
         return;
@@ -1891,30 +2083,36 @@ static void ndsRendererProfileVertexRange(
     if ((s32)y > gNdsRendererProfileHWVertexMaxY) { gNdsRendererProfileHWVertexMaxY = y; }
     if ((s32)z < gNdsRendererProfileHWVertexMinZ) { gNdsRendererProfileHWVertexMinZ = z; }
     if ((s32)z > gNdsRendererProfileHWVertexMaxZ) { gNdsRendererProfileHWVertexMaxZ = z; }
+#else
+    (void)vtx;
+#endif
     if ((x == (v16)32767) || (x == (v16)-32768) ||
         (y == (v16)32767) || (y == (v16)-32768) ||
         (z == (v16)32767) || (z == (v16)-32768))
     {
-        gNdsRendererProfileHWVertexSaturateCount++;
+        ndsRendererProfileRecordVertexSaturate();
     }
 }
 
 static void ndsRendererProfileHWVertexRange(v16 x, v16 y, v16 z)
 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     if ((s32)x < gNdsRendererProfileHWVertexMinX) { gNdsRendererProfileHWVertexMinX = x; }
     if ((s32)x > gNdsRendererProfileHWVertexMaxX) { gNdsRendererProfileHWVertexMaxX = x; }
     if ((s32)y < gNdsRendererProfileHWVertexMinY) { gNdsRendererProfileHWVertexMinY = y; }
     if ((s32)y > gNdsRendererProfileHWVertexMaxY) { gNdsRendererProfileHWVertexMaxY = y; }
     if ((s32)z < gNdsRendererProfileHWVertexMinZ) { gNdsRendererProfileHWVertexMinZ = z; }
     if ((s32)z > gNdsRendererProfileHWVertexMaxZ) { gNdsRendererProfileHWVertexMaxZ = z; }
+#endif
     if ((x == (v16)32767) || (x == (v16)-32768) ||
         (y == (v16)32767) || (y == (v16)-32768) ||
         (z == (v16)32767) || (z == (v16)-32768))
     {
-        gNdsRendererProfileHWVertexSaturateCount++;
+        ndsRendererProfileRecordVertexSaturate();
     }
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static u32 ndsRendererAbsDiffS32(s32 lhs, s32 rhs)
 {
     s64 diff = (s64)lhs - (s64)rhs;
@@ -1978,6 +2176,7 @@ static void ndsRendererHardwareRecordOracleTriangle(
     ndsRendererHardwareRecordOracleVertex(state, i1);
     ndsRendererHardwareRecordOracleVertex(state, i2);
 }
+#endif
 
 static s32 ndsRendererCombineUsesColor(u32 w0, u32 w1, u32 source)
 {
@@ -2206,6 +2405,7 @@ static void ndsRendererHardwareRecordUseTextureReject(
     const NDSRendererStats *stats,
     u32 reason)
 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     switch (reason)
     {
     case NDS_RENDERER_HW_USETEX_REJECT_NO_STATS:
@@ -2241,6 +2441,10 @@ static void ndsRendererHardwareRecordUseTextureReject(
                 stats->geometry_mode;
         }
     }
+#else
+    (void)stats;
+    (void)reason;
+#endif
 }
 
 static s32 ndsRendererHardwareTextureImplicitStateOn(
@@ -2292,7 +2496,9 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
                 stats, NDS_RENDERER_HW_USETEX_REJECT_STATE_OFF);
             return FALSE;
         }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileUseTextureImplicitOnCount++;
+#endif
     }
     if (stats->texture_combine_count == 0u)
     {
@@ -2607,6 +2813,7 @@ static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, u32 origin,
     return (s16)(scaled_t16 - origin_t16 + offset);
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static void ndsRendererProfileTextureCoord(s16 s, s16 t)
 {
     gNdsRendererProfileTexturedVertexCount++;
@@ -2627,6 +2834,7 @@ static void ndsRendererProfileTextureCoord(s16 s, s16 t)
         gNdsRendererProfileTextureCoordMaxT = t;
     }
 }
+#endif
 
 static u32 ndsRendererHardwareColorByte(u32 color, u32 shift)
 {
@@ -2654,7 +2862,9 @@ static u32 ndsRendererHardwareLightColor(NDSRendererStats *stats, u32 mask,
         if (stats != NULL)
         {
             stats->light_fallback_count++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
             gNdsRendererProfileLightFallbackCount++;
+#endif
         }
         return fallback;
     }
@@ -2992,7 +3202,7 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key)
             (ndsRendererHardwareTextureKeyWouldLegacyAlias(
                  &sNdsRendererHardwareTextureCache[i].key, key) != FALSE))
         {
-            gNdsRendererProfileTextureCacheAliasAvoidCount++;
+            ndsRendererProfileRecordTextureAliasAvoid();
         }
     }
     return NULL;
@@ -3121,7 +3331,7 @@ static s32 ndsRendererHardwareEvictTexture(
             (entry->last_used_frame !=
              (sNdsRendererHardwareFrameSerial + 1u)))
         {
-            gNdsRendererProfileTextureCacheEvictCount++;
+            ndsRendererProfileRecordTextureEvict();
             (void)ndsRendererHardwareReleaseTexture(entry);
             return TRUE;
         }
@@ -3156,7 +3366,7 @@ ndsRendererHardwareAllocTexture(void)
         {
             /* libnds allocates texture VRAM in glTexImage2D. Delete the old
              * allocation, but never recycle a texture referenced this frame. */
-            gNdsRendererProfileTextureCacheEvictCount++;
+            ndsRendererProfileRecordTextureEvict();
             return ndsRendererHardwareReleaseTexture(entry);
         }
     }
@@ -3350,7 +3560,7 @@ static void ndsRendererHardwareBindTextureName(
         ndsRendererHardwareEndBatch();
         glBindTexture(GL_TEXTURE_2D, texture_name);
         sNdsRendererHardwareBoundTextureName = texture_name;
-        gNdsRendererProfileTextureBinds++;
+        ndsRendererProfileRecordTextureBind();
         if (stats != NULL)
         {
             stats->hardware_texture_bind_count++;
@@ -3532,7 +3742,9 @@ static u32 ndsRendererHardwareTextureSourceWidthPixels(u32 render_size,
     return image_width;
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static u32 ndsRendererHardwareTextureFormatBit(u32 format, u32 size);
+#endif
 
 static NDSRendererTextureDataLayout ndsRendererTextureDataLayout(
     const NDSRendererConfig *config)
@@ -3549,6 +3761,7 @@ static NDSRendererTextureDataLayout ndsRendererTextureDataLayout(
     return NDS_RENDERER_TEXTURE_DATA_NATIVE;
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static u32 ndsRendererTexturePackMap(
     NDSRendererTextureDataLayout layout, u32 stride)
 {
@@ -3567,7 +3780,9 @@ static u32 ndsRendererTexturePackMap(
     }
     return map;
 }
+#endif
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static void ndsRendererRecordTextureLaneCount(
     NDSRendererTextureDataLayout layout, u32 is_halfword,
     u32 format, u32 size, u32 count)
@@ -3590,6 +3805,7 @@ static void ndsRendererRecordTextureLaneCount(
             ndsRendererTexturePackMap(layout, 3u);
     }
 }
+#endif
 
 static u32 ndsRendererTextureLogicalByteIndex(
     NDSRendererTextureDataLayout layout, u32 logical_index)
@@ -3653,6 +3869,7 @@ static u16 ndsRendererReadTextureHalfword(
     return data[ndsRendererTextureLogicalHalfwordIndex(layout, logical_index)];
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static void ndsRendererRecordTextureLaneUseCount(
     const NDSRendererConfig *config, u32 format, u32 size, u32 count)
 {
@@ -3681,6 +3898,7 @@ static void ndsRendererRecordTextureLaneUse(
 {
     ndsRendererRecordTextureLaneUseCount(config, format, size, 1u);
 }
+#endif
 
 static u16 ndsRendererHardwarePaletteColor(
     const NDSRendererConfig *config, const u16 *palette, u32 index, u32 count,
@@ -3796,6 +4014,7 @@ static u16 ndsRendererHardwareTextureColor(
     return 0u;
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static s32 ndsRendererTextureColorNonWhite(u16 color)
 {
     u32 r;
@@ -3953,6 +4172,7 @@ static void ndsRendererProfileTextureFormat(volatile u32 *mask,
         *mask |= ndsRendererHardwareTextureFormatBit(format, size);
     }
 }
+#endif
 
 static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
                                              u32 format, u32 size,
@@ -3962,9 +4182,15 @@ static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
     {
         stats->hardware_texture_reject_count++;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererProfileTextureFormat(
         &gNdsRendererProfileTextureRejectFormatMask, format, size);
     gNdsRendererProfileTextureRejectReasonMask |= reason;
+#else
+    (void)format;
+    (void)size;
+    (void)reason;
+#endif
 }
 
 static s32 ndsRendererHardwarePrepareTexel1Source(
@@ -4002,12 +4228,13 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
         (ndsRendererHardwareUsesTexel01Lerp(stats) == FALSE) ||
         (ndsRendererActiveTextureTile(stats) != NDS_RENDERER_RENDER_TILE))
     {
-        gNdsRendererProfileTexel1RejectReasonMask |=
-            NDS_RENDERER_HW_TEXEL1_REJECT_ACTIVE_TILE;
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_ACTIVE_TILE);
         return FALSE;
     }
 
     tile = &stats->texture_tiles[NDS_RENDERER_RENDER_TILE_1];
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileTexel1LastTileState =
         (tile->set_seen & 1u) |
         ((tile->size_seen & 1u) << 1) |
@@ -4021,6 +4248,7 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
         ((primary_size & 0x3u) << 3) |
         ((primary_width & 0xffu) << 8) |
         ((primary_height & 0xffu) << 16);
+#endif
     if ((primary_format != NDS_RENDERER_HW_TEXTURE_FMT_CI) ||
         (primary_size != NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
         (tile->set_seen == 0u) || (tile->size_seen == 0u) ||
@@ -4028,16 +4256,16 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
         (tile->shiftt != 0u) ||
         (tile->format != primary_format) || (tile->size != primary_size))
     {
-        gNdsRendererProfileTexel1RejectReasonMask |=
-            NDS_RENDERER_HW_TEXEL1_REJECT_TILE_STATE;
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_TILE_STATE);
         return FALSE;
     }
     load = ndsRendererHardwareFindTextureLoadForTmem(stats, tile->tmem);
     if ((load == NULL) || (load->image == 0u) ||
         (load->load_texels == 0u))
     {
-        gNdsRendererProfileTexel1RejectReasonMask |=
-            NDS_RENDERER_HW_TEXEL1_REJECT_LOAD_STATE;
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_LOAD_STATE);
         return FALSE;
     }
 
@@ -4070,8 +4298,8 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
         (width > NDS_RENDERER_HW_TEXTURE_MAX_WIDTH) ||
         (height > NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT))
     {
-        gNdsRendererProfileTexel1RejectReasonMask |=
-            NDS_RENDERER_HW_TEXEL1_REJECT_DIMENSIONS;
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_DIMENSIONS);
         return FALSE;
     }
 
@@ -4091,8 +4319,8 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
     }
     if ((width != primary_width) || (height != primary_height))
     {
-        gNdsRendererProfileTexel1RejectReasonMask |=
-            NDS_RENDERER_HW_TEXEL1_REJECT_PAIR_SIZE;
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_PAIR_SIZE);
         return FALSE;
     }
 
@@ -4129,12 +4357,14 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
         (source_read_width > out->source_extent_width) ||
         (source_read_height > out->source_extent_height))
     {
-        gNdsRendererProfileTexel1RejectReasonMask |=
-            NDS_RENDERER_HW_TEXEL1_REJECT_SOURCE_RANGE;
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_SOURCE_RANGE);
         return FALSE;
     }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererRecordTextureLaneUse(config, primary_format, primary_size);
+#endif
     source_last_index =
         ((source_origin_t + source_read_height - 1u) * source_width) +
         source_origin_s + source_read_width - 1u;
@@ -4142,8 +4372,8 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
         primary_format, primary_size, source_last_index + 1u);
     if (source_bytes == 0u)
     {
-        gNdsRendererProfileTexel1RejectReasonMask |=
-            NDS_RENDERER_HW_TEXEL1_REJECT_SOURCE_BYTES;
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_SOURCE_BYTES);
         return FALSE;
     }
     source_physical_bytes = ndsRendererTexturePhysicalByteSpan(
@@ -4153,8 +4383,8 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
         source_physical_bytes);
     if (out->texels == NULL)
     {
-        gNdsRendererProfileTexel1RejectReasonMask |=
-            NDS_RENDERER_HW_TEXEL1_REJECT_SOURCE_PTR;
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_SOURCE_PTR);
         return FALSE;
     }
 
@@ -4422,9 +4652,11 @@ static s32 ndsRendererHardwareBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config)
 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     u32 texture_start = cpuGetTiming();
     u32 convert_start;
     u32 upload_start;
+#endif
     NDSRendererHardwareTextureKey key;
     NDSRendererHardwareTextureCacheEntry *entry;
     NDSRendererHardwareTextureCacheEntry *fraction_entry;
@@ -4514,9 +4746,9 @@ static s32 ndsRendererHardwareBindTexture(
         if ((primary_load == NULL) || (primary_load->image == 0u) ||
             (primary_load->load_texels == 0u))
         {
-            gNdsRendererProfileTexel1RejectCount++;
-            gNdsRendererProfileTexel1RejectReasonMask |=
-                NDS_RENDERER_HW_TEXEL1_REJECT_LOAD_STATE;
+            ndsRendererProfileRecordTexel1Reject();
+            ndsRendererProfileRecordTexel1RejectReason(
+                NDS_RENDERER_HW_TEXEL1_REJECT_LOAD_STATE);
             ndsRendererHardwareRejectTexture(
                 stats, stats->texture_format, stats->texture_size,
                 NDS_RENDERER_HW_TEXREJECT_MISSING_STATE);
@@ -4698,7 +4930,9 @@ static s32 ndsRendererHardwareBindTexture(
             NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_RANGE);
         return FALSE;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererRecordTextureLaneUse(config, format, size);
+#endif
     source_last_index =
         ((source_origin_t + source_read_height - 1u) * source_width) +
         source_origin_s + source_read_width - 1u;
@@ -4735,17 +4969,18 @@ static s32 ndsRendererHardwareBindTexture(
             texel1_origin_delta_t = ndsRendererHardwareQuarterToTexel(
                 ndsRendererHardwareTileOriginDelta(
                     render_tile->ult, texel1_source.render_tile->ult));
-            gNdsRendererProfileTexel1CompositeCount++;
-            gNdsRendererProfileTexel1LoadMatchCount++;
+            ndsRendererProfileRecordTexel1Composite();
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
             gNdsRendererProfileTexel1LastFraction =
                 stats->prim_lod_fraction;
             gNdsRendererProfileTexel1LastImage0 = primary_image;
             gNdsRendererProfileTexel1LastImage1 =
                 texel1_source.load->image;
+#endif
         }
         else
         {
-            gNdsRendererProfileTexel1RejectCount++;
+            ndsRendererProfileRecordTexel1Reject();
         }
     }
 
@@ -4835,10 +5070,14 @@ static s32 ndsRendererHardwareBindTexture(
         stats->hardware_texture_format = format;
         stats->hardware_texture_width = width;
         stats->hardware_texture_height = height;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         ndsRendererProfileTextureFormat(
             &gNdsRendererProfileTextureBindFormatMask, format, size);
         ndsRendererProfileTextureCacheEntry(entry);
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
+#endif
         return TRUE;
     }
     if (use_texel1 != FALSE)
@@ -4912,11 +5151,15 @@ static s32 ndsRendererHardwareBindTexture(
                 NDS_RENDERER_HW_TEXREJECT_BAD_TLUT_PTR);
             return FALSE;
         }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         ndsRendererProfileTextureFormat(
             &gNdsRendererProfileTexturePaletteFormatMask, format, size);
+#endif
     }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     convert_start = cpuGetTiming();
+#endif
     if ((use_texel1 != FALSE) &&
         (format == NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
         (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
@@ -4985,23 +5228,31 @@ static s32 ndsRendererHardwareBindTexture(
                 }
             }
             sNdsRendererHardwareTextureScratch[dst_index] = color;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
             ndsRendererProfileTexturePixel(color, &green_texels,
                                            &nonwhite_texels);
+#endif
         }
     }
     /* Preserve the canonical lane-observation totals while paying one volatile
      * update per converted texture instead of one per texel. */
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererRecordTextureLaneUseCount(config, format, size, texels);
     if (use_texel1 != FALSE)
     {
         ndsRendererRecordTextureLaneUseCount(
             config, texel1_source.format, texel1_source.size, texels);
     }
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererProfileTextureFormat(
         &gNdsRendererProfileTextureConvertFormatMask, format, size);
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileTextureConvertTicks += cpuGetTiming() - convert_start;
 
     upload_start = cpuGetTiming();
+#endif
     entry = fraction_entry;
     if (entry != NULL)
     {
@@ -5014,7 +5265,7 @@ static s32 ndsRendererHardwareBindTexture(
         }
         else
         {
-            gNdsRendererProfileTexel1FractionRefreshCount++;
+            ndsRendererProfileRecordTexel1Refresh();
         }
     }
     if (entry == NULL)
@@ -5064,7 +5315,9 @@ static s32 ndsRendererHardwareBindTexture(
         }
     }
     ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileTextureUploadTicks += cpuGetTiming() - upload_start;
+#endif
 
     entry->key = key;
     entry->params = ndsRendererHardwareMergeTextureParams(params);
@@ -5081,14 +5334,19 @@ static s32 ndsRendererHardwareBindTexture(
     stats->hardware_texture_format = format;
     stats->hardware_texture_width = width;
     stats->hardware_texture_height = height;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererProfileTextureFormat(
         &gNdsRendererProfileTextureBindFormatMask, format, size);
+#endif
     ndsRendererHardwareApplyTextureParams(entry->params);
-    gNdsRendererProfileTextureUploads++;
-    gNdsRendererProfileTextureUploadBytes += upload_width * upload_height *
-        sizeof(u16);
+    ndsRendererProfileRecordTextureUpload(
+        upload_width * upload_height * sizeof(u16));
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererProfileTextureCacheEntry(entry);
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
+#endif
     return TRUE;
 }
 
@@ -5173,7 +5431,8 @@ static void ndsRendererLoadHardwareMatrices(
     glMatrixMode(GL_MODELVIEW);
     glLoadMatrix4x4(&modelview_hw);
 
-    gNdsRendererProfileMatrixLoadCount++;
+    ndsRendererProfileRecordMatrixLoad();
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileMatrixScaleWorld = scale_world;
     gNdsRendererProfileProjectionM00 = projection.m[0][0];
     gNdsRendererProfileProjectionM11 = projection.m[1][1];
@@ -5185,6 +5444,7 @@ static void ndsRendererLoadHardwareMatrices(
     gNdsRendererProfileModelviewM30 = modelview.m[3][0];
     gNdsRendererProfileModelviewM31 = modelview.m[3][1];
     gNdsRendererProfileModelviewM32 = modelview.m[3][2];
+#endif
 
     sNdsRendererHardwareMatrixProjection = projection;
     sNdsRendererHardwareMatrixModelview = modelview;
@@ -5265,7 +5525,7 @@ static void ndsRendererHardwareEndBatch(void)
          * starts the next primitive group, so only restore state owned by the
          * logical source-triangle batch here. */
         glDisable(GL_ALPHA_TEST);
-        gNdsRendererProfileHardwareBatchEndCount++;
+        ndsRendererProfileRecordBatchEnd();
         sNdsRendererHardwareTriangleBatchOpen = FALSE;
         sNdsRendererHardwareTriangleBatchTextured = FALSE;
         sNdsRendererHardwareTriangleBatchTextureName = 0u;
@@ -5291,7 +5551,7 @@ static void ndsRendererHardwareBeginTriangleBatch(
         (sNdsRendererHardwareTriangleBatchAlphaKey == alpha_key) &&
         (sNdsRendererHardwareTriangleBatchFogKey == fog_key))
     {
-        gNdsRendererProfileHardwareBatchReuseCount++;
+        ndsRendererProfileRecordBatchReuse();
         return;
     }
 
@@ -5309,7 +5569,7 @@ static void ndsRendererHardwareBeginTriangleBatch(
     ndsRendererHardwareApplyFog(stats);
     glPolyFmt(poly_fmt);
     glBegin(GL_TRIANGLE);
-    gNdsRendererProfileHardwareBatchBeginCount++;
+    ndsRendererProfileRecordBatchBegin();
 
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
     sNdsRendererHardwareTriangleBatchTextured = textured;
@@ -5368,8 +5628,10 @@ static void ndsRendererHardwareSubmitVertex(
                                             texture_origin_t,
                                             texture_offset);
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         ndsRendererProfileTextureCoord(s, t);
         ndsRendererProfileTextureSample(s, t);
+#endif
         glTexCoord2t16(s, t);
     }
     if ((zbuffered != FALSE) &&
@@ -5402,6 +5664,7 @@ static void ndsRendererHardwareSubmitVertex(
         if ((source_clip_depth != FALSE) && (clip_vtx != NULL) &&
             (clip_vtx->w != 0))
         {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
             s32 depth = ndsRendererHardwareClampS64ToV16(
                 ((s64)clip_vtx->z * NDS_RENDERER_HW_PROJECTED_VERTEX) /
                 clip_vtx->w);
@@ -5433,6 +5696,7 @@ static void ndsRendererHardwareSubmitVertex(
                 }
             }
             stats->hardware_projected_depth_sample_count++;
+#endif
             projected_z = clip_vtx->z;
         }
         if (source_clip_depth != FALSE)
@@ -5573,7 +5837,12 @@ static void ndsRendererSubmitHardwareTriangle(
     v1 = &state->input_vertices[i1];
     v2 = &state->input_vertices[i2];
     render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
-    ndsRendererHardwareRecordOracleTriangle(state, i0, i1, i2);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    if (sNdsRendererHardwareNoOracle == 0u)
+    {
+        ndsRendererHardwareRecordOracleTriangle(state, i0, i1, i2);
+    }
+#endif
     material_color = ndsRendererHardwareColorSource(stats);
     use_material_color = ndsRendererHardwareUseMaterialColor(stats);
     use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
@@ -5581,11 +5850,15 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
         {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
             gNdsRendererProfileLitShadeCombineCount++;
+#endif
         }
         if (use_material_color != FALSE)
         {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
             gNdsRendererProfileMaterialCombineCount++;
+#endif
         }
     }
     poly_alpha = ndsRendererHardwareAlpha(stats, v0);
@@ -5595,7 +5868,7 @@ static void ndsRendererSubmitHardwareTriangle(
     }
     if (projected_submit != FALSE)
     {
-        gNdsRendererProfileProjectedSubmitFallbackCount++;
+        ndsRendererProfileRecordProjectedSubmit();
         zbuffered = FALSE;
         decal_depth = FALSE;
         prim_depth = FALSE;
@@ -5691,13 +5964,7 @@ static void ndsRendererSubmitHardwareTriangle(
     sNdsRendererHardwareSubmitted = TRUE;
     stats->hardware_triangle_count++;
     stats->hardware_vertex_count += 3u;
-    gNdsRendererProfileHardwareTriangles++;
-    gNdsRendererProfileHardwareVertices += 3u;
-    if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
-        (gNdsRendererProfileHardwareVertices > 6144u))
-    {
-        gNdsRendererProfileHardwareOverLimit = 1u;
-    }
+    ndsRendererProfileRecordHardwareTriangle();
     if (zbuffered != FALSE)
     {
         stats->hardware_zbuffer_triangle_count++;
@@ -6119,6 +6386,66 @@ u32 ndsRendererHardwareNoOracleEnabled(void)
     return sNdsRendererHardwareNoOracle;
 #else
     return FALSE;
+#endif
+}
+
+void ndsRendererProfileFrameBegin(void)
+{
+    gNdsRendererProfileLevel = NDS_RENDERER_PROFILE_LEVEL;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    memset(&sNdsRendererRuntimeFrameSummary, 0,
+           sizeof(sNdsRendererRuntimeFrameSummary));
+    if (gNdsRendererProfileFrameCount == 1u)
+    {
+        sNdsRendererRuntimeTexel1FractionRefreshCount = 0u;
+        sNdsRendererRuntimeTextureCacheEvictCount = 0u;
+    }
+#endif
+}
+
+void ndsRendererProfileFramePublish(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    /* One compact publication replaces hot-loop volatile diagnostic writes. */
+    gNdsRendererProfileTextureBinds =
+        sNdsRendererRuntimeFrameSummary.texture_binds;
+    gNdsRendererProfileTextureUploads =
+        sNdsRendererRuntimeFrameSummary.texture_uploads;
+    gNdsRendererProfileTextureUploadBytes =
+        sNdsRendererRuntimeFrameSummary.texture_upload_bytes;
+    gNdsRendererProfileTextureCacheAliasAvoidCount =
+        sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count;
+    gNdsRendererProfileTexel1CompositeCount =
+        sNdsRendererRuntimeFrameSummary.texel1_composite_count;
+    gNdsRendererProfileTexel1LoadMatchCount =
+        sNdsRendererRuntimeFrameSummary.texel1_load_match_count;
+    gNdsRendererProfileTexel1RejectCount =
+        sNdsRendererRuntimeFrameSummary.texel1_reject_count;
+    gNdsRendererProfileTexel1FractionRefreshCount =
+        sNdsRendererRuntimeTexel1FractionRefreshCount;
+    gNdsRendererProfileTextureCacheEvictCount =
+        sNdsRendererRuntimeTextureCacheEvictCount;
+    gNdsRendererProfileProjectedSubmitFallbackCount =
+        sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count;
+    gNdsRendererProfileMatrixLoadCount =
+        sNdsRendererRuntimeFrameSummary.matrix_load_count;
+    gNdsRendererProfileHardwareVertices =
+        sNdsRendererRuntimeFrameSummary.hardware_vertices;
+    gNdsRendererProfileHardwareTriangles =
+        sNdsRendererRuntimeFrameSummary.hardware_triangles;
+    gNdsRendererProfileHardwareBatchBeginCount =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count;
+    gNdsRendererProfileHardwareBatchReuseCount =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count;
+    gNdsRendererProfileHardwareBatchEndCount =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_end_count;
+    gNdsRendererProfileHardwareOverLimit =
+        sNdsRendererRuntimeFrameSummary.hardware_over_limit;
+    gNdsRendererProfileHWVertexSaturateCount =
+        sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count;
+    gNdsRendererProfileOracleSamples = 0u;
+    gNdsRendererProfileOracleMismatches = 0u;
+    gNdsRendererProfileOracleMaxDelta = 0u;
 #endif
 }
 

@@ -19214,3 +19214,41 @@ generic path remains available.
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none; the normalization result and all integrated gates remain
 unchanged while repeated command-local work is removed.
+
+## 2026-07-11 - Compile-time renderer performance and forensic profiles
+
+- Implemented the first architectural step from Tyler's optimization reviews:
+  one source renderer now has compile-time profiles instead of paying full
+  proof cost in the shipped ROM. Profile 0 is canonical/shipped, profile 1 adds
+  coarse phase timers, and profile 2 retains the full pixel/oracle, texture-
+  lane, matrix, range, depth, and per-list diagnostics. The extra builds remain
+  configurations of scene mode `163`, not new harness modes.
+- Profiles 0/1 publish one ordinary-memory frame summary after rendering and
+  retain the integrated health invariants: `2484/828` hardware vertices/
+  triangles, `103/725/103` batches, texture upload/bind and TEXEL1 refresh/
+  reject/eviction counts, projected submission, saturation, and matrix loads.
+  Detailed volatile writes and oracle calls compile out; profile 2 owns those
+  assertions. Depth diagnostics now live in the always-linked diagnostics TU,
+  so normal/opening builds retain stable symbols without importing battle DLs.
+- An eight-warm-frame GDB sampler reports present median/p95
+  `17,346,720/17,475,520` for profile 0 and statistically equal
+  `17,345,728/17,474,496` for profile 1. Full profile 2 costs
+  `20,282,080/20,578,944`; lean present time is about `14.5%` below forensic
+  and `12.1%` below the preceding canonical `19,725,696`. Pacing improves from
+  about `1.6` to `1.9fps`, still far below the P1 `60fps` requirement.
+- Added explicit coarse/forensic targets, a separate forensic verifier, and an
+  optional 1-16 warm-frame sampler to the integrated mode-163 verifier. Host
+  fixtures pin profile ownership and ensure canonical cannot silently reenable
+  the oracle. Profile 2 still proves `37200/37200` texture lanes and oracle
+  `2403/0/0`; profile 0 requires those detailed counters to remain zero.
+- DevFast, all four fresh-rebuild P1Gate legs (`379.9s`), and fresh Boundary
+  (`289.9s`) pass. Canonical/shipped parity is `11,578,368` bytes at SHA-256
+  `9DE48AE1B24D93AE128D2A9B118AD801F08B99C46311A3D2C7BBE60E45591C80`.
+  The accepted capture is
+  `artifacts/visibility/2026-07-11_canonical_fast_174928-5579684-p21988.png`;
+  pond, five flower groups, foreground fence ordering, and fighters pass. Full
+  Regression remains intentionally skipped for Tyler's faster P1 cadence.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: profiles 0/1 intentionally zero detailed renderer proofs; the
+same-source profile-2 configuration retains the complete assertions.

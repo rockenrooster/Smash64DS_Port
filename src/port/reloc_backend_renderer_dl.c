@@ -2553,22 +2553,7 @@ static NDSRendererStats sNdsRendererAdapterStagePersistentStats;
 static NDSRendererVertexCache sNdsRendererAdapterStageVertexCache;
 static sb32 sNdsRendererAdapterStagePersistentActive;
 
-volatile u32 gNdsRendererDepthStageSamples;
-volatile s32 gNdsRendererDepthStageMin;
-volatile s32 gNdsRendererDepthStageMax;
-volatile s32 gNdsRendererDepthStageWMin;
-volatile s32 gNdsRendererDepthStageWMax;
-volatile u32 gNdsRendererDepthFighterP0Samples;
-volatile s32 gNdsRendererDepthFighterP0Min;
-volatile s32 gNdsRendererDepthFighterP0Max;
-volatile s32 gNdsRendererDepthFighterP0WMin;
-volatile s32 gNdsRendererDepthFighterP0WMax;
-volatile u32 gNdsRendererDepthFighterP1Samples;
-volatile s32 gNdsRendererDepthFighterP1Min;
-volatile s32 gNdsRendererDepthFighterP1Max;
-volatile s32 gNdsRendererDepthFighterP1WMin;
-volatile s32 gNdsRendererDepthFighterP1WMax;
-
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static void ndsRendererAdapterAccumulateDepth(
     const NDSRendererStats *stats,
     volatile u32 *samples,
@@ -2611,6 +2596,7 @@ static void ndsRendererAdapterAccumulateDepth(
     }
     *samples += stats->hardware_projected_depth_sample_count;
 }
+#endif
 
 void ndsRendererAdapterResetDepthDiagnostics(void)
 {
@@ -3487,8 +3473,10 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
     void *saved_graphics_heap_ptr;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     u32 adapter_start;
     u32 step_start;
+#endif
     sb32 inherited_texture = FALSE;
     sb32 inherited_tile = FALSE;
     sb32 inherited_segment = FALSE;
@@ -3534,11 +3522,13 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
     saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     adapter_start = cpuGetTiming();
     step_start = adapter_start;
 #endif
+#endif
     ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
-#if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
     gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
     step_start = cpuGetTiming();
 #endif
@@ -3553,7 +3543,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              &initial_projection_ptr,
                                              &initial_modelview,
                                              &initial_modelview_ptr);
-#if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
     gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
 
@@ -3579,7 +3569,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         ndsFighterDLDrawCopyPersistentRendererState(
             &stats, &sNdsRendererAdapterStagePersistentStats);
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     step_start = cpuGetTiming();
+#endif
 #endif
     ndsRendererExecuteDisplayListWithVertexCache(
         dl,
@@ -3590,6 +3582,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (sNdsRendererAdapterStagePersistentActive != FALSE) ?
             &sNdsRendererAdapterStageVertexCache : NULL);
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererAdapterAccumulateDepth(
         &stats,
         &gNdsRendererDepthStageSamples,
@@ -3597,8 +3590,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         &gNdsRendererDepthStageMax,
         &gNdsRendererDepthStageWMin,
         &gNdsRendererDepthStageWMax);
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
     gNdsRendererProfileStageAdapterTicks += cpuGetTiming() - adapter_start;
+#endif
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
     if (sNdsRendererAdapterStagePersistentActive != FALSE)
     {
@@ -3619,11 +3615,13 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             }
         }
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
         (gNdsRendererProfileHardwareVertices > 6144u))
     {
         gNdsRendererProfileHardwareOverLimit = 1u;
     }
+#endif
 #endif
     gNdsStageGCDrawAllLoopHardwareTriangleCount +=
         stats.hardware_triangle_count;
@@ -5145,7 +5143,9 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         u32 step_start;
+#endif
 #endif
 
         if ((loaded == NULL) &&
@@ -5160,13 +5160,15 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                             &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         step_start = cpuGetTiming();
+#endif
         ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
                                                  &states[i]);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
-#endif
-#if NDS_RENDERER_HW_TRIANGLES
         step_start = cpuGetTiming();
+#endif
 #endif
         ndsRendererAdapterPrepareInitialMatrices(collection.dobjs[i],
                                                  (gGCCurrentCamera != NULL) ?
@@ -5177,7 +5179,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
                                                  &initial_modelview_ptr);
-#if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
         gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
         config.max_depth = 8u;
@@ -6455,7 +6457,7 @@ static void ndsFighterDLAllDrawAccumulateStats(
         return;
     }
 
-#if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
     if (slot == 0u)
     {
         ndsRendererAdapterAccumulateDepth(
@@ -6746,7 +6748,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         u32 step_start;
+#endif
 #endif
 
         if ((loaded == NULL) &&
@@ -6779,7 +6783,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                             &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         step_start = cpuGetTiming();
+#endif
         if ((sNdsFighterDisplayContractPlayback == FALSE) ||
             (contract_event->material_dobj != NULL))
         {
@@ -6791,8 +6797,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             ndsRendererAdapterPrepareMaterialSegment(material_dobj,
                                                      &states[i]);
         }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
         step_start = cpuGetTiming();
+#endif
 #endif
         ndsRendererAdapterPrepareInitialMatrices(
                                                  (sNdsFighterDisplayContractPlayback != FALSE) ?
@@ -6806,7 +6814,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
                                                  &initial_modelview_ptr);
-#if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
         gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
         config.max_depth = 8u;
@@ -6828,7 +6836,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         ndsFighterDLDrawCopyPersistentRendererState(&stats[i],
                                                     &persistent_stats);
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         step_start = cpuGetTiming();
+#endif
 #endif
         ndsRendererExecuteDisplayListWithVertexCache(
             dl,
@@ -6840,7 +6850,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             &stats[i],
             &persistent_renderer_vertices);
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
+#endif
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 #endif
         ndsFighterDLDrawCapturePersistentState(&persistent_state,

@@ -16,13 +16,8 @@ The registry decides the active Boundary/Latest set:
 .\scripts\verify-all.ps1 -Profile Boundary -List
 ```
 
-Current Boundary/Latest entries:
-
-```powershell
-.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
-.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
-.\scripts\verify-battle-playable-harness.ps1 -DelaySeconds 3
-```
+Current Boundary/Latest entries are `battle_mariofox_stage_mplivehit_status_loop`,
+`menu_chain_mariofox_stage_mplivehit_status_loop`, and `battle_playable`.
 
 Modes `161/162` remain the bounded natural-combat pair. They keep the
 Pupupu/Dream Land Mario/Fox battle root stable, create Mario/Fox through the
@@ -89,7 +84,8 @@ terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
 Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
 plus `G_MWO_POINT_ST` restores five flower groups and adds ten source triangles
 (`192 -> 202`); Tyler accepts both flowers and foreground fences. Texture
-conversion retains exact `37200/37200` lane observations and oracle `2403/0/0`.
+conversion retains exact `37200/37200` lane observations; the forensic profile
+retains oracle `2403/0/0`.
 The immutable 300x220 wallpaper now decodes once into the retained HW buffer;
 source position/scale stay live and composed content is never cached. Proof is
 `build1/hit44/fast45/fallback0/opaque66000`; present fell
@@ -98,7 +94,12 @@ now spans only adjacent TRI1/TRI2 commands and closes at every other opcode or
 list exit. Proof remains `begin103/reuse725/end103` for all `828` triangles.
 The CI4 table first cuts present to `20,285,888`; preparing the invariant light
 once per `G_VTX` then cuts present to `19,725,696` (`-2.8%`), draw `3.0%`, and
-DL `4.3%`. Pacing is `16/16 x0.1`. Capture: `artifacts/visibility/2026-07-11_canonical_fast_170758-1981780-p35312.png`.
+DL `4.3%`. Shipped/canonical profile 0 now compiles out oracle, vertex/texture
+ranges, and detailed volatile writes, then publishes one compact frame summary.
+Warm 8-frame present median/p95 is `17,346,720/17,475,520`; pacing is
+`19/19 x0.1`. Profile 1 is statistically equal while retaining coarse timers.
+Separate profile 2 proves full oracle/ranges at `20,282,080/20,578,944`.
+Capture: `artifacts/visibility/2026-07-11_canonical_fast_174928-5579684-p21988.png`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `236100`, resident reloc `681632`
@@ -117,8 +118,9 @@ Pupupu map-object kinds `0..3` now decode as `(0,6)`, `(-1397,906)`,
 Fox enter Wait grounded on lines `3/2` at X `0/-1397`.
 
 Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
-live pads before each update, and has hard GX RAM, oracle, display-contract,
-and screenshot gates. DevFast incrementally builds it, runs one capture pass, rotates
+live pads before each update, and has hard GX RAM, display-contract, profile-0,
+and screenshot gates; a same-source profile-2 run owns oracle correctness.
+DevFast incrementally builds it, runs one capture pass, rotates
 `latest.png` to `previous.png`, and requires exact canonical/shipped ROM parity.
 The scripted mode-163 ROM remains an internal `-fast-hwtri` target; three
 user-facing filenames represent only two unique configurations.
@@ -129,12 +131,12 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Next P1 work is profile-level/no-oracle separation, then a hybrid raw-GX matrix
-proof and direct final-resolution 2D; visual/audio debt remains afterward.
+Next P1 work is a hybrid raw-GX matrix proof, then direct final-resolution 2D;
+visual/audio debt remains afterward.
 ## Verification
 
-All four `P1Gate` legs pass in `177.2s`: opening-to-Title, canonical battle,
-mode-163 combat, and one-minute Results. Boundary passes in `83.5s`. This is
+All four `P1Gate` legs pass in `379.9s`: opening-to-Title, canonical battle,
+mode-163 combat, and one-minute Results. Boundary passes in `289.9s`. This is
 not the five-minute P1 soak; Full Regression was skipped for Tyler's fast cadence.
 
 ```powershell
@@ -143,8 +145,5 @@ not the five-minute P1 soak; Full Regression was skipped for Tyler's fast cadenc
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-After verified progress, commit if requested, then run the Lean snapshot last:
-
-```powershell
-.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean
-```
+After verified progress, commit, then run
+`.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

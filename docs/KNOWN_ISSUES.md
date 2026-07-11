@@ -1127,7 +1127,7 @@
   range without consuming a synthetic slot. This restores source layer-3 over
   layer-1 ordering. Exact raw-GX/no-Z behavior remains deferred. Full source-selected
   fighter submission plus the current CPU-scaled 300x220 wallpaper and water
-  precomposition now presents at about `1.6fps`; renderer work remains P1 debt.
+  precomposition now presents at about `1.9fps`; renderer work remains P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native
@@ -1160,9 +1160,9 @@
   reduces present again to `24,238,464` (`-2.1%`). An exact 256-entry CI4
   palette-pair table preserves source addressing/coverage while reducing
   present to `20,285,888` (`-16.3%`) and conversion to `5,035,776` (`-42.8%`);
-  command-hoisted exact light normalization reduces present again to
-  `19,725,696` (`-2.8%`) and DL work `4.3%`. Pacing is still only
-  `16/16 x0.1`, so profile/no-oracle, raw-GX, and software-2D work remain.
+  command-hoisted exact light normalization reduces present to `19,725,696`.
+  Profile-0/no-oracle separation then reaches warm median/p95
+  `17,346,720/17,475,520` and `19/19 x0.1`; raw-GX and software 2D remain.
   Audible BGM resyncs remain possible while frames exceed the half-buffer
   deadline. Lane totals remain aggregate conversion observations covered by
   host byte/halfword fixtures.

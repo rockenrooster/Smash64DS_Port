@@ -13047,10 +13047,14 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererAdapterResetDepthDiagnostics();
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareSetNoOracle(TRUE);
+#endif
     gcDrawAll();
     ndsFighterDisplayContractSubmitStageFighters();
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareSetNoOracle(FALSE);
+#endif
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
 }
 #endif

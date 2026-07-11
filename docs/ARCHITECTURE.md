@@ -1263,6 +1263,21 @@ positions remain per vertex; polygon/vertex RAM accounting is unchanged.
 Libnds documents `glEnd` as a dummy FIFO write, so closure restores owned alpha
 state and records diagnostics without emitting it.
 
+Renderer instrumentation is compile-time tiered through
+`NDS_RENDERER_PROFILE_LEVEL`. Profile 0 is forced for the canonical/shipped ROM:
+oracle transforms, vertex/texture/depth ranges, texture samples, format/lane
+proofs, matrix mirrors, and per-command volatile writes are absent. A small
+ordinary-memory health summary retains triangle/batch/texture/TEXEL1/saturation
+accounting and is copied to GDB globals once at frame completion. Profile 1 adds
+coarse adapter/DL/texture phase timers. Profile 2 retains all forensic state and
+does not enable the no-oracle frame seam. The internal coarse/forensic targets
+share mode 163 and source configuration with canonical; they are not product
+ROMs or new harness modes. `verify-battle-playable-renderer-forensic.ps1`
+requires positive oracle samples with zero mismatch, while the performance run
+requires exactly zero oracle/forensic work. The optional warm-frame sampler
+collects 8--16 marker-synchronized frames and reports median/p95 without adding
+runtime writes to the shipped ROM.
+
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,
 GX flush, vblank, and per-frame profile finalization. Sampling the same globals

@@ -1090,6 +1090,11 @@ Assert-True ($platform.Contains('gNdsHardwareRendererPolyRamCount')) 'Platform h
 Assert-True ($platform.Contains('gNdsHardwareRendererVertexRamCount')) 'Platform hardware renderer vertex RAM diagnostic is missing.'
 $makefile = Get-Content (Join-Path $root 'Makefile') -Raw
 Assert-True ($makefile.Contains('NDS_RENDERER_HW_TRIANGLES ?= 0')) 'Makefile hardware renderer flag default is missing.'
+Assert-True ($makefile.Contains('NDS_RENDERER_PROFILE_LEVEL ?= 2')) 'Makefile renderer profile default is not forensic-safe.'
+Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-canonical-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 0') 'Canonical/shipped renderer is not forced to performance profile 0.'
+Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1') 'Internal coarse renderer target is not forced to profile 1.'
+Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-forensic-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 2') 'Internal forensic renderer target is not forced to profile 2.'
+Assert-True ($makefile.Contains("echo '#define NDS_RENDERER_PROFILE_LEVEL `$(NDS_RENDERER_PROFILE_LEVEL)';")) 'Generated build config omits the renderer profile level.'
 Assert-True ($makefile.Contains('battleship_sys_matrix.c')) 'Makefile original sys/matrix import is missing.'
 Assert-True ($makefile.Contains('battleship_sys_sintable.c')) 'Makefile original sine table import is missing.'
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
@@ -1105,6 +1110,7 @@ Assert-True ($rendererHeader.Contains('matrix_move_word_count')) 'Renderer matri
 Assert-True ($rendererHeader.Contains('othermode_h')) 'Renderer current othermode-H state is missing from the public stats.'
 Assert-True ($rendererHeader.Contains('transformed_vertices')) 'Renderer command transformed vertex cache exposure is missing.'
 Assert-True ($rendererHeader.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Renderer hardware submit-latch API is missing.'
+Assert-True ($rendererHeader.Contains('NDS_RENDERER_PROFILE_LEVEL must be 0, 1, or 2')) 'Renderer profile-level compile-time validation is missing.'
 $startupHeader = Get-Content (Join-Path $root 'include/nds/nds_startup.h') -Raw
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawHardwareTextureReadyCount')) 'All-DL hardware texture diagnostics are missing from the startup header.'
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount')) 'All-DL hardware z-buffer diagnostics are missing from the startup header.'
@@ -1123,6 +1129,19 @@ Assert-True ($renderer -match '(?s)ndsRendererHardwareNextProjectedDepth\(void\)
 Assert-True ($renderer -match '(?s)source_zbuffered = zbuffered;.*?if \(source_zbuffered != FALSE\)\s*\{\s*/\* Source-Z projected submissions use the composed clip Z below and\s*\* must not consume the synthetic no-Z painter counter\. \*/\s*projected_z\[0\].*?else.*?ndsRendererHardwareNextProjectedDepth\(\);') 'Renderer source-Z submissions consume the synthetic no-Z painter counter.'
 Assert-True ($renderer.Contains('ndsRendererHardwareBeginTriangleBatch')) 'Renderer adjacent source-triangle batch helper is missing.'
 Assert-True ($renderer.Contains('gNdsRendererProfileHardwareBatchReuseCount++')) 'Renderer adjacent source-triangle reuse diagnostic is missing.'
+Assert-True ($renderer.Contains('NDSRendererRuntimeFrameSummary')) 'Performance renderer compact frame summary is missing.'
+Assert-True ($renderer.Contains('ndsRendererProfileFramePublish')) 'Performance renderer frame-summary publication is missing.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*if \(sNdsRendererHardwareNoOracle == 0u\).*?ndsRendererHardwareRecordOracleTriangle') 'Renderer oracle is not compile-time excluded from profile 0/1 or does not honor no-oracle.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*ndsRendererProfileTextureCoord\(s, t\);\s*ndsRendererProfileTextureSample\(s, t\);\s*#endif') 'Per-vertex texture range/sample diagnostics are not forensic-only.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*s32 depth =.*?hardware_projected_depth_sample_count\+\+;\s*#endif\s*projected_z = clip_vtx->z;') 'Projected-depth ranges are not forensic-only or alter runtime depth.'
+$rendererMovement = Get-Content (Join-Path $root 'src/port/reloc_backend_movement.c') -Raw
+Assert-True ($rendererMovement -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2\s*ndsRendererHardwareSetNoOracle\(TRUE\);.*?#if NDS_RENDERER_PROFILE_LEVEL < 2\s*ndsRendererHardwareSetNoOracle\(FALSE\);') 'Performance/coarse frame does not suppress the renderer command oracle.'
+$rendererVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
+Assert-True ($rendererVerifier.Contains('RENDER_PROFILE_LEVEL=%u')) 'Realtime verifier does not identify the compiled renderer profile.'
+Assert-True ($rendererVerifier.Contains('RENDER_BENCH=%u')) 'Realtime verifier lacks the optional warm-frame renderer sampler.'
+Assert-True ($rendererVerifier.Contains('still performed forensic oracle transforms')) 'Realtime performance verifier does not require zero oracle work.'
+$forensicVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-renderer-forensic.ps1') -Raw
+Assert-True ($forensicVerifier.Contains('-RendererProfileLevel 2')) 'Separate profile-2 canonical oracle verifier is missing.'
 Assert-True ($renderer -match '(?s)if \(sNdsRendererHardwareActiveTextureEntry != entry\).*?ndsRendererHardwareApplyTextureParams\(entry->params\);') 'Renderer cache-hit texture parameters are still programmed inside an unchanged triangle batch.'
 Assert-True ($renderer -match '(?s)if \(\(op != NDS_RENDERER_OP_TRI1\) &&\s*\(op != NDS_RENDERER_OP_TRI2\)\)\s*\{\s*ndsRendererHardwareEndBatch\(\);') 'Renderer does not terminate a triangle batch before every non-triangle source command.'
 Assert-True ($renderer -match '(?s)ndsRendererScanList\(dl, config, stats, &state, 0, NULL, NULL\);\s*#if NDS_RENDERER_HW_TRIANGLES\s*ndsRendererHardwareEndBatch\(\);') 'Renderer scan-only display-list entry point can leak an open triangle batch.'

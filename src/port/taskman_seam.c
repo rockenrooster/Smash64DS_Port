@@ -741,6 +741,13 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileTexturePaletteFormatMask = 0;
     gNdsRendererProfileTextureRejectFormatMask = 0;
     gNdsRendererProfileTextureRejectReasonMask = 0;
+    gNdsRendererProfileTextureLaneLayoutMask = 0;
+    gNdsRendererProfileTextureLaneByteAccessCount = 0;
+    gNdsRendererProfileTextureLaneHalfwordAccessCount = 0;
+    gNdsRendererProfileTextureLaneByteFormatMask = 0;
+    gNdsRendererProfileTextureLaneHalfwordFormatMask = 0;
+    gNdsRendererProfileTextureLaneByteMap = 0;
+    gNdsRendererProfileTextureLaneHalfwordMap = 0;
     gNdsRendererProfileUseTextureRejectNoStatsCount = 0;
     gNdsRendererProfileUseTextureRejectStateOffCount = 0;
     gNdsRendererProfileUseTextureRejectNoCombineCount = 0;
@@ -802,6 +809,21 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileHWVertexMinZ = 0;
     gNdsRendererProfileHWVertexMaxZ = 0;
     gNdsRendererProfileHWVertexSaturateCount = 0;
+    gNdsRendererDepthStageSamples = 0;
+    gNdsRendererDepthStageMin = 0;
+    gNdsRendererDepthStageMax = 0;
+    gNdsRendererDepthStageWMin = 0;
+    gNdsRendererDepthStageWMax = 0;
+    gNdsRendererDepthFighterP0Samples = 0;
+    gNdsRendererDepthFighterP0Min = 0;
+    gNdsRendererDepthFighterP0Max = 0;
+    gNdsRendererDepthFighterP0WMin = 0;
+    gNdsRendererDepthFighterP0WMax = 0;
+    gNdsRendererDepthFighterP1Samples = 0;
+    gNdsRendererDepthFighterP1Min = 0;
+    gNdsRendererDepthFighterP1Max = 0;
+    gNdsRendererDepthFighterP1WMin = 0;
+    gNdsRendererDepthFighterP1WMax = 0;
     gNdsIFCommonHUDRecordCount = 0;
     gNdsIFCommonHUDObjectMask = 0;
     gNdsIFCommonHUDP0DamageCurrent = 0;
@@ -4209,6 +4231,8 @@ static void ndsBattlePlayablePresentFrame(void)
     u32 hud_start;
 
     gNdsRendererProfileFrameCount++;
+    ndsRendererProfileFrameBegin();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileDrawTicks = 0;
     gNdsRendererProfileHudTicks = 0;
     gNdsRendererProfileStageAdapterTicks = 0;
@@ -4221,6 +4245,8 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileTextureUploads = 0;
     gNdsRendererProfileTextureUploadBytes = 0;
     gNdsRendererProfileTextureBinds = 0;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileTextureSourceTexels = 0;
     gNdsRendererProfileTextureGreenTexels = 0;
     gNdsRendererProfileTextureNonWhiteTexels = 0;
@@ -4290,6 +4316,7 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileHWVertexMinZ = 32767;
     gNdsRendererProfileHWVertexMaxZ = -32768;
     gNdsRendererProfileHWVertexSaturateCount = 0;
+#endif
 
     ndsPlatformBeginFrame();
     ndsSObjPreviewBeginFrame();
@@ -4311,6 +4338,7 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsFrameCounter++;
     gNdsBattlePlayablePacingPresentedFrames++;
     gNdsRendererProfilePresentTicks = cpuGetTiming() - start;
+    ndsRendererProfileFramePublish();
     ndsBattlePlayablePacingUpdate();
     ndsBattlePlayableFrameCompleteMarker();
 }

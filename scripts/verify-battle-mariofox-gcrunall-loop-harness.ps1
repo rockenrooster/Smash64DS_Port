@@ -27,6 +27,8 @@ param(
     [switch]$CPUOpponentProof,
     [switch]$MatchLifecycleProof,
     [switch]$RequireRealtime60Fps,
+    [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
+    [ValidateRange(0,16)][int]$RendererBenchmarkSamples = 0,
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
     [string]$Build = 'build-battle-mariofox-gcrunall-loop-harness',
@@ -99,9 +101,27 @@ function Test-DamageDigits {
     }
     return $true
 }
+function Get-Median {
+    param([int64[]]$Values)
+    $ordered = @($Values | Sort-Object)
+    if ($ordered.Count -eq 0) { return 0 }
+    $middle = [int]($ordered.Count / 2)
+    if (($ordered.Count % 2) -eq 0) {
+        return [int64](($ordered[$middle - 1] + $ordered[$middle]) / 2)
+    }
+    return [int64]$ordered[$middle]
+}
+function Get-Percentile95 {
+    param([int64[]]$Values)
+    $ordered = @($Values | Sort-Object)
+    if ($ordered.Count -eq 0) { return 0 }
+    $index = [Math]::Max(0, [Math]::Ceiling($ordered.Count * 0.95) - 1)
+    return [int64]$ordered[$index]
+}
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
+$makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
 }
@@ -235,12 +255,32 @@ try {
         'quit'
     )
     if ($BattlePlayable -and $RealtimePresentation -and $HardwareTriangles -and -not $MatchLifecycleProof) {
-        $gdbCommands = @(
-            $gdbCommands[0..3]
-            'tbreak ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingResult != 0'
-            'continue'
-            $gdbCommands[4..($gdbCommands.Count - 1)]
-        )
+        if ($RendererBenchmarkSamples -gt 0) {
+            $gdbCommands = @(
+                $gdbCommands[0..3]
+                'set $renderer_benchmark_samples = 0'
+                'break ndsBattlePlayableFrameCompleteMarker'
+                'commands'
+                'silent'
+                'if gNdsBattlePlayablePacingResult != 0'
+                'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileOracleSamples'
+                'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
+                'end'
+                ('if $renderer_benchmark_samples < {0}' -f $RendererBenchmarkSamples)
+                'continue'
+                'end'
+                'end'
+                'continue'
+                $gdbCommands[4..($gdbCommands.Count - 1)]
+            )
+        } else {
+            $gdbCommands = @(
+                $gdbCommands[0..3]
+                'tbreak ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingResult != 0'
+                'continue'
+                $gdbCommands[4..($gdbCommands.Count - 1)]
+            )
+        }
     }
     elseif ($BattlePlayable -and -not $RealtimePresentation -and -not $MatchLifecycleProof) {
         # Fast-logic mode can still be inside its expensive final draw after
@@ -257,6 +297,7 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $hardwareCommands = @(
+            'printf "RENDER_PROFILE_LEVEL=%u\n", gNdsRendererProfileLevel',
             'printf "PLATFORM_HW=%u,%u,%u,%u,%#x,%#x\n", gNdsHardwareRendererSubmittedFrameCount, gNdsHardwareRendererFlushCount, gNdsHardwareRendererPolyRamCount, gNdsHardwareRendererVertexRamCount, gNdsHardwareRendererStatus, gNdsHardwareRendererControl',
             'printf "STAGE_GCDRAWALL_HW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount, gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareTextureBindCount, gNdsStageGCDrawAllLoopHardwareTextureUploadCount, gNdsStageGCDrawAllLoopHardwareTextureReadyCount, gNdsStageGCDrawAllLoopHardwareTextureRejectCount, gNdsStageGCDrawAllLoopHardwareTextureFormatMask, gNdsStageGCDrawAllLoopHardwareTextureMaxWidth, gNdsStageGCDrawAllLoopHardwareTextureMaxHeight',
             'printf "RENDER_STAGE_CARRY=%u,%u,%u,%u,%u,%u,%u\n", (gNdsStageGCDrawAllLoopHardwareCarrySeedCount < gNdsStageGCDrawAllLoopHardwareCarryCaptureCount) ? gNdsStageGCDrawAllLoopHardwareCarrySeedCount : gNdsStageGCDrawAllLoopHardwareCarryCaptureCount, (gNdsStageGCDrawAllLoopHardwareCarrySeedCount < gNdsStageGCDrawAllLoopHardwareCarryCaptureCount) ? gNdsStageGCDrawAllLoopHardwareCarrySeedCount : gNdsStageGCDrawAllLoopHardwareCarryCaptureCount, gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount, gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount, gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount, gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount, gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount',
@@ -412,11 +453,13 @@ try {
     $safe = [regex]::Match($gdbStdout, 'GCRUNALL_SAFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $platform = [regex]::Match($gdbStdout, 'PLATFORM_DL_PREVIEW=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $platformHw = [regex]::Match($gdbStdout, 'PLATFORM_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $rendererProfileMarker = [regex]::Match($gdbStdout, 'RENDER_PROFILE_LEVEL=([0-9]+)')
     $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $stageCarry = [regex]::Match($gdbStdout, 'RENDER_STAGE_CARRY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
     $fighterDisplayContract = [regex]::Match($gdbStdout, 'FTR_DISPLAY_CONTRACT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderProfile = [regex]::Match($gdbStdout, 'RENDER_PROFILE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $rendererBenchmark = [regex]::Matches($gdbStdout, 'RENDER_BENCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderBatch = [regex]::Match($gdbStdout, 'RENDER_BATCH=([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
@@ -510,6 +553,22 @@ try {
                 $rc = Get-Ints $renderCombine
                 $rl = Get-Ints $renderLight
                 $fls = Get-Ints $fighterLightSeed
+                $benchmarkSummary = ''
+                if ($RendererBenchmarkSamples -gt 0) {
+                    Assert-Condition ($rendererBenchmark.Count -eq $RendererBenchmarkSamples) "Renderer benchmark captured $($rendererBenchmark.Count) of $RendererBenchmarkSamples requested warm frames." $gdbStdout
+                    $benchPresent = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[3].Value })
+                    $benchDraw = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[4].Value })
+                    $benchDL = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[5].Value })
+                    $benchTexture = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[6].Value })
+                    foreach ($sample in $rendererBenchmark) {
+                        $sampleProfile = [int64]$sample.Groups[1].Value
+                        $sampleTriangles = [int64]$sample.Groups[7].Value
+                        $sampleOracle = [int64]$sample.Groups[8].Value
+                        Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangles -eq 828 -and (($RendererProfileLevel -ge 2 -and $sampleOracle -gt 0) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or incomplete triangle/oracle accounting.' $gdbStdout
+                    }
+                    $benchmarkSummary = " bench${RendererBenchmarkSamples}=present$((Get-Median $benchPresent))/$((Get-Percentile95 $benchPresent))/draw$((Get-Median $benchDraw))/$((Get-Percentile95 $benchDraw))/dl$((Get-Median $benchDL))/$((Get-Percentile95 $benchDL))/tex$((Get-Median $benchTexture))/$((Get-Percentile95 $benchTexture))"
+                }
+                Assert-Condition ($rendererProfileMarker.Success -and [int64]$rendererProfileMarker.Groups[1].Value -eq $RendererProfileLevel) "Canonical realtime HW build did not report renderer profile level $RendererProfileLevel." $gdbStdout
                 Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
                 Assert-Condition ($stageHardware.Success -and $shw[0] -gt 8 -and $shw[1] -gt 0 -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build did not submit textured stage triangles.' $gdbStdout
@@ -521,22 +580,30 @@ try {
                 Assert-Condition ($renderProfile.Success -and $rp[15] -le 6144 -and $rp[16] -le 2048 -and $rp[17] -eq 0) 'Canonical realtime HW build exceeded DS poly/vertex limits.' $gdbStdout
                 Assert-Condition ($renderBatch.Success -and $rb[0] -gt 0 -and $rb[1] -gt 0 -and $rb[0] -lt $rp[16] -and ($rb[0] + $rb[1]) -eq $rp[16] -and $rb[2] -eq $rb[0]) 'Canonical realtime HW build did not batch adjacent source triangle commands or left a GX batch open.' $gdbStdout
                 Assert-Condition ($wallpaperCache.Success -and $wc[0] -eq 1 -and $wc[1] -ge 1 -and $wc[2] -eq ($wc[0] + $wc[1]) -and $wc[3] -eq 0 -and $wc[4] -eq 300 -and $wc[5] -eq 220 -and $wc[6] -eq 66000 -and $wc[7] -gt 0 -and $wc[8] -gt 0) 'Canonical realtime HW build did not construct once and reuse the exact opaque Dream Land wallpaper decode cache.' $gdbStdout
-                Assert-Condition ($renderOracle.Success -and $ro[0] -gt 0 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Canonical realtime HW submitted vertex positions drifted from the CPU 20.12 oracle.' $gdbStdout
-                Assert-Condition ($renderMatrix.Success) 'Canonical realtime HW build did not report loaded GX matrix ranges.' $gdbStdout
-                Assert-Condition ($renderVertex.Success) 'Canonical realtime HW build did not report submitted vertex ranges.' $gdbStdout
-                Assert-Condition ($renderDepth.Success -and $rd[0] -gt 0 -and $rd[5] -gt 0 -and $rd[10] -gt 0) 'Canonical realtime HW build did not report source-depth samples for the stage, Mario, and Fox.' $gdbStdout
-                Assert-Condition ($rd[1] -ge -4096 -and $rd[2] -le 4095 -and $rd[1] -le $rd[2] -and $rd[3] -gt 0 -and $rd[3] -le $rd[4] -and $rd[6] -ge -4096 -and $rd[7] -le 4095 -and $rd[6] -le $rd[7] -and $rd[8] -gt 0 -and $rd[8] -le $rd[9] -and $rd[11] -ge -4096 -and $rd[12] -le 4095 -and $rd[11] -le $rd[12] -and $rd[13] -gt 0 -and $rd[13] -le $rd[14]) 'Canonical realtime HW source-depth samples left signed 20.12 NDC or reported invalid clip W.' $gdbStdout
                 Assert-Condition ($renderClip.Success -and $rclip[0] -eq $rv[12]) 'Canonical realtime HW build did not report a consistent clipping/saturation marker.' $gdbStdout
-                Assert-Condition ($renderTexture.Success -and $rt[0] -gt 0 -and $rt[1] -gt 0 -and $rt[2] -gt 0 -and $rt[3] -gt 0 -and $rt[4] -gt 0 -and $rt[5] -gt 0 -and $rt[6] -gt 0 -and $rt[8] -lt $rt[9] -and $rt[10] -lt $rt[11]) 'Canonical realtime HW build did not prove Dream Land texture data and texcoords reached GX submission.' $gdbStdout
-                Assert-Condition ($renderTexel1.Success -and $rt1[0] -gt 0 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[3] -eq 0 -and $rt1[4] -le 0xff -and $rt1[5] -ne 0 -and $rt1[6] -ne 0 -and $rt1[5] -ne $rt1[6] -and $rt1[9] -gt 0 -and $rt1[10] -eq 0) 'Canonical realtime HW build did not resolve, precompose, and refresh the source Dream Land TEXEL0/TEXEL1 water material without evicting resident textures.' $gdbStdout
+                Assert-Condition ($renderTexel1.Success -and $rt1[0] -gt 0 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -gt 0 -and $rt1[10] -eq 0) 'Canonical realtime HW build did not resolve, precompose, and refresh the source Dream Land TEXEL0/TEXEL1 water material without evicting resident textures.' $gdbStdout
                 Assert-Condition ($mobjAttach.Success -and $ma[0] -ge 4 -and $ma[1] -eq 0 -and $ma[2] -eq 0 -and $ma[3] -eq 0x0200 -and $ma[4] -eq 0x006b) 'Canonical realtime HW build did not normalize the live water and Whispy mixed-width O2R MObjSub fields at the BattleShip attachment boundary.' $gdbStdout
-                Assert-Condition ($renderTexUse.Success) 'Canonical realtime HW build did not report texture-use rejection classes.' $gdbStdout
-                Assert-Condition ($renderTexFmt.Success -and $rtf[0] -ne 0 -and $rtf[1] -ne 0 -and $rtf[4] -eq 0) 'Canonical realtime HW build had unexplained texture bind failures by format.' $gdbStdout
-                Assert-Condition ($renderTexLane.Success -and (($rtl[0] -band 0x2) -ne 0) -and $rtl[1] -gt 0 -and $rtl[2] -gt 0 -and (($rtl[3] -band 0x100) -ne 0) -and $rtl[5] -eq 0x00010203 -and $rtl[6] -eq 0x02030001) 'Canonical realtime HW build did not prove O2R texture byte-lane decoding on the active CI4 path.' $gdbStdout
-                Assert-Condition ($renderCombine.Success -and $rc[0] -gt 0 -and $rc[1] -gt 0 -and $rc[4] -gt 0) 'Canonical realtime HW build did not report source combine modes and projected-submit fallback.' $gdbStdout
-                Assert-Condition ($renderLight.Success) 'Canonical realtime HW build did not report source light diagnostics.' $gdbStdout
-                Assert-Condition ($fighterLightSeed.Success -and $fls[0] -gt 0 -and $fls[1] -eq [Convert]::ToUInt32('ffffff00', 16) -and $fls[2] -eq [Convert]::ToUInt32('4c4c4c00', 16) -and $rl[2] -eq 0) 'Canonical realtime HW build did not seed the fighter RSP light state from the selected source MObj material or still used a fallback.' $gdbStdout
-                $hardwareSummary = " gxram=$($hw[2])/$($hw[3]) gxstat=0x{0:x}/ctrl=0x{1:x} ftrContract=$($fdc[0])/$($fdc[3])/geom0x{17:x}/cycle0x{18:x}/rm0x{19:x}/light$($fdc[5])/$($fdc[6])/bounds$($fdc[7])/$($fdc[8]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) batch=$($rb[0])/$($rb[1])/$($rb[2]) wallCache=$($wc[0])/$($wc[1])/$($wc[2])/fb$($wc[3])/src$($wc[4])x$($wc[5])/$($wc[6])/ticks$($wc[7])/$($wc[8]) mtx=load$($rm[0])/scale$($rm[1])/p$($rm[2]),$($rm[3]),$($rm[4]),$($rm[5])/mv$($rm[6]),$($rm[7]),$($rm[8]),$($rm[9]),$($rm[10]),$($rm[11]) vraw=$($rv[0])..$($rv[1])/$($rv[2])..$($rv[3])/$($rv[4])..$($rv[5]) vhw=$($rv[6])..$($rv[7])/$($rv[8])..$($rv[9])/$($rv[10])..$($rv[11]) depth=stage$($rd[0]):$($rd[1])..$($rd[2])/p0$($rd[5]):$($rd[6])..$($rd[7])/p1$($rd[10]):$($rd[11])..$($rd[12]) clip=$($rclip[0]) texProof=$($rt[1])/$($rt[2])/$($rt[3]) sample=$($rt[5])/$($rt[6])/$($rt[4]) alias=$($rt[7]) st=$($rt[8])..$($rt[9])/$($rt[10])..$($rt[11]) texUse=$($rtu[0])/$($rtu[1])/$($rtu[2])/$($rtu[3])/$($rtu[4])/impl$($rtu[5])/first0x{7:x}/flags0x{8:x}/w0x{9:x}/w1x{10:x}/geom0x{11:x} texFmt=conv0x{2:x}/bind0x{3:x}/pal0x{4:x}/rej0x{5:x}/why0x{6:x} texLane=layout0x{12:x}/byte$($rtl[1])/half$($rtl[2])/bFmt0x{13:x}/hFmt0x{14:x}/bMap0x{15:x}/hMap0x{16:x} stageCarry=$($scarry[0])/$($scarry[1])/tex$($scarry[2])/tile$($scarry[3])/short$($scarry[4])/$($scarry[5])/seg$($scarry[6]) combine=$($rc[0])/$($rc[1])/lit$($rc[2])/mat$($rc[3])/proj$($rc[4]) light=$($rl[0])/$($rl[1])/$($rl[2]) profile=present$($rp[2])/draw$($rp[3])/stage$($rp[5])/mat$($rp[6])/dl$($rp[8])/tex$($rp[9])/conv$($rp[10])/upload$($rp[11]) texUploads=$($rp[12])/$($rp[13]) binds=$($rp[14]) vtx=$($rp[15]) tri=$($rp[16])" -f $hw[4], $hw[5], $rtf[0], $rtf[1], $rtf[2], $rtf[3], $rtf[4], $rtu[6], $rtu[7], $rtu[8], $rtu[9], $rtu[10], $rtl[0], $rtl[3], $rtl[4], $rtl[5], $rtl[6], $fdc[4], $fdc[13], $fdc[14]
+                Assert-Condition ($renderCombine.Success -and $rc[4] -gt 0) 'Canonical realtime HW build did not report projected-submit accounting.' $gdbStdout
+                Assert-Condition ($fighterLightSeed.Success -and $fls[0] -gt 0 -and $fls[1] -eq [Convert]::ToUInt32('ffffff00', 16) -and $fls[2] -eq [Convert]::ToUInt32('4c4c4c00', 16)) 'Canonical realtime HW build did not seed the fighter RSP light state from the selected source MObj material.' $gdbStdout
+                if ($RendererProfileLevel -ge 2) {
+                    Assert-Condition ($renderOracle.Success -and $ro[0] -gt 0 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Forensic realtime HW submitted vertex positions drifted from the CPU 20.12 oracle.' $gdbStdout
+                    Assert-Condition ($renderMatrix.Success) 'Forensic realtime HW build did not report loaded GX matrix ranges.' $gdbStdout
+                    Assert-Condition ($renderVertex.Success) 'Forensic realtime HW build did not report submitted vertex ranges.' $gdbStdout
+                    Assert-Condition ($renderDepth.Success -and $rd[0] -gt 0 -and $rd[5] -gt 0 -and $rd[10] -gt 0) 'Forensic realtime HW build did not report source-depth samples for the stage, Mario, and Fox.' $gdbStdout
+                    Assert-Condition ($rd[1] -ge -4096 -and $rd[2] -le 4095 -and $rd[1] -le $rd[2] -and $rd[3] -gt 0 -and $rd[3] -le $rd[4] -and $rd[6] -ge -4096 -and $rd[7] -le 4095 -and $rd[6] -le $rd[7] -and $rd[8] -gt 0 -and $rd[8] -le $rd[9] -and $rd[11] -ge -4096 -and $rd[12] -le 4095 -and $rd[11] -le $rd[12] -and $rd[13] -gt 0 -and $rd[13] -le $rd[14]) 'Forensic realtime HW source-depth samples left signed 20.12 NDC or reported invalid clip W.' $gdbStdout
+                    Assert-Condition ($renderTexture.Success -and $rt[0] -gt 0 -and $rt[1] -gt 0 -and $rt[2] -gt 0 -and $rt[3] -gt 0 -and $rt[4] -gt 0 -and $rt[5] -gt 0 -and $rt[6] -gt 0 -and $rt[8] -lt $rt[9] -and $rt[10] -lt $rt[11]) 'Forensic realtime HW build did not prove Dream Land texture data and texcoords reached GX submission.' $gdbStdout
+                    Assert-Condition ($rt1[3] -eq 0 -and $rt1[4] -le 0xff -and $rt1[5] -ne 0 -and $rt1[6] -ne 0 -and $rt1[5] -ne $rt1[6]) 'Forensic realtime HW build did not retain TEXEL0/TEXEL1 source-state diagnostics.' $gdbStdout
+                    Assert-Condition ($renderTexUse.Success) 'Forensic realtime HW build did not report texture-use rejection classes.' $gdbStdout
+                    Assert-Condition ($renderTexFmt.Success -and $rtf[0] -ne 0 -and $rtf[1] -ne 0 -and $rtf[4] -eq 0) 'Forensic realtime HW build had unexplained texture bind failures by format.' $gdbStdout
+                    Assert-Condition ($renderTexLane.Success -and (($rtl[0] -band 0x2) -ne 0) -and $rtl[1] -gt 0 -and $rtl[2] -gt 0 -and (($rtl[3] -band 0x100) -ne 0) -and $rtl[5] -eq 0x00010203 -and $rtl[6] -eq 0x02030001) 'Forensic realtime HW build did not prove O2R texture byte-lane decoding on the active CI4 path.' $gdbStdout
+                    Assert-Condition ($rc[0] -gt 0 -and $rc[1] -gt 0) 'Forensic realtime HW build did not report source combine modes.' $gdbStdout
+                    Assert-Condition ($renderLight.Success -and $rl[2] -eq 0) 'Forensic realtime HW build reported a source-light fallback.' $gdbStdout
+                } else {
+                    Assert-Condition ($renderOracle.Success -and $ro[0] -eq 0 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Performance/coarse realtime HW build still performed forensic oracle transforms.' $gdbStdout
+                    Assert-Condition ($rv[12] -eq 0) 'Performance/coarse realtime HW build saturated a submitted DS vertex.' $gdbStdout
+                    Assert-Condition ($rt[0] -eq 0 -and $rt[3] -eq 0 -and $rt[4] -eq 0 -and $rc[0] -eq 0 -and $rc[1] -eq 0) 'Performance/coarse realtime HW build still published per-vertex or per-command forensic diagnostics.' $gdbStdout
+                }
+                $hardwareSummary = " rprof=$RendererProfileLevel$benchmarkSummary gxram=$($hw[2])/$($hw[3]) gxstat=0x{0:x}/ctrl=0x{1:x} ftrContract=$($fdc[0])/$($fdc[3])/geom0x{17:x}/cycle0x{18:x}/rm0x{19:x}/light$($fdc[5])/$($fdc[6])/bounds$($fdc[7])/$($fdc[8]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) batch=$($rb[0])/$($rb[1])/$($rb[2]) wallCache=$($wc[0])/$($wc[1])/$($wc[2])/fb$($wc[3])/src$($wc[4])x$($wc[5])/$($wc[6])/ticks$($wc[7])/$($wc[8]) mtx=load$($rm[0])/scale$($rm[1])/p$($rm[2]),$($rm[3]),$($rm[4]),$($rm[5])/mv$($rm[6]),$($rm[7]),$($rm[8]),$($rm[9]),$($rm[10]),$($rm[11]) vraw=$($rv[0])..$($rv[1])/$($rv[2])..$($rv[3])/$($rv[4])..$($rv[5]) vhw=$($rv[6])..$($rv[7])/$($rv[8])..$($rv[9])/$($rv[10])..$($rv[11]) depth=stage$($rd[0]):$($rd[1])..$($rd[2])/p0$($rd[5]):$($rd[6])..$($rd[7])/p1$($rd[10]):$($rd[11])..$($rd[12]) clip=$($rclip[0]) texProof=$($rt[1])/$($rt[2])/$($rt[3]) sample=$($rt[5])/$($rt[6])/$($rt[4]) alias=$($rt[7]) st=$($rt[8])..$($rt[9])/$($rt[10])..$($rt[11]) texUse=$($rtu[0])/$($rtu[1])/$($rtu[2])/$($rtu[3])/$($rtu[4])/impl$($rtu[5])/first0x{7:x}/flags0x{8:x}/w0x{9:x}/w1x{10:x}/geom0x{11:x} texFmt=conv0x{2:x}/bind0x{3:x}/pal0x{4:x}/rej0x{5:x}/why0x{6:x} texLane=layout0x{12:x}/byte$($rtl[1])/half$($rtl[2])/bFmt0x{13:x}/hFmt0x{14:x}/bMap0x{15:x}/hMap0x{16:x} stageCarry=$($scarry[0])/$($scarry[1])/tex$($scarry[2])/tile$($scarry[3])/short$($scarry[4])/$($scarry[5])/seg$($scarry[6]) combine=$($rc[0])/$($rc[1])/lit$($rc[2])/mat$($rc[3])/proj$($rc[4]) light=$($rl[0])/$($rl[1])/$($rl[2]) profile=present$($rp[2])/draw$($rp[3])/stage$($rp[5])/mat$($rp[6])/dl$($rp[8])/tex$($rp[9])/conv$($rp[10])/upload$($rp[11]) texUploads=$($rp[12])/$($rp[13]) binds=$($rp[14]) vtx=$($rp[15]) tri=$($rp[16])" -f $hw[4], $hw[5], $rtf[0], $rtf[1], $rtf[2], $rtf[3], $rtf[4], $rtu[6], $rtu[7], $rtu[8], $rtu[9], $rtu[10], $rtl[0], $rtl[3], $rtl[4], $rtl[5], $rtl[6], $fdc[4], $fdc[13], $fdc[14]
             }
             if ($LiveInputPreview) {
                 $livePad = [regex]::Match($gdbStdout, 'LIVE_PAD=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')

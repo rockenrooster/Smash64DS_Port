@@ -20,9 +20,14 @@ param(
     [switch]$LiveInputPreview,
     [switch]$CPUOpponentProof,
     [switch]$MatchLifecycleProof,
-    [switch]$RequireRealtime60Fps
+    [switch]$RequireRealtime60Fps,
+    [int]$RendererProfileLevel = -1,
+    [ValidateRange(0,16)][int]$RendererBenchmarkSamples = 0
 )
 $ErrorActionPreference = 'Stop'
+if (($RendererProfileLevel -lt -1) -or ($RendererProfileLevel -gt 2)) {
+    throw 'RendererProfileLevel must be -1 (automatic), 0, 1, or 2.'
+}
 $ImportBattleShipNormalMoveset = $true
 $ImportBattleShipMarioFireball = $true
 $ImportBattleShipFoxBlaster = $true
@@ -36,14 +41,24 @@ $ImportBattleShipAudioBGM = $true
 $target = 'smash64ds-battle-playable-fast-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 if ($RealtimePresentation) {
-    $target = 'smash64ds-battle-playable-canonical-hwtri'
-    $build = 'build-battle-playable-canonical-hwtri-harness'
+    if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 0 }
+    if ($RendererProfileLevel -eq 0) {
+        $target = 'smash64ds-battle-playable-canonical-hwtri'
+        $build = 'build-battle-playable-canonical-hwtri-harness'
+    } elseif ($RendererProfileLevel -eq 1) {
+        $target = 'smash64ds-battle-playable-coarse-hwtri'
+        $build = 'build-battle-playable-coarse-hwtri-harness'
+    } else {
+        $target = 'smash64ds-battle-playable-forensic-hwtri'
+        $build = 'build-battle-playable-forensic-hwtri-harness'
+    }
     $LiveInputPreview = $true
 } elseif ($CPUOpponentProof) {
     $target = 'smash64ds-battle-playable-cpu-proof'
     $build = 'build-battle-playable-cpu-proof-harness'
     $LiveInputPreview = $true
 }
+if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 2 }
 $hardwareTriangles = $target -like '*-hwtri'
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
@@ -71,6 +86,8 @@ $hardwareTriangles = $target -like '*-hwtri'
     -CPUOpponentProof:$CPUOpponentProof `
     -MatchLifecycleProof:$MatchLifecycleProof `
     -RequireRealtime60Fps:$RequireRealtime60Fps `
+    -RendererProfileLevel $RendererProfileLevel `
+    -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -Harness 'battle_playable' `
     -Target $target `
     -Build $build `
