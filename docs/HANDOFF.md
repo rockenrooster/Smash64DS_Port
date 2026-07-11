@@ -101,13 +101,13 @@ record. The HW combiner also preserves the proven one-cycle
 normalize complete N64 MSB-first command graphs once per reloc generation;
 fighter AObj16 streams bypass that path. Original timing/state stays live, and
 a host-independent post-step corrects packed RGBA byte arithmetic. Persistent
-source vertex slots restore 44 cross-joint triangles. Source-depth X/Y/Z share
-one clip vertex, and no-Z layers use direct signed 20.12 NDC. Dream Land now
-repeats/mirrors mask-sized uploads inside larger clamped logical tiles, removing
-broad canopy/shrub/island ribbons; native pixel gates reject the old frame.
-Source scene light now seeds each fighter draw; modelview vertex lighting and
-N64 RGBA material-light order are live. Harsh contrast, fragments, shifts,
-TEXEL1/water, DL-head order, raw GX matrices, and `1.2fps` output remain debt.
+source vertex slots restore 44 cross-joint triangles. Source-depth X/Y/Z share one
+clip vertex; no-Z layers use signed 20.12 NDC. Dream Land texture varyings stay
+linear; masked-clamp axes through 128 texels materialize source addressing inside
+the logical tile. Its six CI4 decorations now render as recognizable stars; the
+192-wide island remains bounded debt. Latest capture: `artifacts/visibility/2026-07-11_masked-clamp-linear-sampler-hudoff-stability-next.png`.
+Source scene light and N64 RGBA order are live. Harsh contrast, fragments, shifts,
+TEXEL1/water, DL-head order, raw GX matrices, and slow output remain debt.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; the shipped
 realtime ROM is `smash64ds-battle-playable-hwtri.nds`, avoiding collisions.
 Normal builds expose one controller; the canonical live-input build alone

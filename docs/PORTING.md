@@ -18792,3 +18792,33 @@ expectations: none.
 
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none.
+
+## 2026-07-11 - Fragment-order clamp and logical mask materialization
+
+- Traced Dream Land's filled star cards to per-vertex clamp in
+  `ndsRendererHardwareTexCoord`. BattleShip's bundled interpreter keeps
+  scaled/origin-adjusted varyings linear (`interpreter.cpp:3256-3289`), carries
+  logical bounds separately (`:3303-3314`), and clamps at fragment sampling
+  (`default.shader.glsl:163-183`). Exact star inputs now reach GX as
+  `(-51,16)`, `(143,407)`, and `(338,16)` rather than edge-clamped endpoints.
+- Materialized masked-clamp logical extents through the source address rule:
+  the 8-in-16 stars map `0..7,7..0`, 32-in-64 side objects map their mirrored
+  period, and the 64-in-128 canopy uses libnds `TEXTURE_SIZE_128`. The
+  32-in-192 island remains on bounded wrap/flip because it exceeds the current
+  upload limit. The diagnostic sampler now uses effective DS texture flags.
+- Corrected the screenshot detail crop labeled `right_bush`; it had included
+  the mostly flat source side platform. Thresholds remain `27%` variation and
+  32px maximum run, now over the flowering shrub cited by
+  `104_StagePupupuFile2.c:423-424` and
+  `103_StagePupupuImages.c:103-113`. Baseline/candidate are
+  `57.083%/13px` and `57.292%/20px` respectively.
+- Focused GBI, all-DL (`320/306`, zero rejects), stage-inclusive
+  (`192+626`, textures through `128x128`), and canonical realtime gates pass.
+  The canonical frame reports zero texture rejects and CPU-oracle mismatches;
+  `artifacts/visibility/2026-07-11_masked-clamp-linear-sampler-hudoff-stability-next.png`
+  visibly shows all six star cutouts. A 100ms tall-window second capture can
+  catch an OpenGL resize transition at 12fps; a one-second sample is stable.
+
+Source-corrected verifier expectations: texture-detail crop now measures the
+named shrub with unchanged thresholds. Coverage-reduced verifier expectations:
+none.

@@ -1132,16 +1132,18 @@ global head order unless the source explicitly resets them.
 Physical upload size and logical tile extent are separate contracts. N64
 `G_TX_CLAMP` bounds the logical `SetTileSize` range; a nonzero mask can still
 repeat or mirror a smaller physical upload inside that range. BattleShip's
-bundled `libultraship/src/fast/interpreter.cpp:3059-3099` computes those
-extents independently and removes sampler clamp when masked repeat/mirror is
-needed. The DS backend follows that rule only when the uploaded axis exactly
-matches `1 << mask`: it enables libnds wrap/flip for the physical period while
-clamping generated 12.4 coordinates to the logical tile edge. Ordinary
-clamp-only tiles remain unchanged. Dream Land file 104 proves both forms: a
-64-wide mirrored CI4 canopy upload inside a 128-wide tile and a 32-wide CI4
-stage upload repeated inside a 192-wide tile. Native screenshot gates measure
-horizontal detail in the right shrub and island body so routing counters alone
-cannot reintroduce the edge-column ribbons.
+bundled `libultraship/src/fast/interpreter.cpp:3059-3099,3256-3314` carries
+linear vertex varyings to the fragment sampler and keeps the logical clamp edge
+separate. The DS adapter therefore never clamps individual `glTexCoord2t16`
+vertices. When a masked-clamp logical axis fits the current 128-texel bound,
+the texture cache materializes it through the N64 mask/mirror address function
+and uses DS clamp-only sampling. This represents an 8-in-16 star, 32-in-64
+side object, and 64-in-128 canopy without changing geometry or UVs. Larger
+logical axes, including Dream Land's 32-in-192 island material, retain bounded
+wrap/flip behavior as explicit fidelity debt. Diagnostic sampling reads the
+effective DS wrap/flip flags rather than inferring them from source `CLAMP`.
+The fixed-camera gates measure the actual shrub and island body so routing
+counters alone cannot validate sampler regressions.
 
 Canonical HW still uses projected submission rather than the final raw GX
 matrix path. Source-depth X/Y/Z now come from the same current composed clip

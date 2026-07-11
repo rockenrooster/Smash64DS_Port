@@ -55,19 +55,11 @@ function Convert-N64TexCoordToDsT16 {
         [int]$Coord,
         [uint32]$Scale,
         [uint32]$Origin,
-        [int]$Offset = 0,
-        [uint32]$Extent = 0,
-        [uint32]$Mode = 0
+        [int]$Offset = 0
     )
     [Int64]$scaledT16 = ([Int64]$Coord * [Int64]$Scale) -shr 17
     [Int64]$originT16 = [Int64]$Origin -shl 2
-    [Int64]$result = $scaledT16 - $originT16 + $Offset
-    if ((($Mode -band 2) -ne 0) -and ($Extent -ne 0)) {
-        [Int64]$maxT16 = ([Int64]$Extent -shl 4) - 1
-        if ($result -lt 0) { $result = 0 }
-        if ($result -gt $maxT16) { $result = $maxT16 }
-    }
-    return [int]$result
+    return [int]($scaledT16 - $originT16 + $Offset)
 }
 function Test-N64MaskedClampNeedsWrap {
     param(
@@ -86,6 +78,37 @@ function Test-N64MaskedClampNeedsWrap {
     [uint32]$samplerExtent = $UploadExtent
     if (($Mode -band 1) -ne 0) { $samplerExtent = $samplerExtent -shl 1 }
     return (($Mode -band 1) -ne 0) -or ($samplerExtent -ne $TileExtent)
+}
+function Convert-N64MaskedTextureAddress {
+    param(
+        [uint32]$Coord,
+        [uint32]$Mode,
+        [uint32]$Mask
+    )
+    [uint32]$extent = 1 -shl $Mask
+    [uint32]$period = $Coord -shr $Mask
+    [uint32]$local = $Coord -band ($extent - 1)
+    if ((($Mode -band 1) -ne 0) -and (($period -band 1) -ne 0)) {
+        $local = $extent - 1 - $local
+    }
+    return $local
+}
+function Test-N64MaskedClampMaterialization {
+    param(
+        [uint32]$Mode,
+        [uint32]$Mask,
+        [uint32]$SourceExtent,
+        [uint32]$TileExtent
+    )
+    if ((($Mode -band 2) -eq 0) -or ($Mask -eq 0) -or
+        ($Mask -ge 31) -or ($SourceExtent -eq 0) -or
+        ($TileExtent -gt 128)) {
+        return $false
+    }
+    [uint32]$maskExtent = 1 -shl $Mask
+    return ($TileExtent -gt $maskExtent) -and
+        ($SourceExtent -ge $maskExtent) -and
+        ($SourceExtent -le $TileExtent)
 }
 function New-F3DEX2VtxW0 {
     param(
@@ -450,7 +473,26 @@ Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 3072 -Scale 0xCCCC -Origin 205) 
 Assert-True (Test-N64MaskedClampNeedsWrap -Mode 3 -Mask 6 -UploadExtent 64 -TileExtent 128) 'Dream Land mirrored canopy axis did not enable masked repeat inside its logical tile.'
 Assert-True (Test-N64MaskedClampNeedsWrap -Mode 2 -Mask 5 -UploadExtent 32 -TileExtent 192) 'Dream Land repeated stage axis did not enable masked repeat inside its logical tile.'
 Assert-True (-not (Test-N64MaskedClampNeedsWrap -Mode 2 -Mask 5 -UploadExtent 32 -TileExtent 32)) 'Ordinary 32-wide clamped texture incorrectly enabled masked repeat.'
-Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 6144 -Scale 0xFFFF -Origin 0 -Offset 16 -Extent 192 -Mode 2) 3071 'Dream Land repeated stage coordinate escaped the source SetTileSize clamp.'
+# File 104's first star deliberately extends beyond its 16x16 tile. The RSP
+# keeps these vertex varyings linear; logical clamp belongs after interpolation.
+Assert-Equal (Convert-N64TexCoordToDsT16 -Coord -134 -Scale 0xFFFF -Origin 0 -Offset 16) -51 'Dream Land star negative S was clamped before interpolation.'
+Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 2 -Scale 0xFFFF -Origin 0 -Offset 16) 16 'Dream Land star low T conversion changed.'
+Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 256 -Scale 0xFFFF -Origin 0 -Offset 16) 143 'Dream Land star center S conversion changed.'
+Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 784 -Scale 0xFFFF -Origin 0 -Offset 16) 407 'Dream Land star high T was clamped before interpolation.'
+Assert-Equal (Convert-N64TexCoordToDsT16 -Coord 646 -Scale 0xFFFF -Origin 0 -Offset 16) 338 'Dream Land star high S was clamped before interpolation.'
+# The star's 8-wide MIRROR mask is materialized across its independent
+# 16-wide logical clamp extent, so DS clamp can happen after interpolation.
+for ($i = 0; $i -lt 8; $i++) {
+    Assert-Equal (Convert-N64MaskedTextureAddress -Coord $i -Mode 3 -Mask 3) $i "Dream Land star first mask period changed at texel $i."
+    Assert-Equal (Convert-N64MaskedTextureAddress -Coord ($i + 8) -Mode 3 -Mask 3) (7 - $i) "Dream Land star mirrored mask period changed at texel $($i + 8)."
+}
+Assert-True (Test-N64MaskedClampMaterialization -Mode 3 -Mask 3 -SourceExtent 16 -TileExtent 16) 'Dream Land 8-in-16 star logical clamp was not materialized.'
+Assert-True (Test-N64MaskedClampMaterialization -Mode 3 -Mask 5 -SourceExtent 32 -TileExtent 64) 'Dream Land 32-in-64 platform logical clamp was not materialized.'
+Assert-True (Test-N64MaskedClampMaterialization -Mode 3 -Mask 6 -SourceExtent 64 -TileExtent 128) 'Dream Land 64-in-128 canopy logical clamp was not materialized.'
+Assert-True (-not (Test-N64MaskedClampMaterialization -Mode 2 -Mask 5 -SourceExtent 32 -TileExtent 192)) 'Dream Land 192-wide island silently exceeded the bounded logical-clamp upload path.'
+Assert-Equal (Convert-N64MaskedTextureAddress -Coord 32 -Mode 3 -Mask 5) 31 'Dream Land platform mirror boundary did not reverse the second mask period.'
+Assert-Equal (Convert-N64MaskedTextureAddress -Coord 63 -Mode 3 -Mask 5) 0 'Dream Land platform logical edge did not resolve to the mirrored source edge.'
+Assert-Equal (Convert-N64MaskedTextureAddress -Coord 127 -Mode 3 -Mask 6) 0 'Dream Land canopy logical edge did not resolve to the mirrored source edge.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
@@ -475,6 +517,7 @@ Assert-True ($renderer.Contains('glVertex3v16')) 'Renderer hardware path does no
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_WORLD_UNIT_SHIFT')) 'Renderer hardware world-unit conversion is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareVertexCoord')) 'Renderer hardware v16 vertex encoder is missing.'
 Assert-True ($renderer.Contains('glTexImage2D')) 'Renderer hardware texture upload path is missing.'
+Assert-True ($renderer.Contains('case 128u: value = TEXTURE_SIZE_128')) 'Renderer cannot materialize a source logical texture extent at its declared 128-texel bound.'
 Assert-True ($renderer.Contains('glTexCoord2t16')) 'Renderer hardware texture coordinates are missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_FMT_RGBA16')) 'Renderer RGBA16 texture format support is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_SIZ_32B')) 'Renderer RGBA32 texture size support is missing.'
@@ -515,7 +558,7 @@ Assert-True ($renderer.Contains('ndsRendererHardwareTextureSourceWidthPixels')) 
 Assert-True ($renderer.Contains('stats->texture_load_kind == NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer hardware upload does not limit source row stride to G_LOADTILE.'
 Assert-True ($renderer.Contains('source_origin_s = stats->texture_load_block_uls >> 2')) 'Renderer hardware upload does not honor LoadTile S origin.'
 Assert-True ($renderer.Contains('source_origin_t = stats->texture_load_block_ult >> 2')) 'Renderer hardware upload does not honor LoadTile T origin.'
-Assert-True ($renderer.Contains('((source_origin_t + y) * source_width) + source_origin_s + x')) 'Renderer hardware upload does not sample source sub-rect rows.'
+Assert-True ($renderer.Contains('((source_origin_t + source_y) * source_width)') -and $renderer.Contains('source_origin_s + source_x')) 'Renderer hardware upload does not sample source sub-rect rows through resolved mask addressing.'
 Assert-True ($renderer.Contains('((s64)coord * (s64)scale) >> 17')) 'Renderer hardware texcoords do not scale N64 vertex coordinates into DS t16 first.'
 Assert-True ($renderer.Contains('(s64)origin << 2')) 'Renderer hardware texcoords do not convert the 10.2 tile origin directly to DS t16.'
 Assert-True (-not $renderer.Contains('((s64)origin << 3)')) 'Renderer hardware texcoords still scale a tile origin converted into vertex-coordinate units.'
@@ -566,8 +609,12 @@ Assert-True ($renderer -match '(?s)static s32 ndsRendererHardwareUseTexture.*nds
 Assert-True ($renderer.Contains('NDS_RENDERER_MDSFT_TEXTFILT')) 'Renderer hardware texture-filter othermode constant is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureFilterOffset')) 'Renderer hardware texture-filter coordinate offset helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureMaskedClampNeedsWrap')) 'Renderer masked clamp/repeat ownership helper is missing.'
+Assert-True ($renderer.Contains('ndsRendererHardwareTextureMaterializesMaskedClamp')) 'Renderer masked logical-clamp materialization helper is missing.'
+Assert-True ($renderer.Contains('ndsRendererHardwareTextureMaskedAddress')) 'Renderer masked logical-clamp source-address helper is missing.'
+Assert-True ($renderer.Contains('(entry->params & GL_TEXTURE_WRAP_S) != 0u')) 'Renderer diagnostic S sampler does not use effective DS texture parameters.'
+Assert-True ($renderer.Contains('(entry->params & GL_TEXTURE_WRAP_T) != 0u')) 'Renderer diagnostic T sampler does not use effective DS texture parameters.'
 Assert-True ($renderer.Contains('render_tile->masks, upload_width')) 'Renderer S sampler state does not compare the N64 mask period with the uploaded extent.'
-Assert-True ($renderer.Contains('max_t16 = ((s64)extent << 4) - 1')) 'Renderer texture coordinates are not clamped to the source SetTileSize extent.'
+Assert-True (-not $renderer.Contains('max_t16 = ((s64)extent << 4) - 1')) 'Renderer still clamps vertex texture coordinates before raster interpolation.'
 Assert-True ($renderer.Contains('NDS_RENDERER_MDSFT_TEXTPERSP')) 'Renderer hardware texture-perspective othermode constant is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseTextureMatrix')) 'Renderer hardware texture-perspective GX texgen helper is missing.'
 Assert-True ($renderer.Contains('TEXGEN_TEXCOORD : TEXGEN_OFF')) 'Renderer hardware texture upload does not honor source texture-perspective state.'

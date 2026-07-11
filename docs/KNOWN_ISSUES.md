@@ -1073,13 +1073,16 @@
   The unflagged palette seed is an intentional compatibility path until
   command-order proof removes it. Tile-origin math now scales signed 10.5
   vertex coordinates before subtracting the independently converted 10.2
-  origin; its fixed-camera probe changed only `18/49152` pixels. The broad
-  horizontal ribbons were instead caused by treating N64 `CLAMP` as excluding
-  DS wrap even when a mask repeats or mirrors a smaller physical upload inside
-  a larger logical tile. That path is fixed and pixel-gated. Remaining texture
-  debt includes nonzero shifts, DXT-zero/pre-swizzled loads, TEXEL1/water, POT
-  padding without a mask period, and camera-wide state ownership. Do not
-  conflate physical upload dimensions with logical `SetTileSize` extents again.
+  origin; its fixed-camera probe changed only `18/49152` pixels. Broad ribbons
+  first came from suppressing masked repeat/mirror under source `CLAMP`.
+  Decorative stars then remained triangles because the DS path clamped each
+  vertex before interpolation. Varyings now stay linear, and masked-clamp
+  logical axes through 128 texels are materialized through the source address
+  function before DS clamp. Dream Land's 192-wide island axis remains above
+  that bound. Other texture debt includes nonzero shifts,
+  DXT-zero/pre-swizzled loads, TEXEL1/water, unmasked POT padding, and
+  camera-wide state ownership. Do not conflate mask, load, logical, or upload
+  extents again.
 - Projected HW submission now takes X/Y/Z from one current composed clip vertex.
   No-Z layers submit their synthetic far order directly in signed 20.12 NDC;
   the removed extra `<< 4` had made those layers occlude source-depth geometry.

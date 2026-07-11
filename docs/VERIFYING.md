@@ -118,6 +118,8 @@ baseline. The canonical texture-detail pixel ratchet explicitly passes
 `-OpenGL4x` and restores the config afterward; never compare its percentages
 with native-runner captures. Use `-OpenGL4x -MaximizeVertical` to expand a
 secondary inspection view to desktop height while preserving aspect ratio.
+After resizing an OpenGL window, allow at least one presented frame before a
+comparison capture; a 100ms sample can catch the resize transition at 12fps.
 Verifier launches use the same unthrottled interpreter policy automatically;
 their assertions are tied to emulated frames/timers, not host wall time. The
 non-runner config is restored after each verifier, while dedicated runner-slot

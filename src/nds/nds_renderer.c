@@ -2322,26 +2322,12 @@ static s32 ndsRendererHardwareUseTextureMatrix(
 }
 
 static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, u32 origin,
-                                       s32 offset, u32 extent, u32 mode)
+                                       s32 offset)
 {
     s64 scaled_t16 = ((s64)coord * (s64)scale) >> 17;
     s64 origin_t16 = (s64)origin << 2;
-    s64 result = scaled_t16 - origin_t16 + offset;
 
-    if (((mode & NDS_RENDERER_TX_CLAMP) != 0u) && (extent != 0u))
-    {
-        s64 max_t16 = ((s64)extent << 4) - 1;
-
-        if (result < 0)
-        {
-            result = 0;
-        }
-        else if (result > max_t16)
-        {
-            result = max_t16;
-        }
-    }
-    return (s16)result;
+    return (s16)(scaled_t16 - origin_t16 + offset);
 }
 
 static void ndsRendererProfileTextureCoord(s16 s, s16 t)
@@ -2706,6 +2692,7 @@ static s32 ndsRendererHardwareTextureSizeEnum(u32 size, int *out)
     case 16u: value = TEXTURE_SIZE_16; break;
     case 32u: value = TEXTURE_SIZE_32; break;
     case 64u: value = TEXTURE_SIZE_64; break;
+    case 128u: value = TEXTURE_SIZE_128; break;
     default:
         return FALSE;
     }
@@ -2748,6 +2735,38 @@ static s32 ndsRendererHardwareTextureMaskedClampNeedsWrap(
     }
     return (((mode & NDS_RENDERER_TX_MIRROR) != 0u) ||
             (sampler_extent != tile_extent)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererHardwareTextureMaterializesMaskedClamp(
+    u32 mode, u32 mask, u32 source_extent, u32 tile_extent)
+{
+    u32 mask_extent;
+
+    if (((mode & NDS_RENDERER_TX_CLAMP) == 0u) || (mask == 0u) ||
+        (mask >= 31u) || (source_extent == 0u) ||
+        (tile_extent > NDS_RENDERER_HW_TEXTURE_MAX_WIDTH))
+    {
+        return FALSE;
+    }
+    mask_extent = 1u << mask;
+    return ((tile_extent > mask_extent) &&
+            (source_extent >= mask_extent) &&
+            (source_extent <= tile_extent)) ? TRUE : FALSE;
+}
+
+static u32 ndsRendererHardwareTextureMaskedAddress(
+    u32 coord, u32 mode, u32 mask)
+{
+    u32 mask_extent = 1u << mask;
+    u32 period = coord >> mask;
+    u32 local = coord & (mask_extent - 1u);
+
+    if (((mode & NDS_RENDERER_TX_MIRROR) != 0u) &&
+        ((period & 1u) != 0u))
+    {
+        local = mask_extent - 1u - local;
+    }
+    return local;
 }
 
 static u32 ndsRendererHardwareTextureParams(
@@ -3388,12 +3407,12 @@ static void ndsRendererProfileTextureSample(s16 s, s16 t)
 
     sample_s = ndsRendererHardwareTextureWrapCoord(
         ((s32)s) >> 4, entry->profile_width,
-        (entry->key.render_tile_cms & NDS_RENDERER_TX_CLAMP) == 0u,
-        (entry->key.render_tile_cms & NDS_RENDERER_TX_MIRROR) != 0u);
+        (entry->params & GL_TEXTURE_WRAP_S) != 0u,
+        (entry->params & GL_TEXTURE_FLIP_S) != 0u);
     sample_t = ndsRendererHardwareTextureWrapCoord(
         ((s32)t) >> 4, entry->profile_height,
-        (entry->key.render_tile_cmt & NDS_RENDERER_TX_CLAMP) == 0u,
-        (entry->key.render_tile_cmt & NDS_RENDERER_TX_MIRROR) != 0u);
+        (entry->params & GL_TEXTURE_WRAP_T) != 0u,
+        (entry->params & GL_TEXTURE_FLIP_T) != 0u);
     if (((u32)sample_s >= entry->profile_width) ||
         ((u32)sample_t >= entry->profile_height))
     {
@@ -3460,7 +3479,11 @@ static s32 ndsRendererHardwareBindTexture(
     u32 texels;
     u32 bytes;
     u32 loaded_bytes;
+    u32 source_extent_width;
+    u32 source_extent_height;
     u32 source_width;
+    u32 source_read_width;
+    u32 source_read_height;
     u32 source_origin_s;
     u32 source_origin_t;
     u32 source_last_index;
@@ -3472,6 +3495,8 @@ static s32 ndsRendererHardwareBindTexture(
     u32 params;
     u32 render_tile_index;
     u32 render_tile_flags;
+    s32 materialize_s;
+    s32 materialize_t;
     const NDSRendererTileState *render_tile;
     u32 green_texels = 0u;
     u32 nonwhite_texels = 0u;
@@ -3585,6 +3610,22 @@ static s32 ndsRendererHardwareBindTexture(
             NDS_RENDERER_HW_TEXREJECT_BAD_DIMENSIONS);
         return FALSE;
     }
+    source_extent_width = width;
+    source_extent_height = height;
+    materialize_s = ndsRendererHardwareTextureMaterializesMaskedClamp(
+        render_tile->cms, render_tile->masks, source_extent_width,
+        render_tile->width);
+    materialize_t = ndsRendererHardwareTextureMaterializesMaskedClamp(
+        render_tile->cmt, render_tile->maskt, source_extent_height,
+        render_tile->height);
+    if (materialize_s != FALSE)
+    {
+        width = render_tile->width;
+    }
+    if (materialize_t != FALSE)
+    {
+        height = render_tile->height;
+    }
 
     upload_width = ndsRendererHardwareTextureNextPow2(width);
     upload_height = ndsRendererHardwareTextureNextPow2(height);
@@ -3609,11 +3650,15 @@ static s32 ndsRendererHardwareBindTexture(
     {
         source_origin_s = 0u;
         source_origin_t = 0u;
-        source_width = width;
+        source_width = source_extent_width;
     }
+    source_read_width = (materialize_s != FALSE) ?
+        (1u << render_tile->masks) : width;
+    source_read_height = (materialize_t != FALSE) ?
+        (1u << render_tile->maskt) : height;
     if ((source_width == 0u) ||
         (source_origin_s >= source_width) ||
-        (width > (source_width - source_origin_s)))
+        (source_read_width > (source_width - source_origin_s)))
     {
         ndsRendererHardwareRejectTexture(
             stats, format, size,
@@ -3622,8 +3667,8 @@ static s32 ndsRendererHardwareBindTexture(
     }
     ndsRendererRecordTextureLaneUse(config, format, size);
     source_last_index =
-        ((source_origin_t + height - 1u) * source_width) +
-        source_origin_s + width - 1u;
+        ((source_origin_t + source_read_height - 1u) * source_width) +
+        source_origin_s + source_read_width - 1u;
     source_texels = source_last_index + 1u;
     source_bytes = ndsRendererHardwareTextureSourceBytes(format, size,
                                                         source_texels);
@@ -3698,7 +3743,8 @@ static s32 ndsRendererHardwareBindTexture(
     }
 
     texels = width * height;
-    bytes = ndsRendererHardwareTextureSourceBytes(format, size, texels);
+    bytes = ndsRendererHardwareTextureSourceBytes(
+        format, size, source_read_width * source_read_height);
     if ((bytes == 0u) || (bytes > loaded_bytes))
     {
         ndsRendererHardwareRejectTexture(
@@ -3760,8 +3806,15 @@ static s32 ndsRendererHardwareBindTexture(
     {
         for (x = 0u; x < width; x++)
         {
+            u32 source_x = (materialize_s != FALSE) ?
+                ndsRendererHardwareTextureMaskedAddress(
+                    x, render_tile->cms, render_tile->masks) : x;
+            u32 source_y = (materialize_t != FALSE) ?
+                ndsRendererHardwareTextureMaskedAddress(
+                    y, render_tile->cmt, render_tile->maskt) : y;
             u32 src_index =
-                ((source_origin_t + y) * source_width) + source_origin_s + x;
+                ((source_origin_t + source_y) * source_width) +
+                source_origin_s + source_x;
             u32 dst_index = (y * upload_width) + x;
             u16 color =
                 ndsRendererHardwareTextureColor(config, format, size, texels_src,
@@ -4088,14 +4141,10 @@ static void ndsRendererHardwareSubmitVertex(
     {
         s16 s = ndsRendererHardwareTexCoord(vtx->s, scale_s,
                                             texture_origin_s,
-                                            texture_offset,
-                                            render_tile->width,
-                                            render_tile->cms);
+                                            texture_offset);
         s16 t = ndsRendererHardwareTexCoord(vtx->t, scale_t,
                                             texture_origin_t,
-                                            texture_offset,
-                                            render_tile->height,
-                                            render_tile->cmt);
+                                            texture_offset);
 
         ndsRendererProfileTextureCoord(s, t);
         ndsRendererProfileTextureSample(s, t);

@@ -73,19 +73,19 @@ composed clip vertex. No-Z layers submit synthetic far order directly in
 signed 20.12 NDC; removing an erroneous extra `<< 4` restores stage/fighter
 occlusion without the rejected global-depth-reversal or W-buffer probes.
 
-O2R `MObjSub` mixed-width lanes, aligned Dream Land starts, original floor
-adoption, and the observed one-cycle `PRIMITIVE * SHADE` material path remain
-live. Imported `grwallpaper.c` owns the original 300x220 source Sprite behind
-the 3D stage. The renderer now separates physical mask periods from logical
-`SetTileSize` extents: mask-backed `CLAMP` materials repeat/mirror on DS while
-coordinates still clamp at the logical edge. Capture
-`artifacts/visibility/2026-07-10_source-fighter-light-hudoff-final.png` retains
-localized canopy, shrub, and island-body detail. Its fixed-window GL4 gate
-reports shrub variation `29.931%` with a 28px maximum flat run and island-body
-variation `20.540%`; the striped baseline fails at `24.444%`/46px. Mario's
-source red/blue remains; VSBattle source light, modelview lighting, and RGBA
-material-light order are live. Harsh contrast, fragments, water/TEXEL1, and
-shifts remain; `1.2fps` presentation can trigger BGM resyncs.
+O2R `MObjSub` lanes, aligned Dream Land starts, original floor adoption, and
+the one-cycle `PRIMITIVE * SHADE` path remain live. Imported `grwallpaper.c`
+owns the source Sprite. Texture varyings now remain linear until sampling;
+masked-clamp axes through 128 texels materialize their logical extent through
+the source mask/mirror address function. Dream Land's six CI4 decorations are
+recognizable stars instead of filled triangles, while the 192-wide island axis
+remains bounded debt. Capture
+`artifacts/visibility/2026-07-11_masked-clamp-linear-sampler-hudoff-stability-next.png`
+retains canopy/shrub/island detail. The fixed-window GL4 gate reports actual
+shrub variation `57.292%`/20px, stage-body `20.540%`, meaningful delta
+`22.166%`, and zero texture rejects/oracle mismatches. Source fighter light and
+RGBA order remain live. Harsh contrast, fragments, water/TEXEL1, shifts, and
+slow presentation remain.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
