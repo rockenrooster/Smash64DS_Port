@@ -104,9 +104,8 @@ stage-carry, GX RAM, oracle, fighter-contract, and screenshot gates cover it.
 ## Current Notes
 
 Stable flags stay in `nds_build_config.h`; per-mode harness ID/Inishie scale
-live in `nds_scene_harness_config.h`. Interrupted compiler dependency files
-are sanitized before make parses them, so incremental builds recover without
-cleaning. Current RegressionCore timing is recorded in `docs/PORTING.md`.
+live in `nds_scene_harness_config.h`. Interrupted dependency files are sanitized
+before make parses them, so incremental builds recover without cleaning.
 
 The taskman allocator now tries `0x140000` and `0x130000` before its legacy
 1 MiB fallback, preventing source-display builds from overflowing after a
@@ -117,9 +116,10 @@ Fox enter Wait grounded on lines `3/2` at X `0/-1397`.
 
 Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
 live pads before each update, and has hard GX RAM, oracle, display-contract,
-and screenshot gates. The input bridge maps B/X/Y/L/R plus arrows/A/START.
-The fast scripted mode-163 ROM uses a distinct `-fast-hwtri` filename so
-Boundary/Regression builds cannot overwrite the shipped realtime ROM.
+and screenshot gates. DevFast incrementally builds it, runs one capture pass, rotates
+`latest.png` to `previous.png`, and requires exact canonical/shipped ROM parity.
+The scripted mode-163 ROM remains an internal `-fast-hwtri` target; three
+user-facing filenames represent only two unique configurations.
 
 The active `161/162` boundary is still bounded proof scaffolding, while
 `battle_playable` is the scene-level battle anchor.
@@ -131,14 +131,15 @@ Rejected load-time MObj and inactive camera-head probes stay reverted; follow-up
 FGM/voice and the original sequence player remain deferred.
 ## Verification
 
-This slice passed fixtures, focused `battle_playable`, DevFast, and Boundary at
-202 triangles. A fresh RegressionCore prebuild stamp passed; optional shards
-then found two verifier-infrastructure failures (moving crop and unsigned Int32
-parse), not ROM marker failures. Full Regression was skipped per Tyler's faster
-iteration request. Re-run the compact gates with:
+All four `P1Gate` legs passed: compact opening-to-Title, canonical live battle/
+capture, supplemental scripted mode-163 combat, and one-minute Results. Warm
+DevFast passed in `63.6s` with no compiler work; unchanged Boundary stayed green.
+The shadow profile changes no existing profile and is not the five-minute P1
+soak. Full Regression was skipped per Tyler's faster iteration request.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
+.\scripts\verify-p1-gate.ps1 -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 

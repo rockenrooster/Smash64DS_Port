@@ -3,7 +3,7 @@ param(
     [switch]$NoBuild,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
-    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
+    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','P1Gate','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
     [string]$Profile = 'Full',
     [string[]]$Only,
     [string]$From,
@@ -216,6 +216,16 @@ try {
         if ($NoBuild -and (Test-ScriptParameter -ScriptPath $scriptPath -Name 'NoBuild')) {
             $arguments += '-NoBuild'
         }
+        if (($Profile -eq 'P1Gate') -and
+            ($record.Name -eq 'opening_skip') -and
+            (Test-ScriptParameter -ScriptPath $scriptPath -Name 'Compact')) {
+            $arguments += '-Compact'
+        }
+        if (($Profile -eq 'P1Gate') -and
+            ($record.Name -eq 'battle_playable_realtime') -and
+            (Test-ScriptParameter -ScriptPath $scriptPath -Name 'FastIteration')) {
+            $arguments += '-FastIteration'
+        }
         Invoke-VerifyScript -Script $scriptPath -Arguments $arguments -Label $record.Name -RetryTransport
     }
     if ($Profile -eq 'Full' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
@@ -226,6 +236,8 @@ try {
         Write-Output 'BoundaryDirect verification profile passed.'
     } elseif ($Profile -eq 'Boundary' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
         Write-Output 'Boundary verification profile passed.'
+    } elseif ($Profile -eq 'P1Gate' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
+        Write-Output 'P1Gate verification profile passed.'
     } elseif ($Profile -eq 'Regression' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
         Write-Output 'Regression verification profile passed.'
     } elseif ($Profile -eq 'RegressionCore' -and -not $Only -and -not $From -and $ShardCount -eq 1) {

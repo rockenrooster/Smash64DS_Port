@@ -878,7 +878,7 @@ SCENE_BACKEND_SLICES := \
 all: $(OUTPUT).nds
 ifeq ($(TARGET),smash64ds-battle-playable-canonical-hwtri)
 all: $(PROJECT_ROOT)/smash64ds-battle-playable-hwtri.nds
-$(PROJECT_ROOT)/smash64ds-battle-playable-hwtri.nds: $(OUTPUT).nds
+$(PROJECT_ROOT)/smash64ds-battle-playable-hwtri.nds: $(OUTPUT).nds FORCE
 	@cp $< $@
 endif
 

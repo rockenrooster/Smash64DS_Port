@@ -66,11 +66,76 @@ foreach ($record in $registry) {
         Fail-Check "missing verifier script for '$($record.Name)': $($record.Script)"
     }
 }
-foreach ($wrapper in @('verify-current.ps1','verify-dev-fast.ps1','verify-boundary.ps1','verify-regression.ps1')) {
+foreach ($wrapper in @('verify-current.ps1','verify-dev-fast.ps1','verify-boundary.ps1','verify-p1-gate.ps1','verify-regression.ps1')) {
     $wrapperPath = Join-Path $PSScriptRoot $wrapper
     if (-not (Test-Path -LiteralPath $wrapperPath)) {
         Fail-Check "missing verifier wrapper script: $wrapper"
     }
+}
+$devFastText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-dev-fast.ps1') -Raw
+$openingSkipText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-opening-skip.ps1') -Raw
+$realtimeText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle-playable-realtime-harness.ps1') -Raw
+$p1GateText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-p1-gate.ps1') -Raw
+$verifyAllText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-all.ps1') -Raw
+$battleLoopText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
+$parityPath = Join-Path $PSScriptRoot 'check-battle-playable-rom-parity.ps1'
+if (-not (Test-Path -LiteralPath $parityPath -PathType Leaf)) {
+    Fail-Check 'missing canonical/shipped battle-playable ROM parity checker'
+}
+$forcedBuildTokenPattern = '(?<![A-Za-z0-9_-])[''"]?-B[''"]?(?![A-Za-z0-9_-])'
+if (($devFastText -notmatch "'-FastIteration'") -or
+    ($devFastText -match "Profile\s*=\s*'BoundaryDirect'") -or
+    ($devFastText -match $forcedBuildTokenPattern)) {
+    Fail-Check 'verify-dev-fast is not the incremental canonical fast-iteration path'
+}
+if (($p1GateText -notmatch 'TARGET=smash64ds BUILD=build') -or
+    ($p1GateText -notmatch 'NDS_DEV_SCENE_HARNESS=normal') -or
+    ($p1GateText -match $forcedBuildTokenPattern)) {
+    Fail-Check 'verify-p1-gate does not incrementally prepare its normal opening ROM'
+}
+if (($realtimeText -notmatch 'check-battle-playable-rom-parity\.ps1') -or
+    ($realtimeText -notmatch '\[switch\]\$FastIteration')) {
+    Fail-Check 'canonical realtime verifier is missing fast iteration or ROM parity'
+}
+if (($realtimeText -notmatch 'Resolve-MelonDSRunnerSlot') -or
+    ($realtimeText -notmatch '-MelonDS\s+\$captureMelonDS') -or
+    ($realtimeText -notmatch 'System\.Threading\.Mutex') -or
+    ($realtimeText -notmatch 'System\.IO\.File\]::Replace')) {
+    Fail-Check 'canonical realtime capture is missing runner-slot isolation or atomic stable publication'
+}
+if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
+    ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or
+    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[0\]\s*-ge\s*2.*?\$shwf\[1\]\s*-gt\s*0') -or
+    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
+    Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'
+}
+if ($verifyAllText -notmatch '(?s)\(\$Profile -eq ''P1Gate''\).*?\(\$record\.Name -eq ''battle_playable_realtime''\).*?\$arguments \+= ''-FastIteration''') {
+    Fail-Check 'P1Gate does not select the one-capture canonical fast path'
+}
+$compactExpectedMatch = [regex]::Match(
+    $openingSkipText,
+    '(?s)\$expected\s*=\s*if\s*\(\$Compact\)\s*\{\s*@\{(?<Compact>.*?)\}\s*\}\s*else\s*\{\s*@\{(?<Default>.*?)\}\s*\}'
+)
+if (($openingSkipText -notmatch '\[switch\]\$Compact') -or
+    (-not $compactExpectedMatch.Success) -or
+    ($compactExpectedMatch.Groups['Compact'].Value -match 'ROOM_RELOC_SYMBOL_COUNT') -or
+    ($compactExpectedMatch.Groups['Compact'].Value -notmatch "TASKMAN_RETURNS\s*=\s*'2'") -or
+    ($compactExpectedMatch.Groups['Compact'].Value -notmatch "ROOM_RELOC_MASK\s*=\s*'0xff'") -or
+    ($compactExpectedMatch.Groups['Compact'].Value -notmatch "ROOM_RELOC_DATA\s*=\s*'1'") -or
+    ($compactExpectedMatch.Groups['Compact'].Value -notmatch "ROOM_RELOC_WORD_SWAP_FAILS\s*=\s*'0'") -or
+    ($compactExpectedMatch.Groups['Compact'].Value -notmatch "ROOM_RELOC_POINTER_FAILS\s*=\s*'0'") -or
+    ($compactExpectedMatch.Groups['Compact'].Value -notmatch "ROOM_RELOC_SYMBOL_FAILS\s*=\s*'0'") -or
+    ($compactExpectedMatch.Groups['Default'].Value -notmatch "ROOM_RELOC_SYMBOL_COUNT\s*=\s*'43'")) {
+    Fail-Check 'opening skip compact contract does not preserve reloc failures while leaving exact historical counters in the default verifier'
+}
+if ($verifyAllText -notmatch '(?s)\(\$Profile -eq ''P1Gate''\).*?\(\$record\.Name -eq ''opening_skip''\).*?\$arguments \+= ''-Compact''') {
+    Fail-Check 'P1Gate does not select the compact opening skip contract'
+}
+if ($battleLoopText -notmatch '\[int64\]\$aobj32\.Groups\[4\]\.Value -eq 0') {
+    Fail-Check 'battle lifecycle verifier does not parse unsigned AObj32 failure count safely'
+}
+if ($makefileText -notmatch 'smash64ds-battle-playable-hwtri\.nds:\s+\$\(OUTPUT\)\.nds\s+FORCE') {
+    Fail-Check 'canonical build does not refresh the shipped battle-playable ROM unconditionally'
 }
 foreach ($record in $harnessRecords) {
     $expectedKey = $record.Harness.ToLowerInvariant()
@@ -121,6 +186,12 @@ Assert-ProfilePlan 'Boundary' @(
     'battle_mariofox_stage_mplivehit_status_loop',
     'menu_chain_mariofox_stage_mplivehit_status_loop',
     'battle_playable'
+)
+Assert-ProfilePlan 'P1Gate' @(
+    'opening_skip',
+    'battle_playable_realtime',
+    'battle_playable',
+    'battle_playable_match_lifecycle'
 )
 Assert-ProfilePlan 'Latest' @(
     'runtime',

@@ -128,22 +128,19 @@ Do not revisit the high-bit fighter branch for current fragments (`0/0` active M
 
 ## Verification
 
-For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical chunks:
+For docs-only edits, run `.\scripts\check-docs.ps1`. Use the visible canonical
+loop per meaningful edit and the additive shadow checkpoint for shared-runtime
+work:
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
+.\scripts\verify-p1-gate.ps1 -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Focused battle, DevFast, and Boundary passed at 202; the fresh RegressionCore prebuild stamp is valid. Full Regression was skipped per Tyler.
-Detach prebuilds expected to exceed 90 seconds and confirm by stamp:
-
-```powershell
-.\scripts\build-verify-profile.ps1 -Profile RegressionCore -Detach
-.\scripts\build-verify-profile.ps1 -Profile RegressionCore -VerifyStamp
-.\scripts\verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3
-.\scripts\check-harness-registry.ps1
-.\scripts\check-gbi-decode-fixtures.ps1
-```
+All four `P1Gate` legs passed; warm DevFast is `63.6s` with no compiler work,
+and unchanged Boundary passed. The scripted battle leg is supplemental and the
+one-minute lifecycle is not the five-minute P1 soak. Keep historical harnesses
+for localization; Full Regression was skipped for Tyler's faster cadence.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

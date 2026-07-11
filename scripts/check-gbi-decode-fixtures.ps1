@@ -1121,6 +1121,8 @@ Assert-True ($buildProfile.Contains("NDS_RENDERER_HW_TRIANGLES=1")) 'Profile pre
 Assert-True ($buildProfile.Contains('if (-not $NoSharedBuild)')) 'Profile prebuild -Force path disables shared builds.'
 Assert-True ($buildProfile.Contains('$forcedSharedBuilds')) 'Profile prebuild no longer limits -Force to one full rebuild per shared slot.'
 Assert-True ($buildProfile.Contains('$rendererSuffix')) 'Profile prebuild shared slots do not split hardware and software renderer object trees.'
+Assert-True ($buildProfile.Contains('if ($stamp.profile -ne $Profile)')) 'Profile prebuild stamp validation does not reject a stamp from another profile.'
+Assert-True ($buildProfile.Contains('Prebuild stamp profile mismatch: stamp={0} requested={1}')) 'Profile prebuild stamp mismatch does not identify the stamped and requested profiles.'
 $stageCollisionWrapper = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-stage-collision-loop-harness.ps1') -Raw
 Assert-True ($stageCollisionWrapper.Contains('HardwareTriangles')) 'Stage collision verifier hardware switch is missing.'
 Assert-True ($stageCollisionWrapper.Contains('SoftwarePreview')) 'Stage collision verifier software-preview opt-out is missing.'

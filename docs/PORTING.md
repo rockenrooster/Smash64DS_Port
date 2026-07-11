@@ -18990,3 +18990,52 @@ Source-corrected verifier expectations: stage HW output gains ten original
 flower triangles (`192 -> 202`) and fixtures require source-Z draws not to
 consume synthetic painter depth. Coverage-reduced verifier expectations: none;
 full Regression was not run by explicit user choice.
+
+## 2026-07-11 - Shadow P1 gate and visible canonical fast loop
+
+- Implemented the reviewed workflow additively. `P1Gate` contains compact
+  normal opening-to-Title, canonical realtime `FastIteration`, supplemental
+  scripted mode-163 combat/KO/rebirth, and the one-minute original timer-to-
+  Results path. Boundary, Regression, and Full memberships are unchanged; this
+  shadow checkpoint neither claims P1 completion nor replaces the required
+  five-minute canonical soak. Its default wrapper incrementally prepares the
+  normal opening ROM, so the documented command is clean-worktree complete.
+- Replaced DevFast's legacy mode-161/forced-normal-build path with GBI fixtures,
+  registry consistency, and an incremental canonical battle build. The
+  12-second fast path uses one visible capture run, publishes `latest.png` while
+  rotating `previous.png`, and does not pass `-B`. A true warm run performed no
+  compile/link/ROM work and passed in `63.559s`.
+- Canonical builds now refresh the shipped filename unconditionally; exact
+  byte length and SHA-256 replace a duplicate emulator launch. Final parity is
+  `11,578,368` bytes and
+  `C0A5AD77561A3C767B34A446540227E7A33D729D8B036A9F40F86F3BC7B58091`.
+  Runner-slot captures use the matching executable/config, high-resolution
+  PID-qualified names, and serialized atomic `latest`/`previous` publication.
+- The opening compact contract keeps the original injected controller skip,
+  scene/taskman transition, all eight relocation masks/content, zero relocation
+  failures, and positive Title rendering. It omits the historical exact symbol/
+  event stack and `<279` terminal-tick bound: current integrated samples report
+  symbol count `45` versus legacy `43` and can reach Title after tick `300+`.
+  The unchanged exact verifier remains directly callable for localization.
+- Added safe unsigned AObj32 failure-count parsing and profile identity to
+  prebuild-stamp validation. A warm P1Gate prebuild took `5.244s`; its stamp
+  validated as P1Gate and was correctly rejected when requested as
+  RegressionCore. Final no-build DevFast passed in `54.482s`.
+- All four P1Gate shards passed: opening `12.915s` including slot stagger,
+  canonical visual `58.620s`, scripted battle `27.3s`, and lifecycle `98.374s`
+  including stagger. The unchanged Boundary passed at `hwtri=202`, zero texture
+  rejects, and oracle `2403/0/0`; its `320.024s` time was one-time recompilation
+  in dedicated build dirs after Makefile/config changes. The final runner-slot
+  fast capture passed in `52s`. Full Regression was intentionally skipped for
+  Tyler's faster iteration cadence.
+- Canonical still reports `8/8 x0.1` pacing, about `0.8fps`; renderer caching
+  remains P1 debt. Accepted fast-loop capture:
+  `artifacts/visibility/2026-07-11_canonical_fast_140330-5991418-p17400.png`.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: P1Gate's opening leg checks stable scene outcomes instead of the
+legacy exact internal counter stack; realtime visual gates no longer require
+moving fighters to remain inside fixed color crops because the preceding GDB
+pass hard-proves selected/submitted/in-bounds fighter geometry; FastIteration
+uses camera-tolerant shrub/pond variation floors `40%/30%` while retaining the
+default `50%/35%` gate and both `16px/60px` flat-run caps.

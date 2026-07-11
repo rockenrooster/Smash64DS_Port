@@ -212,7 +212,7 @@ function Select-Smash64DSRegistryEntriesByName {
 
 function Get-Smash64DSVerifyPlan {
     param(
-        [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
+        [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','P1Gate','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
         [string]$Profile = 'Full',
         [string[]]$Only,
         [string]$From
@@ -247,6 +247,14 @@ function Get-Smash64DSVerifyPlan {
                 'battle_mariofox_stage_mplivehit_status_loop',
                 'menu_chain_mariofox_stage_mplivehit_status_loop',
                 'battle_playable'
+            )
+        }
+        'P1Gate' {
+            Select-Smash64DSRegistryEntriesByName $registry @(
+                'opening_skip',
+                'battle_playable_realtime',
+                'battle_playable',
+                'battle_playable_match_lifecycle'
             )
         }
         'Regression' {

@@ -48,6 +48,7 @@ Use the wrapper profiles while iterating:
 
 ```powershell
 .\scripts\verify-dev-fast.ps1
+.\scripts\verify-p1-gate.ps1
 .\scripts\verify-boundary.ps1
 .\scripts\verify-current.ps1
 .\scripts\verify-regression.ps1
@@ -56,6 +57,31 @@ Use the wrapper profiles while iterating:
 `verify-current.ps1` is the Latest profile wrapper. Do not run both
 `verify-current.ps1` and `verify-all.ps1 -Profile Latest` unless you are
 testing profile plumbing.
+
+`verify-dev-fast.ps1` now runs the GBI and registry checks, incrementally builds
+only `smash64ds-battle-playable-canonical-hwtri` unless `-NoBuild` is passed,
+and invokes its realtime verifier with `FastIteration`. It does not force a
+normal-ROM `-B` rebuild. That path uses a minimum 12-second smoke and one early
+capture run, rotates an existing `artifacts/visibility/latest.png` to
+`previous.png`, and publishes the accepted frame as `latest.png`. After the
+canonical build, `check-battle-playable-rom-parity.ps1` requires identical byte
+length and SHA-256 for the canonical and shipped ROM names. Runner-slot captures
+use that slot's emulator/config; stable alias rotation is serialized and atomic.
+
+The fast capture tolerates camera-dependent left-shrub and pond variation at
+40% and 30%, versus the checkpoint path's 50% and 35%; their 16px and 60px
+flat-run caps remain unchanged. Fixed fighter-color crops are not gates because
+the immediately preceding GDB verifier hard-proves both fighters' selected,
+submitted, and in-bounds display contracts.
+
+`P1Gate` is a shadow compact checkpoint with four legs: compact normal-opening
+smoke, canonical realtime `FastIteration`, supplemental deterministic/scripted
+mode-163 battle coverage, and the one-minute timer-to-Results lifecycle. It is
+additive: Boundary, Regression, and Full profile memberships remain unchanged,
+and legacy harnesses remain diagnostic. Passing it does not prove P1 completion
+or replace the required canonical five-minute milestone soak. Unless `-NoBuild`
+is passed, its wrapper incrementally prepares the normal opening ROM first;
+explicit `-Build` retains the existing forced-normal-rebuild behavior.
 
 After source changes that can affect normal boot/runtime, run:
 
@@ -91,6 +117,7 @@ from `scripts/lib/harness-registry.ps1`. List a profile without running it:
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile Boundary -List
+.\scripts\verify-all.ps1 -Profile P1Gate -List
 .\scripts\verify-all.ps1 -Profile Regression -List
 ```
 

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
+    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','P1Gate','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
     [string]$Profile = 'Boundary',
     [string[]]$Only,
     [string]$From,
@@ -120,6 +120,11 @@ function Test-PrebuildStamp {
         return $false
     }
     $stamp = Get-Content -LiteralPath $stampPath -Raw | ConvertFrom-Json
+    if ($stamp.profile -ne $Profile) {
+        Write-Error ("Prebuild stamp profile mismatch: stamp={0} requested={1}. Run .\scripts\build-verify-profile.ps1 -Profile {1} before -VerifyStamp." -f
+            $stamp.profile, $Profile)
+        return $false
+    }
     $currentRev = Get-GitHead
     if ($stamp.gitRev -ne $currentRev) {
         Write-Error "Prebuild stamp git rev mismatch: stamp=$($stamp.gitRev) current=$currentRev"
@@ -239,7 +244,7 @@ function Test-OptSizeHarnessMode {
     return $false
 }
 if ($ParallelBuilds -le 0) {
-    $ParallelBuilds = if ($Profile -in @('Full','Regression','RegressionCore')) { 4 } else { 1 }
+    $ParallelBuilds = if ($Profile -in @('Full','P1Gate','Regression','RegressionCore')) { 4 } else { 1 }
 }
 if ($ParallelBuildJobs -le 0) {
     $ParallelBuildJobs = if ($ParallelBuilds -gt 1) { 4 } else { 16 }

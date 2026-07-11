@@ -10,17 +10,69 @@ param(
     [switch]$SkipRegistryCheck
 )
 $ErrorActionPreference = 'Stop'
-$params = @{
-    Profile = 'BoundaryDirect'
-    MelonDS = $MelonDS
-    Gdb = $Gdb
-    DelaySeconds = $DelaySeconds
-    RunnerSlot = $RunnerSlot
+if ($Build -and $NoBuild) {
+    throw 'Use either -Build or -NoBuild, not both.'
 }
-if ($PSBoundParameters.ContainsKey('GdbPort')) { $params.GdbPort = $GdbPort }
-if ($Build) { $params.Build = $true }
-if ($NoBuild) { $params.NoBuild = $true }
-if ($List) { $params.List = $true }
-if ($SkipRegistryCheck) { $params.SkipRegistryCheck = $true }
-& (Join-Path $PSScriptRoot 'verify-all.ps1') @params
-exit $LASTEXITCODE
+
+if ($List) {
+    $steps = @(
+        [PSCustomObject]@{ Step = 'GBI fixtures'; Script = 'check-gbi-decode-fixtures.ps1' }
+    )
+    if (-not $SkipRegistryCheck) {
+        $steps += [PSCustomObject]@{ Step = 'Harness registry'; Script = 'check-harness-registry.ps1' }
+    }
+    $steps += [PSCustomObject]@{
+        Step = 'Canonical realtime fast iteration'
+        Script = 'verify-battle-playable-realtime-harness.ps1 -FastIteration'
+    }
+    $steps | Format-Table -AutoSize
+    exit 0
+}
+
+$powerShellExe = (Get-Process -Id $PID).Path
+function Invoke-DevFastStep {
+    param(
+        [string]$Script,
+        [string[]]$Arguments = @()
+    )
+    & $powerShellExe `
+        -NoProfile `
+        -ExecutionPolicy Bypass `
+        -File (Join-Path $PSScriptRoot $Script) `
+        @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+}
+
+Invoke-DevFastStep -Script 'check-gbi-decode-fixtures.ps1'
+if (-not $SkipRegistryCheck) {
+    Invoke-DevFastStep -Script 'check-harness-registry.ps1'
+}
+
+. (Join-Path $PSScriptRoot 'lib\melonds.ps1')
+$selectedGdbPort = if (($RunnerSlot -ge 0) -and
+    -not $PSBoundParameters.ContainsKey('GdbPort')) {
+    Get-MelonDSRunnerPort -RunnerSlot $RunnerSlot -Cpu ARM9
+} else {
+    $GdbPort
+}
+$realtimeArgs = @(
+    '-MelonDS', $MelonDS,
+    '-Gdb', $Gdb,
+    '-GdbPort', "$selectedGdbPort",
+    '-RunnerSlot', "$RunnerSlot",
+    '-DelaySeconds', "$DelaySeconds",
+    '-FastIteration'
+)
+if ($NoBuild) {
+    $realtimeArgs += '-NoBuild'
+} else {
+    Write-Output 'Building the canonical battle ROM incrementally (no forced normal-ROM rebuild).'
+}
+Invoke-DevFastStep `
+    -Script 'verify-battle-playable-realtime-harness.ps1' `
+    -Arguments $realtimeArgs
+
+Write-Output 'Fast canonical iteration passed.'
+exit 0

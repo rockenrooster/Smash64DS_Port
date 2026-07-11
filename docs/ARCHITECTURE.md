@@ -97,6 +97,25 @@ must remain development/verifier targets only.
 Generated build outputs belong in `build/` and root `smash64ds.*` artifacts.
 Do not edit generated output directories.
 
+## Development ROM Topology
+
+Three user-facing persistent filenames represent two unique configurations. `smash64ds.nds`
+is the normal opening/title build. The canonical realtime battle ROM and
+`smash64ds-battle-playable-hwtri.nds` shipped name are the same build bytes;
+the canonical target copies its output to the latter and the verifier requires
+equal length and SHA-256 rather than launching both.
+
+Mode `163` is one scene-level anchor, but its canonical realtime, deterministic
+scripted battle, and timer/Results scenarios still use compile-distinct targets.
+Moving those selections to runtime configuration on the same original gameplay
+path remains tooling debt; do not multiply persistent user-facing ROMs.
+
+The additive `P1Gate` composes a compact normal-opening smoke, canonical
+`FastIteration` capture, supplemental mode-163 battle, and one-minute lifecycle
+check. It changes neither runtime ownership nor Boundary/Regression/Full
+membership. It is a shadow checkpoint, not P1 completion or the required
+five-minute canonical soak; legacy harnesses remain diagnostic.
+
 ## Include Strategy
 
 The Makefile does not add `BattleShip-main/decomp/include` globally because

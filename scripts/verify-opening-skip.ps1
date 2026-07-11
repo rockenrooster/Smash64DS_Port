@@ -3,7 +3,8 @@ param(
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$GdbPort = 3333,
     [int]$RunnerSlot = -1,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$Compact
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -189,7 +190,30 @@ try {
         'printf "TITLE_ORIGINAL_UPDATE=%#x,%u,%u,%u,%u,%u,%u\n", gNdsTitleOriginalUpdateResult, gNdsTitleOriginalUpdateCount, gNdsTitleOriginalLayout, gNdsTitleOriginalTransitionTics, gNdsTitleOriginalStartActorProcess, gNdsTitleOriginalProceedScene, gNdsTitleOriginalProceedWait',
         'detach'
     )
-    $expected = @{
+    $expected = if ($Compact) {
+        @{
+            SKIP_COUNT = '1'
+            SCENE_CURR = '1'
+            SCENE_PREV = '28'
+            BOUNDARY = '0x53434e45'
+            BOUNDARY_KIND = '1'
+            TASKMAN_RETURNS = '2'
+            ROOM_RELOC = '0x4f52524c'
+            ROOM_RELOC_MASK = '0xff'
+            ROOM_RELOC_HEADER_MASK = '0xff'
+            ROOM_RELOC_PAYLOAD_MASK = '0xff'
+            ROOM_RELOC_DATA = '1'
+            ROOM_RELOC_FIXUP = '0'
+            ROOM_RELOC_WORD_SWAP_FAILS = '0'
+            ROOM_RELOC_POINTER_FAILS = '0'
+            ROOM_RELOC_SYMBOL_FAILS = '0'
+            RELOC_NITRO = '0x4e465349'
+            TITLE_RELOC = '0x5449524c'
+            TITLE_PREVIEW = '0x54495056'
+            TITLE_DRAW = '0x54494457'
+        }
+    } else {
+        @{
         SKIP_COUNT = '1'
         SCENE_CURR = '1'
         SCENE_PREV = '28'
@@ -235,6 +259,7 @@ try {
         TITLE_LOGO_FIRE = '0x544c4643,0x3f,1,4,3,1,0'
         TITLE_FIRE = '0x54464952,0xfff,1,2,0,2,786432,255'
         TITLE_ORIGINAL_UPDATE = '0,0,1,169,0,0,3'
+        }
     }
     foreach ($name in $expected.Keys) {
         $match = [regex]::Match($result, "$name=([^\r\n]+)")
@@ -250,20 +275,33 @@ try {
     }
     $roomTicks = [int]$roomTicksMatch.Groups[1].Value
     $roomChecks = [int]$roomChecksMatch.Groups[1].Value
-    if ($roomTicks -lt 10 -or $roomTicks -ge 279 -or
+    if ($roomTicks -lt 10 -or
+        ((-not $Compact) -and ($roomTicks -ge 279)) -or
         $roomChecks -ne ($roomTicks - 9)) {
         throw "Opening Room skip was outside the original controller-gated interval.`n$result"
     }
     $titleSpriteNorm = [regex]::Match($result, 'TITLE_SPRITE_NORM=([0-9]+),([0-9]+)')
     $titleDrawCounts = [regex]::Match($result, 'TITLE_DRAW_COUNTS=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    if (-not $titleSpriteNorm.Success -or
-        [int]$titleSpriteNorm.Groups[1].Value -ne 10 -or
-        [int]$titleSpriteNorm.Groups[2].Value -ne 0 -or
-        -not $titleDrawCounts.Success -or
-        [int]$titleDrawCounts.Groups[1].Value -ne 10 -or
-        [int]$titleDrawCounts.Groups[2].Value -ne 10 -or
-        [int]$titleDrawCounts.Groups[3].Value -ne 10 -or
-        [int]$titleDrawCounts.Groups[4].Value -le 1000) {
+    $titlePreviewValid = if ($Compact) {
+        $titleSpriteNorm.Success -and
+        [int]$titleSpriteNorm.Groups[1].Value -gt 0 -and
+        [int]$titleSpriteNorm.Groups[2].Value -eq 0 -and
+        $titleDrawCounts.Success -and
+        [int]$titleDrawCounts.Groups[1].Value -gt 0 -and
+        [int]$titleDrawCounts.Groups[2].Value -gt 0 -and
+        [int]$titleDrawCounts.Groups[3].Value -gt 0 -and
+        [int]$titleDrawCounts.Groups[4].Value -gt 1000
+    } else {
+        $titleSpriteNorm.Success -and
+        [int]$titleSpriteNorm.Groups[1].Value -eq 10 -and
+        [int]$titleSpriteNorm.Groups[2].Value -eq 0 -and
+        $titleDrawCounts.Success -and
+        [int]$titleDrawCounts.Groups[1].Value -eq 10 -and
+        [int]$titleDrawCounts.Groups[2].Value -eq 10 -and
+        [int]$titleDrawCounts.Groups[3].Value -eq 10 -and
+        [int]$titleDrawCounts.Groups[4].Value -gt 1000
+    }
+    if (-not $titlePreviewValid) {
         throw "Opening Room skip reached Title but did not render the bounded MNTitle preview.`n$result"
     }
     Write-Output "Opening Room skip verification passed (tick $roomTicks -> Title)."

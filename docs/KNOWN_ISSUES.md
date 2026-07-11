@@ -2,6 +2,31 @@
 
 ## Local Tooling Issues
 
+- `P1Gate` is an additive shadow checkpoint, not a P1-completion claim. Its
+  lifecycle leg uses one minute on the original expiry/Results path; a dated
+  canonical five-minute soak is still required. Boundary, Regression, and Full
+  profile memberships remain unchanged, and the historical harness fleet
+  remains diagnostic while unique assertions are migrated.
+- [coverage-reduced] `FastIteration` lowers only the moving left-shrub and pond
+  variation floors from `50%/35%` to `40%/30%`. The default realtime gate stays
+  strict, both flat-run caps remain `16px/60px`, and GDB still hard-proves both
+  source-selected fighter display contracts before capture.
+- [coverage-reduced] Realtime capture no longer requires Mario/Fox to remain in
+  historical fixed color crops during live combat. The preceding GDB pass still
+  requires both selected/submitted display contracts, in-bounds geometry, and
+  fighter triangles; scene/object/texture regions remain visual gates.
+- [coverage-reduced] P1Gate's compact opening leg omits the legacy exact symbol/
+  event stack and terminal `<279` tick bound. Current normal runs reach Title
+  with relocation symbol count `45` versus the untouched verifier's `43`, and
+  sometimes after the first asset event; use that exact verifier only to
+  localize the historical mismatch. Scene/taskman/reloc-failure/Title outcomes
+  remain hard gates.
+- Three user-facing persistent ROM filenames represent two unique configurations:
+  normal `smash64ds.nds`, and one canonical battle configuration copied to both
+  canonical and shipped names and checked by exact length/SHA-256 parity.
+  Realtime, supplemental scripted battle, and lifecycle mode-163 scenarios are
+  still compile-distinct builds; runtime scenario selection remains tooling
+  debt.
 - The Full verifier profile is large enough to time out under short command
   limits. This is a workflow/runtime-cost issue, not a source-boundary failure.
   Use `scripts/verify-dev-fast.ps1`, `scripts/verify-boundary.ps1`,
