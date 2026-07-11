@@ -69,7 +69,7 @@ single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
 all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
 Fighter playback seeds its initial light pair from the first selected source
 `MObjSub` (`0xffffff00/0x4c4c4c00`); overrides carry and fallback use is zero.
-Canonical proof reports `gxram=730/2214`, geometry `0x222005`, source cycle/
+Canonical proof reports `gxram=742/2251`, geometry `0x222005`, source cycle/
 render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
 Source-depth X/Y/Z share one composed clip vertex. Projected no-Z depth has
 source-backed background/foreground phases around the first source-Z triangle,
@@ -80,7 +80,8 @@ loaded-file and asset/generation provenance. Canonical Dream Land observes at
 least four water/Whispy swaps, zero native/failure cases, and first flags
 `0x0200 -> 0x006b`. The renderer resolves the source tile-6/TMEM-0x40 TEXEL1 and
 tile-7/TMEM-0 TEXEL0 independently, recognizes exact `G_CC_TEMPLERP`, and
-precomposes its CI4 pair with a DS RGBA5551/A1 approximation. Compatible
+precomposes its CI4 pair with a DS RGBA5551/A1 approximation. Each change builds
+all 256 palette-pair RGB/coverage values; addressing and Bayer A1 stay exact. Compatible
 animated state refreshes resident VRAM with frame pinning. The 184-frame gate
 has positive scene-lifetime refresh, zero eviction/reject/oracle drift, and a
 terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
@@ -94,13 +95,13 @@ source position/scale stay live and composed content is never cached. Proof is
 `build1/hit44/fast45/fallback0/opaque66000`; present fell
 `34,839,424 -> 24,764,160` ticks (`-28.9%`). Same-state GX triangle batching
 now spans only adjacent TRI1/TRI2 commands and closes at every other opcode or
-list exit. Canonical proves `begin103/reuse725/end103` with all `828` triangles
-and oracle results unchanged; present fell again to `24,238,464` (`-2.1%`),
-draw to `23,877,568` (`-0.8%`), while pacing remains `13/13 x0.1`. The dated
-capture is `artifacts/visibility/2026-07-11_canonical_fast_154544-4627518-p18756.png`.
+list exit. Proof remains `begin103/reuse725/end103` for all `828` triangles.
+The CI4 table cuts present `24,238,464 -> 20,285,888` (`-16.3%`), draw
+`23,877,568 -> 20,014,528` (`-16.2%`), and conversion `8,810,496 -> 5,035,776`
+(`-42.8%`); pacing is `16/16 x0.1`. Capture: `artifacts/visibility/2026-07-11_canonical_fast_162528-9583521-p27704.png`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
-cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
+cache eviction. Mode `163` reports headroom `236100`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
 `16` bytes of scratch. The separate 64 KiB BGM buffer leaves `172412` bytes
@@ -128,14 +129,13 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Next P1 work is Whispy and Mario light A/B, then measured renderer work,
+Next P1 work is continued measured renderer work, then Whispy/Mario light A/B,
 phase/shifts, fog, and gameplay-critical FGM/voice.
 ## Verification
 
-All four `P1Gate` legs pass in `278.9s`: compact opening-to-Title, canonical
-live battle/capture, supplemental mode-163 combat, and one-minute Results.
-Fresh Boundary passes in `152.2s`. This is not the five-minute P1 soak; Full
-Regression was skipped for Tyler's fast cadence.
+All four `P1Gate` legs pass in `180.8s`: opening-to-Title, canonical battle,
+mode-163 combat, and one-minute Results. Boundary passes in `77.6s`. This is
+not the five-minute P1 soak; Full Regression was skipped for Tyler's fast cadence.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

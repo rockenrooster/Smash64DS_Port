@@ -82,21 +82,20 @@ raw=4422960 resident=0 scratch=16`,
 `bgm=track0 play=1 stop=1 rate=44099 resident=65536`, and
 `hwsubmit=42`, `hwtri=202`, `hwftr=2/626`. FGM/voice, original sequence-player,
 and non-critical HUD/SObj/particle work remain follow-up.
-The memory ledger reports headroom `237948`, resident reloc `681632` bytes
+The memory ledger reports headroom `236100`, resident reloc `681632` bytes
 (`stage=202816`, `fighter=175440`, `if=208672`), stale bytes `0/0`, and
 `172412` bytes after the 64 KiB BGM buffer against the 128 KiB reserve.
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land;
-source-separated Mario/Fox bodies are broadly accepted on DS. The current
-capture retains the foreground fence and all five flower groups:
-`artifacts/visibility/2026-07-11_canonical_fast_152053-8952067-p21188.png`.
+source-separated Mario/Fox bodies are broadly accepted on DS.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
 Mario/Fox on lines `3/2` at X `0/-1397`. A source-shaped `gcAddMObjAll` wrapper
 uses loaded-file/asset-generation provenance for local O2R lane restoration.
 Canonical observes at least four water/Whispy swaps, no native/failure cases,
 and first flags `0x0200 -> 0x006b`. The renderer independently resolves
 tile-6/TMEM-0x40 TEXEL1 and tile-7/TMEM-0 TEXEL0, recognizes exact
-`G_CC_TEMPLERP`, and precomposes a DS RGBA5551/A1 approximation. A 184-frame
+`G_CC_TEMPLERP`, and precomposes a DS RGBA5551/A1 approximation. Its CI4 path
+builds all 256 pair values per change; addressing and Bayer A1 stay exact. A 184-frame
 gate proves positive scene-lifetime compatible-state refresh, zero eviction/
 reject/oracle drift, and terminal `12/12` matches. Pond detail is
 `46.053%/23px` versus white `27.997%/105px`.
@@ -104,8 +103,9 @@ Canonical lanes remain `37200/37200` and oracle `2403/0/0`. The exact 300x220
 wallpaper cache remains `1/44/45/fallback0/opaque66000`. Adjacent TRI1/TRI2
 commands now share a same-state GX batch, with every other source opcode and
 list exit as a hard boundary; proof is `begin103/reuse725/end103` for the
-unchanged `828` triangles. Present fell `24,764,160 -> 24,238,464` (`-2.1%`);
-draw fell `0.8%`, pacing remains `13/13 x0.1`, and the accepted capture is `artifacts/visibility/2026-07-11_canonical_fast_154544-4627518-p18756.png`.
+unchanged `828` triangles. The CI4 pair table then cuts present
+`24,238,464 -> 20,285,888` (`-16.3%`), draw `16.2%`, and texture conversion
+`42.8%`; pacing is `16/16 x0.1`. Accepted capture: `artifacts/visibility/2026-07-11_canonical_fast_162528-9583521-p27704.png`.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -122,8 +122,8 @@ realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Refine Whispy and Mario light A/B; cover phase/shifts and fog/color animation.
-2. Continue measured renderer work; batching alone leaves pacing at `1.3fps`.
+1. Continue measured renderer work; the exact water lookup leaves `1.6fps`.
+2. Refine Whispy and Mario light A/B; cover phase/shifts and fog/color animation.
 3. Keep the full five-minute soak for milestones rather than each edit.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
@@ -143,8 +143,8 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-All four compact P1Gate legs pass in `278.9s`, and fresh Boundary passes in
-`152.2s`. The lifecycle is not the five-minute P1 soak. Keep historical
+All four compact P1Gate legs pass in `180.8s`, and fresh Boundary passes in
+`77.6s`. The lifecycle is not the five-minute P1 soak. Keep historical
 harnesses for localization; Full Regression was skipped.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

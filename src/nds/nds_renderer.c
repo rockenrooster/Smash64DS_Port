@@ -94,6 +94,9 @@
 #define NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT 128u
 #define NDS_RENDERER_HW_TEXTURE_MAX_TEXELS \
     (NDS_RENDERER_HW_TEXTURE_MAX_WIDTH * NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT)
+#define NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT (16u * 16u)
+#define NDS_RENDERER_HW_TEXEL01_RGB_MASK 0x7fffu
+#define NDS_RENDERER_HW_TEXEL01_COVERAGE_SHIFT 15u
 #define NDS_RENDERER_HW_TEXTURE_FMT_RGBA16 0u
 #define NDS_RENDERER_HW_TEXTURE_FMT_CI 2u
 #define NDS_RENDERER_HW_TEXTURE_FMT_IA 3u
@@ -316,6 +319,8 @@ static const NDSRendererHardwareTextureCacheEntry
     *sNdsRendererHardwareActiveTextureEntry;
 static u16 sNdsRendererHardwareTextureScratch[
     NDS_RENDERER_HW_TEXTURE_MAX_TEXELS];
+static u32 sNdsRendererHardwareTexel01Ci4Lut[
+    NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT];
 
 static void ndsRendererHardwareEndBatch(void);
 #endif
@@ -4177,11 +4182,8 @@ static u32 ndsRendererHardwareTextureAddressCoord(
     return (u32)local;
 }
 
-static u16 ndsRendererHardwareTexel1Color(
+static u32 ndsRendererHardwareTexel1SourceIndex(
     const NDSRendererHardwareTexel1Source *source,
-    const NDSRendererConfig *config,
-    const u16 *palette,
-    u32 palette_count,
     s32 origin_delta_s,
     s32 origin_delta_t,
     u32 x,
@@ -4193,11 +4195,6 @@ static u16 ndsRendererHardwareTexel1Color(
     u32 addressed_y;
     u32 index;
 
-    if ((source == NULL) || (source->render_tile == NULL) ||
-        (source->texels == NULL))
-    {
-        return 0u;
-    }
     source_x = (s32)x + origin_delta_s;
     source_y = (s32)y + origin_delta_t;
     addressed_x = ndsRendererHardwareTextureAddressCoord(
@@ -4210,6 +4207,28 @@ static u16 ndsRendererHardwareTexel1Color(
         source->render_tile->maskt);
     index = ((source->source_origin_t + addressed_y) *
              source->source_width) + source->source_origin_s + addressed_x;
+    return index;
+}
+
+static u16 ndsRendererHardwareTexel1Color(
+    const NDSRendererHardwareTexel1Source *source,
+    const NDSRendererConfig *config,
+    const u16 *palette,
+    u32 palette_count,
+    s32 origin_delta_s,
+    s32 origin_delta_t,
+    u32 x,
+    u32 y)
+{
+    u32 index;
+
+    if ((source == NULL) || (source->render_tile == NULL) ||
+        (source->texels == NULL))
+    {
+        return 0u;
+    }
+    index = ndsRendererHardwareTexel1SourceIndex(
+        source, origin_delta_s, origin_delta_t, x, y);
     return ndsRendererHardwareTextureColor(
         config, source->format, source->size, source->texels, palette,
         palette_count, source->palette_base, index, TRUE);
@@ -4233,14 +4252,13 @@ static u32 ndsRendererHardwareExpand5To8(u32 value)
     return (value << 3) | (value >> 2);
 }
 
-static u16 ndsRendererHardwareBlendTexel01(u16 texel0, u16 texel1,
-                                           u32 fraction, u32 x, u32 y)
+static u32 ndsRendererHardwareBlendTexel01Value(u16 texel0, u16 texel1,
+                                                u32 fraction)
 {
     u32 inverse;
     u32 red;
     u32 green;
     u32 blue;
-    u32 alpha;
     u32 alpha_coverage;
     u32 texel0_red;
     u32 texel0_green;
@@ -4270,9 +4288,58 @@ static u16 ndsRendererHardwareBlendTexel01(u16 texel0, u16 texel1,
      * with an ordered 4x4 decision instead of unioning both silhouettes. */
     alpha_coverage = ((((texel0 >> 15) & 1u) * 0x100u * inverse) +
                       (((texel1 >> 15) & 1u) * 0x100u * fraction)) >> 8;
-    alpha = (alpha_coverage >
-             ndsRendererHardwareAlphaCoverageThreshold(x, y)) ? 1u : 0u;
-    return (u16)(red | (green << 5) | (blue << 10) | (alpha << 15));
+    return red | (green << 5) | (blue << 10) |
+        (alpha_coverage << NDS_RENDERER_HW_TEXEL01_COVERAGE_SHIFT);
+}
+
+static u16 ndsRendererHardwareResolveTexel01Value(u32 value, u32 x, u32 y)
+{
+    u32 alpha_coverage =
+        value >> NDS_RENDERER_HW_TEXEL01_COVERAGE_SHIFT;
+    u32 alpha = (alpha_coverage >
+                 ndsRendererHardwareAlphaCoverageThreshold(x, y)) ? 1u : 0u;
+
+    return (u16)((value & NDS_RENDERER_HW_TEXEL01_RGB_MASK) |
+                 (alpha << 15));
+}
+
+static u16 ndsRendererHardwareBlendTexel01(u16 texel0, u16 texel1,
+                                           u32 fraction, u32 x, u32 y)
+{
+    return ndsRendererHardwareResolveTexel01Value(
+        ndsRendererHardwareBlendTexel01Value(texel0, texel1, fraction),
+        x, y);
+}
+
+static void ndsRendererHardwareBuildTexel01Ci4Lut(
+    const NDSRendererConfig *config,
+    const u16 *palette,
+    u32 palette_count,
+    u32 palette0_base,
+    u32 palette1_base,
+    u32 fraction)
+{
+    u16 palette0[16];
+    u16 palette1[16];
+    u32 index0;
+    u32 index1;
+
+    for (index0 = 0u; index0 < 16u; index0++)
+    {
+        palette0[index0] = ndsRendererHardwarePaletteColor(
+            config, palette, palette0_base + index0, palette_count, TRUE);
+        palette1[index0] = ndsRendererHardwarePaletteColor(
+            config, palette, palette1_base + index0, palette_count, TRUE);
+    }
+    for (index0 = 0u; index0 < 16u; index0++)
+    {
+        for (index1 = 0u; index1 < 16u; index1++)
+        {
+            sNdsRendererHardwareTexel01Ci4Lut[(index0 << 4) | index1] =
+                ndsRendererHardwareBlendTexel01Value(
+                    palette0[index0], palette1[index1], fraction);
+        }
+    }
 }
 
 static s32 ndsRendererHardwareBindTexture(
@@ -4330,6 +4397,7 @@ static s32 ndsRendererHardwareBindTexture(
     s32 materialize_t;
     s32 wants_texel1;
     s32 use_texel1 = FALSE;
+    s32 use_texel1_ci4_lut = FALSE;
     s32 texel1_origin_delta_s = 0;
     s32 texel1_origin_delta_t = 0;
     const NDSRendererTileState *render_tile;
@@ -4734,6 +4802,18 @@ static s32 ndsRendererHardwareBindTexture(
         {
             palette_base = render_tile->palette * 16u;
             palette_entries += palette_base;
+            if ((use_texel1 != FALSE) &&
+                (texel1_source.format == NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
+                (texel1_source.size == NDS_RENDERER_HW_TEXTURE_SIZ_4B))
+            {
+                u32 texel1_palette_entries =
+                    texel1_source.palette_base + 16u;
+
+                if (texel1_palette_entries > palette_entries)
+                {
+                    palette_entries = texel1_palette_entries;
+                }
+            }
         }
         if ((stats->texture_tlut_image == 0u) ||
             (stats->texture_tlut_count < palette_entries))
@@ -4761,6 +4841,22 @@ static s32 ndsRendererHardwareBindTexture(
     }
 
     convert_start = cpuGetTiming();
+    if ((use_texel1 != FALSE) &&
+        (format == NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
+        (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
+        (texel1_source.format == NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
+        (texel1_source.size == NDS_RENDERER_HW_TEXTURE_SIZ_4B))
+    {
+        /* The source pond's two CI4 inputs can produce only 16x16 palette
+         * pairs for a given primitive LOD fraction. Precompute the exact
+         * RGB/coverage result once instead of repeating palette conversion
+         * and six channel multiplies for every output texel. */
+        ndsRendererHardwareBuildTexel01Ci4Lut(
+            config, tlut_src, stats->texture_tlut_count, palette_base,
+            texel1_source.palette_base, stats->prim_lod_fraction);
+        use_texel1_ci4_lut = TRUE;
+    }
+
     memset(sNdsRendererHardwareTextureScratch, 0,
            sizeof(sNdsRendererHardwareTextureScratch));
     for (y = 0u; y < height; y++)
@@ -4778,22 +4874,39 @@ static s32 ndsRendererHardwareBindTexture(
                 ((source_origin_t + source_y) * source_width) +
                 source_origin_s + source_x;
             u32 dst_index = (y * upload_width) + x;
-            u16 color =
-                ndsRendererHardwareTextureColor(config, format, size, texels_src,
-                                                tlut_src,
-                                                stats->texture_tlut_count,
-                                                palette_base,
-                                                src_index,
-                                                use_texel1);
-            if (use_texel1 != FALSE)
-            {
-                u16 color1 = ndsRendererHardwareTexel1Color(
-                    &texel1_source, config, tlut_src,
-                    stats->texture_tlut_count,
-                    texel1_origin_delta_s, texel1_origin_delta_t, x, y);
+            u16 color;
 
-                color = ndsRendererHardwareBlendTexel01(
-                    color, color1, stats->prim_lod_fraction, x, y);
+            if (use_texel1_ci4_lut != FALSE)
+            {
+                u32 index0 = ndsRendererReadTexturePackedNibble(
+                    config, texels_src, src_index, format, size);
+                u32 source1_index = ndsRendererHardwareTexel1SourceIndex(
+                    &texel1_source, texel1_origin_delta_s,
+                    texel1_origin_delta_t, x, y);
+                u32 index1 = ndsRendererReadTexturePackedNibble(
+                    config, texel1_source.texels, source1_index,
+                    texel1_source.format, texel1_source.size);
+
+                color = ndsRendererHardwareResolveTexel01Value(
+                    sNdsRendererHardwareTexel01Ci4Lut[
+                        (index0 << 4) | index1], x, y);
+            }
+            else
+            {
+                color = ndsRendererHardwareTextureColor(
+                    config, format, size, texels_src, tlut_src,
+                    stats->texture_tlut_count, palette_base, src_index,
+                    use_texel1);
+                if (use_texel1 != FALSE)
+                {
+                    u16 color1 = ndsRendererHardwareTexel1Color(
+                        &texel1_source, config, tlut_src,
+                        stats->texture_tlut_count,
+                        texel1_origin_delta_s, texel1_origin_delta_t, x, y);
+
+                    color = ndsRendererHardwareBlendTexel01(
+                        color, color1, stats->prim_lod_fraction, x, y);
+                }
             }
             sNdsRendererHardwareTextureScratch[dst_index] = color;
             ndsRendererProfileTexturePixel(color, &green_texels,

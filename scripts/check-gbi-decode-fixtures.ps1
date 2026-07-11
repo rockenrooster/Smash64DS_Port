@@ -157,6 +157,39 @@ function Blend-Texel01Rgb5551 {
     return [uint16]($red -bor ($green -shl 5) -bor ($blue -shl 10) -bor
         ($alpha -shl 15))
 }
+function Get-Texel01Ci4LutValue {
+    param(
+        [uint16]$Texel0,
+        [uint16]$Texel1,
+        [uint32]$Fraction
+    )
+    if ($Fraction -gt 0xff) { $Fraction = 0xff }
+    $inverse = 0x100 - $Fraction
+    $r0 = (((($Texel0 -shr 0) -band 0x1f) -shl 3) -bor ((($Texel0 -shr 0) -band 0x1f) -shr 2))
+    $g0 = (((($Texel0 -shr 5) -band 0x1f) -shl 3) -bor ((($Texel0 -shr 5) -band 0x1f) -shr 2))
+    $b0 = (((($Texel0 -shr 10) -band 0x1f) -shl 3) -bor ((($Texel0 -shr 10) -band 0x1f) -shr 2))
+    $r1 = (((($Texel1 -shr 0) -band 0x1f) -shl 3) -bor ((($Texel1 -shr 0) -band 0x1f) -shr 2))
+    $g1 = (((($Texel1 -shr 5) -band 0x1f) -shl 3) -bor ((($Texel1 -shr 5) -band 0x1f) -shr 2))
+    $b1 = (((($Texel1 -shr 10) -band 0x1f) -shl 3) -bor ((($Texel1 -shr 10) -band 0x1f) -shr 2))
+    $red = ((($r0 * $inverse) + ($r1 * $Fraction)) -shr 8) -shr 3
+    $green = ((($g0 * $inverse) + ($g1 * $Fraction)) -shr 8) -shr 3
+    $blue = ((($b0 * $inverse) + ($b1 * $Fraction)) -shr 8) -shr 3
+    $alphaCoverage = (((($Texel0 -shr 15) -band 1) * 0x100 * $inverse) +
+        ((($Texel1 -shr 15) -band 1) * 0x100 * $Fraction)) -shr 8
+    return [uint32]($red -bor ($green -shl 5) -bor ($blue -shl 10) -bor
+        ($alphaCoverage -shl 15))
+}
+function Resolve-Texel01Ci4LutValue {
+    param(
+        [uint32]$Value,
+        [uint32]$X,
+        [uint32]$Y
+    )
+    $bayer = @(0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5)
+    $threshold = ($bayer[(($Y -band 3) -shl 2) -bor ($X -band 3)] -shl 4) + 8
+    $alpha = if (($Value -shr 15) -gt $threshold) { 1 } else { 0 }
+    return [uint16](($Value -band 0x7fff) -bor ($alpha -shl 15))
+}
 function Convert-N64Rgba16ToDs {
     param(
         [uint16]$Color,
@@ -671,6 +704,37 @@ for ($coverageY = 0; $coverageY -lt 4; $coverageY++) {
     }
 }
 Assert-Equal $coverageCount 4 'Dream Land A1 coverage approximation did not retain the source quarter-alpha mean.'
+$lutPalette0 = [uint16[]](0..15 | ForEach-Object {
+    (($_ * 3) -band 0x1f) -bor (((($_ * 5) -band 0x1f)) -shl 5) -bor
+        (((($_ * 7) -band 0x1f)) -shl 10) -bor ((($_ -band 1)) -shl 15)
+})
+$lutPalette1 = [uint16[]](0..15 | ForEach-Object {
+    (((31 - $_ * 2) -band 0x1f)) -bor (((($_ * 11) -band 0x1f)) -shl 5) -bor
+        (((($_ * 13) -band 0x1f)) -shl 10) -bor (((($_ + 1) -band 1)) -shl 15)
+})
+foreach ($lutFraction in @(0, 1, 0x40, 0x72, 0xff)) {
+    for ($lutIndex0 = 0; $lutIndex0 -lt 16; $lutIndex0++) {
+        for ($lutIndex1 = 0; $lutIndex1 -lt 16; $lutIndex1++) {
+            $lutValue = Get-Texel01Ci4LutValue `
+                -Texel0 $lutPalette0[$lutIndex0] `
+                -Texel1 $lutPalette1[$lutIndex1] `
+                -Fraction $lutFraction
+            for ($lutY = 0; $lutY -lt 4; $lutY++) {
+                for ($lutX = 0; $lutX -lt 4; $lutX++) {
+                    $lutExpected = Blend-Texel01Rgb5551 `
+                        -Texel0 $lutPalette0[$lutIndex0] `
+                        -Texel1 $lutPalette1[$lutIndex1] `
+                        -Fraction $lutFraction -X $lutX -Y $lutY
+                    $lutActual = Resolve-Texel01Ci4LutValue `
+                        -Value $lutValue -X $lutX -Y $lutY
+                    if ($lutActual -ne $lutExpected) {
+                        throw "TEXEL0/TEXEL1 CI4 lookup diverged at pair $lutIndex0/$lutIndex1, fraction $lutFraction, pixel $lutX/${lutY}: expected $lutExpected, got $lutActual."
+                    }
+                }
+            }
+        }
+    }
+}
 $pondMObj = Convert-MObjSubMixedFields -Pad00 0x0202 -Fmt 0 -Siz 0 -Flags 0x0200 -BlockFmt 0x6b -BlockSiz 0
 Assert-True ($pondMObj.Pad00 -eq 0 -and $pondMObj.Fmt -eq 2 -and $pondMObj.Siz -eq 2 -and $pondMObj.Flags -eq 0x006b -and $pondMObj.BlockFmt -eq 2 -and $pondMObj.BlockSiz -eq 0) 'Dream Land water MObjSub mixed fields did not recover the source layout.'
 $whispyMObj = Convert-MObjSubMixedFields -Pad00 0x0202 -Fmt 0 -Siz 0 -Flags 0x0200 -BlockFmt 1 -BlockSiz 0
@@ -863,7 +927,12 @@ Assert-True ($renderer.Contains('ndsRendererHardwarePrepareTexel1Source')) 'Rend
 Assert-True ($renderer.Contains('key.texel1_image = load->image')) 'Renderer composite cache key omits the TEXEL1 source image.'
 Assert-True ($renderer.Contains('key.prim_lod_fraction = stats->prim_lod_fraction')) 'Renderer composite cache key omits the source blend fraction.'
 Assert-True ($renderer.Contains('ndsRendererHardwareBlendTexel01')) 'Renderer does not precompose the source TEXEL0/TEXEL1 result for DS hardware.'
-Assert-True ($renderer.Contains('color, color1, stats->prim_lod_fraction')) 'Renderer texture upload loop does not consume both source texels and the original fraction.'
+Assert-True ($renderer.Contains('ndsRendererHardwareBuildTexel01Ci4Lut')) 'Renderer does not precompute the exact 16x16 CI4 palette-pair blend table.'
+Assert-True ($renderer.Contains('sNdsRendererHardwareTexel01Ci4Lut[(index0 << 4) | index1]')) 'Renderer CI4 blend lookup is not keyed by both source palette indices.'
+Assert-True ($renderer.Contains('texel1_palette_entries =') -and $renderer.Contains('texel1_source.palette_base + 16u')) 'Renderer TLUT pointer validation does not cover the TEXEL1 CI4 palette bank.'
+Assert-True ($renderer.Contains('texel1_palette_entries > palette_entries')) 'Renderer does not resolve the maximum TEXEL0/TEXEL1 CI4 palette span.'
+Assert-True ($renderer.Contains('use_texel1_ci4_lut != FALSE')) 'Renderer upload loop does not select the CI4 TEXEL0/TEXEL1 lookup path.'
+Assert-True ($renderer.Contains('color, color1, stats->prim_lod_fraction')) 'Renderer retained generic TEXEL0/TEXEL1 fallback does not consume both source texels and the original fraction.'
 Assert-True ($renderer.Contains('preserve_transparent_rgb')) 'Renderer composite decode does not preserve transparent source RGB before color lerp.'
 Assert-True ($renderer.Contains('ndsRendererHardwareFindTexel1RefreshTexture')) 'Renderer does not retain one allocation across source water animation updates.'
 Assert-True ($renderer.Contains('entry->last_used_frame !=')) 'Renderer does not prevent incompatible same-frame composite allocation reuse.'

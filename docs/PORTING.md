@@ -19150,3 +19150,37 @@ the generic/SW SObj path and historical profiles remain available.
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none; the integrated canonical gate adds batch invariants without
 removing historical diagnostics.
+
+## 2026-07-11 - Exact CI4 TEXEL0/TEXEL1 palette-pair lookup
+
+- Profiled canonical Dream Land after triangle batching: animated texture
+  conversion still consumed `8,810,496` of `9,749,504` texture ticks. The two
+  source CI4 water images produce only 16x16 palette-index pairs at each live
+  primitive LOD fraction, while the old loop repeated palette conversion and
+  six channel lerps for all `18,432` output texels.
+- Added a renderer-owned 256-entry table containing the exact RGB and alpha-
+  coverage blend for the active fraction. Each palette is converted once per
+  changed texture. Primary/TEXEL1 source indexing, O2R lanes, tile addressing,
+  ordered 4x4 A1 resolution, the retained generic blend fallback, and the cache/
+  resident-VRAM refresh path are unchanged. TLUT pointer validation now spans
+  the higher end of both 16-entry palette banks before either is read.
+- The host fixture exhaustively compares all 256 palette pairs at fractions
+  `0,1,0x40,0x72,0xff` and all 16 Bayer positions against the prior blend
+  oracle. Canonical retains `37200/37200` lanes, two uploads/`36,864` bytes,
+  `2484/828` hardware output, `103/725/103` batches, and oracle `2403/0/0`.
+- Deterministic canonical samples cut present `24,238,464 -> 20,285,888`
+  (`-16.3%`), draw `23,877,568 -> 20,014,528` (`-16.2%`), texture
+  `9,749,504 -> 5,967,936` (`-38.8%`), and conversion
+  `8,810,496 -> 5,035,776` (`-42.8%`). Pacing improves `13 -> 16 x0.1` FPS;
+  real-time performance remains P1-blocking. Memory reserve is `236,100` bytes.
+- DevFast, all four P1Gate legs (`180.8s`), and fresh Boundary (`77.6s`) pass.
+  Canonical/shipped parity is `11,581,440` bytes at SHA-256
+  `A873A0FA7FB5BADAF168F5F98A593E57845D55ED8C82A08D942399AE34134775`.
+  The accepted capture is
+  `artifacts/visibility/2026-07-11_canonical_fast_162528-9583521-p27704.png`;
+  pond, flowers, foreground fence ordering, and fighters remain intact. Full
+  Regression was intentionally skipped for Tyler's faster P1 cadence.
+
+Source-corrected verifier expectations: none. Coverage-reduced verifier
+expectations: none; the lookup is exact against the prior pixel oracle and the
+generic path remains available.

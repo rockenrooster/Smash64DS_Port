@@ -1127,7 +1127,7 @@
   range without consuming a synthetic slot. This restores source layer-3 over
   layer-1 ordering. Exact raw-GX/no-Z behavior remains deferred. Full source-selected
   fighter submission plus the current CPU-scaled 300x220 wallpaper and water
-  precomposition presents at about `1.3fps`; renderer work remains P1 debt.
+  precomposition now presents at about `1.6fps`; renderer work remains P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native
@@ -1157,8 +1157,10 @@
   Whispy, flowers, fences, or fighters. Canonical present cost fell from
   `34,839,424` to `24,764,160` ticks (`-28.9%`). Adjacent same-state triangle
   batching proves `103/725/103` begin/reuse/end for all `828` triangles and
-  reduces present again to `24,238,464` (`-2.1%`), but pacing remains only
-  `13/13 x0.1`; broader renderer work remains.
+  reduces present again to `24,238,464` (`-2.1%`). An exact 256-entry CI4
+  palette-pair table preserves source addressing/coverage while reducing
+  present to `20,285,888` (`-16.3%`) and conversion to `5,035,776` (`-42.8%`);
+  pacing is still only `16/16 x0.1`, so broader renderer work remains.
   Audible BGM resyncs remain possible while frames exceed the half-buffer
   deadline. Lane totals remain aggregate conversion observations covered by
   host byte/halfword fixtures.

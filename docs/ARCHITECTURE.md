@@ -1203,8 +1203,15 @@ writes the animated primitive LOD fraction. The renderer retains the two most
 recent load windows and resolves both render-tile TMEM bases independently. It
 recognizes the exact Pupupu `0xfc272c04/0x1f0c93ff` mux and CPU-precomposes its
 CI4 pair into DS RGBA5551; ordered 4x4 A1 coverage approximates blended source
-alpha. Other two-texture formulas remain unmodeled single-texture debt. The
-cache key contains both sources, tile windows, and LOD fraction. Compatible
+alpha. The exact CI4 path converts each source's 16 palette entries once and
+builds all 256 pair RGB/coverage values for the active fraction; pixels retain
+the same source addressing and Bayer A1 decision. The prior generic per-texel
+blend remains guarded for future eligibility expansion, but current preparation
+accepts only the proven CI4 pair. An exhaustive host oracle compares every pair
+at five fractions and all 16 Bayer positions. Other two-texture formulas remain
+unmodeled single-texture debt. TLUT pointer validation spans the higher end of
+both source palette banks. The cache key contains both sources, tile windows,
+and LOD fraction. Compatible
 animated-state changes reuse an allocation and DMA replacement pixels through
 the bundled sm64-nds bank-remap pattern; frame pinning prevents rewriting or
 evicting textures referenced by submitted polygons. Refresh/eviction health is
