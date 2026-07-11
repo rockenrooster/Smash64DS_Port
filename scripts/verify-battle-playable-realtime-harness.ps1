@@ -10,7 +10,7 @@ param(
     [int]$ScreenshotDelaySeconds = 8,
     [int]$ScreenshotSecondDelaySeconds = 1,
     [int]$ScreenshotSecondDelayMilliseconds = 100,
-    [double]$MaxScreenshotChangedFraction = 0.25,
+    [double]$MaxScreenshotChangedFraction = 0.30,
     [double]$MinScreenshotGreenFraction = 0.03,
     [double]$MinScreenshotDetailFraction = 0.25,
     [double]$MinFighterRegionFraction = 0.10,
@@ -34,7 +34,11 @@ $textureDetailRegions = @(
     # StagePupupuFile2.c:423-424 and StagePupupuImages.c:103-113 place the
     # flowering side object below the platform; keep this texture gate on it.
     'left_bush:70,88,40,20,0.50,16',
-    'stage_body:50,115,165,30,0.30,0'
+    'stage_body:50,115,165,30,0.30,0',
+    # StagePupupuFile2.c:621-680 supplies the two animated water MObjs.
+    # The pre-fix white oval measured 27.997% / 105px at threshold 20;
+    # the accepted TEXEL0/TEXEL1 frame measures 44.115% / 23px.
+    'pond:82,125,115,24,0.35,60'
 )
 function Invoke-VisibleCaptureAssert {
     param(

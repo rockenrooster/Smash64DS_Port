@@ -1310,7 +1310,8 @@ Opening movie / Opening Portraits:
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
   completed update, and nonzero timer-derived rates. The canonical HW smoke
-  currently reports about `1.2` fps with the source wallpaper; pass
+  currently reports about `0.7` fps with source wallpaper and water
+  precomposition; pass
   `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
 - `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
@@ -1336,10 +1337,17 @@ Opening movie / Opening Portraits:
 - `RENDER_TEXTURE`: canonical HW texture trace marker. Fields are converted
   source texels, dominant-green converted texels, non-white converted texels,
   textured vertices, in-range texture-coordinate sample count, samples over a
-  texture with green texels, samples over a texture with non-white texels, and
-  S/T min/max. The screenshot gate is the pixel-level proof; this marker proves
+  texture with green texels, samples over a texture with non-white texels,
+  cache-alias avoidance count, and S/T min/max. The screenshot gate proves
   converted source texture content and sane submitted S/T without keeping a
   copied texel cache resident.
+- `RENDER_TEXEL1`: Dream Land DS water-composite marker. Fields are calls,
+  TMEM-load matches, rejects, reject-reason mask, last primitive LOD fraction,
+  current/next images, packed TEXEL1/primary tile state, compatible animated-
+  state VRAM refreshes, and cache evictions. The last two are scene-lifetime.
+  Canonical requires positive matched/refreshed work, distinct images, and zero
+  rejects, reasons, or evictions. Exact mux recognition feeds an RGBA5551/A1
+  approximation; relative 10.2 phase still rounds to whole texels.
 - `RENDER_TEXFMT`: canonical HW texture-format trace marker. Fields are
   converted-format mask, bound-format mask, palette-bound-format mask,
   rejected-format mask, and reject-reason mask. The canonical gate currently
@@ -1383,9 +1391,11 @@ Opening movie / Opening Portraits:
   at least 3% dominant-green pixels, at least 25% non-white/non-green detail
   pixels, nonzero fighter-region pixels in the expected Mario/Fox region, and
   at least 50% detail in the source-sky region. Temporal comparison counts
-  channel deltas of at least 25, allows no more than 25% meaningful changed
-  pixels, and caps mean max-channel delta at 32; the latter keeps the archived
-  flashing frame red while allowing detailed wallpaper parallax. Keep the
+  channel deltas of at least 25, allows no more than 30% meaningful changed
+  pixels, and caps mean max-channel delta at 32; this rejects the archived
+  flashing frame while allowing source-scene motion after animated materials. The
+  pond crop also requires 35% horizontal variation and no flat run over 60px;
+  the accepted frame is `46.053%/23px`, versus white `27.997%/105px`. Keep the
   first capture delay at 12 seconds or more: an 8-second shipped-ROM probe
   reached the first source wallpaper BG commit before the first complete 3D
   frame, while the 12-second rerun was stable.
@@ -1418,6 +1428,10 @@ Opening movie / Opening Portraits:
   generation-registry overflow. A green run leaves all values zero.
 - `AOBJ32_COLOR`: number of host-independent packed-RGBA output corrections
   applied after original `gcPlayMObjMatAnim`; normal boot requires it positive.
+- `MOBJ_ATTACH`: source-shaped `gcAddMObjAll` wrapper marker. Fields are swapped
+  copies, already-native copies, failures, first source flags, and first native
+  flags. Canonical Dream Land requires at least four active water/Whispy swaps,
+  zero native/failure cases, and first pair `0x0200/0x006b`.
 - `gNdsSCVSBattleCompatSpawnMask`: deterministic spawn-position queries from
   `mpCollisionGetPlayerMapObjPosition`.
 - `gNdsSCVSBattleOriginalUpdateResult` / `UpdateCount`: one bounded

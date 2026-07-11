@@ -18916,3 +18916,51 @@ verifier expectations: none.
 Source-corrected verifier expectations: the texture-detail crop follows the
 same source flowering object at the current camera; its threshold is unchanged.
 Coverage-reduced verifier expectations: none.
+
+## 2026-07-11 - Dream Land material attachment and TEXEL1 pond
+
+- Traced the large pond to `104_StagePupupuFile2.c` material flags `0x006b`
+  and BattleShip `objdisplay.c:1225-1430`: tile 6/TMEM `0x40` loads the next
+  CI4 image, tile 7/TMEM `0` loads the current image, and primitive LOD fraction
+  drives exact mux words `0xfc272c04/0x1f0c93ff`. The live O2R records reached
+  `gcAddMObjAll` with mixed-width lanes still word-swapped.
+- Added a source-shaped attachment wrapper preserving `objanim.c:2429-2455`.
+  Loaded-file plus asset/generation provenance distinguishes native/in-place
+  normalized records from raw O2R records; local conversion is validated and
+  fails closed before unchanged `gcAddMObjForDObj` copies it. Canonical Dream
+  Land observes at least four active water/Whispy conversions, zero native or
+  failed cases, and first flags `0x0200 -> 0x006b`.
+- The renderer now retains the two immediately preceding load windows, resolves
+  TEXEL0 and TEXEL1 independently, and recognizes the exact pond mux. Because
+  GX exposes one texture per polygon, the CI4 pair is CPU-precomposed to DS
+  RGBA5551. Composite reads preserve hidden RGB, expand 5-bit channels before
+  blending, and use ordered 4x4 A1 coverage. Relative 10.2 tile-origin phase
+  still rounds to whole texels and remains explicit water-motion debt.
+- Legacy multi-DL and Inishie preview fixtures now reuse one temporary renderer
+  stats object instead of keeping four enlarged copies on the DS stack. This
+  restores the all-DL stack budget without changing their accumulated markers.
+- Composite keys include both image/load/tile windows and LOD fraction.
+  Allocation-compatible animated state refreshes resident VRAM through the
+  sm64-nds bank-remap/DMA pattern; local frame serials pin any texture already
+  referenced by submitted polygons. Refresh and eviction evidence is now
+  scene-lifetime, so a stable terminal frame cannot erase earlier cache health.
+- Concrete fixtures cover both pond TMEM loads, exact mux, DXT, RGBA hidden
+  color, 5-to-8-bit blend precision (`0xB1EE`), ordered alpha coverage, compact
+  load overflow, and water/Whispy mixed-field conversion. The 184-frame
+  canonical gate proves matched composites, positive compatible-state refresh,
+  zero TEXEL1/texture rejects, zero cache evictions, and zero oracle drift.
+  Final pond detail is `46.053%/23px`, versus the archived solid-white frame's
+  `27.997%/105px`. Capture:
+  `artifacts/visibility/2026-07-11_dream-land-texel1-materials-hudoff-final.png`.
+  Tyler visually accepted the water; foreground fence occlusion by the
+  floor/path is the next confirmed stage-order target.
+- Focused all-DL/stage/canonical, DevFast, Boundary, stamped RegressionCore,
+  the 184-frame cache run, and shipped parity passed. Tyler explicitly chose
+  faster iteration over the full 105-output Regression prebuild; it was stopped
+  before completion and its four no-build shards were not run.
+
+Source-corrected verifier expectations: added exact TMEM/mux/material markers
+and a `35%/60px` pond-detail ratchet. Coverage-reduced verifier expectations:
+the global registered temporal ceiling moved `25% -> 30%` after the corrected
+source scene measured `26.555%`; the new pond ratchet prevents a white-water
+regression that the broader temporal ceiling could not detect.

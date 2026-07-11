@@ -40,6 +40,7 @@
 
 #define NDS_RENDERER_VERTEX_CACHE_SIZE 32u
 #define NDS_RENDERER_TILE_COUNT 8u
+#define NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT 2u
 
 #define NDS_RENDERER_GEOM_ZBUFFER 0x00000001u
 #define NDS_RENDERER_GEOM_SHADE 0x00000004u
@@ -139,6 +140,24 @@ typedef struct NDSRendererTileState
     u32 height;
     u32 flags;
 } NDSRendererTileState;
+
+typedef struct NDSRendererTextureLoadState
+{
+    u32 image;
+    u32 sequence;
+    u16 image_width;
+    u16 load_uls;
+    u16 load_ult;
+    u16 load_lrs;
+    u16 load_dxt;
+    u16 load_texels;
+    u16 load_tmem;
+    u8 valid;
+    u8 image_format;
+    u8 image_size;
+    u8 load_kind;
+    u8 load_tile;
+} NDSRendererTextureLoadState;
 
 typedef s32 (*NDSRendererCommandCallback)(const NDSRendererCommand *command,
                                           void *user);
@@ -291,10 +310,15 @@ typedef struct NDSRendererStats
     u32 texture_tile_width;
     u32 texture_tile_height;
     NDSRendererTileState texture_tiles[NDS_RENDERER_TILE_COUNT];
+    u32 texture_load_sequence;
+    NDSRendererTextureLoadState
+        texture_loads[NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT];
     u32 texture_combine_w0;
     u32 texture_combine_w1;
     u32 texture_combine_count;
     u32 prim_color;
+    u32 prim_min_level;
+    u32 prim_lod_fraction;
     u32 env_color;
     u32 blend_color;
     u32 light_color_1;

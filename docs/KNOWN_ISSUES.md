@@ -1085,10 +1085,14 @@
   that bound. Nonzero `LOADBLOCK` DXT now reconstructs 64-bit words per source
   row from BattleShip `gbi.h:3291,3309-3317`, independent of render-tile width;
   this fixes Fox's 8x8 CI4 tail reading every other zero-padding half-row.
-  Remaining stage defects are the white large pond, missing ground flowers,
-  tree-face strips, and incomplete-looking front fences. Other texture debt
-  includes nonzero shifts,
-  DXT-zero/pre-swizzled loads, TEXEL1/water, unmasked POT padding, and
+  The large pond now recognizes its exact TEXEL0/TEXEL1 mux and runs a DS
+  RGBA5551/A1 precomposition approximation. Whispy material lanes now normalize
+  on the live path; Tyler accepts the corrected water. Final face-strip
+  comparison and missing ground flowers remain visual work. Foreground fence
+  geometry is present but is drawn over by the floor/path, a confirmed depth/
+  ordering defect. Other texture debt
+  includes fractional relative tile-origin phase, nonzero shifts,
+  DXT-zero/pre-swizzled loads, other TEXEL1 formulas, unmasked POT padding, and
   camera-wide state ownership. Do not conflate mask, load, logical, or upload
   extents again.
 - Projected HW submission now takes X/Y/Z from one current composed clip vertex.
@@ -1096,14 +1100,15 @@
   the removed extra `<< 4` had made those layers occlude source-depth geometry.
   Exact source no-Z write/ordering behavior and the raw GX matrix path remain
   deferred. Full source-selected
-  fighter submission plus the current CPU-scaled 300x220 wallpaper presents at
-  about `1.2fps`; cache work follows fidelity.
-- Dream Land stage `MObjSub` mixed-width fields remain unnormalized. The
-  relocation normalizer currently covers MVCommon and fighter-local copies,
-  not the Pupupu stage assets, so Whispy face and material fields can retain
-  swapped `u16/u8` lanes. An exact five-record normalization probe passed data
-  fixtures but changed `0/49152` canonical pixels, so it was reverted and is
-  not an active explanation for the visible texture defects.
+  fighter submission plus the current CPU-scaled 300x220 wallpaper and water
+  precomposition presents at about `0.8fps`; caching remains P1 debt.
+- A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
+  fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
+  Loaded-file plus asset/generation provenance separates raw and already-native
+  records; invalid conversion fails closed. Canonical observes at least four
+  active Dream Land water/Whispy swaps, zero native/failure cases, and first
+  flags `0x0200 -> 0x006b`. The global seam's other callers are not yet claimed.
+  The rejected five-address load-time mutation remains reverted.
 - Stage submission still validates but discards `DObjDLLink::list_id` for
   stages that use secondary callbacks. Dream Land is not such a case:
   `255_GRPupupuMap.c:25-35` sets `layer_mask=0`, selecting four primary head-0

@@ -1,8 +1,11 @@
 /* Compile the original BattleShip object-animation/setup translation unit.
  * Its public add entrypoints normalize O2R AObjEvent32 command words before
  * the unchanged original parser sees them. */
+#include <nds/nds_reloc_assets.h>
+
 #define gcAddDObjAnimJoint ndsBaseGcAddDObjAnimJoint
 #define gcAddMObjMatAnimJoint ndsBaseGcAddMObjMatAnimJoint
+#define gcAddMObjAll ndsBaseGcAddMObjAll
 #define gcAddAnimJointAll ndsBaseGcAddAnimJointAll
 #define gcAddMatAnimJointAll ndsBaseGcAddMatAnimJointAll
 #define gcAddAnimAll ndsBaseGcAddAnimAll
@@ -14,6 +17,7 @@
 
 #undef gcAddDObjAnimJoint
 #undef gcAddMObjMatAnimJoint
+#undef gcAddMObjAll
 #undef gcAddAnimJointAll
 #undef gcAddMatAnimJointAll
 #undef gcAddAnimAll
@@ -64,6 +68,74 @@ volatile u32 gNdsAObjEvent32NormalizeLastFailWord;
 volatile u32 gNdsAObjEvent32NormalizeLastFailOpcode;
 volatile u32 gNdsAObjEvent32NormalizeLastFailFlags;
 volatile u32 gNdsAObjEvent32ColorCorrectionCount;
+
+volatile u32 gNdsMObjSubAttachNormalizeCount;
+volatile u32 gNdsMObjSubAttachNativeCount;
+volatile u32 gNdsMObjSubAttachFailCount;
+volatile u32 gNdsMObjSubAttachFirstSourceFlags;
+volatile u32 gNdsMObjSubAttachFirstNativeFlags;
+
+/* Preserve objanim.c:2429-2455 exactly except for the compatibility copy at
+ * the MObj attachment boundary. gcAddMObjForDObj copies the full MObjSub, so
+ * the normalized stack record cannot escape this call. */
+void gcAddMObjAll(GObj *gobj, MObjSub ***p_mobjsubs)
+{
+    DObj *dobj = DObjGetStruct(gobj);
+
+    while (dobj != NULL)
+    {
+        if (p_mobjsubs != NULL)
+        {
+            if (*p_mobjsubs != NULL)
+            {
+                MObjSub **mobjsubs = *p_mobjsubs;
+                MObjSub *mobjsub = *mobjsubs;
+
+                while (mobjsub != NULL)
+                {
+                    MObjSub normalized_mobjsub;
+                    s32 normalize_result =
+                        ndsRelocCopyMObjSubForAttachment(
+                            &normalized_mobjsub, mobjsub);
+
+                    if (normalize_result > 0)
+                    {
+                        if (gNdsMObjSubAttachNormalizeCount == 0u)
+                        {
+                            gNdsMObjSubAttachFirstSourceFlags =
+                                mobjsub->flags;
+                            gNdsMObjSubAttachFirstNativeFlags =
+                                normalized_mobjsub.flags;
+                        }
+                        gNdsMObjSubAttachNormalizeCount++;
+                    }
+                    else if (normalize_result == 0)
+                    {
+                        gNdsMObjSubAttachNativeCount++;
+                    }
+                    else
+                    {
+                        gNdsMObjSubAttachFailCount++;
+                        /* A malformed loaded record is neither a safe native
+                         * attachment nor a valid O2R conversion. Fail closed;
+                         * the canonical scene requires this path to stay at
+                         * zero, so no source material is silently omitted. */
+                        mobjsubs++;
+                        mobjsub = *mobjsubs;
+                        continue;
+                    }
+
+                    gcAddMObjForDObj(dobj, &normalized_mobjsub);
+
+                    mobjsubs++;
+                    mobjsub = *mobjsubs;
+                }
+            }
+            p_mobjsubs++;
+        }
+        dobj = gcGetTreeDObjNext(dobj);
+    }
+}
 
 extern s32 ndsRelocPointerRangeInLoadedFiles(const void *ptr, size_t size);
 extern s32 ndsRelocPointerIsFighterAObj16(const void *ptr);

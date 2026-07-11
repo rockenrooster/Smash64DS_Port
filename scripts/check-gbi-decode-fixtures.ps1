@@ -68,6 +68,100 @@ function Get-LoadBlockDxtSourceWidth {
         default { return 0 }
     }
 }
+function Test-Texel01LerpCombine {
+    param(
+        [uint32]$W0,
+        [uint32]$W1
+    )
+    return ((($W0 -shr 20) -band 0x0f) -eq 2) -and
+        ((($W1 -shr 28) -band 0x0f) -eq 1) -and
+        ((($W0 -shr 15) -band 0x1f) -eq 14) -and
+        ((($W1 -shr 15) -band 0x07) -eq 1) -and
+        ((($W0 -shr 12) -band 0x07) -eq 2) -and
+        ((($W1 -shr 12) -band 0x07) -eq 1) -and
+        ((($W0 -shr 9) -band 0x07) -eq 6) -and
+        ((($W1 -shr 9) -band 0x07) -eq 1) -and
+        ((($W0 -shr 5) -band 0x0f) -eq 0) -and
+        ((($W1 -shr 24) -band 0x0f) -eq 15) -and
+        (($W0 -band 0x1f) -eq 4) -and
+        ((($W1 -shr 6) -band 0x07) -eq 7) -and
+        ((($W1 -shr 21) -band 0x07) -eq 0) -and
+        ((($W1 -shr 18) -band 0x07) -eq 3)
+}
+function Blend-Texel01Rgb5551 {
+    param(
+        [uint16]$Texel0,
+        [uint16]$Texel1,
+        [uint32]$Fraction,
+        [uint32]$X = 0,
+        [uint32]$Y = 0
+    )
+    $inverse = 0x100 - $Fraction
+    $r0 = (((($Texel0 -shr 0) -band 0x1f) -shl 3) -bor ((($Texel0 -shr 0) -band 0x1f) -shr 2))
+    $g0 = (((($Texel0 -shr 5) -band 0x1f) -shl 3) -bor ((($Texel0 -shr 5) -band 0x1f) -shr 2))
+    $b0 = (((($Texel0 -shr 10) -band 0x1f) -shl 3) -bor ((($Texel0 -shr 10) -band 0x1f) -shr 2))
+    $r1 = (((($Texel1 -shr 0) -band 0x1f) -shl 3) -bor ((($Texel1 -shr 0) -band 0x1f) -shr 2))
+    $g1 = (((($Texel1 -shr 5) -band 0x1f) -shl 3) -bor ((($Texel1 -shr 5) -band 0x1f) -shr 2))
+    $b1 = (((($Texel1 -shr 10) -band 0x1f) -shl 3) -bor ((($Texel1 -shr 10) -band 0x1f) -shr 2))
+    $red = ((($r0 * $inverse) + ($r1 * $Fraction)) -shr 8) -shr 3
+    $green = ((($g0 * $inverse) + ($g1 * $Fraction)) -shr 8) -shr 3
+    $blue = ((($b0 * $inverse) + ($b1 * $Fraction)) -shr 8) -shr 3
+    $alphaCoverage = (((($Texel0 -shr 15) -band 1) * 0x100 * $inverse) +
+        ((($Texel1 -shr 15) -band 1) * 0x100 * $Fraction)) -shr 8
+    $bayer = @(0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5)
+    $threshold = ($bayer[(($Y -band 3) -shl 2) -bor ($X -band 3)] -shl 4) + 8
+    $alpha = if ($alphaCoverage -gt $threshold) { 1 } else { 0 }
+    return [uint16]($red -bor ($green -shl 5) -bor ($blue -shl 10) -bor
+        ($alpha -shl 15))
+}
+function Convert-N64Rgba16ToDs {
+    param(
+        [uint16]$Color,
+        [bool]$PreserveTransparentRgb = $false
+    )
+    if ((($Color -band 1) -eq 0) -and -not $PreserveTransparentRgb) {
+        return [uint16]0
+    }
+    $red = ($Color -shr 11) -band 0x1f
+    $green = ($Color -shr 6) -band 0x1f
+    $blue = ($Color -shr 1) -band 0x1f
+    $alpha = if (($Color -band 1) -ne 0) { 1 } else { 0 }
+    return [uint16]($red -bor ($green -shl 5) -bor ($blue -shl 10) -bor
+        ($alpha -shl 15))
+}
+function Find-LatestTmemLoad {
+    param(
+        [object[]]$Loads,
+        [uint32]$Tmem
+    )
+    return $Loads | Where-Object { $_.Valid -and $_.Tmem -eq $Tmem } |
+        Sort-Object Sequence -Descending | Select-Object -First 1
+}
+
+function Get-CompactTextureLoadTexels {
+    param([uint32]$Texels)
+
+    if ($Texels -gt 0xffff) { return [uint16]0 }
+    return [uint16]$Texels
+}
+function Convert-MObjSubMixedFields {
+    param(
+        [uint16]$Pad00,
+        [byte]$Fmt,
+        [byte]$Siz,
+        [uint16]$Flags,
+        [byte]$BlockFmt,
+        [byte]$BlockSiz
+    )
+    return [pscustomobject]@{
+        Pad00 = [uint16](([uint16]$Siz -shl 8) -bor $Fmt)
+        Fmt = [byte]($Pad00 -shr 8)
+        Siz = [byte]($Pad00 -band 0xff)
+        Flags = [uint16](([uint16]$BlockSiz -shl 8) -bor $BlockFmt)
+        BlockFmt = [byte]($Flags -shr 8)
+        BlockSiz = [byte]($Flags -band 0xff)
+    }
+}
 function Convert-N64TexCoordToDsT16 {
     param(
         [int]$Coord,
@@ -466,6 +560,10 @@ foreach ($file in $files) {
 }
 $renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
+$relocAssets = Get-Content (Join-Path $root 'src/port/reloc_backend_assets.c') -Raw
+$relocRendererDL = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
+$relocMPCollision = Get-Content (Join-Path $root 'src/port/reloc_backend_mp_collision.c') -Raw
+$objAnimImport = Get-Content (Join-Path $root 'src/import/battleship_sys_objanim.c') -Raw
 $o2rCi8 = [byte[]](3, 2, 1, 0)
 Assert-Equal (Get-TextureByte $o2rCi8 0 'O2R') 0 'O2R CI8 logical byte 0 lane decode failed.'
 Assert-Equal (Get-TextureByte $o2rCi8 1 'O2R') 1 'O2R CI8 logical byte 1 lane decode failed.'
@@ -500,6 +598,40 @@ Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 1 -Dxt 1024 -FallbackWidth 4) 16
 Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 2 -Dxt 1024 -FallbackWidth 2) 8 'RGBA16 LOADBLOCK DXT source width mismatch.'
 Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 3 -Dxt 1024 -FallbackWidth 1) 4 'RGBA32 LOADBLOCK DXT source width mismatch.'
 Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 0 -Dxt 0 -FallbackWidth 8) 8 'DXT-zero LOADBLOCK must retain its bounded fallback width.'
+# StagePupupuFile2 DL 0x22D0 uses G_CC_TEMPLERP in cycle 1 and
+# COMBINED*SHADE / COMBINED*PRIMITIVE in cycle 2. Its generated MObj branch
+# loads next through tile 6/TMEM 0x40 before current through tile 7/TMEM 0.
+$pondCombineW0 = [Convert]::ToUInt32('fc272c04', 16)
+$pondCombineW1 = [Convert]::ToUInt32('1f0c93ff', 16)
+Assert-True (Test-Texel01LerpCombine $pondCombineW0 $pondCombineW1) 'Dream Land pond TEXEL0/TEXEL1 combine mux did not decode as source TEMPLERP.'
+$pondLoads = @(
+    [pscustomobject]@{ Valid = $true; Sequence = 1; Tile = 6; Tmem = 0x40; Image = 0x1e10; Texels = 256; Dxt = 1024 },
+    [pscustomobject]@{ Valid = $true; Sequence = 2; Tile = 7; Tmem = 0x00; Image = 0x1be0; Texels = 256; Dxt = 1024 }
+)
+$pondTexel1Load = Find-LatestTmemLoad -Loads $pondLoads -Tmem 0x40
+$pondTexel0Load = Find-LatestTmemLoad -Loads $pondLoads -Tmem 0x00
+Assert-True ($null -ne $pondTexel1Load -and $pondTexel1Load.Tile -eq 6 -and $pondTexel1Load.Image -eq 0x1e10) 'Dream Land TEXEL1 did not resolve the tile-6 TMEM 0x40 load.'
+Assert-True ($null -ne $pondTexel0Load -and $pondTexel0Load.Tile -eq 7 -and $pondTexel0Load.Image -eq 0x1be0) 'Dream Land TEXEL0 did not retain the later tile-7 TMEM 0 load.'
+Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 0 -Dxt $pondTexel1Load.Dxt -FallbackWidth 128) 32 'Dream Land TEXEL1 transfer-size load did not decode through its CI4 render tile.'
+Assert-Equal (Get-CompactTextureLoadTexels 0xffff) 0xffff 'Largest compact TMEM load was rejected.'
+Assert-Equal (Get-CompactTextureLoadTexels 0x10000) 0 'Oversized TMEM load did not fail closed before u16 truncation.'
+$pondTexel0 = Convert-N64Rgba16ToDs -Color 0x0221
+$pondTexel1 = Convert-N64Rgba16ToDs -Color 0xFE10 -PreserveTransparentRgb $true
+Assert-Equal (Convert-N64Rgba16ToDs -Color 0xFE10) 0 'Ordinary transparent RGBA16 conversion no longer clears hidden RGB.'
+Assert-Equal $pondTexel1 ([uint16](31 -bor (24 -shl 5) -bor (8 -shl 10))) 'Composite RGBA16 conversion discarded transparent source RGB.'
+Assert-Equal (Blend-Texel01Rgb5551 -Texel0 $pondTexel0 -Texel1 $pondTexel1 -Fraction 0x72) 0xB1EE 'Dream Land primitive-LOD texture blend changed.'
+$coverageCount = 0
+for ($coverageY = 0; $coverageY -lt 4; $coverageY++) {
+    for ($coverageX = 0; $coverageX -lt 4; $coverageX++) {
+        $coverageColor = Blend-Texel01Rgb5551 -Texel0 0 -Texel1 0x8000 -Fraction 0x40 -X $coverageX -Y $coverageY
+        if (($coverageColor -band 0x8000) -ne 0) { $coverageCount++ }
+    }
+}
+Assert-Equal $coverageCount 4 'Dream Land A1 coverage approximation did not retain the source quarter-alpha mean.'
+$pondMObj = Convert-MObjSubMixedFields -Pad00 0x0202 -Fmt 0 -Siz 0 -Flags 0x0200 -BlockFmt 0x6b -BlockSiz 0
+Assert-True ($pondMObj.Pad00 -eq 0 -and $pondMObj.Fmt -eq 2 -and $pondMObj.Siz -eq 2 -and $pondMObj.Flags -eq 0x006b -and $pondMObj.BlockFmt -eq 2 -and $pondMObj.BlockSiz -eq 0) 'Dream Land water MObjSub mixed fields did not recover the source layout.'
+$whispyMObj = Convert-MObjSubMixedFields -Pad00 0x0202 -Fmt 0 -Siz 0 -Flags 0x0200 -BlockFmt 1 -BlockSiz 0
+Assert-True ($whispyMObj.Pad00 -eq 0 -and $whispyMObj.Fmt -eq 2 -and $whispyMObj.Siz -eq 2 -and $whispyMObj.Flags -eq 1 -and $whispyMObj.BlockFmt -eq 2 -and $whispyMObj.BlockSiz -eq 0) 'Dream Land Whispy MObjSub false-native layout was not disambiguated.'
 # FoxModel DLs 0x2718/0x2818 use an 8x8 CI4 render tile over a physical
 # 16-texel row (dxt=0x800). The right half is row padding; compact width-8
 # stepping would incorrectly alternate real and zero rows.
@@ -595,19 +727,19 @@ Assert-True ($renderer.Contains('gNdsRendererProfileTextureLaneByteMap')) 'Rende
 Assert-True (-not ($renderer -match 'texels\s*\[\s*index\s*\]')) 'Renderer byte-packed texture path returned to direct texels[index] reads.'
 Assert-True (-not ($renderer -match 'texels\s*\[\s*index\s*>>\s*1\s*\]')) 'Renderer packed-nibble texture path returned to direct texels[index >> 1] reads.'
 Assert-True ($renderer.Contains('key.render_tmem = render_tile->tmem')) 'Renderer hardware texture cache key is not wired directly to render-tile TMEM state.'
-Assert-True ($renderer.Contains('key.image_width = stats->texture_image_width')) 'Renderer hardware texture cache key is missing source image width.'
+Assert-True ($renderer.Contains('key.image_width = primary_image_width')) 'Renderer hardware texture cache key is missing resolved TEXEL0 source image width.'
 Assert-True ($renderer.Contains('palette_base = render_tile->palette * 16u')) 'Renderer CI4 palette bank is not applied from the active render tile.'
-Assert-True ($renderer.Contains('key.load_tile = stats->texture_load_tile')) 'Renderer hardware texture cache key is missing load-tile state.'
-Assert-True ($renderer.Contains('key.load_uls = stats->texture_load_block_uls')) 'Renderer hardware texture cache key is missing load-block ULS state.'
-Assert-True ($renderer.Contains('key.load_dxt = stats->texture_load_block_dxt')) 'Renderer hardware texture cache key is missing load-block DXT state.'
+Assert-True ($renderer.Contains('key.load_tile = primary_load_tile')) 'Renderer hardware texture cache key is missing resolved TEXEL0 load-tile state.'
+Assert-True ($renderer.Contains('key.load_uls = primary_load_uls')) 'Renderer hardware texture cache key is missing resolved TEXEL0 load ULS state.'
+Assert-True ($renderer.Contains('key.load_dxt = primary_load_dxt')) 'Renderer hardware texture cache key is missing resolved TEXEL0 load DXT state.'
 Assert-True ($renderer.Contains('NDS_RENDERER_G_TX_DXT_ONE + dxt - 1u')) 'Renderer LOADBLOCK source rows do not reconstruct 1.11 DXT qwords.'
 Assert-True ($renderer.Contains('source_width = ndsRendererHardwareTextureLinePixels(size, qwords)')) 'Renderer LOADBLOCK source width does not use the DXT-derived logical row stride.'
 Assert-True ($renderer.Contains('texture_load_kind = NDS_RENDERER_TEXTURE_LOADBLOCK')) 'Renderer G_LOADBLOCK does not mark the current texture load kind.'
 Assert-True ($renderer.Contains('texture_load_kind = NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer G_LOADTILE does not mark the current texture load kind.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureSourceWidthPixels')) 'Renderer hardware upload does not derive source row stride.'
-Assert-True ($renderer.Contains('stats->texture_load_kind == NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer hardware upload does not limit source row stride to G_LOADTILE.'
-Assert-True ($renderer.Contains('source_origin_s = stats->texture_load_block_uls >> 2')) 'Renderer hardware upload does not honor LoadTile S origin.'
-Assert-True ($renderer.Contains('source_origin_t = stats->texture_load_block_ult >> 2')) 'Renderer hardware upload does not honor LoadTile T origin.'
+Assert-True ($renderer.Contains('primary_load_kind == NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer hardware upload does not limit resolved TEXEL0 source row stride to G_LOADTILE.'
+Assert-True ($renderer.Contains('source_origin_s = primary_load_uls >> 2')) 'Renderer hardware upload does not honor resolved TEXEL0 LoadTile S origin.'
+Assert-True ($renderer.Contains('source_origin_t = primary_load_ult >> 2')) 'Renderer hardware upload does not honor resolved TEXEL0 LoadTile T origin.'
 Assert-True ($renderer.Contains('((source_origin_t + source_y) * source_width)') -and $renderer.Contains('source_origin_s + source_x')) 'Renderer hardware upload does not sample source sub-rect rows through resolved mask addressing.'
 Assert-True ($renderer.Contains('((s64)coord * (s64)scale) >> 17')) 'Renderer hardware texcoords do not scale N64 vertex coordinates into DS t16 first.'
 Assert-True ($renderer.Contains('(s64)origin << 2')) 'Renderer hardware texcoords do not convert the 10.2 tile origin directly to DS t16.'
@@ -616,10 +748,45 @@ Assert-True ($renderer.Contains('render_tile->uls, render_tile->ult')) 'Renderer
 Assert-True ($renderer.Contains('NDS_RENDERER_OP_LOADTILE 0xf4u')) 'Renderer G_LOADTILE opcode decode is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordLoadTile')) 'Renderer G_LOADTILE state recorder is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_TEXTURE_LOADTILE')) 'Renderer G_LOADTILE texture-state mask is missing.'
-Assert-True ($renderer.Contains('(stats->texture_load_kind << 8)')) 'Renderer texture cache key does not distinguish current LOADBLOCK and LOADTILE state.'
+Assert-True ($renderer.Contains('(primary_load_kind << 8)')) 'Renderer texture cache key does not distinguish resolved TEXEL0 LOADBLOCK and LOADTILE state.'
 Assert-True (-not $renderer.Contains('if (stats->texture_load_texels == 0)')) 'Renderer load-block state still freezes on the first texture load.'
 Assert-True (-not $renderer.Contains('stats->texture_tile_width != 0) &&')) 'Renderer tile-size state still freezes on the first tile size.'
 Assert-True ($rendererHeader.Contains('texture_tiles[NDS_RENDERER_TILE_COUNT]')) 'Renderer texture state is not tracked per GBI tile.'
+Assert-True ($rendererHeader.Contains('texture_loads[NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT]')) 'Renderer does not retain the recent TEXEL0/TEXEL1 load pair.'
+Assert-True ($rendererHeader.Contains('#define NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT 2u')) 'Renderer TMEM history grew beyond the source pond pair and legacy stack budget.'
+Assert-True (-not $relocRendererDL.Contains('NDSRendererStats stats[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED]')) 'Fighter multi-DL fixture restored a stack array of enlarged renderer stats.'
+Assert-True (-not $relocMPCollision.Contains('NDSRendererStats stats[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED]')) 'Inishie preview restored a stack array of enlarged renderer stats.'
+Assert-True ($rendererHeader.Contains('prim_lod_fraction')) 'Renderer does not retain SETPRIMCOLOR primitive LOD fraction.'
+Assert-True ($renderer.Contains('ndsRendererCaptureTextureLoad')) 'Renderer does not snapshot texture-image/load provenance when TMEM is filled.'
+Assert-True ($renderer.Contains('primary_load = ndsRendererHardwareFindTextureLoadForTmem(')) 'Renderer does not resolve TEXEL0 through its render-tile TMEM load.'
+Assert-True ($renderer.Contains('load = ndsRendererHardwareFindTextureLoadForTmem(stats, tile->tmem)')) 'Renderer does not resolve TEXEL1 through its render-tile TMEM load.'
+Assert-True ($renderer.Contains('(uintptr_t)primary_image')) 'Renderer texture upload still resolves TEXEL0 through mutable SETTIMG state.'
+Assert-True ($renderer.Contains('stats->texture_load_texels <= 0xffffu')) 'Renderer compact TMEM capture does not reject oversized load rectangles.'
+Assert-True ($renderer.Contains('ndsRendererHardwareUsesTexel01Lerp')) 'Renderer does not recognize the source TEXEL0/TEXEL1 lerp contract.'
+Assert-True ($renderer.Contains('ndsRendererHardwarePrepareTexel1Source')) 'Renderer does not prepare the second source texture independently.'
+Assert-True ($renderer.Contains('key.texel1_image = load->image')) 'Renderer composite cache key omits the TEXEL1 source image.'
+Assert-True ($renderer.Contains('key.prim_lod_fraction = stats->prim_lod_fraction')) 'Renderer composite cache key omits the source blend fraction.'
+Assert-True ($renderer.Contains('ndsRendererHardwareBlendTexel01')) 'Renderer does not precompose the source TEXEL0/TEXEL1 result for DS hardware.'
+Assert-True ($renderer.Contains('color, color1, stats->prim_lod_fraction')) 'Renderer texture upload loop does not consume both source texels and the original fraction.'
+Assert-True ($renderer.Contains('preserve_transparent_rgb')) 'Renderer composite decode does not preserve transparent source RGB before color lerp.'
+Assert-True ($renderer.Contains('ndsRendererHardwareFindTexel1RefreshTexture')) 'Renderer does not retain one allocation across source water animation updates.'
+Assert-True ($renderer.Contains('entry->last_used_frame !=')) 'Renderer does not prevent incompatible same-frame composite allocation reuse.'
+Assert-True ($renderer.Contains('glGetTexturePointer(entry->name)')) 'Renderer fraction refresh does not resolve the resident DS texture allocation.'
+Assert-True ($renderer.Contains('dmaCopyWords(0, texture, vram_address, texture_bytes)')) 'Renderer fraction refresh does not update resident texture VRAM.'
+Assert-True ($renderer.Contains('glDeleteTextures(1, &entry->name)')) 'Renderer cache eviction does not release the old libnds texture allocation.'
+Assert-Equal ([regex]::Matches($taskman, 'gNdsRendererProfileTexel1FractionRefreshCount = 0;').Count) 1 'Renderer composite refresh proof is still cleared every presented frame.'
+Assert-Equal ([regex]::Matches($taskman, 'gNdsRendererProfileTextureCacheEvictCount = 0;').Count) 1 'Renderer texture-eviction proof is still cleared every presented frame.'
+Assert-True ($renderer.Contains('key.texel1_image_format = load->image_format')) 'Renderer composite cache key omits TEXEL1 image format.'
+Assert-True ($renderer.Contains('key.texel1_image_size = load->image_size')) 'Renderer composite cache key omits TEXEL1 transfer size.'
+Assert-True ($renderer.Contains('key.texel1_load_kind = load->load_kind')) 'Renderer composite cache key omits TEXEL1 load kind.'
+Assert-True ($renderer.Contains('key.texel1_render_line = tile->line')) 'Renderer composite cache key omits TEXEL1 render line.'
+Assert-True ($relocAssets.Contains('ndsRelocCopyMObjSubForAttachment')) 'Relocation backend does not expose mixed-width MObjSub attachment copies.'
+Assert-True ($relocAssets.Contains('ndsRelocNormalizeMObjSubWordSwapped(dst)')) 'MObjSub attachment copy does not restore O2R mixed-width lanes.'
+Assert-True ($relocAssets.Contains('loaded = ndsRelocFindLoadedFileContaining(src, sizeof(*src))')) 'MObjSub attachment normalization does not require O2R loaded-file provenance.'
+Assert-True ($relocAssets.Contains('ndsRelocMObjSubAlreadyNormalized')) 'MObjSub attachment normalization does not preserve explicitly normalized loaded records.'
+Assert-True ($objAnimImport.Contains('#define gcAddMObjAll ndsBaseGcAddMObjAll')) 'BattleShip objanim import does not fence the original MObj attachment entrypoint.'
+Assert-True ($objAnimImport.Contains('gcAddMObjForDObj(dobj, &normalized_mobjsub)')) 'Live gcAddMObjAll traversal does not attach the normalized material copy.'
+Assert-True ($objAnimImport -match '(?s)gNdsMObjSubAttachFailCount\+\+;.*?continue;.*?gcAddMObjForDObj') 'Invalid loaded MObjSub conversion no longer fails closed before live attachment.'
 Assert-True ($renderer.Contains('ndsRendererSyncTextureTile(stats)')) 'Renderer per-tile texture state is not synced into the hardware bind view.'
 Assert-True ($renderer.Contains('key.tile_lrs = render_tile->lrs') -and $renderer.Contains('key.tile_lrt = render_tile->lrt')) 'Renderer cache key is missing active render-tile rectangle end coordinates.'
 Assert-True ($renderer.Contains('gNdsRendererProfileTextureCacheAliasAvoidCount')) 'Renderer cache alias diagnostic counter is missing.'

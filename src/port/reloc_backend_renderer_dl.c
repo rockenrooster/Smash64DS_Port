@@ -2357,10 +2357,15 @@ static void ndsFighterDLDrawCopyPersistentRendererState(
     NDS_RENDERER_COPY_STATE(texture_tile_width);
     NDS_RENDERER_COPY_STATE(texture_tile_height);
     memcpy(dst->texture_tiles, src->texture_tiles, sizeof(dst->texture_tiles));
+    NDS_RENDERER_COPY_STATE(texture_load_sequence);
+    memcpy(dst->texture_loads, src->texture_loads,
+           sizeof(dst->texture_loads));
     NDS_RENDERER_COPY_STATE(texture_combine_w0);
     NDS_RENDERER_COPY_STATE(texture_combine_w1);
     NDS_RENDERER_COPY_STATE(texture_combine_count);
     NDS_RENDERER_COPY_STATE(prim_color);
+    NDS_RENDERER_COPY_STATE(prim_min_level);
+    NDS_RENDERER_COPY_STATE(prim_lod_fraction);
     NDS_RENDERER_COPY_STATE(env_color);
     NDS_RENDERER_COPY_STATE(blend_color);
     NDS_RENDERER_COPY_STATE(light_color_1);
@@ -5059,7 +5064,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
     NDSFighterDLDrawState states[
         NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     NDSFighterDLDrawState persistent_state;
-    NDSRendererStats stats[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
+    NDSRendererStats stats;
     NDSRendererStats persistent_stats;
     u8 clean[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     u32 root_x_before;
@@ -5098,7 +5103,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
 
     bzero(states, sizeof(states));
     bzero(&persistent_state, sizeof(persistent_state));
-    bzero(stats, sizeof(stats));
+    bzero(&stats, sizeof(stats));
     ndsRendererInitStats(&persistent_stats);
     bzero(clean, sizeof(clean));
 
@@ -5162,23 +5167,23 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         config.resolve_data = ndsFighterDLDrawResolveRendererData;
         config.user = &states[i];
 
-        ndsRendererInitStats(&stats[i]);
-        ndsFighterDLDrawCopyPersistentRendererState(&stats[i],
+        ndsRendererInitStats(&stats);
+        ndsFighterDLDrawCopyPersistentRendererState(&stats,
                                                     &persistent_stats);
         ndsRendererExecuteDisplayList(dl,
                                       &config,
                                       ndsFighterMarioFoxVisitDLDrawCommand,
                                       &states[i],
-                                      &stats[i]);
+                                      &stats);
 #if NDS_RENDERER_HW_TRIANGLES
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 #endif
         ndsFighterDLDrawCapturePersistentState(&persistent_state,
                                                &states[i]);
         ndsFighterDLDrawCopyPersistentRendererState(&persistent_stats,
-                                                    &stats[i]);
+                                                    &stats);
         ndsFighterDLMultiDrawAccumulateStats(slot, i, &states[i],
-                                             &stats[i], clean);
+                                             &stats, clean);
     }
 
     ndsFighterDLMultiDrawRasterizeStates(slot, states, clean,

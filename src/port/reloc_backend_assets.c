@@ -16,6 +16,7 @@
 #define NDS_RELOC_OPENING_ROOM_FILE_COUNT 8u
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 96u
+#define NDS_RELOC_NORMALIZED_MOBJ_SUB_CAPACITY 128u
 #define NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES (128u * 1024u)
 
 #define NDS_RELOC_ASSET_INVALID 0xffffffffu
@@ -433,6 +434,13 @@ typedef struct NDSRelocLoadedFile {
     u8 fixups_applying;
 } NDSRelocLoadedFile;
 
+typedef struct NDSRelocNormalizedMObjSub
+{
+    const MObjSub *record;
+    u32 asset_id;
+    u32 owner_generation;
+} NDSRelocNormalizedMObjSub;
+
 typedef struct NDSFighterDLScanContext {
     const NDSRelocLoadedFile *primary_file;
     u32 slot;
@@ -587,6 +595,9 @@ typedef struct NDSOpeningActionPreviewCache {
 
 static NDSRelocLoadedFile sNdsRelocLoadedFiles[NDS_RELOC_LOADED_FILE_CAPACITY];
 static u32 sNdsRelocLoadedFileCount;
+static NDSRelocNormalizedMObjSub
+    sNdsRelocNormalizedMObjSubs[NDS_RELOC_NORMALIZED_MOBJ_SUB_CAPACITY];
+static u32 sNdsRelocNormalizedMObjSubCount;
 static u32 sNdsRelocOwnerScene = NDS_RELOC_ASSET_INVALID;
 static u32 sNdsRelocSceneGeneration;
 static LBFileNode *sNdsRelocStatusBuffer;
@@ -1484,6 +1495,9 @@ static void ndsRelocResetLoadedFiles(void)
     ndsAObjEvent32ResetNormalizedScripts();
     memset(sNdsRelocLoadedFiles, 0, sizeof(sNdsRelocLoadedFiles));
     sNdsRelocLoadedFileCount = 0;
+    memset(sNdsRelocNormalizedMObjSubs, 0,
+           sizeof(sNdsRelocNormalizedMObjSubs));
+    sNdsRelocNormalizedMObjSubCount = 0u;
     ndsFighterMarioFoxResetFileSlots();
 }
 
@@ -3441,6 +3455,113 @@ static s32 ndsRelocMObjSubFlagsKnown(u32 flags)
               0x40u)) == 0;
 }
 
+static s32 ndsRelocMObjSubAttachmentFieldsLookNative(
+    const MObjSub *mobjsub)
+{
+    if (mobjsub == NULL)
+    {
+        return FALSE;
+    }
+
+    return (mobjsub->pad00 == 0u) &&
+           (ndsRelocMObjSubFlagsKnown(mobjsub->flags) != FALSE) &&
+           (mobjsub->fmt <= NDS_RELOC_G_IM_FMT_MAX) &&
+           (mobjsub->siz <= G_IM_SIZ_32b) &&
+           (mobjsub->block_fmt <= NDS_RELOC_G_IM_FMT_MAX) &&
+           (mobjsub->block_siz <= G_IM_SIZ_32b);
+}
+
+static void ndsRelocRegisterNormalizedMObjSub(
+    const NDSRelocLoadedFile *loaded, const MObjSub *mobjsub)
+{
+    u32 i;
+
+    if ((loaded == NULL) || (mobjsub == NULL))
+    {
+        return;
+    }
+    for (i = 0u; i < sNdsRelocNormalizedMObjSubCount; i++)
+    {
+        NDSRelocNormalizedMObjSub *entry =
+            &sNdsRelocNormalizedMObjSubs[i];
+
+        if ((entry->record == mobjsub) &&
+            (entry->asset_id == loaded->asset_id) &&
+            (entry->owner_generation == loaded->owner_generation))
+        {
+            return;
+        }
+    }
+    if (sNdsRelocNormalizedMObjSubCount >=
+        NDS_RELOC_NORMALIZED_MOBJ_SUB_CAPACITY)
+    {
+        gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+        return;
+    }
+    sNdsRelocNormalizedMObjSubs[sNdsRelocNormalizedMObjSubCount].record =
+        mobjsub;
+    sNdsRelocNormalizedMObjSubs[sNdsRelocNormalizedMObjSubCount].asset_id =
+        loaded->asset_id;
+    sNdsRelocNormalizedMObjSubs[sNdsRelocNormalizedMObjSubCount]
+        .owner_generation = loaded->owner_generation;
+    sNdsRelocNormalizedMObjSubCount++;
+}
+
+static s32 ndsRelocMObjSubAlreadyNormalized(
+    const NDSRelocLoadedFile *loaded, const MObjSub *mobjsub)
+{
+    u32 i;
+
+    if ((loaded == NULL) || (mobjsub == NULL))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < sNdsRelocNormalizedMObjSubCount; i++)
+    {
+        const NDSRelocNormalizedMObjSub *entry =
+            &sNdsRelocNormalizedMObjSubs[i];
+
+        if ((entry->record == mobjsub) &&
+            (entry->asset_id == loaded->asset_id) &&
+            (entry->owner_generation == loaded->owner_generation))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* BattleShip O2R payloads are blanket-swapped as u32 words. MObjSub mixes
+ * u16/u8 fields inside those words, so public object attachment must restore
+ * those lanes before objman.c copies the material into its live MObj. Keep
+ * pointers outside loaded files native. Within a loaded file, the
+ * asset/generation registry identifies records already normalized in place;
+ * every other record still has the O2R word-swapped representation. */
+s32 ndsRelocCopyMObjSubForAttachment(MObjSub *dst, const MObjSub *src)
+{
+    NDSRelocLoadedFile *loaded;
+
+    if ((dst == NULL) || (src == NULL))
+    {
+        return -1;
+    }
+
+    *dst = *src;
+    loaded = ndsRelocFindLoadedFileContaining(src, sizeof(*src));
+    if (loaded == NULL)
+    {
+        return 0;
+    }
+    if (ndsRelocMObjSubAlreadyNormalized(loaded, src) != FALSE)
+    {
+        return (ndsRelocMObjSubAttachmentFieldsLookNative(dst) != FALSE) ?
+            0 : -1;
+    }
+
+    ndsRelocNormalizeMObjSubWordSwapped(dst);
+    return (ndsRelocMObjSubAttachmentFieldsLookNative(dst) != FALSE) ? 1 : -1;
+}
+
 static s32 ndsRelocMVCommonMObjSubFlagsLookNative(u32 flags)
 {
     return (flags == MOBJ_FLAG_NONE) ||
@@ -3529,11 +3650,13 @@ static void ndsRelocNormalizeMObjSubMixedFields(NDSRelocLoadedFile *loaded,
 
     if (ndsRelocMObjSubMixedFieldsLookNative(mobjsub) != FALSE)
     {
+        ndsRelocRegisterNormalizedMObjSub(loaded, mobjsub);
         ndsRelocRecordMObjSubNormalize(loaded, mobjsub);
         return;
     }
 
     ndsRelocNormalizeMObjSubWordSwapped(mobjsub);
+    ndsRelocRegisterNormalizedMObjSub(loaded, mobjsub);
     ndsRelocRecordMObjSubNormalize(loaded, mobjsub);
 }
 

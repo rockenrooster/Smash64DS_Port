@@ -74,19 +74,19 @@ render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
 Source-depth X/Y/Z share one composed clip vertex. No-Z layers use signed 20.12
 NDC; removing an extra `<< 4` restores stage/fighter occlusion.
 
-O2R `MObjSub` lanes, aligned Dream Land starts, original floor adoption, and
-the one-cycle `PRIMITIVE * SHADE` path remain live. Imported `grwallpaper.c`
-owns the source Sprite. Texture varyings remain linear until sampling;
-masked-clamp axes through 128 texels materialize their logical extent through
-the source mask/mirror address function. Nonzero `LOADBLOCK` DXT now recovers
-the source DRAM row stride independently of the render-tile width. Fox's 8x8
-CI4 tail no longer alternates its real 16-texel rows with zero padding; Tyler
-accepted the visible fix in
-`artifacts/visibility/2026-07-11_fox-tail-dxt-hudoff-candidate.png`.
-Canonical proof retains zero texture rejects/oracle mismatches and 73.077%
-flowering-bush detail. Both fighters are broadly recognizable on DS. The large
-white pond, missing ground flowers, tree-face strips, front fences, shifts,
-fog/color animation, and slow output remain.
+A source-shaped `gcAddMObjAll` wrapper now normalizes mixed-width O2R lanes by
+loaded-file and asset/generation provenance. Canonical Dream Land observes at
+least four water/Whispy swaps, zero native/failure cases, and first flags
+`0x0200 -> 0x006b`. The renderer resolves the source tile-6/TMEM-0x40 TEXEL1 and
+tile-7/TMEM-0 TEXEL0 independently, recognizes exact `G_CC_TEMPLERP`, and
+precomposes its CI4 pair with a DS RGBA5551/A1 approximation. Compatible
+animated state refreshes resident VRAM with frame pinning. The 184-frame gate
+has positive scene-lifetime refresh, zero eviction/reject/oracle drift, and a
+terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
+`27.997%/105px`. Accepted capture:
+`artifacts/visibility/2026-07-11_dream-land-texel1-materials-hudoff-final.png`.
+Fox's DXT tail fix remains; Tyler accepts the water. Debt: flowers, floor/path
+occlusion of front fences, Whispy face, fractional phase, shifts, fog, and speed.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `237948`, resident reloc `681632`
@@ -125,9 +125,9 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-The five-record stage `MObjSub` probe changed no pixels and was reverted; the source-correct tile-origin conversion changed only `18/49152` pixels.
+The rejected five-address load-time `MObjSub` mutation remains reverted; the attachment seam is live-path and address-independent.
 The accepted S-axis trace found masked `CLAMP` ownership; the high-bit fighter branch is live, but Mario/Fox select `0/0` such descriptors.
-Follow-ups: pond/TEXEL1, flower rows, tree-face/fence draw classes, Mario facing/light A/B, wallpaper/audio timing, then caching.
+Follow-ups: flower/fence draw classes, Whispy face acceptance, Mario facing/light A/B, quarter-phase water, then caching.
 FGM/voice and the original sequence player remain deferred.
 ## Verification
 

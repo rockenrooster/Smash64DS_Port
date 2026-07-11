@@ -12215,7 +12215,7 @@ static void ndsStageInishieScaleLoopPreviewSourceDisplay(void)
 {
     DObj *dobjs[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     NDSFighterDLDrawState states[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
-    NDSRendererStats stats[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
+    NDSRendererStats stats;
     u8 clean[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     u32 pitch = 0u;
     u16 *pixels;
@@ -12228,7 +12228,7 @@ static void ndsStageInishieScaleLoopPreviewSourceDisplay(void)
     dobjs[3] = gGRCommonStruct.inishie.scale[1].string_dobj;
 
     bzero(states, sizeof(states));
-    bzero(stats, sizeof(stats));
+    bzero(&stats, sizeof(stats));
     bzero(clean, sizeof(clean));
 
     commit_before = gNdsOriginalDLPreviewCommitCount;
@@ -12248,7 +12248,7 @@ static void ndsStageInishieScaleLoopPreviewSourceDisplay(void)
     {
         states[i].slot = i & 1u;
         ndsStageInishieScaleLoopPreviewSourceDObj(dobjs[i], &states[i],
-                                                  &stats[i], &clean[i]);
+                                                  &stats, &clean[i]);
     }
 
     if ((clean[0] != FALSE) && (clean[1] != FALSE) &&

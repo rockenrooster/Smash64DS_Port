@@ -195,6 +195,7 @@ try {
         ("target remote 127.0.0.1:{0}" -f (Get-MelonDSActiveGdbPort)),
         'printf "AOBJ32=%u,%u,%u,%u,%#x,%#x\n", gNdsAObjEvent32NormalizeScriptCount, gNdsAObjEvent32NormalizeCommandCount, gNdsAObjEvent32NormalizeReuseCount, gNdsAObjEvent32NormalizeFailCount, gNdsAObjEvent32NormalizeFirstSourceWord, gNdsAObjEvent32NormalizeFirstNativeWord',
         'printf "AOBJ32_FAIL=%u,%u,%#x,%#x,%u,%#x\n", gNdsAObjEvent32NormalizeLastFailReason, gNdsAObjEvent32NormalizeLastFailOwner, gNdsAObjEvent32NormalizeLastFailAddress, gNdsAObjEvent32NormalizeLastFailWord, gNdsAObjEvent32NormalizeLastFailOpcode, gNdsAObjEvent32NormalizeLastFailFlags',
+        'printf "MOBJ_ATTACH=%u,%u,%u,%#x,%#x\n", gNdsMObjSubAttachNormalizeCount, gNdsMObjSubAttachNativeCount, gNdsMObjSubAttachFailCount, gNdsMObjSubAttachFirstSourceFlags, gNdsMObjSubAttachFirstNativeFlags',
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
         'printf "SCENE=%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind',
         'printf "BUILD_MODE=%#x,%#x,%#x\n", gNdsBuildModeCanonicalWord, gNdsBuildModeShippedWord, gNdsBuildModeFastWord',
@@ -270,6 +271,7 @@ try {
             'printf "RENDER_DEPTH=%u,%d,%d,%d,%d,%u,%d,%d,%d,%d,%u,%d,%d,%d,%d\n", gNdsRendererDepthStageSamples, gNdsRendererDepthStageMin, gNdsRendererDepthStageMax, gNdsRendererDepthStageWMin, gNdsRendererDepthStageWMax, gNdsRendererDepthFighterP0Samples, gNdsRendererDepthFighterP0Min, gNdsRendererDepthFighterP0Max, gNdsRendererDepthFighterP0WMin, gNdsRendererDepthFighterP0WMax, gNdsRendererDepthFighterP1Samples, gNdsRendererDepthFighterP1Min, gNdsRendererDepthFighterP1Max, gNdsRendererDepthFighterP1WMin, gNdsRendererDepthFighterP1WMax',
             'printf "RENDER_CLIP=%u\n", gNdsRendererProfileHWVertexSaturateCount',
             'printf "RENDER_TEXTURE=%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%d,%d\n", gNdsRendererProfileTextureSourceTexels, gNdsRendererProfileTextureGreenTexels, gNdsRendererProfileTextureNonWhiteTexels, gNdsRendererProfileTexturedVertexCount, gNdsRendererProfileTextureSampleCount, gNdsRendererProfileTextureSampleGreenCount, gNdsRendererProfileTextureSampleNonWhiteCount, gNdsRendererProfileTextureCacheAliasAvoidCount, gNdsRendererProfileTextureCoordMinS, gNdsRendererProfileTextureCoordMaxS, gNdsRendererProfileTextureCoordMinT, gNdsRendererProfileTextureCoordMaxT',
+            'printf "RENDER_TEXEL1=%u,%u,%u,%#x,%u,%#x,%#x,%#x,%#x,%u,%u\n", gNdsRendererProfileTexel1CompositeCount, gNdsRendererProfileTexel1LoadMatchCount, gNdsRendererProfileTexel1RejectCount, gNdsRendererProfileTexel1RejectReasonMask, gNdsRendererProfileTexel1LastFraction, gNdsRendererProfileTexel1LastImage0, gNdsRendererProfileTexel1LastImage1, gNdsRendererProfileTexel1LastTileState, gNdsRendererProfileTexel1LastPrimaryState, gNdsRendererProfileTexel1FractionRefreshCount, gNdsRendererProfileTextureCacheEvictCount',
             'printf "RENDER_TEXUSE=%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x\n", gNdsRendererProfileUseTextureRejectNoStatsCount, gNdsRendererProfileUseTextureRejectStateOffCount, gNdsRendererProfileUseTextureRejectNoCombineCount, gNdsRendererProfileUseTextureRejectPrimitiveDecalCount, gNdsRendererProfileUseTextureRejectNoTexel0Count, gNdsRendererProfileUseTextureImplicitOnCount, gNdsRendererProfileUseTextureRejectFirstReason, gNdsRendererProfileUseTextureRejectFirstFlags, gNdsRendererProfileUseTextureRejectFirstW0, gNdsRendererProfileUseTextureRejectFirstW1, gNdsRendererProfileUseTextureRejectFirstGeometry',
             'printf "RENDER_TEXFMT=%#x,%#x,%#x,%#x,%#x\n", gNdsRendererProfileTextureConvertFormatMask, gNdsRendererProfileTextureBindFormatMask, gNdsRendererProfileTexturePaletteFormatMask, gNdsRendererProfileTextureRejectFormatMask, gNdsRendererProfileTextureRejectReasonMask',
             'printf "RENDER_TEXLANE=%#x,%u,%u,%#x,%#x,%#x,%#x\n", gNdsRendererProfileTextureLaneLayoutMask, gNdsRendererProfileTextureLaneByteAccessCount, gNdsRendererProfileTextureLaneHalfwordAccessCount, gNdsRendererProfileTextureLaneByteFormatMask, gNdsRendererProfileTextureLaneHalfwordFormatMask, gNdsRendererProfileTextureLaneByteMap, gNdsRendererProfileTextureLaneHalfwordMap',
@@ -362,6 +364,7 @@ try {
     }
     $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root -Commands $gdbCommands -ScriptName $scriptName).Stdout
     $aobj32 = [regex]::Match($gdbStdout, 'AOBJ32=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $mobjAttach = [regex]::Match($gdbStdout, 'MOBJ_ATTACH=([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+)')
     $buildMode = [regex]::Match($gdbStdout, 'BUILD_MODE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
@@ -416,6 +419,7 @@ try {
     $renderDepth = [regex]::Match($gdbStdout, 'RENDER_DEPTH=([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderClip = [regex]::Match($gdbStdout, 'RENDER_CLIP=([0-9]+)')
     $renderTexture = [regex]::Match($gdbStdout, 'RENDER_TEXTURE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
+    $renderTexel1 = [regex]::Match($gdbStdout, 'RENDER_TEXEL1=([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $renderTexUse = [regex]::Match($gdbStdout, 'RENDER_TEXUSE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderTexFmt = [regex]::Match($gdbStdout, 'RENDER_TEXFMT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderTexLane = [regex]::Match($gdbStdout, 'RENDER_TEXLANE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
@@ -490,6 +494,8 @@ try {
                 $rd = Get-Ints $renderDepth
                 $rclip = Get-Ints $renderClip
                 $rt = Get-Ints $renderTexture
+                $rt1 = Get-Ints $renderTexel1
+                $ma = Get-Ints $mobjAttach
                 $rtu = Get-Ints $renderTexUse
                 $rtf = Get-Ints $renderTexFmt
                 $rtl = Get-Ints $renderTexLane
@@ -512,6 +518,8 @@ try {
                 Assert-Condition ($rd[1] -ge -4096 -and $rd[2] -le 4095 -and $rd[1] -le $rd[2] -and $rd[3] -gt 0 -and $rd[3] -le $rd[4] -and $rd[6] -ge -4096 -and $rd[7] -le 4095 -and $rd[6] -le $rd[7] -and $rd[8] -gt 0 -and $rd[8] -le $rd[9] -and $rd[11] -ge -4096 -and $rd[12] -le 4095 -and $rd[11] -le $rd[12] -and $rd[13] -gt 0 -and $rd[13] -le $rd[14]) 'Canonical realtime HW source-depth samples left signed 20.12 NDC or reported invalid clip W.' $gdbStdout
                 Assert-Condition ($renderClip.Success -and $rclip[0] -eq $rv[12]) 'Canonical realtime HW build did not report a consistent clipping/saturation marker.' $gdbStdout
                 Assert-Condition ($renderTexture.Success -and $rt[0] -gt 0 -and $rt[1] -gt 0 -and $rt[2] -gt 0 -and $rt[3] -gt 0 -and $rt[4] -gt 0 -and $rt[5] -gt 0 -and $rt[6] -gt 0 -and $rt[8] -lt $rt[9] -and $rt[10] -lt $rt[11]) 'Canonical realtime HW build did not prove Dream Land texture data and texcoords reached GX submission.' $gdbStdout
+                Assert-Condition ($renderTexel1.Success -and $rt1[0] -gt 0 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[3] -eq 0 -and $rt1[4] -le 0xff -and $rt1[5] -ne 0 -and $rt1[6] -ne 0 -and $rt1[5] -ne $rt1[6] -and $rt1[9] -gt 0 -and $rt1[10] -eq 0) 'Canonical realtime HW build did not resolve, precompose, and refresh the source Dream Land TEXEL0/TEXEL1 water material without evicting resident textures.' $gdbStdout
+                Assert-Condition ($mobjAttach.Success -and $ma[0] -ge 4 -and $ma[1] -eq 0 -and $ma[2] -eq 0 -and $ma[3] -eq 0x0200 -and $ma[4] -eq 0x006b) 'Canonical realtime HW build did not normalize the live water and Whispy mixed-width O2R MObjSub fields at the BattleShip attachment boundary.' $gdbStdout
                 Assert-Condition ($renderTexUse.Success) 'Canonical realtime HW build did not report texture-use rejection classes.' $gdbStdout
                 Assert-Condition ($renderTexFmt.Success -and $rtf[0] -ne 0 -and $rtf[1] -ne 0 -and $rtf[4] -eq 0) 'Canonical realtime HW build had unexplained texture bind failures by format.' $gdbStdout
                 Assert-Condition ($renderTexLane.Success -and (($rtl[0] -band 0x2) -ne 0) -and $rtl[1] -gt 0 -and $rtl[2] -gt 0 -and (($rtl[3] -band 0x100) -ne 0) -and $rtl[5] -eq 0x00010203 -and $rtl[6] -eq 0x02030001) 'Canonical realtime HW build did not prove O2R texture byte-lane decoding on the active CI4 path.' $gdbStdout

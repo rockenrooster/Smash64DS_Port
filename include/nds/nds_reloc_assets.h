@@ -15,6 +15,8 @@ typedef struct NDSRelocAssetHeader {
     u32 data_size;
 } NDSRelocAssetHeader;
 
+struct MObjSub;
+
 void ndsRelocAssetsInit(void);
 const char *ndsRelocAssetGetPath(u32 asset_id);
 s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header);
@@ -22,6 +24,8 @@ s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u32 *out_file_ids,
                                    u32 capacity, u32 *out_count);
 s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
                            NDSRelocAssetHeader *out_header);
+s32 ndsRelocCopyMObjSubForAttachment(struct MObjSub *dst,
+                                     const struct MObjSub *src);
 
 extern volatile u32 gNdsRelocAssetInitResult;
 extern volatile u32 gNdsRelocAssetHeaderReadCount;

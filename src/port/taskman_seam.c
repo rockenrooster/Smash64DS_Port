@@ -721,6 +721,17 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileTextureSampleGreenCount = 0;
     gNdsRendererProfileTextureSampleNonWhiteCount = 0;
     gNdsRendererProfileTextureCacheAliasAvoidCount = 0;
+    gNdsRendererProfileTexel1CompositeCount = 0;
+    gNdsRendererProfileTexel1LoadMatchCount = 0;
+    gNdsRendererProfileTexel1RejectCount = 0;
+    gNdsRendererProfileTexel1RejectReasonMask = 0;
+    gNdsRendererProfileTexel1LastFraction = 0;
+    gNdsRendererProfileTexel1LastImage0 = 0;
+    gNdsRendererProfileTexel1LastImage1 = 0;
+    gNdsRendererProfileTexel1LastTileState = 0;
+    gNdsRendererProfileTexel1LastPrimaryState = 0;
+    gNdsRendererProfileTexel1FractionRefreshCount = 0;
+    gNdsRendererProfileTextureCacheEvictCount = 0;
     gNdsRendererProfileTextureCoordMinS = 32767;
     gNdsRendererProfileTextureCoordMaxS = -32768;
     gNdsRendererProfileTextureCoordMinT = 32767;
@@ -4215,6 +4226,19 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileTextureSampleGreenCount = 0;
     gNdsRendererProfileTextureSampleNonWhiteCount = 0;
     gNdsRendererProfileTextureCacheAliasAvoidCount = 0;
+    gNdsRendererProfileTexel1CompositeCount = 0;
+    gNdsRendererProfileTexel1LoadMatchCount = 0;
+    gNdsRendererProfileTexel1RejectCount = 0;
+    gNdsRendererProfileTexel1RejectReasonMask = 0;
+    gNdsRendererProfileTexel1LastFraction = 0;
+    gNdsRendererProfileTexel1LastImage0 = 0;
+    gNdsRendererProfileTexel1LastImage1 = 0;
+    gNdsRendererProfileTexel1LastTileState = 0;
+    gNdsRendererProfileTexel1LastPrimaryState = 0;
+    /* Refreshes and evictions are scene-lifetime cache health counters. A
+     * terminal verifier sample can land on a frame whose water keys are
+     * unchanged, so clearing them per present would erase the animation proof
+     * and could also hide an earlier resident-texture eviction. */
     gNdsRendererProfileTextureCoordMinS = 32767;
     gNdsRendererProfileTextureCoordMaxS = -32768;
     gNdsRendererProfileTextureCoordMinT = 32767;

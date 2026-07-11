@@ -63,10 +63,6 @@ and live animation/key runtime. Modes `39/40`, `53/54`, and `161/162` rebuild
 movement, attack, damage/recover, and guard naturally; obsolete gcDrawAll modes
 `57/58` and selected Jab2 modes `159/160` were deleted.
 
-The local `ftParamsUpdateFighterPartsTransform*` seams now follow
-`ftparam.c:2161-2349`; mode `163` walks both fighters toward stage center and
-uses the source-derived jostle plus reflector reach before firing.
-
 `battle_playable` default: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now links
 original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`,
 battle-critical `if/ifcommon.c` HUD paths, original `if/ifscreenflash.c`, the
@@ -92,12 +88,18 @@ The memory ledger reports headroom `237948`, resident reloc `681632` bytes
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land;
 source-separated Mario/Fox bodies are broadly accepted on DS. Latest capture:
-`artifacts/visibility/2026-07-11_fox-tail-dxt-hudoff-candidate.png`.
+`artifacts/visibility/2026-07-11_dream-land-texel1-materials-hudoff-final.png`.
 Source map-object kinds `0..3` decode exactly, and the original manager grounds
-Mario/Fox on lines `3/2` at X `0/-1397`. Fighter `MObjSub` attachment now
-normalizes O2R mixed-width lanes before original `gcAddMObjForDObj` copies the
-record. The HW combiner also preserves the proven one-cycle
-`PRIMITIVE * SHADE` formula. Imported DObj/MObj/CObj AObj32 attachments now
+Mario/Fox on lines `3/2` at X `0/-1397`. A source-shaped `gcAddMObjAll` wrapper
+uses loaded-file/asset-generation provenance for local O2R lane restoration.
+Canonical observes at least four water/Whispy swaps, no native/failure cases,
+and first flags `0x0200 -> 0x006b`. The renderer independently resolves
+tile-6/TMEM-0x40 TEXEL1 and tile-7/TMEM-0 TEXEL0, recognizes exact
+`G_CC_TEMPLERP`, and precomposes a DS RGBA5551/A1 approximation. A 184-frame
+gate proves positive scene-lifetime compatible-state refresh, zero eviction/
+reject/oracle drift, and terminal `12/12` matches. Pond detail is
+`46.053%/23px` versus white `27.997%/105px`.
+Imported DObj/MObj/CObj AObj32 attachments now
 normalize complete N64 MSB-first command graphs once per reloc generation;
 fighter AObj16 streams bypass that path. Original timing/state stays live, and
 a host-independent post-step corrects packed RGBA byte arithmetic. Persistent
@@ -107,22 +109,20 @@ texels materialize source addressing; six CI4 stars render correctly. Nonzero
 `LOADBLOCK` DXT reconstructs source DRAM stride and removes Fox tail's
 alternating CI4 padding rows. The 192-wide island remains masked-clamp debt.
 Source scene light, selected material light seed, and N64 RGBA order are live.
-Debt: white pond, flower rows, tree-face strips, front fences, shifts,
-TEXEL1/water, fog/color animation, raw GX matrices, and slow output. Mario's
-pant lighting needs an opposite-facing A/B before classification.
+Debt: flowers, confirmed floor/path occlusion of foreground fences, Whispy face
+acceptance, fractional water phase, shifts, other TEXEL1 formulas, fog/color
+animation/raw GX matrices/speed, and Mario's unclassified pant lighting.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped
 realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
-Arena fallbacks keep fighter-runtime modes above the 128 KiB memory reserve.
 
 ## Recommended Next Work
-1. Fix the large white pond through source TEXEL1/material/pass semantics.
-2. Restore the missing ground flower batches and their alpha path.
-3. Resolve tree-face strips and verify front-fence faces/culling.
-4. Turn Mario under a fixed light to classify the pant-leg asymmetry.
-5. Cache corrected draw/SObj state for stable audio and 60fps.
+1. Fix floor/path depth ordering over foreground fences; restore flowers.
+2. Accept or refine the changed Whispy face; preserve 10.2 water phase.
+3. Turn Mario under a fixed light to classify the pant-leg asymmetry.
+4. Cache corrected draw/SObj/material state for stable audio and 60fps.
 
-Do not repeat the exact five-record stage `MObjSub` normalization as a visual fix: its canonical probe changed `0/49152` pixels and was fully reverted.
+Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
 Do not translate N64 `CLAMP` as clamp-only when a nonzero mask owns a smaller physical period; preserve logical tile clamp and masked repeat/mirror separately.
 Do not revisit the high-bit fighter branch for current fragments (`0/0` active Mario/Fox descriptors), or queue Dream Land by generic head assumptions (`layer_mask=0`, `42/0` lists, `0/49152` changed pixels).
@@ -136,7 +136,7 @@ For docs-only edits, run `.\scripts\check-docs.ps1`. For mechanical chunks:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-For shared-TU changes, use `RegressionCore` during the session. Tyler runs the full Regression sweep overnight with `scripts/start-overnight-regression.ps1`.
+Stamped RegressionCore passed; Tyler skipped full Regression for faster iteration. Run the overnight sweep later if desired.
 Detach prebuilds expected to exceed 90 seconds and confirm by stamp:
 
 ```powershell

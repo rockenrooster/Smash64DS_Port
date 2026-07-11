@@ -1166,6 +1166,32 @@ keeps O2R byte/halfword lanes orthogonal and prevents Fox's 8x8 CI4 tail from
 stepping through an 8-texel half-row of zero padding instead of its physical
 16-texel source row. DXT-zero/pre-swizzled material paths remain separate debt.
 
+Stage material compatibility belongs at object attachment, not at hardcoded
+asset offsets. O2R relocation swaps each 32-bit word, but `MObjSub` mixes
+16-bit flags and byte-sized format fields inside those words. A source-shaped
+`gcAddMObjAll` wrapper preserves `objanim.c:2429-2455` traversal and copies each
+record at the attachment boundary. Pointers outside loaded reloc files remain
+native; an asset/generation registry identifies loaded records already
+normalized in place; every other loaded record is lane-restored and validated.
+Invalid conversions fail closed before unchanged `gcAddMObjForDObj` owns the
+durable copy. The global seam covers all callers; canonical Dream Land observes
+the active water and Whispy records without mutating assets or hardcoding IDs.
+
+Dream Land water uses two textures in one source combiner, while DS hardware
+exposes one texture per polygon. `objdisplay.c:1225-1430` loads the next image
+through tile 6/TMEM `0x40`, the current image through tile 7/TMEM `0`, and
+writes the animated primitive LOD fraction. The renderer retains the two most
+recent load windows and resolves both render-tile TMEM bases independently. It
+recognizes the exact Pupupu `0xfc272c04/0x1f0c93ff` mux and CPU-precomposes its
+CI4 pair into DS RGBA5551; ordered 4x4 A1 coverage approximates blended source
+alpha. Other two-texture formulas remain unmodeled single-texture debt. The
+cache key contains both sources, tile windows, and LOD fraction. Compatible
+animated-state changes reuse an allocation and DMA replacement pixels through
+the bundled sm64-nds bank-remap pattern; frame pinning prevents rewriting or
+evicting textures referenced by submitted polygons. Refresh/eviction health is
+scene-lifetime. Relative 10.2 tile-origin phase still rounds to whole texels,
+so smooth bilerp water motion remains fidelity/performance debt.
+
 Canonical HW still uses projected submission rather than the final raw GX
 matrix path. Source-depth X/Y/Z now come from the same current composed clip
 vertex, including matrix-word updates, before the perspective divide. Stage
@@ -1182,8 +1208,8 @@ at an arbitrary PC can observe the intentional reset at frame start and must
 not be interpreted as zero geometry or a failed CPU oracle.
 
 Remaining fidelity boundaries stay source-shaped. Dream Land still needs
-proof for nonzero texture shifts, DXT-zero/pre-swizzled loads, TEXEL1/water,
-and POT padding when no mask defines the physical period. Stage traversal must
+proof for nonzero texture shifts, DXT-zero/pre-swizzled loads, other TEXEL1
+formulas, and POT padding when no mask defines the physical period. Stage traversal must
 retain layer and opaque/translucent DL-head identity across the camera pass;
 fighter events still need fog-color/alpha and non-white ENV semantics; anim-lock
 motions need the inverse-scale matrix branch from `lbcommon.c:1369-1441`.
