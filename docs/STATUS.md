@@ -86,22 +86,23 @@ generic/oracle route. No composed frame, fighter, or source behavior is cached.
 
 Canonical mode 163 alone keeps `-O2`; the larger scripted/lifecycle diagnostics
 stay `-Os` and retain `227392` bytes of headroom. Mode 163 compiles the renderer
-TU in ARM state, while four measured O3 loops live in ITCM (`15,492` profile-1
-bytes, `14,680` forensic); normal/legacy builds remain Thumb. Matrix cache hits
-return before building temporary 4x4 pairs. Frame-local camera/DObj caches and
-hybrid submission remain:
+TU in ARM state, while four measured O3 loops live in ITCM (`14,968` profile-1
+bytes, `14,404` forensic); normal/legacy builds remain Thumb. Profiles 0/1 now
+reuse live renderer state across ordered lists while resetting only transient
+proof counters; profile 2 keeps per-list forensic state. Runtime builds omit its
+82,176-byte stats array. Raw-fit bits are cached at VTX load, and an adjacent
+TRI batch skips invariant alpha/fog work. Frame-local caches and submission remain:
 `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range, `1,242`
 divisions, and `121/707/121` batches. A GX display-list arena experiment was
 reverted after worsening vertex submission.
-
-Warm profile-0 present median/p95 is now `4,901,760/5,165,440`, down from
-`5,889,312/6,024,768`; pacing rises `5.6 -> 6.6fps`. Profile 1 is
-`4,898,336/4,902,784`, with DL `3,381,152/3,486,208`, texture
-`803,840/907,840`, setup `1,311,424/1,414,976`, scan
-`1,406,752/1,408,448`, and vertex `663,776/665,280` ticks.
+Warm profile-0 present stays at its pacing quantum (`4,901,312/4,904,128`),
+but draw falls `4,669,856 -> 4,392,160` ticks and pacing reaches `7.0fps`.
+Profile 1 is `4,766,048/4,902,848`, with DL `3,329,920/3,434,304`, texture
+`804,512/907,840`, setup `1,253,280/1,357,248`, scan
+`1,415,040/1,416,704`, and vertex `661,920/663,040` ticks.
 Forensic oracle remains `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_canonical_fast_002352-0840184-p39796.png`;
-shipped SHA-256: `80F67758BE41809C4F0FFFA9BEDCB82912CAD41E3968051374E79E6340191C9F`.
+`artifacts/visibility/2026-07-12_runtime-state-dualscreen-software.png`;
+shipped SHA-256: `353F5B98D230808CD0EACB38037A99462405DF3CB6EE53AEA710A0496F70740A`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
@@ -129,15 +130,15 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `6.6fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `1.41M/1.31M` ticks; compile immutable packets
+The canonical frame is still only `7.0fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `1.42M/1.25M` ticks; compile immutable packets
 and hoist exact run state without reviving the regressive GX-list arena. RGBA4 HUD,
 Whispy face strips, and Mario facing/light A/B remain separate debt.
 
 ## Verification
 
-Fresh P1Gate passed in `467.6s`; Boundary passed in `277.7s`. DevFast passed in
-`43.0s` and the forensic oracle in `120.7s`. This is not the five-minute soak;
+P1Gate passed in `198.2s`; Boundary passed in `106.2s`. DevFast passed in
+`43.7s` and the forensic oracle in `16.8s`. This is not the five-minute soak;
 Full Regression stays skipped.
 
 ```powershell

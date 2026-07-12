@@ -19600,3 +19600,46 @@ Source-corrected verifier expectations: none; the compiler layout follows the
 DS reference and matrix reuse keys exact already-loaded GX state.
 Coverage-reduced verifier expectations: none; profile 2 retains the generic
 interpreter, eager transform oracle, and dynamic validation paths.
+
+## 2026-07-12 - Persistent runtime renderer state and TRI invariants
+
+- Applied the optimization review's profile split at the existing BattleShip
+  list boundary. Profiles 0/1 reuse one live `NDSRendererStats` state across
+  ordered stage heads or fighter parts and reset only the contiguous transient
+  prefix plus nine interleaved diagnostics. Texture/tile/combine/light/fog/
+  other-mode state remains exactly the prior seed/capture set. Profile 2 keeps
+  independent per-list forensic objects and the original copy route.
+- Runtime builds no longer allocate the 64-entry per-part forensic stats array.
+  The profile-2 symbol is `0x14100` bytes (82,176); canonical BSS falls to
+  1,844,176 bytes while the forensic build retains the array and 1,932,944-byte
+  BSS. A measured whole-stats template copy was slower than zero plus narrow
+  state copy and was reverted before the in-place transient reset landed.
+- Each RSP slot now records raw-v16 coordinate eligibility once at `G_VTX` and
+  carries the bit through the persistent vertex cache; `G_MWO_POINT_ST` does
+  not alter it. Triangle classification replaces up to three repeated six-axis
+  range tests with one exact mask comparison.
+- An open GX batch proves source adjacency: every opcode able to change alpha,
+  fog, texture, or matrix state closes it first. The 707 adjacent reuse calls
+  therefore skip invariant alpha/fog key construction while retaining polygon,
+  texture-name, and matrix ownership checks. Batch counts remain
+  `121/707/121`; the triangle partition remains `648/44/126/10`.
+- Warm profile 0 retains its presentation pacing quantum but draw median falls
+  `4,669,856 -> 4,392,160` ticks and measured pacing rises `6.6 -> 7.0fps`.
+  Profile 1 reports present `4,766,048/4,902,848`, DL
+  `3,329,920/3,434,304`, texture `804,512/907,840`, setup
+  `1,253,280/1,357,248`, scan `1,415,040/1,416,704`, and vertex
+  `661,920/663,040`. ITCM is `14,968` bytes in profile 1 and `14,404` in
+  profile 2.
+- Profile 2 retains all 828 triangles and exact oracle `2484/0/0`. A final
+  software-rendered melonDS capture shows the natural equal-size top and bottom
+  screens with Dream Land, pond, flowers, foreground fence, Mario, and Fox
+  intact. Canonical/shipped parity is 11,594,752 bytes at SHA-256
+  `353F5B98D230808CD0EACB38037A99462405DF3CB6EE53AEA710A0496F70740A`.
+- GBI/static checks, DevFast, forensic, P1Gate, and all three Boundary entries
+  pass in `2.2s/43.7s/16.8s/198.2s/106.2s`. Full/Legacy Regression remains
+  intentionally skipped for Tyler's fast P1 iteration cadence.
+
+Source-corrected verifier expectations: none; the reused object preserves the
+same explicitly enumerated source state and resets every prior per-list field.
+Coverage-reduced verifier expectations: none; profile 2 retains the old
+per-list allocation/copy route, generic interpreter, and eager oracle.

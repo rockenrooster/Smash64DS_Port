@@ -1334,10 +1334,24 @@ selection and exact derived RGB15 color, scaled S/T, projected X/Y, and source
 clip Z per RSP vertex slot. The no-Z synthetic depth is still generated per
 triangle. Every non-TRI opcode clears these masks, so VTX, MODIFYVTX, matrix,
 texture, material, branch, sync, and end boundaries cannot reuse stale values.
+Raw-coordinate eligibility is likewise computed when a slot is loaded and
+carried with the persistent RSP vertex cache; `G_MWO_POINT_ST` cannot change
+that result. An open TRI batch is proof that no intervening source opcode could
+mutate alpha/fog state, so adjacent triangles compare only the vertex-dependent
+polygon format plus texture and matrix ownership before reusing the batch.
 The animated CI4 pair LUT has a separate exact key over the two converted
 16-color palettes and blend fraction. A dynamic `glCallList`/FIFO arena was
 measured and rejected because 121 small source runs increased vertex cost; the
 direct GX submission path remains authoritative.
+
+Profiles 0/1 also reuse one live renderer state object across BattleShip's
+ordered stage heads or fighter-part lists. Before each list, the adapter clears
+the contiguous transient proof/counter prefix and nine interleaved diagnostics;
+texture, tile, combine, light, fog, and other-mode state remain live exactly as
+the prior explicit seed/capture helper defined. Profile 2 keeps independent
+per-list forensic objects and the old state-copy route. Its 64-entry stats array
+is therefore omitted from runtime builds, removing 82,176 bytes of static BSS
+without weakening the forensic ABI or oracle.
 
 Renderer instrumentation is compile-time tiered through
 `NDS_RENDERER_PROFILE_LEVEL`. Profile 0 is forced for the canonical/shipped ROM:
@@ -1359,8 +1373,8 @@ while larger scripted and timer/Results diagnostics use Os for scene reserve.
 Only mode 163 compiles `nds_renderer.c` in ARM state; normal and archived narrow
 builds retain Thumb density. Four measured renderer loops also carry targeted
 O3 and `.itcm`, matching sm64-nds's interpreter/submission layout without
-fast-math or whole-program O3. Profile 1 occupies `15,492/32,768` ITCM bytes;
-profile 2 occupies `14,680`. Cache-hit guards run before temporary GX matrix
+fast-math or whole-program O3. Profile 1 occupies `14,968/32,768` ITCM bytes;
+profile 2 occupies `14,404`. Cache-hit guards run before temporary GX matrix
 construction, while `ndsRendererLoadHardwareMatrixPair` remains the final exact
 state guard.
 

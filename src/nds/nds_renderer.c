@@ -742,6 +742,21 @@ static u32 sNdsRendererHardwareTexel01Ci4LutFraction;
 static u32 sNdsRendererHardwareTexel01Ci4LutKeyValid;
 
 static void ndsRendererHardwareEndBatch(void);
+
+static inline s32 ndsRendererHardwareRawVertexFits(
+    const NDSRendererInputVertex *vtx)
+{
+    if (vtx == NULL)
+    {
+        return FALSE;
+    }
+    return ((vtx->x >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
+            (vtx->x <= NDS_RENDERER_HW_RAW_COORD_MAX) &&
+            (vtx->y >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
+            (vtx->y <= NDS_RENDERER_HW_RAW_COORD_MAX) &&
+            (vtx->z >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
+            (vtx->z <= NDS_RENDERER_HW_RAW_COORD_MAX)) ? TRUE : FALSE;
+}
 #endif
 
 typedef struct NDSRendererTraversalState
@@ -797,6 +812,9 @@ typedef struct NDSRendererTraversalState
     u32 modelview_valid;
     u32 matrix_valid;
     u32 matrix_word_valid;
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 raw_vertex_fit_mask;
+#endif
 } NDSRendererTraversalState;
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
@@ -2364,6 +2382,14 @@ static void ndsRendererApplyVertexCommand(
         ndsRendererProfileRecordSourceVertexLoad();
         state->input_vertices[index] = input;
         state->input_vertex_valid_mask |= mask;
+        if (ndsRendererHardwareRawVertexFits(&input) != FALSE)
+        {
+            state->raw_vertex_fit_mask |= mask;
+        }
+        else
+        {
+            state->raw_vertex_fit_mask &= ~mask;
+        }
         state->vertex_colors[index] =
             ndsRendererHardwareLitShadeColorPrepared(
                 stats, &input, prepared_light_direction);
@@ -6218,21 +6244,6 @@ static void ndsRendererLoadHardwareMatrices(
         NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY, 0u, FALSE);
 }
 
-static s32 ndsRendererHardwareRawVertexFits(
-    const NDSRendererInputVertex *vtx)
-{
-    if (vtx == NULL)
-    {
-        return FALSE;
-    }
-    return ((vtx->x >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
-            (vtx->x <= NDS_RENDERER_HW_RAW_COORD_MAX) &&
-            (vtx->y >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
-            (vtx->y <= NDS_RENDERER_HW_RAW_COORD_MAX) &&
-            (vtx->z >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
-            (vtx->z <= NDS_RENDERER_HW_RAW_COORD_MAX)) ? TRUE : FALSE;
-}
-
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 static u64 ndsRendererHardwareAbsS64(s64 value)
 {
@@ -6600,15 +6611,17 @@ static void ndsRendererHardwareBeginTriangleBatch(
     u32 matrix_mode,
     u32 matrix_generation)
 {
-    u32 alpha_key = ndsRendererHardwareAlphaStateKey(stats);
-    u32 fog_key = ndsRendererHardwareFogStateKey(stats);
+    u32 alpha_key;
+    u32 fog_key;
 
+    /* An open GX batch can only contain adjacent TRI1/TRI2 source commands.
+     * Every opcode capable of changing alpha, fog, texture, or matrix state
+     * closes it in ndsRendererScanList before mutation. Keep the per-triangle
+     * reuse check to the values that can differ through vertex selection. */
     if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
         (sNdsRendererHardwareTriangleBatchTextured == textured) &&
         (sNdsRendererHardwareTriangleBatchTextureName == texture_name) &&
         (sNdsRendererHardwareTriangleBatchPolyFmt == poly_fmt) &&
-        (sNdsRendererHardwareTriangleBatchAlphaKey == alpha_key) &&
-        (sNdsRendererHardwareTriangleBatchFogKey == fog_key) &&
         (sNdsRendererHardwareTriangleBatchMatrixMode == matrix_mode) &&
         (sNdsRendererHardwareTriangleBatchMatrixGeneration ==
          matrix_generation))
@@ -6617,6 +6630,8 @@ static void ndsRendererHardwareBeginTriangleBatch(
         return;
     }
 
+    alpha_key = ndsRendererHardwareAlphaStateKey(stats);
+    fog_key = ndsRendererHardwareFogStateKey(stats);
     ndsRendererHardwareEndBatch();
     if (textured != 0u)
     {
@@ -6934,18 +6949,13 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     {
         return NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH;
     }
-    if ((ndsRendererHardwareRawVertexFits(&state->input_vertices[i0]) ==
-         FALSE) ||
-        (ndsRendererHardwareRawVertexFits(&state->input_vertices[i1]) ==
-         FALSE) ||
-        (ndsRendererHardwareRawVertexFits(&state->input_vertices[i2]) ==
-         FALSE))
+    mask = (1u << i0) | (1u << i1) | (1u << i2);
+    if ((state->raw_vertex_fit_mask & mask) != mask)
     {
         ndsRendererProfileRecordRawCurrentRangeReject();
         return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
     }
 
-    mask = (1u << i0) | (1u << i1) | (1u << i2);
     if ((state->current_transform_vertex_mask & mask) == mask)
     {
         if (ndsRendererHardwareRawMatrixCompatible(state) == FALSE)
@@ -7784,6 +7794,7 @@ void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache)
     }
 
     vertex_cache->input_valid_mask = 0u;
+    vertex_cache->raw_vertex_fit_mask = 0u;
     vertex_cache->transformed_valid_mask = 0u;
     vertex_cache->vertex_color_valid_mask = 0u;
     vertex_cache->matrix_snapshot_count = 0u;
@@ -8067,6 +8078,7 @@ void ndsRendererExecuteDisplayListWithVertexCache(
         memcpy(state.input_vertices, vertex_cache->input_vertices,
                sizeof(state.input_vertices));
         state.input_vertex_valid_mask = vertex_cache->input_valid_mask;
+        state.raw_vertex_fit_mask = vertex_cache->raw_vertex_fit_mask;
         memcpy(state.vertex_colors, vertex_cache->vertex_colors,
                sizeof(state.vertex_colors));
         state.vertex_color_valid_mask =
@@ -8090,6 +8102,7 @@ void ndsRendererExecuteDisplayListWithVertexCache(
         memcpy(vertex_cache->input_vertices, state.input_vertices,
                sizeof(vertex_cache->input_vertices));
         vertex_cache->input_valid_mask = state.input_vertex_valid_mask;
+        vertex_cache->raw_vertex_fit_mask = state.raw_vertex_fit_mask;
         memcpy(vertex_cache->vertex_colors, state.vertex_colors,
                sizeof(vertex_cache->vertex_colors));
         vertex_cache->vertex_color_valid_mask =

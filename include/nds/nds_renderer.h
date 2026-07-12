@@ -120,6 +120,7 @@ typedef struct NDSRendererVertexCache
     u32 transformed_valid_mask;
     u32 vertex_color_valid_mask;
     u32 matrix_snapshot_count;
+    u32 raw_vertex_fit_mask;
 } NDSRendererVertexCache;
 
 typedef struct NDSRendererCommand
