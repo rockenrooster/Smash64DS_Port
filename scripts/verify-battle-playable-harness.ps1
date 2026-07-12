@@ -22,7 +22,10 @@ param(
     [switch]$MatchLifecycleProof,
     [switch]$RequireRealtime60Fps,
     [int]$RendererProfileLevel = -1,
-    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0
+    [ValidateRange(0,2)][int]$PreparedStage0ExecutionMode = 0,
+    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(0,100000)][int]$RendererBenchmarkStartFrame = 0,
+    [string]$RendererBenchmarkOutputJson = ''
 )
 $ErrorActionPreference = 'Stop'
 if (($RendererProfileLevel -lt -1) -or ($RendererProfileLevel -gt 2)) {
@@ -95,7 +98,10 @@ $hardwareTriangles = $target -like '*-hwtri'
     -MatchLifecycleProof:$MatchLifecycleProof `
     -RequireRealtime60Fps:$RequireRealtime60Fps `
     -RendererProfileLevel $RendererProfileLevel `
+    -PreparedStage0ExecutionMode $PreparedStage0ExecutionMode `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
+    -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
+    -RendererBenchmarkOutputJson $RendererBenchmarkOutputJson `
     -Harness $harness `
     -Target $target `
     -Build $build `

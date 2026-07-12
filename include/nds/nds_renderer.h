@@ -52,6 +52,13 @@
 #define NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT 2u
 #define NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 1024u
 
+/* Version-one prepared lists deliberately describe immutable source topology,
+ * not a final GX stream.  The owner compiler binds live state into the compact
+ * pools below and the renderer still uses its exact vertex/triangle path. */
+#define NDS_RENDERER_PREPARED_FORMAT_VERSION 1u
+#define NDS_RENDERER_PREPARED_ROOT_BRANCH 0xffffu
+#define NDS_RENDERER_PREPARED_MAX_BYTES (16u * 1024u)
+
 #define NDS_RENDERER_GEOM_ZBUFFER 0x00000001u
 #define NDS_RENDERER_GEOM_SHADE 0x00000004u
 #define NDS_RENDERER_GEOM_CULL_FRONT 0x00000200u
@@ -123,6 +130,79 @@ typedef struct NDSRendererVertexCache
     u32 matrix_snapshot_count;
     u32 raw_vertex_fit_mask;
 } NDSRendererVertexCache;
+
+typedef enum NDSRendererPreparedOpKind
+{
+    NDS_RENDERER_PREPARED_OP_APPLY_STATE_GROUP = 0,
+    NDS_RENDERER_PREPARED_OP_LOAD_PREDECODED_VTX_BLOCK,
+    NDS_RENDERER_PREPARED_OP_DRAW_TRIANGLE_RUN
+} NDSRendererPreparedOpKind;
+
+/* payload_index/count select a consecutive slice of the pool named by kind.
+ * vertex_start is used only by LOAD_PREDECODED_VTX_BLOCK. */
+typedef struct NDSRendererPreparedOp
+{
+    u16 payload_index;
+    u16 count;
+    u16 source_command_index;
+    u8 kind;
+    u8 vertex_start;
+} NDSRendererPreparedOp;
+
+/* A first-generation program only needs root commands and direct children of
+ * the root list.  branch_command_index is the root DL-command index that
+ * entered the child, or NDS_RENDERER_PREPARED_ROOT_BRANCH for the root itself.
+ * This is sufficient for an exact profile-2 provenance path for Dream Land's
+ * layer-zero owner without carrying profile data in shipping builds. */
+typedef struct NDSRendererPreparedTriangleCommand
+{
+    Gfx command;
+    u16 source_command_index;
+    u16 branch_command_index;
+    u8 branch_depth;
+    u8 branch_is_jump;
+    u8 reserved[2];
+} NDSRendererPreparedTriangleCommand;
+
+typedef struct NDSRendererPreparedList
+{
+    const NDSRendererPreparedOp *operations;
+    const Gfx *state_commands;
+    const NDSRendererInputVertex *vertices;
+    const NDSRendererPreparedTriangleCommand *triangle_commands;
+    const void *storage_base;
+    const Gfx *first_branch_dl;
+    const Gfx *first_resolved_branch_dl;
+    u32 format_version;
+    u16 operation_count;
+    u16 state_command_count;
+    u16 vertex_count;
+    u16 triangle_command_count;
+    u16 source_command_count;
+    u16 storage_bytes;
+    u16 omitted_command_count;
+    u16 sync_command_count;
+    u16 end_command_count;
+    u16 branch_command_count;
+    u16 branch_call_count;
+    u16 branch_jump_count;
+    u16 segment_resolve_count;
+    u16 skip_command_count;
+    u16 immutable_list_count;
+    u16 trusted_command_count;
+    u16 validated_command_count;
+    u16 max_depth_seen;
+    u16 max_source_list_commands;
+    u8 first_opcode;
+    u8 reserved[3];
+} NDSRendererPreparedList;
+
+_Static_assert(sizeof(NDSRendererInputVertex) <= 16u,
+               "prepared decoded vertex exceeded its compact bound");
+_Static_assert(sizeof(NDSRendererPreparedOp) == 8u,
+               "prepared operation record exceeded its compact bound");
+_Static_assert(sizeof(NDSRendererPreparedTriangleCommand) == 16u,
+               "prepared triangle record exceeded its compact bound");
 
 typedef enum NDSRendererProfileOwner
 {
@@ -446,6 +526,13 @@ void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
                                      NDSRendererClipVertex20p12 *out);
 void ndsRendererInitStats(NDSRendererStats *stats);
 void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache);
+void ndsRendererDecodePreparedVertexBlock(
+    NDSRendererInputVertex *dst, const void *src, u32 count);
+s32 ndsRendererPreparedStateOpcodeSupported(u32 op);
+u32 ndsRendererPreparedListPreflight(
+    const NDSRendererPreparedList *prepared,
+    const NDSRendererConfig *config,
+    const NDSRendererStats *stats);
 void ndsRendererScanDisplayList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats);
@@ -459,6 +546,11 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     const NDSRendererConfig *config,
     NDSRendererCommandCallback callback,
     void *callback_user,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache);
+void ndsRendererExecutePreparedListWithVertexCache(
+    const NDSRendererPreparedList *prepared,
+    const NDSRendererConfig *config,
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache);
 void ndsRendererHardwareResetSourceCaches(void);

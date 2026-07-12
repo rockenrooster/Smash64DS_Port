@@ -12805,29 +12805,28 @@ static sb32 ndsStageGCDrawAllLoopIsSelectedFighter(GObj *gobj)
     return (ndsFighterStructIsPoolPointer(fp) != FALSE) ? TRUE : FALSE;
 }
 
-static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
-                                           sb32 is_layer, u32 kind,
-                                           u32 callback_kind)
+static u32 ndsStageGCDrawAllLoopCollectDObjs(
+    GObj *gobj, u32 owner_mask, sb32 is_layer, u32 kind,
+    DObj **collected, u32 collected_capacity)
 {
     DObj *stack[128];
     u32 stack_count = 0u;
     u32 scanned = 0u;
     DObj *root;
 
-    if (gobj == NULL)
+    if ((gobj == NULL) || (collected == NULL) ||
+        (collected_capacity == 0u))
     {
-        return;
+        return 0u;
     }
     root = DObjGetStruct(gobj);
     if (root == NULL)
     {
-        return;
+        return 0u;
     }
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)callback_kind;
-#endif
     stack[stack_count++] = root;
-    while ((stack_count != 0u) && (scanned < ARRAY_COUNT(stack)))
+    while ((stack_count != 0u) && (scanned < ARRAY_COUNT(stack)) &&
+           (scanned < collected_capacity))
     {
         DObj *dobj = stack[--stack_count];
 
@@ -12835,6 +12834,7 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
         {
             continue;
         }
+        collected[scanned] = dobj;
         scanned++;
         if (is_layer != FALSE)
         {
@@ -12860,30 +12860,6 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                 gNdsStageGCDrawAllLoopMapMObjMask |= owner_mask;
             }
         }
-#if NDS_RENDERER_HW_TRIANGLES
-        if ((dobj->dv != NULL) &&
-            (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE) &&
-            ((callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) ||
-             (callback_kind ==
-                 NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS) ||
-             (((callback_kind ==
-                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS) ||
-               (callback_kind ==
-                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0) ||
-               (callback_kind ==
-                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1)) &&
-              (dobj == root))))
-        {
-            ndsRendererAdapterSubmitStageDObj(
-                dobj,
-                callback_kind,
-                sNdsStageGCDrawAllLoopCurrentCameraGObj,
-                ndsStageGCDrawAllLoopInitialGeometryMode());
-            sNdsStageGCDrawAllLoopHardwareSubmitCount++;
-            gNdsStageGCDrawAllLoopHardwareSubmitCount =
-                sNdsStageGCDrawAllLoopHardwareSubmitCount;
-        }
-#endif
         if ((dobj->sib_next != NULL) && (stack_count < ARRAY_COUNT(stack)))
         {
             stack[stack_count++] = dobj->sib_next;
@@ -12894,7 +12870,50 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
         }
     }
     gNdsStageGCDrawAllLoopDObjDrawKindMask |= 1u << kind;
+    return scanned;
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+static void ndsStageGCDrawAllLoopSubmitCollectedDObjs(
+    DObj *root, DObj *const *collected, u32 collected_count,
+    u32 callback_kind)
+{
+    u32 i;
+
+    if ((root == NULL) || (collected == NULL) ||
+        (sNdsStageGCDrawAllLoopHardwareSubmitActive == FALSE))
+    {
+        return;
+    }
+    for (i = 0u; i < collected_count; i++)
+    {
+        DObj *dobj = collected[i];
+
+        if ((dobj == NULL) || (dobj->dv == NULL) ||
+            ((callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) &&
+             (callback_kind !=
+                 NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS) &&
+             (((callback_kind !=
+                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS) &&
+               (callback_kind !=
+                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0) &&
+               (callback_kind !=
+                    NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1)) ||
+              (dobj != root))))
+        {
+            continue;
+        }
+        ndsRendererAdapterSubmitStageDObj(
+            dobj,
+            callback_kind,
+            sNdsStageGCDrawAllLoopCurrentCameraGObj,
+            ndsStageGCDrawAllLoopInitialGeometryMode());
+        sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+        gNdsStageGCDrawAllLoopHardwareSubmitCount =
+            sNdsStageGCDrawAllLoopHardwareSubmitCount;
+    }
+}
+#endif
 
 void ndsStageGCDrawAllLoopRecordCameraCallback(void)
 {
@@ -12960,6 +12979,8 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 {
     GObj *stage_gobj = gobj;
+    DObj *collected[128];
+    u32 collected_count;
     u32 mask;
     sb32 is_layer;
     u32 callback_kind = kind;
@@ -13004,11 +13025,24 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
         ndsRendererAdapterBeginStageTraversal();
     }
 #endif
-    ndsStageGCDrawAllLoopScanDObjs(stage_gobj, mask, is_layer, kind,
-                                   callback_kind);
+    collected_count = ndsStageGCDrawAllLoopCollectDObjs(
+        stage_gobj, mask, is_layer, kind, collected,
+        ARRAY_COUNT(collected));
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)collected_count;
+    (void)callback_kind;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
+        ndsRendererAdapterBeginStagePreparedCandidate(
+            stage_gobj, (void *const *)collected, collected_count,
+            callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
+            ndsStageGCDrawAllLoopInitialGeometryMode(), mask,
+            sNdsStageGCDrawAllLoopCurrentDisplayLinkID, is_layer);
+        ndsStageGCDrawAllLoopSubmitCollectedDObjs(
+            DObjGetStruct(stage_gobj), collected, collected_count,
+            callback_kind);
         ndsRendererAdapterEndStageTraversal();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         if (owner_start != 0u)

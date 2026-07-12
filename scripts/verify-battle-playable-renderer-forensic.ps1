@@ -5,7 +5,9 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0
+    [ValidateRange(0,2)][int]$PreparedStage0ExecutionMode = 0,
+    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(0,100000)][int]$RendererBenchmarkStartFrame = 0
 )
 $ErrorActionPreference = 'Stop'
 
@@ -19,7 +21,9 @@ $ErrorActionPreference = 'Stop'
     -RealtimePresentation `
     -ImportBattleShipFTComputer `
     -RendererProfileLevel 2 `
-    -RendererBenchmarkSamples $RendererBenchmarkSamples
+    -PreparedStage0ExecutionMode $PreparedStage0ExecutionMode `
+    -RendererBenchmarkSamples $RendererBenchmarkSamples `
+    -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

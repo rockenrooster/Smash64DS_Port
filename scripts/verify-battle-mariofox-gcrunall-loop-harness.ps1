@@ -28,7 +28,10 @@ param(
     [switch]$MatchLifecycleProof,
     [switch]$RequireRealtime60Fps,
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
+    [ValidateRange(0,2)][int]$PreparedStage0ExecutionMode = 0,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(0,100000)][int]$RendererBenchmarkStartFrame = 0,
+    [string]$RendererBenchmarkOutputJson = '',
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
     [string]$Build = 'build-battle-mariofox-gcrunall-loop-harness',
@@ -76,6 +79,15 @@ $benchmarkRomIdentity = $null
 $benchmarkElfIdentity = $null
 $benchmarkMelonIdentity = $null
 $benchmarkMelonConfigSha256 = $null
+$benchmarkResult = $null
+if ((-not [string]::IsNullOrWhiteSpace($RendererBenchmarkOutputJson)) -and
+    ($RendererBenchmarkSamples -eq 0)) {
+    throw 'RendererBenchmarkOutputJson requires RendererBenchmarkSamples greater than zero.'
+}
+if (($RendererBenchmarkStartFrame -ne 0) -and
+    ($RendererBenchmarkSamples -eq 0)) {
+    throw 'RendererBenchmarkStartFrame requires RendererBenchmarkSamples greater than zero.'
+}
 function Assert-Condition {
     param([bool]$Condition, [string]$Message, [string]$Context)
     if (-not $Condition) { throw "$Message`n$Context" }
@@ -156,10 +168,11 @@ function Get-RatioBasisPoints {
     return [int64](($Numerator * 10000) / $Denominator)
 }
 function Test-RendererUploadPair {
-    param([int64]$Count, [int64]$Bytes, [int]$ProfileLevel)
-    if ($ProfileLevel -ge 2) {
-        return ($Count -eq 0 -and $Bytes -eq 0)
-    }
+    param([int64]$Count, [int64]$Bytes)
+    # All three renderer profiles can sample either a resident frame or one
+    # of the exact animated-water upload phases.  Profile 2 uses an
+    # independent bytewise decoder, but its cache residency phase is not
+    # synchronized to the benchmark window.
     return (($Count -eq 0 -and $Bytes -eq 0) -or
             ($Count -eq 1 -and ($Bytes -eq 4096 -or $Bytes -eq 32768)) -or
             ($Count -eq 2 -and $Bytes -eq 36864))
@@ -258,6 +271,141 @@ function Get-BenchmarkFileIdentity {
         Bytes = [int64]$item.Length
         LastWriteUtc = $item.LastWriteTimeUtc.ToString('o')
     }
+}
+function Get-BenchmarkMarkerRows {
+    param([System.Collections.IEnumerable]$Matches)
+
+    $rows = [System.Collections.Generic.List[object]]::new()
+    foreach ($match in $Matches) {
+        $rows.Add([int64[]](Get-Ints $match))
+    }
+    return ,$rows
+}
+function Get-BenchmarkMarkerValues {
+    param([System.Text.RegularExpressions.Match]$Match)
+
+    if (($null -eq $Match) -or -not $Match.Success) {
+        return ,([int64[]]@())
+    }
+    return ,([int64[]](Get-Ints $Match))
+}
+function Get-RendererBenchmarkFieldSchema {
+    $semanticFields = @(
+        'frame', 'frameHash1', 'frameHash2', 'frameEventCount',
+        'frameOverflowCount'
+    )
+    foreach ($owner in @('stage', 'mario', 'fox')) {
+        $semanticFields += @(
+            "${owner}Hash1", "${owner}Hash2", "${owner}EventCount",
+            "${owner}OverflowCount", "${owner}OccurrenceCount",
+            "${owner}FirstOwnerOccurrence", "${owner}FirstListOrdinal",
+            "${owner}FirstBranchPath", "${owner}FirstCommandIndex",
+            "${owner}FirstTri2Half", "${owner}FirstOutcome"
+        )
+    }
+    return [ordered]@{
+        renderer = @(
+            'profile', 'frame', 'presentTicks', 'drawTicks',
+            'stageAdapterTicks', 'materialTicks', 'matrixTicks',
+            'displayListTicks', 'textureTicks', 'triangleSubmitTicks',
+            'vertexSubmitTicks', 'hardwareTriangles', 'oracleSamples',
+            'textureUploads', 'textureUploadBytes'
+        )
+        coarse = @(
+            'frame', 'loopWallTicks', 'inputTicks', 'updateTicks',
+            'sourceUpdateTicks', 'audioUpdateTicks', 'presentActiveTicks',
+            'vblankWaitTicks', 'beginFrameTicks', 'drawTicks',
+            'wallpaperTicks', 'stageOwnerTicks', 'marioOwnerTicks',
+            'foxOwnerTicks', 'foregroundTicks', 'hudTicks', 'flushTicks',
+            'postVblankTicks', 'threadTicks', 'drawResidualTicks',
+            'presentResidualTicks', 'loopResidualTicks',
+            'conservationErrorTicks', 'logicTick'
+        )
+        gxBoundary = @(
+            'frame', 'statusBeforeFlush', 'controlBeforeFlush',
+            'statusAfterFlush', 'statusPostVblank', 'controlPostVblank',
+            'flushTicks'
+        )
+        stageLayer0 = @('frame', 'ticks')
+        owner = @(
+            'frame', 'owner', 'exclusiveTicks', 'selectedCount',
+            'sourceCommandCount', 'vertexCommandCount',
+            'sourceVertexCount', 'triangleCommandCount', 'triangleCount',
+            'submitClass0', 'submitClass1', 'submitClass2', 'submitClass3',
+            'submitClass4', 'submitClass5', 'submitClass6', 'submitClass7',
+            'materialOperationCount', 'matrixChangeCount',
+            'textureChangeCount', 'runCount', 'entryStateHash',
+            'exitStateHash', 'entryVertexCacheHash', 'exitVertexCacheHash',
+            'entryResolverHash', 'exitResolverHash', 'entryGlobalHash',
+            'exitGlobalHash', 'topologySignature', 'selectedEventSignature',
+            'cameraSignature', 'dobjMatrixSignature', 'materialSignature',
+            'lightSignature', 'textureSignature', 'semanticOutputHash'
+        )
+        semantic = $semanticFields
+        terminal = [ordered]@{
+            platformHardware = @('submittedFrameCount', 'flushCount', 'polygonRamCount', 'vertexRamCount', 'status', 'control')
+            stageHardware = @('submitCount', 'triangleCount', 'zbufferTriangleCount', 'projectedDepthTriangleCount', 'decalDepthTriangleCount', 'textureBindCount', 'textureUploadCount', 'textureReadyCount', 'textureRejectCount', 'textureFormatMask', 'textureMaxWidth', 'textureMaxHeight')
+            stageCarry = @('seedCount', 'captureCount', 'textureSeedCount', 'tileSeedCount', 'shortTextureSeedCount', 'shortTileSeedCount', 'segmentSeedCount')
+            stageHardwareFighter = @('submitCount', 'triangleCount')
+            fighterDisplayContract = @('selectedCount', 'hiddenCount', 'noTextureCount', 'submittedCount', 'geometryMode', 'lightCount', 'lightDirectionCount', 'boundsPassCount', 'boundsFailCount', 'boundsXBits', 'boundsYBits', 'marioSelectedCount', 'foxSelectedCount', 'cycleType', 'renderMode')
+            renderProfile = @('frame', 'updateTicks', 'presentTicks', 'drawTicks', 'hudTicks', 'stageAdapterTicks', 'materialTicks', 'matrixTicks', 'displayListTicks', 'textureTicks', 'textureConvertTicks', 'textureUploadTicks', 'textureUploads', 'textureUploadBytes', 'textureBinds', 'hardwareVertices', 'hardwareTriangles', 'hardwareOverLimit')
+            renderBatch = @('batchBeginCount', 'batchReuseCount', 'batchEndCount', 'texturePrepareCount', 'texturePrepareReuseCount')
+            renderTopology = @('immutableListCount', 'trustedCommandCount', 'validatedCommandCount', 'triangleRunReuseCount')
+            renderCost = @('triangleSubmitTicks', 'vertexSubmitTicks')
+            renderCi4Lut = @('lutBuildCount', 'lutReuseCount', 'indexBuildCount', 'indexReuseCount')
+            renderCi4Map = @('representativePixelCount', 'reusePixelCount')
+            renderTexHash = @('lookupCallCount', 'lookupProbeCount', 'activeHitCount', 'tableHitCount', 'missCount')
+            renderOracle = @('samples', 'mismatches', 'maxDelta')
+            renderMatrix = @('loadCount', 'scaleWorld', 'projectionM00', 'projectionM11', 'projectionM22', 'projectionM32', 'modelviewM00', 'modelviewM11', 'modelviewM22', 'modelviewM30', 'modelviewM31', 'modelviewM32')
+            renderAdapterCache = @('cameraHitCount', 'cameraMissCount', 'cameraOverflowCount', 'dobjHitCount', 'dobjMissCount', 'dobjOverflowCount')
+            renderRawMatrix = @('rawCurrentCandidateCount', 'rawCurrentRangeRejectCount', 'rawCrossMatrixCount', 'posTestSamples', 'posTestMismatches', 'posTestMaxError', 'posTestWSignMismatches', 'posTestClipMismatches', 'posTestMatrixWordSamples', 'posTestDropped')
+            renderSubmit = @('rawCurrentCount', 'rawSnapshotCount', 'projectedCrossCount', 'projectedNoZCount', 'projectedDecalCount', 'projectedPrimDepthCount', 'projectedRangeOrMatrixCount', 'rejectCount', 'dividerWork')
+            renderHardwareDivide = @('sampleCount', 'maxError', 'wSignMismatches', 'zeroDenominator', 'mismatch')
+            renderLazy = @('sourceVertexLoadCount', 'cpuTransformCount', 'transformCacheHitCount', 'snapshotCreateCount', 'snapshotReuseCount', 'snapshotOverflowCount')
+            renderVertex = @('rawMinX', 'rawMaxX', 'rawMinY', 'rawMaxY', 'rawMinZ', 'rawMaxZ', 'hardwareMinX', 'hardwareMaxX', 'hardwareMinY', 'hardwareMaxY', 'hardwareMinZ', 'hardwareMaxZ', 'saturateCount')
+            renderDepth = @('stageSamples', 'stageMin', 'stageMax', 'stageWMin', 'stageWMax', 'marioSamples', 'marioMin', 'marioMax', 'marioWMin', 'marioWMax', 'foxSamples', 'foxMin', 'foxMax', 'foxWMin', 'foxWMax')
+            renderClip = @('hardwareVertexSaturateCount')
+            renderTexture = @('sourceTexels', 'greenTexels', 'nonWhiteTexels', 'texturedVertexCount', 'sampleCount', 'sampleGreenCount', 'sampleNonWhiteCount', 'cacheAliasAvoidCount', 'coordMinS', 'coordMaxS', 'coordMinT', 'coordMaxT')
+            renderTexel1 = @('compositeCount', 'loadMatchCount', 'rejectCount', 'rejectReasonMask', 'lastFraction', 'lastImage0', 'lastImage1', 'lastTileState', 'lastPrimaryState', 'fractionRefreshCount', 'cacheEvictCount', 'ci4DirectPixels')
+            renderTexUse = @('rejectNoStatsCount', 'rejectStateOffCount', 'rejectNoCombineCount', 'rejectPrimitiveDecalCount', 'rejectNoTexel0Count', 'implicitOnCount', 'firstReason', 'firstFlags', 'firstW0', 'firstW1', 'firstGeometry')
+            renderTexFmt = @('convertFormatMask', 'bindFormatMask', 'paletteFormatMask', 'rejectFormatMask', 'rejectReasonMask')
+            renderTexLane = @('layoutMask', 'byteAccessCount', 'halfwordAccessCount', 'byteFormatMask', 'halfwordFormatMask', 'byteMap', 'halfwordMap')
+            renderCombine = @('modeCount', 'modeDistinctCount', 'litShadeCount', 'materialCount', 'projectedFallbackCount', 'mode0W0', 'mode0W1', 'mode1W0', 'mode1W1', 'mode2W0', 'mode2W1', 'mode3W0', 'mode3W1')
+            renderLight = @('colorCommands', 'directionCommands', 'fallbackCount')
+            preparedStage0 = @('frame', 'compileAttemptCount', 'compileSuccessCount', 'fallbackReason', 'arenaCapacity', 'programBytes', 'keyHash1', 'keyHash2', 'dobjCount', 'listCount', 'sourceCommandCount', 'logicalOperationCount', 'applyOpCount', 'stateGroupCount', 'stateActionCount', 'vertexBlockCount', 'sourceVertexCount', 'drawRunCount', 'triangleCommandCount', 'triangleCount', 'immutableListCount', 'trustedCommandCount', 'validatedCommandCount', 'branchCount', 'branchCallCount', 'branchJumpCount')
+            preparedStage0Execution = @('mode', 'preflightAttemptCount', 'preflightSuccessCount', 'armedOwnerCount', 'completedOwnerCount', 'executedListCount', 'failureCount', 'lastFailure', 'lastBlocker')
+        }
+    }
+}
+function Write-RendererBenchmarkJson {
+    param(
+        [Parameter(Mandatory=$true)][object]$Result,
+        [Parameter(Mandatory=$true)][string]$Path,
+        [Parameter(Mandatory=$true)][string]$BaseDirectory
+    )
+
+    $outputPath = if ([System.IO.Path]::IsPathRooted($Path)) {
+        [System.IO.Path]::GetFullPath($Path)
+    } else {
+        [System.IO.Path]::GetFullPath((Join-Path $BaseDirectory $Path))
+    }
+    $outputDirectory = Split-Path -Parent $outputPath
+    if (-not [string]::IsNullOrWhiteSpace($outputDirectory)) {
+        New-Item -ItemType Directory -Path $outputDirectory -Force |
+            Out-Null
+    }
+    $temporaryPath = "$outputPath.tmp.$PID"
+    try {
+        $json = $Result | ConvertTo-Json -Depth 12
+        $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+        [System.IO.File]::WriteAllText(
+            $temporaryPath, $json + [Environment]::NewLine, $utf8NoBom)
+        Move-Item -LiteralPath $temporaryPath -Destination $outputPath -Force
+    } finally {
+        Remove-Item -LiteralPath $temporaryPath -Force `
+            -ErrorAction SilentlyContinue
+    }
+    return $outputPath
 }
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
@@ -441,6 +589,13 @@ try {
     if ($BattlePlayable -and $RealtimePresentation -and $HardwareTriangles -and -not $MatchLifecycleProof) {
         if ($RendererBenchmarkSamples -gt 0) {
             $coarseBenchmarkCommands = @()
+            $benchmarkCaptureCondition =
+                'gNdsBattlePlayablePacingResult != 0'
+            if ($RendererBenchmarkStartFrame -gt 0) {
+                $benchmarkCaptureCondition +=
+                    (" && gNdsRendererProfileFrameCount >= {0}" -f
+                        $RendererBenchmarkStartFrame)
+            }
             if ($RendererProfileLevel -ge 1) {
                 $coarseBenchmarkCommands += 'printf "COARSE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileLoopWallTicks, gNdsRendererProfileInputTicks, gNdsRendererProfileUpdateTicks, gNdsRendererProfileSourceUpdateTicks, gNdsRendererProfileAudioUpdateTicks, gNdsRendererProfilePresentActiveTicks, gNdsRendererProfileVBlankWaitTicks, gNdsRendererProfileBeginFrameTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileWallpaperTicks, gNdsRendererProfileOwners[0].exclusive_ticks, gNdsRendererProfileOwners[1].exclusive_ticks, gNdsRendererProfileOwners[2].exclusive_ticks, gNdsRendererProfileForegroundTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileFlushTicks, gNdsRendererProfilePostVBlankTicks, gNdsRendererProfileThreadTicks, gNdsRendererProfileDrawResidualTicks, gNdsRendererProfilePresentResidualTicks, gNdsRendererProfileLoopResidualTicks, gNdsRendererProfileConservationErrorTicks, gNdsRendererProfileLogicTick'
                 $coarseBenchmarkCommands += 'printf "STAGE0_BENCH=%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileStageLayer0Ticks'
@@ -458,7 +613,7 @@ try {
                 'break ndsBattlePlayableFrameCompleteMarker'
                 'commands'
                 'silent'
-                'if gNdsBattlePlayablePacingResult != 0'
+                ("if {0}" -f $benchmarkCaptureCondition)
                 'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileOracleSamples, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes'
                 $coarseBenchmarkCommands
                 'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
@@ -487,6 +642,14 @@ try {
             $gdbCommands[0..3]
             'tbreak osStopThread if gNdsSceneBoundaryResult != 0'
             'continue'
+            $gdbCommands[4..($gdbCommands.Count - 1)]
+        )
+    }
+    if ($PreparedStage0ExecutionMode -ne 0) {
+        $gdbCommands = @(
+            $gdbCommands[0..3]
+            ("set var gNdsPreparedStage0ExecutionMode = {0}" -f
+                $PreparedStage0ExecutionMode)
             $gdbCommands[4..($gdbCommands.Count - 1)]
         )
     }
@@ -527,6 +690,13 @@ try {
             'printf "RENDER_COMBINE=%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsRendererProfileCombineModeCount, gNdsRendererProfileCombineModeDistinctCount, gNdsRendererProfileLitShadeCombineCount, gNdsRendererProfileMaterialCombineCount, gNdsRendererProfileProjectedSubmitFallbackCount, gNdsRendererProfileCombineMode0W0, gNdsRendererProfileCombineMode0W1, gNdsRendererProfileCombineMode1W0, gNdsRendererProfileCombineMode1W1, gNdsRendererProfileCombineMode2W0, gNdsRendererProfileCombineMode2W1, gNdsRendererProfileCombineMode3W0, gNdsRendererProfileCombineMode3W1',
             'printf "RENDER_LIGHT=%u,%u,%u\n", gNdsRendererProfileLightColorCommands, gNdsRendererProfileLightDirectionCommands, gNdsRendererProfileLightFallbackCount'
         )
+        if ($BattlePlayable -and $RealtimePresentation -and
+            ($RendererProfileLevel -ge 2)) {
+            $hardwareCommands += 'printf "PREP_STAGE0=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsPreparedStage0CompileAttemptCount, gNdsPreparedStage0CompileSuccessCount, gNdsPreparedStage0FallbackReason, gNdsPreparedStage0ArenaCapacity, gNdsPreparedStage0ProgramBytes, gNdsPreparedStage0KeyHash, gNdsPreparedStage0KeyHash2, gNdsPreparedStage0DObjCount, gNdsPreparedStage0ListCount, gNdsPreparedStage0SourceCommandCount, gNdsPreparedStage0OperationCount, gNdsPreparedStage0ApplyOpCount, gNdsPreparedStage0StateGroupCount, gNdsPreparedStage0StateActionCount, gNdsPreparedStage0VertexBlockCount, gNdsPreparedStage0SourceVertexCount, gNdsPreparedStage0DrawRunCount, gNdsPreparedStage0TriangleCommandCount, gNdsPreparedStage0TriangleCount, gNdsPreparedStage0ImmutableListCount, gNdsPreparedStage0TrustedCommandCount, gNdsPreparedStage0ValidatedCommandCount, gNdsPreparedStage0BranchCount, gNdsPreparedStage0BranchCallCount, gNdsPreparedStage0BranchJumpCount'
+        }
+        if ($BattlePlayable -and $RealtimePresentation) {
+            $hardwareCommands += 'printf "PREP_STAGE0_EXEC=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsPreparedStage0ExecutionMode, gNdsPreparedStage0PreflightAttemptCount, gNdsPreparedStage0PreflightSuccessCount, gNdsPreparedStage0ArmedOwnerCount, gNdsPreparedStage0CompletedOwnerCount, gNdsPreparedStage0ExecutedListCount, gNdsPreparedStage0ExecutionFailureCount, gNdsPreparedStage0ExecutionLastFailure, gNdsPreparedStage0ExecutionLastBlocker'
+        }
         if ($BattlePlayable -and $RealtimePresentation) {
             $hardwareCommands += 'printf "SOBJ_WALL_CACHE=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperCacheBuildCount, gNdsSObjWallpaperCacheHitCount, gNdsSObjWallpaperCacheFastDrawCount, gNdsSObjWallpaperCacheFallbackCount, gNdsSObjWallpaperCacheWidth, gNdsSObjWallpaperCacheHeight, gNdsSObjWallpaperCacheOpaquePixels, gNdsSObjWallpaperCacheBuildTicks, gNdsSObjWallpaperCacheDrawTicks'
             $hardwareCommands += 'printf "SOBJ_WALL_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperFinalDirectCount, gNdsSObjWallpaperFinalSkipCount, gNdsSObjWallpaperFinalKeyChangeCount, gNdsSObjWallpaperFinalPixelWriteCount, gNdsSObjBackgroundStagingClearBytes, gNdsSObjForegroundStagingClearBytes, gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes'
@@ -662,6 +832,21 @@ try {
     $platform = [regex]::Match($gdbStdout, 'PLATFORM_DL_PREVIEW=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $platformHw = [regex]::Match($gdbStdout, 'PLATFORM_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $rendererProfileMarker = [regex]::Match($gdbStdout, 'RENDER_PROFILE_LEVEL=([0-9]+)')
+    $preparedStage0Matches = @(Get-UnsignedMarkerMatches `
+        -Text $gdbStdout -Name 'PREP_STAGE0' -FieldCount 26)
+    $preparedStage0 = if ($preparedStage0Matches.Count -ne 0) {
+        $preparedStage0Matches[0]
+    } else {
+        $null
+    }
+    $preparedStage0ExecutionMatches = @(Get-UnsignedMarkerMatches `
+        -Text $gdbStdout -Name 'PREP_STAGE0_EXEC' -FieldCount 9)
+    $preparedStage0Execution = if (
+        $preparedStage0ExecutionMatches.Count -ne 0) {
+        $preparedStage0ExecutionMatches[0]
+    } else {
+        $null
+    }
     $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $stageCarry = [regex]::Match($gdbStdout, 'RENDER_STAGE_CARRY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
@@ -810,6 +995,15 @@ try {
                 $semanticProvenanceSummaries = @()
                 $ownerCensusSummaries = @()
                 $ownerChurnSummaries = @()
+                $coarseSamples = [System.Collections.Generic.List[object]]::new()
+                $gxBoundarySamples = [System.Collections.Generic.List[object]]::new()
+                $stage0Samples = [System.Collections.Generic.List[object]]::new()
+                $semanticSamples = [System.Collections.Generic.List[object]]::new()
+                $ownerSamples = @(
+                    [System.Collections.Generic.List[object]]::new(),
+                    [System.Collections.Generic.List[object]]::new(),
+                    [System.Collections.Generic.List[object]]::new()
+                )
                 if ($RendererBenchmarkSamples -gt 0) {
                     Assert-Condition ($rendererBenchmark.Count -eq $RendererBenchmarkSamples) "Renderer benchmark captured $($rendererBenchmark.Count) of $RendererBenchmarkSamples requested warm frames." $gdbStdout
                     $benchFrames = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[2].Value })
@@ -838,7 +1032,7 @@ try {
                         $sampleUploadCount = [int64]$sample.Groups[14].Value
                         $sampleUploadBytes = [int64]$sample.Groups[15].Value
                         Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangles -eq 828 -and (($RendererProfileLevel -ge 2 -and $sampleOracle -eq 2484) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or drifted from exact 828-triangle/2,484-oracle accounting.' $gdbStdout
-                        Assert-Condition (Test-RendererUploadPair $sampleUploadCount $sampleUploadBytes $RendererProfileLevel) "Renderer benchmark sampled an invalid texture upload pair $sampleUploadCount/$sampleUploadBytes at frame $sampleFrame." $gdbStdout
+                        Assert-Condition (Test-RendererUploadPair $sampleUploadCount $sampleUploadBytes) "Renderer benchmark sampled an invalid texture upload pair $sampleUploadCount/$sampleUploadBytes at frame $sampleFrame." $gdbStdout
                         if ($sampleIndex -gt 0) {
                             $previousFrame = [int64]$rendererBenchmark[$sampleIndex - 1].Groups[2].Value
                             Assert-Condition ($sampleFrame -eq ($previousFrame + 1)) "Renderer benchmark frame window is not synchronized: frame $sampleFrame followed $previousFrame." $gdbStdout
@@ -1062,6 +1256,7 @@ try {
                         }
                         sampling = [ordered]@{
                             warmupFrames = [Math]::Max(0, ([int64]$benchFrames[0] - 1))
+                            requestedStartFrame = $RendererBenchmarkStartFrame
                             samples = $RendererBenchmarkSamples
                             frameStart = [int64]$benchFrames[0]
                             frameEnd = [int64]$benchFrames[-1]
@@ -1073,8 +1268,112 @@ try {
                     $benchmarkIdentitySummary =
                         'BENCH_IDENTITY=' +
                         ($benchmarkIdentity | ConvertTo-Json -Compress -Depth 6)
+                    $benchmarkResult = [ordered]@{
+                        schema = 1
+                        kind = 'smash64ds-renderer-benchmark'
+                        identity = $benchmarkIdentity
+                        fields = Get-RendererBenchmarkFieldSchema
+                        samples = [ordered]@{
+                            renderer = Get-BenchmarkMarkerRows $rendererBenchmark
+                            coarse = $coarseSamples
+                            gxBoundary = $gxBoundarySamples
+                            stageLayer0 = $stage0Samples
+                            owners = [ordered]@{
+                                stage = $ownerSamples[0]
+                                mario = $ownerSamples[1]
+                                fox = $ownerSamples[2]
+                            }
+                            semantic = $semanticSamples
+                        }
+                        terminal = [ordered]@{
+                            platformHardware = Get-BenchmarkMarkerValues $platformHw
+                            stageHardware = Get-BenchmarkMarkerValues $stageHardware
+                            stageCarry = Get-BenchmarkMarkerValues $stageCarry
+                            stageHardwareFighter = Get-BenchmarkMarkerValues $stageHardwareFighter
+                            fighterDisplayContract = Get-BenchmarkMarkerValues $fighterDisplayContract
+                            renderProfile = Get-BenchmarkMarkerValues $renderProfile
+                            renderBatch = Get-BenchmarkMarkerValues $renderBatch
+                            renderTopology = Get-BenchmarkMarkerValues $renderTopology
+                            renderCost = Get-BenchmarkMarkerValues $renderCost
+                            renderCi4Lut = Get-BenchmarkMarkerValues $renderCi4Lut
+                            renderCi4Map = Get-BenchmarkMarkerValues $renderCi4Map
+                            renderTexHash = Get-BenchmarkMarkerValues $renderTexHash
+                            renderOracle = Get-BenchmarkMarkerValues $renderOracle
+                            renderMatrix = Get-BenchmarkMarkerValues $renderMatrix
+                            renderAdapterCache = Get-BenchmarkMarkerValues $renderAdapterCache
+                            renderRawMatrix = Get-BenchmarkMarkerValues $renderRawMatrix
+                            renderSubmit = Get-BenchmarkMarkerValues $renderSubmit
+                            renderHardwareDivide = Get-BenchmarkMarkerValues $renderHardwareDivide
+                            renderLazy = Get-BenchmarkMarkerValues $renderLazy
+                            renderVertex = Get-BenchmarkMarkerValues $renderVertex
+                            renderDepth = Get-BenchmarkMarkerValues $renderDepth
+                            renderClip = Get-BenchmarkMarkerValues $renderClip
+                            renderTexture = Get-BenchmarkMarkerValues $renderTexture
+                            renderTexel1 = Get-BenchmarkMarkerValues $renderTexel1
+                            renderTexUse = Get-BenchmarkMarkerValues $renderTexUse
+                            renderTexFmt = Get-BenchmarkMarkerValues $renderTexFmt
+                            renderTexLane = Get-BenchmarkMarkerValues $renderTexLane
+                            renderCombine = Get-BenchmarkMarkerValues $renderCombine
+                            renderLight = Get-BenchmarkMarkerValues $renderLight
+                            preparedStage0 = Get-BenchmarkMarkerValues $preparedStage0
+                            preparedStage0Execution = Get-BenchmarkMarkerValues $preparedStage0Execution
+                        }
+                        derived = [ordered]@{
+                            uploadSequenceSha256 = $uploadSequenceHash
+                        }
+                    }
                 }
                 Assert-Condition ($rendererProfileMarker.Success -and [int64]$rendererProfileMarker.Groups[1].Value -eq $RendererProfileLevel) "Canonical realtime HW build did not report renderer profile level $RendererProfileLevel." $gdbStdout
+                Assert-Condition ($preparedStage0ExecutionMatches.Count -eq 1) `
+                    "Prepared stage layer-0 execution published $($preparedStage0ExecutionMatches.Count) terminal markers instead of one." `
+                    $gdbStdout
+                $prepExec = Get-Ints $preparedStage0Execution
+                Assert-Condition (($prepExec[0] -eq 1 -or
+                    $prepExec[0] -eq 2) -and
+                    (($PreparedStage0ExecutionMode -eq 0) -or
+                     ($prepExec[0] -eq $PreparedStage0ExecutionMode)) -and
+                    $prepExec[1] -eq $prepExec[2] -and
+                    $prepExec[2] -eq $prepExec[3] -and
+                    $prepExec[3] -eq $prepExec[4] -and
+                    $prepExec[5] -eq (20 * $prepExec[4]) -and
+                    $prepExec[6] -eq 0 -and $prepExec[7] -eq 0 -and
+                    $prepExec[8] -eq 0 -and
+                    (($prepExec[0] -ne 2) -or ($prepExec[4] -gt 0))) `
+                    'Prepared stage layer-0 whole-owner preflight/execution contract failed.' `
+                    $gdbStdout
+                if ($RendererProfileLevel -ge 2) {
+                    Assert-Condition ($preparedStage0Matches.Count -eq 1) `
+                        "Prepared stage layer-0 compiler published $($preparedStage0Matches.Count) terminal markers instead of one." `
+                        $gdbStdout
+                    $prep = Get-Ints $preparedStage0
+                    Assert-Condition ($prep[0] -gt 0 -and
+                        $prep[1] -eq 1 -and $prep[2] -eq 1 -and
+                        $prep[3] -eq 0 -and $prep[4] -eq 6144 -and
+                        $prep[5] -gt 0 -and $prep[5] -le $prep[4] -and
+                        $prep[6] -ne 0 -and $prep[7] -ne 0) `
+                        'Prepared stage layer-0 compile/storage/key contract failed.' `
+                        $gdbStdout
+                    Assert-Condition ($prep[8] -eq 21 -and
+                        $prep[9] -eq 20 -and $prep[10] -eq 297 -and
+                        $prep[11] -eq 91 -and $prep[12] -eq 17 -and
+                        $prep[13] -eq 17 -and $prep[14] -eq 123 -and
+                        $prep[15] -eq 26 -and $prep[16] -eq 108 -and
+                        $prep[17] -eq 26 -and $prep[18] -eq 36 -and
+                        $prep[19] -eq 54 -and
+                        $prep[11] -eq
+                            ($prep[12] + $prep[15] + $prep[17] +
+                             $prep[9] + 2)) `
+                        'Prepared stage layer-0 census drifted from 21 DObjs, 20 lists, 297 commands, 91 logical/69 executable ops, 17 state groups/123 actions, 26 VTX blocks/108 vertices, and 26 runs/36 commands/54 triangles.' `
+                        $gdbStdout
+                    Assert-Condition ($prep[20] -eq 21 -and
+                        $prep[21] -eq 297 -and
+                        $prep[22] -eq 22 -and
+                        $prep[23] -eq 1 -and $prep[24] -eq 1 -and
+                        $prep[25] -eq 0 -and
+                        $prep[23] -eq ($prep[24] + $prep[25])) `
+                        'Prepared stage layer-0 immutable/trusted/validated or branch call/jump accounting failed.' `
+                        $gdbStdout
+                }
                 Assert-Condition $renderTexHash.Success 'Canonical realtime HW build did not publish texture lookup accounting.' $gdbStdout
                 if ($RendererProfileLevel -lt 2) {
                     # The resident texture cache survives frame boundaries, so a
@@ -1094,14 +1393,7 @@ try {
                 # source-selected, visible, textured fighter part display lists.
                 Assert-Condition ($fighterDisplayContract.Success -and $fdc[0] -gt 0 -and $fdc[3] -gt 0 -and $fdc[0] -ge $fdc[3] -and ($fdc[0] - $fdc[3]) -le 64 -and (($fdc[4] -band 0x222005) -eq 0x222005) -and $fdc[5] -gt 0 -and $fdc[6] -gt 0 -and $fdc[7] -gt 0 -and $fdc[8] -eq 0 -and $fdc[11] -gt 0 -and $fdc[12] -gt 0 -and $fdc[13] -eq 0x00100000 -and $fdc[14] -eq [Convert]::ToUInt32('c4112078', 16)) 'Canonical realtime HW build did not preserve the original fighter display selection, lighting, geometry, cycle, render-mode, and visibility contract.' $gdbStdout
                 Assert-Condition ($renderProfile.Success -and $rp[15] -eq 2484 -and $rp[16] -eq 828 -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact 2,484-vertex/828-triangle renderer contract.' $gdbStdout
-                if ($RendererProfileLevel -lt 2) {
-                    Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13] $RendererProfileLevel) 'Performance/coarse realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
-                } else {
-                    # The independent bytewise forensic cache is fully resident
-                    # before this synchronized window; unlike profiles 0/1 it
-                    # must not perform recurring texture uploads here.
-                    Assert-Condition ($rp[12] -eq 0 -and $rp[13] -eq 0) 'Forensic renderer unexpectedly uploaded texture data after its independent cache became resident.' $gdbStdout
-                }
+                Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13]) 'Realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
                 Assert-Condition ($renderBatch.Success -and $rb[0] -eq 121 -and $rb[1] -eq 707 -and $rb[2] -eq 121 -and $rb[3] -eq 98 -and $rb[4] -eq 730) 'Canonical realtime HW build drifted from exact 121/707/121 batch and 98/730 texture-prepare accounting.' $gdbStdout
                 if ($RendererProfileLevel -lt 2) {
                     Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 2 -and $rci4lut[3] -gt $rci4lut[2]) 'Performance/coarse renderer did not build exactly two immutable CI4 source-index planes and reuse them across live water addressing.' $gdbStdout
@@ -1202,6 +1494,17 @@ try {
                 Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x1) -eq 0x1) -and (($ab[2] -eq 1) -or ($ab[6] -ge 1)) -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0) 'Minimal BGM backend realtime smoke failed hardware-timer byte-rate or safe half refill guard.' $gdbStdout
             }
             if ($RendererBenchmarkSamples -gt 0) {
+                if (-not [string]::IsNullOrWhiteSpace(
+                        $RendererBenchmarkOutputJson)) {
+                    Assert-Condition ($null -ne $benchmarkResult) `
+                        'Renderer benchmark JSON result was not assembled.' `
+                        $gdbStdout
+                    $benchmarkJsonPath = Write-RendererBenchmarkJson `
+                        -Result $benchmarkResult `
+                        -Path $RendererBenchmarkOutputJson `
+                        -BaseDirectory $root
+                    Write-Output "BENCH_JSON=$benchmarkJsonPath"
+                }
                 Write-Output $benchmarkIdentitySummary
                 Write-Output $benchmarkMetricSummary
                 Write-Output $benchmarkChurnSummary
