@@ -1334,6 +1334,16 @@ Opening movie / Opening Portraits:
   build/last-draw ticks. Canonical expects exactly one build, one or more hits,
   fast draws equal to builds plus hits, `0 / 300 / 220 / 66000`, and positive
   timings; live SObj position/scale are deliberately not part of the key.
+- `SOBJ_WALL_FINAL`: exact final-layer compositor traffic. Fields are direct
+  calls, unchanged-key skips, changed-key writes, pixel writes, background and
+  foreground 320x240 staging-clear bytes, then BG2 clear/copy/final-write bytes
+  and BG3 clear/copy/final-write bytes. Canonical requires direct calls to equal
+  decode fast draws and `skip + change`, every change to write exactly
+  `256*192` pixels, BG2 final bytes to equal twice the pixel count, and zero
+  staging, BG2 clear/copy, BG3 full-clear, or BG3 direct-write traffic. A live
+  camera can change the Q16 source key every sampled frame, so positive skips
+  are not required; the key still includes provenance, transform, mapping
+  version, and platform BG2 ownership epoch.
 - `RENDER_MATRIX` / `RENDER_VERTEX`: canonical HW matrix and vertex-range
   markers. They record loaded projection/modelview seeds and raw/HW vertex
   ranges so blank-screen failures can be sorted into matrix/clip issues versus

@@ -99,15 +99,16 @@ builds all 256 pair values per change; addressing and Bayer A1 stay exact. A 184
 gate proves positive scene-lifetime compatible-state refresh, zero eviction/
 reject/oracle drift, and terminal `12/12` matches. Pond detail is
 `46.053%/23px` versus white `27.997%/105px`.
-Profile-0 canonical/shipped retains all `828` triangles; `648` ordinary source-Z
-triangles use corrected GX. Exceptions are `44` cross-matrix, `126` no-Z, and `10` range; snapshot/
-decal/prim/reject remain zero. Matrix-keyed batches are `121/707/121`, loads are
-`53`, and projected divisions fall `7,074 -> 1,242`. Profile 2 retains device
-`PosTest 32/0/e2/w0/c0/mw1/drop0`, oracle `2484/0/0`, and all depth contracts.
-The 32 slots retain matrix IDs in per-traversal 64-entry tables. Profile 0 turns
-`821` loads into `282` lazy transforms and `258` hits; create/reuse/overflow is
-`67/7/0`. All 44 stale-slot triangles are genuinely mixed. Warm median/p95 is
-`15,543,456/15,804,544`, another `1.9%` reduction, at `2.1fps`. Capture: `artifacts/visibility/2026-07-11_canonical_fast_200725-1819819-p34716.png`.
+Profile 0 retains all `828` triangles: `648` raw-current, `44` cross-matrix,
+`126` no-Z, and `10` range; snapshot/decal/prim/reject stay zero. Batches/loads/
+divisions are `121/707/121`, `53`, and `1,242`. Profile 2 retains device
+`PosTest 32/0/e1/w0/c0/mw1/drop0`, oracle `2484/0/0`, and all depth. Per-slot
+matrix IDs produce `282` lazy transforms, `258` hits, and `67/7/0` snapshot
+create/reuse/overflow. Dream Land now composes exactly to final BG2 under a
+provenance/live-state/ownership key: `direct67/skip0/change67`, `67*49152`
+pixels, and zero staging/BG clears/BG copies. Unsupported RGBA4 interface SObjs
+are rejected before scratch clear. Warm median/p95 falls
+`15,543,456/15,804,544 -> 13,301,312/13,595,328` (`-14.4%/-14.0%`) at `2.5fps`; capture is `artifacts/visibility/2026-07-11_canonical_fast_205024-5917438-p10196.png`.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -119,12 +120,11 @@ and applies `G_MWO_POINT_ST`; File3's five flower groups add ten source textured
 triangles (`192 -> 202`). Masked-clamp axes through 128 texels, six CI4 stars,
 and the DXT tail stride remain fixed. Debt: Whispy face acceptance, water phase/
 shifts/other TEXEL1, fog/color animation, speed, and Mario light A/B.
-The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
-exposes a connected-neutral second pad; normal builds expose one controller.
+The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2.
 
 ## Recommended Next Work
-1. Cut software 2D to exact final-resolution output; keep live source transforms.
-2. Re-profile before packet replay; soak only at architecture milestones.
+1. Re-profile remaining 3D command/state cost; packetize validated immutable topology only if still hot.
+2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3; soak only at architecture milestones.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
@@ -144,7 +144,7 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Fresh P1Gate/Boundary pass in `213.9s/143.6s`. This is not the five-minute P1
+Fresh P1Gate/Boundary pass in `281.4s/167.0s`. This is not the five-minute P1
 soak; keep historical harnesses only for localization and skip Full Regression.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

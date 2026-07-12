@@ -63,6 +63,55 @@ function Get-WallpaperInverseLastWriterMap {
     }
     return ,$map
 }
+function Get-WallpaperStagedFinalMap {
+    param(
+        [int]$Length,
+        [uint32]$ScaleQ16,
+        [int]$Origin,
+        [int]$Viewport,
+        [int]$Output
+    )
+    $staged = Get-WallpaperForwardLastWriterMap `
+        -Length $Length -ScaleQ16 $ScaleQ16 -Origin $Origin `
+        -Viewport $Viewport
+    $map = [int[]]::new($Output)
+    $step = [int][Math]::Floor(([int64]$Viewport -shl 16) / $Output)
+    $sourceQ16 = [int64]($step -shr 1)
+    for ($destination = 0; $destination -lt $Output; $destination++) {
+        $preview = [int]($sourceQ16 -shr 16)
+        if ($preview -ge $Viewport) { $preview = $Viewport - 1 }
+        $map[$destination] = $staged[$preview]
+        $sourceQ16 += $step
+    }
+    return ,$map
+}
+function Get-WallpaperDirectFinalMap {
+    param(
+        [int]$Length,
+        [uint32]$ScaleQ16,
+        [int]$Origin,
+        [int]$Viewport,
+        [int]$Output
+    )
+    $map = [int[]]::new($Output)
+    for ($i = 0; $i -lt $Output; $i++) { $map[$i] = -1 }
+    $step = [int][Math]::Floor(([int64]$Viewport -shl 16) / $Output)
+    $previewQ16 = [int64]($step -shr 1)
+    $drawEnd = $Origin + [int][Math]::Floor(
+        (([int64]$Length * $ScaleQ16) + 0xffff) / 65536.0)
+    for ($destination = 0; $destination -lt $Output; $destination++) {
+        $preview = [int]($previewQ16 -shr 16)
+        if (($preview -ge $Origin) -and ($preview -lt $drawEnd)) {
+            $relative = $preview - $Origin
+            $source = [int][Math]::Floor(
+                [double]((((([int64]$relative + 1) -shl 16) - 1)) /
+                    [double]$ScaleQ16))
+            $map[$destination] = [Math]::Min($source, $Length - 1)
+        }
+        $previewQ16 += $step
+    }
+    return ,$map
+}
 function Get-TextureByte {
     param(
         [byte[]]$Bytes,
@@ -928,6 +977,11 @@ foreach ($case in $wallpaperMapCases) {
     $inverse = Get-WallpaperInverseLastWriterMap @case
     Assert-Equal ($inverse -join ',') ($forward -join ',') `
         "Wallpaper inverse last-writer mapping drifted at length=$($case.Length) scale=$($case.Scale) origin=$($case.Origin)."
+    $output = if ($case.Viewport -eq 320) { 256 } else { 192 }
+    $stagedFinal = Get-WallpaperStagedFinalMap @case -Output $output
+    $directFinal = Get-WallpaperDirectFinalMap @case -Output $output
+    Assert-Equal ($directFinal -join ',') ($stagedFinal -join ',') `
+        "Wallpaper final-resolution composition drifted from the exact two-stage map at length=$($case.Length) scale=$($case.Scale) origin=$($case.Origin)."
 }
 # Synthetic six-row/two-strip input with a one-row logical overlap. The later
 # strip's first row must replace the earlier strip's last row before scaling.
@@ -967,6 +1021,16 @@ foreach ($origin in @(-1, 1)) {
 $spritePreview = Get-Content (Join-Path $root 'src/port/sprite_preview_backend.c') -Raw
 Assert-True ($spritePreview.Contains('return ((((relative + 1u) << 16) - 1u) / scale_q16);')) 'Wallpaper inverse helper no longer uses the proven last-writer equation.'
 Assert-True ([regex]::Matches($spritePreview, 'ndsSObjWallpaperLastSource\(').Count -ge 3) 'Wallpaper fast path no longer routes both axes through the proven inverse helper.'
+Assert-True ($spritePreview.Contains('ndsSObjDrawOpaqueWallpaperFinal')) 'Dream Land wallpaper no longer has a direct final-resolution renderer.'
+Assert-True ($spritePreview.Contains('(preview_width << 16) / overlay_width')) 'Direct wallpaper X mapping no longer composes the exact preview-to-screen nearest step.'
+Assert-True ($spritePreview.Contains('(preview_height << 16) / overlay_height')) 'Direct wallpaper Y mapping no longer composes the exact preview-to-screen nearest step.'
+Assert-True ($spritePreview.Contains('ndsSObjWallpaperFinalKeyMatches')) 'Direct wallpaper output no longer keys retained BG2 ownership and live source state.'
+Assert-True ($spritePreview.Contains('sNdsSObjFramePendingWallpaper')) 'Layered SObj path no longer defers the isolated wallpaper until its background boundary.'
+Assert-True ($spritePreview.Contains('ndsSObjPreviewBasicSupported(sobj) == FALSE')) 'Layered SObj path again clears staging before rejecting unsupported source formats.'
+Assert-True ($spritePreview.Contains('sNdsSObjOverlayForegroundPopulated')) 'Layered SObj path no longer retains BG3 until a populated foreground becomes empty.'
+$platform = Get-Content (Join-Path $root 'src/nds/nds_platform.c') -Raw
+Assert-True ($platform.Contains('ndsPlatformGetOriginalSpriteOverlayLayer')) 'DS platform no longer exposes bounded final-layer ownership for direct wallpaper composition.'
+Assert-True ($platform.Contains('ndsPlatformCommitOriginalSpriteFinalLayer')) 'DS platform no longer publishes direct final-layer commits and ownership epochs.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'

@@ -82,16 +82,15 @@ has positive scene-lifetime refresh, zero eviction/reject/oracle drift, and a
 terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
 `27.997%/105px`.
 Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
-plus `G_MWO_POINT_ST` restores five flower groups and adds ten source triangles
-(`192 -> 202`); Tyler accepts both flowers and foreground fences. Texture
-conversion retains exact `37200/37200` lane observations; the forensic profile
-retains oracle `2484/0/0`.
-The immutable 300x220 wallpaper now decodes once into the retained HW buffer;
-source position/scale stay live and composed content is never cached. Proof is
-`build1/hit44/fast45/fallback0/opaque66000`; present fell
-`34,839,424 -> 24,764,160` ticks (`-28.9%`). Same-state GX triangle batching
-now spans only adjacent TRI1/TRI2 commands and closes at every other opcode or
-list exit. Proof remains `begin103/reuse725/end103` for all `828` triangles.
+plus `G_MWO_POINT_ST` restores five flower groups (`192 -> 202` triangles);
+Tyler accepts flowers/fences. Forensic lane/oracle proof is `37200/37200`, `2484/0/0`.
+The immutable 300x220 wallpaper decodes once; imported `grWallpaperCalcPersp`
+still owns its position/scale every tick. HW now composes the proven opaque
+source directly into final 256x192 BG2 with the exact old draw-then-nearest map.
+Its key covers provenance/epoch, live transform, combine/mapping, and BG2
+ownership; no composed gameplay frame is cached. Unsupported layouts retain
+the generic path. Canonical proves `direct67/skip0/change67`, exactly
+`67*49152` pixels, and zero staging, BG2 clear/copy, or BG3 full-clear traffic.
 The CI4 table first cuts present to `20,285,888`; command-hoisted light and
 compile-time profile separation reduce shipped/profile-0 work further. Matrix
 loads now use nonzero traversal generations instead of two 64-byte compares.
@@ -101,10 +100,10 @@ plus per-slot matrix/clip IDs. Profile 0 turns `821` source loads into `282`
 lazy transforms and `258` hits; snapshot create/reuse/overflow is `67/7/0`.
 The `44` stale-slot triangles are genuinely mixed, so raw-snapshot stays zero;
 `126` no-Z and `10` range exceptions also stay projected. Divisions/batches/
-loads remain `1,242`, `121/707/121`, and `53`. Profile 2 eagerly transforms
-`821/821` and passes oracle `2484/0/0`, device `PosTest 32/0/e2/w0/c0/mw1/drop0`,
-and all depth. Warm median/p95 improves `15,837,408/16,103,104 -> 15,543,456/15,804,544` (`-1.9%`); pacing remains `21/21 x0.1`.
-Capture: `artifacts/visibility/2026-07-11_canonical_fast_200725-1819819-p34716.png`.
+loads remain `1,242`, `121/707/121`, and `53`. Profile 2 transforms `821/821`;
+oracle `2484/0/0`, device `PosTest 32/0/e1/w0/c0/mw1/drop0`, and depth pass. Eight warm frames improve present median/p95
+`15,543,456/15,804,544 -> 13,301,312/13,595,328` (`-14.4%/-14.0%`); pacing is
+`25/25 x0.1`. Capture: `artifacts/visibility/2026-07-11_canonical_fast_205024-5917438-p10196.png`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `236100`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
@@ -135,11 +134,12 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Next: final-resolution 2D composition; the software compositor is the larger measured blocker.
+Next: re-profile the remaining 3D command/state cost, then add validated packet
+replay only if it remains hot; source RGBA4 interface/HUD output is separate debt.
 
 ## Verification
 
-Fresh P1Gate/Boundary pass in `213.9s/143.6s`: opening-to-Title, canonical battle, mode-163 combat, and one-minute Results—not the five-minute soak. Full Regression stays skipped.
+Fresh P1Gate/Boundary pass in `281.4s/167.0s`: opening-to-Title, canonical battle, mode-163 combat, and one-minute Results—not the five-minute soak. Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

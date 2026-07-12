@@ -1276,16 +1276,29 @@ not alternative fighter behavior.
 
 Dream Land's source wallpaper remains an SObj controlled each tick by imported
 `grWallpaperCalcPersp`. In HW builds, the otherwise redundant 320x240 retained
-preview buffer stores one decoded 300x220 RGBA16 source image. Its key copies
-relocation asset/scene/generation/data and a bitmap-layout fingerprint; platform
-clear increments an epoch. Position and scale remain live. Because the shipped
-44-strip asset proves all 66,000 logical pixels opaque, the compositor uses an
-exact destination-to-last-source inverse map; any key, opacity, capacity, or
-scale mismatch returns to the generic SObj decoder. HW preview commit scales
-the staging buffer in place before its row copies, so this adds no second frame
-buffer and never caches water, Whispy, flowers, fences, fighters, or a composed
-stage frame. A direct affine BG was rejected: lossless 300x220 RGB15 needs both
-bitmap banks and would displace the foreground layer.
+preview buffer stores one decoded 300x220 RGBA16 source image. Its decode key
+copies relocation asset/scene/generation/data, bitmap layout, and platform
+epoch. Because all 66,000 logical pixels are proven opaque, the renderer can
+invert BattleShip's last-writer scaling exactly.
+
+The isolated battle wallpaper is deferred until the background layer boundary.
+If another background SObj appears, the unchanged generic compositor receives
+both. Otherwise the DS path composes the existing stages algebraically: each
+256x192 destination uses the old 320x240 center-nearest preview sample, then the
+same destination-to-last-source inverse. Pixels outside the source draw bounds
+are written as transparent zero, exactly matching cleared staging. Its retained
+BG2 key includes source provenance/epoch, integer origin, Q16 scale, combine
+mode, mapping version, and a platform-owned BG2 epoch. A matching key writes
+zero pixels; a changed key writes exactly 49,152 final pixels. Generic BG2
+commits and clears advance the epoch, preventing stale reuse.
+
+The canonical path therefore performs no 320x240 background clear/draw/scale
+or BG2 row copy. Unsupported foreground formats are rejected before scratch
+clear, and BG3 remains retained until a populated foreground becomes empty; a
+full 256x192 foreground commit already carries transparent zeroes for untouched
+pixels. The retained source buffer never caches water, Whispy, flowers, fences,
+fighters, or a composed stage frame. A direct affine BG remains rejected:
+lossless 300x220 RGB15 needs both bitmap banks and would displace BG3.
 
 Hardware triangles retain the source command boundary. Only consecutive
 F3DEX2 TRI1/TRI2 opcodes may share a `GL_TRIANGLE` group, and the derived

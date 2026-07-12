@@ -19387,3 +19387,48 @@ hardware and CPU oracles.
 Source-corrected verifier expectations: none; position ownership now follows
 the persistent RSP slots. Coverage-reduced verifier expectations: none; profile
 2 stays eager and both integrated/boundary oracles remain authoritative.
+
+## 2026-07-11 - Exact final-resolution Dream Land composition
+
+- Audited imported `grWallpaperCalcPersp`, BattleShip's SObj rectangle math,
+  the bundled sm64-nds DS backend, and the external optimization playbook before
+  changing the DS layer. The source GObj still owns wallpaper position/scale on
+  every update; no source behavior, asset, water, stage, fighter, or whole-frame
+  output is cached.
+- Deferred the isolated Dream Land wallpaper until its background boundary. If
+  another background SObj appears, both use the unchanged generic compositor.
+  Otherwise the HW path algebraically composes the existing destination-to-last-
+  source map with the old 320x240-to-256x192 center-nearest sample and writes
+  transparent zero outside the same cleared-staging bounds.
+- Added a final BG2 key over reloc provenance/generation, decode epoch/layout,
+  live integer origin/Q16 scale, combine mode, mapping version, and a platform-
+  owned BG2 epoch. Generic clears/copies advance ownership. Matching state writes
+  zero pixels; changed state writes exactly 49,152 final pixels. The live camera
+  changed the key on every sampled frame, so canonical naturally reports zero
+  skips without weakening the exact key.
+- Removed unconditional background staging and BG3 clears. BG3 stays retained
+  until a previously populated foreground becomes empty; a full foreground
+  commit already contains transparent zeroes. Live GDB inspection identified
+  the current foreground as source interface GObj 1016, RGBA/4-bit, which the
+  compositor already rejected. The existing support test now runs before the
+  153,600-byte scratch clear, preserving its zero-pixel result without the work.
+- Host fixtures compare forward draw-plus-scale against direct final maps for
+  canonical, clipped, 1.004x, 1.5x, and 2x X/Y cases. Canonical telemetry is
+  `direct67/skip0/change67`, `3,293,184` pixels, zero staging/BG clears/BG
+  copies, and `6,586,368` exact BG2 bytes. The separate forensic ROM passes
+  oracle `2484/0/0`, PosTest `32/0/e1/w0/c0/mw1/drop0`, depth, and the same
+  final-layer contract.
+- Eight warm profile-0 frames improve present median/p95 from
+  `15,543,456/15,804,544` to `13,301,312/13,595,328`
+  (`-14.4%/-14.0%`). DevFast visibility/parity passes at SHA-256
+  `4D83091990A7B7A6E2EF127C8403885E5D0254C3F24A7AD4EAEAB3BA081D1A0B`;
+  accepted capture is
+  `artifacts/visibility/2026-07-11_canonical_fast_205024-5917438-p10196.png`.
+- Fresh P1Gate passes all four legs in `281.4s`; Boundary passes all three in
+  `167.0s`. Full Regression remains intentionally skipped for Tyler's fast P1
+  cadence. Canonical/shipped parity remains 11,581,440 bytes at the hash above.
+
+Source-corrected verifier expectations: none; this is an exact composition of
+the existing source-controlled SObj result. Coverage-reduced verifier
+expectations: none; unsupported formats retain their previous zero-pixel result
+and the generic compositor remains the fallback.

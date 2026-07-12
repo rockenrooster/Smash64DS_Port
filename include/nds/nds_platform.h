@@ -27,6 +27,13 @@ u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
 u16 *ndsPlatformGetOriginalSpriteDecodeCache(u32 *out_pitch,
                                               u32 *out_height,
                                               u32 *out_epoch);
+u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
+                                               u32 *out_pitch,
+                                               u32 *out_width,
+                                               u32 *out_height,
+                                               u32 *out_epoch);
+u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
+                                               u32 pixel_write_count);
 void ndsPlatformCommitOriginalSpritePreview(void);
 void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
@@ -41,6 +48,12 @@ extern volatile u32 gNdsOriginalSpritePreviewCommitCount;
 extern volatile u32 gNdsOriginalSpritePreviewDrawCount;
 extern volatile u32 gNdsOriginalSpritePreviewDisplayWidth;
 extern volatile u32 gNdsOriginalSpritePreviewDisplayHeight;
+extern volatile u32 gNdsOriginalSpriteBg2ClearBytes;
+extern volatile u32 gNdsOriginalSpriteBg2CopyBytes;
+extern volatile u32 gNdsOriginalSpriteBg2FinalWriteBytes;
+extern volatile u32 gNdsOriginalSpriteBg3ClearBytes;
+extern volatile u32 gNdsOriginalSpriteBg3CopyBytes;
+extern volatile u32 gNdsOriginalSpriteBg3FinalWriteBytes;
 extern volatile u32 gNdsOriginalDLPreviewReady;
 extern volatile u32 gNdsOriginalDLPreviewWidth;
 extern volatile u32 gNdsOriginalDLPreviewHeight;

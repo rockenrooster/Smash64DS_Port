@@ -1131,8 +1131,9 @@
   natural 44 stale-slot triangles are mixed snapshots; same-snapshot raw is
   implemented and fixture-covered but has zero current-frame traffic. Exact
   no-Z equivalence beyond the proven Dream Land ordering remains debt.
-  The CPU-scaled 300x220 wallpaper and water precomposition still limit the
-  measured frame to about `2.1fps`; renderer/compositor work remains P1 debt.
+  Final-resolution wallpaper composition removes its 320x240 staging/scale and
+  BG2 copy, but the measured frame remains about `2.5fps`; renderer command/
+  state work, water precomposition, and source RGBA4 interface output remain P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native
@@ -1156,10 +1157,11 @@
 - Dream Land wallpaper runs through imported `grwallpaper.c` and the source
   Sprite/SObj path on the DS 2D back layer. The exact 300x220 RGBA16 asset is
   decoded once for the immutable loaded asset and rebuilt on platform clear or
-  provenance mismatch; every frame consumes the live source transform. The cache
-  proves one build, 44 hits, 45 exact opaque inverse draws, zero fallback, and
-  all 66,000 pixels opaque. It never retains the composed stage frame, water,
-  Whispy, flowers, fences, or fighters. Canonical present cost fell from
+  provenance mismatch; every frame consumes the live source transform. The
+  final renderer composes the old last-writer and 320x240-to-256x192 nearest
+  maps exactly, and its retained key includes provenance, transform, mapping
+  version, and BG2 ownership. It never retains the composed stage frame, water,
+  Whispy, flowers, fences, or fighters. Canonical present cost first fell from
   `34,839,424` to `24,764,160` ticks (`-28.9%`). Adjacent same-state triangle
   batching proves `103/725/103` begin/reuse/end for all `828` triangles and
   reduces present again to `24,238,464` (`-2.1%`). An exact 256-entry CI4
@@ -1167,9 +1169,13 @@
   present to `20,285,888` (`-16.3%`) and conversion to `5,035,776` (`-42.8%`);
   command-hoisted exact light normalization reduces present to `19,725,696`.
   Profile-0/no-oracle separation, generation-keyed loads, hybrid raw-current,
-  and lazy transforms reach warm median/p95 `15,543,456/15,804,544` and
-  `21/21 x0.1`; projected divisions are `1,242`, down from `7,074`. Software 2D
-  remains the larger measured blocker.
+  and lazy transforms reached warm median/p95 `15,543,456/15,804,544`.
+  Direct final BG2 plus early rejection of unsupported RGBA4 foreground SObjs
+  now proves `direct67/skip0/change67`, exactly `67*49152` writes, and zero
+  staging/BG clears/BG copies. Warm median/p95 is
+  `13,301,312/13,595,328` (`-14.4%/-14.0%`) at `25/25 x0.1`; projected
+  divisions remain `1,242`. Remaining 3D traversal/state cost is now the next
+  measured target. The RGBA4 interface/HUD SObjs still produce no DS pixels.
   At this sub-realtime cadence, the second two-shot screenshot can land during
   compositor updates and appear partly black while its paired `_next` sample is
   complete; stable-sample selection remains visual-gate tooling debt.

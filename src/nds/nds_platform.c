@@ -66,6 +66,7 @@ static int sOriginalSpriteOverlayBg = -1;
 static int sOriginalSpriteOverlayForegroundBg = -1;
 static s32 sOriginalSpriteOverlayEnabled;
 static s32 sOriginalSpriteOverlayNeedsFlush;
+static u32 sOriginalSpriteOverlayEpoch[2] = { 1u, 1u };
 #endif
 static u16 sOriginalSpriteDisplayPreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
@@ -93,6 +94,12 @@ volatile u32 gNdsOriginalSpritePreviewDrawCount;
 /* These retain the last committed frame while a new scratch layer is built. */
 volatile u32 gNdsOriginalSpritePreviewDisplayWidth;
 volatile u32 gNdsOriginalSpritePreviewDisplayHeight;
+volatile u32 gNdsOriginalSpriteBg2ClearBytes;
+volatile u32 gNdsOriginalSpriteBg2CopyBytes;
+volatile u32 gNdsOriginalSpriteBg2FinalWriteBytes;
+volatile u32 gNdsOriginalSpriteBg3ClearBytes;
+volatile u32 gNdsOriginalSpriteBg3CopyBytes;
+volatile u32 gNdsOriginalSpriteBg3FinalWriteBytes;
 volatile u32 gNdsOriginalDLPreviewReady;
 volatile u32 gNdsOriginalDLPreviewWidth;
 volatile u32 gNdsOriginalDLPreviewHeight;
@@ -301,6 +308,92 @@ u16 *ndsPlatformGetOriginalSpriteDecodeCache(u32 *out_pitch,
 #endif
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+static u32 ndsPlatformAdvanceOriginalSpriteOverlayEpoch(u32 layer)
+{
+    sOriginalSpriteOverlayEpoch[layer]++;
+    if (sOriginalSpriteOverlayEpoch[layer] == 0u)
+    {
+        sOriginalSpriteOverlayEpoch[layer] = 1u;
+    }
+    return sOriginalSpriteOverlayEpoch[layer];
+}
+#endif
+
+u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
+                                               u32 *out_pitch,
+                                               u32 *out_width,
+                                               u32 *out_height,
+                                               u32 *out_epoch)
+{
+    if (out_pitch != NULL) { *out_pitch = 0u; }
+    if (out_width != NULL) { *out_width = 0u; }
+    if (out_height != NULL) { *out_height = 0u; }
+    if (out_epoch != NULL) { *out_epoch = 0u; }
+
+#if NDS_RENDERER_HW_TRIANGLES
+    {
+        u32 layer = (is_foreground != FALSE) ? 1u : 0u;
+        int bg = (layer != 0u) ?
+            sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
+
+        if ((sOriginalSpriteOverlayEnabled == FALSE) || (bg < 0))
+        {
+            return NULL;
+        }
+        if (out_pitch != NULL) { *out_pitch = 256u; }
+        if (out_width != NULL) { *out_width = SCREEN_WIDTH; }
+        if (out_height != NULL) { *out_height = SCREEN_HEIGHT; }
+        if (out_epoch != NULL)
+        {
+            *out_epoch = sOriginalSpriteOverlayEpoch[layer];
+        }
+        return (u16 *)bgGetGfxPtr(bg);
+    }
+#else
+    (void)is_foreground;
+    return NULL;
+#endif
+}
+
+u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
+                                               u32 pixel_write_count)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 layer = (is_foreground != FALSE) ? 1u : 0u;
+    int bg = (layer != 0u) ?
+        sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
+    u32 bytes;
+
+    if ((sOriginalSpriteOverlayEnabled == FALSE) || (bg < 0) ||
+        (pixel_write_count > (SCREEN_WIDTH * SCREEN_HEIGHT)))
+    {
+        return 0u;
+    }
+    bytes = pixel_write_count * sizeof(u16);
+    if (layer != 0u)
+    {
+        gNdsOriginalSpriteBg3FinalWriteBytes += bytes;
+    }
+    else
+    {
+        gNdsOriginalSpriteBg2FinalWriteBytes += bytes;
+    }
+    sOriginalSpriteDisplayPreviewWidth = SCREEN_WIDTH;
+    sOriginalSpriteDisplayPreviewHeight = SCREEN_HEIGHT;
+    sOriginalSpritePreviewReady = 1u;
+    gNdsOriginalSpritePreviewReady = 1u;
+    gNdsOriginalSpritePreviewDisplayWidth = SCREEN_WIDTH;
+    gNdsOriginalSpritePreviewDisplayHeight = SCREEN_HEIGHT;
+    gNdsOriginalSpritePreviewCommitCount++;
+    return ndsPlatformAdvanceOriginalSpriteOverlayEpoch(layer);
+#else
+    (void)is_foreground;
+    (void)pixel_write_count;
+    return 0u;
+#endif
+}
+
 #if !NDS_RENDERER_HW_TRIANGLES
 static void ndsPlatformCopyOriginalSpritePreviewNative(
     u16 *destination, u32 destination_pitch, s32 dst_w, s32 dst_h)
@@ -464,6 +557,16 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         if ((dst_w < SCREEN_WIDTH) || (dst_h < SCREEN_HEIGHT))
         {
             dmaFillHalfWords(0, overlay, 256u * 256u * sizeof(u16));
+            if (is_foreground != FALSE)
+            {
+                gNdsOriginalSpriteBg3ClearBytes +=
+                    256u * 256u * sizeof(u16);
+            }
+            else
+            {
+                gNdsOriginalSpriteBg2ClearBytes +=
+                    256u * 256u * sizeof(u16);
+            }
         }
         for (y = 0; y < dst_h; y++)
         {
@@ -471,6 +574,18 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
                    &display_preview[
                        y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH],
                    (size_t)dst_w * sizeof(u16));
+        }
+        if (is_foreground != FALSE)
+        {
+            gNdsOriginalSpriteBg3CopyBytes +=
+                (u32)dst_w * (u32)dst_h * sizeof(u16);
+            ndsPlatformAdvanceOriginalSpriteOverlayEpoch(1u);
+        }
+        else
+        {
+            gNdsOriginalSpriteBg2CopyBytes +=
+                (u32)dst_w * (u32)dst_h * sizeof(u16);
+            ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
         }
     }
 #endif
@@ -491,6 +606,18 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
     {
         dmaFillHalfWords(0, bgGetGfxPtr(bg),
                          256u * 256u * sizeof(u16));
+        if (is_foreground != FALSE)
+        {
+            gNdsOriginalSpriteBg3ClearBytes +=
+                256u * 256u * sizeof(u16);
+            ndsPlatformAdvanceOriginalSpriteOverlayEpoch(1u);
+        }
+        else
+        {
+            gNdsOriginalSpriteBg2ClearBytes +=
+                256u * 256u * sizeof(u16);
+            ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
+        }
     }
 #else
     (void)is_foreground;
@@ -504,6 +631,15 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
         (sOriginalSpriteOverlayEnabled == FALSE))
     {
         sOriginalSpriteOverlayNeedsFlush = TRUE;
+        /* Start a fresh traffic window for the scene that owns the overlay.
+         * Initialization/previous-scene clears must not masquerade as live
+         * compositor work in the canonical battle profile. */
+        gNdsOriginalSpriteBg2ClearBytes = 0u;
+        gNdsOriginalSpriteBg2CopyBytes = 0u;
+        gNdsOriginalSpriteBg2FinalWriteBytes = 0u;
+        gNdsOriginalSpriteBg3ClearBytes = 0u;
+        gNdsOriginalSpriteBg3CopyBytes = 0u;
+        gNdsOriginalSpriteBg3FinalWriteBytes = 0u;
     }
     sOriginalSpriteOverlayEnabled = is_enabled;
     glClearColor(2, 3, 6, (is_enabled != FALSE) ? 0 : 31);
