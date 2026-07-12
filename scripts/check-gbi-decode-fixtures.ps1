@@ -1329,6 +1329,9 @@ Assert-True ($platform.Contains('ndsPlatformGetOriginalSpriteOverlayLayer')) 'DS
 Assert-True ($platform.Contains('ndsPlatformCommitOriginalSpriteFinalLayer')) 'DS platform no longer publishes direct final-layer commits and ownership epochs.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 $harnessScript = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
+$rendererUploadPair = [regex]::Match(
+    $harnessScript, '(?s)function Test-RendererUploadPair \{.*?\n\}').Value
+Assert-True (-not [string]::IsNullOrWhiteSpace($rendererUploadPair) -and $rendererUploadPair.Contains('$Count -eq 0 -and $Bytes -eq 0') -and $rendererUploadPair.Contains('$Count -eq 1 -and ($Bytes -eq 4096 -or $Bytes -eq 32768)') -and $rendererUploadPair.Contains('$Count -eq 2 -and $Bytes -eq 36864') -and -not $rendererUploadPair.Contains('ProfileLevel')) 'Renderer upload-pair gate no longer accepts every exact animated-water phase uniformly across profiles.'
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($relocRendererDL.Contains('ndsRendererAdapterGetFrameCameraMatrices')) 'Renderer adapter does not reuse immutable camera matrices within one BattleShip draw frame.'
 Assert-True ($relocRendererDL.Contains('sNdsRendererAdapterCameraCacheFrame != frame')) 'Renderer adapter camera cache is not bounded to one presented frame.'

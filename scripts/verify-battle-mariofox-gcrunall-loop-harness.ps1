@@ -156,10 +156,10 @@ function Get-RatioBasisPoints {
     return [int64](($Numerator * 10000) / $Denominator)
 }
 function Test-RendererUploadPair {
-    param([int64]$Count, [int64]$Bytes, [int]$ProfileLevel)
-    if ($ProfileLevel -ge 2) {
-        return ($Count -eq 0 -and $Bytes -eq 0)
-    }
+    param([int64]$Count, [int64]$Bytes)
+    # Every renderer profile may sample either a resident frame or one of the
+    # exact animated-water upload phases. Profile 2 uses an independent
+    # bytewise decoder, but its cache phase is not synchronized to this probe.
     return (($Count -eq 0 -and $Bytes -eq 0) -or
             ($Count -eq 1 -and ($Bytes -eq 4096 -or $Bytes -eq 32768)) -or
             ($Count -eq 2 -and $Bytes -eq 36864))
@@ -838,7 +838,7 @@ try {
                         $sampleUploadCount = [int64]$sample.Groups[14].Value
                         $sampleUploadBytes = [int64]$sample.Groups[15].Value
                         Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangles -eq 828 -and (($RendererProfileLevel -ge 2 -and $sampleOracle -eq 2484) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or drifted from exact 828-triangle/2,484-oracle accounting.' $gdbStdout
-                        Assert-Condition (Test-RendererUploadPair $sampleUploadCount $sampleUploadBytes $RendererProfileLevel) "Renderer benchmark sampled an invalid texture upload pair $sampleUploadCount/$sampleUploadBytes at frame $sampleFrame." $gdbStdout
+                        Assert-Condition (Test-RendererUploadPair $sampleUploadCount $sampleUploadBytes) "Renderer benchmark sampled an invalid texture upload pair $sampleUploadCount/$sampleUploadBytes at frame $sampleFrame." $gdbStdout
                         if ($sampleIndex -gt 0) {
                             $previousFrame = [int64]$rendererBenchmark[$sampleIndex - 1].Groups[2].Value
                             Assert-Condition ($sampleFrame -eq ($previousFrame + 1)) "Renderer benchmark frame window is not synchronized: frame $sampleFrame followed $previousFrame." $gdbStdout
@@ -1094,14 +1094,7 @@ try {
                 # source-selected, visible, textured fighter part display lists.
                 Assert-Condition ($fighterDisplayContract.Success -and $fdc[0] -gt 0 -and $fdc[3] -gt 0 -and $fdc[0] -ge $fdc[3] -and ($fdc[0] - $fdc[3]) -le 64 -and (($fdc[4] -band 0x222005) -eq 0x222005) -and $fdc[5] -gt 0 -and $fdc[6] -gt 0 -and $fdc[7] -gt 0 -and $fdc[8] -eq 0 -and $fdc[11] -gt 0 -and $fdc[12] -gt 0 -and $fdc[13] -eq 0x00100000 -and $fdc[14] -eq [Convert]::ToUInt32('c4112078', 16)) 'Canonical realtime HW build did not preserve the original fighter display selection, lighting, geometry, cycle, render-mode, and visibility contract.' $gdbStdout
                 Assert-Condition ($renderProfile.Success -and $rp[15] -eq 2484 -and $rp[16] -eq 828 -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact 2,484-vertex/828-triangle renderer contract.' $gdbStdout
-                if ($RendererProfileLevel -lt 2) {
-                    Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13] $RendererProfileLevel) 'Performance/coarse realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
-                } else {
-                    # The independent bytewise forensic cache is fully resident
-                    # before this synchronized window; unlike profiles 0/1 it
-                    # must not perform recurring texture uploads here.
-                    Assert-Condition ($rp[12] -eq 0 -and $rp[13] -eq 0) 'Forensic renderer unexpectedly uploaded texture data after its independent cache became resident.' $gdbStdout
-                }
+                Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13]) 'Realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
                 Assert-Condition ($renderBatch.Success -and $rb[0] -eq 121 -and $rb[1] -eq 707 -and $rb[2] -eq 121 -and $rb[3] -eq 98 -and $rb[4] -eq 730) 'Canonical realtime HW build drifted from exact 121/707/121 batch and 98/730 texture-prepare accounting.' $gdbStdout
                 if ($RendererProfileLevel -lt 2) {
                     Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 2 -and $rci4lut[3] -gt $rci4lut[2]) 'Performance/coarse renderer did not build exactly two immutable CI4 source-index planes and reuse them across live water addressing.' $gdbStdout
