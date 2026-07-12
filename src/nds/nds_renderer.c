@@ -24,6 +24,17 @@
 #define NDS_RENDERER_HOT_CODE __attribute__((hot, optimize("O3")))
 #endif
 
+/* Profile 0 publishes its shipping contract through the compact frame
+ * summary.  Keep generic command-family counters for coarse/forensic builds
+ * and non-hardware scan fixtures, but do not make the hot shipping
+ * interpreter maintain the duplicate proof ledger. */
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 0)
+#define NDS_RENDERER_RECORD_PROOF_ONLY(statement) ((void)0)
+#else
+#define NDS_RENDERER_RECORD_PROOF_ONLY(statement) \
+    do { statement; } while (0)
+#endif
+
 #if NDS_RENDERER_HW_TRIANGLES
 #include <math.h>
 #include <nds.h>
@@ -1436,7 +1447,7 @@ static void ndsRendererRecordOtherMode(NDSRendererStats *stats,
     u32 shift;
     u32 mask;
 
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
     stats->othermode_command_count++;
     stats->ignored_state_command_count++;
     if (stats->first_othermode_opcode == 0)
@@ -1486,13 +1497,13 @@ static void ndsRendererRecordPrimDepth(NDSRendererStats *stats, u32 w1)
     stats->prim_depth = (w1 >> 16) & 0xffffu;
     stats->prim_depth_delta = w1 & 0xffffu;
     stats->prim_depth_command_count++;
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
 }
 
 static void ndsRendererRecordCull(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     stats->cull_command_count++;
-    stats->skip_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
     if ((stats->first_cull_w0 == 0) && (stats->first_cull_w1 == 0))
     {
         stats->first_cull_w0 = w0;
@@ -2189,7 +2200,7 @@ static void ndsRendererPushModelview(NDSRendererStats *stats,
     depth = state->modelview_stack_depth;
     if (depth >= NDS_RENDERER_MODELVIEW_STACK_SIZE)
     {
-        stats->skip_command_count++;
+        NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
         return;
     }
 
@@ -2217,7 +2228,7 @@ static void ndsRendererApplyMatrixCommand(
     }
 
     flags = (w0 & 0xffu) ^ NDS_RENDERER_MTX_PUSH_XOR;
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
     stats->matrix_command_count++;
     stats->matrix_flags = flags;
     if ((flags & NDS_RENDERER_MTX_PROJECTION) != 0u)
@@ -2238,7 +2249,7 @@ static void ndsRendererApplyMatrixCommand(
                                         sizeof(Mtx));
     if (src == NULL)
     {
-        stats->skip_command_count++;
+        NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
         return;
     }
     ndsRendererMtxLoadN64ToDS20p12(src, &incoming);
@@ -2290,7 +2301,7 @@ static void ndsRendererApplyMvpRecalcCommand(
         return;
     }
 
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
     if ((((w0 >> NDS_RENDERER_MOVEWORD_OFFSET_SHIFT) &
           NDS_RENDERER_MOVEWORD_OFFSET_MASK) != 0u) ||
         ((w0 & NDS_RENDERER_MOVEWORD_INDEX_MASK) != 1u) ||
@@ -2420,7 +2431,7 @@ static void ndsRendererRecordLightMoveMem(
     {
         return;
     }
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
     if ((index != NDS_RENDERER_MOVEMEM_LIGHT) ||
         (offset < NDS_RENDERER_MOVEMEM_LIGHT_BASE_OFFSET) ||
         (((offset - NDS_RENDERER_MOVEMEM_LIGHT_BASE_OFFSET) %
@@ -2472,7 +2483,7 @@ static void ndsRendererApplyMatrixMoveWordCommand(
         return;
     }
 
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
     index = w0 & NDS_RENDERER_MOVEWORD_INDEX_MASK;
     offset = (w0 >> NDS_RENDERER_MOVEWORD_OFFSET_SHIFT) &
         NDS_RENDERER_MOVEWORD_OFFSET_MASK;
@@ -2533,7 +2544,7 @@ static void ndsRendererApplyPopMatrixCommand(NDSRendererStats *stats,
         count = 1u;
     }
 
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
     stats->matrix_command_count++;
     stats->matrix_modelview_count++;
     stats->matrix_pop_count += count;
@@ -2544,7 +2555,7 @@ static void ndsRendererApplyPopMatrixCommand(NDSRendererStats *stats,
 
         if (depth == 0u)
         {
-            stats->skip_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
             break;
         }
 
@@ -2581,12 +2592,12 @@ ndsRendererApplyVertexCommand(
     {
         return;
     }
-    stats->vertex_command_count++;
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->vertex_command_count++);
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
     if (ndsGBIDecodeF3DEX2Vtx(w0, NDS_RENDERER_MAX_VTX, &v0,
                               &count) == FALSE)
     {
-        stats->skip_command_count++;
+        NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
         return;
     }
     if ((v0 + count) > stats->vertex_count)
@@ -2605,7 +2616,7 @@ ndsRendererApplyVertexCommand(
                                         (size_t)count * 16u);
     if (src == NULL)
     {
-        stats->skip_command_count++;
+        NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
         return;
     }
 #if NDS_RENDERER_HW_TRIANGLES
@@ -2739,7 +2750,7 @@ static void ndsRendererApplyModifyVertexCommand(
         return;
     }
 
-    stats->state_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
     where = (w0 >> 16) & 0xffu;
     packed_index = w0 & 0xffffu;
     index = packed_index / 2u;
@@ -2761,7 +2772,7 @@ static void ndsRendererApplyModifyVertexCommand(
     (void)w1;
 #endif
 
-    stats->skip_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
 }
 
 static s32 ndsRendererTransformedTriangleReady(
@@ -8154,8 +8165,8 @@ static inline void ndsRendererExecuteTriangleCommand(
     (void)config;
 #endif
 
-    stats->triangle_command_count++;
-    stats->render_command_count++;
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->triangle_command_count++);
+    NDS_RENDERER_RECORD_PROOF_ONLY(stats->render_command_count++);
     if (op == NDS_RENDERER_OP_TRI1)
     {
         u32 packed = ndsGBIDecodeF3DEX2Tri1(w0);
@@ -8344,7 +8355,7 @@ ndsRendererScanList(const Gfx *dl,
         switch (op)
         {
         case NDS_RENDERER_OP_NOOP:
-            stats->skip_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
             break;
 
         case NDS_RENDERER_OP_MODIFYVTX:
@@ -8400,7 +8411,7 @@ ndsRendererScanList(const Gfx *dl,
 
         case NDS_RENDERER_OP_ENDDL:
             stats->end_command_count++;
-            stats->skip_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
             return;
 
         case NDS_RENDERER_OP_DL:
@@ -8447,7 +8458,7 @@ ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_TEXTURE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordTextureState(stats, w0, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_MTX:
@@ -8473,7 +8484,7 @@ ndsRendererScanList(const Gfx *dl,
 
         case NDS_RENDERER_OP_SETSCISSOR:
         case NDS_RENDERER_OP_SETCIMG:
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             stats->ignored_state_command_count++;
             break;
 
@@ -8487,54 +8498,54 @@ ndsRendererScanList(const Gfx *dl,
             stats->geometry_clear_mask = w0;
             stats->geometry_set_mask = w1;
             stats->geometry_command_count++;
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_SETCOMBINE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordSetCombine(stats, w0, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_SETTIMG:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordSetImage(stats, w0, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_SETTILE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordSetTile(stats, w0, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_LOADTILE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordLoadTile(stats, w0, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_LOADBLOCK:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordLoadBlock(stats, w0, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_LOADTLUT:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordLoadTlut(stats, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_SETTILESIZE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordSetTileSize(stats, w0, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_SETFOGCOLOR:
             ndsRendererRecordFogColor(stats, w1);
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             stats->color_command_count++;
             break;
 
@@ -8545,7 +8556,7 @@ ndsRendererScanList(const Gfx *dl,
             {
                 NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             }
-            stats->state_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             stats->color_command_count++;
             if (op == NDS_RENDERER_OP_SETPRIMCOLOR)
             {
@@ -8567,7 +8578,7 @@ ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_RDPLOADSYNC:
         case NDS_RENDERER_OP_RDPTILESYNC:
         case NDS_RENDERER_OP_RDPFULLSYNC:
-            stats->skip_command_count++;
+            NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
             stats->sync_command_count++;
             break;
 
