@@ -19682,3 +19682,49 @@ Source-corrected verifier expectations: none; this is an ARM ABI/code-layout
 reduction around the same live source values and GX writes.
 Coverage-reduced verifier expectations: none; the generic interpreter,
 profile-2 eager oracle, dynamic validation, and all submission classes remain.
+
+## 2026-07-12 - Resolved animated CI4 phases before the pixel loop
+
+- Reconciled the July 11 optimization review against the live renderer. Its
+  profile levels, hybrid raw/snapshot path, lazy transforms, direct wallpaper,
+  compact runtime state, ARM/O3/ITCM placement, and packet-cache experiment had
+  already landed; the current remaining costs were measured instead of replaying
+  its snapshot plan.
+- Temporary profile-1-only timers isolated about `700K` ticks in the direct
+  pond CI4 loop, versus `19K` scratch clear, `3K` LUT reuse, and `334K` source
+  VTX load/shade work. A temporary pairability counter then proved the adjacent
+  packed-nibble branch served only `2,048/18,432` converted pixels; the other
+  `16,384` pixels still paid every branch check. All temporary probes were
+  removed after the measurement.
+- Expanded the exact 16x16 palette-pair result into sixteen pre-resolved Bayer
+  phase planes. The 8 KiB table replaces per-pixel alpha-mask shift/merge, is
+  content-keyed by the same palettes/fraction, and adds 7,168 net BSS bytes over
+  the removed 1 KiB entry table. It caches neither source indices nor output
+  frames. The cold table builder is noinline; the hot loop now performs one
+  exact two-nibble/phase lookup per pixel with no mostly-failing pair branch.
+- Texture/material/depth preparation now survives VTX and matrix commands and
+  invalidates only at opcodes that mutate its exact key/flags. Prepare/reuse
+  changes `103/725 -> 98/730`; all non-TRI commands still close the GX batch and
+  per-vertex derived caches remain bounded. A hardware/no-op macro preserves
+  normal and archived non-HW builds.
+- Matched 16-frame profile 1 improves draw `4,473,120 -> 4,164,800`, DL
+  `3,317,280 -> 3,017,888`, texture `908,192 -> 595,424`, submission
+  `1,900,416 -> 1,584,864`, and non-vertex setup
+  `1,385,856 -> 1,074,912` ticks. Final scan is
+  `1,432,864/1,433,856`; vertex is `509,760/511,360`.
+- Profile-0 draw is `3,983,296/3,984,640`, about 294K below the prior
+  `4,277,344/4,295,488`, and pacing reaches `7.5fps`. Renderer ITCM is
+  `14,068/14,212/14,128` bytes for profiles 0/1/2, still below 32 KiB.
+- Profile 2 retains all 828 triangles, submission `648/44/126/10`, divisions
+  `1,242`, and oracle `2484/0/0`. P1Gate first caught the non-HW invalidation
+  field reference; after the no-op macro fix, DevFast (`44.5s`), forensic
+  (`24.5s`), P1Gate (`189.2s`), and Boundary (`81.2s`) pass. Full/Legacy
+  Regression remains skipped for fast iteration. The dated dual-screen capture
+  preserves the accepted pond, flowers, fence, Mario, and Fox. Canonical/shipped
+  parity is 11,593,728 bytes at SHA-256
+  `00C9A6167F01E43950098854A56BFB271F1E3A1CEE2741EF7F14D38E24D397FB`.
+
+Source-corrected verifier expectations: none; the table stores the same exact
+palette-pair/phase values and invalidation follows the live state dependencies.
+Coverage-reduced verifier expectations: none; generic conversion, profile-2
+forensics, non-HW builds, dynamic validation, and every submit class remain.

@@ -107,6 +107,10 @@
 #define NDS_RENDERER_HW_TEXTURE_MAX_TEXELS \
     (NDS_RENDERER_HW_TEXTURE_MAX_WIDTH * NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT)
 #define NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT (16u * 16u)
+#define NDS_RENDERER_HW_TEXEL01_CI4_PHASE_COUNT 16u
+#define NDS_RENDERER_HW_TEXEL01_CI4_PHASE_LUT_COUNT \
+    (NDS_RENDERER_HW_TEXEL01_CI4_PHASE_COUNT * \
+     NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT)
 #define NDS_RENDERER_HW_TEXEL01_RGB_MASK 0x7fffu
 #define NDS_RENDERER_HW_TEXEL01_COVERAGE_SHIFT 15u
 #define NDS_RENDERER_HW_TEXTURE_FMT_RGBA16 0u
@@ -224,6 +228,12 @@
 #define NDS_RENDERER_VERTEX_CONTEXT_DECAL_DEPTH (1u << 5)
 #define NDS_RENDERER_VERTEX_CONTEXT_PRIM_DEPTH (1u << 6)
 #define NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH (1u << 7)
+#if NDS_RENDERER_HW_TRIANGLES
+#define NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state) \
+    ((state)->texture_prepare_valid = FALSE)
+#else
+#define NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state) ((void)(state))
+#endif
 
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 static u32 sNdsRendererProfileImmutableListCount;
@@ -716,12 +726,6 @@ typedef struct NDSRendererHardwareTexel1Source
     s32 materialize_t;
 } NDSRendererHardwareTexel1Source;
 
-typedef struct NDSRendererHardwareTexel01Ci4LutEntry
-{
-    u16 rgb;
-    u16 alpha_phase_mask;
-} NDSRendererHardwareTexel01Ci4LutEntry;
-
 typedef struct NDSRendererHardwareLightDirection
 {
     s32 x;
@@ -741,9 +745,12 @@ static u8 sNdsRendererHardwareTexel01Ci4Source0S[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
 static u8 sNdsRendererHardwareTexel01Ci4Source1S[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
-static NDSRendererHardwareTexel01Ci4LutEntry
-    sNdsRendererHardwareTexel01Ci4Lut[
-    NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT];
+static u16 sNdsRendererHardwareTexel01Ci4PhaseLut[
+    NDS_RENDERER_HW_TEXEL01_CI4_PHASE_LUT_COUNT];
+#if defined(__arm__)
+_Static_assert(sizeof(sNdsRendererHardwareTexel01Ci4PhaseLut) == 8192u,
+               "phase-resolved CI4 lookup must stay within 8 KiB");
+#endif
 static u16 sNdsRendererHardwareTexel01Ci4LutPalette0[16];
 static u16 sNdsRendererHardwareTexel01Ci4LutPalette1[16];
 static u32 sNdsRendererHardwareTexel01Ci4LutFraction;
@@ -5180,7 +5187,8 @@ static u16 ndsRendererHardwareBlendTexel01(u16 texel0, u16 texel1,
         x, y);
 }
 
-static void ndsRendererHardwareBuildTexel01Ci4Lut(
+static void __attribute__((noinline))
+ndsRendererHardwareBuildTexel01Ci4Lut(
     const NDSRendererConfig *config,
     const u16 *palette,
     u32 palette_count,
@@ -5236,16 +5244,27 @@ static void ndsRendererHardwareBuildTexel01Ci4Lut(
                 value >> NDS_RENDERER_HW_TEXEL01_COVERAGE_SHIFT;
             u32 alpha_prefix_count = (alpha_coverage + 7u) >> 4;
             u32 lut_index = (index0 << 4) | index1;
+            u16 rgb;
+            u16 alpha_phase_mask;
+            u32 phase;
 
             if (alpha_prefix_count > 16u)
             {
                 alpha_prefix_count = 16u;
             }
-            sNdsRendererHardwareTexel01Ci4Lut[lut_index].rgb =
-                (u16)(value & NDS_RENDERER_HW_TEXEL01_RGB_MASK);
-            sNdsRendererHardwareTexel01Ci4Lut[
-                lut_index].alpha_phase_mask =
-                    alpha_phase_prefix[alpha_prefix_count];
+            rgb = (u16)(value & NDS_RENDERER_HW_TEXEL01_RGB_MASK);
+            alpha_phase_mask = alpha_phase_prefix[alpha_prefix_count];
+            for (phase = 0u;
+                 phase < NDS_RENDERER_HW_TEXEL01_CI4_PHASE_COUNT;
+                 phase++)
+            {
+                u32 alpha = (alpha_phase_mask >> phase) & 1u;
+
+                sNdsRendererHardwareTexel01Ci4PhaseLut[
+                    (phase * NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT) +
+                    lut_index] =
+                        (u16)(rgb | (alpha << 15));
+            }
         }
     }
 }
@@ -5253,12 +5272,11 @@ static void ndsRendererHardwareBuildTexel01Ci4Lut(
 static inline u16 ndsRendererHardwareResolveTexel01Ci4Lut(
     u32 index0, u32 index1, u32 x, u32 y)
 {
-    const NDSRendererHardwareTexel01Ci4LutEntry *entry =
-        &sNdsRendererHardwareTexel01Ci4Lut[(index0 << 4) | index1];
     u32 phase = ((y & 3u) << 2) | (x & 3u);
-    u32 alpha = (entry->alpha_phase_mask >> phase) & 1u;
+    u32 lut_index = (index0 << 4) | index1;
 
-    return (u16)(entry->rgb | (alpha << 15));
+    return sNdsRendererHardwareTexel01Ci4PhaseLut[
+        (phase * NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT) + lut_index];
 }
 
 static inline u8 ndsRendererHardwareReadCi4Direct(
@@ -5268,18 +5286,6 @@ static inline u8 ndsRendererHardwareReadCi4Direct(
 
     return ((logical_texel_index & 1u) == 0u) ?
         (u8)(packed >> 4) : (u8)(packed & 0x0fu);
-}
-
-static inline u16 ndsRendererHardwareResolveCi4PackedPair(
-    u8 packed0, u8 packed1, u32 low_nibble, u32 x, u32 y)
-{
-    u32 index0 = (low_nibble != FALSE) ?
-        (u32)(packed0 & 0x0fu) : (u32)(packed0 >> 4);
-    u32 index1 = (low_nibble != FALSE) ?
-        (u32)(packed1 & 0x0fu) : (u32)(packed1 >> 4);
-
-    return ndsRendererHardwareResolveTexel01Ci4Lut(
-        index0, index1, x, y);
 }
 
 static void NDS_RENDERER_HOT_CODE
@@ -5342,64 +5348,28 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
             ((source1->source_origin_t + source1_y) *
              source1->source_width) + source1->source_origin_s;
         u32 dst_index = y * upload_width;
+        u32 phase_row = (y & 3u) << 10;
 
-        x = 0u;
-
-        while (x < width)
+        for (x = 0u; x < width; x++)
         {
             u32 source0_index = source0_row +
                 sNdsRendererHardwareTexel01Ci4Source0S[x];
             u32 source1_index = source1_row +
                 sNdsRendererHardwareTexel01Ci4Source1S[x];
-            u16 color;
+            u32 index0 = ndsRendererHardwareReadCi4Direct(
+                texels0, source0_index, byte_lane_xor);
+            u32 index1 = ndsRendererHardwareReadCi4Direct(
+                source1->texels, source1_index, byte_lane_xor);
+            u32 phase_lut_index = phase_row | ((x & 3u) << 8) |
+                (index0 << 4) | index1;
+            u16 color =
+                sNdsRendererHardwareTexel01Ci4PhaseLut[phase_lut_index];
 
-            if ((((source0_index | source1_index) & 1u) == 0u) &&
-                ((x + 1u) < width) &&
-                (sNdsRendererHardwareTexel01Ci4Source0S[x + 1u] ==
-                 (u8)(sNdsRendererHardwareTexel01Ci4Source0S[x] + 1u)) &&
-                (sNdsRendererHardwareTexel01Ci4Source1S[x + 1u] ==
-                 (u8)(sNdsRendererHardwareTexel01Ci4Source1S[x] + 1u)))
-            {
-                u8 packed0 =
-                    texels0[(source0_index >> 1) ^ byte_lane_xor];
-                u8 packed1 = source1->texels[
-                    (source1_index >> 1) ^ byte_lane_xor];
-                u16 color0;
-                u16 color1;
-
-                color0 = ndsRendererHardwareResolveCi4PackedPair(
-                    packed0, packed1, FALSE, x, y);
+            sNdsRendererHardwareTextureScratch[dst_index + x] = color;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-                ndsRendererProfileTexturePixel(
-                    color0, green_texels, nonwhite_texels);
+            ndsRendererProfileTexturePixel(
+                color, green_texels, nonwhite_texels);
 #endif
-                color1 = ndsRendererHardwareResolveCi4PackedPair(
-                    packed0, packed1, TRUE, x + 1u, y);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                ndsRendererProfileTexturePixel(
-                    color1, green_texels, nonwhite_texels);
-#endif
-                sNdsRendererHardwareTextureScratch[dst_index + x] = color0;
-                sNdsRendererHardwareTextureScratch[dst_index + x + 1u] =
-                    color1;
-                x += 2u;
-            }
-            else
-            {
-                u32 index0 = ndsRendererHardwareReadCi4Direct(
-                    texels0, source0_index, byte_lane_xor);
-                u32 index1 = ndsRendererHardwareReadCi4Direct(
-                    source1->texels, source1_index, byte_lane_xor);
-
-                color = ndsRendererHardwareResolveTexel01Ci4Lut(
-                    index0, index1, x, y);
-                sNdsRendererHardwareTextureScratch[dst_index + x] = color;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                ndsRendererProfileTexturePixel(
-                    color, green_texels, nonwhite_texels);
-#endif
-                x++;
-            }
         }
     }
 }
@@ -5924,9 +5894,9 @@ static s32 ndsRendererHardwareBindTexture(
         (texel1_source.size == NDS_RENDERER_HW_TEXTURE_SIZ_4B))
     {
         /* The source pond's two CI4 inputs can produce only 16x16 palette
-         * pairs for a given primitive LOD fraction. Precompute the exact
-         * RGB/coverage result once instead of repeating palette conversion
-         * and six channel multiplies for every output texel. */
+         * pairs for a given primitive LOD fraction. Precompute all 16 exact
+         * ordered-coverage phases once so the animated pixel loop is one
+         * pair/phase lookup instead of per-pixel blend or alpha resolution. */
         ndsRendererHardwareBuildTexel01Ci4Lut(
             config, tlut_src, stats->texture_tlut_count, palette_base,
             texel1_source.palette_base, stats->prim_lod_fraction);
@@ -7547,10 +7517,9 @@ ndsRendererScanList(const Gfx *dl,
             (op != NDS_RENDERER_OP_TRI2))
         {
             ndsRendererHardwareEndBatch();
-            /* Texture image/tile/combine/material state can only change at a
-             * non-TRI source opcode. Rebuild the dynamic texture key on the
-             * next triangle run, never once per adjacent triangle. */
-            state->texture_prepare_valid = FALSE;
+            /* VTX and matrix commands end the GX primitive group but cannot
+             * change the prepared texture/material/depth epoch. The exact
+             * state opcodes below invalidate that epoch at their mutation. */
             state->prepared_vertex_color_valid_mask = 0u;
             state->prepared_texcoord_valid_mask = 0u;
             state->prepared_projected_xy_valid_mask = 0u;
@@ -7704,6 +7673,7 @@ ndsRendererScanList(const Gfx *dl,
         }
 
         case NDS_RENDERER_OP_TEXTURE:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordTextureState(stats, w0, w1);
             stats->state_command_count++;
             break;
@@ -7739,6 +7709,7 @@ ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_GEOMETRYMODE:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             stats->geometry_mode = (stats->geometry_mode & w0) | w1;
             stats->geometry_clear_mask = w0;
             stats->geometry_set_mask = w1;
@@ -7747,36 +7718,43 @@ ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_SETCOMBINE:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordSetCombine(stats, w0, w1);
             stats->state_command_count++;
             break;
 
         case NDS_RENDERER_OP_SETTIMG:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordSetImage(stats, w0, w1);
             stats->state_command_count++;
             break;
 
         case NDS_RENDERER_OP_SETTILE:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordSetTile(stats, w0, w1);
             stats->state_command_count++;
             break;
 
         case NDS_RENDERER_OP_LOADTILE:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordLoadTile(stats, w0, w1);
             stats->state_command_count++;
             break;
 
         case NDS_RENDERER_OP_LOADBLOCK:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordLoadBlock(stats, w0, w1);
             stats->state_command_count++;
             break;
 
         case NDS_RENDERER_OP_LOADTLUT:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordLoadTlut(stats, w1);
             stats->state_command_count++;
             break;
 
         case NDS_RENDERER_OP_SETTILESIZE:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordSetTileSize(stats, w0, w1);
             stats->state_command_count++;
             break;
@@ -7790,6 +7768,10 @@ ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_SETBLENDCOLOR:
         case NDS_RENDERER_OP_SETENVCOLOR:
         case NDS_RENDERER_OP_SETPRIMCOLOR:
+            if (op != NDS_RENDERER_OP_SETBLENDCOLOR)
+            {
+                NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            }
             stats->state_command_count++;
             stats->color_command_count++;
             if (op == NDS_RENDERER_OP_SETPRIMCOLOR)
@@ -7819,6 +7801,7 @@ ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_SETOTHERMODE_H:
         case NDS_RENDERER_OP_SETOTHERMODE_L:
         case NDS_RENDERER_OP_RDPSETOTHERMODE:
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
             ndsRendererRecordOtherMode(stats, op, w0, w1);
             break;
 

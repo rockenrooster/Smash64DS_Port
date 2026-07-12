@@ -89,26 +89,25 @@ Profile 0 retains all `828` triangles: `648` raw-current, `44` cross-matrix,
 proves reloc-backed topology `80/1736/344/330`: immutable lists/trusted commands/
 dynamic validations/replayed adjacent TRI commands. Within one unchanged TRI
 run it reuses exact material/depth, RGB15 color, S/T, projected X/Y, and source
-clip Z; a non-TRI opcode invalidates everything. Texture prepare/reuse and
-batching remain `103/725` and `121/707/121`; divisions remain `1,242`.
+clip Z. Non-TRI commands close GX; texture preparation survives VTX/matrix and
+invalidates at exact key mutations. Prepare/reuse is `98/730`; batching remains
+`121/707/121`, and divisions remain `1,242`.
 
 Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os to preserve
 their `227392`-byte reserve. Its renderer TU now follows sm64-nds in ARM state;
-four measured O3 loops occupy `12,608` ITCM bytes in profile 1 (`12,556`
+four measured O3 loops occupy `14,212` ITCM bytes in profile 1 (`14,128`
 forensic), while normal/legacy builds stay Thumb. One 40-byte exact context
 supplies all three vertex calls instead of restaging 22 arguments three times;
 eight Boolean modes share one word. Profiles 0/1 reuse live ordered-list state;
 profile 2 remains independent. Runtime omits its 82,176-byte stats array.
 Matrix loads remain `53`, batches `121/707/121`, and submissions
-`648/44/126/10`. A matched profile-1 A/B cuts draw
-`4,572,544 -> 4,454,784`, DL `3,416,832 -> 3,299,328`, and vertex
-`661,824 -> 513,600` ticks. Sixteen-frame profile 1 is
-`4,896,416/4,901,440`; DL is `3,308,064/3,318,464`, setup
-`1,376,992/1,389,888`, scan `1,415,744/1,417,408`, and vertex
-`513,728/515,584`. Profile 0 reaches `7.4fps` with draw
-`4,277,344/4,295,488`; profile 2 retains oracle `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_canonical_fast_022237-9222071-p41568.png`;
-shipped SHA-256: `E55D3D60C560231FD74796F86B10A1C718EDE703B3AEE30926C0FA24DE86B11A`.
+`648/44/126/10`. An 8 KiB table resolves all sixteen exact CI4 coverage phases;
+the removed pair branch covered only `2,048/18,432` pixels. Matched profile-1
+draw falls `4,473,120 -> 4,164,800`, DL `3,317,280 -> 3,017,888`, texture
+`908,192 -> 595,424`, and setup `1,385,856 -> 1,074,912` ticks. Profile 0
+reaches `7.5fps` at `3,983,296/3,984,640` draw; profile 2 retains oracle
+`2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_030326-3934155-p33036.png`;
+shipped SHA-256: `00C9A6167F01E43950098854A56BFB271F1E3A1CEE2741EF7F14D38E24D397FB`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
 separate, original timing stays live, and a post-step corrects packed RGBA.
 Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the
@@ -118,9 +117,9 @@ other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2.
 
 ## Recommended Next Work
-1. The canonical ROM is still only `7.4fps`, not P1-complete. Profile 1 leaves
-   about `1.42M` scan and `1.38M` non-vertex setup ticks. Immutable packets were
-   neutral/regressive; profile vertex-load/resolution costs, then hoist exact run state.
+1. The canonical ROM is still only `7.5fps`, not P1-complete. Profile 1 leaves
+   about `1.43M` scan and `1.07M` non-vertex setup ticks. Split source matrix/
+   state commands and VTX lighting before another exact runtime cut.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
    Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
 3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary
@@ -144,7 +143,7 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-P1Gate passed in `267.4s`; Boundary passed in `146.6s`. DevFast passed in
-`43.7s` and the separate forensic oracle in `16.8s`. This is not the
+P1Gate passed in `189.2s`; Boundary passed in `81.2s`. DevFast passed in
+`44.5s` and the separate forensic oracle in `24.5s`. This is not the
 five-minute P1 soak; skip Full Regression.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

@@ -1376,11 +1376,15 @@ O3 and `.itcm`, matching sm64-nds's interpreter/submission layout without
 fast-math or whole-program O3. The three vertex submissions share one 40-byte
 per-triangle context instead of restaging a 22-argument ABI three times; eight
 Boolean material/texture/depth modes are one exact flag word, while all live
-matrices, tiles, colors, vertices, and projected depths remain uncached.
-Profile 0/1/2 renderer ITCM is `12,408/12,608/12,556` of 32,768 bytes.
-Cache-hit guards run before temporary GX matrix
-construction, while `ndsRendererLoadHardwareMatrixPair` remains the final exact
-state guard.
+matrices, tiles, colors, vertices, and projected depths remain uncached. The
+animated pond's 16x16 CI4 palette pairs are expanded into sixteen exact Bayer
+phase planes in an 8 KiB table. Its measured single-pixel loop is faster than
+the removed adjacent-pair branch because only `2,048/18,432` pixels were
+pairable. Texture preparation survives VTX/matrix boundaries but is invalidated
+at every texture/material/depth-key mutation; normal builds compile that seam
+to a no-op. Profile 0/1/2 renderer ITCM is `14,068/14,212/14,128` of 32,768
+bytes. Cache-hit guards run before temporary GX matrix construction, while
+`ndsRendererLoadHardwareMatrixPair` remains the final exact state guard.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,
