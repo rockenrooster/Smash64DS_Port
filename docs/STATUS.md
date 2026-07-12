@@ -82,9 +82,9 @@ Reloc-backed source DLs now expose one immutable byte span; dynamic task-heap
 lists keep per-command validation. Live stage/fighter validators test the
 taskman arena before walking the loaded-file ledger, preserving the same
 accepted ranges. Each list directly uses the persistent 32-slot input/clip/color/
-snapshot planes; validity masks reset compact control state. Profile 1 remains `80` immutable lists, `1,736` trusted commands, `344` fallback validations, and `330` adjacent TRI commands. Each run reuses exact material/depth state, RGB15 colors, scaled S/T, projected X/Y, and source clip Z. Each non-TRI closes GX and invalidates per-vertex derivatives;
-texture preparation persists through VTX/matrix commands and invalidates only
-at exact texture/material/depth-key mutations. The animated CI4 palette-pair
+snapshot planes; validity masks reset compact control state. Profile 1 remains `80/1736/344/330` immutable/trusted/validated/adjacent-TRI work. Each run reuses exact material/depth, RGB15, S/T, projected X/Y, and clip Z.
+Texture preparation persists through VTX/matrix and invalidates only at exact key mutations. Profiles 0/1 reuse alpha/poly-format only when the blend/combine classifier proves it vertex-independent; profile 2 stays generic.
+The animated CI4 palette-pair
 LUT remains content-keyed with sixteen exact 4x4 coverage planes. Profiles 0/1
 decode the two immutable 32x32 packed source-index planes once, keyed by
 pointer/texel count/lane and invalidated before reloc scene storage is reused.
@@ -100,16 +100,15 @@ exact invalidation; profile 2 omits the 2,096-byte table and runs the independen
 exact shade calculation. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1
 index exact texture keys through 128 byte slots and compact fingerprints; full
 236-byte equality remains the oracle and deletion repairs clusters.
-Profile-0 BSS is `1,857,584`; canonical/profile-2 ITCM is `21,480/18,196`; last measured profile 1 is `21,524`, all below 32 KiB. Submission stays `648` raw source-Z, `44`
+Profile-0 BSS is `1,857,736`; canonical/profile-1/profile-2 ITCM is `20,916/21,376/18,196`, all below 32 KiB. Submission stays `648` raw source-Z, `44`
 mixed-matrix, `126` no-Z, `10` range, `1,242` logical divide demand, and
 `121/707/121` batches. Signed pre-clamping plus DS `div64` removes the shipping software 64-bit helper. Profile 1 makes `650` cache-miss calls; profile 2 checks
 `1,404` evaluations against C with zero mismatch. Final hash lookup is
-`53/51/9/42/2`; exact material/texture context persists by mutation epoch.
-Profile-1 median/P95 draw is `2,545,536/2,591,936`, vertex
-`457,888/458,560`, setup `744,352/791,168`, and scan `638,112/638,848`.
-Repeated shipping O2 is `2,203,168/2,205,504`; pacing is `11.7fps`.
-Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_100402-3629818-p14696.png`;
-shipped SHA-256: `B487001E1EDBF6590A42BAAFC6E192340B50FDA8750D75CC8860205242C80D4F`.
+frame-dependent but conserves active/table/miss results with bounded probes.
+Profile-1 median/P95 is draw `2,554,368/2,602,240`, vertex `459,264/460,096`, setup `740,896/789,888`, scan `652,416/653,184`.
+Repeated shipping O2 is `2,190,112/2,190,976`; pacing is `11.7fps`.
+Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_110513-4384512-p19696.png`;
+shipped SHA-256: `AE6645D9AA06C7C45309137FC47F26ECDBB06023E72E3EDB8FECAD69161C0349`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
@@ -133,14 +132,13 @@ anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
 The canonical frame is still only `11.7fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `0.638M/0.744M` ticks; next separate runtime
-state from proof telemetry, then fuse source state/VTX/TRI into prepared runs.
+Shipping now omits five generic proof-only counters and reuses proven constant alpha/poly-format, but the combined cut is only ~1%; profile-1 scan/setup remains `0.652M/0.741M`.
+Next fuse owner-level source state/VTX/TRI. The indexed-water trial halved uploads but regressed draw/GX RAM and is gone.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-Final P1Gate/Boundary passed in `149.0s/56.0s`; the isolated canonical gate passed
-in `63.8s`. This is not the five-minute soak; Full Regression stays skipped.
+Final P1Gate/Boundary passed in `149.1s/56.5s`; isolated fast canonical passed in `47.6s`. This is not the five-minute soak; Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

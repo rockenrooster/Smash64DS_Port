@@ -20086,3 +20086,49 @@ from source submission classes; exact pre-clamps are accepted only when their
 count plus hardware calls conserves every old quotient and mismatch stays zero.
 Coverage-reduced verifier expectations: Full/Legacy Regression remains skipped
 for the requested fast iteration cadence.
+
+## 2026-07-12 - Trimmed shipping proof stores and prepared constant alpha
+
+- Measured a fresh profile-0/O2 baseline before editing at
+  `2,212,928/2,214,784` median/P95 draw ticks. Hardware profile 0 now compiles
+  out the duplicate generic state/skip/VTX/TRI/render proof ledgers; profile 1,
+  profile 2, and non-hardware fixtures retain them. That isolated cut measured
+  `2,205,216/2,205,568`, about 0.35% below the same-cycle baseline.
+- Profiles 0/1 now classify the exact other-mode, blend-alpha, and combine-alpha
+  sources once per existing texture/material mutation epoch. When alpha is
+  provably independent of the vertex, the first triangle prepares alpha and
+  polygon format for the remaining adjacent run. TEXEL0/SHADE-dependent alpha
+  stays live per triangle, and profile 2 always executes the generic calculation.
+  The structural fixture requires those boundaries.
+- Repeated shipping draw is `2,190,112/2,190,976`, about 1.0% below the fresh
+  baseline, with all `828` triangles, `648/44/126/10` submit classes,
+  `121/707/121` batches, `98/730` prepare/reuse, `36,864` upload bytes, and GX
+  RAM `715/2167` unchanged. Pacing remains `11.7fps`, so this is measured
+  progress rather than the 60 FPS objective.
+- The current profile-1 median/P95 is draw `2,554,368/2,602,240`, vertex
+  `459,264/460,096`, setup `740,896/789,888`, and scan `652,416/653,184`.
+  The independent profile-2 renderer retains oracle `2484/0/0`, DS-divider
+  `1404/0/0/z0/mis0`, and all texture/fidelity/PosTest gates.
+- Tested and fully reverted two exact indexed-water variants. The first exceeded
+  the 255-class bound and correctly fell back. The pair-class/alpha-mask design
+  engaged and cut upload bytes `36,864 -> 19,456`, but draw regressed to about
+  `2.88M` and GX RAM drifted `715/2167 -> 714/2164`. Do not restore that design
+  without a materially different owner-level submission architecture.
+- Corrected one timing-sensitive verifier assumption found by P1Gate. Texture
+  lookup accounting is per completed frame while the 64-entry resident cache
+  survives frame boundaries, so a warm frame may have zero misses. The gate
+  still requires active/table hits, exact active+table+miss conservation, and
+  fewer than four probes per call; the collision/deletion host oracle is intact.
+- Canonical/profile-1/profile-2 ITCM is `20,916/21,376/18,196` bytes; canonical
+  BSS is `1,857,736`. Fast canonical (`47.6s`), profile-2 forensic, P1Gate
+  (`149.1s`), Boundary 161/162/163 (`56.5s`), GBI fixtures, and static checks
+  pass. Full/Legacy Regression remains intentionally skipped. Canonical/shipped
+  parity is 11,670,528 bytes at SHA-256
+  `AE6645D9AA06C7C45309137FC47F26ECDBB06023E72E3EDB8FECAD69161C0349`.
+  The accepted dual-screen capture is
+  `artifacts/visibility/2026-07-12_canonical_fast_110513-4384512-p19696.png`.
+
+Source-corrected verifier expectations: a completed warm texture-cache frame may
+have zero misses, but lookup outcome conservation and the probe bound remain
+mandatory. Coverage-reduced verifier expectations: Full/Legacy Regression
+remains skipped for the requested fast iteration cadence.

@@ -1384,7 +1384,9 @@ runtime builds, removing 82,176 bytes of static BSS without weakening the oracle
 Renderer instrumentation is compile-time tiered through
 `NDS_RENDERER_PROFILE_LEVEL`. Profile 0 is forced for the canonical/shipped ROM:
 oracle transforms, vertex/texture/depth ranges, texture samples, format/lane
-proofs, matrix mirrors, and per-command volatile writes are absent. A small
+proofs, matrix mirrors, per-command volatile writes, and the generic state/skip/
+VTX/TRI/render proof ledgers are absent. Fixtures and profiles 1/2 retain those
+counters. A small
 ordinary-memory health summary retains triangle/batch/texture/TEXEL1/saturation
 accounting and is copied to GDB globals once at frame completion. Profile 1 adds
 coarse adapter/DL/texture phase timers. Profile 2 retains all forensic state and
@@ -1408,8 +1410,11 @@ builds retain Thumb density. Six measured renderer paths carry targeted O3 and
 `.itcm`: CI4 conversion, source VTX decode/shade, GX vertex/triangle submission,
 and command scanning. This follows sm64-nds's interpreter/submission placement
 without fast-math or whole-program O3. Material, texture scale/origin, and
-filter invariants live in the exact mutation-keyed traversal epoch; each vertex
-call passes only stats, state, index, and depth in the four ARM argument registers.
+filter invariants live in the exact mutation-keyed traversal epoch. Profiles 0/1
+retain alpha and polygon format only when the exact other-mode/blend/combine
+classifier proves alpha independent of the vertex; vertex-dependent alpha stays
+live and profile 2 uses the generic calculation. Each vertex call passes only
+stats, state, index, and depth in the four ARM argument registers.
 Aligned little-endian VTX payloads use four strict-alias-safe word loads, while
 arbitrary alignment retains the bytewise decoder; hardware mode writes directly
 into the same persistent 32-slot input cache. A prepared light direction remains
@@ -1429,10 +1434,12 @@ preserves the first exact representative under collisions; rows expand forward
 from already-written representatives, then repeat rows copy bottom-to-top. A
 `>=4096`-pixel and at-least-50%-reuse gate leaves smaller or weakly repeating
 inputs on the direct loop; profile 2 omits both caches. The four maps are 512
-bytes; canonical profile-0 BSS is `1,857,584`. Canonical-O2/profile-1/profile-2
-renderer ITCM is `21,480/21,524(last measured)/18,196` of 32,768 bytes.
+bytes; canonical profile-0 BSS is `1,857,736`. Canonical-O2/profile-1/profile-2
+renderer ITCM is `20,916/21,376/18,196` of 32,768 bytes.
 Cache-hit guards run before temporary GX matrix construction; the final matrix-
 state guard remains exact.
+The live pond upload remains direct RGBA5551. A measured 8-bit class texture plus
+dynamic palette halved upload bytes but regressed draw and GX RAM, so it is absent.
 
 Profiles 0/1 index the resident 64-entry DS texture cache through a fixed
 128-slot byte table. A compact fingerprint mixes high-entropy source image,
@@ -1441,9 +1448,10 @@ the complete 236-byte texture-key comparison. Profile 2 retains the independent
 linear lookup and legacy-alias diagnostic. Removal repairs and reinserts the
 rest of the linear-probe cluster instead of leaving tombstones, so the animated
 pond cannot degrade lookup cost over the five-minute match. Runtime accounting
-requires active hits, table hits, misses, exact totals, and fewer than four
-probes per call; a host collision fixture covers equal fingerprints, deletion,
-cluster repair, and head replacement.
+requires active hits, table hits, exact active/table/miss conservation, and fewer
+than four probes per call. A warm frame may have zero misses because the resident
+cache crosses frame boundaries. A host fixture covers equal fingerprints,
+deletion, cluster repair, and head replacement.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,

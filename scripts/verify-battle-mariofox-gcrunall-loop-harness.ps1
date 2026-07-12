@@ -617,7 +617,11 @@ try {
                 Assert-Condition ($rendererProfileMarker.Success -and [int64]$rendererProfileMarker.Groups[1].Value -eq $RendererProfileLevel) "Canonical realtime HW build did not report renderer profile level $RendererProfileLevel." $gdbStdout
                 Assert-Condition $renderTexHash.Success 'Canonical realtime HW build did not publish texture lookup accounting.' $gdbStdout
                 if ($RendererProfileLevel -lt 2) {
-                    Assert-Condition ($rth[0] -gt 0 -and $rth[2] -gt 0 -and $rth[3] -gt 0 -and $rth[4] -gt 0 -and ($rth[2] + $rth[3] + $rth[4]) -eq $rth[0] -and $rth[1] -ge ($rth[3] + $rth[4]) -and $rth[1] -lt (4 * $rth[0])) 'Performance/coarse texture hash lookup lacked active/table/miss coverage, exact accounting, or bounded probes.' $gdbStdout
+                    # The resident texture cache survives frame boundaries, so a
+                    # completed warm frame may legitimately have zero misses.
+                    # Active and indexed hits, conservation, and the probe bound
+                    # are the invariant performance contract.
+                    Assert-Condition ($rth[0] -gt 0 -and $rth[2] -gt 0 -and $rth[3] -gt 0 -and ($rth[2] + $rth[3] + $rth[4]) -eq $rth[0] -and $rth[1] -ge ($rth[3] + $rth[4]) -and $rth[1] -lt (4 * $rth[0])) 'Performance/coarse texture hash lookup lacked active/table coverage, exact accounting, or bounded probes.' $gdbStdout
                 } else {
                     Assert-Condition (($rth | Measure-Object -Sum).Sum -eq 0) 'Forensic renderer unexpectedly used the performance texture hash lookup.' $gdbStdout
                 }

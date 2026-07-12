@@ -1138,11 +1138,15 @@
   60 FPS P1 condition. Exact pre-clamped DS `div64` removes the shipping
   software 64-bit divide helper; profile 1 sees `650` actual calls and profile 2
   compares `1,404` results with zero mismatch. Profile-1 median/p95 is draw
-  `2,545,536/2,591,936`, vertex `457,888/458,560`, scan
-  `638,112/638,848`, and setup `744,352/791,168` ticks. Generic command/state
-  execution, water uploads, and source RGBA4 interface output remain; the next
-  performance cut must separate runtime state from proof telemetry and fuse
-  source state/VTX/TRI runs without restoring one-command packets.
+  `2,554,368/2,602,240`, vertex `459,264/460,096`, scan
+  `652,416/653,184`, and setup `740,896/789,888` ticks. Shipping profile 0 now
+  omits five generic proof counters and reuses alpha/poly-format only for exact
+  vertex-independent epochs; repeated draw is `2,190,112/2,190,976`, about 1%
+  below the same-cycle fresh baseline. Generic command/state execution, direct
+  RGBA5551 water uploads, and source RGBA4 interface output remain; the next cut
+  must fuse owner-level state/VTX/TRI runs without restoring one-command packets.
+  An exact indexed-water trial reduced upload bytes `36,864 -> 19,456` but
+  regressed draw to about `2.88M` and GX RAM `715/2167 -> 714/2164`; it is gone.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native
@@ -1193,7 +1197,7 @@
   VTX-cache decode reached `7.6fps`. Arena-first dynamic validation and the
   two immutable CI4 source-index planes first reached `8.7fps`. Exact
   representative expansion and exact class indexing reached `9.9fps`.
-  Direct persistent RSP traversal plus exact prepared vertex context now reach
+  Direct persistent RSP traversal plus exact prepared vertex context first reached
   `2,277,952/2,612,032` repeated shipping-O2 draw and `11.4-11.5fps`; profile-1
   draw/setup/scan is `2,660,864/790,208/641,664`, with `1,242` nominal divides.
   The rejected GX

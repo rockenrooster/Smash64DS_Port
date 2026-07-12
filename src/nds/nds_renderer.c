@@ -1010,6 +1010,11 @@ typedef struct NDSRendererTraversalState
     u32 texture_prepare_source_zbuffered;
     u32 texture_prepare_decal_depth;
     u32 texture_prepare_prim_depth;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    u32 texture_prepare_alpha_constant;
+    u32 texture_prepare_poly_alpha;
+    u32 texture_prepare_poly_fmt;
+#endif
     u16 prepared_vertex_colors[NDS_RENDERER_MAX_VTX];
     s16 prepared_texcoord_s[NDS_RENDERER_MAX_VTX];
     s16 prepared_texcoord_t[NDS_RENDERER_MAX_VTX];
@@ -3598,6 +3603,45 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     }
     return alpha >> 3;
 }
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static s32 ndsRendererHardwareAlphaUsesVertex(
+    const NDSRendererStats *stats)
+{
+    if ((stats != NULL) &&
+        ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) !=
+         NDS_RENDERER_ALPHA_COMPARE_THRESHOLD) &&
+        ((stats->othermode_l & NDS_RENDERER_FORCE_BL) == 0u) &&
+        ((stats->othermode_l & NDS_RENDERER_CVG_X_ALPHA) == 0u) &&
+        ((stats->othermode_l & NDS_RENDERER_ZMODE_MASK) !=
+         NDS_RENDERER_ZMODE_XLU))
+    {
+        return FALSE;
+    }
+    if (ndsRendererHardwareBlendAlphaUsesMemory(stats) != FALSE)
+    {
+        return FALSE;
+    }
+    if ((stats != NULL) && (stats->texture_combine_count != 0u))
+    {
+        if ((ndsRendererHardwareOutputUsesAlpha(
+                 stats, NDS_RENDERER_ACMUX_PRIMITIVE) != FALSE) ||
+            (ndsRendererHardwareOutputUsesAlpha(
+                 stats, NDS_RENDERER_ACMUX_ENVIRONMENT) != FALSE))
+        {
+            return FALSE;
+        }
+        if ((ndsRendererHardwareOutputUsesAlpha(
+                 stats, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
+            (ndsRendererHardwareOutputUsesAlpha(
+                 stats, NDS_RENDERER_ACMUX_SHADE) == FALSE))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+#endif
 
 static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
 {
@@ -7982,7 +8026,31 @@ ndsRendererSubmitHardwareTriangle(
         }
     }
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    if (state->texture_prepare_valid == 0u)
+    {
+        poly_alpha = ndsRendererHardwareAlpha(stats, v0);
+        state->texture_prepare_alpha_constant =
+            (ndsRendererHardwareAlphaUsesVertex(stats) == FALSE) ?
+                TRUE : FALSE;
+        if (state->texture_prepare_alpha_constant != 0u)
+        {
+            state->texture_prepare_poly_alpha = poly_alpha;
+            state->texture_prepare_poly_fmt =
+                ndsRendererHardwarePolyFmt(stats, poly_alpha);
+        }
+    }
+    else if (state->texture_prepare_alpha_constant != 0u)
+    {
+        poly_alpha = state->texture_prepare_poly_alpha;
+    }
+    else
+    {
+        poly_alpha = ndsRendererHardwareAlpha(stats, v0);
+    }
+#else
     poly_alpha = ndsRendererHardwareAlpha(stats, v0);
+#endif
     if (poly_alpha == 0u)
     {
         return;
@@ -8093,7 +8161,13 @@ ndsRendererSubmitHardwareTriangle(
         projected_z[0] = projected_z[1] = projected_z[2] =
             ndsRendererHardwareNextProjectedDepth();
     }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    poly_fmt = (state->texture_prepare_alpha_constant != 0u) ?
+        state->texture_prepare_poly_fmt :
+        ndsRendererHardwarePolyFmt(stats, poly_alpha);
+#else
     poly_fmt = ndsRendererHardwarePolyFmt(stats, poly_alpha);
+#endif
     texture_name = state->texture_prepare_name;
     ndsRendererHardwareBeginTriangleBatch(
         stats, (use_texture != FALSE) ? TRUE : FALSE,
