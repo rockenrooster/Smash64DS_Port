@@ -1066,6 +1066,13 @@ volatile u32 gNdsRendererBenchmarkTriangleCount;
 static u32 sNdsRendererBenchmarkTriangleCount;
 #endif
 
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
+volatile u32 gNdsRendererBenchmarkSuppressedTextureUploads;
+volatile u32 gNdsRendererBenchmarkSuppressedTextureUploadBytes;
+static u32 sNdsRendererBenchmarkSuppressedTextureUploads;
+static u32 sNdsRendererBenchmarkSuppressedTextureUploadBytes;
+#endif
+
 static inline void ndsRendererProfileRecordTextureBind(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -7449,6 +7456,43 @@ static s32 ndsRendererHardwareBindTexture(
             ndsRendererHardwareFindTexel1RefreshTexture(&key);
     }
 
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
+    if ((sNdsRendererHardwareFrameSerial != 0u) &&
+        (fraction_entry != NULL))
+    {
+        /* The first completed frame populates the exact resident allocations.
+         * Subsequent animated-water key changes retain normal lookup, live
+         * params, texture binding, batches, and geometry while deliberately
+         * keeping the resident pixels from that warm frame. This benchmark
+         * branch occurs before source resolution, conversion, or VRAM upload. */
+        entry = fraction_entry;
+        ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ndsRendererHardwareTextureLookupRemove(entry);
+#endif
+        entry->key = key;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        entry->key_hash = key_hash;
+#endif
+        entry->params = ndsRendererHardwareMergeTextureParams(params);
+        entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+        entry->ready = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ndsRendererHardwareTextureLookupInsert(entry);
+#endif
+        sNdsRendererHardwareActiveTextureEntry = entry;
+        stats->hardware_texture_ready_count++;
+        stats->hardware_texture_format = format;
+        stats->hardware_texture_width = width;
+        stats->hardware_texture_height = height;
+        ndsRendererHardwareApplyTextureParams(entry->params);
+        sNdsRendererBenchmarkSuppressedTextureUploads++;
+        sNdsRendererBenchmarkSuppressedTextureUploadBytes +=
+            upload_width * upload_height * sizeof(u16);
+        return TRUE;
+    }
+#endif
+
     texels = width * height;
     bytes = ndsRendererHardwareTextureSourceBytes(
         format, size, source_read_width * source_read_height);
@@ -10058,6 +10102,10 @@ void ndsRendererProfileFrameBegin(void)
 #if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
     sNdsRendererBenchmarkTriangleCount = 0u;
 #endif
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
+    sNdsRendererBenchmarkSuppressedTextureUploads = 0u;
+    sNdsRendererBenchmarkSuppressedTextureUploadBytes = 0u;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     memset(&sNdsRendererRuntimeFrameSummary, 0,
            sizeof(sNdsRendererRuntimeFrameSummary));
@@ -10092,6 +10140,12 @@ void ndsRendererProfileFramePublish(void)
     memcpy((void *)gNdsRendererBenchmarkSinkOwnerWords,
            sNdsRendererBenchmarkSinkOwnerWords,
            sizeof(gNdsRendererBenchmarkSinkOwnerWords));
+#endif
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
+    gNdsRendererBenchmarkSuppressedTextureUploads =
+        sNdsRendererBenchmarkSuppressedTextureUploads;
+    gNdsRendererBenchmarkSuppressedTextureUploadBytes =
+        sNdsRendererBenchmarkSuppressedTextureUploadBytes;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileGXStatusPostVBlank =

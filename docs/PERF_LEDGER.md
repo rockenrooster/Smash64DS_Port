@@ -543,6 +543,103 @@ NEXT MEASURED BOTTLENECK:
   transport. Use those floors plus a stable-run census to select K1.
 ```
 
+## T2D-WARM-NO-UPLOAD — animated texture critical-path control
+
+```text
+IDEA ID:
+  T2D-WARM-NO-UPLOAD
+HYPOTHESIS:
+  After one exact resident frame, retaining normal texture lookup, live key and
+  parameter mutation, binding, batches, and geometry while suppressing only
+  animated conversion/upload will bound the texture critical path.
+TARGETED EXCLUSIVE COUNTER:
+  Whole draw and stage/Mario/Fox owner walls over one synchronized 128-frame
+  profile-1 window, plus the canonical suppressed upload count/byte sequence.
+MEASURED UPPER BOUND:
+  Whole-draw median improved 315,584 ticks and stage improved 291,904 ticks.
+  Mario/Fox improved only 11,136/12,928 ticks. Animated texture work is a
+  first-order stage critical path and exceeds the 150,000-tick immediate-action
+  threshold in CODEX_60FPS_FASTEST_PATH_20260712.txt.
+LIVE-TREE RECONCILIATION:
+  Continued from CPU-preparation floor commit 944e7e08f. Preserved all user
+  roadmaps, reviews, prompts, logs, and docs/optimization files; decomp remained
+  read-only.
+FILES/FUNCTIONS CHANGED:
+  Added benchmark mode 4 and a dedicated profile-1 target. On a compatible
+  TEXEL0/TEXEL1 fraction refresh after the first resident frame,
+  ndsRendererHardwareBindTexture retains live key/hash/params/binding and exact
+  geometry but returns before source resolution, conversion, or VRAM upload.
+  Added compact suppressed-upload publication and synchronized verifier gates.
+BUILD TARGET/FLAGS:
+  smash64ds-battle-playable-coarse-warm-no-upload-hwtri; common/scene
+  -O2 -mthumb and renderer -O2 -marm; benchmark mode 4.
+BASELINE ROM SHA-256:
+  T1B same-scene generic profile-1:
+  3FF0CB4AD3782C8DF2510A718F740E7A9089275C0912646CF0F4BFE84EAB2FCC.
+EXPERIMENT ROM / ELF SHA-256:
+  26482D03A04F4450D4020B520E5B9CA90F1C744E93B815CC89B0F88BA8DFBA3B /
+  6E3D5C05D4044B6F3DC62E1AB76757957CDFEF7C2862622DC8317B292CB66DB6.
+FRAME/LOGIC-TICK WINDOW:
+  Warm-up 200; frames 201..328; logic ticks 208..335. All frame and logic
+  ticks were consecutive, with no timer-start reset in the decision window.
+A0 MEDIAN/P95:
+  Generic T1B draw 2,083,264/2,102,784; stage 1,031,680/1,049,536;
+  Mario 500,736/500,800; Fox 534,272/534,336.
+B0 MEDIAN/P95:
+  WARM_NO_UPLOAD draw 1,767,680/2,148,800; stage 739,776/739,968;
+  Mario 489,600/489,664; Fox 521,344/521,472.
+A1 OR DISABLED-CONTROL MEDIAN/P95:
+  Compile-time benchmark control; normal mode 0 is unchanged. The source
+  branch is absent from normal renderer builds.
+ACTIVE/WAIT SPLIT:
+  Loop 2,240,672/2,800,896; present active 1,771,072/2,152,128;
+  VBlank wait 332,416/513,216; update 135,968/441,920; conservation error 0/0
+  and all residual ratios below 0.8%. Draw P95's 46,016-tick regression versus
+  T1B is explained by the independent 383,360-tick wallpaper P95 phase; owner
+  stage P95 improves 309,568 ticks.
+OWNER SPLIT:
+  Stage is the affected owner. Mario/Fox remain within 13K of generic, proving
+  that the control did not broadly alter fighter work.
+RENDERER NESTED/EXCLUSIVE SPLIT:
+  Detailed DL/submit/vertex timers remain compile-time absent in profile 1.
+  Real conversion/upload counters are 0/0. The suppressed sequence preserves
+  canonical resident or 1x4,096/1x32,768/2x36,864 refresh phases; median/P95
+  are 2/2 uploads and 36,864/36,864 bytes.
+OP/PROGRAM BYTES/FALLBACKS:
+  One cold compile-time cache-refresh branch, no program arena and no per-frame
+  allocation. Non-TEXEL1 cache misses and the first resident frame retain the
+  normal exact path.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  ITCM 20,936 bytes, renderer-emitted 19,200: CI4 direct 2,344, vertex submit
+  3,184, triangle submit 4,208, scanner 9,464. Text/data/BSS
+  664,436/126,104/1,858,280; DTCM 0. ROM 11,672,576 bytes; ELF 8,189,832
+  bytes. No arena or per-frame allocation.
+SEMANTIC TRACE RESULT:
+  Not applicable to the deliberately frozen resident pixels. Source topology,
+  live texture key/params, triangle preparation, and geometry remain normal.
+ORACLE/COUNTER/GX RESULT:
+  Exact 2,484 vertices/828 triangles; batches 121/707/121; texture prepare
+  98/730; classes 648/44/126/10; zero real uploads. A 32-frame run ended at
+  canonical 715/2,167 GX RAM. The later 128-frame terminal probe observed the
+  live animation/clipping boundary one triangle behind on one run, while exact
+  source geometry and submitted/flush frame conservation remained intact.
+CAPTURE RESULT:
+  None; animated pixels are intentionally frozen by this nonshipping control.
+VERIFIER COMMANDS AND RESULTS:
+  GBI fixtures and PowerShell parse checks passed. ITCM placement passed. The
+  32-frame exploratory and 128-frame synchronized WARM_NO_UPLOAD benchmark
+  passed count, upload-suppression, GX submission, and conservation gates.
+DECISION: KEEP
+  Keep the benchmark-only control and tooling. It is not a production path.
+  Texture conversion/upload is large enough to optimize immediately after the
+  shared raw-current kernel rather than deferring until draw falls below 900K.
+NEXT MEASURED BOTTLENECK:
+  Adopt CODEX_60FPS_FASTEST_PATH_20260712.txt: derive the stable-run census from
+  retained semantic data and build one shared K-RAW kernel with owner masks.
+  The prior frozen-stream probe is optional because NO_GX already bounded
+  transport below 300K.
+```
+
 ## Per-experiment report template
 
 ```text

@@ -460,6 +460,9 @@ try {
                 if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                     $coarseBenchmarkCommands += 'printf "SINK_BENCH=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSinkCursor, gNdsRendererBenchmarkSinkWordCount, gNdsRendererBenchmarkSinkCalibrationWords, gNdsRendererBenchmarkSinkCalibrationTicks, gNdsRendererBenchmarkSinkOwnerWords[0], gNdsRendererBenchmarkSinkOwnerWords[1], gNdsRendererBenchmarkSinkOwnerWords[2]'
                 }
+                if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
+                    $coarseBenchmarkCommands += 'printf "WARM_BENCH=%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSuppressedTextureUploads, gNdsRendererBenchmarkSuppressedTextureUploadBytes'
+                }
                 if ($RendererProfileLevel -ge 2) {
                     foreach ($ownerIndex in 0..2) {
                         $coarseBenchmarkCommands += Get-RendererOwnerBenchmarkCommand -OwnerIndex $ownerIndex
@@ -695,6 +698,7 @@ try {
     $gxBoundaryBenchmark = @()
     $stage0Benchmark = @()
     $sinkBenchmark = @()
+    $warmBenchmark = @()
     $rendererSemanticBenchmark = @()
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
         $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 24)
@@ -702,6 +706,9 @@ try {
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
             $sinkBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SINK_BENCH' -FieldCount 8)
+        }
+        if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
+            $warmBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'WARM_BENCH' -FieldCount 3)
         }
         if ($RendererProfileLevel -ge 2) {
             $ownerBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'OWNER_BENCH' -FieldCount 37)
@@ -832,6 +839,7 @@ try {
                 $gxBoundarySummary = ''
                 $stage0Summary = ''
                 $sinkMetricSummary = ''
+                $warmMetricSummary = ''
                 $semanticMetricSummary = ''
                 $semanticChurnSummary = ''
                 $semanticProvenanceSummaries = @()
@@ -889,6 +897,7 @@ try {
                         $gxBoundarySamples = [System.Collections.Generic.List[object]]::new()
                         $stage0Samples = [System.Collections.Generic.List[object]]::new()
                         $sinkSamples = [System.Collections.Generic.List[object]]::new()
+                        $warmSamples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
                         $logicTickResetCount = 0
                         $drawResidualRatios = @()
@@ -901,6 +910,9 @@ try {
                         )
                         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                             Assert-Condition ($sinkBenchmark.Count -eq $RendererBenchmarkSamples) "CPU_PREP_NO_GX sink benchmark captured $($sinkBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        }
+                        if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
+                            Assert-Condition ($warmBenchmark.Count -eq $RendererBenchmarkSamples) "WARM_NO_UPLOAD benchmark captured $($warmBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         for ($sampleIndex = 0; $sampleIndex -lt $RendererBenchmarkSamples; $sampleIndex++) {
                             $coarse = Get-Ints $coarseBenchmark[$sampleIndex]
@@ -959,6 +971,11 @@ try {
                                 $sinkOwnerWords = $sink[5] + $sink[6] + $sink[7]
                                 Assert-Condition ($sink[0] -eq $frame -and $sink[1] -eq $sink[2] -and $sink[2] -gt 0 -and $sink[3] -eq 1024 -and $sink[4] -gt 0 -and $sinkOwnerWords -eq $sink[2]) "CPU_PREP_NO_GX sink record is not synchronized, owner-conserved, or calibrated at frame $frame." $gdbStdout
                                 $sinkSamples.Add($sink)
+                            }
+                            if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
+                                $warm = Get-Ints $warmBenchmark[$sampleIndex]
+                                Assert-Condition ($warm[0] -eq $frame -and (Test-RendererUploadPair $warm[1] $warm[2])) "WARM_NO_UPLOAD sampled an invalid suppressed refresh pair $($warm[1])/$($warm[2]) at frame $frame." $gdbStdout
+                                $warmSamples.Add($warm)
                             }
                             $drawResidualRatios += Get-RatioBasisPoints $coarse[19] $drawTicks
                             $presentResidualRatios += Get-RatioBasisPoints $coarse[20] $presentActive
@@ -1037,6 +1054,10 @@ try {
                         $stage0Summary = "Renderer stage layer-0 benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 ticks=$(Get-MedianP95 (Get-SampleFieldValues $stage0Samples 1)) adjacent changes/distinct values=$(Get-AdjacentChurn (Get-SampleFieldValues $stage0Samples 1))"
                         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                             $sinkMetricSummary = "Renderer CPU_PREP_NO_GX sink: samples=$RendererBenchmarkSamples words=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 2)) cursor=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 1)) stageWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 5)) MarioWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 6)) FoxWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 7)) calibrationWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 3)) calibrationTicks=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 4))"
+                        }
+                        if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
+                            Assert-Condition (((Get-SampleFieldValues $warmSamples 1) | Measure-Object -Sum).Sum -gt 0) 'WARM_NO_UPLOAD window did not observe any animated texture refresh to suppress.' $gdbStdout
+                            $warmMetricSummary = "Renderer WARM_NO_UPLOAD: samples=$RendererBenchmarkSamples suppressedUploads=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 1)) suppressedBytes=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 2))"
                         }
 
                         $ownerLabels = @('stage', 'Mario', 'Fox')
@@ -1142,6 +1163,23 @@ try {
                         Assert-Condition ($renderSubmit.Success -and $sinkSubmit[0] -eq 648 -and $sinkSubmit[1] -eq 0 -and $sinkSubmit[2] -eq 44 -and $sinkSubmit[3] -eq 126 -and $sinkSubmit[4] -eq 0 -and $sinkSubmit[5] -eq 0 -and $sinkSubmit[6] -eq 10 -and $sinkSubmit[7] -eq 0) 'CPU_PREP_NO_GX drifted from the exact 648/44/126/10 submit-class partition.' $gdbStdout
                         Assert-Condition ($platformHw.Success -and $sinkPlatform[0] -gt 0 -and $sinkPlatform[2] -eq 0 -and $sinkPlatform[3] -eq 0) 'CPU_PREP_NO_GX unexpectedly emitted GX geometry or failed to complete benchmark frames.' $gdbStdout
                     }
+                    if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
+                        $warmProfile = Get-Ints $renderProfile
+                        $warmBatch = Get-Ints $renderBatch
+                        $warmSubmit = Get-Ints $renderSubmit
+                        $warmPlatform = Get-Ints $platformHw
+                        Assert-Condition ($renderProfile.Success -and $warmProfile[12] -eq 0 -and $warmProfile[13] -eq 0 -and $warmProfile[15] -eq 2484 -and $warmProfile[16] -eq 828 -and $warmProfile[17] -eq 0) 'WARM_NO_UPLOAD did not preserve exact geometry or leaked a real texture upload into the warm window.' $gdbStdout
+                        Assert-Condition ($renderBatch.Success -and $warmBatch[0] -eq 121 -and $warmBatch[1] -eq 707 -and $warmBatch[2] -eq 121 -and $warmBatch[3] -eq 98 -and $warmBatch[4] -eq 730) 'WARM_NO_UPLOAD drifted from exact batch and texture-preparation policy.' $gdbStdout
+                        Assert-Condition ($renderSubmit.Success -and $warmSubmit[0] -eq 648 -and $warmSubmit[1] -eq 0 -and $warmSubmit[2] -eq 44 -and $warmSubmit[3] -eq 126 -and $warmSubmit[4] -eq 0 -and $warmSubmit[5] -eq 0 -and $warmSubmit[6] -eq 10 -and $warmSubmit[7] -eq 0) 'WARM_NO_UPLOAD drifted from the exact 648/44/126/10 submit-class partition.' $gdbStdout
+                        # The terminal hardware counters are sampled at a later
+                        # live animation/logic frame than the synchronized CPU
+                        # window. Clipping can leave the final observed RAM one
+                        # triangle below the canonical frozen 715/2167 value;
+                        # exact 828 CPU triangles, submit classes, batches, and
+                        # submitted/flush frame conservation are the benchmark
+                        # geometry contract.
+                        Assert-Condition ($platformHw.Success -and $warmPlatform[0] -gt 0 -and $warmPlatform[0] -eq $warmPlatform[1] -and $warmPlatform[2] -gt 0 -and $warmPlatform[3] -gt 0) 'WARM_NO_UPLOAD failed to submit and flush live GX geometry.' $gdbStdout
+                    }
                     Write-Output $benchmarkIdentitySummary
                     Write-Output $benchmarkMetricSummary
                     Write-Output $benchmarkChurnSummary
@@ -1150,6 +1188,7 @@ try {
                     Write-Output $gxBoundarySummary
                     Write-Output $stage0Summary
                     if ($sinkMetricSummary) { Write-Output $sinkMetricSummary }
+                    if ($warmMetricSummary) { Write-Output $warmMetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     Write-Output "$Label renderer benchmark-only sample passed."
                     return

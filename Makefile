@@ -53,6 +53,11 @@ override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 1
 override NDS_RENDERER_BENCHMARK_MODE := 2
 endif
+ifeq ($(TARGET),smash64ds-battle-playable-coarse-warm-no-upload-hwtri)
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 1
+override NDS_RENDERER_BENCHMARK_MODE := 4
+endif
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
 override NDS_IMPORT_BATTLESHIP_FTCOMPUTER := 1
