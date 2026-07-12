@@ -839,6 +839,14 @@ $nativeCi4 = [byte[]](0x12, 0x34, 0x56, 0x78)
 for ($i = 0; $i -lt 8; $i++) {
     Assert-Equal (Get-TextureNibble $nativeCi4 $i 'Native') ($i + 1) "Native CI4 nibble $i should not lane-remap."
 }
+foreach ($layout in @('Native', 'O2R')) {
+    $packedCi4 = if ($layout -eq 'O2R') { $o2rCi4 } else { $nativeCi4 }
+    for ($i = 0; $i -lt 8; $i += 2) {
+        $packed = Get-TextureByte $packedCi4 ($i -shr 1) $layout
+        Assert-Equal ($packed -shr 4) (Get-TextureNibble $packedCi4 $i $layout) "$layout CI4 paired high nibble diverged at texel $i."
+        Assert-Equal ($packed -band 0x0f) (Get-TextureNibble $packedCi4 ($i + 1) $layout) "$layout CI4 paired low nibble diverged at texel $($i + 1)."
+    }
+}
 Assert-Equal (Get-TextureNibble $o2rCi4 0 'O2R') 1 'O2R IA4/I4 share the CI4 packed-byte lane rule.'
 Assert-Equal (Get-TextureByte $o2rCi8 2 'O2R') 2 'O2R IA8/I8 share the CI8 byte lane rule.'
 $o2rHalfwords = [uint16[]](0x3344, 0x1122)
@@ -895,6 +903,11 @@ $lutPalette1 = [uint16[]](0..15 | ForEach-Object {
     (((31 - $_ * 2) -band 0x1f)) -bor (((($_ * 11) -band 0x1f)) -shl 5) -bor
         (((($_ * 13) -band 0x1f)) -shl 10) -bor (((($_ + 1) -band 1)) -shl 15)
 })
+$alphaPhasePrefix = [uint16[]](
+    0x0000, 0x0001, 0x0401, 0x0405, 0x0505, 0x0525,
+    0x8525, 0x85a5, 0xa5a5, 0xa5a7, 0xada7, 0xadaf,
+    0xafaf, 0xafbf, 0xefbf, 0xefff, 0xffff
+)
 foreach ($lutFraction in @(0, 1, 0x40, 0x72, 0xff)) {
     for ($lutIndex0 = 0; $lutIndex0 -lt 16; $lutIndex0++) {
         for ($lutIndex1 = 0; $lutIndex1 -lt 16; $lutIndex1++) {
@@ -912,6 +925,14 @@ foreach ($lutFraction in @(0, 1, 0x40, 0x72, 0xff)) {
                         -Value $lutValue -X $lutX -Y $lutY
                     if ($lutActual -ne $lutExpected) {
                         throw "TEXEL0/TEXEL1 CI4 lookup diverged at pair $lutIndex0/$lutIndex1, fraction $lutFraction, pixel $lutX/${lutY}: expected $lutExpected, got $lutActual."
+                    }
+                    $alphaCoverage = $lutValue -shr 15
+                    $alphaPrefixCount = [Math]::Min(16, (($alphaCoverage + 7) -shr 4))
+                    $phase = (($lutY -band 3) -shl 2) -bor ($lutX -band 3)
+                    $phaseAlpha = ($alphaPhasePrefix[$alphaPrefixCount] -shr $phase) -band 1
+                    $phaseActual = ($lutValue -band 0x7fff) -bor ($phaseAlpha -shl 15)
+                    if ($phaseActual -ne $lutExpected) {
+                        throw "TEXEL0/TEXEL1 CI4 phase mask diverged at pair $lutIndex0/$lutIndex1, fraction $lutFraction, pixel $lutX/${lutY}: expected $lutExpected, got $phaseActual."
                     }
                 }
             }
@@ -1032,7 +1053,16 @@ $platform = Get-Content (Join-Path $root 'src/nds/nds_platform.c') -Raw
 Assert-True ($platform.Contains('ndsPlatformGetOriginalSpriteOverlayLayer')) 'DS platform no longer exposes bounded final-layer ownership for direct wallpaper composition.'
 Assert-True ($platform.Contains('ndsPlatformCommitOriginalSpriteFinalLayer')) 'DS platform no longer publishes direct final-layer commits and ownership epochs.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
+$harnessScript = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
+Assert-True ($relocRendererDL.Contains('ndsRendererAdapterGetFrameCameraMatrices')) 'Renderer adapter does not reuse immutable camera matrices within one BattleShip draw frame.'
+Assert-True ($relocRendererDL.Contains('sNdsRendererAdapterCameraCacheFrame != frame')) 'Renderer adapter camera cache is not bounded to one presented frame.'
+Assert-True ($relocRendererDL.Contains('ndsRendererAdapterFindDObjWorldMatrix')) 'Renderer adapter does not reuse parent DObj world matrices within one BattleShip draw frame.'
+Assert-True ($relocRendererDL.Contains('sNdsRendererAdapterDObjWorldCacheFrame != frame')) 'Renderer adapter DObj world cache is not bounded to one presented frame.'
+Assert-True ($relocRendererDL.Contains('NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u')) 'Renderer adapter DObj world cache lost its measured fixed-capacity fallback bound.'
+Assert-True ($relocRendererDL.Contains('syTaskmanMalloc(bytes, 0x10u)')) 'Renderer adapter DObj world cache returned to scarce static memory instead of scene-owned taskman storage.'
+Assert-True ($relocRendererDL.Contains('ndsRelocUpdateMemoryLedger();')) 'Renderer adapter scene-heap cache is absent from the P1 reserve ledger.'
+Assert-True ($relocAssets.Contains('ndsRendererAdapterResetSceneCaches();')) 'Renderer adapter scene-owned cache is not invalidated before taskman heap reuse.'
 Assert-True ($renderer.Contains('ndsRendererTransformVertex20p12')) 'Renderer vertex transform helper is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_OP_MTX 0xdau')) 'Renderer G_MTX opcode support is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_OP_POPMTX 0xd8u')) 'Renderer G_POPMTX opcode support is missing.'
@@ -1126,10 +1156,18 @@ Assert-True ($renderer.Contains('key.texel1_image = load->image')) 'Renderer com
 Assert-True ($renderer.Contains('key.prim_lod_fraction = stats->prim_lod_fraction')) 'Renderer composite cache key omits the source blend fraction.'
 Assert-True ($renderer.Contains('ndsRendererHardwareBlendTexel01')) 'Renderer does not precompose the source TEXEL0/TEXEL1 result for DS hardware.'
 Assert-True ($renderer.Contains('ndsRendererHardwareBuildTexel01Ci4Lut')) 'Renderer does not precompute the exact 16x16 CI4 palette-pair blend table.'
-Assert-True ($renderer.Contains('sNdsRendererHardwareTexel01Ci4Lut[(index0 << 4) | index1]')) 'Renderer CI4 blend lookup is not keyed by both source palette indices.'
+Assert-True ($renderer.Contains('&sNdsRendererHardwareTexel01Ci4Lut[(index0 << 4) | index1]')) 'Renderer CI4 blend lookup is not keyed by both source palette indices.'
+Assert-True ($renderer.Contains('.alpha_phase_mask =') -and $renderer.Contains('alpha_phase_prefix[alpha_prefix_count]')) 'Renderer CI4 lookup does not pre-resolve exact ordered-coverage phase masks.'
+Assert-True ($renderer.Contains('sNdsRendererHardwareTexel01Ci4Source1S[x]') -and $renderer.Contains('ndsRendererHardwareTextureAddressCoord(')) 'Renderer does not precompute animated TEXEL1 addressing through the exact generic address function.'
+Assert-True ($renderer.Contains('ndsRendererHardwareConvertTexel01Ci4Direct')) 'Renderer does not pair directly addressable CI4 source nibbles.'
+Assert-True ($renderer.Contains('ndsRendererProfileRecordTextureCi4Direct(width * height)')) 'Renderer does not publish direct CI4 conversion coverage once per texture.'
+Assert-True ($taskman.Contains('gNdsRendererProfileTextureCi4DirectPixels = 0;')) 'Renderer direct CI4 conversion coverage is not reset with the frame profile.'
+Assert-True ($harnessScript.Contains('gNdsRendererProfileTextureCi4DirectPixels')) 'Canonical renderer verifier does not require the direct CI4 water path.'
+Assert-True ($harnessScript.Contains('RENDER_ADAPTER_CACHE=') -and $harnessScript.Contains('gNdsRendererProfileDObjWorldCacheOverflowCount')) 'Forensic renderer verifier does not prove bounded frame-local matrix-cache reuse.'
 Assert-True ($renderer.Contains('texel1_palette_entries =') -and $renderer.Contains('texel1_source.palette_base + 16u')) 'Renderer TLUT pointer validation does not cover the TEXEL1 CI4 palette bank.'
 Assert-True ($renderer.Contains('texel1_palette_entries > palette_entries')) 'Renderer does not resolve the maximum TEXEL0/TEXEL1 CI4 palette span.'
 Assert-True ($renderer.Contains('use_texel1_ci4_lut != FALSE')) 'Renderer upload loop does not select the CI4 TEXEL0/TEXEL1 lookup path.'
+Assert-True ($renderer.Contains('upload_width * upload_height * sizeof(u16)')) 'Renderer texture conversion still clears the worst-case scratch arena for smaller uploads.'
 Assert-True ($renderer.Contains('color, color1, stats->prim_lod_fraction')) 'Renderer retained generic TEXEL0/TEXEL1 fallback does not consume both source texels and the original fraction.'
 Assert-True ($renderer.Contains('preserve_transparent_rgb')) 'Renderer composite decode does not preserve transparent source RGB before color lerp.'
 Assert-True ($renderer.Contains('ndsRendererHardwareFindTexel1RefreshTexture')) 'Renderer does not retain one allocation across source water animation updates.'
@@ -1338,6 +1376,8 @@ Assert-True ($renderer -match '(?s)ndsRendererHardwareNextProjectedDepth\(void\)
 Assert-True ($renderer -match '(?s)source_zbuffered = zbuffered;.*?if \(source_zbuffered != FALSE\)\s*\{\s*/\* Source-Z projected submissions use the composed clip Z below and\s*\* must not consume the synthetic no-Z painter counter\. \*/\s*projected_z\[0\].*?else.*?ndsRendererHardwareNextProjectedDepth\(\);') 'Renderer source-Z submissions consume the synthetic no-Z painter counter.'
 Assert-True ($renderer.Contains('ndsRendererHardwareBeginTriangleBatch')) 'Renderer adjacent source-triangle batch helper is missing.'
 Assert-True ($renderer.Contains('gNdsRendererProfileHardwareBatchReuseCount++')) 'Renderer adjacent source-triangle reuse diagnostic is missing.'
+Assert-True ($renderer -match '(?s)if \(state->texture_prepare_valid == 0u\).*?ndsRendererHardwareBindTexture\(stats, config\).*?ndsRendererProfileRecordTexturePrepare\(\);.*?else.*?ndsRendererProfileRecordTexturePrepareReuse\(\);') 'Renderer does not prepare the dynamic texture key once per unchanged source TRI run.'
+Assert-True ($renderer -match '(?s)if \(\(op != NDS_RENDERER_OP_TRI1\).*?ndsRendererHardwareEndBatch\(\);.*?state->texture_prepare_valid = FALSE;') 'Renderer texture preparation is not invalidated at every non-TRI source opcode.'
 Assert-True ($renderer.Contains('matrix_generation = ndsRendererNextMatrixGeneration()')) 'Renderer composed matrix generations are not refreshed on matrix changes.'
 Assert-True ($renderer -match '(?s)sNdsRendererMatrixGenerationSerial == 0u.*?sNdsRendererHardwareMatrixLoaded = FALSE.*?sNdsRendererHardwareMatrixGeneration = 0u') 'Renderer matrix-generation wrap does not invalidate the GX matrix cache.'
 Assert-True (-not $renderer.Contains('sNdsRendererHardwareMatrixProjection')) 'Renderer still compares full projection matrices in the triangle hot path.'
@@ -1367,6 +1407,7 @@ Assert-True ($rendererMovement -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2\s*
 $rendererVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
 Assert-True ($rendererVerifier.Contains('RENDER_PROFILE_LEVEL=%u')) 'Realtime verifier does not identify the compiled renderer profile.'
 Assert-True ($rendererVerifier.Contains('RENDER_BENCH=%u')) 'Realtime verifier lacks the optional warm-frame renderer sampler.'
+Assert-True ($rendererVerifier.Contains('gNdsRendererProfileTexturePrepareReuseCount')) 'Realtime verifier does not report unchanged-TRI texture preparation reuse.'
 Assert-True ($rendererVerifier.Contains('RENDER_RAW_MATRIX=%u')) 'Realtime verifier does not report raw-candidate and GX PosTest diagnostics.'
 Assert-True ($rendererVerifier.Contains('RENDER_SUBMIT=%u')) 'Realtime verifier does not report hybrid raw/projected class accounting.'
 Assert-True ($rendererVerifier.Contains('RENDER_LAZY=%u')) 'Realtime verifier does not report source loads, lazy transforms, snapshot reuse, and overflow.'
@@ -1407,7 +1448,7 @@ Assert-True ($rendererAdapter.Contains('syMatrixLookAtReflect')) 'Battle DL rend
 Assert-True ($rendererAdapter.Contains('parts->transform_update_mode != 0')) 'Battle DL renderer fighter-parts cached matrix branch is missing.'
 Assert-True ($rendererAdapter.Contains('parts->unk_dobjtrans_0x10')) 'Battle DL renderer fighter-parts matrix seed is missing.'
 Assert-True ($rendererAdapter.Contains('value = (row == 3u) ? 1.0F : 0.0F;')) 'Battle DL renderer cached fighter-parts matrix conversion no longer matches syMatrixF2LFixedW W-column behavior.'
-Assert-True ($rendererAdapter.Contains('for (i = depth; i != 0u; i--)')) 'Battle DL renderer DObj parent-chain composition order regressed.'
+Assert-True ($rendererAdapter.Contains('for (; i != 0u; i--)') -and $rendererAdapter.Contains('ndsRendererMtxMul20p12(&local, out, out)')) 'Battle DL renderer DObj parent-chain composition order regressed.'
 Assert-True ($rendererAdapter.Contains('ndsRendererMtxMul20p12(&dobj_world, &camera_modelview, modelview)')) 'Battle DL renderer DObj/camera modelview composition order regressed.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareMaterialSegment')) 'Battle DL renderer material segment emission is missing.'
 Assert-True ($rendererAdapter.Contains('segment_e_base')) 'Battle DL renderer segment 0x0E material resolver is missing.'

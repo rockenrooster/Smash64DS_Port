@@ -82,35 +82,35 @@ raw=4422960 resident=0 scratch=16`,
 `bgm=track0 play=1 stop=1 rate=44099 resident=65536`, and
 `hwsubmit=42`, `hwtri=202`, `hwftr=2/626`. FGM/voice, original sequence-player,
 and non-critical HUD/SObj/particle work remain follow-up.
-The memory ledger reports headroom `236100`, resident reloc `681632` bytes
+The memory ledger reports headroom `227392`, resident reloc `681632` bytes
 (`stage=202816`, `fighter=175440`, `if=208672`), stale bytes `0/0`, and
-`172412` bytes after the 64 KiB BGM buffer against the 128 KiB reserve.
+`161856` bytes after BGM against the 128 KiB reserve, including matrix-cache heap.
 
-Canonical realtime + live-input + HW-tri shows recognizable Dream Land;
-source-separated Mario/Fox bodies are broadly accepted on DS.
-Source map-object kinds `0..3` decode exactly, and the original manager grounds
-Mario/Fox on lines `3/2` at X `0/-1397`. A source-shaped `gcAddMObjAll` wrapper
-uses loaded-file/asset-generation provenance for local O2R lane restoration.
+Canonical realtime + live-input + HW-tri shows recognizable Dream Land; source-
+separated Mario/Fox bodies are broadly accepted on DS. Source map-object kinds
+`0..3` decode exactly, and the original manager grounds Mario/Fox on lines `3/2`
+at X `0/-1397`; `gcAddMObjAll` restores O2R lanes by source provenance.
 Canonical observes at least four water/Whispy swaps, no native/failure cases,
-and first flags `0x0200 -> 0x006b`. The renderer independently resolves
-tile-6/TMEM-0x40 TEXEL1 and tile-7/TMEM-0 TEXEL0, recognizes exact
-`G_CC_TEMPLERP`, and precomposes a DS RGBA5551/A1 approximation. Its CI4 path
-builds all 256 pair values per change; addressing and Bayer A1 stay exact. A 184-frame
-gate proves positive scene-lifetime compatible-state refresh, zero eviction/
-reject/oracle drift, and terminal `12/12` matches. Pond detail is
-`46.053%/23px` versus white `27.997%/105px`.
+and first flags `0x0200 -> 0x006b`. Exact TEXEL0/TEXEL1 CI4 conversion now uses
+precomputed source-address maps, row-local T addressing, packed paired texels,
+and 17 exact Bayer phase masks. Non-CI4 and non-adjacent cases retain the generic
+path. The two animated uploads cover `36,864` bytes and positive scene-lifetime
+direct-pixel/refresh proof with zero eviction, reject, or oracle drift.
 Profile 0 retains all `828` triangles: `648` raw-current, `44` cross-matrix,
-`126` no-Z, and `10` range; snapshot/decal/prim/reject stay zero. Batches/loads/
-divisions are `121/707/121`, `53`, and `1,242`. Profile 2 retains device
-`PosTest 32/0/e1/w0/c0/mw1/drop0`, oracle `2484/0/0`, and all depth. Per-slot
-matrix IDs produce `282` lazy transforms, `258` hits, and `67/7/0` snapshot
-create/reuse/overflow. Dream Land now composes exactly to final BG2 under a
-provenance/live-state/ownership key: `direct67/skip0/change67`, `67*49152`
-pixels, and zero staging/BG clears/BG copies. Unsupported RGBA4 interface SObjs
-are rejected before scratch clear. Warm median/p95 falls
-`15,543,456/15,804,544 -> 13,301,312/13,595,328` (`-14.4%/-14.0%`) at `2.5fps`; capture is `artifacts/visibility/2026-07-11_canonical_fast_205024-5917438-p10196.png`.
-Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
-command graphs once per reloc generation; fighter AObj16 bypasses that path.
+`126` no-Z, and `10` range; snapshot/decal/prim/reject stay zero. Adjacent TRI
+runs prepare/reuse texture state `103/725`; batches/loads/divisions remain
+`121/707/121`, `53`, and `1,242`.
+Frame-local caches reset every present; profile 2 proves camera/DObj hit/miss/overflow `73/1/0`, `64/107/0`, device
+`PosTest 32/0/e2/w0/c0/mw1/drop0`, oracle `2484/0/0`, and all depth. Matrix
+preparation falls to about `772,352` ticks. Dream Land still composes exactly to
+final BG2 under its provenance/live-state/ownership key with no staging clears
+or copies; unsupported RGBA4 interface SObjs are rejected before scratch clear.
+Warm profile-0 present median/p95 falls `13,301,312/13,595,328 ->
+7,697,632/7,958,912` (`-42.1%/-41.5%`); pacing rises `2.5 -> 4.2fps`. Profile 1
+records DL `5,396,128/5,396,736`, texture `1,501,952/1,502,208`, and conversion
+about `1,328,576` ticks. Capture: `artifacts/visibility/2026-07-11_canonical_fast_221338-4022982-p19312.png`; shipped SHA-256:
+`64F52CE565B8D5C536440CBF0143D897C39B7BB7DDD19EAAD187553A2C84BE5E`.
+Imported DObj/MObj/CObj AObj32 command graphs normalize once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
 fighter vertex slots retain 44 cross-joint triangles. Source depth shares one
 clip vertex. Projected no-Z depth now has background/foreground phases: layer 0
@@ -123,7 +123,7 @@ shifts/other TEXEL1, fog/color animation, speed, and Mario light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2.
 
 ## Recommended Next Work
-1. Profile 1 confirms DL traversal at `9,627,840/9,632,832` of `13,301,536/13,563,968` present median/p95; packetize only validated immutable topology.
+1. Profile 1 leaves about `3.9M` non-texture DL ticks inside `5.396M`; packetize only validated immutable topology while matrices, materials, and TEXEL1 remain live.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3; soak only at architecture milestones.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.

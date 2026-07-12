@@ -863,6 +863,9 @@ typedef struct NDSFighterLivePreviewState
 static NDSFighterLivePreviewState sNdsFighterLivePreviewStates[2];
 static sb32 sNdsFTMainSetStatusCompatReplayActive = FALSE;
 static void ndsRelocNormalizeMObjSubWordSwapped(MObjSub *mobjsub);
+#if NDS_RENDERER_HW_TRIANGLES
+static void ndsRendererAdapterResetSceneCaches(void);
+#endif
 
 /* Compatibility/proof shims. */
 #include "reloc_backend_compat_shims.c"

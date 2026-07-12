@@ -19462,3 +19462,52 @@ and the generic compositor remains the fallback.
 Source-corrected verifier expectations: none; this is emulator-window layout,
 not source rendering. Coverage-reduced verifier expectations: none; visible
 launches still execute the same ROM and capture restores local preferences.
+
+## 2026-07-11 - Exact texture and matrix hot-path reuse
+
+- Audited the external optimization reviews, the BattleShip display path, the
+  current interpreter, and sm64-nds texture semantics. The useful boundary was
+  exact reuse inside source-stable work, not caching a completed gameplay frame.
+- A contiguous TRI run now prepares implicit texture state, texture selection,
+  cache lookup, and binding once. Every non-TRI opcode ends the GX batch and
+  invalidates the preparation. Canonical remains `121/707/121` batch begin/
+  reuse/end and reports `103/725` texture prepare/reuse across all 828 triangles.
+- Animated TEXEL0/TEXEL1 CI4 conversion precomputes exact primary and secondary
+  S-address maps, resolves T once per row, and reads two packed texels together
+  only when both mapped sources are adjacent and even-aligned. All other layouts
+  retain the exact generic fallback. Scratch clear is limited to the upload
+  extent instead of the full 128x128 arena.
+- Repacked the existing 256-entry CI4 pair table as RGB plus one of 17 exact
+  Bayer A1 phase masks without increasing its memory. The host fixture exhausts
+  all palette pairs, selected blend fractions, and all 4x4 phases against the
+  prior exact result. Scene-lifetime direct conversion proof covers both live
+  power-of-two uploads totaling 36,864 bytes.
+- Camera projection/modelview matrices are cached by CObj only within a presented
+  frame. DObj world matrices reuse the closest cached ancestor while retaining
+  BattleShip's exact `local * parent_world` order. The measured live set reached
+  116 entries, so the fixed table is 128 entries with unchanged fallback. The
+  forensic frame reports camera `73/1/0` and DObj `64/107/0` hit/miss/overflow.
+- P1Gate caught the first table placement consuming enough static BSS to make
+  the task arena fall from `0x150000` to `0x140000`. Its 8,704 bytes now come
+  from the scene-owned original task heap, are invalidated before heap reuse,
+  and update the reserve ledger after lazy allocation. Exact headroom is
+  `227392`, leaving `161856` after the 64 KiB BGM buffer versus 128 KiB required.
+- Profile 2 preserves 828 triangles, class counts `648/44/126/10`, oracle
+  `2484/0/0`, device `PosTest 32/0/e2/w0/c0/mw1/drop0`, and all source depth.
+  Matrix preparation is about 772,352 ticks. Eight warm profile-0 frames improve
+  present median/p95 from `13,301,312/13,595,328` to
+  `7,697,632/7,958,912` (`-42.1%/-41.5%`), and pacing rises `2.5 -> 4.2fps`.
+  Profile-1 DL falls to `5,396,128/5,396,736`, including texture
+  `1,501,952/1,502,208`; conversion falls from about 4.825M to 1.329M ticks.
+- P1Gate visibility/parity passes at 11,583,488 bytes and SHA-256
+  `64F52CE565B8D5C536440CBF0143D897C39B7BB7DDD19EAAD187553A2C84BE5E`.
+  Capture: `artifacts/visibility/2026-07-11_canonical_fast_221338-4022982-p19312.png`.
+  Flowers, foreground fence ordering, pond, fighters, and dual-screen layout
+  remain intact. Fresh P1Gate/Boundary pass in `214.8s/140.3s`; the post-fix
+  forensic oracle also passes. Full Regression remains intentionally skipped
+  for Tyler's fast P1 cadence.
+
+Source-corrected verifier expectations: none; all reuse is scoped to unchanged
+source state within one command run or presented frame. Coverage-reduced
+verifier expectations: none; generic conversion and fixed-capacity fallbacks
+remain live, while forensic oracle/device/depth coverage stays authoritative.

@@ -270,6 +270,8 @@ typedef struct NDSRendererRuntimeFrameSummary
     u32 hardware_batch_begin_count;
     u32 hardware_batch_reuse_count;
     u32 hardware_batch_end_count;
+    u32 texture_prepare_count;
+    u32 texture_prepare_reuse_count;
     u32 hardware_over_limit;
     u32 hardware_vertex_saturate_count;
     u32 raw_current_candidate_count;
@@ -280,6 +282,7 @@ typedef struct NDSRendererRuntimeFrameSummary
 static NDSRendererRuntimeFrameSummary sNdsRendererRuntimeFrameSummary;
 static u32 sNdsRendererRuntimeTexel1FractionRefreshCount;
 static u32 sNdsRendererRuntimeTextureCacheEvictCount;
+static u32 sNdsRendererRuntimeTextureCi4DirectPixels;
 #endif
 
 static inline void ndsRendererProfileRecordTextureBind(void)
@@ -299,6 +302,15 @@ static inline void ndsRendererProfileRecordTextureUpload(u32 bytes)
 #else
     sNdsRendererRuntimeFrameSummary.texture_uploads++;
     sNdsRendererRuntimeFrameSummary.texture_upload_bytes += bytes;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTextureCi4Direct(u32 pixels)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTextureCi4DirectPixels += pixels;
+#else
+    sNdsRendererRuntimeTextureCi4DirectPixels += pixels;
 #endif
 }
 
@@ -391,6 +403,24 @@ static inline void ndsRendererProfileRecordBatchEnd(void)
     gNdsRendererProfileHardwareBatchEndCount++;
 #else
     sNdsRendererRuntimeFrameSummary.hardware_batch_end_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTexturePrepare(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTexturePrepareCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.texture_prepare_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordTexturePrepareReuse(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTexturePrepareReuseCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count++;
 #endif
 }
 
@@ -656,6 +686,12 @@ typedef struct NDSRendererHardwareTexel1Source
     s32 materialize_t;
 } NDSRendererHardwareTexel1Source;
 
+typedef struct NDSRendererHardwareTexel01Ci4LutEntry
+{
+    u16 rgb;
+    u16 alpha_phase_mask;
+} NDSRendererHardwareTexel01Ci4LutEntry;
+
 typedef struct NDSRendererHardwareLightDirection
 {
     s32 x;
@@ -671,7 +707,12 @@ static const NDSRendererHardwareTextureCacheEntry
     *sNdsRendererHardwareActiveTextureEntry;
 static u16 sNdsRendererHardwareTextureScratch[
     NDS_RENDERER_HW_TEXTURE_MAX_TEXELS];
-static u32 sNdsRendererHardwareTexel01Ci4Lut[
+static u8 sNdsRendererHardwareTexel01Ci4Source0S[
+    NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
+static u8 sNdsRendererHardwareTexel01Ci4Source1S[
+    NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
+static NDSRendererHardwareTexel01Ci4LutEntry
+    sNdsRendererHardwareTexel01Ci4Lut[
     NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT];
 
 static void ndsRendererHardwareEndBatch(void);
@@ -702,6 +743,10 @@ typedef struct NDSRendererTraversalState
     u32 matrix_generation;
     u32 matrix_snapshot_count;
     u32 current_matrix_snapshot;
+    u32 texture_prepare_valid;
+    u32 texture_prepare_enabled;
+    u32 texture_prepare_implicit_on;
+    u32 texture_prepare_name;
 #endif
     u32 projection_valid;
     u32 modelview_valid;
@@ -5041,6 +5086,11 @@ static void ndsRendererHardwareBuildTexel01Ci4Lut(
     u32 palette1_base,
     u32 fraction)
 {
+    static const u16 alpha_phase_prefix[17] = {
+        0x0000u, 0x0001u, 0x0401u, 0x0405u, 0x0505u, 0x0525u,
+        0x8525u, 0x85a5u, 0xa5a5u, 0xa5a7u, 0xada7u, 0xadafu,
+        0xafafu, 0xafbfu, 0xefbfu, 0xefffu, 0xffffu
+    };
     u16 palette0[16];
     u16 palette1[16];
     u32 index0;
@@ -5057,9 +5107,173 @@ static void ndsRendererHardwareBuildTexel01Ci4Lut(
     {
         for (index1 = 0u; index1 < 16u; index1++)
         {
-            sNdsRendererHardwareTexel01Ci4Lut[(index0 << 4) | index1] =
-                ndsRendererHardwareBlendTexel01Value(
-                    palette0[index0], palette1[index1], fraction);
+            u32 value = ndsRendererHardwareBlendTexel01Value(
+                palette0[index0], palette1[index1], fraction);
+            u32 alpha_coverage =
+                value >> NDS_RENDERER_HW_TEXEL01_COVERAGE_SHIFT;
+            u32 alpha_prefix_count = (alpha_coverage + 7u) >> 4;
+            u32 lut_index = (index0 << 4) | index1;
+
+            if (alpha_prefix_count > 16u)
+            {
+                alpha_prefix_count = 16u;
+            }
+            sNdsRendererHardwareTexel01Ci4Lut[lut_index].rgb =
+                (u16)(value & NDS_RENDERER_HW_TEXEL01_RGB_MASK);
+            sNdsRendererHardwareTexel01Ci4Lut[
+                lut_index].alpha_phase_mask =
+                    alpha_phase_prefix[alpha_prefix_count];
+        }
+    }
+}
+
+static inline u16 ndsRendererHardwareResolveTexel01Ci4Lut(
+    u32 index0, u32 index1, u32 x, u32 y)
+{
+    const NDSRendererHardwareTexel01Ci4LutEntry *entry =
+        &sNdsRendererHardwareTexel01Ci4Lut[(index0 << 4) | index1];
+    u32 phase = ((y & 3u) << 2) | (x & 3u);
+    u32 alpha = (entry->alpha_phase_mask >> phase) & 1u;
+
+    return (u16)(entry->rgb | (alpha << 15));
+}
+
+static inline u8 ndsRendererHardwareReadCi4Direct(
+    const u8 *texels, u32 logical_texel_index, u32 byte_lane_xor)
+{
+    u8 packed = texels[(logical_texel_index >> 1) ^ byte_lane_xor];
+
+    return ((logical_texel_index & 1u) == 0u) ?
+        (u8)(packed >> 4) : (u8)(packed & 0x0fu);
+}
+
+static inline u16 ndsRendererHardwareResolveCi4PackedPair(
+    u8 packed0, u8 packed1, u32 low_nibble, u32 x, u32 y)
+{
+    u32 index0 = (low_nibble != FALSE) ?
+        (u32)(packed0 & 0x0fu) : (u32)(packed0 >> 4);
+    u32 index1 = (low_nibble != FALSE) ?
+        (u32)(packed1 & 0x0fu) : (u32)(packed1 >> 4);
+
+    return ndsRendererHardwareResolveTexel01Ci4Lut(
+        index0, index1, x, y);
+}
+
+static void ndsRendererHardwareConvertTexel01Ci4Direct(
+    const NDSRendererConfig *config,
+    const u8 *texels0,
+    u32 source0_width,
+    u32 source0_origin_s,
+    u32 source0_origin_t,
+    const NDSRendererTileState *render_tile0,
+    s32 materialize0_s,
+    s32 materialize0_t,
+    const NDSRendererHardwareTexel1Source *source1,
+    s32 origin1_delta_s,
+    s32 origin1_delta_t,
+    u32 width,
+    u32 height,
+    u32 upload_width,
+    u32 *green_texels,
+    u32 *nonwhite_texels)
+{
+    u32 byte_lane_xor =
+        (ndsRendererTextureDataLayout(config) ==
+         NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED) ? 3u : 0u;
+    const NDSRendererTileState *render_tile1 = source1->render_tile;
+    u32 x;
+    u32 y;
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    (void)green_texels;
+    (void)nonwhite_texels;
+#endif
+    /* Animated tile origins can wrap or mirror TEXEL1. Resolve those exact
+     * addressing rules once per S coordinate, then reuse them for every row. */
+    for (x = 0u; x < width; x++)
+    {
+        sNdsRendererHardwareTexel01Ci4Source0S[x] = (u8)(
+            (materialize0_s != FALSE) ?
+                ndsRendererHardwareTextureMaskedAddress(
+                    x, render_tile0->cms, render_tile0->masks) : x);
+        sNdsRendererHardwareTexel01Ci4Source1S[x] = (u8)
+            ndsRendererHardwareTextureAddressCoord(
+                (s32)x + origin1_delta_s, render_tile1->width,
+                source1->source_extent_width, render_tile1->cms,
+                render_tile1->masks);
+    }
+    for (y = 0u; y < height; y++)
+    {
+        u32 source0_y = (materialize0_t != FALSE) ?
+            ndsRendererHardwareTextureMaskedAddress(
+                y, render_tile0->cmt, render_tile0->maskt) : y;
+        u32 source1_y = ndsRendererHardwareTextureAddressCoord(
+            (s32)y + origin1_delta_t, render_tile1->height,
+            source1->source_extent_height, render_tile1->cmt,
+            render_tile1->maskt);
+        u32 source0_row =
+            ((source0_origin_t + source0_y) * source0_width) +
+            source0_origin_s;
+        u32 source1_row =
+            ((source1->source_origin_t + source1_y) *
+             source1->source_width) + source1->source_origin_s;
+        u32 dst_index = y * upload_width;
+
+        x = 0u;
+
+        while (x < width)
+        {
+            u32 source0_index = source0_row +
+                sNdsRendererHardwareTexel01Ci4Source0S[x];
+            u32 source1_index = source1_row +
+                sNdsRendererHardwareTexel01Ci4Source1S[x];
+            u16 color;
+
+            if ((((source0_index | source1_index) & 1u) == 0u) &&
+                ((x + 1u) < width) &&
+                (sNdsRendererHardwareTexel01Ci4Source0S[x + 1u] ==
+                 (u8)(sNdsRendererHardwareTexel01Ci4Source0S[x] + 1u)) &&
+                (sNdsRendererHardwareTexel01Ci4Source1S[x + 1u] ==
+                 (u8)(sNdsRendererHardwareTexel01Ci4Source1S[x] + 1u)))
+            {
+                u8 packed0 =
+                    texels0[(source0_index >> 1) ^ byte_lane_xor];
+                u8 packed1 = source1->texels[
+                    (source1_index >> 1) ^ byte_lane_xor];
+
+                color = ndsRendererHardwareResolveCi4PackedPair(
+                    packed0, packed1, FALSE, x, y);
+                sNdsRendererHardwareTextureScratch[dst_index + x] = color;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                ndsRendererProfileTexturePixel(
+                    color, green_texels, nonwhite_texels);
+#endif
+                color = ndsRendererHardwareResolveCi4PackedPair(
+                    packed0, packed1, TRUE, x + 1u, y);
+                sNdsRendererHardwareTextureScratch[dst_index + x + 1u] =
+                    color;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                ndsRendererProfileTexturePixel(
+                    color, green_texels, nonwhite_texels);
+#endif
+                x += 2u;
+            }
+            else
+            {
+                u32 index0 = ndsRendererHardwareReadCi4Direct(
+                    texels0, source0_index, byte_lane_xor);
+                u32 index1 = ndsRendererHardwareReadCi4Direct(
+                    source1->texels, source1_index, byte_lane_xor);
+
+                color = ndsRendererHardwareResolveTexel01Ci4Lut(
+                    index0, index1, x, y);
+                sNdsRendererHardwareTextureScratch[dst_index + x] = color;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                ndsRendererProfileTexturePixel(
+                    color, green_texels, nonwhite_texels);
+#endif
+                x++;
+            }
         }
     }
 }
@@ -5122,6 +5336,7 @@ static s32 ndsRendererHardwareBindTexture(
     s32 wants_texel1;
     s32 use_texel1 = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
+    s32 use_texel1_ci4_direct = FALSE;
     s32 texel1_origin_delta_s = 0;
     s32 texel1_origin_delta_t = 0;
     const NDSRendererTileState *render_tile;
@@ -5590,64 +5805,80 @@ static s32 ndsRendererHardwareBindTexture(
             config, tlut_src, stats->texture_tlut_count, palette_base,
             texel1_source.palette_base, stats->prim_lod_fraction);
         use_texel1_ci4_lut = TRUE;
+        use_texel1_ci4_direct = TRUE;
     }
 
+    /* Only the power-of-two rectangle handed to libnds is observable.  The
+     * shared scratch arena is sized for the worst 128x128 texture, but smaller
+     * animated uploads must not pay to clear the unused tail every frame. */
     memset(sNdsRendererHardwareTextureScratch, 0,
-           sizeof(sNdsRendererHardwareTextureScratch));
-    for (y = 0u; y < height; y++)
+           upload_width * upload_height * sizeof(u16));
+    if (use_texel1_ci4_direct != FALSE)
     {
-        u32 source_y = (materialize_t != FALSE) ?
-            ndsRendererHardwareTextureMaskedAddress(
-                y, render_tile->cmt, render_tile->maskt) : y;
-
-        for (x = 0u; x < width; x++)
+        ndsRendererHardwareConvertTexel01Ci4Direct(
+            config, texels_src, source_width, source_origin_s,
+            source_origin_t, render_tile, materialize_s, materialize_t,
+            &texel1_source, texel1_origin_delta_s, texel1_origin_delta_t,
+            width, height, upload_width, &green_texels, &nonwhite_texels);
+        ndsRendererProfileRecordTextureCi4Direct(width * height);
+    }
+    else
+    {
+        for (y = 0u; y < height; y++)
         {
-            u32 source_x = (materialize_s != FALSE) ?
+            u32 source_y = (materialize_t != FALSE) ?
                 ndsRendererHardwareTextureMaskedAddress(
-                    x, render_tile->cms, render_tile->masks) : x;
-            u32 src_index =
-                ((source_origin_t + source_y) * source_width) +
-                source_origin_s + source_x;
-            u32 dst_index = (y * upload_width) + x;
-            u16 color;
+                    y, render_tile->cmt, render_tile->maskt) : y;
 
-            if (use_texel1_ci4_lut != FALSE)
+            for (x = 0u; x < width; x++)
             {
-                u32 index0 = ndsRendererReadTexturePackedNibble(
-                    config, texels_src, src_index, format, size);
-                u32 source1_index = ndsRendererHardwareTexel1SourceIndex(
-                    &texel1_source, texel1_origin_delta_s,
-                    texel1_origin_delta_t, x, y);
-                u32 index1 = ndsRendererReadTexturePackedNibble(
-                    config, texel1_source.texels, source1_index,
-                    texel1_source.format, texel1_source.size);
+                u32 source_x = (materialize_s != FALSE) ?
+                    ndsRendererHardwareTextureMaskedAddress(
+                        x, render_tile->cms, render_tile->masks) : x;
+                u32 src_index =
+                    ((source_origin_t + source_y) * source_width) +
+                    source_origin_s + source_x;
+                u32 dst_index = (y * upload_width) + x;
+                u16 color;
 
-                color = ndsRendererHardwareResolveTexel01Value(
-                    sNdsRendererHardwareTexel01Ci4Lut[
-                        (index0 << 4) | index1], x, y);
-            }
-            else
-            {
-                color = ndsRendererHardwareTextureColor(
-                    config, format, size, texels_src, tlut_src,
-                    stats->texture_tlut_count, palette_base, src_index,
-                    use_texel1);
-                if (use_texel1 != FALSE)
+                if (use_texel1_ci4_lut != FALSE)
                 {
-                    u16 color1 = ndsRendererHardwareTexel1Color(
-                        &texel1_source, config, tlut_src,
-                        stats->texture_tlut_count,
-                        texel1_origin_delta_s, texel1_origin_delta_t, x, y);
+                    u32 index0 = ndsRendererReadTexturePackedNibble(
+                        config, texels_src, src_index, format, size);
+                    u32 source1_index = ndsRendererHardwareTexel1SourceIndex(
+                        &texel1_source, texel1_origin_delta_s,
+                        texel1_origin_delta_t, x, y);
+                    u32 index1 = ndsRendererReadTexturePackedNibble(
+                        config, texel1_source.texels, source1_index,
+                        texel1_source.format, texel1_source.size);
 
-                    color = ndsRendererHardwareBlendTexel01(
-                        color, color1, stats->prim_lod_fraction, x, y);
+                    color = ndsRendererHardwareResolveTexel01Ci4Lut(
+                        index0, index1, x, y);
                 }
-            }
-            sNdsRendererHardwareTextureScratch[dst_index] = color;
+                else
+                {
+                    color = ndsRendererHardwareTextureColor(
+                        config, format, size, texels_src, tlut_src,
+                        stats->texture_tlut_count, palette_base, src_index,
+                        use_texel1);
+                    if (use_texel1 != FALSE)
+                    {
+                        u16 color1 = ndsRendererHardwareTexel1Color(
+                            &texel1_source, config, tlut_src,
+                            stats->texture_tlut_count,
+                            texel1_origin_delta_s, texel1_origin_delta_t,
+                            x, y);
+
+                        color = ndsRendererHardwareBlendTexel01(
+                            color, color1, stats->prim_lod_fraction, x, y);
+                    }
+                }
+                sNdsRendererHardwareTextureScratch[dst_index] = color;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-            ndsRendererProfileTexturePixel(color, &green_texels,
-                                           &nonwhite_texels);
+                ndsRendererProfileTexturePixel(color, &green_texels,
+                                               &nonwhite_texels);
 #endif
+            }
         }
     }
     /* Preserve the canonical lane-observation totals while paying one volatile
@@ -6693,9 +6924,29 @@ static void ndsRendererSubmitHardwareTriangle(
         ndsRendererProfileRecordProjectedDivisions(9u);
     }
     scale_world = (raw_submit != FALSE) ? TRUE : FALSE;
-    implicit_texture_on = ndsRendererHardwareTextureImplicitStateOn(stats);
-    use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
-        ndsRendererHardwareBindTexture(stats, config) : FALSE;
+    if (state->texture_prepare_valid == 0u)
+    {
+        implicit_texture_on =
+            ndsRendererHardwareTextureImplicitStateOn(stats);
+        use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
+            ndsRendererHardwareBindTexture(stats, config) : FALSE;
+        state->texture_prepare_valid = TRUE;
+        state->texture_prepare_enabled =
+            (use_texture != FALSE) ? TRUE : FALSE;
+        state->texture_prepare_implicit_on =
+            (implicit_texture_on != FALSE) ? TRUE : FALSE;
+        state->texture_prepare_name = (use_texture != FALSE) ?
+            sNdsRendererHardwareBoundTextureName : 0u;
+        ndsRendererProfileRecordTexturePrepare();
+    }
+    else
+    {
+        implicit_texture_on =
+            (state->texture_prepare_implicit_on != 0u) ? TRUE : FALSE;
+        use_texture =
+            (state->texture_prepare_enabled != 0u) ? TRUE : FALSE;
+        ndsRendererProfileRecordTexturePrepareReuse();
+    }
     texture_scale_s = stats->texture_scale_s;
     texture_scale_t = stats->texture_scale_t;
     if ((use_texture != FALSE) && (implicit_texture_on != FALSE))
@@ -6749,8 +7000,7 @@ static void ndsRendererSubmitHardwareTriangle(
             ndsRendererHardwareNextProjectedDepth();
     }
     poly_fmt = ndsRendererHardwarePolyFmt(stats, poly_alpha);
-    texture_name = (use_texture != FALSE) ?
-        sNdsRendererHardwareBoundTextureName : 0u;
+    texture_name = state->texture_prepare_name;
     ndsRendererHardwareBeginTriangleBatch(
         stats, (use_texture != FALSE) ? TRUE : FALSE,
         texture_name, poly_fmt, sNdsRendererHardwareMatrixMode,
@@ -6869,6 +7119,10 @@ static void ndsRendererScanList(const Gfx *dl,
             (op != NDS_RENDERER_OP_TRI2))
         {
             ndsRendererHardwareEndBatch();
+            /* Texture image/tile/combine/material state can only change at a
+             * non-TRI source opcode. Rebuild the dynamic texture key on the
+             * next triangle run, never once per adjacent triangle. */
+            state->texture_prepare_valid = FALSE;
         }
 #endif
         memset(&command, 0, sizeof(command));
@@ -7263,6 +7517,7 @@ void ndsRendererProfileFrameBegin(void)
     {
         sNdsRendererRuntimeTexel1FractionRefreshCount = 0u;
         sNdsRendererRuntimeTextureCacheEvictCount = 0u;
+        sNdsRendererRuntimeTextureCi4DirectPixels = 0u;
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
@@ -7281,6 +7536,8 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererRuntimeFrameSummary.texture_uploads;
     gNdsRendererProfileTextureUploadBytes =
         sNdsRendererRuntimeFrameSummary.texture_upload_bytes;
+    gNdsRendererProfileTextureCi4DirectPixels =
+        sNdsRendererRuntimeTextureCi4DirectPixels;
     gNdsRendererProfileTextureCacheAliasAvoidCount =
         sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count;
     gNdsRendererProfileTexel1CompositeCount =
@@ -7307,6 +7564,10 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count;
     gNdsRendererProfileHardwareBatchEndCount =
         sNdsRendererRuntimeFrameSummary.hardware_batch_end_count;
+    gNdsRendererProfileTexturePrepareCount =
+        sNdsRendererRuntimeFrameSummary.texture_prepare_count;
+    gNdsRendererProfileTexturePrepareReuseCount =
+        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count;
     gNdsRendererProfileHardwareOverLimit =
         sNdsRendererRuntimeFrameSummary.hardware_over_limit;
     gNdsRendererProfileHWVertexSaturateCount =

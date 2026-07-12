@@ -70,17 +70,12 @@ Source-depth X/Y/Z share one composed clip vertex. Projected no-Z depth has
 source-backed background/foreground phases around the first source-Z triangle,
 restoring layer-3 foreground fences over layer-1 floor/path.
 
-A source-shaped `gcAddMObjAll` wrapper now normalizes mixed-width O2R lanes by
-loaded-file and asset/generation provenance. Canonical Dream Land observes at
-least four water/Whispy swaps, zero native/failure cases, and first flags
-`0x0200 -> 0x006b`. The renderer resolves the source tile-6/TMEM-0x40 TEXEL1 and
-tile-7/TMEM-0 TEXEL0 independently, recognizes exact `G_CC_TEMPLERP`, and
-precomposes its CI4 pair with a DS RGBA5551/A1 approximation. Each change builds
-all 256 palette-pair RGB/coverage values; addressing and Bayer A1 stay exact. Compatible
-animated state refreshes resident VRAM with frame pinning. The 184-frame gate
-has positive scene-lifetime refresh, zero eviction/reject/oracle drift, and a
-terminal `12/12` matched frame. Pond detail is `46.053%/23px`, versus white
-`27.997%/105px`.
+`gcAddMObjAll` normalizes mixed-width O2R lanes by source provenance. Dream Land
+observes at least four water/Whispy swaps and zero native/failure cases. Exact S
+maps, row-local T addresses, packed paired CI4 reads, and 17 Bayer phase masks
+replace the TEXEL0/TEXEL1 pixel-generic hot path; all other cases retain it. The
+two dynamic uploads cover `36,864` bytes with positive direct-pixel/refresh proof
+and zero eviction/reject/oracle drift. Pond detail remains accepted.
 Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
 plus `G_MWO_POINT_ST` restores five flower groups (`192 -> 202` triangles);
 Tyler accepts flowers/fences. Forensic lane/oracle proof is `37200/37200`, `2484/0/0`.
@@ -91,25 +86,29 @@ Its key covers provenance/epoch, live transform, combine/mapping, and BG2
 ownership; no composed gameplay frame is cached. Unsupported layouts retain
 the generic path. Canonical proves `direct67/skip0/change67`, exactly
 `67*49152` pixels, and zero staging, BG2 clear/copy, or BG3 full-clear traffic.
-The CI4 table first cuts present to `20,285,888`; command-hoisted light and
-compile-time profile separation reduce shipped/profile-0 work further. Matrix
-loads now use nonzero traversal generations instead of two 64-byte compares.
+The earlier exact optimizations remain. Adjacent TRI runs prepare/reuse dynamic
+texture state `103/725`; any non-TRI command invalidates it. Frame-local camera
+and DObj-world caches reset at every present and retain fixed-capacity fallback.
 Hybrid submission sends `648` ordinary source-Z triangles through corrected GX.
 Each persistent 32-slot RSP cache owns a bounded 64-entry composed-matrix table
 plus per-slot matrix/clip IDs. Profile 0 turns `821` source loads into `282`
 lazy transforms and `258` hits; snapshot create/reuse/overflow is `67/7/0`.
 The `44` stale-slot triangles are genuinely mixed, so raw-snapshot stays zero;
 `126` no-Z and `10` range exceptions also stay projected. Divisions/batches/
-loads remain `1,242`, `121/707/121`, and `53`. Profile 2 transforms `821/821`;
-oracle `2484/0/0`, device `PosTest 32/0/e1/w0/c0/mw1/drop0`, and depth pass. Eight warm frames improve present median/p95
-`15,543,456/15,804,544 -> 13,301,312/13,595,328` (`-14.4%/-14.0%`); pacing is
-`25/25 x0.1`. Capture: `artifacts/visibility/2026-07-11_canonical_fast_205024-5917438-p10196.png`.
+loads remain `1,242`, `121/707/121`, and `53`. Profile 2 retains oracle
+`2484/0/0`, device `PosTest 32/0/e2/w0/c0/mw1/drop0`, and all depth; adapter
+cache hit/miss/overflow is camera `73/1/0`, DObj `64/107/0`.
+Warm profile-0 present median/p95 falls `13,301,312/13,595,328 ->
+7,697,632/7,958,912` (`-42.1%/-41.5%`), raising pacing `2.5 -> 4.2fps`.
+Profile-1 DL is `5,396,128/5,396,736`, texture `1,501,952/1,502,208`, and
+conversion about `1,328,576` ticks. Capture: `artifacts/visibility/2026-07-11_canonical_fast_221338-4022982-p19312.png`. SHA-256:
+`64F52CE565B8D5C536440CBF0143D897C39B7BB7DDD19EAAD187553A2C84BE5E`.
 
-The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `236100`, resident reloc `681632`
+The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
-`16` bytes of scratch. The separate 64 KiB BGM buffer leaves `172412` bytes
-against the 128 KiB reserve.
+`16` bytes of scratch. After the 8,704-byte scene matrix cache and 64 KiB BGM,
+`161856` bytes remain against the 128 KiB reserve.
 
 ## Current Notes
 

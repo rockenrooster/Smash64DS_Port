@@ -11,6 +11,8 @@
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
 #define NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX 64u
+#define NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT 4u
+#define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u
 #define NDS_RENDERER_ADAPTER_G_TX_LOADTILE 7u
 #define NDS_RENDERER_ADAPTER_G_TX_RENDERTILE 0u
 #define NDS_RENDERER_ADAPTER_G_TX_WRAP 0u
@@ -33,6 +35,33 @@
 static const Gfx sNdsRendererAdapterEmptySegmentEDL[1] = {
     { { NDS_FIGHTER_DL_OP_ENDDL << 24, 0u } }
 };
+
+#if NDS_RENDERER_HW_TRIANGLES
+typedef struct NDSRendererAdapterCameraCacheEntry
+{
+    const CObj *cobj;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    u32 projection_valid;
+    u32 modelview_valid;
+} NDSRendererAdapterCameraCacheEntry;
+
+typedef struct NDSRendererAdapterDObjWorldCacheEntry
+{
+    const DObj *dobj;
+    NDSRendererMatrix20p12 world;
+} NDSRendererAdapterDObjWorldCacheEntry;
+
+static NDSRendererAdapterCameraCacheEntry
+    sNdsRendererAdapterCameraCache[NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT];
+static u32 sNdsRendererAdapterCameraCacheFrame;
+static u32 sNdsRendererAdapterCameraCacheCount;
+static NDSRendererAdapterDObjWorldCacheEntry
+    *sNdsRendererAdapterDObjWorldCache;
+static u32 sNdsRendererAdapterDObjWorldCacheFrame;
+static u32 sNdsRendererAdapterDObjWorldCacheCount;
+static u32 sNdsRendererAdapterDObjWorldCacheAllocationAttempted;
+#endif
 
 static sb32 ndsRendererAdapterRangeIsEmptySegmentEDL(const Gfx *dl,
                                                      size_t bytes)
@@ -764,6 +793,111 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
     return TRUE;
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+static void ndsRendererAdapterResetSceneCaches(void)
+{
+    sNdsRendererAdapterCameraCacheFrame = 0u;
+    sNdsRendererAdapterCameraCacheCount = 0u;
+    sNdsRendererAdapterDObjWorldCache = NULL;
+    sNdsRendererAdapterDObjWorldCacheFrame = 0u;
+    sNdsRendererAdapterDObjWorldCacheCount = 0u;
+    sNdsRendererAdapterDObjWorldCacheAllocationAttempted = FALSE;
+}
+
+static sb32 ndsRendererAdapterEnsureDObjWorldCache(void)
+{
+    uintptr_t aligned;
+    size_t bytes = sizeof(NDSRendererAdapterDObjWorldCacheEntry) *
+        NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT;
+
+    if (sNdsRendererAdapterDObjWorldCache != NULL)
+    {
+        return TRUE;
+    }
+    if (sNdsRendererAdapterDObjWorldCacheAllocationAttempted != FALSE)
+    {
+        return FALSE;
+    }
+    sNdsRendererAdapterDObjWorldCacheAllocationAttempted = TRUE;
+    if ((gSYTaskmanGeneralHeap.ptr == NULL) ||
+        (gSYTaskmanGeneralHeap.end == NULL))
+    {
+        return FALSE;
+    }
+    aligned = ((uintptr_t)gSYTaskmanGeneralHeap.ptr + 0x0fu) &
+        ~(uintptr_t)0x0fu;
+    if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
+        (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)))
+    {
+        return FALSE;
+    }
+    sNdsRendererAdapterDObjWorldCache =
+        (NDSRendererAdapterDObjWorldCacheEntry *)syTaskmanMalloc(bytes, 0x10u);
+    /* This DS cache now consumes the original scene heap, so keep the P1
+     * reserve ledger truthful after its lazy first-frame allocation. */
+    ndsRelocUpdateMemoryLedger();
+    return (sNdsRendererAdapterDObjWorldCache != NULL) ? TRUE : FALSE;
+}
+
+static const NDSRendererMatrix20p12 *
+ndsRendererAdapterFindDObjWorldMatrix(const DObj *dobj)
+{
+    u32 frame = gNdsRendererProfileFrameCount;
+    u32 i;
+
+    if (sNdsRendererAdapterDObjWorldCacheFrame != frame)
+    {
+        sNdsRendererAdapterDObjWorldCacheFrame = frame;
+        sNdsRendererAdapterDObjWorldCacheCount = 0u;
+    }
+    if (ndsRendererAdapterEnsureDObjWorldCache() == FALSE)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        gNdsRendererProfileDObjWorldCacheMissCount++;
+#endif
+        return NULL;
+    }
+    for (i = 0u; i < sNdsRendererAdapterDObjWorldCacheCount; i++)
+    {
+        if (sNdsRendererAdapterDObjWorldCache[i].dobj == dobj)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            gNdsRendererProfileDObjWorldCacheHitCount++;
+#endif
+            return &sNdsRendererAdapterDObjWorldCache[i].world;
+        }
+    }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileDObjWorldCacheMissCount++;
+#endif
+    return NULL;
+}
+
+static void ndsRendererAdapterStoreDObjWorldMatrix(
+    const DObj *dobj, const NDSRendererMatrix20p12 *world)
+{
+    NDSRendererAdapterDObjWorldCacheEntry *entry;
+
+    if ((dobj == NULL) || (world == NULL))
+    {
+        return;
+    }
+    if ((sNdsRendererAdapterDObjWorldCache == NULL) ||
+        (sNdsRendererAdapterDObjWorldCacheCount >=
+         NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT))
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        gNdsRendererProfileDObjWorldCacheOverflowCount++;
+#endif
+        return;
+    }
+    entry = &sNdsRendererAdapterDObjWorldCache[
+        sNdsRendererAdapterDObjWorldCacheCount++];
+    entry->dobj = dobj;
+    entry->world = *world;
+}
+#endif
+
 static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {
@@ -772,11 +906,22 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     NDSRendererMatrix20p12 local;
     u32 depth = 0u;
     u32 i;
+#if NDS_RENDERER_HW_TRIANGLES
+    const NDSRendererMatrix20p12 *cached;
+#endif
 
     if ((dobj == NULL) || (out == NULL))
     {
         return FALSE;
     }
+#if NDS_RENDERER_HW_TRIANGLES
+    cached = ndsRendererAdapterFindDObjWorldMatrix(dobj);
+    if (cached != NULL)
+    {
+        *out = *cached;
+        return TRUE;
+    }
+#endif
 
     while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
            (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
@@ -789,14 +934,37 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         return FALSE;
     }
 
+#if NDS_RENDERER_HW_TRIANGLES
+    for (i = 1u; i < depth; i++)
+    {
+        cached = ndsRendererAdapterFindDObjWorldMatrix(chain[i]);
+        if (cached != NULL)
+        {
+            *out = *cached;
+            break;
+        }
+    }
+    if (i == depth)
+    {
+        ndsRendererAdapterMtxIdentity20p12(out);
+    }
+#else
     ndsRendererAdapterMtxIdentity20p12(out);
-    for (i = depth; i != 0u; i--)
+    i = depth;
+#endif
+    for (; i != 0u; i--)
     {
         if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u], &local) !=
             FALSE)
         {
             /* objdisplay.c:1183-1191 left-multiplies each child local matrix. */
             ndsRendererMtxMul20p12(&local, out, out);
+#if NDS_RENDERER_HW_TRIANGLES
+            /* DObj transforms are finalized before the camera's gcDrawAll
+             * pass. Cache each prefix for sibling/child draws, and reset at
+             * the next presented frame so live fighter poses remain live. */
+            ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
+#endif
         }
     }
     return TRUE;
@@ -994,6 +1162,78 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
     ndsRendererAdapterMtxFromN64(&mtx, modelview);
     *modelview_valid = TRUE;
 }
+
+static void ndsRendererAdapterGetFrameCameraMatrices(
+    CObj *cobj,
+    NDSRendererMatrix20p12 *projection,
+    u32 *projection_valid,
+    NDSRendererMatrix20p12 *modelview,
+    u32 *modelview_valid)
+{
+    u32 frame = gNdsRendererProfileFrameCount;
+    u32 i;
+
+    if ((projection == NULL) || (projection_valid == NULL) ||
+        (modelview == NULL) || (modelview_valid == NULL))
+    {
+        return;
+    }
+    if (sNdsRendererAdapterCameraCacheFrame != frame)
+    {
+        sNdsRendererAdapterCameraCacheFrame = frame;
+        sNdsRendererAdapterCameraCacheCount = 0u;
+    }
+    for (i = 0u; i < sNdsRendererAdapterCameraCacheCount; i++)
+    {
+        const NDSRendererAdapterCameraCacheEntry *entry =
+            &sNdsRendererAdapterCameraCache[i];
+
+        if (entry->cobj == cobj)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            gNdsRendererProfileCameraMatrixCacheHitCount++;
+#endif
+            *projection = entry->projection;
+            *modelview = entry->modelview;
+            *projection_valid = entry->projection_valid;
+            *modelview_valid = entry->modelview_valid;
+            return;
+        }
+    }
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileCameraMatrixCacheMissCount++;
+#endif
+    ndsRendererAdapterBuildCameraMatrices(
+        cobj, projection, projection_valid, modelview, modelview_valid);
+    if ((*projection_valid == FALSE) && (*modelview_valid == FALSE))
+    {
+        ndsRendererAdapterBuildDefaultBattleCameraMatrices(
+            projection, projection_valid, modelview, modelview_valid);
+    }
+    if (sNdsRendererAdapterCameraCacheCount <
+        NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT)
+    {
+        NDSRendererAdapterCameraCacheEntry *entry =
+            &sNdsRendererAdapterCameraCache[
+                sNdsRendererAdapterCameraCacheCount++];
+
+        /* BattleShip updates CObj state before gcDrawAll; every DObj in that
+         * camera's draw pass consumes the same matrices. The frame token
+         * prevents fighter poses or camera motion from crossing presents. */
+        entry->cobj = cobj;
+        entry->projection = *projection;
+        entry->modelview = *modelview;
+        entry->projection_valid = *projection_valid;
+        entry->modelview_valid = *modelview_valid;
+    }
+    else
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        gNdsRendererProfileCameraMatrixCacheOverflowCount++;
+#endif
+    }
+}
 #endif
 
 static void ndsRendererAdapterPrepareInitialMatrices(
@@ -1023,18 +1263,15 @@ static void ndsRendererAdapterPrepareInitialMatrices(
         return;
     }
 
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, &camera_projection, &camera_projection_valid,
+        &camera_modelview, &camera_modelview_valid);
+#else
     ndsRendererAdapterBuildCameraMatrices(cobj, &camera_projection,
                                           &camera_projection_valid,
                                           &camera_modelview,
                                           &camera_modelview_valid);
-#if NDS_RENDERER_HW_TRIANGLES
-    if ((camera_projection_valid == FALSE) &&
-        (camera_modelview_valid == FALSE))
-    {
-        ndsRendererAdapterBuildDefaultBattleCameraMatrices(
-            &camera_projection, &camera_projection_valid,
-            &camera_modelview, &camera_modelview_valid);
-    }
 #endif
     if (dobj != NULL)
     {

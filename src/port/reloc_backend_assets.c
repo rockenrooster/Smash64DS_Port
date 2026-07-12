@@ -1528,6 +1528,11 @@ static void ndsRelocPrepareSceneCache(void)
 
     sNdsRelocOwnerScene = scene;
     sNdsRelocSceneGeneration++;
+#if NDS_RENDERER_HW_TRIANGLES
+    /* The adapter's frame-local matrix storage lives in this scene's original
+     * taskman heap. Drop its pointer before that heap can be reused. */
+    ndsRendererAdapterResetSceneCaches();
+#endif
     gNdsMemoryLedgerEvictedFiles = evicted_files;
     gNdsMemoryLedgerEvictedBytes = evicted_bytes;
 }
