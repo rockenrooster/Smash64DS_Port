@@ -797,6 +797,12 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileSubmitProjectedRangeOrMatrixCount = 0;
     gNdsRendererProfileSubmitRejectCount = 0;
     gNdsRendererProfileProjectedDivisionCount = 0;
+    gNdsRendererProfileSourceVertexLoadCount = 0;
+    gNdsRendererProfileCPUTransformCount = 0;
+    gNdsRendererProfileTransformCacheHitCount = 0;
+    gNdsRendererProfileMatrixSnapshotCreateCount = 0;
+    gNdsRendererProfileMatrixSnapshotReuseCount = 0;
+    gNdsRendererProfileMatrixSnapshotOverflowCount = 0;
     gNdsRendererProfileMatrixPosTestSamples = 0;
     gNdsRendererProfileMatrixPosTestMismatches = 0;
     gNdsRendererProfileMatrixPosTestMaxError = 0;

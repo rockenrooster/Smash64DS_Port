@@ -1126,7 +1126,11 @@
   exceptions. Projected X/Y/Z still come from one composed clip vertex. Early
   no-Z background draws count down from far signed 20.12 NDC; the first source-Z
   triangle switches later no-Z painter draws near, retaining the fence over the
-  floor. Matrix snapshots/lazy transforms and exact no-Z behavior remain debt.
+  floor. Per-slot matrix snapshots now make production clip transforms lazy:
+  `821` loads produce `282` transforms and `258` hits with zero overflow. The
+  natural 44 stale-slot triangles are mixed snapshots; same-snapshot raw is
+  implemented and fixture-covered but has zero current-frame traffic. Exact
+  no-Z equivalence beyond the proven Dream Land ordering remains debt.
   The CPU-scaled 300x220 wallpaper and water precomposition still limit the
   measured frame to about `2.1fps`; renderer/compositor work remains P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
@@ -1162,9 +1166,10 @@
   palette-pair table preserves source addressing/coverage while reducing
   present to `20,285,888` (`-16.3%`) and conversion to `5,035,776` (`-42.8%`);
   command-hoisted exact light normalization reduces present to `19,725,696`.
-  Profile-0/no-oracle separation, generation-keyed loads, and hybrid raw-current
-  submission reach warm median/p95 `15,837,408/16,103,104` and `21/21 x0.1`;
-  projected divisions are `1,242`, down from `7,074`. Software 2D remains.
+  Profile-0/no-oracle separation, generation-keyed loads, hybrid raw-current,
+  and lazy transforms reach warm median/p95 `15,543,456/15,804,544` and
+  `21/21 x0.1`; projected divisions are `1,242`, down from `7,074`. Software 2D
+  remains the larger measured blocker.
   At this sub-realtime cadence, the second two-shot screenshot can land during
   compositor updates and appear partly black while its paired `_next` sample is
   complete; stable-sample selection remains visual-gate tooling debt.

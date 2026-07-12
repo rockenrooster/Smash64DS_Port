@@ -1232,6 +1232,21 @@ The stable frame raw-submits `648` current-matrix ordinary-Z triangles. It keeps
 snapshot/decal/primitive-depth/reject classes are zero. The class sum is the
 same `828` triangles and projected division accounting falls `7,074 -> 1,242`.
 
+Each persistent renderer vertex cache owns a bounded 64-entry table of composed
+20.12 matrix snapshots. Slots carry the matrix ID used at `G_VTX` and the ID of
+their cached clip transform; identical matrix contents reuse one entry across
+the selected DObj/list traversal. `G_MWO_POINT_ST` changes only texture state
+and preserves both position IDs. Profiles 0/1 retain raw input and defer the CPU
+clip transform until a no-Z, mixed-snapshot, decal, primitive-depth, or range
+exception needs it; a matching clip ID is reused. Profile 2 remains eager so
+its CPU/GX oracle is independent. The stable frame records `821` loads, `282`
+production transforms, `258` hits, `67/7/0` snapshot create/reuse/overflow, and
+`821/821` forensic transforms. All 44 stale-slot triangles are genuinely mixed;
+three-slot same-snapshot raw submission is fixture-covered but naturally zero.
+The fighter traversal cache uses one reset fixed-storage instance because the
+snapshot table exceeds BattleShip's nested task-stack margin; draw callbacks
+are serialized, and the cache is reinitialized at every fighter boundary.
+
 For raw input submitted as source/256, rows 0--2 of the composed 20.12 matrix
 stay unchanged and the complete homogeneous row 3, including W, is rounded
 right by eight. Profile 2 closes the final GX batch, loads that candidate, and
@@ -1240,8 +1255,8 @@ frame has no natural `G_MW_MATRIX`, a backend-only fixture applies BattleShip's
 MVP-recalc plus matrix-word reconstruction to its first natural matrix. The
 stable proof is `32/0/e2/w0/c0/mw1/drop0`: samples/mismatches/max error/W-sign/
 clip/matrix-word/dropped. This fixture cannot affect submitted geometry and is
-absent from profiles 0/1. Raw-current loads the corrected matrix with identity
-in the other GX slot; every projected exception loads identity explicitly.
+absent from profiles 0/1. Raw-current or raw-snapshot loads its corrected matrix
+with identity in the other GX slot; every projected exception loads identity.
 Matrix representation/generation changes are hard triangle-batch boundaries.
 
 Source-depth X/Y/Z still come from one composed clip vertex. Because DS cannot

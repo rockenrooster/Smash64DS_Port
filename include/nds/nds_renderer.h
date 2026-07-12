@@ -47,6 +47,7 @@
 #define NDS_RENDERER_TILE_T_MASKED (1u << 7)
 
 #define NDS_RENDERER_VERTEX_CACHE_SIZE 32u
+#define NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY 64u
 #define NDS_RENDERER_TILE_COUNT 8u
 #define NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT 2u
 
@@ -76,6 +77,13 @@ typedef struct NDSRendererMatrix20p12
     s32 m[4][4];
 } NDSRendererMatrix20p12;
 
+typedef struct NDSRendererMatrixSnapshot
+{
+    NDSRendererMatrix20p12 matrix;
+    u32 generation;
+    u32 signature;
+} NDSRendererMatrixSnapshot;
+
 typedef struct NDSRendererInputVertex
 {
     s16 x;
@@ -103,9 +111,14 @@ typedef struct NDSRendererVertexCache
     NDSRendererClipVertex20p12
         transformed_vertices[NDS_RENDERER_VERTEX_CACHE_SIZE];
     u32 vertex_colors[NDS_RENDERER_VERTEX_CACHE_SIZE];
+    NDSRendererMatrixSnapshot
+        matrix_snapshots[NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY];
+    u8 vertex_matrix_snapshot[NDS_RENDERER_VERTEX_CACHE_SIZE];
+    u8 vertex_clip_snapshot[NDS_RENDERER_VERTEX_CACHE_SIZE];
     u32 input_valid_mask;
     u32 transformed_valid_mask;
     u32 vertex_color_valid_mask;
+    u32 matrix_snapshot_count;
 } NDSRendererVertexCache;
 
 typedef struct NDSRendererCommand
@@ -355,6 +368,7 @@ void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
                                      const NDSRendererInputVertex *vtx,
                                      NDSRendererClipVertex20p12 *out);
 void ndsRendererInitStats(NDSRendererStats *stats);
+void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache);
 void ndsRendererScanDisplayList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats);

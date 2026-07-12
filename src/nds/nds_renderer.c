@@ -143,6 +143,7 @@
 #define NDS_RENDERER_HW_POS_TEST_MAX 64u
 #define NDS_RENDERER_HW_POS_TEST_TOLERANCE 16u
 #define NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA 4352
+#define NDS_RENDERER_MATRIX_SNAPSHOT_INVALID 0u
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START (0x1000 * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START \
     ((128 - 0x1000) * 6)
@@ -241,6 +242,12 @@ static u32 sNdsRendererMatrixGenerationSerial;
 static u32 sNdsRendererHardwareSubmitClassCounts[
     NDS_RENDERER_HW_SUBMIT_CLASS_COUNT];
 static u32 sNdsRendererHardwareProjectedDivisionCount;
+static u32 sNdsRendererHardwareSourceVertexLoadCount;
+static u32 sNdsRendererHardwareCPUTransformCount;
+static u32 sNdsRendererHardwareTransformCacheHitCount;
+static u32 sNdsRendererHardwareMatrixSnapshotCreateCount;
+static u32 sNdsRendererHardwareMatrixSnapshotReuseCount;
+static u32 sNdsRendererHardwareMatrixSnapshotOverflowCount;
 
 /* Profile levels 0/1 accumulate the small runtime health summary in ordinary
  * memory and publish it once at frame completion. The performance build never
@@ -446,11 +453,47 @@ static inline void ndsRendererProfileRecordProjectedDivisions(u32 count)
     sNdsRendererHardwareProjectedDivisionCount += count;
 }
 
+static inline void ndsRendererProfileRecordSourceVertexLoad(void)
+{
+    sNdsRendererHardwareSourceVertexLoadCount++;
+}
+
+static inline void ndsRendererProfileRecordCPUTransform(void)
+{
+    sNdsRendererHardwareCPUTransformCount++;
+}
+
+static inline void ndsRendererProfileRecordTransformCacheHit(void)
+{
+    sNdsRendererHardwareTransformCacheHitCount++;
+}
+
+static inline void ndsRendererProfileRecordMatrixSnapshotCreate(void)
+{
+    sNdsRendererHardwareMatrixSnapshotCreateCount++;
+}
+
+static inline void ndsRendererProfileRecordMatrixSnapshotReuse(void)
+{
+    sNdsRendererHardwareMatrixSnapshotReuseCount++;
+}
+
+static inline void ndsRendererProfileRecordMatrixSnapshotOverflow(void)
+{
+    sNdsRendererHardwareMatrixSnapshotOverflowCount++;
+}
+
 static void ndsRendererProfileResetSubmitSummary(void)
 {
     memset(sNdsRendererHardwareSubmitClassCounts, 0,
            sizeof(sNdsRendererHardwareSubmitClassCounts));
     sNdsRendererHardwareProjectedDivisionCount = 0u;
+    sNdsRendererHardwareSourceVertexLoadCount = 0u;
+    sNdsRendererHardwareCPUTransformCount = 0u;
+    sNdsRendererHardwareTransformCacheHitCount = 0u;
+    sNdsRendererHardwareMatrixSnapshotCreateCount = 0u;
+    sNdsRendererHardwareMatrixSnapshotReuseCount = 0u;
+    sNdsRendererHardwareMatrixSnapshotOverflowCount = 0u;
 }
 
 static void ndsRendererProfilePublishSubmitSummary(void)
@@ -482,6 +525,18 @@ static void ndsRendererProfilePublishSubmitSummary(void)
             NDS_RENDERER_HW_SUBMIT_REJECT];
     gNdsRendererProfileProjectedDivisionCount =
         sNdsRendererHardwareProjectedDivisionCount;
+    gNdsRendererProfileSourceVertexLoadCount =
+        sNdsRendererHardwareSourceVertexLoadCount;
+    gNdsRendererProfileCPUTransformCount =
+        sNdsRendererHardwareCPUTransformCount;
+    gNdsRendererProfileTransformCacheHitCount =
+        sNdsRendererHardwareTransformCacheHitCount;
+    gNdsRendererProfileMatrixSnapshotCreateCount =
+        sNdsRendererHardwareMatrixSnapshotCreateCount;
+    gNdsRendererProfileMatrixSnapshotReuseCount =
+        sNdsRendererHardwareMatrixSnapshotReuseCount;
+    gNdsRendererProfileMatrixSnapshotOverflowCount =
+        sNdsRendererHardwareMatrixSnapshotOverflowCount;
 }
 
 static inline void ndsRendererProfileRecordHardwareTriangle(void)
@@ -633,6 +688,9 @@ typedef struct NDSRendererTraversalState
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererInputVertex input_vertices[NDS_RENDERER_MAX_VTX];
     u32 vertex_colors[NDS_RENDERER_MAX_VTX];
+    NDSRendererMatrixSnapshot *matrix_snapshots;
+    u8 vertex_matrix_snapshot[NDS_RENDERER_MAX_VTX];
+    u8 vertex_clip_snapshot[NDS_RENDERER_MAX_VTX];
 #endif
     u32 modelview_valid_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     u32 modelview_stack_depth;
@@ -642,6 +700,8 @@ typedef struct NDSRendererTraversalState
     u32 vertex_color_valid_mask;
     u32 current_transform_vertex_mask;
     u32 matrix_generation;
+    u32 matrix_snapshot_count;
+    u32 current_matrix_snapshot;
 #endif
     u32 projection_valid;
     u32 modelview_valid;
@@ -1492,6 +1552,153 @@ static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
 #endif
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+static u32 ndsRendererMatrixSnapshotSignature(
+    const NDSRendererMatrix20p12 *matrix)
+{
+    u32 signature = 2166136261u;
+    u32 row;
+    u32 col;
+
+    if (matrix == NULL)
+    {
+        return 0u;
+    }
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            signature ^= (u32)matrix->m[row][col];
+            signature *= 16777619u;
+        }
+    }
+    return signature;
+}
+
+static const NDSRendererMatrixSnapshot *ndsRendererGetMatrixSnapshot(
+    const NDSRendererTraversalState *state, u32 snapshot_id)
+{
+    if ((state == NULL) || (state->matrix_snapshots == NULL) ||
+        (snapshot_id == NDS_RENDERER_MATRIX_SNAPSHOT_INVALID) ||
+        (snapshot_id > state->matrix_snapshot_count))
+    {
+        return NULL;
+    }
+    return &state->matrix_snapshots[snapshot_id - 1u];
+}
+
+static u32 ndsRendererAcquireCurrentMatrixSnapshot(
+    NDSRendererTraversalState *state)
+{
+    NDSRendererMatrixSnapshot *snapshot;
+    u32 signature;
+    u32 i;
+
+    if ((state == NULL) || (state->matrix_valid == 0u) ||
+        (state->matrix_snapshots == NULL))
+    {
+        return NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    }
+    if (state->current_matrix_snapshot !=
+        NDS_RENDERER_MATRIX_SNAPSHOT_INVALID)
+    {
+        return state->current_matrix_snapshot;
+    }
+
+    signature = ndsRendererMatrixSnapshotSignature(&state->matrix);
+    for (i = 0u; i < state->matrix_snapshot_count; i++)
+    {
+        snapshot = &state->matrix_snapshots[i];
+        if ((snapshot->signature == signature) &&
+            (memcmp(&snapshot->matrix, &state->matrix,
+                    sizeof(snapshot->matrix)) == 0))
+        {
+            state->current_matrix_snapshot = i + 1u;
+            ndsRendererProfileRecordMatrixSnapshotReuse();
+            return state->current_matrix_snapshot;
+        }
+    }
+    if (state->matrix_snapshot_count >=
+        NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY)
+    {
+        ndsRendererProfileRecordMatrixSnapshotOverflow();
+        return NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    }
+
+    snapshot = &state->matrix_snapshots[state->matrix_snapshot_count++];
+    snapshot->matrix = state->matrix;
+    snapshot->generation = state->matrix_generation;
+    snapshot->signature = signature;
+    state->current_matrix_snapshot = state->matrix_snapshot_count;
+    ndsRendererProfileRecordMatrixSnapshotCreate();
+    return state->current_matrix_snapshot;
+}
+
+static s32 ndsRendererTransformCachedVertex(
+    NDSRendererStats *stats, NDSRendererTraversalState *state, u32 index,
+    const NDSRendererMatrix20p12 *matrix, u32 snapshot_id)
+{
+    NDSRendererClipVertex20p12 *out;
+    u32 mask;
+
+    if ((stats == NULL) || (state == NULL) || (matrix == NULL) ||
+        (index >= NDS_RENDERER_MAX_VTX))
+    {
+        return FALSE;
+    }
+    mask = 1u << index;
+    if ((state->input_vertex_valid_mask & mask) == 0u)
+    {
+        return FALSE;
+    }
+
+    out = &state->vertices[index];
+    ndsRendererTransformVertex20p12(matrix, &state->input_vertices[index], out);
+    state->vertex_valid_mask |= mask;
+    state->vertex_clip_snapshot[index] = (u8)snapshot_id;
+    stats->matrix_transform_count++;
+    stats->transformed_vertex_count++;
+    if (stats->transformed_vertex_count == 1u)
+    {
+        stats->first_transformed_x = out->x;
+        stats->first_transformed_y = out->y;
+        stats->first_transformed_z = out->z;
+        stats->first_transformed_w = out->w;
+    }
+    ndsRendererProfileRecordCPUTransform();
+    return TRUE;
+}
+
+static s32 ndsRendererEnsureTransformedVertex(
+    NDSRendererStats *stats, NDSRendererTraversalState *state, u32 index)
+{
+    const NDSRendererMatrixSnapshot *snapshot;
+    u32 snapshot_id;
+    u32 mask;
+
+    if ((state == NULL) || (index >= NDS_RENDERER_MAX_VTX))
+    {
+        return FALSE;
+    }
+    mask = 1u << index;
+    snapshot_id = state->vertex_matrix_snapshot[index];
+    if (((state->vertex_valid_mask & mask) != 0u) &&
+        (state->vertex_clip_snapshot[index] == snapshot_id))
+    {
+        ndsRendererProfileRecordTransformCacheHit();
+        return TRUE;
+    }
+
+    snapshot = ndsRendererGetMatrixSnapshot(state, snapshot_id);
+    if (snapshot == NULL)
+    {
+        return FALSE;
+    }
+    return ndsRendererTransformCachedVertex(
+        stats, state, index, &snapshot->matrix, snapshot_id);
+}
+#endif
+
 static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
 {
     NDSRendererMatrix20p12 identity;
@@ -1528,6 +1735,7 @@ static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
 #if NDS_RENDERER_HW_TRIANGLES
     /* Cached RSP vertices retain the transform active when they were loaded. */
     state->current_transform_vertex_mask = 0u;
+    state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     state->matrix_generation = ndsRendererNextMatrixGeneration();
 #endif
 }
@@ -1556,7 +1764,9 @@ static void ndsRendererInitMatrixWordRaw(NDSRendererTraversalState *state)
 
 static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
                                           const NDSRendererConfig *config,
-                                          NDSRendererStats *stats)
+                                          NDSRendererStats *stats,
+                                          NDSRendererMatrixSnapshot *snapshots,
+                                          u32 snapshot_count)
 {
     if (state == NULL)
     {
@@ -1564,6 +1774,15 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
     }
 
     memset(state, 0, sizeof(*state));
+#if NDS_RENDERER_HW_TRIANGLES
+    state->matrix_snapshots = snapshots;
+    state->matrix_snapshot_count =
+        (snapshot_count <= NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY) ?
+            snapshot_count : NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY;
+#else
+    (void)snapshots;
+    (void)snapshot_count;
+#endif
     if (config == NULL)
     {
         return;
@@ -1922,6 +2141,7 @@ static void ndsRendererApplyMatrixMoveWordCommand(
     state->matrix_valid = TRUE;
 #if NDS_RENDERER_HW_TRIANGLES
     state->current_transform_vertex_mask = 0u;
+    state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     state->matrix_generation = ndsRendererNextMatrixGeneration();
 #endif
     stats->matrix_command_count++;
@@ -1983,6 +2203,7 @@ static void ndsRendererApplyVertexCommand(
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererHardwareLightDirection light_direction;
     const NDSRendererHardwareLightDirection *prepared_light_direction = NULL;
+    u32 matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
 #endif
 
     if ((stats == NULL) || (state == NULL))
@@ -2019,6 +2240,10 @@ static void ndsRendererApplyVertexCommand(
     }
 
 #if NDS_RENDERER_HW_TRIANGLES
+    if (state->matrix_valid != 0u)
+    {
+        matrix_snapshot = ndsRendererAcquireCurrentMatrixSnapshot(state);
+    }
     if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
         ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
     {
@@ -2033,24 +2258,52 @@ static void ndsRendererApplyVertexCommand(
     for (i = 0u; i < count; i++)
     {
         NDSRendererInputVertex input;
-        NDSRendererClipVertex20p12 *out = &state->vertices[v0 + i];
+        u32 index = v0 + i;
+#if NDS_RENDERER_HW_TRIANGLES
+        u32 mask = 1u << index;
+#else
+        NDSRendererClipVertex20p12 *out = &state->vertices[index];
+#endif
 
         ndsRendererDecodeInputVertex(&input, src + (i * 16u));
 #if NDS_RENDERER_HW_TRIANGLES
-        state->input_vertices[v0 + i] = input;
-        state->input_vertex_valid_mask |= 1u << (v0 + i);
-        state->vertex_colors[v0 + i] =
+        ndsRendererProfileRecordSourceVertexLoad();
+        state->input_vertices[index] = input;
+        state->input_vertex_valid_mask |= mask;
+        state->vertex_colors[index] =
             ndsRendererHardwareLitShadeColorPrepared(
                 stats, &input, prepared_light_direction);
-        state->vertex_color_valid_mask |= 1u << (v0 + i);
-        state->current_transform_vertex_mask |= 1u << (v0 + i);
+        state->vertex_color_valid_mask |= mask;
+        state->vertex_matrix_snapshot[index] = (u8)matrix_snapshot;
+        state->vertex_clip_snapshot[index] =
+            NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+        state->vertex_valid_mask &= ~mask;
+        state->current_transform_vertex_mask &= ~mask;
+        if (state->matrix_valid != 0u)
+        {
+            state->current_transform_vertex_mask |= mask;
+        }
 #endif
         if (state->matrix_valid == 0u)
         {
             continue;
         }
+#if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        (void)ndsRendererTransformCachedVertex(
+            stats, state, index, &state->matrix, matrix_snapshot);
+#else
+        /* Profile 0/1 keep source vertices raw for GX. Only an exhausted
+         * snapshot table needs the eager clip fallback retained here. */
+        if (matrix_snapshot == NDS_RENDERER_MATRIX_SNAPSHOT_INVALID)
+        {
+            (void)ndsRendererTransformCachedVertex(
+                stats, state, index, &state->matrix, matrix_snapshot);
+        }
+#endif
+#else
         ndsRendererTransformVertex20p12(&state->matrix, &input, out);
-        state->vertex_valid_mask |= 1u << (v0 + i);
+        state->vertex_valid_mask |= 1u << index;
         stats->matrix_transform_count++;
         stats->transformed_vertex_count++;
         if (stats->transformed_vertex_count == 1u)
@@ -2060,6 +2313,7 @@ static void ndsRendererApplyVertexCommand(
             stats->first_transformed_z = out->z;
             stats->first_transformed_w = out->w;
         }
+#endif
     }
 }
 
@@ -2270,6 +2524,8 @@ static u32 ndsRendererAbsDiffS32(s32 lhs, s32 rhs)
 static void ndsRendererHardwareRecordOracleVertex(
     const NDSRendererTraversalState *state, u32 index)
 {
+    const NDSRendererMatrixSnapshot *snapshot;
+    const NDSRendererMatrix20p12 *matrix = NULL;
     NDSRendererClipVertex20p12 expected;
     const NDSRendererClipVertex20p12 *actual;
     u32 dx;
@@ -2282,13 +2538,30 @@ static void ndsRendererHardwareRecordOracleVertex(
         (index >= NDS_RENDERER_MAX_VTX) ||
         ((state->input_vertex_valid_mask & (1u << index)) == 0u) ||
         ((state->vertex_valid_mask & (1u << index)) == 0u) ||
-        ((state->current_transform_vertex_mask & (1u << index)) == 0u) ||
-        (state->matrix_valid == 0u))
+        (state->vertex_clip_snapshot[index] !=
+         state->vertex_matrix_snapshot[index]))
     {
         return;
     }
 
-    ndsRendererTransformVertex20p12(&state->matrix,
+    snapshot = ndsRendererGetMatrixSnapshot(
+        state, state->vertex_matrix_snapshot[index]);
+    if (snapshot != NULL)
+    {
+        matrix = &snapshot->matrix;
+    }
+    else if (((state->current_transform_vertex_mask & (1u << index)) != 0u) &&
+             (state->matrix_valid != 0u))
+    {
+        /* Bounded-table overflow is eagerly transformed at VTX load. */
+        matrix = &state->matrix;
+    }
+    if (matrix == NULL)
+    {
+        return;
+    }
+
+    ndsRendererTransformVertex20p12(matrix,
                                     &state->input_vertices[index],
                                     &expected);
     actual = &state->vertices[index];
@@ -5673,20 +5946,21 @@ static u32 ndsRendererHardwarePosTestInside(s32 axis, s32 w)
             ndsRendererHardwareAbsS64(w)) ? TRUE : FALSE;
 }
 
-static void ndsRendererHardwareQueueRawMatrixPosTest(
-    const NDSRendererTraversalState *state, u32 index)
+static void ndsRendererHardwareQueueRawMatrixPosTestValues(
+    const NDSRendererMatrix20p12 *matrix, u32 generation,
+    const NDSRendererInputVertex *input,
+    const NDSRendererClipVertex20p12 *clip, u32 matrix_word)
 {
     NDSRendererHardwarePendingPosTest *probe;
 
-    if ((state == NULL) || (index >= NDS_RENDERER_MAX_VTX) ||
-        (state->matrix_valid == 0u) ||
-        (state->matrix_generation ==
-         sNdsRendererHardwarePendingPosTestLastGeneration))
+    if ((matrix == NULL) || (input == NULL) || (clip == NULL) ||
+        (generation == 0u) ||
+        (generation == sNdsRendererHardwarePendingPosTestLastGeneration))
     {
         return;
     }
     sNdsRendererHardwarePendingPosTestLastGeneration =
-        state->matrix_generation;
+        generation;
     if (sNdsRendererHardwarePendingPosTestCount >=
         NDS_RENDERER_HW_POS_TEST_MAX)
     {
@@ -5696,11 +5970,40 @@ static void ndsRendererHardwareQueueRawMatrixPosTest(
 
     probe = &sNdsRendererHardwarePendingPosTests[
         sNdsRendererHardwarePendingPosTestCount++];
-    probe->matrix = state->matrix;
-    probe->input = state->input_vertices[index];
-    probe->clip = state->vertices[index];
-    probe->generation = state->matrix_generation;
-    probe->matrix_word = state->matrix_word_valid;
+    probe->matrix = *matrix;
+    probe->input = *input;
+    probe->clip = *clip;
+    probe->generation = generation;
+    probe->matrix_word = matrix_word;
+}
+
+static void ndsRendererHardwareQueueRawMatrixPosTest(
+    const NDSRendererTraversalState *state, u32 index)
+{
+    if ((state == NULL) || (index >= NDS_RENDERER_MAX_VTX) ||
+        (state->matrix_valid == 0u))
+    {
+        return;
+    }
+    ndsRendererHardwareQueueRawMatrixPosTestValues(
+        &state->matrix, state->matrix_generation,
+        &state->input_vertices[index], &state->vertices[index],
+        state->matrix_word_valid);
+}
+
+static void ndsRendererHardwareQueueSnapshotMatrixPosTest(
+    const NDSRendererTraversalState *state, u32 snapshot_id, u32 index)
+{
+    const NDSRendererMatrixSnapshot *snapshot =
+        ndsRendererGetMatrixSnapshot(state, snapshot_id);
+
+    if ((snapshot == NULL) || (index >= NDS_RENDERER_MAX_VTX))
+    {
+        return;
+    }
+    ndsRendererHardwareQueueRawMatrixPosTestValues(
+        &snapshot->matrix, snapshot->generation,
+        &state->input_vertices[index], &state->vertices[index], FALSE);
 }
 
 static void ndsRendererHardwareQueueMatrixWordPosTestFixture(void)
@@ -6172,9 +6475,16 @@ static s32 ndsRendererHardwareRawMatrixCompatible(
 static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     const NDSRendererTraversalState *state,
     u32 i0, u32 i1, u32 i2,
-    s32 source_zbuffered, s32 decal_depth, s32 prim_depth)
+    s32 source_zbuffered, s32 decal_depth, s32 prim_depth,
+    u32 *out_snapshot_id)
 {
     u32 mask;
+    u32 snapshot_id;
+
+    if (out_snapshot_id != NULL)
+    {
+        *out_snapshot_id = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    }
 
     if (source_zbuffered == FALSE)
     {
@@ -6188,17 +6498,6 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     {
         return NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH;
     }
-    if (ndsRendererHardwareRawMatrixCompatible(state) == FALSE)
-    {
-        return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
-    }
-
-    mask = (1u << i0) | (1u << i1) | (1u << i2);
-    if ((state->current_transform_vertex_mask & mask) != mask)
-    {
-        ndsRendererProfileRecordRawCrossMatrix();
-        return NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX;
-    }
     if ((ndsRendererHardwareRawVertexFits(&state->input_vertices[i0]) ==
          FALSE) ||
         (ndsRendererHardwareRawVertexFits(&state->input_vertices[i1]) ==
@@ -6210,17 +6509,45 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
         return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
     }
 
-    ndsRendererProfileRecordRawCurrentCandidate();
+    mask = (1u << i0) | (1u << i1) | (1u << i2);
+    if ((state->current_transform_vertex_mask & mask) == mask)
+    {
+        if (ndsRendererHardwareRawMatrixCompatible(state) == FALSE)
+        {
+            return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
+        }
+        ndsRendererProfileRecordRawCurrentCandidate();
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererHardwareQueueRawMatrixPosTest(state, i0);
+        ndsRendererHardwareQueueRawMatrixPosTest(state, i0);
 #endif
-    return NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX;
+        return NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX;
+    }
+
+    snapshot_id = state->vertex_matrix_snapshot[i0];
+    if ((snapshot_id != NDS_RENDERER_MATRIX_SNAPSHOT_INVALID) &&
+        (state->vertex_matrix_snapshot[i1] == snapshot_id) &&
+        (state->vertex_matrix_snapshot[i2] == snapshot_id) &&
+        (ndsRendererGetMatrixSnapshot(state, snapshot_id) != NULL))
+    {
+        if (out_snapshot_id != NULL)
+        {
+            *out_snapshot_id = snapshot_id;
+        }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        ndsRendererHardwareQueueSnapshotMatrixPosTest(
+            state, snapshot_id, i0);
+#endif
+        return NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX;
+    }
+
+    ndsRendererProfileRecordRawCrossMatrix();
+    return NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX;
 }
 
 static void ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
-    const NDSRendererTraversalState *state,
+    NDSRendererTraversalState *state,
     u32 packed)
 {
     u32 i0;
@@ -6251,6 +6578,8 @@ static void ndsRendererSubmitHardwareTriangle(
     s32 raw_submit;
     s32 source_clip_depth;
     s32 no_oracle;
+    u32 raw_snapshot_id = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    const NDSRendererMatrixSnapshot *raw_snapshot = NULL;
     NDSRendererHWSubmitClass submit_class;
     s32 projected_z[3] = { 0, 0, 0 };
 
@@ -6266,22 +6595,6 @@ static void ndsRendererSubmitHardwareTriangle(
         return;
     }
     no_oracle = (sNdsRendererHardwareNoOracle != 0u) ? TRUE : FALSE;
-    transformed_ready =
-        ((state != NULL) &&
-         (state->matrix_valid != 0u) &&
-         (ndsRendererTransformedTriangleReady(state, packed, NULL, NULL,
-                                              NULL) != FALSE)) ? TRUE : FALSE;
-    if (transformed_ready == FALSE)
-    {
-        stats->hardware_oracle_reject_count++;
-        ndsRendererProfileRecordSubmitClass(
-            NDS_RENDERER_HW_SUBMIT_REJECT);
-        return;
-    }
-    if (no_oracle == FALSE)
-    {
-        stats->hardware_oracle_triangle_count++;
-    }
     zbuffered = ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) != 0u) ?
         TRUE : FALSE;
     source_zbuffered = zbuffered;
@@ -6295,13 +6608,39 @@ static void ndsRendererSubmitHardwareTriangle(
     v1 = &state->input_vertices[i1];
     v2 = &state->input_vertices[i2];
     submit_class = ndsRendererHardwareClassifySubmit(
-        state, i0, i1, i2, source_zbuffered, decal_depth, prim_depth);
+        state, i0, i1, i2, source_zbuffered, decal_depth, prim_depth,
+        &raw_snapshot_id);
     raw_submit =
-        (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
-            TRUE : FALSE;
+        ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
+         (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX)) ?
+             TRUE : FALSE;
     projected_submit =
         ((source_zbuffered != FALSE) && (raw_submit == FALSE)) ? TRUE : FALSE;
     source_clip_depth = projected_submit;
+    transformed_ready = TRUE;
+    if (raw_submit == FALSE)
+    {
+        transformed_ready =
+            ((ndsRendererEnsureTransformedVertex(stats, state, i0) != FALSE) &&
+             (ndsRendererEnsureTransformedVertex(stats, state, i1) != FALSE) &&
+             (ndsRendererEnsureTransformedVertex(stats, state, i2) != FALSE)) ?
+                 TRUE : FALSE;
+    }
+    if (transformed_ready == FALSE)
+    {
+        stats->hardware_oracle_reject_count++;
+        ndsRendererProfileRecordSubmitClass(
+            NDS_RENDERER_HW_SUBMIT_REJECT);
+        return;
+    }
+    if (no_oracle == FALSE)
+    {
+        stats->hardware_oracle_triangle_count++;
+    }
+    if (raw_snapshot_id != NDS_RENDERER_MATRIX_SNAPSHOT_INVALID)
+    {
+        raw_snapshot = ndsRendererGetMatrixSnapshot(state, raw_snapshot_id);
+    }
     render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     if (sNdsRendererHardwareNoOracle == 0u)
@@ -6380,9 +6719,14 @@ static void ndsRendererSubmitHardwareTriangle(
     }
 #endif
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
-    if (raw_submit != FALSE)
+    if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
         ndsRendererLoadHardwareMatrices(state, scale_world);
+    }
+    else if (raw_snapshot != NULL)
+    {
+        ndsRendererLoadHardwareRawComposedMatrix(
+            &raw_snapshot->matrix, raw_snapshot->generation);
     }
     else
     {
@@ -6805,11 +7149,35 @@ void ndsRendererInitStats(NDSRendererStats *stats)
     }
 }
 
+void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache)
+{
+    if (vertex_cache == NULL)
+    {
+        return;
+    }
+
+    vertex_cache->input_valid_mask = 0u;
+    vertex_cache->transformed_valid_mask = 0u;
+    vertex_cache->vertex_color_valid_mask = 0u;
+    vertex_cache->matrix_snapshot_count = 0u;
+    memset(vertex_cache->vertex_matrix_snapshot, 0,
+           sizeof(vertex_cache->vertex_matrix_snapshot));
+    memset(vertex_cache->vertex_clip_snapshot, 0,
+           sizeof(vertex_cache->vertex_clip_snapshot));
+}
+
 void ndsRendererScanDisplayList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats)
 {
     NDSRendererTraversalState state;
+#if NDS_RENDERER_HW_TRIANGLES
+    NDSRendererMatrixSnapshot
+        matrix_snapshot_storage[NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY];
+    NDSRendererMatrixSnapshot *matrix_snapshots = matrix_snapshot_storage;
+#else
+    NDSRendererMatrixSnapshot *matrix_snapshots = NULL;
+#endif
 
     if (stats == NULL)
     {
@@ -6822,7 +7190,8 @@ void ndsRendererScanDisplayList(const Gfx *dl,
         return;
     }
 
-    ndsRendererInitTraversalState(&state, config, stats);
+    ndsRendererInitTraversalState(&state, config, stats,
+                                  matrix_snapshots, 0u);
     ndsRendererScanList(dl, config, stats, &state, 0, NULL, NULL);
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererHardwareEndBatch();
@@ -6998,6 +7367,14 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     NDSRendererVertexCache *vertex_cache)
 {
     NDSRendererTraversalState state;
+#if NDS_RENDERER_HW_TRIANGLES
+    NDSRendererMatrixSnapshot
+        local_matrix_snapshots[NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY];
+    NDSRendererMatrixSnapshot *matrix_snapshots = local_matrix_snapshots;
+#else
+    NDSRendererMatrixSnapshot *matrix_snapshots = NULL;
+#endif
+    u32 matrix_snapshot_count = 0u;
 
     if (stats == NULL)
     {
@@ -7010,7 +7387,15 @@ void ndsRendererExecuteDisplayListWithVertexCache(
         return;
     }
 
-    ndsRendererInitTraversalState(&state, config, stats);
+#if NDS_RENDERER_HW_TRIANGLES
+    if (vertex_cache != NULL)
+    {
+        matrix_snapshots = vertex_cache->matrix_snapshots;
+        matrix_snapshot_count = vertex_cache->matrix_snapshot_count;
+    }
+#endif
+    ndsRendererInitTraversalState(&state, config, stats, matrix_snapshots,
+                                  matrix_snapshot_count);
     if (vertex_cache != NULL)
     {
         memcpy(state.vertices, vertex_cache->transformed_vertices,
@@ -7024,6 +7409,12 @@ void ndsRendererExecuteDisplayListWithVertexCache(
                sizeof(state.vertex_colors));
         state.vertex_color_valid_mask =
             vertex_cache->vertex_color_valid_mask;
+        memcpy(state.vertex_matrix_snapshot,
+               vertex_cache->vertex_matrix_snapshot,
+               sizeof(state.vertex_matrix_snapshot));
+        memcpy(state.vertex_clip_snapshot,
+               vertex_cache->vertex_clip_snapshot,
+               sizeof(state.vertex_clip_snapshot));
 #endif
     }
     ndsRendererScanList(dl, config, stats, &state, 0, callback,
@@ -7041,6 +7432,13 @@ void ndsRendererExecuteDisplayListWithVertexCache(
                sizeof(vertex_cache->vertex_colors));
         vertex_cache->vertex_color_valid_mask =
             state.vertex_color_valid_mask;
+        memcpy(vertex_cache->vertex_matrix_snapshot,
+               state.vertex_matrix_snapshot,
+               sizeof(vertex_cache->vertex_matrix_snapshot));
+        memcpy(vertex_cache->vertex_clip_snapshot,
+               state.vertex_clip_snapshot,
+               sizeof(vertex_cache->vertex_clip_snapshot));
+        vertex_cache->matrix_snapshot_count = state.matrix_snapshot_count;
 #endif
     }
 #if NDS_RENDERER_HW_TRIANGLES

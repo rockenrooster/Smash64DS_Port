@@ -2642,8 +2642,7 @@ void ndsRendererAdapterBeginStageTraversal(void)
     bzero(&sNdsRendererAdapterStagePersistentState,
           sizeof(sNdsRendererAdapterStagePersistentState));
     ndsRendererInitStats(&sNdsRendererAdapterStagePersistentStats);
-    bzero(&sNdsRendererAdapterStageVertexCache,
-          sizeof(sNdsRendererAdapterStageVertexCache));
+    ndsRendererInitVertexCache(&sNdsRendererAdapterStageVertexCache);
     sNdsRendererAdapterStagePersistentActive = TRUE;
 }
 
@@ -6660,7 +6659,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     NDSFighterDLAllDrawCollection collection;
     NDSFighterDLDrawState *states;
     NDSFighterDLDrawState persistent_state;
-    NDSRendererVertexCache persistent_renderer_vertices;
+    /* The snapshot table is traversal-owned but too large for BattleShip's
+     * nested task stack. Draw callbacks are serialized, so one reset fixed
+     * cache preserves the same per-fighter lifetime without caching output. */
+    static NDSRendererVertexCache persistent_renderer_vertices;
     NDSRendererStats *stats;
     NDSRendererStats persistent_stats;
     u8 *clean;
@@ -6707,7 +6709,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                                     FALSE;
     bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
     bzero(&persistent_state, sizeof(persistent_state));
-    bzero(&persistent_renderer_vertices, sizeof(persistent_renderer_vertices));
+    ndsRendererInitVertexCache(&persistent_renderer_vertices);
     bzero(stats, sizeof(sNdsFighterDLAllDrawStats[slot]));
     ndsRendererInitStats(&persistent_stats);
     if (sNdsFighterDisplayContractPlayback != FALSE)

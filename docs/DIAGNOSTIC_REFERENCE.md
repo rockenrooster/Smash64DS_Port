@@ -1352,6 +1352,13 @@ Opening movie / Opening Portraits:
   The non-reject class sum must equal hardware triangles; raw-current must equal
   its readiness count, projected classes must match their classifiers, reject
   must be zero, and the division count is exactly `6*no-Z + 9*other-projected`.
+- `RENDER_LAZY`: completed-frame vertex/snapshot marker. Fields are source
+  vertex loads, CPU clip transforms, matching-transform cache hits, composed-
+  matrix snapshot creates, content reuses, and table overflows. Profiles 0/1
+  require transforms below half of loads, positive hits/create/reuse, and zero
+  overflow. Profile 2 deliberately requires transforms equal loads while still
+  exercising cache hits; it owns the independent oracle. The stable canonical
+  values are `821/282/258/67/7/0`, versus forensic `821/821/540/67/7/0`.
 - `RENDER_DEPTH`: source-depth sample count, signed 20.12 NDC min/max, and
   clip-W min/max for stage, player 0, and player 1. Canonical HW requires all
   three classes, NDC within `-4096..4095`, and positive ordered W ranges. This

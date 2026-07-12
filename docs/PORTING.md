@@ -19338,3 +19338,52 @@ Source-corrected verifier expectations: none; the same source geometry now uses
 the proven GX representation. Coverage-reduced verifier expectations: none;
 exceptional depth/matrix classes remain projected and profile 2 retains both
 hardware and CPU oracles.
+
+## 2026-07-11 - Per-slot matrix snapshots and lazy CPU transforms
+
+- Reconciled the live tree with the external optimization package, then audited
+  BattleShip `gbi.h`/`objdisplay.c`, bundled sm64-nds renderer cache semantics,
+  the persistent stage/fighter RSP caches, and the existing hybrid GX classes.
+  This is the playbook's isolated snapshot/lazy-transform patch; no gameplay,
+  source geometry, depth class, texture, material, or composed-frame cache changed.
+- Each persistent 32-slot renderer cache now owns a bounded 64-entry table of
+  composed 20.12 matrices. VTX loads attach a content-deduplicated matrix ID;
+  cached clip results attach the ID they represent. `G_MWO_POINT_ST` changes S/T
+  only. A triangle with three matching retained IDs may raw-submit that matrix;
+  mixed IDs, no-Z, decal, primitive-depth, and range cases remain projected.
+- Profiles 0/1 defer the CPU clip transform until a projected exception needs
+  it and reuse matching clip IDs. Profile 2 deliberately remains eager so its
+  software oracle stays independent. The stable frame is `821` source loads,
+  `282` production transforms, `258` hits, and `67/7/0` snapshot create/reuse/
+  overflow; forensic is `821/821/540/67/7/0`. All 44 stale-slot triangles are
+  genuinely mixed, so natural raw-snapshot traffic remains zero and fixture
+  coverage owns that class. Submission remains `648/0/44/126/0/0/10/0 = 828`,
+  with `1,242` divisions, `121/707/121` batches, and 53 matrix loads.
+- The first deterministic mode-163 run exposed that embedding the table in an
+  automatic fighter cache exceeded BattleShip's nested task-stack margin and
+  prefetched-aborted before GX flush. Fighter draws are serialized, so that
+  traversal cache now uses one fixed-storage instance reset at every fighter
+  boundary. The failed leg then passed, and a host fixture prevents returning
+  the table to task-stack storage.
+- Eight warm profile-0 frames improve present median/p95 from
+  `15,837,408/16,103,104` to `15,543,456/15,804,544` (about `-1.9%`). Profile 2
+  passes oracle `2484/0/0`, device `PosTest 32/0/e2/w0/c0/mw1/drop0`, all source
+  depth, and zero reject/saturation/overflow. Canonical text/data/BSS moves
+  `570084/125952/1914888 -> 571348/125952/1925384`; the ROM stays 11,579,392
+  bytes, while the source memory ledger retains 236,100 bytes headroom.
+- Host GBI fixtures now pin current/same/mixed snapshot classification, `0/6/9`
+  division policy, profile-specific eager/deferred behavior, clip-ID invalidation,
+  ST persistence, bounded capacity, fixed fighter storage, and frame markers.
+  Static docs/architecture/registry/GBI checks and generated-clean dry run pass.
+  Canonical visibility/parity and the separate forensic run pass; flowers,
+  fence, pond, fighters,
+  and depth remain unchanged. Fresh P1Gate/Boundary pass in `213.9s/143.6s`.
+  Full Regression remains intentionally skipped for Tyler's fast P1 cadence.
+  Canonical/shipped SHA-256 is
+  `10741FC4C6497325023006F8ED4C117428E65B93D254CBDEFBC074D05083543C`.
+  Accepted capture:
+  `artifacts/visibility/2026-07-11_canonical_fast_200725-1819819-p34716.png`.
+
+Source-corrected verifier expectations: none; position ownership now follows
+the persistent RSP slots. Coverage-reduced verifier expectations: none; profile
+2 stays eager and both integrated/boundary oracles remain authoritative.

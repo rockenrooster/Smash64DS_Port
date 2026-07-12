@@ -546,21 +546,40 @@ function Get-HybridSubmitClass {
         [bool]$PrimDepth,
         [bool]$MatrixCompatible,
         [bool]$CurrentSlots,
+        [bool]$SameSnapshot,
         [bool]$RawCoordinatesFit
     )
     if (-not $SourceZ) { return 'projected_no_z' }
     if ($Decal) { return 'projected_decal' }
     if ($PrimDepth) { return 'projected_prim_depth' }
-    if (-not $MatrixCompatible) { return 'projected_range_or_matrix' }
-    if (-not $CurrentSlots) { return 'projected_cross_matrix' }
     if (-not $RawCoordinatesFit) { return 'projected_range_or_matrix' }
-    return 'raw_z_current_matrix'
+    if ($CurrentSlots) {
+        if (-not $MatrixCompatible) { return 'projected_range_or_matrix' }
+        return 'raw_z_current_matrix'
+    }
+    if ($SameSnapshot) { return 'raw_z_snapshot_matrix' }
+    return 'projected_cross_matrix'
 }
 function Get-HybridProjectedDivisions {
     param([string]$SubmitClass)
-    if ($SubmitClass -eq 'raw_z_current_matrix') { return 0 }
+    if (($SubmitClass -eq 'raw_z_current_matrix') -or
+        ($SubmitClass -eq 'raw_z_snapshot_matrix')) { return 0 }
     if ($SubmitClass -eq 'projected_no_z') { return 6 }
     return 9
+}
+function Get-VertexLoadTransformPolicy {
+    param([int]$ProfileLevel, [bool]$SnapshotAvailable)
+    if (($ProfileLevel -ge 2) -or (-not $SnapshotAvailable)) {
+        return 'eager_transform'
+    }
+    return 'defer_transform'
+}
+function Get-ProjectedTransformPolicy {
+    param([bool]$ClipValid, [bool]$ClipMatchesVertexSnapshot)
+    if ($ClipValid -and $ClipMatchesVertexSnapshot) {
+        return 'cache_hit'
+    }
+    return 'transform_snapshot'
 }
 $vtxW0 = New-F3DEX2VtxW0 -Count 4 -V0 12
 Assert-Equal $vtxW0 0x01004020 'F3DEX2 gSPVertex(4,12) fixture packed word mismatch.'
@@ -685,16 +704,24 @@ $perspectiveRows = @(
 $perspective = Convert-N64PackedMtxTo20p12 (New-N64PackedMtx -Rows $perspectiveRows)
 Assert-RawGXHomogeneousEquivalent -Mtx $perspective -X 100 -Y -200 -Z 2 -Label 'Perspective/positive-W'
 Assert-RawGXHomogeneousEquivalent -Mtx $perspective -X -300 -Y 400 -Z 10 -Label 'Perspective/negative-W'
-Assert-Equal (Get-HybridSubmitClass $false $false $false $true $true $true) 'projected_no_z' 'Hybrid raw policy did not preserve no-Z projection.'
-Assert-Equal (Get-HybridSubmitClass $true $true $false $true $true $true) 'projected_decal' 'Hybrid raw policy did not preserve decal projection.'
-Assert-Equal (Get-HybridSubmitClass $true $false $true $true $true $true) 'projected_prim_depth' 'Hybrid raw policy did not preserve primitive-depth projection.'
-Assert-Equal (Get-HybridSubmitClass $true $false $false $false $true $true) 'projected_range_or_matrix' 'Hybrid raw policy accepted an incompatible matrix.'
-Assert-Equal (Get-HybridSubmitClass $true $false $false $true $false $true) 'projected_cross_matrix' 'Hybrid raw policy accepted cross-matrix slots.'
-Assert-Equal (Get-HybridSubmitClass $true $false $false $true $true $false) 'projected_range_or_matrix' 'Hybrid raw policy accepted saturated coordinates.'
-Assert-Equal (Get-HybridSubmitClass $true $false $false $true $true $true) 'raw_z_current_matrix' 'Hybrid raw policy rejected compatible current-matrix source-Z.'
+Assert-Equal (Get-HybridSubmitClass $false $false $false $true $true $false $true) 'projected_no_z' 'Hybrid raw policy did not preserve no-Z projection.'
+Assert-Equal (Get-HybridSubmitClass $true $true $false $true $true $false $true) 'projected_decal' 'Hybrid raw policy did not preserve decal projection.'
+Assert-Equal (Get-HybridSubmitClass $true $false $true $true $true $false $true) 'projected_prim_depth' 'Hybrid raw policy did not preserve primitive-depth projection.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $false $true $false $true) 'projected_range_or_matrix' 'Hybrid raw policy accepted an incompatible current matrix.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $true $false $false $true) 'projected_cross_matrix' 'Hybrid raw policy accepted mixed matrix snapshots.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $true $false $true $true) 'raw_z_snapshot_matrix' 'Hybrid raw policy rejected three slots from one retained matrix snapshot.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $true $true $false $false) 'projected_range_or_matrix' 'Hybrid raw policy accepted saturated coordinates.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $true $true $false $true) 'raw_z_current_matrix' 'Hybrid raw policy rejected compatible current-matrix source-Z.'
 Assert-Equal (Get-HybridProjectedDivisions 'raw_z_current_matrix') 0 'Raw-current class retained projected divisions.'
+Assert-Equal (Get-HybridProjectedDivisions 'raw_z_snapshot_matrix') 0 'Raw-snapshot class retained projected divisions.'
 Assert-Equal (Get-HybridProjectedDivisions 'projected_no_z') 6 'No-Z projected division accounting drifted.'
 Assert-Equal (Get-HybridProjectedDivisions 'projected_cross_matrix') 9 'Source-Z projected division accounting drifted.'
+Assert-Equal (Get-VertexLoadTransformPolicy 0 $true) 'defer_transform' 'Performance profile did not defer a snapshotted source vertex.'
+Assert-Equal (Get-VertexLoadTransformPolicy 1 $true) 'defer_transform' 'Coarse profile did not defer a snapshotted source vertex.'
+Assert-Equal (Get-VertexLoadTransformPolicy 2 $true) 'eager_transform' 'Forensic profile did not retain eager oracle transforms.'
+Assert-Equal (Get-VertexLoadTransformPolicy 0 $false) 'eager_transform' 'Snapshot-overflow fallback did not preserve a usable clip vertex.'
+Assert-Equal (Get-ProjectedTransformPolicy $true $true) 'cache_hit' 'Matching projected snapshot did not reuse its clip transform.'
+Assert-Equal (Get-ProjectedTransformPolicy $true $false) 'transform_snapshot' 'A stale clip transform survived matrix-snapshot invalidation.'
 $modelviewStack = @()
 $modelviewStack += ,$transform
 $innerRows = @(
@@ -1124,6 +1151,10 @@ Assert-True ($renderer.Contains('NDS_RENDERER_MWO_POINT_ST')) 'Renderer G_MWO_PO
 Assert-True ($renderer.Contains('ndsRendererApplyModifyVertexCommand')) 'Renderer G_MODIFYVTX state handler is missing.'
 Assert-True ($renderer.Contains('state->input_vertices[index].s = (s16)(w1 >> 16)')) 'Renderer G_MODIFYVTX does not replace cached vertex S.'
 Assert-True ($renderer.Contains('state->input_vertices[index].t = (s16)(w1 & 0xffffu)')) 'Renderer G_MODIFYVTX does not replace cached vertex T.'
+$modifyVertexSource = [regex]::Match($renderer, '(?s)static void ndsRendererApplyModifyVertexCommand\(.*?\n}\s*\n\s*static s32 ndsRendererTransformedTriangleReady').Value
+Assert-True (-not [string]::IsNullOrWhiteSpace($modifyVertexSource)) 'Renderer G_MODIFYVTX fixture could not isolate the handler.'
+Assert-True (-not $modifyVertexSource.Contains('vertex_matrix_snapshot')) 'G_MODIFYVTX ST incorrectly invalidates the cached position matrix snapshot.'
+Assert-True (-not $modifyVertexSource.Contains('vertex_clip_snapshot')) 'G_MODIFYVTX ST incorrectly invalidates the cached clip transform snapshot.'
 Assert-True ($renderer.Contains('ndsRendererHardwareClipVertex')) 'Renderer hardware no-z projected vertex path is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START')) 'Renderer hardware background projected-depth counter is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START')) 'Renderer hardware foreground projected-depth counter is missing.'
@@ -1218,11 +1249,18 @@ Assert-True ($rendererHeader.Contains('othermode_h')) 'Renderer current othermod
 Assert-True ($rendererHeader.Contains('transformed_vertices')) 'Renderer command transformed vertex cache exposure is missing.'
 Assert-True ($rendererHeader.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Renderer hardware submit-latch API is missing.'
 Assert-True ($rendererHeader.Contains('NDS_RENDERER_PROFILE_LEVEL must be 0, 1, or 2')) 'Renderer profile-level compile-time validation is missing.'
+Assert-True ($rendererHeader.Contains('NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY 64u')) 'Renderer matrix snapshot table lost its measured bounded capacity.'
+Assert-True ($rendererHeader.Contains('matrix_snapshots[NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY]')) 'Persistent renderer vertex cache does not own its matrix snapshot table.'
+Assert-True ($rendererHeader.Contains('vertex_matrix_snapshot[NDS_RENDERER_VERTEX_CACHE_SIZE]')) 'Persistent renderer vertex cache lacks per-slot matrix snapshot IDs.'
+Assert-True ($rendererHeader.Contains('vertex_clip_snapshot[NDS_RENDERER_VERTEX_CACHE_SIZE]')) 'Persistent renderer vertex cache lacks per-slot clip transform IDs.'
+Assert-True ($rendererHeader.Contains('ndsRendererInitVertexCache')) 'Renderer vertex-cache boundary initializer is missing.'
 $startupHeader = Get-Content (Join-Path $root 'include/nds/nds_startup.h') -Raw
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawHardwareTextureReadyCount')) 'All-DL hardware texture diagnostics are missing from the startup header.'
 Assert-True ($startupHeader.Contains('gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount')) 'All-DL hardware z-buffer diagnostics are missing from the startup header.'
 Assert-True ($startupHeader.Contains('gNdsStageGCDrawAllLoopHardwareTextureReadyCount')) 'Stage gcDrawAll hardware texture startup diagnostics are missing.'
 Assert-True ($startupHeader.Contains('gNdsStageGCDrawAllLoopHardwareFighterTriangleCount')) 'Stage gcDrawAll hardware fighter diagnostics are missing from the startup header.'
+Assert-True ($startupHeader.Contains('gNdsRendererProfileSourceVertexLoadCount')) 'Renderer lazy source-load diagnostic is missing from the startup header.'
+Assert-True ($startupHeader.Contains('gNdsRendererProfileMatrixSnapshotOverflowCount')) 'Renderer snapshot-overflow diagnostic is missing from the startup header.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Battle DL renderer matrix adapter is missing.'
 Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL renderer does not route DObj prep through original matrix helpers.'
@@ -1241,10 +1279,11 @@ Assert-True ($renderer -match '(?s)sNdsRendererMatrixGenerationSerial == 0u.*?sN
 Assert-True (-not $renderer.Contains('sNdsRendererHardwareMatrixProjection')) 'Renderer still compares full projection matrices in the triangle hot path.'
 Assert-True (-not $renderer.Contains('sNdsRendererHardwareMatrixModelview')) 'Renderer still compares full modelview matrices in the triangle hot path.'
 Assert-True ($renderer -match '(?s)ndsRendererBuildRawHardwareMatrix\(.*?\*hardware = \*composed;.*?for \(col = 0u; col < 4u; col\+\+\).*?NDS_RENDERER_HW_WORLD_UNIT_SHIFT') 'Renderer corrected raw matrix does not scale the complete homogeneous row.'
-Assert-True ($renderer -match '(?s)current_transform_vertex_mask & mask.*?ndsRendererHardwareRawVertexFits.*?ndsRendererProfileRecordRawCurrentCandidate') 'Renderer raw candidate classification does not require current-matrix slots and unclamped coordinates.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareRawVertexFits.*?current_transform_vertex_mask & mask.*?ndsRendererHardwareRawMatrixCompatible.*?ndsRendererProfileRecordRawCurrentCandidate') 'Renderer raw-current classification does not require unclamped coordinates, current slots, and a compatible current matrix.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX')) 'Renderer hybrid submission-class enum is missing raw-current source-Z.'
-Assert-True ($renderer -match '(?s)ndsRendererHardwareClassifySubmit.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX.*?NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX') 'Renderer hybrid submit classifier no longer preserves exceptional classes before raw current-matrix eligibility.'
-Assert-True ($renderer -match '(?s)if \(raw_submit != FALSE\)\s*\{\s*ndsRendererLoadHardwareMatrices\(state, scale_world\);\s*\}\s*else\s*\{\s*ndsRendererLoadHardwareMatrices\(NULL, FALSE\);') 'Renderer raw-current and projected classes do not load corrected versus identity GX matrices explicitly.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX')) 'Renderer hybrid submission-class enum is missing retained-snapshot source-Z.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareClassifySubmit.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH.*?ndsRendererHardwareRawVertexFits.*?NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX.*?vertex_matrix_snapshot.*?NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX') 'Renderer hybrid submit classifier no longer preserves exceptional classes before raw current/snapshot eligibility and mixed-snapshot projection.'
+Assert-True ($renderer -match '(?s)if \(submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX\).*?ndsRendererLoadHardwareMatrices\(state, scale_world\);.*?else if \(raw_snapshot != NULL\).*?ndsRendererLoadHardwareRawComposedMatrix.*?else.*?ndsRendererLoadHardwareMatrices\(NULL, FALSE\);') 'Renderer raw-current, raw-snapshot, and projected classes do not load their explicit GX matrices.'
 Assert-True ($renderer -match '(?s)sNdsRendererHardwareTriangleBatchMatrixMode == matrix_mode.*?sNdsRendererHardwareTriangleBatchMatrixGeneration ==\s*matrix_generation') 'Renderer triangle batch key omits matrix representation or generation.'
 Assert-True ($renderer -match '(?s)ndsRendererProfileRecordSubmitClass\(submit_class\).*?ndsRendererProfileRecordProjectedDivisions.*?ndsRendererProfileRecordHardwareTriangle') 'Renderer does not account hybrid submit classes and projected divisions before final hardware triangle accounting.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareConsumeSubmittedFrame.*?ndsRendererProfilePublishSubmitSummary\(\).*?ndsRendererProfileResetSubmitSummary\(\)') 'Renderer does not publish and reset hybrid submit accounting at the shared hardware-frame boundary.'
@@ -1253,6 +1292,9 @@ Assert-True ($renderer -match '(?s)ndsRendererHardwareQueueMatrixWordPosTestFixt
 Assert-True ($renderer -match '(?s)ndsRendererHardwareEndBatch\(\);\s*#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*ndsRendererHardwareRunRawMatrixPosTests\(\);') 'Renderer raw GX PosTests do not run after the final source triangle batch closes.'
 Assert-True ($renderer.Contains('NDSRendererRuntimeFrameSummary')) 'Performance renderer compact frame summary is missing.'
 Assert-True ($renderer.Contains('ndsRendererProfileFramePublish')) 'Performance renderer frame-summary publication is missing.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*\(void\)ndsRendererTransformCachedVertex.*?#else.*?matrix_snapshot == NDS_RENDERER_MATRIX_SNAPSHOT_INVALID.*?ndsRendererTransformCachedVertex') 'Renderer VTX path does not keep forensic transforms eager while deferring bounded production snapshots.'
+Assert-True ($renderer -match '(?s)if \(raw_submit == FALSE\).*?ndsRendererEnsureTransformedVertex\(stats, state, i0\).*?ndsRendererEnsureTransformedVertex\(stats, state, i1\).*?ndsRendererEnsureTransformedVertex\(stats, state, i2\)') 'Renderer projected exceptions do not lazily materialize all three clip vertices.'
+Assert-True ($renderer -match '(?s)vertex_clip_snapshot\[index\] == snapshot_id.*?ndsRendererProfileRecordTransformCacheHit') 'Renderer lazy clip-transform cache does not require the vertex matrix snapshot ID.'
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*if \(sNdsRendererHardwareNoOracle == 0u\).*?ndsRendererHardwareRecordOracleTriangle') 'Renderer oracle is not compile-time excluded from profile 0/1 or does not honor no-oracle.'
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*ndsRendererProfileTextureCoord\(s, t\);\s*ndsRendererProfileTextureSample\(s, t\);\s*#endif') 'Per-vertex texture range/sample diagnostics are not forensic-only.'
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*s32 depth =.*?hardware_projected_depth_sample_count\+\+;\s*#endif\s*projected_z = clip_vtx->z;') 'Projected-depth ranges are not forensic-only or alter runtime depth.'
@@ -1263,6 +1305,8 @@ Assert-True ($rendererVerifier.Contains('RENDER_PROFILE_LEVEL=%u')) 'Realtime ve
 Assert-True ($rendererVerifier.Contains('RENDER_BENCH=%u')) 'Realtime verifier lacks the optional warm-frame renderer sampler.'
 Assert-True ($rendererVerifier.Contains('RENDER_RAW_MATRIX=%u')) 'Realtime verifier does not report raw-candidate and GX PosTest diagnostics.'
 Assert-True ($rendererVerifier.Contains('RENDER_SUBMIT=%u')) 'Realtime verifier does not report hybrid raw/projected class accounting.'
+Assert-True ($rendererVerifier.Contains('RENDER_LAZY=%u')) 'Realtime verifier does not report source loads, lazy transforms, snapshot reuse, and overflow.'
+Assert-True ($rendererVerifier.Contains('defer a majority of CPU vertex transforms')) 'Realtime performance verifier does not require the measured lazy-transform majority.'
 Assert-True ($rendererVerifier.Contains('sharply reduce and exactly account projected software divisions')) 'Realtime verifier does not require the projected-division collapse.'
 Assert-True ($rendererVerifier.Contains('corrected composed GX matrix PosTest')) 'Realtime verifier does not require the corrected GX matrix oracle.'
 Assert-True ($rendererVerifier.Contains('still performed forensic oracle transforms')) 'Realtime performance verifier does not require zero oracle work.'
@@ -1285,8 +1329,10 @@ Assert-True ($rendererAdapter.Contains('NDS_RENDERER_ADAPTER_G_MWO_POINT_ST')) '
 Assert-True ($rendererAdapter.Contains('state->vertices[index].s = (s16)(command->w1 >> 16)')) 'Battle DL adapter diagnostics do not replace cached vertex S.'
 Assert-True ($rendererAdapter.Contains('state->vertices[index].t = (s16)(command->w1 & 0xffffu)')) 'Battle DL adapter diagnostics do not replace cached vertex T.'
 Assert-True ($rendererAdapter.Contains('NDSRendererVertexCache sNdsRendererAdapterStageVertexCache')) 'Stage traversal renderer vertex cache is missing.'
-Assert-True ($rendererAdapter -match '(?s)ndsRendererAdapterBeginStageTraversal\(void\).*?bzero\(&sNdsRendererAdapterStageVertexCache') 'Stage traversal does not clear the source RSP vertex cache at its boundary.'
+Assert-True ($rendererAdapter -match '(?s)ndsRendererAdapterBeginStageTraversal\(void\).*?ndsRendererInitVertexCache\(&sNdsRendererAdapterStageVertexCache\)') 'Stage traversal does not reset source RSP vertex-cache validity and snapshot ownership at its boundary.'
 Assert-True ($rendererAdapter -match '(?s)ndsRendererExecuteDisplayListWithVertexCache\(.*?&sNdsRendererAdapterStageVertexCache') 'Stage DObjs do not share the source RSP vertex cache.'
+Assert-True ($rendererAdapter.Contains('ndsRendererInitVertexCache(&persistent_renderer_vertices)')) 'Fighter traversal does not reset its persistent RSP vertex/snapshot cache at the fighter boundary.'
+Assert-True ($rendererAdapter.Contains('static NDSRendererVertexCache persistent_renderer_vertices')) 'Fighter matrix snapshots returned to BattleShip task-stack storage.'
 Assert-True ($rendererAdapter.Contains('nGCMatrixKindVecTraRotRpyRSca')) 'Battle DL renderer vector DObj matrix cases are missing.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterBuildBillboardMtx')) 'Battle DL renderer billboard DObj matrix cases are missing.'
 Assert-True ($rendererAdapter.Contains('nGCMatrixKindRecalcRotRpyRSca')) 'Battle DL renderer recalc DObj matrix cases are missing.'

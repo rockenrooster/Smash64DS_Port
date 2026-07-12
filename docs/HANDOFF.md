@@ -103,10 +103,11 @@ Profile-0 canonical/shipped retains all `828` triangles; `648` ordinary source-Z
 triangles use corrected GX. Exceptions are `44` cross-matrix, `126` no-Z, and `10` range; snapshot/
 decal/prim/reject remain zero. Matrix-keyed batches are `121/707/121`, loads are
 `53`, and projected divisions fall `7,074 -> 1,242`. Profile 2 retains device
-`PosTest 32/0/e2/w0/c0/mw1/drop0`, oracle `2403/0/0`, and all depth contracts.
-Warm present median/p95 improves `17,220,704/17,500,608 ->
-15,837,408/16,103,104` (about `-8%`) at `2.1fps`.
-Capture: `artifacts/visibility/2026-07-11_canonical_fast_190254-2501107-p35056.png`.
+`PosTest 32/0/e2/w0/c0/mw1/drop0`, oracle `2484/0/0`, and all depth contracts.
+The 32 slots retain matrix IDs in per-traversal 64-entry tables. Profile 0 turns
+`821` loads into `282` lazy transforms and `258` hits; create/reuse/overflow is
+`67/7/0`. All 44 stale-slot triangles are genuinely mixed. Warm median/p95 is
+`15,543,456/15,804,544`, another `1.9%` reduction, at `2.1fps`. Capture: `artifacts/visibility/2026-07-11_canonical_fast_200725-1819819-p34716.png`.
 Imported DObj/MObj/CObj AObj32 attachments normalize complete N64 MSB-first
 command graphs once per reloc generation; fighter AObj16 bypasses that path.
 Original timing remains live, and a post-step corrects packed RGBA. Persistent
@@ -118,13 +119,12 @@ and applies `G_MWO_POINT_ST`; File3's five flower groups add ten source textured
 triangles (`192 -> 202`). Masked-clamp axes through 128 texels, six CI4 stars,
 and the DXT tail stride remain fixed. Debt: Whispy face acceptance, water phase/
 shifts/other TEXEL1, fog/color animation, speed, and Mario light A/B.
-The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped
-realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
+The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped realtime is `smash64ds-battle-playable-hwtri.nds`. Canonical live input alone
 exposes a connected-neutral second pad; normal builds expose one controller.
 
 ## Recommended Next Work
-1. Add per-slot matrix snapshots and lazy transforms; mixed/range stays projected.
-2. Cut software 2D to exact final-resolution output; soak only at milestones.
+1. Cut software 2D to exact final-resolution output; keep live source transforms.
+2. Re-profile before packet replay; soak only at architecture milestones.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
@@ -144,7 +144,7 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Fresh P1Gate/Boundary pass in `148.3s/55.9s`. This is not the five-minute P1
+Fresh P1Gate/Boundary pass in `213.9s/143.6s`. This is not the five-minute P1
 soak; keep historical harnesses only for localization and skip Full Regression.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

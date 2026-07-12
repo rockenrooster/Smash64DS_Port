@@ -85,7 +85,7 @@ Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
 plus `G_MWO_POINT_ST` restores five flower groups and adds ten source triangles
 (`192 -> 202`); Tyler accepts both flowers and foreground fences. Texture
 conversion retains exact `37200/37200` lane observations; the forensic profile
-retains oracle `2403/0/0`.
+retains oracle `2484/0/0`.
 The immutable 300x220 wallpaper now decodes once into the retained HW buffer;
 source position/scale stay live and composed content is never cached. Proof is
 `build1/hit44/fast45/fallback0/opaque66000`; present fell
@@ -95,17 +95,18 @@ list exit. Proof remains `begin103/reuse725/end103` for all `828` triangles.
 The CI4 table first cuts present to `20,285,888`; command-hoisted light and
 compile-time profile separation reduce shipped/profile-0 work further. Matrix
 loads now use nonzero traversal generations instead of two 64-byte compares.
-Hybrid submission sends `648` ordinary source-Z triangles through the corrected
-GX matrix. It projects `44` cross-matrix, `126` no-Z, and `10` range exceptions;
-reject/snapshot/decal/prim are zero. Batches are `121/707/121`, loads are `53`;
-software divisions fall `7,074 -> 1,242` per frame. Profile 2 still passes
-device `PosTest 32/0/e2/w0/c0/mw1/drop0`, oracle `2403/0/0`, and all depth.
-Warm median/p95 improves `17,220,704/17,500,608 ->
-15,837,408/16,103,104` (about `-8%`); pacing is `21/21 x0.1`.
-Capture: `artifacts/visibility/2026-07-11_canonical_fast_190254-2501107-p35056.png`.
+Hybrid submission sends `648` ordinary source-Z triangles through corrected GX.
+Each persistent 32-slot RSP cache owns a bounded 64-entry composed-matrix table
+plus per-slot matrix/clip IDs. Profile 0 turns `821` source loads into `282`
+lazy transforms and `258` hits; snapshot create/reuse/overflow is `67/7/0`.
+The `44` stale-slot triangles are genuinely mixed, so raw-snapshot stays zero;
+`126` no-Z and `10` range exceptions also stay projected. Divisions/batches/
+loads remain `1,242`, `121/707/121`, and `53`. Profile 2 eagerly transforms
+`821/821` and passes oracle `2484/0/0`, device `PosTest 32/0/e2/w0/c0/mw1/drop0`,
+and all depth. Warm median/p95 improves `15,837,408/16,103,104 -> 15,543,456/15,804,544` (`-1.9%`); pacing remains `21/21 x0.1`.
+Capture: `artifacts/visibility/2026-07-11_canonical_fast_200725-1819819-p34716.png`.
 
-The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
-cache eviction. Mode `163` reports headroom `236100`, resident reloc `681632`
+The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `236100`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
 `16` bytes of scratch. The separate 64 KiB BGM buffer leaves `172412` bytes
@@ -134,12 +135,11 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Next: matrix snapshots/lazy transforms, then final-resolution 2D; the compositor remains the larger measured blocker.
+Next: final-resolution 2D composition; the software compositor is the larger measured blocker.
 
 ## Verification
 
-Fresh P1Gate/Boundary pass in `148.3s/55.9s`: opening-to-Title, canonical battle,
-mode-163 combat, and one-minute Results—not the five-minute soak. Full Regression stays skipped.
+Fresh P1Gate/Boundary pass in `213.9s/143.6s`: opening-to-Title, canonical battle, mode-163 combat, and one-minute Results—not the five-minute soak. Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
