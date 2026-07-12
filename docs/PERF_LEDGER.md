@@ -640,6 +640,107 @@ NEXT MEASURED BOTTLENECK:
   transport below 300K.
 ```
 
+## KRAW-SHARED — shared raw-current run kernel
+
+```text
+IDEA ID:
+  KRAW-SHARED
+HYPOTHESIS:
+  Once the generic scanner has established exact live matrix, material,
+  texture, alpha, and batch state for the first triangle, one shared owner-
+  masked kernel can consume the rest of each immutable adjacent TRI run and
+  emit exact raw-current vertices without re-entering the generic command and
+  per-triangle setup path.
+TARGETED EXCLUSIVE COUNTER:
+  Same-ROM profile-1 whole draw and exclusive stage/Mario/Fox walls, with a
+  profile-2 dual semantic trace and owner entry/exit state/cache comparison.
+MEASURED UPPER BOUND:
+  The 128-frame whole-draw median/P95 improvement is 208,672/180,224 ticks.
+  The remaining generic raw-current work is bounded by the unaccelerated first
+  triangle of each run, 47 state fallbacks, seven vertex-mask fallbacks, and
+  all projected classes.
+LIVE-TREE RECONCILIATION:
+  Continued from T2D commit ad71a4a03 and adopted
+  docs/optimization/CODEX_60FPS_FASTEST_PATH_20260712.txt. Preserved all user
+  roadmaps, reviews, prompts, logs, and goal files; decomp remained read-only.
+FILES/FUNCTIONS CHANGED:
+  Added one owner-boundary selector, a shared raw-current run executor, narrow
+  textured/untextured GX writers, aggregate accounting, exact generic
+  fallback, profile-2 semantic reconstruction, synchronized fast-run export,
+  and a generic-versus-fast comparison script. The profile-0 default selects
+  all three owners; profile 1/2 retain runtime A/B selection.
+BUILD TARGET/FLAGS:
+  Same-ROM smash64ds-battle-playable-coarse-hwtri; common/scene -O2 -mthumb,
+  renderer -O2 -marm, benchmark mode 0. Canonical uses the same profile-0 O2
+  renderer with the all-owner selector initialized at the owner boundary.
+BASELINE / EXPERIMENT ROM SHA-256:
+  83B6452C94327309F218A2ACE9EB5361C63BC94A8EB699DC14ADC4237CDCDD4E
+  for both profile-1 A and B; only the GDB owner selector changed. Promoted
+  canonical/shipped ROM:
+  19D8C30B18F5973EF7D75F26EF9033AB5FE7C453A6D5EFD88EFBE6848EF3CCFD.
+FRAME/LOGIC-TICK WINDOW:
+  Decision A/B/A used 32 synchronized frames: A 207..238, B 211..242,
+  A 206..237. Promotion used A 212..339 and B 211..338 (128 frames each).
+A0 MEDIAN/P95:
+  Generic 128: draw 2,067,296/2,407,872; stage 1,017,408/1,035,328;
+  Mario 498,368/498,432; Fox 530,688/530,752.
+B0 MEDIAN/P95:
+  K-RAW 128: draw 1,858,624/2,227,648; stage 999,840/1,017,728;
+  Mario 399,872/399,936; Fox 437,440/437,504.
+A1 OR DISABLED-CONTROL MEDIAN/P95:
+  The 32-frame A repeat was draw 2,177,696/2,441,280 versus initial A
+  2,177,664/2,441,280. B was 1,968,032/2,233,344, proving a 209,632-tick
+  median win on the same ROM and stable generic control within 32 ticks.
+ACTIVE/WAIT SPLIT:
+  Generic/K-RAW active median is 2,070,688/1,862,080. Loop median remains
+  2,240,704/2,240,640 because VBlank wait absorbs the saved active work.
+  Conservation error is 0/0 and draw/present/loop residuals remain below 2%.
+OWNER SPLIT:
+  Stage improves 17,568 ticks median, Mario 98,496, and Fox 93,248. The shared
+  kernel executes 45 runs and 540 triangles every frame: stage 60, Mario 246,
+  Fox 234. Fallbacks are bounded at state/vertex/command 47/7/0.
+OP/PROGRAM BYTES/FALLBACKS:
+  Main-RAM ARM code is 2,392 bytes for the shared executor, 520 bytes for slot
+  preparation, and a 4-byte cold fallback wrapper: 2,916 bytes total, with no
+  program arena, final-GX cache, expanded water phases, or allocation.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  Canonical ITCM is 20,120/32,768 and renderer-emitted ITCM is 18,384. K-RAW
+  remains in main RAM. Canonical main BSS is 1,857,648; DTCM payload is zero
+  plus 152 bytes DTCM BSS. No per-frame or arena storage was added.
+SEMANTIC TRACE RESULT:
+  A same-ROM 32-frame profile-2 generic/fast comparison matched both full-
+  frame and owner rolling semantic hashes, event counts, first provenance,
+  final v16 XYZ/ST/RGB15/poly/texture/source-state inputs, and exact upload
+  sequence with zero mismatches or overflow.
+OWNER ENTRY/EXIT STATE/CACHE RESULT:
+  Zero mismatches across all three owners for census/topology, runtime state,
+  32-slot input/transformed cache and validity/snapshot ownership, resolver,
+  global state, camera/DObj/material/light/texture signatures, and semantic
+  output. Profile-2 oracle remains 2,484/0/0.
+ORACLE/COUNTER/GX RESULT:
+  Exact 828 triangles, 648/44/126/10 classes, 121/707/121 batching, 98/730
+  texture prepare/reuse, and canonical 715/2,167 GX RAM. The profile-2 upload
+  sequence and bytes match generic exactly.
+CAPTURE RESULT:
+  Canonical capture remains recognizable and detailed. Faster valid capture
+  timing measured stage varied coverage 46.7% with a 68px flat run; the fast-
+  iteration-only ceiling is now 72px while the full gate remains unchanged:
+  artifacts/visibility/2026-07-12_canonical_fast_183402-2942634-p17080.png.
+VERIFIER COMMANDS AND RESULTS:
+  GBI fixtures, PowerShell parsing, ITCM placement, 32-frame profile-2 exact
+  compare, 32-frame same-ROM A/B/A, 128-frame A/B promotion, canonical realtime
+  smoke/parity/counter gates, and canonical capture content passed. DevFast's
+  earlier 64px fast-only stage ceiling was the only failure and was corrected
+  from measured exact output before the final retry.
+DECISION: KEEP
+  Promote the shared all-owner K-RAW kernel in profile 0. It clears the fastest-
+  path 100K whole-draw threshold, improves P95, and preserves exact semantics.
+NEXT MEASURED BOTTLENECK:
+  The T2D warm-no-upload control already saved 315,584 ticks, so move the
+  animated texture conversion/refresh off the critical path next. Coordinate
+  its VRAM commit with VBlank because it is also the leading flicker cause.
+```
+
 ## Per-experiment report template
 
 ```text

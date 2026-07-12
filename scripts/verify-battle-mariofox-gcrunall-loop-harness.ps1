@@ -30,6 +30,8 @@ param(
     [switch]$RendererBenchmarkOnly,
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(0,3)][int]$RendererFastRunMode = 0,
+    [string]$RendererBenchmarkExportPath = '',
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
     [string]$Build = 'build-battle-mariofox-gcrunall-loop-harness',
@@ -457,6 +459,7 @@ try {
                 $coarseBenchmarkCommands += 'printf "COARSE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileLoopWallTicks, gNdsRendererProfileInputTicks, gNdsRendererProfileUpdateTicks, gNdsRendererProfileSourceUpdateTicks, gNdsRendererProfileAudioUpdateTicks, gNdsRendererProfilePresentActiveTicks, gNdsRendererProfileVBlankWaitTicks, gNdsRendererProfileBeginFrameTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileWallpaperTicks, gNdsRendererProfileOwners[0].exclusive_ticks, gNdsRendererProfileOwners[1].exclusive_ticks, gNdsRendererProfileOwners[2].exclusive_ticks, gNdsRendererProfileForegroundTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileFlushTicks, gNdsRendererProfilePostVBlankTicks, gNdsRendererProfileThreadTicks, gNdsRendererProfileDrawResidualTicks, gNdsRendererProfilePresentResidualTicks, gNdsRendererProfileLoopResidualTicks, gNdsRendererProfileConservationErrorTicks, gNdsRendererProfileLogicTick'
                 $coarseBenchmarkCommands += 'printf "STAGE0_BENCH=%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileStageLayer0Ticks'
                 $coarseBenchmarkCommands += 'printf "GX_BOUNDARY=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileGXStatusBeforeFlush, gNdsRendererProfileGXControlBeforeFlush, gNdsRendererProfileGXStatusAfterFlush, gNdsRendererProfileGXStatusPostVBlank, gNdsRendererProfileGXControlPostVBlank, gNdsRendererProfileFlushTicks'
+                $coarseBenchmarkCommands += 'printf "FAST_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]'
                 if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                     $coarseBenchmarkCommands += 'printf "SINK_BENCH=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSinkCursor, gNdsRendererBenchmarkSinkWordCount, gNdsRendererBenchmarkSinkCalibrationWords, gNdsRendererBenchmarkSinkCalibrationTicks, gNdsRendererBenchmarkSinkOwnerWords[0], gNdsRendererBenchmarkSinkOwnerWords[1], gNdsRendererBenchmarkSinkOwnerWords[2]'
                 }
@@ -479,14 +482,20 @@ try {
                 'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, {0}, gNdsRendererProfileOracleSamples, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes' -f $benchmarkTriangleSymbol
             $gdbCommands = @(
                 $gdbCommands[0..3]
+                ('set variable gNdsRendererFastRunMode = {0}' -f $RendererFastRunMode)
                 'set $renderer_benchmark_samples = 0'
+                'set $renderer_benchmark_warm = 0'
                 'break ndsBattlePlayableFrameCompleteMarker'
                 'commands'
                 'silent'
+                'if $renderer_benchmark_warm == 0'
+                'set $renderer_benchmark_warm = 1'
+                'else'
                 'if gNdsBattlePlayablePacingResult != 0'
                 $rendererBenchmarkCommand
                 $coarseBenchmarkCommands
                 'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
+                'end'
                 'end'
                 ('if $renderer_benchmark_samples < {0}' -f $RendererBenchmarkSamples)
                 'continue'
@@ -699,11 +708,13 @@ try {
     $stage0Benchmark = @()
     $sinkBenchmark = @()
     $warmBenchmark = @()
+    $fastRunBenchmark = @()
     $rendererSemanticBenchmark = @()
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
         $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 24)
         $gxBoundaryBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'GX_BOUNDARY' -FieldCount 7)
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
+        $fastRunBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'FAST_BENCH' -FieldCount 10)
         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
             $sinkBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SINK_BENCH' -FieldCount 8)
         }
@@ -840,6 +851,7 @@ try {
                 $stage0Summary = ''
                 $sinkMetricSummary = ''
                 $warmMetricSummary = ''
+                $fastRunMetricSummary = ''
                 $semanticMetricSummary = ''
                 $semanticChurnSummary = ''
                 $semanticProvenanceSummaries = @()
@@ -898,6 +910,7 @@ try {
                         $stage0Samples = [System.Collections.Generic.List[object]]::new()
                         $sinkSamples = [System.Collections.Generic.List[object]]::new()
                         $warmSamples = [System.Collections.Generic.List[object]]::new()
+                        $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
                         $logicTickResetCount = 0
                         $drawResidualRatios = @()
@@ -914,6 +927,7 @@ try {
                         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
                             Assert-Condition ($warmBenchmark.Count -eq $RendererBenchmarkSamples) "WARM_NO_UPLOAD benchmark captured $($warmBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
+                        Assert-Condition ($fastRunBenchmark.Count -eq $RendererBenchmarkSamples) "Fast-run benchmark captured $($fastRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         for ($sampleIndex = 0; $sampleIndex -lt $RendererBenchmarkSamples; $sampleIndex++) {
                             $coarse = Get-Ints $coarseBenchmark[$sampleIndex]
                             $render = Get-Ints $rendererBenchmark[$sampleIndex]
@@ -977,6 +991,14 @@ try {
                                 Assert-Condition ($warm[0] -eq $frame -and (Test-RendererUploadPair $warm[1] $warm[2])) "WARM_NO_UPLOAD sampled an invalid suppressed refresh pair $($warm[1])/$($warm[2]) at frame $frame." $gdbStdout
                                 $warmSamples.Add($warm)
                             }
+                            $fastRun = Get-Ints $fastRunBenchmark[$sampleIndex]
+                            Assert-Condition ($fastRun[0] -eq $frame -and $fastRun[1] -eq $RendererFastRunMode -and ($fastRun[4] + $fastRun[5] + $fastRun[6]) -eq $fastRun[3]) "Fast-run accounting is not synchronized, in the selected mode, or owner-conserved at frame $frame." $gdbStdout
+                            if ($RendererFastRunMode -eq 0) {
+                                Assert-Condition ($fastRun[2] -eq 0 -and $fastRun[3] -eq 0) "Generic laboratory mode unexpectedly executed fast runs at frame $frame." $gdbStdout
+                            } else {
+                                Assert-Condition ($fastRun[2] -gt 0 -and $fastRun[3] -gt 0) "Selected laboratory fast mode executed no fast triangles at frame $frame." $gdbStdout
+                            }
+                            $fastRunSamples.Add($fastRun)
                             $drawResidualRatios += Get-RatioBasisPoints $coarse[19] $drawTicks
                             $presentResidualRatios += Get-RatioBasisPoints $coarse[20] $presentActive
                             $loopResidualRatios += Get-RatioBasisPoints $coarse[21] $loopWall
@@ -1059,6 +1081,7 @@ try {
                             Assert-Condition (((Get-SampleFieldValues $warmSamples 1) | Measure-Object -Sum).Sum -gt 0) 'WARM_NO_UPLOAD window did not observe any animated texture refresh to suppress.' $gdbStdout
                             $warmMetricSummary = "Renderer WARM_NO_UPLOAD: samples=$RendererBenchmarkSamples suppressedUploads=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 1)) suppressedBytes=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 2))"
                         }
+                        $fastRunMetricSummary = "Renderer fast raw runs: mode=$RendererFastRunMode samples=$RendererBenchmarkSamples runs=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 2)) triangles=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 3)) stage=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 4)) Mario=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 5)) Fox=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 6)) fallbackState=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 7)) fallbackVertex=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 8)) fallbackCommand=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 9))"
 
                         $ownerLabels = @('stage', 'Mario', 'Fox')
                         if ($RendererProfileLevel -ge 2) {
@@ -1150,6 +1173,40 @@ try {
                     $benchmarkIdentitySummary =
                         'BENCH_IDENTITY=' +
                         ($benchmarkIdentity | ConvertTo-Json -Compress -Depth 6)
+                    if ($RendererBenchmarkExportPath) {
+                        $resolvedExportPath = if ([System.IO.Path]::IsPathRooted(
+                                $RendererBenchmarkExportPath)) {
+                            $RendererBenchmarkExportPath
+                        } else {
+                            Join-Path $root $RendererBenchmarkExportPath
+                        }
+                        $exportParent = Split-Path -Parent $resolvedExportPath
+                        if ($exportParent -and -not (Test-Path -LiteralPath $exportParent)) {
+                            New-Item -ItemType Directory -Path $exportParent -Force |
+                                Out-Null
+                        }
+                        $benchmarkExport = [ordered]@{
+                            schema = 1
+                            kind = 'smash64ds-renderer-fast-raw-benchmark'
+                            identity = $benchmarkIdentity
+                            fastRunMode = $RendererFastRunMode
+                            samples = [ordered]@{
+                                renderer = @($rendererBenchmark | ForEach-Object {
+                                    , @(Get-Ints $_)
+                                })
+                                coarse = @($coarseSamples)
+                                fastRaw = @($fastRunSamples)
+                                owners = @(
+                                    @($ownerSamples[0]),
+                                    @($ownerSamples[1]),
+                                    @($ownerSamples[2])
+                                )
+                                semantic = @($semanticSamples)
+                            }
+                        }
+                        Set-Content -LiteralPath $resolvedExportPath -Encoding utf8 `
+                            -Value ($benchmarkExport | ConvertTo-Json -Depth 8)
+                    }
                 }
                 if ($RendererBenchmarkOnly) {
                     Assert-Condition ($benchmarkMakeIdentity.RendererBenchmarkMode -gt 0) 'Benchmark-only verifier was not built with a renderer benchmark mode.' ($benchmarkMakeIdentity | Format-List | Out-String)
@@ -1189,6 +1246,7 @@ try {
                     Write-Output $stage0Summary
                     if ($sinkMetricSummary) { Write-Output $sinkMetricSummary }
                     if ($warmMetricSummary) { Write-Output $warmMetricSummary }
+                    if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     Write-Output "$Label renderer benchmark-only sample passed."
                     return
@@ -1322,6 +1380,7 @@ try {
                     Write-Output $coarseResidualRatioSummary
                     Write-Output $gxBoundarySummary
                     Write-Output $stage0Summary
+                    if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     $ownerChurnSummaries | ForEach-Object { Write-Output $_ }
                     if ($RendererProfileLevel -ge 2) {

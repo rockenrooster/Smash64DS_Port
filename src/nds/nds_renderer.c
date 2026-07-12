@@ -20,15 +20,19 @@
 #if defined(__arm__)
 #define NDS_RENDERER_HOT_CODE \
     __attribute__((hot, optimize("O3"), target("arm"), section(".itcm")))
+#define NDS_RENDERER_FAST_RUN_CODE \
+    __attribute__((noinline, optimize("O3"), target("arm")))
 #else
 #define NDS_RENDERER_HOT_CODE __attribute__((hot, optimize("O3")))
+#define NDS_RENDERER_FAST_RUN_CODE \
+    __attribute__((noinline, optimize("O3")))
 #endif
 
 /* Profiles 0/1 publish the shipping contract through the compact frame
  * summary.  Profile 1 is the low-frequency O2 coarse build, so it must not
  * maintain the generic per-command proof ledger either.  Profile 2 retains
  * the full forensic counters and semantic observer. */
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_RECORD_PROOF_ONLY(statement) ((void)0)
 #else
 #define NDS_RENDERER_RECORD_PROOF_ONLY(statement) \
@@ -928,6 +932,26 @@ typedef enum NDSRendererHWSubmitClass
     NDS_RENDERER_HW_SUBMIT_CLASS_COUNT
 } NDSRendererHWSubmitClass;
 
+#if NDS_RENDERER_PROFILE_LEVEL == 0
+volatile u32 gNdsRendererFastRunMode =
+    NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT;
+#else
+volatile u32 gNdsRendererFastRunMode = NDS_RENDERER_FAST_RUN_GENERIC;
+#endif
+volatile u32 gNdsRendererFastRunCount;
+volatile u32 gNdsRendererFastTriangleCount;
+volatile u32 gNdsRendererFastOwnerTriangleCount[
+    NDS_RENDERER_PROFILE_OWNER_COUNT];
+volatile u32 gNdsRendererFastFallbackCount[3];
+static NDSRendererProfileOwner sNdsRendererRuntimeOwner =
+    NDS_RENDERER_PROFILE_OWNER_NONE;
+static u32 sNdsRendererFastOwnerEnabled;
+static u32 sNdsRendererFastRunCount;
+static u32 sNdsRendererFastTriangleCount;
+static u32 sNdsRendererFastOwnerTriangleCount[
+    NDS_RENDERER_PROFILE_OWNER_COUNT];
+static u32 sNdsRendererFastFallbackCount[3];
+
 static u32 sNdsRendererHardwareSubmitted;
 static u32 sNdsRendererHardwareNoOracle;
 static u32 sNdsRendererHardwareTriangleBatchOpen;
@@ -1750,11 +1774,9 @@ typedef struct NDSRendererTraversalState
     u32 semantic_command_index;
     u32 semantic_tri2_half;
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 texture_prepare_alpha_constant;
     u32 texture_prepare_poly_alpha;
     u32 texture_prepare_poly_fmt;
-#endif
     u16 prepared_vertex_colors[NDS_RENDERER_MAX_VTX];
     s16 prepared_texcoord_s[NDS_RENDERER_MAX_VTX];
     s16 prepared_texcoord_t[NDS_RENDERER_MAX_VTX];
@@ -4366,7 +4388,6 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     return alpha >> 3;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 ndsRendererHardwareAlphaUsesVertex(
     const NDSRendererStats *stats)
 {
@@ -4403,7 +4424,6 @@ static s32 ndsRendererHardwareAlphaUsesVertex(
     }
     return TRUE;
 }
-#endif
 
 static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
 {
@@ -8933,14 +8953,12 @@ ndsRendererSubmitHardwareTriangle(
         prim_depth = ((zbuffered != FALSE) &&
                       (ndsRendererHardwareUsePrimDepth(stats) != FALSE)) ?
             TRUE : FALSE;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         state->texture_prepare_source_zbuffered =
             (source_zbuffered != FALSE) ? TRUE : FALSE;
         state->texture_prepare_decal_depth =
             (decal_depth != FALSE) ? TRUE : FALSE;
         state->texture_prepare_prim_depth =
             (prim_depth != FALSE) ? TRUE : FALSE;
-#endif
     }
     v0 = &state->input_vertices[i0];
     submit_class = ndsRendererHardwareClassifySubmit(
@@ -9037,7 +9055,6 @@ ndsRendererSubmitHardwareTriangle(
         }
     }
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (state->texture_prepare_valid == 0u)
     {
         poly_alpha = ndsRendererHardwareAlpha(stats, v0);
@@ -9059,9 +9076,6 @@ ndsRendererSubmitHardwareTriangle(
     {
         poly_alpha = ndsRendererHardwareAlpha(stats, v0);
     }
-#else
-    poly_alpha = ndsRendererHardwareAlpha(stats, v0);
-#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     semantic_event.poly_alpha = poly_alpha;
     semantic_event.alpha_key = ndsRendererHardwareAlphaStateKey(stats);
@@ -9189,13 +9203,9 @@ ndsRendererSubmitHardwareTriangle(
         projected_z[0] = projected_z[1] = projected_z[2] =
             ndsRendererHardwareNextProjectedDepth();
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     poly_fmt = (state->texture_prepare_alpha_constant != 0u) ?
         state->texture_prepare_poly_fmt :
         ndsRendererHardwarePolyFmt(stats, poly_alpha);
-#else
-    poly_fmt = ndsRendererHardwarePolyFmt(stats, poly_alpha);
-#endif
     texture_name = state->texture_prepare_name;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     semantic_event.poly_fmt = poly_fmt;
@@ -9367,6 +9377,510 @@ static inline void ndsRendererExecuteTriangleCommand(
 #endif
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+static inline s32 ndsRendererFastRawStateEligible(
+    const NDSRendererTraversalState *state)
+{
+    const u32 required_flags =
+        NDS_RENDERER_VERTEX_CONTEXT_SCALE_WORLD |
+        NDS_RENDERER_VERTEX_CONTEXT_ZBUFFERED;
+    const u32 forbidden_flags =
+        NDS_RENDERER_VERTEX_CONTEXT_DECAL_DEPTH |
+        NDS_RENDERER_VERTEX_CONTEXT_PRIM_DEPTH |
+        NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH;
+
+    return ((state != NULL) &&
+            (state->texture_prepare_valid != 0u) &&
+            (state->texture_prepare_source_zbuffered != 0u) &&
+            (state->texture_prepare_decal_depth == 0u) &&
+            (state->texture_prepare_prim_depth == 0u) &&
+            (state->texture_prepare_alpha_constant != 0u) &&
+            (state->texture_prepare_poly_alpha != 0u) &&
+            ((state->texture_prepare_vertex_flags & required_flags) ==
+             required_flags) &&
+            ((state->texture_prepare_vertex_flags & forbidden_flags) == 0u) &&
+            (state->matrix_valid != 0u) &&
+            (state->matrix_generation != 0u) &&
+            (sNdsRendererHardwareMatrixLoaded != 0u) &&
+            (sNdsRendererHardwareMatrixMode ==
+             NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
+            (sNdsRendererHardwareMatrixGeneration ==
+             state->matrix_generation) &&
+            (sNdsRendererHardwareTriangleBatchOpen != 0u) &&
+            (sNdsRendererHardwareTriangleBatchTextured ==
+             state->texture_prepare_enabled) &&
+            (sNdsRendererHardwareTriangleBatchTextureName ==
+             state->texture_prepare_name) &&
+            (sNdsRendererHardwareTriangleBatchPolyFmt ==
+             state->texture_prepare_poly_fmt) &&
+            (sNdsRendererHardwareTriangleBatchMatrixMode ==
+             NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
+            (sNdsRendererHardwareTriangleBatchMatrixGeneration ==
+             state->matrix_generation)) ? TRUE : FALSE;
+}
+
+static inline s32 ndsRendererFastDecodeTriangle(
+    u32 packed, u32 *indices, u32 *required_mask)
+{
+    u32 i0;
+    u32 i1;
+    u32 i2;
+
+    ndsGBIDecodePackedTriIndices(packed, &i0, &i1, &i2);
+    if ((i0 >= NDS_RENDERER_MAX_VTX) ||
+        (i1 >= NDS_RENDERER_MAX_VTX) ||
+        (i2 >= NDS_RENDERER_MAX_VTX))
+    {
+        return FALSE;
+    }
+    indices[0] = i0;
+    indices[1] = i1;
+    indices[2] = i2;
+    *required_mask |= (1u << i0) | (1u << i1) | (1u << i2);
+    return TRUE;
+}
+
+static void NDS_RENDERER_FAST_RUN_CODE ndsRendererFastPrepareRawSlots(
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 required_mask,
+    u32 textured)
+{
+    u32 missing_color = required_mask &
+        ~state->prepared_vertex_color_valid_mask;
+    u32 context_flags = state->texture_prepare_vertex_flags;
+
+    while (missing_color != 0u)
+    {
+        u32 vertex_index = (u32)__builtin_ctz(missing_color);
+        u32 vertex_mask = 1u << vertex_index;
+        const NDSRendererInputVertex *vtx =
+            &state->input_vertices[vertex_index];
+
+        state->prepared_vertex_colors[vertex_index] =
+            ndsRendererHardwarePackedVertexColor(
+                stats, vtx, state->texture_prepare_material_color,
+                context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL,
+                context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX,
+                state->vertex_colors[vertex_index],
+                ((state->vertex_color_valid_mask & vertex_mask) != 0u) ?
+                    TRUE : FALSE);
+        state->prepared_vertex_color_valid_mask |= vertex_mask;
+        missing_color &= ~vertex_mask;
+    }
+
+    if (textured != 0u)
+    {
+        u32 missing_texcoord = required_mask &
+            ~state->prepared_texcoord_valid_mask;
+
+        while (missing_texcoord != 0u)
+        {
+            u32 vertex_index = (u32)__builtin_ctz(missing_texcoord);
+            u32 vertex_mask = 1u << vertex_index;
+            const NDSRendererInputVertex *vtx =
+                &state->input_vertices[vertex_index];
+
+            state->prepared_texcoord_s[vertex_index] =
+                ndsRendererHardwareTexCoord(
+                    vtx->s, state->texture_prepare_scale_s,
+                    state->texture_prepare_origin_s,
+                    state->texture_prepare_offset);
+            state->prepared_texcoord_t[vertex_index] =
+                ndsRendererHardwareTexCoord(
+                    vtx->t, state->texture_prepare_scale_t,
+                    state->texture_prepare_origin_t,
+                    state->texture_prepare_offset);
+            state->prepared_texcoord_valid_mask |= vertex_mask;
+            missing_texcoord &= ~vertex_mask;
+        }
+    }
+}
+
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsRendererFastRawFallbackCommand(
+    NDSRendererStats *stats,
+    const NDSRendererConfig *config,
+    NDSRendererTraversalState *state,
+    u32 op,
+    u32 w0,
+    u32 w1)
+{
+    ndsRendererExecuteTriangleCommand(stats, config, state, op, w0, w1);
+}
+
+static inline void ndsRendererFastEmitRawUntexturedVertex(
+    const NDSRendererTraversalState *state, u32 vertex_index)
+{
+    const NDSRendererInputVertex *vtx =
+        &state->input_vertices[vertex_index];
+
+    glColor(state->prepared_vertex_colors[vertex_index]);
+    glVertex3v16(
+        (v16)((s32)vtx->x * (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))),
+        (v16)((s32)vtx->y * (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))),
+        (v16)((s32)vtx->z * (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))));
+}
+
+static inline void ndsRendererFastEmitRawTexturedVertex(
+    const NDSRendererTraversalState *state, u32 vertex_index)
+{
+    const NDSRendererInputVertex *vtx =
+        &state->input_vertices[vertex_index];
+
+    glColor(state->prepared_vertex_colors[vertex_index]);
+    glTexCoord2t16(state->prepared_texcoord_s[vertex_index],
+                  state->prepared_texcoord_t[vertex_index]);
+    glVertex3v16(
+        (v16)((s32)vtx->x * (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))),
+        (v16)((s32)vtx->y * (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))),
+        (v16)((s32)vtx->z * (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))));
+}
+
+static inline void ndsRendererFastEmitRawCommand(
+    const NDSRendererTraversalState *state,
+    const u32 *indices,
+    u32 triangle_count,
+    u32 textured)
+{
+    u32 triangle_index;
+
+    if (textured != 0u)
+    {
+        for (triangle_index = 0u;
+             triangle_index < triangle_count;
+             triangle_index++)
+        {
+            const u32 *triangle = &indices[triangle_index * 3u];
+
+            ndsRendererFastEmitRawTexturedVertex(state, triangle[0]);
+            ndsRendererFastEmitRawTexturedVertex(state, triangle[1]);
+            ndsRendererFastEmitRawTexturedVertex(state, triangle[2]);
+        }
+    }
+    else
+    {
+        for (triangle_index = 0u;
+             triangle_index < triangle_count;
+             triangle_index++)
+        {
+            const u32 *triangle = &indices[triangle_index * 3u];
+
+            ndsRendererFastEmitRawUntexturedVertex(state, triangle[0]);
+            ndsRendererFastEmitRawUntexturedVertex(state, triangle[1]);
+            ndsRendererFastEmitRawUntexturedVertex(state, triangle[2]);
+        }
+    }
+}
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static void ndsRendererFastCommitRawSemanticTriangle(
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 packed,
+    const u32 *indices)
+{
+    NDSRendererSemanticEvent event;
+    u32 vertex_number;
+
+    memset(&event, 0, sizeof(event));
+    event.owner = (u32)sNdsRendererProfileOwner;
+    event.owner_occurrence =
+        sNdsRendererSemanticSourceProvenance.owner_occurrence;
+    event.list_ordinal =
+        sNdsRendererSemanticSourceProvenance.list_ordinal;
+    event.branch_path = state->semantic_branch_path;
+    event.command_index = state->semantic_command_index;
+    event.tri2_half = state->semantic_tri2_half;
+    event.outcome = NDS_RENDERER_SEMANTIC_EMITTED;
+    event.packed = packed;
+    event.submit_class =
+        NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX;
+    event.source_state_hash = ndsRendererSemanticSourceStateHash(stats);
+    event.raw_snapshot_id = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    event.context_flags = state->texture_prepare_vertex_flags;
+    event.source_zbuffered = TRUE;
+    event.zbuffered = TRUE;
+    event.raw_submit = TRUE;
+    event.poly_alpha = state->texture_prepare_poly_alpha;
+    event.poly_fmt = state->texture_prepare_poly_fmt;
+    event.alpha_key = ndsRendererHardwareAlphaStateKey(stats);
+    event.fog_key = ndsRendererHardwareFogStateKey(stats);
+    event.fog_color = stats->fog_color;
+    event.fog_min = stats->fog_min;
+    event.fog_max = stats->fog_max;
+    event.fog_status = stats->fog_status;
+    event.texture_name = state->texture_prepare_name;
+    event.texture_key_hash = state->texture_prepare_key_hash;
+    event.texture_params = state->texture_prepare_params;
+    event.matrix_loaded = sNdsRendererHardwareMatrixLoaded;
+    event.matrix_mode = sNdsRendererHardwareMatrixMode;
+    event.matrix_generation = sNdsRendererHardwareMatrixGeneration;
+    event.matrix_signature = sNdsRendererHardwareMatrixSignature;
+    event.no_z_depth_before = sNdsRendererHardwareProjectedDepth;
+    event.no_z_depth_after = sNdsRendererHardwareProjectedDepth;
+    event.no_z_background_before =
+        sNdsRendererHardwareProjectedBackground;
+    event.no_z_background_after =
+        sNdsRendererHardwareProjectedBackground;
+
+    ndsRendererHardwareRecordOracleTriangle(
+        state, indices[0], indices[1], indices[2]);
+    stats->hardware_oracle_triangle_count++;
+    for (vertex_number = 0u; vertex_number < 3u; vertex_number++)
+    {
+        u32 vertex_index = indices[vertex_number];
+        const NDSRendererInputVertex *vtx =
+            &state->input_vertices[vertex_index];
+        NDSRendererSemanticVertex *vertex = &event.vertex[vertex_number];
+
+        event.vertex_index[vertex_number] = vertex_index;
+        event.vertex_matrix_snapshot[vertex_number] =
+            state->vertex_matrix_snapshot[vertex_index];
+        event.vertex_clip_snapshot[vertex_number] =
+            state->vertex_clip_snapshot[vertex_index];
+        vertex->x = (v16)((s32)vtx->x *
+            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+        vertex->y = (v16)((s32)vtx->y *
+            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+        vertex->z = (v16)((s32)vtx->z *
+            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+        vertex->color = state->prepared_vertex_colors[vertex_index];
+        vertex->valid_flags =
+            NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID |
+            NDS_RENDERER_SEMANTIC_VERTEX_COLOR_VALID;
+        if (state->texture_prepare_enabled != 0u)
+        {
+            vertex->s = state->prepared_texcoord_s[vertex_index];
+            vertex->t = state->prepared_texcoord_t[vertex_index];
+            vertex->valid_flags |= NDS_RENDERER_SEMANTIC_VERTEX_ST_VALID;
+            ndsRendererProfileTextureCoord(vertex->s, vertex->t);
+            ndsRendererProfileTextureSample(vertex->s, vertex->t);
+        }
+        ndsRendererProfileVertexRange(
+            vtx, vertex->x, vertex->y, vertex->z);
+    }
+    ndsRendererSemanticCommitEvent(&event);
+}
+#endif
+
+static inline void ndsRendererFastAccountRawTriangles(
+    NDSRendererStats *stats, u32 triangle_count)
+{
+    sNdsRendererHardwareSubmitClassCounts[
+        NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX] += triangle_count;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    {
+        NDSRendererProfileOwnerHotLedger *owner =
+            ndsRendererProfileCurrentOwner();
+
+        if (owner != NULL)
+        {
+            owner->submit_class_count[
+                NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX] +=
+                    triangle_count;
+        }
+    }
+    gNdsRendererProfileRawCurrentCandidateCount += triangle_count;
+    gNdsRendererProfileHardwareBatchReuseCount += triangle_count;
+    gNdsRendererProfileTexturePrepareReuseCount += triangle_count;
+    gNdsRendererProfileHardwareTriangles += triangle_count;
+    gNdsRendererProfileHardwareVertices += triangle_count * 3u;
+    if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
+        (gNdsRendererProfileHardwareVertices > 6144u))
+    {
+        gNdsRendererProfileHardwareOverLimit = 1u;
+    }
+#else
+    sNdsRendererRuntimeFrameSummary.raw_current_candidate_count +=
+        triangle_count;
+    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+        triangle_count;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+        triangle_count;
+    sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
+    sNdsRendererRuntimeFrameSummary.hardware_vertices +=
+        triangle_count * 3u;
+#endif
+    stats->hardware_triangle_count += triangle_count;
+    stats->hardware_vertex_count += triangle_count * 3u;
+    stats->hardware_zbuffer_triangle_count += triangle_count;
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+    sNdsRendererBenchmarkTriangleCount += triangle_count;
+#endif
+    sNdsRendererHardwareSubmitted = TRUE;
+}
+
+static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
+    const Gfx **dl_io,
+    u32 *list_index_io,
+    u32 immutable_command_count,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 depth,
+    NDSRendererCommandCallback callback,
+    void *callback_user)
+{
+    const Gfx *dl = *dl_io;
+    u32 list_index = *list_index_io;
+    u32 fast_triangles = 0u;
+    u32 fallback_state = 0u;
+    u32 fallback_vertex = 0u;
+    u32 fallback_command = 0u;
+    u32 fast_command_count = 0u;
+
+    while (((list_index + 1u) < immutable_command_count) &&
+           ((list_index + 1u) < config->max_list_commands))
+    {
+        const Gfx *next_dl = dl + 1;
+        u32 w0 = next_dl->words.w0;
+        u32 w1 = next_dl->words.w1;
+        u32 op = w0 >> 24;
+        u32 packed[2];
+        u32 indices[6];
+        u32 required_mask = 0u;
+        u32 triangle_count;
+        s32 decode_ok;
+        s32 state_ok;
+        s32 vertex_ok;
+        NDSRendererCommand command;
+
+        if ((op != NDS_RENDERER_OP_TRI1) &&
+            (op != NDS_RENDERER_OP_TRI2))
+        {
+            break;
+        }
+        if (stats->command_count >= config->max_commands)
+        {
+            stats->blocker = NDS_RENDERER_BLOCKER_BUDGET;
+            break;
+        }
+
+        list_index++;
+        dl = next_dl;
+        stats->command_count++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        state->semantic_command_index = list_index;
+        state->semantic_tri2_half = 0u;
+        sNdsRendererProfileTrustedCommandCount++;
+        sNdsRendererProfileTriangleRunReuseCount++;
+#endif
+        if (callback != NULL)
+        {
+            memset(&command, 0, sizeof(command));
+            command.dl = dl;
+            command.w0 = w0;
+            command.w1 = w1;
+            command.op = op;
+            command.depth = depth;
+            command.list_index = list_index;
+            command.transformed_vertices = state->vertices;
+            command.transformed_vertex_valid_mask = state->vertex_valid_mask;
+            command.matrix_valid = state->matrix_valid;
+            if (callback(&command, callback_user) == FALSE)
+            {
+                ndsRendererRecordUnsupported(stats, op);
+                stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
+                break;
+            }
+        }
+        triangle_count = (op == NDS_RENDERER_OP_TRI1) ? 1u : 2u;
+        packed[0] = (op == NDS_RENDERER_OP_TRI1) ?
+            ndsGBIDecodeF3DEX2Tri1(w0) :
+            ndsGBIDecodeF3DEX2Tri2First(w0);
+        packed[1] = (triangle_count == 2u) ?
+            ndsGBIDecodeF3DEX2Tri2Second(w1) : 0u;
+        decode_ok = ndsRendererFastDecodeTriangle(
+            packed[0], &indices[0], &required_mask);
+        if ((decode_ok != FALSE) && (triangle_count == 2u))
+        {
+            decode_ok = ndsRendererFastDecodeTriangle(
+                packed[1], &indices[3], &required_mask);
+        }
+        state_ok = ndsRendererFastRawStateEligible(state);
+        vertex_ok = ((decode_ok != FALSE) &&
+                     ((state->input_vertex_valid_mask & required_mask) ==
+                      required_mask) &&
+                     ((state->raw_vertex_fit_mask & required_mask) ==
+                      required_mask) &&
+                     ((state->current_transform_vertex_mask & required_mask) ==
+                      required_mask)) ? TRUE : FALSE;
+
+        if ((state_ok != FALSE) && (vertex_ok != FALSE))
+        {
+            u32 textured = state->texture_prepare_enabled;
+            u32 triangle_index;
+
+            NDS_RENDERER_RECORD_PROOF_ONLY(
+                stats->triangle_command_count++;
+                stats->render_command_count++;
+            );
+            stats->triangle_count += triangle_count;
+            ndsRendererFastPrepareRawSlots(
+                stats, state, required_mask, textured);
+            for (triangle_index = 0u;
+                 triangle_index < triangle_count;
+                 triangle_index++)
+            {
+                const u32 *triangle = &indices[triangle_index * 3u];
+
+                if (sNdsRendererHardwareNoOracle == 0u)
+                {
+                    ndsRendererRecordTransformedTriangle(
+                        stats, state, packed[triangle_index]);
+                }
+                ndsRendererFastEmitRawCommand(
+                    state, triangle, 1u, textured);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                state->semantic_tri2_half = triangle_index;
+                ndsRendererFastCommitRawSemanticTriangle(
+                    stats, state, packed[triangle_index], triangle);
+#endif
+            }
+            fast_triangles += triangle_count;
+            fast_command_count++;
+        }
+        else
+        {
+            if (decode_ok == FALSE)
+            {
+                fallback_command++;
+            }
+            else if (state_ok == FALSE)
+            {
+                fallback_state++;
+            }
+            else
+            {
+                fallback_vertex++;
+            }
+            ndsRendererFastRawFallbackCommand(
+                stats, config, state, op, w0, w1);
+        }
+    }
+
+    if (fast_triangles != 0u)
+    {
+        ndsRendererFastAccountRawTriangles(stats, fast_triangles);
+        sNdsRendererFastRunCount++;
+        sNdsRendererFastTriangleCount += fast_triangles;
+        if ((u32)sNdsRendererRuntimeOwner <
+            (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
+        {
+            sNdsRendererFastOwnerTriangleCount[
+                (u32)sNdsRendererRuntimeOwner] += fast_triangles;
+        }
+    }
+    (void)fast_command_count;
+    sNdsRendererFastFallbackCount[0] += fallback_state;
+    sNdsRendererFastFallbackCount[1] += fallback_vertex;
+    sNdsRendererFastFallbackCount[2] += fallback_command;
+    *dl_io = dl;
+    *list_index_io = list_index;
+}
+#endif
+
 static void NDS_RENDERER_HOT_CODE
 ndsRendererScanList(const Gfx *dl,
                                 const NDSRendererConfig *config,
@@ -9528,12 +10042,23 @@ ndsRendererScanList(const Gfx *dl,
         {
             ndsRendererExecuteTriangleCommand(
                 stats, config, state, op, w0, w1);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_HW_TRIANGLES
             /* Immutable adjacent TRI commands have no intervening source
              * state transition. Profile 0/1 has no command callback, so
              * replay the remainder of the run without rebuilding a generic
              * command record or re-entering the full opcode switch. */
-            while ((callback == NULL) &&
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if ((callback == NULL) && (sNdsRendererFastOwnerEnabled != 0u))
+#else
+            if (sNdsRendererFastOwnerEnabled != 0u)
+#endif
+            {
+                ndsRendererExecuteFastRawCurrentRun(
+                    &dl, &i, immutable_command_count,
+                    config, stats, state, depth, callback, callback_user);
+            }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            else while ((callback == NULL) &&
                    ((i + 1u) < immutable_command_count) &&
                    ((i + 1u) < config->max_list_commands))
             {
@@ -9562,6 +10087,7 @@ ndsRendererScanList(const Gfx *dl,
                     stats, config, state, next_op, next_w0,
                     next_dl->words.w1);
             }
+#endif
 #endif
             break;
         }
@@ -9888,16 +10414,32 @@ u32 ndsRendererHardwareNoOracleEnabled(void)
 
 void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
 {
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 mode = gNdsRendererFastRunMode;
+
+    sNdsRendererRuntimeOwner =
+        ((u32)owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT) ? owner :
+        NDS_RENDERER_PROFILE_OWNER_NONE;
+    sNdsRendererFastOwnerEnabled =
+        ((mode == NDS_RENDERER_FAST_RUN_MARIO_ONLY) &&
+         (sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_MARIO)) ||
+        ((mode == NDS_RENDERER_FAST_RUN_FIGHTERS) &&
+         ((sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_MARIO) ||
+          (sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_FOX))) ||
+        ((mode == NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT) &&
+         ((u32)sNdsRendererRuntimeOwner <
+          (u32)NDS_RENDERER_PROFILE_OWNER_COUNT));
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererProfileOwner =
         ((u32)owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT) ? owner :
         NDS_RENDERER_PROFILE_OWNER_NONE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
     memset(&sNdsRendererSemanticSourceProvenance, 0,
            sizeof(sNdsRendererSemanticSourceProvenance));
-#endif
 #else
+#if !NDS_RENDERER_HW_TRIANGLES
     (void)owner;
+#endif
 #endif
 }
 
@@ -10106,6 +10648,14 @@ void ndsRendererProfileFrameBegin(void)
     sNdsRendererBenchmarkSuppressedTextureUploads = 0u;
     sNdsRendererBenchmarkSuppressedTextureUploadBytes = 0u;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+    sNdsRendererFastRunCount = 0u;
+    sNdsRendererFastTriangleCount = 0u;
+    memset(sNdsRendererFastOwnerTriangleCount, 0,
+           sizeof(sNdsRendererFastOwnerTriangleCount));
+    memset(sNdsRendererFastFallbackCount, 0,
+           sizeof(sNdsRendererFastFallbackCount));
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     memset(&sNdsRendererRuntimeFrameSummary, 0,
            sizeof(sNdsRendererRuntimeFrameSummary));
@@ -10146,6 +10696,16 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererBenchmarkSuppressedTextureUploads;
     gNdsRendererBenchmarkSuppressedTextureUploadBytes =
         sNdsRendererBenchmarkSuppressedTextureUploadBytes;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+    gNdsRendererFastRunCount = sNdsRendererFastRunCount;
+    gNdsRendererFastTriangleCount = sNdsRendererFastTriangleCount;
+    memcpy((void *)gNdsRendererFastOwnerTriangleCount,
+           sNdsRendererFastOwnerTriangleCount,
+           sizeof(gNdsRendererFastOwnerTriangleCount));
+    memcpy((void *)gNdsRendererFastFallbackCount,
+           sNdsRendererFastFallbackCount,
+           sizeof(gNdsRendererFastFallbackCount));
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileGXStatusPostVBlank =

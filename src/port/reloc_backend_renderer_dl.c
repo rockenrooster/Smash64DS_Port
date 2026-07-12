@@ -3678,13 +3678,13 @@ void ndsRendererAdapterBeginStageTraversal(void)
     ndsRendererInitStats(&sNdsRendererAdapterStagePersistentStats);
     ndsRendererInitVertexCache(&sNdsRendererAdapterStageVertexCache);
     sNdsRendererAdapterStagePersistentActive = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererAdapterStageOwnerOccurrence =
         sNdsRendererAdapterStageNextOccurrence++;
     sNdsRendererAdapterStageListOrdinal = 0u;
-#endif
     gNdsRendererProfileOwners[
         NDS_RENDERER_PROFILE_OWNER_STAGE].entry_state_hash =
         ndsRendererOwnerHashU32(
@@ -3745,6 +3745,8 @@ void ndsRendererAdapterEndStageTraversal(void)
             gNdsRendererProfileOwners[
                 NDS_RENDERER_PROFILE_OWNER_STAGE].exit_global_hash,
             ndsRendererProfileGlobalStateHash());
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
 #endif
     sNdsRendererAdapterStagePersistentActive = FALSE;
@@ -7876,7 +7878,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 root_x_before;
     u32 root_x_after;
     u32 i;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#if NDS_RENDERER_HW_TRIANGLES
     NDSRendererProfileOwner owner_id;
 #endif
 
@@ -7960,10 +7962,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
         ndsFighterDisplayContractSeedMaterialLights(&persistent_stats);
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#if NDS_RENDERER_HW_TRIANGLES
     owner_id = (slot == 0u) ? NDS_RENDERER_PROFILE_OWNER_MARIO :
                               NDS_RENDERER_PROFILE_OWNER_FOX;
     ndsRendererProfileSetOwner(owner_id);
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileOwners[(u32)owner_id].entry_state_hash =
         ndsRendererOwnerHashRuntimeState(&persistent_stats);
     gNdsRendererProfileOwners[(u32)owner_id].entry_vertex_cache_hash =
@@ -8184,6 +8188,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         ndsRendererOwnerHashResolver(&persistent_state);
     gNdsRendererProfileOwners[(u32)owner_id].exit_global_hash =
         ndsRendererProfileGlobalStateHash();
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
 #endif
 

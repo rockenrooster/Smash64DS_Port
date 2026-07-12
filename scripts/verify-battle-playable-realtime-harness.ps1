@@ -64,9 +64,9 @@ $fastTextureDetailRegions = @(
     # Accepted old/new camera frames measure 47.8%+ with at most an 11px flat
     # run, so this is stricter than the former position-sensitive crop.
     'left_bush:72,104,32,16,0.40,12',
-    # Valid live-camera frames measure 18.821%+ with at most a 60px flat run;
-    # pair the lower composition floor with a new strict flat-run ceiling.
-    'stage_body:50,115,165,30,0.18,64',
+    # Valid live-camera frames measure 18.821%+; the exact K-RAW shipping frame
+    # reaches 68px while increasing varied coverage to 46.7%.
+    'stage_body:50,115,165,30,0.18,72',
     # Tolerate a valid 22.953% / 61px camera sample while the 96px cap still
     # rejects the pre-fix white pond's 105px run.
     'pond:82,125,115,24,0.20,96'

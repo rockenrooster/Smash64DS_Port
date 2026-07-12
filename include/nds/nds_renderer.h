@@ -18,6 +18,11 @@
 #define NDS_RENDERER_BENCHMARK_FROZEN_TRANSPORT 3
 #define NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD 4
 
+#define NDS_RENDERER_FAST_RUN_GENERIC 0u
+#define NDS_RENDERER_FAST_RUN_MARIO_ONLY 1u
+#define NDS_RENDERER_FAST_RUN_FIGHTERS 2u
+#define NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT 3u
+
 #ifndef NDS_RENDERER_BENCHMARK_MODE
 #define NDS_RENDERER_BENCHMARK_MODE NDS_RENDERER_BENCHMARK_NONE
 #endif
@@ -489,6 +494,12 @@ void ndsRendererProfileRecordMaterialOperations(u32 count);
 u32 ndsRendererProfileGlobalStateHash(void);
 void ndsRendererProfileFrameBegin(void);
 void ndsRendererProfileFramePublish(void);
+extern volatile u32 gNdsRendererFastRunMode;
+extern volatile u32 gNdsRendererFastRunCount;
+extern volatile u32 gNdsRendererFastTriangleCount;
+extern volatile u32 gNdsRendererFastOwnerTriangleCount[
+    NDS_RENDERER_PROFILE_OWNER_COUNT];
+extern volatile u32 gNdsRendererFastFallbackCount[3];
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner);
 #endif

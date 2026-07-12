@@ -100,15 +100,16 @@ exact invalidation; profile 2 omits the 2,096-byte table and runs the independen
 exact shade calculation. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1
 index exact texture keys through 128 byte slots and compact fingerprints; full
 236-byte equality remains the oracle and deletion repairs clusters.
-Profile-0 BSS is `1,857,736`; canonical/profile-1/profile-2 ITCM is `20,916/21,376/18,196`, all below 32 KiB. Submission stays `648` raw source-Z, `44`
+Profile-0 BSS is `1,857,648`; canonical/profile-1/profile-2 ITCM is `20,120/20,120/29,788`, all below 32 KiB. Submission stays `648` raw source-Z, `44`
 mixed-matrix, `126` no-Z, `10` range, `1,242` logical divide demand, and
 `121/707/121` batches. Signed pre-clamping plus DS `div64` removes the shipping software 64-bit helper. Profile 1 makes `650` cache-miss calls; profile 2 checks
 `1,404` evaluations against C with zero mismatch. Final hash lookup is
 frame-dependent but conserves active/table/miss results with bounded probes.
-Profile-1 median/P95 is draw `2,423,168/2,473,984`, vertex `459,168/460,736`, setup `748,576/799,104`, scan `652,352/653,184`.
-Repeated shipping O2 is `2,044,640/2,046,080`; pacing is `12.3fps`.
-Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png`;
-shipped SHA-256: `5E502A39FB46000176E2EA3BA54511EEB39AE9068DC666104991BF9AEFE51872`.
+The shared all-owner K-RAW kernel executes `45/540` immutable runs/triangles
+(`60/246/234` stage/Mario/Fox) and falls back `47/7/0`. Same-ROM 128-frame
+profile-1 draw improves `2,067,296/2,407,872 -> 1,858,624/2,227,648`.
+The 32-frame dual semantic/owner-state comparison is exact; oracle remains `2484/0/0`. Canonical pacing is about `13.0fps`; shipped SHA-256 is
+`19D8C30B18F5973EF7D75F26EF9033AB5FE7C453A6D5EFD88EFBE6848EF3CCFD`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
@@ -131,11 +132,10 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `12.3fps`, far below the 60 FPS P1 condition.
-The O2-equivalent coarse profiler conserves the whole loop and the 128-frame
-profile-2 trace is exact. A 5,712-byte/91-op prepared Dream Land layer-0 owner
-regressed draw by 12,640 ticks and was reverted; see `docs/PERF_LEDGER.md`.
-The next compiler cut must amortize across a materially larger frame slice.
+The canonical frame is still only about `13.0fps`, far below the 60 FPS P1 condition.
+K-RAW saves 208,672 median draw ticks with exact trace/state. The measured next
+target is animated texture conversion/refresh: warm-no-upload saved 315,584
+ticks and the active-scanout VRAM remap is also the leading flicker hypothesis.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification

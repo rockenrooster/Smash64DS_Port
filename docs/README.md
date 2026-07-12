@@ -14,6 +14,7 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | `FT_ANIM_STATUS_SCOUT.md` | Maintained | Source-backed dependency scout for fighter animation/status graduation. |
 | `FTSTRUCT_PARITY.md` | Maintained | Field-by-field FTStruct parity report against BattleShip source layout. |
 | `GOAL_DEBUGGING.md` | Maintained | Debugging and verifier workflow notes. |
+| `goal-objective.md` | Current truth | User-owned delivery objective and acceptance criteria. |
 | `HANDOFF.md` | Current truth | Detailed current handoff and latest proof evidence. |
 | `HARNESSES.md` | Maintained | Harness naming, registry, and generated-index policy. |
 | `HW_RENDERER_VISIBILITY_FINDINGS.md` | Maintained | Canonical HW realtime visibility measurements and current blocker. |
@@ -21,7 +22,9 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | `MEMORY_OVERLAY_PLAN.md` | Maintained | Source-backed memory budget and reloc eviction plan. |
 | `MP_PASS_THROUGH_SCOUT.md` | Maintained | Source-order scout for the next pass-through floor/platform boundary. |
 | `NEXT_BOUNDARY_QUEUE.md` | Current truth | Compact next-boundary candidate queue. |
+| `OPTIMIZATION_ROADMAP.md` | Maintained | Active renderer measurement and optimization sequence. |
 | `PERF_LEDGER.md` | Maintained | Reproducible renderer benchmark identities, measurements, gates, and decisions. |
+| `PERF_LEDGER_TEMPLATE_20260712.md` | Reference | Original performance-ledger template and accepted baseline. |
 | `PORTING.md` | Append-only | Chronological porting history. Do not use as primary planning. |
 | `ROADMAP.md` | Maintained | Milestone-level project roadmap. |
 | `SPECIALS_WEAPONS_SCOUT.md` | Maintained | Source-backed scout for Mario/Fox specials and weapon-manager runtime work. |

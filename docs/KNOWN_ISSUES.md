@@ -1348,6 +1348,15 @@ isolating the compatibility type that causes the warning.
   can still affect captures in remote or locked sessions. The host OpenGL
   renderer can produce a white frame for a known-good ROM on this setup, so
   automated pixel gates pin software 3D and normalize the scaled top screen.
+- An intermittent single presented frame can retain coherent BG2 and fighters
+  while most textured Dream Land geometry disappears. The leading diagnosis is
+  the live TEXEL0/TEXEL1 water refresh temporarily remapping texture VRAM A/B
+  to LCD during active scanout; no static-stage GX replay exists in the current
+  tree. Confirm with a long canonical versus `WARM_NO_UPLOAD` ROI capture and
+  VCOUNT/bank-remap ring before changing code. If confirmed, queue only the
+  current 4 KiB + 32 KiB payloads and commit them in a measured VBlank window;
+  do not cache fully expanded water phases. A bad frame with fewer than 202
+  stage triangles instead points to the camera/GObj/DObj selection path.
 - The current ledge action proofs clear `is_cliff_hold` and
   `is_jostle_ignore` through the bounded `ftMainSetStatus` seam, and the
   CliffClimb finish proof now verifies the broader current common-reset mask

@@ -20192,3 +20192,29 @@ remains skipped for the requested fast iteration cadence.
 - Revert `e446ddab4` removes the slower prepared slice. The decision-grade
   profiler/trace remains. Full identities and the experiment report are in
   `docs/PERF_LEDGER.md`; Full Regression remains intentionally skipped.
+
+## 2026-07-12 - Promoted the shared raw-current run kernel
+
+- Added one 2,916-byte main-RAM K-RAW kernel shared by stage, Mario, and Fox.
+  It consumes the remainder of eligible immutable adjacent TRI runs after the
+  generic first triangle binds exact live matrix/material/texture/batch state.
+  It executes `45/540` runs/triangles per frame (`60/246/234` by owner), with
+  bounded state/vertex/command fallbacks `47/7/0`; projected classes remain on
+  the exact generic path.
+- Same-ROM 128-frame profile-1 draw improved
+  `2,067,296/2,407,872 -> 1,858,624/2,227,648`. Stage/Mario/Fox median walls
+  improved `17,568/98,496/93,248` ticks, conservation stayed zero, and the
+  32-frame A/B/A generic controls reproduced within 32 ticks.
+- The 32-frame profile-2 comparison matched both semantic hashes, provenance,
+  all owner entry/exit runtime and 32-slot cache hashes, resolver/signatures,
+  geometry, oracle, and upload sequence with zero mismatches. Exact `828`,
+  `648/44/126/10`, `121/707/121`, `98/730`, and GX RAM `715/2167` remain.
+- Profile 0 now selects all owners by default; profiles 1/2 retain the same-ROM
+  selector for measurement. Canonical/shipped parity is 11,673,600 bytes at
+  SHA-256 `19D8C30B18F5973EF7D75F26EF9033AB5FE7C453A6D5EFD88EFBE6848EF3CCFD`.
+  DevFast, profile-2 comparison, GBI fixtures, ITCM, docs, architecture, and
+  registry checks pass; Full Regression remains intentionally skipped.
+- The next measured target is animated texture conversion/refresh: the retained
+  warm-no-upload control saves 315,584 ticks. Its active-scanout VRAM bank remap
+  is also the leading diagnosis for the intermittent stage-only flash; confirm
+  before moving the two current-frame payload commits into measured VBlank.

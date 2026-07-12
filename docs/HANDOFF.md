@@ -96,7 +96,7 @@ X/Y, and clip Z. Texture preparation survives exact-key mutations; profiles 0/1 
 Prepare/reuse is `98/730`;
 batching stays `121/707/121`, and logical divide demand stays `1,242`.
 Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os to preserve
-their `227392`-byte reserve. Six ARM/O3 paths occupy `20,916/21,376/18,196`
+their `227392`-byte reserve. Six ARM/O3 paths occupy `20,120/20,120/29,788`
 ITCM bytes in canonical/profile 1/profile 2. Exact signed
 pre-clamping and libnds `div64` remove the shipping software 64-bit helper;
 profile 1 records `650` cached calls, while profile 2 compares `1,404` results
@@ -104,14 +104,13 @@ with C. Boundary modes retain exact nonzero clamp counts. Divider evidence adds
 no BSS; profile 2 also omits the production 2,096-byte shade table and runs the
 independent exact shade path. Profiles 0/1 retain light/table and exact 128-slot
 texture-key caches; compact fingerprints still require full 236-byte equality.
-Profile-0 BSS is `1,857,736`; prepared context persists by `98/730` epoch.
-The O2-equivalent profile-1 loop conserves at zero error; clean draw is
-`2,050,592/2,416,384`. Profile 2 records 828 exact events across 128 frames; a
-5,712-byte/91-op layer-0 trial regressed draw 12,640 ticks and is reverted.
-Repeated shipping O2 is `2,044,640/2,046,080` at `12.3fps`; profile 2 retains
-`2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png`;
-shipped SHA-256: `5E502A39FB46000176E2EA3BA54511EEB39AE9068DC666104991BF9AEFE51872`.
+Profile-0 BSS is `1,857,648`; prepared context persists by `98/730` epoch.
+The 2,916-byte main-RAM K-RAW kernel accelerates `45/540` runs/triangles per
+frame with `47/7/0` bounded fallbacks. Same-ROM 128-frame profile-1 draw moves
+`2,067,296/2,407,872 -> 1,858,624/2,227,648`; stage/Mario/Fox save
+`17,568/98,496/93,248` median ticks. The 32-frame profile-2 dual trace, owner
+state/cache, oracle, geometry, and upload sequence compare exactly. Canonical is about `13.0fps`; shipped SHA-256 is
+`19D8C30B18F5973EF7D75F26EF9033AB5FE7C453A6D5EFD88EFBE6848EF3CCFD`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
 separate, original timing stays live, and a post-step corrects packed RGBA.
 Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the
@@ -120,8 +119,9 @@ Masked-clamp, six CI4 stars, and DXT tail stride remain fixed. Debt: Whispy face
 other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 ## Recommended Next Work
-1. The canonical ROM is still only `12.3fps`, not P1-complete. Do not retry the
-   54-triangle layer-0 program; amortize the next compiler cut across a larger slice.
+1. The canonical ROM is still only about `13.0fps`, not P1-complete. Optimize the
+   315,584-tick animated texture conversion/refresh path next and move its VRAM
+   commit into measured VBlank; this also targets the intermittent stage flicker.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
    Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
 3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary
