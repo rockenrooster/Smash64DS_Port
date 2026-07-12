@@ -19511,3 +19511,50 @@ Source-corrected verifier expectations: none; all reuse is scoped to unchanged
 source state within one command run or presented frame. Coverage-reduced
 verifier expectations: none; generic conversion and fixed-capacity fallbacks
 remain live, while forensic oracle/device/depth coverage stays authoritative.
+
+## 2026-07-11 - Immutable TRI replay and exact submission hot paths
+
+- Reviewed the new optimization package, the attached proof-workflow proposal,
+  BattleShip display ownership, and the bundled sm64-nds backend. The accepted
+  boundary remains exact reuse under unchanged source state; no gameplay TU,
+  source asset, composed frame, fighter result, or camera output is cached.
+- Reloc-backed renderer adapters now return the remaining immutable bytes in a
+  containing loaded file. The scanner validates the list before classification,
+  repeats classification for branches, and retains ordinary validation for
+  taskman/dynamic lists. Profiles 0/1 replay adjacent TRI1/TRI2 commands only
+  inside that span. Profile 1 proves `80/1736/344/330` immutable lists, trusted
+  commands, fallback validations, and replayed TRI commands.
+- One unchanged TRI run now caches exact material/depth decisions and derived
+  RGB15 color, scaled S/T, projected X/Y, and source-clip Z by RSP slot. No-Z
+  synthetic Z remains per triangle; every non-TRI command clears all masks.
+  Profile 2 keeps the generic interpreter and independent eager oracle.
+- Animated CI4 conversion content-keys its existing 256-entry table by both
+  converted 16-color palettes plus blend fraction. Aligned, fully covered
+  wallpaper rows pack two exact RGB5A1 samples into one VRAM word; clipped rows
+  retain the halfword fallback. Wallpaper draw cost falls about `774K -> 380K`.
+- Canonical realtime keeps O2, while scripted and timer/Results diagnostics use
+  Os. P1Gate caught the first all-mode O2 policy reducing forensic scene
+  headroom to `96320`; the split restores `227392`. Four measured renderer loops
+  and the wallpaper writer use targeted O3 without fast-math or whole-program O3.
+- A dynamic GX FIFO/`glCallList` arena was measured and fully reverted: 121
+  small source runs raised vertex submission from about `0.96M` to `1.28M`
+  ticks. Direct FIFO submission remains authoritative.
+- Sixteen warm profile-0 frames now report present median/p95
+  `5,889,312/6,024,768`, versus `7,697,632/7,958,912` at the prior checkpoint;
+  pacing rises `4.2 -> 5.6fps`. Profile 1 is `6,021,408/6,318,400`, with DL
+  `4,288,352/4,290,240`, texture `1,196,416/1,196,992`, and sampled vertex
+  submission about `764K`. This remains far below the 60 FPS P1 requirement.
+- The forensic run retains oracle `2484/0/0`, all 828 triangles, source depth,
+  and device checks. DevFast visibility shows both equal-size melonDS screens
+  with accepted pond, foreground fences, and flowers. Component builds plus
+  integrated P1Gate `-NoBuild` pass all four legs in `149.5s`; Boundary passes
+  in `288.5s`. Full Regression remains intentionally skipped.
+- Canonical/shipped parity is 11,660,288 bytes, SHA-256
+  `998628BE3B2110AD68558E85240C0D6885FB5ABF3CC38AE907B5C5A3EBF78B21`.
+  Accepted capture:
+  `artifacts/visibility/2026-07-11_canonical_fast_233415-5255026-p18944.png`.
+
+Source-corrected verifier expectations: none; all shortcuts are bounded by
+source-command or immutable-file ownership. Coverage-reduced verifier
+expectations: none; dynamic validation, generic conversion, profile-2 oracle,
+memory, P1Gate, and Boundary fallbacks remain live.

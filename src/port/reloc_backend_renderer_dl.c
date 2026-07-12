@@ -1317,6 +1317,24 @@ static s32 ndsFighterDLScanRangeInTaskmanArena(const void *ptr, size_t bytes)
     return (bytes <= (arena_size - (size_t)(addr - base))) ? TRUE : FALSE;
 }
 
+static size_t ndsRendererAdapterImmutableCommandSpan(const Gfx *dl,
+                                                      void *user)
+{
+    NDSRelocLoadedFile *loaded;
+    uintptr_t base;
+    uintptr_t addr;
+
+    (void)user;
+    loaded = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+    if (loaded == NULL)
+    {
+        return 0u;
+    }
+    base = (uintptr_t)loaded->data;
+    addr = (uintptr_t)dl;
+    return loaded->data_size - (size_t)(addr - base);
+}
+
 static s32 ndsFighterDLScanValidateRange(const Gfx *dl, size_t bytes,
                                          void *user)
 {
@@ -1593,6 +1611,7 @@ static void ndsFighterMarioFoxScanDLForSlot(u32 slot, FTStruct *fp)
     config.initial_geometry_mode = 0u;
     config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsFighterDLScanValidateRange;
+    config.immutable_command_span = ndsRendererAdapterImmutableCommandSpan;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
     config.resolve_data = ndsFighterDLScanResolveDataPointer;
     config.user = &context;
@@ -2159,6 +2178,7 @@ static void ndsFighterMarioFoxExecuteDLForSlot(u32 slot, FTStruct *fp)
     config.initial_geometry_mode = 0u;
     config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsFighterDLExecValidateRange;
+    config.immutable_command_span = ndsRendererAdapterImmutableCommandSpan;
     config.resolve_branch = ndsFighterDLScanResolveBranch;
     config.resolve_data = ndsFighterDLExecResolveRendererData;
     config.user = &state;
@@ -3792,6 +3812,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     config.initial_geometry_mode = initial_geometry_mode;
     config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsRendererAdapterStageValidateRange;
+    config.immutable_command_span = ndsRendererAdapterImmutableCommandSpan;
     config.resolve_branch = ndsFighterDLDrawResolveBranch;
     config.resolve_data = ndsFighterDLDrawResolveRendererData;
     config.user = &state;
@@ -4542,6 +4563,7 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     config.initial_geometry_mode = 0u;
     config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsFighterDLDrawValidateRange;
+    config.immutable_command_span = ndsRendererAdapterImmutableCommandSpan;
     config.resolve_branch = ndsFighterDLDrawResolveBranch;
     config.resolve_data = ndsFighterDLDrawResolveRendererData;
     config.user = &state;
@@ -5427,6 +5449,8 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         config.texture_data_layout =
             NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
         config.validate_range = ndsFighterDLMultiDrawValidateRange;
+        config.immutable_command_span =
+            ndsRendererAdapterImmutableCommandSpan;
         config.resolve_branch = ndsFighterDLMultiDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;
         config.user = &states[i];
@@ -7067,6 +7091,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.texture_data_layout =
             NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
         config.validate_range = ndsFighterDLAllDrawValidateRange;
+        config.immutable_command_span =
+            ndsRendererAdapterImmutableCommandSpan;
         config.resolve_branch = ndsFighterDLAllDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;
         config.user = &states[i];

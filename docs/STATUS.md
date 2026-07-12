@@ -3,12 +3,10 @@ This is the short current-truth document. Use `docs/DIAGNOSTIC_REFERENCE.md`
 for full marker strings; append history in `docs/PORTING.md`.
 ## Direction
 Target remains a full 1:1 playable Nintendo DS source port of BattleShip Smash
-64. Gameplay work now moves by runtime-first subsystem slices aimed at
-scene-level capability: import coherent original TU groups, prove with the
-continuous natural-runtime verifier plus captures, then graduate live.
+64. Import coherent original TU groups, prove them in continuous natural runtime
+plus captures, then graduate them live.
 
-Keep `decomp/` read-only. Do not hand-author gameplay when BattleShip source can
-be ported.
+Keep `decomp/` read-only; do not hand-author gameplay when source can be ported.
 ## Current Boundary
 The registry decides the active Boundary/Latest set:
 
@@ -19,12 +17,10 @@ The registry decides the active Boundary/Latest set:
 Current Boundary/Latest entries are `battle_mariofox_stage_mplivehit_status_loop`,
 `menu_chain_mariofox_stage_mplivehit_status_loop`, and `battle_playable`.
 
-Modes `161/162` remain the bounded natural-combat pair. They keep the
-Pupupu/Dream Land Mario/Fox battle root stable, create Mario/Fox through the
-original manager, and drive Wait -> Walk -> Dash -> Run -> RunBrake -> Turn,
-Fox Attack11, live hitbox search, Mario damage/recover, and GuardOn/Guard/
-GuardOff through imported `ftanim.c`/`ftkey.c`, original status descriptors,
-`ftmain.c`, and `gmcollision.c`.
+Modes `161/162` remain the bounded natural-combat pair. They use the original
+manager and drive movement, Fox Attack11, live hitbox search, Mario damage/
+recover, and guard through imported animation/key, status, `ftmain.c`, and
+`gmcollision.c`.
 
 Mode `163` has three verifier-covered configurations. The fast harness keeps
 its scripted two-human stock chain; canonical realtime/live-input presents the
@@ -35,18 +31,11 @@ natural combat/KO/rebirth, normal moves, specials, audio, and a DS 3D frame.
 
 ## Latest Proof
 
-The original fighter runtime is live: `gmcollision.c`, `ftmain.c`,
-`ftmanager.c`, `ftcomputer.c`, animation/key, common/Mario/Fox statuses, normal
-moves, weapons, effects, and specials run through imported BattleShip code.
-The lifecycle gate records source CPU process/target frames, A/B/Z inputs,
-live hitboxes, guard, and positive Mario damage. Original
-`ifcommon.c:2472-2537,3144-3152,3342-3345` consumes all `3600` one-minute test
-ticks and requests `LoadScene`; imported
-`scvsbattle.c:513-560` returns through taskman cleanup and changes scene
-`VSBattle(22) -> VSResults(24)`. Imported `mnvsresults.c`, `lbtransition.c`,
-and the source subsystem fighter/data support now run Results by default. The
-gate reports tick `120+`, all eight files, two fighters, 12 SObjs, and source
-Win/Lose statuses installed through original `ftMainSetStatus`.
+The imported fighter runtime owns collision, main/manager/CPU, animation/key,
+statuses, normal moves, weapons, effects, and specials. The lifecycle gate
+records source CPU/input/combat, consumes all `3600` test ticks, returns through
+taskman cleanup, and changes `VSBattle(22) -> VSResults(24)`. Imported Results
+loads all eight files, two fighters, 12 SObjs, and source Win/Lose statuses.
 
 The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
 and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
@@ -64,7 +53,7 @@ single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
 all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
 Fighter playback seeds its initial light pair from the first selected source
 `MObjSub` (`0xffffff00/0x4c4c4c00`); overrides carry and fallback use is zero.
-Canonical proof reports `gxram=742/2251`, geometry `0x222005`, source cycle/
+Latest canonical reports `gxram=733/2219`, geometry `0x222005`, source cycle/
 render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
 Source-depth X/Y/Z share one composed clip vertex. Projected no-Z depth has
 source-backed background/foreground phases around the first source-Z triangle,
@@ -84,25 +73,33 @@ still owns its position/scale every tick. HW now composes the proven opaque
 source directly into final 256x192 BG2 with the exact old draw-then-nearest map.
 Its key covers provenance/epoch, live transform, combine/mapping, and BG2
 ownership; no composed gameplay frame is cached. Unsupported layouts retain
-the generic path. Canonical proves `direct67/skip0/change67`, exactly
-`67*49152` pixels, and zero staging, BG2 clear/copy, or BG3 full-clear traffic.
-The earlier exact optimizations remain. Adjacent TRI runs prepare/reuse dynamic
-texture state `103/725`; any non-TRI command invalidates it. Frame-local camera
-and DObj-world caches reset at every present and retain fixed-capacity fallback.
-Hybrid submission sends `648` ordinary source-Z triangles through corrected GX.
-Each persistent 32-slot RSP cache owns a bounded 64-entry composed-matrix table
-plus per-slot matrix/clip IDs. Profile 0 turns `821` source loads into `282`
-lazy transforms and `258` hits; snapshot create/reuse/overflow is `67/7/0`.
-The `44` stale-slot triangles are genuinely mixed, so raw-snapshot stays zero;
-`126` no-Z and `10` range exceptions also stay projected. Divisions/batches/
-loads remain `1,242`, `121/707/121`, and `53`. Profile 2 retains oracle
-`2484/0/0`, device `PosTest 32/0/e2/w0/c0/mw1/drop0`, and all depth; adapter
-cache hit/miss/overflow is camera `73/1/0`, DObj `64/107/0`.
-Warm profile-0 present median/p95 falls `13,301,312/13,595,328 ->
-7,697,632/7,958,912` (`-42.1%/-41.5%`), raising pacing `2.5 -> 4.2fps`.
-Profile-1 DL is `5,396,128/5,396,736`, texture `1,501,952/1,502,208`, and
-conversion about `1,328,576` ticks. Capture: `artifacts/visibility/2026-07-11_canonical_fast_221338-4022982-p19312.png`. SHA-256:
-`64F52CE565B8D5C536440CBF0143D897C39B7BB7DDD19EAAD187553A2C84BE5E`.
+the generic path. Canonical proves one `49152`-pixel write per changed frame and
+zero staging, BG2 clear/copy, or BG3 full-clear traffic.
+Reloc-backed source DLs now expose one immutable byte span; dynamic task-heap
+lists keep per-command validation. Profile 1 proves `80` immutable lists,
+`1,736` trusted commands, `344` fallback validations, and `330` adjacent TRI
+commands replayed through the bounded run path. Each unchanged TRI run also
+reuses exact material/depth state, RGB15 colors, scaled S/T, projected X/Y, and
+source clip Z; every non-TRI opcode invalidates all derived values. The animated
+CI4 palette-pair LUT is content-keyed, while profile 2 retains the independent
+generic/oracle route. No composed frame, fighter, or source behavior is cached.
+
+Canonical mode 163 alone keeps `-O2`; the larger scripted/lifecycle diagnostics
+stay `-Os` and retain `227392` bytes of headroom. Four measured renderer loops
+and the wallpaper writer use targeted O3. Aligned opaque 256-wide wallpaper rows
+pack two exact RGB5A1 samples per VRAM word, reducing its draw from about `774K`
+to `380K` ticks. Frame-local camera/DObj caches and hybrid submission remain:
+`648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range, `1,242`
+divisions, and `121/707/121` batches. A GX display-list arena experiment was
+reverted after worsening vertex submission.
+
+Warm profile-0 present median/p95 is now `5,889,312/6,024,768`, down from
+`7,697,632/7,958,912`; pacing rises `4.2 -> 5.6fps`. Profile 1 is
+`6,021,408/6,318,400`, with DL `4,288,352/4,290,240`, texture
+`1,196,416/1,196,992`, and sampled vertex submission about `764K` ticks.
+Forensic oracle remains `2484/0/0`. Capture:
+`artifacts/visibility/2026-07-11_canonical_fast_233415-5255026-p18944.png`;
+shipped SHA-256: `998628BE3B2110AD68558E85240C0D6885FB5ABF3CC38AE907B5C5A3EBF78B21`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
@@ -112,12 +109,9 @@ VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
 
 ## Current Notes
 
-The taskman allocator now tries `0x140000` and `0x130000` before its legacy
-1 MiB fallback, preventing source-display builds from overflowing after a
-failed `0x150000` allocation while preserving the 128 KiB reserve.
-Pupupu map-object kinds `0..3` now decode as `(0,6)`, `(-1397,906)`,
-`(1,1545)`, and `(1421,909)` with no duplicates or unaligned reads. Mario and
-Fox enter Wait grounded on lines `3/2` at X `0/-1397`.
+The taskman allocator's `0x140000`/`0x130000` fallbacks preserve the reserve.
+Pupupu map objects decode without duplicates/unaligned reads; original-manager
+Mario/Fox enter Wait on lines `3/2` at X `0/-1397`.
 
 Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
 live pads before each update, and has hard GX RAM, display-contract, profile-0,
@@ -133,12 +127,16 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-Fresh profile 1 is `present=13,301,536/13,563,968` median/p95; DL traversal at
-`9,627,840/9,632,832` remains hot. Next: validated immutable-topology packet replay; source RGBA4 HUD is separate debt.
+The canonical frame is still only `5.6fps`, far below the 60 FPS P1 condition.
+Profile-1 DL minus texture remains about `3.09M` ticks; reduce interpreter/state
+work without reviving the regressive GX display-list arena. Source RGBA4 HUD,
+Whispy face strips, and Mario facing/light A/B remain separate debt.
 
 ## Verification
 
-Fresh P1Gate/Boundary pass in `281.4s/167.0s`: opening-to-Title, canonical battle, mode-163 combat, and one-minute Results—not the five-minute soak. Full Regression stays skipped.
+Fresh component builds plus integrated P1Gate `-NoBuild` passed in `149.5s`;
+Boundary passed in `288.5s`. This is not the five-minute soak. Full Regression
+stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

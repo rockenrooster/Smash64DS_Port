@@ -437,15 +437,16 @@ NDS_DEV_SCENE_HARNESS_ID := 162
 CFLAGS += -Os
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable)
 NDS_DEV_SCENE_HARNESS_ID := 163
-# Mode 163 links the battle_playable scene-level stock/KO proof.
+# The scripted profile-2 diagnostic ROM is substantially larger than the
+# shipped renderer; keep its scene-reserve coverage size-optimized.
 CFLAGS += -Os
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable_realtime)
 NDS_DEV_SCENE_HARNESS_ID := 163
-# Mode 163, built with realtime verifier presentation smoke defaults.
-CFLAGS += -Os
+# The canonical P1 runtime/performance anchor needs latency optimization.
+CFLAGS += -O2
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable_match_lifecycle)
 NDS_DEV_SCENE_HARNESS_ID := 163
-# Mode 163, built for the original five-minute timer/results lifecycle.
+# The fast-logic timer/Results diagnostic is a reserve proof, not a benchmark.
 CFLAGS += -Os
 else
 $(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use a harness name from scripts/lib/harness-registry.ps1, including battle_mariofox_stage_mplivehit_status_loop or menu_chain_mariofox_stage_mplivehit_status_loop)

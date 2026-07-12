@@ -82,6 +82,14 @@ For a warm 8-frame level-0/1/2 median and p95 comparison, add
 -RendererProfileLevel 1`. Ordinary DevFast does not run the forensic build, so
 the visible one-ROM edit loop remains fast.
 
+The realtime/canonical mode-163 build uses O2 for latency. The larger scripted
+and timer/Results diagnostic builds use Os because O2 reduced their measured
+scene headroom below the reserve gate. Profile 1 additionally requires
+`RENDER_TOPOLOGY`, `RENDER_COST`, and `RENDER_CI4LUT`: immutable reloc spans
+must coexist with dynamic-list validation, and only profiles 0/1 may use the
+adjacent-TRI replay/derived-value fast paths. Profile 2 remains the independent
+generic interpreter and oracle.
+
 The fast capture tolerates camera-dependent left-shrub and pond variation at
 40% and 30%, versus the checkpoint path's 50% and 35%; their 16px and 60px
 flat-run caps remain unchanged. Fixed fighter-color crops are not gates because
@@ -96,6 +104,11 @@ and legacy harnesses remain diagnostic. Passing it does not prove P1 completion
 or replace the required canonical five-minute milestone soak. Unless `-NoBuild`
 is passed, its wrapper incrementally prepares the normal opening ROM first;
 explicit `-Build` retains the existing forced-normal-rebuild behavior.
+
+Use DevFast for ordinary visual/renderer iteration, P1Gate for integrated
+scene checkpoints, and Boundary once before handoff. Keep the older registry
+fleet available for failure localization; do not run Full Regression merely to
+repeat assertions already owned by those integrated gates.
 
 After source changes that can affect normal boot/runtime, run:
 

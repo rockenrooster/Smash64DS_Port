@@ -713,7 +713,8 @@ static void ndsSObjWallpaperStoreFinalKey(
     final_cache->valid = TRUE;
 }
 
-static s32 ndsSObjDrawOpaqueWallpaperFinal(
+static s32 __attribute__((hot, optimize("O3")))
+ndsSObjDrawOpaqueWallpaperFinal(
     const u16 *cache_pixels, u32 cache_pitch, u16 *source_x_map,
     u32 width, u32 height, u32 scale_x_q16, u32 scale_y_q16,
     u16 *overlay, u32 overlay_pitch, u32 overlay_width, u32 overlay_height,
@@ -726,6 +727,8 @@ static s32 ndsSObjDrawOpaqueWallpaperFinal(
     u32 step_y;
     u32 preview_x_q16;
     u32 preview_y_q16;
+    u32 source_x_map_complete = TRUE;
+    u32 packed_rows;
     s32 dst_x_end;
     s32 dst_y_end;
     u32 x;
@@ -759,9 +762,17 @@ static s32 ndsSObjDrawOpaqueWallpaperFinal(
             if (source_x >= width) { source_x = width - 1u; }
             source_x_map[x] = (u16)source_x;
         }
+        else
+        {
+            source_x_map_complete = FALSE;
+        }
         preview_x_q16 += step_x;
     }
 
+    packed_rows = ((source_x_map_complete != FALSE) &&
+                   ((overlay_width & 1u) == 0u) &&
+                   ((overlay_pitch & 1u) == 0u) &&
+                   (((uintptr_t)overlay & 3u) == 0u)) ? TRUE : FALSE;
     preview_y_q16 = step_y >> 1;
     for (y = 0u; y < overlay_height; y++)
     {
@@ -778,10 +789,29 @@ static s32 ndsSObjDrawOpaqueWallpaperFinal(
             if (source_y >= height) { source_y = height - 1u; }
             src = &cache_pixels[source_y * cache_pitch];
         }
-        for (x = 0u; x < overlay_width; x++)
+        if ((src != NULL) && (packed_rows != FALSE))
         {
-            dst[x] = ((src != NULL) && (source_x_map[x] != no_source)) ?
-                src[source_x_map[x]] : 0u;
+            u32 *dst_pairs = (u32 *)dst;
+
+            /* BG2 rows are word-aligned and the opaque Dream Land wallpaper
+             * covers the complete visible X map. Pack two exact RGB5A1
+             * samples per VRAM store instead of issuing 49,152 halfword
+             * writes every camera update. */
+            for (x = 0u; x < overlay_width; x += 2u)
+            {
+                dst_pairs[x >> 1] =
+                    (u32)src[source_x_map[x]] |
+                    ((u32)src[source_x_map[x + 1u]] << 16);
+            }
+        }
+        else
+        {
+            for (x = 0u; x < overlay_width; x++)
+            {
+                dst[x] = ((src != NULL) &&
+                          (source_x_map[x] != no_source)) ?
+                    src[source_x_map[x]] : 0u;
+            }
         }
         preview_y_q16 += step_y;
     }

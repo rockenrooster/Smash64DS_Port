@@ -1303,6 +1303,11 @@ full 256x192 foreground commit already carries transparent zeroes for untouched
 pixels. The retained source buffer never caches water, Whispy, flowers, fences,
 fighters, or a composed stage frame. A direct affine BG remains rejected:
 lossless 300x220 RGB15 needs both bitmap banks and would displace BG3.
+When the live wallpaper covers every X sample and the 256-pixel BG2 row is
+word-aligned, the final writer packs two already-resolved RGB5A1 samples into
+one 32-bit VRAM store. Clipped rows retain the original conditional halfword
+loop. This changes store width only; source lookup, transparency, camera key,
+pixel count, and BG ownership are identical.
 
 Hardware triangles retain the source command boundary. Only consecutive
 F3DEX2 TRI1/TRI2 opcodes may share a `GL_TRIANGLE` group, and the derived
@@ -1314,6 +1319,25 @@ state command lands inside a reused batch. Color, texture coordinates, and
 positions remain per vertex; polygon/vertex RAM accounting is unchanged.
 Libnds documents `glEnd` as a dummy FIFO write, so closure restores owned alpha
 state and records diagnostics without emitting it.
+
+Loaded relocation files expose an immutable-command-span callback to the
+renderer. The callback returns only the remaining bytes in the containing
+loaded file; taskman/dynamic lists return zero. Each list entry is validated
+before classifying its span, each recursive branch repeats the classification,
+and scans remain bounded by both the span and normal command budgets. Profiles
+0/1 may replay adjacent TRI1/TRI2 commands inside that proven span without
+building callback records or re-entering the generic opcode switch. Profile 2
+and every callback/dynamic list retain the generic interpreter.
+
+Within one TRI run, profiles 0/1 also retain source-invariant depth/material
+selection and exact derived RGB15 color, scaled S/T, projected X/Y, and source
+clip Z per RSP vertex slot. The no-Z synthetic depth is still generated per
+triangle. Every non-TRI opcode clears these masks, so VTX, MODIFYVTX, matrix,
+texture, material, branch, sync, and end boundaries cannot reuse stale values.
+The animated CI4 pair LUT has a separate exact key over the two converted
+16-color palettes and blend fraction. A dynamic `glCallList`/FIFO arena was
+measured and rejected because 121 small source runs increased vertex cost; the
+direct GX submission path remains authoritative.
 
 Renderer instrumentation is compile-time tiered through
 `NDS_RENDERER_PROFILE_LEVEL`. Profile 0 is forced for the canonical/shipped ROM:
@@ -1329,6 +1353,12 @@ requires positive oracle samples with zero mismatch, while the performance run
 requires exactly zero oracle/forensic work. The optional warm-frame sampler
 collects 8--16 marker-synchronized frames and reports median/p95 without adding
 runtime writes to the shipped ROM.
+
+Mode-163 compiler policy follows artifact purpose: canonical realtime uses O2,
+while the larger scripted and timer/Results diagnostic ROMs use Os to preserve
+their scene-memory reserve. Only four measured renderer loops and the opaque
+wallpaper writer carry targeted O3 attributes; fast-math and whole-program O3
+are not used.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,

@@ -66,6 +66,7 @@
 
 typedef s32 (*NDSRendererValidateRange)(const Gfx *dl, size_t bytes,
                                         void *user);
+typedef size_t (*NDSRendererImmutableCommandSpan)(const Gfx *dl, void *user);
 typedef const Gfx *(*NDSRendererResolveBranch)(const Gfx *dl,
                                                u32 *resolve_kind,
                                                void *user);
@@ -199,6 +200,7 @@ typedef struct NDSRendererConfig
     u32 initial_geometry_mode;
     NDSRendererTextureDataLayout texture_data_layout;
     NDSRendererValidateRange validate_range;
+    NDSRendererImmutableCommandSpan immutable_command_span;
     NDSRendererResolveBranch resolve_branch;
     NDSRendererResolveData resolve_data;
     void *user;

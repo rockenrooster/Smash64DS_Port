@@ -1074,8 +1074,8 @@
 - The canonical realtime + live-input + HW-tri battle-playable ROM polls live
   DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
   pixel-gated, but the frame is not yet demo-fidelity. Latest gate: GX RAM
-  `729/2209`, source depth for stage/Mario/Fox, zero oracle mismatches, and a
-  HUD-off capture with `21.179%` meaningful 100ms frame change. Dream Land
+  `733/2219`, source depth for stage/Mario/Fox, zero oracle mismatches, and a
+  HUD-off capture with `20.012%` meaningful 100ms frame change. Dream Land
   and its original wallpaper are recognizable. The
   original fighter-display preamble and part-selection contract are now live;
   fighter attachment restores mixed-width O2R `MObjSub` lanes before the
@@ -1132,8 +1132,11 @@
   implemented and fixture-covered but has zero current-frame traffic. Exact
   no-Z equivalence beyond the proven Dream Land ordering remains debt.
   Final-resolution wallpaper composition removes its 320x240 staging/scale and
-  BG2 copy, but the measured frame remains about `2.5fps`; renderer command/
-  state work, water precomposition, and source RGBA4 interface output remain P1 debt.
+  BG2 copy. Exact word-packed rows, immutable TRI replay, derived vertex reuse,
+  canonical O2, and targeted O3 now reach `5.6fps`, but this is still roughly
+  10.7x short of the 60 FPS P1 condition. Profile-1 DL median is `4,288,352`
+  ticks, including `1,196,416` texture ticks; renderer command/state work,
+  water precomposition, and source RGBA4 interface output remain P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native
@@ -1171,11 +1174,15 @@
   Profile-0/no-oracle separation, generation-keyed loads, hybrid raw-current,
   and lazy transforms reached warm median/p95 `15,543,456/15,804,544`.
   Direct final BG2 plus early rejection of unsupported RGBA4 foreground SObjs
-  now proves `direct67/skip0/change67`, exactly `67*49152` writes, and zero
-  staging/BG clears/BG copies. Warm median/p95 is
-  `13,301,312/13,595,328` (`-14.4%/-14.0%`) at `25/25 x0.1`; projected
-  divisions remain `1,242`. Remaining 3D traversal/state cost is now the next
-  measured target. The RGBA4 interface/HUD SObjs still produce no DS pixels.
+  now proves exact full-frame writes and zero staging/BG clears/BG copies.
+  Texture/matrix hot-path reuse first brought warm profile 0 to
+  `7,697,632/7,958,912`; the current compiler split, targeted hot functions,
+  packed wallpaper rows, immutable TRI replay, CI4 LUT key, and per-run derived
+  vertex reuse reach `5,889,312/6,024,768` median/p95 at `5.6fps`. Profile 1
+  records `80/1736/344/330` immutable-list/trusted-command/dynamic-validation/
+  TRI-replay coverage. Projected divisions remain `1,242`. The rejected GX
+  FIFO/display-list arena increased vertex cost and must not be restored.
+  The RGBA4 interface/HUD SObjs still produce no DS pixels.
   At this sub-realtime cadence, the second two-shot screenshot can land during
   compositor updates and appear partly black while its paired `_next` sample is
   complete; stable-sample selection remains visual-gate tooling debt.

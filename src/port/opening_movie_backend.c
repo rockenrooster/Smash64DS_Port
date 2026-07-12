@@ -2240,6 +2240,7 @@ static void ndsOpeningRoomProbeMaterialDLExpandedShape(void)
     config.initial_geometry_mode = 0u;
     config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config.validate_range = ndsOpeningRoomRendererValidateRange;
+    config.immutable_command_span = NULL;
     config.resolve_branch = ndsOpeningRoomRendererResolveBranch;
     config.resolve_data = ndsOpeningRoomRendererResolveData;
     config.user = NULL;
@@ -3464,6 +3465,7 @@ static void ndsOpeningRoomRenderDLPreview(DObj *dobj, Gfx *dl)
     renderer_config.texture_data_layout =
         NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     renderer_config.validate_range = ndsOpeningRoomRendererValidateRange;
+    renderer_config.immutable_command_span = NULL;
     renderer_config.resolve_branch = ndsOpeningRoomRendererResolveBranch;
     renderer_config.resolve_data = ndsOpeningRoomRendererResolveData;
     renderer_config.user = NULL;
