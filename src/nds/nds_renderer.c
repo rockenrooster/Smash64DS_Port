@@ -206,6 +206,19 @@
 #define NDS_RENDERER_LIGHT_COLOR_2_FALLBACK 0xc0c0c000u
 
 #if NDS_RENDERER_HW_TRIANGLES
+typedef enum NDSRendererHWSubmitClass
+{
+    NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX = 0,
+    NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX,
+    NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX,
+    NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z,
+    NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL,
+    NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH,
+    NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX,
+    NDS_RENDERER_HW_SUBMIT_REJECT,
+    NDS_RENDERER_HW_SUBMIT_CLASS_COUNT
+} NDSRendererHWSubmitClass;
+
 static u32 sNdsRendererHardwareSubmitted;
 static u32 sNdsRendererHardwareNoOracle;
 static u32 sNdsRendererHardwareTriangleBatchOpen;
@@ -214,6 +227,8 @@ static u32 sNdsRendererHardwareTriangleBatchTextureName;
 static u32 sNdsRendererHardwareTriangleBatchPolyFmt;
 static u32 sNdsRendererHardwareTriangleBatchAlphaKey;
 static u32 sNdsRendererHardwareTriangleBatchFogKey;
+static u32 sNdsRendererHardwareTriangleBatchMatrixMode;
+static u32 sNdsRendererHardwareTriangleBatchMatrixGeneration;
 static u32 sNdsRendererHardwareBoundTextureName;
 static int sNdsRendererHardwareNoTextureName;
 static s32 sNdsRendererHardwareProjectedDepth =
@@ -223,6 +238,9 @@ static u32 sNdsRendererHardwareMatrixLoaded;
 static u32 sNdsRendererHardwareMatrixMode;
 static u32 sNdsRendererHardwareMatrixGeneration;
 static u32 sNdsRendererMatrixGenerationSerial;
+static u32 sNdsRendererHardwareSubmitClassCounts[
+    NDS_RENDERER_HW_SUBMIT_CLASS_COUNT];
+static u32 sNdsRendererHardwareProjectedDivisionCount;
 
 /* Profile levels 0/1 accumulate the small runtime health summary in ordinary
  * memory and publish it once at frame completion. The performance build never
@@ -412,6 +430,58 @@ static inline void ndsRendererProfileRecordRawCrossMatrix(void)
 #else
     sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count++;
 #endif
+}
+
+static inline void ndsRendererProfileRecordSubmitClass(
+    NDSRendererHWSubmitClass submit_class)
+{
+    if ((u32)submit_class < NDS_RENDERER_HW_SUBMIT_CLASS_COUNT)
+    {
+        sNdsRendererHardwareSubmitClassCounts[submit_class]++;
+    }
+}
+
+static inline void ndsRendererProfileRecordProjectedDivisions(u32 count)
+{
+    sNdsRendererHardwareProjectedDivisionCount += count;
+}
+
+static void ndsRendererProfileResetSubmitSummary(void)
+{
+    memset(sNdsRendererHardwareSubmitClassCounts, 0,
+           sizeof(sNdsRendererHardwareSubmitClassCounts));
+    sNdsRendererHardwareProjectedDivisionCount = 0u;
+}
+
+static void ndsRendererProfilePublishSubmitSummary(void)
+{
+    gNdsRendererProfileLevel = NDS_RENDERER_PROFILE_LEVEL;
+    gNdsRendererProfileSubmitRawCurrentCount =
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX];
+    gNdsRendererProfileSubmitRawSnapshotCount =
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX];
+    gNdsRendererProfileSubmitProjectedCrossCount =
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX];
+    gNdsRendererProfileSubmitProjectedNoZCount =
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z];
+    gNdsRendererProfileSubmitProjectedDecalCount =
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL];
+    gNdsRendererProfileSubmitProjectedPrimDepthCount =
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH];
+    gNdsRendererProfileSubmitProjectedRangeOrMatrixCount =
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX];
+    gNdsRendererProfileSubmitRejectCount =
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_REJECT];
+    gNdsRendererProfileProjectedDivisionCount =
+        sNdsRendererHardwareProjectedDivisionCount;
 }
 
 static inline void ndsRendererProfileRecordHardwareTriangle(void)
@@ -5886,6 +5956,9 @@ static void ndsRendererHardwareEndBatch(void)
         sNdsRendererHardwareTriangleBatchPolyFmt = 0u;
         sNdsRendererHardwareTriangleBatchAlphaKey = 0u;
         sNdsRendererHardwareTriangleBatchFogKey = 0u;
+        sNdsRendererHardwareTriangleBatchMatrixMode =
+            NDS_RENDERER_HW_MATRIX_MODE_NONE;
+        sNdsRendererHardwareTriangleBatchMatrixGeneration = 0u;
     }
 }
 
@@ -5893,7 +5966,9 @@ static void ndsRendererHardwareBeginTriangleBatch(
     const NDSRendererStats *stats,
     u32 textured,
     u32 texture_name,
-    u32 poly_fmt)
+    u32 poly_fmt,
+    u32 matrix_mode,
+    u32 matrix_generation)
 {
     u32 alpha_key = ndsRendererHardwareAlphaStateKey(stats);
     u32 fog_key = ndsRendererHardwareFogStateKey(stats);
@@ -5903,7 +5978,10 @@ static void ndsRendererHardwareBeginTriangleBatch(
         (sNdsRendererHardwareTriangleBatchTextureName == texture_name) &&
         (sNdsRendererHardwareTriangleBatchPolyFmt == poly_fmt) &&
         (sNdsRendererHardwareTriangleBatchAlphaKey == alpha_key) &&
-        (sNdsRendererHardwareTriangleBatchFogKey == fog_key))
+        (sNdsRendererHardwareTriangleBatchFogKey == fog_key) &&
+        (sNdsRendererHardwareTriangleBatchMatrixMode == matrix_mode) &&
+        (sNdsRendererHardwareTriangleBatchMatrixGeneration ==
+         matrix_generation))
     {
         ndsRendererProfileRecordBatchReuse();
         return;
@@ -5931,14 +6009,8 @@ static void ndsRendererHardwareBeginTriangleBatch(
     sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
     sNdsRendererHardwareTriangleBatchAlphaKey = alpha_key;
     sNdsRendererHardwareTriangleBatchFogKey = fog_key;
-}
-
-static s32 ndsRendererHardwareUseProjectedSubmitFallback(
-    const NDSRendererStats *stats, s32 zbuffered, s32 transformed_ready)
-{
-    (void)stats;
-    return ((zbuffered != FALSE) && (transformed_ready != FALSE)) ?
-        TRUE : FALSE;
+    sNdsRendererHardwareTriangleBatchMatrixMode = matrix_mode;
+    sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
 }
 
 static void ndsRendererHardwareSubmitVertex(
@@ -6090,25 +6162,42 @@ static s32 ndsRendererInputTriangleReady(
     return ((state->input_vertex_valid_mask & mask) == mask) ? TRUE : FALSE;
 }
 
-static void ndsRendererHardwareRecordRawCurrentCandidate(
+static s32 ndsRendererHardwareRawMatrixCompatible(
+    const NDSRendererTraversalState *state)
+{
+    return ((state != NULL) && (state->matrix_valid != 0u) &&
+            (state->matrix_generation != 0u)) ? TRUE : FALSE;
+}
+
+static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     const NDSRendererTraversalState *state,
     u32 i0, u32 i1, u32 i2,
     s32 source_zbuffered, s32 decal_depth, s32 prim_depth)
 {
     u32 mask;
 
-    if ((state == NULL) || (source_zbuffered == FALSE) ||
-        (decal_depth != FALSE) || (prim_depth != FALSE) ||
-        (state->matrix_valid == 0u))
+    if (source_zbuffered == FALSE)
     {
-        return;
+        return NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z;
+    }
+    if (decal_depth != FALSE)
+    {
+        return NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL;
+    }
+    if (prim_depth != FALSE)
+    {
+        return NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH;
+    }
+    if (ndsRendererHardwareRawMatrixCompatible(state) == FALSE)
+    {
+        return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
     }
 
     mask = (1u << i0) | (1u << i1) | (1u << i2);
     if ((state->current_transform_vertex_mask & mask) != mask)
     {
         ndsRendererProfileRecordRawCrossMatrix();
-        return;
+        return NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX;
     }
     if ((ndsRendererHardwareRawVertexFits(&state->input_vertices[i0]) ==
          FALSE) ||
@@ -6118,13 +6207,14 @@ static void ndsRendererHardwareRecordRawCurrentCandidate(
          FALSE))
     {
         ndsRendererProfileRecordRawCurrentRangeReject();
-        return;
+        return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
     }
 
     ndsRendererProfileRecordRawCurrentCandidate();
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererHardwareQueueRawMatrixPosTest(state, i0);
 #endif
+    return NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX;
 }
 
 static void ndsRendererSubmitHardwareTriangle(
@@ -6158,7 +6248,10 @@ static void ndsRendererSubmitHardwareTriangle(
     s32 prim_depth;
     s32 transformed_ready;
     s32 projected_submit;
+    s32 raw_submit;
+    s32 source_clip_depth;
     s32 no_oracle;
+    NDSRendererHWSubmitClass submit_class;
     s32 projected_z[3] = { 0, 0, 0 };
 
     if (stats == NULL)
@@ -6168,41 +6261,26 @@ static void ndsRendererSubmitHardwareTriangle(
     if (ndsRendererInputTriangleReady(state, packed, &i0, &i1, &i2) == FALSE)
     {
         stats->hardware_oracle_reject_count++;
+        ndsRendererProfileRecordSubmitClass(
+            NDS_RENDERER_HW_SUBMIT_REJECT);
         return;
     }
     no_oracle = (sNdsRendererHardwareNoOracle != 0u) ? TRUE : FALSE;
-    transformed_ready = FALSE;
-    if (no_oracle != FALSE)
+    transformed_ready =
+        ((state != NULL) &&
+         (state->matrix_valid != 0u) &&
+         (ndsRendererTransformedTriangleReady(state, packed, NULL, NULL,
+                                              NULL) != FALSE)) ? TRUE : FALSE;
+    if (transformed_ready == FALSE)
     {
-        transformed_ready =
-            ((state != NULL) &&
-             (state->matrix_valid != 0u) &&
-             (ndsRendererTransformedTriangleReady(state, packed, NULL, NULL,
-                                                  NULL) != FALSE)) ? TRUE :
-                                                                    FALSE;
-        if (transformed_ready == FALSE)
-        {
-            stats->hardware_oracle_reject_count++;
-            return;
-        }
+        stats->hardware_oracle_reject_count++;
+        ndsRendererProfileRecordSubmitClass(
+            NDS_RENDERER_HW_SUBMIT_REJECT);
+        return;
     }
-    else
+    if (no_oracle == FALSE)
     {
-        transformed_ready =
-            ((state != NULL) &&
-             (state->matrix_valid != 0u) &&
-             (ndsRendererTransformedTriangleReady(state, packed, NULL, NULL,
-                                                  NULL) != FALSE)) ? TRUE :
-                                                                    FALSE;
-        if ((state != NULL) && (state->matrix_valid != 0u))
-        {
-            if (transformed_ready == FALSE)
-            {
-                stats->hardware_oracle_reject_count++;
-                return;
-            }
-            stats->hardware_oracle_triangle_count++;
-        }
+        stats->hardware_oracle_triangle_count++;
     }
     zbuffered = ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) != 0u) ?
         TRUE : FALSE;
@@ -6213,22 +6291,17 @@ static void ndsRendererSubmitHardwareTriangle(
     prim_depth = ((zbuffered != FALSE) &&
                   (ndsRendererHardwareUsePrimDepth(stats) != FALSE)) ?
         TRUE : FALSE;
-    projected_submit = ndsRendererHardwareUseProjectedSubmitFallback(
-        stats, zbuffered, transformed_ready);
-    if (((zbuffered == FALSE) ||
-         (decal_depth != FALSE) ||
-         (prim_depth != FALSE) ||
-         (projected_submit != FALSE)) &&
-        (transformed_ready == FALSE))
-    {
-        stats->hardware_oracle_reject_count++;
-        return;
-    }
     v0 = &state->input_vertices[i0];
     v1 = &state->input_vertices[i1];
     v2 = &state->input_vertices[i2];
-    ndsRendererHardwareRecordRawCurrentCandidate(
+    submit_class = ndsRendererHardwareClassifySubmit(
         state, i0, i1, i2, source_zbuffered, decal_depth, prim_depth);
+    raw_submit =
+        (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
+            TRUE : FALSE;
+    projected_submit =
+        ((source_zbuffered != FALSE) && (raw_submit == FALSE)) ? TRUE : FALSE;
+    source_clip_depth = projected_submit;
     render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     if (sNdsRendererHardwareNoOracle == 0u)
@@ -6259,14 +6332,28 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         return;
     }
+    ndsRendererProfileRecordSubmitClass(submit_class);
     if (projected_submit != FALSE)
     {
         ndsRendererProfileRecordProjectedSubmit();
+    }
+    if ((raw_submit == FALSE) &&
+        (submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL) &&
+        (submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH))
+    {
         zbuffered = FALSE;
         decal_depth = FALSE;
         prim_depth = FALSE;
     }
-    scale_world = TRUE;
+    if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+    {
+        ndsRendererProfileRecordProjectedDivisions(6u);
+    }
+    else if (raw_submit == FALSE)
+    {
+        ndsRendererProfileRecordProjectedDivisions(9u);
+    }
+    scale_world = (raw_submit != FALSE) ? TRUE : FALSE;
     implicit_texture_on = ndsRendererHardwareTextureImplicitStateOn(stats);
     use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
         ndsRendererHardwareBindTexture(stats, config) : FALSE;
@@ -6293,9 +6380,7 @@ static void ndsRendererSubmitHardwareTriangle(
     }
 #endif
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
-    if ((zbuffered != FALSE) &&
-        (decal_depth == FALSE) &&
-        (prim_depth == FALSE))
+    if (raw_submit != FALSE)
     {
         ndsRendererLoadHardwareMatrices(state, scale_world);
     }
@@ -6303,16 +6388,16 @@ static void ndsRendererSubmitHardwareTriangle(
     {
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
     }
-    if (source_zbuffered != FALSE)
+    if (prim_depth != FALSE)
+    {
+        projected_z[0] = projected_z[1] = projected_z[2] =
+            (s32)(stats->prim_depth & 0xffffu);
+    }
+    else if (source_zbuffered != FALSE)
     {
         /* Source-Z projected submissions use the composed clip Z below and
          * must not consume the synthetic no-Z painter counter. */
         projected_z[0] = projected_z[1] = projected_z[2] = 0;
-    }
-    else if (prim_depth != FALSE)
-    {
-        projected_z[0] = projected_z[1] = projected_z[2] =
-            (s32)(stats->prim_depth & 0xffffu);
     }
     else
     {
@@ -6324,7 +6409,8 @@ static void ndsRendererSubmitHardwareTriangle(
         sNdsRendererHardwareBoundTextureName : 0u;
     ndsRendererHardwareBeginTriangleBatch(
         stats, (use_texture != FALSE) ? TRUE : FALSE,
-        texture_name, poly_fmt);
+        texture_name, poly_fmt, sNdsRendererHardwareMatrixMode,
+        sNdsRendererHardwareMatrixGeneration);
     ndsRendererHardwareSubmitVertex(
         stats, v0, &state->vertices[i0], material_color, use_material_color,
         use_vertex_color, state->vertex_colors[i0],
@@ -6332,7 +6418,8 @@ static void ndsRendererSubmitHardwareTriangle(
         use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z[0], projected_submit);
+        zbuffered, decal_depth, prim_depth, projected_z[0],
+        source_clip_depth);
     ndsRendererHardwareSubmitVertex(
         stats, v1, &state->vertices[i1], material_color, use_material_color,
         use_vertex_color, state->vertex_colors[i1],
@@ -6340,7 +6427,8 @@ static void ndsRendererSubmitHardwareTriangle(
         use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z[1], projected_submit);
+        zbuffered, decal_depth, prim_depth, projected_z[1],
+        source_clip_depth);
     ndsRendererHardwareSubmitVertex(
         stats, v2, &state->vertices[i2], material_color, use_material_color,
         use_vertex_color, state->vertex_colors[i2],
@@ -6348,7 +6436,8 @@ static void ndsRendererSubmitHardwareTriangle(
         use_texture, render_tile, texture_scale_s,
         texture_scale_t, render_tile->uls, render_tile->ult,
         texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z[2], projected_submit);
+        zbuffered, decal_depth, prim_depth, projected_z[2],
+        source_clip_depth);
     if (source_zbuffered != FALSE)
     {
         ndsRendererHardwareEnterProjectedForeground();
@@ -6795,6 +6884,9 @@ void ndsRendererProfileFrameBegin(void)
     gNdsRendererProfileMatrixPosTestClipMismatches = 0u;
     gNdsRendererProfileMatrixPosTestMatrixWordSamples = 0u;
     gNdsRendererProfileMatrixPosTestDropped = 0u;
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsRendererProfileResetSubmitSummary();
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     memset(&sNdsRendererRuntimeFrameSummary, 0,
            sizeof(sNdsRendererRuntimeFrameSummary));
@@ -6871,6 +6963,16 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererHardwareRunRawMatrixPosTests();
 #endif
+    if ((submitted != FALSE) ||
+        (sNdsRendererHardwareSubmitClassCounts[
+             NDS_RENDERER_HW_SUBMIT_REJECT] != 0u))
+    {
+        /* The accelerated mode-163 proof does not use the realtime presentation
+         * wrapper. Publish at the renderer-owned hardware-frame boundary so
+         * every configuration reports the same completed-frame contract. */
+        ndsRendererProfilePublishSubmitSummary();
+    }
+    ndsRendererProfileResetSubmitSummary();
     sNdsRendererHardwareSubmitted = FALSE;
     sNdsRendererHardwareProjectedDepth =
         NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;

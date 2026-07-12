@@ -539,6 +539,29 @@ function Assert-RawGXHomogeneousEquivalent {
     Assert-True (([Math]::Sign([Int64]$hardware.W) -eq [Math]::Sign([Int64]$cpu.W))) `
         "$Label raw GX W sign drifted."
 }
+function Get-HybridSubmitClass {
+    param(
+        [bool]$SourceZ,
+        [bool]$Decal,
+        [bool]$PrimDepth,
+        [bool]$MatrixCompatible,
+        [bool]$CurrentSlots,
+        [bool]$RawCoordinatesFit
+    )
+    if (-not $SourceZ) { return 'projected_no_z' }
+    if ($Decal) { return 'projected_decal' }
+    if ($PrimDepth) { return 'projected_prim_depth' }
+    if (-not $MatrixCompatible) { return 'projected_range_or_matrix' }
+    if (-not $CurrentSlots) { return 'projected_cross_matrix' }
+    if (-not $RawCoordinatesFit) { return 'projected_range_or_matrix' }
+    return 'raw_z_current_matrix'
+}
+function Get-HybridProjectedDivisions {
+    param([string]$SubmitClass)
+    if ($SubmitClass -eq 'raw_z_current_matrix') { return 0 }
+    if ($SubmitClass -eq 'projected_no_z') { return 6 }
+    return 9
+}
 $vtxW0 = New-F3DEX2VtxW0 -Count 4 -V0 12
 Assert-Equal $vtxW0 0x01004020 'F3DEX2 gSPVertex(4,12) fixture packed word mismatch.'
 $decodedVtx = Decode-F3DEX2Vtx -W0 $vtxW0 -MaxVtx 32
@@ -662,6 +685,16 @@ $perspectiveRows = @(
 $perspective = Convert-N64PackedMtxTo20p12 (New-N64PackedMtx -Rows $perspectiveRows)
 Assert-RawGXHomogeneousEquivalent -Mtx $perspective -X 100 -Y -200 -Z 2 -Label 'Perspective/positive-W'
 Assert-RawGXHomogeneousEquivalent -Mtx $perspective -X -300 -Y 400 -Z 10 -Label 'Perspective/negative-W'
+Assert-Equal (Get-HybridSubmitClass $false $false $false $true $true $true) 'projected_no_z' 'Hybrid raw policy did not preserve no-Z projection.'
+Assert-Equal (Get-HybridSubmitClass $true $true $false $true $true $true) 'projected_decal' 'Hybrid raw policy did not preserve decal projection.'
+Assert-Equal (Get-HybridSubmitClass $true $false $true $true $true $true) 'projected_prim_depth' 'Hybrid raw policy did not preserve primitive-depth projection.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $false $true $true) 'projected_range_or_matrix' 'Hybrid raw policy accepted an incompatible matrix.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $true $false $true) 'projected_cross_matrix' 'Hybrid raw policy accepted cross-matrix slots.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $true $true $false) 'projected_range_or_matrix' 'Hybrid raw policy accepted saturated coordinates.'
+Assert-Equal (Get-HybridSubmitClass $true $false $false $true $true $true) 'raw_z_current_matrix' 'Hybrid raw policy rejected compatible current-matrix source-Z.'
+Assert-Equal (Get-HybridProjectedDivisions 'raw_z_current_matrix') 0 'Raw-current class retained projected divisions.'
+Assert-Equal (Get-HybridProjectedDivisions 'projected_no_z') 6 'No-Z projected division accounting drifted.'
+Assert-Equal (Get-HybridProjectedDivisions 'projected_cross_matrix') 9 'Source-Z projected division accounting drifted.'
 $modelviewStack = @()
 $modelviewStack += ,$transform
 $innerRows = @(
@@ -1209,6 +1242,12 @@ Assert-True (-not $renderer.Contains('sNdsRendererHardwareMatrixProjection')) 'R
 Assert-True (-not $renderer.Contains('sNdsRendererHardwareMatrixModelview')) 'Renderer still compares full modelview matrices in the triangle hot path.'
 Assert-True ($renderer -match '(?s)ndsRendererBuildRawHardwareMatrix\(.*?\*hardware = \*composed;.*?for \(col = 0u; col < 4u; col\+\+\).*?NDS_RENDERER_HW_WORLD_UNIT_SHIFT') 'Renderer corrected raw matrix does not scale the complete homogeneous row.'
 Assert-True ($renderer -match '(?s)current_transform_vertex_mask & mask.*?ndsRendererHardwareRawVertexFits.*?ndsRendererProfileRecordRawCurrentCandidate') 'Renderer raw candidate classification does not require current-matrix slots and unclamped coordinates.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX')) 'Renderer hybrid submission-class enum is missing raw-current source-Z.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareClassifySubmit.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX.*?NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX.*?NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX') 'Renderer hybrid submit classifier no longer preserves exceptional classes before raw current-matrix eligibility.'
+Assert-True ($renderer -match '(?s)if \(raw_submit != FALSE\)\s*\{\s*ndsRendererLoadHardwareMatrices\(state, scale_world\);\s*\}\s*else\s*\{\s*ndsRendererLoadHardwareMatrices\(NULL, FALSE\);') 'Renderer raw-current and projected classes do not load corrected versus identity GX matrices explicitly.'
+Assert-True ($renderer -match '(?s)sNdsRendererHardwareTriangleBatchMatrixMode == matrix_mode.*?sNdsRendererHardwareTriangleBatchMatrixGeneration ==\s*matrix_generation') 'Renderer triangle batch key omits matrix representation or generation.'
+Assert-True ($renderer -match '(?s)ndsRendererProfileRecordSubmitClass\(submit_class\).*?ndsRendererProfileRecordProjectedDivisions.*?ndsRendererProfileRecordHardwareTriangle') 'Renderer does not account hybrid submit classes and projected divisions before final hardware triangle accounting.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareConsumeSubmittedFrame.*?ndsRendererProfilePublishSubmitSummary\(\).*?ndsRendererProfileResetSubmitSummary\(\)') 'Renderer does not publish and reset hybrid submit accounting at the shared hardware-frame boundary.'
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2.*?ndsRendererHardwareQueueRawMatrixPosTest.*?#endif') 'Renderer raw GX PosTest capture is not forensic-only.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareQueueMatrixWordPosTestFixture.*?ndsRendererApplyMvpRecalcCommand.*?ndsRendererApplyMatrixMoveWordCommand') 'Renderer device PosTest coverage omits the MVP-recalc matrix-word reconstruction case.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareEndBatch\(\);\s*#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*ndsRendererHardwareRunRawMatrixPosTests\(\);') 'Renderer raw GX PosTests do not run after the final source triangle batch closes.'
@@ -1223,6 +1262,8 @@ $rendererVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox
 Assert-True ($rendererVerifier.Contains('RENDER_PROFILE_LEVEL=%u')) 'Realtime verifier does not identify the compiled renderer profile.'
 Assert-True ($rendererVerifier.Contains('RENDER_BENCH=%u')) 'Realtime verifier lacks the optional warm-frame renderer sampler.'
 Assert-True ($rendererVerifier.Contains('RENDER_RAW_MATRIX=%u')) 'Realtime verifier does not report raw-candidate and GX PosTest diagnostics.'
+Assert-True ($rendererVerifier.Contains('RENDER_SUBMIT=%u')) 'Realtime verifier does not report hybrid raw/projected class accounting.'
+Assert-True ($rendererVerifier.Contains('sharply reduce and exactly account projected software divisions')) 'Realtime verifier does not require the projected-division collapse.'
 Assert-True ($rendererVerifier.Contains('corrected composed GX matrix PosTest')) 'Realtime verifier does not require the corrected GX matrix oracle.'
 Assert-True ($rendererVerifier.Contains('still performed forensic oracle transforms')) 'Realtime performance verifier does not require zero oracle work.'
 $forensicVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-renderer-forensic.ps1') -Raw

@@ -1121,14 +1121,14 @@
   DXT-zero/pre-swizzled loads, other TEXEL1 formulas, unmasked POT padding, and
   camera-wide state ownership. Do not conflate mask, load, logical, or upload
   extents again.
-- Projected HW submission takes X/Y/Z from one composed clip vertex. Early no-Z
-  background draws count down from far signed 20.12 NDC; the first submitted
-  source-Z triangle switches later no-Z painter draws to the near foreground
-  range without consuming a synthetic slot. This restores source layer-3 over
-  layer-1 ordering. Corrected raw-GX matrix math is device-proven, but the
-  production hybrid cutover and exact no-Z behavior remain deferred. Full source-selected
-  fighter submission plus the current CPU-scaled 300x220 wallpaper and water
-  precomposition now presents at about `1.9fps`; renderer work remains P1 debt.
+- Hybrid HW submission raw-submits `648` compatible current-matrix source-Z
+  triangles and projects `44` cross-matrix, `126` no-Z, and `10` range
+  exceptions. Projected X/Y/Z still come from one composed clip vertex. Early
+  no-Z background draws count down from far signed 20.12 NDC; the first source-Z
+  triangle switches later no-Z painter draws near, retaining the fence over the
+  floor. Matrix snapshots/lazy transforms and exact no-Z behavior remain debt.
+  The CPU-scaled 300x220 wallpaper and water precomposition still limit the
+  measured frame to about `2.1fps`; renderer/compositor work remains P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native
@@ -1162,9 +1162,12 @@
   palette-pair table preserves source addressing/coverage while reducing
   present to `20,285,888` (`-16.3%`) and conversion to `5,035,776` (`-42.8%`);
   command-hoisted exact light normalization reduces present to `19,725,696`.
-  Profile-0/no-oracle separation and generation-keyed matrix loads reach warm
-  median/p95 `17,220,704/17,500,608` and `19/19 x0.1`; profile-2 raw readiness
-  is `648/10/44` with device `PosTest 32/0/e2`; raw submission and software 2D remain.
+  Profile-0/no-oracle separation, generation-keyed loads, and hybrid raw-current
+  submission reach warm median/p95 `15,837,408/16,103,104` and `21/21 x0.1`;
+  projected divisions are `1,242`, down from `7,074`. Software 2D remains.
+  At this sub-realtime cadence, the second two-shot screenshot can land during
+  compositor updates and appear partly black while its paired `_next` sample is
+  complete; stable-sample selection remains visual-gate tooling debt.
   Audible BGM resyncs remain possible while frames exceed the half-buffer
   deadline. Lane totals remain aggregate conversion observations covered by
   host byte/halfword fixtures.

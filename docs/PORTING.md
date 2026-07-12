@@ -19294,3 +19294,47 @@ same-source profile-2 configuration retains the complete assertions.
 Source-corrected verifier expectations: none; production output remains
 projected. Coverage-reduced verifier expectations: none; profiles 0/1 retain
 classification health while profile 2 owns the bounded hardware oracle.
+
+## 2026-07-11 - Hybrid raw-current GX submission
+
+- Enabled the optimization playbook's isolated Patch 5 after the corrected
+  matrix proof. A private classifier partitions every hardware triangle into
+  raw-current, reserved raw-snapshot, projected cross-matrix/no-Z/decal/
+  primitive-depth/range-or-matrix, or reject. The stable frame is exactly
+  `648/0/44/126/0/0/10/0 = 828`.
+- Raw-current loads the generation-keyed corrected composed matrix and submits
+  source coordinates divided by 256. All projected exceptions load identity;
+  cross/range source-Z keeps composed clip depth, no-Z keeps the two-phase
+  painter depth, and decal/primitive-depth branches remain separate. Eager CPU
+  transforms intentionally remain until the next matrix-snapshot patch.
+- Matrix representation and generation join the triangle-batch key. The stable
+  batch contract moves `103/725/103 -> 121/707/121`, with `53` matrix loads.
+  Exact logical projected divisions fall `7,074 -> 1,242` per frame (`-82.4%`).
+- Profile 2 retains CPU oracle `2403/0/0`, device
+  `PosTest 32/0/e2/w0/c0/mw1/drop0`, zero reject/saturation/clip failures, and
+  valid stage/Mario/Fox source-depth samples. Host fixtures cover every submit
+  class, `0/6/9` division policy, matrix-keyed batching, and explicit corrected/
+  identity matrix loads.
+- Warm profile-0 present median/p95 improves
+  `17,220,704/17,500,608 -> 15,837,408/16,103,104` (about `-8.0%`); pacing rises
+  `19/19 -> 21/21 x0.1`. The compositor remains the larger measured blocker.
+  DevFast and the canonical screenshot gate pass; pond, five flower groups,
+  foreground fence ordering, fighters, and canonical/shipped parity remain.
+  Capture: `artifacts/visibility/2026-07-11_canonical_fast_190254-2501107-p35056.png`.
+- The first integrated fast-logic run exposed that its one hardware draw bypasses
+  the realtime profile-frame publisher. Submit publication/reset now lives at
+  `ndsRendererHardwareConsumeSubmittedFrame`, the renderer-owned boundary used
+  by both configurations. Realtime, modes `161/162`, fast mode `163`, and the
+  lifecycle configuration now report the same exact completed-frame classes.
+- A clean P1 baseline prebuild took `416.8s`; the frame-boundary correction then
+  rebuilt all four outputs incrementally in `18.8s`. Fresh P1Gate passes in
+  `148.3s`; stamped Boundary prebuild/run is `147.7s/55.9s`. Full Regression was
+  intentionally skipped. The canonical/shipped ROMs are `11,578,368` bytes at
+  SHA-256 `8A7537A9549FE384F6F99A2FE25B8140AD9E5A74247B0D1B7E39B699322D8516`.
+  Canonical ELF text/data/BSS is `570,084/125,952/1,914,888` bytes; the source
+  memory ledger retains `236,100` bytes headroom.
+
+Source-corrected verifier expectations: none; the same source geometry now uses
+the proven GX representation. Coverage-reduced verifier expectations: none;
+exceptional depth/matrix classes remain projected and profile 2 retains both
+hardware and CPU oracles.

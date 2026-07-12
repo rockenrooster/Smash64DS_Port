@@ -1346,6 +1346,12 @@ Opening movie / Opening Portraits:
   candidates and samples, error at most 16, one natural-or-derived matrix-word
   reconstruction, and all mismatch/drop fields zero. Profiles 0/1 retain only
   the three classification totals and must perform zero `PosTest` work.
+- `RENDER_SUBMIT`: completed-frame hybrid submission marker. Fields are raw-
+  current, raw-snapshot, projected cross-matrix, no-Z, decal, primitive-depth,
+  range-or-matrix, reject triangles, then the logical projected-division count.
+  The non-reject class sum must equal hardware triangles; raw-current must equal
+  its readiness count, projected classes must match their classifiers, reject
+  must be zero, and the division count is exactly `6*no-Z + 9*other-projected`.
 - `RENDER_DEPTH`: source-depth sample count, signed 20.12 NDC min/max, and
   clip-W min/max for stage, player 0, and player 1. Canonical HW requires all
   three classes, NDC within `-4096..4095`, and positive ordered W ranges. This

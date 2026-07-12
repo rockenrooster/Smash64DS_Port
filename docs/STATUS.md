@@ -95,12 +95,14 @@ list exit. Proof remains `begin103/reuse725/end103` for all `828` triangles.
 The CI4 table first cuts present to `20,285,888`; command-hoisted light and
 compile-time profile separation reduce shipped/profile-0 work further. Matrix
 loads now use nonzero traversal generations instead of two 64-byte compares.
-Warm 8-frame present median/p95 is `17,220,704/17,500,608`; pacing remains
-`19/19 x0.1`. Profile 2 classifies ordinary-Z as `648` raw-current, `44`
-cross-matrix, and `10` range fallbacks. Its corrected composed matrix passes
-device `PosTest` at `32/0/e2/w0/c0/mw1/drop0`, plus full oracle `2403/0/0`, at
-`20,273,728/20,578,688`. Production still uses projected submission.
-Capture: `artifacts/visibility/2026-07-11_canonical_fast_183846-0107333-p39400.png`.
+Hybrid submission sends `648` ordinary source-Z triangles through the corrected
+GX matrix. It projects `44` cross-matrix, `126` no-Z, and `10` range exceptions;
+reject/snapshot/decal/prim are zero. Batches are `121/707/121`, loads are `53`;
+software divisions fall `7,074 -> 1,242` per frame. Profile 2 still passes
+device `PosTest 32/0/e2/w0/c0/mw1/drop0`, oracle `2403/0/0`, and all depth.
+Warm median/p95 improves `17,220,704/17,500,608 ->
+15,837,408/16,103,104` (about `-8%`); pacing is `21/21 x0.1`.
+Capture: `artifacts/visibility/2026-07-11_canonical_fast_190254-2501107-p35056.png`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc
 cache eviction. Mode `163` reports headroom `236100`, resident reloc `681632`
@@ -132,13 +134,12 @@ Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
 deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
 `159/160` have already been deleted.
 
-Next P1 work is hybrid raw-current GX, then final-resolution 2D; visual/audio debt follows.
+Next: matrix snapshots/lazy transforms, then final-resolution 2D; the compositor remains the larger measured blocker.
 
 ## Verification
 
-All four `P1Gate` legs pass in `459.7s` including clean prebuild: opening-to-Title,
-canonical battle, mode-163 combat, and one-minute Results. Boundary passes in `385.5s`.
-not the five-minute P1 soak; Full Regression was skipped for Tyler's fast cadence.
+Fresh P1Gate/Boundary pass in `148.3s/55.9s`: opening-to-Title, canonical battle,
+mode-163 combat, and one-minute Results—not the five-minute soak. Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
@@ -146,5 +147,4 @@ not the five-minute P1 soak; Full Regression was skipped for Tyler's fast cadenc
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-After verified progress, commit, then run
-`.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.
+After verified progress, commit, then run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

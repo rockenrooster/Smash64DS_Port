@@ -1223,13 +1223,14 @@ evicting textures referenced by submitted polygons. Refresh/eviction health is
 scene-lifetime. Relative 10.2 tile-origin phase still rounds to whole texels,
 so smooth bilerp water motion remains fidelity/performance debt.
 
-Canonical HW still uses projected submission rather than the final raw GX
-cutover. The renderer now assigns a nonzero generation whenever projection,
-modelview, pop, or matrix-word state changes; GX caches mode plus generation
-instead of comparing two 64-byte matrices per eligible triangle. Wrap to
-generation one invalidates the cache. Current-slot/range classification finds
-`648` compatible ordinary-Z triangles, `44` cross-matrix cache joins, and `10`
-raw-v16 range fallbacks in the stable `828`-triangle frame.
+Canonical HW uses a classified hybrid GX path. The renderer assigns a nonzero
+generation whenever projection, modelview, pop, or matrix-word state changes;
+GX and triangle-batch keys contain representation plus generation rather than
+two 64-byte matrix comparisons. Wrap to generation one invalidates the cache.
+The stable frame raw-submits `648` current-matrix ordinary-Z triangles. It keeps
+`44` cross-matrix, `126` no-Z, and `10` raw-v16 range exceptions projected;
+snapshot/decal/primitive-depth/reject classes are zero. The class sum is the
+same `828` triangles and projected division accounting falls `7,074 -> 1,242`.
 
 For raw input submitted as source/256, rows 0--2 of the composed 20.12 matrix
 stay unchanged and the complete homogeneous row 3, including W, is rounded
@@ -1239,8 +1240,9 @@ frame has no natural `G_MW_MATRIX`, a backend-only fixture applies BattleShip's
 MVP-recalc plus matrix-word reconstruction to its first natural matrix. The
 stable proof is `32/0/e2/w0/c0/mw1/drop0`: samples/mismatches/max error/W-sign/
 clip/matrix-word/dropped. This fixture cannot affect submitted geometry and is
-absent from profiles 0/1. Production raw submission remains disabled until the
-separate hybrid cutover.
+absent from profiles 0/1. Raw-current loads the corrected matrix with identity
+in the other GX slot; every projected exception loads identity explicitly.
+Matrix representation/generation changes are hard triangle-batch boundaries.
 
 Source-depth X/Y/Z still come from one composed clip vertex. Because DS cannot
 disable depth testing per polygon, synthetic no-Z depth is phase-aware:

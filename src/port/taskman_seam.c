@@ -788,6 +788,15 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileRawCurrentCandidateCount = 0;
     gNdsRendererProfileRawCurrentRangeRejectCount = 0;
     gNdsRendererProfileRawCrossMatrixCount = 0;
+    gNdsRendererProfileSubmitRawCurrentCount = 0;
+    gNdsRendererProfileSubmitRawSnapshotCount = 0;
+    gNdsRendererProfileSubmitProjectedCrossCount = 0;
+    gNdsRendererProfileSubmitProjectedNoZCount = 0;
+    gNdsRendererProfileSubmitProjectedDecalCount = 0;
+    gNdsRendererProfileSubmitProjectedPrimDepthCount = 0;
+    gNdsRendererProfileSubmitProjectedRangeOrMatrixCount = 0;
+    gNdsRendererProfileSubmitRejectCount = 0;
+    gNdsRendererProfileProjectedDivisionCount = 0;
     gNdsRendererProfileMatrixPosTestSamples = 0;
     gNdsRendererProfileMatrixPosTestMismatches = 0;
     gNdsRendererProfileMatrixPosTestMaxError = 0;
