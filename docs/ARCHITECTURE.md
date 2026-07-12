@@ -1397,9 +1397,15 @@ valid only until a matrix or source light-state mutation. Four content-keyed
 normal, direction, alpha, and incomplete-state fallback remain live. The shade
 table occupies 2,096 bytes; that earlier increment raised net BSS 2,080 bytes.
 Animated CI4 phase planes remain an exact 8 KiB table, and texture preparation
-retains its mutation-keyed epoch. The source-index cache raises current profile-0
-BSS another 2,112 bytes including its key/counters; profile 2 omits the cache.
-Profile 0/1/2 renderer ITCM is `19,036/19,340/18,216` of 32,768 bytes.
+retains its mutation-keyed epoch. Profiles 0/1 decode two immutable CI4 index
+planes, then group a large output axis only when TEXEL0 address, TEXEL1 address,
+and 4x4 ordered-coverage phase all match. First representatives are expanded
+right-to-left and repeat rows bottom-to-top, so no representative is overwritten
+before its last use. A `>=4096`-pixel and at-least-50%-reuse gate leaves smaller
+or weakly repeating inputs on the direct loop; profile 2 omits both caches. The
+four address/representative maps are exactly 512 bytes; current profile-0 BSS is
+`1,856,200`. Profile 0/1/2 renderer ITCM is `20,448/20,888/18,216` of 32,768
+bytes.
 Cache-hit guards run before temporary GX matrix construction; the final matrix-
 state guard remains exact.
 

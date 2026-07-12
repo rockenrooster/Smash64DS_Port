@@ -19824,3 +19824,42 @@ Source-corrected verifier expectations: none; the cache stores the same decoded
 CI4 indices and leaves every live addressing/blend/upload input outside it.
 Coverage-reduced verifier expectations: Full/Legacy Regression was skipped by
 request; DevFast, P1Gate, Boundary, generic fallback, and profile-2 oracle remain.
+
+## 2026-07-12 - Exact CI4 representative expansion
+
+- Profile-1 setup/scan timers isolated animated texture preparation as the
+  remaining setup hotspot. A temporary live-address audit rejected periodic
+  tiling: the `128x128` water output needed its full axis periods, but only
+  `65x63` distinct TEXEL0/TEXEL1/Bayer-phase axis classes. The `32x64` output
+  was nearly unique at `32x63`; all audit probes and `TEMP_*` output were removed.
+- Profiles 0/1 now construct exact S/T class maps only for outputs of at least
+  4,096 pixels. A class matches both source addresses and the axis's 2-bit Bayer
+  phase. When unique Cartesian work is at most half of the output, only first
+  representatives evaluate the existing phase LUT; unique rows expand in
+  reverse X order and repeated rows copy in reverse Y order. Live origins,
+  masks, palettes, fraction, phase, index planes, uploads, and source pixels are
+  not cached. Smaller/weakly repeating inputs retain the direct loop; profile 2
+  remains independently bytewise.
+- A synthetic host oracle compares direct evaluation with representative
+  expansion for phase-only and nonperiodic clamped/wrapped maps. Static checks
+  pin the 512-byte map bound, threshold, reverse expansion, fallback, and profile
+  separation. The live 16-frame profile proves `545086/2485954`
+  representative/reused pixels; forensic reports map `0/0` and oracle
+  `2484/0/0`.
+- Against the preceding clean 16-frame run, profile-1 median/P95 draw falls
+  `3,141,952/3,585,792 -> 3,043,872/3,491,392`; P95 texture falls
+  `509,376 -> 439,680` and setup `988,608 -> 915,968`. Profile-0 draw reaches
+  `2,913,152/3,359,296` and `8.7fps`; final DevFast remains `8.6fps`. Profile
+  0/1/2 ITCM is `20,448/20,888/18,216`; profile-0 BSS is `1,856,200`.
+- DevFast (`76.9s`), rebuilt forensic (`49.8s`), P1Gate (`259.9s`), and Boundary
+  161/162/163 (`127.8s`) pass. Full/Legacy Regression remains skipped by
+  request. Canonical/shipped parity is 11,599,872 bytes at SHA-256
+  `832566CCEA53F6E6DD7195DDBFCEB0164EDC1F11594D376A5244F42B6A15C76E`.
+  The accepted dual-screen capture is
+  `artifacts/visibility/2026-07-12_canonical_fast_054624-3345757-p21976.png`;
+  the lower LCD's three bootstrap rows confirm the sub engine is live.
+
+Source-corrected verifier expectations: none; every representative has the same
+two source addresses and ordered-coverage phase as the expanded destination.
+Coverage-reduced verifier expectations: Full/Legacy Regression was skipped by
+request; DevFast, P1Gate, Boundary, direct fallback, and profile-2 oracle remain.

@@ -793,6 +793,8 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileCi4LutReuseCount = 0;
     gNdsRendererProfileCi4IndexCacheBuildCount = 0;
     gNdsRendererProfileCi4IndexCacheReuseCount = 0;
+    gNdsRendererProfileCi4RepresentativePixelCount = 0;
+    gNdsRendererProfileCi4ReusePixelCount = 0;
     gNdsRendererProfileHardwareOverLimit = 0;
     gNdsRendererProfileOracleSamples = 0;
     gNdsRendererProfileOracleMismatches = 0;
@@ -4354,6 +4356,8 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileCi4LutReuseCount = 0;
     gNdsRendererProfileCi4IndexCacheBuildCount = 0;
     gNdsRendererProfileCi4IndexCacheReuseCount = 0;
+    gNdsRendererProfileCi4RepresentativePixelCount = 0;
+    gNdsRendererProfileCi4ReusePixelCount = 0;
     gNdsRendererProfileHardwareOverLimit = 0;
     gNdsRendererProfileOracleSamples = 0;
     gNdsRendererProfileOracleMismatches = 0;

@@ -239,6 +239,89 @@ function Resolve-Texel01Ci4LutValue {
     $alpha = if (($Value -shr 15) -gt $threshold) { 1 } else { 0 }
     return [uint16](($Value -band 0x7fff) -bor ($alpha -shl 15))
 }
+function Test-Ci4RepresentativeExpansion {
+    param(
+        [int[]]$Source0S,
+        [int[]]$Source1S,
+        [int[]]$Source0T,
+        [int[]]$Source1T
+    )
+    $width = $Source0S.Count
+    $height = $Source0T.Count
+    $representativeS = [int[]]::new($width)
+    $representativeT = [int[]]::new($height)
+    $uniqueS = 0
+    $uniqueT = 0
+
+    Assert-Equal $Source1S.Count $width 'CI4 representative S maps have different widths.'
+    Assert-Equal $Source1T.Count $height 'CI4 representative T maps have different heights.'
+    for ($x = 0; $x -lt $width; $x++) {
+        for ($prior = 0; $prior -lt $x; $prior++) {
+            if (($Source0S[$x] -eq $Source0S[$prior]) -and
+                ($Source1S[$x] -eq $Source1S[$prior]) -and
+                (($x -band 3) -eq ($prior -band 3))) {
+                break
+            }
+        }
+        $representativeS[$x] = $prior
+        if ($prior -eq $x) { $uniqueS++ }
+    }
+    for ($y = 0; $y -lt $height; $y++) {
+        for ($prior = 0; $prior -lt $y; $prior++) {
+            if (($Source0T[$y] -eq $Source0T[$prior]) -and
+                ($Source1T[$y] -eq $Source1T[$prior]) -and
+                (($y -band 3) -eq ($prior -band 3))) {
+                break
+            }
+        }
+        $representativeT[$y] = $prior
+        if ($prior -eq $y) { $uniqueT++ }
+    }
+
+    $direct = [uint16[]]::new($width * $height)
+    $expanded = [uint16[]]::new($width * $height)
+    for ($y = 0; $y -lt $height; $y++) {
+        for ($x = 0; $x -lt $width; $x++) {
+            $value = (($Source0S[$x] * 109) +
+                ($Source1S[$x] * 521) +
+                ($Source0T[$y] * 1237) +
+                ($Source1T[$y] * 3571) +
+                (($x -band 3) * 8191) +
+                (($y -band 3) * 16381)) -band 0xffff
+            $direct[($y * $width) + $x] = [uint16]$value
+        }
+    }
+    for ($y = 0; $y -lt $height; $y++) {
+        if ($representativeT[$y] -ne $y) { continue }
+        $row = $y * $width
+        for ($x = 0; $x -lt $width; $x++) {
+            if ($representativeS[$x] -eq $x) {
+                $expanded[$row + $x] = $direct[$row + $x]
+            }
+        }
+        for ($x = $width - 1; $x -ge 0; $x--) {
+            $expanded[$row + $x] =
+                $expanded[$row + $representativeS[$x]]
+        }
+    }
+    for ($y = $height - 1; $y -ge 0; $y--) {
+        $representativeY = $representativeT[$y]
+        if ($representativeY -eq $y) { continue }
+        for ($x = 0; $x -lt $width; $x++) {
+            $expanded[($y * $width) + $x] =
+                $expanded[($representativeY * $width) + $x]
+        }
+    }
+
+    Assert-Equal ([string]::Join(',', $expanded)) ([string]::Join(',', $direct)) `
+        'CI4 representative expansion diverged from direct per-pixel evaluation.'
+    return [PSCustomObject]@{
+        UniqueS = $uniqueS
+        UniqueT = $uniqueT
+        UniquePixels = $uniqueS * $uniqueT
+        ReusedPixels = ($width * $height) - ($uniqueS * $uniqueT)
+    }
+}
 function Convert-N64Rgba16ToDs {
     param(
         [uint16]$Color,
@@ -939,6 +1022,24 @@ foreach ($lutFraction in @(0, 1, 0x40, 0x72, 0xff)) {
         }
     }
 }
+$phaseOnlyMap = Test-Ci4RepresentativeExpansion `
+    -Source0S ([int[]](0..7 | ForEach-Object { 0 })) `
+    -Source1S ([int[]](0..7 | ForEach-Object { 0 })) `
+    -Source0T ([int[]](0..7 | ForEach-Object { 0 })) `
+    -Source1T ([int[]](0..7 | ForEach-Object { 0 }))
+Assert-Equal $phaseOnlyMap.UniqueS 4 'CI4 representative S map collapsed distinct ordered-coverage phases.'
+Assert-Equal $phaseOnlyMap.UniqueT 4 'CI4 representative T map collapsed distinct ordered-coverage phases.'
+$nonperiodicSource0S = [int[]](0..127 | ForEach-Object { [Math]::Min($_, 31) })
+$nonperiodicSource1S = [int[]](0..127 | ForEach-Object { ($_ + 13) -band 31 })
+$nonperiodicSource0T = [int[]](0..127 | ForEach-Object { [Math]::Min($_, 30) })
+$nonperiodicSource1T = [int[]](0..127 | ForEach-Object { ($_ + 7) -band 31 })
+$nonperiodicMap = Test-Ci4RepresentativeExpansion `
+    -Source0S $nonperiodicSource0S -Source1S $nonperiodicSource1S `
+    -Source0T $nonperiodicSource0T -Source1T $nonperiodicSource1T
+Assert-True ($nonperiodicMap.UniquePixels -gt 0 -and
+    ($nonperiodicMap.UniquePixels * 2) -le (128 * 128) -and
+    $nonperiodicMap.ReusedPixels -ge $nonperiodicMap.UniquePixels) `
+    'CI4 nonperiodic representative fixture no longer exercises the retained large-texture reuse threshold.'
 $pondMObj = Convert-MObjSubMixedFields -Pad00 0x0202 -Fmt 0 -Siz 0 -Flags 0x0200 -BlockFmt 0x6b -BlockSiz 0
 Assert-True ($pondMObj.Pad00 -eq 0 -and $pondMObj.Fmt -eq 2 -and $pondMObj.Siz -eq 2 -and $pondMObj.Flags -eq 0x006b -and $pondMObj.BlockFmt -eq 2 -and $pondMObj.BlockSiz -eq 0) 'Dream Land water MObjSub mixed fields did not recover the source layout.'
 $whispyMObj = Convert-MObjSubMixedFields -Pad00 0x0202 -Fmt 0 -Siz 0 -Flags 0x0200 -BlockFmt 1 -BlockSiz 0
@@ -1090,9 +1191,13 @@ Assert-True ($renderer -match '(?s)vertex_context\.stats = stats;.*?vertex_conte
 Assert-True ($harnessScript.Contains('RENDER_CI4LUT=')) 'Mode 163 does not expose exact animated CI4 LUT build/reuse coverage.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_CI4_INDEX_CACHE_COUNT 2u') -and $renderer.Contains('NDS_RENDERER_HW_CI4_INDEX_CACHE_TEXELS 1024u')) 'Performance renderer CI4 source-index cache lost its exact two-plane 32x32 bound.'
 Assert-True ($renderer.Contains('sizeof(sNdsRendererHardwareCi4IndexCache) == 2080u')) 'Performance renderer CI4 source-index cache exceeded its measured 2080-byte DS bound.'
+Assert-True ($renderer.Contains('== 512u') -and $renderer.Contains('CI4 representative maps must stay within 512 bytes')) 'Performance renderer CI4 representative maps exceeded their measured 512-byte DS bound.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareGetCi4Indices.*?entry->source == source.*?entry->source_texels == source_texels.*?entry->byte_lane_xor == byte_lane_xor.*?entry->indices\[i\] = ndsRendererHardwareReadCi4Direct') 'Performance renderer CI4 source-index cache no longer keys and decodes the exact immutable packed source plane.'
 Assert-True ($renderer -match '(?s)replace_index = sNdsRendererHardwareCi4IndexCacheNext;.*?indices ==\s*protected_indices.*?replace_index = \(replace_index \+ 1u\).*?sNdsRendererHardwareCi4IndexCacheNext =\s*\(replace_index \+ 1u\)') 'CI4 pair acquisition can evict the first returned source plane during the second lookup.'
 Assert-True ($renderer -match '(?s)if \(\(indices0 != NULL\) && \(indices1 != NULL\)\).*?index0 = indices0\[.*?index1 = indices1\[.*?return;') 'Performance CI4 source-index cache no longer preserves live tile addressing.'
+Assert-True ($renderer.Contains('sNdsRendererHardwareTexel01Ci4RepresentativeS[x] = (u8)prior;') -and $renderer.Contains('sNdsRendererHardwareTexel01Ci4RepresentativeT[y] = (u8)prior;') -and $renderer -match '(?s)Source0S\[x\].*?Source1S\[x\].*?\(x & 3u\) == \(prior & 3u\)' -and $renderer -match '(?s)Source0T\[y\].*?Source1T\[y\].*?\(y & 3u\) == \(prior & 3u\)') 'Performance CI4 representative keys no longer include both source-address axes and the exact ordered-coverage phase.'
+Assert-True ($renderer -match '(?s)unique_texels \* 2u\) <= texels.*?for \(x = width; x != 0u; \).*?for \(y = height; y != 0u; \).*?memcpy\(') 'Performance CI4 representative path no longer applies its measured threshold or expands first representatives in overwrite-safe reverse order.'
+Assert-True ($harnessScript.Contains('RENDER_CI4MAP=') -and $harnessScript.Contains('Forensic renderer unexpectedly reused performance CI4 representative maps.')) 'Mode 163 no longer proves representative-map reuse while keeping the forensic decoder independent.'
 Assert-True ($renderer -match '(?s)#endif\s*for \(y = 0u; y < height; y\+\+\).*?index0 = ndsRendererHardwareReadCi4Direct.*?index1 = ndsRendererHardwareReadCi4Direct') 'Performance CI4 cache no longer retains the independent bytewise fallback.'
 Assert-True ($rendererHeader.Contains('ndsRendererHardwareResetSourceCaches')) 'Renderer API cannot invalidate source-pointer caches before reloc scene storage is reused.'
 Assert-True ($relocRendererDL -match '(?s)static void ndsRendererAdapterResetSceneCaches.*?ndsRendererHardwareResetSourceCaches\(\)') 'Reloc scene reset no longer invalidates immutable renderer source caches before pointer reuse.'
@@ -1199,6 +1304,7 @@ Assert-True (-not $renderer.Contains('ndsRendererHardwareResolveCi4PackedPair'))
 Assert-True ($renderer.Contains('ndsRendererHardwareConvertTexel01Ci4Direct')) 'Renderer does not directly resolve the two CI4 source nibbles.'
 Assert-True ($renderer.Contains('ndsRendererProfileRecordTextureCi4Direct(width * height)')) 'Renderer does not publish direct CI4 conversion coverage once per texture.'
 Assert-True ($taskman.Contains('gNdsRendererProfileTextureCi4DirectPixels = 0;')) 'Renderer direct CI4 conversion coverage is not reset with the frame profile.'
+Assert-True ($taskman.Contains('gNdsRendererProfileCi4RepresentativePixelCount = 0;') -and $taskman.Contains('gNdsRendererProfileCi4ReusePixelCount = 0;')) 'Renderer CI4 representative coverage is not reset with the frame profile.'
 Assert-True ($harnessScript.Contains('gNdsRendererProfileTextureCi4DirectPixels')) 'Canonical renderer verifier does not require the direct CI4 water path.'
 Assert-True ($harnessScript.Contains('RENDER_ADAPTER_CACHE=') -and $harnessScript.Contains('gNdsRendererProfileDObjWorldCacheOverflowCount')) 'Forensic renderer verifier does not prove bounded frame-local matrix-cache reuse.'
 Assert-True ($renderer.Contains('texel1_palette_entries =') -and $renderer.Contains('texel1_source.palette_base + 16u')) 'Renderer TLUT pointer validation does not cover the TEXEL1 CI4 palette bank.'

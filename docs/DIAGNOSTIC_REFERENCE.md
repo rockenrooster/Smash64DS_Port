@@ -1329,6 +1329,12 @@ Opening movie / Opening Portraits:
   batch begins, reused triangle submissions, and batch ends. Canonical requires
   begin plus reuse to equal submitted hardware triangles, positive reuse, fewer
   begins than triangles, and ends equal begins at the completed-frame marker.
+- `RENDER_CI4LUT` / `RENDER_CI4MAP`: animated-water performance markers. The
+  first reports palette-pair LUT build/reuse and immutable source-index-plane
+  build/reuse. The second reports pixels evaluated at their first exact
+  TEXEL0/TEXEL1/ordered-phase representative and pixels expanded from one.
+  Profiles 0/1 require positive representative work with reuse at least as large;
+  profile 2 requires both map fields and both index-cache fields to remain zero.
 - `SOBJ_WALL_CACHE`: immutable Dream Land decode-cache marker. Fields are
   build/hit/fast-draw/fallback counts, source width/height/opaque pixels, and
   build/last-draw ticks. Canonical expects exactly one build, one or more hits,

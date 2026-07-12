@@ -1187,10 +1187,10 @@
   `4,392,160/4,411,008` and first reached `7.0fps`. Phase-resolved CI4 then
   reached `7.5fps`; six ITCM paths, exact light-state reuse, and aligned direct
   VTX-cache decode reached `7.6fps`. Arena-first dynamic validation and the
-  two immutable CI4 source-index planes now reach `8.7fps` at
-  `2,959,936/3,404,224` draw. Final DevFast is `8.6fps`; profile-1 draw is
-  `3,141,952/3,585,792`; scan is `949,152/950,720`; projected divisions remain
-  `1,242`.
+  two immutable CI4 source-index planes first reached `8.7fps`. Exact
+  representative expansion now reaches `2,913,152/3,359,296` profile-0 draw.
+  Final DevFast is `8.6fps`; profile-1 draw is `3,043,872/3,491,392`, scan is
+  `937,600/939,072`, and projected divisions remain `1,242`.
   The rejected GX
   FIFO/display-list arena increased vertex cost and must not be restored.
   The RGBA4 interface/HUD SObjs still produce no DS pixels.

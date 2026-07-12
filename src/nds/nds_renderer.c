@@ -332,6 +332,8 @@ static u32 sNdsRendererRuntimeTextureCacheEvictCount;
 static u32 sNdsRendererRuntimeTextureCi4DirectPixels;
 static u32 sNdsRendererRuntimeCi4IndexCacheBuildCount;
 static u32 sNdsRendererRuntimeCi4IndexCacheReuseCount;
+static u32 sNdsRendererRuntimeCi4RepresentativePixelCount;
+static u32 sNdsRendererRuntimeCi4ReusePixelCount;
 #endif
 
 static inline void ndsRendererProfileRecordTextureBind(void)
@@ -374,6 +376,18 @@ static inline void ndsRendererProfileRecordCi4IndexCacheReuse(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     sNdsRendererRuntimeCi4IndexCacheReuseCount++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordCi4RepresentativeReuse(
+    u32 representative_pixels, u32 reused_pixels)
+{
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    sNdsRendererRuntimeCi4RepresentativePixelCount += representative_pixels;
+    sNdsRendererRuntimeCi4ReusePixelCount += reused_pixels;
+#else
+    (void)representative_pixels;
+    (void)reused_pixels;
 #endif
 }
 
@@ -788,6 +802,24 @@ static u8 sNdsRendererHardwareTexel01Ci4Source0S[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
 static u8 sNdsRendererHardwareTexel01Ci4Source1S[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static u8 sNdsRendererHardwareTexel01Ci4Source0T[
+    NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT];
+static u8 sNdsRendererHardwareTexel01Ci4Source1T[
+    NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT];
+static u8 sNdsRendererHardwareTexel01Ci4RepresentativeS[
+    NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
+static u8 sNdsRendererHardwareTexel01Ci4RepresentativeT[
+    NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT];
+#if defined(__arm__)
+_Static_assert(
+    sizeof(sNdsRendererHardwareTexel01Ci4Source0T) +
+    sizeof(sNdsRendererHardwareTexel01Ci4Source1T) +
+    sizeof(sNdsRendererHardwareTexel01Ci4RepresentativeS) +
+    sizeof(sNdsRendererHardwareTexel01Ci4RepresentativeT) == 512u,
+    "CI4 representative maps must stay within 512 bytes");
+#endif
+#endif
 static u16 sNdsRendererHardwareTexel01Ci4PhaseLut[
     NDS_RENDERER_HW_TEXEL01_CI4_PHASE_LUT_COUNT];
 #if defined(__arm__)
@@ -5578,6 +5610,152 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     if ((indices0 != NULL) && (indices1 != NULL))
     {
+        u32 texels = width * height;
+
+        /* Large clamped/masked animated tiles revisit the same pair of source
+         * coordinates and ordered-coverage phase many times. Compute the first
+         * exact representative of each separable S/T class, expand unique rows
+         * right-to-left, then copy repeated rows bottom-to-top. The reverse
+         * order keeps every first representative live until its last use. */
+        if (texels >= 4096u)
+        {
+            u32 unique_s = 0u;
+            u32 unique_t = 0u;
+            u32 unique_texels;
+
+            for (y = 0u; y < height; y++)
+            {
+                sNdsRendererHardwareTexel01Ci4Source0T[y] = (u8)(
+                    (materialize0_t != FALSE) ?
+                        ndsRendererHardwareTextureMaskedAddress(
+                            y, render_tile0->cmt, render_tile0->maskt) : y);
+                sNdsRendererHardwareTexel01Ci4Source1T[y] = (u8)
+                    ndsRendererHardwareTextureAddressCoord(
+                        (s32)y + origin1_delta_t, render_tile1->height,
+                        source1->source_extent_height, render_tile1->cmt,
+                        render_tile1->maskt);
+            }
+            for (x = 0u; x < width; x++)
+            {
+                u32 prior;
+
+                for (prior = 0u; prior < x; prior++)
+                {
+                    if ((sNdsRendererHardwareTexel01Ci4Source0S[x] ==
+                         sNdsRendererHardwareTexel01Ci4Source0S[prior]) &&
+                        (sNdsRendererHardwareTexel01Ci4Source1S[x] ==
+                         sNdsRendererHardwareTexel01Ci4Source1S[prior]) &&
+                        ((x & 3u) == (prior & 3u)))
+                    {
+                        break;
+                    }
+                }
+                sNdsRendererHardwareTexel01Ci4RepresentativeS[x] = (u8)prior;
+                if (prior == x)
+                {
+                    unique_s++;
+                }
+            }
+            for (y = 0u; y < height; y++)
+            {
+                u32 prior;
+
+                for (prior = 0u; prior < y; prior++)
+                {
+                    if ((sNdsRendererHardwareTexel01Ci4Source0T[y] ==
+                         sNdsRendererHardwareTexel01Ci4Source0T[prior]) &&
+                        (sNdsRendererHardwareTexel01Ci4Source1T[y] ==
+                         sNdsRendererHardwareTexel01Ci4Source1T[prior]) &&
+                        ((y & 3u) == (prior & 3u)))
+                    {
+                        break;
+                    }
+                }
+                sNdsRendererHardwareTexel01Ci4RepresentativeT[y] = (u8)prior;
+                if (prior == y)
+                {
+                    unique_t++;
+                }
+            }
+
+            unique_texels = unique_s * unique_t;
+            if ((unique_texels * 2u) <= texels)
+            {
+                for (y = 0u; y < height; y++)
+                {
+                    u32 source0_row;
+                    u32 source1_row;
+                    u32 dst_index;
+                    u32 phase_row;
+
+                    if (sNdsRendererHardwareTexel01Ci4RepresentativeT[y] != y)
+                    {
+                        continue;
+                    }
+                    source0_row = ((source0_origin_t +
+                        sNdsRendererHardwareTexel01Ci4Source0T[y]) *
+                        source0_width) + source0_origin_s;
+                    source1_row = ((source1->source_origin_t +
+                        sNdsRendererHardwareTexel01Ci4Source1T[y]) *
+                        source1->source_width) + source1->source_origin_s;
+                    dst_index = y * upload_width;
+                    phase_row = (y & 3u) << 10;
+
+                    for (x = 0u; x < width; x++)
+                    {
+                        u32 index0;
+                        u32 index1;
+                        u32 phase_lut_index;
+
+                        if (sNdsRendererHardwareTexel01Ci4RepresentativeS[x] !=
+                            x)
+                        {
+                            continue;
+                        }
+                        index0 = indices0[source0_row +
+                            sNdsRendererHardwareTexel01Ci4Source0S[x]];
+                        index1 = indices1[source1_row +
+                            sNdsRendererHardwareTexel01Ci4Source1S[x]];
+                        phase_lut_index = phase_row | ((x & 3u) << 8) |
+                            (index0 << 4) | index1;
+                        sNdsRendererHardwareTextureScratch[dst_index + x] =
+                            sNdsRendererHardwareTexel01Ci4PhaseLut[
+                                phase_lut_index];
+                    }
+                    for (x = width; x != 0u; )
+                    {
+                        u32 representative_x;
+
+                        x--;
+                        representative_x =
+                            sNdsRendererHardwareTexel01Ci4RepresentativeS[x];
+                        sNdsRendererHardwareTextureScratch[dst_index + x] =
+                            sNdsRendererHardwareTextureScratch[
+                                dst_index + representative_x];
+                    }
+                }
+                for (y = height; y != 0u; )
+                {
+                    u32 representative_y;
+
+                    y--;
+                    representative_y =
+                        sNdsRendererHardwareTexel01Ci4RepresentativeT[y];
+                    if (representative_y != y)
+                    {
+                        memcpy(
+                            &sNdsRendererHardwareTextureScratch[y * upload_width],
+                            &sNdsRendererHardwareTextureScratch[
+                                representative_y * upload_width],
+                            width * sizeof(u16));
+                    }
+                }
+                ndsRendererProfileRecordCi4RepresentativeReuse(
+                    unique_texels, texels - unique_texels);
+                return;
+            }
+        }
+
         for (y = 0u; y < height; y++)
         {
             u32 source0_y = (materialize0_t != FALSE) ?
@@ -8245,6 +8423,8 @@ void ndsRendererProfileFrameBegin(void)
         sNdsRendererRuntimeTextureCi4DirectPixels = 0u;
         sNdsRendererRuntimeCi4IndexCacheBuildCount = 0u;
         sNdsRendererRuntimeCi4IndexCacheReuseCount = 0u;
+        sNdsRendererRuntimeCi4RepresentativePixelCount = 0u;
+        sNdsRendererRuntimeCi4ReusePixelCount = 0u;
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
@@ -8287,6 +8467,10 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererRuntimeCi4IndexCacheBuildCount;
     gNdsRendererProfileCi4IndexCacheReuseCount =
         sNdsRendererRuntimeCi4IndexCacheReuseCount;
+    gNdsRendererProfileCi4RepresentativePixelCount =
+        sNdsRendererRuntimeCi4RepresentativePixelCount;
+    gNdsRendererProfileCi4ReusePixelCount =
+        sNdsRendererRuntimeCi4ReusePixelCount;
     gNdsRendererProfileTextureCacheAliasAvoidCount =
         sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count;
     gNdsRendererProfileTexel1CompositeCount =
