@@ -8282,6 +8282,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         gNdsRendererProfileOwners[(u32)owner_id].exclusive_ticks +=
             cpuGetTiming() - owner_start;
 #endif
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+        ndsRendererBenchmarkSinkEndOwner(owner_id);
+#endif
         return;
     }
     submitted_before = gNdsFighterMarioFoxDLAllDrawCount;
@@ -8308,6 +8311,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileOwners[(u32)owner_id].exclusive_ticks +=
         cpuGetTiming() - owner_start;
+#endif
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkEndOwner(owner_id);
 #endif
 #else
     (void)fighter_gobj;

@@ -489,5 +489,8 @@ void ndsRendererProfileRecordMaterialOperations(u32 count);
 u32 ndsRendererProfileGlobalStateHash(void);
 void ndsRendererProfileFrameBegin(void);
 void ndsRendererProfileFramePublish(void);
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner);
+#endif
 
 #endif

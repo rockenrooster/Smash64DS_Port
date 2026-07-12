@@ -443,6 +443,106 @@ NEXT MEASURED BOTTLENECK:
   bounded aligned ring sink, then measure the warm no-upload control.
 ```
 
+## T2B-CPU-PREP-NO-GX — exact CPU policy/derive cost floor
+
+```text
+IDEA ID:
+  T2B-CPU-PREP-NO-GX
+HYPOTHESIS:
+  Running exact triangle classification, projection, color/ST derivation,
+  matrix/texture policy, and final GX value calculation while redirecting GX
+  writes to a bounded aligned ring will separate CPU policy/derive cost from
+  GX transport without allowing the compiler to delete prepared values.
+TARGETED EXCLUSIVE COUNTER:
+  Whole draw and stage/Mario/Fox owner walls over one synchronized 128-frame
+  profile-1 window, plus owner sink-word totals and a warm-up-only sink-store
+  calibration.
+MEASURED UPPER BOUND:
+  The raw no-GX draw saves only 27,296 ticks versus T1B generic. Scaling the
+  measured 1,024-word/6,720-tick ring calibration to 11,090 words gives about
+  72,764 ticks of sink overhead, placing the approximate CPU policy/derive
+  floor near 1,983,204 ticks and the non-additive GX-transport/substitution
+  upper bound near 100,060 ticks. CPU policy/derive, not GX transport, remains
+  dominant.
+LIVE-TREE RECONCILIATION:
+  Continued from T2A commit 6e039ad82. Preserved all untracked user roadmaps,
+  reviews, prompts, logs, and docs/optimization files; decomp remained
+  read-only.
+FILES/FUNCTIONS CHANGED:
+  Added benchmark mode 2 and a dedicated O2/profile-1 target; compile-time GX,
+  matrix, texture, color, ST, polygon, begin/end, upload, and refresh sinks;
+  a bounded 4 KiB aligned ring; warm-up calibration; exact CPU-prep gates;
+  owner sink-word publication; synchronized verifier support; and ITCM/static
+  target assertions. Normal targets remain benchmark mode 0.
+BUILD TARGET/FLAGS:
+  smash64ds-battle-playable-coarse-cpu-prep-no-gx-hwtri; common/scene
+  -O2 -mthumb and renderer -O2 -marm; benchmark mode 2.
+BASELINE ROM SHA-256:
+  T1B same-scene generic profile-1:
+  3FF0CB4AD3782C8DF2510A718F740E7A9089275C0912646CF0F4BFE84EAB2FCC.
+EXPERIMENT ROM / ELF SHA-256:
+  9709D05C907859902E1EDD63F15307ABF041FD3FECEFF86DC041D3E05C7412D5 /
+  9403FF50B0B79D1C5F5CA90457DE48C0867F106824B2C9F43EE06DD7BA5A686B.
+FRAME/LOGIC-TICK WINDOW:
+  Warm-up 194; frames 195..322; logic ticks 202..329. All frame and logic
+  ticks were consecutive, with no timer-start reset in the decision window.
+A0 MEDIAN/P95:
+  Generic T1B draw 2,083,264/2,102,784; stage 1,031,680/1,049,536;
+  Mario 500,736/500,800; Fox 534,272/534,336.
+B0 MEDIAN/P95:
+  CPU_PREP_NO_GX draw 2,055,968/2,423,104; stage 985,472/1,004,672;
+  Mario 504,640/504,704; Fox 535,744/535,808.
+A1 OR DISABLED-CONTROL MEDIAN/P95:
+  Compile-time nonvisual floor; normal mode 0 is the disabled control. No
+  runtime branch was added to normal renderer targets.
+ACTIVE/WAIT SPLIT:
+  Loop 2,240,704/2,800,896; present active 2,059,232/2,426,368;
+  VBlank wait 85,664/466,624; update 137,280/435,904;
+  conservation error 0/0 and all residual ratios below 2%. Long-window P95
+  contains known periodic audio/wallpaper spikes and is not a transport-only
+  comparison.
+OWNER SPLIT:
+  Stage/Mario/Fox ring words were 2,952/4,144/3,994, exactly summing to the
+  11,090-word frame total. Calibration-scaled owner sink costs are about
+  19,373/27,195/26,211 ticks. Subtracting them gives approximate owner CPU
+  floors of 966,100/477,445/509,533 ticks and non-additive generic-to-floor
+  upper bounds of 65,581/23,291/24,739 ticks.
+RENDERER NESTED/EXCLUSIVE SPLIT:
+  Profile-1 detailed DL/submit/vertex timers remain compile-time absent.
+  Logical texture work remained exactly two uploads and 36,864 bytes; real
+  VRAM/MMIO and GX geometry writes were suppressed.
+OP/PROGRAM BYTES/FALLBACKS:
+  One 4,096-byte aligned ring, 11,090 stores per frame with bounded wrap, and
+  no allocation. Calibration is 1,024 stores/6,720 ticks and occurs once
+  before the measured warm window. No fallback exists.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  ITCM 21,284 bytes: CI4 direct 2,344, vertex submit 3,348, triangle submit
+  4,368, scanner 9,488, renderer emitted total 19,548. Text/data/BSS
+  659,400/126,112/1,862,376; DTCM 0. ROM 11,668,480 bytes; ELF 8,132,156
+  bytes. No arena or per-frame allocation.
+SEMANTIC TRACE RESULT:
+  Not applicable: this is a deliberately nonvisual transport ablation. The
+  existing exact CPU decisions and derived values execute and are consumed by
+  the ring, but no GX stream is submitted.
+ORACLE/COUNTER/GX RESULT:
+  Exact 2,484 vertices/828 triangles; batches 121/707/121; texture prepare
+  98/730; classes 648/44/126/10; logical uploads 2/36,864 bytes; terminal GX
+  polygons/vertices intentionally zero.
+CAPTURE RESULT:
+  None; the benchmark is nonvisual by contract.
+VERIFIER COMMANDS AND RESULTS:
+  The synchronized 128-frame CPU-prep benchmark passed frame, identity,
+  counter, sink, and conservation gates. ITCM placement and target/static
+  fixture assertions passed during iteration.
+DECISION: KEEP
+  Keep the benchmark-only ablation and measurement tooling. It is not a
+  production renderer path. The result rejects GX transport as the primary
+  explanation for the remaining 2.08M-tick generic draw cost.
+NEXT MEASURED BOTTLENECK:
+  Measure the independent warm no-upload control, then frozen owner-scale
+  transport. Use those floors plus a stable-run census to select K1.
+```
+
 ## Per-experiment report template
 
 ```text

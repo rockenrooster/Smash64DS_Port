@@ -41,6 +41,221 @@
 #include <nds/arm9/postest.h>
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX)
+#define NDS_RENDERER_BENCHMARK_SINK_WORDS 1024u
+#define NDS_RENDERER_BENCHMARK_SINK_MASK \
+    (NDS_RENDERER_BENCHMARK_SINK_WORDS - 1u)
+
+u32 gNdsRendererBenchmarkSink[
+    NDS_RENDERER_BENCHMARK_SINK_WORDS] __attribute__((aligned(32)));
+volatile u32 gNdsRendererBenchmarkSinkCursor;
+volatile u32 gNdsRendererBenchmarkSinkWordCount;
+volatile u32 gNdsRendererBenchmarkSinkOwnerWords[
+    NDS_RENDERER_PROFILE_OWNER_COUNT];
+volatile u32 gNdsRendererBenchmarkSinkCalibrationWords;
+volatile u32 gNdsRendererBenchmarkSinkCalibrationTicks;
+static u32 sNdsRendererBenchmarkSinkCursor;
+static u32 sNdsRendererBenchmarkSinkWordCount;
+static u32 sNdsRendererBenchmarkSinkLastOwnerCursor;
+static u32 sNdsRendererBenchmarkSinkOwnerWords[
+    NDS_RENDERER_PROFILE_OWNER_COUNT];
+static u32 sNdsRendererBenchmarkFakeTextureName = 1u;
+static u32 sNdsRendererBenchmarkTextureParameter;
+
+static inline void ndsRendererBenchmarkSinkWord(u32 value)
+{
+    gNdsRendererBenchmarkSink[
+        sNdsRendererBenchmarkSinkCursor &
+        NDS_RENDERER_BENCHMARK_SINK_MASK] = value;
+    sNdsRendererBenchmarkSinkCursor++;
+    sNdsRendererBenchmarkSinkWordCount++;
+}
+
+static inline void ndsRendererBenchmarkGlEnable(int bits)
+{
+    ndsRendererBenchmarkSinkWord(0xe1000000u | (u32)bits);
+}
+
+static inline void ndsRendererBenchmarkGlDisable(int bits)
+{
+    ndsRendererBenchmarkSinkWord(0xd1000000u | (u32)bits);
+}
+
+static inline void ndsRendererBenchmarkGlAlphaFunc(int threshold)
+{
+    ndsRendererBenchmarkSinkWord((u32)threshold);
+}
+
+static inline void ndsRendererBenchmarkGlFogDensity(int index, int density)
+{
+    ndsRendererBenchmarkSinkWord(
+        ((u32)index & 0xffu) | (((u32)density & 0xffu) << 8));
+}
+
+static inline void ndsRendererBenchmarkGlFogShift(int shift)
+{
+    ndsRendererBenchmarkSinkWord((u32)shift);
+}
+
+static inline void ndsRendererBenchmarkGlFogOffset(int offset)
+{
+    ndsRendererBenchmarkSinkWord((u32)offset);
+}
+
+static inline void ndsRendererBenchmarkGlFogColor(
+    u8 red, u8 green, u8 blue, u8 alpha)
+{
+    ndsRendererBenchmarkSinkWord(
+        (u32)red | ((u32)green << 5) | ((u32)blue << 10) |
+        ((u32)alpha << 15));
+}
+
+static inline void ndsRendererBenchmarkGlTexParameter(int target, int param)
+{
+    (void)target;
+    sNdsRendererBenchmarkTextureParameter = (u32)param;
+    ndsRendererBenchmarkSinkWord((u32)param);
+}
+
+static inline u32 ndsRendererBenchmarkGlGetTexParameter(void)
+{
+    return sNdsRendererBenchmarkTextureParameter;
+}
+
+static inline void ndsRendererBenchmarkGlBindTexture(int target, int name)
+{
+    (void)target;
+    ndsRendererBenchmarkSinkWord((u32)name);
+}
+
+static inline int ndsRendererBenchmarkGlGenTextures(int count, int *names)
+{
+    int i;
+
+    if ((count <= 0) || (names == NULL))
+    {
+        return 0;
+    }
+    for (i = 0; i < count; i++)
+    {
+        names[i] = (int)sNdsRendererBenchmarkFakeTextureName++;
+        ndsRendererBenchmarkSinkWord((u32)names[i]);
+    }
+    return 1;
+}
+
+static inline int ndsRendererBenchmarkGlDeleteTextures(int count, int *names)
+{
+    int i;
+
+    if ((count <= 0) || (names == NULL))
+    {
+        return 0;
+    }
+    for (i = 0; i < count; i++)
+    {
+        ndsRendererBenchmarkSinkWord((u32)names[i]);
+    }
+    return 1;
+}
+
+static inline int ndsRendererBenchmarkGlTexImage2D(
+    int target, int empty1, GL_TEXTURE_TYPE_ENUM type,
+    int size_x, int size_y, int empty2, int params, const void *texture)
+{
+    (void)target;
+    (void)empty1;
+    (void)empty2;
+    (void)texture;
+    sNdsRendererBenchmarkTextureParameter = (u32)params;
+    ndsRendererBenchmarkSinkWord((u32)type);
+    ndsRendererBenchmarkSinkWord(
+        ((u32)size_x & 0xffffu) | ((u32)size_y << 16));
+    ndsRendererBenchmarkSinkWord((u32)params);
+    return 1;
+}
+
+static inline void ndsRendererBenchmarkGlMatrixMode(int mode)
+{
+    ndsRendererBenchmarkSinkWord((u32)mode);
+}
+
+static inline void ndsRendererBenchmarkGlLoadMatrix4x4(const m4x4 *matrix)
+{
+    const u32 *words = (const u32 *)matrix;
+    u32 i;
+
+    for (i = 0u; i < 16u; i++)
+    {
+        ndsRendererBenchmarkSinkWord(words[i]);
+    }
+}
+
+static inline void ndsRendererBenchmarkGlVertex3v16(v16 x, v16 y, v16 z)
+{
+    ndsRendererBenchmarkSinkWord(
+        (u32)(u16)x | ((u32)(u16)y << 16));
+    ndsRendererBenchmarkSinkWord((u32)(u16)z);
+}
+
+static inline void ndsRendererBenchmarkGlPolyFmt(u32 params)
+{
+    ndsRendererBenchmarkSinkWord(params);
+}
+
+static inline void ndsRendererBenchmarkGlBegin(GL_GLBEGIN_ENUM mode)
+{
+    ndsRendererBenchmarkSinkWord((u32)mode);
+}
+
+static inline void ndsRendererBenchmarkGlColor(u16 color)
+{
+    ndsRendererBenchmarkSinkWord((u32)color);
+}
+
+static inline void ndsRendererBenchmarkGlTexCoord2t16(t16 s, t16 t)
+{
+    ndsRendererBenchmarkSinkWord(
+        (u32)(u16)s | ((u32)(u16)t << 16));
+}
+
+#define glEnable ndsRendererBenchmarkGlEnable
+#define glDisable ndsRendererBenchmarkGlDisable
+#define glAlphaFunc ndsRendererBenchmarkGlAlphaFunc
+#define glFogDensity ndsRendererBenchmarkGlFogDensity
+#define glFogShift ndsRendererBenchmarkGlFogShift
+#define glFogOffset ndsRendererBenchmarkGlFogOffset
+#define glFogColor ndsRendererBenchmarkGlFogColor
+#define glTexParameter ndsRendererBenchmarkGlTexParameter
+#define glGetTexParameter ndsRendererBenchmarkGlGetTexParameter
+#define glBindTexture ndsRendererBenchmarkGlBindTexture
+#define glGenTextures ndsRendererBenchmarkGlGenTextures
+#define glDeleteTextures ndsRendererBenchmarkGlDeleteTextures
+#define glTexImage2D ndsRendererBenchmarkGlTexImage2D
+#define glMatrixMode ndsRendererBenchmarkGlMatrixMode
+#define glLoadMatrix4x4 ndsRendererBenchmarkGlLoadMatrix4x4
+#define glVertex3v16 ndsRendererBenchmarkGlVertex3v16
+#define glPolyFmt ndsRendererBenchmarkGlPolyFmt
+#define glBegin ndsRendererBenchmarkGlBegin
+#define glColor ndsRendererBenchmarkGlColor
+#define glTexCoord2t16 ndsRendererBenchmarkGlTexCoord2t16
+#endif
+
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
+{
+    u32 cursor = sNdsRendererBenchmarkSinkCursor;
+
+    if ((u32)owner < NDS_RENDERER_PROFILE_OWNER_COUNT)
+    {
+        sNdsRendererBenchmarkSinkOwnerWords[(u32)owner] +=
+            cursor - sNdsRendererBenchmarkSinkLastOwnerCursor;
+    }
+    sNdsRendererBenchmarkSinkLastOwnerCursor = cursor;
+}
+#endif
+
 #define NDS_RENDERER_OP_NOOP 0x00u
 #define NDS_RENDERER_OP_VTX 0x01u
 #define NDS_RENDERER_OP_MODIFYVTX 0x02u
@@ -4953,6 +5168,16 @@ static s32 ndsRendererHardwareReplaceTextureData(
     const void *texture,
     u32 texture_bytes)
 {
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    if ((entry == NULL) || (entry->name == 0) ||
+        (texture == NULL) || (texture_bytes == 0u))
+    {
+        return FALSE;
+    }
+    ndsRendererBenchmarkSinkWord((u32)entry->name);
+    ndsRendererBenchmarkSinkWord(texture_bytes);
+    return TRUE;
+#else
     void *vram_address;
     uintptr_t vram_first;
     uintptr_t vram_last;
@@ -5000,6 +5225,7 @@ static s32 ndsRendererHardwareReplaceTextureData(
     dmaCopyWords(0, texture, vram_address, texture_bytes);
     vramRestorePrimaryBanks(vram_state);
     return TRUE;
+#endif
 }
 
 static NDSRendererHardwareTextureCacheEntry *
@@ -8998,6 +9224,9 @@ ndsRendererSubmitHardwareTriangle(
 #endif
 
     sNdsRendererHardwareSubmitted = TRUE;
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+    sNdsRendererBenchmarkTriangleCount++;
+#endif
     stats->hardware_triangle_count++;
     stats->hardware_vertex_count += 3u;
     ndsRendererProfileRecordHardwareTriangle();
@@ -9753,6 +9982,27 @@ u32 ndsRendererProfileGlobalStateHash(void)
 
 void ndsRendererProfileFrameBegin(void)
 {
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    if (gNdsRendererBenchmarkSinkCalibrationWords == 0u)
+    {
+        u32 calibration_start = cpuGetTiming();
+        u32 i;
+
+        for (i = 0u; i < NDS_RENDERER_BENCHMARK_SINK_WORDS; i++)
+        {
+            ndsRendererBenchmarkSinkWord(i);
+        }
+        gNdsRendererBenchmarkSinkCalibrationTicks =
+            cpuGetTiming() - calibration_start;
+        gNdsRendererBenchmarkSinkCalibrationWords =
+            NDS_RENDERER_BENCHMARK_SINK_WORDS;
+    }
+    sNdsRendererBenchmarkSinkCursor = 0u;
+    sNdsRendererBenchmarkSinkWordCount = 0u;
+    sNdsRendererBenchmarkSinkLastOwnerCursor = 0u;
+    memset(sNdsRendererBenchmarkSinkOwnerWords, 0,
+           sizeof(sNdsRendererBenchmarkSinkOwnerWords));
+#endif
     gNdsRendererProfileLevel = NDS_RENDERER_PROFILE_LEVEL;
     gNdsRendererProfileRawCurrentCandidateCount = 0u;
     gNdsRendererProfileRawCurrentRangeRejectCount = 0u;
@@ -9833,6 +10083,15 @@ void ndsRendererProfileFramePublish(void)
 #if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
     gNdsRendererBenchmarkTriangleCount =
         sNdsRendererBenchmarkTriangleCount;
+#endif
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    gNdsRendererBenchmarkSinkCursor =
+        sNdsRendererBenchmarkSinkCursor;
+    gNdsRendererBenchmarkSinkWordCount =
+        sNdsRendererBenchmarkSinkWordCount;
+    memcpy((void *)gNdsRendererBenchmarkSinkOwnerWords,
+           sNdsRendererBenchmarkSinkOwnerWords,
+           sizeof(gNdsRendererBenchmarkSinkOwnerWords));
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileGXStatusPostVBlank =

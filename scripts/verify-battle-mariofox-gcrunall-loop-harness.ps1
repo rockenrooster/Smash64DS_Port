@@ -338,7 +338,7 @@ if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
 if ($Target -match '^smash64ds-battle-playable-(canonical|coarse(?:-[a-z-]+)?|forensic)-hwtri$') {
     & (Join-Path $PSScriptRoot 'check-renderer-itcm-placement.ps1') `
         -Elf $elf `
-        -BenchmarkAblation:$RendererBenchmarkOnly
+        -BenchmarkAblation:($Target -like '*triangle-noop*')
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melonDsPath" }
@@ -457,6 +457,9 @@ try {
                 $coarseBenchmarkCommands += 'printf "COARSE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileLoopWallTicks, gNdsRendererProfileInputTicks, gNdsRendererProfileUpdateTicks, gNdsRendererProfileSourceUpdateTicks, gNdsRendererProfileAudioUpdateTicks, gNdsRendererProfilePresentActiveTicks, gNdsRendererProfileVBlankWaitTicks, gNdsRendererProfileBeginFrameTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileWallpaperTicks, gNdsRendererProfileOwners[0].exclusive_ticks, gNdsRendererProfileOwners[1].exclusive_ticks, gNdsRendererProfileOwners[2].exclusive_ticks, gNdsRendererProfileForegroundTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileFlushTicks, gNdsRendererProfilePostVBlankTicks, gNdsRendererProfileThreadTicks, gNdsRendererProfileDrawResidualTicks, gNdsRendererProfilePresentResidualTicks, gNdsRendererProfileLoopResidualTicks, gNdsRendererProfileConservationErrorTicks, gNdsRendererProfileLogicTick'
                 $coarseBenchmarkCommands += 'printf "STAGE0_BENCH=%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileStageLayer0Ticks'
                 $coarseBenchmarkCommands += 'printf "GX_BOUNDARY=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileGXStatusBeforeFlush, gNdsRendererProfileGXControlBeforeFlush, gNdsRendererProfileGXStatusAfterFlush, gNdsRendererProfileGXStatusPostVBlank, gNdsRendererProfileGXControlPostVBlank, gNdsRendererProfileFlushTicks'
+                if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
+                    $coarseBenchmarkCommands += 'printf "SINK_BENCH=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSinkCursor, gNdsRendererBenchmarkSinkWordCount, gNdsRendererBenchmarkSinkCalibrationWords, gNdsRendererBenchmarkSinkCalibrationTicks, gNdsRendererBenchmarkSinkOwnerWords[0], gNdsRendererBenchmarkSinkOwnerWords[1], gNdsRendererBenchmarkSinkOwnerWords[2]'
+                }
                 if ($RendererProfileLevel -ge 2) {
                     foreach ($ownerIndex in 0..2) {
                         $coarseBenchmarkCommands += Get-RendererOwnerBenchmarkCommand -OwnerIndex $ownerIndex
@@ -691,11 +694,15 @@ try {
     $ownerBenchmark = @()
     $gxBoundaryBenchmark = @()
     $stage0Benchmark = @()
+    $sinkBenchmark = @()
     $rendererSemanticBenchmark = @()
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
         $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 24)
         $gxBoundaryBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'GX_BOUNDARY' -FieldCount 7)
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
+        if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
+            $sinkBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SINK_BENCH' -FieldCount 8)
+        }
         if ($RendererProfileLevel -ge 2) {
             $ownerBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'OWNER_BENCH' -FieldCount 37)
             $rendererSemanticBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'RENDER_SEMANTIC' -FieldCount 38)
@@ -824,6 +831,7 @@ try {
                 $coarseResidualRatioSummary = ''
                 $gxBoundarySummary = ''
                 $stage0Summary = ''
+                $sinkMetricSummary = ''
                 $semanticMetricSummary = ''
                 $semanticChurnSummary = ''
                 $semanticProvenanceSummaries = @()
@@ -880,6 +888,7 @@ try {
                         $coarseSamples = [System.Collections.Generic.List[object]]::new()
                         $gxBoundarySamples = [System.Collections.Generic.List[object]]::new()
                         $stage0Samples = [System.Collections.Generic.List[object]]::new()
+                        $sinkSamples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
                         $logicTickResetCount = 0
                         $drawResidualRatios = @()
@@ -890,6 +899,9 @@ try {
                             [System.Collections.Generic.List[object]]::new(),
                             [System.Collections.Generic.List[object]]::new()
                         )
+                        if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
+                            Assert-Condition ($sinkBenchmark.Count -eq $RendererBenchmarkSamples) "CPU_PREP_NO_GX sink benchmark captured $($sinkBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        }
                         for ($sampleIndex = 0; $sampleIndex -lt $RendererBenchmarkSamples; $sampleIndex++) {
                             $coarse = Get-Ints $coarseBenchmark[$sampleIndex]
                             $render = Get-Ints $rendererBenchmark[$sampleIndex]
@@ -942,6 +954,12 @@ try {
                             $stage0 = Get-Ints $stage0Benchmark[$sampleIndex]
                             Assert-Condition ($stage0[0] -eq $frame -and $stage0[1] -gt 0) "Stage layer-0 benchmark is not synchronized or measured at frame $frame." $gdbStdout
                             $stage0Samples.Add($stage0)
+                            if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
+                                $sink = Get-Ints $sinkBenchmark[$sampleIndex]
+                                $sinkOwnerWords = $sink[5] + $sink[6] + $sink[7]
+                                Assert-Condition ($sink[0] -eq $frame -and $sink[1] -eq $sink[2] -and $sink[2] -gt 0 -and $sink[3] -eq 1024 -and $sink[4] -gt 0 -and $sinkOwnerWords -eq $sink[2]) "CPU_PREP_NO_GX sink record is not synchronized, owner-conserved, or calibrated at frame $frame." $gdbStdout
+                                $sinkSamples.Add($sink)
+                            }
                             $drawResidualRatios += Get-RatioBasisPoints $coarse[19] $drawTicks
                             $presentResidualRatios += Get-RatioBasisPoints $coarse[20] $presentActive
                             $loopResidualRatios += Get-RatioBasisPoints $coarse[21] $loopWall
@@ -1017,6 +1035,9 @@ try {
                         $coarseResidualRatioSummary = "Renderer coarse residual ratios (median/p95 basis points): draw=$(Get-MedianP95 $drawResidualRatios) present=$(Get-MedianP95 $presentResidualRatios) loop=$(Get-MedianP95 $loopResidualRatios)"
                         $gxBoundarySummary = "Renderer GX boundary: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) adjacent changes/distinct values statusBefore=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 1)) controlBefore=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 2)) statusAfterFlush=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 3)) statusPostVBlank=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 4)) controlPostVBlank=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 5)) median/p95 ticks flush=$(Get-MedianP95 (Get-SampleFieldValues $gxBoundarySamples 6))"
                         $stage0Summary = "Renderer stage layer-0 benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 ticks=$(Get-MedianP95 (Get-SampleFieldValues $stage0Samples 1)) adjacent changes/distinct values=$(Get-AdjacentChurn (Get-SampleFieldValues $stage0Samples 1))"
+                        if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
+                            $sinkMetricSummary = "Renderer CPU_PREP_NO_GX sink: samples=$RendererBenchmarkSamples words=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 2)) cursor=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 1)) stageWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 5)) MarioWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 6)) FoxWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 7)) calibrationWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 3)) calibrationTicks=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 4))"
+                        }
 
                         $ownerLabels = @('stage', 'Mario', 'Fox')
                         if ($RendererProfileLevel -ge 2) {
@@ -1111,6 +1132,16 @@ try {
                 }
                 if ($RendererBenchmarkOnly) {
                     Assert-Condition ($benchmarkMakeIdentity.RendererBenchmarkMode -gt 0) 'Benchmark-only verifier was not built with a renderer benchmark mode.' ($benchmarkMakeIdentity | Format-List | Out-String)
+                    if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
+                        $sinkProfile = Get-Ints $renderProfile
+                        $sinkBatch = Get-Ints $renderBatch
+                        $sinkSubmit = Get-Ints $renderSubmit
+                        $sinkPlatform = Get-Ints $platformHw
+                        Assert-Condition ($renderProfile.Success -and $sinkProfile[15] -eq 2484 -and $sinkProfile[16] -eq 828 -and $sinkProfile[17] -eq 0) 'CPU_PREP_NO_GX did not execute exact 2,484-vertex/828-triangle CPU preparation.' $gdbStdout
+                        Assert-Condition ($renderBatch.Success -and $sinkBatch[0] -eq 121 -and $sinkBatch[1] -eq 707 -and $sinkBatch[2] -eq 121 -and $sinkBatch[3] -eq 98 -and $sinkBatch[4] -eq 730) 'CPU_PREP_NO_GX drifted from exact batch and texture-preparation policy.' $gdbStdout
+                        Assert-Condition ($renderSubmit.Success -and $sinkSubmit[0] -eq 648 -and $sinkSubmit[1] -eq 0 -and $sinkSubmit[2] -eq 44 -and $sinkSubmit[3] -eq 126 -and $sinkSubmit[4] -eq 0 -and $sinkSubmit[5] -eq 0 -and $sinkSubmit[6] -eq 10 -and $sinkSubmit[7] -eq 0) 'CPU_PREP_NO_GX drifted from the exact 648/44/126/10 submit-class partition.' $gdbStdout
+                        Assert-Condition ($platformHw.Success -and $sinkPlatform[0] -gt 0 -and $sinkPlatform[2] -eq 0 -and $sinkPlatform[3] -eq 0) 'CPU_PREP_NO_GX unexpectedly emitted GX geometry or failed to complete benchmark frames.' $gdbStdout
+                    }
                     Write-Output $benchmarkIdentitySummary
                     Write-Output $benchmarkMetricSummary
                     Write-Output $benchmarkChurnSummary
@@ -1118,6 +1149,7 @@ try {
                     Write-Output $coarseResidualRatioSummary
                     Write-Output $gxBoundarySummary
                     Write-Output $stage0Summary
+                    if ($sinkMetricSummary) { Write-Output $sinkMetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     Write-Output "$Label renderer benchmark-only sample passed."
                     return
