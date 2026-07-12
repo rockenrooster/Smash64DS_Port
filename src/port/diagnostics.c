@@ -2917,6 +2917,8 @@ volatile u32 gNdsRendererProfileTriangleSubmitTicks;
 volatile u32 gNdsRendererProfileVertexSubmitTicks;
 volatile u32 gNdsRendererProfileCi4LutBuildCount;
 volatile u32 gNdsRendererProfileCi4LutReuseCount;
+volatile u32 gNdsRendererProfileCi4IndexCacheBuildCount;
+volatile u32 gNdsRendererProfileCi4IndexCacheReuseCount;
 volatile u32 gNdsRendererProfileHardwareOverLimit;
 volatile u32 gNdsRendererProfileOracleSamples;
 volatile u32 gNdsRendererProfileOracleMismatches;

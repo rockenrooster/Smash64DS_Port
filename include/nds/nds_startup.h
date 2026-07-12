@@ -3981,6 +3981,8 @@ extern volatile u32 gNdsRendererProfileTriangleSubmitTicks;
 extern volatile u32 gNdsRendererProfileVertexSubmitTicks;
 extern volatile u32 gNdsRendererProfileCi4LutBuildCount;
 extern volatile u32 gNdsRendererProfileCi4LutReuseCount;
+extern volatile u32 gNdsRendererProfileCi4IndexCacheBuildCount;
+extern volatile u32 gNdsRendererProfileCi4IndexCacheReuseCount;
 extern volatile u32 gNdsRendererProfileHardwareOverLimit;
 extern volatile u32 gNdsRendererProfileOracleSamples;
 extern volatile u32 gNdsRendererProfileOracleMismatches;

@@ -309,7 +309,7 @@ try {
             'printf "RENDER_BATCH=%u,%u,%u,%u,%u\n", gNdsRendererProfileHardwareBatchBeginCount, gNdsRendererProfileHardwareBatchReuseCount, gNdsRendererProfileHardwareBatchEndCount, gNdsRendererProfileTexturePrepareCount, gNdsRendererProfileTexturePrepareReuseCount',
             'printf "RENDER_TOPOLOGY=%u,%u,%u,%u\n", gNdsRendererProfileImmutableListCount, gNdsRendererProfileTrustedCommandCount, gNdsRendererProfileValidatedCommandCount, gNdsRendererProfileTriangleRunReuseCount',
             'printf "RENDER_COST=%u,%u\n", gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks',
-            'printf "RENDER_CI4LUT=%u,%u\n", gNdsRendererProfileCi4LutBuildCount, gNdsRendererProfileCi4LutReuseCount',
+            'printf "RENDER_CI4LUT=%u,%u,%u,%u\n", gNdsRendererProfileCi4LutBuildCount, gNdsRendererProfileCi4LutReuseCount, gNdsRendererProfileCi4IndexCacheBuildCount, gNdsRendererProfileCi4IndexCacheReuseCount',
             'printf "RENDER_ORACLE=%u,%u,%u\n", gNdsRendererProfileOracleSamples, gNdsRendererProfileOracleMismatches, gNdsRendererProfileOracleMaxDelta',
             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
             'printf "RENDER_ADAPTER_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileCameraMatrixCacheHitCount, gNdsRendererProfileCameraMatrixCacheMissCount, gNdsRendererProfileCameraMatrixCacheOverflowCount, gNdsRendererProfileDObjWorldCacheHitCount, gNdsRendererProfileDObjWorldCacheMissCount, gNdsRendererProfileDObjWorldCacheOverflowCount',
@@ -471,7 +471,7 @@ try {
     $renderBatch = [regex]::Match($gdbStdout, 'RENDER_BATCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderTopology = [regex]::Match($gdbStdout, 'RENDER_TOPOLOGY=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderCost = [regex]::Match($gdbStdout, 'RENDER_COST=([0-9]+),([0-9]+)')
-    $renderCi4Lut = [regex]::Match($gdbStdout, 'RENDER_CI4LUT=([0-9]+),([0-9]+)')
+    $renderCi4Lut = [regex]::Match($gdbStdout, 'RENDER_CI4LUT=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperFinal = [regex]::Match($gdbStdout, 'SOBJ_WALL_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
@@ -616,6 +616,11 @@ try {
                 Assert-Condition ($fighterDisplayContract.Success -and $fdc[0] -gt 0 -and $fdc[3] -gt 0 -and $fdc[0] -ge $fdc[3] -and ($fdc[0] - $fdc[3]) -le 64 -and (($fdc[4] -band 0x222005) -eq 0x222005) -and $fdc[5] -gt 0 -and $fdc[6] -gt 0 -and $fdc[7] -gt 0 -and $fdc[8] -eq 0 -and $fdc[11] -gt 0 -and $fdc[12] -gt 0 -and $fdc[13] -eq 0x00100000 -and $fdc[14] -eq [Convert]::ToUInt32('c4112078', 16)) 'Canonical realtime HW build did not preserve the original fighter display selection, lighting, geometry, cycle, render-mode, and visibility contract.' $gdbStdout
                 Assert-Condition ($renderProfile.Success -and $rp[15] -le 6144 -and $rp[16] -le 2048 -and $rp[17] -eq 0) 'Canonical realtime HW build exceeded DS poly/vertex limits.' $gdbStdout
                 Assert-Condition ($renderBatch.Success -and $rb[0] -gt 0 -and $rb[1] -gt 0 -and $rb[0] -lt $rp[16] -and ($rb[0] + $rb[1]) -eq $rp[16] -and $rb[2] -eq $rb[0] -and $rb[3] -gt 0 -and $rb[4] -gt 0 -and $rb[3] -le $rb[0] -and ($rb[3] + $rb[4]) -eq $rp[16]) 'Canonical realtime HW build did not batch adjacent source triangles, reuse one texture preparation per unchanged TRI run, or close every GX batch.' $gdbStdout
+                if ($RendererProfileLevel -lt 2) {
+                    Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 2 -and $rci4lut[3] -gt $rci4lut[2]) 'Performance/coarse renderer did not build exactly two immutable CI4 source-index planes and reuse them across live water addressing.' $gdbStdout
+                } else {
+                    Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 0 -and $rci4lut[3] -eq 0) 'Forensic renderer unexpectedly bypassed its independent bytewise CI4 source decoder.' $gdbStdout
+                }
                 if ($RendererProfileLevel -ge 1) {
                     Assert-Condition ($renderTopology.Success -and $rtopo[0] -gt 0 -and $rtopo[1] -gt 0 -and $rtopo[2] -gt 0) 'Profiled renderer did not hoist immutable reloc-list validation while retaining dynamic-list fallback validation.' $gdbStdout
                     if ($RendererProfileLevel -lt 2) {
@@ -680,7 +685,7 @@ try {
                 if ($RendererProfileLevel -ge 1) {
                     $hardwareSummary += " topology=$($rtopo[0])/$($rtopo[1])/$($rtopo[2])/$($rtopo[3])"
                     $hardwareSummary += " cost=$($rcost[0])/$($rcost[1])"
-                    $hardwareSummary += " ci4lut=$($rci4lut[0])/$($rci4lut[1])"
+                    $hardwareSummary += " ci4lut=$($rci4lut[0])/$($rci4lut[1])/idx$($rci4lut[2])/$($rci4lut[3])"
                 }
             }
             if ($LiveInputPreview) {

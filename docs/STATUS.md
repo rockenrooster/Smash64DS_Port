@@ -53,7 +53,7 @@ single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
 all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
 Fighter playback seeds its initial light pair from the first selected source
 `MObjSub` (`0xffffff00/0x4c4c4c00`); overrides carry and fallback use is zero.
-Latest canonical reports `gxram=733/2219`, geometry `0x222005`, source cycle/
+Latest canonical reports `gxram=715/2167`, geometry `0x222005`, source cycle/
 render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
 Source-depth X/Y/Z share one composed clip vertex. Projected no-Z depth has
 source-backed background/foreground phases around the first source-Z triangle,
@@ -76,15 +76,17 @@ ownership; no composed gameplay frame is cached. Unsupported layouts retain
 the generic path. Canonical proves one `49152`-pixel write per changed frame and
 zero staging, BG2 clear/copy, or BG3 full-clear traffic.
 Reloc-backed source DLs now expose one immutable byte span; dynamic task-heap
-lists keep per-command validation. Profile 1 proves `80` immutable lists,
-`1,736` trusted commands, `344` fallback validations, and `330` adjacent TRI
-commands replayed through the bounded run path. Each unchanged TRI run also
-reuses exact material/depth state, RGB15 colors, scaled S/T, projected X/Y, and
-source clip Z. Each non-TRI closes GX and invalidates per-vertex derivatives;
+lists keep per-command validation. Live stage/fighter validators test the
+taskman arena before walking the loaded-file ledger, preserving the same
+accepted ranges. Profile 1 remains `80` immutable lists, `1,736` trusted
+commands, `344` fallback validations, and `330` adjacent TRI commands. Each run reuses exact material/depth state, RGB15 colors, scaled S/T, projected X/Y, and source clip Z. Each non-TRI closes GX and invalidates per-vertex derivatives;
 texture preparation persists through VTX/matrix commands and invalidates only
 at exact texture/material/depth-key mutations. The animated CI4 palette-pair
-LUT is content-keyed and expanded into sixteen exact 4x4 coverage phase planes.
-Only `2,048/18,432` pixels were pairable, so the regressive pair branch is gone.
+LUT remains content-keyed with sixteen exact 4x4 coverage planes. Profiles 0/1
+decode the two immutable 32x32 packed source-index planes once, keyed by
+pointer/texel count/lane and invalidated before reloc scene storage is reused.
+Live tile origins, masks, palette/fraction, phase lookup, and uploads stay
+dynamic. Profile 1 proves `2/712` build/reuse; profile 2 stays bytewise at `0/0`.
 
 Canonical mode 163 alone keeps `-O2`; the larger scripted/lifecycle diagnostics
 stay `-Os` and retain `227392` bytes of headroom. Mode 163 compiles the renderer
@@ -93,16 +95,18 @@ guarded may-alias word loads with bytewise fallback and decode directly into the
 persistent cache. Light direction survives adjacent VTX commands until exact
 matrix/MOVEMEM invalidation; four 128-step RGB tables key source diffuse/ambient
 colors while normals/direction/alpha remain live. The table occupies 2,096
-bytes and net BSS rises 2,080;
-ITCM is `18,512/18,816/18,216` bytes. Profile 2 keeps its generic/oracle route.
+bytes. The two-plane CI4 cache adds 2,112 net profile-0 BSS bytes; profile
+0/1/2 ITCM is `19,036/19,340/18,216`, still below 32 KiB. Profile 2 keeps its
+generic/oracle route.
 Submission stays `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range,
-`1,242` divisions, and `121/707/121` batches. A matched current A/B cuts draw
-`4,164,800 -> 3,974,048`, DL `3,017,888 -> 2,819,616`, scan
-`1,432,864 -> 1,255,424`, and vertex `509,760 -> 492,768` ticks; setup remains
-`1,070,176`. Profile 0 reaches `7.6fps` at `3,782,752/3,783,680` draw.
+`1,242` divisions, and `121/707/121` batches. Combined matched P95 falls from
+draw `3,974,720 -> 3,585,792`, DL `2,820,032 -> 2,430,080`, scan
+`1,256,576 -> 950,720`, texture `593,216 -> 509,376`, and setup
+`1,073,088 -> 988,608` ticks. Profile 0's best benchmark reaches `8.7fps`;
+final DevFast is `8.6fps`.
 Forensic oracle remains `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_canonical_fast_034905-8915840-p27924.png`;
-shipped SHA-256: `6DCD00EA6257519BC6C0F33B818D883E31CD6845B2B036C9F42A4FE239606B95`.
+`artifacts/visibility/2026-07-12_canonical_fast_050724-7066269-p20384_next.png`;
+shipped SHA-256: `A617BE4778EF26809769D64CF473ED7C8CF1AA1BA513B39D8AE43B32CD390306`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
@@ -113,33 +117,28 @@ VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
 ## Current Notes
 
 The taskman allocator's `0x140000`/`0x130000` fallbacks preserve the reserve.
-Pupupu map objects decode without duplicates/unaligned reads; original-manager
-Mario/Fox enter Wait on lines `3/2` at X `0/-1397`.
+Pupupu map objects decode cleanly; Mario/Fox enter Wait on lines `3/2` at X `0/-1397`.
 
-Canonical realtime + live-input + HW-tri renders through `gcDrawAll`, polls
-live pads before each update, and has hard GX RAM, display-contract, profile-0,
-and screenshot gates; a same-source profile-2 run owns oracle correctness.
-DevFast incrementally builds it, runs one capture pass, rotates
-`latest.png` to `previous.png`, and requires exact canonical/shipped ROM parity.
-The scripted mode-163 ROM remains an internal `-fast-hwtri` target; three
-user-facing filenames represent only two unique configurations.
-Visible melonDS launch/capture now force the natural equal-size two-screen
-layout; the canonical lower screen retains its three bootstrap status rows.
+Canonical realtime + live-input + HW-tri has hard GX RAM, display-contract,
+profile-0, screenshot, and ROM-parity gates; profile 2 owns oracle correctness.
+DevFast builds it, captures once, and rotates `latest.png` to `previous.png`.
+The scripted mode-163 ROM remains internal; three user-facing names represent
+two configurations. Both melonDS LCDs render; the canonical lower screen is
+black except for three bootstrap status rows.
 
 Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `7.6fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `1.26M/1.07M` ticks; matrix handlers measured
-only about 10K, so next split branch/state interpreter overhead and hoist exact
-triangle-run setup. RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
+The canonical frame is still only `8.6fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `0.94M/0.99M` ticks; next profile command-state
+dispatch and exact TRI-run setup before considering a larger packet cache.
+RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-P1Gate passed in `189.0s`; Boundary passed in `81.9s`. DevFast passed in
-`52.3s` and the forensic oracle in `25.3s`. This is not the five-minute soak;
-Full Regression stays skipped.
+P1Gate/Boundary passed in `270.0s/132.5s`; DevFast/rebuilt forensic passed in
+`51.9s/50.5s`. This is not the five-minute soak; Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

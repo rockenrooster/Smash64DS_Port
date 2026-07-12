@@ -19771,3 +19771,56 @@ Source-corrected verifier expectations: none; aligned and cached paths produce
 the same decoded words, normalized direction, and integer shade result.
 Coverage-reduced verifier expectations: none; normal/unaligned/incomplete-light
 fallbacks, profile-2 forensics, every submit class, P1Gate, and Boundary remain.
+
+## 2026-07-12 - Short-circuited validation and cached immutable CI4 indices
+
+- Reconciled the four new optimization reviews with the live renderer. Raw GX,
+  lazy transforms, direct wallpaper, compact profile tiers/state, immutable TRI
+  replay, ARM/O3/ITCM placement, and the rejected FIFO packet experiment were
+  already represented. Re-profiled current scan/setup costs before selecting a
+  smaller exact reuse boundary; a larger packet cache remains deferred.
+- The `344` fallback command validations are predominantly taskman-arena display
+  lists. Stage and fighter validators previously walked every loaded reloc file
+  before checking those arena bounds. Reordering the two existing predicates
+  preserves alignment, empty-segment-E, and accepted-range semantics. Against
+  the prior clean profile-1 run it reduces draw P95
+  `3,974,720 -> 3,718,592`, DL `2,820,032 -> 2,564,864`, and scan
+  `1,256,576 -> 953,216` ticks with topology fixed at `80/1736/344/330`.
+- Temporary setup timers then isolated animated texture prepare/upload as the
+  largest setup phase. A final palette/polyfmt cache saved only about 15K ticks
+  and was reverted. Source-key audits found two immutable packed 32x32 CI4
+  planes shared by the live `128x128` and `32x64` water outputs, while tile
+  origins and blend phase continued changing. All temporary probes were removed.
+- Profiles 0/1 now decode those two packed planes once into two bounded 1,024-
+  byte index arrays. The exact key is source pointer, proven logical texel count,
+  and O2R byte-lane XOR; reloc scene reset invalidates it before pointer reuse.
+  The second pair lookup protects the first returned entry from replacement.
+  Live tile origins/masks/row addressing, palettes, fraction, Bayer phase, and
+  both VRAM uploads remain dynamic. Oversize inputs retain the old decoder and
+  profile 2 always uses the independent bytewise route.
+- The clean 16-frame profile-1 cache A/B reduces texture P95
+  `640,960 -> 509,376`, non-vertex setup `1,119,872 -> 988,608`, and draw
+  `3,718,592 -> 3,585,792` ticks. Combined against the prior checkpoint, P95
+  draw is `3,974,720 -> 3,585,792`, DL `2,820,032 -> 2,430,080`, scan
+  `1,256,576 -> 950,720`, texture `593,216 -> 509,376`, and setup
+  `1,073,088 -> 988,608`. Profile 0 peaks at `8.7fps` at
+  `2,959,936/3,404,224` draw versus `7.6fps` at
+  `3,782,752/3,783,680`; final DevFast is `8.6fps`. Profile 1 proves cache build/reuse `2/712`; all 828
+  triangles, submission `648/44/126/10`, and batch `121/707/121` stay exact.
+- The source cache is profile-0/1-only. Its 2,080-byte arrays plus key/counters
+  add 2,112 bytes to profile-0 main BSS (`1,855,536` total). Renderer ITCM is
+  `19,036/19,340/18,216` bytes for profiles 0/1/2. Forensic cache counters are
+  `0/0`, and its bytewise route retains oracle `2484/0/0`.
+- GBI fixtures pin validator order, cache bounds/key/fallback, scene invalidation,
+  and profile separation. Final DevFast (`51.9s`), rebuilt forensic (`50.5s`), all four
+  P1Gate legs (`270.0s`), and Boundary 161/162/163 (`132.5s`) pass. Full/Legacy
+  Regression remains skipped for fast iteration. Canonical/shipped parity is
+  11,598,848 bytes at SHA-256
+  `A617BE4778EF26809769D64CF473ED7C8CF1AA1BA513B39D8AE43B32CD390306`.
+  The dated dual-screen capture keeps the accepted water, flowers, and fences;
+  the canonical lower LCD is intentionally black except for three bootstrap rows.
+
+Source-corrected verifier expectations: none; the cache stores the same decoded
+CI4 indices and leaves every live addressing/blend/upload input outside it.
+Coverage-reduced verifier expectations: Full/Legacy Regression was skipped by
+request; DevFast, P1Gate, Boundary, generic fallback, and profile-2 oracle remain.

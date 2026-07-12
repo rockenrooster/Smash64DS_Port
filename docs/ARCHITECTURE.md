@@ -1327,7 +1327,10 @@ before classifying its span, each recursive branch repeats the classification,
 and scans remain bounded by both the span and normal command budgets. Profiles
 0/1 may replay adjacent TRI1/TRI2 commands inside that proven span without
 building callback records or re-entering the generic opcode switch. Profile 2
-and every callback/dynamic list retain the generic interpreter.
+and every callback/dynamic list retain the generic interpreter. For the latter,
+live stage/fighter validators test the taskman arena before walking the loaded-
+file ledger. This changes lookup cost, not alignment, empty-list, or accepted-
+range semantics.
 
 Within one TRI run, profiles 0/1 also retain source-invariant depth/material
 selection and exact derived RGB15 color, scaled S/T, projected X/Y, and source
@@ -1343,6 +1346,16 @@ The animated CI4 pair LUT has a separate exact key over the two converted
 16-color palettes and blend fraction. A dynamic `glCallList`/FIFO arena was
 measured and rejected because 121 small source runs increased vertex cost; the
 direct GX submission path remains authoritative.
+
+Profiles 0/1 additionally decode each of the two immutable 32x32 packed CI4
+source planes into a bounded byte-index plane once. The two-entry key contains
+source pointer, proven logical texel count, and O2R byte-lane XOR; reloc scene
+reset invalidates it before loaded storage can reuse an address. Live tile
+origins, masks, row addressing, palettes, blend fraction, Bayer phase, and VRAM
+uploads remain outside the cache. Oversize/unknown sources use the old decoder,
+and profile 2 always uses that independent bytewise path. The cache occupies
+2,080 bytes and runtime proof reports build/reuse separately from the palette
+LUT.
 
 Profiles 0/1 also reuse one live renderer state object across BattleShip's
 ordered stage heads or fighter-part lists. Before each list, the adapter clears
@@ -1382,10 +1395,13 @@ into the same persistent 32-slot input cache. A prepared light direction remains
 valid only until a matrix or source light-state mutation. Four content-keyed
 128-step tables pre-resolve the exact diffuse/ambient RGB function, while vertex
 normal, direction, alpha, and incomplete-state fallback remain live. The shade
-table occupies 2,096 bytes; net BSS rises 2,080 bytes. Animated CI4 phase planes remain an exact 8 KiB table,
-and texture preparation retains its mutation-keyed epoch. Profile 0/1/2 renderer
-ITCM is `18,512/18,816/18,216` of 32,768 bytes. Cache-hit guards run before
-temporary GX matrix construction; the final matrix-state guard remains exact.
+table occupies 2,096 bytes; that earlier increment raised net BSS 2,080 bytes.
+Animated CI4 phase planes remain an exact 8 KiB table, and texture preparation
+retains its mutation-keyed epoch. The source-index cache raises current profile-0
+BSS another 2,112 bytes including its key/counters; profile 2 omits the cache.
+Profile 0/1/2 renderer ITCM is `19,036/19,340/18,216` of 32,768 bytes.
+Cache-hit guards run before temporary GX matrix construction; the final matrix-
+state guard remains exact.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,

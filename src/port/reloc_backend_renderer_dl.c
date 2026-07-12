@@ -796,6 +796,7 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
 #if NDS_RENDERER_HW_TRIANGLES
 static void ndsRendererAdapterResetSceneCaches(void)
 {
+    ndsRendererHardwareResetSourceCaches();
     sNdsRendererAdapterCameraCacheFrame = 0u;
     sNdsRendererAdapterCameraCacheCount = 0u;
     sNdsRendererAdapterDObjWorldCache = NULL;
@@ -2940,8 +2941,8 @@ static s32 ndsRendererAdapterStageValidateRange(const Gfx *dl, size_t bytes,
     (void)user;
 
     if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
-        ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
-         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+        ((ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+         (ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
          (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
         return FALSE;
@@ -6219,8 +6220,8 @@ static s32 ndsFighterDLAllDrawValidateRange(const Gfx *dl, size_t bytes,
     (void)user;
 
     if ((((uintptr_t)dl & (sizeof(u32) - 1u)) != 0u) ||
-        ((ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
-         (ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+        ((ndsFighterDLScanRangeInTaskmanArena(dl, bytes) == FALSE) &&
+         (ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
          (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
         gNdsFighterDLAllDrawRangeRejectCount++;

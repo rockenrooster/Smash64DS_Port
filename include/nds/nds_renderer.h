@@ -387,6 +387,7 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     void *callback_user,
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache);
+void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareSetNoOracle(u32 enabled);
 u32 ndsRendererHardwareNoOracleEnabled(void);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);

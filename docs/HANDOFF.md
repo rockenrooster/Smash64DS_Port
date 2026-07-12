@@ -53,7 +53,7 @@ geometry/prim/env/light and cycle/render state; `dls[0]` uses parent state.
 The adapter now preserves the 32-slot input/transformed RSP vertex cache across
 the selected part sequence, as BattleShip's common `gSYTaskmanDLHeads[0]`
 stream does. All-DL HW output is the full `320/306` Mario/Fox triangle set with
-zero rejects; latest canonical reports `gxram=733/2219`, geometry `0x222005`, cycle/
+zero rejects; latest canonical reports `gxram=715/2167`, geometry `0x222005`, cycle/
 render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
 Initial diffuse/ambient state comes from the first selected source `MObjSub`
 (`0xffffff00/0x4c4c4c00`); per-part overrides carry and fallback use is zero.
@@ -80,14 +80,17 @@ separated Mario/Fox bodies are broadly accepted on DS. Source map-object kinds
 at X `0/-1397`; `gcAddMObjAll` restores O2R lanes by source provenance.
 Canonical observes at least four water/Whispy swaps, no native/failure cases,
 and first flags `0x0200 -> 0x006b`. Exact TEXEL0/TEXEL1 CI4 conversion now uses
-precomputed source-address maps, row-local T addressing, packed paired texels,
-and 17 exact Bayer phase masks. Non-CI4 and non-adjacent cases retain the generic
-path. The two animated uploads cover `36,864` bytes and positive scene-lifetime
-direct-pixel/refresh proof with zero eviction, reject, or oracle drift.
+precomputed source-address maps, row-local T addressing, and 17 exact Bayer
+phase masks. Profiles 0/1 decode the two immutable 32x32 packed source-index
+planes once; live origins/masks/palette/fraction/phase and uploads stay dynamic.
+Scene change invalidates pointer keys; profile 1 proves `2/712` build/reuse and
+profile 2 remains bytewise `0/0`. The two uploads cover `36,864` bytes with zero
+eviction, reject, or oracle drift.
 Profile 0 retains all `828` triangles: `648` raw-current, `44` cross-matrix,
 `126` no-Z, and `10` range; snapshot/decal/prim/reject stay zero. Profile 1
 proves reloc-backed topology `80/1736/344/330`: immutable lists/trusted commands/
-dynamic validations/replayed adjacent TRI commands. Within one unchanged TRI
+dynamic validations/replayed adjacent TRI commands. Stage/fighter dynamic
+validation now checks the taskman arena before the loaded-file ledger. Within a TRI
 run it reuses exact material/depth, RGB15 color, S/T, projected X/Y, and source
 clip Z. Non-TRI commands close GX; texture preparation survives VTX/matrix and
 invalidates at exact key mutations. Prepare/reuse is `98/730`; batching remains
@@ -95,31 +98,30 @@ invalidates at exact key mutations. Prepare/reuse is `98/730`; batching remains
 
 Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os to preserve
 their `227392`-byte reserve. Its renderer TU now follows sm64-nds in ARM state;
-six measured O3 paths occupy `18,816` ITCM bytes in profile 1 (`18,216`
-forensic), while normal/legacy builds stay Thumb. The source VTX handler now
+six measured O3 paths occupy `19,036/19,340/18,216` ITCM bytes in profiles
+0/1/2, while normal/legacy builds stay Thumb. The source VTX handler now
 uses guarded aligned word loads with bytewise fallback and decodes directly into
 the persistent cache. Exact light direction persists until matrix/MOVEMEM
 mutation; four 128-step tables key diffuse/ambient RGB while live normal,
-direction, alpha, and incomplete-state fallback remain uncached. They add 2,080
-net BSS bytes around a 2,096-byte table. Matrix loads remain `53`, batches `121/707/121`, and submissions
-`648/44/126/10`. Matched profile-1 draw falls `4,164,800 -> 3,974,048`, DL
-`3,017,888 -> 2,819,616`, scan `1,432,864 -> 1,255,424`, and vertex
-`509,760 -> 492,768` ticks. Profile 0 reaches `7.6fps` at
-`3,782,752/3,783,680` draw; profile 2 retains oracle `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_canonical_fast_034905-8915840-p27924.png`;
-shipped SHA-256: `6DCD00EA6257519BC6C0F33B818D883E31CD6845B2B036C9F42A4FE239606B95`.
+direction, alpha, and incomplete-state fallback remain uncached. The new
+two-plane cache adds 2,112 profile-0 BSS bytes. Matrix/batch/submission contracts
+remain exact. Combined matched P95 draw falls `3,974,720 -> 3,585,792`, DL
+`2,820,032 -> 2,430,080`, scan `1,256,576 -> 950,720`, texture
+`593,216 -> 509,376`, and setup `1,073,088 -> 988,608`. Profile 0 peaks at
+`8.7fps`; final DevFast is `8.6fps`; profile 2 retains `2484/0/0`. Capture:
+`artifacts/visibility/2026-07-12_canonical_fast_050724-7066269-p20384_next.png`;
+shipped SHA-256: `A617BE4778EF26809769D64CF473ED7C8CF1AA1BA513B39D8AE43B32CD390306`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
 separate, original timing stays live, and a post-step corrects packed RGBA.
 Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the
 foreground fence. Stage RSP/ST carry restores five flower groups (`192 -> 202`).
 Masked-clamp, six CI4 stars, and DXT tail stride remain fixed. Debt: Whispy face,
 other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
-The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2.
+The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three bootstrap rows.
 
 ## Recommended Next Work
-1. The canonical ROM is still only `7.6fps`, not P1-complete. Profile 1 leaves
-   about `1.26M` scan and `1.07M` non-vertex setup ticks. Matrix handlers were
-   only about 10K; split branch/state overhead, then hoist exact TRI-run setup.
+1. The canonical ROM is still only `8.6fps`, not P1-complete. Profile the
+   `0.94M/0.99M` scan/setup buckets and exact TRI-run setup before a packet cache.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
    Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
 3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary
@@ -143,7 +145,6 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-P1Gate passed in `189.0s`; Boundary passed in `81.9s`. DevFast passed in
-`52.3s` and the separate forensic oracle in `25.3s`. This is not the
-five-minute P1 soak; skip Full Regression.
+P1Gate/Boundary passed in `270.0s/132.5s`; DevFast/rebuilt forensic in
+`51.9s/50.5s`. This is not the five-minute P1 soak; skip Full Regression.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

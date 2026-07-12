@@ -1133,11 +1133,12 @@
   no-Z equivalence beyond the proven Dream Land ordering remains debt.
   Final-resolution wallpaper composition removes its 320x240 staging/scale and
   BG2 copy. Exact word-packed rows, immutable TRI replay, derived vertex reuse,
-  canonical O2, ARM-state mode-163 renderer, and ITCM O3 loops now reach
-  `7.0fps`, but this is still roughly 8.6x short of the 60 FPS P1 condition.
-  Profile-1 DL median is `3,329,920` ticks, including `804,512` texture,
-  `1,415,040` scan, and `1,253,280` non-vertex setup ticks; packet/state work,
-  water precomposition, and source RGBA4 interface output remain P1 debt.
+  canonical O2, ARM/ITCM paths, arena-first dynamic validation, and the bounded
+  CI4 source-index cache peak at `8.7fps` (`8.6fps` final), still roughly 7.0x short of the
+  60 FPS P1 condition. Profile-1 median/p95 is DL
+  `2,429,344/2,430,080`, texture `508,960/509,376`, scan
+  `949,152/950,720`, and non-vertex setup `986,560/988,608` ticks;
+  command/state work, water uploads, and source RGBA4 interface output remain.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native
@@ -1185,8 +1186,11 @@
   VTX-load raw-fit bits, and invariant TRI-batch reuse now reduce warm draw to
   `4,392,160/4,411,008` and first reached `7.0fps`. Phase-resolved CI4 then
   reached `7.5fps`; six ITCM paths, exact light-state reuse, and aligned direct
-  VTX-cache decode now reach `7.6fps` at `3,782,752/3,783,680` draw. Profile 1
-  scan remains `1,255,424/1,256,448`; projected divisions remain `1,242`.
+  VTX-cache decode reached `7.6fps`. Arena-first dynamic validation and the
+  two immutable CI4 source-index planes now reach `8.7fps` at
+  `2,959,936/3,404,224` draw. Final DevFast is `8.6fps`; profile-1 draw is
+  `3,141,952/3,585,792`; scan is `949,152/950,720`; projected divisions remain
+  `1,242`.
   The rejected GX
   FIFO/display-list arena increased vertex cost and must not be restored.
   The RGBA4 interface/HUD SObjs still produce no DS pixels.
@@ -1198,7 +1202,8 @@
   host byte/halfword fixtures.
 - The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`; the
   canonical/shipped target forces the live redraw off while verifier markers
-  remain active. Three bootstrap status rows still remain on its lower screen.
+  remain active. Both LCDs render; the otherwise-black canonical lower screen
+  intentionally retains only three bootstrap status rows.
   The project launchers present both physical screens; debug-HUD targets use
   the lower one for the full live diagnostic page.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
