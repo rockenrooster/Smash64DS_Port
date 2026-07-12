@@ -81,8 +81,8 @@ zero staging, BG2 clear/copy, or BG3 full-clear traffic.
 Reloc-backed source DLs now expose one immutable byte span; dynamic task-heap
 lists keep per-command validation. Live stage/fighter validators test the
 taskman arena before walking the loaded-file ledger, preserving the same
-accepted ranges. Profile 1 remains `80` immutable lists, `1,736` trusted
-commands, `344` fallback validations, and `330` adjacent TRI commands. Each run reuses exact material/depth state, RGB15 colors, scaled S/T, projected X/Y, and source clip Z. Each non-TRI closes GX and invalidates per-vertex derivatives;
+accepted ranges. Each list directly uses the persistent 32-slot input/clip/color/
+snapshot planes; validity masks reset compact control state. Profile 1 remains `80` immutable lists, `1,736` trusted commands, `344` fallback validations, and `330` adjacent TRI commands. Each run reuses exact material/depth state, RGB15 colors, scaled S/T, projected X/Y, and source clip Z. Each non-TRI closes GX and invalidates per-vertex derivatives;
 texture preparation persists through VTX/matrix commands and invalidates only
 at exact texture/material/depth-key mutations. The animated CI4 palette-pair
 LUT remains content-keyed with sixteen exact 4x4 coverage planes. Profiles 0/1
@@ -101,15 +101,15 @@ matrix/MOVEMEM invalidation; four 128-step RGB tables key source diffuse/ambient
 colors while normals/direction/alpha remain live. The table occupies 2,096
 bytes. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1 index the exact texture cache through 128 byte slots and per-entry fingerprints; full 236-byte equality remains the
 oracle, and deletion repairs clusters so animated keys leave no tombstones.
-Profile-0 BSS is `1,857,584`; canonical-O2/profile-1/profile-2 ITCM is `31,672/20,036/18,216`, below 32 KiB. Profile 2 keeps the linear/oracle route.
+Profile-0 BSS is `1,857,584`; canonical-O2/profile-1/profile-2 ITCM is `31,672/20,604/18,380`, below 32 KiB. Profile 2 keeps the linear/oracle route.
 Submission stays `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range,
 `1,242` divisions, and `121/707/121` batches. Hash lookup reports `53` calls,
 `49` probes, and `9/42/2` active/table/miss. Against the preceding checkpoint,
-profile-1 median/P95 draw is `2,965,152/3,410,368`, texture
-`346,304/348,352`, setup `825,856/830,720`, and scan `948,736/950,144`.
-Shipping O2 draw is `2,601,984/2,605,184`; DevFast/benchmark reaches `9.8/9.9fps`.
-Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_073710-9321374-p42864.png`;
-shipped SHA-256: `D60AF90333C044CCB4F769D986ABDE217450483D17984C28DB7F5CEED8550707`.
+profile-1 median/P95 draw is `2,720,896/3,166,720`, texture
+`352,736/354,816`, setup `842,176/844,352`, and scan `642,560/643,456`.
+Shipping O2 draw is `2,293,056/2,339,456`; DevFast/benchmark reaches `10.5fps`.
+Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_081934-6230668-p40156.png`;
+shipped SHA-256: `ECAE91BCDB65C5B7EF1BA9BF0EC311BB25BAD2BF7ACF7FC12E3CF0E908E09A96`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
@@ -132,15 +132,15 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `9.9fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `0.95M/0.83M` ticks; next profile command-state
-dispatch and exact TRI-run setup before considering a larger packet cache.
+The canonical frame is still only `10.5fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `0.64M/0.84M` ticks; next split command-state
+dispatch and exact TRI setup before a validated topology-packet replay.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-Prebuilt P1Gate/Boundary passed in `149.9s/56.7s`; DevFast/post-rebuild forensic
-passed in `57.2s/26.5s`. This is not the five-minute soak; Full Regression stays skipped.
+Prebuilt P1Gate/Boundary passed in `149.0s/56.6s`; DevFast/rebuilt forensic in
+`43.4s/24.4s`. This is not the five-minute soak; Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

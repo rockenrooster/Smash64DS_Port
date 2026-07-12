@@ -935,6 +935,17 @@ static inline u32 ndsRendererHardwareLitShadeColorLut(
 }
 #endif
 
+typedef struct NDSRendererTraversalVertexStorage
+{
+    NDSRendererClipVertex20p12 vertices[NDS_RENDERER_MAX_VTX];
+#if NDS_RENDERER_HW_TRIANGLES
+    NDSRendererInputVertex input_vertices[NDS_RENDERER_MAX_VTX];
+    u32 vertex_colors[NDS_RENDERER_MAX_VTX];
+    u8 vertex_matrix_snapshot[NDS_RENDERER_MAX_VTX];
+    u8 vertex_clip_snapshot[NDS_RENDERER_MAX_VTX];
+#endif
+} NDSRendererTraversalVertexStorage;
+
 typedef struct NDSRendererTraversalState
 {
     NDSRendererMatrix20p12 projection;
@@ -942,13 +953,13 @@ typedef struct NDSRendererTraversalState
     NDSRendererMatrix20p12 matrix;
     Mtx matrix_word_raw;
     NDSRendererMatrix20p12 modelview_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
-    NDSRendererClipVertex20p12 vertices[NDS_RENDERER_MAX_VTX];
+    NDSRendererClipVertex20p12 *vertices;
 #if NDS_RENDERER_HW_TRIANGLES
-    NDSRendererInputVertex input_vertices[NDS_RENDERER_MAX_VTX];
-    u32 vertex_colors[NDS_RENDERER_MAX_VTX];
+    NDSRendererInputVertex *input_vertices;
+    u32 *vertex_colors;
     NDSRendererMatrixSnapshot *matrix_snapshots;
-    u8 vertex_matrix_snapshot[NDS_RENDERER_MAX_VTX];
-    u8 vertex_clip_snapshot[NDS_RENDERER_MAX_VTX];
+    u8 *vertex_matrix_snapshot;
+    u8 *vertex_clip_snapshot;
 #endif
     u32 modelview_valid_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     u32 modelview_stack_depth;
@@ -2095,6 +2106,8 @@ static void ndsRendererInitMatrixWordRaw(NDSRendererTraversalState *state)
 static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
                                           const NDSRendererConfig *config,
                                           NDSRendererStats *stats,
+                                          NDSRendererTraversalVertexStorage
+                                              *vertex_storage,
                                           NDSRendererMatrixSnapshot *snapshots,
                                           u32 snapshot_count)
 {
@@ -2103,16 +2116,46 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
         return;
     }
 
-    memset(state, 0, sizeof(*state));
+    /* Valid masks and stack depth own every scratch read. Initialize that
+     * compact control plane instead of clearing matrix, stack, and derived
+     * arrays that will be overwritten before their first valid use. */
+    state->modelview_stack_depth = 0u;
+    state->vertex_valid_mask = 0u;
+    state->vertices = (vertex_storage != NULL) ?
+        vertex_storage->vertices : NULL;
 #if NDS_RENDERER_HW_TRIANGLES
+    state->input_vertices = (vertex_storage != NULL) ?
+        vertex_storage->input_vertices : NULL;
+    state->vertex_colors = (vertex_storage != NULL) ?
+        vertex_storage->vertex_colors : NULL;
+    state->vertex_matrix_snapshot = (vertex_storage != NULL) ?
+        vertex_storage->vertex_matrix_snapshot : NULL;
+    state->vertex_clip_snapshot = (vertex_storage != NULL) ?
+        vertex_storage->vertex_clip_snapshot : NULL;
     state->matrix_snapshots = snapshots;
     state->matrix_snapshot_count =
         (snapshot_count <= NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY) ?
             snapshot_count : NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY;
+    state->input_vertex_valid_mask = 0u;
+    state->vertex_color_valid_mask = 0u;
+    state->current_transform_vertex_mask = 0u;
+    state->matrix_generation = 0u;
+    state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    state->prepared_light_direction_valid = 0u;
+    state->texture_prepare_valid = 0u;
+    state->prepared_vertex_color_valid_mask = 0u;
+    state->prepared_texcoord_valid_mask = 0u;
+    state->prepared_projected_xy_valid_mask = 0u;
+    state->prepared_projected_source_z_valid_mask = 0u;
+    state->raw_vertex_fit_mask = 0u;
 #else
     (void)snapshots;
     (void)snapshot_count;
 #endif
+    state->projection_valid = 0u;
+    state->modelview_valid = 0u;
+    state->matrix_valid = 0u;
+    state->matrix_word_valid = 0u;
     if (config == NULL)
     {
         return;
@@ -8529,6 +8572,7 @@ void ndsRendererScanDisplayList(const Gfx *dl,
                                 NDSRendererStats *stats)
 {
     NDSRendererTraversalState state;
+    NDSRendererTraversalVertexStorage vertex_storage;
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererMatrixSnapshot
         matrix_snapshot_storage[NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY];
@@ -8548,7 +8592,7 @@ void ndsRendererScanDisplayList(const Gfx *dl,
         return;
     }
 
-    ndsRendererInitTraversalState(&state, config, stats,
+    ndsRendererInitTraversalState(&state, config, stats, &vertex_storage,
                                   matrix_snapshots, 0u);
     ndsRendererScanList(dl, config, stats, &state, 0, NULL, NULL);
 #if NDS_RENDERER_HW_TRIANGLES
@@ -8791,6 +8835,7 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     NDSRendererVertexCache *vertex_cache)
 {
     NDSRendererTraversalState state;
+    NDSRendererTraversalVertexStorage vertex_storage;
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererMatrixSnapshot
         local_matrix_snapshots[NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY];
@@ -8818,52 +8863,36 @@ void ndsRendererExecuteDisplayListWithVertexCache(
         matrix_snapshot_count = vertex_cache->matrix_snapshot_count;
     }
 #endif
-    ndsRendererInitTraversalState(&state, config, stats, matrix_snapshots,
-                                  matrix_snapshot_count);
+    ndsRendererInitTraversalState(&state, config, stats, &vertex_storage,
+                                  matrix_snapshots, matrix_snapshot_count);
     if (vertex_cache != NULL)
     {
-        memcpy(state.vertices, vertex_cache->transformed_vertices,
-               sizeof(state.vertices));
+        /* BattleShip submits the selected lists through one persistent RSP
+         * stream. Back traversal directly with that stream instead of
+         * clearing and copying every 32-slot plane around each list. */
+        state.vertices = vertex_cache->transformed_vertices;
         state.vertex_valid_mask = vertex_cache->transformed_valid_mask;
 #if NDS_RENDERER_HW_TRIANGLES
-        memcpy(state.input_vertices, vertex_cache->input_vertices,
-               sizeof(state.input_vertices));
+        state.input_vertices = vertex_cache->input_vertices;
         state.input_vertex_valid_mask = vertex_cache->input_valid_mask;
         state.raw_vertex_fit_mask = vertex_cache->raw_vertex_fit_mask;
-        memcpy(state.vertex_colors, vertex_cache->vertex_colors,
-               sizeof(state.vertex_colors));
+        state.vertex_colors = vertex_cache->vertex_colors;
         state.vertex_color_valid_mask =
             vertex_cache->vertex_color_valid_mask;
-        memcpy(state.vertex_matrix_snapshot,
-               vertex_cache->vertex_matrix_snapshot,
-               sizeof(state.vertex_matrix_snapshot));
-        memcpy(state.vertex_clip_snapshot,
-               vertex_cache->vertex_clip_snapshot,
-               sizeof(state.vertex_clip_snapshot));
+        state.vertex_matrix_snapshot = vertex_cache->vertex_matrix_snapshot;
+        state.vertex_clip_snapshot = vertex_cache->vertex_clip_snapshot;
 #endif
     }
     ndsRendererScanList(dl, config, stats, &state, 0, callback,
                         callback_user);
     if (vertex_cache != NULL)
     {
-        memcpy(vertex_cache->transformed_vertices, state.vertices,
-               sizeof(vertex_cache->transformed_vertices));
         vertex_cache->transformed_valid_mask = state.vertex_valid_mask;
 #if NDS_RENDERER_HW_TRIANGLES
-        memcpy(vertex_cache->input_vertices, state.input_vertices,
-               sizeof(vertex_cache->input_vertices));
         vertex_cache->input_valid_mask = state.input_vertex_valid_mask;
         vertex_cache->raw_vertex_fit_mask = state.raw_vertex_fit_mask;
-        memcpy(vertex_cache->vertex_colors, state.vertex_colors,
-               sizeof(vertex_cache->vertex_colors));
         vertex_cache->vertex_color_valid_mask =
             state.vertex_color_valid_mask;
-        memcpy(vertex_cache->vertex_matrix_snapshot,
-               state.vertex_matrix_snapshot,
-               sizeof(vertex_cache->vertex_matrix_snapshot));
-        memcpy(vertex_cache->vertex_clip_snapshot,
-               state.vertex_clip_snapshot,
-               sizeof(vertex_cache->vertex_clip_snapshot));
         vertex_cache->matrix_snapshot_count = state.matrix_snapshot_count;
 #endif
     }

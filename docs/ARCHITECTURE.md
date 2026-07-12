@@ -1359,12 +1359,13 @@ LUT.
 
 Profiles 0/1 also reuse one live renderer state object across BattleShip's
 ordered stage heads or fighter-part lists. Before each list, the adapter clears
-the contiguous transient proof/counter prefix and nine interleaved diagnostics;
-texture, tile, combine, light, fog, and other-mode state remain live exactly as
-the prior explicit seed/capture helper defined. Profile 2 keeps independent
-per-list forensic objects and the old state-copy route. Its 64-entry stats array
-is therefore omitted from runtime builds, removing 82,176 bytes of static BSS
-without weakening the forensic ABI or oracle.
+the transient proof/counter fields while texture, tile, combine, light, fog,
+and other-mode state remain live. Traversal directly aliases the persistent
+32-slot input, clip, color, and matrix-snapshot-ID planes instead of copying
+them into and out of per-list scratch. Valid masks and stack depth initialize
+only the compact control plane; invalid scratch is never read. Profile 2 keeps
+independent per-list forensic stats. Its 64-entry stats array is omitted from
+runtime builds, removing 82,176 bytes of static BSS without weakening the oracle.
 
 Renderer instrumentation is compile-time tiered through
 `NDS_RENDERER_PROFILE_LEVEL`. Profile 0 is forced for the canonical/shipped ROM:
@@ -1410,7 +1411,7 @@ from already-written representatives, then repeat rows copy bottom-to-top. A
 `>=4096`-pixel and at-least-50%-reuse gate leaves smaller or weakly repeating
 inputs on the direct loop; profile 2 omits both caches. The four maps are 512
 bytes; canonical profile-0 BSS is `1,857,584`. Canonical-O2/profile-1/profile-2
-renderer ITCM is `31,672/20,036/18,216` of 32,768 bytes.
+renderer ITCM is `31,672/20,604/18,380` of 32,768 bytes.
 Cache-hit guards run before temporary GX matrix construction; the final matrix-
 state guard remains exact.
 

@@ -19961,3 +19961,42 @@ Source-corrected verifier expectations: none; the class key contains every
 input used by the prior exact first-match test, and forward expansion reads only
 an already-written first representative. Coverage-reduced verifier expectations:
 Full/Legacy Regression remains skipped for the requested fast iteration cadence.
+
+## 2026-07-12 - Direct persistent RSP traversal
+
+- Re-profiled the remaining `~0.95M` command-scan bucket after the CI4 cut.
+  BattleShip's selected fighter lists append to one `gSYTaskmanDLHeads[0]`
+  stream, and sm64-nds likewise decodes into one persistent vertex buffer.
+  The DS traversal nevertheless copied five complete 32-slot source, clip,
+  color, matrix-snapshot-ID, and clip-snapshot-ID planes into and back out of a
+  stack object around each of the 80 selected immutable lists.
+- Traversal now points those planes directly at the existing scene-owned
+  `NDSRendererVertexCache`. Valid masks, raw-fit bits, snapshot count, and all
+  existing matrix/material state remain the ownership boundary; no display
+  list, triangle, final frame, or dynamic state is cached by this change.
+- The local no-cache/software path retains private per-call storage. Its valid
+  masks and modelview-stack depth guard every read, so initialization resets
+  only that compact control plane instead of clearing matrices, stack slots,
+  and derived arrays which are overwritten before becoming valid. A source
+  fixture rejects restoring either broad scratch clearing or per-list plane
+  copies.
+- Against the preceding matched profile-1 baseline, median/P95 scan falls
+  `948,736/950,144 -> 642,560/643,456` (`-32.3%`), while draw falls
+  `2,965,152/3,410,368 -> 2,720,896/3,166,720`. Coarse texture/setup are
+  `352,736/354,816` and `842,176/844,352`; all `80/1736/344/330` topology,
+  `648/44/126/10` submit classes, `828` triangles, and `1,242` divisions remain.
+- Repeated shipping-O2 sampling improves draw
+  `2,601,984/2,605,184 -> 2,293,056/2,339,456` and pacing `9.9 -> 10.5fps`.
+  Profile-0 BSS remains `1,857,584`; canonical/profile-1/profile-2 ITCM is
+  `31,672/20,604/18,380`. The normal software build, GBI fixtures, DevFast
+  (`43.4s`), rebuilt forensic oracle `2484/0/0` (`24.4s`), prebuilt P1Gate
+  (`149.0s`), and Boundary 161/162/163 (`56.6s`) pass. Their detached
+  prebuilds took `116.06s/316.70s`.
+- Canonical/shipped parity is 11,671,552 bytes at SHA-256
+  `ECAE91BCDB65C5B7EF1BA9BF0EC311BB25BAD2BF7ACF7FC12E3CF0E908E09A96`.
+  The accepted dual-screen capture is
+  `artifacts/visibility/2026-07-12_canonical_fast_081934-6230668-p40156.png`.
+
+Source-corrected verifier expectations: none; the same persistent arrays and
+validity metadata now back traversal directly. Coverage-reduced expectations:
+Full/Legacy Regression remains skipped for the requested fast iteration cadence.
