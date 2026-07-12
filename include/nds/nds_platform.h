@@ -74,6 +74,7 @@ extern volatile u32 gNdsHardwareRendererStatus;
 extern volatile u32 gNdsHardwareRendererControl;
 void ndsPlatformRenderDebugHud(void);
 void ndsPlatformEndFrame(void);
+void ndsPlatformProfileSampleFrameBoundaryGXState(void);
 u32 ndsPlatformTicks(void);
 u32 ndsPlatformHeldKeys(void);
 

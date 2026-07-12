@@ -4171,6 +4171,20 @@ extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 #define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
 
 static u32 sNdsBattlePlayablePacingStartTick;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+static u32 sNdsBattlePlayableProfileLoopStartTick;
+
+static u32 ndsBattlePlayableProfileResidual(u32 total, u64 known)
+{
+    if (known > (u64)total)
+    {
+        gNdsRendererProfileConservationErrorTicks +=
+            (u32)(known - (u64)total);
+        return 0u;
+    }
+    return total - (u32)known;
+}
+#endif
 
 static void ndsBattlePlayableAdvanceFastLogicClock(void)
 {
@@ -4194,10 +4208,20 @@ static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
 static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 {
     u32 start = cpuGetTiming();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 phase_start = start;
+#endif
 
     scVSBattleFuncUpdate();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileSourceUpdateTicks = cpuGetTiming() - phase_start;
+    phase_start = cpuGetTiming();
+#endif
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmUpdate();
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileAudioUpdateTicks = cpuGetTiming() - phase_start;
 #endif
     gNdsRendererProfileUpdateTicks = cpuGetTiming() - start;
     dSYTaskmanUpdateCount++;
@@ -4280,10 +4304,27 @@ static void ndsBattlePlayablePresentFrame(void)
     u32 start = cpuGetTiming();
     u32 draw_start;
     u32 hud_start;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 phase_start;
+    u64 known;
+#endif
 
     gNdsRendererProfileFrameCount++;
     ndsRendererProfileFrameBegin();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileBeginFrameTicks = 0u;
+    gNdsRendererProfileWallpaperTicks = 0u;
+    gNdsRendererProfileForegroundTicks = 0u;
+    gNdsRendererProfileStageLayer0Ticks = 0u;
+    gNdsRendererProfileFlushTicks = 0u;
+    gNdsRendererProfileVBlankWaitTicks = 0u;
+    gNdsRendererProfilePostVBlankTicks = 0u;
+    gNdsRendererProfileThreadTicks = 0u;
+    gNdsRendererProfilePresentActiveTicks = 0u;
+    gNdsRendererProfileDrawResidualTicks = 0u;
+    gNdsRendererProfilePresentResidualTicks = 0u;
+    gNdsRendererProfileLoopResidualTicks = 0u;
+    gNdsRendererProfileConservationErrorTicks = 0u;
     gNdsRendererProfileDrawTicks = 0;
     gNdsRendererProfileHudTicks = 0;
     gNdsRendererProfileStageAdapterTicks = 0;
@@ -4389,8 +4430,14 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileHWVertexSaturateCount = 0;
 #endif
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    phase_start = cpuGetTiming();
+#endif
     ndsPlatformBeginFrame();
     ndsSObjPreviewBeginFrame();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileBeginFrameTicks = cpuGetTiming() - phase_start;
+#endif
     draw_start = cpuGetTiming();
 #if NDS_RENDERER_HW_TRIANGLES
     ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame();
@@ -4404,13 +4451,72 @@ static void ndsBattlePlayablePresentFrame(void)
     ndsPlatformRenderDebugHud();
     gNdsRendererProfileHudTicks = cpuGetTiming() - hud_start;
     ndsPlatformEndFrame();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    phase_start = cpuGetTiming();
+#endif
     ndsOsPostVBlank();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfilePostVBlankTicks += cpuGetTiming() - phase_start;
+    phase_start = cpuGetTiming();
+#endif
     ndsOsRunThreads();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileThreadTicks = cpuGetTiming() - phase_start;
+#endif
     gNdsFrameCounter++;
     gNdsBattlePlayablePacingPresentedFrames++;
     gNdsRendererProfilePresentTicks = cpuGetTiming() - start;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfilePresentActiveTicks =
+        ndsBattlePlayableProfileResidual(
+            gNdsRendererProfilePresentTicks,
+            gNdsRendererProfileVBlankWaitTicks);
+    known = (u64)gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_MARIO].exclusive_ticks +
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_FOX].exclusive_ticks +
+            gNdsRendererProfileWallpaperTicks +
+            gNdsRendererProfileForegroundTicks;
+    gNdsRendererProfileDrawResidualTicks =
+        ndsBattlePlayableProfileResidual(gNdsRendererProfileDrawTicks,
+                                         known);
+    known = (u64)gNdsRendererProfileBeginFrameTicks +
+            gNdsRendererProfileDrawTicks +
+            gNdsRendererProfileHudTicks +
+            gNdsRendererProfileFlushTicks +
+            gNdsRendererProfilePostVBlankTicks +
+            gNdsRendererProfileThreadTicks;
+    gNdsRendererProfilePresentResidualTicks =
+        ndsBattlePlayableProfileResidual(
+            gNdsRendererProfilePresentActiveTicks, known);
+    /* Publish the GX state only after the VBlank wait, scheduler retrace
+     * notification, post-wait bookkeeping, and runnable thread work have all
+     * completed. This is the bounded frame endpoint, not merely the return
+     * from glFlush(). */
+    ndsPlatformProfileSampleFrameBoundaryGXState();
+#endif
     ndsRendererProfileFramePublish();
     ndsBattlePlayablePacingUpdate();
+}
+
+static void ndsBattlePlayableFinalizePresentedIteration(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u64 known;
+
+    gNdsRendererProfileLogicTick = sySchedulerGetTicCount();
+    gNdsRendererProfileLoopWallTicks =
+        cpuGetTiming() - sNdsBattlePlayableProfileLoopStartTick;
+    known = (u64)gNdsRendererProfileInputTicks +
+            gNdsRendererProfileUpdateTicks +
+            gNdsRendererProfilePresentActiveTicks +
+            gNdsRendererProfileVBlankWaitTicks;
+    gNdsRendererProfileLoopResidualTicks =
+        ndsBattlePlayableProfileResidual(
+            gNdsRendererProfileLoopWallTicks, known);
+#endif
     ndsBattlePlayableFrameCompleteMarker();
 }
 
@@ -6968,6 +7074,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             }
             for (i = 0u; i < update_max; i++)
             {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+                u32 input_start;
+
+                sNdsBattlePlayableProfileLoopStartTick = cpuGetTiming();
+                input_start = sNdsBattlePlayableProfileLoopStartTick;
+#endif
                 if (use_realtime_presentation != 0u)
                 {
                     (void)ndsPlatformReadInput();
@@ -6977,6 +7089,10 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                         syControllerUpdateGlobalData();
                     }
                 }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+                gNdsRendererProfileInputTicks =
+                    cpuGetTiming() - input_start;
+#endif
                 ndsRunMarioFoxProofUpdate(
                     &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
                 if ((is_battle_playable != 0u) &&
@@ -6996,6 +7112,10 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 if ((is_battle_playable != 0u) &&
                     (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
                 {
+                    if (use_realtime_presentation != 0u)
+                    {
+                        ndsBattlePlayableFinalizePresentedIteration();
+                    }
                     break;
                 }
 
@@ -7005,12 +7125,17 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     if ((is_battle_playable != 0u) &&
                         (NDS_DEV_LIVE_INPUT_PREVIEW != 0))
                     {
+                        if (use_realtime_presentation != 0u)
+                        {
+                            ndsBattlePlayableFinalizePresentedIteration();
+                        }
                         continue;
                     }
                     if ((is_battle_playable != 0u) &&
                         (use_realtime_presentation != 0u) &&
                         ((i + 1u) < update_max))
                     {
+                        ndsBattlePlayableFinalizePresentedIteration();
                         continue;
                     }
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
@@ -7022,7 +7147,15 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                         continue;
                     }
 #endif
+                    if (use_realtime_presentation != 0u)
+                    {
+                        ndsBattlePlayableFinalizePresentedIteration();
+                    }
                     break;
+                }
+                if (use_realtime_presentation != 0u)
+                {
+                    ndsBattlePlayableFinalizePresentedIteration();
                 }
             }
             if (is_battle_playable != 0u)

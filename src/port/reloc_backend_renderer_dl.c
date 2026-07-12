@@ -2861,6 +2861,726 @@ static NDSFighterDLDrawState sNdsRendererAdapterStagePersistentState;
 static NDSRendererStats sNdsRendererAdapterStagePersistentStats;
 static NDSRendererVertexCache sNdsRendererAdapterStageVertexCache;
 static sb32 sNdsRendererAdapterStagePersistentActive;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static u32 sNdsRendererAdapterStageOwnerOccurrence;
+static u32 sNdsRendererAdapterStageNextOccurrence;
+static u32 sNdsRendererAdapterStageListOrdinal;
+#endif
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#define NDS_RENDERER_OWNER_HASH_SEED 2166136261u
+
+typedef struct NDSRendererOwnerStatsSnapshot
+{
+    u32 vertex_command_count;
+    u32 source_vertex_count;
+    u32 triangle_command_count;
+    u32 triangle_count;
+    u32 matrix_command_count;
+} NDSRendererOwnerStatsSnapshot;
+
+static u32 ndsRendererOwnerHashBytes(u32 hash, const void *data,
+                                     size_t bytes)
+{
+    const u8 *cursor = data;
+    size_t i;
+
+    if (hash == 0u)
+    {
+        hash = NDS_RENDERER_OWNER_HASH_SEED;
+    }
+    for (i = 0u; i < bytes; i++)
+    {
+        hash ^= cursor[i];
+        hash *= 16777619u;
+    }
+    /* Zero is the public "not started" sentinel for the compact ledgers.
+     * Keep an intermediate hash from ever aliasing that sentinel. */
+    if (hash == 0u)
+    {
+        hash = 1u;
+    }
+    return hash;
+}
+
+static u32 ndsRendererOwnerHashU32(u32 hash, u32 value)
+{
+    return ndsRendererOwnerHashBytes(hash, &value, sizeof(value));
+}
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static u32 ndsRendererOwnerRootBranchPath(
+    const NDSRelocLoadedFile *loaded, const Gfx *dl, u32 selected_event)
+{
+    u32 hash = 0u;
+
+    hash = ndsRendererOwnerHashU32(hash, 0x524f4f54u);
+    if ((loaded != NULL) && ((uintptr_t)dl >= (uintptr_t)loaded->data) &&
+        ((uintptr_t)dl <
+         ((uintptr_t)loaded->data + loaded->data_size)))
+    {
+        hash = ndsRendererOwnerHashU32(hash, 1u);
+        hash = ndsRendererOwnerHashU32(hash, loaded->asset_id);
+        hash = ndsRendererOwnerHashU32(hash, loaded->owner_generation);
+        hash = ndsRendererOwnerHashU32(
+            hash, (u32)((uintptr_t)dl - (uintptr_t)loaded->data));
+    }
+    else if ((gSYTaskmanGraphicsHeap.start != NULL) &&
+             (gSYTaskmanGraphicsHeap.end != NULL) &&
+             ((uintptr_t)dl >=
+              (uintptr_t)gSYTaskmanGraphicsHeap.start) &&
+             ((uintptr_t)dl <
+              (uintptr_t)gSYTaskmanGraphicsHeap.end))
+    {
+        hash = ndsRendererOwnerHashU32(hash, 2u);
+        hash = ndsRendererOwnerHashU32(
+            hash, (u32)((uintptr_t)dl -
+                        (uintptr_t)gSYTaskmanGraphicsHeap.start));
+    }
+    else
+    {
+        /* Valid roots are reloc- or taskman-backed. Preserve a stable
+         * segmented source token for any future resolver-backed root without
+         * hashing its process address. */
+        hash = ndsRendererOwnerHashU32(hash, 3u);
+        hash = ndsRendererOwnerHashU32(
+            hash, (u32)((uintptr_t)dl & 0x00ffffffu));
+    }
+    hash = ndsRendererOwnerHashU32(hash, selected_event);
+    return hash;
+}
+#endif
+
+#define NDS_RENDERER_OWNER_POINTER_NULL 0u
+#define NDS_RENDERER_OWNER_POINTER_EMPTY_SEGMENT 1u
+#define NDS_RENDERER_OWNER_POINTER_RELOC 2u
+#define NDS_RENDERER_OWNER_POINTER_TASKMAN 3u
+#define NDS_RENDERER_OWNER_POINTER_GRAPHICS_HEAP 4u
+#define NDS_RENDERER_OWNER_POINTER_SEGMENTED 5u
+#define NDS_RENDERER_OWNER_POINTER_RAW 6u
+
+static u32 ndsRendererOwnerHashStablePointer(u32 hash, uintptr_t value)
+{
+    const NDSRelocLoadedFile *loaded;
+    const u8 *arena = ndsTaskmanArenaStart();
+    uintptr_t arena_base = (uintptr_t)arena;
+    size_t arena_size = ndsTaskmanArenaSize();
+    u32 segment = (u32)(value >> 24);
+
+    hash = ndsRendererOwnerHashU32(hash, 0x50545231u);
+    if (value == 0u)
+    {
+        return ndsRendererOwnerHashU32(
+            hash, NDS_RENDERER_OWNER_POINTER_NULL);
+    }
+    if (value == (uintptr_t)sNdsRendererAdapterEmptySegmentEDL)
+    {
+        return ndsRendererOwnerHashU32(
+            hash, NDS_RENDERER_OWNER_POINTER_EMPTY_SEGMENT);
+    }
+
+    loaded = ndsRelocFindLoadedFileContaining(
+        (const void *)value, 1u);
+    if (loaded != NULL)
+    {
+        hash = ndsRendererOwnerHashU32(
+            hash, NDS_RENDERER_OWNER_POINTER_RELOC);
+        hash = ndsRendererOwnerHashU32(hash, loaded->asset_id);
+        hash = ndsRendererOwnerHashU32(
+            hash, loaded->owner_generation);
+        return ndsRendererOwnerHashU32(
+            hash, (u32)(value - (uintptr_t)loaded->data));
+    }
+    if ((arena != NULL) && (value >= arena_base) &&
+        ((size_t)(value - arena_base) < arena_size))
+    {
+        hash = ndsRendererOwnerHashU32(
+            hash, NDS_RENDERER_OWNER_POINTER_TASKMAN);
+        return ndsRendererOwnerHashU32(
+            hash, (u32)(value - arena_base));
+    }
+    if ((gSYTaskmanGraphicsHeap.start != NULL) &&
+        (gSYTaskmanGraphicsHeap.end != NULL) &&
+        (value >= (uintptr_t)gSYTaskmanGraphicsHeap.start) &&
+        (value < (uintptr_t)gSYTaskmanGraphicsHeap.end))
+    {
+        hash = ndsRendererOwnerHashU32(
+            hash, NDS_RENDERER_OWNER_POINTER_GRAPHICS_HEAP);
+        return ndsRendererOwnerHashU32(
+            hash, (u32)(value -
+                        (uintptr_t)gSYTaskmanGraphicsHeap.start));
+    }
+    if ((segment != 0u) && (segment <= 0x0fu))
+    {
+        hash = ndsRendererOwnerHashU32(
+            hash, NDS_RENDERER_OWNER_POINTER_SEGMENTED);
+        hash = ndsRendererOwnerHashU32(hash, segment);
+        return ndsRendererOwnerHashU32(
+            hash, (u32)(value & 0x00ffffffu));
+    }
+
+    /* Valid renderer operands are reloc-, taskman-, or segment-backed. Keep
+     * an explicit raw fallback so an unexpected operand mutation is still
+     * visible instead of silently aliasing the null provenance. */
+    hash = ndsRendererOwnerHashU32(
+        hash, NDS_RENDERER_OWNER_POINTER_RAW);
+    return ndsRendererOwnerHashU32(hash, (u32)value);
+}
+
+static s32 ndsRendererOwnerCommandUsesPointer(u32 op)
+{
+    return ((op == NDS_FIGHTER_DL_OP_VTX) ||
+            (op == NDS_FIGHTER_DL_OP_MTX) ||
+            (op == 0xdcu) || /* F3DEX2 G_MOVEMEM */
+            (op == NDS_FIGHTER_DL_OP_DL) ||
+            (op == NDS_FIGHTER_DL_OP_SETTIMG) ||
+            (op == 0xfeu) || /* G_SETZIMG */
+            (op == NDS_FIGHTER_DL_OP_SETCIMG)) ? TRUE : FALSE;
+}
+
+static u32 ndsRendererOwnerHashDisplayList(
+    u32 hash, const Gfx *dl, const NDSRendererConfig *config,
+    u32 depth, u32 *remaining_commands)
+{
+    u32 i;
+
+    hash = ndsRendererOwnerHashU32(hash, 0x4c495354u);
+    hash = ndsRendererOwnerHashStablePointer(
+        hash, (uintptr_t)dl);
+    hash = ndsRendererOwnerHashU32(hash, depth);
+    if ((dl == NULL) || (config == NULL) ||
+        (remaining_commands == NULL))
+    {
+        return ndsRendererOwnerHashU32(hash, 0xffffffffu);
+    }
+    if (depth > config->max_depth)
+    {
+        return ndsRendererOwnerHashU32(hash, 0xfffffffeu);
+    }
+
+    for (i = 0u; i < config->max_list_commands; i++, dl++)
+    {
+        u32 w0;
+        u32 w1;
+        u32 op;
+
+        if (*remaining_commands == 0u)
+        {
+            return ndsRendererOwnerHashU32(hash, 0xfffffffdu);
+        }
+        if ((config->validate_range != NULL) &&
+            (config->validate_range(dl, sizeof(*dl), config->user) == FALSE))
+        {
+            hash = ndsRendererOwnerHashStablePointer(
+                hash, (uintptr_t)dl);
+            return ndsRendererOwnerHashU32(hash, 0xfffffffcu);
+        }
+
+        w0 = dl->words.w0;
+        w1 = dl->words.w1;
+        op = w0 >> 24;
+        (*remaining_commands)--;
+        hash = ndsRendererOwnerHashU32(hash, 0x434d4431u);
+        hash = ndsRendererOwnerHashU32(hash, i);
+        hash = ndsRendererOwnerHashU32(hash, w0);
+        if (ndsRendererOwnerCommandUsesPointer(op) != FALSE)
+        {
+            hash = ndsRendererOwnerHashStablePointer(
+                hash, (uintptr_t)w1);
+        }
+        else
+        {
+            hash = ndsRendererOwnerHashU32(hash, w1);
+        }
+
+        if (op == NDS_FIGHTER_DL_OP_DL)
+        {
+            const Gfx *branch = (const Gfx *)(uintptr_t)w1;
+            u32 resolve_kind = NDS_RENDERER_RESOLVE_NONE;
+            u32 branch_is_jump =
+                ((w0 & (1u << 16)) != 0u) ? TRUE : FALSE;
+
+            if (config->resolve_branch != NULL)
+            {
+                branch = config->resolve_branch(
+                    branch, &resolve_kind, config->user);
+            }
+            hash = ndsRendererOwnerHashU32(hash, 0x4252414eu);
+            hash = ndsRendererOwnerHashU32(hash, resolve_kind);
+            hash = ndsRendererOwnerHashU32(hash, branch_is_jump);
+            hash = ndsRendererOwnerHashDisplayList(
+                hash, branch, config, depth + 1u, remaining_commands);
+            if (branch_is_jump != FALSE)
+            {
+                return hash;
+            }
+        }
+        else if (op == NDS_FIGHTER_DL_OP_ENDDL)
+        {
+            return ndsRendererOwnerHashU32(hash, 0x454e444cu);
+        }
+    }
+    return ndsRendererOwnerHashU32(hash, 0x4e4f454eu);
+}
+
+static u32 ndsRendererOwnerHashTileState(
+    u32 hash, const NDSRendererTileState *tile)
+{
+#define NDS_RENDERER_HASH_TILE_FIELD(field) \
+    hash = ndsRendererOwnerHashU32(hash, tile->field)
+
+    NDS_RENDERER_HASH_TILE_FIELD(set_seen);
+    NDS_RENDERER_HASH_TILE_FIELD(size_seen);
+    NDS_RENDERER_HASH_TILE_FIELD(format);
+    NDS_RENDERER_HASH_TILE_FIELD(size);
+    NDS_RENDERER_HASH_TILE_FIELD(line);
+    NDS_RENDERER_HASH_TILE_FIELD(tmem);
+    NDS_RENDERER_HASH_TILE_FIELD(palette);
+    NDS_RENDERER_HASH_TILE_FIELD(cms);
+    NDS_RENDERER_HASH_TILE_FIELD(cmt);
+    NDS_RENDERER_HASH_TILE_FIELD(masks);
+    NDS_RENDERER_HASH_TILE_FIELD(maskt);
+    NDS_RENDERER_HASH_TILE_FIELD(shifts);
+    NDS_RENDERER_HASH_TILE_FIELD(shiftt);
+    NDS_RENDERER_HASH_TILE_FIELD(uls);
+    NDS_RENDERER_HASH_TILE_FIELD(ult);
+    NDS_RENDERER_HASH_TILE_FIELD(lrs);
+    NDS_RENDERER_HASH_TILE_FIELD(lrt);
+    NDS_RENDERER_HASH_TILE_FIELD(width);
+    NDS_RENDERER_HASH_TILE_FIELD(height);
+    NDS_RENDERER_HASH_TILE_FIELD(flags);
+
+#undef NDS_RENDERER_HASH_TILE_FIELD
+    return hash;
+}
+
+static u32 ndsRendererOwnerHashTextureLoadState(
+    u32 hash, const NDSRendererTextureLoadState *load)
+{
+    hash = ndsRendererOwnerHashU32(hash, load->image);
+    hash = ndsRendererOwnerHashU32(hash, load->sequence);
+    hash = ndsRendererOwnerHashU32(hash, load->image_width);
+    hash = ndsRendererOwnerHashU32(hash, load->load_uls);
+    hash = ndsRendererOwnerHashU32(hash, load->load_ult);
+    hash = ndsRendererOwnerHashU32(hash, load->load_lrs);
+    hash = ndsRendererOwnerHashU32(hash, load->load_dxt);
+    hash = ndsRendererOwnerHashU32(hash, load->load_texels);
+    hash = ndsRendererOwnerHashU32(hash, load->load_tmem);
+    hash = ndsRendererOwnerHashU32(hash, load->valid);
+    hash = ndsRendererOwnerHashU32(hash, load->image_format);
+    hash = ndsRendererOwnerHashU32(hash, load->image_size);
+    hash = ndsRendererOwnerHashU32(hash, load->load_kind);
+    hash = ndsRendererOwnerHashU32(hash, load->load_tile);
+    return hash;
+}
+
+static u32 ndsRendererOwnerHashRuntimeState(const NDSRendererStats *stats)
+{
+    u32 hash = 0u;
+    u32 i;
+
+    if (stats == NULL)
+    {
+        return 0u;
+    }
+
+    /* Serialize exactly the persistent renderer contract copied by
+     * ndsFighterDLDrawCopyPersistentRendererState().  Do not hash the raw
+     * tail: it interleaves proof counters and pointer-bearing diagnostics,
+     * and struct padding is not semantic state. */
+#define NDS_RENDERER_HASH_STATE_FIELD(field) \
+    hash = ndsRendererOwnerHashU32(hash, (u32)stats->field)
+
+    NDS_RENDERER_HASH_STATE_FIELD(othermode_h);
+    NDS_RENDERER_HASH_STATE_FIELD(othermode_l);
+    NDS_RENDERER_HASH_STATE_FIELD(geometry_mode);
+    NDS_RENDERER_HASH_STATE_FIELD(geometry_clear_mask);
+    NDS_RENDERER_HASH_STATE_FIELD(geometry_set_mask);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_load_kind);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_scale_s);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_scale_t);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_level);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tile);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_on);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_xparam);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_state_flags);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_image);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_format);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_size);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_image_width);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tlut_image);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tlut_count);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tlut_tile);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_format);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_size);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_line);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_tmem);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_palette);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_cms);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_cmt);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_masks);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_maskt);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_shifts);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_shiftt);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_render_tile_flags);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_load_tile);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_load_block_uls);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_load_block_ult);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_load_block_lrs);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_load_block_dxt);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_load_texels);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tile_size_tile);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tile_size_uls);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tile_size_ult);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tile_size_lrs);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tile_size_lrt);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tile_width);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_tile_height);
+    for (i = 0u; i < NDS_RENDERER_TILE_COUNT; i++)
+    {
+        hash = ndsRendererOwnerHashTileState(hash,
+                                              &stats->texture_tiles[i]);
+    }
+    NDS_RENDERER_HASH_STATE_FIELD(texture_load_sequence);
+    for (i = 0u; i < NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT; i++)
+    {
+        hash = ndsRendererOwnerHashTextureLoadState(
+            hash, &stats->texture_loads[i]);
+    }
+    NDS_RENDERER_HASH_STATE_FIELD(texture_combine_w0);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_combine_w1);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_combine_count);
+    NDS_RENDERER_HASH_STATE_FIELD(prim_color);
+    NDS_RENDERER_HASH_STATE_FIELD(prim_min_level);
+    NDS_RENDERER_HASH_STATE_FIELD(prim_lod_fraction);
+    NDS_RENDERER_HASH_STATE_FIELD(env_color);
+    NDS_RENDERER_HASH_STATE_FIELD(blend_color);
+    NDS_RENDERER_HASH_STATE_FIELD(light_color_1);
+    NDS_RENDERER_HASH_STATE_FIELD(light_color_2);
+    NDS_RENDERER_HASH_STATE_FIELD(light_color_mask);
+    NDS_RENDERER_HASH_STATE_FIELD(light_dir_x);
+    NDS_RENDERER_HASH_STATE_FIELD(light_dir_y);
+    NDS_RENDERER_HASH_STATE_FIELD(light_dir_z);
+    NDS_RENDERER_HASH_STATE_FIELD(light_dir_mask);
+    NDS_RENDERER_HASH_STATE_FIELD(prim_depth);
+    NDS_RENDERER_HASH_STATE_FIELD(prim_depth_delta);
+    NDS_RENDERER_HASH_STATE_FIELD(fog_color);
+    NDS_RENDERER_HASH_STATE_FIELD(fog_min);
+    NDS_RENDERER_HASH_STATE_FIELD(fog_max);
+    NDS_RENDERER_HASH_STATE_FIELD(fog_status);
+
+#undef NDS_RENDERER_HASH_STATE_FIELD
+    return hash;
+}
+
+static u32 ndsRendererOwnerHashVertexCache(
+    const NDSRendererVertexCache *cache)
+{
+    u32 hash = 0u;
+    u32 i;
+    u32 row;
+    u32 col;
+    u32 snapshot_count;
+    u32 input_mask;
+    u32 transformed_mask;
+    u32 color_mask;
+
+    if (cache == NULL)
+    {
+        return 0u;
+    }
+    input_mask = cache->input_valid_mask;
+    transformed_mask = cache->transformed_valid_mask & input_mask;
+    color_mask = cache->vertex_color_valid_mask & input_mask;
+    hash = ndsRendererOwnerHashU32(hash, input_mask);
+    hash = ndsRendererOwnerHashU32(
+        hash, cache->raw_vertex_fit_mask & input_mask);
+    hash = ndsRendererOwnerHashU32(hash, transformed_mask);
+    hash = ndsRendererOwnerHashU32(hash, color_mask);
+    snapshot_count = cache->matrix_snapshot_count;
+    if (snapshot_count > NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY)
+    {
+        snapshot_count = NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY;
+    }
+    hash = ndsRendererOwnerHashU32(hash, snapshot_count);
+    for (i = 0u; i < NDS_RENDERER_VERTEX_CACHE_SIZE; i++)
+    {
+        u32 bit = 1u << i;
+
+        if ((input_mask & bit) != 0u)
+        {
+            const NDSRendererInputVertex *input = &cache->input_vertices[i];
+
+            hash = ndsRendererOwnerHashU32(hash, (u32)(s32)input->x);
+            hash = ndsRendererOwnerHashU32(hash, (u32)(s32)input->y);
+            hash = ndsRendererOwnerHashU32(hash, (u32)(s32)input->z);
+            hash = ndsRendererOwnerHashU32(hash, (u32)(s32)input->s);
+            hash = ndsRendererOwnerHashU32(hash, (u32)(s32)input->t);
+            hash = ndsRendererOwnerHashU32(hash, input->r);
+            hash = ndsRendererOwnerHashU32(hash, input->g);
+            hash = ndsRendererOwnerHashU32(hash, input->b);
+            hash = ndsRendererOwnerHashU32(hash, input->a);
+            hash = ndsRendererOwnerHashU32(
+                hash, cache->vertex_matrix_snapshot[i]);
+            hash = ndsRendererOwnerHashU32(
+                hash, cache->vertex_clip_snapshot[i]);
+        }
+        if ((transformed_mask & bit) != 0u)
+        {
+            const NDSRendererClipVertex20p12 *clip =
+                &cache->transformed_vertices[i];
+
+            hash = ndsRendererOwnerHashU32(hash, (u32)clip->x);
+            hash = ndsRendererOwnerHashU32(hash, (u32)clip->y);
+            hash = ndsRendererOwnerHashU32(hash, (u32)clip->z);
+            hash = ndsRendererOwnerHashU32(hash, (u32)clip->w);
+        }
+        if ((color_mask & bit) != 0u)
+        {
+            hash = ndsRendererOwnerHashU32(hash,
+                                           cache->vertex_colors[i]);
+        }
+    }
+    for (i = 0u; i < snapshot_count; i++)
+    {
+        const NDSRendererMatrixSnapshot *snapshot =
+            &cache->matrix_snapshots[i];
+
+        for (row = 0u; row < 4u; row++)
+        {
+            for (col = 0u; col < 4u; col++)
+            {
+                hash = ndsRendererOwnerHashU32(
+                    hash, (u32)snapshot->matrix.m[row][col]);
+            }
+        }
+        hash = ndsRendererOwnerHashU32(hash, snapshot->generation);
+        hash = ndsRendererOwnerHashU32(hash, snapshot->signature);
+    }
+    return hash;
+}
+
+static u32 ndsRendererOwnerHashResolver(
+    const NDSFighterDLDrawState *state)
+{
+    u32 hash = 0u;
+    uintptr_t base;
+    uintptr_t end;
+    size_t bytes;
+    size_t i;
+
+    if (state == NULL)
+    {
+        return 0u;
+    }
+    if (state->primary_file != NULL)
+    {
+        hash = ndsRendererOwnerHashU32(hash, 1u);
+        hash = ndsRendererOwnerHashU32(
+            hash, state->primary_file->asset_id);
+        hash = ndsRendererOwnerHashU32(
+            hash, state->primary_file->owner_generation);
+        hash = ndsRendererOwnerHashU32(
+            hash, state->primary_file->data_size);
+    }
+    else
+    {
+        hash = ndsRendererOwnerHashU32(hash, 0u);
+    }
+
+    base = (uintptr_t)state->segment_e_base;
+    end = (uintptr_t)state->segment_e_end;
+    if ((base == 0u) || (end <= base))
+    {
+        return ndsRendererOwnerHashU32(hash, 0u);
+    }
+    bytes = (size_t)(end - base);
+    if (((bytes % sizeof(Gfx)) != 0u) ||
+        (ndsFighterDLScanRangeInTaskmanArena(
+             state->segment_e_base, bytes) == FALSE))
+    {
+        hash = ndsRendererOwnerHashU32(hash, 0xffffffffu);
+        return ndsRendererOwnerHashU32(hash, (u32)bytes);
+    }
+
+    hash = ndsRendererOwnerHashU32(hash, (u32)(bytes / sizeof(Gfx)));
+    for (i = 0u; i < (bytes / sizeof(Gfx)); i++)
+    {
+        const Gfx *command = &state->segment_e_base[i];
+        u32 w0 = command->words.w0;
+        u32 w1 = command->words.w1;
+        u32 op = w0 >> 24;
+
+        hash = ndsRendererOwnerHashU32(
+            hash, w0);
+        if ((op == NDS_FIGHTER_DL_OP_DL) ||
+            (op == NDS_FIGHTER_DL_OP_VTX) ||
+            (op == NDS_FIGHTER_DL_OP_MTX) ||
+            (op == 0xdcu) || /* F3DEX2 G_MOVEMEM */
+            (op == NDS_FIGHTER_DL_OP_SETTIMG))
+        {
+            const void *pointer = (const void *)(uintptr_t)w1;
+            const NDSRelocLoadedFile *loaded = NULL;
+            uintptr_t pointer_value = (uintptr_t)pointer;
+
+            if ((pointer_value >= base) && (pointer_value < end))
+            {
+                hash = ndsRendererOwnerHashU32(hash, 1u);
+                hash = ndsRendererOwnerHashU32(
+                    hash, (u32)(pointer_value - base));
+                continue;
+            }
+            loaded = ndsRelocFindLoadedFileContaining(pointer, 1u);
+            if (loaded != NULL)
+            {
+                hash = ndsRendererOwnerHashU32(hash, 2u);
+                hash = ndsRendererOwnerHashU32(hash, loaded->asset_id);
+                hash = ndsRendererOwnerHashU32(
+                    hash, loaded->owner_generation);
+                hash = ndsRendererOwnerHashU32(
+                    hash, (u32)(pointer_value -
+                                (uintptr_t)loaded->data));
+                continue;
+            }
+            if ((gSYTaskmanGraphicsHeap.start != NULL) &&
+                (gSYTaskmanGraphicsHeap.end != NULL) &&
+                (pointer_value >=
+                 (uintptr_t)gSYTaskmanGraphicsHeap.start) &&
+                (pointer_value <
+                 (uintptr_t)gSYTaskmanGraphicsHeap.end))
+            {
+                hash = ndsRendererOwnerHashU32(hash, 3u);
+                hash = ndsRendererOwnerHashU32(
+                    hash, (u32)(pointer_value -
+                                (uintptr_t)gSYTaskmanGraphicsHeap.start));
+                continue;
+            }
+            hash = ndsRendererOwnerHashU32(hash, 4u);
+        }
+        hash = ndsRendererOwnerHashU32(hash, w1);
+    }
+    return hash;
+}
+
+static void ndsRendererOwnerSnapshotStats(
+    const NDSRendererStats *stats, NDSRendererOwnerStatsSnapshot *snapshot)
+{
+    snapshot->vertex_command_count = stats->vertex_command_count;
+    snapshot->source_vertex_count = stats->source_vertex_count;
+    snapshot->triangle_command_count = stats->triangle_command_count;
+    snapshot->triangle_count = stats->triangle_count;
+    snapshot->matrix_command_count = stats->matrix_command_count;
+}
+
+static void ndsRendererOwnerAccumulateList(
+    NDSRendererProfileOwner owner_id,
+    const NDSRelocLoadedFile *loaded,
+    const Gfx *dl,
+    u32 selected_event,
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *modelview,
+    const NDSRendererConfig *config,
+    const NDSRendererOwnerStatsSnapshot *before,
+    const NDSRendererStats *after)
+{
+    volatile NDSRendererOwnerProfile *owner;
+    u32 dl_offset;
+    u32 remaining_commands;
+
+    if ((u32)owner_id >= (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
+    {
+        return;
+    }
+    owner = &gNdsRendererProfileOwners[(u32)owner_id];
+    owner->selected_count++;
+    owner->source_command_count += after->command_count;
+    owner->vertex_command_count +=
+        after->vertex_command_count - before->vertex_command_count;
+    owner->source_vertex_count +=
+        after->source_vertex_count - before->source_vertex_count;
+    owner->triangle_command_count +=
+        after->triangle_command_count - before->triangle_command_count;
+    owner->triangle_count += after->triangle_count - before->triangle_count;
+    /* Every selected list binds its live camera/DObj matrix pair before the
+     * source stream runs.  Source MTX commands, when present, are additional
+     * changes rather than the whole owner-level matrix census. */
+    owner->matrix_change_count += 1u +
+        after->matrix_command_count - before->matrix_command_count;
+
+    if ((loaded != NULL) && ((uintptr_t)dl >= (uintptr_t)loaded->data) &&
+        ((uintptr_t)dl <
+         ((uintptr_t)loaded->data + loaded->data_size)))
+    {
+        dl_offset = (u32)((uintptr_t)dl - (uintptr_t)loaded->data);
+    }
+    else if (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) != FALSE)
+    {
+        dl_offset = (u32)((uintptr_t)dl -
+                          (uintptr_t)ndsTaskmanArenaStart());
+    }
+    else
+    {
+        dl_offset = (u32)((uintptr_t)dl & 0x00ffffffu);
+    }
+    owner->topology_signature = ndsRendererOwnerHashU32(
+        owner->topology_signature, 0x4f574e31u);
+    owner->topology_signature = ndsRendererOwnerHashStablePointer(
+        owner->topology_signature, (uintptr_t)dl);
+    owner->topology_signature = ndsRendererOwnerHashU32(
+        owner->topology_signature, after->command_count);
+    remaining_commands = (config != NULL) ? config->max_commands : 0u;
+    owner->topology_signature = ndsRendererOwnerHashDisplayList(
+        owner->topology_signature, dl, config, 0u,
+        &remaining_commands);
+    owner->topology_signature = ndsRendererOwnerHashU32(
+        owner->topology_signature, remaining_commands);
+    owner->selected_event_signature = ndsRendererOwnerHashU32(
+        owner->selected_event_signature, selected_event);
+    owner->selected_event_signature = ndsRendererOwnerHashU32(
+        owner->selected_event_signature, dl_offset);
+    if (projection != NULL)
+    {
+        owner->camera_signature = ndsRendererOwnerHashBytes(
+            owner->camera_signature, projection, sizeof(*projection));
+    }
+    if (modelview != NULL)
+    {
+        owner->dobj_matrix_signature = ndsRendererOwnerHashBytes(
+            owner->dobj_matrix_signature, modelview, sizeof(*modelview));
+    }
+    owner->material_signature = ndsRendererOwnerHashU32(
+        owner->material_signature, after->prim_color);
+    owner->material_signature = ndsRendererOwnerHashU32(
+        owner->material_signature, after->env_color);
+    owner->material_signature = ndsRendererOwnerHashU32(
+        owner->material_signature, after->blend_color);
+    owner->material_signature = ndsRendererOwnerHashU32(
+        owner->material_signature, after->texture_combine_w0);
+    owner->material_signature = ndsRendererOwnerHashU32(
+        owner->material_signature, after->texture_combine_w1);
+    owner->light_signature = ndsRendererOwnerHashU32(
+        owner->light_signature, after->light_color_1);
+    owner->light_signature = ndsRendererOwnerHashU32(
+        owner->light_signature, after->light_color_2);
+    owner->light_signature = ndsRendererOwnerHashU32(
+        owner->light_signature, (u32)after->light_dir_x);
+    owner->light_signature = ndsRendererOwnerHashU32(
+        owner->light_signature, (u32)after->light_dir_y);
+    owner->light_signature = ndsRendererOwnerHashU32(
+        owner->light_signature, (u32)after->light_dir_z);
+    owner->texture_signature = ndsRendererOwnerHashU32(
+        owner->texture_signature, after->texture_image);
+    owner->texture_signature = ndsRendererOwnerHashU32(
+        owner->texture_signature, after->texture_tlut_image);
+    owner->texture_signature = ndsRendererOwnerHashU32(
+        owner->texture_signature, after->texture_scale_s);
+    owner->texture_signature = ndsRendererOwnerHashU32(
+        owner->texture_signature, after->texture_scale_t);
+    owner->texture_signature = ndsRendererOwnerHashU32(
+        owner->texture_signature, after->texture_render_tile);
+}
+#endif
 
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 static void ndsRendererAdapterAccumulateDepth(
@@ -2912,6 +3632,11 @@ void ndsRendererAdapterResetDepthDiagnostics(void)
     gNdsRendererDepthStageSamples = 0u;
     gNdsRendererDepthFighterP0Samples = 0u;
     gNdsRendererDepthFighterP1Samples = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    sNdsRendererAdapterStageOwnerOccurrence = 0u;
+    sNdsRendererAdapterStageNextOccurrence = 0u;
+    sNdsRendererAdapterStageListOrdinal = 0u;
+#endif
 }
 
 static sb32 ndsRendererAdapterStatsHasArmedTexture(
@@ -2953,10 +3678,75 @@ void ndsRendererAdapterBeginStageTraversal(void)
     ndsRendererInitStats(&sNdsRendererAdapterStagePersistentStats);
     ndsRendererInitVertexCache(&sNdsRendererAdapterStageVertexCache);
     sNdsRendererAdapterStagePersistentActive = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    sNdsRendererAdapterStageOwnerOccurrence =
+        sNdsRendererAdapterStageNextOccurrence++;
+    sNdsRendererAdapterStageListOrdinal = 0u;
+#endif
+    gNdsRendererProfileOwners[
+        NDS_RENDERER_PROFILE_OWNER_STAGE].entry_state_hash =
+        ndsRendererOwnerHashU32(
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].entry_state_hash,
+            ndsRendererOwnerHashRuntimeState(
+                &sNdsRendererAdapterStagePersistentStats));
+    gNdsRendererProfileOwners[
+        NDS_RENDERER_PROFILE_OWNER_STAGE].entry_vertex_cache_hash =
+        ndsRendererOwnerHashU32(
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].entry_vertex_cache_hash,
+            ndsRendererOwnerHashVertexCache(
+                &sNdsRendererAdapterStageVertexCache));
+    gNdsRendererProfileOwners[
+        NDS_RENDERER_PROFILE_OWNER_STAGE].entry_resolver_hash =
+        ndsRendererOwnerHashU32(
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].entry_resolver_hash,
+            ndsRendererOwnerHashResolver(
+                &sNdsRendererAdapterStagePersistentState));
+    gNdsRendererProfileOwners[
+        NDS_RENDERER_PROFILE_OWNER_STAGE].entry_global_hash =
+        ndsRendererOwnerHashU32(
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].entry_global_hash,
+            ndsRendererProfileGlobalStateHash());
+#endif
 }
 
 void ndsRendererAdapterEndStageTraversal(void)
 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileOwners[
+        NDS_RENDERER_PROFILE_OWNER_STAGE].exit_state_hash =
+        ndsRendererOwnerHashU32(
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].exit_state_hash,
+            ndsRendererOwnerHashRuntimeState(
+                &sNdsRendererAdapterStagePersistentStats));
+    gNdsRendererProfileOwners[
+        NDS_RENDERER_PROFILE_OWNER_STAGE].exit_vertex_cache_hash =
+        ndsRendererOwnerHashU32(
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].exit_vertex_cache_hash,
+            ndsRendererOwnerHashVertexCache(
+                &sNdsRendererAdapterStageVertexCache));
+    gNdsRendererProfileOwners[
+        NDS_RENDERER_PROFILE_OWNER_STAGE].exit_resolver_hash =
+        ndsRendererOwnerHashU32(
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].exit_resolver_hash,
+            ndsRendererOwnerHashResolver(
+                &sNdsRendererAdapterStagePersistentState));
+    gNdsRendererProfileOwners[
+        NDS_RENDERER_PROFILE_OWNER_STAGE].exit_global_hash =
+        ndsRendererOwnerHashU32(
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].exit_global_hash,
+            ndsRendererProfileGlobalStateHash());
+    ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
+#endif
     sNdsRendererAdapterStagePersistentActive = FALSE;
 }
 
@@ -3741,6 +4531,9 @@ static sb32 ndsRendererAdapterPrepareMaterialSegment(
     {
         return FALSE;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    ndsRendererProfileRecordMaterialOperations(mobj_count);
+#endif
 
     heap_start = (uintptr_t)gSYTaskmanGraphicsHeap.start;
     heap_end = (uintptr_t)gSYTaskmanGraphicsHeap.end;
@@ -3785,9 +4578,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     sb32 detailed_output;
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 adapter_start;
     u32 step_start;
+    u32 adapter_ticks;
+    NDSRendererOwnerStatsSnapshot owner_stats_before;
 #endif
     sb32 inherited_texture = FALSE;
     sb32 inherited_tile = FALSE;
@@ -3866,13 +4661,13 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
     saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     adapter_start = cpuGetTiming();
     step_start = adapter_start;
 #endif
 #endif
     ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
     gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
     step_start = cpuGetTiming();
 #endif
@@ -3887,7 +4682,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              &initial_projection_ptr,
                                              &initial_modelview,
                                              &initial_modelview_ptr);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
     gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
 
@@ -3936,8 +4731,17 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    ndsRendererOwnerSnapshotStats(render_stats, &owner_stats_before);
     step_start = cpuGetTiming();
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    ndsRendererProfileSetSourceProvenance(
+        sNdsRendererAdapterStageOwnerOccurrence,
+        sNdsRendererAdapterStageListOrdinal,
+        ndsRendererOwnerRootBranchPath(
+            loaded, dl, sNdsRendererAdapterStageListOrdinal));
+    sNdsRendererAdapterStageListOrdinal++;
 #endif
 #endif
     ndsRendererExecuteDisplayListWithVertexCache(
@@ -3958,9 +4762,17 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         &gNdsRendererDepthStageWMin,
         &gNdsRendererDepthStageWMax);
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
-    gNdsRendererProfileStageAdapterTicks += cpuGetTiming() - adapter_start;
+    adapter_ticks = cpuGetTiming() - adapter_start;
+    gNdsRendererProfileStageAdapterTicks += adapter_ticks;
+    ndsRendererOwnerAccumulateList(
+        NDS_RENDERER_PROFILE_OWNER_STAGE, loaded, dl,
+        gNdsRendererProfileOwners[
+            NDS_RENDERER_PROFILE_OWNER_STAGE].selected_count,
+        initial_projection_ptr, initial_modelview_ptr,
+        &config,
+        &owner_stats_before, render_stats);
 #endif
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
     if (sNdsRendererAdapterStagePersistentActive != FALSE)
@@ -5528,7 +6340,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         u32 step_start;
 #endif
 #endif
@@ -5545,12 +6357,12 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                             &persistent_state);
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         step_start = cpuGetTiming();
 #endif
         ndsRendererAdapterPrepareMaterialSegment(collection.dobjs[i],
                                                  &states[i]);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
         step_start = cpuGetTiming();
 #endif
@@ -5564,7 +6376,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
                                                  &initial_modelview_ptr);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
         gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
         config.max_depth = 8u;
@@ -7064,6 +7876,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 root_x_before;
     u32 root_x_after;
     u32 i;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    NDSRendererProfileOwner owner_id;
+#endif
 
     if ((slot > 1u) ||
         (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
@@ -7145,6 +7960,19 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
         ndsFighterDisplayContractSeedMaterialLights(&persistent_stats);
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    owner_id = (slot == 0u) ? NDS_RENDERER_PROFILE_OWNER_MARIO :
+                              NDS_RENDERER_PROFILE_OWNER_FOX;
+    ndsRendererProfileSetOwner(owner_id);
+    gNdsRendererProfileOwners[(u32)owner_id].entry_state_hash =
+        ndsRendererOwnerHashRuntimeState(&persistent_stats);
+    gNdsRendererProfileOwners[(u32)owner_id].entry_vertex_cache_hash =
+        ndsRendererOwnerHashVertexCache(&persistent_renderer_vertices);
+    gNdsRendererProfileOwners[(u32)owner_id].entry_resolver_hash =
+        ndsRendererOwnerHashResolver(&persistent_state);
+    gNdsRendererProfileOwners[(u32)owner_id].entry_global_hash =
+        ndsRendererProfileGlobalStateHash();
+#endif
     for (i = 0u; i < collection.selected_count; i++)
     {
         const NDSFighterDisplayContractEvent *contract_event =
@@ -7165,8 +7993,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         u32 step_start;
+        NDSRendererOwnerStatsSnapshot owner_stats_before;
 #endif
 #endif
 
@@ -7214,7 +8043,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         step_start = cpuGetTiming();
 #endif
         if ((sNdsFighterDisplayContractPlayback == FALSE) ||
@@ -7228,7 +8057,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             ndsRendererAdapterPrepareMaterialSegment(material_dobj,
                                                      current_state);
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
         step_start = cpuGetTiming();
 #endif
@@ -7245,7 +8074,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
                                                  &initial_modelview_ptr);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
         gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
         config.max_depth = 8u;
@@ -7282,8 +8111,15 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         current_stats = &stats[i];
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        ndsRendererOwnerSnapshotStats(current_stats, &owner_stats_before);
         step_start = cpuGetTiming();
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        ndsRendererProfileSetSourceProvenance(
+            0u, i,
+            ndsRendererOwnerRootBranchPath(
+                loaded, dl, collection.indices[i]));
 #endif
 #endif
         ndsRendererExecuteDisplayListWithVertexCache(
@@ -7296,8 +8132,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             current_stats,
             &persistent_renderer_vertices);
 #if NDS_RENDERER_HW_TRIANGLES
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
+        ndsRendererOwnerAccumulateList(
+            owner_id, loaded, dl, collection.indices[i],
+            initial_projection_ptr, initial_modelview_ptr,
+            &config,
+            &owner_stats_before, current_stats);
 #endif
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 #endif
@@ -7333,6 +8174,18 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                            current_state, current_stats, clean);
 #endif
     }
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileOwners[(u32)owner_id].exit_state_hash =
+        ndsRendererOwnerHashRuntimeState(&persistent_stats);
+    gNdsRendererProfileOwners[(u32)owner_id].exit_vertex_cache_hash =
+        ndsRendererOwnerHashVertexCache(&persistent_renderer_vertices);
+    gNdsRendererProfileOwners[(u32)owner_id].exit_resolver_hash =
+        ndsRendererOwnerHashResolver(&persistent_state);
+    gNdsRendererProfileOwners[(u32)owner_id].exit_global_hash =
+        ndsRendererProfileGlobalStateHash();
+    ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     if (detailed_output == FALSE)
@@ -7389,6 +8242,10 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     u32 submitted_before;
     u32 triangles_before;
     u32 triangles_after;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 owner_start;
+    NDSRendererProfileOwner owner_id;
+#endif
 
     if (fighter_gobj == NULL)
     {
@@ -7413,9 +8270,18 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     }
     sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] =
         gNdsRendererProfileFrameCount;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    owner_id = ((u32)fp->nds_slot == 0u) ?
+        NDS_RENDERER_PROFILE_OWNER_MARIO : NDS_RENDERER_PROFILE_OWNER_FOX;
+    owner_start = cpuGetTiming();
+#endif
     ndsFighterDisplayContractCapture(fighter_gobj);
     if (sNdsFighterDisplayContract.event_count == 0u)
     {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        gNdsRendererProfileOwners[(u32)owner_id].exclusive_ticks +=
+            cpuGetTiming() - owner_start;
+#endif
         return;
     }
     submitted_before = gNdsFighterMarioFoxDLAllDrawCount;
@@ -7439,6 +8305,10 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
                 triangles_after - triangles_before;
         }
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileOwners[(u32)owner_id].exclusive_ticks +=
+        cpuGetTiming() - owner_start;
+#endif
 #else
     (void)fighter_gobj;
 #endif

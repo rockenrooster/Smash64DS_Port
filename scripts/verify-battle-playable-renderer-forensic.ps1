@@ -5,7 +5,7 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [ValidateRange(0,16)][int]$RendererBenchmarkSamples = 0
+    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0
 )
 $ErrorActionPreference = 'Stop'
 

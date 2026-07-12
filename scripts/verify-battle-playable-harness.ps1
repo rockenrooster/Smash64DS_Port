@@ -22,7 +22,7 @@ param(
     [switch]$MatchLifecycleProof,
     [switch]$RequireRealtime60Fps,
     [int]$RendererProfileLevel = -1,
-    [ValidateRange(0,16)][int]$RendererBenchmarkSamples = 0
+    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0
 )
 $ErrorActionPreference = 'Stop'
 if (($RendererProfileLevel -lt -1) -or ($RendererProfileLevel -gt 2)) {
@@ -62,9 +62,9 @@ if ($RealtimePresentation) {
 if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 2 }
 if ($MatchLifecycleProof) {
     $harness = 'battle_playable_match_lifecycle'
-} elseif ($RealtimePresentation -and ($RendererProfileLevel -eq 0)) {
-    # The shipped profile-0 path is the latency-optimized mode-163 variant.
-    # Coarse/forensic diagnostic targets retain the size-optimized variant.
+} elseif ($RealtimePresentation -and ($RendererProfileLevel -lt 2)) {
+    # Profiles 0/1 share the latency-optimized mode-163 realtime variant;
+    # profile 2 retains the size-optimized forensic build variant.
     $harness = 'battle_playable_realtime'
 }
 $hardwareTriangles = $target -like '*-hwtri'

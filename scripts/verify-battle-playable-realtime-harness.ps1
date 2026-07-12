@@ -6,6 +6,7 @@ param(
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
     [switch]$RequireRealtime60Fps,
+    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [switch]$SkipScreenshot,
     [int]$ScreenshotDelaySeconds = 8,
     [int]$ScreenshotSecondDelaySeconds = 1,
@@ -217,6 +218,9 @@ $harnessArgs = @(
 )
 if ($NoBuild) { $harnessArgs += '-NoBuild' }
 if ($RequireRealtime60Fps) { $harnessArgs += '-RequireRealtime60Fps' }
+if ($RendererBenchmarkSamples -gt 0) {
+    $harnessArgs += @('-RendererBenchmarkSamples', "$RendererBenchmarkSamples")
+}
 & $powerShellExe @harnessArgs
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

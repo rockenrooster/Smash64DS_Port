@@ -2829,6 +2829,43 @@ volatile u32 gNdsRendererProfileUpdateTicks;
 volatile u32 gNdsRendererProfilePresentTicks;
 volatile u32 gNdsRendererProfileDrawTicks;
 volatile u32 gNdsRendererProfileHudTicks;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+volatile u32 gNdsRendererProfileLoopWallTicks;
+volatile u32 gNdsRendererProfileInputTicks;
+volatile u32 gNdsRendererProfileSourceUpdateTicks;
+volatile u32 gNdsRendererProfileAudioUpdateTicks;
+volatile u32 gNdsRendererProfileBeginFrameTicks;
+volatile u32 gNdsRendererProfileWallpaperTicks;
+volatile u32 gNdsRendererProfileForegroundTicks;
+volatile u32 gNdsRendererProfileStageLayer0Ticks;
+volatile u32 gNdsRendererProfileFlushTicks;
+volatile u32 gNdsRendererProfileVBlankWaitTicks;
+volatile u32 gNdsRendererProfilePostVBlankTicks;
+volatile u32 gNdsRendererProfileThreadTicks;
+volatile u32 gNdsRendererProfilePresentActiveTicks;
+volatile u32 gNdsRendererProfileDrawResidualTicks;
+volatile u32 gNdsRendererProfilePresentResidualTicks;
+volatile u32 gNdsRendererProfileLoopResidualTicks;
+volatile u32 gNdsRendererProfileConservationErrorTicks;
+volatile u32 gNdsRendererProfileLogicTick;
+volatile u32 gNdsRendererProfileGXStatusBeforeFlush;
+volatile u32 gNdsRendererProfileGXStatusAfterFlush;
+volatile u32 gNdsRendererProfileGXControlBeforeFlush;
+volatile u32 gNdsRendererProfileGXStatusPostVBlank;
+volatile u32 gNdsRendererProfileGXControlPostVBlank;
+volatile NDSRendererOwnerProfile
+    gNdsRendererProfileOwners[NDS_RENDERER_PROFILE_OWNER_COUNT];
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+volatile u32 gNdsRendererSemanticOutputHash;
+volatile u32 gNdsRendererSemanticOutputHash2;
+volatile u32 gNdsRendererSemanticEventCount;
+volatile u32 gNdsRendererSemanticOverflowCount;
+volatile u32 gNdsRendererSemanticPrefixHash[
+    NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
+volatile u32 gNdsRendererSemanticPrefixHash2[
+    NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
+#endif
 volatile u32 gNdsRendererProfileStageAdapterTicks;
 volatile u32 gNdsRendererProfileMaterialTicks;
 volatile u32 gNdsRendererProfileMatrixTicks;

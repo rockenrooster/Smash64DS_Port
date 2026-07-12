@@ -1484,6 +1484,9 @@ static void ndsSObjPreviewFlushPendingWallpaperToStaging(void)
 {
     SObj *wallpaper = sNdsSObjFramePendingWallpaper;
     u32 combine_mode = sNdsSObjFramePendingWallpaperCombine;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 profile_start;
+#endif
 
     sNdsSObjFramePendingWallpaper = NULL;
     sNdsSObjFramePendingWallpaperCombine = 0u;
@@ -1491,6 +1494,9 @@ static void ndsSObjPreviewFlushPendingWallpaperToStaging(void)
     {
         return;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    profile_start = cpuGetTiming();
+#endif
     ndsSObjPreviewBeginStagingLayer();
     if (ndsDrawSObjIntoPreview(
             wallpaper, 0u, sNdsSObjFramePreview,
@@ -1500,16 +1506,32 @@ static void ndsSObjPreviewFlushPendingWallpaperToStaging(void)
     {
         sNdsSObjFramePreviewDrawCount++;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileWallpaperTicks += cpuGetTiming() - profile_start;
+#endif
 }
 
 static void ndsSObjPreviewCommitLayer(void)
 {
     if (sNdsSObjFramePendingWallpaper != NULL)
     {
-        if ((sNdsSObjFrameForeground == FALSE) &&
-            (ndsSObjDrawCachedWallpaperFinal(
+        s32 final_wallpaper = FALSE;
+
+        if (sNdsSObjFrameForeground == FALSE)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            u32 wallpaper_start = cpuGetTiming();
+#endif
+
+            final_wallpaper = ndsSObjDrawCachedWallpaperFinal(
                 sNdsSObjFramePendingWallpaper,
-                sNdsSObjFramePendingWallpaperCombine) != FALSE))
+                sNdsSObjFramePendingWallpaperCombine);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            gNdsRendererProfileWallpaperTicks +=
+                cpuGetTiming() - wallpaper_start;
+#endif
+        }
+        if (final_wallpaper != FALSE)
         {
             sNdsSObjFramePendingWallpaper = NULL;
             sNdsSObjFramePendingWallpaperCombine = 0u;
@@ -1541,6 +1563,10 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
     SObj *sobj = (gobj != NULL) ? SObjGetStruct(gobj) : NULL;
     u32 foreground = FALSE;
     u32 cache_wallpaper = FALSE;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 foreground_start = 0u;
+    u32 profile_foreground = FALSE;
+#endif
 
     if (gobj != NULL)
     {
@@ -1558,6 +1584,14 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         ndsSObjPreviewCommitLayer();
         sNdsSObjFrameForeground = TRUE;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    if ((foreground != FALSE) &&
+        (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
+    {
+        profile_foreground = TRUE;
+        foreground_start = cpuGetTiming();
+    }
+#endif
 
     while (sobj != NULL)
     {
@@ -1598,6 +1632,13 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         }
         sobj = sobj->next;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    if (profile_foreground != FALSE)
+    {
+        gNdsRendererProfileForegroundTicks +=
+            cpuGetTiming() - foreground_start;
+    }
+#endif
 }
 
 void ndsSObjPreviewBeginFrame(void)
@@ -1614,6 +1655,15 @@ void ndsSObjPreviewBeginFrame(void)
 
 void ndsSObjPreviewEndFrame(void)
 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 profile_foreground =
+        ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+         ((sNdsSObjFrameForeground != FALSE) ||
+          (sNdsSObjOverlayForegroundPopulated != FALSE))) ? TRUE : FALSE;
+    u32 foreground_start =
+        (profile_foreground != FALSE) ? cpuGetTiming() : 0u;
+#endif
+
     ndsSObjPreviewCommitLayer();
     if ((sNdsSObjFrameForegroundCommitted == FALSE) &&
         (sNdsSObjOverlayForegroundPopulated != FALSE))
@@ -1625,6 +1675,13 @@ void ndsSObjPreviewEndFrame(void)
         ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
         sNdsSObjOverlayForegroundPopulated = FALSE;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    if (profile_foreground != FALSE)
+    {
+        gNdsRendererProfileForegroundTicks +=
+            cpuGetTiming() - foreground_start;
+    }
+#endif
     sNdsSObjFramePreview = NULL;
     sNdsSObjFramePreviewPitch = 0;
     sNdsSObjFramePreviewDrawCount = 0;

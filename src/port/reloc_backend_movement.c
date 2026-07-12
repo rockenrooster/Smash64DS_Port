@@ -12963,6 +12963,9 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     u32 mask;
     sb32 is_layer;
     u32 callback_kind = kind;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+    u32 owner_start = 0u;
+#endif
 
     if (kind >= 32u)
     {
@@ -12995,6 +12998,9 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        owner_start = cpuGetTiming();
+#endif
         ndsRendererAdapterBeginStageTraversal();
     }
 #endif
@@ -13004,6 +13010,20 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
         ndsRendererAdapterEndStageTraversal();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        if (owner_start != 0u)
+        {
+            u32 owner_ticks = cpuGetTiming() - owner_start;
+
+            gNdsRendererProfileOwners[
+                NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
+                owner_ticks;
+            if ((is_layer != FALSE) && (mask == 1u))
+            {
+                gNdsRendererProfileStageLayer0Ticks += owner_ticks;
+            }
+        }
+#endif
     }
 #endif
 }

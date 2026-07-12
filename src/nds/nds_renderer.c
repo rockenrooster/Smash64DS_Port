@@ -24,11 +24,11 @@
 #define NDS_RENDERER_HOT_CODE __attribute__((hot, optimize("O3")))
 #endif
 
-/* Profile 0 publishes its shipping contract through the compact frame
- * summary.  Keep generic command-family counters for coarse/forensic builds
- * and non-hardware scan fixtures, but do not make the hot shipping
- * interpreter maintain the duplicate proof ledger. */
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 0)
+/* Profiles 0/1 publish the shipping contract through the compact frame
+ * summary.  Profile 1 is the low-frequency O2 coarse build, so it must not
+ * maintain the generic per-command proof ledger either.  Profile 2 retains
+ * the full forensic counters and semantic observer. */
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 #define NDS_RENDERER_RECORD_PROOF_ONLY(statement) ((void)0)
 #else
 #define NDS_RENDERER_RECORD_PROOF_ONLY(statement) \
@@ -263,6 +263,11 @@
 #endif
 
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
+static u32 sNdsRendererProfileGXStatusPostVBlank;
+static u32 sNdsRendererProfileGXControlPostVBlank;
+#endif
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static u32 sNdsRendererProfileImmutableListCount;
 static u32 sNdsRendererProfileTrustedCommandCount;
 static u32 sNdsRendererProfileValidatedCommandCount;
@@ -271,6 +276,427 @@ static u32 sNdsRendererProfileTriangleSubmitTicks;
 static u32 sNdsRendererProfileVertexSubmitTicks;
 static u32 sNdsRendererProfileCi4LutBuildCount;
 static u32 sNdsRendererProfileCi4LutReuseCount;
+static NDSRendererProfileOwner sNdsRendererProfileOwner =
+    NDS_RENDERER_PROFILE_OWNER_NONE;
+
+typedef enum NDSRendererSemanticOutcome
+{
+    NDS_RENDERER_SEMANTIC_INPUT_REJECT = 0,
+    NDS_RENDERER_SEMANTIC_TRANSFORM_REJECT,
+    NDS_RENDERER_SEMANTIC_ALPHA_ZERO,
+    NDS_RENDERER_SEMANTIC_EMITTED
+} NDSRendererSemanticOutcome;
+
+#define NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID (1u << 0)
+#define NDS_RENDERER_SEMANTIC_VERTEX_ST_VALID (1u << 1)
+#define NDS_RENDERER_SEMANTIC_VERTEX_COLOR_VALID (1u << 2)
+
+typedef struct NDSRendererSemanticVertex
+{
+    s16 x;
+    s16 y;
+    s16 z;
+    s16 s;
+    s16 t;
+    u16 color;
+    u32 valid_flags;
+} NDSRendererSemanticVertex;
+
+typedef struct NDSRendererSemanticEvent
+{
+    u32 owner;
+    u32 owner_occurrence;
+    u32 list_ordinal;
+    u32 branch_path;
+    u32 command_index;
+    u32 tri2_half;
+    u32 outcome;
+    u32 packed;
+    u32 vertex_index[3];
+    u32 submit_class;
+    u32 source_state_hash;
+    u32 raw_snapshot_id;
+    u32 vertex_matrix_snapshot[3];
+    u32 vertex_clip_snapshot[3];
+    u32 context_flags;
+    u32 source_zbuffered;
+    u32 zbuffered;
+    u32 raw_submit;
+    u32 projected_submit;
+    u32 decal_depth;
+    u32 prim_depth;
+    u32 source_clip_depth;
+    u32 poly_alpha;
+    u32 poly_fmt;
+    u32 alpha_key;
+    u32 fog_key;
+    u32 fog_color;
+    s32 fog_min;
+    s32 fog_max;
+    u32 fog_status;
+    u32 texture_name;
+    u32 texture_key_hash;
+    u32 texture_params;
+    u32 matrix_loaded;
+    u32 matrix_mode;
+    u32 matrix_generation;
+    u32 matrix_signature;
+    s32 no_z_depth_before;
+    s32 no_z_depth_after;
+    u32 no_z_background_before;
+    u32 no_z_background_after;
+    s32 projected_z[3];
+    NDSRendererSemanticVertex vertex[3];
+} NDSRendererSemanticEvent;
+
+typedef struct NDSRendererSemanticSourceProvenance
+{
+    u32 owner_occurrence;
+    u32 list_ordinal;
+    u32 root_branch_path;
+} NDSRendererSemanticSourceProvenance;
+
+static NDSRendererSemanticSourceProvenance
+    sNdsRendererSemanticSourceProvenance;
+static u32 sNdsRendererSemanticOwnerLastOccurrence[
+    NDS_RENDERER_PROFILE_OWNER_COUNT];
+static u32 sNdsRendererSemanticOwnerOccurrenceValidMask;
+static u32 sNdsRendererSemanticOutputHash;
+static u32 sNdsRendererSemanticOutputHash2;
+static u32 sNdsRendererSemanticEventCount;
+static u32 sNdsRendererSemanticOverflowCount;
+static u32 sNdsRendererSemanticLastTextureKeyHash;
+static u32 sNdsRendererSemanticLastTextureParams;
+
+typedef struct NDSRendererProfileOwnerHotLedger
+{
+    u32 submit_class_count[8];
+    u32 material_operation_count;
+    u32 texture_change_count;
+    u32 run_count;
+    u32 semantic_output_hash;
+    u32 semantic_output_hash2;
+    u32 semantic_event_count;
+    u32 semantic_overflow_count;
+    u32 semantic_occurrence_count;
+    u32 semantic_first_owner_occurrence;
+    u32 semantic_first_list_ordinal;
+    u32 semantic_first_branch_path;
+    u32 semantic_first_command_index;
+    u32 semantic_first_tri2_half;
+    u32 semantic_first_outcome;
+} NDSRendererProfileOwnerHotLedger;
+
+static NDSRendererProfileOwnerHotLedger
+    sNdsRendererProfileOwnerHot[NDS_RENDERER_PROFILE_OWNER_COUNT];
+
+static inline NDSRendererProfileOwnerHotLedger *
+ndsRendererProfileCurrentOwner(void)
+{
+    return ((u32)sNdsRendererProfileOwner <
+            (u32)NDS_RENDERER_PROFILE_OWNER_COUNT) ?
+        &sNdsRendererProfileOwnerHot[(u32)sNdsRendererProfileOwner] : NULL;
+}
+
+static void ndsRendererSemanticHash1Word(u32 *hash, u32 value)
+{
+    u32 i;
+
+    for (i = 0u; i < sizeof(value); i++)
+    {
+        *hash ^= (value >> (i * 8u)) & 0xffu;
+        *hash *= 16777619u;
+    }
+}
+
+static void ndsRendererSemanticHash2Word(u32 *hash, u32 value)
+{
+    u32 mixed = *hash;
+
+    mixed ^= value + 0x9e3779b9u + (mixed << 6) + (mixed >> 2);
+    mixed = ((mixed << 13) | (mixed >> 19)) * 0x85ebca6bu;
+    *hash = mixed;
+}
+
+static u32 ndsRendererSemanticBranchPath(u32 parent_path,
+                                         u32 command_index,
+                                         u32 depth,
+                                         u32 branch_is_jump)
+{
+    u32 hash = 2166136261u;
+
+    ndsRendererSemanticHash1Word(&hash, 0x4252414eu);
+    ndsRendererSemanticHash1Word(&hash, parent_path);
+    ndsRendererSemanticHash1Word(&hash, command_index);
+    ndsRendererSemanticHash1Word(&hash, depth);
+    ndsRendererSemanticHash1Word(&hash, branch_is_jump);
+    return (hash != 0u) ? hash : 1u;
+}
+
+static u32 ndsRendererSemanticSourceStateHash(
+    const NDSRendererStats *stats)
+{
+    u32 hash = 2166136261u;
+    u32 i;
+
+#define NDS_RENDERER_SEMANTIC_STATE_WORD(value) \
+    ndsRendererSemanticHash1Word(&hash, (u32)(value))
+    NDS_RENDERER_SEMANTIC_STATE_WORD(0x53524331u);
+    if (stats == NULL)
+    {
+        NDS_RENDERER_SEMANTIC_STATE_WORD(0xffffffffu);
+        return hash;
+    }
+
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->othermode_h);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->othermode_l);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->geometry_mode);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_mask);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_load_kind);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_scale_s);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_scale_t);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_level);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tile);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_on);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_xparam);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_state_flags);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_image);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_format);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_size);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_image_width);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_set_tile_count);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tlut_image);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tlut_count);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tlut_tile);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_format);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_size);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_line);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_tmem);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_palette);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_cms);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_cmt);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_masks);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_maskt);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_shifts);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_shiftt);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_render_tile_flags);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_load_tile);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_load_block_uls);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_load_block_ult);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_load_block_lrs);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_load_block_dxt);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_load_texels);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tile_size_tile);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tile_size_uls);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tile_size_ult);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tile_size_lrs);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tile_size_lrt);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tile_width);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_tile_height);
+    for (i = 0u; i < NDS_RENDERER_TILE_COUNT; i++)
+    {
+        const NDSRendererTileState *tile = &stats->texture_tiles[i];
+
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->set_seen);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->size_seen);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->format);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->size);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->line);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->tmem);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->palette);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->cms);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->cmt);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->masks);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->maskt);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->shifts);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->shiftt);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->uls);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->ult);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->lrs);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->lrt);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->width);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->height);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(tile->flags);
+    }
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_load_sequence);
+    for (i = 0u; i < NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT; i++)
+    {
+        const NDSRendererTextureLoadState *load =
+            &stats->texture_loads[i];
+
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->image);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->sequence);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->image_width);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->load_uls);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->load_ult);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->load_lrs);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->load_dxt);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->load_texels);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->load_tmem);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->valid);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->image_format);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->image_size);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->load_kind);
+        NDS_RENDERER_SEMANTIC_STATE_WORD(load->load_tile);
+    }
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_combine_w0);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_combine_w1);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->texture_combine_count);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->prim_color);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->prim_min_level);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->prim_lod_fraction);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->env_color);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->blend_color);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->light_color_1);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->light_color_2);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->light_color_mask);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->light_dir_x);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->light_dir_y);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->light_dir_z);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->light_dir_mask);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->prim_depth);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->prim_depth_delta);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->fog_color);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->fog_min);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->fog_max);
+    NDS_RENDERER_SEMANTIC_STATE_WORD(stats->fog_status);
+#undef NDS_RENDERER_SEMANTIC_STATE_WORD
+    return hash;
+}
+
+static void ndsRendererSemanticHashEvent(u32 *hash1,
+                                         u32 *hash2,
+                                         const NDSRendererSemanticEvent *event)
+{
+    u32 i;
+
+#define NDS_RENDERER_SEMANTIC_EVENT_WORD(value) do { \
+        u32 semantic_word = (u32)(value); \
+        ndsRendererSemanticHash1Word(hash1, semantic_word); \
+        ndsRendererSemanticHash2Word(hash2, semantic_word); \
+    } while (0)
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(0x53454d31u);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->owner);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->owner_occurrence);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->list_ordinal);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->branch_path);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->command_index);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->tri2_half);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->outcome);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->packed);
+    for (i = 0u; i < 3u; i++)
+    {
+        NDS_RENDERER_SEMANTIC_EVENT_WORD(event->vertex_index[i]);
+    }
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->submit_class);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->source_state_hash);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->raw_snapshot_id);
+    for (i = 0u; i < 3u; i++)
+    {
+        NDS_RENDERER_SEMANTIC_EVENT_WORD(
+            event->vertex_matrix_snapshot[i]);
+        NDS_RENDERER_SEMANTIC_EVENT_WORD(
+            event->vertex_clip_snapshot[i]);
+    }
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->context_flags);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->source_zbuffered);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->zbuffered);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->raw_submit);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->projected_submit);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->decal_depth);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->prim_depth);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->source_clip_depth);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->poly_alpha);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->poly_fmt);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->alpha_key);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->fog_key);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->fog_color);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->fog_min);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->fog_max);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->fog_status);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->texture_name);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->texture_key_hash);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->texture_params);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->matrix_loaded);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->matrix_mode);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->matrix_generation);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->matrix_signature);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->no_z_depth_before);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->no_z_depth_after);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->no_z_background_before);
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(event->no_z_background_after);
+    for (i = 0u; i < 3u; i++)
+    {
+        const NDSRendererSemanticVertex *vertex = &event->vertex[i];
+
+        NDS_RENDERER_SEMANTIC_EVENT_WORD(event->projected_z[i]);
+        NDS_RENDERER_SEMANTIC_EVENT_WORD((u16)vertex->x);
+        NDS_RENDERER_SEMANTIC_EVENT_WORD((u16)vertex->y);
+        NDS_RENDERER_SEMANTIC_EVENT_WORD((u16)vertex->z);
+        NDS_RENDERER_SEMANTIC_EVENT_WORD((u16)vertex->s);
+        NDS_RENDERER_SEMANTIC_EVENT_WORD((u16)vertex->t);
+        NDS_RENDERER_SEMANTIC_EVENT_WORD(vertex->color);
+        NDS_RENDERER_SEMANTIC_EVENT_WORD(vertex->valid_flags);
+    }
+    NDS_RENDERER_SEMANTIC_EVENT_WORD(0x454e4431u);
+#undef NDS_RENDERER_SEMANTIC_EVENT_WORD
+}
+
+static void ndsRendererSemanticCommitEvent(
+    const NDSRendererSemanticEvent *event)
+{
+    NDSRendererProfileOwnerHotLedger *owner =
+        ndsRendererProfileCurrentOwner();
+    u32 owner_hash1;
+    u32 owner_hash2;
+    u32 frame_hash1;
+    u32 frame_hash2;
+    u32 frame_index;
+
+    if ((event == NULL) || (owner == NULL))
+    {
+        return;
+    }
+    if (owner->semantic_event_count == 0u)
+    {
+        owner->semantic_first_owner_occurrence = event->owner_occurrence;
+        owner->semantic_first_list_ordinal = event->list_ordinal;
+        owner->semantic_first_branch_path = event->branch_path;
+        owner->semantic_first_command_index = event->command_index;
+        owner->semantic_first_tri2_half = event->tri2_half;
+        owner->semantic_first_outcome = event->outcome;
+    }
+
+    owner_hash1 = (owner->semantic_event_count == 0u) ?
+        2166136261u : owner->semantic_output_hash;
+    owner_hash2 = (owner->semantic_event_count == 0u) ?
+        0x9e3779b9u : owner->semantic_output_hash2;
+    ndsRendererSemanticHashEvent(&owner_hash1, &owner_hash2, event);
+    owner->semantic_output_hash = owner_hash1;
+    owner->semantic_output_hash2 = owner_hash2;
+    owner->semantic_event_count++;
+
+    frame_index = sNdsRendererSemanticEventCount;
+    frame_hash1 = (frame_index == 0u) ?
+        2166136261u : sNdsRendererSemanticOutputHash;
+    frame_hash2 = (frame_index == 0u) ?
+        0x9e3779b9u : sNdsRendererSemanticOutputHash2;
+    ndsRendererSemanticHashEvent(&frame_hash1, &frame_hash2, event);
+    sNdsRendererSemanticOutputHash = frame_hash1;
+    sNdsRendererSemanticOutputHash2 = frame_hash2;
+    if (frame_index < NDS_RENDERER_SEMANTIC_TRACE_CAPACITY)
+    {
+        gNdsRendererSemanticPrefixHash[frame_index] = frame_hash1;
+        gNdsRendererSemanticPrefixHash2[frame_index] = frame_hash2;
+    }
+    else
+    {
+        sNdsRendererSemanticOverflowCount++;
+        owner->semantic_overflow_count++;
+    }
+    sNdsRendererSemanticEventCount++;
+}
 #endif
 
 #if NDS_RENDERER_HW_TRIANGLES
@@ -306,6 +732,53 @@ static u32 sNdsRendererHardwareMatrixLoaded;
 static u32 sNdsRendererHardwareMatrixMode;
 static u32 sNdsRendererHardwareMatrixGeneration;
 static u32 sNdsRendererMatrixGenerationSerial;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static u32 sNdsRendererHardwareMatrixSignature;
+
+static inline u32 ndsRendererProfileHashU32(u32 hash, u32 value)
+{
+    u32 i;
+
+    if (hash == 0u)
+    {
+        hash = 2166136261u;
+    }
+    for (i = 0u; i < sizeof(value); i++)
+    {
+        hash ^= (value >> (i * 8u)) & 0xffu;
+        hash *= 16777619u;
+    }
+    if (hash == 0u)
+    {
+        hash = 1u;
+    }
+    return hash;
+}
+
+static u32 ndsRendererProfileHashMatrixPair(
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *modelview,
+    u32 mode, u32 generation)
+{
+    u32 hash = 0u;
+    u32 row;
+    u32 col;
+
+    hash = ndsRendererProfileHashU32(hash, mode);
+    hash = ndsRendererProfileHashU32(hash, generation);
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            hash = ndsRendererProfileHashU32(
+                hash, (u32)projection->m[row][col]);
+            hash = ndsRendererProfileHashU32(
+                hash, (u32)modelview->m[row][col]);
+        }
+    }
+    return hash;
+}
+#endif
 static u32 sNdsRendererHardwareSubmitClassCounts[
     NDS_RENDERER_HW_SUBMIT_CLASS_COUNT];
 /* The logical demand is derived exactly from the submitted class totals.
@@ -500,6 +973,17 @@ static inline void ndsRendererProfileRecordBatchBegin(void)
 #else
     sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count++;
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    {
+        NDSRendererProfileOwnerHotLedger *owner =
+            ndsRendererProfileCurrentOwner();
+
+        if (owner != NULL)
+        {
+            owner->run_count++;
+        }
+    }
+#endif
 }
 
 static inline void ndsRendererProfileRecordBatchReuse(void)
@@ -526,6 +1010,17 @@ static inline void ndsRendererProfileRecordTexturePrepare(void)
     gNdsRendererProfileTexturePrepareCount++;
 #else
     sNdsRendererRuntimeFrameSummary.texture_prepare_count++;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    {
+        NDSRendererProfileOwnerHotLedger *owner =
+            ndsRendererProfileCurrentOwner();
+
+        if (owner != NULL)
+        {
+            owner->texture_change_count++;
+        }
+    }
 #endif
 }
 
@@ -589,6 +1084,17 @@ static inline void ndsRendererProfileRecordSubmitClass(
     if ((u32)submit_class < NDS_RENDERER_HW_SUBMIT_CLASS_COUNT)
     {
         sNdsRendererHardwareSubmitClassCounts[submit_class]++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        {
+            NDSRendererProfileOwnerHotLedger *owner =
+                ndsRendererProfileCurrentOwner();
+
+            if (owner != NULL)
+            {
+                owner->submit_class_count[(u32)submit_class]++;
+            }
+        }
+#endif
     }
 }
 
@@ -1010,6 +1516,13 @@ typedef struct NDSRendererTraversalState
     u32 texture_prepare_source_zbuffered;
     u32 texture_prepare_decal_depth;
     u32 texture_prepare_prim_depth;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    u32 texture_prepare_key_hash;
+    u32 texture_prepare_params;
+    u32 semantic_branch_path;
+    u32 semantic_command_index;
+    u32 semantic_tri2_half;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 texture_prepare_alpha_constant;
     u32 texture_prepare_poly_alpha;
@@ -1329,6 +1842,9 @@ static u32 ndsRendererNextMatrixGeneration(void)
         sNdsRendererHardwareMatrixLoaded = FALSE;
         sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
         sNdsRendererHardwareMatrixGeneration = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        sNdsRendererHardwareMatrixSignature = 0u;
+#endif
     }
     return sNdsRendererMatrixGenerationSerial;
 }
@@ -1398,7 +1914,7 @@ static s32 ndsRendererValidateCommand(const Gfx *dl,
 {
     uintptr_t addr = (uintptr_t)dl;
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererProfileValidatedCommandCount++;
 #endif
 
@@ -2154,6 +2670,22 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
     state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     state->prepared_light_direction_valid = 0u;
     state->texture_prepare_valid = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    state->texture_prepare_key_hash = 0u;
+    state->texture_prepare_params = 0u;
+    state->semantic_branch_path =
+        sNdsRendererSemanticSourceProvenance.root_branch_path;
+    if (state->semantic_branch_path == 0u)
+    {
+        state->semantic_branch_path = ndsRendererSemanticBranchPath(
+            (u32)sNdsRendererProfileOwner,
+            sNdsRendererSemanticSourceProvenance.owner_occurrence,
+            sNdsRendererSemanticSourceProvenance.list_ordinal,
+            FALSE);
+    }
+    state->semantic_command_index = 0u;
+    state->semantic_tri2_half = 0u;
+#endif
     state->prepared_vertex_color_valid_mask = 0u;
     state->prepared_texcoord_valid_mask = 0u;
     state->prepared_projected_xy_valid_mask = 0u;
@@ -2605,6 +3137,9 @@ ndsRendererApplyVertexCommand(
         NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
         return;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    stats->source_vertex_count += count;
+#endif
     if ((v0 + count) > stats->vertex_count)
     {
         stats->vertex_count = v0 + count;
@@ -2897,7 +3432,7 @@ static inline v16 ndsRendererHardwareProjectToV16(
 
     if (denominator == 0)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         sNdsRendererHardwareDivideSummary |=
             NDS_RENDERER_HW_DIVISION_ZERO_DENOMINATOR;
 #endif
@@ -2913,7 +3448,7 @@ static inline v16 ndsRendererHardwareProjectToV16(
         ((denominator < 0) && (numerator > low_product)))
     {
         result = (v16)-32768;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         sNdsRendererHardwareDivideSummary +=
             NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_ONE;
 #endif
@@ -2922,7 +3457,7 @@ static inline v16 ndsRendererHardwareProjectToV16(
              ((denominator < 0) && (numerator < high_product)))
     {
         result = (v16)32767;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         sNdsRendererHardwareDivideSummary +=
             NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_ONE;
 #endif
@@ -2935,7 +3470,7 @@ static inline v16 ndsRendererHardwareProjectToV16(
         result = ndsRendererHardwareClampS64ToV16(
             numerator / denominator);
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         sNdsRendererHardwareDivideSummary++;
 #endif
     }
@@ -4092,6 +4627,26 @@ static s32 ndsRendererHardwareTextureKeyEqual(
     }
     return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;
 }
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static u32 ndsRendererProfileTextureKeyHashFull(
+    const NDSRendererHardwareTextureKey *key)
+{
+    const u32 *words = (const u32 *)key;
+    u32 hash = 0u;
+    u32 i;
+
+    if (key == NULL)
+    {
+        return 0u;
+    }
+    for (i = 0u; i < (sizeof(*key) / sizeof(*words)); i++)
+    {
+        hash = ndsRendererProfileHashU32(hash, words[i]);
+    }
+    return hash;
+}
+#endif
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 static u32 ndsRendererHardwareTextureKeyHash(
@@ -5807,7 +6362,7 @@ ndsRendererHardwareBuildTexel01Ci4Lut(
         (memcmp(sNdsRendererHardwareTexel01Ci4LutPalette1,
                 palette1, sizeof(palette1)) == 0))
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         sNdsRendererProfileCi4LutReuseCount++;
 #endif
         return;
@@ -5818,7 +6373,7 @@ ndsRendererHardwareBuildTexel01Ci4Lut(
            palette1, sizeof(palette1));
     sNdsRendererHardwareTexel01Ci4LutFraction = fraction;
     sNdsRendererHardwareTexel01Ci4LutKeyValid = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererProfileCi4LutBuildCount++;
 #endif
     for (index0 = 0u; index0 < 16u; index0++)
@@ -6212,7 +6767,7 @@ static s32 ndsRendererHardwareBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 texture_start = cpuGetTiming();
     u32 convert_start;
     u32 upload_start;
@@ -6278,6 +6833,10 @@ static s32 ndsRendererHardwareBindTexture(
     u32 x;
     u32 y;
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    sNdsRendererSemanticLastTextureKeyHash = 0u;
+    sNdsRendererSemanticLastTextureParams = 0u;
+#endif
     if (stats == NULL)
     {
         return FALSE;
@@ -6625,6 +7184,11 @@ static s32 ndsRendererHardwareBindTexture(
     entry = ndsRendererHardwareFindTexture(&key, key_hash);
     params = ndsRendererHardwareTextureParams(stats, render_tile,
                                                upload_width, upload_height);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    sNdsRendererSemanticLastTextureKeyHash =
+        ndsRendererProfileTextureKeyHashFull(&key);
+    sNdsRendererSemanticLastTextureParams = params;
+#endif
     if (entry != NULL)
     {
         entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
@@ -6643,7 +7207,7 @@ static s32 ndsRendererHardwareBindTexture(
             &gNdsRendererProfileTextureBindFormatMask, format, size);
         ndsRendererProfileTextureCacheEntry(entry);
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
 #endif
         return TRUE;
@@ -6725,7 +7289,7 @@ static s32 ndsRendererHardwareBindTexture(
 #endif
     }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     convert_start = cpuGetTiming();
 #endif
     if ((use_texel1 != FALSE) &&
@@ -6832,7 +7396,7 @@ static s32 ndsRendererHardwareBindTexture(
     ndsRendererProfileTextureFormat(
         &gNdsRendererProfileTextureConvertFormatMask, format, size);
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileTextureConvertTicks += cpuGetTiming() - convert_start;
 
     upload_start = cpuGetTiming();
@@ -6899,7 +7463,7 @@ static s32 ndsRendererHardwareBindTexture(
         }
     }
     ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileTextureUploadTicks += cpuGetTiming() - upload_start;
 #endif
 
@@ -6937,7 +7501,7 @@ static s32 ndsRendererHardwareBindTexture(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererProfileTextureCacheEntry(entry);
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
 #endif
     return TRUE;
@@ -7032,6 +7596,11 @@ static void ndsRendererLoadHardwareMatrixPair(
     sNdsRendererHardwareMatrixMode = mode;
     sNdsRendererHardwareMatrixGeneration = generation;
     sNdsRendererHardwareMatrixLoaded = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    sNdsRendererHardwareMatrixSignature =
+        ndsRendererProfileHashMatrixPair(
+            projection, modelview, mode, generation);
+#endif
 }
 
 static void ndsRendererLoadHardwareRawComposedMatrix(
@@ -7389,7 +7958,11 @@ static void ndsRendererHardwareEnterProjectedForeground(void)
 }
 
 static void ndsRendererHardwareClipVertex(
-    const NDSRendererClipVertex20p12 *vtx, s32 z)
+    const NDSRendererClipVertex20p12 *vtx, s32 z
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    , NDSRendererSemanticVertex *semantic_vertex
+#endif
+    )
 {
     v16 x;
     v16 y;
@@ -7406,12 +7979,26 @@ static void ndsRendererHardwareClipVertex(
         (s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
     out_z = ndsRendererHardwareProjectToV16(
         (s64)z * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    if (semantic_vertex != NULL)
+    {
+        semantic_vertex->x = x;
+        semantic_vertex->y = y;
+        semantic_vertex->z = out_z;
+        semantic_vertex->valid_flags |=
+            NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID;
+    }
+#endif
     ndsRendererProfileHWVertexRange(x, y, out_z);
     glVertex3v16(x, y, out_z);
 }
 
 static void ndsRendererHardwareClipVertexNdcDepth(
-    const NDSRendererClipVertex20p12 *vtx, s32 z)
+    const NDSRendererClipVertex20p12 *vtx, s32 z
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    , NDSRendererSemanticVertex *semantic_vertex
+#endif
+    )
 {
     v16 x;
     v16 y;
@@ -7426,6 +8013,16 @@ static void ndsRendererHardwareClipVertexNdcDepth(
     y = ndsRendererHardwareProjectToV16(
         (s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
     out_z = ndsRendererHardwareClampS64ToV16(z);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    if (semantic_vertex != NULL)
+    {
+        semantic_vertex->x = x;
+        semantic_vertex->y = y;
+        semantic_vertex->z = out_z;
+        semantic_vertex->valid_flags |=
+            NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID;
+    }
+#endif
     ndsRendererProfileHWVertexRange(x, y, out_z);
     glVertex3v16(x, y, out_z);
 }
@@ -7511,7 +8108,11 @@ ndsRendererHardwareSubmitVertex(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
     u32 vertex_index,
-    s32 projected_z)
+    s32 projected_z
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    , NDSRendererSemanticVertex *semantic_vertex
+#endif
+    )
 {
     const NDSRendererInputVertex *vtx;
     const NDSRendererClipVertex20p12 *clip_vtx;
@@ -7534,6 +8135,12 @@ ndsRendererHardwareSubmitVertex(
     s32 source_clip_depth;
     u16 hardware_color;
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    if (semantic_vertex != NULL)
+    {
+        memset(semantic_vertex, 0, sizeof(*semantic_vertex));
+    }
+#endif
     if ((stats == NULL) || (state == NULL) ||
         (vertex_index >= NDS_RENDERER_MAX_VTX))
     {
@@ -7586,6 +8193,14 @@ ndsRendererHardwareSubmitVertex(
         }
 #endif
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    if (semantic_vertex != NULL)
+    {
+        semantic_vertex->color = hardware_color;
+        semantic_vertex->valid_flags |=
+            NDS_RENDERER_SEMANTIC_VERTEX_COLOR_VALID;
+    }
+#endif
     glColor(hardware_color);
     if (use_texture != FALSE)
     {
@@ -7623,6 +8238,13 @@ ndsRendererHardwareSubmitVertex(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         ndsRendererProfileTextureCoord(s, t);
         ndsRendererProfileTextureSample(s, t);
+        if (semantic_vertex != NULL)
+        {
+            semantic_vertex->s = s;
+            semantic_vertex->t = t;
+            semantic_vertex->valid_flags |=
+                NDS_RENDERER_SEMANTIC_VERTEX_ST_VALID;
+        }
 #endif
         glTexCoord2t16(s, t);
     }
@@ -7634,19 +8256,37 @@ ndsRendererHardwareSubmitVertex(
         v16 y = ndsRendererHardwareVertexCoord(vtx->y, scale_world);
         v16 z = ndsRendererHardwareVertexCoord(vtx->z, scale_world);
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        if (semantic_vertex != NULL)
+        {
+            semantic_vertex->x = x;
+            semantic_vertex->y = y;
+            semantic_vertex->z = z;
+            semantic_vertex->valid_flags |=
+                NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID;
+        }
+#endif
         ndsRendererProfileVertexRange(vtx, x, y, z);
         glVertex3v16(x, y, z);
     }
     else if (prim_depth != FALSE)
     {
-        ndsRendererHardwareClipVertex(clip_vtx, projected_z);
+        ndsRendererHardwareClipVertex(clip_vtx, projected_z
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                                      , semantic_vertex
+#endif
+                                      );
     }
     else if (decal_depth != FALSE)
     {
         if (clip_vtx != NULL)
         {
             ndsRendererHardwareClipVertex(
-                clip_vtx, clip_vtx->z - NDS_RENDERER_HW_DECAL_DEPTH_BIAS);
+                clip_vtx, clip_vtx->z - NDS_RENDERER_HW_DECAL_DEPTH_BIAS
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                , semantic_vertex
+#endif
+                );
         }
     }
     else
@@ -7754,11 +8394,13 @@ ndsRendererHardwareSubmitVertex(
 #else
         if (source_clip_depth != FALSE)
         {
-            ndsRendererHardwareClipVertex(clip_vtx, projected_z);
+            ndsRendererHardwareClipVertex(
+                clip_vtx, projected_z, semantic_vertex);
         }
         else
         {
-            ndsRendererHardwareClipVertexNdcDepth(clip_vtx, projected_z);
+            ndsRendererHardwareClipVertexNdcDepth(
+                clip_vtx, projected_z, semantic_vertex);
         }
 #endif
     }
@@ -7901,21 +8543,81 @@ ndsRendererSubmitHardwareTriangle(
     const NDSRendererMatrixSnapshot *raw_snapshot = NULL;
     NDSRendererHWSubmitClass submit_class;
     s32 projected_z[3] = { 0, 0, 0 };
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 vertex_submit_start;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    NDSRendererSemanticEvent semantic_event;
 #endif
 
     if (stats == NULL)
     {
         return;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    memset(&semantic_event, 0, sizeof(semantic_event));
+    semantic_event.owner = (u32)sNdsRendererProfileOwner;
+    semantic_event.owner_occurrence =
+        sNdsRendererSemanticSourceProvenance.owner_occurrence;
+    semantic_event.list_ordinal =
+        sNdsRendererSemanticSourceProvenance.list_ordinal;
+    semantic_event.branch_path = (state != NULL) ?
+        state->semantic_branch_path :
+        sNdsRendererSemanticSourceProvenance.root_branch_path;
+    semantic_event.command_index = (state != NULL) ?
+        state->semantic_command_index : 0u;
+    semantic_event.tri2_half = (state != NULL) ?
+        state->semantic_tri2_half : 0u;
+    semantic_event.outcome = NDS_RENDERER_SEMANTIC_INPUT_REJECT;
+    semantic_event.packed = packed;
+    semantic_event.submit_class = NDS_RENDERER_HW_SUBMIT_REJECT;
+    semantic_event.source_state_hash =
+        ndsRendererSemanticSourceStateHash(stats);
+    semantic_event.raw_snapshot_id =
+        NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    semantic_event.no_z_depth_before =
+        sNdsRendererHardwareProjectedDepth;
+    semantic_event.no_z_depth_after =
+        sNdsRendererHardwareProjectedDepth;
+    semantic_event.no_z_background_before =
+        sNdsRendererHardwareProjectedBackground;
+    semantic_event.no_z_background_after =
+        sNdsRendererHardwareProjectedBackground;
+    semantic_event.fog_color = stats->fog_color;
+    semantic_event.fog_min = stats->fog_min;
+    semantic_event.fog_max = stats->fog_max;
+    semantic_event.fog_status = stats->fog_status;
+#endif
     if (ndsRendererInputTriangleReady(state, packed, &i0, &i1, &i2) == FALSE)
     {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        semantic_event.vertex_index[0] = i0;
+        semantic_event.vertex_index[1] = i1;
+        semantic_event.vertex_index[2] = i2;
+        ndsRendererSemanticCommitEvent(&semantic_event);
+#endif
         stats->hardware_oracle_reject_count++;
         ndsRendererProfileRecordSubmitClass(
             NDS_RENDERER_HW_SUBMIT_REJECT);
         return;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    semantic_event.vertex_index[0] = i0;
+    semantic_event.vertex_index[1] = i1;
+    semantic_event.vertex_index[2] = i2;
+    semantic_event.vertex_matrix_snapshot[0] =
+        state->vertex_matrix_snapshot[i0];
+    semantic_event.vertex_matrix_snapshot[1] =
+        state->vertex_matrix_snapshot[i1];
+    semantic_event.vertex_matrix_snapshot[2] =
+        state->vertex_matrix_snapshot[i2];
+    semantic_event.vertex_clip_snapshot[0] =
+        state->vertex_clip_snapshot[i0];
+    semantic_event.vertex_clip_snapshot[1] =
+        state->vertex_clip_snapshot[i1];
+    semantic_event.vertex_clip_snapshot[2] =
+        state->vertex_clip_snapshot[i2];
+#endif
     no_oracle = (sNdsRendererHardwareNoOracle != 0u) ? TRUE : FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     if (state->texture_prepare_valid != 0u)
@@ -7961,6 +8663,20 @@ ndsRendererSubmitHardwareTriangle(
     projected_submit =
         ((source_zbuffered != FALSE) && (raw_submit == FALSE)) ? TRUE : FALSE;
     source_clip_depth = projected_submit;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    semantic_event.submit_class = (u32)submit_class;
+    semantic_event.raw_snapshot_id = raw_snapshot_id;
+    semantic_event.source_zbuffered =
+        (source_zbuffered != FALSE) ? TRUE : FALSE;
+    semantic_event.zbuffered = (zbuffered != FALSE) ? TRUE : FALSE;
+    semantic_event.raw_submit = (raw_submit != FALSE) ? TRUE : FALSE;
+    semantic_event.projected_submit =
+        (projected_submit != FALSE) ? TRUE : FALSE;
+    semantic_event.decal_depth = (decal_depth != FALSE) ? TRUE : FALSE;
+    semantic_event.prim_depth = (prim_depth != FALSE) ? TRUE : FALSE;
+    semantic_event.source_clip_depth =
+        (source_clip_depth != FALSE) ? TRUE : FALSE;
+#endif
     transformed_ready = TRUE;
     if (raw_submit == FALSE)
     {
@@ -7972,6 +8688,11 @@ ndsRendererSubmitHardwareTriangle(
     }
     if (transformed_ready == FALSE)
     {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        semantic_event.outcome = NDS_RENDERER_SEMANTIC_TRANSFORM_REJECT;
+        semantic_event.submit_class = NDS_RENDERER_HW_SUBMIT_REJECT;
+        ndsRendererSemanticCommitEvent(&semantic_event);
+#endif
         stats->hardware_oracle_reject_count++;
         ndsRendererProfileRecordSubmitClass(
             NDS_RENDERER_HW_SUBMIT_REJECT);
@@ -8051,8 +8772,19 @@ ndsRendererSubmitHardwareTriangle(
 #else
     poly_alpha = ndsRendererHardwareAlpha(stats, v0);
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    semantic_event.poly_alpha = poly_alpha;
+    semantic_event.alpha_key = ndsRendererHardwareAlphaStateKey(stats);
+    semantic_event.fog_key = ndsRendererHardwareFogStateKey(stats);
+#endif
     if (poly_alpha == 0u)
     {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        semantic_event.outcome = NDS_RENDERER_SEMANTIC_ALPHA_ZERO;
+        semantic_event.poly_fmt =
+            ndsRendererHardwarePolyFmt(stats, poly_alpha);
+        ndsRendererSemanticCommitEvent(&semantic_event);
+#endif
         return;
     }
     ndsRendererProfileRecordSubmitClass(submit_class);
@@ -8077,6 +8809,12 @@ ndsRendererSubmitHardwareTriangle(
             ndsRendererHardwareTextureImplicitStateOn(stats);
         use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
             ndsRendererHardwareBindTexture(stats, config) : FALSE;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        state->texture_prepare_key_hash = (use_texture != FALSE) ?
+            sNdsRendererSemanticLastTextureKeyHash : 0u;
+        state->texture_prepare_params = (use_texture != FALSE) ?
+            sNdsRendererSemanticLastTextureParams : 0u;
+#endif
         state->texture_prepare_valid = TRUE;
         state->texture_prepare_enabled =
             (use_texture != FALSE) ? TRUE : FALSE;
@@ -8169,6 +8907,21 @@ ndsRendererSubmitHardwareTriangle(
     poly_fmt = ndsRendererHardwarePolyFmt(stats, poly_alpha);
 #endif
     texture_name = state->texture_prepare_name;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    semantic_event.poly_fmt = poly_fmt;
+    semantic_event.texture_name = texture_name;
+    semantic_event.texture_key_hash = state->texture_prepare_key_hash;
+    semantic_event.texture_params = state->texture_prepare_params;
+    semantic_event.matrix_loaded = sNdsRendererHardwareMatrixLoaded;
+    semantic_event.matrix_mode = sNdsRendererHardwareMatrixMode;
+    semantic_event.matrix_generation =
+        sNdsRendererHardwareMatrixGeneration;
+    semantic_event.matrix_signature =
+        sNdsRendererHardwareMatrixSignature;
+    semantic_event.projected_z[0] = projected_z[0];
+    semantic_event.projected_z[1] = projected_z[1];
+    semantic_event.projected_z[2] = projected_z[2];
+#endif
     ndsRendererHardwareBeginTriangleBatch(
         stats, (use_texture != FALSE) ? TRUE : FALSE,
         texture_name, poly_fmt, sNdsRendererHardwareMatrixMode,
@@ -8186,13 +8939,29 @@ ndsRendererSubmitHardwareTriangle(
              NDS_RENDERER_VERTEX_CONTEXT_PRIM_DEPTH : 0u) |
         ((source_clip_depth != FALSE) ?
              NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH : 0u);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    semantic_event.context_flags = state->texture_prepare_vertex_flags;
+    semantic_event.zbuffered = (zbuffered != FALSE) ? TRUE : FALSE;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     vertex_submit_start = cpuGetTiming();
 #endif
-    ndsRendererHardwareSubmitVertex(stats, state, i0, projected_z[0]);
-    ndsRendererHardwareSubmitVertex(stats, state, i1, projected_z[1]);
-    ndsRendererHardwareSubmitVertex(stats, state, i2, projected_z[2]);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    ndsRendererHardwareSubmitVertex(stats, state, i0, projected_z[0]
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                                    , &semantic_event.vertex[0]
+#endif
+                                    );
+    ndsRendererHardwareSubmitVertex(stats, state, i1, projected_z[1]
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                                    , &semantic_event.vertex[1]
+#endif
+                                    );
+    ndsRendererHardwareSubmitVertex(stats, state, i2, projected_z[2]
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                                    , &semantic_event.vertex[2]
+#endif
+                                    );
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererProfileVertexSubmitTicks +=
         cpuGetTiming() - vertex_submit_start;
 #endif
@@ -8200,6 +8969,13 @@ ndsRendererSubmitHardwareTriangle(
     {
         ndsRendererHardwareEnterProjectedForeground();
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    semantic_event.outcome = NDS_RENDERER_SEMANTIC_EMITTED;
+    semantic_event.no_z_depth_after = sNdsRendererHardwareProjectedDepth;
+    semantic_event.no_z_background_after =
+        sNdsRendererHardwareProjectedBackground;
+    ndsRendererSemanticCommitEvent(&semantic_event);
+#endif
 
     sNdsRendererHardwareSubmitted = TRUE;
     stats->hardware_triangle_count++;
@@ -8232,7 +9008,7 @@ static inline void ndsRendererExecuteTriangleCommand(
     u32 w0,
     u32 w1)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
     u32 triangle_submit_start;
 #endif
 #if !NDS_RENDERER_HW_TRIANGLES
@@ -8251,11 +9027,14 @@ static inline void ndsRendererExecuteTriangleCommand(
 #endif
         ndsRendererRecordTransformedTriangle(stats, state, packed);
 #if NDS_RENDERER_HW_TRIANGLES
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         triangle_submit_start = cpuGetTiming();
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        state->semantic_tri2_half = 0u;
+#endif
         ndsRendererSubmitHardwareTriangle(stats, config, state, packed);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         sNdsRendererProfileTriangleSubmitTicks +=
             cpuGetTiming() - triangle_submit_start;
 #endif
@@ -8274,14 +9053,20 @@ static inline void ndsRendererExecuteTriangleCommand(
             stats, state, ndsGBIDecodeF3DEX2Tri2Second(w1));
 #if NDS_RENDERER_HW_TRIANGLES
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     triangle_submit_start = cpuGetTiming();
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    state->semantic_tri2_half = 0u;
 #endif
     ndsRendererSubmitHardwareTriangle(
         stats, config, state, ndsGBIDecodeF3DEX2Tri2First(w0));
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    state->semantic_tri2_half = 1u;
+#endif
     ndsRendererSubmitHardwareTriangle(
         stats, config, state, ndsGBIDecodeF3DEX2Tri2Second(w1));
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererProfileTriangleSubmitTicks +=
         cpuGetTiming() - triangle_submit_start;
 #endif
@@ -8329,7 +9114,7 @@ ndsRendererScanList(const Gfx *dl,
             immutable_count = config->max_list_commands;
         }
         immutable_command_count = (u32)immutable_count;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         if (immutable_command_count != 0u)
         {
             sNdsRendererProfileImmutableListCount++;
@@ -8350,7 +9135,7 @@ ndsRendererScanList(const Gfx *dl,
             stats->blocker = NDS_RENDERER_BLOCKER_BAD_BRANCH;
             return;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         if (i < immutable_command_count)
         {
             sNdsRendererProfileTrustedCommandCount++;
@@ -8365,6 +9150,10 @@ ndsRendererScanList(const Gfx *dl,
         w0 = dl->words.w0;
         w1 = dl->words.w1;
         op = w0 >> 24;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        state->semantic_command_index = i;
+        state->semantic_tri2_half = 0u;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
         /* Preserve the source-command boundary: only adjacent TRI1/TRI2
          * opcodes may share a GX triangle group. In particular, close before
@@ -8471,7 +9260,7 @@ ndsRendererScanList(const Gfx *dl,
                 i++;
                 dl = next_dl;
                 stats->command_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
                 sNdsRendererProfileTrustedCommandCount++;
                 sNdsRendererProfileTriangleRunReuseCount++;
 #endif
@@ -8492,6 +9281,10 @@ ndsRendererScanList(const Gfx *dl,
         {
             const Gfx *raw_branch = command.raw_branch_dl;
             const Gfx *branch = command.resolved_branch_dl;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            u32 parent_branch_path = state->semantic_branch_path;
+            u32 child_branch_path;
+#endif
 
             stats->branch_command_count++;
             if (stats->first_branch_dl == NULL)
@@ -8514,14 +9307,27 @@ ndsRendererScanList(const Gfx *dl,
             if ((w0 & (1u << 16)) != 0)
             {
                 stats->branch_jump_count++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                child_branch_path = ndsRendererSemanticBranchPath(
+                    parent_branch_path, i, depth + 1u, TRUE);
+                state->semantic_branch_path = child_branch_path;
+#endif
                 ndsRendererScanList(branch, config, stats, state, depth + 1u,
                                     callback, callback_user);
                 return;
             }
 
             stats->branch_call_count++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            child_branch_path = ndsRendererSemanticBranchPath(
+                parent_branch_path, i, depth + 1u, FALSE);
+            state->semantic_branch_path = child_branch_path;
+#endif
             ndsRendererScanList(branch, config, stats, state, depth + 1u,
                                 callback, callback_user);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            state->semantic_branch_path = parent_branch_path;
+#endif
             if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
             {
                 return;
@@ -8786,6 +9592,144 @@ u32 ndsRendererHardwareNoOracleEnabled(void)
 #endif
 }
 
+void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    sNdsRendererProfileOwner =
+        ((u32)owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT) ? owner :
+        NDS_RENDERER_PROFILE_OWNER_NONE;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    memset(&sNdsRendererSemanticSourceProvenance, 0,
+           sizeof(sNdsRendererSemanticSourceProvenance));
+#endif
+#else
+    (void)owner;
+#endif
+}
+
+void ndsRendererProfileSetSourceProvenance(u32 owner_occurrence,
+                                           u32 list_ordinal,
+                                           u32 root_branch_path)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    NDSRendererProfileOwnerHotLedger *owner;
+    u32 owner_index = (u32)sNdsRendererProfileOwner;
+    u32 owner_mask;
+
+    sNdsRendererSemanticSourceProvenance.owner_occurrence =
+        owner_occurrence;
+    sNdsRendererSemanticSourceProvenance.list_ordinal = list_ordinal;
+    sNdsRendererSemanticSourceProvenance.root_branch_path = root_branch_path;
+    owner = ndsRendererProfileCurrentOwner();
+    if (owner == NULL)
+    {
+        return;
+    }
+    owner_mask = 1u << owner_index;
+    if (((sNdsRendererSemanticOwnerOccurrenceValidMask & owner_mask) == 0u) ||
+        (sNdsRendererSemanticOwnerLastOccurrence[owner_index] !=
+         owner_occurrence))
+    {
+        sNdsRendererSemanticOwnerOccurrenceValidMask |= owner_mask;
+        sNdsRendererSemanticOwnerLastOccurrence[owner_index] =
+            owner_occurrence;
+        owner->semantic_occurrence_count++;
+    }
+#else
+    (void)owner_occurrence;
+    (void)list_ordinal;
+    (void)root_branch_path;
+#endif
+}
+
+void ndsRendererProfileRecordFrameBoundaryGXState(u32 status, u32 control)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    sNdsRendererProfileGXStatusPostVBlank = status;
+    sNdsRendererProfileGXControlPostVBlank = control;
+#else
+    (void)status;
+    (void)control;
+#endif
+}
+
+void ndsRendererProfileRecordMaterialOperations(u32 count)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    NDSRendererProfileOwnerHotLedger *owner =
+        ndsRendererProfileCurrentOwner();
+
+    if (owner != NULL)
+    {
+        owner->material_operation_count += count;
+    }
+#else
+    (void)count;
+#endif
+}
+
+u32 ndsRendererProfileGlobalStateHash(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+    u32 hash = 0u;
+
+    hash = ndsRendererProfileHashU32(
+        hash, (u32)sNdsRendererHardwareProjectedDepth);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareProjectedBackground);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererMatrixGenerationSerial);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareMatrixLoaded);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareMatrixMode);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareMatrixGeneration);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareMatrixSignature);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareBoundTextureName);
+    hash = ndsRendererProfileHashU32(
+        hash, (u32)sNdsRendererHardwareNoTextureName);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareTriangleBatchOpen);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareTriangleBatchTextured);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareTriangleBatchTextureName);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareTriangleBatchPolyFmt);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareTriangleBatchAlphaKey);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareTriangleBatchFogKey);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareTriangleBatchMatrixMode);
+    hash = ndsRendererProfileHashU32(
+        hash, sNdsRendererHardwareTriangleBatchMatrixGeneration);
+    if (sNdsRendererHardwareActiveTextureEntry != NULL)
+    {
+        hash = ndsRendererProfileHashU32(hash, 1u);
+        hash = ndsRendererProfileHashU32(
+            hash, (u32)sNdsRendererHardwareActiveTextureEntry->name);
+        hash = ndsRendererProfileHashU32(
+            hash, sNdsRendererHardwareActiveTextureEntry->ready);
+        hash = ndsRendererProfileHashU32(
+            hash, sNdsRendererHardwareActiveTextureEntry->params);
+        hash = ndsRendererProfileHashU32(
+            hash, ndsRendererProfileTextureKeyHashFull(
+                &sNdsRendererHardwareActiveTextureEntry->key));
+    }
+    else
+    {
+        hash = ndsRendererProfileHashU32(hash, 0u);
+    }
+    return hash;
+#else
+    return 0u;
+#endif
+}
+
 void ndsRendererProfileFrameBegin(void)
 {
     gNdsRendererProfileLevel = NDS_RENDERER_PROFILE_LEVEL;
@@ -8800,6 +9744,17 @@ void ndsRendererProfileFrameBegin(void)
     gNdsRendererProfileMatrixPosTestMatrixWordSamples = 0u;
     gNdsRendererProfileMatrixPosTestDropped = 0u;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
+    memset((void *)gNdsRendererProfileOwners, 0,
+           sizeof(gNdsRendererProfileOwners));
+    sNdsRendererProfileGXStatusPostVBlank = 0u;
+    sNdsRendererProfileGXControlPostVBlank = 0u;
+    gNdsRendererProfileGXStatusPostVBlank = 0u;
+    gNdsRendererProfileGXControlPostVBlank = 0u;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    memset(sNdsRendererProfileOwnerHot, 0,
+           sizeof(sNdsRendererProfileOwnerHot));
+    sNdsRendererProfileOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
     sNdsRendererProfileImmutableListCount = 0u;
     sNdsRendererProfileTrustedCommandCount = 0u;
     sNdsRendererProfileValidatedCommandCount = 0u;
@@ -8808,6 +9763,23 @@ void ndsRendererProfileFrameBegin(void)
     sNdsRendererProfileVertexSubmitTicks = 0u;
     sNdsRendererProfileCi4LutBuildCount = 0u;
     sNdsRendererProfileCi4LutReuseCount = 0u;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    memset(&sNdsRendererSemanticSourceProvenance, 0,
+           sizeof(sNdsRendererSemanticSourceProvenance));
+    memset(sNdsRendererSemanticOwnerLastOccurrence, 0,
+           sizeof(sNdsRendererSemanticOwnerLastOccurrence));
+    sNdsRendererSemanticOwnerOccurrenceValidMask = 0u;
+    sNdsRendererSemanticOutputHash = 0u;
+    sNdsRendererSemanticOutputHash2 = 0u;
+    sNdsRendererSemanticEventCount = 0u;
+    sNdsRendererSemanticOverflowCount = 0u;
+    sNdsRendererSemanticLastTextureKeyHash = 0u;
+    sNdsRendererSemanticLastTextureParams = 0u;
+    gNdsRendererSemanticOutputHash = 0u;
+    gNdsRendererSemanticOutputHash2 = 0u;
+    gNdsRendererSemanticEventCount = 0u;
+    gNdsRendererSemanticOverflowCount = 0u;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileResetSubmitSummary();
@@ -8835,6 +9807,14 @@ void ndsRendererProfileFrameBegin(void)
 void ndsRendererProfileFramePublish(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileGXStatusPostVBlank =
+        sNdsRendererProfileGXStatusPostVBlank;
+    gNdsRendererProfileGXControlPostVBlank =
+        sNdsRendererProfileGXControlPostVBlank;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    u32 owner_index;
+
     gNdsRendererProfileImmutableListCount =
         sNdsRendererProfileImmutableListCount;
     gNdsRendererProfileTrustedCommandCount =
@@ -8851,6 +9831,49 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererProfileCi4LutBuildCount;
     gNdsRendererProfileCi4LutReuseCount =
         sNdsRendererProfileCi4LutReuseCount;
+    for (owner_index = 0u;
+         owner_index < NDS_RENDERER_PROFILE_OWNER_COUNT;
+         owner_index++)
+    {
+        u32 submit_class;
+        volatile NDSRendererOwnerProfile *owner =
+            &gNdsRendererProfileOwners[owner_index];
+        const NDSRendererProfileOwnerHotLedger *hot =
+            &sNdsRendererProfileOwnerHot[owner_index];
+
+        owner->material_operation_count = hot->material_operation_count;
+        owner->texture_change_count = hot->texture_change_count;
+        owner->run_count = hot->run_count;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        owner->semantic_output_hash = hot->semantic_output_hash;
+        owner->semantic_output_hash2 = hot->semantic_output_hash2;
+        owner->semantic_event_count = hot->semantic_event_count;
+        owner->semantic_overflow_count = hot->semantic_overflow_count;
+        owner->semantic_occurrence_count = hot->semantic_occurrence_count;
+        owner->semantic_first_owner_occurrence =
+            hot->semantic_first_owner_occurrence;
+        owner->semantic_first_list_ordinal =
+            hot->semantic_first_list_ordinal;
+        owner->semantic_first_branch_path =
+            hot->semantic_first_branch_path;
+        owner->semantic_first_command_index =
+            hot->semantic_first_command_index;
+        owner->semantic_first_tri2_half = hot->semantic_first_tri2_half;
+        owner->semantic_first_outcome = hot->semantic_first_outcome;
+#endif
+        for (submit_class = 0u; submit_class < 8u; submit_class++)
+        {
+            owner->submit_class_count[submit_class] =
+                hot->submit_class_count[submit_class];
+        }
+    }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererSemanticOutputHash = sNdsRendererSemanticOutputHash;
+    gNdsRendererSemanticOutputHash2 = sNdsRendererSemanticOutputHash2;
+    gNdsRendererSemanticEventCount = sNdsRendererSemanticEventCount;
+    gNdsRendererSemanticOverflowCount =
+        sNdsRendererSemanticOverflowCount;
+#endif
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     /* One compact publication replaces hot-loop volatile diagnostic writes. */
@@ -8952,6 +9975,9 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
     sNdsRendererHardwareMatrixLoaded = FALSE;
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
     sNdsRendererHardwareMatrixGeneration = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    sNdsRendererHardwareMatrixSignature = 0u;
+#endif
     sNdsRendererHardwareBoundTextureName = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     sNdsRendererHardwareFrameSerial++;

@@ -1238,6 +1238,15 @@ void ndsPlatformRenderDebugHud(void)
 
 void ndsPlatformEndFrame(void)
 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 profile_start;
+
+    gNdsRendererProfileFlushTicks = 0u;
+    gNdsRendererProfileVBlankWaitTicks = 0u;
+    gNdsRendererProfileGXStatusBeforeFlush = GFX_STATUS;
+    gNdsRendererProfileGXStatusAfterFlush = GFX_STATUS;
+    gNdsRendererProfileGXControlBeforeFlush = GFX_CONTROL;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     u32 submitted = ndsRendererHardwareConsumeSubmittedFrame();
 
@@ -1251,18 +1260,56 @@ void ndsPlatformEndFrame(void)
         gNdsHardwareRendererVertexRamCount = GFX_VERTEX_RAM_USAGE;
         gNdsHardwareRendererStatus = GFX_STATUS;
         gNdsHardwareRendererControl = GFX_CONTROL;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        gNdsRendererProfileGXStatusBeforeFlush = GFX_STATUS;
+        gNdsRendererProfileGXControlBeforeFlush = GFX_CONTROL;
+        profile_start = cpuGetTiming();
+#endif
         glFlush(GL_TRANS_MANUALSORT);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        gNdsRendererProfileFlushTicks = cpuGetTiming() - profile_start;
+        gNdsRendererProfileGXStatusAfterFlush = GFX_STATUS;
+#endif
         gNdsHardwareRendererFlushCount++;
         sOriginalSpriteOverlayNeedsFlush = FALSE;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    profile_start = cpuGetTiming();
+#endif
     swiWaitForVBlank();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
+    profile_start = cpuGetTiming();
+#endif
     sTicks++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfilePostVBlankTicks +=
+        cpuGetTiming() - profile_start;
+#endif
 #else
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    profile_start = cpuGetTiming();
+#endif
     swiWaitForVBlank();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
+    profile_start = cpuGetTiming();
+#endif
     videoSetMode((sDrawFramebufferIndex == 0) ? MODE_FB0 : MODE_FB1);
     sDrawFramebufferIndex ^= 1u;
     sFramebuffer = sFramebuffers[sDrawFramebufferIndex];
     sTicks++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfilePostVBlankTicks +=
+        cpuGetTiming() - profile_start;
+#endif
+#endif
+}
+
+void ndsPlatformProfileSampleFrameBoundaryGXState(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    ndsRendererProfileRecordFrameBoundaryGXState(GFX_STATUS, GFX_CONTROL);
 #endif
 }
 

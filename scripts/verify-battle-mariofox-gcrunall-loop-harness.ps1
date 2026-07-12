@@ -28,7 +28,7 @@ param(
     [switch]$MatchLifecycleProof,
     [switch]$RequireRealtime60Fps,
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
-    [ValidateRange(0,16)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
     [string]$Build = 'build-battle-mariofox-gcrunall-loop-harness',
@@ -71,6 +71,11 @@ $stderr = Join-Path $logDir "melonds.$($Harness.Replace('_','-'))-harness.stderr
 $scriptName = "_$($Harness)_harness.gdb"
 $configState = $null
 $emulator = $null
+$benchmarkMakeIdentity = $null
+$benchmarkRomIdentity = $null
+$benchmarkElfIdentity = $null
+$benchmarkMelonIdentity = $null
+$benchmarkMelonConfigSha256 = $null
 function Assert-Condition {
     param([bool]$Condition, [string]$Message, [string]$Context)
     if (-not $Condition) { throw "$Message`n$Context" }
@@ -117,6 +122,142 @@ function Get-Percentile95 {
     if ($ordered.Count -eq 0) { return 0 }
     $index = [Math]::Max(0, [Math]::Ceiling($ordered.Count * 0.95) - 1)
     return [int64]$ordered[$index]
+}
+function Get-AdjacentChurn {
+    param([int64[]]$Values)
+    if ($Values.Count -eq 0) { return '0/0' }
+    $changes = 0
+    for ($i = 1; $i -lt $Values.Count; $i++) {
+        if ($Values[$i] -ne $Values[$i - 1]) { $changes++ }
+    }
+    $distinct = @($Values | Sort-Object -Unique).Count
+    return "$changes/$distinct"
+}
+function Get-MedianP95 {
+    param([int64[]]$Values)
+    return "$(Get-Median $Values)/$(Get-Percentile95 $Values)"
+}
+function Get-UnsignedMarkerMatches {
+    param([string]$Text, [string]$Name, [int]$FieldCount)
+    $fieldPattern = ((1..$FieldCount | ForEach-Object { '([0-9]+)' }) -join ',')
+    return [regex]::Matches($Text, ([regex]::Escape("$Name=") + $fieldPattern))
+}
+function Get-SampleFieldValues {
+    param([System.Collections.IEnumerable]$Samples, [int]$FieldIndex)
+    $values = @()
+    foreach ($sample in $Samples) {
+        $values += [int64]$sample[$FieldIndex]
+    }
+    return [int64[]]$values
+}
+function Get-RatioBasisPoints {
+    param([int64]$Numerator, [int64]$Denominator)
+    if ($Denominator -le 0) { return [int64]0 }
+    return [int64](($Numerator * 10000) / $Denominator)
+}
+function Test-RendererUploadPair {
+    param([int64]$Count, [int64]$Bytes, [int]$ProfileLevel)
+    if ($ProfileLevel -ge 2) {
+        return ($Count -eq 0 -and $Bytes -eq 0)
+    }
+    return (($Count -eq 0 -and $Bytes -eq 0) -or
+            ($Count -eq 1 -and ($Bytes -eq 4096 -or $Bytes -eq 32768)) -or
+            ($Count -eq 2 -and $Bytes -eq 36864))
+}
+function Get-RendererUploadSequenceHash {
+    param([int64[]]$Counts, [int64[]]$Bytes)
+    $pairs = for ($i = 0; $i -lt $Counts.Count; $i++) {
+        "$($Counts[$i]):$($Bytes[$i])"
+    }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $sha.ComputeHash(
+            [System.Text.Encoding]::UTF8.GetBytes(($pairs -join ';')))
+        return ([BitConverter]::ToString($digest)).Replace('-', '')
+    } finally {
+        $sha.Dispose()
+    }
+}
+function Get-RendererOwnerBenchmarkCommand {
+    param([ValidateRange(0,2)][int]$OwnerIndex)
+    $owner = "gNdsRendererProfileOwners[$OwnerIndex]"
+    return ('printf "OWNER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, {0}, {1}.exclusive_ticks, {1}.selected_count, {1}.source_command_count, {1}.vertex_command_count, {1}.source_vertex_count, {1}.triangle_command_count, {1}.triangle_count, {1}.submit_class_count[0], {1}.submit_class_count[1], {1}.submit_class_count[2], {1}.submit_class_count[3], {1}.submit_class_count[4], {1}.submit_class_count[5], {1}.submit_class_count[6], {1}.submit_class_count[7], {1}.material_operation_count, {1}.matrix_change_count, {1}.texture_change_count, {1}.run_count, {1}.entry_state_hash, {1}.exit_state_hash, {1}.entry_vertex_cache_hash, {1}.exit_vertex_cache_hash, {1}.entry_resolver_hash, {1}.exit_resolver_hash, {1}.entry_global_hash, {1}.exit_global_hash, {1}.topology_signature, {1}.selected_event_signature, {1}.camera_signature, {1}.dobj_matrix_signature, {1}.material_signature, {1}.light_signature, {1}.texture_signature, {1}.semantic_output_hash' -f $OwnerIndex, $owner)
+}
+function Get-RendererSemanticBenchmarkCommand {
+    $format = ((1..38 | ForEach-Object { '%u' }) -join ',')
+    $arguments = @(
+        'gNdsRendererProfileFrameCount',
+        'gNdsRendererSemanticOutputHash',
+        'gNdsRendererSemanticOutputHash2',
+        'gNdsRendererSemanticEventCount',
+        'gNdsRendererSemanticOverflowCount'
+    )
+    foreach ($ownerIndex in 0..2) {
+        $owner = "gNdsRendererProfileOwners[$ownerIndex]"
+        $arguments += @(
+            "$owner.semantic_output_hash",
+            "$owner.semantic_output_hash2",
+            "$owner.semantic_event_count",
+            "$owner.semantic_overflow_count",
+            "$owner.semantic_occurrence_count",
+            "$owner.semantic_first_owner_occurrence",
+            "$owner.semantic_first_list_ordinal",
+            "$owner.semantic_first_branch_path",
+            "$owner.semantic_first_command_index",
+            "$owner.semantic_first_tri2_half",
+            "$owner.semantic_first_outcome"
+        )
+    }
+    return ('printf "RENDER_SEMANTIC={0}\n", {1}' -f $format, ($arguments -join ', '))
+}
+function Get-BenchmarkMakeIdentity {
+    param([string[]]$BaseMakeArgs)
+
+    $identityArgs = @($BaseMakeArgs) + 'print-benchmark-flags'
+    # The verifier imports a `make` wrapper that deliberately honors
+    # SMASH64DS_VERIFY_NO_BUILD.  Identity is a read-only Makefile query and
+    # must still run for same-ROM -NoBuild samples, so invoke the application.
+    $makeExe = (Get-Command make.exe -CommandType Application).Source
+    $identityOutput = @(& $makeExe @identityArgs 2>&1 |
+        ForEach-Object { "$_" })
+    if ($LASTEXITCODE -ne 0) {
+        throw "Makefile benchmark-flag query failed.`n$($identityOutput -join "`n")"
+    }
+    $values = @{}
+    foreach ($line in $identityOutput) {
+        $match = [regex]::Match($line, '^BENCH_MAKE_([A-Z0-9_]+)=(.*)$')
+        if ($match.Success) {
+            $values[$match.Groups[1].Value] = $match.Groups[2].Value
+        }
+    }
+    $required = @(
+        'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE',
+        'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
+    )
+    foreach ($key in $required) {
+        if (-not $values.ContainsKey($key)) {
+            throw "Makefile benchmark-flag query omitted BENCH_MAKE_$key.`n$($identityOutput -join "`n")"
+        }
+    }
+    return [PSCustomObject]@{
+        Target = $values.TARGET
+        Harness = $values.HARNESS
+        HarnessId = [int]$values.HARNESS_ID
+        Profile = [int]$values.PROFILE
+        CommonCFlags = $values.CFLAGS_COMMON
+        RendererCFlags = $values.CFLAGS_RENDERER
+        SceneCFlags = $values.CFLAGS_SCENE
+    }
+}
+function Get-BenchmarkFileIdentity {
+    param([Parameter(Mandatory=$true)][string]$Path)
+
+    $item = Get-Item -LiteralPath $Path
+    return [PSCustomObject]@{
+        Sha256 = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+        Bytes = [int64]$item.Length
+        LastWriteUtc = $item.LastWriteTimeUtc.ToString('o')
+    }
 }
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
@@ -190,9 +331,37 @@ if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
 }
 if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melonDsPath" }
 if (-not (Test-Path $Gdb)) { throw "GDB executable not found: $Gdb" }
+if ($RendererBenchmarkSamples -gt 0) {
+    $benchmarkMakeIdentity = Get-BenchmarkMakeIdentity -BaseMakeArgs $makeArgs
+    Assert-Condition ($benchmarkMakeIdentity.Target -eq $Target -and
+        $benchmarkMakeIdentity.Harness -eq $Harness -and
+        $benchmarkMakeIdentity.HarnessId -eq $ExpectedMode -and
+        $benchmarkMakeIdentity.Profile -eq $RendererProfileLevel) `
+        'Makefile benchmark identity does not match the requested verifier target/harness/profile.' `
+        ($benchmarkMakeIdentity | Format-List | Out-String)
+    $benchmarkRomIdentity = Get-BenchmarkFileIdentity -Path $rom
+    $benchmarkElfIdentity = Get-BenchmarkFileIdentity -Path $elf
+    $melonItem = Get-Item -LiteralPath $melonDsPath
+    $melonVersion = $melonItem.VersionInfo.ProductVersion
+    if ([string]::IsNullOrWhiteSpace($melonVersion)) {
+        $melonVersion = $melonItem.VersionInfo.FileVersion
+    }
+    if ([string]::IsNullOrWhiteSpace($melonVersion)) {
+        $melonVersion = 'unknown'
+    }
+    $benchmarkMelonIdentity = [PSCustomObject]@{
+        Version = $melonVersion
+        Sha256 = (Get-FileHash -LiteralPath $melonDsPath -Algorithm SHA256).Hash
+        Path = $melonDsPath
+    }
+}
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 try {
     $configState = Enable-MelonDSGdbConfig -MelonDSPath $melonDsPath -GdbPort $verifierContext.GdbPort -Persistent:([bool]$verifierContext.PersistentConfig)
+    if ($RendererBenchmarkSamples -gt 0) {
+        $benchmarkMelonConfigSha256 =
+            (Get-FileHash -LiteralPath $configState.Config -Algorithm SHA256).Hash
+    }
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath `
         -ArgumentList $rom `
@@ -206,7 +375,22 @@ try {
     # continues into an input-driven KO -> Rebirth -> Wait. The lifecycle ROM
     # uses a one-minute source timer and gets one GDB session after startup;
     # repeated attach/detach cycles are unreliable in the melonDS GDB stub.
-    $minimumDelay = if ($MatchLifecycleProof) { 85 } elseif ($BattlePlayable -and $RealtimePresentation) { 12 } elseif ($BattlePlayable) { 3 } else { 15 }
+    $minimumDelay = if ($MatchLifecycleProof) {
+        85
+    } elseif ($BattlePlayable -and $RealtimePresentation -and
+              ($RendererBenchmarkSamples -gt 0)) {
+        # The synchronized breakpoint itself captures the requested warm
+        # sample span. Eight seconds lets both canonical texture uploads
+        # settle while keeping 128-frame profiles inside one logic-clock
+        # epoch at the current uncapped benchmark rate.
+        8
+    } elseif ($BattlePlayable -and $RealtimePresentation) {
+        12
+    } elseif ($BattlePlayable) {
+        3
+    } else {
+        15
+    }
     Start-Sleep -Seconds ([Math]::Max($DelaySeconds, $minimumDelay))
     $gdbCommands = @(
         'set pagination off',
@@ -256,6 +440,18 @@ try {
     )
     if ($BattlePlayable -and $RealtimePresentation -and $HardwareTriangles -and -not $MatchLifecycleProof) {
         if ($RendererBenchmarkSamples -gt 0) {
+            $coarseBenchmarkCommands = @()
+            if ($RendererProfileLevel -ge 1) {
+                $coarseBenchmarkCommands += 'printf "COARSE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileLoopWallTicks, gNdsRendererProfileInputTicks, gNdsRendererProfileUpdateTicks, gNdsRendererProfileSourceUpdateTicks, gNdsRendererProfileAudioUpdateTicks, gNdsRendererProfilePresentActiveTicks, gNdsRendererProfileVBlankWaitTicks, gNdsRendererProfileBeginFrameTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileWallpaperTicks, gNdsRendererProfileOwners[0].exclusive_ticks, gNdsRendererProfileOwners[1].exclusive_ticks, gNdsRendererProfileOwners[2].exclusive_ticks, gNdsRendererProfileForegroundTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileFlushTicks, gNdsRendererProfilePostVBlankTicks, gNdsRendererProfileThreadTicks, gNdsRendererProfileDrawResidualTicks, gNdsRendererProfilePresentResidualTicks, gNdsRendererProfileLoopResidualTicks, gNdsRendererProfileConservationErrorTicks, gNdsRendererProfileLogicTick'
+                $coarseBenchmarkCommands += 'printf "STAGE0_BENCH=%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileStageLayer0Ticks'
+                $coarseBenchmarkCommands += 'printf "GX_BOUNDARY=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileGXStatusBeforeFlush, gNdsRendererProfileGXControlBeforeFlush, gNdsRendererProfileGXStatusAfterFlush, gNdsRendererProfileGXStatusPostVBlank, gNdsRendererProfileGXControlPostVBlank, gNdsRendererProfileFlushTicks'
+                if ($RendererProfileLevel -ge 2) {
+                    foreach ($ownerIndex in 0..2) {
+                        $coarseBenchmarkCommands += Get-RendererOwnerBenchmarkCommand -OwnerIndex $ownerIndex
+                    }
+                    $coarseBenchmarkCommands += Get-RendererSemanticBenchmarkCommand
+                }
+            }
             $gdbCommands = @(
                 $gdbCommands[0..3]
                 'set $renderer_benchmark_samples = 0'
@@ -263,7 +459,8 @@ try {
                 'commands'
                 'silent'
                 'if gNdsBattlePlayablePacingResult != 0'
-                'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileOracleSamples'
+                'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileOracleSamples, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes'
+                $coarseBenchmarkCommands
                 'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
                 'end'
                 ('if $renderer_benchmark_samples < {0}' -f $RendererBenchmarkSamples)
@@ -470,7 +667,21 @@ try {
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
     $fighterDisplayContract = [regex]::Match($gdbStdout, 'FTR_DISPLAY_CONTRACT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderProfile = [regex]::Match($gdbStdout, 'RENDER_PROFILE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    $rendererBenchmark = [regex]::Matches($gdbStdout, 'RENDER_BENCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $rendererBenchmark = [regex]::Matches($gdbStdout, 'RENDER_BENCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $coarseBenchmark = @()
+    $ownerBenchmark = @()
+    $gxBoundaryBenchmark = @()
+    $stage0Benchmark = @()
+    $rendererSemanticBenchmark = @()
+    if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
+        $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 24)
+        $gxBoundaryBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'GX_BOUNDARY' -FieldCount 7)
+        $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
+        if ($RendererProfileLevel -ge 2) {
+            $ownerBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'OWNER_BENCH' -FieldCount 37)
+            $rendererSemanticBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'RENDER_SEMANTIC' -FieldCount 38)
+        }
+    }
     $renderBatch = [regex]::Match($gdbStdout, 'RENDER_BATCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderTopology = [regex]::Match($gdbStdout, 'RENDER_TOPOLOGY=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderCost = [regex]::Match($gdbStdout, 'RENDER_COST=([0-9]+),([0-9]+)')
@@ -587,8 +798,21 @@ try {
                 $rl = Get-Ints $renderLight
                 $fls = Get-Ints $fighterLightSeed
                 $benchmarkSummary = ''
+                $benchmarkIdentitySummary = ''
+                $benchmarkMetricSummary = ''
+                $benchmarkChurnSummary = ''
+                $coarseMetricSummary = ''
+                $coarseResidualRatioSummary = ''
+                $gxBoundarySummary = ''
+                $stage0Summary = ''
+                $semanticMetricSummary = ''
+                $semanticChurnSummary = ''
+                $semanticProvenanceSummaries = @()
+                $ownerCensusSummaries = @()
+                $ownerChurnSummaries = @()
                 if ($RendererBenchmarkSamples -gt 0) {
                     Assert-Condition ($rendererBenchmark.Count -eq $RendererBenchmarkSamples) "Renderer benchmark captured $($rendererBenchmark.Count) of $RendererBenchmarkSamples requested warm frames." $gdbStdout
+                    $benchFrames = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[2].Value })
                     $benchPresent = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[3].Value })
                     $benchDraw = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[4].Value })
                     $benchStage = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[5].Value })
@@ -598,21 +822,257 @@ try {
                     $benchTexture = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[9].Value })
                     $benchSubmit = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[10].Value })
                     $benchVertex = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[11].Value })
+                    $benchUploadCount = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[14].Value })
+                    $benchUploadBytes = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[15].Value })
                     $benchSetup = @()
                     $benchScan = @()
-                    foreach ($sample in $rendererBenchmark) {
+                    for ($sampleIndex = 0; $sampleIndex -lt $rendererBenchmark.Count; $sampleIndex++) {
+                        $sample = $rendererBenchmark[$sampleIndex]
                         $sampleProfile = [int64]$sample.Groups[1].Value
+                        $sampleFrame = [int64]$sample.Groups[2].Value
                         $sampleDL = [int64]$sample.Groups[8].Value
                         $sampleSubmit = [int64]$sample.Groups[10].Value
                         $sampleVertex = [int64]$sample.Groups[11].Value
                         $sampleTriangles = [int64]$sample.Groups[12].Value
                         $sampleOracle = [int64]$sample.Groups[13].Value
-                        Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangles -eq 828 -and (($RendererProfileLevel -ge 2 -and $sampleOracle -gt 0) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or incomplete triangle/oracle accounting.' $gdbStdout
+                        $sampleUploadCount = [int64]$sample.Groups[14].Value
+                        $sampleUploadBytes = [int64]$sample.Groups[15].Value
+                        Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangles -eq 828 -and (($RendererProfileLevel -ge 2 -and $sampleOracle -eq 2484) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or drifted from exact 828-triangle/2,484-oracle accounting.' $gdbStdout
+                        Assert-Condition (Test-RendererUploadPair $sampleUploadCount $sampleUploadBytes $RendererProfileLevel) "Renderer benchmark sampled an invalid texture upload pair $sampleUploadCount/$sampleUploadBytes at frame $sampleFrame." $gdbStdout
+                        if ($sampleIndex -gt 0) {
+                            $previousFrame = [int64]$rendererBenchmark[$sampleIndex - 1].Groups[2].Value
+                            Assert-Condition ($sampleFrame -eq ($previousFrame + 1)) "Renderer benchmark frame window is not synchronized: frame $sampleFrame followed $previousFrame." $gdbStdout
+                        }
                         Assert-Condition ($sampleDL -ge $sampleSubmit -and $sampleSubmit -ge $sampleVertex) 'Renderer benchmark sampled incoherent nested DL/triangle/vertex costs.' $gdbStdout
                         $benchSetup += $sampleSubmit - $sampleVertex
                         $benchScan += $sampleDL - $sampleSubmit
                     }
-                    $benchmarkSummary = " bench${RendererBenchmarkSamples}=present$((Get-Median $benchPresent))/$((Get-Percentile95 $benchPresent))/draw$((Get-Median $benchDraw))/$((Get-Percentile95 $benchDraw))/stage$((Get-Median $benchStage))/$((Get-Percentile95 $benchStage))/mat$((Get-Median $benchMaterial))/$((Get-Percentile95 $benchMaterial))/mtx$((Get-Median $benchMatrix))/$((Get-Percentile95 $benchMatrix))/dl$((Get-Median $benchDL))/$((Get-Percentile95 $benchDL))/tex$((Get-Median $benchTexture))/$((Get-Percentile95 $benchTexture))/submit$((Get-Median $benchSubmit))/$((Get-Percentile95 $benchSubmit))/vertex$((Get-Median $benchVertex))/$((Get-Percentile95 $benchVertex))/setup$((Get-Median $benchSetup))/$((Get-Percentile95 $benchSetup))/scan$((Get-Median $benchScan))/$((Get-Percentile95 $benchScan))"
+                    $uploadSequenceHash = Get-RendererUploadSequenceHash $benchUploadCount $benchUploadBytes
+                    $benchmarkMetricSummary = "Renderer benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 ticks present=$((Get-Median $benchPresent))/$((Get-Percentile95 $benchPresent)) draw=$((Get-Median $benchDraw))/$((Get-Percentile95 $benchDraw)) stage=$((Get-Median $benchStage))/$((Get-Percentile95 $benchStage)) material=$((Get-Median $benchMaterial))/$((Get-Percentile95 $benchMaterial)) matrix=$((Get-Median $benchMatrix))/$((Get-Percentile95 $benchMatrix)) dl=$((Get-Median $benchDL))/$((Get-Percentile95 $benchDL)) texture=$((Get-Median $benchTexture))/$((Get-Percentile95 $benchTexture)) submit=$((Get-Median $benchSubmit))/$((Get-Percentile95 $benchSubmit)) vertex=$((Get-Median $benchVertex))/$((Get-Percentile95 $benchVertex)) setup=$((Get-Median $benchSetup))/$((Get-Percentile95 $benchSetup)) scan=$((Get-Median $benchScan))/$((Get-Percentile95 $benchScan)) uploads=$(Get-MedianP95 $benchUploadCount)/$(Get-MedianP95 $benchUploadBytes) uploadSequenceSha256=$uploadSequenceHash"
+                    $benchmarkChurnSummary = "Renderer benchmark churn (adjacent changes/distinct values): present=$((Get-AdjacentChurn $benchPresent)) draw=$((Get-AdjacentChurn $benchDraw)) stage=$((Get-AdjacentChurn $benchStage)) material=$((Get-AdjacentChurn $benchMaterial)) matrix=$((Get-AdjacentChurn $benchMatrix)) dl=$((Get-AdjacentChurn $benchDL)) texture=$((Get-AdjacentChurn $benchTexture)) submit=$((Get-AdjacentChurn $benchSubmit)) vertex=$((Get-AdjacentChurn $benchVertex)) setup=$((Get-AdjacentChurn $benchSetup)) scan=$((Get-AdjacentChurn $benchScan))"
+                    if ($RendererProfileLevel -ge 1) {
+                        Assert-Condition ($coarseBenchmark.Count -eq $RendererBenchmarkSamples) "Coarse renderer benchmark captured $($coarseBenchmark.Count) of $RendererBenchmarkSamples synchronized frames." $gdbStdout
+                        Assert-Condition ($gxBoundaryBenchmark.Count -eq $RendererBenchmarkSamples) "GX boundary benchmark captured $($gxBoundaryBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        Assert-Condition ($stage0Benchmark.Count -eq $RendererBenchmarkSamples) "Stage layer-0 benchmark captured $($stage0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        if ($RendererProfileLevel -ge 2) {
+                            Assert-Condition ($ownerBenchmark.Count -eq (3 * $RendererBenchmarkSamples)) "Owner renderer benchmark captured $($ownerBenchmark.Count) of $(3 * $RendererBenchmarkSamples) synchronized owner records." $gdbStdout
+                            Assert-Condition ($rendererSemanticBenchmark.Count -eq $RendererBenchmarkSamples) "Renderer semantic benchmark captured $($rendererSemanticBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        }
+                        $coarseSamples = [System.Collections.Generic.List[object]]::new()
+                        $gxBoundarySamples = [System.Collections.Generic.List[object]]::new()
+                        $stage0Samples = [System.Collections.Generic.List[object]]::new()
+                        $semanticSamples = [System.Collections.Generic.List[object]]::new()
+                        $drawResidualRatios = @()
+                        $presentResidualRatios = @()
+                        $loopResidualRatios = @()
+                        $ownerSamples = @(
+                            [System.Collections.Generic.List[object]]::new(),
+                            [System.Collections.Generic.List[object]]::new(),
+                            [System.Collections.Generic.List[object]]::new()
+                        )
+                        for ($sampleIndex = 0; $sampleIndex -lt $RendererBenchmarkSamples; $sampleIndex++) {
+                            $coarse = Get-Ints $coarseBenchmark[$sampleIndex]
+                            $render = Get-Ints $rendererBenchmark[$sampleIndex]
+                            $frame = $coarse[0]
+                            $loopWall = $coarse[1]
+                            $update = $coarse[3]
+                            $sourceUpdate = $coarse[4]
+                            $audioUpdate = $coarse[5]
+                            $presentActive = $coarse[6]
+                            $vblankWait = $coarse[7]
+                            $drawTicks = $coarse[9]
+                            $drawKnown = $coarse[10] + $coarse[11] + $coarse[12] + $coarse[13] + $coarse[14]
+                            $presentKnown = $coarse[8] + $drawTicks + $coarse[15] + $coarse[16] + $coarse[17] + $coarse[18]
+                            $loopKnown = $coarse[2] + $update + $presentActive + $vblankWait
+                            $expectedPresentActive = if ($render[2] -ge $vblankWait) { $render[2] - $vblankWait } else { 0 }
+                            $expectedDrawResidual = if ($drawTicks -ge $drawKnown) { $drawTicks - $drawKnown } else { 0 }
+                            $expectedPresentResidual = if ($presentActive -ge $presentKnown) { $presentActive - $presentKnown } else { 0 }
+                            $expectedLoopResidual = if ($loopWall -ge $loopKnown) { $loopWall - $loopKnown } else { 0 }
+                            $expectedConservationError = [int64]0
+                            if ($vblankWait -gt $render[2]) { $expectedConservationError += $vblankWait - $render[2] }
+                            if ($drawKnown -gt $drawTicks) { $expectedConservationError += $drawKnown - $drawTicks }
+                            if ($presentKnown -gt $presentActive) { $expectedConservationError += $presentKnown - $presentActive }
+                            if ($loopKnown -gt $loopWall) { $expectedConservationError += $loopKnown - $loopWall }
+
+                            Assert-Condition ($frame -eq $render[1] -and $drawTicks -eq $render[3]) "Coarse renderer benchmark frame $frame is not synchronized with RENDER_BENCH." $gdbStdout
+                            if ($sampleIndex -gt 0) {
+                                $previousCoarse = Get-Ints $coarseBenchmark[$sampleIndex - 1]
+                                Assert-Condition ($frame -eq ($previousCoarse[0] + 1) -and $coarse[23] -eq ($previousCoarse[23] + 1)) "Coarse renderer benchmark frame/logic window is not contiguous at frame $frame tick $($coarse[23])." $gdbStdout
+                            }
+                            Assert-Condition (($sourceUpdate + $audioUpdate) -le $update) "Coarse renderer benchmark update subphases exceed update wall time at frame $frame." $gdbStdout
+                            Assert-Condition ($presentActive -eq $expectedPresentActive -and $coarse[19] -eq $expectedDrawResidual -and $coarse[20] -eq $expectedPresentResidual -and $coarse[21] -eq $expectedLoopResidual -and $coarse[22] -eq $expectedConservationError) "Coarse renderer benchmark residual equations failed at frame $frame." $gdbStdout
+                            Assert-Condition ($loopWall -gt 0 -and ($coarse[22] * 100) -le ($loopWall * 2)) "Coarse renderer benchmark conservation error exceeded 2 percent at frame $frame." $gdbStdout
+                            Assert-Condition (($presentActive -eq 0) -or (($coarse[20] * 100) -le ($presentActive * 2))) "Coarse renderer benchmark present residual exceeded 2 percent at frame $frame." $gdbStdout
+
+                            $gxBoundary = Get-Ints $gxBoundaryBenchmark[$sampleIndex]
+                            Assert-Condition ($gxBoundary[0] -eq $frame -and $gxBoundary[4] -ne 0 -and $gxBoundary[5] -ne 0 -and $gxBoundary[6] -eq $coarse[16]) "GX boundary benchmark is not synchronized or lacks a post-VBlank completion sample at coarse frame $frame." $gdbStdout
+                            $gxBoundarySamples.Add($gxBoundary)
+                            $stage0 = Get-Ints $stage0Benchmark[$sampleIndex]
+                            Assert-Condition ($stage0[0] -eq $frame -and $stage0[1] -gt 0) "Stage layer-0 benchmark is not synchronized or measured at frame $frame." $gdbStdout
+                            $stage0Samples.Add($stage0)
+                            $drawResidualRatios += Get-RatioBasisPoints $coarse[19] $drawTicks
+                            $presentResidualRatios += Get-RatioBasisPoints $coarse[20] $presentActive
+                            $loopResidualRatios += Get-RatioBasisPoints $coarse[21] $loopWall
+
+                            if ($RendererProfileLevel -ge 2) {
+                                $ownerTriangleTotal = [int64]0
+                                $ownerRunTotal = [int64]0
+                                $ownerClassTotals = [int64[]]::new(8)
+                                $expectedOwnerTriangles = @(202, 320, 306)
+                                for ($ownerIndex = 0; $ownerIndex -lt 3; $ownerIndex++) {
+                                    $owner = Get-Ints $ownerBenchmark[(3 * $sampleIndex) + $ownerIndex]
+                                    Assert-Condition ($owner[0] -eq $frame -and $owner[1] -eq $ownerIndex -and $owner[2] -eq $coarse[11 + $ownerIndex]) "Owner renderer benchmark record $ownerIndex is not synchronized at frame $frame." $gdbStdout
+                                    $ownerClassTotal = [int64]0
+                                    foreach ($classIndex in 0..7) {
+                                        $ownerClassTotal += $owner[9 + $classIndex]
+                                        $ownerClassTotals[$classIndex] +=
+                                            $owner[9 + $classIndex]
+                                    }
+                                    $ownerTriangleTotal += $owner[8]
+                                    $ownerRunTotal += $owner[20]
+                                    $boundaryHashesPresent = $true
+                                    foreach ($hashIndex in 21..28) {
+                                        if ($owner[$hashIndex] -eq 0) {
+                                            $boundaryHashesPresent = $false
+                                        }
+                                    }
+                                    Assert-Condition ($owner[8] -eq $expectedOwnerTriangles[$ownerIndex] -and $ownerClassTotal -eq $owner[8] -and $boundaryHashesPresent) "Owner renderer benchmark record $ownerIndex did not preserve its exact triangle/class partition or nonzero entry/exit boundary hashes at frame $frame." $gdbStdout
+                                    $ownerSamples[$ownerIndex].Add($owner)
+                                }
+                                Assert-Condition ($ownerTriangleTotal -eq 828 -and $ownerRunTotal -eq 121 -and $ownerClassTotals[0] -eq 648 -and $ownerClassTotals[1] -eq 0 -and $ownerClassTotals[2] -eq 44 -and $ownerClassTotals[3] -eq 126 -and $ownerClassTotals[4] -eq 0 -and $ownerClassTotals[5] -eq 0 -and $ownerClassTotals[6] -eq 10 -and $ownerClassTotals[7] -eq 0) "Owner renderer benchmark did not conserve exact 828 triangles, 648/44/126/10 classes, and 121 runs at frame $frame." $gdbStdout
+                                $semantic = Get-Ints $rendererSemanticBenchmark[$sampleIndex]
+                                $ownerEventCount = [int64]0
+                                $ownerOverflowCount = [int64]0
+                                Assert-Condition ($semantic[0] -eq $frame -and $semantic[1] -ne 0 -and $semantic[2] -ne 0 -and $semantic[3] -eq 828 -and $semantic[3] -eq $render[11] -and $semantic[4] -eq 0) "Renderer semantic frame hash/count/overflow contract failed at frame $frame." $gdbStdout
+                                for ($ownerIndex = 0; $ownerIndex -lt 3; $ownerIndex++) {
+                                    $semanticBase = 5 + (11 * $ownerIndex)
+                                    $ownerProfile = Get-Ints $ownerBenchmark[(3 * $sampleIndex) + $ownerIndex]
+                                    $ownerEventCount += $semantic[$semanticBase + 2]
+                                    $ownerOverflowCount += $semantic[$semanticBase + 3]
+                                    Assert-Condition ($semantic[$semanticBase] -ne 0 -and $semantic[$semanticBase + 1] -ne 0 -and $semantic[$semanticBase] -eq $ownerProfile[36] -and $semantic[$semanticBase + 2] -eq $ownerProfile[8] -and $semantic[$semanticBase + 3] -eq 0 -and $semantic[$semanticBase + 4] -gt 0) "Renderer semantic owner $ownerIndex hash/count/occurrence contract failed at frame $frame." $gdbStdout
+                                    Assert-Condition ($semantic[$semanticBase + 5] -lt $semantic[$semanticBase + 4] -and $semantic[$semanticBase + 6] -lt $ownerProfile[3] -and $semantic[$semanticBase + 7] -ne 0 -and $semantic[$semanticBase + 8] -lt $ownerProfile[4] -and $semantic[$semanticBase + 9] -le 1 -and $semantic[$semanticBase + 10] -le 3) "Renderer semantic owner $ownerIndex first provenance/outcome was out of bounds at frame $frame." $gdbStdout
+                                }
+                                Assert-Condition ($ownerEventCount -eq $semantic[3] -and $ownerOverflowCount -eq $semantic[4]) "Renderer semantic owner totals did not conserve frame events/overflow at frame $frame." $gdbStdout
+                                $semanticSamples.Add($semantic)
+                            }
+                            $coarseSamples.Add($coarse)
+                        }
+
+                        $coarseLoop = Get-SampleFieldValues $coarseSamples 1
+                        $coarseInput = Get-SampleFieldValues $coarseSamples 2
+                        $coarseUpdate = Get-SampleFieldValues $coarseSamples 3
+                        $coarseSourceUpdate = Get-SampleFieldValues $coarseSamples 4
+                        $coarseAudioUpdate = Get-SampleFieldValues $coarseSamples 5
+                        $coarseActive = Get-SampleFieldValues $coarseSamples 6
+                        $coarseWait = Get-SampleFieldValues $coarseSamples 7
+                        $coarseBegin = Get-SampleFieldValues $coarseSamples 8
+                        $coarseDraw = Get-SampleFieldValues $coarseSamples 9
+                        $coarseWallpaper = Get-SampleFieldValues $coarseSamples 10
+                        $coarseStage = Get-SampleFieldValues $coarseSamples 11
+                        $coarseMario = Get-SampleFieldValues $coarseSamples 12
+                        $coarseFox = Get-SampleFieldValues $coarseSamples 13
+                        $coarseForeground = Get-SampleFieldValues $coarseSamples 14
+                        $coarseHud = Get-SampleFieldValues $coarseSamples 15
+                        $coarseFlush = Get-SampleFieldValues $coarseSamples 16
+                        $coarsePostVBlank = Get-SampleFieldValues $coarseSamples 17
+                        $coarseThreads = Get-SampleFieldValues $coarseSamples 18
+                        $coarseDrawResidual = Get-SampleFieldValues $coarseSamples 19
+                        $coarsePresentResidual = Get-SampleFieldValues $coarseSamples 20
+                        $coarseLoopResidual = Get-SampleFieldValues $coarseSamples 21
+                        $coarseConservation = Get-SampleFieldValues $coarseSamples 22
+                        $coarseLogic = Get-SampleFieldValues $coarseSamples 23
+                        $coarseMetricSummary = "Renderer coarse benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) logic=$($coarseLogic[0])..$($coarseLogic[-1]) median/p95 ticks loop=$(Get-MedianP95 $coarseLoop) input=$(Get-MedianP95 $coarseInput) update=$(Get-MedianP95 $coarseUpdate) sourceUpdate=$(Get-MedianP95 $coarseSourceUpdate) audioUpdate=$(Get-MedianP95 $coarseAudioUpdate) active=$(Get-MedianP95 $coarseActive) wait=$(Get-MedianP95 $coarseWait) begin=$(Get-MedianP95 $coarseBegin) draw=$(Get-MedianP95 $coarseDraw) wallpaper=$(Get-MedianP95 $coarseWallpaper) stage=$(Get-MedianP95 $coarseStage) Mario=$(Get-MedianP95 $coarseMario) Fox=$(Get-MedianP95 $coarseFox) foreground=$(Get-MedianP95 $coarseForeground) hud=$(Get-MedianP95 $coarseHud) flush=$(Get-MedianP95 $coarseFlush) postVBlank=$(Get-MedianP95 $coarsePostVBlank) threads=$(Get-MedianP95 $coarseThreads) drawResidual=$(Get-MedianP95 $coarseDrawResidual) presentResidual=$(Get-MedianP95 $coarsePresentResidual) loopResidual=$(Get-MedianP95 $coarseLoopResidual) conservationError=$(Get-MedianP95 $coarseConservation)"
+                        $coarseResidualRatioSummary = "Renderer coarse residual ratios (median/p95 basis points): draw=$(Get-MedianP95 $drawResidualRatios) present=$(Get-MedianP95 $presentResidualRatios) loop=$(Get-MedianP95 $loopResidualRatios)"
+                        $gxBoundarySummary = "Renderer GX boundary: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) adjacent changes/distinct values statusBefore=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 1)) controlBefore=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 2)) statusAfterFlush=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 3)) statusPostVBlank=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 4)) controlPostVBlank=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 5)) median/p95 ticks flush=$(Get-MedianP95 (Get-SampleFieldValues $gxBoundarySamples 6))"
+                        $stage0Summary = "Renderer stage layer-0 benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 ticks=$(Get-MedianP95 (Get-SampleFieldValues $stage0Samples 1)) adjacent changes/distinct values=$(Get-AdjacentChurn (Get-SampleFieldValues $stage0Samples 1))"
+
+                        $ownerLabels = @('stage', 'Mario', 'Fox')
+                        if ($RendererProfileLevel -ge 2) {
+                            for ($ownerIndex = 0; $ownerIndex -lt 3; $ownerIndex++) {
+                                $samples = $ownerSamples[$ownerIndex]
+                                $submitClasses = @()
+                                foreach ($classIndex in 0..7) {
+                                    $submitClasses += "class$classIndex=$(Get-MedianP95 (Get-SampleFieldValues $samples (9 + $classIndex)))"
+                                }
+                                $ownerCensusSummaries += "Renderer owner census $($ownerLabels[$ownerIndex]): samples=$RendererBenchmarkSamples median/p95 counts selected=$(Get-MedianP95 (Get-SampleFieldValues $samples 3)) sourceCommands=$(Get-MedianP95 (Get-SampleFieldValues $samples 4)) vertexCommands=$(Get-MedianP95 (Get-SampleFieldValues $samples 5)) sourceVertices=$(Get-MedianP95 (Get-SampleFieldValues $samples 6)) triangleCommands=$(Get-MedianP95 (Get-SampleFieldValues $samples 7)) triangles=$(Get-MedianP95 (Get-SampleFieldValues $samples 8)) $($submitClasses -join ' ') materialOps=$(Get-MedianP95 (Get-SampleFieldValues $samples 17)) matrixChanges=$(Get-MedianP95 (Get-SampleFieldValues $samples 18)) textureChanges=$(Get-MedianP95 (Get-SampleFieldValues $samples 19)) runs=$(Get-MedianP95 (Get-SampleFieldValues $samples 20))"
+                                $ownerChurnSummaries += "Renderer owner churn ($RendererBenchmarkSamples frames; adjacent changes/distinct values) $($ownerLabels[$ownerIndex]): stateEntry=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 21)) stateExit=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 22)) cacheEntry=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 23)) cacheExit=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 24)) resolverEntry=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 25)) resolverExit=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 26)) globalEntry=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 27)) globalExit=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 28)) topology=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 29)) selected=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 30)) camera=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 31)) DObj=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 32)) material=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 33)) light=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 34)) texture=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 35)) semantic=$(Get-AdjacentChurn (Get-SampleFieldValues $samples 36))"
+                            }
+                            $semanticOwnerMetrics = @()
+                            $semanticOwnerHashChurn = @()
+                            for ($ownerIndex = 0; $ownerIndex -lt 3; $ownerIndex++) {
+                                $semanticBase = 5 + (11 * $ownerIndex)
+                                $semanticOwnerMetrics += "$($ownerLabels[$ownerIndex])Events=$(Get-MedianP95 (Get-SampleFieldValues $semanticSamples ($semanticBase + 2))) $($ownerLabels[$ownerIndex])Overflow=$(Get-MedianP95 (Get-SampleFieldValues $semanticSamples ($semanticBase + 3))) $($ownerLabels[$ownerIndex])Occurrences=$(Get-MedianP95 (Get-SampleFieldValues $semanticSamples ($semanticBase + 4)))"
+                                $semanticOwnerHashChurn += "$($ownerLabels[$ownerIndex])Hash1=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples $semanticBase)) $($ownerLabels[$ownerIndex])Hash2=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples ($semanticBase + 1)))"
+                                $semanticProvenanceSummaries += "Renderer semantic first provenance ($RendererBenchmarkSamples frames; adjacent changes/distinct values) $($ownerLabels[$ownerIndex]): occurrence=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples ($semanticBase + 5))) list=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples ($semanticBase + 6))) branch=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples ($semanticBase + 7))) command=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples ($semanticBase + 8))) tri2Half=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples ($semanticBase + 9))) outcome=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples ($semanticBase + 10)))"
+                            }
+                            $semanticMetricSummary = "Renderer semantic benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 counts frameEvents=$(Get-MedianP95 (Get-SampleFieldValues $semanticSamples 3)) frameOverflow=$(Get-MedianP95 (Get-SampleFieldValues $semanticSamples 4)) $($semanticOwnerMetrics -join ' ')"
+                            $semanticChurnSummary = "Renderer semantic hash churn (adjacent changes/distinct values): frameHash1=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples 1)) frameHash2=$(Get-AdjacentChurn (Get-SampleFieldValues $semanticSamples 2)) $($semanticOwnerHashChurn -join ' ')"
+                        } else {
+                            $ownerCensusSummaries += 'Renderer owner detailed census: unavailable (profile 1 coarse timing only)'
+                            $semanticChurnSummary = 'Renderer semantic hash churn: unavailable (profile 1 coarse timing only)'
+                        }
+                    }
+                    $logicTickStart = $null
+                    $logicTickEnd = $null
+                    if ($RendererProfileLevel -ge 1) {
+                        $logicTickStart = [int64]$coarseLogic[0]
+                        $logicTickEnd = [int64]$coarseLogic[-1]
+                    }
+                    $benchmarkIdentity = [ordered]@{
+                        schema = 1
+                        target = $benchmarkMakeIdentity.Target
+                        build = $Build
+                        harness = [ordered]@{
+                            name = $benchmarkMakeIdentity.Harness
+                            id = $benchmarkMakeIdentity.HarnessId
+                        }
+                        rendererProfile = $benchmarkMakeIdentity.Profile
+                        effectiveCFlags = [ordered]@{
+                            common = $benchmarkMakeIdentity.CommonCFlags
+                            renderer = $benchmarkMakeIdentity.RendererCFlags
+                            scene = $benchmarkMakeIdentity.SceneCFlags
+                            source = 'make print-benchmark-flags'
+                        }
+                        artifacts = [ordered]@{
+                            rom = [ordered]@{
+                                path = $rom
+                                sha256 = $benchmarkRomIdentity.Sha256
+                                bytes = $benchmarkRomIdentity.Bytes
+                                lastWriteUtc = $benchmarkRomIdentity.LastWriteUtc
+                            }
+                            elf = [ordered]@{
+                                path = $elf
+                                sha256 = $benchmarkElfIdentity.Sha256
+                                bytes = $benchmarkElfIdentity.Bytes
+                                lastWriteUtc = $benchmarkElfIdentity.LastWriteUtc
+                            }
+                        }
+                        melonDS = [ordered]@{
+                            version = $benchmarkMelonIdentity.Version
+                            executableSha256 = $benchmarkMelonIdentity.Sha256
+                            path = $benchmarkMelonIdentity.Path
+                            configPath = $configState.Config
+                            configSha256 = $benchmarkMelonConfigSha256
+                            settings = [ordered]@{
+                                limitFPS = $false
+                                jit = $false
+                                gdbArm9Port = $configState.GdbPort
+                                gdbArm7Port = $configState.Arm7Port
+                            }
+                        }
+                        sampling = [ordered]@{
+                            warmupFrames = [Math]::Max(0, ([int64]$benchFrames[0] - 1))
+                            samples = $RendererBenchmarkSamples
+                            frameStart = [int64]$benchFrames[0]
+                            frameEnd = [int64]$benchFrames[-1]
+                            logicTickStart = $logicTickStart
+                            logicTickEnd = $logicTickEnd
+                            delaySeconds = [Math]::Max($DelaySeconds, $minimumDelay)
+                        }
+                    }
+                    $benchmarkIdentitySummary =
+                        'BENCH_IDENTITY=' +
+                        ($benchmarkIdentity | ConvertTo-Json -Compress -Depth 6)
                 }
                 Assert-Condition ($rendererProfileMarker.Success -and [int64]$rendererProfileMarker.Groups[1].Value -eq $RendererProfileLevel) "Canonical realtime HW build did not report renderer profile level $RendererProfileLevel." $gdbStdout
                 Assert-Condition $renderTexHash.Success 'Canonical realtime HW build did not publish texture lookup accounting.' $gdbStdout
@@ -627,14 +1087,22 @@ try {
                 }
                 Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
-                Assert-Condition ($stageHardware.Success -and $shw[0] -gt 8 -and $shw[1] -gt 0 -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build did not submit textured stage triangles.' $gdbStdout
+                Assert-Condition ($stageHardware.Success -and $shw[0] -eq (42 * $hw[0]) -and $shw[1] -eq (202 * $hw[0]) -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build drifted from the exact per-frame 42-list/202-triangle textured stage contract.' $gdbStdout
                 Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
-                Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -ge 2 -and $shwf[1] -gt 0) 'Canonical realtime HW build did not submit fighter triangle sets.' $gdbStdout
+                Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq (2 * $hw[0]) -and $shwf[1] -eq (626 * $hw[0])) 'Canonical realtime HW build drifted from the exact per-frame two-owner/626-triangle fighter contract.' $gdbStdout
                 # ftdisplaymain.c:1164-1242 sets this preamble and traverses only
                 # source-selected, visible, textured fighter part display lists.
                 Assert-Condition ($fighterDisplayContract.Success -and $fdc[0] -gt 0 -and $fdc[3] -gt 0 -and $fdc[0] -ge $fdc[3] -and ($fdc[0] - $fdc[3]) -le 64 -and (($fdc[4] -band 0x222005) -eq 0x222005) -and $fdc[5] -gt 0 -and $fdc[6] -gt 0 -and $fdc[7] -gt 0 -and $fdc[8] -eq 0 -and $fdc[11] -gt 0 -and $fdc[12] -gt 0 -and $fdc[13] -eq 0x00100000 -and $fdc[14] -eq [Convert]::ToUInt32('c4112078', 16)) 'Canonical realtime HW build did not preserve the original fighter display selection, lighting, geometry, cycle, render-mode, and visibility contract.' $gdbStdout
-                Assert-Condition ($renderProfile.Success -and $rp[15] -le 6144 -and $rp[16] -le 2048 -and $rp[17] -eq 0) 'Canonical realtime HW build exceeded DS poly/vertex limits.' $gdbStdout
-                Assert-Condition ($renderBatch.Success -and $rb[0] -gt 0 -and $rb[1] -gt 0 -and $rb[0] -lt $rp[16] -and ($rb[0] + $rb[1]) -eq $rp[16] -and $rb[2] -eq $rb[0] -and $rb[3] -gt 0 -and $rb[4] -gt 0 -and $rb[3] -le $rb[0] -and ($rb[3] + $rb[4]) -eq $rp[16]) 'Canonical realtime HW build did not batch adjacent source triangles, reuse one texture preparation per unchanged TRI run, or close every GX batch.' $gdbStdout
+                Assert-Condition ($renderProfile.Success -and $rp[15] -eq 2484 -and $rp[16] -eq 828 -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact 2,484-vertex/828-triangle renderer contract.' $gdbStdout
+                if ($RendererProfileLevel -lt 2) {
+                    Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13] $RendererProfileLevel) 'Performance/coarse realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
+                } else {
+                    # The independent bytewise forensic cache is fully resident
+                    # before this synchronized window; unlike profiles 0/1 it
+                    # must not perform recurring texture uploads here.
+                    Assert-Condition ($rp[12] -eq 0 -and $rp[13] -eq 0) 'Forensic renderer unexpectedly uploaded texture data after its independent cache became resident.' $gdbStdout
+                }
+                Assert-Condition ($renderBatch.Success -and $rb[0] -eq 121 -and $rb[1] -eq 707 -and $rb[2] -eq 121 -and $rb[3] -eq 98 -and $rb[4] -eq 730) 'Canonical realtime HW build drifted from exact 121/707/121 batch and 98/730 texture-prepare accounting.' $gdbStdout
                 if ($RendererProfileLevel -lt 2) {
                     Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 2 -and $rci4lut[3] -gt $rci4lut[2]) 'Performance/coarse renderer did not build exactly two immutable CI4 source-index planes and reuse them across live water addressing.' $gdbStdout
                     Assert-Condition ($renderCi4Map.Success -and $rci4map[0] -gt 0 -and $rci4map[1] -ge $rci4map[0]) 'Performance/coarse renderer did not resolve live large-water pixels through exact representative address/phase classes.' $gdbStdout
@@ -642,15 +1110,14 @@ try {
                     Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 0 -and $rci4lut[3] -eq 0) 'Forensic renderer unexpectedly bypassed its independent bytewise CI4 source decoder.' $gdbStdout
                     Assert-Condition ($renderCi4Map.Success -and $rci4map[0] -eq 0 -and $rci4map[1] -eq 0) 'Forensic renderer unexpectedly reused performance CI4 representative maps.' $gdbStdout
                 }
-                if ($RendererProfileLevel -ge 1) {
+                if ($RendererProfileLevel -ge 2) {
                     Assert-Condition ($renderTopology.Success -and $rtopo[0] -gt 0 -and $rtopo[1] -gt 0 -and $rtopo[2] -gt 0) 'Profiled renderer did not hoist immutable reloc-list validation while retaining dynamic-list fallback validation.' $gdbStdout
-                    if ($RendererProfileLevel -lt 2) {
-                        Assert-Condition ($rtopo[3] -gt 0) 'Performance/coarse renderer did not replay any immutable adjacent TRI commands through the exact run fast path.' $gdbStdout
-                    }
                     Assert-Condition ($renderCost.Success -and $rcost[0] -gt 0 -and $rcost[1] -gt 0 -and $rcost[0] -ge $rcost[1]) 'Profiled renderer did not report a coherent triangle/vertex submission cost split.' $gdbStdout
                     if ($rp[12] -gt 0) {
                         Assert-Condition ($renderCi4Lut.Success -and ($rci4lut[0] + $rci4lut[1]) -gt 0) 'Profiled renderer uploaded animated textures without building or reusing the exact CI4 palette-pair LUT.' $gdbStdout
                     }
+                } elseif ($RendererProfileLevel -eq 1) {
+                    Assert-Condition ($renderTopology.Success -and (($rtopo | Measure-Object -Sum).Sum -eq 0) -and $renderCost.Success -and (($rcost | Measure-Object -Sum).Sum -eq 0)) 'Low-frequency O2 coarse profile unexpectedly retained detailed command/triangle profiling.' $gdbStdout
                 }
                 Assert-Condition ($wallpaperCache.Success -and $wc[0] -eq 1 -and $wc[1] -ge 1 -and $wc[2] -eq ($wc[0] + $wc[1]) -and $wc[3] -eq 0 -and $wc[4] -eq 300 -and $wc[5] -eq 220 -and $wc[6] -eq 66000 -and $wc[7] -gt 0 -and $wc[8] -gt 0) 'Canonical realtime HW build did not construct once and reuse the exact opaque Dream Land wallpaper decode cache.' $gdbStdout
                 Assert-Condition ($wallpaperFinal.Success -and $wf[0] -eq $wc[2] -and $wf[0] -eq ($wf[1] + $wf[2]) -and $wf[2] -gt 0 -and $wf[3] -eq (49152 * $wf[2]) -and $wf[4] -eq 0 -and $wf[5] -eq 0 -and $wf[6] -eq 0 -and $wf[7] -eq 0 -and $wf[8] -eq (2 * $wf[3]) -and $wf[9] -eq 0 -and $wf[11] -eq 0) 'Canonical realtime HW build did not retain exact final BG2/BG3 ownership or still performed eliminated full-screen clears/staging/copies.' $gdbStdout
@@ -669,14 +1136,12 @@ try {
                     # stable canonical geometry contract.
                     $expectedProjectedFallbackCount *= $hw[0]
                 }
-                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq $rrm[0] -and $rs[0] -gt 0 -and $rs[2] -eq $rrm[2] -and $rs[3] -gt 0 -and $rs[6] -eq $rrm[1] -and $rs[7] -eq 0 -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build did not partition every submitted triangle into the expected hybrid raw/projected classes.' $gdbStdout
+                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq 648 -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq 126 -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq 10 -and $rs[7] -eq 0 -and $rs[0] -eq $rrm[0] -and $rs[2] -eq $rrm[2] -and $rs[6] -eq $rrm[1] -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact 648/44/126/10 hybrid submit-class partition.' $gdbStdout
                 Assert-Condition ($rs[8] -eq $expectedProjectedDivisions -and ($rs[8] * 4) -lt $preCutoverProjectedDivisions) 'Canonical realtime HW build did not sharply reduce and exactly account projected division demand.' $gdbStdout
                 $hardwareDivideEvaluations = $rhdiv[0] + $rhdiv[1] + $rhdiv[2]
                 Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Canonical realtime projected hardware divider reported a zero denominator or exact-result mismatch.' $gdbStdout
-                if ($RendererProfileLevel -eq 0) {
-                    Assert-Condition ($hardwareDivideEvaluations -eq 0) 'Shipping profile retained hot-loop hardware-divider telemetry.' $gdbStdout
-                } elseif ($RendererProfileLevel -lt 2) {
-                    Assert-Condition ($rhdiv[0] -gt 0 -and $hardwareDivideEvaluations -lt $rs[8]) 'Coarse renderer did not use the exact DS hardware divider or reuse projected vertex results.' $gdbStdout
+                if ($RendererProfileLevel -lt 2) {
+                    Assert-Condition ($hardwareDivideEvaluations -eq 0) 'Shipping-equivalent profile retained hot-loop hardware-divider telemetry.' $gdbStdout
                 } else {
                     $expectedHardwareDivideEvaluations = $rs[8] + (3 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
                     Assert-Condition ($rhdiv[0] -gt 0 -and $hardwareDivideEvaluations -eq $expectedHardwareDivideEvaluations) 'Forensic renderer did not compare every live DS hardware quotient with the former exact C result.' $gdbStdout
@@ -686,7 +1151,7 @@ try {
                 Assert-Condition ($fighterLightSeed.Success -and $fls[0] -gt 0 -and $fls[1] -eq [Convert]::ToUInt32('ffffff00', 16) -and $fls[2] -eq [Convert]::ToUInt32('4c4c4c00', 16)) 'Canonical realtime HW build did not seed the fighter RSP light state from the selected source MObj material.' $gdbStdout
                 if ($RendererProfileLevel -ge 2) {
                     Assert-Condition ($rlazy[1] -eq $rlazy[0] -and $rlazy[2] -gt 0) 'Forensic renderer did not eagerly transform every source vertex before exercising transform-cache hits.' $gdbStdout
-                    Assert-Condition ($renderOracle.Success -and $ro[0] -gt 0 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Forensic realtime HW submitted vertex positions drifted from the CPU 20.12 oracle.' $gdbStdout
+                    Assert-Condition ($renderOracle.Success -and $ro[0] -eq 2484 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Forensic realtime HW drifted from the exact 2,484/0/0 CPU 20.12 oracle contract.' $gdbStdout
                     Assert-Condition ($renderMatrix.Success) 'Forensic realtime HW build did not report loaded GX matrix ranges.' $gdbStdout
                     Assert-Condition ($renderVertex.Success) 'Forensic realtime HW build did not report submitted vertex ranges.' $gdbStdout
                     Assert-Condition ($renderDepth.Success -and $rd[0] -gt 0 -and $rd[5] -gt 0 -and $rd[10] -gt 0) 'Forensic realtime HW build did not report source-depth samples for the stage, Mario, and Fox.' $gdbStdout
@@ -735,6 +1200,26 @@ try {
             if ($ImportBattleShipAudioBGM) {
                 $ab = Get-Ints $audioBgm
                 Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x1) -eq 0x1) -and (($ab[2] -eq 1) -or ($ab[6] -ge 1)) -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0) 'Minimal BGM backend realtime smoke failed hardware-timer byte-rate or safe half refill guard.' $gdbStdout
+            }
+            if ($RendererBenchmarkSamples -gt 0) {
+                Write-Output $benchmarkIdentitySummary
+                Write-Output $benchmarkMetricSummary
+                Write-Output $benchmarkChurnSummary
+                if ($RendererProfileLevel -ge 1) {
+                    Write-Output $coarseMetricSummary
+                    Write-Output $coarseResidualRatioSummary
+                    Write-Output $gxBoundarySummary
+                    Write-Output $stage0Summary
+                    $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
+                    $ownerChurnSummaries | ForEach-Object { Write-Output $_ }
+                    if ($RendererProfileLevel -ge 2) {
+                        Write-Output $semanticMetricSummary
+                        Write-Output $semanticChurnSummary
+                        $semanticProvenanceSummaries | ForEach-Object { Write-Output $_ }
+                    } else {
+                        Write-Output $semanticChurnSummary
+                    }
+                }
             }
             Write-Output ("$Label realtime pacing smoke passed: frames=$($bp[3]) fps=$($bp[6])/$($bp[7]) ticks=$($bp[5])$hardwareSummary$aobjSummary")
             return

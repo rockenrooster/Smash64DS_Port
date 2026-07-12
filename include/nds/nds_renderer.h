@@ -50,6 +50,7 @@
 #define NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY 64u
 #define NDS_RENDERER_TILE_COUNT 8u
 #define NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT 2u
+#define NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 1024u
 
 #define NDS_RENDERER_GEOM_ZBUFFER 0x00000001u
 #define NDS_RENDERER_GEOM_SHADE 0x00000004u
@@ -122,6 +123,76 @@ typedef struct NDSRendererVertexCache
     u32 matrix_snapshot_count;
     u32 raw_vertex_fit_mask;
 } NDSRendererVertexCache;
+
+typedef enum NDSRendererProfileOwner
+{
+    NDS_RENDERER_PROFILE_OWNER_STAGE = 0,
+    NDS_RENDERER_PROFILE_OWNER_MARIO,
+    NDS_RENDERER_PROFILE_OWNER_FOX,
+    NDS_RENDERER_PROFILE_OWNER_COUNT,
+    NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
+} NDSRendererProfileOwner;
+
+/* Diagnostic-only owner census.  Profile 0 never allocates or touches this
+ * ledger; profiles 1/2 publish it once per synchronized frame. */
+typedef struct NDSRendererOwnerProfile
+{
+    u32 exclusive_ticks;
+    u32 selected_count;
+    u32 source_command_count;
+    u32 vertex_command_count;
+    u32 source_vertex_count;
+    u32 triangle_command_count;
+    u32 triangle_count;
+    u32 submit_class_count[8];
+    u32 material_operation_count;
+    u32 matrix_change_count;
+    u32 texture_change_count;
+    u32 run_count;
+    u32 entry_state_hash;
+    u32 exit_state_hash;
+    u32 entry_vertex_cache_hash;
+    u32 exit_vertex_cache_hash;
+    u32 entry_resolver_hash;
+    u32 exit_resolver_hash;
+    u32 entry_global_hash;
+    u32 exit_global_hash;
+    u32 topology_signature;
+    u32 selected_event_signature;
+    u32 camera_signature;
+    u32 dobj_matrix_signature;
+    u32 material_signature;
+    u32 light_signature;
+    u32 texture_signature;
+    u32 semantic_output_hash;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    u32 semantic_output_hash2;
+    u32 semantic_event_count;
+    u32 semantic_overflow_count;
+    u32 semantic_occurrence_count;
+    u32 semantic_first_owner_occurrence;
+    u32 semantic_first_list_ordinal;
+    u32 semantic_first_branch_path;
+    u32 semantic_first_command_index;
+    u32 semantic_first_tri2_half;
+    u32 semantic_first_outcome;
+#endif
+} NDSRendererOwnerProfile;
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+extern volatile NDSRendererOwnerProfile
+    gNdsRendererProfileOwners[NDS_RENDERER_PROFILE_OWNER_COUNT];
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+extern volatile u32 gNdsRendererSemanticOutputHash;
+extern volatile u32 gNdsRendererSemanticOutputHash2;
+extern volatile u32 gNdsRendererSemanticEventCount;
+extern volatile u32 gNdsRendererSemanticOverflowCount;
+extern volatile u32 gNdsRendererSemanticPrefixHash[
+    NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
+extern volatile u32 gNdsRendererSemanticPrefixHash2[
+    NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
+#endif
 
 typedef struct NDSRendererCommand
 {
@@ -216,6 +287,9 @@ typedef struct NDSRendererStats
     u32 first_opcode;
     u32 unsupported_opcode;
     u32 vertex_command_count;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    u32 source_vertex_count;
+#endif
     u32 triangle_command_count;
     u32 matrix_command_count;
     u32 matrix_load_count;
@@ -391,6 +465,13 @@ void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareSetNoOracle(u32 enabled);
 u32 ndsRendererHardwareNoOracleEnabled(void);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);
+void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner);
+void ndsRendererProfileSetSourceProvenance(u32 owner_occurrence,
+                                           u32 list_ordinal,
+                                           u32 root_branch_path);
+void ndsRendererProfileRecordFrameBoundaryGXState(u32 status, u32 control);
+void ndsRendererProfileRecordMaterialOperations(u32 count);
+u32 ndsRendererProfileGlobalStateHash(void);
 void ndsRendererProfileFrameBegin(void);
 void ndsRendererProfileFramePublish(void);
 

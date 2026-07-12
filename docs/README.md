@@ -21,6 +21,7 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | `MEMORY_OVERLAY_PLAN.md` | Maintained | Source-backed memory budget and reloc eviction plan. |
 | `MP_PASS_THROUGH_SCOUT.md` | Maintained | Source-order scout for the next pass-through floor/platform boundary. |
 | `NEXT_BOUNDARY_QUEUE.md` | Current truth | Compact next-boundary candidate queue. |
+| `PERF_LEDGER.md` | Maintained | Reproducible renderer benchmark identities, measurements, gates, and decisions. |
 | `PORTING.md` | Append-only | Chronological porting history. Do not use as primary planning. |
 | `ROADMAP.md` | Maintained | Milestone-level project roadmap. |
 | `SPECIALS_WEAPONS_SCOUT.md` | Maintained | Source-backed scout for Mario/Fox specials and weapon-manager runtime work. |

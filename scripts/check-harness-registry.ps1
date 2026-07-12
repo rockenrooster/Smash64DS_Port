@@ -114,7 +114,7 @@ if (($melonLibText -notmatch 'function\s+Set-MelonDSDualScreenLayout') -or
 }
 if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
     ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or
-    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[0\]\s*-ge\s*2.*?\$shwf\[1\]\s*-gt\s*0') -or
+    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[0\]\s*-eq\s*\(2\s*\*\s*\$hw\[0\]\).*?\$shwf\[1\]\s*-eq\s*\(626\s*\*\s*\$hw\[0\]\)') -or
     ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
     Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'
 }

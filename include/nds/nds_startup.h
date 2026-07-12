@@ -3893,6 +3893,31 @@ extern volatile u32 gNdsRendererProfileUpdateTicks;
 extern volatile u32 gNdsRendererProfilePresentTicks;
 extern volatile u32 gNdsRendererProfileDrawTicks;
 extern volatile u32 gNdsRendererProfileHudTicks;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+extern volatile u32 gNdsRendererProfileLoopWallTicks;
+extern volatile u32 gNdsRendererProfileInputTicks;
+extern volatile u32 gNdsRendererProfileSourceUpdateTicks;
+extern volatile u32 gNdsRendererProfileAudioUpdateTicks;
+extern volatile u32 gNdsRendererProfileBeginFrameTicks;
+extern volatile u32 gNdsRendererProfileWallpaperTicks;
+extern volatile u32 gNdsRendererProfileForegroundTicks;
+extern volatile u32 gNdsRendererProfileStageLayer0Ticks;
+extern volatile u32 gNdsRendererProfileFlushTicks;
+extern volatile u32 gNdsRendererProfileVBlankWaitTicks;
+extern volatile u32 gNdsRendererProfilePostVBlankTicks;
+extern volatile u32 gNdsRendererProfileThreadTicks;
+extern volatile u32 gNdsRendererProfilePresentActiveTicks;
+extern volatile u32 gNdsRendererProfileDrawResidualTicks;
+extern volatile u32 gNdsRendererProfilePresentResidualTicks;
+extern volatile u32 gNdsRendererProfileLoopResidualTicks;
+extern volatile u32 gNdsRendererProfileConservationErrorTicks;
+extern volatile u32 gNdsRendererProfileLogicTick;
+extern volatile u32 gNdsRendererProfileGXStatusBeforeFlush;
+extern volatile u32 gNdsRendererProfileGXStatusAfterFlush;
+extern volatile u32 gNdsRendererProfileGXControlBeforeFlush;
+extern volatile u32 gNdsRendererProfileGXStatusPostVBlank;
+extern volatile u32 gNdsRendererProfileGXControlPostVBlank;
+#endif
 extern volatile u32 gNdsRendererProfileStageAdapterTicks;
 extern volatile u32 gNdsRendererProfileMaterialTicks;
 extern volatile u32 gNdsRendererProfileMatrixTicks;
@@ -4012,7 +4037,7 @@ extern volatile u32 gNdsRendererProfileSubmitProjectedDecalCount;
 extern volatile u32 gNdsRendererProfileSubmitProjectedPrimDepthCount;
 extern volatile u32 gNdsRendererProfileSubmitProjectedRangeOrMatrixCount;
 extern volatile u32 gNdsRendererProfileSubmitRejectCount;
-/* Profile 1/2 actual divide/clamp counts and error flags; logical demand is
+/* Profile-2-only actual divide/clamp counts and error flags; logical demand is
  * derived from the submitted class totals by the renderer verifier. */
 extern volatile u32 gNdsRendererProfileHardwareDivideSummary;
 extern volatile u32 gNdsRendererProfileSourceVertexLoadCount;

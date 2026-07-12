@@ -977,3 +977,16 @@ endif
 -include $(DEPENDS)
 
 endif
+
+# Read-only benchmark metadata.  Keep this target independent from the build
+# graph so verifier `-NoBuild` runs can still report the exact flags selected
+# by this Makefile, including the mode-163 ARM-state renderer override.
+.PHONY: print-benchmark-flags
+print-benchmark-flags:
+	@printf '%s\n' 'BENCH_MAKE_TARGET=$(TARGET)'
+	@printf '%s\n' 'BENCH_MAKE_HARNESS=$(NDS_DEV_SCENE_HARNESS)'
+	@printf '%s\n' 'BENCH_MAKE_HARNESS_ID=$(NDS_DEV_SCENE_HARNESS_ID)'
+	@printf '%s\n' 'BENCH_MAKE_PROFILE=$(NDS_RENDERER_PROFILE_LEVEL)'
+	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
+	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
+	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'
