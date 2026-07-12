@@ -1133,9 +1133,10 @@
   no-Z equivalence beyond the proven Dream Land ordering remains debt.
   Final-resolution wallpaper composition removes its 320x240 staging/scale and
   BG2 copy. Exact word-packed rows, immutable TRI replay, derived vertex reuse,
-  canonical O2, and targeted O3 now reach `5.6fps`, but this is still roughly
-  10.7x short of the 60 FPS P1 condition. Profile-1 DL median is `4,288,352`
-  ticks, including `1,196,416` texture ticks; renderer command/state work,
+  canonical O2, ARM-state mode-163 renderer, and ITCM O3 loops now reach
+  `6.6fps`, but this is still roughly 9.1x short of the 60 FPS P1 condition.
+  Profile-1 DL median is `3,381,152` ticks, including `803,840` texture,
+  `1,406,752` scan, and `1,311,424` non-vertex setup ticks; packet/state work,
   water precomposition, and source RGBA4 interface output remain P1 debt.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
@@ -1178,7 +1179,9 @@
   Texture/matrix hot-path reuse first brought warm profile 0 to
   `7,697,632/7,958,912`; the current compiler split, targeted hot functions,
   packed wallpaper rows, immutable TRI replay, CI4 LUT key, and per-run derived
-  vertex reuse reach `5,889,312/6,024,768` median/p95 at `5.6fps`. Profile 1
+  vertex reuse first reached `5,889,312/6,024,768` median/p95 at `5.6fps`.
+  ARM-state mode 163, four ITCM loops, and pre-construction matrix cache hits
+  now reach `4,901,760/5,165,440` at `6.6fps`. Profile 1
   records `80/1736/344/330` immutable-list/trusted-command/dynamic-validation/
   TRI-replay coverage. Projected divisions remain `1,242`. The rejected GX
   FIFO/display-list arena increased vertex cost and must not be restored.

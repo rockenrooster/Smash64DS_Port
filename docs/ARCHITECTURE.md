@@ -1355,10 +1355,14 @@ collects 8--16 marker-synchronized frames and reports median/p95 without adding
 runtime writes to the shipped ROM.
 
 Mode-163 compiler policy follows artifact purpose: canonical realtime uses O2,
-while the larger scripted and timer/Results diagnostic ROMs use Os to preserve
-their scene-memory reserve. Only four measured renderer loops and the opaque
-wallpaper writer carry targeted O3 attributes; fast-math and whole-program O3
-are not used.
+while larger scripted and timer/Results diagnostics use Os for scene reserve.
+Only mode 163 compiles `nds_renderer.c` in ARM state; normal and archived narrow
+builds retain Thumb density. Four measured renderer loops also carry targeted
+O3 and `.itcm`, matching sm64-nds's interpreter/submission layout without
+fast-math or whole-program O3. Profile 1 occupies `15,492/32,768` ITCM bytes;
+profile 2 occupies `14,680`. Cache-hit guards run before temporary GX matrix
+construction, while `ndsRendererLoadHardwareMatrixPair` remains the final exact
+state guard.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,

@@ -940,6 +940,12 @@ $(NDS_SCENE_HARNESS_CONFIG): FORCE
 $(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES)
 $(OUTPUT).elf: $(OFILES)
 $(OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
+# The source DS renderer is ARM-state code, with its hottest handlers copied
+# to ITCM. Keep that interworking shape for mode 163 without spending the code
+# size in normal startup or the archived narrow harness fleet.
+ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)
+nds_renderer.o: CFLAGS += -marm
+endif
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 

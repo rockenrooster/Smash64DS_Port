@@ -19558,3 +19558,45 @@ Source-corrected verifier expectations: none; all shortcuts are bounded by
 source-command or immutable-file ownership. Coverage-reduced verifier
 expectations: none; dynamic validation, generic conversion, profile-2 oracle,
 memory, P1Gate, and Boundary fallbacks remain live.
+
+## 2026-07-11 - ARM-state renderer and pre-construction matrix cache
+
+- Extended the synchronized warm-frame marker from eight to thirteen fields.
+  Profile 1 now separates stage/material/matrix/DL/texture/triangle/vertex
+  costs and derives non-vertex setup plus non-submit scan cost. The accepted
+  frame leaves scan/setup as the two coequal CPU buckets.
+- The sm64-nds reference keeps its renderer in ARM state and its interpreter,
+  vertex, triangle, and matrix handlers in ITCM. Mode 163 now follows that
+  architecture: `nds_renderer.c` compiles ARM while normal/legacy builds remain
+  Thumb, and four measured O3 loops use `.itcm`. Profile 1 occupies `15,492`
+  of 32,768 ITCM bytes; forensic profile 2 occupies `14,680`.
+- A strict profile-0 control measured Thumb/O3 at
+  `6,575,616/6,831,040` present and `6,267,392/6,308,032` draw (`4.9fps`).
+  Four ARM+ITCM loops reached `6,016,128/6,022,144` and
+  `5,567,552/5,586,688` (`5.5fps`); broad mode-163 ARM state then reached
+  about `4.90M` present and `4.72M` draw (`6.5fps`).
+- GX matrix state changes only 53 times, but triangle submission previously
+  built identity/raw temporary 4x4 pairs before discovering the other calls
+  were cache hits. Exact mode/generation guards now return before construction.
+  Final profile-0 draw is `4,669,856/4,688,640` at `6.6fps`; profile 1 reports
+  present `4,898,336/4,902,784`, DL `3,381,152/3,486,208`, texture
+  `803,840/907,840`, setup `1,311,424/1,414,976`, scan
+  `1,406,752/1,408,448`, and vertex `663,776/665,280`.
+- An adapter-wide ARM pragma and a branch-command-record shortcut were measured
+  and fully reverted: neither improved uninstrumented presentation enough to
+  justify its size/layout cost. The rejected GX FIFO/list arena also remains
+  absent.
+- Profile 2 retains all 828 triangles, source depth, device checks, and oracle
+  `2484/0/0`; no command semantics, texture math, or GX ordering changed.
+- DevFast parity passes at 11,595,776 bytes and SHA-256
+  `80F67758BE41809C4F0FFFA9BEDCB82912CAD41E3968051374E79E6340191C9F`.
+  Both melonDS screens, the pond, flowers, foreground fence, and fighters remain
+  visible in `2026-07-12_canonical_fast_002352-0840184-p39796.png`.
+- GBI/static checks, DevFast, forensic, fresh four-leg P1Gate, and all three
+  Boundary entries pass in `2.2s/43.0s/120.7s/467.6s/277.7s`. Full/Legacy
+  Regression remains intentionally skipped for the fast P1 cadence.
+
+Source-corrected verifier expectations: none; the compiler layout follows the
+DS reference and matrix reuse keys exact already-loaded GX state.
+Coverage-reduced verifier expectations: none; profile 2 retains the generic
+interpreter, eager transform oracle, and dynamic validation paths.

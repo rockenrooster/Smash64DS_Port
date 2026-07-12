@@ -85,21 +85,23 @@ CI4 palette-pair LUT is content-keyed, while profile 2 retains the independent
 generic/oracle route. No composed frame, fighter, or source behavior is cached.
 
 Canonical mode 163 alone keeps `-O2`; the larger scripted/lifecycle diagnostics
-stay `-Os` and retain `227392` bytes of headroom. Four measured renderer loops
-and the wallpaper writer use targeted O3. Aligned opaque 256-wide wallpaper rows
-pack two exact RGB5A1 samples per VRAM word, reducing its draw from about `774K`
-to `380K` ticks. Frame-local camera/DObj caches and hybrid submission remain:
+stay `-Os` and retain `227392` bytes of headroom. Mode 163 compiles the renderer
+TU in ARM state, while four measured O3 loops live in ITCM (`15,492` profile-1
+bytes, `14,680` forensic); normal/legacy builds remain Thumb. Matrix cache hits
+return before building temporary 4x4 pairs. Frame-local camera/DObj caches and
+hybrid submission remain:
 `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range, `1,242`
 divisions, and `121/707/121` batches. A GX display-list arena experiment was
 reverted after worsening vertex submission.
 
-Warm profile-0 present median/p95 is now `5,889,312/6,024,768`, down from
-`7,697,632/7,958,912`; pacing rises `4.2 -> 5.6fps`. Profile 1 is
-`6,021,408/6,318,400`, with DL `4,288,352/4,290,240`, texture
-`1,196,416/1,196,992`, and sampled vertex submission about `764K` ticks.
+Warm profile-0 present median/p95 is now `4,901,760/5,165,440`, down from
+`5,889,312/6,024,768`; pacing rises `5.6 -> 6.6fps`. Profile 1 is
+`4,898,336/4,902,784`, with DL `3,381,152/3,486,208`, texture
+`803,840/907,840`, setup `1,311,424/1,414,976`, scan
+`1,406,752/1,408,448`, and vertex `663,776/665,280` ticks.
 Forensic oracle remains `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-11_canonical_fast_233415-5255026-p18944.png`;
-shipped SHA-256: `998628BE3B2110AD68558E85240C0D6885FB5ABF3CC38AE907B5C5A3EBF78B21`.
+`artifacts/visibility/2026-07-12_canonical_fast_002352-0840184-p39796.png`;
+shipped SHA-256: `80F67758BE41809C4F0FFFA9BEDCB82912CAD41E3968051374E79E6340191C9F`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
@@ -127,16 +129,16 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `5.6fps`, far below the 60 FPS P1 condition.
-Profile-1 DL minus texture remains about `3.09M` ticks; reduce interpreter/state
-work without reviving the regressive GX display-list arena. Source RGBA4 HUD,
+The canonical frame is still only `6.6fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `1.41M/1.31M` ticks; compile immutable packets
+and hoist exact run state without reviving the regressive GX-list arena. RGBA4 HUD,
 Whispy face strips, and Mario facing/light A/B remain separate debt.
 
 ## Verification
 
-Fresh component builds plus integrated P1Gate `-NoBuild` passed in `149.5s`;
-Boundary passed in `288.5s`. This is not the five-minute soak. Full Regression
-stays skipped.
+Fresh P1Gate passed in `467.6s`; Boundary passed in `277.7s`. DevFast passed in
+`43.0s` and the forensic oracle in `120.7s`. This is not the five-minute soak;
+Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

@@ -263,7 +263,7 @@ try {
                 'commands'
                 'silent'
                 'if gNdsBattlePlayablePacingResult != 0'
-                'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileOracleSamples'
+                'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileOracleSamples'
                 'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
                 'end'
                 ('if $renderer_benchmark_samples < {0}' -f $RendererBenchmarkSamples)
@@ -467,7 +467,7 @@ try {
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
     $fighterDisplayContract = [regex]::Match($gdbStdout, 'FTR_DISPLAY_CONTRACT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderProfile = [regex]::Match($gdbStdout, 'RENDER_PROFILE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    $rendererBenchmark = [regex]::Matches($gdbStdout, 'RENDER_BENCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $rendererBenchmark = [regex]::Matches($gdbStdout, 'RENDER_BENCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderBatch = [regex]::Match($gdbStdout, 'RENDER_BATCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderTopology = [regex]::Match($gdbStdout, 'RENDER_TOPOLOGY=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderCost = [regex]::Match($gdbStdout, 'RENDER_COST=([0-9]+),([0-9]+)')
@@ -582,15 +582,28 @@ try {
                     Assert-Condition ($rendererBenchmark.Count -eq $RendererBenchmarkSamples) "Renderer benchmark captured $($rendererBenchmark.Count) of $RendererBenchmarkSamples requested warm frames." $gdbStdout
                     $benchPresent = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[3].Value })
                     $benchDraw = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[4].Value })
-                    $benchDL = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[5].Value })
-                    $benchTexture = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[6].Value })
+                    $benchStage = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[5].Value })
+                    $benchMaterial = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[6].Value })
+                    $benchMatrix = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[7].Value })
+                    $benchDL = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[8].Value })
+                    $benchTexture = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[9].Value })
+                    $benchSubmit = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[10].Value })
+                    $benchVertex = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[11].Value })
+                    $benchSetup = @()
+                    $benchScan = @()
                     foreach ($sample in $rendererBenchmark) {
                         $sampleProfile = [int64]$sample.Groups[1].Value
-                        $sampleTriangles = [int64]$sample.Groups[7].Value
-                        $sampleOracle = [int64]$sample.Groups[8].Value
+                        $sampleDL = [int64]$sample.Groups[8].Value
+                        $sampleSubmit = [int64]$sample.Groups[10].Value
+                        $sampleVertex = [int64]$sample.Groups[11].Value
+                        $sampleTriangles = [int64]$sample.Groups[12].Value
+                        $sampleOracle = [int64]$sample.Groups[13].Value
                         Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangles -eq 828 -and (($RendererProfileLevel -ge 2 -and $sampleOracle -gt 0) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or incomplete triangle/oracle accounting.' $gdbStdout
+                        Assert-Condition ($sampleDL -ge $sampleSubmit -and $sampleSubmit -ge $sampleVertex) 'Renderer benchmark sampled incoherent nested DL/triangle/vertex costs.' $gdbStdout
+                        $benchSetup += $sampleSubmit - $sampleVertex
+                        $benchScan += $sampleDL - $sampleSubmit
                     }
-                    $benchmarkSummary = " bench${RendererBenchmarkSamples}=present$((Get-Median $benchPresent))/$((Get-Percentile95 $benchPresent))/draw$((Get-Median $benchDraw))/$((Get-Percentile95 $benchDraw))/dl$((Get-Median $benchDL))/$((Get-Percentile95 $benchDL))/tex$((Get-Median $benchTexture))/$((Get-Percentile95 $benchTexture))"
+                    $benchmarkSummary = " bench${RendererBenchmarkSamples}=present$((Get-Median $benchPresent))/$((Get-Percentile95 $benchPresent))/draw$((Get-Median $benchDraw))/$((Get-Percentile95 $benchDraw))/stage$((Get-Median $benchStage))/$((Get-Percentile95 $benchStage))/mat$((Get-Median $benchMaterial))/$((Get-Percentile95 $benchMaterial))/mtx$((Get-Median $benchMatrix))/$((Get-Percentile95 $benchMatrix))/dl$((Get-Median $benchDL))/$((Get-Percentile95 $benchDL))/tex$((Get-Median $benchTexture))/$((Get-Percentile95 $benchTexture))/submit$((Get-Median $benchSubmit))/$((Get-Percentile95 $benchSubmit))/vertex$((Get-Median $benchVertex))/$((Get-Percentile95 $benchVertex))/setup$((Get-Median $benchSetup))/$((Get-Percentile95 $benchSetup))/scan$((Get-Median $benchScan))/$((Get-Percentile95 $benchScan))"
                 }
                 Assert-Condition ($rendererProfileMarker.Success -and [int64]$rendererProfileMarker.Groups[1].Value -eq $RendererProfileLevel) "Canonical realtime HW build did not report renderer profile level $RendererProfileLevel." $gdbStdout
                 Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout

@@ -13,6 +13,17 @@
 #define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY 0
 #endif
 
+/* libnds builds default to compact Thumb code, but the DS reference renderer
+ * keeps its display-list interpreter and GX submission loops in ARM state.
+ * These four measured loops favor ARM's full register file and conditional
+ * execution; retain the ordinary hot/O3 annotation for host-side fixtures. */
+#if defined(__arm__)
+#define NDS_RENDERER_HOT_CODE \
+    __attribute__((hot, optimize("O3"), target("arm"), section(".itcm")))
+#else
+#define NDS_RENDERER_HOT_CODE __attribute__((hot, optimize("O3")))
+#endif
+
 #if NDS_RENDERER_HW_TRIANGLES
 #include <math.h>
 #include <nds.h>
@@ -5217,7 +5228,7 @@ static inline u16 ndsRendererHardwareResolveCi4PackedPair(
         index0, index1, x, y);
 }
 
-static void __attribute__((hot, optimize("O3")))
+static void NDS_RENDERER_HOT_CODE
 ndsRendererHardwareConvertTexel01Ci4Direct(
     const NDSRendererConfig *config,
     const u8 *texels0,
@@ -6155,6 +6166,14 @@ static void ndsRendererLoadHardwareRawComposedMatrix(
     NDSRendererMatrix20p12 projection;
     NDSRendererMatrix20p12 modelview;
 
+    if ((sNdsRendererHardwareMatrixLoaded != 0u) &&
+        (sNdsRendererHardwareMatrixMode ==
+         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
+        (sNdsRendererHardwareMatrixGeneration == generation))
+    {
+        return;
+    }
+
     ndsRendererMtxIdentity20p12(&projection);
     ndsRendererBuildRawHardwareMatrix(composed, &modelview);
     ndsRendererLoadHardwareMatrixPair(
@@ -6171,8 +6190,24 @@ static void ndsRendererLoadHardwareMatrices(
     if ((state != NULL) && (scale_world != 0u) &&
         (state->matrix_valid != 0u))
     {
+        if ((sNdsRendererHardwareMatrixLoaded != 0u) &&
+            (sNdsRendererHardwareMatrixMode ==
+             NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
+            (sNdsRendererHardwareMatrixGeneration ==
+             state->matrix_generation))
+        {
+            return;
+        }
         ndsRendererLoadHardwareRawComposedMatrix(
             &state->matrix, state->matrix_generation);
+        return;
+    }
+
+    if ((sNdsRendererHardwareMatrixLoaded != 0u) &&
+        (sNdsRendererHardwareMatrixMode ==
+         NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY) &&
+        (sNdsRendererHardwareMatrixGeneration == 0u))
+    {
         return;
     }
 
@@ -6608,7 +6643,7 @@ static void ndsRendererHardwareBeginTriangleBatch(
     sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
 }
 
-static void __attribute__((hot, optimize("O3")))
+static void NDS_RENDERER_HOT_CODE
 ndsRendererHardwareSubmitVertex(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
@@ -6945,7 +6980,7 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     return NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX;
 }
 
-static void __attribute__((hot, optimize("O3")))
+static void NDS_RENDERER_HOT_CODE
 ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
@@ -7359,7 +7394,7 @@ static inline void ndsRendererExecuteTriangleCommand(
 #endif
 }
 
-static void __attribute__((hot, optimize("O3")))
+static void NDS_RENDERER_HOT_CODE
 ndsRendererScanList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats,

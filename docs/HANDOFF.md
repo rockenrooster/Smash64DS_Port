@@ -93,16 +93,17 @@ clip Z; a non-TRI opcode invalidates everything. Texture prepare/reuse and
 batching remain `103/725` and `121/707/121`; divisions remain `1,242`.
 
 Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os to preserve
-their `227392`-byte reserve. Four measured renderer loops plus the wallpaper
-writer use targeted O3. The aligned wallpaper path packs two exact RGB5A1
-samples per word, cutting draw cost from about `774K` to `380K` ticks. A GX
-display-list arena trial regressed vertex cost and was fully reverted.
-Warm profile-0 present median/p95 is `5,889,312/6,024,768` at `5.6fps`.
-Profile 1 is `6,021,408/6,318,400`; DL is `4,288,352/4,290,240`, texture is
-`1,196,416/1,196,992`, and sampled vertex submission is about `764K` ticks.
+their `227392`-byte reserve. Its renderer TU now follows sm64-nds in ARM state;
+four measured O3 loops occupy `15,492` ITCM bytes in profile 1 (`14,680` in
+profile 2), while normal/legacy builds stay Thumb. Matrix cache hits now return
+before constructing temporary 4x4 pairs; live loads remain exactly `53`.
+Warm profile-0 present median/p95 is `4,901,760/5,165,440` at `6.6fps`.
+Profile 1 is `4,898,336/4,902,784`; DL is `3,381,152/3,486,208`, texture is
+`803,840/907,840`, setup is `1,311,424/1,414,976`, scan is
+`1,406,752/1,408,448`, and vertex submission is `663,776/665,280` ticks.
 Profile 2 retains oracle `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-11_canonical_fast_233415-5255026-p18944.png`;
-shipped SHA-256: `998628BE3B2110AD68558E85240C0D6885FB5ABF3CC38AE907B5C5A3EBF78B21`.
+`artifacts/visibility/2026-07-12_canonical_fast_002352-0840184-p39796.png`;
+shipped SHA-256: `80F67758BE41809C4F0FFFA9BEDCB82912CAD41E3968051374E79E6340191C9F`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
 separate, original timing stays live, and a post-step corrects packed RGBA.
 Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the
@@ -112,9 +113,9 @@ other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2.
 
 ## Recommended Next Work
-1. The canonical ROM is still only `5.6fps`, not P1-complete. Profile 1 leaves
-   about `3.09M` DL ticks outside texture conversion; reduce interpreter/state
-   work without reviving the regressive GX display-list arena.
+1. The canonical ROM is still only `6.6fps`, not P1-complete. Profile 1 leaves
+   about `1.41M` scan and `1.31M` non-vertex setup ticks; compile immutable
+   packets and hoist exact run state without reviving the GX-list arena.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
    Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
 3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary
@@ -138,8 +139,8 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Fresh component builds plus integrated P1Gate `-NoBuild` passed in `149.5s`;
-Boundary passed in `288.5s`. This is not the five-minute P1 soak; skip Full
-Regression.
+Fresh P1Gate passed in `467.6s`; Boundary passed in `277.7s`. DevFast passed in
+`43.0s` and the separate forensic oracle in `120.7s`. This is not the
+five-minute P1 soak; skip Full Regression.
 
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.
