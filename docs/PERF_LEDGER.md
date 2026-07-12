@@ -357,6 +357,92 @@ NEXT MEASURED BOTTLENECK:
   or fuse setup/transport work in addition to source dispatch.
 ```
 
+## T2A-TRIANGLE-NOOP — source traversal + state/VTX cost floor
+
+```text
+IDEA ID:
+  T2A-TRIANGLE-NOOP
+HYPOTHESIS:
+  Preserving source traversal, branches, state/matrix mutation, VTX decode,
+  persistent cache mutation, and owner boundaries while replacing the first
+  triangle-submission boundary with one compact count will isolate the live
+  source/state/VTX floor.
+TARGETED EXCLUSIVE COUNTER:
+  Whole draw and stage/Mario/Fox owner walls over one synchronized 128-frame
+  profile-1 window.
+MEASURED UPPER BOUND:
+  Relative to T1B's generic medians, work above this floor is at most 1,126,528
+  whole-draw ticks: stage 630,464, Mario 259,136, and Fox 242,048. The floor
+  itself is 45.9% of generic draw, 38.9% of stage, 48.2% of Mario, and 54.7%
+  of Fox.
+LIVE-TREE RECONCILIATION:
+  Started from 2bf4df137 after the exact T1B revert and later texture-upload
+  acceptance. Preserved all untracked user roadmaps, reviews, prompts, logs,
+  and docs/optimization files; decomp remained read-only. Placement guard
+  commit a1844bcd3 preceded the experiment.
+FILES/FUNCTIONS CHANGED:
+  Added a compile-time benchmark-mode identity, dedicated O2/profile-1 target,
+  one 24-byte no-op submit boundary, synchronized benchmark-only verifier,
+  source timer-start tick-reset recognition, and post-link ITCM assertion.
+  Normal targets compile with benchmark mode 0 and contain no runtime branch.
+BUILD TARGET/FLAGS:
+  smash64ds-battle-playable-coarse-triangle-noop-hwtri; common/scene
+  -O2 -mthumb and renderer -O2 -marm; benchmark mode 1.
+BASELINE ROM SHA-256:
+  T1B same-scene generic profile-1:
+  3FF0CB4AD3782C8DF2510A718F740E7A9089275C0912646CF0F4BFE84EAB2FCC.
+EXPERIMENT ROM / ELF SHA-256:
+  E03841FD3D8A673E98AF7F2B24E03CF04E42D16EF8C4E8D39A9140E7E3A06249 /
+  5A32E24CD3B379BABD631865CA9311B6DACB6F6E390AA4135ED411CDDC29F109.
+FRAME/LOGIC-TICK WINDOW:
+  Warm-up 375; frames 376..503; logic 383..112 with the single source-backed
+  ifcommon.c timer-start reset. Frames and all other logic ticks were exact.
+A0 MEDIAN/P95:
+  Generic T1B draw 2,083,264/2,102,784; stage 1,031,680/1,049,536;
+  Mario 500,736/500,800; Fox 534,272/534,336.
+B0 MEDIAN/P95:
+  TRIANGLE_NOOP draw 956,736/957,056; stage 401,216/401,408;
+  Mario 241,600/241,664; Fox 292,224/292,288.
+A1 OR DISABLED-CONTROL MEDIAN/P95:
+  Compile-time nonvisual floor; normal mode 0 is the disabled control. A
+  same-ROM runtime branch was deliberately not added to the shipping loop.
+ACTIVE/WAIT SPLIT:
+  Loop 1,120,256/1,120,576; present active 959,840/960,192;
+  VBlank wait 33,536/40,128; update 125,280/150,528;
+  conservation error 0/0 and all residual ratios below 2%.
+OWNER SPLIT:
+  Stage layer 0 159,552/159,552. Whole-owner values are listed above.
+RENDERER NESTED/EXCLUSIVE SPLIT:
+  Detailed DL/submit/vertex timers are compile-time absent in profile 1.
+  Texture conversion/upload and GX flush were 0/0 by construction.
+OP/PROGRAM BYTES/FALLBACKS:
+  One 24-byte noinline ARM/O3/ITCM submit counter. Exactly 828 source
+  triangles were counted on every frame; no fallback or allocation exists.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  ITCM 11,472 bytes, including 9,712-byte scanner and 24-byte no-op submit;
+  text/data/BSS 633,052/126,096/1,797,512; DTCM 0. No arena or per-frame
+  allocation. ROM 11,641,856 bytes; ELF 7,968,156 bytes.
+SEMANTIC TRACE RESULT:
+  Not applicable: this is an explicitly nonvisual feasibility ablation that
+  stops before classification and semantic output.
+ORACLE/COUNTER/GX RESULT:
+  Exact 828 source triangle count per frame. Oracle, submit classes, texture
+  preparation, uploads, GX geometry, and flush work were intentionally zero.
+CAPTURE RESULT:
+  None; the benchmark is nonvisual by contract.
+VERIFIER COMMANDS AND RESULTS:
+  GBI fixtures passed. ITCM placement passed under Windows PowerShell 5.1.
+  benchmark-renderer-triangle-noop.ps1 -NoBuild -DelaySeconds 3
+  -RendererBenchmarkSamples 128 passed frame/count/conservation gates.
+DECISION: KEEP
+  Keep the benchmark-only ablation and measurement tooling. It is not a
+  production renderer path. The source/state/VTX floor is too large to treat
+  the historical scan bucket as fully removable.
+NEXT MEASURED BOTTLENECK:
+  Run full CPU preparation with final GX writes redirected to a calibrated
+  bounded aligned ring sink, then measure the warm no-upload control.
+```
+
 ## Per-experiment report template
 
 ```text

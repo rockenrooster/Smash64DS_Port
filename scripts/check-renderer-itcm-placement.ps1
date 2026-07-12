@@ -2,6 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string[]]$Elf,
     [string]$Objdump = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-objdump.exe',
+    [switch]$BenchmarkAblation,
     [ValidateRange(1, 32768)]
     [int]$MaxItcmBytes = 32768
 )
@@ -16,11 +17,15 @@ $hotFunctions = @(
     'ndsRendererSubmitHardwareTriangle',
     'ndsRendererScanList'
 )
-$requiredEmittedFunctions = @(
-    'ndsRendererHardwareSubmitVertex',
-    'ndsRendererSubmitHardwareTriangle',
-    'ndsRendererScanList'
-)
+$requiredEmittedFunctions = if ($BenchmarkAblation) {
+    @('ndsRendererSubmitHardwareTriangle', 'ndsRendererScanList')
+} else {
+    @(
+        'ndsRendererHardwareSubmitVertex',
+        'ndsRendererSubmitHardwareTriangle',
+        'ndsRendererScanList'
+    )
+}
 
 if (-not (Test-Path -LiteralPath $Objdump -PathType Leaf)) {
     throw "arm-none-eabi-objdump was not found at '$Objdump'."

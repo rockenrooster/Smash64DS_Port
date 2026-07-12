@@ -1705,6 +1705,8 @@ $makefile = Get-Content (Join-Path $root 'Makefile') -Raw
 $battlePlayableVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-harness.ps1') -Raw
 Assert-True ($makefile.Contains('NDS_RENDERER_HW_TRIANGLES ?= 0')) 'Makefile hardware renderer flag default is missing.'
 Assert-True ($makefile.Contains('NDS_RENDERER_PROFILE_LEVEL ?= 2')) 'Makefile renderer profile default is not forensic-safe.'
+Assert-True ($makefile.Contains('NDS_RENDERER_BENCHMARK_MODE ?= 0')) 'Makefile renderer benchmark modes no longer default off.'
+Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-triangle-noop-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1.*?override NDS_RENDERER_BENCHMARK_MODE := 1') 'TRIANGLE_NOOP cost-floor target is not a dedicated profile-1 build.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-canonical-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 0') 'Canonical/shipped renderer is not forced to performance profile 0.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1') 'Internal coarse renderer target is not forced to profile 1.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-forensic-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 2') 'Internal forensic renderer target is not forced to profile 2.'

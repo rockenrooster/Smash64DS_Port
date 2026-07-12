@@ -846,6 +846,11 @@ static u32 sNdsRendererRuntimeCi4RepresentativePixelCount;
 static u32 sNdsRendererRuntimeCi4ReusePixelCount;
 #endif
 
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+volatile u32 gNdsRendererBenchmarkTriangleCount;
+static u32 sNdsRendererBenchmarkTriangleCount;
+#endif
+
 static inline void ndsRendererProfileRecordTextureBind(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -8506,6 +8511,21 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     return NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX;
 }
 
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
+static void __attribute__((noinline)) NDS_RENDERER_HOT_CODE
+ndsRendererSubmitHardwareTriangle(
+    NDSRendererStats *stats,
+    const NDSRendererConfig *config,
+    NDSRendererTraversalState *state,
+    u32 packed)
+{
+    (void)stats;
+    (void)config;
+    (void)state;
+    (void)packed;
+    sNdsRendererBenchmarkTriangleCount++;
+}
+#else
 static void NDS_RENDERER_HOT_CODE
 ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
@@ -8998,6 +9018,7 @@ ndsRendererSubmitHardwareTriangle(
         stats->hardware_projected_depth_triangle_count++;
     }
 }
+#endif
 #endif
 
 static inline void ndsRendererExecuteTriangleCommand(
@@ -9784,6 +9805,9 @@ void ndsRendererProfileFrameBegin(void)
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileResetSubmitSummary();
 #endif
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+    sNdsRendererBenchmarkTriangleCount = 0u;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     memset(&sNdsRendererRuntimeFrameSummary, 0,
            sizeof(sNdsRendererRuntimeFrameSummary));
@@ -9806,6 +9830,10 @@ void ndsRendererProfileFrameBegin(void)
 
 void ndsRendererProfileFramePublish(void)
 {
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+    gNdsRendererBenchmarkTriangleCount =
+        sNdsRendererBenchmarkTriangleCount;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileGXStatusPostVBlank =
         sNdsRendererProfileGXStatusPostVBlank;

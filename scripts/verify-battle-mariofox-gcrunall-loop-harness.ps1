@@ -27,6 +27,7 @@ param(
     [switch]$CPUOpponentProof,
     [switch]$MatchLifecycleProof,
     [switch]$RequireRealtime60Fps,
+    [switch]$RendererBenchmarkOnly,
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
@@ -39,6 +40,9 @@ param(
     [string]$HarnessSelectMessage = 'Direct gcRunAll-loop harness did not select VSBattle from Maps.'
 )
 $ErrorActionPreference = 'Stop'
+if ($RendererBenchmarkOnly -and ($RendererBenchmarkSamples -eq 0)) {
+    throw 'RendererBenchmarkOnly requires RendererBenchmarkSamples greater than zero.'
+}
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -232,6 +236,7 @@ function Get-BenchmarkMakeIdentity {
     }
     $required = @(
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE',
+        'RENDERER_BENCHMARK_MODE',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
     foreach ($key in $required) {
@@ -244,6 +249,7 @@ function Get-BenchmarkMakeIdentity {
         Harness = $values.HARNESS
         HarnessId = [int]$values.HARNESS_ID
         Profile = [int]$values.PROFILE
+        RendererBenchmarkMode = [int]$values.RENDERER_BENCHMARK_MODE
         CommonCFlags = $values.CFLAGS_COMMON
         RendererCFlags = $values.CFLAGS_RENDERER
         SceneCFlags = $values.CFLAGS_SCENE
@@ -329,8 +335,10 @@ if (-not $NoBuild) {
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw "$Label harness build did not produce the expected ROM and ELF."
 }
-if ($Target -match '^smash64ds-battle-playable-(canonical|coarse|forensic)-hwtri$') {
-    & (Join-Path $PSScriptRoot 'check-renderer-itcm-placement.ps1') -Elf $elf
+if ($Target -match '^smash64ds-battle-playable-(canonical|coarse(?:-[a-z-]+)?|forensic)-hwtri$') {
+    & (Join-Path $PSScriptRoot 'check-renderer-itcm-placement.ps1') `
+        -Elf $elf `
+        -BenchmarkAblation:$RendererBenchmarkOnly
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melonDsPath" }
@@ -456,6 +464,13 @@ try {
                     $coarseBenchmarkCommands += Get-RendererSemanticBenchmarkCommand
                 }
             }
+            $benchmarkTriangleSymbol = if ($RendererBenchmarkOnly) {
+                'gNdsRendererBenchmarkTriangleCount'
+            } else {
+                'gNdsRendererProfileHardwareTriangles'
+            }
+            $rendererBenchmarkCommand =
+                'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, {0}, gNdsRendererProfileOracleSamples, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes' -f $benchmarkTriangleSymbol
             $gdbCommands = @(
                 $gdbCommands[0..3]
                 'set $renderer_benchmark_samples = 0'
@@ -463,7 +478,7 @@ try {
                 'commands'
                 'silent'
                 'if gNdsBattlePlayablePacingResult != 0'
-                'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileOracleSamples, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes'
+                $rendererBenchmarkCommand
                 $coarseBenchmarkCommands
                 'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
                 'end'
@@ -866,6 +881,7 @@ try {
                         $gxBoundarySamples = [System.Collections.Generic.List[object]]::new()
                         $stage0Samples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
+                        $logicTickResetCount = 0
                         $drawResidualRatios = @()
                         $presentResidualRatios = @()
                         $loopResidualRatios = @()
@@ -901,7 +917,19 @@ try {
                             Assert-Condition ($frame -eq $render[1] -and $drawTicks -eq $render[3]) "Coarse renderer benchmark frame $frame is not synchronized with RENDER_BENCH." $gdbStdout
                             if ($sampleIndex -gt 0) {
                                 $previousCoarse = Get-Ints $coarseBenchmark[$sampleIndex - 1]
-                                Assert-Condition ($frame -eq ($previousCoarse[0] + 1) -and $coarse[23] -eq ($previousCoarse[23] + 1)) "Coarse renderer benchmark frame/logic window is not contiguous at frame $frame tick $($coarse[23])." $gdbStdout
+                                $logicTickContinues =
+                                    $coarse[23] -eq ($previousCoarse[23] + 1)
+                                # BattleShip ifcommon.c:3173-3178 starts the
+                                # five-minute timer after the Ready/Go wait by
+                                # resetting the scheduler tic counter once.
+                                $logicTimerStartReset =
+                                    ($coarse[23] -eq 1) -and
+                                    ($previousCoarse[23] -ge 300) -and
+                                    ($logicTickResetCount -eq 0)
+                                if ($logicTimerStartReset) {
+                                    $logicTickResetCount++
+                                }
+                                Assert-Condition ($frame -eq ($previousCoarse[0] + 1) -and ($logicTickContinues -or $logicTimerStartReset)) "Coarse renderer benchmark frame/logic window is not contiguous or the single source timer-start reset at frame $frame tick $($coarse[23])." $gdbStdout
                             }
                             Assert-Condition (($sourceUpdate + $audioUpdate) -le $update) "Coarse renderer benchmark update subphases exceed update wall time at frame $frame." $gdbStdout
                             Assert-Condition ($presentActive -eq $expectedPresentActive -and $coarse[19] -eq $expectedDrawResidual -and $coarse[20] -eq $expectedPresentResidual -and $coarse[21] -eq $expectedLoopResidual -and $coarse[22] -eq $expectedConservationError) "Coarse renderer benchmark residual equations failed at frame $frame." $gdbStdout
@@ -1031,6 +1059,8 @@ try {
                             id = $benchmarkMakeIdentity.HarnessId
                         }
                         rendererProfile = $benchmarkMakeIdentity.Profile
+                        rendererBenchmarkMode =
+                            $benchmarkMakeIdentity.RendererBenchmarkMode
                         effectiveCFlags = [ordered]@{
                             common = $benchmarkMakeIdentity.CommonCFlags
                             renderer = $benchmarkMakeIdentity.RendererCFlags
@@ -1071,12 +1101,26 @@ try {
                             frameEnd = [int64]$benchFrames[-1]
                             logicTickStart = $logicTickStart
                             logicTickEnd = $logicTickEnd
+                            logicTickTimerStartResets = $logicTickResetCount
                             delaySeconds = [Math]::Max($DelaySeconds, $minimumDelay)
                         }
                     }
                     $benchmarkIdentitySummary =
                         'BENCH_IDENTITY=' +
                         ($benchmarkIdentity | ConvertTo-Json -Compress -Depth 6)
+                }
+                if ($RendererBenchmarkOnly) {
+                    Assert-Condition ($benchmarkMakeIdentity.RendererBenchmarkMode -gt 0) 'Benchmark-only verifier was not built with a renderer benchmark mode.' ($benchmarkMakeIdentity | Format-List | Out-String)
+                    Write-Output $benchmarkIdentitySummary
+                    Write-Output $benchmarkMetricSummary
+                    Write-Output $benchmarkChurnSummary
+                    Write-Output $coarseMetricSummary
+                    Write-Output $coarseResidualRatioSummary
+                    Write-Output $gxBoundarySummary
+                    Write-Output $stage0Summary
+                    $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
+                    Write-Output "$Label renderer benchmark-only sample passed."
+                    return
                 }
                 Assert-Condition ($rendererProfileMarker.Success -and [int64]$rendererProfileMarker.Groups[1].Value -eq $RendererProfileLevel) "Canonical realtime HW build did not report renderer profile level $RendererProfileLevel." $gdbStdout
                 Assert-Condition $renderTexHash.Success 'Canonical realtime HW build did not publish texture lookup accounting.' $gdbStdout
