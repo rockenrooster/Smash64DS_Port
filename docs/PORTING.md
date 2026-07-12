@@ -19914,3 +19914,50 @@ documented O2 policy; texture equality and all live conversion/upload inputs are
 unchanged. Coverage-reduced verifier expectations: Full/Legacy Regression was
 skipped by request; DevFast, P1Gate, Boundary, collision fallback, and the
 profile-2 linear/oracle route remain.
+
+## 2026-07-12 - Indexed exact CI4 representatives
+
+- Re-profiled the current `~0.87M` non-vertex setup bucket rather than applying
+  the July 11 review's already-landed large cuts again. Temporary profile-1
+  timers isolated animated texture work at about `0.42M` ticks; readiness,
+  material/alpha, matrix/batch, and post-submit work were smaller. More focused
+  probes measured S/T address maps at `11.5K/10.2K`, quadratic representative
+  discovery at `32.7K`, and evaluation/row expansion at `126.1K/25.4K`.
+  All temporary probes and output were removed.
+- A tested camera-composed DObj cache had zero eligible calls because Pupupu's
+  `0x4C` camera path already carries LookAt in projection. It was fully removed
+  instead of retaining a no-op cache or spending another 4.5 KiB.
+- Profiles 0/1 now find the first exact `(TEXEL0 address, TEXEL1 address,
+  ordered-coverage phase)` representative through a 256-slot u32 table. The
+  key and first index share one word; open addressing preserves collisions and
+  the 128-coordinate maximum keeps the 1 KiB table at most half full. Profile 2
+  remains independent and bytewise.
+- Unique rows expand left-to-right: a duplicate consumes its strictly earlier
+  first representative immediately, avoiding the former second pass and its
+  redundant writes. Repeat rows retain the existing bottom-to-top copy. Live
+  origins, masks, palettes, blend fraction, source indices, and uploads remain
+  outside the class table; no texture or composed frame is cached.
+- The host oracle compares hashed representatives with the old quadratic first
+  match under phase-only/nonperiodic maps, requires collision probes, and
+  compares the expanded pixels with direct evaluation.
+- Against the prior clean profile-1 baseline, median/P95 draw improves
+  `3,016,064/3,463,424 -> 2,965,152/3,410,368`, texture
+  `395,232/398,400 -> 346,304/348,352`, and setup
+  `871,552/876,544 -> 825,856/830,720`; scan is `948,736/950,144`.
+  Shipping O2 draw improves `2,658,304/2,661,760 ->
+  2,601,984/2,605,184`, and pacing reaches `9.9fps`.
+- The 1 KiB table raises profile-0 BSS to `1,857,584`. Factoring discovery out
+  of the hot conversion function lowers canonical/profile-1 ITCM to
+  `31,672/20,036`; profile 2 remains `18,216`. DevFast, the dated dual-screen
+  visibility gate, GBI fixtures, and rebuilt forensic oracle `2484/0/0` pass.
+- Rebuilt DevFast (`57.2s`), prebuilt P1Gate (`149.9s`), prebuilt Boundary
+  161/162/163 (`56.7s`), and the post-rebuild forensic run (`26.5s`) pass.
+  Canonical/shipped parity is 11,670,528 bytes at SHA-256
+  `D60AF90333C044CCB4F769D986ABDE217450483D17984C28DB7F5CEED8550707`.
+  The final automated dual-screen capture is
+  `artifacts/visibility/2026-07-12_canonical_fast_073710-9321374-p42864.png`.
+
+Source-corrected verifier expectations: none; the class key contains every
+input used by the prior exact first-match test, and forward expansion reads only
+an already-written first representative. Coverage-reduced verifier expectations:
+Full/Legacy Regression remains skipped for the requested fast iteration cadence.

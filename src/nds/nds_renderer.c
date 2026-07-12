@@ -115,6 +115,9 @@
 #define NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT 128u
 #define NDS_RENDERER_HW_CI4_INDEX_CACHE_COUNT 2u
 #define NDS_RENDERER_HW_CI4_INDEX_CACHE_TEXELS 1024u
+#define NDS_RENDERER_HW_CI4_CLASS_TABLE_COUNT 256u
+#define NDS_RENDERER_HW_CI4_CLASS_KEY_MASK 0x7ffffu
+#define NDS_RENDERER_HW_CI4_CLASS_INDEX_SHIFT 19u
 #define NDS_RENDERER_HW_TEXEL01_RGB_MASK 0x7fffu
 #define NDS_RENDERER_HW_TEXEL01_COVERAGE_SHIFT 15u
 #define NDS_RENDERER_HW_TEXTURE_FMT_RGBA16 0u
@@ -836,6 +839,8 @@ static u8 sNdsRendererHardwareTexel01Ci4RepresentativeS[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
 static u8 sNdsRendererHardwareTexel01Ci4RepresentativeT[
     NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT];
+static u32 sNdsRendererHardwareTexel01Ci4ClassTable[
+    NDS_RENDERER_HW_CI4_CLASS_TABLE_COUNT];
 #if defined(__arm__)
 _Static_assert(
     sizeof(sNdsRendererHardwareTexel01Ci4Source0T) +
@@ -843,6 +848,18 @@ _Static_assert(
     sizeof(sNdsRendererHardwareTexel01Ci4RepresentativeS) +
     sizeof(sNdsRendererHardwareTexel01Ci4RepresentativeT) == 512u,
     "CI4 representative maps must stay within 512 bytes");
+_Static_assert(sizeof(sNdsRendererHardwareTexel01Ci4ClassTable) == 1024u,
+               "CI4 representative class table must stay within 1 KiB");
+_Static_assert(
+    (NDS_RENDERER_HW_CI4_CLASS_TABLE_COUNT &
+     (NDS_RENDERER_HW_CI4_CLASS_TABLE_COUNT - 1u)) == 0u,
+    "CI4 representative class table must remain a power of two");
+_Static_assert(
+    (NDS_RENDERER_HW_TEXTURE_MAX_WIDTH <=
+     (NDS_RENDERER_HW_CI4_CLASS_TABLE_COUNT / 2u)) &&
+    (NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT <=
+     (NDS_RENDERER_HW_CI4_CLASS_TABLE_COUNT / 2u)),
+    "CI4 representative class table must remain at most half full");
 #endif
 #endif
 static u16 sNdsRendererHardwareTexel01Ci4PhaseLut[
@@ -5738,6 +5755,48 @@ static const u8 *ndsRendererHardwareGetCi4Indices(
     ndsRendererProfileRecordCi4IndexCacheBuild();
     return entry->indices;
 }
+
+static u32 ndsRendererHardwareBuildCi4RepresentativeMap(
+    const u8 *source0, const u8 *source1, u8 *representative, u32 count)
+{
+    u32 i;
+    u32 unique = 0u;
+
+    /* The exact 18-bit class key plus one reserves zero as empty; the upper
+     * field stores the first coordinate. At most 128 coordinates enter the
+     * 256-slot table, so linear probing always reaches an empty terminator. */
+    memset(sNdsRendererHardwareTexel01Ci4ClassTable, 0,
+           sizeof(sNdsRendererHardwareTexel01Ci4ClassTable));
+    for (i = 0u; i < count; i++)
+    {
+        u32 key = ((i & 3u) << 16) |
+            ((u32)source1[i] << 8) | source0[i];
+        u32 stored_key = key + 1u;
+        u32 slot = (key * 0x9e3779b1u) >> 24;
+
+        while (sNdsRendererHardwareTexel01Ci4ClassTable[slot] != 0u)
+        {
+            u32 entry = sNdsRendererHardwareTexel01Ci4ClassTable[slot];
+
+            if ((entry & NDS_RENDERER_HW_CI4_CLASS_KEY_MASK) == stored_key)
+            {
+                representative[i] =
+                    (u8)(entry >> NDS_RENDERER_HW_CI4_CLASS_INDEX_SHIFT);
+                break;
+            }
+            slot = (slot + 1u) &
+                (NDS_RENDERER_HW_CI4_CLASS_TABLE_COUNT - 1u);
+        }
+        if (sNdsRendererHardwareTexel01Ci4ClassTable[slot] == 0u)
+        {
+            sNdsRendererHardwareTexel01Ci4ClassTable[slot] =
+                (i << NDS_RENDERER_HW_CI4_CLASS_INDEX_SHIFT) | stored_key;
+            representative[i] = (u8)i;
+            unique++;
+        }
+    }
+    return unique;
+}
 #endif
 
 static void NDS_RENDERER_HOT_CODE
@@ -5799,10 +5858,10 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
         u32 texels = width * height;
 
         /* Large clamped/masked animated tiles revisit the same pair of source
-         * coordinates and ordered-coverage phase many times. Compute the first
-         * exact representative of each separable S/T class, expand unique rows
-         * right-to-left, then copy repeated rows bottom-to-top. The reverse
-         * order keeps every first representative live until its last use. */
+         * coordinates and ordered-coverage phase many times. Index the first
+         * exact representative of each separable S/T class; forward X expansion
+         * reads only earlier representatives, and repeated rows copy in reverse
+         * Y order after every unique row is complete. */
         if (texels >= 4096u)
         {
             u32 unique_s = 0u;
@@ -5821,48 +5880,14 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                         source1->source_extent_height, render_tile1->cmt,
                         render_tile1->maskt);
             }
-            for (x = 0u; x < width; x++)
-            {
-                u32 prior;
-
-                for (prior = 0u; prior < x; prior++)
-                {
-                    if ((sNdsRendererHardwareTexel01Ci4Source0S[x] ==
-                         sNdsRendererHardwareTexel01Ci4Source0S[prior]) &&
-                        (sNdsRendererHardwareTexel01Ci4Source1S[x] ==
-                         sNdsRendererHardwareTexel01Ci4Source1S[prior]) &&
-                        ((x & 3u) == (prior & 3u)))
-                    {
-                        break;
-                    }
-                }
-                sNdsRendererHardwareTexel01Ci4RepresentativeS[x] = (u8)prior;
-                if (prior == x)
-                {
-                    unique_s++;
-                }
-            }
-            for (y = 0u; y < height; y++)
-            {
-                u32 prior;
-
-                for (prior = 0u; prior < y; prior++)
-                {
-                    if ((sNdsRendererHardwareTexel01Ci4Source0T[y] ==
-                         sNdsRendererHardwareTexel01Ci4Source0T[prior]) &&
-                        (sNdsRendererHardwareTexel01Ci4Source1T[y] ==
-                         sNdsRendererHardwareTexel01Ci4Source1T[prior]) &&
-                        ((y & 3u) == (prior & 3u)))
-                    {
-                        break;
-                    }
-                }
-                sNdsRendererHardwareTexel01Ci4RepresentativeT[y] = (u8)prior;
-                if (prior == y)
-                {
-                    unique_t++;
-                }
-            }
+            unique_s = ndsRendererHardwareBuildCi4RepresentativeMap(
+                sNdsRendererHardwareTexel01Ci4Source0S,
+                sNdsRendererHardwareTexel01Ci4Source1S,
+                sNdsRendererHardwareTexel01Ci4RepresentativeS, width);
+            unique_t = ndsRendererHardwareBuildCi4RepresentativeMap(
+                sNdsRendererHardwareTexel01Ci4Source0T,
+                sNdsRendererHardwareTexel01Ci4Source1T,
+                sNdsRendererHardwareTexel01Ci4RepresentativeT, height);
 
             unique_texels = unique_s * unique_t;
             if ((unique_texels * 2u) <= texels)
@@ -5892,10 +5917,14 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                         u32 index0;
                         u32 index1;
                         u32 phase_lut_index;
+                        u32 representative_x =
+                            sNdsRendererHardwareTexel01Ci4RepresentativeS[x];
 
-                        if (sNdsRendererHardwareTexel01Ci4RepresentativeS[x] !=
-                            x)
+                        if (representative_x != x)
                         {
+                            sNdsRendererHardwareTextureScratch[dst_index + x] =
+                                sNdsRendererHardwareTextureScratch[
+                                    dst_index + representative_x];
                             continue;
                         }
                         index0 = indices0[source0_row +
@@ -5907,17 +5936,6 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                         sNdsRendererHardwareTextureScratch[dst_index + x] =
                             sNdsRendererHardwareTexel01Ci4PhaseLut[
                                 phase_lut_index];
-                    }
-                    for (x = width; x != 0u; )
-                    {
-                        u32 representative_x;
-
-                        x--;
-                        representative_x =
-                            sNdsRendererHardwareTexel01Ci4RepresentativeS[x];
-                        sNdsRendererHardwareTextureScratch[dst_index + x] =
-                            sNdsRendererHardwareTextureScratch[
-                                dst_index + representative_x];
                     }
                 }
                 for (y = height; y != 0u; )

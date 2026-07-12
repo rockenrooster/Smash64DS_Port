@@ -302,6 +302,46 @@ function Resolve-Texel01Ci4LutValue {
     $alpha = if (($Value -shr 15) -gt $threshold) { 1 } else { 0 }
     return [uint16](($Value -band 0x7fff) -bor ($alpha -shl 15))
 }
+function Get-Ci4HashedRepresentatives {
+    param(
+        [int[]]$Source0,
+        [int[]]$Source1
+    )
+    $table = [uint32[]]::new(256)
+    $representatives = [int[]]::new($Source0.Count)
+    $unique = 0
+    $collisionProbes = 0
+
+    Assert-Equal $Source1.Count $Source0.Count 'CI4 hashed representative maps have different lengths.'
+    for ($i = 0; $i -lt $Source0.Count; $i++) {
+        $key = [uint32]((($i -band 3) -shl 16) -bor
+            (($Source1[$i] -band 0xff) -shl 8) -bor
+            ($Source0[$i] -band 0xff))
+        $storedKey = [uint32]($key + 1)
+        $product = ([uint64]$key * [uint64]2654435761) -band [uint64]4294967295
+        $slot = [int](($product -shr 24) -band 0xff)
+
+        while ($table[$slot] -ne 0) {
+            $entry = $table[$slot]
+            if (($entry -band 0x7ffff) -eq $storedKey) {
+                $representatives[$i] = [int]($entry -shr 19)
+                break
+            }
+            $collisionProbes++
+            $slot = ($slot + 1) -band 0xff
+        }
+        if ($table[$slot] -eq 0) {
+            $table[$slot] = [uint32](([uint32]$i -shl 19) -bor $storedKey)
+            $representatives[$i] = $i
+            $unique++
+        }
+    }
+    return [PSCustomObject]@{
+        Representatives = $representatives
+        Unique = $unique
+        CollisionProbes = $collisionProbes
+    }
+}
 function Test-Ci4RepresentativeExpansion {
     param(
         [int[]]$Source0S,
@@ -340,6 +380,18 @@ function Test-Ci4RepresentativeExpansion {
         $representativeT[$y] = $prior
         if ($prior -eq $y) { $uniqueT++ }
     }
+    $hashedS = Get-Ci4HashedRepresentatives -Source0 $Source0S -Source1 $Source1S
+    $hashedT = Get-Ci4HashedRepresentatives -Source0 $Source0T -Source1 $Source1T
+    Assert-Equal ([string]::Join(',', $hashedS.Representatives)) `
+        ([string]::Join(',', $representativeS)) `
+        'CI4 hashed S representatives diverged from first exact matches.'
+    Assert-Equal ([string]::Join(',', $hashedT.Representatives)) `
+        ([string]::Join(',', $representativeT)) `
+        'CI4 hashed T representatives diverged from first exact matches.'
+    $representativeS = $hashedS.Representatives
+    $representativeT = $hashedT.Representatives
+    $uniqueS = $hashedS.Unique
+    $uniqueT = $hashedT.Unique
 
     $direct = [uint16[]]::new($width * $height)
     $expanded = [uint16[]]::new($width * $height)
@@ -360,11 +412,10 @@ function Test-Ci4RepresentativeExpansion {
         for ($x = 0; $x -lt $width; $x++) {
             if ($representativeS[$x] -eq $x) {
                 $expanded[$row + $x] = $direct[$row + $x]
+            } else {
+                $expanded[$row + $x] =
+                    $expanded[$row + $representativeS[$x]]
             }
-        }
-        for ($x = $width - 1; $x -ge 0; $x--) {
-            $expanded[$row + $x] =
-                $expanded[$row + $representativeS[$x]]
         }
     }
     for ($y = $height - 1; $y -ge 0; $y--) {
@@ -383,6 +434,8 @@ function Test-Ci4RepresentativeExpansion {
         UniqueT = $uniqueT
         UniquePixels = $uniqueS * $uniqueT
         ReusedPixels = ($width * $height) - ($uniqueS * $uniqueT)
+        HashCollisionProbes = $hashedS.CollisionProbes +
+            $hashedT.CollisionProbes
     }
 }
 function Convert-N64Rgba16ToDs {
@@ -1101,7 +1154,8 @@ $nonperiodicMap = Test-Ci4RepresentativeExpansion `
     -Source0T $nonperiodicSource0T -Source1T $nonperiodicSource1T
 Assert-True ($nonperiodicMap.UniquePixels -gt 0 -and
     ($nonperiodicMap.UniquePixels * 2) -le (128 * 128) -and
-    $nonperiodicMap.ReusedPixels -ge $nonperiodicMap.UniquePixels) `
+    $nonperiodicMap.ReusedPixels -ge $nonperiodicMap.UniquePixels -and
+    $nonperiodicMap.HashCollisionProbes -gt 0) `
     'CI4 nonperiodic representative fixture no longer exercises the retained large-texture reuse threshold.'
 $pondMObj = Convert-MObjSubMixedFields -Pad00 0x0202 -Fmt 0 -Siz 0 -Flags 0x0200 -BlockFmt 0x6b -BlockSiz 0
 Assert-True ($pondMObj.Pad00 -eq 0 -and $pondMObj.Fmt -eq 2 -and $pondMObj.Siz -eq 2 -and $pondMObj.Flags -eq 0x006b -and $pondMObj.BlockFmt -eq 2 -and $pondMObj.BlockSiz -eq 0) 'Dream Land water MObjSub mixed fields did not recover the source layout.'
@@ -1258,8 +1312,10 @@ Assert-True ($renderer.Contains('== 512u') -and $renderer.Contains('CI4 represen
 Assert-True ($renderer -match '(?s)ndsRendererHardwareGetCi4Indices.*?entry->source == source.*?entry->source_texels == source_texels.*?entry->byte_lane_xor == byte_lane_xor.*?entry->indices\[i\] = ndsRendererHardwareReadCi4Direct') 'Performance renderer CI4 source-index cache no longer keys and decodes the exact immutable packed source plane.'
 Assert-True ($renderer -match '(?s)replace_index = sNdsRendererHardwareCi4IndexCacheNext;.*?indices ==\s*protected_indices.*?replace_index = \(replace_index \+ 1u\).*?sNdsRendererHardwareCi4IndexCacheNext =\s*\(replace_index \+ 1u\)') 'CI4 pair acquisition can evict the first returned source plane during the second lookup.'
 Assert-True ($renderer -match '(?s)if \(\(indices0 != NULL\) && \(indices1 != NULL\)\).*?index0 = indices0\[.*?index1 = indices1\[.*?return;') 'Performance CI4 source-index cache no longer preserves live tile addressing.'
-Assert-True ($renderer.Contains('sNdsRendererHardwareTexel01Ci4RepresentativeS[x] = (u8)prior;') -and $renderer.Contains('sNdsRendererHardwareTexel01Ci4RepresentativeT[y] = (u8)prior;') -and $renderer -match '(?s)Source0S\[x\].*?Source1S\[x\].*?\(x & 3u\) == \(prior & 3u\)' -and $renderer -match '(?s)Source0T\[y\].*?Source1T\[y\].*?\(y & 3u\) == \(prior & 3u\)') 'Performance CI4 representative keys no longer include both source-address axes and the exact ordered-coverage phase.'
-Assert-True ($renderer -match '(?s)unique_texels \* 2u\) <= texels.*?for \(x = width; x != 0u; \).*?for \(y = height; y != 0u; \).*?memcpy\(') 'Performance CI4 representative path no longer applies its measured threshold or expands first representatives in overwrite-safe reverse order.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_CI4_CLASS_TABLE_COUNT 256u') -and $renderer.Contains('CI4 representative class table must stay within 1 KiB')) 'Performance CI4 representative class table lost its measured half-full 1 KiB bound.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareBuildCi4RepresentativeMap.*?key = \(\(i & 3u\) << 16\).*?source1\[i\] << 8.*?source0\[i\].*?entry & NDS_RENDERER_HW_CI4_CLASS_KEY_MASK.*?stored_key.*?slot = \(slot \+ 1u\).*?representative\[i\] = \(u8\)i') 'Performance CI4 representative hash no longer preserves both source addresses, ordered-coverage phase, collision probing, and first exact match.'
+Assert-True ($renderer -match '(?s)unique_s = ndsRendererHardwareBuildCi4RepresentativeMap\(\s*sNdsRendererHardwareTexel01Ci4Source0S.*?unique_t = ndsRendererHardwareBuildCi4RepresentativeMap\(\s*sNdsRendererHardwareTexel01Ci4Source0T') 'Performance CI4 S/T representative maps no longer share the exact bounded class index.'
+Assert-True ($renderer -match '(?s)unique_texels \* 2u\) <= texels.*?representative_x != x.*?dst_index \+ representative_x.*?for \(y = height; y != 0u; \).*?memcpy\(') 'Performance CI4 representative path no longer applies its measured threshold or expands from already-written first representatives.'
 Assert-True ($harnessScript.Contains('RENDER_CI4MAP=') -and $harnessScript.Contains('Forensic renderer unexpectedly reused performance CI4 representative maps.')) 'Mode 163 no longer proves representative-map reuse while keeping the forensic decoder independent.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u') -and $renderer.Contains('texture lookup must retain an empty cluster terminator')) 'Performance texture lookup lost its measured 128-slot byte table or half-full terminator bound.'
 Assert-True ($renderer.Contains('sizeof(NDSRendererHardwareTextureKey) == 236u') -and $renderer.Contains('entry->key_hash == key_hash') -and $renderer.Contains('ndsRendererHardwareTextureKeyEqual(&entry->key, key)')) 'Performance texture lookup no longer pairs its compact fingerprint with the full exact key oracle.'

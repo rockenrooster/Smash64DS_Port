@@ -62,8 +62,9 @@ restoring layer-3 foreground fences over layer-1 floor/path.
 `gcAddMObjAll` normalizes mixed-width O2R lanes by source provenance. Dream Land
 observes at least four water/Whispy swaps and zero native/failure cases. Exact
 S/T maps, packed CI4 reads, and 17 Bayer phase masks preserve live water. For
-large tiles, profiles 0/1 evaluate only the first identical TEXEL0/TEXEL1/phase
-class, expand each row right-to-left, then copy repeated rows bottom-to-top.
+large tiles, profiles 0/1 index the first identical TEXEL0/TEXEL1/phase class
+through a half-full 1 KiB table, expand forward from each first representative,
+then copy repeated rows bottom-to-top.
 Profile 1 proves `545086/2485954` representative/reused pixels; smaller tiles
 and profile 2 retain the direct loop. The two uploads remain `36,864` bytes with
 zero eviction/reject/oracle drift. Pond detail remains accepted.
@@ -98,18 +99,17 @@ guarded may-alias word loads with bytewise fallback and decode directly into the
 persistent cache. Light direction survives adjacent VTX commands until exact
 matrix/MOVEMEM invalidation; four 128-step RGB tables key source diffuse/ambient
 colors while normals/direction/alpha remain live. The table occupies 2,096
-bytes. CI4 maps add 512 bytes. Profiles 0/1 index the exact texture cache through 128 byte slots and per-entry fingerprints; full 236-byte equality remains the
+bytes. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1 index the exact texture cache through 128 byte slots and per-entry fingerprints; full 236-byte equality remains the
 oracle, and deletion repairs clusters so animated keys leave no tombstones.
-Profile-0 BSS is `1,856,560`; canonical-O2/profile-1/profile-2 ITCM is `32,460/20,888/18,216`, below 32 KiB. Profile 2 keeps the linear/oracle route.
+Profile-0 BSS is `1,857,584`; canonical-O2/profile-1/profile-2 ITCM is `31,672/20,036/18,216`, below 32 KiB. Profile 2 keeps the linear/oracle route.
 Submission stays `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range,
 `1,242` divisions, and `121/707/121` batches. Hash lookup reports `53` calls,
 `49` probes, and `9/42/2` active/table/miss. Against the preceding checkpoint,
-profile-1 median/P95 draw falls `3,043,872/3,491,392 -> 3,016,064/3,463,424`, texture `434,144/439,680 -> 395,232/398,400`, and setup
-`911,936/915,968 -> 871,552/876,544`; scan is `943,200/943,808`. Matched-Os
-profile-0 draw falls `2,913,152/3,359,296 -> 2,858,304/3,304,256`; corrected
-shipping O2 is `2,658,304/2,661,760`, with DevFast/benchmark `9.7/9.8fps`.
-Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_064740-7379227-p41728.png`;
-shipped SHA-256: `D57BC8BB3A69F2B9CF50066AC2BE713A847BA5D7AC728C4D100C95E6061BB034`.
+profile-1 median/P95 draw is `2,965,152/3,410,368`, texture
+`346,304/348,352`, setup `825,856/830,720`, and scan `948,736/950,144`.
+Shipping O2 draw is `2,601,984/2,605,184`; DevFast/benchmark reaches `9.8/9.9fps`.
+Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_073710-9321374-p42864.png`;
+shipped SHA-256: `D60AF90333C044CCB4F769D986ABDE217450483D17984C28DB7F5CEED8550707`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
@@ -132,15 +132,15 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `9.7fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `0.94M/0.87M` ticks; next profile command-state
+The canonical frame is still only `9.9fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `0.95M/0.83M` ticks; next profile command-state
 dispatch and exact TRI-run setup before considering a larger packet cache.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-Prebuilt P1Gate/Boundary passed in `150.6s/56.7s`; rebuilt DevFast/forensic in
-`151.6s/49.4s`. This is not the five-minute soak; Full Regression stays skipped.
+Prebuilt P1Gate/Boundary passed in `149.9s/56.7s`; DevFast/post-rebuild forensic
+passed in `57.2s/26.5s`. This is not the five-minute soak; Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

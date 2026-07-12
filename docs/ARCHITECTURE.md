@@ -1404,13 +1404,13 @@ table occupies 2,096 bytes; that earlier increment raised net BSS 2,080 bytes.
 Animated CI4 phase planes remain an exact 8 KiB table, and texture preparation
 retains its mutation-keyed epoch. Profiles 0/1 decode two immutable CI4 index
 planes, then group a large output axis only when TEXEL0 address, TEXEL1 address,
-and 4x4 ordered-coverage phase all match. First representatives are expanded
-right-to-left and repeat rows bottom-to-top, so no representative is overwritten
-before its last use. A `>=4096`-pixel and at-least-50%-reuse gate leaves smaller
-or weakly repeating inputs on the direct loop; profile 2 omits both caches. The
-four address/representative maps are exactly 512 bytes; current canonical
-profile-0 BSS is `1,856,560`. Canonical-O2/profile-1/profile-2 renderer ITCM is
-`32,460/20,888/18,216` of 32,768 bytes; the shipped route retains 308 bytes.
+and 4x4 ordered-coverage phase all match. A half-full 256-slot, 1 KiB table
+preserves the first exact representative under collisions; rows expand forward
+from already-written representatives, then repeat rows copy bottom-to-top. A
+`>=4096`-pixel and at-least-50%-reuse gate leaves smaller or weakly repeating
+inputs on the direct loop; profile 2 omits both caches. The four maps are 512
+bytes; canonical profile-0 BSS is `1,857,584`. Canonical-O2/profile-1/profile-2
+renderer ITCM is `31,672/20,036/18,216` of 32,768 bytes.
 Cache-hit guards run before temporary GX matrix construction; the final matrix-
 state guard remains exact.
 
