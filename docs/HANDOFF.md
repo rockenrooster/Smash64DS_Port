@@ -95,19 +95,19 @@ invalidates at exact key mutations. Prepare/reuse is `98/730`; batching remains
 
 Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os to preserve
 their `227392`-byte reserve. Its renderer TU now follows sm64-nds in ARM state;
-four measured O3 loops occupy `14,212` ITCM bytes in profile 1 (`14,128`
-forensic), while normal/legacy builds stay Thumb. One 40-byte exact context
-supplies all three vertex calls instead of restaging 22 arguments three times;
-eight Boolean modes share one word. Profiles 0/1 reuse live ordered-list state;
-profile 2 remains independent. Runtime omits its 82,176-byte stats array.
-Matrix loads remain `53`, batches `121/707/121`, and submissions
-`648/44/126/10`. An 8 KiB table resolves all sixteen exact CI4 coverage phases;
-the removed pair branch covered only `2,048/18,432` pixels. Matched profile-1
-draw falls `4,473,120 -> 4,164,800`, DL `3,317,280 -> 3,017,888`, texture
-`908,192 -> 595,424`, and setup `1,385,856 -> 1,074,912` ticks. Profile 0
-reaches `7.5fps` at `3,983,296/3,984,640` draw; profile 2 retains oracle
-`2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_030326-3934155-p33036.png`;
-shipped SHA-256: `00C9A6167F01E43950098854A56BFB271F1E3A1CEE2741EF7F14D38E24D397FB`.
+six measured O3 paths occupy `18,816` ITCM bytes in profile 1 (`18,216`
+forensic), while normal/legacy builds stay Thumb. The source VTX handler now
+uses guarded aligned word loads with bytewise fallback and decodes directly into
+the persistent cache. Exact light direction persists until matrix/MOVEMEM
+mutation; four 128-step tables key diffuse/ambient RGB while live normal,
+direction, alpha, and incomplete-state fallback remain uncached. They add 2,080
+net BSS bytes around a 2,096-byte table. Matrix loads remain `53`, batches `121/707/121`, and submissions
+`648/44/126/10`. Matched profile-1 draw falls `4,164,800 -> 3,974,048`, DL
+`3,017,888 -> 2,819,616`, scan `1,432,864 -> 1,255,424`, and vertex
+`509,760 -> 492,768` ticks. Profile 0 reaches `7.6fps` at
+`3,782,752/3,783,680` draw; profile 2 retains oracle `2484/0/0`. Capture:
+`artifacts/visibility/2026-07-12_canonical_fast_034905-8915840-p27924.png`;
+shipped SHA-256: `6DCD00EA6257519BC6C0F33B818D883E31CD6845B2B036C9F42A4FE239606B95`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
 separate, original timing stays live, and a post-step corrects packed RGBA.
 Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the
@@ -117,9 +117,9 @@ other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2.
 
 ## Recommended Next Work
-1. The canonical ROM is still only `7.5fps`, not P1-complete. Profile 1 leaves
-   about `1.43M` scan and `1.07M` non-vertex setup ticks. Split source matrix/
-   state commands and VTX lighting before another exact runtime cut.
+1. The canonical ROM is still only `7.6fps`, not P1-complete. Profile 1 leaves
+   about `1.26M` scan and `1.07M` non-vertex setup ticks. Matrix handlers were
+   only about 10K; split branch/state overhead, then hoist exact TRI-run setup.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
    Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
 3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary
@@ -143,7 +143,7 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-P1Gate passed in `189.2s`; Boundary passed in `81.2s`. DevFast passed in
-`44.5s` and the separate forensic oracle in `24.5s`. This is not the
+P1Gate passed in `189.0s`; Boundary passed in `81.9s`. DevFast passed in
+`52.3s` and the separate forensic oracle in `25.3s`. This is not the
 five-minute P1 soak; skip Full Regression.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

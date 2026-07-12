@@ -88,22 +88,21 @@ Only `2,048/18,432` pixels were pairable, so the regressive pair branch is gone.
 
 Canonical mode 163 alone keeps `-O2`; the larger scripted/lifecycle diagnostics
 stay `-Os` and retain `227392` bytes of headroom. Mode 163 compiles the renderer
-TU in ARM state, while four measured O3 loops live in ITCM. One 40-byte exact
-context supplies each three-vertex submission instead of restaging 22 arguments
-three times; its eight Boolean modes share one flag word. The 8 KiB phase LUT
-adds 7,168 net BSS bytes; renderer ITCM is `14,068/14,212/14,128` bytes for
-profiles 0/1/2. Profile 2 retains its independent generic/oracle route.
+TU in ARM state; six measured O3 paths live in ITCM. Aligned VTX payloads use
+guarded may-alias word loads with bytewise fallback and decode directly into the
+persistent cache. Light direction survives adjacent VTX commands until exact
+matrix/MOVEMEM invalidation; four 128-step RGB tables key source diffuse/ambient
+colors while normals/direction/alpha remain live. The table occupies 2,096
+bytes and net BSS rises 2,080;
+ITCM is `18,512/18,816/18,216` bytes. Profile 2 keeps its generic/oracle route.
 Submission stays `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range,
-`1,242` divisions, and `121/707/121` batches. Immutable-packet and redundant
-GX-attribute experiments were measured and reverted because neither reduced
-the frame. A matched profile-1 A/B cuts draw `4,473,120 -> 4,164,800`, DL
-`3,317,280 -> 3,017,888`, texture `908,192 -> 595,424`, and setup
-`1,385,856 -> 1,074,912` ticks. Final present is `4,336,864/4,592,960`; scan
-is `1,432,864/1,433,856` and vertex `509,760/511,360`. Profile 0 reaches
-`7.5fps`; draw is `3,983,296/3,984,640`.
+`1,242` divisions, and `121/707/121` batches. A matched current A/B cuts draw
+`4,164,800 -> 3,974,048`, DL `3,017,888 -> 2,819,616`, scan
+`1,432,864 -> 1,255,424`, and vertex `509,760 -> 492,768` ticks; setup remains
+`1,070,176`. Profile 0 reaches `7.6fps` at `3,782,752/3,783,680` draw.
 Forensic oracle remains `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_canonical_fast_030326-3934155-p33036.png`;
-shipped SHA-256: `00C9A6167F01E43950098854A56BFB271F1E3A1CEE2741EF7F14D38E24D397FB`.
+`artifacts/visibility/2026-07-12_canonical_fast_034905-8915840-p27924.png`;
+shipped SHA-256: `6DCD00EA6257519BC6C0F33B818D883E31CD6845B2B036C9F42A4FE239606B95`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
@@ -131,15 +130,15 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `7.5fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `1.43M/1.07M` ticks; next split source matrix/
-state commands and VTX lighting. RGBA4 HUD, Whispy face strips, and Mario
-facing/light A/B remain debt.
+The canonical frame is still only `7.6fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `1.26M/1.07M` ticks; matrix handlers measured
+only about 10K, so next split branch/state interpreter overhead and hoist exact
+triangle-run setup. RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-P1Gate passed in `189.2s`; Boundary passed in `81.2s`. DevFast passed in
-`44.5s` and the forensic oracle in `24.5s`. This is not the five-minute soak;
+P1Gate passed in `189.0s`; Boundary passed in `81.9s`. DevFast passed in
+`52.3s` and the forensic oracle in `25.3s`. This is not the five-minute soak;
 Full Regression stays skipped.
 
 ```powershell

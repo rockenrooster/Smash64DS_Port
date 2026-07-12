@@ -19728,3 +19728,46 @@ Source-corrected verifier expectations: none; the table stores the same exact
 palette-pair/phase values and invalidation follows the live state dependencies.
 Coverage-reduced verifier expectations: none; generic conversion, profile-2
 forensics, non-HW builds, dynamic validation, and every submit class remain.
+
+## 2026-07-12 - Moved source VTX decode and lighting into the measured hot path
+
+- Re-profiled the remaining `~1.43M` scan bucket after the CI4 cut. Temporary
+  profile-1 timers measured 113 VTX commands and 821 source vertices at about
+  `417K` ticks: `17K` pointer resolution, `81K` matrix/light preparation, and
+  `289K` decode/shade/cache work. Matrix command handlers were only `~10K`.
+  All probes and temporary verifier output were removed.
+- Coverage counters showed all 821 live VTX payloads 4-byte aligned, 519 lit
+  vertices across 54 commands, 22 repeated matrix/light-direction keys, and
+  only two diffuse/ambient pairs with three transitions. The retained path is
+  still generic: unaligned payloads use the old bytewise decoder and incomplete
+  light state uses the old per-vertex fallback.
+- Added the source VTX handler and generic shade fallback to the existing
+  ARM/O3 ITCM policy. GCC can now inline the decoder/shader into the interpreter.
+  Hardware VTX loads decode directly into the persistent 32-slot source cache
+  instead of copying a temporary 14-byte vertex.
+- Aligned DS payloads use four `may_alias` little-endian word loads. Prepared
+  light direction survives adjacent VTX commands and invalidates at composed
+  matrix, matrix-word, and MOVEMEM mutations. A four-entry, 128-step, 2,096-byte
+  cache stores only the exact RGB result keyed by source diffuse/ambient colors;
+  normals, directions, alpha, vertices, poses, and frames remain live.
+- Matched 16-frame profile 1 improves draw `4,164,800 -> 3,974,048`, DL
+  `3,017,888 -> 2,819,616`, scan `1,432,864 -> 1,255,424`, submission
+  `1,584,864 -> 1,563,648`, and vertex `509,760 -> 492,768` ticks. Non-vertex
+  setup remains `1,070,176`; profile-0 draw improves
+  `3,983,296 -> 3,782,752`, and pacing reaches `7.6fps`.
+- Profile 0/1/2 ITCM is `18,512/18,816/18,216` bytes, below 32 KiB. Runtime BSS
+  rises only 2,080 bytes. The triangle partition remains `648/44/126/10`, batch
+  `121/707/121`, divisions `1,242`, and forensic oracle `2484/0/0`.
+- P1Gate first caught a normal-build reference to the hardware-only cache field;
+  the exact invalidations now use a hardware/no-op macro. DevFast (`52.3s`),
+  forensic (`25.3s`), P1Gate (`189.0s`), Boundary 161/162/163 (`81.9s`), and
+  GBI fixtures pass. Full/Legacy Regression remains skipped for fast iteration.
+  The accepted dual-screen capture is
+  `artifacts/visibility/2026-07-12_canonical_fast_034905-8915840-p27924.png`.
+  Canonical/shipped parity is 11,597,824 bytes at SHA-256
+  `6DCD00EA6257519BC6C0F33B818D883E31CD6845B2B036C9F42A4FE239606B95`.
+
+Source-corrected verifier expectations: none; aligned and cached paths produce
+the same decoded words, normalized direction, and integer shade result.
+Coverage-reduced verifier expectations: none; normal/unaligned/incomplete-light
+fallbacks, profile-2 forensics, every submit class, P1Gate, and Boundary remain.

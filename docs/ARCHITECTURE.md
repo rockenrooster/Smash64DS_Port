@@ -1371,20 +1371,21 @@ runtime writes to the shipped ROM.
 Mode-163 compiler policy follows artifact purpose: canonical realtime uses O2,
 while larger scripted and timer/Results diagnostics use Os for scene reserve.
 Only mode 163 compiles `nds_renderer.c` in ARM state; normal and archived narrow
-builds retain Thumb density. Four measured renderer loops also carry targeted
-O3 and `.itcm`, matching sm64-nds's interpreter/submission layout without
-fast-math or whole-program O3. The three vertex submissions share one 40-byte
-per-triangle context instead of restaging a 22-argument ABI three times; eight
-Boolean material/texture/depth modes are one exact flag word, while all live
-matrices, tiles, colors, vertices, and projected depths remain uncached. The
-animated pond's 16x16 CI4 palette pairs are expanded into sixteen exact Bayer
-phase planes in an 8 KiB table. Its measured single-pixel loop is faster than
-the removed adjacent-pair branch because only `2,048/18,432` pixels were
-pairable. Texture preparation survives VTX/matrix boundaries but is invalidated
-at every texture/material/depth-key mutation; normal builds compile that seam
-to a no-op. Profile 0/1/2 renderer ITCM is `14,068/14,212/14,128` of 32,768
-bytes. Cache-hit guards run before temporary GX matrix construction, while
-`ndsRendererLoadHardwareMatrixPair` remains the final exact state guard.
+builds retain Thumb density. Six measured renderer paths carry targeted O3 and
+`.itcm`: CI4 conversion, source VTX decode/shade, GX vertex/triangle submission,
+and command scanning. This follows sm64-nds's interpreter/submission placement
+without fast-math or whole-program O3. The three vertex submissions share one
+40-byte per-triangle context instead of restaging a 22-argument ABI three times.
+Aligned little-endian VTX payloads use four strict-alias-safe word loads, while
+arbitrary alignment retains the bytewise decoder; hardware mode writes directly
+into the same persistent 32-slot input cache. A prepared light direction remains
+valid only until a matrix or source light-state mutation. Four content-keyed
+128-step tables pre-resolve the exact diffuse/ambient RGB function, while vertex
+normal, direction, alpha, and incomplete-state fallback remain live. The shade
+table occupies 2,096 bytes; net BSS rises 2,080 bytes. Animated CI4 phase planes remain an exact 8 KiB table,
+and texture preparation retains its mutation-keyed epoch. Profile 0/1/2 renderer
+ITCM is `18,512/18,816/18,216` of 32,768 bytes. Cache-hit guards run before
+temporary GX matrix construction; the final matrix-state guard remains exact.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,

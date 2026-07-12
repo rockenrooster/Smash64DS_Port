@@ -15,7 +15,7 @@
 
 /* libnds builds default to compact Thumb code, but the DS reference renderer
  * keeps its display-list interpreter and GX submission loops in ARM state.
- * These four measured loops favor ARM's full register file and conditional
+ * These six measured paths favor ARM's full register file and conditional
  * execution; retain the ordinary hot/O3 annotation for host-side fixtures. */
 #if defined(__arm__)
 #define NDS_RENDERER_HOT_CODE \
@@ -111,6 +111,8 @@
 #define NDS_RENDERER_HW_TEXEL01_CI4_PHASE_LUT_COUNT \
     (NDS_RENDERER_HW_TEXEL01_CI4_PHASE_COUNT * \
      NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT)
+#define NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT 4u
+#define NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT 128u
 #define NDS_RENDERER_HW_TEXEL01_RGB_MASK 0x7fffu
 #define NDS_RENDERER_HW_TEXEL01_COVERAGE_SHIFT 15u
 #define NDS_RENDERER_HW_TEXTURE_FMT_RGBA16 0u
@@ -231,8 +233,11 @@
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state) \
     ((state)->texture_prepare_valid = FALSE)
+#define NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state) \
+    ((state)->prepared_light_direction_valid = FALSE)
 #else
 #define NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state) ((void)(state))
+#define NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state) ((void)(state))
 #endif
 
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
@@ -733,6 +738,14 @@ typedef struct NDSRendererHardwareLightDirection
     s32 z;
 } NDSRendererHardwareLightDirection;
 
+typedef struct NDSRendererHardwareLightShadeCacheEntry
+{
+    u32 valid;
+    u32 diffuse;
+    u32 ambient;
+    u32 rgb[NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT];
+} NDSRendererHardwareLightShadeCacheEntry;
+
 static NDSRendererHardwareTextureCacheEntry
     sNdsRendererHardwareTextureCache[NDS_RENDERER_HW_TEXTURE_CACHE_COUNT];
 static u32 sNdsRendererHardwareTextureCacheNext;
@@ -755,6 +768,14 @@ static u16 sNdsRendererHardwareTexel01Ci4LutPalette0[16];
 static u16 sNdsRendererHardwareTexel01Ci4LutPalette1[16];
 static u32 sNdsRendererHardwareTexel01Ci4LutFraction;
 static u32 sNdsRendererHardwareTexel01Ci4LutKeyValid;
+static NDSRendererHardwareLightShadeCacheEntry
+    sNdsRendererHardwareLightShadeCache[
+        NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT];
+static u32 sNdsRendererHardwareLightShadeCacheNext;
+#if defined(__arm__)
+_Static_assert(sizeof(sNdsRendererHardwareLightShadeCache) == 2096u,
+               "light shade lookup cache must stay within 2096 bytes");
+#endif
 
 static void ndsRendererHardwareEndBatch(void);
 
@@ -771,6 +792,32 @@ static inline s32 ndsRendererHardwareRawVertexFits(
             (vtx->y <= NDS_RENDERER_HW_RAW_COORD_MAX) &&
             (vtx->z >= NDS_RENDERER_HW_RAW_COORD_MIN) &&
             (vtx->z <= NDS_RENDERER_HW_RAW_COORD_MAX)) ? TRUE : FALSE;
+}
+
+static inline u32 ndsRendererHardwareLitShadeColorLut(
+    const NDSRendererInputVertex *vtx,
+    const NDSRendererHardwareLightDirection *direction,
+    const u32 *rgb_lut)
+{
+    s32 dot;
+    u32 diffuse_numer;
+
+    dot = ((s32)(s8)vtx->r * direction->x) +
+        ((s32)(s8)vtx->g * direction->y) +
+        ((s32)(s8)vtx->b * direction->z);
+    if (dot <= 0)
+    {
+        diffuse_numer = 0u;
+    }
+    else if (dot > (127 * 127))
+    {
+        diffuse_numer = 127u;
+    }
+    else
+    {
+        diffuse_numer = (u32)((dot * 127) / (127 * 127));
+    }
+    return rgb_lut[diffuse_numer] | (u32)vtx->a;
 }
 #endif
 
@@ -799,6 +846,8 @@ typedef struct NDSRendererTraversalState
     u32 matrix_generation;
     u32 matrix_snapshot_count;
     u32 current_matrix_snapshot;
+    NDSRendererHardwareLightDirection prepared_light_direction;
+    u32 prepared_light_direction_valid;
     u32 texture_prepare_valid;
     u32 texture_prepare_enabled;
     u32 texture_prepare_implicit_on;
@@ -877,6 +926,8 @@ static u32 ndsRendererHardwareLitShadeColorPrepared(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
     const NDSRendererHardwareLightDirection *direction);
+static const u32 *ndsRendererHardwareGetLightShadeLut(
+    u32 diffuse, u32 ambient);
 static u32 ndsRendererHardwareLitShadeColor(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
@@ -1157,6 +1208,8 @@ static u32 ndsRendererReadU32(const void *ptr)
            ((u32)bytes[3] << 24);
 }
 
+typedef u32 NDSRendererAliasedU32 __attribute__((__may_alias__));
+
 static void ndsRendererDecodeInputVertex(NDSRendererInputVertex *dst,
                                          const void *src)
 {
@@ -1170,10 +1223,25 @@ static void ndsRendererDecodeInputVertex(NDSRendererInputVertex *dst,
         return;
     }
 
-    xy = ndsRendererReadU32(src);
-    zf = ndsRendererReadU32((const u8 *)src + 4);
-    st = ndsRendererReadU32((const u8 *)src + 8);
-    rgba = ndsRendererReadU32((const u8 *)src + 12);
+    /* DS is little-endian, so an aligned may-alias word load is exactly the
+     * bytewise payload decode below. Retain that fallback for arbitrary DLs. */
+    if ((((uintptr_t)src) & 3u) == 0u)
+    {
+        const NDSRendererAliasedU32 *words =
+            (const NDSRendererAliasedU32 *)src;
+
+        xy = words[0];
+        zf = words[1];
+        st = words[2];
+        rgba = words[3];
+    }
+    else
+    {
+        xy = ndsRendererReadU32(src);
+        zf = ndsRendererReadU32((const u8 *)src + 4);
+        st = ndsRendererReadU32((const u8 *)src + 8);
+        rgba = ndsRendererReadU32((const u8 *)src + 12);
+    }
     dst->x = (s16)(xy >> 16);
     dst->y = (s16)(xy & 0xffffu);
     dst->z = (s16)(zf >> 16);
@@ -1884,6 +1952,7 @@ static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
     state->current_transform_vertex_mask = 0u;
     state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     state->matrix_generation = ndsRendererNextMatrixGeneration();
+    NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state);
 #endif
 }
 
@@ -2020,7 +2089,6 @@ static void ndsRendererApplyMatrixCommand(
         stats->skip_command_count++;
         return;
     }
-
     ndsRendererMtxLoadN64ToDS20p12(src, &incoming);
     if ((flags & NDS_RENDERER_MTX_PROJECTION) != 0u)
     {
@@ -2290,6 +2358,7 @@ static void ndsRendererApplyMatrixMoveWordCommand(
     state->current_transform_vertex_mask = 0u;
     state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     state->matrix_generation = ndsRendererNextMatrixGeneration();
+    NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state);
 #endif
     stats->matrix_command_count++;
     stats->matrix_move_word_count++;
@@ -2336,7 +2405,8 @@ static void ndsRendererApplyPopMatrixCommand(NDSRendererStats *stats,
     ndsRendererComposeMatrix(state);
 }
 
-static void ndsRendererApplyVertexCommand(
+static void NDS_RENDERER_HOT_CODE
+ndsRendererApplyVertexCommand(
     const NDSRendererConfig *config,
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
@@ -2348,8 +2418,8 @@ static void ndsRendererApplyVertexCommand(
     const u8 *src;
     u32 i;
 #if NDS_RENDERER_HW_TRIANGLES
-    NDSRendererHardwareLightDirection light_direction;
     const NDSRendererHardwareLightDirection *prepared_light_direction = NULL;
+    const u32 *prepared_light_shade_lut = NULL;
     u32 matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
 #endif
 
@@ -2357,7 +2427,6 @@ static void ndsRendererApplyVertexCommand(
     {
         return;
     }
-
     stats->vertex_command_count++;
     stats->state_command_count++;
     if (ndsGBIDecodeF3DEX2Vtx(w0, NDS_RENDERER_MAX_VTX, &v0,
@@ -2385,7 +2454,6 @@ static void ndsRendererApplyVertexCommand(
         stats->skip_command_count++;
         return;
     }
-
 #if NDS_RENDERER_HW_TRIANGLES
     if (state->matrix_valid != 0u)
     {
@@ -2394,30 +2462,46 @@ static void ndsRendererApplyVertexCommand(
     if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
         ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
     {
-        ndsRendererHardwarePrepareLitDirection(
-            stats,
-            (state->modelview_valid != 0u) ? &state->modelview : NULL,
-            &light_direction);
-        prepared_light_direction = &light_direction;
+        if (state->prepared_light_direction_valid == 0u)
+        {
+            /* Matrix and MOVEMEM handlers invalidate this exact source-state
+             * value; adjacent VTX commands can share its float normalization. */
+            ndsRendererHardwarePrepareLitDirection(
+                stats,
+                (state->modelview_valid != 0u) ? &state->modelview : NULL,
+                &state->prepared_light_direction);
+            state->prepared_light_direction_valid = TRUE;
+        }
+        prepared_light_direction = &state->prepared_light_direction;
+        if ((stats->light_color_mask &
+             (NDS_RENDERER_LIGHT_COLOR_1_MASK |
+              NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
+            (NDS_RENDERER_LIGHT_COLOR_1_MASK |
+             NDS_RENDERER_LIGHT_COLOR_2_MASK))
+        {
+            prepared_light_shade_lut = ndsRendererHardwareGetLightShadeLut(
+                stats->light_color_1, stats->light_color_2);
+        }
     }
 #endif
 
     for (i = 0u; i < count; i++)
     {
-        NDSRendererInputVertex input;
         u32 index = v0 + i;
 #if NDS_RENDERER_HW_TRIANGLES
+        NDSRendererInputVertex *input = &state->input_vertices[index];
         u32 mask = 1u << index;
 #else
+        NDSRendererInputVertex input_storage;
+        NDSRendererInputVertex *input = &input_storage;
         NDSRendererClipVertex20p12 *out = &state->vertices[index];
 #endif
 
-        ndsRendererDecodeInputVertex(&input, src + (i * 16u));
+        ndsRendererDecodeInputVertex(input, src + (i * 16u));
 #if NDS_RENDERER_HW_TRIANGLES
         ndsRendererProfileRecordSourceVertexLoad();
-        state->input_vertices[index] = input;
         state->input_vertex_valid_mask |= mask;
-        if (ndsRendererHardwareRawVertexFits(&input) != FALSE)
+        if (ndsRendererHardwareRawVertexFits(input) != FALSE)
         {
             state->raw_vertex_fit_mask |= mask;
         }
@@ -2425,9 +2509,19 @@ static void ndsRendererApplyVertexCommand(
         {
             state->raw_vertex_fit_mask &= ~mask;
         }
-        state->vertex_colors[index] =
-            ndsRendererHardwareLitShadeColorPrepared(
-                stats, &input, prepared_light_direction);
+        if (prepared_light_shade_lut != NULL)
+        {
+            state->vertex_colors[index] =
+                ndsRendererHardwareLitShadeColorLut(
+                    input, prepared_light_direction,
+                    prepared_light_shade_lut);
+        }
+        else
+        {
+            state->vertex_colors[index] =
+                ndsRendererHardwareLitShadeColorPrepared(
+                    stats, input, prepared_light_direction);
+        }
         state->vertex_color_valid_mask |= mask;
         state->vertex_matrix_snapshot[index] = (u8)matrix_snapshot;
         state->vertex_clip_snapshot[index] =
@@ -2457,7 +2551,7 @@ static void ndsRendererApplyVertexCommand(
         }
 #endif
 #else
-        ndsRendererTransformVertex20p12(&state->matrix, &input, out);
+        ndsRendererTransformVertex20p12(&state->matrix, input, out);
         state->vertex_valid_mask |= 1u << index;
         stats->matrix_transform_count++;
         stats->transformed_vertex_count++;
@@ -3425,6 +3519,51 @@ static u8 ndsRendererHardwareClampColor(s32 value)
     return (u8)value;
 }
 
+static const u32 * __attribute__((noinline))
+ndsRendererHardwareGetLightShadeLut(u32 diffuse, u32 ambient)
+{
+    NDSRendererHardwareLightShadeCacheEntry *entry;
+    u32 i;
+
+    /* Cache only the exact RGB function of the two source light colors and
+     * diffuse numerator. Vertex normals, direction, and alpha stay live. */
+    for (i = 0u; i < NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT; i++)
+    {
+        entry = &sNdsRendererHardwareLightShadeCache[i];
+        if ((entry->valid != 0u) &&
+            (entry->diffuse == diffuse) &&
+            (entry->ambient == ambient))
+        {
+            return entry->rgb;
+        }
+    }
+
+    entry = &sNdsRendererHardwareLightShadeCache[
+        sNdsRendererHardwareLightShadeCacheNext];
+    sNdsRendererHardwareLightShadeCacheNext =
+        (sNdsRendererHardwareLightShadeCacheNext + 1u) &
+        (NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT - 1u);
+    entry->valid = FALSE;
+    entry->diffuse = diffuse;
+    entry->ambient = ambient;
+    for (i = 0u; i < NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT; i++)
+    {
+        s32 r = (s32)ndsRendererHardwareColorByte(ambient, 24) +
+            (s32)((ndsRendererHardwareColorByte(diffuse, 24) * i) / 127u);
+        s32 g = (s32)ndsRendererHardwareColorByte(ambient, 16) +
+            (s32)((ndsRendererHardwareColorByte(diffuse, 16) * i) / 127u);
+        s32 b = (s32)ndsRendererHardwareColorByte(ambient, 8) +
+            (s32)((ndsRendererHardwareColorByte(diffuse, 8) * i) / 127u);
+
+        entry->rgb[i] =
+            ((u32)ndsRendererHardwareClampColor(r) << 24) |
+            ((u32)ndsRendererHardwareClampColor(g) << 16) |
+            ((u32)ndsRendererHardwareClampColor(b) << 8);
+    }
+    entry->valid = TRUE;
+    return entry->rgb;
+}
+
 static u32 ndsRendererHardwareLightColor(NDSRendererStats *stats, u32 mask,
                                          u32 color, u32 fallback)
 {
@@ -3526,7 +3665,8 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
     return (u32)((dot * 127) / (127 * 127));
 }
 
-static u32 ndsRendererHardwareLitShadeColorPrepared(
+static u32 NDS_RENDERER_HOT_CODE
+ndsRendererHardwareLitShadeColorPrepared(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
     const NDSRendererHardwareLightDirection *direction)
@@ -7692,6 +7832,7 @@ ndsRendererScanList(const Gfx *dl,
 
         case NDS_RENDERER_OP_MOVEMEM:
             ndsRendererRecordLightMoveMem(config, stats, w0, w1);
+            NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state);
             break;
 
         case NDS_RENDERER_OP_SPECIAL_1:

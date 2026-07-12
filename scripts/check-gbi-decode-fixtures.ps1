@@ -1075,7 +1075,7 @@ Assert-True ($renderer.Contains('prepared_vertex_colors[NDS_RENDERER_MAX_VTX]'))
 Assert-True ($renderer.Contains('prepared_texcoord_s[NDS_RENDERER_MAX_VTX]')) 'Renderer no longer retains exact scaled texture coordinates within one unchanged TRI run.'
 Assert-True ($renderer.Contains('prepared_projected_x[NDS_RENDERER_MAX_VTX]')) 'Renderer no longer retains exact projected coordinates within one unchanged TRI run.'
 Assert-True ($renderer.Contains('state->prepared_projected_source_z_valid_mask = 0u;')) 'Renderer does not invalidate derived projected-depth values at source-command boundaries.'
-Assert-True ([regex]::Matches($renderer, 'static void NDS_RENDERER_HOT_CODE').Count -eq 4) 'Renderer hot-code set drifted from the four measured texture/vertex/triangle/scan paths.'
+Assert-True ([regex]::Matches($renderer, 'static (?:void|u32) NDS_RENDERER_HOT_CODE').Count -eq 6) 'Renderer hot-code set drifted from the six measured texture/VTX/shade/vertex/triangle/scan paths.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_HOT_CODE.*?optimize\("O3"\).*?target\("arm"\).*?section\("\.itcm"\)') 'Renderer hot-code policy no longer combines targeted O3, ARM state, and ITCM placement.'
 Assert-True ($relocRendererDL.Contains('ndsRendererAdapterImmutableCommandSpan')) 'Battle renderer does not classify reloc-backed display-list topology as immutable.'
 Assert-True ($harnessScript.Contains('RENDER_TOPOLOGY=')) 'Mode 163 does not prove immutable-span validation coverage and dynamic fallback.'
@@ -1310,12 +1310,35 @@ Assert-True ($renderer.Contains('ndsRendererHardwareLitShadeColor')) 'Renderer l
 $litPrepare = $renderer.LastIndexOf('static void ndsRendererHardwarePrepareLitDirection(')
 $litDiffuse = $renderer.IndexOf('static u32 ndsRendererHardwareLitDiffuseNumer(', $litPrepare)
 $litSqrt = $renderer.IndexOf('sqrtf(', $litPrepare)
-$litPreparedCall = $renderer.IndexOf('prepared_light_direction = &light_direction;')
+$litCacheGuard = $renderer.IndexOf('if (state->prepared_light_direction_valid == 0u)')
+$litPreparedCall = $renderer.IndexOf('prepared_light_direction = &state->prepared_light_direction;')
 $litVertexLoop = $renderer.IndexOf('for (i = 0u; i < count; i++)', $litPreparedCall)
 Assert-True ($litPrepare -ge 0 -and $litDiffuse -gt $litPrepare -and $litSqrt -gt $litPrepare -and $litSqrt -lt $litDiffuse) 'Renderer light normalization is not isolated from the per-vertex diffuse dot product.'
-Assert-True ($litPreparedCall -ge 0 -and $litVertexLoop -gt $litPreparedCall) 'Renderer does not prepare the invariant light direction before each source G_VTX loop.'
+Assert-True ($litCacheGuard -ge 0 -and $litPreparedCall -gt $litCacheGuard -and $litVertexLoop -gt $litPreparedCall) 'Renderer does not reuse one exact prepared light direction before each source G_VTX loop.'
 Assert-Equal ([regex]::Matches($renderer, 'sqrtf\(').Count) 1 'Renderer restored more than one light-normalization square root site.'
-Assert-True ($renderer.Contains('stats, &input, prepared_light_direction')) 'Renderer vertex colors do not consume the source-command prepared light direction.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_HW_TRIANGLES.*?#define NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION\(state\).*?prepared_light_direction_valid = FALSE.*?#else.*?#define NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION\(state\) \(\(void\)\(state\)\)') 'Renderer light-direction invalidation is not hardware-only with a normal-build no-op.'
+Assert-True ([regex]::Matches($renderer, 'NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION\(state\);').Count -ge 3) 'Renderer light-direction cache is not invalidated by composed/matrix-word/light-state mutations.'
+Assert-True ($renderer.Contains('state->prepared_light_direction_valid = TRUE;')) 'Renderer never validates its exact prepared light direction.'
+Assert-True ($renderer -match 'static void NDS_RENDERER_HOT_CODE\s+ndsRendererApplyVertexCommand') 'Renderer source G_VTX handler is not retained in the measured ARM/O3 ITCM path.'
+Assert-True ($renderer -match 'static u32 NDS_RENDERER_HOT_CODE\s+ndsRendererHardwareLitShadeColorPrepared') 'Renderer generic lit-shade fallback is not retained with the measured VTX hot path.'
+Assert-True ($renderer.Contains('typedef u32 NDSRendererAliasedU32 __attribute__((__may_alias__))')) 'Renderer aligned VTX decode lost its strict-alias-safe source word type.'
+Assert-True ($renderer.Contains('if ((((uintptr_t)src) & 3u) == 0u)') -and $renderer.Contains('xy = words[0];') -and $renderer.Contains('rgba = words[3];')) 'Renderer does not use the measured aligned four-word VTX decode.'
+Assert-True ($renderer.Contains('xy = ndsRendererReadU32(src);') -and $renderer.Contains('rgba = ndsRendererReadU32((const u8 *)src + 12);')) 'Renderer aligned VTX decode lost the exact bytewise unaligned fallback.'
+Assert-True ($renderer.Contains('NDSRendererInputVertex *input = &state->input_vertices[index];')) 'Renderer hardware VTX path does not decode directly into the persistent 32-slot source cache.'
+Assert-True (-not $renderer.Contains('state->input_vertices[index] = input;')) 'Renderer restored the redundant temporary-to-cache VTX copy.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT 4u') -and $renderer.Contains('NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT 128u')) 'Renderer exact light-shade cache lost its four-entry/128-step bound.'
+Assert-True ($renderer.Contains('sizeof(sNdsRendererHardwareLightShadeCache) == 2096u')) 'Renderer exact light-shade cache exceeds its measured 2,096-byte bound.'
+Assert-True ($renderer -match '(?s)entry->diffuse == diffuse.*?entry->ambient == ambient.*?return entry->rgb;') 'Renderer light-shade cache is not content-keyed by both source light colors.'
+Assert-True ($renderer.Contains('(ndsRendererHardwareColorByte(diffuse, 24) * i) / 127u') -and $renderer.Contains('return rgb_lut[diffuse_numer] | (u32)vtx->a;')) 'Renderer light-shade LUT does not preserve the exact per-channel integer result and source alpha.'
+Assert-True ($renderer -match '(?s)stats->light_color_mask.*?NDS_RENDERER_LIGHT_COLOR_1_MASK.*?NDS_RENDERER_LIGHT_COLOR_2_MASK.*?prepared_light_shade_lut = ndsRendererHardwareGetLightShadeLut') 'Renderer light-shade LUT bypasses the generic fallback for incomplete source light state.'
+function Get-LitShadeFixtureChannel {
+    param([int]$Diffuse, [int]$Ambient, [int]$Numer)
+    return [Math]::Min(255, $Ambient + [int][Math]::Floor(
+        ([double]$Diffuse * $Numer) / 127.0))
+}
+Assert-Equal (Get-LitShadeFixtureChannel 131 36 0) 36 'Mario shoe LUT ambient endpoint drifted.'
+Assert-Equal (Get-LitShadeFixtureChannel 131 36 64) 102 'Mario shoe LUT midpoint drifted.'
+Assert-Equal (Get-LitShadeFixtureChannel 131 36 127) 167 'Mario shoe LUT diffuse endpoint drifted.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPackColor(&mobj->sub.light1color)')) 'Fighter material light 1 still depends on host-endian SYColorPack.pack layout.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPackColor(&mobj->sub.light2color)')) 'Fighter material light 2 still depends on host-endian SYColorPack.pack layout.'
@@ -1420,7 +1443,7 @@ Assert-True (-not $renderer.Contains('sNdsRendererHardwareMatrixModelview')) 'Re
 Assert-True ($renderer -match '(?s)ndsRendererLoadHardwareRawComposedMatrix\(.*?sNdsRendererHardwareMatrixMode ==\s*NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED.*?sNdsRendererHardwareMatrixGeneration == generation.*?return;.*?ndsRendererMtxIdentity20p12') 'Renderer raw matrix cache no longer returns before temporary matrix construction.'
 Assert-True ($renderer -match '(?s)ndsRendererLoadHardwareMatrices\(.*?NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY.*?sNdsRendererHardwareMatrixGeneration == 0u.*?return;.*?ndsRendererMtxIdentity20p12') 'Renderer projected-identity cache no longer returns before temporary matrix construction.'
 Assert-True ($renderer -match '(?s)ndsRendererBuildRawHardwareMatrix\(.*?\*hardware = \*composed;.*?for \(col = 0u; col < 4u; col\+\+\).*?NDS_RENDERER_HW_WORLD_UNIT_SHIFT') 'Renderer corrected raw matrix does not scale the complete homogeneous row.'
-Assert-True ($renderer -match '(?s)ndsRendererApplyVertexCommand.*?ndsRendererHardwareRawVertexFits\(&input\).*?raw_vertex_fit_mask \|= mask;.*?raw_vertex_fit_mask &= ~mask;') 'Renderer does not cache exact raw-coordinate eligibility when an RSP vertex slot is loaded.'
+Assert-True ($renderer -match '(?s)ndsRendererApplyVertexCommand.*?ndsRendererHardwareRawVertexFits\(input\).*?raw_vertex_fit_mask \|= mask;.*?raw_vertex_fit_mask &= ~mask;') 'Renderer does not cache exact raw-coordinate eligibility when an RSP vertex slot is loaded.'
 Assert-True ($renderer -match '(?s)raw_vertex_fit_mask & mask\) != mask.*?current_transform_vertex_mask & mask.*?ndsRendererHardwareRawMatrixCompatible.*?ndsRendererProfileRecordRawCurrentCandidate') 'Renderer raw-current classification does not require cached unclamped coordinates, current slots, and a compatible current matrix.'
 Assert-True ($renderer -match '(?s)state\.raw_vertex_fit_mask = vertex_cache->raw_vertex_fit_mask.*?vertex_cache->raw_vertex_fit_mask = state\.raw_vertex_fit_mask') 'Renderer persistent vertex cache does not carry raw-coordinate eligibility across ordered source lists.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX')) 'Renderer hybrid submission-class enum is missing raw-current source-Z.'

@@ -1180,12 +1180,14 @@
   `7,697,632/7,958,912`; the current compiler split, targeted hot functions,
   packed wallpaper rows, immutable TRI replay, CI4 LUT key, and per-run derived
   vertex reuse first reached `5,889,312/6,024,768` median/p95 at `5.6fps`.
-  ARM-state mode 163, four ITCM loops, and pre-construction matrix cache hits
+  ARM-state mode 163, four initial ITCM loops, and pre-construction matrix hits
   first reached `4,901,760/5,165,440` at `6.6fps`. Persistent runtime state,
   VTX-load raw-fit bits, and invariant TRI-batch reuse now reduce warm draw to
-  `4,392,160/4,411,008` and reach `7.0fps`. Profile 1
-  records `80/1736/344/330` immutable-list/trusted-command/dynamic-validation/
-  TRI-replay coverage. Projected divisions remain `1,242`. The rejected GX
+  `4,392,160/4,411,008` and first reached `7.0fps`. Phase-resolved CI4 then
+  reached `7.5fps`; six ITCM paths, exact light-state reuse, and aligned direct
+  VTX-cache decode now reach `7.6fps` at `3,782,752/3,783,680` draw. Profile 1
+  scan remains `1,255,424/1,256,448`; projected divisions remain `1,242`.
+  The rejected GX
   FIFO/display-list arena increased vertex cost and must not be restored.
   The RGBA4 interface/HUD SObjs still produce no DS pixels.
   At this sub-realtime cadence, the second two-shot screenshot can land during
