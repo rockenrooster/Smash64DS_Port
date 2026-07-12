@@ -329,6 +329,10 @@ if (-not $NoBuild) {
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw "$Label harness build did not produce the expected ROM and ELF."
 }
+if ($Target -match '^smash64ds-battle-playable-(canonical|coarse|forensic)-hwtri$') {
+    & (Join-Path $PSScriptRoot 'check-renderer-itcm-placement.ps1') -Elf $elf
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
 if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melonDsPath" }
 if (-not (Test-Path $Gdb)) { throw "GDB executable not found: $Gdb" }
 if ($RendererBenchmarkSamples -gt 0) {
