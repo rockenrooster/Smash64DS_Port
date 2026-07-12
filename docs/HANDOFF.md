@@ -105,8 +105,9 @@ no BSS; profile 2 also omits the production 2,096-byte shade table and runs the
 independent exact shade path. Profiles 0/1 retain light/table and exact 128-slot
 texture-key caches; compact fingerprints still require full 236-byte equality.
 Profile-0 BSS is `1,857,736`; prepared context persists by `98/730` epoch.
-Profile-1 median/P95 draw is `2,423,168/2,473,984`, vertex
-`459,168/460,736`, setup `748,576/799,104`, and scan `652,352/653,184`.
+The O2-equivalent profile-1 loop conserves at zero error; clean draw is
+`2,050,592/2,416,384`. Profile 2 records 828 exact events across 128 frames; a
+5,712-byte/91-op layer-0 trial regressed draw 12,640 ticks and is reverted.
 Repeated shipping O2 is `2,044,640/2,046,080` at `12.3fps`; profile 2 retains
 `2484/0/0`. Capture:
 `artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png`;
@@ -118,10 +119,9 @@ foreground fence. Stage RSP/ST carry restores five flower groups (`192 -> 202`).
 Masked-clamp, six CI4 stars, and DXT tail stride remain fixed. Debt: Whispy face,
 other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
-
 ## Recommended Next Work
-1. The canonical ROM is still only `12.3fps`, not P1-complete. Fuse owner-level
-   source state/VTX/TRI; indexed water halved uploads but slowed draw and drifted GX.
+1. The canonical ROM is still only `12.3fps`, not P1-complete. Do not retry the
+   54-triangle layer-0 program; amortize the next compiler cut across a larger slice.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
    Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
 3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary

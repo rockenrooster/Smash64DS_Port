@@ -20170,3 +20170,25 @@ Source-corrected verifier expectations: sample stable source-bush pixels rather
 than live fighter overlap; stage detail must satisfy both variation and a strict
 flat-run ceiling. Coverage-reduced verifier expectations: Full/Legacy Regression
 remains skipped for the requested fast iteration cadence.
+
+## 2026-07-12 - Profiled and rejected the first prepared stage owner
+
+- Commit `c5f815562` adds an O2-equivalent low-frequency whole-loop profiler
+  with zero conservation error, exclusive stage/Mario/Fox timing, 128-frame
+  churn signatures, and a profile-2 semantic triangle/GX trace with persistent
+  32-slot cache and owner entry/exit state hashes. The generic profile-2 path
+  emits exactly 828 events per frame with zero overflow and oracle `2484/0/0`.
+- Experiment `9e466fd15` compiled Dream Land layer 0 into a 5,712-byte program:
+  91 logical / 69 executable operations, 17 state groups / 123 actions, 26 VTX
+  blocks / 108 vertices, and 26 runs / 36 commands / 54 triangles. All 20 lists
+  preflighted before GX; live matrices and persistent renderer/cache state stayed
+  bound per list. A 128-frame profile-2 A/B comparison was exactly trace-, state-,
+  cache-, counter-, upload-, and GX-equivalent.
+- The synchronized O2-equivalent A/B/A window was frames `240..367`, logic
+  `247..374`. Generic repeated at draw `2,083,264/2,102,784` and layer 0
+  `308,864/308,928`; prepared measured `2,095,904/2,115,456` and
+  `321,472/321,536`. It regressed draw by 12,640 ticks, owner median by 4.08%,
+  and owner P95 by 4.08%, missing both keep gates.
+- Revert `e446ddab4` removes the slower prepared slice. The decision-grade
+  profiler/trace remains. Full identities and the experiment report are in
+  `docs/PERF_LEDGER.md`; Full Regression remains intentionally skipped.

@@ -132,8 +132,10 @@ anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
 The canonical frame is still only `12.3fps`, far below the 60 FPS P1 condition.
-Zero-forensic-state adapter ownership removes ~145K draw ticks (6.6%); profile-1 scan/setup remains `0.652M/0.749M`.
-Next fuse owner-level source state/VTX/TRI. The indexed-water trial halved uploads but regressed draw/GX RAM and is gone.
+The O2-equivalent coarse profiler conserves the whole loop and the 128-frame
+profile-2 trace is exact. A 5,712-byte/91-op prepared Dream Land layer-0 owner
+regressed draw by 12,640 ticks and was reverted; see `docs/PERF_LEDGER.md`.
+The next compiler cut must amortize across a materially larger frame slice.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification

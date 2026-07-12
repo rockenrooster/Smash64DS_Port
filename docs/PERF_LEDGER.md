@@ -67,10 +67,9 @@ triangles        828 (stage 202; Mario 320; Fox 306)
 classes          648 raw-current / 44 cross / 126 no-Z / 10 range
 batches          121 / 707 / 121
 prepare          98 / 730
-profiles 0/1    every sampled pair is canonical: 0/0, one 4,096- or
+all profiles    every sampled pair is canonical: 0/0, one 4,096- or
                 32,768-byte upload, or 2/36,864; stable T0C was 2/36,864
 T0C upload SHA  EC2EA0B6A9AB3F69B6BDA3978B912D7D765BAB6F4D0E11671E875D559D0BDEBA
-profile 2        0 uploads / 0 bytes after independent resident-cache warm-up
 GX RAM           715 / 2,167 at the accepted final logic ticks
 profile-2 oracle 2,484 / 0 / 0
 ```
@@ -82,7 +81,7 @@ profile-2 oracle 2,484 / 0 / 0
 | BASE-12.3 | 2026-07-12 | Accepted shipping reference | draw | 2,044,640 / 2,046,080 | — | — | exact | KEEP |
 | T0-O2-COARSE | 2026-07-12 | Low-frequency O2 timing identifies the largest owner | draw / owners | 2,044,640 / 2,046,080 | 2,050,592 / 2,416,384 | phase-matched profile-0 +0.27% / +0.38% | exact counters | KEEP |
 | T1A-TRACE | 2026-07-12 | Profile-2 trace guards prepared activation | semantic emission | n/a | 828 / 0 overflow | timing noncomparable | 2,484 / 0 / 0 | KEEP |
-| T1B-STAGE0 | 2026-07-12 | Compile immutable Dream Land layer 0 topology | stage layer 0 | 292,288 / 292,352 | pending | pending | pending | PENDING |
+| T1B-STAGE0 | 2026-07-12 | Compile immutable Dream Land layer 0 topology | stage layer 0 | 308,864 / 308,928 | 321,472 / 321,536 | -12,640 ticks | exact 128-frame A/B | REVERT |
 | REJ-T0-MIXED | 2026-07-12 | Combined coarse timing and detailed census | whole loop / owners | — | loop 3,361,024 / 3,361,280 | observer-contaminated | counters exact | REJECT |
 | REJ-GXLIST | prior | 121 small GX lists | vertex submit | — | ~0.96M -> ~1.28M | regression | output retained | REVERT |
 | REJ-PACKET | prior | 1,406 generic packets | scan/setup | — | scan flat/setup regressed | regression | output retained | REVERT |
@@ -220,7 +219,8 @@ SEMANTIC TRACE RESULT:
 ORACLE/COUNTER/GX RESULT:
   Oracle 2,484/0/0; 828 triangles; exact 648/44/126/10 classes;
   121/707/121 batches; 98/730 prepares; final GX RAM 715/2,167. The independent
-  forensic cache was resident, so recurring uploads were exactly 0/0.
+  forensic cache retained its independent bytewise decoder. Sampled uploads
+  followed the same exact canonical phase pairs as profiles 0/1.
 CAPTURE RESULT:
   No new capture; trace equality and exact GX/counter gates passed.
 VERIFIER COMMANDS AND RESULTS:
@@ -267,6 +267,94 @@ Immutable branch:         one internal call, 0x06F8 -> 0x0708
 Dynamic dependencies:     no MODIFYVTX, MObj, AnimJoint, MatAnim, or dynamic branch
 Activation boundary:      whole owner, before first GX write; next-frame only
 Storage ceiling:          16 KiB fixed arena
+```
+
+## T1B-STAGE0 — exact prepared owner missed the keep gate
+
+```text
+IDEA ID:
+  T1B-STAGE0
+HYPOTHESIS:
+  Replacing the 297-command immutable Dream Land layer-0 source scan with a
+  coarse prepared program will save at least 50,000 whole-draw ticks or 25%
+  of the owner's exclusive cost without changing semantic output.
+TARGETED EXCLUSIVE COUNTER:
+  Whole draw and gGRCommonLayerGObjs[0] owner wall.
+MEASURED UPPER BOUND:
+  Generic layer 0 was 308,864 / 308,928 ticks in the phase-synchronized
+  profile-1 A/B/A window; the 25% threshold was 77,216 ticks.
+LIVE-TREE RECONCILIATION:
+  Built on c5f815562 after preserving all user-local roadmap, review, log,
+  prompt, and attachment files. No decomp file was edited.
+FILES/FUNCTIONS CHANGED:
+  The experiment added a bounded prepared-list ABI/executor, exact shared VTX
+  decode and TRI submission, a 20-list layer-0 compiler, whole-owner preflight,
+  live DObj/camera binding, persistent cache/state replay, execution telemetry,
+  synchronized benchmark start frames, and strict profile-2/profile-1 A/B tools.
+  Experiment commit 9e466fd15 was reverted by e446ddab4 after the keep gate.
+BUILD TARGET/FLAGS:
+  Profile 1: smash64ds-battle-playable-coarse-hwtri, common/scene -O2
+  -mthumb and renderer -O2 -marm. Profile 2: forensic -Os, renderer -marm.
+BASELINE ROM SHA-256:
+  Profile-1 generic and prepared used the same runtime-selected ROM:
+  3FF0CB4AD3782C8DF2510A718F740E7A9089275C0912646CF0F4BFE84EAB2FCC.
+EXPERIMENT ROM SHA-256:
+  Profile-2 generic and prepared used the same ROM:
+  534EAC077BB9DFE537466B1C24B077D0EA71B0759A7259D953431CB0A4BEA8C9.
+FRAME/LOGIC-TICK WINDOW:
+  Profile 1 A/B/A: 128 synchronized frames 240..367, logic 247..374.
+  Profile 2 A/B: 128 synchronized frames 45..172, logic 52..179.
+A0 MEDIAN/P95:
+  Generic A and B were identical: draw 2,083,264 / 2,102,784; layer 0
+  308,864 / 308,928.
+B0 MEDIAN/P95:
+  Prepared draw 2,095,904 / 2,115,456; layer 0 321,472 / 321,536.
+A1 OR DISABLED-CONTROL MEDIAN/P95:
+  Generic B exactly repeated generic A at both draw and owner medians/P95s.
+ACTIVE/WAIT SPLIT:
+  Generic active 2,086,560 / 2,106,112 and wait 45,856 / 547,648.
+  Prepared active 2,099,232 / 2,118,784 and wait 274,976 / 558,208.
+OWNER SPLIT:
+  Stage generic 1,031,680 / 1,049,536 versus prepared
+  1,044,192 / 1,062,144. Mario remained 500,736 / 500,800 and Fox
+  534,272 / 534,336.
+OP/PROGRAM BYTES/FALLBACKS:
+  91 logical operations: owner begin/end, 20 live list/matrix binds, and 69
+  executable ops (17 APPLY / 26 VTX / 26 DRAW). The compiler retained 123
+  state actions, 108 decoded vertices, and 36 TRI commands / 54 triangles in
+  5,712 bytes inside a 6,144-byte arena. Compiler, preflight, binding, and
+  renderer fallbacks were zero. Profile 1 completed 177 prepared owners and
+  3,540 lists; profile 2 completed 146 / 2,920.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  Profile-1 experiment: ITCM 15,804; DTCM-BSS 152; main-BSS 1,864,624;
+  text/data/BSS 672,016/126,112/1,864,776. The prepared proof added 6,528
+  main-BSS bytes over T0. Profile-2 main-BSS was 1,956,208. Arena 6,144.
+SEMANTIC TRACE RESULT:
+  The 128-frame profile-2 A/B comparer passed every one of 828 events/frame,
+  owner/list/command provenance, submit class, final XYZ/ST/RGB15, material/
+  texture/source-state hashes, owner state/cache/resolver/global hashes, GX
+  boundary, and upload sequence. Upload SHA-256 was
+  63114295EA9C027387E25D7C3C56DA83C5DE52AB36C7A9AF82CD5830A118878B.
+ORACLE/COUNTER/GX RESULT:
+  Oracle 2,484/0/0; 828 triangles; 648/44/126/10 classes; 121/707/121
+  batches; 98/730 prepares; terminal GX RAM 715/2,167. Profile-1 upload
+  sequence SHA-256 matched across A/B/A:
+  BE547A01609587869FD64C3C943B21AB6D6D5810AD1C57B627597E44EE1C4CAD.
+CAPTURE RESULT:
+  No new visual capture was needed; isolated semantic/GX state was exact.
+VERIFIER COMMANDS AND RESULTS:
+  GBI/static fixtures passed. An 8-frame prepared forensic smoke passed.
+  The 128-frame profile-2 A/B comparer passed. The synchronized profile-1
+  A/B/A comparer failed exactly as intended: whole draw regressed 12,640
+  ticks and owner improvement was -408 bp; owner P95 also regressed 4.08%.
+DECISION: REVERT
+  The candidate missed both the 50,000-tick and 25% gates and exceeded the
+  owner P95 ceiling. The source/trace plumbing commit c5f815562 remains; the
+  prepared activation was not retained in the live tree.
+NEXT MEASURED BOTTLENECK:
+  Do not retry this 54-triangle owner shape. The next compiler experiment must
+  amortize binding/preflight across a materially larger stage or frame slice,
+  or fuse setup/transport work in addition to source dispatch.
 ```
 
 ## Per-experiment report template
