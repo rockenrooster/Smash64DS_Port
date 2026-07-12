@@ -216,6 +216,14 @@
  * fallback for lit lists whose scene callback supplied only light direction. */
 #define NDS_RENDERER_LIGHT_COLOR_1_FALLBACK 0x40404000u
 #define NDS_RENDERER_LIGHT_COLOR_2_FALLBACK 0xc0c0c000u
+#define NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL (1u << 0)
+#define NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX (1u << 1)
+#define NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE (1u << 2)
+#define NDS_RENDERER_VERTEX_CONTEXT_SCALE_WORLD (1u << 3)
+#define NDS_RENDERER_VERTEX_CONTEXT_ZBUFFERED (1u << 4)
+#define NDS_RENDERER_VERTEX_CONTEXT_DECAL_DEPTH (1u << 5)
+#define NDS_RENDERER_VERTEX_CONTEXT_PRIM_DEPTH (1u << 6)
+#define NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH (1u << 7)
 
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 static u32 sNdsRendererProfileImmutableListCount;
@@ -816,6 +824,26 @@ typedef struct NDSRendererTraversalState
     u32 raw_vertex_fit_mask;
 #endif
 } NDSRendererTraversalState;
+
+#if NDS_RENDERER_HW_TRIANGLES
+typedef struct NDSRendererHardwareVertexContext
+{
+    NDSRendererStats *stats;
+    NDSRendererTraversalState *state;
+    const NDSRendererTileState *render_tile;
+    u32 material_color;
+    u32 scale_s;
+    u32 scale_t;
+    u32 texture_origin_s;
+    u32 texture_origin_t;
+    u32 flags;
+    s32 texture_offset;
+} NDSRendererHardwareVertexContext;
+#if defined(__arm__)
+_Static_assert(sizeof(NDSRendererHardwareVertexContext) == 40u,
+               "DS vertex-submit context must stay compact");
+#endif
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
 typedef struct NDSRendererHardwarePendingPosTest
@@ -6660,36 +6688,69 @@ static void ndsRendererHardwareBeginTriangleBatch(
 
 static void NDS_RENDERER_HOT_CODE
 ndsRendererHardwareSubmitVertex(
-    NDSRendererStats *stats,
-    NDSRendererTraversalState *state,
+    const NDSRendererHardwareVertexContext *context,
     u32 vertex_index,
-    const NDSRendererInputVertex *vtx,
-    const NDSRendererClipVertex20p12 *clip_vtx,
-    u32 material_color,
-    s32 use_material_color,
-    s32 use_vertex_color,
-    u32 vertex_color,
-    s32 vertex_color_valid,
-    s32 use_texture,
-    const NDSRendererTileState *render_tile,
-    u32 scale_s,
-    u32 scale_t,
-    u32 texture_origin_s,
-    u32 texture_origin_t,
-    s32 texture_offset,
-    u32 scale_world,
-    s32 zbuffered,
-    s32 decal_depth,
-    s32 prim_depth,
-    s32 projected_z,
-    s32 source_clip_depth)
+    s32 projected_z)
 {
+    NDSRendererStats *stats;
+    NDSRendererTraversalState *state;
+    const NDSRendererInputVertex *vtx;
+    const NDSRendererClipVertex20p12 *clip_vtx;
+    const NDSRendererTileState *render_tile;
+    u32 material_color;
+    u32 scale_s;
+    u32 scale_t;
+    u32 texture_origin_s;
+    u32 texture_origin_t;
+    u32 context_flags;
+    u32 scale_world;
+    u32 vertex_color;
+    s32 use_material_color;
+    s32 use_vertex_color;
+    s32 vertex_color_valid;
+    s32 use_texture;
+    s32 texture_offset;
+    s32 zbuffered;
+    s32 decal_depth;
+    s32 prim_depth;
+    s32 source_clip_depth;
     u16 hardware_color;
 
-    if (vtx == NULL)
+    if (context == NULL)
     {
         return;
     }
+    stats = context->stats;
+    state = context->state;
+    if ((state == NULL) || (vertex_index >= NDS_RENDERER_MAX_VTX))
+    {
+        return;
+    }
+    vtx = &state->input_vertices[vertex_index];
+    clip_vtx = &state->vertices[vertex_index];
+    render_tile = context->render_tile;
+    material_color = context->material_color;
+    scale_s = context->scale_s;
+    scale_t = context->scale_t;
+    texture_origin_s = context->texture_origin_s;
+    texture_origin_t = context->texture_origin_t;
+    context_flags = context->flags;
+    scale_world = context_flags & NDS_RENDERER_VERTEX_CONTEXT_SCALE_WORLD;
+    vertex_color = state->vertex_colors[vertex_index];
+    use_material_color =
+        context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
+    use_vertex_color =
+        context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX;
+    vertex_color_valid =
+        ((state->vertex_color_valid_mask & (1u << vertex_index)) != 0u) ?
+            TRUE : FALSE;
+    use_texture = context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE;
+    texture_offset = context->texture_offset;
+    zbuffered = context_flags & NDS_RENDERER_VERTEX_CONTEXT_ZBUFFERED;
+    decal_depth = context_flags & NDS_RENDERER_VERTEX_CONTEXT_DECAL_DEPTH;
+    prim_depth = context_flags & NDS_RENDERER_VERTEX_CONTEXT_PRIM_DEPTH;
+    source_clip_depth =
+        context_flags & NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH;
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     if ((state != NULL) &&
@@ -7001,8 +7062,6 @@ ndsRendererSubmitHardwareTriangle(
     u32 i1;
     u32 i2;
     const NDSRendererInputVertex *v0;
-    const NDSRendererInputVertex *v1;
-    const NDSRendererInputVertex *v2;
     const NDSRendererTileState *render_tile;
     s32 use_texture;
     s32 implicit_texture_on;
@@ -7028,6 +7087,7 @@ ndsRendererSubmitHardwareTriangle(
     u32 raw_snapshot_id = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     const NDSRendererMatrixSnapshot *raw_snapshot = NULL;
     NDSRendererHWSubmitClass submit_class;
+    NDSRendererHardwareVertexContext vertex_context;
     s32 projected_z[3] = { 0, 0, 0 };
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     u32 vertex_submit_start;
@@ -7079,8 +7139,6 @@ ndsRendererSubmitHardwareTriangle(
 #endif
     }
     v0 = &state->input_vertices[i0];
-    v1 = &state->input_vertices[i1];
-    v2 = &state->input_vertices[i2];
     submit_class = ndsRendererHardwareClassifySubmit(
         state, i0, i1, i2, source_zbuffered, decal_depth, prim_depth,
         &raw_snapshot_id);
@@ -7275,39 +7333,38 @@ ndsRendererSubmitHardwareTriangle(
         stats, (use_texture != FALSE) ? TRUE : FALSE,
         texture_name, poly_fmt, sNdsRendererHardwareMatrixMode,
         sNdsRendererHardwareMatrixGeneration);
+    vertex_context.stats = stats;
+    vertex_context.state = state;
+    vertex_context.render_tile = render_tile;
+    vertex_context.material_color = material_color;
+    vertex_context.scale_s = texture_scale_s;
+    vertex_context.scale_t = texture_scale_t;
+    vertex_context.texture_origin_s = render_tile->uls;
+    vertex_context.texture_origin_t = render_tile->ult;
+    vertex_context.flags =
+        ((use_material_color != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL : 0u) |
+        ((use_vertex_color != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX : 0u) |
+        ((use_texture != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE : 0u) |
+        ((scale_world != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_SCALE_WORLD : 0u) |
+        ((zbuffered != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_ZBUFFERED : 0u) |
+        ((decal_depth != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_DECAL_DEPTH : 0u) |
+        ((prim_depth != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_PRIM_DEPTH : 0u) |
+        ((source_clip_depth != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH : 0u);
+    vertex_context.texture_offset = texture_offset;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     vertex_submit_start = cpuGetTiming();
 #endif
-    ndsRendererHardwareSubmitVertex(
-        stats, state, i0, v0, &state->vertices[i0],
-        material_color, use_material_color,
-        use_vertex_color, state->vertex_colors[i0],
-        ((state->vertex_color_valid_mask & (1u << i0)) != 0u),
-        use_texture, render_tile, texture_scale_s,
-        texture_scale_t, render_tile->uls, render_tile->ult,
-        texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z[0],
-        source_clip_depth);
-    ndsRendererHardwareSubmitVertex(
-        stats, state, i1, v1, &state->vertices[i1],
-        material_color, use_material_color,
-        use_vertex_color, state->vertex_colors[i1],
-        ((state->vertex_color_valid_mask & (1u << i1)) != 0u),
-        use_texture, render_tile, texture_scale_s,
-        texture_scale_t, render_tile->uls, render_tile->ult,
-        texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z[1],
-        source_clip_depth);
-    ndsRendererHardwareSubmitVertex(
-        stats, state, i2, v2, &state->vertices[i2],
-        material_color, use_material_color,
-        use_vertex_color, state->vertex_colors[i2],
-        ((state->vertex_color_valid_mask & (1u << i2)) != 0u),
-        use_texture, render_tile, texture_scale_s,
-        texture_scale_t, render_tile->uls, render_tile->ult,
-        texture_offset, scale_world,
-        zbuffered, decal_depth, prim_depth, projected_z[2],
-        source_clip_depth);
+    ndsRendererHardwareSubmitVertex(&vertex_context, i0, projected_z[0]);
+    ndsRendererHardwareSubmitVertex(&vertex_context, i1, projected_z[1]);
+    ndsRendererHardwareSubmitVertex(&vertex_context, i2, projected_z[2]);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     sNdsRendererProfileVertexSubmitTicks +=
         cpuGetTiming() - vertex_submit_start;

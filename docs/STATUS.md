@@ -86,23 +86,24 @@ generic/oracle route. No composed frame, fighter, or source behavior is cached.
 
 Canonical mode 163 alone keeps `-O2`; the larger scripted/lifecycle diagnostics
 stay `-Os` and retain `227392` bytes of headroom. Mode 163 compiles the renderer
-TU in ARM state, while four measured O3 loops live in ITCM (`14,968` profile-1
-bytes, `14,404` forensic); normal/legacy builds remain Thumb. Profiles 0/1 now
-reuse live renderer state across ordered lists while resetting only transient
-proof counters; profile 2 keeps per-list forensic state. Runtime builds omit its
-82,176-byte stats array. Raw-fit bits are cached at VTX load, and an adjacent
-TRI batch skips invariant alpha/fog work. Frame-local caches and submission remain:
-`648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range, `1,242`
-divisions, and `121/707/121` batches. A GX display-list arena experiment was
-reverted after worsening vertex submission.
-Warm profile-0 present stays at its pacing quantum (`4,901,312/4,904,128`),
-but draw falls `4,669,856 -> 4,392,160` ticks and pacing reaches `7.0fps`.
-Profile 1 is `4,766,048/4,902,848`, with DL `3,329,920/3,434,304`, texture
-`804,512/907,840`, setup `1,253,280/1,357,248`, scan
-`1,415,040/1,416,704`, and vertex `661,920/663,040` ticks.
+TU in ARM state, while four measured O3 loops live in ITCM. One 40-byte exact
+context now supplies each three-vertex submission instead of restaging 22
+arguments three times; its eight Boolean modes share one flag word. Renderer
+ITCM is `12,408/12,608/12,556` bytes for profiles 0/1/2. Profiles 0/1 reuse live
+ordered-list state; profile 2 keeps per-list forensic state. Runtime omits its
+82,176-byte stats array. Raw-fit and TRI-run caches remain frame-local.
+Submission stays `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range,
+`1,242` divisions, and `121/707/121` batches. Immutable-packet and redundant
+GX-attribute experiments were measured and reverted because neither reduced
+the frame. A matched profile-1 A/B cuts draw `4,572,544 -> 4,454,784`, DL
+`3,416,832 -> 3,299,328`, and vertex `661,824 -> 513,600` ticks. Sixteen-frame
+profile 1 is `4,896,416/4,901,440`, with DL `3,308,064/3,318,464`, setup
+`1,376,992/1,389,888`, scan `1,415,744/1,417,408`, and vertex
+`513,728/515,584`. Profile 0 reaches `7.4fps`; draw is
+`4,277,344/4,295,488`.
 Forensic oracle remains `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_runtime-state-dualscreen-software.png`;
-shipped SHA-256: `353F5B98D230808CD0EACB38037A99462405DF3CB6EE53AEA710A0496F70740A`.
+`artifacts/visibility/2026-07-12_canonical_fast_022237-9222071-p41568.png`;
+shipped SHA-256: `E55D3D60C560231FD74796F86B10A1C718EDE703B3AEE30926C0FA24DE86B11A`.
 
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
@@ -130,14 +131,14 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `7.0fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `1.42M/1.25M` ticks; compile immutable packets
-and hoist exact run state without reviving the regressive GX-list arena. RGBA4 HUD,
-Whispy face strips, and Mario facing/light A/B remain separate debt.
+The canonical frame is still only `7.4fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `1.42M/1.38M` ticks; packet decoding is not
+their root cost, so profile vertex-load/resolution costs, then hoist exact run
+setup. RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-P1Gate passed in `198.2s`; Boundary passed in `106.2s`. DevFast passed in
+P1Gate passed in `267.4s`; Boundary passed in `146.6s`. DevFast passed in
 `43.7s` and the forensic oracle in `16.8s`. This is not the five-minute soak;
 Full Regression stays skipped.
 
@@ -146,5 +147,4 @@ Full Regression stays skipped.
 .\scripts\verify-p1-gate.ps1 -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
-
 After verified progress, commit, then run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

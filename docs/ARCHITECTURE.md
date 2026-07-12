@@ -1373,8 +1373,12 @@ while larger scripted and timer/Results diagnostics use Os for scene reserve.
 Only mode 163 compiles `nds_renderer.c` in ARM state; normal and archived narrow
 builds retain Thumb density. Four measured renderer loops also carry targeted
 O3 and `.itcm`, matching sm64-nds's interpreter/submission layout without
-fast-math or whole-program O3. Profile 1 occupies `14,968/32,768` ITCM bytes;
-profile 2 occupies `14,404`. Cache-hit guards run before temporary GX matrix
+fast-math or whole-program O3. The three vertex submissions share one 40-byte
+per-triangle context instead of restaging a 22-argument ABI three times; eight
+Boolean material/texture/depth modes are one exact flag word, while all live
+matrices, tiles, colors, vertices, and projected depths remain uncached.
+Profile 0/1/2 renderer ITCM is `12,408/12,608/12,556` of 32,768 bytes.
+Cache-hit guards run before temporary GX matrix
 construction, while `ndsRendererLoadHardwareMatrixPair` remains the final exact
 state guard.
 

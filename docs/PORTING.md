@@ -19643,3 +19643,42 @@ Source-corrected verifier expectations: none; the reused object preserves the
 same explicitly enumerated source state and resets every prior per-list field.
 Coverage-reduced verifier expectations: none; profile 2 retains the old
 per-list allocation/copy route, generic interpreter, and eager oracle.
+
+## 2026-07-12 - Compacted exact hardware vertex submission
+
+- Re-profiled the review's immutable-packet proposal against the current
+  post-cutover renderer. A fixed scene-generation cache reached 80 warm hits,
+  80 entries, 1,406 packets, 828 triangles, and only dynamic-list fallback,
+  but used 18--22 KiB without reducing the `~1.42M` scan bucket; triangle
+  submission also regressed. Both decoded and source-command forms were fully
+  reverted. Command packetization is not the current scan root cause.
+- Tested sm64-nds-style redundant GX attribute suppression. It skipped
+  `1,221/2,484` packed color writes and 78 texture-coordinate writes, but the
+  cross-call state checks raised measured vertex cost `~662K -> ~707K`; that
+  experiment was also fully reverted.
+- Replaced the accepted vertex helper's 22-argument call with one 40-byte
+  per-triangle context plus `(vertex_index, projected_z)`. The context is built
+  once before the measured three-vertex sequence; material, texture, tile,
+  matrix, and depth inputs remain live. Eight exact Boolean modes occupy one
+  flag word. No display list, pose, resolved pointer, texture content, or
+  composed output is cached.
+- A matched eight-frame profile-1 A/B reduces draw
+  `4,572,544 -> 4,454,784`, DL `3,416,832 -> 3,299,328`, triangle submission
+  `2,000,896 -> 1,883,392`, and vertex submission
+  `661,824 -> 513,600` ticks. Sixteen-frame profile 1 is
+  `4,896,416/4,901,440` present, `3,308,064/3,318,464` DL, and
+  `513,728/515,584` vertex. Profile-0 draw is
+  `4,277,344/4,295,488`, and pacing reaches `7.4fps`.
+- The smaller ABI cuts renderer ITCM to `12,408/12,608/12,556` bytes for
+  profiles 0/1/2. Profile 2 retains all 828 triangles and oracle `2484/0/0`.
+  Static checks, DevFast (`43.7s`), forensic (`16.8s`), P1Gate (`267.4s`), and
+  Boundary (`146.6s`) pass; Full/Legacy Regression remains skipped for fast
+  iteration. The dated dual-screen capture keeps the accepted pond, flowers,
+  fences, Mario, and Fox intact. Canonical/shipped parity is
+  11,594,752 bytes at SHA-256
+  `E55D3D60C560231FD74796F86B10A1C718EDE703B3AEE30926C0FA24DE86B11A`.
+
+Source-corrected verifier expectations: none; this is an ARM ABI/code-layout
+reduction around the same live source values and GX writes.
+Coverage-reduced verifier expectations: none; the generic interpreter,
+profile-2 eager oracle, dynamic validation, and all submission classes remain.
