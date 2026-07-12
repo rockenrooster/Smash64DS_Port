@@ -1393,8 +1393,9 @@ Only mode 163 compiles `nds_renderer.c` in ARM state; normal and archived narrow
 builds retain Thumb density. Six measured renderer paths carry targeted O3 and
 `.itcm`: CI4 conversion, source VTX decode/shade, GX vertex/triangle submission,
 and command scanning. This follows sm64-nds's interpreter/submission placement
-without fast-math or whole-program O3. The three vertex submissions share one
-40-byte per-triangle context instead of restaging a 22-argument ABI three times.
+without fast-math or whole-program O3. Material, texture scale/origin, and
+filter invariants live in the exact mutation-keyed traversal epoch; each vertex
+call passes only stats, state, index, and depth in the four ARM argument registers.
 Aligned little-endian VTX payloads use four strict-alias-safe word loads, while
 arbitrary alignment retains the bytewise decoder; hardware mode writes directly
 into the same persistent 32-slot input cache. A prepared light direction remains
@@ -1411,7 +1412,7 @@ from already-written representatives, then repeat rows copy bottom-to-top. A
 `>=4096`-pixel and at-least-50%-reuse gate leaves smaller or weakly repeating
 inputs on the direct loop; profile 2 omits both caches. The four maps are 512
 bytes; canonical profile-0 BSS is `1,857,584`. Canonical-O2/profile-1/profile-2
-renderer ITCM is `31,672/20,604/18,380` of 32,768 bytes.
+renderer ITCM is `20,956/20,596/18,244` of 32,768 bytes.
 Cache-hit guards run before temporary GX matrix construction; the final matrix-
 state guard remains exact.
 

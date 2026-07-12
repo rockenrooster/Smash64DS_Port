@@ -101,15 +101,15 @@ matrix/MOVEMEM invalidation; four 128-step RGB tables key source diffuse/ambient
 colors while normals/direction/alpha remain live. The table occupies 2,096
 bytes. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1 index the exact texture cache through 128 byte slots and per-entry fingerprints; full 236-byte equality remains the
 oracle, and deletion repairs clusters so animated keys leave no tombstones.
-Profile-0 BSS is `1,857,584`; canonical-O2/profile-1/profile-2 ITCM is `31,672/20,604/18,380`, below 32 KiB. Profile 2 keeps the linear/oracle route.
+Profile-0 BSS is `1,857,584`; canonical-O2/profile-1/profile-2 ITCM is `20,956/20,596/18,244`, below 32 KiB. Profile 2 keeps the linear/oracle route.
 Submission stays `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range,
 `1,242` divisions, and `121/707/121` batches. Hash lookup reports `53` calls,
-`49` probes, and `9/42/2` active/table/miss. Against the preceding checkpoint,
-profile-1 median/P95 draw is `2,720,896/3,166,720`, texture
-`352,736/354,816`, setup `842,176/844,352`, and scan `642,560/643,456`.
-Shipping O2 draw is `2,293,056/2,339,456`; DevFast/benchmark reaches `10.5fps`.
-Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_081934-6230668-p40156.png`;
-shipped SHA-256: `ECAE91BCDB65C5B7EF1BA9BF0EC311BB25BAD2BF7ACF7FC12E3CF0E908E09A96`.
+`49` probes, and `9/42/2` active/table/miss. Prepared material/texture context now persists for each exact epoch instead of rebuilding a 40-byte triangle object.
+Profile-1 median/P95 draw is `2,660,864/3,105,152`, texture
+`354,592/357,312`, setup `790,208/792,256`, and scan `641,664/642,496`.
+Repeated shipping O2 is `2,277,952/2,612,032`; pacing is `11.4-11.5fps`.
+Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_084620-1331088-p21320.png`;
+shipped SHA-256: `60F062AF4D72EDAABAA4C5012CEE08F1A4648810DDF3446F761F01360210C120`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
@@ -132,15 +132,15 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `10.5fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `0.64M/0.84M` ticks; next split command-state
-dispatch and exact TRI setup before a validated topology-packet replay.
+The canonical frame is still only `11.4-11.5fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `0.642M/0.790M` ticks; next measure actual
+projected divides and exact hardware `div64`, then runtime telemetry/fused runs.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-Prebuilt P1Gate/Boundary passed in `149.0s/56.6s`; DevFast/rebuilt forensic in
-`43.4s/24.4s`. This is not the five-minute soak; Full Regression stays skipped.
+Prebuilt P1Gate/Boundary passed in `149.0s/56.5s`; DevFast/rebuilt forensic in
+`43.6s/16.5s`. This is not the five-minute soak; Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

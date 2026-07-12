@@ -1189,9 +1189,9 @@
   VTX-cache decode reached `7.6fps`. Arena-first dynamic validation and the
   two immutable CI4 source-index planes first reached `8.7fps`. Exact
   representative expansion and exact class indexing reached `9.9fps`.
-  Direct persistent RSP traversal and validity-only scratch initialization now
-  reach `2,293,056/2,339,456` shipping-O2 draw and `10.5fps`; profile-1 draw is
-  `2,720,896/3,166,720`, scan is `642,560/643,456`, and divisions remain `1,242`.
+  Direct persistent RSP traversal plus exact prepared vertex context now reach
+  `2,277,952/2,612,032` repeated shipping-O2 draw and `11.4-11.5fps`; profile-1
+  draw/setup/scan is `2,660,864/790,208/641,664`, with `1,242` nominal divides.
   The rejected GX
   FIFO/display-list arena increased vertex cost and must not be restored.
   The RGBA4 interface/HUD SObjs still produce no DS pixels.

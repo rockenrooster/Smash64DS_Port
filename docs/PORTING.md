@@ -20000,3 +20000,44 @@ Full/Legacy Regression remains skipped for the requested fast iteration cadence.
 Source-corrected verifier expectations: none; the same persistent arrays and
 validity metadata now back traversal directly. Coverage-reduced expectations:
 Full/Legacy Regression remains skipped for the requested fast iteration cadence.
+
+## 2026-07-12 - Retained exact vertex-submit context
+
+- Profile 1 showed only `98` texture/material prepare epochs across `828`
+  triangles, with `730` exact reuses. The renderer nevertheless rebuilt and
+  filled a 40-byte stack context for every triangle before its three vertex
+  calls; every invariant in that object already shared the prepare epoch.
+- Material color/use flags, texture scales/origins, filter offset, and texture
+  enable now remain in traversal state until the existing exact invalidation
+  points. Only per-triangle depth/source-clip flags are replaced. The vertex
+  helper takes stats, state, slot, and projected depth through the four ARM
+  argument registers; the stack object and its stores are gone.
+- Profile 2 still recomputes material/combine diagnostics per triangle and
+  uses the same retained fields, so the independent bytewise/oracle path keeps
+  its coverage. The structural fixture rejects restoring per-triangle context
+  staging and requires mutation-keyed scale/origin preparation.
+- Against the preceding profile-1 checkpoint, median/P95 setup improves
+  `842,176/844,352 -> 790,208/792,256` (`-6.2%`), while draw improves
+  `2,720,896/3,166,720 -> 2,660,864/3,105,152`; scan stays
+  `641,664/642,496`. Repeated shipping-O2 medians are
+  `2,277,952-2,279,392`; one run held P95 at `2,281,344`, while a repeat
+  exposed a `2,612,032` outlier. Pacing is `11.4-11.5fps`.
+- Profile-0 BSS remains `1,857,584`. Canonical/profile-1/profile-2 renderer
+  ITCM falls to `20,956/20,596/18,244`, leaving substantially more of the
+  32 KiB region free. The normal build, GBI fixtures, DevFast (`43.6s`),
+  rebuilt forensic oracle `2484/0/0` (`16.5s`), P1Gate (`149.0s`), and
+  Boundary 161/162/163 (`56.5s`) pass.
+- Canonical/shipped parity is 11,669,504 bytes at SHA-256
+  `60F062AF4D72EDAABAA4C5012CEE08F1A4648810DDF3446F761F01360210C120`.
+  The accepted dual-screen capture is
+  `artifacts/visibility/2026-07-12_canonical_fast_084620-1331088-p21320.png`.
+- The external optimization review predates the hybrid raw path, profiles,
+  final-resolution wallpaper, persistent traversal, and this epoch reuse.
+  Its remaining measured candidates are actual projected-divide accounting
+  plus exact DS `div64`, then separating profile-0 runtime state from telemetry
+  before any materially fused owner-level run compiler; do not restore the
+  rejected one-command packet or small synchronous GX-list designs.
+
+Source-corrected verifier expectations: none; all retained values use the same
+existing invalidation boundary. Coverage-reduced verifier expectations:
+Full/Legacy Regression remains skipped for the requested fast iteration cadence.
