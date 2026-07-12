@@ -1183,7 +1183,10 @@
   deadline. Lane totals remain aggregate conversion observations covered by
   host byte/halfword fixtures.
 - The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`; the
-  canonical/shipped target forces it off while verifier markers remain active.
+  canonical/shipped target forces the live redraw off while verifier markers
+  remain active. Three bootstrap status rows still remain on its lower screen.
+  The project launchers present both physical screens; debug-HUD targets use
+  the lower one for the full live diagnostic page.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite

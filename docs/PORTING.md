@@ -19432,3 +19432,33 @@ Source-corrected verifier expectations: none; this is an exact composition of
 the existing source-controlled SObj result. Coverage-reduced verifier
 expectations: none; unsupported formats retain their previous zero-pixel result
 and the generic compositor remains the fallback.
+
+## 2026-07-11 - Dual-screen melonDS presentation and post-2D profile
+
+- The project-local melonDS profile had `ScreenSizing = 4`. melonDS defines
+  value 4 as top-only; this hid the sub engine even though the ROM already
+  initializes `MODE_0_2D`, VRAM H, and its console. The local profile is back
+  on value 0, the equal-size two-screen mode.
+- Added one TOML helper for the natural stacked, unrotated, unswapped,
+  equal-aspect DS pair. The visible capture path applies it temporarily and
+  restores the user's prior config; the interactive debug launcher leaves the
+  two-screen layout enabled. The registry static check now pins both callers.
+- A 488x675 software-renderer capture samples two distinct native 256x192
+  panels: top `49,150` nonblack pixels/hash `0x8e35ab22`, bottom `1,099`/hash
+  `0x56e171a2`. The lower canonical panel still shows the three bootstrap status
+  rows; only the full live diagnostic redraw is compiled out. Capture:
+  `artifacts/visibility/2026-07-11_dual-screen_210739.png`.
+- The already-started eight-frame profile-1 run completed before the layout
+  repair: present median/p95 is `13,301,536/13,563,968`, draw
+  `13,215,712/13,225,664`, DL `9,627,840/9,632,832`, and texture
+  `5,707,520/5,710,784`; the final sampled frame splits stage adapter
+  `7,856,960`, material `14,272`, conversion `4,824,768`, and upload `33,728`.
+  Immutable display-list traversal remains the next measured optimization.
+- PowerShell parsing, the top-only-to-dual fixture, docs, architecture, harness
+  registry, and diff checks pass. No ROM source or build configuration changed, so the
+  fast checkpoint intentionally skipped rebuild, emulator regression, and Full
+  Regression.
+
+Source-corrected verifier expectations: none; this is emulator-window layout,
+not source rendering. Coverage-reduced verifier expectations: none; visible
+launches still execute the same ROM and capture restores local preferences.

@@ -78,6 +78,9 @@ $realtimeText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle
 $p1GateText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-p1-gate.ps1') -Raw
 $verifyAllText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-all.ps1') -Raw
 $battleLoopText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
+$captureText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'capture-melonds.ps1') -Raw
+$debugMelonText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'debug-melonds.ps1') -Raw
+$melonLibText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'lib\melonds.ps1') -Raw
 $parityPath = Join-Path $PSScriptRoot 'check-battle-playable-rom-parity.ps1'
 if (-not (Test-Path -LiteralPath $parityPath -PathType Leaf)) {
     Fail-Check 'missing canonical/shipped battle-playable ROM parity checker'
@@ -102,6 +105,12 @@ if (($realtimeText -notmatch 'Resolve-MelonDSRunnerSlot') -or
     ($realtimeText -notmatch 'System\.Threading\.Mutex') -or
     ($realtimeText -notmatch 'System\.IO\.File\]::Replace')) {
     Fail-Check 'canonical realtime capture is missing runner-slot isolation or atomic stable publication'
+}
+if (($melonLibText -notmatch 'function\s+Set-MelonDSDualScreenLayout') -or
+    ($melonLibText -notmatch "@\('ScreenSizing',\s*'0'\)") -or
+    ($captureText -notmatch 'Set-MelonDSDualScreenLayout') -or
+    ($debugMelonText -notmatch 'Set-MelonDSDualScreenLayout')) {
+    Fail-Check 'visible melonDS launch/capture no longer guarantees both DS screens'
 }
 if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
     ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or

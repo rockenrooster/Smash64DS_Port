@@ -123,7 +123,7 @@ shifts/other TEXEL1, fog/color animation, speed, and Mario light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2.
 
 ## Recommended Next Work
-1. Re-profile remaining 3D command/state cost; packetize validated immutable topology only if still hot.
+1. Profile 1 confirms DL traversal at `9,627,840/9,632,832` of `13,301,536/13,563,968` present median/p95; packetize only validated immutable topology.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3; soak only at architecture milestones.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.

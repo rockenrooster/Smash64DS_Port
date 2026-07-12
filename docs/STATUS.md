@@ -127,15 +127,15 @@ DevFast incrementally builds it, runs one capture pass, rotates
 `latest.png` to `previous.png`, and requires exact canonical/shipped ROM parity.
 The scripted mode-163 ROM remains an internal `-fast-hwtri` target; three
 user-facing filenames represent only two unique configurations.
+Visible melonDS launch/capture now force the natural equal-size two-screen
+layout; the canonical lower screen retains its three bootstrap status rows.
 
-The active `161/162` boundary is still bounded proof scaffolding, while
-`battle_playable` is the scene-level battle anchor.
-Legacy bounded modes are migrate-or-delete: obsolete mode/verifier stacks get
-deleted with one `[coverage-reduced]` `KNOWN_ISSUES` line. Modes `57/58` and
-`159/160` have already been deleted.
+Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
+anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
+`[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-Next: re-profile the remaining 3D command/state cost, then add validated packet
-replay only if it remains hot; source RGBA4 interface/HUD output is separate debt.
+Fresh profile 1 is `present=13,301,536/13,563,968` median/p95; DL traversal at
+`9,627,840/9,632,832` remains hot. Next: validated immutable-topology packet replay; source RGBA4 HUD is separate debt.
 
 ## Verification
 

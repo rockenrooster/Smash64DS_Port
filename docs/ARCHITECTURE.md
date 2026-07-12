@@ -1058,6 +1058,10 @@ Launch it with:
 
 melonDS is kept under `emulators/melonds/`; its generated config and RTC state
 stay there, and stdout/stderr logs go to `artifacts/emulator-logs/`.
+The visible debug and capture launchers select melonDS's natural stacked,
+equal-size dual-screen layout so a saved top-only emulator preference cannot
+hide the bottom engine or invalidate the native top-screen crop. Capture runs
+restore the prior local preference when they exit.
 
 Capture the real melonDS window to `artifacts/` with:
 

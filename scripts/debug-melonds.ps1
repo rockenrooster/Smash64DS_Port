@@ -4,6 +4,7 @@ param(
     [string]$Rom = (Join-Path $PSScriptRoot '..\smash64ds.nds')
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $melonDsPath = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
     $MelonDS
@@ -28,7 +29,16 @@ if (-not (Test-Path $melonDsPath)) {
 if (-not (Test-Path $romPath)) {
     throw "ROM not found: $romPath. Run `make -j16` first or pass -Build."
 }
+$config = Join-Path $melonDsDir 'melonDS.toml'
+if (Test-Path -LiteralPath $config) {
+    $configText = Get-Content -LiteralPath $config -Raw
+    $dualScreenConfig = Set-MelonDSDualScreenLayout -Text $configText
+    if ($dualScreenConfig -ne $configText) {
+        Set-Content -LiteralPath $config -Value $dualScreenConfig -NoNewline
+    }
+}
 Write-Output 'Launching melonDS with live visual debug HUD.'
+Write-Output 'Display: natural stacked top and bottom screens at equal size.'
 Write-Output 'Top rail: self-test, boot chain, startup func, taskman, Opening Room boundary.'
 Write-Output 'Previews: native-size original N64Logo sprite plus bounded Opening Room DObj DL slice.'
 Write-Output 'Moving top-screen markers are disabled; detailed live values stay on the bottom screen and verifier.'

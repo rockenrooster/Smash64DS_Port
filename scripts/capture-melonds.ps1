@@ -13,6 +13,7 @@ param(
     [int]$SecondDelayMilliseconds = 0
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 if ($OpenGL4x -and $SoftwareRenderer) {
     throw '-OpenGL4x and -SoftwareRenderer are mutually exclusive.'
 }
@@ -140,7 +141,8 @@ $emulator = $null
 try {
     if (Test-Path $config) {
         $originalConfig = Get-Content $config -Raw
-        $visibleConfig = $originalConfig -replace
+        $visibleConfig = Set-MelonDSDualScreenLayout -Text $originalConfig
+        $visibleConfig = $visibleConfig -replace
             '(?s)(\[Instance0\.Gdb\]\s*Enabled\s*=\s*)true', '${1}false'
         $visibleConfig = $visibleConfig -replace
             '(?s)(\[Instance0\.Gdb\]\s*Enable\s*=\s*)true', '${1}false'

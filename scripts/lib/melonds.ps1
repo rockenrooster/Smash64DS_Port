@@ -173,6 +173,33 @@ function Set-MelonDSTomlValue {
         $Text.Substring($sectionMatch.Index + $sectionMatch.Length)
 }
 
+function Set-MelonDSDualScreenLayout {
+    param(
+        [Parameter(Mandatory=$true)]
+        [AllowEmptyString()]
+        [string]$Text
+    )
+
+    # Visible project runs and native-screen capture both assume the natural,
+    # equally sized DS pair. In melonDS, ScreenSizing=4 is top-only.
+    foreach ($setting in @(
+        @('ScreenLayout', '0'),
+        @('ScreenRotation', '0'),
+        @('ScreenGap', '0'),
+        @('ScreenSwap', 'false'),
+        @('ScreenSizing', '0'),
+        @('IntegerScaling', 'false'),
+        @('ScreenAspectTop', '0'),
+        @('ScreenAspectBot', '0')
+    )) {
+        $Text = Set-MelonDSTomlValue -Text $Text `
+            -Section 'Instance0.Window0' `
+            -Key $setting[0] -Value $setting[1]
+    }
+
+    return $Text
+}
+
 function Set-MelonDSTomlRootValue {
     param(
         [string]$Text,
