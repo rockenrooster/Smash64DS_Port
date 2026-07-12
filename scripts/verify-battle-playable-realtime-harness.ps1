@@ -7,9 +7,6 @@ param(
     [int]$DelaySeconds = 5,
     [switch]$RequireRealtime60Fps,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
-    [ValidateRange(0,100000)][int]$RendererBenchmarkStartFrame = 0,
-    [string]$RendererBenchmarkOutputJson = '',
-    [ValidateRange(0,2)][int]$PreparedStage0ExecutionMode = 0,
     [switch]$SkipScreenshot,
     [int]$ScreenshotDelaySeconds = 8,
     [int]$ScreenshotSecondDelaySeconds = 1,
@@ -217,19 +214,12 @@ $harnessArgs = @(
     '-RunnerSlot', "$RunnerSlot",
     '-DelaySeconds', "$smokeDelaySeconds",
     '-RealtimePresentation',
-    '-ImportBattleShipFTComputer',
-    '-PreparedStage0ExecutionMode', "$PreparedStage0ExecutionMode"
+    '-ImportBattleShipFTComputer'
 )
 if ($NoBuild) { $harnessArgs += '-NoBuild' }
 if ($RequireRealtime60Fps) { $harnessArgs += '-RequireRealtime60Fps' }
 if ($RendererBenchmarkSamples -gt 0) {
-    $harnessArgs += @(
-        '-RendererBenchmarkSamples', "$RendererBenchmarkSamples",
-        '-RendererBenchmarkStartFrame', "$RendererBenchmarkStartFrame")
-}
-if (-not [string]::IsNullOrWhiteSpace($RendererBenchmarkOutputJson)) {
-    $harnessArgs += @(
-        '-RendererBenchmarkOutputJson', $RendererBenchmarkOutputJson)
+    $harnessArgs += @('-RendererBenchmarkSamples', "$RendererBenchmarkSamples")
 }
 & $powerShellExe @harnessArgs
 if ($LASTEXITCODE -ne 0) {

@@ -4350,50 +4350,10 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                                 s32 link_id);
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind);
 void ndsRendererAdapterBeginStageTraversal(void);
-void ndsRendererAdapterBeginStagePreparedCandidate(
-    void *stage_gobj, void *const *collected_dobjs, u32 collected_count,
-    u32 callback_kind, void *camera_gobj, u32 initial_geometry_mode,
-    u32 layer_mask, s32 link_id, s32 is_layer);
 void ndsRendererAdapterEndStageTraversal(void);
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
                                        void *camera_gobj,
                                        u32 initial_geometry_mode);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-extern volatile u32 gNdsPreparedStage0CompileAttemptCount;
-extern volatile u32 gNdsPreparedStage0CompileSuccessCount;
-extern volatile u32 gNdsPreparedStage0FallbackReason;
-extern volatile u32 gNdsPreparedStage0ArenaCapacity;
-extern volatile u32 gNdsPreparedStage0ProgramBytes;
-extern volatile u32 gNdsPreparedStage0KeyHash;
-extern volatile u32 gNdsPreparedStage0KeyHash2;
-extern volatile u32 gNdsPreparedStage0DObjCount;
-extern volatile u32 gNdsPreparedStage0ListCount;
-extern volatile u32 gNdsPreparedStage0SourceCommandCount;
-extern volatile u32 gNdsPreparedStage0OperationCount;
-extern volatile u32 gNdsPreparedStage0ApplyOpCount;
-extern volatile u32 gNdsPreparedStage0StateGroupCount;
-extern volatile u32 gNdsPreparedStage0StateActionCount;
-extern volatile u32 gNdsPreparedStage0VertexBlockCount;
-extern volatile u32 gNdsPreparedStage0SourceVertexCount;
-extern volatile u32 gNdsPreparedStage0DrawRunCount;
-extern volatile u32 gNdsPreparedStage0TriangleCommandCount;
-extern volatile u32 gNdsPreparedStage0TriangleCount;
-extern volatile u32 gNdsPreparedStage0ImmutableListCount;
-extern volatile u32 gNdsPreparedStage0TrustedCommandCount;
-extern volatile u32 gNdsPreparedStage0ValidatedCommandCount;
-extern volatile u32 gNdsPreparedStage0BranchCount;
-extern volatile u32 gNdsPreparedStage0BranchCallCount;
-extern volatile u32 gNdsPreparedStage0BranchJumpCount;
-#endif
-extern volatile u32 gNdsPreparedStage0ExecutionMode;
-extern volatile u32 gNdsPreparedStage0PreflightAttemptCount;
-extern volatile u32 gNdsPreparedStage0PreflightSuccessCount;
-extern volatile u32 gNdsPreparedStage0ArmedOwnerCount;
-extern volatile u32 gNdsPreparedStage0CompletedOwnerCount;
-extern volatile u32 gNdsPreparedStage0ExecutedListCount;
-extern volatile u32 gNdsPreparedStage0ExecutionFailureCount;
-extern volatile u32 gNdsPreparedStage0ExecutionLastFailure;
-extern volatile u32 gNdsPreparedStage0ExecutionLastBlocker;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopMask;

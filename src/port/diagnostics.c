@@ -2865,43 +2865,7 @@ volatile u32 gNdsRendererSemanticPrefixHash[
     NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
 volatile u32 gNdsRendererSemanticPrefixHash2[
     NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
-volatile u32 gNdsPreparedStage0CompileAttemptCount;
-volatile u32 gNdsPreparedStage0CompileSuccessCount;
-volatile u32 gNdsPreparedStage0FallbackReason;
-volatile u32 gNdsPreparedStage0ArenaCapacity;
-volatile u32 gNdsPreparedStage0ProgramBytes;
-volatile u32 gNdsPreparedStage0KeyHash;
-volatile u32 gNdsPreparedStage0KeyHash2;
-volatile u32 gNdsPreparedStage0DObjCount;
-volatile u32 gNdsPreparedStage0ListCount;
-volatile u32 gNdsPreparedStage0SourceCommandCount;
-volatile u32 gNdsPreparedStage0OperationCount;
-volatile u32 gNdsPreparedStage0ApplyOpCount;
-volatile u32 gNdsPreparedStage0StateGroupCount;
-volatile u32 gNdsPreparedStage0StateActionCount;
-volatile u32 gNdsPreparedStage0VertexBlockCount;
-volatile u32 gNdsPreparedStage0SourceVertexCount;
-volatile u32 gNdsPreparedStage0DrawRunCount;
-volatile u32 gNdsPreparedStage0TriangleCommandCount;
-volatile u32 gNdsPreparedStage0TriangleCount;
-volatile u32 gNdsPreparedStage0ImmutableListCount;
-volatile u32 gNdsPreparedStage0TrustedCommandCount;
-volatile u32 gNdsPreparedStage0ValidatedCommandCount;
-volatile u32 gNdsPreparedStage0BranchCount;
-volatile u32 gNdsPreparedStage0BranchCallCount;
-volatile u32 gNdsPreparedStage0BranchJumpCount;
 #endif
-/* Keep the A/B selector in .data so generic and prepared experiments have
- * identical section layout.  Mode 1 is generic; mode 2 is prepared. */
-volatile u32 gNdsPreparedStage0ExecutionMode = 1u;
-volatile u32 gNdsPreparedStage0PreflightAttemptCount;
-volatile u32 gNdsPreparedStage0PreflightSuccessCount;
-volatile u32 gNdsPreparedStage0ArmedOwnerCount;
-volatile u32 gNdsPreparedStage0CompletedOwnerCount;
-volatile u32 gNdsPreparedStage0ExecutedListCount;
-volatile u32 gNdsPreparedStage0ExecutionFailureCount;
-volatile u32 gNdsPreparedStage0ExecutionLastFailure;
-volatile u32 gNdsPreparedStage0ExecutionLastBlocker;
 volatile u32 gNdsRendererProfileStageAdapterTicks;
 volatile u32 gNdsRendererProfileMaterialTicks;
 volatile u32 gNdsRendererProfileMatrixTicks;
