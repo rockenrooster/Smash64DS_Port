@@ -51,20 +51,21 @@ $visibleRegions = @(
 $textureDetailRegions = @(
     # StagePupupuFile2.c:423-424 and StagePupupuImages.c:103-113 place the
     # flowering side object below the platform; keep this texture gate on it.
-    'left_bush:70,88,40,20,0.50,16',
-    'stage_body:50,115,165,30,0.30,0',
+    'left_bush:72,104,32,16,0.45,12',
+    'stage_body:50,115,165,30,0.18,64',
     # StagePupupuFile2.c:621-680 supplies the two animated water MObjs.
     # The pre-fix white oval measured 27.997% / 105px at threshold 20;
     # the accepted TEXEL0/TEXEL1 frame measures 44.115% / 23px.
     'pond:82,125,115,24,0.35,60'
 )
 $fastTextureDetailRegions = @(
-    # The live camera can move this bush partly outside its fixed diagnostic
-    # crop. Visually accepted source-camera frames measured 35.128%+; retain
-    # the strict 16px flat-run cap while allowing that live composition range.
-    'left_bush:70,88,40,20,0.25,16',
-    # A valid 1.01x camera sample measured 24.837% with a 72px flat run.
-    'stage_body:50,115,165,30,0.20,96',
+    # Sample the lower flowering bush, clear of live Fox/platform overlap.
+    # Accepted old/new camera frames measure 47.8%+ with at most an 11px flat
+    # run, so this is stricter than the former position-sensitive crop.
+    'left_bush:72,104,32,16,0.40,12',
+    # Valid live-camera frames measure 18.821%+ with at most a 60px flat run;
+    # pair the lower composition floor with a new strict flat-run ceiling.
+    'stage_body:50,115,165,30,0.18,64',
     # Tolerate a valid 22.953% / 61px camera sample while the 96px cap still
     # rejects the pre-fix white pond's 105px run.
     'pond:82,125,115,24,0.20,96'

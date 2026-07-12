@@ -1372,9 +1372,13 @@ and profile 2 always uses that independent bytewise path. The cache occupies
 LUT.
 
 Profiles 0/1 also reuse one live renderer state object across BattleShip's
-ordered stage heads or fighter-part lists. Before each list, the adapter clears
-the transient proof/counter fields while texture, tile, combine, light, fog,
-and other-mode state remain live. Traversal directly aliases the persistent
+ordered stage heads or fighter-part lists. A null-callback traversal resets only
+execution guards and owner-level hardware totals while texture, tile, combine,
+light, fog, and other-mode state remain live. Stage/fighter adapters carry only
+the segment-`E` resolver pointers instead of clearing and copying the separate
+software-preview vertex ledger; the fighter owner publishes its hardware
+triangle total once after all selected parts. Detailed pixel/oracle output keeps
+the complete preview state and per-list proof accumulator. Traversal aliases the persistent
 32-slot input, clip, color, and matrix-snapshot-ID planes instead of copying
 them into and out of per-list scratch. Valid masks and stack depth initialize
 only the compact control plane; invalid scratch is never read. Profile 2 keeps

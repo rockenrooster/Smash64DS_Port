@@ -2687,6 +2687,31 @@ static void ndsFighterDLDrawResetTransientRendererStats(
     stats->texture_set_tile_count = 0u;
     stats->prim_depth_command_count = 0u;
 }
+
+static void ndsFighterDLDrawResetRuntimeRendererStats(
+    NDSRendererStats *stats)
+{
+    if (stats == NULL)
+    {
+        return;
+    }
+
+    /* Profiles 0/1 keep the ordered RDP state below intact. The null-callback
+     * path only needs traversal guards and the owner-level hardware totals;
+     * historical command/matrix/color ledgers remain profile-2 output. */
+    stats->blocker = NDS_RENDERER_BLOCKER_NONE;
+    stats->command_count = 0u;
+    stats->unsupported_command_count = 0u;
+    stats->end_command_count = 0u;
+    stats->hardware_triangle_count = 0u;
+    stats->hardware_zbuffer_triangle_count = 0u;
+    stats->hardware_projected_depth_triangle_count = 0u;
+    stats->hardware_decal_depth_triangle_count = 0u;
+    stats->hardware_texture_bind_count = 0u;
+    stats->hardware_texture_upload_count = 0u;
+    stats->hardware_texture_ready_count = 0u;
+    stats->hardware_texture_reject_count = 0u;
+}
 #endif
 
 static sb32 ndsFighterDLDrawAppendTriangle(NDSFighterDLDrawState *state,
@@ -3757,6 +3782,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
     void *saved_graphics_heap_ptr;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    sb32 detailed_output;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     u32 adapter_start;
     u32 step_start;
@@ -3778,7 +3806,24 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         return;
     }
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    detailed_output = (ndsRendererHardwareNoOracleEnabled() == FALSE) ?
+        TRUE : FALSE;
+    if (detailed_output != FALSE)
+    {
+        bzero(&state, sizeof(state));
+    }
+    else
+    {
+        /* Profile 0/1 submit with a null command callback. Only the compact
+         * branch/data resolver context is live; software-preview vertices
+         * are already retained by the renderer's persistent vertex cache. */
+        state.segment_e_base = NULL;
+        state.segment_e_end = NULL;
+    }
+#else
     bzero(&state, sizeof(state));
+#endif
     state.primary_file = loaded;
     state.slot = 0u;
 #if NDS_RENDERER_HW_TRIANGLES
@@ -3788,8 +3833,23 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             &sNdsRendererAdapterStagePersistentStats);
         inherited_tile = ndsRendererAdapterStatsHasArmedTile(
             &sNdsRendererAdapterStagePersistentStats);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (detailed_output != FALSE)
+        {
+            ndsFighterDLDrawSeedPersistentState(
+                &state, &sNdsRendererAdapterStagePersistentState);
+        }
+        else
+        {
+            state.segment_e_base =
+                sNdsRendererAdapterStagePersistentState.segment_e_base;
+            state.segment_e_end =
+                sNdsRendererAdapterStagePersistentState.segment_e_end;
+        }
+#else
         ndsFighterDLDrawSeedPersistentState(
             &state, &sNdsRendererAdapterStagePersistentState);
+#endif
         inherited_segment = (state.segment_e_base != NULL) ? TRUE : FALSE;
         gNdsStageGCDrawAllLoopHardwareCarrySeedCount++;
         if (inherited_texture != FALSE)
@@ -3852,7 +3912,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     if (sNdsRendererAdapterStagePersistentActive != FALSE)
     {
         render_stats = &sNdsRendererAdapterStagePersistentStats;
-        ndsFighterDLDrawResetTransientRendererStats(render_stats);
+        if (detailed_output != FALSE)
+        {
+            ndsFighterDLDrawResetTransientRendererStats(render_stats);
+        }
+        else
+        {
+            ndsFighterDLDrawResetRuntimeRendererStats(render_stats);
+        }
     }
     else
     {
@@ -3898,8 +3965,23 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
     if (sNdsRendererAdapterStagePersistentActive != FALSE)
     {
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (detailed_output != FALSE)
+        {
+            ndsFighterDLDrawCapturePersistentState(
+                &sNdsRendererAdapterStagePersistentState, &state);
+        }
+        else
+        {
+            sNdsRendererAdapterStagePersistentState.segment_e_base =
+                state.segment_e_base;
+            sNdsRendererAdapterStagePersistentState.segment_e_end =
+                state.segment_e_end;
+        }
+#else
         ndsFighterDLDrawCapturePersistentState(
             &sNdsRendererAdapterStagePersistentState, &state);
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         ndsFighterDLDrawCopyPersistentRendererState(
             &sNdsRendererAdapterStagePersistentStats, render_stats);
@@ -6975,6 +7057,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     NDSRendererStats persistent_stats;
     u8 *clean;
     sb32 no_oracle;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    sb32 detailed_output;
+    u32 runtime_hardware_triangle_count = 0u;
+#endif
     u32 root_x_before;
     u32 root_x_after;
     u32 i;
@@ -7017,8 +7103,28 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     clean = sNdsFighterDLAllDrawClean[slot];
     no_oracle = (ndsRendererHardwareNoOracleEnabled() != FALSE) ? TRUE :
                                                                     FALSE;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    detailed_output = ((pixels != NULL) || (no_oracle == FALSE)) ? TRUE :
+                                                                       FALSE;
+    if (detailed_output != FALSE)
+    {
+        bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
+        bzero(&persistent_state, sizeof(persistent_state));
+        bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
+    }
+    else
+    {
+        /* The shipping callback is null, so only the resolver's segment
+         * ownership crosses source part lists. Do not clear/copy the
+         * software-preview vertices or update its historical proof ledger. */
+        persistent_state.segment_e_base = NULL;
+        persistent_state.segment_e_end = NULL;
+    }
+#else
     bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
     bzero(&persistent_state, sizeof(persistent_state));
+    bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
+#endif
     ndsRendererInitVertexCache(&persistent_renderer_vertices);
     ndsRendererInitStats(&persistent_stats);
     if (sNdsFighterDisplayContractPlayback != FALSE)
@@ -7039,8 +7145,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
         ndsFighterDisplayContractSeedMaterialLights(&persistent_stats);
     }
-    bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
-
     for (i = 0u; i < collection.selected_count; i++)
     {
         const NDSFighterDisplayContractEvent *contract_event =
@@ -7052,6 +7156,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             collection.dobjs[i]->dl;
         NDSRelocLoadedFile *loaded =
             ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+        NDSFighterDLDrawState *current_state;
         NDSRendererConfig config;
         NDSRendererStats *current_stats;
         NDSRendererMatrix20p12 initial_projection;
@@ -7071,8 +7176,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             continue;
         }
 
-        states[i].primary_file = loaded;
-        states[i].slot = slot;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        current_state = (detailed_output != FALSE) ? &states[i] :
+                                                    &persistent_state;
+#else
+        current_state = &states[i];
+#endif
+        current_state->primary_file = loaded;
+        current_state->slot = slot;
         if (contract_event != NULL)
         {
             persistent_stats.geometry_mode = contract_event->geometry_mode;
@@ -7091,8 +7202,16 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 persistent_stats.light_dir_mask = 1u;
             }
         }
-        ndsFighterDLDrawSeedPersistentState(&states[i],
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        if (detailed_output != FALSE)
+        {
+            ndsFighterDLDrawSeedPersistentState(current_state,
+                                                &persistent_state);
+        }
+#else
+        ndsFighterDLDrawSeedPersistentState(current_state,
                                             &persistent_state);
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
@@ -7107,7 +7226,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     collection.dobjs[i];
 
             ndsRendererAdapterPrepareMaterialSegment(material_dobj,
-                                                     &states[i]);
+                                                     current_state);
         }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
@@ -7144,10 +7263,17 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             ndsRendererAdapterImmutableCommandSpan;
         config.resolve_branch = ndsFighterDLAllDrawResolveBranch;
         config.resolve_data = ndsFighterDLDrawResolveRendererData;
-        config.user = &states[i];
+        config.user = current_state;
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-        ndsFighterDLDrawResetTransientRendererStats(&persistent_stats);
+        if (detailed_output != FALSE)
+        {
+            ndsFighterDLDrawResetTransientRendererStats(&persistent_stats);
+        }
+        else
+        {
+            ndsFighterDLDrawResetRuntimeRendererStats(&persistent_stats);
+        }
         current_stats = &persistent_stats;
 #else
         ndsRendererInitStats(&stats[i]);
@@ -7166,7 +7292,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             (no_oracle != FALSE) ?
                 NULL :
                 ndsFighterMarioFoxVisitDLDrawCommand,
-            &states[i],
+            current_state,
             current_stats,
             &persistent_renderer_vertices);
 #if NDS_RENDERER_HW_TRIANGLES
@@ -7175,17 +7301,54 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        if (detailed_output != FALSE)
+        {
+            ndsFighterDLDrawCapturePersistentState(&persistent_state,
+                                                   current_state);
+        }
+#else
         ndsFighterDLDrawCapturePersistentState(&persistent_state,
-                                               &states[i]);
+                                               current_state);
+#endif
 #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
         ndsFighterDLDrawCopyPersistentRendererState(&persistent_stats,
                                                     current_stats);
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        if (detailed_output != FALSE)
+        {
+            ndsFighterDLAllDrawAccumulateStats(
+                slot, i, collection.indices[i], collection.dobjs[i], dl,
+                current_state, current_stats, clean);
+        }
+        else
+        {
+            runtime_hardware_triangle_count +=
+                current_stats->hardware_triangle_count;
+        }
+#else
         ndsFighterDLAllDrawAccumulateStats(slot, i, collection.indices[i],
                                            collection.dobjs[i], dl,
-                                           &states[i], current_stats, clean);
+                                           current_state, current_stats, clean);
+#endif
     }
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    if (detailed_output == FALSE)
+    {
+        if (slot == 0u)
+        {
+            gNdsFighterDLAllDrawP0HardwareTriangleCount +=
+                runtime_hardware_triangle_count;
+        }
+        else
+        {
+            gNdsFighterDLAllDrawP1HardwareTriangleCount +=
+                runtime_hardware_triangle_count;
+        }
+    }
+#endif
     if (pixels != NULL)
     {
         ndsFighterDLAllDrawRasterizeStates(slot, states, clean,

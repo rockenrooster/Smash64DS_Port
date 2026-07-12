@@ -20132,3 +20132,41 @@ Source-corrected verifier expectations: a completed warm texture-cache frame may
 have zero misses, but lookup outcome conservation and the probe bound remain
 mandatory. Coverage-reduced verifier expectations: Full/Legacy Regression
 remains skipped for the requested fast iteration cadence.
+
+## 2026-07-12 - Removed null-callback preview/proof state from runtime adapters
+
+- Profiles 0/1 no longer clear and copy the separate software-preview vertex/
+  triangle ledger around every selected stage or fighter list when the command
+  callback is null. Stage traversal carries only its exact segment-`E` resolver
+  pointers; fighter traversal reuses one resolver context and publishes the
+  hardware triangle total once after the selected-part owner loop. Pixel/oracle
+  output and profile 2 retain the complete per-list state and failure ledger.
+- The runtime stats reset now clears only traversal guards plus owner-consumed
+  hardware totals. The ordered texture, tile, combine, light, fog, and other-mode
+  state remains live. Full transient proof clearing is selected whenever detailed
+  output is requested. Structural fixtures lock both ownership paths.
+- The clean same-cycle profile-0 baseline was `2,189,312/2,190,976` median/P95
+  draw ticks. Repeated shipping O2 is `2,044,640/2,046,080`, a conservative
+  `144,672`-tick or 6.6% median cut, with pacing `11.7 -> 12.3fps`. Profile 1 is
+  draw `2,423,168/2,473,984`, vertex `459,168/460,736`, setup
+  `748,576/799,104`, and scan `652,352/653,184`.
+- All `828` triangles, `648/44/126/10` submit classes, `121/707/121` batches,
+  `98/730` prepare/reuse, 36,864 upload bytes, GX RAM `715/2167`, stage RSP/ST
+  carry, and profile-2 oracle `2484/0/0` remain exact.
+- The prior fixed left-bush screenshot crop began overlapping live Fox/camera
+  composition and failed on the unchanged `AE6645...` baseline despite a valid
+  frame. The gate now samples the lower source flowering bush: 30 recent old/new
+  captures measure 47.8%+ variation and at most an 11px flat run, against gates
+  of 40%/12px. The broad stage crop adds a 64px flat-run ceiling while accepting
+  the valid 18.821% live-camera composition. DevFast publishes the accepted
+  dual-screen capture; final P1Gate publishes
+  `artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png`.
+- DevFast, the rebuilt profile-2 forensic oracle, P1Gate (`195.4s`), Boundary
+  161/162/163 (`58.3s`), and static checks pass. Full/Legacy Regression remains
+  intentionally skipped. Canonical/shipped parity is 11,670,528 bytes at
+  SHA-256 `5E502A39FB46000176E2EA3BA54511EEB39AE9068DC666104991BF9AEFE51872`.
+
+Source-corrected verifier expectations: sample stable source-bush pixels rather
+than live fighter overlap; stage detail must satisfy both variation and a strict
+flat-run ceiling. Coverage-reduced verifier expectations: Full/Legacy Regression
+remains skipped for the requested fast iteration cadence.

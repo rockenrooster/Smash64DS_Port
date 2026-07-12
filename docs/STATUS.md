@@ -82,7 +82,7 @@ Reloc-backed source DLs now expose one immutable byte span; dynamic task-heap
 lists keep per-command validation. Live stage/fighter validators test the
 taskman arena before walking the loaded-file ledger, preserving the same
 accepted ranges. Each list directly uses the persistent 32-slot input/clip/color/
-snapshot planes; validity masks reset compact control state. Profile 1 remains `80/1736/344/330` immutable/trusted/validated/adjacent-TRI work. Each run reuses exact material/depth, RGB15, S/T, projected X/Y, and clip Z.
+snapshot planes; validity masks reset compact control state. Null-callback profiles carry only segment-`E` preview resolver state, reset exact traversal guards/hardware totals, and publish fighter triangles once per owner; detailed/profile-2 ledgers remain unchanged. Profile 1 remains `80/1736/344/330` immutable/trusted/validated/adjacent-TRI work. Each run reuses exact material/depth, RGB15, S/T, projected X/Y, and clip Z.
 Texture preparation persists through VTX/matrix and invalidates only at exact key mutations. Profiles 0/1 reuse alpha/poly-format only when the blend/combine classifier proves it vertex-independent; profile 2 stays generic.
 The animated CI4 palette-pair
 LUT remains content-keyed with sixteen exact 4x4 coverage planes. Profiles 0/1
@@ -105,10 +105,10 @@ mixed-matrix, `126` no-Z, `10` range, `1,242` logical divide demand, and
 `121/707/121` batches. Signed pre-clamping plus DS `div64` removes the shipping software 64-bit helper. Profile 1 makes `650` cache-miss calls; profile 2 checks
 `1,404` evaluations against C with zero mismatch. Final hash lookup is
 frame-dependent but conserves active/table/miss results with bounded probes.
-Profile-1 median/P95 is draw `2,554,368/2,602,240`, vertex `459,264/460,096`, setup `740,896/789,888`, scan `652,416/653,184`.
-Repeated shipping O2 is `2,190,112/2,190,976`; pacing is `11.7fps`.
-Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_110513-4384512-p19696.png`;
-shipped SHA-256: `AE6645D9AA06C7C45309137FC47F26ECDBB06023E72E3EDB8FECAD69161C0349`.
+Profile-1 median/P95 is draw `2,423,168/2,473,984`, vertex `459,168/460,736`, setup `748,576/799,104`, scan `652,352/653,184`.
+Repeated shipping O2 is `2,044,640/2,046,080`; pacing is `12.3fps`.
+Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png`;
+shipped SHA-256: `5E502A39FB46000176E2EA3BA54511EEB39AE9068DC666104991BF9AEFE51872`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
@@ -131,14 +131,14 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `11.7fps`, far below the 60 FPS P1 condition.
-Shipping now omits five generic proof-only counters and reuses proven constant alpha/poly-format, but the combined cut is only ~1%; profile-1 scan/setup remains `0.652M/0.741M`.
+The canonical frame is still only `12.3fps`, far below the 60 FPS P1 condition.
+Zero-forensic-state adapter ownership removes ~145K draw ticks (6.6%); profile-1 scan/setup remains `0.652M/0.749M`.
 Next fuse owner-level source state/VTX/TRI. The indexed-water trial halved uploads but regressed draw/GX RAM and is gone.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-Final P1Gate/Boundary passed in `149.1s/56.5s`; isolated fast canonical passed in `47.6s`. This is not the five-minute soak; Full Regression stays skipped.
+Final P1Gate/Boundary passed in `195.4s/58.3s`; DevFast and forensic also pass. This is not the five-minute soak; Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
