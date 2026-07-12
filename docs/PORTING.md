@@ -19863,3 +19863,54 @@ Source-corrected verifier expectations: none; every representative has the same
 two source addresses and ordered-coverage phase as the expanded destination.
 Coverage-reduced verifier expectations: Full/Legacy Regression was skipped by
 request; DevFast, P1Gate, Boundary, direct fallback, and profile-2 oracle remain.
+
+## 2026-07-12 - Exact texture index and canonical O2 routing
+
+- A temporary profile-1 phase audit found about 53 texture-cache searches per
+  frame, with the 64-entry linear route examining 19.4 entries per call. Lookup
+  consumed about 72K ticks/frame; hashing all 59 key words recovered lookup
+  time but spent most of it again, so that experimental hash and all temporary
+  timers were removed.
+- Profiles 0/1 now mix high-entropy image, tile, TEXEL1, fraction, and combine
+  fields into a compact fingerprint and probe a fixed 128-slot byte index. The
+  active entry remains the first guard and every table candidate still requires
+  full 236-byte key equality. Profile 2 keeps the independent 64-entry linear
+  search and legacy-alias diagnostic.
+- Deletion repairs and reinserts the rest of its linear-probe cluster. It leaves
+  no tombstones for animated pond keys to accumulate over a five-minute match.
+  A host oracle covers equal-fingerprint/full-key rejection, colliding homes,
+  middle/head deletion, cluster repair, and replacement. Runtime proof reports
+  `53/49/9/42/2` calls/probes/active/table/miss and requires exact accounting
+  with fewer than four probes per call.
+- Against the preceding matched profile-1 run, median/P95 texture falls
+  `434,144/439,680 -> 395,232/398,400`, setup
+  `911,936/915,968 -> 871,552/876,544`, and draw
+  `3,043,872/3,491,392 -> 3,016,064/3,463,424`. The matched size-optimized
+  profile-0 A/B lowers draw `2,913,152/3,359,296 ->
+  2,858,304/3,304,256`.
+- Artifact comparison then exposed that the direct canonical wrapper still
+  passed the `battle_playable` harness name, selecting `-Os`, while registry
+  prebuilds correctly selected `battle_playable_realtime`/O2. Direct profile 0
+  now routes through the realtime variant; lifecycle selects its own `-Os`
+  variant, and coarse/forensic profiling stays size-optimized. The generated
+  build config records the harness name, so equal-ID mode-163 variants cannot
+  silently reuse objects compiled under a different optimization policy.
+- Corrected shipping O2 measures `2,797,152/3,220,480` present and
+  `2,658,304/2,661,760` draw over 16 frames, reaching `9.8fps`; final DevFast is
+  `9.7fps`. Canonical O2/profile-1/profile-2 ITCM is
+  `32,460/20,888/18,216`, leaving 308 canonical bytes, and profile-0 BSS is
+  `1,856,560`.
+- Rebuilt DevFast (`151.6s`), final prebuilt P1Gate (`150.6s`), final prebuilt
+  Boundary 161/162/163 (`56.7s`), and rebuilt forensic (`49.4s`) pass. Full/
+  Legacy Regression remains skipped by request. Canonical/shipped parity is
+  11,671,552 bytes at SHA-256
+  `D57BC8BB3A69F2B9CF50066AC2BE713A847BA5D7AC728C4D100C95E6061BB034`.
+  The final dual-screen capture is
+  `artifacts/visibility/2026-07-12_canonical_fast_064740-7379227-p41728.png`;
+  the lower LCD remains live with its three bootstrap rows.
+
+Source-corrected verifier expectations: canonical direct builds now receive the
+documented O2 policy; texture equality and all live conversion/upload inputs are
+unchanged. Coverage-reduced verifier expectations: Full/Legacy Regression was
+skipped by request; DevFast, P1Gate, Boundary, collision fallback, and the
+profile-2 linear/oracle route remain.

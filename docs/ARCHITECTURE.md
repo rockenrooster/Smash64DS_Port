@@ -1383,6 +1383,11 @@ runtime writes to the shipped ROM.
 
 Mode-163 compiler policy follows artifact purpose: canonical realtime uses O2,
 while larger scripted and timer/Results diagnostics use Os for scene reserve.
+The direct profile-0 verifier therefore selects `battle_playable_realtime`;
+coarse/forensic profiling stays on the size-optimized `battle_playable` variant,
+and lifecycle selects `battle_playable_match_lifecycle`. All share scene ID 163,
+so the generated build config also records the harness variant and invalidates
+objects whenever that compiler-policy input changes.
 Only mode 163 compiles `nds_renderer.c` in ARM state; normal and archived narrow
 builds retain Thumb density. Six measured renderer paths carry targeted O3 and
 `.itcm`: CI4 conversion, source VTX decode/shade, GX vertex/triangle submission,
@@ -1403,11 +1408,22 @@ and 4x4 ordered-coverage phase all match. First representatives are expanded
 right-to-left and repeat rows bottom-to-top, so no representative is overwritten
 before its last use. A `>=4096`-pixel and at-least-50%-reuse gate leaves smaller
 or weakly repeating inputs on the direct loop; profile 2 omits both caches. The
-four address/representative maps are exactly 512 bytes; current profile-0 BSS is
-`1,856,200`. Profile 0/1/2 renderer ITCM is `20,448/20,888/18,216` of 32,768
-bytes.
+four address/representative maps are exactly 512 bytes; current canonical
+profile-0 BSS is `1,856,560`. Canonical-O2/profile-1/profile-2 renderer ITCM is
+`32,460/20,888/18,216` of 32,768 bytes; the shipped route retains 308 bytes.
 Cache-hit guards run before temporary GX matrix construction; the final matrix-
 state guard remains exact.
+
+Profiles 0/1 index the resident 64-entry DS texture cache through a fixed
+128-slot byte table. A compact fingerprint mixes high-entropy source image,
+tile, TEXEL1, fraction, and combine state, but every candidate still requires
+the complete 236-byte texture-key comparison. Profile 2 retains the independent
+linear lookup and legacy-alias diagnostic. Removal repairs and reinserts the
+rest of the linear-probe cluster instead of leaving tombstones, so the animated
+pond cannot degrade lookup cost over the five-minute match. Runtime accounting
+requires active hits, table hits, misses, exact totals, and fewer than four
+probes per call; a host collision fixture covers equal fingerprints, deletion,
+cluster repair, and head replacement.
 
 Canonical GDB reads are synchronized to
 `ndsBattlePlayableFrameCompleteMarker`, after `gcDrawAll`, SObj composition,

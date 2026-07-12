@@ -20,6 +20,69 @@ function Assert-True {
         throw $Message
     }
 }
+function Add-TextureLookupFixtureEntry {
+    param(
+        [byte[]]$Table,
+        [object[]]$Entries,
+        [int]$EntryIndex
+    )
+    $slotValue = $EntryIndex + 1
+    $slot = [int]([uint32]$Entries[$EntryIndex].Hash -band 127u)
+    for ($probe = 0; $probe -lt 128; $probe++) {
+        $value = [int]$Table[$slot]
+        if ($value -eq $slotValue) { return }
+        if ($value -eq 0) {
+            $Table[$slot] = [byte]$slotValue
+            return
+        }
+        $slot = ($slot + 1) -band 127
+    }
+}
+function Remove-TextureLookupFixtureEntry {
+    param(
+        [byte[]]$Table,
+        [object[]]$Entries,
+        [int]$EntryIndex
+    )
+    $slotValue = $EntryIndex + 1
+    $slot = [int]([uint32]$Entries[$EntryIndex].Hash -band 127u)
+    for ($probe = 0; $probe -lt 128; $probe++) {
+        $value = [int]$Table[$slot]
+        if ($value -eq 0) { return }
+        if ($value -eq $slotValue) {
+            $Table[$slot] = 0
+            $slot = ($slot + 1) -band 127
+            while ($Table[$slot] -ne 0) {
+                $value = [int]$Table[$slot]
+                $Table[$slot] = 0
+                Add-TextureLookupFixtureEntry $Table $Entries ($value - 1)
+                $slot = ($slot + 1) -band 127
+            }
+            return
+        }
+        $slot = ($slot + 1) -band 127
+    }
+}
+function Find-TextureLookupFixtureEntry {
+    param(
+        [byte[]]$Table,
+        [object[]]$Entries,
+        [uint32]$Hash,
+        [string]$Key
+    )
+    $slot = [int]($Hash -band 127u)
+    for ($probe = 0; $probe -lt 128; $probe++) {
+        $value = [int]$Table[$slot]
+        if ($value -eq 0) { return -1 }
+        $entry = $Entries[$value - 1]
+        if ($entry.Ready -and ([uint32]$entry.Hash -eq $Hash) -and
+            ([string]$entry.Key -ceq $Key)) {
+            return $value - 1
+        }
+        $slot = ($slot + 1) -band 127
+    }
+    return -1
+}
 function Get-WallpaperForwardLastWriterMap {
     param(
         [int]$Length,
@@ -1198,6 +1261,32 @@ Assert-True ($renderer -match '(?s)if \(\(indices0 != NULL\) && \(indices1 != NU
 Assert-True ($renderer.Contains('sNdsRendererHardwareTexel01Ci4RepresentativeS[x] = (u8)prior;') -and $renderer.Contains('sNdsRendererHardwareTexel01Ci4RepresentativeT[y] = (u8)prior;') -and $renderer -match '(?s)Source0S\[x\].*?Source1S\[x\].*?\(x & 3u\) == \(prior & 3u\)' -and $renderer -match '(?s)Source0T\[y\].*?Source1T\[y\].*?\(y & 3u\) == \(prior & 3u\)') 'Performance CI4 representative keys no longer include both source-address axes and the exact ordered-coverage phase.'
 Assert-True ($renderer -match '(?s)unique_texels \* 2u\) <= texels.*?for \(x = width; x != 0u; \).*?for \(y = height; y != 0u; \).*?memcpy\(') 'Performance CI4 representative path no longer applies its measured threshold or expands first representatives in overwrite-safe reverse order.'
 Assert-True ($harnessScript.Contains('RENDER_CI4MAP=') -and $harnessScript.Contains('Forensic renderer unexpectedly reused performance CI4 representative maps.')) 'Mode 163 no longer proves representative-map reuse while keeping the forensic decoder independent.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u') -and $renderer.Contains('texture lookup must retain an empty cluster terminator')) 'Performance texture lookup lost its measured 128-slot byte table or half-full terminator bound.'
+Assert-True ($renderer.Contains('sizeof(NDSRendererHardwareTextureKey) == 236u') -and $renderer.Contains('entry->key_hash == key_hash') -and $renderer.Contains('ndsRendererHardwareTextureKeyEqual(&entry->key, key)')) 'Performance texture lookup no longer pairs its compact fingerprint with the full exact key oracle.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2.*?entry = .*?sNdsRendererHardwareActiveTextureEntry.*?sNdsRendererHardwareTextureLookup\[slot\].*?value - 1u.*?#else\s*\(void\)key_hash;\s*for \(i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i\+\+\)') 'Texture lookup no longer keeps the open-address performance path independent from the forensic linear oracle.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureLookupRemove.*?leaving tombstones.*?while \(sNdsRendererHardwareTextureLookup\[slot\] !=.*?NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY\).*?ndsRendererHardwareTextureLookupInsert') 'Texture lookup deletion no longer repairs its collision cluster to prevent long-match probe decay.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureLookupRemove\(entry\);\s*#endif\s*entry->key = key;.*?entry->ready = TRUE;\s*#if NDS_RENDERER_PROFILE_LEVEL < 2\s*ndsRendererHardwareTextureLookupInsert\(entry\);') 'Texture refresh no longer removes the old hash mapping before publishing and indexing the exact replacement key.'
+Assert-True ($harnessScript.Contains('RENDER_TEXHASH=') -and $harnessScript.Contains('bounded probes') -and $harnessScript.Contains('Forensic renderer unexpectedly used the performance texture hash lookup.')) 'Canonical verifier no longer proves bounded performance hash coverage and forensic independence.'
+$textureLookupTable = [byte[]]::new(128)
+$textureLookupEntries = @(
+    [pscustomobject]@{ Hash = [uint32]5; Key = 'A'; Ready = $true },
+    [pscustomobject]@{ Hash = [uint32]133; Key = 'B'; Ready = $true },
+    [pscustomobject]@{ Hash = [uint32]5; Key = 'C'; Ready = $true },
+    [pscustomobject]@{ Hash = [uint32]261; Key = 'D'; Ready = $true }
+)
+Add-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 0
+Add-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 1
+Add-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 2
+Assert-Equal (Find-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 5 'C') 2 'Texture lookup did not pass an equal fingerprint through full-key comparison.'
+Assert-Equal (Find-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 5 'Z') -1 'Texture lookup accepted a fingerprint collision without exact key equality.'
+Remove-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 1
+Assert-Equal (Find-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 5 'C') 2 'Texture lookup deletion did not retain a later collision-chain entry.'
+Assert-Equal $textureLookupTable[6] 3 'Texture lookup deletion did not repair the collision-chain hole.'
+Assert-Equal $textureLookupTable[7] 0 'Texture lookup deletion left the repaired collision chain fragmented.'
+Add-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 3
+Assert-Equal $textureLookupTable[7] 4 'Texture lookup did not append a new collision after cluster repair.'
+Remove-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 0
+Assert-Equal (Find-TextureLookupFixtureEntry $textureLookupTable $textureLookupEntries 261 'D') 3 'Texture lookup lost a replacement after deleting the collision-chain head.'
 Assert-True ($renderer -match '(?s)#endif\s*for \(y = 0u; y < height; y\+\+\).*?index0 = ndsRendererHardwareReadCi4Direct.*?index1 = ndsRendererHardwareReadCi4Direct') 'Performance CI4 cache no longer retains the independent bytewise fallback.'
 Assert-True ($rendererHeader.Contains('ndsRendererHardwareResetSourceCaches')) 'Renderer API cannot invalidate source-pointer caches before reloc scene storage is reused.'
 Assert-True ($relocRendererDL -match '(?s)static void ndsRendererAdapterResetSceneCaches.*?ndsRendererHardwareResetSourceCaches\(\)') 'Reloc scene reset no longer invalidates immutable renderer source caches before pointer reuse.'
@@ -1495,6 +1584,7 @@ Assert-True ($platform.Contains('gNdsHardwareRendererFlushCount')) 'Platform har
 Assert-True ($platform.Contains('gNdsHardwareRendererPolyRamCount')) 'Platform hardware renderer polygon RAM diagnostic is missing.'
 Assert-True ($platform.Contains('gNdsHardwareRendererVertexRamCount')) 'Platform hardware renderer vertex RAM diagnostic is missing.'
 $makefile = Get-Content (Join-Path $root 'Makefile') -Raw
+$battlePlayableVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-harness.ps1') -Raw
 Assert-True ($makefile.Contains('NDS_RENDERER_HW_TRIANGLES ?= 0')) 'Makefile hardware renderer flag default is missing.'
 Assert-True ($makefile.Contains('NDS_RENDERER_PROFILE_LEVEL ?= 2')) 'Makefile renderer profile default is not forensic-safe.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-canonical-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 0') 'Canonical/shipped renderer is not forced to performance profile 0.'
@@ -1504,6 +1594,9 @@ Assert-True ([regex]::Matches($makefile, 'NDS_DEV_SCENE_HARNESS_ID := 163\r?\n(?
 Assert-True ([regex]::Matches($makefile, 'NDS_DEV_SCENE_HARNESS_ID := 163\r?\n(?:#[^\r\n]*\r?\n)*CFLAGS \+= -Os').Count -eq 2) 'Mode 163 diagnostic variants no longer preserve their scene-reserve size policy.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(NDS_DEV_SCENE_HARNESS_ID\),163\).*?nds_renderer\.o: CFLAGS \+= -marm.*?endif') 'Mode 163 no longer compiles the renderer TU in measured ARM state.'
 Assert-True ($makefile.Contains("echo '#define NDS_RENDERER_PROFILE_LEVEL `$(NDS_RENDERER_PROFILE_LEVEL)';")) 'Generated build config omits the renderer profile level.'
+Assert-True ($makefile.Contains('echo ''#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'';')) 'Generated build config cannot invalidate objects when equal-ID harness variants change compiler policy.'
+Assert-True ($battlePlayableVerifier -match '(?s)elseif \(\$RealtimePresentation -and \(\$RendererProfileLevel -eq 0\)\).*?\$harness = ''battle_playable_realtime''.*?-Harness \$harness') 'Direct canonical verifier no longer routes profile 0 through the O2 battle_playable_realtime build variant.'
+Assert-True ($battlePlayableVerifier -match '(?s)if \(\$MatchLifecycleProof\).*?\$harness = ''battle_playable_match_lifecycle''') 'Direct lifecycle verifier no longer routes through its size-optimized mode-163 build variant.'
 Assert-True ($makefile.Contains('battleship_sys_matrix.c')) 'Makefile original sys/matrix import is missing.'
 Assert-True ($makefile.Contains('battleship_sys_sintable.c')) 'Makefile original sine table import is missing.'
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw

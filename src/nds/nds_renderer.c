@@ -171,6 +171,8 @@
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
 #define NDS_RENDERER_HW_ORACLE_EPSILON 0u
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 64u
+#define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
+#define NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY 0u
 #define NDS_RENDERER_CCMUX_COMBINED 0u
 #define NDS_RENDERER_CCMUX_TEXEL0 1u
 #define NDS_RENDERER_CCMUX_TEXEL1 2u
@@ -307,6 +309,11 @@ typedef struct NDSRendererRuntimeFrameSummary
     u32 texture_uploads;
     u32 texture_upload_bytes;
     u32 texture_cache_alias_avoid_count;
+    u32 texture_lookup_call_count;
+    u32 texture_lookup_probe_count;
+    u32 texture_lookup_active_hit_count;
+    u32 texture_lookup_table_hit_count;
+    u32 texture_lookup_miss_count;
     u32 texel1_composite_count;
     u32 texel1_load_match_count;
     u32 texel1_reject_count;
@@ -741,6 +748,9 @@ typedef struct NDSRendererHardwareTextureCacheEntry
     u32 profile_width;
     u32 profile_height;
     u32 last_used_frame;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    u32 key_hash;
+#endif
     NDSRendererHardwareTextureKey key;
 } NDSRendererHardwareTextureCacheEntry;
 
@@ -792,6 +802,21 @@ typedef struct NDSRendererHardwareLightShadeCacheEntry
 
 static NDSRendererHardwareTextureCacheEntry
     sNdsRendererHardwareTextureCache[NDS_RENDERER_HW_TEXTURE_CACHE_COUNT];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static u8 sNdsRendererHardwareTextureLookup[
+    NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT];
+#if defined(__arm__)
+_Static_assert(sizeof(NDSRendererHardwareTextureKey) == 236u,
+               "texture key layout must remain exact-match stable");
+_Static_assert(
+    (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT &
+     (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u)) == 0u,
+    "texture lookup count must remain a power of two");
+_Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <
+                   NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT,
+               "texture lookup must retain an empty cluster terminator");
+#endif
+#endif
 static u32 sNdsRendererHardwareTextureCacheNext;
 static u32 sNdsRendererHardwareFrameSerial;
 static const NDSRendererHardwareTextureCacheEntry
@@ -3880,6 +3905,117 @@ static s32 ndsRendererHardwareTextureKeyEqual(
     return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static u32 ndsRendererHardwareTextureKeyHash(
+    const NDSRendererHardwareTextureKey *key)
+{
+    u32 hash;
+
+    if (key == NULL)
+    {
+        return 0u;
+    }
+    /* This is an index fingerprint, not the equality oracle.  Mix the
+     * high-entropy image/material identity and animated tile state, then keep
+     * the full 236-byte comparison on every candidate hit.  Hashing all 59
+     * words cost more ARM9 time than the open-address lookup saved. */
+    hash = key->image ^ (key->tlut_image * 0x9e3779b9u);
+    hash ^= key->texel1_image * 0x85ebca6bu;
+    hash ^= (key->width << 16) ^ key->height;
+    hash ^= (key->format << 28) ^ (key->size << 24) ^ key->flags;
+    hash ^= (key->load_uls << 16) ^ key->load_ult ^ key->load_lrs;
+    hash ^= (key->tile_uls << 16) ^ key->tile_ult ^ key->tile_lrs;
+    hash ^= (key->texel1_load_uls << 16) ^ key->texel1_load_ult ^
+        key->texel1_load_lrs;
+    hash ^= (key->texel1_tile_uls << 16) ^ key->texel1_tile_ult ^
+        key->texel1_tile_lrs;
+    hash ^= key->prim_lod_fraction * 0xc2b2ae35u;
+    hash ^= key->combine_w0 ^ (key->combine_w1 * 0x27d4eb2fu);
+    hash ^= hash >> 16;
+    hash *= 0x7feb352du;
+    hash ^= hash >> 15;
+    return hash;
+}
+
+static void ndsRendererHardwareTextureLookupInsert(
+    const NDSRendererHardwareTextureCacheEntry *entry)
+{
+    u32 slot_value;
+    u32 slot;
+    u32 probe;
+
+    if ((entry == NULL) || (entry->ready == 0u))
+    {
+        return;
+    }
+    slot_value = (u32)(entry - sNdsRendererHardwareTextureCache) + 1u;
+    slot = entry->key_hash & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
+    for (probe = 0u; probe < NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT; probe++)
+    {
+        u32 value = sNdsRendererHardwareTextureLookup[slot];
+
+        if (value == slot_value)
+        {
+            return;
+        }
+        if (value == NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY)
+        {
+            sNdsRendererHardwareTextureLookup[slot] = (u8)slot_value;
+            return;
+        }
+        slot = (slot + 1u) & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
+    }
+}
+
+static void ndsRendererHardwareTextureLookupRemove(
+    const NDSRendererHardwareTextureCacheEntry *entry)
+{
+    u32 slot_value;
+    u32 slot;
+    u32 probe;
+
+    if ((entry == NULL) || (entry->ready == 0u))
+    {
+        return;
+    }
+    slot_value = (u32)(entry - sNdsRendererHardwareTextureCache) + 1u;
+    slot = entry->key_hash & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
+    for (probe = 0u; probe < NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT; probe++)
+    {
+        u32 value = sNdsRendererHardwareTextureLookup[slot];
+
+        if (value == NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY)
+        {
+            return;
+        }
+        if (value == slot_value)
+        {
+            /* Repair the remainder of this linear-probe cluster instead of
+             * leaving tombstones that animated water keys could accumulate
+             * over a five-minute match.  The table is twice the cache size,
+             * so an empty terminator is guaranteed. */
+            sNdsRendererHardwareTextureLookup[slot] =
+                NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY;
+            slot = (slot + 1u) &
+                (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
+            while (sNdsRendererHardwareTextureLookup[slot] !=
+                   NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY)
+            {
+                value = sNdsRendererHardwareTextureLookup[slot];
+                sNdsRendererHardwareTextureLookup[slot] =
+                    NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY;
+                ndsRendererHardwareTextureLookupInsert(
+                    &sNdsRendererHardwareTextureCache[value - 1u]);
+                slot = (slot + 1u) &
+                    (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
+            }
+            return;
+        }
+        slot = (slot + 1u) & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
+    }
+}
+#endif
+
 static s32 ndsRendererHardwareTexel1RefreshCompatible(
     const NDSRendererHardwareTextureKey *a,
     const NDSRendererHardwareTextureKey *b)
@@ -3901,6 +4037,7 @@ static s32 ndsRendererHardwareTexel1RefreshCompatible(
             (a->combine_w1 == b->combine_w1)) ? TRUE : FALSE;
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static s32 ndsRendererHardwareTextureKeyWouldLegacyAlias(
     const NDSRendererHardwareTextureKey *a,
     const NDSRendererHardwareTextureKey *b)
@@ -3962,16 +4099,58 @@ static s32 ndsRendererHardwareTextureKeyWouldLegacyAlias(
             (a->combine_w0 == b->combine_w0) &&
             (a->combine_w1 == b->combine_w1)) ? TRUE : FALSE;
 }
+#endif
 
 static NDSRendererHardwareTextureCacheEntry *
-ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key)
+ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
+                               u32 key_hash)
 {
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSRendererHardwareTextureCacheEntry *entry;
+    u32 slot;
+    u32 probe;
+#else
     u32 i;
+#endif
 
     if (key == NULL)
     {
         return NULL;
     }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    sNdsRendererRuntimeFrameSummary.texture_lookup_call_count++;
+    entry = (NDSRendererHardwareTextureCacheEntry *)
+        sNdsRendererHardwareActiveTextureEntry;
+    if ((entry != NULL) && (entry->ready != 0u) &&
+        (entry->key_hash == key_hash) &&
+        (ndsRendererHardwareTextureKeyEqual(&entry->key, key) != FALSE))
+    {
+        sNdsRendererRuntimeFrameSummary.texture_lookup_active_hit_count++;
+        return entry;
+    }
+
+    slot = key_hash & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
+    for (probe = 0u; probe < NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT; probe++)
+    {
+        u32 value = sNdsRendererHardwareTextureLookup[slot];
+
+        sNdsRendererRuntimeFrameSummary.texture_lookup_probe_count++;
+        if (value == NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY)
+        {
+            break;
+        }
+        entry = &sNdsRendererHardwareTextureCache[value - 1u];
+        if ((entry->ready != 0u) && (entry->key_hash == key_hash) &&
+            (ndsRendererHardwareTextureKeyEqual(&entry->key, key) != FALSE))
+        {
+            sNdsRendererRuntimeFrameSummary
+                .texture_lookup_table_hit_count++;
+            return entry;
+        }
+        slot = (slot + 1u) & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
+    }
+#else
+    (void)key_hash;
     for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
     {
         if ((sNdsRendererHardwareTextureCache[i].ready != 0u) &&
@@ -3987,6 +4166,10 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key)
             ndsRendererProfileRecordTextureAliasAvoid();
         }
     }
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    sNdsRendererRuntimeFrameSummary.texture_lookup_miss_count++;
+#endif
     return NULL;
 }
 
@@ -4079,6 +4262,9 @@ ndsRendererHardwareReleaseTexture(
     {
         return NULL;
     }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareTextureLookupRemove(entry);
+#endif
     ndsRendererHardwareEndBatch();
     if (sNdsRendererHardwareBoundTextureName == (u32)entry->name)
     {
@@ -5872,6 +6058,7 @@ static s32 ndsRendererHardwareBindTexture(
     u32 palette_base;
     u32 tlut_physical_bytes;
     u32 params;
+    u32 key_hash;
     u32 render_tile_index;
     u32 render_tile_flags;
     u32 upload_attempts;
@@ -6239,8 +6426,14 @@ static s32 ndsRendererHardwareBindTexture(
         key.combine_w1 = stats->texture_combine_w1;
     }
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    key_hash = ndsRendererHardwareTextureKeyHash(&key);
+#else
+    key_hash = 0u;
+#endif
+
     fraction_entry = NULL;
-    entry = ndsRendererHardwareFindTexture(&key);
+    entry = ndsRendererHardwareFindTexture(&key, key_hash);
     params = ndsRendererHardwareTextureParams(stats, render_tile,
                                                upload_width, upload_height);
     if (entry != NULL)
@@ -6521,7 +6714,13 @@ static s32 ndsRendererHardwareBindTexture(
     gNdsRendererProfileTextureUploadTicks += cpuGetTiming() - upload_start;
 #endif
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareTextureLookupRemove(entry);
+#endif
     entry->key = key;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    entry->key_hash = key_hash;
+#endif
     entry->params = ndsRendererHardwareMergeTextureParams(params);
     entry->source_texels = texels;
     entry->green_texels = green_texels;
@@ -6530,6 +6729,9 @@ static s32 ndsRendererHardwareBindTexture(
     entry->profile_height = upload_height;
     entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
     entry->ready = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareTextureLookupInsert(entry);
+#endif
     sNdsRendererHardwareActiveTextureEntry = entry;
     stats->hardware_texture_upload_count++;
     stats->hardware_texture_ready_count++;
@@ -8473,6 +8675,16 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererRuntimeCi4ReusePixelCount;
     gNdsRendererProfileTextureCacheAliasAvoidCount =
         sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count;
+    gNdsRendererProfileTextureLookupCallCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_call_count;
+    gNdsRendererProfileTextureLookupProbeCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_probe_count;
+    gNdsRendererProfileTextureLookupActiveHitCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_active_hit_count;
+    gNdsRendererProfileTextureLookupTableHitCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_table_hit_count;
+    gNdsRendererProfileTextureLookupMissCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_miss_count;
     gNdsRendererProfileTexel1CompositeCount =
         sNdsRendererRuntimeFrameSummary.texel1_composite_count;
     gNdsRendererProfileTexel1LoadMatchCount =

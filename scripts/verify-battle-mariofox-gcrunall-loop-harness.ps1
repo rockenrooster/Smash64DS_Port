@@ -311,6 +311,7 @@ try {
             'printf "RENDER_COST=%u,%u\n", gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks',
             'printf "RENDER_CI4LUT=%u,%u,%u,%u\n", gNdsRendererProfileCi4LutBuildCount, gNdsRendererProfileCi4LutReuseCount, gNdsRendererProfileCi4IndexCacheBuildCount, gNdsRendererProfileCi4IndexCacheReuseCount',
             'printf "RENDER_CI4MAP=%u,%u\n", gNdsRendererProfileCi4RepresentativePixelCount, gNdsRendererProfileCi4ReusePixelCount',
+            'printf "RENDER_TEXHASH=%u,%u,%u,%u,%u\n", gNdsRendererProfileTextureLookupCallCount, gNdsRendererProfileTextureLookupProbeCount, gNdsRendererProfileTextureLookupActiveHitCount, gNdsRendererProfileTextureLookupTableHitCount, gNdsRendererProfileTextureLookupMissCount',
             'printf "RENDER_ORACLE=%u,%u,%u\n", gNdsRendererProfileOracleSamples, gNdsRendererProfileOracleMismatches, gNdsRendererProfileOracleMaxDelta',
             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
             'printf "RENDER_ADAPTER_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileCameraMatrixCacheHitCount, gNdsRendererProfileCameraMatrixCacheMissCount, gNdsRendererProfileCameraMatrixCacheOverflowCount, gNdsRendererProfileDObjWorldCacheHitCount, gNdsRendererProfileDObjWorldCacheMissCount, gNdsRendererProfileDObjWorldCacheOverflowCount',
@@ -474,6 +475,7 @@ try {
     $renderCost = [regex]::Match($gdbStdout, 'RENDER_COST=([0-9]+),([0-9]+)')
     $renderCi4Lut = [regex]::Match($gdbStdout, 'RENDER_CI4LUT=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderCi4Map = [regex]::Match($gdbStdout, 'RENDER_CI4MAP=([0-9]+),([0-9]+)')
+    $renderTexHash = [regex]::Match($gdbStdout, 'RENDER_TEXHASH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperFinal = [regex]::Match($gdbStdout, 'SOBJ_WALL_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
@@ -560,6 +562,7 @@ try {
                 $rcost = Get-Ints $renderCost
                 $rci4lut = Get-Ints $renderCi4Lut
                 $rci4map = Get-Ints $renderCi4Map
+                $rth = Get-Ints $renderTexHash
                 $wc = Get-Ints $wallpaperCache
                 $wf = Get-Ints $wallpaperFinal
                 $ro = Get-Ints $renderOracle
@@ -609,6 +612,12 @@ try {
                     $benchmarkSummary = " bench${RendererBenchmarkSamples}=present$((Get-Median $benchPresent))/$((Get-Percentile95 $benchPresent))/draw$((Get-Median $benchDraw))/$((Get-Percentile95 $benchDraw))/stage$((Get-Median $benchStage))/$((Get-Percentile95 $benchStage))/mat$((Get-Median $benchMaterial))/$((Get-Percentile95 $benchMaterial))/mtx$((Get-Median $benchMatrix))/$((Get-Percentile95 $benchMatrix))/dl$((Get-Median $benchDL))/$((Get-Percentile95 $benchDL))/tex$((Get-Median $benchTexture))/$((Get-Percentile95 $benchTexture))/submit$((Get-Median $benchSubmit))/$((Get-Percentile95 $benchSubmit))/vertex$((Get-Median $benchVertex))/$((Get-Percentile95 $benchVertex))/setup$((Get-Median $benchSetup))/$((Get-Percentile95 $benchSetup))/scan$((Get-Median $benchScan))/$((Get-Percentile95 $benchScan))"
                 }
                 Assert-Condition ($rendererProfileMarker.Success -and [int64]$rendererProfileMarker.Groups[1].Value -eq $RendererProfileLevel) "Canonical realtime HW build did not report renderer profile level $RendererProfileLevel." $gdbStdout
+                Assert-Condition $renderTexHash.Success 'Canonical realtime HW build did not publish texture lookup accounting.' $gdbStdout
+                if ($RendererProfileLevel -lt 2) {
+                    Assert-Condition ($rth[0] -gt 0 -and $rth[2] -gt 0 -and $rth[3] -gt 0 -and $rth[4] -gt 0 -and ($rth[2] + $rth[3] + $rth[4]) -eq $rth[0] -and $rth[1] -ge ($rth[3] + $rth[4]) -and $rth[1] -lt (4 * $rth[0])) 'Performance/coarse texture hash lookup lacked active/table/miss coverage, exact accounting, or bounded probes.' $gdbStdout
+                } else {
+                    Assert-Condition (($rth | Measure-Object -Sum).Sum -eq 0) 'Forensic renderer unexpectedly used the performance texture hash lookup.' $gdbStdout
+                }
                 Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
                 Assert-Condition ($stageHardware.Success -and $shw[0] -gt 8 -and $shw[1] -gt 0 -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build did not submit textured stage triangles.' $gdbStdout
@@ -693,6 +702,7 @@ try {
                     $hardwareSummary += " ci4lut=$($rci4lut[0])/$($rci4lut[1])/idx$($rci4lut[2])/$($rci4lut[3])"
                     $hardwareSummary += " ci4map=$($rci4map[0])/$($rci4map[1])"
                 }
+                $hardwareSummary += " texHash=$($rth[0])/$($rth[1])/$($rth[2])/$($rth[3])/$($rth[4])"
             }
             if ($LiveInputPreview) {
                 $livePad = [regex]::Match($gdbStdout, 'LIVE_PAD=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')

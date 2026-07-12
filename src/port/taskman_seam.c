@@ -722,6 +722,11 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileTextureSampleGreenCount = 0;
     gNdsRendererProfileTextureSampleNonWhiteCount = 0;
     gNdsRendererProfileTextureCacheAliasAvoidCount = 0;
+    gNdsRendererProfileTextureLookupCallCount = 0;
+    gNdsRendererProfileTextureLookupProbeCount = 0;
+    gNdsRendererProfileTextureLookupActiveHitCount = 0;
+    gNdsRendererProfileTextureLookupTableHitCount = 0;
+    gNdsRendererProfileTextureLookupMissCount = 0;
     gNdsRendererProfileTexel1CompositeCount = 0;
     gNdsRendererProfileTexel1LoadMatchCount = 0;
     gNdsRendererProfileTexel1RejectCount = 0;

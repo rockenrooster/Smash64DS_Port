@@ -40,6 +40,7 @@ $ImportBattleShipAudioAssets = $true
 $ImportBattleShipAudioBGM = $true
 $target = 'smash64ds-battle-playable-fast-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
+$harness = 'battle_playable'
 if ($RealtimePresentation) {
     if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 0 }
     if ($RendererProfileLevel -eq 0) {
@@ -59,6 +60,13 @@ if ($RealtimePresentation) {
     $LiveInputPreview = $true
 }
 if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 2 }
+if ($MatchLifecycleProof) {
+    $harness = 'battle_playable_match_lifecycle'
+} elseif ($RealtimePresentation -and ($RendererProfileLevel -eq 0)) {
+    # The shipped profile-0 path is the latency-optimized mode-163 variant.
+    # Coarse/forensic diagnostic targets retain the size-optimized variant.
+    $harness = 'battle_playable_realtime'
+}
 $hardwareTriangles = $target -like '*-hwtri'
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
@@ -88,7 +96,7 @@ $hardwareTriangles = $target -like '*-hwtri'
     -RequireRealtime60Fps:$RequireRealtime60Fps `
     -RendererProfileLevel $RendererProfileLevel `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
-    -Harness 'battle_playable' `
+    -Harness $harness `
     -Target $target `
     -Build $build `
     -ExpectedMode 163 `

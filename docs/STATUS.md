@@ -88,7 +88,7 @@ LUT remains content-keyed with sixteen exact 4x4 coverage planes. Profiles 0/1
 decode the two immutable 32x32 packed source-index planes once, keyed by
 pointer/texel count/lane and invalidated before reloc scene storage is reused.
 Live tile origins, masks, palette/fraction, phase lookup, and uploads stay
-dynamic. Profile 1 proves `2/720` index build/reuse; profile 2 stays bytewise
+dynamic. Profile 1 proves `2/728` index build/reuse; profile 2 stays bytewise
 with index/map `0/0` and `0/0`.
 
 Canonical mode 163 alone keeps `-O2`; the larger scripted/lifecycle diagnostics
@@ -98,18 +98,18 @@ guarded may-alias word loads with bytewise fallback and decode directly into the
 persistent cache. Light direction survives adjacent VTX commands until exact
 matrix/MOVEMEM invalidation; four 128-step RGB tables key source diffuse/ambient
 colors while normals/direction/alpha remain live. The table occupies 2,096
-bytes. CI4 representative maps add 512 bytes; profile-0 BSS is `1,856,200`.
-Profile 0/1/2 ITCM is `20,448/20,888/18,216`, below 32 KiB; profile 2 keeps its generic/oracle route.
+bytes. CI4 maps add 512 bytes. Profiles 0/1 index the exact texture cache through 128 byte slots and per-entry fingerprints; full 236-byte equality remains the
+oracle, and deletion repairs clusters so animated keys leave no tombstones.
+Profile-0 BSS is `1,856,560`; canonical-O2/profile-1/profile-2 ITCM is `32,460/20,888/18,216`, below 32 KiB. Profile 2 keeps the linear/oracle route.
 Submission stays `648` raw source-Z, `44` mixed-matrix, `126` no-Z, `10` range,
-`1,242` divisions, and `121/707/121` batches. Representative reuse lowers the
-matched profile-1 P95 draw `3,585,792 -> 3,491,392`, DL
-`2,430,080 -> 2,350,976`, texture `509,376 -> 439,680`, setup
-`988,608 -> 915,968`, and scan `950,720 -> 939,072` ticks. Profile 0's best
-benchmark remains `8.7fps`; final DevFast is `8.6fps`.
-Forensic oracle remains `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_canonical_fast_054624-3345757-p21976.png`;
-shipped SHA-256: `832566CCEA53F6E6DD7195DDBFCEB0164EDC1F11594D376A5244F42B6A15C76E`.
-
+`1,242` divisions, and `121/707/121` batches. Hash lookup reports `53` calls,
+`49` probes, and `9/42/2` active/table/miss. Against the preceding checkpoint,
+profile-1 median/P95 draw falls `3,043,872/3,491,392 -> 3,016,064/3,463,424`, texture `434,144/439,680 -> 395,232/398,400`, and setup
+`911,936/915,968 -> 871,552/876,544`; scan is `943,200/943,808`. Matched-Os
+profile-0 draw falls `2,913,152/3,359,296 -> 2,858,304/3,304,256`; corrected
+shipping O2 is `2,658,304/2,661,760`, with DevFast/benchmark `9.7/9.8fps`.
+Forensic oracle remains `2484/0/0`. Capture: `artifacts/visibility/2026-07-12_canonical_fast_064740-7379227-p41728.png`;
+shipped SHA-256: `D57BC8BB3A69F2B9CF50066AC2BE713A847BA5D7AC728C4D100C95E6061BB034`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
@@ -132,15 +132,15 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still only `8.6fps`, far below the 60 FPS P1 condition.
-Profile-1 scan/setup remain about `0.94M/0.92M` ticks; next profile command-state
+The canonical frame is still only `9.7fps`, far below the 60 FPS P1 condition.
+Profile-1 scan/setup remain about `0.94M/0.87M` ticks; next profile command-state
 dispatch and exact TRI-run setup before considering a larger packet cache.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 
 ## Verification
 
-P1Gate/Boundary passed in `259.9s/127.8s`; DevFast/rebuilt forensic passed in
-`76.9s/49.8s`. This is not the five-minute soak; Full Regression stays skipped.
+Prebuilt P1Gate/Boundary passed in `150.6s/56.7s`; rebuilt DevFast/forensic in
+`151.6s/49.4s`. This is not the five-minute soak; Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
