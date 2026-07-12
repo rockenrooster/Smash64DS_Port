@@ -316,7 +316,8 @@ try {
             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
             'printf "RENDER_ADAPTER_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileCameraMatrixCacheHitCount, gNdsRendererProfileCameraMatrixCacheMissCount, gNdsRendererProfileCameraMatrixCacheOverflowCount, gNdsRendererProfileDObjWorldCacheHitCount, gNdsRendererProfileDObjWorldCacheMissCount, gNdsRendererProfileDObjWorldCacheOverflowCount',
             'printf "RENDER_RAW_MATRIX=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileRawCurrentCandidateCount, gNdsRendererProfileRawCurrentRangeRejectCount, gNdsRendererProfileRawCrossMatrixCount, gNdsRendererProfileMatrixPosTestSamples, gNdsRendererProfileMatrixPosTestMismatches, gNdsRendererProfileMatrixPosTestMaxError, gNdsRendererProfileMatrixPosTestWSignMismatches, gNdsRendererProfileMatrixPosTestClipMismatches, gNdsRendererProfileMatrixPosTestMatrixWordSamples, gNdsRendererProfileMatrixPosTestDropped',
-            'printf "RENDER_SUBMIT=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileSubmitRawCurrentCount, gNdsRendererProfileSubmitRawSnapshotCount, gNdsRendererProfileSubmitProjectedCrossCount, gNdsRendererProfileSubmitProjectedNoZCount, gNdsRendererProfileSubmitProjectedDecalCount, gNdsRendererProfileSubmitProjectedPrimDepthCount, gNdsRendererProfileSubmitProjectedRangeOrMatrixCount, gNdsRendererProfileSubmitRejectCount, gNdsRendererProfileProjectedDivisionCount',
+            'printf "RENDER_SUBMIT=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileSubmitRawCurrentCount, gNdsRendererProfileSubmitRawSnapshotCount, gNdsRendererProfileSubmitProjectedCrossCount, gNdsRendererProfileSubmitProjectedNoZCount, gNdsRendererProfileSubmitProjectedDecalCount, gNdsRendererProfileSubmitProjectedPrimDepthCount, gNdsRendererProfileSubmitProjectedRangeOrMatrixCount, gNdsRendererProfileSubmitRejectCount, (6 * gNdsRendererProfileSubmitProjectedNoZCount) + (9 * (gNdsRendererProfileSubmitProjectedCrossCount + gNdsRendererProfileSubmitProjectedDecalCount + gNdsRendererProfileSubmitProjectedPrimDepthCount + gNdsRendererProfileSubmitProjectedRangeOrMatrixCount))',
+            'printf "RENDER_HWDIV=%u,%u,%u,%u,%u\n", gNdsRendererProfileHardwareDivideSummary & 0xfff, (gNdsRendererProfileHardwareDivideSummary >> 12) & 0xff, (gNdsRendererProfileHardwareDivideSummary >> 20) & 0xff, (gNdsRendererProfileHardwareDivideSummary >> 28) & 1, (gNdsRendererProfileHardwareDivideSummary >> 29) & 1',
             'printf "RENDER_LAZY=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileSourceVertexLoadCount, gNdsRendererProfileCPUTransformCount, gNdsRendererProfileTransformCacheHitCount, gNdsRendererProfileMatrixSnapshotCreateCount, gNdsRendererProfileMatrixSnapshotReuseCount, gNdsRendererProfileMatrixSnapshotOverflowCount',
             'printf "RENDER_VERTEX=%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%u\n", gNdsRendererProfileRawVertexMinX, gNdsRendererProfileRawVertexMaxX, gNdsRendererProfileRawVertexMinY, gNdsRendererProfileRawVertexMaxY, gNdsRendererProfileRawVertexMinZ, gNdsRendererProfileRawVertexMaxZ, gNdsRendererProfileHWVertexMinX, gNdsRendererProfileHWVertexMaxX, gNdsRendererProfileHWVertexMinY, gNdsRendererProfileHWVertexMaxY, gNdsRendererProfileHWVertexMinZ, gNdsRendererProfileHWVertexMaxZ, gNdsRendererProfileHWVertexSaturateCount',
             'printf "RENDER_DEPTH=%u,%d,%d,%d,%d,%u,%d,%d,%d,%d,%u,%d,%d,%d,%d\n", gNdsRendererDepthStageSamples, gNdsRendererDepthStageMin, gNdsRendererDepthStageMax, gNdsRendererDepthStageWMin, gNdsRendererDepthStageWMax, gNdsRendererDepthFighterP0Samples, gNdsRendererDepthFighterP0Min, gNdsRendererDepthFighterP0Max, gNdsRendererDepthFighterP0WMin, gNdsRendererDepthFighterP0WMax, gNdsRendererDepthFighterP1Samples, gNdsRendererDepthFighterP1Min, gNdsRendererDepthFighterP1Max, gNdsRendererDepthFighterP1WMin, gNdsRendererDepthFighterP1WMax',
@@ -483,6 +484,7 @@ try {
     $renderAdapterCache = [regex]::Match($gdbStdout, 'RENDER_ADAPTER_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderRawMatrix = [regex]::Match($gdbStdout, 'RENDER_RAW_MATRIX=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderSubmit = [regex]::Match($gdbStdout, 'RENDER_SUBMIT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $renderHardwareDivide = [regex]::Match($gdbStdout, 'RENDER_HWDIV=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderLazy = [regex]::Match($gdbStdout, 'RENDER_LAZY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderVertex = [regex]::Match($gdbStdout, 'RENDER_VERTEX=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+)')
     $renderDepth = [regex]::Match($gdbStdout, 'RENDER_DEPTH=([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
@@ -570,6 +572,7 @@ try {
                 $rac = Get-Ints $renderAdapterCache
                 $rrm = Get-Ints $renderRawMatrix
                 $rs = Get-Ints $renderSubmit
+                $rhdiv = Get-Ints $renderHardwareDivide
                 $rlazy = Get-Ints $renderLazy
                 $rv = Get-Ints $renderVertex
                 $rd = Get-Ints $renderDepth
@@ -663,7 +666,17 @@ try {
                     $expectedProjectedFallbackCount *= $hw[0]
                 }
                 Assert-Condition ($renderSubmit.Success -and $rs[0] -eq $rrm[0] -and $rs[0] -gt 0 -and $rs[2] -eq $rrm[2] -and $rs[3] -gt 0 -and $rs[6] -eq $rrm[1] -and $rs[7] -eq 0 -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build did not partition every submitted triangle into the expected hybrid raw/projected classes.' $gdbStdout
-                Assert-Condition ($rs[8] -eq $expectedProjectedDivisions -and ($rs[8] * 4) -lt $preCutoverProjectedDivisions) 'Canonical realtime HW build did not sharply reduce and exactly account projected software divisions.' $gdbStdout
+                Assert-Condition ($rs[8] -eq $expectedProjectedDivisions -and ($rs[8] * 4) -lt $preCutoverProjectedDivisions) 'Canonical realtime HW build did not sharply reduce and exactly account projected division demand.' $gdbStdout
+                $hardwareDivideEvaluations = $rhdiv[0] + $rhdiv[1] + $rhdiv[2]
+                Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Canonical realtime projected hardware divider reported a zero denominator or exact-result mismatch.' $gdbStdout
+                if ($RendererProfileLevel -eq 0) {
+                    Assert-Condition ($hardwareDivideEvaluations -eq 0) 'Shipping profile retained hot-loop hardware-divider telemetry.' $gdbStdout
+                } elseif ($RendererProfileLevel -lt 2) {
+                    Assert-Condition ($rhdiv[0] -gt 0 -and $hardwareDivideEvaluations -lt $rs[8]) 'Coarse renderer did not use the exact DS hardware divider or reuse projected vertex results.' $gdbStdout
+                } else {
+                    $expectedHardwareDivideEvaluations = $rs[8] + (3 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
+                    Assert-Condition ($rhdiv[0] -gt 0 -and $hardwareDivideEvaluations -eq $expectedHardwareDivideEvaluations) 'Forensic renderer did not compare every live DS hardware quotient with the former exact C result.' $gdbStdout
+                }
                 Assert-Condition ($renderLazy.Success -and $rlazy[0] -gt 0 -and $rlazy[3] -gt 0 -and $rlazy[4] -gt 0 -and $rlazy[5] -eq 0) 'Canonical realtime HW matrix snapshot table lacked natural load/create/reuse coverage or overflowed.' $gdbStdout
                 Assert-Condition ($renderCombine.Success -and $rc[4] -eq $expectedProjectedFallbackCount) 'Canonical realtime HW projected-fallback accounting does not match the exceptional source-Z classes.' $gdbStdout
                 Assert-Condition ($fighterLightSeed.Success -and $fls[0] -gt 0 -and $fls[1] -eq [Convert]::ToUInt32('ffffff00', 16) -and $fls[2] -eq [Convert]::ToUInt32('4c4c4c00', 16)) 'Canonical realtime HW build did not seed the fighter RSP light state from the selected source MObj material.' $gdbStdout
@@ -697,6 +710,7 @@ try {
                     $hardwareSummary += " adapterCache=$($rac[0])/$($rac[1])/$($rac[2])/$($rac[3])/$($rac[4])/$($rac[5])"
                 }
                 if ($RendererProfileLevel -ge 1) {
+                    $hardwareSummary += " hdiv=$($rhdiv[0])/$($rhdiv[1])/$($rhdiv[2])/z$($rhdiv[3])/mis$($rhdiv[4])"
                     $hardwareSummary += " topology=$($rtopo[0])/$($rtopo[1])/$($rtopo[2])/$($rtopo[3])"
                     $hardwareSummary += " cost=$($rcost[0])/$($rcost[1])"
                     $hardwareSummary += " ci4lut=$($rci4lut[0])/$($rci4lut[1])/idx$($rci4lut[2])/$($rci4lut[3])"
@@ -868,6 +882,7 @@ try {
             $ro = Get-Ints $renderOracle
             $rrm = Get-Ints $renderRawMatrix
             $rs = Get-Ints $renderSubmit
+            $rhdiv = Get-Ints $renderHardwareDivide
             $rlazy = Get-Ints $renderLazy
             $rp = Get-Ints $renderProfile
             Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Boundary hardware draw did not flush submitted DS 3D frames.' $gdbStdout
@@ -885,8 +900,10 @@ try {
             $submitTotal = $rs[0] + $rs[1] + $rs[2] + $rs[3] + $rs[4] + $rs[5] + $rs[6]
             $expectedProjectedDivisions = (6 * $rs[3]) + (9 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
             Assert-Condition ($renderSubmit.Success -and $renderProfile.Success -and $rs[0] -eq $rrm[0] -and $rs[0] -gt 0 -and $rs[2] -eq $rrm[2] -and $rs[3] -gt 0 -and $rs[6] -eq $rrm[1] -and $rs[7] -eq 0 -and $submitTotal -eq $rp[16] -and $rs[8] -eq $expectedProjectedDivisions) 'Boundary hybrid raw/projected class or projected-division accounting drifted.' $gdbStdout
+            $expectedHardwareDivideEvaluations = $rs[8] + (3 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
+            Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[0] -gt 0 -and ($rhdiv[0] + $rhdiv[1] + $rhdiv[2]) -eq $expectedHardwareDivideEvaluations -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Boundary forensic hardware-divider coverage or exact-result oracle drifted.' $gdbStdout
             Assert-Condition ($renderLazy.Success -and $rlazy[0] -gt 0 -and $rlazy[1] -eq $rlazy[0] -and $rlazy[2] -gt 0 -and $rlazy[3] -gt 0 -and $rlazy[4] -gt 0 -and $rlazy[5] -eq 0) 'Boundary forensic snapshot/lazy-transform accounting drifted or overflowed.' $gdbStdout
-            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/mw$($rrm[8])"
+            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) hdiv=$($rhdiv[0])/$($rhdiv[1])/$($rhdiv[2])/z$($rhdiv[3])/mis$($rhdiv[4]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/mw$($rrm[8])"
         }
         Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
         Write-Output ("$Label ftmanager natural-combat harness passed: wait={0}/{1} walk={2}/{3} dash={4}/{5} run={6}/{7} attack={8} hitbox={9} dmg={10}->{11} status={12} knock={13} guard={14}/{15}/{16} retries={17} updates={18} mask=0x{19:x}{20}{21}{22}{23}" -f $nw[0], $nw[1], $nwalk[1], $nwalk[2], $nc[3], $nc[4], $nc[5], $nc[6], $na[2], $na[4], $na[8], $na[9], $na[6], $na[10], $ng[0], $ng[1], $ng[2], $na[5], $nat[4], $nat[2], $projectileSummary, $battlePlayableSummary, $hardwareSummary, $aobjSummary)

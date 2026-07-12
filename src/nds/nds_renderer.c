@@ -297,7 +297,19 @@ static u32 sNdsRendererHardwareMatrixGeneration;
 static u32 sNdsRendererMatrixGenerationSerial;
 static u32 sNdsRendererHardwareSubmitClassCounts[
     NDS_RENDERER_HW_SUBMIT_CLASS_COUNT];
-static u32 sNdsRendererHardwareProjectedDivisionCount;
+/* The logical demand is derived exactly from the submitted class totals.
+ * Profiles 1/2 pack actual call/clamp counts plus error flags into this one
+ * existing summary word, avoiding forensic BSS growth in the tight P1 build. */
+#define NDS_RENDERER_HW_DIVISION_CALL_MASK          0x00000fffu
+#define NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_SHIFT 12u
+#define NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_ONE   (1u << 12)
+#define NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_MASK  0x000ff000u
+#define NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_SHIFT 20u
+#define NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_ONE  (1u << 20)
+#define NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_MASK 0x0ff00000u
+#define NDS_RENDERER_HW_DIVISION_ZERO_DENOMINATOR   (1u << 28)
+#define NDS_RENDERER_HW_DIVISION_MISMATCH           (1u << 29)
+static u32 sNdsRendererHardwareDivideSummary;
 static u32 sNdsRendererHardwareSourceVertexLoadCount;
 static u32 sNdsRendererHardwareCPUTransformCount;
 static u32 sNdsRendererHardwareTransformCacheHitCount;
@@ -569,11 +581,6 @@ static inline void ndsRendererProfileRecordSubmitClass(
     }
 }
 
-static inline void ndsRendererProfileRecordProjectedDivisions(u32 count)
-{
-    sNdsRendererHardwareProjectedDivisionCount += count;
-}
-
 static inline void ndsRendererProfileRecordSourceVertexLoad(void)
 {
     sNdsRendererHardwareSourceVertexLoadCount++;
@@ -608,7 +615,7 @@ static void ndsRendererProfileResetSubmitSummary(void)
 {
     memset(sNdsRendererHardwareSubmitClassCounts, 0,
            sizeof(sNdsRendererHardwareSubmitClassCounts));
-    sNdsRendererHardwareProjectedDivisionCount = 0u;
+    sNdsRendererHardwareDivideSummary = 0u;
     sNdsRendererHardwareSourceVertexLoadCount = 0u;
     sNdsRendererHardwareCPUTransformCount = 0u;
     sNdsRendererHardwareTransformCacheHitCount = 0u;
@@ -644,8 +651,8 @@ static void ndsRendererProfilePublishSubmitSummary(void)
     gNdsRendererProfileSubmitRejectCount =
         sNdsRendererHardwareSubmitClassCounts[
             NDS_RENDERER_HW_SUBMIT_REJECT];
-    gNdsRendererProfileProjectedDivisionCount =
-        sNdsRendererHardwareProjectedDivisionCount;
+    gNdsRendererProfileHardwareDivideSummary =
+        sNdsRendererHardwareDivideSummary;
     gNdsRendererProfileSourceVertexLoadCount =
         sNdsRendererHardwareSourceVertexLoadCount;
     gNdsRendererProfileCPUTransformCount =
@@ -886,6 +893,7 @@ _Static_assert(sizeof(sNdsRendererHardwareCi4IndexCache) == 2080u,
                "CI4 index cache must stay within 2080 bytes");
 #endif
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static NDSRendererHardwareLightShadeCacheEntry
     sNdsRendererHardwareLightShadeCache[
         NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT];
@@ -893,6 +901,7 @@ static u32 sNdsRendererHardwareLightShadeCacheNext;
 #if defined(__arm__)
 _Static_assert(sizeof(sNdsRendererHardwareLightShadeCache) == 2096u,
                "light shade lookup cache must stay within 2096 bytes");
+#endif
 #endif
 
 static void ndsRendererHardwareEndBatch(void);
@@ -1035,8 +1044,10 @@ static u32 ndsRendererHardwareLitShadeColorPrepared(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
     const NDSRendererHardwareLightDirection *direction);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static const u32 *ndsRendererHardwareGetLightShadeLut(
     u32 diffuse, u32 ambient);
+#endif
 static u32 ndsRendererHardwareLitShadeColor(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
@@ -2560,7 +2571,9 @@ ndsRendererApplyVertexCommand(
     u32 i;
 #if NDS_RENDERER_HW_TRIANGLES
     const NDSRendererHardwareLightDirection *prepared_light_direction = NULL;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     const u32 *prepared_light_shade_lut = NULL;
+#endif
     u32 matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
 #endif
 
@@ -2614,6 +2627,7 @@ ndsRendererApplyVertexCommand(
             state->prepared_light_direction_valid = TRUE;
         }
         prepared_light_direction = &state->prepared_light_direction;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         if ((stats->light_color_mask &
              (NDS_RENDERER_LIGHT_COLOR_1_MASK |
               NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
@@ -2623,6 +2637,7 @@ ndsRendererApplyVertexCommand(
             prepared_light_shade_lut = ndsRendererHardwareGetLightShadeLut(
                 stats->light_color_1, stats->light_color_2);
         }
+#endif
     }
 #endif
 
@@ -2650,6 +2665,7 @@ ndsRendererApplyVertexCommand(
         {
             state->raw_vertex_fit_mask &= ~mask;
         }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (prepared_light_shade_lut != NULL)
         {
             state->vertex_colors[index] =
@@ -2658,6 +2674,7 @@ ndsRendererApplyVertexCommand(
                     prepared_light_shade_lut);
         }
         else
+#endif
         {
             state->vertex_colors[index] =
                 ndsRendererHardwareLitShadeColorPrepared(
@@ -2848,6 +2865,76 @@ static v16 ndsRendererHardwareClampS64ToV16(s64 value)
     }
     return (v16)value;
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static v16 __attribute__((noinline, optimize("Os")))
+ndsRendererHardwareProjectToV16(s64 numerator, s32 denominator)
+#else
+static inline v16 ndsRendererHardwareProjectToV16(
+    s64 numerator, s32 denominator)
+#endif
+{
+    s64 low_product;
+    s64 high_product;
+    v16 result;
+
+    if (denominator == 0)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        sNdsRendererHardwareDivideSummary |=
+            NDS_RENDERER_HW_DIVISION_ZERO_DENOMINATOR;
+#endif
+        return 0;
+    }
+
+    /* The DS 64/32 divider returns a signed 32-bit quotient. Pre-clamp the
+     * exact C result into v16 range so the hardware operation cannot overflow
+     * its result register. Negative W reverses both product comparisons. */
+    low_product = (s64)-32768 * (s64)denominator;
+    high_product = (s64)32767 * (s64)denominator;
+    if (((denominator > 0) && (numerator < low_product)) ||
+        ((denominator < 0) && (numerator > low_product)))
+    {
+        result = (v16)-32768;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        sNdsRendererHardwareDivideSummary +=
+            NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_ONE;
+#endif
+    }
+    else if (((denominator > 0) && (numerator > high_product)) ||
+             ((denominator < 0) && (numerator < high_product)))
+    {
+        result = (v16)32767;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        sNdsRendererHardwareDivideSummary +=
+            NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_ONE;
+#endif
+    }
+    else
+    {
+#if defined(__arm__)
+        result = (v16)div64(numerator, denominator);
+#else
+        result = ndsRendererHardwareClampS64ToV16(
+            numerator / denominator);
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        sNdsRendererHardwareDivideSummary++;
+#endif
+    }
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    if (result != ndsRendererHardwareClampS64ToV16(
+                      numerator / denominator))
+    {
+        sNdsRendererHardwareDivideSummary |=
+            NDS_RENDERER_HW_DIVISION_MISMATCH;
+    }
+#endif
+    return result;
+}
+#endif
 
 static void ndsRendererProfileVertexRange(
     const NDSRendererInputVertex *vtx, v16 x, v16 y, v16 z)
@@ -3660,6 +3747,7 @@ static u8 ndsRendererHardwareClampColor(s32 value)
     return (u8)value;
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static const u32 * __attribute__((noinline))
 ndsRendererHardwareGetLightShadeLut(u32 diffuse, u32 ambient)
 {
@@ -3704,6 +3792,7 @@ ndsRendererHardwareGetLightShadeLut(u32 diffuse, u32 ambient)
     entry->valid = TRUE;
     return entry->rgb;
 }
+#endif
 
 static u32 ndsRendererHardwareLightColor(NDSRendererStats *stats, u32 mask,
                                          u32 color, u32 fallback)
@@ -7256,12 +7345,12 @@ static void ndsRendererHardwareClipVertex(
         return;
     }
 
-    x = ndsRendererHardwareClampS64ToV16(
-        ((s64)vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
-    y = ndsRendererHardwareClampS64ToV16(
-        ((s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
-    out_z = ndsRendererHardwareClampS64ToV16(
-        ((s64)z * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
+    x = ndsRendererHardwareProjectToV16(
+        (s64)vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
+    y = ndsRendererHardwareProjectToV16(
+        (s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
+    out_z = ndsRendererHardwareProjectToV16(
+        (s64)z * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
     ndsRendererProfileHWVertexRange(x, y, out_z);
     glVertex3v16(x, y, out_z);
 }
@@ -7277,10 +7366,10 @@ static void ndsRendererHardwareClipVertexNdcDepth(
     {
         return;
     }
-    x = ndsRendererHardwareClampS64ToV16(
-        ((s64)vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
-    y = ndsRendererHardwareClampS64ToV16(
-        ((s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX) / vtx->w);
+    x = ndsRendererHardwareProjectToV16(
+        (s64)vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
+    y = ndsRendererHardwareProjectToV16(
+        (s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
     out_z = ndsRendererHardwareClampS64ToV16(z);
     ndsRendererProfileHWVertexRange(x, y, out_z);
     glVertex3v16(x, y, out_z);
@@ -7513,8 +7602,8 @@ ndsRendererHardwareSubmitVertex(
             (clip_vtx->w != 0))
         {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-            s32 depth = ndsRendererHardwareClampS64ToV16(
-                ((s64)clip_vtx->z * NDS_RENDERER_HW_PROJECTED_VERTEX) /
+            s32 depth = ndsRendererHardwareProjectToV16(
+                (s64)clip_vtx->z * NDS_RENDERER_HW_PROJECTED_VERTEX,
                 clip_vtx->w);
 
             if (stats->hardware_projected_depth_sample_count == 0u)
@@ -7565,11 +7654,11 @@ ndsRendererHardwareSubmitVertex(
             }
             else
             {
-                x = ndsRendererHardwareClampS64ToV16(
-                    ((s64)clip_vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX) /
+                x = ndsRendererHardwareProjectToV16(
+                    (s64)clip_vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX,
                     clip_vtx->w);
-                y = ndsRendererHardwareClampS64ToV16(
-                    ((s64)clip_vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX) /
+                y = ndsRendererHardwareProjectToV16(
+                    (s64)clip_vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX,
                     clip_vtx->w);
                 state->prepared_projected_x[vertex_index] = x;
                 state->prepared_projected_y[vertex_index] = y;
@@ -7584,9 +7673,10 @@ ndsRendererHardwareSubmitVertex(
                 }
                 else
                 {
-                    z = ndsRendererHardwareClampS64ToV16(
-                        ((s64)projected_z *
-                         NDS_RENDERER_HW_PROJECTED_VERTEX) / clip_vtx->w);
+                    z = ndsRendererHardwareProjectToV16(
+                        (s64)projected_z *
+                            NDS_RENDERER_HW_PROJECTED_VERTEX,
+                        clip_vtx->w);
                     state->prepared_projected_source_z[vertex_index] = z;
                     state->prepared_projected_source_z_valid_mask |=
                         vertex_mask;
@@ -7898,14 +7988,6 @@ ndsRendererSubmitHardwareTriangle(
         zbuffered = FALSE;
         decal_depth = FALSE;
         prim_depth = FALSE;
-    }
-    if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
-    {
-        ndsRendererProfileRecordProjectedDivisions(6u);
-    }
-    else if (raw_submit == FALSE)
-    {
-        ndsRendererProfileRecordProjectedDivisions(9u);
     }
     scale_world = (raw_submit != FALSE) ? TRUE : FALSE;
     if (state->texture_prepare_valid == 0u)

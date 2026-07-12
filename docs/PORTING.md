@@ -20041,3 +20041,48 @@ Full/Legacy Regression remains skipped for the requested fast iteration cadence.
 Source-corrected verifier expectations: none; all retained values use the same
 existing invalidation boundary. Coverage-reduced verifier expectations:
 Full/Legacy Regression remains skipped for the requested fast iteration cadence.
+
+## 2026-07-12 - Exact DS projected divider
+
+- Reconciled the external 9.8-to-60 FPS review against the live tree rather
+  than repeating its already-landed wallpaper, hybrid-matrix, texture, and
+  persistent-traversal work. Canonical object disassembly confirmed the
+  remaining projected expressions called `__aeabi_ldivmod` before this cut.
+- One signed helper now compares the 64-bit numerator with `-32768*W` and
+  `32767*W` without negating negative/`INT_MIN` W, pre-clamps out-of-v16
+  quotients, and uses libnds `div64` for the exact in-range 64/32 result. Host
+  fixtures cover positive/negative denominators and both limits. The project
+  and its IRQ callbacks contain no other libnds/direct-divider user; final
+  shipping-object disassembly has no software 64-bit division helper.
+- Profile 0 compiles out hot divide telemetry. Profile 1 records `650` actual
+  calls because projected slot results are reused. Profile 2 evaluates `1,404`
+  live plus independent depth results against the former C quotient with zero
+  mismatch. Logical demand is derived from submit classes, and actual call,
+  low/high clamp, zero-W, and mismatch evidence shares one packed word. Modes
+  161/162 naturally prove `1377/0/27/z0/mis0`; mode 163 proves
+  `1404/0/0/z0/mis0`.
+- P1Gate caught the first diagnostic layout crossing the allocator threshold
+  from `0x150000` to `0x140000`. Separate counters were removed. Profile 2 now
+  uses one size-optimized non-inlined divide oracle and omits the production
+  2,096-byte shade LUT in favor of its existing independent exact shade path.
+  Its arena returns to `227392` bytes headroom (`161856` after the conservative
+  64 KiB BGM reserve accounting); profiles 0/1 keep the optimized shade LUT.
+- Against the preceding checkpoint, repeated profile-1 median/P95 draw falls
+  `2,660,864/3,105,152 -> 2,545,536/2,591,936`; vertex falls
+  `519,712/520,832 -> 457,888/458,560`, with setup
+  `744,352/791,168` and scan `638,112/638,848`. Repeated shipping O2 draw is
+  `2,203,168/2,205,504`, about 3.3% below the prior stable `~2.278M`; pacing is
+  `11.7fps`. All `828` triangles, `648/44/126/10` classes, texture uploads,
+  GX RAM, and oracle `2484/0/0` remain exact.
+- Final P1Gate (`149.0s`), Boundary 161/162/163 (`56.0s`), isolated canonical
+  (`63.8s`), GBI fixtures, and static checks pass. Full/Legacy Regression was
+  intentionally skipped. Canonical/shipped parity is 11,670,528 bytes at
+  SHA-256 `B487001E1EDBF6590A42BAAFC6E192340B50FDA8750D75CC8860205242C80D4F`.
+  The final dual-screen capture is
+  `artifacts/visibility/2026-07-12_canonical_fast_100402-3629818-p14696.png`.
+
+Source-corrected verifier expectations: logical projected demand now derives
+from source submission classes; exact pre-clamps are accepted only when their
+count plus hardware calls conserves every old quotient and mismatch stays zero.
+Coverage-reduced verifier expectations: Full/Legacy Regression remains skipped
+for the requested fast iteration cadence.

@@ -822,7 +822,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileSubmitProjectedPrimDepthCount = 0;
     gNdsRendererProfileSubmitProjectedRangeOrMatrixCount = 0;
     gNdsRendererProfileSubmitRejectCount = 0;
-    gNdsRendererProfileProjectedDivisionCount = 0;
+    gNdsRendererProfileHardwareDivideSummary = 0;
     gNdsRendererProfileSourceVertexLoadCount = 0;
     gNdsRendererProfileCPUTransformCount = 0;
     gNdsRendererProfileTransformCacheHitCount = 0;

@@ -85,10 +85,10 @@ the visible one-ROM edit loop remains fast.
 The realtime/canonical mode-163 build uses O2 for latency. The larger scripted
 and timer/Results diagnostic builds use Os because O2 reduced their measured
 scene headroom below the reserve gate. Profile 1 additionally requires
-`RENDER_TOPOLOGY`, `RENDER_COST`, and `RENDER_CI4LUT`: immutable reloc spans
+`RENDER_TOPOLOGY`, `RENDER_COST`, `RENDER_CI4LUT`, and `RENDER_HWDIV`: immutable reloc spans
 must coexist with dynamic-list validation, and only profiles 0/1 may use the
-adjacent-TRI replay/derived-value fast paths. Profile 2 remains the independent
-generic interpreter and oracle.
+adjacent-TRI replay/derived-value fast paths. Profile 2 retains the independent
+generic interpreter, exact shade path, and old-C-division oracle.
 
 The fast capture tolerates camera-dependent left-shrub and pond variation at
 40% and 30%, versus the checkpoint path's 50% and 35%; their 16px and 60px

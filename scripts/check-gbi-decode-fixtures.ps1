@@ -815,6 +815,34 @@ function Get-HybridProjectedDivisions {
     if ($SubmitClass -eq 'projected_no_z') { return 6 }
     return 9
 }
+function Clamp-ProjectedV16 {
+    param([Int64]$Value)
+    if ($Value -lt -32768) { return -32768 }
+    if ($Value -gt 32767) { return 32767 }
+    return [int]$Value
+}
+function Get-ProjectedV16Reference {
+    param([Int64]$Numerator, [int]$Denominator)
+    if ($Denominator -eq 0) { return 0 }
+    [Int64]$quotient = [Math]::Truncate(
+        ([decimal]$Numerator) / ([decimal]$Denominator))
+    return Clamp-ProjectedV16 $quotient
+}
+function Get-ProjectedV16Preclamped {
+    param([Int64]$Numerator, [int]$Denominator)
+    if ($Denominator -eq 0) { return 0 }
+    [Int64]$lowProduct = [Int64]-32768 * [Int64]$Denominator
+    [Int64]$highProduct = [Int64]32767 * [Int64]$Denominator
+    if ((($Denominator -gt 0) -and ($Numerator -lt $lowProduct)) -or
+        (($Denominator -lt 0) -and ($Numerator -gt $lowProduct))) {
+        return -32768
+    }
+    if ((($Denominator -gt 0) -and ($Numerator -gt $highProduct)) -or
+        (($Denominator -lt 0) -and ($Numerator -lt $highProduct))) {
+        return 32767
+    }
+    return Get-ProjectedV16Reference $Numerator $Denominator
+}
 function Get-VertexLoadTransformPolicy {
     param([int]$ProfileLevel, [bool]$SnapshotAvailable)
     if (($ProfileLevel -ge 2) -or (-not $SnapshotAvailable)) {
@@ -964,6 +992,32 @@ Assert-Equal (Get-HybridProjectedDivisions 'raw_z_current_matrix') 0 'Raw-curren
 Assert-Equal (Get-HybridProjectedDivisions 'raw_z_snapshot_matrix') 0 'Raw-snapshot class retained projected divisions.'
 Assert-Equal (Get-HybridProjectedDivisions 'projected_no_z') 6 'No-Z projected division accounting drifted.'
 Assert-Equal (Get-HybridProjectedDivisions 'projected_cross_matrix') 9 'Source-Z projected division accounting drifted.'
+$projectedDivisionCases = @(
+    @{ Numerator = [Int64]0; Denominator = 1 },
+    @{ Numerator = [Int64]-1; Denominator = 2 },
+    @{ Numerator = [Int64]1; Denominator = -2 },
+    @{ Numerator = ([Int64]32767 * 4095); Denominator = 4095 },
+    @{ Numerator = (([Int64]32767 * 4095) + 1); Denominator = 4095 },
+    @{ Numerator = ([Int64]-32768 * 4095); Denominator = 4095 },
+    @{ Numerator = (([Int64]-32768 * 4095) - 1); Denominator = 4095 },
+    @{ Numerator = ([Int64]-32768 * -4095); Denominator = -4095 },
+    @{ Numerator = (([Int64]-32768 * -4095) + 1); Denominator = -4095 },
+    @{ Numerator = ([Int64]32767 * -4095); Denominator = -4095 },
+    @{ Numerator = (([Int64]32767 * -4095) - 1); Denominator = -4095 },
+    @{ Numerator = ([Int64][Int32]::MaxValue * 4096); Denominator = 1 },
+    @{ Numerator = ([Int64][Int32]::MinValue * 4096); Denominator = 1 },
+    @{ Numerator = ([Int64]32767 * [Int32]::MinValue); Denominator = [Int32]::MinValue },
+    @{ Numerator = ([Int64]-32768 * [Int32]::MinValue); Denominator = [Int32]::MinValue }
+)
+foreach ($divideCase in $projectedDivisionCases) {
+    Assert-Equal (Get-ProjectedV16Preclamped `
+        -Numerator $divideCase.Numerator `
+        -Denominator $divideCase.Denominator) `
+        (Get-ProjectedV16Reference `
+            -Numerator $divideCase.Numerator `
+            -Denominator $divideCase.Denominator) `
+        "Projected signed pre-clamp drifted for $($divideCase.Numerator)/$($divideCase.Denominator)."
+}
 Assert-Equal (Get-VertexLoadTransformPolicy 0 $true) 'defer_transform' 'Performance profile did not defer a snapshotted source vertex.'
 Assert-Equal (Get-VertexLoadTransformPolicy 1 $true) 'defer_transform' 'Coarse profile did not defer a snapshotted source vertex.'
 Assert-Equal (Get-VertexLoadTransformPolicy 2 $true) 'eager_transform' 'Forensic profile did not retain eager oracle transforms.'
@@ -1591,6 +1645,7 @@ Assert-True ($renderer.Contains('NDSRendererInputVertex *input = &state->input_v
 Assert-True (-not $renderer.Contains('state->input_vertices[index] = input;')) 'Renderer restored the redundant temporary-to-cache VTX copy.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT 4u') -and $renderer.Contains('NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT 128u')) 'Renderer exact light-shade cache lost its four-entry/128-step bound.'
 Assert-True ($renderer.Contains('sizeof(sNdsRendererHardwareLightShadeCache) == 2096u')) 'Renderer exact light-shade cache exceeds its measured 2,096-byte bound.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2\s*static NDSRendererHardwareLightShadeCacheEntry\s*sNdsRendererHardwareLightShadeCache.*?sizeof\(sNdsRendererHardwareLightShadeCache\) == 2096u.*?#endif') 'Forensic renderer restored the production light-shade cache instead of its independent exact shade path.'
 Assert-True ($renderer -match '(?s)entry->diffuse == diffuse.*?entry->ambient == ambient.*?return entry->rgb;') 'Renderer light-shade cache is not content-keyed by both source light colors.'
 Assert-True ($renderer.Contains('(ndsRendererHardwareColorByte(diffuse, 24) * i) / 127u') -and $renderer.Contains('return rgb_lut[diffuse_numer] | (u32)vtx->a;')) 'Renderer light-shade LUT does not preserve the exact per-channel integer result and source alpha.'
 Assert-True ($renderer -match '(?s)stats->light_color_mask.*?NDS_RENDERER_LIGHT_COLOR_1_MASK.*?NDS_RENDERER_LIGHT_COLOR_2_MASK.*?prepared_light_shade_lut = ndsRendererHardwareGetLightShadeLut') 'Renderer light-shade LUT bypasses the generic fallback for incomplete source light state.'
@@ -1722,7 +1777,13 @@ Assert-True ($renderer -match '(?s)ndsRendererHardwareClassifySubmit.*?NDS_RENDE
 Assert-True ($renderer -match '(?s)if \(submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX\).*?ndsRendererLoadHardwareMatrices\(state, scale_world\);.*?else if \(raw_snapshot != NULL\).*?ndsRendererLoadHardwareRawComposedMatrix.*?else.*?ndsRendererLoadHardwareMatrices\(NULL, FALSE\);') 'Renderer raw-current, raw-snapshot, and projected classes do not load their explicit GX matrices.'
 Assert-True ($renderer -match '(?s)sNdsRendererHardwareTriangleBatchMatrixMode == matrix_mode.*?sNdsRendererHardwareTriangleBatchMatrixGeneration ==\s*matrix_generation') 'Renderer triangle batch key omits matrix representation or generation.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareBeginTriangleBatch.*?ndsRendererProfileRecordBatchReuse\(\);\s*return;\s*\}\s*alpha_key = ndsRendererHardwareAlphaStateKey') 'Renderer adjacent TRI reuse no longer bypasses invariant alpha/fog key construction.'
-Assert-True ($renderer -match '(?s)ndsRendererProfileRecordSubmitClass\(submit_class\).*?ndsRendererProfileRecordProjectedDivisions.*?ndsRendererProfileRecordHardwareTriangle') 'Renderer does not account hybrid submit classes and projected divisions before final hardware triangle accounting.'
+Assert-True ($renderer -match '(?s)ndsRendererProfileRecordSubmitClass\(submit_class\).*?ndsRendererProfileRecordHardwareTriangle') 'Renderer does not account hybrid submit classes before final hardware triangle accounting.'
+Assert-True (-not ($renderer.Contains('ndsRendererProfileRecordProjectedDivisions'))) 'Renderer restored redundant hot-loop logical division accounting instead of deriving it from submitted classes.'
+Assert-True ($renderer -match '(?s)static inline v16 ndsRendererHardwareProjectToV16.*?low_product = \(s64\)-32768 \* \(s64\)denominator;.*?high_product = \(s64\)32767 \* \(s64\)denominator;.*?#if defined\(__arm__\)\s*result = \(v16\)div64\(numerator, denominator\);') 'Renderer projected helper no longer bounds the exact signed quotient before using the DS 64/32 divider.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*static v16 __attribute__\(\(noinline, optimize\("Os"\)\)\)\s*ndsRendererHardwareProjectToV16.*?#else\s*static inline v16 ndsRendererHardwareProjectToV16') 'Forensic projected-divider oracle no longer keeps one size-optimized helper copy outside the hot submit loop.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*if \(result != ndsRendererHardwareClampS64ToV16\(\s*numerator / denominator\)\).*?sNdsRendererHardwareDivideSummary \|=\s*NDS_RENDERER_HW_DIVISION_MISMATCH;') 'Forensic renderer no longer compares every hardware quotient with the former exact C division.'
+Assert-True (-not ($renderer -match 'static u32 sNdsRendererHardwareDivide(?:Call|Preclamp|Zero|Mismatch)')) 'Hardware-divider evidence restored separate forensic BSS counters instead of one packed summary.'
+Assert-True (-not ($renderer -match 'NDS_RENDERER_HW_PROJECTED_VERTEX\) / (?:vtx|clip_vtx)->w')) 'Renderer restored direct software 64-bit division in projected vertex submission.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareConsumeSubmittedFrame.*?ndsRendererProfilePublishSubmitSummary\(\).*?ndsRendererProfileResetSubmitSummary\(\)') 'Renderer does not publish and reset hybrid submit accounting at the shared hardware-frame boundary.'
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2.*?ndsRendererHardwareQueueRawMatrixPosTest.*?#endif') 'Renderer raw GX PosTest capture is not forensic-only.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareQueueMatrixWordPosTestFixture.*?ndsRendererApplyMvpRecalcCommand.*?ndsRendererApplyMatrixMoveWordCommand') 'Renderer device PosTest coverage omits the MVP-recalc matrix-word reconstruction case.'
@@ -1743,9 +1804,12 @@ Assert-True ($rendererVerifier.Contains('RENDER_BENCH=%u')) 'Realtime verifier l
 Assert-True ($rendererVerifier.Contains('gNdsRendererProfileTexturePrepareReuseCount')) 'Realtime verifier does not report unchanged-TRI texture preparation reuse.'
 Assert-True ($rendererVerifier.Contains('RENDER_RAW_MATRIX=%u')) 'Realtime verifier does not report raw-candidate and GX PosTest diagnostics.'
 Assert-True ($rendererVerifier.Contains('RENDER_SUBMIT=%u')) 'Realtime verifier does not report hybrid raw/projected class accounting.'
+Assert-True ($rendererVerifier.Contains('RENDER_HWDIV=%u')) 'Realtime verifier does not report actual hardware divides, pre-clamps, zero denominators, and oracle mismatches.'
 Assert-True ($rendererVerifier.Contains('RENDER_LAZY=%u')) 'Realtime verifier does not report source loads, lazy transforms, snapshot reuse, and overflow.'
 Assert-True ($rendererVerifier.Contains('defer a majority of CPU vertex transforms')) 'Realtime performance verifier does not require the measured lazy-transform majority.'
-Assert-True ($rendererVerifier.Contains('sharply reduce and exactly account projected software divisions')) 'Realtime verifier does not require the projected-division collapse.'
+Assert-True ($rendererVerifier.Contains('sharply reduce and exactly account projected division demand')) 'Realtime verifier does not require the projected-division collapse.'
+Assert-True ($rendererVerifier.Contains('Shipping profile retained hot-loop hardware-divider telemetry')) 'Realtime verifier does not keep actual-divide telemetry out of profile 0.'
+Assert-True ($rendererVerifier.Contains('Forensic renderer did not compare every live DS hardware quotient')) 'Realtime verifier does not require full exact hardware-divider oracle coverage.'
 Assert-True ($rendererVerifier.Contains('corrected composed GX matrix PosTest')) 'Realtime verifier does not require the corrected GX matrix oracle.'
 Assert-True ($rendererVerifier.Contains('still performed forensic oracle transforms')) 'Realtime performance verifier does not require zero oracle work.'
 $forensicVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-renderer-forensic.ps1') -Raw

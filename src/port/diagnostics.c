@@ -2948,7 +2948,7 @@ volatile u32 gNdsRendererProfileSubmitProjectedDecalCount;
 volatile u32 gNdsRendererProfileSubmitProjectedPrimDepthCount;
 volatile u32 gNdsRendererProfileSubmitProjectedRangeOrMatrixCount;
 volatile u32 gNdsRendererProfileSubmitRejectCount;
-volatile u32 gNdsRendererProfileProjectedDivisionCount;
+volatile u32 gNdsRendererProfileHardwareDivideSummary;
 volatile u32 gNdsRendererProfileSourceVertexLoadCount;
 volatile u32 gNdsRendererProfileCPUTransformCount;
 volatile u32 gNdsRendererProfileTransformCacheHitCount;

@@ -94,23 +94,23 @@ uses the persistent 32-slot input/clip/color/snapshot planes; validity masks res
 only compact traversal control. TRI runs retain exact material/depth, RGB15, S/T,
 projected X/Y, and clip Z. Non-TRI commands close GX; texture preparation survives
 VTX/matrix and invalidates at exact key mutations. Prepare/reuse is `98/730`;
-batching stays `121/707/121`, and divisions stay `1,242`.
+batching stays `121/707/121`, and logical divide demand stays `1,242`.
 Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os to preserve
-their `227392`-byte reserve. Its renderer TU follows sm64-nds in ARM state; six
-measured O3 paths occupy `20,956/20,596/18,244` ITCM bytes in canonical O2/profile 1/profile 2,
-while normal/legacy builds stay Thumb. The source VTX handler
-uses guarded aligned word loads with bytewise fallback and decodes directly into
-the persistent cache. Exact light direction persists until matrix/MOVEMEM
-mutation; four 128-step tables key diffuse/ambient RGB while live normal,
-direction, alpha, and incomplete-state fallback remain uncached. Representative
-maps add 512 bytes. Profiles 0/1 use a 128-slot byte index over the exact 64-entry texture cache; compact fingerprints retain full 236-byte equality and
-cluster repair prevents animated-key tombstones. Profile-0 BSS is `1,857,584`; exact prepared material/texture context persists across each `98/730` epoch.
-Latest profile-1 median/P95 draw is `2,660,864/3,105,152`, texture
-`354,592/357,312`, setup `790,208/792,256`, and scan `641,664/642,496`.
-Repeated shipping O2 is `2,277,952/2,612,032` at `11.4-11.5fps`; profile 2
-retains `2484/0/0`. Capture:
-`artifacts/visibility/2026-07-12_canonical_fast_084620-1331088-p21320.png`;
-shipped SHA-256: `60F062AF4D72EDAABAA4C5012CEE08F1A4648810DDF3446F761F01360210C120`.
+their `227392`-byte reserve. Six ARM/O3 paths occupy `21,480/18,196` ITCM bytes
+in canonical/profile 2; last measured profile 1 is `21,524`. Exact signed
+pre-clamping and libnds `div64` remove the shipping software 64-bit helper;
+profile 1 records `650` cached calls, while profile 2 compares `1,404` results
+with C. Boundary modes retain exact nonzero clamp counts. Divider evidence adds
+no BSS; profile 2 also omits the production 2,096-byte shade table and runs the
+independent exact shade path. Profiles 0/1 retain light/table and exact 128-slot
+texture-key caches; compact fingerprints still require full 236-byte equality.
+Profile-0 BSS is `1,857,584`; prepared context persists by `98/730` epoch.
+Profile-1 median/P95 draw is `2,545,536/2,591,936`, vertex
+`457,888/458,560`, setup `744,352/791,168`, and scan `638,112/638,848`.
+Repeated shipping O2 is `2,203,168/2,205,504` at `11.7fps`; profile 2 retains
+`2484/0/0`. Capture:
+`artifacts/visibility/2026-07-12_canonical_fast_100402-3629818-p14696.png`;
+shipped SHA-256: `B487001E1EDBF6590A42BAAFC6E192340B50FDA8750D75CC8860205242C80D4F`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
 separate, original timing stays live, and a post-step corrects packed RGBA.
 Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the
@@ -120,8 +120,8 @@ other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 
 ## Recommended Next Work
-1. The canonical ROM is still only `11.4-11.5fps`, not P1-complete. Measure
-   actual projected divides and exact `div64`, then split runtime telemetry/runs.
+1. The canonical ROM is still only `11.7fps`, not P1-complete. Separate
+   production runtime state from proof telemetry, then fuse prepared DL runs.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
    Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
 3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary
@@ -145,6 +145,6 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Prebuilt P1Gate/Boundary passed in `149.0s/56.5s`; DevFast/rebuilt forensic in
-`43.6s/16.5s`. This is not the five-minute P1 soak; skip Full Regression.
+Final P1Gate/Boundary passed in `149.0s/56.0s`; isolated canonical passed in
+`63.8s`. This is not the five-minute P1 soak; skip Full Regression.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

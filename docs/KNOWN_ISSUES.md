@@ -1134,11 +1134,15 @@
   Final-resolution wallpaper composition removes its 320x240 staging/scale and
   BG2 copy. Exact word-packed rows, immutable TRI replay, derived vertex reuse,
   canonical O2, ARM/ITCM paths, arena-first dynamic validation, and the bounded
-  CI4 source-index cache peak at `8.7fps` (`8.6fps` final), still roughly 7.0x short of the
-  60 FPS P1 condition. Profile-1 median/p95 is DL
-  `2,429,344/2,430,080`, texture `508,960/509,376`, scan
-  `949,152/950,720`, and non-vertex setup `986,560/988,608` ticks;
-  command/state work, water uploads, and source RGBA4 interface output remain.
+  CI4/source-index caches now reach `11.7fps`, still about 5.1x short of the
+  60 FPS P1 condition. Exact pre-clamped DS `div64` removes the shipping
+  software 64-bit divide helper; profile 1 sees `650` actual calls and profile 2
+  compares `1,404` results with zero mismatch. Profile-1 median/p95 is draw
+  `2,545,536/2,591,936`, vertex `457,888/458,560`, scan
+  `638,112/638,848`, and setup `744,352/791,168` ticks. Generic command/state
+  execution, water uploads, and source RGBA4 interface output remain; the next
+  performance cut must separate runtime state from proof telemetry and fuse
+  source state/VTX/TRI runs without restoring one-command packets.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
   fields in a validated local copy before unchanged `gcAddMObjForDObj` owns it.
   Loaded-file plus asset/generation provenance separates raw and already-native

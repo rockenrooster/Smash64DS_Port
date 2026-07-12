@@ -1368,6 +1368,14 @@ Opening movie / Opening Portraits:
   The non-reject class sum must equal hardware triangles; raw-current must equal
   its readiness count, projected classes must match their classifiers, reject
   must be zero, and the division count is exactly `6*no-Z + 9*other-projected`.
+- `RENDER_HWDIV`: completed-frame exact-divider marker. Fields are actual DS
+  `div64` calls, pre-clamp-low count, pre-clamp-high count, zero-W occurrence,
+  and old-C-result mismatch. Profile 0 requires all zero because
+  hot telemetry is compiled out. Profile 1 requires positive calls below
+  logical demand because projected slot results are cached. Profile 2 requires
+  demand plus its independent depth samples and zero event/mismatch fields.
+  Logical demand is derived from the submitted class totals; these values use
+  one packed summary word so diagnostic evidence adds no BSS.
 - `RENDER_LAZY`: completed-frame vertex/snapshot marker. Fields are source
   vertex loads, CPU clip transforms, matching-transform cache hits, composed-
   matrix snapshot creates, content reuses, and table overflows. Profiles 0/1

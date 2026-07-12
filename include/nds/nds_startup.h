@@ -4012,7 +4012,9 @@ extern volatile u32 gNdsRendererProfileSubmitProjectedDecalCount;
 extern volatile u32 gNdsRendererProfileSubmitProjectedPrimDepthCount;
 extern volatile u32 gNdsRendererProfileSubmitProjectedRangeOrMatrixCount;
 extern volatile u32 gNdsRendererProfileSubmitRejectCount;
-extern volatile u32 gNdsRendererProfileProjectedDivisionCount;
+/* Profile 1/2 actual divide/clamp counts and error flags; logical demand is
+ * derived from the submitted class totals by the renderer verifier. */
+extern volatile u32 gNdsRendererProfileHardwareDivideSummary;
 extern volatile u32 gNdsRendererProfileSourceVertexLoadCount;
 extern volatile u32 gNdsRendererProfileCPUTransformCount;
 extern volatile u32 gNdsRendererProfileTransformCacheHitCount;

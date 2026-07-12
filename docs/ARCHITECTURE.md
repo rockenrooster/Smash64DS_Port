@@ -1234,7 +1234,21 @@ two 64-byte matrix comparisons. Wrap to generation one invalidates the cache.
 The stable frame raw-submits `648` current-matrix ordinary-Z triangles. It keeps
 `44` cross-matrix, `126` no-Z, and `10` raw-v16 range exceptions projected;
 snapshot/decal/primitive-depth/reject classes are zero. The class sum is the
-same `828` triangles and projected division accounting falls `7,074 -> 1,242`.
+same `828` triangles and logical projected-division demand falls
+`7,074 -> 1,242`.
+
+Projected conversion compares the signed 64-bit numerator against
+`v16_min*W` and `v16_max*W` without negating negative W, then uses libnds
+`div64` for the exact in-range 64/32 quotient on ARM. This removes the ARM EABI
+software-division helper from the shipping renderer object. Profile 0 performs
+no hot-loop divider telemetry; profile 1 records the actual cache-miss calls,
+and profile 2 compares every DS result with the former C quotient. The stable
+counts are `650` coarse calls and `1,404` forensic evaluations with no clamp,
+zero-denominator, or mismatch event. Logical demand is derived from submit
+classes and exact call/clamp evidence shares one existing summary word rather
+than adding BSS. No project IRQ callback
+uses `div32`, `div64`, or divider registers, so the synchronous math unit has no
+observed interrupt contender.
 
 Each persistent renderer vertex cache owns a bounded 64-entry table of composed
 20.12 matrix snapshots. Slots carry the matrix ID used at `G_VTX` and the ID of
@@ -1402,7 +1416,11 @@ into the same persistent 32-slot input cache. A prepared light direction remains
 valid only until a matrix or source light-state mutation. Four content-keyed
 128-step tables pre-resolve the exact diffuse/ambient RGB function, while vertex
 normal, direction, alpha, and incomplete-state fallback remain live. The shade
-table occupies 2,096 bytes; that earlier increment raised net BSS 2,080 bytes.
+table occupies 2,096 bytes in profiles 0/1; profile 2 omits it and runs the
+independent exact shade calculation. Its divider oracle is one size-optimized,
+non-inlined function, keeping the diagnostic arena above its reserve without
+changing production code. That earlier production-table increment raised net
+BSS 2,080 bytes.
 Animated CI4 phase planes remain an exact 8 KiB table, and texture preparation
 retains its mutation-keyed epoch. Profiles 0/1 decode two immutable CI4 index
 planes, then group a large output axis only when TEXEL0 address, TEXEL1 address,
@@ -1412,7 +1430,7 @@ from already-written representatives, then repeat rows copy bottom-to-top. A
 `>=4096`-pixel and at-least-50%-reuse gate leaves smaller or weakly repeating
 inputs on the direct loop; profile 2 omits both caches. The four maps are 512
 bytes; canonical profile-0 BSS is `1,857,584`. Canonical-O2/profile-1/profile-2
-renderer ITCM is `20,956/20,596/18,244` of 32,768 bytes.
+renderer ITCM is `21,480/21,524(last measured)/18,196` of 32,768 bytes.
 Cache-hit guards run before temporary GX matrix construction; the final matrix-
 state guard remains exact.
 
