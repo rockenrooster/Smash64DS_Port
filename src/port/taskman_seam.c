@@ -811,6 +811,12 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileDObjWorldCacheHitCount = 0;
     gNdsRendererProfileDObjWorldCacheMissCount = 0;
     gNdsRendererProfileDObjWorldCacheOverflowCount = 0;
+    gNdsRendererProfileStageWorldPersistentHitCount = 0;
+    gNdsRendererProfileStageWorldPersistentMissCount = 0;
+    gNdsRendererProfileStageWorldPersistentRejectCount = 0;
+    gNdsRendererProfileStageWorldPersistentOverflowCount = 0;
+    gNdsRendererProfileStageWorldPersistentOracleSampleCount = 0;
+    gNdsRendererProfileStageWorldPersistentOracleMismatchCount = 0;
     gNdsRendererProfileAffineMatrixSamples = 0;
     gNdsRendererProfileAffineMatrixMismatches = 0;
     gNdsRendererProfileAffineMatrixMaxDelta = 0;
@@ -4418,6 +4424,12 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileDObjWorldCacheHitCount = 0;
     gNdsRendererProfileDObjWorldCacheMissCount = 0;
     gNdsRendererProfileDObjWorldCacheOverflowCount = 0;
+    gNdsRendererProfileStageWorldPersistentHitCount = 0;
+    gNdsRendererProfileStageWorldPersistentMissCount = 0;
+    gNdsRendererProfileStageWorldPersistentRejectCount = 0;
+    gNdsRendererProfileStageWorldPersistentOverflowCount = 0;
+    gNdsRendererProfileStageWorldPersistentOracleSampleCount = 0;
+    gNdsRendererProfileStageWorldPersistentOracleMismatchCount = 0;
     gNdsRendererProfileAffineMatrixSamples = 0;
     gNdsRendererProfileAffineMatrixMismatches = 0;
     gNdsRendererProfileAffineMatrixMaxDelta = 0;
