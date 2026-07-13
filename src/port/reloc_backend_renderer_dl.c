@@ -3194,6 +3194,8 @@ static void ndsFighterDLDrawCopyPersistentRendererState(
     NDS_RENDERER_COPY_STATE(fog_min);
     NDS_RENDERER_COPY_STATE(fog_max);
     NDS_RENDERER_COPY_STATE(fog_status);
+    NDS_RENDERER_COPY_STATE(texture_source_hash1);
+    NDS_RENDERER_COPY_STATE(texture_source_hash2);
 
 #undef NDS_RENDERER_COPY_STATE
 }
@@ -3804,6 +3806,8 @@ static u32 ndsRendererOwnerHashRuntimeState(const NDSRendererStats *stats)
     NDS_RENDERER_HASH_STATE_FIELD(fog_min);
     NDS_RENDERER_HASH_STATE_FIELD(fog_max);
     NDS_RENDERER_HASH_STATE_FIELD(fog_status);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_source_hash1);
+    NDS_RENDERER_HASH_STATE_FIELD(texture_source_hash2);
 
 #undef NDS_RENDERER_HASH_STATE_FIELD
     return hash;

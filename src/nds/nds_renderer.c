@@ -946,6 +946,7 @@ volatile u32 gNdsRendererFastFallbackCount[3];
 static NDSRendererProfileOwner sNdsRendererRuntimeOwner =
     NDS_RENDERER_PROFILE_OWNER_NONE;
 static u32 sNdsRendererFastOwnerEnabled;
+static u32 sNdsRendererStageTextureSitesEnabled;
 static u32 sNdsRendererFastRunCount;
 static u32 sNdsRendererFastTriangleCount;
 static u32 sNdsRendererFastOwnerTriangleCount[
@@ -1584,6 +1585,7 @@ typedef struct NDSRendererHardwareTextureCacheEntry
     u32 profile_width;
     u32 profile_height;
     u32 last_used_frame;
+    u32 key_generation;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 key_hash;
 #endif
@@ -1654,6 +1656,7 @@ _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <
 #endif
 #endif
 static u32 sNdsRendererHardwareTextureCacheNext;
+static u32 sNdsRendererHardwareTextureKeyGeneration;
 static u32 sNdsRendererHardwareFrameSerial;
 static const NDSRendererHardwareTextureCacheEntry
     *sNdsRendererHardwareActiveTextureEntry;
@@ -1820,6 +1823,7 @@ typedef struct NDSRendererTraversalState
     NDSRendererMatrixSnapshot *matrix_snapshots;
     u8 *vertex_matrix_snapshot;
     u8 *vertex_clip_snapshot;
+    const Gfx *source_command_site;
 #endif
     u32 modelview_valid_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     u32 modelview_stack_depth;
@@ -5852,6 +5856,251 @@ static void ndsRendererHardwareApplyTextureParams(u32 params)
     glTexParameter(GL_TEXTURE_2D, (int)params);
 }
 
+#define NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT 128u
+
+typedef struct NDSRendererStageTextureSite
+{
+    const Gfx *site;
+    NDSRendererHardwareTextureCacheEntry *entry;
+    u32 state_hash1;
+    u32 state_hash2;
+    u32 entry_generation;
+    u32 format;
+    u32 size;
+    u32 width;
+    u32 height;
+    u32 uses_texel1;
+    u32 prim_lod_fraction;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    u32 semantic_key_hash;
+    u32 semantic_params;
+    u32 texel1_tile_state;
+    u32 texel1_primary_state;
+    u32 texel1_image0;
+    u32 texel1_image1;
+#endif
+} NDSRendererStageTextureSite;
+
+static NDSRendererStageTextureSite
+    sNdsRendererStageTextureSites[NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT];
+static u32 sNdsRendererStageTextureSiteNext;
+
+_Static_assert(
+    sizeof(sNdsRendererStageTextureSites) <= (12u * 1024u),
+    "stage texture-site plans must stay below 12 KiB");
+
+static void ndsRendererHardwareBindTextureName(
+    NDSRendererStats *stats,
+    u32 texture_name);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static void ndsRendererProfileTextureCacheEntry(
+    const NDSRendererHardwareTextureCacheEntry *entry);
+static void ndsRendererProfileTextureFormat(
+    volatile u32 *mask,
+    u32 format,
+    u32 size);
+static void ndsRendererRecordTextureLaneUse(
+    const NDSRendererConfig *config,
+    u32 format,
+    u32 size);
+#endif
+
+static u32 ndsRendererStageTextureSiteSlot(const Gfx *site)
+{
+    u32 value = (u32)(uintptr_t)site;
+
+    value ^= value >> 11;
+    value ^= value >> 19;
+    return value & (NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT - 1u);
+}
+
+static NDSRendererStageTextureSite *ndsRendererStageTextureSiteFind(
+    const NDSRendererTraversalState *state,
+    const NDSRendererStats *stats)
+{
+    u32 slot;
+    u32 probe;
+
+    if ((state == NULL) || (stats == NULL) ||
+        (state->source_command_site == NULL))
+    {
+        return NULL;
+    }
+    slot = ndsRendererStageTextureSiteSlot(state->source_command_site);
+    for (probe = 0u; probe < NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT; probe++)
+    {
+        NDSRendererStageTextureSite *plan =
+            &sNdsRendererStageTextureSites[slot];
+
+        if (plan->site == NULL)
+        {
+            return NULL;
+        }
+        if ((plan->site == state->source_command_site) &&
+            (plan->state_hash1 == stats->texture_source_hash1) &&
+            (plan->state_hash2 == stats->texture_source_hash2))
+        {
+            return plan;
+        }
+        slot = (slot + 1u) &
+            (NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT - 1u);
+    }
+    return NULL;
+}
+
+static s32 ndsRendererStageTextureSiteTryBind(
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    const NDSRendererConfig *config)
+{
+    NDSRendererStageTextureSite *plan;
+    NDSRendererHardwareTextureCacheEntry *entry;
+
+    if (sNdsRendererStageTextureSitesEnabled == 0u)
+    {
+        return FALSE;
+    }
+    plan = ndsRendererStageTextureSiteFind(state, stats);
+    if (plan == NULL)
+    {
+        return FALSE;
+    }
+    entry = plan->entry;
+    if ((entry == NULL) || (entry->ready == 0u) ||
+        (entry->key_generation != plan->entry_generation) ||
+        ((plan->uses_texel1 != 0u) &&
+         (plan->prim_lod_fraction != stats->prim_lod_fraction)))
+    {
+        return FALSE;
+    }
+
+    entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+    if (sNdsRendererHardwareActiveTextureEntry != entry)
+    {
+        ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
+        ndsRendererHardwareApplyTextureParams(entry->params);
+        sNdsRendererHardwareActiveTextureEntry = entry;
+    }
+    stats->hardware_texture_ready_count++;
+    stats->hardware_texture_format = plan->format;
+    stats->hardware_texture_width = plan->width;
+    stats->hardware_texture_height = plan->height;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    sNdsRendererSemanticLastTextureKeyHash = plan->semantic_key_hash;
+    sNdsRendererSemanticLastTextureParams = plan->semantic_params;
+    ndsRendererRecordTextureLaneUse(config, plan->format, plan->size);
+    if (plan->uses_texel1 != 0u)
+    {
+        ndsRendererRecordTextureLaneUse(config, plan->format, plan->size);
+        ndsRendererProfileRecordTexel1Composite();
+        gNdsRendererProfileTexel1LastTileState = plan->texel1_tile_state;
+        gNdsRendererProfileTexel1LastPrimaryState =
+            plan->texel1_primary_state;
+        gNdsRendererProfileTexel1LastFraction = plan->prim_lod_fraction;
+        gNdsRendererProfileTexel1LastImage0 = plan->texel1_image0;
+        gNdsRendererProfileTexel1LastImage1 = plan->texel1_image1;
+    }
+    ndsRendererProfileTextureFormat(
+        &gNdsRendererProfileTextureBindFormatMask,
+        plan->format, plan->size);
+    ndsRendererProfileTextureCacheEntry(entry);
+#endif
+    return TRUE;
+}
+
+static void ndsRendererStageTextureSiteRemember(
+    const NDSRendererTraversalState *state,
+    const NDSRendererStats *stats,
+    NDSRendererHardwareTextureCacheEntry *entry,
+    u32 format,
+    u32 size,
+    u32 width,
+    u32 height)
+{
+    NDSRendererStageTextureSite *plan = NULL;
+    NDSRendererStageTextureSite *empty = NULL;
+    u32 slot;
+    u32 probe;
+
+    if ((sNdsRendererStageTextureSitesEnabled == 0u) ||
+        (state == NULL) || (state->source_command_site == NULL) ||
+        (stats == NULL) || (entry == NULL) || (entry->ready == 0u))
+    {
+        return;
+    }
+    slot = ndsRendererStageTextureSiteSlot(state->source_command_site);
+    for (probe = 0u; probe < NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT; probe++)
+    {
+        NDSRendererStageTextureSite *candidate =
+            &sNdsRendererStageTextureSites[slot];
+
+        if (candidate->site == state->source_command_site)
+        {
+            plan = candidate;
+            break;
+        }
+        if ((empty == NULL) && (candidate->site == NULL))
+        {
+            empty = candidate;
+        }
+        slot = (slot + 1u) &
+            (NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT - 1u);
+    }
+    if (plan == NULL)
+    {
+        plan = empty;
+    }
+    if (plan == NULL)
+    {
+        plan = &sNdsRendererStageTextureSites[
+            sNdsRendererStageTextureSiteNext++ &
+            (NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT - 1u)];
+    }
+    plan->site = state->source_command_site;
+    plan->entry = entry;
+    plan->state_hash1 = stats->texture_source_hash1;
+    plan->state_hash2 = stats->texture_source_hash2;
+    plan->entry_generation = entry->key_generation;
+    plan->format = format;
+    plan->size = size;
+    plan->width = width;
+    plan->height = height;
+    plan->uses_texel1 = (entry->key.texel1_image != 0u) ? TRUE : FALSE;
+    plan->prim_lod_fraction = entry->key.prim_lod_fraction;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    plan->semantic_key_hash = sNdsRendererSemanticLastTextureKeyHash;
+    plan->semantic_params = sNdsRendererSemanticLastTextureParams;
+    plan->texel1_tile_state = gNdsRendererProfileTexel1LastTileState;
+    plan->texel1_primary_state = gNdsRendererProfileTexel1LastPrimaryState;
+    plan->texel1_image0 = gNdsRendererProfileTexel1LastImage0;
+    plan->texel1_image1 = gNdsRendererProfileTexel1LastImage1;
+#endif
+}
+
+static void ndsRendererTextureSourceHashCommand(
+    NDSRendererStats *stats,
+    u32 w0,
+    u32 w1)
+{
+    u32 hash1;
+    u32 hash2;
+
+    if ((stats == NULL) ||
+        (sNdsRendererRuntimeOwner != NDS_RENDERER_PROFILE_OWNER_STAGE))
+    {
+        return;
+    }
+
+    hash1 = stats->texture_source_hash1;
+    hash1 ^= w0 ^ ((w1 << 16) | (w1 >> 16));
+    hash1 *= 16777619u;
+    stats->texture_source_hash1 = hash1;
+
+    hash2 = stats->texture_source_hash2 + w1 + 0x9e3779b9u;
+    hash2 = (hash2 << 7) | (hash2 >> 25);
+    stats->texture_source_hash2 = hash2 ^ w0 ^ 0x85ebca6bu;
+}
+
 static u32 ndsRendererHardwareAlphaStateKey(const NDSRendererStats *stats)
 {
     if (stats == NULL)
@@ -7487,7 +7736,8 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
 
 static s32 ndsRendererHardwareBindTexture(
     NDSRendererStats *stats,
-    const NDSRendererConfig *config)
+    const NDSRendererConfig *config,
+    NDSRendererTraversalState *state)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 texture_start = cpuGetTiming();
@@ -7576,6 +7826,13 @@ static s32 ndsRendererHardwareBindTexture(
     if (stats == NULL)
     {
         return FALSE;
+    }
+    if (ndsRendererStageTextureSiteTryBind(stats, state, config) != FALSE)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
+#endif
+        return TRUE;
     }
     ndsRendererSyncTextureTile(stats);
     render_tile_index = ndsRendererActiveTextureTile(stats);
@@ -7943,6 +8200,8 @@ static s32 ndsRendererHardwareBindTexture(
             &gNdsRendererProfileTextureBindFormatMask, format, size);
         ndsRendererProfileTextureCacheEntry(entry);
 #endif
+        ndsRendererStageTextureSiteRemember(
+            state, stats, entry, format, size, width, height);
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
 #endif
@@ -7969,6 +8228,12 @@ static s32 ndsRendererHardwareBindTexture(
         ndsRendererHardwareTextureLookupRemove(entry);
 #endif
         entry->key = key;
+        sNdsRendererHardwareTextureKeyGeneration++;
+        if (sNdsRendererHardwareTextureKeyGeneration == 0u)
+        {
+            sNdsRendererHardwareTextureKeyGeneration++;
+        }
+        entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         entry->key_hash = key_hash;
 #endif
@@ -7987,6 +8252,8 @@ static s32 ndsRendererHardwareBindTexture(
         sNdsRendererBenchmarkSuppressedTextureUploads++;
         sNdsRendererBenchmarkSuppressedTextureUploadBytes +=
             upload_width * upload_height * sizeof(u16);
+        ndsRendererStageTextureSiteRemember(
+            state, stats, entry, format, size, width, height);
         return TRUE;
     }
 #endif
@@ -8336,6 +8603,12 @@ static s32 ndsRendererHardwareBindTexture(
     ndsRendererHardwareTextureLookupRemove(entry);
 #endif
     entry->key = key;
+    sNdsRendererHardwareTextureKeyGeneration++;
+    if (sNdsRendererHardwareTextureKeyGeneration == 0u)
+    {
+        sNdsRendererHardwareTextureKeyGeneration++;
+    }
+    entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     entry->key_hash = key_hash;
 #endif
@@ -8366,6 +8639,8 @@ static s32 ndsRendererHardwareBindTexture(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererProfileTextureCacheEntry(entry);
 #endif
+    ndsRendererStageTextureSiteRemember(
+        state, stats, entry, format, size, width, height);
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
 #endif
@@ -9682,7 +9957,7 @@ ndsRendererSubmitHardwareTriangle(
         implicit_texture_on =
             ndsRendererHardwareTextureImplicitStateOn(stats);
         use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
-            ndsRendererHardwareBindTexture(stats, config) : FALSE;
+            ndsRendererHardwareBindTexture(stats, config, state) : FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         state->texture_prepare_key_hash = (use_texture != FALSE) ?
             sNdsRendererSemanticLastTextureKeyHash : 0u;
@@ -10830,6 +11105,9 @@ ndsRendererScanList(const Gfx *dl,
         w0 = dl->words.w0;
         w1 = dl->words.w1;
         op = w0 >> 24;
+#if NDS_RENDERER_HW_TRIANGLES
+        state->source_command_site = dl;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
         state->semantic_command_index = i;
         state->semantic_tri2_half = 0u;
@@ -11029,6 +11307,7 @@ ndsRendererScanList(const Gfx *dl,
 
         case NDS_RENDERER_OP_TEXTURE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordTextureState(stats, w0, w1);
             NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
@@ -11066,6 +11345,7 @@ ndsRendererScanList(const Gfx *dl,
 
         case NDS_RENDERER_OP_GEOMETRYMODE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             stats->geometry_mode = (stats->geometry_mode & w0) | w1;
             stats->geometry_clear_mask = w0;
             stats->geometry_set_mask = w1;
@@ -11075,42 +11355,49 @@ ndsRendererScanList(const Gfx *dl,
 
         case NDS_RENDERER_OP_SETCOMBINE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordSetCombine(stats, w0, w1);
             NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_SETTIMG:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordSetImage(stats, w0, w1);
             NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_SETTILE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordSetTile(stats, w0, w1);
             NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_LOADTILE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordLoadTile(stats, w0, w1);
             NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_LOADBLOCK:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordLoadBlock(stats, w0, w1);
             NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_LOADTLUT:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordLoadTlut(stats, w1);
             NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
 
         case NDS_RENDERER_OP_SETTILESIZE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordSetTileSize(stats, w0, w1);
             NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
             break;
@@ -11158,6 +11445,7 @@ ndsRendererScanList(const Gfx *dl,
         case NDS_RENDERER_OP_SETOTHERMODE_L:
         case NDS_RENDERER_OP_RDPSETOTHERMODE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            ndsRendererTextureSourceHashCommand(stats, w0, w1);
             ndsRendererRecordOtherMode(stats, op, w0, w1);
             break;
 
@@ -11179,6 +11467,8 @@ void ndsRendererInitStats(NDSRendererStats *stats)
         memset(stats, 0, sizeof(*stats));
         stats->geometry_mode = NDS_RENDERER_GEOM_RESET_MODE;
         stats->othermode_h = NDS_RENDERER_TP_PERSP | NDS_RENDERER_TF_BILERP;
+        stats->texture_source_hash1 = 2166136261u;
+        stats->texture_source_hash2 = 0x9e3779b9u;
     }
 }
 
@@ -11263,6 +11553,9 @@ void ndsRendererHardwareResetSourceCaches(void)
     memset(sNdsRendererDirectRawPlans, 0,
            sizeof(sNdsRendererDirectRawPlans));
     sNdsRendererDirectRawEntryCount = 0u;
+    memset(sNdsRendererStageTextureSites, 0,
+           sizeof(sNdsRendererStageTextureSites));
+    sNdsRendererStageTextureSiteNext = 0u;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     memset(sNdsRendererHardwareCi4IndexCache, 0,
@@ -11297,13 +11590,18 @@ void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
     sNdsRendererRuntimeOwner =
         ((u32)owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT) ? owner :
         NDS_RENDERER_PROFILE_OWNER_NONE;
+    sNdsRendererStageTextureSitesEnabled =
+        ((mode == NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES) &&
+         (sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_STAGE)) ?
+            TRUE : FALSE;
     sNdsRendererFastOwnerEnabled =
         ((mode == NDS_RENDERER_FAST_RUN_MARIO_ONLY) &&
          (sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_MARIO)) ||
         ((mode == NDS_RENDERER_FAST_RUN_FIGHTERS) &&
          ((sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_MARIO) ||
           (sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_FOX))) ||
-        ((mode == NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT) &&
+        (((mode == NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT) ||
+          (mode == NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES)) &&
          ((u32)sNdsRendererRuntimeOwner <
           (u32)NDS_RENDERER_PROFILE_OWNER_COUNT));
 #endif

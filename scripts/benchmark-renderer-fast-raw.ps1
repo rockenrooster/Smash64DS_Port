@@ -1,5 +1,5 @@
 param(
-    [ValidateRange(0,3)][int]$FastRunMode = 0,
+    [ValidateRange(0,4)][int]$FastRunMode = 0,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [ValidateRange(1,2)][int]$RendererProfileLevel = 1,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),

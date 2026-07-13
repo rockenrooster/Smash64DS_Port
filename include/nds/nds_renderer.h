@@ -22,6 +22,7 @@
 #define NDS_RENDERER_FAST_RUN_MARIO_ONLY 1u
 #define NDS_RENDERER_FAST_RUN_FIGHTERS 2u
 #define NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT 3u
+#define NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES 4u
 
 #ifndef NDS_RENDERER_BENCHMARK_MODE
 #define NDS_RENDERER_BENCHMARK_MODE NDS_RENDERER_BENCHMARK_NONE
@@ -453,6 +454,8 @@ typedef struct NDSRendererStats
     s32 fog_min;
     s32 fog_max;
     u32 fog_status;
+    u32 texture_source_hash1;
+    u32 texture_source_hash2;
 } NDSRendererStats;
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);

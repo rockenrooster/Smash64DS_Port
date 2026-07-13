@@ -30,7 +30,7 @@ param(
     [switch]$RendererBenchmarkOnly,
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
-    [ValidateRange(0,3)][int]$RendererFastRunMode = 0,
+    [ValidateRange(0,4)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [string]$RendererBenchmarkExportPath = '',
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
