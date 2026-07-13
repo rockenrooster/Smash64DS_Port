@@ -136,7 +136,7 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-Canonical is `14.0fps`, draw `2,199,744/2,212,864`; next measure fused direct stage-owner records/live binding. HUD, Whispy face, and Mario facing/light remain debt.
+Canonical is `14.0fps`, draw `2,199,744/2,212,864`. A fixed 26-record layer-0 schedule was exact but saved only `8,448` ticks and is reverted; the next cut must fuse complete-stage live binding with narrow raw/no-Z kernels. HUD, Whispy face, and Mario facing/light remain debt.
 ## Verification
 
 DevFast, forensic, P1Gate, and Boundary `161/162/163` pass; Full Regression stays intentionally skipped for fast iteration.

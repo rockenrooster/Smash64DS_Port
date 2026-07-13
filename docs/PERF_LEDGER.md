@@ -1266,3 +1266,93 @@ NEXT MEASURED BOTTLENECK:
   live matrices/materials/textures through the exact submission path. Do not
   retry standalone no-Z or cache fully expanded water phases.
 ```
+
+## 2026-07-13 - rejected fixed-shape Dream Land layer-0 scan compiler
+
+```text
+IDEA ID: M6-STAGE0-FIXED-SCHEDULE
+HYPOTHESIS:
+  Replace Dream Land layer 0's 297-command immutable source traversal with 26
+  fixed state/VTX/TRI records while retaining the exact triangle helper. The
+  candidate must save 50,000 whole-draw ticks or 25% of layer 0.
+TARGETED EXCLUSIVE COUNTER:
+  Same-ROM profile-1 whole draw, stage owner, and layer-0 wall over 128 warm
+  frames; isolated profile-2 semantic and owner-state/cache equality.
+MEASURED UPPER BOUND:
+  The exact compiler removes source validation, branch dispatch, 90 syncs, 21
+  ends, and the generic opcode switch, but saves only 8,448 ticks. Source scan
+  is 3.22% of the live 262,592-tick layer-0 wall in this architecture.
+LIVE-TREE RECONCILIATION:
+  Started from 95b2a426e2 after direct compact CI4 rows. Preserved all untracked
+  user roadmaps, reviews, logs, prompts, and goal files; decomp stayed read-only.
+FILES/FUNCTIONS CHANGED:
+  Temporary renderer/compiler, adapter selection, mode-4 benchmark plumbing,
+  and exact diagnostic counters in nds_renderer.c/.h, nds_startup.h,
+  reloc_backend_renderer_dl.c, reloc_backend_movement.c, and the fast-run
+  benchmark/comparison/verifier scripts. All production changes were removed.
+BUILD TARGET/FLAGS:
+  Profile-1 coarse O2 Thumb common/scene and O2 ARM renderer; profile-2 forensic
+  O2 Thumb common/scene and O2 ARM renderer. Runtime modes 3/4 share each ROM.
+BUILD COUNT / TIME TO FIRST MEASUREMENT:
+  One initial incremental profile-1 build, two diagnostic renderer rebuilds,
+  and one profile-2 incremental build. The first executing 8-frame result came
+  after correcting the immutable-span cap to match the generic renderer.
+PROFILE-1 ROM SHA-256:
+  2C1CDE0817214A4180D4C3A1492C9A88A22BE271C648959672B705051908AEA5.
+FRAME/LOGIC-TICK WINDOWS:
+  Mode 3 frames 209..336 / logic 216..343; mode 4 frames 215..342 / logic
+  222..349. Both contain 128 consecutive warm frames with 0/0 conservation
+  error and identical O2 flags/emulator identity.
+A0 MEDIAN/P95:
+  Mode 3 draw 1,979,680/1,996,928; stage 820,992/837,184; layer 0
+  262,592/262,720; Mario 361,728/361,856; Fox 398,752/399,488.
+B0 MEDIAN/P95:
+  Mode 4 draw 1,971,232/1,988,544; stage 812,544/828,608; layer 0
+  254,144/254,272; Mario 361,728/381,504; Fox 398,816/405,504.
+WHOLE-DRAW / OWNER DELTA:
+  Draw, stage, and layer 0 each improve 8,448 median ticks. Layer 0 improves
+  3.22%, far below its 25% gate; draw improves 0.43%, far below 50,000 ticks.
+  Candidate draw/stage/layer P95 each improve about 8.4K. Fighter P95 variation
+  is unrelated sampling noise because the candidate is stage-layer-0-only.
+ACTIVE/WAIT SPLIT:
+  Mode 3 active 2,016,320/2,033,984 and mode 4 active
+  2,007,936/2,025,600. VBlank wait absorbs the small active-work delta; all
+  draw/present/loop residuals stay below 0.8%.
+OP/PROGRAM BYTES/FALLBACKS:
+  Exact census: 20 root lists plus one branch child, 26 records, 123 live state
+  commands, 108 predecoded vertices, 36 TRI commands, and 54 no-Z triangles.
+  Program storage is 5,440 bytes. Mode 4 executes 71/594 total fast runs/
+  triangles versus mode 3's 45/540; compile/runtime fallback is zero.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  Experiment profile-1 ITCM was 17,996 versus the accepted 20,376 placement;
+  main BSS was 1,881,520, about +6 KiB. DTCM BSS remained 152. No arena,
+  per-frame allocation, or expanded texture frame was added. Retained delta is
+  zero after the exact reverse patch.
+PROFILE-2 ROM SHA-256 / WINDOW:
+  D6D0B107C7C8DC2A9573CDB0E254CE79E238490A5014913338AE5B7514CDB334;
+  isolated generic and mode-4 frames 45..76 / logic 52..83.
+SEMANTIC TRACE RESULT:
+  All 32 frames match every 828 semantic events, provenance values, owner entry/
+  exit state, persistent 32-slot cache and ownership hashes, resolver/global
+  hashes, topology/signature census, and upload sequence. No dual GX submit.
+ORACLE/COUNTER/GX RESULT:
+  Oracle 2,484/0/0; exact 828 and 648/44/126/10 classes; 121/707/121 batches;
+  98/730 texture prepare/reuse; 36,864 upload bytes. Both isolated windows end
+  at the same dynamic 732/2,218 GX RAM state.
+CAPTURE RESULT:
+  None. Exact semantics passed, but the candidate missed the performance gate
+  before visual promotion.
+VERIFIER COMMANDS AND RESULTS:
+  Matched 128-frame profile-1 A/B, 32-frame isolated profile-2 comparison,
+  ITCM placement, exact geometry/oracle/upload, and conservation gates pass.
+  Broad regression is intentionally skipped at the user's fast-iteration pace.
+DECISION: REVERT
+  Correct but too small. Do not revive this fixed schedule or another record
+  executor that feeds the generic triangle helper.
+NEXT MEASURED BOTTLENECK:
+  Adopt CODEX_60FPS_FASTEST_PATH_20260712.txt Phase 4: compile the complete
+  stage owner into direct records that bind live adapter state and call narrow
+  raw/no-Z kernels. A temporary side census measured the exact software
+  wallpaper wall at 383,296 ticks and live scale 1.50x..1.70x; retain that as
+  a deferred >=300K-class BG2-affine/row-reuse target only after draw <700K.
+```

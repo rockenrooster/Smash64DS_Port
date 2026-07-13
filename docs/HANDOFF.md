@@ -124,7 +124,7 @@ other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 ## Recommended Next Work
 1. Manually accept source floor/edge callbacks; then repair live A and jump physics.
-2. Measure fused direct stage-owner records/live binding; do not retry the no-Z cut.
+2. Build complete-stage direct records that fuse live binding with narrow raw/no-Z kernels; the exact fixed layer-0 schedule saved only `8,448` ticks and is reverted.
 3. Defer the rare 4 KiB Whispy miss, then add RGBA4 HUD output.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
