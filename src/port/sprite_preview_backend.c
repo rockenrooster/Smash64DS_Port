@@ -305,6 +305,14 @@ volatile u32 gNdsSObjWallpaperFinalDirectCount;
 volatile u32 gNdsSObjWallpaperFinalSkipCount;
 volatile u32 gNdsSObjWallpaperFinalKeyChangeCount;
 volatile u32 gNdsSObjWallpaperFinalPixelWriteCount;
+volatile u32 gNdsSObjWallpaperMapOracleCheckCount;
+volatile u32 gNdsSObjWallpaperMapOracleMismatchCount;
+volatile u32 gNdsSObjWallpaperPixelOracleCheckCount;
+volatile u32 gNdsSObjWallpaperPixelOracleMismatchCount;
+volatile u32 gNdsSObjWallpaperOracleFirstKind;
+volatile u32 gNdsSObjWallpaperOracleFirstIndex;
+volatile u32 gNdsSObjWallpaperOracleFirstExpected;
+volatile u32 gNdsSObjWallpaperOracleFirstActual;
 volatile u32 gNdsSObjBackgroundStagingClearBytes;
 volatile u32 gNdsSObjForegroundStagingClearBytes;
 
@@ -499,6 +507,21 @@ static u32 ndsSObjWallpaperLastSource(u32 relative, u32 scale_q16)
      * an ARM9 software 64-bit divide on every source-map entry. */
     return ((((relative + 1u) << 16) - 1u) / scale_q16);
 }
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+static void ndsSObjWallpaperRecordOracleMismatch(
+    u32 kind, u32 index, u32 expected, u32 actual)
+{
+    if ((gNdsSObjWallpaperMapOracleMismatchCount == 0u) &&
+        (gNdsSObjWallpaperPixelOracleMismatchCount == 0u))
+    {
+        gNdsSObjWallpaperOracleFirstKind = kind;
+        gNdsSObjWallpaperOracleFirstIndex = index;
+        gNdsSObjWallpaperOracleFirstExpected = expected;
+        gNdsSObjWallpaperOracleFirstActual = actual;
+    }
+}
+#endif
 
 static s32 ndsSObjDrawOpaqueWallpaperCache(
     const u16 *cache_pixels, u32 cache_pitch,
@@ -727,8 +750,18 @@ ndsSObjDrawOpaqueWallpaperFinal(
     u32 step_y;
     u32 preview_x_q16;
     u32 preview_y_q16;
+    u32 previous_preview_x = 0u;
+    u32 previous_preview_y = 0u;
+    u32 source_x_unclamped = 0u;
+    u32 source_y_unclamped = 0u;
+    u32 source_x_remainder = 0u;
+    u32 source_y_remainder = 0u;
+    u32 source_x_recurrence_valid = FALSE;
+    u32 source_y_recurrence_valid = FALSE;
     u32 source_x_map_complete = TRUE;
     u32 packed_rows;
+    const u16 *previous_src = NULL;
+    u16 *previous_dst = NULL;
     s32 dst_x_end;
     s32 dst_y_end;
     u32 x;
@@ -756,8 +789,45 @@ ndsSObjDrawOpaqueWallpaperFinal(
         if (((s32)preview_x >= origin_x) &&
             ((s32)preview_x < dst_x_end))
         {
-            u32 source_x = ndsSObjWallpaperLastSource(
-                (u32)((s32)preview_x - origin_x), scale_x_q16);
+            u32 source_x;
+
+            if (source_x_recurrence_valid == FALSE)
+            {
+                u32 relative = (u32)((s32)preview_x - origin_x);
+                u32 numerator = ((relative + 1u) << 16) - 1u;
+
+                source_x_unclamped = numerator / scale_x_q16;
+                source_x_remainder = numerator -
+                    (source_x_unclamped * scale_x_q16);
+                source_x_recurrence_valid = TRUE;
+            }
+            else
+            {
+                source_x_remainder +=
+                    (preview_x - previous_preview_x) << 16;
+                while (source_x_remainder >= scale_x_q16)
+                {
+                    source_x_remainder -= scale_x_q16;
+                    source_x_unclamped++;
+                }
+            }
+            previous_preview_x = preview_x;
+            source_x = source_x_unclamped;
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            {
+                u32 expected_source_x = ndsSObjWallpaperLastSource(
+                    (u32)((s32)preview_x - origin_x), scale_x_q16);
+
+                gNdsSObjWallpaperMapOracleCheckCount++;
+                if (source_x != expected_source_x)
+                {
+                    ndsSObjWallpaperRecordOracleMismatch(
+                        1u, x, expected_source_x, source_x);
+                    gNdsSObjWallpaperMapOracleMismatchCount++;
+                }
+            }
+#endif
 
             if (source_x >= width) { source_x = width - 1u; }
             source_x_map[x] = (u16)source_x;
@@ -772,6 +842,7 @@ ndsSObjDrawOpaqueWallpaperFinal(
     packed_rows = ((source_x_map_complete != FALSE) &&
                    ((overlay_width & 1u) == 0u) &&
                    ((overlay_pitch & 1u) == 0u) &&
+                   (((uintptr_t)source_x_map & 3u) == 0u) &&
                    (((uintptr_t)overlay & 3u) == 0u)) ? TRUE : FALSE;
     preview_y_q16 = step_y >> 1;
     for (y = 0u; y < overlay_height; y++)
@@ -783,13 +854,56 @@ ndsSObjDrawOpaqueWallpaperFinal(
         if (((s32)preview_y >= origin_y) &&
             ((s32)preview_y < dst_y_end))
         {
-            u32 source_y = ndsSObjWallpaperLastSource(
-                (u32)((s32)preview_y - origin_y), scale_y_q16);
+            u32 source_y;
+
+            if (source_y_recurrence_valid == FALSE)
+            {
+                u32 relative = (u32)((s32)preview_y - origin_y);
+                u32 numerator = ((relative + 1u) << 16) - 1u;
+
+                source_y_unclamped = numerator / scale_y_q16;
+                source_y_remainder = numerator -
+                    (source_y_unclamped * scale_y_q16);
+                source_y_recurrence_valid = TRUE;
+            }
+            else
+            {
+                source_y_remainder +=
+                    (preview_y - previous_preview_y) << 16;
+                while (source_y_remainder >= scale_y_q16)
+                {
+                    source_y_remainder -= scale_y_q16;
+                    source_y_unclamped++;
+                }
+            }
+            previous_preview_y = preview_y;
+            source_y = source_y_unclamped;
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            {
+                u32 expected_source_y = ndsSObjWallpaperLastSource(
+                    (u32)((s32)preview_y - origin_y), scale_y_q16);
+
+                gNdsSObjWallpaperMapOracleCheckCount++;
+                if (source_y != expected_source_y)
+                {
+                    ndsSObjWallpaperRecordOracleMismatch(
+                        2u, y, expected_source_y, source_y);
+                    gNdsSObjWallpaperMapOracleMismatchCount++;
+                }
+            }
+#endif
 
             if (source_y >= height) { source_y = height - 1u; }
             src = &cache_pixels[source_y * cache_pitch];
         }
-        if ((src != NULL) && (packed_rows != FALSE))
+        if ((src != NULL) && (src == previous_src) &&
+            (previous_dst != NULL) && (packed_rows != FALSE))
+        {
+            memcpy(dst, previous_dst,
+                   overlay_width * sizeof(dst[0]));
+        }
+        else if ((src != NULL) && (packed_rows != FALSE))
         {
             u32 *dst_pairs = (u32 *)dst;
 
@@ -797,11 +911,30 @@ ndsSObjDrawOpaqueWallpaperFinal(
              * covers the complete visible X map. Pack two exact RGB5A1
              * samples per VRAM store instead of issuing 49,152 halfword
              * writes every camera update. */
-            for (x = 0u; x < overlay_width; x += 2u)
+            const u32 *source_pair = (const u32 *)source_x_map;
+            const u32 *source_pair_end = source_pair +
+                (overlay_width >> 1);
+
+            while ((source_pair + 1) < source_pair_end)
             {
-                dst_pairs[x >> 1] =
-                    (u32)src[source_x_map[x]] |
-                    ((u32)src[source_x_map[x + 1u]] << 16);
+                u32 pair0 = source_pair[0];
+                u32 pair1 = source_pair[1];
+
+                dst_pairs[0] =
+                    (u32)src[(u16)pair0] |
+                    ((u32)src[pair0 >> 16] << 16);
+                dst_pairs[1] =
+                    (u32)src[(u16)pair1] |
+                    ((u32)src[pair1 >> 16] << 16);
+                source_pair += 2;
+                dst_pairs += 2;
+            }
+            if (source_pair < source_pair_end)
+            {
+                u32 pair = *source_pair;
+
+                *dst_pairs = (u32)src[(u16)pair] |
+                    ((u32)src[pair >> 16] << 16);
             }
         }
         else
@@ -813,6 +946,25 @@ ndsSObjDrawOpaqueWallpaperFinal(
                     src[source_x_map[x]] : 0u;
             }
         }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        for (x = 0u; x < overlay_width; x++)
+        {
+            u16 expected_pixel = ((src != NULL) &&
+                                  (source_x_map[x] != no_source)) ?
+                src[source_x_map[x]] : 0u;
+
+            gNdsSObjWallpaperPixelOracleCheckCount++;
+            if (dst[x] != expected_pixel)
+            {
+                ndsSObjWallpaperRecordOracleMismatch(
+                    3u, (y * overlay_width) + x,
+                    expected_pixel, dst[x]);
+                gNdsSObjWallpaperPixelOracleMismatchCount++;
+            }
+        }
+#endif
+        previous_src = src;
+        previous_dst = dst;
         preview_y_q16 += step_y;
     }
     return TRUE;

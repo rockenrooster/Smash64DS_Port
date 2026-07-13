@@ -20367,3 +20367,28 @@ remains skipped for the requested fast iteration cadence.
   visibility/detail/motion and exact ROM parity. Static checks, forensic,
   DevFast, P1Gate, and Boundary `161/162/163` pass; Full Regression remains
   intentionally skipped for Tyler's requested fast iteration.
+
+## 2026-07-13 - Exact final-wallpaper recurrence and packed pairs
+
+- The direct 300x220-to-256x192 Dream Land mapper now seeds each axis with one
+  exact quotient/remainder, advances the monotonic destination map without hot
+  divides, copies repeated source rows, and consumes two u16 indices from one
+  aligned word. It still binds live `grWallpaperCalcPersp` transforms and does
+  not cache a composed gameplay frame; unsupported layouts retain fallback.
+- Same-ROM 32-frame profile-1 A/B/A returns both controls to `1,954,816` median
+  draw ticks. The candidate is `1,897,920/1,938,880`; wallpaper improves
+  `383,360/383,488 -> 329,024/330,304`. Active work saves 56,960 median ticks,
+  P95 improves, and stage/Mario/Fox remain flat.
+- Profile 2 checks `11,200/0` old-division versus recurrence map entries and
+  `1,228,800/0` final pixels. Renderer oracle `2484/0/0`, 828 triangles,
+  `648/44/126/10` classes, `121/707/121` batches, `98/730` prepare/reuse, and
+  36,864 upload bytes remain exact. No ITCM, DTCM, BSS, or arena allocation was
+  added. Rejected `div32`, per-row ARM, whole-mapper ARM, and pre-unroll variants
+  are recorded in the experiment report/logs rather than retained in runtime.
+- Canonical profile 0 reaches 14.4 FPS and samples `1,859,552/1,969,600` draw
+  ticks; profile 1 is `1,905,920/1,913,472` with wallpaper
+  `320,640/320,960`. ROM parity is 11,684,864 bytes at
+  `F596FE642FA176946E06D318293BC3543FA1A5E4C93D3D7B7A176F6406513163`.
+- Capture `2026-07-13_canonical_fast_041102-8008285-p44652.png`, static checks,
+  forensic, DevFast, P1Gate, and Boundary `161/162/163` pass. Full Regression
+  remains intentionally skipped for Tyler's requested fast iteration.

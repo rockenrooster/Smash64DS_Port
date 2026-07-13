@@ -1322,7 +1322,9 @@ Assert-True ($spritePreview.Contains('sNdsSObjFramePendingWallpaper')) 'Layered 
 Assert-True ($spritePreview.Contains('ndsSObjPreviewBasicSupported(sobj) == FALSE')) 'Layered SObj path again clears staging before rejecting unsupported source formats.'
 Assert-True ($spritePreview.Contains('sNdsSObjOverlayForegroundPopulated')) 'Layered SObj path no longer retains BG3 until a populated foreground becomes empty.'
 Assert-True ($spritePreview.Contains('u32 *dst_pairs = (u32 *)dst;')) 'Opaque Dream Land wallpaper no longer packs aligned final BG2 rows into word stores.'
-Assert-True ($spritePreview.Contains('((u32)src[source_x_map[x + 1u]] << 16)')) 'Packed wallpaper row path no longer preserves both exact RGB5A1 samples.'
+Assert-True ($spritePreview.Contains('(u32)src[(u16)pair0]') -and $spritePreview.Contains('((u32)src[pair0 >> 16] << 16)') -and $spritePreview.Contains('(u32)src[(u16)pair1]') -and $spritePreview.Contains('((u32)src[pair1 >> 16] << 16)')) 'Packed wallpaper row path no longer preserves both exact RGB5A1 pairs.'
+Assert-True ($spritePreview.Contains('source_x_remainder +=') -and $spritePreview.Contains('(preview_x - previous_preview_x) << 16') -and $spritePreview.Contains('while (source_x_remainder >= scale_x_q16)')) 'Wallpaper mapper no longer advances the exact source quotient/remainder recurrence.'
+Assert-True ($spritePreview.Contains('(src == previous_src)') -and $spritePreview.Contains('memcpy(dst, previous_dst,')) 'Wallpaper mapper no longer reuses exact repeated source rows.'
 Assert-True ($spritePreview.Contains('static s32 __attribute__((hot, optimize("O3")))')) 'Measured wallpaper hot path lost its targeted latency optimization.'
 $platform = Get-Content (Join-Path $root 'src/nds/nds_platform.c') -Raw
 Assert-True ($platform.Contains('ndsPlatformGetOriginalSpriteOverlayLayer')) 'DS platform no longer exposes bounded final-layer ownership for direct wallpaper composition.'

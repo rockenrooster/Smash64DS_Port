@@ -113,7 +113,8 @@ index plus affine world product moves O2 draw `2,126,752/2,169,600 ->
 2,057,376/2,098,880`. Exact persistent stage worlds reuse `57` stable source nodes; profile 2 shadows `42` selected outputs with zero mismatch/reject/overflow.
 Matched cache-off/on stage-world draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`.
 Direct compact CI4 rows move `2,001,600/2,033,664 -> 1,970,304/2,002,880` with identical upload hash and zero fallback.
-Canonical draw is `2,199,744/2,212,864` at about `14.0fps`.
+The exact wallpaper recurrence/row-reuse/packed-index path moves same-ROM A/B/A wallpaper `383360/383488 -> 329024/330304` and draw `1954816/1993984 -> 1897920/1938880`; profile 2 proves map/pixel `11200/0` and `1228800/0`.
+Canonical is `14.4fps`; profile-0 draw is `1,859,552/1,969,600`, while profile-1 draw/wallpaper are `1,905,920/1,913,472` and `320,640/320,960`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays separate and original timing remains live.
 The BattleShip ground interrupt chain and source floor/edge callbacks are live
 under imported FTMANAGER; manual acceptance is pending. A normals and jump/
@@ -124,7 +125,7 @@ other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 ## Recommended Next Work
 1. Manually accept source floor/edge callbacks; then repair live A and jump physics.
-2. Build complete-stage direct records that fuse live binding with narrow raw/no-Z kernels; the exact fixed layer-0 schedule saved only `8,448` ticks and is reverted.
+2. Build one coarse complete-stage owner kernel; fixed schedules and VTX memoization are measured dead ends.
 3. Defer the rare 4 KiB Whispy miss, then add RGBA4 HUD output.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
