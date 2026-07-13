@@ -101,9 +101,9 @@ pre-clamping and libnds `div64` remove the shipping software 64-bit helper;
 profile 1 records `650` cached calls, while profile 2 compares `1,404` results
 with C. Boundary modes retain exact nonzero clamp counts. Divider evidence adds
 no BSS; profile 2 also omits the production 2,096-byte shade table and runs the
-independent exact shade path. Profiles 0/1 retain light/table and exact 128-slot
+independent exact shade path. Profiles 0/1 retain light/table and exact 48-slot
 texture-key caches; compact fingerprints still require full 236-byte equality.
-Profile-0 BSS is `1,879,760`; prepared context persists by `98/730` epoch.
+Profile-0 BSS is `1,875,504`; prepared context persists by `98/730` epoch.
 The 2,916-byte main-RAM K-RAW kernel accelerates `45/540` runs/triangles per
 frame with `47/7/0` bounded fallbacks. Same-ROM 128-frame profile-1 draw moves
 `2,067,296/2,407,872 -> 1,858,624/2,227,648`; stage/Mario/Fox save
@@ -111,9 +111,10 @@ frame with `47/7/0` bounded fallbacks. Same-ROM 128-frame profile-1 draw moves
 state/cache, oracle, geometry, and upload sequence compare exactly. An 8 KiB
 direct table consumes 330 TRI commands without redecode. A 256-byte exact DObj
 index plus affine world product moves O2 draw `2,126,752/2,169,600 ->
-2,057,376/2,098,880`; the final 128-frame draw is `2,067,712/2,088,064`, and
-profile 2 proves `107/0/0` affine samples/mismatches/delta. Canonical reaches
-about `13.5fps`; shipped SHA-256 is `B4A89E279445E3EB44C0931E5C718B3A81D5FD4B578F71702C3D0ADDB9A6E258`.
+2,057,376/2,098,880`. Exact persistent stage worlds reuse `57` stable source nodes; profile 2 shadows `42` selected outputs with zero mismatch/reject/overflow.
+Matched cache-off/on draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`;
+stage saves `63,424/82,176` and matrix prep `67,328/41,088` ticks. Canonical
+draw is `2,248,640/2,276,544` at about `13.4fps`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays separate and original timing remains live.
 The BattleShip ground interrupt chain and source floor/edge callbacks are live
 under imported FTMANAGER; manual acceptance is pending. A normals and jump/
@@ -124,7 +125,7 @@ other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 ## Recommended Next Work
 1. Manually accept source floor/edge callbacks; then repair live A and jump physics.
-2. Measure persistent stage-world reuse (`0/1` churn); do not retry the no-Z cut.
+2. Measure fused direct stage-owner records/live binding; do not retry the no-Z cut.
 3. Defer the rare 4 KiB Whispy miss, then add RGBA4 HUD output.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
@@ -145,6 +146,5 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-DevFast, forensic, P1Gate, and all Boundary modes `161/162/163` pass. Mode 163
-now passes the elevated fighter through line 2 before DashRun; skip Full Regression.
+DevFast, forensic, P1Gate, and all Boundary modes `161/162/163` pass. Mode 163 now passes the elevated fighter through line 2 before DashRun; skip Full Regression.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

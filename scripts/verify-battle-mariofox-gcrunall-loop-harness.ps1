@@ -547,6 +547,7 @@ try {
             'printf "RENDER_ORACLE=%u,%u,%u\n", gNdsRendererProfileOracleSamples, gNdsRendererProfileOracleMismatches, gNdsRendererProfileOracleMaxDelta',
             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
             'printf "RENDER_ADAPTER_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileCameraMatrixCacheHitCount, gNdsRendererProfileCameraMatrixCacheMissCount, gNdsRendererProfileCameraMatrixCacheOverflowCount, gNdsRendererProfileDObjWorldCacheHitCount, gNdsRendererProfileDObjWorldCacheMissCount, gNdsRendererProfileDObjWorldCacheOverflowCount',
+            'printf "RENDER_STAGE_WORLD_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileStageWorldPersistentHitCount, gNdsRendererProfileStageWorldPersistentMissCount, gNdsRendererProfileStageWorldPersistentRejectCount, gNdsRendererProfileStageWorldPersistentOverflowCount, gNdsRendererProfileStageWorldPersistentOracleSampleCount, gNdsRendererProfileStageWorldPersistentOracleMismatchCount',
             'printf "RENDER_AFFINE_MATRIX=%u,%u,%u\n", gNdsRendererProfileAffineMatrixSamples, gNdsRendererProfileAffineMatrixMismatches, gNdsRendererProfileAffineMatrixMaxDelta',
             'printf "RENDER_RAW_MATRIX=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileRawCurrentCandidateCount, gNdsRendererProfileRawCurrentRangeRejectCount, gNdsRendererProfileRawCrossMatrixCount, gNdsRendererProfileMatrixPosTestSamples, gNdsRendererProfileMatrixPosTestMismatches, gNdsRendererProfileMatrixPosTestMaxError, gNdsRendererProfileMatrixPosTestWSignMismatches, gNdsRendererProfileMatrixPosTestClipMismatches, gNdsRendererProfileMatrixPosTestMatrixWordSamples, gNdsRendererProfileMatrixPosTestDropped',
             'printf "RENDER_SUBMIT=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileSubmitRawCurrentCount, gNdsRendererProfileSubmitRawSnapshotCount, gNdsRendererProfileSubmitProjectedCrossCount, gNdsRendererProfileSubmitProjectedNoZCount, gNdsRendererProfileSubmitProjectedDecalCount, gNdsRendererProfileSubmitProjectedPrimDepthCount, gNdsRendererProfileSubmitProjectedRangeOrMatrixCount, gNdsRendererProfileSubmitRejectCount, (6 * gNdsRendererProfileSubmitProjectedNoZCount) + (9 * (gNdsRendererProfileSubmitProjectedCrossCount + gNdsRendererProfileSubmitProjectedDecalCount + gNdsRendererProfileSubmitProjectedPrimDepthCount + gNdsRendererProfileSubmitProjectedRangeOrMatrixCount))',
@@ -741,6 +742,7 @@ try {
     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
     $renderMatrix = [regex]::Match($gdbStdout, 'RENDER_MATRIX=([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderAdapterCache = [regex]::Match($gdbStdout, 'RENDER_ADAPTER_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $renderStageWorldCache = [regex]::Match($gdbStdout, 'RENDER_STAGE_WORLD_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderAffineMatrix = [regex]::Match($gdbStdout, 'RENDER_AFFINE_MATRIX=([0-9]+),([0-9]+),([0-9]+)')
     $renderRawMatrix = [regex]::Match($gdbStdout, 'RENDER_RAW_MATRIX=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderSubmit = [regex]::Match($gdbStdout, 'RENDER_SUBMIT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -830,6 +832,7 @@ try {
                 $ro = Get-Ints $renderOracle
                 $rm = Get-Ints $renderMatrix
                 $rac = Get-Ints $renderAdapterCache
+                $rswc = Get-Ints $renderStageWorldCache
                 $ram = Get-Ints $renderAffineMatrix
                 $rrm = Get-Ints $renderRawMatrix
                 $rs = Get-Ints $renderSubmit
@@ -1357,6 +1360,7 @@ try {
                     Assert-Condition ($rc[0] -gt 0 -and $rc[1] -gt 0) 'Forensic realtime HW build did not report source combine modes.' $gdbStdout
                     Assert-Condition ($renderLight.Success -and $rl[2] -eq 0) 'Forensic realtime HW build reported a source-light fallback.' $gdbStdout
                     Assert-Condition ($renderAdapterCache.Success -and $rac[0] -gt $rac[1] -and $rac[1] -gt 0 -and $rac[2] -eq 0 -and $rac[3] -gt 0 -and $rac[4] -gt 0 -and $rac[5] -eq 0) 'Forensic realtime HW build did not reuse frame-local camera/DObj matrices without cache overflow.' $gdbStdout
+                    Assert-Condition ($renderStageWorldCache.Success -and $rswc[0] -gt 0 -and $rswc[3] -eq 0 -and $rswc[4] -gt 0 -and $rswc[5] -eq 0) 'Forensic persistent stage-world cache did not reuse exact source keys or its uncached matrix shadow mismatched.' $gdbStdout
                     Assert-Condition ($renderAffineMatrix.Success -and $ram[0] -gt 0 -and $ram[1] -eq 0 -and $ram[2] -eq 0) 'Forensic affine DObj matrix path drifted from the former exact generic multiply.' $gdbStdout
                     Assert-Condition ($rrm[3] -gt 0 -and $rrm[4] -eq 0 -and $rrm[5] -le 16 -and $rrm[6] -eq 0 -and $rrm[7] -eq 0 -and $rrm[8] -gt 0 -and $rrm[9] -eq 0) 'Forensic corrected composed GX matrix PosTest failed homogeneous, W-sign, clip, matrix-word, or capacity checks.' $gdbStdout
                 } else {
@@ -1371,6 +1375,7 @@ try {
                 if ($RendererProfileLevel -ge 2) {
                     $hardwareSummary += " texel1state=0x{0:x}/0x{1:x}" -f $rt1[7], $rt1[8]
                     $hardwareSummary += " adapterCache=$($rac[0])/$($rac[1])/$($rac[2])/$($rac[3])/$($rac[4])/$($rac[5])"
+                    $hardwareSummary += " stageWorld=$($rswc[0])/$($rswc[1])/reject$($rswc[2])/overflow$($rswc[3])/oracle$($rswc[4])/$($rswc[5])"
                     $hardwareSummary += " affineMtx=$($ram[0])/$($ram[1])/$($ram[2])"
                 }
                 if ($RendererProfileLevel -ge 1) {
@@ -1570,6 +1575,7 @@ try {
             $rs = Get-Ints $renderSubmit
             $rhdiv = Get-Ints $renderHardwareDivide
             $rlazy = Get-Ints $renderLazy
+            $rswc = Get-Ints $renderStageWorldCache
             $rp = Get-Ints $renderProfile
             Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Boundary hardware draw did not flush submitted DS 3D frames.' $gdbStdout
             $shw = Get-Ints $stageHardware
@@ -1588,8 +1594,9 @@ try {
             Assert-Condition ($renderSubmit.Success -and $renderProfile.Success -and $rs[0] -eq $rrm[0] -and $rs[0] -gt 0 -and $rs[2] -eq $rrm[2] -and $rs[3] -gt 0 -and $rs[6] -eq $rrm[1] -and $rs[7] -eq 0 -and $submitTotal -eq $rp[16] -and $rs[8] -eq $expectedProjectedDivisions) 'Boundary hybrid raw/projected class or projected-division accounting drifted.' $gdbStdout
             $expectedHardwareDivideEvaluations = $rs[8] + (3 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
             Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[0] -gt 0 -and ($rhdiv[0] + $rhdiv[1] + $rhdiv[2]) -eq $expectedHardwareDivideEvaluations -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Boundary forensic hardware-divider coverage or exact-result oracle drifted.' $gdbStdout
+            Assert-Condition ($renderStageWorldCache.Success -and $rswc[0] -eq 0 -and $rswc[1] -eq 57 -and $rswc[2] -eq 0 -and $rswc[3] -eq 0 -and $rswc[4] -eq 0 -and $rswc[5] -eq 0) 'Boundary first-frame stage-world cache did not build all 57 exact nodes before reuse.' $gdbStdout
             Assert-Condition ($renderLazy.Success -and $rlazy[0] -gt 0 -and $rlazy[1] -eq $rlazy[0] -and $rlazy[2] -gt 0 -and $rlazy[3] -gt 0 -and $rlazy[4] -gt 0 -and $rlazy[5] -eq 0) 'Boundary forensic snapshot/lazy-transform accounting drifted or overflowed.' $gdbStdout
-            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) hdiv=$($rhdiv[0])/$($rhdiv[1])/$($rhdiv[2])/z$($rhdiv[3])/mis$($rhdiv[4]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/mw$($rrm[8])"
+            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) hdiv=$($rhdiv[0])/$($rhdiv[1])/$($rhdiv[2])/z$($rhdiv[3])/mis$($rhdiv[4]) stageWorld=$($rswc[0])/$($rswc[1])/reject$($rswc[2])/overflow$($rswc[3]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/mw$($rrm[8])"
         }
         Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
         Write-Output ("$Label ftmanager natural-combat harness passed: wait={0}/{1} walk={2}/{3} dash={4}/{5} run={6}/{7} attack={8} hitbox={9} dmg={10}->{11} status={12} knock={13} guard={14}/{15}/{16} retries={17} updates={18} mask=0x{19:x}{20}{21}{22}{23}" -f $nw[0], $nw[1], $nwalk[1], $nwalk[2], $nc[3], $nc[4], $nc[5], $nc[6], $na[2], $na[4], $na[8], $na[9], $na[6], $na[10], $ng[0], $ng[1], $ng[2], $na[5], $nat[4], $nat[2], $projectileSummary, $battlePlayableSummary, $hardwareSummary, $aobjSummary)

@@ -1157,15 +1157,15 @@
   Final-resolution wallpaper composition removes its 320x240 staging/scale and
   BG2 copy. Exact word-packed rows, immutable TRI replay, derived vertex reuse,
   canonical O2, ARM/ITCM paths, arena-first validation, K-RAW/direct topology,
-  and exact DObj matrix indexing/affine composition now reach `13.5fps`, still
+  exact DObj indexing/affine composition, and persistent static stage worlds now reach `13.4fps`, still
   about 4.4x short of the 60 FPS P1 condition. Exact pre-clamped DS `div64` removes the shipping
   software 64-bit divide helper; profile 1 sees `650` actual calls and profile 2
-  compares `1,404` results with zero mismatch. The final 128-frame profile-1
-  draw is `2,067,712/2,088,064`; matrix prep is `256,256/256,704`, texture
-  conversion `189,376/206,144`, and wallpaper about `382,656/382,912`. The
-  canonical smoke samples draw near `2.015M`. Stage DObj semantic signatures
-  were constant over the forensic window while fighter signatures changed;
-  measure exact live-signature stage-world persistence before broader owner fusion.
+  compares `1,404` realtime results with zero mismatch. Matched 128-frame
+  cache-off/on draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`; stage is
+  `937,920/970,688 -> 874,496/888,512`, and canonical profile-0 draw is
+  `2,248,640/2,276,544`. Profile 2 observes `57` exact persistent node hits and
+  shadows all `42` selected outputs with zero mismatch/reject/overflow. The next
+  measured cut is fused direct stage-owner records/live binding.
   An exact indexed-water trial reduced upload bytes `36,864 -> 19,456` but
   regressed draw to about `2.88M` and GX RAM `715/2167 -> 714/2164`; it is gone.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R

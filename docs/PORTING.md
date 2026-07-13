@@ -20305,3 +20305,33 @@ remains skipped for the requested fast iteration cadence.
   and retains oracle `2484/0/0` plus exact `648/44/126/10` submission classes.
 - Focused battle-playable, P1Gate, and Boundary `161/162/163` pass. Full
   Regression remains intentionally skipped for the requested fast iteration.
+
+## 2026-07-13 - Exact persistent Dream Land world matrices
+
+- Added a stage-only persistent world cache keyed by exact live source float
+  bits, XObj kinds/presence, parent pointer/generation, asset scene lifetime,
+  and current frame validation. Camera-facing, direct, fighter-parts, live
+  vector-track, and unbounded-XObj cases keep the exact uncached fallback.
+- The 57 stable stage nodes reuse spare upper slots in the existing 128-entry
+  DObj cache; only 4,608 bytes of scene-owned metadata are added. Measured cache
+  bounds are now 48 texture entries, 40 forensic PosTests, and 832 semantic
+  events, retaining all observed 40/32/828 contracts and the memory reserve.
+- Matched 128-frame cache-off/on profile-1 draw improves
+  `2,323,008/2,355,712 -> 2,263,616/2,280,512`; matrix prep improves
+  `255,872/256,256 -> 188,544/215,168`, and stage improves
+  `937,920/970,688 -> 874,496/888,512`. Whole draw saves `59,392/75,200` ticks.
+- Profile 2 observes stage-world `57/0/reject0/overflow0/oracle42/0`, affine
+  `158/0/0`, vertex oracle `2484/0/0`, exact `828` triangles and
+  `648/44/126/10` classes, `121/707/121` batches, `98/730` prepare/reuse, and
+  36,864 upload bytes. Its fast memory gate retains 202,416 bytes before and
+  136,880 after resident BGM. Accelerated first-frame mode gates all 57 cold
+  builds and 1,404 exact divider results; realtime remains 1,404/0 mismatch.
+- Final canonical profile-0 128-frame draw is `2,248,640/2,276,544` at 13.4
+  FPS; visible smokes reached 14.2 FPS. ROM parity is 11,683,840 bytes at
+  `C62C20F409B5A1F7A553462953EC48B6F9135E5AFC87EA24D226C2542C7E970F`.
+  Capture `2026-07-13_canonical_fast_012843-3972323-p5864.png` passes all
+  visibility, detail, and paired-motion gates.
+- Docs/architecture/registry/GBI/dry-run checks, focused fast/realtime forensic,
+  DevFast, P1Gate, and Boundary `161/162/163` pass. Full Regression remains
+  intentionally skipped for Tyler's requested fast iteration. Next renderer
+  work is fused direct stage-owner records/live binding, not standalone no-Z.

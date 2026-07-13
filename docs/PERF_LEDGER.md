@@ -86,6 +86,7 @@ profile-2 oracle 2,484 / 0 / 0
 | REJ-GXLIST | prior | 121 small GX lists | vertex submit | — | ~0.96M -> ~1.28M | regression | output retained | REVERT |
 | REJ-PACKET | prior | 1,406 generic packets | scan/setup | — | scan flat/setup regressed | regression | output retained | REVERT |
 | REJ-WATER | 2026-07-12 | indexed water | texture/upload | — | draw ~2.88M | regression | GX drift | REVERT |
+| M4-STAGE-WORLD | 2026-07-13 | Reuse exact stable Dream Land world matrices | matrix / stage | 2,323,008 / 2,355,712 | 2,263,616 / 2,280,512 | -59,392 / -75,200 | 42 / 0 shadows | KEEP |
 
 ## T0-O2-COARSE — clean exclusive loop and owner baseline
 
@@ -1082,4 +1083,104 @@ NEXT MEASURED BOTTLENECK:
   stage DObj signatures constant (0 changes / 1 distinct) while Mario/Fox
   change every frame; measure a live-signature persistent stage-world cache
   before a larger owner compiler. Wallpaper is independently about 383K.
+```
+
+## 2026-07-13 - exact persistent Dream Land world matrices
+
+```text
+IDEA ID: M4-STAGE-WORLD
+HYPOTHESIS:
+  Dream Land's source DObj transforms and parent topology are stable after
+  update, so exact source-bit/parent-generation validation can reuse its world
+  matrices across frames while fighter matrices remain frame-local.
+TARGETED EXCLUSIVE COUNTER:
+  Profile-1 matrix preparation, stage owner, and whole draw median/P95. Profile
+  2 independently recomputes every reused selected world and compares all 16
+  20.12 cells without submitting a second GX stream.
+MEASURED UPPER BOUND:
+  The live stage hierarchy has 57 reusable nodes feeding 42 selected world
+  outputs. Cache-off matrix prep is 255,872/256,256 ticks and the stage owner is
+  937,920/970,688, leaving a useful whole-draw cut without touching fighters.
+LIVE-TREE RECONCILIATION:
+  Started at 77b6f4258 after the source-collision choreography checkpoint.
+  Existing user roadmaps, reviews, logs, prompts, and decomp trees were
+  preserved; decomp remained read-only.
+FILES/FUNCTIONS CHANGED:
+  reloc_backend_renderer_dl.c adds a scene-generation-bounded stage metadata
+  cache, exact float-bit/XObj/parent matching, stage-only selection, and the
+  profile-2 uncached matrix shadow. The 57 worlds occupy spare upper slots in
+  the existing 128-entry world cache. Diagnostics, startup declarations,
+  taskman reset, verifier markers, and static fixtures publish and gate it.
+  nds_renderer.c/header right-size measured P1 bounds to 48 texture entries,
+  40 pending matrix tests, and 832 semantic events.
+BUILD TARGET/FLAGS:
+  smash64ds-battle-playable-coarse-hwtri; profile 1; common/scene O2 Thumb,
+  renderer O2 ARM; benchmark mode 0. Forensic profile 2 remains Os/ARM.
+BASELINE / EXPERIMENT ROM SHA-256:
+  Cache-off 9CC93F4733F88468C8B9F37B26132704451C8B820BFEA778EA43EB56A3884030.
+  Cache-on B742DDC129E3B12EA570C5E799B8EC3CFFF9530C71BFDCC761A0368B78F8B3F6.
+  Final canonical profile-0 candidate
+  C62C20F409B5A1F7A553462953EC48B6F9135E5AFC87EA24D226C2542C7E970F.
+FRAME/LOGIC-TICK WINDOW:
+  Cache-off uses 128 consecutive frames 193..320 / logic 200..327 after 192
+  warm frames. Cache-on uses frames 216..343 / logic 223..350 after 215 warm
+  frames. Both use the same O2 flags, emulator identity, neutral input, and
+  zero timer reset/conservation error; windows are independent and consecutive.
+A0 MEDIAN/P95:
+  Cache-off draw 2,323,008/2,355,712; matrix 255,872/256,256; stage
+  937,920/970,688; Mario 480,320/480,384; Fox 506,816/507,328.
+B0 MEDIAN/P95:
+  Cache-on draw 2,263,616/2,280,512; matrix 188,544/215,168; stage
+  874,496/888,512; Mario 482,432/502,336; Fox 508,672/515,456.
+WHOLE-DRAW / OWNER DELTA:
+  Whole draw improves 59,392 median and 75,200 P95, clearing the 50K keep gate.
+  Matrix prep improves 67,328/41,088 and stage improves 63,424/82,176. This is
+  a stage-only cut; fighter variation is sampling noise, not claimed savings.
+ACTIVE/WAIT SPLIT:
+  Cache-off active 2,359,680/2,393,088 and wait 310,048/529,152. Cache-on active
+  2,300,320/2,317,568 and wait 351,584/463,040. Loop medians remain VBlank-
+  paced at 2,800,832; P95 improves 2,834,816 -> 2,834,304. Conservation is 0/0.
+CHURN / SIGNATURE RESULT:
+  The prior owner census measured stage DObj signature churn 0 changes / 1
+  distinct value while fighters changed every frame. The exact live matcher
+  now observes 57 static-node hits per forensic frame with no rejected source
+  shape or capacity overflow.
+OP/PROGRAM BYTES/FALLBACKS:
+  No prepared program or GX stream was added. Metadata is 64 * 72 = 4,608
+  scene-heap bytes; matrix storage reuses the spare upper 64 entries already
+  allocated by the 128-entry frame cache. This is below the 16 KiB proof cap.
+  Camera-facing kinds 33..40, direct kind 1, fighter-parts kind 0x4B, live
+  vector tracks, and more than five XObjs fall back to uncached exact build.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  Canonical ITCM/DTCM-BSS is 20,088/152; main/main-RW/main-BSS is
+  637,336/124,052/1,875,504. Forensic is 18,584/152 and
+  580,824/123,916/1,942,800. The fast forensic memory gate retains 202,416
+  bytes before and 136,880 after the resident 65,536-byte BGM ring.
+SEMANTIC TRACE RESULT:
+  Profile 2 reports stage-world 57/0/reject0/overflow0/oracle42/0. Its 832-event
+  bound retains all 828 triangle events with zero overflow. Owner state/cache
+  tracing remains isolated; the shadow recomputation never reaches GX.
+ORACLE/COUNTER/GX RESULT:
+  Vertex oracle 2,484/0/0; affine 158/0/0; exact 828 triangles and
+  648/44/126/10 classes; 121/707/121 batches; 98/730 prepare/reuse; 36,864
+  uploaded bytes; DObj dynamic cache 30/50/0; zero matrix-cache mismatch.
+  Realtime and accelerated Boundary divider coverage is 1,404/0/0/0/0. The
+  first accelerated frame separately gates 0/57 stage hits/misses before reuse.
+CAPTURE RESULT:
+  P1Gate synchronized capture
+  2026-07-13_canonical_fast_012843-3972323-p5864.png passes full-screen,
+  stage/fighter-region, horizontal-detail, pairwise-motion, and exact ROM
+  parity at 11,683,840 bytes / C62C20F409B5A1F7A553462953EC48B6F9135E5AFC87EA24D226C2542C7E970F.
+VERIFIER COMMANDS AND RESULTS:
+  Focused fast profile 2, realtime profile 2, matched 128-frame profile-1 A/B,
+  128-frame canonical profile 0, docs, GBI fixtures, and diff checks pass.
+  Rebuilt DevFast, P1Gate (opening/canonical/fast/lifecycle/CPU), and Boundary
+  modes 161/162/163 pass. Full Regression is intentionally skipped at the
+  user's requested fast-iteration cadence.
+DECISION: KEEP
+  Exact shadow equality and the 59,392/75,200 whole-draw reduction clear the
+  semantic and >=50K/P95 keep gates while preserving the memory reserve.
+NEXT MEASURED BOTTLENECK:
+  Compile larger direct stage-owner records that bind live matrices/materials/
+  textures and fuse short run setup. Do not retry standalone no-Z specialization.
 ```

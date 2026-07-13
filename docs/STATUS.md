@@ -100,7 +100,7 @@ exact invalidation; profile 2 omits the 2,096-byte table and runs the independen
 exact shade calculation. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1
 index exact texture keys through 128 byte slots and compact fingerprints; full
 236-byte equality remains the oracle and deletion repairs clusters.
-Profile-0 BSS is `1,879,760`; ITCM is `20,088/20,088/18,584`. Submission stays
+Profile-0 BSS is `1,875,504`; ITCM is `20,088/20,088/18,584`. Submission stays
 `648/44/126/10`, with `1,242` logical divides and `121/707/121` batches. Exact
 DS `div64` makes 650 profile-1 calls; profile 2 checks 1,404 with zero mismatch.
 The shared all-owner K-RAW kernel executes `45/540` immutable runs/triangles
@@ -108,14 +108,15 @@ The shared all-owner K-RAW kernel executes `45/540` immutable runs/triangles
 profile-1 draw improves `2,067,296/2,407,872 -> 1,858,624/2,227,648`.
 Its 8 KiB table consumes 330 TRI commands. A 256-byte DObj index plus exact
 affine product moves draw `2,126,752/2,169,600 -> 2,057,376/2,098,880`; profile
-2 proves affine `107/0/0` and vertex `2484/0/0`. Canonical reaches `13.5fps`;
-shipped SHA is `B4A89E279445E3EB44C0931E5C718B3A81D5FD4B578F71702C3D0ADDB9A6E258`.
-The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
-bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
+2 proves affine and vertex equality. Exact persistent stage worlds reuse `57`
+nodes with `42/0` shadow samples/mismatches and zero reject/overflow.
+Matched 128-frame draw moves `2,323,008/2,355,712 -> 2,263,616/2,280,512`;
+matrix prep saves `67,328/41,088` and stage saves `63,424/82,176` ticks.
+The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632` bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
-`16` bytes of scratch. Canonical retains `227392` bytes taskman headroom and
-`161856` after BGM. The larger forensic gate selects `0x14c000`, retaining
-`211008` before and `145472` after BGM against the 128 KiB reserve.
+`16` bytes of scratch. The bounded 48-texture/40-pos-test/832-event caches keep
+the larger forensic gate at `202416` bytes before and `136880` after BGM,
+retaining the required 128 KiB reserve.
 
 ## Current Notes
 
@@ -136,8 +137,7 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-At `13.5fps`, stage DObj signatures are stable; measure exact persistent stage-world reuse next.
-RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
+Canonical is `13.4fps`, draw `2,248,640/2,276,544`; next measure fused direct stage-owner records/live binding. HUD, Whispy face, and Mario facing/light remain debt.
 ## Verification
 
 DevFast, forensic, P1Gate, and Boundary `161/162/163` pass; Full Regression stays intentionally skipped for fast iteration.

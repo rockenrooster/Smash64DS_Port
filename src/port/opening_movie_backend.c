@@ -3450,7 +3450,7 @@ static void ndsOpeningRoomRenderDLPreview(DObj *dobj, Gfx *dl)
     parse_state.combine_flags = &combine_flags;
 
     preview_cobj = ndsOpeningRoomGetCurrentDrawCameraCObj();
-    ndsRendererAdapterPrepareInitialMatrices(dobj, preview_cobj,
+    ndsRendererAdapterPrepareInitialMatrices(dobj, preview_cobj, FALSE,
                                              &initial_projection,
                                              &initial_projection_ptr,
                                              &initial_modelview,

@@ -1359,6 +1359,14 @@ Opening movie / Opening Portraits:
   camera matrices followed by DObj world matrices. Dream Land's stable live
   census is `73/1/0` and `64/107/0`; the DObj lookup uses a bounded half-full
   256-slot index without changing the 128 exact matrix entries.
+- `RENDER_STAGE_WORLD_CACHE`: profile-2 persistent stage-world hits, misses,
+  rejected transforms, capacity overflow, uncached shadow samples, and shadow
+  mismatches. The accepted static Dream Land path is `57/0/0/0/42/0`; profiles
+  0/1 compile out counters but use the same exact source-bit/parent-generation
+  key. Accelerated first-frame mode requires `0/57/0/0/0/0` before reuse.
+  Camera-facing, fighter-parts, direct-kind, and vector-track transforms
+  fall back. Worlds share the spare upper 64 slots of the existing 128-entry
+  scene cache; metadata is scene-owned and reset before taskman heap reuse.
 - `RENDER_AFFINE_MATRIX`: profile-2 affine DObj world-product samples,
   mismatching products, and maximum cell delta against the former generic 4x4
   multiply. Forensic mode requires positive samples and `0/0` mismatch/delta;
@@ -1382,8 +1390,8 @@ Opening movie / Opening Portraits:
   hot telemetry is compiled out. Profile 1 requires positive calls below
   logical demand because projected slot results are cached. Profile 2 requires
   demand plus its independent depth samples and zero event/mismatch fields.
-  Logical demand is derived from the submitted class totals; these values use
-  one packed summary word so diagnostic evidence adds no BSS.
+  Realtime and accelerated Boundary modes both gate 1,404 exact evaluations.
+  These values use one packed summary word so diagnostic evidence adds no BSS.
 - `RENDER_LAZY`: completed-frame vertex/snapshot marker. Fields are source
   vertex loads, CPU clip transforms, matching-transform cache hits, composed-
   matrix snapshot creates, content reuses, and table overflows. Profiles 0/1

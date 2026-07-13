@@ -16,6 +16,13 @@
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT 256u
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK \
     (NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT - 1u)
+#define NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT 64u
+#define NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE \
+    (NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT - \
+     NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT)
+#define NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT 128u
+#define NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK \
+    (NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT - 1u)
 #define NDS_RENDERER_ADAPTER_G_TX_LOADTILE 7u
 #define NDS_RENDERER_ADAPTER_G_TX_RENDERTILE 0u
 #define NDS_RENDERER_ADAPTER_G_TX_WRAP 0u
@@ -55,6 +62,30 @@ typedef struct NDSRendererAdapterDObjWorldCacheEntry
     NDSRendererMatrix20p12 world;
 } NDSRendererAdapterDObjWorldCacheEntry;
 
+typedef struct NDSRendererAdapterStageWorldSourceKey
+{
+    u32 base_translate[3];
+    u32 base_rotate[4];
+    u32 base_scale[3];
+    u8 xobj_kinds[5];
+    u8 xobj_present_mask;
+    u8 xobjs_num;
+    u8 reserved;
+} NDSRendererAdapterStageWorldSourceKey;
+
+typedef struct NDSRendererAdapterStageWorldCacheEntry
+{
+    const DObj *dobj;
+    const DObj *parent;
+    NDSRendererAdapterStageWorldSourceKey source_key;
+    u32 parent_generation;
+    u32 generation;
+    u32 validated_frame;
+    u8 source_key_valid;
+    u8 world_slot;
+    u8 reserved[2];
+} NDSRendererAdapterStageWorldCacheEntry;
+
 static NDSRendererAdapterCameraCacheEntry
     sNdsRendererAdapterCameraCache[NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT];
 static u32 sNdsRendererAdapterCameraCacheFrame;
@@ -63,9 +94,18 @@ static NDSRendererAdapterDObjWorldCacheEntry
     *sNdsRendererAdapterDObjWorldCache;
 static u32 sNdsRendererAdapterDObjWorldCacheFrame;
 static u32 sNdsRendererAdapterDObjWorldCacheCount;
+static u32 sNdsRendererAdapterDObjWorldCacheDynamicLimit =
+    NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT;
 static u32 sNdsRendererAdapterDObjWorldCacheAllocationAttempted;
 static u8 sNdsRendererAdapterDObjWorldIndex[
     NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT];
+static NDSRendererAdapterStageWorldCacheEntry
+    *sNdsRendererAdapterStageWorldCache;
+static u32 sNdsRendererAdapterStageWorldCacheCount;
+static u32 sNdsRendererAdapterStageWorldCacheAllocationAttempted;
+static u32 sNdsRendererAdapterStageWorldNextGeneration;
+static u8 sNdsRendererAdapterStageWorldIndex[
+    NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT];
 #endif
 
 static sb32 ndsRendererAdapterRangeIsEmptySegmentEDL(const Gfx *dl,
@@ -807,9 +847,17 @@ static void ndsRendererAdapterResetSceneCaches(void)
     sNdsRendererAdapterDObjWorldCache = NULL;
     sNdsRendererAdapterDObjWorldCacheFrame = 0u;
     sNdsRendererAdapterDObjWorldCacheCount = 0u;
+    sNdsRendererAdapterDObjWorldCacheDynamicLimit =
+        NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT;
     sNdsRendererAdapterDObjWorldCacheAllocationAttempted = FALSE;
     memset(sNdsRendererAdapterDObjWorldIndex, 0,
            sizeof(sNdsRendererAdapterDObjWorldIndex));
+    sNdsRendererAdapterStageWorldCache = NULL;
+    sNdsRendererAdapterStageWorldCacheCount = 0u;
+    sNdsRendererAdapterStageWorldCacheAllocationAttempted = FALSE;
+    sNdsRendererAdapterStageWorldNextGeneration = 1u;
+    memset(sNdsRendererAdapterStageWorldIndex, 0,
+           sizeof(sNdsRendererAdapterStageWorldIndex));
 }
 
 static u32 ndsRendererAdapterDObjWorldIndexHash(const DObj *dobj)
@@ -920,7 +968,7 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
     }
     if ((sNdsRendererAdapterDObjWorldCache == NULL) ||
         (sNdsRendererAdapterDObjWorldCacheCount >=
-         NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT))
+         sNdsRendererAdapterDObjWorldCacheDynamicLimit))
     {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileDObjWorldCacheOverflowCount++;
@@ -943,6 +991,289 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
         }
         slot = (slot + 1u) & NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK;
     }
+}
+
+static u32 ndsRendererAdapterStageWorldIndexHash(const DObj *dobj)
+{
+    uintptr_t key = (uintptr_t)dobj >> 2;
+
+    key ^= key >> 7;
+    key ^= key >> 15;
+    return (u32)key & NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK;
+}
+
+static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
+{
+    uintptr_t aligned;
+    size_t bytes = sizeof(NDSRendererAdapterStageWorldCacheEntry) *
+        NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT;
+
+    if (sNdsRendererAdapterStageWorldCache != NULL)
+    {
+        return TRUE;
+    }
+    if (sNdsRendererAdapterStageWorldCacheAllocationAttempted != FALSE)
+    {
+        return FALSE;
+    }
+    if ((ndsRendererAdapterEnsureDObjWorldCache() == FALSE) ||
+        (sNdsRendererAdapterDObjWorldCacheCount >
+         NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE))
+    {
+        return FALSE;
+    }
+    sNdsRendererAdapterStageWorldCacheAllocationAttempted = TRUE;
+    if ((gSYTaskmanGeneralHeap.ptr == NULL) ||
+        (gSYTaskmanGeneralHeap.end == NULL))
+    {
+        return FALSE;
+    }
+    aligned = ((uintptr_t)gSYTaskmanGeneralHeap.ptr + 0x0fu) &
+        ~(uintptr_t)0x0fu;
+    if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
+        (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)))
+    {
+        return FALSE;
+    }
+    sNdsRendererAdapterStageWorldCache =
+        (NDSRendererAdapterStageWorldCacheEntry *)
+            syTaskmanMalloc(bytes, 0x10u);
+    if (sNdsRendererAdapterStageWorldCache != NULL)
+    {
+        memset(sNdsRendererAdapterStageWorldCache, 0, bytes);
+        sNdsRendererAdapterDObjWorldCacheDynamicLimit =
+            NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE;
+        ndsRelocUpdateMemoryLedger();
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static NDSRendererAdapterStageWorldCacheEntry *
+ndsRendererAdapterFindStageWorldEntry(const DObj *dobj)
+{
+    u32 slot;
+    u32 probe;
+
+    if ((dobj == NULL) ||
+        (ndsRendererAdapterEnsureStageWorldCache() == FALSE))
+    {
+        return NULL;
+    }
+    slot = ndsRendererAdapterStageWorldIndexHash(dobj);
+    for (probe = 0u;
+         probe < NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT;
+         probe++)
+    {
+        u32 encoded = sNdsRendererAdapterStageWorldIndex[slot];
+        u32 cache_index;
+
+        if (encoded == 0u)
+        {
+            return NULL;
+        }
+        cache_index = encoded - 1u;
+        if ((cache_index < sNdsRendererAdapterStageWorldCacheCount) &&
+            (sNdsRendererAdapterStageWorldCache[cache_index].dobj == dobj))
+        {
+            return &sNdsRendererAdapterStageWorldCache[cache_index];
+        }
+        slot = (slot + 1u) & NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK;
+    }
+    return NULL;
+}
+
+static NDSRendererAdapterStageWorldCacheEntry *
+ndsRendererAdapterFindOrAllocateStageWorldEntry(const DObj *dobj)
+{
+    NDSRendererAdapterStageWorldCacheEntry *entry;
+    u32 cache_index;
+    u32 slot;
+    u32 probe;
+
+    entry = ndsRendererAdapterFindStageWorldEntry(dobj);
+    if (entry != NULL)
+    {
+        return entry;
+    }
+    if ((sNdsRendererAdapterStageWorldCache == NULL) ||
+        (sNdsRendererAdapterStageWorldCacheCount >=
+         NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT))
+    {
+        return NULL;
+    }
+    cache_index = sNdsRendererAdapterStageWorldCacheCount++;
+    entry = &sNdsRendererAdapterStageWorldCache[cache_index];
+    memset(entry, 0, sizeof(*entry));
+    entry->dobj = dobj;
+    /* A zero frame is valid in accelerated harnesses. Ensure a freshly
+     * allocated entry cannot take the same-frame shortcut before its first
+     * exact world build; no u32 equals its own bitwise complement. */
+    entry->validated_frame = ~gNdsRendererProfileFrameCount;
+    entry->world_slot = (u8)(NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE +
+                             cache_index);
+    sNdsRendererAdapterDObjWorldCache[entry->world_slot].dobj = dobj;
+    slot = ndsRendererAdapterStageWorldIndexHash(dobj);
+    for (probe = 0u;
+         probe < NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT;
+         probe++)
+    {
+        if (sNdsRendererAdapterStageWorldIndex[slot] == 0u)
+        {
+            sNdsRendererAdapterStageWorldIndex[slot] =
+                (u8)(cache_index + 1u);
+            return entry;
+        }
+        slot = (slot + 1u) & NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK;
+    }
+    return NULL;
+}
+
+static NDSRendererMatrix20p12 *
+ndsRendererAdapterStageWorldEntryMatrix(
+    const NDSRendererAdapterStageWorldCacheEntry *entry)
+{
+    return &sNdsRendererAdapterDObjWorldCache[entry->world_slot].world;
+}
+
+static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
+    DObj *dobj, NDSRendererAdapterStageWorldSourceKey *source_key)
+{
+    u32 i;
+
+    if ((dobj == NULL) || (source_key == NULL) ||
+        (dobj->xobjs_num > 5u) || (dobj->vec != NULL))
+    {
+        return FALSE;
+    }
+    memset(source_key, 0, sizeof(*source_key));
+    memcpy(source_key->base_translate, &dobj->translate.vec.f,
+           sizeof(source_key->base_translate));
+    memcpy(&source_key->base_rotate[0], &dobj->rotate.a,
+           sizeof(source_key->base_rotate[0]));
+    memcpy(&source_key->base_rotate[1], &dobj->rotate.vec.f,
+           sizeof(source_key->base_rotate) -
+               sizeof(source_key->base_rotate[0]));
+    memcpy(source_key->base_scale, &dobj->scale.vec.f,
+           sizeof(source_key->base_scale));
+
+    source_key->xobjs_num = dobj->xobjs_num;
+    for (i = 0u; i < dobj->xobjs_num; i++)
+    {
+        XObj *xobj = dobj->xobjs[i];
+
+        if (xobj == NULL)
+        {
+            continue;
+        }
+        source_key->xobj_present_mask |= (u8)(1u << i);
+        source_key->xobj_kinds[i] = xobj->kind;
+        /* Kind 1 consumes an arbitrary 64-byte matrix. Kinds 33-40 consume
+         * live camera state, and 0x4B consumes live FTParts state. Keep those
+         * exact paths frame-local instead of enlarging this first stage-only
+         * proof cache. */
+        if ((xobj->kind == 1u) ||
+            ((xobj->kind >= 33u) && (xobj->kind <= 40u)) ||
+            (xobj->kind == NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterStageWorldSourceKeyMatches(
+    DObj *dobj, const NDSRendererAdapterStageWorldSourceKey *source_key)
+{
+    u32 i;
+
+    if ((dobj == NULL) || (source_key == NULL) ||
+        (dobj->xobjs_num > 5u) || (dobj->vec != NULL) ||
+        (dobj->xobjs_num != source_key->xobjs_num) ||
+        (memcmp(source_key->base_translate, &dobj->translate.vec.f,
+                sizeof(source_key->base_translate)) != 0) ||
+        (memcmp(&source_key->base_rotate[0], &dobj->rotate.a,
+                sizeof(source_key->base_rotate[0])) != 0) ||
+        (memcmp(&source_key->base_rotate[1], &dobj->rotate.vec.f,
+                sizeof(source_key->base_rotate) -
+                    sizeof(source_key->base_rotate[0])) != 0) ||
+        (memcmp(source_key->base_scale, &dobj->scale.vec.f,
+                sizeof(source_key->base_scale)) != 0))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < dobj->xobjs_num; i++)
+    {
+        XObj *xobj = dobj->xobjs[i];
+        u32 expected_present =
+            (source_key->xobj_present_mask & (u8)(1u << i));
+
+        if (xobj == NULL)
+        {
+            if (expected_present != 0u)
+            {
+                return FALSE;
+            }
+            continue;
+        }
+        if ((expected_present == 0u) ||
+            (source_key->xobj_kinds[i] != xobj->kind) ||
+            (xobj->kind == 1u) ||
+            ((xobj->kind >= 33u) && (xobj->kind <= 40u)) ||
+            (xobj->kind == NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static u32 ndsRendererAdapterNextStageWorldGeneration(void)
+{
+    u32 generation = sNdsRendererAdapterStageWorldNextGeneration++;
+
+    if (generation == 0u)
+    {
+        generation = sNdsRendererAdapterStageWorldNextGeneration++;
+    }
+    return generation;
+}
+#endif
+
+#if NDS_RENDERER_HW_TRIANGLES
+static sb32 ndsRendererAdapterBuildDObjWorldMatrixUncached(
+    DObj *dobj, NDSRendererMatrix20p12 *out)
+{
+    DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
+    DObj *cursor = dobj;
+    NDSRendererMatrix20p12 local;
+    u32 depth = 0u;
+    u32 i;
+
+    if ((dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+           (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
+    {
+        chain[depth++] = cursor;
+        cursor = cursor->parent;
+    }
+    if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterMtxIdentity20p12(out);
+    for (i = depth; i != 0u; i--)
+    {
+        if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u], &local) !=
+            FALSE)
+        {
+            ndsRendererMtxMulAffine20p12(&local, out, out);
+        }
+    }
+    return TRUE;
 }
 #endif
 
@@ -1017,6 +1348,151 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     }
     return TRUE;
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
+    DObj *dobj, NDSRendererMatrix20p12 *out)
+{
+    DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
+    DObj *cursor = dobj;
+    NDSRendererMatrix20p12 parent_world;
+    NDSRendererMatrix20p12 local;
+    NDSRendererAdapterStageWorldCacheEntry *entry;
+    NDSRendererAdapterStageWorldSourceKey source_key;
+    u32 parent_generation = 0u;
+    u32 depth = 0u;
+    u32 frame = gNdsRendererProfileFrameCount;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    u32 reused_persistent = FALSE;
+#endif
+    u32 i;
+
+    if ((dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    entry = ndsRendererAdapterFindStageWorldEntry(dobj);
+    if ((entry != NULL) && (entry->validated_frame == frame))
+    {
+        *out = *ndsRendererAdapterStageWorldEntryMatrix(entry);
+        return TRUE;
+    }
+    while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+           (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
+    {
+        chain[depth++] = cursor;
+        cursor = cursor->parent;
+    }
+    if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
+    {
+        return FALSE;
+    }
+    if (ndsRendererAdapterEnsureStageWorldCache() == FALSE)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        gNdsRendererProfileStageWorldPersistentOverflowCount++;
+#endif
+        return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
+    }
+
+    ndsRendererAdapterMtxIdentity20p12(&parent_world);
+    for (i = depth; i != 0u; i--)
+    {
+        DObj *node = chain[i - 1u];
+        u32 source_key_valid;
+        u32 reuse = FALSE;
+
+        entry = ndsRendererAdapterFindOrAllocateStageWorldEntry(node);
+        if (entry == NULL)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            gNdsRendererProfileStageWorldPersistentOverflowCount++;
+#endif
+            return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
+        }
+        if (entry->validated_frame == frame)
+        {
+            parent_world = *ndsRendererAdapterStageWorldEntryMatrix(entry);
+            parent_generation = entry->generation;
+            continue;
+        }
+
+        source_key_valid = FALSE;
+        if ((entry->source_key_valid != FALSE) &&
+            (entry->parent == node->parent) &&
+            (entry->parent_generation == parent_generation) &&
+            (ndsRendererAdapterStageWorldSourceKeyMatches(
+                 node, &entry->source_key) != FALSE))
+        {
+            reuse = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            reused_persistent = TRUE;
+            gNdsRendererProfileStageWorldPersistentHitCount++;
+#endif
+        }
+        if (reuse == FALSE)
+        {
+            source_key_valid = ndsRendererAdapterCaptureStageWorldSourceKey(
+                node, &source_key);
+            if (ndsRendererAdapterBuildDObjLocalMatrix(node, &local) == FALSE)
+            {
+                return FALSE;
+            }
+            ndsRendererMtxMulAffine20p12(
+                &local, &parent_world,
+                ndsRendererAdapterStageWorldEntryMatrix(entry));
+            entry->parent = node->parent;
+            entry->parent_generation = parent_generation;
+            entry->generation = ndsRendererAdapterNextStageWorldGeneration();
+            entry->source_key_valid = source_key_valid;
+            if (source_key_valid != FALSE)
+            {
+                entry->source_key = source_key;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                gNdsRendererProfileStageWorldPersistentMissCount++;
+#endif
+            }
+            else
+            {
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                gNdsRendererProfileStageWorldPersistentRejectCount++;
+#endif
+            }
+        }
+        entry->validated_frame = frame;
+        parent_world = *ndsRendererAdapterStageWorldEntryMatrix(entry);
+        parent_generation = entry->generation;
+    }
+    *out = parent_world;
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    if (reused_persistent != FALSE)
+    {
+        NDSRendererMatrix20p12 oracle_world;
+
+        if (ndsRendererAdapterBuildDObjWorldMatrixUncached(
+                dobj, &oracle_world) != FALSE)
+        {
+            gNdsRendererProfileStageWorldPersistentOracleSampleCount++;
+            if (memcmp(out, &oracle_world, sizeof(oracle_world)) != 0)
+            {
+                NDSRendererAdapterStageWorldCacheEntry *target =
+                    ndsRendererAdapterFindStageWorldEntry(dobj);
+
+                gNdsRendererProfileStageWorldPersistentOracleMismatchCount++;
+                *out = oracle_world;
+                if (target != NULL)
+                {
+                    target->source_key_valid = FALSE;
+                    target->validated_frame = 0u;
+                }
+            }
+        }
+    }
+#endif
+    return TRUE;
+}
+#endif
 
 static sb32 ndsRendererAdapterBuildCameraMatrices(
     CObj *cobj,
@@ -1287,6 +1763,7 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
 static void ndsRendererAdapterPrepareInitialMatrices(
     DObj *dobj,
     CObj *cobj,
+    u32 persistent_stage_world,
     NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 **projection_ptr,
     NDSRendererMatrix20p12 *modelview,
@@ -1323,8 +1800,19 @@ static void ndsRendererAdapterPrepareInitialMatrices(
 #endif
     if (dobj != NULL)
     {
-        dobj_world_valid =
-            ndsRendererAdapterBuildDObjWorldMatrix(dobj, &dobj_world);
+#if NDS_RENDERER_HW_TRIANGLES
+        if (persistent_stage_world != FALSE)
+        {
+            dobj_world_valid =
+                ndsRendererAdapterBuildPersistentStageWorldMatrix(
+                    dobj, &dobj_world);
+        }
+        else
+#endif
+        {
+            dobj_world_valid =
+                ndsRendererAdapterBuildDObjWorldMatrix(dobj, &dobj_world);
+        }
     }
 
     if (camera_projection_valid != FALSE)
@@ -4731,6 +5219,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                                       CObjGetStruct(
                                                           gGCCurrentCamera) :
                                                       NULL),
+                                             TRUE,
                                              &initial_projection,
                                              &initial_projection_ptr,
                                              &initial_modelview,
@@ -5542,6 +6031,7 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
                                                  CObjGetStruct(
                                                      gGCCurrentCamera) :
                                                  NULL,
+                                             FALSE,
                                              &initial_projection,
                                              &initial_projection_ptr,
                                              &initial_modelview,
@@ -6425,6 +6915,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
                                                      CObjGetStruct(
                                                          gGCCurrentCamera) :
                                                      NULL,
+                                                 FALSE,
                                                  &initial_projection,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
@@ -8127,6 +8618,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                      CObjGetStruct(
                                                          gGCCurrentCamera) :
                                                      NULL,
+                                                 FALSE,
                                                  &initial_projection,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
