@@ -100,7 +100,7 @@ exact invalidation; profile 2 omits the 2,096-byte table and runs the independen
 exact shade calculation. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1
 index exact texture keys through 128 byte slots and compact fingerprints; full
 236-byte equality remains the oracle and deletion repairs clusters.
-Profile-0 BSS is `1,875,504`; ITCM is `20,088/20,088/18,584`. Submission stays
+Profile-0 BSS is `1,881,392`; ITCM is `21,228/21,228/19,492`. Submission stays
 `648/44/126/10`, with `1,242` logical divides and `121/707/121` batches. Exact
 DS `div64` makes 650 profile-1 calls; profile 2 checks 1,404 with zero mismatch.
 The shared all-owner K-RAW kernel executes `45/540` immutable runs/triangles
@@ -137,7 +137,7 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-Canonical is `14.8fps`; a 128-frame profile-0 sample is `1,690,176/1,867,392` draw ticks. Profile 1 is `1,812,256/1,900,288`, with wallpaper `237,088/340,032`. Current ROM SHA-256 is `5FFA613E500CED28B9630E7F90E30C7A5F129AA3112A49E6BBF8F49D344BFCC5`. The next renderer cut needs a coarse stage-owner kernel. HUD, Whispy face, and Mario facing/light remain debt.
+Canonical is `14.9fps`; the final eight-sample profile-0 draw is `1,856,864/1,888,960`. Profile-1 stage/draw are `771,680/801,344` and `1,790,368/1,879,872`. Current ROM SHA-256 is `4C75B4F3BD1F3D5E8BFC73C3C20C22D257DB73B6221C3A199883EB84E0DC99BC`. Next is the complete coarse stage-owner program. HUD, weapon geometry, platform crossing, Whispy face, and Mario facing/light remain debt.
 ## Verification
 
 DevFast, forensic, P1Gate, and Boundary `161/162/163` pass; Full Regression stays intentionally skipped for fast iteration.

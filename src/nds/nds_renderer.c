@@ -934,7 +934,7 @@ typedef enum NDSRendererHWSubmitClass
 
 #if NDS_RENDERER_PROFILE_LEVEL == 0
 volatile u32 gNdsRendererFastRunMode =
-    NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT;
+    NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES;
 #else
 volatile u32 gNdsRendererFastRunMode = NDS_RENDERER_FAST_RUN_GENERIC;
 #endif
