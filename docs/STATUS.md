@@ -140,7 +140,7 @@ At `13.5fps`, stage DObj signatures are stable; measure exact persistent stage-w
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 ## Verification
 
-DevFast, forensic, and Boundary `161/162` pass; P1Gate and Boundary `163` repeatably fail the 9,000-tick natural-motion gate. Full Regression stays skipped.
+DevFast, forensic, P1Gate, and Boundary `161/162/163` pass; Full Regression stays intentionally skipped for fast iteration.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

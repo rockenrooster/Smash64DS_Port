@@ -11,11 +11,9 @@
   trace must distinguish a missing live `button_tap` edge from clear relocated
   `FTAttributes::is_have_attack*` flags, which older proofs force temporarily.
 - The live source floor/edge callbacks are now active, but their manual behavior
-  is still awaiting Tyler's fresh playtest. The broader scripted natural-motion
-  leg now repeatably reaches 9,000 ticks with `NAT_MOTION=0,0,0x1ff,1` and no
-  attack/moveset transition; P1Gate and Boundary mode `163` fail there while
-  bounded modes `161/162` and all renderer oracles pass. Root-cause this source
-  collision/runtime interaction; do not restore unconditional edge success.
+  is still awaiting Tyler's fresh playtest. Mode 163 now uses normal down input
+  to pass its elevated fighter through the one-way platform before Walk/DashRun;
+  P1Gate and Boundary pass without restoring unconditional edge success.
 - The rare `3 uploads / 40960 bytes` frame is two normal animated-water uploads
   plus a source-valid 4 KiB Whispy texture miss. That cold miss still reaches
   synchronous `glTexImage2D` during active display and can explain the reported

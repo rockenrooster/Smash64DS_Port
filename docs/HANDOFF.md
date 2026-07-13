@@ -145,6 +145,6 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-DevFast, forensic, and Boundary modes `161/162` pass. P1Gate and Boundary mode
-`163` repeatably stop at the 9,000-tick natural-motion gate; skip Full Regression.
+DevFast, forensic, P1Gate, and all Boundary modes `161/162/163` pass. Mode 163
+now passes the elevated fighter through line 2 before DashRun; skip Full Regression.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

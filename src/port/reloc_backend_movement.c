@@ -11365,10 +11365,13 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         if ((s0->wait_frames >=
                 NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED) &&
             (s1->wait_frames >=
-                NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED))
+                NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED) &&
+            (ndsFighterNaturalCombatBothGroundWait(fp) != FALSE) &&
+            (dy <= NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE))
         {
             gNdsFighterNaturalMotionWalkInputFrame =
                 gNdsFighterNaturalMotionUpdateCount + 1u;
+            sNdsNaturalCombatPassPressed = 0u;
             ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseWalk);
         }
         break;
@@ -11964,6 +11967,30 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 
     switch (sNdsNaturalCombatPhase)
     {
+    case nNDSNaturalCombatPhaseWait:
+        if (sNdsNaturalCombatPassPressed == 0u)
+        {
+            f32 y0 = fp[0]->coll_data.p_translate->y;
+            f32 y1 = fp[1]->coll_data.p_translate->y;
+            f32 dy = y0 - y1;
+            u32 pass_slot;
+
+            if (dy < 0.0F)
+            {
+                dy = -dy;
+            }
+            pass_slot = (y0 > y1) ? 0u : 1u;
+            if ((dy > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE) &&
+                (fp[pass_slot]->status_id == nFTCommonStatusWait) &&
+                (fp[pass_slot]->ga == nMPKineticsGround) &&
+                ((fp[pass_slot]->coll_data.floor_flags &
+                  MAP_VERTEX_COLL_PASS) != 0))
+            {
+                stick_y[pass_slot] = -80;
+                sNdsNaturalCombatPassPressed = 1u;
+            }
+        }
+        break;
     case nNDSNaturalCombatPhaseWalk:
         for (i = 0u; i < 2u; i++)
         {

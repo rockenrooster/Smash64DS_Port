@@ -20290,3 +20290,18 @@ remains skipped for the requested fast iteration cadence.
   9,000-tick natural-motion assertion after the preceding source floor/edge
   activation, with no affine or vertex oracle mismatch. Full Regression remains
   intentionally skipped for Tyler's fast P1 iteration cadence.
+
+## 2026-07-12 - Restored battle-playable natural collision choreography
+
+- Live GDB pinned the mode-163 stall to Fox entering Dash on Pupupu line 2 at
+  Y `904`, leaving the upper one-way platform during Dash's exact early ground-
+  break branch, and therefore recording only `1/0` Dash/Run frames.
+- The diagnostic controller now taps down through the original input/pass path
+  for the higher grounded fighter when its floor has `MAP_VERTEX_COLL_PASS`.
+  Walk begins only after both fighters are grounded Wait and within the existing
+  100-unit vertical tolerance; no fighter or collision state is written.
+- Mode 163 now reaches Dash/Run `7/22` and `8/24`, completes the full combat,
+  projectile, reflector, normal-moveset `0x7ff`, and specials `0xfff` chains,
+  and retains oracle `2484/0/0` plus exact `648/44/126/10` submission classes.
+- Focused battle-playable, P1Gate, and Boundary `161/162/163` pass. Full
+  Regression remains intentionally skipped for the requested fast iteration.
