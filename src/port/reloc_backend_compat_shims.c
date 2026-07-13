@@ -1759,30 +1759,30 @@ void ftHammerSetStatusHammerWait(GObj *fighter_gobj)
 sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    if (ndsFighterMarioFoxNaturalMotionUpdateEnabled() != FALSE)
-    {
-        return ((ftCommonSpecialNCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonSpecialHiCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonSpecialLwCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonCatchCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonAttackS4CheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonAttackHi4CheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonAttackLw4CheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonAttackS3CheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonAttackHi3CheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonAttackLw3CheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonAttack1CheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonGuardOnCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonAppealCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonKneeBendCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonDashCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonPassCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonDokanStartCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonSquatCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonTurnCheckInterruptCommon(fighter_gobj) != FALSE) ||
-                (ftCommonWalkCheckInterruptCommon(fighter_gobj) != FALSE)) ? TRUE :
-                                                                             FALSE;
-    }
+    /* BattleShip fighter.h defines this exact ordered chain as the common
+     * ground interrupt. The imported manager runs it for every live fighter;
+     * it must not depend on the old scripted natural-motion proof being active. */
+    return ((ftCommonSpecialNCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonSpecialHiCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonSpecialLwCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonCatchCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonAttackS4CheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonAttackHi4CheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonAttackLw4CheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonAttackS3CheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonAttackHi3CheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonAttackLw3CheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonAttack1CheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonGuardOnCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonAppealCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonKneeBendCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonDashCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonPassCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonDokanStartCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonSquatCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonTurnCheckInterruptCommon(fighter_gobj) != FALSE) ||
+            (ftCommonWalkCheckInterruptCommon(fighter_gobj) != FALSE)) ? TRUE :
+                                                                         FALSE;
 #endif
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
