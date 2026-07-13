@@ -116,15 +116,15 @@ Direct compact CI4 rows move `2,001,600/2,033,664 -> 1,970,304/2,002,880` with i
 The exact wallpaper path keeps alternating X/Y maps in existing decode scratch, writes only dirty rows/columns, and cache-flushes/DMA-copies full dirty rows. Same-ROM 128-frame profile-1 wallpaper/draw move `344672/348480 -> 237088/340032` and `1926624/1955648 -> 1812256/1900288`; profile 2 proves map/pixel `23296/0` and `2555904/0`.
 Canonical is `14.8fps`; 128-frame profile-0 draw is `1,690,176/1,867,392`, while profile-1 draw/wallpaper are `1,812,256/1,900,288` and `237,088/340,032`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays separate and original timing remains live. The full contiguous Mario battle-animation bank (`499..641`) is now mapped from the imported file-ID symbols and staged in NitroFS. Live-input GDB checks load normalized Jab1/JumpF/JumpAerialF assets `606/509/511`; Attack11 hitboxes and first/double-jump joint playback advance naturally. Compact path generation avoids 143 redundant ARM9 records and keeps scripted headroom `198416` (`132880` after BGM).
-The BattleShip ground interrupt chain and source floor/edge callbacks are live
-under imported FTMANAGER; manual acceptance of edge behavior and the restored
-Mario poses is pending. Special physics remain blockers. Persistent slots retain 44 cross-joint
+The BattleShip ground interrupt chain and source floor/edge callbacks are live;
+edge/pose acceptance is pending. Mario Up-B now uses BattleShip TransN motion
+and PROJECT/PASS map semantics; near-wall/ceiling adjustment remains debt. Persistent slots retain 44 cross-joint
 triangles; no-Z/RSP carry restores the fence and five flower groups (`192 -> 202`).
 Masked-clamp, six CI4 stars, and DXT tail stride remain fixed. Debt: Whispy face,
 other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 ## Recommended Next Work
-1. Manually accept source floor/edge plus restored A/jump poses; then repair Super Jump Punch physics/camera/grounding.
+1. Manually accept source floor/edge, restored A/jump poses, and corrected Up-B; then finish the coherent special-collision wall/ceiling family.
 2. Build one coarse complete-stage owner kernel; fixed schedules and VTX memoization are measured dead ends.
 3. Defer the rare 4 KiB Whispy miss, then add RGBA4 HUD output.
 

@@ -10945,7 +10945,10 @@ static sb32 ndsStageMPCliffClimbFloorLoopRecatchSpecialCollisions(
     return TRUE;
 }
 
-static sb32 ndsMPProcessRunFloorCollisionAdjNewNULL(MPCollData *coll_data)
+static sb32 (*sNdsMPCommonProcPass)(GObj *);
+
+static sb32 ndsMPProcessCheckTestFloorCollisionAdjNew(
+    MPCollData *coll_data, sb32 (*proc_map)(GObj *), GObj *gobj)
 {
     MPObjectColl *map_coll;
     MPObjectColl *p_map_coll;
@@ -10982,7 +10985,8 @@ static sb32 ndsMPProcessRunFloorCollisionAdjNewNULL(MPCollData *coll_data)
 
     if ((hit != FALSE) &&
         (((coll_data->floor_flags & MAP_VERTEX_COLL_PASS) == 0u) ||
-         (coll_data->floor_line_id != coll_data->ignore_line_id)))
+         (coll_data->floor_line_id != coll_data->ignore_line_id)) &&
+        ((proc_map == NULL) || (proc_map(gobj) != FALSE)))
     {
         coll_data->mask_curr |= MAP_FLAG_FLOOR;
         return TRUE;
@@ -11014,15 +11018,35 @@ static sb32 ndsMPCommonRunFighterCliffFloorCeilCollisions(
         }
     }
 
-    if (ndsMPProcessRunFloorCollisionAdjNewNULL(coll_data) != FALSE)
+    if (ndsMPProcessCheckTestFloorCollisionAdjNew(
+            coll_data,
+            ((flags & MAP_PROC_TYPE_PASS) != 0u) ?
+                sNdsMPCommonProcPass : NULL,
+            ((flags & MAP_PROC_TYPE_PASS) != 0u) ? fighter_gobj : NULL) !=
+        FALSE)
     {
-        mpProcessSetLandingFloor(coll_data);
-        mpCommonSetFighterLandingParams(fighter_gobj);
-        if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+        if ((flags & MAP_PROC_TYPE_PROJECT) != 0u)
         {
-            mpProcessRunFloorEdgeAdjust(coll_data);
-            coll_data->is_coll_end = TRUE;
-            return TRUE;
+            mpProcessSetCollideFloor(coll_data);
+            if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+            {
+                mpProcessRunFloorEdgeAdjust(coll_data);
+            }
+            else
+            {
+                mpProcessSetCollProjectFloorID(coll_data);
+            }
+        }
+        else
+        {
+            mpProcessSetLandingFloor(coll_data);
+            mpCommonSetFighterLandingParams(fighter_gobj);
+            if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+            {
+                mpProcessRunFloorEdgeAdjust(coll_data);
+                coll_data->is_coll_end = TRUE;
+                return TRUE;
+            }
         }
     }
     else
@@ -11671,12 +11695,12 @@ sb32 mpCommonCheckFighterPass(GObj *fighter_gobj,
                               sb32 (*proc_map)(GObj *))
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
-    (void)proc_map;
 
     if (fp == NULL)
     {
         return FALSE;
     }
+    sNdsMPCommonProcPass = proc_map;
     return mpProcessUpdateMain(&fp->coll_data,
                                ndsMPCommonRunFighterCliffFloorCeilCollisions,
                                fighter_gobj, MAP_PROC_TYPE_PASS);
@@ -11686,12 +11710,12 @@ sb32 mpCommonCheckFighterPassCliff(GObj *fighter_gobj,
                                    sb32 (*proc_map)(GObj *))
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
-    (void)proc_map;
 
     if (fp == NULL)
     {
         return FALSE;
     }
+    sNdsMPCommonProcPass = proc_map;
     return mpProcessUpdateMain(&fp->coll_data,
                                ndsMPCommonRunFighterCliffFloorCeilCollisions,
                                fighter_gobj,
@@ -11927,7 +11951,36 @@ void ftPhysicsApplyGroundVelTransN(GObj *fighter_gobj)
     {
         gNdsStageMPCliffEscapeCommon2LoopGroundTransCount++;
     }
-    (void)fighter_gobj;
+    {
+        FTStruct *fp = (fighter_gobj != NULL) ?
+            ftGetStruct(fighter_gobj) : NULL;
+        DObj *root = (fighter_gobj != NULL) ?
+            DObjGetStruct(fighter_gobj) : NULL;
+        DObj *transn_joint;
+
+        if ((fp == NULL) || (root == NULL) ||
+            (fp->joints[nFTPartsJointTransN] == NULL))
+        {
+            return;
+        }
+        transn_joint = fp->joints[nFTPartsJointTransN];
+
+        /* BattleShip ftphysics.c:168-184. TransN Z owns forward ground
+         * motion; TransN X owns lateral motion after facing/orientation. */
+        fp->physics.vel_ground.x =
+            (transn_joint->translate.vec.f.z - fp->anim_vel.z) *
+            root->scale.vec.f.z;
+        fp->physics.vel_ground.z =
+            (transn_joint->translate.vec.f.x - fp->anim_vel.x) *
+            -fp->lr * root->scale.vec.f.x;
+
+        if ((fp->lr * root->rotate.vec.f.y) < 0.0F)
+        {
+            fp->physics.vel_ground.x = -fp->physics.vel_ground.x;
+            fp->physics.vel_ground.z = -fp->physics.vel_ground.z;
+        }
+        ftPhysicsSetGroundVelTransferAir(fighter_gobj);
+    }
 }
 
 void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
@@ -11935,6 +11988,10 @@ void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
 {
     DObj *topn_joint;
     DObj *transn_joint;
+    f32 anim_vel_z;
+    f32 anim_vel_y;
+    f32 transn_cos;
+    f32 transn_sin;
     f32 next_x = 0.0F;
     f32 next_y = 0.0F;
     f32 next_z = 0.0F;
@@ -11945,12 +12002,24 @@ void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
     {
         topn_joint = fp->joints[nFTPartsJointTopN];
         transn_joint = fp->joints[nFTPartsJointTransN];
-        next_x = (transn_joint->translate.vec.f.x - fp->anim_vel.x) *
-            topn_joint->scale.vec.f.x;
-        next_y = (transn_joint->translate.vec.f.y - fp->anim_vel.y) *
+        anim_vel_z =
+            (transn_joint->translate.vec.f.z - fp->anim_vel.z) *
+            fp->lr * topn_joint->scale.vec.f.z;
+        anim_vel_y =
+            (transn_joint->translate.vec.f.y - fp->anim_vel.y) *
             topn_joint->scale.vec.f.y;
-        next_z = (transn_joint->translate.vec.f.z - fp->anim_vel.z) *
-            topn_joint->scale.vec.f.z;
+        transn_cos = cosf(transn_joint->rotate.vec.f.z);
+        transn_sin = __sinf(transn_joint->rotate.vec.f.z);
+
+        /* BattleShip ftphysics.c:393-413. The original parameter names are
+         * Z/Y/X, but ApplyAirVelTransNAll passes vel_air X/Y/Z in that order. */
+        next_x = (anim_vel_z * transn_cos) -
+            (anim_vel_y * transn_sin);
+        next_y = (anim_vel_z * transn_sin) +
+            (anim_vel_y * transn_cos);
+        next_z =
+            (transn_joint->translate.vec.f.x - fp->anim_vel.x) *
+            -fp->lr * topn_joint->scale.vec.f.x;
     }
     if (vel_x != NULL)
     {

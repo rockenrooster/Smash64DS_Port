@@ -20440,3 +20440,25 @@ remains skipped for the requested fast iteration cadence.
   architecture, and registry checks pass. An earlier equivalent-path P1Gate
   also passes; Full Regression remains intentionally skipped for Tyler's
   requested fast iteration.
+
+## 2026-07-13 - Restored Mario Super Jump Punch root physics and map modes
+
+- Replaced the live `ftPhysicsApplyGroundVelTransN` no-op with BattleShip's
+  exact TransN Z/X ground equations, facing/root-orientation correction, and
+  ground-to-air transfer. Restored `ftPhysicsGetAirVelTransN` facing, Z/Y
+  rotation, and source axis remap instead of copying joint XYZ directly.
+- The shared special-collision seam now preserves BattleShip's rising
+  `MAP_PROC_TYPE_PROJECT` behavior and invokes the stored PASS callback used by
+  descending Super Jump Punch. It no longer applies landing semantics during
+  the rising projection check.
+- Mode 163's natural Up+B sequence moves from max root Y `1,542,000` to
+  `1,758,649`, records `20/9/155/12` ground/air/fall-special/landing frames,
+  and returns to grounded Wait. It retains all 828 triangles, exact
+  `648/44/126/10` classes, and oracle `2484/0/0`.
+- DevFast, P1Gate, and Boundary `161/162/163` pass. Canonical remains 14.8 FPS
+  and ROM parity is
+  `5FFA613E500CED28B9630E7F90E30C7A5F129AA3112A49E6BBF8F49D344BFCC5`.
+  Full Regression remains intentionally skipped for the requested fast loop.
+- Deferred source parity is explicit: special collisions still lack proper
+  wall runners, wall-to-floor fallback, and ceiling-edge adjustment; the
+  current weak helpers cannot be completed merely by adding call sites.

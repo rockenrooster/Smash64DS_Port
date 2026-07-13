@@ -5,8 +5,9 @@
 - P1 is not yet broadly playable. Live device injection now proves Attack11,
   first jump, and double jump dispatch plus exact normalized Mario assets
   `606/509/511`; Tyler still needs to accept their poses on hardware/emulator.
-  Fireball has no visible projectile, Super Jump Punch loses correct physics/
-  camera/grounding, and intermittent freezes remain unlocalized.
+  Fireball has no visible projectile and intermittent freezes remain
+  unlocalized. Super Jump Punch's center-stage root motion/camera/grounding
+  cause is repaired, but it still needs Tyler's fresh playtest.
 - The live source floor/edge callbacks are now active, but their manual behavior
   is still awaiting Tyler's fresh playtest. Mode 163 now uses normal down input
   to pass its elevated fighter through the one-way platform before Walk/DashRun;
@@ -159,7 +160,10 @@
   remain follow-up.
 - Mario Super Jump Punch, Mario Tornado, and Fox Fire Fox are default through
   original `ftmariospecialhi.c`, `ftmariospeciallw.c`, `ftfoxspecialhi.c`, and
-  `ftcommonfallspecial.c`. The fall-special public reaction call remains a
+  `ftcommonfallspecial.c`. Super Jump Punch now restores source TransN
+  ground/air equations and PROJECT/PASS map handling. Special collisions still
+  omit source wall runners, wall-to-floor fallback, and ceiling-edge adjustment.
+  The fall-special public reaction call remains a
   weak no-op until `ftpublic.c`/audio reaction behavior is imported
   (`ftcommonfallspecial.c:96`, `ftpublic.c:261`).
 - Common particle script/texture banks remain non-resident for now; particle

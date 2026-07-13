@@ -124,7 +124,7 @@ The taskman allocator now probes 4 KiB pages from `0x150000` through `0x130000`
 before its smaller fallbacks, avoiding the old 64 KiB capacity cliff.
 Source ground/floor/edge callbacks are live; manual acceptance is pending. Live input now dispatches A normals, first jump, and double jump.
 The full Mario battle-animation bank (`499..641`) resolves to staged BattleShip O2R; compact path lookup avoids 143 redundant ARM9 records and retains scripted headroom `198416` (`132880` after BGM).
-Live checks load normalized assets `606/509/511` and advance AObj16 joints; manual pose acceptance and special physics remain incomplete.
+Live checks load normalized assets `606/509/511` and advance AObj16 joints. Mario Up-B now restores exact BattleShip TransN facing/rotation/axis motion and rising PROJECT/descending PASS map semantics; near-wall/floor joins and ceiling-edge adjustment remain incomplete.
 
 Canonical realtime + live-input + HW-tri has hard GX RAM, display-contract,
 profile-0, screenshot, and ROM-parity gates; profile 2 owns oracle correctness.
@@ -137,7 +137,7 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-Canonical is `14.8fps`; a 128-frame profile-0 sample is `1,690,176/1,867,392` draw ticks. Profile 1 is `1,812,256/1,900,288`, with wallpaper `237,088/340,032`. The fixed layer-0 schedule and VTX memo experiments are reverted; the next renderer cut needs a coarse stage-owner kernel, not another command VM. HUD, Whispy face, and Mario facing/light remain debt.
+Canonical is `14.8fps`; a 128-frame profile-0 sample is `1,690,176/1,867,392` draw ticks. Profile 1 is `1,812,256/1,900,288`, with wallpaper `237,088/340,032`. Current ROM SHA-256 is `5FFA613E500CED28B9630E7F90E30C7A5F129AA3112A49E6BBF8F49D344BFCC5`. The next renderer cut needs a coarse stage-owner kernel. HUD, Whispy face, and Mario facing/light remain debt.
 ## Verification
 
 DevFast, forensic, P1Gate, and Boundary `161/162/163` pass; Full Regression stays intentionally skipped for fast iteration.
