@@ -121,6 +121,7 @@
 #define NDS_RELOC_ASSET_MARIO_ANIM_TORNADO_GROUND 0x27eu
 #define NDS_RELOC_ASSET_MARIO_ANIM_TORNADO_AIR 0x27fu
 #define NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE 0x280u
+#define NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR 0x281u
 #define NDS_RELOC_ASSET_FOX_ANIM_EGGLAY 0x282u
 #define NDS_RELOC_ASSET_FOX_ANIM_WALK1 0x283u
 #define NDS_RELOC_ASSET_FOX_ANIM_WALK2 0x284u
@@ -1244,17 +1245,7 @@ static void ndsRelocWriteNativePointer(void *addr, void *target)
 static s32 ndsRelocIsMarioFoxNaturalCombatAnimID(u32 asset_id)
 {
     return (((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_WAIT) &&
-             (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_TURN_RUN)) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_DROP) ||
-            ((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST) &&
-             (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_LAST)) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_OFF) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_AIR) ||
-            ((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_SUPER_JUMP_PUNCH) &&
-             (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_TORNADO_AIR)) ||
-            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE) ||
+             (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR)) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
              (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN)) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JUMP_F) &&
@@ -1270,6 +1261,174 @@ static s32 ndsRelocIsMarioFoxNaturalCombatAnimID(u32 asset_id)
              (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_FIREFOX_LANDING_AIR))) ?
         TRUE :
         FALSE;
+}
+
+/* BattleShip's Mario battle animation files are one contiguous reloc bank.
+ * The imported motion descriptors retain the addresses of the original
+ * llFTMarioAnim*FileID symbols, so bridge each symbol to its exact source file
+ * number instead of leaving unproven motions with a null figatree. */
+static const uintptr_t *const sNdsRelocMarioBattleAnimFileIDs[] =
+{
+    &llFTMarioAnimWaitFileID, /* 499 */
+    &llFTMarioAnimWalk1FileID, /* 500 */
+    &llFTMarioAnimWalk2FileID, /* 501 */
+    &llFTMarioAnimWalk3FileID, /* 502 */
+    &llFTMarioAnimWalkEndFileID, /* 503 */
+    &llFTMarioAnimDashFileID, /* 504 */
+    &llFTMarioAnimRunFileID, /* 505 */
+    &llFTMarioAnimRunBrakeFileID, /* 506 */
+    &llFTMarioAnimTurnFileID, /* 507 */
+    &llFTMarioAnimTurnRunFileID, /* 508 */
+    &llFTMarioAnimJumpFFileID, /* 509 */
+    &llFTMarioAnimJumpBFileID, /* 510 */
+    &llFTMarioAnimJumpAerialFFileID, /* 511 */
+    &llFTMarioAnimJumpAerialBFileID, /* 512 */
+    &llFTMarioAnimFallFileID, /* 513 */
+    &llFTMarioAnimFallAerialFileID, /* 514 */
+    &llFTMarioAnimCrouchFileID, /* 515 */
+    &llFTMarioAnimCrouchIdleFileID, /* 516 */
+    &llFTMarioAnimCrouchEndFileID, /* 517 */
+    &llFTMarioAnimLandingAirXFileID, /* 518 */
+    &llFTMarioAnimShieldDropFileID, /* 519 */
+    &llFTMarioAnimTeeterFileID, /* 520 */
+    &llFTMarioAnimTeeterstartFileID, /* 521 */
+    &llFTMarioAnimSleepFileID, /* 522 */
+    &llFTMarioAnimDamaged1FileID, /* 523 */
+    &llFTMarioAnimDamaged2FileID, /* 524 */
+    &llFTMarioAnimFalconDivePulledFileID, /* 525 */
+    &llFTMarioAnimDamageX1FileID, /* 526 */
+    &llFTMarioAnimDamageX2FileID, /* 527 */
+    &llFTMarioAnimDamageX3FileID, /* 528 */
+    &llFTMarioAnimDamaged3FileID, /* 529 */
+    &llFTMarioAnimDamaged4FileID, /* 530 */
+    &llFTMarioAnimDamaged5FileID, /* 531 */
+    &llFTMarioAnimDamaged6FileID, /* 532 */
+    &llFTMarioAnimDamageAirFileID, /* 533 */
+    &llFTMarioAnimDamaged7FileID, /* 534 */
+    &llFTMarioAnimDamageFlyX1FileID, /* 535 */
+    &llFTMarioAnimDamageFlyX2FileID, /* 536 */
+    &llFTMarioAnimDamage2FileID, /* 537 */
+    &llFTMarioAnimShieldBreakFileID, /* 538 */
+    &llFTMarioAnimDamageFlyTopFileID, /* 539 */
+    &llFTMarioAnimDamagedFileID, /* 540 */
+    &llFTMarioAnimFallSpecialFileID, /* 541 */
+    &llFTMarioAnimCeilingBonkFileID, /* 542 */
+    &llFTMarioAnimDownBounceDFileID, /* 543 */
+    &llFTMarioAnimStunLandUFileID, /* 544 */
+    &llFTMarioAnimDownStandDFileID, /* 545 */
+    &llFTMarioAnimStunStartUFileID, /* 546 */
+    &llFTMarioAnimTechFFileID, /* 547 */
+    &llFTMarioAnimTechBFileID, /* 548 */
+    &llFTMarioAnimDownForwardDFileID, /* 549 */
+    &llFTMarioAnimDownForwardUFileID, /* 550 */
+    &llFTMarioAnimDownBackDFileID, /* 551 */
+    &llFTMarioAnimDownBackUFileID, /* 552 */
+    &llFTMarioAnimDownAttackDFileID, /* 553 */
+    &llFTMarioAnimDownAttackUFileID, /* 554 */
+    &llFTMarioAnimTechFileID, /* 555 */
+    &llFTMarioAnimClangRecoilFileID, /* 556 */
+    &llFTMarioAnimShieldOnFileID, /* 557 */
+    &llFTMarioAnimShieldOffFileID, /* 558 */
+    &llFTMarioAnimRollFFileID, /* 559 */
+    &llFTMarioAnimRollBFileID, /* 560 */
+    &llFTMarioAnimCatchFileID, /* 561 */
+    &llFTMarioAnimCatchPullFileID, /* 562 */
+    &llFTMarioAnimThrowFFileID, /* 563 */
+    &llFTMarioAnimThrowBFileID, /* 564 */
+    &llFTMarioAnimEggLayPulledFileID, /* 565 */
+    &llFTMarioAnimThrownDKPulledFileID, /* 566 */
+    &llFTMarioAnimThrownMarioBrosFileID, /* 567 */
+    &llFTMarioAnimThrownDKFileID, /* 568 */
+    &llFTMarioAnimThrown2FileID, /* 569 */
+    &llFTMarioAnimThrown1FileID, /* 570 */
+    &llFTMarioAnimTauntFileID, /* 571 */
+    &llFTMarioAnimCliffCatchFileID, /* 572 */
+    &llFTMarioAnimCliffWaitFileID, /* 573 */
+    &llFTMarioAnimCliffQuickFileID, /* 574 */
+    &llFTMarioAnimCliffClimbQuick1FileID, /* 575 */
+    &llFTMarioAnimCliffClimbQuick2FileID, /* 576 */
+    &llFTMarioAnimCliffSlowFileID, /* 577 */
+    &llFTMarioAnimCliffClimbSlow1FileID, /* 578 */
+    &llFTMarioAnimCliffClimbSlow2FileID, /* 579 */
+    &llFTMarioAnimCliffAttackQuick1FileID, /* 580 */
+    &llFTMarioAnimCliffAttackQuick2FileID, /* 581 */
+    &llFTMarioAnimCliffAttackSlow1FileID, /* 582 */
+    &llFTMarioAnimCliffAttackSlow2FileID, /* 583 */
+    &llFTMarioAnimCliffEscapeQuick1FileID, /* 584 */
+    &llFTMarioAnimCliffEscapeQuick2FileID, /* 585 */
+    &llFTMarioAnimCliffEscapeSlow1FileID, /* 586 */
+    &llFTMarioAnimCliffEscapeSlow2FileID, /* 587 */
+    &llFTMarioAnimLightItemPickupFileID, /* 588 */
+    &llFTMarioAnimItemThrowSmashBFileID, /* 589 */
+    &llFTMarioAnimItemThrowSmashUFileID, /* 590 */
+    &llFTMarioAnimItemThrowSmashDFileID, /* 591 */
+    &llFTMarioAnimItemThrowDashFileID, /* 592 */
+    &llFTMarioAnimItemDropFileID, /* 593 */
+    &llFTMarioAnimItemThrowAirSmashBFileID, /* 594 */
+    &llFTMarioAnimItemThrowAirSmashUFileID, /* 595 */
+    &llFTMarioAnimItemThrowAirSmashFFileID, /* 596 */
+    &llFTMarioAnimHeavyItemPickupFileID, /* 597 */
+    &llFTMarioAnimHeavyItemThrowSmashBFileID, /* 598 */
+    &llFTMarioAnimStarRodNeutralFileID, /* 599 */
+    &llFTMarioAnimStarRodTiltFileID, /* 600 */
+    &llFTMarioAnimStarRodSmashFileID, /* 601 */
+    &llFTMarioAnimStarRodDashFileID, /* 602 */
+    &llFTMarioAnimHammerIdleFileID, /* 603 */
+    &llFTMarioAnimHammerLandingFileID, /* 604 */
+    &llFTMarioAnimFireFlowerShootFileID, /* 605 */
+    &llFTMarioAnimJab1FileID, /* 606 */
+    &llFTMarioAnimJab2FileID, /* 607 */
+    &llFTMarioAnimJab3FileID, /* 608 */
+    &llFTMarioAnimDashAttackFileID, /* 609 */
+    &llFTMarioAnimFTiltHighFileID, /* 610 */
+    &llFTMarioAnimFTiltFileID, /* 611 */
+    &llFTMarioAnimFTiltLowFileID, /* 612 */
+    &llFTMarioAnimUTiltFileID, /* 613 */
+    &llFTMarioAnimDTiltFileID, /* 614 */
+    &llFTMarioAnimFSmashHighFileID, /* 615 */
+    &llFTMarioAnimFSmashMidHighFileID, /* 616 */
+    &llFTMarioAnimFSmashFileID, /* 617 */
+    &llFTMarioAnimFSmashMidLowFileID, /* 618 */
+    &llFTMarioAnimFSmashLowFileID, /* 619 */
+    &llFTMarioAnimUSmashFileID, /* 620 */
+    &llFTMarioAnimDSmashFileID, /* 621 */
+    &llFTMarioAnimAttackAirNFileID, /* 622 */
+    &llFTMarioAnimAttackAirFFileID, /* 623 */
+    &llFTMarioAnimAttackAirBFileID, /* 624 */
+    &llFTMarioAnimAttackAirUFileID, /* 625 */
+    &llFTMarioAnimAttackAirDFileID, /* 626 */
+    &llFTMarioAnimLandingAirFFileID, /* 627 */
+    &llFTMarioAnimLandingAirBFileID, /* 628 */
+    &llFTMarioAnimLandingAirUFileID, /* 629 */
+    &llFTMarioAnimEnterPipeFileID, /* 630 */
+    &llFTMarioAnimExitPipeFileID, /* 631 */
+    &llFTMarioAnimExitPipeWalkFileID, /* 632 */
+    &llFTMarioAnimAppear1FileID, /* 633 */
+    &llFTMarioAnimAppear2FileID, /* 634 */
+    &llFTMarioAnimFireballGroundFileID, /* 635 */
+    &llFTMarioAnimFireballAirFileID, /* 636 */
+    &llFTMarioAnimSuperJumpPunchAirFileID, /* 637 */
+    &llFTMarioAnimMarioTornadoGroundFileID, /* 638 */
+    &llFTMarioAnimMarioTornadoAirFileID, /* 639 */
+    &llFTMarioAnimDamageFileID, /* 640 */
+    &llFTMarioAnimFireFlowerShootAirFileID, /* 641 */
+};
+
+static u32 ndsRelocMarioBattleAnimAssetIDForToken(u32 token)
+{
+    u32 i;
+
+    for (i = 0u;
+         i < (sizeof(sNdsRelocMarioBattleAnimFileIDs) /
+              sizeof(sNdsRelocMarioBattleAnimFileIDs[0]));
+         i++)
+    {
+        if (token == ndsRelocFileID(sNdsRelocMarioBattleAnimFileIDs[i]))
+        {
+            return NDS_RELOC_ASSET_MARIO_ANIM_WAIT + i;
+        }
+    }
+    return NDS_RELOC_ASSET_INVALID;
 }
 
 static u32 ndsRelocAssetIDForToken(u32 token)
@@ -1380,43 +1539,15 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_MISC_DATA_299) return NDS_RELOC_ASSET_MISC_DATA_299;
     if (token == NDS_RELOC_ASSET_MISC_DATA_315) return NDS_RELOC_ASSET_MISC_DATA_315;
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_109) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_109;
-    if (token == ndsRelocFileID(&llFTMarioAnimWaitFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
-    if (token == ndsRelocFileID(&llFTMarioAnimWalk1FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK1;
-    if (token == ndsRelocFileID(&llFTMarioAnimWalk2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK2;
-    if (token == ndsRelocFileID(&llFTMarioAnimWalk3FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK3;
-    if (token == ndsRelocFileID(&llFTMarioAnimWalkEndFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_WALK_END;
-    if (token == ndsRelocFileID(&llFTMarioAnimDashFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DASH;
-    if (token == ndsRelocFileID(&llFTMarioAnimRunFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DASH + 1u;
-    if (token == ndsRelocFileID(&llFTMarioAnimRunBrakeFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DASH + 2u;
-    if (token == ndsRelocFileID(&llFTMarioAnimTurnFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DASH + 3u;
-    if (token == ndsRelocFileID(&llFTMarioAnimTurnRunFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_TURN_RUN;
-    if (token == ndsRelocFileID(&llFTMarioAnimShieldDropFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_DROP;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamaged1FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamaged2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 1u;
-    if (token == ndsRelocFileID(&llFTMarioAnimFalconDivePulledFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 2u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamageX1FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 3u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamageX2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 4u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamageX3FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 5u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamaged3FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 6u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamaged4FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 7u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamaged5FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 8u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamaged6FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 9u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamageAirFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 10u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamaged7FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 11u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamageFlyX1FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 12u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamageFlyX2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 13u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamage2FileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 14u;
-    if (token == ndsRelocFileID(&llFTMarioAnimShieldBreakFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 15u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamageFlyTopFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_FIRST + 16u;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamagedFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE_LOW_LAST;
-    if (token == ndsRelocFileID(&llFTMarioAnimShieldOnFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON;
-    if (token == ndsRelocFileID(&llFTMarioAnimShieldOffFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_OFF;
-    if (token == ndsRelocFileID(&llFTMarioAnimFireballGroundFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND;
-    if (token == ndsRelocFileID(&llFTMarioAnimFireballAirFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_AIR;
-    if (token == ndsRelocFileID(&llFTMarioAnimSuperJumpPunchAirFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_SUPER_JUMP_PUNCH;
-    if (token == ndsRelocFileID(&llFTMarioAnimMarioTornadoGroundFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_TORNADO_GROUND;
-    if (token == ndsRelocFileID(&llFTMarioAnimMarioTornadoAirFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_TORNADO_AIR;
-    if (token == ndsRelocFileID(&llFTMarioAnimDamageFileID)) return NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE;
+    {
+        u32 mario_anim_asset_id =
+            ndsRelocMarioBattleAnimAssetIDForToken(token);
+
+        if (mario_anim_asset_id != NDS_RELOC_ASSET_INVALID)
+        {
+            return mario_anim_asset_id;
+        }
+    }
     if (token == ndsRelocFileID(&llFTFoxAnimEggLayFileID)) return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY;
     if (token == ndsRelocFileID(&llFTFoxAnimWalk1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK1;
     if (token == ndsRelocFileID(&llFTFoxAnimWalk2FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK2;
@@ -1606,7 +1737,7 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
         break;
     }
     if (((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_WAIT) &&
-         (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE)) ||
+         (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR)) ||
         ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
          (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JAB1)) ||
         ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JUMP_F) &&

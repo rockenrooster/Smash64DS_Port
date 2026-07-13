@@ -122,9 +122,9 @@ retaining the required 128 KiB reserve.
 
 The taskman allocator now probes 4 KiB pages from `0x150000` through `0x130000`
 before its smaller fallbacks, avoiding the old 64 KiB capacity cliff.
-Source ground/floor/edge callbacks are live; manual acceptance is pending. A
-normals still do not dispatch and jump/special physics remain incomplete.
-The A-normal audit narrows its first false gate to live `button_tap` versus the relocated fighter attack-availability flags; the original move TUs are present.
+Source ground/floor/edge callbacks are live; manual acceptance is pending. Live input now dispatches A normals, first jump, and double jump.
+The full Mario battle-animation bank (`499..641`) resolves to staged BattleShip O2R; compact path lookup avoids 143 redundant ARM9 records and retains scripted headroom `198416` (`132880` after BGM).
+Live checks load normalized assets `606/509/511` and advance AObj16 joints; manual pose acceptance and special physics remain incomplete.
 
 Canonical realtime + live-input + HW-tri has hard GX RAM, display-contract,
 profile-0, screenshot, and ROM-parity gates; profile 2 owns oracle correctness.

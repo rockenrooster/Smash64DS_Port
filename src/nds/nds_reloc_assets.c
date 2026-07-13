@@ -106,43 +106,6 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
     { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
-    { 0x1f3, 0x1f3, "nitro:/reloc/reloc_animations/FTMarioAnimWait" },
-    { 0x1f4, 0x1f4, "nitro:/reloc/reloc_animations/FTMarioAnim001" },
-    { 0x1f5, 0x1f5, "nitro:/reloc/reloc_animations/FTMarioAnim002" },
-    { 0x1f6, 0x1f6, "nitro:/reloc/reloc_animations/FTMarioAnim003" },
-    { 0x1f7, 0x1f7, "nitro:/reloc/reloc_animations/FTMarioAnim004" },
-    { 0x1f8, 0x1f8, "nitro:/reloc/reloc_animations/FTMarioAnim005" },
-    { 0x1f9, 0x1f9, "nitro:/reloc/reloc_animations/FTMarioAnim006" },
-    { 0x1fa, 0x1fa, "nitro:/reloc/reloc_animations/FTMarioAnim007" },
-    { 0x1fb, 0x1fb, "nitro:/reloc/reloc_animations/FTMarioAnim008" },
-    { 0x1fc, 0x1fc, "nitro:/reloc/reloc_animations/FTMarioAnim009" },
-    { 0x207, 0x207, "nitro:/reloc/reloc_animations/FTMarioAnim020" },
-    { 0x20b, 0x20b, "nitro:/reloc/reloc_animations/FTMarioAnim024" },
-    { 0x20c, 0x20c, "nitro:/reloc/reloc_animations/FTMarioAnim025" },
-    { 0x20d, 0x20d, "nitro:/reloc/reloc_animations/FTMarioAnim026" },
-    { 0x20e, 0x20e, "nitro:/reloc/reloc_animations/FTMarioAnim027" },
-    { 0x20f, 0x20f, "nitro:/reloc/reloc_animations/FTMarioAnim028" },
-    { 0x210, 0x210, "nitro:/reloc/reloc_animations/FTMarioAnim029" },
-    { 0x211, 0x211, "nitro:/reloc/reloc_animations/FTMarioAnim030" },
-    { 0x212, 0x212, "nitro:/reloc/reloc_animations/FTMarioAnim031" },
-    { 0x213, 0x213, "nitro:/reloc/reloc_animations/FTMarioAnim032" },
-    { 0x214, 0x214, "nitro:/reloc/reloc_animations/FTMarioAnim033" },
-    { 0x215, 0x215, "nitro:/reloc/reloc_animations/FTMarioAnim034" },
-    { 0x216, 0x216, "nitro:/reloc/reloc_animations/FTMarioAnim035" },
-    { 0x217, 0x217, "nitro:/reloc/reloc_animations/FTMarioAnim036" },
-    { 0x218, 0x218, "nitro:/reloc/reloc_animations/FTMarioAnim037" },
-    { 0x219, 0x219, "nitro:/reloc/reloc_animations/FTMarioAnim038" },
-    { 0x21a, 0x21a, "nitro:/reloc/reloc_animations/FTMarioAnim039" },
-    { 0x21b, 0x21b, "nitro:/reloc/reloc_animations/FTMarioAnim040" },
-    { 0x21c, 0x21c, "nitro:/reloc/reloc_animations/FTMarioAnim041" },
-    { 0x22d, 0x22d, "nitro:/reloc/reloc_animations/FTMarioAnim058" },
-    { 0x22e, 0x22e, "nitro:/reloc/reloc_animations/FTMarioAnim059" },
-    { 0x27b, 0x27b, "nitro:/reloc/reloc_animations/FTMarioAnim136" },
-    { 0x27c, 0x27c, "nitro:/reloc/reloc_animations/FTMarioAnim137" },
-    { 0x27d, 0x27d, "nitro:/reloc/reloc_animations/FTMarioAnim138" },
-    { 0x27e, 0x27e, "nitro:/reloc/reloc_animations/FTMarioAnim139" },
-    { 0x27f, 0x27f, "nitro:/reloc/reloc_animations/FTMarioAnim140" },
-    { 0x280, 0x280, "nitro:/reloc/reloc_animations/FTMarioAnim141" },
     { 0x282, 0x282, "nitro:/reloc/reloc_animations/FTFoxAnim000" },
     { 0x283, 0x283, "nitro:/reloc/reloc_animations/FTFoxAnim001" },
     { 0x284, 0x284, "nitro:/reloc/reloc_animations/FTFoxAnim002" },
@@ -199,9 +162,64 @@ static u32 ndsReadLe32(const u8 *bytes)
            ((u32)bytes[3] << 24);
 }
 
+#define NDS_RELOC_MARIO_ANIM_FIRST 0x1f3u
+#define NDS_RELOC_MARIO_ANIM_LAST 0x281u
+#define NDS_RELOC_MARIO_ANIM_PATH_CAPACITY 64u
+
+static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
+{
+    static const char prefix[] = "nitro:/reloc/reloc_animations/";
+    static NDSRelocAssetEntry entry;
+    static char path[NDS_RELOC_MARIO_ANIM_PATH_CAPACITY];
+    u32 index;
+    int written;
+
+    if ((asset_id < NDS_RELOC_MARIO_ANIM_FIRST) ||
+        (asset_id > NDS_RELOC_MARIO_ANIM_LAST))
+    {
+        return NULL;
+    }
+
+    index = asset_id - NDS_RELOC_MARIO_ANIM_FIRST;
+    if (index == 0u)
+    {
+        written = snprintf(path, sizeof(path), "%sFTMarioAnimWait", prefix);
+    }
+    else if (index == 44u)
+    {
+        written = snprintf(path, sizeof(path),
+                           "%sFTMarioAnimDownBounceD", prefix);
+    }
+    else if (index == 46u)
+    {
+        written = snprintf(path, sizeof(path),
+                           "%sFTMarioAnimDownStandD", prefix);
+    }
+    else
+    {
+        written = snprintf(path, sizeof(path), "%sFTMarioAnim%03lu", prefix,
+                           (unsigned long)index);
+    }
+    if ((written < 0) || ((size_t)written >= sizeof(path)))
+    {
+        return NULL;
+    }
+
+    entry.asset_id = asset_id;
+    entry.file_id = asset_id;
+    entry.path = path;
+    return &entry;
+}
+
 static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
 {
     size_t i;
+
+    if ((asset_id >= NDS_RELOC_MARIO_ANIM_FIRST) &&
+        (asset_id <= NDS_RELOC_MARIO_ANIM_LAST))
+    {
+        return ndsRelocAssetMarioAnimEntry(asset_id);
+    }
 
     for (i = 0; i < (sizeof(sNdsRelocAssets) / sizeof(sNdsRelocAssets[0])); i++)
     {

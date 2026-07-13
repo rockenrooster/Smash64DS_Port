@@ -20415,3 +20415,28 @@ remains skipped for the requested fast iteration cadence.
   texture upload bytes, and zero BG2/BG3 staging/clear/copy remain exact.
 - The benchmark exporter now represents profile-0-only samples with empty
   coarse/forensic arrays instead of indexing profile-1/2 collections.
+
+## 2026-07-13 - Restored the complete Mario battle-animation bank
+
+- BattleShip `ftdata.c` exposes Mario's battle animations as one contiguous
+  symbol-address sequence. The reloc backend now maps all 143 descriptors to
+  exact asset IDs `499..641`, and the ROM stages the matching O2R files. The
+  source naming exceptions remain exact: `FTMarioAnimWait`,
+  `FTMarioAnimDownBounceD`, and `FTMarioAnimDownStandD`.
+- The loader generates those paths from the contiguous ID at runtime instead
+  of retaining 143 repetitive path records. This recovered the 4 KiB task-arena
+  page lost by the first proof and preserves `198,416` bytes of mode-163
+  headroom, or `132,880` after the 65,536-byte BGM ring reserve.
+- Direct device input now proves Attack11 asset `606`, JumpF asset `509`, and
+  JumpAerialF asset `511` loading from the heap with normalized AObj tracks.
+  Attack11 advances into its frame-2/3 hitbox window, while first- and
+  double-jump joint rotations interpolate from the imported source data.
+- Final canonical profile 0 is 11,981,824 bytes at
+  `C276D8E4F2151398A1C4345ABEF79F811B4A217C75FFB70E0154AE7F288129C7`
+  and reaches 14.8 FPS. Capture
+  `2026-07-13_canonical_fast_064059-8144036-p17392.png` passes paired
+  visibility/detail/motion.
+- Focused mode 163, DevFast, Boundary `161/162/163`, GBI fixtures, docs,
+  architecture, and registry checks pass. An earlier equivalent-path P1Gate
+  also passes; Full Regression remains intentionally skipped for Tyler's
+  requested fast iteration.

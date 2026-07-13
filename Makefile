@@ -706,7 +706,20 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTMarioAnim007 \
 	reloc_animations/FTMarioAnim008 \
 	reloc_animations/FTMarioAnim009 \
+	reloc_animations/FTMarioAnim010 \
+	reloc_animations/FTMarioAnim011 \
+	reloc_animations/FTMarioAnim012 \
+	reloc_animations/FTMarioAnim013 \
+	reloc_animations/FTMarioAnim014 \
+	reloc_animations/FTMarioAnim015 \
+	reloc_animations/FTMarioAnim016 \
+	reloc_animations/FTMarioAnim017 \
+	reloc_animations/FTMarioAnim018 \
+	reloc_animations/FTMarioAnim019 \
 	reloc_animations/FTMarioAnim020 \
+	reloc_animations/FTMarioAnim021 \
+	reloc_animations/FTMarioAnim022 \
+	reloc_animations/FTMarioAnim023 \
 	reloc_animations/FTMarioAnim024 \
 	reloc_animations/FTMarioAnim025 \
 	reloc_animations/FTMarioAnim026 \
@@ -725,14 +738,107 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTMarioAnim039 \
 	reloc_animations/FTMarioAnim040 \
 	reloc_animations/FTMarioAnim041 \
+	reloc_animations/FTMarioAnim042 \
+	reloc_animations/FTMarioAnim043 \
+	reloc_animations/FTMarioAnimDownBounceD \
+	reloc_animations/FTMarioAnim045 \
+	reloc_animations/FTMarioAnimDownStandD \
+	reloc_animations/FTMarioAnim047 \
+	reloc_animations/FTMarioAnim048 \
+	reloc_animations/FTMarioAnim049 \
+	reloc_animations/FTMarioAnim050 \
+	reloc_animations/FTMarioAnim051 \
+	reloc_animations/FTMarioAnim052 \
+	reloc_animations/FTMarioAnim053 \
+	reloc_animations/FTMarioAnim054 \
+	reloc_animations/FTMarioAnim055 \
+	reloc_animations/FTMarioAnim056 \
+	reloc_animations/FTMarioAnim057 \
 	reloc_animations/FTMarioAnim058 \
 	reloc_animations/FTMarioAnim059 \
+	reloc_animations/FTMarioAnim060 \
+	reloc_animations/FTMarioAnim061 \
+	reloc_animations/FTMarioAnim062 \
+	reloc_animations/FTMarioAnim063 \
+	reloc_animations/FTMarioAnim064 \
+	reloc_animations/FTMarioAnim065 \
+	reloc_animations/FTMarioAnim066 \
+	reloc_animations/FTMarioAnim067 \
+	reloc_animations/FTMarioAnim068 \
+	reloc_animations/FTMarioAnim069 \
+	reloc_animations/FTMarioAnim070 \
+	reloc_animations/FTMarioAnim071 \
+	reloc_animations/FTMarioAnim072 \
+	reloc_animations/FTMarioAnim073 \
+	reloc_animations/FTMarioAnim074 \
+	reloc_animations/FTMarioAnim075 \
+	reloc_animations/FTMarioAnim076 \
+	reloc_animations/FTMarioAnim077 \
+	reloc_animations/FTMarioAnim078 \
+	reloc_animations/FTMarioAnim079 \
+	reloc_animations/FTMarioAnim080 \
+	reloc_animations/FTMarioAnim081 \
+	reloc_animations/FTMarioAnim082 \
+	reloc_animations/FTMarioAnim083 \
+	reloc_animations/FTMarioAnim084 \
+	reloc_animations/FTMarioAnim085 \
+	reloc_animations/FTMarioAnim086 \
+	reloc_animations/FTMarioAnim087 \
+	reloc_animations/FTMarioAnim088 \
+	reloc_animations/FTMarioAnim089 \
+	reloc_animations/FTMarioAnim090 \
+	reloc_animations/FTMarioAnim091 \
+	reloc_animations/FTMarioAnim092 \
+	reloc_animations/FTMarioAnim093 \
+	reloc_animations/FTMarioAnim094 \
+	reloc_animations/FTMarioAnim095 \
+	reloc_animations/FTMarioAnim096 \
+	reloc_animations/FTMarioAnim097 \
+	reloc_animations/FTMarioAnim098 \
+	reloc_animations/FTMarioAnim099 \
+	reloc_animations/FTMarioAnim100 \
+	reloc_animations/FTMarioAnim101 \
+	reloc_animations/FTMarioAnim102 \
+	reloc_animations/FTMarioAnim103 \
+	reloc_animations/FTMarioAnim104 \
+	reloc_animations/FTMarioAnim105 \
+	reloc_animations/FTMarioAnim106 \
+	reloc_animations/FTMarioAnim107 \
+	reloc_animations/FTMarioAnim108 \
+	reloc_animations/FTMarioAnim109 \
+	reloc_animations/FTMarioAnim110 \
+	reloc_animations/FTMarioAnim111 \
+	reloc_animations/FTMarioAnim112 \
+	reloc_animations/FTMarioAnim113 \
+	reloc_animations/FTMarioAnim114 \
+	reloc_animations/FTMarioAnim115 \
+	reloc_animations/FTMarioAnim116 \
+	reloc_animations/FTMarioAnim117 \
+	reloc_animations/FTMarioAnim118 \
+	reloc_animations/FTMarioAnim119 \
+	reloc_animations/FTMarioAnim120 \
+	reloc_animations/FTMarioAnim121 \
+	reloc_animations/FTMarioAnim122 \
+	reloc_animations/FTMarioAnim123 \
+	reloc_animations/FTMarioAnim124 \
+	reloc_animations/FTMarioAnim125 \
+	reloc_animations/FTMarioAnim126 \
+	reloc_animations/FTMarioAnim127 \
+	reloc_animations/FTMarioAnim128 \
+	reloc_animations/FTMarioAnim129 \
+	reloc_animations/FTMarioAnim130 \
+	reloc_animations/FTMarioAnim131 \
+	reloc_animations/FTMarioAnim132 \
+	reloc_animations/FTMarioAnim133 \
+	reloc_animations/FTMarioAnim134 \
+	reloc_animations/FTMarioAnim135 \
 	reloc_animations/FTMarioAnim136 \
 	reloc_animations/FTMarioAnim137 \
 	reloc_animations/FTMarioAnim138 \
 	reloc_animations/FTMarioAnim139 \
 	reloc_animations/FTMarioAnim140 \
 	reloc_animations/FTMarioAnim141 \
+	reloc_animations/FTMarioAnim142 \
 	reloc_animations/FTFoxAnim000 \
 	reloc_animations/FTFoxAnim001 \
 	reloc_animations/FTFoxAnim002 \

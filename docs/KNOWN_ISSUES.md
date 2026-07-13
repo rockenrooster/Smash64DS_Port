@@ -2,14 +2,11 @@
 
 ## Local Tooling Issues
 
-- Manual canonical play now confirms live DS movement/special input, but P1 is
-  not yet broadly playable: A-button normals do not start, jump/double-jump
-  animation is broken, fireball has no visible projectile, Super Jump Punch
-  loses correct physics/camera/grounding, and intermittent freezes remain
-  unlocalized. Scripted mode-163 status coverage is not evidence that those
-  live-input paths work. The attack TUs/dispatch are present; the next natural
-  trace must distinguish a missing live `button_tap` edge from clear relocated
-  `FTAttributes::is_have_attack*` flags, which older proofs force temporarily.
+- P1 is not yet broadly playable. Live device injection now proves Attack11,
+  first jump, and double jump dispatch plus exact normalized Mario assets
+  `606/509/511`; Tyler still needs to accept their poses on hardware/emulator.
+  Fireball has no visible projectile, Super Jump Punch loses correct physics/
+  camera/grounding, and intermittent freezes remain unlocalized.
 - The live source floor/edge callbacks are now active, but their manual behavior
   is still awaiting Tyler's fresh playtest. Mode 163 now uses normal down input
   to pass its elevated fighter through the one-way platform before Walk/DashRun;
