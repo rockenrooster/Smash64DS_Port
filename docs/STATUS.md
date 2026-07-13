@@ -100,16 +100,16 @@ exact invalidation; profile 2 omits the 2,096-byte table and runs the independen
 exact shade calculation. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1
 index exact texture keys through 128 byte slots and compact fingerprints; full
 236-byte equality remains the oracle and deletion repairs clusters.
-Profile-0 BSS is `1,879,472`; canonical/profile-1/profile-2 ITCM is `20,088/20,088/30,104`, all below 32 KiB. Submission stays `648` raw source-Z, `44`
-mixed-matrix, `126` no-Z, `10` range, `1,242` logical divide demand, and
-`121/707/121` batches. Signed pre-clamping plus DS `div64` removes the shipping software 64-bit helper. Profile 1 makes `650` cache-miss calls; profile 2 checks
-`1,404` evaluations against C with zero mismatch. Final hash lookup is
-frame-dependent but conserves active/table/miss results with bounded probes.
+Profile-0 BSS is `1,879,760`; ITCM is `20,088/20,088/18,584`. Submission stays
+`648/44/126/10`, with `1,242` logical divides and `121/707/121` batches. Exact
+DS `div64` makes 650 profile-1 calls; profile 2 checks 1,404 with zero mismatch.
 The shared all-owner K-RAW kernel executes `45/540` immutable runs/triangles
 (`60/246/234` stage/Mario/Fox) and falls back `47/7/0`. Same-ROM 128-frame
 profile-1 draw improves `2,067,296/2,407,872 -> 1,858,624/2,227,648`.
-Its 8 KiB direct table consumes 330 TRI commands without redecode; draw is `2,118,688/2,138,816`, 60,384/60,992 ticks below baseline, with exact profile-2 semantics/owner/cache.
-The pair oracle checks `18,432/0` pixels on changed forensic frames; the main oracle remains `2484/0/0`. Canonical pacing is about `12.3fps`; shipped SHA-256 is `0294C7F30C67FB907A04A9FA5CEE16597365DF294F440449255D68386AF75D33`.
+Its 8 KiB table consumes 330 TRI commands. A 256-byte DObj index plus exact
+affine product moves draw `2,126,752/2,169,600 -> 2,057,376/2,098,880`; profile
+2 proves affine `107/0/0` and vertex `2484/0/0`. Canonical reaches `13.5fps`;
+shipped SHA is `B4A89E279445E3EB44C0931E5C718B3A81D5FD4B578F71702C3D0ADDB9A6E258`.
 The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632`
 bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
 VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
@@ -121,8 +121,8 @@ VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
 
 The taskman allocator now probes 4 KiB pages from `0x150000` through `0x130000`
 before its smaller fallbacks, avoiding the old 64 KiB capacity cliff.
-Pupupu map objects decode cleanly. Scripted Right/A/X reaches Run/Attack11/JumpF, but manual canonical play exposes real P1 gaps: A normals do not dispatch,
-jump/special physics are incomplete, and the bounded floor/edge seam permits walking on air and fall-through. Full source MP collision graduation is next.
+Source ground/floor/edge callbacks are live; manual acceptance is pending. A
+normals still do not dispatch and jump/special physics remain incomplete.
 The A-normal audit narrows its first false gate to live `button_tap` versus the relocated fighter attack-availability flags; the original move TUs are present.
 
 Canonical realtime + live-input + HW-tri has hard GX RAM, display-contract,
@@ -136,11 +136,11 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-The canonical frame is still about `12fps`, far below 60 FPS. Packed RGB15 conversion regressed and was removed; next is the 126-triangle stage no-Z/direct-owner kernel.
+At `13.5fps`, stage DObj signatures are stable; measure exact persistent stage-world reuse next.
 RGBA4 HUD, Whispy face strips, and Mario facing/light A/B remain debt.
 ## Verification
 
-Current P1Gate/Boundary passed in `151.4s/94.9s`; DevFast and forensic also pass. This is not the five-minute soak; Full Regression stays skipped.
+DevFast, forensic, and Boundary `161/162` pass; P1Gate and Boundary `163` repeatably fail the 9,000-tick natural-motion gate. Full Regression stays skipped.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3

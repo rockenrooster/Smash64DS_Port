@@ -461,6 +461,9 @@ void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
 void ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
                             const NDSRendererMatrix20p12 *rhs,
                             NDSRendererMatrix20p12 *out);
+void ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
+                                  const NDSRendererMatrix20p12 *rhs,
+                                  NDSRendererMatrix20p12 *out);
 void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
                                      const NDSRendererInputVertex *vtx,
                                      NDSRendererClipVertex20p12 *out);

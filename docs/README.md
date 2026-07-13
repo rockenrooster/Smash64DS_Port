@@ -25,6 +25,7 @@ starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
 | `OPTIMIZATION_ROADMAP.md` | Maintained | Active renderer measurement and optimization sequence. |
 | `PERF_LEDGER.md` | Maintained | Reproducible renderer benchmark identities, measurements, gates, and decisions. |
 | `PERF_LEDGER_TEMPLATE_20260712.md` | Reference | Original performance-ledger template and accepted baseline. |
+| `PLAYTESTING.md` | Maintained | Short manual acceptance checklist for the current user-facing ROM. |
 | `PORTING.md` | Append-only | Chronological porting history. Do not use as primary planning. |
 | `ROADMAP.md` | Maintained | Milestone-level project roadmap. |
 | `SPECIALS_WEAPONS_SCOUT.md` | Maintained | Source-backed scout for Mario/Fox specials and weapon-manager runtime work. |

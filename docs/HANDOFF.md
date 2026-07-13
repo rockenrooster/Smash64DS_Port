@@ -95,37 +95,37 @@ detailed/profile-2 ledgers remain unchanged. Profile 1 proves topology
 X/Y, and clip Z. Texture preparation survives exact-key mutations; profiles 0/1 reuse alpha/poly-format only when proven vertex-independent.
 Prepare/reuse is `98/730`;
 batching stays `121/707/121`, and logical divide demand stays `1,242`.
-Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os to preserve
-their reserve. Six ARM/O3 paths occupy `20,088/20,088/30,104`
-ITCM bytes in canonical/profile 1/profile 2. Exact signed
+Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os. Six ARM/O3
+paths occupy `20,088/20,088/18,584` ITCM bytes. Exact signed
 pre-clamping and libnds `div64` remove the shipping software 64-bit helper;
 profile 1 records `650` cached calls, while profile 2 compares `1,404` results
 with C. Boundary modes retain exact nonzero clamp counts. Divider evidence adds
 no BSS; profile 2 also omits the production 2,096-byte shade table and runs the
 independent exact shade path. Profiles 0/1 retain light/table and exact 128-slot
 texture-key caches; compact fingerprints still require full 236-byte equality.
-Profile-0 BSS is `1,879,472`; prepared context persists by `98/730` epoch.
+Profile-0 BSS is `1,879,760`; prepared context persists by `98/730` epoch.
 The 2,916-byte main-RAM K-RAW kernel accelerates `45/540` runs/triangles per
 frame with `47/7/0` bounded fallbacks. Same-ROM 128-frame profile-1 draw moves
 `2,067,296/2,407,872 -> 1,858,624/2,227,648`; stage/Mario/Fox save
 `17,568/98,496/93,248` median ticks. The 32-frame profile-2 dual trace, owner
-state/cache, oracle, geometry, and upload sequence compare exactly. An 8 KiB direct table consumes 330 TRI commands without redecode; draw is
-`2,118,688/2,138,816`, 60,384/60,992 ticks below baseline. Canonical is about `12fps`, and shipped SHA-256 is
-`0294C7F30C67FB907A04A9FA5CEE16597365DF294F440449255D68386AF75D33`.
-Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
-separate, original timing stays live, and a post-step corrects packed RGBA.
-The BattleShip ground interrupt chain is live under imported FTMANAGER; scripted Right/A/X reach Run/Attack11/JumpF, but manual canonical play currently confirms only movement/special input. A normals, jump physics/animation, and full stage-edge collision remain live-path blockers. Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the foreground fence. Stage RSP/ST carry restores five flower groups (`192 -> 202`).
+state/cache, oracle, geometry, and upload sequence compare exactly. An 8 KiB
+direct table consumes 330 TRI commands without redecode. A 256-byte exact DObj
+index plus affine world product moves O2 draw `2,126,752/2,169,600 ->
+2,057,376/2,098,880`; the final 128-frame draw is `2,067,712/2,088,064`, and
+profile 2 proves `107/0/0` affine samples/mismatches/delta. Canonical reaches
+about `13.5fps`; shipped SHA-256 is `B4A89E279445E3EB44C0931E5C718B3A81D5FD4B578F71702C3D0ADDB9A6E258`.
+Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays separate and original timing remains live.
+The BattleShip ground interrupt chain and source floor/edge callbacks are live
+under imported FTMANAGER; manual acceptance is pending. A normals and jump/
+special physics remain blockers. Persistent slots retain 44 cross-joint
+triangles; no-Z/RSP carry restores the fence and five flower groups (`192 -> 202`).
 Masked-clamp, six CI4 stars, and DXT tail stride remain fixed. Debt: Whispy face,
 other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 ## Recommended Next Work
-1. Graduate the full source MP floor/edge update into `battle_playable`; current bounded fallbacks explain walking on air and falling through. Then repair the
-   live A `button_tap` from relocated attack-availability flags and correct the failing source-backed gate. Prove both fixes with natural input.
-2. Keep the exact direct TRI table; next specialize the 126-triangle stage
-   no-Z class. Canonical remains about `12.3fps`; packed RGB15 regressed.
-3. Defer the rare 4 KiB Whispy miss through the existing VBlank texture path,
-   then add RGBA4 HUD output. Use DevFast/P1Gate and Boundary once at handoff.
-   once before handoff. Historical one-bit harnesses are localization tools.
+1. Manually accept source floor/edge callbacks; then repair live A and jump physics.
+2. Measure persistent stage-world reuse (`0/1` churn); do not retry the no-Z cut.
+3. Defer the rare 4 KiB Whispy miss, then add RGBA4 HUD output.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
@@ -145,6 +145,6 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Final P1Gate/Boundary passed in `289.5s/306.7s`; DevFast and forensic pass.
-This is not the five-minute P1 soak; skip Full Regression.
+DevFast, forensic, and Boundary modes `161/162` pass. P1Gate and Boundary mode
+`163` repeatably stop at the 9,000-tick natural-motion gate; skip Full Regression.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

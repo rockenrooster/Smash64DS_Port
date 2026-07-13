@@ -811,6 +811,9 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileDObjWorldCacheHitCount = 0;
     gNdsRendererProfileDObjWorldCacheMissCount = 0;
     gNdsRendererProfileDObjWorldCacheOverflowCount = 0;
+    gNdsRendererProfileAffineMatrixSamples = 0;
+    gNdsRendererProfileAffineMatrixMismatches = 0;
+    gNdsRendererProfileAffineMatrixMaxDelta = 0;
     gNdsRendererProfileRawCurrentCandidateCount = 0;
     gNdsRendererProfileRawCurrentRangeRejectCount = 0;
     gNdsRendererProfileRawCrossMatrixCount = 0;
@@ -4415,6 +4418,9 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileDObjWorldCacheHitCount = 0;
     gNdsRendererProfileDObjWorldCacheMissCount = 0;
     gNdsRendererProfileDObjWorldCacheOverflowCount = 0;
+    gNdsRendererProfileAffineMatrixSamples = 0;
+    gNdsRendererProfileAffineMatrixMismatches = 0;
+    gNdsRendererProfileAffineMatrixMaxDelta = 0;
     gNdsRendererProfileRawVertexMinX = 32767;
     gNdsRendererProfileRawVertexMaxX = -32768;
     gNdsRendererProfileRawVertexMinY = 32767;

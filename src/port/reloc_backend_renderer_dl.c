@@ -13,6 +13,9 @@
 #define NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX 64u
 #define NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT 4u
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u
+#define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT 256u
+#define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK \
+    (NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT - 1u)
 #define NDS_RENDERER_ADAPTER_G_TX_LOADTILE 7u
 #define NDS_RENDERER_ADAPTER_G_TX_RENDERTILE 0u
 #define NDS_RENDERER_ADAPTER_G_TX_WRAP 0u
@@ -61,6 +64,8 @@ static NDSRendererAdapterDObjWorldCacheEntry
 static u32 sNdsRendererAdapterDObjWorldCacheFrame;
 static u32 sNdsRendererAdapterDObjWorldCacheCount;
 static u32 sNdsRendererAdapterDObjWorldCacheAllocationAttempted;
+static u8 sNdsRendererAdapterDObjWorldIndex[
+    NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT];
 #endif
 
 static sb32 ndsRendererAdapterRangeIsEmptySegmentEDL(const Gfx *dl,
@@ -803,6 +808,17 @@ static void ndsRendererAdapterResetSceneCaches(void)
     sNdsRendererAdapterDObjWorldCacheFrame = 0u;
     sNdsRendererAdapterDObjWorldCacheCount = 0u;
     sNdsRendererAdapterDObjWorldCacheAllocationAttempted = FALSE;
+    memset(sNdsRendererAdapterDObjWorldIndex, 0,
+           sizeof(sNdsRendererAdapterDObjWorldIndex));
+}
+
+static u32 ndsRendererAdapterDObjWorldIndexHash(const DObj *dobj)
+{
+    uintptr_t key = (uintptr_t)dobj >> 2;
+
+    key ^= key >> 8;
+    key ^= key >> 16;
+    return (u32)key & NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK;
 }
 
 static sb32 ndsRendererAdapterEnsureDObjWorldCache(void)
@@ -844,12 +860,15 @@ static const NDSRendererMatrix20p12 *
 ndsRendererAdapterFindDObjWorldMatrix(const DObj *dobj)
 {
     u32 frame = gNdsRendererProfileFrameCount;
-    u32 i;
+    u32 slot;
+    u32 probe;
 
     if (sNdsRendererAdapterDObjWorldCacheFrame != frame)
     {
         sNdsRendererAdapterDObjWorldCacheFrame = frame;
         sNdsRendererAdapterDObjWorldCacheCount = 0u;
+        memset(sNdsRendererAdapterDObjWorldIndex, 0,
+               sizeof(sNdsRendererAdapterDObjWorldIndex));
     }
     if (ndsRendererAdapterEnsureDObjWorldCache() == FALSE)
     {
@@ -858,15 +877,28 @@ ndsRendererAdapterFindDObjWorldMatrix(const DObj *dobj)
 #endif
         return NULL;
     }
-    for (i = 0u; i < sNdsRendererAdapterDObjWorldCacheCount; i++)
+    slot = ndsRendererAdapterDObjWorldIndexHash(dobj);
+    for (probe = 0u;
+         probe < NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT;
+         probe++)
     {
-        if (sNdsRendererAdapterDObjWorldCache[i].dobj == dobj)
+        u32 encoded = sNdsRendererAdapterDObjWorldIndex[slot];
+        u32 cache_index;
+
+        if (encoded == 0u)
+        {
+            break;
+        }
+        cache_index = encoded - 1u;
+        if ((cache_index < sNdsRendererAdapterDObjWorldCacheCount) &&
+            (sNdsRendererAdapterDObjWorldCache[cache_index].dobj == dobj))
         {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
             gNdsRendererProfileDObjWorldCacheHitCount++;
 #endif
-            return &sNdsRendererAdapterDObjWorldCache[i].world;
+            return &sNdsRendererAdapterDObjWorldCache[cache_index].world;
         }
+        slot = (slot + 1u) & NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK;
     }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileDObjWorldCacheMissCount++;
@@ -878,6 +910,9 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
     const DObj *dobj, const NDSRendererMatrix20p12 *world)
 {
     NDSRendererAdapterDObjWorldCacheEntry *entry;
+    u32 cache_index;
+    u32 slot;
+    u32 probe;
 
     if ((dobj == NULL) || (world == NULL))
     {
@@ -892,10 +927,22 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
 #endif
         return;
     }
-    entry = &sNdsRendererAdapterDObjWorldCache[
-        sNdsRendererAdapterDObjWorldCacheCount++];
+    cache_index = sNdsRendererAdapterDObjWorldCacheCount++;
+    entry = &sNdsRendererAdapterDObjWorldCache[cache_index];
     entry->dobj = dobj;
     entry->world = *world;
+    slot = ndsRendererAdapterDObjWorldIndexHash(dobj);
+    for (probe = 0u;
+         probe < NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT;
+         probe++)
+    {
+        if (sNdsRendererAdapterDObjWorldIndex[slot] == 0u)
+        {
+            sNdsRendererAdapterDObjWorldIndex[slot] = (u8)(cache_index + 1u);
+            return;
+        }
+        slot = (slot + 1u) & NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK;
+    }
 }
 #endif
 
@@ -959,7 +1006,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
             FALSE)
         {
             /* objdisplay.c:1183-1191 left-multiplies each child local matrix. */
-            ndsRendererMtxMul20p12(&local, out, out);
+            ndsRendererMtxMulAffine20p12(&local, out, out);
 #if NDS_RENDERER_HW_TRIANGLES
             /* DObj transforms are finalized before the camera's gcDrawAll
              * pass. Cache each prefix for sibling/child draws, and reset at
@@ -4580,9 +4627,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     sb32 detailed_output;
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 step_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 adapter_start;
-    u32 step_start;
     u32 adapter_ticks;
     NDSRendererOwnerStatsSnapshot owner_stats_before;
 #endif
@@ -4666,10 +4715,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     adapter_start = cpuGetTiming();
     step_start = adapter_start;
+#elif NDS_RENDERER_PROFILE_LEVEL >= 1
+    step_start = cpuGetTiming();
 #endif
 #endif
     ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
     gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
     step_start = cpuGetTiming();
 #endif
@@ -4684,7 +4735,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              &initial_projection_ptr,
                                              &initial_modelview,
                                              &initial_modelview_ptr);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
     gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
 
@@ -7997,8 +8048,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         u32 step_start;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         NDSRendererOwnerStatsSnapshot owner_stats_before;
 #endif
 #endif
@@ -8047,7 +8100,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         step_start = cpuGetTiming();
 #endif
         if ((sNdsFighterDisplayContractPlayback == FALSE) ||
@@ -8061,7 +8114,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             ndsRendererAdapterPrepareMaterialSegment(material_dobj,
                                                      current_state);
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
         step_start = cpuGetTiming();
 #endif
@@ -8078,7 +8131,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                  &initial_projection_ptr,
                                                  &initial_modelview,
                                                  &initial_modelview_ptr);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
         gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
         config.max_depth = 8u;

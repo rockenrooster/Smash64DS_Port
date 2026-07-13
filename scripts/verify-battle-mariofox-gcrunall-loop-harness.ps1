@@ -547,6 +547,7 @@ try {
             'printf "RENDER_ORACLE=%u,%u,%u\n", gNdsRendererProfileOracleSamples, gNdsRendererProfileOracleMismatches, gNdsRendererProfileOracleMaxDelta',
             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
             'printf "RENDER_ADAPTER_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileCameraMatrixCacheHitCount, gNdsRendererProfileCameraMatrixCacheMissCount, gNdsRendererProfileCameraMatrixCacheOverflowCount, gNdsRendererProfileDObjWorldCacheHitCount, gNdsRendererProfileDObjWorldCacheMissCount, gNdsRendererProfileDObjWorldCacheOverflowCount',
+            'printf "RENDER_AFFINE_MATRIX=%u,%u,%u\n", gNdsRendererProfileAffineMatrixSamples, gNdsRendererProfileAffineMatrixMismatches, gNdsRendererProfileAffineMatrixMaxDelta',
             'printf "RENDER_RAW_MATRIX=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileRawCurrentCandidateCount, gNdsRendererProfileRawCurrentRangeRejectCount, gNdsRendererProfileRawCrossMatrixCount, gNdsRendererProfileMatrixPosTestSamples, gNdsRendererProfileMatrixPosTestMismatches, gNdsRendererProfileMatrixPosTestMaxError, gNdsRendererProfileMatrixPosTestWSignMismatches, gNdsRendererProfileMatrixPosTestClipMismatches, gNdsRendererProfileMatrixPosTestMatrixWordSamples, gNdsRendererProfileMatrixPosTestDropped',
             'printf "RENDER_SUBMIT=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileSubmitRawCurrentCount, gNdsRendererProfileSubmitRawSnapshotCount, gNdsRendererProfileSubmitProjectedCrossCount, gNdsRendererProfileSubmitProjectedNoZCount, gNdsRendererProfileSubmitProjectedDecalCount, gNdsRendererProfileSubmitProjectedPrimDepthCount, gNdsRendererProfileSubmitProjectedRangeOrMatrixCount, gNdsRendererProfileSubmitRejectCount, (6 * gNdsRendererProfileSubmitProjectedNoZCount) + (9 * (gNdsRendererProfileSubmitProjectedCrossCount + gNdsRendererProfileSubmitProjectedDecalCount + gNdsRendererProfileSubmitProjectedPrimDepthCount + gNdsRendererProfileSubmitProjectedRangeOrMatrixCount))',
             'printf "RENDER_HWDIV=%u,%u,%u,%u,%u\n", gNdsRendererProfileHardwareDivideSummary & 0xfff, (gNdsRendererProfileHardwareDivideSummary >> 12) & 0xff, (gNdsRendererProfileHardwareDivideSummary >> 20) & 0xff, (gNdsRendererProfileHardwareDivideSummary >> 28) & 1, (gNdsRendererProfileHardwareDivideSummary >> 29) & 1',
@@ -740,6 +741,7 @@ try {
     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
     $renderMatrix = [regex]::Match($gdbStdout, 'RENDER_MATRIX=([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderAdapterCache = [regex]::Match($gdbStdout, 'RENDER_ADAPTER_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $renderAffineMatrix = [regex]::Match($gdbStdout, 'RENDER_AFFINE_MATRIX=([0-9]+),([0-9]+),([0-9]+)')
     $renderRawMatrix = [regex]::Match($gdbStdout, 'RENDER_RAW_MATRIX=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderSubmit = [regex]::Match($gdbStdout, 'RENDER_SUBMIT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderHardwareDivide = [regex]::Match($gdbStdout, 'RENDER_HWDIV=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -828,6 +830,7 @@ try {
                 $ro = Get-Ints $renderOracle
                 $rm = Get-Ints $renderMatrix
                 $rac = Get-Ints $renderAdapterCache
+                $ram = Get-Ints $renderAffineMatrix
                 $rrm = Get-Ints $renderRawMatrix
                 $rs = Get-Ints $renderSubmit
                 $rhdiv = Get-Ints $renderHardwareDivide
@@ -1354,6 +1357,7 @@ try {
                     Assert-Condition ($rc[0] -gt 0 -and $rc[1] -gt 0) 'Forensic realtime HW build did not report source combine modes.' $gdbStdout
                     Assert-Condition ($renderLight.Success -and $rl[2] -eq 0) 'Forensic realtime HW build reported a source-light fallback.' $gdbStdout
                     Assert-Condition ($renderAdapterCache.Success -and $rac[0] -gt $rac[1] -and $rac[1] -gt 0 -and $rac[2] -eq 0 -and $rac[3] -gt 0 -and $rac[4] -gt 0 -and $rac[5] -eq 0) 'Forensic realtime HW build did not reuse frame-local camera/DObj matrices without cache overflow.' $gdbStdout
+                    Assert-Condition ($renderAffineMatrix.Success -and $ram[0] -gt 0 -and $ram[1] -eq 0 -and $ram[2] -eq 0) 'Forensic affine DObj matrix path drifted from the former exact generic multiply.' $gdbStdout
                     Assert-Condition ($rrm[3] -gt 0 -and $rrm[4] -eq 0 -and $rrm[5] -le 16 -and $rrm[6] -eq 0 -and $rrm[7] -eq 0 -and $rrm[8] -gt 0 -and $rrm[9] -eq 0) 'Forensic corrected composed GX matrix PosTest failed homogeneous, W-sign, clip, matrix-word, or capacity checks.' $gdbStdout
                 } else {
                     Assert-Condition ($rlazy[1] -gt 0 -and (2 * $rlazy[1]) -lt $rlazy[0] -and $rlazy[2] -gt 0) 'Performance/coarse renderer did not defer a majority of CPU vertex transforms or reuse projected exceptions.' $gdbStdout
@@ -1367,6 +1371,7 @@ try {
                 if ($RendererProfileLevel -ge 2) {
                     $hardwareSummary += " texel1state=0x{0:x}/0x{1:x}" -f $rt1[7], $rt1[8]
                     $hardwareSummary += " adapterCache=$($rac[0])/$($rac[1])/$($rac[2])/$($rac[3])/$($rac[4])/$($rac[5])"
+                    $hardwareSummary += " affineMtx=$($ram[0])/$($ram[1])/$($ram[2])"
                 }
                 if ($RendererProfileLevel -ge 1) {
                     $hardwareSummary += " hdiv=$($rhdiv[0])/$($rhdiv[1])/$($rhdiv[2])/z$($rhdiv[3])/mis$($rhdiv[4])"

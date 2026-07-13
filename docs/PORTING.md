@@ -20261,3 +20261,32 @@ remains skipped for the requested fast iteration cadence.
 - P1Gate and Boundary pass. Fast live-input capture now content/detail-checks
   both presentations independently before applying its camera-motion allowance;
   normal realtime retains the stricter pairwise threshold.
+
+## 2026-07-12 - Indexed and reduced exact DObj world composition
+
+- Profile-1 coarse timing exposed material preparation at only 15.6K ticks but
+  source DObj/camera matrix preparation at 330.3K. Profile 2 measured camera
+  cache `73/1/0` and DObj cache `64/107/0`; the latter still linearly searched
+  as many as 128 exact entries on every parent-chain lookup.
+- Added a 256-byte half-full open-address index over the unchanged frame-local
+  128-entry DObj cache. Parent-chain multiplication now uses a guarded affine
+  product that removes provably zero fourth-column terms and falls back to the
+  generic 4x4 path for any non-affine input. BattleShip objdisplay composition
+  order and lbCommon fighter-parts construction remain unchanged.
+- Profile 2 compares every candidate product with the former generic result:
+  `107/0/0` samples/mismatches/max delta. The vertex oracle stays `2484/0/0`,
+  cache census stays `73/1/0` and `64/107/0`, and all 828 triangles,
+  `648/44/126/10` classes, batches, texture epochs, and upload bytes remain exact.
+- Against the immediate 32-frame O2 baseline, draw improves
+  `2,126,752/2,169,600 -> 2,057,376/2,098,880` and matrix preparation improves
+  `330,304/330,624 -> 254,528/254,848`. The final 128-frame result is draw
+  `2,067,712/2,088,064`, matrix `256,256/256,704`, stage
+  `914,464/933,760`, Mario `359,424/359,552`, and Fox `396,288/396,992`.
+- Canonical/profile-1 ITCM remains 20,088. Canonical BSS is 1,879,760 (+288),
+  and DevFast measures about 13.5 FPS. ROM parity is 11,682,816 bytes at
+  SHA-256 `B4A89E279445E3EB44C0931E5C718B3A81D5FD4B578F71702C3D0ADDB9A6E258`.
+- GBI/static checks, rebuilt profile-2 forensic, DevFast, and Boundary modes
+  `161/162` pass. P1Gate and Boundary mode `163` repeatably stop at the
+  9,000-tick natural-motion assertion after the preceding source floor/edge
+  activation, with no affine or vertex oracle mismatch. Full Regression remains
+  intentionally skipped for Tyler's fast P1 iteration cadence.

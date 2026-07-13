@@ -916,3 +916,170 @@ NEXT MEASURED BOTTLENECK:
   Move to the 126-triangle stage no-Z class/direct owner kernel. Packed RGB15
   pair stores regressed changed-frame conversion to 228.8K and were removed.
 ```
+
+## 2026-07-12 - rejected adjacent stage no-Z kernel
+
+```text
+IDEA ID: M2B-ADJACENT-NO-Z
+HYPOTHESIS:
+  Reuse the immutable TRI topology table for adjacent stage no-Z commands,
+  prepare each unique transformed/projected/color/ST slot once, and emit a
+  narrow projected loop with the exact synthetic painter-depth sequence.
+TARGETED EXCLUSIVE COUNTER:
+  Whole draw and stage owner median/P95 in one profile-1 ROM, with retained
+  mode 3 as raw-only control and temporary mode 4 adding the no-Z candidate.
+MEASURED UPPER BOUND:
+  Dream Land has 93 no-Z run starts but only 33 adjacent remainder triangles.
+  Remainder-only mode saved 13,504/9,664 draw ticks and 13,824/10,176 stage
+  ticks. Extending the narrow vertex emitter to all 126 no-Z triangles still
+  saved only 12,384/8,832 draw and 12,896/9,216 stage ticks.
+LIVE-TREE RECONCILIATION:
+  Started from collision checkpoint 12bf51e34 and retained direct raw commit
+  63384b41d. User roadmaps/reviews/logs remained untouched; decomp was read
+  only and sm64-nds no-Z painter behavior was checked before the experiment.
+FILES/FUNCTIONS CHANGED:
+  Temporary changes only in nds_renderer.c/header and benchmark runtime-mode
+  ranges. They added exact stage-only eligibility, projected slot preparation,
+  narrow textured/untextured emitters, profile-2 semantic construction, and a
+  9.5 KiB shared topology table. All production changes were removed.
+BUILD TARGET/FLAGS:
+  smash64ds-battle-playable-coarse-hwtri; profile 1; common/scene O2 Thumb,
+  renderer O2 ARM; benchmark mode 0.
+BASELINE / EXPERIMENT ROM SHA-256:
+  Remainder-only same ROM B959AED668B11EDC4D46607279DE1EF2B34D9FB766BABEB3B07D60F0DD85903A.
+  All-no-Z same ROM 3E2654E38F15652F3FC6AA66E36A9DF5D7C2EB7130ED7C98CFA923D55A4E53CF.
+FRAME/LOGIC-TICK WINDOW:
+  Three synchronized 16-frame remainder A/B/A windows and one synchronized
+  16-frame all-no-Z B/A pair after at least 205 warm frames; conservation 0/0.
+A0 MEDIAN/P95:
+  Remainder raw-only control draw 2,128,640/2,185,152; stage
+  924,416/980,544 on repeat.
+B0 MEDIAN/P95:
+  Remainder candidate draw 2,115,136/2,175,488; stage 910,528/970,432.
+A1 / ALL-NO-Z CONTROL MEDIAN/P95:
+  All-no-Z ROM raw-only control draw 2,104,256/2,160,704; stage
+  913,152/969,344. Candidate draw 2,091,872/2,151,872; stage
+  900,256/960,128.
+ACTIVE/WAIT SPLIT:
+  All-no-Z candidate active 2,128,480/2,189,248; wait 472,544/541,568;
+  all frame/logic samples consecutive and conservation error 0/0.
+OWNER SPLIT:
+  Candidate stage 900,256/960,128; Mario 375,648/375,680; Fox
+  418,208/418,496. The no-Z change was stage-only.
+OP/PROGRAM BYTES/FALLBACKS:
+  Remainder coverage was 6 runs / 33 triangles. The exact first-triangle
+  extension covered the other 93 triangles but retained generic run setup.
+  Raw K-RAW remained 45/540; bounded fallback changed 47/7/0 -> 30/7/0.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  First-triangle specialization grew ITCM 20,088 -> 21,052 (+964); temporary
+  topology BSS grew by 1,536 bytes and remained below the 16 KiB proof cap.
+SEMANTIC TRACE RESULT:
+  Profile 2 was intentionally skipped: the 16-frame gain missed both the
+  50K/25% keep gate and the roadmap's >=100K or >=5% forensic-entry cadence.
+ORACLE/COUNTER/GX RESULT:
+  Profile 1 retained exact 828 triangles, 648/44/126/10 classes,
+  121/707/121 batches, 98/730 texture prepare/reuse, and upload phases.
+CAPTURE RESULT:
+  None; the candidate failed the performance gate before visual acceptance.
+VERIFIER COMMANDS AND RESULTS:
+  Incremental compile, ITCM placement, 8-frame smoke, and synchronized
+  profile-1 A/B/A passed. Candidate production source was then fully reverted.
+DECISION: REVERT
+  Adjacent no-Z topology is too fragmented, and generic first-run setup still
+  dominates. Do not retry this shape or add more emitter variants.
+NEXT MEASURED BOTTLENECK:
+  A future stage cut must fuse the 93 short run starts through direct owner
+  records/live binding, or attack the independently measured texture wall.
+```
+
+## 2026-07-12 - exact DObj index and affine world composition
+
+```text
+IDEA ID: M3-DOBJ-AFFINE-INDEX
+HYPOTHESIS:
+  The newly exposed 330K matrix-preparation wall is dominated by repeated
+  linear searches through the 128-entry frame cache and generic 4x4 products
+  for source DObj world matrices that are exactly affine.
+TARGETED EXCLUSIVE COUNTER:
+  Profile-1 matrix preparation plus whole draw and stage/Mario/Fox exclusive
+  owner time. Profile 2 compares every affine result with the former generic
+  product in the same execution.
+MEASURED UPPER BOUND:
+  Forensic census is camera cache 73/1/0 and DObj cache 64/107/0. All 107 live
+  hierarchy products are affine. Material preparation is only 15.6K ticks,
+  while initial matrix preparation was 330.3K.
+LIVE-TREE RECONCILIATION:
+  Started at collision checkpoint 12bf51e34 with K-RAW/direct table 63384b41d.
+  User roadmaps/reviews/logs stayed untouched and BattleShip objdisplay/lbcommon
+  matrix order and fighter-parts behavior were read from decomp without edits.
+FILES/FUNCTIONS CHANGED:
+  reloc_backend_renderer_dl.c indexes the unchanged 128-entry cache through a
+  256-byte half-full open-address table and uses the exact affine helper only
+  for parent-chain world composition. nds_renderer.c retains the generic
+  fallback and a profile-2-only generic-result oracle. Diagnostics/verifier
+  plumbing publishes and requires affine samples/mismatches/max delta.
+BUILD TARGET/FLAGS:
+  smash64ds-battle-playable-coarse-hwtri; profile 1; common/scene O2 Thumb,
+  renderer O2 ARM; benchmark mode 0 and retained fast-run mode 3.
+BASELINE / EXPERIMENT ROM SHA-256:
+  Baseline 5A1C78FA2F6B96C95610E979232F598B696AFE5C189E38AF684E85C4E20C9149.
+  Final 128-frame profile-1 candidate
+  CBB1710EB0C360671D0A23247CB0EC429FD679723EDDA1A1E10704CE54C38D24.
+FRAME/LOGIC-TICK WINDOW:
+  Baseline and staged candidates use 32 synchronized frames after 206-209 warm
+  frames. Final candidate uses 128 frames 209..336 / logic 216..343; timer
+  resets and conservation error are 0/0.
+A0 MEDIAN/P95:
+  Baseline draw 2,126,752/2,169,600; matrix 330,304/330,624; stage
+  934,464/976,704; Mario 376,320/376,448; Fox 419,200/419,648.
+B0 MEDIAN/P95:
+  Index-only draw 2,098,240/2,138,560 and matrix 298,976/299,648. Combined
+  draw 2,057,376/2,098,880 and matrix 254,528/254,848, saving
+  69,376/70,720 whole-draw and 75,776/75,776 matrix ticks.
+A1 OR FINAL 128-FRAME MEDIAN/P95:
+  Draw 2,067,712/2,088,064; matrix 256,256/256,704; stage
+  914,464/933,760; Mario 359,424/359,552; Fox 396,288/396,992.
+ACTIVE/WAIT SPLIT:
+  Loop 2,767,392/2,804,800; active 2,104,416/2,125,120; wait
+  231,808/548,928; draw/present/loop residual ratios 67/74, 7/8, 4/5 basis
+  points with 0/0 conservation error.
+OWNER SPLIT:
+  The 32-frame combined candidate saves stage 29,024/30,272, Mario
+  17,472/17,472, and Fox 23,808/23,936 ticks. The final 128-frame values are
+  listed above; selected event and fast-run ownership remain exact.
+OP/PROGRAM BYTES/FALLBACKS:
+  No prepared program or GX stream was added. The 256-slot u8 index is at most
+  half full for 128 exact DObj entries. K-RAW remains 45/540 with stage/Mario/
+  Fox 60/246/234 and 47/7/0 bounded fallbacks.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  Profile-1 ITCM remains 20,088 and DTCM BSS 152. Main BSS is 1,880,304,
+  +288 bytes for the index, three oracle words, and alignment. No scene arena
+  or stack allocation was added.
+SEMANTIC TRACE RESULT:
+  Profile 2 exercised 107 affine products and compared every 16-cell result
+  with the former generic multiply: 107/0/0 samples/mismatches/max delta.
+  Owner state/cache/resolver accounting and the 828-event semantic stream ran
+  in isolation; no second GX stream was submitted.
+ORACLE/COUNTER/GX RESULT:
+  Profile-2 vertex oracle 2,484/0/0; exact 828 triangles, 648/44/126/10
+  classes, 121/707/121 batches, 98/730 texture prepare/reuse, 36,864 upload
+  bytes, cache 73/1/0 and 64/107/0, and zero reject/overflow.
+CAPTURE RESULT:
+  DevFast synchronized capture
+  2026-07-12_canonical_fast_233629-6422977-p4736.png passes full-screen,
+  stage/fighter region, horizontal-detail, and paired-frame motion gates.
+VERIFIER COMMANDS AND RESULTS:
+  GBI/docs/architecture/registry/dry-run/diff checks, rebuilt forensic profile
+  2, rebuilt DevFast, and Boundary modes 161/162 pass. P1Gate and Boundary mode
+  163 repeatably fail the existing 9,000-tick natural-motion gate after the
+  preceding source collision-callback activation; renderer exactness remains
+  green. Full Regression is intentionally skipped by user request.
+DECISION: KEEP
+  The combined exact slice clears the 50K whole-draw gate, improves P95, and
+  adds only 288 bytes of bounded state.
+NEXT MEASURED BOTTLENECK:
+  Matrix preparation still costs 256K. The 8-frame profile-2 churn census shows
+  stage DObj signatures constant (0 changes / 1 distinct) while Mario/Fox
+  change every frame; measure a live-signature persistent stage-world cache
+  before a larger owner compiler. Wallpaper is independently about 383K.
+```

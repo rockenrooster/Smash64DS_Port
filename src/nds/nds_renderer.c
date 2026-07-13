@@ -2144,6 +2144,92 @@ void ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
     *out = temp;
 }
 
+void ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
+                                  const NDSRendererMatrix20p12 *rhs,
+                                  NDSRendererMatrix20p12 *out)
+{
+    NDSRendererMatrix20p12 temp;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    NDSRendererMatrix20p12 oracle;
+    u32 mismatch = FALSE;
+#endif
+    u32 row;
+    u32 col;
+
+    if ((lhs == NULL) || (rhs == NULL) || (out == NULL))
+    {
+        return;
+    }
+    if ((lhs->m[0][3] != 0) || (lhs->m[1][3] != 0) ||
+        (lhs->m[2][3] != 0) ||
+        (lhs->m[3][3] != (1 << NDS_RENDERER_DS_MTX_FRAC_BITS)) ||
+        (rhs->m[0][3] != 0) || (rhs->m[1][3] != 0) ||
+        (rhs->m[2][3] != 0) ||
+        (rhs->m[3][3] != (1 << NDS_RENDERER_DS_MTX_FRAC_BITS)))
+    {
+        ndsRendererMtxMul20p12(lhs, rhs, out);
+        return;
+    }
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            s64 sum = (s64)lhs->m[row][0] * rhs->m[0][col] +
+                (s64)lhs->m[row][1] * rhs->m[1][col] +
+                (s64)lhs->m[row][2] * rhs->m[2][col];
+
+            temp.m[row][col] = ndsRendererClampS64ToS32(
+                ndsRendererRoundShiftS64(
+                    sum, NDS_RENDERER_DS_MTX_FRAC_BITS));
+        }
+        temp.m[row][3] = 0;
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        s64 sum = (s64)lhs->m[3][0] * rhs->m[0][col] +
+            (s64)lhs->m[3][1] * rhs->m[1][col] +
+            (s64)lhs->m[3][2] * rhs->m[2][col] +
+            (s64)lhs->m[3][3] * rhs->m[3][col];
+
+        temp.m[3][col] = ndsRendererClampS64ToS32(
+            ndsRendererRoundShiftS64(sum,
+                                     NDS_RENDERER_DS_MTX_FRAC_BITS));
+    }
+    temp.m[3][3] = 1 << NDS_RENDERER_DS_MTX_FRAC_BITS;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    ndsRendererMtxMul20p12(lhs, rhs, &oracle);
+    gNdsRendererProfileAffineMatrixSamples++;
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            s64 delta = (s64)temp.m[row][col] - oracle.m[row][col];
+            u32 magnitude;
+
+            if (delta < 0)
+            {
+                delta = -delta;
+            }
+            magnitude = (delta > (s64)UINT_MAX) ? UINT_MAX : (u32)delta;
+            if (magnitude != 0u)
+            {
+                mismatch = TRUE;
+                if (magnitude > gNdsRendererProfileAffineMatrixMaxDelta)
+                {
+                    gNdsRendererProfileAffineMatrixMaxDelta = magnitude;
+                }
+            }
+        }
+    }
+    if (mismatch != FALSE)
+    {
+        gNdsRendererProfileAffineMatrixMismatches++;
+    }
+#endif
+    *out = temp;
+}
+
 static void ndsRendererMtxIdentity20p12(NDSRendererMatrix20p12 *out)
 {
     u32 i;

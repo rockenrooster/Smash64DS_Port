@@ -1355,6 +1355,14 @@ Opening movie / Opening Portraits:
   ranges so blank-screen failures can be sorted into matrix/clip issues versus
   display/attribute issues. Projected draws divide the current composed clip
   vertex for X/Y/Z together and use DS Z.
+- `RENDER_ADAPTER_CACHE`: frame-local adapter cache hits/misses/overflows for
+  camera matrices followed by DObj world matrices. Dream Land's stable live
+  census is `73/1/0` and `64/107/0`; the DObj lookup uses a bounded half-full
+  256-slot index without changing the 128 exact matrix entries.
+- `RENDER_AFFINE_MATRIX`: profile-2 affine DObj world-product samples,
+  mismatching products, and maximum cell delta against the former generic 4x4
+  multiply. Forensic mode requires positive samples and `0/0` mismatch/delta;
+  profiles 0/1 compile out the comparison.
 - `RENDER_RAW_MATRIX`: hybrid-raw readiness and corrected-matrix marker. Fields
   are raw-current candidates, range fallbacks, cross-matrix fallbacks, device
   `PosTest` samples/mismatches/max normalized error/W-sign mismatches/clip-class

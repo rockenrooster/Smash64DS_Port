@@ -10,12 +10,12 @@
   live-input paths work. The attack TUs/dispatch are present; the next natural
   trace must distinguish a missing live `button_tap` edge from clear relocated
   `FTAttributes::is_have_attack*` flags, which older proofs force temporarily.
-- Manual walk-off/fall-through behavior is a confirmed runtime seam. In
-  `battle_playable`, `mpCommonCheckFighterOnFloor()` still bypasses full
-  `mpProcessUpdateMain` collision outside legacy proof modes, the bounded
-  fallback can preserve Dream Land floor line `0` indefinitely, and
-  `mpCommonCheckFighterOnEdge()` returns true unconditionally. Graduate the
-  source collision update/edge-adjust path naturally; do not patch coordinates.
+- The live source floor/edge callbacks are now active, but their manual behavior
+  is still awaiting Tyler's fresh playtest. The broader scripted natural-motion
+  leg now repeatably reaches 9,000 ticks with `NAT_MOTION=0,0,0x1ff,1` and no
+  attack/moveset transition; P1Gate and Boundary mode `163` fail there while
+  bounded modes `161/162` and all renderer oracles pass. Root-cause this source
+  collision/runtime interaction; do not restore unconditional edge success.
 - The rare `3 uploads / 40960 bytes` frame is two normal animated-water uploads
   plus a source-valid 4 KiB Whispy texture miss. That cold miss still reaches
   synchronous `glTexImage2D` during active display and can explain the reported
@@ -1158,18 +1158,16 @@
   no-Z equivalence beyond the proven Dream Land ordering remains debt.
   Final-resolution wallpaper composition removes its 320x240 staging/scale and
   BG2 copy. Exact word-packed rows, immutable TRI replay, derived vertex reuse,
-  canonical O2, ARM/ITCM paths, arena-first dynamic validation, and the bounded
-  CI4/source-index caches now reach `11.7fps`, still about 5.1x short of the
-  60 FPS P1 condition. Exact pre-clamped DS `div64` removes the shipping
+  canonical O2, ARM/ITCM paths, arena-first validation, K-RAW/direct topology,
+  and exact DObj matrix indexing/affine composition now reach `13.5fps`, still
+  about 4.4x short of the 60 FPS P1 condition. Exact pre-clamped DS `div64` removes the shipping
   software 64-bit divide helper; profile 1 sees `650` actual calls and profile 2
-  compares `1,404` results with zero mismatch. Profile-1 median/p95 is draw
-  `2,554,368/2,602,240`, vertex `459,264/460,096`, scan
-  `652,416/653,184`, and setup `740,896/789,888` ticks. Shipping profile 0 now
-  omits five generic proof counters and reuses alpha/poly-format only for exact
-  vertex-independent epochs; repeated draw is `2,190,112/2,190,976`, about 1%
-  below the same-cycle fresh baseline. Generic command/state execution, direct
-  RGBA5551 water uploads, and source RGBA4 interface output remain; the next cut
-  must fuse owner-level state/VTX/TRI runs without restoring one-command packets.
+  compares `1,404` results with zero mismatch. The final 128-frame profile-1
+  draw is `2,067,712/2,088,064`; matrix prep is `256,256/256,704`, texture
+  conversion `189,376/206,144`, and wallpaper about `382,656/382,912`. The
+  canonical smoke samples draw near `2.015M`. Stage DObj semantic signatures
+  were constant over the forensic window while fighter signatures changed;
+  measure exact live-signature stage-world persistence before broader owner fusion.
   An exact indexed-water trial reduced upload bytes `36,864 -> 19,456` but
   regressed draw to about `2.88M` and GX RAM `715/2167 -> 714/2164`; it is gone.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
