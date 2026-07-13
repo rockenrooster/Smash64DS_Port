@@ -12,6 +12,7 @@ param(
     [int]$ScreenshotSecondDelaySeconds = 1,
     [int]$ScreenshotSecondDelayMilliseconds = 100,
     [double]$MaxScreenshotChangedFraction = 0.30,
+    [double]$MaxScreenshotMeanChannelDelta = 32.0,
     [double]$MinScreenshotGreenFraction = 0.03,
     [double]$MinScreenshotDetailFraction = 0.25,
     [switch]$FastIteration,
@@ -164,7 +165,7 @@ function Invoke-VisibleCaptureAssert {
         MinDominantGreenFraction = $MinScreenshotGreenFraction
         MinNonWhiteNonGreenFraction = $MinDetailFraction
         CompareChannelThreshold = 25
-        MaxCompareMeanChannelDelta = 32
+        MaxCompareMeanChannelDelta = $MaxScreenshotMeanChannelDelta
         RegisterCompareCamera = $true
         MaxCompareChangedFraction = $MaxScreenshotChangedFraction
         MinDifferentFraction = 0.01
@@ -172,6 +173,19 @@ function Invoke-VisibleCaptureAssert {
         NamedRegion = $visibleRegions
     }
     & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') @visibleArgs
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+    # Validate both sampled presentations independently. This keeps a missing
+    # stage/foreground flash as a hard failure even when live camera motion
+    # requires a wider pairwise-delta allowance in the short iteration path.
+    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+        -Image $nextOutput `
+        -MinDominantGreenFraction $MinScreenshotGreenFraction `
+        -MinNonWhiteNonGreenFraction $MinDetailFraction `
+        -MinDifferentFraction 0.01 `
+        -WindowScaledCapture `
+        -NamedRegion $visibleRegions
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
@@ -183,6 +197,14 @@ function Invoke-VisibleCaptureAssert {
         }
         & (Join-Path $PSScriptRoot 'assert-melonds-horizontal-detail.ps1') `
             -Image $output `
+            -ChannelThreshold 20 `
+            -WindowScaledCapture `
+            -Region $detailRegions
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
+        & (Join-Path $PSScriptRoot 'assert-melonds-horizontal-detail.ps1') `
+            -Image $nextOutput `
             -ChannelThreshold 20 `
             -WindowScaledCapture `
             -Region $detailRegions

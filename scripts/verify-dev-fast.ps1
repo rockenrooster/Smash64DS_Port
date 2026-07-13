@@ -63,6 +63,11 @@ $realtimeArgs = @(
     '-GdbPort', "$selectedGdbPort",
     '-RunnerSlot', "$RunnerSlot",
     '-DelaySeconds', "$DelaySeconds",
+    # Both captured presentations are independently content/detail-gated. The
+    # short live-input sample may still move/zoom the camera by a full source
+    # tick, so its pairwise delta allowance is wider than the normal path.
+    '-MaxScreenshotChangedFraction', '0.50',
+    '-MaxScreenshotMeanChannelDelta', '45',
     '-FastIteration'
 )
 if ($NoBuild) {

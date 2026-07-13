@@ -225,6 +225,15 @@ try {
             ($record.Name -eq 'battle_playable_realtime') -and
             (Test-ScriptParameter -ScriptPath $scriptPath -Name 'FastIteration')) {
             $arguments += '-FastIteration'
+            # Match DevFast's calibrated pairwise allowance for the same short
+            # live-input sample. Both frames receive independent content and
+            # texture-detail gates; full-length realtime retains 30% / 32.
+            if (Test-ScriptParameter -ScriptPath $scriptPath -Name 'MaxScreenshotChangedFraction') {
+                $arguments += @('-MaxScreenshotChangedFraction', '0.50')
+            }
+            if (Test-ScriptParameter -ScriptPath $scriptPath -Name 'MaxScreenshotMeanChannelDelta') {
+                $arguments += @('-MaxScreenshotMeanChannelDelta', '45')
+            }
         }
         Invoke-VerifyScript -Script $scriptPath -Arguments $arguments -Label $record.Name -RetryTransport
     }
