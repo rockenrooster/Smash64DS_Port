@@ -2,6 +2,26 @@
 
 ## Local Tooling Issues
 
+- Manual canonical play now confirms live DS movement/special input, but P1 is
+  not yet broadly playable: A-button normals do not start, jump/double-jump
+  animation is broken, fireball has no visible projectile, Super Jump Punch
+  loses correct physics/camera/grounding, and intermittent freezes remain
+  unlocalized. Scripted mode-163 status coverage is not evidence that those
+  live-input paths work. The attack TUs/dispatch are present; the next natural
+  trace must distinguish a missing live `button_tap` edge from clear relocated
+  `FTAttributes::is_have_attack*` flags, which older proofs force temporarily.
+- Manual walk-off/fall-through behavior is a confirmed runtime seam. In
+  `battle_playable`, `mpCommonCheckFighterOnFloor()` still bypasses full
+  `mpProcessUpdateMain` collision outside legacy proof modes, the bounded
+  fallback can preserve Dream Land floor line `0` indefinitely, and
+  `mpCommonCheckFighterOnEdge()` returns true unconditionally. Graduate the
+  source collision update/edge-adjust path naturally; do not patch coordinates.
+- The rare `3 uploads / 40960 bytes` frame is two normal animated-water uploads
+  plus a source-valid 4 KiB Whispy texture miss. That cold miss still reaches
+  synchronous `glTexImage2D` during active display and can explain the reported
+  one-frame missing-stage flash. The bounded fix is a third VBlank record and a
+  second 4 KiB staging slot, followed by a 256-frame exercised zero-fallback
+  proof; ordinary `2 / 36864` frames remain clean.
 - `P1Gate` is an additive shadow checkpoint, not a P1-completion claim. Its
   lifecycle leg uses one minute on the original expiry/Results path; a dated
   canonical five-minute soak is still required. Boundary, Regression, and Full
@@ -11,6 +31,11 @@
   variation floors from `50%/35%` to `40%/30%`. The default realtime gate stays
   strict, both flat-run caps remain `16px/60px`, and GDB still hard-proves both
   source-selected fighter display contracts before capture.
+- [coverage-reduced] Short live-input captures allow `50%` meaningful pairwise
+  motion and mean channel delta `45` because one source tick can move/zoom the
+  camera by two pixels. Both captured presentations are now independently
+  stage/fighter/detail-gated, so a missing-foreground flash remains a failure;
+  normal realtime retains `30%/32`.
 - [coverage-reduced] Realtime capture no longer requires Mario/Fox to remain in
   historical fixed color crops during live combat. The preceding GDB pass still
   requires both selected/submitted display contracts, in-bounds geometry, and

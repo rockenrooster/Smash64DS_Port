@@ -952,6 +952,45 @@ static u32 sNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 static u32 sNdsRendererFastFallbackCount[3];
 
+/* Direct immutable TRI-run records are topology only.  Live vertex, matrix,
+ * material, texture, and light state remains in the traversal object and is
+ * rebound by the existing exact path.  The cache is reset with reloc/source
+ * caches at scene boundaries, so it never survives pointer ownership changes. */
+#define NDS_RENDERER_DIRECT_RAW_PLAN_COUNT 128u
+#define NDS_RENDERER_DIRECT_RAW_ENTRY_COUNT 384u
+
+typedef struct NDSRendererDirectRawEntry
+{
+    u32 required_mask;
+    u8 indices[6];
+    u8 triangle_count;
+    u8 reserved;
+} NDSRendererDirectRawEntry;
+
+typedef struct NDSRendererDirectRawPlan
+{
+    const Gfx *source;
+    u16 entry_offset;
+    u16 command_count;
+    u16 triangle_count;
+    u16 reserved;
+    u32 first_w0;
+    u32 first_w1;
+    u32 last_w0;
+    u32 last_w1;
+} NDSRendererDirectRawPlan;
+
+static NDSRendererDirectRawPlan
+    sNdsRendererDirectRawPlans[NDS_RENDERER_DIRECT_RAW_PLAN_COUNT];
+static NDSRendererDirectRawEntry
+    sNdsRendererDirectRawEntries[NDS_RENDERER_DIRECT_RAW_ENTRY_COUNT];
+static u32 sNdsRendererDirectRawEntryCount;
+
+_Static_assert(
+    (sizeof(sNdsRendererDirectRawPlans) +
+     sizeof(sNdsRendererDirectRawEntries)) <= (8u * 1024u),
+    "direct raw topology cache must remain within 8 KiB");
+
 static u32 sNdsRendererHardwareSubmitted;
 static u32 sNdsRendererHardwareNoOracle;
 static u32 sNdsRendererHardwareTriangleBatchOpen;
@@ -9823,6 +9862,141 @@ static inline s32 ndsRendererFastDecodeTriangle(
     return TRUE;
 }
 
+static u32 ndsRendererDirectRawPlanHash(const Gfx *source)
+{
+    uintptr_t value = (uintptr_t)source;
+
+    return (u32)(((value >> 3) ^ (value >> 11)) &
+                 (NDS_RENDERER_DIRECT_RAW_PLAN_COUNT - 1u));
+}
+
+static NDSRendererDirectRawPlan *ndsRendererDirectRawFindPlan(
+    const Gfx *source, u32 max_commands)
+{
+    NDSRendererDirectRawPlan *empty = NULL;
+    u32 slot = ndsRendererDirectRawPlanHash(source);
+    u32 probe;
+    u32 command_count = 0u;
+    u32 triangle_count = 0u;
+    u32 entry_offset;
+    u32 i;
+
+    if ((source == NULL) || (max_commands == 0u))
+    {
+        return NULL;
+    }
+    for (probe = 0u; probe < NDS_RENDERER_DIRECT_RAW_PLAN_COUNT; probe++)
+    {
+        NDSRendererDirectRawPlan *plan =
+            &sNdsRendererDirectRawPlans[
+                (slot + probe) & (NDS_RENDERER_DIRECT_RAW_PLAN_COUNT - 1u)];
+
+        if (plan->source == source)
+        {
+            const Gfx *last;
+
+            if ((plan->command_count == 0u) ||
+                (plan->command_count > max_commands))
+            {
+                return NULL;
+            }
+            last = source + plan->command_count - 1u;
+            if ((source->words.w0 != plan->first_w0) ||
+                (source->words.w1 != plan->first_w1) ||
+                (last->words.w0 != plan->last_w0) ||
+                (last->words.w1 != plan->last_w1))
+            {
+                return NULL;
+            }
+            return plan;
+        }
+        if (plan->source == NULL)
+        {
+            empty = plan;
+            break;
+        }
+    }
+    if (empty == NULL)
+    {
+        return NULL;
+    }
+
+    while (command_count < max_commands)
+    {
+        u32 op = source[command_count].words.w0 >> 24;
+
+        if ((op != NDS_RENDERER_OP_TRI1) &&
+            (op != NDS_RENDERER_OP_TRI2))
+        {
+            break;
+        }
+        triangle_count += (op == NDS_RENDERER_OP_TRI1) ? 1u : 2u;
+        command_count++;
+    }
+    if ((command_count == 0u) ||
+        (command_count > 0xffffu) ||
+        (triangle_count > 0xffffu) ||
+        ((sNdsRendererDirectRawEntryCount + command_count) >
+         NDS_RENDERER_DIRECT_RAW_ENTRY_COUNT))
+    {
+        return NULL;
+    }
+
+    entry_offset = sNdsRendererDirectRawEntryCount;
+    for (i = 0u; i < command_count; i++)
+    {
+        const Gfx *command = source + i;
+        NDSRendererDirectRawEntry *entry =
+            &sNdsRendererDirectRawEntries[entry_offset + i];
+        u32 w0 = command->words.w0;
+        u32 w1 = command->words.w1;
+        u32 op = w0 >> 24;
+        u32 packed[2];
+        u32 indices[6];
+        u32 required_mask = 0u;
+        u32 command_triangles =
+            (op == NDS_RENDERER_OP_TRI1) ? 1u : 2u;
+        u32 index;
+
+        packed[0] = (op == NDS_RENDERER_OP_TRI1) ?
+            ndsGBIDecodeF3DEX2Tri1(w0) :
+            ndsGBIDecodeF3DEX2Tri2First(w0);
+        packed[1] = (command_triangles == 2u) ?
+            ndsGBIDecodeF3DEX2Tri2Second(w1) : 0u;
+        if ((ndsRendererFastDecodeTriangle(
+                 packed[0], &indices[0], &required_mask) == FALSE) ||
+            ((command_triangles == 2u) &&
+             (ndsRendererFastDecodeTriangle(
+                  packed[1], &indices[3], &required_mask) == FALSE)))
+        {
+            return NULL;
+        }
+        entry->required_mask = required_mask;
+        entry->triangle_count = (u8)command_triangles;
+        entry->reserved = 0u;
+        for (index = 0u; index < (command_triangles * 3u); index++)
+        {
+            entry->indices[index] = (u8)indices[index];
+        }
+        for (; index < 6u; index++)
+        {
+            entry->indices[index] = 0u;
+        }
+    }
+
+    sNdsRendererDirectRawEntryCount += command_count;
+    empty->entry_offset = (u16)entry_offset;
+    empty->command_count = (u16)command_count;
+    empty->triangle_count = (u16)triangle_count;
+    empty->reserved = 0u;
+    empty->first_w0 = source->words.w0;
+    empty->first_w1 = source->words.w1;
+    empty->last_w0 = source[command_count - 1u].words.w0;
+    empty->last_w1 = source[command_count - 1u].words.w1;
+    empty->source = source;
+    return empty;
+}
+
 static void NDS_RENDERER_FAST_RUN_CODE ndsRendererFastPrepareRawSlots(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
@@ -10094,6 +10268,166 @@ static inline void ndsRendererFastAccountRawTriangles(
     sNdsRendererHardwareSubmitted = TRUE;
 }
 
+static inline void ndsRendererFastEmitDirectRawEntry(
+    const NDSRendererTraversalState *state,
+    const NDSRendererDirectRawEntry *entry,
+    u32 textured)
+{
+    u32 vertex_count = (u32)entry->triangle_count * 3u;
+    u32 vertex_index;
+
+    if (textured != 0u)
+    {
+        for (vertex_index = 0u; vertex_index < vertex_count; vertex_index++)
+        {
+            ndsRendererFastEmitRawTexturedVertex(
+                state, entry->indices[vertex_index]);
+        }
+    }
+    else
+    {
+        for (vertex_index = 0u; vertex_index < vertex_count; vertex_index++)
+        {
+            ndsRendererFastEmitRawUntexturedVertex(
+                state, entry->indices[vertex_index]);
+        }
+    }
+}
+
+static s32 NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteDirectRawRemainder(
+    const Gfx **dl_io,
+    u32 *list_index_io,
+    u32 immutable_command_count,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    NDSRendererCommandCallback callback)
+{
+    const Gfx *source;
+    NDSRendererDirectRawPlan *plan;
+    u32 first_index;
+    u32 remaining_commands;
+    u32 available_mask;
+    u32 required_mask = 0u;
+    u32 entry_number;
+    u32 textured;
+
+    if ((callback != NULL) ||
+        (ndsRendererFastRawStateEligible(state) == FALSE))
+    {
+        return FALSE;
+    }
+    first_index = *list_index_io + 1u;
+    if ((first_index >= immutable_command_count) ||
+        (first_index >= config->max_list_commands))
+    {
+        return FALSE;
+    }
+    remaining_commands = immutable_command_count - first_index;
+    if (remaining_commands > (config->max_list_commands - first_index))
+    {
+        remaining_commands = config->max_list_commands - first_index;
+    }
+    source = *dl_io + 1;
+    plan = ndsRendererDirectRawFindPlan(source, remaining_commands);
+    if ((plan == NULL) ||
+        ((stats->command_count + plan->command_count) > config->max_commands))
+    {
+        return FALSE;
+    }
+
+    available_mask = state->input_vertex_valid_mask &
+        state->raw_vertex_fit_mask & state->current_transform_vertex_mask;
+    for (entry_number = 0u;
+         entry_number < plan->command_count;
+         entry_number++)
+    {
+        const NDSRendererDirectRawEntry *entry =
+            &sNdsRendererDirectRawEntries[
+                plan->entry_offset + entry_number];
+
+        if ((available_mask & entry->required_mask) != entry->required_mask)
+        {
+            return FALSE;
+        }
+        required_mask |= entry->required_mask;
+    }
+
+    textured = state->texture_prepare_enabled;
+    ndsRendererFastPrepareRawSlots(stats, state, required_mask, textured);
+    for (entry_number = 0u;
+         entry_number < plan->command_count;
+         entry_number++)
+    {
+        const Gfx *command = source + entry_number;
+        const NDSRendererDirectRawEntry *entry =
+            &sNdsRendererDirectRawEntries[
+                plan->entry_offset + entry_number];
+
+        stats->command_count++;
+        NDS_RENDERER_RECORD_PROOF_ONLY(
+            stats->triangle_command_count++;
+            stats->render_command_count++;
+        );
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        state->semantic_command_index = first_index + entry_number;
+        state->semantic_tri2_half = 0u;
+        sNdsRendererProfileTrustedCommandCount++;
+        sNdsRendererProfileTriangleRunReuseCount++;
+#endif
+        ndsRendererFastEmitDirectRawEntry(state, entry, textured);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        {
+            u32 w0 = command->words.w0;
+            u32 w1 = command->words.w1;
+            u32 packed[2];
+            u32 triangle_index;
+
+            packed[0] = (entry->triangle_count == 1u) ?
+                ndsGBIDecodeF3DEX2Tri1(w0) :
+                ndsGBIDecodeF3DEX2Tri2First(w0);
+            packed[1] = (entry->triangle_count == 2u) ?
+                ndsGBIDecodeF3DEX2Tri2Second(w1) : 0u;
+            for (triangle_index = 0u;
+                 triangle_index < entry->triangle_count;
+                 triangle_index++)
+            {
+                u32 indices[3];
+                u32 base = triangle_index * 3u;
+
+                indices[0] = entry->indices[base];
+                indices[1] = entry->indices[base + 1u];
+                indices[2] = entry->indices[base + 2u];
+                if (sNdsRendererHardwareNoOracle == 0u)
+                {
+                    ndsRendererRecordTransformedTriangle(
+                        stats, state, packed[triangle_index]);
+                }
+                state->semantic_tri2_half = triangle_index;
+                ndsRendererFastCommitRawSemanticTriangle(
+                    stats, state, packed[triangle_index], indices);
+            }
+        }
+#else
+        (void)command;
+#endif
+    }
+
+    stats->triangle_count += plan->triangle_count;
+    ndsRendererFastAccountRawTriangles(stats, plan->triangle_count);
+    sNdsRendererFastRunCount++;
+    sNdsRendererFastTriangleCount += plan->triangle_count;
+    if ((u32)sNdsRendererRuntimeOwner <
+        (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
+    {
+        sNdsRendererFastOwnerTriangleCount[
+            (u32)sNdsRendererRuntimeOwner] += plan->triangle_count;
+    }
+    *dl_io = source + plan->command_count - 1u;
+    *list_index_io = first_index + plan->command_count - 1u;
+    return TRUE;
+}
+
 static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
     const Gfx **dl_io,
     u32 *list_index_io,
@@ -10112,6 +10446,13 @@ static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
     u32 fallback_vertex = 0u;
     u32 fallback_command = 0u;
     u32 fast_command_count = 0u;
+
+    if (ndsRendererExecuteDirectRawRemainder(
+            dl_io, list_index_io, immutable_command_count,
+            config, stats, state, callback) != FALSE)
+    {
+        return;
+    }
 
     while (((list_index + 1u) < immutable_command_count) &&
            ((list_index + 1u) < config->max_list_commands))
@@ -10770,6 +11111,11 @@ void ndsRendererScanDisplayList(const Gfx *dl,
 
 void ndsRendererHardwareResetSourceCaches(void)
 {
+#if NDS_RENDERER_HW_TRIANGLES
+    memset(sNdsRendererDirectRawPlans, 0,
+           sizeof(sNdsRendererDirectRawPlans));
+    sNdsRendererDirectRawEntryCount = 0u;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     memset(sNdsRendererHardwareCi4IndexCache, 0,
            sizeof(sNdsRendererHardwareCi4IndexCache));

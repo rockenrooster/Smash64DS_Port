@@ -20243,3 +20243,21 @@ remains skipped for the requested fast iteration cadence.
 - Canonical main BSS is 1,871,280, ITCM 20,088, and ROM parity is 11,675,648
   bytes at SHA-256
   `0C564D4822011FCAB9DC5CA4F52C5F8EBB7339354BFD3FBA93A035C5F90F2663`.
+
+## 2026-07-12 - Added exact immutable direct TRI-run records
+
+- Added an 8 KiB scene-lifetime topology table for immutable reloc-backed TRI
+  remainders. It predecodes 330 command masks/indices and prepares each live
+  slot union once while preserving the persistent cache and exact generic path.
+- The retained 128-frame O2 result is draw `2,118,688/2,138,816`, saving
+  `60,384/60,992` median/P95 ticks versus the prior live K-RAW baseline.
+  Stage/Mario/Fox medians are `934,400/372,416/413,856`.
+- An isolated profile-2 A/B matched 828 semantic events, all owner/cache hashes,
+  oracle `2484/0/0`, classes `648/44/126/10`, batching `121/707/121`, texture
+  `98/730`, and upload bytes exactly. A slower first-command expansion and a
+  228.8K changed-frame packed-pixel experiment were removed.
+- Canonical BSS/ITCM is `1,879,472/20,088`; ROM parity is 11,678,720 bytes at
+  SHA-256 `0294C7F30C67FB907A04A9FA5CEE16597365DF294F440449255D68386AF75D33`.
+- P1Gate and Boundary pass. Fast live-input capture now content/detail-checks
+  both presentations independently before applying its camera-motion allowance;
+  normal realtime retains the stricter pairwise threshold.

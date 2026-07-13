@@ -842,3 +842,77 @@ NEXT MEASURED BOTTLENECK:
   Split small/large conversion and emit two aligned RGB15 pixels per 32-bit
   store; retain only if a same-ROM 128-frame control clears the keep gate.
 ```
+
+## 2026-07-12 - M2A immutable direct TRI-run records
+
+```text
+IDEA ID: M2A-DIRECT-TRI-RUNS
+HYPOTHESIS:
+  Predecode immutable adjacent TRI topology once per scene, prepare the union
+  of required live slots once, and execute the whole eligible K-RAW remainder
+  without repeated source decode/state checks.
+TARGETED EXCLUSIVE COUNTER:
+  Whole draw and exclusive stage/Mario/Fox owner walls.
+MEASURED UPPER BOUND:
+  The retained K-RAW path still paid per-command decode and slot preparation
+  for 330 adjacent commands / 540 raw-current triangles.
+LIVE-TREE RECONCILIATION:
+  Started from texture/input commits 2c4f62a70/0b12a8737; preserved all user
+  roadmaps, reviews, prompts, logs, and goal files. Decomp stayed read-only.
+FILES/FUNCTIONS CHANGED:
+  nds_renderer.c adds a scene-lifetime immutable topology cache, exact compact
+  indices/masks, one direct remainder executor, and cold generic fallback.
+BUILD TARGET/FLAGS:
+  Profile-1 coarse O2 ARM renderer, O2 Thumb scene/common, benchmark mode 0;
+  profile-2 forensic used the same runtime selector for isolated A/B.
+BASELINE ROM SHA-256:
+  Retained pre-change canonical 0C564D4822011FCAB9DC5CA4F52C5F8EBB7339354BFD3FBA93A035C5F90F2663.
+EXPERIMENT ROM SHA-256:
+  Same-ROM profile-1 A/B CFFC7159CCC87A6EF0EF1282E4931ACB0F74CF106B585DF5384798C4BF693866.
+FRAME/LOGIC-TICK WINDOW:
+  Generic frames 209..336 / logic 216..343; direct frames 214..341 / logic
+  221..348; 128 synchronized warm frames each.
+A0 MEDIAN/P95:
+  Same-ROM generic draw 2,376,000/2,396,160; stage 957,056/976,128; Mario
+  494,656/494,720; Fox 526,304/527,040.
+B0 MEDIAN/P95:
+  Direct K-RAW draw 2,118,688/2,138,816; stage 934,400/953,408; Mario
+  372,416/372,544; Fox 413,856/414,656.
+A1 OR DISABLED-CONTROL MEDIAN/P95:
+  The pre-change retained K-RAW draw was 2,179,072/2,199,808. The direct table
+  saves 60,384/60,992 ticks against that live baseline and clears the 50K gate.
+ACTIVE/WAIT SPLIT:
+  Direct loop 2,800,832/2,834,304; active 2,155,488/2,175,936; conservation
+  error 0/0. VBlank wait absorbs the active gain at the current frame cadence.
+OWNER SPLIT:
+  Stage/Mario/Fox are 934,400/372,416/413,856 median. The existing 45/540
+  owner split remains 60/246/234 with bounded fallbacks 47/7/0.
+OP/PROGRAM BYTES/FALLBACKS:
+  One 2,908-byte main-RAM direct executor consumes 330 compact topology
+  records. Fixed topology storage is exactly 8 KiB; no arena or allocation.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  Profile-1 ITCM stays 20,088; main BSS is 1,880,016 (+8,192); DTCM BSS 152.
+  A broader first-command variant reached 632 fast triangles but displaced hot
+  code and made the absolute fast draw about 46K slower, so it was removed.
+SEMANTIC TRACE RESULT:
+  Eight-frame isolated profile-2 generic/direct traces matched all 828 events,
+  provenance, owner state/cache/resolver/signatures, and uploads exactly.
+ORACLE/COUNTER/GX RESULT:
+  Oracle 2,484/0/0; exact 828, 648/44/126/10, 121/707/121, 98/730, and 36,864
+  upload bytes. Direct path remains 45 runs / 540 triangles.
+CAPTURE RESULT:
+  P1Gate capture 2026-07-12_canonical_fast_220350-6133192-p35444.png passes
+  independent stage/fighter/detail checks on both sampled presentations; the
+  direct path submits no duplicate GX stream.
+VERIFIER COMMANDS AND RESULTS:
+  128-frame profile-1 A/B, 8-frame profile-2 semantic comparison, DevFast,
+  P1Gate, Boundary, GBI, docs, architecture, and registry checks passed. Short
+  live-input capture allows 50% / mean 45 pairwise motion while independently
+  gating both frames; normal realtime stays 30% / 32.
+DECISION: KEEP
+  The exact direct remainder table clears the requested 50K live-baseline gate
+  while reducing both median and P95.
+NEXT MEASURED BOTTLENECK:
+  Move to the 126-triangle stage no-Z class/direct owner kernel. Packed RGB15
+  pair stores regressed changed-frame conversion to 228.8K and were removed.
+```

@@ -104,27 +104,27 @@ with C. Boundary modes retain exact nonzero clamp counts. Divider evidence adds
 no BSS; profile 2 also omits the production 2,096-byte shade table and runs the
 independent exact shade path. Profiles 0/1 retain light/table and exact 128-slot
 texture-key caches; compact fingerprints still require full 236-byte equality.
-Profile-0 BSS is `1,871,280`; prepared context persists by `98/730` epoch.
+Profile-0 BSS is `1,879,472`; prepared context persists by `98/730` epoch.
 The 2,916-byte main-RAM K-RAW kernel accelerates `45/540` runs/triangles per
 frame with `47/7/0` bounded fallbacks. Same-ROM 128-frame profile-1 draw moves
 `2,067,296/2,407,872 -> 1,858,624/2,227,648`; stage/Mario/Fox save
 `17,568/98,496/93,248` median ticks. The 32-frame profile-2 dual trace, owner
-state/cache, oracle, geometry, and upload sequence compare exactly. The final texture-safety run is `2,179,072/2,199,808` draw ticks; canonical is about
-`12.2fps`, and shipped SHA-256 is
-`0C564D4822011FCAB9DC5CA4F52C5F8EBB7339354BFD3FBA93A035C5F90F2663`.
+state/cache, oracle, geometry, and upload sequence compare exactly. An 8 KiB direct table consumes 330 TRI commands without redecode; draw is
+`2,118,688/2,138,816`, 60,384/60,992 ticks below baseline. Canonical is about `12fps`, and shipped SHA-256 is
+`0294C7F30C67FB907A04A9FA5CEE16597365DF294F440449255D68386AF75D33`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
 separate, original timing stays live, and a post-step corrects packed RGBA.
-The BattleShip ground interrupt chain is live under imported FTMANAGER; Right/A/X drive Mario Run/Attack11/JumpF. Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the foreground fence. Stage RSP/ST carry restores five flower groups (`192 -> 202`).
+The BattleShip ground interrupt chain is live under imported FTMANAGER; scripted Right/A/X reach Run/Attack11/JumpF, but manual canonical play currently confirms only movement/special input. A normals, jump physics/animation, and full stage-edge collision remain live-path blockers. Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the foreground fence. Stage RSP/ST carry restores five flower groups (`192 -> 202`).
 Masked-clamp, six CI4 stars, and DXT tail stride remain fixed. Debt: Whispy face,
 other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 ## Recommended Next Work
-1. The canonical ROM is still only about `12.2fps`, not P1-complete. VBlank
-   staging fixes the remap/flicker window; next reduce the remaining `190528`
-   conversion ticks with aligned two-pixel RGB15 emission, then remeasure.
-2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
-   Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
-3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary
+1. Graduate the full source MP floor/edge update into `battle_playable`; current bounded fallbacks explain walking on air and falling through. Then repair the
+   live A `button_tap` from relocated attack-availability flags and correct the failing source-backed gate. Prove both fixes with natural input.
+2. Keep the exact direct TRI table; next specialize the 126-triangle stage
+   no-Z class. Canonical remains about `12.3fps`; packed RGB15 regressed.
+3. Defer the rare 4 KiB Whispy miss through the existing VBlank texture path,
+   then add RGBA4 HUD output. Use DevFast/P1Gate and Boundary once at handoff.
    once before handoff. Historical one-bit harnesses are localization tools.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
