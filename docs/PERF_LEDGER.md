@@ -1184,3 +1184,85 @@ NEXT MEASURED BOTTLENECK:
   Compile larger direct stage-owner records that bind live matrices/materials/
   textures and fuse short run setup. Do not retry standalone no-Z specialization.
 ```
+
+## 2026-07-13 - direct compact animated-water rows
+
+```text
+IDEA ID: M5-CI4-COMPACT-DIRECT
+HYPOTHESIS:
+  A warm 128x128 animated CI4 refresh can write its exact unique rows directly
+  into the existing VBlank buffer, removing full-scratch repeated-row expansion
+  and immediate unique-row restaging without caching a phase frame.
+TARGETED EXCLUSIVE COUNTER:
+  Profile-1 texture conversion, queue/staging, stage owner, active work, and
+  whole draw median/P95. Profile 2 remains the independent pixel/semantic oracle.
+MEASURED UPPER BOUND:
+  Control conversion plus staging is 207,712/224,448 ticks; the retained VBlank
+  commit is already outside active draw and is intentionally unchanged.
+LIVE-TREE RECONCILIATION:
+  Started at 47e5c593c after exact persistent stage worlds. User roadmaps,
+  reviews, prompts, logs, and decomp trees were preserved; decomp stayed read-only.
+FILES/FUNCTIONS CHANGED:
+  nds_renderer.c makes the CI4 converter return whether its shared exact
+  representative loop targeted compact staging, fills the existing row map in
+  first-representative order, and skips the old scratch-to-staging pass only on
+  exact-size warm large refreshes. Cold/small/forensic fallbacks are unchanged.
+  The GBI fixture pins direct compact output plus the full-scratch fallback.
+BUILD TARGET/FLAGS:
+  smash64ds-battle-playable-coarse-hwtri profile 1 and canonical profile 0;
+  common/scene O2 Thumb, renderer O2 ARM, benchmark mode 0, fast-run mode 3.
+BASELINE / EXPERIMENT ROM SHA-256:
+  Compile-time compact-off control D1B2C521D2CF71670DDE29437D304272162D7E5B12A89270A59A26C1F35200D4.
+  Retained profile-1 DEBA0442CC27F67BE74E950CAC248098CA74AB813A35A11749717411287251CA;
+  final profile-0 D8A03238B29DB483BB6083F176C2A104C2FFD834BED51B6542AD79103B0DE582.
+FRAME/LOGIC-TICK WINDOW:
+  Both profile-1 arms use the identical 128 warm frames 220..347 / logic
+  227..354, neutral input, the same emulator/config, zero timer resets, and
+  zero conservation error. Their upload-sequence SHA-256 is identical.
+A0 MEDIAN/P95:
+  Compact off: draw 2,001,600/2,033,664; active 2,038,368/2,070,784; stage
+  850,016/864,000; convert 190,400/204,288; stage/queue 17,312/20,160.
+B0 MEDIAN/P95:
+  Compact on: draw 1,970,304/2,002,880; active 2,006,944/2,039,872; stage
+  817,184/831,488; convert 168,064/184,576; stage/queue 4,416/4,480.
+WHOLE-DRAW / OWNER DELTA:
+  Draw saves 31,296/30,784, active saves 31,424/30,912, stage saves
+  32,832/32,512, and conversion plus staging saves 35,232/35,392 ticks.
+ACTIVE/WAIT SPLIT:
+  Control wait 80,576/414,400; retained wait 110,464/441,280. Both remain
+  VBlank-paced at loop 2,240,672-2,240,704 median with 0/0 conservation error.
+OWNER SPLIT:
+  Only Dream Land owns the changing 32 KiB pond refresh; Mario/Fox remain
+  359,872/380,096 and 395,872/402,688 in the retained 128-frame window.
+OP/PROGRAM BYTES/FALLBACKS:
+  No prepared program, expanded phase frame, new cache, or GX stream was added.
+  Queue/upload remains 2/36,864 with zero outside-window/fallback work and VBlank
+  lines 192..207. K-RAW remains 45/540 and 47/7/0 bounded fallbacks.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  Canonical/coarse ITCM grows 288 bytes, 20,088 -> 20,376; forensic remains
+  18,584. Main/DTCM BSS, stack, texture staging, and scene arena are unchanged.
+SEMANTIC TRACE RESULT:
+  Profile 2 remains an isolated full-scratch decoder and retains all 828 events
+  with zero overflow. Its 18,432 direct CI4 pixels compare with the old exact
+  blend formula with zero mismatch; no second GX stream is submitted.
+ORACLE/COUNTER/GX RESULT:
+  Profile-2 vertex oracle 2,484/0/0; exact 828 triangles, 648/44/126/10 classes,
+  121/707/121 batches, 98/730 prepare/reuse, and 36,864 upload bytes. Profile 1
+  reports 2 queued/committed refreshes, zero fallback, and the identical upload
+  sequence in both A/B arms.
+CAPTURE RESULT:
+  P1Gate capture 2026-07-13_canonical_fast_021218-4461378-p24268.png passes
+  full-screen, stage/fighter region, horizontal-detail, and paired-motion gates.
+VERIFIER COMMANDS AND RESULTS:
+  Matched 128-frame off/on profile 1, 32-frame profile 0, 8-frame forensic,
+  docs/architecture/registry/GBI/dry-run/diff checks, rebuilt DevFast, P1Gate,
+  and Boundary 161/162/163 pass. Full Regression is skipped by user request.
+DECISION: KEEP AS MEASURED TEXTURE SUBCUT
+  It removes 17.0% of the targeted conversion/staging wall with no BSS, exact
+  upload identity, and improved P95. This is not the prepared-owner activation;
+  that experiment still must clear its independent 50K whole-draw/25% gate.
+NEXT MEASURED BOTTLENECK:
+  Compile direct coarse records for the largest immutable stage owner, binding
+  live matrices/materials/textures through the exact submission path. Do not
+  retry standalone no-Z or cache fully expanded water phases.
+```

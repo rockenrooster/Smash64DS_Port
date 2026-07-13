@@ -60,15 +60,14 @@ restoring layer-3 foreground fences over layer-1 floor/path.
 
 `gcAddMObjAll` normalizes mixed-width O2R lanes by source provenance. Dream Land
 observes at least four water/Whispy swaps and zero native/failure cases. Exact
-S/T maps, packed CI4 reads, and one 1 KiB RGB15/coverage pair table preserve live water. For
-large tiles, profiles 0/1 index the first identical TEXEL0/TEXEL1/phase class
-through a half-full 1 KiB table, expand forward from each first representative,
-then copy repeated rows bottom-to-top.
-Profile 1 proves `545086/2485954` representative/reused pixels; smaller tiles
-and profile 2 retain the direct loop. Profiles 0/1 store the 4 KiB output and
-at most 16 KiB of distinct large rows, then expand the exact map on VBlank lines
-`192..207`; 128 frames report zero outside/fallback and oracle drift. Profile 2
-keeps its independent synchronous oracle route without duplicate staging BSS.
+S/T maps, packed CI4 reads, and one 1 KiB RGB15/coverage table preserve live water.
+Large tiles index the first identical TEXEL0/TEXEL1/phase class and expand X.
+Cold uploads still materialize all rows in scratch. Warm large refreshes write
+each unique row directly into the existing 16 KiB VBlank staging buffer; the
+exact row map expands repeats only on lines `192..207`. Matched 128-frame draw
+improves `2,001,600/2,033,664 -> 1,970,304/2,002,880`, with identical upload hash
+and zero fallback. Profile 2 retains its independent synchronous oracle route
+and reports `18,432/0` exact pair-pixel checks.
 Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
 plus `G_MWO_POINT_ST` restores five flower groups (`192 -> 202` triangles);
 Tyler accepts flowers/fences. Forensic lane/oracle proof is `37200/37200`, `2484/0/0`.
@@ -137,7 +136,7 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-Canonical is `13.4fps`, draw `2,248,640/2,276,544`; next measure fused direct stage-owner records/live binding. HUD, Whispy face, and Mario facing/light remain debt.
+Canonical is `14.0fps`, draw `2,199,744/2,212,864`; next measure fused direct stage-owner records/live binding. HUD, Whispy face, and Mario facing/light remain debt.
 ## Verification
 
 DevFast, forensic, P1Gate, and Boundary `161/162/163` pass; Full Regression stays intentionally skipped for fast iteration.

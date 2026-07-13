@@ -79,13 +79,12 @@ separated Mario/Fox bodies are broadly accepted on DS. Source map-object kinds
 at X `0/-1397`; `gcAddMObjAll` restores O2R lanes by source provenance.
 Canonical observes at least four water/Whispy swaps, no native/failure cases,
 and first flags `0x0200 -> 0x006b`. Exact TEXEL0/TEXEL1 CI4 conversion uses S/T
-maps and one RGB15 plus 16-bit coverage pair table. Profiles 0/1 decode the two
-immutable 32x32 source-index planes once. Large tiles use a half-full 1 KiB
-table to find each first exact source-address/phase class, expand forward, and
-copy repeat rows bottom-to-top; live origin/mask/palette/fraction stays dynamic.
-Profile 1 proves map/index reuse; profile 2 checks `18,432/0` exact pair pixels.
-Profiles 0/1 store the current 4 KiB output plus at most 16 KiB of distinct large
-rows, expand the exact row map on VBlank lines `192..207`; profile 2 keeps the independent synchronous oracle path and no duplicate staging BSS.
+maps, immutable source-index planes, and one RGB15/coverage pair table. Large
+tiles index first source-address/phase representatives through a 1 KiB table.
+Cold uploads retain full scratch materialization; warm large refreshes emit
+unique rows directly into the existing 16 KiB buffer and expand its exact map
+on VBlank lines `192..207`. Profile 1 proves reuse and zero fallback; profile 2
+checks `18,432/0` exact pair pixels through its independent synchronous path.
 Profile 0 omits five generic proof ledgers and retains all `828` triangles: `648`
 raw-current, `44` cross-matrix, `126` no-Z, and `10` range; reject stays zero.
 Null-callback profiles carry only segment-`E` preview resolver state, reset exact
@@ -96,7 +95,7 @@ X/Y, and clip Z. Texture preparation survives exact-key mutations; profiles 0/1 
 Prepare/reuse is `98/730`;
 batching stays `121/707/121`, and logical divide demand stays `1,242`.
 Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os. Six ARM/O3
-paths occupy `20,088/20,088/18,584` ITCM bytes. Exact signed
+paths occupy `20,376/20,376/18,584` ITCM bytes. Exact signed
 pre-clamping and libnds `div64` remove the shipping software 64-bit helper;
 profile 1 records `650` cached calls, while profile 2 compares `1,404` results
 with C. Boundary modes retain exact nonzero clamp counts. Divider evidence adds
@@ -112,9 +111,9 @@ state/cache, oracle, geometry, and upload sequence compare exactly. An 8 KiB
 direct table consumes 330 TRI commands without redecode. A 256-byte exact DObj
 index plus affine world product moves O2 draw `2,126,752/2,169,600 ->
 2,057,376/2,098,880`. Exact persistent stage worlds reuse `57` stable source nodes; profile 2 shadows `42` selected outputs with zero mismatch/reject/overflow.
-Matched cache-off/on draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`;
-stage saves `63,424/82,176` and matrix prep `67,328/41,088` ticks. Canonical
-draw is `2,248,640/2,276,544` at about `13.4fps`.
+Matched cache-off/on stage-world draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`.
+Direct compact CI4 rows move `2,001,600/2,033,664 -> 1,970,304/2,002,880` with identical upload hash and zero fallback.
+Canonical draw is `2,199,744/2,212,864` at about `14.0fps`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays separate and original timing remains live.
 The BattleShip ground interrupt chain and source floor/edge callbacks are live
 under imported FTMANAGER; manual acceptance is pending. A normals and jump/

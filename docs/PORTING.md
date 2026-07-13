@@ -20335,3 +20335,35 @@ remains skipped for the requested fast iteration cadence.
   DevFast, P1Gate, and Boundary `161/162/163` pass. Full Regression remains
   intentionally skipped for Tyler's requested fast iteration. Next renderer
   work is fused direct stage-owner records/live binding, not standalone no-Z.
+
+## 2026-07-13 - Direct compact animated-water rows
+
+- Large warm TEXEL0/TEXEL1 CI4 refreshes now run the unchanged exact
+  representative loop directly against the existing 16 KiB unique-row staging
+  buffer. Cold allocation uploads retain full 32 KiB scratch materialization;
+  smaller refreshes and profile 2 retain their existing paths. No expanded
+  water phase frame, new BSS, texture key, or live palette/origin cache was added.
+- The existing row map is populated as each first T representative is emitted,
+  so warm refreshes no longer expand repeated rows into scratch and immediately
+  copy the unique rows back into staging. VBlank still expands the same map on
+  lines `192..207` and uploads the exact 4 KiB + 32 KiB logical payloads.
+- A compile-time off/on profile-1 control used identical warm frames `220..347`
+  and the same upload-sequence hash. Draw improves
+  `2,001,600/2,033,664 -> 1,970,304/2,002,880`; stage improves
+  `850,016/864,000 -> 817,184/831,488`; conversion plus staging improves
+  `207,712/224,448 -> 172,480/189,056` ticks. Active work saves
+  `31,424/30,912`; P95 does not regress and conservation remains exact.
+- The retained hot function grows by 288 ITCM bytes to `20,376/32,768`; BSS,
+  queue capacity, `2/36,864` uploads, `828` triangles, `648/44/126/10` classes,
+  `121/707/121` batches, and `98/730` prepare/reuse remain unchanged. Profile 2
+  stays independent and passes `18,432/0` CI4 pair pixels plus `2,484/0/0`
+  vertex oracle checks.
+- Final profile-0 ROM is 11,683,840 bytes at
+  `D8A03238B29DB483BB6083F176C2A104C2FFD834BED51B6542AD79103B0DE582`;
+  its 32-frame draw is `2,199,744/2,212,864` at 14.0 FPS. The direct stage-owner
+  compiler remains the next architectural experiment and keeps its separate
+  50K/25% activation gate.
+- Capture `2026-07-13_canonical_fast_021218-4461378-p24268.png` passes paired
+  visibility/detail/motion and exact ROM parity. Static checks, forensic,
+  DevFast, P1Gate, and Boundary `161/162/163` pass; Full Regression remains
+  intentionally skipped for Tyler's requested fast iteration.

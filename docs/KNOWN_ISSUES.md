@@ -1157,13 +1157,14 @@
   Final-resolution wallpaper composition removes its 320x240 staging/scale and
   BG2 copy. Exact word-packed rows, immutable TRI replay, derived vertex reuse,
   canonical O2, ARM/ITCM paths, arena-first validation, K-RAW/direct topology,
-  exact DObj indexing/affine composition, and persistent static stage worlds now reach `13.4fps`, still
-  about 4.4x short of the 60 FPS P1 condition. Exact pre-clamped DS `div64` removes the shipping
+  exact DObj indexing/affine composition, persistent static stage worlds, and
+  direct compact CI4 refresh rows now reach `14.0fps`, still about 4.3x short
+  of the 60 FPS P1 condition. Exact pre-clamped DS `div64` removes the shipping
   software 64-bit divide helper; profile 1 sees `650` actual calls and profile 2
   compares `1,404` realtime results with zero mismatch. Matched 128-frame
   cache-off/on draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`; stage is
   `937,920/970,688 -> 874,496/888,512`, and canonical profile-0 draw is
-  `2,248,640/2,276,544`. Profile 2 observes `57` exact persistent node hits and
+  `2,199,744/2,212,864`. Profile 2 observes `57` exact persistent node hits and
   shadows all `42` selected outputs with zero mismatch/reject/overflow. The next
   measured cut is fused direct stage-owner records/live binding.
   An exact indexed-water trial reduced upload bytes `36,864 -> 19,456` but

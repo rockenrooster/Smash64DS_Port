@@ -7195,7 +7195,7 @@ static s32 ndsRendererHardwareStageUniqueTextureRows(
 }
 #endif
 
-static void NDS_RENDERER_HOT_CODE
+static s32 NDS_RENDERER_HOT_CODE
 ndsRendererHardwareConvertTexel01Ci4Direct(
     const NDSRendererConfig *config,
     const u8 *texels0,
@@ -7212,6 +7212,8 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
     u32 width,
     u32 height,
     u32 upload_width,
+    u8 *compact_row_map,
+    u32 *compact_staged_bytes,
     u32 *green_texels,
     u32 *nonwhite_texels)
 {
@@ -7236,6 +7238,9 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     (void)green_texels;
     (void)nonwhite_texels;
+#else
+    (void)compact_row_map;
+    (void)compact_staged_bytes;
 #endif
     /* Animated tile origins can wrap or mirror TEXEL1. Resolve those exact
      * addressing rules once per S coordinate, then reuse them for every row. */
@@ -7272,8 +7277,8 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
         /* Large clamped/masked animated tiles revisit the same pair of source
          * coordinates and ordered-coverage phase many times. Index the first
          * exact representative of each separable S/T class; forward X expansion
-         * reads only earlier representatives, and repeated rows copy in reverse
-         * Y order after every unique row is complete. */
+         * reads only earlier representatives. Cold output copies repeated rows
+         * in reverse Y order, while warm staging records their exact row map. */
         if (texels >= 4096u)
         {
             u32 unique_s = 0u;
@@ -7292,15 +7297,46 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
             unique_texels = unique_s * unique_t;
             if ((unique_texels * 2u) <= texels)
             {
+                s32 compact_output =
+                    (compact_row_map != NULL) &&
+                    (compact_staged_bytes != NULL) &&
+                    (width == upload_width) &&
+                    (height <= NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT) &&
+                    (unique_t <=
+                     NDS_RENDERER_HW_TEXTURE_REFRESH_LARGE_ROWS) &&
+                    ((unique_t * upload_width * sizeof(u16)) <=
+                     sizeof(sNdsRendererHardwareTextureRefreshLarge));
+                u16 *destination = (compact_output != FALSE) ?
+                    sNdsRendererHardwareTextureRefreshLarge :
+                    sNdsRendererHardwareTextureScratch;
+                u32 unique_row = 0u;
+
+                /* Warm animated-water refreshes already upload a compact set
+                 * of unique rows during VBlank.  Produce that exact compact
+                 * representation here instead of expanding repeated rows into
+                 * the 32 KiB scratch arena and immediately copying the unique
+                 * rows back into the 16 KiB refresh staging buffer.  Cold
+                 * uploads use the same loop with the full scratch destination. */
                 for (y = 0u; y < height; y++)
                 {
+                    u32 representative_y =
+                        sNdsRendererHardwareTexel01Ci4RepresentativeT[y];
                     u32 source0_row;
                     u32 source1_row;
                     u32 dst_index;
 
-                    if (sNdsRendererHardwareTexel01Ci4RepresentativeT[y] != y)
+                    if (representative_y != y)
                     {
+                        if (compact_output != FALSE)
+                        {
+                            compact_row_map[y] =
+                                compact_row_map[representative_y];
+                        }
                         continue;
+                    }
+                    if (compact_output != FALSE)
+                    {
+                        compact_row_map[y] = (u8)unique_row;
                     }
                     source0_row = ((source0_origin_t +
                         sNdsRendererHardwareTexel01Ci4Source0T[y]) *
@@ -7308,7 +7344,8 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                     source1_row = ((source1->source_origin_t +
                         sNdsRendererHardwareTexel01Ci4Source1T[y]) *
                         source1->source_width) + source1->source_origin_s;
-                    dst_index = y * upload_width;
+                    dst_index = ((compact_output != FALSE) ?
+                        unique_row : y) * upload_width;
 
                     for (x = 0u; x < width; x++)
                     {
@@ -7319,40 +7356,48 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
 
                         if (representative_x != x)
                         {
-                            sNdsRendererHardwareTextureScratch[dst_index + x] =
-                                sNdsRendererHardwareTextureScratch[
-                                    dst_index + representative_x];
+                            destination[dst_index + x] =
+                                destination[dst_index + representative_x];
                             continue;
                         }
                         index0 = indices0[source0_row +
                             sNdsRendererHardwareTexel01Ci4Source0S[x]];
                         index1 = indices1[source1_row +
                             sNdsRendererHardwareTexel01Ci4Source1S[x]];
-                        sNdsRendererHardwareTextureScratch[dst_index + x] =
+                        destination[dst_index + x] =
                             ndsRendererHardwareResolveTexel01Ci4Lut(
                                 index0, index1, x, y);
                     }
+                    unique_row++;
                 }
-                for (y = height; y != 0u; )
+                if (compact_output != FALSE)
                 {
-                    u32 representative_y;
-
-                    y--;
-                    representative_y =
-                        sNdsRendererHardwareTexel01Ci4RepresentativeT[y];
-                    if (representative_y != y)
+                    *compact_staged_bytes =
+                        unique_row * upload_width * sizeof(u16);
+                }
+                else
+                {
+                    for (y = height; y != 0u; )
                     {
-                        memcpy(
-                            &sNdsRendererHardwareTextureScratch[y * upload_width],
-                            &sNdsRendererHardwareTextureScratch[
-                                representative_y * upload_width],
-                            width * sizeof(u16));
+                        u32 representative_y;
+
+                        y--;
+                        representative_y =
+                            sNdsRendererHardwareTexel01Ci4RepresentativeT[y];
+                        if (representative_y != y)
+                        {
+                            memcpy(&sNdsRendererHardwareTextureScratch[
+                                       y * upload_width],
+                                   &sNdsRendererHardwareTextureScratch[
+                                       representative_y * upload_width],
+                                   width * sizeof(u16));
+                        }
                     }
                 }
                 ndsRendererProfileRecordCi4RepresentativeReuse(
                     unique_texels, texels - unique_texels);
                 sNdsRendererHardwareTexel01Ci4RepresentativeRowsValid = TRUE;
-                return;
+                return compact_output;
             }
         }
 
@@ -7385,7 +7430,7 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                         index0, index1, x, y);
             }
         }
-        return;
+        return FALSE;
     }
 #endif
     for (y = 0u; y < height; y++)
@@ -7437,6 +7482,7 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
 #endif
         }
     }
+    return FALSE;
 }
 
 static s32 ndsRendererHardwareBindTexture(
@@ -7510,6 +7556,7 @@ static s32 ndsRendererHardwareBindTexture(
     s32 use_texel1_ci4_direct = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     s32 queue_texture_refresh = FALSE;
+    s32 compact_row_output = FALSE;
 #endif
     s32 texel1_origin_delta_s = 0;
     s32 texel1_origin_delta_t = 0;
@@ -8070,11 +8117,25 @@ static s32 ndsRendererHardwareBindTexture(
     }
     if (use_texel1_ci4_direct != FALSE)
     {
-        ndsRendererHardwareConvertTexel01Ci4Direct(
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        compact_row_output = ndsRendererHardwareConvertTexel01Ci4Direct(
             config, texels_src, source_texels, source_width, source_origin_s,
             source_origin_t, render_tile, materialize_s, materialize_t,
             &texel1_source, texel1_origin_delta_s, texel1_origin_delta_t,
-            width, height, upload_width, &green_texels, &nonwhite_texels);
+            width, height, upload_width,
+            ((upload_buffer == sNdsRendererHardwareTextureRefreshLarge) &&
+             (queue_texture_refresh != FALSE) &&
+             (width == upload_width) && (height == upload_height)) ?
+                staged_row_map : NULL,
+            &staged_bytes, &green_texels, &nonwhite_texels);
+#else
+        (void)ndsRendererHardwareConvertTexel01Ci4Direct(
+            config, texels_src, source_texels, source_width, source_origin_s,
+            source_origin_t, render_tile, materialize_s, materialize_t,
+            &texel1_source, texel1_origin_delta_s, texel1_origin_delta_t,
+            width, height, upload_width, NULL, NULL,
+            &green_texels, &nonwhite_texels);
+#endif
         ndsRendererProfileRecordTextureCi4Direct(width * height);
     }
     else
@@ -8160,11 +8221,12 @@ static s32 ndsRendererHardwareBindTexture(
     {
         staged_row_bytes = upload_width * sizeof(u16);
         staged_row_count = upload_height;
-        if (ndsRendererHardwareStageUniqueTextureRows(
+        if ((compact_row_output == FALSE) &&
+            (ndsRendererHardwareStageUniqueTextureRows(
                 sNdsRendererHardwareTextureScratch, upload_buffer,
                 sizeof(sNdsRendererHardwareTextureRefreshLarge),
                 staged_row_map, staged_row_bytes, staged_row_count,
-                &staged_bytes) == FALSE)
+                &staged_bytes) == FALSE))
         {
             upload_buffer = sNdsRendererHardwareTextureScratch;
             queue_texture_refresh = FALSE;
