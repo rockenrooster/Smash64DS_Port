@@ -3,6 +3,16 @@
 
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
 
+static sb32 ndsBattlePlayableRuntimeEnabled(void)
+{
+#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+    return TRUE;
+#else
+    return FALSE;
+#endif
+}
+
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 /* Imported BattleShip originals exported by src/import wrappers. */
 sb32 ndsBaseFTCommonCatchCheckInterruptCommon(GObj *fighter_gobj);
@@ -10570,6 +10580,24 @@ void ftPhysicsSetGroundVelTransferAir(GObj *fighter_gobj)
 
 void mpCommonProcFighterOnCliffEdge(GObj *fighter_gobj)
 {
+    if (ndsBattlePlayableRuntimeEnabled() != FALSE)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) &&
+            (mpCommonCheckFighterOnCliffEdge(fighter_gobj) == FALSE))
+        {
+            if ((fp->coll_data.mask_stat & MAP_FLAG_FLOOREDGE) != 0u)
+            {
+                ftCommonOttottoSetStatus(fighter_gobj);
+            }
+            else
+            {
+                ftCommonFallSetStatus(fighter_gobj);
+            }
+        }
+        return;
+    }
     if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffStatusFloorLoopActive != FALSE) &&
@@ -11414,6 +11442,12 @@ void mpCommonProcFighterCliffFloorCeil(GObj *fighter_gobj)
 
 void mpCommonSetFighterFallOnGroundBreak(GObj *fighter_gobj)
 {
+    if (ndsBattlePlayableRuntimeEnabled() != FALSE)
+    {
+        (void)mpCommonProcFighterOnFloor(
+            fighter_gobj, ftCommonFallSetStatus);
+        return;
+    }
     if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPCliffLiveLoopCommon2MapActive != FALSE))
     {
@@ -11494,6 +11528,14 @@ void mpCommonSetFighterWaitOrFall(GObj *fighter_gobj)
 
 void mpCommonSetFighterFallOnEdgeBreak(GObj *fighter_gobj)
 {
+    if (ndsBattlePlayableRuntimeEnabled() != FALSE)
+    {
+        if (mpCommonCheckFighterOnEdge(fighter_gobj) == FALSE)
+        {
+            ftCommonFallSetStatus(fighter_gobj);
+        }
+        return;
+    }
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunEscapeMapActive != FALSE))
     {

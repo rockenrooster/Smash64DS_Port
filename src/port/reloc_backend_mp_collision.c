@@ -4904,12 +4904,22 @@ void mpProcessRunFloorEdgeAdjust(MPCollData *coll_data)
     sb32 hit_l;
     sb32 hit_r;
     s32 live_slot = sNdsStageMPCrossFloorLoopLiveSlot;
+    sb32 proof_active =
+        ndsFighterMarioFoxStageMPAdjustFloorLoopProofEnabled();
+    sb32 battle_playable_active;
+
+#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
+    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+    battle_playable_active = TRUE;
+#else
+    battle_playable_active = FALSE;
+#endif
 
     if (ndsFighterMarioFoxStageMPSweepFloorLoopProofEnabled() != FALSE)
     {
         gNdsStageMPSweepFloorLoopFloorEdgeAdjustCallCount++;
     }
-    if (ndsFighterMarioFoxStageMPAdjustFloorLoopProofEnabled() == FALSE)
+    if ((proof_active == FALSE) && (battle_playable_active == FALSE))
     {
         if (ndsFighterMarioFoxStageMPSweepFloorLoopProofEnabled() != FALSE)
         {
@@ -4919,17 +4929,23 @@ void mpProcessRunFloorEdgeAdjust(MPCollData *coll_data)
     }
     if ((coll_data == NULL) || (coll_data->p_translate == NULL))
     {
-        gNdsStageMPAdjustFloorLoopUnsafeCount++;
+        if (proof_active != FALSE)
+        {
+            gNdsStageMPAdjustFloorLoopUnsafeCount++;
+        }
         return;
     }
-    gNdsStageMPAdjustFloorLoopRunCallCount++;
-    if (live_slot == 0)
+    if (proof_active != FALSE)
     {
-        gNdsStageMPAdjustFloorLoopP0RunCount++;
-    }
-    else if (live_slot == 1)
-    {
-        gNdsStageMPAdjustFloorLoopP1RunCount++;
+        gNdsStageMPAdjustFloorLoopRunCallCount++;
+        if (live_slot == 0)
+        {
+            gNdsStageMPAdjustFloorLoopP0RunCount++;
+        }
+        else if (live_slot == 1)
+        {
+            gNdsStageMPAdjustFloorLoopP1RunCount++;
+        }
     }
 
     hit_l = mpProcessCheckFloorEdgeCollisionL(coll_data);
@@ -4942,27 +4958,30 @@ void mpProcessRunFloorEdgeAdjust(MPCollData *coll_data)
     {
         mpProcessFloorEdgeRAdjust(coll_data);
     }
-    if ((hit_l == FALSE) && (hit_r == FALSE))
+    if (proof_active != FALSE)
     {
-        gNdsStageMPAdjustFloorLoopNoAdjustCount++;
-    }
-    if (live_slot == 0)
-    {
-        gNdsStageMPAdjustFloorLoopP0FinalLineID =
-            coll_data->floor_line_id;
-        gNdsStageMPAdjustFloorLoopP0FinalFloorOK =
-            (((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u) &&
-             (ndsMPLineIDIsFloor(coll_data->floor_line_id) != FALSE)) ?
-                1u : 0u;
-    }
-    else if (live_slot == 1)
-    {
-        gNdsStageMPAdjustFloorLoopP1FinalLineID =
-            coll_data->floor_line_id;
-        gNdsStageMPAdjustFloorLoopP1FinalFloorOK =
-            (((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u) &&
-             (ndsMPLineIDIsFloor(coll_data->floor_line_id) != FALSE)) ?
-                1u : 0u;
+        if ((hit_l == FALSE) && (hit_r == FALSE))
+        {
+            gNdsStageMPAdjustFloorLoopNoAdjustCount++;
+        }
+        if (live_slot == 0)
+        {
+            gNdsStageMPAdjustFloorLoopP0FinalLineID =
+                coll_data->floor_line_id;
+            gNdsStageMPAdjustFloorLoopP0FinalFloorOK =
+                (((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u) &&
+                 (ndsMPLineIDIsFloor(coll_data->floor_line_id) != FALSE)) ?
+                    1u : 0u;
+        }
+        else if (live_slot == 1)
+        {
+            gNdsStageMPAdjustFloorLoopP1FinalLineID =
+                coll_data->floor_line_id;
+            gNdsStageMPAdjustFloorLoopP1FinalFloorOK =
+                (((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u) &&
+                 (ndsMPLineIDIsFloor(coll_data->floor_line_id) != FALSE)) ?
+                    1u : 0u;
+        }
     }
 }
 
@@ -5163,6 +5182,213 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
     return result;
 }
 
+static sb32 ndsMPCommonCheckSetFighterCliffEdgeLive(
+    GObj *fighter_gobj, s32 floor_line_id)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    MPObjectColl *map_coll;
+    Vec3f *translate;
+    Vec3f edge_pos;
+    Vec3f wall_pos;
+    Vec3f angle;
+    u32 flags;
+    f32 floor_dist;
+
+    if ((fp == NULL) || (fp->coll_data.p_translate == NULL) ||
+        (mpCollisionCheckExistLineID(floor_line_id) == FALSE))
+    {
+        return FALSE;
+    }
+    map_coll = &fp->coll_data.map_coll;
+    translate = fp->coll_data.p_translate;
+    edge_pos.z = translate->z;
+    mpCollisionGetFloorEdgeL(floor_line_id, &edge_pos);
+    if (translate->x <= edge_pos.x)
+    {
+        if ((fp->lr == -1) && (fp->input.pl.stick_range.x > -60))
+        {
+            edge_pos.x += 40.0F;
+            if (mpCollisionGetFCCommonFloor(
+                    floor_line_id, &edge_pos, &floor_dist,
+                    &flags, &angle) == FALSE)
+            {
+                return FALSE;
+            }
+            edge_pos.y += floor_dist;
+            wall_pos.x = map_coll->width + edge_pos.x;
+            wall_pos.y = (map_coll->center + edge_pos.y) -
+                map_coll->bottom;
+            wall_pos.z = edge_pos.z;
+            if (mpCollisionCheckLWallLineCollisionSame(
+                    &edge_pos, &wall_pos, NULL, NULL, NULL, NULL) == FALSE)
+            {
+                fp->lr = -1;
+                goto set_ground;
+            }
+        }
+    }
+    else if ((fp->lr == +1) && (fp->input.pl.stick_range.x < 60))
+    {
+        mpCollisionGetFloorEdgeR(floor_line_id, &edge_pos);
+        edge_pos.x -= 40.0F;
+        if (mpCollisionGetFCCommonFloor(
+                floor_line_id, &edge_pos, &floor_dist,
+                &flags, &angle) == FALSE)
+        {
+            return FALSE;
+        }
+        edge_pos.y += floor_dist;
+        wall_pos.x = edge_pos.x - map_coll->width;
+        wall_pos.y = (map_coll->center + edge_pos.y) - map_coll->bottom;
+        wall_pos.z = edge_pos.z;
+        if (mpCollisionCheckRWallLineCollisionSame(
+                &edge_pos, &wall_pos, NULL, NULL, NULL, NULL) == FALSE)
+        {
+            fp->lr = +1;
+            goto set_ground;
+        }
+    }
+    return FALSE;
+
+set_ground:
+    *translate = edge_pos;
+    fp->coll_data.floor_line_id = floor_line_id;
+    fp->coll_data.floor_flags = flags;
+    fp->coll_data.floor_angle = angle;
+    fp->coll_data.floor_dist = 0.0F;
+    fp->coll_data.mask_stat |= MAP_FLAG_FLOOREDGE;
+    return TRUE;
+}
+
+static sb32 ndsMPCommonCheckSetFighterEdgeLive(
+    GObj *fighter_gobj, s32 floor_line_id)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    MPObjectColl *map_coll;
+    Vec3f *translate;
+    Vec3f edge_pos;
+    Vec3f wall_start;
+    Vec3f wall_end;
+    Vec3f angle;
+    u32 flags;
+    f32 floor_dist;
+
+    if ((fp == NULL) || (fp->coll_data.p_translate == NULL) ||
+        (mpCollisionCheckExistLineID(floor_line_id) == FALSE))
+    {
+        return FALSE;
+    }
+    map_coll = &fp->coll_data.map_coll;
+    translate = fp->coll_data.p_translate;
+    edge_pos.z = translate->z;
+    mpCollisionGetFloorEdgeL(floor_line_id, &edge_pos);
+    if (translate->x <= edge_pos.x)
+    {
+        if (mpCollisionGetFCCommonFloor(
+                floor_line_id, &edge_pos, &floor_dist,
+                &flags, &angle) == FALSE)
+        {
+            return FALSE;
+        }
+        wall_start.x = edge_pos.x + 1.0F;
+        wall_start.y = edge_pos.y + 1.0F;
+        wall_start.z = edge_pos.z;
+        wall_end.x = map_coll->width + edge_pos.x;
+        wall_end.y = (map_coll->center + edge_pos.y) - map_coll->bottom;
+        wall_end.z = edge_pos.z;
+        if (mpCollisionCheckLWallLineCollisionSame(
+                &wall_start, &wall_end, NULL, NULL, NULL, NULL) == FALSE)
+        {
+            goto set_ground;
+        }
+    }
+    else
+    {
+        mpCollisionGetFloorEdgeR(floor_line_id, &edge_pos);
+        if (mpCollisionGetFCCommonFloor(
+                floor_line_id, &edge_pos, &floor_dist,
+                &flags, &angle) == FALSE)
+        {
+            return FALSE;
+        }
+        wall_start.x = edge_pos.x - 1.0F;
+        wall_start.y = edge_pos.y + 1.0F;
+        wall_start.z = edge_pos.z;
+        wall_end.x = edge_pos.x - map_coll->width;
+        wall_end.y = (map_coll->center + edge_pos.y) - map_coll->bottom;
+        wall_end.z = edge_pos.z;
+        if (mpCollisionCheckRWallLineCollisionSame(
+                &wall_start, &wall_end, NULL, NULL, NULL, NULL) == FALSE)
+        {
+            goto set_ground;
+        }
+    }
+    return FALSE;
+
+set_ground:
+    *translate = edge_pos;
+    fp->coll_data.floor_line_id = floor_line_id;
+    fp->coll_data.floor_flags = flags;
+    fp->coll_data.floor_angle = angle;
+    fp->coll_data.floor_dist = 0.0F;
+    return TRUE;
+}
+
+static sb32 ndsMPCommonRunFighterFloorEdgeLive(
+    MPCollData *coll_data, GObj *fighter_gobj, u32 flags)
+{
+    s32 floor_line_id;
+    sb32 is_floor = FALSE;
+
+    if (coll_data == NULL)
+    {
+        return FALSE;
+    }
+    floor_line_id = coll_data->floor_line_id;
+    if (mpProcessCheckTestFloorCollisionNew(coll_data) != FALSE)
+    {
+        if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+        {
+            mpProcessRunFloorEdgeAdjust(coll_data);
+            is_floor = TRUE;
+        }
+    }
+    else if ((flags & MAP_PROC_TYPE_CLIFFEDGE) != 0u)
+    {
+        (void)ndsMPCommonCheckSetFighterCliffEdgeLive(
+            fighter_gobj, floor_line_id);
+        coll_data->is_coll_end = TRUE;
+    }
+    else if ((flags & MAP_PROC_TYPE_STOPEDGE) != 0u)
+    {
+        if (ndsMPCommonCheckSetFighterEdgeLive(
+                fighter_gobj, floor_line_id) != FALSE)
+        {
+            is_floor = TRUE;
+        }
+        else
+        {
+            coll_data->is_coll_end = TRUE;
+        }
+    }
+    else
+    {
+        coll_data->is_coll_end = TRUE;
+    }
+    if (mpProcessCheckTestFloorCollision(coll_data, floor_line_id) != FALSE)
+    {
+        mpProcessSetLandingFloor(coll_data);
+        if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+        {
+            mpProcessRunFloorEdgeAdjust(coll_data);
+            is_floor = TRUE;
+        }
+        coll_data->mask_stat &= (u16)~MAP_FLAG_FLOOREDGE;
+        coll_data->is_coll_end = FALSE;
+    }
+    return is_floor;
+}
+
 sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
                                       GObj *fighter_gobj,
                                       u32 flags)
@@ -5177,6 +5403,11 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
             gNdsStageMPUpdateFloorLoopUnsafeCount++;
         }
         return FALSE;
+    }
+    if (ndsBattlePlayableRuntimeEnabled() != FALSE)
+    {
+        return ndsMPCommonRunFighterFloorEdgeLive(
+            coll_data, fighter_gobj, flags);
     }
     floor_line_id = coll_data->floor_line_id;
     (void)fighter_gobj;
@@ -6186,6 +6417,8 @@ static sb32 ndsStageMPUpdateFloorLoopUpdateFighter(GObj *fighter_gobj)
 
 sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj)
 {
+    FTStruct *fp;
+
     if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
@@ -6194,6 +6427,17 @@ sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj)
         gNdsStageMPCliffTickFloorLoopOttottoFloorCheckCount++;
         gNdsStageMPCliffTickFloorLoopOttottoFloorHitCount++;
         return TRUE;
+    }
+    if (ndsBattlePlayableRuntimeEnabled() != FALSE)
+    {
+        fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+        if ((fp == NULL) || (fp->coll_data.p_translate == NULL))
+        {
+            return FALSE;
+        }
+        return mpProcessUpdateMain(
+            &fp->coll_data, mpCommonRunFighterAllCollisions,
+            fighter_gobj, MAP_PROC_TYPE_DEFAULT);
     }
     if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() == FALSE)
     {
@@ -6211,23 +6455,49 @@ sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj)
 
 sb32 mpCommonCheckFighterOnEdge(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp;
+
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopCatchMapActive != FALSE))
     {
         gNdsStageMPPassiveLoopCatchMapEdgeCheckCount++;
+        return TRUE;
+    }
+    if (ndsBattlePlayableRuntimeEnabled() != FALSE)
+    {
+        fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+        if ((fp == NULL) || (fp->coll_data.p_translate == NULL))
+        {
+            return FALSE;
+        }
+        return mpProcessUpdateMain(
+            &fp->coll_data, mpCommonRunFighterAllCollisions,
+            fighter_gobj, MAP_PROC_TYPE_STOPEDGE);
     }
     return TRUE;
 }
 
 sb32 mpCommonCheckFighterOnCliffEdge(GObj *fighter_gobj)
 {
+    FTStruct *fp;
+
     if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffStatusFloorLoopActive != FALSE))
     {
         (void)fighter_gobj;
         return FALSE;
+    }
+    if (ndsBattlePlayableRuntimeEnabled() != FALSE)
+    {
+        fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+        if ((fp == NULL) || (fp->coll_data.p_translate == NULL))
+        {
+            return FALSE;
+        }
+        return mpProcessUpdateMain(
+            &fp->coll_data, mpCommonRunFighterAllCollisions,
+            fighter_gobj, MAP_PROC_TYPE_CLIFFEDGE);
     }
     if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() == FALSE)
     {
