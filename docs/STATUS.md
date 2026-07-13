@@ -72,13 +72,13 @@ Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
 plus `G_MWO_POINT_ST` restores five flower groups (`192 -> 202` triangles);
 Tyler accepts flowers/fences. Forensic lane/oracle proof is `37200/37200`, `2484/0/0`.
 The immutable 300x220 wallpaper decodes once; imported `grWallpaperCalcPersp`
-still owns its live transform. Final 256x192 BG2 now walks the exact quotient/
-remainder map, reuses equal source rows, and loads two packed indices at once;
-no composed gameplay frame is cached. Same-ROM 32-frame A/B/A moves wallpaper
-`383360/383488 -> 329024/330304` and whole draw `1954816/1993984 ->
-1897920/1938880`, with both controls returning to `1954816` median. Profile 2
-proves `11200/0` source-map and `1228800/0` final-pixel checks. Unsupported
-layouts retain the generic path; staging, BG2 clear/copy, and BG3 clear stay zero.
+still owns its live transform. Final BG2 keeps two exact X/Y maps in the decode
+buffer's unused tail, updates only changed rows/columns, and expands full dirty
+rows there before cache-flushed DMA. No composed frame is cached or added to
+BSS. Same-ROM 128-frame profile-1 draw moves `1926624/1955648 ->
+1812256/1900288`; wallpaper moves `344672/348480 -> 237088/340032` while
+stage/Mario/Fox stay flat. Profile 2 proves map/pixel `23296/0` and `2555904/0`.
+Unsupported/changed ownership redraws fully; staging and BG2/BG3 clear/copy stay zero.
 Reloc-backed source DLs now expose one immutable byte span; dynamic task-heap
 lists keep per-command validation. Live stage/fighter validators test the
 taskman arena before walking the loaded-file ledger, preserving the same
@@ -137,7 +137,7 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-Canonical is `14.4fps`; a 32-frame profile-0 sample is `1,859,552/1,969,600` draw ticks. Profile 1 is `1,905,920/1,913,472`, with wallpaper `320,640/320,960`. The fixed layer-0 schedule and VTX memo experiments are reverted; the next renderer cut needs a coarse owner kernel, not another command VM. HUD, Whispy face, and Mario facing/light remain debt.
+Canonical is `14.8fps`; a 128-frame profile-0 sample is `1,690,176/1,867,392` draw ticks. Profile 1 is `1,812,256/1,900,288`, with wallpaper `237,088/340,032`. The fixed layer-0 schedule and VTX memo experiments are reverted; the next renderer cut needs a coarse stage-owner kernel, not another command VM. HUD, Whispy face, and Mario facing/light remain debt.
 ## Verification
 
 DevFast, forensic, P1Gate, and Boundary `161/162/163` pass; Full Regression stays intentionally skipped for fast iteration.

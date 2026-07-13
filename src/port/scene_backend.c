@@ -3,6 +3,8 @@
 #include <string.h>
 #include <math.h>
 
+#include <nds/arm9/cache.h>
+#include <nds/dma.h>
 #include <nds/timers.h>
 #include <PR/os.h>
 #include <db/debug.h>

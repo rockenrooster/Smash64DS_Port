@@ -113,8 +113,8 @@ index plus affine world product moves O2 draw `2,126,752/2,169,600 ->
 2,057,376/2,098,880`. Exact persistent stage worlds reuse `57` stable source nodes; profile 2 shadows `42` selected outputs with zero mismatch/reject/overflow.
 Matched cache-off/on stage-world draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`.
 Direct compact CI4 rows move `2,001,600/2,033,664 -> 1,970,304/2,002,880` with identical upload hash and zero fallback.
-The exact wallpaper recurrence/row-reuse/packed-index path moves same-ROM A/B/A wallpaper `383360/383488 -> 329024/330304` and draw `1954816/1993984 -> 1897920/1938880`; profile 2 proves map/pixel `11200/0` and `1228800/0`.
-Canonical is `14.4fps`; profile-0 draw is `1,859,552/1,969,600`, while profile-1 draw/wallpaper are `1,905,920/1,913,472` and `320,640/320,960`.
+The exact wallpaper path keeps alternating X/Y maps in existing decode scratch, writes only dirty rows/columns, and cache-flushes/DMA-copies full dirty rows. Same-ROM 128-frame profile-1 wallpaper/draw move `344672/348480 -> 237088/340032` and `1926624/1955648 -> 1812256/1900288`; profile 2 proves map/pixel `23296/0` and `2555904/0`.
+Canonical is `14.8fps`; 128-frame profile-0 draw is `1,690,176/1,867,392`, while profile-1 draw/wallpaper are `1,812,256/1,900,288` and `237,088/340,032`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays separate and original timing remains live.
 The BattleShip ground interrupt chain and source floor/edge callbacks are live
 under imported FTMANAGER; manual acceptance is pending. A normals and jump/

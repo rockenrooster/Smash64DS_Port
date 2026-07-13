@@ -269,7 +269,16 @@ typedef struct NDSSObjWallpaperDecodeCache
 
 static NDSSObjWallpaperDecodeCache sNdsSObjWallpaperDecodeCache;
 
-#define NDS_SOBJ_WALLPAPER_FINAL_MAPPING_VERSION 1u
+#define NDS_SOBJ_WALLPAPER_FINAL_MAPPING_VERSION 2u
+#define NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT 256u
+#define NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT 192u
+#define NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT 2u
+#define NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS \
+    ((NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT * \
+      NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) + \
+     (NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT * \
+      NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) + \
+     (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT * 2u))
 
 typedef struct NDSSObjWallpaperFinalCache
 {
@@ -288,6 +297,7 @@ typedef struct NDSSObjWallpaperFinalCache
     u32 scale_y_q16;
     u32 combine_mode;
     u32 mapping_version;
+    u32 map_slot;
 } NDSSObjWallpaperFinalCache;
 
 static NDSSObjWallpaperFinalCache sNdsSObjWallpaperFinalCache;
@@ -305,6 +315,11 @@ volatile u32 gNdsSObjWallpaperFinalDirectCount;
 volatile u32 gNdsSObjWallpaperFinalSkipCount;
 volatile u32 gNdsSObjWallpaperFinalKeyChangeCount;
 volatile u32 gNdsSObjWallpaperFinalPixelWriteCount;
+#if NDS_RENDERER_PROFILE_LEVEL == 0
+volatile u32 gNdsSObjWallpaperIncrementalMode = 1u;
+#else
+volatile u32 gNdsSObjWallpaperIncrementalMode;
+#endif
 volatile u32 gNdsSObjWallpaperMapOracleCheckCount;
 volatile u32 gNdsSObjWallpaperMapOracleMismatchCount;
 volatile u32 gNdsSObjWallpaperPixelOracleCheckCount;
@@ -678,10 +693,8 @@ static u32 ndsSObjDrawCachedWallpaper(
     return sNdsSObjWallpaperDecodeCache.source_drawn_pixels;
 }
 
-static s32 ndsSObjWallpaperFinalKeyMatches(
-    const NDSRelocLoadedFile *loaded, u32 overlay_epoch,
-    s32 origin_x, s32 origin_y, u32 scale_x_q16, u32 scale_y_q16,
-    u32 combine_mode)
+static s32 ndsSObjWallpaperFinalSourceMatches(
+    const NDSRelocLoadedFile *loaded, u32 overlay_epoch, u32 combine_mode)
 {
     const NDSSObjWallpaperFinalCache *final_cache =
         &sNdsSObjWallpaperFinalCache;
@@ -701,18 +714,32 @@ static s32 ndsSObjWallpaperFinalKeyMatches(
             (final_cache->layout_fingerprint ==
              source_cache->layout_fingerprint) &&
             (final_cache->overlay_epoch == overlay_epoch) &&
+            (final_cache->combine_mode == combine_mode) &&
+            (final_cache->mapping_version ==
+             NDS_SOBJ_WALLPAPER_FINAL_MAPPING_VERSION) &&
+            (final_cache->map_slot <
+             NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT)) ? TRUE : FALSE;
+}
+
+static s32 ndsSObjWallpaperFinalKeyMatches(
+    const NDSRelocLoadedFile *loaded, u32 overlay_epoch,
+    s32 origin_x, s32 origin_y, u32 scale_x_q16, u32 scale_y_q16,
+    u32 combine_mode)
+{
+    const NDSSObjWallpaperFinalCache *final_cache =
+        &sNdsSObjWallpaperFinalCache;
+
+    return ((ndsSObjWallpaperFinalSourceMatches(
+                loaded, overlay_epoch, combine_mode) != FALSE) &&
             (final_cache->origin_x == origin_x) &&
             (final_cache->origin_y == origin_y) &&
             (final_cache->scale_x_q16 == scale_x_q16) &&
-            (final_cache->scale_y_q16 == scale_y_q16) &&
-            (final_cache->combine_mode == combine_mode) &&
-            (final_cache->mapping_version ==
-             NDS_SOBJ_WALLPAPER_FINAL_MAPPING_VERSION)) ? TRUE : FALSE;
+            (final_cache->scale_y_q16 == scale_y_q16)) ? TRUE : FALSE;
 }
 
 static void ndsSObjWallpaperStoreFinalKey(
     u32 overlay_epoch, s32 origin_x, s32 origin_y,
-    u32 scale_x_q16, u32 scale_y_q16, u32 combine_mode)
+    u32 scale_x_q16, u32 scale_y_q16, u32 combine_mode, u32 map_slot)
 {
     NDSSObjWallpaperFinalCache *final_cache =
         &sNdsSObjWallpaperFinalCache;
@@ -733,19 +760,32 @@ static void ndsSObjWallpaperStoreFinalKey(
     final_cache->scale_y_q16 = scale_y_q16;
     final_cache->combine_mode = combine_mode;
     final_cache->mapping_version = NDS_SOBJ_WALLPAPER_FINAL_MAPPING_VERSION;
+    final_cache->map_slot = map_slot;
     final_cache->valid = TRUE;
 }
 
 static s32 __attribute__((hot, optimize("O3")))
 ndsSObjDrawOpaqueWallpaperFinal(
-    const u16 *cache_pixels, u32 cache_pitch, u16 *source_x_map,
+    const u16 *cache_pixels, u32 cache_pitch, u16 *map_scratch,
+    u32 current_map_slot, u32 incremental_valid, u32 row_dma_enabled,
     u32 width, u32 height, u32 scale_x_q16, u32 scale_y_q16,
     u16 *overlay, u32 overlay_pitch, u32 overlay_width, u32 overlay_height,
-    s32 origin_x, s32 origin_y)
+    s32 origin_x, s32 origin_y, u32 *out_pixel_write_count)
 {
     const u32 preview_width = 320u;
     const u32 preview_height = 240u;
     const u16 no_source = 0xffffu;
+    u16 *source_x_map;
+    u16 *source_y_map;
+    const u16 *previous_source_x_map;
+    const u16 *previous_source_y_map;
+    u16 *changed_x_indices;
+    u16 *expanded_row;
+    const u16 *expanded_row_source = NULL;
+    u32 expanded_row_valid = FALSE;
+    u32 previous_map_slot;
+    u32 changed_x_count = 0u;
+    u32 pixel_write_count = 0u;
     u32 step_x;
     u32 step_y;
     u32 preview_x_q16;
@@ -767,12 +807,38 @@ ndsSObjDrawOpaqueWallpaperFinal(
     u32 x;
     u32 y;
 
-    if ((cache_pixels == NULL) || (source_x_map == NULL) ||
+    if (out_pixel_write_count != NULL) { *out_pixel_write_count = 0u; }
+    if ((cache_pixels == NULL) || (map_scratch == NULL) ||
         (overlay == NULL) || (overlay_pitch < overlay_width) ||
-        (overlay_width == 0u) || (overlay_height == 0u))
+        (overlay_width != NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT) ||
+        (overlay_height != NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT) ||
+        (current_map_slot >= NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT))
     {
         return FALSE;
     }
+    previous_map_slot = current_map_slot ^ 1u;
+    /* The immutable 300x220 decode occupies 70,400 of the retained 76,800
+     * pixels. Keep both exact screen-to-source maps, the changed-X list, and
+     * one expanded DMA row in that existing 6,400-pixel scratch tail. */
+    source_x_map = &map_scratch[
+        current_map_slot * NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT];
+    previous_source_x_map = &map_scratch[
+        previous_map_slot * NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT];
+    source_y_map = &map_scratch[
+        (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT *
+         NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) +
+        (current_map_slot * NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT)];
+    previous_source_y_map = &map_scratch[
+        (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT *
+         NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) +
+        (previous_map_slot * NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT)];
+    changed_x_indices = &map_scratch[
+        (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT *
+         NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) +
+        (NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT *
+         NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT)];
+    expanded_row = changed_x_indices +
+        NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT;
     step_x = (preview_width << 16) / overlay_width;
     step_y = (preview_height << 16) / overlay_height;
     preview_x_q16 = step_x >> 1;
@@ -836,6 +902,11 @@ ndsSObjDrawOpaqueWallpaperFinal(
         {
             source_x_map_complete = FALSE;
         }
+        if ((incremental_valid != FALSE) &&
+            (source_x_map[x] != previous_source_x_map[x]))
+        {
+            changed_x_indices[changed_x_count++] = (u16)x;
+        }
         preview_x_q16 += step_x;
     }
 
@@ -848,8 +919,10 @@ ndsSObjDrawOpaqueWallpaperFinal(
     for (y = 0u; y < overlay_height; y++)
     {
         u32 preview_y = preview_y_q16 >> 16;
+        u16 source_y_map_value = no_source;
         const u16 *src = NULL;
         u16 *dst = &overlay[y * overlay_pitch];
+        u32 full_row;
 
         if (((s32)preview_y >= origin_y) &&
             ((s32)preview_y < dst_y_end))
@@ -895,15 +968,78 @@ ndsSObjDrawOpaqueWallpaperFinal(
 #endif
 
             if (source_y >= height) { source_y = height - 1u; }
+            source_y_map_value = (u16)source_y;
             src = &cache_pixels[source_y * cache_pitch];
         }
-        if ((src != NULL) && (src == previous_src) &&
-            (previous_dst != NULL) && (packed_rows != FALSE))
+        source_y_map[y] = source_y_map_value;
+        full_row = ((incremental_valid == FALSE) ||
+                    (source_y_map_value != previous_source_y_map[y]) ||
+                    ((row_dma_enabled != FALSE) &&
+                     (changed_x_count >= (overlay_width >> 1)))) ?
+            TRUE : FALSE;
+        if ((full_row != FALSE) && (row_dma_enabled != FALSE))
+        {
+            if ((expanded_row_valid == FALSE) ||
+                (expanded_row_source != src))
+            {
+                if ((src != NULL) && (packed_rows != FALSE))
+                {
+                    u32 *expanded_pairs = (u32 *)expanded_row;
+                    const u32 *source_pair = (const u32 *)source_x_map;
+                    const u32 *source_pair_end = source_pair +
+                        (overlay_width >> 1);
+
+                    while ((source_pair + 1) < source_pair_end)
+                    {
+                        u32 pair0 = source_pair[0];
+                        u32 pair1 = source_pair[1];
+
+                        expanded_pairs[0] =
+                            (u32)src[(u16)pair0] |
+                            ((u32)src[pair0 >> 16] << 16);
+                        expanded_pairs[1] =
+                            (u32)src[(u16)pair1] |
+                            ((u32)src[pair1 >> 16] << 16);
+                        source_pair += 2;
+                        expanded_pairs += 2;
+                    }
+                    if (source_pair < source_pair_end)
+                    {
+                        u32 pair = *source_pair;
+
+                        *expanded_pairs = (u32)src[(u16)pair] |
+                            ((u32)src[pair >> 16] << 16);
+                    }
+                }
+                else
+                {
+                    for (x = 0u; x < overlay_width; x++)
+                    {
+                        expanded_row[x] = ((src != NULL) &&
+                            (source_x_map[x] != no_source)) ?
+                            src[source_x_map[x]] : 0u;
+                    }
+                }
+                DC_FlushRange(
+                    expanded_row, overlay_width * sizeof(expanded_row[0]));
+                expanded_row_source = src;
+                expanded_row_valid = TRUE;
+            }
+            dmaCopyHalfWords(
+                0, expanded_row, dst,
+                overlay_width * sizeof(expanded_row[0]));
+            pixel_write_count += overlay_width;
+        }
+        else if ((full_row != FALSE) &&
+                 (src != NULL) && (src == previous_src) &&
+                 (previous_dst != NULL) && (packed_rows != FALSE))
         {
             memcpy(dst, previous_dst,
                    overlay_width * sizeof(dst[0]));
+            pixel_write_count += overlay_width;
         }
-        else if ((src != NULL) && (packed_rows != FALSE))
+        else if ((full_row != FALSE) &&
+                 (src != NULL) && (packed_rows != FALSE))
         {
             u32 *dst_pairs = (u32 *)dst;
 
@@ -936,8 +1072,9 @@ ndsSObjDrawOpaqueWallpaperFinal(
                 *dst_pairs = (u32)src[(u16)pair] |
                     ((u32)src[pair >> 16] << 16);
             }
+            pixel_write_count += overlay_width;
         }
-        else
+        else if (full_row != FALSE)
         {
             for (x = 0u; x < overlay_width; x++)
             {
@@ -945,6 +1082,19 @@ ndsSObjDrawOpaqueWallpaperFinal(
                           (source_x_map[x] != no_source)) ?
                     src[source_x_map[x]] : 0u;
             }
+            pixel_write_count += overlay_width;
+        }
+        else
+        {
+            for (x = 0u; x < changed_x_count; x++)
+            {
+                u32 changed_x = changed_x_indices[x];
+
+                dst[changed_x] = ((src != NULL) &&
+                    (source_x_map[changed_x] != no_source)) ?
+                    src[source_x_map[changed_x]] : 0u;
+            }
+            pixel_write_count += changed_x_count;
         }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         for (x = 0u; x < overlay_width; x++)
@@ -967,6 +1117,10 @@ ndsSObjDrawOpaqueWallpaperFinal(
         previous_dst = dst;
         preview_y_q16 += step_y;
     }
+    if (out_pixel_write_count != NULL)
+    {
+        *out_pixel_write_count = pixel_write_count;
+    }
     return TRUE;
 }
 
@@ -976,7 +1130,7 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     NDSRelocLoadedFile *loaded;
     u16 *overlay;
     u16 *cache_pixels;
-    u16 *source_x_map;
+    u16 *map_scratch;
     u32 overlay_pitch;
     u32 overlay_width;
     u32 overlay_height;
@@ -986,6 +1140,9 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     u32 scale_y_q16;
     u32 draw_start;
     u32 committed_epoch;
+    u32 current_map_slot = 0u;
+    u32 incremental_valid = FALSE;
+    u32 incremental_mode;
     u32 pixel_count;
     s32 origin_x;
     s32 origin_y;
@@ -1027,7 +1184,8 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
         scale_y_q16 = (u32)((sprite->scaley * 65536.0F) + 0.5F);
     }
     if (ndsSObjGetOpaqueWallpaperCache(
-            loaded, sprite, scale_x_q16, scale_y_q16, overlay_width,
+            loaded, sprite, scale_x_q16, scale_y_q16,
+            NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS,
             &cache_pixels, &cache_pitch) == FALSE)
     {
         return FALSE;
@@ -1047,19 +1205,36 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
         return TRUE;
     }
 
-    source_x_map = &cache_pixels[
+#if NDS_RENDERER_PROFILE_LEVEL == 0
+    /* Shipping has no A/B telemetry state in the decision path. Profiles
+     * 1/2 retain the runtime selector for same-ROM timing and exact oracles. */
+    incremental_mode = TRUE;
+#else
+    incremental_mode =
+        (gNdsSObjWallpaperIncrementalMode != 0u) ? TRUE : FALSE;
+#endif
+    if ((incremental_mode != FALSE) &&
+        (ndsSObjWallpaperFinalSourceMatches(
+            loaded, overlay_epoch, combine_mode) != FALSE))
+    {
+        current_map_slot = sNdsSObjWallpaperFinalCache.map_slot ^ 1u;
+        incremental_valid = TRUE;
+    }
+    map_scratch = &cache_pixels[
         sNdsSObjWallpaperDecodeCache.height * cache_pitch];
     if (ndsSObjDrawOpaqueWallpaperFinal(
-            cache_pixels, cache_pitch, source_x_map,
+            cache_pixels, cache_pitch, map_scratch,
+            current_map_slot, incremental_valid,
+            incremental_mode,
             sNdsSObjWallpaperDecodeCache.width,
             sNdsSObjWallpaperDecodeCache.height,
             scale_x_q16, scale_y_q16, overlay, overlay_pitch,
-            overlay_width, overlay_height, origin_x, origin_y) == FALSE)
+            overlay_width, overlay_height, origin_x, origin_y,
+            &pixel_count) == FALSE)
     {
         ndsSObjWallpaperPublishDrawTicks(draw_start);
         return FALSE;
     }
-    pixel_count = overlay_width * overlay_height;
     committed_epoch = ndsPlatformCommitOriginalSpriteFinalLayer(
         FALSE, pixel_count);
     if (committed_epoch == 0u)
@@ -1070,7 +1245,7 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     }
     ndsSObjWallpaperStoreFinalKey(
         committed_epoch, origin_x, origin_y,
-        scale_x_q16, scale_y_q16, combine_mode);
+        scale_x_q16, scale_y_q16, combine_mode, current_map_slot);
     gNdsSObjWallpaperFinalDirectCount++;
     gNdsSObjWallpaperFinalKeyChangeCount++;
     gNdsSObjWallpaperFinalPixelWriteCount += pixel_count;

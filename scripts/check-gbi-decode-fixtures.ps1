@@ -1312,6 +1312,7 @@ foreach ($origin in @(-1, 1)) {
         "Wallpaper overlapping-strip flattening drifted at origin=$origin."
 }
 $spritePreview = Get-Content (Join-Path $root 'src/port/sprite_preview_backend.c') -Raw
+$sceneBackend = Get-Content (Join-Path $root 'src/port/scene_backend.c') -Raw
 Assert-True ($spritePreview.Contains('return ((((relative + 1u) << 16) - 1u) / scale_q16);')) 'Wallpaper inverse helper no longer uses the proven last-writer equation.'
 Assert-True ([regex]::Matches($spritePreview, 'ndsSObjWallpaperLastSource\(').Count -ge 3) 'Wallpaper fast path no longer routes both axes through the proven inverse helper.'
 Assert-True ($spritePreview.Contains('ndsSObjDrawOpaqueWallpaperFinal')) 'Dream Land wallpaper no longer has a direct final-resolution renderer.'
@@ -1325,6 +1326,10 @@ Assert-True ($spritePreview.Contains('u32 *dst_pairs = (u32 *)dst;')) 'Opaque Dr
 Assert-True ($spritePreview.Contains('(u32)src[(u16)pair0]') -and $spritePreview.Contains('((u32)src[pair0 >> 16] << 16)') -and $spritePreview.Contains('(u32)src[(u16)pair1]') -and $spritePreview.Contains('((u32)src[pair1 >> 16] << 16)')) 'Packed wallpaper row path no longer preserves both exact RGB5A1 pairs.'
 Assert-True ($spritePreview.Contains('source_x_remainder +=') -and $spritePreview.Contains('(preview_x - previous_preview_x) << 16') -and $spritePreview.Contains('while (source_x_remainder >= scale_x_q16)')) 'Wallpaper mapper no longer advances the exact source quotient/remainder recurrence.'
 Assert-True ($spritePreview.Contains('(src == previous_src)') -and $spritePreview.Contains('memcpy(dst, previous_dst,')) 'Wallpaper mapper no longer reuses exact repeated source rows.'
+Assert-True ($spritePreview.Contains('ndsSObjWallpaperFinalSourceMatches') -and $spritePreview.Contains('current_map_slot = sNdsSObjWallpaperFinalCache.map_slot ^ 1u;')) 'Wallpaper mapper no longer bounds incremental reuse to retained BG2/source ownership and alternating exact maps.'
+Assert-True ($spritePreview.Contains('source_x_map[x] != previous_source_x_map[x]') -and $spritePreview.Contains('source_y_map_value != previous_source_y_map[y]') -and $spritePreview.Contains('changed_x_indices[changed_x_count++]')) 'Wallpaper mapper no longer derives exact dirty rows and columns from adjacent source-index maps.'
+Assert-True ($spritePreview.Contains('pixel_write_count += changed_x_count;') -and $spritePreview.Contains('&pixel_count')) 'Wallpaper mapper no longer publishes its bounded physical BG2 write count.'
+Assert-True ($sceneBackend.Contains('#include <nds/arm9/cache.h>') -and $sceneBackend.Contains('#include <nds/dma.h>') -and $spritePreview.Contains('DC_FlushRange(') -and $spritePreview.Contains('dmaCopyHalfWords(')) 'Wallpaper full dirty rows no longer flush and DMA their exact scratch expansion into BG2.'
 Assert-True ($spritePreview.Contains('static s32 __attribute__((hot, optimize("O3")))')) 'Measured wallpaper hot path lost its targeted latency optimization.'
 $platform = Get-Content (Join-Path $root 'src/nds/nds_platform.c') -Raw
 Assert-True ($platform.Contains('ndsPlatformGetOriginalSpriteOverlayLayer')) 'DS platform no longer exposes bounded final-layer ownership for direct wallpaper composition.'

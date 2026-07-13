@@ -31,6 +31,7 @@ param(
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,3)][int]$RendererFastRunMode = 0,
+    [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [string]$RendererBenchmarkExportPath = '',
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
@@ -484,6 +485,7 @@ try {
             $gdbCommands = @(
                 $gdbCommands[0..3]
                 ('set variable gNdsRendererFastRunMode = {0}' -f $RendererFastRunMode)
+                ('set variable gNdsSObjWallpaperIncrementalMode = {0}' -f $WallpaperIncrementalMode)
                 'set $renderer_benchmark_samples = 0'
                 'set $renderer_benchmark_warm = 0'
                 'break ndsBattlePlayableFrameCompleteMarker'
@@ -912,6 +914,20 @@ try {
                     $uploadSequenceHash = Get-RendererUploadSequenceHash $benchUploadCount $benchUploadBytes
                     $benchmarkMetricSummary = "Renderer benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 ticks present=$((Get-Median $benchPresent))/$((Get-Percentile95 $benchPresent)) draw=$((Get-Median $benchDraw))/$((Get-Percentile95 $benchDraw)) stage=$((Get-Median $benchStage))/$((Get-Percentile95 $benchStage)) material=$((Get-Median $benchMaterial))/$((Get-Percentile95 $benchMaterial)) matrix=$((Get-Median $benchMatrix))/$((Get-Percentile95 $benchMatrix)) dl=$((Get-Median $benchDL))/$((Get-Percentile95 $benchDL)) texture=$((Get-Median $benchTexture))/$((Get-Percentile95 $benchTexture)) submit=$((Get-Median $benchSubmit))/$((Get-Percentile95 $benchSubmit)) vertex=$((Get-Median $benchVertex))/$((Get-Percentile95 $benchVertex)) setup=$((Get-Median $benchSetup))/$((Get-Percentile95 $benchSetup)) scan=$((Get-Median $benchScan))/$((Get-Percentile95 $benchScan)) uploads=$(Get-MedianP95 $benchUploadCount)/$(Get-MedianP95 $benchUploadBytes) uploadSequenceSha256=$uploadSequenceHash"
                     $benchmarkChurnSummary = "Renderer benchmark churn (adjacent changes/distinct values): present=$((Get-AdjacentChurn $benchPresent)) draw=$((Get-AdjacentChurn $benchDraw)) stage=$((Get-AdjacentChurn $benchStage)) material=$((Get-AdjacentChurn $benchMaterial)) matrix=$((Get-AdjacentChurn $benchMatrix)) dl=$((Get-AdjacentChurn $benchDL)) texture=$((Get-AdjacentChurn $benchTexture)) submit=$((Get-AdjacentChurn $benchSubmit)) vertex=$((Get-AdjacentChurn $benchVertex)) setup=$((Get-AdjacentChurn $benchSetup)) scan=$((Get-AdjacentChurn $benchScan))"
+                    # Profile 0 intentionally emits only the non-nested
+                    # RENDER_BENCH window. Keep its JSON schema stable with
+                    # empty coarse/forensic collections instead of indexing
+                    # arrays that are created only by profiles 1/2.
+                    $coarseSamples = [System.Collections.Generic.List[object]]::new()
+                    $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
+                    $fastRunSamples = [System.Collections.Generic.List[object]]::new()
+                    $semanticSamples = [System.Collections.Generic.List[object]]::new()
+                    $ownerSamples = @(
+                        [System.Collections.Generic.List[object]]::new(),
+                        [System.Collections.Generic.List[object]]::new(),
+                        [System.Collections.Generic.List[object]]::new()
+                    )
+                    $logicTickResetCount = 0
                     if ($RendererProfileLevel -ge 1) {
                         Assert-Condition ($coarseBenchmark.Count -eq $RendererBenchmarkSamples) "Coarse renderer benchmark captured $($coarseBenchmark.Count) of $RendererBenchmarkSamples synchronized frames." $gdbStdout
                         Assert-Condition ($gxBoundaryBenchmark.Count -eq $RendererBenchmarkSamples) "GX boundary benchmark captured $($gxBoundaryBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -1155,6 +1171,7 @@ try {
                         rendererProfile = $benchmarkMakeIdentity.Profile
                         rendererBenchmarkMode =
                             $benchmarkMakeIdentity.RendererBenchmarkMode
+                        wallpaperIncrementalMode = $WallpaperIncrementalMode
                         effectiveCFlags = [ordered]@{
                             common = $benchmarkMakeIdentity.CommonCFlags
                             renderer = $benchmarkMakeIdentity.RendererCFlags
@@ -1219,6 +1236,7 @@ try {
                             kind = 'smash64ds-renderer-fast-raw-benchmark'
                             identity = $benchmarkIdentity
                             fastRunMode = $RendererFastRunMode
+                            wallpaperIncrementalMode = $WallpaperIncrementalMode
                             samples = [ordered]@{
                                 renderer = @($rendererBenchmark | ForEach-Object {
                                     , @(Get-Ints $_)
@@ -1321,7 +1339,7 @@ try {
                     Assert-Condition ($renderTopology.Success -and (($rtopo | Measure-Object -Sum).Sum -eq 0) -and $renderCost.Success -and (($rcost | Measure-Object -Sum).Sum -eq 0)) 'Low-frequency O2 coarse profile unexpectedly retained detailed command/triangle profiling.' $gdbStdout
                 }
                 Assert-Condition ($wallpaperCache.Success -and $wc[0] -eq 1 -and $wc[1] -ge 1 -and $wc[2] -eq ($wc[0] + $wc[1]) -and $wc[3] -eq 0 -and $wc[4] -eq 300 -and $wc[5] -eq 220 -and $wc[6] -eq 66000 -and $wc[7] -gt 0 -and $wc[8] -gt 0) 'Canonical realtime HW build did not construct once and reuse the exact opaque Dream Land wallpaper decode cache.' $gdbStdout
-                Assert-Condition ($wallpaperFinal.Success -and $wf[0] -eq $wc[2] -and $wf[0] -eq ($wf[1] + $wf[2]) -and $wf[2] -gt 0 -and $wf[3] -eq (49152 * $wf[2]) -and $wf[4] -eq 0 -and $wf[5] -eq 0 -and $wf[6] -eq 0 -and $wf[7] -eq 0 -and $wf[8] -eq (2 * $wf[3]) -and $wf[9] -eq 0 -and $wf[11] -eq 0) 'Canonical realtime HW build did not retain exact final BG2/BG3 ownership or still performed eliminated full-screen clears/staging/copies.' $gdbStdout
+                Assert-Condition ($wallpaperFinal.Success -and $wf[0] -eq $wc[2] -and $wf[0] -eq ($wf[1] + $wf[2]) -and $wf[2] -gt 0 -and $wf[3] -gt 0 -and $wf[3] -le (49152 * $wf[2]) -and $wf[4] -eq 0 -and $wf[5] -eq 0 -and $wf[6] -eq 0 -and $wf[7] -eq 0 -and $wf[8] -eq (2 * $wf[3]) -and $wf[9] -eq 0 -and $wf[11] -eq 0) 'Canonical realtime HW build did not retain bounded exact final BG2/BG3 ownership or still performed eliminated full-screen clears/staging/copies.' $gdbStdout
                 if ($RendererProfileLevel -ge 2) {
                     Assert-Condition ($wallpaperOracle.Success -and $wo[0] -gt 0 -and $wo[1] -eq 0 -and $wo[2] -gt 0 -and $wo[3] -eq 0 -and $wo[4] -eq 0 -and $wo[5] -eq 0 -and $wo[6] -eq 0 -and $wo[7] -eq 0) 'Forensic wallpaper recurrence/pixel oracle found an exact-output mismatch.' $gdbStdout
                 }

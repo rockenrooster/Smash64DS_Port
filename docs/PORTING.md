@@ -20392,3 +20392,26 @@ remains skipped for the requested fast iteration cadence.
 - Capture `2026-07-13_canonical_fast_041102-8008285-p44652.png`, static checks,
   forensic, DevFast, P1Gate, and Boundary `161/162/163` pass. Full Regression
   remains intentionally skipped for Tyler's requested fast iteration.
+## 2026-07-13 - Exact incremental Dream Land BG2 maps and dirty-row DMA
+
+- Kept imported `grWallpaperCalcPersp` and the accepted destination-driven
+  nearest-neighbor equation. Two 256-entry X maps, two 192-entry Y maps, a
+  changed-X list, and one expanded row now occupy 1,408 pixels of the existing
+  6,400-pixel decode-cache tail; no composed phase frame or new pixel buffer is
+  allocated.
+- Retained BG2/source epochs guard adjacent-map reuse. Changed source-Y rows
+  redraw exactly; unchanged rows write only changed X entries. Rows with at
+  least 128 changed X entries take the bounded full-row route.
+- Full dirty rows expand in cached scratch, flush exactly 512 bytes, and use a
+  synchronous DMA0 copy. The existing renderer upload DMA0 work occurs later
+  at the VBlank commit boundary, so no asynchronous channel ownership overlaps.
+- Same-ROM 128-frame profile-1 mode `0 -> 1` moves wallpaper
+  `344672/348480 -> 237088/340032` and whole draw
+  `1926624/1955648 -> 1812256/1900288`; stage/Mario/Fox remain flat and draw
+  P95 improves. Shipping profile 0 measures `1690176/1867392`, versus the prior
+  `1859552/1969600` checkpoint.
+- Profile 2 reports `23296/0` exact map checks, `2555904/0` final-pixel checks,
+  and renderer oracle `2484/0/0`; triangles/classes, batches, prepare/reuse,
+  texture upload bytes, and zero BG2/BG3 staging/clear/copy remain exact.
+- The benchmark exporter now represents profile-0-only samples with empty
+  coarse/forensic arrays instead of indexing profile-1/2 collections.
