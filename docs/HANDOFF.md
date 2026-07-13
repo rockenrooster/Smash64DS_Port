@@ -53,10 +53,9 @@ geometry/prim/env/light and cycle/render state; `dls[0]` uses parent state.
 The adapter now preserves the 32-slot input/transformed RSP vertex cache across
 the selected part sequence, as BattleShip's common `gSYTaskmanDLHeads[0]`
 stream does. All-DL HW output is the full `320/306` Mario/Fox triangle set with
-zero rejects; latest canonical reports `gxram=715/2167`, geometry `0x222005`, cycle/
-render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
-Initial diffuse/ambient state comes from the first selected source `MObjSub`
-(`0xffffff00/0x4c4c4c00`); per-part overrides carry and fallback use is zero.
+zero rejects; live-input GX RAM is dynamic near `695/2119`, with geometry
+`0x222005`, cycle/render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
+Initial diffuse/ambient state comes from first selected source `MObjSub` (`0xffffff00/0x4c4c4c00`); per-part overrides carry and fallback use is zero.
 
 `battle_playable` default: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now links
 original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`,
@@ -71,8 +70,8 @@ Mode 163 proves stock/KO/rebirth, all normal-move phases, grab/throw damage,
 HUD digits/stocks, projectile/reflector/specials, parsed audio, looping BGM, and
 `42/202` stage DL/HW triangles plus `2/626` fighter draws/triangles. FGM/voice,
 the original sequence player, and non-critical HUD/SObj/particles remain debt.
-The ledger retains `227392` headroom, reloc `681632` bytes, stale `0/0`, and
-`161856` bytes after BGM against the 128 KiB reserve.
+Canonical retains `227392` taskman headroom (`161856` after BGM), reloc `681632`
+bytes, and stale `0/0`. The forensic gate selects the largest 4 KiB-granular arena (`0x14c000`) and retains `145472` after BGM against 128 KiB.
 
 Canonical realtime + live-input + HW-tri shows recognizable Dream Land; source-
 separated Mario/Fox bodies are broadly accepted on DS. Source map-object kinds
@@ -80,12 +79,13 @@ separated Mario/Fox bodies are broadly accepted on DS. Source map-object kinds
 at X `0/-1397`; `gcAddMObjAll` restores O2R lanes by source provenance.
 Canonical observes at least four water/Whispy swaps, no native/failure cases,
 and first flags `0x0200 -> 0x006b`. Exact TEXEL0/TEXEL1 CI4 conversion uses S/T
-address maps and 17 exact Bayer phase masks. Profiles 0/1 decode the two
+maps and one RGB15 plus 16-bit coverage pair table. Profiles 0/1 decode the two
 immutable 32x32 source-index planes once. Large tiles use a half-full 1 KiB
 table to find each first exact source-address/phase class, expand forward, and
 copy repeat rows bottom-to-top; live origin/mask/palette/fraction stays dynamic.
-Profile 1 proves map `549766/2514042` and index `2/728`; profile 2 remains
-bytewise with map/index `0/0`. Uploads remain `36,864` bytes with zero drift.
+Profile 1 proves map/index reuse; profile 2 checks `18,432/0` exact pair pixels.
+Profiles 0/1 store the current 4 KiB output plus at most 16 KiB of distinct large
+rows, expand the exact row map on VBlank lines `192..207`; profile 2 keeps the independent synchronous oracle path and no duplicate staging BSS.
 Profile 0 omits five generic proof ledgers and retains all `828` triangles: `648`
 raw-current, `44` cross-matrix, `126` no-Z, and `10` range; reject stays zero.
 Null-callback profiles carry only segment-`E` preview resolver state, reset exact
@@ -96,7 +96,7 @@ X/Y, and clip Z. Texture preparation survives exact-key mutations; profiles 0/1 
 Prepare/reuse is `98/730`;
 batching stays `121/707/121`, and logical divide demand stays `1,242`.
 Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os to preserve
-their `227392`-byte reserve. Six ARM/O3 paths occupy `20,120/20,120/29,788`
+their reserve. Six ARM/O3 paths occupy `20,088/20,088/30,104`
 ITCM bytes in canonical/profile 1/profile 2. Exact signed
 pre-clamping and libnds `div64` remove the shipping software 64-bit helper;
 profile 1 records `650` cached calls, while profile 2 compares `1,404` results
@@ -104,24 +104,24 @@ with C. Boundary modes retain exact nonzero clamp counts. Divider evidence adds
 no BSS; profile 2 also omits the production 2,096-byte shade table and runs the
 independent exact shade path. Profiles 0/1 retain light/table and exact 128-slot
 texture-key caches; compact fingerprints still require full 236-byte equality.
-Profile-0 BSS is `1,857,648`; prepared context persists by `98/730` epoch.
+Profile-0 BSS is `1,871,280`; prepared context persists by `98/730` epoch.
 The 2,916-byte main-RAM K-RAW kernel accelerates `45/540` runs/triangles per
 frame with `47/7/0` bounded fallbacks. Same-ROM 128-frame profile-1 draw moves
 `2,067,296/2,407,872 -> 1,858,624/2,227,648`; stage/Mario/Fox save
 `17,568/98,496/93,248` median ticks. The 32-frame profile-2 dual trace, owner
-state/cache, oracle, geometry, and upload sequence compare exactly. Canonical is about `13.0fps`; shipped SHA-256 is
-`19D8C30B18F5973EF7D75F26EF9033AB5FE7C453A6D5EFD88EFBE6848EF3CCFD`.
+state/cache, oracle, geometry, and upload sequence compare exactly. The final texture-safety run is `2,179,072/2,199,808` draw ticks; canonical is about
+`12.2fps`, and shipped SHA-256 is
+`0C564D4822011FCAB9DC5CA4F52C5F8EBB7339354BFD3FBA93A035C5F90F2663`.
 Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays
 separate, original timing stays live, and a post-step corrects packed RGBA.
-Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the
-foreground fence. Stage RSP/ST carry restores five flower groups (`192 -> 202`).
+The BattleShip ground interrupt chain is live under imported FTMANAGER; Right/A/X drive Mario Run/Attack11/JumpF. Persistent slots retain 44 cross-joint triangles; phase-aware no-Z restores the foreground fence. Stage RSP/ST carry restores five flower groups (`192 -> 202`).
 Masked-clamp, six CI4 stars, and DXT tail stride remain fixed. Debt: Whispy face,
 other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
 The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
 ## Recommended Next Work
-1. The canonical ROM is still only about `13.0fps`, not P1-complete. Optimize the
-   315,584-tick animated texture conversion/refresh path next and move its VRAM
-   commit into measured VBlank; this also targets the intermittent stage flicker.
+1. The canonical ROM is still only about `12.2fps`, not P1-complete. VBlank
+   staging fixes the remap/flicker window; next reduce the remaining `190528`
+   conversion ticks with aligned two-pixel RGB15 emission, then remeasure.
 2. Add source RGBA4 interface/HUD output with final-resolution dirty BG3. Keep
    Whispy face strips and Mario facing/light A/B as the remaining visual A/B.
 3. Use DevFast while iterating, P1Gate at integrated checkpoints, and Boundary
@@ -145,6 +145,6 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Final P1Gate/Boundary passed in `195.4s/58.3s`; DevFast and forensic pass.
+Final P1Gate/Boundary passed in `289.5s/306.7s`; DevFast and forensic pass.
 This is not the five-minute P1 soak; skip Full Regression.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

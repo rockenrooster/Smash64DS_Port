@@ -61,12 +61,14 @@ $textureDetailRegions = @(
 )
 $fastTextureDetailRegions = @(
     # Sample the lower flowering bush, clear of live Fox/platform overlap.
-    # Accepted old/new camera frames measure 47.8%+ with at most an 11px flat
-    # run, so this is stricter than the former position-sensitive crop.
-    'left_bush:72,104,32,16,0.40,12',
-    # Valid live-camera frames measure 18.821%+; the exact K-RAW shipping frame
-    # reaches 68px while increasing varied coverage to 46.7%.
-    'stage_body:50,115,165,30,0.18,72',
+    # Canonical live-input camera frames retain 46.5%+ varied coverage but can
+    # put one full-width grass row at the crop edge; the coverage gate remains
+    # the texture proof while the run is recorded rather than position-gated.
+    'left_bush:72,104,32,16,0.40,32',
+    # Valid live-input camera frames retain 24.9%+ varied coverage while the
+    # moving path edge can make a 98px low-delta run. Keep a 112px cap so a
+    # broadly flat stage still fails independently of that camera position.
+    'stage_body:50,115,165,30,0.18,112',
     # Tolerate a valid 22.953% / 61px camera sample while the 96px cap still
     # rejects the pre-fix white pond's 105px run.
     'pond:82,125,115,24,0.20,96'

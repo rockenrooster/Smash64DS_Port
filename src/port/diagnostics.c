@@ -7137,31 +7137,51 @@ static u8 *ndsTaskmanArenaBytes(void)
 {
     if (sNdsTaskmanArenaBytes == NULL)
     {
-        static const size_t arena_sizes[] =
+        static const size_t lower_arena_sizes[] =
         {
-            NDS_TASKMAN_ARENA_SIZE,
-            0x140000u,
-            0x130000u,
             0x100000u,
             0xc0000u,
             0x80000u,
             0x40000u
         };
+        size_t arena_size;
         size_t i;
 
-        for (i = 0; i < (sizeof(arena_sizes) / sizeof(arena_sizes[0])); i++)
+        /* Preserve the largest useful BattleShip taskman arena the DS heap can
+         * provide. A coarse 0x150000 -> 0x140000 jump discarded up to 60 KiB
+         * even when only a few pages were unavailable, which could erase the
+         * verified 128 KiB post-BGM reserve. */
+        for (arena_size = NDS_TASKMAN_ARENA_SIZE;
+             arena_size >= 0x130000u;
+             arena_size -= 0x1000u)
         {
-            if (arena_sizes[i] > NDS_TASKMAN_ARENA_SIZE)
-            {
-                continue;
-            }
-            sNdsTaskmanArenaAlloc = calloc(1, arena_sizes[i] + 0x10u);
+            sNdsTaskmanArenaAlloc = calloc(1, arena_size + 0x10u);
             if (sNdsTaskmanArenaAlloc != NULL)
             {
                 uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
                 sNdsTaskmanArenaBytes = (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
-                sNdsTaskmanArenaSize = arena_sizes[i];
+                sNdsTaskmanArenaSize = arena_size;
                 break;
+            }
+        }
+        for (i = 0;
+             (sNdsTaskmanArenaBytes == NULL) &&
+             (i < (sizeof(lower_arena_sizes) /
+                   sizeof(lower_arena_sizes[0])));
+             i++)
+        {
+            if (lower_arena_sizes[i] > NDS_TASKMAN_ARENA_SIZE)
+            {
+                continue;
+            }
+            sNdsTaskmanArenaAlloc = calloc(
+                1, lower_arena_sizes[i] + 0x10u);
+            if (sNdsTaskmanArenaAlloc != NULL)
+            {
+                uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
+                sNdsTaskmanArenaBytes =
+                    (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
+                sNdsTaskmanArenaSize = lower_arena_sizes[i];
             }
         }
     }

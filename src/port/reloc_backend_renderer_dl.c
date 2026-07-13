@@ -7967,7 +7967,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                               NDS_RENDERER_PROFILE_OWNER_FOX;
     ndsRendererProfileSetOwner(owner_id);
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
     gNdsRendererProfileOwners[(u32)owner_id].entry_state_hash =
         ndsRendererOwnerHashRuntimeState(&persistent_stats);
     gNdsRendererProfileOwners[(u32)owner_id].entry_vertex_cache_hash =
@@ -8179,7 +8179,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
     }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
     gNdsRendererProfileOwners[(u32)owner_id].exit_state_hash =
         ndsRendererOwnerHashRuntimeState(&persistent_stats);
     gNdsRendererProfileOwners[(u32)owner_id].exit_vertex_cache_hash =

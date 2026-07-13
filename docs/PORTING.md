@@ -20218,3 +20218,28 @@ remains skipped for the requested fast iteration cadence.
   warm-no-upload control saves 315,584 ticks. Its active-scanout VRAM bank remap
   is also the leading diagnosis for the intermittent stage-only flash; confirm
   before moving the two current-frame payload commits into measured VBlank.
+
+## 2026-07-12 - Restored live Mario input and VBlank-safe water refresh
+
+- Removed the old natural-motion proof gate from `ftCommonGroundCheckInterrupt`.
+  Imported FTMANAGER now executes BattleShip `fighter.h:47-69`'s exact ordered
+  action chain for every live fighter. Held Right reaches Run, DS A Attack11,
+  and DS X JumpF; a 25-second no-input soak kept Fox CPU combat stable.
+- Split texture conversion from resident refresh timing. Profiles 0/1 stage the
+  4 KiB output and at most 64 distinct large rows (16 KiB), then expand the exact
+  128-row map while remapping/copying texture VRAM only after `swiWaitForVBlank`;
+  128 frames committed on lines `192..207` with zero outside/fallback. Profile 2
+  keeps its independent synchronous oracle route without staging BSS.
+- Replaced the changing 8 KiB sixteen-plane CI4 table with one 1 KiB exact
+  palette-pair RGB/16-bit coverage table. Profile 2 compares all 18,432 output
+  pixels to the old blend formula with zero mismatch; main oracle stays
+  `2484/0/0` and geometry/classes remain `828`, `648/44/126/10`.
+- The retained 128-frame texture path measures conversion/staging
+  `190,528/208,704` and `18,304/21,184` median/P95. This is a correctness keep,
+  not a 50K optimization win; aligned two-pixel RGB15 stores remain next.
+- Replaced the taskman seam's 64 KiB fallback cliff with 4 KiB probes. The
+  forensic P1 build selects `0x14c000`, retaining 211,008 bytes before and
+  145,472 after BGM, 14,400 above the 128 KiB reserve.
+- Canonical main BSS is 1,871,280, ITCM 20,088, and ROM parity is 11,675,648
+  bytes at SHA-256
+  `0C564D4822011FCAB9DC5CA4F52C5F8EBB7339354BFD3FBA93A035C5F90F2663`.

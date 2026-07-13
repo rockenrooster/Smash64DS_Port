@@ -459,6 +459,7 @@ try {
                 $coarseBenchmarkCommands += 'printf "COARSE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileLoopWallTicks, gNdsRendererProfileInputTicks, gNdsRendererProfileUpdateTicks, gNdsRendererProfileSourceUpdateTicks, gNdsRendererProfileAudioUpdateTicks, gNdsRendererProfilePresentActiveTicks, gNdsRendererProfileVBlankWaitTicks, gNdsRendererProfileBeginFrameTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileWallpaperTicks, gNdsRendererProfileOwners[0].exclusive_ticks, gNdsRendererProfileOwners[1].exclusive_ticks, gNdsRendererProfileOwners[2].exclusive_ticks, gNdsRendererProfileForegroundTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileFlushTicks, gNdsRendererProfilePostVBlankTicks, gNdsRendererProfileThreadTicks, gNdsRendererProfileDrawResidualTicks, gNdsRendererProfilePresentResidualTicks, gNdsRendererProfileLoopResidualTicks, gNdsRendererProfileConservationErrorTicks, gNdsRendererProfileLogicTick'
                 $coarseBenchmarkCommands += 'printf "STAGE0_BENCH=%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileStageLayer0Ticks'
                 $coarseBenchmarkCommands += 'printf "GX_BOUNDARY=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileGXStatusBeforeFlush, gNdsRendererProfileGXControlBeforeFlush, gNdsRendererProfileGXStatusAfterFlush, gNdsRendererProfileGXStatusPostVBlank, gNdsRendererProfileGXControlPostVBlank, gNdsRendererProfileFlushTicks'
+                $coarseBenchmarkCommands += 'printf "TEXTURE_PHASE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileTextureConvertTicks, gNdsRendererProfileTextureUploadTicks, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes, gNdsRendererProfileTexturePairOracleChecks, gNdsRendererProfileTexturePairOracleMismatches, gNdsRendererProfileTextureVBlankQueuedUploads, gNdsRendererProfileTextureVBlankQueuedBytes, gNdsRendererProfileTextureVBlankCommittedUploads, gNdsRendererProfileTextureVBlankCommitTicks, gNdsRendererProfileTextureVBlankOutsideCount, gNdsRendererProfileTextureVBlankFallbackCount, gNdsRendererProfileTextureVBlankStartLine, gNdsRendererProfileTextureVBlankEndLine'
                 $coarseBenchmarkCommands += 'printf "FAST_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]'
                 if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                     $coarseBenchmarkCommands += 'printf "SINK_BENCH=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSinkCursor, gNdsRendererBenchmarkSinkWordCount, gNdsRendererBenchmarkSinkCalibrationWords, gNdsRendererBenchmarkSinkCalibrationTicks, gNdsRendererBenchmarkSinkOwnerWords[0], gNdsRendererBenchmarkSinkOwnerWords[1], gNdsRendererBenchmarkSinkOwnerWords[2]'
@@ -708,12 +709,14 @@ try {
     $stage0Benchmark = @()
     $sinkBenchmark = @()
     $warmBenchmark = @()
+    $texturePhaseBenchmark = @()
     $fastRunBenchmark = @()
     $rendererSemanticBenchmark = @()
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
         $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 24)
         $gxBoundaryBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'GX_BOUNDARY' -FieldCount 7)
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
+        $texturePhaseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TEXTURE_PHASE_BENCH' -FieldCount 15)
         $fastRunBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'FAST_BENCH' -FieldCount 10)
         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
             $sinkBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SINK_BENCH' -FieldCount 8)
@@ -851,6 +854,7 @@ try {
                 $stage0Summary = ''
                 $sinkMetricSummary = ''
                 $warmMetricSummary = ''
+                $texturePhaseMetricSummary = ''
                 $fastRunMetricSummary = ''
                 $semanticMetricSummary = ''
                 $semanticChurnSummary = ''
@@ -910,6 +914,7 @@ try {
                         $stage0Samples = [System.Collections.Generic.List[object]]::new()
                         $sinkSamples = [System.Collections.Generic.List[object]]::new()
                         $warmSamples = [System.Collections.Generic.List[object]]::new()
+                        $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                         $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
                         $logicTickResetCount = 0
@@ -928,6 +933,7 @@ try {
                             Assert-Condition ($warmBenchmark.Count -eq $RendererBenchmarkSamples) "WARM_NO_UPLOAD benchmark captured $($warmBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         Assert-Condition ($fastRunBenchmark.Count -eq $RendererBenchmarkSamples) "Fast-run benchmark captured $($fastRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        Assert-Condition ($texturePhaseBenchmark.Count -eq $RendererBenchmarkSamples) "Texture-phase benchmark captured $($texturePhaseBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         for ($sampleIndex = 0; $sampleIndex -lt $RendererBenchmarkSamples; $sampleIndex++) {
                             $coarse = Get-Ints $coarseBenchmark[$sampleIndex]
                             $render = Get-Ints $rendererBenchmark[$sampleIndex]
@@ -991,6 +997,17 @@ try {
                                 Assert-Condition ($warm[0] -eq $frame -and (Test-RendererUploadPair $warm[1] $warm[2])) "WARM_NO_UPLOAD sampled an invalid suppressed refresh pair $($warm[1])/$($warm[2]) at frame $frame." $gdbStdout
                                 $warmSamples.Add($warm)
                             }
+                            $texturePhase = Get-Ints $texturePhaseBenchmark[$sampleIndex]
+                            Assert-Condition ($texturePhase[0] -eq $frame -and (Test-RendererUploadPair $texturePhase[3] $texturePhase[4])) "Texture-phase benchmark is not synchronized or sampled invalid uploads at frame $frame." $gdbStdout
+                            if ($RendererProfileLevel -ge 2) {
+                                Assert-Condition ($texturePhase[6] -eq 0 -and (($texturePhase[3] -eq 0 -and $texturePhase[5] -eq 0) -or ($texturePhase[3] -gt 0 -and $texturePhase[5] -gt 0))) "Palette-pair texture oracle failed or did not track the sampled refreshes at frame $frame." $gdbStdout
+                            }
+                            if (($RendererProfileLevel -lt 2) -and ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 0) -and ($texturePhase[3] -gt 0)) {
+                                Assert-Condition ($texturePhase[7] -eq $texturePhase[3] -and $texturePhase[8] -eq $texturePhase[4] -and $texturePhase[9] -eq $texturePhase[3] -and $texturePhase[11] -eq 0 -and $texturePhase[12] -eq 0 -and $texturePhase[13] -ge 192 -and $texturePhase[14] -ge 192) "Animated texture refresh did not queue and commit exactly inside VBlank at frame $frame." $gdbStdout
+                            } elseif ($RendererProfileLevel -ge 2) {
+                                Assert-Condition ($texturePhase[7] -eq 0 -and $texturePhase[8] -eq 0 -and $texturePhase[9] -eq 0 -and $texturePhase[11] -eq 0 -and $texturePhase[12] -eq 0) "Forensic texture oracle unexpectedly allocated or executed the shipping VBlank staging path at frame $frame." $gdbStdout
+                            }
+                            $texturePhaseSamples.Add($texturePhase)
                             $fastRun = Get-Ints $fastRunBenchmark[$sampleIndex]
                             Assert-Condition ($fastRun[0] -eq $frame -and $fastRun[1] -eq $RendererFastRunMode -and ($fastRun[4] + $fastRun[5] + $fastRun[6]) -eq $fastRun[3]) "Fast-run accounting is not synchronized, in the selected mode, or owner-conserved at frame $frame." $gdbStdout
                             if ($RendererFastRunMode -eq 0) {
@@ -1082,6 +1099,7 @@ try {
                             $warmMetricSummary = "Renderer WARM_NO_UPLOAD: samples=$RendererBenchmarkSamples suppressedUploads=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 1)) suppressedBytes=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 2))"
                         }
                         $fastRunMetricSummary = "Renderer fast raw runs: mode=$RendererFastRunMode samples=$RendererBenchmarkSamples runs=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 2)) triangles=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 3)) stage=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 4)) Mario=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 5)) Fox=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 6)) fallbackState=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 7)) fallbackVertex=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 8)) fallbackCommand=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 9))"
+                        $texturePhaseMetricSummary = "Renderer texture phases: samples=$RendererBenchmarkSamples convert=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 1)) queue=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 2)) uploads=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 3))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 4)) pairOracle=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 5))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 6)) vblankQueued=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 7))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 8)) committed=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 9)) commitTicks=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 10)) outside/fallback=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 11))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 12)) lines=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 13))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 14))"
 
                         $ownerLabels = @('stage', 'Mario', 'Fox')
                         if ($RendererProfileLevel -ge 2) {
@@ -1195,6 +1213,7 @@ try {
                                     , @(Get-Ints $_)
                                 })
                                 coarse = @($coarseSamples)
+                                texturePhases = @($texturePhaseSamples)
                                 fastRaw = @($fastRunSamples)
                                 owners = @(
                                     @($ownerSamples[0]),
@@ -1246,6 +1265,7 @@ try {
                     Write-Output $stage0Summary
                     if ($sinkMetricSummary) { Write-Output $sinkMetricSummary }
                     if ($warmMetricSummary) { Write-Output $warmMetricSummary }
+                    if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     Write-Output "$Label renderer benchmark-only sample passed."
@@ -1380,6 +1400,7 @@ try {
                     Write-Output $coarseResidualRatioSummary
                     Write-Output $gxBoundarySummary
                     Write-Output $stage0Summary
+                    if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     $ownerChurnSummaries | ForEach-Object { Write-Output $_ }

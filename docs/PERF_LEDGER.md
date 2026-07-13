@@ -768,3 +768,77 @@ VERIFIER COMMANDS AND RESULTS:
 DECISION: KEEP / REWORK / REVERT
 NEXT MEASURED BOTTLENECK:
 ```
+
+## 2026-07-12 - T2D pair conversion and VBlank refresh safety
+
+```text
+IDEA ID: T2D-PAIR-VBLANK
+HYPOTHESIS:
+  Split conversion from upload, replace the changing 8 KiB/16-plane CI4 table
+  with exact palette-pair RGB/coverage state, and stage both current payloads
+  so texture VRAM is never remapped during active scanout.
+TARGETED EXCLUSIVE COUNTER:
+  texture convert, queue/stage, VBlank commit, outside-window/fallback.
+MEASURED UPPER BOUND:
+  Retained WARM_NO_UPLOAD control saved 315,584 whole-draw ticks.
+LIVE-TREE RECONCILIATION:
+  Started from K-RAW commit 15f6b78a8; preserved all user untracked files and
+  reconciled the concurrent live-input correction separately.
+FILES/FUNCTIONS CHANGED:
+  nds_renderer.c/.h texture pair conversion, two-entry refresh queue/oracle;
+  nds_platform.c post-wait commit; benchmark/static verifier plumbing.
+BUILD TARGET/FLAGS:
+  battle_playable coarse/forensic/canonical; common/scene O2 Thumb, renderer O2
+  ARM with the existing targeted O3/ITCM path; benchmark mode 0.
+BASELINE ROM SHA-256:
+  Localization ROM 7E820AAC2D4D884830910212D17EE0BC8B8ABD26DD58A6C1C49E342979CE62AD.
+EXPERIMENT ROM SHA-256:
+  128-frame coarse D944503003D2B44F798D529769BA3ED4BF687A64856F1E42F526099B7D55E461;
+  canonical 0C564D4822011FCAB9DC5CA4F52C5F8EBB7339354BFD3FBA93A035C5F90F2663.
+FRAME/LOGIC-TICK WINDOW:
+  128 synchronized warm frames 208..335; logic ticks 215..342.
+A0 MEDIAN/P95:
+  Eight-frame localization before edits: draw 2,199,168/2,224,384; conversion
+  201,568/226,752; synchronous remap/DMA 33,696/33,728.
+B0 MEDIAN/P95:
+  128-frame retained path: draw 2,179,072/2,199,808; conversion
+  190,528/208,704; distinct-row stage/queue 18,304/21,184.
+A1 OR DISABLED-CONTROL MEDIAN/P95:
+  No same-ROM A1 was retained because the independent live-input source fix
+  changed gameplay concurrently; no 50K optimization claim is made.
+ACTIVE/WAIT SPLIT:
+  loop 2,800,896/2,834,432; active 2,216,160/2,236,800; VBlank wait
+  440,416/486,272; post-VBlank 33,600/33,856; conservation error 0/0.
+OWNER SPLIT:
+  stage/Mario/Fox 943,840/964,864, 399,552/399,616, 437,984/438,656.
+OP/PROGRAM BYTES/FALLBACKS:
+  Logical outputs remain 4,096 + 32,768 bytes. Physical persistent staging is
+  4 KiB plus at most 64 distinct 256-byte rows (16 KiB) and a 128-byte row map.
+  Queue/commit is 2/36,864; outside/fallback 0/0; no phase-frame cache/program.
+ITCM/DTCM/BSS/STACK/ARENA DELTA:
+  Canonical ITCM 20,088/32,768; main BSS 1,871,280 (+13,632 versus K-RAW after
+  pair-table reduction/compact staging); DTCM BSS 152. Profile 2 omits staging.
+  Its 4 KiB-granular taskman fallback selects 0x14c000 and leaves 145,472 bytes
+  after BGM, 14,400 above the 128 KiB reserve.
+SEMANTIC TRACE RESULT:
+  Profile 2 checks all 18,432 changed-frame RGB15/coverage outputs against the
+  old exact blend formula with zero mismatch; semantic events remain 828/0.
+ORACLE/COUNTER/GX RESULT:
+  Oracle 2,484/0/0; triangles/classes 828 and 648/44/126/10; batch 121/707/121;
+  prepare/reuse 98/730; exact 36,864 bytes. Profile 2 uses synchronous refresh
+  only as the independent oracle. Live fighter motion makes GX RAM
+  position-dependent (canonical sample 695/2,119) without geometry loss.
+CAPTURE RESULT:
+  Canonical image is recognizable with flowers, fence, pond, tree, and fighters;
+  live-input camera crops retain 46.7% bush, 24.9% stage, and 24.2% pond detail.
+VERIFIER COMMANDS AND RESULTS:
+  128-frame coarse pass, 8-frame forensic pair/oracle pass, GBI fixtures,
+  architecture, registry, ITCM, canonical smoke/parity, and P1 memory passed. Fast capture's
+  stale flat-run limits were corrected from repeated valid live-input frames.
+DECISION: KEEP VBlank safety / REWORK performance
+  The path removes the diagnosed active-scanout remap and remains exact, but
+  does not meet the 50K performance gate or the 80K-100K texture target.
+NEXT MEASURED BOTTLENECK:
+  Split small/large conversion and emit two aligned RGB15 pixels per 32-bit
+  store; retain only if a same-ROM 128-frame control clears the keep gate.
+```

@@ -1281,6 +1281,7 @@ void ndsPlatformEndFrame(void)
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();
 #endif
+    ndsRendererHardwareCommitPendingTextureRefreshes();
     sTicks++;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfilePostVBlankTicks +=
