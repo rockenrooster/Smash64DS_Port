@@ -87,6 +87,12 @@ scene=22→24, safety=0, stale=0/0, and 171,916 bytes conservative reserve after
 the resident BGM buffer. It is unthrottled lifecycle evidence, not a realtime
 or exact canonical-duration qualification.
 
+The source-backed 39,120-byte AOT FGM pack also passes natural countdown
+runtime: exact PublicExcited/3/2/1/GO IDs play once (`0x1f`), decoded waveforms
+are non-silent, FGM uses channel mask `0x2` beside BGM channel 0, included
+lookup/play/load failures are zero, and arena headroom is 235,104 bytes. Voices,
+seven unsupported calls, and winner/Results BGM remain explicit debt.
+
 ## Execution Ownership
 
 Use `P1_EXECUTION_BOARD.md` for the active lanes, worktrees, file locks,

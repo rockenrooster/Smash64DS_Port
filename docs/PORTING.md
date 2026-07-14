@@ -20678,3 +20678,15 @@ remains skipped for the requested fast iteration cadence.
   `385B9F051C5CBB801089C69E13D49F9E0D19C07F1E4DA19DA943772B5553FC21`.
   Its measured 9.0 FPS remains a release blocker; the unthrottled lifecycle
   gate is not cited as realtime evidence.
+
+## 2026-07-14 - Added source-backed battle phase FGM playback
+
+- Integrated a setup-generated 39,120-byte IMA ADPCM pack for the exact
+  BattleShip REGION_US PublicExcited, 3, 2, 1, and GO IDs. Runtime lookup plays
+  through the compatibility audio seam with no conversion during gameplay.
+- The natural mode-163 countdown gate observed every included ID exactly once,
+  phase mask `0x1f`, non-silent offline waveforms, FGM channel mask `0x2`
+  alongside BGM channel 0, maximum one live FGM, 28 envelope steps, zero
+  included lookup/play/load failures, and 235,104 bytes arena headroom.
+- Seven other calls, fighter voices, winner/Results BGM, positional mixing, and
+  two explicit PublicExcited loop/envelope fidelity debts remain open.

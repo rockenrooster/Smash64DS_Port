@@ -24,8 +24,8 @@ coverage, and a dated exact-ROM capture.
 | Renderer M2 — Mario/Fox | Active | AOT DS-native owner at 170–250K combined with semantic and screenshot parity |
 | Renderer M3 — complete stage | Open | AOT DS-native stage at 150–250K with source/collision/pixel parity |
 | Renderer M4 — conversion | Open | Zero texture conversion or preparation during gameplay |
-| Weapons/gameplay gaps | Active | Visible, moving, damaging Fireball; natural recovery and current-ROM acceptance |
-| Audio | Active | Real naturally triggered FGM/voices plus winner/Results BGM on enabled DS channels |
+| Weapons/gameplay gaps | Active | Fireball passes; natural recovery and current-ROM acceptance remain |
+| Audio | Active | Five natural phase FGMs pass; voices plus winner/Results BGM remain |
 | Stability and memory | Open | Repeated one-minute soaks, no crash/corruption, reserve gate maintained |
 | Release evidence | Open | Full Regression, canonical parity, dated capture, exact-ROM user retest |
 

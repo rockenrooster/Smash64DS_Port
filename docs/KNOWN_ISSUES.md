@@ -5,12 +5,13 @@
 | Blocker | Required closure |
 |---|---|
 | Renderer M2–M4 | Mario/Fox 170–250K, complete stage 150–250K, zero gameplay conversion, phase P95 path toward ~560K active ticks |
-| Mario Fireball | Distinct weapon owner with visible moving geometry, normal damage/hitlag, and destruction |
-| Gameplay-critical audio | Real FGM/voice channels, audible BGM proof, winner track 12/16 followed by Results 22; exact US IDs now pass |
+| Gameplay coverage | Natural Fox recovery plus current-ROM platform/edge and repeat-hit acceptance |
+| Gameplay-critical audio | Five phase FGMs pass; close voices, seven unsupported calls, audible BGM proof, and winner 12/16 followed by Results 22 |
 | Full-match stability | Repeated canonical one-minute Time Up → Results soaks with memory reserve and guards intact |
 | Release evidence | Full Regression, clean canonical parity, dated captures, and exact-ROM manual user retest |
 
-The authoritative state, lane, next gate, and integration decision for each row
+Mario Fireball is closed by its dedicated visible/moving/textured source-spawn
+and damage gate. The authoritative state, lane, next gate, and integration decision for each row
 live in `P1_EXECUTION_BOARD.md`.
 
 ## Current P1 And Tooling Notes
@@ -31,10 +32,11 @@ live in `P1_EXECUTION_BOARD.md`.
   same-ROM split-matrix cut saved only 36,192 ticks and was removed; deleting
   all generated-run preparation/emission still leaves a 331K measured floor,
   so the next architecture must also cut the ~178K matrix-preparation wall.
-- Audio is not release-ready. All 129 local REGION_US IDs now match BattleShip,
-  but the FGM seam records diagnostics without playing a DS sample, Dream Land
-  BGM counters do not yet prove an enabled non-silent sound channel, and
-  winner/Results tracks 12/16/22 are unsupported.
+- Audio is not release-ready. All 129 local REGION_US IDs match BattleShip and
+  the five phase FGMs play naturally from a verified 39,120-byte AOT pack, but
+  fighter voices and seven other calls remain unsupported, Dream Land BGM
+  counters do not yet prove an enabled non-silent channel, and tracks 12/16/22
+  are unsupported.
 - The live source floor/edge callbacks are now active, but their manual behavior
   is still awaiting Tyler's fresh playtest. Mode 163 now uses normal down input
   to pass its elevated fighter through the one-way platform before Walk/DashRun;
@@ -1121,8 +1123,10 @@ live in `P1_EXECUTION_BOARD.md`.
   the permanent seam, but the current DS streamer behind them is interim and is
   superseded by the future original sequence-player import. It currently loops
   by wrapping the whole rendered track; original CSEQ loop-point extraction is
-  still follow-up. FGM/voice playback, positional audio, broader BGM IDs, mixer
-  behavior, and original sequence envelopes remain unimplemented.
+  still follow-up. General FGM/voice playback, positional audio, broader BGM IDs, mixer
+  behavior, and original sequence envelopes remain unimplemented. The five
+  countdown phase FGMs are now the narrow exception: they use preconverted IMA
+  ADPCM with two declared loop/envelope fidelity debts and zero runtime conversion.
 - Realtime battle presentation is paced to DS vblank. The original N64
   scheduler drives gameplay from retrace; the DS hardware vblank is 59.8261 Hz,
   about 0.3% slower than N64 60 Hz. This is an inherent platform difference,

@@ -71,7 +71,7 @@ available, and reassign a slot immediately when its packet completes.
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | Visual pass / native optimization active | Renderer + QA | Generic full-layer compositor adds about 1.84M foreground ticks per active frame | Keep source thread/assets; replace DS presentation owner |
 | Dream Land BGM | Partial | Audio | Stream counters pass; enabled DS channel and nonzero PCM peak unproved | Block audio completion |
-| Required FGM and Mario/Fox voices | IDs pass / runtime fail | Audio | 129 REGION_US IDs match BattleShip; current seam is diagnostic-only and silent | AOT countdown/voice slice, then natural audible event |
+| Required FGM and Mario/Fox voices | Phase FGM pass / voices open | Audio | Five exact natural phase IDs, mask `0x1f`, non-silent samples, channel `0x2`, failures zero; voices and seven unsupported calls remain | Keep pack; implement voices |
 | Winner and Results BGM | Fail | Audio | Tracks Mario 12 / Fox 16 / Results 22 unsupported | Block full Results acceptance |
 | Stable reserve / no corruption | One-match pass | QA | Conservative reserve 171,916 bytes after BGM; stale=0/0 and 17 safety counters zero; repetition pending | Keep gate; repeat for qualification |
 | Full Regression | Pending | QA | Required after architecture freeze | Block release candidate |
@@ -79,12 +79,13 @@ available, and reassign a slot immediately when its packet completes.
 
 ## Reconciled Blockers
 
-- Confirmed: renderer M2–M4, countdown software-compositor cost, missing mainline
-  FGM/voice playback, unsupported winner/Results BGM, incomplete audible-channel
+- Confirmed: renderer M2–M4, countdown software-compositor cost, missing voice
+  playback and seven unsupported FGM calls, unsupported winner/Results BGM, incomplete audible-channel
   proof for Dream Land BGM, exact canonical-duration qualification, Full
   Regression, and final dated capture/manual exact-ROM qualification.
-- Closed: exact US sound-ID drift, visible/damaging Fireball, one-minute natural
-  lifecycle/single-match safety, lower HUD pixels, Cut G M1, and the 10.5K
+- Closed: exact US sound-ID drift, five natural countdown phase FGMs,
+  visible/damaging Fireball, one-minute natural lifecycle/single-match safety,
+  lower HUD pixels, Cut G M1, and the 10.5K
   CPU-only joint-preorder experiment.
 - Retest before changes: repaired Mario→Fox repeat damage, freeze,
   platform/edge behavior, Up-B, and missing
@@ -101,8 +102,8 @@ available, and reassign a slot immediately when its packet completes.
   baselines; repeat canonical one-minute qualification.
 - Fireball render/damage and one-minute lifecycle/safety gates now pass.
 - M2/M3 research ranked whole-owner cuts; countdown software cost is isolated.
-- Audio audit: exact BattleShip IDs now pass; AOT-build the natural
-  PublicExcited → 3 → 2 → 1 → GO DS ADPCM slice next.
+- Audio audit and AOT PublicExcited → 3 → 2 → 1 → GO DS ADPCM slice pass;
+  voices and winner/Results tracks remain.
 
 ### July 15
 

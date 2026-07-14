@@ -74,7 +74,7 @@ physical hardware remains untested.
 | Gameplay | Core live; source Fireball render/damage passes; natural recovery coverage open |
 | Renderer | M1 pass; M2 active; M3/M4 open |
 | HUD/countdown | User-approved lower HUD and top countdown pass |
-| Audio | 129 exact US IDs pass; real FGM/voices and winner/Results BGM fail; BGM channel proof partial |
+| Audio | Five natural phase FGMs pass; voices and winner/Results BGM remain; BGM channel proof partial |
 | Stability/memory | One full match passes with 171,916-byte conservative reserve and zero safety faults; repetition pending |
 | Release evidence | Full Regression, dated capture, and exact-ROM retest pending |
 

@@ -20,8 +20,8 @@ active Boundary profile. It is a natural BattleShip battle scene, not a
 scripted combat proof.
 
 Cut G renderer milestone 1 and the lower-screen text HUD are accepted. The
-remaining release blockers include renderer milestones 2–4, visible/damaging
-projectiles, gameplay-critical FGM/voices and Results music, a dated canonical
+remaining release blockers include renderer milestones 2–4, natural recovery
+coverage, fighter voices and Results music, a dated canonical
 one-minute soak, Full Regression, and final exact-ROM qualification. Current
 acceptance state, lane ownership, dated gates, and evidence are maintained only
 in `docs/P1_EXECUTION_BOARD.md`.

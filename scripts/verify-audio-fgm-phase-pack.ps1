@@ -103,7 +103,8 @@ try {
     $configState = Enable-MelonDSGdbConfig `
         -MelonDSPath $melonDsPath `
         -GdbPort $verifierContext.GdbPort `
-        -Persistent:([bool]$verifierContext.PersistentConfig)
+        -Persistent:([bool]$verifierContext.PersistentConfig) `
+        -MuteAudio
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath `
         -ArgumentList $rom `
