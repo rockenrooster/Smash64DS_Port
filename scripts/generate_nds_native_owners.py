@@ -388,8 +388,11 @@ def decode_joint_topology(
     return joint_schedule, binding_parents, binding_joints, cross_slots
 
 
-def build_dense_geometry(vertex, triangles, runs, epochs, owners):
-    repo_root = Path(__file__).resolve().parents[1]
+def build_dense_geometry(
+        vertex, triangles, runs, epochs, owners, repo_root: Path | None = None):
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(repo_root).resolve()
     payloads = {
         owner_name: load_o2r_payload(repo_root, owner_name)
         for owner_name, _ in owners
@@ -729,7 +732,10 @@ def emit_rows(type_name: str, name: str, rows: list[str]) -> list[str]:
     return result
 
 
-def generate() -> str:
+def generate(repo_root: Path | None = None) -> str:
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(repo_root).resolve()
     data = decode_export()
     state = unpack_many("<IIB3x", data["state"])
     sequence = list(data["sequence"])
@@ -754,9 +760,7 @@ def generate() -> str:
     owner_roots = (("mario", mario_roots), ("fox", fox_roots))
     owner_topologies = []
     for owner_name, roots in owner_roots:
-        payload = load_o2r_payload(
-            Path(__file__).resolve().parents[1], owner_name
-        )
+        payload = load_o2r_payload(repo_root, owner_name)
         owner_topologies.append(
             decode_joint_topology(payload, owner_name, roots)
         )
@@ -776,6 +780,7 @@ def generate() -> str:
         runs,
         epochs,
         owner_roots,
+        repo_root,
     )
     if (len(dense_vertices), len(dense_corners)) != (541, 1878):
         raise ValueError(
@@ -948,9 +953,14 @@ def main() -> int:
         default=Path(__file__).resolve().parents[1]
         / "src" / "nds" / "nds_native_fighter_owner.generated.inc",
     )
+    parser.add_argument(
+        "--source-root", type=Path,
+        default=Path(__file__).resolve().parents[1],
+        help="repo root containing the read-only BattleShip O2R inputs",
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    generated = generate()
+    generated = generate(args.source_root)
     if args.check:
         if not args.output.is_file() or args.output.read_text() != generated:
             raise SystemExit(f"stale generated native-owner IR: {args.output}")
