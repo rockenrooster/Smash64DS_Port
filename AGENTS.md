@@ -63,20 +63,18 @@ current Boundary/Latest membership, then read these human summaries:
 
 ## Current Boundary
 
-Registry modes `161/162` remain the active legacy proof boundary:
+Canonical `battle_playable_realtime` mode `163` is the active natural-runtime
+boundary:
 
 ```powershell
-.\scripts\verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
-.\scripts\verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1 -DelaySeconds 3
+.\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-They prove a bounded selected Fox Jab2 live-hit damage lifecycle and
-damage-status follow-through on the Pupupu Mario/Fox battle root, inheriting
-the current MP, ledge, damage, catch/throw, shield, rebound, and TaruCannon
-hazard setup/physics proofs. Full marker strings live only in
-`docs/DIAGNOSTIC_REFERENCE.md`.
-
-This boundary is a regression anchor, not the template for future one-bit work.
+It proves the source five-minute Mario-human/Fox-CPU scene, exact Wait-to-GO
+control/timer behavior, retained affine BG2 wallpaper, and live stage/fighter
+hardware submission. Legacy modes `161/162` remain diagnostic-only because
+their bounded input driver assumes pre-GO movement. Full marker strings live
+only in `docs/DIAGNOSTIC_REFERENCE.md`.
 
 ## Common Commands
 

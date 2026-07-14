@@ -7090,30 +7090,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             {
                 ndsBattlePlayablePacingStart(
                     (NDS_HARNESS_FAST_LOGIC != 0) ? 1u : 0u);
-#if NDS_SCENE_MIP_CACHE_LAB
-                if (use_realtime_presentation != 0u)
-                {
-                    u32 seed_guard = 0u;
-
-                    while ((ndsSceneMipCacheHoldLogic() != FALSE) &&
-                           (seed_guard < 4u))
-                    {
-                        ndsBattlePlayablePresentFrame();
-                        seed_guard++;
-                    }
-                    if (ndsSceneMipCacheHoldLogic() != FALSE)
-                    {
-                        ndsPlatformSceneMipCacheAbort();
-                    }
-                    /* Seed VBlanks do not consume match time or pacing. */
-                    ndsBattlePlayablePacingStart(0u);
-                    if (ndsPlatformSceneMipCacheReady() != FALSE)
-                    {
-                        ndsPlatformSetOriginalSpriteOverlayLayerMask(
-                            NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND);
-                    }
-                }
-#endif
             }
             for (i = 0u; i < update_max; i++)
             {
@@ -7138,6 +7114,29 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #endif
                 ndsRunMarioFoxProofUpdate(
                     &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+#if NDS_SCENE_MIP_CACHE_LAB
+                if ((is_battle_playable != 0u) &&
+                    (use_realtime_presentation != 0u) &&
+                    (i == 0u) &&
+                    (ndsSceneMipCacheHoldLogic() != FALSE))
+                {
+                    u32 seed_guard = 0u;
+
+                    /* Let BattleShip establish the real fighter/camera state
+                     * once, then seed without advancing logic or match time. */
+                    while ((ndsSceneMipCacheHoldLogic() != FALSE) &&
+                           (seed_guard < 4u))
+                    {
+                        ndsBattlePlayablePresentFrame();
+                        seed_guard++;
+                    }
+                    if (ndsSceneMipCacheHoldLogic() != FALSE)
+                    {
+                        ndsPlatformSceneMipCacheAbort();
+                    }
+                    ndsBattlePlayablePacingStart(0u);
+                }
+#endif
                 if ((is_battle_playable != 0u) &&
                     (use_realtime_presentation == 0u))
                 {

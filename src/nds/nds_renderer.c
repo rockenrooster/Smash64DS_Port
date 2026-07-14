@@ -6100,8 +6100,6 @@ s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
 #undef NDS_SCENE_MIP_EMIT
         }
     }
-    glEnd();
-
     triangle_count = (columns - 1u) * (rows - 1u) * 2u;
     sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
     sNdsRendererRuntimeFrameSummary.hardware_vertices +=

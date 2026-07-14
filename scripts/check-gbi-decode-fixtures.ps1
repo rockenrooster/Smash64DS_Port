@@ -1313,6 +1313,15 @@ foreach ($origin in @(-1, 1)) {
 }
 $spritePreview = Get-Content (Join-Path $root 'src/port/sprite_preview_backend.c') -Raw
 $sceneBackend = Get-Content (Join-Path $root 'src/port/scene_backend.c') -Raw
+$mbiHeader = Get-Content (Join-Path $root 'include/PR/mbi.h') -Raw
+Assert-True ([regex]::IsMatch($mbiHeader, '(?m)^#define G_IM_SIZ_4c 4\r?$')) 'Compressed sprite 4c no longer has its distinct upstream size code.'
+$siz4cBranch = $spritePreview.IndexOf('if (sprite->bmsiz == G_IM_SIZ_4c)')
+$siz4cDecode = $spritePreview.IndexOf('lbCommonDecodeSpriteBitmapsSiz4b(sprite);', $siz4cBranch)
+$siz4cAddSObj = $spritePreview.IndexOf('sobj = gcAddSObjForGObj(gobj, sprite);', $siz4cBranch)
+Assert-True (($siz4cBranch -ge 0) -and ($siz4cDecode -gt $siz4cBranch) -and ($siz4cDecode -lt $siz4cAddSObj)) 'lbCommonMakeSObjForGObj no longer expands 4c sprites before copying the SObj.'
+Assert-True ($spritePreview.Contains('ndsRelocFindLoadedFileContaining(bitmap_start, output_size)') -and $spritePreview.Contains('input_index ^ byte_lane_xor')) 'The 4c decoder no longer preserves logical O2R byte lanes during in-place expansion.'
+Assert-True ([regex]::Matches($spritePreview, 'sprite->bmfmt == G_IM_FMT_CI\)\s*&&\s*\(sprite->bmsiz == G_IM_SIZ_4b').Count -ge 3) 'The SObj preview no longer accepts and decodes ordinary CI4 sprites.'
+Assert-True ($spritePreview.Contains('packed = src_ci[source_index ^ 3u];') -and $spritePreview.Contains('palette[((u32)index) ^ 1u]')) 'CI4 raster decode no longer combines O2R TEXSHUF data with its RGBA16 TLUT.'
 Assert-True ($spritePreview.Contains('return ((((relative + 1u) << 16) - 1u) / scale_q16);')) 'Wallpaper inverse helper no longer uses the proven last-writer equation.'
 Assert-True ([regex]::Matches($spritePreview, 'ndsSObjWallpaperLastSource\(').Count -ge 3) 'Wallpaper fast path no longer routes both axes through the proven inverse helper.'
 Assert-True ($spritePreview.Contains('ndsSObjDrawOpaqueWallpaperFinal')) 'Dream Land wallpaper no longer has a direct final-resolution renderer.'
@@ -1733,6 +1742,7 @@ Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-cpu-prep-no-gx-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1.*?override NDS_RENDERER_BENCHMARK_MODE := 2') 'CPU_PREP_NO_GX cost-floor target is not a dedicated profile-1 build.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-warm-no-upload-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1.*?override NDS_RENDERER_BENCHMARK_MODE := 4') 'WARM_NO_UPLOAD cost-floor target is not a dedicated profile-1 build.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-canonical-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 0') 'Canonical/shipped renderer is not forced to performance profile 0.'
+Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-canonical-hwtri\).*?override NDS_SCENE_MIP_CACHE_LAB := 1') 'Canonical/shipped renderer no longer enables the graduated retained-wallpaper path.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1') 'Internal coarse renderer target is not forced to profile 1.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-forensic-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 2') 'Internal forensic renderer target is not forced to profile 2.'
 Assert-True ([regex]::Matches($makefile, 'NDS_DEV_SCENE_HARNESS_ID := 163\r?\n(?:#[^\r\n]*\r?\n)*CFLAGS \+= -O2').Count -eq 1) 'Canonical mode 163 no longer retains the measured O2 latency policy.'

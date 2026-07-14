@@ -83,6 +83,9 @@ $benchmarkRomIdentity = $null
 $benchmarkElfIdentity = $null
 $benchmarkMelonIdentity = $null
 $benchmarkMelonConfigSha256 = $null
+$usesRetainedWallpaper =
+    (($Target -eq 'smash64ds-battle-playable-coarse-mipcache-hwtri') -or
+     ($Target -eq 'smash64ds-battle-playable-canonical-hwtri'))
 function Assert-Condition {
     param([bool]$Condition, [string]$Message, [string]$Context)
     if (-not $Condition) { throw "$Message`n$Context" }
@@ -573,8 +576,9 @@ try {
                 $hardwareCommands += 'printf "SOBJ_WALL_ORACLE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperMapOracleCheckCount, gNdsSObjWallpaperMapOracleMismatchCount, gNdsSObjWallpaperPixelOracleCheckCount, gNdsSObjWallpaperPixelOracleMismatchCount, gNdsSObjWallpaperOracleFirstKind, gNdsSObjWallpaperOracleFirstIndex, gNdsSObjWallpaperOracleFirstExpected, gNdsSObjWallpaperOracleFirstActual'
             }
         }
-        if ($Target -eq 'smash64ds-battle-playable-coarse-mipcache-hwtri') {
-            $hardwareCommands += 'printf "SCENE_MIP_CACHE=%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%#x,%#x,%u\n", gNdsSceneMipCacheState, gNdsSceneMipCacheCaptureCount, gNdsSceneMipCacheUploadCount, gNdsSceneMipCacheFailureCount, gNdsSceneMipCacheLastHash, gNdsSceneMipCacheLastNonzeroPixels, gNdsSceneMipCacheSeedDrawCount, gNdsSceneMipCacheDrawCount, gNdsSceneMipCacheFallbackCount, gNdsSceneMipCacheMappingFailureCount, gNdsSceneMipCacheSelectedMip, gNdsSceneMipCacheTargetDistanceBits, gNdsSceneMipCacheSelectedMipMask, gNdsSceneMipCacheSelectedMipChangeCount'
+        if ($usesRetainedWallpaper) {
+            $hardwareCommands += 'printf "SCENE_MIP_CACHE=%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%#x,%#x\n", gNdsSceneMipCacheState, gNdsSceneMipCacheCaptureCount, gNdsSceneMipCacheUploadCount, gNdsSceneMipCacheFailureCount, gNdsSceneMipCacheLastHash, gNdsSceneMipCacheLastNonzeroPixels, gNdsSceneMipCacheSeedDrawCount, gNdsSceneMipCacheDrawCount, gNdsSceneMipCacheFallbackCount, gNdsSceneMipCacheSelectedMip, gNdsSceneMipCacheTargetDistanceBits, gNdsSceneMipCacheSelectedMipMask'
+            $hardwareCommands += 'printf "SCENE_WALL_AFFINE=%u,%u,%u,%u,%d,%d,%d,%d\n", gNdsSceneWallpaperAffineQueueCount, gNdsSceneWallpaperAffineApplyCount, gNdsSceneWallpaperAffineCoverageFailureCount, gNdsSceneWallpaperAffineLastTicks, gNdsSceneWallpaperAffineHdx, gNdsSceneWallpaperAffineVdy, gNdsSceneWallpaperAffineDx, gNdsSceneWallpaperAffineDy'
         }
         $gdbCommands = @($beforeDetach + $hardwareCommands + $afterDetach)
     }
@@ -590,6 +594,9 @@ try {
             'printf "MEMRELOC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerRelocFiles, gNdsMemoryLedgerRelocBytes, gNdsMemoryLedgerRelocStageBytes, gNdsMemoryLedgerRelocFighterBytes, gNdsMemoryLedgerRelocInterfaceBytes, gNdsMemoryLedgerRelocMenuBytes, gNdsMemoryLedgerRelocOpeningBytes, gNdsMemoryLedgerRelocOtherBytes, gNdsMemoryLedgerRelocStaleFiles, gNdsMemoryLedgerRelocStaleBytes',
             'printf "MEMEVICT=%u,%u\n", gNdsMemoryLedgerEvictedFiles, gNdsMemoryLedgerEvictedBytes'
         )
+        if ($usesRetainedWallpaper) {
+            $battlePlayableCommands += 'printf "BPLAY_START=%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerBattleState->game_status, gSCManagerBattleState->time_limit, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, sIFCommonTimerIsStarted, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsBattlePlayablePacingLogicFrames'
+        }
         $gdbCommands = @($beforeDetach + $battlePlayableCommands + $afterDetach)
     }
     if ($ImportBattleShipFTComputer) {
@@ -684,6 +691,7 @@ try {
     $battlePlayableKO = [regex]::Match($gdbStdout, 'BPLAY_KO=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayableStatus = [regex]::Match($gdbStdout, 'BPLAY_STATUS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayablePacing = [regex]::Match($gdbStdout, 'BPLAY_PACE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $battlePlayableStart = [regex]::Match($gdbStdout, 'BPLAY_START=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryArena = [regex]::Match($gdbStdout, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryReloc = [regex]::Match($gdbStdout, 'MEMRELOC=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryEvict = [regex]::Match($gdbStdout, 'MEMEVICT=([0-9]+),([0-9]+)')
@@ -748,6 +756,8 @@ try {
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperFinal = [regex]::Match($gdbStdout, 'SOBJ_WALL_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperOracle = [regex]::Match($gdbStdout, 'SOBJ_WALL_ORACLE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $sceneMipCache = [regex]::Match($gdbStdout, 'SCENE_MIP_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $sceneWallAffine = [regex]::Match($gdbStdout, 'SCENE_WALL_AFFINE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
     $renderMatrix = [regex]::Match($gdbStdout, 'RENDER_MATRIX=([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderAdapterCache = [regex]::Match($gdbStdout, 'RENDER_ADAPTER_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -818,6 +828,25 @@ try {
             $bp = Get-Ints $battlePlayablePacing
             $minPresentedFrames = if ($RequireRealtime60Fps) { 60 } else { 45 }
             Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and (($bp[2] -eq $bp[3]) -or ($bp[2] -eq ($bp[3] + 1))) -and (($bp[4] -eq $bp[3]) -or ($bp[4] -eq ($bp[3] + 1))) -and $bp[3] -ge $minPresentedFrames -and $bp[5] -gt 0 -and $bp[6] -gt 0 -and $bp[7] -gt 0) 'battle_playable realtime pacing smoke did not present live frames or keep draw/update within one in-flight vblank.' $gdbStdout
+            if ($usesRetainedWallpaper) {
+                $bs = Get-Ints $battlePlayableStart
+                $preGoState =
+                    ($bs[0] -eq 0 -and $bs[1] -eq 5 -and
+                     $bs[2] -eq 18000 -and $bs[3] -eq 0 -and
+                     $bs[4] -eq 0 -and $bs[5] -eq 1 -and
+                     $bs[6] -eq 1)
+                $postGoState =
+                    ($bs[0] -eq 1 -and $bs[1] -eq 5 -and
+                     $bs[2] -gt 0 -and $bs[3] -gt 0 -and
+                     ($bs[2] + $bs[3]) -eq 18000 -and
+                     $bs[4] -eq 1 -and $bs[5] -eq 0 -and
+                     $bs[6] -eq 0)
+                Assert-Condition (
+                    $battlePlayableStart.Success -and
+                    ($bs[7] -eq $bp[2]) -and
+                    ($preGoState -or $postGoState)
+                ) 'Cut G did not keep the source timer and both fighter controls synchronized with the Wait-to-GO transition.' $gdbStdout
+            }
             if ($RequireRealtime60Fps) {
                 Assert-Condition ($bp[6] -ge 593 -and $bp[6] -le 603 -and $bp[7] -ge 593 -and $bp[7] -le 603) 'battle_playable realtime pacing failed 59.3..60.3 presented/logic fps.' $gdbStdout
             } elseif (($bp[6] -lt 593) -or ($bp[6] -gt 603) -or ($bp[7] -lt 593) -or ($bp[7] -gt 603)) {
@@ -839,6 +868,10 @@ try {
                 $wc = Get-Ints $wallpaperCache
                 $wf = Get-Ints $wallpaperFinal
                 $wo = Get-Ints $wallpaperOracle
+                if ($usesRetainedWallpaper) {
+                    $smc = Get-Ints $sceneMipCache
+                    $swa = Get-Ints $sceneWallAffine
+                }
                 $ro = Get-Ints $renderOracle
                 $rm = Get-Ints $renderMatrix
                 $rac = Get-Ints $renderAdapterCache
@@ -1320,7 +1353,31 @@ try {
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
                 Assert-Condition ($stageHardware.Success -and $shw[0] -eq (42 * $hw[0]) -and $shw[1] -eq (202 * $hw[0]) -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build drifted from the exact per-frame 42-list/202-triangle textured stage contract.' $gdbStdout
                 Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
-                Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq (2 * $hw[0]) -and $shwf[1] -eq (626 * $hw[0])) 'Canonical realtime HW build drifted from the exact per-frame two-owner/626-triangle fighter contract.' $gdbStdout
+                if ($usesRetainedWallpaper) {
+                    Assert-Condition (
+                        $sceneMipCache.Success -and
+                        $smc[0] -eq 2 -and
+                        $smc[1] -eq 1 -and
+                        $smc[2] -eq 0 -and
+                        $smc[3] -eq 0 -and
+                        $smc[4] -ne 0 -and
+                        $smc[5] -ge 36864 -and
+                        $smc[6] -eq 1 -and
+                        $smc[7] -gt 0 -and
+                        $smc[8] -eq 0 -and
+                        $smc[9] -eq 0 -and
+                        $smc[10] -ne 0 -and
+                        $smc[11] -eq 1 -and
+                        $hw[0] -eq ($smc[6] + $smc[7])
+                    ) 'Cut G did not retain exactly one complete BG2 wallpaper seed and continue natural live scene frames.' $gdbStdout
+                    Assert-Condition (
+                        $stageHardwareFighter.Success -and
+                        $shwf[0] -eq (2 * $smc[7]) -and
+                        $shwf[1] -eq (626 * $smc[7])
+                    ) 'Cut G live frames drifted from the exact two-owner/626-triangle fighter contract.' $gdbStdout
+                } else {
+                    Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq (2 * $hw[0]) -and $shwf[1] -eq (626 * $hw[0])) 'Canonical realtime HW build drifted from the exact per-frame two-owner/626-triangle fighter contract.' $gdbStdout
+                }
                 # ftdisplaymain.c:1164-1242 sets this preamble and traverses only
                 # source-selected, visible, textured fighter part display lists.
                 Assert-Condition ($fighterDisplayContract.Success -and $fdc[0] -gt 0 -and $fdc[3] -gt 0 -and $fdc[0] -ge $fdc[3] -and ($fdc[0] - $fdc[3]) -le 64 -and (($fdc[4] -band 0x222005) -eq 0x222005) -and $fdc[5] -gt 0 -and $fdc[6] -gt 0 -and $fdc[7] -gt 0 -and $fdc[8] -eq 0 -and $fdc[11] -gt 0 -and $fdc[12] -gt 0 -and $fdc[13] -eq 0x00100000 -and $fdc[14] -eq [Convert]::ToUInt32('c4112078', 16)) 'Canonical realtime HW build did not preserve the original fighter display selection, lighting, geometry, cycle, render-mode, and visibility contract.' $gdbStdout
@@ -1355,8 +1412,41 @@ try {
                 } elseif ($RendererProfileLevel -eq 1) {
                     Assert-Condition ($renderTopology.Success -and (($rtopo | Measure-Object -Sum).Sum -eq 0) -and $renderCost.Success -and (($rcost | Measure-Object -Sum).Sum -eq 0)) 'Low-frequency O2 coarse profile unexpectedly retained detailed command/triangle profiling.' $gdbStdout
                 }
-                Assert-Condition ($wallpaperCache.Success -and $wc[0] -eq 1 -and $wc[1] -ge 1 -and $wc[2] -eq ($wc[0] + $wc[1]) -and $wc[3] -eq 0 -and $wc[4] -eq 300 -and $wc[5] -eq 220 -and $wc[6] -eq 66000 -and $wc[7] -gt 0 -and $wc[8] -gt 0) 'Canonical realtime HW build did not construct once and reuse the exact opaque Dream Land wallpaper decode cache.' $gdbStdout
-                Assert-Condition ($wallpaperFinal.Success -and $wf[0] -eq $wc[2] -and $wf[0] -eq ($wf[1] + $wf[2]) -and $wf[2] -gt 0 -and $wf[3] -gt 0 -and $wf[3] -le (49152 * $wf[2]) -and $wf[4] -eq 0 -and $wf[5] -eq 0 -and $wf[6] -eq 0 -and $wf[7] -eq 0 -and $wf[8] -eq (2 * $wf[3]) -and $wf[9] -eq 0 -and $wf[11] -eq 0) 'Canonical realtime HW build did not retain bounded exact final BG2/BG3 ownership or still performed eliminated full-screen clears/staging/copies.' $gdbStdout
+                if ($usesRetainedWallpaper) {
+                    Assert-Condition (
+                        $wallpaperCache.Success -and
+                        $wc[0] -eq 1 -and $wc[1] -eq 0 -and
+                        $wc[2] -eq 1 -and $wc[3] -eq 0 -and
+                        $wc[4] -eq 300 -and $wc[5] -eq 220 -and
+                        $wc[6] -eq 66000 -and
+                        $wc[7] -gt 0 -and $wc[8] -gt 0
+                    ) 'Cut G did not construct exactly one opaque Dream Land wallpaper seed.' $gdbStdout
+                    Assert-Condition (
+                        $wallpaperFinal.Success -and
+                        $wf[0] -eq 1 -and $wf[1] -eq 0 -and
+                        $wf[2] -eq 1 -and $wf[3] -eq 49152 -and
+                        $wf[4] -eq 0 -and $wf[5] -gt 0 -and
+                        $wf[6] -eq 0 -and $wf[7] -eq 0 -and
+                        $wf[8] -eq 98304 -and
+                        $wf[9] -eq 0 -and $wf[10] -gt 0 -and
+                        $wf[11] -eq 0
+                    ) 'Cut G did not retain the one full BG2 seed while preserving live foreground sprite traffic.' $gdbStdout
+                    Assert-Condition (
+                        $sceneWallAffine.Success -and
+                        $swa[0] -eq $smc[7] -and
+                        $swa[1] -eq ($swa[0] + $smc[6]) -and
+                        $swa[2] -eq 0 -and
+                        $swa[3] -gt 0 -and $swa[3] -le 35000 -and
+                        $swa[4] -gt 0 -and $swa[4] -le 0x7fff -and
+                        $swa[5] -gt 0 -and $swa[5] -le 0x7fff -and
+                        $swa[6] -ge 0 -and $swa[7] -ge 0 -and
+                        (($swa[4] -ne 256) -or ($swa[5] -ne 256) -or
+                         ($swa[6] -ne 0) -or ($swa[7] -ne 0))
+                    ) 'Cut G BG2 affine updates lacked exact frame conservation, coverage, nonidentity motion, or the 35K-tick ceiling.' $gdbStdout
+                } else {
+                    Assert-Condition ($wallpaperCache.Success -and $wc[0] -eq 1 -and $wc[1] -ge 1 -and $wc[2] -eq ($wc[0] + $wc[1]) -and $wc[3] -eq 0 -and $wc[4] -eq 300 -and $wc[5] -eq 220 -and $wc[6] -eq 66000 -and $wc[7] -gt 0 -and $wc[8] -gt 0) 'Canonical realtime HW build did not construct once and reuse the exact opaque Dream Land wallpaper decode cache.' $gdbStdout
+                    Assert-Condition ($wallpaperFinal.Success -and $wf[0] -eq $wc[2] -and $wf[0] -eq ($wf[1] + $wf[2]) -and $wf[2] -gt 0 -and $wf[3] -gt 0 -and $wf[3] -le (49152 * $wf[2]) -and $wf[4] -eq 0 -and $wf[5] -eq 0 -and $wf[6] -eq 0 -and $wf[7] -eq 0 -and $wf[8] -eq (2 * $wf[3]) -and $wf[9] -eq 0 -and $wf[11] -eq 0) 'Canonical realtime HW build did not retain bounded exact final BG2/BG3 ownership or still performed eliminated full-screen clears/staging/copies.' $gdbStdout
+                }
                 if ($RendererProfileLevel -ge 2) {
                     Assert-Condition ($wallpaperOracle.Success -and $wo[0] -gt 0 -and $wo[1] -eq 0 -and $wo[2] -gt 0 -and $wo[3] -eq 0 -and $wo[4] -eq 0 -and $wo[5] -eq 0 -and $wo[6] -eq 0 -and $wo[7] -eq 0) 'Forensic wallpaper recurrence/pixel oracle found an exact-output mismatch.' $gdbStdout
                 }
@@ -1450,8 +1540,34 @@ try {
             }
             if ($ImportBattleShipFTComputer) {
                 $cpu = Get-Ints $computerAI
-                Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and $cpu[2] -gt 0 -and $cpu[3] -gt 0 -and $cpu[7] -gt 0 -and $cpu[20] -gt 0) 'Canonical realtime build did not run the imported Fox CPU setup/process/target/movement path.' $gdbStdout
+                if ($usesRetainedWallpaper -and $preGoState) {
+                    Assert-Condition (
+                        $computerAI.Success -and
+                        $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and
+                        $cpu[2] -eq 0 -and $cpu[3] -eq 0 -and
+                        $cpu[6] -eq 0 -and $cpu[7] -eq 0 -and
+                        $cpu[8] -eq 0 -and $cpu[9] -eq 0 -and
+                        $cpu[10] -eq 0 -and $cpu[11] -eq 0 -and
+                        $cpu[12] -eq 0 -and $cpu[13] -eq 0
+                    ) 'Cut G ran imported Fox CPU control before the source GO transition.' $gdbStdout
+                } else {
+                    Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and $cpu[2] -gt 0 -and $cpu[3] -gt 0 -and $cpu[7] -gt 0 -and $cpu[20] -gt 0) 'Canonical realtime build did not run the imported Fox CPU setup/process/target/movement path.' $gdbStdout
+                }
                 $hardwareSummary += " cpu=setup$($cpu[0])/proc$($cpu[2])/target$($cpu[3])/stick$($cpu[7])/obj0x$('{0:x}' -f $cpu[4])"
+            }
+            if ($usesRetainedWallpaper -and $ImportBattleShipIFCommon) {
+                $ih = Get-Ints $ifHud
+                $p0DigitsOk = ($ih[4] -eq 0) -or
+                    (Test-DamageDigits -Damage $ih[4] -DigitCount $ih[6] -DigitsPack $ih[8])
+                $p1DigitsOk = ($ih[5] -eq 0) -or
+                    (Test-DamageDigits -Damage $ih[5] -DigitCount $ih[7] -DigitsPack $ih[9])
+                Assert-Condition (
+                    $ifHud.Success -and $ih[0] -gt 0 -and
+                    (($ih[1] -band 0x3) -eq 0x3) -and
+                    $ih[2] -le $ih[4] -and $ih[3] -le $ih[5] -and
+                    $p0DigitsOk -and $p1DigitsOk
+                ) 'Cut G did not preserve coherent source IFCommon damage-interface state.' $gdbStdout
+                $hardwareSummary += " start=$($bs[0])/timer$($bs[4])/$($bs[2])/$($bs[3])/lock$($bs[5])/$($bs[6]) hud=0x$('{0:x}' -f $ih[1])"
             }
             if ($ImportBattleShipAudioBGM) {
                 $ab = Get-Ints $audioBgm

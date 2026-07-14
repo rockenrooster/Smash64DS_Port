@@ -71,15 +71,28 @@ static u32 sOriginalSpriteOverlayLayerMask;
 static s32 sOriginalSpriteOverlayNeedsFlush;
 static u32 sOriginalSpriteOverlayEpoch[2] = { 1u, 1u };
 #if NDS_SCENE_MIP_CACHE_LAB
-#define NDS_SCENE_MIP_CAPTURE_WIDTH 256u
-#define NDS_SCENE_MIP_CAPTURE_HEIGHT 192u
-#define NDS_SCENE_MIP_TEXTURE_WIDTH 128u
-#define NDS_SCENE_MIP_TEXTURE_HEIGHT 128u
-#define NDS_SCENE_MIP_VISIBLE_HEIGHT 96u
+typedef struct NDSSceneWallpaperTransform
+{
+    s32 origin_x;
+    s32 origin_y;
+    u32 scale_x_q16;
+    u32 scale_y_q16;
+} NDSSceneWallpaperTransform;
+
 static u32 sSceneMipCapturePending;
 static u32 sSceneMipCaptureCompleted;
 static u32 sSceneMipCacheReady;
 static u32 sSceneMipCacheFailed;
+static NDSSceneWallpaperTransform sSceneWallpaperSeedTransform;
+static NDSSceneWallpaperTransform sSceneWallpaperLatestTransform;
+static u32 sSceneWallpaperLatestTransformValid;
+static u32 sSceneWallpaperSeedRasterCommitted;
+static s32 sSceneWallpaperPendingHdx;
+static s32 sSceneWallpaperPendingVdy;
+static s32 sSceneWallpaperPendingDx;
+static s32 sSceneWallpaperPendingDy;
+static u32 sSceneWallpaperAffinePending;
+static u32 sSceneWallpaperAffineResetPending;
 #endif
 #endif
 static u16 sOriginalSpriteDisplayPreview[
@@ -138,6 +151,14 @@ volatile u32 gNdsSceneMipCacheUploadCount;
 volatile u32 gNdsSceneMipCacheFailureCount;
 volatile u32 gNdsSceneMipCacheLastHash;
 volatile u32 gNdsSceneMipCacheLastNonzeroPixels;
+volatile u32 gNdsSceneWallpaperAffineQueueCount;
+volatile u32 gNdsSceneWallpaperAffineApplyCount;
+volatile u32 gNdsSceneWallpaperAffineCoverageFailureCount;
+volatile u32 gNdsSceneWallpaperAffineLastTicks;
+volatile s32 gNdsSceneWallpaperAffineHdx;
+volatile s32 gNdsSceneWallpaperAffineVdy;
+volatile s32 gNdsSceneWallpaperAffineDx;
+volatile s32 gNdsSceneWallpaperAffineDy;
 void ndsPlatformInit(void)
 {
     /* libultra time/count are sub-frame hardware counters. Reserve timers 0/1
@@ -169,6 +190,9 @@ void ndsPlatformInit(void)
     bgSetPriority(sOriginalSpriteOverlayForegroundBg, 0);
     bgSetPriority(0, 1);
     bgSetPriority(sOriginalSpriteOverlayBg, 2);
+    bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
+                            1 << 8, 0, 0, 1 << 8, 0, 0);
+    bgWrapOff(sOriginalSpriteOverlayBg);
     REG_BLDCNT = BLEND_ALPHA | BLEND_SRC_BG0 | BLEND_DST_BG2;
     REG_BLDALPHA = 16u | (16u << 8);
     dmaFillHalfWords(0, bgGetGfxPtr(sOriginalSpriteOverlayBg),
@@ -729,87 +753,206 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
 }
 
 #if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
-static u16 *ndsPlatformSceneMipStagePixels(u32 mip_index)
+static s32 ndsPlatformSceneWallpaperQ16ToQ8(s64 value_q16)
 {
-    u16 *background = (u16 *)bgGetGfxPtr(sOriginalSpriteOverlayBg);
-    u16 *foreground =
-        (u16 *)bgGetGfxPtr(sOriginalSpriteOverlayForegroundBg);
-
-    if ((background == NULL) || (foreground == NULL))
+    if (value_q16 < 0)
     {
-        return NULL;
+        return -(s32)(((-value_q16) + 0x80) >> 8);
     }
-    switch (mip_index)
-    {
-    case 0u:
-        return background + (SCREEN_WIDTH * SCREEN_HEIGHT);
-    case 1u:
-        return foreground + (SCREEN_WIDTH * SCREEN_HEIGHT);
-    case 2u:
-        return foreground;
-    default:
-        return NULL;
-    }
+    return (s32)((value_q16 + 0x80) >> 8);
 }
 
-static void ndsPlatformSceneMipDownsample(const u16 *source, u16 *destination)
+static void ndsPlatformSceneWallpaperQueueIdentity(void)
 {
-    u32 y;
-
-    for (y = 0u; y < NDS_SCENE_MIP_VISIBLE_HEIGHT; y++)
-    {
-        u32 x;
-        const u16 *source0 =
-            source + ((y * 2u) * NDS_SCENE_MIP_CAPTURE_WIDTH);
-        const u16 *source1 = source0 + NDS_SCENE_MIP_CAPTURE_WIDTH;
-        u16 *target = destination + (y * NDS_SCENE_MIP_TEXTURE_WIDTH);
-
-        for (x = 0u; x < NDS_SCENE_MIP_TEXTURE_WIDTH; x++)
-        {
-            u32 source_x = x * 2u;
-            u16 p0 = source0[source_x];
-            u16 p1 = source0[source_x + 1u];
-            u16 p2 = source1[source_x];
-            u16 p3 = source1[source_x + 1u];
-            u32 red = ((p0 & 31u) + (p1 & 31u) +
-                       (p2 & 31u) + (p3 & 31u) + 2u) >> 2;
-            u32 green = (((p0 >> 5) & 31u) + ((p1 >> 5) & 31u) +
-                         ((p2 >> 5) & 31u) + ((p3 >> 5) & 31u) + 2u) >> 2;
-            u32 blue = (((p0 >> 10) & 31u) + ((p1 >> 10) & 31u) +
-                        ((p2 >> 10) & 31u) + ((p3 >> 10) & 31u) + 2u) >> 2;
-
-            target[x] = (u16)(BIT(15) | red | (green << 5) | (blue << 10));
-        }
-    }
-    for (y = NDS_SCENE_MIP_VISIBLE_HEIGHT;
-         y < NDS_SCENE_MIP_TEXTURE_HEIGHT; y++)
-    {
-        memcpy(destination + (y * NDS_SCENE_MIP_TEXTURE_WIDTH),
-               destination + ((NDS_SCENE_MIP_VISIBLE_HEIGHT - 1u) *
-                              NDS_SCENE_MIP_TEXTURE_WIDTH),
-               NDS_SCENE_MIP_TEXTURE_WIDTH * sizeof(u16));
-    }
+    sSceneWallpaperPendingHdx = 1 << 8;
+    sSceneWallpaperPendingVdy = 1 << 8;
+    sSceneWallpaperPendingDx = 0;
+    sSceneWallpaperPendingDy = 0;
+    sSceneWallpaperAffinePending = TRUE;
 }
 
-static void ndsPlatformSceneMipPublishHash(const u16 *pixels)
+static u32 ndsPlatformSceneWallpaperBuildAffine(
+    const NDSSceneWallpaperTransform *live)
+{
+    const s64 preview_pixel_center_q16 = 0xa000;
+    u32 ratio_x_q16;
+    u32 ratio_y_q16;
+    s64 offset_x_q16;
+    s64 offset_y_q16;
+    s64 source_x_end_q8;
+    s64 source_y_end_q8;
+
+    if ((live == NULL) ||
+        (live->scale_x_q16 == 0u) || (live->scale_y_q16 == 0u) ||
+        (sSceneWallpaperSeedTransform.scale_x_q16 == 0u) ||
+        (sSceneWallpaperSeedTransform.scale_y_q16 == 0u))
+    {
+        return FALSE;
+    }
+    ratio_x_q16 = (u32)((
+        ((u64)sSceneWallpaperSeedTransform.scale_x_q16 << 16) +
+        (live->scale_x_q16 >> 1)) / live->scale_x_q16);
+    ratio_y_q16 = (u32)((
+        ((u64)sSceneWallpaperSeedTransform.scale_y_q16 << 16) +
+        (live->scale_y_q16 >> 1)) / live->scale_y_q16);
+    sSceneWallpaperPendingHdx = (s32)((ratio_x_q16 + 0x80u) >> 8);
+    sSceneWallpaperPendingVdy = (s32)((ratio_y_q16 + 0x80u) >> 8);
+    if ((sSceneWallpaperPendingHdx <= 0) ||
+        (sSceneWallpaperPendingVdy <= 0) ||
+        (sSceneWallpaperPendingHdx > 0x7fff) ||
+        (sSceneWallpaperPendingVdy > 0x7fff))
+    {
+        return FALSE;
+    }
+
+    /* The software compositor samples the 320x240 preview at pixel centers
+     * while reducing it to BG2's 256x192 window. Solve the same mapping for
+     * the retained seed image, including that 0.625-preview-pixel center. */
+    offset_x_q16 = (((s64)ratio_x_q16 *
+        (preview_pixel_center_q16 -
+         ((s64)live->origin_x << 16))) / 65536) +
+        ((s64)sSceneWallpaperSeedTransform.origin_x << 16) -
+        preview_pixel_center_q16;
+    offset_y_q16 = (((s64)ratio_y_q16 *
+        (preview_pixel_center_q16 -
+         ((s64)live->origin_y << 16))) / 65536) +
+        ((s64)sSceneWallpaperSeedTransform.origin_y << 16) -
+        preview_pixel_center_q16;
+    offset_x_q16 = (offset_x_q16 * 4) / 5;
+    offset_y_q16 = (offset_y_q16 * 4) / 5;
+    sSceneWallpaperPendingDx =
+        ndsPlatformSceneWallpaperQ16ToQ8(offset_x_q16);
+    sSceneWallpaperPendingDy =
+        ndsPlatformSceneWallpaperQ16ToQ8(offset_y_q16);
+
+    source_x_end_q8 = (s64)sSceneWallpaperPendingDx +
+        ((s64)sSceneWallpaperPendingHdx * (SCREEN_WIDTH - 1));
+    source_y_end_q8 = (s64)sSceneWallpaperPendingDy +
+        ((s64)sSceneWallpaperPendingVdy * (SCREEN_HEIGHT - 1));
+    if ((sSceneWallpaperPendingDx < 0) ||
+        (sSceneWallpaperPendingDy < 0) ||
+        (source_x_end_q8 >= ((s64)SCREEN_WIDTH << 8)) ||
+        (source_y_end_q8 >= ((s64)SCREEN_HEIGHT << 8)))
+    {
+        return FALSE;
+    }
+    sSceneWallpaperAffinePending = TRUE;
+    gNdsSceneWallpaperAffineHdx = sSceneWallpaperPendingHdx;
+    gNdsSceneWallpaperAffineVdy = sSceneWallpaperPendingVdy;
+    gNdsSceneWallpaperAffineDx = sSceneWallpaperPendingDx;
+    gNdsSceneWallpaperAffineDy = sSceneWallpaperPendingDy;
+    return TRUE;
+}
+
+static void ndsPlatformSceneWallpaperCommitAffine(void)
+{
+    if (sOriginalSpriteOverlayBg < 0)
+    {
+        return;
+    }
+    if (sSceneWallpaperAffineResetPending != FALSE)
+    {
+        bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
+                                1 << 8, 0, 0, 1 << 8, 0, 0);
+        sSceneWallpaperAffineResetPending = FALSE;
+        sSceneWallpaperAffinePending = FALSE;
+        return;
+    }
+    if (sSceneWallpaperAffinePending == FALSE)
+    {
+        return;
+    }
+    bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
+                            sSceneWallpaperPendingHdx, 0, 0,
+                            sSceneWallpaperPendingVdy,
+                            sSceneWallpaperPendingDx,
+                            sSceneWallpaperPendingDy);
+    sSceneWallpaperAffinePending = FALSE;
+    gNdsSceneWallpaperAffineApplyCount++;
+}
+#endif
+
+u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
+                                             u32 scale_x_q16,
+                                             u32 scale_y_q16)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    u32 profile_start = cpuGetTiming();
+
+    if (sSceneMipCacheFailed != FALSE)
+    {
+        gNdsSceneWallpaperAffineLastTicks =
+            cpuGetTiming() - profile_start;
+        return FALSE;
+    }
+    sSceneWallpaperLatestTransform.origin_x = origin_x;
+    sSceneWallpaperLatestTransform.origin_y = origin_y;
+    sSceneWallpaperLatestTransform.scale_x_q16 = scale_x_q16;
+    sSceneWallpaperLatestTransform.scale_y_q16 = scale_y_q16;
+    sSceneWallpaperLatestTransformValid =
+        ((scale_x_q16 != 0u) && (scale_y_q16 != 0u)) ? TRUE : FALSE;
+    if (sSceneMipCacheReady == FALSE)
+    {
+        gNdsSceneWallpaperAffineLastTicks =
+            cpuGetTiming() - profile_start;
+        return FALSE;
+    }
+    if (ndsPlatformSceneWallpaperBuildAffine(
+            &sSceneWallpaperLatestTransform) == FALSE)
+    {
+        gNdsSceneWallpaperAffineCoverageFailureCount++;
+        ndsPlatformSceneMipCacheAbort();
+        gNdsSceneWallpaperAffineLastTicks =
+            cpuGetTiming() - profile_start;
+        return FALSE;
+    }
+    gNdsSceneWallpaperAffineQueueCount++;
+    gNdsSceneWallpaperAffineLastTicks = cpuGetTiming() - profile_start;
+    return TRUE;
+#else
+    (void)origin_x;
+    (void)origin_y;
+    (void)scale_x_q16;
+    (void)scale_y_q16;
+    return FALSE;
+#endif
+}
+
+void ndsPlatformSceneWallpaperConfirmRaster(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    if ((sSceneMipCapturePending != 0u) &&
+        (sSceneMipCacheReady == FALSE) &&
+        (sSceneMipCacheFailed == FALSE))
+    {
+        sSceneWallpaperSeedRasterCommitted = TRUE;
+    }
+#endif
+}
+
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+static void ndsPlatformSceneMipPublishWallpaperHash(const u16 *pixels)
 {
     u32 hash = 2166136261u;
     u32 nonzero = 0u;
-    u32 i;
+    u32 y;
 
-    for (i = 0u;
-         i < (NDS_SCENE_MIP_TEXTURE_WIDTH *
-              NDS_SCENE_MIP_TEXTURE_HEIGHT); i++)
+    for (y = 0u; y < SCREEN_HEIGHT; y++)
     {
-        u16 pixel = pixels[i];
+        u32 x;
 
-        hash ^= pixel & 0xffu;
-        hash *= 16777619u;
-        hash ^= pixel >> 8;
-        hash *= 16777619u;
-        if ((pixel & 0x7fffu) != 0u)
+        for (x = 0u; x < SCREEN_WIDTH; x++)
         {
-            nonzero++;
+            u16 pixel = pixels[(y * 256u) + x];
+
+            hash ^= pixel & 0xffu;
+            hash *= 16777619u;
+            hash ^= pixel >> 8;
+            hash *= 16777619u;
+            if ((pixel & BIT(15)) != 0u)
+            {
+                nonzero++;
+            }
         }
     }
     gNdsSceneMipCacheLastHash = hash;
@@ -818,54 +961,42 @@ static void ndsPlatformSceneMipPublishHash(const u16 *pixels)
 
 static void ndsPlatformSceneMipFinishCapture(void)
 {
-    u32 mip_index = sSceneMipCapturePending - 1u;
-    u16 *destination = ndsPlatformSceneMipStagePixels(mip_index);
+    const u16 *wallpaper = (sOriginalSpriteOverlayBg >= 0) ?
+        (const u16 *)bgGetGfxPtr(sOriginalSpriteOverlayBg) : NULL;
 
-    if ((sSceneMipCapturePending == 0u) || (destination == NULL))
+    if ((sSceneMipCapturePending != 1u) || (wallpaper == NULL) ||
+        (sSceneWallpaperLatestTransformValid == FALSE) ||
+        (sSceneWallpaperSeedRasterCommitted == FALSE))
     {
-        vramSetBankA(VRAM_A_TEXTURE);
-        ndsRendererHardwareDiscardTextureCache();
         sSceneMipCacheFailed = TRUE;
         gNdsSceneMipCacheFailureCount++;
         gNdsSceneMipCacheState = 3u;
         sSceneMipCapturePending = 0u;
         return;
     }
-    ndsPlatformSceneMipDownsample((const u16 *)VRAM_A, destination);
-    ndsPlatformSceneMipPublishHash(destination);
-    vramSetBankA(VRAM_A_TEXTURE);
-    /* Capture owns bank A's bytes. Drop every allocator entry before another
-     * source frame can bind the overwritten texture data. */
-    ndsRendererHardwareDiscardTextureCache();
-    sSceneMipCaptureCompleted = mip_index + 1u;
-    sSceneMipCapturePending = 0u;
-    gNdsSceneMipCacheCaptureCount = sSceneMipCaptureCompleted;
-
-    if (sSceneMipCaptureCompleted == 3u)
+    /* Cut G freezes only BattleShip's already-composited BG2 wallpaper. The
+     * source stage and fighters continue through the live GX display graph,
+     * preserving the depth and parallax lost by a flattened scene texture. */
+    ndsPlatformSceneMipPublishWallpaperHash(wallpaper);
+    if (gNdsSceneMipCacheLastNonzeroPixels <
+        ((SCREEN_WIDTH * SCREEN_HEIGHT * 3u) / 4u))
     {
-        const u16 *mip0 = ndsPlatformSceneMipStagePixels(0u);
-        const u16 *mip1 = ndsPlatformSceneMipStagePixels(1u);
-        const u16 *mip2 = ndsPlatformSceneMipStagePixels(2u);
-
-        if (ndsRendererHardwareUploadSceneMipCache(mip0, mip1, mip2) != FALSE)
-        {
-            sSceneMipCacheReady = TRUE;
-            gNdsSceneMipCacheUploadCount = 3u;
-            gNdsSceneMipCacheState = 2u;
-            /* The captured mip pixels are resident in texture VRAM now. Reuse
-             * BG3 for BattleShip's live interface while keeping BG2's cached
-             * wallpaper source out of the normal-frame compositor. */
-            ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
-            ndsPlatformSetOriginalSpriteOverlayLayerMask(
-                NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND);
-        }
-        else
-        {
-            sSceneMipCacheFailed = TRUE;
-            gNdsSceneMipCacheFailureCount++;
-            gNdsSceneMipCacheState = 3u;
-        }
+        sSceneMipCacheFailed = TRUE;
+        gNdsSceneMipCacheFailureCount++;
+        gNdsSceneMipCacheState = 3u;
+        sSceneMipCapturePending = 0u;
+        return;
     }
+    sSceneWallpaperSeedTransform = sSceneWallpaperLatestTransform;
+    sSceneMipCaptureCompleted = 1u;
+    sSceneMipCapturePending = 0u;
+    gNdsSceneMipCacheCaptureCount = 1u;
+    gNdsSceneMipCacheUploadCount = 0u;
+    sSceneMipCacheReady = TRUE;
+    gNdsSceneMipCacheState = 2u;
+    ndsPlatformSceneWallpaperQueueIdentity();
+    ndsPlatformSetOriginalSpriteOverlayLayerMask(
+        NDS_ORIGINAL_SPRITE_OVERLAY_ALL);
 }
 #endif
 
@@ -878,7 +1009,7 @@ u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index)
         return FALSE;
     }
     if ((sSceneMipCapturePending != 0u) ||
-        (mip_index >= 3u) ||
+        (mip_index != 0u) ||
         (mip_index != sSceneMipCaptureCompleted))
     {
         sSceneMipCacheFailed = TRUE;
@@ -887,6 +1018,8 @@ u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index)
         return FALSE;
     }
     sSceneMipCapturePending = mip_index + 1u;
+    sSceneWallpaperLatestTransformValid = FALSE;
+    sSceneWallpaperSeedRasterCommitted = FALSE;
     gNdsSceneMipCacheState = 1u;
     return TRUE;
 #else
@@ -904,6 +1037,10 @@ void ndsPlatformSceneMipCacheAbort(void)
         gNdsSceneMipCacheFailureCount++;
         gNdsSceneMipCacheState = 3u;
     }
+    sSceneMipCacheReady = FALSE;
+    sSceneMipCapturePending = 0u;
+    sSceneWallpaperAffinePending = FALSE;
+    sSceneWallpaperAffineResetPending = TRUE;
 #endif
 }
 
@@ -1562,24 +1699,18 @@ void ndsPlatformEndFrame(void)
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();
 #endif
+#if NDS_SCENE_MIP_CACHE_LAB
+    ndsPlatformSceneWallpaperCommitAffine();
+#endif
     ndsRendererHardwareCommitPendingTextureRefreshes();
 #if NDS_SCENE_MIP_CACHE_LAB
     if (sSceneMipCapturePending != 0u)
     {
-        /* The flushed seed has reached scanout with both BG layers intact.
-         * Capture the following visible scan into A only after its textures
-         * are no longer needed by GX, then restore A before another draw. */
-        vramSetBankA(VRAM_A_LCD);
-        REG_DISPCAPCNT = DCAP_ENABLE |
-            DCAP_MODE(DCAP_MODE_A) |
-            DCAP_SRC_A(DCAP_SRC_A_COMPOSITED) |
-            DCAP_SIZE(DCAP_SIZE_256x192) |
-            DCAP_BANK(DCAP_BANK_VRAM_A) |
-            DCAP_OFFSET(0) |
-            DCAP_A(31);
-        swiWaitForVBlank();
-        REG_DISPCAPCNT = 0u;
+        /* EndFrame runs after the SObj compositor committed BG2. Mark that
+         * exact source wallpaper as retained without copying it through GX
+         * texture VRAM or consuming a second VBlank. */
         ndsPlatformSceneMipFinishCapture();
+        ndsPlatformSceneWallpaperCommitAffine();
     }
 #endif
     sTicks++;

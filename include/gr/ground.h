@@ -333,7 +333,9 @@ extern f32 gMPCollisionLightAngleX;
 extern f32 gMPCollisionLightAngleY;
 extern u32 gMPCollisionBGMCurrent;
 extern u32 gMPCollisionBGMDefault;
+extern GObj *sGRWallpaperGObj;
 
+void grWallpaperCalcPersp(SObj *wallpaper_sobj);
 void grWallpaperMakeDecideKind(void);
 void grWallpaperPausePerspUpdate(void);
 void grWallpaperResumePerspUpdate(void);

@@ -580,6 +580,16 @@ typedef struct NDSVSResultsSpriteDesc {
     u8 bmsiz;
 } NDSVSResultsSpriteDesc;
 
+typedef struct NDSRelocSpriteNormalizeDesc {
+    u32 asset_id;
+    u32 offset;
+    u16 width;
+    u16 height;
+    u16 bitmap_count;
+    u8 bmfmt;
+    u8 bmsiz;
+} NDSRelocSpriteNormalizeDesc;
+
 typedef struct NDSOpeningActionPreviewCache {
     u32 asset_id;
     u32 offset;
@@ -814,6 +824,142 @@ static const NDSVSResultsSpriteDesc sNdsVSResultsSpriteDescs[] = {
     { 0x4d48u, 15u, 12u, 1u, G_IM_FMT_IA, G_IM_SIZ_8b },
     { 0xd5c8u, 300u, 220u, 9u, G_IM_FMT_I, G_IM_SIZ_4b },
     { 0xe2a0u, 42u, 35u, 2u, G_IM_FMT_RGBA, G_IM_SIZ_16b }
+};
+
+/* Exact BattleShip HUD and fighter-interface Sprite manifests.  These are
+ * the mixed-width Sprite records needed by the live Mario/Fox battle HUD and
+ * its countdown/GO sequence. Keeping the offsets, dimensions and formats
+ * explicit avoids guessing at arbitrary relocated data after the blanket u32
+ * endian pass. */
+static const NDSRelocSpriteNormalizeDesc
+    sNdsBattleInterfaceSpriteDescs[] = {
+    /* IFCommonGameStatus countdown and GO (reloc asset 0x52). */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x4d78u, 62u, 73u, 5u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0xa730u, 70u, 74u, 6u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0xc370u, 24u, 73u, 2u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x20990u, 8u, 53u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x21760u, 97u, 33u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x21878u, 15u, 11u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x21950u, 15u, 15u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x21a10u, 11u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x21ba8u, 19u, 19u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x22128u, 32u, 41u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x22588u, 30u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x22f18u, 46u, 49u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x23a28u, 48u, 57u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x24620u, 53u, 53u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x25290u, 55u, 55u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_8b },
+
+    /* IFCommonDigits (reloc asset 0x24). */
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0068u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0118u, 5u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x01c8u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0278u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0328u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x03d8u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0488u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0538u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x05e8u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0698u, 8u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0710u, 6u, 3u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x0828u, 11u, 11u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_DIGITS, 0x08d8u, 6u, 10u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+
+    /* IFCommonPlayerDamage (reloc asset 0xa4). */
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x0148u, 16u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x02d8u, 11u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x0500u, 17u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x0698u, 16u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x08c0u, 17u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x0a58u, 15u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x0c80u, 17u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x0e18u, 16u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x1040u, 17u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x1270u, 17u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x1458u, 19u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, 0x15d8u, 20u, 12u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+
+    /* IFCommonTimer (reloc asset 0xa5). */
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x0138u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x0228u, 8u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x03a8u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x0528u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x06a8u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x0828u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x09a8u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x0b28u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x0ca8u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x0e28u, 12u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x0f08u, 6u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x1018u, 11u, 11u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x1090u, 11u, 3u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x1140u, 5u, 9u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_TIMER, 0x1238u, 9u, 9u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+
+    /* Mario/Fox model-owned stock icons and fighter emblems. */
+    { NDS_RELOC_ASSET_MARIO_MODEL, 0x72d0u, 8u, 10u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MARIO_MODEL, 0x74c8u, 27u, 25u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_FOX_MODEL, 0x7c28u, 8u, 10u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_FOX_MODEL, 0x7e08u, 30u, 24u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b }
 };
 
 static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
@@ -2658,6 +2804,8 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
 
 static size_t ndsRelocAssetAllocSize(u32 asset_id);
 static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded);
+static s32 ndsRelocNormalizeBattleInterfaceSprites(
+    NDSRelocLoadedFile *loaded);
 static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
                                           u32 *seen_count);
 static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
@@ -2844,6 +2992,11 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     }
     loaded->fixups_applying = FALSE;
 
+    if (ndsRelocNormalizeBattleInterfaceSprites(loaded) == FALSE)
+    {
+        return FALSE;
+    }
+
     if (ndsPupupuStageAssetBit(loaded->asset_id) != 0u)
     {
         gNdsStagePupupuRelocAssetMask |=
@@ -3015,6 +3168,87 @@ static s32 ndsRelocNormalizeSpriteBitmapTable(NDSRelocLoadedFile *loaded,
         ndsRelocSwapS16Pair(&bitmap[i].width, &bitmap[i].width_img);
         ndsRelocSwapS16Pair(&bitmap[i].s, &bitmap[i].t);
         ndsRelocSwapS16Pair(&bitmap[i].actualHeight, &bitmap[i].LUToffset);
+    }
+    return TRUE;
+}
+
+static s32 ndsRelocNormalizeBattleInterfaceSprites(
+    NDSRelocLoadedFile *loaded)
+{
+    u32 i;
+
+    if (loaded == NULL)
+    {
+        return FALSE;
+    }
+
+    for (i = 0; i < ARRAY_COUNT(sNdsBattleInterfaceSpriteDescs); i++)
+    {
+        const NDSRelocSpriteNormalizeDesc *desc =
+            &sNdsBattleInterfaceSpriteDescs[i];
+        Sprite *sprite;
+        u32 display_list_words;
+
+        if (desc->asset_id != loaded->asset_id)
+        {
+            continue;
+        }
+        if (ndsRelocRangeInLoadedFile(loaded, desc->offset,
+                                      sizeof(Sprite)) == FALSE)
+        {
+            return FALSE;
+        }
+
+        sprite = (Sprite *)((u8 *)loaded->data + desc->offset);
+        display_list_words = 36u;
+        if ((desc->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS) &&
+            (desc->offset == 0x4d78u))
+        {
+            display_list_words = 84u;
+        }
+        else if ((desc->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS) &&
+                 (desc->offset == 0xa730u))
+        {
+            display_list_words = 96u;
+        }
+        else if ((desc->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS) &&
+                 (desc->offset == 0xc370u))
+        {
+            display_list_words = 48u;
+        }
+        if (((u32)(u16)sprite->width == desc->width) &&
+            ((u32)(u16)sprite->height == desc->height) &&
+            ((u32)(u16)sprite->nbitmaps == desc->bitmap_count) &&
+            (sprite->bmfmt == desc->bmfmt) &&
+            (sprite->bmsiz == desc->bmsiz))
+        {
+            continue;
+        }
+
+        /* The blanket u32 endian pass exchanges each adjacent halfword.
+         * Validate that exact raw signature, including libultra's 36-word
+         * generated display list, before touching a known manifest entry. */
+        if (((u32)(u16)sprite->width != desc->height) ||
+            ((u32)(u16)sprite->height != desc->width) ||
+            ((u32)(u16)sprite->nbitmaps != display_list_words) ||
+            ((u32)(u16)sprite->ndisplist != desc->bitmap_count) ||
+            (ndsRelocPointerRangeInLoadedFile(
+                loaded, sprite->bitmap,
+                sizeof(Bitmap) * desc->bitmap_count) == FALSE))
+        {
+            return FALSE;
+        }
+
+        ndsRelocNormalizeSpriteHeaderFields(sprite, desc->bmfmt,
+                                            desc->bmsiz);
+        if (((u32)(u16)sprite->width != desc->width) ||
+            ((u32)(u16)sprite->height != desc->height) ||
+            ((u32)(u16)sprite->nbitmaps != desc->bitmap_count) ||
+            (ndsRelocNormalizeSpriteBitmapTable(
+                loaded, sprite, desc->bitmap_count) == FALSE))
+        {
+            return FALSE;
+        }
     }
     return TRUE;
 }

@@ -55,15 +55,84 @@ DObj *lbCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root)
     return dobj;
 }
 
+u8 lbCommonGetBitmapDecodeNibble(u8 index)
+{
+    static const u8 nibbles[4] = { 0x00, 0x05, 0x0a, 0x0f };
+
+    return nibbles[index];
+}
+
+void lbCommonDecodeBitmapSiz4b(u8 *bitmap_csr, u8 *bitmap_buf,
+                               u8 *bitmap_start)
+{
+    size_t input_size;
+    size_t output_size;
+    u32 byte_lane_xor;
+
+    if ((bitmap_csr == NULL) || (bitmap_buf == NULL) ||
+        (bitmap_start == NULL) || (bitmap_csr < bitmap_start) ||
+        (bitmap_buf < bitmap_start))
+    {
+        return;
+    }
+
+    input_size = (size_t)(bitmap_csr - bitmap_start) + 1u;
+    output_size = (size_t)(bitmap_buf - bitmap_start) + 1u;
+    byte_lane_xor =
+        (ndsRelocFindLoadedFileContaining(bitmap_start, output_size) != NULL) ?
+        3u : 0u;
+
+    while (input_size != 0u)
+    {
+        size_t input_index = input_size - 1u;
+        size_t output_index = input_index * 2u;
+        u8 packed = bitmap_start[input_index ^ byte_lane_xor];
+        u8 lower = lbCommonGetBitmapDecodeNibble((packed >> 4) & 3u);
+        u8 upper = lbCommonGetBitmapDecodeNibble((packed >> 6) & 3u);
+
+        bitmap_start[output_index ^ byte_lane_xor] =
+            (u8)(lower | (upper << 4));
+        lower = lbCommonGetBitmapDecodeNibble(packed & 3u);
+        upper = lbCommonGetBitmapDecodeNibble((packed >> 2) & 3u);
+        bitmap_start[(output_index + 1u) ^ byte_lane_xor] =
+            (u8)(lower | (upper << 4));
+        input_size--;
+    }
+}
+
+void lbCommonDecodeSpriteBitmapsSiz4b(Sprite *sprite)
+{
+    s32 n;
+    Bitmap *bitmap;
+
+    for (n = sprite->nbitmaps, bitmap = sprite->bitmap; n > 0; n--)
+    {
+        s32 res = (bitmap[n - 1].width_img / 2) *
+                  bitmap[n - 1].actualHeight;
+        u8 *bitmap_start = (u8 *)bitmap[n - 1].buf;
+
+        lbCommonDecodeBitmapSiz4b(bitmap_start + (res / 2) - 1,
+                                  bitmap_start + res - 1,
+                                  bitmap_start);
+    }
+    sprite->bmsiz = G_IM_SIZ_4b;
+}
+
 /* Narrow lbcommon startup shim.
  *
  * The full original lb/lbcommon.c translation unit fans out into the fighter
  * part tree, camera look-at helpers, and the N64 sprite display-list pipeline.
- * Startup only needs to create one SObj and retain the display callback
- * identity, so keep this bounded here until the renderer slice is ready. */
+ * The current scenes need its SObj creation and source 4c expansion behavior,
+ * so keep those bounded here until the full renderer slice is ready. */
 SObj *lbCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite)
 {
-    SObj *sobj = gcAddSObjForGObj(gobj, sprite);
+    SObj *sobj;
+
+    if (sprite->bmsiz == G_IM_SIZ_4c)
+    {
+        lbCommonDecodeSpriteBitmapsSiz4b(sprite);
+    }
+    sobj = gcAddSObjForGObj(gobj, sprite);
 
     sobj->envcolor.r = 0;
     sobj->envcolor.g = 0;
@@ -238,6 +307,10 @@ static s32 ndsSObjPreviewBasicSupported(SObj *sobj)
              ((sprite->bmfmt == G_IM_FMT_IA) &&
               (sprite->bmsiz == G_IM_SIZ_8b)) ||
              ((sprite->bmfmt == G_IM_FMT_CI) &&
+              (sprite->bmsiz == G_IM_SIZ_8b)) ||
+             ((sprite->bmfmt == G_IM_FMT_CI) &&
+              (sprite->bmsiz == G_IM_SIZ_4b)) ||
+             ((sprite->bmfmt == G_IM_FMT_I) &&
               (sprite->bmsiz == G_IM_SIZ_8b)) ||
              ((sprite->bmfmt == G_IM_FMT_I) &&
               (sprite->bmsiz == G_IM_SIZ_4b))) &&
@@ -1300,6 +1373,10 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
            (sprite->bmsiz == G_IM_SIZ_8b)) ||
           ((sprite->bmfmt == G_IM_FMT_CI) &&
            (sprite->bmsiz == G_IM_SIZ_8b)) ||
+          ((sprite->bmfmt == G_IM_FMT_CI) &&
+           (sprite->bmsiz == G_IM_SIZ_4b)) ||
+          ((sprite->bmfmt == G_IM_FMT_I) &&
+           (sprite->bmsiz == G_IM_SIZ_8b)) ||
           ((sprite->bmfmt == G_IM_FMT_I) &&
            (sprite->bmsiz == G_IM_SIZ_4b))))
     {
@@ -1430,8 +1507,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
             bytes_per_pixel = 4u;
         }
 
-        if ((sprite->bmfmt == G_IM_FMT_I) &&
-            (sprite->bmsiz == G_IM_SIZ_4b))
+        if (sprite->bmsiz == G_IM_SIZ_4b)
         {
             src_row_bytes = ((size_t)src_width + 1u) / 2u;
         }
@@ -1449,8 +1525,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
             }
             return FALSE;
         }
-        if ((sprite->bmfmt == G_IM_FMT_CI) &&
-            (sprite->bmsiz == G_IM_SIZ_8b))
+        if (sprite->bmfmt == G_IM_FMT_CI)
         {
             const u8 *src_ci = (const u8 *)src;
             const u16 *palette = (const u16 *)sprite->LUT;
@@ -1458,9 +1533,21 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
 
             for (i = 0; i < src_bytes; i++)
             {
-                if ((u32)src_ci[i] > ci_max_index)
+                u32 first_index = src_ci[i];
+                u32 second_index = first_index;
+
+                if (sprite->bmsiz == G_IM_SIZ_4b)
                 {
-                    ci_max_index = src_ci[i];
+                    second_index = first_index & 0x0fu;
+                    first_index >>= 4;
+                }
+                if (first_index > ci_max_index)
+                {
+                    ci_max_index = first_index;
+                }
+                if (second_index > ci_max_index)
+                {
+                    ci_max_index = second_index;
                 }
             }
             if ((palette != NULL) &&
@@ -1571,6 +1658,48 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                     color = (ci_palette_ready != 0) ?
                         ndsStartupLogoConvertRgba16(
                             palette[((u32)index) ^ 1u]) : 0;
+                }
+                else if ((sprite->bmfmt == G_IM_FMT_CI) &&
+                         (sprite->bmsiz == G_IM_SIZ_4b))
+                {
+                    const u8 *src_ci = (const u8 *)src;
+                    const u16 *palette = (const u16 *)sprite->LUT;
+                    u32 source_x = x;
+                    size_t source_index;
+                    u8 packed;
+                    u8 index;
+
+                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    {
+                        source_x ^= 8u;
+                    }
+                    source_index = ((size_t)row * src_row_bytes) +
+                                   (source_x >> 1);
+                    packed = src_ci[source_index ^ 3u];
+                    index = ((source_x & 1u) == 0u) ?
+                        (u8)(packed >> 4) : (u8)(packed & 0x0fu);
+                    color = (ci_palette_ready != 0u) ?
+                        ndsStartupLogoConvertRgba16(
+                            palette[((u32)index) ^ 1u]) : 0;
+                }
+                else if ((sprite->bmfmt == G_IM_FMT_I) &&
+                         (sprite->bmsiz == G_IM_SIZ_8b))
+                {
+                    const u8 *src_i8 = (const u8 *)src;
+                    u32 source_x = x;
+                    size_t source_index;
+                    u8 intensity;
+
+                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    {
+                        source_x ^= 4u;
+                    }
+                    source_index = ((size_t)row * src_row_bytes) + source_x;
+                    intensity = src_i8[source_index ^ 3u];
+                    color = ((intensity != 0u) &&
+                             (sprite->alpha != 0u)) ?
+                        ndsSpritePackRgb15(sprite->red, sprite->green,
+                                           sprite->blue) : 0;
                 }
                 else if ((sprite->bmfmt == G_IM_FMT_I) &&
                          (sprite->bmsiz == G_IM_SIZ_4b))
@@ -1779,6 +1908,7 @@ static u32 sNdsSObjFramePreviewDrawCount;
 static u32 sNdsSObjFrameForeground;
 static u32 sNdsSObjFrameActive;
 static SObj *sNdsSObjFramePendingWallpaper;
+static SObj sNdsSObjFramePendingWallpaperSnapshot;
 static u32 sNdsSObjFramePendingWallpaperCombine;
 static u32 sNdsSObjFrameForegroundCommitted;
 static u32 sNdsSObjOverlayForegroundPopulated;
@@ -1849,10 +1979,45 @@ static void ndsSObjPreviewCommitLayer(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             u32 wallpaper_start = cpuGetTiming();
 #endif
+            SObj *wallpaper = sNdsSObjFramePendingWallpaper;
+            u32 scale_x_q16 = 0u;
+            u32 scale_y_q16 = 0u;
+            u32 retained_wallpaper = FALSE;
 
-            final_wallpaper = ndsSObjDrawCachedWallpaperFinal(
-                sNdsSObjFramePendingWallpaper,
-                sNdsSObjFramePendingWallpaperCombine);
+            if ((wallpaper->sprite.scalex >= 0.0001F) &&
+                (wallpaper->sprite.scaley >= 0.0001F))
+            {
+                if ((wallpaper->sprite.attr & SP_FASTCOPY) != 0u)
+                {
+                    scale_x_q16 = 1u << 16;
+                    scale_y_q16 = 1u << 16;
+                }
+                else
+                {
+                    scale_x_q16 = (u32)(
+                        (wallpaper->sprite.scalex * 65536.0F) + 0.5F);
+                    scale_y_q16 = (u32)(
+                        (wallpaper->sprite.scaley * 65536.0F) + 0.5F);
+                }
+                retained_wallpaper =
+                    ndsPlatformSceneWallpaperQueueTransform(
+                        (s32)wallpaper->pos.x,
+                        (s32)wallpaper->pos.y,
+                        scale_x_q16, scale_y_q16);
+            }
+            if (retained_wallpaper != FALSE)
+            {
+                final_wallpaper = TRUE;
+            }
+            else
+            {
+                final_wallpaper = ndsSObjDrawCachedWallpaperFinal(
+                    wallpaper, sNdsSObjFramePendingWallpaperCombine);
+                if (final_wallpaper != FALSE)
+                {
+                    ndsPlatformSceneWallpaperConfirmRaster();
+                }
+            }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             gNdsRendererProfileWallpaperTicks +=
                 cpuGetTiming() - wallpaper_start;
@@ -1931,8 +2096,14 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
             {
                 /* Delay the one-source Dream Land background until the layer
                  * boundary. A later background SObj forces the unchanged
-                 * staging path before any final BG2 pixels are written. */
-                sNdsSObjFramePendingWallpaper = sobj;
+                 * staging path before any final BG2 pixels are written. Keep
+                 * the source state by value because Cut G restores its seed
+                 * camera before the outer frame commits this deferred layer. */
+                sNdsSObjFramePendingWallpaperSnapshot = *sobj;
+                sNdsSObjFramePendingWallpaperSnapshot.next = NULL;
+                sNdsSObjFramePendingWallpaperSnapshot.prev = NULL;
+                sNdsSObjFramePendingWallpaper =
+                    &sNdsSObjFramePendingWallpaperSnapshot;
                 sNdsSObjFramePendingWallpaperCombine = wallpaper_combine;
             }
             else
@@ -2061,6 +2232,10 @@ void lbCommonDrawSObjAttr(GObj *gobj)
         (sNdsSObjFrameActive != FALSE))
     {
         ndsDrawLayeredSObjFrame(gobj, 0u);
+        if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+        {
+            ndsIFCommonRecordHUDState();
+        }
         return;
     }
 

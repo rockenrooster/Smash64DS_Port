@@ -36,6 +36,7 @@ NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-
 ifeq ($(TARGET),smash64ds-battle-playable-canonical-hwtri)
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_SCENE_MIP_CACHE_LAB := 1
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)
 # This is the user-testable fast-iteration ROM, not a generic build alias.

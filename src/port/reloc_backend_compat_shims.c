@@ -12302,7 +12302,23 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
 
 void ftParamLockPlayerControl(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    fp->input.pl.button_hold = fp->input.pl.button_tap =
+        fp->input.cp.button_inputs = 0;
+    fp->input.pl.stick_range.x = fp->input.pl.stick_range.y =
+        fp->input.pl.stick_prev.x = fp->input.pl.stick_prev.y =
+        fp->input.cp.stick_range.x = fp->input.cp.stick_range.y = 0;
+    fp->tap_stick_x = fp->tap_stick_y =
+        fp->hold_stick_x = fp->hold_stick_y = FTINPUT_STICKBUFFER_TICS_MAX;
+    fp->is_control_disable = TRUE;
+}
+
+void ftParamUnlockPlayerControl(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    fp->is_control_disable = FALSE;
 }
 
 #if !NDS_IMPORT_BATTLESHIP_FTCOMPUTER

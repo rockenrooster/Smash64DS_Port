@@ -177,9 +177,7 @@ if ($sceneConfigViolations.Count -gt 0) {
     Fail-Check "scene harness macro reference(s) missing nds_scene_harness_config.h include: $($sceneConfigViolations -join ', ')"
 }
 $latestExpect = @{
-    battle_mariofox_stage_mplivehit_status_loop = 161
-    menu_chain_mariofox_stage_mplivehit_status_loop = 162
-    battle_playable = 163
+    battle_playable_realtime = 163
 }
 foreach ($name in $latestExpect.Keys) {
     $record = $registry | Where-Object { $_.Name -eq $name } | Select-Object -First 1
@@ -189,12 +187,10 @@ foreach ($name in $latestExpect.Keys) {
     }
 }
 Assert-ProfilePlan 'BoundaryDirect' @(
-    'battle_mariofox_stage_mplivehit_status_loop'
+    'battle_playable_realtime'
 )
 Assert-ProfilePlan 'Boundary' @(
-    'battle_mariofox_stage_mplivehit_status_loop',
-    'menu_chain_mariofox_stage_mplivehit_status_loop',
-    'battle_playable'
+    'battle_playable_realtime'
 )
 Assert-ProfilePlan 'P1Gate' @(
     'opening_skip',
@@ -205,9 +201,11 @@ Assert-ProfilePlan 'P1Gate' @(
 Assert-ProfilePlan 'Latest' @(
     'runtime',
     'title',
-    'battle_mariofox_stage_mplivehit_status_loop',
-    'menu_chain_mariofox_stage_mplivehit_status_loop',
-    'battle_playable'
+    'battle_playable_realtime'
+)
+Assert-ProfilePlan 'LatestFast' @(
+    'title',
+    'battle_playable_realtime'
 )
 Assert-ProfilePlan 'Regression' @(
     'runtime',

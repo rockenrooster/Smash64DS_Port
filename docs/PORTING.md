@@ -20548,3 +20548,40 @@ remains skipped for the requested fast iteration cadence.
   affine/scanline wallpaper is closed alongside earlier affine correction work.
 - A clean coarse rebuild restored exact ROM `DC2871F3...52E4E3AD`; its no-build
   Mode-8 benchmark passes. No title or VS-setup ROM was built.
+
+## 2026-07-14 - Accepted Cut G affine BG2 and restored the source start gate
+
+- Replaced the three-mip/2x2-grid WIP with one complete source-rendered Dream
+  Land wallpaper retained in 256x192 BG2. After one held seed frame, live
+  BattleShip `grWallpaperCalcPersp` state drives native BG2 affine registers;
+  invalid coverage aborts to the complete source renderer.
+- Added exact BattleShip interface/fighter Sprite manifests and layered-SObj
+  4c/CI4/I8, TLUT, and TEXSHUF decoding. Timer, countdown traffic light, and
+  GO art render while stage, fighters, effects, and foreground traffic remain
+  live. Percent/stock custom callbacks still emit no pixels and may move to the
+  lower LCD in a follow-up.
+- Restored exact `ftParamLockPlayerControl`/`ftParamUnlockPlayerControl`.
+  Pre-GO proof requires Wait, 18,000 remaining, timer stopped, both fighters
+  locked, and zero Fox CPU processing; post-GO requires Go, a running timer,
+  both unlocked, and natural CPU activity.
+- The focused Cut G gate requires one seed/capture, no retained-wallpaper
+  upload/failure/fallback, 49,152 BG2 pixels, live foreground traffic, exact
+  affine frame conservation, nonidentity live motion, zero coverage failure,
+  and an affine-update ceiling of 35,000 ticks. Profile-1 pre/post-GO windows
+  and the clean gameplay screenshot pass.
+- Graduated the retained owner to canonical profile 0. DevFast and Boundary
+  pass runtime, byte-parity, early/late paired visibility, motion, named-region,
+  texture-detail, and sky gates. User-facing ROM
+  `smash64ds-battle-playable-hwtri.nds` is 12,038,144 bytes at SHA-256
+  `4132FBB6A618AE16A3E7554A2C4928669152278DD0F84138329B4058FDF93557`.
+- Exact source pre-GO locking invalidated the bounded input driver in legacy
+  modes 161/162. Boundary/Latest now use scene-level
+  `battle_playable_realtime`; the selected Attack11 damage/guard marker stack
+  is recorded as coverage-reduced rather than revived with an unlock seed.
+- This completes milestone 1 only. Whole-frame rendering remains about
+  9.6-11.4 FPS, and sampled gameplay still performs texture conversion plus
+  two uploads totaling 36,864 bytes. AOT fighter, AOT complete-stage, and
+  conversion-off-critical-path milestones remain open.
+- GBI fixtures, docs, architecture, harness registry, focused profile-1 and
+  canonical profile-0 pre/post-GO runs, canonical DevFast build/capture/parity,
+  and migrated Boundary pass. Full Regression remains follow-up.

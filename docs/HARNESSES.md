@@ -17,30 +17,20 @@ mappings, mode defines, wrapper scripts, and profile plans stay in sync.
 
 ## Current Boundary
 
-The current Boundary and Latest playable-spine set is:
+The current Boundary playable-spine set is:
 
 ```text
-battle_mariofox_stage_mplivehit_status_loop      mode 161
-menu_chain_mariofox_stage_mplivehit_status_loop  mode 162
-battle_playable                                  mode 163
+battle_playable_realtime  mode 163
 ```
 
-These modes keep the live battle scene on Pupupu/Dream Land, create Mario/Fox
-through the imported original manager, and drive Wait -> Walk -> Dash -> Run ->
-RunBrake -> Turn, Fox Attack11, live hitbox search, Mario damage/recover, and
-GuardOn/Guard/GuardOff through imported `ftanim.c`/`ftkey.c`, original status
-descriptors, `ftmain.c`, and `gmcollision.c`.
+This scene-level owner runs the canonical five-minute Mario-human/Fox-CPU match
+with exact Wait-to-GO control/timer behavior, source CPU/input, retained affine
+BG2 wallpaper, and live hardware stage/fighter submission. Modes `161/162`
+remain registered for diagnosis but are no longer Boundary/Latest members:
+their bounded input driver assumes pre-GO movement, which exact BattleShip
+control locking correctly prevents. Do not add a synthetic unlock to restore
+their marker stack; the coverage reduction is recorded in KNOWN_ISSUES.
 
-They now build and verify DS 3D hardware submission by default:
-`hwsubmit=252`, `hwtri=1152`, `hwftr=2/582`, and
-`hwtex=bind582/upload66/ready582/reject0/fmt4/max32x32`. Pass
-`-SoftwarePreview` to the wrappers only for comparison runs. Use
-`-DelaySeconds 3` for the current Boundary/Latest profiles so the menu-chain
-finalizer markers are captured.
-
-Mode `163` is the scene-level `battle_playable` anchor. It reuses the gcRunAll
-natural-combat verifier path, adds stock KO -> Rebirth -> Wait assertions, and
-requires a hardware-triangle stage + fighter frame.
 `battle_playable_match_lifecycle` is a registry alias for the same scene mode,
 not a new gameplay mode. Its compile-distinct verifier target uses the source
 CPU/live setup and a one-minute harness timer to prove the original
@@ -79,10 +69,9 @@ For a normal direct/menu-chain pair:
 
 ## Profiles
 
-- `Latest`: runtime, Title, the current direct/menu boundary pair, and
-  `battle_playable`.
-- `BoundaryDirect`: current direct boundary only.
-- `Boundary`: current direct/menu boundary pair plus `battle_playable`.
+- `Latest`: runtime, Title, and canonical `battle_playable_realtime`.
+- `LatestFast`: Title plus canonical `battle_playable_realtime`.
+- `BoundaryDirect` / `Boundary`: canonical `battle_playable_realtime`.
 - `P1Gate`: additive four-leg shadow checkpoint: compact opening smoke,
   canonical realtime `FastIteration`, supplemental deterministic mode-163
   battle playback, and the one-minute mode-163 lifecycle/Results verifier.

@@ -225,28 +225,23 @@ function Get-Smash64DSVerifyPlan {
             Select-Smash64DSRegistryEntriesByName $registry @(
                 'runtime',
                 'title',
-                'battle_mariofox_stage_mplivehit_status_loop',
-                'menu_chain_mariofox_stage_mplivehit_status_loop',
-                'battle_playable'
+                'battle_playable_realtime'
             )
         }
         'LatestFast' {
             Select-Smash64DSRegistryEntriesByName $registry @(
                 'title',
-                'battle_mariofox_stage_mplivehit_status_loop',
-                'menu_chain_mariofox_stage_mplivehit_status_loop'
+                'battle_playable_realtime'
             )
         }
         'BoundaryDirect' {
             Select-Smash64DSRegistryEntriesByName $registry @(
-                'battle_mariofox_stage_mplivehit_status_loop'
+                'battle_playable_realtime'
             )
         }
         'Boundary' {
             Select-Smash64DSRegistryEntriesByName $registry @(
-                'battle_mariofox_stage_mplivehit_status_loop',
-                'menu_chain_mariofox_stage_mplivehit_status_loop',
-                'battle_playable'
+                'battle_playable_realtime'
             )
         }
         'P1Gate' {

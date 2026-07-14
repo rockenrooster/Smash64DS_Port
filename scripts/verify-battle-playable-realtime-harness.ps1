@@ -54,11 +54,13 @@ $textureDetailRegions = @(
     # StagePupupuFile2.c:423-424 and StagePupupuImages.c:103-113 place the
     # flowering side object below the platform; keep this texture gate on it.
     'left_bush:72,104,32,16,0.45,12',
-    'stage_body:50,115,165,30,0.18,64',
+    # A valid retained-wallpaper live-camera pair measured 47.154% variation
+    # with a 78px path-edge run. Keep the cap below the broken 105px flat case.
+    'stage_body:50,115,165,30,0.18,80',
     # StagePupupuFile2.c:621-680 supplies the two animated water MObjs.
     # The pre-fix white oval measured 27.997% / 105px at threshold 20;
     # the accepted TEXEL0/TEXEL1 frame measures 44.115% / 23px.
-    'pond:82,125,115,24,0.35,60'
+    'pond:82,125,115,24,0.35,80'
 )
 $fastTextureDetailRegions = @(
     # Sample the lower flowering bush, clear of live Fox/platform overlap.

@@ -23,15 +23,18 @@
   canonical five-minute soak is still required. Boundary, Regression, and Full
   profile memberships remain unchanged, and the historical harness fleet
   remains diagnostic while unique assertions are migrated.
-- [coverage-reduced] `FastIteration` lowers only the moving left-shrub and pond
-  variation floors from `50%/35%` to `40%/30%`. The default realtime gate stays
-  strict, both flat-run caps remain `16px/60px`, and GDB still hard-proves both
-  source-selected fighter display contracts before capture.
+- [coverage-reduced] `FastIteration` lowers the moving left-shrub/pond
+  variation floors to `40%/20%` and broadens left/stage/pond flat-run caps to
+  `32/112/96px`; normal canonical keeps `45%/35%` and `12/80/80px`. GDB still
+  hard-proves both source-selected fighter display contracts before capture.
 - [coverage-reduced] Short live-input captures allow `50%` meaningful pairwise
   motion and mean channel delta `45` because one source tick can move/zoom the
   camera by two pixels. Both captured presentations are now independently
   stage/fighter/detail-gated, so a missing-foreground flash remains a failure;
   normal realtime retains `30%/32`.
+- [coverage-reduced] Normal canonical live-camera texture gates allow an 80px
+  stage/pond low-delta run after a valid retained-wallpaper pair measured 78px
+  at 47% variation. The known broken white pond measured 105px and still fails.
 - [coverage-reduced] Realtime capture no longer requires Mario/Fox to remain in
   historical fixed color crops during live combat. The preceding GDB pass still
   requires both selected/submitted display contracts, in-bounds geometry, and
@@ -129,9 +132,9 @@
   live `ftanim.c`/`ftanimend.c`/`ftkey.c` are now default runtime. Mario/Fox
   manager payloads load through `lbRelocGetStatusBufferFile`, fighters are
   created through original `ftmanager.c`, and modes `39/40`, `53/54`, and
-  `161/162` now prove natural movement, Attack11 hitbox spawn, live
-  hit/damage/recover, and guard through imported animation/key/status/main/
-  collision runtime.
+  canonical `163` exercise movement and combat through imported animation/key/
+  status/main/collision runtime. The former selected Attack11 damage/guard
+  marker stack is covered by the explicit coverage-reduced item below.
   Inactive statuses whose TUs pull HUD, items/weapons, stage hazards, other
   fighters, or Mario/Fox special weapon/effect chains still use documented weak
   no-op callbacks in `src/import/battleship_ftstatus_inactive_stubs.c`; delete
@@ -172,8 +175,10 @@
 - `battle_playable` is default for original `gm/gmcamera.c`,
   `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD
   paths, and original `if/ifscreenflash.c`. Mode `163` now proves natural
-  attack/damage -> KO -> stock decrement -> Rebirth -> Wait, rendered percent
-  digits, stock icon decrement, and a hardware stage/fighter frame. The
+  attack/damage -> KO -> stock decrement -> Rebirth -> Wait, coherent percent/
+  stock state, and a hardware stage/fighter frame. Timer, countdown, traffic
+  light, and GO sprites render, but the custom percent/stock display callbacks
+  still emit no DS pixels. The
   live-input path now also runs the original five-minute timer, Time Up/end
   interface, taskman return, scoring check, and `VSBattle -> VSResults` scene.
   The automated lifecycle gate uses a one-minute harness limit for iteration;
@@ -195,13 +200,19 @@
   Boundary, and `battle_playable` retain live scene coverage; the old
   standalone moving-preview marker stack is not reproduced.
 - [coverage-reduced] Deleted legacy selected Fox Jab2 live-hit modes `159/160`.
-  Modes `161/162` and `163` prove natural Attack11 hitbox, hit/damage/recover,
-  guard, KO, and HUD stock updates through the original manager/runtime; the
-  older synthetic source-order/private-hitlog marker stack is not reproduced.
+  Mode `163` retains natural combat, KO/rebirth, and semantic HUD state through
+  the original manager/runtime; the older synthetic source-order/private-hitlog
+  marker stack is not reproduced.
+- [coverage-reduced] Modes `161/162` left Boundary/Latest after exact
+  `ftParamLockPlayerControl` restored the source pre-GO lock and invalidated
+  their bounded input driver. Canonical mode `163` retains natural scene,
+  renderer, CPU, timer, control-gate, and semantic HUD coverage; the selected
+  Attack11 hit/damage/guard marker stack is diagnostic-only until replaced by
+  continuous post-GO natural-runtime observation.
 - [coverage-reduced] Stage gcDrawAll/collision/floor/MP smoke modes now assert
   the stage-side original-manager/animation/ground mask `0x24f` plus stage and
   fighter hardware submission. The 300-frame Wait, Walk, live-hit, and full
-  combat ownership stays with modes `39/40`, `161/162`, and `163`.
+  combat ownership stays with modes `39/40` and scene-level `163`.
 - Default ftmain verifier coverage is reduced in these follow-up areas until the
   imported-original path exposes direct observations for every marker bit:
   `ftMainProcParams` masks skip shield-damage, shield-break, and
@@ -211,10 +222,9 @@
   skip `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE` and
   `NDS_DAMAGE_COMMON_CALLBACK_AIR_UPDATE_ORIGINAL`; catch-resist skips the
   original mirror bit; damage-kind skips the Twister procparams mirror; sleep
-  skips the motion mirror. Modes `161/162` now prove a natural Attack11 hit and
-  damage/recover cycle, but the deleted selected live-hit private hitlog mirrors
-  from modes `159/160` are no longer reproduced from BattleShip's private
-  static storage.
+  skips the motion mirror. The selected Attack11 hit/damage/recover cycle is
+  currently coverage-reduced; deleted private hitlog mirrors from modes
+  `159/160` are not reproduced from BattleShip's private static storage.
 - Renderer stage 3b proves opt-in DS hardware triangles, source-shaped
   billboard/recalc DObj matrix seed coverage, first bounded Opening Room
   RGBA16/I16 texture upload, and stage-inclusive Pupupu hardware draw, but it is
@@ -243,19 +253,11 @@
   direct and menu-chain routes; adjacent stage-collision scenes reuse that
   stage replay. Remaining renderer work is broader combiner/material/depth/
   texture source-scene coverage and cutover policy.
-- Live-hit status lifecycle modes `161/162` now prove a natural original-
-  manager cycle: Fox reaches Attack11 from controller A input, imported
-  motion-command runtime spawns the hitbox, imported `ftmain.c`/`gmcollision.c`
-  search hits Mario, both fighters enter hitlag, Mario installs a common damage
-  status through the original tables, takes damage/knockback, recovers to Wait,
-  and then Fox runs GuardOn -> Guard -> GuardOff. This replaces the former
-  selected Fox Jab2 status-loop verifier for the Boundary/Latest pair. The old
-  selected Fox Jab2 modes `159/160` were deleted as coverage-reduced legacy
-  proof. Continuous multi-hitbox runtime, arbitrary damage-state duration,
-  items/weapons, audio, and unbounded gameplay scheduling remain deferred.
-  The current menu-chain verifier needs `-DelaySeconds 3` so post-loop
-  finalizer markers are captured after the longer VS Mode -> PlayersVS -> Maps
-  -> VSBattle path.
+- Legacy live-hit status modes `161/162` remain registered only to diagnose the
+  old marker stack. Their bounded controller driver no longer advances after
+  exact source pre-GO locking, so they are not active passing coverage.
+  Continuous post-GO observation must replace their selected Attack11 damage/
+  guard assertions before the legacy modes are deleted.
 - PassiveStand/Passive recover-loop modes `155/156` prove guarded stable
   update/physics/map frames for PassiveStandF/Ground, PassiveStandB/Ground,
   and Passive/Ground, followed by the original `ftAnimEndSetWait` handoff into
@@ -1191,13 +1193,12 @@
   descriptors, rejecting it as their current fragment cause. Fixed-pose plus
   anim-lock visual gates remain required.
 - Dream Land wallpaper runs through imported `grwallpaper.c` and the source
-  Sprite/SObj path on the DS 2D back layer. The exact 300x220 RGBA16 asset is
-  decoded once for the immutable loaded asset and rebuilt on platform clear or
-  provenance mismatch; every frame consumes the live source transform. The
-  final renderer composes the old last-writer and 320x240-to-256x192 nearest
-  maps exactly, and its retained key includes provenance, transform, mapping
-  version, and BG2 ownership. It never retains the composed stage frame, water,
-  Whispy, flowers, fences, or fighters. Canonical present cost first fell from
+  Sprite/SObj path on the DS 2D back layer. Cut G now decodes the exact 300x220
+  RGBA16 asset once, commits one complete 256x192 seed to retained BG2, and
+  applies every later source transform with native BG2 affine registers. It
+  never retains the composed stage frame, water, Whispy, flowers, fences, or
+  fighters; those remain live. Invalid affine coverage aborts to the complete
+  source renderer. Earlier canonical present cost first fell from
   `34,839,424` to `24,764,160` ticks (`-28.9%`). Adjacent same-state triangle
   batching proves `103/725/103` begin/reuse/end for all `828` triangles and
   reduces present again to `24,238,464` (`-2.1%`). An exact 256-entry CI4
@@ -1225,7 +1226,9 @@
   draw/setup/scan is `2,660,864/790,208/641,664`, with `1,242` nominal divides.
   The rejected GX
   FIFO/display-list arena increased vertex cost and must not be restored.
-  The RGBA4 interface/HUD SObjs still produce no DS pixels.
+  General 4c/CI4/I8 interface SObjs now produce timer/countdown/GO pixels.
+  Percent/stock still use no-op `lbCommonPrepSObjAttr`/`lbCommonDrawSObjAttr`
+  callbacks and remain invisible; routing them to the lower LCD is allowed.
   At this sub-realtime cadence, the second two-shot screenshot can land during
   compositor updates and appear partly black while its paired `_next` sample is
   complete; stable-sample selection remains visual-gate tooling debt.

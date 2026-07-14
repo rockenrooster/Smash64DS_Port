@@ -1309,11 +1309,16 @@ Opening movie / Opening Portraits:
   `NDS_HARNESS_FAST_LOGIC=1` and expect mode `1`, at least 3200 logic frames,
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
-  completed update, and nonzero timer-derived rates. The canonical HW smoke
-  currently reports about `1.9` fps with source wallpaper and water
-  precomposition; pass
+  completed update, and nonzero timer-derived rates. The retained-wallpaper
+  canonical HW smoke currently reports about `9.6-11.4` fps; pass
   `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
+- `BPLAY_START`: synchronized source start-state marker. Fields are game
+  status, time limit, time remain, time passed, timer-started flag, player-0
+  control-disable, player-1 control-disable, and pacing logic frames. A valid
+  pre-GO window is `Wait / 5 / 18000 / 0 / 0 / 1 / 1`; a valid post-GO window
+  is `Go / 5 / positive / positive / 1 / 0 / 0` with remain plus passed equal
+  to 18,000.
 - `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
   flushes, pre-flush GX polygon RAM count, pre-flush GX vertex RAM count,
   `GFX_STATUS`, and `GFX_CONTROL`. The verifier requires submitted frames to
@@ -1337,19 +1342,30 @@ Opening movie / Opening Portraits:
   profile 2 requires both map fields and both index-cache fields to remain zero.
 - `SOBJ_WALL_CACHE`: immutable Dream Land decode-cache marker. Fields are
   build/hit/fast-draw/fallback counts, source width/height/opaque pixels, and
-  build/last-draw ticks. Canonical expects exactly one build, one or more hits,
-  fast draws equal to builds plus hits, `0 / 300 / 220 / 66000`, and positive
-  timings; live SObj position/scale are deliberately not part of the key.
+  build/last-draw ticks. Retained-wallpaper canonical expects exactly
+  `1 / 0 / 1 / 0 / 300 / 220 / 66000` and positive timings because only the
+  held seed frame performs the software wallpaper draw.
 - `SOBJ_WALL_FINAL`: exact final-layer compositor traffic. Fields are direct
   calls, unchanged-key skips, changed-key writes, pixel writes, background and
   foreground 320x240 staging-clear bytes, then BG2 clear/copy/final-write bytes
-  and BG3 clear/copy/final-write bytes. Canonical requires direct calls to equal
-  decode fast draws and `skip + change`, every change to write exactly
-  `256*192` pixels, BG2 final bytes to equal twice the pixel count, and zero
-  staging, BG2 clear/copy, BG3 full-clear, or BG3 direct-write traffic. A live
-  camera can change the Q16 source key every sampled frame, so positive skips
-  are not required; the key still includes provenance, transform, mapping
-  version, and platform BG2 ownership epoch.
+  and BG3 clear/copy/final-write bytes. Retained-wallpaper canonical requires
+  one direct/change, 49,152 pixels, 98,304 BG2 final-write bytes, positive live
+  foreground staging/copy traffic, and zero BG2 clear/copy or BG3 direct-write
+  traffic.
+- `SCENE_MIP_CACHE`: retained-wallpaper ownership marker. Fields are state,
+  capture count, upload count, failure count, seed hash, nonzero pixels, seed
+  draws, live draws, fallbacks, selected index, live target-distance bits, and
+  selected mask. Accepted Cut G is ready state 2 with one seed/capture, no
+  upload/failure/fallback, at least 36,864 nonzero pixels, selected index 0 and
+  mask 1. Hardware frame count must equal seed plus live draws.
+- `SCENE_WALL_AFFINE`: native BG2 transform marker. Fields are queue count,
+  apply count, coverage failures, last-update ticks, Hdx, Vdy, Dx, and Dy.
+  Queue count equals live draws, apply count adds the seed identity, coverage
+  failures are zero, the transform is valid/nonidentity, and update cost is at
+  most 35,000 ticks.
+- `IFHUD`: source IFCommon semantic state. It records object mask, current/max
+  damage, digit encodings, and stock ranges. It does not prove percent/stock
+  pixels; those custom display callbacks are still unimplemented.
 - `RENDER_MATRIX` / `RENDER_VERTEX`: canonical HW matrix and vertex-range
   markers. They record loaded projection/modelview seeds and raw/HW vertex
   ranges so blank-screen failures can be sorted into matrix/clip issues versus

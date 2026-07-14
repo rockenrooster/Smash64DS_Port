@@ -11,7 +11,7 @@
 #define G_IM_SIZ_32b 3
 
 /* Sprite/bitmap format-size codes used by the lb common sprite code. */
-#define G_IM_SIZ_4c (G_IM_SIZ_4b)
+#define G_IM_SIZ_4c 4
 #define G_IM_SIZ_4b_STRING "4b"
 #define G_IM_FMT_RGBA 0
 #define G_IM_FMT_YUV  1

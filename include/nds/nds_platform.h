@@ -48,6 +48,10 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpritePreview(void);
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask);
 void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
+u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
+                                             u32 scale_x_q16,
+                                             u32 scale_y_q16);
+void ndsPlatformSceneWallpaperConfirmRaster(void);
 u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index);
 void ndsPlatformSceneMipCacheAbort(void);
 u32 ndsPlatformSceneMipCaptureCompletedCount(void);
