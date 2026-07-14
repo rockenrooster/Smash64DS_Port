@@ -6,7 +6,6 @@
 #include <nds/nds_boot.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_reloc_assets.h>
-#include <nds/nds_renderer.h>
 #include <nds/nds_video.h>
 #include <port/port_probe.h>
 #include <port/coroutine.h>
@@ -24,8 +23,6 @@ int main(void)
 
     ndsPlatformInit();
     ndsRelocAssetsInit();
-    /* NitroFS is live now; validate/open prepared stage data before gameplay. */
-    ndsRendererPupupuWaterAotInit();
     portCoroutineInitMain();
     os_test = ndsOsSelfTest();
     iprintf("OS queues/threads: %s", os_test == 0 ? "PASS\n" : "FAIL ");
