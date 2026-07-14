@@ -1,0 +1,245 @@
+param(
+    [string]$BattleShipRoot = ''
+)
+
+$ErrorActionPreference = 'Stop'
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+
+if ([string]::IsNullOrWhiteSpace($BattleShipRoot)) {
+    $BattleShipRoot = Join-Path $root 'decomp/BattleShip-main/decomp'
+}
+$BattleShipRoot = (Resolve-Path -LiteralPath $BattleShipRoot).Path
+
+function Find-BytePattern {
+    param(
+        [byte[]]$Data,
+        [byte[]]$Pattern
+    )
+
+    $hits = [System.Collections.Generic.List[int]]::new()
+    for ($offset = 0; $offset -le ($Data.Length - $Pattern.Length);
+         $offset++) {
+        $matches = $true
+        for ($index = 0; $index -lt $Pattern.Length; $index++) {
+            if ($Data[$offset + $index] -ne $Pattern[$index]) {
+                $matches = $false
+                break
+            }
+        }
+        if ($matches) {
+            $hits.Add($offset)
+        }
+    }
+    return $hits.ToArray()
+}
+
+function Read-NormalizedU16Word {
+    param(
+        [byte[]]$Data,
+        [int]$Offset
+    )
+
+    # The loader's blanket u32 byte swap makes [3,2,1,0]. The audited
+    # mixed-u16 repair then exchanges those two native lanes.
+    $wordSwap = @(
+        $Data[$Offset + 3], $Data[$Offset + 2],
+        $Data[$Offset + 1], $Data[$Offset]
+    )
+    $laneRepair = @(
+        $wordSwap[2], $wordSwap[3], $wordSwap[0], $wordSwap[1]
+    )
+    return @(
+        ([int]$laneRepair[0] -bor ([int]$laneRepair[1] -shl 8)),
+        ([int]$laneRepair[2] -bor ([int]$laneRepair[3] -shl 8))
+    )
+}
+
+function Assert-EqualList {
+    param(
+        [string]$Label,
+        [int[]]$Actual,
+        [int[]]$Expected
+    )
+
+    if (($Actual -join ',') -ne ($Expected -join ',')) {
+        throw ('{0} differs: got [{1}], expected [{2}].' -f
+            $Label, ($Actual -join ', '), ($Expected -join ', '))
+    }
+}
+
+$fixtures = @(
+    @{
+        Name = 'MarioMain'
+        Prefix = [byte[]]@(
+            0x01, 0xB7, 0x01, 0x24, 0x01, 0xB1, 0x01, 0xB8,
+            0x01, 0xAD, 0x01, 0xAE, 0x01, 0xAF, 0x00, 0x00
+        )
+        Audio = [int[]]@(439, 292, 433, 440, 429, 430, 431, 0)
+        Heavy = [int[]]@(438, 0)
+    },
+    @{
+        Name = 'FoxMain'
+        Prefix = [byte[]]@(
+            0x01, 0x72, 0x01, 0x21, 0x01, 0x68, 0x01, 0x77,
+            0x01, 0x76, 0x01, 0x74, 0x01, 0x75, 0x00, 0x00
+        )
+        Audio = [int[]]@(370, 289, 360, 375, 374, 372, 373, 0)
+        Heavy = [int[]]@(0x2B7, 0)
+    }
+)
+
+foreach ($fixture in $fixtures) {
+    $assetPath = Join-Path $BattleShipRoot (
+        'BattleShip_o2r/reloc_fighters_main/{0}' -f $fixture.Name)
+    if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf)) {
+        throw "BattleShip O2R fighter fixture not found: $assetPath"
+    }
+    $data = [IO.File]::ReadAllBytes($assetPath)
+    $hits = @(Find-BytePattern -Data $data -Pattern $fixture.Prefix)
+    if ($hits.Count -ne 1) {
+        throw ('{0} FTAttributes signature count is {1}, expected 1.' -f
+            $fixture.Name, $hits.Count)
+    }
+
+    $audio = [System.Collections.Generic.List[int]]::new()
+    foreach ($relativeOffset in @(0, 4, 8, 12)) {
+        foreach ($value in (Read-NormalizedU16Word `
+                -Data $data -Offset ($hits[0] + $relativeOffset))) {
+            $audio.Add($value)
+        }
+    }
+    Assert-EqualList -Label "$($fixture.Name) normalized audio attributes" `
+        -Actual $audio.ToArray() -Expected $fixture.Audio
+    Assert-EqualList -Label "$($fixture.Name) normalized item-throw pair" `
+        -Actual (Read-NormalizedU16Word -Data $data `
+            -Offset ($hits[0] + 0x30)) -Expected ([int[]]@(100, 100))
+    Assert-EqualList -Label "$($fixture.Name) normalized heavy-get word" `
+        -Actual (Read-NormalizedU16Word -Data $data `
+        -Offset ($hits[0] + 0x34)) -Expected $fixture.Heavy
+}
+
+$ftDataText = Get-Content -LiteralPath (
+    Join-Path $BattleShipRoot 'src/ft/ftdata.c') -Raw
+foreach ($sourceOffset in @(
+        @{ Fighter = 'Mario'; Offset = '0x00000428' },
+        @{ Fighter = 'Fox'; Offset = '0x0000046C' }
+    )) {
+    $dataBlock = [regex]::Match(
+        $ftDataText,
+        ('(?s)FTData dFT{0}Data\s*=\s*\{{.*?\}};' -f
+            $sourceOffset.Fighter)
+    )
+    if (-not $dataBlock.Success -or
+        -not $dataBlock.Value.Contains($sourceOffset.Offset)) {
+        throw ('BattleShip dFT{0}Data does not retain attribute offset {1}.' -f
+            $sourceOffset.Fighter, $sourceOffset.Offset)
+    }
+}
+
+$relocPath = Join-Path $root 'src/port/reloc_backend_assets.c'
+$fgmPath = Join-Path $root 'src/nds/nds_audio_fgm.c'
+$relocText = Get-Content -LiteralPath $relocPath -Raw
+$fgmText = Get-Content -LiteralPath $fgmPath -Raw
+
+$normalize = [regex]::Match(
+    $relocText,
+    '(?s)static s32 ndsRelocNormalizeFighterAttributesFile\(.*?' +
+        '(?=static size_t ndsRelocAssetAllocSize)'
+)
+if (-not $normalize.Success) {
+    throw 'FTAttributes normalizer implementation was not found.'
+}
+$repairCount = [regex]::Matches(
+    $normalize.Value, 'ndsRelocSwapNativeU16WordLanes\('
+).Count
+if ($repairCount -ne 6) {
+    throw "FTAttributes normalizer repairs $repairCount words, expected 6."
+}
+foreach ($required in @(
+        'NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES 0x428u',
+        'NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES 0x46cu',
+        'offsetof(FTAttributes, dead_fgm_ids)',
+        'offsetof(FTAttributes, deadup_sfx)',
+        'offsetof(FTAttributes, smash_sfx)',
+        'offsetof(FTAttributes, itemthrow_vel_scale)',
+        'offsetof(FTAttributes, heavyget_sfx)',
+        'ndsRelocFighterAttributesMatchSource(loaded->asset_id, attr)',
+        'ndsRelocNormalizeFighterAttributesFile(loaded)'
+    )) {
+    if (-not $relocText.Contains($required)) {
+        throw "FTAttributes production fixture is missing: $required"
+    }
+}
+
+foreach ($required in @(
+        'u16 fgm_id;',
+        'handle->effect.sfx_id = ndsAudioFgmNextInstanceToken();',
+        'handle->fgm_id = fgm_id;',
+        'handle->effect.sfx_id = 0u;',
+        'handle->allocated = FALSE;',
+        'gNdsAudioFgmHandleRecycleCount++;',
+        'gNdsAudioFgmHandleReleaseCount++;',
+        'gNdsAudioFgmInstanceTokenWrapCount++;'
+    )) {
+    if (-not $fgmText.Contains($required)) {
+        throw "FGM token-lifecycle fixture is missing: $required"
+    }
+}
+foreach ($forbidden in @(
+        'handle->effect.sfx_id = fgm_id;',
+        'handle->effect.sfx_max = fgm_id;',
+        'NDS_AUDIO_FGM_NONREUSE_HANDLE_CAPACITY',
+        'never reused during one'
+    )) {
+    if ($fgmText.Contains($forbidden)) {
+        throw "Obsolete FGM handle behavior remains: $forbidden"
+    }
+}
+
+$devkitArm = if ([string]::IsNullOrWhiteSpace($env:DEVKITARM)) {
+    'C:/devkitPro/devkitARM'
+}
+else {
+    $env:DEVKITARM
+}
+$compiler = Join-Path $devkitArm 'bin/arm-none-eabi-gcc.exe'
+if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
+    throw "ARM compiler is required for layout fixtures: $compiler"
+}
+$layoutSource = @'
+#include <stddef.h>
+#include <ft/fighter.h>
+#include <sys/audio.h>
+_Static_assert(offsetof(FTAttributes, dead_fgm_ids) == 0xb4u, "dead");
+_Static_assert(offsetof(FTAttributes, deadup_sfx) == 0xb8u, "deadup");
+_Static_assert(offsetof(FTAttributes, damage_sfx) == 0xbau, "damage");
+_Static_assert(offsetof(FTAttributes, smash_sfx) == 0xbcu, "smash");
+_Static_assert(offsetof(FTAttributes, item_pickup) == 0xc4u, "pickup");
+_Static_assert(offsetof(FTAttributes, itemthrow_vel_scale) == 0xe4u, "throw");
+_Static_assert(offsetof(FTAttributes, heavyget_sfx) == 0xe8u, "heavy");
+_Static_assert(offsetof(FTAttributes, halo_size) == 0xecu, "halo");
+_Static_assert(offsetof(alSoundEffect, sfx_id) == 0x26u, "token");
+int main(void) { return 0; }
+'@
+$compilerArgs = @(
+    '-std=gnu11', '-fsyntax-only', '-x', 'c', '-',
+    '-DREGION_US', '-D_LANGUAGE_C', '-DARM9', '-DSSB64_TARGET_NDS',
+    "-I$(Join-Path $root 'include')",
+    "-I$(Join-Path $BattleShipRoot 'src')",
+    "-I$(Join-Path $BattleShipRoot 'src/sys')"
+)
+$compilerOutput = $layoutSource | & $compiler @compilerArgs 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $details = ($compilerOutput | Out-String).Trim()
+    throw "Target layout fixtures failed.`n$details"
+}
+
+& (Join-Path $PSScriptRoot 'check-audio-id-fixtures.ps1') `
+    -BattleShipRoot $BattleShipRoot
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Output (
+    'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
+    'mixed-u16 words each, target layouts, source IDs, and recyclable ' +
+    'BattleShip FGM tokens.'
+)

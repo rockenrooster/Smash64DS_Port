@@ -15,7 +15,7 @@
 #define NDS_AUDIO_FGM_PACK_DATA_OFFSET \
     (NDS_AUDIO_FGM_PACK_HEADER_BYTES + \
      (NDS_AUDIO_FGM_PHASE_COUNT * NDS_AUDIO_FGM_PACK_ENTRY_BYTES))
-#define NDS_AUDIO_FGM_HANDLE_COUNT NDS_AUDIO_FGM_NONREUSE_HANDLE_CAPACITY
+#define NDS_AUDIO_FGM_HANDLE_COUNT NDS_AUDIO_FGM_HANDLE_CAPACITY
 #define NDS_AUDIO_FGM_CHANNEL_COUNT 16u
 #define NDS_AUDIO_FGM_TIMER_MICROSECONDS 5750u
 
@@ -48,10 +48,11 @@ typedef struct NDSAudioFgmHandle {
     u32 envelope_offset;
     u16 envelope_count;
     u16 envelope_index;
+    u16 fgm_id;
     s8 channel;
     u8 allocated;
     u8 live;
-    u8 _pad;
+    u8 ever_allocated;
 } NDSAudioFgmHandle;
 
 volatile u32 gNdsAudioFgmResult;
@@ -81,9 +82,13 @@ volatile u32 gNdsAudioFgmChannelMask;
 volatile u32 gNdsAudioFgmLastChannel;
 volatile u32 gNdsAudioFgmLastID;
 volatile u32 gNdsAudioFgmLastGeneration;
+volatile u32 gNdsAudioFgmLastInstanceToken;
+volatile u32 gNdsAudioFgmInstanceTokenWrapCount;
 volatile u32 gNdsAudioFgmPoolExhaustCount;
-volatile u32 gNdsAudioFgmAllocatedHandles;
-volatile u32 gNdsAudioFgmNonReuseCapacity;
+volatile u32 gNdsAudioFgmHandleAcquireCount;
+volatile u32 gNdsAudioFgmHandleReleaseCount;
+volatile u32 gNdsAudioFgmHandleRecycleCount;
+volatile u32 gNdsAudioFgmHandleCapacity;
 volatile u32 gNdsAudioFgmEnvelopeStepCount;
 volatile u32 gNdsAudioFgmFidelityDebtMask;
 
@@ -95,6 +100,7 @@ static NDSAudioFgmHandle sNdsAudioFgmHandles[NDS_AUDIO_FGM_HANDLE_COUNT];
 static NDSAudioFgmHandle *sNdsAudioFgmChannelOwners[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmChannelGenerations[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmNextGeneration = 1u;
+static u16 sNdsAudioFgmInstanceToken;
 
 _Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 176u,
                "FGM phase pack header layout changed");
@@ -102,8 +108,10 @@ _Static_assert(NDS_AUDIO_FGM_PACK_BYTES <= (64u * 1024u),
                "FGM phase pack exceeds its resident-memory gate");
 _Static_assert(offsetof(NDSAudioFgmHandle, effect) == 0u,
                "BattleShip audio handle must be the backend handle prefix");
-_Static_assert(NDS_AUDIO_FGM_HANDLE_COUNT > NDS_AUDIO_FGM_PHASE_COUNT,
-               "one-match non-reuse pool must exceed the five phase calls");
+_Static_assert(offsetof(alSoundEffect, sfx_id) == 0x26u,
+               "BattleShip FGM instance-token field moved");
+_Static_assert(NDS_AUDIO_FGM_HANDLE_COUNT >= 3u,
+               "FGM pool must support the source KO call burst");
 
 static u16 ndsAudioFgmReadLe16(const u8 *data)
 {
@@ -164,10 +172,26 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
     return NULL;
 }
 
+static u16 ndsAudioFgmNextInstanceToken(void)
+{
+    sNdsAudioFgmInstanceToken++;
+    if (sNdsAudioFgmInstanceToken == 0u)
+    {
+        sNdsAudioFgmInstanceToken++;
+        gNdsAudioFgmInstanceTokenWrapCount++;
+    }
+    return sNdsAudioFgmInstanceToken;
+}
+
 static void ndsAudioFgmReleaseHandle(NDSAudioFgmHandle *handle,
                                      s32 kill_channel)
 {
     s32 channel = handle->channel;
+
+    if (handle->allocated == FALSE)
+    {
+        return;
+    }
 
     if ((channel >= 0) && (channel < (s32)NDS_AUDIO_FGM_CHANNEL_COUNT) &&
         (sNdsAudioFgmChannelOwners[channel] == handle) &&
@@ -188,12 +212,15 @@ static void ndsAudioFgmReleaseHandle(NDSAudioFgmHandle *handle,
     {
         handle->live = FALSE;
         handle->channel = -1;
-        handle->effect.sfx_id = 0u;
         if (gNdsAudioFgmActiveHandles != 0u)
         {
             gNdsAudioFgmActiveHandles--;
         }
     }
+    handle->effect.sfx_id = 0u;
+    handle->fgm_id = 0u;
+    handle->allocated = FALSE;
+    gNdsAudioFgmHandleReleaseCount++;
 }
 
 static NDSAudioFgmHandle *ndsAudioFgmHandleFromEffect(alSoundEffect *effect)
@@ -320,11 +347,10 @@ void ndsAudioFgmDiagnosticsReset(void)
 {
     u32 i;
 
-    /* A raw BattleShip alSoundEffect pointer carries no generation token.
-     * Therefore phase handles are deliberately never reused during one
-     * match: five natural calls fit in the eight-slot pool, and scene reset
-     * retires the whole epoch.  Clearing `allocated` on expiry would let a
-     * stale source pointer alias and stop a later sound. */
+    /* BattleShip stores a nonzero instance token in sfx_id, snapshots that
+     * token in source-side holders, and compares it before stopping a handle.
+     * Keep that contract: completed handles clear the token and return to the
+     * reusable backend pool. */
     for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
     {
         if (sNdsAudioFgmHandles[i].live != FALSE)
@@ -375,9 +401,13 @@ void ndsAudioFgmDiagnosticsReset(void)
     gNdsAudioFgmLastChannel = 0xffffffffu;
     gNdsAudioFgmLastID = 0u;
     gNdsAudioFgmLastGeneration = 0u;
+    gNdsAudioFgmLastInstanceToken = 0u;
+    gNdsAudioFgmInstanceTokenWrapCount = 0u;
     gNdsAudioFgmPoolExhaustCount = 0u;
-    gNdsAudioFgmAllocatedHandles = 0u;
-    gNdsAudioFgmNonReuseCapacity = NDS_AUDIO_FGM_HANDLE_COUNT;
+    gNdsAudioFgmHandleAcquireCount = 0u;
+    gNdsAudioFgmHandleReleaseCount = 0u;
+    gNdsAudioFgmHandleRecycleCount = 0u;
+    gNdsAudioFgmHandleCapacity = NDS_AUDIO_FGM_HANDLE_COUNT;
     gNdsAudioFgmEnvelopeStepCount = 0u;
     gNdsAudioFgmFidelityDebtMask = 0u;
 }
@@ -459,7 +489,7 @@ void ndsAudioFgmLoadFenced(void)
     gNdsAudioFgmLoaded = 1u;
     gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_PACK_BYTES;
     gNdsAudioFgmSupportedCount = NDS_AUDIO_FGM_PHASE_COUNT;
-    gNdsAudioFgmNonReuseCapacity = NDS_AUDIO_FGM_HANDLE_COUNT;
+    gNdsAudioFgmHandleCapacity = NDS_AUDIO_FGM_HANDLE_COUNT;
     gNdsAudioFgmMask |= NDS_AUDIO_FGM_MASK_PACK_LOADED;
     gNdsAudioFgmFidelityDebtMask =
         NDS_AUDIO_FGM_EXPECTED_FIDELITY_DEBT_MASK;
@@ -618,9 +648,9 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
     }
 
     memset(&handle->effect, 0, sizeof(handle->effect));
-    handle->effect.sfx_id = fgm_id;
-    handle->effect.sfx_max = fgm_id;
+    handle->effect.sfx_id = ndsAudioFgmNextInstanceToken();
     handle->effect.balance = entry->pan;
+    handle->fgm_id = fgm_id;
     handle->generation = sNdsAudioFgmNextGeneration++;
     if (sNdsAudioFgmNextGeneration == 0u)
     {
@@ -635,13 +665,18 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
     handle->envelope_count = entry->envelope_count;
     handle->envelope_index = 0u;
     handle->channel = (s8)channel;
+    if (handle->ever_allocated != FALSE)
+    {
+        gNdsAudioFgmHandleRecycleCount++;
+    }
+    handle->ever_allocated = TRUE;
     handle->allocated = TRUE;
     handle->live = TRUE;
     sNdsAudioFgmChannelOwners[channel] = handle;
     sNdsAudioFgmChannelGenerations[channel] = handle->generation;
 
     gNdsAudioFgmSupportedPlayCount++;
-    gNdsAudioFgmAllocatedHandles++;
+    gNdsAudioFgmHandleAcquireCount++;
     gNdsAudioFgmActiveHandles++;
     if (gNdsAudioFgmActiveHandles > gNdsAudioFgmMaxActiveHandles)
     {
@@ -650,6 +685,7 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
     gNdsAudioFgmChannelMask |= 1u << channel;
     gNdsAudioFgmLastChannel = (u32)channel;
     gNdsAudioFgmLastGeneration = handle->generation;
+    gNdsAudioFgmLastInstanceToken = handle->effect.sfx_id;
     gNdsAudioFgmMask |= NDS_AUDIO_FGM_MASK_SUPPORTED_PLAY;
     if ((entry->flags & 1u) != 0u)
     {

@@ -1822,13 +1822,15 @@ static FTAttributes *ndsFighterMarioFoxGetAttributes(s32 fkind)
     {
         return lbRelocGetFileData(FTAttributes *,
                                   sNdsFighterMarioMainFile,
-                                  (const void *)0x428u);
+                                  (const void *)
+                                      NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES);
     }
     if (fkind == nFTKindFox)
     {
         return lbRelocGetFileData(FTAttributes *,
                                   sNdsFighterFoxMainFile,
-                                  (const void *)0x46cu);
+                                  (const void *)
+                                      NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES);
     }
     return NULL;
 }

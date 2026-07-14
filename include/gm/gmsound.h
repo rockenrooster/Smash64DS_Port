@@ -80,7 +80,9 @@ typedef enum gmFGMID
     nSYAudioFGMHyruleTwisterAppear = 283,
     nSYAudioFGMHyruleTwisterTrapped = 284,
     nSYAudioFGMPupupuWhispyWind = 0x11d,
-    nSYAudioFGMFloorDamageFire = 286
+    nSYAudioFGMFloorDamageFire = 286,
+    nSYAudioFGMFoxDeadSlam = 289,
+    nSYAudioFGMMarioDeadSlam = 292
 } gmFGMID;
 
 typedef enum gmVoiceID
@@ -89,10 +91,23 @@ typedef enum gmVoiceID
     nSYAudioVoiceCaptainAttackS4 = 345,
     nSYAudioVoiceCaptainJumpAerial = 353,
     nSYAudioVoiceCaptainHeavyGet = 354,
+    nSYAudioVoiceFoxDeadUp = 360,
     nSYAudioVoiceFoxSelected = 365,
     nSYAudioVoiceFoxWin = 368,
+    nSYAudioVoiceFoxDead = 370,
+    nSYAudioVoiceFoxSmash1 = 372,
+    nSYAudioVoiceFoxSmash2 = 373,
+    nSYAudioVoiceFoxSmash3 = 374,
+    nSYAudioVoiceFoxDamage = 375,
     nSYAudioVoiceLinkSmash1 = 401,
     nSYAudioVoiceLuigiFuraFura = 421,
+    nSYAudioVoiceMarioSmash1 = 429,
+    nSYAudioVoiceMarioSmash2 = 430,
+    nSYAudioVoiceMarioSmash3 = 431,
+    nSYAudioVoiceMarioDeadUp = 433,
+    nSYAudioVoiceMarioHeavyGet = 438,
+    nSYAudioVoiceMarioDead = 439,
+    nSYAudioVoiceMarioDamage = 440,
     nSYAudioVoiceMarioHereWe = 441,
     nSYAudioVoiceAnnounceFailure = 460,
     nSYAudioVoiceAnnounceOne = 467,

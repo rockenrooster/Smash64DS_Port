@@ -9,7 +9,7 @@
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_PACK_BYTES 39120u
 #define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xca162f4eu
-#define NDS_AUDIO_FGM_NONREUSE_HANDLE_CAPACITY 8u
+#define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_LOOP_PREROLL (1u << 0)
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_ENVELOPE_QUANTIZATION (1u << 1)
 #define NDS_AUDIO_FGM_EXPECTED_FIDELITY_DEBT_MASK \
@@ -50,9 +50,13 @@ extern volatile u32 gNdsAudioFgmChannelMask;
 extern volatile u32 gNdsAudioFgmLastChannel;
 extern volatile u32 gNdsAudioFgmLastID;
 extern volatile u32 gNdsAudioFgmLastGeneration;
+extern volatile u32 gNdsAudioFgmLastInstanceToken;
+extern volatile u32 gNdsAudioFgmInstanceTokenWrapCount;
 extern volatile u32 gNdsAudioFgmPoolExhaustCount;
-extern volatile u32 gNdsAudioFgmAllocatedHandles;
-extern volatile u32 gNdsAudioFgmNonReuseCapacity;
+extern volatile u32 gNdsAudioFgmHandleAcquireCount;
+extern volatile u32 gNdsAudioFgmHandleReleaseCount;
+extern volatile u32 gNdsAudioFgmHandleRecycleCount;
+extern volatile u32 gNdsAudioFgmHandleCapacity;
 extern volatile u32 gNdsAudioFgmEnvelopeStepCount;
 extern volatile u32 gNdsAudioFgmFidelityDebtMask;
 

@@ -14,6 +14,8 @@
 #include "nds_scene_harness_config.h"
 
 #include <nds/nds_ifcommon_oam.h>
+#include <ft/fighter.h>
+#include <gm/gmsound.h>
 
 #define NDS_RELOC_OPENING_ROOM_FILE_COUNT 8u
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
@@ -330,6 +332,8 @@
 #define NDS_RELOC_SYMBOL_GR_PUPUPU_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_HYRULE_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER 0x14u
+#define NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES 0x428u
+#define NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES 0x46cu
 
 #define NDS_OPENING_PORTRAITS_CARD_WIDTH 300u
 #define NDS_OPENING_PORTRAITS_CARD_HEIGHT 55u
@@ -2804,6 +2808,134 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
     return TRUE;
 }
 
+/* The O2R fighter files preserve the N64's big-endian mixed-width layout.
+ * The common relocation pass first byte-swaps each u32, which is correct for
+ * floats, pointers, and integers but reverses the two u16 lanes within these
+ * exact FTAttributes words.  BattleShip reads all six words directly. */
+_Static_assert(offsetof(FTAttributes, dead_fgm_ids) == 0xb4u,
+               "FTAttributes dead FGM layout changed");
+_Static_assert(offsetof(FTAttributes, deadup_sfx) == 0xb8u,
+               "FTAttributes dead-up FGM layout changed");
+_Static_assert(offsetof(FTAttributes, damage_sfx) == 0xbau,
+               "FTAttributes damage FGM layout changed");
+_Static_assert(offsetof(FTAttributes, smash_sfx) == 0xbcu,
+               "FTAttributes smash FGM layout changed");
+_Static_assert(offsetof(FTAttributes, item_pickup) == 0xc4u,
+               "FTAttributes smash padding layout changed");
+_Static_assert(offsetof(FTAttributes, itemthrow_vel_scale) == 0xe4u,
+               "FTAttributes item-throw layout changed");
+_Static_assert(offsetof(FTAttributes, itemthrow_damage_scale) == 0xe6u,
+               "FTAttributes item-throw damage layout changed");
+_Static_assert(offsetof(FTAttributes, heavyget_sfx) == 0xe8u,
+               "FTAttributes heavy-get FGM layout changed");
+_Static_assert(offsetof(FTAttributes, halo_size) == 0xecu,
+               "FTAttributes heavy-get padding layout changed");
+
+static void ndsRelocSwapNativeU16WordLanes(void *word)
+{
+    u8 *bytes = word;
+    u16 first = ndsRelocReadNative16(bytes);
+    u16 second = ndsRelocReadNative16(bytes + sizeof(u16));
+
+    ndsRelocWriteNative16(bytes, second);
+    ndsRelocWriteNative16(bytes + sizeof(u16), first);
+}
+
+static s32 ndsRelocFighterAttributesMatchSource(
+    u32 asset_id, const FTAttributes *attr)
+{
+    if (attr == NULL)
+    {
+        return FALSE;
+    }
+    if (asset_id == NDS_RELOC_ASSET_MARIO_MAIN)
+    {
+        return
+            (attr->dead_fgm_ids[0] == nSYAudioVoiceMarioDead) &&
+            (attr->dead_fgm_ids[1] == nSYAudioFGMMarioDeadSlam) &&
+            (attr->deadup_sfx == nSYAudioVoiceMarioDeadUp) &&
+            (attr->damage_sfx == nSYAudioVoiceMarioDamage) &&
+            (attr->smash_sfx[0] == nSYAudioVoiceMarioSmash1) &&
+            (attr->smash_sfx[1] == nSYAudioVoiceMarioSmash2) &&
+            (attr->smash_sfx[2] == nSYAudioVoiceMarioSmash3) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == nSYAudioVoiceMarioHeavyGet);
+    }
+    if (asset_id == NDS_RELOC_ASSET_FOX_MAIN)
+    {
+        return
+            (attr->dead_fgm_ids[0] == nSYAudioVoiceFoxDead) &&
+            (attr->dead_fgm_ids[1] == nSYAudioFGMFoxDeadSlam) &&
+            (attr->deadup_sfx == nSYAudioVoiceFoxDeadUp) &&
+            (attr->damage_sfx == nSYAudioVoiceFoxDamage) &&
+            (attr->smash_sfx[0] == nSYAudioVoiceFoxSmash3) &&
+            (attr->smash_sfx[1] == nSYAudioVoiceFoxSmash1) &&
+            (attr->smash_sfx[2] == nSYAudioVoiceFoxSmash2) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == nSYAudioFGMVoiceEnd);
+    }
+    return FALSE;
+}
+
+static s32 ndsRelocNormalizeFighterAttributesFile(
+    NDSRelocLoadedFile *loaded)
+{
+    u32 attr_offset;
+    u8 *attr_bytes;
+    FTAttributes *attr;
+
+    if ((loaded == NULL) || (loaded->data == NULL))
+    {
+        return FALSE;
+    }
+    if (loaded->asset_id == NDS_RELOC_ASSET_MARIO_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES;
+    }
+    else if (loaded->asset_id == NDS_RELOC_ASSET_FOX_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES;
+    }
+    else
+    {
+        return TRUE;
+    }
+    if (ndsRelocRangeInLoadedFile(
+            loaded, attr_offset, sizeof(FTAttributes)) == FALSE)
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+
+    attr_bytes = (u8 *)loaded->data + attr_offset;
+    attr = (FTAttributes *)attr_bytes;
+    if (loaded->format_fixups_applied == FALSE)
+    {
+        ndsRelocSwapNativeU16WordLanes(
+            attr_bytes + offsetof(FTAttributes, dead_fgm_ids));
+        ndsRelocSwapNativeU16WordLanes(
+            attr_bytes + offsetof(FTAttributes, deadup_sfx));
+        ndsRelocSwapNativeU16WordLanes(
+            attr_bytes + offsetof(FTAttributes, smash_sfx));
+        ndsRelocSwapNativeU16WordLanes(
+            attr_bytes + offsetof(FTAttributes, smash_sfx) +
+            (2u * sizeof(u16)));
+        ndsRelocSwapNativeU16WordLanes(
+            attr_bytes + offsetof(FTAttributes, itemthrow_vel_scale));
+        ndsRelocSwapNativeU16WordLanes(
+            attr_bytes + offsetof(FTAttributes, heavyget_sfx));
+        loaded->format_fixups_applied = TRUE;
+    }
+    if (ndsRelocFighterAttributesMatchSource(loaded->asset_id, attr) == FALSE)
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static size_t ndsRelocAssetAllocSize(u32 asset_id);
 static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded);
 static s32 ndsRelocNormalizeBattleInterfaceSprites(
@@ -2987,6 +3119,7 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     loaded->fixups_applying = TRUE;
     if ((ndsRelocApplyInternalPointerFixups(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE) ||
+        (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE) ||
         (ndsRelocApplyExternalPointerFixups(loaded) == FALSE))
     {
         loaded->fixups_applying = FALSE;

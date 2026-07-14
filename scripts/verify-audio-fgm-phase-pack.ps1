@@ -21,6 +21,8 @@ $runnerExe = Join-Path $root "emulators\melonds-runners\slot$RunnerSlot\melonDS.
 
 & (Join-Path $PSScriptRoot 'check-audio-fgm-phase-pack.ps1')
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& (Join-Path $PSScriptRoot 'check-audio-runtime-fixtures.ps1')
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
 $peakMin = [int](($metadata.entries | Measure-Object decoded_peak -Minimum).Minimum)
 $rmsMin = [double](($metadata.entries | Measure-Object decoded_rms -Minimum).Minimum)
@@ -132,8 +134,8 @@ try {
         'printf "FGM_LOAD=%#x,%#x,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmResult, gNdsAudioFgmMask, gNdsAudioFgmLoaded, gNdsAudioFgmResidentBytes, gNdsAudioFgmSupportedCount, gNdsAudioFgmOpenFailCount, gNdsAudioFgmReadFailCount, gNdsAudioFgmFormatFailCount',
         'printf "FGM_PLAY=%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsAudioFgmPlayCalls, gNdsAudioFgmSupportedPlayCount, gNdsAudioFgmUnsupportedCallCount, gNdsAudioFgmIncludedLookupFailCount, gNdsAudioFgmPlayFailCount, gNdsAudioFgmPhasePlayMask, gNdsAudioFgmLoopPlayCount, gNdsAudioFgmEnvelopeStepCount',
         'printf "FGM_PHASE=%u,%u,%u,%u,%u\n", gNdsAudioFgmPhasePlayCounts[0], gNdsAudioFgmPhasePlayCounts[1], gNdsAudioFgmPhasePlayCounts[2], gNdsAudioFgmPhasePlayCounts[3], gNdsAudioFgmPhasePlayCounts[4]',
-        'printf "FGM_POOL=%u,%u,%u,%u,%u,%#x,%u,%#x\n", gNdsAudioFgmAllocatedHandles, gNdsAudioFgmNonReuseCapacity, gNdsAudioFgmPoolExhaustCount, gNdsAudioFgmActiveHandles, gNdsAudioFgmMaxActiveHandles, gNdsAudioFgmChannelMask, gNdsAudioFgmLastChannel, gNdsAudioFgmFidelityDebtMask',
-        'printf "FGM_LIFE=%u,%u,%u,%u,%u\n", gNdsAudioFgmStopCalls, gNdsAudioFgmStopAllCalls, gNdsAudioFgmDurationStopCount, gNdsAudioFgmStaleStopCount, gNdsAudioFgmGenerationMismatchCount',
+        'printf "FGM_POOL=%u,%u,%u,%u,%u,%u,%u,%#x,%u,%#x\n", gNdsAudioFgmHandleAcquireCount, gNdsAudioFgmHandleCapacity, gNdsAudioFgmHandleReleaseCount, gNdsAudioFgmHandleRecycleCount, gNdsAudioFgmPoolExhaustCount, gNdsAudioFgmActiveHandles, gNdsAudioFgmMaxActiveHandles, gNdsAudioFgmChannelMask, gNdsAudioFgmLastChannel, gNdsAudioFgmFidelityDebtMask',
+        'printf "FGM_LIFE=%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmStopCalls, gNdsAudioFgmStopAllCalls, gNdsAudioFgmDurationStopCount, gNdsAudioFgmStaleStopCount, gNdsAudioFgmGenerationMismatchCount, gNdsAudioFgmLastInstanceToken, gNdsAudioFgmInstanceTokenWrapCount',
         'printf "BGM=%#x,%u,%u,%u,%d\n", gNdsAudioBgmResult, gNdsAudioBgmPlaying, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmReadBytes, sNdsAudioBgmSoundID',
         'printf "MEM=%u,%u,%u\n", gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater',
         'detach',
@@ -155,9 +157,9 @@ try {
     $phase = [regex]::Match($gdbStdout,
         'FGM_PHASE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $pool = [regex]::Match($gdbStdout,
-        'FGM_POOL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0)')
+        'FGM_POOL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $life = [regex]::Match($gdbStdout,
-        'FGM_LIFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+        'FGM_LIFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $bgm = [regex]::Match($gdbStdout,
         'BGM=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
     $memory = [regex]::Match($gdbStdout,
@@ -196,20 +198,26 @@ try {
         throw "One or more natural phase IDs did not play exactly once.`n$gdbStdout"
     }
     $fgmChannelMask = if ($pool.Success) {
-        Convert-MarkerUInt32 $pool.Groups[6].Value
+        Convert-MarkerUInt32 $pool.Groups[8].Value
     } else { 0u }
     if (-not $pool.Success -or
         [int]$pool.Groups[1].Value -ne 5 -or
         [int]$pool.Groups[2].Value -ne 8 -or
-        [int]$pool.Groups[3].Value -ne 0 -or
-        [int]$pool.Groups[5].Value -lt 1 -or
+        [int]$pool.Groups[3].Value -ne 5 -or
+        [int]$pool.Groups[4].Value -lt 1 -or
+        [int]$pool.Groups[5].Value -ne 0 -or
+        [int]$pool.Groups[6].Value -ne 0 -or
+        [int]$pool.Groups[7].Value -lt 1 -or
         $fgmChannelMask -eq 0 -or
-        [int]$pool.Groups[7].Value -ge 16 -or
-        (Convert-MarkerUInt32 $pool.Groups[8].Value) -ne 3) {
-        throw "FGM non-reuse/channel/fidelity diagnostics failed.`n$gdbStdout"
+        [int]$pool.Groups[9].Value -ge 16 -or
+        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 3) {
+        throw "FGM recycle/channel/fidelity diagnostics failed.`n$gdbStdout"
     }
-    if (-not $life.Success -or [int]$life.Groups[5].Value -ne 0) {
-        throw "FGM channel generation ownership failed.`n$gdbStdout"
+    if (-not $life.Success -or
+        [int]$life.Groups[5].Value -ne 0 -or
+        [int]$life.Groups[6].Value -eq 0 -or
+        [int]$life.Groups[7].Value -ne 0) {
+        throw "FGM token/channel generation ownership failed.`n$gdbStdout"
     }
     $bgmChannel = if ($bgm.Success) { [int]$bgm.Groups[5].Value } else { -1 }
     if (-not $bgm.Success -or
@@ -232,7 +240,7 @@ try {
          'headroom={9} text/rodata/data/bss/itcm={10}/{11}/{12}/{13}/{14}.') -f
         $metadata.resident_bytes, $peakMin, $rmsMin,
         $play.Groups[2].Value, $play.Groups[3].Value,
-        $pool.Groups[6].Value, $bgmChannel, $pool.Groups[5].Value,
+        $pool.Groups[8].Value, $bgmChannel, $pool.Groups[7].Value,
         $play.Groups[8].Value, $memory.Groups[1].Value,
         $sectionTotals.text, $sectionTotals.rodata, $sectionTotals.data,
         $sectionTotals.bss, $sectionTotals.itcm)
