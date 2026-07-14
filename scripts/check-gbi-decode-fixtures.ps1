@@ -1752,7 +1752,11 @@ Assert-True ($renderer.Contains('hardware_triangle_count')) 'Renderer hardware t
 $platform = Get-Content (Join-Path $root 'src/nds/nds_platform.c') -Raw
 Assert-True ($platform.Contains('MODE_5_3D')) 'Platform hardware renderer/BG overlay mode init is missing.'
 Assert-True ($platform.Contains('VRAM_A_TEXTURE')) 'Platform texture VRAM bank A init is missing.'
-Assert-True ($platform.Contains('VRAM_E_TEX_PALETTE')) 'Platform texture palette VRAM bank init is missing.'
+Assert-True ($platform.Contains('VRAM_B_TEXTURE')) 'Platform texture VRAM bank B init is missing.'
+Assert-True ($platform.Contains('vramSetBankE(VRAM_E_MAIN_SPRITE)')) 'Platform countdown OBJ bank E init is missing.'
+Assert-True ($platform.Contains('vramSetBankF(VRAM_F_MAIN_SPRITE_0x06410000)')) 'Platform countdown OBJ bank F continuation is missing.'
+Assert-True ($platform.Contains('vramSetBankG(VRAM_G_MAIN_SPRITE_0x06414000)')) 'Platform countdown OBJ bank G continuation is missing.'
+Assert-True (-not $platform.Contains('VRAM_E_TEX_PALETTE')) 'Platform restored the unused texture-palette bank over countdown OBJ VRAM.'
 Assert-True ($platform.Contains('glFlush(GL_TRANS_MANUALSORT)')) 'Platform hardware renderer manual-sort/Z-buffer frame flush is missing.'
 Assert-True (-not $platform.Contains('GL_WBUFFERING')) 'Projected source depth must not be replaced by identity-matrix W buffering.'
 Assert-True ($platform.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Platform does not guard hardware flushes with the renderer submit latch.'
