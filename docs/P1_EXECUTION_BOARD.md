@@ -36,17 +36,16 @@ more accurate than recycling cross-build samples.
 | KO / rebirth | canonical-profile-0 | same canonical SHA | Pending natural KO→rebirth window | — | — / — | Pending July 14 baseline |
 | Time Up / Results | canonical-profile-0 | same canonical SHA | Pending natural expiry→Results window | — | — / — | Pending one-minute soak |
 
-Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`
-with their own ROM SHA and windows; they are not canonical phase baselines.
+Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; they are not canonical phase baselines.
 
 ## Lane Ownership
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
 | Integration/release | Active | live tree | shared gates, one-minute lifecycle integration, current docs, ROM identity | direct `4333/4334`; capture slot 3 `3363/3364` |
-| Renderer implementation | Active | `codex/m4-aot-generator`, `Smash64DS_Port-wt-m4-aot` | M4 deterministic AOT asset/runtime lookup | muted worktree slot 8 `3413/3414` |
-| Gameplay + QA | Active | `codex/p1-five-minute-soak`, `Smash64DS_Port-wt-soak` | source-driven DS-native countdown/GO owner | muted slot 2 `4463/4464` |
-| Performance research | Active | isolated audio worktree | natural phase FGM plus winner/Results BGM follow-up | muted worktree slot 4 `3373/3374` |
+| Renderer implementation | Integrating | `codex/m4-aot-generator`, `Smash64DS_Port-wt-m4-aot` | accepted prepared-output cache candidate | muted worktree slot 8 `3413/3414` |
+| Gameplay + QA | Active | `codex/p1-five-minute-soak`, `Smash64DS_Port-wt-soak` | M2/M3 RGB15/t16 owner-parity microbenchmark | no emulator |
+| Performance research | Active | isolated audio worktree | mixed-u16 fighter-attribute and FGM-handle lifecycle correction | no emulator |
 
 Only `./emulators/melonds/melonDS.exe` (manual) and repo-owned
 `./emulators/melonds-runners/slotN/melonDS.exe` copies may launch. Every TOML
@@ -54,8 +53,8 @@ uses the 488x675 vertical, equal-size, native-aspect, zero-gap, unswapped,
 unfiltered, OSD-off profile. Ports `3333/3334` stay manual-only; slot 0 uses
 `4323/4324`, phase FGM slot 1 uses `3343/3344`, and slot 2 uses `4463/4464`.
 Run `Set-MelonDSWindowConfig.ps1 -AllWorktrees` after creating runner slots.
-Workers do not edit central renderer files, Makefile, registry, or current-truth
-docs. They return a self-contained commit plus exact reproduction evidence.
+Workers do not edit shared files or current-truth docs; they return a
+self-contained commit plus exact reproduction evidence.
 Keep all three subagent slots occupied while three independent P1 packets are
 available, and reassign a slot immediately when its packet completes.
 

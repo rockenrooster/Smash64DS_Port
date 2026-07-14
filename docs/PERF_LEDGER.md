@@ -1972,3 +1972,28 @@ NEXT ARCHITECTURE DECISION:
   the detailed ledger only for phase attribution; run all <=331K and 170-250K
   absolute gates with it disabled.
 ```
+
+## 2026-07-14 - accepted source-driven native countdown OAM
+
+```text
+IDEA ID: IFCOMMON-NATIVE-OAM
+BOUNDARY:
+  Keep BattleShip ifCommonCountdownThread, GObjs, SObjs, timing, scale, color,
+  order, control unlock, timer start, and teardown live. Convert only the exact
+  game-status Sprite set once during relocation and draw recognized live SObjs
+  through main bitmap OAM; unknown state falls back before partial submission.
+IDENTICAL-ROM A/B:
+  Integrated profile-1 ROM CCC30624C574FC3C52BE457C761836508262E77D99A55E85965CEA62532FEBAF,
+  frames 187..194. Fallback foreground median 1,863,232 ticks; native foreground
+  10,336; inclusive native median/P95 11,584/11,584.
+CORRECTNESS / LIFETIME:
+  Prepare 1/1/0 at frame 0, 93,824 bytes, 16 assets / 59 tiles, zero palette,
+  hot conversion, or runtime upload. Active source count 10 SObjs and 24..26
+  OAM objects; final clear frame 511; frame 600 idle tax zero. Wait/GO locks,
+  timer state, semantic hashes, identical config, complete fallback/native PNGs,
+  and post-GO cleanup agree.
+DECISION: KEEP
+  This removes the bounded 1.86M countdown spike without changing source
+  behavior. Bitmap OBJ makes nonzero partial-alpha GO edge texels opaque; keep
+  that bounded presentation debt rather than restoring software composition.
+```

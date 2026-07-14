@@ -20690,3 +20690,17 @@ remains skipped for the requested fast iteration cadence.
   included lookup/play/load failures, and 235,104 bytes arena headroom.
 - Seven other calls, fighter voices, winner/Results BGM, positional mixing, and
   two explicit PublicExcited loop/envelope fidelity debts remain open.
+
+## 2026-07-14 - Moved the live countdown to setup-converted native OAM
+
+- Kept BattleShip's original countdown/GO thread, SObj graph, timing, scale,
+  color, control unlock, timer start, and teardown live while routing its exact
+  recognized Sprite set through main bitmap OAM.
+- Integrated profile-1 frames 187..194 reduced foreground median from
+  1,863,232 to 10,336 ticks; inclusive native median/P95 is 11,584/11,584.
+  Setup owns 93,824 bytes / 16 assets / 59 tiles; gameplay conversion, palette,
+  and upload counters are zero. Objects clear at frame 511 with no frame-600
+  idle tax.
+- Synchronized fallback/native screenshots are complete under
+  `artifacts/visibility`. Partial-alpha RGBA GO edge texels become opaque in the
+  one-bit-transparency bitmap OBJ path and remain explicit presentation debt.

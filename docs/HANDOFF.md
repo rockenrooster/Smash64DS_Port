@@ -55,6 +55,11 @@ TEXSHUF decoding restore the countdown traffic light and GO art on the top
 screen. The approved lower text HUD shows FPS, timer, Mario/Fox labels, stock,
 and damage; it updates only when state changes and clears on VS Results.
 
+The countdown path is now setup-converted main bitmap OAM. Integrated profile-1
+frames 187–194 measured 11,584/11,584 median/P95 versus 1,863,232 foreground
+ticks, with zero gameplay conversion/upload, final clear at frame 511, no
+frame-600 idle tax, and complete captures in `artifacts/visibility`.
+
 Exact `ftParamLockPlayerControl`/`ftParamUnlockPlayerControl` behavior now keeps
 both fighters and Fox CPU inactive during Wait while the timer remains 3,600,
 then unlocks controls and starts the timer at GO. The same canonical ROM passed

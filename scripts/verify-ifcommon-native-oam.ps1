@@ -164,7 +164,9 @@ function Set-WindowCapturePosition {
     param([System.IntPtr]$WindowHandle)
     [void][Smash64DSIFCommonCapture]::ShowWindow($WindowHandle, 9)
     [void][Smash64DSIFCommonCapture]::SetWindowPos(
-        $WindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
+        $WindowHandle, [IntPtr](-1), 0, 0,
+        $script:MelonDSCanonicalWindowWidth,
+        $script:MelonDSCanonicalWindowHeight, 0x42)
     [void][Smash64DSIFCommonCapture]::SetForegroundWindow($WindowHandle)
     Start-Sleep -Milliseconds 100
 }
@@ -344,7 +346,9 @@ function Invoke-IFCommonRun {
 }
 
 if (-not $NoBuild) {
-    make $Build -j16
+    if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
+    if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
+    & make -C $root "TARGET=$Target" "BUILD=$Build" -j24
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 Assert-Condition (Test-Path -LiteralPath $rom) "ROM not found: $rom"

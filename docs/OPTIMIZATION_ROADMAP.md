@@ -1,4 +1,4 @@
-# Optimization Roadmap — Cut G M1 Accepted; M2–M4 Active
+# Optimization Roadmap — Cut G and Native Countdown Accepted; M2–M4 Active
 
 Updated: 2026-07-14
 
@@ -86,25 +86,25 @@ The repeated disabled control reproduced the original values. Treat the HUD as
 accepted presentation, not a remaining visual milestone. Keep its battle-only
 lifecycle, post-GO source-state gate, and Results teardown proof.
 
-## Countdown / GO — Replace Full-Layer Software Composition
+## Accepted Native Countdown / GO
 
-The BattleShip thread and timing are correct and remain authoritative: it owns
+The BattleShip thread and timing remain authoritative: it owns
 the rod/frame/lamps, 3→2→1 changes at source ticks 120/180/240, GO at 300,
-control unlock/timer start, and teardown at 420. The DS backend currently sends
-those SObjs through a generic CPU compositor that clears 153,600 staging bytes,
-decodes/scales pixels (including the 3x lit lamp), downsizes 320x240 to 256x192,
-and copies another 98,304 bytes to BG3 each active frame.
+control unlock/timer start, and teardown at 420. The accepted DS backend keeps
+those source GObjs/SObjs live and maps their position, scale, color, and order
+to setup-converted main bitmap OAM chunks.
 
-Identical profile-1 frames 187–194 measured about 1,842,432 foreground ticks
-per frame; synchronized post-GO frames 600–607 measured zero foreground work.
-The active replacement keeps the source GObjs/SObjs/thread untouched but maps
-their live position, scale, color, alpha, and order to setup-converted main OAM
-chunks, with a bounded GX atlas only if an exact OBJ census does not fit.
+On integrated profile-1 ROM `CCC30624...FEBAF`, synchronized frames 187–194
+reduced foreground median from 1,863,232 to 10,336 ticks; inclusive native OAM
+median/P95 was 11,584/11,584. Setup converted 16 source assets / 59 tiles into
+93,824 OBJ-VRAM bytes once. Runtime conversion, palette payload, and upload
+were zero; the final objects cleared at frame 511 and frame 600 had no retained
+OAM tax. The source window retained 10 SObjs, 24–26 OAM objects, Wait/GO locks,
+timer state, semantic hashes, and complete synchronized screenshots.
 
-Keep only if recognized-owner P95 is at most 40K (or saves at least 1.5M),
-generic foreground clear/copy counters are zero, setup owns all conversion and
-uploads, and source Wait/GO locks, timer, sound timing, scale/order, runtime
-state, and synchronized screenshots remain exact.
+Bitmap OBJ has one-bit per-texel transparency, so nonzero partial-alpha texels
+in the RGBA GO art are currently opaque. This is bounded presentation debt,
+not permission to restore the 1.86M-tick software compositor.
 
 ## M2 — Finish the Existing AOT Fighter Owner
 

@@ -47,6 +47,12 @@ the countdown traffic light and GO art on the top screen. The user-approved
 lower text HUD shows FPS, timer, Mario/Fox labels, stock, and damage, updates on
 state changes, and clears at VS Results.
 
+The live countdown SObjs now use setup-converted main bitmap OAM instead of
+full-layer software composition. Integrated frames 187–194 measured
+11,584/11,584 native median/P95 versus 1,863,232 foreground ticks, with zero
+gameplay conversion/upload, complete captures, final clear at frame 511, and no
+frame-600 idle tax.
+
 BattleShip's exact player-control gate is restored. A synchronized pre-GO
 sample proves Wait, 3,600 remaining, timer stopped, both fighters locked, and
 zero Fox CPU processing. A post-GO sample proves Go, remaining + passed =
@@ -72,7 +78,7 @@ physical hardware remains untested.
 |---|---|
 | Natural one-minute battle and Results | Natural 3,600→0/Time Up/22→24 gate passes; exact canonical-duration qualification remains |
 | Gameplay | Core live; source Fireball render/damage passes; natural recovery coverage open |
-| Renderer | M1 pass; M2 active; M3/M4 open |
+| Renderer | M1 and native countdown pass; M2 active; M3/M4 open |
 | HUD/countdown | User-approved lower HUD and top countdown pass |
 | Audio | Five natural phase FGMs pass; voices and winner/Results BGM remain; BGM channel proof partial |
 | Stability/memory | One full match passes with 171,916-byte conservative reserve and zero safety faults; repetition pending |
@@ -95,9 +101,6 @@ bytes. Therefore:
   fused static-slab owner before the 150–250K target is credible.
 - Milestone 4 has a verified host-generated 322-key/206-output asset plan, but
   live runtime lookup/promotion and zero gameplay conversion remain open.
-- Countdown/GO still takes about 1.84M foreground ticks per active frame by
-  clearing/decoding/downscaling/copying full software layers; a source-driven
-  DS-native owner is active work.
 - Whispy face, weapon detail, platform crossing, and some fighter lighting/
   facing remain presentation debt.
 
@@ -111,8 +114,8 @@ Normal with zero mismatch and clears the no-damage flag. Repeated Mario→Fox
 contact still awaits manual confirmation and a continuous natural-hit gate.
 
 P1 uses one integration owner plus all three subagent slots whenever three
-independent packets exist. Current isolated lanes cover M4 assets, native
-countdown/GO, and audio/Results while integration owns shared gates and docs.
+independent packets exist. Current isolated lanes cover M4 assets, M2/M3 owner
+parity, and audio attribute/handle correction while integration owns gates.
 
 Rejected Cut D/F, typed-stage, mode-9, and scanline/HBlank experiments remain
 closed; see PORTING and PERF_LEDGER for their measurements. Do not revive them

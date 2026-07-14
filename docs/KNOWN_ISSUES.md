@@ -215,6 +215,10 @@ live in `P1_EXECUTION_BOARD.md`.
   interface, taskman return, scoring check, and `VSBattle -> VSResults` scene.
   The automated lifecycle gate and canonical/manual P1 ROM all use the same
   one-minute rule.
+  Native bitmap OAM now owns the live countdown/GO SObjs without gameplay-time
+  conversion or upload. DS bitmap OBJ only preserves transparent versus
+  nontransparent texels, so the GO art's partial-alpha edge texels are opaque;
+  exact N64 edge blending remains presentation debt.
   Original `mnvsresults.c`, `lbtransition.c`, and its subsystem fighter/data
   support now run by default with all eight source files and source Win/Lose
   statuses. The DS compositor preserves source 2D layers around the fighter
