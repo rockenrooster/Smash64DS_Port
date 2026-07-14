@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $wrapperPath = Join-Path $PSScriptRoot 'verify-battle-playable-one-minute-match.ps1'
+$lifecyclePath = Join-Path $PSScriptRoot 'verify-battle-playable-match-lifecycle-harness.ps1'
 $battlePath = Join-Path $PSScriptRoot 'verify-battle-playable-harness.ps1'
 $ownerPath = Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1'
 $scenePath = Join-Path $root 'src\port\scene_harness.c'
@@ -19,7 +20,7 @@ function Assert-Text {
     }
 }
 
-foreach ($path in @($wrapperPath, $battlePath, $ownerPath, $melonPath, $gdbPath)) {
+foreach ($path in @($wrapperPath, $lifecyclePath, $battlePath, $ownerPath, $melonPath, $gdbPath)) {
     $tokens = $null
     $errors = $null
     [void][System.Management.Automation.Language.Parser]::ParseFile(
@@ -30,6 +31,7 @@ foreach ($path in @($wrapperPath, $battlePath, $ownerPath, $melonPath, $gdbPath)
 }
 
 $wrapper = Get-Content -LiteralPath $wrapperPath -Raw
+$lifecycle = Get-Content -LiteralPath $lifecyclePath -Raw
 $battle = Get-Content -LiteralPath $battlePath -Raw
 $owner = Get-Content -LiteralPath $ownerPath -Raw
 $scene = Get-Content -LiteralPath $scenePath -Raw
@@ -44,6 +46,10 @@ Assert-Text $wrapper 'unthrottled state/memory only; realtime performance is not
 if ($wrapper -match 'RequireRealtime60Fps|capture-melonds|Screenshot|FiveMinute|five-minute|18000') {
     throw 'One-minute wrapper must not claim realtime, capture a desktop screenshot, or retain a five-minute assumption.'
 }
+Assert-Text $lifecycle 'Get-MelonDSRunnerPort -RunnerSlot \$RunnerSlot -Cpu ARM9' `
+    'Match-lifecycle wrapper no longer derives an isolated GDB port from RunnerSlot.'
+Assert-Text $lifecycle '-GdbPort \$selectedGdbPort' `
+    'Match-lifecycle wrapper no longer forwards its selected isolated GDB port.'
 
 Assert-Text $battle 'smash64ds-battle-playable-one-minute-match' `
     'One-minute verifier target is not artifact-isolated from the canonical ROM.'

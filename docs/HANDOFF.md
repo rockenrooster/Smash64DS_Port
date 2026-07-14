@@ -13,10 +13,12 @@ registry decides Boundary/Latest membership, and `PORTING.md` owns history.
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Single-run Codex verification reserves GDB ARM9/ARM7 ports `4333/4334`, leaving
-`3333/3334` free for a manually opened melonDS instance. Runner slots retain
-their isolated per-slot port mapping and stay host-muted (`Volume = 0`); ROM
-audio remains enabled and the user's manual emulator config is untouched.
+Single-run Codex verification reserves `4333/4334`, leaving `3333/3334` free
+for a manually opened melonDS instance. Active isolated pairs are phase FGM
+slot 1 `3343/3344`, root capture slot 3 `3363/3364`, audio slot 4 `3373/3374`,
+M4 slot 8 `3413/3414`, and countdown slot 2 `4463/4464`. Runner slots stay
+host-muted (`Volume = 0`); ROM audio remains enabled and the user's manual
+emulator config is untouched.
 
 As of 2026-07-14, P1 and all automated iteration/stability soaks use the source
 one-minute (`3600` tick) expiry-to-Results rule. Do not launch the obsolete

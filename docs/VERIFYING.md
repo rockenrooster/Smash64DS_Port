@@ -15,7 +15,8 @@ make NDS_DEV_SCENE_HARNESS=normal -j16
 
 Codex-owned single runs use melonDS GDB ARM9/ARM7 ports `4333/4334`; ports
 `3333/3334` are reserved for a user-opened manual melonDS instance. Runner
-slots keep their own isolated mappings. Use scripted emulator/GDB/capture
+slots keep isolated mappings: FGM `3343/3344`, capture `3363/3364`, audio
+`3373/3374`, M4 `3413/3414`, and countdown `4463/4464`. Use scripted emulator/GDB/capture
 automation only. For subjective play behavior, build the verifier-covered ROM
 and ask the user to test it rather than controlling their desktop.
 Keep Codex-owned runner-slot emulator volume at `0`; this mutes only host

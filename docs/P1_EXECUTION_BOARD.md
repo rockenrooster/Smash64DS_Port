@@ -43,12 +43,13 @@ with their own ROM SHA and windows; they are not canonical phase baselines.
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Active | live tree | shared gates, one-minute lifecycle integration, current docs, ROM identity | direct `4333/4334`; capture slot 3 `4363/4364` |
-| Renderer implementation | Active | `codex/m4-aot-generator`, `Smash64DS_Port-wt-m4-aot` | M4 deterministic AOT asset/runtime lookup | none until a runtime gate is ready |
+| Integration/release | Active | live tree | shared gates, one-minute lifecycle integration, current docs, ROM identity | direct `4333/4334`; capture slot 3 `3363/3364` |
+| Renderer implementation | Active | `codex/m4-aot-generator`, `Smash64DS_Port-wt-m4-aot` | M4 deterministic AOT asset/runtime lookup | muted worktree slot 8 `3413/3414` |
 | Gameplay + QA | Active | `codex/p1-five-minute-soak`, `Smash64DS_Port-wt-soak` | source-driven DS-native countdown/GO owner | muted slot 2 `4463/4464` |
-| Performance research | Active | isolated audio worktree | natural phase FGM plus winner/Results BGM follow-up | isolated muted runner only when ready |
+| Performance research | Active | isolated audio worktree | natural phase FGM plus winner/Results BGM follow-up | muted worktree slot 4 `3373/3374` |
 
-Ports `3333/3334` stay free for the user's manual melonDS. Workers do not edit
+Ports `3333/3334` stay free for the user's manual melonDS. The phase-FGM gate
+uses muted slot 1 `3343/3344`. Workers do not edit
 central renderer files, Makefile, registry, or current-truth docs. They return
 a self-contained commit plus exact reproduction evidence for integration.
 Keep all three subagent slots occupied while three independent P1 packets are
