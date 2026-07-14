@@ -2086,6 +2086,20 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
     }
 #endif
 
+    if ((foreground != FALSE) &&
+        (gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        (ndsIFCommonNativeOamDrawGObj(gobj) != FALSE))
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        if (profile_foreground != FALSE)
+        {
+            gNdsRendererProfileForegroundTicks +=
+                cpuGetTiming() - foreground_start;
+        }
+#endif
+        return;
+    }
+
     while (sobj != NULL)
     {
         if ((sobj->sprite.attr & SP_HIDDEN) == 0)
@@ -2142,6 +2156,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 
 void ndsSObjPreviewBeginFrame(void)
 {
+    ndsIFCommonNativeOamBeginFrame();
     sNdsSObjFramePreview = NULL;
     sNdsSObjFramePreviewPitch = 0u;
     sNdsSObjFramePreviewDrawCount = 0u;

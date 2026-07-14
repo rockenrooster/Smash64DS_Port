@@ -5,6 +5,7 @@
 
 #include <nds/nds_boot.h>
 #include <nds/nds_controller.h>
+#include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
@@ -205,7 +206,13 @@ void ndsPlatformInit(void)
     videoSetMode(MODE_5_3D | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
     vramSetBankA(VRAM_A_TEXTURE);
     vramSetBankB(VRAM_B_TEXTURE);
-    vramSetBankE(VRAM_E_TEX_PALETTE);
+    /* The live renderer uploads RGBA textures, so the texture-palette bank is
+     * idle in Cut G.  Use E/F/G as one 96 KiB main-OBJ aperture for the exact
+     * preconverted BattleShip countdown/GO bitmaps. */
+    vramSetBankE(VRAM_E_MAIN_SPRITE);
+    vramSetBankF(VRAM_F_MAIN_SPRITE_0x06410000);
+    vramSetBankG(VRAM_G_MAIN_SPRITE_0x06414000);
+    ndsIFCommonNativeOamInit();
     glInit();
     glClearColor(2, 3, 6, 31);
     glClearDepth(GL_MAX_DEPTH);
@@ -1989,6 +1996,7 @@ void ndsPlatformEndFrame(void)
     ndsPlatformSceneWallpaperCommitAffine();
 #endif
     ndsRendererHardwareCommitPendingTextureRefreshes();
+    ndsIFCommonNativeOamCommit();
 #if NDS_SCENE_MIP_CACHE_LAB
     if (sSceneMipCapturePending != 0u)
     {

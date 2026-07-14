@@ -13,6 +13,8 @@
  * and are reported separately. */
 #include "nds_scene_harness_config.h"
 
+#include <nds/nds_ifcommon_oam.h>
+
 #define NDS_RELOC_OPENING_ROOM_FILE_COUNT 8u
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 96u
@@ -3248,6 +3250,16 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
                 loaded, sprite, desc->bitmap_count) == FALSE))
         {
             return FALSE;
+        }
+    }
+    if (loaded->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS)
+    {
+        if (ndsIFCommonNativeOamPrepareGameStatus(
+                loaded->data, loaded->data_size) == FALSE)
+        {
+            /* Preparation is an optimization seam.  The relocated source
+             * asset remains valid and the exact BG3 SObj compositor is the
+             * required fallback if OBJ capacity or conversion rejects it. */
         }
     }
     return TRUE;
