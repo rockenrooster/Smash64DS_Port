@@ -1,5 +1,5 @@
 param(
-    [string]$MelonDS = 'D:\Stuff\DevFolder\Smash64DS_Port\emulators\melonds\melonDS.exe',
+    [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$RunnerSlot = 1,
     [int]$GdbPort = 3343,

@@ -13,12 +13,17 @@ registry decides Boundary/Latest membership, and `PORTING.md` owns history.
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Single-run Codex verification reserves `4333/4334`, leaving `3333/3334` free
-for a manually opened melonDS instance. Active isolated pairs are phase FGM
-slot 1 `3343/3344`, root capture slot 3 `3363/3364`, audio slot 4 `3373/3374`,
-M4 slot 8 `3413/3414`, and countdown slot 2 `4463/4464`. Runner slots stay
-host-muted (`Volume = 0`); ROM audio remains enabled and the user's manual
-emulator config is untouched.
+Only `./emulators/melonds/melonDS.exe` and repo-owned
+`./emulators/melonds-runners/slotN/melonDS.exe` may launch; external paths fail.
+All TOMLs use one 488x675 vertical/equal/native-aspect, zero-gap, unswapped,
+unfiltered, OSD-off window profile. Normalize all registered worktrees with
+`./scripts/Set-MelonDSWindowConfig.ps1 -AllWorktrees`; check them with
+`./scripts/check-melonds-policy.ps1`.
+Manual melonDS stays limited to 60 FPS with OpenGL 6x, `Volume = 256`, GDB off,
+and ports `3333/3334`. Automation is unthrottled interpreter/software, muted
+only at the host (`Volume = 0`), and uses root `4333/4334`, slot 0 `4323/4324`,
+FGM slot 1 `3343/3344`, capture slot 3 `3363/3364`, audio slot 4 `3373/3374`,
+M4 slot 8 `3413/3414`, or countdown slot 2 `4463/4464`. ROM audio stays live.
 
 As of 2026-07-14, P1 and all automated iteration/stability soaks use the source
 one-minute (`3600` tick) expiry-to-Results rule. Do not launch the obsolete

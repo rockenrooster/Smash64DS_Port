@@ -8,11 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$sourceMelonDS = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
-    $MelonDS
-} else {
-    Join-Path $root $MelonDS
-}
+$sourceMelonDS = Resolve-MelonDSRepoExecutablePath -Root $root -MelonDS $MelonDS
 $runnerRoot = Join-Path $root 'emulators\melonds-runners'
 function New-RunnerRow {
     param(
@@ -75,7 +71,7 @@ for ($slot = 0; $slot -lt $Count; $slot++) {
             -MelonDSPath $slotMelonDS `
             -GdbPort $arm9Port `
             -Arm7Port $arm7Port `
-            -Persistent | Out-Null
+            -Persistent -MuteAudio | Out-Null
     }
     $rows += New-RunnerRow `
         -Slot $slot `

@@ -48,10 +48,14 @@ with their own ROM SHA and windows; they are not canonical phase baselines.
 | Gameplay + QA | Active | `codex/p1-five-minute-soak`, `Smash64DS_Port-wt-soak` | source-driven DS-native countdown/GO owner | muted slot 2 `4463/4464` |
 | Performance research | Active | isolated audio worktree | natural phase FGM plus winner/Results BGM follow-up | muted worktree slot 4 `3373/3374` |
 
-Ports `3333/3334` stay free for the user's manual melonDS. The phase-FGM gate
-uses muted slot 1 `3343/3344`. Workers do not edit
-central renderer files, Makefile, registry, or current-truth docs. They return
-a self-contained commit plus exact reproduction evidence for integration.
+Only `./emulators/melonds/melonDS.exe` (manual) and repo-owned
+`./emulators/melonds-runners/slotN/melonDS.exe` copies may launch. Every TOML
+uses the 488x675 vertical, equal-size, native-aspect, zero-gap, unswapped,
+unfiltered, OSD-off profile. Ports `3333/3334` stay manual-only; slot 0 uses
+`4323/4324`, phase FGM slot 1 uses `3343/3344`, and slot 2 uses `4463/4464`.
+Run `Set-MelonDSWindowConfig.ps1 -AllWorktrees` after creating runner slots.
+Workers do not edit central renderer files, Makefile, registry, or current-truth
+docs. They return a self-contained commit plus exact reproduction evidence.
 Keep all three subagent slots occupied while three independent P1 packets are
 available, and reassign a slot immediately when its packet completes.
 

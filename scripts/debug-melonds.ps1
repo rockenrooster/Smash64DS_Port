@@ -6,11 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$melonDsPath = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
-    $MelonDS
-} else {
-    Join-Path $root $MelonDS
-}
+$melonDsPath = Resolve-MelonDSRepoExecutablePath -Root $root -MelonDS $MelonDS
 $melonDsDir = Split-Path -Parent $melonDsPath
 $romPath = if ([System.IO.Path]::IsPathRooted($Rom)) {
     $Rom

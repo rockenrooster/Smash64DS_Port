@@ -105,7 +105,7 @@ fresh Regression prebuild plus four sharded `-NoBuild` runs at the end. Builds
 expected to exceed 90 seconds should use `build-verify-profile.ps1 -Detach`,
 then confirm completion with `build-verify-profile.ps1 -VerifyStamp`.
 
-Do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
+Use only repo-local `./emulators` melonDS binaries and the canonical window profile in every TOML; do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
 
 ## Work Selection And Doc Policy
 

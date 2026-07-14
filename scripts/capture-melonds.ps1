@@ -27,11 +27,7 @@ if ($Jit -and $NoJit) {
     throw '-Jit and -NoJit are mutually exclusive.'
 }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$melonDsPath = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
-    $MelonDS
-} else {
-    Join-Path $root $MelonDS
-}
+$melonDsPath = Resolve-MelonDSRepoExecutablePath -Root $root -MelonDS $MelonDS
 $melonDsDir = Split-Path -Parent $melonDsPath
 $romPath = if ([System.IO.Path]::IsPathRooted($Rom)) {
     $Rom
@@ -152,7 +148,9 @@ function Set-MelonDSCaptureWindow {
         # available vertical resolution for close visual inspection.
         $workArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
         $height = $workArea.Height
-        $width = [Math]::Round($height * (488.0 / 675.0))
+        $width = [Math]::Round($height * (
+            $script:MelonDSCanonicalWindowWidth /
+            [double]$script:MelonDSCanonicalWindowHeight))
         [void][Smash64DSWindowCapture]::ShowWindow($WindowHandle, 9)
         [void][Smash64DSWindowCapture]::SetWindowPos(
             $WindowHandle, [IntPtr](-1), $workArea.X, $workArea.Y,
@@ -164,7 +162,9 @@ function Set-MelonDSCaptureWindow {
     # auto-resize after the first frame and create a false pixel-delta failure.
     # SWP_NOMOVE | SWP_SHOWWINDOW = 0x42.
     [void][Smash64DSWindowCapture]::SetWindowPos(
-        $WindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
+        $WindowHandle, [IntPtr](-1), 0, 0,
+        $script:MelonDSCanonicalWindowWidth,
+        $script:MelonDSCanonicalWindowHeight, 0x42)
 }
 function Set-MelonDSCaptureRuntimeMode {
     param(
