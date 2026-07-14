@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate exact Nintendo DS Dream Land animated-water AOT fixtures.
+"""Generate exact Nintendo DS Dream Land animated-water AOT artifacts.
 
-This is a host-only feasibility tool.  It reads the pinned BattleShip O2R
+This host build tool reads the pinned BattleShip O2R
 resources, executes the original material-animation command stream with
 float32 arithmetic, and reproduces the current DS TEXEL0/TEXEL1 CI4 ordered-
 coverage output.  It does not replace or modify the runtime renderer.
@@ -83,6 +83,18 @@ EXPECTED_OUTPUT_SET_HASH = {
     OWNER_LARGE: "32b1736cf65a536a7d90e70b7324f54031a8ee23fd4b4a79f458df2f00f79e27",
     OWNER_SMALL: "9c6736d6766b1978f649bc869e9dd2599cbab9655777001576f8829c9e0d3543",
 }
+
+# These are the runtime ABI, not merely informative fixture values.  A build
+# must stop if the exact payload or sorted lookup table changes without an
+# intentional schema/signature update on both the host and DS sides.
+EXPECTED_PAYLOAD_BYTES = 1_560_960
+EXPECTED_PAYLOAD_SHA256 = (
+    "fa8bf472aad6ef1a2423bcec3f28891831b309774ae2f92c9db140cb25121c1e"
+)
+EXPECTED_INDEX_BYTES = 11_060
+EXPECTED_INDEX_SHA256 = (
+    "83d2b342bb0a3530589a12af89a0548aa67dbdf6d1f92630bef1798701ac08b6"
+)
 
 PAYLOAD_NAME = "pupupu_water_aot_payload.bin"
 INDEX_NAME = "pupupu_water_aot_index.bin"
@@ -1479,8 +1491,22 @@ def build_payload_and_index(
         SIMULATED_FRAMES,
     )
     index = header + bytes(image_entries) + bytes(key_entries)
-    verify_index(index, bytes(payload))
-    return bytes(payload), index
+    payload_bytes = bytes(payload)
+    verify_index(index, payload_bytes)
+    if (
+        len(payload_bytes) != EXPECTED_PAYLOAD_BYTES
+        or sha256(payload_bytes) != EXPECTED_PAYLOAD_SHA256
+    ):
+        raise falsify(
+            "runtime payload signature changed: "
+            f"bytes={len(payload_bytes)} sha256={sha256(payload_bytes)}"
+        )
+    if len(index) != EXPECTED_INDEX_BYTES or sha256(index) != EXPECTED_INDEX_SHA256:
+        raise falsify(
+            "runtime index signature changed: "
+            f"bytes={len(index)} sha256={sha256(index)}"
+        )
+    return payload_bytes, index
 
 
 def verify_index(index: bytes, payload: bytes) -> None:
@@ -1672,9 +1698,21 @@ def generate(repo_root: Path) -> GeneratedArtifacts:
     )
 
 
-def write_artifacts(artifacts: GeneratedArtifacts, output_dir: Path) -> None:
+def write_artifacts(
+    artifacts: GeneratedArtifacts,
+    output_dir: Path,
+    runtime_only: bool = False,
+) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    for name, payload in artifacts.files().items():
+    files = (
+        {
+            PAYLOAD_NAME: artifacts.payload,
+            INDEX_NAME: artifacts.index,
+        }
+        if runtime_only
+        else artifacts.files()
+    )
+    for name, payload in files.items():
         (output_dir / name).write_bytes(payload)
 
 
@@ -1729,6 +1767,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="print the compact golden-fixture summary as JSON",
     )
+    parser.add_argument(
+        "--runtime-only",
+        action="store_true",
+        help="write only the payload and index consumed by the DS runtime",
+    )
     return parser.parse_args(argv)
 
 
@@ -1737,7 +1780,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         artifacts = generate(args.repo_root)
         if args.output_dir is not None:
-            write_artifacts(artifacts, args.output_dir)
+            write_artifacts(artifacts, args.output_dir, args.runtime_only)
         if args.fixture_json:
             print(json.dumps(artifacts.fixture_summary(), indent=2, sort_keys=True))
         else:

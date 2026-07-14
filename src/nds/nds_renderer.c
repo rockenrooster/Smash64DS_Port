@@ -1,4 +1,5 @@
 #include <limits.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <nds/nds_gbi_decode.h>
@@ -15,6 +16,13 @@
 
 #ifndef NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
 #define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY 0
+#endif
+
+#if (NDS_RENDERER_PUPUPU_WATER_AOT_MODE != \
+     NDS_RENDERER_PUPUPU_WATER_AOT_OFF) && \
+    ((!NDS_RENDERER_HW_TRIANGLES) || (NDS_RENDERER_PROFILE_LEVEL >= 2) || \
+     (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE))
+#error "Pupupu water AOT requires hardware triangles, profile 0/1, and benchmark mode 0"
 #endif
 
 /* libnds builds default to compact Thumb code, but the DS reference renderer
@@ -1215,6 +1223,33 @@ volatile u32 gNdsRendererProfileTextureVBlankOutsideCount;
 volatile u32 gNdsRendererProfileTextureVBlankFallbackCount;
 volatile u32 gNdsRendererProfileTextureVBlankStartLine;
 volatile u32 gNdsRendererProfileTextureVBlankEndLine;
+volatile u32 gNdsRendererPupupuWaterAotMode =
+    NDS_RENDERER_PUPUPU_WATER_AOT_MODE;
+volatile u32 gNdsRendererPupupuWaterAotInitResult;
+volatile u32 gNdsRendererPupupuWaterAotCandidateCount;
+volatile u32 gNdsRendererPupupuWaterAotLookupHitCount;
+volatile u32 gNdsRendererPupupuWaterAotLookupMissCount;
+volatile u32 gNdsRendererPupupuWaterAotSourceRejectCount;
+volatile u32 gNdsRendererPupupuWaterAotReadCount;
+volatile u32 gNdsRendererPupupuWaterAotReadFailCount;
+volatile u32 gNdsRendererPupupuWaterAotReadBytes;
+volatile u32 gNdsRendererPupupuWaterAotReadTicks;
+volatile u32 gNdsRendererPupupuWaterAotComparePassCount;
+volatile u32 gNdsRendererPupupuWaterAotCompareFailCount;
+volatile u32 gNdsRendererPupupuWaterAotDirectCount;
+volatile u32 gNdsRendererPupupuWaterAotFallbackCount;
+volatile u32 gNdsRendererPupupuWaterAotPreparedCacheHitCount;
+volatile u32 gNdsRendererPupupuWaterAotPreparedCacheMissCount;
+volatile u32 gNdsRendererPupupuWaterAotPreparedCacheReplacementCount;
+volatile u32 gNdsRendererPupupuWaterAotPreparedCacheInvalidationCount;
+volatile u32 gNdsRendererPupupuWaterAotPreparedCacheStaleRejectCount;
+volatile u32 gNdsRendererPupupuWaterAotLiveConvertCount;
+volatile u32 gNdsRendererPupupuWaterAotLiveWaterConvertCount;
+volatile u32 gNdsRendererPupupuWaterAotLiveConvertFrame;
+volatile u32 gNdsRendererPupupuWaterAotLiveConvertImage;
+volatile u32 gNdsRendererPupupuWaterAotLiveConvertTexel1Image;
+volatile u32 gNdsRendererPupupuWaterAotLiveConvertShape;
+volatile u32 gNdsRendererPupupuWaterAotLiveConvertFraction;
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
 volatile u32 gNdsRendererBenchmarkSuppressedTextureUploads;
 volatile u32 gNdsRendererBenchmarkSuppressedTextureUploadBytes;
@@ -1762,6 +1797,81 @@ static u16 sNdsRendererHardwareTextureRefreshLarge[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH *
     NDS_RENDERER_HW_TEXTURE_REFRESH_LARGE_ROWS];
 #endif
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE != \
+    NDS_RENDERER_PUPUPU_WATER_AOT_OFF
+#define NDS_RENDERER_PUPUPU_WATER_AOT_INDEX_BYTES 11060u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_PAYLOAD_BYTES 1560960u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_INDEX_FNV1A 0x20383509u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_HEADER_BYTES 36u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_BYTES 16u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_KEY_BYTES 24u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_COUNT 206u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_IMAGE_COUNT 101u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_IMAGE_COUNT 105u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_KEY_COUNT 322u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_KEY_COUNT 165u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_KEY_COUNT 157u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_OWNER 0u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_OWNER 1u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_FULL 0u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_COMPACT_ROWS 1u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES 256u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT 128u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_BYTES 4096u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_COMBINE_W0 0xfc272c04u
+#define NDS_RENDERER_PUPUPU_WATER_AOT_COMBINE_W1 0x1f0c93ffu
+
+typedef struct NDSRendererPupupuWaterAotLookupKey
+{
+    u8 owner;
+    u8 texture0;
+    u8 texture1;
+    u16 coordinates[8];
+    u8 fraction;
+} NDSRendererPupupuWaterAotLookupKey;
+
+typedef struct NDSRendererPupupuWaterAotSelection
+{
+    u32 image_index;
+    u32 owner;
+    u32 output_kind;
+    u32 unique_rows;
+    u32 payload_offset;
+    u32 staged_bytes;
+    u32 record_bytes;
+} NDSRendererPupupuWaterAotSelection;
+
+static u8 sNdsRendererPupupuWaterAotIndex[
+    NDS_RENDERER_PUPUPU_WATER_AOT_INDEX_BYTES] __attribute__((aligned(4)));
+static FILE *sNdsRendererPupupuWaterAotPayload;
+static u32 sNdsRendererPupupuWaterAotReady;
+static u32 sNdsRendererPupupuWaterAotValidatedPalette;
+static u32 sNdsRendererPupupuWaterAotSourceSignatureValid;
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT
+static u16 sNdsRendererPupupuWaterAotPreparedLarge[
+    NDS_RENDERER_HW_TEXTURE_MAX_WIDTH *
+    NDS_RENDERER_HW_TEXTURE_REFRESH_LARGE_ROWS];
+static u16 sNdsRendererPupupuWaterAotPreparedSmall[
+    NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_BYTES / sizeof(u16)];
+static u8 sNdsRendererPupupuWaterAotPreparedLargeRowMap[
+    NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT];
+static NDSRendererPupupuWaterAotSelection
+    sNdsRendererPupupuWaterAotPreparedSelection[2];
+static u32 sNdsRendererPupupuWaterAotPreparedValid[2];
+#if defined(__arm__)
+_Static_assert(
+    sizeof(sNdsRendererPupupuWaterAotPreparedLarge) +
+    sizeof(sNdsRendererPupupuWaterAotPreparedSmall) +
+    sizeof(sNdsRendererPupupuWaterAotPreparedLargeRowMap) == 20608u,
+    "Pupupu prepared pixels must stay within the measured 20608-byte budget");
+_Static_assert(
+    sizeof(sNdsRendererPupupuWaterAotPreparedSelection) +
+    sizeof(sNdsRendererPupupuWaterAotPreparedValid) == 64u,
+    "Pupupu prepared metadata must stay within the measured 64-byte budget");
+#endif
+#endif
+#endif
 static u8 sNdsRendererHardwareTexel01Ci4Source0S[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];
 static u8 sNdsRendererHardwareTexel01Ci4Source1S[
@@ -1829,6 +1939,836 @@ _Static_assert(sizeof(sNdsRendererHardwareLightShadeCache) == 2096u,
                "light shade lookup cache must stay within 2096 bytes");
 #endif
 #endif
+
+static const void *ndsRendererResolveTextureDataPointer(
+    const NDSRendererConfig *config, const void *ptr, size_t bytes);
+
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE != \
+    NDS_RENDERER_PUPUPU_WATER_AOT_OFF
+static u16 ndsRendererPupupuWaterAotReadLe16(const u8 *bytes)
+{
+    return (u16)bytes[0] | ((u16)bytes[1] << 8);
+}
+
+static u32 ndsRendererPupupuWaterAotReadLe32(const u8 *bytes)
+{
+    return (u32)bytes[0] |
+        ((u32)bytes[1] << 8) |
+        ((u32)bytes[2] << 16) |
+        ((u32)bytes[3] << 24);
+}
+
+static u32 ndsRendererPupupuWaterAotFnv1a(const u8 *bytes, u32 count)
+{
+    u32 hash = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        hash ^= bytes[i];
+        hash *= 16777619u;
+    }
+    return hash;
+}
+
+static const u8 *ndsRendererPupupuWaterAotImageEntry(u32 image_index)
+{
+    if (image_index >= NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_COUNT)
+    {
+        return NULL;
+    }
+    return &sNdsRendererPupupuWaterAotIndex[
+        NDS_RENDERER_PUPUPU_WATER_AOT_HEADER_BYTES +
+        (image_index * NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_BYTES)];
+}
+
+static const u8 *ndsRendererPupupuWaterAotKeyEntry(u32 key_index)
+{
+    if (key_index >= NDS_RENDERER_PUPUPU_WATER_AOT_KEY_COUNT)
+    {
+        return NULL;
+    }
+    return &sNdsRendererPupupuWaterAotIndex[
+        NDS_RENDERER_PUPUPU_WATER_AOT_HEADER_BYTES +
+        (NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_COUNT *
+         NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_BYTES) +
+        (key_index * NDS_RENDERER_PUPUPU_WATER_AOT_KEY_BYTES)];
+}
+
+static s32 ndsRendererPupupuWaterAotCompareRawKeys(const u8 *left,
+                                                   const u8 *right)
+{
+    u32 i;
+
+    for (i = 0u; i < 3u; i++)
+    {
+        if (left[i] != right[i])
+        {
+            return (left[i] < right[i]) ? -1 : 1;
+        }
+    }
+    for (i = 0u; i < 8u; i++)
+    {
+        u16 left_value = ndsRendererPupupuWaterAotReadLe16(
+            &left[4u + (i * 2u)]);
+        u16 right_value = ndsRendererPupupuWaterAotReadLe16(
+            &right[4u + (i * 2u)]);
+
+        if (left_value != right_value)
+        {
+            return (left_value < right_value) ? -1 : 1;
+        }
+    }
+    if (left[20] != right[20])
+    {
+        return (left[20] < right[20]) ? -1 : 1;
+    }
+    return 0;
+}
+
+static s32 ndsRendererPupupuWaterAotValidateIndex(void)
+{
+    const u8 *header = sNdsRendererPupupuWaterAotIndex;
+    u32 previous_end = 0u;
+    u32 large_keys = 0u;
+    u32 small_keys = 0u;
+    u32 i;
+
+    if ((memcmp(header, "PWA1", 4u) != 0) ||
+        (ndsRendererPupupuWaterAotReadLe16(&header[4]) != 1u) ||
+        (ndsRendererPupupuWaterAotReadLe16(&header[6]) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_HEADER_BYTES) ||
+        (ndsRendererPupupuWaterAotReadLe16(&header[8]) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_KEY_BYTES) ||
+        (ndsRendererPupupuWaterAotReadLe16(&header[10]) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_BYTES) ||
+        (ndsRendererPupupuWaterAotReadLe32(&header[12]) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_KEY_COUNT) ||
+        (ndsRendererPupupuWaterAotReadLe32(&header[16]) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_COUNT) ||
+        (ndsRendererPupupuWaterAotReadLe16(&header[20]) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_IMAGE_COUNT) ||
+        (ndsRendererPupupuWaterAotReadLe16(&header[22]) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_IMAGE_COUNT) ||
+        (ndsRendererPupupuWaterAotReadLe16(&header[24]) != 216u) ||
+        (ndsRendererPupupuWaterAotReadLe16(&header[26]) != 2u) ||
+        (ndsRendererPupupuWaterAotReadLe32(&header[28]) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_PAYLOAD_BYTES) ||
+        (ndsRendererPupupuWaterAotReadLe32(&header[32]) != 18000u) ||
+        (ndsRendererPupupuWaterAotFnv1a(
+             sNdsRendererPupupuWaterAotIndex,
+             sizeof(sNdsRendererPupupuWaterAotIndex)) !=
+         NDS_RENDERER_PUPUPU_WATER_AOT_INDEX_FNV1A))
+    {
+        return FALSE;
+    }
+
+    for (i = 0u; i < NDS_RENDERER_PUPUPU_WATER_AOT_IMAGE_COUNT; i++)
+    {
+        const u8 *image = ndsRendererPupupuWaterAotImageEntry(i);
+        u32 expected_owner =
+            (i < NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_IMAGE_COUNT) ?
+            NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_OWNER :
+            NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_OWNER;
+        u32 unique_rows = ndsRendererPupupuWaterAotReadLe16(&image[2]);
+        u32 offset = ndsRendererPupupuWaterAotReadLe32(&image[4]);
+        u32 staged_bytes = ndsRendererPupupuWaterAotReadLe32(&image[8]);
+        u32 record_bytes = ndsRendererPupupuWaterAotReadLe32(&image[12]);
+
+        if ((image[0] != expected_owner) || (offset != previous_end) ||
+            (record_bytes >
+             (NDS_RENDERER_PUPUPU_WATER_AOT_PAYLOAD_BYTES - offset)))
+        {
+            return FALSE;
+        }
+        if (expected_owner == NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_OWNER)
+        {
+            if ((image[1] !=
+                 NDS_RENDERER_PUPUPU_WATER_AOT_COMPACT_ROWS) ||
+                (unique_rows < 32u) ||
+                (unique_rows > NDS_RENDERER_HW_TEXTURE_REFRESH_LARGE_ROWS) ||
+                (staged_bytes !=
+                 (unique_rows *
+                  NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES)) ||
+                (record_bytes !=
+                 (staged_bytes +
+                  NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT)))
+            {
+                return FALSE;
+            }
+        }
+        else if ((image[1] != NDS_RENDERER_PUPUPU_WATER_AOT_FULL) ||
+                 (unique_rows != 0u) ||
+                 (staged_bytes != NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_BYTES) ||
+                 (record_bytes != staged_bytes))
+        {
+            return FALSE;
+        }
+        previous_end = offset + record_bytes;
+    }
+    if (previous_end != NDS_RENDERER_PUPUPU_WATER_AOT_PAYLOAD_BYTES)
+    {
+        return FALSE;
+    }
+
+    for (i = 0u; i < NDS_RENDERER_PUPUPU_WATER_AOT_KEY_COUNT; i++)
+    {
+        const u8 *key = ndsRendererPupupuWaterAotKeyEntry(i);
+        u32 image_index = ndsRendererPupupuWaterAotReadLe16(&key[22]);
+        const u8 *image = ndsRendererPupupuWaterAotImageEntry(image_index);
+
+        if ((key[3] != 0u) || (key[21] != 0u) || (image == NULL) ||
+            (key[0] != image[0]) || (key[0] > 1u) ||
+            ((i != 0u) &&
+             (ndsRendererPupupuWaterAotCompareRawKeys(
+                  ndsRendererPupupuWaterAotKeyEntry(i - 1u), key) >= 0)))
+        {
+            return FALSE;
+        }
+        if (key[0] == NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_OWNER)
+        {
+            large_keys++;
+        }
+        else
+        {
+            small_keys++;
+        }
+    }
+    return ((large_keys == NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_KEY_COUNT) &&
+            (small_keys == NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_KEY_COUNT)) ?
+        TRUE : FALSE;
+}
+
+static s32 ndsRendererPupupuWaterAotCheckFileSize(FILE *file,
+                                                   u32 expected_bytes)
+{
+    long file_bytes;
+
+    if ((file == NULL) || (fseek(file, 0, SEEK_END) != 0))
+    {
+        return FALSE;
+    }
+    file_bytes = ftell(file);
+    if ((file_bytes < 0) || ((u32)file_bytes != expected_bytes) ||
+        (fseek(file, 0, SEEK_SET) != 0))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static s32 ndsRendererPupupuWaterAotTextureId(u32 image, u32 palette,
+                                               u8 *out_id)
+{
+    u32 delta;
+
+    if ((out_id == NULL) || (image < palette))
+    {
+        return FALSE;
+    }
+    delta = image - palette;
+    if (delta == 0x28u)
+    {
+        *out_id = 0u;
+    }
+    else if (delta == 0x258u)
+    {
+        *out_id = 1u;
+    }
+    else if (delta == 0x488u)
+    {
+        *out_id = 2u;
+    }
+    else
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static s32 ndsRendererPupupuWaterAotBuildLookupKey(
+    const NDSRendererHardwareTextureKey *key,
+    NDSRendererPupupuWaterAotLookupKey *lookup)
+{
+    u32 owner;
+    u8 texture0;
+    u8 texture1;
+    u32 i;
+
+    if ((key == NULL) || (lookup == NULL) ||
+        (sNdsRendererPupupuWaterAotReady == FALSE))
+    {
+        return FALSE;
+    }
+    if ((key->width == 128u) && (key->height == 128u))
+    {
+        owner = NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_OWNER;
+    }
+    else if ((key->width == 32u) && (key->height == 64u))
+    {
+        owner = NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_OWNER;
+    }
+    else
+    {
+        return FALSE;
+    }
+    /* BattleShip's large owner materializes the repeated S axis and uses
+     * mirror+clamp.  The 32-wide small owner never leaves its source row and
+     * uses clamp-only.  Keeping this owner-specific is both stricter and more
+     * source-faithful than accepting the large mode for every water key. */
+    if (((owner == NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_OWNER) &&
+         (key->render_tile_cms !=
+          (NDS_RENDERER_TX_MIRROR | NDS_RENDERER_TX_CLAMP))) ||
+        ((owner == NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_OWNER) &&
+         (key->render_tile_cms != NDS_RENDERER_TX_CLAMP)) ||
+        (key->image_format != NDS_RENDERER_HW_TEXTURE_FMT_CI) ||
+        (key->image_size != NDS_RENDERER_HW_TEXTURE_SIZ_16B) ||
+        (key->image_width != 1u) || (key->tlut_count != 16u) ||
+        (key->data_layout != NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED) ||
+        (key->format != NDS_RENDERER_HW_TEXTURE_FMT_CI) ||
+        (key->size != NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
+        (key->render_tile != NDS_RENDERER_RENDER_TILE) ||
+        (key->render_tmem != 0u) || (key->render_palette != 0u) ||
+        (key->render_tile_cmt != NDS_RENDERER_TX_CLAMP) ||
+        (key->render_tile_masks != 5u) ||
+        (key->render_tile_maskt != 5u) ||
+        (key->render_tile_shifts != 0u) ||
+        (key->render_tile_shiftt != 0u) ||
+        (key->load_tile != NDS_RENDERER_LOAD_TILE) ||
+        (key->load_uls != 0u) || (key->load_ult != 0u) ||
+        (key->load_lrs != 255u) || (key->load_dxt != 1024u) ||
+        (key->load_texels != 256u) ||
+        (key->texel1_image_format != NDS_RENDERER_HW_TEXTURE_FMT_CI) ||
+        (key->texel1_image_size != NDS_RENDERER_HW_TEXTURE_SIZ_16B) ||
+        (key->texel1_image_width != 1u) ||
+        (key->texel1_load_kind != NDS_RENDERER_TEXTURE_LOADBLOCK) ||
+        (key->texel1_render_tmem != 0x40u) ||
+        (key->texel1_render_line != 2u) ||
+        (key->texel1_render_palette != 0u) ||
+        (key->texel1_render_tile_cms != NDS_RENDERER_TX_CLAMP) ||
+        (key->texel1_render_tile_cmt != NDS_RENDERER_TX_CLAMP) ||
+        (key->texel1_render_tile_masks != 5u) ||
+        (key->texel1_render_tile_maskt != 5u) ||
+        (key->texel1_render_tile_shifts != 0u) ||
+        (key->texel1_render_tile_shiftt != 0u) ||
+        (key->texel1_load_tile != 6u) ||
+        (key->texel1_load_uls != 0u) || (key->texel1_load_ult != 0u) ||
+        (key->texel1_load_lrs != 255u) ||
+        (key->texel1_load_dxt != 1024u) ||
+        (key->texel1_load_texels != 256u) ||
+        (key->combine_w0 != NDS_RENDERER_PUPUPU_WATER_AOT_COMBINE_W0) ||
+        (key->combine_w1 != NDS_RENDERER_PUPUPU_WATER_AOT_COMBINE_W1) ||
+        (key->prim_lod_fraction > 255u))
+    {
+        return FALSE;
+    }
+    if ((ndsRendererPupupuWaterAotTextureId(
+             key->image, key->tlut_image, &texture0) == FALSE) ||
+        (ndsRendererPupupuWaterAotTextureId(
+             key->texel1_image, key->tlut_image, &texture1) == FALSE))
+    {
+        return FALSE;
+    }
+
+    lookup->owner = (u8)owner;
+    lookup->texture0 = texture0;
+    lookup->texture1 = texture1;
+    lookup->coordinates[0] = (u16)key->tile_uls;
+    lookup->coordinates[1] = (u16)key->tile_ult;
+    lookup->coordinates[2] = (u16)key->tile_lrs;
+    lookup->coordinates[3] = (u16)key->tile_lrt;
+    lookup->coordinates[4] = (u16)key->texel1_tile_uls;
+    lookup->coordinates[5] = (u16)key->texel1_tile_ult;
+    lookup->coordinates[6] = (u16)key->texel1_tile_lrs;
+    lookup->coordinates[7] = (u16)key->texel1_tile_lrt;
+    for (i = 0u; i < 8u; i++)
+    {
+        u32 original = (i == 0u) ? key->tile_uls :
+            (i == 1u) ? key->tile_ult :
+            (i == 2u) ? key->tile_lrs :
+            (i == 3u) ? key->tile_lrt :
+            (i == 4u) ? key->texel1_tile_uls :
+            (i == 5u) ? key->texel1_tile_ult :
+            (i == 6u) ? key->texel1_tile_lrs : key->texel1_tile_lrt;
+
+        if (original > 0xffffu)
+        {
+            return FALSE;
+        }
+    }
+    lookup->fraction = (u8)key->prim_lod_fraction;
+    return TRUE;
+}
+
+static s32 ndsRendererPupupuWaterAotCompareEntryToLookup(
+    const u8 *entry, const NDSRendererPupupuWaterAotLookupKey *lookup)
+{
+    u32 i;
+
+    if (entry[0] != lookup->owner)
+    {
+        return (entry[0] < lookup->owner) ? -1 : 1;
+    }
+    if (entry[1] != lookup->texture0)
+    {
+        return (entry[1] < lookup->texture0) ? -1 : 1;
+    }
+    if (entry[2] != lookup->texture1)
+    {
+        return (entry[2] < lookup->texture1) ? -1 : 1;
+    }
+    for (i = 0u; i < 8u; i++)
+    {
+        u16 value = ndsRendererPupupuWaterAotReadLe16(
+            &entry[4u + (i * 2u)]);
+
+        if (value != lookup->coordinates[i])
+        {
+            return (value < lookup->coordinates[i]) ? -1 : 1;
+        }
+    }
+    if (entry[20] != lookup->fraction)
+    {
+        return (entry[20] < lookup->fraction) ? -1 : 1;
+    }
+    return 0;
+}
+
+static s32 ndsRendererPupupuWaterAotFind(
+    const NDSRendererHardwareTextureKey *key,
+    NDSRendererPupupuWaterAotSelection *selection)
+{
+    NDSRendererPupupuWaterAotLookupKey lookup;
+    u32 low = 0u;
+    u32 high = NDS_RENDERER_PUPUPU_WATER_AOT_KEY_COUNT;
+
+    if (ndsRendererPupupuWaterAotBuildLookupKey(key, &lookup) == FALSE)
+    {
+        return FALSE;
+    }
+    gNdsRendererPupupuWaterAotCandidateCount++;
+    while (low < high)
+    {
+        u32 middle = low + ((high - low) / 2u);
+        const u8 *entry = ndsRendererPupupuWaterAotKeyEntry(middle);
+        s32 compare = ndsRendererPupupuWaterAotCompareEntryToLookup(
+            entry, &lookup);
+
+        if (compare < 0)
+        {
+            low = middle + 1u;
+        }
+        else if (compare > 0)
+        {
+            high = middle;
+        }
+        else
+        {
+            u32 image_index = ndsRendererPupupuWaterAotReadLe16(&entry[22]);
+            const u8 *image = ndsRendererPupupuWaterAotImageEntry(image_index);
+
+            if ((selection == NULL) || (image == NULL))
+            {
+                break;
+            }
+            selection->image_index = image_index;
+            selection->owner = image[0];
+            selection->output_kind = image[1];
+            selection->unique_rows =
+                ndsRendererPupupuWaterAotReadLe16(&image[2]);
+            selection->payload_offset =
+                ndsRendererPupupuWaterAotReadLe32(&image[4]);
+            selection->staged_bytes =
+                ndsRendererPupupuWaterAotReadLe32(&image[8]);
+            selection->record_bytes =
+                ndsRendererPupupuWaterAotReadLe32(&image[12]);
+            gNdsRendererPupupuWaterAotLookupHitCount++;
+            return TRUE;
+        }
+    }
+    gNdsRendererPupupuWaterAotLookupMissCount++;
+    return FALSE;
+}
+
+static s32 ndsRendererPupupuWaterAotValidateSource(
+    const NDSRendererConfig *config,
+    const NDSRendererHardwareTextureKey *key)
+{
+    const u8 *source;
+    u32 hash = 2166136261u;
+    u32 i;
+
+    if ((key == NULL) || (key->tlut_image == 0u))
+    {
+        return FALSE;
+    }
+    if ((sNdsRendererPupupuWaterAotSourceSignatureValid != FALSE) &&
+        (sNdsRendererPupupuWaterAotValidatedPalette == key->tlut_image))
+    {
+        return TRUE;
+    }
+    source = ndsRendererResolveTextureDataPointer(
+        config, (const void *)(uintptr_t)key->tlut_image, 0x688u);
+    if (source != NULL)
+    {
+        for (i = 0u; i < 0x688u; i++)
+        {
+            hash ^= source[i ^ 3u];
+            hash *= 16777619u;
+        }
+    }
+    if ((source == NULL) || (hash != 0x60d595a2u))
+    {
+        gNdsRendererPupupuWaterAotSourceRejectCount++;
+        return FALSE;
+    }
+    sNdsRendererPupupuWaterAotValidatedPalette = key->tlut_image;
+    sNdsRendererPupupuWaterAotSourceSignatureValid = TRUE;
+    return TRUE;
+}
+
+static s32 ndsRendererPupupuWaterAotLoad(
+    const NDSRendererPupupuWaterAotSelection *selection,
+    u16 *pixels, u32 capacity_bytes, u8 *row_map)
+{
+    u32 start = cpuGetTiming();
+    s32 ok = FALSE;
+
+    if ((selection != NULL) && (pixels != NULL) &&
+        (selection->staged_bytes <= capacity_bytes) &&
+        (sNdsRendererPupupuWaterAotPayload != NULL) &&
+        ((selection->output_kind !=
+          NDS_RENDERER_PUPUPU_WATER_AOT_COMPACT_ROWS) ||
+         (row_map != NULL)) &&
+        (fseek(sNdsRendererPupupuWaterAotPayload,
+               (long)selection->payload_offset, SEEK_SET) == 0) &&
+        (fread(pixels, 1u, selection->staged_bytes,
+               sNdsRendererPupupuWaterAotPayload) ==
+         selection->staged_bytes))
+    {
+        if (selection->output_kind ==
+            NDS_RENDERER_PUPUPU_WATER_AOT_COMPACT_ROWS)
+        {
+            u32 i;
+
+            ok = (fread(row_map, 1u,
+                        NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT,
+                        sNdsRendererPupupuWaterAotPayload) ==
+                  NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT) ?
+                TRUE : FALSE;
+            for (i = 0u; (ok != FALSE) &&
+                 (i < NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT); i++)
+            {
+                if (row_map[i] >= selection->unique_rows)
+                {
+                    ok = FALSE;
+                }
+            }
+        }
+        else
+        {
+            ok = TRUE;
+        }
+    }
+    gNdsRendererPupupuWaterAotReadTicks += cpuGetTiming() - start;
+    if (ok != FALSE)
+    {
+        gNdsRendererPupupuWaterAotReadCount++;
+        gNdsRendererPupupuWaterAotReadBytes += selection->record_bytes;
+        return TRUE;
+    }
+    gNdsRendererPupupuWaterAotReadFailCount++;
+    return FALSE;
+}
+
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_COMPARE
+static s32 ndsRendererPupupuWaterAotCompare(
+    const NDSRendererPupupuWaterAotSelection *selection,
+    const u16 *pixels, const u8 *row_map, const u16 *reference)
+{
+    u32 y;
+
+    if ((selection == NULL) || (pixels == NULL) || (reference == NULL))
+    {
+        return FALSE;
+    }
+    if (selection->output_kind == NDS_RENDERER_PUPUPU_WATER_AOT_FULL)
+    {
+        return (memcmp(pixels, reference, selection->staged_bytes) == 0) ?
+            TRUE : FALSE;
+    }
+    if (row_map == NULL)
+    {
+        return FALSE;
+    }
+    for (y = 0u; y < NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT; y++)
+    {
+        if (memcmp((const u8 *)pixels +
+                       ((u32)row_map[y] *
+                        NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES),
+                   (const u8 *)reference +
+                       (y * NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES),
+                   NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES) != 0)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+#endif
+
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT
+static s32 ndsRendererPupupuWaterAotSelectionEqual(
+    const NDSRendererPupupuWaterAotSelection *left,
+    const NDSRendererPupupuWaterAotSelection *right)
+{
+    if ((left == NULL) || (right == NULL))
+    {
+        return FALSE;
+    }
+    return ((left->image_index == right->image_index) &&
+            (left->owner == right->owner) &&
+            (left->output_kind == right->output_kind) &&
+            (left->unique_rows == right->unique_rows) &&
+            (left->payload_offset == right->payload_offset) &&
+            (left->staged_bytes == right->staged_bytes) &&
+            (left->record_bytes == right->record_bytes)) ? TRUE : FALSE;
+}
+
+static void ndsRendererPupupuWaterAotInvalidatePrepared(void)
+{
+    u32 owner;
+
+    for (owner = 0u; owner < 2u; owner++)
+    {
+        if (sNdsRendererPupupuWaterAotPreparedValid[owner] != FALSE)
+        {
+            sNdsRendererPupupuWaterAotPreparedValid[owner] = FALSE;
+            memset(&sNdsRendererPupupuWaterAotPreparedSelection[owner], 0,
+                   sizeof(sNdsRendererPupupuWaterAotPreparedSelection[owner]));
+            gNdsRendererPupupuWaterAotPreparedCacheInvalidationCount++;
+        }
+    }
+}
+
+static s32 ndsRendererPupupuWaterAotPrepare(
+    const NDSRendererPupupuWaterAotSelection *selection,
+    u16 *pixels, u32 capacity_bytes, u8 *row_map)
+{
+    NDSRendererPupupuWaterAotSelection *prepared_selection;
+    u16 *prepared_pixels;
+    u8 *prepared_row_map = NULL;
+    u32 prepared_capacity;
+    u32 owner;
+
+    if ((selection == NULL) || (pixels == NULL) ||
+        (selection->owner > NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_OWNER) ||
+        (selection->staged_bytes > capacity_bytes))
+    {
+        return FALSE;
+    }
+    owner = selection->owner;
+    if (owner == NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_OWNER)
+    {
+        if ((selection->output_kind !=
+             NDS_RENDERER_PUPUPU_WATER_AOT_COMPACT_ROWS) ||
+            (row_map == NULL))
+        {
+            return FALSE;
+        }
+        prepared_pixels = sNdsRendererPupupuWaterAotPreparedLarge;
+        prepared_capacity = sizeof(sNdsRendererPupupuWaterAotPreparedLarge);
+        prepared_row_map = sNdsRendererPupupuWaterAotPreparedLargeRowMap;
+    }
+    else
+    {
+        if (selection->output_kind != NDS_RENDERER_PUPUPU_WATER_AOT_FULL)
+        {
+            return FALSE;
+        }
+        prepared_pixels = sNdsRendererPupupuWaterAotPreparedSmall;
+        prepared_capacity = sizeof(sNdsRendererPupupuWaterAotPreparedSmall);
+    }
+    if (selection->staged_bytes > prepared_capacity)
+    {
+        return FALSE;
+    }
+    prepared_selection =
+        &sNdsRendererPupupuWaterAotPreparedSelection[owner];
+    if (sNdsRendererPupupuWaterAotPreparedValid[owner] != FALSE)
+    {
+        if (ndsRendererPupupuWaterAotSelectionEqual(
+                selection, prepared_selection) != FALSE)
+        {
+            gNdsRendererPupupuWaterAotPreparedCacheHitCount++;
+        }
+        else
+        {
+            if (selection->image_index == prepared_selection->image_index)
+            {
+                /* An output ID may never change its owner or payload
+                 * description.  Reject the cached copy before reloading so a
+                 * malformed or stale index can never silently reuse it. */
+                gNdsRendererPupupuWaterAotPreparedCacheStaleRejectCount++;
+                gNdsRendererPupupuWaterAotPreparedCacheInvalidationCount++;
+            }
+            else
+            {
+                gNdsRendererPupupuWaterAotPreparedCacheReplacementCount++;
+            }
+            sNdsRendererPupupuWaterAotPreparedValid[owner] = FALSE;
+        }
+    }
+    if (sNdsRendererPupupuWaterAotPreparedValid[owner] == FALSE)
+    {
+        gNdsRendererPupupuWaterAotPreparedCacheMissCount++;
+        if (ndsRendererPupupuWaterAotLoad(
+                selection, prepared_pixels, prepared_capacity,
+                prepared_row_map) == FALSE)
+        {
+            return FALSE;
+        }
+        *prepared_selection = *selection;
+        sNdsRendererPupupuWaterAotPreparedValid[owner] = TRUE;
+    }
+    memcpy(pixels, prepared_pixels, selection->staged_bytes);
+    if (prepared_row_map != NULL)
+    {
+        memcpy(row_map, prepared_row_map,
+               NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT);
+    }
+    return TRUE;
+}
+
+static s32 ndsRendererPupupuWaterAotExpand(
+    const NDSRendererPupupuWaterAotSelection *selection,
+    const u16 *pixels, const u8 *row_map, u16 *destination,
+    u32 destination_bytes)
+{
+    u32 y;
+
+    if ((selection == NULL) || (pixels == NULL) || (destination == NULL) ||
+        (destination_bytes < ((selection->owner ==
+          NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_OWNER) ?
+         (128u * 128u * sizeof(u16)) :
+         NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_BYTES)))
+    {
+        return FALSE;
+    }
+    if (selection->output_kind == NDS_RENDERER_PUPUPU_WATER_AOT_FULL)
+    {
+        memcpy(destination, pixels, selection->staged_bytes);
+        return TRUE;
+    }
+    if (row_map == NULL)
+    {
+        return FALSE;
+    }
+    for (y = 0u; y < NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT; y++)
+    {
+        memcpy((u8 *)destination +
+                   (y * NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES),
+               (const u8 *)pixels +
+                   ((u32)row_map[y] *
+                    NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES),
+               NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES);
+    }
+    return TRUE;
+}
+#endif
+#endif
+
+void ndsRendererPupupuWaterAotInit(void)
+{
+    /* This is the one boot-time reset point for both the runtime gate and its
+     * diagnostics.  Explicitly touch every public counter so linker section
+     * GC cannot discard mode-specific fields that the automated off/compare/
+     * direct oracle reads from GDB. */
+    gNdsRendererPupupuWaterAotMode =
+        NDS_RENDERER_PUPUPU_WATER_AOT_MODE;
+    gNdsRendererPupupuWaterAotInitResult = 0u;
+    gNdsRendererPupupuWaterAotCandidateCount = 0u;
+    gNdsRendererPupupuWaterAotLookupHitCount = 0u;
+    gNdsRendererPupupuWaterAotLookupMissCount = 0u;
+    gNdsRendererPupupuWaterAotSourceRejectCount = 0u;
+    gNdsRendererPupupuWaterAotReadCount = 0u;
+    gNdsRendererPupupuWaterAotReadFailCount = 0u;
+    gNdsRendererPupupuWaterAotReadBytes = 0u;
+    gNdsRendererPupupuWaterAotReadTicks = 0u;
+    gNdsRendererPupupuWaterAotComparePassCount = 0u;
+    gNdsRendererPupupuWaterAotCompareFailCount = 0u;
+    gNdsRendererPupupuWaterAotDirectCount = 0u;
+    gNdsRendererPupupuWaterAotFallbackCount = 0u;
+    gNdsRendererPupupuWaterAotPreparedCacheHitCount = 0u;
+    gNdsRendererPupupuWaterAotPreparedCacheMissCount = 0u;
+    gNdsRendererPupupuWaterAotPreparedCacheReplacementCount = 0u;
+    gNdsRendererPupupuWaterAotPreparedCacheInvalidationCount = 0u;
+    gNdsRendererPupupuWaterAotPreparedCacheStaleRejectCount = 0u;
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT
+    memset(sNdsRendererPupupuWaterAotPreparedSelection, 0,
+           sizeof(sNdsRendererPupupuWaterAotPreparedSelection));
+    memset(sNdsRendererPupupuWaterAotPreparedValid, 0,
+           sizeof(sNdsRendererPupupuWaterAotPreparedValid));
+#endif
+    gNdsRendererPupupuWaterAotLiveConvertCount = 0u;
+    gNdsRendererPupupuWaterAotLiveWaterConvertCount = 0u;
+    gNdsRendererPupupuWaterAotLiveConvertFrame = 0u;
+    gNdsRendererPupupuWaterAotLiveConvertImage = 0u;
+    gNdsRendererPupupuWaterAotLiveConvertTexel1Image = 0u;
+    gNdsRendererPupupuWaterAotLiveConvertShape = 0u;
+    gNdsRendererPupupuWaterAotLiveConvertFraction = 0u;
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE != \
+    NDS_RENDERER_PUPUPU_WATER_AOT_OFF
+    FILE *index_file;
+
+    if (sNdsRendererPupupuWaterAotReady != FALSE)
+    {
+        return;
+    }
+    index_file = fopen("nitro:/aot/pupupu_water_aot_index.bin", "rb");
+    if ((index_file == NULL) ||
+        (ndsRendererPupupuWaterAotCheckFileSize(
+             index_file, NDS_RENDERER_PUPUPU_WATER_AOT_INDEX_BYTES) == FALSE) ||
+        (fread(sNdsRendererPupupuWaterAotIndex, 1u,
+               sizeof(sNdsRendererPupupuWaterAotIndex), index_file) !=
+         sizeof(sNdsRendererPupupuWaterAotIndex)))
+    {
+        if (index_file != NULL)
+        {
+            fclose(index_file);
+        }
+        gNdsRendererPupupuWaterAotInitResult = 1u;
+        return;
+    }
+    fclose(index_file);
+    if (ndsRendererPupupuWaterAotValidateIndex() == FALSE)
+    {
+        gNdsRendererPupupuWaterAotInitResult = 2u;
+        return;
+    }
+    sNdsRendererPupupuWaterAotPayload = fopen(
+        "nitro:/aot/pupupu_water_aot_payload.bin", "rb");
+    if ((sNdsRendererPupupuWaterAotPayload == NULL) ||
+        (ndsRendererPupupuWaterAotCheckFileSize(
+             sNdsRendererPupupuWaterAotPayload,
+             NDS_RENDERER_PUPUPU_WATER_AOT_PAYLOAD_BYTES) == FALSE))
+    {
+        if (sNdsRendererPupupuWaterAotPayload != NULL)
+        {
+            fclose(sNdsRendererPupupuWaterAotPayload);
+            sNdsRendererPupupuWaterAotPayload = NULL;
+        }
+        gNdsRendererPupupuWaterAotInitResult = 3u;
+        return;
+    }
+    sNdsRendererPupupuWaterAotReady = TRUE;
+    gNdsRendererPupupuWaterAotInitResult =
+        NDS_RENDERER_PUPUPU_WATER_AOT_INIT_PASS;
+#endif
+}
 
 static void ndsRendererHardwareEndBatch(void);
 
@@ -5780,6 +6720,25 @@ static s32 ndsRendererHardwareTextureRefreshUses(
     return FALSE;
 }
 
+static u16 *ndsRendererHardwareSelectTextureRefreshBuffer(u32 upload_bytes)
+{
+    if ((upload_bytes <=
+         sizeof(sNdsRendererHardwareTextureRefreshSmall)) &&
+        (ndsRendererHardwareTextureRefreshUses(
+             sNdsRendererHardwareTextureRefreshSmall) == FALSE))
+    {
+        return sNdsRendererHardwareTextureRefreshSmall;
+    }
+    if ((upload_bytes >
+         sizeof(sNdsRendererHardwareTextureRefreshSmall)) &&
+        (ndsRendererHardwareTextureRefreshUses(
+             sNdsRendererHardwareTextureRefreshLarge) == FALSE))
+    {
+        return sNdsRendererHardwareTextureRefreshLarge;
+    }
+    return NULL;
+}
+
 static s32 ndsRendererHardwareQueueTextureRefresh(
     NDSRendererHardwareTextureCacheEntry *entry,
     const u16 *pixels,
@@ -8264,6 +9223,15 @@ static s32 ndsRendererHardwareBindTexture(
     NDSRendererHardwareTextureKey key;
     NDSRendererHardwareTextureCacheEntry *entry;
     NDSRendererHardwareTextureCacheEntry *fraction_entry;
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE != \
+    NDS_RENDERER_PUPUPU_WATER_AOT_OFF
+    NDSRendererPupupuWaterAotSelection aot_selection;
+    s32 aot_found = FALSE;
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_COMPARE
+    s32 aot_prepared_output = FALSE;
+#endif
+#endif
     NDSRendererHardwareTexel1Source texel1_source;
     const NDSRendererTextureLoadState *primary_load;
     const u8 *texels_src;
@@ -8727,6 +9695,101 @@ static s32 ndsRendererHardwareBindTexture(
         fraction_entry =
             ndsRendererHardwareFindTexel1RefreshTexture(&key);
     }
+    texels = width * height;
+    upload_bytes = upload_width * upload_height * sizeof(u16);
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE != \
+    NDS_RENDERER_PUPUPU_WATER_AOT_OFF
+    aot_found = ndsRendererPupupuWaterAotFind(&key, &aot_selection);
+    if ((aot_found != FALSE) &&
+        (ndsRendererPupupuWaterAotValidateSource(config, &key) == FALSE))
+    {
+        aot_found = FALSE;
+        gNdsRendererPupupuWaterAotFallbackCount++;
+    }
+#endif
+
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT
+    if (aot_found != FALSE)
+    {
+        u16 *aot_buffer = NULL;
+        u32 aot_capacity = 0u;
+
+        if (fraction_entry != NULL)
+        {
+            aot_buffer = ndsRendererHardwareSelectTextureRefreshBuffer(
+                upload_bytes);
+            if (aot_buffer == sNdsRendererHardwareTextureRefreshSmall)
+            {
+                aot_capacity =
+                    sizeof(sNdsRendererHardwareTextureRefreshSmall);
+            }
+            else if (aot_buffer ==
+                     sNdsRendererHardwareTextureRefreshLarge)
+            {
+                aot_capacity =
+                    sizeof(sNdsRendererHardwareTextureRefreshLarge);
+            }
+        }
+        else if (aot_selection.owner ==
+                 NDS_RENDERER_PUPUPU_WATER_AOT_SMALL_OWNER)
+        {
+            aot_buffer = sNdsRendererHardwareTextureScratch;
+            aot_capacity = sizeof(sNdsRendererHardwareTextureScratch);
+        }
+        else if (ndsRendererHardwareTextureRefreshUses(
+                     sNdsRendererHardwareTextureRefreshLarge) == FALSE)
+        {
+            aot_buffer = sNdsRendererHardwareTextureRefreshLarge;
+            aot_capacity = sizeof(sNdsRendererHardwareTextureRefreshLarge);
+        }
+
+        if ((aot_buffer != NULL) &&
+            (ndsRendererPupupuWaterAotPrepare(
+                 &aot_selection, aot_buffer, aot_capacity,
+                 staged_row_map) != FALSE))
+        {
+            staged_bytes = aot_selection.staged_bytes;
+            if (fraction_entry != NULL)
+            {
+                upload_buffer = aot_buffer;
+                queue_texture_refresh = TRUE;
+                if (aot_selection.output_kind ==
+                    NDS_RENDERER_PUPUPU_WATER_AOT_COMPACT_ROWS)
+                {
+                    staged_row_bytes =
+                        NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES;
+                    staged_row_count =
+                        NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT;
+                }
+            }
+            else
+            {
+                if ((aot_buffer != sNdsRendererHardwareTextureScratch) &&
+                    (ndsRendererPupupuWaterAotExpand(
+                         &aot_selection, aot_buffer, staged_row_map,
+                         sNdsRendererHardwareTextureScratch,
+                         sizeof(sNdsRendererHardwareTextureScratch)) == FALSE))
+                {
+                    gNdsRendererPupupuWaterAotFallbackCount++;
+                    goto pupupu_water_aot_direct_fallback;
+                }
+                upload_buffer = sNdsRendererHardwareTextureScratch;
+                staged_bytes = upload_bytes;
+                staged_row_bytes = 0u;
+                staged_row_count = 0u;
+                queue_texture_refresh = FALSE;
+            }
+            gNdsRendererPupupuWaterAotDirectCount++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            upload_start = cpuGetTiming();
+#endif
+            goto texture_pixels_ready;
+        }
+        gNdsRendererPupupuWaterAotFallbackCount++;
+    }
+pupupu_water_aot_direct_fallback:
+#endif
 
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
     if ((sNdsRendererHardwareFrameSerial != 0u) &&
@@ -8773,7 +9836,6 @@ static s32 ndsRendererHardwareBindTexture(
     }
 #endif
 
-    texels = width * height;
     bytes = ndsRendererHardwareTextureSourceBytes(
         format, size, source_read_width * source_read_height);
     if ((bytes == 0u) || (bytes > loaded_bytes))
@@ -8886,28 +9948,43 @@ static s32 ndsRendererHardwareBindTexture(
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     convert_start = cpuGetTiming();
 #endif
-    upload_bytes = upload_width * upload_height * sizeof(u16);
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT
+    {
+        NDSRendererPupupuWaterAotLookupKey diagnostic_lookup;
+
+        gNdsRendererPupupuWaterAotLiveConvertCount++;
+        if (ndsRendererPupupuWaterAotBuildLookupKey(
+                &key, &diagnostic_lookup) != FALSE)
+        {
+            gNdsRendererPupupuWaterAotLiveWaterConvertCount++;
+        }
+        gNdsRendererPupupuWaterAotLiveConvertFrame =
+            sNdsRendererHardwareFrameSerial;
+        gNdsRendererPupupuWaterAotLiveConvertImage = key.image;
+        gNdsRendererPupupuWaterAotLiveConvertTexel1Image = key.texel1_image;
+        gNdsRendererPupupuWaterAotLiveConvertShape =
+            (key.width << 16) | key.height;
+        gNdsRendererPupupuWaterAotLiveConvertFraction =
+            key.prim_lod_fraction;
+    }
+#endif
     staged_bytes = upload_bytes;
 #if (NDS_RENDERER_PROFILE_LEVEL < 2) && \
     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
-    if (fraction_entry != NULL)
+    if ((fraction_entry != NULL)
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_COMPARE
+        && (aot_found == FALSE)
+#endif
+       )
     {
-        if ((upload_bytes <=
-             sizeof(sNdsRendererHardwareTextureRefreshSmall)) &&
-            (ndsRendererHardwareTextureRefreshUses(
-                 sNdsRendererHardwareTextureRefreshSmall) == FALSE))
+        u16 *refresh_buffer =
+            ndsRendererHardwareSelectTextureRefreshBuffer(upload_bytes);
+
+        if (refresh_buffer != NULL)
         {
-            upload_buffer =
-                sNdsRendererHardwareTextureRefreshSmall;
-            queue_texture_refresh = TRUE;
-        }
-        else if ((upload_bytes >
-                  sizeof(sNdsRendererHardwareTextureRefreshSmall)) &&
-                 (ndsRendererHardwareTextureRefreshUses(
-                      sNdsRendererHardwareTextureRefreshLarge) == FALSE))
-        {
-            upload_buffer =
-                sNdsRendererHardwareTextureRefreshLarge;
+            upload_buffer = refresh_buffer;
             queue_texture_refresh = TRUE;
         }
     }
@@ -9037,6 +10114,71 @@ static s32 ndsRendererHardwareBindTexture(
 
     upload_start = cpuGetTiming();
 #endif
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_COMPARE
+    if (aot_found != FALSE)
+    {
+        u16 *aot_buffer =
+            ndsRendererHardwareSelectTextureRefreshBuffer(upload_bytes);
+        u32 aot_capacity =
+            (aot_buffer == sNdsRendererHardwareTextureRefreshSmall) ?
+            sizeof(sNdsRendererHardwareTextureRefreshSmall) :
+            (aot_buffer == sNdsRendererHardwareTextureRefreshLarge) ?
+            sizeof(sNdsRendererHardwareTextureRefreshLarge) : 0u;
+
+        if ((aot_buffer != NULL) &&
+            (ndsRendererPupupuWaterAotLoad(
+                 &aot_selection, aot_buffer, aot_capacity,
+                 staged_row_map) != FALSE))
+        {
+            if (ndsRendererPupupuWaterAotCompare(
+                    &aot_selection, aot_buffer, staged_row_map,
+                    sNdsRendererHardwareTextureScratch) != FALSE)
+            {
+                gNdsRendererPupupuWaterAotComparePassCount++;
+                if (fraction_entry != NULL)
+                {
+                    upload_buffer = aot_buffer;
+                    staged_bytes = aot_selection.staged_bytes;
+                    queue_texture_refresh = TRUE;
+                    aot_prepared_output = TRUE;
+                    if (aot_selection.output_kind ==
+                        NDS_RENDERER_PUPUPU_WATER_AOT_COMPACT_ROWS)
+                    {
+                        staged_row_bytes =
+                            NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_BYTES;
+                        staged_row_count =
+                            NDS_RENDERER_PUPUPU_WATER_AOT_LARGE_ROW_COUNT;
+                        compact_row_output = TRUE;
+                    }
+                }
+            }
+            else
+            {
+                gNdsRendererPupupuWaterAotCompareFailCount++;
+                gNdsRendererPupupuWaterAotFallbackCount++;
+            }
+        }
+        else
+        {
+            gNdsRendererPupupuWaterAotFallbackCount++;
+        }
+        if ((fraction_entry != NULL) &&
+            (queue_texture_refresh == FALSE))
+        {
+            upload_buffer =
+                ndsRendererHardwareSelectTextureRefreshBuffer(upload_bytes);
+            if (upload_buffer != NULL)
+            {
+                queue_texture_refresh = TRUE;
+            }
+            else
+            {
+                upload_buffer = sNdsRendererHardwareTextureScratch;
+            }
+        }
+    }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     if (upload_buffer == sNdsRendererHardwareTextureRefreshLarge)
     {
@@ -9059,11 +10201,20 @@ static s32 ndsRendererHardwareBindTexture(
 #endif
         }
     }
-    else if (upload_buffer != sNdsRendererHardwareTextureScratch)
+    else if ((upload_buffer != sNdsRendererHardwareTextureScratch)
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_COMPARE
+             && (aot_prepared_output == FALSE)
+#endif
+            )
     {
         memcpy(upload_buffer, sNdsRendererHardwareTextureScratch,
                staged_bytes);
     }
+#endif
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT
+texture_pixels_ready:
 #endif
     entry = fraction_entry;
     if (entry != NULL)
@@ -9087,8 +10238,9 @@ static s32 ndsRendererHardwareBindTexture(
 #endif
         if ((refresh_ready == FALSE) &&
             (ndsRendererHardwareReplaceTextureData(
-                 entry, upload_buffer, staged_bytes, upload_bytes, NULL, 0u,
-                 0u) != FALSE))
+                 entry, upload_buffer, staged_bytes, upload_bytes,
+                 (staged_row_count != 0u) ? staged_row_map : NULL,
+                 staged_row_bytes, staged_row_count) != FALSE))
         {
             refresh_ready = TRUE;
         }
@@ -15009,6 +16161,15 @@ void ndsRendererScanDisplayList(const Gfx *dl,
 
 void ndsRendererHardwareResetSourceCaches(void)
 {
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE != \
+    NDS_RENDERER_PUPUPU_WATER_AOT_OFF
+    sNdsRendererPupupuWaterAotValidatedPalette = 0u;
+    sNdsRendererPupupuWaterAotSourceSignatureValid = FALSE;
+#if NDS_RENDERER_PUPUPU_WATER_AOT_MODE == \
+    NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT
+    ndsRendererPupupuWaterAotInvalidatePrepared();
+#endif
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     memset(sNdsRendererDirectRawPlans, 0,
            sizeof(sNdsRendererDirectRawPlans));

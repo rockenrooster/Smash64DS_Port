@@ -30,6 +30,10 @@ NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_BENCHMARK_MODE ?= 0
+# 0 keeps the source converter unchanged, 1 runs the AOT output through a
+# byte-exact shadow comparison before use, and 2 enables the validated direct
+# prepared-data path.  Direct mode is never inferred from a harness name.
+NDS_RENDERER_PUPUPU_WATER_AOT_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
 NDS_DEBUG_HUD ?= 1
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
@@ -117,6 +121,9 @@ NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
 	battle_mariofox_stage_mplivehit_status_loop \
 	menu_chain_mariofox_stage_mplivehit_status_loop
 NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP ?= $(if $(filter $(NDS_INISHIE_SOURCE_SCALE_HARNESSES),$(NDS_DEV_SCENE_HARNESS)),1,0)
+ifeq ($(filter $(NDS_RENDERER_PUPUPU_WATER_AOT_MODE),0 1 2),)
+$(error "NDS_RENDERER_PUPUPU_WATER_AOT_MODE must be 0, 1, or 2")
+endif
 NITROFS_DIR := $(PROJECT_ROOT)/$(BUILD)/nitrofs
 NITRO_FILES := $(NITROFS_DIR)
 
@@ -1005,6 +1012,14 @@ export NDS_NITROFS_AUDIO_FILES := \
 export NDS_NITROFS_RELOCDATA_FILES := \
 	$(foreach file,$(NDS_INISHIE_SCALE_RELOCDATA_FILES),$(NITROFS_DIR)/relocdata/us/$(file))
 
+NDS_NITROFS_PUPUPU_WATER_AOT_FILES :=
+ifneq ($(NDS_RENDERER_PUPUPU_WATER_AOT_MODE),0)
+NDS_NITROFS_PUPUPU_WATER_AOT_FILES := \
+	$(NITROFS_DIR)/aot/pupupu_water_aot_payload.bin \
+	$(NITROFS_DIR)/aot/pupupu_water_aot_index.bin
+endif
+export NDS_NITROFS_PUPUPU_WATER_AOT_FILES
+
 .PHONY: all clean clean-generated distclean run $(BUILD)
 
 all: $(BUILD)
@@ -1067,6 +1082,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
+		echo '#define NDS_RENDERER_PUPUPU_WATER_AOT_MODE $(NDS_RENDERER_PUPUPU_WATER_AOT_MODE)'; \
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
@@ -1104,7 +1120,7 @@ $(NDS_SCENE_HARNESS_CONFIG): FORCE
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
-$(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES)
+$(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_PUPUPU_WATER_AOT_FILES)
 $(OUTPUT).elf: $(OFILES)
 $(OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 # The source DS renderer is ARM-state code, with its hottest handlers copied
@@ -1147,6 +1163,23 @@ $(NITROFS_DIR)/audio/fgm_phase_pack_ima.bin: $(PROJECT_ROOT)/assets/audio/fgm_ph
 $(NITROFS_DIR)/audio/%: $(BATTLESHIP_O2R)/audio/%
 	@mkdir -p $(dir $@)
 	@cp $< $@
+
+NDS_PUPUPU_WATER_AOT_STAMP := $(PROJECT_ROOT)/$(BUILD)/pupupu_water_aot.stamp
+NDS_PUPUPU_WATER_AOT_GENERATOR := $(PROJECT_ROOT)/scripts/generate_pupupu_water_aot.py
+NDS_PUPUPU_WATER_AOT_FIXTURE := $(PROJECT_ROOT)/scripts/fixtures/pupupu_water_aot_expected.json
+
+$(NDS_PUPUPU_WATER_AOT_STAMP): $(NDS_PUPUPU_WATER_AOT_GENERATOR) \
+		$(NDS_PUPUPU_WATER_AOT_FIXTURE) \
+		$(BATTLESHIP_O2R)/reloc_extern_data/ExternDataBank103 \
+		$(BATTLESHIP_O2R)/reloc_extern_data/ExternDataBank104
+	@mkdir -p $(NITROFS_DIR)/aot
+	@python -B $(NDS_PUPUPU_WATER_AOT_GENERATOR) \
+		--repo-root $(PROJECT_ROOT) --runtime-only \
+		--output-dir $(NITROFS_DIR)/aot
+	@touch $@
+
+$(NDS_NITROFS_PUPUPU_WATER_AOT_FILES): $(NDS_PUPUPU_WATER_AOT_STAMP)
+	@test -f $@
 
 # A killed compiler can leave its .d file before ERROR_FILTER gets a chance to
 # repair Windows drive paths. Sanitize existing dependency files before make

@@ -50,6 +50,23 @@
 #error "NDS_RENDERER_BENCHMARK_MODE must be 0 through 4"
 #endif
 
+#define NDS_RENDERER_PUPUPU_WATER_AOT_OFF 0
+#define NDS_RENDERER_PUPUPU_WATER_AOT_COMPARE 1
+#define NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT 2
+#define NDS_RENDERER_PUPUPU_WATER_AOT_INIT_PASS 0x50574131u
+
+#ifndef NDS_RENDERER_PUPUPU_WATER_AOT_MODE
+#define NDS_RENDERER_PUPUPU_WATER_AOT_MODE \
+    NDS_RENDERER_PUPUPU_WATER_AOT_OFF
+#endif
+
+#if (NDS_RENDERER_PUPUPU_WATER_AOT_MODE < \
+     NDS_RENDERER_PUPUPU_WATER_AOT_OFF) || \
+    (NDS_RENDERER_PUPUPU_WATER_AOT_MODE > \
+     NDS_RENDERER_PUPUPU_WATER_AOT_DIRECT)
+#error "NDS_RENDERER_PUPUPU_WATER_AOT_MODE must be 0, 1, or 2"
+#endif
+
 #define NDS_RENDERER_BLOCKER_NONE 0u
 #define NDS_RENDERER_BLOCKER_BAD_BRANCH 1u
 #define NDS_RENDERER_BLOCKER_TOO_DEEP 2u
@@ -685,6 +702,7 @@ void ndsRendererProfileCensusNativeFighterSchedule(
 #endif
 void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareDiscardTextureCache(void);
+void ndsRendererPupupuWaterAotInit(void);
 s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
                                             const u16 *mip1,
                                             const u16 *mip2);
@@ -712,6 +730,32 @@ extern volatile u32 gNdsRendererFastTriangleCount;
 extern volatile u32 gNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 extern volatile u32 gNdsRendererFastFallbackCount[3];
+extern volatile u32 gNdsRendererPupupuWaterAotMode;
+extern volatile u32 gNdsRendererPupupuWaterAotInitResult;
+extern volatile u32 gNdsRendererPupupuWaterAotCandidateCount;
+extern volatile u32 gNdsRendererPupupuWaterAotLookupHitCount;
+extern volatile u32 gNdsRendererPupupuWaterAotLookupMissCount;
+extern volatile u32 gNdsRendererPupupuWaterAotSourceRejectCount;
+extern volatile u32 gNdsRendererPupupuWaterAotReadCount;
+extern volatile u32 gNdsRendererPupupuWaterAotReadFailCount;
+extern volatile u32 gNdsRendererPupupuWaterAotReadBytes;
+extern volatile u32 gNdsRendererPupupuWaterAotReadTicks;
+extern volatile u32 gNdsRendererPupupuWaterAotComparePassCount;
+extern volatile u32 gNdsRendererPupupuWaterAotCompareFailCount;
+extern volatile u32 gNdsRendererPupupuWaterAotDirectCount;
+extern volatile u32 gNdsRendererPupupuWaterAotFallbackCount;
+extern volatile u32 gNdsRendererPupupuWaterAotPreparedCacheHitCount;
+extern volatile u32 gNdsRendererPupupuWaterAotPreparedCacheMissCount;
+extern volatile u32 gNdsRendererPupupuWaterAotPreparedCacheReplacementCount;
+extern volatile u32 gNdsRendererPupupuWaterAotPreparedCacheInvalidationCount;
+extern volatile u32 gNdsRendererPupupuWaterAotPreparedCacheStaleRejectCount;
+extern volatile u32 gNdsRendererPupupuWaterAotLiveConvertCount;
+extern volatile u32 gNdsRendererPupupuWaterAotLiveWaterConvertCount;
+extern volatile u32 gNdsRendererPupupuWaterAotLiveConvertFrame;
+extern volatile u32 gNdsRendererPupupuWaterAotLiveConvertImage;
+extern volatile u32 gNdsRendererPupupuWaterAotLiveConvertTexel1Image;
+extern volatile u32 gNdsRendererPupupuWaterAotLiveConvertShape;
+extern volatile u32 gNdsRendererPupupuWaterAotLiveConvertFraction;
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner);
 #endif
