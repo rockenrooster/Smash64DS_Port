@@ -89,6 +89,11 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -RunnerSlot $RunnerSlot `
     -GdbPort $GdbPort `
     -GdbPortExplicit
+$expectedRunnerPath = (Resolve-Path -LiteralPath $runnerExe).Path
+if (-not $verifierContext.MelonDSPath.Equals(
+        $expectedRunnerPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Audio FGM verification must use isolated runner slot $RunnerSlot, not $($verifierContext.MelonDSPath)."
+}
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot

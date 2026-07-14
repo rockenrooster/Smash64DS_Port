@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $generator = Join-Path $PSScriptRoot 'render-audio-fgm-phase-pack.py'
+$verifierPath = Join-Path $PSScriptRoot 'verify-audio-fgm-phase-pack.ps1'
 $metadataPath = Join-Path $root 'assets/audio/fgm_phase_pack_ima.json'
 
 if (-not (Test-Path -LiteralPath $generator -PathType Leaf)) {
@@ -12,6 +13,11 @@ if (-not (Test-Path -LiteralPath $generator -PathType Leaf)) {
 }
 if ($null -eq (Get-Command $Python -ErrorAction SilentlyContinue)) {
     throw "Python command not found: $Python"
+}
+$verifier = Get-Content -LiteralPath $verifierPath -Raw
+if (($verifier -notmatch '-MuteAudio') -or
+    ($verifier -notmatch 'Audio FGM verification must use isolated runner slot')) {
+    throw 'Audio FGM verifier lost its host-mute or isolated-runner guard.'
 }
 
 & $Python $generator --repo-root $root --check
