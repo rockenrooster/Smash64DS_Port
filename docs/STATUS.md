@@ -80,7 +80,7 @@ physical hardware remains untested.
 | Gameplay | Core live; source Fireball render/damage passes; natural recovery coverage open |
 | Renderer | M1 and native countdown pass; M2 active; M3/M4 open |
 | HUD/countdown | User-approved lower HUD and top countdown pass |
-| Audio | Five natural phase FGMs pass; voices and winner/Results BGM remain; BGM channel proof partial |
+| Audio | Five phase FGMs and recyclable handles pass; winner/Results streams exist; voices and natural transition proof remain |
 | Stability/memory | One full match passes with 171,916-byte conservative reserve and zero safety faults; repetition pending |
 | Release evidence | Full Regression, dated capture, and exact-ROM retest pending |
 
@@ -99,8 +99,8 @@ bytes. Therefore:
   compiled epoch/run transaction.
 - Milestone 3 is open: the ~801K stage owner needs whole-stage preflight and a
   fused static-slab owner before the 150–250K target is credible.
-- Milestone 4 has a verified host-generated 322-key/206-output asset plan, but
-  live runtime lookup/promotion and zero gameplay conversion remain open.
+- Milestone 4 keeps an exact 322-key/206-output host corpus. A direct runtime
+  NitroFS reader was measured and rejected; zero-I/O preload remains open.
 - Whispy face, weapon detail, platform crossing, and some fighter lighting/
   facing remain presentation debt.
 
@@ -114,8 +114,8 @@ Normal with zero mismatch and clears the no-damage flag. Repeated Mario→Fox
 contact still awaits manual confirmation and a continuous natural-hit gate.
 
 P1 uses one integration owner plus all three subagent slots whenever three
-independent packets exist. Current isolated lanes cover M4 assets, M2/M3 owner
-parity, and audio attribute/handle correction while integration owns gates.
+independent packets exist. Current isolated lanes cover M4 zero-I/O encoding,
+M2/M3 owner parity, and KO audio while integration owns gates.
 
 Rejected Cut D/F, typed-stage, mode-9, and scanline/HBlank experiments remain
 closed; see PORTING and PERF_LEDGER for their measurements. Do not revive them

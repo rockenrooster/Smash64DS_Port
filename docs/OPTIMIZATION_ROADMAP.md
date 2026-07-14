@@ -38,7 +38,7 @@ was not rebuilt or published. Gameplay still reports two uploads / 36,864 bytes.
 | M1 — simple hardware-affine BG2 | Complete | 1,856/1,856 ticks; required 5–35K |
 | M2 — AOT DS-native Mario/Fox | In progress | ledger-off 431,168/458,688; target 170–250K |
 | M3 — AOT DS-native complete stage | Open | 800,608/803,456; target 150–250K |
-| M4 — conversion off gameplay path | Host feasibility pass | 322 keys / 206 outputs / period 216; live target zero conversion |
+| M4 — conversion off gameplay path | Corpus kept; streaming rejected | 322 keys / 206 outputs / period 216; target zero conversion and zero gameplay I/O |
 
 The owner targets are active renderer ticks, not FPS estimates. Re-profile the
 whole frame after each accepted owner cut.
@@ -216,11 +216,19 @@ conversion, allocation, decompression, and upload preparation are not. The
 promotion gate is zero gameplay conversion/upload-preparation counters with
 unchanged texture/material semantics.
 
-The deterministic host generator now reproduces the exact period-216 stream
-for all 18,000 simulated frames: 322 live keys, 206 outputs, zero oracle
-mismatches, 1,572,020-byte payload/index, and 20,224-byte maximum staged set.
-This is feasibility evidence only until live lookup selects those outputs and
-the gameplay conversion/upload-preparation counters reach zero.
+The deterministic host generator reproduces the exact period-216 stream for
+all 18,000 simulated frames: 322 live keys, 206 outputs, 3,024,896 oracle
+pixels, zero mismatches, and a 1,560,960-byte payload plus 11,060-byte index.
+It is now a permanent DevFast fixture, not a promoted runtime design.
+
+The first direct runtime trial replaced conversion with an on-demand NitroFS
+read and one prepared output per owner. It was rejected. In synchronized
+frames 171..202, direct versus off inclusive renderer median/P95 was
+1,537,984/1,573,376 versus 1,536,896/1,572,224 ticks; loop P95 was unchanged,
+draw P95 worsened by 21,376 ticks, and the window incurred 12 payload reads.
+Audio-adjusted reserve was only 153,184 bytes, 22,112 above the floor. The
+next falsifier is a complete pre-GO, zero-I/O pair-index/palette encoding with
+byte-exact oracle expansion and measured texture-VRAM ownership.
 
 ## Measurement And Correctness Rules
 

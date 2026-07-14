@@ -6,7 +6,7 @@
 |---|---|
 | Renderer M2–M4 | Mario/Fox 170–250K, complete stage 150–250K, zero gameplay conversion, phase P95 path toward ~560K active ticks |
 | Gameplay coverage | Natural Fox recovery plus current-ROM platform/edge and repeat-hit acceptance |
-| Gameplay-critical audio | Five phase FGMs pass; close voices, seven unsupported calls, audible BGM proof, and winner 12/16 followed by Results 22 |
+| Gameplay-critical audio | Five phase FGMs and handle recycling pass; close voices/25 observed unsupported calls, audible BGM proof, and natural winner 12/16 → Results 22 |
 | Full-match stability | Repeated canonical one-minute Time Up → Results soaks with memory reserve and guards intact |
 | Release evidence | Full Regression, clean canonical parity, dated captures, and exact-ROM manual user retest |
 
@@ -16,10 +16,9 @@ live in `P1_EXECUTION_BOARD.md`.
 
 ## Current P1 And Tooling Notes
 
-- Fireball is a confirmed display blocker: its source weapon is created and
-  simulated, but the current DS stage recorder rejects the non-stage GObj before
-  hardware submission. Freeze, platform/edge, Up-B, and missing-stage reports
-  are not reproducible failures on the current artifact; retest them before any
+- Fireball display/damage is closed by its visible, moving, textured natural
+  gate. Freeze, platform/edge, Up-B, and missing-stage reports are not
+  reproducible failures on the current artifact; retest them before any
   speculative behavior change. Natural Fox recovery remains coverage debt.
 - Tyler approved the lower text HUD. Mario→Fox damage was reopened after Fox
   could become permanently unhittable following an up/down-smash restore. The
@@ -32,11 +31,14 @@ live in `P1_EXECUTION_BOARD.md`.
   same-ROM split-matrix cut saved only 36,192 ticks and was removed; deleting
   all generated-run preparation/emission still leaves a 331K measured floor,
   so the next architecture must also cut the ~178K matrix-preparation wall.
-- Audio is not release-ready. All 129 local REGION_US IDs match BattleShip and
-  the five phase FGMs play naturally from a verified 39,120-byte AOT pack, but
-  fighter voices and seven other calls remain unsupported, Dream Land BGM
-  counters do not yet prove an enabled non-silent channel, and tracks 12/16/22
-  are unsupported.
+- Milestone 4's exact host corpus passes all 3,024,896 oracle pixels. The
+  gameplay NitroFS-reader trial was rejected because inclusive timing did not
+  improve, draw P95 regressed, and it performed frequent reads beside BGM.
+- Audio is not release-ready. All 144 local REGION_US IDs match BattleShip;
+  fighter attribute IDs and recyclable FGM instance tokens are source-correct.
+  Five phase FGMs play naturally, but voices and 25 observed calls remain
+  unsupported. Tracks 12/16/22 are integrated but their natural transition and
+  enabled non-silent channel still need verifier closure.
 - The live source floor/edge callbacks are now active, but their manual behavior
   is still awaiting Tyler's fresh playtest. Mode 163 now uses normal down input
   to pass its elevated fighter through the one-way platform before Walk/DashRun;

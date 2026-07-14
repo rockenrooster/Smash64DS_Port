@@ -20704,3 +20704,27 @@ remains skipped for the requested fast iteration cadence.
 - Synchronized fallback/native screenshots are complete under
   `artifacts/visibility`. Partial-alpha RGBA GO edge texels become opaque in the
   one-bit-transparency bitmap OBJ path and remain explicit presentation debt.
+
+## 2026-07-14 - Kept the exact M4 corpus and rejected runtime streaming
+
+- Added a deterministic Pupupu water generator and independent DevFast gate:
+  18,000 frames, period 216, 322 keys, 206 outputs, 3,024,896 oracle pixels,
+  zero mismatches, and pinned payload/index hashes.
+- Tested the generated outputs through a direct one-output-per-owner cache.
+  Synchronized frames 171..202 showed no inclusive renderer or loop-P95 win;
+  draw P95 regressed 21,376 ticks and the window made 12 NitroFS reads beside
+  BGM streaming. Audio-adjusted reserve was only 22,112 bytes above the floor.
+- Reverted the runtime reader and retained only the offline corpus. M4 remains
+  open for a complete pre-GO, zero-conversion, zero-I/O DS-native encoding.
+
+## 2026-07-14 - Corrected fighter audio attributes and FGM handle lifetime
+
+- Normalized exactly six audited mixed-u16 words in each Mario/Fox source
+  FTAttributes block, fixing the generic word-swap reversal of packed sound
+  IDs while retaining source-file identity and target-layout assertions.
+- Separated public FGM IDs from BattleShip's nonzero per-instance `sfx_id`
+  tokens and added clear/release/recycle behavior plus lifecycle diagnostics.
+- Raw O2R/layout fixtures, all 144 local REGION_US IDs, the phase-pack fixture,
+  compile, and host-muted natural countdown gate pass. The runtime observed
+  five supported phase plays, 25 unsupported calls, max one live FGM, 28
+  envelope steps, and 235,104 bytes headroom. KO/voice support remains open.

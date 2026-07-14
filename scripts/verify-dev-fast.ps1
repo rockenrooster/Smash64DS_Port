@@ -22,7 +22,8 @@ if ($List) {
         [PSCustomObject]@{ Step = 'Derived BGM assets'; Script = 'check-audio-bgm-derived-assets.ps1' },
         [PSCustomObject]@{ Step = 'melonDS policy'; Script = 'check-melonds-policy.ps1' },
         [PSCustomObject]@{ Step = 'One-minute verifier contract'; Script = 'check-one-minute-match-verifier.ps1' },
-        [PSCustomObject]@{ Step = 'FGM phase pack'; Script = 'check-audio-fgm-phase-pack.ps1' }
+        [PSCustomObject]@{ Step = 'FGM phase pack'; Script = 'check-audio-fgm-phase-pack.ps1' },
+        [PSCustomObject]@{ Step = 'Pupupu water AOT corpus'; Script = 'check-pupupu-water-aot.ps1' }
     )
     if (-not $SkipRegistryCheck) {
         $steps += [PSCustomObject]@{ Step = 'Harness registry'; Script = 'check-harness-registry.ps1' }
@@ -58,6 +59,7 @@ Invoke-DevFastStep -Script 'check-audio-bgm-derived-assets.ps1'
 Invoke-DevFastStep -Script 'check-melonds-policy.ps1'
 Invoke-DevFastStep -Script 'check-one-minute-match-verifier.ps1'
 Invoke-DevFastStep -Script 'check-audio-fgm-phase-pack.ps1'
+Invoke-DevFastStep -Script 'check-pupupu-water-aot.ps1'
 if (-not $SkipRegistryCheck) {
     Invoke-DevFastStep -Script 'check-harness-registry.ps1'
 }

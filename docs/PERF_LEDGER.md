@@ -1997,3 +1997,35 @@ DECISION: KEEP
   behavior. Bitmap OBJ makes nonzero partial-alpha GO edge texels opaque; keep
   that bounded presentation debt rather than restoring software composition.
 ```
+
+## 2026-07-14 - retained exact M4 corpus; rejected gameplay NitroFS reader
+
+```text
+IDEA ID: M4-PUPUPU-WATER-AOT-DIRECT
+SOURCE / OFFLINE CONTRACT:
+  The host generator replays the exact BattleShip Pupupu texture/MObj scripts
+  for 18,000 frames: period 216, 322 keys, 206 distinct outputs, 3,024,896
+  oracle pixels, and zero mismatches. Exact products are a 1,560,960-byte
+  payload (SHA fa8bf472...21c1e) and 11,060-byte index
+  (SHA 83d2b342...08b6). Retain this generator, fixture, and DevFast gate.
+TREATMENT:
+  Direct mode held one prepared output per water owner and used fseek/fread on
+  a cache miss. It removed live conversion but read the packaged payload on
+  12 of synchronized frames 171..202 and shared NitroFS with streaming BGM.
+SYNCHRONIZED 32-FRAME RESULT:
+  Off inclusive renderer median/P95 1,536,896/1,572,224; direct
+  1,537,984/1,573,376 (+1,088/+1,152). Off draw 1,264,960/1,272,512; direct
+  1,091,008/1,293,888 (-173,952 median, +21,376 P95). Loop median/P95 was
+  1,680,512/1,714,368 off and 1,680,448/1,714,368 direct. The cumulative FPS
+  marker's 16.3 -> 16.8 movement is not a synchronized-window win.
+MEMORY / CORRECTNESS:
+  Audio-adjusted reserve was 153,184 bytes, only 22,112 above the 128 KiB
+  floor. The index was integrity-checked, but the same-size payload lacked a
+  runtime content check. Frequent gameplay I/O also violates M4's critical-
+  path requirement even if conversion counters are zero.
+DECISION: REJECT / REVERT RUNTIME; KEEP CORPUS
+  Reverted the runtime integration. Do not promote streaming as M4. The next
+  falsifier must preload a complete exact DS-native pair-index/palette corpus
+  before GO, prove byte-exact oracle expansion, fit measured texture VRAM/RAM,
+  and report zero gameplay conversion, preparation, decompression, and I/O.
+```
