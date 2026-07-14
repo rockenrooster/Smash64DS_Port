@@ -8,6 +8,7 @@ param(
     [switch]$OpenGL4x,
     [switch]$SoftwareRenderer,
     [switch]$Jit,
+    [switch]$NoJit,
     [switch]$MaximizeVertical,
     [ValidateRange(-1,8)][int]$RendererFastRunMode = -1,
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
@@ -21,6 +22,9 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 if ($OpenGL4x -and $SoftwareRenderer) {
     throw '-OpenGL4x and -SoftwareRenderer are mutually exclusive.'
+}
+if ($Jit -and $NoJit) {
+    throw '-Jit and -NoJit are mutually exclusive.'
 }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $melonDsPath = if ([System.IO.Path]::IsPathRooted($MelonDS)) {
@@ -227,6 +231,9 @@ try {
         if ($Jit) {
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'JIT' -Key 'Enable' -Value 'true'
+        } elseif ($NoJit) {
+            $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
+                -Section 'JIT' -Key 'Enable' -Value 'false'
         }
         if ($SoftwareRenderer) {
             $visibleConfig = $visibleConfig -replace

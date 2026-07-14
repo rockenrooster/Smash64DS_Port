@@ -13,7 +13,7 @@ param(
     [ValidateRange(1,128)][int]$ShardCount = 1,
     [ValidateRange(0,127)][int]$ShardIndex = 0,
     [ValidateRange(-1,127)][int]$RunnerSlot = -1,
-    [ValidateRange(1,65535)][int]$GdbPort = 3333
+    [ValidateRange(1,65535)][int]$GdbPort = 4333
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path

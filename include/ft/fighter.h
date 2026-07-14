@@ -1526,8 +1526,8 @@ enum {
 };
 
 enum {
-    nGMHitStatusNormal = 0,
-    nGMHitStatusNone = 1,
+    nGMHitStatusNone = 0,
+    nGMHitStatusNormal = 1,
     nGMHitStatusInvincible = 2,
     nGMHitStatusIntangible = 3
 };

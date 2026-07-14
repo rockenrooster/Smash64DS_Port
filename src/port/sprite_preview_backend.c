@@ -20,6 +20,7 @@ void lbCommonPrepSObjDraw(Gfx **dls, SObj *sobj)
 }
 
 extern void ndsIFCommonRecordHUDState(void);
+extern u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj);
 
 DObj *lbCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root)
 {
@@ -2231,6 +2232,23 @@ void lbCommonDrawSObjAttr(GObj *gobj)
          (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) &&
         (sNdsSObjFrameActive != FALSE))
     {
+        if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+            (ndsIFCommonRouteGObjToLowerTextHUD(gobj) != FALSE))
+        {
+            /* BattleShip still runs each source display callback so timer,
+             * stock, and damage state advance normally. Only its prepared
+             * steady HUD composition is redirected to the DS lower text
+             * backend; countdown/GO GObjs keep the original top BG3 path. */
+            ndsIFCommonRecordHUDState();
+            return;
+        }
+        if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+            (gobj != NULL) &&
+            (gobj->id == nGCCommonKindInterface) &&
+            (gobj->proc_display == lbCommonDrawSObjAttr))
+        {
+            gNdsIFCommonHUDTopGenericPassCount++;
+        }
         ndsDrawLayeredSObjFrame(gobj, 0u);
         if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
         {

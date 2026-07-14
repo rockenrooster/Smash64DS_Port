@@ -361,7 +361,8 @@ blocker appears. melonDS remains the automated runtime/global verifier.
 ## Current References
 
 - `docs/STATUS.md`: short current-truth state.
-- `docs/HANDOFF.md`: detailed current boundary and next work.
+- `docs/P1_EXECUTION_BOARD.md`: only dynamic queue and acceptance decisions.
+- `docs/HANDOFF.md`: exact current commands and artifact handoff.
 - `docs/DIAGNOSTIC_REFERENCE.md`: diagnostic globals and manual GDB details.
 - `docs/EMULATOR_STRATEGY.md`: melonDS vs no$gba routing.
 - `docs/PORTING.md`: append-only history.

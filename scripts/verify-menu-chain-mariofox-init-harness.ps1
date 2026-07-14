@@ -136,10 +136,10 @@ try {
     if (-not $init.Success -or (Convert-MarkerUInt32 $init.Groups[1].Value) -ne 0x4654494e -or (Convert-MarkerUInt32 $init.Groups[2].Value) -ne 0x4654434c -or (Convert-MarkerUInt32 $init.Groups[3].Value) -ne 0x46544446 -or ((Convert-MarkerUInt32 $init.Groups[4].Value) -band 0x3fff) -ne 0x3fff -or [int]$init.Groups[6].Value -ne 2) {
         throw "Mario/Fox init-state proof failed after menu chain.`n$gdbStdout"
     }
-    if (-not $p0.Success -or [int]$p0.Groups[1].Value -ne 0 -or [int]$p0.Groups[2].Value -ne 0 -or [int]$p0.Groups[3].Value -ne 55 -or [int]$p0.Groups[4].Value -ne 0 -or [int]$p0.Groups[5].Value -ne 0 -or [int]$p0.Groups[6].Value -ne 0 -or [int]$p0.Groups[7].Value -ne 0 -or (Convert-MarkerUInt32 $p0.Groups[8].Value) -ne 0) {
+    if (-not $p0.Success -or [int]$p0.Groups[1].Value -ne 0 -or [int]$p0.Groups[2].Value -ne 0 -or [int]$p0.Groups[3].Value -ne 55 -or [int]$p0.Groups[4].Value -ne 0 -or [int]$p0.Groups[5].Value -ne 0 -or [int]$p0.Groups[6].Value -ne 1 -or [int]$p0.Groups[7].Value -ne 0 -or (Convert-MarkerUInt32 $p0.Groups[8].Value) -ne 0) {
         throw "Mario init-state fields failed after menu chain.`n$gdbStdout"
     }
-    if (-not $p1.Success -or [int]$p1.Groups[1].Value -ne 1 -or [int]$p1.Groups[2].Value -ne 0 -or [int]$p1.Groups[3].Value -ne 55 -or [int]$p1.Groups[4].Value -ne 0 -or [int]$p1.Groups[5].Value -ne 0 -or [int]$p1.Groups[6].Value -ne 0 -or [int]$p1.Groups[7].Value -ne 0 -or (Convert-MarkerUInt32 $p1.Groups[8].Value) -ne 0) {
+    if (-not $p1.Success -or [int]$p1.Groups[1].Value -ne 1 -or [int]$p1.Groups[2].Value -ne 0 -or [int]$p1.Groups[3].Value -ne 55 -or [int]$p1.Groups[4].Value -ne 0 -or [int]$p1.Groups[5].Value -ne 0 -or [int]$p1.Groups[6].Value -ne 1 -or [int]$p1.Groups[7].Value -ne 0 -or (Convert-MarkerUInt32 $p1.Groups[8].Value) -ne 0) {
         throw "Fox init-state fields failed after menu chain.`n$gdbStdout"
     }
     if (-not $floor.Success -or [int]$floor.Groups[1].Value -ne 1 -or [int]$floor.Groups[2].Value -ne 1 -or [int]$floor.Groups[3].Value -ne 1 -or [int]$floor.Groups[4].Value -ne 1 -or (Convert-MarkerUInt32 $floor.Groups[5].Value) -ne 0 -or (Convert-MarkerUInt32 $floor.Groups[6].Value) -ne 0) {

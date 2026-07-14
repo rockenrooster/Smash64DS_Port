@@ -1177,11 +1177,13 @@ void ftParamSetHitStatusPartAll(GObj *fighter_gobj, s32 hitstatus)
     {
         for (i = 0; i < FTDAMAGECOLL_NUM_MAX; i++)
         {
-            if (fp->damage_colls[i].joint != NULL)
+            if (fp->damage_colls[i].hitstatus != nGMHitStatusNone)
             {
                 fp->damage_colls[i].hitstatus = hitstatus;
             }
         }
+        fp->is_hitstatus_nodamage =
+            (hitstatus == nGMHitStatusNormal) ? FALSE : TRUE;
     }
     if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
     {
@@ -1260,10 +1262,16 @@ void ftParamSetHitStatusPartID(GObj *fighter_gobj, s32 joint_id,
     {
         for (i = 0; i < FTDAMAGECOLL_NUM_MAX; i++)
         {
-            if ((fp->damage_colls[i].joint != NULL) &&
+            if ((fp->damage_colls[i].hitstatus != nGMHitStatusNone) &&
                 (fp->damage_colls[i].joint_id == joint_id))
             {
                 fp->damage_colls[i].hitstatus = hitstatus;
+
+                if (hitstatus != nGMHitStatusNormal)
+                {
+                    fp->is_hitstatus_nodamage = TRUE;
+                }
+                break;
             }
         }
     }
@@ -5855,7 +5863,6 @@ void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus)
     if (fp != NULL)
     {
         fp->hitstatus = hitstatus;
-        fp->special_hitstatus = hitstatus;
     }
 }
 

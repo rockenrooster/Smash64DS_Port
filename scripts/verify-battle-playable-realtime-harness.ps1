@@ -1,7 +1,7 @@
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
-    [int]$GdbPort = 3333,
+    [int]$GdbPort = 4333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
@@ -28,7 +28,7 @@ $selectedGdbPort = if (($RunnerSlot -ge 0) -and
 } else {
     $GdbPort
 }
-$minimumSmokeDelaySeconds = if ($FastIteration) { 12 } else { 20 }
+$minimumSmokeDelaySeconds = 25
 $smokeDelaySeconds = [Math]::Max($DelaySeconds, $minimumSmokeDelaySeconds)
 $earlyScreenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 12)
 $lateScreenshotDelaySeconds = 12

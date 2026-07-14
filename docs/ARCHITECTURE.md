@@ -114,7 +114,7 @@ The additive `P1Gate` composes a compact normal-opening smoke, canonical
 `FastIteration` capture, supplemental mode-163 battle, and one-minute lifecycle
 check. It changes neither runtime ownership nor Boundary/Regression/Full
 membership. It is a shadow checkpoint, not P1 completion or the required
-five-minute canonical soak; legacy harnesses remain diagnostic.
+one-minute canonical soak; legacy harnesses remain diagnostic.
 
 ## Include Strategy
 
@@ -1451,7 +1451,7 @@ tile, TEXEL1, fraction, and combine state, but every candidate still requires
 the complete 236-byte texture-key comparison. Profile 2 retains the independent
 linear lookup and legacy-alias diagnostic. Removal repairs and reinserts the
 rest of the linear-probe cluster instead of leaving tombstones, so the animated
-pond cannot degrade lookup cost over the five-minute match. Runtime accounting
+pond cannot degrade lookup cost over the complete one-minute match. Runtime accounting
 requires active hits, table hits, exact active/table/miss conservation, and fewer
 than four probes per call. A warm frame may have zero misses because the resident
 cache crosses frame boundaries. A host fixture covers equal fingerprints,

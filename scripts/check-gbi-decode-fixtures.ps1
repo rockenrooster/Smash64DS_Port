@@ -196,6 +196,19 @@ function Get-TextureNibble {
     }
     return ($packed -band 0x0f)
 }
+function Get-Ci4PaletteEntriesUsed {
+    param(
+        [byte[]]$Bytes,
+        [string]$Layout,
+        [int]$PaletteBase = 0
+    )
+    $maxIndex = 0
+    for ($i = 0; $i -lt ($Bytes.Count * 2); $i++) {
+        $index = Get-TextureNibble $Bytes $i $Layout
+        if ($index -gt $maxIndex) { $maxIndex = $index }
+    }
+    return $PaletteBase + $maxIndex + 1
+}
 function Get-TextureHalfword {
     param(
         [uint16[]]$Halfwords,
@@ -1102,6 +1115,12 @@ foreach ($layout in @('Native', 'O2R')) {
 }
 Assert-Equal (Get-TextureNibble $o2rCi4 0 'O2R') 1 'O2R IA4/I4 share the CI4 packed-byte lane rule.'
 Assert-Equal (Get-TextureByte $o2rCi8 2 'O2R') 2 'O2R IA8/I8 share the CI8 byte lane rule.'
+$partialTlutCi4 = [byte[]](0x56, 0x34, 0x2c, 0x01)
+Assert-Equal (Get-Ci4PaletteEntriesUsed $partialTlutCi4 'O2R') 13 `
+    'Partial CI4 TLUT validation rejected a source using only indices 0..12.'
+$partialTlutCi4[3] = 0x1d
+Assert-Equal (Get-Ci4PaletteEntriesUsed $partialTlutCi4 'O2R') 14 `
+    'Partial CI4 TLUT validation accepted index 13 with only 13 entries.'
 $o2rHalfwords = [uint16[]](0x3344, 0x1122)
 Assert-Equal (Get-TextureHalfword $o2rHalfwords 0 'O2R') 0x1122 'O2R RGBA16/TLUT halfword 0 lane decode failed.'
 Assert-Equal (Get-TextureHalfword $o2rHalfwords 1 'O2R') 0x3344 'O2R RGBA16/TLUT halfword 1 lane decode failed.'
@@ -1345,6 +1364,7 @@ Assert-True ($platform.Contains('ndsPlatformGetOriginalSpriteOverlayLayer')) 'DS
 Assert-True ($platform.Contains('ndsPlatformCommitOriginalSpriteFinalLayer')) 'DS platform no longer publishes direct final-layer commits and ownership epochs.'
 $taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
 $harnessScript = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
+$fireballVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-fireball-render.ps1') -Raw
 $rendererUploadPair = [regex]::Match(
     $harnessScript, '(?s)function Test-RendererUploadPair \{.*?\n\}').Value
 Assert-True (-not [string]::IsNullOrWhiteSpace($rendererUploadPair) -and $rendererUploadPair.Contains('$Count -eq 0 -and $Bytes -eq 0') -and $rendererUploadPair.Contains('$Count -eq 1 -and ($Bytes -eq 4096 -or $Bytes -eq 32768)') -and $rendererUploadPair.Contains('$Count -eq 2 -and $Bytes -eq 36864') -and -not $rendererUploadPair.Contains('ProfileLevel')) 'Renderer upload-pair gate no longer accepts every exact animated-water phase uniformly across profiles.'
@@ -1392,6 +1412,10 @@ Assert-True ($renderer -match '(?s)if \(state->texture_prepare_valid == 0u\).*?s
 Assert-True ($renderer -match '(?s)state->texture_prepare_vertex_flags =\s*\(state->texture_prepare_vertex_flags &\s*NDS_RENDERER_VERTEX_CONTEXT_PREPARED_MASK\).*?#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*vertex_submit_start = cpuGetTiming\(\);.*?ndsRendererHardwareSubmitVertex\(stats, state, i0, projected_z\[0\]\s*#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*, &semantic_event\.vertex\[0\]\s*#endif\s*\);\s*ndsRendererHardwareSubmitVertex\(stats, state, i1, projected_z\[1\]\s*#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*, &semantic_event\.vertex\[1\]\s*#endif\s*\);\s*ndsRendererHardwareSubmitVertex\(stats, state, i2, projected_z\[2\]\s*#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*, &semantic_event\.vertex\[2\]\s*#endif\s*\);') 'Renderer does not retain one exact prepared context before the measured three-vertex sequence with profile-2-only timing and semantic capture.'
 Assert-True ([regex]::Matches($renderer, '(?s)ndsRendererHardwareSubmitVertex\(stats, state, i[0-2], projected_z\[[0-2]\]\s*#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*, &semantic_event\.vertex\[[0-2]\]\s*#endif\s*\);').Count -eq 3 -and $renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*NDSRendererSemanticEvent semantic_event;\s*#endif' -and -not ($renderer -match 's32 projected_z\s*,\s*NDSRendererSemanticVertex') -and -not ($renderer -match 'projected_z\[[0-2]\]\s*,\s*&semantic_event')) 'Renderer exposes semantic vertex argument/storage outside profile-2 guards.'
 Assert-True ($harnessScript.Contains('RENDER_CI4LUT=')) 'Mode 163 does not expose exact animated CI4 LUT build/reuse coverage.'
+Assert-True ($fireballVerifier.Contains("`$target = 'smash64ds-battle-playable-canonical-hwtri'") -and $fireballVerifier.Contains('NDS_DEV_LIVE_INPUT_PREVIEW=1') -and $fireballVerifier.Contains('NDS_HARNESS_FAST_LOGIC=0') -and $fireballVerifier.Contains('NDS_RENDERER_HW_TRIANGLES=1') -and $fireballVerifier.Contains('NDS_RENDERER_PROFILE_LEVEL=0') -and $fireballVerifier.Contains("`$hv[1] -eq 163")) 'Live Fireball verifier no longer uses the shipped realtime hardware-triangle profile-0 mode-163 ROM.'
+Assert-True ($fireballVerifier.Contains('tbreak ifcommon.c:3175') -and $fireballVerifier.Contains('tbreak ftmariospecialn.c:ftMarioSpecialNSetStatus') -and $fireballVerifier.Contains('tbreak battleship_mario_fireball.c:wpMarioFireballMakeWeapon')) 'Live Fireball verifier no longer drives real post-GO input through unambiguous original Mario special and weapon source paths.'
+Assert-True ($fireballVerifier.Contains('WEAPON_RENDER=') -and $fireballVerifier.Contains('gNdsWeaponRendererFireballVisibleDrawCount')) 'Live Fireball verifier no longer exposes hardware-render coverage.'
+Assert-True ($fireballVerifier.Contains("`$wv[12] -eq (2 * `$wv[11])") -and $fireballVerifier.Contains("`$wv[13] -eq `$wv[11]") -and $fireballVerifier.Contains("`$wv[6] -eq 0") -and $fireballVerifier.Contains("`$wv[14] -eq 0") -and $fireballVerifier.Contains("`$wv[8] -eq 0x444c4831") -and $fireballVerifier.Contains("`$mv[2] -ge 131072")) 'Live Fireball verifier no longer requires every source DLHEAD1 callback to be a visible, rejection-free two-triangle draw above the P1 reserve floor.'
 Assert-True ($renderer.Contains('NDS_RENDERER_HW_CI4_INDEX_CACHE_COUNT 2u') -and $renderer.Contains('NDS_RENDERER_HW_CI4_INDEX_CACHE_TEXELS 1024u')) 'Performance renderer CI4 source-index cache lost its exact two-plane 32x32 bound.'
 Assert-True ($renderer.Contains('sizeof(sNdsRendererHardwareCi4IndexCache) == 2080u')) 'Performance renderer CI4 source-index cache exceeded its measured 2080-byte DS bound.'
 Assert-True ($renderer.Contains('== 512u') -and $renderer.Contains('CI4 representative maps must stay within 512 bytes')) 'Performance renderer CI4 representative maps exceeded their measured 512-byte DS bound.'
@@ -1487,6 +1511,8 @@ Assert-True (-not ($renderer -match 'texels\s*\[\s*index\s*>>\s*1\s*\]')) 'Rende
 Assert-True ($renderer.Contains('key.render_tmem = render_tile->tmem')) 'Renderer hardware texture cache key is not wired directly to render-tile TMEM state.'
 Assert-True ($renderer.Contains('key.image_width = primary_image_width')) 'Renderer hardware texture cache key is missing resolved TEXEL0 source image width.'
 Assert-True ($renderer.Contains('palette_base = render_tile->palette * 16u')) 'Renderer CI4 palette bank is not applied from the active render tile.'
+Assert-True ($renderer.Contains('ndsRendererHardwareCiPaletteEntriesUsed')) 'Renderer partial-TLUT used-index validation is missing.'
+Assert-True ($renderer -match '(?s)palette_entries = palette_base \+.*?16u : 256u.*?if \(stats->texture_tlut_count < palette_entries\).*?palette_entries = ndsRendererHardwareCiPaletteEntriesUsed') 'Renderer normal full TLUT path no longer bypasses the partial-TLUT source scan.'
 Assert-True ($renderer.Contains('key.load_tile = primary_load_tile')) 'Renderer hardware texture cache key is missing resolved TEXEL0 load-tile state.'
 Assert-True ($renderer.Contains('key.load_uls = primary_load_uls')) 'Renderer hardware texture cache key is missing resolved TEXEL0 load ULS state.'
 Assert-True ($renderer.Contains('key.load_dxt = primary_load_dxt')) 'Renderer hardware texture cache key is missing resolved TEXEL0 load DXT state.'
@@ -1541,7 +1567,7 @@ Assert-True ($harnessScript.Contains('gNdsRendererProfileTextureCi4DirectPixels'
 Assert-True ($harnessScript.Contains('RENDER_ADAPTER_CACHE=') -and $harnessScript.Contains('gNdsRendererProfileDObjWorldCacheOverflowCount')) 'Forensic renderer verifier does not prove bounded frame-local matrix-cache reuse.'
 Assert-True ($harnessScript.Contains('RENDER_STAGE_WORLD_CACHE=') -and $harnessScript.Contains('gNdsRendererProfileStageWorldPersistentOracleMismatchCount')) 'Forensic renderer verifier does not prove exact persistent stage-world reuse.'
 Assert-True ($harnessScript.Contains('RENDER_AFFINE_MATRIX=') -and $harnessScript.Contains('gNdsRendererProfileAffineMatrixMismatches')) 'Forensic renderer verifier does not compare affine DObj composition with the former exact generic multiply.'
-Assert-True ($renderer.Contains('texel1_palette_entries =') -and $renderer.Contains('texel1_source.palette_base + 16u')) 'Renderer TLUT pointer validation does not cover the TEXEL1 CI4 palette bank.'
+Assert-True ($renderer.Contains('texel1_palette_entries = texel1_source.palette_base +') -and $renderer.Contains('texel1_source.size == NDS_RENDERER_HW_TEXTURE_SIZ_4B')) 'Renderer TLUT pointer validation does not cover the TEXEL1 CI palette bank.'
 Assert-True ($renderer.Contains('texel1_palette_entries > palette_entries')) 'Renderer does not resolve the maximum TEXEL0/TEXEL1 CI4 palette span.'
 Assert-True ($renderer.Contains('use_texel1_ci4_lut != FALSE')) 'Renderer upload loop does not select the CI4 TEXEL0/TEXEL1 lookup path.'
 Assert-True ($renderer.Contains('if ((width != upload_width) || (height != upload_height))') -and $renderer.Contains('memset(sNdsRendererHardwareTextureScratch, 0, upload_bytes)')) 'Renderer texture conversion does not limit padding clears to non-exact upload extents.'

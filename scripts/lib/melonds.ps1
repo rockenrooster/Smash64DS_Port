@@ -225,7 +225,8 @@ function Set-MelonDSGdbConfig {
         [string]$MelonDSPath,
         [int]$GdbPort = (Get-MelonDSActiveGdbPort),
         [Nullable[int]]$Arm7Port,
-        [switch]$Persistent
+        [switch]$Persistent,
+        [switch]$MuteAudio
     )
 
     if (-not $Arm7Port.HasValue) {
@@ -256,6 +257,11 @@ function Set-MelonDSGdbConfig {
     # wall-clock limiter or JIT setting. The interpreter remains the reference.
     $text = Set-MelonDSTomlRootValue -Text $text -Key 'LimitFPS' -Value 'false'
     $text = Set-MelonDSTomlValue -Text $text -Section 'JIT' -Key 'Enable' -Value 'false'
+    if ($MuteAudio) {
+        # Automated full-match gates exercise the ROM audio path and counters,
+        # but must not emit host audio during unattended verification.
+        $text = Set-MelonDSTomlValue -Text $text -Section 'Instance0.Audio' -Key 'Volume' -Value '0'
+    }
     Set-Content $config -Value $text -NoNewline
 
     return [PSCustomObject]@{
@@ -273,14 +279,16 @@ function Enable-MelonDSGdbConfig {
         [string]$MelonDSPath,
         [int]$GdbPort = (Get-MelonDSActiveGdbPort),
         [Nullable[int]]$Arm7Port,
-        [switch]$Persistent
+        [switch]$Persistent,
+        [switch]$MuteAudio
     )
 
     return Set-MelonDSGdbConfig `
         -MelonDSPath $MelonDSPath `
         -GdbPort $GdbPort `
         -Arm7Port $Arm7Port `
-        -Persistent:$Persistent
+        -Persistent:$Persistent `
+        -MuteAudio:$MuteAudio
 }
 
 function Restore-MelonDSGdbConfig {

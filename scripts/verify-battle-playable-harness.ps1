@@ -20,6 +20,7 @@ param(
     [switch]$LiveInputPreview,
     [switch]$CPUOpponentProof,
     [switch]$MatchLifecycleProof,
+    [switch]$OneMinuteMatchProof,
     [switch]$RequireRealtime60Fps,
     [int]$RendererProfileLevel = -1,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0
@@ -27,6 +28,9 @@ param(
 $ErrorActionPreference = 'Stop'
 if (($RendererProfileLevel -lt -1) -or ($RendererProfileLevel -gt 2)) {
     throw 'RendererProfileLevel must be -1 (automatic), 0, 1, or 2.'
+}
+if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
+    throw 'OneMinuteMatchProof requires MatchLifecycleProof.'
 }
 $ImportBattleShipNormalMoveset = $true
 $ImportBattleShipMarioFireball = $true
@@ -54,12 +58,23 @@ if ($RealtimePresentation) {
         $build = 'build-battle-playable-forensic-hwtri-harness'
     }
     $LiveInputPreview = $true
+} elseif ($OneMinuteMatchProof) {
+    # Keep the full-expiry release gate artifact-isolated from the canonical
+    # user ROM while exercising that ROM's same one-minute source rule.
+    $target = 'smash64ds-battle-playable-one-minute-match'
+    $build = 'build-battle-playable-one-minute-match-harness'
+    $LiveInputPreview = $true
 } elseif ($CPUOpponentProof) {
     $target = 'smash64ds-battle-playable-cpu-proof'
     $build = 'build-battle-playable-cpu-proof-harness'
     $LiveInputPreview = $true
 }
-if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 2 }
+if ($RendererProfileLevel -lt 0) {
+    # The one-minute match is a state/memory gate. Keep renderer profiling off
+    # so the unthrottled full match reaches Results in a practical verifier
+    # window; the canonical realtime verifier owns renderer performance.
+    $RendererProfileLevel = if ($OneMinuteMatchProof) { 0 } else { 2 }
+}
 if ($MatchLifecycleProof) {
     $harness = 'battle_playable_match_lifecycle'
 } elseif ($RealtimePresentation -and ($RendererProfileLevel -lt 2)) {
@@ -93,6 +108,7 @@ $hardwareTriangles = $target -like '*-hwtri'
     -LiveInputPreview:$LiveInputPreview `
     -CPUOpponentProof:$CPUOpponentProof `
     -MatchLifecycleProof:$MatchLifecycleProof `
+    -OneMinuteMatchProof:$OneMinuteMatchProof `
     -RequireRealtime60Fps:$RequireRealtime60Fps `
     -RendererProfileLevel $RendererProfileLevel `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `

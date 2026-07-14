@@ -1,8 +1,8 @@
 # Current Status
 
-This is the short current-truth document. Use
-`docs/DIAGNOSTIC_REFERENCE.md` for marker definitions and append history to
-`docs/PORTING.md`.
+This is the short current-truth document. `P1_EXECUTION_BOARD.md` is the only
+dynamic queue. Use `DIAGNOSTIC_REFERENCE.md` for marker definitions and append
+history to `PORTING.md`.
 
 ## Direction
 
@@ -19,7 +19,7 @@ The registry is authoritative:
 ```
 
 Boundary/BoundaryDirect now select canonical `battle_playable_realtime`, mode
-163. Latest keeps runtime, Title, and that same natural five-minute
+163. Latest keeps runtime, Title, and that same natural one-minute
 Mario-human/Fox-level-3 scene. Exact BattleShip start locks made the former
 161/162 bounded pre-GO input driver invalid; those modes remain diagnostic-only
 and their selected live-hit coverage reduction is recorded in KNOWN_ISSUES.
@@ -43,22 +43,22 @@ update no greater than 35,000 ticks. Live frames preserve both fighters and the
 626-triangle fighter contract.
 
 BattleShip Sprite manifests and general 4c/CI4/I8 layered-SObj decode restore
-the timer, countdown traffic light, and GO art. Percent/stock semantic state is
-coherent, but its custom SObj callbacks still emit no pixels; lower-LCD routing
-is presentation debt and is allowed by the user.
+the countdown traffic light and GO art on the top screen. The user-approved
+lower text HUD shows FPS, timer, Mario/Fox labels, stock, and damage, updates on
+state changes, and clears at VS Results.
 
 BattleShip's exact player-control gate is restored. A synchronized pre-GO
-sample proves Wait, 18,000 remaining, timer stopped, both fighters locked, and
+sample proves Wait, 3,600 remaining, timer stopped, both fighters locked, and
 zero Fox CPU processing. A post-GO sample proves Go, remaining + passed =
-18,000, timer running, both unlocked, and natural CPU activity.
+3,600, timer running, both unlocked, and natural CPU activity.
 
 The canonical target enables the retained path at profile 0 and publishes the
 user-facing ROM only through the Makefile parity rule:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-12,038,144 bytes
-SHA-256 4132FBB6A618AE16A3E7554A2C4928669152278DD0F84138329B4058FDF93557
+12,043,264 bytes
+SHA-256 385B9F051C5CBB801089C69E13D49F9E0D19C07F1E4DA19DA943772B5553FC21
 ```
 
 `artifacts/visibility/latest.png` is a successful canonical screenshot. Both
@@ -66,18 +66,53 @@ sampled frames pass top-screen visibility, green/detail, named regions,
 horizontal stage detail, motion, and sky coverage. Acceptance is melonDS-only;
 physical hardware remains untested.
 
+## P1 Release Matrix
+
+| Area | Current state |
+|---|---|
+| Natural one-minute battle and Results | Natural 3,600→0/Time Up/22→24 gate passes; exact canonical-duration qualification remains |
+| Gameplay | Core live; source Fireball render/damage passes; natural recovery coverage open |
+| Renderer | M1 pass; M2 active; M3/M4 open |
+| HUD/countdown | User-approved lower HUD and top countdown pass |
+| Audio | 129 exact US IDs pass; real FGM/voices and winner/Results BGM fail; BGM channel proof partial |
+| Stability/memory | One full match passes with 171,916-byte conservative reserve and zero safety faults; repetition pending |
+| Release evidence | Full Regression, dated capture, and exact-ROM retest pending |
+
+Detailed owners, gates, blockers, and evidence live only on the execution board.
+
 ## Performance And Open Work
 
-Whole-frame presentation remains about 9.6–11.4 FPS. Sampled profile-1 gameplay
+Whole-frame presentation is about 10.3 FPS in the latest synchronized
+`laboratory-profile-1` M2 window, not a canonical phase baseline. Sampled lab
+gameplay
 still reports positive texture conversion and two uploads totaling 36,864
 bytes. Therefore:
 
-- Milestone 2, AOT DS-native Mario/Fox at 170–250K ticks, is open.
-- Milestone 3, AOT DS-native complete stage at 150–250K ticks, is open.
-- Milestone 4, zero texture conversion during gameplay, is open.
-- Percent/stock custom-SObj rendering and optional lower-LCD layout are open.
+- Milestone 2 is in progress: Mario/Fox still cost about 431K combined versus
+  170–250K. Ranked next cuts are a GX hierarchy/3x3 lighting sidecar and a
+  compiled epoch/run transaction.
+- Milestone 3 is open: the ~801K stage owner needs whole-stage preflight and a
+  fused static-slab owner before the 150–250K target is credible.
+- Milestone 4 has a verified host-generated 322-key/206-output asset plan, but
+  live runtime lookup/promotion and zero gameplay conversion remain open.
+- Countdown/GO still takes about 1.84M foreground ticks per active frame by
+  clearing/decoding/downscaling/copying full software layers; a source-driven
+  DS-native owner is active work.
 - Whispy face, weapon detail, platform crossing, and some fighter lighting/
   facing remain presentation debt.
+
+Same-ROM split projection/modelview A/B/A saved only 36,192 fighter ticks and
+was rejected and removed. The compile-time generated-owner no-submit floor is
+331K, so submission-only tuning cannot close M2; the next architecture must
+also cut the ~178K matrix-preparation wall. A BattleShip ABI mismatch had made
+Fox's up/down-smash restore command disable his damage colliders. On exact ROM
+`385B9F...FC21`, natural Fox up-smash now restores all 11 active colliders to
+Normal with zero mismatch and clears the no-damage flag. Repeated Mario→Fox
+contact still awaits manual confirmation and a continuous natural-hit gate.
+
+P1 uses one integration owner plus all three subagent slots whenever three
+independent packets exist. Current isolated lanes cover M4 assets, native
+countdown/GO, and audio/Results while integration owns shared gates and docs.
 
 Rejected Cut D/F, typed-stage, mode-9, and scanline/HBlank experiments remain
 closed; see PORTING and PERF_LEDGER for their measurements. Do not revive them
@@ -96,6 +131,8 @@ Passing checks for this checkpoint:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-Focused profile-1 and canonical profile-0 pre/post-GO runs also pass. Full
+Focused profile-1 and canonical profile-0 pre/post-GO runs pass. The automated
+one-minute natural-runtime gate also passes logic=3892, timer=3600→0/3600,
+scene=22→24, safety=0, stale=0/0, and conservative reserve=171,916 bytes. Full
 Regression remains follow-up. Run the Lean snapshot only after all final checks
 and status inspection; run no project command after it.

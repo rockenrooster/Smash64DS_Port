@@ -570,8 +570,10 @@ The script:
    compatibility key `Enable = true`) without duplicating either key in
    `[Instance0.Gdb]`
 3. launches the ROM hidden
-4. waits for the melonDS ARM9 listener on port `3333`
-5. connects `arm-none-eabi-gdb` to `127.0.0.1:3333`
+4. waits for the selected melonDS ARM9 listener (`4333` for maintained Codex
+   single runs, `3333` for a user-opened manual instance, runner-slot mapping
+   otherwise; ARM7 is the following port)
+5. connects `arm-none-eabi-gdb` to the selected ARM9 port
 6. reads diagnostic globals from `smash64ds.elf`
 7. restores or removes the temporary melonDS config
 
@@ -1228,12 +1230,12 @@ Opening movie / Opening Portraits:
   `inishieAsset=header/geometry nodes=1`. It proves `GRInishieMap` is staged
   and `llGRInishieMapMapHeader` resolves without disturbing the active Pupupu
   proof.
-- `STAGE_INISHIE_SCALE_SOURCE`: source-setup diagnostic for current Inishie
-  scale boundary builds. Direct and menu-chain source-backed builds currently
+- `STAGE_INISHIE_SCALE_SOURCE`: source-setup diagnostic for legacy Inishie
+  scale builds. Direct and menu-chain source-backed builds
   reach step `13`, after original `grInishieMakeScale` returns through the
   offset-compatible setup shim. The second and third fields record active
   GObj/DObj counts sampled before source setup; the last field is the source
-  setup readiness mask. Current boundary builds report the original low bits
+  setup readiness mask. Those diagnostic builds report the original low bits
   plus source bits `0x1ff00`: safe active `G_ENDDL`, native
   ScaleRetract words, raw `155.vpk0.bin` load, raw DObjDesc validation, raw
   map-head-DL validation, raw ScaleRetract validation, native DL scan pass,
@@ -1246,7 +1248,7 @@ Opening movie / Opening Portraits:
   triangle totals, and blocker `0`. The mask proves the two platform DObjs have
   the original `gcDrawDObjDLHead0` display callback, the two string DObjs have
   the original `gcDrawDObjTreeForGObj` display callback, and all four DObj DLs
-  scan cleanly through `ndsRendererScanDisplayList`. Current boundary builds
+  scan cleanly through `ndsRendererScanDisplayList`. The diagnostic builds
   summarize this as `sourceDL=0xff cmds=91 tris=20`.
 - `STAGE_INISHIE_SCALE_MATERIAL`: source-DL material/texture-state diagnostic
   emitted with `STAGE_INISHIE_SCALE_DISPLAY`. Expected current values include
@@ -1310,15 +1312,15 @@ Opening movie / Opening Portraits:
   zero presented/drawn frames, and a nonzero hardware timer. Realtime/manual
   builds use mode `0` and expect live presented frames, one scene draw per
   completed update, and nonzero timer-derived rates. The retained-wallpaper
-  canonical HW smoke currently reports about `9.6-11.4` fps; pass
+  canonical HW smoke is currently about `10.3` fps; pass
   `-RequireRealtime60Fps` for the
   stricter `59.3..60.3` fps renderer-cache gate.
 - `BPLAY_START`: synchronized source start-state marker. Fields are game
   status, time limit, time remain, time passed, timer-started flag, player-0
   control-disable, player-1 control-disable, and pacing logic frames. A valid
-  pre-GO window is `Wait / 5 / 18000 / 0 / 0 / 1 / 1`; a valid post-GO window
-  is `Go / 5 / positive / positive / 1 / 0 / 0` with remain plus passed equal
-  to 18,000.
+  pre-GO window is `Wait / 1 / 3600 / 0 / 0 / 1 / 1`; a valid post-GO window
+  is `Go / 1 / positive / positive / 1 / 0 / 0` with remain plus passed equal
+  to 3,600.
 - `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
   flushes, pre-flush GX polygon RAM count, pre-flush GX vertex RAM count,
   `GFX_STATUS`, and `GFX_CONTROL`. The verifier requires submitted frames to
@@ -1349,8 +1351,10 @@ Opening movie / Opening Portraits:
   calls, unchanged-key skips, changed-key writes, pixel writes, background and
   foreground 320x240 staging-clear bytes, then BG2 clear/copy/final-write bytes
   and BG3 clear/copy/final-write bytes. Retained-wallpaper canonical requires
-  one direct/change, 49,152 pixels, 98,304 BG2 final-write bytes, positive live
-  foreground staging/copy traffic, and zero BG2 clear/copy or BG3 direct-write
+  one direct/change, 49,152 pixels, 98,304 BG2 final-write bytes, bounded
+  countdown/GO foreground traffic when those source SObjs are active, and zero
+  BG2 clear/copy or BG3 direct-write. Steady gameplay with the approved lower
+  HUD route legitimately reports zero foreground traffic
   traffic.
 - `SCENE_MIP_CACHE`: retained-wallpaper ownership marker. Fields are state,
   capture count, upload count, failure count, seed hash, nonzero pixels, seed
@@ -1364,8 +1368,12 @@ Opening movie / Opening Portraits:
   failures are zero, the transform is valid/nonidentity, and update cost is at
   most 35,000 ticks.
 - `IFHUD`: source IFCommon semantic state. It records object mask, current/max
-  damage, digit encodings, and stock ranges. It does not prove percent/stock
-  pixels; those custom display callbacks are still unimplemented.
+  damage, digit encodings, and stock ranges.
+- `IFHUD_ROUTE`: lower-screen routing mask, stock route, and retained top
+  generic-SObj pass. Countdown/3-2-1/GO remain on the top screen.
+- `BATTLE_TEXT_HUD`: lower backend render/change counts, fingerprint, timer,
+  Mario/Fox damage and stock, active mask, and damage-visible mask. Marker
+  agreement plus capture/user approval proves the visible lower text HUD.
 - `RENDER_MATRIX` / `RENDER_VERTEX`: canonical HW matrix and vertex-range
   markers. They record loaded projection/modelview seeds and raw/HW vertex
   ranges so blank-screen failures can be sorted into matrix/clip issues versus
@@ -3672,7 +3680,7 @@ If the emulator does not start:
 1. Confirm `smash64ds.nds` and `smash64ds.elf` exist.
 2. Confirm `emulators/melonds/melonDS.exe` exists or pass `-MelonDS`.
 3. If melonDS stays alive but has no visible/capturable window and no ARM9 GDB
-   listener on `3333`, first inspect `[Instance0.Gdb]` in
+   listener on the selected port, first inspect `[Instance0.Gdb]` in
    `emulators/melonds/melonDS.toml` for duplicate `Enable` / `Enabled` keys,
    then test another known-good ROM such as devkitPro's
    `Simple_Tri.nds`. If that also starts hidden/windowless, treat it as a
@@ -3692,7 +3700,7 @@ C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe .\smash64ds.elf
 Inside GDB:
 
 ```gdb
-target remote 127.0.0.1:3333
+target remote 127.0.0.1:4333
 p/x gNdsOriginalBootStage
 p/x gNdsSceneBoundaryResult
 p gNdsStartupTaskmanSceneKind
@@ -5249,12 +5257,11 @@ items/weapons, HUD, audio, or unbounded gameplay scheduling.
 
 The `battle_mariofox_stage_mplivehit_damage_loop` and
 `menu_chain_mariofox_stage_mplivehit_damage_loop` verifiers are standalone
-regression coverage for modes `159/160`. The current Boundary/Latest pair is
-`battle_mariofox_stage_mplivehit_status_loop` and
-`menu_chain_mariofox_stage_mplivehit_status_loop` for modes `161/162`, which
+regression coverage for modes `159/160`. Legacy diagnostic modes `161/162`
 consume this damage-loop proof and add bounded selected damage-status
-follow-through. The marker group is emitted only when the verifier passes
-`-RequireStageMPLiveHitDamageLoop`.
+follow-through. Canonical `battle_playable_realtime`, mode `163`, is the active
+Boundary/Latest battle entry. The marker group is emitted only when the
+verifier passes `-RequireStageMPLiveHitDamageLoop`.
 
 - `STAGE_MPLIVEHIT_DAMAGE`: top-level live-hit result, safe result, proof mask,
   deferred mask, and count. A passing proof reports `0x464c4844`,
@@ -6204,7 +6211,7 @@ scheduling.
 
 - `CPU_CONFIG`: player-0/player-1 kinds, CPU level, human/CPU counts, time
   limit, item toggle mask, and item appearance rate. Canonical mode `163`
-  expects Mario Man, Fox Com level `3`, `1/1`, five minutes, and items off.
+  expects Mario Man, Fox Com level `3`, `1/1`, one minute, and items off.
 - `CPU_AI`: setup and damage-detect calls, process/target frames, objective and
   behavior masks, input changes, stick/A/B/Z frames, attack/live-hitbox/guard/
   recover frames, status changes/final status/kinetics/input, maximum Mario
@@ -6212,6 +6219,11 @@ scheduling.
   requires source Attack dispatch, all three action buttons, live hitboxes,
   guard, positive damage, valid floors, and substantial movement. Recover is
   reported continuously but is not required until selected naturally.
+- `MATCH_START`: scene, game status, time limit/remain/passed, timer-start flag,
+  Mario/Fox control-disable flags, and arena headroom captured by an exact
+  conditional breakpoint before the first VSBattle update. The one-minute gate
+  requires `22, Wait, 1, 3600, 0, stopped, locked, locked` so a late attach
+  cannot masquerade as a full match.
 - `VSB_END`: lifecycle result, DS arena-adapter count, taskman-return count and
   status, source time limit/remain/passed, game status, scene previous/current,
   and sudden-death flag. The accelerated gate expects `VBEN`, `1+`, `1+`,
@@ -6225,9 +6237,16 @@ scheduling.
   Place zero must use source Win1..Win3 status/motion; the other place must use
   Lose status/motion, following `mnvsresults.c:869-928` and status installation
   through `scsubsysfighter.c:74-77`.
-- `VS_RESULTS_DISPLAY`: current scratch readiness, committed frame count, and
-  last committed width/height. A passed lifecycle requires a positive commit
-  count and a retained `256x192` source-SObj composition.
+- `VS_RESULTS_DISPLAY`: current scratch readiness, committed frame count, last
+  committed width/height, and battle-text-HUD clear count. A passed lifecycle
+  requires a positive commit, retained `256x192` source-SObj composition, and
+  at least one lower battle-HUD clear during the transition.
+- `MATCH_SAFETY`: relocation stale files/bytes; natural-motion unsafe,
+  figatree-table, and figatree-animation failures; AObj/MObj normalization
+  failures; stage/fighter external-fixup failures; BGM open/read/unsafe-write/
+  overrun failures; collision missing/out-of-range/bad-vertex failures; and
+  fighter-display bounds failures. All 17 fields must remain zero through the
+  complete one-minute match and Results setup.
 
 ## Debugging Principle
 

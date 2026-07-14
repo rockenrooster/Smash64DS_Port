@@ -12771,6 +12771,135 @@ static u32 ndsStageGCDrawAllLoopInitialGeometryMode(void)
     return (sNdsStageGCDrawAllLoopCurrentDisplayLinkID == 6) ?
         mode : (mode & ~NDS_RENDERER_GEOM_ZBUFFER);
 }
+
+static sb32 ndsStageGCDrawAllLoopIsWeaponDisplay(GObj *gobj, s32 link_id)
+{
+    return ((gobj != NULL) &&
+            (gobj->id == nGCCommonKindWeapon) &&
+            (gobj->dl_link_id == 14) &&
+            (link_id == 14)) ? TRUE : FALSE;
+}
+
+static void ndsStageGCDrawAllLoopRecordWeaponCapture(GObj *gobj,
+                                                      s32 link_id)
+{
+    WPStruct *wp;
+
+    if (ndsStageGCDrawAllLoopIsWeaponDisplay(gobj, link_id) == FALSE)
+    {
+        return;
+    }
+    gNdsWeaponRendererCaptureCount++;
+    wp = gobj->user_data.p;
+    if ((wp != NULL) && (wp->kind >= 0) && (wp->kind < 32))
+    {
+        gNdsWeaponRendererKindMask |= 1u << (u32)wp->kind;
+    }
+}
+
+static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
+                                                  u32 callback_kind)
+{
+    DObj *root;
+    WPStruct *wp;
+    u32 triangle_before;
+    u32 texture_ready_before;
+    u32 texture_reject_before;
+    u32 triangle_delta;
+    u32 texture_ready_delta;
+    u32 texture_reject_delta;
+    u32 initial_geometry_mode;
+    u32 x_bits;
+    u32 y_bits;
+
+    if ((weapon_gobj == NULL) ||
+        (weapon_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
+        (ndsStageGCDrawAllLoopIsWeaponDisplay(
+             weapon_gobj,
+             sNdsStageGCDrawAllLoopCurrentDisplayLinkID) == FALSE))
+    {
+        return;
+    }
+
+    gNdsWeaponRendererDObjDrawCount++;
+    gNdsWeaponRendererCallbackKind = callback_kind;
+    root = DObjGetStruct(weapon_gobj);
+    if ((root == NULL) || (root->dv == NULL) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1))
+    {
+        gNdsWeaponRendererRejectedDrawCount++;
+        return;
+    }
+
+    x_bits = ndsFloatBits(root->translate.vec.f.x);
+    y_bits = ndsFloatBits(root->translate.vec.f.y);
+    if ((gNdsWeaponRendererSubmitCount != 0u) &&
+        ((x_bits != gNdsWeaponRendererLastXBits) ||
+         (y_bits != gNdsWeaponRendererLastYBits)))
+    {
+        gNdsWeaponRendererMovingDrawCount++;
+    }
+    gNdsWeaponRendererLastXBits = x_bits;
+    gNdsWeaponRendererLastYBits = y_bits;
+
+    triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
+    texture_ready_before =
+        gNdsStageGCDrawAllLoopHardwareTextureReadyCount;
+    texture_reject_before =
+        gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
+    initial_geometry_mode = ndsStageGCDrawAllLoopInitialGeometryMode();
+    if ((initial_geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u)
+    {
+        /* BattleShip wpDisplayDrawNormal clears Z before link-14 weapons. */
+        gNdsWeaponRendererNoZCount++;
+    }
+
+    ndsRendererAdapterBeginStageTraversal();
+    ndsRendererAdapterSubmitStageDObj(
+        root,
+        callback_kind,
+        sNdsStageGCDrawAllLoopCurrentCameraGObj,
+        initial_geometry_mode);
+    ndsRendererAdapterEndStageTraversal();
+
+    triangle_delta =
+        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;
+    texture_ready_delta =
+        gNdsStageGCDrawAllLoopHardwareTextureReadyCount -
+        texture_ready_before;
+    texture_reject_delta =
+        gNdsStageGCDrawAllLoopHardwareTextureRejectCount -
+        texture_reject_before;
+    gNdsWeaponRendererTriangleCount += triangle_delta;
+    gNdsWeaponRendererTextureReadyCount += texture_ready_delta;
+    gNdsWeaponRendererTextureRejectCount += texture_reject_delta;
+
+    if (triangle_delta == 0u)
+    {
+        gNdsWeaponRendererRejectedDrawCount++;
+        return;
+    }
+
+    gNdsWeaponRendererSubmitCount++;
+    if (texture_reject_delta == 0u)
+    {
+        gNdsWeaponRendererVisibleDrawCount++;
+    }
+    wp = weapon_gobj->user_data.p;
+    if ((wp != NULL) && (wp->kind == nWPKindFireball))
+    {
+        gNdsWeaponRendererFireballSubmitCount++;
+        gNdsWeaponRendererFireballTriangleCount += triangle_delta;
+        if ((texture_ready_delta != 0u) && (texture_reject_delta == 0u))
+        {
+            gNdsWeaponRendererFireballVisibleDrawCount++;
+        }
+    }
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+}
 #endif
 
 static sb32 ndsStageGCDrawAllLoopClassifyGObj(GObj *gobj, u32 *mask,
@@ -12966,6 +13095,9 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     sNdsStageGCDrawAllLoopCurrentCameraGObj = camera_gobj;
     sNdsStageGCDrawAllLoopCurrentDisplayGObj = display;
     sNdsStageGCDrawAllLoopCurrentDisplayLinkID = link_id;
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsStageGCDrawAllLoopRecordWeaponCapture(display, link_id);
+#endif
     if (ndsStageGCDrawAllLoopClassifyGObj(display, &mask,
                                           &is_layer) != FALSE)
     {
@@ -13023,6 +13155,13 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     if (ndsStageGCDrawAllLoopClassifyGObj(stage_gobj, &mask,
                                           &is_layer) == FALSE)
     {
+#if NDS_RENDERER_HW_TRIANGLES
+        if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
+        {
+            ndsStageGCDrawAllLoopSubmitWeaponDObj(stage_gobj,
+                                                  callback_kind);
+        }
+#endif
         return;
     }
     gNdsStageGCDrawAllLoopDObjDrawCallbackCount++;

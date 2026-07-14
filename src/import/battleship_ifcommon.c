@@ -161,11 +161,104 @@ static void ndsIFCommonRecordStockState(u32 player)
 
 void ndsIFCommonRecordHUDState(void)
 {
+    u32 active_mask = 0u;
+    u32 show_damage_mask = 0u;
+    u32 single_stock_mask = 0u;
+    u32 cpu_player_mask = 0u;
+    u32 player;
+
+    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (gSCManagerBattleState == NULL))
+    {
+        return;
+    }
+
     gNdsIFCommonHUDRecordCount++;
 
     ndsIFCommonRecordDamageState(0u);
     ndsIFCommonRecordDamageState(1u);
     ndsIFCommonRecordStockState(0u);
     ndsIFCommonRecordStockState(1u);
+
+    for (player = 0u; player < 2u; player++)
+    {
+        if (gSCManagerBattleState->players[player].pkind !=
+            nFTPlayerKindNot)
+        {
+            active_mask |= 1u << player;
+        }
+        if (sIFCommonPlayerDamageInterface[player].is_show_interface !=
+            FALSE)
+        {
+            show_damage_mask |= 1u << player;
+        }
+        if (gSCManagerBattleState->players[player].is_single_stockicon !=
+            FALSE)
+        {
+            single_stock_mask |= 1u << player;
+        }
+        if (gSCManagerBattleState->players[player].pkind ==
+            nFTPlayerKindCom)
+        {
+            cpu_player_mask |= 1u << player;
+        }
+    }
+    gNdsIFCommonHUDActivePlayerMask = active_mask;
+    gNdsIFCommonHUDShowDamageMask = show_damage_mask;
+    gNdsIFCommonHUDSingleStockMask = single_stock_mask;
+    gNdsIFCommonHUDCPUPlayerMask = cpu_player_mask;
+    gNdsIFCommonHUDP0FighterKind =
+        (u32)gSCManagerBattleState->players[0].fkind;
+    gNdsIFCommonHUDP1FighterKind =
+        (u32)gSCManagerBattleState->players[1].fkind;
+    gNdsIFCommonHUDP0Level =
+        (u32)gSCManagerBattleState->players[0].level;
+    gNdsIFCommonHUDP1Level =
+        (u32)gSCManagerBattleState->players[1].level;
+    gNdsIFCommonHUDP0LowerStock =
+        (gSCManagerBattleState->players[0].stock_count < 0) ? S8_MAX :
+        ((gSCManagerBattleState->players[0].is_single_stockicon != FALSE) ?
+         1u : (u32)gSCManagerBattleState->players[0].stock_count + 1u);
+    gNdsIFCommonHUDP1LowerStock =
+        (gSCManagerBattleState->players[1].stock_count < 0) ? S8_MAX :
+        ((gSCManagerBattleState->players[1].is_single_stockicon != FALSE) ?
+         1u : (u32)gSCManagerBattleState->players[1].stock_count + 1u);
+    gNdsIFCommonHUDTimeRemain = gSCManagerBattleState->time_remain;
+    gNdsIFCommonHUDTimerLimit = sIFCommonTimerLimit;
+    gNdsIFCommonHUDTimerStarted =
+        (sIFCommonTimerIsStarted != FALSE) ? 1u : 0u;
+    gNdsIFCommonHUDGameStatus = gSCManagerBattleState->game_status;
+}
+
+u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
+{
+    u32 route = 0u;
+
+    if (gobj == NULL)
+    {
+        return FALSE;
+    }
+    if (gNdsIFCommonHUDLowerTextMode == 0u)
+    {
+        return FALSE;
+    }
+    if (gobj->proc_display == ifCommonTimerProcDisplay)
+    {
+        route = 1u;
+        gNdsIFCommonHUDLowerTimerRouteCount++;
+    }
+    else if ((gobj->proc_display == ifCommonPlayerStockMultiProcDisplay) ||
+             (gobj->proc_display == ifCommonPlayerStockSingleProcDisplay))
+    {
+        route = 2u;
+        gNdsIFCommonHUDLowerStockRouteCount++;
+    }
+    if (route != 0u)
+    {
+        gNdsIFCommonHUDLowerRouteMask |= route;
+        gNdsIFCommonHUDLowerRouteCount++;
+        return TRUE;
+    }
+    return FALSE;
 }
 #endif

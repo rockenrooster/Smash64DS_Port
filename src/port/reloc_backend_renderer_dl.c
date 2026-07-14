@@ -99,6 +99,15 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
 static NDSRendererAdapterNativeOwnerWorkspace
     sNdsRendererAdapterNativeOwnerWorkspace;
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static sb32 ndsRendererAdapterCollectFighterTopology(
+    DObj *dobj,
+    u32 parent_index,
+    DObj **joints,
+    u8 *joint_parents,
+    u32 *joint_count);
+#endif
+
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 typedef struct NDSRendererAdapterNativeOwnerValidationCache
 {
@@ -1421,6 +1430,91 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     return TRUE;
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
+    DObj *dobj,
+    NDSRendererMatrix20p12 *out,
+    volatile NDSRendererOwnerProfile *owner)
+{
+    DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
+    DObj *cursor = dobj;
+    NDSRendererMatrix20p12 local;
+    const NDSRendererMatrix20p12 *cached;
+    u32 depth = 0u;
+    u32 phase_start;
+    u32 i;
+
+    if ((dobj == NULL) || (out == NULL) || (owner == NULL))
+    {
+        return FALSE;
+    }
+    owner->m2_world_matrix_request_count++;
+    phase_start = cpuGetTiming();
+    cached = ndsRendererAdapterFindDObjWorldMatrix(dobj);
+    if (cached != NULL)
+    {
+        *out = *cached;
+        owner->m2_world_matrix_cache_hit_count++;
+        owner->m2_hash_parent_lookup_ticks +=
+            cpuGetTiming() - phase_start;
+        return TRUE;
+    }
+    while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+           (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
+    {
+        chain[depth++] = cursor;
+        cursor = cursor->parent;
+    }
+    if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
+    {
+        owner->m2_hash_parent_lookup_ticks +=
+            cpuGetTiming() - phase_start;
+        return FALSE;
+    }
+    for (i = 1u; i < depth; i++)
+    {
+        cached = ndsRendererAdapterFindDObjWorldMatrix(chain[i]);
+        if (cached != NULL)
+        {
+            *out = *cached;
+            owner->m2_world_matrix_cache_hit_count++;
+            break;
+        }
+    }
+    if (i == depth)
+    {
+        ndsRendererAdapterMtxIdentity20p12(out);
+    }
+    owner->m2_hash_parent_lookup_ticks += cpuGetTiming() - phase_start;
+
+    for (; i != 0u; i--)
+    {
+        sb32 local_valid;
+
+        phase_start = cpuGetTiming();
+        local_valid = ndsRendererAdapterBuildDObjLocalMatrix(
+            chain[i - 1u], &local);
+        owner->m2_local_matrix_ticks += cpuGetTiming() - phase_start;
+        owner->m2_local_matrix_build_count++;
+        if (local_valid != FALSE)
+        {
+            phase_start = cpuGetTiming();
+            ndsRendererMtxMulAffine20p12(&local, out, out);
+            owner->m2_world_affine_ticks +=
+                cpuGetTiming() - phase_start;
+            owner->m2_world_affine_count++;
+
+            phase_start = cpuGetTiming();
+            ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
+            owner->m2_hash_parent_lookup_ticks +=
+                cpuGetTiming() - phase_start;
+        }
+    }
+    return TRUE;
+}
+#endif
+
 #if NDS_RENDERER_HW_TRIANGLES
 static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
@@ -1944,7 +2038,12 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 binding_count,
     CObj *cobj,
     const NDSRendererMatrix20p12 **projection_ptr,
-    const NDSRendererMatrix20p12 **modelview_ptrs)
+    const NDSRendererMatrix20p12 **modelview_ptrs
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    , volatile NDSRendererOwnerProfile *m2_owner
+#endif
+    )
 {
     NDSRendererMatrix20p12 camera_projection;
     NDSRendererMatrix20p12 camera_modelview;
@@ -1952,6 +2051,10 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
     u32 binding_index;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    u32 m2_phase_start;
+#endif
 
     if ((bindings == NULL) || (projection_ptr == NULL) ||
         (modelview_ptrs == NULL) ||
@@ -1967,9 +2070,22 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         modelview_ptrs[binding_index] = NULL;
     }
 
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    m2_phase_start = cpuGetTiming();
+#endif
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, &camera_projection, &camera_projection_valid,
         &camera_modelview, &camera_modelview_valid);
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    if (m2_owner != NULL)
+    {
+        m2_owner->m2_camera_fetch_ticks +=
+            cpuGetTiming() - m2_phase_start;
+        m2_owner->m2_camera_fetch_count++;
+    }
+#endif
     if (camera_projection_valid != FALSE)
     {
         sNdsRendererAdapterNativeOwnerProjection = camera_projection;
@@ -1987,17 +2103,37 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     {
         if (bindings[binding_index] != NULL)
         {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+            if (ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
+                    bindings[binding_index], &world,
+                    m2_owner) == FALSE)
+#else
             if (ndsRendererAdapterBuildDObjWorldMatrix(
                     bindings[binding_index], &world) == FALSE)
+#endif
             {
                 return FALSE;
             }
             if (camera_modelview_valid != FALSE)
             {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                m2_phase_start = cpuGetTiming();
+#endif
                 ndsRendererMtxMulAffine20p12(
                     &world, &camera_modelview,
                     &sNdsRendererAdapterNativeOwnerModelviews[
                         binding_index]);
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                if (m2_owner != NULL)
+                {
+                    m2_owner->m2_world_camera_ticks +=
+                        cpuGetTiming() - m2_phase_start;
+                    m2_owner->m2_world_camera_count++;
+                }
+#endif
             }
             else
             {
@@ -2019,6 +2155,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
             (camera_modelview_valid != FALSE) ||
             (binding_count == 0u)) ? TRUE : FALSE;
 }
+
 static u32 ndsRendererAdapterNormalizeNativeGeometryMode(u32 geometry_mode)
 {
     const u32 legacy_cull_front = 0x00001000u;
@@ -8333,6 +8470,149 @@ static void ndsFighterCollectAllDObjsWithDL(
                                               &traversal_index);
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static sb32 ndsRendererAdapterCollectFighterTopology(
+    DObj *dobj,
+    u32 parent_index,
+    DObj **joints,
+    u8 *joint_parents,
+    u32 *joint_count)
+{
+    while (dobj != NULL)
+    {
+        if (*joint_count >= NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX)
+        {
+            return FALSE;
+        }
+        u32 joint_index = (*joint_count)++;
+
+        joints[joint_index] = dobj;
+        joint_parents[joint_index] = (u8)parent_index;
+        if (ndsRendererAdapterCollectFighterTopology(
+                dobj->child, joint_index,
+                joints, joint_parents, joint_count) == FALSE)
+        {
+            return FALSE;
+        }
+        dobj = dobj->sib_next;
+    }
+    return TRUE;
+}
+
+#endif
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+
+static void ndsRendererAdapterM2CensusFighter(
+    u32 slot,
+    FTStruct *fp,
+    DObj *root,
+    const NDSFighterDLAllDrawCollection *collection,
+    volatile NDSRendererOwnerProfile *owner)
+{
+    DObj *joints[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    u8 joint_parents[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    u8 joint_bindings[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    u32 joint_count = 0u;
+    u32 joint_index;
+    u32 binding_index;
+    u32 schedule_matches = 0u;
+    u32 binding_matches = 0u;
+
+    if ((slot > 1u) || (fp == NULL) || (root == NULL) ||
+        (collection == NULL) || (owner == NULL))
+    {
+        return;
+    }
+    memset(joints, 0, sizeof(joints));
+    memset(joint_parents, 31, sizeof(joint_parents));
+    memset(joint_bindings, 31, sizeof(joint_bindings));
+    ndsRendererAdapterCollectFighterTopology(
+        root, 31u, joints, joint_parents, &joint_count);
+
+    for (binding_index = 0u;
+         binding_index < collection->selected_count;
+         binding_index++)
+    {
+        for (joint_index = 0u;
+             joint_index < joint_count;
+             joint_index++)
+        {
+            if (joints[joint_index] == collection->dobjs[binding_index])
+            {
+                if (joint_bindings[joint_index] == 31u)
+                {
+                    joint_bindings[joint_index] = (u8)binding_index;
+                }
+                break;
+            }
+        }
+    }
+    for (joint_index = 0u; joint_index < joint_count; joint_index++)
+    {
+        DObj *joint = joints[joint_index];
+        FTParts *parts = ftGetParts(joint);
+        u32 xobj_index;
+
+        for (xobj_index = 0u;
+             xobj_index < joint->xobjs_num;
+             xobj_index++)
+        {
+            XObj *xobj = joint->xobjs[xobj_index];
+
+            if (xobj == NULL)
+            {
+                owner->m2_xobj_null_count++;
+                continue;
+            }
+            owner->m2_xobj_count++;
+            if (xobj->kind ==
+                NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND)
+            {
+                owner->m2_xobj_kind_4b_count++;
+            }
+            else if (xobj->kind == nGCMatrixKindNull)
+            {
+                owner->m2_xobj_kind_2_count++;
+            }
+            else
+            {
+                owner->m2_xobj_other_count++;
+            }
+        }
+        if (parts != NULL)
+        {
+            owner->m2_parts_count++;
+            switch (parts->transform_update_mode)
+            {
+            case 0:
+                owner->m2_parts_matrix_mode0_count++;
+                break;
+            case 1:
+                owner->m2_parts_matrix_mode1_count++;
+                break;
+            case 3:
+                owner->m2_parts_matrix_mode3_count++;
+                break;
+            default:
+                owner->m2_parts_matrix_other_count++;
+                break;
+            }
+        }
+    }
+    ndsRendererProfileCensusNativeFighterSchedule(
+        slot, joint_parents, joint_bindings,
+        joint_count, collection->selected_count,
+        &schedule_matches, &binding_matches);
+    owner->m2_schedule_joint_count = joint_count;
+    owner->m2_schedule_match_count = schedule_matches;
+    owner->m2_binding_count = collection->selected_count;
+    owner->m2_binding_match_count = binding_matches;
+    owner->m2_animlock_active = (fp->is_use_animlocks != FALSE) ? 1u : 0u;
+}
+#endif
+
 static void ndsFighterDisplayContractSeedMaterialLights(
     NDSRendererStats *stats)
 {
@@ -8407,7 +8687,12 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *const *modelviews,
     NDSFighterDLDrawState *resolver,
-    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+    NDSRendererAdapterNativeOwnerWorkspace *workspace
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    , volatile NDSRendererOwnerProfile *m2_owner
+#endif
+    )
 {
     u32 i;
 
@@ -8455,6 +8740,29 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
         config->resolve_data = ndsFighterDLDrawResolveRendererData;
         config->user = resolver;
 
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        {
+            u32 m2_compose_start = cpuGetTiming();
+            sb32 m2_compose_valid =
+                ((modelviews[i] != NULL) &&
+                 (ndsRendererAdapterComposeNativeRootMatrix(
+                      modelviews[i], projection,
+                      &workspace->composed_matrices[i]) != FALSE)) ?
+                    TRUE : FALSE;
+
+            if (m2_owner != NULL)
+            {
+                m2_owner->m2_final_compose_ticks +=
+                    cpuGetTiming() - m2_compose_start;
+                m2_owner->m2_final_compose_count++;
+            }
+            if (m2_compose_valid == FALSE)
+            {
+                return FALSE;
+            }
+        }
+#else
         if ((modelviews[i] == NULL) ||
             (ndsRendererAdapterComposeNativeRootMatrix(
                  modelviews[i], projection,
@@ -8462,6 +8770,7 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
         {
             return FALSE;
         }
+#endif
 
         root->root_offset = workspace->root_offsets[i];
         root->material_count = workspace->material_counts[i];
@@ -9239,6 +9548,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 i;
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererProfileOwner owner_id;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    volatile NDSRendererOwnerProfile *m2_owner;
+    u32 m2_phase_start;
+#endif
     NDSRelocLoadedFile *native_owner_file = NULL;
     NDSRelocLoadedFile **native_owner_loaded =
         sNdsRendererAdapterNativeOwnerWorkspace.loaded;
@@ -9284,7 +9598,24 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     root_x_before = (root != NULL) ? ndsFloatBits(root->translate.vec.f.x) :
         0u;
 
+#if NDS_RENDERER_HW_TRIANGLES
+    owner_id = (slot == 0u) ? NDS_RENDERER_PROFILE_OWNER_MARIO :
+                              NDS_RENDERER_PROFILE_OWNER_FOX;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    m2_owner = &gNdsRendererProfileOwners[(u32)owner_id];
+    m2_phase_start = cpuGetTiming();
+#endif
+#endif
     ndsFighterCollectAllDObjsWithDL(root, &collection);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    m2_owner->m2_collection_ticks += cpuGetTiming() - m2_phase_start;
+    m2_phase_start = cpuGetTiming();
+    ndsRendererAdapterM2CensusFighter(
+        slot, fp, root, &collection, m2_owner);
+    m2_owner->m2_census_ticks += cpuGetTiming() - m2_phase_start;
+#endif
     if (slot == 0u)
     {
         gNdsFighterDLAllDrawP0CandidateCount = collection.total_count;
@@ -9350,8 +9681,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         ndsFighterDisplayContractSeedMaterialLights(&persistent_stats);
     }
 #if NDS_RENDERER_HW_TRIANGLES
-    owner_id = (slot == 0u) ? NDS_RENDERER_PROFILE_OWNER_MARIO :
-                              NDS_RENDERER_PROFILE_OWNER_FOX;
     native_owner_enabled =
         (((gNdsRendererFastRunMode ==
            NDS_RENDERER_FAST_RUN_NATIVE_MARIO) && (slot == 0u)) ||
@@ -9372,6 +9701,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     if (native_owner_enabled != FALSE)
     {
         u32 expected_asset_id = (slot == 0u) ? 0x128u : 0x139u;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        m2_phase_start = cpuGetTiming();
+#endif
 
         if ((collection.selected_count == 0u) ||
             (collection.selected_count >
@@ -9455,6 +9788,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         {
             native_owner_enabled = FALSE;
         }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        m2_owner->m2_owner_validation_ticks +=
+            cpuGetTiming() - m2_phase_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         if (native_owner_enabled != FALSE)
         {
@@ -9467,7 +9805,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     (gGCCurrentCamera != NULL) ?
                         CObjGetStruct(gGCCurrentCamera) : NULL,
                     &native_owner_projection,
-                    native_owner_modelviews) == FALSE)
+                    native_owner_modelviews
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                    , m2_owner
+#endif
+                    ) == FALSE)
             {
                 native_owner_enabled = FALSE;
             }
@@ -9529,6 +9872,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     cpuGetTiming() - owner_material_start;
 
                 gNdsRendererProfileMaterialTicks += owner_material_ticks;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                m2_owner->m2_material_ticks += owner_material_ticks;
+#endif
             }
 #endif
         }
@@ -9544,7 +9891,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 slot, native_owner_file, &collection,
                 native_owner_projection, native_owner_modelviews,
                 &persistent_state,
-                &sNdsRendererAdapterNativeOwnerWorkspace) == FALSE)
+                &sNdsRendererAdapterNativeOwnerWorkspace
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                , m2_owner
+#endif
+                ) == FALSE)
         {
             ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
                 native_owner_material_dobjs,
@@ -10124,6 +10476,45 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     gNdsFighterMarioFoxDLAllDrawCount++;
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+static void ndsRendererAdapterM2FinishOwner(
+    volatile NDSRendererOwnerProfile *owner,
+    u32 owner_start)
+{
+    u32 owner_ticks;
+    u32 measured_ticks;
+
+    if (owner == NULL)
+    {
+        return;
+    }
+    owner_ticks = cpuGetTiming() - owner_start;
+    measured_ticks =
+        owner->m2_contract_capture_ticks +
+        owner->m2_collection_ticks +
+        owner->m2_owner_validation_ticks +
+        owner->m2_census_ticks +
+        owner->m2_camera_fetch_ticks +
+        owner->m2_hash_parent_lookup_ticks +
+        owner->m2_local_matrix_ticks +
+        owner->m2_world_affine_ticks +
+        owner->m2_world_camera_ticks +
+        owner->m2_final_compose_ticks +
+        owner->m2_material_ticks +
+        owner->m2_production_total_ticks;
+    owner->exclusive_ticks += owner_ticks;
+    if (owner_ticks >= measured_ticks)
+    {
+        owner->m2_owner_residual_ticks += owner_ticks - measured_ticks;
+    }
+    else
+    {
+        owner->m2_owner_phase_overlap_count++;
+    }
+}
+#endif
+
 void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -10137,6 +10528,10 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     u32 owner_start;
     NDSRendererProfileOwner owner_id;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    u32 m2_capture_start;
+#endif
 #endif
 
     if (fighter_gobj == NULL)
@@ -10166,13 +10561,28 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     owner_id = ((u32)fp->nds_slot == 0u) ?
         NDS_RENDERER_PROFILE_OWNER_MARIO : NDS_RENDERER_PROFILE_OWNER_FOX;
     owner_start = cpuGetTiming();
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    m2_capture_start = cpuGetTiming();
+#endif
 #endif
     ndsFighterDisplayContractCapture(fighter_gobj);
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    gNdsRendererProfileOwners[(u32)owner_id].m2_contract_capture_ticks +=
+        cpuGetTiming() - m2_capture_start;
+#endif
     if (sNdsFighterDisplayContract.event_count == 0u)
     {
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        ndsRendererAdapterM2FinishOwner(
+            &gNdsRendererProfileOwners[(u32)owner_id], owner_start);
+#else
         gNdsRendererProfileOwners[(u32)owner_id].exclusive_ticks +=
             cpuGetTiming() - owner_start;
+#endif
 #endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         ndsRendererBenchmarkSinkEndOwner(owner_id);
@@ -10201,8 +10611,14 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         }
     }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    ndsRendererAdapterM2FinishOwner(
+        &gNdsRendererProfileOwners[(u32)owner_id], owner_start);
+#else
     gNdsRendererProfileOwners[(u32)owner_id].exclusive_ticks +=
         cpuGetTiming() - owner_start;
+#endif
 #endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkEndOwner(owner_id);

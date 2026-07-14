@@ -1,18 +1,29 @@
 # Handoff
 
-Use this file for the active handoff only. Keep it under 150 lines. The harness
-registry decides Boundary/Latest membership; `docs/PORTING.md` owns history.
+Use this file for exact current commands and artifact handoff only. Keep it
+under 150 lines. `P1_EXECUTION_BOARD.md` is the only dynamic queue, the harness
+registry decides Boundary/Latest membership, and `PORTING.md` owns history.
 
 ## Start Here
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile Boundary -List
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
+.\scripts\verify-battle-playable-one-minute-match.ps1 -RunnerSlot 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
+Single-run Codex verification reserves GDB ARM9/ARM7 ports `4333/4334`, leaving
+`3333/3334` free for a manually opened melonDS instance. Runner slots retain
+their isolated per-slot port mapping and stay host-muted (`Volume = 0`); ROM
+audio remains enabled and the user's manual emulator config is untouched.
+
+As of 2026-07-14, P1 and all automated iteration/stability soaks use the source
+one-minute (`3600` tick) expiry-to-Results rule. Do not launch the obsolete
+five-minute configuration.
+
 Boundary and BoundaryDirect now select `battle_playable_realtime` (mode 163),
-the canonical five-minute Mario-human/Fox-CPU scene. Modes 161/162 remain
+the canonical one-minute Mario-human/Fox-CPU scene. Modes 161/162 remain
 registered for diagnosis but are no longer active Boundary/Latest entries:
 their bounded input driver assumes pre-GO movement, which conflicts with the
 restored BattleShip control lock. Do not add an unlock seed to revive them.
@@ -33,13 +44,12 @@ ticks. Live frames retain both fighters and the exact 626-triangle fighter
 contract.
 
 Exact BattleShip Sprite manifests plus layered-SObj 4c/CI4/I8, TLUT, and
-TEXSHUF decoding restore the timer, countdown traffic light, and GO art. The
-custom percent/stock callbacks still route through unimplemented
-`lbCommonPrepSObjAttr`/`lbCommonDrawSObjAttr`; their pixels are not yet visible.
-The user permits those HUD elements on the lower LCD.
+TEXSHUF decoding restore the countdown traffic light and GO art on the top
+screen. The approved lower text HUD shows FPS, timer, Mario/Fox labels, stock,
+and damage; it updates only when state changes and clears on VS Results.
 
 Exact `ftParamLockPlayerControl`/`ftParamUnlockPlayerControl` behavior now keeps
-both fighters and Fox CPU inactive during Wait while the timer remains 18,000,
+both fighters and Fox CPU inactive during Wait while the timer remains 3,600,
 then unlocks controls and starts the timer at GO. The same canonical ROM passed
 coherent pre-GO and post-GO windows.
 
@@ -47,8 +57,8 @@ Canonical/shipped ROM:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-12,038,144 bytes
-SHA-256 4132FBB6A618AE16A3E7554A2C4928669152278DD0F84138329B4058FDF93557
+12,043,264 bytes
+SHA-256 385B9F051C5CBB801089C69E13D49F9E0D19C07F1E4DA19DA943772B5553FC21
 ```
 
 Fresh canonical capture `artifacts/visibility/latest.png` passes full top-screen
@@ -58,40 +68,50 @@ gates. This is melonDS/verifier acceptance, not physical-hardware acceptance.
 ## Performance And Remaining Milestones
 
 - Milestone 1: complete. Native BG2 affine update is within the 5–35K target.
-- Milestone 2: open. AOT DS-native Mario/Fox renderer target is 170–250K ticks.
+- Milestone 2: in progress. The generated AOT Mario/Fox owner exists, but its
+  synchronized combined cost is about 431K versus the 170–250K target.
 - Milestone 3: open. AOT DS-native complete-stage target is 150–250K ticks.
 - Milestone 4: open. Sampled gameplay still converts textures and uploads
   `2 / 36,864` bytes; conversion must move entirely before gameplay.
 
-Whole-frame presentation remains roughly 9.6–11.4 FPS. The accepted slice is a
-fidelity/ownership win, not a 60 FPS claim.
+Whole-frame presentation is about 10.3 FPS in the latest synchronized
+`laboratory-profile-1` M2 window, not a canonical phase baseline. The accepted
+slices are fidelity/ownership wins, not a 60 FPS claim. On exact ROM
+`385B9F...FC21`, natural Fox up-smash restores all 11 damage colliders with
+zero mismatch and clears the no-damage flag. Manual repeat-hit confirmation
+and a continuous natural-hit gate remain open.
 
-## Recommended Next Work
+The isolated one-minute state/memory gate passes from exact locked 1:00 through
+Time Up and Results: logic=3892, timer=3600→0/3600, Fox CPU=7203 updates,
+scene=22→24, safety=0, stale=0/0, and 171,916 bytes conservative reserve after
+the resident BGM buffer. It is unthrottled lifecycle evidence, not a realtime
+or exact canonical-duration qualification.
 
-1. Implement the AOT DS-native Mario/Fox owner and gate 170–250K ticks.
-2. Implement the AOT complete-stage owner and gate 150–250K ticks.
-3. Move all texture conversion/upload preparation before gameplay.
-4. Implement the source custom-SObj callbacks and route percent/stock HUD to
-   the lower LCD if that is the least invasive DS layout.
+## Execution Ownership
+
+Use `P1_EXECUTION_BOARD.md` for the active lanes, worktrees, file locks,
+dated gates, and acceptance decisions. This handoff does not maintain a second
+task queue. Shared renderer-core work stays serialized in the live tree;
+gameplay and audio return isolated commits plus reproduction evidence.
+
+The rejected separate projection/modelview cut saved only 36,192 fighter ticks
+in exact same-ROM A/B/A and was removed. A compile-time Mode-8 TRIANGLE_NOOP
+floor then proved submission-only work can save at most 100K: fighters still
+cost 331K with all run preparation/emission removed. The next M2 design must
+also remove a large share of the measured ~178K matrix-preparation wall.
 
 Keep comparisons on identical ROM hashes and synchronized windows. Require
 counters, screenshots, semantic traces, and runtime state to agree.
 
-## Focused Cut G Commands
+## Focused M2 Commands
 
 ```powershell
-$env:DEVKITPRO = 'C:/devkitPro'
-$env:DEVKITARM = 'C:/devkitPro/devkitARM'
-make TARGET=smash64ds-battle-playable-coarse-mipcache-hwtri `
-  BUILD=build-battle-playable-coarse-mipcache-hwtri-harness -j16
-
-.\scripts\verify-battle-playable-harness.ps1 -NoBuild -DelaySeconds 45 `
-  -RealtimePresentation -ImportBattleShipFTComputer
+.\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 8 `
+  -RendererBenchmarkSamples 8 -RendererBenchmarkStartFrame 600 -GdbPort 4333
 ```
 
-The profile-1 Cut G target remains useful for counters; the canonical profile-0
-target is the only source for the shipped filename. Never copy the lab ROM over
-the shipped ROM manually.
+Profile-1 laboratory targets never publish the shipped filename. Refresh the
+user ROM only through the canonical Makefile parity rule.
 
 ## Verification State
 

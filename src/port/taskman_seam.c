@@ -900,6 +900,25 @@ void ndsResetStartupDiagnostics(void)
     gNdsIFCommonHUDP1StockMin = 0;
     gNdsIFCommonHUDP0StockMax = 0;
     gNdsIFCommonHUDP1StockMax = 0;
+    gNdsIFCommonHUDActivePlayerMask = 0;
+    gNdsIFCommonHUDShowDamageMask = 0;
+    gNdsIFCommonHUDSingleStockMask = 0;
+    gNdsIFCommonHUDCPUPlayerMask = 0;
+    gNdsIFCommonHUDP0FighterKind = 0;
+    gNdsIFCommonHUDP1FighterKind = 0;
+    gNdsIFCommonHUDP0Level = 0;
+    gNdsIFCommonHUDP1Level = 0;
+    gNdsIFCommonHUDP0LowerStock = 0;
+    gNdsIFCommonHUDP1LowerStock = 0;
+    gNdsIFCommonHUDTimeRemain = 0;
+    gNdsIFCommonHUDTimerLimit = 0;
+    gNdsIFCommonHUDTimerStarted = 0;
+    gNdsIFCommonHUDGameStatus = 0;
+    gNdsIFCommonHUDLowerRouteMask = 0;
+    gNdsIFCommonHUDLowerRouteCount = 0;
+    gNdsIFCommonHUDLowerTimerRouteCount = 0;
+    gNdsIFCommonHUDLowerStockRouteCount = 0;
+    gNdsIFCommonHUDTopGenericPassCount = 0;
     gNdsFighterMarioFoxModelResult = 0;
     gNdsFighterMarioFoxGObjResult = 0;
     gNdsFighterMarioFoxSetupMask = 0;
@@ -6364,6 +6383,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         const u32 fast_update_max = 132u;
         u32 updates = 0;
 
+        ndsPlatformClearBattleTextHud();
         ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
         while ((tfunc != NULL) && (tfunc->task_update != NULL) &&
                (sSYTaskmanStatus != nSYTaskmanStatusLoadScene) &&

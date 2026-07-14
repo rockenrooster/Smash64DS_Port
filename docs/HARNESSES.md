@@ -23,7 +23,7 @@ The current Boundary playable-spine set is:
 battle_playable_realtime  mode 163
 ```
 
-This scene-level owner runs the canonical five-minute Mario-human/Fox-CPU match
+This scene-level owner runs the canonical one-minute Mario-human/Fox-CPU match
 with exact Wait-to-GO control/timer behavior, source CPU/input, retained affine
 BG2 wallpaper, and live hardware stage/fighter submission. Modes `161/162`
 remain registered for diagnosis but are no longer Boundary/Latest members:
@@ -34,7 +34,9 @@ their marker stack; the coverage reduction is recorded in KNOWN_ISSUES.
 `battle_playable_match_lifecycle` is a registry alias for the same scene mode,
 not a new gameplay mode. Its compile-distinct verifier target uses the source
 CPU/live setup and a one-minute harness timer to prove the original
-timer-expiry/end transition to VS Results.
+timer-expiry/end transition to VS Results. Run the full natural state/memory
+gate with `scripts/verify-battle-playable-one-minute-match.ps1`; it reuses mode
+163 and does not add a harness or proof-mask mode.
 
 ## Naming Rules
 
@@ -81,7 +83,7 @@ For a normal direct/menu-chain pair:
 - `Full`: all registered verifiers.
 
 `P1Gate` does not change Boundary, Regression, or Full profile membership, and
-a pass is neither P1 completion nor the required five-minute soak. The legacy
+a pass is neither P1 completion nor the required one-minute full-match soak. The legacy
 harness fleet remains available for diagnosis; this additive profile does not
 delete or graduate its unique assertions.
 

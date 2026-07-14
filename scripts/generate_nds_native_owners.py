@@ -71,18 +71,29 @@ O2R_ASSETS = {
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
 # resources above.  BattleShip's source declarations are
 # dMarioModel_JointTree (file offset 0x2200) and dFoxModel_JointTree (0x2938).
-# Mario contains 25 live preorder nodes and Fox contains 27, followed by the
-# depth-18 sentinel.  (The Mario source comment says 28 entries, but the exact
+# Mario contains 25 raw descriptors and Fox contains 27, followed by the
+# depth-18 sentinel. BattleShip ftmanager.c creates a separate synthetic TopN
+# root, then lbCommonSetupFighterPartsDObjs applies the character setup mask:
+# Mario selects raw descriptors 0..23 and Fox selects 0..25. Thus both live
+# trees retain the raw cardinality after adding TopN and dropping the final
+# unselected raw leaf. (The Mario source comment says 28 entries, but the exact
 # hashed initializer/O2R payload reaches its sentinel at descriptor 25.)
 OWNER_JOINT_TREES = {
     "mario": (0x2200, 26),
     "fox": (0x2938, 28),
 }
 
-# Slot zero stays available for the camera/base modelview.  Only bindings
+# dMarioMain_setup_parts / dFoxMain_setup_parts, consumed MSB-first by
+# BattleShip lbCommonSetupFighterPartsDObjs.
+OWNER_SETUP_PARTS = {
+    "mario": (0xffffff00, 0x00000000),
+    "fox": (0xffffffc0, 0x00000000),
+}
+
+# Slot zero stays available for the camera/base modelview. Only bindings
 # observed in canonical cross-matrix runs receive an owner-local GX palette
-# slot.  A packed corner uses slot 31 as the logical current-root slot; after
-# an alternate-binding corner the emitter restores that root through its real
+# slot. A packed corner uses slot 31 as the logical current-root slot; after an
+# alternate-binding corner the emitter restores that root through its real
 # per-binding palette slot.
 OWNER_CROSS_BINDINGS = {
     "mario": (1, 2, 5, 6, 8, 9, 11, 12),
@@ -244,15 +255,38 @@ def decode_joint_topology(
         raise ValueError(f"{owner_name} JointTree lost its depth-18 sentinel")
     depths = depths[:-1]
     display_offsets = display_offsets[:-1]
-    expected_live_count = descriptor_count - 1
-    if (len(depths) != expected_live_count) or (depths[0] != 0):
+    raw_descriptor_count = descriptor_count - 1
+    if (len(depths) != raw_descriptor_count) or (depths[0] != 0):
         raise ValueError(f"{owner_name} JointTree topology cardinality changed")
 
+    setup_words = OWNER_SETUP_PARTS[owner_name]
+    selected_indices = []
+    for descriptor_index in range(raw_descriptor_count):
+        word_index = descriptor_index // 32
+        bit_index = 31 - (descriptor_index & 31)
+        if setup_words[word_index] & (1 << bit_index):
+            selected_indices.append(descriptor_index)
+    if selected_indices != list(range(len(selected_indices))):
+        raise ValueError(
+            f"{owner_name} setup_parts is no longer one contiguous prefix"
+        )
+    selected_count = len(selected_indices)
+    if selected_count + 1 != raw_descriptor_count:
+        raise ValueError(
+            f"{owner_name} synthetic-TopN live cardinality changed"
+        )
+    if any(offset is not None for offset in display_offsets[selected_count:]):
+        raise ValueError(
+            f"{owner_name} setup_parts dropped a drawable raw descriptor"
+        )
+    depths = depths[:selected_count]
+    display_offsets = display_offsets[:selected_count]
+
     root_offsets = [root[0] for root in roots]
-    live_display_offsets = [
+    selected_display_offsets = [
         offset for offset in display_offsets if offset is not None
     ]
-    if live_display_offsets != root_offsets:
+    if selected_display_offsets != root_offsets:
         raise ValueError(
             f"{owner_name} JointTree display preorder does not match "
             "canonical native roots"
@@ -261,8 +295,8 @@ def decode_joint_topology(
         offset: binding for binding, offset in enumerate(root_offsets)
     }
 
-    parents = []
-    bindings = []
+    raw_parents = []
+    raw_bindings = []
     depth_stack = []
     for joint_index, (depth, display_offset) in enumerate(
             zip(depths, display_offsets)):
@@ -290,11 +324,21 @@ def decode_joint_topology(
         else:
             depth_stack[depth] = joint_index
             del depth_stack[depth + 1:]
-        parents.append(parent)
-        bindings.append(
+        raw_parents.append(parent)
+        raw_bindings.append(
             INVALID_U8 if display_offset is None else
             root_by_offset[display_offset]
         )
+
+    # ftManagerMakeFighter creates TopN before the selected JointTree prefix.
+    # Shift every raw index by one and parent raw roots directly to TopN.
+    parents = [INVALID_U8]
+    bindings = [INVALID_U8]
+    parents.extend(
+        0 if parent == INVALID_U8 else parent + 1
+        for parent in raw_parents
+    )
+    bindings.extend(raw_bindings)
 
     binding_joints = [INVALID_U8] * len(roots)
     for joint_index, binding in enumerate(bindings):

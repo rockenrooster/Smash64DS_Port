@@ -49,6 +49,7 @@ current Boundary/Latest membership, then read these human summaries:
 
 | Need | File |
 |---|---|
+| Only dynamic P1 queue, ownership, dated gates | `docs/P1_EXECUTION_BOARD.md` |
 | Active handoff and exact current commands | `docs/HANDOFF.md` |
 | Current boundary summary, latest proof, blockers | `docs/STATUS.md` |
 | Verification workflow | `docs/VERIFYING.md` |
@@ -70,11 +71,15 @@ boundary:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-It proves the source five-minute Mario-human/Fox-CPU scene, exact Wait-to-GO
+It proves the source one-minute Mario-human/Fox-CPU scene, exact Wait-to-GO
 control/timer behavior, retained affine BG2 wallpaper, and live stage/fighter
 hardware submission. Legacy modes `161/162` remain diagnostic-only because
 their bounded input driver assumes pre-GO movement. Full marker strings live
 only in `docs/DIAGNOSTIC_REFERENCE.md`.
+
+P1 timer policy (2026-07-14): the canonical/user-facing ROM and automated
+expiry/stability gates use the original one-minute (`3600` tick) rule. Do not
+launch the obsolete five-minute configuration.
 
 ## Common Commands
 
@@ -82,16 +87,6 @@ only in `docs/DIAGNOSTIC_REFERENCE.md`.
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 make NDS_DEV_SCENE_HARNESS=normal -j16
-```
-
-Static checks:
-
-```powershell
-.\scripts\check-docs.ps1
-.\scripts\check-architecture.ps1
-.\scripts\check-harness-registry.ps1
-.\scripts\check-gbi-decode-fixtures.ps1
-.\scripts\clean-generated.ps1 -DryRun
 ```
 
 Tiered verifiers:
@@ -112,13 +107,20 @@ then confirm completion with `build-verify-profile.ps1 -VerifyStamp`.
 
 Do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
 
-## Slice And Doc Policy
+## Work Selection And Doc Policy
 
-Future gameplay progress should move by runtime-first subsystem groups, not
-one-bit markers: import original TUs, wire narrow seams, prove with continuous
-natural-runtime/capture gates, then graduate live. Legacy bounded modes are
-migrate-or-delete when superseded. Mechanical file splits and docs/tooling may
-stay smaller when they do not claim gameplay progress.
+Select the highest-impact unowned red P1 row from `P1_EXECUTION_BOARD.md`.
+Gameplay progress moves by runtime-first subsystem groups: import original TUs,
+wire narrow seams, prove natural runtime/captures, then graduate live.
+
+Keep all three subagent slots active whenever three independent useful P1 packets exist; immediately reassign completed slots. Each lane uses a separate worktree,
+build directory, runner slot, and claimed file set. Only integration/release edits
+central files and current-truth docs. Define one hypothesis,
+exclusive counters, and a keep/revert threshold; return a self-contained commit
+plus evidence. Do not begin P2 while a required P1 row is red.
+
+Legacy bounded modes are migrate-or-delete when superseded. Mechanical splits
+and tooling may stay smaller when they do not claim gameplay progress.
 
 New harness modes are only for scene-level milestones. Registry changes go
 through `scripts/lib/harness-registry.ps1` and

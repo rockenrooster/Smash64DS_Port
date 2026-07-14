@@ -42,6 +42,13 @@ extern volatile u32 gNdsFrameCounter;
 #define NDS_N64_LOGICAL_HEIGHT 240
 #define NDS_TOP_BACKGROUND_COLOR (RGB15(2, 3, 6) | BIT(15))
 #define NDS_PERF_SAMPLE_TICKS 60u
+#define NDS_BATTLE_FPS_HUD_SAMPLE_TICKS (BUS_CLOCK / 2u)
+#define NDS_BATTLE_SOURCE_TICKS_PER_SECOND 60u
+#define NDS_BATTLE_FPS_HUD_ENABLED \
+    ((NDS_HARNESS_FAST_LOGIC == 0) && \
+     (NDS_RENDERER_HW_TRIANGLES != 0) && \
+     (NDS_DEV_LIVE_INPUT_PREVIEW != 0) && \
+     (NDS_DEBUG_HUD == 0))
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
@@ -56,6 +63,14 @@ static u32 sPerfLastFrameCounter;
 static u32 sPerfLastLogicTickCount;
 static u32 sPerfLastDLPreviewDrawCount;
 static u32 sPerfLastPreviewCommitCount;
+#if NDS_BATTLE_FPS_HUD_ENABLED
+static u32 sBattleFpsHudSampleReady;
+static u32 sBattleFpsHudLastTick;
+static u32 sBattleFpsHudLastPresentedFrames;
+static u32 sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
+static u32 sBattleTextHudReady;
+static u32 sBattleTextHudFingerprint = 0xffffffffu;
+#endif
 static u16 sOriginalSpritePreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT];
@@ -139,6 +154,21 @@ volatile u32 gNdsPerfPreviewCommitFps;
 volatile u32 gNdsPerfPreviewCommitCount;
 volatile u32 gNdsPerfSampleCount;
 volatile u32 gNdsPerfSampleWindowTicks;
+volatile u32 gNdsBattlePlayableHudFpsX10;
+volatile u32 gNdsBattlePlayableHudFpsSampleCount;
+volatile u32 gNdsBattlePlayableHudFpsFrameWindow;
+volatile u32 gNdsBattlePlayableHudFpsTickWindow;
+volatile u32 gNdsBattleTextHudRenderCount;
+volatile u32 gNdsBattleTextHudChangeCount;
+volatile u32 gNdsBattleTextHudFingerprint;
+volatile u32 gNdsBattleTextHudTimeSeconds;
+volatile u32 gNdsBattleTextHudP0Damage;
+volatile u32 gNdsBattleTextHudP1Damage;
+volatile u32 gNdsBattleTextHudP0Stock;
+volatile u32 gNdsBattleTextHudP1Stock;
+volatile u32 gNdsBattleTextHudActiveMask;
+volatile u32 gNdsBattleTextHudShowDamageMask;
+volatile u32 gNdsBattleTextHudClearCount;
 volatile u32 gNdsHardwareRendererSubmittedFrameCount;
 volatile u32 gNdsHardwareRendererFlushCount;
 volatile u32 gNdsHardwareRendererPolyRamCount;
@@ -164,6 +194,12 @@ void ndsPlatformInit(void)
     /* libultra time/count are sub-frame hardware counters. Reserve timers 0/1
      * for libnds' 32-bit CPU timing source before original code can sample it. */
     cpuStartTiming(0);
+
+#if NDS_BATTLE_FPS_HUD_ENABLED
+    gNdsIFCommonHUDLowerTextMode = 1u;
+#else
+    gNdsIFCommonHUDLowerTextMode = 0u;
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES
     videoSetMode(MODE_5_3D | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
@@ -216,9 +252,9 @@ void ndsPlatformInit(void)
     videoSetModeSub(MODE_0_2D);
     vramSetBankH(VRAM_H_SUB_BG);
     consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 15, 0, false, true);
+    iprintf("\x1b[?25l");
 
 #if NDS_DEBUG_HUD
-    iprintf("\x1b[?25l");
     iprintf("Smash 64 DS Port\n");
     iprintf("================\n");
     iprintf("melonDS visual debug active\n");
@@ -1297,10 +1333,253 @@ static void ndsPlatformPrintDebugLine(u32 row, const char *format, ...)
     iprintf("\x1b[%lu;0H%-31s", (unsigned long)row, line);
 }
 
+#if NDS_BATTLE_FPS_HUD_ENABLED
+static void ndsPlatformRenderBattleFpsHud(void)
+{
+    u32 now_tick = cpuGetTiming();
+    u32 presented_frames = gNdsBattlePlayablePacingPresentedFrames;
+    u32 elapsed_ticks;
+    u32 elapsed_frames;
+    u32 fps_x10;
+
+    if ((sBattleFpsHudSampleReady == 0u) ||
+        (presented_frames < sBattleFpsHudLastPresentedFrames))
+    {
+        sBattleFpsHudSampleReady = 1u;
+        sBattleFpsHudLastTick = now_tick;
+        sBattleFpsHudLastPresentedFrames = presented_frames;
+        sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
+        sBattleTextHudReady = FALSE;
+        sBattleTextHudFingerprint = 0xffffffffu;
+        gNdsBattlePlayableHudFpsX10 = 0u;
+        gNdsBattlePlayableHudFpsSampleCount = 0u;
+        gNdsBattlePlayableHudFpsFrameWindow = 0u;
+        gNdsBattlePlayableHudFpsTickWindow = 0u;
+        consoleClear();
+        ndsPlatformPrintDebugLine(0u, "FPS: --.-");
+        return;
+    }
+
+    elapsed_ticks = now_tick - sBattleFpsHudLastTick;
+    if (elapsed_ticks < NDS_BATTLE_FPS_HUD_SAMPLE_TICKS)
+    {
+        return;
+    }
+
+    elapsed_frames =
+        presented_frames - sBattleFpsHudLastPresentedFrames;
+    fps_x10 = (elapsed_frames == 0u) ? 0u :
+        (u32)((((u64)elapsed_frames * BUS_CLOCK * 10u) +
+               (elapsed_ticks / 2u)) / elapsed_ticks);
+    gNdsBattlePlayableHudFpsX10 = fps_x10;
+    gNdsBattlePlayableHudFpsSampleCount++;
+    gNdsBattlePlayableHudFpsFrameWindow = elapsed_frames;
+    gNdsBattlePlayableHudFpsTickWindow = elapsed_ticks;
+    sBattleFpsHudLastTick = now_tick;
+    sBattleFpsHudLastPresentedFrames = presented_frames;
+
+    /* sm64-nds also dedicates the lower console to FPS. Keep this port's
+     * update change-driven so the counter does not clear or pulse the screen. */
+    if (fps_x10 != sBattleFpsHudPrintedFpsX10)
+    {
+        sBattleFpsHudPrintedFpsX10 = fps_x10;
+        ndsPlatformPrintDebugLine(0u, "FPS: %lu.%lu",
+                                  (unsigned long)(fps_x10 / 10u),
+                                  (unsigned long)(fps_x10 % 10u));
+    }
+}
+#endif
+
 static u32 ndsPlatformMixDebugValue(u32 hash, u32 value)
 {
     hash ^= value;
     return hash * 16777619u;
+}
+
+#if NDS_BATTLE_FPS_HUD_ENABLED
+static const char *ndsPlatformBattleHudFighterName(u32 fighter_kind)
+{
+    static const char *const names[] = {
+        "MARIO", "FOX", "DK", "SAMUS", "LUIGI", "LINK",
+        "YOSHI", "CAPTAIN", "KIRBY", "PIKACHU", "JIGGLYPUFF",
+        "NESS"
+    };
+
+    return (fighter_kind < (sizeof(names) / sizeof(names[0]))) ?
+        names[fighter_kind] : "FIGHTER";
+}
+
+static u32 ndsPlatformBattleHudDisplayDamage(u32 damage)
+{
+    return (damage > 999u) ? 999u : damage;
+}
+
+static u32 ndsPlatformBattleHudDisplaySeconds(void)
+{
+    u32 remain = gNdsIFCommonHUDTimeRemain;
+    u32 display_ticks;
+
+    if ((gNdsIFCommonHUDRecordCount == 0u) || (remain == 0u))
+    {
+        return 0u;
+    }
+    display_ticks = remain;
+    if ((remain != gNdsIFCommonHUDTimerLimit) &&
+        (remain <= (0xffffffffu -
+                    (NDS_BATTLE_SOURCE_TICKS_PER_SECOND - 1u))))
+    {
+        /* Match ifCommonTimerProcDisplay's source ceil-to-second rule. */
+        display_ticks += NDS_BATTLE_SOURCE_TICKS_PER_SECOND - 1u;
+    }
+    return display_ticks / NDS_BATTLE_SOURCE_TICKS_PER_SECOND;
+}
+
+static u32 ndsPlatformBattleTextHudStateFingerprint(void)
+{
+    u32 hash = 2166136261u;
+
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDRecordCount != 0u);
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDActivePlayerMask);
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDShowDamageMask);
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDCPUPlayerMask);
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP0FighterKind);
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP1FighterKind);
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP0Level);
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP1Level);
+    hash = ndsPlatformMixDebugValue(
+        hash, ndsPlatformBattleHudDisplayDamage(
+                  gNdsIFCommonHUDP0DamageCurrent));
+    hash = ndsPlatformMixDebugValue(
+        hash, ndsPlatformBattleHudDisplayDamage(
+                  gNdsIFCommonHUDP1DamageCurrent));
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP0LowerStock);
+    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP1LowerStock);
+    hash = ndsPlatformMixDebugValue(hash,
+                                    ndsPlatformBattleHudDisplaySeconds());
+    return hash;
+}
+
+static void ndsPlatformRenderBattlePlayerText(u32 player, u32 row,
+                                               u32 fighter_kind,
+                                               u32 damage, u32 stock)
+{
+    u32 player_bit = 1u << player;
+
+    if ((gNdsIFCommonHUDActivePlayerMask & player_bit) == 0u)
+    {
+        ndsPlatformPrintDebugLine(row, "");
+        ndsPlatformPrintDebugLine(row + 1u, "");
+        return;
+    }
+
+    if ((gNdsIFCommonHUDCPUPlayerMask & player_bit) != 0u)
+    {
+        u32 level = (player == 0u) ? gNdsIFCommonHUDP0Level :
+                                     gNdsIFCommonHUDP1Level;
+
+        ndsPlatformPrintDebugLine(row, "CPU L%lu [%s]",
+                                  (unsigned long)level,
+                                  ndsPlatformBattleHudFighterName(
+                                      fighter_kind));
+    }
+    else
+    {
+        ndsPlatformPrintDebugLine(row, "P%lu [%s]",
+                                  (unsigned long)(player + 1u),
+                                  ndsPlatformBattleHudFighterName(
+                                      fighter_kind));
+    }
+    if ((gNdsIFCommonHUDShowDamageMask & player_bit) == 0u)
+    {
+        if (stock == 0x7fu)
+        {
+            ndsPlatformPrintDebugLine(row + 1u,
+                                      "DMG --    STOCK --");
+        }
+        else
+        {
+            ndsPlatformPrintDebugLine(row + 1u,
+                                      "DMG --    STOCK x%lu",
+                                      (unsigned long)stock);
+        }
+    }
+    else if (stock == 0x7fu)
+    {
+        ndsPlatformPrintDebugLine(row + 1u,
+                                  "DMG %lu%%   STOCK --",
+                                  (unsigned long)damage);
+    }
+    else
+    {
+        ndsPlatformPrintDebugLine(row + 1u,
+                                  "DMG %lu%%   STOCK x%lu",
+                                  (unsigned long)damage,
+                                  (unsigned long)stock);
+    }
+}
+
+static void ndsPlatformRenderBattleTextHud(void)
+{
+    u32 fingerprint = ndsPlatformBattleTextHudStateFingerprint();
+    u32 seconds = ndsPlatformBattleHudDisplaySeconds();
+
+    gNdsBattleTextHudRenderCount++;
+    if ((sBattleTextHudReady != FALSE) &&
+        (fingerprint == sBattleTextHudFingerprint))
+    {
+        return;
+    }
+    sBattleTextHudReady = TRUE;
+    sBattleTextHudFingerprint = fingerprint;
+    gNdsBattleTextHudChangeCount++;
+    gNdsBattleTextHudFingerprint = fingerprint;
+    gNdsBattleTextHudTimeSeconds = seconds;
+    gNdsBattleTextHudP0Damage = ndsPlatformBattleHudDisplayDamage(
+        gNdsIFCommonHUDP0DamageCurrent);
+    gNdsBattleTextHudP1Damage = ndsPlatformBattleHudDisplayDamage(
+        gNdsIFCommonHUDP1DamageCurrent);
+    gNdsBattleTextHudP0Stock = gNdsIFCommonHUDP0LowerStock;
+    gNdsBattleTextHudP1Stock = gNdsIFCommonHUDP1LowerStock;
+    gNdsBattleTextHudActiveMask = gNdsIFCommonHUDActivePlayerMask;
+    gNdsBattleTextHudShowDamageMask = gNdsIFCommonHUDShowDamageMask;
+
+    if (gNdsIFCommonHUDRecordCount == 0u)
+    {
+        ndsPlatformPrintDebugLine(2u, "TIME  --:--");
+    }
+    else
+    {
+        ndsPlatformPrintDebugLine(2u, "TIME  %02lu:%02lu",
+                                  (unsigned long)(seconds / 60u),
+                                  (unsigned long)(seconds % 60u));
+    }
+    ndsPlatformRenderBattlePlayerText(
+        0u, 5u, gNdsIFCommonHUDP0FighterKind,
+        ndsPlatformBattleHudDisplayDamage(
+            gNdsIFCommonHUDP0DamageCurrent),
+        gNdsIFCommonHUDP0LowerStock);
+    ndsPlatformRenderBattlePlayerText(
+        1u, 9u, gNdsIFCommonHUDP1FighterKind,
+        ndsPlatformBattleHudDisplayDamage(
+            gNdsIFCommonHUDP1DamageCurrent),
+        gNdsIFCommonHUDP1LowerStock);
+}
+#endif
+
+void ndsPlatformClearBattleTextHud(void)
+{
+    gNdsBattleTextHudClearCount++;
+#if NDS_BATTLE_FPS_HUD_ENABLED
+    if ((sBattleFpsHudSampleReady != 0u) ||
+        (sBattleTextHudReady != FALSE))
+    {
+        consoleClear();
+    }
+    sBattleFpsHudSampleReady = 0u;
+    sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
+    sBattleTextHudReady = FALSE;
+    sBattleTextHudFingerprint = 0xffffffffu;
+#endif
 }
 
 static u32 ndsPlatformScaleToFps(u32 delta, u32 elapsed_ticks)
@@ -1537,6 +1816,13 @@ void ndsPlatformRenderDebugHud(void)
 {
     u32 debug_text_fingerprint;
 
+#if NDS_BATTLE_FPS_HUD_ENABLED && !NDS_DEBUG_HUD
+    if (gNdsBattlePlayablePacingDrawCalls != 0u)
+    {
+        ndsPlatformRenderBattleFpsHud();
+        ndsPlatformRenderBattleTextHud();
+    }
+#endif
 #if !NDS_DEBUG_HUD
     return;
 #endif

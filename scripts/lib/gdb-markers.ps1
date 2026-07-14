@@ -15,7 +15,8 @@ function Invoke-GdbMarkerScript {
         [string]$Elf,
         [string]$Root,
         [string[]]$Commands,
-        [string]$ScriptName = '_verify_markers.gdb'
+        [string]$ScriptName = '_verify_markers.gdb',
+        [ValidateRange(1,3600)][int]$TimeoutSeconds = 30
     )
 
     $tempDir = if (-not [string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_TEMP_DIR)) {
@@ -50,20 +51,43 @@ function Invoke-GdbMarkerScript {
     $gdbInfo.CreateNoWindow = $true
 
     $gdbProcess = [System.Diagnostics.Process]::Start($gdbInfo)
-    $stdout = $gdbProcess.StandardOutput.ReadToEnd()
-    $stderr = $gdbProcess.StandardError.ReadToEnd()
-    if ($gdbProcess.WaitForExit(30000) -eq $false) {
-        try {
-            $gdbProcess.Kill()
-        } catch {
+    $timedOut = $false
+    try {
+        # Read asynchronously so WaitForExit remains the timeout authority.
+        # The former synchronous ReadToEnd calls could block forever before
+        # the nominal timeout was reached.
+        $stdoutTask = $gdbProcess.StandardOutput.ReadToEndAsync()
+        $stderrTask = $gdbProcess.StandardError.ReadToEndAsync()
+        $timedOut = -not $gdbProcess.WaitForExit($TimeoutSeconds * 1000)
+        if ($timedOut) {
+            try {
+                $gdbProcess.Kill($true)
+            } catch {
+                try { $gdbProcess.Kill() } catch {}
+            }
         }
-        throw "GDB marker capture timed out.`n$stdout`n$stderr"
+        $gdbProcess.WaitForExit()
+        $stdout = $stdoutTask.GetAwaiter().GetResult()
+        $stderr = $stderrTask.GetAwaiter().GetResult()
+        $exitCode = if ($timedOut) { -1 } else { $gdbProcess.ExitCode }
+    } finally {
+        if (-not $gdbProcess.HasExited) {
+            try {
+                $gdbProcess.Kill($true)
+            } catch {
+                try { $gdbProcess.Kill() } catch {}
+            }
+        }
+        $gdbProcess.Dispose()
+    }
+    if ($timedOut) {
+        throw "GDB marker capture timed out after $TimeoutSeconds seconds.`n$stdout`n$stderr"
     }
     Set-Content $gdbStdoutPath -Value $stdout
     Set-Content $gdbStderrPath -Value $stderr
 
-    if ($gdbProcess.ExitCode -ne 0) {
-        throw "GDB marker capture failed with exit $($gdbProcess.ExitCode).`n$stdout`n$stderr"
+    if ($exitCode -ne 0) {
+        throw "GDB marker capture failed with exit $exitCode.`n$stdout`n$stderr"
     }
 
     return [PSCustomObject]@{

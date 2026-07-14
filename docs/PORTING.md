@@ -20585,3 +20585,96 @@ remains skipped for the requested fast iteration cadence.
 - GBI fixtures, docs, architecture, harness registry, focused profile-1 and
   canonical profile-0 pre/post-GO runs, canonical DevFast build/capture/parity,
   and migrated Boundary pass. Full Regression remains follow-up.
+
+## 2026-07-14 - Approved lower HUD and rejected the M2 split-matrix cut
+
+- Routed FPS, timer, Mario/Fox labels, stock, and damage to change-driven lower
+  text while retaining countdown/3-2-1/GO on the top screen. The lower state is
+  battle-only and clears at VS Results. Tyler approved the presentation.
+- Same-ROM HUD A/B/A at frames 600..607 removed steady foreground work
+  `788,160/788,288 -> 0/0`, reduced draw median `3,044,672 -> 2,256,192`
+  (25.90%), present 17.57%, and loop 17.50%; the disabled control repeated.
+- Tyler manually confirmed Mario can damage Fox. Continuous automated post-GO
+  natural-hit observation remains coverage debt.
+- Codex single-run melonDS now reserves `4333/4334`, leaving `3333/3334` for a
+  user-opened manual instance; runner-slot mappings remain isolated.
+- The generated M2 owner remains exact at 67 fighter runs, 626 fighter
+  triangles, and 320/306 ownership. A same-ROM projection/modelview split at
+  frames 600..607 saved only 36,192 combined fighter ticks
+  (`433,856 -> 397,664`); the final control exactly repeated the first, so the
+  selector and runtime path were removed.
+- A restored profile-1 baseline measures Mario/Fox `197,888 + 233,248 =
+  431,136` median, matrix 177,440, and owner DL 218,336. A compile-time Mode-8
+  TRIANGLE_NOOP floor removes generated-run preparation/emission yet remains
+  `151,584 + 179,552 = 331,136`; submission-only tuning cannot meet 250K.
+- Adopted five P1 lanes: integration/release, serialized renderer M2→M3→M4,
+  gameplay/stability, audio, and QA/soak. Shared renderer-core changes stay
+  under one owner; file-isolated lanes may advance in parallel.
+- The canonical/shipped pair currently remains 12,041,216 bytes at SHA-256
+  `3980C629D54B4CB591F254A66B4901FFCFEAEAC11C4F6D8089132D8DA38CCD3E`.
+
+## 2026-07-14 - Documentation authority consolidation and date erratum
+
+- Established `P1_EXECUTION_BOARD.md` as the only dynamic queue, reduced the
+  stale boundary queue to a historical redirect, and made the root README and
+  ROADMAP current mode-163/deadline entrypoints. Renderer priority now comes
+  from the board; the native plan is the technical contract and PERF_LEDGER is
+  measured history.
+- Reconciled the P1 blocker set against the current ROM: lower HUD and
+  Mario-to-Fox manual damage are accepted; Fireball display, exact audio IDs,
+  real FGM/voice playback, winner/Results BGM, repeated five-minute soak, Full
+  Regression, and dated exact-ROM qualification remain open.
+- `PORTING_DATE_ERRATUM: 2026-07-19 | Original fighter display contract | 2026-07-09`
+- `PORTING_DATE_ERRATUM: 2026-07-19 | Source Dream Land fighter starts | 2026-07-09`
+
+## 2026-07-14 - Repaired Fox smash hit-status restore ABI
+
+- A state-triggered manual report narrowed the regression to Fox remaining
+  animated and attack-capable while no longer accepting damage. BattleShip's
+  Fox up/down-smash motion commands restore all parts with raw hit status `1`.
+  The local compatibility enum had swapped `None` and `Normal`, so that restore
+  disabled every active Fox damage collider after either smash.
+- Restored the exact BattleShip `GMHitStatus` ABI and aligned the local
+  `ftParamSetHitStatusPartAll`, `ftParamSetHitStatusPartID`, and
+  `ftParamSetHitStatusAll` shims with `ftparam.c`, including the source
+  no-damage reset flag. A new static fixture compares the local enum against
+  read-only BattleShip and guards the Fox smash restore semantics.
+- DevFast rebuilt and captured the canonical scene successfully; fixture,
+  registry, realtime, screenshot, and ROM-parity gates pass. The shipped pair
+  is 12,043,264 bytes at SHA-256
+  `D28DFB303EE7381F9209026DD7DFF2370B667AD25A587ECED1D40D5BB87D2198`.
+  A read-only exact-ROM GDB trace then observed natural Fox up-smash: frame 553
+  made 1/11 active colliders Intangible and raised the reset flag; frame 562
+  restored 11/11 to Normal with zero mismatch and cleared the flag. Manual
+  repeat-hit confirmation remains pending and is not claimed here.
+
+## 2026-07-14 - Aligned the REGION_US audio compatibility IDs
+
+- Integrated isolated checkpoint `badd9e0e0b`, aligning all local BGM, FGM,
+  announcement, and fighter-voice constants used by the current port with the
+  read-only BattleShip `gmsound.h` REGION_US values. This closes the ID-drift
+  prerequisite; it does not claim audible DS playback.
+- Added a compiler-evaluated fixture that includes both headers and checks all
+  129 local constants, including implicit enum values and aliases. The fixture
+  passes and is now part of DevFast before runtime verification.
+- Real FGM/voice channel playback, audible Dream Land BGM proof, winner tracks
+  12/16, and Results track 22 remain P1 audio blockers.
+
+## 2026-07-14 - Proved the natural one-minute match lifecycle
+
+- P1's source rule is now one minute (`3600` ticks); this supersedes older
+  five-minute soak references without rewriting append-only history. Removed
+  the verifier-only Results timer switch so canonical live-input mode 163 owns
+  one rule.
+- Added an artifact-isolated, host-muted natural-runtime gate. It synchronizes
+  at the exact locked `1:00` Wait state, then runs BattleShip CPU/timer/end code
+  once through Time Up and imported Results without scripted combat outcomes.
+- The live-tree pass reported logic `3892`, timer `3600 -> 0/3600`, Fox CPU
+  `7203` updates, scene `22 -> 24`, Results tick `120`, relocation stale `0/0`,
+  all 17 safety fields zero, and arena headroom `237452` bytes. After the
+  resident 65,536-byte BGM buffer, conservative reserve is `171916` bytes.
+- The same exact canonical ROM then passed realtime state, visibility, capture,
+  and parity at 12,043,264 bytes / SHA-256
+  `385B9F051C5CBB801089C69E13D49F9E0D19C07F1E4DA19DA943772B5553FC21`.
+  Its measured 9.0 FPS remains a release blocker; the unthrottled lifecycle
+  gate is not cited as realtime evidence.

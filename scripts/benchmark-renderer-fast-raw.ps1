@@ -1,14 +1,17 @@
 param(
     [ValidateRange(0,8)][int]$FastRunMode = 0,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
+    [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
     [ValidateRange(1,2)][int]$RendererProfileLevel = 1,
+    [switch]$RendererM2DetailedLedger,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
-    [int]$GdbPort = 3333,
+    [int]$GdbPort = 4333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
     [ValidateRange(8,256)][int]$RendererBenchmarkSamples = 32,
+    [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
     [string]$RendererBenchmarkExportPath = ''
 )
 
@@ -37,9 +40,12 @@ $build = if ($RendererProfileLevel -eq 2) {
     -ImportBattleShipFTComputer `
     -HardwareTriangles `
     -RendererProfileLevel $RendererProfileLevel `
+    -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
+    -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
     -RendererFastRunMode $FastRunMode `
     -WallpaperIncrementalMode $WallpaperIncrementalMode `
+    -LowerTextHudMode $LowerTextHudMode `
     -RendererBenchmarkExportPath $RendererBenchmarkExportPath `
     -Harness 'battle_playable_realtime' `
     -Target $target `
@@ -47,7 +53,7 @@ $build = if ($RendererProfileLevel -eq 2) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode wallpaper incremental $WallpaperIncrementalMode" `
+    -Label "battle_playable fast raw mode $FastRunMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

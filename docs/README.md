@@ -1,34 +1,34 @@
 # Documentation Index
 
-Use this file as the table of contents for project-owned docs. Current planning
-starts in `STATUS.md` and `HANDOFF.md`; historical detail stays in
-`PORTING.md`.
+Use this file as the table of contents for project-owned docs. The dynamic P1
+queue is `P1_EXECUTION_BOARD.md`; current summaries stay in `STATUS.md` and
+`HANDOFF.md`, and historical detail stays in `PORTING.md`.
 
 | Doc | Status | Purpose |
 |---|---|---|
 | `ARCHITECTURE.md` | Maintained | Port architecture, ownership boundaries, and large-file split plan. |
-| `AUDIO_BACKEND_SCOUT.md` | Maintained | Source-backed scout for future DS audio backend work. |
+| `AUDIO_BACKEND_SCOUT.md` | Reference | Dated source-backed scout for DS audio backend work. |
 | `DECOMP_MAP.md` | Maintained | Read-only upstream reference map for `decomp/`. |
 | `DIAGNOSTIC_REFERENCE.md` | Maintained | Runtime marker and diagnostic contracts. |
 | `EMULATOR_STRATEGY.md` | Maintained | melonDS/no$gba usage boundaries. |
-| `FT_ANIM_STATUS_SCOUT.md` | Maintained | Source-backed dependency scout for fighter animation/status graduation. |
+| `FT_ANIM_STATUS_SCOUT.md` | Reference | Dated dependency scout for fighter animation/status graduation. |
 | `FTSTRUCT_PARITY.md` | Maintained | Field-by-field FTStruct parity report against BattleShip source layout. |
 | `GOAL_DEBUGGING.md` | Maintained | Debugging and verifier workflow notes. |
-| `goal-objective.md` | Current truth | User-owned delivery objective and acceptance criteria. |
+| `goal-objective.md` | Objective contract | User-owned delivery objective and acceptance criteria. |
 | `HANDOFF.md` | Current truth | Detailed current handoff and latest proof evidence. |
 | `HARNESSES.md` | Maintained | Harness naming, registry, and generated-index policy. |
-| `HW_RENDERER_VISIBILITY_FINDINGS.md` | Maintained | Canonical HW realtime visibility measurements and current blocker. |
+| `HW_RENDERER_VISIBILITY_FINDINGS.md` | Reference | Dated July 8 HW realtime visibility findings. |
 | `KNOWN_ISSUES.md` | Maintained | Known blockers, stubs, and deferred systems. |
 | `MEMORY_OVERLAY_PLAN.md` | Maintained | Source-backed memory budget and reloc eviction plan. |
-| `MP_PASS_THROUGH_SCOUT.md` | Maintained | Source-order scout for the next pass-through floor/platform boundary. |
-| `NEXT_BOUNDARY_QUEUE.md` | Current truth | Compact next-boundary candidate queue. |
-| `OPTIMIZATION_ROADMAP.md` | Maintained | Active renderer measurement and optimization sequence. |
+| `MP_PASS_THROUGH_SCOUT.md` | Reference | Dated source-order pass-through floor/platform scout. |
+| `NEXT_BOUNDARY_QUEUE.md` | Historical redirect | Legacy bounded-proof queue redirect; never an active planning surface. |
+| `OPTIMIZATION_ROADMAP.md` | Reference | Concise renderer status and rejected-experiment synopsis; not a queue. |
+| `optimization/NATIVE_RENDERER_PLAN.md` | Technical contract | Exact source/semantic/performance gates for renderer milestones M2–M4. |
+| `P1_EXECUTION_BOARD.md` | Current truth | P1 acceptance matrix, lane ownership, dated gates, and integration decisions. |
 | `PERF_LEDGER.md` | Maintained | Reproducible renderer benchmark identities, measurements, gates, and decisions. |
-| `PERF_LEDGER_TEMPLATE_20260712.md` | Reference | Original performance-ledger template and accepted baseline. |
-| `PLAYTESTING.md` | Maintained | Short manual acceptance checklist for the current user-facing ROM. |
 | `PORTING.md` | Append-only | Chronological porting history. Do not use as primary planning. |
-| `ROADMAP.md` | Maintained | Milestone-level project roadmap. |
-| `SPECIALS_WEAPONS_SCOUT.md` | Maintained | Source-backed scout for Mario/Fox specials and weapon-manager runtime work. |
+| `ROADMAP.md` | Stable | P1/P2 milestone and dependency map; dynamic priority stays on the execution board. |
+| `SPECIALS_WEAPONS_SCOUT.md` | Reference | Dated Mario/Fox specials and weapon-manager scout. |
 | `STATUS.md` | Current truth | Short active planning state. |
 | `VERIFYING.md` | Maintained | Build, static-check, verifier, emulator, and snapshot workflow. |
 

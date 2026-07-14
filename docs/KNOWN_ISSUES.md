@@ -1,13 +1,40 @@
 # Known Issues
 
-## Local Tooling Issues
+## P1 Release Blockers
 
-- P1 is not yet broadly playable. Live device injection now proves Attack11,
-  first jump, and double jump dispatch plus exact normalized Mario assets
-  `606/509/511`; Tyler still needs to accept their poses on hardware/emulator.
-  Fireball has no visible projectile and intermittent freezes remain
-  unlocalized. Super Jump Punch's center-stage root motion/camera/grounding
-  cause is repaired, but it still needs Tyler's fresh playtest.
+| Blocker | Required closure |
+|---|---|
+| Renderer M2–M4 | Mario/Fox 170–250K, complete stage 150–250K, zero gameplay conversion, phase P95 path toward ~560K active ticks |
+| Mario Fireball | Distinct weapon owner with visible moving geometry, normal damage/hitlag, and destruction |
+| Gameplay-critical audio | Real FGM/voice channels, audible BGM proof, winner track 12/16 followed by Results 22; exact US IDs now pass |
+| Full-match stability | Repeated canonical one-minute Time Up → Results soaks with memory reserve and guards intact |
+| Release evidence | Full Regression, clean canonical parity, dated captures, and exact-ROM manual user retest |
+
+The authoritative state, lane, next gate, and integration decision for each row
+live in `P1_EXECUTION_BOARD.md`.
+
+## Current P1 And Tooling Notes
+
+- Fireball is a confirmed display blocker: its source weapon is created and
+  simulated, but the current DS stage recorder rejects the non-stage GObj before
+  hardware submission. Freeze, platform/edge, Up-B, and missing-stage reports
+  are not reproducible failures on the current artifact; retest them before any
+  speculative behavior change. Natural Fox recovery remains coverage debt.
+- Tyler approved the lower text HUD. Mario→Fox damage was reopened after Fox
+  could become permanently unhittable following an up/down-smash restore. The
+  local `GMHitStatus` ABI and hit-status part shims now match BattleShip. An
+  exact-ROM natural up-smash trace restores 11/11 active colliders with zero
+  mismatch and clears the no-damage flag; manual repeat-hit confirmation and a
+  continuous post-GO natural-hit observation remain open.
+- Renderer milestone 2 remains a P1 performance blocker. The generated AOT
+  fighter owner costs about 431K combined against the 170–250K target. A
+  same-ROM split-matrix cut saved only 36,192 ticks and was removed; deleting
+  all generated-run preparation/emission still leaves a 331K measured floor,
+  so the next architecture must also cut the ~178K matrix-preparation wall.
+- Audio is not release-ready. All 129 local REGION_US IDs now match BattleShip,
+  but the FGM seam records diagnostics without playing a DS sample, Dream Land
+  BGM counters do not yet prove an enabled non-silent sound channel, and
+  winner/Results tracks 12/16/22 are unsupported.
 - The live source floor/edge callbacks are now active, but their manual behavior
   is still awaiting Tyler's fresh playtest. Mode 163 now uses normal down input
   to pass its elevated fighter through the one-way platform before Walk/DashRun;
@@ -19,8 +46,8 @@
   second 4 KiB staging slot, followed by a 256-frame exercised zero-fallback
   proof; ordinary `2 / 36864` frames remain clean.
 - `P1Gate` is an additive shadow checkpoint, not a P1-completion claim. Its
-  lifecycle leg uses one minute on the original expiry/Results path; a dated
-  canonical five-minute soak is still required. Boundary, Regression, and Full
+  lifecycle leg uses the P1 one-minute rule on the original expiry/Results
+  path; a dated canonical one-minute soak is still required. Boundary, Regression, and Full
   profile memberships remain unchanged, and the historical harness fleet
   remains diagnostic while unique assertions are migrated.
 - [coverage-reduced] `FastIteration` lowers the moving left-shrub/pond
@@ -75,7 +102,9 @@
   window, while other settings can expose separate debugger and emulator
   windows. `scripts/capture-nogba.ps1 -AllWindows` handles both layouts.
 - melonDS 1.1 previously started in this Codex desktop session as a live process
-  with a hidden, untitled top-level window and no ARM9 GDB listener on `3333`.
+  with a hidden, untitled top-level window and no ARM9 GDB listener. Maintained
+  Codex single runs now use `4333/4334`, leaving `3333/3334` for the user's
+  manual instance; runner slots remain isolated.
   That reproduced with `smash64ds.nds`, the local `sm64-nds` ROM, and the
   devkitPro `Simple_Tri.nds` sample, so if it recurs, treat it as an
   emulator/session launch issue before changing ROM code. The verifier scripts
@@ -176,13 +205,14 @@
   `ftcommondead.c`, `ftcommonrebirth.c`, battle-critical `if/ifcommon.c` HUD
   paths, and original `if/ifscreenflash.c`. Mode `163` now proves natural
   attack/damage -> KO -> stock decrement -> Rebirth -> Wait, coherent percent/
-  stock state, and a hardware stage/fighter frame. Timer, countdown, traffic
-  light, and GO sprites render, but the custom percent/stock display callbacks
-  still emit no DS pixels. The
-  live-input path now also runs the original five-minute timer, Time Up/end
+  stock state, and a hardware stage/fighter frame. Countdown, traffic light,
+  and GO stay on the top screen; FPS, timer, fighter labels, stock, and damage
+  now render as approved change-driven text on the lower screen and clear at
+  VS Results. The
+  live-input path now also runs the original one-minute timer, Time Up/end
   interface, taskman return, scoring check, and `VSBattle -> VSResults` scene.
-  The automated lifecycle gate uses a one-minute harness limit for iteration;
-  canonical/manual match length remains independently configurable.
+  The automated lifecycle gate and canonical/manual P1 ROM all use the same
+  one-minute rule.
   Original `mnvsresults.c`, `lbtransition.c`, and its subsystem fighter/data
   support now run by default with all eight source files and source Win/Lose
   statuses. The DS compositor preserves source 2D layers around the fighter
@@ -1099,9 +1129,9 @@
   not a gameplay rewrite.
 - The canonical realtime + live-input + HW-tri battle-playable ROM polls live
   DS input, submits stage/fighter triangles, keeps BGM timer-paced, and is
-  pixel-gated, but the frame is not yet demo-fidelity. Latest gate: GX RAM
-  `733/2219`, source depth for stage/Mario/Fox, zero oracle mismatches, and a
-  HUD-off capture with `20.012%` meaningful 100ms frame change. Dream Land
+  pixel-gated, but the frame is not yet demo-fidelity. A historical profile-1
+  HUD-off gate measured GX RAM `733/2219` and `20.012%` meaningful 100ms frame
+  change; it is not the current artifact or performance baseline. Dream Land
   and its original wallpaper are recognizable. The
   original fighter-display preamble and part-selection contract are now live;
   fighter attachment restores mixed-width O2R `MObjSub` lanes before the
@@ -1161,15 +1191,17 @@
   BG2 copy. Exact word-packed rows, immutable TRI replay, derived vertex reuse,
   canonical O2, ARM/ITCM paths, arena-first validation, K-RAW/direct topology,
   exact DObj indexing/affine composition, persistent static stage worlds, and
-  direct compact CI4 refresh rows now reach `14.0fps`, still about 4.3x short
-  of the 60 FPS P1 condition. Exact pre-clamped DS `div64` removes the shipping
+  direct compact CI4 refresh rows historically reached `14.0fps` in a different
+  build/window; this is ledger history, not the current phase baseline. Exact
+  pre-clamped DS `div64` removes the shipping
   software 64-bit divide helper; profile 1 sees `650` actual calls and profile 2
   compares `1,404` realtime results with zero mismatch. Matched 128-frame
   cache-off/on draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`; stage is
   `937,920/970,688 -> 874,496/888,512`, and canonical profile-0 draw is
   `2,199,744/2,212,864`. Profile 2 observes `57` exact persistent node hits and
-  shadows all `42` selected outputs with zero mismatch/reject/overflow. The next
-  measured cut is fused direct stage-owner records/live binding.
+  shadows all `42` selected outputs with zero mismatch/reject/overflow. Current
+  renderer priority is M2 fighter ownership under `P1_EXECUTION_BOARD.md`; use
+  `PERF_LEDGER.md` for the superseded stage-owner decision trail.
   An exact indexed-water trial reduced upload bytes `36,864 -> 19,456` but
   regressed draw to about `2.88M` and GX RAM `715/2167 -> 714/2164`; it is gone.
 - A source-shaped `gcAddMObjAll` attachment wrapper normalizes mixed-width O2R
@@ -1226,21 +1258,19 @@
   draw/setup/scan is `2,660,864/790,208/641,664`, with `1,242` nominal divides.
   The rejected GX
   FIFO/display-list arena increased vertex cost and must not be restored.
-  General 4c/CI4/I8 interface SObjs now produce timer/countdown/GO pixels.
-  Percent/stock still use no-op `lbCommonPrepSObjAttr`/`lbCommonDrawSObjAttr`
-  callbacks and remain invisible; routing them to the lower LCD is allowed.
-  At this sub-realtime cadence, the second two-shot screenshot can land during
-  compositor updates and appear partly black while its paired `_next` sample is
-  complete; stable-sample selection remains visual-gate tooling debt.
+  General 4c/CI4/I8 interface SObjs produce timer/countdown/GO pixels. FPS,
+  timer, Mario/Fox labels, stock, and damage now render as approved,
+  change-driven text on the lower LCD and clear at VS Results. Earlier
+  unsynchronized two-shot captures could sample a compositor transition; the
+  current gate requires synchronized complete pairs and does not treat a black
+  inspection tile as canonical output.
   Audible BGM resyncs remain possible while frames exceed the half-buffer
   deadline. Lane totals remain aggregate conversion observations covered by
   host byte/halfword fixtures.
-- The live diagnostic HUD and startup banner are behind `NDS_DEBUG_HUD`; the
-  canonical/shipped target forces the live redraw off while verifier markers
-  remain active. Both LCDs render; the otherwise-black canonical lower screen
-  intentionally retains only three bootstrap status rows.
-  The project launchers present both physical screens; debug-HUD targets use
-  the lower one for the full live diagnostic page.
+- The full diagnostic page and startup banner remain behind `NDS_DEBUG_HUD`.
+  Canonical/shipped mode keeps that verbose page off while retaining the
+  approved battle HUD on the lower screen; debug targets may replace it with
+  the diagnostic page.
 - Save/backup functions are stubs. No persistent SRAM/flash behavior exists.
 - RSP/RDP graphics tasks are acknowledged but display lists are not generally
   translated to DS rendering. The visible startup `N64Logo` is a bounded Sprite

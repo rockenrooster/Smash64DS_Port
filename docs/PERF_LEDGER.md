@@ -87,6 +87,7 @@ profile-2 oracle 2,484 / 0 / 0
 | REJ-PACKET | prior | 1,406 generic packets | scan/setup | — | scan flat/setup regressed | regression | output retained | REVERT |
 | REJ-WATER | 2026-07-12 | indexed water | texture/upload | — | draw ~2.88M | regression | GX drift | REVERT |
 | M4-STAGE-WORLD | 2026-07-13 | Reuse exact stable Dream Land world matrices | matrix / stage | 2,323,008 / 2,355,712 | 2,263,616 / 2,280,512 | -59,392 / -75,200 | 42 / 0 shadows | KEEP |
+| M2-GX-SKELETON | 2026-07-14 | Compose the whole fighter hierarchy in GX while retaining exact CPU lighting modelviews | Mario + Fox | 493,696 / 520,896 detailed | 445,568 / 472,768 detailed | -48,128 paired median | exact 626-triangle contract | REVERT |
 
 ## T0-O2-COARSE — clean exclusive loop and owner baseline
 
@@ -1433,9 +1434,12 @@ TARGETED EXCLUSIVE COUNTER:
   Exact accepted source X/Y maps versus the DS q8 affine sampler, plus live BG3
   ownership before dedicating or repurposing VRAM D.
 LIVE-TREE RECONCILIATION:
-  CODEX_60FPS_BIG_JUMPS_14_9FPS_20260713.txt is authoritative over older
-  roadmap order/gates. Canonical battle leaves BG3 empty across the observed
-  128-frame window, but Results/opening still require the generic BG3 layout.
+  The now-retired 2026-07-13 experiment brief superseded older ordering only
+  for this historical preflight. Current priority lives in
+  `P1_EXECUTION_BOARD.md`, the renderer contract in
+  `optimization/NATIVE_RENDERER_PLAN.md`, and measured decisions in this
+  ledger. Canonical battle left BG3 empty across the observed 128-frame window,
+  but Results/opening still required the generic BG3 layout.
 EXACTNESS RESULT:
   The accepted mapper contains two integer sampling stages. The host/profile
   model found coordinate mismatches in both axes across all 128 observed
@@ -1445,7 +1449,7 @@ PERFORMANCE RESULT:
   None. The architecture failed its required exactness/approval preflight, so
   no ROM rebuild or misleading timing run was performed.
 DECISION: REVERT / DO NOT IMPLEMENT
-  A single affine layer cannot meet the authoritative exactness gate. The live
+  A single affine layer could not meet that experiment's exactness gate. The live
   source tree retained no implementation or diagnostic probe.
 NEXT MEASURED BOTTLENECK:
   Test the supplied exact affine-base plus sparse-correction architecture once;
@@ -1801,4 +1805,170 @@ RESTORED CHECKPOINT:
   A clean coarse rebuild reproduces exact 12,036,096-byte ROM
   DC2871F3E6C32C72D6F36516EDA461F25E416E5146947280E11BEFA352E4E3AD.
   Its no-build Mode-8 gate passes exact geometry/owner/fallback accounting.
+```
+
+## 2026-07-14 - rejected fighter split projection/modelview path
+
+```text
+IDEA ID: M2-NATIVE-SPLIT-MATRIX
+HYPOTHESIS / KEEP GATE:
+  Remove per-root CPU modelview×projection composition from the existing AOT
+  Mario/Fox owner by loading one shared GX projection and one world-scaled
+  modelview per root. Keep only with at least 100,000 combined fighter ticks
+  saved in the first synchronized eight-frame run.
+SOURCE / BACKEND BASIS:
+  BattleShip ftDisplayMainProcDisplay, gcPrepDObjMatrix, gcDrawMObjForDObj,
+  gcDrawDObjTree, and lbCommonSetupFighterPartsDObjs were read before the cut.
+  decomp/sm64-nds confirmed separate DS projection/modelview loading, while
+  BattleShip row-vector ordering, lighting modelviews, and GX palette restores
+  remained authoritative.
+IDENTICAL-ROM A/B/A:
+  Profile-1 Mode-8 ROM SHA-256
+  71316594FD739FFEBFAA73D5A97446C31BB7EB46CD17B2B87BAFE4E6A8AA7727,
+  12,042,240 bytes. All runs sampled frames 600..607 / logic 209..216.
+CONTROL A0 AND A1 MEDIAN/P95:
+  Mario 199,008/219,072; Fox 234,848/241,856; combined median 433,856;
+  draw 1,597,152/1,600,384; present 2,095,712/2,127,168; matrix
+  177,920/204,608; DL 219,136/219,264. A1 reproduced A0 exactly on every
+  listed counter.
+TREATMENT B0 MEDIAN/P95:
+  Mario 183,136/203,264; Fox 214,528/221,568; combined median 397,664;
+  draw 1,561,056/1,564,224; present 1,999,616/2,106,816; matrix
+  177,856/204,544; DL 211,072/211,136.
+RESULT / SEMANTICS:
+  Combined saving was 36,192 ticks (8.34%), draw saving 36,096, and present
+  saving 96,096. Exact 70/686 native runs, 60+320+306 owner triangles,
+  29/0/0 fallbacks, full 828-triangle class census, two uploads/36,864 bytes,
+  CPU activity, timer state, and frame conservation all remained coherent.
+  The treatment therefore failed performance, not correctness.
+DECISION: REJECT / REMOVE
+  The final control closed phase-drift risk. Remove the selector, split GX
+  path, public structure field, and benchmark plumbing; retain the pre-existing
+  generated owner and synchronized-frame tooling. Do not revive this cut.
+NEXT MEASUREMENT:
+  Isolate current production-owner execution and matrix-preparation floors
+  before selecting another M2 representation. The control window reports
+  about 219,136 DL ticks and 177,920 matrix ticks across the fighter path.
+```
+
+## 2026-07-14 - rejected CPU-only generated joint preorder
+
+```text
+IDEA ID: M2-JOINT-PREORDER-CPU
+HYPOTHESIS:
+  Replace per-binding hierarchy/cache lookup with generated 25/27-joint
+  Mario/Fox preorder schedules while retaining CPU local/world/camera matrix
+  construction and the existing production owner.
+CONTROL / TREATMENT / CONTROL:
+  Control ROM A0/A1 SHA-256
+  A0FFA8C2B1F7CFF21DCD36D4399E12C7646593E6195DE26549B2552E75530874;
+  treatment B0 SHA-256
+  B35892951478AD28C2759750D65243EEC56469AA67F04F4953D814DD728306EB.
+  Eight-frame post-GO samples used the same Mode-8 source configuration; the
+  final control reproduced the first fighter and matrix medians.
+RESULT:
+  Control Mario/Fox medians were 188,512 + 220,960 = 409,472 ticks; treatment
+  was 183,648 + 215,296 = 398,944, saving only 10,528. Matrix median moved
+  176,896 -> 166,464, saving 10,432. Production DL cost was unchanged at
+  about 197.4K. Stage/draw medians crossed animation phases and are not used
+  for this fighter-only decision.
+DECISION: REJECT CPU-ONLY PATH
+  The result missed the 100K M2 falsifier by nearly an order of magnitude.
+  Remove the CPU-only runtime path. Keep the corrected generated topology,
+  parent/binding, and GX-slot data only as input to a distinct whole-skeleton
+  hardware owner; do not revive indexed CPU preorder as an optimization.
+```
+
+## 2026-07-14 - measured current Mode-8 no-submit floor
+
+```text
+IDEA ID: M2-PRODUCTION-TRIANGLE-NOOP-FLOOR
+PURPOSE:
+  Bound all generated production-run preparation/emission before designing the
+  next owner. This is a compile-time nonvisual ablation, not a candidate path.
+RESTORED BASELINE:
+  Profile-1 ROM 6F00937C1FC022D0CEE85CDAF8FE2ED770E691E26102986909248F76E78E4B66,
+  frames 600..607 / logic 209..216. Mario 197,888/218,304; Fox
+  233,248/240,384; combined median 431,136; matrix 177,440/204,736; production
+  DL 218,336/218,368.
+TRIANGLE_NOOP FLOOR:
+  ROM 99C29CDFF2A6BF740DDFB9ACDA091D44515801BCB62BCC4F4B628FBA56669531,
+  identical frames/logic. It retains all generated fighter accounting at
+  67 runs / 626 triangles / 320+306 with zero fighter fallback. Mario
+  151,584/171,008; Fox 179,552/186,432; combined median 331,136; matrix
+  178,144/204,736; production DL 116,736/116,736.
+BOUND / DECISION:
+  Removing the complete root-bind/run-prepare/emission boundary saves exactly
+  100,000 combined fighter ticks, yet the remaining 331,136 floor still misses
+  the 250K ceiling. Submission-only tuning cannot complete M2. The next design
+  must jointly reduce the ~178K CPU matrix-preparation wall while preserving
+  BattleShip transforms, lighting, materials, and cross-joint semantics.
+```
+
+## 2026-07-14 - rejected whole-fighter GX skeleton palette
+
+```text
+IDEA ID: M2-WHOLE-FIGHTER-GX-SKELETON
+HYPOTHESIS / KEEP GATE:
+  Generate the corrected live 25-joint Mario / 27-joint Fox preorder, build
+  each exact BattleShip 0x4B local once, and compose geometry through the DS
+  GX matrix palette. Retain CPU world/modelview matrices solely for exact
+  lighting. Keep only with at least 100,000 same-ROM combined fighter ticks
+  saved; check the <=331,000 absolute first-window gate separately with the
+  detailed M2 ledger disabled.
+SOURCE / BACKEND BASIS:
+  BattleShip lbCommonFighterPartsFuncMatrix and ftDisplayMain traversal were
+  authoritative for transform order and lighting state. sm64-nds/libnds GX
+  store/restore and affine 4x3 multiplication established the DS backend
+  mechanism. Cross-matrix corners retained the existing compact slot ABI.
+IDENTICAL-ROM A/B/A:
+  Profile-1 Mode-8 ROM SHA-256
+  03950839A61B7E1C058986AB7D8E1095A20C07AD5E0466DDCB50D8DA3BEEF09B,
+  12,047,360 bytes. All three runs sampled frames 600..607 / logic 209..216,
+  n=8, melonDS 1.1, JIT disabled, ports 4333/4334. A2 reproduced every A1
+  sample and listed median/P95 exactly. Both sides carried the same detailed
+  M2 census/timer overhead, so their paired delta is valid; their absolute
+  totals are not coarse-profile gate measurements.
+CONTROL A1 = A2 MEDIAN/P95:
+  Mario 226,112/246,272; Fox 267,584/274,624. Paired per-frame combined
+  493,696/520,896. Draw 1,658,528/1,661,568; matrix 199,008/226,304;
+  M2 matrix/root subtotal 162,208/189,568; production 243,520/243,648.
+TREATMENT B MEDIAN/P95:
+  Mario 205,344/225,536; Fox 240,192/247,232. The sum of independent owner
+  medians is 445,536; the paired per-frame combined result is 445,568/472,768.
+  Draw 1,610,336/1,613,504; matrix 184,320/211,520; M2 matrix/root subtotal
+  113,632/140,736; production 242,240/242,304.
+RESULT / SEMANTICS:
+  Paired combined saving was 48,128 ticks (9.75%); the independent-owner
+  median sum saved 48,160. Draw saved 48,192. The treatment removed the
+  19,552-tick hash/parent phase and reduced final composition
+  30,304 -> 1,920, but exact CPU local/world work remained and production was
+  essentially flat. All runs retained 49 lighting epochs, 67 fighter runs,
+  626 fighter triangles, the full 828-triangle 648/44/126/10 class census,
+  70/686 native run accounting, 29/0/0 fallbacks, two uploads/36,864 bytes,
+  zero production failure/overlap/reject, and coherent timer/runtime state.
+DECISION: REJECT / REMOVE
+  The valid same-ROM saving was 51,872 ticks short of the 100K relative gate,
+  which is sufficient to reject the treatment. The 445,568 paired median
+  includes detailed-ledger overhead and is not compared with the coarse 331K
+  ceiling. All skeleton, selector, public API, generated unique-slot, adapter,
+  and verifier treatment code was removed. Corrected 25/27 topology remains;
+  the disjoint M2 ledger is now opt-in through
+  NDS_RENDERER_M2_DETAILED_LEDGER=1. The historical post-revert instrumented
+  profile-1 ROM is
+  0192BAFF0B130BC184B2E263D792AEF16CE67851A47CE81FB2DA9496684AE5E9.
+CANONICAL ARTIFACT:
+  No profile-0 build or publish occurred. The user-facing ROM remains
+  D28DFB303EE7381F9209026DD7DFF2370B667AD25A587ECED1D40D5BB87D2198,
+  12,043,264 bytes.
+NEXT ARCHITECTURE DECISION:
+  Do not retry a matrix-only owner while duplicating CPU world/composed
+  geometry. The next M2 cut must fuse matrix preparation, exact lighting, and
+  production emission at whole-fighter scale: GX owns geometry hierarchy;
+  CPU retains only a verified minimal 3x3/light-direction sidecar; immutable
+  49-epoch/67-run state and vertex emission is compiled into one coarse owner
+  transport rather than per-root/per-run dispatch. Budget matrix preparation
+  at <=60-80K and production at <=100-120K so 170-250K remains credible. Use
+  the detailed ledger only for phase attribution; run all <=331K and 170-250K
+  absolute gates with it disabled.
 ```

@@ -13,6 +13,15 @@ $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 make NDS_DEV_SCENE_HARNESS=normal -j16
 ```
 
+Codex-owned single runs use melonDS GDB ARM9/ARM7 ports `4333/4334`; ports
+`3333/3334` are reserved for a user-opened manual melonDS instance. Runner
+slots keep their own isolated mappings. Use scripted emulator/GDB/capture
+automation only. For subjective play behavior, build the verifier-covered ROM
+and ask the user to test it rather than controlling their desktop.
+Keep Codex-owned runner-slot emulator volume at `0`; this mutes only host
+playback and does not disable or bypass ROM audio channels/counters. Never
+change the user's manual melonDS audio configuration.
+
 Use `NDS_DEV_SCENE_HARNESS=normal` for the shared `smash64ds.nds` target.
 Harness builds should use their own `TARGET=` and `BUILD=` directories. The
 Makefile stores plain `BUILD=build*` outputs under `builds/` so root stays
@@ -31,6 +40,9 @@ Run these for docs, tooling, registry, and renderer decode changes:
 .\scripts\check-architecture.ps1
 .\scripts\check-harness-registry.ps1
 .\scripts\check-gbi-decode-fixtures.ps1
+.\scripts\check-ft-hitstatus-fixtures.ps1
+.\scripts\check-audio-id-fixtures.ps1
+.\scripts\check-one-minute-match-verifier.ps1
 .\scripts\clean-generated.ps1 -DryRun
 ```
 
@@ -48,6 +60,7 @@ Use the wrapper profiles while iterating:
 
 ```powershell
 .\scripts\verify-dev-fast.ps1
+.\scripts\verify-battle-playable-one-minute-match.ps1 -RunnerSlot 3
 .\scripts\verify-p1-gate.ps1
 .\scripts\verify-boundary.ps1
 .\scripts\verify-current.ps1
@@ -58,15 +71,23 @@ Use the wrapper profiles while iterating:
 `verify-current.ps1` and `verify-all.ps1 -Profile Latest` unless you are
 testing profile plumbing.
 
-`verify-dev-fast.ps1` now runs the GBI and registry checks, incrementally builds
+`verify-dev-fast.ps1` now runs the GBI, fighter hit-status, audio-ID, and
+registry checks, incrementally builds
 only `smash64ds-battle-playable-canonical-hwtri` unless `-NoBuild` is passed,
 and invokes its realtime verifier with `FastIteration`. It does not force a
-normal-ROM `-B` rebuild. That path uses a minimum 12-second smoke and one early
-capture run, rotates an existing `artifacts/visibility/latest.png` to
-`previous.png`, and publishes the accepted frame as `latest.png`. After the
+normal-ROM `-B` rebuild. That path uses a minimum 25-second post-GO smoke and
+one capture run, rotates an existing `artifacts/visibility/latest.png` to
+`previous.png`, and publishes the accepted frame as `latest.png`. This samples
+the timer, unlocked controls, natural CPU, and lower HUD after countdown. After the
 canonical build, `check-battle-playable-rom-parity.ps1` requires identical byte
 length and SHA-256 for the canonical and shipped ROM names. Runner-slot captures
 use that slot's emulator/config; stable alias rotation is serialized and atomic.
+
+Store every generated screenshot under `artifacts/visibility/`; do not leave
+captures in the repo root or temporary runner directories. Dated evidence names
+must identify the date, ROM/configuration, and synchronized frame window.
+`latest.png` and `previous.png` are stable aliases only, not substitutes for the
+dated evidence file.
 
 The shipped/canonical target is renderer profile 0. Renderer changes also need
 the internal profile-2 correctness run; this is the same mode-163 scene and
@@ -101,7 +122,7 @@ smoke, canonical realtime `FastIteration`, supplemental deterministic/scripted
 mode-163 battle coverage, and the one-minute timer-to-Results lifecycle. It is
 additive: Boundary, Regression, and Full profile memberships remain unchanged,
 and legacy harnesses remain diagnostic. Passing it does not prove P1 completion
-or replace the required canonical five-minute milestone soak. Unless `-NoBuild`
+or replace the required canonical one-minute full-match soak. Unless `-NoBuild`
 is passed, its wrapper incrementally prepares the normal opening ROM first;
 explicit `-Build` retains the existing forced-normal-rebuild behavior.
 
@@ -190,6 +211,10 @@ non-runner config is restored after each verifier, while dedicated runner-slot
 configs remain verifier-owned.
 The match-lifecycle gate uses a one-minute harness setting (`3600` source
 ticks) while retaining the original timer-expiry and Results transition path.
+Effective 2026-07-14, one minute is the P1 ROM rule and the automated
+iteration/soak duration. Do not launch the obsolete `18000`-tick five-minute
+configuration; the full-duration acceptance gate is the natural `3600`-tick
+expiry-to-Results path.
 
 See `docs/EMULATOR_STRATEGY.md` for the emulator decision boundary.
 
@@ -198,7 +223,7 @@ See `docs/EMULATOR_STRATEGY.md` for the emulator decision boundary.
 Use Lean snapshots for normal handoff:
 
 ```powershell
-.\scripts\New-Smash64DSSnapshot.ps1
+.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean
 ```
 
 Lean excludes generated build products, root ROM/ELF outputs, emulator logs and

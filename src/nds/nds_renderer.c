@@ -962,6 +962,60 @@ volatile u32 gNdsRendererFastOwnerTriangleCount[
 volatile u32 gNdsRendererFastFallbackCount[3];
 static NDSRendererProfileOwner sNdsRendererRuntimeOwner =
     NDS_RENDERER_PROFILE_OWNER_NONE;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+static volatile NDSRendererOwnerProfile *ndsRendererProfileM2Owner(void)
+{
+    if ((sNdsRendererRuntimeOwner != NDS_RENDERER_PROFILE_OWNER_MARIO) &&
+        (sNdsRendererRuntimeOwner != NDS_RENDERER_PROFILE_OWNER_FOX))
+    {
+        return NULL;
+    }
+    return &gNdsRendererProfileOwners[(u32)sNdsRendererRuntimeOwner];
+}
+
+static void ndsRendererProfileM2FinishProduction(
+    volatile NDSRendererOwnerProfile *owner,
+    u32 total_start,
+    u32 lighting_before,
+    u32 root_gx_before,
+    u32 run_prepare_before,
+    u32 emit_account_before,
+    u32 success)
+{
+    u32 total_ticks;
+    u32 measured_ticks;
+
+    if (owner == NULL)
+    {
+        return;
+    }
+    total_ticks = cpuGetTiming() - total_start;
+    measured_ticks =
+        (owner->m2_lighting_shading_ticks - lighting_before) +
+        (owner->m2_root_gx_ticks - root_gx_before) +
+        (owner->m2_run_prepare_ticks - run_prepare_before) +
+        (owner->m2_corner_emit_account_ticks - emit_account_before);
+    owner->m2_production_total_ticks += total_ticks;
+    if (total_ticks >= measured_ticks)
+    {
+        owner->m2_production_preflight_state_ticks +=
+            total_ticks - measured_ticks;
+    }
+    else
+    {
+        owner->m2_production_phase_overlap_count++;
+    }
+    if (success != FALSE)
+    {
+        owner->m2_production_success_count++;
+    }
+    else
+    {
+        owner->m2_production_failure_count++;
+    }
+}
+#endif
 static u32 sNdsRendererFastOwnerEnabled;
 static u32 sNdsRendererStageTextureSitesEnabled;
 static u32 sNdsRendererFastRunCount;
@@ -5376,7 +5430,7 @@ static void ndsRendererHardwareTextureLookupRemove(
         {
             /* Repair the remainder of this linear-probe cluster instead of
              * leaving tombstones that animated water keys could accumulate
-             * over a five-minute match.  The table is twice the cache size,
+             * over the complete timed match. The table is twice the cache size,
              * so an empty terminator is guaranteed. */
             sNdsRendererHardwareTextureLookup[slot] =
                 NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY;
@@ -6849,6 +6903,51 @@ static u8 ndsRendererReadTexturePackedNibble(
 
     return ((logical_texel_index & 1u) == 0u) ?
         (u8)(packed >> 4) : (u8)(packed & 0x0fu);
+}
+
+static u32 ndsRendererHardwareCiPaletteEntriesUsed(
+    const NDSRendererConfig *config,
+    const u8 *texels,
+    u32 size,
+    u32 source_width,
+    u32 source_origin_s,
+    u32 source_origin_t,
+    u32 source_read_width,
+    u32 source_read_height,
+    u32 palette_base)
+{
+    u32 max_index = 0u;
+    u32 x;
+    u32 y;
+
+    if ((texels == NULL) || (source_width == 0u) ||
+        (source_read_width == 0u) || (source_read_height == 0u))
+    {
+        return palette_base;
+    }
+    for (y = 0u; y < source_read_height; y++)
+    {
+        u32 row = (source_origin_t + y) * source_width;
+
+        for (x = 0u; x < source_read_width; x++)
+        {
+            u32 source_index = row + source_origin_s + x;
+            u32 palette_index =
+                (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ?
+                    ndsRendererReadTexturePackedNibble(
+                        config, texels, source_index,
+                        NDS_RENDERER_HW_TEXTURE_FMT_CI, size) :
+                    ndsRendererReadTextureByte(
+                        config, texels, source_index,
+                        NDS_RENDERER_HW_TEXTURE_FMT_CI, size);
+
+            if (palette_index > max_index)
+            {
+                max_index = palette_index;
+            }
+        }
+    }
+    return palette_base + max_index + 1u;
 }
 
 static u16 ndsRendererReadTextureHalfword(
@@ -8698,19 +8797,58 @@ static s32 ndsRendererHardwareBindTexture(
     palette_base = 0u;
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
     {
-        u32 palette_entries = (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ?
-            16u : 256u;
+        u32 palette_entries;
 
         if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
         {
             palette_base = render_tile->palette * 16u;
-            palette_entries += palette_base;
-            if ((use_texel1 != FALSE) &&
-                (texel1_source.format == NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
-                (texel1_source.size == NDS_RENDERER_HW_TEXTURE_SIZ_4B))
+        }
+        /* LOADTLUT is allowed to load fewer than the format's full 16/256
+         * entries. Mario's source Fireball list deliberately loads 13 CI4
+         * entries because its 16x16 image uses only indices 0..12. Validate
+         * the exact indices reachable by this tile instead of rejecting that
+         * legal BattleShip state or reading beyond the loaded palette. Keep
+         * the common full-TLUT path scan-free; only partial source TLUTs pay
+         * the bounded index census. */
+        palette_entries = palette_base +
+            ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ? 16u : 256u);
+        if ((use_texel1 != FALSE) &&
+            (texel1_source.format == NDS_RENDERER_HW_TEXTURE_FMT_CI))
+        {
+            u32 texel1_palette_entries = texel1_source.palette_base +
+                ((texel1_source.size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ?
+                    16u : 256u);
+
+            if (texel1_palette_entries > palette_entries)
             {
+                palette_entries = texel1_palette_entries;
+            }
+        }
+        if (stats->texture_tlut_count < palette_entries)
+        {
+            palette_entries = ndsRendererHardwareCiPaletteEntriesUsed(
+                config, texels_src, size, source_width,
+                source_origin_s, source_origin_t,
+                source_read_width, source_read_height, palette_base);
+            if ((use_texel1 != FALSE) &&
+                (texel1_source.format == NDS_RENDERER_HW_TEXTURE_FMT_CI))
+            {
+                u32 texel1_read_width =
+                    (texel1_source.materialize_s != FALSE) ?
+                        (1u << texel1_source.render_tile->masks) :
+                        texel1_source.width;
+                u32 texel1_read_height =
+                    (texel1_source.materialize_t != FALSE) ?
+                        (1u << texel1_source.render_tile->maskt) :
+                        texel1_source.height;
                 u32 texel1_palette_entries =
-                    texel1_source.palette_base + 16u;
+                    ndsRendererHardwareCiPaletteEntriesUsed(
+                        config, texel1_source.texels, texel1_source.size,
+                        texel1_source.source_width,
+                        texel1_source.source_origin_s,
+                        texel1_source.source_origin_t,
+                        texel1_read_width, texel1_read_height,
+                        texel1_source.palette_base);
 
                 if (texel1_palette_entries > palette_entries)
                 {
@@ -12445,6 +12583,7 @@ static s32 NDS_RENDERER_FAST_RUN_CODE
 ndsRendererNativePrepareProductionRun(
     u32 run_index,
     u32 epoch_policy,
+    u32 packet_mode,
     const NDSRendererConfig *config,
     NDSRendererStats *stats,
     NDSRendererTraversalState *state)
@@ -12643,9 +12782,12 @@ ndsRendererNativePrepareProductionRun(
         }
     }
 
-    ndsRendererNativeBeginDirectBatch(
-        stats, policy->textured, state->texture_prepare_name,
-        state->texture_prepare_poly_fmt, state->matrix_generation);
+    if (packet_mode == 0u)
+    {
+        ndsRendererNativeBeginDirectBatch(
+            stats, policy->textured, state->texture_prepare_name,
+            state->texture_prepare_poly_fmt, state->matrix_generation);
+    }
     return TRUE;
 }
 
@@ -12655,7 +12797,8 @@ ndsRendererNativeEmitProductionRun(
     u32 corner_count,
     u32 textured,
     u32 cross_matrix,
-    u32 current_palette_slot)
+    u32 current_palette_slot,
+    const u8 *binding_palette_slots)
 {
     const u16 *corner =
         &sNdsNativeFighterPackedCorners[
@@ -12674,8 +12817,18 @@ ndsRendererNativeEmitProductionRun(
 
         if (cross_matrix != 0u)
         {
-            u32 palette_slot =
-                packed >> NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT;
+            u32 palette_slot;
+
+            if (binding_palette_slots != NULL)
+            {
+                palette_slot =
+                    binding_palette_slots[dense->matrix_binding];
+            }
+            else
+            {
+                palette_slot =
+                    packed >> NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT;
+            }
 
             if (palette_slot == NDS_NATIVE_GX_MATRIX_CURRENT)
             {
@@ -12743,11 +12896,18 @@ static s32 ndsRendererNativeSubmitProductionRun(
     const NDSNativeRun *run,
     u32 epoch_policy,
     u32 current_palette_slot,
+    const u8 *binding_palette_slots,
     const NDSRendererConfig *config,
     NDSRendererStats *stats,
     NDSRendererTraversalState *state)
 {
     u32 run_index;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    volatile NDSRendererOwnerProfile *m2_owner =
+        ndsRendererProfileM2Owner();
+    u32 m2_phase_start = 0u;
+#endif
 
     if ((run == NULL) || (run->triangle_count == 0u))
     {
@@ -12757,27 +12917,61 @@ static s32 ndsRendererNativeSubmitProductionRun(
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
     (void)epoch_policy;
     (void)current_palette_slot;
+    (void)binding_palette_slots;
     (void)config;
     (void)state;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    m2_phase_start = cpuGetTiming();
+#endif
 #elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    m2_phase_start = cpuGetTiming();
+#endif
     if (ndsRendererNativePrepareProductionRun(
-            run_index, epoch_policy, config, stats, state) == FALSE)
+            run_index, epoch_policy,
+            FALSE,
+            config, stats, state) == FALSE)
     {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        if (m2_owner != NULL)
+        {
+            m2_owner->m2_run_prepare_ticks +=
+                cpuGetTiming() - m2_phase_start;
+            m2_owner->m2_run_prepare_count++;
+        }
+#endif
         return FALSE;
     }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    if (m2_owner != NULL)
+    {
+        m2_owner->m2_run_prepare_ticks +=
+            cpuGetTiming() - m2_phase_start;
+        m2_owner->m2_run_prepare_count++;
+    }
+#endif
     if ((run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) &&
         (current_palette_slot > NDS_NATIVE_GX_MATRIX_SLOT_MAX))
     {
         return ndsRendererNativeDirectReject(stats);
     }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    m2_phase_start = cpuGetTiming();
+#endif
     ndsRendererNativeEmitProductionRun(
         run_index, (u32)run->triangle_count * 3u,
         state->texture_prepare_enabled,
         (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) ? TRUE : FALSE,
-        current_palette_slot);
+        current_palette_slot, binding_palette_slots);
 #else
     (void)epoch_policy;
     (void)current_palette_slot;
+    (void)binding_palette_slots;
     (void)config;
     (void)state;
     return ndsRendererNativeDirectReject(stats);
@@ -12795,8 +12989,26 @@ static s32 ndsRendererNativeSubmitProductionRun(
     }
     else
     {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        if (m2_owner != NULL)
+        {
+            m2_owner->m2_corner_emit_account_ticks +=
+                cpuGetTiming() - m2_phase_start;
+            m2_owner->m2_corner_emit_run_count++;
+        }
+#endif
         return ndsRendererNativeDirectReject(stats);
     }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    if (m2_owner != NULL)
+    {
+        m2_owner->m2_corner_emit_account_ticks +=
+            cpuGetTiming() - m2_phase_start;
+        m2_owner->m2_corner_emit_run_count++;
+    }
+#endif
     return TRUE;
 }
 
@@ -13414,6 +13626,7 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     const NDSNativeRoot *roots;
     const u8 *palette_slots;
+    const u8 *binding_palette_slots = NULL;
     const u8 *asset_base = asset_base_ptr;
     NDSRendererTraversalState *state =
         &sNdsNativeFighterOwnerExecution.traversal;
@@ -13421,6 +13634,15 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 root_index;
     u32 native_run_count = 0u;
     u32 native_triangle_count = 0u;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    volatile NDSRendererOwnerProfile *m2_owner;
+    u32 m2_total_start;
+    u32 m2_lighting_before = 0u;
+    u32 m2_root_gx_before = 0u;
+    u32 m2_run_prepare_before = 0u;
+    u32 m2_emit_account_before = 0u;
+#endif
 
     (void)callback_user;
     if (out_hardware_started == NULL)
@@ -13428,12 +13650,31 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
         return FALSE;
     }
     *out_hardware_started = FALSE;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    m2_owner = ndsRendererProfileM2Owner();
+    if (m2_owner != NULL)
+    {
+        m2_lighting_before = m2_owner->m2_lighting_shading_ticks;
+        m2_root_gx_before = m2_owner->m2_root_gx_ticks;
+        m2_run_prepare_before = m2_owner->m2_run_prepare_ticks;
+        m2_emit_account_before = m2_owner->m2_corner_emit_account_ticks;
+    }
+    m2_total_start = cpuGetTiming();
+#endif
     if ((stats == NULL) ||
         (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ||
         (ndsRendererNativePreflightProductionOwner(
              slot, asset_base, inputs, input_count,
              callback, stats) == FALSE))
     {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        ndsRendererProfileM2FinishProduction(
+            m2_owner, m2_total_start,
+            m2_lighting_before, m2_root_gx_before,
+            m2_run_prepare_before, m2_emit_account_before, FALSE);
+#endif
         return FALSE;
     }
     if (slot == 0u)
@@ -13462,6 +13703,11 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
 
         ndsRendererNativeBindProductionRoot(state, input, stats);
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        {
+            u32 m2_root_gx_start = cpuGetTiming();
+#endif
         *out_hardware_started = TRUE;
         ndsRendererLoadHardwareRawComposedMatrix(
             &state->matrix, state->matrix_generation);
@@ -13469,6 +13715,16 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
         {
             glStoreMatrix((int)palette_slot);
         }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+            if (m2_owner != NULL)
+            {
+                m2_owner->m2_root_gx_ticks +=
+                    cpuGetTiming() - m2_root_gx_start;
+                m2_owner->m2_root_gx_count++;
+            }
+        }
+#endif
 #endif
         if (stats->first_opcode == 0u)
         {
@@ -13498,10 +13754,25 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
                 epoch->after_state_first, epoch->after_state_count,
                 epoch->after_sync_count,
                 asset_base, stats, state);
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+            {
+                u32 m2_lighting_start = cpuGetTiming();
+#endif
             ndsRendererNativeShadeProductionActions(
                 epoch,
                 sNdsNativeFighterEpochDirectPolicy[epoch_index],
                 stats, state);
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                if (m2_owner != NULL)
+                {
+                    m2_owner->m2_lighting_shading_ticks +=
+                        cpuGetTiming() - m2_lighting_start;
+                    m2_owner->m2_lighting_epoch_count++;
+                }
+            }
+#endif
 
             for (run_offset = 0u;
                  run_offset < epoch->run_count;
@@ -13513,10 +13784,19 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
                 if (ndsRendererNativeSubmitProductionRun(
                         run,
                         sNdsNativeFighterEpochDirectPolicy[epoch_index],
-                        palette_slot, input->config,
+                        palette_slot, binding_palette_slots,
+                        input->config,
                         stats, state) == FALSE)
                 {
                     ndsRendererHardwareEndBatch();
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                    ndsRendererProfileM2FinishProduction(
+                        m2_owner, m2_total_start,
+                        m2_lighting_before, m2_root_gx_before,
+                        m2_run_prepare_before, m2_emit_account_before,
+                        FALSE);
+#endif
                     return FALSE;
                 }
                 native_run_count++;
@@ -13538,6 +13818,13 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
         sNdsRendererFastOwnerTriangleCount[
             (u32)sNdsRendererRuntimeOwner] += native_triangle_count;
     }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    ndsRendererProfileM2FinishProduction(
+        m2_owner, m2_total_start,
+        m2_lighting_before, m2_root_gx_before,
+        m2_run_prepare_before, m2_emit_account_before, TRUE);
+#endif
     return TRUE;
 #else
     (void)slot;
@@ -13936,6 +14223,86 @@ static s32 ndsRendererValidateNativeRun(
         }
     }
     return TRUE;
+}
+#endif
+
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER && NDS_RENDERER_HW_TRIANGLES
+void ndsRendererProfileCensusNativeFighterSchedule(
+    u32 slot,
+    const u8 *joint_parents,
+    const u8 *joint_bindings,
+    u32 joint_count,
+    u32 binding_count,
+    u32 *schedule_match_count,
+    u32 *binding_match_count)
+{
+    const u16 *schedule;
+    const u8 *binding_joints;
+    u32 expected_joint_count;
+    u32 expected_binding_count;
+    u32 joint_index;
+    u32 binding_index;
+    u32 schedule_matches = 0u;
+    u32 binding_matches = 0u;
+
+    if ((schedule_match_count == NULL) || (binding_match_count == NULL))
+    {
+        return;
+    }
+    *schedule_match_count = 0u;
+    *binding_match_count = 0u;
+    if ((slot > 1u) || (joint_parents == NULL) ||
+        (joint_bindings == NULL))
+    {
+        return;
+    }
+    if (slot == 0u)
+    {
+        schedule = sNdsNativeMarioJointSchedule;
+        binding_joints = sNdsNativeMarioBindingJoints;
+        expected_joint_count = sizeof(sNdsNativeMarioJointSchedule) /
+            sizeof(sNdsNativeMarioJointSchedule[0]);
+        expected_binding_count = sizeof(sNdsNativeMarioBindingJoints) /
+            sizeof(sNdsNativeMarioBindingJoints[0]);
+    }
+    else
+    {
+        schedule = sNdsNativeFoxJointSchedule;
+        binding_joints = sNdsNativeFoxBindingJoints;
+        expected_joint_count = sizeof(sNdsNativeFoxJointSchedule) /
+            sizeof(sNdsNativeFoxJointSchedule[0]);
+        expected_binding_count = sizeof(sNdsNativeFoxBindingJoints) /
+            sizeof(sNdsNativeFoxBindingJoints[0]);
+    }
+    for (joint_index = 0u;
+         (joint_index < joint_count) &&
+         (joint_index < expected_joint_count);
+         joint_index++)
+    {
+        u32 expected = schedule[joint_index];
+
+        if (((expected & 31u) == joint_parents[joint_index]) &&
+            (((expected >> 5) & 31u) == joint_bindings[joint_index]))
+        {
+            schedule_matches++;
+        }
+    }
+    for (binding_index = 0u;
+         (binding_index < binding_count) &&
+         (binding_index < expected_binding_count);
+         binding_index++)
+    {
+        u32 joint = binding_joints[binding_index];
+
+        if ((joint < joint_count) &&
+            (joint_bindings[joint] == binding_index))
+        {
+            binding_matches++;
+        }
+    }
+    *schedule_match_count = schedule_matches;
+    *binding_match_count = binding_matches;
 }
 #endif
 

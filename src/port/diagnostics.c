@@ -2809,7 +2809,14 @@ volatile u32 gNdsBuildModeFastWord = NDS_BUILD_MODE_FAST_WORD;
 volatile u32 gNdsBuildModeFastWord;
 #endif
 volatile u32 gNdsRendererProfileFrameCount;
-volatile u32 gNdsRendererProfileLevel = NDS_RENDERER_PROFILE_LEVEL;
+/* Keep the immutable benchmark-build identity beside the already-live profile
+ * word so --gc-sections retains both without any per-frame touch. */
+volatile u32 gNdsRendererProfileLevel
+    __attribute__((section(".data.nds_renderer_runtime_identity"))) =
+        NDS_RENDERER_PROFILE_LEVEL;
+volatile u32 gNdsRendererM2DetailedLedger
+    __attribute__((section(".data.nds_renderer_runtime_identity"))) =
+        NDS_RENDERER_M2_DETAILED_LEDGER;
 volatile u32 gNdsRendererDepthStageSamples;
 volatile s32 gNdsRendererDepthStageMin;
 volatile s32 gNdsRendererDepthStageMax;
@@ -3048,6 +3055,26 @@ volatile u32 gNdsIFCommonHUDP0StockMin;
 volatile u32 gNdsIFCommonHUDP1StockMin;
 volatile u32 gNdsIFCommonHUDP0StockMax;
 volatile u32 gNdsIFCommonHUDP1StockMax;
+volatile u32 gNdsIFCommonHUDActivePlayerMask;
+volatile u32 gNdsIFCommonHUDShowDamageMask;
+volatile u32 gNdsIFCommonHUDSingleStockMask;
+volatile u32 gNdsIFCommonHUDCPUPlayerMask;
+volatile u32 gNdsIFCommonHUDP0FighterKind;
+volatile u32 gNdsIFCommonHUDP1FighterKind;
+volatile u32 gNdsIFCommonHUDP0Level;
+volatile u32 gNdsIFCommonHUDP1Level;
+volatile u32 gNdsIFCommonHUDP0LowerStock;
+volatile u32 gNdsIFCommonHUDP1LowerStock;
+volatile u32 gNdsIFCommonHUDTimeRemain;
+volatile u32 gNdsIFCommonHUDTimerLimit;
+volatile u32 gNdsIFCommonHUDTimerStarted;
+volatile u32 gNdsIFCommonHUDGameStatus;
+volatile u32 gNdsIFCommonHUDLowerRouteMask;
+volatile u32 gNdsIFCommonHUDLowerTextMode;
+volatile u32 gNdsIFCommonHUDLowerRouteCount;
+volatile u32 gNdsIFCommonHUDLowerTimerRouteCount;
+volatile u32 gNdsIFCommonHUDLowerStockRouteCount;
+volatile u32 gNdsIFCommonHUDTopGenericPassCount;
 volatile u32 gNdsFighterMarioFoxGCDrawAllLoopResult;
 volatile u32 gNdsFighterMarioFoxGCDrawAllLoopSafeResult;
 volatile u32 gNdsFighterMarioFoxGCDrawAllLoopMask;
@@ -3249,6 +3276,23 @@ volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxWidth;
 volatile u32 gNdsStageGCDrawAllLoopHardwareTextureMaxHeight;
 volatile u32 gNdsStageGCDrawAllLoopHardwareFighterSubmitCount;
 volatile u32 gNdsStageGCDrawAllLoopHardwareFighterTriangleCount;
+volatile u32 gNdsWeaponRendererCaptureCount;
+volatile u32 gNdsWeaponRendererDObjDrawCount;
+volatile u32 gNdsWeaponRendererSubmitCount;
+volatile u32 gNdsWeaponRendererVisibleDrawCount;
+volatile u32 gNdsWeaponRendererTriangleCount;
+volatile u32 gNdsWeaponRendererTextureReadyCount;
+volatile u32 gNdsWeaponRendererTextureRejectCount;
+volatile u32 gNdsWeaponRendererKindMask;
+volatile u32 gNdsWeaponRendererCallbackKind;
+volatile u32 gNdsWeaponRendererNoZCount;
+volatile u32 gNdsWeaponRendererMovingDrawCount;
+volatile u32 gNdsWeaponRendererLastXBits;
+volatile u32 gNdsWeaponRendererLastYBits;
+volatile u32 gNdsWeaponRendererFireballSubmitCount;
+volatile u32 gNdsWeaponRendererFireballTriangleCount;
+volatile u32 gNdsWeaponRendererFireballVisibleDrawCount;
+volatile u32 gNdsWeaponRendererRejectedDrawCount;
 volatile u32 gNdsFighterDisplayContractSelectedCount;
 volatile u32 gNdsFighterDisplayContractHiddenCount;
 volatile u32 gNdsFighterDisplayContractNoTextureCount;

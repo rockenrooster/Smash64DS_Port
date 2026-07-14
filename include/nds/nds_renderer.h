@@ -12,6 +12,20 @@
 #error "NDS_RENDERER_PROFILE_LEVEL must be 0, 1, or 2"
 #endif
 
+#ifndef NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_RENDERER_M2_DETAILED_LEDGER 0
+#endif
+
+#if (NDS_RENDERER_M2_DETAILED_LEDGER != 0) && \
+    (NDS_RENDERER_M2_DETAILED_LEDGER != 1)
+#error "NDS_RENDERER_M2_DETAILED_LEDGER must be 0 or 1"
+#endif
+
+#if NDS_RENDERER_M2_DETAILED_LEDGER && \
+    (NDS_RENDERER_PROFILE_LEVEL != 1)
+#error "NDS_RENDERER_M2_DETAILED_LEDGER requires profile level 1"
+#endif
+
 #define NDS_RENDERER_BENCHMARK_NONE 0
 #define NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP 1
 #define NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX 2
@@ -72,6 +86,7 @@
 
 #define NDS_RENDERER_VERTEX_CACHE_SIZE 32u
 #define NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY 64u
+#define NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX 27u
 #define NDS_RENDERER_TILE_COUNT 8u
 #define NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT 2u
 #define NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u
@@ -189,6 +204,59 @@ typedef struct NDSRendererOwnerProfile
     u32 light_signature;
     u32 texture_signature;
     u32 semantic_output_hash;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    /* M2 decision ledger.  These fields are deliberately absent from the
+     * shipping profile-0 owner and from the independent profile-2 oracle. */
+    u32 m2_contract_capture_ticks;
+    u32 m2_collection_ticks;
+    u32 m2_owner_validation_ticks;
+    u32 m2_census_ticks;
+    u32 m2_camera_fetch_ticks;
+    u32 m2_hash_parent_lookup_ticks;
+    u32 m2_local_matrix_ticks;
+    u32 m2_world_affine_ticks;
+    u32 m2_world_camera_ticks;
+    u32 m2_final_compose_ticks;
+    u32 m2_material_ticks;
+    u32 m2_production_total_ticks;
+    u32 m2_production_preflight_state_ticks;
+    u32 m2_lighting_shading_ticks;
+    u32 m2_root_gx_ticks;
+    u32 m2_run_prepare_ticks;
+    u32 m2_corner_emit_account_ticks;
+    u32 m2_owner_residual_ticks;
+    u32 m2_production_success_count;
+    u32 m2_production_failure_count;
+    u32 m2_production_phase_overlap_count;
+    u32 m2_owner_phase_overlap_count;
+    u32 m2_schedule_joint_count;
+    u32 m2_schedule_match_count;
+    u32 m2_binding_count;
+    u32 m2_binding_match_count;
+    u32 m2_xobj_count;
+    u32 m2_xobj_kind_4b_count;
+    u32 m2_xobj_kind_2_count;
+    u32 m2_xobj_other_count;
+    u32 m2_xobj_null_count;
+    u32 m2_parts_count;
+    u32 m2_parts_matrix_mode0_count;
+    u32 m2_parts_matrix_mode1_count;
+    u32 m2_parts_matrix_mode3_count;
+    u32 m2_parts_matrix_other_count;
+    u32 m2_animlock_active;
+    u32 m2_camera_fetch_count;
+    u32 m2_world_matrix_request_count;
+    u32 m2_world_matrix_cache_hit_count;
+    u32 m2_local_matrix_build_count;
+    u32 m2_world_affine_count;
+    u32 m2_world_camera_count;
+    u32 m2_final_compose_count;
+    u32 m2_root_gx_count;
+    u32 m2_lighting_epoch_count;
+    u32 m2_run_prepare_count;
+    u32 m2_corner_emit_run_count;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 semantic_output_hash2;
     u32 semantic_event_count;
@@ -604,6 +672,17 @@ s32 ndsRendererValidateNativeFighterOwner(
     u32 root_count,
     const u32 *root_offsets,
     const u32 *material_counts);
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER && NDS_RENDERER_HW_TRIANGLES
+void ndsRendererProfileCensusNativeFighterSchedule(
+    u32 slot,
+    const u8 *joint_parents,
+    const u8 *joint_bindings,
+    u32 joint_count,
+    u32 binding_count,
+    u32 *schedule_match_count,
+    u32 *binding_match_count);
+#endif
 void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareDiscardTextureCache(void);
 s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,

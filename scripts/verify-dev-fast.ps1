@@ -5,7 +5,7 @@ param(
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$DelaySeconds = 5,
     [int]$RunnerSlot = -1,
-    [int]$GdbPort = 3333,
+    [int]$GdbPort = 4333,
     [switch]$List,
     [switch]$SkipRegistryCheck
 )
@@ -16,7 +16,10 @@ if ($Build -and $NoBuild) {
 
 if ($List) {
     $steps = @(
-        [PSCustomObject]@{ Step = 'GBI fixtures'; Script = 'check-gbi-decode-fixtures.ps1' }
+        [PSCustomObject]@{ Step = 'GBI fixtures'; Script = 'check-gbi-decode-fixtures.ps1' },
+        [PSCustomObject]@{ Step = 'FT hit-status fixtures'; Script = 'check-ft-hitstatus-fixtures.ps1' },
+        [PSCustomObject]@{ Step = 'Audio ID fixtures'; Script = 'check-audio-id-fixtures.ps1' },
+        [PSCustomObject]@{ Step = 'One-minute verifier contract'; Script = 'check-one-minute-match-verifier.ps1' }
     )
     if (-not $SkipRegistryCheck) {
         $steps += [PSCustomObject]@{ Step = 'Harness registry'; Script = 'check-harness-registry.ps1' }
@@ -46,6 +49,9 @@ function Invoke-DevFastStep {
 }
 
 Invoke-DevFastStep -Script 'check-gbi-decode-fixtures.ps1'
+Invoke-DevFastStep -Script 'check-ft-hitstatus-fixtures.ps1'
+Invoke-DevFastStep -Script 'check-audio-id-fixtures.ps1'
+Invoke-DevFastStep -Script 'check-one-minute-match-verifier.ps1'
 if (-not $SkipRegistryCheck) {
     Invoke-DevFastStep -Script 'check-harness-registry.ps1'
 }
