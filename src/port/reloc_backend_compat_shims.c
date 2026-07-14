@@ -527,7 +527,7 @@ void syAudioPlayBGM(s32 player, s32 bgm_id)
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmPlay(player, bgm_id);
     sNdsAudioCSPlayerCompat.state =
-        (ndsAudioBgmCheckPlaying(player) != FALSE) ? 1 : AL_STOPPED;
+        (ndsAudioBgmIsPlaying() != FALSE) ? AL_PLAYING : AL_STOPPED;
 #else
     (void)player;
     sNdsAudioCSPlayerCompat.state = AL_STOPPED;
@@ -535,6 +535,16 @@ void syAudioPlayBGM(s32 player, s32 bgm_id)
     gNdsSCVSBattleStageBGM = (u32)bgm_id;
     gNdsSCVSBattleCompatAudioMask |= 1u << 0;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+}
+
+void syAudioUpdateBGMState(void)
+{
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    sNdsAudioCSPlayerCompat.state =
+        (ndsAudioBgmIsPlaying() != FALSE) ? AL_PLAYING : AL_STOPPED;
+#else
+    sNdsAudioCSPlayerCompat.state = AL_STOPPED;
+#endif
 }
 
 void func_800266A0_272A0(void)

@@ -1,0 +1,18 @@
+{
+  "source": "BattleShip_o2r/audio/S1_music_sbk sequence 12 + B1_sounds1_ctl/tbl",
+  "tool": "scripts/render-audio-bgm-pupupu.py",
+  "sample_rate": 22050,
+  "format": "signed PCM16LE mono raw",
+  "bytes": 326800,
+  "sha256": "3baf58e4dea713badfe257f42fa0057bd76e481d4792f4ddf18600c0a9239018",
+  "sequence_index": 12,
+  "note_count": 407,
+  "tempo_us_per_quarter": 405405,
+  "gain": 0.22,
+  "looping": false,
+  "loop_start_tick": 0,
+  "loop_end_tick": 0,
+  "loop_start_tick_min": 0,
+  "loop_end_tick_min": 0,
+  "loop_start_byte": 0
+}

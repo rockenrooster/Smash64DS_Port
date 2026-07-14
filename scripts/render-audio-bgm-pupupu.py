@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Render BattleShip's Pupupu BGM sequence to a DS-friendly PCM16 stream.
+"""Render a BattleShip BGM sequence to a DS-friendly PCM16 stream.
 
-This is intentionally a small compatibility renderer for the port's first
-audible BGM gate. It derives the stream from the original O2R sequence/bank
-files and does not use hand-authored notes or third-party audio.
+This is intentionally a small compatibility renderer for the port's audible
+BGM gates. It derives each stream from the original O2R sequence/bank files
+and does not use hand-authored notes or third-party audio.
 """
 
 from __future__ import annotations
@@ -122,6 +122,55 @@ def collect_notes(cseq_to_mid, seq: bytes):
         note["end"] = max(note["start"] + 80, tick_to_sample(note["end_tick"]))
 
     return notes, tempo_us
+
+
+def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int):
+    """Return a conservative shared loop interval for a rendered mix.
+
+    BattleShip's CSEQ stores loop commands per channel.  All looping channels
+    use the same loop length, but some enter the loop a few ticks apart.  A
+    single mixed PCM stream cannot reproduce those independent channel cursors;
+    using the latest loop start preserves the complete intro and is the closest
+    common stream loop point.  The metadata records the spread so that this
+    remaining fidelity debt stays measurable.
+    """
+
+    starts = []
+    ends = []
+    ticks_per_quarter = struct.unpack_from(">I", seq, 64)[0]
+
+    for tick, _sort_key, _track_id, event in iter_midi_events(cseq_to_mid, seq):
+        if event[0] != "marker":
+            continue
+        if event[1] == "loopstart":
+            starts.append(int(tick))
+        elif event[1].startswith("loopend"):
+            ends.append(int(tick))
+
+    if not starts or not ends:
+        return {
+            "looping": False,
+            "loop_start_tick": 0,
+            "loop_end_tick": 0,
+            "loop_start_tick_min": 0,
+            "loop_end_tick_min": 0,
+            "loop_start_byte": 0,
+        }
+
+    loop_start_tick = max(starts)
+    loop_end_tick = max(ends)
+    loop_start_sample = int(
+        (loop_start_tick * tempo_us * OUTPUT_SAMPLE_RATE)
+        / (ticks_per_quarter * 1000000)
+    )
+    return {
+        "looping": True,
+        "loop_start_tick": loop_start_tick,
+        "loop_end_tick": loop_end_tick,
+        "loop_start_tick_min": min(starts),
+        "loop_end_tick_min": min(ends),
+        "loop_start_byte": loop_start_sample * 2,
+    }
 
 
 def resolve_instrument(bank, program: int):
@@ -246,6 +295,7 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--sequence-index", type=int, default=SEQ_INDEX_PUPUPU)
     parser.add_argument(
         "--output",
         type=Path,
@@ -265,8 +315,9 @@ def main() -> int:
     ctl = read_o2r_payload(audio_root / "B1_sounds1_ctl")
     tbl = read_o2r_payload(audio_root / "B1_sounds1_tbl")
 
-    seq = read_seq(sbk, SEQ_INDEX_PUPUPU)
+    seq = read_seq(sbk, args.sequence_index)
     notes, tempo_us = collect_notes(cseq_to_mid, seq)
+    loop = collect_loop_metadata(cseq_to_mid, seq, tempo_us)
     decoded = decode_ctl.walk(ctl)
     by_off = {item["offset"]: item for item in decoded}
     bank = next(item for item in decoded if item.get("kind") == "ALBank")
@@ -278,16 +329,20 @@ def main() -> int:
     digest = hashlib.sha256(pcm).hexdigest()
 
     metadata = {
-        "source": "BattleShip_o2r/audio/S1_music_sbk sequence 0 + B1_sounds1_ctl/tbl",
+        "source": (
+            "BattleShip_o2r/audio/S1_music_sbk sequence "
+            f"{args.sequence_index} + B1_sounds1_ctl/tbl"
+        ),
         "tool": "scripts/render-audio-bgm-pupupu.py",
         "sample_rate": OUTPUT_SAMPLE_RATE,
         "format": "signed PCM16LE mono raw",
         "bytes": len(pcm),
         "sha256": digest,
-        "sequence_index": SEQ_INDEX_PUPUPU,
+        "sequence_index": args.sequence_index,
         "note_count": len(notes),
         "tempo_us_per_quarter": tempo_us,
         "gain": args.gain,
+        **loop,
     }
     output.with_suffix(".json").write_text(json.dumps(metadata, indent=2) + "\n")
 

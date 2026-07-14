@@ -4234,6 +4234,17 @@ static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
     gNdsSCVSBattleLifecycleGameStatus = gSCManagerBattleState->game_status;
 }
 
+static void ndsAudioBackendUpdate(void)
+{
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    ndsAudioBgmUpdate();
+    syAudioUpdateBGMState();
+#endif
+#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
+    ndsAudioFgmUpdate();
+#endif
+}
+
 static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 {
     u32 start = cpuGetTiming();
@@ -4246,12 +4257,7 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
     gNdsRendererProfileSourceUpdateTicks = cpuGetTiming() - phase_start;
     phase_start = cpuGetTiming();
 #endif
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
-    ndsAudioBgmUpdate();
-#endif
-#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
-    ndsAudioFgmUpdate();
-#endif
+    ndsAudioBackendUpdate();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileAudioUpdateTicks = cpuGetTiming() - phase_start;
 #endif
@@ -6383,7 +6389,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
     {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+        /* tic 120 starts a finite winner sequence; run long enough for the
+         * original Results audio thread to observe AL_STOPPED and start BGM 22. */
+        const u32 fast_update_max = NDS_AUDIO_BGM_RESULTS_FAST_UPDATE_MAX;
+#else
         const u32 fast_update_max = 132u;
+#endif
         u32 updates = 0;
 
         ndsPlatformClearBattleTextHud();
@@ -6400,6 +6412,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 syControllerUpdateGlobalData();
             }
             tfunc->task_update(tfunc);
+            ndsAudioBackendUpdate();
             dSYTaskmanUpdateCount++;
             updates++;
             ndsMNVSResultsRecordFrame();

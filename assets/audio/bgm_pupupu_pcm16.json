@@ -8,5 +8,11 @@
   "sequence_index": 0,
   "note_count": 1804,
   "tempo_us_per_quarter": 321371,
-  "gain": 0.22
+  "gain": 0.22,
+  "looping": true,
+  "loop_start_tick": 298,
+  "loop_end_tick": 96298,
+  "loop_start_tick_min": 298,
+  "loop_end_tick_min": 96298,
+  "loop_start_byte": 8798
 }

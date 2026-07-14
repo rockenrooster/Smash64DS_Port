@@ -965,7 +965,10 @@ NDS_AUDIO_FILES := \
 NDS_AUDIO_DERIVED_FILES :=
 ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_BGM),1)
 NDS_AUDIO_DERIVED_FILES := \
-	audio/bgm_pupupu_pcm16.raw
+	audio/bgm_pupupu_pcm16.raw \
+	audio/bgm_win_mario_pcm16.raw \
+	audio/bgm_win_fox_pcm16.raw \
+	audio/bgm_results_pcm16.raw
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_FGM),1)
 NDS_AUDIO_DERIVED_FILES += \
@@ -1122,6 +1125,18 @@ $(NITROFS_DIR)/relocdata/us/%: $(BATTLESHIP_RELOCDATA)/%
 	@cp $< $@
 
 $(NITROFS_DIR)/audio/bgm_pupupu_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_pupupu_pcm16.raw
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/audio/bgm_win_mario_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_win_mario_pcm16.raw
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/audio/bgm_win_fox_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_win_fox_pcm16.raw
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/audio/bgm_results_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_results_pcm16.raw
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

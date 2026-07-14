@@ -6,6 +6,7 @@
 
 #define AL_FX_CUSTOM 6
 #define AL_STOPPED 0
+#define AL_PLAYING 1
 
 typedef struct SYAudioCSPlayerCompat {
     s32 state;
@@ -64,6 +65,7 @@ void syAudioStopBGMAll(void);
 void syAudioPlayBGM(s32 player, s32 bgm_id);
 s32 syAudioCheckBGMPlaying(s32 sngplayer);
 void syAudioSetBGMVolume(s32 sngplayer, u32 vol);
+void syAudioUpdateBGMState(void);
 void func_800266A0_272A0(void);
 void func_80026738_27338(alSoundEffect *sfx);
 void *func_800269C0_275C0(u16 fgm_id);

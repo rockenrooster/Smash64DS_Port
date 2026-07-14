@@ -19,6 +19,7 @@ if ($List) {
         [PSCustomObject]@{ Step = 'GBI fixtures'; Script = 'check-gbi-decode-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'FT hit-status fixtures'; Script = 'check-ft-hitstatus-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'Audio ID fixtures'; Script = 'check-audio-id-fixtures.ps1' },
+        [PSCustomObject]@{ Step = 'Derived BGM assets'; Script = 'check-audio-bgm-derived-assets.ps1' },
         [PSCustomObject]@{ Step = 'One-minute verifier contract'; Script = 'check-one-minute-match-verifier.ps1' },
         [PSCustomObject]@{ Step = 'FGM phase pack'; Script = 'check-audio-fgm-phase-pack.ps1' }
     )
@@ -52,6 +53,7 @@ function Invoke-DevFastStep {
 Invoke-DevFastStep -Script 'check-gbi-decode-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-ft-hitstatus-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-audio-id-fixtures.ps1'
+Invoke-DevFastStep -Script 'check-audio-bgm-derived-assets.ps1'
 Invoke-DevFastStep -Script 'check-one-minute-match-verifier.ps1'
 Invoke-DevFastStep -Script 'check-audio-fgm-phase-pack.ps1'
 if (-not $SkipRegistryCheck) {
