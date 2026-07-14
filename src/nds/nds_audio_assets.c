@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <PR/ultratypes.h>
+#include <nds/nds_audio_fgm.h>
 
 #define NDS_AUDIO_O2R_RAW_SIZE_OFFSET 0x40L
 #define NDS_AUDIO_O2R_DATA_OFFSET 0x44L
@@ -577,6 +578,7 @@ static s32 ndsAudioParsePackage(const char *path, u32 raw_expected,
 
 void ndsAudioAssetDiagnosticsReset(void)
 {
+    ndsAudioFgmDiagnosticsReset();
     sNdsAudioAssetLoaded = 0u;
     gNdsAudioAssetResult = 0u;
     gNdsAudioAssetMask = 0u;
@@ -611,6 +613,7 @@ void ndsAudioAssetLoadFenced(void)
         return;
     }
     sNdsAudioAssetLoaded = 1u;
+    ndsAudioFgmLoadFenced();
 
     if ((ndsAudioParseSeq() != FALSE) &&
         (ndsAudioParseCtlAssets() != FALSE) &&

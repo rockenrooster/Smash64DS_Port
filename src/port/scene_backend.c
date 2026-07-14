@@ -19,6 +19,7 @@
 #include <nds/nds_boot.h>
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_audio_bgm.h>
+#include <nds/nds_audio_fgm.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_os.h>
 #include <nds/nds_platform.h>

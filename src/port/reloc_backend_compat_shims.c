@@ -539,21 +539,36 @@ void syAudioPlayBGM(s32 player, s32 bgm_id)
 
 void func_800266A0_272A0(void)
 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
+    ndsAudioFgmStopAll();
+#endif
 }
 
+#if !NDS_IMPORT_BATTLESHIP_AUDIO_FGM
 static alSoundEffect sNdsStubSoundEffect;
+#endif
 
 void func_80026738_27338(alSoundEffect *sfx)
 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
+    ndsAudioFgmStop(sfx);
+#else
     if (sfx != NULL)
     {
         sfx->sfx_id = 0;
     }
+#endif
 }
 
 void *func_800269C0_275C0(u16 fgm_id)
 {
+#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
+    alSoundEffect *sound_effect;
+
+    sound_effect = ndsAudioFgmPlay(fgm_id);
+#else
     sNdsStubSoundEffect.sfx_id = fgm_id;
+#endif
     gNdsSCVSBattleLastFGM = fgm_id;
     if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
             FALSE) &&
@@ -581,7 +596,11 @@ void *func_800269C0_275C0(u16 fgm_id)
     }
     gNdsSCVSBattleCompatAudioMask |= 1u << 1;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
+#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
+    return sound_effect;
+#else
     return &sNdsStubSoundEffect;
+#endif
 }
 
 s32 syAudioCheckBGMPlaying(s32 sngplayer)

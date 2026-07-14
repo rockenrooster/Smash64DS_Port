@@ -4249,6 +4249,9 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmUpdate();
 #endif
+#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
+    ndsAudioFgmUpdate();
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileAudioUpdateTicks = cpuGetTiming() - phase_start;
 #endif

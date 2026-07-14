@@ -1,0 +1,869 @@
+{
+  "entries": [
+    {
+      "articulation_index": 460,
+      "articulation_program": [
+        [
+          "trigger",
+          320,
+          0
+        ],
+        [
+          "pitch",
+          -1200,
+          0
+        ],
+        [
+          "unk36",
+          100,
+          0
+        ],
+        [
+          "vol",
+          20,
+          2
+        ],
+        [
+          "vol",
+          30,
+          2
+        ],
+        [
+          "vol",
+          40,
+          2
+        ],
+        [
+          "vol",
+          50,
+          3
+        ],
+        [
+          "vol",
+          60,
+          3
+        ],
+        [
+          "vol",
+          70,
+          3
+        ],
+        [
+          "vol",
+          80,
+          3
+        ],
+        [
+          "vol",
+          90,
+          3
+        ],
+        [
+          "vol",
+          100,
+          4
+        ],
+        [
+          "vol",
+          110,
+          20
+        ],
+        [
+          "vol",
+          120,
+          80
+        ],
+        [
+          "vol",
+          127,
+          60
+        ],
+        [
+          "vol",
+          120,
+          100
+        ],
+        [
+          "vol",
+          110,
+          100
+        ],
+        [
+          "vol",
+          105,
+          100
+        ],
+        [
+          "vol",
+          100,
+          100
+        ],
+        [
+          "vol",
+          95,
+          10
+        ],
+        [
+          "vol",
+          90,
+          90
+        ],
+        [
+          "vol",
+          85,
+          10
+        ],
+        [
+          "vol",
+          80,
+          80
+        ],
+        [
+          "vol",
+          75,
+          10
+        ],
+        [
+          "vol",
+          70,
+          50
+        ],
+        [
+          "vol",
+          65,
+          10
+        ],
+        [
+          "vol",
+          60,
+          50
+        ],
+        [
+          "vol",
+          55,
+          10
+        ],
+        [
+          "vol",
+          50,
+          60
+        ],
+        [
+          "vol",
+          40,
+          10
+        ],
+        [
+          "vol",
+          30,
+          100
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 12856.73,
+      "ds_frequency_hz": 15102,
+      "ds_initial_prefix_samples_dropped": 1,
+      "ds_initial_volume": 17,
+      "ds_loop_strategy": "full_stream_is_exact_source_loop_range",
+      "ds_pan": 64,
+      "ds_sample_count": 28214,
+      "ds_trailing_samples_dropped": 9,
+      "ds_volume": 17,
+      "id": 626,
+      "ima_adpcm_bytes": 14112,
+      "ima_adpcm_sha256": "72abd82861b5954113335cd7e990b4e0262d065873e4209b292a629efe475b76",
+      "ima_snr_db": 23.118,
+      "name": "nSYAudioVoicePublicExcited",
+      "net_pitch_cents": -1300,
+      "phase_index": 0,
+      "sound_offset": 64384,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 6900000,
+      "source_duration_ticks": 1200,
+      "source_loop_end": 28215,
+      "source_loop_infinite": true,
+      "source_loop_start": 1,
+      "source_pcm_samples": 28224,
+      "source_pcm_sha256": "9f6be5d2c857b8a27409e6e69e6503b4be67c71fba0122e4eb2d922eef4ae32d",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 320,
+      "source_vadpcm_bytes": 15876,
+      "source_vadpcm_frame_bytes": 15876,
+      "source_vadpcm_sha256": "973262100d680bae3e1c0cb65d41e6a598359b4c535ced1bfd3dcab9bbf36819",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 20,
+          "ds_volume": 17,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 30,
+          "ds_volume": 25,
+          "tick": 2
+        },
+        {
+          "articulation_volume": 40,
+          "ds_volume": 34,
+          "tick": 4
+        },
+        {
+          "articulation_volume": 50,
+          "ds_volume": 42,
+          "tick": 6
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 51,
+          "tick": 9
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 59,
+          "tick": 12
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 68,
+          "tick": 15
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 76,
+          "tick": 18
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 85,
+          "tick": 21
+        },
+        {
+          "articulation_volume": 110,
+          "ds_volume": 93,
+          "tick": 25
+        },
+        {
+          "articulation_volume": 120,
+          "ds_volume": 102,
+          "tick": 45
+        },
+        {
+          "articulation_volume": 127,
+          "ds_volume": 108,
+          "tick": 125
+        },
+        {
+          "articulation_volume": 120,
+          "ds_volume": 102,
+          "tick": 185
+        },
+        {
+          "articulation_volume": 110,
+          "ds_volume": 93,
+          "tick": 285
+        },
+        {
+          "articulation_volume": 105,
+          "ds_volume": 89,
+          "tick": 385
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 85,
+          "tick": 485
+        },
+        {
+          "articulation_volume": 95,
+          "ds_volume": 81,
+          "tick": 585
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 76,
+          "tick": 595
+        },
+        {
+          "articulation_volume": 85,
+          "ds_volume": 72,
+          "tick": 685
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 68,
+          "tick": 695
+        },
+        {
+          "articulation_volume": 75,
+          "ds_volume": 64,
+          "tick": 775
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 59,
+          "tick": 785
+        },
+        {
+          "articulation_volume": 65,
+          "ds_volume": 55,
+          "tick": 835
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 51,
+          "tick": 845
+        },
+        {
+          "articulation_volume": 55,
+          "ds_volume": 47,
+          "tick": 895
+        },
+        {
+          "articulation_volume": 50,
+          "ds_volume": 42,
+          "tick": 905
+        },
+        {
+          "articulation_volume": 40,
+          "ds_volume": 34,
+          "tick": 965
+        },
+        {
+          "articulation_volume": 30,
+          "ds_volume": 25,
+          "tick": 975
+        },
+        {
+          "articulation_volume": 0,
+          "ds_volume": 0,
+          "tick": 1075
+        }
+      ],
+      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          460
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          77
+        ],
+        [
+          "set_unk2C",
+          16
+        ],
+        [
+          "set_unk1E",
+          36
+        ],
+        [
+          "set_volume",
+          223
+        ],
+        [
+          "note",
+          12,
+          7,
+          1200
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 2966600
+    },
+    {
+      "articulation_index": 331,
+      "articulation_program": [
+        [
+          "trigger",
+          208,
+          0
+        ],
+        [
+          "pitch",
+          -1200,
+          0
+        ],
+        [
+          "unk36",
+          100,
+          0
+        ],
+        [
+          "vol",
+          127,
+          220
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 8855.318,
+      "ds_frequency_hz": 16000,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 106,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 11248,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 106,
+      "id": 470,
+      "ima_adpcm_bytes": 5628,
+      "ima_adpcm_sha256": "668cade614e56e94bdd96454bf11e0cea8e86cc42bb28f887be67ec60ea453c6",
+      "ima_snr_db": 26.731,
+      "name": "nSYAudioVoiceAnnounceThree",
+      "net_pitch_cents": -1200,
+      "phase_index": 1,
+      "sound_offset": 62592,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 569250,
+      "source_duration_ticks": 99,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 11248,
+      "source_pcm_sha256": "4b2c8cf9ee44140bb1950c08e4bca385cf490d157bffe8244227e1ce382b7ea0",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 208,
+      "source_vadpcm_bytes": 6328,
+      "source_vadpcm_frame_bytes": 6327,
+      "source_vadpcm_sha256": "07a9860a570b14e1330634f0c3b51b1d7ecf2cd994a42943d0a45375b84f9a51",
+      "source_vadpcm_trailing_bytes": 1,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 106,
+          "tick": 0
+        }
+      ],
+      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          3
+        ],
+        [
+          "set_articulation",
+          331
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          255
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_unk2C",
+          35
+        ],
+        [
+          "set_volume",
+          220
+        ],
+        [
+          "note",
+          13,
+          7,
+          99
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 1757880
+    },
+    {
+      "articulation_index": 332,
+      "articulation_program": [
+        [
+          "trigger",
+          209,
+          0
+        ],
+        [
+          "pitch",
+          -1200,
+          0
+        ],
+        [
+          "unk36",
+          100,
+          0
+        ],
+        [
+          "vol",
+          127,
+          220
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32009,
+      "decoded_rms": 8272.839,
+      "ds_frequency_hz": 16000,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 106,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 11472,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 106,
+      "id": 469,
+      "ima_adpcm_bytes": 5740,
+      "ima_adpcm_sha256": "16a68f0bcc93f389677358f2040c7659f59b44844158b2db976f30fca1917f13",
+      "ima_snr_db": 25.254,
+      "name": "nSYAudioVoiceAnnounceTwo",
+      "net_pitch_cents": -1200,
+      "phase_index": 2,
+      "sound_offset": 62608,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 575000,
+      "source_duration_ticks": 100,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 11472,
+      "source_pcm_sha256": "4864857eab61c88769913a6c4e6fb9d269eb5c978dd746d7fd5082312df475f9",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 209,
+      "source_vadpcm_bytes": 6454,
+      "source_vadpcm_frame_bytes": 6453,
+      "source_vadpcm_sha256": "35ddcea1d8b6165a00570c0ef5a1aac69927f2e0da9849666e38a00e1f271e56",
+      "source_vadpcm_trailing_bytes": 1,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 106,
+          "tick": 0
+        }
+      ],
+      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          3
+        ],
+        [
+          "set_articulation",
+          332
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          255
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_unk2C",
+          35
+        ],
+        [
+          "set_volume",
+          220
+        ],
+        [
+          "note",
+          13,
+          7,
+          100
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 1764208
+    },
+    {
+      "articulation_index": 333,
+      "articulation_program": [
+        [
+          "trigger",
+          210,
+          0
+        ],
+        [
+          "pitch",
+          -1200,
+          0
+        ],
+        [
+          "unk36",
+          100,
+          0
+        ],
+        [
+          "vol",
+          127,
+          220
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 7934.794,
+      "ds_frequency_hz": 16000,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 111,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 10848,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 111,
+      "id": 467,
+      "ima_adpcm_bytes": 5428,
+      "ima_adpcm_sha256": "8f440486dd3ca8cffadbe6c5ec436f391a6385696ddf766113d05ca45c7720ee",
+      "ima_snr_db": 28.393,
+      "name": "nSYAudioVoiceAnnounceOne",
+      "net_pitch_cents": -1200,
+      "phase_index": 3,
+      "sound_offset": 62624,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 488750,
+      "source_duration_ticks": 85,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 10848,
+      "source_pcm_sha256": "6d9f122795d4c3c4640bc4acf4b82842570bd2f4f655255a4d3cd6c46eb9378a",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 210,
+      "source_vadpcm_bytes": 6102,
+      "source_vadpcm_frame_bytes": 6102,
+      "source_vadpcm_sha256": "b36e74c3631389075c83911f448aa7e8b107748dff7ab25061b041bd82c77398",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 111,
+          "tick": 0
+        }
+      ],
+      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          3
+        ],
+        [
+          "set_articulation",
+          333
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          255
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_unk2C",
+          35
+        ],
+        [
+          "set_volume",
+          230
+        ],
+        [
+          "note",
+          13,
+          7,
+          85
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 1770664
+    },
+    {
+      "articulation_index": 334,
+      "articulation_program": [
+        [
+          "trigger",
+          211,
+          0
+        ],
+        [
+          "pitch",
+          -1200,
+          0
+        ],
+        [
+          "unk36",
+          100,
+          0
+        ],
+        [
+          "vol",
+          127,
+          220
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 7690.527,
+      "ds_frequency_hz": 16000,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 124,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 15840,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 124,
+      "id": 490,
+      "ima_adpcm_bytes": 7924,
+      "ima_adpcm_sha256": "214bfa4c1964973bcf3efaa82a12e68c3b2b9d8489c8c0efea9bedddfd10927b",
+      "ima_snr_db": 26.512,
+      "name": "nSYAudioVoiceAnnounceGo",
+      "net_pitch_cents": -1200,
+      "phase_index": 4,
+      "sound_offset": 62640,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 862500,
+      "source_duration_ticks": 150,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 15840,
+      "source_pcm_sha256": "be91334126be40b507a2a94b1e0b359fcb0f114a5bc29700bddf01d9aa10eafe",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 211,
+      "source_vadpcm_bytes": 8910,
+      "source_vadpcm_frame_bytes": 8910,
+      "source_vadpcm_sha256": "8f406abb82d3667e493787c912fc06f5f95ceae45ae6c76cdf2d5f5434607c5e",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 124,
+          "tick": 0
+        }
+      ],
+      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          334
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          95
+        ],
+        [
+          "set_unk1E",
+          36
+        ],
+        [
+          "set_unk2C",
+          35
+        ],
+        [
+          "set_volume",
+          255
+        ],
+        [
+          "note",
+          13,
+          7,
+          150
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 1776768
+    }
+  ],
+  "entry_bytes": 32,
+  "entry_count": 5,
+  "envelope_point_bytes": 4,
+  "format": "BattleShip P1 FGM phase pack / Nintendo DS IMA ADPCM",
+  "format_version": 2,
+  "header_bytes": 16,
+  "known_runtime_fidelity_debt": [
+    "PublicExcited drops its one-sample pre-roll so the DS ADPCM stream can loop the exact BattleShip [1, 28215) range.",
+    "The AOT BattleShip volume envelope is scheduled from the 60 Hz game update and uses DS step volume; N64 applied 5.75 ms ticks with a 5.75 ms synthesizer ramp."
+  ],
+  "mapping_sha256": "4e2f16ca78c25561719f67fc548a668f95cdc475b61088b5a834eff609124a65",
+  "mapping_sha256_lo": "0xca162f4e",
+  "pack_sha256": "5ae447cd79934f90503c0f94d68e888b02f7202294b727e836ddd296b9cb716c",
+  "resident_bytes": 39120,
+  "resident_limit_bytes": 65536,
+  "runtime_conversion": false,
+  "source_fgm_output_rate_hz": 32000,
+  "source_fgm_timer_microseconds": 5750,
+  "sources": {
+    "B1_sounds2_ctl": {
+      "raw_bytes": 64416,
+      "raw_sha256": "45d66fbf15375e5ff726a878b4f7118745df7a1549975689af0be31fa0d5e636",
+      "wrapped_sha256": "1fb9da77cb88d6e06e8baa92106bc7a409e1f4b34786e385921a1807fccf2fc4"
+    },
+    "B1_sounds2_tbl": {
+      "raw_bytes": 2998752,
+      "raw_sha256": "30d86950b3d97a0d487ac9f6a98d6a896642956a31be06a844987ce248cd60dd",
+      "wrapped_sha256": "f4fa5a9e38e838fa2cfd9dedb54b1574388ceb36d2db52e0a0574d4d32524290"
+    },
+    "fgm_tbl": {
+      "raw_bytes": 11728,
+      "raw_sha256": "aea950b2fe8d7837f2f41af5c6644a238931ca6fd617cb400ef7051f3fe3ec0e",
+      "wrapped_sha256": "7e4b9fb1162dedb91a67c9cee5cc53d8758ee8afbbb8e311e67dc8d8820b7b39"
+    },
+    "fgm_ucd": {
+      "raw_bytes": 19232,
+      "raw_sha256": "c99224c263abf7370507c3235d8459b2196d919addf4384803099e0a1c06977e",
+      "wrapped_sha256": "12b043e8db6572256cc15ce684e9fae4f56a4d076c2f47bce930d0ddeea6ab9c"
+    }
+  }
+}

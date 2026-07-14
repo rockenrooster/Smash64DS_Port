@@ -10,6 +10,7 @@
 #include <gr/ground.h>
 #include <if/interface.h>
 #include <mn/menu.h>
+#include <nds/nds_audio_assets.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -231,6 +232,13 @@ void scVSBattleStartScene(void)
 #if NDS_DEV_LIVE_INPUT_PREVIEW
     gNdsSCVSBattleOriginalStartResult =
         NDS_SCVSBATTLE_ORIGINAL_START_PASS;
+
+    /* Stage the bounded DS-native audio bank at the scene boundary.  The
+     * original func_start immediately plays PublicExcited, before the DS
+     * task loop begins, so loading from syTaskmanRunTask is too late. */
+#if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
+    ndsAudioAssetLoadFenced();
+#endif
 
     /* The N64 validation overlay is not staged on DS. */
     gSCManagerBackupData.boot = 0;

@@ -97,6 +97,7 @@ override NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW := 1
 override NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1
+override NDS_IMPORT_BATTLESHIP_AUDIO_FGM := 1
 ifeq ($(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL),1)
 override NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER := 1
 endif
@@ -513,7 +514,7 @@ export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
 
 # Keep this list explicit. Adding an original subsystem is a deliberate port step.
-CFILES := main.c nds_platform.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_renderer.c port_probe.c n64_stubs.c coroutine.c \
+CFILES := main.c nds_platform.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c port_probe.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -966,6 +967,10 @@ ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_BGM),1)
 NDS_AUDIO_DERIVED_FILES := \
 	audio/bgm_pupupu_pcm16.raw
 endif
+ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_FGM),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/fgm_phase_pack_ima.bin
+endif
 
 NDS_INISHIE_SCALE_RELOCDATA_FILES :=
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
@@ -1080,6 +1085,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS $(NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_AUDIO_BGM $(NDS_IMPORT_BATTLESHIP_AUDIO_BGM)'; \
+		echo '#define NDS_IMPORT_BATTLESHIP_AUDIO_FGM $(NDS_IMPORT_BATTLESHIP_AUDIO_FGM)'; \
 		echo '#endif'; \
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
@@ -1116,6 +1122,10 @@ $(NITROFS_DIR)/relocdata/us/%: $(BATTLESHIP_RELOCDATA)/%
 	@cp $< $@
 
 $(NITROFS_DIR)/audio/bgm_pupupu_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_pupupu_pcm16.raw
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/audio/fgm_phase_pack_ima.bin: $(PROJECT_ROOT)/assets/audio/fgm_phase_pack_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
