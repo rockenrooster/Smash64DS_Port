@@ -1,0 +1,104 @@
+{
+  "artifacts": {
+    "index_bytes": 11060,
+    "index_sha256": "83d2b342bb0a3530589a12af89a0548aa67dbdf6d1f92630bef1798701ac08b6",
+    "max_staged_texture_bytes_per_frame": 20224,
+    "manifest_bytes": 44339,
+    "manifest_sha256": "74c74144e34e9692f94a62e042ab1ce12ba0c00f597d1da1f9f01888e6564046",
+    "payload_bytes": 1560960,
+    "payload_sha256": "fa8bf472aad6ef1a2423bcec3f28891831b309774ae2f92c9db140cb25121c1e",
+    "runtime_artifact_bytes": 1572020,
+    "safe_64_row_payload_bytes": 2097792
+  },
+  "census": {
+    "cycle_frames": 216,
+    "large_keys": 165,
+    "large_outputs": 101,
+    "oracle_pixels": 3024896,
+    "simulated_frames": 18000,
+    "small_keys": 157,
+    "small_outputs": 105,
+    "total_keys": 322,
+    "total_outputs": 206
+  },
+  "outputs": {
+    "large": {
+      "compact_unique_rows": [
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63
+      ],
+      "first_key": [
+        0,
+        1,
+        769,
+        0,
+        1277,
+        508,
+        769,
+        0,
+        1277,
+        508,
+        114
+      ],
+      "first_output_sha256": "f3a908659547f360ec9d3b79f80aa4c5dca829cdb36975a5d3a59667d1fdf532",
+      "last_new_frame": 215,
+      "output_set_sha256": "32b1736cf65a536a7d90e70b7324f54031a8ee23fd4b4a79f458df2f00f79e27"
+    },
+    "small": {
+      "compact_unique_rows": [],
+      "first_key": [
+        0,
+        1,
+        205,
+        0,
+        329,
+        252,
+        205,
+        0,
+        329,
+        252,
+        114
+      ],
+      "first_output_sha256": "61b0bb44aa30033d0c8e07d924f6b38ddbafa23807692eb16aab194e57457efe",
+      "last_new_frame": 215,
+      "output_set_sha256": "9c6736d6766b1978f649bc869e9dd2599cbab9655777001576f8829c9e0d3543"
+    }
+  },
+  "schema": 1,
+  "sources": {
+    "bank103_payload_sha256": "4109fa4ac31fdf36d25ea228f8475a1efa6758114942ee65b051e56358684afe",
+    "bank103_sha256": "a61e74aece06c5f15fa7cd1d6633afd9cc3750c9163caeffe59cab2d157a222a",
+    "bank104_payload_sha256": "1d82f9304458528341452b9610f55952a4951a1ead4c41cd0c5ebdab10380ebd",
+    "bank104_sha256": "3ce7e51da3810dca927521717357a2c44b1c51760bc942b0d4e5bfebe6fd4d52"
+  }
+}
