@@ -17,6 +17,14 @@ enum NDSInput {
     NDS_INPUT_R     = 1u << 10
 };
 
+enum NDSOriginalSpriteOverlayLayer {
+    NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND = 1u << 0,
+    NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND = 1u << 1,
+    NDS_ORIGINAL_SPRITE_OVERLAY_ALL =
+        NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND |
+        NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND
+};
+
 void ndsPlatformInit(void);
 u32 ndsPlatformReadInput(void);
 void ndsPlatformBeginFrame(void);
@@ -38,7 +46,13 @@ void ndsPlatformCommitOriginalSpritePreview(void);
 void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpritePreview(void);
+void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask);
 void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
+u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index);
+void ndsPlatformSceneMipCacheAbort(void);
+u32 ndsPlatformSceneMipCaptureCompletedCount(void);
+u32 ndsPlatformSceneMipCacheReady(void);
+u32 ndsPlatformSceneMipCacheFailed(void);
 u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height,
                                        u32 *out_pitch);
 void ndsPlatformCommitOriginalDLPreview(void);

@@ -1356,3 +1356,449 @@ NEXT MEASURED BOTTLENECK:
   wallpaper wall at 383,296 ticks and live scale 1.50x..1.70x; retain that as
   a deferred >=300K-class BG2-affine/row-reuse target only after draw <700K.
 ```
+
+## 2026-07-13 - rejected complete stage no-Z setup kernel
+
+```text
+IDEA ID: M7-STAGE-NOZ-SETUP
+HYPOTHESIS:
+  Keep the exact source state interpreter, but intercept every Dream Land no-Z
+  TRI command before the generic classifier/setup path. Prepare transformed XY,
+  color, ST, vertex-alpha poly format, and painter depth through one narrow
+  command kernel while retaining live texture binds and exact GX writes.
+TARGETED EXCLUSIVE COUNTER:
+  Same-ROM profile-1 whole draw, stage owner, and layer-0 median/P95, comparing
+  retained mode 3 against temporary mode 4 with incremental wallpaper enabled.
+MEASURED UPPER BOUND:
+  The kernel covered all 126 stage no-Z triangles, but stage improved only
+  21,152/22,592 ticks (2.59% median) and whole draw only 13,952/5,248 ticks.
+  Bypassing generic class/setup without fusing intervening state/material work
+  therefore misses both the 50K whole-draw and 25% owner gates.
+LIVE-TREE RECONCILIATION:
+  Started from retained wallpaper commit d2f5809a5c. Read the current roadmaps,
+  BattleShip grdisplay source, and sm64-nds painter-depth renderer. Preserved all
+  user-local files and kept decomp read-only.
+FILES/FUNCTIONS CHANGED:
+  Temporary renderer/header and benchmark-selector changes added a stage-only
+  no-Z command kernel, exact constant/vertex-alpha handling, unique projected
+  slot preparation, narrow textured/untextured emission, and mode-4 coverage.
+  All production and selector changes were removed after the keep-gate miss.
+BUILD TARGET/FLAGS:
+  smash64ds-battle-playable-coarse-hwtri; profile 1; common/scene O2 Thumb,
+  renderer O2 ARM; benchmark mode 0; incremental wallpaper mode 1.
+PROFILE-1 ROM SHA-256:
+  3F525296E9CA537CD6D14012DF7116AE4A5501A75CF07492E78D601A72AB37AC
+  for both modes; only the GDB runtime selector changed.
+FRAME/LOGIC-TICK WINDOWS:
+  Mode 3 frames 225..256 / logic 232..263; mode 4 frames 233..264 / logic
+  240..271. Both are 32 consecutive warm frames with 0/0 conservation error.
+A0 MEDIAN/P95:
+  Mode 3 draw 1,861,920/1,916,032; stage 815,168/822,720; layer 0
+  262,400/262,464; wallpaper 289,856/362,752.
+B0 MEDIAN/P95:
+  Mode 4 draw 1,847,968/1,910,784; stage 794,016/800,128; layer 0
+  251,936/252,160; wallpaper 297,280/373,632.
+ACTIVE/WAIT SPLIT:
+  Active improves 1,898,560/1,952,704 -> 1,884,704/1,947,456. VBlank wait
+  absorbs the small median delta; residuals remain below 0.9%.
+OWNER / COVERAGE RESULT:
+  Fast coverage changes 45 runs / 540 triangles -> 120 / 666. Stage coverage
+  is 60 -> 186, proving all 126 no-Z triangles joined the existing 60 raw
+  triangles; Mario/Fox remain 246/234. Existing raw fallbacks remain bounded.
+ORACLE/COUNTER/GX RESULT:
+  Profile 1 retains exact 828 triangles, 648/44/126/10 classes, 121/707/121
+  batches, 98/730 texture prepare/reuse, and 2/36,864-byte uploads. Profile 2
+  and capture were intentionally skipped after the decisive performance miss.
+VERIFIER COMMANDS AND RESULTS:
+  Incremental build, ITCM placement, two 8-frame coverage smokes, and the
+  same-ROM 32-frame mode-3/mode-4 comparison passed their structural and
+  conservation gates. The candidate was then fully reverted with apply_patch.
+DECISION: REVERT
+  A standalone no-Z classifier/setup/emitter is still too small. Do not add
+  another triangle-kernel variant around the existing source state stream.
+NEXT MEASURED BOTTLENECK:
+  Renderer work requires a complete-stage owner design that fuses intervening
+  material/state/VTX preparation into coarse direct records. In parallel, the
+  live A-normal availability/tap gap remains a higher-impact P1 gameplay issue.
+```
+
+## 2026-07-13 - rejected single-affine Dream Land wallpaper
+
+```text
+IDEA ID: J1-SINGLE-AFFINE
+HYPOTHESIS:
+  Replace the exact 256x192 software wallpaper resampler with one DS affine
+  B16 background and register-only per-frame updates.
+TARGETED EXCLUSIVE COUNTER:
+  Exact accepted source X/Y maps versus the DS q8 affine sampler, plus live BG3
+  ownership before dedicating or repurposing VRAM D.
+LIVE-TREE RECONCILIATION:
+  CODEX_60FPS_BIG_JUMPS_14_9FPS_20260713.txt is authoritative over older
+  roadmap order/gates. Canonical battle leaves BG3 empty across the observed
+  128-frame window, but Results/opening still require the generic BG3 layout.
+EXACTNESS RESULT:
+  The accepted mapper contains two integer sampling stages. The host/profile
+  model found coordinate mismatches in both axes across all 128 observed
+  origin/scale states for a single q8 affine transform. No bounded sampling
+  difference was approved by Tyler.
+PERFORMANCE RESULT:
+  None. The architecture failed its required exactness/approval preflight, so
+  no ROM rebuild or misleading timing run was performed.
+DECISION: REVERT / DO NOT IMPLEMENT
+  A single affine layer cannot meet the authoritative exactness gate. The live
+  source tree retained no implementation or diagnostic probe.
+NEXT MEASURED BOTTLENECK:
+  Test the supplied exact affine-base plus sparse-correction architecture once;
+  retain it only if the complete owner falls below the 20K/30K wallpaper gate.
+```
+
+## 2026-07-13 - rejected per-root generated fighter representation
+
+```text
+IDEA ID: J2-FIGHTER-NATIVE-PER-ROOT
+HYPOTHESIS:
+  Generate compact fighter roots, state epochs, and triangle runs so Mario and
+  Fox bypass source-list traversal while preserving exact renderer semantics.
+TARGETED EXCLUSIVE COUNTER:
+  Same-ROM profile-1 Mario+Fox owner wall and whole draw; profile-2 828-event,
+  owner/cache/state, vertex, class, batch, texture, and upload equality.
+GENERATED REPRESENTATION:
+  32 roots, 49 epochs, 67 runs, and 626 triangles. Compact typed state and u16
+  topology reduced ROM growth to 13,312 bytes after dead-state elimination;
+  250/418 runtime state effects were removed, leaving 54 deltas / 168 refs.
+PROFILE-1 RESULT:
+  Generic Mario+Fox 1,003,232 ticks; generated path 736,864 ticks. Saving is
+  266,368 ticks / 26.55%, below the binding >=300K and >=40% activation gate.
+  A temporary raw-first variant reached a 305,536-tick timing delta but stalled
+  the forensic renderer and was immediately removed; it is not an exact KEEP.
+PROFILE-2 RESULT:
+  The retained measurable variant matched 828 semantic events, 2,484/0/0
+  vertex oracle, 648/44/126/10 submit classes, 121/707/121 batches, 98/730
+  texture prepare/reuse, and the exact upload hash with zero trace overflow.
+ARCHITECTURE FINDING:
+  The generated path still paid one generic triangle entry per root and applied
+  residual source-shaped state effects. It was a compact per-root executor,
+  not the required complete owner that directly binds live epochs and emits
+  long native streams.
+MEMORY/DISASSEMBLY:
+  Candidate ROM was 12,035,072 bytes versus 12,021,760 baseline. The scene arena
+  retained 202,336 bytes of headroom in the measured profile-1 build; generated
+  material BSS was 400 bytes. The remaining generic call boundary explains the
+  missed reduction gate.
+DECISION: REVERT
+  Exact but too small. Generator, runtime mode plumbing, generated include, and
+  all renderer changes were removed. Do not revive this representation or its
+  raw-first kernel.
+NEXT MEASURED BOTTLENECK:
+  Only a genuine whole-owner fighter path is admissible: preflight the complete
+  owner, bind typed material/matrix/texture state once per effective epoch,
+  direct-load VTX/MODIFY state, and use no generic scan/VTX/TRI/classifier call.
+```
+
+## 2026-07-13 - rejected exact affine-base plus sparse-correction wallpaper
+
+```text
+IDEA ID: J1-AFFINE-SPARSE-CORRECTION
+HYPOTHESIS:
+  Put a fixed 256x220 Dream Land source window in affine BG2 and maintain an
+  identity BG3 containing only exact pixels where the affine X or Y sample
+  differs from the accepted software mapper.
+TARGETED EXCLUSIVE COUNTER:
+  Profile-1 wallpaper/whole-draw timing, source-window writes, correction
+  density/writes, semantic-map solver time, and sparse-correction maintenance.
+  Profile 2 was gated on a >=100K or >=5% win and was not built after the miss.
+HOST/FEASIBILITY RESULT:
+  The supplied reference model reconstructs exact pixels at representative
+  1.50..1.70 scales with about 23-30% corrections. The live eight-frame census
+  observed source X 46..232, fixed window origin 44, one initial 65,536-pixel
+  upload, zero normal-frame shifts, and 12,746-14,220 current corrections.
+FIRST FALSIFYING RESULTS:
+  The full +/-8 coefficient search cost more than the retained renderer and
+  produced about 1.69M wallpaper ticks. Rounded-slope solving plus correction
+  delta tracking still measured 488,992-602,560 wallpaper median in separate
+  eight-frame windows, versus the accepted 237,088 baseline. Whole draw rose
+  to roughly 2.37M-2.47M instead of falling by the required 180K.
+EXCLUSIVE PHASE RESULT:
+  Rounded-slope solving remained about 62-66K ticks/frame. BG3 correction
+  maintenance alone remained about 480-620K ticks/frame: sparse screen-space
+  VRAM stores and the comparisons needed to avoid unchanged stores cost more
+  than the complete packed-row/DMA software wallpaper owner.
+ROM/MEMORY RESULT:
+  Final diagnostic ROM SHA-256 was
+  E8983923EBA196E3AE1CB87915155E3700FDC6323EB94ADFF704E0EC3513D91D
+  at 11,992,064 bytes. Arena headroom was 218,720 bytes; the temporary affine
+  state occupied 1,552 BSS bytes and preserved the reserve.
+EXACTNESS STATUS:
+  Host reconstruction was exact by construction, but on-device profile-2 pixel
+  promotion was intentionally skipped after the decisive negative profile-1
+  result. No production exactness claim is made for the removed prototype.
+DECISION: REVERT
+  The architecture is hundreds of thousands of ticks slower than the retained
+  software path and cannot clear the 20K/30K or >=180K gates. Platform API,
+  solver, correction code, selectors, verifier fields, and generated pycache
+  were fully removed; retained source delta is zero.
+NEXT MEASURED BOTTLENECK:
+  Return to complete DS-native owners. Do not retry affine correction bitmaps,
+  single-affine bias polishing, source-window streaming, or more wallpaper DMA
+  tuning without a fundamentally different hardware representation.
+```
+
+## 2026-07-13 - retained serialized scene-buffer reuse / paused stage falsifier
+
+```text
+IDEA ID: M9-BOOT-MEMORY
+HYPOTHESIS:
+  Recover the complete-stage candidate's measured 53,808-byte arena overflow
+  without weakening its heap reserve by sharing file storage between scenes
+  that BattleShip's scene manager serializes.
+SOURCE/LIFETIME RESULT:
+  Title and opening/action-preview reset the reloc ledger at scene boundaries
+  and cannot own their static file stores concurrently. Their existing
+  176,000- and 270,000-byte arrays now alias through one aligned union; sizes,
+  paths, and cache storage are unchanged.
+MEMORY RESULT:
+  Main BSS falls exactly 176,000 bytes, from 1,932,688 to 1,756,688. The final
+  coarse candidate ELF is 8,539,628 bytes with main/main.rw/BSS
+  722,352/124,052/1,756,688.
+RUNTIME RESULT:
+  The immediate post-memory Profile-1 generic ROM boots with audio, Dream Land,
+  and all 828 triangles. Eight-frame draw/stage medians are 2,242,336/865,920
+  ticks; this is boot proof, not a performance control. Artifact:
+  logs/optimization/native-stage-post-memory-mode0-generic-smoke8.json.
+MODE-9 STATUS:
+  The first post-memory launch cleanly fell back because the preflight expected
+  gcDrawDObjTreeForGObj instead of BattleShip's eight grdisplay layer wrappers.
+  Exact wrapper validation is now rebuilt, but the final ROM
+  9E7D7114DDE5DCC5FCDD6689AC5EFFD44646F28B53B773942CA0F69AEFE18CAC
+  is deliberately unmeasured at the user's pause point.
+DECISION: KEEP MEMORY REUSE; MODE 9 PENDING ONE FINAL FALSIFIER
+  Resume with the checkpointed eight-frame mode-9 command. Reject immediately
+  on another activation failure or unless draw <=1,299,968 and stage <=485,702
+  ticks. Preserve the accepted mode-8 owner and this 176,000-byte recovery.
+```
+
+## 2026-07-13 - rejected complete-stage owner; retained mode-8 visual proof
+
+```text
+IDEA ID: M9-COMPLETE-STAGE-FINAL
+HYPOTHESIS / EXCLUSIVE GATE:
+  The corrected BattleShip layer-wrapper identities would activate one native
+  complete-stage transaction and save at least 300,000 whole-draw ticks while
+  reducing stage to <=485,702. Required accounting was exactly 121 runs, 828
+  triangles, owners 202+320+306, and zero owner fallbacks.
+TIME TO FIRST MEASUREMENT:
+  Zero new implementation time at resume: the mandated existing-ROM falsifier
+  was the first runtime action. No further activation/debug iteration ran.
+LIVE-TREE / BUILD:
+  Preserved the accepted mode-8 fighter owner, serialized scene-buffer union,
+  decomp read-only state, and all unrelated user files. The falsifier used the
+  existing profile-1 coarse ROM `9E7D7114DDE5DCC5FCDD6689AC5EFFD4
+  4646F28B53B773942CA0F69AEFE18CAC`; no title or VS-setup build ran.
+ACTIVATION / PERFORMANCE RESULT:
+  Selector 9 reported `70/686`, owners `60+320+306`, fallbacks `29/0/0` on
+  every sampled marker—the exact retained fighter path plus generic stage.
+  Required mode-9 activation therefore failed a second time. No benchmark JSON
+  or valid timing window exists, so no performance claim is made.
+FILES / FOOTPRINT:
+  Removed the mode-9 selector/API, native-stage executor and adapter, generator,
+  generated table, hooks, verifier branch, and two workspaces. Post-revert
+  main/main.rw/BSS are `692456/124052/1738000`; ITCM is `17984/32768`, DTCM
+  BSS 152. Versus the failed candidate this removes 29,896 main bytes and
+  18,688 aligned BSS bytes. The independent 176,000-byte scene-buffer saving
+  remains.
+RETAINED MODE-8 REBUILD:
+  ROM `D55F80F156875EC9077C679403C6D8F419229657721C18FD56391C4788CA6037`,
+  12,036,096 bytes; ELF `22CB3CFA1EA5BF69E1D37AE738A3160C1403F0B8C65ED9A629CE234B90A9B16E`,
+  8,443,528 bytes. Frames 193..200 / logic 200..207 report draw
+  `1606368/1759680`, stage `812320/930368`, Mario `201344/236288`, Fox
+  `235552/235712`, wallpaper `342784/342848`, exact `70/686`, owners
+  `60+320+306`, fallbacks `29/0/0`, 828 triangles, two/36,864-byte uploads,
+  and zero conservation failure.
+CAPTURE RESULT:
+  Plain generic capture `2026-07-13_coarse_mode0_plain_launch.png` and
+  GDB-confirmed selector-8 capture `2026-07-13_coarse_mode8_verified.png` both
+  show Dream Land, Mario, and Fox. Both sampled mode-8 frames pass top-screen,
+  named-region, motion, green/detail, and horizontal-texture gates.
+INTEGRATED VERIFICATION:
+  DevFast, profile-2 forensic, P1Gate, and Boundary 161/162/163 pass. The first
+  forensic compile exposed that the generated dense-table declaration type was
+  hidden from profile 2; exposing only that 16-byte type declaration fixed the
+  build without enabling the production owner there. Forensic then passed
+  oracle 2484/0/0 plus exact 828, texture, depth, matrix, semantic, and upload
+  gates. Static checks pass.
+DECISION: REVERT MODE 9 / KEEP MODE 8 + MEMORY UNION
+  Do not revive this complete-stage record executor. Next run the authoritative
+  Cut-D complete converted-output cardinality probe for <=30 minutes against
+  the measured `197376/199360` conversion wall; require >=120K active saving.
+```
+
+## 2026-07-14 - rejected texture residency/overlap; restored coarse ROM
+
+```text
+IDEA ID: D0/D1/D2-COMPLETE-TEXTURE-OUTPUT
+HYPOTHESIS / EXCLUSIVE BOUND:
+  Recurrent exact converted outputs or zero-lag overlap could remove at least
+  120,000 active ticks from the measured 197,376/199,360 conversion wall.
+TIME TO DECISION:
+  One bounded instrumentation/build cycle and one 600-frame run; the candidate
+  was rejected from measured cardinality and architectural bounds before any
+  cache, custom ARM7 payload, or second render prepass was implemented.
+LIVE-TREE / TEMPORARY CHANGES:
+  A temporary renderer census recorded complete input/output hashes, sizes,
+  frequency, owner, sequence, and reuse distance. The benchmark/verifier gained
+  a temporary 600-frame dump path. All census source and script plumbing is now
+  removed; the three files match the 20260713_232129 verified lean checkpoint
+  byte-for-byte. Decomp and unrelated user files remained untouched.
+CARDINALITY RESULT:
+  Frames 600; changed frames 457 (76.17%); events 891; complete keys 322;
+  overflow 0; final outputs 206; reuse median/P95/max 216/216/216. The 32,768-B
+  class has 165 keys, 101 outputs, and 457 events; the 4,096-B class has 157
+  keys, 105 outputs, and 434 events. Frequency is 75 keys x2 and 247 keys x3.
+  Full output residency is 3,739,648 bytes; a 2-4-slot LRU has effectively zero
+  hits. Every first-use owner is stage.
+OVERLAP BOUND:
+  The exact recipe is first assembled inside ndsRendererHardwareBindTexture,
+  immediately before the dependent stage bind. Original update does not expose
+  it. ARM7 overlap therefore also needs a custom payload/protocol and a second
+  source/render prepass. Against the 197,376-tick ceiling, all prepass, IPC,
+  cache, and wait work must fit below 77,376 ticks to clear the 120K gate.
+  This cannot close the >1M draw gap and was rejected without implementation.
+RESTORED BUILD / ARTIFACT:
+  Only profile-1 `smash64ds-battle-playable-coarse-hwtri` was rebuilt: common/
+  scene O2 Thumb, renderer O2 ARM, benchmark mode 0. One renderer compile and
+  link restored ROM `D55F80F156875EC9077C679403C6D8F419229657721C18FD56391
+  C4788CA6037`, 12,036,096 bytes; ELF `C9B57B6C5E53736D8387FEFC15AE60F
+  EEB7E193CE540CD893E93C8BACF2E0D10`, 8,443,528 bytes. No title/VS build ran.
+PROFILE-1 RESULT:
+  Frames 193..200 / logic 200..207: draw 1,606,368/1,705,856; stage
+  812,320/911,424; Mario 201,344/201,472; Fox 235,552/235,712; wallpaper
+  342,784/342,848; conversion 197,376/199,360; exact mode-8 70/686,
+  60+320+306, fallbacks 29/0/0, two uploads/36,864 bytes, conservation 0/0.
+CAPTURE / AUDIO RESULT:
+  Fresh `2026-07-14_coarse_restored_mode0_plain_launch*.png` and
+  `2026-07-14_coarse_restored_mode8_verified*.png` pairs visibly show moving
+  Mario/Fox and Dream Land. Full-window paired deltas are 30.965% and 13.224%.
+  A same-ROM no-build verifier passes natural BGM start, hardware-timer rate
+  near 44.1 kB/s, safe alternating half refills, and zero open/read/unsupported
+  failures (`logs/optimization/restored-mode8-audio-smoke8.json`).
+MEMORY / RETAINED STATE:
+  Retained main/main.rw/BSS are 692,456/124,052/1,738,000; ITCM 17,984/32,768.
+  The production fighter owner and 176,000-byte scene-buffer union remain.
+INTEGRATED VERIFICATION:
+  Docs, architecture, registry, and GBI checks pass. DevFast passes fresh
+  canonical capture and `99FF3D2...C901BE30` shipped parity; forensic passes
+  2,484/0/0 and exact 828 semantics. P1Gate passes opening, realtime/natural
+  battle, one-minute expiry/results, CPU, audio, and memory. Boundary
+  161/162/163 passes. Full Regression is intentionally skipped for fast iteration.
+DECISION: REVERT D1/D2 / REMOVE PROBE
+  Finite residency and exact overlap cannot meet the minimum-calendar-time,
+  hundreds-of-thousands gate. The 176,736-tick aggregate matrix ceiling is also
+  too small as the next architecture. Next falsify one source-seeded DS display-
+  capture/affine Dream Land raster owner against the combined 1,155,104-tick
+  wallpaper+stage wall; keep only at >=800K saving and draw <=650K.
+```
+
+## 2026-07-14 - rejected Cut F; natural Mode-8 direct-launch checkpoint
+
+```text
+IDEA ID: CUT-F-SOURCE-SEEDED-RASTER
+PERFORMANCE RESULT:
+  The first eight synchronized frames reached draw 467,968/468,992,
+  present-active 471,808/472,832, update 137,504/151,552, zero normal-frame
+  stage/wallpaper CPU work, and exact 626 fighter triangles (320+306).
+FALSIFIER RESULT:
+  The captured surface omitted wallpaper pixels, producing navy holes. After
+  232 normal frames, legitimate source-camera pan/zoom exceeded the affine
+  cache bounds and forced the full 828-triangle generic fallback. The early
+  and fallback captures are rejection evidence, not working screenshots.
+DECISION:
+  Reject and remove all Cut F runtime, API, Makefile, capture, and verifier
+  plumbing. Do not iterate margins or seed-camera guesses.
+RESTORED DIRECT ARTIFACT:
+  The coarse target now compiles NDS_RENDERER_FAST_RUN_DEFAULT=8. ROM
+  DC2871F3E6C32C72D6F36516EDA461F25E416E5146947280E11BEFA352E4E3AD
+  launches Mode 8 with GDB disabled. Frames 275..282 retain exact 70/686,
+  owners 60+320+306, fallbacks 29/0/0, and 828 triangles. Draw is
+  1,571,648/1,589,696; stage 775,552/790,720; wallpaper 344,704/347,200.
+CAPTURE RESULT:
+  2026-07-14_coarse-mode8-direct-settled.png and its _next pair visibly show
+  Dream Land and moving Mario/Fox. Both-frame visibility/green/detail, all
+  named regions, wallpaper, and three texture-detail crops pass. Registered
+  meaningful motion is 11.001%, mean channel delta 9.45, overlap 100%.
+DECISION: KEEP DIRECT MODE-8 DEFAULT / REJECT CUT F
+  This is a verified launch/fidelity checkpoint, not a 60 FPS claim. Require
+  >=300K exclusive saving before the next distinct architecture is coded.
+```
+
+## 2026-07-14 - rejected typed stage executor; hardened exact-ROM checkpoint
+
+```text
+IDEA ID: PER-CALLBACK-TYPED-STAGE-EXECUTOR
+PERFORMANCE FALSIFIER:
+  The source-keyed executor covered 799/828 triangles with one stage fallback.
+  Candidate stage time was about 877,248 ticks versus 873,344 for the generic
+  control. The candidate therefore saved essentially zero stage time; the
+  whole-draw delta came from the already accepted native fighter owner.
+DECISION:
+  Reject and remove the executor, generated stage tables, adapter seam, mode 9,
+  and texture-site shortcut. This representation cannot save hundreds of
+  thousands of ticks and must not be revived.
+BUILD-PATH CORRECTION:
+  The 39CD1397... cleanup ROM was produced by an under-specified direct make
+  invocation with NDS_DEV_LIVE_INPUT_PREVIEW=0. It is not user-facing evidence.
+  The coarse target now intrinsically forces battle_playable_realtime, live
+  input, full-rate logic, HW triangles, profile 1, and Mode 8. A plain target
+  build reproduces 12,036,096-byte ROM
+  DC2871F3E6C32C72D6F36516EDA461F25E416E5146947280E11BEFA352E4E3AD.
+MODE-8 RESULT:
+  Frames 282..289 retain exact 70/686 runs, 60+320+306 owners, 29/0/0
+  fallbacks, and all 828 triangles. Draw is 1,578,720/1,586,368; stage
+  784,608/792,832; wallpaper 342,784/344,832. Texture commits remain inside
+  VBlank with zero outside/fallback uploads.
+PRESENTATION / RUNTIME RESULT:
+  Exact-ROM pair 2026-07-14_dc287-mode8-direct*.png passes both-frame 100%
+  visibility, green/detail, all named regions, and all horizontal-detail gates.
+  Registered meaningful motion is 10.610%, mean channel delta 8.71, overlap
+  100%. The earlier alleged partial PNGs are complete on disk; the multi-image
+  inspection view displayed unchanged regions as black. A same-ROM no-build
+  verifier passes original Fox CPU, natural BGM/refills, reserve, and ITCM.
+CHECKPOINT STATUS:
+  Workspace automated launch correctness is restored, but this is still only
+  about 15.4 FPS. The user's separate exact-ROM no-audio/no-stage manual report
+  remains pending controlled retest; hardware/manual acceptance is not claimed.
+  Modes 1-7 do not have individual capture proof. No title/VS setup build ran.
+INTEGRATED VERIFICATION:
+  Docs, architecture, registry, and GBI checks pass. Fresh DevFast passes its
+  canonical build, paired motion/detail capture, and exact shipped ROM parity.
+  The focused exact coarse benchmark and CPU/audio/memory verifier pass. The
+  prior broad checkpoint owns forensic, P1Gate, and Boundary 161/162/163.
+```
+
+## 2026-07-14 - rejected full-source scanline-affine wallpaper
+
+```text
+IDEA ID: FULL-SOURCE-SCANLINE-AFFINE-WALLPAPER
+ARCHITECTURE:
+  Profile-1 laboratory mode stored the complete decoded 300x220 BattleShip
+  wallpaper in a 512x256 B16 BG, selected X with one affine coefficient, and
+  streamed exact source-Y rows into BG2PA..BG2Y during HBlank. It avoided the
+  rejected Cut-F camera bound and source-window streaming.
+SAME-ROM CONTROL (mode 1, 8 frames):
+  ROM 0962F6B4195971EB1E7D34273CCA9F897AAF8FB4DAFD4525DC659DA826F59471
+  draw 1,489,696 / 1,548,096; wallpaper 274,144 / 310,016.
+CANDIDATE (mode 2, 8 frames):
+  draw 1,250,304 / 1,719,360; wallpaper 34,112 / 453,824.
+  One 132,000-byte source upload, eight HBlank table arms, zero failures,
+  exact 828 triangles, 70/686 runs, 60+320+306 owners, 29/0/0 fallbacks.
+FALSIFIER:
+  Whole-draw saving was 239,392 ticks and wallpaper saving was 240,032 ticks,
+  both below the binding 300K keep threshold. The one-time upload worsened P95.
+DECISION: REJECT / REMOVE
+  All runtime, API, selector, and verifier plumbing is removed. Do not retry
+  full-source affine or per-scanline HBlank wallpaper; wallpaper-only work no
+  longer has a credible >=300K ceiling on the current baseline.
+RESTORED CHECKPOINT:
+  A clean coarse rebuild reproduces exact 12,036,096-byte ROM
+  DC2871F3E6C32C72D6F36516EDA461F25E416E5146947280E11BEFA352E4E3AD.
+  Its no-build Mode-8 gate passes exact geometry/owner/fallback accounting.
+```

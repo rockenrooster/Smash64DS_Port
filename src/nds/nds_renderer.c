@@ -9,6 +9,10 @@
 #define NDS_RENDERER_HW_TRIANGLES 0
 #endif
 
+#ifndef NDS_SCENE_MIP_CACHE_LAB
+#define NDS_SCENE_MIP_CACHE_LAB 0
+#endif
+
 #ifndef NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
 #define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY 0
 #endif
@@ -22,10 +26,15 @@
     __attribute__((hot, optimize("O3"), target("arm"), section(".itcm")))
 #define NDS_RENDERER_FAST_RUN_CODE \
     __attribute__((noinline, optimize("O3"), target("arm")))
+#define NDS_RENDERER_NATIVE_FIGHTER_CODE \
+    __attribute__((noinline, hot, optimize("O3"), target("arm"), \
+                   section(".itcm.native_fighter")))
 #else
 #define NDS_RENDERER_HOT_CODE __attribute__((hot, optimize("O3")))
 #define NDS_RENDERER_FAST_RUN_CODE \
     __attribute__((noinline, optimize("O3")))
+#define NDS_RENDERER_NATIVE_FIGHTER_CODE \
+    __attribute__((noinline, hot, optimize("O3")))
 #endif
 
 /* Profiles 0/1 publish the shipping contract through the compact frame
@@ -933,8 +942,16 @@ typedef enum NDSRendererHWSubmitClass
 } NDSRendererHWSubmitClass;
 
 #if NDS_RENDERER_PROFILE_LEVEL == 0
+#if NDS_RENDERER_FAST_RUN_DEFAULT
+volatile u32 gNdsRendererFastRunMode =
+    NDS_RENDERER_FAST_RUN_DEFAULT;
+#else
 volatile u32 gNdsRendererFastRunMode =
     NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES;
+#endif
+#elif NDS_RENDERER_FAST_RUN_DEFAULT
+volatile u32 gNdsRendererFastRunMode =
+    NDS_RENDERER_FAST_RUN_DEFAULT;
 #else
 volatile u32 gNdsRendererFastRunMode = NDS_RENDERER_FAST_RUN_GENERIC;
 #endif
@@ -1144,7 +1161,6 @@ volatile u32 gNdsRendererProfileTextureVBlankOutsideCount;
 volatile u32 gNdsRendererProfileTextureVBlankFallbackCount;
 volatile u32 gNdsRendererProfileTextureVBlankStartLine;
 volatile u32 gNdsRendererProfileTextureVBlankEndLine;
-
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
 volatile u32 gNdsRendererBenchmarkSuppressedTextureUploads;
 volatile u32 gNdsRendererBenchmarkSuppressedTextureUploadBytes;
@@ -1660,6 +1676,12 @@ static u32 sNdsRendererHardwareTextureKeyGeneration;
 static u32 sNdsRendererHardwareFrameSerial;
 static const NDSRendererHardwareTextureCacheEntry
     *sNdsRendererHardwareActiveTextureEntry;
+#if NDS_SCENE_MIP_CACHE_LAB
+#define NDS_RENDERER_SCENE_MIP_COUNT 3u
+#define NDS_RENDERER_SCENE_MIP_SIZE 128u
+static int sNdsRendererSceneMipTextureNames[
+    NDS_RENDERER_SCENE_MIP_COUNT];
+#endif
 static u16 sNdsRendererHardwareTextureScratch[
     NDS_RENDERER_HW_TEXTURE_MAX_TEXELS];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -1771,6 +1793,16 @@ static inline s32 ndsRendererHardwareRawVertexFits(
             (vtx->z <= NDS_RENDERER_HW_RAW_COORD_MAX)) ? TRUE : FALSE;
 }
 
+static inline u32 ndsRendererHardwareDivideLitDotBy127(u32 dot)
+{
+    u32 biased = dot + 1u;
+
+    /* The caller clamps dot to 127^2.  Over that complete domain this is
+     * exactly floor(dot / 127), which is the reduced source expression
+     * floor((dot * 127) / (127 * 127)). */
+    return (biased + (biased >> 7)) >> 7;
+}
+
 static inline u32 ndsRendererHardwareLitShadeColorLut(
     const NDSRendererInputVertex *vtx,
     const NDSRendererHardwareLightDirection *direction,
@@ -1792,7 +1824,7 @@ static inline u32 ndsRendererHardwareLitShadeColorLut(
     }
     else
     {
-        diffuse_numer = (u32)((dot * 127) / (127 * 127));
+        diffuse_numer = ndsRendererHardwareDivideLitDotBy127((u32)dot);
     }
     return rgb_lut[diffuse_numer] | (u32)vtx->a;
 }
@@ -1879,6 +1911,155 @@ typedef struct NDSRendererTraversalState
     u32 raw_vertex_fit_mask;
 #endif
 } NDSRendererTraversalState;
+
+#if NDS_RENDERER_HW_TRIANGLES
+#define NDS_NATIVE_STATE_OTHERMODE 2u
+#define NDS_NATIVE_STATE_COMBINE 3u
+#define NDS_NATIVE_STATE_TEXTURE 4u
+#define NDS_NATIVE_STATE_GEOMETRY 5u
+#define NDS_NATIVE_STATE_IMAGE 6u
+#define NDS_NATIVE_STATE_TILE 7u
+#define NDS_NATIVE_STATE_LOAD_TLUT 8u
+#define NDS_NATIVE_STATE_LOAD_BLOCK 9u
+#define NDS_NATIVE_STATE_TILE_SIZE 10u
+#define NDS_NATIVE_STATE_PRIM 11u
+#define NDS_NATIVE_STATE_NONE 0xffffu
+#define NDS_NATIVE_MATERIAL_NONE 0xffu
+#define NDS_NATIVE_VERTEX_BLOCK 0u
+#define NDS_NATIVE_MODIFY_ST 1u
+#define NDS_NATIVE_RUN_RAW_CURRENT 0u
+#define NDS_NATIVE_RUN_CROSS_MATRIX 1u
+#define NDS_NATIVE_DENSE_VERTEX_COUNT 541u
+#define NDS_NATIVE_ROOT_BINDING_COUNT 32u
+#define NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK 0x03u
+#define NDS_NATIVE_DIRECT_POLICY_TEXTURED_LIT 0u
+#define NDS_NATIVE_DIRECT_POLICY_LIT_PRIM 1u
+#define NDS_NATIVE_DIRECT_POLICY_LIT_ONLY 2u
+#define NDS_NATIVE_DIRECT_POLICY_LIT_PRIM_ALT_ALPHA 3u
+#define NDS_NATIVE_DIRECT_POLICY_CULL_NONE 0x80u
+#define NDS_NATIVE_DENSE_ID_MASK 0x03ffu
+#define NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT 10u
+#define NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT 10u
+#define NDS_NATIVE_GX_MATRIX_CURRENT 31u
+#define NDS_NATIVE_GX_MATRIX_SLOT_MAX 30u
+#define NDS_NATIVE_SOURCE_GEOM_CULL_FRONT 0x00001000u
+#define NDS_NATIVE_SOURCE_GEOM_CULL_BACK 0x00002000u
+typedef struct NDSNativeStateDelta
+{
+    u32 w0;
+    u32 w1;
+    u8 effect;
+    u8 reserved[3];
+} NDSNativeStateDelta;
+
+typedef struct NDSNativeVertexAction
+{
+    u8 kind;
+    u8 command_index;
+    u8 index;
+    u8 count;
+    u32 source_offset;
+    s16 s;
+    s16 t;
+} NDSNativeVertexAction;
+
+typedef struct NDSNativeDenseVertex
+{
+    s16 x;
+    s16 y;
+    s16 z;
+    s16 s;
+    s16 t;
+    u8 matrix_binding;
+    u8 cache_slot;
+    u32 rgba;
+} NDSNativeDenseVertex;
+
+typedef struct NDSNativeRun
+{
+    u16 first_triangle;
+    u8 triangle_count;
+    u8 submit_class;
+    u32 required_mask;
+} NDSNativeRun;
+
+typedef struct NDSNativeEpoch
+{
+    u16 before_state_first;
+    u16 after_state_first;
+    u16 first_action;
+    u16 first_run;
+    u8 before_state_count;
+    u8 after_state_count;
+    u8 before_sync_count;
+    u8 after_sync_count;
+    u8 action_count;
+    u8 run_count;
+    u8 material_slot;
+    u8 first_triangle_command_index;
+} NDSNativeEpoch;
+
+typedef struct NDSNativeRoot
+{
+    u32 root_offset;
+    u16 first_epoch;
+    u16 tail_state_first;
+    u16 source_command_count;
+    u8 epoch_count;
+    u8 tail_state_count;
+    u8 tail_sync_count;
+    u8 reserved;
+} NDSNativeRoot;
+
+typedef struct NDSNativeDirectPolicy
+{
+    u32 combine_w0;
+    u32 combine_w1;
+    u8 vertex_flags;
+    u8 textured;
+    u8 reserved[2];
+} NDSNativeDirectPolicy;
+
+_Static_assert(sizeof(NDSNativeStateDelta) == 12u,
+               "native state effect ABI must stay compact");
+_Static_assert(sizeof(NDSNativeDenseVertex) == 16u,
+               "native dense vertex ABI must stay cache-line friendly");
+_Static_assert(sizeof(NDSNativeRun) == 8u,
+               "native run ABI must stay compact");
+_Static_assert(sizeof(NDSNativeEpoch) == 16u,
+               "native epoch ABI must stay compact");
+_Static_assert(sizeof(NDSNativeRoot) == 16u,
+               "native root ABI must stay compact");
+_Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
+               "native direct policy ABI must stay compact");
+#include "nds_native_fighter_owner.generated.inc"
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+typedef struct NDSNativePreparedDenseVertex
+{
+    u32 shaded_rgba;
+    u16 packed_color;
+    s16 s;
+    s16 t;
+} NDSNativePreparedDenseVertex;
+
+typedef struct NDSNativeFighterOwnerExecution
+{
+    NDSRendererTraversalState traversal;
+    NDSRendererStats *stats;
+    NDSRendererVertexCache *vertex_cache;
+    u32 slot;
+    u32 active;
+} NDSNativeFighterOwnerExecution;
+
+/* Fighter owner draws are serialized by taskman.  Keeping one compact
+ * control plane alive across the selected roots removes 32 generic traversal
+ * initializations while the persistent cache arrays remain scene-owned. */
+static NDSNativeFighterOwnerExecution sNdsNativeFighterOwnerExecution;
+static NDSNativePreparedDenseVertex
+    sNdsNativeFighterPreparedDense[NDS_NATIVE_DENSE_VERTEX_COUNT];
+#endif
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
 typedef struct NDSRendererHardwarePendingPosTest
@@ -3078,6 +3259,7 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
     state->vertex_clip_snapshot = (vertex_storage != NULL) ?
         vertex_storage->vertex_clip_snapshot : NULL;
     state->matrix_snapshots = snapshots;
+    state->source_command_site = NULL;
     state->matrix_snapshot_count =
         (snapshot_count <= NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY) ?
             snapshot_count : NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY;
@@ -4740,6 +4922,18 @@ static u32 ndsRendererHardwareColorByte(u32 color, u32 shift)
     return (color >> shift) & 0xffu;
 }
 
+static inline u32 ndsRendererHardwareScaleMaterialChannel5(
+    u32 shaded, u32 material)
+{
+    u32 numerator = (shaded * material) + 127u;
+
+    /* For every 16-bit numerator, floor(n / 255) is exactly
+     * (n + 1 + (n >> 8)) >> 8.  Fold the following RGB15 divide by eight
+     * into the same shift so the native owner does not issue three wide
+     * constant divisions for every prepared vertex. */
+    return (numerator + 1u + (numerator >> 8)) >> 11;
+}
+
 static u8 ndsRendererHardwareClampColor(s32 value)
 {
     if (value < 0)
@@ -4838,6 +5032,36 @@ static void ndsRendererHardwarePrepareLitDirection(
         ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
         (modelview != NULL))
     {
+#if NDS_SCENE_MIP_CACHE_LAB && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        s64 transformed_x =
+            (s64)light_x * modelview->m[0][0] +
+            (s64)light_y * modelview->m[0][1] +
+            (s64)light_z * modelview->m[0][2];
+        s64 transformed_y =
+            (s64)light_x * modelview->m[1][0] +
+            (s64)light_y * modelview->m[1][1] +
+            (s64)light_z * modelview->m[1][2];
+        s64 transformed_z =
+            (s64)light_x * modelview->m[2][0] +
+            (s64)light_y * modelview->m[2][1] +
+            (s64)light_z * modelview->m[2][2];
+        s64 length_squared =
+            (transformed_x * transformed_x) +
+            (transformed_y * transformed_y) +
+            (transformed_z * transformed_z);
+
+        if (length_squared > 0)
+        {
+            u32 length = sqrt64(length_squared);
+
+            if (length != 0u)
+            {
+                light_x = div64(transformed_x * 127, (s32)length);
+                light_y = div64(transformed_y * 127, (s32)length);
+                light_z = div64(transformed_z * 127, (s32)length);
+            }
+        }
+#else
         f32 transformed_x = (f32)(
             (s64)light_x * modelview->m[0][0] +
             (s64)light_y * modelview->m[0][1] +
@@ -4860,6 +5084,7 @@ static void ndsRendererHardwarePrepareLitDirection(
             light_y = (s32)((transformed_y * 127.0F) / length);
             light_z = (s32)((transformed_z * 127.0F) / length);
         }
+#endif
     }
 
     out->x = light_x;
@@ -4898,7 +5123,7 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
     {
         return 127u;
     }
-    return (u32)((dot * 127) / (127 * 127));
+    return ndsRendererHardwareDivideLitDotBy127((u32)dot);
 }
 
 static u32 NDS_RENDERER_HOT_CODE
@@ -5703,6 +5928,199 @@ ndsRendererHardwareAllocTexture(void)
         }
     }
     return NULL;
+}
+
+void ndsRendererHardwareDiscardTextureCache(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 i;
+
+    ndsRendererHardwareEndBatch();
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        if ((sNdsRendererHardwareTextureCache[i].name != 0) ||
+            (sNdsRendererHardwareTextureCache[i].ready != 0u))
+        {
+            (void)ndsRendererHardwareReleaseTexture(
+                &sNdsRendererHardwareTextureCache[i]);
+        }
+    }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    memset(sNdsRendererHardwareTextureLookup, 0,
+           sizeof(sNdsRendererHardwareTextureLookup));
+    memset(sNdsRendererHardwareTextureRefreshQueue, 0,
+           sizeof(sNdsRendererHardwareTextureRefreshQueue));
+    sNdsRendererHardwareTextureRefreshCount = 0u;
+#endif
+    if (sNdsRendererHardwareNoTextureName != 0)
+    {
+        glDeleteTextures(1, &sNdsRendererHardwareNoTextureName);
+        sNdsRendererHardwareNoTextureName = 0;
+    }
+    sNdsRendererHardwareTextureCacheNext = 0u;
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    ndsRendererHardwareResetSourceCaches();
+#endif
+}
+
+s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
+                                            const u16 *mip1,
+                                            const u16 *mip2)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    const u16 *pixels[NDS_RENDERER_SCENE_MIP_COUNT] = {
+        mip0, mip1, mip2
+    };
+    u32 i;
+
+    if ((mip0 == NULL) || (mip1 == NULL) || (mip2 == NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererHardwareDiscardTextureCache();
+    for (i = 0u; i < NDS_RENDERER_SCENE_MIP_COUNT; i++)
+    {
+        if (sNdsRendererSceneMipTextureNames[i] != 0)
+        {
+            glDeleteTextures(1, &sNdsRendererSceneMipTextureNames[i]);
+            sNdsRendererSceneMipTextureNames[i] = 0;
+        }
+        if (glGenTextures(1, &sNdsRendererSceneMipTextureNames[i]) == 0)
+        {
+            break;
+        }
+        glBindTexture(GL_TEXTURE_2D,
+                      sNdsRendererSceneMipTextureNames[i]);
+        if (glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                         TEXTURE_SIZE_128, TEXTURE_SIZE_128, 0,
+                         TEXGEN_TEXCOORD, pixels[i]) == 0)
+        {
+            glDeleteTextures(1, &sNdsRendererSceneMipTextureNames[i]);
+            sNdsRendererSceneMipTextureNames[i] = 0;
+            break;
+        }
+    }
+    if (i != NDS_RENDERER_SCENE_MIP_COUNT)
+    {
+        u32 j;
+
+        for (j = 0u; j < NDS_RENDERER_SCENE_MIP_COUNT; j++)
+        {
+            if (sNdsRendererSceneMipTextureNames[j] != 0)
+            {
+                glDeleteTextures(1,
+                                 &sNdsRendererSceneMipTextureNames[j]);
+                sNdsRendererSceneMipTextureNames[j] = 0;
+            }
+        }
+        sNdsRendererHardwareBoundTextureName = 0u;
+        return FALSE;
+    }
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    return TRUE;
+#else
+    (void)mip0;
+    (void)mip1;
+    (void)mip2;
+    return FALSE;
+#endif
+}
+
+s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
+                                          const s32 *tex_s_q4,
+                                          const s32 *tex_t_q4,
+                                          u32 columns,
+                                          u32 rows)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    v16 vertex_x[64];
+    v16 vertex_y[64];
+    u32 vertex_count;
+    u32 row;
+    u32 column;
+    u32 triangle_count;
+
+    if ((mip_index >= NDS_RENDERER_SCENE_MIP_COUNT) ||
+        (sNdsRendererSceneMipTextureNames[mip_index] == 0) ||
+        (tex_s_q4 == NULL) || (tex_t_q4 == NULL) ||
+        (columns < 2u) || (rows < 2u))
+    {
+        return FALSE;
+    }
+    vertex_count = columns * rows;
+    if (vertex_count > (sizeof(vertex_x) / sizeof(vertex_x[0])))
+    {
+        return FALSE;
+    }
+    for (row = 0u; row < rows; row++)
+    {
+        for (column = 0u; column < columns; column++)
+        {
+            u32 index = (row * columns) + column;
+
+            vertex_x[index] = (v16)(-4096 +
+                (s32)((8192u * column) / (columns - 1u)));
+            vertex_y[index] = (v16)(4096 -
+                (s32)((8192u * row) / (rows - 1u)));
+        }
+    }
+
+    ndsRendererHardwareEndBatch();
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glBindTexture(GL_TEXTURE_2D,
+                  sNdsRendererSceneMipTextureNames[mip_index]);
+    glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(31) | POLY_ID(63));
+    glColor(RGB15(31, 31, 31));
+    glBegin(GL_TRIANGLE);
+    for (row = 0u; row + 1u < rows; row++)
+    {
+        for (column = 0u; column + 1u < columns; column++)
+        {
+            u32 i00 = (row * columns) + column;
+            u32 i10 = i00 + 1u;
+            u32 i01 = i00 + columns;
+            u32 i11 = i01 + 1u;
+
+#define NDS_SCENE_MIP_EMIT(index) do { \
+    glTexCoord2t16((t16)tex_s_q4[(index)], \
+                   (t16)tex_t_q4[(index)]); \
+    glVertex3v16(vertex_x[(index)], vertex_y[(index)], (v16)4090); \
+} while (0)
+            NDS_SCENE_MIP_EMIT(i00);
+            NDS_SCENE_MIP_EMIT(i01);
+            NDS_SCENE_MIP_EMIT(i10);
+            NDS_SCENE_MIP_EMIT(i10);
+            NDS_SCENE_MIP_EMIT(i01);
+            NDS_SCENE_MIP_EMIT(i11);
+#undef NDS_SCENE_MIP_EMIT
+        }
+    }
+    glEnd();
+
+    triangle_count = (columns - 1u) * (rows - 1u) * 2u;
+    sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
+    sNdsRendererRuntimeFrameSummary.hardware_vertices +=
+        triangle_count * 3u;
+    sNdsRendererHardwareSubmitted = TRUE;
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    sNdsRendererHardwareMatrixGeneration = 0u;
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    return TRUE;
+#else
+    (void)mip_index;
+    (void)tex_s_q4;
+    (void)tex_t_q4;
+    (void)columns;
+    (void)rows;
+    return FALSE;
+#endif
 }
 
 static s32 ndsRendererHardwareTextureSizeEnum(u32 size, int *out)
@@ -10645,7 +11063,9 @@ static void ndsRendererFastCommitRawSemanticTriangle(
 #endif
 
 static inline void ndsRendererFastAccountRawTriangles(
-    NDSRendererStats *stats, u32 triangle_count)
+    NDSRendererStats *stats,
+    u32 triangle_count,
+    u32 reuse_count)
 {
     sNdsRendererHardwareSubmitClassCounts[
         NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX] += triangle_count;
@@ -10662,8 +11082,8 @@ static inline void ndsRendererFastAccountRawTriangles(
         }
     }
     gNdsRendererProfileRawCurrentCandidateCount += triangle_count;
-    gNdsRendererProfileHardwareBatchReuseCount += triangle_count;
-    gNdsRendererProfileTexturePrepareReuseCount += triangle_count;
+    gNdsRendererProfileHardwareBatchReuseCount += reuse_count;
+    gNdsRendererProfileTexturePrepareReuseCount += reuse_count;
     gNdsRendererProfileHardwareTriangles += triangle_count;
     gNdsRendererProfileHardwareVertices += triangle_count * 3u;
     if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
@@ -10675,9 +11095,9 @@ static inline void ndsRendererFastAccountRawTriangles(
     sNdsRendererRuntimeFrameSummary.raw_current_candidate_count +=
         triangle_count;
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
-        triangle_count;
+        reuse_count;
     sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
-        triangle_count;
+        reuse_count;
     sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
     sNdsRendererRuntimeFrameSummary.hardware_vertices +=
         triangle_count * 3u;
@@ -10837,7 +11257,8 @@ static s32 NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteDirectRawRemainder(
     }
 
     stats->triangle_count += plan->triangle_count;
-    ndsRendererFastAccountRawTriangles(stats, plan->triangle_count);
+    ndsRendererFastAccountRawTriangles(
+        stats, plan->triangle_count, plan->triangle_count);
     sNdsRendererFastRunCount++;
     sNdsRendererFastTriangleCount += plan->triangle_count;
     if ((u32)sNdsRendererRuntimeOwner <
@@ -11009,7 +11430,8 @@ static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
 
     if (fast_triangles != 0u)
     {
-        ndsRendererFastAccountRawTriangles(stats, fast_triangles);
+        ndsRendererFastAccountRawTriangles(
+            stats, fast_triangles, fast_triangles);
         sNdsRendererFastRunCount++;
         sNdsRendererFastTriangleCount += fast_triangles;
         if ((u32)sNdsRendererRuntimeOwner <
@@ -11026,7 +11448,2680 @@ static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
     *dl_io = dl;
     *list_index_io = list_index;
 }
+
+static inline void ndsRendererNativeSourceBoundary(
+    NDSRendererTraversalState *state)
+{
+    ndsRendererHardwareEndBatch();
+    state->prepared_vertex_color_valid_mask = 0u;
+    state->prepared_texcoord_valid_mask = 0u;
+    state->prepared_projected_xy_valid_mask = 0u;
+    state->prepared_projected_source_z_valid_mask = 0u;
+}
+
+static s32 ndsRendererNativePrepareDirectRun(
+    const NDSNativeRun *run,
+    u32 first_vertex,
+    s32 projected_run,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    const NDSRendererInputVertex *v0;
+    const NDSRendererTileState *render_tile;
+    u32 texture_scale_s;
+    u32 texture_scale_t;
+    u32 material_color;
+    u32 poly_alpha;
+    u32 poly_fmt;
+    s32 use_material_color;
+    s32 use_vertex_color;
+    s32 implicit_texture_on;
+    s32 use_texture;
+    s32 texture_offset;
+    u32 available_mask;
+
+    if ((run == NULL) || (config == NULL) || (stats == NULL) ||
+        (state == NULL) || (first_vertex >= NDS_RENDERER_MAX_VTX))
+    {
+        return FALSE;
+    }
+    if (((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u) ||
+        ((stats->othermode_l & NDS_RENDERER_ZMODE_DEC) ==
+         NDS_RENDERER_ZMODE_DEC) ||
+        (ndsRendererHardwareUsePrimDepth(stats) != FALSE) ||
+        ((projected_run == FALSE) &&
+         (ndsRendererHardwareRawMatrixCompatible(state) == FALSE)))
+    {
+        return FALSE;
+    }
+    available_mask = state->input_vertex_valid_mask &
+        state->raw_vertex_fit_mask;
+    if (projected_run == FALSE)
+    {
+        available_mask &= state->current_transform_vertex_mask;
+    }
+    if ((available_mask & run->required_mask) != run->required_mask)
+    {
+        return FALSE;
+    }
+    v0 = &state->input_vertices[first_vertex];
+    if (projected_run != FALSE)
+    {
+        u32 missing = run->required_mask;
+
+        while (missing != 0u)
+        {
+            u32 index = (u32)__builtin_ctz(missing);
+
+            if (ndsRendererEnsureTransformedVertex(
+                    stats, state, index) == FALSE)
+            {
+                return FALSE;
+            }
+            missing &= ~(1u << index);
+        }
+    }
+    state->texture_prepare_source_zbuffered = TRUE;
+    state->texture_prepare_decal_depth = FALSE;
+    state->texture_prepare_prim_depth = FALSE;
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    if (state->texture_prepare_valid == 0u)
 #endif
+    {
+        material_color = ndsRendererHardwareColorSource(stats);
+        use_material_color = ndsRendererHardwareUseMaterialColor(stats);
+        use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
+        state->texture_prepare_material_color = material_color;
+        state->texture_prepare_vertex_flags =
+            ((use_material_color != FALSE) ?
+                 NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL : 0u) |
+            ((use_vertex_color != FALSE) ?
+                 NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX : 0u);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        if (stats->texture_combine_count != 0u)
+        {
+            if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
+            {
+                gNdsRendererProfileLitShadeCombineCount++;
+            }
+            if (use_material_color != FALSE)
+            {
+                gNdsRendererProfileMaterialCombineCount++;
+            }
+        }
+#endif
+    }
+    if (state->texture_prepare_valid == 0u)
+    {
+        poly_alpha = ndsRendererHardwareAlpha(stats, v0);
+        state->texture_prepare_alpha_constant =
+            (ndsRendererHardwareAlphaUsesVertex(stats) == FALSE) ?
+                TRUE : FALSE;
+        if ((state->texture_prepare_alpha_constant == 0u) ||
+            (poly_alpha == 0u))
+        {
+            return FALSE;
+        }
+        state->texture_prepare_poly_alpha = poly_alpha;
+        state->texture_prepare_poly_fmt =
+            ndsRendererHardwarePolyFmt(stats, poly_alpha);
+
+        render_tile =
+            &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
+        implicit_texture_on =
+            ndsRendererHardwareTextureImplicitStateOn(stats);
+        use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
+            ndsRendererHardwareBindTexture(stats, config, state) : FALSE;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        state->texture_prepare_key_hash = (use_texture != FALSE) ?
+            sNdsRendererSemanticLastTextureKeyHash : 0u;
+        state->texture_prepare_params = (use_texture != FALSE) ?
+            sNdsRendererSemanticLastTextureParams : 0u;
+#endif
+        state->texture_prepare_valid = TRUE;
+        state->texture_prepare_enabled =
+            (use_texture != FALSE) ? TRUE : FALSE;
+        state->texture_prepare_name = (use_texture != FALSE) ?
+            sNdsRendererHardwareBoundTextureName : 0u;
+        ndsRendererProfileRecordTexturePrepare();
+
+        texture_scale_s = stats->texture_scale_s;
+        texture_scale_t = stats->texture_scale_t;
+        if ((use_texture != FALSE) && (implicit_texture_on != FALSE))
+        {
+            if ((stats->texture_state_flags &
+                 NDS_RENDERER_TEXTURE_STATE_SCALE_S) == 0u)
+            {
+                texture_scale_s = NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
+            }
+            if ((stats->texture_state_flags &
+                 NDS_RENDERER_TEXTURE_STATE_SCALE_T) == 0u)
+            {
+                texture_scale_t = NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
+            }
+        }
+        texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
+        state->texture_prepare_scale_s = texture_scale_s;
+        state->texture_prepare_scale_t = texture_scale_t;
+        state->texture_prepare_origin_s = render_tile->uls;
+        state->texture_prepare_origin_t = render_tile->ult;
+        state->texture_prepare_offset = texture_offset;
+        if (use_texture != FALSE)
+        {
+            state->texture_prepare_vertex_flags |=
+                NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE;
+        }
+    }
+    else
+    {
+        use_texture =
+            (state->texture_prepare_enabled != 0u) ? TRUE : FALSE;
+        ndsRendererProfileRecordTexturePrepareReuse();
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        if (use_texture != FALSE)
+        {
+            state->texture_prepare_vertex_flags |=
+                NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE;
+        }
+#endif
+    }
+#if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
+    if (use_texture != FALSE)
+    {
+        state->texture_prepare_vertex_flags &=
+            ~(NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL |
+              NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
+    }
+#endif
+
+    state->texture_prepare_vertex_flags =
+        (state->texture_prepare_vertex_flags &
+         NDS_RENDERER_VERTEX_CONTEXT_PREPARED_MASK) |
+        ((projected_run != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH :
+             (NDS_RENDERER_VERTEX_CONTEXT_SCALE_WORLD |
+              NDS_RENDERER_VERTEX_CONTEXT_ZBUFFERED));
+    ndsRendererFastPrepareRawSlots(
+        stats, state, run->required_mask,
+        state->texture_prepare_enabled);
+    if (projected_run != FALSE)
+    {
+        ndsRendererLoadHardwareMatrices(NULL, FALSE);
+        poly_fmt = state->texture_prepare_poly_fmt;
+        ndsRendererHardwareBeginTriangleBatch(
+            stats, (use_texture != FALSE) ? TRUE : FALSE,
+            state->texture_prepare_name, poly_fmt,
+            sNdsRendererHardwareMatrixMode,
+            sNdsRendererHardwareMatrixGeneration);
+        return TRUE;
+    }
+    ndsRendererLoadHardwareMatrices(state, TRUE);
+    poly_fmt = state->texture_prepare_poly_fmt;
+    ndsRendererHardwareBeginTriangleBatch(
+        stats, (use_texture != FALSE) ? TRUE : FALSE,
+        state->texture_prepare_name, poly_fmt,
+        sNdsRendererHardwareMatrixMode,
+        sNdsRendererHardwareMatrixGeneration);
+    return ndsRendererFastRawStateEligible(state);
+}
+
+static void ndsRendererNativeApplyStateDelta(
+    const NDSNativeStateDelta *delta,
+    const u8 *asset_base,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    if ((delta == NULL) || (stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+    switch (delta->effect)
+    {
+    case NDS_NATIVE_STATE_OTHERMODE:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordOtherMode(
+            stats, delta->w0 >> 24, delta->w0, delta->w1);
+        break;
+    case NDS_NATIVE_STATE_COMBINE:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordSetCombine(stats, delta->w0, delta->w1);
+        break;
+    case NDS_NATIVE_STATE_TEXTURE:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordTextureState(stats, delta->w0, delta->w1);
+        break;
+    case NDS_NATIVE_STATE_GEOMETRY:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        stats->geometry_mode =
+            (stats->geometry_mode & delta->w0) | delta->w1;
+        stats->geometry_clear_mask = delta->w0;
+        stats->geometry_set_mask = delta->w1;
+        stats->geometry_command_count++;
+        break;
+    case NDS_NATIVE_STATE_IMAGE:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordSetImage(
+            stats, delta->w0,
+            (u32)(uintptr_t)(asset_base + delta->w1));
+        break;
+    case NDS_NATIVE_STATE_TILE:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordSetTile(stats, delta->w0, delta->w1);
+        break;
+    case NDS_NATIVE_STATE_LOAD_TLUT:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordLoadTlut(stats, delta->w1);
+        break;
+    case NDS_NATIVE_STATE_LOAD_BLOCK:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordLoadBlock(stats, delta->w0, delta->w1);
+        break;
+    case NDS_NATIVE_STATE_TILE_SIZE:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordSetTileSize(stats, delta->w0, delta->w1);
+        break;
+    case NDS_NATIVE_STATE_PRIM:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        stats->prim_color = delta->w1;
+        stats->prim_min_level = (delta->w0 >> 8) & 0xffu;
+        stats->prim_lod_fraction = delta->w0 & 0xffu;
+        stats->color_command_count++;
+        break;
+    default:
+        break;
+    }
+}
+
+static void ndsRendererNativeApplyStateSpan(
+    u16 first,
+    u32 count,
+    u32 sync_count,
+    const u8 *asset_base,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    u32 i;
+
+    if ((count == 0u) && (sync_count == 0u))
+    {
+        return;
+    }
+    ndsRendererNativeSourceBoundary(state);
+    stats->sync_command_count += sync_count;
+    if ((count == 0u) || (first == NDS_NATIVE_STATE_NONE))
+    {
+        return;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        u32 delta_index = sNdsNativeFighterStateSequence[first + i];
+
+        ndsRendererNativeApplyStateDelta(
+            &sNdsNativeFighterStateDeltas[delta_index],
+            asset_base, stats, state);
+    }
+}
+
+static void ndsRendererNativeApplyMaterial(
+    const NDSRendererNativeMaterial *material,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    u32 effects;
+
+    if ((material == NULL) || (stats == NULL) || (state == NULL))
+    {
+        return;
+    }
+    ndsRendererNativeSourceBoundary(state);
+    effects = material->effects;
+    /* Root DE call + generated segment-E table DE jump. The root command is
+     * already included in the generated source count; only the table word
+     * and typed branch body are additional commands. */
+    stats->command_count += (u32)material->command_count + 1u;
+    stats->branch_command_count += 2u;
+    stats->branch_call_count++;
+    stats->branch_jump_count++;
+    stats->segment_resolve_count++;
+    stats->end_command_count++;
+    stats->sync_command_count += material->sync_count;
+
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererTextureSourceHashCommand(
+            stats, material->palette_image_w0, material->palette_image);
+        ndsRendererRecordSetImage(
+            stats, material->palette_image_w0, material->palette_image);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererTextureSourceHashCommand(
+            stats, material->palette_tile_w0, material->palette_tile_w1);
+        ndsRendererRecordSetTile(
+            stats, material->palette_tile_w0, material->palette_tile_w1);
+        ndsRendererTextureSourceHashCommand(
+            stats, NDS_RENDERER_OP_LOADTLUT << 24,
+            material->palette_tlut_w1);
+        ndsRendererRecordLoadTlut(stats, material->palette_tlut_w1);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_LIGHT1) != 0u)
+    {
+        ndsRendererRecordLightColor(stats, 1u, material->light1);
+        ndsRendererRecordLightColor(stats, 1u, material->light1);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_LIGHT2) != 0u)
+    {
+        ndsRendererRecordLightColor(stats, 2u, material->light2);
+        ndsRendererRecordLightColor(stats, 2u, material->light2);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_PRIM) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        stats->prim_color = material->prim_w1;
+        stats->prim_min_level = (material->prim_w0 >> 8) & 0xffu;
+        stats->prim_lod_fraction = material->prim_w0 & 0xffu;
+        stats->color_command_count++;
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_ENV) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        stats->env_color = material->env_color;
+        stats->color_command_count++;
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_BLEND) != 0u)
+    {
+        stats->blend_color = material->blend_color;
+        stats->color_command_count++;
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_BLOCK_IMAGE) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererTextureSourceHashCommand(
+            stats, material->block_image_w0, material->block_image);
+        ndsRendererRecordSetImage(
+            stats, material->block_image_w0, material->block_image);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_LOAD_BLOCK) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererTextureSourceHashCommand(
+            stats, material->load_block_w0, material->load_block_w1);
+        ndsRendererRecordLoadBlock(
+            stats, material->load_block_w0, material->load_block_w1);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererTextureSourceHashCommand(
+            stats, material->current_image_w0, material->current_image);
+        ndsRendererRecordSetImage(
+            stats, material->current_image_w0, material->current_image);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererTextureSourceHashCommand(
+            stats, material->render_tile_size_w0,
+            material->render_tile_size_w1);
+        ndsRendererRecordSetTileSize(
+            stats, material->render_tile_size_w0,
+            material->render_tile_size_w1);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_SCROLL_TILE_SIZE) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererTextureSourceHashCommand(
+            stats, material->scroll_tile_size_w0,
+            material->scroll_tile_size_w1);
+        ndsRendererRecordSetTileSize(
+            stats, material->scroll_tile_size_w0,
+            material->scroll_tile_size_w1);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_TEXTURE) != 0u)
+    {
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererTextureSourceHashCommand(
+            stats, material->texture_w0, material->texture_w1);
+        ndsRendererRecordTextureState(
+            stats, material->texture_w0, material->texture_w1);
+    }
+}
+
+static s32 ndsRendererNativeVisitSourceCommand(
+    const u8 *root_base,
+    u32 command_index,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    const Gfx *dl;
+    NDSRendererCommand command;
+
+    if (callback == NULL)
+    {
+        return TRUE;
+    }
+    dl = (const Gfx *)(root_base + (command_index * sizeof(*dl)));
+    memset(&command, 0, sizeof(command));
+    command.dl = dl;
+    command.w0 = dl->words.w0;
+    command.w1 = dl->words.w1;
+    command.op = command.w0 >> 24;
+    command.list_index = command_index;
+    command.transformed_vertices = state->vertices;
+    command.transformed_vertex_valid_mask = state->vertex_valid_mask;
+    command.matrix_valid = state->matrix_valid;
+    if (callback(&command, callback_user) == FALSE)
+    {
+        ndsRendererRecordUnsupported(stats, command.op);
+        stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void ndsRendererNativeLoadVertexBlock(
+    const u8 *src,
+    u32 v0,
+    u32 count,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    const NDSRendererHardwareLightDirection *prepared_light_direction = NULL;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    const u32 *prepared_light_shade_lut = NULL;
+#endif
+    u32 matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    u32 i;
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    stats->source_vertex_count += count;
+#endif
+    if ((v0 + count) > stats->vertex_count)
+    {
+        stats->vertex_count = v0 + count;
+    }
+    if (state->matrix_valid != 0u)
+    {
+        matrix_snapshot = ndsRendererAcquireCurrentMatrixSnapshot(state);
+    }
+    if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
+        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
+    {
+        if (state->prepared_light_direction_valid == 0u)
+        {
+            ndsRendererHardwarePrepareLitDirection(
+                stats,
+                (state->modelview_valid != 0u) ? &state->modelview : NULL,
+                &state->prepared_light_direction);
+            state->prepared_light_direction_valid = TRUE;
+        }
+        prepared_light_direction = &state->prepared_light_direction;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if ((stats->light_color_mask &
+             (NDS_RENDERER_LIGHT_COLOR_1_MASK |
+              NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
+            (NDS_RENDERER_LIGHT_COLOR_1_MASK |
+             NDS_RENDERER_LIGHT_COLOR_2_MASK))
+        {
+            prepared_light_shade_lut = ndsRendererHardwareGetLightShadeLut(
+                stats->light_color_1, stats->light_color_2);
+        }
+#endif
+    }
+    for (i = 0u; i < count; i++)
+    {
+        u32 index = v0 + i;
+        u32 mask = 1u << index;
+        NDSRendererInputVertex *input = &state->input_vertices[index];
+
+        ndsRendererDecodeInputVertex(input, src + (i * 16u));
+        state->input_vertex_valid_mask |= mask;
+        if (ndsRendererHardwareRawVertexFits(input) != FALSE)
+        {
+            state->raw_vertex_fit_mask |= mask;
+        }
+        else
+        {
+            state->raw_vertex_fit_mask &= ~mask;
+        }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (prepared_light_shade_lut != NULL)
+        {
+            state->vertex_colors[index] =
+                ndsRendererHardwareLitShadeColorLut(
+                    input, prepared_light_direction,
+                    prepared_light_shade_lut);
+        }
+        else
+#endif
+        {
+            state->vertex_colors[index] =
+                ndsRendererHardwareLitShadeColorPrepared(
+                    stats, input, prepared_light_direction);
+        }
+        state->vertex_color_valid_mask |= mask;
+        state->vertex_matrix_snapshot[index] = (u8)matrix_snapshot;
+        state->vertex_clip_snapshot[index] =
+            NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+        state->vertex_valid_mask &= ~mask;
+        state->current_transform_vertex_mask &= ~mask;
+        if (state->matrix_valid != 0u)
+        {
+            state->current_transform_vertex_mask |= mask;
+        }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        if (state->matrix_valid != 0u)
+        {
+            (void)ndsRendererTransformCachedVertex(
+                stats, state, index, &state->matrix, matrix_snapshot);
+        }
+#else
+        if ((state->matrix_valid != 0u) &&
+            (matrix_snapshot == NDS_RENDERER_MATRIX_SNAPSHOT_INVALID))
+        {
+            (void)ndsRendererTransformCachedVertex(
+                stats, state, index, &state->matrix, matrix_snapshot);
+        }
+#endif
+    }
+    sNdsRendererHardwareSourceVertexLoadCount += count;
+}
+
+static void ndsRendererNativeApplyVertexActions(
+    const NDSNativeEpoch *epoch,
+    const u8 *asset_base,
+    const u8 *root_base,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    u32 i;
+
+    if (epoch->action_count == 0u)
+    {
+        return;
+    }
+    ndsRendererNativeSourceBoundary(state);
+    for (i = 0u; i < epoch->action_count; i++)
+    {
+        const NDSNativeVertexAction *action =
+            &sNdsNativeFighterVertexActions[epoch->first_action + i];
+
+        if (ndsRendererNativeVisitSourceCommand(
+                root_base, action->command_index, callback, callback_user,
+                stats, state) == FALSE)
+        {
+            return;
+        }
+        if (action->kind == NDS_NATIVE_VERTEX_BLOCK)
+        {
+            ndsRendererNativeLoadVertexBlock(
+                asset_base + action->source_offset,
+                action->index, action->count, stats, state);
+        }
+        else if ((action->kind == NDS_NATIVE_MODIFY_ST) &&
+                 (action->index < NDS_RENDERER_MAX_VTX) &&
+                 ((state->input_vertex_valid_mask &
+                   (1u << action->index)) != 0u))
+        {
+            state->input_vertices[action->index].s = action->s;
+            state->input_vertices[action->index].t = action->t;
+        }
+    }
+}
+
+static void ndsRendererNativeSubmitGenericTriangle(
+    u32 packed,
+    u32 command_index,
+    u32 tri2_half,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    state->semantic_command_index = command_index;
+    state->semantic_tri2_half = tri2_half;
+#else
+    (void)command_index;
+    (void)tri2_half;
+#endif
+    if (sNdsRendererHardwareNoOracle == 0u)
+    {
+        ndsRendererRecordTransformedTriangle(
+            stats, state, packed);
+    }
+    ndsRendererSubmitHardwareTriangle(
+        stats, config, state, packed);
+}
+
+static inline u32 ndsRendererNativeDecodeTriangle(
+    u16 encoded,
+    u32 indices[3])
+{
+    u32 compact = (u32)encoded & 0x7fffu;
+
+    indices[0] = (compact >> 10) & 31u;
+    indices[1] = (compact >> 5) & 31u;
+    indices[2] = compact & 31u;
+    return (indices[0] << 17) |
+           (indices[1] << 9) |
+           (indices[2] << 1);
+}
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static u32 ndsRendererNativeNormalizeGeometryMode(u32 mode)
+{
+    u32 source_cull = mode &
+        (NDS_NATIVE_SOURCE_GEOM_CULL_FRONT |
+         NDS_NATIVE_SOURCE_GEOM_CULL_BACK);
+
+    if ((source_cull & NDS_NATIVE_SOURCE_GEOM_CULL_FRONT) != 0u)
+    {
+        mode |= NDS_RENDERER_GEOM_CULL_FRONT;
+    }
+    if ((source_cull & NDS_NATIVE_SOURCE_GEOM_CULL_BACK) != 0u)
+    {
+        mode |= NDS_RENDERER_GEOM_CULL_BACK;
+    }
+    return mode &
+        ~(NDS_NATIVE_SOURCE_GEOM_CULL_FRONT |
+          NDS_NATIVE_SOURCE_GEOM_CULL_BACK);
+}
+
+static s32 ndsRendererNativeDirectReject(NDSRendererStats *stats)
+{
+    if (stats != NULL)
+    {
+        stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
+    }
+    return FALSE;
+}
+
+static inline void ndsRendererNativeBeginDirectBatch(
+    const NDSRendererStats *stats,
+    u32 textured,
+    u32 texture_name,
+    u32 poly_fmt,
+    u32 matrix_generation)
+{
+    if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
+        (sNdsRendererHardwareTriangleBatchTextured == textured) &&
+        (sNdsRendererHardwareTriangleBatchTextureName == texture_name) &&
+        (sNdsRendererHardwareTriangleBatchPolyFmt == poly_fmt) &&
+        (sNdsRendererHardwareTriangleBatchMatrixMode ==
+         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
+        (sNdsRendererHardwareTriangleBatchMatrixGeneration ==
+         matrix_generation))
+    {
+        ndsRendererProfileRecordBatchReuse();
+        return;
+    }
+
+    ndsRendererHardwareEndBatch();
+    glEnable(GL_TEXTURE_2D);
+    if (textured == 0u)
+    {
+        ndsRendererHardwareBindNoTexture(NULL);
+    }
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_FOG);
+    glPolyFmt(poly_fmt);
+    glBegin(GL_TRIANGLE);
+    ndsRendererProfileRecordBatchBegin();
+
+    sNdsRendererHardwareTriangleBatchOpen = TRUE;
+    sNdsRendererHardwareTriangleBatchTextured = textured;
+    sNdsRendererHardwareTriangleBatchTextureName = texture_name;
+    sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
+    sNdsRendererHardwareTriangleBatchAlphaKey = 0u;
+    sNdsRendererHardwareTriangleBatchFogKey = 0u;
+    sNdsRendererHardwareTriangleBatchMatrixMode =
+        NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
+    sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
+    (void)stats;
+}
+
+static void ndsRendererNativeApplyProductionPreamble(
+    const NDSRendererNativeFighterPreamble *preamble,
+    NDSRendererStats *stats)
+{
+    if ((preamble == NULL) || (stats == NULL) ||
+        ((preamble->flags & NDS_RENDERER_NATIVE_PREAMBLE_VALID) == 0u))
+    {
+        return;
+    }
+
+    stats->geometry_mode = ndsRendererNativeNormalizeGeometryMode(
+        preamble->geometry_mode);
+    stats->othermode_h =
+        (stats->othermode_h & ~NDS_RENDERER_CYCLETYPE_MASK) |
+        (preamble->cycle_type & NDS_RENDERER_CYCLETYPE_MASK);
+    stats->othermode_l = preamble->render_mode;
+    stats->prim_color = preamble->prim_color;
+    stats->env_color = preamble->env_color;
+
+    if ((preamble->flags &
+         NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) != 0u)
+    {
+        stats->light_dir_x = preamble->light_dir_x;
+        stats->light_dir_y = preamble->light_dir_y;
+        stats->light_dir_z = preamble->light_dir_z;
+        stats->light_dir_mask = NDS_RENDERER_LIGHT_DIR_1_MASK;
+    }
+}
+
+static void ndsRendererNativeBindProductionRoot(
+    NDSRendererTraversalState *state,
+    const NDSRendererNativeFighterRoot *input,
+    NDSRendererStats *stats)
+{
+    ndsRendererNativeApplyProductionPreamble(&input->preamble, stats);
+    state->modelview_stack_depth = 0u;
+    state->vertex_valid_mask = 0u;
+    state->input_vertex_valid_mask = 0u;
+    state->vertex_color_valid_mask = 0u;
+    state->current_transform_vertex_mask = 0u;
+    state->prepared_vertex_color_valid_mask = 0u;
+    state->prepared_texcoord_valid_mask = 0u;
+    state->prepared_projected_xy_valid_mask = 0u;
+    state->prepared_projected_source_z_valid_mask = 0u;
+    state->prepared_light_direction_valid = 0u;
+    state->texture_prepare_valid = 0u;
+    state->projection_valid = 0u;
+    state->modelview = *input->modelview_matrix;
+    state->modelview_valid = TRUE;
+    state->matrix = *input->composed_matrix;
+    state->matrix_valid = TRUE;
+    state->matrix_word_valid = FALSE;
+    state->matrix_generation = ndsRendererNextMatrixGeneration();
+    stats->hardware_matrix_seed_count++;
+}
+
+static s32 ndsRendererNativePreflightProductionOwner(
+    u32 slot,
+    const void *asset_base,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count,
+    NDSRendererCommandCallback callback,
+    NDSRendererStats *stats)
+{
+    const NDSNativeRoot *roots;
+    u32 root_count;
+    u32 root_index;
+
+    if ((slot > 1u) || (asset_base == NULL) || (inputs == NULL) ||
+        (stats == NULL) || (callback != NULL) ||
+        (sNdsNativeFighterOwnerExecution.active != 0u))
+    {
+        return FALSE;
+    }
+    if (slot == 0u)
+    {
+        roots = sNdsNativeMarioRoots;
+        root_count = sizeof(sNdsNativeMarioRoots) /
+            sizeof(sNdsNativeMarioRoots[0]);
+    }
+    else
+    {
+        roots = sNdsNativeFoxRoots;
+        root_count = sizeof(sNdsNativeFoxRoots) /
+            sizeof(sNdsNativeFoxRoots[0]);
+    }
+    if (input_count != root_count)
+    {
+        return FALSE;
+    }
+    for (root_index = 0u; root_index < root_count; root_index++)
+    {
+        const NDSRendererNativeFighterRoot *input = &inputs[root_index];
+        const NDSNativeRoot *root = &roots[root_index];
+        u32 epoch_index;
+
+        if ((input->root_offset != root->root_offset) ||
+            (input->composed_matrix == NULL) ||
+            (input->modelview_matrix == NULL) ||
+            (input->config == NULL) ||
+            ((input->preamble.flags &
+              NDS_RENDERER_NATIVE_PREAMBLE_VALID) == 0u))
+        {
+            return FALSE;
+        }
+        for (epoch_index = 0u;
+             epoch_index < root->epoch_count;
+             epoch_index++)
+        {
+            const NDSNativeEpoch *epoch =
+                &sNdsNativeFighterEpochs[root->first_epoch + epoch_index];
+
+            if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
+                ((input->materials == NULL) ||
+                 (epoch->material_slot >= input->material_count)))
+            {
+                return FALSE;
+            }
+        }
+    }
+    return TRUE;
+}
+
+static void ndsRendererNativeShadeProductionActions(
+    const NDSNativeEpoch *epoch,
+    u32 epoch_policy,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    const NDSNativeDirectPolicy *policy =
+        &sNdsNativeFighterDirectPolicies[
+            epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK];
+    const NDSRendererHardwareLightDirection *prepared_direction = NULL;
+    const u32 *shade_lut = NULL;
+    u32 use_material =
+        policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
+    u32 material_color = (use_material != 0u) ? stats->prim_color : 0u;
+    u32 action_offset;
+
+    if (epoch->action_count == 0u)
+    {
+        return;
+    }
+    ndsRendererNativeSourceBoundary(state);
+    if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
+        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
+    {
+        if (state->prepared_light_direction_valid == 0u)
+        {
+            ndsRendererHardwarePrepareLitDirection(
+                stats, &state->modelview,
+                &state->prepared_light_direction);
+            state->prepared_light_direction_valid = TRUE;
+        }
+        prepared_direction = &state->prepared_light_direction;
+        if ((stats->light_color_mask &
+             (NDS_RENDERER_LIGHT_COLOR_1_MASK |
+              NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
+            (NDS_RENDERER_LIGHT_COLOR_1_MASK |
+             NDS_RENDERER_LIGHT_COLOR_2_MASK))
+        {
+            shade_lut = ndsRendererHardwareGetLightShadeLut(
+                stats->light_color_1, stats->light_color_2);
+        }
+    }
+
+    for (action_offset = 0u;
+         action_offset < epoch->action_count;
+         action_offset++)
+    {
+        u32 action_index = epoch->first_action + action_offset;
+        const NDSNativeVertexAction *action =
+            &sNdsNativeFighterVertexActions[action_index];
+        u32 span = sNdsNativeFighterActionDenseSpans[action_index];
+        u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
+        u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
+        u32 dense_offset;
+
+        if (action->kind == NDS_NATIVE_VERTEX_BLOCK)
+        {
+            u32 vertex_end = (u32)action->index + (u32)action->count;
+
+            if (vertex_end > stats->vertex_count)
+            {
+                stats->vertex_count = vertex_end;
+            }
+            sNdsRendererHardwareSourceVertexLoadCount += action->count;
+        }
+        for (dense_offset = 0u;
+             dense_offset < dense_count;
+             dense_offset++)
+        {
+            u32 dense_id = dense_first + dense_offset;
+            u32 color_source =
+                sNdsNativeFighterDenseColorSource[dense_id];
+
+            if (color_source != dense_id)
+            {
+                sNdsNativeFighterPreparedDense[dense_id].shaded_rgba =
+                    sNdsNativeFighterPreparedDense[color_source].shaded_rgba;
+            }
+            else
+            {
+                const NDSNativeDenseVertex *dense =
+                    &sNdsNativeFighterDenseVertices[dense_id];
+                NDSRendererInputVertex input;
+
+                input.r = (u8)(dense->rgba >> 24);
+                input.g = (u8)(dense->rgba >> 16);
+                input.b = (u8)(dense->rgba >> 8);
+                input.a = (u8)dense->rgba;
+                if (shade_lut != NULL)
+                {
+                    sNdsNativeFighterPreparedDense[dense_id].shaded_rgba =
+                        ndsRendererHardwareLitShadeColorLut(
+                            &input, prepared_direction, shade_lut);
+                }
+                else
+                {
+                    sNdsNativeFighterPreparedDense[dense_id].shaded_rgba =
+                        ndsRendererHardwareLitShadeColorPrepared(
+                            stats, &input, prepared_direction);
+                }
+            }
+            {
+                NDSNativePreparedDenseVertex *prepared =
+                    &sNdsNativeFighterPreparedDense[dense_id];
+                u32 color = prepared->shaded_rgba;
+
+                if (use_material != 0u)
+                {
+                    u32 r = ndsRendererHardwareScaleMaterialChannel5(
+                        (color >> 24) & 0xffu,
+                        (material_color >> 24) & 0xffu);
+                    u32 g = ndsRendererHardwareScaleMaterialChannel5(
+                        (color >> 16) & 0xffu,
+                        (material_color >> 16) & 0xffu);
+                    u32 b = ndsRendererHardwareScaleMaterialChannel5(
+                        (color >> 8) & 0xffu,
+                        (material_color >> 8) & 0xffu);
+
+                    prepared->packed_color = RGB15(r, g, b);
+                }
+                else
+                {
+                    prepared->packed_color =
+                        RGB15((color >> 27) & 0x1fu,
+                              (color >> 19) & 0x1fu,
+                              (color >> 11) & 0x1fu);
+                }
+            }
+        }
+    }
+}
+
+static s32 NDS_RENDERER_FAST_RUN_CODE
+ndsRendererNativePrepareProductionRun(
+    u32 run_index,
+    u32 epoch_policy,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    const NDSNativeDirectPolicy *policy;
+    const NDSRendererTileState *render_tile;
+    u32 family = epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK;
+    u32 expected_geometry_cull =
+        ((epoch_policy & NDS_NATIVE_DIRECT_POLICY_CULL_NONE) != 0u) ?
+            0u : NDS_RENDERER_GEOM_CULL_BACK;
+    u32 expected_poly_cull =
+        ((epoch_policy & NDS_NATIVE_DIRECT_POLICY_CULL_NONE) != 0u) ?
+            POLY_CULL_NONE : POLY_CULL_BACK;
+    u32 geometry_cull;
+    u32 material_color;
+    u32 use_texture;
+    u32 texture_scale_s = 0u;
+    u32 texture_scale_t = 0u;
+    u32 texture_origin_s = 0u;
+    u32 texture_origin_t = 0u;
+    u32 unique_first;
+    u32 unique_count;
+    u32 unique_offset;
+    s32 texture_offset = 0;
+
+    if ((config == NULL) || (stats == NULL) || (state == NULL) ||
+        (family >= (sizeof(sNdsNativeFighterDirectPolicies) /
+                    sizeof(sNdsNativeFighterDirectPolicies[0]))))
+    {
+        return ndsRendererNativeDirectReject(stats);
+    }
+    policy = &sNdsNativeFighterDirectPolicies[family];
+    geometry_cull = stats->geometry_mode &
+        (NDS_RENDERER_GEOM_CULL_FRONT | NDS_RENDERER_GEOM_CULL_BACK);
+    if (((stats->geometry_mode &
+          (NDS_RENDERER_GEOM_ZBUFFER | NDS_RENDERER_GEOM_LIGHTING)) !=
+         (NDS_RENDERER_GEOM_ZBUFFER | NDS_RENDERER_GEOM_LIGHTING)) ||
+        ((stats->geometry_mode &
+          (NDS_RENDERER_GEOM_FOG |
+           NDS_RENDERER_GEOM_TEXTURE_GEN |
+           NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR)) != 0u) ||
+        (geometry_cull != expected_geometry_cull) ||
+        ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) != 0u) ||
+        ((stats->othermode_l & NDS_RENDERER_ZMODE_MASK) ==
+         NDS_RENDERER_ZMODE_DEC) ||
+        ((stats->othermode_l & NDS_RENDERER_ZSOURCE_MASK) != 0u) ||
+        (stats->texture_combine_w0 != policy->combine_w0) ||
+        (stats->texture_combine_w1 != policy->combine_w1) ||
+        ((family != NDS_NATIVE_DIRECT_POLICY_LIT_ONLY) &&
+         (stats->env_color != 0xffffffffu)) ||
+        (state->matrix_valid == 0u) ||
+        (state->matrix_generation == 0u))
+    {
+        return ndsRendererNativeDirectReject(stats);
+    }
+
+    material_color =
+        ((policy->vertex_flags &
+          NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL) != 0u) ?
+            stats->prim_color : 0u;
+    state->texture_prepare_source_zbuffered = TRUE;
+    state->texture_prepare_decal_depth = FALSE;
+    state->texture_prepare_prim_depth = FALSE;
+    state->texture_prepare_material_color = material_color;
+    state->texture_prepare_vertex_flags = policy->vertex_flags;
+    if (state->texture_prepare_valid == 0u)
+    {
+        u32 texture_name = 0u;
+
+        use_texture = FALSE;
+        if (policy->textured != 0u)
+        {
+            u32 render_tile_index =
+                ((stats->texture_state_flags &
+                  NDS_RENDERER_TEXTURE_STATE_SEEN) != 0u) ?
+                    (stats->texture_tile & 0x7u) :
+                    NDS_RENDERER_RENDER_TILE;
+            u32 implicit_texture_on = FALSE;
+            u32 required_texture_mask =
+                NDS_RENDERER_TEXTURE_SETTIMG |
+                NDS_RENDERER_TEXTURE_SETTILE |
+                NDS_RENDERER_TEXTURE_SETTILESIZE;
+
+            render_tile = &stats->texture_tiles[render_tile_index];
+            if ((stats->texture_state_flags &
+                 NDS_RENDERER_TEXTURE_STATE_ON) == 0u)
+            {
+                implicit_texture_on =
+                    (((stats->texture_mask & required_texture_mask) ==
+                      required_texture_mask) &&
+                     ((stats->texture_mask &
+                       (NDS_RENDERER_TEXTURE_LOADBLOCK |
+                        NDS_RENDERER_TEXTURE_LOADTILE)) != 0u) &&
+                     (stats->texture_image != 0u) &&
+                     (stats->texture_load_texels != 0u) &&
+                     (render_tile->set_seen != 0u) &&
+                     (render_tile->size_seen != 0u) &&
+                     (render_tile->line != 0u) &&
+                     (render_tile->width != 0u) &&
+                     (render_tile->height != 0u)) ? TRUE : FALSE;
+            }
+            use_texture = ndsRendererHardwareBindTexture(
+                stats, config, state);
+            if (use_texture == FALSE)
+            {
+                return ndsRendererNativeDirectReject(stats);
+            }
+            texture_name = sNdsRendererHardwareBoundTextureName;
+            texture_scale_s = stats->texture_scale_s;
+            texture_scale_t = stats->texture_scale_t;
+            if (implicit_texture_on != FALSE)
+            {
+                if ((stats->texture_state_flags &
+                     NDS_RENDERER_TEXTURE_STATE_SCALE_S) == 0u)
+                {
+                    texture_scale_s =
+                        NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
+                }
+                if ((stats->texture_state_flags &
+                     NDS_RENDERER_TEXTURE_STATE_SCALE_T) == 0u)
+                {
+                    texture_scale_t =
+                        NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
+                }
+            }
+            texture_origin_s = render_tile->uls;
+            texture_origin_t = render_tile->ult;
+            texture_offset =
+                ((stats->othermode_h & NDS_RENDERER_TEXTFILT_MASK) !=
+                 NDS_RENDERER_TF_POINT) ?
+                    NDS_RENDERER_TEXCOORD_FILTER_OFFSET : 0;
+        }
+        state->texture_prepare_valid = TRUE;
+        state->texture_prepare_enabled = use_texture;
+        state->texture_prepare_name = texture_name;
+        state->texture_prepare_alpha_constant = TRUE;
+        state->texture_prepare_poly_alpha = 31u;
+        state->texture_prepare_poly_fmt =
+            expected_poly_cull | POLY_ALPHA(31u) |
+            POLY_ID(stats->texture_combine_count &
+                    NDS_RENDERER_POLY_ID_MASK);
+        state->texture_prepare_scale_s = texture_scale_s;
+        state->texture_prepare_scale_t = texture_scale_t;
+        state->texture_prepare_origin_s = texture_origin_s;
+        state->texture_prepare_origin_t = texture_origin_t;
+        state->texture_prepare_offset = texture_offset;
+        ndsRendererProfileRecordTexturePrepare();
+    }
+    else
+    {
+        use_texture = state->texture_prepare_enabled;
+        if ((use_texture != FALSE) != (policy->textured != 0u))
+        {
+            return ndsRendererNativeDirectReject(stats);
+        }
+        ndsRendererProfileRecordTexturePrepareReuse();
+    }
+#if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
+    if (use_texture != FALSE)
+    {
+        state->texture_prepare_vertex_flags &=
+            ~(NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL |
+              NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
+    }
+#endif
+
+    unique_first = sNdsNativeFighterRunFirstUnique[run_index];
+    unique_count = sNdsNativeFighterRunUniqueCount[run_index];
+    if (policy->textured != 0u)
+    {
+        for (unique_offset = 0u;
+             unique_offset < unique_count;
+             unique_offset++)
+        {
+            u32 dense_id = sNdsNativeFighterRunUniqueDense[
+                unique_first + unique_offset];
+            const NDSNativeDenseVertex *dense =
+                &sNdsNativeFighterDenseVertices[dense_id];
+            NDSNativePreparedDenseVertex *prepared =
+                &sNdsNativeFighterPreparedDense[dense_id];
+            s32 scaled_s =
+                ((s32)dense->s *
+                 (s32)state->texture_prepare_scale_s) >> 17;
+            s32 scaled_t =
+                ((s32)dense->t *
+                 (s32)state->texture_prepare_scale_t) >> 17;
+
+            prepared->s = (s16)(
+                scaled_s -
+                ((s32)state->texture_prepare_origin_s << 2) +
+                state->texture_prepare_offset);
+            prepared->t = (s16)(
+                scaled_t -
+                ((s32)state->texture_prepare_origin_t << 2) +
+                state->texture_prepare_offset);
+        }
+    }
+
+    ndsRendererNativeBeginDirectBatch(
+        stats, policy->textured, state->texture_prepare_name,
+        state->texture_prepare_poly_fmt, state->matrix_generation);
+    return TRUE;
+}
+
+static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+ndsRendererNativeEmitProductionRun(
+    u32 run_index,
+    u32 corner_count,
+    u32 textured,
+    u32 cross_matrix,
+    u32 current_palette_slot)
+{
+    const u16 *corner =
+        &sNdsNativeFighterPackedCorners[
+            sNdsNativeFighterRunFirstCorner[run_index]];
+    u32 active_palette_slot = current_palette_slot;
+    u32 remaining = corner_count;
+
+    while (remaining-- != 0u)
+    {
+        u32 packed = *corner++;
+        u32 dense_id = packed & NDS_NATIVE_DENSE_ID_MASK;
+        const NDSNativeDenseVertex *dense =
+            &sNdsNativeFighterDenseVertices[dense_id];
+        const NDSNativePreparedDenseVertex *prepared =
+            &sNdsNativeFighterPreparedDense[dense_id];
+
+        if (cross_matrix != 0u)
+        {
+            u32 palette_slot =
+                packed >> NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT;
+
+            if (palette_slot == NDS_NATIVE_GX_MATRIX_CURRENT)
+            {
+                palette_slot = current_palette_slot;
+            }
+            if (palette_slot != active_palette_slot)
+            {
+                glRestoreMatrix((int)palette_slot);
+                active_palette_slot = palette_slot;
+            }
+        }
+        GFX_COLOR = prepared->packed_color;
+        if (textured != 0u)
+        {
+            GFX_TEX_COORD =
+                (u32)(u16)prepared->s |
+                ((u32)(u16)prepared->t << 16);
+        }
+        GFX_VERTEX16 =
+            (u32)(u16)((s32)dense->x *
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
+            ((u32)(u16)((s32)dense->y *
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
+        GFX_VERTEX16 = (u16)((s32)dense->z *
+            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+    }
+    if ((cross_matrix != 0u) &&
+        (active_palette_slot != current_palette_slot))
+    {
+        glRestoreMatrix((int)current_palette_slot);
+    }
+}
+static inline void ndsRendererNativeAccountGXCrossTriangles(
+    NDSRendererStats *stats,
+    u32 triangle_count)
+{
+    u32 reuse_count = (triangle_count != 0u) ?
+        triangle_count - 1u : 0u;
+
+    sNdsRendererHardwareSubmitClassCounts[
+        NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX] += triangle_count;
+    sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count += triangle_count;
+    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+        reuse_count;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+        reuse_count;
+    sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
+    sNdsRendererRuntimeFrameSummary.hardware_vertices +=
+        triangle_count * 3u;
+    if ((sNdsRendererRuntimeFrameSummary.hardware_triangles > 2048u) ||
+        (sNdsRendererRuntimeFrameSummary.hardware_vertices > 6144u))
+    {
+        sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
+    }
+    stats->hardware_triangle_count += triangle_count;
+    stats->hardware_vertex_count += triangle_count * 3u;
+    stats->hardware_zbuffer_triangle_count += triangle_count;
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+    sNdsRendererBenchmarkTriangleCount += triangle_count;
+#endif
+    sNdsRendererHardwareSubmitted = TRUE;
+}
+
+static s32 ndsRendererNativeSubmitProductionRun(
+    const NDSNativeRun *run,
+    u32 epoch_policy,
+    u32 current_palette_slot,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    u32 run_index;
+
+    if ((run == NULL) || (run->triangle_count == 0u))
+    {
+        return ndsRendererNativeDirectReject(stats);
+    }
+    run_index = (u32)(run - sNdsNativeFighterRuns);
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
+    (void)epoch_policy;
+    (void)current_palette_slot;
+    (void)config;
+    (void)state;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+    if (ndsRendererNativePrepareProductionRun(
+            run_index, epoch_policy, config, stats, state) == FALSE)
+    {
+        return FALSE;
+    }
+    if ((run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) &&
+        (current_palette_slot > NDS_NATIVE_GX_MATRIX_SLOT_MAX))
+    {
+        return ndsRendererNativeDirectReject(stats);
+    }
+    ndsRendererNativeEmitProductionRun(
+        run_index, (u32)run->triangle_count * 3u,
+        state->texture_prepare_enabled,
+        (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) ? TRUE : FALSE,
+        current_palette_slot);
+#else
+    (void)epoch_policy;
+    (void)current_palette_slot;
+    (void)config;
+    (void)state;
+    return ndsRendererNativeDirectReject(stats);
+#endif
+    stats->triangle_count += run->triangle_count;
+    if (run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT)
+    {
+        ndsRendererFastAccountRawTriangles(
+            stats, run->triangle_count, run->triangle_count - 1u);
+    }
+    else if (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
+    {
+        ndsRendererNativeAccountGXCrossTriangles(
+            stats, run->triangle_count);
+    }
+    else
+    {
+        return ndsRendererNativeDirectReject(stats);
+    }
+    return TRUE;
+}
+
+static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+ndsRendererNativeEmitDenseRawRun(
+    u32 run_index,
+    u32 corner_count,
+    const NDSRendererTraversalState *state,
+    u32 textured)
+{
+    const u16 *corner =
+        &sNdsNativeFighterDenseCorners[
+            sNdsNativeFighterRunFirstCorner[run_index]];
+    u32 remaining = corner_count;
+
+    if (textured != 0u)
+    {
+        while (remaining-- != 0u)
+        {
+            const NDSNativeDenseVertex *vertex =
+                &sNdsNativeFighterDenseVertices[*corner++];
+            u32 slot = vertex->cache_slot;
+
+            GFX_COLOR = state->prepared_vertex_colors[slot];
+            GFX_TEX_COORD =
+                (u32)(u16)state->prepared_texcoord_s[slot] |
+                ((u32)(u16)state->prepared_texcoord_t[slot] << 16);
+            GFX_VERTEX16 =
+                (u32)(u16)((s32)vertex->x *
+                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
+                ((u32)(u16)((s32)vertex->y *
+                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
+            GFX_VERTEX16 = (u16)((s32)vertex->z *
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+        }
+    }
+    else
+    {
+        while (remaining-- != 0u)
+        {
+            const NDSNativeDenseVertex *vertex =
+                &sNdsNativeFighterDenseVertices[*corner++];
+            u32 slot = vertex->cache_slot;
+
+            GFX_COLOR = state->prepared_vertex_colors[slot];
+            GFX_VERTEX16 =
+                (u32)(u16)((s32)vertex->x *
+                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
+                ((u32)(u16)((s32)vertex->y *
+                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
+            GFX_VERTEX16 = (u16)((s32)vertex->z *
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+        }
+    }
+}
+
+static inline void ndsRendererNativeAccountProjectedCrossTriangle(
+    NDSRendererStats *stats,
+    u32 triangle_count)
+{
+    u32 reuse_count = (triangle_count != 0u) ?
+        triangle_count - 1u : 0u;
+
+    sNdsRendererHardwareSubmitClassCounts[
+        NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX] += triangle_count;
+    sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count += triangle_count;
+    sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count +=
+        triangle_count;
+    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+        reuse_count;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+        reuse_count;
+    sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
+    sNdsRendererRuntimeFrameSummary.hardware_vertices +=
+        triangle_count * 3u;
+    if ((sNdsRendererRuntimeFrameSummary.hardware_triangles > 2048u) ||
+        (sNdsRendererRuntimeFrameSummary.hardware_vertices > 6144u))
+    {
+        sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
+    }
+    stats->hardware_triangle_count += triangle_count;
+    stats->hardware_vertex_count += triangle_count * 3u;
+    stats->hardware_projected_depth_triangle_count += triangle_count;
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+    sNdsRendererBenchmarkTriangleCount += triangle_count;
+#endif
+    sNdsRendererHardwareSubmitted = TRUE;
+}
+#endif
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static s32 ndsRendererNativeSubmitRunDirect(
+    const NDSNativeRun *run,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
+    if ((run == NULL) || (config == NULL) || (stats == NULL) ||
+        (state == NULL) || (run->triangle_count == 0u))
+    {
+        return FALSE;
+    }
+    /* This benchmark measures everything surrounding triangle transport.
+     * Consume the generated run as one unit instead of paying the generic
+     * per-triangle fallback loop that production never executes. */
+    stats->triangle_count += run->triangle_count;
+    if (run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT)
+    {
+        ndsRendererFastAccountRawTriangles(
+            stats, run->triangle_count,
+            (run->triangle_count != 0u) ? run->triangle_count - 1u : 0u);
+    }
+    else
+    {
+        ndsRendererNativeAccountProjectedCrossTriangle(
+            stats, run->triangle_count);
+    }
+    return TRUE;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+    u32 run_index;
+    u32 i;
+
+    if ((run == NULL) || (config == NULL) || (stats == NULL) ||
+        (state == NULL) || (run->triangle_count == 0u))
+    {
+        return FALSE;
+    }
+    run_index = (u32)(run - sNdsNativeFighterRuns);
+    if (run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT)
+    {
+        const u16 *triangles =
+            &sNdsNativeFighterTriangles[run->first_triangle];
+        u32 first_indices[3];
+
+        (void)ndsRendererNativeDecodeTriangle(
+            triangles[0], first_indices);
+        if (ndsRendererNativePrepareDirectRun(
+                run, first_indices[0], FALSE,
+                config, stats, state) == FALSE)
+        {
+            return FALSE;
+        }
+        stats->triangle_count += run->triangle_count;
+        ndsRendererNativeEmitDenseRawRun(
+            run_index,
+            (u32)run->triangle_count * 3u,
+            state, state->texture_prepare_enabled);
+        ndsRendererFastAccountRawTriangles(
+            stats, run->triangle_count, run->triangle_count - 1u);
+        return TRUE;
+    }
+    if (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
+    {
+        const u16 *triangles =
+            &sNdsNativeFighterTriangles[run->first_triangle];
+        u32 first_indices[3];
+
+        (void)ndsRendererNativeDecodeTriangle(triangles[0], first_indices);
+        if (ndsRendererNativePrepareDirectRun(
+                run, first_indices[0], TRUE,
+                config, stats, state) == FALSE)
+        {
+            return FALSE;
+        }
+        stats->triangle_count += run->triangle_count;
+        for (i = 0u; i < run->triangle_count; i++)
+        {
+            u32 indices[3];
+
+            (void)ndsRendererNativeDecodeTriangle(
+                triangles[i], indices);
+            ndsRendererHardwareSubmitVertex(
+                stats, state, indices[0], 0);
+            ndsRendererHardwareSubmitVertex(
+                stats, state, indices[1], 0);
+            ndsRendererHardwareSubmitVertex(
+                stats, state, indices[2], 0);
+        }
+        ndsRendererHardwareEnterProjectedForeground();
+        ndsRendererNativeAccountProjectedCrossTriangle(
+            stats, run->triangle_count);
+        return TRUE;
+    }
+#else
+    (void)run;
+    (void)config;
+    (void)stats;
+    (void)state;
+#endif
+    return FALSE;
+}
+#endif
+
+static void ndsRendererNativeSubmitRun(
+    const NDSNativeRun *run,
+    const u8 *root_base,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    u32 *last_callback_command,
+    u32 *source_command_index,
+    u32 *tri2_half,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    const u16 *triangle;
+    s32 native_raw_ready = FALSE;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    s32 native_snapshot_ready = FALSE;
+    u32 native_raw_submitted = 0u;
+    u32 native_cross_submitted = 0u;
+#endif
+    u32 i;
+
+    stats->triangle_count += run->triangle_count;
+    triangle = &sNdsNativeFighterTriangles[run->first_triangle];
+    if ((run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT) &&
+        (run->triangle_count != 0u) &&
+        (NDS_RENDERER_BENCHMARK_MODE !=
+         NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP))
+    {
+        u32 first_indices[3];
+
+        (void)ndsRendererNativeDecodeTriangle(
+            triangle[0], first_indices);
+        native_raw_ready = ndsRendererNativePrepareDirectRun(
+            run, first_indices[0], FALSE,
+            config, stats, state);
+    }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    else if ((run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) &&
+             (run->triangle_count != 0u) &&
+             (NDS_RENDERER_BENCHMARK_MODE !=
+              NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP))
+    {
+        u32 first_indices[3];
+
+        (void)ndsRendererNativeDecodeTriangle(
+            triangle[0], first_indices);
+        native_snapshot_ready = ndsRendererNativePrepareDirectRun(
+            run, first_indices[0], TRUE,
+            config, stats, state);
+    }
+#endif
+    for (i = 0u; i < run->triangle_count; i++)
+    {
+        u16 encoded = triangle[i];
+        u32 indices[3];
+        u32 packed = ndsRendererNativeDecodeTriangle(encoded, indices);
+        u32 command_index = *source_command_index;
+        u32 command_half = *tri2_half;
+
+        if (*last_callback_command != command_index)
+        {
+            if (ndsRendererNativeVisitSourceCommand(
+                    root_base, command_index,
+                    callback, callback_user, stats, state) == FALSE)
+            {
+                return;
+            }
+            *last_callback_command = command_index;
+        }
+        if (((run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT) &&
+             (native_raw_ready == FALSE)) ||
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ((run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) &&
+             (native_snapshot_ready == FALSE)) ||
+#else
+            (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) ||
+#endif
+            (NDS_RENDERER_BENCHMARK_MODE ==
+             NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP))
+        {
+            if ((run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT) &&
+                (i != 0u) &&
+                (ndsRendererFastRawStateEligible(state) == FALSE))
+            {
+                sNdsRendererFastFallbackCount[0]++;
+            }
+            ndsRendererNativeSubmitGenericTriangle(
+                packed, command_index, command_half,
+                config, stats, state);
+            if ((run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT) &&
+                (i == 0u) &&
+                (ndsRendererFastRawStateEligible(state) != FALSE))
+            {
+                ndsRendererFastPrepareRawSlots(
+                    stats, state, run->required_mask,
+                    state->texture_prepare_enabled);
+                native_raw_ready = TRUE;
+            }
+        }
+        else
+        {
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
+            {
+                ndsRendererHardwareSubmitVertex(
+                    stats, state, indices[0], 0);
+                ndsRendererHardwareSubmitVertex(
+                    stats, state, indices[1], 0);
+                ndsRendererHardwareSubmitVertex(
+                    stats, state, indices[2], 0);
+                ndsRendererHardwareEnterProjectedForeground();
+                native_cross_submitted++;
+            }
+            else
+#endif
+            {
+            if (sNdsRendererHardwareNoOracle == 0u)
+            {
+                ndsRendererRecordTransformedTriangle(
+                    stats, state, packed);
+            }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            state->semantic_command_index = command_index;
+            state->semantic_tri2_half = command_half;
+#endif
+            ndsRendererFastEmitRawCommand(
+                state, indices, 1u, state->texture_prepare_enabled);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            ndsRendererFastCommitRawSemanticTriangle(
+                stats, state, packed, indices);
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            native_raw_submitted++;
+#else
+            ndsRendererFastAccountRawTriangles(
+                stats, 1u, (i == 0u) ? 0u : 1u);
+#endif
+            }
+        }
+        if ((encoded & 0x8000u) != 0u)
+        {
+            *tri2_half = 1u;
+        }
+        else
+        {
+            (*source_command_index)++;
+            *tri2_half = 0u;
+        }
+    }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    if (native_raw_submitted != 0u)
+    {
+        ndsRendererFastAccountRawTriangles(
+            stats, native_raw_submitted,
+            native_raw_submitted - 1u);
+    }
+    if (native_cross_submitted != 0u)
+    {
+        ndsRendererNativeAccountProjectedCrossTriangle(
+            stats, native_cross_submitted);
+    }
+#endif
+}
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static void ndsRendererNativeBindOwnerRootState(
+    NDSRendererTraversalState *state,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats)
+{
+    state->modelview_stack_depth = 0u;
+    state->prepared_vertex_color_valid_mask = 0u;
+    state->prepared_texcoord_valid_mask = 0u;
+    state->prepared_projected_xy_valid_mask = 0u;
+    state->prepared_projected_source_z_valid_mask = 0u;
+    state->prepared_light_direction_valid = 0u;
+    state->texture_prepare_valid = 0u;
+    state->projection_valid = 0u;
+    state->modelview_valid = 0u;
+    state->matrix_valid = 0u;
+    state->matrix_word_valid = 0u;
+    if ((stats != NULL) && (config->initial_geometry_mode != 0u))
+    {
+        stats->geometry_mode = config->initial_geometry_mode;
+    }
+    if (config->initial_projection != NULL)
+    {
+        state->projection = *config->initial_projection;
+        state->projection_valid = TRUE;
+    }
+    if (config->initial_modelview != NULL)
+    {
+        state->modelview = *config->initial_modelview;
+        state->modelview_valid = TRUE;
+    }
+    ndsRendererComposeMatrix(state);
+    if ((stats != NULL) && (state->matrix_valid != 0u))
+    {
+        stats->hardware_matrix_seed_count++;
+    }
+}
+#endif
+
+static s32 ndsRendererExecuteNativeFighterRootHardware(
+    u32 slot,
+    u32 root_ordinal,
+    const void *asset_base_ptr,
+    u32 root_offset,
+    const NDSRendererNativeMaterial *materials,
+    u32 material_count,
+    const NDSRendererConfig *config,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache)
+{
+    const NDSNativeRoot *roots;
+    const NDSNativeRoot *root;
+    const u8 *asset_base = asset_base_ptr;
+    const u8 *root_base;
+    u32 root_count;
+    u32 epoch_index;
+    u32 native_triangle_count = 0u;
+    u32 native_run_count = 0u;
+    u32 last_callback_command = 0xffffffffu;
+    NDSRendererTraversalState local_state;
+    NDSRendererTraversalState *state_ptr = &local_state;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    s32 shared_owner_state = FALSE;
+#endif
+#define state (*state_ptr)
+
+    if ((asset_base == NULL) || (config == NULL) || (stats == NULL) ||
+        (vertex_cache == NULL) || (slot > 1u))
+    {
+        return FALSE;
+    }
+    if (slot == 0u)
+    {
+        roots = sNdsNativeMarioRoots;
+        root_count = sizeof(sNdsNativeMarioRoots) /
+            sizeof(sNdsNativeMarioRoots[0]);
+    }
+    else
+    {
+        roots = sNdsNativeFoxRoots;
+        root_count = sizeof(sNdsNativeFoxRoots) /
+            sizeof(sNdsNativeFoxRoots[0]);
+    }
+    if ((root_ordinal >= root_count) ||
+        (roots[root_ordinal].root_offset != root_offset))
+    {
+        return FALSE;
+    }
+    root = &roots[root_ordinal];
+    for (epoch_index = 0u; epoch_index < root->epoch_count; epoch_index++)
+    {
+        const NDSNativeEpoch *epoch =
+            &sNdsNativeFighterEpochs[root->first_epoch + epoch_index];
+
+        if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
+            ((materials == NULL) ||
+             (epoch->material_slot >= material_count)))
+        {
+            return FALSE;
+        }
+    }
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    if (sNdsNativeFighterOwnerExecution.active != 0u)
+    {
+        if ((sNdsNativeFighterOwnerExecution.slot != slot) ||
+            (sNdsNativeFighterOwnerExecution.stats != stats) ||
+            (sNdsNativeFighterOwnerExecution.vertex_cache != vertex_cache))
+        {
+            ndsRendererAbortNativeFighterOwner();
+            return FALSE;
+        }
+        state_ptr = &sNdsNativeFighterOwnerExecution.traversal;
+        shared_owner_state = TRUE;
+        ndsRendererNativeBindOwnerRootState(&state, config, stats);
+    }
+    else
+#endif
+    {
+        ndsRendererInitTraversalState(
+            &state, config, stats, NULL,
+            vertex_cache->matrix_snapshots,
+            vertex_cache->matrix_snapshot_count);
+        state.vertices = vertex_cache->transformed_vertices;
+        state.vertex_valid_mask = vertex_cache->transformed_valid_mask;
+        state.input_vertices = vertex_cache->input_vertices;
+        state.input_vertex_valid_mask = vertex_cache->input_valid_mask;
+        state.raw_vertex_fit_mask = vertex_cache->raw_vertex_fit_mask;
+        state.vertex_colors = vertex_cache->vertex_colors;
+        state.vertex_color_valid_mask =
+            vertex_cache->vertex_color_valid_mask;
+        state.vertex_matrix_snapshot = vertex_cache->vertex_matrix_snapshot;
+        state.vertex_clip_snapshot = vertex_cache->vertex_clip_snapshot;
+    }
+    root_base = asset_base + root_offset;
+    if (stats->first_opcode == 0u)
+    {
+        stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
+    }
+    stats->command_count += root->source_command_count;
+
+    for (epoch_index = 0u; epoch_index < root->epoch_count; epoch_index++)
+    {
+        const NDSNativeEpoch *epoch =
+            &sNdsNativeFighterEpochs[root->first_epoch + epoch_index];
+        u32 run_index;
+        u32 source_command_index =
+            epoch->first_triangle_command_index;
+        u32 tri2_half = 0u;
+
+        ndsRendererNativeApplyStateSpan(
+            epoch->before_state_first, epoch->before_state_count,
+            epoch->before_sync_count,
+            asset_base, stats, &state);
+        if (epoch->material_slot != NDS_NATIVE_MATERIAL_NONE)
+        {
+            ndsRendererNativeApplyMaterial(
+                &materials[epoch->material_slot], stats, &state);
+        }
+        ndsRendererNativeApplyStateSpan(
+            epoch->after_state_first, epoch->after_state_count,
+            epoch->after_sync_count,
+            asset_base, stats, &state);
+        ndsRendererNativeApplyVertexActions(
+            epoch, asset_base, root_base,
+            callback, callback_user, stats, &state);
+        if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
+        {
+            break;
+        }
+        for (run_index = 0u; run_index < epoch->run_count; run_index++)
+        {
+            const NDSNativeRun *run =
+                &sNdsNativeFighterRuns[epoch->first_run + run_index];
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if ((callback != NULL) ||
+                (sNdsRendererHardwareNoOracle == 0u) ||
+                (ndsRendererNativeSubmitRunDirect(
+                     run, config, stats, &state) == FALSE))
+#endif
+            {
+                ndsRendererNativeSubmitRun(
+                    run, root_base, callback, callback_user,
+                    &last_callback_command,
+                    &source_command_index, &tri2_half,
+                    config, stats, &state);
+            }
+            native_triangle_count += run->triangle_count;
+            native_run_count++;
+            if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
+            {
+                break;
+            }
+        }
+        if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
+        {
+            break;
+        }
+    }
+    if (stats->blocker == NDS_RENDERER_BLOCKER_NONE)
+    {
+        ndsRendererNativeApplyStateSpan(
+            root->tail_state_first, root->tail_state_count,
+            root->tail_sync_count,
+            asset_base, stats, &state);
+        stats->end_command_count++;
+    }
+    ndsRendererHardwareEndBatch();
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    if (shared_owner_state == FALSE)
+#endif
+    {
+        vertex_cache->transformed_valid_mask = state.vertex_valid_mask;
+        vertex_cache->input_valid_mask = state.input_vertex_valid_mask;
+        vertex_cache->raw_vertex_fit_mask = state.raw_vertex_fit_mask;
+        vertex_cache->vertex_color_valid_mask =
+            state.vertex_color_valid_mask;
+        vertex_cache->matrix_snapshot_count = state.matrix_snapshot_count;
+    }
+    if (native_triangle_count != 0u)
+    {
+        sNdsRendererFastRunCount += native_run_count;
+        sNdsRendererFastTriangleCount += native_triangle_count;
+        if ((u32)sNdsRendererRuntimeOwner <
+            (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
+        {
+            sNdsRendererFastOwnerTriangleCount[
+                (u32)sNdsRendererRuntimeOwner] += native_triangle_count;
+        }
+    }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    if ((shared_owner_state != FALSE) &&
+        (stats->blocker != NDS_RENDERER_BLOCKER_NONE))
+    {
+        ndsRendererAbortNativeFighterOwner();
+        return FALSE;
+    }
+#endif
+    return TRUE;
+#undef state
+}
+#endif
+
+s32 ndsRendererExecuteNativeFighterOwnerProduction(
+    u32 slot,
+    const void *asset_base_ptr,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    u32 *out_hardware_started)
+{
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    const NDSNativeRoot *roots;
+    const u8 *palette_slots;
+    const u8 *asset_base = asset_base_ptr;
+    NDSRendererTraversalState *state =
+        &sNdsNativeFighterOwnerExecution.traversal;
+    u32 root_count;
+    u32 root_index;
+    u32 native_run_count = 0u;
+    u32 native_triangle_count = 0u;
+
+    (void)callback_user;
+    if (out_hardware_started == NULL)
+    {
+        return FALSE;
+    }
+    *out_hardware_started = FALSE;
+    if ((stats == NULL) ||
+        (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ||
+        (ndsRendererNativePreflightProductionOwner(
+             slot, asset_base, inputs, input_count,
+             callback, stats) == FALSE))
+    {
+        return FALSE;
+    }
+    if (slot == 0u)
+    {
+        roots = sNdsNativeMarioRoots;
+        root_count = sizeof(sNdsNativeMarioRoots) /
+            sizeof(sNdsNativeMarioRoots[0]);
+        palette_slots = sNdsNativeMarioCrossPaletteSlots;
+    }
+    else
+    {
+        roots = sNdsNativeFoxRoots;
+        root_count = sizeof(sNdsNativeFoxRoots) /
+            sizeof(sNdsNativeFoxRoots[0]);
+        palette_slots = sNdsNativeFoxCrossPaletteSlots;
+    }
+
+    ndsRendererInitTraversalState(
+        state, NULL, stats, NULL, NULL, 0u);
+    for (root_index = 0u; root_index < root_count; root_index++)
+    {
+        const NDSNativeRoot *root = &roots[root_index];
+        const NDSRendererNativeFighterRoot *input = &inputs[root_index];
+        u32 palette_slot = palette_slots[root_index];
+        u32 epoch_offset;
+
+        ndsRendererNativeBindProductionRoot(state, input, stats);
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+        *out_hardware_started = TRUE;
+        ndsRendererLoadHardwareRawComposedMatrix(
+            &state->matrix, state->matrix_generation);
+        if (palette_slot <= NDS_NATIVE_GX_MATRIX_SLOT_MAX)
+        {
+            glStoreMatrix((int)palette_slot);
+        }
+#endif
+        if (stats->first_opcode == 0u)
+        {
+            stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
+        }
+        stats->command_count += root->source_command_count;
+
+        for (epoch_offset = 0u;
+             epoch_offset < root->epoch_count;
+             epoch_offset++)
+        {
+            u32 epoch_index = root->first_epoch + epoch_offset;
+            const NDSNativeEpoch *epoch =
+                &sNdsNativeFighterEpochs[epoch_index];
+            u32 run_offset;
+
+            ndsRendererNativeApplyStateSpan(
+                epoch->before_state_first, epoch->before_state_count,
+                epoch->before_sync_count,
+                asset_base, stats, state);
+            if (epoch->material_slot != NDS_NATIVE_MATERIAL_NONE)
+            {
+                ndsRendererNativeApplyMaterial(
+                    &input->materials[epoch->material_slot], stats, state);
+            }
+            ndsRendererNativeApplyStateSpan(
+                epoch->after_state_first, epoch->after_state_count,
+                epoch->after_sync_count,
+                asset_base, stats, state);
+            ndsRendererNativeShadeProductionActions(
+                epoch,
+                sNdsNativeFighterEpochDirectPolicy[epoch_index],
+                stats, state);
+
+            for (run_offset = 0u;
+                 run_offset < epoch->run_count;
+                 run_offset++)
+            {
+                const NDSNativeRun *run =
+                    &sNdsNativeFighterRuns[epoch->first_run + run_offset];
+
+                if (ndsRendererNativeSubmitProductionRun(
+                        run,
+                        sNdsNativeFighterEpochDirectPolicy[epoch_index],
+                        palette_slot, input->config,
+                        stats, state) == FALSE)
+                {
+                    ndsRendererHardwareEndBatch();
+                    return FALSE;
+                }
+                native_run_count++;
+                native_triangle_count += run->triangle_count;
+            }
+        }
+        ndsRendererNativeApplyStateSpan(
+            root->tail_state_first, root->tail_state_count,
+            root->tail_sync_count,
+            asset_base, stats, state);
+        stats->end_command_count++;
+    }
+    ndsRendererHardwareEndBatch();
+    sNdsRendererFastRunCount += native_run_count;
+    sNdsRendererFastTriangleCount += native_triangle_count;
+    if ((u32)sNdsRendererRuntimeOwner <
+        (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
+    {
+        sNdsRendererFastOwnerTriangleCount[
+            (u32)sNdsRendererRuntimeOwner] += native_triangle_count;
+    }
+    return TRUE;
+#else
+    (void)slot;
+    (void)asset_base_ptr;
+    (void)inputs;
+    (void)input_count;
+    (void)callback;
+    (void)callback_user;
+    (void)stats;
+    if (out_hardware_started != NULL)
+    {
+        *out_hardware_started = FALSE;
+    }
+    return FALSE;
+#endif
+}
+
+#if !NDS_RENDERER_HW_TRIANGLES
+static void ndsRendererTextureSourceHashCommand(
+    NDSRendererStats *stats, u32 w0, u32 w1)
+{
+    (void)stats;
+    (void)w0;
+    (void)w1;
+}
+#endif
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static void ndsRendererClearNativeFighterOwner(void)
+{
+    ndsRendererHardwareEndBatch();
+    sNdsNativeFighterOwnerExecution.stats = NULL;
+    sNdsNativeFighterOwnerExecution.vertex_cache = NULL;
+    sNdsNativeFighterOwnerExecution.slot = 0u;
+    sNdsNativeFighterOwnerExecution.active = FALSE;
+}
+#endif
+
+s32 ndsRendererBeginNativeFighterOwner(
+    u32 slot,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache)
+{
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    NDSRendererTraversalState *state;
+
+    if ((slot > 1u) || (stats == NULL) || (vertex_cache == NULL) ||
+        (sNdsNativeFighterOwnerExecution.active != 0u))
+    {
+        return FALSE;
+    }
+    state = &sNdsNativeFighterOwnerExecution.traversal;
+    ndsRendererInitTraversalState(
+        state, NULL, stats, NULL,
+        vertex_cache->matrix_snapshots,
+        vertex_cache->matrix_snapshot_count);
+    state->vertices = vertex_cache->transformed_vertices;
+    state->vertex_valid_mask = vertex_cache->transformed_valid_mask;
+    state->input_vertices = vertex_cache->input_vertices;
+    state->input_vertex_valid_mask = vertex_cache->input_valid_mask;
+    state->raw_vertex_fit_mask = vertex_cache->raw_vertex_fit_mask;
+    state->vertex_colors = vertex_cache->vertex_colors;
+    state->vertex_color_valid_mask =
+        vertex_cache->vertex_color_valid_mask;
+    state->vertex_matrix_snapshot = vertex_cache->vertex_matrix_snapshot;
+    state->vertex_clip_snapshot = vertex_cache->vertex_clip_snapshot;
+    sNdsNativeFighterOwnerExecution.stats = stats;
+    sNdsNativeFighterOwnerExecution.vertex_cache = vertex_cache;
+    sNdsNativeFighterOwnerExecution.slot = slot;
+    sNdsNativeFighterOwnerExecution.active = TRUE;
+    return TRUE;
+#else
+    (void)slot;
+    (void)stats;
+    (void)vertex_cache;
+    return FALSE;
+#endif
+}
+
+s32 ndsRendererEndNativeFighterOwner(
+    u32 slot,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache)
+{
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    NDSRendererTraversalState *state;
+    NDSRendererVertexCache *owner_vertex_cache;
+    s32 identity_matches;
+
+    if (sNdsNativeFighterOwnerExecution.active == 0u)
+    {
+        ndsRendererClearNativeFighterOwner();
+        return FALSE;
+    }
+    identity_matches =
+        ((sNdsNativeFighterOwnerExecution.slot == slot) &&
+         (sNdsNativeFighterOwnerExecution.stats == stats) &&
+         (sNdsNativeFighterOwnerExecution.vertex_cache == vertex_cache)) ?
+            TRUE : FALSE;
+    owner_vertex_cache =
+        sNdsNativeFighterOwnerExecution.vertex_cache;
+    if ((identity_matches == FALSE) || (owner_vertex_cache == NULL))
+    {
+        /* An identity mismatch is a caller integrity failure, but it must not
+         * strand the singleton owner and poison the next fighter draw. */
+        ndsRendererClearNativeFighterOwner();
+        return FALSE;
+    }
+    state = &sNdsNativeFighterOwnerExecution.traversal;
+    owner_vertex_cache->transformed_valid_mask = state->vertex_valid_mask;
+    owner_vertex_cache->input_valid_mask = state->input_vertex_valid_mask;
+    owner_vertex_cache->raw_vertex_fit_mask = state->raw_vertex_fit_mask;
+    owner_vertex_cache->vertex_color_valid_mask =
+        state->vertex_color_valid_mask;
+    owner_vertex_cache->matrix_snapshot_count =
+        state->matrix_snapshot_count;
+    ndsRendererClearNativeFighterOwner();
+    return TRUE;
+#else
+    (void)slot;
+    (void)stats;
+    (void)vertex_cache;
+    return FALSE;
+#endif
+}
+
+void ndsRendererAbortNativeFighterOwner(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsRendererClearNativeFighterOwner();
+#endif
+}
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static s32 ndsRendererNativeArraySpanFits(
+    u32 first, u32 count, u32 total)
+{
+    return ((first <= total) && (count <= (total - first))) ?
+        TRUE : FALSE;
+}
+
+static s32 ndsRendererNativeAssetSpanFits(
+    u32 offset, u32 count, u32 element_size, u32 asset_data_size)
+{
+    if ((element_size == 0u) || (offset > asset_data_size))
+    {
+        return FALSE;
+    }
+    return (count <= ((asset_data_size - offset) / element_size)) ?
+        TRUE : FALSE;
+}
+
+static s32 ndsRendererValidateNativeStateSpan(
+    u16 first, u32 count, u32 asset_data_size)
+{
+    u32 sequence_count = sizeof(sNdsNativeFighterStateSequence) /
+        sizeof(sNdsNativeFighterStateSequence[0]);
+    u32 delta_count = sizeof(sNdsNativeFighterStateDeltas) /
+        sizeof(sNdsNativeFighterStateDeltas[0]);
+    u32 i;
+
+    if (count == 0u)
+    {
+        return TRUE;
+    }
+    if ((first == NDS_NATIVE_STATE_NONE) ||
+        (ndsRendererNativeArraySpanFits(
+             first, count, sequence_count) == FALSE))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        u32 delta_index = sNdsNativeFighterStateSequence[first + i];
+        const NDSNativeStateDelta *delta;
+
+        if (delta_index >= delta_count)
+        {
+            return FALSE;
+        }
+        delta = &sNdsNativeFighterStateDeltas[delta_index];
+        switch (delta->effect)
+        {
+        case NDS_NATIVE_STATE_OTHERMODE:
+        case NDS_NATIVE_STATE_COMBINE:
+        case NDS_NATIVE_STATE_TEXTURE:
+        case NDS_NATIVE_STATE_GEOMETRY:
+        case NDS_NATIVE_STATE_TILE:
+        case NDS_NATIVE_STATE_LOAD_TLUT:
+        case NDS_NATIVE_STATE_LOAD_BLOCK:
+        case NDS_NATIVE_STATE_TILE_SIZE:
+        case NDS_NATIVE_STATE_PRIM:
+            break;
+        case NDS_NATIVE_STATE_IMAGE:
+            if (delta->w1 >= asset_data_size)
+            {
+                return FALSE;
+            }
+            break;
+        default:
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static s32 ndsRendererValidateNativeVertexAction(
+    u32 action_index,
+    const NDSNativeRoot *root,
+    u32 asset_data_size)
+{
+    u32 action_count = sizeof(sNdsNativeFighterVertexActions) /
+        sizeof(sNdsNativeFighterVertexActions[0]);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    u32 dense_first_count =
+        sizeof(sNdsNativeFighterActionDenseFirst) /
+        sizeof(sNdsNativeFighterActionDenseFirst[0]);
+#endif
+    const NDSNativeVertexAction *action;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    u32 dense_first;
+    u32 i;
+#endif
+
+    if ((root == NULL) || (action_index >= action_count)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ||
+        (action_index >= dense_first_count))
+#else
+        )
+#endif
+    {
+        return FALSE;
+    }
+    action = &sNdsNativeFighterVertexActions[action_index];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    dense_first = sNdsNativeFighterActionDenseFirst[action_index];
+#endif
+    if (action->command_index >= root->source_command_count)
+    {
+        return FALSE;
+    }
+    if (action->kind == NDS_NATIVE_VERTEX_BLOCK)
+    {
+        if ((action->count == 0u) ||
+            ((u32)action->index > NDS_RENDERER_MAX_VTX) ||
+            ((u32)action->count >
+             (NDS_RENDERER_MAX_VTX - (u32)action->index)) ||
+            (ndsRendererNativeAssetSpanFits(
+                 action->source_offset, action->count, 16u,
+                 asset_data_size) == FALSE)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ||
+            (ndsRendererNativeArraySpanFits(
+                 dense_first, action->count,
+                 NDS_NATIVE_DENSE_VERTEX_COUNT) == FALSE))
+#else
+            )
+#endif
+        {
+            return FALSE;
+        }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        for (i = 0u; i < action->count; i++)
+        {
+            const NDSNativeDenseVertex *dense =
+                &sNdsNativeFighterDenseVertices[dense_first + i];
+
+            if ((dense->cache_slot != ((u32)action->index + i)) ||
+                (dense->matrix_binding >=
+                 NDS_NATIVE_ROOT_BINDING_COUNT))
+            {
+                return FALSE;
+            }
+        }
+#endif
+        return TRUE;
+    }
+    if (action->kind == NDS_NATIVE_MODIFY_ST)
+    {
+        if ((action->index >= NDS_RENDERER_MAX_VTX)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ||
+            (dense_first >= NDS_NATIVE_DENSE_VERTEX_COUNT) ||
+            (sNdsNativeFighterDenseVertices[dense_first].cache_slot !=
+             action->index) ||
+            (sNdsNativeFighterDenseVertices[dense_first].matrix_binding >=
+             NDS_NATIVE_ROOT_BINDING_COUNT))
+#else
+            )
+#endif
+        {
+            return FALSE;
+        }
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static s32 ndsRendererValidateNativeRun(
+    u32 run_index,
+    const NDSNativeRoot *root,
+    u32 *source_command_index,
+    u32 *tri2_half)
+{
+    u32 run_count = sizeof(sNdsNativeFighterRuns) /
+        sizeof(sNdsNativeFighterRuns[0]);
+    u32 triangle_count = sizeof(sNdsNativeFighterTriangles) /
+        sizeof(sNdsNativeFighterTriangles[0]);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    u32 run_corner_count = sizeof(sNdsNativeFighterRunFirstCorner) /
+        sizeof(sNdsNativeFighterRunFirstCorner[0]);
+    u32 dense_corner_count = sizeof(sNdsNativeFighterDenseCorners) /
+        sizeof(sNdsNativeFighterDenseCorners[0]);
+#endif
+    const NDSNativeRun *run;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    u32 first_corner;
+    u32 corner_count;
+#endif
+    u32 i;
+
+    if ((root == NULL) || (source_command_index == NULL) ||
+        (tri2_half == NULL) || (run_index >= run_count)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ||
+        (run_index >= run_corner_count))
+#else
+        )
+#endif
+    {
+        return FALSE;
+    }
+    run = &sNdsNativeFighterRuns[run_index];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    corner_count = (u32)run->triangle_count * 3u;
+    first_corner = sNdsNativeFighterRunFirstCorner[run_index];
+#endif
+    if ((run->triangle_count == 0u) ||
+        (run->submit_class > NDS_NATIVE_RUN_CROSS_MATRIX) ||
+        (ndsRendererNativeArraySpanFits(
+             run->first_triangle, run->triangle_count,
+             triangle_count) == FALSE)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ||
+        (ndsRendererNativeArraySpanFits(
+             first_corner, corner_count, dense_corner_count) == FALSE))
+#else
+        )
+#endif
+    {
+        return FALSE;
+    }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    for (i = 0u; i < corner_count; i++)
+    {
+        u32 dense_id = sNdsNativeFighterDenseCorners[first_corner + i];
+
+        if ((dense_id >= NDS_NATIVE_DENSE_VERTEX_COUNT) ||
+            (sNdsNativeFighterDenseVertices[dense_id].cache_slot >=
+             NDS_RENDERER_MAX_VTX) ||
+            (sNdsNativeFighterDenseVertices[dense_id].matrix_binding >=
+             NDS_NATIVE_ROOT_BINDING_COUNT))
+        {
+            return FALSE;
+        }
+    }
+#endif
+    for (i = 0u; i < run->triangle_count; i++)
+    {
+        u32 encoded =
+            sNdsNativeFighterTriangles[run->first_triangle + i];
+        u32 compact = encoded & 0x7fffu;
+        u32 required =
+            (1u << ((compact >> 10) & 31u)) |
+            (1u << ((compact >> 5) & 31u)) |
+            (1u << (compact & 31u));
+
+        if ((*source_command_index >= root->source_command_count) ||
+            ((run->required_mask & required) != required))
+        {
+            return FALSE;
+        }
+        if ((encoded & 0x8000u) != 0u)
+        {
+            if (*tri2_half != 0u)
+            {
+                return FALSE;
+            }
+            *tri2_half = 1u;
+        }
+        else
+        {
+            (*source_command_index)++;
+            *tri2_half = 0u;
+        }
+    }
+    return TRUE;
+}
+#endif
+
+s32 ndsRendererValidateNativeFighterOwner(
+    u32 slot,
+    u32 asset_data_size,
+    u32 root_count,
+    const u32 *root_offsets,
+    const u32 *material_counts)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    const NDSNativeRoot *roots;
+    u32 expected_count;
+    u32 expected_asset_data_size;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    u32 epoch_count = sizeof(sNdsNativeFighterEpochs) /
+        sizeof(sNdsNativeFighterEpochs[0]);
+    u32 action_count = sizeof(sNdsNativeFighterVertexActions) /
+        sizeof(sNdsNativeFighterVertexActions[0]);
+    u32 run_count = sizeof(sNdsNativeFighterRuns) /
+        sizeof(sNdsNativeFighterRuns[0]);
+#endif
+    u32 root_index;
+
+    if ((slot > 1u) || (root_offsets == NULL) ||
+        (material_counts == NULL))
+    {
+        return FALSE;
+    }
+    if (slot == 0u)
+    {
+        roots = sNdsNativeMarioRoots;
+        expected_asset_data_size = 0x7510u;
+        expected_count = sizeof(sNdsNativeMarioRoots) /
+            sizeof(sNdsNativeMarioRoots[0]);
+    }
+    else
+    {
+        roots = sNdsNativeFoxRoots;
+        expected_asset_data_size = 0x7e50u;
+        expected_count = sizeof(sNdsNativeFoxRoots) /
+            sizeof(sNdsNativeFoxRoots[0]);
+    }
+    if ((asset_data_size != expected_asset_data_size) ||
+        (root_count != expected_count))
+    {
+        return FALSE;
+    }
+    for (root_index = 0u; root_index < root_count; root_index++)
+    {
+        const NDSNativeRoot *root = &roots[root_index];
+        u32 epoch_index;
+
+        if (root->root_offset != root_offsets[root_index])
+        {
+            return FALSE;
+        }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (
+            (ndsRendererNativeAssetSpanFits(
+                 root->root_offset, root->source_command_count,
+                 sizeof(Gfx), asset_data_size) == FALSE) ||
+            (ndsRendererNativeArraySpanFits(
+                 root->first_epoch, root->epoch_count,
+                 epoch_count) == FALSE) ||
+            (ndsRendererValidateNativeStateSpan(
+                 root->tail_state_first, root->tail_state_count,
+                 asset_data_size) == FALSE))
+        {
+            return FALSE;
+        }
+#endif
+        for (epoch_index = 0u;
+             epoch_index < root->epoch_count;
+             epoch_index++)
+        {
+            const NDSNativeEpoch *epoch =
+                &sNdsNativeFighterEpochs[
+                    root->first_epoch + epoch_index];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            u32 action_index;
+            u32 run_index;
+            u32 source_command_index =
+                epoch->first_triangle_command_index;
+            u32 tri2_half = 0u;
+#endif
+
+            if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
+                (epoch->material_slot >= material_counts[root_index]))
+            {
+                return FALSE;
+            }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if ((ndsRendererValidateNativeStateSpan(
+                     epoch->before_state_first,
+                     epoch->before_state_count,
+                     asset_data_size) == FALSE) ||
+                (ndsRendererValidateNativeStateSpan(
+                     epoch->after_state_first,
+                     epoch->after_state_count,
+                     asset_data_size) == FALSE) ||
+                (ndsRendererNativeArraySpanFits(
+                     epoch->first_action, epoch->action_count,
+                     action_count) == FALSE) ||
+                (ndsRendererNativeArraySpanFits(
+                     epoch->first_run, epoch->run_count,
+                     run_count) == FALSE))
+            {
+                return FALSE;
+            }
+            for (action_index = 0u;
+                 action_index < epoch->action_count;
+                 action_index++)
+            {
+                if (ndsRendererValidateNativeVertexAction(
+                        (u32)epoch->first_action + action_index,
+                        root, asset_data_size) == FALSE)
+                {
+                    return FALSE;
+                }
+            }
+            for (run_index = 0u;
+                 run_index < epoch->run_count;
+                 run_index++)
+            {
+                if (ndsRendererValidateNativeRun(
+                        (u32)epoch->first_run + run_index,
+                        root, &source_command_index,
+                        &tri2_half) == FALSE)
+                {
+                    return FALSE;
+                }
+            }
+            if (tri2_half != 0u)
+            {
+                return FALSE;
+            }
+#endif
+        }
+    }
+    return TRUE;
+#else
+    (void)slot;
+    (void)asset_data_size;
+    (void)root_count;
+    (void)root_offsets;
+    (void)material_counts;
+    return FALSE;
+#endif
+}
+
+s32 ndsRendererExecuteNativeFighterRoot(
+    u32 slot,
+    u32 root_ordinal,
+    const void *asset_base,
+    u32 root_offset,
+    const NDSRendererNativeMaterial *materials,
+    u32 material_count,
+    const NDSRendererConfig *config,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    return ndsRendererExecuteNativeFighterRootHardware(
+        slot, root_ordinal, asset_base, root_offset,
+        materials, material_count, config,
+        callback, callback_user, stats, vertex_cache);
+#else
+    (void)slot;
+    (void)root_ordinal;
+    (void)asset_base;
+    (void)root_offset;
+    (void)materials;
+    (void)material_count;
+    (void)config;
+    (void)callback;
+    (void)callback_user;
+    (void)stats;
+    (void)vertex_cache;
+    return FALSE;
+#endif
+}
 
 static void NDS_RENDERER_HOT_CODE
 ndsRendererScanList(const Gfx *dl,
@@ -11591,7 +14686,10 @@ void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
         ((u32)owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT) ? owner :
         NDS_RENDERER_PROFILE_OWNER_NONE;
     sNdsRendererStageTextureSitesEnabled =
-        ((mode == NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES) &&
+        (((mode == NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES) ||
+          (mode == NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
+          (mode ==
+           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)) &&
          (sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_STAGE)) ?
             TRUE : FALSE;
     sNdsRendererFastOwnerEnabled =
@@ -11601,7 +14699,10 @@ void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
          ((sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_MARIO) ||
           (sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_FOX))) ||
         (((mode == NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT) ||
-          (mode == NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES)) &&
+          (mode == NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES) ||
+          (mode == NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
+          (mode ==
+           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)) &&
          ((u32)sNdsRendererRuntimeOwner <
           (u32)NDS_RENDERER_PROFILE_OWNER_COUNT));
 #endif

@@ -20462,3 +20462,89 @@ remains skipped for the requested fast iteration cadence.
 - Deferred source parity is explicit: special collisions still lack proper
   wall runners, wall-to-floor fallback, and ceiling-edge adjustment; the
   current weak helpers cannot be completed merely by adding call sites.
+
+## 2026-07-13 - Rejected complete-stage fast owner and proved mode-8 visibility
+
+- The final complete-stage selector again fell through to generic stage work,
+  so its executor, adapter, generator, verifier path, and workspaces were
+  removed. The accepted production fighter owner and 176,000-byte serialized
+  scene-buffer reuse remain.
+- `capture-melonds.ps1` can now select a bounded renderer fast mode through GDB,
+  verify the value, detach, and capture the running ROM. A selector-confirmed
+  mode-8 pair passes the existing canonical visibility and texture-detail gates.
+- DevFast, forensic, P1Gate, and Boundary `161/162/163` pass. The forensic build
+  found the generated dense-table type hidden behind the production-only guard;
+  only its 16-byte declaration is now profile-visible, while execution/storage
+  remain excluded from profile 2. Current canonical/shipped parity is 12,033,024
+  bytes at `99FF3D2DB2A51B341548821BFECE87A22AA2614D8A0AD1B1B3F4E050C901BE30`.
+
+## 2026-07-14 - Closed texture Cut D and restored the launchable coarse ROM
+
+- A 600-frame exact-output census found 322 complete keys, 206 final outputs,
+  reuse distance exactly 216, and 3,739,648 bytes for full residency. A 2-4-slot
+  LRU cannot hit, so finite converted-output caching is rejected.
+- ARM7 overlap is rejected by architecture before implementation: the recipe
+  first exists at the dependent render bind, requiring a second source prepass;
+  all prepass/IPC/wait work would have only 77,376 ticks of budget to clear the
+  120K gate against a 197,376-tick ceiling. Census-only code was removed.
+- The coarse ROM is restored to `D55F80F...CA6037`. Fresh plain-mode-0 and
+  GDB-confirmed mode-8 pairs show moving Mario/Fox on Dream Land, and the exact
+  ROM passes the BGM hardware-timer/safe-refill guard. No title/VS ROM was built.
+- The authoritative plan now selects one source-seeded DS display-capture/
+  affine Dream Land raster owner against the 1,155,104-tick wallpaper+stage
+  wall. It stops after one activation failure or 60 minutes and requires at
+  least 800K whole-draw saving before further work.
+- Docs/architecture/registry/GBI checks, DevFast, forensic, P1Gate, and Boundary
+  `161/162/163` pass. Full Regression remains intentionally skipped for the
+  requested fast iteration.
+
+## 2026-07-14 - Rejected Cut F and made Mode 8 launch directly
+
+- The source-seeded raster cache reached `467968/468992` draw ticks, but its
+  seed omitted wallpaper pixels and the live BattleShip camera exceeded cache
+  bounds after 232 frames. The full Cut F runtime/tooling path was removed.
+- `smash64ds-battle-playable-coarse-hwtri.nds` now defaults to accepted Mode 8
+  without GDB. ROM `DC2871F3...52E4E3AD` passes exact `70/686`, owner
+  `60+320+306`, fallback `29/0/0`, and 828-triangle checks.
+- A fresh settled no-GDB pair passes visibility, named-region, wallpaper,
+  motion, green/detail, and horizontal-texture gates. This restores a working
+  fast-iteration artifact but remains approximately 15.4 FPS.
+- Fresh DevFast, eight-frame profile-2 forensic, P1Gate, and Boundary
+  `161/162/163` runs pass after the cleanup. Full Regression remains skipped for
+  the requested minimum-calendar loop.
+
+## 2026-07-14 - Rejected the per-callback typed stage executor
+
+- The typed source-keyed stage path measured about `877,248` stage ticks versus
+  `873,344` generic, covered only 799/828 triangles, and fell back once. Its
+  apparent whole-draw improvement was entirely the retained fighter owner.
+- Removed the executor, generated stage tables, adapter seam, and texture-site
+  shortcut. No title or VS-setup ROM was built.
+- Traced the cleanup artifact mismatch to an under-specified direct build:
+  `39CD1397...B508CEF` had live input disabled. The coarse target now forces its
+  complete realtime/live-input/HW/profile-1/Mode-8 configuration. A plain target
+  build reproduces exact ROM `DC2871F3...52E4E3AD` (12,036,096 bytes).
+- The exact ROM passes eight Mode-8 frames at `1,578,720/1,586,368` draw with
+  all 828 triangles, paired full-scene/motion/detail capture gates, original Fox
+  CPU, natural BGM/refills, reserve, and ITCM checks. The earlier allegedly
+  partial PNGs are complete files; only the multi-image inspection view blacked
+  unchanged regions.
+- The user's separate exact-ROM no-audio/no-stage manual report remains pending
+  controlled retest, so hardware/manual acceptance is not claimed. Screenshot
+  coverage remains Mode 0, Mode 8, and canonical only—not Modes 1-7—and cannot
+  prove audio or hardware. Performance remains about 15.4 FPS.
+- Static checks and fresh DevFast canonical build/capture/parity pass. The
+  focused exact coarse Mode-8 and CPU/audio/memory gates pass; the prior broad
+  checkpoint retains forensic, P1Gate, and Boundary `161/162/163` coverage.
+
+## 2026-07-14 - Rejected full-source scanline/HBlank wallpaper
+
+- A profile-1 laboratory path stored all 300x220 decoded wallpaper pixels in a
+  512x256 B16 background and used HBlank register DMA for exact per-row Y.
+- Same-ROM eight-frame A/B measured draw `1,489,696 -> 1,250,304` and wallpaper
+  `274,144 -> 34,112`, only `239,392/240,032` ticks saved. The upload worsened
+  P95 despite zero failures and exact 828-triangle/Mode-8 accounting.
+- The path missed the binding 300K gate and was removed immediately. Full-source
+  affine/scanline wallpaper is closed alongside earlier affine correction work.
+- A clean coarse rebuild restored exact ROM `DC2871F3...52E4E3AD`; its no-build
+  Mode-8 benchmark passes. No title or VS-setup ROM was built.

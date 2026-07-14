@@ -1,5 +1,5 @@
 param(
-    [ValidateRange(1,4)][int]$FastRunMode = 3,
+    [ValidateRange(1,8)][int]$FastRunMode = 3,
     [int]$RunnerSlot = -1,
     [int]$DelaySeconds = 5,
     [ValidateRange(8,256)][int]$RendererBenchmarkSamples = 32,

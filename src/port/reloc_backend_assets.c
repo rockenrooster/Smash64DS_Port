@@ -610,9 +610,22 @@ static LBFileNode *sNdsRelocForceStatusBuffer;
 static s32 sNdsRelocForceStatusBufferCount;
 static s32 sNdsRelocForceStatusBufferMax;
 
-static u8 sNdsTitleFileBuffer[NDS_TITLE_FILE_BUFFER_SIZE];
-static u8 sNdsOpeningActionPreviewFileBuffer[
-    NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE] __attribute__((aligned(16)));
+typedef union NDSRelocSceneFileBuffer
+{
+    u8 title[NDS_TITLE_FILE_BUFFER_SIZE];
+    u8 opening_action[NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE];
+} NDSRelocSceneFileBuffer;
+
+/* BattleShip's scene manager serializes the opening-movie and title scenes.
+ * The opening buffer also backs dev-harness static assets, but no such asset
+ * remains live while the title preview is loaded: both paths reset the reloc
+ * ledger at their scene boundary.  Reuse the larger file store instead of
+ * permanently reserving both buffers in ARM9 main memory. */
+static NDSRelocSceneFileBuffer sNdsRelocSceneFileBuffer
+    __attribute__((aligned(16)));
+#define sNdsTitleFileBuffer sNdsRelocSceneFileBuffer.title
+#define sNdsOpeningActionPreviewFileBuffer \
+    sNdsRelocSceneFileBuffer.opening_action
 static NDSOpeningActionPreviewCache sNdsOpeningActionPreviewCaches[
     NDS_OPENING_ACTION_PREVIEW_CACHE_COUNT];
 

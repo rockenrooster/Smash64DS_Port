@@ -41,97 +41,88 @@ limit and runs the same source timer, Time Up, taskman cleanup, and original
 now own Results by default. The gate reaches tick `120+`, loads all eight files,
 creates two fighters and 12 SObjs, and installs source Win/Lose statuses.
 
-Latest renderer detail: BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`, and
-`guMtxCatF` are imported. The live fighter path now uses the original display
-preamble, light state, visibility flags, and `dl`/ordered-`dls[]` selection;
-only those selected DLs cross the narrow DS hardware-submission seam. The
-manual all-DObj collector remains only as the software fixture oracle.
+The renderer imports BattleShip display/light/matrix source and keeps selected
+source DL order, RSP vertex carry, materials, depth, lighting, and live camera.
+Profile 2 remains the exact oracle; production Mode 8 owns the proven native
+fighter path. Geometry stays `828 = 202+320+306` source triangles with exact
+`648/44/126/10` submit classes. See `docs/PERF_LEDGER.md` for the detailed
+optimization history and counters.
 
-The source camera matrix/projection is prepared before fighter visibility
-selection. Each selected event retains its matrix/material owner plus per-draw
-geometry/prim/env/light and cycle/render state; `dls[0]` uses parent state.
-The adapter now preserves the 32-slot input/transformed RSP vertex cache across
-the selected part sequence, as BattleShip's common `gSYTaskmanDLHeads[0]`
-stream does. All-DL HW output is the full `320/306` Mario/Fox triangle set with
-zero rejects; live-input GX RAM is dynamic near `695/2119`, with geometry
-`0x222005`, cycle/render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
-Initial diffuse/ambient state comes from first selected source `MObjSub` (`0xffffff00/0x4c4c4c00`); per-part overrides carry and fallback use is zero.
+Mode 163 links original camera, death/rebirth, HUD, normal moves, weapons,
+effects, level-3 CPU, parsed audio, and Pupupu BGM. Its lifecycle gate covers
+stock/KO/rebirth, combat, one-minute source expiry, cleanup, and Results while
+retaining the protected 128 KiB reserve. The canonical five-minute runtime and
+live DS input remain the user-facing gameplay configuration.
 
-`battle_playable` default: `NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1` now links
-original `gm/gmcamera.c`, `ftcommondead.c`, `ftcommonrebirth.c`,
-battle-critical `if/ifcommon.c` HUD paths, original `if/ifscreenflash.c`, the
-normal moveset imports, the weapon manager, Mario fireball, Fox blaster, the
-original effect manager, Fox reflector, Mario Super Jump Punch, Mario Tornado,
-Fox Fire Fox, `ftcomputer.c`, original audio parsing, and Pupupu BGM playback.
-The one-minute lifecycle CPU gate records `7594` original process/target calls,
-objective/behavior `0x204/0x9`, `57` input frames, `1668/120` attack frames,
-`856` guard frames, `246` status changes, and `81%` maximum Mario damage.
-Mode 163 proves stock/KO/rebirth, all normal-move phases, grab/throw damage,
-HUD digits/stocks, projectile/reflector/specials, parsed audio, looping BGM, and
-`42/202` stage DL/HW triangles plus `2/626` fighter draws/triangles. FGM/voice,
-the original sequence player, and non-critical HUD/SObj/particles remain debt.
-Canonical retains `227392` taskman headroom (`161856` after BGM), reloc `681632`
-bytes, and stale `0/0`. The forensic gate selects the largest 4 KiB-granular arena (`0x14c000`) and retains `145472` after BGM against 128 KiB.
+The coarse target now intrinsically forces realtime presentation, live input,
+HW triangles, profile 1, and natural Mode 8. A plain target build reproduces
+ROM `DC2871F3...52E4E3AD` (12,036,096 bytes). Its exact eight-frame Mode-8 run
+retains all 828 triangles, `70/686` runs, `60+320+306` owners, and `29/0/0`
+fallbacks at about 15.4 FPS. Fresh exact-ROM captures
+`2026-07-14_dc287-mode8-direct*.png` pass both-frame visibility, named-region,
+texture-detail, and motion gates; a same-ROM no-build run passes original Fox
+CPU, natural BGM/refills, and memory/ITCM checks.
 
-Canonical realtime + live-input + HW-tri shows recognizable Dream Land; source-
-separated Mario/Fox bodies are broadly accepted on DS. Source map-object kinds
-`0..3` decode exactly, and the original manager grounds Mario/Fox on lines `3/2`
-at X `0/-1397`; `gcAddMObjAll` restores O2R lanes by source provenance.
-Canonical observes at least four water/Whispy swaps, no native/failure cases,
-and first flags `0x0200 -> 0x006b`. Exact TEXEL0/TEXEL1 CI4 conversion uses S/T
-maps, immutable source-index planes, and one RGB15/coverage pair table. Large
-tiles index first source-address/phase representatives through a 1 KiB table.
-Cold uploads retain full scratch materialization; warm large refreshes emit
-unique rows directly into the existing 16 KiB buffer and expand its exact map
-on VBlank lines `192..207`. Profile 1 proves reuse and zero fallback; profile 2
-checks `18,432/0` exact pair pixels through its independent synchronous path.
-Profile 0 omits five generic proof ledgers and retains all `828` triangles: `648`
-raw-current, `44` cross-matrix, `126` no-Z, and `10` range; reject stays zero.
-Null-callback profiles carry only segment-`E` preview resolver state, reset exact
-traversal guards/hardware totals, and publish fighter triangles once per owner;
-detailed/profile-2 ledgers remain unchanged. Profile 1 proves topology
-`80/1736/344/330`. TRI runs retain exact material/depth, RGB15, S/T, projected
-X/Y, and clip Z. Texture preparation survives exact-key mutations; profiles 0/1 reuse alpha/poly-format only when proven vertex-independent.
-Prepare/reuse is `98/730`;
-batching stays `121/707/121`, and logical divide demand stays `1,242`.
-Canonical mode 163 is O2; scripted/lifecycle diagnostics remain Os. Six ARM/O3
-paths occupy `20,376/20,376/18,584` ITCM bytes. Exact signed
-pre-clamping and libnds `div64` remove the shipping software 64-bit helper;
-profile 1 records `650` cached calls, while profile 2 compares `1,404` results
-with C. Boundary modes retain exact nonzero clamp counts. Divider evidence adds
-no BSS; profile 2 also omits the production 2,096-byte shade table and runs the
-independent exact shade path. Profiles 0/1 retain light/table and exact 48-slot
-texture-key caches; compact fingerprints still require full 236-byte equality.
-Profile-0 BSS is `1,881,392`; prepared context persists by `98/730` epoch.
-The 2,916-byte main-RAM K-RAW kernel accelerates `45/540` runs/triangles per
-frame with `47/7/0` bounded fallbacks. Same-ROM 128-frame profile-1 draw moves
-`2,067,296/2,407,872 -> 1,858,624/2,227,648`; stage/Mario/Fox save
-`17,568/98,496/93,248` median ticks. The 32-frame profile-2 dual trace, owner
-state/cache, oracle, geometry, and upload sequence compare exactly. An 8 KiB
-direct table consumes 330 TRI commands without redecode. A 256-byte exact DObj
-index plus affine world product moves O2 draw `2,126,752/2,169,600 ->
-2,057,376/2,098,880`. Exact persistent stage worlds reuse `57` stable source nodes; profile 2 shadows `42` selected outputs with zero mismatch/reject/overflow.
-Matched cache-off/on stage-world draw is `2,323,008/2,355,712 -> 2,263,616/2,280,512`.
-Direct compact CI4 rows move `2,001,600/2,033,664 -> 1,970,304/2,002,880` with identical upload hash and zero fallback.
-The exact wallpaper path keeps alternating X/Y maps in existing decode scratch, writes only dirty rows/columns, and cache-flushes/DMA-copies full dirty rows. Same-ROM 128-frame profile-1 wallpaper/draw move `344672/348480 -> 237088/340032` and `1926624/1955648 -> 1812256/1900288`; profile 2 proves map/pixel `23296/0` and `2555904/0`.
-An exact 5,632-byte stage texture-site table reuses resident static bindings by immutable TRI site and live-state hashes; changed TEXEL1/water state falls back. Same-ROM 128-frame profile-1 stage/draw move `823456/853248 -> 771680/801344` and `1841376/1931264 -> 1790368/1879872`; profile-2 trace, owner state/cache, oracle, geometry, and upload sequence match exactly. Canonical is `14.9fps`; final eight-sample profile-0 draw is `1,856,864/1,888,960`, and shipped SHA-256 is `4C75B4F3BD1F3D5E8BFC73C3C20C22D257DB73B6221C3A199883EB84E0DC99BC`.
-Source AObj32 graphs normalize once per reloc generation; fighter AObj16 stays separate and original timing remains live. The full contiguous Mario battle-animation bank (`499..641`) is now mapped from the imported file-ID symbols and staged in NitroFS. Live-input GDB checks load normalized Jab1/JumpF/JumpAerialF assets `606/509/511`; Attack11 hitboxes and first/double-jump joint playback advance naturally. Compact path generation avoids 143 redundant ARM9 records and keeps scripted headroom `198416` (`132880` after BGM).
-The BattleShip ground interrupt chain and source floor/edge callbacks are live;
-edge/pose acceptance is pending. Mario Up-B now uses BattleShip TransN motion
-and PROJECT/PASS map semantics; near-wall/ceiling adjustment remains debt. Persistent slots retain 44 cross-joint
-triangles; no-Z/RSP carry restores the fence and five flower groups (`192 -> 202`).
-Masked-clamp, six CI4 stars, and DXT tail stride remain fixed. Debt: Whispy face,
-other TEXEL1/fog/color animation, speed, and Mario facing/light A/B.
-The scripted target is `smash64ds-battle-playable-fast-hwtri.nds`; shipped is `smash64ds-battle-playable-hwtri.nds`. Canonical alone exposes neutral pad 2. Both melonDS LCDs render; the lower canonical screen is intentionally black except for three visible bootstrap rows.
+The rejected `39CD1397...B508CEF` cleanup ROM came from an under-specified
+manual build with live input disabled. The reported partial second PNGs were
+complete on disk; a multi-image inspection view displayed unchanged regions
+as black. The user's separate no-audio/no-stage report for the exact `DC287...`
+ROM remains a manual-environment retest item, so do not claim hardware/manual
+acceptance. Screenshot coverage exists only for Mode 0, Mode 8, and canonical
+HW-tri; Modes 1-7 have no capture set, and screenshots cannot prove audio or
+hardware.
+
+Cut F's scene raster cache is rejected and removed: its first eight frames cut
+draw to `467,968/468,992`, but the seed omitted wallpaper pixels and the real
+source camera exceeded cache bounds after 232 frames, forcing generic fallback.
+Do not count its captures as working output. Remaining presentation debt includes
+Whispy face, HUD/weapon detail, platform crossing, and Mario facing/light.
+
+The per-callback typed stage executor is also rejected and removed. Candidate
+stage time was about `877,248` ticks versus `873,344` generic, with 799/828
+fast triangles and one fallback. Its whole-draw delta came from the already
+accepted fighter owner, so it cannot supply a hundreds-of-thousands stage cut.
+
+The full-source scanline-affine wallpaper path is rejected and removed. On one
+ROM, mode 1 versus the candidate measured draw `1,489,696 -> 1,250,304` and
+wallpaper `274,144 -> 34,112`: savings of only `239,392/240,032`, below the
+300K keep gate, with a worse upload P95. Exact ROM `DC287...` is restored.
+
+Cut G is paused as a WIP lab, not a production or hardware-accepted path. Its
+three cached 128x128 scene mips plus a 2x2 projective grid reduce steady draw to
+about `448K-450K` ticks with `628` live fighter triangles and recognizable
+Dream Land/Mario/Fox captures. Original interface-camera traversal adds only
+about `7K-10K` ticks, but the HUD is still absent because the layered SObj
+adapter does not decode the source interface's CI4 sprites. Dynamic stage/front
+effects are also absent, and pacing remains about 29.8 FPS. Resume with general
+CI4 SObj support, then immediately measure and keep/revert against fidelity and
+one-VBlank cost; do not count the current Cut G PNGs as complete screenshots.
 ## Recommended Next Work
-1. Manually accept source floor/edge, restored A/jump poses, and corrected Up-B; then finish the coherent special-collision wall/ceiling family.
-2. Extend the exact site proof into one coarse complete-stage owner program; fixed schedules and VTX memoization are measured dead ends.
-3. Defer the rare 4 KiB Whispy miss, then add RGBA4 HUD output.
+1. Preserve the exact `DC287...` target and ask for manual retest before changing
+   ROM code for the external launch report. Keep title and VS-setup ROMs outside
+   this fast path.
+2. Require a distinct source-backed representation with
+   a measured/modelled exclusive saving of at least 300K ticks and a credible
+   live-camera/fidelity path. Get its first timing in one build or 60 minutes.
+3. Kill it immediately below that bound. Do not revive mode 9, Cut D texture
+   residency/overlap, Cut F raster capture, matrix-only, affine-wallpaper,
+   full-source scanline/HBlank wallpaper, prepared-VM, record-executor, or
+   local no-Z/raw variants.
 
 Do not restore the rejected five-address load-time `MObjSub` probe; the accepted seam is the generic original attachment boundary and proves live output.
 The corrected tile-origin equation is source parity, but its fixed-camera probe changed only `18/49152` pixels; do not cite it as the remaining ribbon fix.
 Do not translate N64 `CLAMP` as clamp-only when a nonzero mask owns a smaller physical period; preserve logical tile clamp and masked repeat/mirror separately.
 Do not revisit the high-bit fighter branch for current fragments (`0/0` active Mario/Fox descriptors), or queue Dream Land by generic head assumptions (`layer_mask=0`, `42/0` lists, `0/49152` changed pixels).
+
+## Optimization Decision
+
+Cut D is closed: 322 keys require 3,739,648 bytes, reuse distance is 216, and
+ARM7 overlap needs a second prepass inside an impossible 77,376-tick budget.
+Cut F is also closed for the camera/wallpaper failures above despite its large
+short-window saving. Both temporary implementations are removed. The accepted
+workspace performance baseline remains Mode 8. Automated launch, draw, motion,
+CPU, audio, and memory gates pass on the exact artifact; only the separate
+manual environment report remains open.
 
 ## Verification
 
@@ -146,5 +137,9 @@ work:
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
 
-DevFast, forensic, P1Gate, and all Boundary modes `161/162/163` pass. Mode 163 now passes the elevated fighter through line 2 before DashRun; skip Full Regression.
+This checkpoint passes the exact coarse Mode-8 benchmark, paired visual gates,
+realtime CPU/audio/memory verifier, all four static checks, and fresh DevFast
+canonical build/capture/parity. The prior broad checkpoint passed the eight-
+frame forensic oracle, P1Gate, and Boundary `161/162/163`; rerun those after
+further shared-runtime work. Full Regression remains intentionally skipped.
 After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

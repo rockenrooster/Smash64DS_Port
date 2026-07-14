@@ -7,7 +7,12 @@ param(
     [switch]$Unthrottled,
     [switch]$OpenGL4x,
     [switch]$SoftwareRenderer,
+    [switch]$Jit,
     [switch]$MaximizeVertical,
+    [ValidateRange(-1,8)][int]$RendererFastRunMode = -1,
+    [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
+    [int]$GdbPort = 3333,
+    [string]$Elf = '',
     [string]$SecondOutput,
     [int]$SecondDelaySeconds = 1,
     [int]$SecondDelayMilliseconds = 0
@@ -28,6 +33,26 @@ $romPath = if ([System.IO.Path]::IsPathRooted($Rom)) {
     $Rom
 } else {
     Join-Path $root $Rom
+}
+$gdbPath = if ([System.IO.Path]::IsPathRooted($Gdb)) {
+    $Gdb
+} else {
+    Join-Path $root $Gdb
+}
+$elfPath = $null
+$gdbSelectionEnabled = ($RendererFastRunMode -ge 0)
+if ($gdbSelectionEnabled) {
+    if (-not (Test-Path -LiteralPath $gdbPath -PathType Leaf)) {
+        throw "GDB executable not found: $gdbPath"
+    }
+    $elfPath = if (-not [string]::IsNullOrWhiteSpace($Elf)) {
+        if ([System.IO.Path]::IsPathRooted($Elf)) { $Elf } else { Join-Path $root $Elf }
+    } else {
+        [System.IO.Path]::ChangeExtension($romPath, '.elf')
+    }
+    if (-not (Test-Path -LiteralPath $elfPath -PathType Leaf)) {
+        throw "Matching ELF not found for mode-specific capture: $elfPath"
+    }
 }
 $config = Join-Path $melonDsDir 'melonDS.toml'
 $originalConfig = $null
@@ -137,20 +162,71 @@ function Set-MelonDSCaptureWindow {
     [void][Smash64DSWindowCapture]::SetWindowPos(
         $WindowHandle, [IntPtr](-1), 0, 0, 488, 675, 0x42)
 }
+function Set-MelonDSCaptureRuntimeMode {
+    param(
+        [Parameter(Mandatory=$true)][string]$GdbPath,
+        [Parameter(Mandatory=$true)][string]$ElfPath,
+        [Parameter(Mandatory=$true)][int]$Port,
+        [Parameter(Mandatory=$true)][int]$Mode
+    )
+
+    $expected = @()
+    if ($Mode -ge 0) { $expected += "CAPTURE_FAST_MODE=$Mode" }
+    $lastOutput = ''
+    for ($attempt = 1; $attempt -le 12; $attempt++) {
+        $gdbArgs = @('-q', '-batch', $ElfPath,
+                     '-ex', "target remote localhost:$Port")
+        if ($Mode -ge 0) {
+            $gdbArgs += @('-ex', "set variable gNdsRendererFastRunMode = $Mode",
+                          '-ex', 'printf "CAPTURE_FAST_MODE=%u\n", gNdsRendererFastRunMode')
+        }
+        $gdbArgs += @('-ex', 'detach', '-ex', 'quit')
+        $lastOutput = (& $GdbPath @gdbArgs 2>&1 | Out-String)
+        $selected = ($LASTEXITCODE -eq 0)
+        foreach ($marker in $expected) {
+            $selected = $selected -and $lastOutput.Contains($marker)
+        }
+        if ($selected) {
+            Write-Output "Selected renderer mode $Mode for capture."
+            return
+        }
+        Start-Sleep -Milliseconds 250
+    }
+    throw "Could not select capture runtime mode through GDB. Last output:`n$lastOutput"
+}
 $emulator = $null
 try {
     if (Test-Path $config) {
         $originalConfig = Get-Content $config -Raw
         $visibleConfig = Set-MelonDSDualScreenLayout -Text $originalConfig
-        $visibleConfig = $visibleConfig -replace
-            '(?s)(\[Instance0\.Gdb\]\s*Enabled\s*=\s*)true', '${1}false'
-        $visibleConfig = $visibleConfig -replace
-            '(?s)(\[Instance0\.Gdb\]\s*Enable\s*=\s*)true', '${1}false'
+        if ($gdbSelectionEnabled) {
+            $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
+                -Section 'Instance0.Gdb' -Key 'Enable' -Value 'true'
+            $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
+                -Section 'Instance0.Gdb' -Key 'Enabled' -Value 'true'
+            $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
+                -Section 'Instance0.Gdb.ARM9' -Key 'BreakOnStartup' -Value 'false'
+            $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
+                -Section 'Instance0.Gdb.ARM9' -Key 'Port' -Value "$GdbPort"
+            $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
+                -Section 'Instance0.Gdb.ARM7' -Key 'BreakOnStartup' -Value 'false'
+            $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
+                -Section 'Instance0.Gdb.ARM7' -Key 'Port' -Value "$($GdbPort + 1)"
+        } else {
+            $visibleConfig = $visibleConfig -replace
+                '(?s)(\[Instance0\.Gdb\]\s*Enabled\s*=\s*)true', '${1}false'
+            $visibleConfig = $visibleConfig -replace
+                '(?s)(\[Instance0\.Gdb\]\s*Enable\s*=\s*)true', '${1}false'
+        }
         if ($Unthrottled) {
             $visibleConfig = $visibleConfig -replace
                 '(?m)^(LimitFPS\s*=\s*)true\s*$', '${1}false'
             $visibleConfig = $visibleConfig -replace
                 '(?ms)(\[JIT\].*?^Enable\s*=\s*)true\s*$', '${1}false'
+        }
+        if ($Jit) {
+            $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
+                -Section 'JIT' -Key 'Enable' -Value 'true'
         }
         if ($SoftwareRenderer) {
             $visibleConfig = $visibleConfig -replace
@@ -175,6 +251,10 @@ try {
              -not $emulator.HasExited -and (Get-Date) -lt $deadline)
     if ($emulator.HasExited -or $emulator.MainWindowHandle -eq [IntPtr]::Zero) {
         throw 'melonDS did not expose a capturable window.'
+    }
+    if ($gdbSelectionEnabled) {
+        Set-MelonDSCaptureRuntimeMode -GdbPath $gdbPath -ElfPath $elfPath `
+            -Port $GdbPort -Mode $RendererFastRunMode
     }
     Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
     [void][Smash64DSWindowCapture]::SetForegroundWindow($emulator.MainWindowHandle)

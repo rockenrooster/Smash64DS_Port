@@ -177,6 +177,11 @@ frame-delta gate registers only bounded source-camera motion (plus or minus
 the unchanged 25% flashing ceiling. `-OpenGL4x` remains an optional secondary
 inspection mode, not a pixel oracle; never compare its percentages with
 software-renderer captures.
+
+To capture an internal fast selector without changing a ROM's compiled
+default, pass `-RendererFastRunMode 0..8` with its matching ELF present beside
+the ROM. The script verifies the selected global through GDB, detaches, captures
+the still-running emulator, and restores the original melonDS configuration.
 After resizing an OpenGL window, allow at least one presented frame before a
 comparison capture; a 100ms sample can catch the resize transition at 12fps.
 Verifier launches use the same unthrottled interpreter policy automatically;

@@ -1,5 +1,9 @@
 #include "nds_scene_harness_config.h"
 
+#ifndef NDS_SCENE_MIP_CACHE_LAB
+#define NDS_SCENE_MIP_CACHE_LAB 0
+#endif
+
 extern void ndsIFCommonRecordHUDState(void);
 
 static void ndsFighterWalkRecordBefore(u32 slot, FTStruct *fp, DObj *root,
@@ -13072,6 +13076,351 @@ static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 }
 
+#if NDS_SCENE_MIP_CACHE_LAB
+#define NDS_SCENE_MIP_COUNT 3u
+#define NDS_SCENE_MIP_GRID_COLUMNS 2u
+#define NDS_SCENE_MIP_GRID_ROWS 2u
+#define NDS_SCENE_MIP_GRID_VERTICES \
+    (NDS_SCENE_MIP_GRID_COLUMNS * NDS_SCENE_MIP_GRID_ROWS)
+
+static const f32 sNdsSceneMipSeedDistances[NDS_SCENE_MIP_COUNT] = {
+    3500.0F, 9000.0F, 30000.0F
+};
+extern Mtx44f gGMCameraMatrix;
+static Mtx44f sNdsSceneMipSeedMatrices[NDS_SCENE_MIP_COUNT];
+
+volatile u32 gNdsSceneMipCacheSeedDrawCount;
+volatile u32 gNdsSceneMipCacheDrawCount;
+volatile u32 gNdsSceneMipCacheFallbackCount;
+volatile u32 gNdsSceneMipCacheMappingFailureCount;
+volatile u32 gNdsSceneMipCacheSelectedMip;
+volatile u32 gNdsSceneMipCacheSelectedMipMask;
+volatile u32 gNdsSceneMipCacheSelectedMipChangeCount;
+volatile u32 gNdsSceneMipCacheTargetDistanceBits;
+static u32 sNdsSceneMipCachePreviousMip = NDS_SCENE_MIP_COUNT;
+
+static sb32 ndsSceneMipCachePrepareCameraMatrix(Mtx44f *matrix)
+{
+    extern sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls);
+    void *saved_graphics_heap_ptr;
+    CObj *cobj;
+    Mtx camera_mtx;
+
+    if ((matrix == NULL) || (gGMCameraGObj == NULL))
+    {
+        return FALSE;
+    }
+    cobj = CObjGetStruct(gGMCameraGObj);
+    if (cobj == NULL)
+    {
+        return FALSE;
+    }
+    saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+    (void)gmCameraLookAtFuncMatrix(&camera_mtx, cobj,
+                                   gSYTaskmanDLHeads);
+    memcpy(matrix, gGMCameraMatrix, sizeof(*matrix));
+    gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+    return TRUE;
+}
+
+static sb32 ndsSceneMipCacheProjectScreenToSeed(
+    const Mtx44f live_matrix,
+    const Mtx44f seed_matrix,
+    f32 screen_x,
+    f32 screen_y,
+    f32 *texture_s,
+    f32 *texture_t)
+{
+    f32 a00 = live_matrix[0][0] -
+        (screen_x * live_matrix[0][3]);
+    f32 a01 = live_matrix[1][0] -
+        (screen_x * live_matrix[1][3]);
+    f32 a10 = live_matrix[0][1] -
+        (screen_y * live_matrix[0][3]);
+    f32 a11 = live_matrix[1][1] -
+        (screen_y * live_matrix[1][3]);
+    f32 b0 = (screen_x * live_matrix[3][3]) -
+        live_matrix[3][0];
+    f32 b1 = (screen_y * live_matrix[3][3]) -
+        live_matrix[3][1];
+    f32 determinant = (a00 * a11) - (a01 * a10);
+    f32 world_x;
+    f32 world_y;
+    f32 projected_x;
+    f32 projected_y;
+    f32 projected_w;
+
+    if ((texture_s == NULL) || (texture_t == NULL) ||
+        (ABSF(determinant) < 0.000001F))
+    {
+        return FALSE;
+    }
+    world_x = ((b0 * a11) - (a01 * b1)) / determinant;
+    world_y = ((a00 * b1) - (b0 * a10)) / determinant;
+    projected_x = (seed_matrix[0][0] * world_x) +
+                  (seed_matrix[1][0] * world_y) +
+                  seed_matrix[3][0];
+    projected_y = (seed_matrix[0][1] * world_x) +
+                  (seed_matrix[1][1] * world_y) +
+                  seed_matrix[3][1];
+    projected_w = (seed_matrix[0][3] * world_x) +
+                  (seed_matrix[1][3] * world_y) +
+                  seed_matrix[3][3];
+    if (ABSF(projected_w) < 0.1F)
+    {
+        return FALSE;
+    }
+    projected_x /= projected_w;
+    projected_y /= projected_w;
+    *texture_s = (projected_x + 1.0F) * 64.0F;
+    *texture_t = (1.0F - projected_y) * 48.0F;
+    return TRUE;
+}
+
+static sb32 ndsSceneMipCacheBuildGrid(Mtx44f live_matrix,
+                                       u32 *mip_index,
+                                       s32 *tex_s_q4,
+                                       s32 *tex_t_q4)
+{
+    u32 first_mip;
+    u32 candidate;
+    f32 target_dist = gGMCameraStruct.target_dist;
+
+    if ((mip_index == NULL) || (tex_s_q4 == NULL) ||
+        (tex_t_q4 == NULL))
+    {
+        return FALSE;
+    }
+    gNdsSceneMipCacheTargetDistanceBits = ndsFloatBits(target_dist);
+    first_mip = (target_dist < 6000.0F) ? 0u :
+        ((target_dist < 18000.0F) ? 1u : 2u);
+    for (candidate = first_mip;
+         candidate < NDS_SCENE_MIP_COUNT; candidate++)
+    {
+        u32 row;
+        sb32 valid = TRUE;
+
+        for (row = 0u; row < NDS_SCENE_MIP_GRID_ROWS; row++)
+        {
+            u32 column;
+            f32 screen_y = 1.0F -
+                ((2.0F * (f32)row) /
+                 (f32)(NDS_SCENE_MIP_GRID_ROWS - 1u));
+
+            for (column = 0u;
+                 column < NDS_SCENE_MIP_GRID_COLUMNS; column++)
+            {
+                u32 index = (row * NDS_SCENE_MIP_GRID_COLUMNS) + column;
+                f32 screen_x = -1.0F +
+                    ((2.0F * (f32)column) /
+                     (f32)(NDS_SCENE_MIP_GRID_COLUMNS - 1u));
+                f32 texture_s;
+                f32 texture_t;
+
+                if ((ndsSceneMipCacheProjectScreenToSeed(
+                        live_matrix, sNdsSceneMipSeedMatrices[candidate],
+                        screen_x, screen_y, &texture_s, &texture_t) == FALSE) ||
+                    (texture_s < -0.5F) || (texture_s > 128.5F) ||
+                    (texture_t < -0.5F) || (texture_t > 96.5F))
+                {
+                    valid = FALSE;
+                    break;
+                }
+                if (texture_s < 0.5F) texture_s = 0.5F;
+                if (texture_s > 127.5F) texture_s = 127.5F;
+                if (texture_t < 0.5F) texture_t = 0.5F;
+                if (texture_t > 95.5F) texture_t = 95.5F;
+                tex_s_q4[index] = (s32)((texture_s * 16.0F) + 0.5F);
+                tex_t_q4[index] = (s32)((texture_t * 16.0F) + 0.5F);
+            }
+            if (valid == FALSE)
+            {
+                break;
+            }
+        }
+        if (valid != FALSE)
+        {
+            *mip_index = candidate;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static sb32 ndsSceneMipCachePresentSeedFrame(void)
+{
+    CObj *cobj;
+    CObjVec saved_vec;
+    Mtx44f saved_matrix;
+    f32 saved_target_dist;
+    f32 dx;
+    f32 dy;
+    f32 dz;
+    f32 magnitude;
+    f32 seed_dist;
+    u32 mip_index;
+
+    if ((ndsPlatformSceneMipCacheReady() != FALSE) ||
+        (ndsPlatformSceneMipCacheFailed() != FALSE))
+    {
+        return FALSE;
+    }
+    mip_index = ndsPlatformSceneMipCaptureCompletedCount();
+    if ((mip_index >= NDS_SCENE_MIP_COUNT) ||
+        (gGMCameraGObj == NULL) ||
+        ((cobj = CObjGetStruct(gGMCameraGObj)) == NULL))
+    {
+        ndsPlatformSceneMipCacheAbort();
+        return FALSE;
+    }
+
+    saved_vec = cobj->vec;
+    saved_target_dist = gGMCameraStruct.target_dist;
+    memcpy(saved_matrix, gGMCameraMatrix, sizeof(saved_matrix));
+    dx = saved_vec.eye.x - saved_vec.at.x;
+    dy = saved_vec.eye.y - saved_vec.at.y;
+    dz = saved_vec.eye.z - saved_vec.at.z;
+    magnitude = sqrtf((dx * dx) + (dy * dy) + (dz * dz));
+    if (magnitude < 0.1F)
+    {
+        dx = 0.0F;
+        dy = 0.0F;
+        dz = 1.0F;
+        magnitude = 1.0F;
+    }
+    seed_dist = sNdsSceneMipSeedDistances[mip_index];
+    cobj->vec.eye.x = cobj->vec.at.x + ((dx / magnitude) * seed_dist);
+    cobj->vec.eye.y = cobj->vec.at.y + ((dy / magnitude) * seed_dist);
+    cobj->vec.eye.z = cobj->vec.at.z + ((dz / magnitude) * seed_dist);
+    gGMCameraStruct.target_dist = seed_dist;
+
+    ndsStageGCDrawAllLoopBeginHardwareFrame();
+    sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
+    ndsRendererAdapterResetDepthDiagnostics();
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareSetNoOracle(TRUE);
+#endif
+    gcDrawAll();
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareSetNoOracle(FALSE);
+#endif
+    sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
+    if (ndsSceneMipCachePrepareCameraMatrix(
+            &sNdsSceneMipSeedMatrices[mip_index]) == FALSE)
+    {
+        cobj->vec = saved_vec;
+        gGMCameraStruct.target_dist = saved_target_dist;
+        memcpy(gGMCameraMatrix, saved_matrix, sizeof(saved_matrix));
+        ndsPlatformSceneMipCacheAbort();
+        return TRUE;
+    }
+    cobj->vec = saved_vec;
+    gGMCameraStruct.target_dist = saved_target_dist;
+    memcpy(gGMCameraMatrix, saved_matrix, sizeof(saved_matrix));
+    if (ndsPlatformSceneMipCaptureRequest(mip_index) == FALSE)
+    {
+        ndsPlatformSceneMipCacheAbort();
+    }
+    gNdsSceneMipCacheSeedDrawCount++;
+    return TRUE;
+}
+
+static sb32 ndsSceneMipCachePresentFrame(void)
+{
+    Mtx44f live_matrix;
+    s32 tex_s_q4[NDS_SCENE_MIP_GRID_VERTICES];
+    s32 tex_t_q4[NDS_SCENE_MIP_GRID_VERTICES];
+    u32 mip_index;
+
+    if (ndsPlatformSceneMipCacheReady() == FALSE)
+    {
+        return FALSE;
+    }
+    if ((ndsSceneMipCachePrepareCameraMatrix(&live_matrix) == FALSE) ||
+        (ndsSceneMipCacheBuildGrid(live_matrix, &mip_index,
+                                   tex_s_q4, tex_t_q4) == FALSE))
+    {
+        gNdsSceneMipCacheMappingFailureCount++;
+        return FALSE;
+    }
+
+    ndsStageGCDrawAllLoopBeginHardwareFrame();
+    sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
+    ndsRendererAdapterResetDepthDiagnostics();
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareSetNoOracle(TRUE);
+#endif
+    if (ndsRendererHardwareDrawSceneMipCache(
+            mip_index, tex_s_q4, tex_t_q4,
+            NDS_SCENE_MIP_GRID_COLUMNS,
+            NDS_SCENE_MIP_GRID_ROWS) == FALSE)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ndsRendererHardwareSetNoOracle(FALSE);
+#endif
+        sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
+        return FALSE;
+    }
+    ndsFighterDisplayContractSubmitStageFighters();
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareSetNoOracle(FALSE);
+#endif
+    sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
+
+    /* BattleShip gmcamera.c assigns the live HUD and pause SObjs to the
+     * interface camera (DL links 23/24, priority 20). Cut G replaces only the
+     * expensive scene cameras, so run that original camera callback after the
+     * cached scene and live fighters instead of hand-selecting HUD objects. */
+    {
+        const u64 interface_mask = (1ULL << 23) | (1ULL << 24);
+        GObj *camera_gobj =
+            gGCCommonDLLinks[ARRAY_COUNT(gGCCommonDLLinks) - 1u];
+
+        while (camera_gobj != NULL)
+        {
+            if (((camera_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u) &&
+                (camera_gobj->proc_display != NULL) &&
+                (camera_gobj->dl_link_priority == 20u) &&
+                (camera_gobj->camera_mask == interface_mask))
+            {
+                GObj *saved_camera = gGCCurrentCamera;
+                GObj *saved_display = gGCCurrentDisplay;
+                s32 saved_status = dGCCurrentStatus;
+
+                dGCCurrentStatus = nGCStatusCapturing;
+                gGCCurrentCamera = camera_gobj;
+                camera_gobj->proc_display(camera_gobj);
+                gGCCurrentCamera = saved_camera;
+                gGCCurrentDisplay = saved_display;
+                dGCCurrentStatus = saved_status;
+                break;
+            }
+            camera_gobj = camera_gobj->dl_link_next;
+        }
+    }
+    gNdsSceneMipCacheSelectedMipMask |= (1u << mip_index);
+    if ((sNdsSceneMipCachePreviousMip < NDS_SCENE_MIP_COUNT) &&
+        (sNdsSceneMipCachePreviousMip != mip_index))
+    {
+        gNdsSceneMipCacheSelectedMipChangeCount++;
+    }
+    sNdsSceneMipCachePreviousMip = mip_index;
+    gNdsSceneMipCacheSelectedMip = mip_index;
+    gNdsSceneMipCacheDrawCount++;
+    return TRUE;
+}
+#endif
+
+u32 ndsSceneMipCacheHoldLogic(void)
+{
+#if NDS_SCENE_MIP_CACHE_LAB
+    return ((ndsPlatformSceneMipCacheReady() == FALSE) &&
+            (ndsPlatformSceneMipCacheFailed() == FALSE)) ? TRUE : FALSE;
+#else
+    return FALSE;
+#endif
+}
+
 static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
     if ((sNdsStageGCDrawAllLoopHardwareSubmitCount != 0u) ||
@@ -13094,6 +13443,26 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     {
         return;
     }
+
+#if NDS_SCENE_MIP_CACHE_LAB
+    if (ndsSceneMipCachePresentSeedFrame() != FALSE)
+    {
+        return;
+    }
+    if ((ndsPlatformSceneMipCacheReady() != FALSE) &&
+        (ndsPlatformSceneMipCacheFailed() == FALSE))
+    {
+        if (ndsSceneMipCachePresentFrame() != FALSE)
+        {
+            return;
+        }
+        /* One uncovered view falsifies Cut G. Restore the complete source
+         * renderer rather than oscillating between cache and generic state. */
+        gNdsSceneMipCacheFallbackCount++;
+        ndsPlatformSceneMipCacheAbort();
+        ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
+    }
+#endif
 
     ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;

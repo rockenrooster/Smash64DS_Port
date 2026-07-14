@@ -21,6 +21,10 @@
 #define NDS_DEBUG_HUD 1
 #endif
 
+#ifndef NDS_SCENE_MIP_CACHE_LAB
+#define NDS_SCENE_MIP_CACHE_LAB 0
+#endif
+
 extern volatile u32 gNdsBootSelfTestResult;
 extern volatile u32 gNdsFrameCounter;
 
@@ -38,7 +42,6 @@ extern volatile u32 gNdsFrameCounter;
 #define NDS_N64_LOGICAL_HEIGHT 240
 #define NDS_TOP_BACKGROUND_COLOR (RGB15(2, 3, 6) | BIT(15))
 #define NDS_PERF_SAMPLE_TICKS 60u
-
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
@@ -64,9 +67,20 @@ static u32 sOriginalSpritePreviewReady;
 #if NDS_RENDERER_HW_TRIANGLES
 static int sOriginalSpriteOverlayBg = -1;
 static int sOriginalSpriteOverlayForegroundBg = -1;
-static s32 sOriginalSpriteOverlayEnabled;
+static u32 sOriginalSpriteOverlayLayerMask;
 static s32 sOriginalSpriteOverlayNeedsFlush;
 static u32 sOriginalSpriteOverlayEpoch[2] = { 1u, 1u };
+#if NDS_SCENE_MIP_CACHE_LAB
+#define NDS_SCENE_MIP_CAPTURE_WIDTH 256u
+#define NDS_SCENE_MIP_CAPTURE_HEIGHT 192u
+#define NDS_SCENE_MIP_TEXTURE_WIDTH 128u
+#define NDS_SCENE_MIP_TEXTURE_HEIGHT 128u
+#define NDS_SCENE_MIP_VISIBLE_HEIGHT 96u
+static u32 sSceneMipCapturePending;
+static u32 sSceneMipCaptureCompleted;
+static u32 sSceneMipCacheReady;
+static u32 sSceneMipCacheFailed;
+#endif
 #endif
 static u16 sOriginalSpriteDisplayPreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
@@ -118,7 +132,12 @@ volatile u32 gNdsHardwareRendererPolyRamCount;
 volatile u32 gNdsHardwareRendererVertexRamCount;
 volatile u32 gNdsHardwareRendererStatus;
 volatile u32 gNdsHardwareRendererControl;
-
+volatile u32 gNdsSceneMipCacheState;
+volatile u32 gNdsSceneMipCacheCaptureCount;
+volatile u32 gNdsSceneMipCacheUploadCount;
+volatile u32 gNdsSceneMipCacheFailureCount;
+volatile u32 gNdsSceneMipCacheLastHash;
+volatile u32 gNdsSceneMipCacheLastNonzeroPixels;
 void ndsPlatformInit(void)
 {
     /* libultra time/count are sub-frame hardware counters. Reserve timers 0/1
@@ -318,6 +337,21 @@ static u32 ndsPlatformAdvanceOriginalSpriteOverlayEpoch(u32 layer)
     }
     return sOriginalSpriteOverlayEpoch[layer];
 }
+
+static u32 ndsPlatformOriginalSpriteOverlayClearPixels(void)
+{
+#if NDS_SCENE_MIP_CACHE_LAB
+    if ((sSceneMipCapturePending != 0u) ||
+        ((sSceneMipCaptureCompleted != 0u) &&
+         (sSceneMipCacheReady == FALSE) &&
+         (sSceneMipCacheFailed == FALSE)))
+    {
+        /* Rows 192..255 stage already captured 128x128 scene textures. */
+        return SCREEN_WIDTH * SCREEN_HEIGHT;
+    }
+#endif
+    return 256u * 256u;
+}
 #endif
 
 u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
@@ -337,7 +371,8 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
         int bg = (layer != 0u) ?
             sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
 
-        if ((sOriginalSpriteOverlayEnabled == FALSE) || (bg < 0))
+        if (((sOriginalSpriteOverlayLayerMask & (1u << layer)) == 0u) ||
+            (bg < 0))
         {
             return NULL;
         }
@@ -365,7 +400,8 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
     u32 bytes;
 
-    if ((sOriginalSpriteOverlayEnabled == FALSE) || (bg < 0) ||
+    if (((sOriginalSpriteOverlayLayerMask & (1u << layer)) == 0u) ||
+        (bg < 0) ||
         (pixel_write_count > (SCREEN_WIDTH * SCREEN_HEIGHT)))
     {
         return 0u;
@@ -539,53 +575,58 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
     gNdsOriginalSpritePreviewCommitCount++;
 
 #if NDS_RENDERER_HW_TRIANGLES
-    if (sOriginalSpriteOverlayEnabled != FALSE)
     {
-        int bg = (is_foreground != FALSE) ?
-            sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
-        u16 *overlay;
-        s32 y;
+        u32 layer = (is_foreground != FALSE) ? 1u : 0u;
 
-        if (bg < 0)
+        if ((sOriginalSpriteOverlayLayerMask & (1u << layer)) != 0u)
         {
-            return;
-        }
-        overlay = (u16 *)bgGetGfxPtr(bg);
-        /* A full-screen staging image already contains transparent zeroes.
-         * Clearing visible VRAM before the row copy exposes black bands when
-         * scanout catches the single-buffered overlay mid-commit. */
-        if ((dst_w < SCREEN_WIDTH) || (dst_h < SCREEN_HEIGHT))
-        {
-            dmaFillHalfWords(0, overlay, 256u * 256u * sizeof(u16));
+            int bg = (is_foreground != FALSE) ?
+                sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
+            u16 *overlay;
+            s32 y;
+
+            if (bg < 0)
+            {
+                return;
+            }
+            overlay = (u16 *)bgGetGfxPtr(bg);
+            /* A full-screen staging image already contains transparent zeroes.
+             * Clearing visible VRAM before the row copy exposes black bands when
+             * scanout catches the single-buffered overlay mid-commit. */
+            if ((dst_w < SCREEN_WIDTH) || (dst_h < SCREEN_HEIGHT))
+            {
+                u32 clear_bytes =
+                    ndsPlatformOriginalSpriteOverlayClearPixels() * sizeof(u16);
+
+                dmaFillHalfWords(0, overlay, clear_bytes);
+                if (is_foreground != FALSE)
+                {
+                    gNdsOriginalSpriteBg3ClearBytes += clear_bytes;
+                }
+                else
+                {
+                    gNdsOriginalSpriteBg2ClearBytes += clear_bytes;
+                }
+            }
+            for (y = 0; y < dst_h; y++)
+            {
+                memcpy(&overlay[y * 256],
+                       &display_preview[
+                           y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH],
+                       (size_t)dst_w * sizeof(u16));
+            }
             if (is_foreground != FALSE)
             {
-                gNdsOriginalSpriteBg3ClearBytes +=
-                    256u * 256u * sizeof(u16);
+                gNdsOriginalSpriteBg3CopyBytes +=
+                    (u32)dst_w * (u32)dst_h * sizeof(u16);
+                ndsPlatformAdvanceOriginalSpriteOverlayEpoch(1u);
             }
             else
             {
-                gNdsOriginalSpriteBg2ClearBytes +=
-                    256u * 256u * sizeof(u16);
+                gNdsOriginalSpriteBg2CopyBytes +=
+                    (u32)dst_w * (u32)dst_h * sizeof(u16);
+                ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
             }
-        }
-        for (y = 0; y < dst_h; y++)
-        {
-            memcpy(&overlay[y * 256],
-                   &display_preview[
-                       y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH],
-                   (size_t)dst_w * sizeof(u16));
-        }
-        if (is_foreground != FALSE)
-        {
-            gNdsOriginalSpriteBg3CopyBytes +=
-                (u32)dst_w * (u32)dst_h * sizeof(u16);
-            ndsPlatformAdvanceOriginalSpriteOverlayEpoch(1u);
-        }
-        else
-        {
-            gNdsOriginalSpriteBg2CopyBytes +=
-                (u32)dst_w * (u32)dst_h * sizeof(u16);
-            ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
         }
     }
 #endif
@@ -604,18 +645,18 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
 
     if (bg >= 0)
     {
-        dmaFillHalfWords(0, bgGetGfxPtr(bg),
-                         256u * 256u * sizeof(u16));
+        u32 clear_bytes =
+            ndsPlatformOriginalSpriteOverlayClearPixels() * sizeof(u16);
+
+        dmaFillHalfWords(0, bgGetGfxPtr(bg), clear_bytes);
         if (is_foreground != FALSE)
         {
-            gNdsOriginalSpriteBg3ClearBytes +=
-                256u * 256u * sizeof(u16);
+            gNdsOriginalSpriteBg3ClearBytes += clear_bytes;
             ndsPlatformAdvanceOriginalSpriteOverlayEpoch(1u);
         }
         else
         {
-            gNdsOriginalSpriteBg2ClearBytes +=
-                256u * 256u * sizeof(u16);
+            gNdsOriginalSpriteBg2ClearBytes += clear_bytes;
             ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
         }
     }
@@ -624,11 +665,13 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
 #endif
 }
 
-void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
+void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
 {
 #if NDS_RENDERER_HW_TRIANGLES
-    if ((is_enabled != FALSE) &&
-        (sOriginalSpriteOverlayEnabled == FALSE))
+    u32 previous_mask = sOriginalSpriteOverlayLayerMask;
+
+    layer_mask &= NDS_ORIGINAL_SPRITE_OVERLAY_ALL;
+    if ((layer_mask != 0u) && (layer_mask != previous_mask))
     {
         sOriginalSpriteOverlayNeedsFlush = TRUE;
         /* Start a fresh traffic window for the scene that owns the overlay.
@@ -641,15 +684,253 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
         gNdsOriginalSpriteBg3CopyBytes = 0u;
         gNdsOriginalSpriteBg3FinalWriteBytes = 0u;
     }
-    sOriginalSpriteOverlayEnabled = is_enabled;
-    glClearColor(2, 3, 6, (is_enabled != FALSE) ? 0 : 31);
-    if ((is_enabled == FALSE) && (sOriginalSpriteOverlayBg >= 0))
+    sOriginalSpriteOverlayLayerMask = layer_mask;
+    glClearColor(2, 3, 6, (layer_mask != 0u) ? 0 : 31);
+
+    if (sOriginalSpriteOverlayBg >= 0)
     {
-        ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
-        ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
+        if ((layer_mask & NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u)
+        {
+            bgShow(sOriginalSpriteOverlayBg);
+        }
+        else
+        {
+            if ((previous_mask & NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u)
+            {
+                ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
+            }
+            bgHide(sOriginalSpriteOverlayBg);
+        }
+    }
+    if (sOriginalSpriteOverlayForegroundBg >= 0)
+    {
+        if ((layer_mask & NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND) != 0u)
+        {
+            bgShow(sOriginalSpriteOverlayForegroundBg);
+        }
+        else
+        {
+            if ((previous_mask & NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND) != 0u)
+            {
+                ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
+            }
+            bgHide(sOriginalSpriteOverlayForegroundBg);
+        }
     }
 #else
-    (void)is_enabled;
+    (void)layer_mask;
+#endif
+}
+
+void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
+{
+    ndsPlatformSetOriginalSpriteOverlayLayerMask(
+        (is_enabled != FALSE) ? NDS_ORIGINAL_SPRITE_OVERLAY_ALL : 0u);
+}
+
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+static u16 *ndsPlatformSceneMipStagePixels(u32 mip_index)
+{
+    u16 *background = (u16 *)bgGetGfxPtr(sOriginalSpriteOverlayBg);
+    u16 *foreground =
+        (u16 *)bgGetGfxPtr(sOriginalSpriteOverlayForegroundBg);
+
+    if ((background == NULL) || (foreground == NULL))
+    {
+        return NULL;
+    }
+    switch (mip_index)
+    {
+    case 0u:
+        return background + (SCREEN_WIDTH * SCREEN_HEIGHT);
+    case 1u:
+        return foreground + (SCREEN_WIDTH * SCREEN_HEIGHT);
+    case 2u:
+        return foreground;
+    default:
+        return NULL;
+    }
+}
+
+static void ndsPlatformSceneMipDownsample(const u16 *source, u16 *destination)
+{
+    u32 y;
+
+    for (y = 0u; y < NDS_SCENE_MIP_VISIBLE_HEIGHT; y++)
+    {
+        u32 x;
+        const u16 *source0 =
+            source + ((y * 2u) * NDS_SCENE_MIP_CAPTURE_WIDTH);
+        const u16 *source1 = source0 + NDS_SCENE_MIP_CAPTURE_WIDTH;
+        u16 *target = destination + (y * NDS_SCENE_MIP_TEXTURE_WIDTH);
+
+        for (x = 0u; x < NDS_SCENE_MIP_TEXTURE_WIDTH; x++)
+        {
+            u32 source_x = x * 2u;
+            u16 p0 = source0[source_x];
+            u16 p1 = source0[source_x + 1u];
+            u16 p2 = source1[source_x];
+            u16 p3 = source1[source_x + 1u];
+            u32 red = ((p0 & 31u) + (p1 & 31u) +
+                       (p2 & 31u) + (p3 & 31u) + 2u) >> 2;
+            u32 green = (((p0 >> 5) & 31u) + ((p1 >> 5) & 31u) +
+                         ((p2 >> 5) & 31u) + ((p3 >> 5) & 31u) + 2u) >> 2;
+            u32 blue = (((p0 >> 10) & 31u) + ((p1 >> 10) & 31u) +
+                        ((p2 >> 10) & 31u) + ((p3 >> 10) & 31u) + 2u) >> 2;
+
+            target[x] = (u16)(BIT(15) | red | (green << 5) | (blue << 10));
+        }
+    }
+    for (y = NDS_SCENE_MIP_VISIBLE_HEIGHT;
+         y < NDS_SCENE_MIP_TEXTURE_HEIGHT; y++)
+    {
+        memcpy(destination + (y * NDS_SCENE_MIP_TEXTURE_WIDTH),
+               destination + ((NDS_SCENE_MIP_VISIBLE_HEIGHT - 1u) *
+                              NDS_SCENE_MIP_TEXTURE_WIDTH),
+               NDS_SCENE_MIP_TEXTURE_WIDTH * sizeof(u16));
+    }
+}
+
+static void ndsPlatformSceneMipPublishHash(const u16 *pixels)
+{
+    u32 hash = 2166136261u;
+    u32 nonzero = 0u;
+    u32 i;
+
+    for (i = 0u;
+         i < (NDS_SCENE_MIP_TEXTURE_WIDTH *
+              NDS_SCENE_MIP_TEXTURE_HEIGHT); i++)
+    {
+        u16 pixel = pixels[i];
+
+        hash ^= pixel & 0xffu;
+        hash *= 16777619u;
+        hash ^= pixel >> 8;
+        hash *= 16777619u;
+        if ((pixel & 0x7fffu) != 0u)
+        {
+            nonzero++;
+        }
+    }
+    gNdsSceneMipCacheLastHash = hash;
+    gNdsSceneMipCacheLastNonzeroPixels = nonzero;
+}
+
+static void ndsPlatformSceneMipFinishCapture(void)
+{
+    u32 mip_index = sSceneMipCapturePending - 1u;
+    u16 *destination = ndsPlatformSceneMipStagePixels(mip_index);
+
+    if ((sSceneMipCapturePending == 0u) || (destination == NULL))
+    {
+        vramSetBankA(VRAM_A_TEXTURE);
+        ndsRendererHardwareDiscardTextureCache();
+        sSceneMipCacheFailed = TRUE;
+        gNdsSceneMipCacheFailureCount++;
+        gNdsSceneMipCacheState = 3u;
+        sSceneMipCapturePending = 0u;
+        return;
+    }
+    ndsPlatformSceneMipDownsample((const u16 *)VRAM_A, destination);
+    ndsPlatformSceneMipPublishHash(destination);
+    vramSetBankA(VRAM_A_TEXTURE);
+    /* Capture owns bank A's bytes. Drop every allocator entry before another
+     * source frame can bind the overwritten texture data. */
+    ndsRendererHardwareDiscardTextureCache();
+    sSceneMipCaptureCompleted = mip_index + 1u;
+    sSceneMipCapturePending = 0u;
+    gNdsSceneMipCacheCaptureCount = sSceneMipCaptureCompleted;
+
+    if (sSceneMipCaptureCompleted == 3u)
+    {
+        const u16 *mip0 = ndsPlatformSceneMipStagePixels(0u);
+        const u16 *mip1 = ndsPlatformSceneMipStagePixels(1u);
+        const u16 *mip2 = ndsPlatformSceneMipStagePixels(2u);
+
+        if (ndsRendererHardwareUploadSceneMipCache(mip0, mip1, mip2) != FALSE)
+        {
+            sSceneMipCacheReady = TRUE;
+            gNdsSceneMipCacheUploadCount = 3u;
+            gNdsSceneMipCacheState = 2u;
+            /* The captured mip pixels are resident in texture VRAM now. Reuse
+             * BG3 for BattleShip's live interface while keeping BG2's cached
+             * wallpaper source out of the normal-frame compositor. */
+            ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
+            ndsPlatformSetOriginalSpriteOverlayLayerMask(
+                NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND);
+        }
+        else
+        {
+            sSceneMipCacheFailed = TRUE;
+            gNdsSceneMipCacheFailureCount++;
+            gNdsSceneMipCacheState = 3u;
+        }
+    }
+}
+#endif
+
+u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    if ((sSceneMipCacheReady != FALSE) ||
+        (sSceneMipCacheFailed != FALSE))
+    {
+        return FALSE;
+    }
+    if ((sSceneMipCapturePending != 0u) ||
+        (mip_index >= 3u) ||
+        (mip_index != sSceneMipCaptureCompleted))
+    {
+        sSceneMipCacheFailed = TRUE;
+        gNdsSceneMipCacheFailureCount++;
+        gNdsSceneMipCacheState = 3u;
+        return FALSE;
+    }
+    sSceneMipCapturePending = mip_index + 1u;
+    gNdsSceneMipCacheState = 1u;
+    return TRUE;
+#else
+    (void)mip_index;
+    return FALSE;
+#endif
+}
+
+void ndsPlatformSceneMipCacheAbort(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    if (sSceneMipCacheFailed == FALSE)
+    {
+        sSceneMipCacheFailed = TRUE;
+        gNdsSceneMipCacheFailureCount++;
+        gNdsSceneMipCacheState = 3u;
+    }
+#endif
+}
+
+u32 ndsPlatformSceneMipCaptureCompletedCount(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    return sSceneMipCaptureCompleted;
+#else
+    return 0u;
+#endif
+}
+
+u32 ndsPlatformSceneMipCacheReady(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    return sSceneMipCacheReady;
+#else
+    return FALSE;
+#endif
+}
+
+u32 ndsPlatformSceneMipCacheFailed(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+    return sSceneMipCacheFailed;
+#else
+    return FALSE;
 #endif
 }
 
@@ -1282,6 +1563,25 @@ void ndsPlatformEndFrame(void)
     profile_start = cpuGetTiming();
 #endif
     ndsRendererHardwareCommitPendingTextureRefreshes();
+#if NDS_SCENE_MIP_CACHE_LAB
+    if (sSceneMipCapturePending != 0u)
+    {
+        /* The flushed seed has reached scanout with both BG layers intact.
+         * Capture the following visible scan into A only after its textures
+         * are no longer needed by GX, then restore A before another draw. */
+        vramSetBankA(VRAM_A_LCD);
+        REG_DISPCAPCNT = DCAP_ENABLE |
+            DCAP_MODE(DCAP_MODE_A) |
+            DCAP_SRC_A(DCAP_SRC_A_COMPOSITED) |
+            DCAP_SIZE(DCAP_SIZE_256x192) |
+            DCAP_BANK(DCAP_BANK_VRAM_A) |
+            DCAP_OFFSET(0) |
+            DCAP_A(31);
+        swiWaitForVBlank();
+        REG_DISPCAPCNT = 0u;
+        ndsPlatformSceneMipFinishCapture();
+    }
+#endif
     sTicks++;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfilePostVBlankTicks +=

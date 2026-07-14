@@ -37,86 +37,51 @@ records source CPU/input/combat, consumes all `3600` test ticks, returns through
 taskman cleanup, and changes `VSBattle(22) -> VSResults(24)`. Imported Results
 loads all eight files, two fighters, 12 SObjs, and source Win/Lose statuses.
 
-The fighter renderer imports BattleShip `ftdisplaymain.c`, `ftdisplaylights.c`,
-and `guMtxCatF`. Its display preamble, lighting state, visibility flags, and
-single-`dl`/ordered-`dls[]` selection run live; only selected lists cross the DS
-submission seam. The manual all-DObj collector remains a software fixture.
-Imported `sys/objanim.c` now receives source-shaped DObj/MObj/CObj AObj32
-graphs: the wrapper repacks only MSB-first commands once per reloc generation,
-follows branches, preserves payloads/pointers, and excludes fighter AObj16.
-Original timing stays live; a post-step corrects N64-endian packed RGBA.
-Selected events retain source matrix/material, geometry/prim/env/light, and
-cycle/render state; pre-matrix `dls[0]` keeps parent state as in
-`ftdisplaymain.c:789-805,883-899`. The DS bridge also carries the RSP input and
-transformed vertex cache across those per-part lists, matching BattleShip's
-single `gSYTaskmanDLHeads[0]` stream. Exact Mario cross-joint fixtures now pass,
-all-DL HW triangles rise from `284/298` to `320/306`, and rejects fall to zero.
-Fighter playback seeds its initial light pair from the first selected source
-`MObjSub` (`0xffffff00/0x4c4c4c00`); overrides carry and fallback use is zero.
-Latest live-input canonical reports dynamic GX RAM near `695/2119`, geometry
-`0x222005`, cycle/render `0x00100000/0xc4112078`, parts `14/18`, and zero oracle mismatches.
-Source-depth X/Y/Z share one composed clip vertex. Projected no-Z depth has source-backed background/foreground phases around the first source-Z triangle,
-restoring layer-3 foreground fences over layer-1 floor/path.
+The renderer imports BattleShip display/light/matrix source and preserves live
+camera, selected DL order, RSP vertex carry, materials, lighting, and depth.
+Profile 2 owns exact oracle coverage; production Mode 8 owns the accepted native
+fighter path. Geometry remains `828 = 202+320+306` source triangles with exact
+`648/44/126/10` classes and zero oracle mismatch. Detailed optimization history
+and counters live in `docs/PERF_LEDGER.md`.
 
-`gcAddMObjAll` normalizes mixed-width O2R lanes by source provenance. Dream Land
-observes at least four water/Whispy swaps and zero native/failure cases. Exact
-S/T maps, packed CI4 reads, and one 1 KiB RGB15/coverage table preserve live water.
-Large tiles index the first identical TEXEL0/TEXEL1/phase class and expand X.
-Cold uploads still materialize all rows in scratch. Warm large refreshes write
-each unique row directly into the existing 16 KiB VBlank staging buffer; the
-exact row map expands repeats only on lines `192..207`. Matched 128-frame draw
-improves `2,001,600/2,033,664 -> 1,970,304/2,002,880`, with identical upload hash
-and zero fallback. Profile 2 retains its independent synchronous oracle route
-and reports `18,432/0` exact pair-pixel checks.
-Fox's DXT tail fix remains; Tyler accepts the water. Persistent stage RSP cache
-plus `G_MWO_POINT_ST` restores five flower groups (`192 -> 202` triangles);
-Tyler accepts flowers/fences. Forensic lane/oracle proof is `37200/37200`, `2484/0/0`.
-The immutable 300x220 wallpaper decodes once; imported `grWallpaperCalcPersp`
-still owns its live transform. Final BG2 keeps two exact X/Y maps in the decode
-buffer's unused tail, updates only changed rows/columns, and expands full dirty
-rows there before cache-flushed DMA. No composed frame is cached or added to
-BSS. Same-ROM 128-frame profile-1 draw moves `1926624/1955648 ->
-1812256/1900288`; wallpaper moves `344672/348480 -> 237088/340032` while
-stage/Mario/Fox stay flat. Profile 2 proves map/pixel `23296/0` and `2555904/0`.
-Unsupported/changed ownership redraws fully; staging and BG2/BG3 clear/copy stay zero.
-Reloc-backed source DLs now expose one immutable byte span; dynamic task-heap
-lists keep per-command validation. Live stage/fighter validators test the
-taskman arena before walking the loaded-file ledger, preserving the same
-accepted ranges. Each list directly uses the persistent 32-slot input/clip/color/
-snapshot planes; validity masks reset compact control state. Null-callback profiles carry only segment-`E` preview resolver state, reset exact traversal guards/hardware totals, and publish fighter triangles once per owner; detailed/profile-2 ledgers remain unchanged. Profile 1 remains `80/1736/344/330` immutable/trusted/validated/adjacent-TRI work. Each run reuses exact material/depth, RGB15, S/T, projected X/Y, and clip Z.
-Texture preparation persists through VTX/matrix and invalidates only at exact key mutations. Profiles 0/1 reuse alpha/poly-format only when the blend/combine classifier proves it vertex-independent; profile 2 stays generic.
-The animated CI4 palette-pair
-LUT remains content-keyed with exact RGB plus one 16-bit 4x4 coverage mask. Profiles 0/1
-decode the two immutable 32x32 packed source-index planes once, keyed by
-pointer/texel count/lane and invalidated before reloc scene storage is reused.
-Live tile origins, masks, palette/fraction, phase lookup, and uploads stay
-dynamic. Profile 1 proves `2/728` index build/reuse; profile 2 stays bytewise
-with index/map `0/0` and `0/0`.
+The mode-163 runtime links original camera, death/rebirth, HUD, normal moves,
+weapons, effects, CPU, audio parsing, and Pupupu BGM. Its lifecycle proof reaches
+source expiry, taskman cleanup, and Results while preserving the 128 KiB reserve.
+The canonical configuration remains the five-minute live-input P1 match.
 
-Canonical mode 163 alone keeps `-O2`; larger scripted/lifecycle diagnostics stay `-Os`; granular 4 KiB arena fallback preserves their reserve. Mode 163 compiles the renderer in
-ARM state; six measured O3 paths live in ITCM. Aligned VTX payloads decode into
-the persistent cache. Light direction and four 128-step RGB tables persist to
-exact invalidation; profile 2 omits the 2,096-byte table and runs the independent
-exact shade calculation. CI4 maps/class indexing add 1,536 bytes. Profiles 0/1
-index exact texture keys through 128 byte slots and compact fingerprints; full
-236-byte equality remains the oracle and deletion repairs clusters.
-Profile-0 BSS is `1,881,392`; ITCM is `21,228/21,228/19,492`. Submission stays
-`648/44/126/10`, with `1,242` logical divides and `121/707/121` batches. Exact
-DS `div64` makes 650 profile-1 calls; profile 2 checks 1,404 with zero mismatch.
-The shared all-owner K-RAW kernel executes `45/540` immutable runs/triangles
-(`60/246/234` stage/Mario/Fox) and falls back `47/7/0`. Same-ROM 128-frame
-profile-1 draw improves `2,067,296/2,407,872 -> 1,858,624/2,227,648`.
-Its 8 KiB table consumes 330 TRI commands. A 256-byte DObj index plus exact
-affine product moves draw `2,126,752/2,169,600 -> 2,057,376/2,098,880`; profile
-2 proves affine and vertex equality. Exact persistent stage worlds reuse `57`
-nodes with `42/0` shadow samples/mismatches and zero reject/overflow.
-Matched 128-frame draw moves `2,323,008/2,355,712 -> 2,263,616/2,280,512`;
-matrix prep saves `67,328/41,088` and stage saves `63,424/82,176` ticks.
-The memory pre-breadth gate has a live VSBattle ledger and scene-owned reloc cache eviction. Mode `163` reports headroom `227392`, resident reloc `681632` bytes (`stage=202816`, `fighter=175440`, `if=208672`), stale `0/0`, and source
-VSBattle buffers from `scvsbattle.c:31-41`. Audio `.ctl` parsing now peaks at
-`16` bytes of scratch. The bounded 48-texture/40-pos-test/832-event caches keep
-the larger forensic gate at `202416` bytes before and `136880` after BGM,
-retaining the required 128 KiB reserve.
+The coarse target intrinsically forces realtime presentation, live input, HW
+triangles, profile 1, and `NDS_RENDERER_FAST_RUN_DEFAULT=8`. A plain target
+build reproduces ROM `DC2871F3...52E4E3AD` (12,036,096 bytes). Eight exact
+Mode-8 frames retain all 828 triangles with `70/686` runs, `60+320+306` owners,
+and `29/0/0` fallbacks at about 15.4 FPS. The exact-ROM paired capture passes
+visibility, motion, named-region, and texture-detail gates. A same-ROM no-build
+run passes original Fox CPU, natural BGM/refills, reserve, and ITCM checks.
+
+The `39CD1397...B508CEF` cleanup ROM was built with live input disabled by an
+under-specified manual invocation and is rejected. Its PNG files were complete;
+the apparent partial second images came from a multi-image inspection view that
+displayed unchanged regions as black. The user's separate report of no audio or
+stage draw on the exact `DC287...` ROM remains pending manual-environment retest,
+so hardware/manual acceptance is not claimed.
+
+Working-looking emulator captures exist for Mode 0, Mode 8, and canonical
+HW-tri only. There is no per-mode capture set for Modes 1-7, and screenshots do
+not prove hardware boot or audio.
+
+Cut F is rejected and removed. Its first cache window reached
+`467,968/468,992` draw with zero stage/wallpaper CPU time, but the seed omitted
+wallpaper pixels and the live source camera exceeded cache bounds after 232
+frames, forcing full generic fallback. The large short-window saving does not
+justify further work on an invalid presentation architecture.
+
+A separate per-callback typed stage executor is rejected and removed. Its
+candidate stage time was about `877,248` ticks versus `873,344` generic, with
+799/828 fast triangles and one fallback. It saved essentially zero stage time;
+the whole-draw difference was the retained fighter owner.
+
+Full-source scanline/HBlank wallpaper is also rejected and removed. Same-ROM
+draw saved `239,392` ticks and wallpaper saved `240,032`, below the 300K gate;
+its source upload also worsened P95. Exact `DC287...` Mode 8 is restored.
 
 ## Current Notes
 
@@ -137,14 +102,38 @@ Modes `161/162` remain bounded scaffolding; `battle_playable` is the scene-level
 anchor. Obsolete mode/verifier stacks are migrate-or-delete with one
 `[coverage-reduced]` line; modes `57/58` and `159/160` are already gone.
 
-Canonical is `14.9fps`; the final eight-sample profile-0 draw is `1,856,864/1,888,960`. Profile-1 stage/draw are `771,680/801,344` and `1,790,368/1,879,872`. Current ROM SHA-256 is `4C75B4F3BD1F3D5E8BFC73C3C20C22D257DB73B6221C3A199883EB84E0DC99BC`. Next is the complete coarse stage-owner program. HUD, weapon geometry, platform crossing, Whispy face, and Mario facing/light remain debt.
+The last decision baseline was `14.9fps` with `1,856,864/1,888,960` draw; its profile-1 stage/draw were `771,680/801,344` and `1,790,368/1,879,872`. Current canonical/shipped parity is 12,033,024 bytes at SHA-256 `99FF3D2DB2A51B341548821BFECE87A22AA2614D8A0AD1B1B3F4E050C901BE30`.
+
+The serialized title/opening store still saves `176,000` BSS bytes; mode 9 again
+reported mode-8 accounting and no timing, so its `18,676`-byte workspace is gone.
+
+Cut D is rejected and its census code is removed. A 600-frame run found 322
+complete keys, 206 final outputs, reuse distance exactly 216, 76.17% changed
+frames, and 3,739,648 bytes for full residency; a 2-4-slot LRU cannot hit.
+ARM7 overlap would require a second source/render prepass because the exact
+recipe first exists at its dependent bind, leaving only 77,376 ticks of total
+prepass/IPC/wait budget to clear the 120K gate. The 176,736-tick matrix aggregate
+also cannot supply the requested hundreds-of-thousands jump.
+
+Preserve the exact hardened Mode-8 baseline and retest the user's manual
+environment before changing ROM code for that report. The next performance
+architecture must be distinct from mode 9, Cut D, Cut F, and the typed
+stage executor, with at least 300K credible exclusive saving before implementation.
+Stop after one build/60 minutes without it; do not return to prepared VMs,
+record executors, matrix-only, affine/scanline wallpaper, or local no-Z/raw work.
+HUD, weapon geometry, platform crossing, Whispy face, and Mario facing/light
+remain presentation debt.
 ## Verification
 
-DevFast, forensic, P1Gate, and Boundary `161/162/163` pass; Full Regression stays intentionally skipped for fast iteration.
+This checkpoint passes the exact coarse Mode-8 benchmark, paired capture gates,
+realtime CPU/audio/memory verifier, all four static checks, and a fresh DevFast
+canonical build/capture/parity run. The prior broad checkpoint passed forensic,
+P1Gate, and Boundary `161/162/163`; rerun those after further shared-runtime
+work. Full Regression stays skipped for minimum-calendar work.
 
 ```powershell
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
 .\scripts\verify-p1-gate.ps1 -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -DelaySeconds 3
 ```
-After verified progress, commit, then run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.
+After verified progress, run `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` last.

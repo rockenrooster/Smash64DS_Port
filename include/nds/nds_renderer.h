@@ -15,7 +15,6 @@
 #define NDS_RENDERER_BENCHMARK_NONE 0
 #define NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP 1
 #define NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX 2
-#define NDS_RENDERER_BENCHMARK_FROZEN_TRANSPORT 3
 #define NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD 4
 
 #define NDS_RENDERER_FAST_RUN_GENERIC 0u
@@ -23,6 +22,10 @@
 #define NDS_RENDERER_FAST_RUN_FIGHTERS 2u
 #define NDS_RENDERER_FAST_RUN_ALL_RAW_CURRENT 3u
 #define NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES 4u
+#define NDS_RENDERER_FAST_RUN_NATIVE_MARIO 5u
+#define NDS_RENDERER_FAST_RUN_NATIVE_FOX 6u
+#define NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS 7u
+#define NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION 8u
 
 #ifndef NDS_RENDERER_BENCHMARK_MODE
 #define NDS_RENDERER_BENCHMARK_MODE NDS_RENDERER_BENCHMARK_NONE
@@ -299,6 +302,84 @@ typedef struct NDSRendererConfig
     void *user;
 } NDSRendererConfig;
 
+#define NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE (1u << 0)
+#define NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT (1u << 1)
+#define NDS_RENDERER_NATIVE_MATERIAL_LIGHT1 (1u << 2)
+#define NDS_RENDERER_NATIVE_MATERIAL_LIGHT2 (1u << 3)
+#define NDS_RENDERER_NATIVE_MATERIAL_PRIM (1u << 4)
+#define NDS_RENDERER_NATIVE_MATERIAL_ENV (1u << 5)
+#define NDS_RENDERER_NATIVE_MATERIAL_BLEND (1u << 6)
+#define NDS_RENDERER_NATIVE_MATERIAL_BLOCK_IMAGE (1u << 7)
+#define NDS_RENDERER_NATIVE_MATERIAL_LOAD_BLOCK (1u << 8)
+#define NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE (1u << 9)
+#define NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE (1u << 10)
+#define NDS_RENDERER_NATIVE_MATERIAL_SCROLL_TILE_SIZE (1u << 11)
+#define NDS_RENDERER_NATIVE_MATERIAL_TEXTURE (1u << 12)
+
+/* Typed BattleShip material effect. The adapter derives this directly from
+ * the live MObj; the native owner never builds or executes a segment-E Gfx
+ * mini display list. */
+typedef struct NDSRendererNativeMaterial
+{
+    u32 effects;
+    u16 command_count;
+    u16 sync_count;
+    u32 palette_image_w0;
+    u32 palette_image;
+    u32 palette_tile_w0;
+    u32 palette_tile_w1;
+    u32 palette_tlut_w1;
+    u32 light1;
+    u32 light2;
+    u32 prim_w0;
+    u32 prim_w1;
+    u32 env_color;
+    u32 blend_color;
+    u32 block_image_w0;
+    u32 block_image;
+    u32 load_block_w0;
+    u32 load_block_w1;
+    u32 current_image_w0;
+    u32 current_image;
+    u32 render_tile_size_w0;
+    u32 render_tile_size_w1;
+    u32 scroll_tile_size_w0;
+    u32 scroll_tile_size_w1;
+    u32 texture_w0;
+    u32 texture_w1;
+} NDSRendererNativeMaterial;
+
+#define NDS_RENDERER_NATIVE_PREAMBLE_VALID (1u << 0)
+#define NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID (1u << 1)
+
+typedef struct NDSRendererNativeFighterPreamble
+{
+    u32 geometry_mode;
+    u32 cycle_type;
+    u32 render_mode;
+    u32 prim_color;
+    u32 env_color;
+    s8 light_dir_x;
+    s8 light_dir_y;
+    s8 light_dir_z;
+    u8 flags;
+} NDSRendererNativeFighterPreamble;
+
+/* One preflighted root row for the production native fighter owner.  The
+ * adapter retains ownership of every pointer for the duration of the call.
+ * composed_matrix is the exact CPU-composed matrix used by the generic
+ * renderer; modelview_matrix is retained separately for source lighting. */
+typedef struct NDSRendererNativeFighterRoot
+{
+    u32 root_offset;
+    u32 material_count;
+    const NDSRendererMatrix20p12 *composed_matrix;
+    const NDSRendererMatrix20p12 *modelview_matrix;
+    const NDSRendererNativeMaterial *materials;
+    const NDSRendererConfig *config;
+    NDSRendererNativeFighterPreamble preamble;
+} NDSRendererNativeFighterRoot;
+
 typedef struct NDSRendererStats
 {
     u32 blocker;
@@ -487,7 +568,52 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     void *callback_user,
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache);
+s32 ndsRendererExecuteNativeFighterRoot(
+    u32 slot,
+    u32 root_ordinal,
+    const void *asset_base,
+    u32 root_offset,
+    const NDSRendererNativeMaterial *materials,
+    u32 material_count,
+    const NDSRendererConfig *config,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache);
+s32 ndsRendererExecuteNativeFighterOwnerProduction(
+    u32 slot,
+    const void *asset_base,
+    const NDSRendererNativeFighterRoot *roots,
+    u32 root_count,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    u32 *out_hardware_started);
+s32 ndsRendererBeginNativeFighterOwner(
+    u32 slot,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache);
+s32 ndsRendererEndNativeFighterOwner(
+    u32 slot,
+    NDSRendererStats *stats,
+    NDSRendererVertexCache *vertex_cache);
+void ndsRendererAbortNativeFighterOwner(void);
+s32 ndsRendererValidateNativeFighterOwner(
+    u32 slot,
+    u32 asset_data_size,
+    u32 root_count,
+    const u32 *root_offsets,
+    const u32 *material_counts);
 void ndsRendererHardwareResetSourceCaches(void);
+void ndsRendererHardwareDiscardTextureCache(void);
+s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
+                                            const u16 *mip1,
+                                            const u16 *mip2);
+s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
+                                          const s32 *tex_s_q4,
+                                          const s32 *tex_t_q4,
+                                          u32 columns,
+                                          u32 rows);
 void ndsRendererHardwareSetNoOracle(u32 enabled);
 u32 ndsRendererHardwareNoOracleEnabled(void);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);
@@ -510,5 +636,4 @@ extern volatile u32 gNdsRendererFastFallbackCount[3];
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner);
 #endif
-
 #endif

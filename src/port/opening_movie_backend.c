@@ -1,4 +1,6 @@
 #include <nds/nds_gbi_decode.h>
+#include <nds/nds_platform.h>
+#include <sys/objdef.h>
 
 #define NDS_DL_PREVIEW_WIDTH 96u
 #define NDS_DL_PREVIEW_HEIGHT 72u

@@ -30,14 +30,35 @@ NDS_RENDERER_HW_TRIANGLES ?= 0
 NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_RENDERER_BENCHMARK_MODE ?= 0
+NDS_SCENE_MIP_CACHE_LAB ?= 0
 NDS_DEBUG_HUD ?= 1
+NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
 ifeq ($(TARGET),smash64ds-battle-playable-canonical-hwtri)
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)
+# This is the user-testable fast-iteration ROM, not a generic build alias.
+# Keep its complete realtime/live-input configuration intrinsic to the target
+# so a direct make invocation cannot silently emit a non-user-facing ROM.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 1
+override NDS_RENDERER_FAST_RUN_DEFAULT := 8
+endif
+ifeq ($(TARGET),smash64ds-battle-playable-coarse-mipcache-hwtri)
+# Cut-G is a separate falsifier target. Keep the exact coarse ROM untouched.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 1
+override NDS_RENDERER_FAST_RUN_DEFAULT := 8
+override NDS_SCENE_MIP_CACHE_LAB := 1
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-forensic-hwtri)
 override NDS_DEBUG_HUD := 0
@@ -467,6 +488,16 @@ CFLAGS += -Os
 else
 $(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use a harness name from scripts/lib/harness-registry.ps1, including battle_mariofox_stage_mplivehit_status_loop or menu_chain_mariofox_stage_mplivehit_status_loop)
 endif
+
+# Profile 2 is an exact semantic oracle rather than a latency benchmark.  Its
+# instrumentation and paired native/generic paths are large enough that an O2
+# realtime build can crowd the BattleShip scene arena below its verified
+# 0x130000-byte floor.  Keep only the forensic target size-optimized; profile
+# 0/1 battle-playable ROMs retain the O2 performance contract.
+ifeq ($(TARGET),smash64ds-battle-playable-forensic-hwtri)
+CFLAGS += -Os
+endif
+
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
@@ -1026,6 +1057,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY $(NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY)'; \
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
+		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
+		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \

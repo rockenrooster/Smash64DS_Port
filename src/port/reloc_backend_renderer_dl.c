@@ -11,6 +11,7 @@
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
 #define NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX 64u
+#define NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX 4u
 #define NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT 4u
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT 256u
@@ -47,6 +48,77 @@ static const Gfx sNdsRendererAdapterEmptySegmentEDL[1] = {
 };
 
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static NDSRendererNativeMaterial
+    sNdsRendererAdapterNativeOwnerMaterials[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED]
+        [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
+static s32 sNdsRendererAdapterNativeOwnerTextureCurr[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED]
+    [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
+static s32 sNdsRendererAdapterNativeOwnerTextureNext[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED]
+    [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
+static u32 sNdsRendererAdapterNativeOwnerTextureCounts[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+static NDSRendererMatrix20p12
+    sNdsRendererAdapterNativeOwnerProjection;
+static NDSRendererMatrix20p12
+    sNdsRendererAdapterNativeOwnerModelviews[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+#else
+static NDSRendererNativeMaterial
+    sNdsRendererAdapterNativeMaterials[
+        NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
+#endif
+
+typedef struct NDSRendererAdapterNativeOwnerWorkspace
+{
+    NDSRelocLoadedFile *loaded[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    DObj *matrix_bindings[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    DObj *material_dobjs[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    const NDSRendererMatrix20p12 *modelviews[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    NDSRendererMatrix20p12 composed_matrices[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    NDSRendererConfig production_configs[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    NDSRendererNativeFighterRoot production_roots[
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+#endif
+    u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+} NDSRendererAdapterNativeOwnerWorkspace;
+
+/* Fighter display callbacks are serialized by taskman. Keep their whole-owner
+ * preflight tables off the already-tight nested task stack. */
+static NDSRendererAdapterNativeOwnerWorkspace
+    sNdsRendererAdapterNativeOwnerWorkspace;
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+typedef struct NDSRendererAdapterNativeOwnerValidationCache
+{
+    const void *data;
+    u32 asset_id;
+    u32 owner_generation;
+    u32 data_size;
+    u32 root_count;
+    u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u32 valid;
+} NDSRendererAdapterNativeOwnerValidationCache;
+
+/* The generated tables and relocated owner payload are immutable for one
+ * reloc generation.  Prove every selected root/material identity each draw,
+ * but do the full generated-array/span walk only when that identity changes. */
+static NDSRendererAdapterNativeOwnerValidationCache
+    sNdsRendererAdapterNativeOwnerValidationCache[2];
+#endif
+
 typedef struct NDSRendererAdapterCameraCacheEntry
 {
     const CObj *cobj;
@@ -1837,6 +1909,138 @@ static void ndsRendererAdapterPrepareInitialMatrices(
         *modelview_ptr = modelview;
     }
 }
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static sb32 ndsRendererAdapterComposeNativeRootMatrix(
+    const NDSRendererMatrix20p12 *modelview,
+    const NDSRendererMatrix20p12 *projection,
+    NDSRendererMatrix20p12 *out)
+{
+    if (out == NULL)
+    {
+        return FALSE;
+    }
+    if ((modelview != NULL) && (projection != NULL))
+    {
+        ndsRendererMtxMul20p12(modelview, projection, out);
+        return TRUE;
+    }
+    if (modelview != NULL)
+    {
+        *out = *modelview;
+        return TRUE;
+    }
+    if (projection != NULL)
+    {
+        *out = *projection;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
+    DObj *root,
+    DObj *const *bindings,
+    u32 binding_count,
+    CObj *cobj,
+    const NDSRendererMatrix20p12 **projection_ptr,
+    const NDSRendererMatrix20p12 **modelview_ptrs)
+{
+    NDSRendererMatrix20p12 camera_projection;
+    NDSRendererMatrix20p12 camera_modelview;
+    NDSRendererMatrix20p12 world;
+    u32 camera_projection_valid = FALSE;
+    u32 camera_modelview_valid = FALSE;
+    u32 binding_index;
+
+    if ((bindings == NULL) || (projection_ptr == NULL) ||
+        (modelview_ptrs == NULL) ||
+        (binding_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return FALSE;
+    }
+    *projection_ptr = NULL;
+    for (binding_index = 0u;
+         binding_index < binding_count;
+         binding_index++)
+    {
+        modelview_ptrs[binding_index] = NULL;
+    }
+
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, &camera_projection, &camera_projection_valid,
+        &camera_modelview, &camera_modelview_valid);
+    if (camera_projection_valid != FALSE)
+    {
+        sNdsRendererAdapterNativeOwnerProjection = camera_projection;
+        *projection_ptr = &sNdsRendererAdapterNativeOwnerProjection;
+    }
+
+    (void)root;
+    /* The ordinary per-frame DObj world cache already records every prefix
+     * built for a binding.  Walking each selected binding through that cache
+     * visits the fighter hierarchy once without the old per-node linear scan
+     * over all 14/18 selected roots. */
+    for (binding_index = 0u;
+         binding_index < binding_count;
+         binding_index++)
+    {
+        if (bindings[binding_index] != NULL)
+        {
+            if (ndsRendererAdapterBuildDObjWorldMatrix(
+                    bindings[binding_index], &world) == FALSE)
+            {
+                return FALSE;
+            }
+            if (camera_modelview_valid != FALSE)
+            {
+                ndsRendererMtxMulAffine20p12(
+                    &world, &camera_modelview,
+                    &sNdsRendererAdapterNativeOwnerModelviews[
+                        binding_index]);
+            }
+            else
+            {
+                sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
+                    world;
+            }
+            modelview_ptrs[binding_index] =
+                &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
+        }
+        else if (camera_modelview_valid != FALSE)
+        {
+            sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
+                camera_modelview;
+            modelview_ptrs[binding_index] =
+                &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
+        }
+    }
+    return ((*projection_ptr != NULL) ||
+            (camera_modelview_valid != FALSE) ||
+            (binding_count == 0u)) ? TRUE : FALSE;
+}
+static u32 ndsRendererAdapterNormalizeNativeGeometryMode(u32 geometry_mode)
+{
+    const u32 legacy_cull_front = 0x00001000u;
+    const u32 legacy_cull_back = G_CULL_BACK;
+    u32 legacy = geometry_mode &
+        (legacy_cull_front | legacy_cull_back);
+
+    if (legacy != 0u)
+    {
+        geometry_mode &= ~(legacy_cull_front | legacy_cull_back);
+        if ((legacy & legacy_cull_front) != 0u)
+        {
+            geometry_mode |= NDS_RENDERER_GEOM_CULL_FRONT;
+        }
+        if ((legacy & legacy_cull_back) != 0u)
+        {
+            geometry_mode |= NDS_RENDERER_GEOM_CULL_BACK;
+        }
+    }
+    return geometry_mode;
+}
+#endif
 
 static s32 ndsFighterDLScanRangeInTaskmanArena(const void *ptr, size_t bytes)
 {
@@ -4002,6 +4206,7 @@ static u32 ndsRendererOwnerHashResolver(
     return hash;
 }
 
+
 static void ndsRendererOwnerSnapshotStats(
     const NDSRendererStats *stats, NDSRendererOwnerStatsSnapshot *snapshot)
 {
@@ -4815,6 +5020,517 @@ static void ndsRendererAdapterEmitTexture(Gfx *cmd,
         (t & 0xffffu);
 }
 
+static void ndsRendererAdapterNativeMaterialImage(
+    u32 fmt, u32 siz, u32 width, const void *image,
+    u32 *out_w0, u32 *out_image)
+{
+    if ((out_w0 == NULL) || (out_image == NULL))
+    {
+        return;
+    }
+    *out_w0 =
+        (NDS_FIGHTER_DL_OP_SETTIMG << 24) |
+        ((fmt & 0x7u) << 21) |
+        ((siz & 0x3u) << 19) |
+        (((width != 0u) ? (width - 1u) : 0u) & 0x0fffu);
+    *out_image = (u32)(uintptr_t)image;
+}
+
+static void ndsRendererAdapterNativeMaterialTile(
+    u32 fmt, u32 siz, u32 line, u32 tmem, u32 tile, u32 palette,
+    u32 cmt, u32 maskt, u32 shiftt, u32 cms, u32 masks, u32 shifts,
+    u32 *out_w0, u32 *out_w1)
+{
+    if ((out_w0 == NULL) || (out_w1 == NULL))
+    {
+        return;
+    }
+    *out_w0 =
+        (NDS_FIGHTER_DL_OP_SETTILE << 24) |
+        ((fmt & 0x7u) << 21) |
+        ((siz & 0x3u) << 19) |
+        ((line & 0x01ffu) << 9) |
+        (tmem & 0x01ffu);
+    *out_w1 =
+        ((tile & 0x7u) << 24) |
+        ((palette & 0x0fu) << 20) |
+        ((cmt & 0x3u) << 18) |
+        ((maskt & 0x0fu) << 14) |
+        ((shiftt & 0x0fu) << 10) |
+        ((cms & 0x3u) << 8) |
+        ((masks & 0x0fu) << 4) |
+        (shifts & 0x0fu);
+}
+
+static void ndsRendererAdapterNativeMaterialTileSize(
+    u32 tile, s32 uls, s32 ult, s32 lrs, s32 lrt,
+    u32 *out_w0, u32 *out_w1)
+{
+    if ((out_w0 == NULL) || (out_w1 == NULL))
+    {
+        return;
+    }
+    *out_w0 =
+        (NDS_FIGHTER_DL_OP_SETTILESIZE << 24) |
+        (((u32)uls & 0x0fffu) << 12) |
+        ((u32)ult & 0x0fffu);
+    *out_w1 =
+        ((tile & 0x7u) << 24) |
+        (((u32)lrs & 0x0fffu) << 12) |
+        ((u32)lrt & 0x0fffu);
+}
+
+static sb32 ndsRendererAdapterBuildNativeMaterial(
+    MObj *mobj, NDSRendererNativeMaterial *out)
+{
+    u32 flags;
+    f32 scau = 0.0F;
+    f32 scav = 0.0F;
+    f32 trau = 0.0F;
+    f32 trav = 0.0F;
+    f32 scrollu = 0.0F;
+    f32 scrollv = 0.0F;
+    s32 uls;
+    s32 ult;
+    s32 s;
+    s32 t;
+
+    if ((mobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    bzero(out, sizeof(*out));
+    flags = ndsRendererAdapterMaterialFlags(mobj);
+    out->command_count = 1u; /* ENDDL */
+    ndsRendererAdapterMaterialTextureState(
+        mobj, flags, &scau, &scav, &trau, &trav, &scrollu, &scrollv);
+
+    if (((flags & MOBJ_FLAG_PALETTE) == 0u) &&
+        (mobj->sub.palettes != NULL))
+    {
+        const void *palette = ndsRendererAdapterReadPointerEntry(
+            mobj->sub.palettes, (s32)mobj->palette_id);
+
+        if (palette != NULL)
+        {
+            out->effects |= NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE;
+            ndsRendererAdapterNativeMaterialImage(
+                G_IM_FMT_RGBA, G_IM_SIZ_16b, 1u, palette,
+                &out->palette_image_w0, &out->palette_image);
+            out->command_count++;
+        }
+    }
+    if ((flags & MOBJ_FLAG_PALETTE) != 0u)
+    {
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE;
+        ndsRendererAdapterNativeMaterialImage(
+            G_IM_FMT_RGBA, G_IM_SIZ_16b, 1u,
+            ndsRendererAdapterReadPointerEntry(
+                mobj->sub.palettes, (s32)mobj->palette_id),
+            &out->palette_image_w0, &out->palette_image);
+        out->command_count++;
+        if ((flags & (MOBJ_FLAG_SPLIT | MOBJ_FLAG_ALPHA)) != 0u)
+        {
+            out->effects |= NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT;
+            ndsRendererAdapterNativeMaterialTile(
+                G_IM_FMT_RGBA, G_IM_SIZ_4b, 0u, 0x0100u, 5u, 0u,
+                NDS_RENDERER_ADAPTER_G_TX_WRAP,
+                NDS_RENDERER_ADAPTER_G_TX_NOMASK,
+                NDS_RENDERER_ADAPTER_G_TX_NOLOD,
+                NDS_RENDERER_ADAPTER_G_TX_WRAP,
+                NDS_RENDERER_ADAPTER_G_TX_NOMASK,
+                NDS_RENDERER_ADAPTER_G_TX_NOLOD,
+                &out->palette_tile_w0, &out->palette_tile_w1);
+            out->palette_tlut_w1 =
+                (5u << 24) |
+                (((mobj->sub.siz == G_IM_SIZ_8b) ? 0xffu : 0x0fu) << 14);
+            out->sync_count += 3u;
+            out->command_count += 5u;
+        }
+    }
+    if ((flags & MOBJ_FLAG_LIGHT1) != 0u)
+    {
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_LIGHT1;
+        out->light1 = ndsRendererAdapterPackColor(&mobj->sub.light1color);
+        out->command_count += 2u;
+    }
+    if ((flags & MOBJ_FLAG_LIGHT2) != 0u)
+    {
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_LIGHT2;
+        out->light2 = ndsRendererAdapterPackColor(&mobj->sub.light2color);
+        out->command_count += 2u;
+    }
+    if ((flags & (MOBJ_FLAG_PRIMCOLOR | MOBJ_FLAG_FRAC | 0x8u)) != 0u)
+    {
+        u32 level;
+
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_PRIM;
+        if ((flags & MOBJ_FLAG_FRAC) != 0u)
+        {
+            s32 trunc = (s32)mobj->lfrac;
+
+            level = ndsRendererAdapterClampU8F32(
+                (mobj->lfrac - (f32)trunc) * 256.0F);
+            mobj->texture_id_curr = trunc;
+            mobj->texture_id_next = trunc + 1;
+        }
+        else
+        {
+            level = ndsRendererAdapterClampU8F32(mobj->lfrac * 255.0F);
+        }
+        out->prim_w0 =
+            (NDS_FIGHTER_DL_OP_SETPRIMCOLOR << 24) |
+            (((u32)mobj->sub.prim_m & 0xffu) << 8) |
+            (level & 0xffu);
+        out->prim_w1 = ndsRendererAdapterPackColor(&mobj->sub.primcolor);
+        out->command_count++;
+    }
+    if ((flags & MOBJ_FLAG_ENVCOLOR) != 0u)
+    {
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_ENV;
+        out->env_color = ndsRendererAdapterPackColor(&mobj->sub.envcolor);
+        out->command_count++;
+    }
+    if ((flags & MOBJ_FLAG_BLENDCOLOR) != 0u)
+    {
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_BLEND;
+        out->blend_color =
+            ndsRendererAdapterPackColor(&mobj->sub.blendcolor);
+        out->command_count++;
+    }
+    if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_SPLIT)) != 0u)
+    {
+        u32 block_siz = (mobj->sub.block_siz == G_IM_SIZ_32b) ?
+            G_IM_SIZ_32b : G_IM_SIZ_16b;
+
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_BLOCK_IMAGE;
+        ndsRendererAdapterNativeMaterialImage(
+            mobj->sub.block_fmt, block_siz, 1u,
+            ndsRendererAdapterReadPointerEntry(
+                mobj->sub.sprites, mobj->texture_id_next),
+            &out->block_image_w0, &out->block_image);
+        out->command_count++;
+        if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_ALPHA)) != 0u)
+        {
+            u32 texels = 0u;
+            u32 dxt = 0u;
+
+            ndsRendererAdapterMaterialLoadBlock(mobj, &texels, &dxt);
+            if (texels > NDS_RENDERER_ADAPTER_G_TX_LDBLK_MAX_TXL)
+            {
+                texels = NDS_RENDERER_ADAPTER_G_TX_LDBLK_MAX_TXL;
+            }
+            out->effects |= NDS_RENDERER_NATIVE_MATERIAL_LOAD_BLOCK;
+            out->load_block_w0 = NDS_FIGHTER_DL_OP_LOADBLOCK << 24;
+            out->load_block_w1 =
+                (6u << 24) | ((texels & 0x0fffu) << 12) |
+                (dxt & 0x0fffu);
+            out->sync_count += 2u;
+            out->command_count += 3u;
+        }
+    }
+    if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_ALPHA)) != 0u)
+    {
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE;
+        ndsRendererAdapterNativeMaterialImage(
+            mobj->sub.fmt, mobj->sub.siz, 1u,
+            ndsRendererAdapterReadPointerEntry(
+                mobj->sub.sprites, mobj->texture_id_curr),
+            &out->current_image_w0, &out->current_image);
+        out->command_count++;
+    }
+    if ((flags & 0x20u) != 0u)
+    {
+        if (mobj->sub.unk10 == 2)
+        {
+            uls = (ABSF(scau) > (1.0F / 65535.0F)) ?
+                (s32)((((f32)mobj->sub.unk0C * trau) / scau) * 4.0F) : 0;
+            ult = (ABSF(scav) > (1.0F / 65535.0F)) ?
+                (s32)((((f32)mobj->sub.unk0E * trav) / scav) * 4.0F) : 0;
+            if (uls < 0) { uls = 0; }
+            if (ult < 0) { ult = 0; }
+        }
+        else
+        {
+            uls = (ABSF(scau) > (1.0F / 65535.0F)) ?
+                (s32)(((((f32)mobj->sub.unk0C * trau) +
+                         (f32)mobj->sub.unk0A) / scau) * 4.0F) : 0;
+            ult = (ABSF(scav) > (1.0F / 65535.0F)) ?
+                (s32)((((((1.0F - scav) - trav) *
+                          (f32)mobj->sub.unk0E) +
+                         (f32)mobj->sub.unk0A) / scav) * 4.0F) : 0;
+        }
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE;
+        ndsRendererAdapterNativeMaterialTileSize(
+            NDS_RENDERER_ADAPTER_G_TX_RENDERTILE, uls, ult,
+            (((s32)mobj->sub.unk0C - 1) << 2) + uls,
+            (((s32)mobj->sub.unk0E - 1) << 2) + ult,
+            &out->render_tile_size_w0, &out->render_tile_size_w1);
+        out->command_count++;
+    }
+    if ((flags & 0x40u) != 0u)
+    {
+        uls = (ABSF(scau) > (1.0F / 65535.0F)) ?
+            (s32)(((((f32)mobj->sub.unk38 * scrollu) +
+                     (f32)mobj->sub.unk0A) / scau) * 4.0F) : 0;
+        ult = (ABSF(scav) > (1.0F / 65535.0F)) ?
+            (s32)((((((1.0F - scav) - scrollv) *
+                      (f32)mobj->sub.unk3A) +
+                     (f32)mobj->sub.unk0A) / scav) * 4.0F) : 0;
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_SCROLL_TILE_SIZE;
+        ndsRendererAdapterNativeMaterialTileSize(
+            1u, uls, ult,
+            (((s32)mobj->sub.unk38 - 1) << 2) + uls,
+            (((s32)mobj->sub.unk3A - 1) << 2) + ult,
+            &out->scroll_tile_size_w0, &out->scroll_tile_size_w1);
+        out->command_count++;
+    }
+    if ((flags & MOBJ_FLAG_TEXTURE) != 0u)
+    {
+        if (mobj->sub.unk10 == 2)
+        {
+            s = (ABSF(scau) > (1.0F / 65535.0F)) ?
+                (s32)(((f32)mobj->sub.unk0C * 64.0F) / scau) : 0;
+            t = (ABSF(scav) > (1.0F / 65535.0F)) ?
+                (s32)(((f32)mobj->sub.unk0E * 64.0F) / scav) : 0;
+        }
+        else
+        {
+            s = ((mobj->sub.unk08 != 0) &&
+                 (ABSF(scau) > (1.0F / 65535.0F))) ?
+                (s32)((2097152.0F / (f32)mobj->sub.unk08) / scau) : 0;
+            t = ((mobj->sub.unk08 != 0) &&
+                 (ABSF(scav) > (1.0F / 65535.0F))) ?
+                (s32)((2097152.0F / (f32)mobj->sub.unk08) / scav) : 0;
+        }
+        if (s > 0xffff) { s = 0xffff; }
+        if (t > 0xffff) { t = 0xffff; }
+        out->effects |= NDS_RENDERER_NATIVE_MATERIAL_TEXTURE;
+        out->texture_w0 =
+            (NDS_FIGHTER_DL_OP_TEXTURE << 24) |
+            (NDS_RENDERER_ADAPTER_G_TX_RENDERTILE << 8) |
+            (NDS_RENDERER_ADAPTER_G_ON << 1);
+        out->texture_w1 =
+            (((u32)s & 0xffffu) << 16) | ((u32)t & 0xffffu);
+        out->command_count++;
+    }
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterPrepareNativeMaterials(
+    DObj *dobj, NDSRendererNativeMaterial *materials,
+    u32 capacity, u32 *out_count)
+{
+    MObj *mobj;
+    u32 count = 0u;
+
+    if ((materials == NULL) || (out_count == NULL))
+    {
+        return FALSE;
+    }
+    *out_count = 0u;
+    if ((dobj == NULL) || (dobj->mobj == NULL))
+    {
+        return TRUE;
+    }
+    for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
+    {
+        count++;
+        if (count > capacity)
+        {
+            return FALSE;
+        }
+    }
+    count = 0u;
+    for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
+    {
+        if (ndsRendererAdapterBuildNativeMaterial(
+                mobj, &materials[count]) == FALSE)
+        {
+            return FALSE;
+        }
+        count++;
+    }
+    *out_count = count;
+    return TRUE;
+}
+
+static u32 ndsRendererAdapterSaveNativeMaterialTextureIds(
+    DObj *dobj,
+    s32 *curr,
+    s32 *next,
+    u32 capacity)
+{
+    MObj *mobj;
+    u32 count = 0u;
+
+    if ((dobj == NULL) || (curr == NULL) || (next == NULL))
+    {
+        return 0u;
+    }
+    for (mobj = dobj->mobj;
+         (mobj != NULL) && (count < capacity);
+         mobj = mobj->next)
+    {
+        curr[count] = mobj->texture_id_curr;
+        next[count] = mobj->texture_id_next;
+        count++;
+    }
+    return count;
+}
+
+static void ndsRendererAdapterRestoreNativeMaterialTextureIds(
+    DObj *dobj,
+    const s32 *curr,
+    const s32 *next,
+    u32 count)
+{
+    MObj *mobj;
+    u32 i = 0u;
+
+    if ((dobj == NULL) || (curr == NULL) || (next == NULL))
+    {
+        return;
+    }
+    for (mobj = dobj->mobj;
+         (mobj != NULL) && (i < count);
+         mobj = mobj->next, i++)
+    {
+        mobj->texture_id_curr = curr[i];
+        mobj->texture_id_next = next[i];
+    }
+}
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static sb32 ndsRendererAdapterValidateNativeOwnerMaterials(
+    const NDSRendererNativeMaterial *materials,
+    u32 material_count)
+{
+    u32 i;
+
+    if ((material_count != 0u) && (materials == NULL))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < material_count; i++)
+    {
+        const NDSRendererNativeMaterial *material = &materials[i];
+        u32 effects = material->effects;
+
+        if (((effects & NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE) != 0u) &&
+            (ndsRelocFindLoadedFileContaining(
+                 (const void *)(uintptr_t)material->palette_image,
+                 1u) == NULL))
+        {
+            return FALSE;
+        }
+        if (((effects & NDS_RENDERER_NATIVE_MATERIAL_BLOCK_IMAGE) != 0u) &&
+            (ndsRelocFindLoadedFileContaining(
+                 (const void *)(uintptr_t)material->block_image,
+                 1u) == NULL))
+        {
+            return FALSE;
+        }
+        if (((effects & NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE) != 0u) &&
+            (ndsRelocFindLoadedFileContaining(
+                 (const void *)(uintptr_t)material->current_image,
+                 1u) == NULL))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static void ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
+    DObj *const *material_dobjs,
+    u32 root_count)
+{
+    if (material_dobjs == NULL)
+    {
+        return;
+    }
+    /* A contract may select one material DObj more than once. Roll back in
+     * reverse event order so each saved pre-event state is restored and the
+     * earliest snapshot remains live for the ordinary renderer fallback. */
+    while (root_count != 0u)
+    {
+        u32 root_index = --root_count;
+
+        ndsRendererAdapterRestoreNativeMaterialTextureIds(
+            material_dobjs[root_index],
+            sNdsRendererAdapterNativeOwnerTextureCurr[root_index],
+            sNdsRendererAdapterNativeOwnerTextureNext[root_index],
+            sNdsRendererAdapterNativeOwnerTextureCounts[root_index]);
+    }
+}
+#endif
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static sb32 ndsRendererAdapterValidateNativeOwnerCached(
+    u32 slot,
+    const NDSRelocLoadedFile *owner_file,
+    u32 root_count,
+    const u32 *root_offsets,
+    const u32 *material_counts)
+{
+    NDSRendererAdapterNativeOwnerValidationCache *cache;
+    u32 i;
+    sb32 identity_matches;
+
+    if ((slot > 1u) || (owner_file == NULL) ||
+        (root_offsets == NULL) || (material_counts == NULL) ||
+        (root_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return FALSE;
+    }
+    cache = &sNdsRendererAdapterNativeOwnerValidationCache[slot];
+    identity_matches =
+        ((cache->valid != 0u) &&
+         (cache->data == owner_file->data) &&
+         (cache->asset_id == owner_file->asset_id) &&
+         (cache->owner_generation == owner_file->owner_generation) &&
+         (cache->data_size == owner_file->data_size) &&
+         (cache->root_count == root_count)) ? TRUE : FALSE;
+    if (identity_matches != FALSE)
+    {
+        for (i = 0u; i < root_count; i++)
+        {
+            if ((cache->root_offsets[i] != root_offsets[i]) ||
+                (cache->material_counts[i] != material_counts[i]))
+            {
+                identity_matches = FALSE;
+                break;
+            }
+        }
+    }
+    if (identity_matches != FALSE)
+    {
+        return TRUE;
+    }
+
+    cache->valid = FALSE;
+    if (ndsRendererValidateNativeFighterOwner(
+            slot, owner_file->data_size, root_count,
+            root_offsets, material_counts) == FALSE)
+    {
+        return FALSE;
+    }
+    cache->data = owner_file->data;
+    cache->asset_id = owner_file->asset_id;
+    cache->owner_generation = owner_file->owner_generation;
+    cache->data_size = owner_file->data_size;
+    cache->root_count = root_count;
+    for (i = 0u; i < root_count; i++)
+    {
+        cache->root_offsets[i] = root_offsets[i];
+        cache->material_counts[i] = material_counts[i];
+    }
+    cache->valid = TRUE;
+    return TRUE;
+}
+#endif
+
 static Gfx *ndsRendererAdapterEmitMaterialCommands(Gfx *branch_dl, MObj *mobj)
 {
     u32 flags = ndsRendererAdapterMaterialFlags(mobj);
@@ -5110,6 +5826,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     NDSRendererStats *render_stats;
     NDSFighterDLDrawState state;
     NDSRendererCommandCallback callback;
+    void *callback_user;
     NDSRendererMatrix20p12 initial_projection;
     NDSRendererMatrix20p12 initial_modelview;
     const NDSRendererMatrix20p12 *initial_projection_ptr;
@@ -5247,6 +5964,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     config.user = &state;
     callback = (ndsRendererHardwareNoOracleEnabled() != FALSE) ?
         NULL : ndsFighterMarioFoxVisitDLDrawCommand;
+    callback_user = &state;
 
     render_stats = &stats;
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -5294,7 +6012,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         dl,
         &config,
         callback,
-        &state,
+        callback_user,
         render_stats,
         (sNdsRendererAdapterStagePersistentActive != FALSE) ?
             &sNdsRendererAdapterStageVertexCache : NULL);
@@ -5457,6 +6175,7 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
         break;
     }
 }
+
 #else
 void ndsRendererAdapterBeginStageTraversal(void)
 {
@@ -5475,6 +6194,7 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
     (void)camera_gobj;
     (void)initial_geometry_mode;
 }
+
 #endif
 
 static s32 ndsFighterDLDrawAxisCoord(const NDSFighterDLDrawVtx *vtx,
@@ -7679,6 +8399,99 @@ static const Gfx *ndsFighterDLAllDrawResolveBranch(const Gfx *dl,
     return ndsFighterDLDrawResolveBranch(dl, resolve_kind, user);
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static sb32 ndsRendererAdapterBuildNativeProductionInputs(
+    u32 slot,
+    NDSRelocLoadedFile *owner_file,
+    const NDSFighterDLAllDrawCollection *collection,
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *const *modelviews,
+    NDSFighterDLDrawState *resolver,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+{
+    u32 i;
+
+    if ((slot > 1u) || (owner_file == NULL) ||
+        (owner_file->data == NULL) || (collection == NULL) ||
+        (modelviews == NULL) || (resolver == NULL) ||
+        (workspace == NULL) || (collection->selected_count == 0u) ||
+        (collection->selected_count >
+         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return FALSE;
+    }
+
+    resolver->primary_file = owner_file;
+    resolver->slot = slot;
+    resolver->segment_e_base = NULL;
+    resolver->segment_e_end = NULL;
+
+    for (i = 0u; i < collection->selected_count; i++)
+    {
+        NDSRendererConfig *config = &workspace->production_configs[i];
+        NDSRendererNativeFighterRoot *root =
+            &workspace->production_roots[i];
+        const NDSFighterDisplayContractEvent *event =
+            (sNdsFighterDisplayContractPlayback != FALSE) ?
+                &sNdsFighterDisplayContract.events[
+                    collection->indices[i]] : NULL;
+
+        *config = (NDSRendererConfig){0};
+        *root = (NDSRendererNativeFighterRoot){0};
+
+        config->max_depth = 8u;
+        config->max_commands = 2048u;
+        config->max_list_commands = 512u;
+        config->initial_projection = projection;
+        config->initial_modelview = modelviews[i];
+        config->initial_geometry_mode =
+            (event != NULL) ? event->geometry_mode : 0u;
+        config->texture_data_layout =
+            NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+        config->validate_range = ndsFighterDLAllDrawValidateRange;
+        config->immutable_command_span =
+            ndsRendererAdapterImmutableCommandSpan;
+        config->resolve_branch = ndsFighterDLAllDrawResolveBranch;
+        config->resolve_data = ndsFighterDLDrawResolveRendererData;
+        config->user = resolver;
+
+        if ((modelviews[i] == NULL) ||
+            (ndsRendererAdapterComposeNativeRootMatrix(
+                 modelviews[i], projection,
+                 &workspace->composed_matrices[i]) == FALSE))
+        {
+            return FALSE;
+        }
+
+        root->root_offset = workspace->root_offsets[i];
+        root->material_count = workspace->material_counts[i];
+        root->composed_matrix = &workspace->composed_matrices[i];
+        root->modelview_matrix = modelviews[i];
+        root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
+        root->config = config;
+
+        if (event != NULL)
+        {
+            root->preamble.geometry_mode = event->geometry_mode;
+            root->preamble.cycle_type = event->cycle_type;
+            root->preamble.render_mode = event->render_mode;
+            root->preamble.prim_color = event->prim_color;
+            root->preamble.env_color = event->env_color;
+            root->preamble.flags = NDS_RENDERER_NATIVE_PREAMBLE_VALID;
+            if (event->light_valid != 0u)
+            {
+                root->preamble.light_dir_x = event->light.l.dir[0];
+                root->preamble.light_dir_y = event->light.l.dir[1];
+                root->preamble.light_dir_z = event->light.l.dir[2];
+                root->preamble.flags |=
+                    NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID;
+            }
+        }
+    }
+    return TRUE;
+}
+#endif
+
 static void ndsFighterDLAllDrawRecordScreenPoint(
     s32 x, s32 y, u32 *screen_valid,
     s32 *screen_min_x, s32 *screen_max_x,
@@ -8426,6 +9239,34 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 i;
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererProfileOwner owner_id;
+    NDSRelocLoadedFile *native_owner_file = NULL;
+    NDSRelocLoadedFile **native_owner_loaded =
+        sNdsRendererAdapterNativeOwnerWorkspace.loaded;
+    u32 *native_owner_root_offsets =
+        sNdsRendererAdapterNativeOwnerWorkspace.root_offsets;
+    u32 *native_owner_material_counts =
+        sNdsRendererAdapterNativeOwnerWorkspace.material_counts;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSRendererNativeMaterial *native_materials =
+        &sNdsRendererAdapterNativeOwnerMaterials[0u][0u];
+    DObj **native_owner_matrix_bindings =
+        sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings;
+    DObj **native_owner_material_dobjs =
+        sNdsRendererAdapterNativeOwnerWorkspace.material_dobjs;
+    const NDSRendererMatrix20p12 **native_owner_modelviews =
+        sNdsRendererAdapterNativeOwnerWorkspace.modelviews;
+    const NDSRendererMatrix20p12 *native_owner_projection = NULL;
+    u32 native_owner_material_saved_root_count = 0u;
+    sb32 native_owner_started = FALSE;
+    sb32 native_owner_failed = FALSE;
+    sb32 native_owner_production_attempted = FALSE;
+    sb32 native_owner_production_mode;
+#else
+    NDSRendererNativeMaterial *native_materials =
+        sNdsRendererAdapterNativeMaterials;
+#endif
+    u32 native_material_count = 0u;
+    sb32 native_owner_enabled;
 #endif
 
     if ((slot > 1u) ||
@@ -8511,7 +9352,258 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_HW_TRIANGLES
     owner_id = (slot == 0u) ? NDS_RENDERER_PROFILE_OWNER_MARIO :
                               NDS_RENDERER_PROFILE_OWNER_FOX;
+    native_owner_enabled =
+        (((gNdsRendererFastRunMode ==
+           NDS_RENDERER_FAST_RUN_NATIVE_MARIO) && (slot == 0u)) ||
+         ((gNdsRendererFastRunMode ==
+           NDS_RENDERER_FAST_RUN_NATIVE_FOX) && (slot == 1u)) ||
+         (gNdsRendererFastRunMode ==
+          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
+         (gNdsRendererFastRunMode ==
+          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)) ? TRUE :
+                                                                    FALSE;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    native_owner_production_mode =
+        (gNdsRendererFastRunMode ==
+         NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ? TRUE :
+                                                                  FALSE;
+#endif
     ndsRendererProfileSetOwner(owner_id);
+    if (native_owner_enabled != FALSE)
+    {
+        u32 expected_asset_id = (slot == 0u) ? 0x128u : 0x139u;
+
+        if ((collection.selected_count == 0u) ||
+            (collection.selected_count >
+             NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+        {
+            native_owner_enabled = FALSE;
+        }
+        for (i = 0u;
+             (native_owner_enabled != FALSE) &&
+             (i < collection.selected_count);
+             i++)
+        {
+            const NDSFighterDisplayContractEvent *event =
+                (sNdsFighterDisplayContractPlayback != FALSE) ?
+                    &sNdsFighterDisplayContract.events[
+                        collection.indices[i]] : NULL;
+            const Gfx *native_dl =
+                (event != NULL) ? event->dl : collection.dobjs[i]->dl;
+            DObj *material_dobj =
+                (event != NULL) ? event->material_dobj :
+                                  collection.dobjs[i];
+            NDSRelocLoadedFile *loaded =
+                ndsRelocFindLoadedFileContaining(
+                    native_dl, sizeof(*native_dl));
+            MObj *mobj;
+            u32 material_count = 0u;
+
+            if ((native_dl == NULL) || (loaded == NULL) ||
+                (loaded->data == NULL) ||
+                (loaded->asset_id != expected_asset_id) ||
+                ((native_owner_file != NULL) &&
+                 (loaded != native_owner_file)) ||
+                (loaded->data_size < sizeof(*native_dl)) ||
+                ((uintptr_t)native_dl < (uintptr_t)loaded->data) ||
+                (((uintptr_t)native_dl - (uintptr_t)loaded->data) >
+                 (loaded->data_size - sizeof(*native_dl))))
+            {
+                native_owner_enabled = FALSE;
+                break;
+            }
+            native_owner_file = loaded;
+            native_owner_loaded[i] = loaded;
+            native_owner_root_offsets[i] =
+                (u32)((uintptr_t)native_dl - (uintptr_t)loaded->data);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            native_owner_matrix_bindings[i] =
+                (event != NULL) ? event->matrix_dobj :
+                                  collection.dobjs[i];
+            native_owner_material_dobjs[i] = material_dobj;
+#endif
+            for (mobj = (material_dobj != NULL) ? material_dobj->mobj :
+                                                  NULL;
+                 mobj != NULL;
+                 mobj = mobj->next)
+            {
+                material_count++;
+                if (material_count >
+                    NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX)
+                {
+                    native_owner_enabled = FALSE;
+                    break;
+                }
+            }
+            native_owner_material_counts[i] = material_count;
+        }
+        if ((native_owner_enabled != FALSE) &&
+            ((native_owner_file == NULL) ||
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            (ndsRendererAdapterValidateNativeOwnerCached(
+                 slot, native_owner_file,
+                 collection.selected_count,
+                 native_owner_root_offsets,
+                 native_owner_material_counts) == FALSE)))
+#else
+            (ndsRendererValidateNativeFighterOwner(
+                 slot, native_owner_file->data_size,
+                 collection.selected_count,
+                 native_owner_root_offsets,
+                 native_owner_material_counts) == FALSE)))
+#endif
+        {
+            native_owner_enabled = FALSE;
+        }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (native_owner_enabled != FALSE)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            u32 owner_matrix_start = cpuGetTiming();
+#endif
+            if (ndsRendererAdapterPrepareNativeOwnerMatrices(
+                    root, native_owner_matrix_bindings,
+                    collection.selected_count,
+                    (gGCCurrentCamera != NULL) ?
+                        CObjGetStruct(gGCCurrentCamera) : NULL,
+                    &native_owner_projection,
+                    native_owner_modelviews) == FALSE)
+            {
+                native_owner_enabled = FALSE;
+            }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            {
+                u32 owner_matrix_ticks =
+                    cpuGetTiming() - owner_matrix_start;
+
+                gNdsRendererProfileMatrixTicks += owner_matrix_ticks;
+            }
+#endif
+        }
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (native_owner_enabled != FALSE)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            u32 owner_material_start = cpuGetTiming();
+#endif
+            native_owner_material_saved_root_count = 0u;
+            for (i = 0u; i < collection.selected_count; i++)
+            {
+                u32 prepared_material_count = 0u;
+
+                sNdsRendererAdapterNativeOwnerTextureCounts[i] =
+                    ndsRendererAdapterSaveNativeMaterialTextureIds(
+                        native_owner_material_dobjs[i],
+                        sNdsRendererAdapterNativeOwnerTextureCurr[i],
+                        sNdsRendererAdapterNativeOwnerTextureNext[i],
+                        NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX);
+                native_owner_material_saved_root_count = i + 1u;
+                if ((sNdsRendererAdapterNativeOwnerTextureCounts[i] !=
+                     native_owner_material_counts[i]) ||
+                    (ndsRendererAdapterPrepareNativeMaterials(
+                         native_owner_material_dobjs[i],
+                         sNdsRendererAdapterNativeOwnerMaterials[i],
+                         NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX,
+                         &prepared_material_count) == FALSE) ||
+                    (prepared_material_count !=
+                     native_owner_material_counts[i]) ||
+                    (ndsRendererAdapterValidateNativeOwnerMaterials(
+                         sNdsRendererAdapterNativeOwnerMaterials[i],
+                         prepared_material_count) == FALSE))
+                {
+                    native_owner_enabled = FALSE;
+                    break;
+                }
+            }
+            if (native_owner_enabled == FALSE)
+            {
+                ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
+                    native_owner_material_dobjs,
+                    native_owner_material_saved_root_count);
+                native_owner_material_saved_root_count = 0u;
+            }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            {
+                u32 owner_material_ticks =
+                    cpuGetTiming() - owner_material_start;
+
+                gNdsRendererProfileMaterialTicks += owner_material_ticks;
+            }
+#endif
+        }
+#endif
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    if ((native_owner_enabled != FALSE) &&
+        (native_owner_production_mode != FALSE) &&
+        (detailed_output == FALSE) && (no_oracle != FALSE))
+    {
+        if (ndsRendererAdapterBuildNativeProductionInputs(
+                slot, native_owner_file, &collection,
+                native_owner_projection, native_owner_modelviews,
+                &persistent_state,
+                &sNdsRendererAdapterNativeOwnerWorkspace) == FALSE)
+        {
+            ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
+                native_owner_material_dobjs,
+                native_owner_material_saved_root_count);
+            native_owner_material_saved_root_count = 0u;
+            native_owner_enabled = FALSE;
+        }
+        if (native_owner_enabled != FALSE)
+        {
+            s32 production_result;
+            u32 production_hardware_started = FALSE;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            u32 owner_dl_start = cpuGetTiming();
+#endif
+            ndsFighterDLDrawResetRuntimeRendererStats(&persistent_stats);
+            native_owner_production_attempted = TRUE;
+            production_result =
+                ndsRendererExecuteNativeFighterOwnerProduction(
+                    slot, native_owner_file->data,
+                    sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
+                    collection.selected_count,
+                    NULL, NULL, &persistent_stats,
+                    &production_hardware_started);
+            if (production_result != FALSE)
+            {
+                runtime_hardware_triangle_count =
+                    persistent_stats.hardware_triangle_count;
+                /* Native material preparation advances every live MObj once,
+                 * matching the generic path. A successful owner consumes that
+                 * advancement and must not restore it. */
+                native_owner_material_saved_root_count = 0u;
+            }
+            else if (production_hardware_started == FALSE)
+            {
+                /* The production owner rejected its complete input contract
+                 * before touching GX. Restore the FRAC fields serialized by
+                 * native material preparation and let the ordinary path
+                 * advance and draw them exactly once. */
+                ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
+                    native_owner_material_dobjs,
+                    native_owner_material_saved_root_count);
+                native_owner_material_saved_root_count = 0u;
+                native_owner_enabled = FALSE;
+                native_owner_production_attempted = FALSE;
+            }
+            else
+            {
+                native_owner_failed = TRUE;
+                if (persistent_stats.blocker == NDS_RENDERER_BLOCKER_NONE)
+                {
+                    persistent_stats.blocker =
+                        NDS_RENDERER_BLOCKER_UNSUPPORTED;
+                }
+            }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            gNdsRendererProfileDLTicks += cpuGetTiming() - owner_dl_start;
+#endif
+        }
+    }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
     gNdsRendererProfileOwners[(u32)owner_id].entry_state_hash =
@@ -8523,6 +9615,30 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     gNdsRendererProfileOwners[(u32)owner_id].entry_global_hash =
         ndsRendererProfileGlobalStateHash();
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    if ((native_owner_enabled != FALSE) &&
+        (native_owner_production_attempted == FALSE))
+    {
+        if (ndsRendererBeginNativeFighterOwner(
+                slot, &persistent_stats,
+                &persistent_renderer_vertices) != FALSE)
+        {
+            native_owner_started = TRUE;
+        }
+        else
+        {
+            ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
+                native_owner_material_dobjs,
+                native_owner_material_saved_root_count);
+            native_owner_material_saved_root_count = 0u;
+            native_owner_enabled = FALSE;
+        }
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    if (native_owner_production_attempted == FALSE)
+#endif
+    {
     for (i = 0u; i < collection.selected_count; i++)
     {
         const NDSFighterDisplayContractEvent *contract_event =
@@ -8532,8 +9648,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         const Gfx *dl = (sNdsFighterDisplayContractPlayback != FALSE) ?
             contract_event->dl :
             collection.dobjs[i]->dl;
-        NDSRelocLoadedFile *loaded =
-            ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+        NDSRelocLoadedFile *loaded;
         NDSFighterDLDrawState *current_state;
         NDSRendererConfig config;
         NDSRendererStats *current_stats;
@@ -8543,6 +9658,18 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
 #if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
+        DObj *material_dobj;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        s32 native_saved_texture_curr[
+            NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
+        s32 native_saved_texture_next[
+            NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
+        u32 native_saved_texture_count = 0u;
+        u32 native_prepared_material_count = 0u;
+        sb32 native_material_built = FALSE;
+#endif
+        u32 native_root_offset = 0u;
+        sb32 native_root_enabled = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         u32 step_start;
 #endif
@@ -8551,11 +9678,45 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES
+        loaded = (native_owner_enabled != FALSE) ?
+            native_owner_loaded[i] :
+            ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+#else
+        loaded = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+#endif
+
         if ((loaded == NULL) &&
             (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
         {
             continue;
         }
+
+#if NDS_RENDERER_HW_TRIANGLES
+        if ((native_owner_enabled != FALSE) && (loaded != NULL) &&
+            (loaded->data != NULL) &&
+            (((slot == 0u) && (loaded->asset_id == 0x128u)) ||
+             ((slot == 1u) && (loaded->asset_id == 0x139u))) &&
+            (loaded->data_size >= sizeof(*dl)) &&
+            ((uintptr_t)dl >= (uintptr_t)loaded->data) &&
+            (((uintptr_t)dl - (uintptr_t)loaded->data) <=
+             (loaded->data_size - sizeof(*dl))))
+        {
+            native_root_offset =
+                (u32)((uintptr_t)dl - (uintptr_t)loaded->data);
+            native_root_enabled =
+                (native_root_offset == native_owner_root_offsets[i]) ?
+                    TRUE : FALSE;
+        }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (native_root_enabled != FALSE)
+        {
+            native_materials =
+                sNdsRendererAdapterNativeOwnerMaterials[i];
+            native_material_count = native_owner_material_counts[i];
+        }
+#endif
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
         current_state = (detailed_output != FALSE) ? &states[i] :
@@ -8567,7 +9728,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         current_state->slot = slot;
         if (contract_event != NULL)
         {
-            persistent_stats.geometry_mode = contract_event->geometry_mode;
+            persistent_stats.geometry_mode =
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+                (native_root_enabled != FALSE) ?
+                    ndsRendererAdapterNormalizeNativeGeometryMode(
+                        contract_event->geometry_mode) :
+#endif
+                    contract_event->geometry_mode;
             persistent_stats.othermode_h =
                 (persistent_stats.othermode_h &
                  ~NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK) |
@@ -8598,35 +9765,91 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         step_start = cpuGetTiming();
 #endif
+        material_dobj =
+            (sNdsFighterDisplayContractPlayback != FALSE) ?
+                contract_event->material_dobj : collection.dobjs[i];
         if ((sNdsFighterDisplayContractPlayback == FALSE) ||
             (contract_event->material_dobj != NULL))
         {
-            DObj *material_dobj =
-                (sNdsFighterDisplayContractPlayback != FALSE) ?
-                    contract_event->material_dobj :
-                    collection.dobjs[i];
-
-            ndsRendererAdapterPrepareMaterialSegment(material_dobj,
-                                                     current_state);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+            if ((native_root_enabled != FALSE) &&
+                (material_dobj != NULL) &&
+                (material_dobj->mobj != NULL))
+            {
+                native_saved_texture_count =
+                    ndsRendererAdapterSaveNativeMaterialTextureIds(
+                        material_dobj,
+                        native_saved_texture_curr,
+                        native_saved_texture_next,
+                        NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX);
+                if (ndsRendererAdapterPrepareNativeMaterials(
+                        material_dobj, native_materials,
+                        NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX,
+                        &native_prepared_material_count) != FALSE)
+                {
+                    native_material_count =
+                        native_prepared_material_count;
+                    native_material_built = TRUE;
+                }
+                else
+                {
+                    ndsRendererAdapterRestoreNativeMaterialTextureIds(
+                        material_dobj,
+                        native_saved_texture_curr,
+                        native_saved_texture_next,
+                        native_saved_texture_count);
+                    native_root_enabled = FALSE;
+                }
+            }
+            if (native_material_built != FALSE)
+            {
+                /* Forensic builds retain the exact resolver-boundary oracle.
+                 * Restore the two FRAC fields before its ordinary material
+                 * builder so the live MObj advances exactly once. */
+                ndsRendererAdapterRestoreNativeMaterialTextureIds(
+                    material_dobj,
+                    native_saved_texture_curr,
+                    native_saved_texture_next,
+                    native_saved_texture_count);
+            }
+            ndsRendererAdapterPrepareMaterialSegment(
+                material_dobj, current_state);
+#else
+            /* The owner preflight already advanced every live MObj once and
+             * serialized this root's descriptors. Only the ordinary fallback
+             * prepares the material segment in the selected-list loop. */
+            if (native_root_enabled == FALSE)
+            {
+                ndsRendererAdapterPrepareMaterialSegment(
+                    material_dobj, current_state);
+            }
+#endif
         }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
         step_start = cpuGetTiming();
 #endif
 #endif
-        ndsRendererAdapterPrepareInitialMatrices(
-                                                 (sNdsFighterDisplayContractPlayback != FALSE) ?
-                                                     contract_event->matrix_dobj :
-                                                     collection.dobjs[i],
-                                                 (gGCCurrentCamera != NULL) ?
-                                                     CObjGetStruct(
-                                                         gGCCurrentCamera) :
-                                                     NULL,
-                                                 FALSE,
-                                                 &initial_projection,
-                                                 &initial_projection_ptr,
-                                                 &initial_modelview,
-                                                 &initial_modelview_ptr);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        if (native_root_enabled != FALSE)
+        {
+            initial_projection_ptr = native_owner_projection;
+            initial_modelview_ptr = native_owner_modelviews[i];
+        }
+        else
+#endif
+        {
+            ndsRendererAdapterPrepareInitialMatrices(
+                (sNdsFighterDisplayContractPlayback != FALSE) ?
+                    contract_event->matrix_dobj : collection.dobjs[i],
+                (gGCCurrentCamera != NULL) ?
+                    CObjGetStruct(gGCCurrentCamera) : NULL,
+                FALSE,
+                &initial_projection,
+                &initial_projection_ptr,
+                &initial_modelview,
+                &initial_modelview_ptr);
+        }
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
         gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
@@ -8638,6 +9861,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.initial_geometry_mode =
             (sNdsFighterDisplayContractPlayback != FALSE) ?
                 contract_event->geometry_mode : 0u;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        if (native_root_enabled != FALSE)
+        {
+            config.initial_geometry_mode =
+                ndsRendererAdapterNormalizeNativeGeometryMode(
+                    config.initial_geometry_mode);
+        }
+#endif
         config.texture_data_layout =
             NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
         config.validate_range = ndsFighterDLAllDrawValidateRange;
@@ -8675,15 +9906,75 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 loaded, dl, collection.indices[i]));
 #endif
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (native_owner_failed != FALSE)
+        {
+            current_stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
+        }
+        else if (native_owner_started != FALSE)
+        {
+            if ((native_root_enabled == FALSE) ||
+                (ndsRendererExecuteNativeFighterRoot(
+                     slot, i, loaded->data, native_root_offset,
+                     native_materials, native_material_count,
+                     &config,
+                     (no_oracle != FALSE) ?
+                         NULL : ndsFighterMarioFoxVisitDLDrawCommand,
+                     current_state,
+                     current_stats,
+                     &persistent_renderer_vertices) == FALSE))
+            {
+                /* The compact owner may have submitted earlier runs or
+                 * updated its dense slot map. Never replay this root through
+                 * the generic cache on top of that partial state. */
+                if (current_stats->blocker == NDS_RENDERER_BLOCKER_NONE)
+                {
+                    current_stats->blocker =
+                        NDS_RENDERER_BLOCKER_UNSUPPORTED;
+                }
+                ndsRendererAbortNativeFighterOwner();
+                native_owner_started = FALSE;
+                native_owner_failed = TRUE;
+            }
+        }
+        else
+        {
+            ndsRendererExecuteDisplayListWithVertexCache(
+                dl, &config,
+                (no_oracle != FALSE) ?
+                    NULL : ndsFighterMarioFoxVisitDLDrawCommand,
+                current_state, current_stats,
+                &persistent_renderer_vertices);
+        }
+#else
+        if ((native_root_enabled == FALSE) ||
+            (ndsRendererExecuteNativeFighterRoot(
+                 slot, i, loaded->data, native_root_offset,
+                 native_materials, native_material_count,
+                 &config,
+                 (no_oracle != FALSE) ?
+                     NULL : ndsFighterMarioFoxVisitDLDrawCommand,
+                 current_state,
+                 current_stats,
+                 &persistent_renderer_vertices) == FALSE))
+        {
+            ndsRendererExecuteDisplayListWithVertexCache(
+                dl, &config,
+                (no_oracle != FALSE) ?
+                    NULL : ndsFighterMarioFoxVisitDLDrawCommand,
+                current_state, current_stats,
+                &persistent_renderer_vertices);
+        }
+#endif
+#else
         ndsRendererExecuteDisplayListWithVertexCache(
-            dl,
-            &config,
+            dl, &config,
             (no_oracle != FALSE) ?
-                NULL :
-                ndsFighterMarioFoxVisitDLDrawCommand,
-            current_state,
-            current_stats,
+                NULL : ndsFighterMarioFoxVisitDLDrawCommand,
+            current_state, current_stats,
             &persistent_renderer_vertices);
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
@@ -8727,6 +10018,52 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                            current_state, current_stats, clean);
 #endif
     }
+    }
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    if (native_owner_started != FALSE)
+    {
+        if (ndsRendererEndNativeFighterOwner(
+                slot, &persistent_stats,
+                &persistent_renderer_vertices) == FALSE)
+        {
+            persistent_stats.blocker =
+                NDS_RENDERER_BLOCKER_UNSUPPORTED;
+            native_owner_failed = TRUE;
+            ndsRendererAbortNativeFighterOwner();
+        }
+        native_owner_started = FALSE;
+    }
+    if (native_owner_failed != FALSE)
+    {
+        u32 failure_index = (collection.selected_count != 0u) ?
+            collection.selected_count - 1u : 0u;
+
+        /* Make an unreachable integrity failure visible to both the detailed
+         * proof ledger and the null-callback performance verifier. */
+        runtime_hardware_triangle_count = 0u;
+        if (slot == 0u)
+        {
+            if (gNdsFighterDLAllDrawP0FirstBlocker == 0u)
+            {
+                gNdsFighterDLAllDrawP0FirstBlocker =
+                    NDS_RENDERER_BLOCKER_UNSUPPORTED;
+            }
+            gNdsFighterDLAllDrawP0BlockerMask |=
+                1u << (failure_index & 31u);
+        }
+        else
+        {
+            if (gNdsFighterDLAllDrawP1FirstBlocker == 0u)
+            {
+                gNdsFighterDLAllDrawP1FirstBlocker =
+                    NDS_RENDERER_BLOCKER_UNSUPPORTED;
+            }
+            gNdsFighterDLAllDrawP1BlockerMask |=
+                1u << (failure_index & 31u);
+        }
+    }
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
     gNdsRendererProfileOwners[(u32)owner_id].exit_state_hash =

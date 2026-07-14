@@ -1366,11 +1366,22 @@ isolating the compatibility type that causes the warning.
   wall-clock performance symptoms. Do not repeatedly poll GDB for progress;
   repeated attach/detach has produced melonDS packet errors.
 - `scripts/capture-melonds.ps1` captures pixels from the visible desktop window.
-  Keep melonDS unobstructed; the script foregrounds it and temporarily disables
-  GDB for visible capture, but Windows focus policy and hidden-window launches
-  can still affect captures in remote or locked sessions. The host OpenGL
+  Keep melonDS unobstructed; the default script path temporarily disables GDB.
+  `-RendererFastRunMode` instead sets and verifies one bounded selector through
+  GDB, detaches, then captures the live window. Windows focus policy and hidden-
+  window launches can still affect captures in remote or locked sessions. The host OpenGL
   renderer can produce a white frame for a known-good ROM on this setup, so
   automated pixel gates pin software 3D and normalize the scaled top screen.
+- The hardened Mode-8 coarse target reproducibly builds exact ROM
+  `DC2871F3...52E4E3AD`, and that ROM passes workspace draw/motion, original CPU,
+  natural BGM/refill, reserve, and ITCM gates. The user's separate manual launch
+  reported no audio or stage draw and still needs a controlled environment
+  retest; do not claim hardware/manual acceptance. The rejected `39CD1397...`
+  ROM had live input disabled by an under-specified build. Its allegedly partial
+  PNGs are complete on disk; a multi-image inspection view rendered unchanged
+  regions black. Only Mode 0, Mode 8, and canonical HW-tri have working-looking
+  screenshots; Modes 1-7 have no capture set, and screenshots cannot verify
+  audio or hardware.
 - The intermittent stage-only flash was traced to current water refreshes
   remapping texture VRAM during active scanout. The exact 4 KiB + 32 KiB
   payloads now use compact exact-row staging in shipping/coarse profiles and

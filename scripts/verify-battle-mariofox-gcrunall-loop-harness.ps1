@@ -30,7 +30,7 @@ param(
     [switch]$RendererBenchmarkOnly,
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
-    [ValidateRange(0,4)][int]$RendererFastRunMode = 0,
+    [ValidateRange(0,8)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [string]$RendererBenchmarkExportPath = '',
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
@@ -573,6 +573,9 @@ try {
                 $hardwareCommands += 'printf "SOBJ_WALL_ORACLE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperMapOracleCheckCount, gNdsSObjWallpaperMapOracleMismatchCount, gNdsSObjWallpaperPixelOracleCheckCount, gNdsSObjWallpaperPixelOracleMismatchCount, gNdsSObjWallpaperOracleFirstKind, gNdsSObjWallpaperOracleFirstIndex, gNdsSObjWallpaperOracleFirstExpected, gNdsSObjWallpaperOracleFirstActual'
             }
         }
+        if ($Target -eq 'smash64ds-battle-playable-coarse-mipcache-hwtri') {
+            $hardwareCommands += 'printf "SCENE_MIP_CACHE=%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%#x,%#x,%u\n", gNdsSceneMipCacheState, gNdsSceneMipCacheCaptureCount, gNdsSceneMipCacheUploadCount, gNdsSceneMipCacheFailureCount, gNdsSceneMipCacheLastHash, gNdsSceneMipCacheLastNonzeroPixels, gNdsSceneMipCacheSeedDrawCount, gNdsSceneMipCacheDrawCount, gNdsSceneMipCacheFallbackCount, gNdsSceneMipCacheMappingFailureCount, gNdsSceneMipCacheSelectedMip, gNdsSceneMipCacheTargetDistanceBits, gNdsSceneMipCacheSelectedMipMask, gNdsSceneMipCacheSelectedMipChangeCount'
+        }
         $gdbCommands = @($beforeDetach + $hardwareCommands + $afterDetach)
     }
     if ($BattlePlayable) {
@@ -1039,6 +1042,8 @@ try {
                             Assert-Condition ($fastRun[0] -eq $frame -and $fastRun[1] -eq $RendererFastRunMode -and ($fastRun[4] + $fastRun[5] + $fastRun[6]) -eq $fastRun[3]) "Fast-run accounting is not synchronized, in the selected mode, or owner-conserved at frame $frame." $gdbStdout
                             if ($RendererFastRunMode -eq 0) {
                                 Assert-Condition ($fastRun[2] -eq 0 -and $fastRun[3] -eq 0) "Generic laboratory mode unexpectedly executed fast runs at frame $frame." $gdbStdout
+                            } elseif (($RendererProfileLevel -eq 1) -and ($RendererFastRunMode -eq 8)) {
+                                Assert-Condition ($fastRun[2] -eq 70 -and $fastRun[3] -eq 686 -and $fastRun[4] -eq 60 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 29 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "Production native fighter owner did not preserve exact 70-run/686-triangle accounting, 60/320/306 owner partition, and 29/0/0 fallback partition at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
                             } else {
                                 Assert-Condition ($fastRun[2] -gt 0 -and $fastRun[3] -gt 0) "Selected laboratory fast mode executed no fast triangles at frame $frame." $gdbStdout
                             }
@@ -1321,7 +1326,19 @@ try {
                 Assert-Condition ($fighterDisplayContract.Success -and $fdc[0] -gt 0 -and $fdc[3] -gt 0 -and $fdc[0] -ge $fdc[3] -and ($fdc[0] - $fdc[3]) -le 64 -and (($fdc[4] -band 0x222005) -eq 0x222005) -and $fdc[5] -gt 0 -and $fdc[6] -gt 0 -and $fdc[7] -gt 0 -and $fdc[8] -eq 0 -and $fdc[11] -gt 0 -and $fdc[12] -gt 0 -and $fdc[13] -eq 0x00100000 -and $fdc[14] -eq [Convert]::ToUInt32('c4112078', 16)) 'Canonical realtime HW build did not preserve the original fighter display selection, lighting, geometry, cycle, render-mode, and visibility contract.' $gdbStdout
                 Assert-Condition ($renderProfile.Success -and $rp[15] -eq 2484 -and $rp[16] -eq 828 -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact 2,484-vertex/828-triangle renderer contract.' $gdbStdout
                 Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13]) 'Realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
-                Assert-Condition ($renderBatch.Success -and $rb[0] -eq 121 -and $rb[1] -eq 707 -and $rb[2] -eq 121 -and $rb[3] -eq 98 -and $rb[4] -eq 730) 'Canonical realtime HW build drifted from exact 121/707/121 batch and 98/730 texture-prepare accounting.' $gdbStdout
+                $expectedBatchBegin = 121
+                $expectedBatchReuse = 707
+                $expectedBatchEnd = 121
+                if (($RendererProfileLevel -lt 2) -and
+                    ($RendererFastRunMode -eq 8)) {
+                    # The production owner keeps identical policy epochs but
+                    # carries 18 compatible fighter batches across old root
+                    # boundaries. Texture preparation remains unchanged.
+                    $expectedBatchBegin = 103
+                    $expectedBatchReuse = 725
+                    $expectedBatchEnd = 103
+                }
+                Assert-Condition ($renderBatch.Success -and $rb[0] -eq $expectedBatchBegin -and $rb[1] -eq $expectedBatchReuse -and $rb[2] -eq $expectedBatchEnd -and $rb[3] -eq 98 -and $rb[4] -eq 730) "Canonical realtime HW build drifted from exact $expectedBatchBegin/$expectedBatchReuse/$expectedBatchEnd batch and 98/730 texture-prepare accounting." $gdbStdout
                 if ($RendererProfileLevel -lt 2) {
                     Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 2 -and $rci4lut[3] -gt $rci4lut[2]) 'Performance/coarse renderer did not build exactly two immutable CI4 source-index planes and reuse them across live water addressing.' $gdbStdout
                     Assert-Condition ($renderCi4Map.Success -and $rci4map[0] -gt 0 -and $rci4map[1] -ge $rci4map[0]) 'Performance/coarse renderer did not resolve live large-water pixels through exact representative address/phase classes.' $gdbStdout
@@ -1344,13 +1361,25 @@ try {
                     Assert-Condition ($wallpaperOracle.Success -and $wo[0] -gt 0 -and $wo[1] -eq 0 -and $wo[2] -gt 0 -and $wo[3] -eq 0 -and $wo[4] -eq 0 -and $wo[5] -eq 0 -and $wo[6] -eq 0 -and $wo[7] -eq 0) 'Forensic wallpaper recurrence/pixel oracle found an exact-output mismatch.' $gdbStdout
                 }
                 Assert-Condition ($renderClip.Success -and $rclip[0] -eq $rv[12]) 'Canonical realtime HW build did not report a consistent clipping/saturation marker.' $gdbStdout
-                Assert-Condition ($renderTexel1.Success -and $rt1[0] -gt 0 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -gt 0 -and $rt1[10] -eq 0 -and $rt1[11] -gt 0) 'Canonical realtime HW build did not resolve, directly precompose, and refresh the source Dream Land TEXEL0/TEXEL1 water material without evicting resident textures.' $gdbStdout
+                # The final sampled frame can legitimately reuse the resident
+                # TEXEL0/TEXEL1 composite, so its per-frame composite/load
+                # counts may both be zero.  The cumulative fraction-refresh
+                # count proves that the live animation was refreshed in the
+                # capture; current-frame rejects and cache evictions stay zero.
+                Assert-Condition ($renderTexel1.Success -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -gt 0 -and $rt1[10] -eq 0 -and $rt1[11] -gt 0) 'Canonical realtime HW build did not resolve, directly precompose, and refresh the source Dream Land TEXEL0/TEXEL1 water material without evicting resident textures.' $gdbStdout
                 Assert-Condition ($mobjAttach.Success -and $ma[0] -ge 4 -and $ma[1] -eq 0 -and $ma[2] -eq 0 -and $ma[3] -eq 0x0200 -and $ma[4] -eq 0x006b) 'Canonical realtime HW build did not normalize the live water and Whispy mixed-width O2R MObjSub fields at the BattleShip attachment boundary.' $gdbStdout
                 Assert-Condition ($renderRawMatrix.Success -and $rrm[0] -gt 0) 'Canonical realtime HW build found no current-matrix ordinary-Z raw candidates.' $gdbStdout
                 $submitTotal = $rs[0] + $rs[1] + $rs[2] + $rs[3] + $rs[4] + $rs[5] + $rs[6]
                 $expectedProjectedDivisions = (6 * $rs[3]) + (9 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
                 $preCutoverProjectedDivisions = (9 * ($rs[0] + $rs[1] + $rs[2] + $rs[4] + $rs[5] + $rs[6])) + (6 * $rs[3])
                 $expectedProjectedFallbackCount = $rs[2] + $rs[4] + $rs[5] + $rs[6]
+                if (($RendererProfileLevel -lt 2) -and
+                    ($RendererFastRunMode -eq 8)) {
+                    # The production native-fighter owner keeps the canonical
+                    # cross-matrix submit class, but GX palette restores now
+                    # remove those 44 triangles from projected fallback.
+                    $expectedProjectedFallbackCount -= $rs[2]
+                }
                 if ($RendererProfileLevel -ge 2) {
                     # Forensic command diagnostics intentionally accumulate across
                     # the whole capture, while submit-class counters describe the
