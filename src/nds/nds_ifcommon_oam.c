@@ -209,8 +209,10 @@ static NDSIFCommonNativeAsset sNdsIFCommonAssets[
 static const void *sNdsIFCommonPreparedFile;
 static u32 sNdsIFCommonPrepared;
 static s32 sNdsIFCommonNextOamID = 127;
+static s32 sNdsIFCommonPreviousLowestOamID = 128;
 static u32 sNdsIFCommonMatrixCount;
 static u16 sNdsIFCommonMatrixInverse[32];
+static u32 sNdsIFCommonFrameNeedsCommit;
 
 volatile u32 gNdsIFCommonNativeOamEnabled = 1u;
 volatile u32 gNdsIFCommonNativeOamPrepareCount;
@@ -224,7 +226,13 @@ volatile u32 gNdsIFCommonNativeOamPrepareProfileFrame;
 volatile u32 gNdsIFCommonNativeOamPreparePaletteBytes;
 volatile u32 gNdsIFCommonNativeOamHotConvertCount;
 volatile u32 gNdsIFCommonNativeOamRuntimeUploadBytes;
+volatile u32 gNdsIFCommonNativeOamFrameBeginTicks;
 volatile u32 gNdsIFCommonNativeOamFrameTicks;
+volatile u32 gNdsIFCommonNativeOamFrameCommitTicks;
+volatile u32 gNdsIFCommonNativeOamFrameCommitCalls;
+volatile u32 gNdsIFCommonNativeOamFrameClearedObjects;
+volatile u32 gNdsIFCommonNativeOamFrameIdle;
+volatile u32 gNdsIFCommonNativeOamIdleFrameCount;
 volatile u32 gNdsIFCommonNativeOamFrameRecognizedCalls;
 volatile u32 gNdsIFCommonNativeOamFrameDrawCalls;
 volatile u32 gNdsIFCommonNativeOamFrameFallbackCalls;
@@ -610,8 +618,24 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
 
 void ndsIFCommonNativeOamBeginFrame(void)
 {
+    gNdsIFCommonNativeOamFrameBeginTicks = 0u;
+    gNdsIFCommonNativeOamFrameCommitTicks = 0u;
+    gNdsIFCommonNativeOamFrameCommitCalls = 0u;
+    gNdsIFCommonNativeOamFrameClearedObjects = 0u;
+    gNdsIFCommonNativeOamFrameIdle = 0u;
+    sNdsIFCommonFrameNeedsCommit = FALSE;
 #if NDS_RENDERER_HW_TRIANGLES
-    oamClear(&oamMain, 0, 128);
+    if (sNdsIFCommonPreviousLowestOamID < 128)
+    {
+        u32 start = cpuGetTiming();
+
+        gNdsIFCommonNativeOamFrameClearedObjects =
+            (u32)(128 - sNdsIFCommonPreviousLowestOamID);
+        oamClear(&oamMain, sNdsIFCommonPreviousLowestOamID,
+                 (int)gNdsIFCommonNativeOamFrameClearedObjects);
+        gNdsIFCommonNativeOamFrameBeginTicks = cpuGetTiming() - start;
+        sNdsIFCommonFrameNeedsCommit = TRUE;
+    }
 #endif
     sNdsIFCommonNextOamID = 127;
     sNdsIFCommonMatrixCount = 0u;
@@ -898,6 +922,7 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
         }
     }
     gNdsIFCommonNativeOamFrameDrawCalls++;
+    sNdsIFCommonFrameNeedsCommit = TRUE;
     gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
     return TRUE;
 #else
@@ -909,7 +934,27 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
 void ndsIFCommonNativeOamCommit(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
-    oamUpdate(&oamMain);
-    gNdsIFCommonNativeOamCommitCount++;
+    if (sNdsIFCommonFrameNeedsCommit != FALSE)
+    {
+        u32 start = cpuGetTiming();
+
+        oamUpdate(&oamMain);
+        gNdsIFCommonNativeOamFrameCommitTicks = cpuGetTiming() - start;
+        gNdsIFCommonNativeOamFrameCommitCalls = 1u;
+        gNdsIFCommonNativeOamCommitCount++;
+    }
+    if (gNdsIFCommonNativeOamFrameObjectCount != 0u)
+    {
+        sNdsIFCommonPreviousLowestOamID = sNdsIFCommonNextOamID + 1;
+    }
+    else
+    {
+        sNdsIFCommonPreviousLowestOamID = 128;
+    }
+    if (sNdsIFCommonFrameNeedsCommit == FALSE)
+    {
+        gNdsIFCommonNativeOamFrameIdle = 1u;
+        gNdsIFCommonNativeOamIdleFrameCount++;
+    }
 #endif
 }
