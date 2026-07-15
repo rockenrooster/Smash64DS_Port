@@ -95,8 +95,8 @@ still reports positive texture conversion and two uploads totaling 36,864
 bytes. Therefore:
 
 - Milestone 2 is in progress: Mario/Fox still cost about 431K combined versus
-  170–250K. Ranked next cuts are a GX hierarchy/3x3 lighting sidecar and a
-  compiled epoch/run transaction.
+  170–250K. Exact corpus tests demote GX lighting (102/413 RGB15 mismatches),
+  retain the CPU light sidecar, and admit synthesized t16 matrices (99/99).
 - Milestone 3 is open: the ~801K stage owner needs whole-stage preflight and a
   fused static-slab owner before the 150–250K target is credible.
 - Milestone 4 keeps an exact 322-key/206-output host corpus. A direct runtime

@@ -44,7 +44,7 @@ Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; th
 |---|---|---|---|---|
 | Integration/release | Active | live tree | shared gates, one-minute lifecycle integration, current docs, ROM identity | direct `4333/4334`; capture slot 3 `3363/3364` |
 | Renderer implementation | Active | isolated M4 corpus lane | zero-I/O pair-index/palette feasibility | no emulator |
-| Gameplay + QA | Active | `codex/renderer-parity-contract` | M2/M3 RGB15/t16 owner-parity microbenchmark | no emulator |
+| Gameplay + QA | Active | `codex/renderer-parity-contract` | M2 49-epoch/67-run transaction packet prototype | no emulator |
 | Performance research | Active | isolated audio worktree | source-backed regular KO FGM slice | no emulator |
 
 Only `./emulators/melonds/melonDS.exe` (manual) and repo-owned
@@ -69,7 +69,7 @@ available, and reassign a slot immediately when its packet completes.
 | Platform/edge and specials | Retest | Gameplay | Reports predate current exact ROM; Up-B was manually accepted | No behavior change without current reproduction |
 | Natural Fox recovery | Coverage debt | Gameplay | Natural Recover objective/offstage return unobserved | No completion claim |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks and accepted canonical screenshot | Keep canonical |
-| M2 Mario/Fox AOT, 170–250K ticks | Fail / active | Renderer | Current ~431K; no-submit floor 331K | Instrument whole-owner wall; block promotion |
+| M2 Mario/Fox AOT, 170–250K ticks | Fail / active | Renderer | ~431K; GX light demoted 102/413, synthesized t16 matrix exact 99/99 | Build packet with CPU light sidecar; block promotion |
 | M3 complete stage AOT, 150–250K ticks | Not started | Renderer | Shared renderer owner follows M2 decision | Hold, then serialize behind M2 |
 | M4 zero gameplay conversion/preparation | Streaming rejected / active | Renderer | Exact corpus passes; direct path made 12 NitroFS reads/32 frames and did not improve inclusive timing | Require complete pre-GO zero-I/O residency |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |

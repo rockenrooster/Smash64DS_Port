@@ -86,6 +86,13 @@ For each fighter owner:
 6. Budget matrix plus lighting preparation at no more than 60–80K combined;
    otherwise the 170–250K milestone cannot close.
 
+The reproducible no-GX parity corpus fixes this split: hardware one-light
+shading misses 102 of 413 exact RGB15 cases across 16/18 bindings, so it cannot
+own source-faithful lighting. Generated fractional-bias 20.12 texture matrices
+match all 99 canonical t16 cases; naive scale-shift matrices miss 47. Treat the
+CPU light sidecar as mandatory and the synthesized texture matrix as eligible,
+subject to live MObj/profile-2 parity.
+
 ### Native execution
 
 - Preflight all signatures, pointers, plan bounds, resolver state, and texture

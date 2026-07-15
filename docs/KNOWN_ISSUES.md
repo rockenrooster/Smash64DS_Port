@@ -31,6 +31,8 @@ live in `P1_EXECUTION_BOARD.md`.
   same-ROM split-matrix cut saved only 36,192 ticks and was removed; deleting
   all generated-run preparation/emission still leaves a 331K measured floor,
   so the next architecture must also cut the ~178K matrix-preparation wall.
+  Exact RGB15 parity demotes GX lighting (102/413 mismatches); synthesized t16
+  matrices remain eligible at 99/99, with lighting retained in the CPU sidecar.
 - Milestone 4's exact host corpus passes all 3,024,896 oracle pixels. The
   gameplay NitroFS-reader trial was rejected because inclusive timing did not
   improve, draw P95 regressed, and it performed frequent reads beside BGM.

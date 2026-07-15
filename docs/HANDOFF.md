@@ -116,7 +116,9 @@ The rejected separate projection/modelview cut saved only 36,192 fighter ticks
 in exact same-ROM A/B/A and was removed. A compile-time Mode-8 TRIANGLE_NOOP
 floor then proved submission-only work can save at most 100K: fighters still
 cost 331K with all run preparation/emission removed. The next M2 design must
-also remove a large share of the measured ~178K matrix-preparation wall.
+also remove a large share of the measured ~178K matrix-preparation wall. The
+parity corpus demotes GX lighting at 102/413 RGB15 mismatches; retain the exact
+CPU light sidecar. Synthesized 20.12 t16 matrices pass all 99 cases.
 
 Keep comparisons on identical ROM hashes and synchronized windows. Require
 counters, screenshots, semantic traces, and runtime state to agree.
@@ -133,8 +135,9 @@ user ROM only through the canonical Makefile parity rule.
 
 ## Verification State
 
-GBI fixtures, docs, architecture, registry, canonical DevFast build/capture/
-parity, focused profile-1 pre/post-GO, and canonical profile-0 pre/post-GO pass.
+GBI/audio/renderer-parity fixtures, docs, architecture, registry, canonical
+DevFast build/capture/parity, focused profile-1 pre/post-GO, latest one-minute
+expiry/Results, and canonical profile-0 pre/post-GO pass.
 Boundary/Latest were migrated because exact source locks invalidate their old
 pre-GO motion assumption. Full Regression remains follow-up.
 

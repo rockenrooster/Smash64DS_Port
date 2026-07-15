@@ -20728,3 +20728,15 @@ remains skipped for the requested fast iteration cadence.
   compile, and host-muted natural countdown gate pass. The runtime observed
   five supported phase plays, 25 unsupported calls, max one live FGM, 28
   envelope steps, and 235,104 bytes headroom. KO/voice support remains open.
+
+## 2026-07-14 - Gated native renderer lighting and texture-matrix parity
+
+- Generated an exact no-GX corpus from the current BattleShip fighter owner:
+  413 binding/normal RGB15 cases and 99 canonical t16 cases, with a portable
+  host oracle and 5,272-byte freestanding ARM946E-S check object.
+- Exhaustive per-binding hardware one-light choices still miss 102/413 RGB15
+  cases across 16/18 bindings. DS hardware lighting is demoted; the next M2
+  owner must retain exact CPU 3x3/light-direction shading.
+- Naive texture-matrix mapping misses 47/99 cases. Synthesized 20.12
+  coefficients plus fractional bias match 99/99, so only that mapping remains
+  eligible for live MObj/profile-2 validation. No runtime speed claim was made.

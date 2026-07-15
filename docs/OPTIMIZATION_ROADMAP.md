@@ -146,6 +146,15 @@ CPU 3x3 normal/light sidecar. This should remove 130–170K. Second, compile the
 targeting another 80–120K without retrying 121 small GX lists. Profile 2 remains
 the independent light/matrix/state oracle.
 
+The no-GX parity gate makes the ownership boundary explicit. Across 413 exact
+binding/normal RGB15 cases, even exhaustive per-binding one-light material
+choices miss 102 cases (16/18 bindings), so DS hardware lighting is demoted.
+Across 99 canonical t16 cases, naive scale-shift mapping misses 47 while the
+generated floor/ceil 20.12 coefficients plus fractional bias miss zero.
+Therefore geometry hierarchy and synthesized texture matrices may move to GX;
+lighting must stay in the exact CPU sidecar unless a new oracle-exact design
+supersedes this result.
+
 Falsification gate:
 
 - a synchronized same-ROM A/B must save at least 100K combined fighter ticks;

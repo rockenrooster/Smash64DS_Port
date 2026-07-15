@@ -2029,3 +2029,30 @@ DECISION: REJECT / REVERT RUNTIME; KEEP CORPUS
   before GO, prove byte-exact oracle expansion, fit measured texture VRAM/RAM,
   and report zero gameplay conversion, preparation, decompression, and I/O.
 ```
+
+## 2026-07-14 - fixed the M2 hardware parity ownership boundary
+
+```text
+IDEA ID: M2-RGB15-T16-HARDWARE-PARITY
+PURPOSE:
+  Decide whether DS hardware lighting and texture matrices can replace the
+  exact CPU work in the next whole-fighter owner before runtime plumbing.
+CORPUS / DEVICE CONTRACT:
+  BattleShip owner IR/O2R produced 541 dense vertices, 411 unique normals,
+  413 unique binding/normal RGB15 cases across 18 bindings, and 99 unique t16
+  cases across 9 epochs / 15 runs / 381 corners / 106 dense IDs. The portable
+  no-GX C oracle also compiles as a 5,272-byte ARM946E-S freestanding object.
+LIGHT RESULT: DEMOTE
+  The source-mapped hardware-light reference misses 107/413 cases. Exhaustive
+  per-binding best one-light 5-bit material choices still miss 102/413, with
+  16/18 bindings failing. Hardware lighting cannot own source-faithful RGB15;
+  retain the exact CPU 3x3/light-direction sidecar.
+TEXTURE RESULT: SYNTHESIZED ELIGIBLE
+  Naive scale-shift texture matrices miss 47/99 canonical t16 cases. Generated
+  floor/ceil 20.12 coefficients plus fractional translation bias match 99/99.
+  Admit only the synthesized mapping, still gated by live MObj/profile-2 parity.
+DECISION:
+  Keep the deterministic corpus and gate. The next M2 packet may move geometry
+  hierarchy and synthesized texture addressing to GX, but must budget and
+  preserve the CPU lighting sidecar. No runtime or performance claim yet.
+```
