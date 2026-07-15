@@ -135,8 +135,6 @@ mismatch and clears the no-damage flag. Continuous natural-hit coverage remains.
 
 ## Verification
 
-Checkpoint commands:
-
 ```powershell
 .\scripts\check-docs.ps1
 .\scripts\check-architecture.ps1

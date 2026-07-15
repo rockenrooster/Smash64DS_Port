@@ -104,4 +104,12 @@ required. The P1 source rule is one minute (`3600` ticks). Publish exactly
 outputs belong under `builds/`.
 
 The current published P1 ROM remains the previously verified artifact; this
-pause did not rebuild or replace it. Compilation alone does not close M2–M4.
+pause did not rebuild or replace it:
+
+```text
+smash64ds-battle-playable-hwtri.nds
+14,368,768 bytes
+SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
+```
+
+Compilation alone does not close M2–M4.
