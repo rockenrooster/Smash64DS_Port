@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-15 12:20 Central
+Updated: 2026-07-15 15:46 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -42,10 +42,10 @@ Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; th
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Active | live tree | exact Cut G gate, docs, ROM identity; ID626 loop repair/audible retest | direct `4333/4334`; exact capture slot 2 `4463/4464` |
-| Renderer implementation | Active | shared live tree / disjoint files | M2 post-packet redesign and exact host fixtures | focused runner only after bounded host gate |
-| Gameplay + QA | Active | shared live tree / disjoint files | sparse DamageFall runtime gate plus M3 dynamic-invalidation contract | focused runner after static gate |
-| Performance research | Active | shared live tree / disjoint files | M4 pre-GO residency contract and exact size proof | no emulator |
+| Integration/release | Paused cleanly | live tree | M3/M4 integration, docs, ROM identity | no runner active |
+| Renderer implementation | Paused | shared live tree / disjoint files | M2 direct-contract design; rejected Mode-7 removal | no runner active |
+| Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
+| Performance research | Paused | shared live tree / disjoint files | M4 live residency/draw/fence integration | no runner active |
 
 Only `./emulators/melonds/melonDS.exe` (manual) and repo-owned
 `./emulators/melonds-runners/slotN/melonDS.exe` copies may launch. Every TOML
@@ -75,17 +75,16 @@ available, and reassign a slot immediately when its packet completes.
 | Pause-orbit geometry containment | Reproduced wide-view symptom / P2 parity open | Renderer + QA | Normal source-envelope and front/±16.8° frames are clean; synchronized ±33.6° frames show foreground occlusion. Plus view has 15.200% one-color concentration; minus retains only 0.602% green | Keep the deterministic symptom gate; compare identical BattleShip/N64 view before changing renderer |
 | Natural Fox recovery | Coverage debt | Gameplay | Natural Recover objective/offstage return unobserved | No completion claim |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
-| M2 Mario/Fox AOT, 170–250K ticks | Fail / FIFO packet rejected | Renderer | Clean A0=A1 413,504; packet B 537,792 (+124,288), exact semantics, runtime path removed | Select a no-whole-copy design; require bounded cost, ≥80K saving, and ≤337,472 first window |
-| M3 complete stage AOT, 150–250K ticks | Exact host packet / production absent | Renderer | 10,076 bytes / 8 callbacks / 57 DObjs / 42 bindings / 54 runs / 202 triangles; production_linked=0 | Close dynamic invalidation, then keep only ≥300K saving and ≤500K |
-| M4 zero gameplay conversion/preparation | Exact host candidates / production absent | Renderer | Water fixture 181,408 bytes; proposed pre-GO payload 258,048; reserve is estimated only; production_linked=0 | Measure reserve/banks, preload before GO, then require zero post-GO work |
+| M2 Mario/Fox AOT, 170–250K ticks | Fail / Mode 8 correct, Mode 7 rejected | Renderer | Latest detailed A0/A1 477,152/477,376; Mode 7 518,336/518,784 and blank fighters; direct-contract estimate 62–75K is unimplemented | Remove Mode 7; implement only the exact bounded direct-contract path, then require ≥80K saving and ≤337,472 first window |
+| M3 complete stage AOT, 150–250K ticks | Exact core + partial adapter compile | Renderer | 12,663 bytes / 8 callbacks / 57 DObjs / 42 bindings / 54 runs / 202 triangles / exact cross 5/10/15; renderer core and adapter helpers compile, interception/link/device proof pending | Wire ordered display interception; keep only ≥300K saving and ≤500K |
+| M4 zero gameplay conversion/preparation | Exact host/ARM packets / live integration pending | Renderer | One-pass payload 167,936 bytes; draw 68 cells/138 triangles/414 vertices, zero draw-time upload/I/O/alloc; draw_proven=0 | Integrate pre-GO residency + M3 water replacement + teardown, then measure reserve and require zero post-GO work |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | Pass / native OAM | Renderer + QA | Source thread/assets live; 11,584/11,584 ticks, zero gameplay conversion/upload, clean teardown | Keep |
 | Dream Land BGM | Partial | Audio | User reports the stage theme sounds normal; stream counters pass, but enabled DS channel and nonzero PCM peak remain unproved | Block audio completion |
 | Required FGM and Mario/Fox voices | Production phase/KO + isolated crowd-command/loop-pack pass; audible pending | Audio | Source calls ID626 once for 6.9 s; its 1.868 s DS loop intentionally overlaps countdown/GO, but exact channel-mask/acoustic proof is absent | Add host acoustic oracle and tighten existing ACK masks; exact-ROM audible retest; voices remain open |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | One-match pass | QA | Conservative reserve 172,024 bytes after BGM; stale=0/0 and 17 safety counters zero; repetition pending | Keep gate; repeat for qualification |
-| Shared-TU Regression checkpoint | Running | QA | Forced Regression prebuild/stamp plus four isolated NoBuild shards | Block this checkpoint until pass |
-| Full profile / release regression | Pending | QA | 60 Full-only records remain outside Regression | Block P1 release |
+| Executable focused/DevFast/Boundary checks | Pending after integration | QA | Use the smallest registered runtime verifier for the accepted diff | `Full`, `Regression*`, and `P1Gate` stay list-only and are never executed/prebuilt |
 | Cut G capture / final dated capture / manual retest | Cut G pass / final pending | QA + user | Exact frame438/439 pair passes; final post-change ROM still needs dated capture and user qualification | Block release on final evidence |
 
 ## Reconciled Blockers
@@ -136,9 +135,18 @@ available, and reassign a slot immediately when its packet completes.
   coordinate repair, but the first natural verifier stalled before attack.
   Run the sparse driver and repair moving-wall/project-floor providers plus
   coherent `mpcommon` before default-live graduation.
-- Reject the whole-owner M2 FIFO packet: clean A0=A1 is 413,504 ticks and B is
-  537,792. Remove its runtime selector/link, retain exact host fixtures and the
-  dated negative ledger, and require a bounded no-whole-copy design next.
+- Reject both the whole-owner FIFO packet and Mode-7 hierarchy candidate. Mode
+  7 regresses to 518,336/518,784 and draws blank fighters. Preserve exact host
+  fixtures, remove its runtime/temporary verifier allowance, and continue only
+  with the bounded direct-contract design (estimated 62–75K, unmeasured).
+- M3's exact packet is now 12,663 bytes with five cross-matrix runs / ten
+  triangles / fifteen foreign corners. Renderer core and adapter helpers
+  compile; ordered display interception, link, device counters, timing, and
+  screenshot are the restart point.
+- M4's one-pass exact payload is 167,936 bytes. The ARM draw gate proves 68
+  cells / 138 triangles / 414 vertices and no runtime upload/I/O/allocation;
+  live pre-GO residency, M3 water replacement, teardown, reserve, and fence
+  remain open.
 - Keep pause-angle symptom gate; isolated crowd command ACKs pass, but require the
   exact-ROM audible retest before closing the opening-crowd report.
 - Require one naturally triggered real FGM and one required voice event.
@@ -161,8 +169,9 @@ available, and reassign a slot immediately when its packet completes.
 
 ### July 18
 
-- Release qualification: repeated one-minute soak, Full Regression, clean
-  canonical rebuild/parity, exact-ROM manual retest, and dated capture set.
+- Release qualification: repeated one-minute soak, executable focused,
+  DevFast, and Boundary checks, clean canonical rebuild/parity, exact-ROM
+  manual retest, and dated capture set.
 
 ### July 19
 

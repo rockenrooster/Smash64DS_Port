@@ -25,22 +25,20 @@ SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
 The canonical and shipped copies match byte-for-byte. Refresh this identity
 after the final build; compilation alone never proves a milestone.
 
-The current clean profile-1 Mode-8 baseline is ROM
-`3F0ADCF3...A8287475`, frames 600–607 / logic 209–216. It measures
-Mario+Fox 188,352+223,872 = 412,224 ticks, stage 804,032, draw 1,575,392,
-present 1,993,632, and a 17.2 FPS smoke marker. It is laboratory evidence,
-not a canonical artifact. The current profile-0 ROM above was rebuilt and
-recaptured at exact completed frames 438/439. Gameplay still reports two
-uploads / 36,864 bytes.
+The accepted ledger-off Mode-8 reference is about 413.5K fighter ticks. The
+latest detailed-ledger A0/A1 is 477,152/477,376; rejected Mode 7 is
+518,336/518,784 and draws blank fighters. The last control smoke window is
+about 17.7 FPS, draw 1.646M, and loop 2.241M ticks. These are laboratory
+figures, not canonical acceptance. The profile-0 ROM above remains unchanged.
 
 ## Milestones
 
 | Milestone | State | Measured boundary / target |
 |---|---|---:|
 | M1 — simple hardware-affine BG2 | Complete | 1,856/1,856 ticks; beats the ≤35K ceiling |
-| M2 — AOT DS-native Mario/Fox | Whole-owner FIFO packet rejected; exact host fixtures retained | clean control 413,504; rejected packet 537,792; target 170–250K |
-| M3 — AOT DS-native complete stage | Exact 10,076-byte host packet; production link absent | clean 804,032 stage; first gate <=500K and >=300K saved; target 150–250K |
-| M4 — conversion off gameplay path | Exact host corpus and pre-GO residency plan; production link absent | current conversion ~189K; gameplay target zero conversion/upload/I/O |
+| M2 — AOT DS-native Mario/Fox | Mode 8 correct; FIFO and Mode 7 rejected | ledger-off ~413.5K; detailed 477,152; target 170–250K |
+| M3 — AOT DS-native complete stage | Exact 12,663-byte core; partial adapter compiles | baseline stage ~805K; first gate <=500K and >=300K saved; target 150–250K |
+| M4 — conversion off gameplay path | Exact 167,936-byte residency + 138-triangle draw packets; live hook pending | draw-time upload/I/O/alloc statically zero; gameplay target zero |
 
 The owner targets are active renderer ticks, not FPS estimates. Re-profile the
 whole frame after each accepted owner cut.
@@ -176,9 +174,16 @@ ROM `13506F55...B98589B`, frames 600–607, exact Mode-8 A0/A1 reproduced at
 537,856, a 124,288-tick regression. It retained exact 70/686 geometry,
 60+320+306 ownership, 29/0/0 fallbacks, batch/submit classes, and texture
 traffic, but uncached validation plus copying, dynamic word patching, cache
-flush, and DMA cost more than the CPU work they replaced. The runtime Mode-9
-path is removed. Keep the 31,880-byte exact host packet and independent
-association checker only as fixtures.
+flush, and DMA cost more than the CPU work they replaced. Its selector is
+removed; Mode 9 is now reserved for M3 complete-stage work. Keep the 31,880-byte
+exact host packet and independent association checker only as fixtures.
+
+The subsequent Mode-7 hierarchy owner is also rejected. A0/A1 Mode 8 is
+477,152/477,376 in the detailed window; Mode 7 is 518,336/518,784 and its
+screenshot contains no fighters despite exact accounting. Remove that runtime
+path and its temporary verifier allowance. A read-only direct-contract design
+can avoid duplicate capture/setup work with an estimated 62–75K net saving,
+but this estimate is not implementation or device evidence.
 
 Do not retry a full staging-buffer copy or merely cache validation: even the
 measured packet production wall alone regressed. The next M2 design must use
@@ -218,14 +223,14 @@ weapons at 14. Each callback closes its logical GX batch, restores profile
 ownership, and rebinds state on resume; it must not flush. Preserve BattleShip
 display order, live state, animation, effects, depth, and translucency.
 
-Do not revive the rejected source-shaped typed stage executor or mode-9 record
-executor. The sampled idle-window candidate is 42 lists / 886 commands / 302
-vertices / 54 runs / 202 triangles, partitioned 66 raw, 126 no-Z, and 10
-projected. A host generator plus profile-2 falsifier must first establish the
-currently doc-only 57-DObj count and exact eight-callback partition. Keep known
-projected/dynamic records cold, assert zero cross-matrix triangles, use the live
-matrix per list, and keep no-Z depth frame-global. Resident slab data must be
-<=16 KiB with no new BSS/heap; any mismatch falls back before mutation.
+The current exact packet is 12,663 bytes: 8 callbacks, 57 DObjs, 42 bindings,
+886 commands, 54 runs, 49 texture epochs, and 202 triangles. It includes five
+projected cross-matrix runs / ten triangles / fifteen foreign corners and zero
+raw cross-matrix submissions. Twelve perturbations prove fail-closed behavior.
+The renderer core and the 415-line adapter helper compile; ordered display-loop
+prepare/commit/finish interception, final link, device counters, timing, and
+screenshot remain unfinished. Resident packet data stays below 16 KiB and any
+mismatch must fall back before GX mutation.
 
 Whispy blink/turn/open/blow/stop, flower animation, live DObj flags, and segment
 E material/FRAC mutation can change draw selection or state after startup. The
@@ -319,24 +324,26 @@ Scope the gameplay fence from GO through battle teardown. Results is a later
 setup/load boundary and may prewarm before rearming; a global no-I/O claim would
 instead require Results assets in the original census and reserve budget.
 
-Water remains a separate representation checkpoint. The exact tiled-AOT host
-fixture is now enforced at 181,408 bytes and production_linked=0: 131,072-byte
-RGB256 pair atlas, 16,384-byte RGB4 visibility atlas, 20,480-byte pair palettes,
-8,544-byte state tables, 544-byte cells, and 4,384-byte vertices. With the
-90,112-byte deduplicated static pixel file, setup would stream/hash 258,048
-bytes from NitroFS in reusable 4 KiB chunks before GO; the source-derived
-planned 18,920-byte metadata/palette base remains separate. A+B post-GO usage
-would be 241,664 with
-20,480 free. The plan uses that exact headroom only as pre-GO palette staging,
-then compacts GO OAM to 60,544 bytes in E and remaps F/G before the first source
-control unlock. Planned F/G use is 20,488 after adding the still-unproved
-8-byte visibility palette.
+Water now has a one-pass exact tiled representation. The NitroFS payload is
+167,936 bytes: 131,072-byte 512x256 primary RGB256 atlas, 16,384-byte 256x64
+secondary atlas, and forty 512-byte palettes. Metadata/state is 6,032 bytes.
+The host oracle covers 3,024,896 full and 2,139,356 clipped pixels with zero
+mismatch. The allocator-managed residency gate proves two textures + forty
+palettes, exact A:0/B:0 placement, and no gameplay upload/I/O/allocation.
 
-The last measured 172,024-byte reserve projects to 152,080 without, or 145,860
-with, the estimated live-key table; those omit new text, padding, allocator,
-and filesystem overhead and are feasibility estimates, not a linker/runtime
-result. Production must prove >=128 KiB reserve, >=16 KiB A+B
-headroom, exact bank ownership, and zero open/read/seek after the fence arms.
+The additive draw helper emits 68 source-ordered cells, 138 triangles, and 414
+vertices in one primary plus an optional secondary batch. Its ARM object is
+840 bytes of text with 64-byte max stack and no division/float/indirect helper;
+draw-time upload/I/O/allocation calls are zero. It is not live yet
+(`draw_proven=0`). After M3 settles, retain stage run 41/binding 30 and replace
+only runs 42–43/bindings 31–32 with this helper under the same live parent
+matrix, source polygon state, white modulation, cycle frame, and fraction.
+
+The last measured 172,024-byte reserve is still only a pre-integration
+reference; new text, packet scratch, allocator metadata, and filesystem
+overhead require a fresh linked/runtime measurement. Production must prove
+>=128 KiB reserve, exact bank ownership, and zero open/read/seek after the
+fence arms.
 Keep the design only after device upload/remap proof, correct moving-water
 screenshots, zero post-GO conversion/upload/I/O/alloc/eviction/palette DMA, and
 at least 100K owner/draw saving. Static-manifest success alone still claims only

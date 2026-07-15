@@ -89,7 +89,7 @@ All generated screenshots belong under `artifacts/visibility`.
 | HUD/countdown | User-approved lower HUD and top countdown pass |
 | Audio | Production phase/KO and isolated crowd-ACK gates pass; the user ROM has no blocking trace; ID626 PNT=1/LEN=3527 model passes with 2 guard samples/cycle; audible qualification remains open |
 | Stability/memory | One full match passes with 172,024-byte conservative reserve and zero safety faults; repetition pending |
-| Release evidence | Cut G exact-frame capture passes; final dated qualification capture, Full Regression, and exact-ROM retest pending |
+| Release evidence | Cut G exact-frame capture passes; final dated capture, executable focused/DevFast/Boundary checks, and exact-ROM retest pending |
 
 ## Performance And Open Work
 
@@ -147,5 +147,4 @@ Checkpoint commands:
 .\scripts\verify-boundary.ps1 -NoBuild -DelaySeconds 3 -RunnerSlot 0
 ```
 
-`Full`, `Regression*`, and `P1Gate` are list-only; never run or prebuild them.
-Remaining blockers, including final CPU-on qualification, live on the execution board. Run the Lean snapshot last.
+`Full`, `Regression*`, and `P1Gate` are list-only; never run or prebuild them. Remaining blockers live on the execution board; run the Lean snapshot last.
