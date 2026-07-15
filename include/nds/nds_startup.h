@@ -4485,15 +4485,19 @@ void ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame(void);
 s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void);
 s32 ndsFighterMarioFoxGCDrawAllLoopDisplayActive(void);
 void ndsStageGCDrawAllLoopRecordCameraCallback(void);
-void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
-                                                void *display_gobj,
-                                                s32 link_id);
+s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
+                                               void *display_gobj,
+                                               s32 link_id);
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind);
 void ndsRendererAdapterBeginStageTraversal(void);
 void ndsRendererAdapterEndStageTraversal(void);
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
                                        void *camera_gobj,
                                        u32 initial_geometry_mode);
+s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj);
+s32 ndsRendererAdapterCommitNativeStageDisplay(void *display_gobj,
+                                                s32 link_id);
+void ndsRendererAdapterFinishNativeStageOwner(void);
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxStageCollisionLoopMask;

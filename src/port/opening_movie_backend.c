@@ -4370,18 +4370,22 @@ void gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                 {
                     GObj *prev_camera_gobj =
                         sNdsOpeningRoomCurrentDrawCameraGObj;
+                    sb32 native_stage_handled;
 
                     dGCCurrentStatus = nGCStatusDisplaying;
                     gGCCurrentDisplay = current_gobj;
 
-                    ndsStageGCDrawAllLoopRecordCapturedDisplay(camera_gobj,
-                                                               current_gobj,
-                                                               link_id);
+                    native_stage_handled =
+                        ndsStageGCDrawAllLoopRecordCapturedDisplay(
+                            camera_gobj, current_gobj, link_id);
                     ndsOpeningRoomRecordCapturedDisplay(camera_gobj,
                                                         current_gobj,
                                                         link_id);
                     sNdsOpeningRoomCurrentDrawCameraGObj = camera_gobj;
-                    current_gobj->proc_display(current_gobj);
+                    if (native_stage_handled == FALSE)
+                    {
+                        current_gobj->proc_display(current_gobj);
+                    }
                     sNdsOpeningRoomCurrentDrawCameraGObj = prev_camera_gobj;
 
                     dGCCurrentStatus = nGCStatusCapturing;

@@ -12761,6 +12761,7 @@ static GObj *sNdsStageGCDrawAllLoopCurrentDisplayGObj;
 static s32 sNdsStageGCDrawAllLoopCurrentDisplayLinkID;
 #if NDS_RENDERER_HW_TRIANGLES
 static sb32 sNdsStageGCDrawAllLoopHardwareSubmitActive;
+static sb32 sNdsStageGCDrawAllLoopNativeStageArmed;
 static u32 sNdsStageGCDrawAllLoopHardwareSubmitCount;
 extern void ndsRendererAdapterResetDepthDiagnostics(void);
 
@@ -13101,9 +13102,9 @@ void ndsStageGCDrawAllLoopRecordCameraCallback(void)
     gNdsStageGCDrawAllLoopCameraCallbackCount++;
 }
 
-void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
-                                                void *display_gobj,
-                                                s32 link_id)
+s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
+                                               void *display_gobj,
+                                               s32 link_id)
 {
     GObj *display = display_gobj;
     u32 mask;
@@ -13118,7 +13119,7 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
         (sNdsFighterGCDrawAllLoopDisplayActive == FALSE))
 #endif
     {
-        return;
+        return FALSE;
     }
     gNdsStageGCDrawAllLoopCapturedDisplayCount++;
     sNdsStageGCDrawAllLoopCurrentCameraGObj = camera_gobj;
@@ -13147,6 +13148,13 @@ void ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     {
         gNdsStageGCDrawAllLoopNonStageCaptureCount++;
     }
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
+    {
+        return ndsRendererAdapterCommitNativeStageDisplay(display, link_id);
+    }
+#endif
+    return FALSE;
 }
 
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
@@ -13391,7 +13399,15 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
     ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererAdapterResetDepthDiagnostics();
+    sNdsStageGCDrawAllLoopNativeStageArmed =
+        ndsRendererAdapterPrepareNativeStageOwner(
+            ndsBattleCompatMainCameraGObj());
     gcDrawAll();
+    if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
+    {
+        ndsRendererAdapterFinishNativeStageOwner();
+        sNdsStageGCDrawAllLoopNativeStageArmed = FALSE;
+    }
     ndsFighterDisplayContractSubmitStageFighters();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
 }
@@ -13429,7 +13445,15 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareSetNoOracle(TRUE);
 #endif
+    sNdsStageGCDrawAllLoopNativeStageArmed =
+        ndsRendererAdapterPrepareNativeStageOwner(
+            ndsBattleCompatMainCameraGObj());
     gcDrawAll();
+    if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
+    {
+        ndsRendererAdapterFinishNativeStageOwner();
+        sNdsStageGCDrawAllLoopNativeStageArmed = FALSE;
+    }
     ndsFighterDisplayContractSubmitStageFighters();
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareSetNoOracle(FALSE);

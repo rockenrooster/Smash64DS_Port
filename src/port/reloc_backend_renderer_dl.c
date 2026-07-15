@@ -10611,15 +10611,19 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
            NDS_RENDERER_FAST_RUN_NATIVE_MARIO) && (slot == 0u)) ||
          ((gNdsRendererFastRunMode ==
            NDS_RENDERER_FAST_RUN_NATIVE_FOX) && (slot == 1u)) ||
-         (gNdsRendererFastRunMode ==
-          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
-         (gNdsRendererFastRunMode ==
-          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)) ? TRUE :
+          (gNdsRendererFastRunMode ==
+           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
+          (gNdsRendererFastRunMode ==
+           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ||
+          (gNdsRendererFastRunMode ==
+           NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE :
                                                                     FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     native_owner_production_mode =
-        (gNdsRendererFastRunMode ==
-         NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ? TRUE :
+        ((gNdsRendererFastRunMode ==
+          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ||
+         (gNdsRendererFastRunMode ==
+          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE :
                                                                    FALSE;
     native_owner_hierarchy_mode =
         (gNdsRendererFastRunMode ==
