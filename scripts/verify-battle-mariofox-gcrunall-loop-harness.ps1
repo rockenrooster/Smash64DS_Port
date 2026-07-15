@@ -643,6 +643,9 @@ try {
                     ($RendererFastRunMode -eq 9)) {
                     $coarseBenchmarkCommands += 'printf "M3_STAGE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3PreflightAttemptCount, gNdsRendererM3PreflightSuccessCount, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3SegmentCount, gNdsRendererM3SegmentMask, gNdsRendererM3PostArmFailureCount, gNdsRendererM3DObjCount, gNdsRendererM3BindingCount, gNdsRendererM3RunCount, gNdsRendererM3TriangleCount, gNdsRendererM3ResidentEpochCount, gNdsRendererM3MaterialShadowCount, gNdsRendererM3MaterialCommitCount, gNdsRendererM3CrossRunCount, gNdsRendererM3CrossTriangleCount, gNdsRendererM3CrossForeignCornerCount'
                 }
+                if ($M4WaterTiledAotMode -eq 1) {
+                    $coarseBenchmarkCommands += 'printf "M4_WATER=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsPupupuWaterResidencyPrepared, gNdsPupupuWaterResidencyPrepareCount, gNdsPupupuWaterResidencyPrepareSuccessCount, gNdsPupupuWaterResidencyPrepareFailCount, gNdsPupupuWaterResidencyResetCount, gNdsPupupuWaterResidencyPayloadBytes, gNdsPupupuWaterResidencyTextureBytes, gNdsPupupuWaterResidencyPaletteBytes, gNdsPupupuWaterResidencyTextureCount, gNdsPupupuWaterResidencyPaletteCount, gNdsPupupuWaterResidencyScratchBytes, gNdsPupupuWaterResidencyPrimaryBindCount, gNdsPupupuWaterResidencySecondaryBindCount, gNdsPupupuWaterResidencyBindFailCount, gNdsPupupuWaterResidencyLastFailure, gNdsPupupuWaterDrawAttemptCount, gNdsPupupuWaterDrawSuccessCount, gNdsPupupuWaterDrawFailCount, gNdsPupupuWaterDrawPrimaryBatchCount, gNdsPupupuWaterDrawSecondaryBatchCount, gNdsPupupuWaterDrawCellCount, gNdsPupupuWaterDrawTriangleCount, gNdsPupupuWaterDrawVertexCount, gNdsPupupuWaterDrawLastFailure'
+                }
                 $coarseBenchmarkCommands += 'printf "M4_STATIC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount'
                 $coarseBenchmarkCommands += 'printf "M4_FENCE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'
                 if ($RendererM2DetailedLedger) {
@@ -1044,6 +1047,7 @@ try {
     $texturePhaseBenchmark = @()
     $fastRunBenchmark = @()
     $m3StageBenchmark = @()
+    $m4WaterBenchmark = @()
     $m4StaticBenchmark = @()
     $m4FenceBenchmark = @()
     $m2Benchmark = @()
@@ -1059,6 +1063,9 @@ try {
         if (($RendererProfileLevel -eq 1) -and
             ($RendererFastRunMode -eq 9)) {
             $m3StageBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_STAGE' -FieldCount 17)
+        }
+        if ($M4WaterTiledAotMode -eq 1) {
+            $m4WaterBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_WATER' -FieldCount 25)
         }
         $m4StaticBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_STATIC' -FieldCount 11)
         $m4FenceBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_FENCE' -FieldCount 13)
@@ -1524,6 +1531,7 @@ try {
                 $texturePhaseMetricSummary = ''
                 $fastRunMetricSummary = ''
                 $m3StageMetricSummary = ''
+                $m4WaterMetricSummary = ''
                 $m4StaticMetricSummary = ''
                 $m4FenceMetricSummary = ''
                 $m2MetricSummary = ''
@@ -1588,6 +1596,7 @@ try {
                     $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                     $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                     $m3StageSamples = [System.Collections.Generic.List[object]]::new()
+                    $m4WaterSamples = [System.Collections.Generic.List[object]]::new()
                     $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
                     $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
                     $semanticSamples = [System.Collections.Generic.List[object]]::new()
@@ -1622,6 +1631,7 @@ try {
                         $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                         $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                         $m3StageSamples = [System.Collections.Generic.List[object]]::new()
+                        $m4WaterSamples = [System.Collections.Generic.List[object]]::new()
                         $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
                         $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
@@ -1649,6 +1659,9 @@ try {
                         Assert-Condition ($fastRunBenchmark.Count -eq $RendererBenchmarkSamples) "Fast-run benchmark captured $($fastRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         if ($RendererFastRunMode -eq 9) {
                             Assert-Condition ($m3StageBenchmark.Count -eq $RendererBenchmarkSamples) "M3 stage benchmark captured $($m3StageBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        }
+                        if ($M4WaterTiledAotMode -eq 1) {
+                            Assert-Condition ($m4WaterBenchmark.Count -eq $RendererBenchmarkSamples) "M4 water benchmark captured $($m4WaterBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         Assert-Condition ($m4StaticBenchmark.Count -eq $RendererBenchmarkSamples) "M4 static-texture benchmark captured $($m4StaticBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         Assert-Condition ($m4FenceBenchmark.Count -eq $RendererBenchmarkSamples) "M4 post-GO texture fence captured $($m4FenceBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -1757,6 +1770,11 @@ try {
                                 Assert-Condition ($fastRun[2] -gt 0 -and $fastRun[3] -gt 0) "Selected laboratory fast mode executed no fast triangles at frame $frame." $gdbStdout
                             }
                             $fastRunSamples.Add($fastRun)
+                            if ($M4WaterTiledAotMode -eq 1) {
+                                $water = Get-Ints $m4WaterBenchmark[$sampleIndex]
+                                Assert-Condition ($water[0] -eq $frame -and $water[1] -eq 1 -and $water[2] -eq 1 -and $water[3] -eq 1 -and $water[4] -eq 0 -and $water[6] -eq 167936 -and $water[7] -eq 147456 -and $water[8] -eq 20480 -and $water[9] -eq 2 -and $water[10] -eq 40 -and $water[11] -eq 4096 -and $water[12] -ge $water[17] -and $water[13] -le $water[17] -and $water[14] -eq 0 -and $water[15] -eq 0 -and $water[16] -eq $water[17] -and $water[17] -gt 0 -and $water[18] -eq 0 -and $water[19] -eq $water[17] -and $water[20] -le $water[17] -and $water[21] -eq ($water[17] * 68) -and $water[22] -eq ($water[17] * 138) -and $water[23] -eq ($water[17] * 414) -and $water[24] -eq 0) "M4 tiled water was not prepared pre-GO and drawn from exact resident assets at frame $frame (actual=$($water -join ','))." $gdbStdout
+                                $m4WaterSamples.Add($water)
+                            }
                             $m4Static = Get-Ints $m4StaticBenchmark[$sampleIndex]
                             Assert-Condition ($m4Static[0] -eq $frame -and
                                 $m4Static[1] -eq $StaticTextureAotMode) "M4 static-texture accounting is not synchronized or in the selected mode at frame $frame." $gdbStdout
@@ -2067,6 +2085,10 @@ try {
                             $m3Last = $m3StageSamples[-1]
                             $m3StageMetricSummary = "Renderer M3 stage owner: attempts/success/fallback=$($m3Last[1])/$($m3Last[2])/$($m3Last[3]) segments/mask=$($m3Last[4])/$($m3Last[5]) postArm=$($m3Last[6]) dobjs/bindings/runs/triangles/epochs=$($m3Last[7])/$($m3Last[8])/$($m3Last[9])/$($m3Last[10])/$($m3Last[11]) materials=$($m3Last[12])/$($m3Last[13]) cross=$($m3Last[14])/$($m3Last[15])/$($m3Last[16])"
                         }
+                        if ($M4WaterTiledAotMode -eq 1) {
+                            $waterLast = $m4WaterSamples[-1]
+                            $m4WaterMetricSummary = "Renderer M4 tiled water: prepared/prepare/success/fail=$($waterLast[1])/$($waterLast[2])/$($waterLast[3])/$($waterLast[4]) payload/texture/palette=$($waterLast[6])/$($waterLast[7])/$($waterLast[8]) textures/palettes/scratch=$($waterLast[9])/$($waterLast[10])/$($waterLast[11]) binds=$($waterLast[12])/$($waterLast[13])/$($waterLast[14]) draws=$($waterLast[16])/$($waterLast[17])/$($waterLast[18]) cells/triangles/vertices=$($waterLast[21])/$($waterLast[22])/$($waterLast[23])"
+                        }
                         $m4StaticMetricSummary = "Renderer M4 static textures: mode=$StaticTextureAotMode samples=$RendererBenchmarkSamples prepare=$($m4StaticSamples[0][2]) fail=$($m4StaticSamples[0][3]) prepared=$($m4StaticSamples[0][4]) bytes=$($m4StaticSamples[0][5]) arm=$($m4StaticSamples[0][6]) seenMask=0x$('{0:x}' -f $m4StaticSamples[-1][7]) ownerMask=0x$('{0:x}' -f $m4StaticSamples[-1][8]) violation=$($m4StaticSamples[-1][9]) pinnedHits=$($m4StaticSamples[0][10])..$($m4StaticSamples[-1][10])"
                         $m4FenceLast = $m4FenceSamples[-1]
                         $m4FenceMetricSummary = "Renderer M4 post-GO texture fence: samples=$RendererBenchmarkSamples first=$($m4FenceLast[1])/$($m4FenceLast[2]) convert=$($m4FenceLast[3]) decode=$($m4FenceLast[4]) alloc=$($m4FenceLast[5]) fileIO=$($m4FenceLast[6]) glCreate=$($m4FenceLast[7]) glUpload=$($m4FenceLast[8]) glDelete=$($m4FenceLast[9]) evict=$($m4FenceLast[10]) refresh=$($m4FenceLast[11]) fallback=$($m4FenceLast[12])"
@@ -2225,6 +2247,7 @@ try {
                                 texturePhases = @($texturePhaseSamples)
                                 fastRaw = @($fastRunSamples)
                                 m3Stage = @($m3StageSamples)
+                                m4Water = @($m4WaterSamples)
                                 m4Static = @($m4StaticSamples)
                                 m4Fence = @($m4FenceSamples)
                                 owners = @(
@@ -2285,6 +2308,7 @@ try {
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
+                    if ($m4WaterMetricSummary) { Write-Output $m4WaterMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
                     if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
                     if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
@@ -2663,6 +2687,7 @@ try {
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
+                    if ($m4WaterMetricSummary) { Write-Output $m4WaterMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
                     if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
                     if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
