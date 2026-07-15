@@ -475,6 +475,7 @@ typedef struct NDSRendererNativeFighterHierarchy
 typedef struct NDSRendererNativeStageFrame
 {
     const void *asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
+    const void *const *binding_display_lists;
     const NDSRendererMatrix20p12 *projection;
     const NDSRendererMatrix20p12 *binding_composed;
     const NDSRendererNativeMaterial *materials;

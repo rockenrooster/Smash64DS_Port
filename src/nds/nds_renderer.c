@@ -15661,6 +15661,355 @@ static inline void ndsRendererNativeStageEmitVertex(
     }
 }
 
+s32 ndsRendererPrepareNativeStageOwner(
+    const NDSRendererNativeStageFrame *frame,
+    NDSRendererStats *stats)
+{
+    NDSRendererTraversalState *state =
+        &sNdsNativeStageOwnerExecution.traversal;
+    u64 epoch_mask = 0u;
+    u32 raw_triangles = 0u;
+    u32 projected_no_z_triangles = 0u;
+    u32 projected_range_triangles = 0u;
+    u32 cross_runs = 0u;
+    u32 cross_triangles = 0u;
+    u32 cross_foreign_corners = 0u;
+    u32 segment_index;
+    s32 accepted = FALSE;
+
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererM3PreflightAttemptCount++;
+    gNdsRendererM3SegmentCount = 0u;
+    gNdsRendererM3SegmentMask = 0u;
+    gNdsRendererM3DObjCount = 0u;
+    gNdsRendererM3BindingCount = 0u;
+    gNdsRendererM3RunCount = 0u;
+    gNdsRendererM3TriangleCount = 0u;
+    gNdsRendererM3ResidentEpochCount = 0u;
+    gNdsRendererM3MaterialShadowCount = 0u;
+    gNdsRendererM3MaterialCommitCount = 0u;
+    gNdsRendererM3CrossRunCount = 0u;
+    gNdsRendererM3CrossTriangleCount = 0u;
+    gNdsRendererM3CrossForeignCornerCount = 0u;
+#endif
+    sNdsNativeStageOwnerExecution.active = FALSE;
+    if ((gNdsRendererFastRunMode !=
+         NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ||
+        (frame == NULL) || (stats == NULL) ||
+        (frame->binding_display_lists == NULL) ||
+        (frame->projection == NULL) ||
+        (frame->binding_composed == NULL) ||
+        (frame->materials == NULL) || (frame->config == NULL) ||
+        (NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI != 0x4d335031u))
+    {
+        goto done;
+    }
+    for (segment_index = 0u;
+         segment_index < NDS_NATIVE_STAGE_ASSET_COUNT;
+         segment_index++)
+    {
+        if (frame->asset_bases[segment_index] == NULL)
+        {
+            goto done;
+        }
+    }
+    for (segment_index = 0u;
+         segment_index < NDS_NATIVE_STAGE_BINDING_COUNT;
+         segment_index++)
+    {
+        const NDSNativeStageBinding *binding =
+            &sNdsNativeStageBindings[segment_index];
+
+        if ((binding->asset_index >= NDS_NATIVE_STAGE_ASSET_COUNT) ||
+            (frame->binding_display_lists[segment_index] !=
+             (const void *)((const u8 *)frame->asset_bases[
+                 binding->asset_index] + binding->root_offset)))
+        {
+            goto done;
+        }
+    }
+
+    for (segment_index = 0u;
+         segment_index < NDS_NATIVE_STAGE_SEGMENT_COUNT;
+         segment_index++)
+    {
+        const NDSNativeStageSegment *segment =
+            &sNdsNativeStageSegments[segment_index];
+        u32 binding_offset;
+
+        ndsRendererInitStats(&sNdsNativeStageOwnerExecution.preflight_stats);
+        sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
+            segment->initial_geometry;
+        ndsRendererInitTraversalState(
+            state, frame->config,
+            &sNdsNativeStageOwnerExecution.preflight_stats,
+            NULL, NULL, 0u);
+        for (binding_offset = 0u;
+             binding_offset < segment->binding_count;
+             binding_offset++)
+        {
+            u32 binding_index = (u32)segment->first_binding + binding_offset;
+            const NDSNativeStageBinding *binding =
+                &sNdsNativeStageBindings[binding_index];
+            u32 run_offset;
+
+            for (run_offset = 0u;
+                 run_offset < binding->run_count;
+                 run_offset++)
+            {
+                u32 run_index = (u32)binding->first_run + run_offset;
+                const NDSNativeStageRun *run;
+                u32 corner_count;
+                u32 corner_offset;
+
+                if ((run_index >= NDS_NATIVE_STAGE_RUN_COUNT) ||
+                    (run_index < segment->first_run) ||
+                    (run_index >= (u32)segment->first_run +
+                                      segment->run_count) ||
+                    (ndsRendererNativeStageApplyStateSpan(
+                         &sNdsNativeStageStateSpans[run_index], frame,
+                         &sNdsNativeStageOwnerExecution.preflight_stats,
+                         state) == FALSE) ||
+                    (ndsRendererNativeStagePrepareRun(
+                         run_index, frame,
+                         &sNdsNativeStageOwnerExecution.preflight_stats,
+                         state, &epoch_mask) == FALSE))
+                {
+                    goto done;
+                }
+                run = &sNdsNativeStageRuns[run_index];
+                if (run->submit_class ==
+                    NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
+                {
+                    if (run->binding_index != 29u)
+                    {
+                        goto done;
+                    }
+                    raw_triangles += run->triangle_count;
+                }
+                else if (run->submit_class ==
+                         NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+                {
+                    projected_no_z_triangles += run->triangle_count;
+                }
+                else if (run->submit_class ==
+                         NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+                {
+                    projected_range_triangles += run->triangle_count;
+                }
+                else
+                {
+                    goto done;
+                }
+                if ((run->flags &
+                     NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
+                {
+                    if ((run->submit_class !=
+                         NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ||
+                        (run->triangle_count != 2u))
+                    {
+                        goto done;
+                    }
+                    cross_runs++;
+                    cross_triangles += run->triangle_count;
+                    corner_count = (u32)run->triangle_count * 3u;
+                    for (corner_offset = 0u;
+                         corner_offset < corner_count;
+                         corner_offset++)
+                    {
+                        u32 dense_index = sNdsNativeStageCorners[
+                            (u32)run->first_corner + corner_offset];
+                        if (sNdsNativeStageVertices[dense_index].matrix_binding !=
+                            run->binding_index)
+                        {
+                            cross_foreign_corners++;
+                        }
+                    }
+                }
+            }
+            if (ndsRendererNativeStageApplyStateSpan(
+                    &sNdsNativeStageStateSpans[
+                        NDS_NATIVE_STAGE_RUN_COUNT + binding_index],
+                    frame, &sNdsNativeStageOwnerExecution.preflight_stats,
+                    state) == FALSE)
+            {
+                goto done;
+            }
+        }
+    }
+    if ((epoch_mask != (((u64)1u <<
+                         NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) - 1u)) ||
+        (raw_triangles != 66u) ||
+        (projected_no_z_triangles != 126u) ||
+        (projected_range_triangles != 10u) ||
+        (cross_runs != 5u) || (cross_triangles != 10u) ||
+        (cross_foreign_corners != 15u))
+    {
+        goto done;
+    }
+
+    sNdsNativeStageOwnerExecution.raw_composed =
+        frame->binding_composed[29u];
+    ndsRendererInitStats(stats);
+    stats->command_count = NDS_NATIVE_STAGE_SOURCE_COMMAND_COUNT;
+    stats->vertex_count = NDS_NATIVE_STAGE_SOURCE_VERTEX_COUNT;
+    stats->vertex_command_count = NDS_NATIVE_STAGE_VERTEX_COMMAND_COUNT;
+    stats->triangle_command_count = NDS_NATIVE_STAGE_TRIANGLE_COMMAND_COUNT;
+    stats->sync_command_count =
+        sNdsNativeStageOwnerExecution.preflight_stats.sync_command_count;
+    sNdsNativeStageOwnerExecution.stats = stats;
+    sNdsNativeStageOwnerExecution.next_segment = 0u;
+    sNdsNativeStageOwnerExecution.active = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererM3PreflightSuccessCount++;
+    gNdsRendererM3ResidentEpochCount =
+        NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT;
+    gNdsRendererM3CrossRunCount = cross_runs;
+    gNdsRendererM3CrossTriangleCount = cross_triangles;
+    gNdsRendererM3CrossForeignCornerCount = cross_foreign_corners;
+#endif
+    accepted = TRUE;
+
+done:
+    if (accepted == FALSE)
+    {
+        sNdsNativeStageOwnerExecution.stats = NULL;
+        sNdsNativeStageOwnerExecution.next_segment = 0u;
+        sNdsNativeStageOwnerExecution.active = FALSE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererM3PreflightFallbackCount++;
+#endif
+    }
+    return accepted;
+}
+
+s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
+{
+    NDSRendererStats *stats = sNdsNativeStageOwnerExecution.stats;
+    const NDSNativeStageSegment *segment;
+    u32 run_offset;
+    u32 segment_triangles = 0u;
+
+    if (sNdsNativeStageOwnerExecution.active == FALSE)
+    {
+        return FALSE;
+    }
+    if ((segment_index >= NDS_NATIVE_STAGE_SEGMENT_COUNT) ||
+        (segment_index != sNdsNativeStageOwnerExecution.next_segment) ||
+        (stats == NULL))
+    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererM3PostArmFailureCount++;
+#endif
+        return TRUE;
+    }
+    segment = &sNdsNativeStageSegments[segment_index];
+    sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
+    for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
+    {
+        u32 run_index = (u32)segment->first_run + run_offset;
+        const NDSNativeStageRun *run = &sNdsNativeStageRuns[run_index];
+        const NDSNativeStagePreparedRun *prepared_run =
+            &sNdsNativeStageOwnerExecution.runs[run_index];
+        u32 triangle_offset;
+
+        ndsRendererNativeStageBeginRun(prepared_run, run->submit_class, stats);
+        for (triangle_offset = 0u;
+             triangle_offset < run->triangle_count;
+             triangle_offset++)
+        {
+            s16 no_z = (run->submit_class ==
+                NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ?
+                ndsRendererHardwareNextProjectedDepth() : 0;
+            u32 corner_offset;
+
+            for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+            {
+                u32 dense_index = sNdsNativeStageCorners[
+                    (u32)run->first_corner + triangle_offset * 3u +
+                    corner_offset];
+                const NDSNativeStageDenseVertex *dense =
+                    &sNdsNativeStageVertices[dense_index];
+                const NDSNativeStagePreparedDense *prepared =
+                    &sNdsNativeStagePreparedDense[dense_index];
+                s16 projected_z =
+                    (run->submit_class ==
+                     NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+                        prepared->source_z : no_z;
+
+                ndsRendererNativeStageEmitVertex(
+                    dense, prepared, prepared_run, run->submit_class,
+                    projected_z);
+            }
+            if (run->submit_class !=
+                NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+            {
+                ndsRendererHardwareEnterProjectedForeground();
+            }
+        }
+        ndsRendererHardwareEndBatch();
+        ndsRendererNativeStageAccountRun(
+            stats, run->submit_class, run->triangle_count);
+        stats->triangle_count += run->triangle_count;
+        segment_triangles += run->triangle_count;
+    }
+    sNdsRendererFastRunCount += segment->run_count;
+    sNdsRendererFastTriangleCount += segment_triangles;
+    sNdsRendererFastOwnerTriangleCount[
+        NDS_RENDERER_PROFILE_OWNER_STAGE] += segment_triangles;
+    sNdsNativeStageOwnerExecution.next_segment++;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererM3SegmentCount++;
+    gNdsRendererM3SegmentMask |= (u32)1u << segment_index;
+    gNdsRendererM3RunCount += segment->run_count;
+    gNdsRendererM3TriangleCount += segment_triangles;
+#endif
+    sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
+    return TRUE;
+}
+
+void ndsRendererFinishNativeStageOwner(void)
+{
+    if (sNdsNativeStageOwnerExecution.active != FALSE)
+    {
+        ndsRendererHardwareEndBatch();
+        if ((sNdsNativeStageOwnerExecution.next_segment !=
+             NDS_NATIVE_STAGE_SEGMENT_COUNT) ||
+            (sNdsNativeStageOwnerExecution.stats == NULL) ||
+            (sNdsNativeStageOwnerExecution.stats->triangle_count !=
+             NDS_NATIVE_STAGE_TRIANGLE_COUNT))
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererM3PostArmFailureCount++;
+#endif
+        }
+    }
+    sNdsNativeStageOwnerExecution.stats = NULL;
+    sNdsNativeStageOwnerExecution.next_segment = 0u;
+    sNdsNativeStageOwnerExecution.active = FALSE;
+    sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
+}
+#else
+s32 ndsRendererPrepareNativeStageOwner(
+    const NDSRendererNativeStageFrame *frame,
+    NDSRendererStats *stats)
+{
+    (void)frame;
+    (void)stats;
+    return FALSE;
+}
+
+s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
+{
+    (void)segment_index;
+    return FALSE;
+}
+
+void ndsRendererFinishNativeStageOwner(void)
+{
+}
+#endif
+
 s32 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
     const void *asset_base_ptr,
