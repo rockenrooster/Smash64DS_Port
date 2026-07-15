@@ -111,6 +111,47 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
 static NDSRendererAdapterNativeOwnerWorkspace
     sNdsRendererAdapterNativeOwnerWorkspace;
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT 8u
+#define NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT 57u
+#define NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT 42u
+#define NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT 4u
+#define NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT 4u
+
+typedef struct NDSRendererAdapterNativeStageWorkspace
+{
+    NDSRelocLoadedFile *loaded[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
+    GObj *segments[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT];
+    DObj *dobjs[NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT];
+    DObj *binding_dobjs[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    NDSRendererNativeStageDObj live_dobjs[
+        NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT];
+    const void *binding_display_lists[
+        NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 binding_composed[
+        NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    NDSRendererNativeMaterial materials[
+        NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
+    MObj *material_mobjs[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
+    s32 material_curr[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
+    s32 material_next[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
+    NDSFighterDLDrawState resolver;
+    NDSRendererConfig config;
+    NDSRendererStats stats;
+    NDSRendererNativeStageFrame frame;
+    u32 dobj_count;
+    u32 binding_count;
+    u32 next_segment;
+    u32 active;
+} NDSRendererAdapterNativeStageWorkspace;
+
+/* The stage owner remains armed across fighter links 9, so it cannot share
+ * the complete-fighter workspace. */
+static NDSRendererAdapterNativeStageWorkspace
+    sNdsRendererAdapterNativeStageWorkspace;
+#endif
+
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 static sb32 ndsRendererAdapterCollectFighterTopology(
     DObj *dobj,
@@ -5583,8 +5624,9 @@ static void ndsRendererAdapterNativeMaterialTileSize(
         ((u32)lrt & 0x0fffu);
 }
 
-static sb32 ndsRendererAdapterBuildNativeMaterial(
-    MObj *mobj, NDSRendererNativeMaterial *out)
+static sb32 ndsRendererAdapterBuildNativeMaterialSnapshot(
+    MObj *mobj, NDSRendererNativeMaterial *out, sb32 advance_texture_ids,
+    s32 *out_curr, s32 *out_next)
 {
     u32 flags;
     f32 scau = 0.0F;
@@ -5597,11 +5639,15 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
     s32 ult;
     s32 s;
     s32 t;
+    s32 texture_id_curr;
+    s32 texture_id_next;
 
     if ((mobj == NULL) || (out == NULL))
     {
         return FALSE;
     }
+    texture_id_curr = mobj->texture_id_curr;
+    texture_id_next = mobj->texture_id_next;
     bzero(out, sizeof(*out));
     flags = ndsRendererAdapterMaterialFlags(mobj);
     out->command_count = 1u; /* ENDDL */
@@ -5674,8 +5720,8 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
 
             level = ndsRendererAdapterClampU8F32(
                 (mobj->lfrac - (f32)trunc) * 256.0F);
-            mobj->texture_id_curr = trunc;
-            mobj->texture_id_next = trunc + 1;
+            texture_id_curr = trunc;
+            texture_id_next = trunc + 1;
         }
         else
         {
@@ -5710,7 +5756,7 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
         ndsRendererAdapterNativeMaterialImage(
             mobj->sub.block_fmt, block_siz, 1u,
             ndsRendererAdapterReadPointerEntry(
-                mobj->sub.sprites, mobj->texture_id_next),
+                mobj->sub.sprites, texture_id_next),
             &out->block_image_w0, &out->block_image);
         out->command_count++;
         if ((flags & (MOBJ_FLAG_FRAC | MOBJ_FLAG_ALPHA)) != 0u)
@@ -5738,7 +5784,7 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
         ndsRendererAdapterNativeMaterialImage(
             mobj->sub.fmt, mobj->sub.siz, 1u,
             ndsRendererAdapterReadPointerEntry(
-                mobj->sub.sprites, mobj->texture_id_curr),
+                mobj->sub.sprites, texture_id_curr),
             &out->current_image_w0, &out->current_image);
         out->command_count++;
     }
@@ -5817,7 +5863,27 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
             (((u32)s & 0xffffu) << 16) | ((u32)t & 0xffffu);
         out->command_count++;
     }
+    if (out_curr != NULL)
+    {
+        *out_curr = texture_id_curr;
+    }
+    if (out_next != NULL)
+    {
+        *out_next = texture_id_next;
+    }
+    if (advance_texture_ids != FALSE)
+    {
+        mobj->texture_id_curr = texture_id_curr;
+        mobj->texture_id_next = texture_id_next;
+    }
     return TRUE;
+}
+
+static sb32 ndsRendererAdapterBuildNativeMaterial(
+    MObj *mobj, NDSRendererNativeMaterial *out)
+{
+    return ndsRendererAdapterBuildNativeMaterialSnapshot(
+        mobj, out, TRUE, NULL, NULL);
 }
 
 static sb32 ndsRendererAdapterPrepareNativeMaterials(

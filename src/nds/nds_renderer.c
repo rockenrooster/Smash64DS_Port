@@ -2356,41 +2356,14 @@ typedef struct NDSNativeStageOwnerExecution
     u32 active;
 } NDSNativeStageOwnerExecution;
 
-typedef struct NDSNativeFighterOwnerScratch
-{
-    NDSNativeFighterOwnerExecution execution;
-    NDSNativePreparedDenseVertex prepared_dense[
-        NDS_NATIVE_DENSE_VERTEX_COUNT];
-} NDSNativeFighterOwnerScratch;
-
-typedef struct NDSNativeStageOwnerScratch
-{
-    NDSNativeStageOwnerExecution execution;
-    NDSNativeStagePreparedDense prepared_dense[
-        NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
-} NDSNativeStageOwnerScratch;
-
-typedef union NDSNativeSerializedOwnerScratch
-{
-    NDSNativeFighterOwnerScratch fighter;
-    NDSNativeStageOwnerScratch stage;
-} NDSNativeSerializedOwnerScratch;
-
-/* Fighter and stage owners are serialized by taskman. Overlaying their
- * complete preflight state keeps mode 9 out of production BSS. */
-static NDSNativeSerializedOwnerScratch sNdsNativeSerializedOwnerScratch;
-#define sNdsNativeFighterOwnerExecution \
-    sNdsNativeSerializedOwnerScratch.fighter.execution
-#define sNdsNativeFighterPreparedDense \
-    sNdsNativeSerializedOwnerScratch.fighter.prepared_dense
-#define sNdsNativeStageOwnerExecution \
-    sNdsNativeSerializedOwnerScratch.stage.execution
-#define sNdsNativeStagePreparedDense \
-    sNdsNativeSerializedOwnerScratch.stage.prepared_dense
-
-_Static_assert(sizeof(NDSNativeStageOwnerScratch) <=
-                   sizeof(NDSNativeFighterOwnerScratch),
-               "stage owner must fit serialized fighter scratch");
+/* Stage segments straddle the fighter display links, so their accepted
+ * preflight must survive the two complete fighter-owner submissions. */
+static NDSNativeFighterOwnerExecution sNdsNativeFighterOwnerExecution;
+static NDSNativePreparedDenseVertex sNdsNativeFighterPreparedDense[
+    NDS_NATIVE_DENSE_VERTEX_COUNT];
+static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
+static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
+    NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
 #endif
 #endif
 
@@ -15696,6 +15669,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     if ((gNdsRendererFastRunMode !=
          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ||
         (frame == NULL) || (stats == NULL) ||
+        (frame->dobjs == NULL) ||
         (frame->binding_display_lists == NULL) ||
         (frame->projection == NULL) ||
         (frame->binding_composed == NULL) ||
@@ -15703,6 +15677,24 @@ s32 ndsRendererPrepareNativeStageOwner(
         (NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI != 0x4d335031u))
     {
         goto done;
+    }
+    for (segment_index = 0u;
+         segment_index < NDS_NATIVE_STAGE_DOBJ_COUNT;
+         segment_index++)
+    {
+        const NDSNativeStageDObj *expected =
+            &sNdsNativeStageDObjs[segment_index];
+        const NDSRendererNativeStageDObj *live = &frame->dobjs[segment_index];
+
+        if ((live->identity == NULL) ||
+            (live->parent_index != expected->parent_index) ||
+            (live->binding_index != expected->binding_index) ||
+            (live->transform_flags != expected->transform_flags) ||
+            (live->owner != expected->owner) ||
+            (live->depth != expected->depth))
+        {
+            goto done;
+        }
     }
     for (segment_index = 0u;
          segment_index < NDS_NATIVE_STAGE_ASSET_COUNT;

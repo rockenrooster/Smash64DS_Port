@@ -468,6 +468,17 @@ typedef struct NDSRendererNativeFighterHierarchy
 #define NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT 4u
 #define NDS_RENDERER_NATIVE_STAGE_BINDING_COUNT 42u
 #define NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT 4u
+#define NDS_RENDERER_NATIVE_STAGE_DOBJ_COUNT 57u
+
+typedef struct NDSRendererNativeStageDObj
+{
+    const void *identity;
+    u16 parent_index;
+    u16 binding_index;
+    u16 transform_flags;
+    u8 owner;
+    u8 depth;
+} NDSRendererNativeStageDObj;
 
 /* Mode-9 Dream Land owner input. The adapter owns these pointers only for the
  * synchronous preflight call; the renderer copies every value needed by the
@@ -475,6 +486,7 @@ typedef struct NDSRendererNativeFighterHierarchy
 typedef struct NDSRendererNativeStageFrame
 {
     const void *asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
+    const NDSRendererNativeStageDObj *dobjs;
     const void *const *binding_display_lists;
     const NDSRendererMatrix20p12 *projection;
     const NDSRendererMatrix20p12 *binding_composed;
