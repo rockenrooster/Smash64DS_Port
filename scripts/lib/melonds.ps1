@@ -139,7 +139,7 @@ function Set-MelonDSVerifierRunContext {
     param(
         [string]$Root,
         [int]$RunnerSlot = -1,
-        [int]$GdbPort = 3333
+        [int]$GdbPort = 4333
     )
 
     $env:SMASH64DS_RUNNER_SLOT = "$RunnerSlot"
@@ -156,7 +156,7 @@ function Initialize-MelonDSVerifierContext {
         [string]$Root,
         [string]$MelonDS,
         [int]$RunnerSlot = -1,
-        [int]$GdbPort = 3333,
+        [int]$GdbPort = 4333,
         [switch]$GdbPortExplicit,
         [switch]$NoBuild
     )
@@ -436,7 +436,7 @@ function Resolve-MelonDSRunnerSlot {
         [string]$Root,
         [int]$RunnerSlot = -1,
         [string]$MelonDS = (Join-Path $Root 'emulators\melonds\melonDS.exe'),
-        [int]$GdbPort = 3333,
+        [int]$GdbPort = 4333,
         [switch]$GdbPortExplicit
     )
 

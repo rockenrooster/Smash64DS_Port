@@ -12,11 +12,13 @@ param(
     [switch]$MaximizeVertical,
     [ValidateRange(-1,8)][int]$RendererFastRunMode = -1,
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
-    [int]$GdbPort = 3333,
+    [int]$GdbPort = 4333,
     [string]$Elf = '',
     [string]$SecondOutput,
     [int]$SecondDelaySeconds = 1,
-    [int]$SecondDelayMilliseconds = 0
+    [int]$SecondDelayMilliseconds = 0,
+    [ValidateRange(-1,1000000)][int]$ExactFirstFrame = -1,
+    [ValidateRange(-1,1000000)][int]$ExactSecondFrame = -1
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -41,7 +43,27 @@ $gdbPath = if ([System.IO.Path]::IsPathRooted($Gdb)) {
 }
 $elfPath = $null
 $gdbSelectionEnabled = ($RendererFastRunMode -ge 0)
-if ($gdbSelectionEnabled) {
+$exactFrameCaptureEnabled =
+    (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0))
+if ($exactFrameCaptureEnabled) {
+    if (($ExactFirstFrame -lt 0) -or ($ExactSecondFrame -lt 0)) {
+        throw '-ExactFirstFrame and -ExactSecondFrame must be supplied together.'
+    }
+    if ($ExactSecondFrame -ne ($ExactFirstFrame + 1)) {
+        throw 'Exact Cut G capture frames must be adjacent.'
+    }
+    if ([string]::IsNullOrWhiteSpace($SecondOutput)) {
+        throw '-SecondOutput is required for exact Cut G frame capture.'
+    }
+    if (-not $SoftwareRenderer) {
+        throw 'Exact Cut G frame capture requires -SoftwareRenderer.'
+    }
+    if ($gdbSelectionEnabled) {
+        throw '-RendererFastRunMode cannot be combined with exact Cut G capture.'
+    }
+}
+$gdbControlEnabled = $gdbSelectionEnabled -or $exactFrameCaptureEnabled
+if ($gdbControlEnabled) {
     if (-not (Test-Path -LiteralPath $gdbPath -PathType Leaf)) {
         throw "GDB executable not found: $gdbPath"
     }
@@ -70,7 +92,7 @@ if (-not (Test-Path $romPath)) {
 }
 if ([string]::IsNullOrWhiteSpace($Output)) {
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $Output = Join-Path $root "artifacts\melonds-$stamp.png"
+    $Output = Join-Path $root "artifacts\visibility\melonds-$stamp.png"
 } elseif (-not [System.IO.Path]::IsPathRooted($Output)) {
     $Output = Join-Path $root $Output
 }
@@ -203,13 +225,19 @@ try {
     if (Test-Path $config) {
         $originalConfig = Get-Content $config -Raw
         $visibleConfig = Set-MelonDSDualScreenLayout -Text $originalConfig
-        if ($gdbSelectionEnabled) {
+        if ($gdbControlEnabled) {
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'Instance0.Gdb' -Key 'Enable' -Value 'true'
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'Instance0.Gdb' -Key 'Enabled' -Value 'true'
+            $arm9BreakOnStartup = if ($exactFrameCaptureEnabled) {
+                'true'
+            } else {
+                'false'
+            }
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
-                -Section 'Instance0.Gdb.ARM9' -Key 'BreakOnStartup' -Value 'false'
+                -Section 'Instance0.Gdb.ARM9' -Key 'BreakOnStartup' `
+                -Value $arm9BreakOnStartup
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'Instance0.Gdb.ARM9' -Key 'Port' -Value "$GdbPort"
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
@@ -263,26 +291,48 @@ try {
         Set-MelonDSCaptureRuntimeMode -GdbPath $gdbPath -ElfPath $elfPath `
             -Port $GdbPort -Mode $RendererFastRunMode
     }
-    Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
-    [void][Smash64DSWindowCapture]::SetForegroundWindow($emulator.MainWindowHandle)
-    Start-Sleep -Seconds $DelaySeconds
-    $emulator.Refresh()
-    Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
-    Start-Sleep -Milliseconds 100
-    $size = Save-MelonDSWindowCapture -WindowHandle $emulator.MainWindowHandle `
-        -Path $Output
-    if (-not [string]::IsNullOrWhiteSpace($SecondOutput)) {
-        if ($SecondDelayMilliseconds -gt 0) {
-            Start-Sleep -Milliseconds $SecondDelayMilliseconds
-        } else {
-            Start-Sleep -Seconds ([Math]::Max($SecondDelaySeconds, 0))
-        }
+    if ($exactFrameCaptureEnabled) {
+        # Establish geometry once while emulation is running. Moving or
+        # foregrounding the window after an exact frame pause can capture a Qt
+        # resize transition instead of the completed DS presentation.
+        Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
+        [void][Smash64DSWindowCapture]::SetForegroundWindow(
+            $emulator.MainWindowHandle)
+        Start-Sleep -Milliseconds 100
+        Wait-MelonDSGdbListener -Process $emulator -Port $GdbPort | Out-Null
+        & (Join-Path $PSScriptRoot 'capture-cut-g-exact-frames.ps1') `
+            -Gdb $gdbPath `
+            -Elf $elfPath `
+            -GdbPort $GdbPort `
+            -EmulatorProcessId $emulator.Id `
+            -WindowHandle ([long]$emulator.MainWindowHandle) `
+            -Output $Output `
+            -SecondOutput $SecondOutput `
+            -FirstFrame $ExactFirstFrame `
+            -SecondFrame $ExactSecondFrame
+    } else {
+        Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
+        [void][Smash64DSWindowCapture]::SetForegroundWindow(
+            $emulator.MainWindowHandle)
+        Start-Sleep -Seconds $DelaySeconds
         $emulator.Refresh()
         Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
         Start-Sleep -Milliseconds 100
-        $secondSize = Save-MelonDSWindowCapture `
-            -WindowHandle $emulator.MainWindowHandle -Path $SecondOutput
-        Write-Output "Captured live melonDS window: $SecondOutput ($secondSize)"
+        $size = Save-MelonDSWindowCapture `
+            -WindowHandle $emulator.MainWindowHandle -Path $Output
+        if (-not [string]::IsNullOrWhiteSpace($SecondOutput)) {
+            if ($SecondDelayMilliseconds -gt 0) {
+                Start-Sleep -Milliseconds $SecondDelayMilliseconds
+            } else {
+                Start-Sleep -Seconds ([Math]::Max($SecondDelaySeconds, 0))
+            }
+            $emulator.Refresh()
+            Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
+            Start-Sleep -Milliseconds 100
+            $secondSize = Save-MelonDSWindowCapture `
+                -WindowHandle $emulator.MainWindowHandle -Path $SecondOutput
+            Write-Output "Captured live melonDS window: $SecondOutput ($secondSize)"
+        }
     }
     try {
         [void][Smash64DSWindowCapture]::SetWindowPos(
@@ -290,7 +340,9 @@ try {
     } catch {
         Write-Warning "Could not lower melonDS window: $_"
     }
-    Write-Output "Captured live melonDS window: $Output ($size)"
+    if (-not $exactFrameCaptureEnabled) {
+        Write-Output "Captured live melonDS window: $Output ($size)"
+    }
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

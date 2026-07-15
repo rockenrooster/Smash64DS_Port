@@ -1,4 +1,4 @@
-# Optimization Roadmap — Cut G and Native Countdown Accepted; M2–M4 Active
+# Optimization Roadmap — Cut G Accepted; M2–M4 Measured
 
 Updated: 2026-07-14
 
@@ -18,8 +18,8 @@ The current user-facing artifact is:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-12,043,264 bytes
-SHA-256 385B9F051C5CBB801089C69E13D49F9E0D19C07F1E4DA19DA943772B5553FC21
+14,362,624 bytes
+SHA-256 57B85DDC6B2919D8962589188D6066F6CE6D0FD83B2F729175C9F339C8CCFAFD
 ```
 
 The canonical and shipped copies match byte-for-byte. Refresh this identity
@@ -35,10 +35,10 @@ was not rebuilt or published. Gameplay still reports two uploads / 36,864 bytes.
 
 | Milestone | State | Measured boundary / target |
 |---|---|---:|
-| M1 — simple hardware-affine BG2 | Complete | 1,856/1,856 ticks; required 5–35K |
+| M1 — simple hardware-affine BG2 | Complete | 1,856/1,856 ticks; beats the ≤35K ceiling |
 | M2 — AOT DS-native Mario/Fox | In progress | ledger-off 431,168/458,688; target 170–250K |
 | M3 — AOT DS-native complete stage | Open | 800,608/803,456; target 150–250K |
-| M4 — conversion off gameplay path | Current residency no-go | Exact archive 232,004 B; pair maps 645,120 B > 524,288 B texture VRAM |
+| M4 — conversion off gameplay path | Eight-frame device falsifier eligible | Exact RGB256 host output; runtime palette mapping/preparation still open |
 
 The owner targets are active renderer ticks, not FPS estimates. Re-profile the
 whole frame after each accepted owner cut.
@@ -58,7 +58,7 @@ Acceptance requires:
 - affine work no greater than 35,000 ticks;
 - the exact two-fighter/626-triangle contract;
 - source timer/control synchronization through Wait → GO;
-- semantic counters and a successful synchronized screenshot.
+- semantic counters and exact completed-frame 438/439 screenshots.
 
 The accepted profile-1 window measured 1,856/1,856 wallpaper ticks. Do not
 revive the rejected three-mip, display-capture, scanline/HBlank, sparse-
@@ -113,30 +113,13 @@ already contains 32 roots, 49 epochs, 67 runs, 626 triangles, and 541 immutable
 vertices. It preserves event order, typed live materials, selected display
 lists, persistent vertex-cache semantics, and the 44 cross-matrix triangles.
 
-The latest same-ROM profile-1 Mode-8 A/B/A used SHA-256
-`03950839A61B...BEEF09B`, frames 600–607 / logic 209–216. Both controls were
-sample-for-sample identical:
-
-```text
-                         control A1=A2       GX skeleton B
-Mario                    226,112/246,272     205,344/225,536
-Fox                      267,584/274,624     240,192/247,232
-paired combined          493,696/520,896     445,568/472,768
-matrix/root subtotal     162,208/189,568     113,632/140,736
-production               243,520/243,648     242,240/242,304
-absolute target       170,000 .. 250,000 ticks (detailed ledger off)
-```
-
-The whole-fighter GX palette was correct but saved only 48,128 paired ticks
-(9.75%), missing the same-ROM 100K falsifier by 51,872 ticks. Both A and B used
-the opt-in detailed M2 census/timers, so the relative delta is valid but the
-445,568 absolute total is not comparable to the coarse 331K ceiling or the
-170–250K milestone target. Exact 49 epochs, 67 fighter runs, 626 fighter
-triangles, 44 cross-matrix cases, full class census, fallback accounting, and
-runtime state all passed. The treatment and selector were removed; corrected
-25/27 live topology remains, and the disjoint M2 ledger is available only with
-`NDS_RENDERER_M2_DETAILED_LEDGER=1`. The earlier split-projection and CPU-
-preorder cuts are also closed.
+The current ledger-off synchronized owner is about 431K combined. Candidate
+`54379201b2` packages exact 32-root/49-epoch/67-run/626-triangle/541-vertex/
+44-cross-matrix bookkeeping into 17,704 bytes with 4,324 bytes of scratch. It
+is tooling eligibility only: it has no live matrices, typed materials, exact
+light sidecar, GX execution, device cycles, or independent profile-2 oracle.
+Do not count it as M2 progress or paste its per-root microbench interpreter into
+production. Rejected experiment measurements remain in `PERF_LEDGER.md`.
 
 The next architecture is two non-overlapping packets. First, preflight corrected
 25/27 joint schedules and 14/18 bindings, let GX walk/store the hierarchy, and
@@ -164,7 +147,9 @@ Falsification gate:
   than polishing either measured bucket in isolation;
 - production remains exactly 70 runs / 686 fast triangles, partitioned
   60+320+306 with bounded 29/0/0 fallbacks;
-- full frame remains 828 triangles with class census 648/44/126/10;
+- an independent adjacent-completed-frame `WEAPON_FRAME` delta supplies `q`;
+  that terminal frame is exactly 2,484+6q vertices, 828+2q triangles, and class
+  census 648/44/(126+2q)/10;
 - semantic, owner entry/exit, vertex-cache, GX matrix, texture/upload, and
   screenshot gates remain coherent;
 - no per-frame allocation and no reserve regression.
@@ -189,6 +174,16 @@ precompiled slabs only when each original callback occurs. The exact current
 contract is 42 lists / 886 commands / 302 vertices / 54 runs / 202 triangles,
 partitioned 66 raw, 126 no-Z, and 10 projected. Keep known projected/dynamic
 records cold and fall back for the whole stage before mutation on any mismatch.
+
+Across completed runtime traversals, exact cumulative accounting is:
+
+```text
+stage submits   = 42F + W
+stage triangles = 202F + 2W
+```
+
+`F` is completed source traversals and `W` is cumulative source link-14 weapon
+quads. Unmarked setup traffic fails the gate.
 
 The first falsifier must save at least 300K stage ticks and reach <=500K with
 P95 improved while retaining all 42/886/54/202 counts, full-frame 828 geometry,
@@ -237,17 +232,17 @@ frames 171..202, direct versus off inclusive renderer median/P95 was
 draw P95 worsened by 21,376 ticks, and the window incurred 12 payload reads.
 Audio-adjusted reserve was only 153,184 bytes, 22,112 above the floor.
 
-The exact pair-index follow-up is also rejected for current-layout residency.
-Phase-aware software expansion matches all 3,024,896 pixels, but literal DS
-RGB256 pair indices incur 753,481 unavoidable alpha mismatches because index 0
-is the only transparent entry and BattleShip dithering needs both alpha states
-for the same color pair. Periodic 32x32 maps miss 1,374,596 pixels; 64x32/32x32
-maps still miss 600,358. The exact compressed archive is 232,004 bytes versus
-22,112 spendable reserve, while resident maps/palettes need 645,120 bytes,
-exceeding the DS 524,288-byte texture space. A 903,168-byte DS-visible exact
-form is worse. The active on-demand RGB256-map study is explicitly an
-intermediate conversion-cost reduction; it cannot close M4 while preparation
-or uploads remain in gameplay.
+The rejected literal pair-index representation is history in `PERF_LEDGER.md`.
+The new RGB256 generator reserves index 0 for transparency and uses opaque
+indices 1–90. It is hardware-visible exact across 3,024,896 map bytes and
+58,604 palette bytes with zero alpha/RGB/visible mismatch. Static ARM estimates
+are 164,388 median, 200,443 worst, and 18,614 bytes peak upload.
+
+Keep only an exact eight-frame device result with byte/visibility parity,
+median no worse than 172,480 ticks, worst no greater than 1.10×189,056, upload
+no greater than 51% of 36,864 bytes, and no reserve/state/capture regression.
+Passing that falsifier still does not complete M4: runtime palette mapping and
+zero gameplay conversion/preparation/upload remain required.
 
 ## Measurement And Correctness Rules
 

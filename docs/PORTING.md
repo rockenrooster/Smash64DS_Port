@@ -20758,3 +20758,24 @@ remains skipped for the requested fast iteration cadence.
   now 300 seconds rather than the incorrect 30-second generic default.
 - Source pitch automation, DeadExplodeL fork voice 685, 24 other observed
   unsupported calls, and audible Dream Land BGM output remain open.
+
+## 2026-07-14 - Captured exact Cut G GO frames and hardened renderer accounting
+
+- Added a synchronized completed-frame capture gate and produced canonical
+  frames 438/439 under `artifacts/visibility`. They preserve GO, unlocked live
+  control, the running one-minute timer, both fighters, the approved lower text
+  HUD, native countdown OAM, and retained Dream Land BG2 without hot conversion,
+  upload, or fallback.
+- Tightened cumulative stage accounting to exactly `42F + W` submits and
+  `202F + 2W` triangles, rejecting the former unmarked 22/44 setup allowance.
+  An independent adjacent-completed-frame `WEAPON_FRAME` source-owner delta now
+  supplies terminal weapon count for geometry, class, batch, texture-prepare,
+  and profile-2 oracle reconciliation instead of deriving it from renderer
+  surplus.
+- The final canonical Boundary pass exercised the positive ledger: 19
+  cumulative weapon quads and terminal `q=1` reconciled exactly to 2,490
+  vertices, 830 triangles, no-Z count 128, and bootstrap 0/0 before ROM-parity
+  and visibility gates passed.
+- Default capture paths now stay under `artifacts/visibility`; active direct
+  melonDS capture/forensic runs use automation port 4333 or the selected
+  isolated runner-slot mapping, leaving manual ports 3333/3334 free.

@@ -10,15 +10,20 @@ Use Windows PowerShell:
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
-make NDS_DEV_SCENE_HARNESS=normal -j16
+make NDS_DEV_SCENE_HARNESS=normal -j24
 ```
 
 Codex-owned single runs use melonDS GDB ARM9/ARM7 ports `4333/4334`; ports
 `3333/3334` are reserved for a user-opened manual melonDS instance. Runner
 slots keep isolated mappings: FGM `3343/3344`, capture `3363/3364`, audio
-`3373/3374`, M4 `3413/3414`, and countdown `4463/4464`. Use scripted emulator/GDB/capture
-automation only. For subjective play behavior, build the verifier-covered ROM
-and ask the user to test it rather than controlling their desktop.
+`3373/3374`, M4 `3413/3414`, and countdown `4463/4464`. Scripted launches
+normalize their selected TOML through the central profile. DevFast runs
+`check-melonds-policy.ps1`, which recursively checks every TOML under every
+registered worktree's `emulators/`, rejects unclassified configs and external
+executables, and fails profile drift. The all-worktree setter is creation/repair,
+not a recurring manual audit. Use scripted emulator/GDB/capture automation only.
+For subjective play behavior, build the verifier-covered ROM and ask the user
+to test it rather than controlling their desktop.
 Keep Codex-owned runner-slot emulator volume at `0`; this mutes only host
 playback and does not disable or bypass ROM audio channels/counters. Never
 change the user's manual melonDS audio configuration.
@@ -72,17 +77,18 @@ Use the wrapper profiles while iterating:
 `verify-current.ps1` and `verify-all.ps1 -Profile Latest` unless you are
 testing profile plumbing.
 
-`verify-dev-fast.ps1` now runs the GBI, fighter hit-status, audio-ID, and
-registry checks, incrementally builds
+`verify-dev-fast.ps1` runs melonDS policy, GBI, fighter hit-status, audio-ID,
+and registry checks, then incrementally builds
 only `smash64ds-battle-playable-canonical-hwtri` unless `-NoBuild` is passed,
 and invokes its realtime verifier with `FastIteration`. It does not force a
 normal-ROM `-B` rebuild. That path uses a minimum 25-second post-GO smoke and
-one capture run, rotates an existing `artifacts/visibility/latest.png` to
-`previous.png`, and publishes the accepted frame as `latest.png`. This samples
-the timer, unlocked controls, natural CPU, and lower HUD after countdown. After the
+then holds ARM9 at startup, installs exact frame-complete breakpoints, and
+captures adjacent GO frames 438/439 while paused. Both frames must prove the
+running timer, unlocked controls, native OAM/no-conversion state, visibility,
+motion, named regions, detail, and sky before `latest.png` rotates. After the
 canonical build, `check-battle-playable-rom-parity.ps1` requires identical byte
-length and SHA-256 for the canonical and shipped ROM names. Runner-slot captures
-use that slot's emulator/config; stable alias rotation is serialized and atomic.
+length and SHA-256 for canonical and shipped ROM names. Runner-slot captures use
+that slot's emulator/config; stable alias rotation is serialized and atomic.
 
 Store every generated screenshot under `artifacts/visibility/`; do not leave
 captures in the repo root or temporary runner directories. Dated evidence names

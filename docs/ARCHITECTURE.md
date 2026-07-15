@@ -1231,11 +1231,14 @@ Canonical HW uses a classified hybrid GX path. The renderer assigns a nonzero
 generation whenever projection, modelview, pop, or matrix-word state changes;
 GX and triangle-batch keys contain representation plus generation rather than
 two 64-byte matrix comparisons. Wrap to generation one invalidates the cache.
-The stable frame raw-submits `648` current-matrix ordinary-Z triangles. It keeps
+The base frame raw-submits `648` current-matrix ordinary-Z triangles. It keeps
 `44` cross-matrix, `126` no-Z, and `10` raw-v16 range exceptions projected;
-snapshot/decal/primitive-depth/reject classes are zero. The class sum is the
-same `828` triangles and logical projected-division demand falls
-`7,074 -> 1,242`.
+snapshot/decal/primitive-depth/reject classes are zero. If `q` source link-14
+weapon quads are live, the exact frame is `2,484+6q` vertices, `828+2q`
+triangles, and class census `648/44/(126+2q)/10`; an independent adjacent-
+completed-frame source-weapon delta supplies `q` rather than deriving it from
+renderer geometry. Base logical projected-
+division demand falls `7,074 -> 1,242` and each weapon quad adds 12.
 
 Projected conversion compares the signed 64-bit numerator against
 `v16_min*W` and `v16_max*W` without negating negative W, then uses libnds

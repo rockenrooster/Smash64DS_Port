@@ -1321,6 +1321,13 @@ Opening movie / Opening Portraits:
   pre-GO window is `Wait / 1 / 3600 / 0 / 0 / 1 / 1`; a valid post-GO window
   is `Go / 1 / positive / positive / 1 / 0 / 0` with remain plus passed equal
   to 3,600.
+- `CUTG_EXACT`: exact completed-frame capture marker. Its 20 fields are renderer
+  frame, game status, timer started, time remain/passed, P0/P1 control-disable,
+  native-OAM enable, recognized/drawn/fallback calls, SObj count, semantic hash,
+  OAM-object count, fallback reason, commit calls, idle, hot conversions, runtime
+  upload bytes, and palette-prepare bytes. Frames 438/439 require GO, timer sums
+  `3555+45` then `3554+46`, unlocked controls, `2/2/0` calls, 13 SObjs, equal
+  positive object counts, one commit, and zero fallback/idle/conversion/upload.
 - `PLATFORM_HW`: canonical realtime DS 3D marker. Fields are submitted frames,
   flushes, pre-flush GX polygon RAM count, pre-flush GX vertex RAM count,
   `GFX_STATUS`, and `GFX_CONTROL`. The verifier requires submitted frames to
@@ -1352,10 +1359,15 @@ Opening movie / Opening Portraits:
   foreground 320x240 staging-clear bytes, then BG2 clear/copy/final-write bytes
   and BG3 clear/copy/final-write bytes. Retained-wallpaper canonical requires
   one direct/change, 49,152 pixels, 98,304 BG2 final-write bytes, bounded
-  countdown/GO foreground traffic when those source SObjs are active, and zero
-  BG2 clear/copy or BG3 direct-write. Steady gameplay with the approved lower
-  HUD route legitimately reports zero foreground traffic
-  traffic.
+  seed-frame writes, and zero BG2 clear/copy, foreground staging, or BG3 traffic.
+  Countdown/GO source SObjs use native OAM rather than generic staging.
+- `IFCOMMON_OAM`: native countdown renderer marker. Its 31 fields are enable;
+  prepare count/success/failure/ticks/bytes/assets/tiles/frame/palette bytes;
+  hot-convert/runtime-upload bytes; frame begin/total/commit ticks; commit calls,
+  cleared objects, idle/idle-count, recognized/drawn/fallback calls, SObj/object
+  counts, semantic hash, fallback reason, cumulative commits, post-VBlank ticks,
+  renderer frame, BG3 copy bytes, and foreground staging bytes. Canonical native
+  frames require no hot conversion, runtime upload, BG3 copy, or staging.
 - `SCENE_MIP_CACHE`: retained-wallpaper ownership marker. Fields are state,
   capture count, upload count, failure count, seed hash, nonzero pixels, seed
   draws, live draws, fallbacks, selected index, live target-distance bits, and
@@ -1370,7 +1382,8 @@ Opening movie / Opening Portraits:
 - `IFHUD`: source IFCommon semantic state. It records object mask, current/max
   damage, digit encodings, and stock ranges.
 - `IFHUD_ROUTE`: lower-screen routing mask, stock route, and retained top
-  generic-SObj pass. Countdown/3-2-1/GO remain on the top screen.
+  interface-GObj pass count. Countdown/3-2-1/GO remain on the top screen and
+  their actual drawing contract is owned by `IFCOMMON_OAM` / `CUTG_EXACT`.
 - `BATTLE_TEXT_HUD`: lower backend render/change counts, fingerprint, timer,
   Mario/Fox damage and stock, active mask, and damage-visible mask. Marker
   agreement plus capture/user approval proves the visible lower text HUD.
@@ -4202,6 +4215,23 @@ Marker groups:
   `618`, `72`, `618`, `0`, `0x4`, and `32x32`.
   Mode-163 now reports `202` projected stage triangles per draw; the ten-triangle
   increase is the five original File3 flower quads restored by RSP cache carry.
+  Canonical cumulative accounting is exactly `42F + W` submits and
+  `202F + 2W` triangles, where `F` is completed stage traversal count and `W`
+  is source link-14 weapon-quad count. Unmarked setup traffic is rejected.
+- `WEAPON_RENDER`: source link-14 weapon display ledger. Its 17 fields are
+  capture, DObj draw, submit, visible, triangle, texture-ready/reject, kind mask,
+  callback kind, no-Z, moving, last X/Y bits, Fireball submit/triangle/visible,
+  and rejected-draw counts. Capture, draw, submit, and visible counts agree;
+  triangles and no-Z are `2*submit` and `submit`; active callback kind is
+  `0x444c4831`; the kind mask is exact, texture-ready equals Fireball submit,
+  and the complete ledger is zero when no weapon submits.
+- `WEAPON_FRAME`: independent adjacent-completed-frame weapon delta used to
+  own terminal renderer accounting. Its 12 fields are capture, DObj draw,
+  submit, visible, triangle, texture-ready/reject, no-Z, Fireball
+  submit/triangle/visible, and rejected-draw deltas. `submit` supplies terminal
+  `q`; per-frame triangles/no-Z are `2q`/`q`, with exact Fireball subledger and
+  zero rejects. Synchronized benchmark windows omit this cross-window delta and
+  instead require `q=0` with the base no-Z count `126`.
 - `STAGE_COLLISION`: geometry-backed floor-collision result, safe result, proof
   mask, deferred mask, and selected fighter count. Current pass values are
   `0x4653434c`, `0x46534353`, mask `0xffff`, deferred mask `0xff`, and count

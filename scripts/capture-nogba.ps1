@@ -35,7 +35,7 @@ if (-not (Test-Path $romPath)) {
 }
 if ([string]::IsNullOrWhiteSpace($Output)) {
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $Output = Join-Path $root "artifacts\nogba-$stamp.png"
+    $Output = Join-Path $root "artifacts\visibility\nogba-$stamp.png"
 } elseif (-not [System.IO.Path]::IsPathRooted($Output)) {
     $Output = Join-Path $root $Output
 }

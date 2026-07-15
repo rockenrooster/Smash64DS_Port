@@ -1,7 +1,7 @@
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
-    [int]$GdbPort = 3333,
+    [int]$GdbPort = 4333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
@@ -26,6 +26,13 @@ param(
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'lib\melonds.ps1')
+$selectedGdbPort = if (($RunnerSlot -ge 0) -and
+    -not $PSBoundParameters.ContainsKey('GdbPort')) {
+    Get-MelonDSRunnerPort -RunnerSlot $RunnerSlot -Cpu ARM9
+} else {
+    $GdbPort
+}
 if (($RendererProfileLevel -lt -1) -or ($RendererProfileLevel -gt 2)) {
     throw 'RendererProfileLevel must be -1 (automatic), 0, 1, or 2.'
 }
@@ -86,7 +93,7 @@ $hardwareTriangles = $target -like '*-hwtri'
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
-    -GdbPort $GdbPort `
+    -GdbPort $selectedGdbPort `
     -RunnerSlot $RunnerSlot `
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `

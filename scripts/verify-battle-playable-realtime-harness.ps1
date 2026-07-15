@@ -15,6 +15,8 @@ param(
     [double]$MaxScreenshotMeanChannelDelta = 32.0,
     [double]$MinScreenshotGreenFraction = 0.03,
     [double]$MinScreenshotDetailFraction = 0.25,
+    [ValidateRange(1,1000000)][int]$FastCaptureFirstFrame = 438,
+    [ValidateRange(1,1000000)][int]$FastCaptureSecondFrame = 439,
     [switch]$FastIteration,
     [switch]$IncludeShippedParity
 )
@@ -144,10 +146,18 @@ function Invoke-VisibleCaptureAssert {
         [int]$Delay,
         [double]$MinDetailFraction = -1.0,
         [switch]$RequireTextureDetail,
-        [switch]$PublishStableCapture
+        [switch]$PublishStableCapture,
+        [switch]$ExactCutGFrames
     )
     $output = Join-Path $root "artifacts\visibility\${captureDate}_${Stem}_${captureStamp}.png"
     $nextOutput = Join-Path $root "artifacts\visibility\${captureDate}_${Stem}_${captureStamp}_next.png"
+    $exactCaptureArgs = @{}
+    if ($ExactCutGFrames) {
+        $exactCaptureArgs.Gdb = $Gdb
+        $exactCaptureArgs.GdbPort = $selectedGdbPort
+        $exactCaptureArgs.ExactFirstFrame = $FastCaptureFirstFrame
+        $exactCaptureArgs.ExactSecondFrame = $FastCaptureSecondFrame
+    }
     & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
         -MelonDS $captureMelonDS `
         -Rom $Rom `
@@ -157,7 +167,8 @@ function Invoke-VisibleCaptureAssert {
         -SecondOutput $nextOutput `
         -SecondDelaySeconds $ScreenshotSecondDelaySeconds `
         -SecondDelayMilliseconds $ScreenshotSecondDelayMilliseconds `
-        -DelaySeconds $Delay
+        -DelaySeconds $Delay `
+        @exactCaptureArgs
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
@@ -274,11 +285,13 @@ if (-not $SkipScreenshot) {
     # visual gate fail merely by leaving its historical fixed crops.
     if ($FastIteration) {
         Invoke-VisibleCaptureAssert -Rom $canonicalRom `
-            -Stem 'canonical_fast' `
+            -Stem ("canonical_fast_frame{0}-{1}" -f
+                $FastCaptureFirstFrame, $FastCaptureSecondFrame) `
             -Delay $earlyScreenshotDelaySeconds `
             -MinDetailFraction $MinScreenshotDetailFraction `
             -RequireTextureDetail `
-            -PublishStableCapture
+            -PublishStableCapture `
+            -ExactCutGFrames
     } else {
         Invoke-VisibleCaptureAssert -Rom $canonicalRom `
             -Stem 'iter4_canonical_early' `

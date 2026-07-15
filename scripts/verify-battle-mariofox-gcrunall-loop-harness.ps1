@@ -1,7 +1,7 @@
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
-    [int]$GdbPort = 3333,
+    [int]$GdbPort = 4333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
@@ -629,10 +629,32 @@ try {
                 $gdbCommands[4..($gdbCommands.Count - 1)]
             )
         } else {
+            # Sample cumulative weapon ownership at one completed frame, then
+            # advance exactly once. The delta is an independent source-owner
+            # census for the terminal renderer frame; do not infer it from the
+            # renderer geometry that it is intended to validate.
+            $weaponFrameCommands = @(
+                'set $weapon_capture_base = gNdsWeaponRendererCaptureCount'
+                'set $weapon_dobj_base = gNdsWeaponRendererDObjDrawCount'
+                'set $weapon_submit_base = gNdsWeaponRendererSubmitCount'
+                'set $weapon_visible_base = gNdsWeaponRendererVisibleDrawCount'
+                'set $weapon_triangle_base = gNdsWeaponRendererTriangleCount'
+                'set $weapon_texture_ready_base = gNdsWeaponRendererTextureReadyCount'
+                'set $weapon_texture_reject_base = gNdsWeaponRendererTextureRejectCount'
+                'set $weapon_noz_base = gNdsWeaponRendererNoZCount'
+                'set $weapon_fireball_submit_base = gNdsWeaponRendererFireballSubmitCount'
+                'set $weapon_fireball_triangle_base = gNdsWeaponRendererFireballTriangleCount'
+                'set $weapon_fireball_visible_base = gNdsWeaponRendererFireballVisibleDrawCount'
+                'set $weapon_rejected_base = gNdsWeaponRendererRejectedDrawCount'
+                'tbreak ndsBattlePlayableFrameCompleteMarker'
+                'continue'
+                'printf "WEAPON_FRAME=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsWeaponRendererCaptureCount - $weapon_capture_base, gNdsWeaponRendererDObjDrawCount - $weapon_dobj_base, gNdsWeaponRendererSubmitCount - $weapon_submit_base, gNdsWeaponRendererVisibleDrawCount - $weapon_visible_base, gNdsWeaponRendererTriangleCount - $weapon_triangle_base, gNdsWeaponRendererTextureReadyCount - $weapon_texture_ready_base, gNdsWeaponRendererTextureRejectCount - $weapon_texture_reject_base, gNdsWeaponRendererNoZCount - $weapon_noz_base, gNdsWeaponRendererFireballSubmitCount - $weapon_fireball_submit_base, gNdsWeaponRendererFireballTriangleCount - $weapon_fireball_triangle_base, gNdsWeaponRendererFireballVisibleDrawCount - $weapon_fireball_visible_base, gNdsWeaponRendererRejectedDrawCount - $weapon_rejected_base'
+            )
             $gdbCommands = @(
                 $gdbCommands[0..3]
                 'tbreak ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingResult != 0'
                 'continue'
+                $weaponFrameCommands
                 $gdbCommands[4..($gdbCommands.Count - 1)]
             )
         }
@@ -658,6 +680,7 @@ try {
             'printf "STAGE_GCDRAWALL_HW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount, gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareTextureBindCount, gNdsStageGCDrawAllLoopHardwareTextureUploadCount, gNdsStageGCDrawAllLoopHardwareTextureReadyCount, gNdsStageGCDrawAllLoopHardwareTextureRejectCount, gNdsStageGCDrawAllLoopHardwareTextureFormatMask, gNdsStageGCDrawAllLoopHardwareTextureMaxWidth, gNdsStageGCDrawAllLoopHardwareTextureMaxHeight',
             'printf "RENDER_STAGE_CARRY=%u,%u,%u,%u,%u,%u,%u\n", (gNdsStageGCDrawAllLoopHardwareCarrySeedCount < gNdsStageGCDrawAllLoopHardwareCarryCaptureCount) ? gNdsStageGCDrawAllLoopHardwareCarrySeedCount : gNdsStageGCDrawAllLoopHardwareCarryCaptureCount, (gNdsStageGCDrawAllLoopHardwareCarrySeedCount < gNdsStageGCDrawAllLoopHardwareCarryCaptureCount) ? gNdsStageGCDrawAllLoopHardwareCarrySeedCount : gNdsStageGCDrawAllLoopHardwareCarryCaptureCount, gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount, gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount, gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount, gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount, gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount',
             'printf "STAGE_GCDRAWALL_HW_FTR=%u,%u\n", gNdsStageGCDrawAllLoopHardwareFighterSubmitCount, gNdsStageGCDrawAllLoopHardwareFighterTriangleCount',
+            'printf "WEAPON_RENDER=%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%#x,%#x,%u,%u,%u,%u\n", gNdsWeaponRendererCaptureCount, gNdsWeaponRendererDObjDrawCount, gNdsWeaponRendererSubmitCount, gNdsWeaponRendererVisibleDrawCount, gNdsWeaponRendererTriangleCount, gNdsWeaponRendererTextureReadyCount, gNdsWeaponRendererTextureRejectCount, gNdsWeaponRendererKindMask, gNdsWeaponRendererCallbackKind, gNdsWeaponRendererNoZCount, gNdsWeaponRendererMovingDrawCount, gNdsWeaponRendererLastXBits, gNdsWeaponRendererLastYBits, gNdsWeaponRendererFireballSubmitCount, gNdsWeaponRendererFireballTriangleCount, gNdsWeaponRendererFireballVisibleDrawCount, gNdsWeaponRendererRejectedDrawCount',
         'printf "FTR_DISPLAY_CONTRACT=%u,%u,%u,%u,%#x,%u,%u,%u,%u,%#x,%#x,%u,%u,%#x,%#x\n", gNdsFighterDisplayContractSelectedCount, gNdsFighterDisplayContractHiddenCount, gNdsFighterDisplayContractNoTextureCount, gNdsFighterDisplayContractSubmittedCount, gNdsFighterDisplayContractGeometryMode, gNdsFighterDisplayContractLightCount, gNdsFighterDisplayContractLightDirectionCount, gNdsFighterDisplayContractBoundsPassCount, gNdsFighterDisplayContractBoundsFailCount, gNdsFighterDisplayContractBoundsXBits, gNdsFighterDisplayContractBoundsYBits, gNdsFighterDLAllDrawP0SelectedCount, gNdsFighterDLAllDrawP1SelectedCount, gNdsFighterDisplayContractCycleType, gNdsFighterDisplayContractRenderMode',
             'printf "FTR_LIGHT_SEED=%u,%#x,%#x\n", gNdsFighterDisplayContractMaterialLightSeedCount, gNdsFighterDisplayContractMaterialLight1, gNdsFighterDisplayContractMaterialLight2',
             'printf "DLALL_SCREEN=%d,%d,%d,%d,%d,%d,%d,%d,%#x,%#x,%#x,%#x\n", gNdsFighterDLAllDrawP0ScreenMinX, gNdsFighterDLAllDrawP0ScreenMaxX, gNdsFighterDLAllDrawP0ScreenMinY, gNdsFighterDLAllDrawP0ScreenMaxY, gNdsFighterDLAllDrawP1ScreenMinX, gNdsFighterDLAllDrawP1ScreenMaxX, gNdsFighterDLAllDrawP1ScreenMinY, gNdsFighterDLAllDrawP1ScreenMaxY, gNdsFighterDLAllDrawP0RootXBeforeBits, gNdsFighterDLAllDrawP0RootXAfterBits, gNdsFighterDLAllDrawP1RootXBeforeBits, gNdsFighterDLAllDrawP1RootXAfterBits',
@@ -691,7 +714,15 @@ try {
         if ($BattlePlayable -and $RealtimePresentation) {
             $hardwareCommands += 'printf "SOBJ_WALL_CACHE=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperCacheBuildCount, gNdsSObjWallpaperCacheHitCount, gNdsSObjWallpaperCacheFastDrawCount, gNdsSObjWallpaperCacheFallbackCount, gNdsSObjWallpaperCacheWidth, gNdsSObjWallpaperCacheHeight, gNdsSObjWallpaperCacheOpaquePixels, gNdsSObjWallpaperCacheBuildTicks, gNdsSObjWallpaperCacheDrawTicks'
             $hardwareCommands += 'printf "SOBJ_WALL_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperFinalDirectCount, gNdsSObjWallpaperFinalSkipCount, gNdsSObjWallpaperFinalKeyChangeCount, gNdsSObjWallpaperFinalPixelWriteCount, gNdsSObjBackgroundStagingClearBytes, gNdsSObjForegroundStagingClearBytes, gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes'
-            $hardwareCommands += 'printf "IFCOMMON_OAM=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u\n", gNdsIFCommonNativeOamEnabled, gNdsIFCommonNativeOamPrepareCount, gNdsIFCommonNativeOamPrepareSuccessCount, gNdsIFCommonNativeOamPrepareFailCount, gNdsIFCommonNativeOamPrepareTicks, gNdsIFCommonNativeOamPrepareBytes, gNdsIFCommonNativeOamPrepareAssets, gNdsIFCommonNativeOamPrepareTiles, gNdsIFCommonNativeOamPrepareProfileFrame, gNdsIFCommonNativeOamPreparePaletteBytes, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsIFCommonNativeOamFrameBeginTicks, gNdsIFCommonNativeOamFrameTicks, gNdsIFCommonNativeOamFrameCommitTicks, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameClearedObjects, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamIdleFrameCount, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamCommitCount, gNdsRendererProfilePostVBlankTicks, gNdsRendererProfileFrameCount, gNdsOriginalSpriteBg3CopyBytes, gNdsSObjForegroundStagingClearBytes'
+            # Profile 0 intentionally links out post-VBlank timing state. Keep
+            # the marker's stable 31-field schema without forcing a diagnostic
+            # symbol into the user-facing ROM solely for GDB sampling.
+            $postVBlankTicksExpression = if ($RendererProfileLevel -ge 1) {
+                'gNdsRendererProfilePostVBlankTicks'
+            } else {
+                '0'
+            }
+            $hardwareCommands += ('printf "IFCOMMON_OAM=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u\n", gNdsIFCommonNativeOamEnabled, gNdsIFCommonNativeOamPrepareCount, gNdsIFCommonNativeOamPrepareSuccessCount, gNdsIFCommonNativeOamPrepareFailCount, gNdsIFCommonNativeOamPrepareTicks, gNdsIFCommonNativeOamPrepareBytes, gNdsIFCommonNativeOamPrepareAssets, gNdsIFCommonNativeOamPrepareTiles, gNdsIFCommonNativeOamPrepareProfileFrame, gNdsIFCommonNativeOamPreparePaletteBytes, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsIFCommonNativeOamFrameBeginTicks, gNdsIFCommonNativeOamFrameTicks, gNdsIFCommonNativeOamFrameCommitTicks, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameClearedObjects, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamIdleFrameCount, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamCommitCount, {0}, gNdsRendererProfileFrameCount, gNdsOriginalSpriteBg3CopyBytes, gNdsSObjForegroundStagingClearBytes' -f $postVBlankTicksExpression)
             if ($RendererProfileLevel -ge 2) {
                 $hardwareCommands += 'printf "SOBJ_WALL_ORACLE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperMapOracleCheckCount, gNdsSObjWallpaperMapOracleMismatchCount, gNdsSObjWallpaperPixelOracleCheckCount, gNdsSObjWallpaperPixelOracleMismatchCount, gNdsSObjWallpaperOracleFirstKind, gNdsSObjWallpaperOracleFirstIndex, gNdsSObjWallpaperOracleFirstExpected, gNdsSObjWallpaperOracleFirstActual'
             }
@@ -872,6 +903,8 @@ try {
     $stageHardware = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $stageCarry = [regex]::Match($gdbStdout, 'RENDER_STAGE_CARRY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+)')
+    $weaponRenderer = [regex]::Match($gdbStdout, 'WEAPON_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $weaponFrame = [regex]::Match($gdbStdout, 'WEAPON_FRAME=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $fighterDisplayContract = [regex]::Match($gdbStdout, 'FTR_DISPLAY_CONTRACT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderProfile = [regex]::Match($gdbStdout, 'RENDER_PROFILE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $rendererBenchmark = [regex]::Matches($gdbStdout, 'RENDER_BENCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -914,6 +947,13 @@ try {
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperFinal = [regex]::Match($gdbStdout, 'SOBJ_WALL_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperOracle = [regex]::Match($gdbStdout, 'SOBJ_WALL_ORACLE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $ifCommonOamFieldPattern = ((0..30 | ForEach-Object {
+        if ($_ -eq 24) { '(0x[0-9a-fA-F]+|0)' }
+        else { '([0-9]+)' }
+    }) -join ',')
+    $ifCommonOam = [regex]::Match(
+        $gdbStdout, ([regex]::Escape('IFCOMMON_OAM=') +
+                     $ifCommonOamFieldPattern))
     $sceneMipCache = [regex]::Match($gdbStdout, 'SCENE_MIP_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $sceneWallAffine = [regex]::Match($gdbStdout, 'SCENE_WALL_AFFINE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
@@ -1149,6 +1189,8 @@ try {
                 $sourceHud = Get-Ints $ifHud
                 $sourceLower = Get-Ints $ifHudLower
                 $sourceRoute = Get-Ints $ifHudRoute
+                $sourceStart = Get-Ints $battlePlayableStart
+                $routeOam = Get-Ints $ifCommonOam
                 $expectedHudSeconds = if ($sourceLower[10] -eq 0) {
                     0
                 } elseif ($sourceLower[10] -eq $sourceLower[11]) {
@@ -1175,6 +1217,31 @@ try {
                     (($sourceLower[12] -eq 0) -or
                      ($sourceLower[12] -eq 1))
                 }
+                # BattleShip's 90-tick sleep resumes countdown creation during
+                # update 91. Profile 2
+                # deliberately samples frame 45, so admit only the exact native-
+                # OAM idle state before that source threshold. Every later
+                # sample, including retained canonical post-GO, must have seen a
+                # top interface GObj; exact drawing remains CUTG_EXACT's job.
+                $preCountdownNativeIdle =
+                    ($RendererProfileLevel -eq 2) -and
+                    $battlePlayableStart.Success -and
+                    $sourceStart[0] -eq 0 -and $sourceStart[1] -eq 1 -and
+                    $sourceStart[2] -eq 3600 -and $sourceStart[3] -eq 0 -and
+                    $sourceStart[4] -eq 0 -and $sourceStart[5] -eq 1 -and
+                    $sourceStart[6] -eq 1 -and $sourceStart[7] -le 90 -and
+                    $sourceRoute[3] -eq 0 -and $ifCommonOam.Success -and
+                    $routeOam[0] -eq 1 -and $routeOam[1] -eq 1 -and
+                    $routeOam[2] -eq 1 -and $routeOam[3] -eq 0 -and
+                    $routeOam[10] -eq 0 -and $routeOam[11] -eq 0 -and
+                    $routeOam[15] -eq 0 -and $routeOam[16] -eq 0 -and
+                    $routeOam[17] -eq 1 -and $routeOam[19] -eq 0 -and
+                    $routeOam[20] -eq 0 -and $routeOam[21] -eq 0 -and
+                    $routeOam[22] -eq 0 -and $routeOam[23] -eq 0 -and
+                    $routeOam[24] -eq 0x49464f41 -and
+                    $routeOam[25] -eq 0 -and $routeOam[26] -eq 0
+                $topPresentationRouteOk =
+                    ($sourceRoute[3] -gt 0) -or $preCountdownNativeIdle
                 Assert-Condition (
                     $ifHudLower.Success -and $ifHudRoute.Success -and
                     $sourceLower[0] -eq 0x3 -and
@@ -1189,8 +1256,8 @@ try {
                     $sourceLower[11] -eq 3600 -and
                     $lowerTimerStateOk -and
                     $sourceRoute[0] -eq $LowerTextHudMode -and
-                    $lowerRoutingOk -and $sourceRoute[3] -gt 0
-                ) 'BattleShip timer/stock HUD callbacks were not routed narrowly to lower text while countdown/GO retained the top generic path.' $gdbStdout
+                    $lowerRoutingOk -and $topPresentationRouteOk
+                ) 'BattleShip timer/stock callbacks were not routed narrowly below, or countdown/GO lacked top-interface evidence outside the exact pre-update-91 native-OAM idle window.' $gdbStdout
                 Assert-Condition (
                     $battleTextHud.Success -and
                     $textHud[0] -gt 0 -and $textHud[1] -gt 0 -and
@@ -1228,6 +1295,8 @@ try {
                 $shw = Get-Ints $stageHardware
                 $scarry = Get-Ints $stageCarry
                 $shwf = Get-Ints $stageHardwareFighter
+                $wr = Get-Ints $weaponRenderer
+                $wframe = Get-Ints $weaponFrame
                 $fdc = Get-Ints $fighterDisplayContract
                 $rp = Get-Ints $renderProfile
                 $rb = Get-Ints $renderBatch
@@ -1240,6 +1309,7 @@ try {
                 $wf = Get-Ints $wallpaperFinal
                 $wo = Get-Ints $wallpaperOracle
                 if ($usesRetainedWallpaper) {
+                    $ioam = Get-Ints $ifCommonOam
                     $smc = Get-Ints $sceneMipCache
                     $swa = Get-Ints $sceneWallAffine
                 }
@@ -1883,7 +1953,48 @@ try {
                 }
                 Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
-                Assert-Condition ($stageHardware.Success -and $shw[0] -eq (42 * $hw[0]) -and $shw[1] -eq (202 * $hw[0]) -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build drifted from the exact per-frame 42-list/202-triangle textured stage contract.' $gdbStdout
+                $stageFrameCount = if ($usesRetainedWallpaper) {
+                    $smc[6] + $smc[7]
+                } else {
+                    $hw[0]
+                }
+                $nonFireballSubmitCount = $wr[2] - $wr[13]
+                $expectedWeaponKindMask =
+                    $(if ($wr[13] -gt 0) { 0x1 } else { 0x0 }) -bor
+                    $(if ($nonFireballSubmitCount -gt 0) { 0x2 } else { 0x0 })
+                $weaponLedgerValid =
+                    $weaponRenderer.Success -and
+                    $wr[0] -eq $wr[1] -and $wr[1] -eq $wr[2] -and
+                    $wr[2] -eq $wr[3] -and $wr[4] -eq (2 * $wr[2]) -and
+                    $wr[5] -eq $wr[13] -and $wr[6] -eq 0 -and
+                    $nonFireballSubmitCount -ge 0 -and
+                    $wr[7] -eq $expectedWeaponKindMask -and
+                    $wr[9] -eq $wr[2] -and
+                    $wr[14] -eq (2 * $wr[13]) -and
+                    $wr[15] -eq $wr[13] -and $wr[16] -eq 0
+                if ($wr[2] -eq 0) {
+                    $weaponLedgerValid = $weaponLedgerValid -and
+                        (($wr | Measure-Object -Sum).Sum -eq 0)
+                } else {
+                    $weaponLedgerValid = $weaponLedgerValid -and
+                        $wr[8] -eq 0x444c4831
+                }
+                Assert-Condition $weaponLedgerValid 'Canonical realtime HW build published an incoherent source weapon display ledger.' $gdbStdout
+                # Every completed source traversal contributes the exact
+                # 42-list / 202-triangle Dream Land base. Link-14 source
+                # weapons are additive two-triangle quads. Do not admit the old
+                # unmarked 22/44 setup traversal: aggregate tolerance could hide
+                # an equal loss in a later gameplay frame.
+                $stageBaseSubmitCount = $shw[0] - $wr[2]
+                $stageBaseTriangleCount = $shw[1] - $wr[4]
+                $stageStartupSubmitCount =
+                    $stageBaseSubmitCount - (42 * $stageFrameCount)
+                $stageStartupTriangleCount =
+                    $stageBaseTriangleCount - (202 * $stageFrameCount)
+                $stageStartupValid =
+                    $stageStartupSubmitCount -eq 0 -and
+                    $stageStartupTriangleCount -eq 0
+                Assert-Condition ($stageHardware.Success -and $stageStartupValid -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build drifted from the exact base + source-weapon stage contract or retained an unmarked setup traversal.' $gdbStdout
                 Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
                 if ($usesRetainedWallpaper) {
                     Assert-Condition (
@@ -1913,7 +2024,32 @@ try {
                 # ftdisplaymain.c:1164-1242 sets this preamble and traverses only
                 # source-selected, visible, textured fighter part display lists.
                 Assert-Condition ($fighterDisplayContract.Success -and $fdc[0] -gt 0 -and $fdc[3] -gt 0 -and $fdc[0] -ge $fdc[3] -and ($fdc[0] - $fdc[3]) -le 64 -and (($fdc[4] -band 0x222005) -eq 0x222005) -and $fdc[5] -gt 0 -and $fdc[6] -gt 0 -and $fdc[7] -gt 0 -and $fdc[8] -eq 0 -and $fdc[11] -gt 0 -and $fdc[12] -gt 0 -and $fdc[13] -eq 0x00100000 -and $fdc[14] -eq [Convert]::ToUInt32('c4112078', 16)) 'Canonical realtime HW build did not preserve the original fighter display selection, lighting, geometry, cycle, render-mode, and visibility contract.' $gdbStdout
-                Assert-Condition ($renderProfile.Success -and $rp[15] -eq 2484 -and $rp[16] -eq 828 -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact 2,484-vertex/828-triangle renderer contract.' $gdbStdout
+                # Source link-14 weapons use BattleShip wpDisplayDrawNormal's
+                # no-Z path. The adjacent completed-frame delta above supplies
+                # an independent owner census for this terminal geometry.
+                if ($RendererBenchmarkSamples -gt 0) {
+                    # Synchronized benchmark windows already require exact base
+                    # geometry on every sampled frame and deliberately reject a
+                    # terminal weapon rather than inventing a cross-window delta.
+                    $terminalWeaponQuadCount = 0
+                    $terminalWeaponFrameValid = $rs[3] -eq 126
+                } else {
+                    $terminalWeaponFrameValid =
+                        $weaponFrame.Success -and
+                        $wframe[0] -eq $wframe[1] -and
+                        $wframe[1] -eq $wframe[2] -and
+                        $wframe[2] -eq $wframe[3] -and
+                        $wframe[4] -eq (2 * $wframe[2]) -and
+                        $wframe[5] -eq $wframe[8] -and
+                        $wframe[8] -le $wframe[2] -and
+                        $wframe[6] -eq 0 -and
+                        $wframe[7] -eq $wframe[2] -and
+                        $wframe[9] -eq (2 * $wframe[8]) -and
+                        $wframe[10] -eq $wframe[8] -and
+                        $wframe[11] -eq 0
+                    $terminalWeaponQuadCount = $wframe[2]
+                }
+                Assert-Condition ($renderProfile.Success -and $terminalWeaponFrameValid -and $rp[15] -eq (2484 + (6 * $terminalWeaponQuadCount)) -and $rp[16] -eq (828 + (2 * $terminalWeaponQuadCount)) -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact base plus source-weapon renderer geometry contract.' $gdbStdout
                 Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13]) 'Realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
                 $expectedBatchBegin = 121
                 $expectedBatchReuse = 707
@@ -1927,7 +2063,12 @@ try {
                     $expectedBatchReuse = 725
                     $expectedBatchEnd = 103
                 }
-                Assert-Condition ($renderBatch.Success -and $rb[0] -eq $expectedBatchBegin -and $rb[1] -eq $expectedBatchReuse -and $rb[2] -eq $expectedBatchEnd -and $rb[3] -eq 98 -and $rb[4] -eq 730) "Canonical realtime HW build drifted from exact $expectedBatchBegin/$expectedBatchReuse/$expectedBatchEnd batch and 98/730 texture-prepare accounting." $gdbStdout
+                $expectedBatchBegin += $terminalWeaponQuadCount
+                $expectedBatchReuse += $terminalWeaponQuadCount
+                $expectedBatchEnd += $terminalWeaponQuadCount
+                $expectedTexturePrepareBegin = 98 + $terminalWeaponQuadCount
+                $expectedTexturePrepareReuse = 730 + $terminalWeaponQuadCount
+                Assert-Condition ($renderBatch.Success -and $rb[0] -eq $expectedBatchBegin -and $rb[1] -eq $expectedBatchReuse -and $rb[2] -eq $expectedBatchEnd -and $rb[3] -eq $expectedTexturePrepareBegin -and $rb[4] -eq $expectedTexturePrepareReuse) "Canonical realtime HW build drifted from exact source-weapon-aware batch and texture-prepare accounting." $gdbStdout
                 if ($RendererProfileLevel -lt 2) {
                     Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 2 -and $rci4lut[3] -gt $rci4lut[2]) 'Performance/coarse renderer did not build exactly two immutable CI4 source-index planes and reuse them across live water addressing.' $gdbStdout
                     Assert-Condition ($renderCi4Map.Success -and $rci4map[0] -gt 0 -and $rci4map[1] -ge $rci4map[0]) 'Performance/coarse renderer did not resolve live large-water pixels through exact representative address/phase classes.' $gdbStdout
@@ -1957,12 +2098,33 @@ try {
                         $wallpaperFinal.Success -and
                         $wf[0] -eq 1 -and $wf[1] -eq 0 -and
                         $wf[2] -eq 1 -and $wf[3] -eq 49152 -and
-                        $wf[4] -eq 0 -and $wf[5] -gt 0 -and
+                        $wf[4] -eq 0 -and $wf[5] -eq 0 -and
                         $wf[6] -eq 0 -and $wf[7] -eq 0 -and
                         $wf[8] -eq 98304 -and
-                        $wf[9] -eq 0 -and $wf[10] -gt 0 -and
+                        $wf[9] -eq 0 -and $wf[10] -eq 0 -and
                         $wf[11] -eq 0
-                    ) 'Cut G did not retain the one full BG2 seed while preserving live foreground sprite traffic.' $gdbStdout
+                    ) 'Cut G did not retain the one full BG2 seed while eliminating generic foreground staging and BG3 copies.' $gdbStdout
+                    Assert-Condition (
+                        $ifCommonOam.Success -and
+                        $ioam[0] -eq 1 -and
+                        $ioam[1] -eq 1 -and $ioam[2] -eq 1 -and
+                        $ioam[3] -eq 0 -and $ioam[4] -gt 0 -and
+                        $ioam[5] -eq 93824 -and $ioam[6] -eq 16 -and
+                        $ioam[7] -eq 59 -and $ioam[9] -eq 0 -and
+                        $ioam[10] -eq 0 -and $ioam[11] -eq 0 -and
+                        $ioam[12] -eq 0 -and $ioam[13] -eq 0 -and
+                        $ioam[14] -eq 0 -and $ioam[15] -eq 0 -and
+                        $ioam[16] -eq 0 -and $ioam[17] -eq 1 -and
+                        $ioam[18] -gt 0 -and $ioam[19] -eq 0 -and
+                        $ioam[20] -eq 0 -and $ioam[21] -eq 0 -and
+                        $ioam[22] -eq 0 -and $ioam[23] -eq 0 -and
+                        $ioam[24] -eq 0x49464f41 -and
+                        $ioam[25] -eq 0 -and $ioam[26] -gt 0 -and
+                        (($RendererProfileLevel -ge 1) -or
+                         ($ioam[27] -eq 0)) -and
+                        $ioam[28] -eq $hw[0] -and
+                        $ioam[29] -eq 0 -and $ioam[30] -eq 0
+                    ) 'Cut G native countdown owner did not preserve prepared source assets, cumulative commits, exact idle cleanup, or zero hot conversion/upload.' $gdbStdout
                     Assert-Condition (
                         $sceneWallAffine.Success -and
                         $swa[0] -eq $smc[7] -and
@@ -2023,7 +2185,7 @@ try {
                     # stable canonical geometry contract.
                     $expectedProjectedFallbackCount *= $hw[0]
                 }
-                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq 648 -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq 126 -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq 10 -and $rs[7] -eq 0 -and $rs[0] -eq $rrm[0] -and $rs[2] -eq $rrm[2] -and $rs[6] -eq $rrm[1] -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact 648/44/126/10 hybrid submit-class partition.' $gdbStdout
+                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq 648 -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq 10 -and $rs[7] -eq 0 -and $rs[0] -eq $rrm[0] -and $rs[2] -eq $rrm[2] -and $rs[6] -eq $rrm[1] -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
                 Assert-Condition ($rs[8] -eq $expectedProjectedDivisions -and ($rs[8] * 4) -lt $preCutoverProjectedDivisions) 'Canonical realtime HW build did not sharply reduce and exactly account projected division demand.' $gdbStdout
                 $hardwareDivideEvaluations = $rhdiv[0] + $rhdiv[1] + $rhdiv[2]
                 Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Canonical realtime projected hardware divider reported a zero denominator or exact-result mismatch.' $gdbStdout
@@ -2038,7 +2200,7 @@ try {
                 Assert-Condition ($fighterLightSeed.Success -and $fls[0] -gt 0 -and $fls[1] -eq [Convert]::ToUInt32('ffffff00', 16) -and $fls[2] -eq [Convert]::ToUInt32('4c4c4c00', 16)) 'Canonical realtime HW build did not seed the fighter RSP light state from the selected source MObj material.' $gdbStdout
                 if ($RendererProfileLevel -ge 2) {
                     Assert-Condition ($rlazy[1] -eq $rlazy[0] -and $rlazy[2] -gt 0) 'Forensic renderer did not eagerly transform every source vertex before exercising transform-cache hits.' $gdbStdout
-                    Assert-Condition ($renderOracle.Success -and $ro[0] -eq 2484 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Forensic realtime HW drifted from the exact 2,484/0/0 CPU 20.12 oracle contract.' $gdbStdout
+                    Assert-Condition ($renderOracle.Success -and $ro[0] -eq (2484 + (6 * $terminalWeaponQuadCount)) -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Forensic realtime HW drifted from the exact source-weapon-aware CPU 20.12 oracle contract.' $gdbStdout
                     Assert-Condition ($renderMatrix.Success) 'Forensic realtime HW build did not report loaded GX matrix ranges.' $gdbStdout
                     Assert-Condition ($renderVertex.Success) 'Forensic realtime HW build did not report submitted vertex ranges.' $gdbStdout
                     Assert-Condition ($renderDepth.Success -and $rd[0] -gt 0 -and $rd[5] -gt 0 -and $rd[10] -gt 0) 'Forensic realtime HW build did not report source-depth samples for the stage, Mario, and Fox.' $gdbStdout
@@ -2061,7 +2223,7 @@ try {
                     Assert-Condition ($rt[0] -eq 0 -and $rt[3] -eq 0 -and $rt[4] -eq 0 -and $rc[0] -eq 0 -and $rc[1] -eq 0) 'Performance/coarse realtime HW build still published per-vertex or per-command forensic diagnostics.' $gdbStdout
                     Assert-Condition ($rrm[3] -eq 0 -and $rrm[4] -eq 0 -and $rrm[5] -eq 0 -and $rrm[6] -eq 0 -and $rrm[7] -eq 0 -and $rrm[8] -eq 0 -and $rrm[9] -eq 0) 'Performance/coarse realtime HW build still ran the GX PosTest oracle.' $gdbStdout
                 }
-                $hardwareSummary = " rprof=$RendererProfileLevel$benchmarkSummary gxram=$($hw[2])/$($hw[3]) gxstat=0x{0:x}/ctrl=0x{1:x} ftrContract=$($fdc[0])/$($fdc[3])/geom0x{17:x}/cycle0x{18:x}/rm0x{19:x}/light$($fdc[5])/$($fdc[6])/bounds$($fdc[7])/$($fdc[8]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) batch=$($rb[0])/$($rb[1])/$($rb[2])/texprep$($rb[3])/$($rb[4]) wallCache=$($wc[0])/$($wc[1])/$($wc[2])/fb$($wc[3])/src$($wc[4])x$($wc[5])/$($wc[6])/ticks$($wc[7])/$($wc[8]) wallFinal=direct$($wf[0])/skip$($wf[1])/change$($wf[2])/px$($wf[3])/stage$($wf[4])/$($wf[5])/bg2$($wf[6])/$($wf[7])/$($wf[8])/bg3$($wf[9])/$($wf[10])/$($wf[11]) mtx=load$($rm[0])/scale$($rm[1])/p$($rm[2]),$($rm[3]),$($rm[4]),$($rm[5])/mv$($rm[6]),$($rm[7]),$($rm[8]),$($rm[9]),$($rm[10]),$($rm[11]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/dec$($rs[4])/prim$($rs[5])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/w$($rrm[6])/c$($rrm[7])/mw$($rrm[8])/drop$($rrm[9]) vraw=$($rv[0])..$($rv[1])/$($rv[2])..$($rv[3])/$($rv[4])..$($rv[5]) vhw=$($rv[6])..$($rv[7])/$($rv[8])..$($rv[9])/$($rv[10])..$($rv[11]) depth=stage$($rd[0]):$($rd[1])..$($rd[2])/p0$($rd[5]):$($rd[6])..$($rd[7])/p1$($rd[10]):$($rd[11]) clip=$($rclip[0]) texProof=$($rt[1])/$($rt[2])/$($rt[3]) sample=$($rt[5])/$($rt[6])/$($rt[4]) alias=$($rt[7]) st=$($rt[8])..$($rt[9])/$($rt[10])..$($rt[11]) texUse=$($rtu[0])/$($rtu[1])/$($rtu[2])/$($rtu[3])/$($rtu[4])/impl$($rtu[5])/first0x{7:x}/flags0x{8:x}/w0x{9:x}/w1x{10:x}/geom0x{11:x} texFmt=conv0x{2:x}/bind0x{3:x}/pal0x{4:x}/rej0x{5:x}/why0x{6:x} texLane=layout0x{12:x}/byte$($rtl[1])/half$($rtl[2])/bFmt0x{13:x}/hFmt0x{14:x}/bMap0x{15:x}/hMap0x{16:x} stageCarry=$($scarry[0])/$($scarry[1])/tex$($scarry[2])/tile$($scarry[3])/short$($scarry[4])/$($scarry[5])/seg$($scarry[6]) combine=$($rc[0])/$($rc[1])/lit$($rc[2])/mat$($rc[3])/proj$($rc[4]) light=$($rl[0])/$($rl[1])/$($rl[2]) profile=present$($rp[2])/draw$($rp[3])/stage$($rp[5])/mat$($rp[6])/dl$($rp[8])/tex$($rp[9])/conv$($rp[10])/upload$($rp[11]) texUploads=$($rp[12])/$($rp[13]) binds=$($rp[14]) vtx=$($rp[15]) tri=$($rp[16])" -f $hw[4], $hw[5], $rtf[0], $rtf[1], $rtf[2], $rtf[3], $rtf[4], $rtu[6], $rtu[7], $rtu[8], $rtu[9], $rtu[10], $rtl[0], $rtl[3], $rtl[4], $rtl[5], $rtl[6], $fdc[4], $fdc[13], $fdc[14]
+                $hardwareSummary = " rprof=$RendererProfileLevel$benchmarkSummary gxram=$($hw[2])/$($hw[3]) gxstat=0x{0:x}/ctrl=0x{1:x} ftrContract=$($fdc[0])/$($fdc[3])/geom0x{17:x}/cycle0x{18:x}/rm0x{19:x}/light$($fdc[5])/$($fdc[6])/bounds$($fdc[7])/$($fdc[8]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) batch=$($rb[0])/$($rb[1])/$($rb[2])/texprep$($rb[3])/$($rb[4]) wallCache=$($wc[0])/$($wc[1])/$($wc[2])/fb$($wc[3])/src$($wc[4])x$($wc[5])/$($wc[6])/ticks$($wc[7])/$($wc[8]) wallFinal=direct$($wf[0])/skip$($wf[1])/change$($wf[2])/px$($wf[3])/stage$($wf[4])/$($wf[5])/bg2$($wf[6])/$($wf[7])/$($wf[8])/bg3$($wf[9])/$($wf[10])/$($wf[11]) mtx=load$($rm[0])/scale$($rm[1])/p$($rm[2]),$($rm[3]),$($rm[4]),$($rm[5])/mv$($rm[6]),$($rm[7]),$($rm[8]),$($rm[9]),$($rm[10]),$($rm[11]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/dec$($rs[4])/prim$($rs[5])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/w$($rrm[6])/c$($rrm[7])/mw$($rrm[8])/drop$($rrm[9]) vraw=$($rv[0])..$($rv[1])/$($rv[2])..$($rv[3])/$($rv[4])..$($rv[5]) vhw=$($rv[6])..$($rv[7])/$($rv[8])..$($rv[9])/$($rv[10])..$($rv[11]) depth=stage$($rd[0]):$($rd[1])..$($rd[2])/p0$($rd[5]):$($rd[6])..$($rd[7])/p1$($rd[10]):$($rd[11]) clip=$($rclip[0]) texProof=$($rt[1])/$($rt[2])/$($rt[3]) sample=$($rt[5])/$($rt[6])/$($rt[4]) alias=$($rt[7]) st=$($rt[8])..$($rt[9])/$($rt[10])..$($rt[11]) texUse=$($rtu[0])/$($rtu[1])/$($rtu[2])/$($rtu[3])/$($rtu[4])/impl$($rtu[5])/first0x{7:x}/flags0x{8:x}/w0x{9:x}/w1x{10:x}/geom0x{11:x} texFmt=conv0x{2:x}/bind0x{3:x}/pal0x{4:x}/rej0x{5:x}/why0x{6:x} texLane=layout0x{12:x}/byte$($rtl[1])/half$($rtl[2])/bFmt0x{13:x}/hFmt0x{14:x}/bMap0x{15:x}/hMap0x{16:x} stageCarry=$($scarry[0])/$($scarry[1])/tex$($scarry[2])/tile$($scarry[3])/short$($scarry[4])/$($scarry[5])/seg$($scarry[6]) stageAcct=frames$stageFrameCount/boot$stageStartupSubmitCount,$stageStartupTriangleCount/weapon$($wr[2]),$($wr[4])/terminal$terminalWeaponQuadCount combine=$($rc[0])/$($rc[1])/lit$($rc[2])/mat$($rc[3])/proj$($rc[4]) light=$($rl[0])/$($rl[1])/$($rl[2]) profile=present$($rp[2])/draw$($rp[3])/stage$($rp[5])/mat$($rp[6])/dl$($rp[8])/tex$($rp[9])/conv$($rp[10])/upload$($rp[11]) texUploads=$($rp[12])/$($rp[13]) binds=$($rp[14]) vtx=$($rp[15]) tri=$($rp[16])" -f $hw[4], $hw[5], $rtf[0], $rtf[1], $rtf[2], $rtf[3], $rtf[4], $rtu[6], $rtu[7], $rtu[8], $rtu[9], $rtu[10], $rtl[0], $rtl[3], $rtl[4], $rtl[5], $rtl[6], $fdc[4], $fdc[13], $fdc[14]
                 $hardwareSummary += " texDirect=$($rt1[11])"
                 if ($RendererProfileLevel -ge 2) {
                     $hardwareSummary += " wallOracle=$($wo[0])/$($wo[1])/$($wo[2])/$($wo[3])"

@@ -12,7 +12,7 @@ if ($NoBuild) {
 }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$output = Join-Path $root "artifacts\nogba-smoke-$stamp.png"
+$output = Join-Path $root "artifacts\visibility\nogba-smoke-$stamp.png"
 $outputDirectory = Split-Path -Parent $output
 $outputStem = [System.IO.Path]::GetFileNameWithoutExtension($output)
 & (Join-Path $PSScriptRoot 'capture-nogba.ps1') `

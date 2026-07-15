@@ -30,8 +30,8 @@ Current verifier-covered user ROM:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-12,043,264 bytes
-SHA-256 385B9F051C5CBB801089C69E13D49F9E0D19C07F1E4DA19DA943772B5553FC21
+14,362,624 bytes
+SHA-256 57B85DDC6B2919D8962589188D6066F6CE6D0FD83B2F729175C9F339C8CCFAFD
 ```
 
 Profile-1 and special benchmark ROMs are laboratory evidence and must never be

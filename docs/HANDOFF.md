@@ -16,9 +16,10 @@ registry decides Boundary/Latest membership, and `PORTING.md` owns history.
 Only `./emulators/melonds/melonDS.exe` and repo-owned
 `./emulators/melonds-runners/slotN/melonDS.exe` may launch; external paths fail.
 All TOMLs use one 488x675 vertical/equal/native-aspect, zero-gap, unswapped,
-unfiltered, OSD-off window profile. Normalize all registered worktrees with
-`./scripts/Set-MelonDSWindowConfig.ps1 -AllWorktrees`; check them with
-`./scripts/check-melonds-policy.ps1`.
+unfiltered, OSD-off window profile. Scripted launches apply the central profile
+to their selected config, and DevFast checks every classified emulator TOML in
+every registered worktree. `Set-MelonDSWindowConfig.ps1 -AllWorktrees` is only
+for creation/repair, not a recurring manual audit.
 Manual melonDS stays limited to 60 FPS with OpenGL 6x, `Volume = 256`, GDB off,
 and ports `3333/3334`. Automation is unthrottled interpreter/software, muted
 only at the host (`Volume = 0`), and uses root `4333/4334`, slot 0 `4323/4324`,
@@ -45,10 +46,12 @@ the stage, both fighters, effects, and foreground/interface SObjs.
 
 The focused gate requires exactly one seed/capture, zero texture uploads,
 failures, or fallbacks for the retained wallpaper, 49,152 initial BG2 pixels,
-live BG3 traffic, one affine queue per live frame, one extra seed apply, no
-coverage failure, a nonidentity transform, and at most 35,000 affine-update
-ticks. Live frames retain both fighters and the exact 626-triangle fighter
-contract.
+zero generic foreground staging/BG3 copies, live native-OAM commits, one affine
+queue per live frame, one extra seed apply, no coverage failure, a nonidentity
+transform, and at most 35,000 affine-update ticks. Live frames retain both
+fighters and the exact 626-triangle fighter contract. Cumulative stage totals
+reconcile as 42 lists/202 triangles per traversal plus the exact source-weapon
+ledger; unmarked setup traffic is rejected.
 
 Exact BattleShip Sprite manifests plus layered-SObj 4c/CI4/I8, TLUT, and
 TEXSHUF decoding restore the countdown traffic light and GO art on the top
@@ -69,28 +72,30 @@ Canonical/shipped ROM:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-12,043,264 bytes
-SHA-256 385B9F051C5CBB801089C69E13D49F9E0D19C07F1E4DA19DA943772B5553FC21
+14,362,624 bytes
+SHA-256 57B85DDC6B2919D8962589188D6066F6CE6D0FD83B2F729175C9F339C8CCFAFD
 ```
 
-Fresh canonical capture `artifacts/visibility/latest.png` passes full top-screen
-coverage, green/detail, paired motion, named-region, horizontal-detail, and sky
-gates. This is melonDS/verifier acceptance, not physical-hardware acceptance.
+Exact completed frames 438/439 in
+`artifacts/visibility/2026-07-14_canonical_fast_frame438-439_200444-1174022-p660.png`
+and its `_next` pair pass GO/timer/control/OAM state, full top-screen coverage,
+green/detail, motion, named-region, horizontal-detail, and sky gates. The first
+frame is published as `latest.png`. This is melonDS, not hardware, acceptance.
 
 ## Performance And Remaining Milestones
 
-- Milestone 1: complete. Native BG2 affine update is within the 5–35K target.
+- Milestone 1: complete. Native BG2 affine update beats the 35K ceiling.
 - Milestone 2: in progress. The generated AOT Mario/Fox owner exists, but its
-  synchronized combined cost is about 431K versus the 170–250K target.
-- Milestone 3: open. AOT DS-native complete-stage target is 150–250K ticks.
-- Milestone 4: feasibility open. Streaming was rejected, and exact current-
-  layout residency needs 232,004 compressed bytes / 645,120 texture bytes,
-  beyond spendable reserve / 524,288-byte texture VRAM.
+  synchronized combined cost is about 431K versus 170–250K. The 17,704-byte
+  transaction packet is tooling only until live device gates pass.
+- Milestone 3: open. The current stage owner is about 801K versus 150–250K.
+- Milestone 4: an exact RGB256 host generator qualifies for an eight-frame
+  device falsifier; runtime palette mapping and zero gameplay preparation stay open.
 
 Whole-frame presentation is about 10.3 FPS in the latest synchronized
 `laboratory-profile-1` M2 window, not a canonical phase baseline. The accepted
 slices are fidelity/ownership wins, not a 60 FPS claim. On exact ROM
-`385B9F...FC21`, natural Fox up-smash restores all 11 damage colliders with
+`57B85D...FAFD`, natural Fox up-smash restores all 11 damage colliders with
 zero mismatch and clears the no-damage flag. Manual repeat-hit confirmation
 and a continuous natural-hit gate remain open.
 
@@ -113,14 +118,6 @@ dated gates, and acceptance decisions. This handoff does not maintain a second
 task queue. Shared renderer-core work stays serialized in the live tree;
 gameplay and audio return isolated commits plus reproduction evidence.
 
-The rejected separate projection/modelview cut saved only 36,192 fighter ticks
-in exact same-ROM A/B/A and was removed. A compile-time Mode-8 TRIANGLE_NOOP
-floor then proved submission-only work can save at most 100K: fighters still
-cost 331K with all run preparation/emission removed. The next M2 design must
-also remove a large share of the measured ~178K matrix-preparation wall. The
-parity corpus demotes GX lighting at 102/413 RGB15 mismatches; retain the exact
-CPU light sidecar. Synthesized 20.12 t16 matrices pass all 99 cases.
-
 Keep comparisons on identical ROM hashes and synchronized windows. Require
 counters, screenshots, semantic traces, and runtime state to agree.
 
@@ -136,9 +133,9 @@ user ROM only through the canonical Makefile parity rule.
 
 ## Verification State
 
-GBI/audio/renderer-parity fixtures, docs, architecture, registry, canonical
-DevFast build/capture/parity, focused profile-1 pre/post-GO, latest one-minute
-expiry/Results, and canonical profile-0 pre/post-GO pass.
+GBI/audio/renderer-parity fixtures, architecture, registry, canonical
+runtime/parity, exact-frame Cut G capture, focused profile-1 pre/post-GO,
+one-minute expiry/Results, and canonical profile-0 pre/post-GO pass.
 Boundary/Latest were migrated because exact source locks invalidate their old
 pre-GO motion assumption. Full Regression remains follow-up.
 

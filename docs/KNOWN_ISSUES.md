@@ -5,21 +5,26 @@
 | Blocker | Required closure |
 |---|---|
 | Renderer M2–M4 | Mario/Fox 170–250K, complete stage 150–250K, zero gameplay conversion, phase P95 path toward ~560K active ticks |
-| Gameplay coverage | Natural Fox recovery plus current-ROM platform/edge and repeat-hit acceptance |
+| Gameplay collision/coverage | Graduate damage/throw map collision, one-way platforms, and Fireball rebound; cover natural Fox recovery and repeat hits |
 | Gameplay-critical audio | Phase/regular-KO FGM and winner→Results pass; close pitch/voice 685/24 unsupported calls and audible Dream Land BGM proof |
 | Full-match stability | Repeated canonical one-minute Time Up → Results soaks with memory reserve and guards intact |
 | Release evidence | Full Regression, clean canonical parity, dated captures, and exact-ROM manual user retest |
 
-Mario Fireball is closed by its dedicated visible/moving/textured source-spawn
-and damage gate. The authoritative state, lane, next gate, and integration decision for each row
-live in `P1_EXECUTION_BOARD.md`.
+Mario Fireball spawn/render/damage passes its dedicated natural gate; trajectory
+and floor rebound remain open. The authoritative state, lane, next gate, and
+integration decision for each row live in `P1_EXECUTION_BOARD.md`.
 
 ## Current P1 And Tooling Notes
 
 - Fireball display/damage is closed by its visible, moving, textured natural
-  gate. Freeze, platform/edge, Up-B, and missing-stage reports are not
-  reproducible failures on the current artifact; retest them before any
-  speculative behavior change. Natural Fox recovery remains coverage debt.
+  gate. Live weapon `mpProcessRunFloorCollisionAdjNewNULL` always returns false,
+  so upstream trajectory integration runs but source floor rebound cannot fire;
+  residual long-range visual drift needs separate post-fix evaluation. Fighter
+  damage collision returns false outside a bounded proof, while default throw
+  projection omits BattleShip's copy/run/reset map sequence. They share an
+  incomplete floor primitive but remain separate policy seams; graduate them and
+  one-way-platform semantics as one coordinated lane. Freeze, Up-B, and missing-
+  stage reports still need current reproduction; Fox recovery remains coverage debt.
 - Tyler approved the lower text HUD. Mario→Fox damage was reopened after Fox
   could become permanently unhittable following an up/down-smash restore. The
   local `GMHitStatus` ABI and hit-status part shims now match BattleShip. An
@@ -42,10 +47,12 @@ live in `P1_EXECUTION_BOARD.md`.
   all five KO IDs are observed. Fox winner 16 naturally transitions to Results
   22. Pitch, voice 685, 24 observed calls, and enabled non-silent Dream Land
   channel proof still need closure.
-- The live source floor/edge callbacks are now active, but their manual behavior
-  is still awaiting Tyler's fresh playtest. Mode 163 now uses normal down input
-  to pass its elevated fighter through the one-way platform before Walk/DashRun;
-  P1Gate and Boundary pass without restoring unconditional edge success.
+- Current playtesting confirms upward passage through one-way platforms is
+  blocked. Mode 163's scripted down-pass and the bounded platform proofs do not
+  prove upward passage, downward landing, jumping from a platform, or intentional
+  drop-through during continuous play.
+- Source pause/camera updates are live and the straight-on Cut G capture passes;
+  fixed-angle containment of the reported pause-orbit geometry failure remains.
 - The rare `3 uploads / 40960 bytes` frame is two normal animated-water uploads
   plus a source-valid 4 KiB Whispy texture miss. That cold miss still reaches
   synchronous `glTexImage2D` during active display and can explain the reported
