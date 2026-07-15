@@ -1,0 +1,183 @@
+{
+  "arm_static_estimator": {
+    "cold_both_maps_plus_palette_cycles": 224315,
+    "cold_source_decode_cycles_per_texture": 5152,
+    "kind": "conservative analytical estimate; not device measurement",
+    "owners": {
+      "large": {
+        "cases": 165,
+        "map_bytes": 16384,
+        "median_cycles": 118976,
+        "p95_cycles": 150540,
+        "unique_s_max": 65,
+        "unique_s_min": 64,
+        "unique_t_max": 63,
+        "unique_t_min": 32,
+        "unique_visible_maps": 38,
+        "worst_cycles": 151914
+      },
+      "small": {
+        "cases": 157,
+        "map_bytes": 2048,
+        "median_cycles": 37215,
+        "p95_cycles": 47865,
+        "unique_s_max": 32,
+        "unique_s_min": 32,
+        "unique_t_max": 63,
+        "unique_t_min": 32,
+        "unique_visible_maps": 46,
+        "worst_cycles": 48529
+      }
+    },
+    "palette_prepare_cycles": 13568,
+    "target": "ARM946E-S ARM state O3",
+    "weights": {
+      "axis_point": 16,
+      "class_table_clear_word": 3,
+      "copied_row_word": 5,
+      "hash_collision_probe": 5,
+      "hash_probe": 8,
+      "map_fixed": 128,
+      "palette_fixed": 128,
+      "palette_pair_scan": 30,
+      "palette_used_pair": 64,
+      "repeated_column_pixel": 11,
+      "source_decode_fixed": 32,
+      "source_decode_packed_byte": 10,
+      "unique_pixel": 22
+    }
+  },
+  "comparison_to_retained_rgb16": {
+    "median_estimate_delta_ticks": -8092,
+    "rgb16_convert_median_ticks": 168064,
+    "rgb16_convert_p95_ticks": 184576,
+    "rgb16_convert_plus_stage_median_ticks": 172480,
+    "rgb16_convert_plus_stage_p95_ticks": 189056,
+    "rgb16_stage_median_ticks": 4416,
+    "rgb16_stage_p95_ticks": 4480,
+    "rgb16_worst_full_map_upload_bytes": 36864,
+    "rgb256_conservative_active_median_estimated_cycles": 164388,
+    "rgb256_conservative_worst_estimated_cycles": 200443,
+    "rgb256_worst_map_plus_palette_upload_bytes": 18614,
+    "source": "docs/PERF_LEDGER.md compact-direct retained profile-1 frames 220..347",
+    "worst_estimate_vs_retained_p95_delta_ticks": 11387
+  },
+  "cycle_update_model": {
+    "conservative_key_change": {
+      "bytes": {
+        "active_frames": 165,
+        "average_per_all_frames": 14069,
+        "cycle_total": 3039092,
+        "median_per_active_frame": 18432,
+        "p95_per_active_frame": 18614,
+        "worst_frame": 18614
+      },
+      "bytes_per_frame_histogram": {
+        "0": 51,
+        "16384": 8,
+        "18432": 79,
+        "18614": 78
+      },
+      "cycles": {
+        "active_frames": 165,
+        "average_per_all_frames": 124543,
+        "cycle_total": 26901438,
+        "median_per_active_frame": 164388,
+        "p95_per_active_frame": 198405,
+        "worst_frame": 200443
+      }
+    },
+    "owner_key_changes": {
+      "large": 165,
+      "small": 157
+    },
+    "owner_visible_map_changes": {
+      "large": 38,
+      "small": 46
+    },
+    "palette_changes": 78,
+    "visible_map_dedup": {
+      "bytes": {
+        "active_frames": 106,
+        "average_per_all_frames": 3384,
+        "cycle_total": 730996,
+        "median_per_active_frame": 182,
+        "p95_per_active_frame": 18614,
+        "worst_frame": 18614
+      },
+      "bytes_per_frame_histogram": {
+        "0": 110,
+        "182": 60,
+        "18432": 24,
+        "18614": 14,
+        "2048": 4,
+        "2230": 4
+      },
+      "cycles": {
+        "active_frames": 106,
+        "average_per_all_frames": 34243,
+        "cycle_total": 7396577,
+        "median_per_active_frame": 13568,
+        "p95_per_active_frame": 190394,
+        "worst_frame": 200443
+      }
+    }
+  },
+  "hardware_contract": {
+    "active_palette_entries": 91,
+    "active_palette_upload_bytes": 182,
+    "alpha_semantics": "BattleShip 4x4 ordered coverage; exact phase mask",
+    "maximum_combined_upload_bytes": 18614,
+    "maximum_map_upload_bytes": 16384,
+    "opaque_index_first": 1,
+    "opaque_index_last": 90,
+    "palette_vram_reservation_bytes": 512,
+    "source0_s_semantics": "32-texel mask with mirror for large owner",
+    "source0_t_semantics": "32-texel masked rows",
+    "source1_semantics": "logical clamp followed by 32-texel mask",
+    "texture_format": "GL_RGB256",
+    "transparent_index": 0
+  },
+  "parity": {
+    "alpha_mismatches": 0,
+    "index_byte_mismatches": 0,
+    "opaque_rgb555_mismatches": 0,
+    "transparent_hidden_rgb_is_hardware_observable": false,
+    "transparent_hidden_rgb_nonzero_pixels": 835594,
+    "visible_pixel_mismatches": 0
+  },
+  "production_footprint": {
+    "active_palette_bytes": 182,
+    "existing_source_ci4_bytes": 1536,
+    "existing_source_palette_bytes": 32,
+    "independent_axis_bytes": 768,
+    "independent_class_table_bytes": 1024,
+    "independent_pair_phase_lut_bytes": 4096,
+    "independent_source_index_cache_bytes": 2048,
+    "independent_working_bytes_unpadded": 8118,
+    "integration_reuse_note": "current renderer already owns a 1 KiB pair LUT, 1 KiB class table, axis arrays, two 1 KiB CI4 index caches, and a >=16 KiB texture arena; this candidate replaces the pair LUT with 4 KiB",
+    "new_constant_alpha_prefix_bytes": 34,
+    "new_constant_pair_index_bytes": 256,
+    "reusable_output_buffer_bytes": 16384
+  },
+  "schema": 1,
+  "source": {
+    "bank103_sha256": "a61e74aece06c5f15fa7cd1d6633afd9cc3750c9163caeffe59cab2d157a222a",
+    "bank104_sha256": "3ce7e51da3810dca927521717357a2c44b1c51760bc942b0d4e5bfebe6fd4d52",
+    "cases": 322,
+    "cycle_frames": 216,
+    "fractions": 40,
+    "map_oracle_bytes": 3024896,
+    "map_oracle_sha256": "5c82a28d3e757bac9728c9f89f97954c3c1d187e3d5307a2f9e11cea98aeb52c",
+    "observed_ci4_pairs": 90,
+    "oracle_pixels": 3024896,
+    "palette_oracle_bytes": 58604,
+    "palette_oracle_sha256": "4911dc4a65ccc4721684b2725d4fd6498ddafe4e48cee735e14aa084d86af7c3"
+  },
+  "verdict": {
+    "milestone_4_complete": false,
+    "palette_vram_mapping_still_required": true,
+    "reason": "the conservative active-frame median is below the retained RGB16 conversion-plus-stage median, its worst estimate is within 10 percent of retained P95, and peak upload is approximately half; only an eight-frame synchronized device falsifier can resolve the remaining estimate uncertainty",
+    "runtime_8_frame_falsifier": "ELIGIBLE_IF_ARM946E_S_NO_GX_AND_EXACT_BYTE_CHECKS_PASS"
+  }
+}
