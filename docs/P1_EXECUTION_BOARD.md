@@ -43,7 +43,7 @@ Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; th
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
 | Integration/release | Active | live tree | shared gates, one-minute lifecycle integration, current docs, ROM identity | direct `4333/4334`; capture slot 3 `3363/3364` |
-| Renderer implementation | Active | isolated M4 corpus lane | zero-I/O pair-index/palette feasibility | no emulator |
+| Renderer implementation | Active | isolated M4 corpus lane | exact on-demand RGB256 map microbenchmark; not M4 completion | no emulator |
 | Gameplay + QA | Active | `codex/renderer-parity-contract` | M2 49-epoch/67-run transaction packet prototype | no emulator |
 | Performance research | Active | isolated audio worktree | source-backed regular KO FGM slice | no emulator |
 
@@ -71,23 +71,23 @@ available, and reassign a slot immediately when its packet completes.
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks and accepted canonical screenshot | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Fail / active | Renderer | ~431K; GX light demoted 102/413, synthesized t16 matrix exact 99/99 | Build packet with CPU light sidecar; block promotion |
 | M3 complete stage AOT, 150–250K ticks | Not started | Renderer | Shared renderer owner follows M2 decision | Hold, then serialize behind M2 |
-| M4 zero gameplay conversion/preparation | Streaming rejected / active | Renderer | Exact corpus passes; direct path made 12 NitroFS reads/32 frames and did not improve inclusive timing | Require complete pre-GO zero-I/O residency |
+| M4 zero gameplay conversion/preparation | Current layout no-go / active | Renderer | Exact archive 232,004 B; pair maps 645,120 B exceed reserve/texture VRAM | Seek new exact representation; intermediate map prep cannot close M4 |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | Pass / native OAM | Renderer + QA | Source thread/assets live; 11,584/11,584 ticks, zero gameplay conversion/upload, clean teardown | Keep |
 | Dream Land BGM | Partial | Audio | Stream counters pass; enabled DS channel and nonzero PCM peak unproved | Block audio completion |
-| Required FGM and Mario/Fox voices | Phase FGM/handles pass; voices open | Audio | Five natural phase IDs pass; recyclable tokens pass; voices and 25 observed unsupported calls remain | Keep pack; implement source calls |
-| Winner and Results BGM | Backend integrated / gate open | Audio | Source tracks Mario 12 / Fox 16 / Results 22 stream; natural transition proof pending | Block full Results acceptance |
+| Required FGM and Mario/Fox voices | Phase + regular KO pass; voices open | Audio | Mario `439→292→154`, all five KO IDs, recyclable tokens pass; pitch/685/24 calls remain | Keep pack; implement source calls |
+| Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 171,916 | Keep gate |
 | Stable reserve / no corruption | One-match pass | QA | Conservative reserve 171,916 bytes after BGM; stale=0/0 and 17 safety counters zero; repetition pending | Keep gate; repeat for qualification |
 | Full Regression | Pending | QA | Required after architecture freeze | Block release candidate |
 | Dated canonical capture and exact-ROM manual retest | Pending | QA + user | July 18 qualification artifact absent | Block release |
 
 ## Reconciled Blockers
 
-- Confirmed: renderer M2–M4, missing voice playback and 25 observed unsupported
-  FGM calls, incomplete natural winner/Results transition and audible-channel
+- Confirmed: renderer M2–M4, missing pitch/voice playback and 24 observed
+  unsupported FGM calls, and incomplete audible-channel
   proof for Dream Land BGM, exact canonical-duration qualification, Full
   Regression, and final dated capture/manual exact-ROM qualification.
-- Closed: exact US sound-ID drift, recyclable FGM handles, five natural countdown phase FGMs,
+- Closed: exact US sound IDs, recyclable handles, natural phase/regular-KO FGMs, winner→Results BGM,
   visible/damaging Fireball, one-minute natural lifecycle/single-match safety,
   lower HUD pixels, native countdown OAM, Cut G M1, and the 10.5K
   CPU-only joint-preorder experiment.
@@ -106,8 +106,8 @@ available, and reassign a slot immediately when its packet completes.
   baselines; repeat canonical one-minute qualification.
 - Fireball render/damage and one-minute lifecycle/safety gates now pass.
 - M2/M3 research ranked whole-owner cuts; countdown software cost is isolated.
-- Audio IDs/handles and AOT PublicExcited → 3 → 2 → 1 → GO pass; winner/
-  Results streams are integrated, while voices and their natural gates remain.
+- Audio IDs/handles, phase FGMs, Mario regular-KO triplet, and Fox winner 16 →
+  Results 22 pass naturally; pitch, voice 685, and other voices remain.
 
 ### July 15
 

@@ -2056,3 +2056,32 @@ DECISION:
   hierarchy and synthesized texture addressing to GX, but must budget and
   preserve the CPU lighting sidecar. No runtime or performance claim yet.
 ```
+
+## 2026-07-14 - rejected current-layout M4 indexed residency
+
+```text
+IDEA ID: M4-PUPUPU-INDEXED-RESIDENCY
+PURPOSE:
+  Test whether an 8-bit pair-index plus RGB5A1 palette and periodic maps can
+  preload the exact animated water corpus before GO with zero gameplay I/O.
+EXACTNESS:
+  Phase-aware software expansion matches all 3,024,896 oracle pixels. Literal
+  DS RGB256 pair indices have at least 753,481 alpha mismatches because only
+  index 0 is transparent while BattleShip's 4x4 dither needs both alpha states
+  for the same pair. 32x32 periodic maps miss 1,374,596 output pixels; 64x32
+  large / 32x32 small periods still miss 600,358 from clamp/mirror edges.
+RESIDENCY:
+  Exact compressed archive 232,004 bytes. Current audio-adjusted reserve is
+  153,184 bytes, leaving only 22,112 spendable above the floor. Resident pair
+  maps/palettes need 645,120 bytes, beyond 524,288 bytes total texture space.
+  The DS-visible index-0-normalized exact form is 903,168 resident / 275,008
+  compressed bytes.
+UPDATE MODEL:
+  A hypothetical pair form changes 33 large maps, 41 small maps, and 78
+  palettes per 216 frames: 664,576 bytes/cycle, 3,076.7 average bytes/frame,
+  and 18,944 peak bytes. Hardware-visible exact maps rise to 975,872/cycle.
+DECISION: CURRENT LAYOUT NO-GO
+  Do not trade fidelity or reserve for this representation. An exact on-demand
+  RGB256 map generator may be measured as an intermediate conversion/upload
+  reduction, but it is not M4 completion while gameplay preparation remains.
+```

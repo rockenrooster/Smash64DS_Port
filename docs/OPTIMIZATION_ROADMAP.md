@@ -38,7 +38,7 @@ was not rebuilt or published. Gameplay still reports two uploads / 36,864 bytes.
 | M1 — simple hardware-affine BG2 | Complete | 1,856/1,856 ticks; required 5–35K |
 | M2 — AOT DS-native Mario/Fox | In progress | ledger-off 431,168/458,688; target 170–250K |
 | M3 — AOT DS-native complete stage | Open | 800,608/803,456; target 150–250K |
-| M4 — conversion off gameplay path | Corpus kept; streaming rejected | 322 keys / 206 outputs / period 216; target zero conversion and zero gameplay I/O |
+| M4 — conversion off gameplay path | Current residency no-go | Exact archive 232,004 B; pair maps 645,120 B > 524,288 B texture VRAM |
 
 The owner targets are active renderer ticks, not FPS estimates. Re-profile the
 whole frame after each accepted owner cut.
@@ -235,9 +235,19 @@ read and one prepared output per owner. It was rejected. In synchronized
 frames 171..202, direct versus off inclusive renderer median/P95 was
 1,537,984/1,573,376 versus 1,536,896/1,572,224 ticks; loop P95 was unchanged,
 draw P95 worsened by 21,376 ticks, and the window incurred 12 payload reads.
-Audio-adjusted reserve was only 153,184 bytes, 22,112 above the floor. The
-next falsifier is a complete pre-GO, zero-I/O pair-index/palette encoding with
-byte-exact oracle expansion and measured texture-VRAM ownership.
+Audio-adjusted reserve was only 153,184 bytes, 22,112 above the floor.
+
+The exact pair-index follow-up is also rejected for current-layout residency.
+Phase-aware software expansion matches all 3,024,896 pixels, but literal DS
+RGB256 pair indices incur 753,481 unavoidable alpha mismatches because index 0
+is the only transparent entry and BattleShip dithering needs both alpha states
+for the same color pair. Periodic 32x32 maps miss 1,374,596 pixels; 64x32/32x32
+maps still miss 600,358. The exact compressed archive is 232,004 bytes versus
+22,112 spendable reserve, while resident maps/palettes need 645,120 bytes,
+exceeding the DS 524,288-byte texture space. A 903,168-byte DS-visible exact
+form is worse. The active on-demand RGB256-map study is explicitly an
+intermediate conversion-cost reduction; it cannot close M4 while preparation
+or uploads remain in gameplay.
 
 ## Measurement And Correctness Rules
 

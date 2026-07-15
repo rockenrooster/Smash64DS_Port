@@ -20740,3 +20740,21 @@ remains skipped for the requested fast iteration cadence.
 - Naive texture-matrix mapping misses 47/99 cases. Synthesized 20.12
   coefficients plus fractional bias match 99/99, so only that mapping remains
   eligible for live MObj/profile-2 validation. No runtime speed claim was made.
+
+## 2026-07-14 - Closed natural regular-KO and Results music slices
+
+- Expanded the source-derived FGM pack to 64,848 bytes / 10 IDs / 9 unique
+  samples. Fighter attribute normalization exposes exact regular death calls:
+  Mario `439 -> 292 -> 154`, Fox `370 -> 289 -> 154`; shared explosion sample
+  data is deduplicated and recyclable instance-token handling remains generic.
+- Extended the existing one-minute natural-runtime gate, not a new harness.
+  Mario's exact `439/292/154` triplet plays cleanly, all five KO IDs are
+  observed (`0x1f`), included lookup/play/pool/generation failures are zero,
+  and the same match retains timer/CPU/Results/safety and 171,916-byte reserve.
+- The isolated natural Results gate selects Fox winner track 16 and transitions
+  to Results track 22. Three plays, natural stop `16 -> 22`, stream rate,
+  95 refills, zero unsafe/overrun/cleanup faults, Results tick 516, and the
+  same 171,916-byte conservative reserve pass. The lifecycle GDB timeout is
+  now 300 seconds rather than the incorrect 30-second generic default.
+- Source pitch automation, DeadExplodeL fork voice 685, 24 other observed
+  unsupported calls, and audible Dream Land BGM output remain open.

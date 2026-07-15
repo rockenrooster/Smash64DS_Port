@@ -3,6 +3,7 @@ param(
     [int]$GdbPort = 3373,
     [switch]$NoBuild,
     [int]$DelaySeconds = 3,
+    [ValidateRange(30,3600)][int]$TimeoutSeconds = 300,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
 )
@@ -143,7 +144,8 @@ try {
     )
     $gdbOutput = (Invoke-GdbMarkerScript `
         -Gdb $Gdb -Elf $elf -Root $root `
-        -Commands $commands -ScriptName $scriptName).Stdout
+        -Commands $commands -ScriptName $scriptName `
+        -TimeoutSeconds $TimeoutSeconds).Stdout
 
     $coreMatch = [regex]::Match($gdbOutput, 'AUDIO_CORE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $resultsMatch = [regex]::Match($gdbOutput, 'AUDIO_RESULTS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')

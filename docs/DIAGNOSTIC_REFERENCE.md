@@ -6299,3 +6299,13 @@ proves the current selected material path has no texture-bearing original
 `MObj` source yet. It still does not prove the general original renderer, broad
 material/combiner mapping, texture upload, z-buffering, or continuous draw
 semantics.
+
+## Natural one-minute audio markers
+
+`AUDIO_FGM_KO` fields are: successful KO-ID mask; play counts for Mario voice
+439, Mario slam 292, Fox voice 370, Fox slam 289, and DeadExplodeL 154; trace
+count; first three successful KO IDs; included lookup failures; play failures;
+pool exhaustions; and generation mismatches. The one-minute gate accepts only
+the exact BattleShip side/down orders `439,292,154` / `370,289,154` or the
+source up-star orders `154,439,292` / `154,370,289`, with all four failure
+counters zero.

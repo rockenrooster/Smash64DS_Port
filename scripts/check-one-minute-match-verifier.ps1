@@ -75,6 +75,12 @@ Assert-Text $owner '(?s)\$life\[8\] -eq 22.*\$life\[9\] -eq 24' `
     'One-minute verifier lost the VSBattle-to-VS-Results transition assertion.'
 Assert-Text $owner 'MATCH_SAFETY=' `
     'One-minute verifier lost its safety-counter marker.'
+Assert-Text $owner 'AUDIO_FGM_KO=' `
+    'One-minute verifier lost its natural KO FGM marker.'
+Assert-Text $owner "(?s)439,292,154.*154,439,292.*370,289,154.*154,370,289" `
+    'One-minute verifier lost the exact Mario/Fox regular/up-star KO call orders.'
+Assert-Text $owner '(?s)\$fgmKo\[10\] -eq 0.*\$fgmKo\[11\] -eq 0.*\$fgmKo\[12\] -eq 0.*\$fgmKo\[13\] -eq 0' `
+    'One-minute verifier no longer requires clean included-KO playback.'
 Assert-Text $owner 'Where-Object \{ \$_ -ne 0 \}' `
     'One-minute verifier no longer requires every safety counter to remain zero.'
 Assert-Text $owner '\(\$ma\[6\] - \$audioResidentBytes\) -ge 131072' `

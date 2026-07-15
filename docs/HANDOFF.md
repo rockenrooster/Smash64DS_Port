@@ -83,8 +83,9 @@ gates. This is melonDS/verifier acceptance, not physical-hardware acceptance.
 - Milestone 2: in progress. The generated AOT Mario/Fox owner exists, but its
   synchronized combined cost is about 431K versus the 170–250K target.
 - Milestone 3: open. AOT DS-native complete-stage target is 150–250K ticks.
-- Milestone 4: open. The exact host corpus passes, but a gameplay NitroFS
-  reader was rejected; conversion/preparation and I/O must all leave gameplay.
+- Milestone 4: feasibility open. Streaming was rejected, and exact current-
+  layout residency needs 232,004 compressed bytes / 645,120 texture bytes,
+  beyond spendable reserve / 524,288-byte texture VRAM.
 
 Whole-frame presentation is about 10.3 FPS in the latest synchronized
 `laboratory-profile-1` M2 window, not a canonical phase baseline. The accepted
@@ -99,11 +100,11 @@ scene=22→24, safety=0, stale=0/0, and 171,916 bytes conservative reserve after
 the resident BGM buffer. It is unthrottled lifecycle evidence, not a realtime
 or exact canonical-duration qualification.
 
-The source-backed 39,120-byte AOT FGM pack passes natural countdown runtime:
-exact PublicExcited/3/2/1/GO IDs play once (`0x1f`), decoded waveforms are
-non-silent, handles recycle through nonzero instance tokens, and arena headroom
-is 235,104 bytes. Voices and 25 observed unsupported calls remain; winner and
-Results streams are integrated but still need the natural transition gate.
+The source-backed 64,848-byte AOT FGM pack passes countdown and natural combat:
+PublicExcited/3/2/1/GO play once, Mario KO plays exact `439/292/154`, all five
+KO IDs are observed, handles recycle, and included failures are zero. Fox winner
+16 naturally transitions to Results 22 with zero stream/cleanup faults. Pitch,
+fork voice 685, other voices, and 24 observed unsupported calls remain.
 
 ## Execution Ownership
 

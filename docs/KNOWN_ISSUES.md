@@ -6,7 +6,7 @@
 |---|---|
 | Renderer M2–M4 | Mario/Fox 170–250K, complete stage 150–250K, zero gameplay conversion, phase P95 path toward ~560K active ticks |
 | Gameplay coverage | Natural Fox recovery plus current-ROM platform/edge and repeat-hit acceptance |
-| Gameplay-critical audio | Five phase FGMs and handle recycling pass; close voices/25 observed unsupported calls, audible BGM proof, and natural winner 12/16 → Results 22 |
+| Gameplay-critical audio | Phase/regular-KO FGM and winner→Results pass; close pitch/voice 685/24 unsupported calls and audible Dream Land BGM proof |
 | Full-match stability | Repeated canonical one-minute Time Up → Results soaks with memory reserve and guards intact |
 | Release evidence | Full Regression, clean canonical parity, dated captures, and exact-ROM manual user retest |
 
@@ -33,14 +33,15 @@ live in `P1_EXECUTION_BOARD.md`.
   so the next architecture must also cut the ~178K matrix-preparation wall.
   Exact RGB15 parity demotes GX lighting (102/413 mismatches); synthesized t16
   matrices remain eligible at 99/99, with lighting retained in the CPU sidecar.
-- Milestone 4's exact host corpus passes all 3,024,896 oracle pixels. The
-  gameplay NitroFS-reader trial was rejected because inclusive timing did not
-  improve, draw P95 regressed, and it performed frequent reads beside BGM.
+- Milestone 4's exact host corpus passes all 3,024,896 oracle pixels. Streaming
+  was rejected; exact current pair residency needs 232,004 compressed bytes
+  and 645,120 texture bytes, exceeding spendable reserve and texture VRAM.
 - Audio is not release-ready. All 144 local REGION_US IDs match BattleShip;
   fighter attribute IDs and recyclable FGM instance tokens are source-correct.
-  Five phase FGMs play naturally, but voices and 25 observed calls remain
-  unsupported. Tracks 12/16/22 are integrated but their natural transition and
-  enabled non-silent channel still need verifier closure.
+  Phase and regular-KO FGMs play naturally; Mario's first triplet is exact and
+  all five KO IDs are observed. Fox winner 16 naturally transitions to Results
+  22. Pitch, voice 685, 24 observed calls, and enabled non-silent Dream Land
+  channel proof still need closure.
 - The live source floor/edge callbacks are now active, but their manual behavior
   is still awaiting Tyler's fresh playtest. Mode 163 now uses normal down input
   to pass its elevated fighter through the one-way platform before Walk/DashRun;

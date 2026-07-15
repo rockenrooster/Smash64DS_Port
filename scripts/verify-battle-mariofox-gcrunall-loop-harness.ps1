@@ -783,7 +783,8 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $audioCommands = @(
-            'printf "AUDIO_ASSET=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioAssetResult, gNdsAudioAssetMask, gNdsAudioAssetOpenCount, gNdsAudioAssetOpenFailCount, gNdsAudioAssetFormatFailCount, gNdsAudioAssetShortReadCount, gNdsAudioAssetRawBytes, gNdsAudioAssetResidentBytes, gNdsAudioAssetScratchMaxBytes, gNdsAudioAssetSeqCount, gNdsAudioAssetSeqFirstOffset, gNdsAudioAssetSeqFirstLength, gNdsAudioAssetSeqMaxLength, gNdsAudioAssetBank1BankCount, gNdsAudioAssetBank1InstrumentCount, gNdsAudioAssetBank1WaveCount, gNdsAudioAssetBank1SampleRate, gNdsAudioAssetBank2BankCount, gNdsAudioAssetBank2InstrumentCount, gNdsAudioAssetBank2WaveCount, gNdsAudioAssetBank2SampleRate, gNdsAudioAssetFgmUnkCount, gNdsAudioAssetFgmTableCount, gNdsAudioAssetFgmUcodeCount'
+            'printf "AUDIO_ASSET=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioAssetResult, gNdsAudioAssetMask, gNdsAudioAssetOpenCount, gNdsAudioAssetOpenFailCount, gNdsAudioAssetFormatFailCount, gNdsAudioAssetShortReadCount, gNdsAudioAssetRawBytes, gNdsAudioAssetResidentBytes, gNdsAudioAssetScratchMaxBytes, gNdsAudioAssetSeqCount, gNdsAudioAssetSeqFirstOffset, gNdsAudioAssetSeqFirstLength, gNdsAudioAssetSeqMaxLength, gNdsAudioAssetBank1BankCount, gNdsAudioAssetBank1InstrumentCount, gNdsAudioAssetBank1WaveCount, gNdsAudioAssetBank1SampleRate, gNdsAudioAssetBank2BankCount, gNdsAudioAssetBank2InstrumentCount, gNdsAudioAssetBank2WaveCount, gNdsAudioAssetBank2SampleRate, gNdsAudioAssetFgmUnkCount, gNdsAudioAssetFgmTableCount, gNdsAudioAssetFgmUcodeCount',
+            'printf "AUDIO_FGM_KO=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmKoPlayMask, gNdsAudioFgmKoPlayCounts[0], gNdsAudioFgmKoPlayCounts[1], gNdsAudioFgmKoPlayCounts[2], gNdsAudioFgmKoPlayCounts[3], gNdsAudioFgmKoPlayCounts[4], gNdsAudioFgmKoTraceCount, gNdsAudioFgmKoTrace[0], gNdsAudioFgmKoTrace[1], gNdsAudioFgmKoTrace[2], gNdsAudioFgmIncludedLookupFailCount, gNdsAudioFgmPlayFailCount, gNdsAudioFgmPoolExhaustCount, gNdsAudioFgmGenerationMismatchCount'
         )
         $gdbCommands = @($beforeDetach + $audioCommands + $afterDetach)
     }
@@ -942,6 +943,7 @@ try {
     $reflector = [regex]::Match($gdbStdout, 'REFLECTOR=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $specials = [regex]::Match($gdbStdout, 'SPECIALS=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
     $audioAsset = [regex]::Match($gdbStdout, 'AUDIO_ASSET=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $audioFgmKo = [regex]::Match($gdbStdout, 'AUDIO_FGM_KO=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     Assert-Condition ($aobj32.Success -and [int64]$aobj32.Groups[4].Value -eq 0) 'AObjEvent32 source-command normalization rejected a live script.' $gdbStdout
@@ -978,6 +980,7 @@ try {
         $resultsFighters = Get-Ints $vsResultsFighters
         $resultsDisplay = Get-Ints $vsResultsDisplay
         $ab = Get-Ints $audioBgm
+        $fgmKo = Get-Ints $audioFgmKo
         $audioResidentBytes = if ($audioBgm.Success) { $ab[13] } else { 0 }
 
         # BattleShip ifcommon.c:2533-2542 initializes one minute as 3,600
@@ -1009,6 +1012,26 @@ try {
             $cpu[19] -gt 0 -and $cpu[20] -gt 0 -and
             ($cpu[23] - $cpu[22]) -ge 50000) `
             'Imported level-3 Fox CPU was not naturally active across the one-minute match.' `
+            $gdbStdout
+
+        # ftcommondead.c:183-190,227-231 and :476-488 enqueue the exact
+        # character voice/slam plus DeadExplodeL triplet. Side/down deaths use
+        # character/character/explode order; up-star deaths use explode first.
+        $koTrace = @($fgmKo[7], $fgmKo[8], $fgmKo[9])
+        $marioRegular = ($koTrace -join ',') -eq '439,292,154'
+        $marioUpStar = ($koTrace -join ',') -eq '154,439,292'
+        $foxRegular = ($koTrace -join ',') -eq '370,289,154'
+        $foxUpStar = ($koTrace -join ',') -eq '154,370,289'
+        $marioCounts = $fgmKo[1] -gt 0 -and $fgmKo[2] -gt 0 -and
+            $fgmKo[5] -gt 0 -and (($fgmKo[0] -band 0x13) -eq 0x13)
+        $foxCounts = $fgmKo[3] -gt 0 -and $fgmKo[4] -gt 0 -and
+            $fgmKo[5] -gt 0 -and (($fgmKo[0] -band 0x1c) -eq 0x1c)
+        Assert-Condition ($audioFgmKo.Success -and $fgmKo[6] -ge 3 -and
+            ((($marioRegular -or $marioUpStar) -and $marioCounts) -or
+             (($foxRegular -or $foxUpStar) -and $foxCounts)) -and
+            $fgmKo[10] -eq 0 -and $fgmKo[11] -eq 0 -and
+            $fgmKo[12] -eq 0 -and $fgmKo[13] -eq 0) `
+            'Natural one-minute combat did not play one exact source KO FGM triplet cleanly.' `
             $gdbStdout
 
         # scvsbattle.c:513-560 returns from the battle task, scores the match,
@@ -1082,7 +1105,7 @@ try {
             'One-minute match observed a stale-reloc, normalization, fixup, audio-safety, collision-range, or display-bounds failure.' `
             $gdbStdout
 
-        Write-Output ("$Label one-minute match passed (unthrottled state/memory only; realtime not measured): logic=$($bp[2]) timer=$($start[3])->$($life[5])/$($life[6]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1])")
+        Write-Output ("$Label one-minute match passed (unthrottled state/memory only; realtime not measured): logic=$($bp[2]) timer=$($start[3])->$($life[5])/$($life[6]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1])")
         return
     }
     if ($ExpectedMode -eq 54) {
