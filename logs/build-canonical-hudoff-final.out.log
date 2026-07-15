@@ -1,0 +1,6 @@
+controller_backend.c
+scene_backend.c
+linking smash64ds-battle-playable-canonical-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-canonical-hwtri.nds

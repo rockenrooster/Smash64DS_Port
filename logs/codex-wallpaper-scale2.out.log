@@ -1,0 +1,9 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+scene_backend.c
+linking smash64ds-battle-playable-canonical-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-canonical-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+[33;1mWARNING: battle_playable Pupupu realtime HW textured perf below 60fps target: fps=12/12 x0.1; renderer-cache follow-up still required.[0m
+battle_playable Pupupu realtime pacing smoke passed: frames=53 fps=12/12 ticks=1443455680 gxram=730/2214 gxstat=0x6000000/ctrl=0x19 ftrContract=1696/1696/geom0x222005/light106/106/bounds106/0 oracle=396/0/0 mtx=load1/scale0/p4096,4096,4096,0/mv4096,4096,4096,0,0,0 vraw=32767..-32768/32767..-32768/32767..-32768 vhw=-3562..6709/-4550..8462/9..3685 clip=0 texProof=50074/88956/387 sample=87/387/387 alias=2 st=-227..3959/-4..2063 texUse=0/2/0/0/0/impl0/first0x2/flags0x1/w0xfcffffff/w1xfffe7d3e/geom0x604 texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0 texLane=layout0x2/byte130/half130/bFmt0x100/hFmt0x400/bMap0x10203/hMap0x2030001 stageCarry=2255/2255/tex1720/tile1827/short323/323/seg161 combine=3723/2336/lit33178/mat16907/proj37270 light=0/0/0 profile=present25931264/draw0/stage1670144/mat2432/dl938624/tex146688/conv0/upload0 texUploads=0/0 binds=23 vtx=393 tri=131 cpu=setup1/proc54/target54/stick25/obj0x4

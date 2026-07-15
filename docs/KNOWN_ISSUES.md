@@ -6,30 +6,40 @@
 |---|---|
 | Renderer M2–M4 | Mario/Fox 170–250K, complete stage 150–250K, zero gameplay conversion, phase P95 path toward ~560K active ticks |
 | Gameplay collision/coverage | Obtain verified natural DamageFly/throw recovery, extend floor-first collision through walls/ceilings/edges, cover Fox recovery/repeat hits, and manually retest platforms/Fireball travel |
-| Gameplay-critical audio | Audibly retest repaired ID626 PNT=1 loop; close pitch/voice 685/24 calls and audible Dream Land BGM proof |
-| Full-match stability | Repeated canonical one-minute Time Up → Results soaks with memory reserve and guards intact |
-| Release evidence | Full Regression, clean canonical parity, dated captures, and exact-ROM manual user retest |
+| Gameplay-critical audio | Audibly retest the opening-crowd overlap/loop report and repaired ID626 PNT=1 body; close pitch/voice 685/24 calls and audible Dream Land BGM proof |
+| Full-match stability | After Tyler requests re-enable, repeat canonical CPU-on one-minute Time Up → Results soaks with memory reserve and guards intact; the temporary default pauses only Fox decisions/inputs, not his level-3 CPU classification or reactions |
+| Release evidence | Focused verifier closure, clean two-ROM canonical parity, dated captures, and exact-ROM manual user retest |
 
-Mario Fireball spawn/render/damage/rebound and one-way platform semantics pass
-focused mode-163 gates. The original platform-feel and long-distance Fireball
-reports remain open for exact-ROM manual retest. The authoritative state, lane,
-next gate, and integration decision live in `P1_EXECUTION_BOARD.md`.
+Mario Fireball spawn/damage/first-rebound and 40 early submissions pass, but the
+gate has no independent BattleShip `0x47` oracle, full 140-tick collision trace,
+or projectile ROI capture. The long-distance visual report remains open. The platform gate proves the exact
+upward-crossing frame rejects the line, then can immediately accept an incorrect
+next-frame landing; it does not close Tyler's early-landing/jump-suppression
+report. The authoritative state, lane, next gate, and integration decision live
+in `P1_EXECUTION_BOARD.md`.
 
 ## Current P1 And Tooling Notes
 
-- Fireball display/damage/rebound passes with source=1/1, maps=18, floor=3,
+- Fireball early display/damage/rebound passes with source=1/1, maps=18, floor=3,
   speed `55→46.75`, 40 draws / 80 triangles, 1,757 units of travel, and reserve
-  222,736. This closes the source-MVP/rebound gate, not the manual visual report.
-- One-way platform semantics passes a 715-frame all-three-line gate: exact live
-  geometry, Mario-only mask `0x7`, three upward passes/zero accepts, nine
-  reversed-endpoint hits, nine landings, two side cycles, three source Pass
-  rejections, and clean returns to main-floor line 3. The capture is under
-  `artifacts/visibility`; the original user report remains open until retest.
-- Natural DamageFly recovery currently times out without a verified sample;
-  the 900-second input-only run advanced only 31 match seconds and reached no
-  damage. The throw/release verifier is candidate-only. Live damage/default
-  policies are floor-only; graduate original `mpprocess` wall/ceiling Run state
-  and damage/default `mpcommon` policy before claiming connected-floor recovery.
+  222,736. This proves early current-path submission/rebound, not source-exact
+  matrix parity or the manual full-lifetime visual report. Full wall/ceil/edge
+  weapon collision also remains incomplete.
+- The 715-frame platform route records exact live geometry, Mario-only mask
+  `0x7`, three upward crossing-frame rejections, nine reversed-endpoint hits,
+  and clean returns. Its phase machine can accept the target landing immediately
+  after the first positive-to-nonpositive velocity transition, without two
+  continued-ascent frames, clearance, a negative-air frame, or a descending
+  plane crossing. Extend this same mode-163 verifier and add a deterministic
+  midair/platform capture under `artifacts/visibility`.
+- Natural DamageFly recovery remains unverified. The first isolated LIVE
+  `mpprocess` run stalled in high-frequency GDB breakpoint churn before any
+  attack, so it is not a semantic failure. Exact source symbol closure and the
+  endpoint-world/common-local repair now pass statically; a sparse natural
+  Down-to-main-floor/Up+A verifier is ready but unrun. Moving-wall sweep,
+  project-floor yakumono transforms, per-segment source flags/angles, and
+  coherent non-floor-first `mpcommon` remain open before default-live
+  graduation or a recovery claim.
 - The live topology cache is validated for the current single battle scene, but
   invalidation drops arena-backed cache pointers without reclaiming them. Prove
   reuse or reclaim before repeated geometry rebuild/rematch qualification.
@@ -39,30 +49,39 @@ next gate, and integration decision live in `P1_EXECUTION_BOARD.md`.
   exact-ROM natural up-smash trace restores 11/11 active colliders with zero
   mismatch and clears the no-damage flag; Tyler confirms damage works. A
   continuous post-GO natural-hit observation remains open.
-- Renderer milestone 2 remains a P1 performance blocker. The generated AOT
-  fighter owner costs about 431K against 170–250K. Retained evidence supports
-  about 50–75K from the first hierarchy cut, below its unchanged ≥80K keep gate.
-  Proposed GX stores must use Mario slots 16–23 and Fox slots 16–17. Final
-  promotion still requires the full 170–250K gate and independent parity.
-- Milestone 3 permits one strict eight-callback whole-owner slab: exact
-  42/886/302/54/202 census, <=16 KiB resident, no new BSS/heap, >=300K paired
-  saving, and <=500K result; remove it if either performance threshold fails.
-- Milestone 4 can prewarm an estimated 69 static keys / 179,328 texture bytes;
-  two live water owners bring the estimate to 71 slots / 216,192 bytes, within
-  mapped texture VRAM but beyond the 48-entry cache. Generate the exact census
-  before resizing. Full water needs 903,168 exact-visible bytes versus 524,288
-  total texture VRAM, so a new 216-state representation remains mandatory.
+- Renderer milestone 2 remains a P1 performance blocker. The latest clean
+  control is 413,504 combined ticks against 170–250K. A per-joint hierarchy
+  saved only 13,472 and was removed; the whole-owner FIFO copy/patch/DMA packet
+  then regressed by 124,288 to 537,792 and is also removed. Exact host packet
+  fixtures remain, but no runtime treatment passes A1=A0, ≥80K saving,
+  ≤337,472 combined, matrix+light ≤120K, transport ≤145K, and independent
+  semantic/visual/runtime parity.
+- Milestone 3's exact host packet is 10,076 bytes / 57 DObjs / 42 bindings /
+  54 runs / 202 triangles, but production linkage and Whispy/flower dynamic
+  invariance remain unproved. Any later <=16 KiB slab needs no BSS/heap, >=300K
+  paired saving, and <=500K result; remove it if either threshold fails.
+- Milestone 4 has exact static/water host candidates and an edit-ready pre-GO
+  residency plan, but production linkage is zero. Runtime provenance, pinned
+  borrowing, bank remap, reserve, device behavior, complete reachable-effect
+  closure, and the zero-post-GO conversion/upload/I/O/alloc/evict/palette-DMA
+  fence remain mandatory before it can alter the renderer.
 - Audio is not release-ready. All 144 local REGION_US IDs match BattleShip;
   fighter attribute IDs and recyclable FGM instance tokens are source-correct.
   Phase and regular-KO FGMs play naturally; Mario's first triplet is exact and
   all five KO IDs are observed. Fox winner 16 naturally transitions to Results
   22. An isolated diagnostic ROM proves exact one-play PublicExcited
   PLAY→final-zero→duration-stop ARM7 ACKs with no retained channel or duplicate
-  handle; the production/user ROM contains no trace or blocking ACK waits. ID626 uses a no-growth AOT
-  PNT=1/LEN=3527 body. A stateful host model rejects missing restore/wrong
-  PNT/LEN; each cycle is 28,214 source plus two alignment-guard samples.
-  Runtime gates pass, but final mixed/acoustic fidelity still needs audible retest.
-  Pitch, voice 685, 24 calls, and audible Dream Land output remain open.
+  handle; the production/user ROM contains no trace or blocking ACK waits.
+  BattleShip calls ID626 once for a 6.9-second envelope; the DS PNT=1/LEN=3527
+  body repeats its 28,216-sample content about every 1.868 seconds and therefore
+  intentionally overlaps countdown/GO. Existing ACK telemetry cannot prove the
+  mixed acoustics or exclude every stale channel. Add the opening acoustic
+  host oracle and exact channel-mask assertions before changing source behavior;
+  final mixed/acoustic fidelity still needs exact-ROM audible retest.
+  The reported 24 unsupported calls are cumulative events, not 24 identified
+  sound IDs; log the natural ID/order before selecting assets. Pitch, the
+  P1-reachable ID154 child voice 685, ordinary fighter voices, and audible Dream
+  Land output remain open.
 - Source pause/camera updates are live and the straight-on Cut G capture passes.
   Synchronized normal/front/±16.8°/±33.6° camera state passes and normal/±16.8°
   images are clean. Both ±33.6° pause views reproduce the reported wide-view
@@ -117,10 +136,16 @@ next gate, and integration decision live in `P1_EXECUTION_BOARD.md`.
   with `-VerifyStamp` for normal iteration. Run or resume
   `scripts/verify-all.ps1 -Profile Full` when change risk requires it, and
   report timeouts honestly instead of claiming Full green.
-- RegressionCore's two shared-slot mode switches still took `477.31s` and
-  `474.68s` after their first slot builds, rather than rebuilding only the
-  harness-aware objects. Investigate that invalidation in the next tooling
-  slice; it is build-cost debt, not a runtime correctness blocker.
+- Regression shared-slot switches rebuild 140 C objects because the raw harness
+  name lives in globally forced `nds_build_config.h`; only three objects consume
+  the scene config. Move the name to `nds_scene_harness_config.h` and retain a
+  semantic optimization/renderer-ISA policy token in the global header. Keep the
+  fix only when incremental outputs exactly match fresh builds across policy
+  classes; this is build-cost debt, not a runtime blocker.
+- The private `mpprocess` OFF/ON verifier isolates object directories but its
+  canonical target still publishes through shared root ELF/ROM names. Run it
+  only with every other root build quiesced. Add an isolated output-root and
+  no-publish Makefile interface before treating the verifier as concurrency-safe.
 - Snapshots created without `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` can
   include hundreds of MB of generated build directories, root ROM/ELF outputs,
   artifacts, emulator payloads, and GDB scratch files.
@@ -206,10 +231,10 @@ next gate, and integration decision live in `P1_EXECUTION_BOARD.md`.
   those stubs status-by-status as the owning original TUs and assets are
   imported.
 - Full `ft/ftcomputer.c` is imported by default. Canonical mode `163` configures
-  Mario human versus Fox level-3 CPU and the fast natural gate proves target
-  acquisition, movement, attack/live hitboxes, defense, and damage through the
-  source AI. The fixed proof did not naturally select the Recover objective, so
-  offstage recovery remains coverage debt rather than a synthetic claim.
+  Mario human versus Fox level-3 CPU. The temporary public/manual default pauses
+  only Fox's decision/input loop; CPU-specific gates enable it and retain the
+  target, movement, attack/live-hitbox, defense, and damage proof. That proof did
+  not naturally select Recover, so offstage recovery remains coverage debt.
   `grHyruleTwisterCheckGetPosition` and the two `grJungleTaruCann*` helpers are
   weak fail-soft boundaries until those stage runtimes are imported; they are
   unreachable in the current items-off Dream Land P1 match.

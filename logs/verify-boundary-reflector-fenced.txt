@@ -1,0 +1,4 @@
+Running verifier: battle_mariofox_stage_mplivehit_status_loop [verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1]
+Running verifier: menu_chain_mariofox_stage_mplivehit_status_loop [verify-menu-chain-mariofox-stage-mplivehit-status-loop-harness.ps1]
+Running verifier: battle_playable [verify-battle-playable-harness.ps1]
+Boundary verification profile passed.

@@ -5,6 +5,10 @@
 
 #include <PR/ultratypes.h>
 
+#ifndef NDS_IFCOMMON_HYBRID_OAM
+#define NDS_IFCOMMON_HYBRID_OAM 0
+#endif
+
 struct GObj;
 
 void ndsIFCommonNativeOamInit(void);

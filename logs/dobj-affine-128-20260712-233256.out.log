@@ -1,0 +1,45 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+nds_platform.c
+battleship_mnstartup.c
+nds_renderer.c
+battleship_sys_taskman.c
+scene_backend.c
+battleship_sys_objhelper.c
+battleship_mvopeningmario.c
+battleship_mvopeningportraits.c
+battleship_mvopeninglink.c
+battleship_mvopeningdonkey.c
+battleship_mvopeningroom.c
+battleship_mvopeningsamus.c
+battleship_mvopeningfox.c
+battleship_mvopeningpikachu.c
+battleship_mvopeningkirby.c
+battleship_mvopeningyoshi.c
+battleship_mntitle.c
+battleship_mnvsmode.c
+battleship_mnplayersvs.c
+battleship_mnmaps.c
+battleship_scvsbattle.c
+battleship_grpupupu_ground.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_run.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_pass.c
+battleship_ftcomputer.c
+battleship_mnvsresults.c
+battleship_ifcommon.c
+battleship_mario_fireball.c
+battleship_fox_blaster.c
+battleship_fox_reflector.c
+linking smash64ds-battle-playable-coarse-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-coarse-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+Renderer ITCM placement passed: elf=smash64ds-battle-playable-coarse-hwtri.elf itcm=20088/32768 renderer=18352 symbols=[ndsRendererHardwareLitShadeColorPrepared=472, ndsRendererHardwareConvertTexel01Ci4Direct.isra.0=2312, ndsRendererHardwareSubmitVertex=2236, ndsRendererSubmitHardwareTriangle=4188, ndsRendererScanList=9144]

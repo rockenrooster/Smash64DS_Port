@@ -1,0 +1,46 @@
+Renderer ITCM placement passed: elf=smash64ds-battle-playable-coarse-hwtri.elf itcm=20416/32768 renderer=18680 symbols=[ndsRendererHardwareLitShadeColorPrepared=472, ndsRendererHardwareConvertTexel01Ci4Direct.isra.0=2600, ndsRendererHardwareSubmitVertex=2236, ndsRendererSubmitHardwareTriangle=4188, ndsRendererScanList=9184]
+WALL_KEY=225,-68,-72,105019,105019
+WALL_KEY=226,-67,-71,104413,104413
+WALL_KEY=227,-66,-70,103828,103828
+WALL_KEY=228,-66,-69,103268,103268
+WALL_KEY=229,-65,-68,102735,102735
+WALL_KEY=230,-64,-68,102230,102230
+WALL_KEY=231,-63,-67,101755,101755
+WALL_KEY=232,-63,-67,101312,101312
+WALL_KEY=233,-62,-66,100900,100900
+WALL_KEY=234,-62,-66,100520,100520
+WALL_KEY=235,-62,-65,100174,100174
+WALL_KEY=236,-62,-65,99862,99862
+WALL_KEY=237,-62,-65,99581,99581
+WALL_KEY=238,-62,-65,99328,99328
+WALL_KEY=239,-62,-65,99102,99102
+WALL_KEY=240,-62,-64,98899,98899
+WALL_KEY=241,-62,-64,98719,98719
+WALL_KEY=242,-62,-64,98561,98561
+WALL_KEY=243,-62,-64,98424,98424
+WALL_KEY=244,-62,-64,98308,98308
+WALL_KEY=245,-63,-65,98212,98212
+WALL_KEY=246,-63,-65,98138,98138
+WALL_KEY=247,-63,-65,98084,98084
+WALL_KEY=248,-63,-65,98052,98052
+WALL_KEY=249,-64,-65,98041,98041
+WALL_KEY=250,-64,-65,98053,98053
+WALL_KEY=251,-64,-66,98089,98089
+WALL_KEY=252,-65,-66,98148,98148
+WALL_KEY=253,-65,-66,98232,98232
+WALL_KEY=254,-65,-67,98340,98340
+WALL_KEY=255,-66,-67,98473,98473
+WALL_KEY=256,-66,-68,98631,98631
+battle_playable fast raw mode 3 realtime HW textured perf below 60fps target: fps=125/125 x0.1; renderer-cache follow-up still required.
+BENCH_IDENTITY={"schema":1,"target":"smash64ds-battle-playable-coarse-hwtri","build":"build-battle-playable-coarse-hwtri-harness","harness":{"name":"battle_playable_realtime","id":163},"rendererProfile":1,"rendererBenchmarkMode":0,"effectiveCFlags":{"common":"-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-coarse-hwtri-harness/nds_build_config.h -O2","renderer":"-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-coarse-hwtri-harness/nds_build_config.h -O2 -marm","scene":"-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-coarse-hwtri-harness/nds_build_config.h -O2","source":"make print-benchmark-flags"},"artifacts":{"rom":{"path":"D:\\Stuff\\DevFolder\\Smash64DS_Port\\smash64ds-battle-playable-coarse-hwtri.nds","sha256":"9BCFB79BD075D5220D58C3FCA3523C6DDEAD521F1242F9A2A46773F5E43DFFFB","bytes":11686912,"lastWriteUtc":"2026-07-13T09:39:57.9312892Z"},"elf":{"path":"D:\\Stuff\\DevFolder\\Smash64DS_Port\\smash64ds-battle-playable-coarse-hwtri.elf","sha256":"8747F3F293C64F111AA003371402F10108FC394E2BA3CFFD6949EF655BB408DD","bytes":8266540,"lastWriteUtc":"2026-07-13T09:39:55.2322642Z"}},"melonDS":{"version":"1.1","executableSha256":"04738277BA1D7EA0B7408608755D746193A68A9BFA628E2759140A9F2D5AB109","path":"D:\\Stuff\\DevFolder\\Smash64DS_Port\\scripts\\..\\emulators\\melonds\\melonDS.exe","configPath":"D:\\Stuff\\DevFolder\\Smash64DS_Port\\scripts\\..\\emulators\\melonds\\melonDS.toml","configSha256":"B7CA63CB585C3DC724928D107D350A2906F1BE34932EA78BA7B6A401921C2492","settings":{"limitFPS":false,"jit":false,"gdbArm9Port":3333,"gdbArm7Port":3334}},"sampling":{"warmupFrames":224,"samples":32,"frameStart":225,"frameEnd":256,"logicTickStart":232,"logicTickEnd":263,"logicTickTimerStartResets":0,"delaySeconds":8}}
+Renderer benchmark: samples=32 frames=225..256 median/p95 ticks present=2116000/2362240 draw=1902016/1907520 stage=0/0 material=15744/16000 matrix=189536/194240 dl=0/0 texture=0/0 submit=0/0 vertex=0/0 setup=0/0 scan=0/0 uploads=2/2/36864/36864 uploadSequenceSha256=0CEA2590C09C6620B1C63B26B1A6183251362D2331085C49FA735101429309E9
+Renderer benchmark churn (adjacent changes/distinct values): present=31/32 draw=30/30 stage=0/1 material=29/12 matrix=26/16 dl=0/1 texture=0/1 submit=0/1 vertex=0/1 setup=0/1 scan=0/1
+Renderer coarse benchmark: samples=32 frames=225..256 logic=232..263 median/p95 ticks loop=2240640/2800896 input=768/768 update=122720/436736 sourceUpdate=121888/160000 audioUpdate=192/307072 active=1938784/1944192 wait=180416/418240 begin=64/128 draw=1902016/1907520 wallpaper=317376/317760 stage=808224/815936 Mario=361344/361472 Fox=398272/398464 foreground=640/704 hud=64/64 flush=64/64 postVBlank=33472/33536 threads=1664/1664 drawResidual=13760/13952 presentResidual=1408/1472 loopResidual=1152/1216 conservationError=0/0
+Renderer coarse residual ratios (median/p95 basis points): draw=72/80 present=7/8 loop=5/5
+Renderer GX boundary: samples=32 frames=225..256 adjacent changes/distinct values statusBefore=0/1 controlBefore=0/1 statusAfterFlush=0/1 statusPostVBlank=0/1 controlPostVBlank=0/1 median/p95 ticks flush=64/64
+Renderer stage layer-0 benchmark: samples=32 frames=225..256 median/p95 ticks=259328/259456 adjacent changes/distinct values=21/7
+Renderer texture phases: samples=32 convert=164064/168768 queue=4416/4480 uploads=2/2/36864/36864 pairOracle=0/0/0/0 vblankQueued=2/2/36864/36864 committed=2/2 commitTicks=33216/33280 outside/fallback=0/0/0/0 lines=192/192/207/207
+Renderer fast raw runs: mode=3 samples=32 runs=45/45 triangles=540/540 stage=60/60 Mario=246/246 Fox=234/234 fallbackState=47/47 fallbackVertex=7/7 fallbackCommand=0/0
+Renderer owner detailed census: unavailable (profile 1 coarse timing only)
+Renderer semantic hash churn: unavailable (profile 1 coarse timing only)
+battle_playable fast raw mode 3 realtime pacing smoke passed: frames=256 fps=125/125 ticks=686291072 rprof=1 gxram=760/2296 gxstat=0x6000000/ctrl=0x19 ftrContract=8192/8192/geom0x222005/cycle0x100000/rm0xc4112078/light512/512/bounds512/0 oracle=0/0/0 batch=121/707/121/texprep98/730 wallCache=1/255/256/fb0/src300x220/66000/ticks2324736/315584 wallFinal=direct256/skip0/change256/px12582912/stage0/0/bg20/0/25165824/bg30/0/0 mtx=load53/scale0/p0,0,0,0/mv0,0,0,0,0,0 submit=raw648/snap0/cross44/noz126/dec0/prim0/range10/rej0/div1242 lazy=load821/xf282/hit258/new67/reuse7/ovf0 rawcand=648/10/44 postest=0/0/e0/w0/c0/mw0/drop0 vraw=0..0/0..0/0..0 vhw=0..0/0..0/0..0 depth=stage0:0..0/p00:0..0/p10:0 clip=0 texProof=0/0/0 sample=0/0/0 alias=0 st=0..0/0..0 texUse=0/0/0/0/0/impl0/first0x0/flags0x0/w0x0/w1x0/geom0x0 texFmt=conv0x0/bind0x0/pal0x0/rej0x0/why0x0 texLane=layout0x0/byte0/half0/bFmt0x0/hFmt0x0/bMap0x0/hMap0x0 stageCarry=10752/10752/tex8192/tile8704/short1536/1536/seg768 combine=0/0/lit0/mat0/proj54 light=0/0/0 profile=present2115520/draw1903616/stage0/mat15616/dl0/tex0/conv168768/upload4480 texUploads=2/36864 binds=54 vtx=2484 tri=828 texDirect=3686400 hdiv=0/0/0/z0/mis0 topology=0/0/0/0 cost=0/0 ci4lut=0/0/idx2/784 ci4map=583371/2709813 texHash=53/49/9/42/2 cpu=setup1/proc256/target256/stick209/obj0x4 aobj32=40/293/reuse0/fail0

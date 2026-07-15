@@ -1,0 +1,82 @@
+GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.
+Harness registry check passed: 159 harness mappings, 164 verifier scripts, 0 drift.
+Running verifier: stage_mplivehit_continuous_runtime [verify-stage-mplivehit-continuous-runtime.ps1]
+Battle Mario/Fox Stage MP live-hit status-loop ftmanager natural-combat harness passed: wait=345/347 walk=8/8 dash=7/6 run=8/9 attack=5 hitbox=4 dmg=0->4 status=40 knock=6150 guard=0/0/0 retries=0 updates=396 mask=0x3fdff hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_collision_loop [verify-battle-mariofox-stage-collision-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox stage collision-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_floor_edge_loop [verify-battle-mariofox-stage-floor-edge-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox stage floor-edge-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpupdate_floor_loop [verify-battle-mariofox-stage-mpupdate-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox stage mpProcessUpdateMain floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpcross_floor_loop [verify-battle-mariofox-stage-mpcross-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP cross-floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpedge_floor_loop [verify-battle-mariofox-stage-mpedge-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP edge-floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpstale_floor_loop [verify-battle-mariofox-stage-mpstale-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP stale-floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpmotionstale_floor_loop [verify-battle-mariofox-stage-mpmotionstale-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP motion-stale-floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpclifftick_floor_loop [verify-battle-mariofox-stage-mpclifftick-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP cliff-tick-floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpfallland_floor_loop [verify-battle-mariofox-stage-mpfallland-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP Fall-landing-floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpceilstatus_floor_loop [verify-battle-mariofox-stage-mpceilstatus-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP Ceiling-status floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpcliffwait_floor_loop [verify-battle-mariofox-stage-mpcliffwait-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP Cliff-wait floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpcliffattack_action_loop [verify-battle-mariofox-stage-mpcliffattack-action-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP Cliff-attack action-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpcliffescape_action_loop [verify-battle-mariofox-stage-mpcliffescape-action-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP Cliff-escape action-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpcliffclimb_floor_loop [verify-battle-mariofox-stage-mpcliffclimb-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP Cliff-climb floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpcliffclimb_common2_loop [verify-battle-mariofox-stage-mpcliffclimb-common2-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP Cliff-climb common2-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpcliffwait_damage_loop [verify-battle-mariofox-stage-mpcliffwait-damage-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP Cliff-wait damage-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Running verifier: battle_mariofox_stage_mpdownwait_loop [verify-battle-mariofox-stage-mpdownwait-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP DownWait-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_mariofox_stage_mpdownrecover_loop [verify-battle-mariofox-stage-mpdownrecover-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP down-recover loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_mariofox_stage_mpclifflive_loop [verify-battle-mariofox-stage-mpclifflive-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP cliff-live loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_mariofox_stage_mpwallcopy_floor_loop [verify-battle-mariofox-stage-mpwallcopy-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP wall-copy floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_mariofox_stage_mpplatform_floor_loop [verify-battle-mariofox-stage-mpplatform-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP platform floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_mariofox_stage_mpplatform_tick_floor_loop [verify-battle-mariofox-stage-mpplatform-tick-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP platform tick floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_mariofox_stage_mpplatform_pos_floor_loop [verify-battle-mariofox-stage-mpplatform-pos-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP platform-position floor-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_mariofox_stage_inishie_scale_loop [verify-battle-mariofox-stage-inishie-scale-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage Inishie scale-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_mariofox_stage_mpdamage_recover_loop [verify-battle-mariofox-stage-mpdamage-recover-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Battle Mario/Fox Stage MP damage-recover-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f
+Running verifier: battle_playable [verify-battle-playable-harness.ps1]
+battle_playable Pupupu stock KO ftmanager natural-combat harness passed: wait=1461/1227 walk=8/8 dash=7/6 run=8/9 attack=16 hitbox=5 dmg=0->0 status=40 knock=2037056 guard=2/10/6 retries=0 updates=2958 mask=0x6ffff projectile=actor0/kind0 b=1 status=23 accessory=23 flag0=0 spawn=1 ok=1 destroy=0/0/0 weaponFrames=46 max=1 kindMask=0x1 attackMask=0xc dmg=13 life=140 map=0x401 reflector=0xff fox1 proj0 shine=9/14/9 reflect=23 lr=-1 clear=2494 proc=1 vx=49809->-49809 owner=1 attrs=ref1/abs1/shield1/count1/dmg13/size100000 delta=-3053077/-3424614 special=350000/50 bplay=stock8->3 falls0->5 dead=22 rebirth=38/19/138 recover=0/8 mem=head240332 reloc750528 stage202816 fighter244336 if208672 stale0/0 evict0/0 moveset=0x7ff phase=15 tilt=23/17/17 smash=13 aerial=19 landing=26 grab=3/1 throw=12/5/265 throwDmg=0->12 specials=0xfff phase=7 mhi=1/14/7/0/195 y=8116580 mlw=1/14/0 dust=1 wait=255 foxhi=1/12/17/9/12/0/61 y=8312687 hud=dmg16/digits0x1060a stock9->4 hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z76/proj116/decal0 hwtex=bind97/upload11/ready97/reject0/fmt4/max32x32 hwftr=2/582
+Verification profile 'Regression' shard 1/4 passed.

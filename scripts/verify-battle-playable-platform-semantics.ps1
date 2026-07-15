@@ -6,6 +6,8 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [ValidateRange(30,600)][int]$TimeoutSeconds = 180,
+    [string]$Rom = '',
+    [string]$Elf = '',
     [string]$Screenshot = ''
 )
 
@@ -21,10 +23,30 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$target = 'smash64ds-battle-playable-canonical-hwtri'
+$target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-canonical-hwtri-harness'
-$rom = Join-Path $root "$target.nds"
-$elf = Join-Path $root "$target.elf"
+$requestedRom = $Rom
+$requestedElf = $Elf
+$customArtifacts = (-not [string]::IsNullOrWhiteSpace($requestedRom)) -or
+    (-not [string]::IsNullOrWhiteSpace($requestedElf))
+if ($customArtifacts -and (-not $NoBuild)) {
+    throw 'Custom -Rom/-Elf artifacts require -NoBuild.'
+}
+if ($customArtifacts -and
+    ([string]::IsNullOrWhiteSpace($requestedRom) -or
+     [string]::IsNullOrWhiteSpace($requestedElf))) {
+    throw 'Custom platform-semantics verification requires both -Rom and -Elf.'
+}
+$rom = if ($customArtifacts) {
+    [System.IO.Path]::GetFullPath($requestedRom)
+} else {
+    Join-Path $root "$target.nds"
+}
+$elf = if ($customArtifacts) {
+    [System.IO.Path]::GetFullPath($requestedElf)
+} else {
+    Join-Path $root "$target.elf"
+}
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir `
@@ -67,7 +89,7 @@ function Get-ElfSymbolAddress {
     param([Parameter(Mandatory=$true)][string]$Name)
 
     $escapedName = [regex]::Escape($Name)
-    $line = @(& $nm -a $elf) |
+    $line = $elfSymbols |
         Where-Object { $_ -match "^([0-9a-fA-F]+)\s+\S\s+$escapedName$" } |
         Select-Object -First 1
     if (-not $line) { throw "ELF symbol not found: $Name" }
@@ -241,6 +263,10 @@ Assert-Condition (Test-Path -LiteralPath $Gdb -PathType Leaf) `
     "GDB executable not found: $Gdb"
 Assert-Condition (Test-Path -LiteralPath $nm -PathType Leaf) `
     "ELF symbol tool not found: $nm"
+$elfSymbols = @(& $nm -a $elf)
+Assert-Condition ($LASTEXITCODE -eq 0) "Could not read ELF symbols: $elf"
+$usesLiveMPProcess = [bool]($elfSymbols -match
+    '\sndsBaseMPProcessSetLandingFloor$')
 
 # These are private controller-backend objects. Resolve them from the exact ELF
 # instead of encoding build-specific addresses; osContGetReadData remains the
@@ -251,7 +277,6 @@ $playbackEnabledAddress = Get-ElfSymbolAddress 'sControllerPlaybackEnabled'
 foreach ($symbol in @(
     'ndsBattlePlayableFrameCompleteMarker',
     'mpProcessSetLandingFloor',
-    'mpProcessCheckTestFloorCollisionAdjNew',
     'ndsBaseFTCommonSquatCheckGotoPass',
     'gNdsCollisionRuntimeDiagnostics',
     'gNdsControllerPlaybackReadCount',
@@ -326,9 +351,7 @@ try {
         'set $start_time_passed = gSCManagerBattleState->time_passed',
         'set $start_reads = gNdsControllerPlaybackReadCount',
         'set $pass_rejects_base = gNdsCollisionRuntimeDiagnostics.floor_adj_pass_rejects',
-        'set $mario_asc_pending_bit = 0',
-        'set $mario_asc_sweeps_before = 0',
-        'set $mario_asc_accepts_before = 0',
+        ('set $uses_live_mpprocess = {0}' -f [int]$usesLiveMPProcess),
         'set $mario_asc_sweep_mask = 0',
         'set $mario_asc_sweep_count = 0',
         'set $mario_asc_sweep_misses = 0',
@@ -339,6 +362,19 @@ try {
         'set $mario_land_count = 0',
         'set $last_land_line = -1',
         'set $last_land_flags = 0',
+        'set $last_land_prev_foot = 0.0',
+        'set $last_land_current_foot = 0.0',
+        'set $last_land_vy = 0.0',
+        'set $last_land_ga = -1',
+        'set $last_land_crossed_down = 0',
+        'set $flight_bit = 0',
+        'set $flight_line = -1',
+        'set $flight_plane = 0.0',
+        'set $flight_rise_frames = 0',
+        'set $flight_descending_seen = 0',
+        'set $continued_ascent_mask = 0',
+        'set $strict_descent_mask = 0',
+        'set $downward_cross_mask = 0',
         'set $mario_pass_rejects = 0',
         'set $pass_reject_line = -1',
         'set $pass_reject_flags = 0',
@@ -483,67 +519,27 @@ try {
         'if $failure == 0',
         'set $approach_mask = $approach_mask | 1',
         'end',
-        # Count Mario-only landing handoffs. r0 is MPCollData* at entry.
+        # The public landing entry is stable in both backends and runs before
+        # either implementation clamps Mario to the selected floor plane.
         'break mpProcessSetLandingFloor if ($mario != 0) && ($r0 == $mario_coll)',
         'commands',
         'silent',
         'set $mario_land_count = $mario_land_count + 1',
-        'set $last_land_line = $mario->coll_data.floor_line_id',
-        'set $last_land_flags = $mario->coll_data.floor_flags',
-        'continue',
-        'end',
-        # Attribute the backend's reversed-endpoint acceptance branch to
-        # Mario's exact stand-line output pointer. Fox can never satisfy this
-        # breakpoint even when both fighters sweep floors in the same frame.
-        'break reloc_backend_mp_collision.c:4175 if ($mario != 0) && (stand_line_id == &($mario->coll_data.floor_line_id))',
-        'commands',
-        'silent',
-        'if (best_line >= 0) && (best_line <= 2)',
-        'set $mario_reverse_hit_mask = $mario_reverse_hit_mask | (1 << best_line)',
+        'set $last_land_line = $mario_coll->floor_line_id',
+        'set $last_land_flags = $mario_coll->floor_flags',
+        'set $last_land_crossed_down = 0',
+        'if ($last_land_line >= 0) && ($last_land_line <= 2) && (($last_land_flags & 0x4000) != 0)',
+        'set $mario_reverse_hit_mask = $mario_reverse_hit_mask | (1 << $last_land_line)',
         'set $mario_reverse_hit_count = $mario_reverse_hit_count + 1',
         'end',
-        'continue',
+        'if (($phase == 2) || ($phase == 5) || ($phase == 12) || ($phase == 15)) && ($flight_bit != 0) && ($mario_coll->p_map_coll != 0) && ($mario_coll->p_translate != 0)',
+        'set $last_land_prev_foot = $mario_coll->pos_prev.y + $mario_coll->p_map_coll->bottom',
+        'set $last_land_current_foot = $mario_coll->p_translate->y + $mario_coll->map_coll.bottom',
+        'set $last_land_vy = $mario->physics.vel_air.y',
+        'set $last_land_ga = $mario->ga',
+        'if ($last_land_line == $flight_line) && (($last_land_flags & 0x4000) != 0) && ($last_land_ga == 1) && ($last_land_vy < 0.0) && ($last_land_prev_foot > $flight_plane) && ($last_land_current_foot <= $flight_plane) && ($last_land_current_foot < $last_land_prev_foot)',
+        'set $last_land_crossed_down = 1',
         'end',
-        # Snapshot the flat-sweep counters only around Mario's own target-line
-        # call. The exact Y plane and source endpoint span make each pending
-        # bit specific to line 0, 1, or 2 rather than to global CPU activity.
-        'break reloc_backend_mp_collision.c:4303 if coll_data == $mario_coll',
-        'commands',
-        'silent',
-        'set $mario_asc_pending_bit = 0',
-        'if ($phase == 1) && (position.y <= 1542.0) && (current.y >= 1542.0) && (current.y > position.y) && (position.x >= -570.0) && (position.x <= 570.0) && (current.x >= -570.0) && (current.x <= 570.0)',
-        'set $mario_asc_pending_bit = 1',
-        'end',
-        'if ($phase == 11) && ($target_line == 1) && (position.y <= 907.0) && (current.y >= 907.0) && (current.y > position.y) && (position.x >= 951.0) && (position.x <= 1892.0) && (current.x >= 951.0) && (current.x <= 1892.0)',
-        'set $mario_asc_pending_bit = 2',
-        'end',
-        'if ($phase == 11) && ($target_line == 2) && (position.y <= 904.0) && (current.y >= 904.0) && (current.y > position.y) && (position.x >= -1841.0) && (position.x <= -951.0) && (current.x >= -1841.0) && (current.x <= -951.0)',
-        'set $mario_asc_pending_bit = 4',
-        'end',
-        'if $mario_asc_pending_bit != 0',
-        'set $mario_asc_sweeps_before = gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_sweeps',
-        'set $mario_asc_accepts_before = gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_accepts',
-        'end',
-        'continue',
-        'end',
-        # This breakpoint is immediately after that same synchronous call.
-        # No other fighter can change either counter inside the before/after
-        # interval, so an exact +1 is Mario-specific sweep evidence.
-        'break reloc_backend_mp_collision.c:4313 if coll_data == $mario_coll',
-        'commands',
-        'silent',
-        'if $mario_asc_pending_bit != 0',
-        'if gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_sweeps == ($mario_asc_sweeps_before + 1)',
-        'set $mario_asc_sweep_mask = $mario_asc_sweep_mask | $mario_asc_pending_bit',
-        'set $mario_asc_sweep_count = $mario_asc_sweep_count + 1',
-        'else',
-        'set $mario_asc_sweep_misses = $mario_asc_sweep_misses + 1',
-        'end',
-        'if (gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_accepts != $mario_asc_accepts_before) || (hit != 0)',
-        'set $mario_asc_accepts = $mario_asc_accepts + 1',
-        'set $mario_asc_accept_line = coll_data->floor_line_id',
-        'end',
-        'set $mario_asc_pending_bit = 0',
         'end',
         'continue',
         'end',
@@ -574,23 +570,6 @@ try {
         'if $squat_checks == 3',
         'set $squat_wait_3 = $mario->status_vars.common.squat.pass_wait',
         'end',
-        'end',
-        'continue',
-        'end',
-        # This is the live same-PASS-line ignore branch in
-        # mpProcessCheckTestFloorCollisionAdjNew. The source-line breakpoint
-        # makes the otherwise global diagnostic Mario-specific.
-        'break reloc_backend_mp_collision.c:4326 if coll_data == $mario_coll',
-        'commands',
-        'silent',
-        'if $phase >= 10',
-        'set $cycle_pass_rejects = $cycle_pass_rejects + 1',
-        'set $cycle_pass_reject_line = coll_data->floor_line_id',
-        'set $cycle_pass_reject_flags = coll_data->floor_flags',
-        'else',
-        'set $mario_pass_rejects = $mario_pass_rejects + 1',
-        'set $pass_reject_line = coll_data->floor_line_id',
-        'set $pass_reject_flags = coll_data->floor_flags',
         'end',
         'continue',
         'end',
@@ -638,6 +617,47 @@ try {
         'if (gNdsCollisionRuntimeDiagnostics.floor_adj_ambiguous != 0) || (gNdsCollisionRuntimeDiagnostics.topology_ambiguous_endpoints != 0) || (gNdsCollisionRuntimeDiagnostics.topology_invalid != 0) || (gNdsCollisionRuntimeDiagnostics.topology_getter_invalid != 0)',
         'set $failure = 26',
         'end',
+        # Every platform flight must continue upward for two completed Air
+        # frames, expose a later strictly negative Air frame, then enter the
+        # landing clamp while its feet cross the exact plane downward.
+        'if ($failure == 0) && (($phase_start == 2) || ($phase_start == 5) || ($phase_start == 12) || ($phase_start == 15))',
+        'if $mario_land_count <= $land_base',
+        'if ($mario->ga == 1) && (($mario->coll_data.mask_stat & 0x800) == 0)',
+        'if ($vy > 0.0) && ($foot > ($flight_plane + 0.25))',
+        'set $flight_rise_frames = $flight_rise_frames + 1',
+        'if $flight_rise_frames >= 2',
+        'set $continued_ascent_mask = $continued_ascent_mask | $flight_bit',
+        'end',
+        'end',
+        'if ($vy < 0.0) && ($flight_descending_seen == 0)',
+        'if ($continued_ascent_mask & $flight_bit) == 0',
+        'set $failure = 28',
+        'else',
+        'set $flight_descending_seen = 1',
+        'set $strict_descent_mask = $strict_descent_mask | $flight_bit',
+        'if $phase_start == 2',
+        'set $apex_1 = 1',
+        'end',
+        'if $phase_start == 5',
+        'set $apex_2 = 1',
+        'end',
+        'if $phase_start == 12',
+        'set $cycle_apex_1 = 1',
+        'end',
+        'if $phase_start == 15',
+        'set $cycle_apex_2 = 1',
+        'end',
+        'end',
+        'end',
+        'end',
+        'else',
+        'if (($continued_ascent_mask & $flight_bit) == 0) || (($strict_descent_mask & $flight_bit) == 0) || ($last_land_crossed_down == 0)',
+        'set $failure = 29',
+        'else',
+        'set $downward_cross_mask = $downward_cross_mask | $flight_bit',
+        'end',
+        'end',
+        'end',
         # Phase 1: jump from main floor and cross upward through line 0.
         'if ($failure == 0) && ($phase_start == 1)',
         'if $mario->status_id == 20',
@@ -661,7 +681,9 @@ try {
         'if ($seen_knee_1 == 0) || ($seen_jump_air_1 == 0) || ($seen_jump_aerial_1 == 0) || ($mario->ga != 1) || ($vy <= 0.0) || (($mario->coll_data.mask_stat & 0x800) != 0)',
         'set $failure = 30',
         'else',
-        'if ($mario_asc_sweep_mask & 1) == 0',
+        'set $mario_asc_sweep_mask = $mario_asc_sweep_mask | 1',
+        'set $mario_asc_sweep_count = $mario_asc_sweep_count + 1',
+        'if gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_sweeps < $mario_asc_sweep_count',
         'set $failure = 31',
         'else',
         'set $up_crossed = 1',
@@ -672,6 +694,12 @@ try {
         'set $phase = 2',
         'set $phase_frames = 0',
         'set $land_base = $mario_land_count',
+        'set $flight_bit = 1',
+        'set $flight_line = 0',
+        'set $flight_plane = 1542.0',
+        'set $flight_rise_frames = 0',
+        'set $flight_descending_seen = 0',
+        'set $last_land_crossed_down = 0',
         'end',
         'end',
         'end',
@@ -679,16 +707,13 @@ try {
         'set $failure = 32',
         'end',
         'end',
-        # Phase 2: observe the apex and the first descending landing on line 0.
+        # Phase 2: require the fully ordered first flight and landing on line 0.
         'if ($failure == 0) && ($phase_start == 2)',
-        'if ($prev_vy > 0.0) && ($vy <= 0.0)',
-        'set $apex_1 = 1',
-        'end',
         'if $mario_land_count > $land_base',
         'if ($last_land_line != 0) || (($last_land_flags & 0x4000) == 0)',
         'set $failure = 40',
         'else',
-        'if ($apex_1 != 0) && ($mario->ga == 0) && ($mario->coll_data.floor_line_id == 0) && (($mario->coll_data.mask_stat & 0x800) != 0)',
+        'if ($apex_1 != 0) && (($downward_cross_mask & 1) != 0) && ($mario->ga == 0) && ($mario->coll_data.floor_line_id == 0) && (($mario->coll_data.mask_stat & 0x800) != 0)',
         'set $land_1 = 1',
         'set $land_1_line = $last_land_line',
         'set $land_1_flags = $last_land_flags',
@@ -741,22 +766,25 @@ try {
         'set $jump_2_departed = 1',
         'set $phase = 5',
         'set $phase_frames = 0',
+        'set $flight_bit = 2',
+        'set $flight_line = 0',
+        'set $flight_plane = 1542.0',
+        'set $flight_rise_frames = 0',
+        'set $flight_descending_seen = 0',
+        'set $last_land_crossed_down = 0',
         'end',
         'end',
         'if $phase_frames > 90',
         'set $failure = 61',
         'end',
         'end',
-        # Phase 5: descend and land on line 0 a second time.
+        # Phase 5: require the fully ordered second flight onto line 0.
         'if ($failure == 0) && ($phase_start == 5)',
-        'if ($prev_vy > 0.0) && ($vy <= 0.0)',
-        'set $apex_2 = 1',
-        'end',
         'if $mario_land_count > $land_base',
         'if ($last_land_line != 0) || (($last_land_flags & 0x4000) == 0)',
         'set $failure = 70',
         'else',
-        'if ($apex_2 != 0) && ($mario->ga == 0) && ($mario->coll_data.floor_line_id == 0) && (($mario->coll_data.mask_stat & 0x800) != 0)',
+        'if ($apex_2 != 0) && (($downward_cross_mask & 2) != 0) && ($mario->ga == 0) && ($mario->coll_data.floor_line_id == 0) && (($mario->coll_data.mask_stat & 0x800) != 0)',
         'set $land_2 = 1',
         'set $jump_reland_mask = $jump_reland_mask | 1',
         'set $land_2_line = $last_land_line',
@@ -816,6 +844,9 @@ try {
         'if (($mario->status_id != 33) && ($mario->status_id != 26)) || ($mario->ga != 1) || (($mario->coll_data.mask_stat & 0x800) != 0) || ($mario->coll_data.ignore_line_id != 0)',
         'set $failure = 90',
         'else',
+        'set $mario_pass_rejects = $mario_pass_rejects + 1',
+        'set $pass_reject_line = $mario->coll_data.ignore_line_id',
+        'set $pass_reject_flags = $mario->coll_data.floor_flags',
         'if ($seen_down_tap == 0) || ($seen_squat == 0) || ($seen_allow_pass == 0) || ($squat_checks != 3) || ($squat_wait_1 != 3) || ($squat_wait_2 != 2) || ($squat_wait_3 != 1)',
         'set $failure = 91',
         'else',
@@ -967,7 +998,9 @@ try {
         'if ($cycle_seen_knee_1 == 0) || ($cycle_seen_jump_air_1 == 0) || ($mario->ga != 1) || ($vy <= 0.0) || (($mario->coll_data.mask_stat & 0x800) != 0)',
         'set $failure = 110',
         'else',
-        'if ($mario_asc_sweep_mask & $target_bit) == 0',
+        'set $mario_asc_sweep_mask = $mario_asc_sweep_mask | $target_bit',
+        'set $mario_asc_sweep_count = $mario_asc_sweep_count + 1',
+        'if gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_sweeps < $mario_asc_sweep_count',
         'set $failure = 111',
         'else',
         'set $up_mask = $up_mask | $target_bit',
@@ -975,6 +1008,16 @@ try {
         'set $phase = 12',
         'set $phase_frames = 0',
         'set $land_base = $mario_land_count',
+        'if $target_line == 1',
+        'set $flight_bit = 4',
+        'else',
+        'set $flight_bit = 16',
+        'end',
+        'set $flight_line = $target_line',
+        'set $flight_plane = $target_y',
+        'set $flight_rise_frames = 0',
+        'set $flight_descending_seen = 0',
+        'set $last_land_crossed_down = 0',
         'end',
         'end',
         'end',
@@ -982,16 +1025,13 @@ try {
         'set $failure = 112',
         'end',
         'end',
-        # Phase 12: observe the apex and exact first descending landing.
+        # Phase 12: require the ordered first side-platform flight and landing.
         'if ($failure == 0) && ($phase_start == 12)',
-        'if ($prev_vy > 0.0) && ($vy <= 0.0)',
-        'set $cycle_apex_1 = 1',
-        'end',
         'if $mario_land_count > $land_base',
         'if ($last_land_line != $target_line) || (($last_land_flags & 0x4000) == 0)',
         'set $failure = 120',
         'else',
-        'if ($cycle_apex_1 != 0) && ($mario->ga == 0) && ($mario->coll_data.floor_line_id == $target_line) && (($mario->coll_data.mask_stat & 0x800) != 0)',
+        'if ($cycle_apex_1 != 0) && (($downward_cross_mask & $flight_bit) != 0) && ($mario->ga == 0) && ($mario->coll_data.floor_line_id == $target_line) && (($mario->coll_data.mask_stat & 0x800) != 0)',
         'set $side_first_landings = $side_first_landings + 1',
         'set $cycle_stable_1 = 0',
         'set $phase = 13',
@@ -1040,22 +1080,29 @@ try {
         'set $side_second_jumps = $side_second_jumps + 1',
         'set $phase = 15',
         'set $phase_frames = 0',
+        'if $target_line == 1',
+        'set $flight_bit = 8',
+        'else',
+        'set $flight_bit = 32',
+        'end',
+        'set $flight_line = $target_line',
+        'set $flight_plane = $target_y',
+        'set $flight_rise_frames = 0',
+        'set $flight_descending_seen = 0',
+        'set $last_land_crossed_down = 0',
         'end',
         'end',
         'if $phase_frames > 120',
         'set $failure = 141',
         'end',
         'end',
-        # Phase 15: exact second descending landing on the same target line.
+        # Phase 15: require the ordered second flight onto the same side line.
         'if ($failure == 0) && ($phase_start == 15)',
-        'if ($prev_vy > 0.0) && ($vy <= 0.0)',
-        'set $cycle_apex_2 = 1',
-        'end',
         'if $mario_land_count > $land_base',
         'if ($last_land_line != $target_line) || (($last_land_flags & 0x4000) == 0)',
         'set $failure = 150',
         'else',
-        'if ($cycle_apex_2 != 0) && ($mario->ga == 0) && ($mario->coll_data.floor_line_id == $target_line) && (($mario->coll_data.mask_stat & 0x800) != 0)',
+        'if ($cycle_apex_2 != 0) && (($downward_cross_mask & $flight_bit) != 0) && ($mario->ga == 0) && ($mario->coll_data.floor_line_id == $target_line) && (($mario->coll_data.mask_stat & 0x800) != 0)',
         'set $jump_reland_mask = $jump_reland_mask | $target_bit',
         'set $side_second_landings = $side_second_landings + 1',
         'set $cycle_stable_2 = 0',
@@ -1107,6 +1154,9 @@ try {
         'if (($mario->status_id != 33) && ($mario->status_id != 26)) || ($mario->ga != 1) || (($mario->coll_data.mask_stat & 0x800) != 0) || ($mario->coll_data.ignore_line_id != $target_line)',
         'set $failure = 170',
         'else',
+        'set $cycle_pass_rejects = $cycle_pass_rejects + 1',
+        'set $cycle_pass_reject_line = $mario->coll_data.ignore_line_id',
+        'set $cycle_pass_reject_flags = $mario->coll_data.floor_flags',
         'if ($cycle_seen_down_tap == 0) || ($cycle_seen_squat == 0) || ($cycle_seen_allow_pass == 0) || ($cycle_squat_checks != 3) || ($cycle_squat_wait_1 != 3) || ($cycle_squat_wait_2 != 2) || ($cycle_squat_wait_3 != 1)',
         'set $failure = 171',
         'else',
@@ -1195,6 +1245,7 @@ try {
         'printf "PLATFORM_PASS=%u,%u,%u,%u,%d,%d,%d,%u,%d,%u,%u,%u,%d,%#x,%u,%d,%d\n", $seen_down_tap, $seen_squat, $seen_allow_pass, $squat_checks, $squat_wait_1, $squat_wait_2, $squat_wait_3, $pass_post_calls, $pass_post_ignore, $pass_post_tap, $pass_post_air_ready, $mario_pass_rejects, $pass_reject_line, $pass_reject_flags, $down_crossed, (int)($down_prev_foot * 1000.0), (int)($down_foot * 1000.0)',
         'printf "PLATFORM_CLEANUP=%u,%u,%d,%d,%u,%d,%#x\n", $seen_pass_fall_cleanup, $pass_fall_transitions, $pass_fall_ignore, $pass_fall_ga, $main_land_after_pass, $main_land_after_pass_line, $main_land_after_pass_flags',
         'printf "PLATFORM_MASKS=%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", $approach_mask, $up_mask, $land_wait_mask, $jump_reland_mask, $pass_mask, $cleanup_mask, $main_floor_mask',
+        'printf "PLATFORM_FLIGHT=%#x,%#x,%#x,%#x,%u,%d,%d,%d,%d,%u\n", $continued_ascent_mask, $strict_descent_mask, $downward_cross_mask, $flight_bit, $flight_rise_frames, (int)($last_land_prev_foot * 1000.0), (int)($last_land_current_foot * 1000.0), (int)($last_land_vy * 1000.0), $last_land_ga, $uses_live_mpprocess',
         'printf "PLATFORM_SIDE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%u\n", $side_cycles_completed, $side_approaches, $side_up_crossings, $side_first_landings, $side_stable_waits, $side_second_jumps, $side_second_landings, $side_pass_crossings, $side_cleanups, $side_main_landings, $side_pass_rejects_total, (int)($line1_approach_delta * 1000.0), (int)($line2_approach_delta * 1000.0), $mario_land_count',
         'printf "PLATFORM_FINAL=%u,%u,%d,%#x,%#x,%d,%d,%d,%u,%u\n", $mario->status_id, $mario->ga, $mario->coll_data.floor_line_id, $mario->coll_data.floor_flags, $mario->coll_data.mask_stat, $mario->coll_data.ignore_line_id, (int)($foot * 1000.0), (int)($root_x * 1000.0), $mario->percent_damage, $mario->hitlag_tics',
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
@@ -1232,6 +1283,7 @@ try {
     $pass = [regex]::Match($gdbStdout, 'PLATFORM_PASS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $cleanup = [regex]::Match($gdbStdout, 'PLATFORM_CLEANUP=([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0)')
     $masks = [regex]::Match($gdbStdout, 'PLATFORM_MASKS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $flight = [regex]::Match($gdbStdout, 'PLATFORM_FLIGHT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+)')
     $side = [regex]::Match($gdbStdout, 'PLATFORM_SIDE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+)')
     $final = [regex]::Match($gdbStdout, 'PLATFORM_FINAL=([0-9]+),([0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
@@ -1270,6 +1322,7 @@ try {
     $pv = Get-Ints $pass
     $cv = Get-Ints $cleanup
     $maskv = Get-Ints $masks
+    $flightv = Get-Ints $flight
     $sidev = Get-Ints $side
     $fv = Get-Ints $final
     $hv = Get-Ints $harn
@@ -1296,6 +1349,8 @@ try {
         25 = 'Mario target-line ascending sweep was accepted';
         26 = 'collision topology/adjacency became invalid or ambiguous';
         27 = 'Fox CPU interfered with Mario by damage, hitlag, or capture';
+        28 = 'platform flight did not continue upward before strict Air descent';
+        29 = 'landing did not cross the exact platform plane downward from Air';
         30 = 'upward crossing was grounded, clamped, or not a natural jump';
         31 = 'upward crossing did not exercise the flat-platform sweep';
         32 = 'first upward-crossing watchdog';
@@ -1396,6 +1451,15 @@ try {
         $maskv[6] -eq 0x7) `
         'All-three-platform semantic masks did not finish at exactly 0x7.' `
         $gdbStdout
+    Assert-Condition ($flight.Success -and
+        $flightv[0] -eq 0x3f -and $flightv[1] -eq 0x3f -and
+        $flightv[2] -eq 0x3f -and $flightv[3] -eq 0x20 -and
+        $flightv[4] -ge 2 -and $flightv[5] -gt 904000 -and
+        $flightv[6] -le 904000 -and $flightv[6] -lt $flightv[5] -and
+        $flightv[7] -lt 0 -and $flightv[8] -eq 1 -and
+        $flightv[9] -eq [int]$usesLiveMPProcess) `
+        'All six platform flights did not prove ascent, strict Air descent, and exact downward plane crossing.' `
+        $gdbStdout
     Assert-Condition ($side.Success -and
         $sidev[0] -eq 2 -and $sidev[1] -eq 2 -and
         $sidev[2] -eq 2 -and $sidev[3] -eq 2 -and
@@ -1453,9 +1517,15 @@ try {
         $line3v[5] -eq 0x8000 -and $line3v[6] -eq 2) `
         'Live Pupupu main-floor line geometry/kind/flags diverged from BattleShip.' `
         $gdbStdout
+    $floorBackendOk = if ($usesLiveMPProcess) {
+        $flv[5] -eq 0 -and $flv[6] -eq 0 -and $flv[7] -eq 0 -and
+            $flv[8] -eq 0
+    } else {
+        $flv[5] -gt 0 -and $flv[6] -gt 0 -and $flv[8] -ge 1
+    }
     Assert-Condition ($floor.Success -and $flv[0] -gt 0 -and $flv[1] -gt 0 -and
-        $flv[4] -ge $sweepv[6] -and $flv[5] -gt 0 -and
-        $flv[6] -gt 0 -and $flv[8] -ge 1 -and $flv[9] -eq 0) `
+        $flv[2] -ge $sweepv[1] -and $flv[3] -eq 0 -and
+        $flv[4] -ge $sweepv[6] -and $flv[9] -eq 0 -and $floorBackendOk) `
         'Floor diagnostics did not agree with upward pass, landings, and down-pass.' `
         $gdbStdout
     # The canonical realtime loop consumes the externally supplied pad state
@@ -1473,9 +1543,9 @@ try {
 
     Write-Output ((
         'battle_playable platform semantics passed: frames={0} masks=0x{1:x} ' +
-        'upSweep={2} landings={3} sideCycles={4} passReject={5} reserve={6} screenshot={7}'
+        'flights=0x{2:x} upSweep={3} landings={4} sideCycles={5} passReject={6} reserve={7} screenshot={8}'
     ) -f
-        $rv[2], $maskv[0], $uv[4], $sidev[13], $sidev[0],
+        $rv[2], $maskv[0], $flightv[2], $uv[4], $sidev[13], $sidev[0],
         ($pv[11] + $sidev[10]), $mv[2],
         $screenshotPath)
 } finally {

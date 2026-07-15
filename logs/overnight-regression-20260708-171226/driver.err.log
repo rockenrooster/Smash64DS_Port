@@ -1,0 +1,10 @@
+Invoke-LoggedCommand : Cannot validate argument on parameter 'Profile'. The argument "-Profile" does not belong to the 
+set "Full,Latest,LatestFast,BoundaryDirect,Boundary,Regression,RegressionCore,RegressionFast,Smoke,SmokeFast,Fighter,Di
+rect,MenuChain" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command 
+again.
+At D:\Stuff\DevFolder\Smash64DS_Port\scripts\start-overnight-regression.ps1:77 char:13
++ $exitCode = Invoke-LoggedCommand -Log $prebuildDetachLog -Command @(
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidData: (:) [Invoke-LoggedCommand], ParameterBindingValidationException
+    + FullyQualifiedErrorId : ParameterArgumentValidationError,Invoke-LoggedCommand
+ 

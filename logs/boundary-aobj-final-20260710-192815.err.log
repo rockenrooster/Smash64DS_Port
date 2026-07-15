@@ -1,0 +1,168 @@
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_objanim.c:13:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayMObjMatAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1392:74: warning: dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]
+ 1392 |                         color = (aobj->length_invert <= aobj->length) ? *(SYColorPack*)&aobj->value_target : *(SYColorPack*)&aobj->value_base;
+      |                                                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1392:111: warning: dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]
+ 1392 |                         color = (aobj->length_invert <= aobj->length) ? *(SYColorPack*)&aobj->value_target : *(SYColorPack*)&aobj->value_base;
+      |                                                                                                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcGetAObjTrackAnimTimeMax':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1713:18: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1713 |         if (TRUE);
+      |                  ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1728:60: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1728 |         else if ((SQUARE(rate_combine) + -value_diff) == (0, 0.0F))
+      |                                                            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1744:59: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1744 |         else if ((SQUARE(rate_combine) + value_diff) == (0, 0.0F))
+      |                                                           ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1763:60: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1763 |         else if ((SQUARE(rate_combine) + -value_diff) == (0, 0.0F))
+      |                                                            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1779:59: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1779 |         else if ((SQUARE(rate_combine) + value_diff) == (0, 0.0F))
+      |                                                           ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1688:9: warning: unused variable 'unused' [-Wunused-variable]
+ 1688 |     f32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'func_8000EC64_F864':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1950:9: warning: unused variable 'length_curr' [-Wunused-variable]
+ 1950 |     f32 length_curr;
+      |         ^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'func_8000EE40_FA40':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:2021:10: warning: unused variable 'unused' [-Wunused-variable]
+ 2021 |     sb32 unused;
+      |          ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcPlayDObjAnimJoint':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:816:45: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+  816 |                         dobj->scale.vec.f.z = value;
+      |                         ~~~~~~~~~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:716:9: note: 'value' was declared here
+  716 |     f32 value; // array_dobjs
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayMObjMatAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1341:42: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+ 1341 |                         mobj->palette_id = value;
+      |                         ~~~~~~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1246:9: note: 'value' was declared here
+ 1246 |     f32 value;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcGetAObjTrackAnimTimeMax':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1711:8: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+ 1711 |     if (value != 0.0F)
+      |        ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1689:9: note: 'value' was declared here
+ 1689 |     f32 value;
+      |         ^~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_objanim.c:13:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayMObjMatAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1392:74: warning: dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]
+ 1392 |                         color = (aobj->length_invert <= aobj->length) ? *(SYColorPack*)&aobj->value_target : *(SYColorPack*)&aobj->value_base;
+      |                                                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1392:111: warning: dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]
+ 1392 |                         color = (aobj->length_invert <= aobj->length) ? *(SYColorPack*)&aobj->value_target : *(SYColorPack*)&aobj->value_base;
+      |                                                                                                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcGetAObjTrackAnimTimeMax':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1713:18: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1713 |         if (TRUE);
+      |                  ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1728:60: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1728 |         else if ((SQUARE(rate_combine) + -value_diff) == (0, 0.0F))
+      |                                                            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1744:59: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1744 |         else if ((SQUARE(rate_combine) + value_diff) == (0, 0.0F))
+      |                                                           ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1763:60: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1763 |         else if ((SQUARE(rate_combine) + -value_diff) == (0, 0.0F))
+      |                                                            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1779:59: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1779 |         else if ((SQUARE(rate_combine) + value_diff) == (0, 0.0F))
+      |                                                           ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1688:9: warning: unused variable 'unused' [-Wunused-variable]
+ 1688 |     f32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'func_8000EC64_F864':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1950:9: warning: unused variable 'length_curr' [-Wunused-variable]
+ 1950 |     f32 length_curr;
+      |         ^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'func_8000EE40_FA40':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:2021:10: warning: unused variable 'unused' [-Wunused-variable]
+ 2021 |     sb32 unused;
+      |          ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcPlayDObjAnimJoint':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:816:45: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+  816 |                         dobj->scale.vec.f.z = value;
+      |                         ~~~~~~~~~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:716:9: note: 'value' was declared here
+  716 |     f32 value; // array_dobjs
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayMObjMatAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1341:42: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+ 1341 |                         mobj->palette_id = value;
+      |                         ~~~~~~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1246:9: note: 'value' was declared here
+ 1246 |     f32 value;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcGetAObjTrackAnimTimeMax':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1711:8: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+ 1711 |     if (value != 0.0F)
+      |        ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1689:9: note: 'value' was declared here
+ 1689 |     f32 value;
+      |         ^~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_objanim.c:13:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayMObjMatAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1392:74: warning: dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]
+ 1392 |                         color = (aobj->length_invert <= aobj->length) ? *(SYColorPack*)&aobj->value_target : *(SYColorPack*)&aobj->value_base;
+      |                                                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1392:111: warning: dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]
+ 1392 |                         color = (aobj->length_invert <= aobj->length) ? *(SYColorPack*)&aobj->value_target : *(SYColorPack*)&aobj->value_base;
+      |                                                                                                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcGetAObjTrackAnimTimeMax':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1713:18: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1713 |         if (TRUE);
+      |                  ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1728:60: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1728 |         else if ((SQUARE(rate_combine) + -value_diff) == (0, 0.0F))
+      |                                                            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1744:59: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1744 |         else if ((SQUARE(rate_combine) + value_diff) == (0, 0.0F))
+      |                                                           ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1763:60: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1763 |         else if ((SQUARE(rate_combine) + -value_diff) == (0, 0.0F))
+      |                                                            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1779:59: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+ 1779 |         else if ((SQUARE(rate_combine) + value_diff) == (0, 0.0F))
+      |                                                           ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1688:9: warning: unused variable 'unused' [-Wunused-variable]
+ 1688 |     f32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'func_8000EC64_F864':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1950:9: warning: unused variable 'length_curr' [-Wunused-variable]
+ 1950 |     f32 length_curr;
+      |         ^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'func_8000EE40_FA40':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:2021:10: warning: unused variable 'unused' [-Wunused-variable]
+ 2021 |     sb32 unused;
+      |          ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcPlayDObjAnimJoint':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:816:45: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+  816 |                         dobj->scale.vec.f.z = value;
+      |                         ~~~~~~~~~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:716:9: note: 'value' was declared here
+  716 |     f32 value; // array_dobjs
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayMObjMatAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1341:42: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+ 1341 |                         mobj->palette_id = value;
+      |                         ~~~~~~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1246:9: note: 'value' was declared here
+ 1246 |     f32 value;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcGetAObjTrackAnimTimeMax':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1711:8: warning: 'value' may be used uninitialized [-Wmaybe-uninitialized]
+ 1711 |     if (value != 0.0F)
+      |        ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c:1689:9: note: 'value' was declared here
+ 1689 |     f32 value;
+      |         ^~~~~

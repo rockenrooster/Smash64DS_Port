@@ -14,6 +14,7 @@
 #include "nds_scene_harness_config.h"
 
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_reloc_assets.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
 
@@ -1819,6 +1820,11 @@ static void ndsRelocPrepareSceneCache(void)
 
     if (evicted_files != 0u)
     {
+#if NDS_RENDERER_HW_TRIANGLES
+        /* Texture keys hold native pointers into the scene-owned reloc files.
+         * Drop every battle entry before those files become stale. */
+        ndsRendererHardwareDiscardBattleStaticTextures();
+#endif
         ndsRelocResetLoadedFiles();
     }
     sNdsRelocStatusBufferCount = 0;
@@ -2073,6 +2079,30 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileByAsset(u32 asset_id)
         }
     }
     return NULL;
+}
+
+s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
+                               u32 *out_size)
+{
+    NDSRelocLoadedFile *loaded;
+
+    if ((out_data == NULL) || (out_size == NULL))
+    {
+        return FALSE;
+    }
+    *out_data = NULL;
+    *out_size = 0u;
+    loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    if ((loaded == NULL) || (loaded->data == NULL) ||
+        (loaded->data_size == 0u) ||
+        (loaded->owner_scene != (u32)gSCManagerSceneData.scene_curr) ||
+        (loaded->owner_generation != sNdsRelocSceneGeneration))
+    {
+        return FALSE;
+    }
+    *out_data = loaded->data;
+    *out_size = loaded->data_size;
+    return TRUE;
 }
 
 static NDSRelocLoadedFile *ndsRelocFindLoadedFileByData(void *file)

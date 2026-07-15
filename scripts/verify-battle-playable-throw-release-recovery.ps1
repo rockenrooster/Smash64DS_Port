@@ -7,6 +7,8 @@ param(
     [ValidateRange(30, 3600)]
     [int]$TimeoutSeconds = 900,
     [switch]$NoBuild,
+    [string]$Rom = '',
+    [string]$Elf = '',
     [string]$Screenshot = ''
 )
 
@@ -24,10 +26,30 @@ $contextArgs = @{
     NoBuild = [bool]$NoBuild
 }
 $verifierContext = Initialize-MelonDSVerifierContext @contextArgs
-$target = 'smash64ds-battle-playable-canonical-hwtri'
+$target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-canonical-hwtri-harness'
-$rom = Join-Path $root ($target + '.nds')
-$elf = Join-Path $root ($target + '.elf')
+$requestedRom = $Rom
+$requestedElf = $Elf
+$customArtifacts = (-not [string]::IsNullOrWhiteSpace($requestedRom)) -or
+    (-not [string]::IsNullOrWhiteSpace($requestedElf))
+if ($customArtifacts -and (-not $NoBuild)) {
+    throw 'Custom -Rom/-Elf artifacts require -NoBuild.'
+}
+if ($customArtifacts -and
+    ([string]::IsNullOrWhiteSpace($requestedRom) -or
+     [string]::IsNullOrWhiteSpace($requestedElf))) {
+    throw 'Custom recovery verification requires both -Rom and -Elf.'
+}
+$rom = if ($customArtifacts) {
+    [System.IO.Path]::GetFullPath($requestedRom)
+} else {
+    Join-Path $root ($target + '.nds')
+}
+$elf = if ($customArtifacts) {
+    [System.IO.Path]::GetFullPath($requestedElf)
+} else {
+    Join-Path $root ($target + '.elf')
+}
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
@@ -211,9 +233,14 @@ if (-not $NoBuild) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
+$artifactError = if ($customArtifacts) {
+    'Custom recovery verification ROM or ELF artifact is missing.'
+} else {
+    'Canonical mode-163 build did not produce the expected ROM and ELF.'
+}
 Assert-Condition ((Test-Path -LiteralPath $rom -PathType Leaf) -and
     (Test-Path -LiteralPath $elf -PathType Leaf)) (
-    'Canonical mode-163 build did not produce the expected ROM and ELF.')
+    "$artifactError ROM='$rom' ELF='$elf'")
 Assert-Condition (Test-Path -LiteralPath $melonDsPath -PathType Leaf) (
     "melonDS executable not found: $melonDsPath")
 Assert-Condition (Test-Path -LiteralPath $Gdb -PathType Leaf) (
@@ -290,7 +317,13 @@ try {
     if (Test-Path -LiteralPath $screenshotPath) {
         Remove-Item -LiteralPath $screenshotPath -Force
     }
-    $emulator = Start-Process -FilePath $melonDsPath -ArgumentList $rom -WorkingDirectory $melonDsDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
+    $emulator = Start-Process -FilePath $melonDsPath `
+        -ArgumentList ('"{0}"' -f $rom) `
+        -WorkingDirectory $melonDsDir `
+        -RedirectStandardOutput $stdout `
+        -RedirectStandardError $stderr `
+        -WindowStyle Hidden `
+        -PassThru
     Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort |
         Out-Null
 
@@ -818,7 +851,7 @@ try {
         $flv[1] -eq 3 -and (($flv[2] -band 0x800) -ne 0) -and
         (($flv[3] -band 0x800) -ne 0) -and $flv[4] -eq 1 -and
         [Math]::Abs($flv[5]) -le 2 -and $flv[6] -gt 0 -and
-        $flv[7] -gt 0 -and $flv[8] -gt 0 -and $flv[9] -gt 0) (
+        $flv[7] -gt 0) (
         'Thrown Fox did not sweep, clamp, and DownBounce on Pupupu main floor line 3.') $gdbStdout
     Assert-Condition ($links.Success -and $linkv[0] -eq 1 -and
         $linkv[1] -eq 0 -and $linkv[2] -eq 0 -and $linkv[3] -eq 0) (

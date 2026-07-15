@@ -1,0 +1,2 @@
+Running verifier: battle_mariofox_stage_mplivehit_status_loop [verify-battle-mariofox-stage-mplivehit-status-loop-harness.ps1]
+BoundaryDirect verification profile passed.

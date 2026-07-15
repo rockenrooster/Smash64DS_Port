@@ -1,7 +1,12 @@
 /* Fenced whole BattleShip ft/ftcomputer.c import. */
 #include <ft/ftcomputer.h>
+#include <nds/nds_scene_harness.h>
 #include <nds/nds_startup.h>
 #include <string.h>
+
+/* Temporary iteration control: preserve the original CPU classification and
+ * setup, but keep its per-frame decisions neutral until explicitly enabled. */
+volatile u32 gNdsBattlePlayableFoxCpuEnabled;
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -143,6 +148,18 @@ void ftComputerSetupAll(GObj *fighter_gobj)
 void ftComputerProcessAll(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((gNdsSceneHarnessMode ==
+         NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_REALTIME) &&
+        (fp->player == 1) &&
+        (fp->fkind == nFTKindFox) &&
+        (gNdsBattlePlayableFoxCpuEnabled == 0u))
+    {
+        fp->input.cp.button_inputs = 0u;
+        fp->input.cp.stick_range.x = 0;
+        fp->input.cp.stick_range.y = 0;
+        return;
+    }
 
     ndsBaseFTComputerProcessAll(fighter_gobj);
     gNdsFTComputerProcessCount++;

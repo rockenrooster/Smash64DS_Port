@@ -18,6 +18,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $generator = Join-Path $PSScriptRoot 'generate_pupupu_water_tiled_aot.py'
 $module = Join-Path $repoRoot 'src/nds/pupupu_water_tiled_aot.c'
 $header = Join-Path $repoRoot 'include/nds/pupupu_water_tiled_aot.h'
+$payload = Join-Path $repoRoot 'assets/renderer/pupupu_water_tiled_aot.bin'
 $gcc = 'C:/devkitPro/devkitARM/bin/arm-none-eabi-gcc.exe'
 $sizeTool = 'C:/devkitPro/devkitARM/bin/arm-none-eabi-size.exe'
 $makefile = Join-Path $repoRoot 'Makefile'
@@ -26,6 +27,8 @@ Assert-Condition (Test-Path -LiteralPath $generator -PathType Leaf) `
     'Tiled-water generator is absent.'
 Assert-Condition (Test-Path -LiteralPath $module -PathType Leaf) `
     'Tiled-water generated module is absent.'
+Assert-Condition (Test-Path -LiteralPath $payload -PathType Leaf) `
+    'Tiled-water generated residency payload is absent.'
 Assert-Condition (Test-Path -LiteralPath $gcc -PathType Leaf) `
     'devkitARM GCC is absent at the canonical path.'
 Assert-Condition (Test-Path -LiteralPath $sizeTool -PathType Leaf) `
@@ -43,17 +46,46 @@ finally {
     $env:PYTHONDONTWRITEBYTECODE = $oldNoBytecode
 }
 
-# This packet is intentionally a host/device preflight. Adding it to the live
-# source list before the pre-GO VRAM transition is proven would consume the
-# ARM9 image/RAM reserve and falsely claim M4 integration.
+# This packet remains absent from default/published builds until its device
+# gate passes.  A single explicit lab selector is allowed to link the compact
+# state/geometry module and package the NitroFS residency payload so the same
+# ROM can exercise the real pre-GO path.
 $makeText = Get-Content -LiteralPath $makefile -Raw
-Assert-Condition (-not $makeText.Contains('pupupu_water_tiled_aot')) `
-    'Tiled-water host packet entered the production Makefile before its device gate.'
+Assert-Condition ($makeText.Contains(
+    'NDS_RENDERER_M4_WATER_TILED_AOT ?= 0')) `
+    'Tiled-water lab selector is not default-off.'
+Assert-Condition ($makeText.Contains(
+    'ifeq ($(NDS_RENDERER_M4_WATER_TILED_AOT),1)')) `
+    'Tiled-water source/payload is not guarded by its explicit lab selector.'
+Assert-Condition ($makeText.Contains(
+    'CFILES += pupupu_water_tiled_aot.c')) `
+    'Tiled-water lab selector no longer links the compact ARM module.'
+Assert-Condition ($makeText.Contains(
+    '$(NITROFS_DIR)/renderer/pupupu_water_tiled_aot.bin')) `
+    'Tiled-water lab selector no longer packages the residency payload.'
+Assert-Condition (-not $makeText.Contains(
+    'override NDS_RENDERER_M4_WATER_TILED_AOT := 1')) `
+    'A published or named target enabled tiled-water before its device gate.'
 $headerText = Get-Content -LiteralPath $header -Raw
 $moduleText = Get-Content -LiteralPath $module -Raw
+$payloadFile = Get-Item -LiteralPath $payload
+$payloadHash = (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant()
+Assert-Condition ($payloadFile.Length -eq 167936) `
+    "Tiled-water payload is $($payloadFile.Length) bytes, expected 167936."
+Assert-Condition ($payloadHash -eq 'af052624915c87205bfbff8e0db1e3365d3d7a30758fba74b32fdaf39c364982') `
+    "Tiled-water payload SHA256 changed: $payloadHash"
+Assert-Condition ($headerText.Contains(
+    '#define NDS_PUPUPU_WATER_TILED_RESIDENCY_PAYLOAD_BYTES 167936u')) `
+    'Tiled-water header lost the exact residency payload size.'
+Assert-Condition ($headerText.Contains(
+    '#define NDS_PUPUPU_WATER_TILED_SECONDARY_ATLAS_OFFSET 131072u')) `
+    'Tiled-water header lost the secondary-atlas payload offset.'
+Assert-Condition ($headerText.Contains(
+    '#define NDS_PUPUPU_WATER_TILED_PALETTES_OFFSET 147456u')) `
+    'Tiled-water header lost the palette payload offset.'
 Assert-Condition ($headerText.Contains('u16 state_cell_count;')) `
     'Frame API no longer names the rectangular state-grid count explicitly.'
-Assert-Condition ($headerText.Contains('cell_index addresses the corresponding 64-entry large or')) `
+Assert-Condition ($headerText.Contains('Each plan cell''s cell_index')) `
     'Frame API no longer documents plan-cell to state-grid indexing.'
 Assert-Condition ($moduleText.Contains('out_frame->state_cell_count = 64u;')) `
     'Large pond frame view no longer exposes its 64-cell state grid.'
@@ -63,16 +95,16 @@ Assert-Condition ($moduleText.Contains(
     'out_assets->plan_cell_count = NDS_PUPUPU_WATER_TILED_PLAN_CELL_COUNT;')) `
     'Asset API no longer exposes its separate occupied plan-cell count.'
 Assert-Condition ($headerText.Contains(
-    '#define NDS_PUPUPU_WATER_TILED_LOGICAL_CELL_SUBMISSIONS 136u')) `
+    '#define NDS_PUPUPU_WATER_TILED_LOGICAL_CELL_SUBMISSIONS 68u')) `
     'Tiled-water contract lost its logical plan-cell submission count.'
 Assert-Condition ($headerText.Contains(
-    '#define NDS_PUPUPU_WATER_TILED_PLANNED_GX_BEGIN_BATCHES 2u')) `
-    'Tiled-water contract no longer batches one shared-atlas GX BEGIN per pass.'
+    '#define NDS_PUPUPU_WATER_TILED_GX_BEGIN_BATCHES_MAX 2u')) `
+    'Tiled-water contract no longer limits the one-pass atlas batches.'
 Assert-Condition ($headerText.Contains(
-    '#define NDS_PUPUPU_WATER_TILED_EMITTED_VERTICES 828u')) `
+    '#define NDS_PUPUPU_WATER_TILED_EMITTED_VERTICES 414u')) `
     'Tiled-water contract lost its expanded GL_TRIANGLES vertex count.'
 Assert-Condition ($headerText.Contains(
-    '#define NDS_PUPUPU_WATER_TILED_VERTEX_ATTRIBUTE_WRITES 2484u')) `
+    '#define NDS_PUPUPU_WATER_TILED_VERTEX_ATTRIBUTE_WRITES 1242u')) `
     'Tiled-water contract lost its TEXCOORD/VTX16 register-write count.'
 Assert-Condition ($headerText.Contains(
     '#define NDS_PUPUPU_WATER_TILED_DEVICE_TICK_BUDGET 40000u')) `
@@ -140,10 +172,10 @@ try {
             $bssBytes += $bytes
         }
     }
-    Assert-Condition ($textBytes -eq 224) `
-        "Generated tiled-water ARM text is $textBytes bytes, expected 224."
-    Assert-Condition ($rodataBytes -eq 181408) `
-        "Generated tiled-water ARM rodata is $rodataBytes bytes, expected 181408."
+    Assert-Condition ($textBytes -eq 144) `
+        "Generated tiled-water ARM text is $textBytes bytes, expected 144."
+    Assert-Condition ($rodataBytes -eq 10960) `
+        "Generated tiled-water ARM rodata is $rodataBytes bytes, expected 10960."
     Assert-Condition ($dataBytes -eq 0) `
         "Generated tiled-water ARM object gained $dataBytes writable data bytes."
     Assert-Condition ($bssBytes -eq 0) `
@@ -161,6 +193,7 @@ finally {
 
 Write-Output (
     'PUPUPU_WATER_TILED_ARM_OK ' +
-    "repeat=$repeat text=$textBytes rodata=$rodataBytes data=$dataBytes bss=$bssBytes " +
-    'production_linked=0'
+    "repeat=$repeat payload=$($payloadFile.Length) payload_sha256=$payloadHash " +
+    "text=$textBytes rodata=$rodataBytes data=$dataBytes bss=$bssBytes " +
+    'production_linked=0 lab_linked=1'
 )

@@ -23,7 +23,11 @@ param(
     [switch]$OneMinuteMatchProof,
     [switch]$RequireRealtime60Fps,
     [int]$RendererProfileLevel = -1,
-    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0
+    [ValidateRange(0,8)][int]$RendererFastRunMode = 0,
+    [switch]$RendererM2DetailedLedger,
+    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
+    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -55,7 +59,7 @@ $harness = 'battle_playable'
 if ($RealtimePresentation) {
     if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 0 }
     if ($RendererProfileLevel -eq 0) {
-        $target = 'smash64ds-battle-playable-canonical-hwtri'
+        $target = 'smash64ds-battle-playable-hwtri'
         $build = 'build-battle-playable-canonical-hwtri-harness'
     } elseif ($RendererProfileLevel -eq 1) {
         $target = 'smash64ds-battle-playable-coarse-hwtri'
@@ -118,7 +122,11 @@ $hardwareTriangles = $target -like '*-hwtri'
     -OneMinuteMatchProof:$OneMinuteMatchProof `
     -RequireRealtime60Fps:$RequireRealtime60Fps `
     -RendererProfileLevel $RendererProfileLevel `
+    -RendererFastRunMode $RendererFastRunMode `
+    -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
+    -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
+    -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds `
     -Harness $harness `
     -Target $target `
     -Build $build `

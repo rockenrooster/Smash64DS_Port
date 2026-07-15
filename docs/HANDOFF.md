@@ -38,6 +38,18 @@ registered for diagnosis but are no longer active Boundary/Latest entries:
 their bounded input driver assumes pre-GO movement, which conflicts with the
 restored BattleShip control lock. Do not add an unlock seed to revive them.
 
+Temporary automation policy (2026-07-15): the public/manual battle ROM keeps
+Fox classified as the original level-3 CPU but defaults only his decision/input
+loop off. Reactions, damage, hitstun, animation, physics, collision, scoring,
+and HUD/results CPU semantics remain live. CPU/lifecycle proofs explicitly set
+`FoxCpuMode=1`; final P1 qualification remains blocked until Tyler asks to turn
+the default back on and the CPU-on canonical ROM passes.
+
+Restart pause point: source, verifier, docs, and repo-local skills are preserved
+and focused static checks pass, but the corrected ROM has not been rebuilt. The
+current 1:30-timestamp ROM is a manual-reference artifact only. Resume with `verify-battle-playable-realtime-harness.ps1 -SkipScreenshot`, then refresh its
+hash/docs and snapshot; no repo process remains (external SuperMarioWar melonDS PID 36352 was left untouched).
+
 ## Cut G Result
 
 Cut G milestone 1 is accepted and graduated to the canonical/shipped profile-0
@@ -59,11 +71,11 @@ Canonical/shipped ROM:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,368,768 bytes
-SHA-256 F8EFEE10ED15457CD79A9B71B9766B5247BE870C332FB12316431F8301A0A94A
+SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
 ```
 
 Exact completed frames 438/439 in
-`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_035112-0572048-p44488.png`
+`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_044100-8463313-p20112.png`
 and its `_next` pair pass GO/timer/control/OAM state, full top-screen coverage,
 green/detail, motion, named-region, horizontal-detail, and sky gates. The first
 frame is published as `latest.png`. This is melonDS, not hardware, acceptance.
@@ -71,46 +83,42 @@ frame is published as `latest.png`. This is melonDS, not hardware, acceptance.
 ## Performance And Remaining Milestones
 
 - Milestone 1: complete. Native BG2 affine update beats the 35K ceiling.
-- Milestone 2: ~431K versus 170–250K; evidence supports about 50–75K from the
-  first hierarchy cut. Keep only ≥80K with slots Mario 16–23 / Fox 16–17.
-- Milestone 3: strict eight-callback slab must save >=300K, reach <=500K, stay
-  <=16 KiB resident, and add no BSS/heap.
-- Milestone 4: static prewarm is feasible; exact visible full-water residency is
-  not (903,168 bytes minimum versus 524,288 total texture VRAM). Require a new
-  representation checkpoint plus zero post-GO conversion/allocation/upload/I/O.
+- Milestone 2: clean same-ROM Mode-8 is 413,504 ticks versus 170–250K. The
+  whole-owner FIFO packet was 537,792 (+124,288), failed the <=337,472 gate,
+  and is being removed; retain its exact host fixtures, not the runtime path.
+- Milestone 3: the exact host packet is 10,076 bytes / 57 DObjs / 42 bindings /
+  54 runs / 202 triangles, but production linkage is zero. Device acceptance
+  still requires >=300K saving, <=500K, <=16 KiB, and dynamic invariance.
+- Milestone 4: the exact water host fixture is 181,408 bytes and remains
+  production-unlinked; the proposed pre-GO NitroFS payload is 258,048 bytes.
+  Estimated reserve remains above 128 KiB, but M4 still requires measured
+  reserve and zero post-GO conversion/allocation/upload/I/O/eviction/palette DMA.
 
-The latest focused profile-1 M2 A/B/A (`03950839...BEEF09B`, frames 600–607)
-measures about 10.1–10.2 FPS, not a canonical phase baseline. The accepted
-slices are fidelity/ownership wins, not a 60 FPS claim. The user confirms Mario
-can damage Fox after the repair; continuous natural-hit coverage remains open.
+The latest focused clean M2 A/B/A (`13506F55...B98589B`, frames 600–607)
+reproduces A0=A1 exactly at 413,504 median / 413,632 P95 and a 17.1 FPS smoke
+marker; rejected B is 537,792 / 537,856 and 16.7 FPS. This is laboratory
+evidence, not a canonical phase baseline or a 60 FPS claim. The user confirms
+Mario can damage Fox after the repair; continuous natural-hit coverage remains
+open.
 
-The isolated one-minute state/memory gate passes from exact locked 1:00 through
+The isolated CPU-on one-minute state/memory gate passes from exact locked 1:00 through
 Time Up and Results: logic=3892, timer=3600→0/3600, Fox CPU=7203 updates,
 scene=22→24, safety=0, stale=0/0, and 172,024 bytes conservative reserve after
 the resident BGM buffer. It is unthrottled lifecycle evidence, not a realtime
 or exact canonical-duration qualification.
 
-Platform semantics pass all three lines in 715 frames: exact live geometry, Mario-only
-mask `0x7`, three upward passes/zero accepts, nine reverse hits/landings, two side cycles, and three Pass rejections. Fireball passes 40/40 custom
-`0x47` source-MVP draws, zero mismatch/reject/translation drift, 1,757 units of
-natural travel, rebound `55→46.75`, and reserve 222,736; its dated capture is in
-`artifacts/visibility`. Their original manual reports remain open. Natural DamageFly currently
-times out; throw/release remains candidate-only. The live damage/default map
-policies are floor-only; BattleShip wall/ceiling Run state and connected-floor
-adjacency are the next coherent `mpprocess`/`mpcommon` graduation. Isolated crowd ACK diagnostics pass; the user ROM has no blocking trace.
-ID626 now uses a no-growth AOT PNT=1/LEN=3527 body. Its stateful host model
-rejects missing restore/wrong PNT/LEN and records two guard samples of alignment
-debt per 28,216-sample cycle; runtime passes but acoustic fidelity is manual. Synchronized
-camera state passes, normal/front/±16.8° images are clean, and both ±33.6° pause
-views reproduce the reported wide-view occlusion. Source parity is unresolved;
-do not change renderer behavior without an identical BattleShip/N64 comparison.
-
-The source-backed 64,848-byte AOT FGM pack passes countdown and natural combat:
-PublicExcited/3/2/1/GO play once, Mario KO plays exact `439/292/154`, all five
-KO IDs are observed, handles recycle, and included failures are zero. Fox winner
-16 naturally transitions to Results 22 with zero stream/cleanup faults. Pitch,
-fork voice 685, other voices, and 24 unsupported calls remain. Retest the
-opening crowd audibly on the rebuilt exact canonical ROM before closing it.
+The platform gate proves only its exact upward-crossing rejection and can miss
+an incorrect next-frame landing; Tyler's report remains open and its automation
+needs continued-ascent/descending-crossing assertions. Fireball's early
+submission/rebound automation passes, but its full-lifetime visual and
+independent `0x47` matrix parity remain open. The isolated BattleShip
+`mpprocess.c` LIVE build now has exclusive exact symbol closure after the
+endpoint-world/common-local repair. It is not graduated: the first natural
+DamageFall run stalled in breakpoint churn before any attack, the sparse
+source-input verifier is newly repaired but unrun, and moving-wall/project-floor
+providers plus coherent `mpcommon` remain open. Camera ±33.6° source parity and
+opening-crowd acoustic fidelity also remain open. Exact evidence and owners live
+on `P1_EXECUTION_BOARD.md`.
 
 ## Execution Ownership
 
@@ -118,6 +126,8 @@ Use `P1_EXECUTION_BOARD.md` for the active lanes, worktrees, file locks,
 dated gates, and acceptance decisions. This handoff does not maintain a second
 task queue. Shared renderer-core work stays serialized in the live tree;
 gameplay and audio return isolated commits plus reproduction evidence.
+
+Acceleration workflows are repo-local under `.agents/skills`; restart to discover them.
 
 Keep comparisons on identical ROM hashes and synchronized windows. Require
 counters, screenshots, semantic traces, and runtime state to agree.
@@ -127,23 +137,13 @@ counters, screenshots, semantic traces, and runtime state to agree.
 ```powershell
 .\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 8 `
   -RendererBenchmarkSamples 8 -RendererBenchmarkStartFrame 600 -GdbPort 4333
-.\scripts\verify-battle-playable-platform-semantics.ps1 -NoBuild
-.\scripts\verify-battle-playable-fireball-render.ps1 -NoBuild
 .\scripts\verify-battle-playable-damagefall-recovery.ps1 -NoBuild
-.\scripts\verify-battle-playable-throw-release-recovery.ps1 -NoBuild
-.\scripts\verify-battle-playable-camera-containment.ps1 -NoBuild
-.\scripts\verify-battle-playable-crowd-envelope-timing.ps1 -NoBuild
+.\scripts\verify-mpprocess-private-import.ps1
 ```
-
 Profile-1 laboratory targets never publish the shipped filename; refresh the user ROM only through the canonical Makefile parity rule.
 
 ## Verification State
 
-GBI/audio/renderer-parity fixtures, architecture, registry, canonical
-runtime/parity, exact-frame Cut G capture, focused profile-1 pre/post-GO,
-one-minute expiry/Results, canonical profile-0 pre/post-GO, platform, exact Cut
-G, 40-draw Fireball source-MVP, and crowd command-ACK gates pass. DamageFly
-timed out; throw/camera are candidate-only and crowd acoustic fidelity is open.
-A fresh RegressionCore prebuild/stamp/runtime and active mode-163 Boundary pass;
-Full Regression follows. After successful verified progress, run
+`Full`, `Regression*`, and `P1Gate` are list-only; use focused checks, DevFast,
+and Boundary, then run
 `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` as the final project action.

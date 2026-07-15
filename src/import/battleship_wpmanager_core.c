@@ -198,6 +198,7 @@ NDS_WPMANAGER_BRIDGE u16 ftParamGetStatUpdateCount(void)
     return update_count;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE
 NDS_WPMANAGER_BRIDGE void mpProcessRunLWallCollisionAdjNew(
     MPCollData *coll_data)
 {
@@ -214,6 +215,7 @@ NDS_WPMANAGER_BRIDGE void mpProcessRunCeilEdgeAdjust(MPCollData *coll_data)
 {
     (void)coll_data;
 }
+#endif
 
 void mpCommonRunWeaponCollisionDefault(
     GObj *weapon_gobj, Vec3f *pos, MPCollData *coll_data)

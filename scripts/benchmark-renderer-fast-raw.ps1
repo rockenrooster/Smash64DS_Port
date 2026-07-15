@@ -1,5 +1,10 @@
 param(
     [ValidateRange(0,8)][int]$FastRunMode = 0,
+    [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
+    [switch]$RequireZeroPostGoTextureFence,
+    [ValidateRange(0,1)][int]$M4WaterTiledAotMode = 0,
+    [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
+    [ValidateRange(0,1)][int]$FoxCpuMode = 0,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
     [ValidateRange(1,2)][int]$RendererProfileLevel = 1,
@@ -12,7 +17,9 @@ param(
     [int]$DelaySeconds = 5,
     [ValidateRange(8,256)][int]$RendererBenchmarkSamples = 32,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
-    [string]$RendererBenchmarkExportPath = ''
+    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
+    [string]$RendererBenchmarkExportPath = '',
+    [string]$RendererBenchmarkScreenshot = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,7 +50,14 @@ $build = if ($RendererProfileLevel -eq 2) {
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
+    -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds `
+    -RendererBenchmarkScreenshot $RendererBenchmarkScreenshot `
     -RendererFastRunMode $FastRunMode `
+    -StaticTextureAotMode $StaticTextureAotMode `
+    -RequireZeroPostGoTextureFence:$RequireZeroPostGoTextureFence `
+    -M4WaterTiledAotMode $M4WaterTiledAotMode `
+    -IFCommonHybridOamMode $IFCommonHybridOamMode `
+    -FoxCpuMode $FoxCpuMode `
     -WallpaperIncrementalMode $WallpaperIncrementalMode `
     -LowerTextHudMode $LowerTextHudMode `
     -RendererBenchmarkExportPath $RendererBenchmarkExportPath `
@@ -53,7 +67,7 @@ $build = if ($RendererProfileLevel -eq 2) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode" `
+    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) M4 water $M4WaterTiledAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

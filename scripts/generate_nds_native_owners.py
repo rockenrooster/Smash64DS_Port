@@ -90,14 +90,30 @@ OWNER_SETUP_PARTS = {
     "fox": (0xffffffc0, 0x00000000),
 }
 
-# Slot zero stays available for the camera/base modelview. Only bindings
-# observed in canonical cross-matrix runs receive an owner-local GX palette
-# slot. A packed corner uses slot 31 as the logical current-root slot; after an
-# alternate-binding corner the emitter restores that root through its real
-# per-binding palette slot.
-OWNER_CROSS_BINDINGS = {
-    "mario": (1, 2, 5, 6, 8, 9, 11, 12),
-    "fox": (16, 17),
+# Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
+# Only bindings observed in canonical cross-matrix runs receive an owner-local
+# physical store slot. Logical binding IDs remain the source/native-owner IDs;
+# never replace them with these physical GX slots. A packed corner uses slot 31
+# as the logical current-root slot, and restores alternate bindings through the
+# explicit mapping below.
+OWNER_CROSS_BINDING_SLOTS = {
+    "mario": (
+        (1, 16), (2, 17), (5, 18), (6, 19),
+        (8, 20), (9, 21), (11, 22), (12, 23),
+    ),
+    "fox": ((16, 16), (17, 17)),
+}
+
+OWNER_PLAN_COUNTS = {
+    "mario": (25, 14),
+    "fox": (27, 18),
+}
+
+# camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
+# per-corner/current-root restores in the exact flattened owner packet.
+OWNER_GX_PLAN_COUNTS = {
+    "mario": (1, 5, 5, 8, 70),
+    "fox": (1, 6, 6, 2, 14),
 }
 
 DIRECT_POLICY_CULL_NONE = 0x80
@@ -123,7 +139,53 @@ INVALID_U8 = 0xff
 PACKED_DENSE_ID_BITS = 10
 PACKED_DENSE_ID_LIMIT = 1 << PACKED_DENSE_ID_BITS
 PACKED_GX_SLOT_CURRENT = 31
+GX_CAMERA_SEED_SLOT = 0
+GX_HIERARCHY_SLOT_LIMIT = 16
+JOINT_SCHEDULE_PUSH_BEFORE = 1 << 15
 DOBJ_DESC_SIZE = 44
+
+# Nintendo DS packed geometry FIFO command IDs.  These are REG2ID(register)
+# values from libnds videoGL.h/video.h.  Keep the generator independent of a
+# host libnds install, then decode every generated payload in the companion
+# checker before it can reach the ARM build.
+FIFO_NOP = 0x00
+FIFO_MTX_MODE = 0x10
+FIFO_MTX_STORE = 0x13
+FIFO_MTX_RESTORE = 0x14
+FIFO_MTX_LOAD_4X4 = 0x16
+FIFO_MTX_LOAD_4X3 = 0x17
+FIFO_COLOR = 0x20
+FIFO_TEX_COORD = 0x22
+FIFO_VERTEX16 = 0x23
+FIFO_POLY_FORMAT = 0x29
+FIFO_TEX_FORMAT = 0x2a
+FIFO_PAL_FORMAT = 0x2b
+FIFO_BEGIN = 0x40
+
+FIFO_PARAMETER_COUNTS = {
+    FIFO_NOP: 0,
+    FIFO_MTX_MODE: 1,
+    FIFO_MTX_STORE: 1,
+    FIFO_MTX_RESTORE: 1,
+    FIFO_MTX_LOAD_4X4: 16,
+    FIFO_MTX_LOAD_4X3: 12,
+    FIFO_COLOR: 1,
+    FIFO_TEX_COORD: 1,
+    FIFO_VERTEX16: 2,
+    FIFO_POLY_FORMAT: 1,
+    FIFO_TEX_FORMAT: 1,
+    FIFO_PAL_FORMAT: 1,
+    FIFO_BEGIN: 1,
+}
+
+FIFO_PATCH_COMPOSED = "composed"
+FIFO_PATCH_COLOR = "color"
+FIFO_PATCH_TEXCOORD = "texcoord"
+FIFO_PATCH_EPOCH_TEX = "epoch_tex"
+FIFO_PATCH_EPOCH_PAL = "epoch_pal"
+FIFO_PATCH_EPOCH_POLY = "epoch_poly"
+FIFO_PATCH_EPOCH_BEGIN = "epoch_begin"
+FIFO_PATCH_EPOCH_BEGIN_PARAM = "epoch_begin_param"
 
 def decode_export() -> dict[str, bytes]:
     decoded: dict[str, bytes] = {}
@@ -221,6 +283,80 @@ def build_direct_epoch_policies(epoch_count: int) -> list[int]:
             family |= DIRECT_POLICY_CULL_NONE
         result.append(family)
     return result
+
+
+def build_joint_push_flags(owner_name: str, parents: list[int]):
+    """Recover BattleShip's root-or-next-sibling matrix-push decisions.
+
+    Joint rows are already child/sibling preorder. Parent indices plus this
+    single flag let a direct executor pop back to the next row's parent without
+    widening the packed u16 schedule or adding a synthetic camera row.
+    """
+    expected_joint_count, _ = OWNER_PLAN_COUNTS[owner_name]
+    if len(parents) != expected_joint_count:
+        raise ValueError(
+            f"{owner_name} hierarchy expects {expected_joint_count} joints, "
+            f"got {len(parents)}"
+        )
+    if not parents or parents[0] != INVALID_U8:
+        raise ValueError(f"{owner_name} hierarchy has no synthetic TopN root")
+
+    children = [[] for _ in parents]
+    depths = [0] * len(parents)
+    for joint_index, parent in enumerate(parents):
+        if joint_index == 0:
+            continue
+        if (parent == INVALID_U8) or (parent >= joint_index):
+            raise ValueError(
+                f"{owner_name} joint {joint_index}: parent {parent} is not "
+                "an earlier preorder joint"
+            )
+        children[parent].append(joint_index)
+        depths[joint_index] = depths[parent] + 1
+
+    preorder = []
+
+    def visit(joint_index: int):
+        preorder.append(joint_index)
+        for child in children[joint_index]:
+            visit(child)
+
+    visit(0)
+    if preorder != list(range(len(parents))):
+        raise ValueError(
+            f"{owner_name} hierarchy is not in BattleShip child/sibling preorder"
+        )
+
+    next_siblings = [INVALID_U8] * len(parents)
+    for child_list in children:
+        for child_offset, child in enumerate(child_list[:-1]):
+            next_siblings[child] = child_list[child_offset + 1]
+
+    push_flags = [
+        (parent == INVALID_U8) or (next_siblings[joint_index] != INVALID_U8)
+        for joint_index, parent in enumerate(parents)
+    ]
+    push_count = sum(push_flags)
+    # gcDrawDObjTree emits one matching pop after each pushed DObj subtree.
+    pop_count = push_count
+    expected_seed, expected_push, expected_pop, _, _ = (
+        OWNER_GX_PLAN_COUNTS[owner_name]
+    )
+    if (expected_seed, push_count, pop_count) != (
+            1, expected_push, expected_pop):
+        raise ValueError(
+            f"{owner_name} hierarchy accounting changed: "
+            f"seed/push/pop=1/{push_count}/{pop_count}"
+        )
+    max_source_depth = max(depths)
+    # A direct executor seeds the camera once, then follows this exact preorder;
+    # slots 0..15 conservatively cover every live hierarchy depth.
+    if max_source_depth >= GX_HIERARCHY_SLOT_LIMIT:
+        raise ValueError(
+            f"{owner_name} hierarchy depth {max_source_depth} reaches reserved "
+            "cross-binding slots"
+        )
+    return push_flags, (1, push_count, pop_count, max_source_depth)
 
 
 def decode_joint_topology(
@@ -340,6 +476,18 @@ def decode_joint_topology(
     )
     bindings.extend(raw_bindings)
 
+    expected_joint_count, expected_binding_count = OWNER_PLAN_COUNTS[owner_name]
+    if len(parents) != expected_joint_count:
+        raise ValueError(
+            f"{owner_name} live joint count {len(parents)} != "
+            f"{expected_joint_count}"
+        )
+    if len(roots) != expected_binding_count:
+        raise ValueError(
+            f"{owner_name} logical binding count {len(roots)} != "
+            f"{expected_binding_count}"
+        )
+
     binding_joints = [INVALID_U8] * len(roots)
     for joint_index, binding in enumerate(bindings):
         if binding != INVALID_U8:
@@ -362,14 +510,36 @@ def decode_joint_topology(
         )
 
     cross_slots = [PACKED_GX_SLOT_CURRENT] * len(roots)
-    for palette_slot, binding in enumerate(
-            OWNER_CROSS_BINDINGS[owner_name], start=1):
+    physical_slots = set()
+    for binding, palette_slot in OWNER_CROSS_BINDING_SLOTS[owner_name]:
         if binding >= len(roots):
             raise ValueError(
                 f"{owner_name} cross binding {binding} is out of range"
             )
+        if ((palette_slot < GX_HIERARCHY_SLOT_LIMIT) or
+                (palette_slot >= PACKED_GX_SLOT_CURRENT) or
+                (palette_slot == GX_CAMERA_SEED_SLOT)):
+            raise ValueError(
+                f"{owner_name} cross binding {binding}: physical slot "
+                f"{palette_slot} overlaps the camera/hierarchy namespace"
+            )
+        if palette_slot in physical_slots:
+            raise ValueError(
+                f"{owner_name} physical slot {palette_slot} is not unique"
+            )
+        physical_slots.add(palette_slot)
         cross_slots[binding] = palette_slot
 
+    expected_store_count = OWNER_GX_PLAN_COUNTS[owner_name][3]
+    if len(physical_slots) != expected_store_count:
+        raise ValueError(
+            f"{owner_name} GX store count {len(physical_slots)} != "
+            f"{expected_store_count}"
+        )
+
+    push_flags, hierarchy_counts = build_joint_push_flags(
+        owner_name, parents
+    )
     joint_schedule = []
     for joint_index, (parent, binding) in enumerate(zip(parents, bindings)):
         packed_parent = 31 if parent == INVALID_U8 else parent
@@ -383,9 +553,18 @@ def decode_joint_topology(
                 f"{owner_name} joint {joint_index}: topology exceeds packed ABI"
             )
         joint_schedule.append(
-            packed_parent | (packed_binding << 5) | (palette_slot << 10)
+            packed_parent |
+            (packed_binding << 5) |
+            (palette_slot << 10) |
+            (JOINT_SCHEDULE_PUSH_BEFORE if push_flags[joint_index] else 0)
         )
-    return joint_schedule, binding_parents, binding_joints, cross_slots
+    return (
+        joint_schedule,
+        binding_parents,
+        binding_joints,
+        cross_slots,
+        hierarchy_counts,
+    )
 
 
 def build_dense_geometry(
@@ -632,6 +811,7 @@ def build_direct_dense_tables(
     run_unique_count = []
     run_unique_dense = []
     observed_cross_bindings = [set() for _ in owner_cross_slots]
+    owner_restore_counts = [0 for _ in owner_cross_slots]
     for run_index, run in enumerate(runs):
         _, triangle_count, submit_class, _ = run
         corner_first = run_first_corner[run_index]
@@ -653,6 +833,8 @@ def build_direct_dense_tables(
                     f"cross run {run_index}: current binding {root_binding} "
                     "has no restorable GX palette slot"
                 )
+            current_palette_slot = cross_slots[root_binding]
+            active_palette_slot = current_palette_slot
 
         unique = []
         seen = set()
@@ -684,10 +866,21 @@ def build_direct_dense_tables(
                             f"cross run {run_index}: binding {binding} has no "
                             "GX palette slot"
                         )
+                physical_palette_slot = (
+                    current_palette_slot
+                    if palette_slot == PACKED_GX_SLOT_CURRENT else palette_slot
+                )
+                if physical_palette_slot != active_palette_slot:
+                    owner_restore_counts[owner_index] += 1
+                    active_palette_slot = physical_palette_slot
             packed_corners.append(dense_id | (palette_slot << 10))
             if dense_id not in seen:
                 seen.add(dense_id)
                 unique.append(dense_id)
+
+        if ((submit_class == 1) and
+                (active_palette_slot != current_palette_slot)):
+            owner_restore_counts[owner_index] += 1
 
         if len(run_unique_dense) > 0xffff:
             raise ValueError("direct run unique list exceeds its u16 index ABI")
@@ -702,11 +895,21 @@ def build_direct_dense_tables(
     if len(packed_corners) != len(dense_corners):
         raise ValueError("packed direct corner cardinality mismatch")
     for owner_index, (owner_name, _) in enumerate(O2R_ASSETS.items()):
-        expected = set(OWNER_CROSS_BINDINGS[owner_name])
+        expected = {
+            binding
+            for binding, _ in OWNER_CROSS_BINDING_SLOTS[owner_name]
+        }
         if observed_cross_bindings[owner_index] != expected:
             raise ValueError(
                 f"{owner_name} cross-binding census changed: "
                 f"{sorted(observed_cross_bindings[owner_index])}"
+            )
+        expected_restore_count = OWNER_GX_PLAN_COUNTS[owner_name][4]
+        if owner_restore_counts[owner_index] != expected_restore_count:
+            raise ValueError(
+                f"{owner_name} GX restore count "
+                f"{owner_restore_counts[owner_index]} != "
+                f"{expected_restore_count}"
             )
     for dense_id, color_source in enumerate(dense_color_sources):
         if ((color_source > dense_id) or
@@ -722,6 +925,399 @@ def build_direct_dense_tables(
         run_unique_count,
         run_unique_dense,
     )
+
+
+def pack_fifo_vertex16(x: int, y: int, z: int, context: str) -> tuple[int, int]:
+    """Encode one GX VERTEX16 without silently wrapping signed coordinates."""
+    scaled_x = x * 16
+    scaled_y = y * 16
+    scaled_z = z * 16
+    if any(
+            value < -0x8000 or value > 0x7fff
+            for value in (scaled_x, scaled_y, scaled_z)):
+        raise ValueError(
+            f"{context}: VERTEX16 signed overflow "
+            f"xyz={x}/{y}/{z} scaled={scaled_x}/{scaled_y}/{scaled_z}"
+        )
+    return (
+        (scaled_x & 0xffff) | ((scaled_y & 0xffff) << 16),
+        scaled_z & 0xffff,
+    )
+
+
+class PackedFifoBuilder:
+    """Serialize libnds packed commands and remember parameter word patches."""
+
+    def __init__(self):
+        self.words: list[int] = []
+        self.pending: list[
+            tuple[int, list[int], list[object | None], object | None]
+        ] = []
+        self.patches: dict[str, list[tuple]] = {
+            FIFO_PATCH_COMPOSED: [],
+            FIFO_PATCH_COLOR: [],
+            FIFO_PATCH_TEXCOORD: [],
+            FIFO_PATCH_EPOCH_TEX: [],
+            FIFO_PATCH_EPOCH_PAL: [],
+            FIFO_PATCH_EPOCH_POLY: [],
+            FIFO_PATCH_EPOCH_BEGIN: [],
+            FIFO_PATCH_EPOCH_BEGIN_PARAM: [],
+        }
+        self.command_counts: dict[int, int] = {}
+
+    def command(
+            self,
+            command: int,
+            parameters: list[int] | tuple[int, ...] = (),
+            parameter_tags: list[object | None] | tuple[object | None, ...] = (),
+            command_tag: object | None = None,
+    ):
+        expected = FIFO_PARAMETER_COUNTS.get(command)
+        if expected is None:
+            raise ValueError(f"unsupported packed FIFO command 0x{command:02x}")
+        parameters = list(parameters)
+        if len(parameters) != expected:
+            raise ValueError(
+                f"FIFO command 0x{command:02x}: {len(parameters)} params != "
+                f"{expected}"
+            )
+        if parameter_tags:
+            parameter_tags = list(parameter_tags)
+            if len(parameter_tags) != expected:
+                raise ValueError(
+                    f"FIFO command 0x{command:02x}: patch tag cardinality "
+                    "does not match parameters"
+                )
+        else:
+            parameter_tags = [None] * expected
+        self.pending.append(
+            (command, parameters, parameter_tags, command_tag)
+        )
+        self.command_counts[command] = self.command_counts.get(command, 0) + 1
+        if len(self.pending) == 4:
+            self.flush()
+
+    def flush(self):
+        if not self.pending:
+            return
+        command_word = 0
+        command_word_offset = len(self.words)
+        for byte_index, (command, _, _, command_tag) in enumerate(self.pending):
+            command_word |= command << (byte_index * 8)
+            if command_tag is not None:
+                patch_kind, patch_source = command_tag
+                self.patches[patch_kind].append(
+                    (command_word_offset, byte_index * 8, patch_source)
+                )
+        self.words.append(command_word)
+        for _, parameters, parameter_tags, _ in self.pending:
+            for value, tag in zip(parameters, parameter_tags):
+                word_offset = len(self.words)
+                self.words.append(value & 0xffffffff)
+                if tag is not None:
+                    patch_kind, patch_source = tag
+                    self.patches[patch_kind].append(
+                        (word_offset, patch_source)
+                    )
+        self.pending.clear()
+
+    def finish(self):
+        self.flush()
+        if not self.words:
+            raise ValueError("packed FIFO owner payload is empty")
+        if len(self.words) > 0xffff:
+            raise ValueError("packed FIFO owner payload exceeds u16 word offsets")
+        return self.words, self.patches, self.command_counts
+
+
+def build_packed_fifo_owner_plan(
+        owner_name: str,
+        owner_slot: int,
+        roots: list[tuple],
+        owner_root_first: int,
+        epochs: list[tuple],
+        runs: list[tuple],
+        dense_vertices: list[tuple],
+        packed_corners: list[int],
+        run_first_corner: list[int],
+        direct_epoch_policies: list[int],
+        cross_slots: list[int],
+):
+    """Build one immutable whole-fighter FIFO template.
+
+    Raw-composed matrices, live colors/texcoords, and epoch texture/poly state
+    remain zero placeholders.  The ARM packet preflight patches those words
+    only after the complete live owner contract has been accepted.
+    """
+    builder = PackedFifoBuilder()
+    epoch_patch_words: dict[int, dict[str, int]] = {}
+    raw_triangles = 0
+    cross_triangles = 0
+    raw_runs = 0
+    cross_runs = 0
+    restore_count = 0
+    store_count = 0
+    triangle_count = 0
+    corner_count = 0
+    textured_corner_count = 0
+
+    # Source vertices are submitted in source/256 DS 4.12 coordinates.  Match
+    # mode 8 exactly: keep GX projection at identity, CPU-compose each root,
+    # then divide the complete composed row 3 by 256 before its 4x4 load.
+    # Scaling split modelview/projection rows changes fixed-point rounding for
+    # ordinary nonaligned live matrices and is permanently rejected by the
+    # packet checker.
+    builder.command(FIFO_MTX_MODE, [0])       # GL_PROJECTION
+    builder.command(
+        FIFO_MTX_LOAD_4X4,
+        [
+            1 << 12, 0, 0, 0,
+            0, 1 << 12, 0, 0,
+            0, 0, 1 << 12, 0,
+            0, 0, 0, 1 << 12,
+        ],
+    )
+    builder.command(FIFO_MTX_MODE, [2])       # GL_MODELVIEW
+
+    for local_root, root in enumerate(roots):
+        global_root = owner_root_first + local_root
+        root_offset, first_epoch, _, _, epoch_count, _, _, _ = root
+        del root_offset, global_root
+        current_palette_slot = cross_slots[local_root]
+
+        builder.command(
+            FIFO_MTX_LOAD_4X4,
+            [0] * 16,
+            [(FIFO_PATCH_COMPOSED, local_root)] + [None] * 15,
+        )
+        if current_palette_slot != PACKED_GX_SLOT_CURRENT:
+            builder.command(FIFO_MTX_STORE, [current_palette_slot])
+            store_count += 1
+
+        for epoch_index in range(first_epoch, first_epoch + epoch_count):
+            epoch = epochs[epoch_index]
+            first_run = epoch[3]
+            run_count = epoch[9]
+            textured = (
+                DIRECT_POLICY_FAMILIES[
+                    direct_epoch_policies[epoch_index] & 0x03
+                ][3] != 0
+            )
+            epoch_patch_words[epoch_index] = {}
+            builder.command(
+                FIFO_TEX_FORMAT, [0],
+                [(FIFO_PATCH_EPOCH_TEX, epoch_index)],
+            )
+            builder.command(
+                FIFO_PAL_FORMAT, [0],
+                [(FIFO_PATCH_EPOCH_PAL, epoch_index)],
+            )
+            builder.command(
+                FIFO_POLY_FORMAT, [0],
+                [(FIFO_PATCH_EPOCH_POLY, epoch_index)],
+            )
+            builder.command(
+                FIFO_BEGIN,
+                [0],
+                [(FIFO_PATCH_EPOCH_BEGIN_PARAM, epoch_index)],
+                (FIFO_PATCH_EPOCH_BEGIN, epoch_index),
+            )  # GL_TRIANGLE, or a same-arity POLY_FORMAT reuse patch
+
+            for run_index in range(first_run, first_run + run_count):
+                _, run_triangle_count, submit_class, _ = runs[run_index]
+                active_palette_slot = current_palette_slot
+                run_corner_first = run_first_corner[run_index]
+                run_corner_count = run_triangle_count * 3
+
+                if submit_class == 0:
+                    raw_runs += 1
+                    raw_triangles += run_triangle_count
+                elif submit_class == 1:
+                    if current_palette_slot == PACKED_GX_SLOT_CURRENT:
+                        raise ValueError(
+                            f"{owner_name} cross run {run_index}: current root "
+                            "has no physical palette slot"
+                        )
+                    cross_runs += 1
+                    cross_triangles += run_triangle_count
+                else:
+                    raise ValueError(
+                        f"{owner_name} run {run_index}: submit class "
+                        f"{submit_class} is unsupported"
+                    )
+
+                for corner_offset in range(run_corner_count):
+                    packed = packed_corners[run_corner_first + corner_offset]
+                    dense_id = packed & (PACKED_DENSE_ID_LIMIT - 1)
+                    palette_slot = packed >> PACKED_DENSE_ID_BITS
+                    if dense_id >= len(dense_vertices):
+                        raise ValueError(
+                            f"{owner_name} run {run_index}: dense ID "
+                            f"{dense_id} is out of range"
+                        )
+                    if submit_class == 1:
+                        if palette_slot == PACKED_GX_SLOT_CURRENT:
+                            palette_slot = current_palette_slot
+                        if palette_slot != active_palette_slot:
+                            builder.command(FIFO_MTX_RESTORE, [palette_slot])
+                            active_palette_slot = palette_slot
+                            restore_count += 1
+
+                    x, y, z, _, _, _, _, _ = dense_vertices[dense_id]
+                    xy, z_word = pack_fifo_vertex16(
+                        x,
+                        y,
+                        z,
+                        f"{owner_name} run {run_index} corner "
+                        f"{corner_offset} dense {dense_id}",
+                    )
+                    builder.command(
+                        FIFO_COLOR, [0],
+                        [(FIFO_PATCH_COLOR, (epoch_index, dense_id))],
+                    )
+                    if textured:
+                        builder.command(
+                            FIFO_TEX_COORD, [0],
+                            [(FIFO_PATCH_TEXCOORD,
+                              (epoch_index, dense_id))],
+                        )
+                        textured_corner_count += 1
+                    builder.command(FIFO_VERTEX16, [xy, z_word])
+                    corner_count += 1
+
+                if ((submit_class == 1) and
+                        (active_palette_slot != current_palette_slot)):
+                    builder.command(
+                        FIFO_MTX_RESTORE, [current_palette_slot]
+                    )
+                    restore_count += 1
+                triangle_count += run_triangle_count
+
+    words, patches, command_counts = builder.finish()
+    for patch_kind, field_name in (
+            (FIFO_PATCH_EPOCH_TEX, "tex"),
+            (FIFO_PATCH_EPOCH_PAL, "pal"),
+            (FIFO_PATCH_EPOCH_POLY, "poly"),
+            (FIFO_PATCH_EPOCH_BEGIN_PARAM, "begin_param")):
+        for word_offset, epoch_index in patches[patch_kind]:
+            epoch_patch_words[epoch_index][field_name] = word_offset
+    color_patches = []
+    color_spans = {}
+    for word_offset, (epoch_index, dense_id) in patches[FIFO_PATCH_COLOR]:
+        if epoch_index not in color_spans:
+            color_spans[epoch_index] = [len(color_patches), 0]
+        expected_index = color_spans[epoch_index][0] + \
+            color_spans[epoch_index][1]
+        if expected_index != len(color_patches):
+            raise ValueError(
+                f"{owner_name} epoch {epoch_index}: color patches are not "
+                "a contiguous owner span"
+            )
+        color_patches.append((word_offset, dense_id))
+        color_spans[epoch_index][1] += 1
+    texcoord_patches = []
+    texcoord_spans = {}
+    for word_offset, (epoch_index, dense_id) in \
+            patches[FIFO_PATCH_TEXCOORD]:
+        if epoch_index not in texcoord_spans:
+            texcoord_spans[epoch_index] = [len(texcoord_patches), 0]
+        expected_index = texcoord_spans[epoch_index][0] + \
+            texcoord_spans[epoch_index][1]
+        if expected_index != len(texcoord_patches):
+            raise ValueError(
+                f"{owner_name} epoch {epoch_index}: texcoord patches are "
+                "not a contiguous owner span"
+            )
+        texcoord_patches.append((word_offset, dense_id))
+        texcoord_spans[epoch_index][1] += 1
+
+    epoch_patches = []
+    color_cursor = 0
+    texcoord_cursor = 0
+    for epoch_index in sorted(epoch_patch_words):
+        fields = epoch_patch_words[epoch_index]
+        begin_command = [
+            (word, shift)
+            for word, shift, source in patches[FIFO_PATCH_EPOCH_BEGIN]
+            if source == epoch_index
+        ]
+        if ((set(fields) != {"tex", "pal", "poly", "begin_param"}) or
+                (len(begin_command) != 1)):
+            raise ValueError(
+                f"{owner_name} epoch {epoch_index}: incomplete state patch"
+            )
+        root_index = next(
+            local_root
+            for local_root, root in enumerate(roots)
+            if root[1] <= epoch_index < root[1] + root[4]
+        )
+        color_first, color_count = color_spans.get(
+            epoch_index, (color_cursor, 0)
+        )
+        texcoord_first, texcoord_count = texcoord_spans.get(
+            epoch_index, (texcoord_cursor, 0)
+        )
+        if ((color_first != color_cursor) or
+                (texcoord_first != texcoord_cursor)):
+            raise ValueError(
+                f"{owner_name} epoch {epoch_index}: patch spans are not "
+                "monotonic"
+            )
+        epoch_patches.append((
+            fields["tex"], fields["pal"], fields["poly"],
+            begin_command[0][0], fields["begin_param"],
+            color_first, color_count, texcoord_first, texcoord_count,
+            root_index, epoch_index, begin_command[0][1], 0,
+        ))
+        color_cursor += color_count
+        texcoord_cursor += texcoord_count
+
+    expected_store = OWNER_GX_PLAN_COUNTS[owner_name][3]
+    expected_restore = OWNER_GX_PLAN_COUNTS[owner_name][4]
+    if (store_count, restore_count) != (expected_store, expected_restore):
+        raise ValueError(
+            f"{owner_name} packet store/restore {store_count}/{restore_count} "
+            f"!= {expected_store}/{expected_restore}"
+        )
+    expected_triangles = 320 if owner_name == "mario" else 306
+    expected_corners = expected_triangles * 3
+    expected_textured_corners = 192 if owner_name == "mario" else 189
+    if (triangle_count, corner_count, textured_corner_count) != (
+            expected_triangles, expected_corners, expected_textured_corners):
+        raise ValueError(
+            f"{owner_name} packet geometry census changed: "
+            f"tri/corner/tex={triangle_count}/{corner_count}/"
+            f"{textured_corner_count}"
+        )
+    matrix_patches = [
+        (word_offset, source, 16)
+        for word_offset, source in patches[FIFO_PATCH_COMPOSED]
+    ]
+    template_bytes = struct.pack(
+        f"<{len(words)}I", *words
+    )
+    template_hash = int.from_bytes(
+        hashlib.sha256(template_bytes).digest()[:4], "little"
+    )
+    return {
+        "words": words,
+        "matrix_patches": matrix_patches,
+        "color_patches": color_patches,
+        "texcoord_patches": texcoord_patches,
+        "epoch_patches": epoch_patches,
+        "template_hash": template_hash,
+        "triangle_count": triangle_count,
+        "raw_triangle_count": raw_triangles,
+        "cross_triangle_count": cross_triangles,
+        "run_count": raw_runs + cross_runs,
+        "raw_run_count": raw_runs,
+        "cross_run_count": cross_runs,
+        "root_count": len(roots),
+        "epoch_count": len(epoch_patches),
+        "store_count": store_count,
+        "restore_count": restore_count,
+        "command_counts": command_counts,
+    }
 
 
 def emit_rows(type_name: str, name: str, rows: list[str]) -> list[str]:
@@ -801,6 +1397,16 @@ def generate(repo_root: Path | None = None) -> str:
         action_dense_first, run_first_corner, run_owners,
         run_root_bindings, run_binding_sets, owner_cross_slots,
     )
+    packet_plans = []
+    owner_root_first = 0
+    for owner_slot, ((owner_name, roots), topology) in enumerate(
+            zip(owner_roots, owner_topologies)):
+        packet_plans.append(build_packed_fifo_owner_plan(
+            owner_name, owner_slot, roots, owner_root_first,
+            epochs, runs, dense_vertices, packed_corners,
+            run_first_corner, direct_epoch_policies, topology[3],
+        ))
+        owner_root_first += len(roots)
 
     lines = [
         "/* Generated by scripts/generate_nds_native_owners.py. */",
@@ -830,8 +1436,11 @@ def generate(repo_root: Path | None = None) -> str:
         "/* root, restored through that binding's real palette slot. */",
         "/* ActionDenseSpans pack first dense in bits 0..9 and count in */",
         "/* bits 10..14. DenseColorSource preserves MODIFY_ST shading. */",
-        "/* JointSchedule packs parent joint, binding, and GX slot into */",
-        "/* successive 5-bit fields; 31 means none/root/current by field. */",
+        "/* JointSchedule packs parent joint, logical binding, and physical */",
+        "/* GX slot into successive 5-bit fields; 31 means none/root/current */",
+        "/* by field. Bit 15 preserves BattleShip's root-or-next-sibling */",
+        "/* push. Array order is child/sibling preorder; seed the camera once */",
+        "/* before row 0 and derive matching pops from later parent rows. */",
         "",
     ]
     policy_flag_expressions = {
@@ -897,9 +1506,13 @@ def generate(repo_root: Path | None = None) -> str:
         [f"{value}u" for value in run_unique_dense],
     )
     for owner_index, (owner_name, roots) in enumerate(owner_roots):
-        joint_schedule, binding_parents, binding_joints, cross_slots = (
-            owner_topologies[owner_index]
-        )
+        (
+            joint_schedule,
+            binding_parents,
+            binding_joints,
+            cross_slots,
+            _hierarchy_counts,
+        ) = owner_topologies[owner_index]
         owner_title = owner_name.title()
         lines += emit_rows(
             "u8", f"sNdsNative{owner_title}CrossPaletteSlots",
@@ -917,6 +1530,85 @@ def generate(repo_root: Path | None = None) -> str:
             "u16", f"sNdsNative{owner_title}JointSchedule",
             [f"0x{value:04x}u" for value in joint_schedule],
         )
+    lines += [
+        "#if 0  /* Retained host-only exact packet fixture. */",
+        "",
+        "/* Whole-owner packed GX FIFO templates. Parameter offsets are */",
+        "/* relative to the payload after the leading runtime word count. */",
+        "/* GFX_END is intentionally absent per libnds glCallList. */",
+        "",
+    ]
+    for owner_slot, ((owner_name, _), plan) in enumerate(
+            zip(owner_roots, packet_plans)):
+        owner_title = owner_name.title()
+        lines += emit_rows(
+            "u32", f"sNdsNative{owner_title}FifoWords",
+            [f"0x{value:08x}u" for value in plan["words"]],
+        )
+        lines += emit_rows(
+            "NDSNativeFifoMatrixPatch",
+            f"sNdsNative{owner_title}FifoMatrixPatches",
+            [f"{{ {word}u, {source}u, {count}u }}"
+             for word, source, count in plan["matrix_patches"]],
+        )
+        lines += emit_rows(
+            "NDSNativeFifoWordPatch",
+            f"sNdsNative{owner_title}FifoColorPatches",
+            [f"{{ {word}u, {source}u }}"
+             for word, source in plan["color_patches"]],
+        )
+        lines += emit_rows(
+            "NDSNativeFifoWordPatch",
+            f"sNdsNative{owner_title}FifoTexcoordPatches",
+            [f"{{ {word}u, {source}u }}"
+             for word, source in plan["texcoord_patches"]],
+        )
+        lines += emit_rows(
+            "NDSNativeFifoEpochPatch",
+            f"sNdsNative{owner_title}FifoEpochPatches",
+            [
+                "{{ {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, "
+                "{}u, {}u, {}u, {}u }}".format(*row)
+                for row in plan["epoch_patches"]
+            ],
+        )
+        lines += [
+            f"static const NDSNativeFifoOwnerPlan "
+            f"sNdsNative{owner_title}FifoPlan =",
+            "{",
+            f"    sNdsNative{owner_title}FifoWords,",
+            f"    sNdsNative{owner_title}FifoMatrixPatches,",
+            f"    sNdsNative{owner_title}FifoColorPatches,",
+            f"    sNdsNative{owner_title}FifoTexcoordPatches,",
+            f"    sNdsNative{owner_title}FifoEpochPatches,",
+            f"    0x{plan['template_hash']:08x}u,",
+            f"    {len(plan['words'])}u,",
+            f"    {len(plan['matrix_patches'])}u,",
+            f"    {len(plan['color_patches'])}u,",
+            f"    {len(plan['texcoord_patches'])}u,",
+            f"    {len(plan['epoch_patches'])}u,",
+            f"    {plan['triangle_count']}u,",
+            f"    {plan['raw_triangle_count']}u,",
+            f"    {plan['cross_triangle_count']}u,",
+            f"    {plan['run_count']}u,",
+            f"    {plan['raw_run_count']}u,",
+            f"    {plan['cross_run_count']}u,",
+            f"    {plan['root_count']}u,",
+            f"    {plan['epoch_count']}u,",
+            f"    {plan['store_count']}u,",
+            f"    {plan['restore_count']}u,",
+            f"    {owner_slot}u,",
+            "    { 0u, 0u, 0u },",
+            "};",
+            "",
+        ]
+    max_packet_words = max(len(plan["words"]) for plan in packet_plans)
+    lines += [
+        f"#define NDS_NATIVE_FIFO_MAX_WORDS {max_packet_words}u",
+        "",
+        "#endif",
+        "",
+    ]
     lines += ["#endif", ""]
     lines += emit_rows(
         "u16", "sNdsNativeFighterTriangles",

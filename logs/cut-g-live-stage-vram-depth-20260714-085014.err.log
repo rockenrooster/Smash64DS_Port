@@ -1,0 +1,48 @@
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:1:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:53:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:93:5: warning: '__thumb__' is not defined, evaluates to '0' [-Wundef]
+   93 | #if __thumb__
+      |     ^~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:104:5: warning: '__thumb__' is not defined, evaluates to '0' [-Wundef]
+  104 | #if __thumb__ && __ARM_ARCH < 5 && !__clang__
+      |     ^~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:38:
+C:/devkitPro/calico/include/calico/arm/common.h:48:6: warning: '__thumb__' is not defined, evaluates to '0' [-Wundef]
+   48 | #if !__thumb__
+      |      ^~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:41:
+C:/devkitPro/calico/include/calico/arm/mpu.h:36:6: warning: '__thumb__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__thumb__
+      |      ^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererStageTextureSiteTryBind':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:6374:30: warning: unused parameter 'config' [-Wunused-parameter]
+ 6374 |     const NDSRendererConfig *config)
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~

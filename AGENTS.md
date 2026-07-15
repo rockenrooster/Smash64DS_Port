@@ -32,11 +32,11 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - New harness modes are only for scene-level capabilities such as
   `battle_playable`; otherwise use Boundary/Latest or continuous natural-runtime
   verifier plus captures.
-- Keep DS/backend behavior in `src/nds` or `src/port`.
-- Keep compatibility declarations in `include/`.
-- Do not edit generated build outputs or local emulator payloads.
-- Keep changes source-backed, buildable, and verifier-backed.
+- Keep DS/backend behavior in `src/nds` or `src/port`; compatibility declarations in `include/`.
+- Do not edit generated build outputs or emulator payloads; keep changes source-backed, buildable, and verifier-backed.
 - User-facing ROMs must be verifier-covered build configurations.
+- Publish exactly two root ROMs: `smash64ds.nds` for the original launch path and
+  `smash64ds-battle-playable-hwtri.nds` for P1; all other outputs stay in `builds/`.
 - After successful verified progress, run
   `.\scripts\New-Smash64DSSnapshot.ps1` as the final project action/tool call.
   Finish docs, static checks, verifiers, and status inspection first; never run
@@ -86,7 +86,9 @@ launch the obsolete five-minute configuration.
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
-make NDS_DEV_SCENE_HARNESS=normal -j16
+make TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -j16
+make TARGET=smash64ds-battle-playable-hwtri BUILD=build-battle-playable-canonical-hwtri-harness -j16
+.\scripts\check-published-roms.ps1 -RequireBoth
 ```
 
 Tiered verifiers:
@@ -94,16 +96,15 @@ Tiered verifiers:
 ```powershell
 .\scripts\verify-dev-fast.ps1
 .\scripts\verify-boundary.ps1
-.\scripts\verify-current.ps1
-.\scripts\verify-regression.ps1
+.\scripts\verify-current.ps1 -Build
 ```
 
-Use `verify-dev-fast.ps1 -Build -DelaySeconds 3` while iterating, and
-`verify-boundary.ps1 -DelaySeconds 3` when a runtime slice appears done.
-For shared-TU work, gate during the session on `RegressionCore`; run one full
-fresh Regression prebuild plus four sharded `-NoBuild` runs at the end. Builds
-expected to exceed 90 seconds should use `build-verify-profile.ps1 -Detach`,
-then confirm completion with `build-verify-profile.ps1 -VerifyStamp`.
+Use `verify-dev-fast.ps1 -DelaySeconds 3` while iterating, `verify-boundary.ps1
+-DelaySeconds 3` for a finished runtime slice, and `verify-current.ps1 -Build`
+when the original launch path can be affected.
+`Full`, `Regression*`, and `P1Gate` are list-only legacy inventories until their
+checks are migrated onto the two runtime ROMs; never execute or prebuild them.
+Focused lab builds may run only with their non-published output inside `builds/`.
 
 Use only repo-local `./emulators` melonDS binaries and the canonical window profile in every TOML; do not commit runner slots, emulator configs/binaries, logs, or shard artifacts.
 
@@ -113,11 +114,11 @@ Select the highest-impact unowned red P1 row from `P1_EXECUTION_BOARD.md`.
 Gameplay progress moves by runtime-first subsystem groups: import original TUs,
 wire narrow seams, prove natural runtime/captures, then graduate live.
 
-Keep all three subagent slots active whenever three independent useful P1 packets exist; immediately reassign completed slots. Each lane uses a separate worktree,
-build directory, runner slot, and claimed file set. Only integration/release edits
-central files and current-truth docs. Define one hypothesis,
-exclusive counters, and a keep/revert threshold; return a self-contained commit
-plus evidence. Do not begin P2 while a required P1 row is red.
+Keep all three subagent slots active when three useful P1 packets exist and
+reassign completed slots. Agents share the live tree, so each lane claims a
+disjoint file set, build directory, and runner slot. Only integration/release edits
+central files/docs. Define a hypothesis, exclusive counters, and a
+keep/revert threshold; do not begin P2 while a required P1 row is red.
 
 Legacy bounded modes are migrate-or-delete when superseded. Mechanical splits
 and tooling may stay smaller when they do not claim gameplay progress.
@@ -145,6 +146,5 @@ commands after it; only the final response may follow.
 
 - Use `apply_patch` for manual source/doc edits.
 - Do not revert user changes unless explicitly requested.
-- Do not add broad compatibility headers or broad original imports.
-- Do not treat a stub as a completed subsystem.
+- Do not add broad compatibility headers/imports or treat a stub as a completed subsystem.
 - Remove temporary probes before handoff; keep verified diagnostics only.

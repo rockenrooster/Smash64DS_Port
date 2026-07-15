@@ -33,10 +33,17 @@ param(
     [switch]$RendererM2DetailedLedger,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
+    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [ValidateRange(0,8)][int]$RendererFastRunMode = 0,
+    [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
+    [ValidateRange(0,1)][int]$M4WaterTiledAotMode = 0,
+    [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
+    [switch]$RequireZeroPostGoTextureFence,
+    [ValidateRange(0,1)][int]$FoxCpuMode = 0,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
     [string]$RendererBenchmarkExportPath = '',
+    [string]$RendererBenchmarkScreenshot = '',
     [string]$Harness = 'battle_mariofox_gcrunall_loop',
     [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
     [string]$Build = 'build-battle-mariofox-gcrunall-loop-harness',
@@ -47,6 +54,11 @@ param(
     [string]$HarnessSelectMessage = 'Direct gcRunAll-loop harness did not select VSBattle from Maps.'
 )
 $ErrorActionPreference = 'Stop'
+$staticTextureAotSelected =
+    $PSBoundParameters.ContainsKey('StaticTextureAotMode')
+$staticTextureAotSelected =
+    $staticTextureAotSelected -or $RequireZeroPostGoTextureFence
+$foxCpuModeSelected = $PSBoundParameters.ContainsKey('FoxCpuMode')
 if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
     throw 'OneMinuteMatchProof requires MatchLifecycleProof.'
 }
@@ -59,8 +71,26 @@ if ($RendererBenchmarkOnly -and ($RendererBenchmarkSamples -eq 0)) {
 if ($RendererM2DetailedLedger -and ($RendererProfileLevel -ne 1)) {
     throw 'RendererM2DetailedLedger requires RendererProfileLevel 1.'
 }
+if ($RequireZeroPostGoTextureFence -and -not $HardwareTriangles) {
+    throw 'RequireZeroPostGoTextureFence requires HardwareTriangles.'
+}
+if ($RequireZeroPostGoTextureFence -and -not $BattlePlayable) {
+    throw 'RequireZeroPostGoTextureFence requires BattlePlayable.'
+}
+if ($RequireZeroPostGoTextureFence -and ($StaticTextureAotMode -ne 1)) {
+    throw 'RequireZeroPostGoTextureFence requires StaticTextureAotMode 1.'
+}
+if ($RequireZeroPostGoTextureFence -and -not $OneMinuteMatchProof -and
+    ($RendererBenchmarkSamples -eq 0)) {
+    throw 'RequireZeroPostGoTextureFence requires a sampled benchmark window or OneMinuteMatchProof.'
+}
+if ($RequireZeroPostGoTextureFence -and
+    ($RendererBenchmarkSamples -gt 0) -and ($RendererProfileLevel -lt 1)) {
+    throw 'RequireZeroPostGoTextureFence sampled windows require RendererProfileLevel 1 or 2.'
+}
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
+. (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ImportBattleShipFTManager = $true
 if ($BattlePlayable) {
@@ -74,6 +104,12 @@ if ($MatchLifecycleProof) {
     $CPUOpponentProof = $true
     $ImportBattleShipVSResults = $true
 }
+if ($CPUOpponentProof) {
+    $FoxCpuMode = 1
+    $foxCpuModeSelected = $true
+}
+$preBattleSelectorSelected =
+    $staticTextureAotSelected -or $foxCpuModeSelected
 $verifierContext = Initialize-MelonDSVerifierContext `
     -Root $root `
     -MelonDS $MelonDS `
@@ -81,8 +117,8 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$rom = Join-Path $root "$Target.nds"
-$elf = Join-Path $root "$Target.elf"
+$rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
+$elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
@@ -98,7 +134,7 @@ $benchmarkMelonIdentity = $null
 $benchmarkMelonConfigSha256 = $null
 $usesRetainedWallpaper =
     (($Target -eq 'smash64ds-battle-playable-coarse-mipcache-hwtri') -or
-     ($Target -eq 'smash64ds-battle-playable-canonical-hwtri'))
+     ($Target -eq 'smash64ds-battle-playable-hwtri'))
 function Assert-Condition {
     param([bool]$Condition, [string]$Message, [string]$Context)
     if (-not $Condition) { throw "$Message`n$Context" }
@@ -292,7 +328,8 @@ function Get-BenchmarkMakeIdentity {
     }
     $required = @(
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
-        'RENDERER_BENCHMARK_MODE',
+        'RENDERER_BENCHMARK_MODE', 'M4_WATER_TILED_AOT',
+        'IFCOMMON_HYBRID_OAM',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
     foreach ($key in $required) {
@@ -307,6 +344,8 @@ function Get-BenchmarkMakeIdentity {
         Profile = [int]$values.PROFILE
         M2DetailedLedger = [int]$values.M2_DETAILED_LEDGER
         RendererBenchmarkMode = [int]$values.RENDERER_BENCHMARK_MODE
+        M4WaterTiledAotMode = [int]$values.M4_WATER_TILED_AOT
+        IFCommonHybridOamMode = [int]$values.IFCOMMON_HYBRID_OAM
         CommonCFlags = $values.CFLAGS_COMMON
         RendererCFlags = $values.CFLAGS_RENDERER
         SceneCFlags = $values.CFLAGS_SCENE
@@ -327,6 +366,8 @@ if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
 $makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
 $makeArgs += "NDS_RENDERER_M2_DETAILED_LEDGER=$([int]$RendererM2DetailedLedger.IsPresent)"
+$makeArgs += "NDS_RENDERER_M4_WATER_TILED_AOT=$M4WaterTiledAotMode"
+$makeArgs += "NDS_IFCOMMON_HYBRID_OAM=$IFCommonHybridOamMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
 }
@@ -390,7 +431,7 @@ if (-not $NoBuild) {
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw "$Label harness build did not produce the expected ROM and ELF."
 }
-if ($Target -match '^smash64ds-battle-playable-(canonical|coarse(?:-[a-z-]+)?|forensic)-hwtri$') {
+if ($Target -match '^smash64ds-battle-playable-(?:hwtri|coarse(?:-[a-z-]+)?-hwtri|forensic-hwtri)$') {
     & (Join-Path $PSScriptRoot 'check-renderer-itcm-placement.ps1') `
         -Elf $elf `
         -BenchmarkAblation:($Target -like '*triangle-noop*')
@@ -405,8 +446,12 @@ if ($RendererBenchmarkSamples -gt 0) {
         $benchmarkMakeIdentity.HarnessId -eq $ExpectedMode -and
         $benchmarkMakeIdentity.Profile -eq $RendererProfileLevel -and
         $benchmarkMakeIdentity.M2DetailedLedger -eq
-            [int]$RendererM2DetailedLedger.IsPresent) `
-        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2-ledger configuration.' `
+            [int]$RendererM2DetailedLedger.IsPresent -and
+        $benchmarkMakeIdentity.M4WaterTiledAotMode -eq
+            $M4WaterTiledAotMode -and
+        $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
+            $IFCommonHybridOamMode) `
+        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/IFCommon configuration.' `
         ($benchmarkMakeIdentity | Format-List | Out-String)
     $benchmarkRomIdentity = Get-BenchmarkFileIdentity -Path $rom
     $benchmarkElfIdentity = Get-BenchmarkFileIdentity -Path $elf
@@ -443,11 +488,47 @@ try {
         -WindowStyle Hidden `
         -PassThru
     Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort | Out-Null
+    $benchmarkScreenshotCommands = @()
+    if (-not [string]::IsNullOrWhiteSpace($RendererBenchmarkScreenshot)) {
+        $visibilityDir = [System.IO.Path]::GetFullPath(
+            (Join-Path $root 'artifacts\visibility'))
+        $screenshotPath = if ([System.IO.Path]::IsPathRooted(
+                $RendererBenchmarkScreenshot)) {
+            [System.IO.Path]::GetFullPath($RendererBenchmarkScreenshot)
+        } else {
+            [System.IO.Path]::GetFullPath(
+                (Join-Path $root $RendererBenchmarkScreenshot))
+        }
+        $visibilityPrefix = $visibilityDir.TrimEnd('\', '/') +
+            [System.IO.Path]::DirectorySeparatorChar
+        if (-not $screenshotPath.StartsWith(
+                $visibilityPrefix,
+                [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Renderer benchmark screenshots must stay under '$visibilityDir'."
+        }
+        $captureScript = [System.IO.Path]::GetFullPath(
+            (Join-Path $PSScriptRoot 'capture-running-melonds-window.ps1'))
+        $captureCommand =
+            'shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}" -EmulatorProcessId {1} -Output "{2}"' -f
+            $captureScript.Replace('\', '/'),
+            $emulator.Id,
+            $screenshotPath.Replace('\', '/')
+        $benchmarkScreenshotCommands = @(
+            ('if $renderer_benchmark_samples == {0}' -f
+                ($RendererBenchmarkSamples - 1)),
+            $captureCommand,
+            'end'
+        )
+    }
     # The natural combat chain runs ~1000+ bounded updates; battle_playable
     # continues into an input-driven KO -> Rebirth -> Wait. The lifecycle ROM
     # uses a one-minute source timer and gets one GDB session after startup;
     # repeated attach/detach cycles are unreliable in the melonDS GDB stub.
-    $minimumDelay = if ($RendererBenchmarkStartFrame -gt 0) {
+    $minimumDelay = if ($preBattleSelectorSelected) {
+        # Runtime selectors must be installed after C initialization but
+        # before VSBattle setup consumes them.
+        0
+    } elseif ($RendererBenchmarkStartFrame -gt 0) {
         # An exact frame gate is the warmup. Attach before the scene starts so
         # a caller delay cannot race past the requested synchronized window.
         0
@@ -471,7 +552,8 @@ try {
     } else {
         15
     }
-    $effectiveDelaySeconds = if ($RendererBenchmarkStartFrame -gt 0) {
+    $effectiveDelaySeconds = if ($preBattleSelectorSelected -or
+                                 ($RendererBenchmarkStartFrame -gt 0)) {
         0
     } else {
         [Math]::Max($DelaySeconds, $minimumDelay)
@@ -480,7 +562,11 @@ try {
         Start-Sleep -Seconds $effectiveDelaySeconds
     }
     $gdbRemoteTimeoutSeconds = if ($OneMinuteMatchProof) { 300 } else { 5 }
-    $gdbCaptureTimeoutSeconds = if ($OneMinuteMatchProof) { 300 } else { 30 }
+    $gdbCaptureTimeoutSeconds = if ($OneMinuteMatchProof) {
+        300
+    } else {
+        $RendererBenchmarkTimeoutSeconds
+    }
     $gdbCommands = @(
         'set pagination off',
         'set confirm off',
@@ -553,6 +639,8 @@ try {
                 $coarseBenchmarkCommands += 'printf "GX_BOUNDARY=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileGXStatusBeforeFlush, gNdsRendererProfileGXControlBeforeFlush, gNdsRendererProfileGXStatusAfterFlush, gNdsRendererProfileGXStatusPostVBlank, gNdsRendererProfileGXControlPostVBlank, gNdsRendererProfileFlushTicks'
                 $coarseBenchmarkCommands += 'printf "TEXTURE_PHASE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileTextureConvertTicks, gNdsRendererProfileTextureUploadTicks, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes, gNdsRendererProfileTexturePairOracleChecks, gNdsRendererProfileTexturePairOracleMismatches, gNdsRendererProfileTextureVBlankQueuedUploads, gNdsRendererProfileTextureVBlankQueuedBytes, gNdsRendererProfileTextureVBlankCommittedUploads, gNdsRendererProfileTextureVBlankCommitTicks, gNdsRendererProfileTextureVBlankOutsideCount, gNdsRendererProfileTextureVBlankFallbackCount, gNdsRendererProfileTextureVBlankStartLine, gNdsRendererProfileTextureVBlankEndLine'
                 $coarseBenchmarkCommands += 'printf "FAST_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]'
+                $coarseBenchmarkCommands += 'printf "M4_STATIC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount'
+                $coarseBenchmarkCommands += 'printf "M4_FENCE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'
                 if ($RendererM2DetailedLedger) {
                     foreach ($ownerIndex in 1..2) {
                         $coarseBenchmarkCommands += Get-RendererM2BenchmarkCommand -OwnerIndex $ownerIndex
@@ -618,6 +706,7 @@ try {
                 'if gNdsBattlePlayablePacingResult != 0'
                 $rendererBenchmarkCommand
                 $coarseBenchmarkCommands
+                $benchmarkScreenshotCommands
                 'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
                 'end'
                 'end'
@@ -670,6 +759,36 @@ try {
             $gdbCommands[4..($gdbCommands.Count - 1)]
         )
     }
+    if ($preBattleSelectorSelected) {
+        # Install one shared pre-battle stop for all runtime selectors. This
+        # must be added after the flow-specific waits above so it executes
+        # before them without creating two scVSBattleStartBattle breakpoints.
+        $preBattleSetupCommands = @(
+            'tbreak scVSBattleStartBattle',
+            'continue'
+        )
+        if ($staticTextureAotSelected) {
+            $preBattleSetupCommands +=
+                ('set variable gNdsRendererBattleStaticTextureEnabled = {0}' -f
+                 $StaticTextureAotMode)
+        }
+        if ($foxCpuModeSelected) {
+            $preBattleSetupCommands +=
+                ('set variable gNdsBattlePlayableFoxCpuEnabled = {0}' -f
+                 $FoxCpuMode)
+        }
+        if ($MatchLifecycleProof -and -not $OneMinuteMatchProof) {
+            $preBattleSetupCommands += @(
+                'tbreak ndsMNVSResultsRecordFrame if gNdsVSResultsResult == 0x56535231',
+                'continue'
+            )
+        }
+        $gdbCommands = @(
+            $gdbCommands[0..3]
+            $preBattleSetupCommands
+            $gdbCommands[4..($gdbCommands.Count - 1)]
+        )
+    }
     if ($HardwareTriangles) {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
@@ -709,7 +828,8 @@ try {
             'printf "RENDER_TEXFMT=%#x,%#x,%#x,%#x,%#x\n", gNdsRendererProfileTextureConvertFormatMask, gNdsRendererProfileTextureBindFormatMask, gNdsRendererProfileTexturePaletteFormatMask, gNdsRendererProfileTextureRejectFormatMask, gNdsRendererProfileTextureRejectReasonMask',
             'printf "RENDER_TEXLANE=%#x,%u,%u,%#x,%#x,%#x,%#x\n", gNdsRendererProfileTextureLaneLayoutMask, gNdsRendererProfileTextureLaneByteAccessCount, gNdsRendererProfileTextureLaneHalfwordAccessCount, gNdsRendererProfileTextureLaneByteFormatMask, gNdsRendererProfileTextureLaneHalfwordFormatMask, gNdsRendererProfileTextureLaneByteMap, gNdsRendererProfileTextureLaneHalfwordMap',
             'printf "RENDER_COMBINE=%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsRendererProfileCombineModeCount, gNdsRendererProfileCombineModeDistinctCount, gNdsRendererProfileLitShadeCombineCount, gNdsRendererProfileMaterialCombineCount, gNdsRendererProfileProjectedSubmitFallbackCount, gNdsRendererProfileCombineMode0W0, gNdsRendererProfileCombineMode0W1, gNdsRendererProfileCombineMode1W0, gNdsRendererProfileCombineMode1W1, gNdsRendererProfileCombineMode2W0, gNdsRendererProfileCombineMode2W1, gNdsRendererProfileCombineMode3W0, gNdsRendererProfileCombineMode3W1',
-            'printf "RENDER_LIGHT=%u,%u,%u\n", gNdsRendererProfileLightColorCommands, gNdsRendererProfileLightDirectionCommands, gNdsRendererProfileLightFallbackCount'
+            'printf "RENDER_LIGHT=%u,%u,%u\n", gNdsRendererProfileLightColorCommands, gNdsRendererProfileLightDirectionCommands, gNdsRendererProfileLightFallbackCount',
+            'printf "M4_FENCE_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureTeardownCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'
         )
         if ($BattlePlayable -and $RealtimePresentation) {
             $hardwareCommands += 'printf "SOBJ_WALL_CACHE=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperCacheBuildCount, gNdsSObjWallpaperCacheHitCount, gNdsSObjWallpaperCacheFastDrawCount, gNdsSObjWallpaperCacheFallbackCount, gNdsSObjWallpaperCacheWidth, gNdsSObjWallpaperCacheHeight, gNdsSObjWallpaperCacheOpaquePixels, gNdsSObjWallpaperCacheBuildTicks, gNdsSObjWallpaperCacheDrawTicks'
@@ -757,7 +877,7 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $computerCommands = @(
-            'printf "CPU_CONFIG=%u,%u,%u,%u,%u,%u,%#x,%u\n", gSCManagerBattleState->players[0].pkind, gSCManagerBattleState->players[1].pkind, gSCManagerBattleState->players[1].level, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count, gSCManagerBattleState->time_limit, gSCManagerBattleState->item_toggles, gSCManagerBattleState->item_appearance_rate',
+            'printf "CPU_CONFIG=%u,%u,%u,%u,%u,%u,%#x,%u,%u\n", gSCManagerBattleState->players[0].pkind, gSCManagerBattleState->players[1].pkind, gSCManagerBattleState->players[1].level, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count, gSCManagerBattleState->time_limit, gSCManagerBattleState->item_toggles, gSCManagerBattleState->item_appearance_rate, gNdsBattlePlayableFoxCpuEnabled',
             'printf "CPU_AI=%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%d,%d\n", gNdsFTComputerSetupCount, gNdsFTComputerDamageDetectCount, gNdsFTComputerProcessCount, gNdsFTComputerTargetFrames, gNdsFTComputerObjectiveMask, gNdsFTComputerBehaviorMask, gNdsFTComputerInputChangeCount, gNdsFTComputerStickFrames, gNdsFTComputerButtonAFrames, gNdsFTComputerButtonBFrames, gNdsFTComputerButtonZFrames, gNdsFTComputerAttackFrames, gNdsFTComputerHitboxFrames, gNdsFTComputerGuardFrames, gNdsFTComputerRecoveryFrames, gNdsFTComputerStatusChangeCount, gNdsFTComputerFinalStatus, gNdsFTComputerFinalGA, gNdsFTComputerFinalInputKind, gNdsFTComputerMarioDamageMax, gNdsFTComputerFloorLineCount, gNdsFTComputerStartXMilli, gNdsFTComputerMinXMilli, gNdsFTComputerMaxXMilli, gNdsFTComputerFinalXMilli'
         )
         $gdbCommands = @($beforeDetach + $computerCommands + $afterDetach)
@@ -870,7 +990,7 @@ try {
     $memoryArena = [regex]::Match($gdbStdout, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryReloc = [regex]::Match($gdbStdout, 'MEMRELOC=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryEvict = [regex]::Match($gdbStdout, 'MEMEVICT=([0-9]+),([0-9]+)')
-    $computerConfig = [regex]::Match($gdbStdout, 'CPU_CONFIG=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+)')
+    $computerConfig = [regex]::Match($gdbStdout, 'CPU_CONFIG=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $computerAI = [regex]::Match($gdbStdout, 'CPU_AI=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $battleLifecycle = [regex]::Match($gdbStdout, 'VSB_END=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $vsResults = [regex]::Match($gdbStdout, 'VS_RESULTS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -918,14 +1038,20 @@ try {
     $warmBenchmark = @()
     $texturePhaseBenchmark = @()
     $fastRunBenchmark = @()
+    $m4StaticBenchmark = @()
+    $m4FenceBenchmark = @()
     $m2Benchmark = @()
     $rendererSemanticBenchmark = @()
+    $m4FenceFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+        -Name 'M4_FENCE_FINAL' -FieldCount 24)
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
         $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 24)
         $gxBoundaryBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'GX_BOUNDARY' -FieldCount 7)
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
         $texturePhaseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TEXTURE_PHASE_BENCH' -FieldCount 15)
         $fastRunBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'FAST_BENCH' -FieldCount 10)
+        $m4StaticBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_STATIC' -FieldCount 11)
+        $m4FenceBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_FENCE' -FieldCount 13)
         if ($RendererM2DetailedLedger) {
             $m2Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M2_BENCH' -FieldCount 50)
         }
@@ -988,6 +1114,40 @@ try {
     $audioFgmKo = [regex]::Match($gdbStdout, 'AUDIO_FGM_KO=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
+    $m4FenceFinalSummary = ''
+    if ($RequireZeroPostGoTextureFence) {
+        Assert-Condition ($m4FenceFinal.Count -eq 1) `
+            "M4 terminal texture fence captured $($m4FenceFinal.Count) records instead of one." `
+            $gdbStdout
+        $m4FenceFinalValues = Get-Ints $m4FenceFinal[0]
+        $m4FenceFinalCountSum = [int64]0
+        foreach ($fenceCount in $m4FenceFinalValues[14..23]) {
+            $m4FenceFinalCountSum += $fenceCount
+        }
+        $expectedM4TeardownCount = if ($OneMinuteMatchProof) { 1 } else { 0 }
+        Assert-Condition (
+            $m4FenceFinalValues[1] -eq 1 -and
+            $m4FenceFinalValues[2] -eq 1 -and
+            $m4FenceFinalValues[3] -eq 0 -and
+            $m4FenceFinalValues[4] -eq 20 -and
+            $m4FenceFinalValues[5] -eq 94208 -and
+            $m4FenceFinalValues[6] -eq 1 -and
+            $m4FenceFinalValues[7] -eq $expectedM4TeardownCount -and
+            $m4FenceFinalValues[10] -eq 0 -and
+            $m4FenceFinalValues[12] -eq 0 -and
+            $m4FenceFinalValues[13] -eq 0 -and
+            $m4FenceFinalCountSum -eq 0
+        ) "M4 terminal post-GO texture fence failed (actual=$($m4FenceFinalValues -join ','))." $gdbStdout
+        if (-not $OneMinuteMatchProof -and ($RendererBenchmarkSamples -gt 0)) {
+            Assert-Condition (
+                $m4FenceFinalValues[8] -eq 0xfffff -and
+                $m4FenceFinalValues[9] -eq 0x7 -and
+                $m4FenceFinalValues[11] -gt 0
+            ) 'M4 strict benchmark did not cover every prepared owner through pinned hits.' $gdbStdout
+        }
+        $m4FenceFinalSummary =
+            "M4 terminal post-GO texture fence: teardown=$($m4FenceFinalValues[7]) first=0/0 counts=$($m4FenceFinalValues[14..23] -join ',')"
+    }
     Assert-Condition ($aobj32.Success -and [int64]$aobj32.Groups[4].Value -eq 0) 'AObjEvent32 source-command normalization rejected a live script.' $gdbStdout
     $aobjSummary = " aobj32=$($aobj32.Groups[1].Value)/$($aobj32.Groups[2].Value)/reuse$($aobj32.Groups[3].Value)/fail0"
     Assert-Condition ($harn.Success -and (Convert-MarkerUInt32 $harn.Groups[1].Value) -eq 0x4841524e -and [int]$harn.Groups[2].Value -eq $ExpectedMode -and [int]$harn.Groups[3].Value -eq $ExpectedHarnessSceneCurr -and [int]$harn.Groups[4].Value -eq $ExpectedHarnessScenePrev -and (Convert-MarkerUInt32 $harn.Groups[5].Value) -eq 0) $HarnessSelectMessage $gdbStdout
@@ -1007,7 +1167,7 @@ try {
     if ($ImportBattleShipFTComputer) {
         $cc = Get-Ints $computerConfig
         $expectedTimeLimit = 1
-        Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq 3 -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0) 'Mode 163 did not configure the expected items-off Mario human versus Fox level-3 CPU match.' $gdbStdout
+        Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq 3 -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0 -and $cc[8] -eq $FoxCpuMode) 'Mode 163 did not preserve the items-off Mario human versus Fox level-3 CPU match and selected Fox CPU decision mode.' $gdbStdout
     }
     if ($OneMinuteMatchProof) {
         $start = Get-Ints $matchStart
@@ -1151,6 +1311,7 @@ try {
             'One-minute match observed a stale-reloc, normalization, fixup, audio-safety, collision-range, or display-bounds failure.' `
             $gdbStdout
 
+        if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
         Write-Output ("$Label one-minute match passed (unthrottled state/memory only; realtime not measured): logic=$($bp[2]) timer=$($start[3])->$($life[5])/$($life[6]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])")
         return
     }
@@ -1352,6 +1513,8 @@ try {
                 $warmMetricSummary = ''
                 $texturePhaseMetricSummary = ''
                 $fastRunMetricSummary = ''
+                $m4StaticMetricSummary = ''
+                $m4FenceMetricSummary = ''
                 $m2MetricSummary = ''
                 $semanticMetricSummary = ''
                 $semanticChurnSummary = ''
@@ -1413,6 +1576,8 @@ try {
                     $coarseSamples = [System.Collections.Generic.List[object]]::new()
                     $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                     $fastRunSamples = [System.Collections.Generic.List[object]]::new()
+                    $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
+                    $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
                     $semanticSamples = [System.Collections.Generic.List[object]]::new()
                     $ownerSamples = @(
                         [System.Collections.Generic.List[object]]::new(),
@@ -1444,6 +1609,8 @@ try {
                         $warmSamples = [System.Collections.Generic.List[object]]::new()
                         $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                         $fastRunSamples = [System.Collections.Generic.List[object]]::new()
+                        $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
+                        $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
                         $logicTickResetCount = 0
                         $drawResidualRatios = @()
@@ -1467,6 +1634,8 @@ try {
                             Assert-Condition ($warmBenchmark.Count -eq $RendererBenchmarkSamples) "WARM_NO_UPLOAD benchmark captured $($warmBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         Assert-Condition ($fastRunBenchmark.Count -eq $RendererBenchmarkSamples) "Fast-run benchmark captured $($fastRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        Assert-Condition ($m4StaticBenchmark.Count -eq $RendererBenchmarkSamples) "M4 static-texture benchmark captured $($m4StaticBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        Assert-Condition ($m4FenceBenchmark.Count -eq $RendererBenchmarkSamples) "M4 post-GO texture fence captured $($m4FenceBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         Assert-Condition ($texturePhaseBenchmark.Count -eq $RendererBenchmarkSamples) "Texture-phase benchmark captured $($texturePhaseBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         for ($sampleIndex = 0; $sampleIndex -lt $RendererBenchmarkSamples; $sampleIndex++) {
                             $coarse = Get-Ints $coarseBenchmark[$sampleIndex]
@@ -1547,7 +1716,7 @@ try {
                             if ($RendererFastRunMode -eq 0) {
                                 Assert-Condition ($fastRun[2] -eq 0 -and $fastRun[3] -eq 0) "Generic laboratory mode unexpectedly executed fast runs at frame $frame." $gdbStdout
                             } elseif (($RendererProfileLevel -eq 1) -and
-                                      ($RendererFastRunMode -eq 8) -and
+                                      ($RendererFastRunMode -in @(7, 8)) -and
                                       ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 1)) {
                                 # TRIANGLE_NOOP deliberately removes the three
                                 # stage fast-submit runs. The generated fighter
@@ -1555,12 +1724,81 @@ try {
                                 # all 626 Mario/Fox triangles, and no fighter
                                 # fallback. Stage state rejects are expected.
                                 Assert-Condition ($fastRun[2] -eq 67 -and $fastRun[3] -eq 626 -and $fastRun[4] -eq 0 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 59 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "TRIANGLE_NOOP did not preserve the exact 67-run/626-triangle generated fighter-owner floor and 0/320/306 owner partition at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
-                            } elseif (($RendererProfileLevel -eq 1) -and ($RendererFastRunMode -eq 8)) {
+                            } elseif (($RendererProfileLevel -eq 1) -and
+                                      ($RendererFastRunMode -in @(7, 8))) {
                                 Assert-Condition ($fastRun[2] -eq 70 -and $fastRun[3] -eq 686 -and $fastRun[4] -eq 60 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 29 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "Production native fighter owner did not preserve exact 70-run/686-triangle accounting, 60/320/306 owner partition, and 29/0/0 fallback partition at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
                             } else {
                                 Assert-Condition ($fastRun[2] -gt 0 -and $fastRun[3] -gt 0) "Selected laboratory fast mode executed no fast triangles at frame $frame." $gdbStdout
                             }
                             $fastRunSamples.Add($fastRun)
+                            $m4Static = Get-Ints $m4StaticBenchmark[$sampleIndex]
+                            Assert-Condition ($m4Static[0] -eq $frame -and
+                                $m4Static[1] -eq $StaticTextureAotMode) "M4 static-texture accounting is not synchronized or in the selected mode at frame $frame." $gdbStdout
+                            if ($StaticTextureAotMode -eq 1) {
+                                Assert-Condition (
+                                    $m4Static[2] -eq 1 -and
+                                    $m4Static[3] -eq 0 -and
+                                    $m4Static[4] -eq 20 -and
+                                    $m4Static[5] -eq 94208 -and
+                                    $m4Static[6] -eq 1 -and
+                                    $m4Static[7] -eq 0xfffff -and
+                                    $m4Static[8] -eq 0x7 -and
+                                    $m4Static[9] -eq 0 -and
+                                    $m4Static[10] -gt 0
+                                ) "M4 static-texture AOT corpus was not fully prepared, armed, covered, and pinned at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
+                            } else {
+                                Assert-Condition (
+                                    @($m4Static[2..10] |
+                                        Where-Object { $_ -ne 0 }).Count -eq 0
+                                ) "M4 static-texture control mode performed work at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
+                            }
+                            $m4StaticSamples.Add($m4Static)
+                            $m4Fence = Get-Ints $m4FenceBenchmark[$sampleIndex]
+                            Assert-Condition ($m4Fence[0] -eq $frame) `
+                                "M4 post-GO texture fence is not synchronized at frame $frame." `
+                                $gdbStdout
+                            $m4FenceCountSum = [int64]0
+                            foreach ($fenceCount in $m4Fence[3..12]) {
+                                $m4FenceCountSum += $fenceCount
+                            }
+                            if ($m4FenceCountSum -eq 0) {
+                                Assert-Condition (
+                                    $m4Fence[1] -eq 0 -and $m4Fence[2] -eq 0
+                                ) "M4 zero-count fence published a first diagnostic at frame $frame." $gdbStdout
+                            } else {
+                                Assert-Condition (
+                                    $m4Fence[1] -ge 1 -and
+                                    $m4Fence[1] -le 10 -and
+                                    $m4Fence[2] -gt 0 -and
+                                    $m4Fence[2] -le $frame
+                                ) "M4 nonzero fence lacks a valid first class/frame at frame $frame." $gdbStdout
+                            }
+                            if ($sampleIndex -gt 0) {
+                                $previousM4Fence = Get-Ints $m4FenceBenchmark[$sampleIndex - 1]
+                                $m4FenceMonotonic = $true
+                                foreach ($fenceIndex in 3..12) {
+                                    if ($m4Fence[$fenceIndex] -lt
+                                        $previousM4Fence[$fenceIndex]) {
+                                        $m4FenceMonotonic = $false
+                                    }
+                                }
+                                Assert-Condition $m4FenceMonotonic `
+                                    "M4 cumulative fence counters regressed at frame $frame." `
+                                    $gdbStdout
+                                if ($previousM4Fence[1] -ne 0) {
+                                    Assert-Condition (
+                                        $m4Fence[1] -eq $previousM4Fence[1] -and
+                                        $m4Fence[2] -eq $previousM4Fence[2]
+                                    ) "M4 first fence diagnostic changed at frame $frame." $gdbStdout
+                                }
+                            }
+                            if ($RequireZeroPostGoTextureFence) {
+                                Assert-Condition (
+                                    @($m4Fence[1..12] |
+                                        Where-Object { $_ -ne 0 }).Count -eq 0
+                                ) "M4 strict post-GO texture fence failed at frame $frame (actual=$($m4Fence -join ','))." $gdbStdout
+                            }
+                            $m4FenceSamples.Add($m4Fence)
                             if ($RendererM2DetailedLedger) {
                                 $m2Combined = [int64[]]::new(50)
                                 $m2Combined[0] = $frame
@@ -1646,9 +1884,66 @@ try {
                                                 $m2[49] -gt 0
                                             ) "M2 owner $m2OwnerId TRIANGLE_NOOP phase census is inconsistent at frame $frame." $gdbStdout
                                         }
+                                    } elseif (($RendererFastRunMode -eq 7) -and
+                                        ($benchmarkMakeIdentity.RendererBenchmarkMode -in @(0,1))) {
+                                        $expectedJoints = if ($m2OwnerId -eq 1) { 25 } else { 27 }
+                                        $expectedBindings = if ($m2OwnerId -eq 1) { 14 } else { 18 }
+                                        $expectedEpochs = if ($m2OwnerId -eq 1) { 18 } else { 31 }
+                                        $expectedRuns = if ($m2OwnerId -eq 1) { 30 } else { 37 }
+                                        $ownerPhaseTicks = [int64]0
+                                        foreach ($tickField in 2..13) {
+                                            $ownerPhaseTicks += $m2[$tickField]
+                                        }
+                                        $ownerPhaseTicks += $m2[19]
+                                        $productionPhaseTicks = [int64]0
+                                        foreach ($tickField in 14..18) {
+                                            $productionPhaseTicks += $m2[$tickField]
+                                        }
+                                        Assert-Condition (
+                                            $ownerPhaseTicks -eq
+                                                $coarse[11 + $m2OwnerId] -and
+                                            $productionPhaseTicks -eq $m2[13] -and
+                                            $m2[20] -eq 1 -and
+                                            $m2[21] -eq 0 -and
+                                            $m2[22] -eq 0 -and
+                                            $m2[23] -eq 0
+                                        ) "M2 hierarchy owner $m2OwnerId did not conserve exclusive/production phases or fell back at frame $frame." $gdbStdout
+                                        Assert-Condition (
+                                            $m2[24] -eq $expectedJoints -and
+                                            $m2[25] -eq $expectedJoints -and
+                                            $m2[26] -eq $expectedBindings -and
+                                            $m2[27] -eq $expectedBindings -and
+                                            $m2[28] -eq
+                                                ($m2[29] + $m2[30] + $m2[31]) -and
+                                            $m2[29] -eq $expectedJoints -and
+                                            $m2[31] -eq 0 -and
+                                            $m2[33] -eq $expectedJoints -and
+                                            $m2[33] -eq
+                                                ($m2[34] + $m2[35] +
+                                                 $m2[36] + $m2[37]) -and
+                                            $m2[38] -eq 0
+                                        ) "M2 hierarchy owner $m2OwnerId joint/binding/XObj/FTParts census drifted at frame $frame." $gdbStdout
+                                        Assert-Condition (
+                                            $m2[39] -eq 1 -and
+                                            $m2[40] -eq 0 -and
+                                            $m2[41] -eq 0 -and
+                                            $m2[42] -eq $expectedJoints -and
+                                            $m2[43] -eq 0 -and
+                                            $m2[44] -eq 0 -and
+                                            $m2[45] -eq 0
+                                        ) "M2 hierarchy owner $m2OwnerId retained a CPU world/camera/final-compose pass at frame $frame." $gdbStdout
+                                        $expectedRootGX = if (
+                                            $benchmarkMakeIdentity.RendererBenchmarkMode -eq 0
+                                        ) { $expectedBindings } else { 0 }
+                                        Assert-Condition (
+                                            $m2[46] -eq $expectedRootGX -and
+                                            $m2[47] -eq $expectedEpochs -and
+                                            $m2[48] -eq $expectedRuns -and
+                                            $m2[49] -eq $expectedRuns
+                                        ) "M2 hierarchy owner $m2OwnerId did not preserve exact root/epoch/run commit counts at frame $frame." $gdbStdout
                                     }
                                 }
-                                if (($RendererFastRunMode -eq 8) -and
+                                if (($RendererFastRunMode -in @(7, 8)) -and
                                     ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 0)) {
                                     Assert-Condition (
                                         $m2Combined[46] -eq 32 -and
@@ -1742,6 +2037,9 @@ try {
                             $warmMetricSummary = "Renderer WARM_NO_UPLOAD: samples=$RendererBenchmarkSamples suppressedUploads=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 1)) suppressedBytes=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 2))"
                         }
                         $fastRunMetricSummary = "Renderer fast raw runs: mode=$RendererFastRunMode samples=$RendererBenchmarkSamples runs=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 2)) triangles=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 3)) stage=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 4)) Mario=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 5)) Fox=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 6)) fallbackState=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 7)) fallbackVertex=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 8)) fallbackCommand=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 9))"
+                        $m4StaticMetricSummary = "Renderer M4 static textures: mode=$StaticTextureAotMode samples=$RendererBenchmarkSamples prepare=$($m4StaticSamples[0][2]) fail=$($m4StaticSamples[0][3]) prepared=$($m4StaticSamples[0][4]) bytes=$($m4StaticSamples[0][5]) arm=$($m4StaticSamples[0][6]) seenMask=0x$('{0:x}' -f $m4StaticSamples[-1][7]) ownerMask=0x$('{0:x}' -f $m4StaticSamples[-1][8]) violation=$($m4StaticSamples[-1][9]) pinnedHits=$($m4StaticSamples[0][10])..$($m4StaticSamples[-1][10])"
+                        $m4FenceLast = $m4FenceSamples[-1]
+                        $m4FenceMetricSummary = "Renderer M4 post-GO texture fence: samples=$RendererBenchmarkSamples first=$($m4FenceLast[1])/$($m4FenceLast[2]) convert=$($m4FenceLast[3]) decode=$($m4FenceLast[4]) alloc=$($m4FenceLast[5]) fileIO=$($m4FenceLast[6]) glCreate=$($m4FenceLast[7]) glUpload=$($m4FenceLast[8]) glDelete=$($m4FenceLast[9]) evict=$($m4FenceLast[10]) refresh=$($m4FenceLast[11]) fallback=$($m4FenceLast[12])"
                         $texturePhaseMetricSummary = "Renderer texture phases: samples=$RendererBenchmarkSamples convert=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 1)) queue=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 2)) uploads=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 3))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 4)) pairOracle=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 5))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 6)) vblankQueued=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 7))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 8)) committed=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 9)) commitTicks=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 10)) outside/fallback=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 11))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 12)) lines=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 13))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 14))"
                         if ($RendererM2DetailedLedger -and
                             ($m2CombinedSamples.Count -eq $RendererBenchmarkSamples)) {
@@ -1808,6 +2106,12 @@ try {
                             [int]$rendererM2DetailedLedgerMarker.Groups[1].Value
                         rendererBenchmarkMode =
                             $benchmarkMakeIdentity.RendererBenchmarkMode
+                        staticTextureAotMode = $StaticTextureAotMode
+                        m4WaterTiledAotMode =
+                            $benchmarkMakeIdentity.M4WaterTiledAotMode
+                        ifCommonHybridOamMode =
+                            $benchmarkMakeIdentity.IFCommonHybridOamMode
+                        foxCpuMode = $FoxCpuMode
                         wallpaperIncrementalMode = $WallpaperIncrementalMode
                         lowerTextHudMode = $LowerTextHudMode
                         effectiveCFlags = [ordered]@{
@@ -1875,6 +2179,12 @@ try {
                             kind = 'smash64ds-renderer-fast-raw-benchmark'
                             identity = $benchmarkIdentity
                             fastRunMode = $RendererFastRunMode
+                            staticTextureAotMode = $StaticTextureAotMode
+                            m4WaterTiledAotMode = $M4WaterTiledAotMode
+                            ifCommonHybridOamMode = $IFCommonHybridOamMode
+                            requireZeroPostGoTextureFence =
+                                [bool]$RequireZeroPostGoTextureFence
+                            foxCpuMode = $FoxCpuMode
                             wallpaperIncrementalMode = $WallpaperIncrementalMode
                             lowerTextHudMode = $LowerTextHudMode
                             samples = [ordered]@{
@@ -1884,6 +2194,8 @@ try {
                                 coarse = @($coarseSamples)
                                 texturePhases = @($texturePhaseSamples)
                                 fastRaw = @($fastRunSamples)
+                                m4Static = @($m4StaticSamples)
+                                m4Fence = @($m4FenceSamples)
                                 owners = @(
                                     @($ownerSamples[0]),
                                     @($ownerSamples[1]),
@@ -1941,6 +2253,9 @@ try {
                     if ($warmMetricSummary) { Write-Output $warmMetricSummary }
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
+                    if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
+                    if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
+                    if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
                     if ($m2MetricSummary) { Write-Output $m2MetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     Write-Output "$Label renderer benchmark-only sample passed."
@@ -1951,9 +2266,12 @@ try {
                 if ($RendererProfileLevel -lt 2) {
                     # The resident texture cache survives frame boundaries, so a
                     # completed warm frame may legitimately have zero misses.
-                    # Active and indexed hits, conservation, and the probe bound
-                    # are the invariant performance contract.
-                    Assert-Condition ($rth[0] -gt 0 -and $rth[2] -gt 0 -and $rth[3] -gt 0 -and ($rth[2] + $rth[3] + $rth[4]) -eq $rth[0] -and $rth[1] -ge ($rth[3] + $rth[4]) -and $rth[1] -lt (4 * $rth[0])) 'Performance/coarse texture hash lookup lacked active/table coverage, exact accounting, or bounded probes.' $gdbStdout
+                    # Mode 7 resolves every fighter texture through the indexed
+                    # table during whole-owner preflight, then commits prepared
+                    # descriptors without repeating an active-entry lookup.
+                    $activeHitCoverage = ($rth[2] -gt 0) -or
+                        (($RendererFastRunMode -eq 7) -and ($rth[3] -gt 0))
+                    Assert-Condition ($rth[0] -gt 0 -and $activeHitCoverage -and $rth[3] -gt 0 -and ($rth[2] + $rth[3] + $rth[4]) -eq $rth[0] -and $rth[1] -ge ($rth[3] + $rth[4]) -and $rth[1] -lt (4 * $rth[0])) 'Performance/coarse texture hash lookup lacked mode-applicable active/table coverage, exact accounting, or bounded probes.' $gdbStdout
                 } else {
                     Assert-Condition (($rth | Measure-Object -Sum).Sum -eq 0) 'Forensic renderer unexpectedly used the performance texture hash lookup.' $gdbStdout
                 }
@@ -2061,7 +2379,7 @@ try {
                 $expectedBatchReuse = 707
                 $expectedBatchEnd = 121
                 if (($RendererProfileLevel -lt 2) -and
-                    ($RendererFastRunMode -eq 8)) {
+                    ($RendererFastRunMode -in @(7, 8))) {
                     # The production owner keeps identical policy epochs but
                     # carries 18 compatible fighter batches across old root
                     # boundaries. Texture preparation remains unchanged.
@@ -2178,7 +2496,7 @@ try {
                 $preCutoverProjectedDivisions = (9 * ($rs[0] + $rs[1] + $rs[2] + $rs[4] + $rs[5] + $rs[6])) + (6 * $rs[3])
                 $expectedProjectedFallbackCount = $rs[2] + $rs[4] + $rs[5] + $rs[6]
                 if (($RendererProfileLevel -lt 2) -and
-                    ($RendererFastRunMode -eq 8)) {
+                    ($RendererFastRunMode -in @(7, 8))) {
                     # The production native-fighter owner keeps the canonical
                     # cross-matrix submit class, but GX palette restores now
                     # remove those 44 triangles from projected fallback.
@@ -2252,7 +2570,7 @@ try {
                 $lpv = Get-Ints $livePad
                 Assert-Condition ($livePad.Success -and $lpv[0] -gt 0 -and $lpv[1] -gt 0 -and (($lpv[2] -band 3) -eq 3) -and $lpv[7] -eq 0 -and $lpv[8] -eq 0 -and $lpv[9] -eq 0 -and $lpv[10] -eq 0 -and $lpv[11] -eq 0 -and $lpv[16] -eq 0 -and $lpv[17] -eq 0 -and $lpv[18] -eq 0 -and $lpv[19] -eq 0) 'Canonical realtime build did not use live DS input with connected-neutral pad1.' $gdbStdout
             }
-            if ($ImportBattleShipFTComputer) {
+            if ($ImportBattleShipFTComputer -and ($FoxCpuMode -eq 1)) {
                 $cpu = Get-Ints $computerAI
                 if ($BattlePlayable -and $preGoState) {
                     Assert-Condition (
@@ -2268,6 +2586,20 @@ try {
                     Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and $cpu[2] -gt 0 -and $cpu[3] -gt 0 -and $cpu[7] -gt 0 -and $cpu[20] -gt 0) 'Canonical realtime build did not run the imported Fox CPU setup/process/target/movement path.' $gdbStdout
                 }
                 $hardwareSummary += " cpu=setup$($cpu[0])/proc$($cpu[2])/target$($cpu[3])/stick$($cpu[7])/obj0x$('{0:x}' -f $cpu[4])"
+            } elseif ($ImportBattleShipFTComputer) {
+                $cpu = Get-Ints $computerAI
+                Assert-Condition (
+                    $computerAI.Success -and
+                    $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and
+                    $cpu[2] -eq 0 -and $cpu[3] -eq 0 -and
+                    $cpu[4] -eq 0 -and $cpu[5] -eq 0 -and
+                    $cpu[6] -eq 0 -and $cpu[7] -eq 0 -and
+                    $cpu[8] -eq 0 -and $cpu[9] -eq 0 -and
+                    $cpu[10] -eq 0 -and $cpu[11] -eq 0 -and
+                    $cpu[12] -eq 0 -and $cpu[13] -eq 0 -and
+                    $cpu[14] -eq 0 -and $cpu[15] -eq 0
+                ) 'Fox-CPU-paused mode did not preserve original setup while suppressing its imported decision/input path.' $gdbStdout
+                $hardwareSummary += " cpu=paused/setup$($cpu[0])/proc$($cpu[2])"
             }
             if ($usesRetainedWallpaper -and $ImportBattleShipIFCommon) {
                 $ih = Get-Ints $ifHud
@@ -2298,6 +2630,9 @@ try {
                     Write-Output $stage0Summary
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
+                    if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
+                    if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
+                    if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
                     if ($m2MetricSummary) { Write-Output $m2MetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     $ownerChurnSummaries | ForEach-Object { Write-Output $_ }

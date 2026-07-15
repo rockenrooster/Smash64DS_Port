@@ -10,14 +10,8 @@ param(
     [switch]$SkipRegistryCheck
 )
 $ErrorActionPreference = 'Stop'
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-if (-not $Build -and -not $NoBuild -and -not $List) {
-    if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
-    if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    Write-Output 'Building the normal opening ROM incrementally for P1Gate.'
-    & make -C $root TARGET=smash64ds BUILD=build `
-        NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=1 -j16
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (-not $List) {
+    throw 'P1Gate execution is retired while its compile-distinct legs are migrated to the two-ROM runtime model. Use verify-current.ps1 or verify-boundary.ps1.'
 }
 $params = @{
     Profile = 'P1Gate'

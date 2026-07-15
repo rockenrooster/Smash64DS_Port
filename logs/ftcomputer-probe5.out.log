@@ -1,0 +1,7 @@
+battle_playable_compat_stubs.c
+battleship_ftcomputer.c
+scene_backend.c
+linking smash64ds-ftcomputer-probe.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-ftcomputer-probe.nds

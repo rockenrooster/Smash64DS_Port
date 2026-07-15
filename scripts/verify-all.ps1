@@ -4,7 +4,7 @@ param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','P1Gate','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
-    [string]$Profile = 'Full',
+    [string]$Profile = 'Boundary',
     [string[]]$Only,
     [string]$From,
     [switch]$List,
@@ -137,6 +137,13 @@ function Invoke-VerifyScript {
 if ($Build -and $NoBuild) {
     throw 'Use either -Build or -NoBuild, not both.'
 }
+$legacyMultiRomProfiles = @(
+    'Full', 'P1Gate', 'Regression', 'RegressionCore', 'RegressionFast',
+    'Smoke', 'SmokeFast', 'Fighter', 'Direct', 'MenuChain'
+)
+if (-not $List -and ($legacyMultiRomProfiles -contains $Profile)) {
+    throw "Profile '$Profile' is registry-list-only while legacy harnesses are migrated to the two-ROM runtime model. Use Boundary, BoundaryDirect, Latest, or LatestFast."
+}
 $selectedGdbPort = if (($RunnerSlot -ge 0) -and -not $PSBoundParameters.ContainsKey('GdbPort')) {
     Get-MelonDSRunnerPort -RunnerSlot $RunnerSlot -Cpu ARM9
 } else {
@@ -175,7 +182,7 @@ try {
     if ($Build) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-        & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=1 -B -j16
+        & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B -j16
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     $plan = @(Get-Smash64DSVerifyPlan -Profile $Profile -Only $Only -From $From)

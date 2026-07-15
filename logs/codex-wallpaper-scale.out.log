@@ -1,0 +1,8 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+scene_backend.c
+linking smash64ds-battle-playable-canonical-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-canonical-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+[33;1mWARNING: battle_playable Pupupu realtime HW textured perf below 60fps target: fps=12/12 x0.1; renderer-cache follow-up still required.[0m

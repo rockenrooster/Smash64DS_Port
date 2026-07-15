@@ -8,25 +8,12 @@ _Static_assert(sizeof(NDSPupupuWaterTiledPlanVertex) == 16u,
                "tiled-water plan vertex ABI changed");
 _Static_assert(sizeof(NDSPupupuWaterTiledPlanCell) == 8u,
                "tiled-water plan cell ABI changed");
-_Static_assert(sizeof(NDSPupupuWaterTiledAssets) == 24u,
+_Static_assert(sizeof(NDSPupupuWaterTiledAssets) == 12u,
                "tiled-water asset-view ABI changed");
-_Static_assert(sizeof(NDSPupupuWaterTiledFrame) == 20u,
+_Static_assert(sizeof(NDSPupupuWaterTiledFrame) == 12u,
                "tiled-water frame-view ABI changed");
-_Static_assert(sizeof(NDSPupupuWaterTiledGeneratedFrameState) == 2u,
-               "tiled-water frame-state ABI changed");
-_Static_assert(sizeof(sNdsPupupuWaterPairAtlas) ==
-                   NDS_PUPUPU_WATER_TILED_PAIR_ATLAS_BYTES,
-               "tiled-water pair atlas size changed");
-_Static_assert(sizeof(sNdsPupupuWaterVisibilityAtlas) ==
-                   NDS_PUPUPU_WATER_TILED_VISIBILITY_ATLAS_BYTES,
-               "tiled-water visibility atlas size changed");
-_Static_assert(sizeof(sNdsPupupuWaterPairPalettes) ==
-                   NDS_PUPUPU_WATER_TILED_PALETTE_BYTES,
-               "tiled-water palette size changed");
-_Static_assert(sizeof(sNdsPupupuWaterLargePairStates) +
-                   sizeof(sNdsPupupuWaterLargeVisibilityStates) +
-                   sizeof(sNdsPupupuWaterSmallPairStates) +
-                   sizeof(sNdsPupupuWaterSmallVisibilityStates) +
+_Static_assert(sizeof(sNdsPupupuWaterLargeStates) +
+                   sizeof(sNdsPupupuWaterSmallStates) +
                    sizeof(sNdsPupupuWaterLargeFrames) +
                    sizeof(sNdsPupupuWaterSmallFrames) ==
                    NDS_PUPUPU_WATER_TILED_STATE_TABLE_BYTES,
@@ -39,41 +26,29 @@ _Static_assert(sizeof(sNdsPupupuWaterPlanVertices) ==
                    NDS_PUPUPU_WATER_TILED_PLAN_VERTEX_COUNT *
                        sizeof(NDSPupupuWaterTiledPlanVertex),
                "tiled-water plan-vertex footprint changed");
-_Static_assert(NDS_PUPUPU_WATER_TILED_PLAN_CELL_COUNT * 2u ==
+_Static_assert(NDS_PUPUPU_WATER_TILED_PLAN_CELL_COUNT ==
                    NDS_PUPUPU_WATER_TILED_LOGICAL_CELL_SUBMISSIONS,
                "logical plan-cell submission count changed");
-_Static_assert(NDS_PUPUPU_WATER_TILED_TRIANGLES_PER_PASS * 2u ==
-                   NDS_PUPUPU_WATER_TILED_TOTAL_TRIANGLES,
-               "two-pass triangle count changed");
 _Static_assert(NDS_PUPUPU_WATER_TILED_TOTAL_TRIANGLES * 3u ==
                    NDS_PUPUPU_WATER_TILED_EMITTED_VERTICES,
                "GL_TRIANGLES vertex expansion changed");
 _Static_assert(NDS_PUPUPU_WATER_TILED_EMITTED_VERTICES * 3u ==
                    NDS_PUPUPU_WATER_TILED_VERTEX_ATTRIBUTE_WRITES,
                "TEXCOORD/VTX16 register-write count changed");
-_Static_assert(__alignof__(sNdsPupupuWaterPairAtlas) >= 32u,
-               "pair atlas lost DMA alignment");
-_Static_assert(__alignof__(sNdsPupupuWaterVisibilityAtlas) >= 32u,
-               "visibility atlas lost DMA alignment");
-_Static_assert(__alignof__(sNdsPupupuWaterPairPalettes) >= 32u,
-               "pair palettes lost DMA alignment");
-
 static void ndsPupupuWaterTiledClearFrame(NDSPupupuWaterTiledFrame *frame)
 {
     if (frame == 0)
     {
         return;
     }
-    frame->pair_tile_ids = 0;
-    frame->visibility_tile_ids = 0;
-    frame->pair_palette = 0;
+    frame->tile_ids = 0;
     frame->state_cell_count = 0u;
     frame->state_columns = 0u;
     frame->state_rows = 0u;
-    frame->pair_state = 0u;
-    frame->visibility_state = 0u;
+    frame->state = 0u;
     frame->palette_index = 0u;
-    frame->reserved = 0u;
+    frame->reserved[0] = 0u;
+    frame->reserved[1] = 0u;
 }
 
 s32 ndsPupupuWaterTiledGetAssets(NDSPupupuWaterTiledAssets *out_assets)
@@ -82,9 +57,6 @@ s32 ndsPupupuWaterTiledGetAssets(NDSPupupuWaterTiledAssets *out_assets)
     {
         return NDS_PUPUPU_WATER_TILED_INVALID;
     }
-    out_assets->pair_atlas = sNdsPupupuWaterPairAtlas;
-    out_assets->visibility_atlas = sNdsPupupuWaterVisibilityAtlas;
-    out_assets->pair_palettes = &sNdsPupupuWaterPairPalettes[0][0];
     out_assets->plan_cells = sNdsPupupuWaterPlanCells;
     out_assets->plan_vertices = sNdsPupupuWaterPlanVertices;
     out_assets->plan_cell_count = NDS_PUPUPU_WATER_TILED_PLAN_CELL_COUNT;
@@ -96,7 +68,7 @@ s32 ndsPupupuWaterTiledGetFrame(
     u32 owner, u32 cycle_frame, u32 source_fraction,
     NDSPupupuWaterTiledFrame *out_frame)
 {
-    const NDSPupupuWaterTiledGeneratedFrameState *state;
+    u8 state;
     u32 palette_index;
 
     ndsPupupuWaterTiledClearFrame(out_frame);
@@ -110,22 +82,16 @@ s32 ndsPupupuWaterTiledGetFrame(
     palette_index = source_fraction - NDS_PUPUPU_WATER_TILED_FRACTION_MIN;
     if (owner == NDS_PUPUPU_WATER_TILED_OWNER_LARGE)
     {
-        state = &sNdsPupupuWaterLargeFrames[cycle_frame];
-        out_frame->pair_tile_ids =
-            sNdsPupupuWaterLargePairStates[state->pair_state];
-        out_frame->visibility_tile_ids =
-            sNdsPupupuWaterLargeVisibilityStates[state->visibility_state];
+        state = sNdsPupupuWaterLargeFrames[cycle_frame];
+        out_frame->tile_ids = sNdsPupupuWaterLargeStates[state];
         out_frame->state_cell_count = 64u;
         out_frame->state_columns = 4u;
         out_frame->state_rows = 16u;
     }
     else if (owner == NDS_PUPUPU_WATER_TILED_OWNER_SMALL)
     {
-        state = &sNdsPupupuWaterSmallFrames[cycle_frame];
-        out_frame->pair_tile_ids =
-            sNdsPupupuWaterSmallPairStates[state->pair_state];
-        out_frame->visibility_tile_ids =
-            sNdsPupupuWaterSmallVisibilityStates[state->visibility_state];
+        state = sNdsPupupuWaterSmallFrames[cycle_frame];
+        out_frame->tile_ids = sNdsPupupuWaterSmallStates[state];
         out_frame->state_cell_count = 8u;
         out_frame->state_columns = 1u;
         out_frame->state_rows = 8u;
@@ -134,9 +100,7 @@ s32 ndsPupupuWaterTiledGetFrame(
     {
         return NDS_PUPUPU_WATER_TILED_INVALID;
     }
-    out_frame->pair_palette = sNdsPupupuWaterPairPalettes[palette_index];
-    out_frame->pair_state = state->pair_state;
-    out_frame->visibility_state = state->visibility_state;
+    out_frame->state = state;
     out_frame->palette_index = (u8)palette_index;
     return NDS_PUPUPU_WATER_TILED_OK;
 }

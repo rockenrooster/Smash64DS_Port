@@ -1,0 +1,134 @@
+Building the normal opening ROM incrementally for P1Gate.
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+nds_renderer.c
+nds_platform.c
+battleship_mnstartup.c
+battleship_sys_taskman.c
+scene_backend.c
+battleship_sys_objhelper.c
+battleship_mvopeningroom.c
+battleship_mvopeninglink.c
+battleship_mvopeningdonkey.c
+battleship_mvopeningportraits.c
+battleship_mvopeningmario.c
+battleship_mvopeningsamus.c
+battleship_mvopeningyoshi.c
+battleship_mvopeningkirby.c
+battleship_mvopeningfox.c
+battleship_mvopeningpikachu.c
+battleship_mntitle.c
+battleship_mnvsmode.c
+battleship_mnplayersvs.c
+battleship_mnmaps.c
+battleship_scvsbattle.c
+battleship_grpupupu_ground.c
+battleship_grinishie_scale.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_run.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_pass.c
+battleship_ftcomputer.c
+battleship_mnvsresults.c
+battleship_ifcommon.c
+battleship_mario_fireball.c
+battleship_fox_blaster.c
+battleship_fox_reflector.c
+linking smash64ds.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, wallpaper inverse/overlap oracle, and source snippets verified.
+Harness registry check passed: 161 harness mappings, 166 verifier scripts, 0 drift.
+Running verifier: opening_skip [verify-opening-skip.ps1]
+Opening Room skip verification passed (tick 284 -> Title).
+Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+Renderer ITCM placement passed: elf=smash64ds-battle-playable-canonical-hwtri.elf itcm=20088/32768 renderer=18352 symbols=[ndsRendererHardwareLitShadeColorPrepared=472, ndsRendererHardwareConvertTexel01Ci4Direct.isra.0=2312, ndsRendererHardwareSubmitVertex=2236, ndsRendererSubmitHardwareTriangle=4188, ndsRendererScanList=9144]
+[33;1mWARNING: battle_playable Pupupu realtime HW textured perf below 60fps target: fps=134/134 x0.1; renderer-cache follow-up still required.[0m
+battle_playable Pupupu realtime pacing smoke passed: frames=360 fps=134/134 ticks=894088576 rprof=0 gxram=698/2128 gxstat=0x6000000/ctrl=0x19 ftrContract=11520/11520/geom0x222005/cycle0x100000/rm0xc4112078/light720/720/bounds720/0 oracle=0/0/0 batch=121/707/121/texprep98/730 wallCache=1/359/360/fb0/src300x220/66000/ticks2167168/381120 wallFinal=direct360/skip0/change360/px17694720/stage0/0/bg20/0/35389440/bg30/0/0 mtx=load53/scale0/p0,0,0,0/mv0,0,0,0,0,0 submit=raw648/snap0/cross44/noz126/dec0/prim0/range10/rej0/div1242 lazy=load821/xf282/hit258/new66/reuse8/ovf0 rawcand=648/10/44 postest=0/0/e0/w0/c0/mw0/drop0 vraw=0..0/0..0/0..0 vhw=0..0/0..0/0..0 depth=stage0:0..0/p00:0..0/p10:0 clip=0 texProof=0/0/0 sample=0/0/0 alias=0 st=0..0/0..0 texUse=0/0/0/0/0/impl0/first0x0/flags0x0/w0x0/w1x0/geom0x0 texFmt=conv0x0/bind0x0/pal0x0/rej0x0/why0x0 texLane=layout0x0/byte0/half0/bFmt0x0/hFmt0x0/bMap0x0/hMap0x0 stageCarry=15120/15120/tex11520/tile12240/short2160/2160/seg1080 combine=0/0/lit0/mat0/proj54 light=0/0/0 profile=present2123840/draw2060544/stage0/mat0/dl0/tex0/conv0/upload0 texUploads=2/36864 binds=54 vtx=2484 tri=828 texDirect=5210112 texHash=53/56/9/42/2 cpu=setup1/proc360/target360/stick231/obj0x4 aobj32=41/297/reuse22/fail0
+Battle-playable ROM parity passed: bytes=11682816 sha256=B4A89E279445E3EB44C0931E5C718B3A81D5FD4B578F71702C3D0ADDB9A6E258
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-12_canonical_fast_234203-8103938-p32720_next.png (1006x1392)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-12_canonical_fast_234203-8103938-p32720.png (1006x1392)
+Top screen camera registration: scale=1.01 dx=1 dy=0 sample=24.249%.
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 20778/49152 dominant-green pixels (42.273%).
+Top screen detail content: 25563/49152 non-white/non-green pixels (52.008%).
+Top screen delta: raw=23277/48260 (48.232%) meaningful=12161/48260 (25.199%, channel>=25) mean=21.16 overlap=98.185%.
+Region left_bush: non-clear=1750/1750 (100.000%) green=798/1750 (45.600%) detail=896/1750 (51.200%) fighter=654/1750 (37.371%) changed=753/1750 (43.029%)
+Region right_bush: non-clear=1750/1750 (100.000%) green=1/1750 (0.057%) detail=1731/1750 (98.914%) fighter=1291/1750 (73.771%) changed=368/1750 (21.029%)
+Region fox: non-clear=2475/2475 (100.000%) green=431/2475 (17.414%) detail=1973/2475 (79.717%) fighter=995/2475 (40.202%) changed=858/2475 (34.667%)
+Region mario: non-clear=2475/2475 (100.000%) green=303/2475 (12.242%) detail=2154/2475 (87.030%) fighter=1377/2475 (55.636%) changed=559/2475 (22.586%)
+Region stage_body: non-clear=7425/7425 (100.000%) green=3288/7425 (44.283%) detail=3831/7425 (51.596%) fighter=2799/7425 (37.697%) changed=3671/7425 (49.441%)
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 20478/49152 dominant-green pixels (41.663%).
+Top screen detail content: 25869/49152 non-white/non-green pixels (52.631%).
+Region left_bush: non-clear=1750/1750 (100.000%) green=815/1750 (46.571%) detail=890/1750 (50.857%) fighter=627/1750 (35.829%)
+Region right_bush: non-clear=1750/1750 (100.000%) green=0/1750 (0.000%) detail=1728/1750 (98.743%) fighter=1292/1750 (73.829%)
+Region fox: non-clear=2475/2475 (100.000%) green=449/2475 (18.141%) detail=1969/2475 (79.556%) fighter=956/2475 (38.626%)
+Region mario: non-clear=2475/2475 (100.000%) green=267/2475 (10.788%) detail=2190/2475 (88.485%) fighter=1396/2475 (56.404%)
+Region stage_body: non-clear=7425/7425 (100.000%) green=3193/7425 (43.003%) detail=3940/7425 (53.064%) fighter=2888/7425 (38.896%)
+Horizontal detail left_bush: varied=331/496 (66.734%) max-flat-run=7px (limit=32px).
+Horizontal detail stage_body: varied=2377/4920 (48.313%) max-flat-run=50px (limit=112px).
+Horizontal detail pond: varied=1328/2736 (48.538%) max-flat-run=58px (limit=96px).
+Horizontal detail left_bush: varied=326/496 (65.726%) max-flat-run=7px (limit=32px).
+Horizontal detail stage_body: varied=2335/4920 (47.459%) max-flat-run=42px (limit=112px).
+Horizontal detail pond: varied=1301/2736 (47.551%) max-flat-run=57px (limit=96px).
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 15950/49152 dominant-green pixels (32.450%).
+Top screen detail content: 26329/49152 non-white/non-green pixels (53.566%).
+Top-screen required region detail: 6710/7200 pixels (93.194%).
+Published fast-iteration capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\latest.png (previous: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\previous.png)
+Running verifier: battle_playable [verify-battle-playable-harness.ps1]
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+nds_platform.c
+battleship_mnstartup.c
+nds_renderer.c
+scene_backend.c
+battleship_mvopeningdonkey.c
+battleship_mvopeningportraits.c
+battleship_mvopeningmario.c
+battleship_mvopeningroom.c
+battleship_sys_taskman.c
+battleship_sys_objhelper.c
+battleship_mvopeninglink.c
+battleship_mvopeningyoshi.c
+battleship_mvopeningkirby.c
+battleship_mvopeningsamus.c
+battleship_mvopeningfox.c
+battleship_mvopeningpikachu.c
+battleship_mntitle.c
+battleship_mnvsmode.c
+battleship_mnplayersvs.c
+battleship_mnmaps.c
+battleship_scvsbattle.c
+battleship_grpupupu_ground.c
+battleship_grinishie_scale.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_run.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_pass.c
+battleship_ftcomputer.c
+battleship_mnvsresults.c
+battleship_ifcommon.c
+battleship_mario_fireball.c
+battleship_fox_blaster.c
+battleship_fox_reflector.c
+linking smash64ds-battle-playable-fast-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-fast-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'

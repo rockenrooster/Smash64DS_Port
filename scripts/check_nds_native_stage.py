@@ -4,8 +4,8 @@
 This checker deliberately does not build or launch a ROM.  It regenerates the
 packet twice from immutable BattleShip/O2R inputs, checks the committed include
 byte-for-byte, and verifies the exact callback, topology, display-list, run,
-texture-epoch, material, and cross-binding vertex-cache contracts needed by a
-later DS-native consumer.
+texture-epoch, material, executable-state, fail-closed, and cross-binding
+vertex-cache contracts needed by a later DS-native consumer.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import shutil
 import sys
 import tempfile
 from collections import Counter
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import generate_nds_native_stage as generator
@@ -99,6 +100,10 @@ EXPECTED_RUN_CLASSES = (
     *(generator.SUBMIT_PROJECTED_NO_Z for _ in range(13)),
 )
 
+EXPECTED_PROJECTED_CROSS_MATRIX_RUNS = (32, 34, 45, 47, 49)
+EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES = 10
+EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS = 15
+
 # gSPModifyVertex(ST) clone index -> source cache vertex and exact new ST.
 EXPECTED_CACHE_CLONES = (
     (133, 130, 0, 0),
@@ -111,6 +116,14 @@ EXPECTED_CACHE_CLONES = (
     (264, 261, 4095, 0),
     (270, 267, 2047, 0),
     (271, 268, 0, 0),
+)
+
+EXPECTED_REPLAY_CLASSES = Counter(
+    state=423,
+    sync=223,
+    vertex=69,
+    triangle=113,
+    control=58,
 )
 
 
@@ -254,6 +267,68 @@ def verify_packet(packet: generator.Packet) -> None:
         "submit-class triangle totals drifted",
     )
 
+    expected_run_flags = tuple(
+        generator.RUN_FLAG_PROJECTED_CROSS_MATRIX
+        if index in EXPECTED_PROJECTED_CROSS_MATRIX_RUNS
+        else 0
+        for index in range(len(packet.runs))
+    )
+    require(fields(packet.runs, "flags") == expected_run_flags, "run flags drifted")
+    flagged_runs = []
+    cross_matrix_triangles = 0
+    cross_matrix_foreign_corners = 0
+    raw_cross_matrix_triangles = 0
+    for run_index, run in enumerate(packet.runs):
+        run_corners = packet.corners[
+            run.first_corner : run.first_corner + run.triangle_count * 3
+        ]
+        run_cross_matrix_triangles = 0
+        run_foreign_corners = 0
+        for first_corner in range(0, len(run_corners), 3):
+            foreign_corners = sum(
+                packet.vertices[dense_index].matrix_binding != run.binding_index
+                for dense_index in run_corners[first_corner : first_corner + 3]
+            )
+            if foreign_corners:
+                run_cross_matrix_triangles += 1
+                run_foreign_corners += foreign_corners
+                if run.submit_class == generator.SUBMIT_RAW_CURRENT:
+                    raw_cross_matrix_triangles += 1
+        if run.flags & generator.RUN_FLAG_PROJECTED_CROSS_MATRIX:
+            flagged_runs.append(run_index)
+            require(
+                run.submit_class == generator.SUBMIT_PROJECTED_NO_Z,
+                f"run {run_index}: cross-matrix path is not projected/no-Z",
+            )
+            require(
+                run_cross_matrix_triangles == run.triangle_count,
+                f"run {run_index}: flagged run mixes matrix ownership",
+            )
+        require(
+            bool(run_cross_matrix_triangles)
+            == bool(run.flags & generator.RUN_FLAG_PROJECTED_CROSS_MATRIX),
+            f"run {run_index}: independently derived cross-matrix state disagrees",
+        )
+        cross_matrix_triangles += run_cross_matrix_triangles
+        cross_matrix_foreign_corners += run_foreign_corners
+    require(
+        tuple(flagged_runs) == EXPECTED_PROJECTED_CROSS_MATRIX_RUNS,
+        "projected cross-matrix run identities drifted",
+    )
+    require(
+        (
+            cross_matrix_triangles,
+            cross_matrix_foreign_corners,
+            raw_cross_matrix_triangles,
+        )
+        == (
+            EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES,
+            EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS,
+            0,
+        ),
+        "cross-matrix triangle/corner contract drifted",
+    )
+
     # Every source display list is selected by exactly one live DObj, and its
     # parent/depth relation stays inside the callback's contiguous DObj span.
     mapped = [row.binding_index for row in packet.dobjs if row.binding_index != generator.INVALID_U16]
@@ -298,8 +373,311 @@ def verify_packet(packet: generator.Packet) -> None:
         )
 
     require(len(packet.policies) == 41, "state-policy count drifted")
-    require(packet.slab_bytes() == 10076, "whole-stage slab byte count drifted")
+    require(len(packet.state_deltas) == 148, "shared state-delta count drifted")
+    require(len(packet.state_sequence) == 423, "state sequence count drifted")
+    require(len(packet.state_spans) == 96, "run/tail state-span count drifted")
+    require(
+        sum(span.sync_count for span in packet.state_spans) == 223,
+        "collapsed sync-command count drifted",
+    )
+    require(packet.slab_bytes() == 12663, "whole-stage slab byte count drifted")
     require(packet.slab_bytes() <= 16 * 1024, "whole-stage slab exceeds 16 KiB")
+
+
+def state_span_oracle(
+    events: list[generator.CommandEvent],
+) -> tuple[tuple[tuple[int, int], ...], tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    pending_state = 0
+    pending_sync = 0
+    in_run = False
+    for event in events:
+        if event.op not in (generator.OP_TRI1, generator.OP_TRI2):
+            in_run = False
+        if event.op in generator.STATE_OPS or event.material_event != generator.INVALID_U8:
+            pending_state += 1
+        elif event.op in generator.SYNC_OPS:
+            pending_sync += 1
+        if event.op in (generator.OP_TRI1, generator.OP_TRI2) and not in_run:
+            spans.append((pending_state, pending_sync))
+            pending_state = 0
+            pending_sync = 0
+            in_run = True
+    return tuple(spans), (pending_state, pending_sync)
+
+
+def verify_command_replay(packet: generator.Packet, repo_root: Path) -> int:
+    resources = {
+        name: generator.load_o2r(repo_root, spec)
+        for name, spec in generator.O2R_INPUTS.items()
+    }
+    asset_index = {asset.asset_id: index for index, asset in enumerate(packet.assets)}
+    binding_order = []
+    for owner in generator.OWNER_SPECS:
+        resource = resources[owner.resource_name]
+        binding_order.extend(
+            (owner, resource, root)
+            for root in generator.selected_roots(resource, owner)
+        )
+    binding_lookup = {
+        (resource.file_id, root): index
+        for index, (_owner, resource, root) in enumerate(binding_order)
+    }
+    materials = generator.build_material_events(
+        resources, binding_lookup, asset_index
+    )
+    material_by_binding = {
+        event.binding_index: index for index, event in enumerate(materials)
+    }
+
+    command_classes: Counter[str] = Counter()
+    sequence_cursor = 0
+    binding_cursor = 0
+    for owner in generator.OWNER_SPECS:
+        resource = resources[owner.resource_name]
+        source_state = generator.SourceState(
+            generator.GEOMETRY_ZBUFFER if owner.link == 6 else 0,
+            state_hash=generator.fnv1a_u32((0x53454733, owner.owner, owner.link)),
+            texture_hash=generator.fnv1a_u32((0x54455833, owner.owner, owner.link)),
+        )
+        replay_state = replace(source_state)
+        for root in generator.selected_roots(resource, owner):
+            binding = packet.bindings[binding_cursor]
+            material_index = material_by_binding.get(
+                binding_cursor, generator.INVALID_U8
+            )
+            events = generator.walk_display_list(
+                resource, root, material_index, materials
+            )
+            require(
+                generator.event_checksum(resource, events)
+                == binding.traversal_checksum,
+                f"binding {binding_cursor}: 886-command checksum parity failed",
+            )
+
+            run_spans, tail_span = state_span_oracle(events)
+            require(
+                len(run_spans) == binding.run_count,
+                f"binding {binding_cursor}: replay run partition changed",
+            )
+            for local_run, expected_span in enumerate(run_spans):
+                actual_span = packet.state_spans[binding.first_run + local_run]
+                require(
+                    (actual_span.state_count, actual_span.sync_count)
+                    == expected_span,
+                    f"binding {binding_cursor}: run {local_run} state span changed",
+                )
+            actual_tail = packet.state_spans[len(packet.runs) + binding_cursor]
+            require(
+                (actual_tail.state_count, actual_tail.sync_count) == tail_span,
+                f"binding {binding_cursor}: tail state span changed",
+            )
+
+            in_run = False
+            run_cursor = 0
+            for event in events:
+                op = event.op
+                if op not in (generator.OP_TRI1, generator.OP_TRI2):
+                    in_run = False
+                generator.apply_source_state(resource, source_state, event)
+                if op in generator.STATE_OPS or event.material_event != generator.INVALID_U8:
+                    command_classes["state"] += 1
+                    require(
+                        sequence_cursor < len(packet.state_sequence),
+                        "state replay exhausted the generated sequence",
+                    )
+                    delta_index = packet.state_sequence[sequence_cursor]
+                    expected_delta = generator.compile_state_delta(
+                        resource, event, asset_index
+                    )
+                    require(
+                        packet.state_deltas[delta_index] == expected_delta,
+                        f"command {sum(command_classes.values())}: state delta parity failed",
+                    )
+                    generator.apply_compiled_state_delta(
+                        packet.assets, replay_state, packet.state_deltas[delta_index]
+                    )
+                    sequence_cursor += 1
+                elif op in generator.SYNC_OPS:
+                    command_classes["sync"] += 1
+                elif op in (generator.OP_VTX, generator.OP_MODIFYVTX):
+                    command_classes["vertex"] += 1
+                elif op in (generator.OP_TRI1, generator.OP_TRI2):
+                    command_classes["triangle"] += 1
+                elif op in (generator.OP_DL, generator.OP_ENDDL):
+                    command_classes["control"] += 1
+                else:
+                    raise generator.falsify(
+                        f"unclassified replay opcode 0x{op:02x}"
+                    )
+                require(
+                    source_state.policy() == replay_state.policy(),
+                    f"command {sum(command_classes.values())}: executable state diverged",
+                )
+                if op in (generator.OP_TRI1, generator.OP_TRI2) and not in_run:
+                    run = packet.runs[binding.first_run + run_cursor]
+                    require(
+                        packet.policies[run.state_policy] == replay_state.policy(),
+                        f"binding {binding_cursor}: run {run_cursor} policy diverged",
+                    )
+                    run_cursor += 1
+                    in_run = True
+            require(
+                run_cursor == binding.run_count,
+                f"binding {binding_cursor}: replay did not consume every run",
+            )
+            binding_cursor += 1
+
+    require(binding_cursor == len(packet.bindings), "replay missed a binding")
+    require(
+        sequence_cursor == len(packet.state_sequence),
+        "replay missed executable state entries",
+    )
+    require(
+        command_classes == EXPECTED_REPLAY_CLASSES,
+        f"886-command class partition changed: {command_classes}",
+    )
+    command_count = sum(command_classes.values())
+    require(command_count == 886, f"replayed {command_count} commands, expected 886")
+    return command_count
+
+
+@dataclass
+class CommitProbe:
+    armed: int = 0
+    segments_emitted: int = 0
+    gx_mutations: int = 0
+
+    def preflight(
+        self, candidate: generator.Packet, reference: generator.Packet
+    ) -> None:
+        generator.validate_packet(candidate)
+        verify_packet(candidate)
+        require(candidate == reference, "immutable transaction packet changed")
+        self.armed = 1
+
+    def commit(self, packet: generator.Packet) -> None:
+        require(self.armed == 1, "unarmed transaction reached commit")
+        self.segments_emitted = len(packet.segments)
+        self.gx_mutations = len(packet.segments)
+
+
+def mutate_row(
+    packet: generator.Packet, field: str, index: int, **changes: int
+) -> generator.Packet:
+    rows = list(getattr(packet, field))
+    rows[index] = replace(rows[index], **changes)
+    return replace(packet, **{field: tuple(rows)})
+
+
+def verify_fail_closed(packet: generator.Packet) -> int:
+    bad_sequence = list(packet.state_sequence)
+    bad_sequence[0] = len(packet.state_deltas)
+    bad_corners = list(packet.corners)
+    bad_corners[0] = len(packet.vertices)
+    mutations = (
+        (
+            "asset provenance",
+            mutate_row(
+                packet,
+                "assets",
+                0,
+                payload_checksum=packet.assets[0].payload_checksum ^ 1,
+            ),
+        ),
+        ("callback link", mutate_row(packet, "segments", 0, link=5)),
+        (
+            "DObj topology",
+            mutate_row(
+                packet, "dobjs", 1, parent_index=generator.INVALID_U16
+            ),
+        ),
+        (
+            "DObj transform",
+            mutate_row(
+                packet,
+                "dobjs",
+                0,
+                transform_flags=packet.dobjs[0].transform_flags ^ 1,
+            ),
+        ),
+        (
+            "display-list root",
+            mutate_row(
+                packet,
+                "bindings",
+                0,
+                root_offset=packet.bindings[0].root_offset + 8,
+            ),
+        ),
+        (
+            "material flags",
+            mutate_row(
+                packet,
+                "materials",
+                0,
+                flags=packet.materials[0].flags ^ 1,
+            ),
+        ),
+        (
+            "run corner span",
+            mutate_row(packet, "runs", 0, first_corner=len(packet.corners)),
+        ),
+        (
+            "run cross-matrix flag",
+            mutate_row(
+                packet,
+                "runs",
+                EXPECTED_PROJECTED_CROSS_MATRIX_RUNS[0],
+                flags=(
+                    packet.runs[EXPECTED_PROJECTED_CROSS_MATRIX_RUNS[0]].flags
+                    ^ generator.RUN_FLAG_PROJECTED_CROSS_MATRIX
+                ),
+            ),
+        ),
+        ("corner index", replace(packet, corners=tuple(bad_corners))),
+        ("state index", replace(packet, state_sequence=tuple(bad_sequence))),
+        (
+            "state command",
+            mutate_row(
+                packet,
+                "state_deltas",
+                0,
+                w0=packet.state_deltas[0].w0 ^ 1,
+            ),
+        ),
+        (
+            "state span",
+            mutate_row(
+                packet,
+                "state_spans",
+                0,
+                state_count=packet.state_spans[0].state_count + 1,
+            ),
+        ),
+    )
+
+    for name, candidate in mutations:
+        probe = CommitProbe()
+        try:
+            probe.preflight(candidate, packet)
+        except generator.Falsifier:
+            pass
+        else:
+            raise generator.falsify(f"{name} perturbation armed the owner")
+        require(
+            (probe.armed, probe.segments_emitted, probe.gx_mutations) == (0, 0, 0),
+            f"{name} perturbation mutated GX before rejection",
+        )
+
+    valid = CommitProbe()
+    valid.preflight(packet, packet)
+    valid.commit(packet)
+    require(
+        (valid.armed, valid.segments_emitted, valid.gx_mutations) == (1, 8, 8),
+        "valid fixture did not commit all eight callback segments",
+    )
+    return len(mutations)
 
 
 def main() -> int:
@@ -310,6 +688,8 @@ def main() -> int:
         second = generator.generate(repo_root)
         require(first == second, "two in-process generations differ")
         verify_packet(first)
+        replay_commands = verify_command_replay(first, repo_root)
+        perturbations = verify_fail_closed(first)
 
         rendered_first = generator.render_include(first)
         rendered_second = generator.render_include(second)
@@ -331,6 +711,13 @@ def main() -> int:
         f"callbacks={len(first.segments)} dobjs={len(first.dobjs)} "
         f"bindings={len(first.bindings)} runs={len(first.runs)} "
         f"epochs={len(first.epochs)} triangles={len(first.corners) // 3} "
+        f"cross_matrix_runs={len(EXPECTED_PROJECTED_CROSS_MATRIX_RUNS)} "
+        f"cross_matrix_triangles={EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES} "
+        f"cross_matrix_foreign_corners={EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS} "
+        f"state_deltas={len(first.state_deltas)} "
+        f"state_events={len(first.state_sequence)} "
+        f"replay_commands={replay_commands} "
+        f"fail_closed_perturbations={perturbations} "
         f"slab_bytes={first.slab_bytes()} sha256={include_hash}"
     )
     return 0

@@ -4,12 +4,14 @@ param(
     [ValidateRange(1,65535)][int]$GdbPort = 4463,
     [ValidateRange(-1,127)][int]$RunnerSlot = 2,
     [switch]$NoBuild,
+    [ValidateRange(0,1)][int]$HybridOamMode = 0,
     [string]$Target = 'smash64ds-battle-playable-coarse-hwtri',
     [string]$Build = 'build-battle-playable-coarse-hwtri-harness'
 )
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
+. (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (($RunnerSlot -ne 2) -or ($GdbPort -ne 4463)) {
@@ -18,8 +20,8 @@ if (($RunnerSlot -ne 2) -or ($GdbPort -ne 4463)) {
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot `
     -GdbPort $GdbPort -GdbPortExplicit -NoBuild:$NoBuild
-$rom = Join-Path $root "$Target.nds"
-$elf = Join-Path $root "$Target.elf"
+$rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
+$elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 $visibilityDir = Join-Path $root 'artifacts\visibility'
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
 $tempDir = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot $RunnerSlot
@@ -348,12 +350,22 @@ function Invoke-IFCommonRun {
 if (-not $NoBuild) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
     if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    & make -C $root "TARGET=$Target" "BUILD=$Build" -j24
+    & make -C $root "TARGET=$Target" "BUILD=$Build" `
+        "NDS_IFCOMMON_HYBRID_OAM=$HybridOamMode" -j24
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 Assert-Condition (Test-Path -LiteralPath $rom) "ROM not found: $rom"
 Assert-Condition (Test-Path -LiteralPath $elf) "ELF not found: $elf"
 Assert-Condition (Test-Path -LiteralPath $Gdb) "GDB not found: $Gdb"
+$buildPath = Resolve-Smash64DSBuildPath -Root $root -Build $Build
+$configHeader = Join-Path $buildPath 'nds_build_config.h'
+Assert-Condition (Test-Path -LiteralPath $configHeader) `
+    "Build configuration not found: $configHeader"
+$configHeaderText = Get-Content -LiteralPath $configHeader -Raw
+Assert-Condition ($configHeaderText -match
+    ('(?m)^#define NDS_IFCOMMON_HYBRID_OAM ' + $HybridOamMode + '$')) `
+    "Compiled hybrid-OAM mode does not match requested mode $HybridOamMode." `
+    $configHeaderText
 New-Item -ItemType Directory -Force -Path $visibilityDir, $logDir, $tempDir |
     Out-Null
 
@@ -373,12 +385,15 @@ $configHash = (Get-FileHash -LiteralPath $configState.Config -Algorithm SHA256).
 $romHash = (Get-FileHash -LiteralPath $rom -Algorithm SHA256).Hash
 $elfHash = (Get-FileHash -LiteralPath $elf -Algorithm SHA256).Hash
 $date = Get-Date -Format 'yyyy-MM-dd'
+$captureVariant = if ($HybridOamMode -eq 1) { '-hybrid' } else { '' }
 $fallbackCapture = Join-Path $visibilityDir `
-    "${date}_ifcommon-bg3-fallback-frame187.png"
+    "${date}_ifcommon-bg3-fallback${captureVariant}-frame187.png"
 $nativeCapture = Join-Path $visibilityDir `
-    "${date}_ifcommon-native-oam-frame187.png"
+    "${date}_ifcommon-native-oam${captureVariant}-frame187.png"
 
 try {
+    $expectedPrepareBytes = if ($HybridOamMode -eq 1) { 60416 } else { 93824 }
+    $expectedPaletteBytes = if ($HybridOamMode -eq 1) { 512 } else { 0 }
     Assert-RunnerReleased
     Set-Content -LiteralPath $configState.Config -Value $configText -NoNewline
     $fallback = Invoke-IFCommonRun -NativeEnabled 0 `
@@ -410,9 +425,10 @@ try {
         $prep = $run.Prep
         Assert-Condition ($prep[0] -eq $run.Mode -and $prep[1] -eq 1 -and
             $prep[2] -eq 1 -and $prep[3] -eq 0 -and $prep[4] -gt 0 -and
-            $prep[5] -eq 93824 -and $prep[6] -eq 16 -and
+            $prep[5] -eq $expectedPrepareBytes -and $prep[6] -eq 16 -and
             $prep[7] -eq 59 -and $prep[8] -eq 0 -and
-            $prep[9] -eq 0 -and $prep[10] -eq 0 -and $prep[11] -eq 0) `
+            $prep[9] -eq $expectedPaletteBytes -and
+            $prep[10] -eq 0 -and $prep[11] -eq 0) `
             'Native countdown assets were not prepared exactly once, wholly outside gameplay, with no palette/hot/runtime upload.' `
             $run.Text
         foreach ($row in $run.Active) {
@@ -550,6 +566,7 @@ try {
     Write-Output (
         "IFCommon native OAM gate passed: ROM=$romHash ELF=$elfHash " +
         "frames=187..194 sourceSObjs=10 objects=24..26 " +
+        "hybridOam=$HybridOamMode prepareBytes=$expectedPrepareBytes paletteBytes=$expectedPaletteBytes " +
         "inclusiveMedian/P95=$nativeMedian/$nativeP95 " +
         "foregroundMedian=$(Get-Median $fallbackForeground)->$(Get-Median $nativeForeground) " +
         "finalClearFrame=$($finalClear[1]) idleFrame=$($idle[1]) " +

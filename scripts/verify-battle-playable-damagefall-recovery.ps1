@@ -7,6 +7,8 @@ param(
     [ValidateRange(30, 3600)]
     [int]$TimeoutSeconds = 900,
     [switch]$NoBuild,
+    [string]$Rom = '',
+    [string]$Elf = '',
     [string]$Screenshot = ''
 )
 
@@ -22,10 +24,30 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$target = 'smash64ds-battle-playable-canonical-hwtri'
+$target = 'smash64ds-battle-playable-hwtri'
 $build = 'build-battle-playable-canonical-hwtri-harness'
-$rom = Join-Path $root "$target.nds"
-$elf = Join-Path $root "$target.elf"
+$requestedRom = $Rom
+$requestedElf = $Elf
+$customArtifacts = (-not [string]::IsNullOrWhiteSpace($requestedRom)) -or
+    (-not [string]::IsNullOrWhiteSpace($requestedElf))
+if ($customArtifacts -and (-not $NoBuild)) {
+    throw 'Custom -Rom/-Elf artifacts require -NoBuild.'
+}
+if ($customArtifacts -and
+    ([string]::IsNullOrWhiteSpace($requestedRom) -or
+     [string]::IsNullOrWhiteSpace($requestedElf))) {
+    throw 'Custom recovery verification requires both -Rom and -Elf.'
+}
+$rom = if ($customArtifacts) {
+    [System.IO.Path]::GetFullPath($requestedRom)
+} else {
+    Join-Path $root "$target.nds"
+}
+$elf = if ($customArtifacts) {
+    [System.IO.Path]::GetFullPath($requestedElf)
+} else {
+    Join-Path $root "$target.elf"
+}
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir `
@@ -124,8 +146,14 @@ if (-not $NoBuild) {
         -j16
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
-if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
-    throw 'Canonical battle_playable build did not produce the expected ROM and ELF.'
+if ((-not (Test-Path -LiteralPath $rom -PathType Leaf)) -or
+    (-not (Test-Path -LiteralPath $elf -PathType Leaf))) {
+    $artifactError = if ($customArtifacts) {
+        'Custom recovery verification ROM or ELF artifact is missing.'
+    } else {
+        'Canonical battle_playable build did not produce the expected ROM and ELF.'
+    }
+    throw "$artifactError ROM='$rom' ELF='$elf'"
 }
 if (-not (Test-Path $melonDsPath)) {
     throw "melonDS executable not found: $melonDsPath"
@@ -145,11 +173,10 @@ $requiredSymbols = @(
     'sControllerPlaybackEnabled',
     'ndsBattlePlayableFrameCompleteMarker',
     'ftCommonWalkSetStatusParam',
-    'ftCommonWalkProcInterrupt',
+    'ndsBaseFTCommonDashSetStatus',
     'ndsBaseFTCommonRunSetStatus',
-    'ndsBaseFTCommonRunProcInterrupt',
-    'ndsBaseFTCommonRunBrakeProcInterrupt',
     'ftCommonWaitSetStatus',
+    'ndsBaseFTCommonPassCheckInterruptCommon',
     'ndsBaseFTCommonAttackHi4CheckInterruptMain',
     'ndsBaseFTCommonThrownReleaseThrownUpdateStats',
     'ndsBaseFTCommonDamageInitDamageVars',
@@ -176,12 +203,11 @@ $playbackConnectedAddress = $symbolAddresses['sControllerPlaybackConnectedMask']
 $playbackEnabledAddress = $symbolAddresses['sControllerPlaybackEnabled']
 $frameMarkerAddress = $symbolAddresses['ndsBattlePlayableFrameCompleteMarker']
 $walkSetAddress = $symbolAddresses['ftCommonWalkSetStatusParam']
-$walkInterruptAddress = $symbolAddresses['ftCommonWalkProcInterrupt']
+$dashSetAddress = $symbolAddresses['ndsBaseFTCommonDashSetStatus']
 $runSetAddress = $symbolAddresses['ndsBaseFTCommonRunSetStatus']
-$runInterruptAddress = $symbolAddresses['ndsBaseFTCommonRunProcInterrupt']
-$runBrakeInterruptAddress =
-    $symbolAddresses['ndsBaseFTCommonRunBrakeProcInterrupt']
 $waitSetAddress = $symbolAddresses['ftCommonWaitSetStatus']
+$passCheckAddress =
+    $symbolAddresses['ndsBaseFTCommonPassCheckInterruptCommon']
 $attackHi4InterruptAddress =
     $symbolAddresses['ndsBaseFTCommonAttackHi4CheckInterruptMain']
 $throwReleaseAddress = $symbolAddresses['ndsBaseFTCommonThrownReleaseThrownUpdateStats']
@@ -206,7 +232,7 @@ try {
     Remove-Item $stdout, $stderr, $screenshotPath -Force `
         -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath `
-        -ArgumentList $rom `
+        -ArgumentList ('"{0}"' -f $rom) `
         -WorkingDirectory $melonDsDir `
         -RedirectStandardOutput $stdout `
         -RedirectStandardError $stderr `
@@ -261,10 +287,11 @@ try {
         'set $drive_phase = 0',
         'set $approach_count = 0',
         'set $approach_route = 0',
-        'set $stop_requested = 0',
-        'set $runbrake_seen = 0',
-        'set $runbrake_count = 0',
         'set $wait_stop_count = 0',
+        'set $drop_requests = 0',
+        'set $drop_accepts = 0',
+        'set $drop_line = -1',
+        'set $main_floor_waits = 0',
         'set $upsmash_attempts = 0',
         'set $upsmash_set_count = 0',
         'set $upsmash_active = 0',
@@ -329,6 +356,9 @@ try {
         'set $outcome = 0',
         'set $heavy_candidate = 0',
         'set $heavy_candidate_bits = 0',
+        'set $phase_heavy_hits = 0',
+        'set $phase_damagefalls = 0',
+        'set $phase_floor_recoveries = 0',
         'set $terminator_scene = 0',
         'set $terminator_status = 0',
         'set $terminator_limit = 0',
@@ -343,139 +373,164 @@ try {
         'set $damage_result_base = gNdsCollisionRuntimeDiagnostics.damage_results',
         'set $damage_invalid_base = gNdsCollisionRuntimeDiagnostics.damage_invalid',
         # External player-0 input only. Hold neutral for one completed GO frame
-        # before beginning the approach so BattleShip observes a fresh stick
-        # transition and can choose Dash rather than a held-stick Walk.
-        # The source Walk transition is neutralized immediately; a Wait
-        # breakpoint then taps Up+A only after Mario stops close to Fox on the
-        # main floor.
+        # before beginning the natural route. If Mario starts on a pass-through
+        # side platform, tap Down and let BattleShip's Wait/Squat/Pass path drop
+        # him to the main floor. Otherwise, use short source Dash/Walk/Run
+        # entries which return naturally to Wait before reevaluating distance.
         ('set {{unsigned short}}0x{0:x8} = 0' -f $playbackPadsAddress),
         ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
         ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 3)),
         ('set {{unsigned int}}0x{0:x8} = 1' -f $playbackConnectedAddress),
         ('set {{unsigned int}}0x{0:x8} = 1' -f $playbackEnabledAddress),
 
+        # Enabled only while a Down tap is pending. This observes the original
+        # pass-input predicate after the live input has been latched, then
+        # releases the external pad while the source function proceeds into
+        # Squat/Pass. No fighter, status, position, or collision state is set.
+        ('break *0x{0:x8}' -f $passCheckAddress),
+        'set $pass_breakpoint = $bpnum',
+        'commands $pass_breakpoint',
+        'silent',
+        'if (((GObj *)$r0 == $mario) && ($drive_phase == 5) && ($mfp->input.pl.stick_range.y <= -53) && ($mfp->tap_stick_y < 4) && (($mfp->coll_data.floor_flags & 0x4000) != 0))',
+        'set $drop_accepts = $drop_accepts + 1',
+        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 3)),
+        'set $drive_phase = 2',
+        'disable $pass_breakpoint',
+        'enable $wait_breakpoint',
+        'end',
+        'continue',
+        'end',
+        'disable $pass_breakpoint',
+
         ('break *0x{0:x8}' -f $frameMarkerAddress),
         'set $kick_breakpoint = $bpnum',
         'commands $kick_breakpoint',
         'silent',
         'if ($drive_phase == 0)',
+        'if (($mfp->ga == 0) && ($mfp->coll_data.floor_line_id != 3) && (($mfp->coll_data.floor_flags & 0x4000) != 0))',
+        'set $drop_requests = $drop_requests + 1',
+        'set $drop_line = $mfp->coll_data.floor_line_id',
+        'set $drive_phase = 5',
+        ('set {{signed char}}0x{0:x8} = -80' -f ($playbackPadsAddress + 3)),
+        'enable $pass_breakpoint',
+        'else',
         'if ($froot->translate.vec.f.x >= $mroot->translate.vec.f.x)',
         ('set {{signed char}}0x{0:x8} = 80' -f ($playbackPadsAddress + 2)),
         'else',
         ('set {{signed char}}0x{0:x8} = -80' -f ($playbackPadsAddress + 2)),
         'end',
         'set $drive_phase = 1',
+        'enable $walk_breakpoint',
+        'enable $dash_breakpoint',
+        'enable $run_breakpoint',
+        'end',
         'disable $kick_breakpoint',
         'end',
         'continue',
         'end',
 
         ('break *0x{0:x8}' -f $walkSetAddress),
-        'commands',
+        'set $walk_breakpoint = $bpnum',
+        'commands $walk_breakpoint',
         'silent',
         'if (((GObj *)$r0 == $mario) && ($heavy_candidate == 0) && ($drive_phase == 1) && ($upsmash_attempts < 48))',
         'set $approach_count = $approach_count + 1',
         'set $approach_route = 1',
-        'set $stop_requested = 0',
-        'set $runbrake_seen = 0',
         'set $drive_phase = 2',
-        'end',
-        'continue',
-        'end',
-
-        # Keep the natural Walk active until Mario is actually within attack
-        # range (or reaches the safe center bound), then request a source Wait
-        # with one neutral controller frame.
-        ('break *0x{0:x8}' -f $walkInterruptAddress),
-        'commands',
-        'silent',
-        'if (((GObj *)$r0 == $mario) && ($heavy_candidate == 0) && ($drive_phase == 2) && ($approach_route == 1) && ($stop_requested == 0))',
-        'set $separation = $froot->translate.vec.f.x - $mroot->translate.vec.f.x',
-        'if (($separation >= -500.0) && ($separation <= 500.0)) || ($mroot->translate.vec.f.x >= 1800.0) || ($mroot->translate.vec.f.x <= -1800.0)',
         ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
-        'set $stop_requested = 1',
-        'else',
-        'if ($separation >= 0.0)',
-        ('set {{signed char}}0x{0:x8} = 80' -f ($playbackPadsAddress + 2)),
-        'else',
-        ('set {{signed char}}0x{0:x8} = -80' -f ($playbackPadsAddress + 2)),
-        'end',
-        'end',
+        'disable $walk_breakpoint',
+        'disable $dash_breakpoint',
+        'disable $run_breakpoint',
+        'enable $wait_breakpoint',
         'end',
         'continue',
         'end',
+        'disable $walk_breakpoint',
 
-        # A fresh edge can choose Dash/Run instead of Walk. Neutralize at the
-        # source Run transition and require a new RunBrake observation before
-        # accepting that cycle's Wait; either natural approach route is valid.
+        # Status-entry observations are deliberately sparse. Only the current
+        # driver phase's breakpoint group stays enabled, so unrelated Fox
+        # transitions do not churn every hardware breakpoint. Neutralizing the
+        # external X stick lets the source status run a short movement step and
+        # return naturally to Wait without a per-frame interrupt breakpoint.
+        ('break *0x{0:x8}' -f $dashSetAddress),
+        'set $dash_breakpoint = $bpnum',
+        'commands $dash_breakpoint',
+        'silent',
+        'if (((GObj *)$r0 == $mario) && ($heavy_candidate == 0) && ($drive_phase == 1) && ($upsmash_attempts < 48))',
+        'set $approach_count = $approach_count + 1',
+        'set $approach_route = 3',
+        'set $drive_phase = 2',
+        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
+        'disable $walk_breakpoint',
+        'disable $dash_breakpoint',
+        'disable $run_breakpoint',
+        'enable $wait_breakpoint',
+        'end',
+        'continue',
+        'end',
+        'disable $dash_breakpoint',
+
         ('break *0x{0:x8}' -f $runSetAddress),
-        'commands',
+        'set $run_breakpoint = $bpnum',
+        'commands $run_breakpoint',
         'silent',
         'if (((GObj *)$r0 == $mario) && ($heavy_candidate == 0) && ($drive_phase == 1) && ($upsmash_attempts < 48))',
         'set $approach_count = $approach_count + 1',
         'set $approach_route = 2',
-        'set $stop_requested = 0',
-        'set $runbrake_seen = 0',
         'set $drive_phase = 2',
-        'end',
-        'continue',
-        'end',
-
-        ('break *0x{0:x8}' -f $runInterruptAddress),
-        'commands',
-        'silent',
-        'if (((GObj *)$r0 == $mario) && ($heavy_candidate == 0) && ($drive_phase == 2) && ($approach_route == 2) && ($stop_requested == 0))',
-        'set $separation = $froot->translate.vec.f.x - $mroot->translate.vec.f.x',
-        'if (($separation >= -500.0) && ($separation <= 500.0)) || ($mroot->translate.vec.f.x >= 1800.0) || ($mroot->translate.vec.f.x <= -1800.0)',
         ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
-        'set $stop_requested = 1',
-        'else',
-        'if ($separation >= 0.0)',
-        ('set {{signed char}}0x{0:x8} = 80' -f ($playbackPadsAddress + 2)),
-        'else',
-        ('set {{signed char}}0x{0:x8} = -80' -f ($playbackPadsAddress + 2)),
-        'end',
-        'end',
+        'disable $walk_breakpoint',
+        'disable $dash_breakpoint',
+        'disable $run_breakpoint',
+        'enable $wait_breakpoint',
         'end',
         'continue',
         'end',
-
-        ('break *0x{0:x8}' -f $runBrakeInterruptAddress),
-        'commands',
-        'silent',
-        'if (((GObj *)$r0 == $mario) && ($heavy_candidate == 0) && ($drive_phase == 2) && ($approach_route == 2) && ($stop_requested != 0) && ($runbrake_seen == 0))',
-        'set $runbrake_seen = 1',
-        'set $runbrake_count = $runbrake_count + 1',
-        'end',
-        'continue',
-        'end',
+        'disable $run_breakpoint',
 
         ('break *0x{0:x8}' -f $waitSetAddress),
-        'commands',
+        'set $wait_breakpoint = $bpnum',
+        'commands $wait_breakpoint',
         'silent',
         'if (((GObj *)$r0 == $mario) && ($heavy_candidate == 0) && ($drive_phase != 0) && ($upsmash_attempts < 48))',
         'set $separation = $froot->translate.vec.f.x - $mroot->translate.vec.f.x',
         'set $separation_milli = (int)($separation * 1000.0)',
-        'set $stop_valid = 0',
-        'if (($drive_phase == 2) && ((($approach_route == 1) && ($stop_requested != 0)) || (($approach_route == 2) && ($runbrake_seen != 0))))',
-        'set $stop_valid = 1',
-        'set $wait_stop_count = $wait_stop_count + 1',
+        # Do not disturb a pending Down tap before the source pass predicate
+        # consumes it. Every other Wait starts from a neutral external pad.
+        'if ($drive_phase != 5)',
+        ('set {{unsigned short}}0x{0:x8} = 0' -f $playbackPadsAddress),
+        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
+        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 3)),
+        'disable $wait_breakpoint',
+        'disable $damageinit_breakpoint',
+        'disable $throwrelease_breakpoint',
+        'set $upsmash_active = 0',
+        'if (($mfp->ga == 0) && ($mfp->coll_data.floor_line_id != 3) && (($mfp->coll_data.floor_flags & 0x4000) != 0))',
+        'set $drop_requests = $drop_requests + 1',
+        'set $drop_line = $mfp->coll_data.floor_line_id',
+        'set $drive_phase = 5',
+        ('set {{signed char}}0x{0:x8} = -80' -f ($playbackPadsAddress + 3)),
+        'enable $pass_breakpoint',
+        'else',
+        'if (($mfp->ga == 0) && ($mfp->coll_data.floor_line_id == 3))',
+        'set $main_floor_waits = $main_floor_waits + 1',
         'end',
-        'if (($drive_phase == 2) && ($stop_valid != 0) && ($wait_stop_count > $upsmash_attempts) && ($mfp->coll_data.floor_line_id == 3) && ($ffp->coll_data.floor_line_id == 3) && ($mroot->translate.vec.f.x >= -1800.0) && ($mroot->translate.vec.f.x <= 1800.0) && ($froot->translate.vec.f.x >= -1800.0) && ($froot->translate.vec.f.x <= 1800.0) && ($separation >= -650.0) && ($separation <= 650.0))',
+        # BattleShip gates AttackHi4 on Mario's live Up+A input, not Fox's
+        # kinetics or floor line. Let the original hitbox accept platform/air hits.
+        'if (($mfp->ga == 0) && ($mfp->coll_data.floor_line_id == 3) && ($approach_count >= 1) && ($wait_stop_count == $upsmash_attempts) && ($mroot->translate.vec.f.x >= -1800.0) && ($mroot->translate.vec.f.x <= 1800.0) && ($froot->translate.vec.f.x >= -1800.0) && ($froot->translate.vec.f.x <= 1800.0) && ($separation >= -650.0) && ($separation <= 650.0))',
         # A fresh Up+A tap is consumed by the ordinary Wait interrupt on the
         # following frame; no status function is called from the verifier.
+        'set $wait_stop_count = $wait_stop_count + 1',
         'set $drive_phase = 3',
         ('set {{unsigned short}}0x{0:x8} = 0x8000' -f $playbackPadsAddress),
-        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
         ('set {{signed char}}0x{0:x8} = 80' -f ($playbackPadsAddress + 3)),
+        'enable $attackhi4_breakpoint',
         'else',
-        'set $upsmash_active = 0',
         'set $drive_phase = 1',
         'set $approach_route = 0',
-        'set $stop_requested = 0',
-        'set $runbrake_seen = 0',
-        ('set {{unsigned short}}0x{0:x8} = 0' -f $playbackPadsAddress),
-        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 3)),
+        'enable $walk_breakpoint',
+        'enable $dash_breakpoint',
+        'enable $run_breakpoint',
         'if ($mroot->translate.vec.f.x >= 1800.0)',
         ('set {{signed char}}0x{0:x8} = -80' -f ($playbackPadsAddress + 2)),
         'else',
@@ -491,14 +546,32 @@ try {
         'end',
         'end',
         'end',
+        'end',
+        'end',
+        'if (((GObj *)$r0 == $mario) && ($heavy_candidate == 0) && ($upsmash_attempts >= 48))',
+        ('set {{unsigned short}}0x{0:x8} = 0' -f $playbackPadsAddress),
+        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
+        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 3)),
+        'disable $kick_breakpoint',
+        'disable $pass_breakpoint',
+        'disable $walk_breakpoint',
+        'disable $dash_breakpoint',
+        'disable $run_breakpoint',
+        'disable $wait_breakpoint',
+        'disable $attackhi4_breakpoint',
+        'disable $throwrelease_breakpoint',
+        'disable $damageinit_breakpoint',
+        'end',
         'continue',
         'end',
+        'disable $wait_breakpoint',
 
         # AttackHi4SetStatus is likewise inlined. This source interrupt-main
         # entry is reached only after the natural Up+A input succeeds; r0 is
         # the live FTStruct rather than its fighter GObj.
         ('break *0x{0:x8}' -f $attackHi4InterruptAddress),
-        'commands',
+        'set $attackhi4_breakpoint = $bpnum',
+        'commands $attackhi4_breakpoint',
         'silent',
         'if (((FTStruct *)$r0 == $mfp) && ($heavy_candidate == 0) && ($drive_phase == 3) && ($upsmash_attempts < 48))',
         'set $upsmash_attempts = $upsmash_attempts + 1',
@@ -508,15 +581,21 @@ try {
         ('set {{unsigned short}}0x{0:x8} = 0' -f $playbackPadsAddress),
         ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
         ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 3)),
+        'disable $attackhi4_breakpoint',
+        'enable $wait_breakpoint',
+        'enable $throwrelease_breakpoint',
+        'enable $damageinit_breakpoint',
         'end',
         'continue',
         'end',
+        'disable $attackhi4_breakpoint',
 
         # Latch source throw release before damage initialization. Pointer
         # links may already be clear by a later DamageAir update, so this event
         # ordering—not pointer nullness—keeps ordinary hits separate.
         ('break *0x{0:x8}' -f $throwReleaseAddress),
-        'commands',
+        'set $throwrelease_breakpoint = $bpnum',
+        'commands $throwrelease_breakpoint',
         'silent',
         'if ((GObj *)$r0 == $fox)',
         'set $throw_release_pending = 1',
@@ -524,8 +603,10 @@ try {
         'end',
         'continue',
         'end',
+        'disable $throwrelease_breakpoint',
         ('break *0x{0:x8}' -f $damageInitAddress),
-        'commands',
+        'set $damageinit_breakpoint = $bpnum',
+        'commands $damageinit_breakpoint',
         'silent',
         'if ((GObj *)$r0 == $fox)',
         'set $damage_event_count = $damage_event_count + 1',
@@ -541,6 +622,8 @@ try {
         'if (($heavy_candidate == 0) && ($damage_from_throw == 0) && ($upsmash_active != 0) && ($drive_phase == 4) && ($mfp->status_id == nFTCommonStatusAttackHi4) && (((unsigned int)$r3) >= 0x42700000) && (((unsigned int)$r3) < 0x7f800000))',
         'set $heavy_candidate = 1',
         'set $heavy_candidate_bits = (unsigned int)$r3',
+        'set $phase_heavy_hits = $phase_heavy_hits + 1',
+        'printf "DAMAGEFALL_PHASE=HEAVY_HIT,%u,%#x\n", $phase_heavy_hits, $heavy_candidate_bits',
         # Candidate-local accepted evidence is reset here. A prior direct
         # DamageFly landing may be retained only in rejected_direct_count and
         # the direct diagnostic fields below.
@@ -576,16 +659,28 @@ try {
         ('set {{unsigned short}}0x{0:x8} = 0' -f $playbackPadsAddress),
         ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 2)),
         ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 3)),
+        'disable $kick_breakpoint',
+        'disable $pass_breakpoint',
+        'disable $walk_breakpoint',
+        'disable $dash_breakpoint',
+        'disable $run_breakpoint',
+        'disable $wait_breakpoint',
+        'disable $attackhi4_breakpoint',
+        'disable $throwrelease_breakpoint',
+        'disable $damageinit_breakpoint',
         'end',
         'end',
         'continue',
         'end',
+        'disable $damageinit_breakpoint',
         ('break *0x{0:x8}' -f $damageFallSetAddress),
         'set $damagefall_breakpoint = $bpnum',
         'commands $damagefall_breakpoint',
         'silent',
         'if (($heavy_candidate != 0) && ((GObj *)$r0 == $fox) && ($damage_from_throw == 0) && ($ffp->status_id >= 51) && ($ffp->status_id <= 55))',
         'disable $damagefall_breakpoint',
+        'set $phase_damagefalls = $phase_damagefalls + 1',
+        'printf "DAMAGEFALL_PHASE=DAMAGEFALL,%u,%d\n", $phase_damagefalls, $ffp->status_id',
         'if ($heavy == 0)',
         'set $heavy = 1',
         'set $heavy_status = $ffp->status_id',
@@ -674,8 +769,6 @@ try {
         'set $route_kind = 0',
         'set $drive_phase = 0',
         'set $approach_route = 0',
-        'set $stop_requested = 0',
-        'set $runbrake_seen = 0',
         'disable $damagefall_breakpoint',
         'disable $cliff_breakpoint',
         'disable $downbounce_breakpoint',
@@ -689,6 +782,8 @@ try {
         'if (($ffp->status_id == 57) && ($cross != 0))',
         'set $route_kind = 2',
         'set $downbounce_calls = $downbounce_calls + 1',
+        'set $phase_floor_recoveries = $phase_floor_recoveries + 1',
+        'printf "DAMAGEFALL_PHASE=FLOOR_RECOVERY,%u,%d\n", $phase_floor_recoveries, $ffp->coll_data.floor_line_id',
         'set $landing_pending = 1',
         'set $landing_ga = $ffp->ga',
         'set $landing_floor_line = $ffp->coll_data.floor_line_id',
@@ -784,6 +879,8 @@ try {
         'printf "DAMAGEFALL_ACTORS=%u,%u,%u,%u,%u,%u,%u\n", $mfp->player, $mfp->fkind, $mfp->pkind, $ffp->player, $ffp->fkind, $ffp->pkind, $ffp->level',
         ('printf "DAMAGEFALL_INPUT=%u,%#x,%u,%u,%u,%u,%#x,%d,%d\n", *(unsigned int *)0x{0:x8}, *(unsigned int *)0x{1:x8}, gNdsControllerPlaybackReadCount - $input_reads_base, gNdsControllerPlaybackFrameCount - $input_frames_base, $observed_frames, $drive_frames, *(unsigned short *)0x{2:x8}, *(signed char *)0x{3:x8}, *(signed char *)0x{4:x8}' -f $playbackEnabledAddress, $playbackConnectedAddress, $playbackPadsAddress, ($playbackPadsAddress + 2), ($playbackPadsAddress + 3)),
         'printf "DAMAGEFALL_DRIVER=%u,%u,%u,%u,%u,%d\n", $approach_count, $wait_stop_count, $upsmash_attempts, $upsmash_set_count, $upsmash_damage_count, $separation_milli',
+        'printf "DAMAGEFALL_DROP=%u,%u,%d,%u\n", $drop_requests, $drop_accepts, $drop_line, $main_floor_waits',
+        'printf "DAMAGEFALL_PHASES=%u,%u,%u\n", $phase_heavy_hits, $phase_damagefalls, $phase_floor_recoveries',
         'printf "DAMAGEFALL_HEAVY=%u,%d,%d,%#x,%d,%#x,%#x,%d,%d\n", $heavy, $heavy_status, $heavy_percent, $heavy_knockback_bits, $heavy_hitstun, $heavy_vx_bits, $heavy_vy_bits, $heavy_x_milli, $heavy_y_milli',
         'printf "DAMAGEFALL_CLASS=%u,%u,%u,%u,%u\n", $route_kind, $throw_release_count, $damage_event_count, $damage_from_throw, $throw_release_pending',
         'printf "DAMAGEFLY_ROUTE=%u,%u,%u,%u,%u,%u,%d,%d,%d,%d,%d,%#x,%#x\n", $direct_check_delta, $direct_test_delta, $direct_hit_delta, $direct_landing_delta, $direct_result_delta, $direct_invalid_delta, $direct_last_line, $direct_last_status, $direct_root_before, $direct_root_after, $direct_pos_diff_y, $direct_mask_curr, $direct_mask_stat',
@@ -815,6 +912,8 @@ try {
     $actors = [regex]::Match($gdbStdout, 'DAMAGEFALL_ACTORS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $input = [regex]::Match($gdbStdout, 'DAMAGEFALL_INPUT=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+)')
     $driver = [regex]::Match($gdbStdout, 'DAMAGEFALL_DRIVER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
+    $drop = [regex]::Match($gdbStdout, 'DAMAGEFALL_DROP=([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+)')
+    $phases = [regex]::Match($gdbStdout, 'DAMAGEFALL_PHASES=([0-9]+),([0-9]+),([0-9]+)')
     $heavy = [regex]::Match($gdbStdout, 'DAMAGEFALL_HEAVY=([0-9]+),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+)')
     $class = [regex]::Match($gdbStdout, 'DAMAGEFALL_CLASS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $direct = [regex]::Match($gdbStdout, 'DAMAGEFLY_ROUTE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
@@ -861,6 +960,8 @@ try {
     $av = Get-Ints $actors
     $iv = Get-Ints $input
     $uv = Get-Ints $driver
+    $ov = Get-Ints $drop
+    $qv = Get-Ints $phases
     $dv = Get-Ints $heavy
     $kv = Get-Ints $class
     $fv = Get-Ints $direct
@@ -895,13 +996,25 @@ try {
     }
 
     $knockback = [double](Convert-UInt32BitsToSingle $dv[3])
-    Assert-Condition ($driver.Success -and $uv[0] -ge 1 -and $uv[1] -ge 1 -and $uv[2] -ge 1 -and $uv[3] -eq $uv[2] -and $uv[1] -ge $uv[2] -and $uv[4] -ge 1 -and [Math]::Abs($uv[5]) -le 650000) 'Mario did not naturally approach through Walk or Dash/Run, stop in Wait, and enter source up-smash close to Fox.' $gdbStdout
+    Assert-Condition ($driver.Success -and $uv[0] -ge 1 -and $uv[1] -ge 1 -and $uv[2] -ge 1 -and $uv[3] -eq $uv[2] -and $uv[1] -ge $uv[2] -and $uv[4] -ge 1 -and [Math]::Abs($uv[5]) -le 650000) 'Mario did not naturally approach through source Dash/Walk/Run steps, stop in Wait, and enter source up-smash close to Fox.' $gdbStdout
+    Assert-Condition ($drop.Success -and $ov[0] -ge 1 -and
+            $ov[1] -eq $ov[0] -and $ov[2] -ge 0 -and $ov[2] -ne 3 -and
+            $ov[3] -ge 1) `
+        'Mario did not naturally pass through a side platform and reach a main-floor Wait before attacking.' `
+        $gdbStdout
+    Assert-Condition ($phases.Success -and $qv[0] -ge 1 -and
+            $qv[1] -ge 1 -and $qv[2] -eq 1 -and
+            $qv[0] -ge $qv[1] -and $qv[1] -ge $qv[2]) `
+        'The cumulative HEAVY_HIT, DAMAGEFALL, and FLOOR_RECOVERY discriminator did not complete in order.' `
+        $gdbStdout
     Assert-Condition ($heavy.Success -and $dv[0] -eq 1 -and $dv[1] -ge 51 -and $dv[1] -le 55 -and $dv[2] -gt 0 -and (Test-FiniteSingle ([single]$knockback)) -and $knockback -ge 60.0) 'The trace did not originate from Mario naturally giving Fox a genuine non-throw >=60 DamageFly hit with up-smash.' $gdbStdout
     Assert-Condition ($class.Success -and $kv[0] -eq 2 -and $kv[2] -ge 1 -and $kv[3] -eq 0 -and $kv[4] -eq 0) 'The accepted Fox damage chain was missing, originated from a throw release, or used direct DamageFly landing.' $gdbStdout
     Assert-Condition ($transition.Success -and $tv[0] -eq 1 -and $tv[1] -ge 51 -and $tv[1] -le 55 -and $tv[2] -eq 1) 'Fox DamageFly did not naturally transition exactly once through source DamageFall status 57.' $gdbStdout
     Assert-Condition ($cross.Success -and $cv[0] -eq 1 -and $cv[1] -ge 0 -and $cv[2] -lt 0 -and $cv[3] -ge -2318000 -and $cv[3] -le 2318000 -and $cv[4] -lt 0) 'Fox DamageFall did not produce a descending main-floor crossing on Pupupu line 3.' $gdbStdout
     Assert-Condition ($route.Success -and $rv[0] -eq 1 -and $rv[8] -eq 3 -and (($rv[9] -band 0x800) -ne 0) -and (($rv[10] -band 0x800) -ne 0) -and $rv[11] -eq 1 -and [Math]::Abs($rv[12]) -le 2) 'Fox DamageFall did not clamp on line 3 and invoke exactly one DownBounce.' $gdbStdout
-    Assert-Condition (($rv[2] - $rv[1]) -ge 1 -and ($rv[4] - $rv[3]) -ge 1 -and ($rv[6] - $rv[5]) -ge 1 -and $rv[7] -ge 1) 'Source-shaped Fox DamageFall processing did not sweep and adjust the floor.' $gdbStdout
+    Assert-Condition (($rv[2] - $rv[1]) -ge 1 -and
+        ($rv[4] - $rv[3]) -ge 1) `
+        'Source-shaped Fox DamageFall processing did not drive the shared floor sweep to a hit.' $gdbStdout
     Assert-Condition ($frames.Success -and $wv[0] -ge 1 -and $wv[1] -eq 0 -and $wv[5] -eq 1) 'Fox completed an in-bounds frame below the floor or missed the accepted DamageFall landing callback.' $gdbStdout
     Assert-Condition ($post.Success -and $pv[0] -eq 1 -and
             (($pv[1] -eq 67 -and $pv[2] -eq 58) -or

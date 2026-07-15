@@ -1,0 +1,46 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+nds_platform.c
+nds_renderer.c
+battleship_mnstartup.c
+battleship_mvopeningmario.c
+battleship_sys_objhelper.c
+battleship_sys_taskman.c
+battleship_mvopeningportraits.c
+battleship_mvopeningroom.c
+battleship_mvopeningyoshi.c
+battleship_mvopeningdonkey.c
+battleship_mvopeningpikachu.c
+battleship_mvopeningfox.c
+battleship_mvopeninglink.c
+battleship_mvopeningkirby.c
+battleship_mvopeningsamus.c
+battleship_mntitle.c
+battleship_mnvsmode.c
+battleship_mnplayersvs.c
+battleship_mnmaps.c
+battleship_scvsbattle.c
+battleship_grpupupu_ground.c
+battleship_grinishie_scale.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_run.c
+battleship_ftcommon_pass.c
+battleship_ftcommon_jump.c
+battleship_ftcomputer.c
+battleship_ifcommon.c
+battleship_mnvsresults.c
+battleship_mario_fireball.c
+battleship_fox_blaster.c
+battleship_fox_reflector.c
+scene_backend.c
+linking smash64ds-battle-mariofox-stage-gcdrawall-loop-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-mariofox-stage-gcdrawall-loop-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+Battle Mario/Fox stage gcDrawAll-loop ftmanager natural-motion harness passed: wait=2/2 anim=1/1 walk=0/0 updates=2 mask=0x24f hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z0/proj192/decal0 hwtex=bind32/upload27/ready187/reject0/fmt4/max128x128 carry=42/42/tex32/tile34/short6/6/seg3 hwftr=2/626

@@ -1,0 +1,133 @@
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:1:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/libnds/include/nds/ndstypes.h:36,
+                 from C:/devkitPro/libnds/include/nds/arm9/cache.h:39,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:6:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:883,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:74:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c: In function 'ndsFighterJumpAttackAirProbeDirections':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:3081:35: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 'long int' [-Wsign-compare]
+ 3081 |             (fp->motion_attack_id ==
+      |                                   ^~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:892:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunProbeDamageInvincibleGate':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:7630:26: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+ 7630 |     if ((fp->hitlag_tics == saved_hitlag_tics) &&
+      |                          ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11464:49: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+11464 |     if ((hitlag > 0) && (victim_fp->hitlag_tics == hitlag))
+      |                                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11551:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+11551 |         (victim_fp->hitlag_tics == shield_break_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunStepAttackDamageProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16361:49: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16361 |         (attack_hitlag > 0) && (fp->hitlag_tics == attack_hitlag) &&
+      |                                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16401:26: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16401 |         (fp->hitlag_tics == attack_shield_hitlag) &&
+      |                          ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16464:50: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16464 |     if ((rebound_hitlag > 0) && (fp->hitlag_tics == rebound_hitlag))
+      |                                                  ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16538:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16538 |         (target_fp->hitlag_tics == shield_damage_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16603:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16603 |         (target_fp->hitlag_tics == shield_break_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16877:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16877 |     if ((target_fp->hitlag_tics == hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17881:13: warning: 'ndsFighterMarioFoxRecordStubFighter' defined but not used [-Wunused-function]
+17881 | static void ndsFighterMarioFoxRecordStubFighter(FTDesc *desc,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17708:14: warning: 'ndsFighterMarioFoxMakeFighter' defined but not used [-Wunused-function]
+17708 | static GObj *ndsFighterMarioFoxMakeFighter(FTDesc *desc)
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16984:13: warning: 'ndsFighterDashRunProbeAttackRecordCarry' defined but not used [-Wunused-function]
+16984 | static void ndsFighterDashRunProbeAttackRecordCarry(FTStruct *fp)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16914:13: warning: 'ndsFighterDashRunStepAttackCollFighterRange' defined but not used [-Wunused-function]
+16914 | static sb32 ndsFighterDashRunStepAttackCollFighterRange(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16262:13: warning: 'ndsFighterDashRunStepAttackDamageProcParams' defined but not used [-Wunused-function]
+16262 | static sb32 ndsFighterDashRunStepAttackDamageProcParams(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16161:13: warning: 'ndsFighterDashRunStepAttackDamageHitStats' defined but not used [-Wunused-function]
+16161 | static sb32 ndsFighterDashRunStepAttackDamageHitStats(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15644:13: warning: 'ndsFighterDashRunStepAttackDamageHitLog' defined but not used [-Wunused-function]
+15644 | static sb32 ndsFighterDashRunStepAttackDamageHitLog(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15576:13: warning: 'ndsFighterDashRunStepAttackDamageRecord' defined but not used [-Wunused-function]
+15576 | static sb32 ndsFighterDashRunStepAttackDamageRecord(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15459:13: warning: 'ndsFighterDashRunStepAttackDamageCollide' defined but not used [-Wunused-function]
+15459 | static sb32 ndsFighterDashRunStepAttackDamageCollide(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12107:13: warning: 'ndsGMCollisionCheckFighterAttackShieldCollideSelected' defined but not used [-Wunused-function]
+12107 | static sb32 ndsGMCollisionCheckFighterAttackShieldCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12084:13: warning: 'ndsGMCollisionCheckFighterAttacksCollideSelected' defined but not used [-Wunused-function]
+12084 | static sb32 ndsGMCollisionCheckFighterAttacksCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11985:13: warning: 'ndsFighterDashRunStepAttackDamageRectangle' defined but not used [-Wunused-function]
+11985 | static sb32 ndsFighterDashRunStepAttackDamageRectangle(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11706:13: warning: 'ndsFighterDashRunStepAttackCollInterpolate' defined but not used [-Wunused-function]
+11706 | static sb32 ndsFighterDashRunStepAttackCollInterpolate(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11627:13: warning: 'ndsFighterDashRunStepAttackCollPosition' defined but not used [-Wunused-function]
+11627 | static sb32 ndsFighterDashRunStepAttackCollPosition(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11612:13: warning: 'ndsFighterDashRunShouldWriteBackAttackPosition' defined but not used [-Wunused-function]
+11612 | static sb32 ndsFighterDashRunShouldWriteBackAttackPosition(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11605:12: warning: 'ndsFTMotionSignExtend' defined but not used [-Wunused-function]
+11605 | static s32 ndsFTMotionSignExtend(u32 value, u32 bits)
+      |            ^~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:13182:13: warning: 'ndsSceneMipCacheBuildGrid' defined but not used [-Wunused-function]
+13182 | static sb32 ndsSceneMipCacheBuildGrid(Mtx44f live_matrix,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:11858:13: warning: 'ndsFighterNaturalSpecialsApplyInput' defined but not used [-Wunused-function]
+11858 | static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:11730:13: warning: 'ndsFighterNaturalMovesetApplyInput' defined but not used [-Wunused-function]
+11730 | static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:877:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_fighter_model.c:1750:13: warning: 'ndsFighterMarioFoxSetupManagerFiles' defined but not used [-Wunused-function]
+ 1750 | static void ndsFighterMarioFoxSetupManagerFiles(void)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:871:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:463:13: warning: 'sNdsFTManagerPartsAllocInit' defined but not used [-Wunused-variable]
+  463 | static sb32 sNdsFTManagerPartsAllocInit;
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:462:17: warning: 'sNdsFTManagerPartsAllocFree' defined but not used [-Wunused-variable]
+  462 | static FTParts *sNdsFTManagerPartsAllocFree;
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:461:16: warning: 'sNdsFTManagerPartsAllocPool' defined but not used [-Wunused-variable]
+  461 | static FTParts sNdsFTManagerPartsAllocPool[64];
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~

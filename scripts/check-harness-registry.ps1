@@ -81,9 +81,9 @@ $battleLoopText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-batt
 $captureText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'capture-melonds.ps1') -Raw
 $debugMelonText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'debug-melonds.ps1') -Raw
 $melonLibText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'lib\melonds.ps1') -Raw
-$parityPath = Join-Path $PSScriptRoot 'check-battle-playable-rom-parity.ps1'
-if (-not (Test-Path -LiteralPath $parityPath -PathType Leaf)) {
-    Fail-Check 'missing canonical/shipped battle-playable ROM parity checker'
+$publishedRomCheckPath = Join-Path $PSScriptRoot 'check-published-roms.ps1'
+if (-not (Test-Path -LiteralPath $publishedRomCheckPath -PathType Leaf)) {
+    Fail-Check 'missing two-ROM publication contract checker'
 }
 $forcedBuildTokenPattern = '(?<![A-Za-z0-9_-])[''"]?-B[''"]?(?![A-Za-z0-9_-])'
 if (($devFastText -notmatch "'-FastIteration'") -or
@@ -91,14 +91,14 @@ if (($devFastText -notmatch "'-FastIteration'") -or
     ($devFastText -match $forcedBuildTokenPattern)) {
     Fail-Check 'verify-dev-fast is not the incremental canonical fast-iteration path'
 }
-if (($p1GateText -notmatch 'TARGET=smash64ds BUILD=build') -or
-    ($p1GateText -notmatch 'NDS_DEV_SCENE_HARNESS=normal') -or
-    ($p1GateText -match $forcedBuildTokenPattern)) {
-    Fail-Check 'verify-p1-gate does not incrementally prepare its normal opening ROM'
+if (($p1GateText -notmatch 'P1Gate execution is retired') -or
+    ($p1GateText -notmatch 'two-ROM runtime model') -or
+    ($p1GateText -match '&\s*make')) {
+    Fail-Check 'verify-p1-gate can still publish compile-distinct ROMs'
 }
-if (($realtimeText -notmatch 'check-battle-playable-rom-parity\.ps1') -or
+if (($realtimeText -notmatch 'check-published-roms\.ps1') -or
     ($realtimeText -notmatch '\[switch\]\$FastIteration')) {
-    Fail-Check 'canonical realtime verifier is missing fast iteration or ROM parity'
+    Fail-Check 'published realtime verifier is missing fast iteration or the ROM contract'
 }
 if (($realtimeText -notmatch 'Resolve-MelonDSRunnerSlot') -or
     ($realtimeText -notmatch '-MelonDS\s+\$captureMelonDS') -or
@@ -143,8 +143,15 @@ if ($verifyAllText -notmatch '(?s)\(\$Profile -eq ''P1Gate''\).*?\(\$record\.Nam
 if ($battleLoopText -notmatch '\[int64\]\$aobj32\.Groups\[4\]\.Value -eq 0') {
     Fail-Check 'battle lifecycle verifier does not parse unsigned AObj32 failure count safely'
 }
-if ($makefileText -notmatch 'smash64ds-battle-playable-hwtri\.nds:\s+\$\(OUTPUT\)\.nds\s+FORCE') {
-    Fail-Check 'canonical build does not refresh the shipped battle-playable ROM unconditionally'
+if (($makefileText -notmatch 'ifeq \(\$\(TARGET\),smash64ds-battle-playable-hwtri\)') -or
+    ($makefileText -notmatch '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-hwtri\).*?override NDS_DEV_SCENE_HARNESS := battle_playable_realtime.*?override NDS_DEV_LIVE_INPUT_PREVIEW := 1.*?override NDS_HARNESS_FAST_LOGIC := 0.*?override NDS_RENDERER_HW_TRIANGLES := 1')) {
+    Fail-Check 'published battle target is not intrinsically realtime, interactive, and hardware-rendered'
+}
+if (($makefileText -notmatch 'NDS_PUBLISHED_TARGETS := smash64ds smash64ds-battle-playable-hwtri') -or
+    ($makefileText -notmatch 'override NDS_PUBLISH_USER_ROM :=') -or
+    ($makefileText -notmatch 'Non-published target .* may not write into the project root') -or
+    ($makefileText -notmatch 'export OUTPUT := \$\(NDS_OUTPUT_ROOT\)/\$\(TARGET\)')) {
+    Fail-Check 'Makefile no longer confines non-published ROMs to their build directories'
 }
 foreach ($record in $harnessRecords) {
     $expectedKey = $record.Harness.ToLowerInvariant()
@@ -211,11 +218,9 @@ Assert-ProfilePlan 'P1Gate' @(
 )
 Assert-ProfilePlan 'Latest' @(
     'runtime',
-    'title',
     'battle_playable_realtime'
 )
 Assert-ProfilePlan 'LatestFast' @(
-    'title',
     'battle_playable_realtime'
 )
 Assert-ProfilePlan 'Regression' @(

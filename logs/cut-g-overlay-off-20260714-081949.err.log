@@ -1,0 +1,15 @@
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:1:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~

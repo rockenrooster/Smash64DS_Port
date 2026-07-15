@@ -1,0 +1,35 @@
+GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.
+Harness registry check passed: 160 harness mappings, 165 verifier scripts, 0 drift.
+Running verifier: runtime [verify-runtime.ps1]
+Runtime verification passed (401 frames, fps=60/up=0/dl=60, cv=0/ch=32, verifyfps=2.92).
+Running verifier: title [verify-title-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
+Title harness passed: scene=1/46 room=0 title=0x54494457
+Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]
+WARNING: battle_playable Pupupu stock KO realtime HW textured perf below 60fps target: fps=31/31 x0.1; renderer-cache 
+follow-up still required.
+battle_playable Pupupu stock KO realtime pacing smoke passed: frames=60 fps=31/31 ticks=628742016 gxram=658/2010 gxstat=0x6000000/ctrl=0x19 ftrContract=1952/1934/geom0x222005/light122/122/bounds122/0 oracle=2302/0/0 mtx=load1/scale0/p4096,4096,4096,0/mv4096,4096,4096,0,0,0 vraw=32767..-32768/32767..-32768/32767..-32768 vhw=-9219..9219/-10083..12656/11..47 clip=0 texProof=69742/231302/897 sample=204/897/897 alias=42 st=-480..6159/-240..2064 texUse=0/410/0/0/58/impl58/first0x2/flags0x1/w0xfcffffff/w1xfffe7d3e/geom0x604 texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0 texLane=layout0x2/byte299/half299/bFmt0x100/hFmt0x400/bMap0x10203/hMap0x2030001 stageCarry=2562/2562/tex1952/tile2074/short366/366/seg183 combine=4269/2687/lit35495/mat0/proj40131 light=0/0/3450 profile=present9974080/draw0/stage3236160/mat10368/dl7056896/tex396224/conv0/upload0 texUploads=0/0 binds=46 vtx=2301 tri=767
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_early_181052_next.png (488x675)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_early_181052.png (488x675)
+Top screen visible: 44489/49152 different pixels (90.513%).
+Top screen green content: 13454/49152 dominant-green pixels (27.372%).
+Top screen detail content: 30474/49152 non-white/non-green pixels (62.000%).
+Top-screen required region detail: 5483/5616 pixels (97.632%).
+Top-screen fighter-region color: 3465/5616 pixels (61.699%).
+Top screen delta: 928/49152 changed pixels (1.888%).
+Region left_bush: non-clear=3000/3000 (100.000%) green=1685/3000 (56.167%) detail=1315/3000 (43.833%) fighter=800/3000 (26.667%) changed=0/3000 (0.000%)
+Region right_bush: non-clear=3250/3250 (100.000%) green=340/3250 (10.462%) detail=2830/3250 (87.077%) fighter=2018/3250 (62.092%) changed=119/3250 (3.662%)
+Region fighter_center: non-clear=4225/4225 (100.000%) green=61/4225 (1.444%) detail=4122/4225 (97.562%) fighter=2695/4225 (63.787%) changed=0/4225 (0.000%)
+Region stage_body: non-clear=7650/7650 (100.000%) green=3662/7650 (47.869%) detail=3934/7650 (51.425%) fighter=2677/7650 (34.993%) changed=61/7650 (0.797%)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_late_181052_next.png (488x675)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_late_181052.png (488x675)
+Top screen visible: 44489/49152 different pixels (90.513%).
+Top screen green content: 13454/49152 dominant-green pixels (27.372%).
+Top screen detail content: 30474/49152 non-white/non-green pixels (62.000%).
+Top screen delta: 0/49152 changed pixels (0.000%).
+Region left_bush: non-clear=3000/3000 (100.000%) green=1685/3000 (56.167%) detail=1315/3000 (43.833%) fighter=800/3000 (26.667%) changed=0/3000 (0.000%)
+Region right_bush: non-clear=3250/3250 (100.000%) green=340/3250 (10.462%) detail=2830/3250 (87.077%) fighter=2018/3250 (62.092%) changed=0/3250 (0.000%)
+Region fighter_center: non-clear=4225/4225 (100.000%) green=61/4225 (1.444%) detail=4122/4225 (97.562%) fighter=2695/4225 (63.787%) changed=0/4225 (0.000%)
+Region stage_body: non-clear=7650/7650 (100.000%) green=3662/7650 (47.869%) detail=3934/7650 (51.425%) fighter=2677/7650 (34.993%) changed=0/7650 (0.000%)
+Running verifier: battle_mariofox_stage_mpcliffstatus_floor_loop [verify-battle-mariofox-stage-mpcliffstatus-floor-loop-harness.ps1]
+Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.

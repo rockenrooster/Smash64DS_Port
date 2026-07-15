@@ -10,11 +10,12 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
+. (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-audio-fgm-hwtri'
 $buildName = 'build-battle-playable-audio-fgm-hwtri-harness'
-$rom = Join-Path $root "$target.nds"
-$elf = Join-Path $root "$target.elf"
+$rom = Resolve-Smash64DSBuildOutput -Root $root -Target $target -Build $buildName -Extension '.nds'
+$elf = Resolve-Smash64DSBuildOutput -Root $root -Target $target -Build $buildName -Extension '.elf'
 $object = Join-Path $root "builds\$buildName\nds_audio_fgm.o"
 $buildConfig = Join-Path $root "builds\$buildName\nds_build_config.h"
 $metadataPath = Join-Path $root 'assets\audio\fgm_phase_pack_ima.json'

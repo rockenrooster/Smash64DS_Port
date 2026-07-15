@@ -3,10 +3,15 @@ param(
     [switch]$Force,
     [switch]$KeepArtifacts,
     [switch]$KeepNormalBuild,
-    [switch]$KeepLatestBuilds
+    [switch]$KeepLatestBuilds,
+    [switch]$KeepPublishedBuilds
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+if ($KeepPublishedBuilds) {
+    $KeepNormalBuild = $true
+    $KeepLatestBuilds = $true
+}
 $latestKeepPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $latestKeepLabels = [System.Collections.Generic.List[string]]::new()
 function Resolve-BuildPath {
@@ -49,6 +54,9 @@ if ($KeepLatestBuilds) {
             }
         }
     }
+}
+if ($KeepPublishedBuilds) {
+    Write-Output 'KeepPublishedBuilds preserves only the normal launch build and Boundary battle build.'
 }
 function Test-InRoot {
     param([string]$Path)

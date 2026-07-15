@@ -20844,3 +20844,35 @@ remains skipped for the requested fast iteration cadence.
   pass, followed by active mode-163 Boundary. The canonical one-minute
   lifecycle still reaches Results with zero safety/stale faults; presentation
   remains 15.7 FPS, so realtime completion is not claimed.
+
+## 2026-07-15 - Compiled the complete BattleShip map processor privately
+
+- Added a whole-source `mp/mpprocess.c` wrapper with exact private remaps for
+  all 36 functions and seven external globals. A target-only compatibility
+  header pins the complete `MPObjectColl`/`MPCollData` size and offset ABI.
+- Added the missing lower left/right wall-edge dependency in a separate private
+  support object. Both objects are canonical ELF prerequisites but are omitted
+  from `OFILES`, so they compile every build without entering the link or
+  perturbing live scene-backend code, veneers, memory, or gameplay.
+- Added `check-mpprocess-private-import.ps1`: it proves source/wrapper/object
+  completeness, pinned ignored-upstream `mpprocess.c`/`mpdef.h` hashes, full
+  dependency provenance/freshness, strict ABI-warning policy, separate sections,
+  compile-only Makefile ownership, and zero final-link leakage.
+- Added a unique-directory OFF/ON orchestrator. It fingerprints all 10,779 build
+  inputs across both builds, stages each artifact immediately, binds staged and
+  live ON output exactly, and requires identical ROM bytes plus allocated ELF
+  sections. Its qualification applies only to this compile checkpoint.
+- Enabled versus disabled private-compilation ROMs are byte-identical at 14,368,768
+  bytes, SHA-256 `E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F`;
+  the earlier `F8EF...` artifact embedded drive-relative `C:devkitPro` assertion
+  paths. Makefile normalization now converges Windows/MSYS spellings before
+  `ds_rules`. DevFast, active Boundary, platform, Fireball, and the one-minute
+  Results lifecycle pass; exact Cut G frames remain under
+  `artifacts/visibility`. This is a compile checkpoint, not a live collision
+  fix. Symbol closure is not semantic closure: DS endpoints omit moving-yakumono
+  world translation and ceil/wall common providers omit world-to-local
+  normalization; repair/fixture the atomic boundary before the source
+  special/damage/default `mpcommon` cluster can run live. No live collision
+  provider or policy changed in this checkpoint. The planned live split is
+  recorded in `ARCHITECTURE.md` and `P1_EXECUTION_BOARD.md`; it is not completed
+  history.

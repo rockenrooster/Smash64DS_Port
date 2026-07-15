@@ -11,6 +11,7 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_audio_assets.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -134,6 +135,7 @@ void scVSBattleStartBattle(void)
         NDS_SCVSBATTLE_ORIGINAL_FUNC_START_PASS;
 
     ndsBaseSCVSBattleStartBattle();
+    (void)ndsRendererHardwarePrepareBattleStaticTextures();
 
     gNdsSCVSBattleOriginalGObjCount = (u32)gcGetGObjsActiveNum();
     gNdsSCVSBattleOriginalCameraCount = sGCCamerasActiveNum;
@@ -243,6 +245,7 @@ void scVSBattleStartScene(void)
     /* The N64 validation overlay is not staged on DS. */
     gSCManagerBackupData.boot = 0;
     ndsBaseSCVSBattleStartScene();
+    ndsRendererHardwareDiscardBattleStaticTextures();
 
     gNdsSCVSBattleLifecycleScenePrev = gSCManagerSceneData.scene_prev;
     gNdsSCVSBattleLifecycleSceneCurr = gSCManagerSceneData.scene_curr;

@@ -7,6 +7,8 @@ param(
     [int]$DelaySeconds = 5,
     [switch]$RequireRealtime60Fps,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
+    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [switch]$SkipScreenshot,
     [int]$ScreenshotDelaySeconds = 8,
     [int]$ScreenshotSecondDelaySeconds = 1,
@@ -17,8 +19,7 @@ param(
     [double]$MinScreenshotDetailFraction = 0.25,
     [ValidateRange(1,1000000)][int]$FastCaptureFirstFrame = 438,
     [ValidateRange(1,1000000)][int]$FastCaptureSecondFrame = 439,
-    [switch]$FastIteration,
-    [switch]$IncludeShippedParity
+    [switch]$FastIteration
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -258,11 +259,18 @@ if ($RequireRealtime60Fps) { $harnessArgs += '-RequireRealtime60Fps' }
 if ($RendererBenchmarkSamples -gt 0) {
     $harnessArgs += @('-RendererBenchmarkSamples', "$RendererBenchmarkSamples")
 }
+if ($RendererBenchmarkStartFrame -gt 0) {
+    $harnessArgs += @('-RendererBenchmarkStartFrame', "$RendererBenchmarkStartFrame")
+}
+$harnessArgs += @(
+    '-RendererBenchmarkTimeoutSeconds',
+    "$RendererBenchmarkTimeoutSeconds"
+)
 & $powerShellExe @harnessArgs
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
-& (Join-Path $PSScriptRoot 'check-battle-playable-rom-parity.ps1')
+& (Join-Path $PSScriptRoot 'check-published-roms.ps1')
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
@@ -278,13 +286,12 @@ if (-not $SkipScreenshot) {
         $captureMelonDS = $captureContext.MelonDSPath
         Write-Output "Using melonDS runner slot $RunnerSlot for capture: $captureMelonDS"
     }
-    $canonicalRom = Join-Path $root 'smash64ds-battle-playable-canonical-hwtri.nds'
-    $shippedRom = Join-Path $root 'smash64ds-battle-playable-hwtri.nds'
+    $battleRom = Join-Path $root 'smash64ds-battle-playable-hwtri.nds'
     # The preceding GDB verifier hard-proves both source-selected fighter
     # display contracts. Moving fighters therefore cannot make any realtime
     # visual gate fail merely by leaving its historical fixed crops.
     if ($FastIteration) {
-        Invoke-VisibleCaptureAssert -Rom $canonicalRom `
+        Invoke-VisibleCaptureAssert -Rom $battleRom `
             -Stem ("canonical_fast_frame{0}-{1}" -f
                 $FastCaptureFirstFrame, $FastCaptureSecondFrame) `
             -Delay $earlyScreenshotDelaySeconds `
@@ -293,23 +300,13 @@ if (-not $SkipScreenshot) {
             -PublishStableCapture `
             -ExactCutGFrames
     } else {
-        Invoke-VisibleCaptureAssert -Rom $canonicalRom `
+        Invoke-VisibleCaptureAssert -Rom $battleRom `
             -Stem 'iter4_canonical_early' `
             -Delay $earlyScreenshotDelaySeconds `
             -MinDetailFraction $MinScreenshotDetailFraction `
             -RequireTextureDetail
-        Invoke-VisibleCaptureAssert -Rom $canonicalRom `
+        Invoke-VisibleCaptureAssert -Rom $battleRom `
             -Stem 'iter4_canonical_late' `
-            -Delay $lateScreenshotDelaySeconds
-    }
-    if ($IncludeShippedParity) {
-        Invoke-VisibleCaptureAssert -Rom $shippedRom `
-            -Stem 'iter4_shipped_early' `
-            -Delay $earlyScreenshotDelaySeconds `
-            -MinDetailFraction $MinScreenshotDetailFraction `
-            -RequireTextureDetail
-        Invoke-VisibleCaptureAssert -Rom $shippedRom `
-            -Stem 'iter4_shipped_late' `
             -Delay $lateScreenshotDelaySeconds
     }
 }

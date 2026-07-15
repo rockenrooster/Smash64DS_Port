@@ -41,6 +41,10 @@ $make = Get-Content -LiteralPath $makePath -Raw
 
 Assert-Text $wrapper '-CPUOpponentProof\s+`\s*\r?\n\s*-MatchLifecycleProof\s+`\s*\r?\n\s*-OneMinuteMatchProof' `
     'One-minute wrapper does not select the existing CPU/lifecycle mode-163 path.'
+Assert-Text $owner '(?s)if \(\$MatchLifecycleProof\) \{\s*\$CPUOpponentProof = \$true.*?\}\s*if \(\$CPUOpponentProof\) \{\s*\$FoxCpuMode = 1\s*\$foxCpuModeSelected = \$true\s*\}' `
+    'CPU/lifecycle proof no longer forces the Fox CPU decision path on.'
+Assert-Text $owner '(?s)\$preBattleSelectorSelected =\s*\$staticTextureAotSelected -or \$foxCpuModeSelected.*?if \(\$preBattleSelectorSelected\) \{.*?''tbreak scVSBattleStartBattle''.*?if \(\$foxCpuModeSelected\) \{\s*\$preBattleSetupCommands \+=\s*\(''set variable gNdsBattlePlayableFoxCpuEnabled = \{0\}'' -f\s*\$FoxCpuMode\).*?\}.*?\$gdbCommands = @\(\s*\$gdbCommands\[0\.\.3\]\s*\$preBattleSetupCommands' `
+    'Common verifier no longer sets the selected Fox CPU mode before battle setup.'
 Assert-Text $wrapper 'unthrottled state/memory only; realtime performance is not measured' `
     'One-minute wrapper lost its explicit no-realtime-claim notice.'
 if ($wrapper -match 'RequireRealtime60Fps|capture-melonds|Screenshot|FiveMinute|five-minute|18000') {

@@ -10,6 +10,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
+. (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 if ($RunnerSlot -lt 0) {
     throw 'Results audio verification requires an automation-owned runner slot; user melonDS config is out of scope.'
@@ -27,8 +28,8 @@ if ($selectedPort -in @(3333, 3334)) {
 $target = 'smash64ds-audio-results-natural'
 $build = 'build-audio-results-natural'
 $harness = 'battle_playable_match_lifecycle'
-$rom = Join-Path $root "$target.nds"
-$elf = Join-Path $root "$target.elf"
+$rom = Resolve-Smash64DSBuildOutput -Root $root -Target $target -Build $build -Extension '.nds'
+$elf = Resolve-Smash64DSBuildOutput -Root $root -Target $target -Build $build -Extension '.elf'
 $scriptName = '_audio_bgm_results.gdb'
 $emulator = $null
 $configState = $null

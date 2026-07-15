@@ -2,11 +2,10 @@
 """Generate the exact tiled Nintendo DS Pupupu-water host packet.
 
 This is an offline M4 packet, not live renderer integration.  It replays the
-pinned BattleShip material scripts, separates each output into an RGB256
-CI4-pair atlas and an exact RGB4 visibility atlas, and proves reconstruction
-against the current DS RGB5A1 oracle for every unique key in the 216-frame
-period.  Generated C data remains deliberately absent from the Makefile until
-the pre-GO VRAM transition and two-pass depth contract pass on hardware.
+pinned BattleShip material scripts, folds source visibility into RGB256 index
+zero, and proves exact reconstruction against the current DS RGB5A1 oracle for
+every unique key in the 216-frame period.  The two resident atlases permit one
+semantic color pass with color-zero transparency and no equal-depth mask pass.
 """
 
 from __future__ import annotations
@@ -23,24 +22,23 @@ from typing import Iterable, Sequence, TypeVar
 import generate_pupupu_water_aot as source
 
 
-PAIR_TILE_WIDTH = 32
-PAIR_TILE_HEIGHT = 8
-PAIR_TILE_BYTES = PAIR_TILE_WIDTH * PAIR_TILE_HEIGHT
-VISIBILITY_TILE_BYTES = PAIR_TILE_BYTES // 4
+TILE_WIDTH = 32
+TILE_HEIGHT = 8
+TILE_BYTES = TILE_WIDTH * TILE_HEIGHT
 
-PAIR_ATLAS_WIDTH = 512
-PAIR_ATLAS_HEIGHT = 256
-PAIR_ATLAS_COLUMNS = PAIR_ATLAS_WIDTH // PAIR_TILE_WIDTH
-PAIR_ATLAS_ROWS = PAIR_ATLAS_HEIGHT // PAIR_TILE_HEIGHT
-PAIR_ATLAS_BYTES = PAIR_ATLAS_WIDTH * PAIR_ATLAS_HEIGHT
+PRIMARY_ATLAS_WIDTH = 512
+PRIMARY_ATLAS_HEIGHT = 256
+PRIMARY_ATLAS_COLUMNS = PRIMARY_ATLAS_WIDTH // TILE_WIDTH
+PRIMARY_ATLAS_ROWS = PRIMARY_ATLAS_HEIGHT // TILE_HEIGHT
+PRIMARY_ATLAS_BYTES = PRIMARY_ATLAS_WIDTH * PRIMARY_ATLAS_HEIGHT
+PRIMARY_ATLAS_CAPACITY = PRIMARY_ATLAS_COLUMNS * PRIMARY_ATLAS_ROWS
 
-VISIBILITY_ATLAS_WIDTH = 256
-VISIBILITY_ATLAS_HEIGHT = 256
-VISIBILITY_ATLAS_COLUMNS = VISIBILITY_ATLAS_WIDTH // PAIR_TILE_WIDTH
-VISIBILITY_ATLAS_ROWS = VISIBILITY_ATLAS_HEIGHT // PAIR_TILE_HEIGHT
-VISIBILITY_ATLAS_BYTES = (
-    VISIBILITY_ATLAS_WIDTH * VISIBILITY_ATLAS_HEIGHT // 4
-)
+SECONDARY_ATLAS_WIDTH = 256
+SECONDARY_ATLAS_HEIGHT = 64
+SECONDARY_ATLAS_COLUMNS = SECONDARY_ATLAS_WIDTH // TILE_WIDTH
+SECONDARY_ATLAS_ROWS = SECONDARY_ATLAS_HEIGHT // TILE_HEIGHT
+SECONDARY_ATLAS_BYTES = SECONDARY_ATLAS_WIDTH * SECONDARY_ATLAS_HEIGHT
+SECONDARY_ATLAS_CAPACITY = SECONDARY_ATLAS_COLUMNS * SECONDARY_ATLAS_ROWS
 
 FRACTION_MIN = 114
 FRACTION_MAX = 153
@@ -48,23 +46,22 @@ FRACTION_COUNT = FRACTION_MAX - FRACTION_MIN + 1
 PAIR_PALETTE_ENTRIES = 256
 PAIR_PALETTE_BYTES = FRACTION_COUNT * PAIR_PALETTE_ENTRIES * 2
 
-EXPECTED_PAIR_TILES = 494
-EXPECTED_VISIBILITY_TILES = 243
-EXPECTED_LARGE_PAIR_STATES = 33
-EXPECTED_LARGE_VISIBILITY_STATES = 38
-EXPECTED_SMALL_PAIR_STATES = 41
-EXPECTED_SMALL_VISIBILITY_STATES = 46
+EXPECTED_MASKED_TILES = 572
+EXPECTED_PRIMARY_TILES = 512
+EXPECTED_SECONDARY_TILES = 60
+EXPECTED_LARGE_STATES = 38
+EXPECTED_SMALL_STATES = 46
 EXPECTED_KEY_COUNT = 322
 EXPECTED_ORACLE_PIXELS = 3_024_896
-EXPECTED_STATE_TABLE_BYTES = 8_544
+EXPECTED_STATE_TABLE_BYTES = 6_032
 EXPECTED_PLAN_CELLS = 68
 EXPECTED_PLAN_VERTICES = 274
-EXPECTED_DRAWS_PER_PASS = 68
-EXPECTED_TRIANGLES_PER_PASS = 138
-EXPECTED_TOTAL_DRAWS = 136
-EXPECTED_TOTAL_TRIANGLES = 276
-EXPECTED_GX_BEGIN_BATCHES = 2
-EXPECTED_EMITTED_VERTICES = EXPECTED_TOTAL_TRIANGLES * 3
+EXPECTED_LOGICAL_DRAWS = 68
+EXPECTED_TRIANGLES = 138
+EXPECTED_MIN_GX_BEGIN_BATCHES = 1
+EXPECTED_MAX_GX_BEGIN_BATCHES = 2
+EXPECTED_SECONDARY_FRAMES = 48
+EXPECTED_EMITTED_VERTICES = EXPECTED_TRIANGLES * 3
 EXPECTED_VERTEX_ATTRIBUTE_WRITES = EXPECTED_EMITTED_VERTICES * 3
 DEVICE_TICK_BUDGET = 40_000
 DEVICE_TICK_REJECT = 50_000
@@ -90,6 +87,7 @@ MODULE_RELATIVE = Path("src/nds/pupupu_water_tiled_aot.c")
 INCLUDE_RELATIVE = Path(
     "src/nds/generated/pupupu_water_tiled_aot.generated.inc"
 )
+PAYLOAD_RELATIVE = Path("assets/renderer/pupupu_water_tiled_aot.bin")
 
 # Filled after the first exact construction.  Updating one of these values is
 # an explicit review action, not an automatic side effect of --write.
@@ -97,12 +95,13 @@ EXPECTED_DIGESTS: dict[str, str] = {
     "source_stream": "a286f0beea8547344c083b88bb1fbcc844bdb3ea9059c6a5d7c8cfed2dffc288",
     "oracle": "5471dfe68ba1a3346cf64799938feb5f40d6afe8879f2f2c3984bca511a66c22",
     "clipped_oracle": "7e3989a8ced63e5a2a7b3534d686b189a624acfae73fc7eac98ea292da3657ec",
-    "pair_atlas": "203e36a96c8125df5204baf02f271a07e0248b8aa51a50bff32715ccfa117f9f",
-    "visibility_atlas": "80e31c49f39e1ca704fb83e3b9d403f19cd6e7afb1491308b26321a276fcba44",
+    "primary_atlas": "ecc0b1b90d5f3f573f1658444a8d68fd308b058b354daf074b5c0e35edf49c8f",
+    "secondary_atlas": "5db8bbbbc30b264fbcf43acaf387924742e50e48a41c1a6d12560c88e91eaf25",
     "palettes": "b55d60bedc30df55fc92197b839e97c1ce2dc733f7055ea9e824ddea095d6d47",
-    "state_tables": "6405e1a67c07b88efe90885d0b746eb5635de4bfcda7ad331aa79f66bdad2d4e",
+    "residency_payload": "af052624915c87205bfbff8e0db1e3365d3d7a30758fba74b32fdaf39c364982",
+    "state_tables": "eed2d0e6c4bddaeec60f6399b3937f7a1ecc3d38e7b94b0e5968a2f4d4f07281",
     "geometry_plan": "cbe6f7546a0ea6c13e3c28fd055634d4170d0f3dc6df48f3a50c610ae91c483b",
-    "combined": "36fbc1c7f4d08f178ac7564b8d5c9c3e3f1dbc2ee1b0f7a60e09ab096b3b2018",
+    "combined": "a5dce81ca54ff6d67ecf327640b43c006201e80d28840f363b07df38fd028745",
 }
 
 T = TypeVar("T")
@@ -121,19 +120,6 @@ def require(condition: bool, message: str) -> None:
         raise fail(message)
 
 
-def pack_visibility(values: bytes) -> bytes:
-    require(len(values) == PAIR_TILE_BYTES, "visibility tile shape changed")
-    output = bytearray(VISIBILITY_TILE_BYTES)
-    for offset, value in enumerate(values):
-        require(value in (0, 1), "visibility texel left its one-bit domain")
-        output[offset >> 2] |= value << ((offset & 3) * 2)
-    return bytes(output)
-
-
-def unpack_visibility(payload: bytes, offset: int) -> int:
-    return (payload[offset >> 2] >> ((offset & 3) * 2)) & 0x3
-
-
 @dataclass(frozen=True)
 class KeyImage:
     pair: bytes
@@ -143,8 +129,7 @@ class KeyImage:
 
 @dataclass(frozen=True)
 class FrameState:
-    pair_state: int
-    visibility_state: int
+    state: int
 
 
 @dataclass(frozen=True)
@@ -152,8 +137,7 @@ class OwnerTables:
     spec: source.MObjSpec
     census: source.KeyCensus
     key_images: dict[source.WaterKey, KeyImage]
-    pair_states: tuple[tuple[int, ...], ...]
-    visibility_states: tuple[tuple[int, ...], ...]
+    states: tuple[tuple[int, ...], ...]
     frames: tuple[FrameState, ...]
 
 
@@ -203,10 +187,9 @@ class ClipVertex:
 class GeneratedModel:
     corpus: source.SourceCorpus
     owners: tuple[OwnerTables, OwnerTables]
-    pair_tiles: tuple[bytes, ...]
-    visibility_tiles: tuple[bytes, ...]
-    pair_atlas: bytes
-    visibility_atlas: bytes
+    masked_tiles: tuple[bytes, ...]
+    primary_atlas: bytes
+    secondary_atlas: bytes
     palettes: tuple[tuple[int, ...], ...]
     palette_payload: bytes
     state_payload: bytes
@@ -222,10 +205,11 @@ class GeneratedModel:
     clipped_oracle_pixels: int
 
     def digests(self) -> dict[str, str]:
+        residency_payload = (
+            self.primary_atlas + self.secondary_atlas + self.palette_payload
+        )
         combined = (
-            self.pair_atlas
-            + self.visibility_atlas
-            + self.palette_payload
+            residency_payload
             + self.state_payload
             + self.geometry_payload
         )
@@ -233,9 +217,10 @@ class GeneratedModel:
             "source_stream": sha256(self.source_stream_payload),
             "oracle": sha256(self.oracle_payload),
             "clipped_oracle": sha256(self.clipped_oracle_payload),
-            "pair_atlas": sha256(self.pair_atlas),
-            "visibility_atlas": sha256(self.visibility_atlas),
+            "primary_atlas": sha256(self.primary_atlas),
+            "secondary_atlas": sha256(self.secondary_atlas),
             "palettes": sha256(self.palette_payload),
+            "residency_payload": sha256(residency_payload),
             "state_tables": sha256(self.state_payload),
             "geometry_plan": sha256(self.geometry_payload),
             "combined": sha256(combined),
@@ -249,24 +234,25 @@ class GeneratedModel:
             "oracle_mismatches": self.oracle_mismatches,
             "clipped_oracle_pixels": self.clipped_oracle_pixels,
             "clipped_oracle_mismatches": self.clipped_oracle_mismatches,
-            "pair_tiles": len(self.pair_tiles),
-            "pair_atlas_bytes": len(self.pair_atlas),
-            "visibility_tiles": len(self.visibility_tiles),
-            "visibility_atlas_bytes": len(self.visibility_atlas),
+            "masked_tiles": len(self.masked_tiles),
+            "primary_atlas_bytes": len(self.primary_atlas),
+            "secondary_atlas_bytes": len(self.secondary_atlas),
             "fractions": len(self.palettes),
             "palette_bytes": len(self.palette_payload),
-            "large_pair_states": len(self.owners[0].pair_states),
-            "large_visibility_states": len(self.owners[0].visibility_states),
-            "small_pair_states": len(self.owners[1].pair_states),
-            "small_visibility_states": len(self.owners[1].visibility_states),
+            "residency_payload_bytes": (
+                len(self.primary_atlas)
+                + len(self.secondary_atlas)
+                + len(self.palette_payload)
+            ),
+            "large_states": len(self.owners[0].states),
+            "small_states": len(self.owners[1].states),
             "state_table_bytes": len(self.state_payload),
             "plan_cells": len(self.plan_cells),
             "plan_vertices": len(self.plan_vertices),
-            "logical_cells_per_pass": EXPECTED_DRAWS_PER_PASS,
-            "triangles_per_pass": sum(cell.triangle_count for cell in self.plan_cells),
-            "logical_cell_submissions": EXPECTED_TOTAL_DRAWS,
-            "total_triangles": 2 * sum(cell.triangle_count for cell in self.plan_cells),
-            "planned_gx_begin_batches": EXPECTED_GX_BEGIN_BATCHES,
+            "logical_cell_submissions": EXPECTED_LOGICAL_DRAWS,
+            "total_triangles": sum(cell.triangle_count for cell in self.plan_cells),
+            "min_gx_begin_batches": EXPECTED_MIN_GX_BEGIN_BATCHES,
+            "max_gx_begin_batches": EXPECTED_MAX_GX_BEGIN_BATCHES,
             "emitted_vertices": EXPECTED_EMITTED_VERTICES,
             "vertex_attribute_writes": EXPECTED_VERTEX_ATTRIBUTE_WRITES,
             "digests": self.digests(),
@@ -299,19 +285,19 @@ def key_image(
     return KeyImage(pair=bytes(pair), visibility=bytes(visibility), expected=expected)
 
 
-def pair_tile(image: bytes, width: int, x0: int, y0: int) -> bytes:
-    return b"".join(
-        image[(y0 + y) * width + x0 : (y0 + y) * width + x0 + PAIR_TILE_WIDTH]
-        for y in range(PAIR_TILE_HEIGHT)
-    )
-
-
-def visibility_tile(image: bytes, width: int, x0: int, y0: int) -> bytes:
-    unpacked = b"".join(
-        image[(y0 + y) * width + x0 : (y0 + y) * width + x0 + PAIR_TILE_WIDTH]
-        for y in range(PAIR_TILE_HEIGHT)
-    )
-    return pack_visibility(unpacked)
+def masked_tile(image: KeyImage, width: int, x0: int, y0: int) -> bytes:
+    output = bytearray()
+    for y in range(TILE_HEIGHT):
+        start = (y0 + y) * width + x0
+        for pair, visible in zip(
+            image.pair[start : start + TILE_WIDTH],
+            image.visibility[start : start + TILE_WIDTH],
+        ):
+            require(visible in (0, 1), "visibility texel left its one-bit domain")
+            require(not visible or pair != 0, "visible source texel uses reserved index zero")
+            output.append(pair if visible else 0)
+    require(len(output) == TILE_BYTES, "masked tile byte count changed")
+    return bytes(output)
 
 
 def intern(value: T, lookup: dict[T, int], values: list[T]) -> int:
@@ -327,10 +313,8 @@ def intern(value: T, lookup: dict[T, int], values: list[T]) -> int:
 def build_owner_tables(
     corpus: source.SourceCorpus,
     census: source.KeyCensus,
-    pair_tile_lookup: dict[bytes, int],
-    pair_tiles: list[bytes],
-    visibility_tile_lookup: dict[bytes, int],
-    visibility_tiles: list[bytes],
+    tile_lookup: dict[bytes, int],
+    tiles: list[bytes],
 ) -> OwnerTables:
     spec = census.spec
     cycle = census.sequence[: source.EXPECTED_CYCLE_FRAMES]
@@ -349,73 +333,42 @@ def build_owner_tables(
         f"{spec.name}: one cycle does not contain every unique source key",
     )
 
-    pair_state_lookup: dict[tuple[int, ...], int] = {}
-    pair_states: list[tuple[int, ...]] = []
-    visibility_state_lookup: dict[tuple[int, ...], int] = {}
-    visibility_states: list[tuple[int, ...]] = []
+    state_lookup: dict[tuple[int, ...], int] = {}
+    states: list[tuple[int, ...]] = []
     frames: list[FrameState] = []
     for key in cycle:
         image = key_images[key]
-        pair_ids: list[int] = []
-        visibility_ids: list[int] = []
-        for y0 in range(0, spec.height, PAIR_TILE_HEIGHT):
-            for x0 in range(0, spec.width, PAIR_TILE_WIDTH):
-                p = pair_tile(image.pair, spec.width, x0, y0)
-                v = visibility_tile(image.visibility, spec.width, x0, y0)
-                pair_ids.append(intern(p, pair_tile_lookup, pair_tiles))
-                visibility_ids.append(
-                    intern(v, visibility_tile_lookup, visibility_tiles)
+        tile_ids: list[int] = []
+        for y0 in range(0, spec.height, TILE_HEIGHT):
+            for x0 in range(0, spec.width, TILE_WIDTH):
+                tile_ids.append(
+                    intern(masked_tile(image, spec.width, x0, y0), tile_lookup, tiles)
                 )
-        pair_state = intern(tuple(pair_ids), pair_state_lookup, pair_states)
-        visibility_state = intern(
-            tuple(visibility_ids), visibility_state_lookup, visibility_states
-        )
-        require(pair_state <= 0xFF, f"{spec.name}: pair state no longer fits u8")
-        require(
-            visibility_state <= 0xFF,
-            f"{spec.name}: visibility state no longer fits u8",
-        )
-        frames.append(FrameState(pair_state, visibility_state))
+        state = intern(tuple(tile_ids), state_lookup, states)
+        require(state <= 0xFF, f"{spec.name}: state no longer fits u8")
+        frames.append(FrameState(state))
     return OwnerTables(
         spec=spec,
         census=census,
         key_images=key_images,
-        pair_states=tuple(pair_states),
-        visibility_states=tuple(visibility_states),
+        states=tuple(states),
         frames=tuple(frames),
     )
 
 
-def build_pair_atlas(tiles: Sequence[bytes]) -> bytes:
-    require(len(tiles) <= PAIR_ATLAS_COLUMNS * PAIR_ATLAS_ROWS, "pair atlas overflow")
-    atlas = bytearray(PAIR_ATLAS_BYTES)
+def build_atlas(
+    tiles: Sequence[bytes], width: int, height: int, columns: int
+) -> bytes:
+    require(len(tiles) <= columns * (height // TILE_HEIGHT), "masked atlas overflow")
+    atlas = bytearray(width * height)
     for tile_id, tile in enumerate(tiles):
-        require(len(tile) == PAIR_TILE_BYTES, "pair tile byte count changed")
-        x0 = (tile_id % PAIR_ATLAS_COLUMNS) * PAIR_TILE_WIDTH
-        y0 = (tile_id // PAIR_ATLAS_COLUMNS) * PAIR_TILE_HEIGHT
-        for y in range(PAIR_TILE_HEIGHT):
-            dst = (y0 + y) * PAIR_ATLAS_WIDTH + x0
-            src = y * PAIR_TILE_WIDTH
-            atlas[dst : dst + PAIR_TILE_WIDTH] = tile[src : src + PAIR_TILE_WIDTH]
-    return bytes(atlas)
-
-
-def build_visibility_atlas(tiles: Sequence[bytes]) -> bytes:
-    require(
-        len(tiles) <= VISIBILITY_ATLAS_COLUMNS * VISIBILITY_ATLAS_ROWS,
-        "visibility atlas overflow",
-    )
-    atlas_stride = VISIBILITY_ATLAS_WIDTH // 4
-    tile_stride = PAIR_TILE_WIDTH // 4
-    atlas = bytearray(VISIBILITY_ATLAS_BYTES)
-    for tile_id, tile in enumerate(tiles):
-        require(len(tile) == VISIBILITY_TILE_BYTES, "visibility tile byte count changed")
-        x0 = (tile_id % VISIBILITY_ATLAS_COLUMNS) * tile_stride
-        y0 = (tile_id // VISIBILITY_ATLAS_COLUMNS) * PAIR_TILE_HEIGHT
-        for y in range(PAIR_TILE_HEIGHT):
-            dst = (y0 + y) * atlas_stride + x0
-            src = y * tile_stride
-            atlas[dst : dst + tile_stride] = tile[src : src + tile_stride]
+        require(len(tile) == TILE_BYTES, "masked tile byte count changed")
+        x0 = (tile_id % columns) * TILE_WIDTH
+        y0 = (tile_id // columns) * TILE_HEIGHT
+        for y in range(TILE_HEIGHT):
+            dst = (y0 + y) * width + x0
+            src = y * TILE_WIDTH
+            atlas[dst : dst + TILE_WIDTH] = tile[src : src + TILE_WIDTH]
     return bytes(atlas)
 
 
@@ -438,13 +391,11 @@ def serialize_palettes(palettes: Sequence[Sequence[int]]) -> bytes:
 def serialize_state_tables(owners: Sequence[OwnerTables]) -> bytes:
     output = bytearray()
     for owner in owners:
-        for state in owner.pair_states:
+        for state in owner.states:
             output.extend(struct.pack(f"<{len(state)}H", *state))
-        for state in owner.visibility_states:
-            output.extend(bytes(state))
     for owner in owners:
         for frame in owner.frames:
-            output.extend((frame.pair_state, frame.visibility_state))
+            output.append(frame.state)
     return bytes(output)
 
 
@@ -572,17 +523,17 @@ def build_geometry_plan(
     vertices: list[PlanVertex] = []
     for spec in corpus.specs:
         polygon = read_source_vertices(corpus, spec)
-        columns = spec.width // PAIR_TILE_WIDTH
-        for cell_y, y0_texel in enumerate(range(0, spec.height, PAIR_TILE_HEIGHT)):
-            for cell_x, x0_texel in enumerate(range(0, spec.width, PAIR_TILE_WIDTH)):
+        columns = spec.width // TILE_WIDTH
+        for cell_y, y0_texel in enumerate(range(0, spec.height, TILE_HEIGHT)):
+            for cell_x, x0_texel in enumerate(range(0, spec.width, TILE_WIDTH)):
                 x0 = x0_texel * 32
                 y0 = y0_texel * 32
                 clipped = clip_cell(
                     polygon,
                     x0,
                     y0,
-                    x0 + PAIR_TILE_WIDTH * 32,
-                    y0 + PAIR_TILE_HEIGHT * 32,
+                    x0 + TILE_WIDTH * 32,
+                    y0 + TILE_HEIGHT * 32,
                 )
                 if len(clipped) < 3 or signed_area(clipped) == 0:
                     continue
@@ -628,23 +579,29 @@ def serialize_stream(owners: Sequence[OwnerTables]) -> bytes:
     return bytes(output)
 
 
-def atlas_pair(atlas: bytes, tile_id: int, x: int, y: int) -> int:
-    atlas_x = (tile_id % PAIR_ATLAS_COLUMNS) * PAIR_TILE_WIDTH + x
-    atlas_y = (tile_id // PAIR_ATLAS_COLUMNS) * PAIR_TILE_HEIGHT + y
-    return atlas[atlas_y * PAIR_ATLAS_WIDTH + atlas_x]
-
-
-def atlas_visibility(atlas: bytes, tile_id: int, x: int, y: int) -> int:
-    atlas_x = (tile_id % VISIBILITY_ATLAS_COLUMNS) * PAIR_TILE_WIDTH + x
-    atlas_y = (tile_id // VISIBILITY_ATLAS_COLUMNS) * PAIR_TILE_HEIGHT + y
-    offset = atlas_y * VISIBILITY_ATLAS_WIDTH + atlas_x
-    return unpack_visibility(atlas, offset)
+def atlas_masked(
+    primary_atlas: bytes, secondary_atlas: bytes, tile_id: int, x: int, y: int
+) -> int:
+    if tile_id < PRIMARY_ATLAS_CAPACITY:
+        local_id = tile_id
+        atlas = primary_atlas
+        columns = PRIMARY_ATLAS_COLUMNS
+        width = PRIMARY_ATLAS_WIDTH
+    else:
+        local_id = tile_id - PRIMARY_ATLAS_CAPACITY
+        require(local_id < SECONDARY_ATLAS_CAPACITY, "masked tile ID exceeds atlases")
+        atlas = secondary_atlas
+        columns = SECONDARY_ATLAS_COLUMNS
+        width = SECONDARY_ATLAS_WIDTH
+    atlas_x = (local_id % columns) * TILE_WIDTH + x
+    atlas_y = (local_id // columns) * TILE_HEIGHT + y
+    return atlas[atlas_y * width + atlas_x]
 
 
 def verify_oracle(
     owners: Sequence[OwnerTables],
-    pair_atlas: bytes,
-    visibility_atlas: bytes,
+    primary_atlas: bytes,
+    secondary_atlas: bytes,
     palettes: Sequence[Sequence[int]],
 ) -> tuple[int, int, bytes]:
     mismatches = 0
@@ -652,7 +609,7 @@ def verify_oracle(
     oracle_payload = bytearray()
     for owner in owners:
         spec = owner.spec
-        columns = spec.width // PAIR_TILE_WIDTH
+        columns = spec.width // TILE_WIDTH
         first_frame = {
             key: frame
             for frame, key in enumerate(
@@ -662,26 +619,23 @@ def verify_oracle(
         for key in owner.census.unique_keys:
             frame = first_frame[key]
             state = owner.frames[frame]
-            pair_ids = owner.pair_states[state.pair_state]
-            visibility_ids = owner.visibility_states[state.visibility_state]
+            tile_ids = owner.states[state.state]
             expected = owner.key_images[key].expected
             palette = palettes[key.fraction - FRACTION_MIN]
             for y in range(spec.height):
                 for x in range(spec.width):
-                    cell = (y // PAIR_TILE_HEIGHT) * columns + x // PAIR_TILE_WIDTH
-                    local_x = x % PAIR_TILE_WIDTH
-                    local_y = y % PAIR_TILE_HEIGHT
-                    pair = atlas_pair(pair_atlas, pair_ids[cell], local_x, local_y)
-                    visible = atlas_visibility(
-                        visibility_atlas,
-                        visibility_ids[cell],
-                        local_x,
-                        local_y,
+                    cell = (y // TILE_HEIGHT) * columns + x // TILE_WIDTH
+                    pair = atlas_masked(
+                        primary_atlas,
+                        secondary_atlas,
+                        tile_ids[cell],
+                        x % TILE_WIDTH,
+                        y % TILE_HEIGHT,
                     )
-                    require(visible in (0, 1), "RGB4 visibility atlas used index 2/3")
-                    actual = palette[pair] | (visible << 15)
+                    actual = 0 if pair == 0 else palette[pair] | 0x8000
                     expected_value = struct.unpack_from("<H", expected, (y * spec.width + x) * 2)[0]
-                    mismatches += actual != expected_value
+                    canonical_expected = expected_value if expected_value & 0x8000 else 0
+                    mismatches += actual != canonical_expected
                     oracle_payload.extend(struct.pack("<H", expected_value))
                     pixels += 1
     return mismatches, pixels, bytes(oracle_payload)
@@ -710,8 +664,8 @@ def point_inside_clockwise_q16(
 def verify_clipped_oracle(
     corpus: source.SourceCorpus,
     owners: Sequence[OwnerTables],
-    pair_atlas: bytes,
-    visibility_atlas: bytes,
+    primary_atlas: bytes,
+    secondary_atlas: bytes,
     palettes: Sequence[Sequence[int]],
     plan_cells: Sequence[PlanCell],
     plan_vertices: Sequence[PlanVertex],
@@ -721,8 +675,8 @@ def verify_clipped_oracle(
     for cell in plan_cells:
         require(cell.owner in (source.OWNER_LARGE, source.OWNER_SMALL), "plan owner changed")
         owner = owners[cell.owner]
-        columns = owner.spec.width // PAIR_TILE_WIDTH
-        rows = owner.spec.height // PAIR_TILE_HEIGHT
+        columns = owner.spec.width // TILE_WIDTH
+        rows = owner.spec.height // TILE_HEIGHT
         state_cell_count = columns * rows
         require(
             cell.cell_x < columns and cell.cell_y < rows,
@@ -744,10 +698,10 @@ def verify_clipped_oracle(
             "plan vertex span is out of range",
         )
         polygon = plan_vertices[cell.first_vertex : cell.first_vertex + cell.vertex_count]
-        min_s = cell.cell_x * PAIR_TILE_WIDTH << 16
-        max_s = (cell.cell_x + 1) * PAIR_TILE_WIDTH << 16
-        min_t = cell.cell_y * PAIR_TILE_HEIGHT << 16
-        max_t = (cell.cell_y + 1) * PAIR_TILE_HEIGHT << 16
+        min_s = cell.cell_x * TILE_WIDTH << 16
+        max_s = (cell.cell_x + 1) * TILE_WIDTH << 16
+        min_t = cell.cell_y * TILE_HEIGHT << 16
+        max_t = (cell.cell_y + 1) * TILE_HEIGHT << 16
         require(
             all(
                 min_s <= vertex.s_q16 <= max_s and min_t <= vertex.t_q16 <= max_t
@@ -765,7 +719,7 @@ def verify_clipped_oracle(
     for owner in owners:
         spec = owner.spec
         source_polygon = read_source_vertices(corpus, spec)
-        columns = spec.width // PAIR_TILE_WIDTH
+        columns = spec.width // TILE_WIDTH
         first_frame = {
             key: frame
             for frame, key in enumerate(
@@ -775,7 +729,7 @@ def verify_clipped_oracle(
         coverage: list[tuple[int, int, int]] = []
         for y in range(spec.height):
             for x in range(spec.width):
-                cell_index = (y // PAIR_TILE_HEIGHT) * columns + x // PAIR_TILE_WIDTH
+                cell_index = (y // TILE_HEIGHT) * columns + x // TILE_WIDTH
                 cell = by_owner_and_index.get((spec.owner, cell_index))
                 plan_inside = False
                 if cell is not None:
@@ -799,28 +753,23 @@ def verify_clipped_oracle(
         for key in owner.census.unique_keys:
             frame = first_frame[key]
             state = owner.frames[frame]
-            pair_ids = owner.pair_states[state.pair_state]
-            visibility_ids = owner.visibility_states[state.visibility_state]
+            tile_ids = owner.states[state.state]
             expected = owner.key_images[key].expected
             palette = palettes[key.fraction - FRACTION_MIN]
             for x, y, cell_index in coverage:
-                pair = atlas_pair(
-                    pair_atlas,
-                    pair_ids[cell_index],
-                    x % PAIR_TILE_WIDTH,
-                    y % PAIR_TILE_HEIGHT,
+                pair = atlas_masked(
+                    primary_atlas,
+                    secondary_atlas,
+                    tile_ids[cell_index],
+                    x % TILE_WIDTH,
+                    y % TILE_HEIGHT,
                 )
-                visible = atlas_visibility(
-                    visibility_atlas,
-                    visibility_ids[cell_index],
-                    x % PAIR_TILE_WIDTH,
-                    y % PAIR_TILE_HEIGHT,
-                )
-                actual = palette[pair] | (visible << 15)
+                actual = 0 if pair == 0 else palette[pair] | 0x8000
                 expected_value = struct.unpack_from(
                     "<H", expected, (y * spec.width + x) * 2
                 )[0]
-                mismatches += actual != expected_value
+                canonical_expected = expected_value if expected_value & 0x8000 else 0
+                mismatches += actual != canonical_expected
                 payload.extend(struct.pack("<H", expected_value))
                 pixels += 1
     return mismatches, pixels, bytes(payload)
@@ -831,23 +780,31 @@ def build_model(repo_root: Path) -> GeneratedModel:
     censuses = tuple(
         source.census_keys(corpus.bank104.payload, spec) for spec in corpus.specs
     )
-    pair_tile_lookup: dict[bytes, int] = {}
-    pair_tiles: list[bytes] = []
-    visibility_tile_lookup: dict[bytes, int] = {}
-    visibility_tiles: list[bytes] = []
+    tile_lookup: dict[bytes, int] = {}
+    tiles: list[bytes] = []
     owners = tuple(
         build_owner_tables(
             corpus,
             census,
-            pair_tile_lookup,
-            pair_tiles,
-            visibility_tile_lookup,
-            visibility_tiles,
+            tile_lookup,
+            tiles,
         )
         for census in censuses
     )
-    pair_atlas = build_pair_atlas(pair_tiles)
-    visibility_atlas = build_visibility_atlas(visibility_tiles)
+    primary_tiles = tiles[:PRIMARY_ATLAS_CAPACITY]
+    secondary_tiles = tiles[PRIMARY_ATLAS_CAPACITY:]
+    primary_atlas = build_atlas(
+        primary_tiles,
+        PRIMARY_ATLAS_WIDTH,
+        PRIMARY_ATLAS_HEIGHT,
+        PRIMARY_ATLAS_COLUMNS,
+    )
+    secondary_atlas = build_atlas(
+        secondary_tiles,
+        SECONDARY_ATLAS_WIDTH,
+        SECONDARY_ATLAS_HEIGHT,
+        SECONDARY_ATLAS_COLUMNS,
+    )
     palettes = build_palettes(corpus)
     palette_payload = serialize_palettes(palettes)
     state_payload = serialize_state_tables(owners)
@@ -856,13 +813,13 @@ def build_model(repo_root: Path) -> GeneratedModel:
         vertex.payload() for vertex in plan_vertices
     )
     mismatches, pixels, oracle_payload = verify_oracle(
-        owners, pair_atlas, visibility_atlas, palettes
+        owners, primary_atlas, secondary_atlas, palettes
     )
     clipped_mismatches, clipped_pixels, clipped_payload = verify_clipped_oracle(
         corpus,
         owners,
-        pair_atlas,
-        visibility_atlas,
+        primary_atlas,
+        secondary_atlas,
         palettes,
         plan_cells,
         plan_vertices,
@@ -870,10 +827,9 @@ def build_model(repo_root: Path) -> GeneratedModel:
     model = GeneratedModel(
         corpus=corpus,
         owners=owners,  # type: ignore[arg-type]
-        pair_tiles=tuple(pair_tiles),
-        visibility_tiles=tuple(visibility_tiles),
-        pair_atlas=pair_atlas,
-        visibility_atlas=visibility_atlas,
+        masked_tiles=tuple(tiles),
+        primary_atlas=primary_atlas,
+        secondary_atlas=secondary_atlas,
         palettes=palettes,
         palette_payload=palette_payload,
         state_payload=state_payload,
@@ -901,37 +857,41 @@ def verify_contract(model: GeneratedModel) -> None:
         sum(len(owner.census.unique_keys) for owner in model.owners) == EXPECTED_KEY_COUNT,
         "unique key count changed",
     )
-    require(len(model.pair_tiles) == EXPECTED_PAIR_TILES, "pair tile count changed")
+    require(len(model.masked_tiles) == EXPECTED_MASKED_TILES, "masked tile count changed")
     require(
-        len(model.visibility_tiles) == EXPECTED_VISIBILITY_TILES,
-        "visibility tile count changed",
+        len(model.masked_tiles[:PRIMARY_ATLAS_CAPACITY]) == EXPECTED_PRIMARY_TILES,
+        "primary tile count changed",
     )
-    require(len(model.pair_atlas) == PAIR_ATLAS_BYTES, "pair atlas size changed")
     require(
-        len(model.visibility_atlas) == VISIBILITY_ATLAS_BYTES,
-        "visibility atlas size changed",
+        len(model.masked_tiles[PRIMARY_ATLAS_CAPACITY:]) == EXPECTED_SECONDARY_TILES,
+        "secondary tile count changed",
+    )
+    require(len(model.primary_atlas) == PRIMARY_ATLAS_BYTES, "primary atlas size changed")
+    require(
+        len(model.secondary_atlas) == SECONDARY_ATLAS_BYTES,
+        "secondary atlas size changed",
     )
     require(len(model.palettes) == FRACTION_COUNT, "fraction palette count changed")
     require(len(model.palette_payload) == PAIR_PALETTE_BYTES, "palette size changed")
-    require(len(large.pair_states) == EXPECTED_LARGE_PAIR_STATES, "large pair states changed")
+    require(len(large.states) == EXPECTED_LARGE_STATES, "large states changed")
+    require(len(small.states) == EXPECTED_SMALL_STATES, "small states changed")
     require(
-        len(large.visibility_states) == EXPECTED_LARGE_VISIBILITY_STATES,
-        "large visibility states changed",
+        all(tile_id < PRIMARY_ATLAS_CAPACITY for state in large.states for tile_id in state),
+        "large owner unexpectedly requires the secondary atlas",
     )
-    require(len(small.pair_states) == EXPECTED_SMALL_PAIR_STATES, "small pair states changed")
-    require(
-        len(small.visibility_states) == EXPECTED_SMALL_VISIBILITY_STATES,
-        "small visibility states changed",
+    secondary_frames = sum(
+        any(tile_id >= PRIMARY_ATLAS_CAPACITY for tile_id in small.states[frame.state])
+        for frame in small.frames
     )
+    require(secondary_frames == EXPECTED_SECONDARY_FRAMES, "secondary frame count changed")
     require(len(model.state_payload) == EXPECTED_STATE_TABLE_BYTES, "state-table size changed")
     require(len(model.plan_cells) == EXPECTED_PLAN_CELLS, "geometry cell count changed")
     require(len(model.plan_vertices) == EXPECTED_PLAN_VERTICES, "geometry vertex count changed")
     triangles = sum(cell.triangle_count for cell in model.plan_cells)
-    require(triangles == EXPECTED_TRIANGLES_PER_PASS, "geometry triangle count changed")
-    require(2 * len(model.plan_cells) == EXPECTED_TOTAL_DRAWS, "two-pass draw count changed")
-    require(2 * triangles == EXPECTED_TOTAL_TRIANGLES, "two-pass triangle count changed")
+    require(len(model.plan_cells) == EXPECTED_LOGICAL_DRAWS, "one-pass draw count changed")
+    require(triangles == EXPECTED_TRIANGLES, "one-pass triangle count changed")
     require(
-        EXPECTED_EMITTED_VERTICES == EXPECTED_TOTAL_TRIANGLES * 3,
+        EXPECTED_EMITTED_VERTICES == EXPECTED_TRIANGLES * 3,
         "batched GL_TRIANGLES vertex count changed",
     )
     require(
@@ -939,8 +899,8 @@ def verify_contract(model: GeneratedModel) -> None:
         "TEXCOORD plus VTX16 register-write count changed",
     )
     require(
-        EXPECTED_GX_BEGIN_BATCHES == 2,
-        "shared-atlas two-pass executor must use two GX BEGIN batches",
+        EXPECTED_MIN_GX_BEGIN_BATCHES == 1 and EXPECTED_MAX_GX_BEGIN_BATCHES == 2,
+        "one-pass executor must use one primary and at most one secondary batch",
     )
     require(
         DEVICE_TICK_BUDGET < DEVICE_TICK_REJECT < MIN_NET_OWNER_DRAW_SAVING,
@@ -978,15 +938,7 @@ def format_palettes(palettes: Sequence[Sequence[int]]) -> str:
     return "\n".join(rows)
 
 
-def format_pair_states(states: Sequence[Sequence[int]]) -> str:
-    rows = []
-    for state in states:
-        values = ", ".join(f"{value}u" for value in state)
-        rows.append(f"    {{ {values} }},")
-    return "\n".join(rows)
-
-
-def format_visibility_states(states: Sequence[Sequence[int]]) -> str:
+def format_states(states: Sequence[Sequence[int]]) -> str:
     rows = []
     for state in states:
         values = ", ".join(f"{value}u" for value in state)
@@ -997,10 +949,7 @@ def format_visibility_states(states: Sequence[Sequence[int]]) -> str:
 def format_frames(frames: Sequence[FrameState]) -> str:
     rows = []
     for start in range(0, len(frames), 8):
-        values = ", ".join(
-            f"{{ {frame.pair_state}u, {frame.visibility_state}u }}"
-            for frame in frames[start : start + 8]
-        )
+        values = ", ".join(f"{frame.state}u" for frame in frames[start : start + 8])
         rows.append(f"    {values},")
     return "\n".join(rows)
 
@@ -1008,7 +957,7 @@ def format_frames(frames: Sequence[FrameState]) -> str:
 def render_header(model: GeneratedModel) -> bytes:
     digests = model.digests()
     return f'''/* Generated by scripts/generate_pupupu_water_tiled_aot.py. */
-/* Host-exact M4 packet only; device integration remains unproven. */
+/* Host-exact M4 packet; device draw integration remains unproven. */
 #ifndef SSB64_NDS_PUPUPU_WATER_TILED_AOT_H
 #define SSB64_NDS_PUPUPU_WATER_TILED_AOT_H
 
@@ -1016,39 +965,50 @@ def render_header(model: GeneratedModel) -> bytes:
 
 #define NDS_PUPUPU_WATER_TILED_CYCLE_FRAMES 216u
 #define NDS_PUPUPU_WATER_TILED_OWNER_COUNT 2u
-#define NDS_PUPUPU_WATER_TILED_PAIR_TILE_WIDTH 32u
-#define NDS_PUPUPU_WATER_TILED_PAIR_TILE_HEIGHT 8u
-#define NDS_PUPUPU_WATER_TILED_PAIR_TILE_COUNT 494u
-#define NDS_PUPUPU_WATER_TILED_VISIBILITY_TILE_COUNT 243u
-#define NDS_PUPUPU_WATER_TILED_PAIR_ATLAS_WIDTH 512u
-#define NDS_PUPUPU_WATER_TILED_PAIR_ATLAS_HEIGHT 256u
-#define NDS_PUPUPU_WATER_TILED_PAIR_ATLAS_BYTES 131072u
-#define NDS_PUPUPU_WATER_TILED_VISIBILITY_ATLAS_WIDTH 256u
-#define NDS_PUPUPU_WATER_TILED_VISIBILITY_ATLAS_HEIGHT 256u
-#define NDS_PUPUPU_WATER_TILED_VISIBILITY_ATLAS_BYTES 16384u
+#define NDS_PUPUPU_WATER_TILED_TILE_WIDTH 32u
+#define NDS_PUPUPU_WATER_TILED_TILE_HEIGHT 8u
+#define NDS_PUPUPU_WATER_TILED_MASKED_TILE_COUNT 572u
+#define NDS_PUPUPU_WATER_TILED_PRIMARY_TILE_FIRST 0u
+#define NDS_PUPUPU_WATER_TILED_PRIMARY_TILE_COUNT 512u
+#define NDS_PUPUPU_WATER_TILED_PRIMARY_TILE_CAPACITY 512u
+#define NDS_PUPUPU_WATER_TILED_PRIMARY_ATLAS_WIDTH 512u
+#define NDS_PUPUPU_WATER_TILED_PRIMARY_ATLAS_HEIGHT 256u
+#define NDS_PUPUPU_WATER_TILED_PRIMARY_ATLAS_BYTES 131072u
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_TILE_FIRST 512u
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_TILE_COUNT 60u
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_TILE_CAPACITY 64u
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_ATLAS_WIDTH 256u
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_ATLAS_HEIGHT 64u
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_ATLAS_BYTES 16384u
 #define NDS_PUPUPU_WATER_TILED_FRACTION_MIN 114u
 #define NDS_PUPUPU_WATER_TILED_FRACTION_MAX 153u
 #define NDS_PUPUPU_WATER_TILED_FRACTION_COUNT 40u
 #define NDS_PUPUPU_WATER_TILED_PALETTE_ENTRIES 256u
 #define NDS_PUPUPU_WATER_TILED_PALETTE_BYTES 20480u
-#define NDS_PUPUPU_WATER_TILED_STATE_TABLE_BYTES 8544u
+#define NDS_PUPUPU_WATER_TILED_PRIMARY_ATLAS_OFFSET 0u
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_ATLAS_OFFSET 131072u
+#define NDS_PUPUPU_WATER_TILED_PALETTES_OFFSET 147456u
+#define NDS_PUPUPU_WATER_TILED_RESIDENCY_PAYLOAD_BYTES 167936u
+#define NDS_PUPUPU_WATER_TILED_RESIDENCY_PAYLOAD_PATH "nitro:/renderer/pupupu_water_tiled_aot.bin"
+#define NDS_PUPUPU_WATER_TILED_STATE_TABLE_BYTES 6032u
 #define NDS_PUPUPU_WATER_TILED_PLAN_CELL_COUNT 68u
 #define NDS_PUPUPU_WATER_TILED_PLAN_VERTEX_COUNT 274u
-#define NDS_PUPUPU_WATER_TILED_LOGICAL_CELLS_PER_PASS 68u
-#define NDS_PUPUPU_WATER_TILED_TRIANGLES_PER_PASS 138u
-#define NDS_PUPUPU_WATER_TILED_LOGICAL_CELL_SUBMISSIONS 136u
-#define NDS_PUPUPU_WATER_TILED_TOTAL_TRIANGLES 276u
-#define NDS_PUPUPU_WATER_TILED_PLANNED_GX_BEGIN_BATCHES 2u
-#define NDS_PUPUPU_WATER_TILED_EMITTED_VERTICES 828u
-#define NDS_PUPUPU_WATER_TILED_VERTEX_ATTRIBUTE_WRITES 2484u
+#define NDS_PUPUPU_WATER_TILED_LOGICAL_CELL_SUBMISSIONS 68u
+#define NDS_PUPUPU_WATER_TILED_TOTAL_TRIANGLES 138u
+#define NDS_PUPUPU_WATER_TILED_GX_BEGIN_BATCHES_MIN 1u
+#define NDS_PUPUPU_WATER_TILED_GX_BEGIN_BATCHES_MAX 2u
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_FRAMES 48u
+#define NDS_PUPUPU_WATER_TILED_EMITTED_VERTICES 414u
+#define NDS_PUPUPU_WATER_TILED_VERTEX_ATTRIBUTE_WRITES 1242u
 #define NDS_PUPUPU_WATER_TILED_DEVICE_TICK_BUDGET 40000u
 #define NDS_PUPUPU_WATER_TILED_DEVICE_TICK_REJECT 50000u
 #define NDS_PUPUPU_WATER_TILED_MIN_NET_OWNER_DRAW_SAVING 100000u
 
-#define NDS_PUPUPU_WATER_TILED_PAIR_ATLAS_SHA256 "{digests['pair_atlas']}"
+#define NDS_PUPUPU_WATER_TILED_PRIMARY_ATLAS_SHA256 "{digests['primary_atlas']}"
 #define NDS_PUPUPU_WATER_TILED_CLIPPED_ORACLE_SHA256 "{digests['clipped_oracle']}"
-#define NDS_PUPUPU_WATER_TILED_VISIBILITY_ATLAS_SHA256 "{digests['visibility_atlas']}"
+#define NDS_PUPUPU_WATER_TILED_SECONDARY_ATLAS_SHA256 "{digests['secondary_atlas']}"
 #define NDS_PUPUPU_WATER_TILED_PALETTES_SHA256 "{digests['palettes']}"
+#define NDS_PUPUPU_WATER_TILED_RESIDENCY_PAYLOAD_SHA256 "{digests['residency_payload']}"
 #define NDS_PUPUPU_WATER_TILED_STATE_TABLES_SHA256 "{digests['state_tables']}"
 #define NDS_PUPUPU_WATER_TILED_GEOMETRY_PLAN_SHA256 "{digests['geometry_plan']}"
 #define NDS_PUPUPU_WATER_TILED_COMBINED_SHA256 "{digests['combined']}"
@@ -1086,9 +1046,6 @@ typedef struct NDSPupupuWaterTiledPlanCell {{
 }} NDSPupupuWaterTiledPlanCell;
 
 typedef struct NDSPupupuWaterTiledAssets {{
-    const u8 *pair_atlas;
-    const u8 *visibility_atlas;
-    const u16 *pair_palettes;
     const NDSPupupuWaterTiledPlanCell *plan_cells;
     const NDSPupupuWaterTiledPlanVertex *plan_vertices;
     u16 plan_cell_count;
@@ -1096,38 +1053,34 @@ typedef struct NDSPupupuWaterTiledAssets {{
 }} NDSPupupuWaterTiledAssets;
 
 typedef struct NDSPupupuWaterTiledFrame {{
-    const u16 *pair_tile_ids;
-    const u8 *visibility_tile_ids;
-    const u16 *pair_palette;
+    const u16 *tile_ids;
     u16 state_cell_count;
     u8 state_columns;
     u8 state_rows;
-    u8 pair_state;
-    u8 visibility_state;
+    u8 state;
     u8 palette_index;
-    u8 reserved;
+    u8 reserved[2];
 }} NDSPupupuWaterTiledFrame;
 
 /* Atlas contract:
- * - pair_atlas is one 512x256 GL_RGB256 image. A u16 pair tile ID selects
- *   (id % 16) * 32, (id / 16) * 8. Its texel is (CI4_0 << 4) | CI4_1.
- * - visibility_atlas is one 256x256 GL_RGB4 image, four low-to-high 2-bit
- *   indices per byte. A u8 tile ID selects (id % 8) * 32, (id / 8) * 8;
- *   every texel is exactly 0 or 1, with texture index zero transparent.
- * - pair_palette is the 256-entry RGB555 palette selected by live fraction.
+ * - IDs 0..511 address the 512x256 primary GL_RGB256 atlas in 16 columns.
+ * - IDs 512..571 address the 256x64 secondary GL_RGB256 atlas in 8 columns
+ *   after subtracting NDS_PUPUPU_WATER_TILED_SECONDARY_TILE_FIRST.
+ * - each texel is (CI4_0 << 4) | CI4_1 when source-visible, otherwise zero.
+ *   Both atlases require GL_TEXTURE_COLOR0_TRANSPARENT and TEXGEN_OFF.
+ * - the NitroFS payload stores primary atlas, secondary atlas, then all 40
+ *   RGB555 palettes. It is loaded once before GO; gameplay only binds the
+ *   resident atlas and frame.palette_index.
  * - cell-local atlas coordinates subtract cell_x * 32 and cell_y * 8 from
  *   each plan vertex's logical s/t before adding the selected tile origin. */
 
 /* The caller supplies the live source material fraction and the corresponding
  * 0..215 material-cycle frame. No upload, allocation, I/O, or conversion is
- * performed by these borrowed immutable views. The intended device path is:
- * RGB4 visibility/depth pass, then RGB256 pair-color pass at equal depth.
- * Each plan cell's cell_index addresses the corresponding 64-entry large or
- * 8-entry small state arrays; state_cell_count is that rectangular grid size,
- * not the number of occupied geometry cells. Expand every clockwise cell fan
- * to GL_TRIANGLES inside one BEGIN per pass: 136 logical cell submissions are
- * two GX primitive batches, 276 triangles, 828 vertices, and 2,484 texture /
- * VTX16 register writes. Device timing and depth behavior remain keep gates. */
+ * performed by these borrowed immutable views. Each plan cell's cell_index
+ * addresses the corresponding 64-entry large or 8-entry small state array.
+ * Expand every clockwise fan to GL_TRIANGLES and group by atlas: one primary
+ * BEGIN plus one secondary BEGIN only when referenced. The one semantic pass
+ * is 68 cells, 138 triangles, 414 vertices, and 1,242 TEXCOORD/VTX16 writes. */
 s32 ndsPupupuWaterTiledGetAssets(NDSPupupuWaterTiledAssets *out_assets);
 s32 ndsPupupuWaterTiledGetFrame(
     u32 owner, u32 cycle_frame, u32 source_fraction,
@@ -1148,25 +1101,12 @@ _Static_assert(sizeof(NDSPupupuWaterTiledPlanVertex) == 16u,
                "tiled-water plan vertex ABI changed");
 _Static_assert(sizeof(NDSPupupuWaterTiledPlanCell) == 8u,
                "tiled-water plan cell ABI changed");
-_Static_assert(sizeof(NDSPupupuWaterTiledAssets) == 24u,
+_Static_assert(sizeof(NDSPupupuWaterTiledAssets) == 12u,
                "tiled-water asset-view ABI changed");
-_Static_assert(sizeof(NDSPupupuWaterTiledFrame) == 20u,
+_Static_assert(sizeof(NDSPupupuWaterTiledFrame) == 12u,
                "tiled-water frame-view ABI changed");
-_Static_assert(sizeof(NDSPupupuWaterTiledGeneratedFrameState) == 2u,
-               "tiled-water frame-state ABI changed");
-_Static_assert(sizeof(sNdsPupupuWaterPairAtlas) ==
-                   NDS_PUPUPU_WATER_TILED_PAIR_ATLAS_BYTES,
-               "tiled-water pair atlas size changed");
-_Static_assert(sizeof(sNdsPupupuWaterVisibilityAtlas) ==
-                   NDS_PUPUPU_WATER_TILED_VISIBILITY_ATLAS_BYTES,
-               "tiled-water visibility atlas size changed");
-_Static_assert(sizeof(sNdsPupupuWaterPairPalettes) ==
-                   NDS_PUPUPU_WATER_TILED_PALETTE_BYTES,
-               "tiled-water palette size changed");
-_Static_assert(sizeof(sNdsPupupuWaterLargePairStates) +
-                   sizeof(sNdsPupupuWaterLargeVisibilityStates) +
-                   sizeof(sNdsPupupuWaterSmallPairStates) +
-                   sizeof(sNdsPupupuWaterSmallVisibilityStates) +
+_Static_assert(sizeof(sNdsPupupuWaterLargeStates) +
+                   sizeof(sNdsPupupuWaterSmallStates) +
                    sizeof(sNdsPupupuWaterLargeFrames) +
                    sizeof(sNdsPupupuWaterSmallFrames) ==
                    NDS_PUPUPU_WATER_TILED_STATE_TABLE_BYTES,
@@ -1179,41 +1119,29 @@ _Static_assert(sizeof(sNdsPupupuWaterPlanVertices) ==
                    NDS_PUPUPU_WATER_TILED_PLAN_VERTEX_COUNT *
                        sizeof(NDSPupupuWaterTiledPlanVertex),
                "tiled-water plan-vertex footprint changed");
-_Static_assert(NDS_PUPUPU_WATER_TILED_PLAN_CELL_COUNT * 2u ==
+_Static_assert(NDS_PUPUPU_WATER_TILED_PLAN_CELL_COUNT ==
                    NDS_PUPUPU_WATER_TILED_LOGICAL_CELL_SUBMISSIONS,
                "logical plan-cell submission count changed");
-_Static_assert(NDS_PUPUPU_WATER_TILED_TRIANGLES_PER_PASS * 2u ==
-                   NDS_PUPUPU_WATER_TILED_TOTAL_TRIANGLES,
-               "two-pass triangle count changed");
 _Static_assert(NDS_PUPUPU_WATER_TILED_TOTAL_TRIANGLES * 3u ==
                    NDS_PUPUPU_WATER_TILED_EMITTED_VERTICES,
                "GL_TRIANGLES vertex expansion changed");
 _Static_assert(NDS_PUPUPU_WATER_TILED_EMITTED_VERTICES * 3u ==
                    NDS_PUPUPU_WATER_TILED_VERTEX_ATTRIBUTE_WRITES,
                "TEXCOORD/VTX16 register-write count changed");
-_Static_assert(__alignof__(sNdsPupupuWaterPairAtlas) >= 32u,
-               "pair atlas lost DMA alignment");
-_Static_assert(__alignof__(sNdsPupupuWaterVisibilityAtlas) >= 32u,
-               "visibility atlas lost DMA alignment");
-_Static_assert(__alignof__(sNdsPupupuWaterPairPalettes) >= 32u,
-               "pair palettes lost DMA alignment");
-
 static void ndsPupupuWaterTiledClearFrame(NDSPupupuWaterTiledFrame *frame)
 {
     if (frame == 0)
     {
         return;
     }
-    frame->pair_tile_ids = 0;
-    frame->visibility_tile_ids = 0;
-    frame->pair_palette = 0;
+    frame->tile_ids = 0;
     frame->state_cell_count = 0u;
     frame->state_columns = 0u;
     frame->state_rows = 0u;
-    frame->pair_state = 0u;
-    frame->visibility_state = 0u;
+    frame->state = 0u;
     frame->palette_index = 0u;
-    frame->reserved = 0u;
+    frame->reserved[0] = 0u;
+    frame->reserved[1] = 0u;
 }
 
 s32 ndsPupupuWaterTiledGetAssets(NDSPupupuWaterTiledAssets *out_assets)
@@ -1222,9 +1150,6 @@ s32 ndsPupupuWaterTiledGetAssets(NDSPupupuWaterTiledAssets *out_assets)
     {
         return NDS_PUPUPU_WATER_TILED_INVALID;
     }
-    out_assets->pair_atlas = sNdsPupupuWaterPairAtlas;
-    out_assets->visibility_atlas = sNdsPupupuWaterVisibilityAtlas;
-    out_assets->pair_palettes = &sNdsPupupuWaterPairPalettes[0][0];
     out_assets->plan_cells = sNdsPupupuWaterPlanCells;
     out_assets->plan_vertices = sNdsPupupuWaterPlanVertices;
     out_assets->plan_cell_count = NDS_PUPUPU_WATER_TILED_PLAN_CELL_COUNT;
@@ -1236,7 +1161,7 @@ s32 ndsPupupuWaterTiledGetFrame(
     u32 owner, u32 cycle_frame, u32 source_fraction,
     NDSPupupuWaterTiledFrame *out_frame)
 {
-    const NDSPupupuWaterTiledGeneratedFrameState *state;
+    u8 state;
     u32 palette_index;
 
     ndsPupupuWaterTiledClearFrame(out_frame);
@@ -1250,22 +1175,16 @@ s32 ndsPupupuWaterTiledGetFrame(
     palette_index = source_fraction - NDS_PUPUPU_WATER_TILED_FRACTION_MIN;
     if (owner == NDS_PUPUPU_WATER_TILED_OWNER_LARGE)
     {
-        state = &sNdsPupupuWaterLargeFrames[cycle_frame];
-        out_frame->pair_tile_ids =
-            sNdsPupupuWaterLargePairStates[state->pair_state];
-        out_frame->visibility_tile_ids =
-            sNdsPupupuWaterLargeVisibilityStates[state->visibility_state];
+        state = sNdsPupupuWaterLargeFrames[cycle_frame];
+        out_frame->tile_ids = sNdsPupupuWaterLargeStates[state];
         out_frame->state_cell_count = 64u;
         out_frame->state_columns = 4u;
         out_frame->state_rows = 16u;
     }
     else if (owner == NDS_PUPUPU_WATER_TILED_OWNER_SMALL)
     {
-        state = &sNdsPupupuWaterSmallFrames[cycle_frame];
-        out_frame->pair_tile_ids =
-            sNdsPupupuWaterSmallPairStates[state->pair_state];
-        out_frame->visibility_tile_ids =
-            sNdsPupupuWaterSmallVisibilityStates[state->visibility_state];
+        state = sNdsPupupuWaterSmallFrames[cycle_frame];
+        out_frame->tile_ids = sNdsPupupuWaterSmallStates[state];
         out_frame->state_cell_count = 8u;
         out_frame->state_columns = 1u;
         out_frame->state_rows = 8u;
@@ -1274,9 +1193,7 @@ s32 ndsPupupuWaterTiledGetFrame(
     {
         return NDS_PUPUPU_WATER_TILED_INVALID;
     }
-    out_frame->pair_palette = sNdsPupupuWaterPairPalettes[palette_index];
-    out_frame->pair_state = state->pair_state;
-    out_frame->visibility_state = state->visibility_state;
+    out_frame->state = state;
     out_frame->palette_index = (u8)palette_index;
     return NDS_PUPUPU_WATER_TILED_OK;
 }
@@ -1309,49 +1226,19 @@ def render_include(model: GeneratedModel) -> bytes:
 /* Clipped oracle SHA256: {digests['clipped_oracle']}. */
 /* Combined generated data SHA256: {digests['combined']}. */
 
-typedef struct NDSPupupuWaterTiledGeneratedFrameState {{
-    u8 pair_state;
-    u8 visibility_state;
-}} NDSPupupuWaterTiledGeneratedFrameState;
-
-static const u8 sNdsPupupuWaterPairAtlas[131072]
-    __attribute__((aligned(32))) = {{
-{format_u8(model.pair_atlas)}
+static const u16 sNdsPupupuWaterLargeStates[38][64] = {{
+{format_states(large.states)}
 }};
 
-static const u8 sNdsPupupuWaterVisibilityAtlas[16384]
-    __attribute__((aligned(32))) = {{
-{format_u8(model.visibility_atlas)}
+static const u16 sNdsPupupuWaterSmallStates[46][8] = {{
+{format_states(small.states)}
 }};
 
-static const u16 sNdsPupupuWaterPairPalettes[40][256]
-    __attribute__((aligned(32))) = {{
-{format_palettes(model.palettes)}
-}};
-
-static const u16 sNdsPupupuWaterLargePairStates[33][64] = {{
-{format_pair_states(large.pair_states)}
-}};
-
-static const u8 sNdsPupupuWaterLargeVisibilityStates[38][64] = {{
-{format_visibility_states(large.visibility_states)}
-}};
-
-static const u16 sNdsPupupuWaterSmallPairStates[41][8] = {{
-{format_pair_states(small.pair_states)}
-}};
-
-static const u8 sNdsPupupuWaterSmallVisibilityStates[46][8] = {{
-{format_visibility_states(small.visibility_states)}
-}};
-
-static const NDSPupupuWaterTiledGeneratedFrameState
-    sNdsPupupuWaterLargeFrames[216] = {{
+static const u8 sNdsPupupuWaterLargeFrames[216] = {{
 {format_frames(large.frames)}
 }};
 
-static const NDSPupupuWaterTiledGeneratedFrameState
-    sNdsPupupuWaterSmallFrames[216] = {{
+static const u8 sNdsPupupuWaterSmallFrames[216] = {{
 {format_frames(small.frames)}
 }};
 
@@ -1371,6 +1258,9 @@ def generated_files(model: GeneratedModel) -> dict[Path, bytes]:
         HEADER_RELATIVE: render_header(model),
         MODULE_RELATIVE: render_module(),
         INCLUDE_RELATIVE: render_include(model),
+        PAYLOAD_RELATIVE: (
+            model.primary_atlas + model.secondary_atlas + model.palette_payload
+        ),
     }
 
 
@@ -1399,13 +1289,14 @@ def print_summary(model: GeneratedModel) -> None:
         f"oracle_pixels={summary['oracle_pixels']} mismatches={summary['oracle_mismatches']} "
         f"clipped_pixels={summary['clipped_oracle_pixels']} "
         f"clipped_mismatches={summary['clipped_oracle_mismatches']} "
-        f"pair_tiles={summary['pair_tiles']} pair_bytes={summary['pair_atlas_bytes']} "
-        f"visibility_tiles={summary['visibility_tiles']} "
-        f"visibility_bytes={summary['visibility_atlas_bytes']} "
+        f"masked_tiles={summary['masked_tiles']} "
+        f"primary_bytes={summary['primary_atlas_bytes']} "
+        f"secondary_bytes={summary['secondary_atlas_bytes']} "
         f"palettes={summary['fractions']} palette_bytes={summary['palette_bytes']} "
+        f"payload_bytes={summary['residency_payload_bytes']} "
         f"state_bytes={summary['state_table_bytes']} "
         f"logical_submissions={summary['logical_cell_submissions']} "
-        f"gx_batches={summary['planned_gx_begin_batches']} "
+        f"gx_batches={summary['min_gx_begin_batches']}..{summary['max_gx_begin_batches']} "
         f"vertices={summary['emitted_vertices']} "
         f"triangles={summary['total_triangles']} combined_sha256={digests['combined']}"
     )

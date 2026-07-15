@@ -1,0 +1,3 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+Battle Mario/Fox init harness passed: scene=22/21 ftmanager=0x46544d47 mask=0xff status=0x1fff fighters=0x3 entry=0 wait=0x3 figatree=5248

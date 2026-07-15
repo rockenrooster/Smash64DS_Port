@@ -1,0 +1,141 @@
+scene_backend.c
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/include/sys/taskman.h:13,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objtypes.h:15,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/include/gr/ground.h:6,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/include/ef/effect.h:6,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:9:
+D:/Stuff/DevFolder/Smash64DS_Port/include/sys/malloc.h:7:16: error: redefinition of 'struct SYMallocRegion'
+    7 | typedef struct SYMallocRegion {
+      |                ^~~~~~~~~~~~~~
+In file included from C:/devkitPro/libnds/include/nds/arm9/linkedlist.h:35,
+                 from C:/devkitPro/libnds/include/nds.h:252,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:6:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/malloc.h:7:16: note: originally defined here
+    7 | typedef struct SYMallocRegion
+      |                ^~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/include/sys/malloc.h:12:3: error: conflicting types for 'SYMallocRegion'; have 'struct SYMallocRegion'
+   12 | } SYMallocRegion;
+      |   ^~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/malloc.h:14:3: note: previous declaration of 'SYMallocRegion' with type 'SYMallocRegion'
+   14 | } SYMallocRegion;
+      |   ^~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/include/sys/malloc.h:14:6: error: conflicting types for 'syMallocInit'; have 'void(SYMallocRegion *, u32,  void *, size_t)' {aka 'void(SYMallocRegion *, long unsigned int,  void *, unsigned int)'}
+   14 | void syMallocInit(SYMallocRegion *region, u32 id, void *start, size_t size);
+      |      ^~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/malloc.h:16:13: note: previous declaration of 'syMallocInit' with type 'void(SYMallocRegion *, u32,  void *, size_t)' {aka 'void(SYMallocRegion *, long unsigned int,  void *, unsigned int)'}
+   16 | extern void syMallocInit(SYMallocRegion *buf, u32 id, void *start, size_t size);
+      |             ^~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/include/sys/malloc.h:15:7: error: conflicting types for 'syMallocSet'; have 'void *(SYMallocRegion *, size_t,  u32)' {aka 'void *(SYMallocRegion *, unsigned int,  long unsigned int)'}
+   15 | void *syMallocSet(SYMallocRegion *region, size_t size, u32 alignment);
+      |       ^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/malloc.h:17:14: note: previous declaration of 'syMallocSet' with type 'void *(SYMallocRegion *, size_t,  u32)' {aka 'void *(SYMallocRegion *, unsigned int,  long unsigned int)'}
+   17 | extern void* syMallocSet(SYMallocRegion *buf, size_t size, u32 alignment);
+      |              ^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/include/sys/malloc.h:16:6: error: conflicting types for 'syMallocReset'; have 'void(SYMallocRegion *)'
+   16 | void syMallocReset(SYMallocRegion *region);
+      |      ^~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/malloc.h:18:13: note: previous declaration of 'syMallocReset' with type 'void(SYMallocRegion *)'
+   18 | extern void syMallocReset(SYMallocRegion *buf);
+      |             ^~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:880,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:70:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c: In function 'ndsFighterJumpAttackAirProbeDirections':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:3075:35: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 'long int' [-Wsign-compare]
+ 3075 |             (fp->motion_attack_id ==
+      |                                   ^~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:889:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunProbeDamageInvincibleGate':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:7630:26: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+ 7630 |     if ((fp->hitlag_tics == saved_hitlag_tics) &&
+      |                          ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11464:49: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+11464 |     if ((hitlag > 0) && (victim_fp->hitlag_tics == hitlag))
+      |                                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11551:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+11551 |         (victim_fp->hitlag_tics == shield_break_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunStepAttackDamageProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16361:49: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16361 |         (attack_hitlag > 0) && (fp->hitlag_tics == attack_hitlag) &&
+      |                                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16401:26: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16401 |         (fp->hitlag_tics == attack_shield_hitlag) &&
+      |                          ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16464:50: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16464 |     if ((rebound_hitlag > 0) && (fp->hitlag_tics == rebound_hitlag))
+      |                                                  ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16538:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16538 |         (target_fp->hitlag_tics == shield_damage_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16603:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16603 |         (target_fp->hitlag_tics == shield_break_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16877:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16877 |     if ((target_fp->hitlag_tics == hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17881:13: warning: 'ndsFighterMarioFoxRecordStubFighter' defined but not used [-Wunused-function]
+17881 | static void ndsFighterMarioFoxRecordStubFighter(FTDesc *desc,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17708:14: warning: 'ndsFighterMarioFoxMakeFighter' defined but not used [-Wunused-function]
+17708 | static GObj *ndsFighterMarioFoxMakeFighter(FTDesc *desc)
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16984:13: warning: 'ndsFighterDashRunProbeAttackRecordCarry' defined but not used [-Wunused-function]
+16984 | static void ndsFighterDashRunProbeAttackRecordCarry(FTStruct *fp)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16914:13: warning: 'ndsFighterDashRunStepAttackCollFighterRange' defined but not used [-Wunused-function]
+16914 | static sb32 ndsFighterDashRunStepAttackCollFighterRange(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16262:13: warning: 'ndsFighterDashRunStepAttackDamageProcParams' defined but not used [-Wunused-function]
+16262 | static sb32 ndsFighterDashRunStepAttackDamageProcParams(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16161:13: warning: 'ndsFighterDashRunStepAttackDamageHitStats' defined but not used [-Wunused-function]
+16161 | static sb32 ndsFighterDashRunStepAttackDamageHitStats(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15644:13: warning: 'ndsFighterDashRunStepAttackDamageHitLog' defined but not used [-Wunused-function]
+15644 | static sb32 ndsFighterDashRunStepAttackDamageHitLog(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15576:13: warning: 'ndsFighterDashRunStepAttackDamageRecord' defined but not used [-Wunused-function]
+15576 | static sb32 ndsFighterDashRunStepAttackDamageRecord(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15459:13: warning: 'ndsFighterDashRunStepAttackDamageCollide' defined but not used [-Wunused-function]
+15459 | static sb32 ndsFighterDashRunStepAttackDamageCollide(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12107:13: warning: 'ndsGMCollisionCheckFighterAttackShieldCollideSelected' defined but not used [-Wunused-function]
+12107 | static sb32 ndsGMCollisionCheckFighterAttackShieldCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12084:13: warning: 'ndsGMCollisionCheckFighterAttacksCollideSelected' defined but not used [-Wunused-function]
+12084 | static sb32 ndsGMCollisionCheckFighterAttacksCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11985:13: warning: 'ndsFighterDashRunStepAttackDamageRectangle' defined but not used [-Wunused-function]
+11985 | static sb32 ndsFighterDashRunStepAttackDamageRectangle(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11706:13: warning: 'ndsFighterDashRunStepAttackCollInterpolate' defined but not used [-Wunused-function]
+11706 | static sb32 ndsFighterDashRunStepAttackCollInterpolate(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11627:13: warning: 'ndsFighterDashRunStepAttackCollPosition' defined but not used [-Wunused-function]
+11627 | static sb32 ndsFighterDashRunStepAttackCollPosition(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11612:13: warning: 'ndsFighterDashRunShouldWriteBackAttackPosition' defined but not used [-Wunused-function]
+11612 | static sb32 ndsFighterDashRunShouldWriteBackAttackPosition(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11605:12: warning: 'ndsFTMotionSignExtend' defined but not used [-Wunused-function]
+11605 | static s32 ndsFTMotionSignExtend(u32 value, u32 bits)
+      |            ^~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:874:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_fighter_model.c:1729:13: warning: 'ndsFighterMarioFoxSetupManagerFiles' defined but not used [-Wunused-function]
+ 1729 | static void ndsFighterMarioFoxSetupManagerFiles(void)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:868:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:447:13: warning: 'sNdsFTManagerPartsAllocInit' defined but not used [-Wunused-variable]
+  447 | static sb32 sNdsFTManagerPartsAllocInit;
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:446:17: warning: 'sNdsFTManagerPartsAllocFree' defined but not used [-Wunused-variable]
+  446 | static FTParts *sNdsFTManagerPartsAllocFree;
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:445:16: warning: 'sNdsFTManagerPartsAllocPool' defined but not used [-Wunused-variable]
+  445 | static FTParts sNdsFTManagerPartsAllocPool[64];
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+make[1]: *** [/c/devkitPro/devkitARM/base_rules:40: scene_backend.o] Error 1
+make: *** [Makefile:807: build-battle-playable-hwtri-harness-moveset-fireball-blaster-effect-reflector-mariohi-mariolw-foxhi-audio-bgm] Error 2

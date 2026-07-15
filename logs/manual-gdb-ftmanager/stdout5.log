@@ -1,0 +1,318 @@
+melonDS 1.1
+https://melonds.kuribo64.net
+Opened "D:/Stuff/DevFolder/Smash64DS_Port/emulators/melonds\melonDS.toml" with FileMode 0x1 (effective mode "rb")
+Opened "D:/Stuff/DevFolder/Smash64DS_Port/emulators/melonds\melonDS.toml" with FileMode 0x20 (effective mode "ab")
+Opened "D:/Stuff/DevFolder/Smash64DS_Port/emulators/melonds\melonDS.toml" with FileMode 0x1 (effective mode "rb")
+MP comm init OK
+Audio output frequency: 48000 Hz
+Audio output buffer size: 512 samples
+Opened "D:\Stuff\DevFolder\Smash64DS_Port\smash64ds-battle-mariofox-gcrunall-loop-ftmanager.nds" with FileMode 0x1 (effective mode "rb")
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.sav" with FileMode 0x1 (effective mode "rb")
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.sav" with FileMode 0x1 (effective mode "rb")
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.sav" with FileMode 0x1 (effective mode "rb")
+ROM entry not found for gamecode 589505315
+!! bad ROM size 3650560 (expected 4194304) rounded to 4194304
+Failed to open "D:/Stuff/DevFolder/Smash64DS_Port/emulators/melonds\wfcsettings.bin" with FileMode 0x1 (effective mode "rb")
+[GDB] initializing GDB stub for core 9 on port 3333
+[GDB] initializing GDB stub for core 7 on port 3334
+Resetting JIT block cache...
+done resetting jit mem
+done resetting jit mem
+MAC: 00:09:BF:11:22:33
+FW: WIFI CRC16 = GOOD
+FW: AP1 CRC16 = GOOD
+FW: AP2 CRC16 = GOOD
+FW: AP3 CRC16 = GOOD
+FW: USER0 CRC16 = GOOD
+FW: USER1 CRC16 = GOOD
+Opened "D:/Stuff/DevFolder/Smash64DS_Port/emulators/melonds\rtc.bin" with FileMode 0x1 (effective mode "rb")
+No need to re-encrypt cart secure area
+Inserted cart with game code: ####
+Inserted cart with ID: 400003C2
+ROM entry: 00400000 00000000
+Ejected GBA cart
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.mch" with FileMode 0x11 (effective mode "r")
+Resetting JIT block cache...
+done resetting jit mem
+done resetting jit mem
+MAC: 00:09:BF:11:22:33
+FW: WIFI CRC16 = GOOD
+FW: AP1 CRC16 = GOOD
+FW: AP2 CRC16 = GOOD
+FW: AP3 CRC16 = GOOD
+FW: USER0 CRC16 = GOOD
+FW: USER1 CRC16 = GOOD
+remapping SWRAM
+NDSCart: Initialized Key1_KeyBuf to zero
+NDSCart: Initialized Key1_KeyBuf to zero
+Secure area decryption failed
+remapping DTCM 0 1000 ffffffff ffffffff
+PU: region 0 = 04000033 : enabled, start: 04000000 size: 19
+PU: region 0 = 04000033 : enabled, start: 04000000 size: 19
+PU: region 1 = 0200002B : enabled, start: 02000000 size: 15
+PU: region 1 = 0200002B : enabled, start: 02000000 size: 15
+PU: region 2 = 00000000 : disabled, start: 00000000 size: 00
+PU: region 2 = 00000000 : disabled, start: 00000000 size: 00
+PU: region 3 = 08000035 : enabled, start: 08000000 size: 1A
+PU: region 3 = 08000035 : enabled, start: 08000000 size: 1A
+PU: region 4 = 0300001B : enabled, start: 03000000 size: 0D
+PU: region 4 = 0300001B : enabled, start: 03000000 size: 0D
+PU: region 5 = 00000000 : disabled, start: 00000000 size: 00
+PU: region 5 = 00000000 : disabled, start: 00000000 size: 00
+PU: region 6 = FFFF001D : enabled, start: FFFF0000 size: 0E
+PU: region 6 = FFFF001D : enabled, start: FFFF0000 size: 0E
+PU: region 7 = 027FF017 : enabled, start: 027FF000 size: 0B
+PU: region 7 = 027FF017 : enabled, start: 027FF000 size: 0B
+remapping DTCM 3000000 3004000 0 fffff000
+Game is now booting
+remapping DTCM ffffffff ffffffff 3000000 2ffc000
+Opened "D:/Stuff/DevFolder/Smash64DS_Port/emulators/melonds\melonDS.toml" with FileMode 0x1 (effective mode "rb")
+remapping DTCM 2ff0000 2ff4000 ffffffff ffffffff
+Opened "D:/Stuff/DevFolder/Smash64DS_Port/emulators/melonds\melonDS.toml" with FileMode 0x20 (effective mode "ab")
+PU: region 0 = 04000033 : enabled, start: 04000000 size: 19
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.ml1" with FileMode 0x1 (effective mode "rb")
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.ml2" with FileMode 0x1 (effective mode "rb")
+PU: region 1 = 0200002B : enabled, start: 02000000 size: 15
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.ml3" with FileMode 0x1 (effective mode "rb")
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.ml4" with FileMode 0x1 (effective mode "rb")
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.ml5" with FileMode 0x1 (effective mode "rb")
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.ml6" with FileMode 0x1 (effective mode "rb")
+PU: region 2 = 00000000 : disabled, start: 00000000 size: 00
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.ml7" with FileMode 0x1 (effective mode "rb")
+Failed to open "D:\Stuff\DevFolder\Smash64DS_Port/smash64ds-battle-mariofox-gcrunall-loop-ftmanager.ml8" with FileMode 0x1 (effective mode "rb")
+PU: region 3 = 00000000 : disabled, start: 00000000 size: 00
+PU: region 4 = 02FF001F : enabled, start: 02FF0000 size: 0F
+PU: region 5 = 01FF801D : enabled, start: 01FF8000 size: 0E
+PU: region 6 = FFFF001D : enabled, start: FFFF0000 size: 0E
+PU: region 7 = 00000017 : enabled, start: 00000000 size: 0B
+PU region 0: 04000000-07FFFFFF, user=03 priv=03, 06330033/66600060
+PU region 1: 02000000-023FFFFF, user=77 priv=77, 06330033/66600060
+PU region 4: 02FF0000-02FFFFFF, user=03 priv=03, 06330033/66600060
+PU region 5: 01FF8000-01FFFFFF, user=07 priv=07, 06330033/66600060
+PU region 6: FFFF0000-FFFF7FFF, user=55 priv=55, 06330033/66600060
+PU region 7: 00000000-00000FFF, user=04 priv=04, 06330033/66600060
+unknown ARM9 IO write32 04001060 00000000 02068BBC
+unknown ARM9 IO write32 04001064 00000000 02068BBC
+unknown ARM9 IO write32 04001068 00000000 02068BBC
+[GDB] send ack
+[GDB] found pkt, checksumGot: ec vs ec
+[GDB] command in: 'qSupported:multiprocess+;swbreak+;hwbreak+;qRelocInsn+;fork-events+;vfork-events+;exec-events+;vContSupported+;QThreadEvents+;no-resumed+;memory-tagging+'
+[GDB] send ack
+[GDB] send resp: '$PacketSize=47F;qXfer:features:read+;swbreak-;hwbreak+;QStartNoAckMode+#73'
+[GDB] got ack: '+'
+[GDB] found pkt, checksumGot: 49 vs 49
+[GDB] command in: 'vCont?'
+[GDB] send ack
+[GDB] send resp: '$vCont;c;s;t#05'
+[GDB] got ack: '+'
+[GDB] found pkt, checksumGot: 3a vs 3a
+[GDB] command in: 'vMustReplyEmpty'
+[GDB] send ack
+must reply empty
+[GDB] send resp: '$#00'
+[GDB] got ack: '+'
+[GDB] found pkt, checksumGot: b0 vs b0
+[GDB] command in: 'QStartNoAckMode'
+[GDB] send ack
+[GDB] send resp: '$OK#9a'
+[GDB] found pkt, checksumGot: df vs df
+[GDB] command in: 'Hg0'
+[GDB] send resp: '$OK#9a'
+[GDB] found pkt, checksumGot: 17 vs 17
+[GDB] command in: 'qXfer:features:read:target.xml:0,47a'
+[GDB] CPU type = 9
+[GDB qresp] query='0,47a'
+[GDB qresp] qaddr=0 qlen=1146 left=2138 outlen=1146
+[GDB] send resp: '$m<target version="1.0"><architecture>armv5te</architecture><osabi>none</osabi><feature name="org.gnu.gdb.arm.core"><reg name="r0" bitsize="32" type="uint32"/><reg name="r1" bitsize="32" type="uint32"/><reg name="r2" bitsize="32" type="uint32"/><reg name="r3" bitsize="32" type="uint32"/><reg name="r4" bitsize="32" type="uint32"/><reg name="r5" bitsize="32" type="uint32"/><reg name="r6" bitsize="32" type="uint32"/><reg name="r7" bitsize="32" type="uint32"/><reg name="r8" bitsize="32" type="uint32"/><reg name="r9" bitsize="32" type="uint32"/><reg name="r10" bitsize="32" type="uint32"/><reg name="r11" bitsize="32" type="uint32"/><reg name="r12" bitsize="32" type="uint32"/><reg name="sp" bitsize="32" type="data_ptr"/><reg name="lr" bitsize="32" type="code_ptr"/><reg name="pc" bitsize="32" type="code_ptr"/><reg name="cpsr" bitsize="32" regnum="25"/><reg name="sp_usr" bitsize="32" regnum="26" type="data_ptr"/><reg name="lr_usr" bitsize="32" regnum="27" type="code_ptr"/><reg name="r8_fiq" bitsize="32" type="uint32" regnum="28"/><reg name="r9_fiq" bitsize="32" type="uint32" regnum="29"/><reg name="r10_fiq" bitsize="32" type="uint32" regnu#58'
+[GDB] found pkt, checksumGot: b3 vs b3
+[GDB] command in: 'qXfer:features:read:target.xml:47a,47a'
+[GDB] CPU type = 9
+[GDB qresp] query='47a,47a'
+[GDB qresp] qaddr=1146 qlen=1146 left=992 outlen=992
+[GDB] send resp: '$mm="30"/><reg name="r11_fiq" bitsize="32" type="uint32" regnum="31"/><reg name="r12_fiq" bitsize="32" type="uint32" regnum="32"/><reg name="sp_fiq" bitsize="32" regnum="33" type="data_ptr"/><reg name="lr_fiq" bitsize="32" regnum="34" type="code_ptr"/><reg name="sp_irq" bitsize="32" regnum="35" type="data_ptr"/><reg name="lr_irq" bitsize="32" regnum="36" type="code_ptr"/><reg name="sp_svc" bitsize="32" regnum="37" type="data_ptr"/><reg name="lr_svc" bitsize="32" regnum="38" type="code_ptr"/><reg name="sp_abt" bitsize="32" regnum="39" type="data_ptr"/><reg name="lr_abt" bitsize="32" regnum="40" type="code_ptr"/><reg name="sp_und" bitsize="32" regnum="41" type="data_ptr"/><reg name="lr_und" bitsize="32" regnum="42" type="code_ptr"/><reg name="spsr_fiq" bitsize="32" regnum="43"/><reg name="spsr_irq" bitsize="32" regnum="44"/><reg name="spsr_svc" bitsize="32" regnum="45"/><reg name="spsr_abt" bitsize="32" regnum="46"/><reg name="spsr_und" bitsize="32" regnum="47"/></feature></target>#dc'
+[GDB] found pkt, checksumGot: b5 vs b5
+[GDB] command in: 'qXfer:features:read:target.xml:85a,47a'
+[GDB] CPU type = 9
+[GDB qresp] query='85a,47a'
+[GDB] send resp: '$l#6c'
+[GDB] found pkt, checksumGot: 49 vs 49
+[GDB] command in: 'qTStatus'
+[GDB] unknown subcommand 'TStatus'!
+[GDB] send resp: '$#00'
+[GDB] found pkt, checksumGot: 3f vs 3f
+[GDB] command in: '?'
+[GDB] send resp: '$S02#b5'
+[GDB] found pkt, checksumGot: bb vs bb
+[GDB] command in: 'qfThreadInfo'
+[GDB] send resp: '$m1#9e'
+[GDB] found pkt, checksumGot: c8 vs c8
+[GDB] command in: 'qsThreadInfo'
+[GDB] send resp: '$l#6c'
+[GDB] found pkt, checksumGot: 8f vs 8f
+[GDB] command in: 'qAttached'
+[GDB] send resp: '$1#31'
+[GDB] found pkt, checksumGot: 09 vs 09
+[GDB] command in: 'Hc-1'
+[GDB] send resp: '$E01#a6'
+[GDB] found pkt, checksumGot: b4 vs b4
+[GDB] command in: 'qC'
+[GDB] send resp: '$QC1#c5'
+[GDB] found pkt, checksumGot: 4b vs 4b
+[GDB] command in: 'qOffsets'
+[GDB] unknown subcommand 'Offsets'!
+[GDB] send resp: '$#00'
+[GDB] found pkt, checksumGot: 67 vs 67
+[GDB] command in: 'g'
+[GDB] send resp: '$0000000000000000000000000000000018d1320200000080a89a09027471090218d132021f0000007471090200000000000000008c0d25020caa0602bca906021f0000608c0d25020caa060200000000000000000000000000000000000000000000000000000000803fff0228730502c03fff021085ff0100000000000000000000000000000000100000003f000080df0000201000000010000000#e0'
+[GDB] found pkt, checksumGot: bb vs bb
+[GDB] command in: 'qfThreadInfo'
+[GDB] send resp: '$m1#9e'
+[GDB] found pkt, checksumGot: c8 vs c8
+[GDB] command in: 'qsThreadInfo'
+[GDB] send resp: '$l#6c'
+[GDB] found pkt, checksumGot: c4 vs c4
+[GDB] command in: 'm206a9bc,4'
+[GDB] send resp: '$c10fa081#24'
+[GDB] found pkt, checksumGot: 5b vs 5b
+[GDB] command in: 'qSymbol::'
+[GDB] unknown subcommand 'Symbol::'!
+[GDB] send resp: '$#00'
+[GDB] found pkt, checksumGot: 96 vs 96
+[GDB] command in: 'm2056d80,40'
+[GDB] send resp: '$310028009b0507f0c7f92000caf714f80120e1e7c9f768fceee7c046f0b54546de4657464e46e0b5446f804699b0a249201c13f034ee00284bd143469f49201c#ad'
+[GDB] found pkt, checksumGot: 92 vs 92
+[GDB] command in: 'm2056e0e,2'
+[GDB] send resp: '$1a78#01'
+[GDB] found pkt, checksumGot: db vs db
+[GDB] command in: 'Z0,2056e0e,2'
+[GDB] added bkpt:
+	[0]: addr=02056e0e, kind=2
+[GDB] send resp: '$OK#9a'
+[GDB] found pkt, checksumGot: db vs db
+[GDB] command in: 'Hc0'
+[GDB] send resp: '$OK#9a'
+[GDB] found pkt, checksumGot: 63 vs 63
+[GDB] command in: 'c'
+[GDB] continue execution
+[GDB] enter exit: 3
+[GDB] send resp: '$S05#b8'
+[GDB] found pkt, checksumGot: 67 vs 67
+[GDB] command in: 'g'
+[GDB] send resp: '$01000000000000001f000000fec4320218d1320200000080a89a09027471090218d132021f000000747109020000000000000000a80d25022d7305020e6e05023f000020a80d25022d73050200000000000000000000000000000000000000000000000000000000803fff0228730502c03fff021085ff0100000000000000000000000000000000100000003f000080df0000201000000010000000#df'
+[GDB] found pkt, checksumGot: 94 vs 94
+[GDB] command in: 'm2056e0e,4'
+[GDB] send resp: '$1a78d206#fd'
+[GDB] found pkt, checksumGot: 8b vs 8b
+[GDB] command in: 'm2250e00,40'
+[GDB] send resp: '$000000000000000010c33202c83b3102a89a0902747109020000000018d13202d84431020000000044453102ab1b020200000000c83b310290cc3202f89a0902#ff'
+[GDB] found pkt, checksumGot: 69 vs 69
+[GDB] command in: 'm232d188,4'
+[GDB] send resp: '$fec43202#29'
+[GDB] found pkt, checksumGot: c4 vs c4
+[GDB] command in: 'm232c4fe,2'
+[GDB] send resp: '$ffd8#68'
+[GDB] found pkt, checksumGot: bb vs bb
+[GDB] command in: 'qfThreadInfo'
+[GDB] send resp: '$m1#9e'
+[GDB] found pkt, checksumGot: c8 vs c8
+[GDB] command in: 'qsThreadInfo'
+[GDB] send resp: '$l#6c'
+[GDB] found pkt, checksumGot: fb vs fb
+[GDB] command in: 'z0,2056e0e,2'
+[GDB] send resp: '$OK#9a'
+[GDB] found pkt, checksumGot: 94 vs 94
+[GDB] command in: 'm2056e0e,4'
+[GDB] send resp: '$1a78d206#fd'
+[GDB] found pkt, checksumGot: b6 vs b6
+[GDB] command in: 'm2021baa,4'
+[GDB] send resp: '$002ed6d1#26'
+[GDB] found pkt, checksumGot: 8f vs 8f
+[GDB] command in: 'm2250e40,40'
+[GDB] send resp: '$000000003f940502c83b310290cc3202f89a090231e005020000000048fc3102040000000000803f90cc3202c83b310218cd32020000803f480f250200000000#ab'
+[GDB] found pkt, checksumGot: 94 vs 94
+[GDB] command in: 'm232d18c,4'
+[GDB] send resp: '$00000080#88'
+[GDB] found pkt, checksumGot: 69 vs 69
+[GDB] command in: 'm232d188,4'
+[GDB] send resp: '$fec43202#29'
+[GDB] found pkt, checksumGot: 69 vs 69
+[GDB] command in: 'm232d188,4'
+[GDB] send resp: '$fec43202#29'
+[GDB] found pkt, checksumGot: c4 vs c4
+[GDB] command in: 'm232c4fe,2'
+[GDB] send resp: '$ffd8#68'
+[GDB] found pkt, checksumGot: 69 vs 69
+[GDB] command in: 'm232d188,4'
+[GDB] send resp: '$fec43202#29'
+[GDB] found pkt, checksumGot: c4 vs c4
+[GDB] command in: 'm232c4fe,2'
+[GDB] send resp: '$ffd8#68'
+[GDB] found pkt, checksumGot: 69 vs 69
+[GDB] command in: 'm232d188,4'
+[GDB] send resp: '$fec43202#29'
+[GDB] found pkt, checksumGot: c4 vs c4
+[GDB] command in: 'm232c4fe,2'
+[GDB] send resp: '$ffd8#68'
+[GDB] found pkt, checksumGot: 69 vs 69
+[GDB] command in: 'm232d188,4'
+[GDB] send resp: '$fec43202#29'
+[GDB] found pkt, checksumGot: c4 vs c4
+[GDB] command in: 'm232c4fe,2'
+[GDB] send resp: '$ffd8#68'
+[GDB] found pkt, checksumGot: 69 vs 69
+[GDB] command in: 'm232d188,4'
+[GDB] send resp: '$fec43202#29'
+[GDB] found pkt, checksumGot: c0 vs c0
+[GDB] command in: 'm232c4fa,2'
+[GDB] send resp: '$c2ff#61'
+[GDB] found pkt, checksumGot: c2 vs c2
+[GDB] command in: 'm232c4fc,2'
+[GDB] send resp: '$a16e#2d'
+[GDB] found pkt, checksumGot: c4 vs c4
+[GDB] command in: 'm232c4fe,2'
+[GDB] send resp: '$ffd8#68'
+[GDB] found pkt, checksumGot: 5a vs 5a
+[GDB] command in: 'm232c500,2'
+[GDB] send resp: '$0000#c0'
+[GDB] found pkt, checksumGot: 5c vs 5c
+[GDB] command in: 'm232c502,2'
+[GDB] send resp: '$0000#c0'
+[GDB] found pkt, checksumGot: 5e vs 5e
+[GDB] command in: 'm232c504,2'
+[GDB] send resp: '$8f00#fe'
+[GDB] found pkt, checksumGot: 60 vs 60
+[GDB] command in: 'm232c506,2'
+[GDB] send resp: '$0000#c0'
+[GDB] found pkt, checksumGot: 62 vs 62
+[GDB] command in: 'm232c508,2'
+[GDB] send resp: '$0000#c0'
+[GDB] found pkt, checksumGot: 8b vs 8b
+[GDB] command in: 'm232c50a,2'
+[GDB] send resp: '$0180#c9'
+[GDB] found pkt, checksumGot: 8d vs 8d
+[GDB] command in: 'm232c50c,2'
+[GDB] send resp: '$3200#c5'
+[GDB] found pkt, checksumGot: 8f vs 8f
+[GDB] command in: 'm232c50e,2'
+[GDB] send resp: '$0d00#f4'
+[GDB] found pkt, checksumGot: 5b vs 5b
+[GDB] command in: 'm232c510,2'
+[GDB] send resp: '$ecff#94'
+[GDB] found pkt, checksumGot: 5d vs 5d
+[GDB] command in: 'm232c512,2'
+[GDB] send resp: '$0000#c0'
+[GDB] found pkt, checksumGot: 5f vs 5f
+[GDB] command in: 'm232c514,2'
+[GDB] send resp: '$e800#fd'
+[GDB] found pkt, checksumGot: 61 vs 61
+[GDB] command in: 'm232c516,2'
+[GDB] send resp: '$c900#fc'
+[GDB] found pkt, checksumGot: 63 vs 63
+[GDB] command in: 'm232c518,2'
+[GDB] send resp: '$fcff#95'
+[GDB] found pkt, checksumGot: 8c vs 8c
+[GDB] command in: 'm232c51a,2'
+[GDB] send resp: '$b000#f2'
+[GDB] found pkt, checksumGot: 8e vs 8e
+[GDB] command in: 'm232c51c,2'
+[GDB] send resp: '$090

@@ -5,9 +5,12 @@ ifeq ($(strip $(DEVKITARM)),)
 $(error "DEVKITARM is not set. Install devkitPro and set DEVKITARM to devkitARM")
 endif
 
-# Keep the documented local C:/devkitPro setup usable under MSYS make rules.
-override DEVKITPRO := $(patsubst c:/%,/c/%,$(patsubst C:/%,/c/%,$(DEVKITPRO)))
-override DEVKITARM := $(patsubst c:/%,/c/%,$(patsubst C:/%,/c/%,$(DEVKITARM)))
+# Keep both inherited Windows backslashes and the documented C:/devkitPro
+# spelling deterministic under MSYS make rules.  Some libnds assertions embed
+# header paths in the ROM, so this normalization is part of build identity.
+NDS_NORMALIZE_DEVKIT_PATH = $(patsubst %/,%,$(patsubst c:/%,/c/%,$(patsubst C:/%,/c/%,$(subst \,/,$(strip $(1))))))
+override DEVKITPRO := $(call NDS_NORMALIZE_DEVKIT_PATH,$(DEVKITPRO))
+override DEVKITARM := $(call NDS_NORMALIZE_DEVKIT_PATH,$(DEVKITARM))
 
 GAME_TITLE     := Smash 64 DS Port
 GAME_SUBTITLE1 := BattleShip architecture probe
@@ -22,6 +25,14 @@ ifneq ($(filter build%,$(BUILD)),)
 override BUILD := $(BUILD_OUTPUT_ROOT)/$(BUILD)
 endif
 endif
+NDS_PUBLISHED_TARGETS := smash64ds smash64ds-battle-playable-hwtri
+override NDS_PUBLISH_USER_ROM := $(if $(filter $(TARGET),$(NDS_PUBLISHED_TARGETS)),1,0)
+NDS_OUTPUT_ROOT ?= $(if $(filter 1,$(NDS_PUBLISH_USER_ROM)),$(PROJECT_ROOT),$(PROJECT_ROOT)/$(BUILD))
+ifeq ($(NDS_PUBLISH_USER_ROM),0)
+ifeq ($(abspath $(NDS_OUTPUT_ROOT)),$(abspath $(PROJECT_ROOT)))
+$(error Non-published target "$(TARGET)" may not write into the project root)
+endif
+endif
 NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_HARNESS_FAST_LOGIC ?= 0
@@ -31,10 +42,19 @@ NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
+NDS_RENDERER_M4_WATER_TILED_AOT ?= 0
+NDS_IFCOMMON_HYBRID_OAM ?= $(NDS_RENDERER_M4_WATER_TILED_AOT)
 NDS_DEBUG_HUD ?= 1
 NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
-ifeq ($(TARGET),smash64ds-battle-playable-canonical-hwtri)
+ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
+# This is the only published P1 battle ROM. Keep the complete realtime
+# configuration intrinsic to the target so direct builds and verifiers cannot
+# silently publish a software-rendered or non-interactive variant.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
 override NDS_SCENE_MIP_CACHE_LAB := 1
@@ -84,6 +104,11 @@ override NDS_RENDERER_BENCHMARK_MODE := 4
 endif
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
+NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE ?= 0
+NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE ?= 1
+ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)$(NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE),11)
+$(error NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE=1 requires NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE=0)
+endif
 override NDS_IMPORT_BATTLESHIP_FTCOMPUTER := 1
 override NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET := 1
 NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE ?= 1
@@ -511,12 +536,15 @@ LIBDIRS := $(LIBNDS)
 
 ifneq ($(abspath $(PROJECT_ROOT)/$(BUILD)),$(abspath $(CURDIR)))
 
-export OUTPUT := $(CURDIR)/$(TARGET)
+export OUTPUT := $(NDS_OUTPUT_ROOT)/$(TARGET)
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
 
 # Keep this list explicit. Adding an original subsystem is a deliberate port step.
-CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c port_probe.c n64_stubs.c coroutine.c \
+NDS_PRIVATE_CHECK_CFILES :=
+NDS_MPPROCESS_SOURCE_CFILES := battleship_mpprocess_edge_support.c \
+	battleship_mpprocess.c
+CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c port_probe.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -574,6 +602,10 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downattack.c \
 	battleship_ftcommon_downforwardback.c \
 	battleship_ftcommon_downstand.c
+ifeq ($(NDS_RENDERER_M4_WATER_TILED_AOT),1)
+CFILES += pupupu_water_tiled_aot.c nds_pupupu_water_residency.c \
+	nds_pupupu_water_draw.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
 endif
@@ -582,8 +614,14 @@ CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	reloc_backend_ftdata_symbols.c
 CFILES += battleship_ftanim.c battleship_ftanimend.c battleship_ftkey.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_FTMANAGER),1)
-CFILES += battleship_ftmanager.c \
-	battleship_ftstatus_callback_aliases.c \
+CFILES += battleship_ftmanager.c
+ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
+CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
+	battleship_mpprocess_live_bridge.c
+else ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE),1)
+NDS_PRIVATE_CHECK_CFILES += $(NDS_MPPROCESS_SOURCE_CFILES)
+endif
+CFILES += battleship_ftstatus_callback_aliases.c \
 	battleship_ftstatus_map_physics_shims.c \
 	battleship_ftstatus_inactive_stubs.c
 endif
@@ -642,6 +680,9 @@ SFILES := coroutine_arm.s
 
 export LD := $(CC)
 export OFILES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export NDS_PRIVATE_CHECK_OFILES := $(NDS_PRIVATE_CHECK_CFILES:.c=.o)
+export NDS_MPPROCESS_STRICT_OFILES := $(NDS_PRIVATE_CHECK_OFILES) \
+	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)),$(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) battleship_mpprocess_live_bridge.o)
 export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 	$(foreach dir,$(LIBDIRS),-I$(dir)/include) -I$(CURDIR)/$(BUILD)
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
@@ -1007,17 +1048,29 @@ export NDS_NITROFS_AUDIO_FILES := \
 export NDS_NITROFS_RELOCDATA_FILES := \
 	$(foreach file,$(NDS_INISHIE_SCALE_RELOCDATA_FILES),$(NITROFS_DIR)/relocdata/us/$(file))
 
+export NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES :=
+ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)
+ifeq ($(NDS_RENDERER_HW_TRIANGLES),1)
+NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES := \
+	$(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin
+ifeq ($(NDS_RENDERER_M4_WATER_TILED_AOT),1)
+NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES += \
+	$(NITROFS_DIR)/renderer/pupupu_water_tiled_aot.bin
+endif
+endif
+endif
+
 .PHONY: all clean clean-generated distclean run $(BUILD)
 
 all: $(BUILD)
 
 $(BUILD):
 	@mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile PROJECT_ROOT=$(PROJECT_ROOT) BUILD=$(BUILD) BUILD_OUTPUT_ROOT=$(BUILD_OUTPUT_ROOT)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile PROJECT_ROOT=$(PROJECT_ROOT) BUILD=$(BUILD) BUILD_OUTPUT_ROOT=$(BUILD_OUTPUT_ROOT) NDS_OUTPUT_ROOT=$(NDS_OUTPUT_ROOT) NDS_PUBLISH_USER_ROM=$(NDS_PUBLISH_USER_ROM)
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
+	@rm -fr $(BUILD) $(NDS_OUTPUT_ROOT)/$(TARGET).elf $(NDS_OUTPUT_ROOT)/$(TARGET).nds $(NDS_OUTPUT_ROOT)/$(TARGET).ds.gba
 
 clean-generated:
 	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-generated.ps1 -Force
@@ -1025,11 +1078,11 @@ clean-generated:
 distclean: clean-generated
 
 run: $(BUILD)
-	@echo "ROM ready: $(TARGET).nds"
+	@echo "ROM ready: $(NDS_OUTPUT_ROOT)/$(TARGET).nds"
 
 else
 
-DEPENDS := $(OFILES:.o=.d)
+DEPENDS := $(OFILES:.o=.d) $(NDS_PRIVATE_CHECK_OFILES:.o=.d)
 NDS_BUILD_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
 NDS_SCENE_HARNESS_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_scene_harness_config.h
 SCENE_BACKEND_SLICES := \
@@ -1051,11 +1104,6 @@ SCENE_BACKEND_SLICES := \
 .PHONY: all FORCE
 
 all: $(OUTPUT).nds
-ifeq ($(TARGET),smash64ds-battle-playable-canonical-hwtri)
-all: $(PROJECT_ROOT)/smash64ds-battle-playable-hwtri.nds
-$(PROJECT_ROOT)/smash64ds-battle-playable-hwtri.nds: $(OUTPUT).nds FORCE
-	@cp $< $@
-endif
 
 $(NDS_BUILD_CONFIG): FORCE
 	@tmp="$@.tmp"; \
@@ -1071,11 +1119,15 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
+		echo '#define NDS_RENDERER_M4_WATER_TILED_AOT $(NDS_RENDERER_M4_WATER_TILED_AOT)'; \
+		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \
 		echo '#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS $(NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
+		echo '#define NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE $(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)'; \
+		echo '#define NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE $(NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTCOMPUTER $(NDS_IMPORT_BATTLESHIP_FTCOMPUTER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET $(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE $(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE)'; \
@@ -1107,9 +1159,12 @@ $(NDS_SCENE_HARNESS_CONFIG): FORCE
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
-$(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES)
-$(OUTPUT).elf: $(OFILES)
-$(OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
+$(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
+$(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES)
+$(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
+ifneq ($(strip $(NDS_MPPROCESS_STRICT_OFILES)),)
+$(NDS_MPPROCESS_STRICT_OFILES): CFLAGS += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=return-type
+endif
 # The source DS renderer is ARM-state code, with its hottest handlers copied
 # to ITCM. Keep that interworking shape for mode 163 without spending the code
 # size in normal startup or the archived narrow harness fleet.
@@ -1147,6 +1202,14 @@ $(NITROFS_DIR)/audio/fgm_phase_pack_ima.bin: $(PROJECT_ROOT)/assets/audio/fgm_ph
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
+$(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(PROJECT_ROOT)/assets/renderer/battle_playable_static_textures.rgb5a1.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/renderer/pupupu_water_tiled_aot.bin: $(PROJECT_ROOT)/assets/renderer/pupupu_water_tiled_aot.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
 $(NITROFS_DIR)/audio/%: $(BATTLESHIP_O2R)/audio/%
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -1174,6 +1237,18 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_PROFILE=$(NDS_RENDERER_PROFILE_LEVEL)'
 	@printf '%s\n' 'BENCH_MAKE_M2_DETAILED_LEDGER=$(NDS_RENDERER_M2_DETAILED_LEDGER)'
 	@printf '%s\n' 'BENCH_MAKE_RENDERER_BENCHMARK_MODE=$(NDS_RENDERER_BENCHMARK_MODE)'
+	@printf '%s\n' 'BENCH_MAKE_M4_WATER_TILED_AOT=$(NDS_RENDERER_M4_WATER_TILED_AOT)'
+	@printf '%s\n' 'BENCH_MAKE_IFCOMMON_HYBRID_OAM=$(NDS_IFCOMMON_HYBRID_OAM)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'
+
+# Nonbuilding semantic probe for the toolchain-path identity checker.  Its
+# caller supplies an unused outer BUILD path so dependency files are not read
+# or repaired while the Makefile is parsed.
+.PHONY: print-toolchain-paths
+print-toolchain-paths:
+	@printf '%s\n' 'TOOLCHAIN_DEVKITPRO=$(DEVKITPRO)'
+	@printf '%s\n' 'TOOLCHAIN_DEVKITARM=$(DEVKITARM)'
+	@printf '%s\n' 'TOOLCHAIN_CALICO=$(CALICO)'
+	@printf '%s\n' 'TOOLCHAIN_LIBNDS=$(LIBNDS)'

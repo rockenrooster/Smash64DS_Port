@@ -1,0 +1,18 @@
+battleship_scsubsysdata.c
+battleship_ifcommon.c
+battleship_mario_special_lw.c
+battleship_efmanager.c
+battleship_fox_reflector.c
+battleship_fox_special_hi.c
+battleship_ftcommon_fallspecial.c
+battleship_fox_blaster.c
+battleship_special_common.c
+battleship_mario_special_hi.c
+battleship_mario_fireball.c
+battleship_wpmanager_core.c
+battleship_ftmain.c
+coroutine_arm.s
+linking smash64ds-battle-playable-coarse-mipcache-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-coarse-mipcache-hwtri.nds

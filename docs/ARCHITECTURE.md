@@ -578,9 +578,15 @@ ceiling-status harnesses build on that path, route the selected original
 `mpCommonProcFighterCliffFloorCeil` map callback through bounded
 `mpProcessUpdateMain`, and import original `ftcommonstopceil.c` enough to prove
 `ftCommonStopCeilSetStatus` changes Fall/Air into StopCeil/Ground.
-Real wall-hit floor-edge adjustment, natural-motion valid-stale/cliff-edge
-transitions, full `mpprocess.c`, full wall/ceiling/cliffcatch/platform logic,
-and unbounded stage collision remain deferred.
+Real wall-hit floor-edge adjustment and natural-motion valid-stale/cliff-edge
+transitions remain deferred. Full upstream `mpprocess.c` is privately
+compile-checked as 36 functions and seven globals, omitted from `OFILES`, and
+not live. Graduation is blocked on atomic moving-yakumono endpoint-world plus
+ceil/wall common world-to-local semantics. The planned whole-TU live cut exposes
+only 11 public `mpcommon` functions plus `sMPCommonProcPass` and 24/36
+`mpprocess` functions. The complete `mpcommon.c` wrapper keeps 32 other
+functions private (31 other `mpCommon*` names plus `func_ovl2_800DDF74`); full
+wall/ceiling/cliffcatch/platform runtime remains deferred.
 General N64 display-list rendering is still not converted to DS GPU calls.
 
 The DS shim now implements BattleShip's original `syRdpSetDefaultViewport`

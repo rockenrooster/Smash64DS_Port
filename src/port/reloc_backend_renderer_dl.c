@@ -92,6 +92,15 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     NDSRendererNativeFighterRoot production_roots[
         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    DObj *hierarchy_joints[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    u8 hierarchy_parents[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    u8 hierarchy_bindings[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    NDSRendererMatrix20p12 hierarchy_locals[
+        NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    NDSRendererMatrix20p12 hierarchy_projection;
+    NDSRendererMatrix20p12 hierarchy_camera_modelview;
+    NDSRendererConfig hierarchy_config;
+    NDSRendererNativeFighterHierarchy hierarchy;
 #endif
     u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
@@ -271,48 +280,6 @@ static void ndsRendererAdapterMtxFromN64(
         return;
     }
     ndsRendererMtxLoadN64ToDS20p12(src, dst);
-}
-
-static s32 ndsRendererAdapterFloatTo20p12(f32 value)
-{
-    f32 scaled = value * (f32)(1 << NDS_RENDERER_ADAPTER_MTX_FRAC_BITS);
-
-    if (scaled >= 2147483520.0F)
-    {
-        return 0x7fffffff;
-    }
-    if (scaled <= -2147483520.0F)
-    {
-        return (s32)0x80000000u;
-    }
-    return (s32)((scaled >= 0.0F) ? (scaled + 0.5F) : (scaled - 0.5F));
-}
-
-static void ndsRendererAdapterMtxFromF(
-    Mtx44f mtx, NDSRendererMatrix20p12 *dst)
-{
-    u32 row;
-    u32 col;
-
-    if (dst == NULL)
-    {
-        return;
-    }
-
-    memset(dst, 0, sizeof(*dst));
-    for (row = 0u; row < 4u; row++)
-    {
-        for (col = 0u; col < 4u; col++)
-        {
-            f32 value = mtx[row][col];
-
-            if (col == 3u)
-            {
-                value = (row == 3u) ? 1.0F : 0.0F;
-            }
-            dst->m[row][col] = ndsRendererAdapterFloatTo20p12(value);
-        }
-    }
 }
 
 static void ndsRendererAdapterBuildDObjFallbackMtx(DObj *dobj, Mtx *mtx)
@@ -575,13 +542,14 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
 
     if (parts->transform_update_mode != 0)
     {
-        ndsRendererAdapterMtxFromF(parts->unk_dobjtrans_0x10, out);
-        return TRUE;
+        /* BattleShip lbCommonFighterPartsFuncMatrix quantizes the complete
+         * source float matrix through syMatrixF2LFixedW before the RSP sees
+         * it. Preserve that 16.16 boundary, then convert to DS 20.12. */
+        syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, &mtx);
     }
-
-    if ((dobj->scale.vec.f.x != 1.0F) ||
-        (dobj->scale.vec.f.y != 1.0F) ||
-        (dobj->scale.vec.f.z != 1.0F))
+    else if ((dobj->scale.vec.f.x != 1.0F) ||
+             (dobj->scale.vec.f.y != 1.0F) ||
+             (dobj->scale.vec.f.z != 1.0F))
     {
         syMatrixTraRotRpyRSca(&mtx,
                               dobj->translate.vec.f.x,
@@ -2330,6 +2298,228 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     return ((*projection_ptr != NULL) ||
             (camera_modelview_valid != FALSE) ||
             (binding_count == 0u)) ? TRUE : FALSE;
+}
+
+static sb32 ndsRendererAdapterMatrixIsAffine20p12(
+    const NDSRendererMatrix20p12 *matrix)
+{
+    return ((matrix != NULL) &&
+            (matrix->m[0][3] == 0) &&
+            (matrix->m[1][3] == 0) &&
+            (matrix->m[2][3] == 0) &&
+            (matrix->m[3][3] == (1 << 12))) ? TRUE : FALSE;
+}
+
+/* The ordinary camera adapter preserves BattleShip's historical combined
+ * 0x4C look-at/projection matrix.  The hierarchy candidate needs the same
+ * product split at its natural affine boundary so source-unit translation can
+ * be scaled once in GX without CPU-composing every fighter root. */
+static sb32 ndsRendererAdapterGetHierarchyCameraMatrices(
+    CObj *cobj,
+    NDSRendererMatrix20p12 *projection,
+    NDSRendererMatrix20p12 *modelview)
+{
+    u32 projection_valid = FALSE;
+    u32 modelview_valid = FALSE;
+    u32 i;
+
+    if ((projection == NULL) || (modelview == NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterMtxIdentity20p12(projection);
+    ndsRendererAdapterMtxIdentity20p12(modelview);
+    if (cobj == NULL)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+    {
+        XObj *xobj = cobj->xobjs[i];
+
+        if ((xobj != NULL) &&
+            (xobj->kind == NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND))
+        {
+            LookAt look_at;
+            Mtx mtx;
+
+            syMatrixLookAtReflect(&mtx, &look_at,
+                                  cobj->vec.eye.x, cobj->vec.eye.y,
+                                  cobj->vec.eye.z, cobj->vec.at.x,
+                                  cobj->vec.at.y, cobj->vec.at.z,
+                                  cobj->vec.up.x, cobj->vec.up.y,
+                                  cobj->vec.up.z);
+            ndsRendererAdapterMtxFromN64(&mtx, modelview);
+            syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
+                              cobj->projection.persp.fovy,
+                              cobj->projection.persp.aspect,
+                              cobj->projection.persp.near,
+                              cobj->projection.persp.far,
+                              cobj->projection.persp.scale);
+            ndsRendererAdapterMtxFromN64(&mtx, projection);
+            return TRUE;
+        }
+    }
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, projection, &projection_valid,
+        modelview, &modelview_valid);
+    if (projection_valid == FALSE)
+    {
+        ndsRendererAdapterMtxIdentity20p12(projection);
+    }
+    if (modelview_valid == FALSE)
+    {
+        ndsRendererAdapterMtxIdentity20p12(modelview);
+    }
+    return ((projection_valid != FALSE) ||
+            (modelview_valid != FALSE)) ? TRUE : FALSE;
+}
+
+static sb32 ndsRendererAdapterPrepareNativeOwnerHierarchy(
+    u32 slot,
+    FTStruct *fp,
+    DObj *root,
+    DObj *const *matrix_bindings,
+    u32 binding_count,
+    CObj *cobj,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    , volatile NDSRendererOwnerProfile *m2_owner
+#endif
+    )
+{
+    u32 expected_joint_count = (slot == 0u) ? 25u : 27u;
+    u32 expected_binding_count = (slot == 0u) ? 14u : 18u;
+    u32 joint_count = 0u;
+    u32 joint_index;
+    u32 binding_index;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    u32 phase_start;
+#endif
+
+    if ((slot > 1u) || (fp == NULL) || (root == NULL) ||
+        (matrix_bindings == NULL) || (workspace == NULL) ||
+        (binding_count != expected_binding_count) ||
+        (fp->is_use_animlocks != FALSE) || (fp->shuffle_tics != 0u))
+    {
+        return FALSE;
+    }
+    memset(workspace->hierarchy_joints, 0,
+           sizeof(workspace->hierarchy_joints));
+    memset(workspace->hierarchy_parents, 31,
+           sizeof(workspace->hierarchy_parents));
+    memset(workspace->hierarchy_bindings, 31,
+           sizeof(workspace->hierarchy_bindings));
+    if ((ndsRendererAdapterCollectFighterTopology(
+             root, 31u, workspace->hierarchy_joints,
+             workspace->hierarchy_parents, &joint_count) == FALSE) ||
+        (joint_count != expected_joint_count))
+    {
+        return FALSE;
+    }
+    for (binding_index = 0u; binding_index < binding_count; binding_index++)
+    {
+        u32 found = NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX;
+
+        for (joint_index = 0u; joint_index < joint_count; joint_index++)
+        {
+            if (workspace->hierarchy_joints[joint_index] ==
+                matrix_bindings[binding_index])
+            {
+                found = joint_index;
+                break;
+            }
+        }
+        if ((found >= joint_count) ||
+            (workspace->hierarchy_bindings[found] != 31u))
+        {
+            return FALSE;
+        }
+        workspace->hierarchy_bindings[found] = (u8)binding_index;
+    }
+    for (joint_index = 0u; joint_index < joint_count; joint_index++)
+    {
+        DObj *joint = workspace->hierarchy_joints[joint_index];
+        u32 xobj_index;
+
+        if ((joint == NULL) ||
+            ((workspace->hierarchy_parents[joint_index] == 31u) ?
+                 (joint->parent != DOBJ_PARENT_NULL) :
+                 (joint->parent != workspace->hierarchy_joints[
+                     workspace->hierarchy_parents[joint_index]])))
+        {
+            return FALSE;
+        }
+        for (xobj_index = 0u; xobj_index < joint->xobjs_num; xobj_index++)
+        {
+            XObj *xobj = joint->xobjs[xobj_index];
+
+            if (xobj == NULL)
+            {
+                continue;
+            }
+            if ((xobj->kind != nGCMatrixKindNull) &&
+                (xobj->kind !=
+                 NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND))
+            {
+                return FALSE;
+            }
+            if ((xobj->kind ==
+                 NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND) &&
+                (ftGetParts(joint) == NULL))
+            {
+                return FALSE;
+            }
+        }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        phase_start = cpuGetTiming();
+#endif
+        if ((ndsRendererAdapterBuildDObjLocalMatrix(
+                 joint, &workspace->hierarchy_locals[joint_index]) == FALSE) ||
+            (ndsRendererAdapterMatrixIsAffine20p12(
+                 &workspace->hierarchy_locals[joint_index]) == FALSE))
+        {
+            return FALSE;
+        }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        if (m2_owner != NULL)
+        {
+            m2_owner->m2_local_matrix_ticks +=
+                cpuGetTiming() - phase_start;
+            m2_owner->m2_local_matrix_build_count++;
+        }
+#endif
+    }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    phase_start = cpuGetTiming();
+#endif
+    if (ndsRendererAdapterGetHierarchyCameraMatrices(
+            cobj, &workspace->hierarchy_projection,
+            &workspace->hierarchy_camera_modelview) == FALSE)
+    {
+        return FALSE;
+    }
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    if (m2_owner != NULL)
+    {
+        m2_owner->m2_camera_fetch_ticks += cpuGetTiming() - phase_start;
+        m2_owner->m2_camera_fetch_count++;
+    }
+#endif
+    workspace->hierarchy.projection = &workspace->hierarchy_projection;
+    workspace->hierarchy.camera_modelview =
+        &workspace->hierarchy_camera_modelview;
+    workspace->hierarchy.joint_locals = workspace->hierarchy_locals;
+    workspace->hierarchy.joint_parents = workspace->hierarchy_parents;
+    workspace->hierarchy.joint_bindings = workspace->hierarchy_bindings;
+    workspace->hierarchy.joint_count = joint_count;
+    return TRUE;
 }
 
 static u32 ndsRendererAdapterNormalizeNativeGeometryMode(u32 geometry_mode)
@@ -8975,6 +9165,83 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
     }
     return TRUE;
 }
+
+static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
+    u32 slot,
+    NDSRelocLoadedFile *owner_file,
+    const NDSFighterDLAllDrawCollection *collection,
+    NDSFighterDLDrawState *resolver,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+{
+    NDSRendererConfig *config;
+    u32 i;
+
+    if ((slot > 1u) || (owner_file == NULL) ||
+        (owner_file->data == NULL) || (collection == NULL) ||
+        (resolver == NULL) || (workspace == NULL) ||
+        (collection->selected_count == 0u) ||
+        (collection->selected_count >
+         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return FALSE;
+    }
+    resolver->primary_file = owner_file;
+    resolver->slot = slot;
+    resolver->segment_e_base = NULL;
+    resolver->segment_e_end = NULL;
+
+    config = &workspace->hierarchy_config;
+    *config = (NDSRendererConfig){0};
+    config->max_depth = 8u;
+    config->max_commands = 2048u;
+    config->max_list_commands = 512u;
+    config->initial_geometry_mode = 0u;
+    config->texture_data_layout =
+        NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+    config->validate_range = ndsFighterDLAllDrawValidateRange;
+    config->immutable_command_span =
+        ndsRendererAdapterImmutableCommandSpan;
+    config->resolve_branch = ndsFighterDLAllDrawResolveBranch;
+    config->resolve_data = ndsFighterDLDrawResolveRendererData;
+    config->user = resolver;
+
+    for (i = 0u; i < collection->selected_count; i++)
+    {
+        NDSRendererNativeFighterRoot *root =
+            &workspace->production_roots[i];
+        const NDSFighterDisplayContractEvent *event =
+            (sNdsFighterDisplayContractPlayback != FALSE) ?
+                &sNdsFighterDisplayContract.events[
+                    collection->indices[i]] : NULL;
+
+        *root = (NDSRendererNativeFighterRoot){0};
+        root->root_offset = workspace->root_offsets[i];
+        root->material_count = workspace->material_counts[i];
+        root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
+        root->config = config;
+        if (event != NULL)
+        {
+            root->preamble.geometry_mode = event->geometry_mode;
+            root->preamble.cycle_type = event->cycle_type;
+            root->preamble.render_mode = event->render_mode;
+            root->preamble.prim_color = event->prim_color;
+            root->preamble.env_color = event->env_color;
+            root->preamble.flags = NDS_RENDERER_NATIVE_PREAMBLE_VALID;
+            if (event->light_valid != 0u)
+            {
+                root->preamble.light_dir_x = event->light.l.dir[0];
+                root->preamble.light_dir_y = event->light.l.dir[1];
+                root->preamble.light_dir_z = event->light.l.dir[2];
+                root->preamble.flags |=
+                    NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID;
+            }
+        }
+    }
+    workspace->hierarchy.roots = workspace->production_roots;
+    workspace->hierarchy.config = config;
+    workspace->hierarchy.root_count = collection->selected_count;
+    return TRUE;
+}
 #endif
 
 static void ndsFighterDLAllDrawRecordScreenPoint(
@@ -9751,6 +10018,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     sb32 native_owner_failed = FALSE;
     sb32 native_owner_production_attempted = FALSE;
     sb32 native_owner_production_mode;
+    sb32 native_owner_hierarchy_mode;
 #else
     NDSRendererNativeMaterial *native_materials =
         sNdsRendererAdapterNativeMaterials;
@@ -9871,7 +10139,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     native_owner_production_mode =
         (gNdsRendererFastRunMode ==
          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ? TRUE :
-                                                                  FALSE;
+                                                                   FALSE;
+    native_owner_hierarchy_mode =
+        (gNdsRendererFastRunMode ==
+         NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ? TRUE : FALSE;
 #endif
     ndsRendererProfileSetOwner(owner_id);
     if (native_owner_enabled != FALSE)
@@ -9975,7 +10246,20 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             u32 owner_matrix_start = cpuGetTiming();
 #endif
-            if (ndsRendererAdapterPrepareNativeOwnerMatrices(
+            if (((native_owner_hierarchy_mode != FALSE) &&
+                 (ndsRendererAdapterPrepareNativeOwnerHierarchy(
+                    slot, fp, root, native_owner_matrix_bindings,
+                    collection.selected_count,
+                    (gGCCurrentCamera != NULL) ?
+                        CObjGetStruct(gGCCurrentCamera) : NULL,
+                    &sNdsRendererAdapterNativeOwnerWorkspace
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                    , m2_owner
+#endif
+                    ) == FALSE)) ||
+                ((native_owner_hierarchy_mode == FALSE) &&
+                 (ndsRendererAdapterPrepareNativeOwnerMatrices(
                     root, native_owner_matrix_bindings,
                     collection.selected_count,
                     (gGCCurrentCamera != NULL) ?
@@ -9986,7 +10270,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     NDS_RENDERER_M2_DETAILED_LEDGER
                     , m2_owner
 #endif
-                    ) == FALSE)
+                    ) == FALSE)))
             {
                 native_owner_enabled = FALSE;
             }
@@ -10060,10 +10344,16 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     if ((native_owner_enabled != FALSE) &&
-        (native_owner_production_mode != FALSE) &&
+        ((native_owner_production_mode != FALSE) ||
+         (native_owner_hierarchy_mode != FALSE)) &&
         (detailed_output == FALSE) && (no_oracle != FALSE))
     {
-        if (ndsRendererAdapterBuildNativeProductionInputs(
+        if (((native_owner_hierarchy_mode != FALSE) &&
+             (ndsRendererAdapterBuildNativeHierarchyInputs(
+                slot, native_owner_file, &collection, &persistent_state,
+                &sNdsRendererAdapterNativeOwnerWorkspace) == FALSE)) ||
+            ((native_owner_hierarchy_mode == FALSE) &&
+             (ndsRendererAdapterBuildNativeProductionInputs(
                 slot, native_owner_file, &collection,
                 native_owner_projection, native_owner_modelviews,
                 &persistent_state,
@@ -10072,7 +10362,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     NDS_RENDERER_M2_DETAILED_LEDGER
                 , m2_owner
 #endif
-                ) == FALSE)
+                ) == FALSE)))
         {
             ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
                 native_owner_material_dobjs,
@@ -10089,7 +10379,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
             ndsFighterDLDrawResetRuntimeRendererStats(&persistent_stats);
             native_owner_production_attempted = TRUE;
-            production_result =
+            production_result = (native_owner_hierarchy_mode != FALSE) ?
+                ndsRendererExecuteNativeFighterOwnerHierarchy(
+                    slot, native_owner_file->data,
+                    &sNdsRendererAdapterNativeOwnerWorkspace.hierarchy,
+                    NULL, NULL, &persistent_stats,
+                    &production_hardware_started) :
                 ndsRendererExecuteNativeFighterOwnerProduction(
                     slot, native_owner_file->data,
                     sNdsRendererAdapterNativeOwnerWorkspace.production_roots,

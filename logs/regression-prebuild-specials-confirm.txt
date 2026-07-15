@@ -1,0 +1,4 @@
+Building default verification ROM.
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+Building 104 verifier outputs with 4 parallel workers (-j4 each).

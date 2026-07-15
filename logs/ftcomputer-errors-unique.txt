@@ -1,0 +1,51 @@
+error: 'FTDONKEY_GIANTPUNCH_CHARGE_MAX' undeclared (first use in this function)
+error: 'FTKIRBY_COPYDONKEY_GIANTPUNCH_CHARGE_MAX' undeclared (first use in this function)
+error: 'FTKIRBY_COPYSAMUS_CHARGE_MAX' undeclared (first use in this function)
+error: 'FTSAMUS_CHARGE_MAX' undeclared (first use in this function)
+error: 'gMPCollisionLineGroups' undeclared (first use in this function); did you mean 'gMPCollisionBounds'?
+error: 'ITStruct' has no member named 'multi'
+error: 'nFTDonkeyStatusSpecialAirNLoop' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialAirLwLoop'?
+error: 'nFTDonkeyStatusSpecialAirNStart' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialAirLwStart'?
+error: 'nFTDonkeyStatusSpecialLwEnd' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialLwEnd'?
+error: 'nFTDonkeyStatusSpecialLwLoop' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialLwLoop'?
+error: 'nFTDonkeyStatusSpecialLwStart' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialLwStart'?
+error: 'nFTDonkeyStatusSpecialNLoop' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialLwLoop'?
+error: 'nFTDonkeyStatusSpecialNStart' undeclared (first use in this function); did you mean 'nFTCommonStatusSpecialStart'?
+error: 'nFTDonkeyStatusThrowFTurn' undeclared (first use in this function); did you mean 'nFTCommonStatusThrowF'?
+error: 'nFTDonkeyStatusThrowFWait' undeclared (first use in this function)
+error: 'nFTDonkeyStatusThrowFWalkFast' undeclared (first use in this function)
+error: 'nFTDonkeyStatusThrowFWalkMiddle' undeclared (first use in this function); did you mean 'nFTCommonStatusWalkMiddle'?
+error: 'nFTDonkeyStatusThrowFWalkSlow' undeclared (first use in this function)
+error: 'nFTKirbyStatusCopyDonkeySpecialAirNLoop' undeclared (first use in this function)
+error: 'nFTKirbyStatusCopyDonkeySpecialAirNStart' undeclared (first use in this function)
+error: 'nFTKirbyStatusCopyDonkeySpecialNLoop' undeclared (first use in this function)
+error: 'nFTKirbyStatusCopyDonkeySpecialNStart' undeclared (first use in this function)
+error: 'nFTKirbyStatusCopySamusSpecialAirNEnd' undeclared (first use in this function)
+error: 'nFTKirbyStatusCopySamusSpecialAirNStart' undeclared (first use in this function)
+error: 'nFTKirbyStatusCopySamusSpecialNLoop' undeclared (first use in this function)
+error: 'nFTKirbyStatusCopySamusSpecialNStart' undeclared (first use in this function)
+error: 'nFTKirbyStatusSpecialAirNCatch' undeclared (first use in this function); did you mean 'nFTMarioStatusSpecialAirN'?
+error: 'nFTKirbyStatusSpecialAirNEat' undeclared (first use in this function); did you mean 'nFTMarioStatusSpecialAirN'?
+error: 'nFTKirbyStatusSpecialAirNWait' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialAirLwHit'?
+error: 'nFTKirbyStatusSpecialNCatch' undeclared (first use in this function); did you mean 'nFTMarioStatusSpecialN'?
+error: 'nFTKirbyStatusSpecialNEat' undeclared (first use in this function); did you mean 'nFTMarioStatusSpecialN'?
+error: 'nFTKirbyStatusSpecialNWait' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialLwHit'?
+error: 'nFTNessStatusSpecialAirHiHold' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialAirHiHold'?
+error: 'nFTNessStatusSpecialHiHold' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialHiHold'?
+error: 'nFTNessStatusSpecialLwScopeEnd' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialLwScopeEnd'?
+error: 'nFTNessStatusSpecialLwScopeStart' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialLwScopeStart'?
+error: 'nFTPikachuStatusSpecialAirHi' undeclared (first use in this function); did you mean 'nFTMarioStatusSpecialAirHi'?
+error: 'nFTPikachuStatusSpecialAirHiStart' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialAirHiStart'?
+error: 'nFTSamusStatusSpecialAirNEnd' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialAirLwEnd'?
+error: 'nFTSamusStatusSpecialAirNStart' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialAirLwStart'?
+error: 'nFTSamusStatusSpecialNLoop' undeclared (first use in this function); did you mean 'nFTFoxStatusSpecialLwLoop'?
+error: 'nFTSamusStatusSpecialNStart' undeclared (first use in this function); did you mean 'nFTDemoStatusSpecialStart'?
+error: implicit declaration of function 'DISTANCE' [-Wimplicit-function-declaration]
+error: implicit declaration of function 'ftGetComTargetFighter' [-Wimplicit-function-declaration]
+error: implicit declaration of function 'ftGetComTargetItem' [-Wimplicit-function-declaration]
+error: implicit declaration of function 'func_ovl2_800F8FFC'; did you mean 'func_ovl2_800EDA0C'? [-Wimplicit-function-declaration]
+error: implicit declaration of function 'grHyruleTwisterCheckGetPosition' [-Wimplicit-function-declaration]
+error: implicit declaration of function 'grJungleTaruCannGetPosition' [-Wimplicit-function-declaration]
+error: implicit declaration of function 'grJungleTaruCannGetRotate' [-Wimplicit-function-declaration]
+error: implicit declaration of function 'grZebesAcidGetLevelInfo' [-Wimplicit-function-declaration]
+error: invalid type argument of '->' (have 'int')

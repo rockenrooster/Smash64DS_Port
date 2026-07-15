@@ -230,7 +230,7 @@ foreach ($requiredIssueToken in @(
     'Mario Fireball',
     'FGM/voice',
     'one-minute',
-    'Full Regression',
+    'two-ROM',
     'dated captures',
     'manual user retest'
 )) {
@@ -249,7 +249,7 @@ foreach ($staleIssuePattern in @(
 }
 foreach ($requiredAgentToken in @(
     'highest-impact unowned red P1 row',
-    'separate worktree',
+    'Agents share the live tree',
     'runner slot',
     'Only integration/release edits',
     'keep/revert threshold',

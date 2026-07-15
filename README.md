@@ -20,6 +20,9 @@ active Boundary profile. It is a natural BattleShip battle scene, not a
 scripted combat proof.
 
 Cut G renderer milestone 1 and the lower-screen text HUD are accepted. The
+complete upstream `mp/mpprocess.c` now has a compile-only ABI gate; its live
+damage/default policy waits for an atomic endpoint-world/common-world-to-local
+collision repair and coherent `mpcommon` promotion. The
 remaining release blockers include renderer milestones 2–4, natural recovery
 coverage, fighter voices and audible Dream Land BGM, a dated canonical
 one-minute soak, Full Regression, and final exact-ROM qualification. Current
@@ -31,7 +34,7 @@ Current verifier-covered user ROM:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,368,768 bytes
-SHA-256 F8EFEE10ED15457CD79A9B71B9766B5247BE870C332FB12316431F8301A0A94A
+SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
 ```
 
 Profile-1 and special benchmark ROMs are laboratory evidence and must never be

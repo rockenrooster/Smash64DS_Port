@@ -1,0 +1,10 @@
+battleship_fox_blaster.c
+battleship_efmanager.c
+battleship_ftcomputer.c
+battleship_fox_reflector.c
+battleship_ftcommon_fallspecial.c
+battleship_mario_special_hi.c
+battleship_ftmain.c
+battleship_mario_special_lw.c
+battleship_fox_special_hi.c
+coroutine_arm.s

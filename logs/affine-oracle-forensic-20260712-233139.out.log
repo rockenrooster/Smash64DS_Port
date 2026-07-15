@@ -1,0 +1,49 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+nds_platform.c
+nds_renderer.c
+battleship_sys_taskman.c
+battleship_mnstartup.c
+scene_backend.c
+battleship_sys_objhelper.c
+battleship_mvopeningmario.c
+battleship_mvopeningportraits.c
+battleship_mvopeningdonkey.c
+battleship_mvopeningroom.c
+battleship_mvopeningyoshi.c
+battleship_mvopeninglink.c
+battleship_mvopeningsamus.c
+battleship_mvopeningfox.c
+battleship_mvopeningkirby.c
+battleship_mvopeningpikachu.c
+battleship_mntitle.c
+battleship_mnvsmode.c
+battleship_mnplayersvs.c
+battleship_mnmaps.c
+battleship_scvsbattle.c
+battleship_grpupupu_ground.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_run.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_pass.c
+battleship_ftcomputer.c
+battleship_mnvsresults.c
+battleship_ifcommon.c
+battleship_mario_fireball.c
+battleship_fox_blaster.c
+battleship_fox_reflector.c
+linking smash64ds-battle-playable-forensic-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-forensic-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+Renderer ITCM placement passed: elf=smash64ds-battle-playable-forensic-hwtri.elf itcm=18584/32768 renderer=16848 symbols=[ndsRendererHardwareLitShadeColorPrepared=516, ndsRendererHardwareConvertTexel01Ci4Direct.isra.0=1264, ndsRendererHardwareSubmitVertex=1348, ndsRendererSubmitHardwareTriangle=5484, ndsRendererScanList=8236]
+WARNING: battle_playable Pupupu realtime HW textured perf below 60fps target: fps=12/12 x0.1; renderer-cache follow-up 
+still required.
+battle_playable Pupupu realtime pacing smoke passed: frames=45 fps=12/12 ticks=1167559104 rprof=2 gxram=745/2261 gxstat=0x6000000/ctrl=0x19 ftrContract=1440/1440/geom0x222005/cycle0x100000/rm0xc4112078/light90/90/bounds90/0 oracle=2484/0/0 batch=121/707/121/texprep98/730 wallCache=1/44/45/fb0/src300x220/66000/ticks3178048/445632 wallFinal=direct45/skip0/change45/px2211840/stage0/0/bg20/0/4423680/bg30/0/0 mtx=load85/scale1/p4096,4096,4096,0/mv8669,11799,-4085,27995,-29298,64930 submit=raw648/snap0/cross44/noz126/dec0/prim0/range10/rej0/div1242 lazy=load821/xf821/hit540/new67/reuse7/ovf0 rawcand=648/10/44 postest=32/0/e2/w0/c0/mw1/drop0 vraw=-1842..1892/-74..1543/-215..220 vhw=-29472..30272/-6622..24688/-3977..4095 depth=stage30:3599..3733/p0108:3671..3689/p124:3673 clip=0 texProof=33236/76865/972 sample=198/972/972 alias=2 st=-481..6159/-241..2064 texUse=0/39/0/0/6/impl6/first0x2/flags0x1/w0xfcffffff/w1xfffe7d3e/geom0x604 texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0 texLane=layout0x2/byte36919/half36919/bFmt0x100/hFmt0x400/bMap0x10203/hMap0x2030001 stageCarry=1890/1890/tex1440/tile1530/short270/270/seg135 combine=3150/1984/lit28170/mat14355/proj2430 light=8/0/0 profile=present25336576/draw25060800/stage7932736/mat15040/dl22085632/tex2581568/conv2279808/upload33728 texUploads=2/36864 binds=54 vtx=2484 tri=828 texDirect=753664 texel1state=0x100b/0x402002 adapterCache=73/1/0/64/107/0 affineMtx=107/0/0 hdiv=1404/0/0/z0/mis0 topology=80/1736/344/0 cost=20989824/1413440 ci4lut=1/1/idx0/0 ci4map=0/0 texHash=0/0/0/0/0 cpu=setup1/proc45/target45/stick16/obj0x4 aobj32=32/240/reuse0/fail0
+Forensic canonical renderer oracle passed at profile level 2.

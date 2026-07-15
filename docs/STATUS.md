@@ -24,6 +24,10 @@ Mario-human/Fox-level-3 scene. Exact BattleShip start locks made the former
 161/162 bounded pre-GO input driver invalid; those modes remain diagnostic-only
 and their selected live-hit coverage reduction is recorded in KNOWN_ISSUES.
 
+The public/manual battle ROM temporarily keeps Fox classified as the original
+level-3 CPU but pauses only decision/input. Reactions and gameplay stay live;
+proofs enable the loop, and final P1 requires Tyler's request plus a CPU-on run.
+
 Mode 163 imports the original fighter manager/main/CPU, animation/key/status
 runtime, collision, camera, death/rebirth, IFCommon, normal moves, weapons,
 effects, audio, and Results chain. Other mode-163 configurations still cover
@@ -57,8 +61,8 @@ frame-600 idle tax.
 
 BattleShip's exact player-control gate is restored. A synchronized pre-GO
 sample proves Wait, 3,600 remaining, timer stopped, both fighters locked, and
-zero Fox CPU processing. A post-GO sample proves Go, remaining + passed =
-3,600, timer running, both unlocked, and natural CPU activity.
+zero Fox CPU processing. The explicit CPU-on post-GO proof shows Go, remaining
++ passed = 3,600, timer running, both unlocked, and natural CPU activity.
 
 The canonical target enables the retained path at profile 0 and publishes the
 user-facing ROM only through the Makefile parity rule:
@@ -66,11 +70,11 @@ user-facing ROM only through the Makefile parity rule:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,368,768 bytes
-SHA-256 F8EFEE10ED15457CD79A9B71B9766B5247BE870C332FB12316431F8301A0A94A
+SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
 ```
 
 Completed frames 438/439 in the dated
-`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_035112-0572048-p44488.png`
+`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_044100-8463313-p20112.png`
 pair pass exact GO/timer/control/OAM state, visibility, detail, named regions,
 motion, and sky coverage; frame 438 is `latest.png`. Acceptance is melonDS-only.
 All generated screenshots belong under `artifacts/visibility`.
@@ -79,43 +83,45 @@ All generated screenshots belong under `artifacts/visibility`.
 
 | Area | Current state |
 |---|---|
-| Natural one-minute battle and Results | Natural 3,600→0/Time Up/22→24 gate passes; exact canonical-duration qualification remains |
-| Gameplay | All-platform and 40-draw Fireball gates pass, but manual reports remain open; damage/default live policies are floor-only, DamageFly has no verified sample, and throw recovery is candidate-only |
-| Renderer | M1/native countdown pass; M2 active; M3 slab specified; M4 static prewarm is feasible but exact full-water residency needs a new representation; pause ±33.6° source parity is unresolved |
+| Natural one-minute battle and Results | CPU-on 3,600→0/Time Up/22→24 gate passes; public/manual default is temporarily CPU-paused, and final CPU-on qualification remains |
+| Gameplay | Fireball early submission/rebound automation passes but full-lifetime visuals and independent `0x47` parity remain open; the platform gate has a next-frame landing blind spot; isolated LIVE `mpprocess` closure passes after endpoint/common repair, but sparse DamageFall runtime, moving-wall/project-floor parity, and coherent `mpcommon` remain open |
+| Renderer | M1/native countdown pass; M2 FIFO packet rejected; M3 exact host packet and M4 pre-GO residency plan remain production-unlinked; pause ±33.6° source parity is unresolved |
 | HUD/countdown | User-approved lower HUD and top countdown pass |
 | Audio | Production phase/KO and isolated crowd-ACK gates pass; the user ROM has no blocking trace; ID626 PNT=1/LEN=3527 model passes with 2 guard samples/cycle; audible qualification remains open |
 | Stability/memory | One full match passes with 172,024-byte conservative reserve and zero safety faults; repetition pending |
 | Release evidence | Cut G exact-frame capture passes; final dated qualification capture, Full Regression, and exact-ROM retest pending |
 
-Detailed owners, gates, blockers, and evidence live only on the execution board.
-
 ## Performance And Open Work
 
-The latest focused profile-1 M2 A/B/A (`03950839...BEEF09B`, frames 600–607)
-measures about 10.1–10.2 FPS, not a canonical phase baseline. Sampled lab gameplay
-still reports positive texture conversion and two uploads totaling 36,864 bytes. Therefore:
+The latest focused clean profile-1 M2 A/B/A (`13506F55...B98589B`, frames
+600–607) reproduces A0=A1 exactly at 413,504 median / 413,632 P95 and a 17.1
+FPS smoke marker. The whole-owner FIFO packet is rejected at 537,792 / 537,856
+(+124,288) and 16.7 FPS. Sampled lab gameplay still reports positive texture
+conversion and two uploads totaling 36,864 bytes. Therefore:
 
-- Milestone 2 remains ~431K versus 170–250K. Retained evidence supports about
-  50–75K from the first hierarchy cut; the ≥80K keep gate remains unchanged.
-- Milestone 3's strict eight-callback slab must save >=300K, reach <=500K, stay
-  <=16 KiB resident, and add no BSS/heap; otherwise remove it.
-- Milestone 4 can prewarm static Dream Land/fighter/Fireball/effect misses, but
-  exact full-water residency is impossible in the retained layouts: the
-  smallest exact visible RGB256 corpus is 903,168 bytes versus 524,288 bytes of
-  total DS texture VRAM. M4 must reach an explicit representation checkpoint;
-  post-GO conversion/allocation/upload/I/O still remain hard failures.
+- M2 remains ~413K; no retained treatment proves its first keep gate.
+- M3's 10,076-byte host packet is exact but DObj/callback/material invariance
+  and production linkage remain unproved.
+- M4 has an exact 181,408-byte water host fixture and a 258,048-byte pre-GO
+  payload plan, but no production link, measured reserve, or zero-post-GO-work
+  proof.
 
-The 715-frame all-platform gate pins exact live geometry, Mario-only mask `0x7`,
-three upward passes/zero accepts, nine reverse hits/landings, two side cycles, and three source Pass rejections. Fireball now
-passes the BattleShip custom-`0x47` MVP path for 40/40 draws with zero mismatch,
+Detailed renderer measurements and falsification gates live only in
+`OPTIMIZATION_ROADMAP.md`.
+
+The 715-frame platform route pins exact live geometry and crossing-frame
+rejections, but it does not require continued ascent or a descending plane
+crossing before accepting the next landing. It therefore does not close the
+reported early-landing/jump-suppression symptom. Fireball selects the current
+custom-`0x47` path for 40/40 early draws with zero internal mismatch,
 1,757 units of natural travel, source rebound `55→46.75`, 80 triangles, and
-222,736-byte reserve. Its dated capture is under `artifacts/visibility`. Both
-original manual reports remain open.
+222,736-byte reserve. The gate lacks an independent BattleShip matrix oracle,
+full 140-tick collision trace, and Fireball ROI capture; the manual report stays open.
 The natural DamageFly gate currently times out without a verified sample, and
 throw/release remains candidate-only. ID626's no-growth AOT PNT=1/LEN=3527
 body passes a state-latch/restore model that rejects missing restore/wrong
-PNT/LEN and exposes two guard samples per cycle; audible proof remains open. Camera passes
-synchronized normal/front/±16.8°/±33.6° windows, but both ±33.6° screenshots
+PNT/LEN and exposes two guard samples per cycle; audible proof remains open. Camera state synchronization passes across
+normal/front/±16.8°/±33.6° windows, but both ±33.6° screenshots
 reproduce the reported pause-only wide-view occlusion. Normal camera remains
 contained; identical BattleShip/N64 comparison is still needed before calling
 the wide view a renderer defect.
@@ -127,22 +133,17 @@ mismatch and clears the no-damage flag. Continuous natural-hit coverage remains.
 
 ## Verification
 
-Passing checks for this checkpoint:
+Checkpoint commands:
 
 ```powershell
 .\scripts\check-docs.ps1
 .\scripts\check-architecture.ps1
+.\scripts\verify-mpprocess-private-import.ps1
 .\scripts\check-harness-registry.ps1
 .\scripts\check-gbi-decode-fixtures.ps1
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
-.\scripts\build-verify-profile.ps1 -Profile RegressionCore -VerifyStamp
-.\scripts\verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3 -RunnerSlot 0
 .\scripts\verify-boundary.ps1 -NoBuild -DelaySeconds 3 -RunnerSlot 0
 ```
 
-Focused profile-1 and canonical profile-0 pre/post-GO runs pass. The one-minute
-gate passes logic=3892, timer=3600→0/3600, scene=22→24, safety/stale=0, and
-reserve=172,024. Fresh RegressionCore prebuild/stamp/runtime and mode-163 Boundary
-pass; Full Regression follows. Platform/Fireball pass; DamageFly timed out,
-throw/camera remain candidate-only, and crowd command telemetry is not acoustic proof.
-Run the Lean snapshot only after all final checks and status inspection; run no project command after it.
+`Full`, `Regression*`, and `P1Gate` are list-only; never run or prebuild them.
+Remaining blockers, including final CPU-on qualification, live on the execution board. Run the Lean snapshot last.

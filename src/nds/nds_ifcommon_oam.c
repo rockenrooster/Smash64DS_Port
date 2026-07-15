@@ -16,7 +16,13 @@
 #endif
 
 #define NDS_IFCOMMON_GAME_STATUS_SIZE 0x252d4u
+#if NDS_IFCOMMON_HYBRID_OAM
+#define NDS_IFCOMMON_OBJ_VRAM_BYTES (64u * 1024u)
+#define NDS_IFCOMMON_OBJ_GFX_ALIGNMENT 128u
+#define NDS_IFCOMMON_OBJ_PALETTE_ENTRIES 256u
+#else
 #define NDS_IFCOMMON_OBJ_VRAM_BYTES (96u * 1024u)
+#endif
 #define NDS_IFCOMMON_ASSET_COUNT 16u
 #define NDS_IFCOMMON_MAX_TILES 9u
 #define NDS_IFCOMMON_SCREEN_SCALE_Q16 52429u
@@ -83,6 +89,7 @@ typedef struct NDSIFCommonNativeTile
 {
     u16 *gfx;
     SpriteSize size;
+    u8 color_format;
     NDSIFCommonTileSpec spec;
 } NDSIFCommonNativeTile;
 
@@ -462,8 +469,91 @@ static SpriteSize ndsIFCommonSpriteSize(u32 width, u32 height)
     return (SpriteSize)0;
 }
 
+#if NDS_IFCOMMON_HYBRID_OAM
+static s32 ndsIFCommonHybridPaletteIndex(const u16 *palette,
+                                          u32 palette_entries, u16 color)
+{
+    u32 palette_index;
+
+    if (color == 0u)
+    {
+        return 0;
+    }
+    for (palette_index = 1u; palette_index < palette_entries;
+         palette_index++)
+    {
+        if (palette[palette_index] == color)
+        {
+            return (s32)palette_index;
+        }
+    }
+    return -1;
+}
+
+static s32 ndsIFCommonBuildHybridPalette(const void *file_data,
+                                          size_t file_size, u16 *palette,
+                                          u32 *palette_entries)
+{
+    u32 asset_index;
+    u32 entry_count = 1u;
+
+    memset(palette, 0,
+           sizeof(*palette) * NDS_IFCOMMON_OBJ_PALETTE_ENTRIES);
+    for (asset_index = nNDSIFCommonAssetRod;
+         asset_index < NDS_IFCOMMON_ASSET_COUNT; asset_index++)
+    {
+        const NDSIFCommonAssetSpec *spec =
+            &sNdsIFCommonAssetSpecs[asset_index];
+        const Sprite *sprite = (const Sprite *)((const u8 *)file_data +
+                                                 spec->offset);
+        u32 tile_index;
+
+        if ((spec->offset + sizeof(*sprite) > file_size) ||
+            (ndsIFCommonRangeValid(file_data, file_size, sprite->bitmap,
+                                   (size_t)(u16)sprite->nbitmaps *
+                                       sizeof(Bitmap)) == FALSE))
+        {
+            return FALSE;
+        }
+        for (tile_index = 0u; tile_index < spec->tile_count; tile_index++)
+        {
+            const NDSIFCommonTileSpec *tile = &spec->tiles[tile_index];
+            u32 y;
+
+            for (y = 0u; y < tile->content_height; y++)
+            {
+                u32 x;
+
+                for (x = 0u; x < tile->content_width; x++)
+                {
+                    u16 color = ndsIFCommonDecodePixel(
+                        sprite, spec, file_data, file_size,
+                        (u32)tile->source_x + x,
+                        (u32)tile->source_y + y);
+
+                    if (ndsIFCommonHybridPaletteIndex(
+                            palette, entry_count, color) < 0)
+                    {
+                        if (entry_count >=
+                            NDS_IFCOMMON_OBJ_PALETTE_ENTRIES)
+                        {
+                            return FALSE;
+                        }
+                        palette[entry_count++] = color;
+                    }
+                }
+            }
+        }
+    }
+    *palette_entries = entry_count;
+    return TRUE;
+}
+#endif
+
 static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
-                                   size_t file_size, u32 *vram_cursor)
+                                   size_t file_size, u32 *vram_cursor,
+                                   const u16 *palette,
+                                   u32 palette_entries)
 {
     const NDSIFCommonAssetSpec *spec =
         &sNdsIFCommonAssetSpecs[asset_index];
@@ -471,6 +561,11 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
     const Sprite *sprite = (const Sprite *)((const u8 *)file_data +
                                              spec->offset);
     u32 tile_index;
+
+#if !NDS_IFCOMMON_HYBRID_OAM
+    (void)palette;
+    (void)palette_entries;
+#endif
 
     if ((spec->offset + sizeof(*sprite) > file_size) ||
         (ndsIFCommonRangeValid(file_data, file_size, sprite->bitmap,
@@ -496,8 +591,20 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
     {
         const NDSIFCommonTileSpec *tile_spec = &spec->tiles[tile_index];
         NDSIFCommonNativeTile *tile = &asset->tiles[tile_index];
+#if NDS_IFCOMMON_HYBRID_OAM
+        s32 indexed = (asset_index >= nNDSIFCommonAssetRod) ? TRUE : FALSE;
+        u32 bytes;
+
+        *vram_cursor = (*vram_cursor +
+                        (NDS_IFCOMMON_OBJ_GFX_ALIGNMENT - 1u)) &
+                       ~(NDS_IFCOMMON_OBJ_GFX_ALIGNMENT - 1u);
+        bytes = (u32)tile_spec->cell_width *
+                (u32)tile_spec->cell_height *
+                (indexed ? sizeof(u8) : sizeof(u16));
+#else
         u32 bytes = (u32)tile_spec->cell_width *
                     (u32)tile_spec->cell_height * sizeof(u16);
+#endif
         u32 y;
 
         if (((*vram_cursor + bytes) > NDS_IFCOMMON_OBJ_VRAM_BYTES) ||
@@ -515,6 +622,12 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
         tile->gfx = (u16 *)((u8 *)SPRITE_GFX + *vram_cursor);
         tile->size = ndsIFCommonSpriteSize(tile_spec->cell_width,
                                            tile_spec->cell_height);
+#if NDS_IFCOMMON_HYBRID_OAM
+        tile->color_format = indexed ? SpriteColorFormat_256Color :
+                                       SpriteColorFormat_Bmp;
+#else
+        tile->color_format = SpriteColorFormat_Bmp;
+#endif
         tile->spec = *tile_spec;
         if ((u32)tile->size == 0u)
         {
@@ -525,16 +638,42 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
         for (y = 0u; y < tile_spec->content_height; y++)
         {
             u32 x;
-            u16 *destination = &tile->gfx[
-                ((u32)tile_spec->pad_y + y) * tile_spec->cell_width +
-                tile_spec->pad_x];
 
             for (x = 0u; x < tile_spec->content_width; x++)
             {
-                destination[x] = ndsIFCommonDecodePixel(
+                u16 color = ndsIFCommonDecodePixel(
                     sprite, spec, file_data, file_size,
                     (u32)tile_spec->source_x + x,
                     (u32)tile_spec->source_y + y);
+
+#if NDS_IFCOMMON_HYBRID_OAM
+                if (indexed != FALSE)
+                {
+                    u32 destination_x = (u32)tile_spec->pad_x + x;
+                    u32 destination_y = (u32)tile_spec->pad_y + y;
+                    u32 tile_offset =
+                        (((destination_y >> 3) *
+                              ((u32)tile_spec->cell_width >> 3) +
+                          (destination_x >> 3)) << 6) +
+                        ((destination_y & 7u) << 3) +
+                        (destination_x & 7u);
+                    s32 palette_index = ndsIFCommonHybridPaletteIndex(
+                        palette, palette_entries, color);
+
+                    if (palette_index < 0)
+                    {
+                        return FALSE;
+                    }
+                    ((u8 *)tile->gfx)[tile_offset] = (u8)palette_index;
+                }
+                else
+#endif
+                {
+                    tile->gfx[
+                        (((u32)tile_spec->pad_y + y) *
+                             tile_spec->cell_width) +
+                        tile_spec->pad_x + x] = color;
+                }
             }
         }
         *vram_cursor += bytes;
@@ -546,9 +685,8 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
 
 void ndsIFCommonNativeOamInit(void)
 {
-    /* These remain zero for the lifetime of the prepared asset set. Bitmap
-     * texels are converted directly into OBJ VRAM during relocation, and the
-     * 16-bit OBJ path has no palette payload or gameplay-time upload path. */
+    /* All conversion and the optional standard OBJ palette upload happen
+     * during relocation.  Neither owner has a gameplay-time upload path. */
     gNdsIFCommonNativeOamPreparePaletteBytes = 0u;
     gNdsIFCommonNativeOamHotConvertCount = 0u;
     gNdsIFCommonNativeOamRuntimeUploadBytes = 0u;
@@ -566,6 +704,11 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     u32 start;
     u32 vram_cursor = 0u;
     u32 asset_index;
+    const u16 *palette = NULL;
+    u32 palette_entries = 0u;
+#if NDS_IFCOMMON_HYBRID_OAM
+    u16 palette_storage[NDS_IFCOMMON_OBJ_PALETTE_ENTRIES];
+#endif
 
     if ((file_data == NULL) ||
         (file_size < NDS_IFCOMMON_GAME_STATUS_SIZE))
@@ -583,17 +726,34 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     gNdsIFCommonNativeOamPrepareCount++;
     gNdsIFCommonNativeOamPrepareAssets = 0u;
     gNdsIFCommonNativeOamPrepareTiles = 0u;
+    gNdsIFCommonNativeOamPrepareBytes = 0u;
+    gNdsIFCommonNativeOamPreparePaletteBytes = 0u;
     gNdsIFCommonNativeOamPrepareProfileFrame =
         gNdsRendererProfileFrameCount;
     memset(sNdsIFCommonAssets, 0, sizeof(sNdsIFCommonAssets));
     sNdsIFCommonPrepared = FALSE;
     sNdsIFCommonPreparedFile = NULL;
 
+#if NDS_IFCOMMON_HYBRID_OAM
+    palette = palette_storage;
+    if (ndsIFCommonBuildHybridPalette(file_data, file_size,
+                                      palette_storage,
+                                      &palette_entries) == FALSE)
+    {
+        gNdsIFCommonNativeOamPrepareFailCount++;
+        gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
+        gNdsIFCommonNativeOamLastFallbackReason =
+            nNDSIFCommonFallbackBadAsset;
+        return FALSE;
+    }
+#endif
+
     for (asset_index = 0u; asset_index < NDS_IFCOMMON_ASSET_COUNT;
          asset_index++)
     {
         if (ndsIFCommonPrepareAsset(asset_index, file_data, file_size,
-                                    &vram_cursor) == FALSE)
+                                    &vram_cursor, palette,
+                                    palette_entries) == FALSE)
         {
             gNdsIFCommonNativeOamPrepareFailCount++;
             gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
@@ -603,6 +763,10 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
         }
     }
 
+#if NDS_IFCOMMON_HYBRID_OAM
+    memcpy(SPRITE_PALETTE, palette_storage, sizeof(palette_storage));
+    gNdsIFCommonNativeOamPreparePaletteBytes = sizeof(palette_storage);
+#endif
     sNdsIFCommonPrepared = TRUE;
     sNdsIFCommonPreparedFile = file_data;
     gNdsIFCommonNativeOamPrepareBytes = vram_cursor;
@@ -797,8 +961,9 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
         s32 x = (center_x_q16 >> 16) - half_bounds_x;
         s32 y = (center_y_q16 >> 16) - half_bounds_y;
 
-        oamSet(&oamMain, sNdsIFCommonNextOamID, x, y, 0, 15,
-               tile->size, SpriteColorFormat_Bmp, tile->gfx,
+        oamSet(&oamMain, sNdsIFCommonNextOamID, x, y, 0,
+               (tile->color_format == SpriteColorFormat_Bmp) ? 15 : 0,
+               tile->size, (SpriteColorFormat)tile->color_format, tile->gfx,
                matrix_index, size_double, false, false, false, false);
         sNdsIFCommonNextOamID--;
         gNdsIFCommonNativeOamFrameObjectCount++;

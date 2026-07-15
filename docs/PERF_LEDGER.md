@@ -2085,3 +2085,117 @@ DECISION: CURRENT LAYOUT NO-GO
   RGB256 map generator may be measured as an intermediate conversion/upload
   reduction, but it is not M4 completion while gameplay preparation remains.
 ```
+
+## 2026-07-15 - corrected Mode-8 measurement; rejected per-joint GX hierarchy
+
+```text
+IDEA ID: M2-GX-HIERARCHY-FORMAL-RETEST
+MEASUREMENT CORRECTION:
+  The outer battle-playable verifier did not expose or forward
+  RendererFastRunMode, so an apparent 2.65M-tick regression had silently run
+  generic mode 0. The wrapper now forwards FastRunMode and the optional M2
+  detailed ledger. All focused M2 commands must explicitly request mode 8.
+CLEAN BASELINE:
+  Profile-1 ROM SHA-256
+  3F0ADCF3B89E02370ACFBAB5D2A34B251D6E1FE3CF3EEDB06C961C18A8287475,
+  frames 600..607 / logic 209..216. Mario 188,352; Fox 223,872; combined
+  412,224; matrix 161,152; production DL 217,312; stage 804,032; draw
+  1,575,392; present 1,993,632. Exact mode-8 accounting is 70 runs / 686
+  triangles, owners 60+320+306, fallbacks 29/0/0, and two uploads / 36,864
+  bytes. The smoke marker is 17.2 FPS.
+SAME-ROM A/B/A:
+  Selector ROM SHA-256
+  7E3D1C36DD38B36509C194C375568BCAE7548003D494F8942F317755D18F0259,
+  frames 600..607, detailed ledger off. A0 and A1 reproduced exactly:
+  Mario 190,784; Fox 226,688; combined 417,472; matrix 161,408; DL 220,096;
+  draw 1,582,816. Treatment B was Mario 186,240; Fox 217,760; combined
+  404,000; matrix 143,264; DL 253,216; draw 1,569,344.
+RESULT / DECISION:
+  The hierarchy saved only 13,472 combined ticks. Its 18,144-tick matrix win
+  was offset by 33,120 additional DL ticks. It missed the >=80K keep gate by
+  66,528 and missed the <=351K absolute gate by 53K. Remove the runtime/API/
+  selector/validator/scratch path; retain only the source-faithful
+  syMatrixF2LFixedW 16.16 -> DS 20.12 boundary and generated topology fixtures.
+NEXT CUT:
+  Compile one packed FIFO transaction per fighter and fuse exact matrix/light
+  preparation with 49-epoch/67-run transport. First gate: A1=A0, combined
+  <=337,472, matrix+light <=120K, transport <=145K, and unchanged semantics,
+  screenshots, geometry, texture traffic, runtime state, and reserve.
+```
+
+## 2026-07-15 - rejected whole-owner FIFO copy/patch/DMA transport
+
+```text
+IDEA ID: M2-WHOLE-OWNER-FIFO-PACKET
+HOST CONTRACT:
+  Exact generated Mario/Fox packets remain useful fixtures: 4,034/3,936 words,
+  16,136/15,744 bytes, 14/18 roots, 18/31 epochs, 30/37 runs, 320/306
+  triangles, and template hashes 033874a6/791eb7a6. The independent checker
+  validates every matrix/color/texcoord/epoch association and signed VERTEX16
+  boundary.
+DETAILED SAME-ROM A/B/A:
+  Profile-1 ROM 10AFE933BFDD4E14C32B04AFE7DA0114F3E064F2686F5428AE6CCD5F1D8410E8,
+  frames 600..607. Mode-8 A0/A1 coarse and M2 arrays reproduce exactly at a
+  477,248-tick combined fighter median. Packet B is 599,040, a 121,792-tick
+  regression. B validation is 79,488 versus 4,864; production is 293,088
+  versus 245,888. Packet medians are copy/patch 67,296, state 71,552, cache
+  flush 3,648, DMA-idle wait 128, DMA wall 20,672, with 2/2 successes.
+CLEAN SAME-ROM A/B/A:
+  Ledger-off ROM 13506F55B28FFC95EC5C38A4AA90B8B53F5A0B61EF17B63B1E701FE43B98589B,
+  same frames. A0 and A1 reproduce exactly at 413,504 median / 413,632 P95;
+  packet B is 537,792 / 537,856, +124,288 median. It misses the <=337,472
+  first gate by 200,320 and supplies -124,288 rather than the required >=80K
+  saving.
+CORRECTNESS:
+  Both selectors conserve 70 runs / 686 triangles, owners 60+320+306,
+  fallbacks 29/0/0, batches 103/725/103, submit classes 648/44/126/10, and
+  two uploads / 36,864 bytes. Dated mode-8 and mode-9 visibility captures are
+  under artifacts/visibility; they are not synchronized-frame parity proof.
+DECISION: REJECT / REMOVE RUNTIME; KEEP HOST FIXTURES
+  Remove the Mode-9 selector, adapter, packet timing, and linked device path.
+  Do not publish this laboratory ROM. Keep only the exact generator/checker
+  evidence for a future design that avoids whole-packet copying and uncached
+  validation while retaining source-exact CPU lighting.
+```
+
+## 2026-07-15 - retained exact M3 host packet; device path still absent
+
+```text
+IDEA ID: M3-PUPUPU-WHOLE-OWNER-HOST-PACKET
+HOST RESULT:
+  Commit cb742db044 records 8 callbacks, 57 DObjs, 42 bindings, 886 source
+  commands, 302 source / 312 dense vertices, 202 triangles, 54 runs, 49
+  epochs, four material events, and 10,076 bytes of packet rodata.
+DYNAMIC CONTRACT:
+  Production preflight must validate callback/link order, DFS topology, live
+  draw flags, xobjs, four MObjs, textures, camera, and provenance before the
+  first link-4 write. Camera, transforms, materials, colors/texcoords, epoch
+  words, projected values, and frame-global no-Z state stay live. Fighters and
+  weapons remain interleaved at links 9/14, so callback-sized rebind segments
+  are mandatory. No fallback is legal after FIFO ownership begins.
+DECISION: KEEP HOST ONLY
+  production_linked=0. Extend the existing stage falsifier before adding a
+  selector; later device B must save >=300K and reach <=500K before promotion.
+```
+
+## 2026-07-15 - retained exact M4 tiled-water host fixture and residency plan
+
+```text
+IDEA ID: M4-PUPUPU-TILED-WATER-PRELOAD
+EXACT HOST RESULT:
+  Commit c85bac721e/checker pins 181,408 bytes and production_linked=0:
+  131,072 pair atlas + 16,384 visibility atlas + 20,480 palettes + 8,544
+  state tables + 544 cells + 4,384 vertices.
+PROPOSED SETUP BUDGET, NOT YET MEASURED:
+  Stream/hash 258,048 NitroFS bytes before GO: 167,936 water payload plus
+  90,112 deduplicated static pixels, using a reusable 4 KiB chunk. A+B post-GO
+  is 241,664/262,144 with 20,480 headroom. Compact GO OAM to 60,544 bytes in E,
+  then move the staged water palettes to F/G before control unlock. Estimated
+  reserve is 152,080 without or 145,860 with the proposed live-key table;
+  these omit new text, padding, allocator, and filesystem overhead, so
+  linker/runtime proof is still required.
+DECISION: KEEP HOST / IMPLEMENT ONLY BEHIND SETUP-FAIL-CLOSED GATE
+  Require zero open/read/seek and zero conversion/upload/allocation/eviction/
+  palette DMA after GO, >=128 KiB measured reserve, >=16 KiB A+B headroom,
+  moving screenshots, and >=100K owner/draw saving. No gameplay cutover yet.
+```

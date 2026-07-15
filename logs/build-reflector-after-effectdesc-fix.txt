@@ -1,0 +1,771 @@
+battleship_efmanager.c
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:126:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efdisplay.c: In function 'efDisplayCLDProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efdisplay.c:5:36: warning: unused parameter 'effect_gobj' [-Wunused-parameter]
+    5 | void efDisplayCLDProcDisplay(GObj *effect_gobj)
+      |                              ~~~~~~^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efdisplay.c: In function 'efDisplayXLUProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efdisplay.c:15:36: warning: unused parameter 'effect_gobj' [-Wunused-parameter]
+   15 | void efDisplayXLUProcDisplay(GObj *effect_gobj)
+      |                              ~~~~~~^~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:162:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:104:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  104 |     &llEFCommonEffects1DamageSlashDObjDesc,    // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:104:5: note: (near initialization for 'dEFManagerDamageSlashEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:105:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  105 |     &llEFCommonEffects1DamageSlashMObjSub,     // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:105:5: note: (near initialization for 'dEFManagerDamageSlashEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:106:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  106 |     &llEFCommonEffects1DamageSlashAnimJoint,   // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:106:5: note: (near initialization for 'dEFManagerDamageSlashEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:107:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  107 |     &llEFCommonEffects1DamageSlashMatAnimJoint // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:107:5: note: (near initialization for 'dEFManagerDamageSlashEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:134:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  134 |     &llEFCommonEffects2ShockSmallDObjDesc,     // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:134:5: note: (near initialization for 'dEFManagerShockSmallEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:135:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  135 |     &llEFCommonEffects2ShockSmallMObjSub,      // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:135:5: note: (near initialization for 'dEFManagerShockSmallEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:137:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  137 |     &llEFCommonEffects2ShockSmallMatAnimJoint  // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:137:5: note: (near initialization for 'dEFManagerShockSmallEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:164:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  164 |     &llEFCommonEffects1FlyOrbsDObjDesc,     // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:164:5: note: (near initialization for 'dEFManagerDamageFlyOrbsEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:166:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  166 |     &llEFCommonEffects1FlyOrbsAnimJoint,    // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:166:5: note: (near initialization for 'dEFManagerDamageFlyOrbsEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:224:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  224 |     &llEFCommonEffects1ImpactWaveDObjDesc,    // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:224:5: note: (near initialization for 'dEFManagerImpactWaveEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:225:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  225 |     &llEFCommonEffects1ImpactWaveMObjSub,     // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:225:5: note: (near initialization for 'dEFManagerImpactWaveEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:226:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  226 |     &llEFCommonEffects1ImpactWaveAnimJoint,   // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:226:5: note: (near initialization for 'dEFManagerImpactWaveEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:227:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  227 |     &llEFCommonEffects1ImpactWaveMatAnimJoint // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:227:5: note: (near initialization for 'dEFManagerImpactWaveEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:254:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  254 |     &llEFCommonEffects1CommonSparkDObjDesc,    // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:254:5: note: (near initialization for 'dEFManagerStarRodSparkEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:255:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  255 |     &llEFCommonEffects1CommonSparkMObjSub,     // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:255:5: note: (near initialization for 'dEFManagerStarRodSparkEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:256:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  256 |     &llEFCommonEffects1CommonSparkAnimJoint,   // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:256:5: note: (near initialization for 'dEFManagerStarRodSparkEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:257:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  257 |     &llEFCommonEffects1CommonSparkMatAnimJoint // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:257:5: note: (near initialization for 'dEFManagerStarRodSparkEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:284:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  284 |     &llEFCommonEffects1CommonSparkDObjDesc,    // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:284:5: note: (near initialization for 'dEFManagerDamageFlySparksEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:285:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  285 |     &llEFCommonEffects1CommonSparkMObjSub,     // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:285:5: note: (near initialization for 'dEFManagerDamageFlySparksEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:286:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  286 |     &llEFCommonEffects1CommonSparkAnimJoint,   // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:286:5: note: (near initialization for 'dEFManagerDamageFlySparksEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:287:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  287 |     &llEFCommonEffects1CommonSparkMatAnimJoint // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:287:5: note: (near initialization for 'dEFManagerDamageFlySparksEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:344:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  344 |     &llEFCommonEffects1DamageFlyMDustDObjDesc,     // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:344:5: note: (near initialization for 'dEFManagerDamageFlyMDustEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:345:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  345 |     &llEFCommonEffects1DamageFlyMDustMObjSub,      // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:345:5: note: (near initialization for 'dEFManagerDamageFlyMDustEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:346:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  346 |     &llEFCommonEffects1DamageFlyMDustAnimJoint,    // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:346:5: note: (near initialization for 'dEFManagerDamageFlyMDustEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:347:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  347 |     &llEFCommonEffects1DamageFlyMDustMatAnimJoint  // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:347:5: note: (near initialization for 'dEFManagerDamageFlyMDustEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:404:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  404 |     &llEFCommonEffects2FireSparkDObjDesc,    // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:404:5: note: (near initialization for 'dEFManagerFireSparkEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:405:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  405 |     &llEFCommonEffects2FireSparkMObjSub,     // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:405:5: note: (near initialization for 'dEFManagerFireSparkEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:406:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  406 |     &llEFCommonEffects2FireSparkAnimJoint,   // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:406:5: note: (near initialization for 'dEFManagerFireSparkEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:407:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  407 |     &llEFCommonEffects2FireSparkMatAnimJoint // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:407:5: note: (near initialization for 'dEFManagerFireSparkEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:413:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  413 |     &llFoxSpecial2ReflectorStartAnimJoint,
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:413:5: note: (near initialization for 'dEFManagerFoxReflectorAnimJointOffsets[0]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:414:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  414 |     &llFoxSpecial2ReflectorLoopAnimJoint,
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:414:5: note: (near initialization for 'dEFManagerFoxReflectorAnimJointOffsets[1]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:415:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  415 |     &llFoxSpecial2ReflectorHitAnimJoint,
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:415:5: note: (near initialization for 'dEFManagerFoxReflectorAnimJointOffsets[2]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:416:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  416 |     &llFoxSpecial2ReflectorEndAnimJoint
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:416:5: note: (near initialization for 'dEFManagerFoxReflectorAnimJointOffsets[3]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:443:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  443 |     &llFoxSpecial2ReflectorDObjDesc,        // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:443:5: note: (near initialization for 'dEFManagerFoxReflectorEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:445:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  445 |     &llFoxSpecial2ReflectorStartAnimJoint,  // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:445:5: note: (near initialization for 'dEFManagerFoxReflectorEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:483:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  483 |     &llFTManagerCommonShieldDObjDesc,       // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:483:5: note: (near initialization for 'dEFManagerShieldEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:513:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  513 |     &llYoshiModelShieldDObjDesc,            // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:513:5: note: (near initialization for 'dEFManagerYoshiShieldEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:543:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  543 |     &llEFCommonEffects2CatchSwirlMObjSub,                // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:543:5: note: (near initialization for 'dEFManagerCatchSwirlEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:544:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  544 |     &llEFCommonEffects2CatchSwirlDObjDesc,                  // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:544:5: note: (near initialization for 'dEFManagerCatchSwirlEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:545:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  545 |     &llEFCommonEffects2CatchSwirlAnimJoint,                // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:545:5: note: (near initialization for 'dEFManagerCatchSwirlEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:546:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  546 |     &llEFCommonEffects2CatchSwirlMatAnimJoint              // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:546:5: note: (near initialization for 'dEFManagerCatchSwirlEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:573:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  573 |     &llEFCommonEffects2ReflectBreakMObjSub,              // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:573:5: note: (near initialization for 'dEFManagerReflectBreakEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:574:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  574 |     &llEFCommonEffects2ReflectBreakDObjDesc,                // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:574:5: note: (near initialization for 'dEFManagerReflectBreakEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:575:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  575 |     &llEFCommonEffects2ReflectBreakAnimJoint,              // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:575:5: note: (near initialization for 'dEFManagerReflectBreakEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:576:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  576 |     &llEFCommonEffects2ReflectBreakMatAnimJoint            // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:576:5: note: (near initialization for 'dEFManagerReflectBreakEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:603:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  603 |     &llPikachuSpecial2UnkDObjDesc,                // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:603:5: note: (near initialization for 'dEFManagerPikachuUnkEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:604:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  604 |     &llPikachuSpecial2UnkMObjSub,                  // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:604:5: note: (near initialization for 'dEFManagerPikachuUnkEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:605:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  605 |     &llPikachuSpecial2UnkAnimJoint,                // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:605:5: note: (near initialization for 'dEFManagerPikachuUnkEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:606:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  606 |     &llPikachuSpecial2UnkMatAnimJoint              // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:606:5: note: (near initialization for 'dEFManagerPikachuUnkEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:633:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  633 |     &llPikachuSpecial2ThunderShockDObjDesc,              // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:633:5: note: (near initialization for 'dEFManagerPikachuThunderShockEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:634:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  634 |     &llPikachuSpecial2ThunderShockMObjSub,                // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:634:5: note: (near initialization for 'dEFManagerPikachuThunderShockEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:635:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  635 |     &llPikachuSpecial2ThunderShock0AnimJoint,              // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:635:5: note: (near initialization for 'dEFManagerPikachuThunderShockEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:636:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  636 |     &llPikachuSpecial2ThunderShock0MatAnimJoint            // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:636:5: note: (near initialization for 'dEFManagerPikachuThunderShockEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:663:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  663 |     &llPikachuModelThunderTrailDObjDesc,              // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:663:5: note: (near initialization for 'dEFManagerPikachuThunderTrailEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:664:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  664 |     &llPikachuModelThunderTrailMObjSub,                // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:664:5: note: (near initialization for 'dEFManagerPikachuThunderTrailEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:693:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  693 |     &llPikachuSpecial3ThunderJoltDObjDesc,               // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:693:5: note: (near initialization for 'dEFManagerThunderJoltEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:694:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  694 |     &llPikachuSpecial3ThunderJoltMObjSub,                 // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:694:5: note: (near initialization for 'dEFManagerThunderJoltEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:695:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  695 |     &llPikachuSpecial3ThunderJoltAnimJoint,               // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:695:5: note: (near initialization for 'dEFManagerThunderJoltEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:696:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  696 |     &llPikachuSpecial3ThunderJoltMatAnimJoint             // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:696:5: note: (near initialization for 'dEFManagerThunderJoltEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:723:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  723 |     &llKirbySpecial2VulcanJabDObjDesc,                 // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:723:5: note: (near initialization for 'dEFManagerVulcanJabEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:753:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  753 |     &llSamusSpecial2GrappleBeamDObjDesc,               // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:753:5: note: (near initialization for 'dEFManagerSamusGrappleBeamEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:754:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  754 |     &llSamusSpecial2GrappleBeamMObjSub,                 // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:754:5: note: (near initialization for 'dEFManagerSamusGrappleBeamEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:755:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  755 |     &llSamusSpecial2GrappleBeamAnimJoint,               // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:755:5: note: (near initialization for 'dEFManagerSamusGrappleBeamEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:756:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  756 |     &llSamusSpecial2GrappleBeamMatAnimJoint             // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:756:5: note: (near initialization for 'dEFManagerSamusGrappleBeamEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:783:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  783 |     &llCaptainSpecial2FalconKickDObjDesc,                // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:783:5: note: (near initialization for 'dEFManagerCaptainFalconKickEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:784:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  784 |     &llCaptainSpecial2FalconKickMObjSub,                  // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:784:5: note: (near initialization for 'dEFManagerCaptainFalconKickEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:785:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  785 |     &llCaptainSpecial2FalconKickAnimJoint,                // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:785:5: note: (near initialization for 'dEFManagerCaptainFalconKickEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:786:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  786 |     &llCaptainSpecial2FalconKickMatAnimJoint              // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:786:5: note: (near initialization for 'dEFManagerCaptainFalconKickEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:813:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  813 |     &llCaptainSpecial3FalconPunchDObjDesc,               // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:813:5: note: (near initialization for 'dEFManagerCaptainFalconPunchEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:814:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  814 |     &llCaptainSpecial3FalconPunchMObjSub,                 // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:814:5: note: (near initialization for 'dEFManagerCaptainFalconPunchEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:816:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  816 |     &llCaptainSpecial3FalconPunchMatAnimJoint             // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:816:5: note: (near initialization for 'dEFManagerCaptainFalconPunchEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:843:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  843 |     &llPurinSpecial2SingDObjDesc,                 // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:843:5: note: (near initialization for 'dEFManagerPurinSingEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:844:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  844 |     &llPurinSpecial2SingMObjSub,                   // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:844:5: note: (near initialization for 'dEFManagerPurinSingEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:845:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  845 |     &llPurinSpecial2SingAnimJoint,                 // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:845:5: note: (near initialization for 'dEFManagerPurinSingEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:846:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  846 |     &llPurinSpecial2SingMatAnimJoint               // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:846:5: note: (near initialization for 'dEFManagerPurinSingEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:873:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  873 |     &llEFCommonEffects2DeadExplodeDefaultMObjSub,        // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:873:5: note: (near initialization for 'dEFManagerDeadExplodeEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:874:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  874 |     &llEFCommonEffects2DeadExplodeDefaultDObjDesc,          // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:874:5: note: (near initialization for 'dEFManagerDeadExplodeEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:875:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  875 |     &llEFCommonEffects2DeadExplodeDefaultAnimJoint,        // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:875:5: note: (near initialization for 'dEFManagerDeadExplodeEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:876:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  876 |     &llEFCommonEffects2DeadExplodeDefaultMatAnimJoint      // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:876:5: note: (near initialization for 'dEFManagerDeadExplodeEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:885:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  885 |     &llEFCommonEffects2DeadExplode1MatAnimJoint,
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:885:5: note: (near initialization for 'dEFManagerDeadExplodeMatAnimJoints[0]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:886:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  886 |     &llEFCommonEffects2DeadExplode2MatAnimJoint,
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:886:5: note: (near initialization for 'dEFManagerDeadExplodeMatAnimJoints[1]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:887:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  887 |     &llEFCommonEffects2DeadExplode3MatAnimJoint,
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:887:5: note: (near initialization for 'dEFManagerDeadExplodeMatAnimJoints[2]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:888:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  888 |     &llEFCommonEffects2DeadExplode4MatAnimJoint
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:888:5: note: (near initialization for 'dEFManagerDeadExplodeMatAnimJoints[3]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:915:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  915 |     &llKirbySpecial2CutterUpDObjDesc,             // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:915:5: note: (near initialization for 'dEFManagerKirbyCutterUpEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:917:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  917 |     &llKirbySpecial2CutterUpAnimJoint,             // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:917:5: note: (near initialization for 'dEFManagerKirbyCutterUpEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:945:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  945 |     &llKirbySpecial2CutterDownDObjDesc,           // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:945:5: note: (near initialization for 'dEFManagerKirbyCutterDownEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:947:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  947 |     &llKirbySpecial2CutterDownAnimJoint,           // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:947:5: note: (near initialization for 'dEFManagerKirbyCutterDownEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:975:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+  975 |     &llKirbySpecial2CutterDrawDObjDesc,           // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:975:5: note: (near initialization for 'dEFManagerKirbyCutterDrawEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1005:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1005 |     &llKirbySpecial2CutterTrailDObjDesc,          // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1005:5: note: (near initialization for 'dEFManagerKirbyCutterTrailEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1007:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1007 |     &llKirbySpecial2CutterTrailAnimJoint,          // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1007:5: note: (near initialization for 'dEFManagerKirbyCutterTrailEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1035:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1035 |     &llNessSpecial2PsychicMagnetDObjDesc,             // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1035:5: note: (near initialization for 'dEFManagerNessPsychicMagnetEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1036:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1036 |     &llNessSpecial2PsychicMagnetMObjSub,               // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1036:5: note: (near initialization for 'dEFManagerNessPsychicMagnetEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1037:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1037 |     &llNessSpecial2PsychicMagnetAnimJoint,             // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1037:5: note: (near initialization for 'dEFManagerNessPsychicMagnetEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1038:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1038 |     &llNessSpecial2PsychicMagnetMatAnimJoint           // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1038:5: note: (near initialization for 'dEFManagerNessPsychicMagnetEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1065:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1065 |     &llNessModelPKThunderTrailDObjDesc,            // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1065:5: note: (near initialization for 'dEFManagerNessPKThunderTrailEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1095:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1095 |     &llNessModelPKThunderTrailDObjDesc,            // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1095:5: note: (near initialization for 'dEFManagerNessPKReflectTrailEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1125:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1125 |     &llNessModelPKThunderWaveDObjDesc,             // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1125:5: note: (near initialization for 'dEFManagerNessPKThunderWaveEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1126:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1126 |     &llNessModelPKThunderWaveMObjSub,               // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1126:5: note: (near initialization for 'dEFManagerNessPKThunderWaveEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1127:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1127 |     &llNessModelPKThunderWaveAnimJoint,             // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1127:5: note: (near initialization for 'dEFManagerNessPKThunderWaveEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1128:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1128 |     &llNessModelPKThunderWaveMatAnimJoint           // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1128:5: note: (near initialization for 'dEFManagerNessPKThunderWaveEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1155:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1155 |     &llEFCommonEffects2NessPKFlashMObjSub,                   // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1155:5: note: (near initialization for 'dEFManagerNessPKFlashEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1156:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1156 |     &llEFCommonEffects2NessPKFlashDObjDesc,                     // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1156:5: note: (near initialization for 'dEFManagerNessPKFlashEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1157:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1157 |     &llEFCommonEffects2NessPKFlashAnimJoint,                   // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1157:5: note: (near initialization for 'dEFManagerNessPKFlashEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1158:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1158 |     &llEFCommonEffects2NessPKFlashMatAnimJoint                 // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1158:5: note: (near initialization for 'dEFManagerNessPKFlashEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1185:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1185 |     &llLinkSpecial2EntryWaveDObjDesc,             // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1185:5: note: (near initialization for 'dEFManagerLinkEntryWaveEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1186:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1186 |     &llLinkSpecial2EntryWaveMObjSub,               // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1186:5: note: (near initialization for 'dEFManagerLinkEntryWaveEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1187:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1187 |     &llLinkSpecial2EntryWaveAnimJoint,             // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1187:5: note: (near initialization for 'dEFManagerLinkEntryWaveEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1188:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1188 |     &llLinkSpecial2EntryWaveMatAnimJoint           // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1188:5: note: (near initialization for 'dEFManagerLinkEntryWaveEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1215:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1215 |     &llLinkSpecial2EntryBeamDObjDesc,             // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1215:5: note: (near initialization for 'dEFManagerLinkEntryBeamEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1216:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1216 |     &llLinkSpecial2EntryBeamMObjSub,               // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1216:5: note: (near initialization for 'dEFManagerLinkEntryBeamEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1217:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1217 |     &llLinkSpecial2EntryBeamAnimJoint,             // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1217:5: note: (near initialization for 'dEFManagerLinkEntryBeamEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1218:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1218 |     &llLinkSpecial2EntryBeamMatAnimJoint           // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1218:5: note: (near initialization for 'dEFManagerLinkEntryBeamEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1245:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1245 |     &llKirbySpecial2EntryStarDObjDesc,            // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1245:5: note: (near initialization for 'dEFManagerKirbyEntryStarEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1247:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1247 |     &llKirbySpecial2EntryStarLAnimJoint,           // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1247:5: note: (near initialization for 'dEFManagerKirbyEntryStarEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1275:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1275 |     &llEFCommonEffects3MBallRaysDObjDesc,                 // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1275:5: note: (near initialization for 'dEFManagerMBallRaysEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1276:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1276 |     &llEFCommonEffects3MBallRaysMObjSub,                   // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1276:5: note: (near initialization for 'dEFManagerMBallRaysEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1277:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1277 |     &llEFCommonEffects3MBallRaysAnimJoint,                 // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1277:5: note: (near initialization for 'dEFManagerMBallRaysEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1278:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1278 |     &llEFCommonEffects3MBallRaysMatAnimJoint               // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1278:5: note: (near initialization for 'dEFManagerMBallRaysEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1305:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1305 |     &llITCommonDataMBallThrownDObjDesc,               // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1305:5: note: (near initialization for 'dEFManagerMBallThrownEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1306:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1306 |     &llITCommonDataMBallThrownMObjSub,                 // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1306:5: note: (near initialization for 'dEFManagerMBallThrownEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1307:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1307 |     &llITCommonDataMBallThrownLAnimJoint,              // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1307:5: note: (near initialization for 'dEFManagerMBallThrownEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1308:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1308 |     &llITCommonDataMBallThrownLMatAnimJoint            // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1308:5: note: (near initialization for 'dEFManagerMBallThrownEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1335:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1335 |     &llYoshiSpecial2EntryEggDObjDesc,             // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1335:5: note: (near initialization for 'dEFManagerYoshiEntryEggEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1336:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1336 |     &llYoshiSpecial2EntryEggMObjSub,               // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1336:5: note: (near initialization for 'dEFManagerYoshiEntryEggEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1337:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1337 |     &llYoshiSpecial2EntryEggAnimJoint,             // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1337:5: note: (near initialization for 'dEFManagerYoshiEntryEggEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1338:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1338 |     &llYoshiSpecial2EntryEggMatAnimJoint           // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1338:5: note: (near initialization for 'dEFManagerYoshiEntryEggEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1342:53: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1342 | intptr_t dEFManagerYoshiEggLayAnimJoints[/* */] = { &llYoshiSpecial3EggLayWaitAnimJoint, &llYoshiSpecial3EggLayBreakAnimJoint };
+      |                                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1342:53: note: (near initialization for 'dEFManagerYoshiEggLayAnimJoints[0]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1342:90: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1342 | intptr_t dEFManagerYoshiEggLayAnimJoints[/* */] = { &llYoshiSpecial3EggLayWaitAnimJoint, &llYoshiSpecial3EggLayBreakAnimJoint };
+      |                                                                                          ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1342:90: note: (near initialization for 'dEFManagerYoshiEggLayAnimJoints[1]')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1368:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1368 |     &llYoshiSpecial3EggLayDObjDesc,               // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1368:5: note: (near initialization for 'dEFManagerYoshiEggLayEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1370:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1370 |     &llYoshiSpecial3EggLayThrowAnimJoint,          // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1370:5: note: (near initialization for 'dEFManagerYoshiEggLayEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1398:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1398 |     &llYoshiModelShieldDObjDesc,            // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1398:5: note: (near initialization for 'dEFManagerYoshiEggEscapeEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1428:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1428 |     &llLinkSpecial2SpinAttackDObjDesc,                // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1428:5: note: (near initialization for 'dEFManagerLinkSpinAttackEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1429:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1429 |     &llLinkSpecial2SpinAttackMObjSub,                  // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1429:5: note: (near initialization for 'dEFManagerLinkSpinAttackEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1430:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1430 |     &llLinkSpecial2SpinAttackAnimJoint,                // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1430:5: note: (near initialization for 'dEFManagerLinkSpinAttackEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1431:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1431 |     &llLinkSpecial2SpinAttackMatAnimJoint              // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1431:5: note: (near initialization for 'dEFManagerLinkSpinAttackEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1458:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1458 |     &llDonkeySpecial2EntryTaruDObjDesc,           // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1458:5: note: (near initialization for 'dEFManagerDonkeyEntryTaruEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1460:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1460 |     &llDonkeySpecial2EntryTaruAnimJoint,           // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1460:5: note: (near initialization for 'dEFManagerDonkeyEntryTaruEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1488:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1488 |     &llSamusSpecial2EntryPointDObjDesc,           // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1488:5: note: (near initialization for 'dEFManagerSamusEntryPointEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1490:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1490 |     &llSamusSpecial2EntryPointAnimJoint,           // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1490:5: note: (near initialization for 'dEFManagerSamusEntryPointEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1518:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1518 |     &llCaptainSpecial2EntryCarDObjDesc,           // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1518:5: note: (near initialization for 'dEFManagerCaptainEntryCarEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1548:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1548 |     &llMarioSpecial2EntryDokanDObjDesc,           // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1548:5: note: (near initialization for 'dEFManagerMarioEntryDokanEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1550:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1550 |     &llMarioSpecial2EntryDokanAnimJoint,           // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1550:5: note: (near initialization for 'dEFManagerMarioEntryDokanEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1578:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1578 |     &llFoxSpecial3EntryArwingDObjDesc,            // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1578:5: note: (near initialization for 'dEFManagerFoxEntryArwingEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1611:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1611 |     &llITCommonDataKirbyStarDObjDesc,                 // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1611:5: note: (near initialization for 'dEFManagerCaptureKirbyStarEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1641:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1641 |     &llITCommonDataKirbyStarDObjDesc,                 // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1641:5: note: (near initialization for 'dEFManagerLoseKirbyStarEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1671:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1671 |     &llEFCommonEffects3RebirthHaloDObjDesc,               // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1671:5: note: (near initialization for 'dEFManagerRebirthHaloEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1673:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1673 |     &llEFCommonEffects3RebirthHaloAnimJoint,               // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1673:5: note: (near initialization for 'dEFManagerRebirthHaloEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1701:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1701 |     &llEFCommonEffects3ItemGetSwirlDObjDesc,              // DObj Setup attributes offset (?)
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1701:5: note: (near initialization for 'dEFManagerItemGetSwirlEffectDesc.o_dobjsetup')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1702:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1702 |     &llEFCommonEffects3ItemGetSwirlMObjSub,                // MObjSub offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1702:5: note: (near initialization for 'dEFManagerItemGetSwirlEffectDesc.o_mobjsub')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1703:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1703 |     &llEFCommonEffects3ItemGetSwirlAnimJoint,              // AnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1703:5: note: (near initialization for 'dEFManagerItemGetSwirlEffectDesc.o_anim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1704:5: warning: initialization of 'int' from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 1704 |     &llEFCommonEffects3ItemGetSwirlMatAnimJoint            // MatAnimJoint offset
+      |     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1704:5: note: (near initialization for 'dEFManagerItemGetSwirlEffectDesc.o_matanim_joint')
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerInitEffects':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1738:9: warning: unused variable 'unused' [-Wunused-variable]
+ 1738 |     s32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1936:11: warning: unused variable 'child_dobj' [-Wunused-variable]
+ 1936 |     DObj *child_dobj;
+      |           ^~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1934:9: warning: unused variable 'unused' [-Wunused-variable]
+ 1934 |     s32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerFlameLRMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2520:9: warning: unused variable 'scale' [-Wunused-variable]
+ 2520 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2519:9: warning: unused variable 'vel' [-Wunused-variable]
+ 2519 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerFlameRandomMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2587:9: warning: unused variable 'scale' [-Wunused-variable]
+ 2587 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2586:9: warning: unused variable 'vel' [-Wunused-variable]
+ 2586 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerFlameStaticMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2651:9: warning: unused variable 'scale' [-Wunused-variable]
+ 2651 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2650:9: warning: unused variable 'vel' [-Wunused-variable]
+ 2650 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2649:9: warning: unused variable 'angle' [-Wunused-variable]
+ 2649 |     f32 angle;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustCollideMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2713:9: warning: unused variable 'scale' [-Wunused-variable]
+ 2713 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2712:9: warning: unused variable 'vel' [-Wunused-variable]
+ 2712 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustLightMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2850:9: warning: unused variable 'scale' [-Wunused-variable]
+ 2850 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2849:9: warning: unused variable 'vel' [-Wunused-variable]
+ 2849 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustHeavyMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2926:9: warning: unused variable 'scale' [-Wunused-variable]
+ 2926 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2925:9: warning: unused variable 'vel' [-Wunused-variable]
+ 2925 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2924:9: warning: unused variable 'angle' [-Wunused-variable]
+ 2924 |     f32 angle;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2923:15: warning: unused variable 'ep' [-Wunused-variable]
+ 2923 |     EFStruct *ep;
+      |               ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustHeavyDoubleProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2967:9: warning: unused variable 'unused' [-Wunused-variable]
+ 2967 |     s32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustHeavyDoubleMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2990:9: warning: unused variable 'scale' [-Wunused-variable]
+ 2990 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2989:9: warning: unused variable 'vel' [-Wunused-variable]
+ 2989 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:2988:9: warning: unused variable 'angle' [-Wunused-variable]
+ 2988 |     f32 angle;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerDustExpandSmallMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3087:9: warning: unused variable 'scale' [-Wunused-variable]
+ 3087 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3086:9: warning: unused variable 'vel' [-Wunused-variable]
+ 3086 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3085:9: warning: unused variable 'angle' [-Wunused-variable]
+ 3085 |     f32 angle;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustDashMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3143:15: warning: unused variable 'ep' [-Wunused-variable]
+ 3143 |     EFStruct *ep;
+      |               ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDamageSpawnSparksProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3452:9: warning: unused variable 'unused' [-Wunused-variable]
+ 3452 |     f32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDamageSpawnMDustProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3533:9: warning: unused variable 'unused' [-Wunused-variable]
+ 3533 |     f32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerQuakeMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3814:9: warning: unused variable 'unused' [-Wunused-variable]
+ 3814 |     s32 unused[2];
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerDamageCoinMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3883:9: warning: unused variable 'scale' [-Wunused-variable]
+ 3883 |     f32 scale;
+      |         ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3882:9: warning: unused variable 'vel' [-Wunused-variable]
+ 3882 |     f32 vel;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:3881:9: warning: unused variable 'angle' [-Wunused-variable]
+ 3881 |     f32 angle;
+      |         ^~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:8:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerFoxReflectorSetAnimID':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:4035:128: warning: passing argument 2 of 'ndsRelocGetFileData' makes pointer from integer without a cast [-Wint-conversion]
+ 4035 |     gcAddAnimJointAll(effect_gobj, lbRelocGetFileData(AObjEvent32**, gFTDataFoxSpecial2, dEFManagerFoxReflectorAnimJointOffsets[anim_id]), 0.0F);
+D:/Stuff/DevFolder/Smash64DS_Port/include/reloc_data.h:597:41: note: in definition of macro 'lbRelocGetFileData'
+  597 |     ((type)ndsRelocGetFileData((file), (symbol)))
+      |                                         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/include/reloc_data.h:594:51: note: expected 'const void *' but argument is of type 'intptr_t' {aka 'int'}
+  594 | void *ndsRelocGetFileData(void *file, const void *symbol);
+      |                                       ~~~~~~~~~~~~^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerDeadExplodeMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:4779:9: warning: unused variable 'unused' [-Wunused-variable]
+ 4779 |     s32 unused[4];
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerKirbyEntryStarMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:5195:53: warning: assignment to 'intptr_t' {aka 'int'} from 'uintptr_t *' {aka 'unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
+ 5195 |     dEFManagerKirbyEntryStarEffectDesc.o_anim_joint = (lr == +1) ? &llKirbySpecial2EntryStarRAnimJoint : &llKirbySpecial2EntryStarLAnimJoint;
+      |                                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerMBallThrownMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:5259:10: warning: assignment to 'void *' from 'unsigned int' makes pointer from integer without a cast [-Wint-conversion]
+ 5259 |     file = ((uintptr_t)*p_file - (intptr_t)&llITCommonDataMBallThrownDObjDesc);
+      |          ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerYoshiEggLaySetAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:5370:155: warning: passing argument 2 of 'ndsRelocGetFileData' makes pointer from integer without a cast [-Wint-conversion]
+ 5370 |     lbCommonAddDObjAnimJointAll(DObjGetStruct(effect_gobj)->child, lbRelocGetFileData(AObjEvent32**, gFTDataYoshiSpecial3, dEFManagerYoshiEggLayAnimJoints[index]), 1.0F);
+D:/Stuff/DevFolder/Smash64DS_Port/include/reloc_data.h:597:41: note: in definition of macro 'lbRelocGetFileData'
+  597 |     ((type)ndsRelocGetFileData((file), (symbol)))
+      |                                         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/include/reloc_data.h:594:51: note: expected 'const void *' but argument is of type 'intptr_t' {aka 'int'}
+  594 | void *ndsRelocGetFileData(void *file, const void *symbol);
+      |                                       ~~~~~~~~~~~~^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerYoshiEggLayMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:5393:11: warning: unused variable 'unused' [-Wunused-variable]
+ 5393 |     void *unused;
+      |           ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerLoseKirbyStarMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:5968:10: warning: assignment to 'void *' from 'unsigned int' makes pointer from integer without a cast [-Wint-conversion]
+ 5968 |     addr = ((uintptr_t)*p_addr - (intptr_t)&llITCommonDataKirbyStarDObjDesc);
+      |          ^
+linking smash64ds-battle-playable-hwtri-moveset-fireball-blaster-reflector.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-hwtri-moveset-fireball-blaster-reflector.nds

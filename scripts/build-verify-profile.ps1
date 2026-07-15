@@ -17,6 +17,13 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $profileKey = $Profile.ToLowerInvariant()
+$supportedProfiles = @('Latest','LatestFast','BoundaryDirect','Boundary')
+if ($supportedProfiles -notcontains $Profile) {
+    throw "Profile '$Profile' would publish legacy harness ROMs. The two-ROM build policy allows only Latest, LatestFast, BoundaryDirect, and Boundary."
+}
+# Supported profiles reuse their registry-owned normal/battle build directories;
+# shared verifier slots would create additional persistent build outputs.
+$NoSharedBuild = $true
 $costDir = Join-Path $root 'artifacts\verifier-cost'
 $stampPath = Join-Path $costDir 'prebuild-stamp.json'
 
@@ -275,7 +282,7 @@ if ($needsDefault) {
         'TARGET=smash64ds',
         'BUILD=build',
         'NDS_DEV_SCENE_HARNESS=normal',
-        'NDS_HARNESS_FAST_LOGIC=1'
+        'NDS_HARNESS_FAST_LOGIC=0'
     )
     if ($Force) {
         $makeArgs += '-B'

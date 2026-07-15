@@ -176,6 +176,7 @@ extern volatile u32 gNdsSceneHarnessResult;
 extern volatile u32 gNdsSceneHarnessSceneCurr;
 extern volatile u32 gNdsSceneHarnessScenePrev;
 extern volatile u32 gNdsSceneHarnessReservedMask;
+extern volatile u32 gNdsBattlePlayableFoxCpuEnabled;
 
 void ndsDevSceneHarnessApply(void);
 

@@ -1,6 +1,7 @@
 #include "nds_scene_harness_config.h"
 #include <nds/nds_mp_floor_crossing.h>
 #include <nds/nds_mp_topology.h>
+#include <nds/nds_mpprocess_source.h>
 
 MPLineGroup gMPCollisionLineGroups[nMPLineKindEnumCount];
 MPVertexInfoContainer *gMPCollisionVertexInfo;
@@ -660,6 +661,71 @@ static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)
     return FALSE;
 }
 
+static sb32 ndsMPGetLineYakumonoDObj(s32 line_id, DObj **yakumono_dobj)
+{
+    u32 yakumono_id = 0u;
+    DObj *dobj;
+
+    if (yakumono_dobj != NULL)
+    {
+        *yakumono_dobj = NULL;
+    }
+    if ((yakumono_dobj == NULL) ||
+        (ndsMPFindLineYakumonoID(line_id, &yakumono_id) == FALSE) ||
+        (gMPCollisionYakumonoDObjs == NULL) ||
+        (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+    {
+        return FALSE;
+    }
+    dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+    if ((dobj == NULL) ||
+        (dobj->user_data.s >= nMPYakumonoStatusOff))
+    {
+        return FALSE;
+    }
+    *yakumono_dobj = dobj;
+    return TRUE;
+}
+
+static sb32 ndsMPLinePositionLocalToWorld(s32 line_id, Vec3f *position)
+{
+    DObj *yakumono_dobj;
+
+    if ((position == NULL) ||
+        (ndsMPGetLineYakumonoDObj(line_id, &yakumono_dobj) == FALSE))
+    {
+        return FALSE;
+    }
+    if ((yakumono_dobj->anim_joint.event32 != NULL) ||
+        (yakumono_dobj->user_data.s != nMPYakumonoStatusNone))
+    {
+        position->x += yakumono_dobj->translate.vec.f.x;
+        position->y += yakumono_dobj->translate.vec.f.y;
+    }
+    return TRUE;
+}
+
+static sb32 ndsMPLinePositionWorldToLocal(s32 line_id,
+                                          const Vec3f *world_position,
+                                          Vec3f *local_position)
+{
+    DObj *yakumono_dobj;
+
+    if ((world_position == NULL) || (local_position == NULL) ||
+        (ndsMPGetLineYakumonoDObj(line_id, &yakumono_dobj) == FALSE))
+    {
+        return FALSE;
+    }
+    *local_position = *world_position;
+    if ((yakumono_dobj->anim_joint.event32 != NULL) ||
+        (yakumono_dobj->user_data.s != nMPYakumonoStatusNone))
+    {
+        local_position->x -= yakumono_dobj->translate.vec.f.x;
+        local_position->y -= yakumono_dobj->translate.vec.f.y;
+    }
+    return TRUE;
+}
+
 u16 mpCollisionGetVertexFlagsLineID(s32 line_id)
 {
     u32 flags = 0u;
@@ -850,8 +916,9 @@ void mpCollisionGetVertexPositionID(s32 line_id, s32 vertex_id,
     {
         gNdsStageFloorEdgeLoopVertexPositionCallCount++;
     }
-    if (ndsMPGetVertexPositionForLineID(line_id, vertex_id, object_pos) ==
-        FALSE)
+    if ((ndsMPGetVertexPositionForLineID(line_id, vertex_id, object_pos) ==
+         FALSE) ||
+        (ndsMPLinePositionLocalToWorld(line_id, object_pos) == FALSE))
     {
         if (object_pos != NULL)
         {
@@ -1025,6 +1092,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
     u32 vertex_first;
     u32 vertex_count;
     u32 segment_count;
+    Vec3f object_local;
     u32 j;
 
     if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
@@ -1048,6 +1116,15 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
     if ((object_pos == NULL) || (line_id < 0) ||
         (ndsMPLineIDIsCeil(line_id) == FALSE) ||
         (ndsStageCollisionLoopGeometryReady() == FALSE))
+    {
+        if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
+        {
+            gNdsStageMPCeilFloorLoopFCCommonMissCount++;
+        }
+        return FALSE;
+    }
+    if (ndsMPLinePositionWorldToLocal(line_id, object_pos, &object_local) ==
+        FALSE)
     {
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
@@ -1081,10 +1158,10 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
         s32 y2 = ndsMPVertexY(verts, v2_id);
         f32 ceil_y;
 
-        if (!(((f32)x1 <= object_pos->x &&
-               (f32)x2 >= object_pos->x) ||
-              ((f32)x2 <= object_pos->x &&
-               (f32)x1 >= object_pos->x)))
+        if (!(((f32)x1 <= object_local.x &&
+               (f32)x2 >= object_local.x) ||
+              ((f32)x2 <= object_local.x &&
+               (f32)x1 >= object_local.x)))
         {
             continue;
         }
@@ -1093,10 +1170,10 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
             gNdsStageCollisionLoopDivisionGuardCount++;
             continue;
         }
-        ceil_y = ndsMPLineDistanceFC(object_pos->x, x1, y1, x2, y2);
+        ceil_y = ndsMPLineDistanceFC(object_local.x, x1, y1, x2, y2);
         if (ceil_dist != NULL)
         {
-            *ceil_dist = ceil_y - object_pos->y;
+            *ceil_dist = ceil_y - object_local.y;
         }
         if (ceil_flags != NULL)
         {
@@ -1107,7 +1184,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
         {
             gNdsStageMPCeilFloorLoopFCCommonHitCount++;
             gNdsStageMPCeilFloorLoopCeilDistMilli =
-                ndsFloatToMilliSigned(ceil_y - object_pos->y);
+                ndsFloatToMilliSigned(ceil_y - object_local.y);
         }
         return TRUE;
     }
@@ -1510,7 +1587,8 @@ void mpCollisionGetFloorEdgeL(s32 line_id, Vec3f *object_pos)
     {
         return;
     }
-    if (ndsMPFindLineEndpoints(line_id, &left, NULL, NULL, NULL) == FALSE)
+    if ((ndsMPFindLineEndpoints(line_id, &left, NULL, NULL, NULL) == FALSE) ||
+        (ndsMPLinePositionLocalToWorld(line_id, &left) == FALSE))
     {
         object_pos->x = 0.0F;
         object_pos->y = 0.0F;
@@ -1528,7 +1606,8 @@ void mpCollisionGetFloorEdgeR(s32 line_id, Vec3f *object_pos)
     {
         return;
     }
-    if (ndsMPFindLineEndpoints(line_id, NULL, &right, NULL, NULL) == FALSE)
+    if ((ndsMPFindLineEndpoints(line_id, NULL, &right, NULL, NULL) == FALSE) ||
+        (ndsMPLinePositionLocalToWorld(line_id, &right) == FALSE))
     {
         object_pos->x = 0.0F;
         object_pos->y = 0.0F;
@@ -1546,7 +1625,8 @@ void mpCollisionGetCeilEdgeL(s32 line_id, Vec3f *object_pos)
     {
         return;
     }
-    if (ndsMPFindLineEndpoints(line_id, &left, NULL, NULL, NULL) == FALSE)
+    if ((ndsMPFindLineEndpoints(line_id, &left, NULL, NULL, NULL) == FALSE) ||
+        (ndsMPLinePositionLocalToWorld(line_id, &left) == FALSE))
     {
         object_pos->x = 0.0F;
         object_pos->y = 0.0F;
@@ -1564,7 +1644,8 @@ void mpCollisionGetCeilEdgeR(s32 line_id, Vec3f *object_pos)
     {
         return;
     }
-    if (ndsMPFindLineEndpoints(line_id, NULL, &right, NULL, NULL) == FALSE)
+    if ((ndsMPFindLineEndpoints(line_id, NULL, &right, NULL, NULL) == FALSE) ||
+        (ndsMPLinePositionLocalToWorld(line_id, &right) == FALSE))
     {
         object_pos->x = 0.0F;
         object_pos->y = 0.0F;
@@ -1905,25 +1986,28 @@ static sb32 ndsMPGetLRCommonWall(s32 line_id, Vec3f *object_pos,
 {
     Vec3f a;
     Vec3f b;
+    Vec3f object_local;
     f32 min_y;
     f32 max_y;
     f32 wall_x;
 
     if ((object_pos == NULL) ||
         (ndsMPGetLineKindForLineID(line_id) != (s32)line_kind) ||
-        (ndsMPFindLineEndpoints(line_id, &a, &b, flags, NULL) == FALSE))
+        (ndsMPFindLineEndpoints(line_id, &a, &b, flags, NULL) == FALSE) ||
+        (ndsMPLinePositionWorldToLocal(line_id, object_pos, &object_local) ==
+         FALSE))
     {
         return FALSE;
     }
     min_y = (a.y < b.y) ? a.y : b.y;
     max_y = (a.y > b.y) ? a.y : b.y;
-    if ((object_pos->y < min_y) || (object_pos->y > max_y))
+    if ((object_local.y < min_y) || (object_local.y > max_y))
     {
         return FALSE;
     }
     if (fabsf(b.y - a.y) > 0.01F)
     {
-        wall_x = a.x + (((object_pos->y - a.y) / (b.y - a.y)) *
+        wall_x = a.x + (((object_local.y - a.y) / (b.y - a.y)) *
             (b.x - a.x));
     }
     else
@@ -1932,7 +2016,7 @@ static sb32 ndsMPGetLRCommonWall(s32 line_id, Vec3f *object_pos,
     }
     if (dist != NULL)
     {
-        *dist = wall_x - object_pos->x;
+        *dist = wall_x - object_local.x;
     }
     if (angle != NULL)
     {
@@ -1974,6 +2058,12 @@ static void ndsMPGetWallEdgeU(s32 line_id, Vec3f *object_pos)
         return;
     }
     *object_pos = (a.y >= b.y) ? a : b;
+    if (ndsMPLinePositionLocalToWorld(line_id, object_pos) == FALSE)
+    {
+        object_pos->x = 0.0F;
+        object_pos->y = 0.0F;
+        object_pos->z = 0.0F;
+    }
 }
 
 void mpCollisionGetLWallEdgeU(s32 line_id, Vec3f *object_pos)
@@ -3556,6 +3646,7 @@ static void ndsFighterMarioFoxStageMPUpdateFloorLoopReset(void)
            sizeof(sNdsStageMPUpdateFloorLoopPrevRootValid));
 }
 
+#if !NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE
 static s32 sMPProcessMultiWallCollidesNum;
 static s32 sMPProcessMultiWallCollideLineIDs[5];
 
@@ -3817,6 +3908,7 @@ sb32 mpProcessCheckTestFloorCollisionNew(MPCollData *coll_data)
     mpProcessSetCollProjectFloorID(coll_data);
     return FALSE;
 }
+#endif
 
 static sb32 ndsStageMPSweepFloorLoopChooseLine(s32 except_line_id,
                                                s32 *line_id,
@@ -4270,6 +4362,7 @@ sb32 mpCollisionCheckFloorLineCollisionDiff(Vec3f *position,
     return hit;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE
 sb32 mpProcessCheckTestFloorCollisionAdjNew(
     MPCollData *coll_data, sb32 (*proc_map)(GObj *), GObj *gobj)
 {
@@ -4359,6 +4452,7 @@ sb32 mpProcessRunFloorCollisionAdjNewNULL(MPCollData *coll_data)
 {
     return mpProcessCheckTestFloorCollisionAdjNew(coll_data, NULL, NULL);
 }
+#endif
 
 static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                                          Vec3f *translate,
@@ -4472,7 +4566,7 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
             {
                 hit = TRUE;
             }
-            else if (mpCollisionGetFCCommonCeil(line_id, &sweep_translate,
+            else if (mpCollisionGetFCCommonCeil(line_id, translate,
                          &ceil_y, NULL, NULL) != FALSE)
             {
                 f32 top_delta = ceil_y;
@@ -4585,6 +4679,7 @@ sb32 mpCollisionCheckCeilLineCollisionDiff(Vec3f *position,
     return hit;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE
 sb32 mpProcessCheckTestCeilCollisionAdjNew(MPCollData *coll_data)
 {
     MPObjectColl *map_coll;
@@ -5422,6 +5517,7 @@ void mpProcessRunFloorEdgeAdjust(MPCollData *coll_data)
         }
     }
 }
+#endif
 
 static sb32 ndsStageMPProcessFloorLoopBuildCollData(FTStruct *fp,
                                                     MPCollData *mp_coll)
@@ -5511,6 +5607,7 @@ static void ndsStageMPProcessFloorLoopInitColl(MPCollData *coll,
     coll->mask_stat = MAP_FLAG_FLOOR;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE
 sb32 mpProcessUpdateMain(MPCollData *coll_data,
                          sb32 (*proc_coll)(MPCollData*, GObj*, u32),
                          GObj *gobj,
@@ -5619,6 +5716,7 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
     }
     return result;
 }
+#endif
 
 static sb32 ndsMPCommonCheckSetFighterCliffEdgeLive(
     GObj *fighter_gobj, s32 floor_line_id)
@@ -11680,6 +11778,7 @@ static sb32 ndsStageMPPlatformSpeedFloorLoopChooseCeilLine(u32 yakumono_id,
             Vec3f left;
             Vec3f right;
             Vec3f probe;
+            Vec3f world_probe;
             f32 dist = 0.0F;
 
             if ((ndsMPFindLineEndpoints(candidate, &left, &right, NULL,
@@ -11692,8 +11791,11 @@ static sb32 ndsStageMPPlatformSpeedFloorLoopChooseCeilLine(u32 yakumono_id,
             probe.x = (left.x + right.x) * 0.5F;
             probe.y = 0.0F;
             probe.z = 0.0F;
-            if (mpCollisionGetFCCommonCeil(candidate, &probe, &dist,
-                    NULL, NULL) == FALSE)
+            world_probe = probe;
+            if ((ndsMPLinePositionLocalToWorld(candidate, &world_probe) ==
+                    FALSE) ||
+                (mpCollisionGetFCCommonCeil(candidate, &world_probe, &dist,
+                    NULL, NULL) == FALSE))
             {
                 continue;
             }
@@ -12069,7 +12171,11 @@ static sb32 ndsStageMPPlatformSpeedFloorLoopRunProcessWallProbe(
     gNdsStageMPPlatformSpeedFloorLoopProcessWallKind = line_kind;
     gNdsStageMPPlatformSpeedFloorLoopProcessWallMaskCurr = coll.mask_curr;
     gNdsStageMPPlatformSpeedFloorLoopProcessWallMultiCount =
+#if NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE
+        (u32)sNdsBaseMPProcessMultiWallCollidesNum;
+#else
         (u32)sMPProcessMultiWallCollidesNum;
+#endif
     return TRUE;
 }
 
@@ -15260,6 +15366,7 @@ static sb32 ndsStageMPCeilFloorLoopChooseLine(s32 *line_id, f32 *sample_x,
             Vec3f left;
             Vec3f right;
             Vec3f probe;
+            Vec3f world_probe;
             f32 dist = 0.0F;
             f32 width;
 
@@ -15277,8 +15384,11 @@ static sb32 ndsStageMPCeilFloorLoopChooseLine(s32 *line_id, f32 *sample_x,
             probe.x = (left.x + right.x) * 0.5F;
             probe.y = 0.0F;
             probe.z = 0.0F;
-            if (mpCollisionGetFCCommonCeil(candidate, &probe, &dist,
-                    NULL, NULL) == FALSE)
+            world_probe = probe;
+            if ((ndsMPLinePositionLocalToWorld(candidate, &world_probe) ==
+                    FALSE) ||
+                (mpCollisionGetFCCommonCeil(candidate, &world_probe, &dist,
+                    NULL, NULL) == FALSE))
             {
                 continue;
             }

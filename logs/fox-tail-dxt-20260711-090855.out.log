@@ -1,0 +1,46 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+battleship_sys_taskman.c
+battleship_sys_objhelper.c
+battleship_mvopeningroom.c
+battleship_mvopeningportraits.c
+battleship_mvopeningmario.c
+battleship_mvopeningdonkey.c
+battleship_mvopeninglink.c
+battleship_mvopeningsamus.c
+battleship_mvopeningyoshi.c
+battleship_mvopeningkirby.c
+battleship_mvopeningfox.c
+battleship_mvopeningpikachu.c
+battleship_mntitle.c
+battleship_mnvsmode.c
+battleship_mnplayersvs.c
+battleship_mnmaps.c
+battleship_scvsbattle.c
+battleship_grpupupu_ground.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_run.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_pass.c
+battleship_ftcomputer.c
+battleship_mnvsresults.c
+battleship_ifcommon.c
+battleship_mario_fireball.c
+battleship_fox_blaster.c
+battleship_fox_reflector.c
+nds_platform.c
+nds_renderer.c
+battleship_mnstartup.c
+scene_backend.c
+linking smash64ds-battle-playable-canonical-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-canonical-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+[33;1mWARNING: battle_playable Pupupu realtime HW textured perf below 60fps target: fps=12/12 x0.1; renderer-cache follow-up still required.[0m
+battle_playable Pupupu realtime pacing smoke passed: frames=56 fps=12/12 ticks=1496461696 gxram=730/2214 gxstat=0x6000000/ctrl=0x19 ftrContract=1792/1792/geom0x222005/cycle0x100000/rm0xc4112078/light112/112/bounds112/0 oracle=2388/0/0 mtx=load1/scale0/p4096,4096,4096,0/mv4096,4096,4096,0,0,0 vraw=32767..-32768/32767..-32768/32767..-32768 vhw=-3584..7363/-7239..8536/3568..4095 depth=stage228:3568..3707/p0960:3636..3669/p1918:3631..3669 clip=0 texProof=113124/348992/942 sample=204/942/942 alias=12 st=-481..6159/-241..2064 texUse=0/382/0/0/122/impl122/first0x2/flags0x1/w0xfcffffff/w1xfffe7d3e/geom0x604 texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0 texLane=layout0x2/byte314/half314/bFmt0x100/hFmt0x400/bMap0x10203/hMap0x2030001 stageCarry=2352/2352/tex1792/tile1904/short336/336/seg168 combine=3920/2468/lit35056/mat17864/proj39312 light=8/0/0 profile=present25325632/draw24758656/stage3356736/mat11776/dl8963840/tex467520/conv0/upload0 texUploads=0/0 binds=46 vtx=2454 tri=818 cpu=setup1/proc56/target56/stick27/obj0x4 aobj32=32/240/reuse0/fail0

@@ -1,0 +1,31 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+scene_backend.c
+linking smash64ds-battle-playable-canonical-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-canonical-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+[33;1mWARNING: battle_playable Pupupu realtime HW textured perf below 60fps target: fps=25/25 x0.1; renderer-cache follow-up still required.[0m
+battle_playable Pupupu realtime pacing smoke passed: frames=100 fps=25/25 ticks=1327234304 gxram=729/2209 gxstat=0x6000000/ctrl=0x19 ftrContract=3214/3200/geom0x222005/light201/201/bounds201/0 oracle=840/0/0 mtx=load1/scale0/p4096,4096,4096,0/mv4096,4096,4096,0,0,0 vraw=32767..-32768/32767..-32768/32767..-32768 vhw=-3787..7958/-7825..9016/9..3685 clip=0 texProof=69742/190164/690 sample=204/690/690 alias=42 st=-480..6159/-63..2064 texUse=0/53/0/0/0/impl0/first0x2/flags0x1/w0xfcffffff/w1xfffe7d3e/geom0x604 texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0 texLane=layout0x2/byte231/half231/bFmt0x100/hFmt0x400/bMap0x10203/hMap0x2030001 stageCarry=4242/4242/tex3232/tile3434/short606/606/seg303 combine=7031/4409/lit62692/mat31920/proj70368 light=0/0/548 profile=present12980224/draw0/stage3512704/mat5312/dl3425344/tex292800/conv0/upload0 texUploads=0/0 binds=36 vtx=849 tri=283 cpu=setup1/proc101/target101/stick72/obj0x4
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_early_104845_next.png (488x675)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_early_104845.png (488x675)
+Top screen visible: 35277/49152 different pixels (71.771%).
+Top screen green content: 17332/49152 dominant-green pixels (35.262%).
+Top screen detail content: 17848/49152 non-white/non-green pixels (36.312%).
+Top-screen required region detail: 2228/5616 pixels (39.672%).
+Top-screen fighter-region color: 790/5616 pixels (14.067%).
+Top screen delta: 1271/49152 changed pixels (2.586%).
+Region left_bush: non-clear=424/3000 (14.133%) green=68/3000 (2.267%) detail=352/3000 (11.733%) fighter=211/3000 (7.033%) changed=0/3000 (0.000%)
+Region right_bush: non-clear=3250/3250 (100.000%) green=919/3250 (28.277%) detail=2329/3250 (71.662%) fighter=1613/3250 (49.631%) changed=13/3250 (0.400%)
+Region fighter_center: non-clear=3007/4225 (71.172%) green=1320/4225 (31.243%) detail=1680/4225 (39.763%) fighter=776/4225 (18.367%) changed=188/4225 (4.450%)
+Region stage_body: non-clear=5059/7650 (66.131%) green=2933/7650 (38.340%) detail=2122/7650 (27.739%) fighter=1786/7650 (23.346%) changed=11/7650 (0.144%)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_late_104845_next.png (488x675)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_late_104845.png (488x675)
+Top screen visible: 35174/49152 different pixels (71.562%).
+Top screen green content: 17250/49152 dominant-green pixels (35.095%).
+Top screen detail content: 17819/49152 non-white/non-green pixels (36.253%).
+Top screen delta: 3295/49152 changed pixels (6.704%).
+Region left_bush: non-clear=412/3000 (13.733%) green=58/3000 (1.933%) detail=350/3000 (11.667%) fighter=209/3000 (6.967%) changed=22/3000 (0.733%)
+Region right_bush: non-clear=3250/3250 (100.000%) green=917/3250 (28.215%) detail=2331/3250 (71.723%) fighter=1617/3250 (49.754%) changed=27/3250 (0.831%)
+Region fighter_center: non-clear=2978/4225 (70.485%) green=1304/4225 (30.864%) detail=1666/4225 (39.432%) fighter=776/4225 (18.367%) changed=619/4225 (14.651%)
+Region stage_body: non-clear=5019/7650 (65.608%) green=2897/7650 (37.869%) detail=2118/7650 (27.686%) fighter=1767/7650 (23.098%) changed=929/7650 (12.144%)

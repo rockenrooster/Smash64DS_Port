@@ -1,0 +1,144 @@
+In file included from C:devkitPro/libnds/include/nds/ndstypes.h:36,
+                 from C:devkitPro/libnds/include/nds/timers.h:51,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:6:
+C:devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:880,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:72:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c: In function 'ndsFighterJumpAttackAirProbeDirections':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:3077:35: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 'long int' [-Wsign-compare]
+ 3077 |             (fp->motion_attack_id ==
+      |                                   ^~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:889:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunProbeDamageInvincibleGate':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:7630:26: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+ 7630 |     if ((fp->hitlag_tics == saved_hitlag_tics) &&
+      |                          ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11464:49: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+11464 |     if ((hitlag > 0) && (victim_fp->hitlag_tics == hitlag))
+      |                                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11551:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+11551 |         (victim_fp->hitlag_tics == shield_break_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunStepAttackDamageProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16361:49: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16361 |         (attack_hitlag > 0) && (fp->hitlag_tics == attack_hitlag) &&
+      |                                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16401:26: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16401 |         (fp->hitlag_tics == attack_shield_hitlag) &&
+      |                          ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16464:50: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16464 |     if ((rebound_hitlag > 0) && (fp->hitlag_tics == rebound_hitlag))
+      |                                                  ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16538:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16538 |         (target_fp->hitlag_tics == shield_damage_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16603:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16603 |         (target_fp->hitlag_tics == shield_break_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16877:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+16877 |     if ((target_fp->hitlag_tics == hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17881:13: warning: 'ndsFighterMarioFoxRecordStubFighter' defined but not used [-Wunused-function]
+17881 | static void ndsFighterMarioFoxRecordStubFighter(FTDesc *desc,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17708:14: warning: 'ndsFighterMarioFoxMakeFighter' defined but not used [-Wunused-function]
+17708 | static GObj *ndsFighterMarioFoxMakeFighter(FTDesc *desc)
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16984:13: warning: 'ndsFighterDashRunProbeAttackRecordCarry' defined but not used [-Wunused-function]
+16984 | static void ndsFighterDashRunProbeAttackRecordCarry(FTStruct *fp)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16914:13: warning: 'ndsFighterDashRunStepAttackCollFighterRange' defined but not used [-Wunused-function]
+16914 | static sb32 ndsFighterDashRunStepAttackCollFighterRange(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16262:13: warning: 'ndsFighterDashRunStepAttackDamageProcParams' defined but not used [-Wunused-function]
+16262 | static sb32 ndsFighterDashRunStepAttackDamageProcParams(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16161:13: warning: 'ndsFighterDashRunStepAttackDamageHitStats' defined but not used [-Wunused-function]
+16161 | static sb32 ndsFighterDashRunStepAttackDamageHitStats(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15644:13: warning: 'ndsFighterDashRunStepAttackDamageHitLog' defined but not used [-Wunused-function]
+15644 | static sb32 ndsFighterDashRunStepAttackDamageHitLog(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15576:13: warning: 'ndsFighterDashRunStepAttackDamageRecord' defined but not used [-Wunused-function]
+15576 | static sb32 ndsFighterDashRunStepAttackDamageRecord(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:15459:13: warning: 'ndsFighterDashRunStepAttackDamageCollide' defined but not used [-Wunused-function]
+15459 | static sb32 ndsFighterDashRunStepAttackDamageCollide(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12107:13: warning: 'ndsGMCollisionCheckFighterAttackShieldCollideSelected' defined but not used [-Wunused-function]
+12107 | static sb32 ndsGMCollisionCheckFighterAttackShieldCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12084:13: warning: 'ndsGMCollisionCheckFighterAttacksCollideSelected' defined but not used [-Wunused-function]
+12084 | static sb32 ndsGMCollisionCheckFighterAttacksCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11985:13: warning: 'ndsFighterDashRunStepAttackDamageRectangle' defined but not used [-Wunused-function]
+11985 | static sb32 ndsFighterDashRunStepAttackDamageRectangle(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11706:13: warning: 'ndsFighterDashRunStepAttackCollInterpolate' defined but not used [-Wunused-function]
+11706 | static sb32 ndsFighterDashRunStepAttackCollInterpolate(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11627:13: warning: 'ndsFighterDashRunStepAttackCollPosition' defined but not used [-Wunused-function]
+11627 | static sb32 ndsFighterDashRunStepAttackCollPosition(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11612:13: warning: 'ndsFighterDashRunShouldWriteBackAttackPosition' defined but not used [-Wunused-function]
+11612 | static sb32 ndsFighterDashRunShouldWriteBackAttackPosition(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:11605:12: warning: 'ndsFTMotionSignExtend' defined but not used [-Wunused-function]
+11605 | static s32 ndsFTMotionSignExtend(u32 value, u32 bits)
+      |            ^~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:11851:13: warning: 'ndsFighterNaturalSpecialsApplyInput' defined but not used [-Wunused-function]
+11851 | static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:11723:13: warning: 'ndsFighterNaturalMovesetApplyInput' defined but not used [-Wunused-function]
+11723 | static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:874:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_fighter_model.c:1750:13: warning: 'ndsFighterMarioFoxSetupManagerFiles' defined but not used [-Wunused-function]
+ 1750 | static void ndsFighterMarioFoxSetupManagerFiles(void)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:868:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:453:13: warning: 'sNdsFTManagerPartsAllocInit' defined but not used [-Wunused-variable]
+  453 | static sb32 sNdsFTManagerPartsAllocInit;
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:452:17: warning: 'sNdsFTManagerPartsAllocFree' defined but not used [-Wunused-variable]
+  452 | static FTParts *sNdsFTManagerPartsAllocFree;
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:451:16: warning: 'sNdsFTManagerPartsAllocPool' defined but not used [-Wunused-variable]
+  451 | static FTParts sNdsFTManagerPartsAllocPool[64];
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[31;1mException: [0mD:\Stuff\DevFolder\Smash64DS_Port\scripts\verify-battle-mariofox-gcrunall-loop-harness.ps1:74[0m
+[31;1m[0m[36;1mLine |[0m
+[31;1m[0m[36;1m[36;1m  74 | [0m     if (-not $Condition) { [36;1mthrow "$Message`n$Context"[0m }[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m                            ~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCanonical realtime HW submitted vertex positions drifted from the CPU 20.12 oracle. 0x020146d2 in ndsDrawSObjIntoPreview[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m     | [31;1m(sobj=sobj@entry=0x23391e0, record_startup=record_startup@entry=0, preview=0x20cf7f4 <sOriginalSpritePreview>,[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mpreview_pitch=320, preview_width=preview_width@entry=320, preview_height=preview_height@entry=240, origin_x=-70,[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1morigin_y=-75, results_wallpaper_combine=results_wallpaper_combine@entry=0) at[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mD:/Stuff/DevFolder/Smash64DS_Port/src/port/sprite_preview_backend.c:608 608                              dst_x <[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mdst_x_end; dst_x++) HARN=0x4841524e,163,22,21,0 SCENE=22,21,6 BUILD_MODE=0x43414e4f,0x53484950,0 VS_TRANS=0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mPV_TRANS=0,0 MAPS_TRANS=0,0,0 PREV_LOOP=0,0,0,0,0 GCRUNALL_LOOP=0,0,0,0,0,0,0 GCRUNALL_TASKMAN=0,56,0,0,0,56[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mNAT_MOTION=0,0,0,0,0,0,0,0,0,0,0 NAT_FIG=35,15,0,0 NAT_WAIT=0,0,0,0,0,0,0,0,0,0 NAT_WALK=0,0,0,0,0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mNAT_CHAIN=0,0,0,0,0,0,0,0,0,0,0,0 NAT_ATTACK=0,0,0,0,0,0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mNAT_MOVESET=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 NAT_HITBOX=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 NAT_HITLAG=0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mNAT_GUARD=0,0,0 BPLAY_GEOM=1,0x2307814,0x23097f4,0x23096e4,0x23096c8,0x2309698,0x2309624,0xfa,1,1,4,0,4,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mBPLAY_WALLPAPER=1,0x23358f8 GCRUNALL_RUN=0,0,0,0,0,0 GCRUNALL_PROCESS=0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mGCRUNALL_INPUT=0,0,0,0,0,0,0,0,0,0,0,0,0,0 GCRUNALL_STATUS=0,0,0,0,0,0,0,0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mGCRUNALL_VISITS=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 GCRUNALL_CALLS=0,0,0,0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mGCRUNALL_DRAW=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 GCRUNALL_SCREEN=0,0,0,0,0,0,0,0,0,0 GCRUNALL_MOVE=0,0,0,0,0,0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mGCRUNALL_TRANS=0,0,0,0,0,0,0,0,0 GCRUNALL_SAFE=0,0,0,0,0,0,0,0,0,0 PLATFORM_DL_PREVIEW=0,0,0,0 BOUNDARY=0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mLIVE_PAD=118,118,0x3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 PLATFORM_HW=55,55,730,2214,0x6000000,0x19[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mSTAGE_GCDRAWALL_HW=2310,10560,0,10560,0,1814,27,10285,0,0x4,64,64 RENDER_STAGE_CARRY=2310,2310,1760,1870,330,330,165[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mSTAGE_GCDRAWALL_HW_FTR=110,34430 FTR_DISPLAY_CONTRACT=1760,0,0,1760,0x222005,110,110,110,0,0xc2163aac,0x41de3d81,14,18[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mDLALL_SCREEN=0,0,0,0,0,0,0,0,0,0,0xc4aea000,0xc4aea000 RENDER_PROFILE=56,396864,25371264,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mRENDER_ORACLE=0,0,0 RENDER_MATRIX=0,0,4096,4096,4096,0,4096,4096,4096,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mRENDER_VERTEX=32767,-32768,32767,-32768,32767,-32768,32767,-32768,32767,-32768,32767,-32768,0 RENDER_CLIP=0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mRENDER_TEXTURE=0,0,0,0,0,0,0,0,32767,-32768,32767,-32768 RENDER_TEXUSE=0,0,0,0,0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mRENDER_TEXFMT=0x100,0x100,0x100,0,0 RENDER_TEXLANE=0,0,0,0,0,0,0[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mRENDER_COMBINE=3850,2424,34430,17545,38610,0xfc121824,0xff33ffff,0xfc127e24,0xfffff3f9,0xfcffffff,0xfffe7d3e,0xfc272c04,0x1f0c93ff RENDER_LIGHT=0,0,0 BPLAY_KO=0,0,0,0,0,0,0,0,0 BPLAY_STATUS=0,0,0,0,0,0,0,0,0,0 BPLAY_MAP=0,0,0,0,0,0,0,0,0,0,0,0,0,0 BPLAY_PACE=0x42505443,0,56,55,55,1461330688,12,12 MEMARENA=0,0,0,0,0,0,0,0,0,0,0 MEMRELOC=0,0,0,0,0,0,0,0,0,0 MEMEVICT=0,0 CPU_CONFIG=0,1,3,1,1,5,0,0 CPU_AI=1,2,56,56,0x4,0x1,0,27,0,0,0,0,0,0,0,1,10,0,0,0,4,-1397000,-1397000,-1397000,-1397000 IFHUD=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 PROJECTILE=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 REFLECTOR=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 SPECIALS=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 AUDIO_ASSET=0x41554431,0xff,8,0,0,0,4422960,0,16,47,380,7999,13366,1,42,117,32000,1,1,322,44100,100,464,695 AUDIO_BGM=0x42474d31,0x5,1,0,30720,1,0,1,0,0,0,0,1867776,65536,32768,56,0,56,1802240,44099,44100,0,55,34452,0,1,0,0,1470508544,1934996,0,4 [Inferior 1 (Remote target) detached][0m

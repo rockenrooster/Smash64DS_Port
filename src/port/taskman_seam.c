@@ -7130,6 +7130,10 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             }
             for (i = 0u; i < update_max; i++)
             {
+                u32 battle_status_before =
+                    ((is_battle_playable != 0u) &&
+                     (gSCManagerBattleState != NULL)) ?
+                        (u32)gSCManagerBattleState->game_status : 0xffffffffu;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
                 u32 input_start;
 
@@ -7151,6 +7155,15 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #endif
                 ndsRunMarioFoxProofUpdate(
                     &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+                if ((battle_status_before == nSCBattleGameStatusWait) &&
+                    (gSCManagerBattleState != NULL) &&
+                    (gSCManagerBattleState->game_status ==
+                     nSCBattleGameStatusGo))
+                {
+                    /* The imported countdown GObj performed the source
+                     * Wait->Go assignment. Arm before the first GO draw. */
+                    ndsRendererHardwareArmBattleStaticTextures();
+                }
 #if NDS_SCENE_MIP_CACHE_LAB
                 if ((is_battle_playable != 0u) &&
                     (use_realtime_presentation != 0u) &&

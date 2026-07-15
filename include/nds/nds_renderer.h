@@ -40,6 +40,7 @@
 #define NDS_RENDERER_FAST_RUN_NATIVE_FOX 6u
 #define NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS 7u
 #define NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION 8u
+#define NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE 9u
 
 #ifndef NDS_RENDERER_BENCHMARK_MODE
 #define NDS_RENDERER_BENCHMARK_MODE NDS_RENDERER_BENCHMARK_NONE
@@ -448,6 +449,38 @@ typedef struct NDSRendererNativeFighterRoot
     NDSRendererNativeFighterPreamble preamble;
 } NDSRendererNativeFighterRoot;
 
+/* Mode-7 laboratory candidate.  The adapter supplies exact BattleShip local
+ * matrices and live topology; the DS backend validates the complete owner
+ * before it mutates GX, then owns the hierarchy and direct corner stream. */
+typedef struct NDSRendererNativeFighterHierarchy
+{
+    const NDSRendererMatrix20p12 *projection;
+    const NDSRendererMatrix20p12 *camera_modelview;
+    const NDSRendererMatrix20p12 *joint_locals;
+    const u8 *joint_parents;
+    const u8 *joint_bindings;
+    const NDSRendererNativeFighterRoot *roots;
+    const NDSRendererConfig *config;
+    u32 joint_count;
+    u32 root_count;
+} NDSRendererNativeFighterHierarchy;
+
+#define NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT 4u
+#define NDS_RENDERER_NATIVE_STAGE_BINDING_COUNT 42u
+#define NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT 4u
+
+/* Mode-9 Dream Land owner input. The adapter owns these pointers only for the
+ * synchronous preflight call; the renderer copies every value needed by the
+ * eight later display-link commits before reporting success. */
+typedef struct NDSRendererNativeStageFrame
+{
+    const void *asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
+    const NDSRendererMatrix20p12 *projection;
+    const NDSRendererMatrix20p12 *binding_composed;
+    const NDSRendererNativeMaterial *materials;
+    const NDSRendererConfig *config;
+} NDSRendererNativeStageFrame;
+
 typedef struct NDSRendererStats
 {
     u32 blocker;
@@ -657,6 +690,19 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
     void *callback_user,
     NDSRendererStats *stats,
     u32 *out_hardware_started);
+s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
+    u32 slot,
+    const void *asset_base,
+    const NDSRendererNativeFighterHierarchy *hierarchy,
+    NDSRendererCommandCallback callback,
+    void *callback_user,
+    NDSRendererStats *stats,
+    u32 *out_hardware_started);
+s32 ndsRendererPrepareNativeStageOwner(
+    const NDSRendererNativeStageFrame *frame,
+    NDSRendererStats *stats);
+s32 ndsRendererCommitNativeStageSegment(u32 segment_index);
+void ndsRendererFinishNativeStageOwner(void);
 s32 ndsRendererBeginNativeFighterOwner(
     u32 slot,
     NDSRendererStats *stats,
@@ -685,9 +731,12 @@ void ndsRendererProfileCensusNativeFighterSchedule(
 #endif
 void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareDiscardTextureCache(void);
+s32 ndsRendererHardwarePrepareBattleStaticTextures(void);
+void ndsRendererHardwareArmBattleStaticTextures(void);
+void ndsRendererHardwareDiscardBattleStaticTextures(void);
 s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
-                                            const u16 *mip1,
-                                            const u16 *mip2);
+                                             const u16 *mip1,
+                                             const u16 *mip2);
 s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
                                           const s32 *tex_s_q4,
                                           const s32 *tex_t_q4,
@@ -712,6 +761,53 @@ extern volatile u32 gNdsRendererFastTriangleCount;
 extern volatile u32 gNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 extern volatile u32 gNdsRendererFastFallbackCount[3];
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+extern volatile u32 gNdsRendererM3PreflightAttemptCount;
+extern volatile u32 gNdsRendererM3PreflightSuccessCount;
+extern volatile u32 gNdsRendererM3PreflightFallbackCount;
+extern volatile u32 gNdsRendererM3SegmentCount;
+extern volatile u32 gNdsRendererM3SegmentMask;
+extern volatile u32 gNdsRendererM3PostArmFailureCount;
+extern volatile u32 gNdsRendererM3DObjCount;
+extern volatile u32 gNdsRendererM3BindingCount;
+extern volatile u32 gNdsRendererM3RunCount;
+extern volatile u32 gNdsRendererM3TriangleCount;
+extern volatile u32 gNdsRendererM3ResidentEpochCount;
+extern volatile u32 gNdsRendererM3MaterialShadowCount;
+extern volatile u32 gNdsRendererM3MaterialCommitCount;
+extern volatile u32 gNdsRendererM3CrossRunCount;
+extern volatile u32 gNdsRendererM3CrossTriangleCount;
+extern volatile u32 gNdsRendererM3CrossForeignCornerCount;
+#endif
+extern volatile u32 gNdsRendererBattleStaticTextureEnabled;
+extern volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
+extern volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
+extern volatile u32 gNdsRendererBattleStaticTexturePreparedCount;
+extern volatile u32 gNdsRendererBattleStaticTexturePreparedBytes;
+extern volatile u32 gNdsRendererBattleStaticTextureArmCount;
+extern volatile u32 gNdsRendererBattleStaticTexturePinnedHitCount;
+extern volatile u32 gNdsRendererBattleStaticTextureSeenMask;
+extern volatile u32 gNdsRendererBattleStaticTextureOwnerMask;
+extern volatile u32 gNdsRendererBattleStaticTextureViolationCount;
+extern volatile u32 gNdsRendererBattleStaticTextureTeardownCount;
+typedef enum NDSRendererBattleTextureFenceClass
+{
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_CONVERT = 0,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_PALETTE_DECODE,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_ALLOC,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_FILE_IO,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_CREATE,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_UPLOAD,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_DELETE,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_EVICT,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_REPLACE_REFRESH,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_MANIFEST_FALLBACK,
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_COUNT
+} NDSRendererBattleTextureFenceClass;
+extern volatile u32 gNdsRendererBattleTextureFenceCounts[
+    NDS_RENDERER_BATTLE_TEXTURE_FENCE_COUNT];
+extern volatile u32 gNdsRendererBattleTextureFenceFirstClassPlus1;
+extern volatile u32 gNdsRendererBattleTextureFenceFirstFrame;
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner);
 #endif

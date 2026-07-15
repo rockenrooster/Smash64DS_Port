@@ -1,0 +1,68 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+battleship_mnstartup.c
+nds_renderer.c
+battleship_mvopeningmario.c
+scene_backend.c
+nds_platform.c
+battleship_mvopeningroom.c
+battleship_mvopeningdonkey.c
+battleship_mvopeninglink.c
+battleship_sys_taskman.c
+battleship_mvopeningportraits.c
+battleship_sys_objhelper.c
+battleship_mvopeningsamus.c
+battleship_mvopeningkirby.c
+battleship_mvopeningyoshi.c
+battleship_mvopeningfox.c
+battleship_mvopeningpikachu.c
+battleship_mnmaps.c
+battleship_mntitle.c
+battleship_mnplayersvs.c
+battleship_mnvsmode.c
+battleship_scvsbattle.c
+battleship_grpupupu_ground.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_run.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_pass.c
+battleship_ftcomputer.c
+battleship_mnvsresults.c
+battleship_mario_fireball.c
+battleship_fox_reflector.c
+battleship_fox_blaster.c
+battleship_ifcommon.c
+linking smash64ds-battle-playable-canonical-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-canonical-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+[33;1mWARNING: battle_playable Pupupu realtime HW textured perf below 60fps target: fps=25/25 x0.1; renderer-cache follow-up still required.[0m
+battle_playable Pupupu realtime pacing smoke passed: frames=101 fps=25/25 ticks=1310302656 gxram=728/2206 gxstat=0x6000000/ctrl=0x19 ftrContract=3246/3232/geom0x222005/light203/203/bounds203/0 oracle=995/0/0 mtx=load1/scale0/p4096,4096,4096,0/mv4096,4096,4096,0,0,0 vraw=32767..-32768/32767..-32768/32767..-32768 vhw=-3788..7960/-7827..9017/9..3685 clip=0 texProof=69670/207178/753 sample=204/753/753 alias=42 st=-480..6159/-63..2064 texUse=0/53/0/0/31/impl31/first0x2/flags0x1/w0xfcffffff/w1xfffe7d3e/geom0x604 texFmt=conv0x100/bind0x100/pal0x100/rej0x0/why0x0 texLane=layout0x2/byte251/half251/bFmt0x100/hFmt0x400/bMap0x10203/hMap0x2030001 stageCarry=4284/4284/tex3264/tile3468/short612/612/seg306 combine=7103/4455/lit63369/mat32270/proj71121 light=0/0/858 profile=present12492352/draw0/stage3500032/mat7680/dl3408704/tex316224/conv0/upload0 texUploads=0/0 binds=38 vtx=1005 tri=335 cpu=setup1/proc102/target102/stick73/obj0x4
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_early_124113_next.png (488x675)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_early_124113.png (488x675)
+Top screen visible: 35270/49152 different pixels (71.757%).
+Top screen green content: 17494/49152 dominant-green pixels (35.592%).
+Top screen detail content: 17666/49152 non-white/non-green pixels (35.942%).
+Top-screen required region detail: 2191/5616 pixels (39.014%).
+Top-screen fighter-region color: 786/5616 pixels (13.996%).
+Top screen delta: 1422/49152 changed pixels (2.893%).
+Region left_bush: non-clear=432/3000 (14.400%) green=68/3000 (2.267%) detail=359/3000 (11.967%) fighter=211/3000 (7.033%) changed=0/3000 (0.000%)
+Region right_bush: non-clear=3250/3250 (100.000%) green=919/3250 (28.277%) detail=2329/3250 (71.662%) fighter=1625/3250 (50.000%) changed=4/3250 (0.123%)
+Region fighter_center: non-clear=2977/4225 (70.462%) green=1320/4225 (31.243%) detail=1647/4225 (38.982%) fighter=761/4225 (18.012%) changed=173/4225 (4.095%)
+Region stage_body: non-clear=5059/7650 (66.131%) green=2912/7650 (38.065%) detail=2143/7650 (28.013%) fighter=1813/7650 (23.699%) changed=44/7650 (0.575%)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_late_124113_next.png (488x675)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-07-09_iter4_canonical_late_124113.png (488x675)
+Top screen visible: 35270/49152 different pixels (71.757%).
+Top screen green content: 17494/49152 dominant-green pixels (35.592%).
+Top screen detail content: 17666/49152 non-white/non-green pixels (35.942%).
+Top screen delta: 1422/49152 changed pixels (2.893%).
+Region left_bush: non-clear=432/3000 (14.400%) green=68/3000 (2.267%) detail=359/3000 (11.967%) fighter=211/3000 (7.033%) changed=0/3000 (0.000%)
+Region right_bush: non-clear=3250/3250 (100.000%) green=919/3250 (28.277%) detail=2329/3250 (71.662%) fighter=1625/3250 (50.000%) changed=4/3250 (0.123%)
+Region fighter_center: non-clear=2977/4225 (70.462%) green=1320/4225 (31.243%) detail=1647/4225 (38.982%) fighter=761/4225 (18.012%) changed=173/4225 (4.095%)
+Region stage_body: non-clear=5059/7650 (66.131%) green=2912/7650 (38.065%) detail=2143/7650 (28.013%) fighter=1813/7650 (23.699%) changed=44/7650 (0.575%)

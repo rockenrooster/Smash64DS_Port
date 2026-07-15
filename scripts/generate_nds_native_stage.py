@@ -43,10 +43,20 @@ EXPECTED_RUNS = 54
 EXPECTED_TEXTURE_EPOCHS = 49
 EXPECTED_MATERIAL_EVENTS = 4
 EXPECTED_SUBMIT_CLASSES = (66, 126, 10)
+EXPECTED_PROJECTED_CROSS_MATRIX_RUNS = 5
+EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES = 10
+EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS = 15
+EXPECTED_STATE_EVENTS = 423
+EXPECTED_STATE_DELTAS = 148
+EXPECTED_SYNC_EVENTS = 223
+EXPECTED_STATE_SPANS = EXPECTED_RUNS + EXPECTED_BINDINGS
+
+PRODUCTION_PACKET_ABI = 0x4D335031
+PRODUCTION_SYMBOL_BYTES = 4
 
 # Filled after the first independently checked generation.  Keeping the
 # packet hash outside the generated file avoids a self-referential checksum.
-EXPECTED_INCLUDE_SHA256 = "e37b0a99f2520003d43ad7ee6b76d5e0e12687b287618d3d2093366d52328eac"
+EXPECTED_INCLUDE_SHA256 = "249fae872c7fad05e958f41908956ceb9fae2eea2d4d0c04a569579bff923f65"
 
 INVALID_U8 = 0xFF
 INVALID_U16 = 0xFFFF
@@ -85,6 +95,8 @@ SUBMIT_RAW_CURRENT = 0
 SUBMIT_PROJECTED_NO_Z = 3
 SUBMIT_PROJECTED_RANGE_OR_MATRIX = 6
 
+RUN_FLAG_PROJECTED_CROSS_MATRIX = 1 << 0
+
 MOBJ_FLAG_ALPHA = 1 << 0
 MOBJ_FLAG_SPLIT = 1 << 1
 MOBJ_FLAG_PALETTE = 1 << 2
@@ -117,6 +129,21 @@ TEXTURE_INVALIDATING_OPS = frozenset(
         OP_SETPRIMCOLOR,
     )
 )
+
+SYNC_OPS = frozenset((OP_RDPLOADSYNC, OP_RDPPIPESYNC, OP_RDPTILESYNC))
+
+STATE_EFFECT_OTHERMODE = 2
+STATE_EFFECT_COMBINE = 3
+STATE_EFFECT_TEXTURE = 4
+STATE_EFFECT_GEOMETRY = 5
+STATE_EFFECT_IMAGE = 6
+STATE_EFFECT_TILE = 7
+STATE_EFFECT_LOAD_TLUT = 8
+STATE_EFFECT_LOAD_BLOCK = 9
+STATE_EFFECT_TILE_SIZE = 10
+STATE_EFFECT_PRIM = 11
+STATE_EFFECT_BLEND = 12
+STATE_EFFECT_MATERIAL = 13
 
 STATE_OPS = frozenset(
     (
@@ -571,6 +598,23 @@ class StatePolicy:
 
 
 @dataclass(frozen=True)
+class StateDelta:
+    w0: int
+    w1: int
+    effect: int
+    asset_index: int
+    material_event: int
+    material_command: int
+
+
+@dataclass(frozen=True)
+class StateSpan:
+    first_state: int
+    state_count: int
+    sync_count: int
+
+
+@dataclass(frozen=True)
 class Packet:
     assets: tuple[StageAsset, ...]
     segments: tuple[StageSegment, ...]
@@ -582,6 +626,9 @@ class Packet:
     epochs: tuple[TextureEpoch, ...]
     materials: tuple[MaterialEvent, ...]
     policies: tuple[StatePolicy, ...]
+    state_deltas: tuple[StateDelta, ...]
+    state_sequence: tuple[int, ...]
+    state_spans: tuple[StateSpan, ...]
     source_command_count: int
     vertex_command_count: int
     triangle_command_count: int
@@ -598,6 +645,10 @@ class Packet:
             + len(self.epochs) * 8
             + len(self.materials) * 12
             + len(self.policies) * 28
+            + len(self.state_deltas) * 12
+            + len(self.state_sequence)
+            + len(self.state_spans) * 4
+            + PRODUCTION_SYMBOL_BYTES
         )
 
 
@@ -835,6 +886,108 @@ def apply_othermode(current: int, op: int, w0: int, w1: int) -> int:
     return (current & ~mask) | (w1 & mask)
 
 
+def state_effect(op: int) -> int:
+    effects = {
+        OP_SETOTHERMODE_H: STATE_EFFECT_OTHERMODE,
+        OP_SETOTHERMODE_L: STATE_EFFECT_OTHERMODE,
+        OP_RDPSETOTHERMODE: STATE_EFFECT_OTHERMODE,
+        OP_SETCOMBINE: STATE_EFFECT_COMBINE,
+        OP_TEXTURE: STATE_EFFECT_TEXTURE,
+        OP_GEOMETRYMODE: STATE_EFFECT_GEOMETRY,
+        OP_SETTIMG: STATE_EFFECT_IMAGE,
+        OP_SETTILE: STATE_EFFECT_TILE,
+        OP_LOADTLUT: STATE_EFFECT_LOAD_TLUT,
+        OP_LOADBLOCK: STATE_EFFECT_LOAD_BLOCK,
+        OP_SETTILESIZE: STATE_EFFECT_TILE_SIZE,
+        OP_SETPRIMCOLOR: STATE_EFFECT_PRIM,
+        OP_SETBLENDCOLOR: STATE_EFFECT_BLEND,
+    }
+    try:
+        return effects[op]
+    except KeyError as exc:
+        raise falsify(f"unsupported executable state opcode 0x{op:02x}") from exc
+
+
+def compile_state_delta(
+    resource: O2RResource,
+    event: CommandEvent,
+    asset_index: dict[int, int],
+) -> StateDelta:
+    if event.material_event != INVALID_U8:
+        return StateDelta(
+            event.w0,
+            event.w1,
+            STATE_EFFECT_MATERIAL,
+            INVALID_U8,
+            event.material_event,
+            event.material_command,
+        )
+    ref = resource.pointer_at(event.source_offset + 4)
+    if ref is not None:
+        if event.op != OP_SETTIMG or ref.asset_id not in asset_index:
+            raise falsify(
+                f"asset {resource.file_id}: unsupported state pointer "
+                f"for opcode 0x{event.op:02x}"
+            )
+        resolved_w1 = ref.offset
+        resolved_asset = asset_index[ref.asset_id]
+    else:
+        resolved_w1 = event.w1
+        resolved_asset = INVALID_U8
+    return StateDelta(
+        event.w0,
+        resolved_w1,
+        state_effect(event.op),
+        resolved_asset,
+        INVALID_U8,
+        INVALID_U8,
+    )
+
+
+def apply_state_words(state: SourceState, op: int, w0: int, w1: int) -> None:
+    if op == OP_GEOMETRYMODE:
+        state.geometry_mode = (state.geometry_mode & w0) | w1
+    elif op == OP_SETCOMBINE:
+        state.combine_w0 = w0
+        state.combine_w1 = w1
+    elif op == OP_RDPSETOTHERMODE:
+        state.othermode_h = w0 & 0xFFFFFF
+        state.othermode_l = w1
+    elif op == OP_SETOTHERMODE_H:
+        state.othermode_h = apply_othermode(state.othermode_h, op, w0, w1)
+    elif op == OP_SETOTHERMODE_L:
+        state.othermode_l = apply_othermode(state.othermode_l, op, w0, w1)
+
+
+def apply_compiled_state_delta(
+    assets: Sequence[StageAsset], state: SourceState, delta: StateDelta
+) -> None:
+    op = delta.w0 >> 24
+    if delta.material_event != INVALID_U8:
+        normalized = (
+            0x4D415433,
+            delta.material_event,
+            delta.material_command,
+            op,
+        )
+    elif delta.asset_index != INVALID_U8:
+        if delta.asset_index >= len(assets):
+            raise falsify("compiled state delta asset index is out of range")
+        normalized = (
+            op,
+            delta.w0,
+            assets[delta.asset_index].asset_id,
+            delta.w1,
+        )
+    else:
+        normalized = (op, delta.w0, delta.w1)
+    state.state_hash = fnv1a_u32(normalized, state.state_hash)
+    if op in TEXTURE_INVALIDATING_OPS:
+        state.texture_hash = fnv1a_u32(normalized, state.texture_hash)
+    if delta.material_event == INVALID_U8:
+        apply_state_words(state, op, delta.w0, delta.w1)
+
+
 def normalized_event_words(
     resource: O2RResource, event: CommandEvent
 ) -> tuple[int, ...]:
@@ -865,22 +1018,7 @@ def apply_source_state(
         )
     if event.material_event != INVALID_U8:
         return
-    if op == OP_GEOMETRYMODE:
-        state.geometry_mode = (state.geometry_mode & event.w0) | event.w1
-    elif op == OP_SETCOMBINE:
-        state.combine_w0 = event.w0
-        state.combine_w1 = event.w1
-    elif op == OP_RDPSETOTHERMODE:
-        state.othermode_h = event.w0 & 0xFFFFFF
-        state.othermode_l = event.w1
-    elif op == OP_SETOTHERMODE_H:
-        state.othermode_h = apply_othermode(
-            state.othermode_h, op, event.w0, event.w1
-        )
-    elif op == OP_SETOTHERMODE_L:
-        state.othermode_l = apply_othermode(
-            state.othermode_l, op, event.w0, event.w1
-        )
+    apply_state_words(state, op, event.w0, event.w1)
 
 
 def walk_display_list(
@@ -1065,6 +1203,11 @@ def generate(repo_root: Path) -> Packet:
     epochs: list[TextureEpoch] = []
     policies: list[StatePolicy] = []
     policy_lookup: dict[StatePolicy, int] = {}
+    state_deltas: list[StateDelta] = []
+    state_delta_lookup: dict[StateDelta, int] = {}
+    state_sequence: list[int] = []
+    run_state_spans: list[StateSpan] = []
+    tail_state_spans: list[StateSpan] = []
     source_command_total = 0
     vertex_command_total = 0
     triangle_command_total = 0
@@ -1106,6 +1249,8 @@ def generate(repo_root: Path) -> Packet:
             triangle_count = 0
             modify_vertex_commands = 0
             material_seen = INVALID_U8
+            pending_state_first = len(state_sequence)
+            pending_sync_count = 0
 
             def finish_run() -> None:
                 nonlocal current_run
@@ -1148,9 +1293,12 @@ def generate(repo_root: Path) -> Packet:
                         run_epoch,
                         run_class,
                         policy_index,
-                        0,
+                        int(current_run["flags"]),
                     )
                 )
+                span = current_run["state_span"]
+                assert isinstance(span, StateSpan)
+                run_state_spans.append(span)
                 current_run = None
 
             for event in events:
@@ -1159,6 +1307,18 @@ def generate(repo_root: Path) -> Packet:
                     finish_run()
                 if event.material_event != INVALID_U8:
                     material_seen = event.material_event
+                if op in STATE_OPS or event.material_event != INVALID_U8:
+                    delta = compile_state_delta(resource, event, asset_index)
+                    delta_index = state_delta_lookup.get(delta)
+                    if delta_index is None:
+                        delta_index = len(state_deltas)
+                        if delta_index > 0xFF:
+                            raise falsify("state-delta table exceeds u8 index")
+                        state_delta_lookup[delta] = delta_index
+                        state_deltas.append(delta)
+                    state_sequence.append(delta_index)
+                elif op in SYNC_OPS:
+                    pending_sync_count += 1
                 apply_source_state(resource, state, event)
                 if op in TEXTURE_INVALIDATING_OPS:
                     texture_prepare_valid = False
@@ -1251,7 +1411,15 @@ def generate(repo_root: Path) -> Packet:
                             "triangles": 0,
                             "epoch": current_epoch,
                             "classes": set(),
+                            "flags": 0,
+                            "state_span": StateSpan(
+                                pending_state_first,
+                                len(state_sequence) - pending_state_first,
+                                pending_sync_count,
+                            ),
                         }
+                        pending_state_first = len(state_sequence)
+                        pending_sync_count = 0
                     triangle_commands += 1
                     for indices in decode_triangles(op, event.w0, event.w1):
                         dense_indices = []
@@ -1283,10 +1451,25 @@ def generate(repo_root: Path) -> Packet:
                         classes = current_run["classes"]
                         assert isinstance(classes, set)
                         classes.add(submit_class)
+                        if any(
+                            vertices[dense_index].matrix_binding != binding_index
+                            for dense_index in dense_indices
+                        ):
+                            current_run["flags"] = (
+                                int(current_run["flags"])
+                                | RUN_FLAG_PROJECTED_CROSS_MATRIX
+                            )
                         corners.extend(dense_indices)
                         current_run["triangles"] = int(current_run["triangles"]) + 1
                         triangle_count += 1
             finish_run()
+            tail_state_spans.append(
+                StateSpan(
+                    pending_state_first,
+                    len(state_sequence) - pending_state_first,
+                    pending_sync_count,
+                )
+            )
 
             binding_run_count = len(runs) - binding_first_run
             binding_epoch_count = len(epochs) - first_epoch
@@ -1340,6 +1523,9 @@ def generate(repo_root: Path) -> Packet:
         tuple(epochs),
         materials,
         tuple(policies),
+        tuple(state_deltas),
+        tuple(state_sequence),
+        tuple(run_state_spans + tail_state_spans),
         source_command_total,
         vertex_command_total,
         triangle_command_total,
@@ -1427,10 +1613,30 @@ def validate_packet(packet: Packet) -> None:
         10,
     ):
         raise falsify("material event command partition changed")
+    state_counts = (
+        len(packet.state_deltas),
+        len(packet.state_sequence),
+        len(packet.state_spans),
+        sum(span.sync_count for span in packet.state_spans),
+    )
+    expected_state_counts = (
+        EXPECTED_STATE_DELTAS,
+        EXPECTED_STATE_EVENTS,
+        EXPECTED_STATE_SPANS,
+        EXPECTED_SYNC_EVENTS,
+    )
+    if state_counts != expected_state_counts:
+        raise falsify(
+            f"state packet counts {state_counts} != {expected_state_counts}"
+        )
     if packet.slab_bytes() > MAX_SLAB_BYTES:
         raise falsify(
             f"const slab {packet.slab_bytes()} exceeds {MAX_SLAB_BYTES} bytes"
         )
+    cross_matrix_runs = 0
+    cross_matrix_triangles = 0
+    cross_matrix_foreign_corners = 0
+    raw_cross_matrix_triangles = 0
     for binding_index, binding in enumerate(packet.bindings):
         if binding.first_run + binding.run_count > len(packet.runs):
             raise falsify(f"binding {binding_index}: run span is out of range")
@@ -1443,19 +1649,145 @@ def validate_packet(packet: Packet) -> None:
                 raise falsify(f"binding {binding_index}: noncontiguous run ownership")
             if run.first_corner + run.triangle_count * 3 > len(packet.corners):
                 raise falsify(f"binding {binding_index}: run corner span is invalid")
-            for dense_index in packet.corners[
+            run_corners = packet.corners[
                 run.first_corner : run.first_corner + run.triangle_count * 3
-            ]:
-                if dense_index >= len(packet.vertices):
-                    raise falsify(f"binding {binding_index}: corner is out of range")
-                matrix_binding = packet.vertices[dense_index].matrix_binding
-                if matrix_binding > binding_index:
+            ]
+            run_cross_matrix_triangles = 0
+            run_foreign_corners = 0
+            for first_corner in range(0, len(run_corners), 3):
+                triangle_crosses_matrix = False
+                for dense_index in run_corners[first_corner : first_corner + 3]:
+                    if dense_index >= len(packet.vertices):
+                        raise falsify(
+                            f"binding {binding_index}: corner is out of range"
+                        )
+                    matrix_binding = packet.vertices[dense_index].matrix_binding
+                    if matrix_binding > binding_index:
+                        raise falsify(
+                            f"binding {binding_index}: vertex depends on future matrix "
+                            f"binding {matrix_binding}"
+                        )
+                    if matrix_binding != binding_index:
+                        triangle_crosses_matrix = True
+                        run_foreign_corners += 1
+                if triangle_crosses_matrix:
+                    run_cross_matrix_triangles += 1
+                    if run.submit_class == SUBMIT_RAW_CURRENT:
+                        raw_cross_matrix_triangles += 1
+
+            unknown_flags = run.flags & ~RUN_FLAG_PROJECTED_CROSS_MATRIX
+            if unknown_flags:
+                raise falsify(
+                    f"binding {binding_index}: run has unknown flags 0x{unknown_flags:02x}"
+                )
+            marked_cross_matrix = (
+                run.flags & RUN_FLAG_PROJECTED_CROSS_MATRIX
+            ) != 0
+            if marked_cross_matrix != (run_cross_matrix_triangles != 0):
+                raise falsify(
+                    f"binding {binding_index}: cross-matrix run flag disagrees with vertices"
+                )
+            if marked_cross_matrix:
+                if run.submit_class != SUBMIT_PROJECTED_NO_Z:
                     raise falsify(
-                        f"binding {binding_index}: vertex depends on future matrix "
-                        f"binding {matrix_binding}"
+                        f"binding {binding_index}: cross-matrix run is not projected/no-Z"
                     )
+                if run_cross_matrix_triangles != run.triangle_count:
+                    raise falsify(
+                        f"binding {binding_index}: cross-matrix run mixes triangle owners"
+                    )
+                cross_matrix_runs += 1
+                cross_matrix_triangles += run_cross_matrix_triangles
+                cross_matrix_foreign_corners += run_foreign_corners
+    cross_matrix_counts = (
+        cross_matrix_runs,
+        cross_matrix_triangles,
+        cross_matrix_foreign_corners,
+        raw_cross_matrix_triangles,
+    )
+    expected_cross_matrix_counts = (
+        EXPECTED_PROJECTED_CROSS_MATRIX_RUNS,
+        EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES,
+        EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS,
+        0,
+    )
+    if cross_matrix_counts != expected_cross_matrix_counts:
+        raise falsify(
+            f"cross-matrix counts {cross_matrix_counts} != "
+            f"{expected_cross_matrix_counts}"
+        )
     if any(epoch.policy_index >= len(packet.policies) for epoch in packet.epochs):
         raise falsify("texture epoch has no compiled state policy")
+    if any(index >= len(packet.state_deltas) for index in packet.state_sequence):
+        raise falsify("state sequence references an absent delta")
+
+    valid_effects = {
+        STATE_EFFECT_OTHERMODE,
+        STATE_EFFECT_COMBINE,
+        STATE_EFFECT_TEXTURE,
+        STATE_EFFECT_GEOMETRY,
+        STATE_EFFECT_IMAGE,
+        STATE_EFFECT_TILE,
+        STATE_EFFECT_LOAD_TLUT,
+        STATE_EFFECT_LOAD_BLOCK,
+        STATE_EFFECT_TILE_SIZE,
+        STATE_EFFECT_PRIM,
+        STATE_EFFECT_BLEND,
+        STATE_EFFECT_MATERIAL,
+    }
+    for index, delta in enumerate(packet.state_deltas):
+        op = delta.w0 >> 24
+        if delta.effect not in valid_effects:
+            raise falsify(f"state delta {index}: unsupported effect")
+        if delta.effect == STATE_EFFECT_MATERIAL:
+            if delta.material_event >= len(packet.materials):
+                raise falsify(f"state delta {index}: material is out of range")
+            material = packet.materials[delta.material_event]
+            if (
+                delta.material_command >= len(material.opcodes)
+                or material.opcodes[delta.material_command] != op
+                or delta.asset_index != INVALID_U8
+            ):
+                raise falsify(f"state delta {index}: material command changed")
+        else:
+            if (
+                delta.effect != state_effect(op)
+                or delta.material_event != INVALID_U8
+                or delta.material_command != INVALID_U8
+            ):
+                raise falsify(f"state delta {index}: static command changed")
+            if delta.effect == STATE_EFFECT_IMAGE:
+                if delta.asset_index >= len(packet.assets):
+                    raise falsify(f"state delta {index}: image asset is out of range")
+            elif delta.asset_index != INVALID_U8:
+                raise falsify(f"state delta {index}: unexpected asset binding")
+
+    state_cursor = 0
+    for binding_index, binding in enumerate(packet.bindings):
+        for run_index in range(
+            binding.first_run, binding.first_run + binding.run_count
+        ):
+            span = packet.state_spans[run_index]
+            if span.first_state != state_cursor:
+                raise falsify(
+                    f"binding {binding_index}: run state span is not contiguous"
+                )
+            state_cursor += span.state_count
+        tail = packet.state_spans[len(packet.runs) + binding_index]
+        if tail.first_state != state_cursor:
+            raise falsify(
+                f"binding {binding_index}: tail state span is not contiguous"
+            )
+        state_cursor += tail.state_count
+    if state_cursor != len(packet.state_sequence):
+        raise falsify("state spans do not consume the complete sequence")
+    if any(
+        span.state_count > 0xFF
+        or span.sync_count > 0xFF
+        or span.first_state + span.state_count > len(packet.state_sequence)
+        for span in packet.state_spans
+    ):
+        raise falsify("state span exceeds its compact ABI")
 
 
 def c_u8(value: int) -> str:
@@ -1480,7 +1812,7 @@ def render_rows(type_name: str, array_name: str, rows: Sequence[str]) -> list[st
 def render_include(packet: Packet) -> bytes:
     lines = [
         "/* Generated by scripts/generate_nds_native_stage.py.  Do not edit. */",
-        "/* Host-exact transaction data only; no runtime path is enabled here. */",
+        "/* Production-linkable packet; runtime selection remains external. */",
         "",
         f"#define NDS_NATIVE_STAGE_ASSET_COUNT {len(packet.assets)}u",
         f"#define NDS_NATIVE_STAGE_SEGMENT_COUNT {len(packet.segments)}u",
@@ -1500,7 +1832,12 @@ def render_include(packet: Packet) -> bytes:
         f"#define NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT {len(packet.epochs)}u",
         f"#define NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT {len(packet.materials)}u",
         f"#define NDS_NATIVE_STAGE_STATE_POLICY_COUNT {len(packet.policies)}u",
+        f"#define NDS_NATIVE_STAGE_STATE_DELTA_COUNT {len(packet.state_deltas)}u",
+        f"#define NDS_NATIVE_STAGE_STATE_SEQUENCE_COUNT {len(packet.state_sequence)}u",
+        f"#define NDS_NATIVE_STAGE_STATE_SPAN_COUNT {len(packet.state_spans)}u",
         f"#define NDS_NATIVE_STAGE_SLAB_BYTES {packet.slab_bytes()}u",
+        f"#define NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI {c_u32(PRODUCTION_PACKET_ABI)}",
+        "#define NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX (1u << 0)",
         "",
         "typedef struct NDSNativeStageAsset {",
         "    u32 asset_id;",
@@ -1597,6 +1934,21 @@ def render_include(packet: Packet) -> bytes:
         "    u32 geometry_mode;",
         "} NDSNativeStageStatePolicy;",
         "",
+        "typedef struct NDSNativeStageStateDelta {",
+        "    u32 w0;",
+        "    u32 w1;",
+        "    u8 effect;",
+        "    u8 asset_index;",
+        "    u8 material_event;",
+        "    u8 material_command;",
+        "} NDSNativeStageStateDelta;",
+        "",
+        "typedef struct NDSNativeStageStateSpan {",
+        "    u16 first_state;",
+        "    u8 state_count;",
+        "    u8 sync_count;",
+        "} NDSNativeStageStateSpan;",
+        "",
         '_Static_assert(sizeof(NDSNativeStageAsset) == 16u, "stage asset ABI");',
         '_Static_assert(sizeof(NDSNativeStageSegment) == 12u, "stage segment ABI");',
         '_Static_assert(sizeof(NDSNativeStageDObj) == 12u, "stage DObj ABI");',
@@ -1606,6 +1958,8 @@ def render_include(packet: Packet) -> bytes:
         '_Static_assert(sizeof(NDSNativeStageTextureEpoch) == 8u, "stage epoch ABI");',
         '_Static_assert(sizeof(NDSNativeStageMaterialEvent) == 12u, "stage material ABI");',
         '_Static_assert(sizeof(NDSNativeStageStatePolicy) == 28u, "stage policy ABI");',
+        '_Static_assert(sizeof(NDSNativeStageStateDelta) == 12u, "stage state delta ABI");',
+        '_Static_assert(sizeof(NDSNativeStageStateSpan) == 4u, "stage state span ABI");',
         '_Static_assert(NDS_NATIVE_STAGE_SLAB_BYTES <= 16384u, "stage slab exceeds 16 KiB");',
         "",
     ]
@@ -1822,6 +2176,59 @@ def render_include(packet: Packet) -> bytes:
             ],
         )
     )
+    lines.extend(
+        render_rows(
+            "NDSNativeStageStateDelta",
+            "sNdsNativeStageStateDeltas",
+            [
+                "{ "
+                + ", ".join(
+                    (
+                        c_u32(row.w0),
+                        c_u32(row.w1),
+                        c_u8(row.effect),
+                        c_u8(row.asset_index),
+                        c_u8(row.material_event),
+                        c_u8(row.material_command),
+                    )
+                )
+                + " }"
+                for row in packet.state_deltas
+            ],
+        )
+    )
+    lines.extend(
+        render_rows(
+            "u8",
+            "sNdsNativeStageStateSequence",
+            [c_u8(index) for index in packet.state_sequence],
+        )
+    )
+    lines.extend(
+        render_rows(
+            "NDSNativeStageStateSpan",
+            "sNdsNativeStageStateSpans",
+            [
+                "{ "
+                + ", ".join(
+                    (
+                        c_u16(row.first_state),
+                        c_u8(row.state_count),
+                        c_u8(row.sync_count),
+                    )
+                )
+                + " }"
+                for row in packet.state_spans
+            ],
+        )
+    )
+    lines.extend(
+        (
+            "const u32 gNdsNativeStageProductionPacketABI =",
+            "    NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI;",
+            "",
+        )
+    )
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
@@ -1883,7 +2290,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"source_vertices={sum(row.source_vertex_count for row in packet.bindings)} "
         f"dense_vertices={len(packet.vertices)} runs={len(packet.runs)} "
         f"epochs={len(packet.epochs)} triangles={len(packet.corners) // 3} "
-        f"policies={len(packet.policies)} slab_bytes={packet.slab_bytes()} "
+        f"policies={len(packet.policies)} state_deltas={len(packet.state_deltas)} "
+        f"state_events={len(packet.state_sequence)} "
+        f"state_spans={len(packet.state_spans)} slab_bytes={packet.slab_bytes()} "
         f"sha256={rendered_hash}"
     )
     return 0

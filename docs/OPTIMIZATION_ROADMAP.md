@@ -19,27 +19,28 @@ The current user-facing artifact is:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,368,768 bytes
-SHA-256 F8EFEE10ED15457CD79A9B71B9766B5247BE870C332FB12316431F8301A0A94A
+SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
 ```
 
 The canonical and shipped copies match byte-for-byte. Refresh this identity
 after the final build; compilation alone never proves a milestone.
 
-The latest focused M2 A/B/A used profile-1 ROM `03950839...BEEF09B`, frames
-600–607 / logic 209–216, and reported about 10.1–10.2 FPS. It is laboratory
-evidence, not a canonical artifact. After rejecting and removing the treatment,
-the profile-1 rebuild is `0192BAFF...AE5E9`; neither laboratory ROM is shipped.
-The current profile-0 ROM above was rebuilt and recaptured at exact completed
-frames 438/439. Gameplay still reports two uploads / 36,864 bytes.
+The current clean profile-1 Mode-8 baseline is ROM
+`3F0ADCF3...A8287475`, frames 600–607 / logic 209–216. It measures
+Mario+Fox 188,352+223,872 = 412,224 ticks, stage 804,032, draw 1,575,392,
+present 1,993,632, and a 17.2 FPS smoke marker. It is laboratory evidence,
+not a canonical artifact. The current profile-0 ROM above was rebuilt and
+recaptured at exact completed frames 438/439. Gameplay still reports two
+uploads / 36,864 bytes.
 
 ## Milestones
 
 | Milestone | State | Measured boundary / target |
 |---|---|---:|
 | M1 — simple hardware-affine BG2 | Complete | 1,856/1,856 ticks; beats the ≤35K ceiling |
-| M2 — AOT DS-native Mario/Fox | In progress | ledger-off 431,168/458,688; evidence supports 50–75K first cut; target 170–250K |
-| M3 — AOT DS-native complete stage | Strict slab falsifier specified | 800,608/803,456; target 150–250K |
-| M4 — conversion off gameplay path | Static-manifest implementation specified; water representation blocked | ~69 static keys fit; exact 216-state water does not fit current representation |
+| M2 — AOT DS-native Mario/Fox | Whole-owner FIFO packet rejected; exact host fixtures retained | clean control 413,504; rejected packet 537,792; target 170–250K |
+| M3 — AOT DS-native complete stage | Exact 10,076-byte host packet; production link absent | clean 804,032 stage; first gate <=500K and >=300K saved; target 150–250K |
+| M4 — conversion off gameplay path | Exact host corpus and pre-GO residency plan; production link absent | current conversion ~189K; gameplay target zero conversion/upload/I/O |
 
 The owner targets are active renderer ticks, not FPS estimates. Re-profile the
 whole frame after each accepted owner cut.
@@ -114,7 +115,7 @@ already contains 32 roots, 49 epochs, 67 runs, 626 triangles, and 541 immutable
 vertices. It preserves event order, typed live materials, selected display
 lists, persistent vertex-cache semantics, and the 44 cross-matrix triangles.
 
-The current ledger-off synchronized owner is about 431K combined. Candidate
+The current clean ledger-off synchronized owner is about 412–414K combined. Candidate
 `54379201b2` packages exact 32-root/49-epoch/67-run/626-triangle/541-vertex/
 44-cross-matrix bookkeeping into 17,704 bytes with 4,324 bytes of scratch. It
 is tooling eligibility only: it has no live matrices, typed materials, exact
@@ -129,12 +130,17 @@ owner must reject before its first GX write. M2 promotion still requires an
 independent three-branch mode-0/mode-3/sibling-restore fixed-point fixture (or
 the exact BattleShip active branch); a neutral Mario/Fox screenshot is not proof.
 
-The next architecture is two non-overlapping packets. First, preflight corrected
-25/27 joint schedules and 14/18 bindings, let GX walk/store the hierarchy, and
-remove parallel CPU world/composed 4x4 construction while retaining an exact
-CPU 3x3 normal/light sidecar. Retained measurements support about 50–75K after
-GX command cost, so the unchanged ≥80K gate may falsify it. Second, compile the
-49-epoch/67-run state
+The display-contract capture cannot donate already-built source matrices:
+`gcPrepDObjMatrix` is the current recorder stub, not BattleShip's matrix
+builder. Local construction and lighting already measure about 72,896 + 79,648
+ticks, so a hierarchy-only retry cannot meet the <=80K matrix+light gate. The
+first packet must combine corrected 25/27 joint schedules and 14/18 bindings
+with source-exact local construction, including BattleShip's 16.16
+`syMatrixF2LFixedW` quantization before DS 20.12 conversion, plus GX hierarchy
+walk/store and an owner-qualified binding/normal lighting sidecar. Final-color
+reuse must also key live epoch light/material inputs. Preflight must validate
+the dynamic `matrix_dobj`, animlock, texture residency, and every fallback
+before the first GX write. Second, compile the 49-epoch/67-run state
 transaction and dense-corner emitter into one owner call without retrying 121
 small GX lists. Profile 2 remains the independent light/matrix/state oracle.
 
@@ -145,20 +151,46 @@ corrected packet reserves Mario slots 16–23 and Fox slots 16–17, retaining t
 measured 11 pushes, 11 pops, 10 stores, 84 restores, and 44 cross-matrix
 triangles without aliasing hierarchy state.
 
-The no-GX parity gate makes the ownership boundary explicit. Across 413 exact
-binding/normal RGB15 cases, even exhaustive per-binding one-light material
-choices miss 102 cases (16/18 bindings), so DS hardware lighting is demoted.
+The no-GX parity gate makes the ownership boundary explicit. The retained 413
+case corpus merges owner-local binding IDs and is only a hardware-lighting
+necessary-condition gate. An owner-qualified recount remains 413 cases but
+misses 101 cases across 25/32 owner-bindings even with exhaustive independent
+one-light material choices, so DS hardware lighting remains demoted. It is not
+the runtime light-cache oracle; cache identity must include owner and dynamic
+epoch light/material inputs.
 Across 99 canonical t16 cases, naive scale-shift mapping misses 47 while the
 generated floor/ceil 20.12 coefficients plus fractional bias miss zero.
 Therefore geometry hierarchy and synthesized texture matrices may move to GX;
 lighting must stay in the exact CPU sidecar unless a new oracle-exact design
 supersedes this result.
 
+A same-ROM A/B/A has formally rejected the per-joint GX hierarchy packet.
+Its A0/A1 control was 417,472 combined ticks and B was 404,000: only 13,472
+saved. Matrix work fell 18,144 ticks, but DL transport rose 33,120 ticks. The
+candidate missed the 80K relative gate by 66,528 and was removed. Do not revive
+per-joint GX hierarchy.
+
+The follow-up whole-owner FIFO copy/patch/DMA packet is also rejected. On clean
+ROM `13506F55...B98589B`, frames 600–607, exact Mode-8 A0/A1 reproduced at
+413,504 median / 413,632 P95 combined fighter ticks. Packet B was 537,792 /
+537,856, a 124,288-tick regression. It retained exact 70/686 geometry,
+60+320+306 ownership, 29/0/0 fallbacks, batch/submit classes, and texture
+traffic, but uncached validation plus copying, dynamic word patching, cache
+flush, and DMA cost more than the CPU work they replaced. The runtime Mode-9
+path is removed. Keep the 31,880-byte exact host packet and independent
+association checker only as fixtures.
+
+Do not retry a full staging-buffer copy or merely cache validation: even the
+measured packet production wall alone regressed. The next M2 design must use
+the exact fixtures to eliminate immutable command work without copying the
+whole packet, retain source-exact CPU lighting, and present a bounded cost
+model below 337,472 before another device selector is added.
+
 Falsification gate:
 
 - a synchronized same-ROM A/B must save at least 80K combined fighter ticks and
-  reach <=351K in the first window. Current evidence supports only 50–75K, so
-  expect this gate may reject the design; the 170–250K promotion gate is measured
+  reach <=337,472 in the first selector window. No retained treatment run proves that saving
+  yet, so the gate may reject the design; the 170–250K promotion gate is measured
   only with `NDS_RENDERER_M2_DETAILED_LEDGER=0`;
 - the chosen design must retain a credible route to the 170–250K target rather
   than polishing either measured bucket in isolation;
@@ -171,10 +203,9 @@ Falsification gate:
   screenshot gates remain coherent;
 - no per-frame allocation and no reserve regression.
 
-For the hierarchy packet specifically, require matrix+light <=80K, ledger-off
-combined <=351K, and the safe slot assignment above. For the epoch/run packet,
-require >=60K incremental saving, production <=120K, and final ledger-off
-combined 170–250K.
+For any replacement owner, require matrix+light <=120K, total transport <=145K,
+A1 exactly equal to A0, and combined <=337,472 before promotion work. The final
+ledger-off M2 gate remains 170–250K.
 
 Promote Mode 8 to canonical profile 0 only when synchronized counters,
 profile-2 oracles, captures, and natural runtime all agree.
@@ -188,11 +219,20 @@ ownership, and rebinds state on resume; it must not flush. Preserve BattleShip
 display order, live state, animation, effects, depth, and translucency.
 
 Do not revive the rejected source-shaped typed stage executor or mode-9 record
-executor. The exact slab contract is 42 lists / 886 commands / 302 vertices /
-54 runs / 202 triangles, partitioned 66 raw, 126 no-Z, and 10 projected. Keep
-known projected/dynamic records cold, assert zero cross-matrix triangles, use
-the live matrix per list, and keep no-Z depth frame-global. Resident slab data
-must be <=16 KiB with no new BSS/heap; any mismatch falls back before mutation.
+executor. The sampled idle-window candidate is 42 lists / 886 commands / 302
+vertices / 54 runs / 202 triangles, partitioned 66 raw, 126 no-Z, and 10
+projected. A host generator plus profile-2 falsifier must first establish the
+currently doc-only 57-DObj count and exact eight-callback partition. Keep known
+projected/dynamic records cold, assert zero cross-matrix triangles, use the live
+matrix per list, and keep no-Z depth frame-global. Resident slab data must be
+<=16 KiB with no new BSS/heap; any mismatch falls back before mutation.
+
+Whispy blink/turn/open/blow/stop, flower animation, live DObj flags, and segment
+E material/FRAC mutation can change draw selection or state after startup. The
+preflight therefore validates live callback/DObj/DL identity before the first
+link-4 GX or material write, shadows source material mutation once, and falls
+back for the whole owner on any mismatch. External effect/weapon callbacks stay
+outside the slab, and every stage resume fully rebinds required GX state.
 
 Across completed runtime traversals, exact cumulative accounting is:
 
@@ -204,15 +244,17 @@ stage triangles = 202F + 2W
 `F` is completed source traversals and `W` is cumulative source link-14 weapon
 quads. Unmarked setup traffic fails the gate.
 
-The single paired falsifier must save at least 300K stage ticks and reach <=500K
-with P95 improved while retaining all 42/886/54/202 counts, full-frame 828
-geometry, semantic/state hashes, texture counters, order, motion, and
-screenshots. Remove the slab if either threshold fails. M3 promotion remains
+The first quiet-window paired falsifier must save at least 300K stage ticks and
+reach <=500K with P95 improved while retaining the candidate counts, baseline
+full-frame geometry, semantic/state hashes, texture counters, order, motion,
+and screenshots. Remove the slab if either threshold fails. M3 promotion remains
 150–250K after M4 removes the conversion wall.
 
 Promotion requires synchronized A/B/A timing, exact geometry/state hashes,
-profile-2 semantic parity, stable memory reserve, and successful moving
-screenshots.
+profile-2 semantic parity, stable memory reserve, successful moving screenshots,
+and a one-minute sweep through Whispy/flower state changes plus weapon/effect
+activity. Changed source draw cardinality must use a separately proven variant
+or whole-owner fallback; it is not forced into the idle tuple.
 
 ## M4 — Move Texture Work Before Gameplay
 
@@ -257,29 +299,48 @@ The RGB256 generator reserves index 0 for transparency and uses opaque indices
 1–90. It is hardware-visible exact across 3,024,896 map bytes and 58,604 palette
 bytes with zero alpha/RGB/visible mismatch.
 
-M4 is now split at an explicit feasibility checkpoint. A generated pre-GO
-manifest can own the static Dream Land, complete Whispy animation roots,
-Mario/Fox, Fireball, reflector, and reachable GX-effect keys. The conservative
-packet estimates 69 static keys / about 179,328 texture bytes; retaining two
-live water owners adds 36,864 bytes, for about 71 slots / 216,192 bytes. That
-fits the currently mapped 262,144-byte texture VRAM with about 45,952 bytes to
-spare, but not the current 48-entry cache. Generate the exact census before
-selecting a 72- or 80-entry fixed cache; those expansions cost 6,720 or 8,960
-bytes of main RAM and must retain at least 131,072 bytes of reserve.
+M4 is split at an explicit feasibility checkpoint. The deterministic current-
+ROM static census now passes 16 source blocks, 20 complete keys, 19 deduplicated
+outputs, 44,032 pixels, 94,208 prepared bytes, and 90,112 deduplicated payload
+bytes. Host lookup hits all 20 keys and fails closed for 1,120 mutations. This
+is a bounded current-configuration corpus, not yet proof that every reachable
+P1 effect is closed; runtime provenance, pre-GO upload, pinning, and the
+post-GO fence remain unproved.
 
-Setup belongs immediately after original battle setup returns, before live
-update/draw. The post-GO fence must latch any static-owner key miss, conversion,
-palette/decode work, allocation, eviction, GL create/upload/delete, refresh,
-decompression, file I/O, or manifest fallback. Normal prepared-key binding is
-allowed and must not be miscounted as conversion.
+The smallest honest runtime checkpoint is `M4-static-256`: prewarm/pin the exact
+generated static set immediately after original battle setup returns, then arm
+at the source Wait→GO transition. For 256 synchronized post-GO frames, latch
+any static key miss, conversion, palette/decode work, allocation, eviction, GL
+create/upload/delete, refresh, texture-path decompression/I/O, or fallback;
+allow only the two current water refreshes / 36,864 bytes. Normal prepared-key
+binding is allowed. This proves static closure only, not M4 completion.
 
-Water remains a separate representation checkpoint: 216 temporal states,
-322 exact keys, and 206 outputs require about 903,168 bytes as exact visible
-RGB256, versus 524,288 bytes of total DS texture VRAM. The 645,120-byte
-map/palette pairing also fails capacity and alpha semantics. Static-manifest
-success may therefore claim only zero post-GO work for static owners; M4 closes
-only after a source-faithful water representation eliminates every remaining
-gameplay conversion, allocation, replacement, and upload.
+Scope the gameplay fence from GO through battle teardown. Results is a later
+setup/load boundary and may prewarm before rearming; a global no-I/O claim would
+instead require Results assets in the original census and reserve budget.
+
+Water remains a separate representation checkpoint. The exact tiled-AOT host
+fixture is now enforced at 181,408 bytes and production_linked=0: 131,072-byte
+RGB256 pair atlas, 16,384-byte RGB4 visibility atlas, 20,480-byte pair palettes,
+8,544-byte state tables, 544-byte cells, and 4,384-byte vertices. With the
+90,112-byte deduplicated static pixel file, setup would stream/hash 258,048
+bytes from NitroFS in reusable 4 KiB chunks before GO; the source-derived
+planned 18,920-byte metadata/palette base remains separate. A+B post-GO usage
+would be 241,664 with
+20,480 free. The plan uses that exact headroom only as pre-GO palette staging,
+then compacts GO OAM to 60,544 bytes in E and remaps F/G before the first source
+control unlock. Planned F/G use is 20,488 after adding the still-unproved
+8-byte visibility palette.
+
+The last measured 172,024-byte reserve projects to 152,080 without, or 145,860
+with, the estimated live-key table; those omit new text, padding, allocator,
+and filesystem overhead and are feasibility estimates, not a linker/runtime
+result. Production must prove >=128 KiB reserve, >=16 KiB A+B
+headroom, exact bank ownership, and zero open/read/seek after the fence arms.
+Keep the design only after device upload/remap proof, correct moving-water
+screenshots, zero post-GO conversion/upload/I/O/alloc/eviction/palette DMA, and
+at least 100K owner/draw saving. Static-manifest success alone still claims only
+static closure.
 
 ## Measurement And Correctness Rules
 
