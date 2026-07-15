@@ -19,6 +19,8 @@
 /melonds.*.log
 /rtc.bin
 /artifacts/
+__pycache__/
+*.pyc
 /emulators/melonds-runners/
 /emulators/*
 !/emulators/README.md
