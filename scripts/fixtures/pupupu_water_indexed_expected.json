@@ -1,0 +1,196 @@
+{
+  "ds_contract": {
+    "cut_g_texture_palette_vram_bytes": 0,
+    "cut_g_texture_vram_bytes": 262144,
+    "ds_max_texture_palette_vram_bytes": 98304,
+    "ds_max_texture_vram_bytes": 524288,
+    "rgb256_bits_per_texel": 8,
+    "rgb256_palette_entries": 256,
+    "rgb256_transparent_indices": 1
+  },
+  "footprint": {
+    "canonical_rgb5a1_archive_bytes": 263064,
+    "canonical_rgb5a1_resident_bytes": 891064,
+    "exact_pair_archive_bytes": 232004,
+    "exact_phase_luts_bytes": 40960,
+    "literal_pair_archive_bytes": 211524,
+    "literal_pair_palettes_bytes": 20480,
+    "natural_period_output_mismatch_pixels": 600358,
+    "natural_period_resident_bytes": 126976,
+    "pair_row_archive_bytes": 190400,
+    "pair_selection_bytes": 644,
+    "requested_32x32_output_mismatch_pixels": 1374596,
+    "requested_32x32_resident_bytes": 94208,
+    "rgb256_visible_archive_bytes": 275008,
+    "rgb256_visible_resident_bytes": 903168,
+    "resident_pair_maps_bytes": 624640,
+    "resident_pair_maps_plus_palettes_bytes": 645120,
+    "tight_canonical_palettes_bytes": 8376
+  },
+  "oracle": {
+    "canonical_rgb5a1_expansion_mismatches": 0,
+    "fraction_pair_alpha_classes_max": 105,
+    "fraction_pair_alpha_classes_min": 102,
+    "literal_pair_rgb5a1_per_key_minimum_mismatches": 753481,
+    "literal_pair_rgb5a1_shared_fraction_minimum_mismatches": 760468,
+    "max_key_pair_alpha_classes": {
+      "large": 104,
+      "small": 100
+    },
+    "mixed_alpha_keys": 322,
+    "mixed_alpha_pair_fraction_entries": 600,
+    "pair_fraction_entries": 3588,
+    "per_key_mixed_alpha_pair_entries": 4830,
+    "phase_lut_expansion_mismatches": 0,
+    "rgb256_visible_semantic_mismatches": 0
+  },
+  "owners": {
+    "large": {
+      "canonical_global_row_archive": {
+        "dictionary_bytes": 182144,
+        "global_rows": 1423,
+        "row_id_bytes": 2,
+        "row_maps_bytes": 12032,
+        "total_bytes": 194176
+      },
+      "canonical_map_changes_per_cycle": 50,
+      "canonical_resident_bytes": 770048,
+      "canonical_rgb5a1_maps": 47,
+      "fraction_changes_per_cycle": 78,
+      "global_row_archive": {
+        "dictionary_bytes": 135040,
+        "global_rows": 1055,
+        "row_id_bytes": 2,
+        "row_maps_bytes": 8448,
+        "total_bytes": 143488
+      },
+      "height": 128,
+      "keys": 165,
+      "map_changes_per_cycle": 33,
+      "natural_mask_period": {
+        "exact_unique_maps": 1,
+        "height": 32,
+        "oracle_output_mismatch_pixels": 557185,
+        "oracle_pair_mismatch_pixels": 565765,
+        "resident_crop_bytes": 65536,
+        "unique_crops": 32,
+        "unique_pair_mismatch_pixels": 120541,
+        "width": 64
+      },
+      "requested_32x32": {
+        "exact_unique_maps": 0,
+        "height": 32,
+        "oracle_output_mismatch_pixels": 1331423,
+        "oracle_pair_mismatch_pixels": 1338159,
+        "resident_crop_bytes": 32768,
+        "unique_crops": 32,
+        "unique_pair_mismatch_pixels": 272213,
+        "width": 32
+      },
+      "resident_pair_map_bytes": 540672,
+      "rgb256_visible_global_row_archive": {
+        "dictionary_bytes": 182016,
+        "global_rows": 1422,
+        "row_id_bytes": 2,
+        "row_maps_bytes": 12032,
+        "total_bytes": 194048
+      },
+      "rgb256_visible_map_changes_per_cycle": 50,
+      "rgb256_visible_maps": 47,
+      "rgb256_visible_resident_bytes": 770048,
+      "unique_pair_maps": 33,
+      "width": 128
+    },
+    "small": {
+      "canonical_global_row_archive": {
+        "dictionary_bytes": 53472,
+        "global_rows": 1671,
+        "row_id_bytes": 2,
+        "row_maps_bytes": 7040,
+        "total_bytes": 60512
+      },
+      "canonical_map_changes_per_cycle": 57,
+      "canonical_resident_bytes": 112640,
+      "canonical_rgb5a1_maps": 55,
+      "fraction_changes_per_cycle": 78,
+      "global_row_archive": {
+        "dictionary_bytes": 41664,
+        "global_rows": 1302,
+        "row_id_bytes": 2,
+        "row_maps_bytes": 5248,
+        "total_bytes": 46912
+      },
+      "height": 64,
+      "keys": 157,
+      "map_changes_per_cycle": 41,
+      "natural_mask_period": {
+        "exact_unique_maps": 1,
+        "height": 32,
+        "oracle_output_mismatch_pixels": 43173,
+        "oracle_pair_mismatch_pixels": 43855,
+        "resident_crop_bytes": 40960,
+        "unique_crops": 40,
+        "unique_pair_mismatch_pixels": 12423,
+        "width": 32
+      },
+      "requested_32x32": {
+        "exact_unique_maps": 1,
+        "height": 32,
+        "oracle_output_mismatch_pixels": 43173,
+        "oracle_pair_mismatch_pixels": 43855,
+        "resident_crop_bytes": 40960,
+        "unique_crops": 40,
+        "unique_pair_mismatch_pixels": 12423,
+        "width": 32
+      },
+      "resident_pair_map_bytes": 83968,
+      "rgb256_visible_global_row_archive": {
+        "dictionary_bytes": 53440,
+        "global_rows": 1670,
+        "row_id_bytes": 2,
+        "row_maps_bytes": 7040,
+        "total_bytes": 60480
+      },
+      "rgb256_visible_map_changes_per_cycle": 57,
+      "rgb256_visible_maps": 55,
+      "rgb256_visible_resident_bytes": 112640,
+      "unique_pair_maps": 41,
+      "width": 32
+    }
+  },
+  "schema": 1,
+  "source": {
+    "cycle_frames": 216,
+    "fractions": 40,
+    "oracle_pixels": 3024896,
+    "transparent_ci4_colors": 1
+  },
+  "update_model": {
+    "active_frames": 106,
+    "average_bytes_per_frame_denominator": 216,
+    "average_bytes_per_frame_numerator": 664576,
+    "bytes_per_cycle": 664576,
+    "bytes_per_frame_histogram": {
+      "0": 110,
+      "18432": 24,
+      "18944": 9,
+      "2048": 4,
+      "2560": 4,
+      "512": 65
+    },
+    "pair_map_changes_large": 33,
+    "pair_map_changes_small": 41,
+    "palette_changes": 78,
+    "peak_bytes_per_frame": 18944,
+    "rgb256_visible_average_bytes_per_frame_denominator": 216,
+    "rgb256_visible_average_bytes_per_frame_numerator": 975872,
+    "rgb256_visible_bytes_per_cycle": 975872
+  },
+  "verdict": {
+    "literal_pair_rgb5a1": "NO_GO_ALPHA_PHASE",
+    "periodic_32x32": "NO_GO_CLAMP_MIRROR",
+    "resident_pair_maps": "NO_GO_TEXTURE_VRAM",
+    "rgb256_visible_variant": "NO_GO_RESIDENCY",
+    "zero_io_archive": "NO_GO_CURRENT_RAM_RESERVE"
+  }
+}

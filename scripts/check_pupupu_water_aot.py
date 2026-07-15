@@ -10,10 +10,14 @@ from pathlib import Path
 from typing import Sequence
 
 import generate_pupupu_water_aot as generator
+import pupupu_water_indexed_feasibility as indexed
 
 
 DEFAULT_FIXTURE = Path(__file__).resolve().parent / "fixtures" / (
     "pupupu_water_aot_expected.json"
+)
+DEFAULT_INDEXED_FIXTURE = Path(__file__).resolve().parent / "fixtures" / (
+    "pupupu_water_indexed_expected.json"
 )
 
 
@@ -90,6 +94,39 @@ def check_artifacts(repo_root: Path, fixture_path: Path) -> generator.GeneratedA
     return first
 
 
+def check_indexed_feasibility(
+    artifacts: generator.GeneratedArtifacts, fixture_path: Path
+) -> dict[str, object]:
+    expected = load_fixture(fixture_path)
+    actual = indexed.analyze(artifacts)
+    require(
+        actual == expected,
+        "indexed pair-map feasibility differs from the pinned fixture",
+    )
+    oracle = actual["oracle"]
+    verdict = actual["verdict"]
+    assert isinstance(oracle, dict)
+    assert isinstance(verdict, dict)
+    require(oracle["phase_lut_expansion_mismatches"] == 0, "phase LUT lost parity")
+    require(
+        oracle["canonical_rgb5a1_expansion_mismatches"] == 0,
+        "canonical indexed expansion lost parity",
+    )
+    require(
+        oracle["rgb256_visible_semantic_mismatches"] == 0,
+        "RGB256 transparent-index normalization lost visible parity",
+    )
+    require(
+        oracle["literal_pair_rgb5a1_per_key_minimum_mismatches"] > 0,
+        "literal pair palette unexpectedly became alpha-exact",
+    )
+    require(
+        all(str(value).startswith("NO_GO_") for value in verdict.values()),
+        "indexed feasibility verdict changed without an explicit fixture update",
+    )
+    return actual
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -104,6 +141,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_FIXTURE,
         help="pinned compact expected-result JSON",
     )
+    parser.add_argument(
+        "--indexed-fixture",
+        type=Path,
+        default=DEFAULT_INDEXED_FIXTURE,
+        help="pinned DS-indexed feasibility result",
+    )
     return parser.parse_args(argv)
 
 
@@ -113,6 +156,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         check_missing_and_corrupt_corpus(repo_root)
         artifacts = check_artifacts(repo_root, args.fixture.resolve())
+        indexed_summary = check_indexed_feasibility(
+            artifacts, args.indexed_fixture.resolve()
+        )
     except (AssertionError, generator.Falsifier, OSError, ValueError) as exc:
         print(f"PUPUPU_WATER_AOT_FIXTURES_FAIL: {exc}")
         return 1
@@ -129,6 +175,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"oracle_pixels={census['oracle_pixels']} payload_bytes={artifact_hashes['payload_bytes']} "
         f"payload_sha256={artifact_hashes['payload_sha256']} "
         f"index_sha256={artifact_hashes['index_sha256']}"
+    )
+    indexed_oracle = indexed_summary["oracle"]
+    indexed_footprint = indexed_summary["footprint"]
+    assert isinstance(indexed_oracle, dict)
+    assert isinstance(indexed_footprint, dict)
+    print(
+        "PUPUPU_WATER_INDEXED_FEASIBILITY_OK "
+        f"phase_parity={indexed_oracle['phase_lut_expansion_mismatches']} "
+        f"literal_mismatches={indexed_oracle['literal_pair_rgb5a1_per_key_minimum_mismatches']} "
+        f"exact_archive_bytes={indexed_footprint['exact_pair_archive_bytes']} "
+        f"resident_bytes={indexed_footprint['resident_pair_maps_plus_palettes_bytes']}"
     )
     return 0
 
