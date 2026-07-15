@@ -34,7 +34,7 @@ param(
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
     [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
-    [ValidateRange(0,8)][int]$RendererFastRunMode = 0,
+    [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
     [ValidateRange(0,1)][int]$M4WaterTiledAotMode = 0,
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
@@ -639,6 +639,7 @@ try {
                 $coarseBenchmarkCommands += 'printf "GX_BOUNDARY=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileGXStatusBeforeFlush, gNdsRendererProfileGXControlBeforeFlush, gNdsRendererProfileGXStatusAfterFlush, gNdsRendererProfileGXStatusPostVBlank, gNdsRendererProfileGXControlPostVBlank, gNdsRendererProfileFlushTicks'
                 $coarseBenchmarkCommands += 'printf "TEXTURE_PHASE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileTextureConvertTicks, gNdsRendererProfileTextureUploadTicks, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes, gNdsRendererProfileTexturePairOracleChecks, gNdsRendererProfileTexturePairOracleMismatches, gNdsRendererProfileTextureVBlankQueuedUploads, gNdsRendererProfileTextureVBlankQueuedBytes, gNdsRendererProfileTextureVBlankCommittedUploads, gNdsRendererProfileTextureVBlankCommitTicks, gNdsRendererProfileTextureVBlankOutsideCount, gNdsRendererProfileTextureVBlankFallbackCount, gNdsRendererProfileTextureVBlankStartLine, gNdsRendererProfileTextureVBlankEndLine'
                 $coarseBenchmarkCommands += 'printf "FAST_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]'
+                $coarseBenchmarkCommands += 'printf "M3_STAGE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3PreflightAttemptCount, gNdsRendererM3PreflightSuccessCount, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3SegmentCount, gNdsRendererM3SegmentMask, gNdsRendererM3PostArmFailureCount, gNdsRendererM3DObjCount, gNdsRendererM3BindingCount, gNdsRendererM3RunCount, gNdsRendererM3TriangleCount, gNdsRendererM3ResidentEpochCount, gNdsRendererM3MaterialShadowCount, gNdsRendererM3MaterialCommitCount, gNdsRendererM3CrossRunCount, gNdsRendererM3CrossTriangleCount, gNdsRendererM3CrossForeignCornerCount'
                 $coarseBenchmarkCommands += 'printf "M4_STATIC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount'
                 $coarseBenchmarkCommands += 'printf "M4_FENCE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'
                 if ($RendererM2DetailedLedger) {
@@ -1038,6 +1039,7 @@ try {
     $warmBenchmark = @()
     $texturePhaseBenchmark = @()
     $fastRunBenchmark = @()
+    $m3StageBenchmark = @()
     $m4StaticBenchmark = @()
     $m4FenceBenchmark = @()
     $m2Benchmark = @()
@@ -1050,6 +1052,7 @@ try {
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
         $texturePhaseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TEXTURE_PHASE_BENCH' -FieldCount 15)
         $fastRunBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'FAST_BENCH' -FieldCount 10)
+        $m3StageBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_STAGE' -FieldCount 17)
         $m4StaticBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_STATIC' -FieldCount 11)
         $m4FenceBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_FENCE' -FieldCount 13)
         if ($RendererM2DetailedLedger) {
@@ -1513,6 +1516,7 @@ try {
                 $warmMetricSummary = ''
                 $texturePhaseMetricSummary = ''
                 $fastRunMetricSummary = ''
+                $m3StageMetricSummary = ''
                 $m4StaticMetricSummary = ''
                 $m4FenceMetricSummary = ''
                 $m2MetricSummary = ''
@@ -1609,6 +1613,7 @@ try {
                         $warmSamples = [System.Collections.Generic.List[object]]::new()
                         $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                         $fastRunSamples = [System.Collections.Generic.List[object]]::new()
+                        $m3StageSamples = [System.Collections.Generic.List[object]]::new()
                         $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
                         $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
@@ -1634,6 +1639,9 @@ try {
                             Assert-Condition ($warmBenchmark.Count -eq $RendererBenchmarkSamples) "WARM_NO_UPLOAD benchmark captured $($warmBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         Assert-Condition ($fastRunBenchmark.Count -eq $RendererBenchmarkSamples) "Fast-run benchmark captured $($fastRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        if ($RendererFastRunMode -eq 9) {
+                            Assert-Condition ($m3StageBenchmark.Count -eq $RendererBenchmarkSamples) "M3 stage benchmark captured $($m3StageBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        }
                         Assert-Condition ($m4StaticBenchmark.Count -eq $RendererBenchmarkSamples) "M4 static-texture benchmark captured $($m4StaticBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         Assert-Condition ($m4FenceBenchmark.Count -eq $RendererBenchmarkSamples) "M4 post-GO texture fence captured $($m4FenceBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         Assert-Condition ($texturePhaseBenchmark.Count -eq $RendererBenchmarkSamples) "Texture-phase benchmark captured $($texturePhaseBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -1727,6 +1735,12 @@ try {
                             } elseif (($RendererProfileLevel -eq 1) -and
                                       ($RendererFastRunMode -in @(7, 8))) {
                                 Assert-Condition ($fastRun[2] -eq 70 -and $fastRun[3] -eq 686 -and $fastRun[4] -eq 60 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 29 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "Production native fighter owner did not preserve exact 70-run/686-triangle accounting, 60/320/306 owner partition, and 29/0/0 fallback partition at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
+                            } elseif (($RendererProfileLevel -eq 1) -and
+                                      ($RendererFastRunMode -eq 9)) {
+                                Assert-Condition ($fastRun[2] -eq 121 -and $fastRun[3] -eq 828 -and $fastRun[4] -eq 202 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 0 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "M3 complete-stage owner did not preserve exact 121-run/828-triangle accounting, 202/320/306 owner partition, and zero fallbacks at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
+                                $m3 = Get-Ints $m3StageBenchmark[$sampleIndex]
+                                Assert-Condition ($m3[0] -eq $frame -and $m3[1] -ge $m3[2] -and $m3[2] -gt 0 -and $m3[4] -eq 8 -and $m3[5] -eq 255 -and $m3[6] -eq 0 -and $m3[7] -eq 57 -and $m3[8] -eq 42 -and $m3[9] -eq 54 -and $m3[10] -eq 202 -and $m3[11] -eq 49 -and $m3[12] -eq 4 -and $m3[13] -eq 4 -and $m3[14] -eq 5 -and $m3[15] -eq 10 -and $m3[16] -eq 15) "M3 stage owner did not preflight and commit the exact 8-segment/57-DObj/42-binding/54-run/202-triangle contract at frame $frame (actual=$($m3 -join ','))." $gdbStdout
+                                $m3StageSamples.Add($m3)
                             } else {
                                 Assert-Condition ($fastRun[2] -gt 0 -and $fastRun[3] -gt 0) "Selected laboratory fast mode executed no fast triangles at frame $frame." $gdbStdout
                             }
@@ -2037,6 +2051,10 @@ try {
                             $warmMetricSummary = "Renderer WARM_NO_UPLOAD: samples=$RendererBenchmarkSamples suppressedUploads=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 1)) suppressedBytes=$(Get-MedianP95 (Get-SampleFieldValues $warmSamples 2))"
                         }
                         $fastRunMetricSummary = "Renderer fast raw runs: mode=$RendererFastRunMode samples=$RendererBenchmarkSamples runs=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 2)) triangles=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 3)) stage=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 4)) Mario=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 5)) Fox=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 6)) fallbackState=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 7)) fallbackVertex=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 8)) fallbackCommand=$(Get-MedianP95 (Get-SampleFieldValues $fastRunSamples 9))"
+                        if ($RendererFastRunMode -eq 9) {
+                            $m3Last = $m3StageSamples[-1]
+                            $m3StageMetricSummary = "Renderer M3 stage owner: attempts/success/fallback=$($m3Last[1])/$($m3Last[2])/$($m3Last[3]) segments/mask=$($m3Last[4])/$($m3Last[5]) postArm=$($m3Last[6]) dobjs/bindings/runs/triangles/epochs=$($m3Last[7])/$($m3Last[8])/$($m3Last[9])/$($m3Last[10])/$($m3Last[11]) materials=$($m3Last[12])/$($m3Last[13]) cross=$($m3Last[14])/$($m3Last[15])/$($m3Last[16])"
+                        }
                         $m4StaticMetricSummary = "Renderer M4 static textures: mode=$StaticTextureAotMode samples=$RendererBenchmarkSamples prepare=$($m4StaticSamples[0][2]) fail=$($m4StaticSamples[0][3]) prepared=$($m4StaticSamples[0][4]) bytes=$($m4StaticSamples[0][5]) arm=$($m4StaticSamples[0][6]) seenMask=0x$('{0:x}' -f $m4StaticSamples[-1][7]) ownerMask=0x$('{0:x}' -f $m4StaticSamples[-1][8]) violation=$($m4StaticSamples[-1][9]) pinnedHits=$($m4StaticSamples[0][10])..$($m4StaticSamples[-1][10])"
                         $m4FenceLast = $m4FenceSamples[-1]
                         $m4FenceMetricSummary = "Renderer M4 post-GO texture fence: samples=$RendererBenchmarkSamples first=$($m4FenceLast[1])/$($m4FenceLast[2]) convert=$($m4FenceLast[3]) decode=$($m4FenceLast[4]) alloc=$($m4FenceLast[5]) fileIO=$($m4FenceLast[6]) glCreate=$($m4FenceLast[7]) glUpload=$($m4FenceLast[8]) glDelete=$($m4FenceLast[9]) evict=$($m4FenceLast[10]) refresh=$($m4FenceLast[11]) fallback=$($m4FenceLast[12])"
@@ -2194,6 +2212,7 @@ try {
                                 coarse = @($coarseSamples)
                                 texturePhases = @($texturePhaseSamples)
                                 fastRaw = @($fastRunSamples)
+                                m3Stage = @($m3StageSamples)
                                 m4Static = @($m4StaticSamples)
                                 m4Fence = @($m4FenceSamples)
                                 owners = @(
@@ -2253,6 +2272,7 @@ try {
                     if ($warmMetricSummary) { Write-Output $warmMetricSummary }
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
+                    if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
                     if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
                     if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
@@ -2630,6 +2650,7 @@ try {
                     Write-Output $stage0Summary
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
+                    if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
                     if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
                     if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }

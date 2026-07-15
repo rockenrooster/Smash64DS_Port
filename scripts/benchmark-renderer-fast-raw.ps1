@@ -1,5 +1,5 @@
 param(
-    [ValidateRange(0,8)][int]$FastRunMode = 0,
+    [ValidateRange(0,9)][int]$FastRunMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
     [switch]$RequireZeroPostGoTextureFence,
     [ValidateRange(0,1)][int]$M4WaterTiledAotMode = 0,
