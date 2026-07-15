@@ -85,7 +85,7 @@ All generated screenshots belong under `artifacts/visibility`.
 |---|---|
 | Natural one-minute battle and Results | CPU-on 3,600→0/Time Up/22→24 gate passes; public/manual default is temporarily CPU-paused, and final CPU-on qualification remains |
 | Gameplay | Fireball early submission/rebound automation passes but full-lifetime visuals and independent `0x47` parity remain open; the platform gate has a next-frame landing blind spot; isolated LIVE `mpprocess` closure passes after endpoint/common repair, but sparse DamageFall runtime, moving-wall/project-floor parity, and coherent `mpcommon` remain open |
-| Renderer | M1/native countdown pass; M2 FIFO packet rejected; M3 exact host packet and M4 pre-GO residency plan remain production-unlinked; pause ±33.6° source parity is unresolved |
+| Renderer | M1/native countdown pass; M2 Mode 8 is correct but above target and Mode 7 is rejected; M3 exact 12,663-byte core plus partial adapter compile; M4 exact 167,936-byte residency and 138-triangle draw packets await live integration; pause ±33.6° source parity is unresolved |
 | HUD/countdown | User-approved lower HUD and top countdown pass |
 | Audio | Production phase/KO and isolated crowd-ACK gates pass; the user ROM has no blocking trace; ID626 PNT=1/LEN=3527 model passes with 2 guard samples/cycle; audible qualification remains open |
 | Stability/memory | One full match passes with 172,024-byte conservative reserve and zero safety faults; repetition pending |
@@ -93,18 +93,20 @@ All generated screenshots belong under `artifacts/visibility`.
 
 ## Performance And Open Work
 
-The latest focused clean profile-1 M2 A/B/A (`13506F55...B98589B`, frames
-600–607) reproduces A0=A1 exactly at 413,504 median / 413,632 P95 and a 17.1
-FPS smoke marker. The whole-owner FIFO packet is rejected at 537,792 / 537,856
-(+124,288) and 16.7 FPS. Sampled lab gameplay still reports positive texture
-conversion and two uploads totaling 36,864 bytes. Therefore:
+The latest detailed-ledger Mode-8 A0/A1 is 477,152/477,376 ticks and renders
+both fighters correctly. Rejected Mode 7 is 518,336/518,784 and produces blank
+fighters; its runtime path must be removed. The ledger-off accepted reference
+remains about 413.5K. A direct-contract design may remove an estimated 62–75K,
+but it is not implemented or measured. The last control smoke window is about
+17.7 FPS, draw 1.646M, and loop 2.241M ticks. Therefore:
 
-- M2 remains ~413K; no retained treatment proves its first keep gate.
-- M3's 10,076-byte host packet is exact but DObj/callback/material invariance
-  and production linkage remain unproved.
-- M4 has an exact 181,408-byte water host fixture and a 258,048-byte pre-GO
-  payload plan, but no production link, measured reserve, or zero-post-GO-work
-  proof.
+- M2 has no accepted cut meeting its 170–250K target.
+- M3's exact 12,663-byte / 8-callback / 57-DObj / 42-binding packet and
+  renderer core compile. The partial adapter helpers compile, but display-loop
+  interception, link, timing, counters, and screenshot remain unfinished.
+- M4's exact one-pass residency is 167,936 bytes. Its 68-cell/138-triangle draw
+  helper has zero draw-time upload, I/O, or allocation in the ARM gate, but
+  live prepare/draw/teardown, reserve, and post-GO fence proof remain open.
 
 Detailed renderer measurements and falsification gates live only in
 `OPTIMIZATION_ROADMAP.md`.

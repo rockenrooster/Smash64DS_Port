@@ -5886,6 +5886,421 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
         mobj, out, TRUE, NULL, NULL);
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
+{
+    switch (segment_index)
+    {
+    case 0u: return gGRCommonLayerGObjs[0];
+    case 1u: return gGRCommonStruct.pupupu.map_gobj[0];
+    case 2u: return gGRCommonStruct.pupupu.map_gobj[1];
+    case 3u: return gGRCommonStruct.pupupu.map_gobj[2];
+    case 4u: return gGRCommonLayerGObjs[1];
+    case 5u: return gGRCommonLayerGObjs[2];
+    case 6u: return gGRCommonStruct.pupupu.map_gobj[3];
+    case 7u: return gGRCommonLayerGObjs[3];
+    default: return NULL;
+    }
+}
+
+static u32 ndsRendererAdapterNativeStageSegmentLink(u32 segment_index)
+{
+    static const u8 links[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT] = {
+        4u, 4u, 4u, 4u, 6u, 13u, 16u, 17u
+    };
+    return (segment_index < ARRAY_COUNT(links)) ? links[segment_index] : 0xffu;
+}
+
+static sb32 ndsRendererAdapterNativeStageProcMatches(
+    u32 segment_index, GObj *gobj)
+{
+    if ((gobj == NULL) || (gobj->proc_display == NULL))
+    {
+        return FALSE;
+    }
+    switch (segment_index)
+    {
+    case 0u:
+    case 1u:
+    case 2u:
+    case 3u:
+        return (gobj->proc_display == grDisplayLayer0PriProcDisplay) ?
+            TRUE : FALSE;
+    case 4u:
+        return (gobj->proc_display == grDisplayLayer1PriProcDisplay) ?
+            TRUE : FALSE;
+    case 5u:
+        return (gobj->proc_display == grDisplayLayer2PriProcDisplay) ?
+            TRUE : FALSE;
+    case 6u:
+    case 7u:
+        return (gobj->proc_display == grDisplayLayer3PriProcDisplay) ?
+            TRUE : FALSE;
+    default:
+        return FALSE;
+    }
+}
+
+static sb32 ndsRendererAdapterNativeStageGObjLinked(GObj *target, u32 link)
+{
+    GObj *gobj;
+    u32 guard = 0u;
+
+    if ((target == NULL) || (link >= GC_COMMON_MAX_DLLINKS))
+    {
+        return FALSE;
+    }
+    for (gobj = gGCCommonDLLinks[link];
+         (gobj != NULL) && (guard < 256u);
+         gobj = gobj->dl_link_next, guard++)
+    {
+        if (gobj == target)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static sb32 ndsRendererAdapterNativeStageTransformFlags(
+    const DObj *dobj, u16 *out_flags)
+{
+    if ((dobj == NULL) || (out_flags == NULL))
+    {
+        return FALSE;
+    }
+    if ((dobj->xobjs_num == 1u) && (dobj->xobjs[0] != NULL) &&
+        (dobj->xobjs[0]->kind == nGCMatrixKindTraRotRpyRSca))
+    {
+        *out_flags = 0u;
+        return TRUE;
+    }
+    if ((dobj->xobjs_num == 2u) && (dobj->xobjs[0] != NULL) &&
+        (dobj->xobjs[1] != NULL) &&
+        (dobj->xobjs[0]->kind == nGCMatrixKindTra))
+    {
+        if (dobj->xobjs[1]->kind == nGCMatrixKind48)
+        {
+            *out_flags = 2u;
+            return TRUE;
+        }
+        if (dobj->xobjs[1]->kind == nGCMatrixKind46)
+        {
+            *out_flags = 4u;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static sb32 ndsRendererAdapterCollectNativeStageDObjs(
+    DObj *dobj, u32 owner, u16 parent_index, u8 depth,
+    NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    for (; dobj != NULL; dobj = dobj->sib_next)
+    {
+        NDSRendererNativeStageDObj *live;
+        u32 index;
+        u16 transform_flags;
+
+        if ((workspace->dobj_count >= NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) ||
+            (depth > 31u) || ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0u) ||
+            (ndsRendererAdapterNativeStageTransformFlags(
+                 dobj, &transform_flags) == FALSE))
+        {
+            return FALSE;
+        }
+        index = workspace->dobj_count++;
+        workspace->dobjs[index] = dobj;
+        live = &workspace->live_dobjs[index];
+        live->identity = dobj;
+        live->parent_index = parent_index;
+        live->transform_flags = transform_flags;
+        live->owner = (u8)owner;
+        live->depth = depth;
+        if (dobj->dv != NULL)
+        {
+            u32 binding = workspace->binding_count++;
+            if ((binding >= NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) ||
+                ((dobj->flags & DOBJ_FLAG_NOTEXTURE) != 0u))
+            {
+                return FALSE;
+            }
+            live->binding_index = (u16)binding;
+            workspace->binding_dobjs[binding] = dobj;
+            workspace->binding_display_lists[binding] = dobj->dv;
+        }
+        else
+        {
+            live->binding_index = 0xffffu;
+        }
+        if ((dobj->child != NULL) &&
+            (ndsRendererAdapterCollectNativeStageDObjs(
+                 dobj->child, owner, (u16)index, (u8)(depth + 1u),
+                 workspace) == FALSE))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
+    CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    u32 binding_index;
+
+    for (binding_index = 0u;
+         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index++)
+    {
+        NDSRendererMatrix20p12 projection;
+        NDSRendererMatrix20p12 modelview;
+        const NDSRendererMatrix20p12 *projection_ptr;
+        const NDSRendererMatrix20p12 *modelview_ptr;
+
+        ndsRendererAdapterPrepareInitialMatrices(
+            workspace->binding_dobjs[binding_index], cobj, TRUE,
+            &projection, &projection_ptr, &modelview, &modelview_ptr);
+        if ((projection_ptr == NULL) || (modelview_ptr == NULL) ||
+            ((binding_index != 0u) &&
+             (memcmp(&workspace->projection, projection_ptr,
+                     sizeof(workspace->projection)) != 0)) ||
+            (ndsRendererAdapterComposeNativeRootMatrix(
+                 modelview_ptr, projection_ptr,
+                 &workspace->binding_composed[binding_index]) == FALSE))
+        {
+            return FALSE;
+        }
+        if (binding_index == 0u)
+        {
+            workspace->projection = *projection_ptr;
+        }
+    }
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterPrepareNativeStageMaterials(
+    NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    static const u8 bindings[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT] = {
+        20u, 22u, 31u, 32u
+    };
+    static const u16 flags[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT] = {
+        0x0001u, 0x0001u, 0x006bu, 0x006bu
+    };
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT; i++)
+    {
+        MObj *mobj = workspace->binding_dobjs[bindings[i]]->mobj;
+
+        if ((mobj == NULL) ||
+            (ndsRendererAdapterMaterialFlags(mobj) != flags[i]) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 mobj, &workspace->materials[i], FALSE,
+                 &workspace->material_curr[i],
+                 &workspace->material_next[i]) == FALSE))
+        {
+            return FALSE;
+        }
+        workspace->material_mobjs[i] = mobj;
+    }
+    return TRUE;
+}
+
+static void ndsRendererAdapterCommitNativeStageMaterials(
+    NDSRendererAdapterNativeStageWorkspace *workspace, u32 segment_index)
+{
+    u32 first = 0u;
+    u32 count = 0u;
+    u32 i;
+
+    if (segment_index == 1u) { first = 0u; count = 1u; }
+    else if (segment_index == 2u) { first = 1u; count = 1u; }
+    else if (segment_index == 5u) { first = 2u; count = 2u; }
+    for (i = first; i < first + count; i++)
+    {
+        workspace->material_mobjs[i]->texture_id_curr =
+            workspace->material_curr[i];
+        workspace->material_mobjs[i]->texture_id_next =
+            workspace->material_next[i];
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererM3MaterialCommitCount++;
+#endif
+    }
+}
+
+s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
+{
+    static const u32 asset_ids[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT] = {
+        0x67u, 0x68u, 0x98u, 0xffu
+    };
+    static const u32 asset_sizes[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT] = {
+        0x2fc0u, 0x43f0u, 0x3700u, 0x00c0u
+    };
+    static const u8 dobj_counts[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT] = {
+        21u, 3u, 6u, 7u, 2u, 4u, 10u, 4u
+    };
+    NDSRendererAdapterNativeStageWorkspace *workspace =
+        &sNdsRendererAdapterNativeStageWorkspace;
+    GObj *camera_gobj = camera_gobj_ptr;
+    CObj *cobj = (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) : NULL;
+    u32 i;
+
+    workspace->active = FALSE;
+    if ((gNdsRendererFastRunMode !=
+         NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) || (cobj == NULL))
+    {
+        return FALSE;
+    }
+    bzero(workspace, sizeof(*workspace));
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+    {
+        workspace->loaded[i] = ndsRelocFindLoadedFileByAsset(asset_ids[i]);
+        if ((workspace->loaded[i] == NULL) ||
+            (workspace->loaded[i]->data == NULL) ||
+            (workspace->loaded[i]->data_size != asset_sizes[i]))
+        {
+            return FALSE;
+        }
+        workspace->frame.asset_bases[i] = workspace->loaded[i]->data;
+    }
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    {
+        u32 first_dobj = workspace->dobj_count;
+        GObj *gobj = ndsRendererAdapterNativeStageSegmentGObj(i);
+
+        workspace->segments[i] = gobj;
+        if ((gobj == NULL) || ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ||
+            (gobj->dl_link_id != ndsRendererAdapterNativeStageSegmentLink(i)) ||
+            (ndsRendererAdapterNativeStageProcMatches(i, gobj) == FALSE) ||
+            (ndsRendererAdapterNativeStageGObjLinked(
+                 gobj, gobj->dl_link_id) == FALSE) ||
+            (ndsRendererAdapterCollectNativeStageDObjs(
+                 DObjGetStruct(gobj),
+                 (i == 0u) ? 0u : (i == 1u) ? 4u :
+                 (i == 2u) ? 5u : (i == 3u) ? 6u :
+                 (i == 4u) ? 1u : (i == 5u) ? 2u :
+                 (i == 6u) ? 7u : 3u,
+                 0xffffu, 0u, workspace) == FALSE) ||
+            ((workspace->dobj_count - first_dobj) != dobj_counts[i]))
+        {
+            return FALSE;
+        }
+    }
+    if ((workspace->dobj_count != NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) ||
+        (workspace->binding_count !=
+         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) ||
+        (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE) ||
+        (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE))
+    {
+        return FALSE;
+    }
+
+    bzero(&workspace->resolver, sizeof(workspace->resolver));
+    workspace->resolver.primary_file = workspace->loaded[0];
+    workspace->config = (NDSRendererConfig){0};
+    workspace->config.max_depth = 8u;
+    workspace->config.max_commands = 2048u;
+    workspace->config.max_list_commands = 512u;
+    workspace->config.texture_data_layout =
+        NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+    workspace->config.validate_range = ndsRendererAdapterStageValidateRange;
+    workspace->config.immutable_command_span =
+        ndsRendererAdapterImmutableCommandSpan;
+    workspace->config.resolve_branch = ndsFighterDLDrawResolveBranch;
+    workspace->config.resolve_data = ndsFighterDLDrawResolveRendererData;
+    workspace->config.user = &workspace->resolver;
+    workspace->frame.dobjs = workspace->live_dobjs;
+    workspace->frame.binding_display_lists =
+        workspace->binding_display_lists;
+    workspace->frame.projection = &workspace->projection;
+    workspace->frame.binding_composed = workspace->binding_composed;
+    workspace->frame.materials = workspace->materials;
+    workspace->frame.config = &workspace->config;
+    if (ndsRendererPrepareNativeStageOwner(
+            &workspace->frame, &workspace->stats) == FALSE)
+    {
+        return FALSE;
+    }
+    workspace->next_segment = 0u;
+    workspace->active = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererM3DObjCount = workspace->dobj_count;
+    gNdsRendererM3BindingCount = workspace->binding_count;
+    gNdsRendererM3MaterialShadowCount =
+        NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT;
+#endif
+    return TRUE;
+}
+
+s32 ndsRendererAdapterCommitNativeStageDisplay(
+    void *display_gobj_ptr, s32 link_id)
+{
+    NDSRendererAdapterNativeStageWorkspace *workspace =
+        &sNdsRendererAdapterNativeStageWorkspace;
+    GObj *display_gobj = display_gobj_ptr;
+    u32 i;
+
+    if (workspace->active == FALSE)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    {
+        if (display_gobj == workspace->segments[i])
+        {
+            if ((i != workspace->next_segment) ||
+                ((u32)link_id != ndsRendererAdapterNativeStageSegmentLink(i)))
+            {
+                (void)ndsRendererCommitNativeStageSegment(0xffffffffu);
+                return TRUE;
+            }
+            ndsRendererAdapterCommitNativeStageMaterials(workspace, i);
+            if (ndsRendererCommitNativeStageSegment(i) == FALSE)
+            {
+                return TRUE;
+            }
+            workspace->next_segment++;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void ndsRendererAdapterFinishNativeStageOwner(void)
+{
+    NDSRendererAdapterNativeStageWorkspace *workspace =
+        &sNdsRendererAdapterNativeStageWorkspace;
+
+    if (workspace->active != FALSE)
+    {
+        ndsRendererFinishNativeStageOwner();
+    }
+    workspace->active = FALSE;
+    workspace->next_segment = 0u;
+}
+#else
+s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj)
+{
+    (void)camera_gobj;
+    return FALSE;
+}
+
+s32 ndsRendererAdapterCommitNativeStageDisplay(
+    void *display_gobj, s32 link_id)
+{
+    (void)display_gobj;
+    (void)link_id;
+    return FALSE;
+}
+
+void ndsRendererAdapterFinishNativeStageOwner(void)
+{
+}
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeMaterials(
     DObj *dobj, NDSRendererNativeMaterial *materials,
     u32 capacity, u32 *out_count)
