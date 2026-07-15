@@ -68,10 +68,10 @@ $sectionTotals = @{
         $sectionTotals[$Matches[1]] += [int64]$Matches[2]
     }
 }
-if (($sectionTotals.text -gt 4096) -or
-    ($sectionTotals.rodata -gt 512) -or
-    ($sectionTotals.data -gt 64) -or
-    ($sectionTotals.bss -gt 42000) -or
+if (($sectionTotals.text -gt 3584) -or
+    ($sectionTotals.rodata -gt 256) -or
+    ($sectionTotals.data -gt 16) -or
+    ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1536L)) -or
     ($sectionTotals.itcm -ne 0)) {
     throw ('FGM backend binary budget failed: text={0} rodata={1} data={2} ' +
         'bss={3} itcm={4}.' -f
@@ -134,6 +134,7 @@ try {
         'printf "FGM_LOAD=%#x,%#x,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmResult, gNdsAudioFgmMask, gNdsAudioFgmLoaded, gNdsAudioFgmResidentBytes, gNdsAudioFgmSupportedCount, gNdsAudioFgmOpenFailCount, gNdsAudioFgmReadFailCount, gNdsAudioFgmFormatFailCount',
         'printf "FGM_PLAY=%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsAudioFgmPlayCalls, gNdsAudioFgmSupportedPlayCount, gNdsAudioFgmUnsupportedCallCount, gNdsAudioFgmIncludedLookupFailCount, gNdsAudioFgmPlayFailCount, gNdsAudioFgmPhasePlayMask, gNdsAudioFgmLoopPlayCount, gNdsAudioFgmEnvelopeStepCount',
         'printf "FGM_PHASE=%u,%u,%u,%u,%u\n", gNdsAudioFgmPhasePlayCounts[0], gNdsAudioFgmPhasePlayCounts[1], gNdsAudioFgmPhasePlayCounts[2], gNdsAudioFgmPhasePlayCounts[3], gNdsAudioFgmPhasePlayCounts[4]',
+        'printf "FGM_KO=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmKoPlayMask, gNdsAudioFgmKoPlayCounts[0], gNdsAudioFgmKoPlayCounts[1], gNdsAudioFgmKoPlayCounts[2], gNdsAudioFgmKoPlayCounts[3], gNdsAudioFgmKoPlayCounts[4], gNdsAudioFgmKoTraceCount, gNdsAudioFgmKoTrace[0], gNdsAudioFgmKoTrace[1], gNdsAudioFgmKoTrace[2]',
         'printf "FGM_POOL=%u,%u,%u,%u,%u,%u,%u,%#x,%u,%#x\n", gNdsAudioFgmHandleAcquireCount, gNdsAudioFgmHandleCapacity, gNdsAudioFgmHandleReleaseCount, gNdsAudioFgmHandleRecycleCount, gNdsAudioFgmPoolExhaustCount, gNdsAudioFgmActiveHandles, gNdsAudioFgmMaxActiveHandles, gNdsAudioFgmChannelMask, gNdsAudioFgmLastChannel, gNdsAudioFgmFidelityDebtMask',
         'printf "FGM_LIFE=%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmStopCalls, gNdsAudioFgmStopAllCalls, gNdsAudioFgmDurationStopCount, gNdsAudioFgmStaleStopCount, gNdsAudioFgmGenerationMismatchCount, gNdsAudioFgmLastInstanceToken, gNdsAudioFgmInstanceTokenWrapCount',
         'printf "BGM=%#x,%u,%u,%u,%d\n", gNdsAudioBgmResult, gNdsAudioBgmPlaying, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmReadBytes, sNdsAudioBgmSoundID',
@@ -156,6 +157,8 @@ try {
         'FGM_PLAY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $phase = [regex]::Match($gdbStdout,
         'FGM_PHASE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $ko = [regex]::Match($gdbStdout,
+        'FGM_KO=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $pool = [regex]::Match($gdbStdout,
         'FGM_POOL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $life = [regex]::Match($gdbStdout,
@@ -175,8 +178,8 @@ try {
     if (-not $load.Success -or
         (Convert-MarkerUInt32 $load.Groups[1].Value) -ne 0x46474d31 -or
         [int]$load.Groups[3].Value -ne 1 -or
-        [int]$load.Groups[4].Value -ne 39120 -or
-        [int]$load.Groups[5].Value -ne 5 -or
+        [int]$load.Groups[4].Value -ne [int]$metadata.resident_bytes -or
+        [int]$load.Groups[5].Value -ne [int]$metadata.entry_count -or
         [int]$load.Groups[6].Value -ne 0 -or
         [int]$load.Groups[7].Value -ne 0 -or
         [int]$load.Groups[8].Value -ne 0) {
@@ -197,6 +200,12 @@ try {
         (@(1..5 | ForEach-Object { [int]$phase.Groups[$_].Value }) -ne 1)) {
         throw "One or more natural phase IDs did not play exactly once.`n$gdbStdout"
     }
+    if (-not $ko.Success -or
+        (Convert-MarkerUInt32 $ko.Groups[1].Value) -ne 0 -or
+        (@(2..10 | ForEach-Object { [int]$ko.Groups[$_].Value }) -ne 0)) {
+        throw ('Regular-KO diagnostics were not clean before natural ' +
+            "blast-zone playback.`n$gdbStdout")
+    }
     $fgmChannelMask = if ($pool.Success) {
         Convert-MarkerUInt32 $pool.Groups[8].Value
     } else { 0u }
@@ -210,7 +219,7 @@ try {
         [int]$pool.Groups[7].Value -lt 1 -or
         $fgmChannelMask -eq 0 -or
         [int]$pool.Groups[9].Value -ge 16 -or
-        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 3) {
+        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 15) {
         throw "FGM recycle/channel/fidelity diagnostics failed.`n$gdbStdout"
     }
     if (-not $life.Success -or
@@ -234,7 +243,8 @@ try {
     }
 
     Write-Output (
-        ('Audio FGM natural phase passed: pack={0} bytes peak_min={1} ' +
+        ('Audio FGM natural phase/regular-KO pack passed: pack={0} bytes ' +
+         'peak_min={1} ' +
          'rms_min={2:N3} plays={3}+{4}unsupported phase=0x1f ' +
          'channels={5} bgm_channel={6} max_live={7} envelope_steps={8} ' +
          'headroom={9} text/rodata/data/bss/itcm={10}/{11}/{12}/{13}/{14}.') -f

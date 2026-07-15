@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the bounded P1 FGM phase pack from BattleShip's original audio.
+"""Build the bounded P1 FGM pack from BattleShip's original audio.
 
 The runtime consumes only this predecoded Nintendo DS IMA-ADPCM pack.  This
 script is the sole conversion step and deliberately reads the read-only
@@ -26,7 +26,7 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_PHASE_RESIDENT_BYTES = 64 * 1024
+MAX_RESIDENT_BYTES = 64 * 1024
 
 # These selectors are intentionally explicit.  Any upstream layout or program
 # change fails generation instead of silently selecting a different sound.
@@ -106,6 +106,134 @@ SELECTED = (
         "loop_start": 0,
         "loop_end": 0,
     },
+    {
+        "id": 439,
+        "name": "nSYAudioVoiceMarioDead",
+        "kind": "ko",
+        "articulation": 306,
+        "sound": 183,
+        "notes": ((13, 7, 6), (13, 7, 20), (13, 7, 30),
+                  (12, 7, 40)),
+        "duration_ticks": 96,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1502992,
+        "wave_length": 5140,
+        "loop_start": 0,
+        "loop_end": 0,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "fe49ea59dc5b1286afefa3db0b6b71958ba1ff398b0558e3d959877000109914",
+        "render_program_sha256":
+            "fe49ea59dc5b1286afefa3db0b6b71958ba1ff398b0558e3d959877000109914",
+        "articulation_program_sha256":
+            "6c41de24317700de64f7999a9fc6945878b42f65fb55537f6ae3a6c689f99e23",
+        "fidelity_debt": ("ucd_pitch_automation",),
+    },
+    {
+        "id": 292,
+        "name": "nSYAudioFGMMarioDeadSlam",
+        "kind": "ko",
+        "render_program": 287,
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((13, 7, 33), (13, 7, 20)),
+        "duration_ticks": 53,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "root_fork_programs": (287,),
+        "root_program_sha256":
+            "64523939186fd3d63f5440b5ec78784dac4e10c76456ebaa75671e4bfd9a85c2",
+        "render_program_sha256":
+            "634c9b1217b933f51dde97353d62e908fa1082943114d6dbe72bb188a3f33776",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+        "fidelity_debt": ("articulation_pitch_modulation",),
+    },
+    {
+        "id": 370,
+        "name": "nSYAudioVoiceFoxDead",
+        "kind": "ko",
+        "articulation": 223,
+        "sound": 104,
+        "notes": ((13, 7, 50), (13, 7, 40), (13, 7, 30)),
+        "duration_ticks": 120,
+        "ucd_volume": 235,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 908424,
+        "wave_length": 5518,
+        "loop_start": 0,
+        "loop_end": 0,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "9ff31a2c34193eb957a4c9c258e07f6b901bd2c70102f6c0078a30d6b00fc3e4",
+        "render_program_sha256":
+            "9ff31a2c34193eb957a4c9c258e07f6b901bd2c70102f6c0078a30d6b00fc3e4",
+        "articulation_program_sha256":
+            "22022da7f182ddc58defdac1ae7411305109d7a9611bd0280c3ccc2573fd5807",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 289,
+        "name": "nSYAudioFGMFoxDeadSlam",
+        "kind": "ko",
+        "render_program": 287,
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((13, 7, 33), (13, 7, 20)),
+        "duration_ticks": 53,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "root_fork_programs": (287,),
+        "root_program_sha256":
+            "64523939186fd3d63f5440b5ec78784dac4e10c76456ebaa75671e4bfd9a85c2",
+        "render_program_sha256":
+            "634c9b1217b933f51dde97353d62e908fa1082943114d6dbe72bb188a3f33776",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+        "fidelity_debt": ("articulation_pitch_modulation",),
+    },
+    {
+        "id": 154,
+        "name": "nSYAudioFGMDeadExplodeL",
+        "kind": "ko",
+        "articulation": 163,
+        "sound": 0,
+        "notes": ((2, 7, 200), (3, 7, 100)),
+        "duration_ticks": 300,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "source_loop_infinite": True,
+        "wave_base": 0,
+        "wave_length": 14220,
+        "loop_start": 20868,
+        "loop_end": 25137,
+        "root_fork_programs": (685,),
+        "omitted_fork_programs": (685,),
+        "root_program_sha256":
+            "22c33d1163d54e9e661037c6850d401580fbe2690003d7db80a83b44560e7fdb",
+        "render_program_sha256":
+            "22c33d1163d54e9e661037c6850d401580fbe2690003d7db80a83b44560e7fdb",
+        "omitted_fork_program_sha256": (
+            "ee5e3c31780c8e09482ca18a29c429aeced10923e37da32c39fa0860c04f80c5",
+        ),
+        "articulation_program_sha256":
+            "a6ebcc72a0293708770674b0e871961bf6a5223c52ae4d0b6d31ea993e8fb6b8",
+        "fidelity_debt": ("ucd_pitch_automation", "omitted_fork_voice_685"),
+    },
 )
 
 IMA_INDEX_TABLE = (
@@ -126,6 +254,12 @@ IMA_STEP_TABLE = (
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def json_sha256(value) -> str:
+    encoded = json.dumps(value, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+    return sha256(encoded)
 
 
 def load_module(path: Path, name: str):
@@ -156,41 +290,74 @@ def first_program_arg(program: list[list], op: str) -> int:
     return values[0]
 
 
-def validate_ucd(program: list[list], selector: dict) -> None:
-    forbidden = {"fork_voice", "mark_loop", "jump_loop", "vol_delta",
-                 "pan_delta", "set_t5_neg2400", "set_t5_neg4800"}
-    present = {row[0] for row in program}
-    if present & forbidden:
+def validate_ucd(root_program: list[list], program: list[list],
+                 selector: dict) -> None:
+    expected_root_hash = selector.get("root_program_sha256")
+    if (expected_root_hash is not None and
+            json_sha256(root_program) != expected_root_hash):
+        raise ValueError(f"FGM {selector['id']} root UCD program changed")
+    expected_render_hash = selector.get("render_program_sha256")
+    if (expected_render_hash is not None and
+            json_sha256(program) != expected_render_hash):
+        raise ValueError(f"FGM {selector['id']} render UCD program changed")
+
+    root_forks = tuple(int(row[1]) for row in root_program
+                       if row[0] == "fork_voice")
+    if root_forks != tuple(selector.get("root_fork_programs", ())):
         raise ValueError(
-            f"FGM {selector['id']} is no longer a bounded single voice: "
-            f"{sorted(present & forbidden)}")
+            f"FGM {selector['id']} root forks changed: {root_forks}")
+    omitted_forks = tuple(selector.get("omitted_fork_programs", ()))
+    omitted_hashes = tuple(selector.get(
+        "omitted_fork_program_sha256", ()))
+    if len(omitted_forks) != len(omitted_hashes):
+        raise ValueError(f"FGM {selector['id']} omitted-fork fixture mismatch")
+
+    if expected_render_hash is None:
+        forbidden = {"fork_voice", "mark_loop", "jump_loop", "vol_delta",
+                     "pan_delta", "set_t5_neg2400", "set_t5_neg4800"}
+        present = {row[0] for row in program}
+        if present & forbidden:
+            raise ValueError(
+                f"FGM {selector['id']} is no longer a bounded voice: "
+                f"{sorted(present & forbidden)}")
     if first_program_arg(program, "set_articulation") != selector["articulation"]:
         raise ValueError(f"FGM {selector['id']} articulation changed")
     if first_program_arg(program, "set_volume") != selector["ucd_volume"]:
         raise ValueError(f"FGM {selector['id']} volume changed")
     notes = [row for row in program if row[0] == "note"]
-    if notes != [["note", selector["pitch_code"], 7,
-                  selector["duration_ticks"]]]:
+    if "notes" in selector:
+        expected_notes = selector["notes"]
+    else:
+        expected_notes = ((selector["pitch_code"], 7,
+                           selector["duration_ticks"]),)
+    expected_notes = [["note", *values] for values in expected_notes]
+    if notes != expected_notes:
         raise ValueError(f"FGM {selector['id']} note program changed: {notes}")
     if not program or program[-1] != ["stop_voice"]:
         raise ValueError(f"FGM {selector['id']} no longer ends in stop_voice")
 
 
 def validate_articulation(program: list[list], selector: dict) -> None:
+    expected_hash = selector.get("articulation_program_sha256")
+    if expected_hash is not None and json_sha256(program) != expected_hash:
+        raise ValueError(
+            f"FGM {selector['id']} articulation program changed")
     triggers = [int(row[1]) for row in program if row[0] == "trigger"]
     if triggers != [selector["sound"]]:
         raise ValueError(
             f"FGM {selector['id']} trigger changed: {triggers}")
     pitches = [int(row[1]) for row in program if row[0] == "pitch"]
-    if pitches != [selector["articulation_pitch_cents"]]:
+    if (not pitches or
+            pitches[0] != selector["articulation_pitch_cents"]):
         raise ValueError(f"FGM {selector['id']} pitch changed: {pitches}")
-    unsupported = {row[0] for row in program} - {
-        "trigger", "pitch", "unk36", "vol", "end"
-    }
-    if unsupported:
-        raise ValueError(
-            f"FGM {selector['id']} articulation gained unsupported ops: "
-            f"{sorted(unsupported)}")
+    if expected_hash is None:
+        unsupported = {row[0] for row in program} - {
+            "trigger", "pitch", "unk36", "vol", "end"
+        }
+        if unsupported:
+            raise ValueError(
+                f"FGM {selector['id']} articulation gained unsupported ops: "
+                f"{sorted(unsupported)}")
     if not program or program[-1][0] != "end":
         raise ValueError(f"FGM {selector['id']} articulation has no end")
 
@@ -363,9 +530,18 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
 
     records = []
     metadata_entries = []
-    for phase_index, selector in enumerate(SELECTED):
-        ucd_program = ucd["entries"][selector["id"]]["program"]
-        validate_ucd(ucd_program, selector)
+    for entry_index, selector in enumerate(SELECTED):
+        root_program = ucd["entries"][selector["id"]]["program"]
+        render_program_id = selector.get("render_program", selector["id"])
+        ucd_program = ucd["entries"][render_program_id]["program"]
+        validate_ucd(root_program, ucd_program, selector)
+        for fork_id, expected_hash in zip(
+                selector.get("omitted_fork_programs", ()),
+                selector.get("omitted_fork_program_sha256", ())):
+            fork_program = ucd["entries"][fork_id]["program"]
+            if json_sha256(fork_program) != expected_hash:
+                raise ValueError(
+                    f"FGM {selector['id']} omitted fork {fork_id} changed")
         art_program = articulations["entries"][
             selector["articulation"]]["program"]
         validate_articulation(art_program, selector)
@@ -381,7 +557,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         actual_loop = (loop["start"], loop["end"]) if loop else (0, 0)
         if actual_loop != (selector["loop_start"], selector["loop_end"]):
             raise ValueError(f"FGM {selector['id']} loop changed: {actual_loop}")
-        if selector["loop"] != bool(loop):
+        source_loop_infinite = selector.get(
+            "source_loop_infinite", selector["loop"])
+        if source_loop_infinite != bool(loop):
             raise ValueError(f"FGM {selector['id']} loop flag changed")
 
         vadpcm = source_raw["B1_sounds2_tbl"][
@@ -407,7 +585,10 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         if metrics["decoded_peak"] == 0 or metrics["decoded_rms"] <= 0:
             raise ValueError(f"FGM {selector['id']} decoded to silence")
 
-        note_pitch_cents = selector["pitch_code"] * 100 - 1300
+        first_pitch_code = (selector["notes"][0][0]
+                            if "notes" in selector
+                            else selector["pitch_code"])
+        note_pitch_cents = first_pitch_code * 100 - 1300
         net_pitch_cents = (selector["articulation_pitch_cents"] +
                            note_pitch_cents)
         frequency = round(FGM_OUTPUT_RATE * (2.0 **
@@ -427,10 +608,21 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "envelope": envelope[1:],
         })
         metadata_entries.append({
-            "phase_index": phase_index,
+            "entry_index": entry_index,
+            "entry_kind": selector.get("kind", "phase"),
+            "phase_index": (entry_index
+                            if selector.get("kind", "phase") == "phase"
+                            else None),
             "id": selector["id"],
             "name": selector["name"],
+            "root_ucd_program_id": selector["id"],
+            "root_ucd_program": root_program,
+            "render_ucd_program_id": render_program_id,
             "ucd_program": ucd_program,
+            "root_fork_programs": list(selector.get(
+                "root_fork_programs", ())),
+            "omitted_fork_programs": list(selector.get(
+                "omitted_fork_programs", ())),
             "articulation_index": selector["articulation"],
             "articulation_program": art_program,
             "source_sound_index": selector["sound"],
@@ -448,7 +640,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 f"<{len(pcm)}h", *pcm)),
             "source_loop_start": selector["loop_start"],
             "source_loop_end": selector["loop_end"],
-            "source_loop_infinite": bool(selector["loop"]),
+            "source_loop_infinite": source_loop_infinite,
             "ds_loop_strategy": loop_strategy,
             "ds_initial_prefix_samples_dropped": (
                 selector["loop_start"] if selector["loop"] else 0),
@@ -468,6 +660,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "source_volume_mapping": (
                 "((articulation_volume * ((ucd_volume * 127) >> 7) * "
                 "127) >> 7) linearly mapped from 0..32767 to DS 0..127"),
+            "runtime_fidelity_debt": list(selector.get(
+                "fidelity_debt", ())),
             "ima_adpcm_bytes": len(ima),
             "ima_adpcm_sha256": sha256(ima),
             **metrics,
@@ -478,10 +672,22 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
     envelope_body = bytearray()
     entries_blob = bytearray()
     cursor = data_offset
+    sample_offsets: dict[bytes, int] = {}
     for record in records:
-        record["data_offset"] = cursor
-        sample_body += record["ima"]
-        cursor += len(record["ima"])
+        ima = record["ima"]
+        if ima in sample_offsets:
+            record["data_offset"] = sample_offsets[ima]
+            record["sample_body_deduplicated"] = True
+        else:
+            record["data_offset"] = cursor
+            sample_offsets[ima] = cursor
+            record["sample_body_deduplicated"] = False
+            sample_body += ima
+            cursor += len(ima)
+    for record, metadata_entry in zip(records, metadata_entries):
+        metadata_entry["pack_data_offset"] = record["data_offset"]
+        metadata_entry["sample_body_deduplicated"] = record[
+            "sample_body_deduplicated"]
     envelope_cursor = cursor
     for record in records:
         envelope = record["envelope"]
@@ -502,31 +708,38 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             bytes(entries_blob) + bytes(sample_body) + bytes(envelope_body))
     if len(pack) != pack_size:
         raise AssertionError("pack size accounting mismatch")
-    if len(pack) > MAX_PHASE_RESIDENT_BYTES:
+    if len(pack) > MAX_RESIDENT_BYTES:
         raise ValueError(
-            f"phase pack exceeds 64 KiB: {len(pack)} bytes")
+            f"FGM pack exceeds 64 KiB: {len(pack)} bytes")
 
     metadata = {
-        "format": "BattleShip P1 FGM phase pack / Nintendo DS IMA ADPCM",
+        "format": "BattleShip P1 FGM pack / Nintendo DS IMA ADPCM",
         "format_version": PACK_VERSION,
         "entry_count": len(records),
         "entry_bytes": PACK_ENTRY.size,
         "envelope_point_bytes": PACK_ENVELOPE_POINT.size,
         "header_bytes": PACK_HEADER.size,
         "resident_bytes": len(pack),
-        "resident_limit_bytes": MAX_PHASE_RESIDENT_BYTES,
+        "resident_limit_bytes": MAX_RESIDENT_BYTES,
         "mapping_sha256": mapping_sha,
         "mapping_sha256_lo": f"0x{mapping_sha_lo:08x}",
         "pack_sha256": sha256(pack),
         "source_fgm_timer_microseconds": FGM_TIMER_MICROSECONDS,
         "source_fgm_output_rate_hz": FGM_OUTPUT_RATE,
         "runtime_conversion": False,
+        "unique_sample_count": len(sample_offsets),
+        "unique_sample_bytes": len(sample_body),
         "known_runtime_fidelity_debt": [
             "PublicExcited drops its one-sample pre-roll so the DS ADPCM "
             "stream can loop the exact BattleShip [1, 28215) range.",
             "The AOT BattleShip volume envelope is scheduled from the "
             "60 Hz game update and uses DS step volume; N64 applied 5.75 ms "
             "ticks with a 5.75 ms synthesizer ramp.",
+            "The regular KO entries retain their exact source wavetable, "
+            "initial pitch, duration, and volume envelope; source pitch "
+            "automation is not yet scheduled on DS channels.",
+            "DeadExplodeL currently renders its primary UCD voice; forked "
+            "source voice 685 remains explicit metadata fidelity debt.",
         ],
         "sources": {
             name: {

@@ -14,7 +14,7 @@
 #define NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES 4u
 #define NDS_AUDIO_FGM_PACK_DATA_OFFSET \
     (NDS_AUDIO_FGM_PACK_HEADER_BYTES + \
-     (NDS_AUDIO_FGM_PHASE_COUNT * NDS_AUDIO_FGM_PACK_ENTRY_BYTES))
+     (NDS_AUDIO_FGM_ENTRY_COUNT * NDS_AUDIO_FGM_PACK_ENTRY_BYTES))
 #define NDS_AUDIO_FGM_HANDLE_COUNT NDS_AUDIO_FGM_HANDLE_CAPACITY
 #define NDS_AUDIO_FGM_CHANNEL_COUNT 16u
 #define NDS_AUDIO_FGM_TIMER_MICROSECONDS 5750u
@@ -70,6 +70,10 @@ volatile u32 gNdsAudioFgmIncludedLookupFailCount;
 volatile u32 gNdsAudioFgmPlayFailCount;
 volatile u32 gNdsAudioFgmPhasePlayMask;
 volatile u32 gNdsAudioFgmPhasePlayCounts[NDS_AUDIO_FGM_PHASE_COUNT];
+volatile u32 gNdsAudioFgmKoPlayMask;
+volatile u32 gNdsAudioFgmKoPlayCounts[NDS_AUDIO_FGM_KO_COUNT];
+volatile u32 gNdsAudioFgmKoTraceCount;
+volatile u32 gNdsAudioFgmKoTrace[NDS_AUDIO_FGM_KO_TRACE_CAPACITY];
 volatile u32 gNdsAudioFgmLoopPlayCount;
 volatile u32 gNdsAudioFgmStopCalls;
 volatile u32 gNdsAudioFgmStopAllCalls;
@@ -95,17 +99,17 @@ volatile u32 gNdsAudioFgmFidelityDebtMask;
 static u8 sNdsAudioFgmPack[NDS_AUDIO_FGM_PACK_BYTES]
     __attribute__((aligned(4)));
 static NDSAudioFgmPackEntry
-    sNdsAudioFgmEntries[NDS_AUDIO_FGM_PHASE_COUNT];
+    sNdsAudioFgmEntries[NDS_AUDIO_FGM_ENTRY_COUNT];
 static NDSAudioFgmHandle sNdsAudioFgmHandles[NDS_AUDIO_FGM_HANDLE_COUNT];
 static NDSAudioFgmHandle *sNdsAudioFgmChannelOwners[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmChannelGenerations[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmNextGeneration = 1u;
 static u16 sNdsAudioFgmInstanceToken;
 
-_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 176u,
-               "FGM phase pack header layout changed");
+_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 336u,
+               "FGM pack header layout changed");
 _Static_assert(NDS_AUDIO_FGM_PACK_BYTES <= (64u * 1024u),
-               "FGM phase pack exceeds its resident-memory gate");
+               "FGM pack exceeds its resident-memory gate");
 _Static_assert(offsetof(NDSAudioFgmHandle, effect) == 0u,
                "BattleShip audio handle must be the backend handle prefix");
 _Static_assert(offsetof(alSoundEffect, sfx_id) == 0x26u,
@@ -133,9 +137,33 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceAnnounceTwo:
     case nSYAudioVoiceAnnounceOne:
     case nSYAudioVoiceAnnounceGo:
+    case nSYAudioVoiceMarioDead:
+    case nSYAudioFGMMarioDeadSlam:
+    case nSYAudioVoiceFoxDead:
+    case nSYAudioFGMFoxDeadSlam:
+    case nSYAudioFGMDeadExplodeL:
         return TRUE;
     default:
         return FALSE;
+    }
+}
+
+static s32 ndsAudioFgmKoIndex(u16 id)
+{
+    switch (id)
+    {
+    case nSYAudioVoiceMarioDead:
+        return 0;
+    case nSYAudioFGMMarioDeadSlam:
+        return 1;
+    case nSYAudioVoiceFoxDead:
+        return 2;
+    case nSYAudioFGMFoxDeadSlam:
+        return 3;
+    case nSYAudioFGMDeadExplodeL:
+        return 4;
+    default:
+        return -1;
     }
 }
 
@@ -162,7 +190,7 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
 {
     u32 i;
 
-    for (i = 0u; i < NDS_AUDIO_FGM_PHASE_COUNT; i++)
+    for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
     {
         if (sNdsAudioFgmEntries[i].id == id)
         {
@@ -239,27 +267,47 @@ static NDSAudioFgmHandle *ndsAudioFgmHandleFromEffect(alSoundEffect *effect)
 
 static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
 {
-    static const u16 expected_ids[NDS_AUDIO_FGM_PHASE_COUNT] = {
+    static const u16 expected_ids[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         nSYAudioVoicePublicExcited,
         nSYAudioVoiceAnnounceThree,
         nSYAudioVoiceAnnounceTwo,
         nSYAudioVoiceAnnounceOne,
-        nSYAudioVoiceAnnounceGo
+        nSYAudioVoiceAnnounceGo,
+        nSYAudioVoiceMarioDead,
+        nSYAudioFGMMarioDeadSlam,
+        nSYAudioVoiceFoxDead,
+        nSYAudioFGMFoxDeadSlam,
+        nSYAudioFGMDeadExplodeL
     };
-    static const u16 expected_frequencies[NDS_AUDIO_FGM_PHASE_COUNT] = {
-        15102u, 16000u, 16000u, 16000u, 16000u
+    static const u16 expected_frequencies[NDS_AUDIO_FGM_ENTRY_COUNT] = {
+        15102u, 16000u, 16000u, 16000u, 16000u,
+        16009u, 16951u, 16000u, 16951u, 8476u
     };
-    static const u16 expected_durations[NDS_AUDIO_FGM_PHASE_COUNT] = {
-        1200u, 99u, 100u, 85u, 150u
+    static const u16 expected_durations[NDS_AUDIO_FGM_ENTRY_COUNT] = {
+        1200u, 99u, 100u, 85u, 150u, 96u, 53u, 120u, 53u, 300u
     };
-    static const u8 expected_volumes[NDS_AUDIO_FGM_PHASE_COUNT] = {
-        17u, 106u, 106u, 111u, 124u
+    static const u8 expected_volumes[NDS_AUDIO_FGM_ENTRY_COUNT] = {
+        17u, 106u, 106u, 111u, 124u, 95u, 30u, 114u, 30u, 124u
     };
-    static const u16 expected_sounds[NDS_AUDIO_FGM_PHASE_COUNT] = {
-        320u, 208u, 209u, 210u, 211u
+    static const u16 expected_sounds[NDS_AUDIO_FGM_ENTRY_COUNT] = {
+        320u, 208u, 209u, 210u, 211u, 183u, 28u, 104u, 28u, 0u
+    };
+    static const u32 expected_data_bytes[NDS_AUDIO_FGM_ENTRY_COUNT] = {
+        14112u, 5628u, 5740u, 5428u, 7924u,
+        4572u, 3348u, 4908u, 3348u, 12644u
+    };
+    static const u32 expected_sample_counts[NDS_AUDIO_FGM_ENTRY_COUNT] = {
+        28214u, 11248u, 11472u, 10848u, 15840u,
+        9136u, 6688u, 9808u, 6688u, 25280u
+    };
+    static const u16 expected_envelope_counts[NDS_AUDIO_FGM_ENTRY_COUNT] = {
+        28u, 0u, 0u, 0u, 0u, 0u, 3u, 5u, 3u, 13u
     };
     NDSAudioFgmPackEntry *entry = &sNdsAudioFgmEntries[index];
     u32 expected_flags = (index == 0u) ? 1u : 0u;
+    u32 next_unique_data_offset = NDS_AUDIO_FGM_PACK_DATA_OFFSET;
+    s32 is_duplicate = FALSE;
+    u32 prior_index;
 
     entry->id = ndsAudioFgmReadLe16(&raw[0]);
     entry->flags = ndsAudioFgmReadLe16(&raw[2]);
@@ -282,8 +330,10 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
         (entry->volume != expected_volumes[index]) ||
         (entry->pan != 64u) ||
         (entry->source_sound_index != expected_sounds[index]) ||
-        (entry->data_bytes < 4u) || ((entry->data_bytes & 3u) != 0u) ||
-        (entry->sample_count == 0u) || (entry->volume > 127u) ||
+        (entry->data_bytes != expected_data_bytes[index]) ||
+        (entry->sample_count != expected_sample_counts[index]) ||
+        (entry->envelope_count != expected_envelope_counts[index]) ||
+        ((entry->data_bytes & 3u) != 0u) || (entry->volume > 127u) ||
         (entry->reserved != 0u) ||
         (entry->data_offset < NDS_AUDIO_FGM_PACK_DATA_OFFSET) ||
         ((entry->data_offset & 3u) != 0u) ||
@@ -293,24 +343,37 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
     {
         return FALSE;
     }
-    if ((index == 0u) && (entry->sample_count != 28214u))
+    for (prior_index = 0u; prior_index < index; prior_index++)
+    {
+        const NDSAudioFgmPackEntry *prior =
+            &sNdsAudioFgmEntries[prior_index];
+        u32 prior_end = prior->data_offset + prior->data_bytes;
+
+        if (prior_end > next_unique_data_offset)
+        {
+            next_unique_data_offset = prior_end;
+        }
+        if (entry->data_offset == prior->data_offset)
+        {
+            if ((entry->data_bytes != prior->data_bytes) ||
+                (entry->sample_count != prior->sample_count))
+            {
+                return FALSE;
+            }
+            is_duplicate = TRUE;
+        }
+    }
+    if ((is_duplicate == FALSE) &&
+        (entry->data_offset != next_unique_data_offset))
     {
         return FALSE;
     }
-    if ((index != 0u) &&
-        (entry->data_offset !=
-         (sNdsAudioFgmEntries[index - 1u].data_offset +
-          sNdsAudioFgmEntries[index - 1u].data_bytes)))
-    {
-        return FALSE;
-    }
-    if (index == 0u)
+    if (entry->envelope_count != 0u)
     {
         u32 point_index;
         u16 previous_tick = 0u;
 
-        if ((entry->envelope_count != 28u) ||
-            ((entry->envelope_offset & 3u) != 0u) ||
+        if (((entry->envelope_offset & 3u) != 0u) ||
             (entry->envelope_offset > NDS_AUDIO_FGM_PACK_BYTES) ||
             (((u32)entry->envelope_count *
               NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES) >
@@ -335,8 +398,7 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
             previous_tick = tick;
         }
     }
-    else if ((entry->envelope_offset != 0u) ||
-             (entry->envelope_count != 0u))
+    else if (entry->envelope_offset != 0u)
     {
         return FALSE;
     }
@@ -389,6 +451,12 @@ void ndsAudioFgmDiagnosticsReset(void)
     gNdsAudioFgmPhasePlayMask = 0u;
     memset((void *)gNdsAudioFgmPhasePlayCounts, 0,
            sizeof(gNdsAudioFgmPhasePlayCounts));
+    gNdsAudioFgmKoPlayMask = 0u;
+    memset((void *)gNdsAudioFgmKoPlayCounts, 0,
+           sizeof(gNdsAudioFgmKoPlayCounts));
+    gNdsAudioFgmKoTraceCount = 0u;
+    memset((void *)gNdsAudioFgmKoTrace, 0,
+           sizeof(gNdsAudioFgmKoTrace));
     gNdsAudioFgmLoopPlayCount = 0u;
     gNdsAudioFgmStopCalls = 0u;
     gNdsAudioFgmStopAllCalls = 0u;
@@ -418,6 +486,8 @@ void ndsAudioFgmLoadFenced(void)
     u8 *header = sNdsAudioFgmPack;
     long file_size;
     u32 i;
+    u32 sample_end = NDS_AUDIO_FGM_PACK_DATA_OFFSET;
+    u32 envelope_cursor;
 
     if (gNdsAudioFgmLoaded != 0u)
     {
@@ -448,7 +518,7 @@ void ndsAudioFgmLoadFenced(void)
 
     if ((memcmp(header, "FGM1", 4) != 0) ||
         (ndsAudioFgmReadLe16(&header[4]) != 2u) ||
-        (ndsAudioFgmReadLe16(&header[6]) != NDS_AUDIO_FGM_PHASE_COUNT) ||
+        (ndsAudioFgmReadLe16(&header[6]) != NDS_AUDIO_FGM_ENTRY_COUNT) ||
         (ndsAudioFgmReadLe32(&header[8]) != NDS_AUDIO_FGM_PACK_BYTES) ||
         (ndsAudioFgmReadLe32(&header[12]) !=
          NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO))
@@ -456,7 +526,7 @@ void ndsAudioFgmLoadFenced(void)
         gNdsAudioFgmFormatFailCount++;
         return;
     }
-    for (i = 0u; i < NDS_AUDIO_FGM_PHASE_COUNT; i++)
+    for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
     {
         const u8 *raw = &sNdsAudioFgmPack[
             NDS_AUDIO_FGM_PACK_HEADER_BYTES +
@@ -470,15 +540,35 @@ void ndsAudioFgmLoadFenced(void)
             return;
         }
     }
+    for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
+    {
+        u32 entry_end = sNdsAudioFgmEntries[i].data_offset +
+                        sNdsAudioFgmEntries[i].data_bytes;
+
+        if (entry_end > sample_end)
+        {
+            sample_end = entry_end;
+        }
+    }
+    envelope_cursor = sample_end;
+    for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
+    {
+        const NDSAudioFgmPackEntry *entry = &sNdsAudioFgmEntries[i];
+
+        if (entry->envelope_count != 0u)
+        {
+            if (entry->envelope_offset != envelope_cursor)
+            {
+                break;
+            }
+            envelope_cursor += (u32)entry->envelope_count *
+                               NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES;
+        }
+    }
     if ((sNdsAudioFgmEntries[0].data_offset !=
          NDS_AUDIO_FGM_PACK_DATA_OFFSET) ||
-        ((sNdsAudioFgmEntries[NDS_AUDIO_FGM_PHASE_COUNT - 1u].data_offset +
-          sNdsAudioFgmEntries[NDS_AUDIO_FGM_PHASE_COUNT - 1u].data_bytes) !=
-         sNdsAudioFgmEntries[0].envelope_offset) ||
-        ((sNdsAudioFgmEntries[0].envelope_offset +
-          ((u32)sNdsAudioFgmEntries[0].envelope_count *
-           NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES)) !=
-         NDS_AUDIO_FGM_PACK_BYTES))
+        (i != NDS_AUDIO_FGM_ENTRY_COUNT) ||
+        (envelope_cursor != NDS_AUDIO_FGM_PACK_BYTES))
     {
         memset(sNdsAudioFgmEntries, 0, sizeof(sNdsAudioFgmEntries));
         gNdsAudioFgmFormatFailCount++;
@@ -488,7 +578,7 @@ void ndsAudioFgmLoadFenced(void)
     DC_FlushRange(sNdsAudioFgmPack, NDS_AUDIO_FGM_PACK_BYTES);
     gNdsAudioFgmLoaded = 1u;
     gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_PACK_BYTES;
-    gNdsAudioFgmSupportedCount = NDS_AUDIO_FGM_PHASE_COUNT;
+    gNdsAudioFgmSupportedCount = NDS_AUDIO_FGM_ENTRY_COUNT;
     gNdsAudioFgmHandleCapacity = NDS_AUDIO_FGM_HANDLE_COUNT;
     gNdsAudioFgmMask |= NDS_AUDIO_FGM_MASK_PACK_LOADED;
     gNdsAudioFgmFidelityDebtMask =
@@ -586,6 +676,7 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
     NDSAudioFgmPackEntry *entry;
     NDSAudioFgmHandle *handle = NULL;
     s32 phase_index;
+    s32 ko_index;
     s32 channel;
     u32 i;
     u32 duration_cpu_ticks;
@@ -701,6 +792,16 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
             NDS_AUDIO_FGM_PHASE_COMPLETE_MASK)
         {
             gNdsAudioFgmMask |= NDS_AUDIO_FGM_MASK_PHASE_COMPLETE;
+        }
+    }
+    ko_index = ndsAudioFgmKoIndex(fgm_id);
+    if (ko_index >= 0)
+    {
+        gNdsAudioFgmKoPlayCounts[ko_index]++;
+        gNdsAudioFgmKoPlayMask |= 1u << ko_index;
+        if (gNdsAudioFgmKoTraceCount < NDS_AUDIO_FGM_KO_TRACE_CAPACITY)
+        {
+            gNdsAudioFgmKoTrace[gNdsAudioFgmKoTraceCount++] = fgm_id;
         }
     }
     return &handle->effect;

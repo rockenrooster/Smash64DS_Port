@@ -67,6 +67,41 @@ function Assert-EqualList {
     }
 }
 
+function Get-SourceFunctionBlock {
+    param(
+        [string]$Source,
+        [string]$Name
+    )
+
+    $match = [regex]::Match(
+        $Source,
+        ('(?s)void\s+{0}\s*\([^)]*\)\s*\{{.*?(?=\r?\n// 0x|\z)' -f
+            [regex]::Escape($Name))
+    )
+    if (-not $match.Success) {
+        throw "BattleShip source function was not found: $Name"
+    }
+    return $match.Value
+}
+
+function Assert-OrderedTokens {
+    param(
+        [string]$Label,
+        [string]$Source,
+        [string[]]$Tokens
+    )
+
+    $cursor = 0
+    foreach ($token in $Tokens) {
+        $found = $Source.IndexOf($token, $cursor,
+            [StringComparison]::Ordinal)
+        if ($found -lt 0) {
+            throw "$Label source order is missing: $token"
+        }
+        $cursor = $found + $token.Length
+    }
+}
+
 $fixtures = @(
     @{
         Name = 'MarioMain'
@@ -136,10 +171,74 @@ foreach ($sourceOffset in @(
     }
 }
 
+$deadSourcePath = Join-Path $BattleShipRoot 'src/ft/ftcommon/ftcommondead.c'
+$deadSourceText = Get-Content -LiteralPath $deadSourcePath -Raw
+$deadInit = Get-SourceFunctionBlock -Source $deadSourceText `
+    -Name 'ftCommonDeadInitStatusVars'
+Assert-OrderedTokens -Label 'BattleShip regular-KO fighter audio' `
+    -Source $deadInit -Tokens @(
+        'ftCommonDeadAddDeadSFXSoundQueue(fp->attr->dead_fgm_ids[0]);',
+        'ftCommonDeadAddDeadSFXSoundQueue(fp->attr->dead_fgm_ids[1]);'
+    )
+foreach ($functionName in @(
+        'ftCommonDeadDownSetStatus',
+        'ftCommonDeadRightSetStatus',
+        'ftCommonDeadLeftSetStatus'
+    )) {
+    $block = Get-SourceFunctionBlock -Source $deadSourceText `
+        -Name $functionName
+    Assert-OrderedTokens -Label "BattleShip $functionName audio" `
+        -Source $block -Tokens @(
+            'ftCommonDeadInitStatusVars(fighter_gobj);',
+            'else sfx_id = nSYAudioFGMDeadExplodeL;',
+            'ftCommonDeadAddDeadSFXSoundQueue(sfx_id);'
+        )
+}
+$rebirthBlock = Get-SourceFunctionBlock -Source $deadSourceText `
+    -Name 'ftCommonDeadCheckRebirth'
+foreach ($unexpected in @(
+        'func_800269C0_275C0(',
+        'ftCommonDeadAddDeadSFXSoundQueue('
+    )) {
+    if ($rebirthBlock.Contains($unexpected)) {
+        throw "BattleShip rebirth path gained an explicit audio call: $unexpected"
+    }
+}
+
+$metadataPath = Join-Path $root 'assets/audio/fgm_phase_pack_ima.json'
+$metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+$koIDs = @($metadata.entries | Where-Object {
+        $_.entry_kind -eq 'ko'
+    } | ForEach-Object { [int]$_.id })
+$marioRegularKo = [int[]]@($fixtures[0].Audio[0],
+    $fixtures[0].Audio[1], 154)
+$foxRegularKo = [int[]]@($fixtures[1].Audio[0],
+    $fixtures[1].Audio[1], 154)
+Assert-EqualList -Label 'Mario regular-KO source sequence' `
+    -Actual $marioRegularKo -Expected ([int[]]@(439, 292, 154))
+Assert-EqualList -Label 'Fox regular-KO source sequence' `
+    -Actual $foxRegularKo -Expected ([int[]]@(370, 289, 154))
+Assert-EqualList -Label 'Resident regular-KO ID set' -Actual $koIDs `
+    -Expected ([int[]]@(439, 292, 370, 289, 154))
+foreach ($entry in $metadata.entries | Where-Object {
+        $_.entry_kind -eq 'ko'
+    }) {
+    if ($entry.name -match '(?i)rebirth|respawn|halo') {
+        throw "Regular-KO pack incorrectly claims respawn audio: $($entry.name)"
+    }
+}
+
 $relocPath = Join-Path $root 'src/port/reloc_backend_assets.c'
 $fgmPath = Join-Path $root 'src/nds/nds_audio_fgm.c'
+$deadImportPath = Join-Path $root 'src/import/battleship_ftcommon_dead.c'
 $relocText = Get-Content -LiteralPath $relocPath -Raw
 $fgmText = Get-Content -LiteralPath $fgmPath -Raw
+$deadImportText = Get-Content -LiteralPath $deadImportPath -Raw
+
+if (-not $deadImportText.Contains(
+        '../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondead.c')) {
+    throw 'The live dead-state TU no longer imports BattleShip ftcommondead.c.'
+}
 
 $normalize = [regex]::Match(
     $relocText,
@@ -179,7 +278,9 @@ foreach ($required in @(
         'handle->allocated = FALSE;',
         'gNdsAudioFgmHandleRecycleCount++;',
         'gNdsAudioFgmHandleReleaseCount++;',
-        'gNdsAudioFgmInstanceTokenWrapCount++;'
+        'gNdsAudioFgmInstanceTokenWrapCount++;',
+        'gNdsAudioFgmKoPlayCounts[ko_index]++;',
+        'gNdsAudioFgmKoTrace[gNdsAudioFgmKoTraceCount++] = fgm_id;'
     )) {
     if (-not $fgmText.Contains($required)) {
         throw "FGM token-lifecycle fixture is missing: $required"
@@ -240,6 +341,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
-    'mixed-u16 words each, target layouts, source IDs, and recyclable ' +
+    'mixed-u16 words each, exact Mario/Fox regular-KO call order, no ' +
+    'rebirth-audio claim, target layouts, source IDs, and recyclable ' +
     'BattleShip FGM tokens.'
 )

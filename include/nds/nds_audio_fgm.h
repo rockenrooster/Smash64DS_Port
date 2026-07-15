@@ -5,16 +5,23 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
+#define NDS_AUDIO_FGM_ENTRY_COUNT 10u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
-#define NDS_AUDIO_FGM_PACK_BYTES 39120u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xca162f4eu
+#define NDS_AUDIO_FGM_KO_COUNT 5u
+#define NDS_AUDIO_FGM_KO_TRACE_CAPACITY 8u
+#define NDS_AUDIO_FGM_PACK_BYTES 64848u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x3c77e937u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_LOOP_PREROLL (1u << 0)
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_ENVELOPE_QUANTIZATION (1u << 1)
+#define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
+#define NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE (1u << 3)
 #define NDS_AUDIO_FGM_EXPECTED_FIDELITY_DEBT_MASK \
     (NDS_AUDIO_FGM_FIDELITY_DEBT_LOOP_PREROLL | \
-     NDS_AUDIO_FGM_FIDELITY_DEBT_ENVELOPE_QUANTIZATION)
+     NDS_AUDIO_FGM_FIDELITY_DEBT_ENVELOPE_QUANTIZATION | \
+     NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION | \
+     NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE)
 
 void ndsAudioFgmDiagnosticsReset(void);
 void ndsAudioFgmLoadFenced(void);
@@ -38,6 +45,11 @@ extern volatile u32 gNdsAudioFgmIncludedLookupFailCount;
 extern volatile u32 gNdsAudioFgmPlayFailCount;
 extern volatile u32 gNdsAudioFgmPhasePlayMask;
 extern volatile u32 gNdsAudioFgmPhasePlayCounts[NDS_AUDIO_FGM_PHASE_COUNT];
+extern volatile u32 gNdsAudioFgmKoPlayMask;
+extern volatile u32 gNdsAudioFgmKoPlayCounts[NDS_AUDIO_FGM_KO_COUNT];
+extern volatile u32 gNdsAudioFgmKoTraceCount;
+extern volatile u32
+    gNdsAudioFgmKoTrace[NDS_AUDIO_FGM_KO_TRACE_CAPACITY];
 extern volatile u32 gNdsAudioFgmLoopPlayCount;
 extern volatile u32 gNdsAudioFgmStopCalls;
 extern volatile u32 gNdsAudioFgmStopAllCalls;
