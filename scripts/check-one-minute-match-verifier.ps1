@@ -48,6 +48,10 @@ if ($wrapper -match 'RequireRealtime60Fps|capture-melonds|Screenshot|FiveMinute|
 }
 Assert-Text $lifecycle 'Get-MelonDSRunnerPort -RunnerSlot \$RunnerSlot -Cpu ARM9' `
     'Match-lifecycle wrapper no longer derives an isolated GDB port from RunnerSlot.'
+Assert-Text $lifecycle '-MelonDS \$MelonDS' `
+    'Match-lifecycle wrapper no longer forwards the selected repo-local emulator.'
+Assert-Text $lifecycle '-Gdb \$Gdb' `
+    'Match-lifecycle wrapper no longer forwards the selected GDB executable.'
 Assert-Text $lifecycle '-GdbPort \$selectedGdbPort' `
     'Match-lifecycle wrapper no longer forwards its selected isolated GDB port.'
 

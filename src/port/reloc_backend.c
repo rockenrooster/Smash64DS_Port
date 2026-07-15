@@ -2,6 +2,7 @@
 #include <it/item.h>
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_fighter_display.h>
+#include <nds/nds_mp_topology.h>
 #include <nds/nds_scene_harness.h>
 #include "nds_scene_harness_config.h"
 #include <sys/utils.h>
@@ -135,10 +136,11 @@ static u16 ndsMPO2RReadU16(const void *base, u32 half_index);
 static s16 ndsMPO2RReadS16(const void *base, u32 half_index);
 static u32 ndsMPGeometryYakumonoCount(MPGeometryData *geometry);
 static u32 ndsMPGeometryMapObjCount(MPGeometryData *geometry);
-static MPLineInfo *ndsMPLineInfoAt(MPLineInfo *line_info, u32 index);
-static u32 ndsMPLineInfoYakumonoID(MPLineInfo *line_info);
-static u32 ndsMPLineInfoGroupID(MPLineInfo *line_info, u32 kind);
-static u32 ndsMPLineInfoLineCount(MPLineInfo *line_info, u32 kind);
+static NDSMPO2RHalfwordView ndsMPLineInfoAt(MPLineInfo *line_info,
+                                             u32 index);
+static u32 ndsMPLineInfoYakumonoID(NDSMPO2RHalfwordView line_info);
+static u32 ndsMPLineInfoGroupID(NDSMPO2RHalfwordView line_info, u32 kind);
+static u32 ndsMPLineInfoLineCount(NDSMPO2RHalfwordView line_info, u32 kind);
 static u32 ndsMPVertexLinkFirst(MPVertexLinks *links, u32 line_id);
 static u32 ndsMPVertexLinkCount(MPVertexLinks *links, u32 line_id);
 static u32 ndsMPVertexID(MPVertexArray *ids, u32 index);

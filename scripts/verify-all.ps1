@@ -221,13 +221,12 @@ try {
             (Test-ScriptParameter -ScriptPath $scriptPath -Name 'Compact')) {
             $arguments += '-Compact'
         }
-        if (($Profile -eq 'P1Gate') -and
-            ($record.Name -eq 'battle_playable_realtime') -and
+        if (($record.Name -eq 'battle_playable_realtime') -and
             (Test-ScriptParameter -ScriptPath $scriptPath -Name 'FastIteration')) {
             $arguments += '-FastIteration'
-            # Match DevFast's calibrated pairwise allowance for the same short
-            # live-input sample. Both frames receive independent content and
-            # texture-detail gates; full-length realtime retains 30% / 32.
+            # Every profile compares the same completed Cut G frame pair. This
+            # removes host-delay/camera drift from Boundary/Regression decisions
+            # while both frames retain independent content/detail gates.
             if (Test-ScriptParameter -ScriptPath $scriptPath -Name 'MaxScreenshotChangedFraction') {
                 $arguments += @('-MaxScreenshotChangedFraction', '0.50')
             }

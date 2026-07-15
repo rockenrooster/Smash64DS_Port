@@ -77,7 +77,8 @@ For a normal direct/menu-chain pair:
 - `P1Gate`: additive four-leg shadow checkpoint: compact opening smoke,
   canonical realtime `FastIteration`, supplemental deterministic mode-163
   battle playback, and the one-minute mode-163 lifecycle/Results verifier.
-- `Regression`: historical playable-spine coverage plus the current boundary.
+- `Regression`: historical passing playable-spine coverage plus canonical
+  realtime `FastIteration`; diagnostic modes `161/162` are excluded.
 - `RegressionCore`: runtime/title, canonical realtime presentation, the
   one-minute lifecycle, one cliff proof, and the direct/menu MP floor pair.
 - `Full`: all registered verifiers.

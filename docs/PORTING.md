@@ -20779,3 +20779,68 @@ remains skipped for the requested fast iteration cadence.
 - Default capture paths now stay under `artifacts/visibility`; active direct
   melonDS capture/forensic runs use automation port 4333 or the selected
   isolated runner-slot mapping, leaving manual ports 3333/3334 free.
+
+## 2026-07-15 - Restored the source Fireball MVP and strengthened playtest gates
+
+- BattleShip's Fireball descriptor uses custom matrix kind `0x47`, whose source
+  callback replaces the upper three rows of translated LookAt/Perspective MVP
+  with `RotRpyR(x,y,0) * perspective` while preserving its translated row. The
+  DS adapter now applies that exact operation instead of treating `0x47` as a
+  second generic translation/rotation.
+- Natural B input now passes 40/40 custom applications with zero mismatch,
+  reject, or translation drift; the source weapon travels 1,757 units, rebounds
+  `55→46.75`, submits 80 triangles, and retains 218,640 bytes of arena headroom.
+  Capture: `artifacts/visibility/2026-07-15_004111-7967427_fireball-long-travel-p46200.png`.
+- The one-way-platform verifier now runs 218 natural frames and directly proves
+  upward passage, three landings, stable footing, a second platform jump,
+  Pass→Fall ignore-line cleanup, and main-floor return. Side-platform natural
+  traversal and both original manual playtest reports remain open.
+
+## 2026-07-15 - Proved PublicExcited ARM7 command application
+
+- Added one target-gated 144-byte trace for exactly three ID-626 events: PLAY,
+  final-zero envelope, and natural duration STOP. Calico auto-update remains off;
+  the three blocking active-channel reads acknowledge queued ARM7 commands with
+  no per-frame polling.
+- The exact gate observes one handle/generation, no replay or overlap, all 28
+  runtime envelope points, target channel active through final zero and cleared
+  at stop, ACK waits `88/67/74us`, lateness `14.3/30.9ms`, and 218,640 bytes of
+  arena headroom. Host audio was muted, so the acoustic playtest report remains
+  open for the user rather than being marked fixed by command telemetry.
+
+## 2026-07-15 - Refreshed Cut G and split the M4 feasibility checkpoint
+
+- Canonical/shipped ROMs are byte-identical at 14,369,792 bytes, SHA-256
+  `573C6FCC7F905369D479876C0402A4C9A0D004FFCC8FA3E886B4C753F0EBD3AE`.
+  Exact completed frames 438/439 pass runtime, OAM, visibility, named-region,
+  motion, and detail gates in
+  `artifacts/visibility/2026-07-15_canonical_fast_frame438-439_005531-0351144-p31652.png`.
+- The same ROM passes the unthrottled one-minute source lifecycle through Time
+  Up and Results with zero safety/stale faults and 172,024-byte conservative
+  reserve. Presentation remains 15.7 FPS, so this is not realtime completion.
+- M4 now separates a feasible generated static manifest (~69 keys / 179,328
+  bytes; ~71 / 216,192 with two live water owners) from the unresolved water
+  representation. Exact visible 216-state water needs about 903,168 bytes,
+  beyond total DS texture VRAM; static prewarm cannot be called M4 completion.
+
+## 2026-07-15 - Isolated diagnostics and hardened natural playtest gates
+
+- Rebuilt the byte-identical canonical/shipped pair at 14,368,768 bytes,
+  SHA-256 `F8EFEE10ED15457CD79A9B71B9766B5247BE870C332FB12316431F8301A0A94A`.
+  Exact Cut G frames 438/439 pass in
+  `artifacts/visibility/2026-07-15_canonical_fast_frame438-439_035112-0572048-p44488.png`.
+- Removed the production Fireball long-trace marker and stopped the focused
+  verifier on its existing post-submit source line. The same natural object
+  still passes 40 custom-`0x47` draws, 1,757 units of travel, and rebound
+  `55→46.75`, with zero mismatch/reject/translation drift.
+- Production/canonical audio now compiles out the ARM7 ACK trace and blocking
+  channel reads. A separate nonpublishing crowd diagnostic retains that trace;
+  production audio text is 3,272 bytes and focused reserve is 222,736 bytes.
+- The platform gate now pins exact all-three-line geometry and 715 natural
+  frames: three upward passes/zero accepts, nine reverse landings, two side
+  cycles, and three source Pass rejections. The user's platform, Fireball,
+  crowd, pause-view, and heavy-hit/throw reports all remain manually open.
+- A fresh seven-output RegressionCore prebuild/stamp and natural-runtime run
+  pass, followed by active mode-163 Boundary. The canonical one-minute
+  lifecycle still reaches Results with zero safety/stale faults; presentation
+  remains 15.7 FPS, so realtime completion is not claimed.

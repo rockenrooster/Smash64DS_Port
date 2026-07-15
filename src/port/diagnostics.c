@@ -2628,6 +2628,21 @@ volatile u32 gNdsFighterNaturalCombatVictimRecoverWaitFrames;
 volatile u32 gNdsFighterNaturalCombatGuardOnFrames;
 volatile u32 gNdsFighterNaturalCombatGuardFrames;
 volatile u32 gNdsFighterNaturalCombatGuardOffFrames;
+volatile NDSCollisionRuntimeDiagnostics gNdsCollisionRuntimeDiagnostics;
+
+void ndsCollisionRuntimeDiagnosticsReset(void)
+{
+    NDSCollisionRuntimeDiagnostics reset = { 0 };
+
+    reset.topology_last_line = -1;
+    reset.topology_last_prev = -1;
+    reset.topology_last_next = -1;
+    reset.damage_last_line = -1;
+    reset.damage_last_status = -1;
+    reset.fireball_last_line = -1;
+    gNdsCollisionRuntimeDiagnostics = reset;
+}
+
 volatile u32 gNdsFighterProjectileProofResult;
 volatile u32 gNdsFighterProjectileProofMask;
 volatile u32 gNdsFighterProjectileProofActorSlot;
@@ -3293,6 +3308,23 @@ volatile u32 gNdsWeaponRendererFireballSubmitCount;
 volatile u32 gNdsWeaponRendererFireballTriangleCount;
 volatile u32 gNdsWeaponRendererFireballVisibleDrawCount;
 volatile u32 gNdsWeaponRendererRejectedDrawCount;
+volatile u32 gNdsWeaponRendererFireballCustom47AppliedCount;
+volatile u32 gNdsWeaponRendererFireballCustom47MismatchCount;
+volatile u32 gNdsWeaponRendererFireballFirstXBits;
+volatile u32 gNdsWeaponRendererFireballFirstYBits;
+volatile u32 gNdsWeaponRendererFireballLastXBits;
+volatile u32 gNdsWeaponRendererFireballLastYBits;
+volatile u32 gNdsRendererAdapterCustom47DetectedCount;
+volatile u32 gNdsRendererAdapterCustom47AppliedCount;
+volatile u32 gNdsRendererAdapterCustom47RejectCount;
+volatile u32 gNdsRendererAdapterCustom47TranslationMismatchCount;
+volatile u32 gNdsRendererAdapterCustom47LastXObjsNum;
+volatile u32 gNdsRendererAdapterCustom47LastKinds;
+volatile u32 gNdsRendererAdapterCustom47LastRotateXBits;
+volatile u32 gNdsRendererAdapterCustom47LastRotateYBits;
+volatile u32 gNdsRendererAdapterCustom47LastTranslateX20p12;
+volatile u32 gNdsRendererAdapterCustom47LastTranslateY20p12;
+volatile u32 gNdsRendererAdapterCustom47LastTranslateZ20p12;
 volatile u32 gNdsFighterDisplayContractSelectedCount;
 volatile u32 gNdsFighterDisplayContractHiddenCount;
 volatile u32 gNdsFighterDisplayContractNoTextureCount;

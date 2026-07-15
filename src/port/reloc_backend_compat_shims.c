@@ -1,5 +1,6 @@
 /* NDS_NATURAL_COMBAT_ROUTED_EXTERNS */
 #include "nds_scene_harness_config.h"
+#include <sys/vector.h>
 
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
 
@@ -4454,6 +4455,11 @@ void mpCommonSetFighterAir(FTStruct *fp)
     if (fp != NULL)
     {
         fp->ga = nMPKineticsAir;
+        fp->physics.vel_air.z = 0.0F;
+        if (fp->joints[nFTPartsJointTopN] != NULL)
+        {
+            fp->joints[nFTPartsJointTopN]->translate.vec.f.z = 0.0F;
+        }
         fp->jumps_used = 1;
     }
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
@@ -4512,6 +4518,7 @@ void mpCommonSetFighterProjectFloor(GObj *fighter_gobj)
     {
         fp->coll_data.p_map_coll = &fp->coll_data.map_coll;
     }
+    mpProcessSetCollProjectFloorID(&fp->coll_data);
 }
 
 void ftPhysicsApplyGravityClampTVel(FTStruct *fp, f32 gravity, f32 tvel)
@@ -4971,10 +4978,11 @@ void mpCommonSetFighterGround(FTStruct *fp)
 {
     if (fp != NULL)
     {
-        fp->ga = nMPKineticsGround;
-        fp->jumps_used = 0;
         fp->physics.vel_ground.x =
             fp->physics.vel_air.x * (f32)fp->lr;
+        fp->ga = nMPKineticsGround;
+        fp->jumps_used = 0;
+        fp->stat_flags.ga = nMPKineticsGround;
         fp->vel_ground = fp->physics.vel_ground;
     }
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
@@ -5045,8 +5053,20 @@ void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
     {
         return;
     }
+    /* The cliff-reaction FGM branch remains audio debt; do not clear another
+     * fighter's passive union through Mario's member while landing. */
     fp->public_knockback = 0.0F;
-    fp->passive_vars.mario.is_expend_tornado = FALSE;
+    switch (fp->fkind)
+    {
+    case nFTKindMario:
+    case nFTKindMMario:
+    case nFTKindNMario:
+        fp->passive_vars.mario.is_expend_tornado = FALSE;
+        break;
+
+    default:
+        break;
+    }
     if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffCatchFloorLoopMapActive != FALSE))
@@ -5061,12 +5081,68 @@ void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
     }
 }
 
+void mpCommonRunDefaultCollision(MPCollData *coll_data, GObj *gobj,
+                                 u32 flags)
+{
+    (void)gobj;
+    (void)flags;
+    if (coll_data == NULL)
+    {
+        return;
+    }
+    gNdsCollisionRuntimeDiagnostics.default_run_calls++;
+    /* Floor acquisition/resolution is graduated first.  The O2R wall runner
+     * does not yet populate source line/angle state, so entering those source
+     * branches here would be less faithful than leaving them deferred. */
+    if (mpProcessRunFloorCollisionAdjNewNULL(coll_data) != FALSE)
+    {
+        mpProcessSetCollideFloor(coll_data);
+        if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+        {
+            mpProcessRunFloorEdgeAdjust(coll_data);
+        }
+    }
+    else
+    {
+        mpProcessSetCollProjectFloorID(coll_data);
+    }
+}
+
+void mpCommonCopyCollDataStats(MPCollData *this_coll_data, Vec3f *pos,
+                               MPCollData *other_coll_data)
+{
+    if ((this_coll_data == NULL) || (pos == NULL) ||
+        (other_coll_data == NULL))
+    {
+        return;
+    }
+    gNdsCollisionRuntimeDiagnostics.default_copy_calls++;
+    this_coll_data->pos_prev = *pos;
+    this_coll_data->p_map_coll = &other_coll_data->map_coll;
+    this_coll_data->mask_curr = 0u;
+    this_coll_data->mask_unk = 0u;
+    this_coll_data->mask_stat = 0u;
+    this_coll_data->is_coll_end = FALSE;
+    this_coll_data->update_tic = other_coll_data->update_tic;
+}
+
+void mpCommonResetCollDataStats(MPCollData *coll_data)
+{
+    if (coll_data == NULL)
+    {
+        return;
+    }
+    gNdsCollisionRuntimeDiagnostics.default_reset_calls++;
+    coll_data->p_map_coll = &coll_data->map_coll;
+    coll_data->update_tic = gMPCollisionUpdateTic;
+    coll_data->mask_curr = 0u;
+}
+
 void mpCommonRunFighterCollisionDefault(GObj *fighter_gobj, Vec3f *pos,
                                         FTCollisionData *coll_data)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    (void)coll_data;
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
     {
@@ -5105,9 +5181,14 @@ void mpCommonRunFighterCollisionDefault(GObj *fighter_gobj, Vec3f *pos,
     {
         gNdsStageMPPassiveLoopThrowDeadResultCollisionCount++;
     }
-    if ((fp != NULL) && (pos != NULL) && (fp->coll_data.p_translate != NULL))
+    if ((fp != NULL) && (pos != NULL) && (coll_data != NULL) &&
+        (fp->coll_data.p_translate != NULL))
     {
-        *fp->coll_data.p_translate = *pos;
+        gNdsCollisionRuntimeDiagnostics.default_fighter_calls++;
+        mpCommonCopyCollDataStats(&fp->coll_data, pos, coll_data);
+        mpCommonRunDefaultCollision(&fp->coll_data, fighter_gobj,
+                                    MAP_PROC_TYPE_DEFAULT);
+        mpCommonResetCollDataStats(&fp->coll_data);
         if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
                 FALSE) &&
             (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
@@ -8556,9 +8637,124 @@ static void ndsFTMainProcUpdateInterruptPassiveSlice(GObj *fighter_gobj)
     }
 }
 
+static sb32 ndsMPCommonProcFighterDamageFloorOnly(MPCollData *coll_data,
+                                                  GObj *fighter_gobj,
+                                                  u32 flags)
+{
+    FTStruct *fp;
+    sb32 is_collide = FALSE;
+    f32 root_y_before;
+
+    (void)flags;
+    gNdsCollisionRuntimeDiagnostics.damage_proc_calls++;
+    if ((coll_data == NULL) || (fighter_gobj == NULL) ||
+        (coll_data->p_translate == NULL))
+    {
+        gNdsCollisionRuntimeDiagnostics.damage_invalid++;
+        return FALSE;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if (fp == NULL)
+    {
+        gNdsCollisionRuntimeDiagnostics.damage_invalid++;
+        return FALSE;
+    }
+    root_y_before = coll_data->p_translate->y;
+
+    /* This is the exact floor portion of BattleShip mpCommonProcFighterDamage.
+     * Its wall and ceiling branches remain deferred until the O2R side runners
+     * publish source-faithful line IDs, angles, and clamps. */
+    coll_data->mask_unk &= (u16)~(MAP_FLAG_LWALL | MAP_FLAG_RWALL);
+    coll_data->mask_stat &= (u16)~(MAP_FLAG_LWALL | MAP_FLAG_RWALL |
+                                   MAP_FLAG_CEIL);
+    gNdsCollisionRuntimeDiagnostics.damage_floor_tests++;
+    if (mpProcessRunFloorCollisionAdjNewNULL(coll_data) != FALSE)
+    {
+        if ((mpCollisionCheckExistLineID(coll_data->floor_line_id) == FALSE) ||
+            (mpCollisionGetLineTypeID(coll_data->floor_line_id) !=
+                nMPLineKindFloor))
+        {
+            gNdsCollisionRuntimeDiagnostics.damage_invalid++;
+            coll_data->mask_curr &= (u16)~MAP_FLAG_FLOOR;
+            mpProcessSetCollProjectFloorID(coll_data);
+            return FALSE;
+        }
+        gNdsCollisionRuntimeDiagnostics.damage_floor_hits++;
+        if (fp->hitlag_tics > 0)
+        {
+            mpProcessSetCollideFloor(coll_data);
+            if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+            {
+                mpProcessRunFloorEdgeAdjust(coll_data);
+            }
+            else
+            {
+                mpProcessSetCollProjectFloorID(coll_data);
+            }
+        }
+        else if (syVectorAngleDiff3D(&coll_data->pos_diff,
+                     &coll_data->floor_angle) > F_CLC_DTOR32(110.0F))
+        {
+            mpProcessSetLandingFloor(coll_data);
+            mpCommonSetFighterLandingParams(fighter_gobj);
+            if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+            {
+                mpProcessRunFloorEdgeAdjust(coll_data);
+                fp->status_vars.common.damage.coll_mask_curr |=
+                    MAP_FLAG_FLOOR;
+                is_collide = TRUE;
+                coll_data->is_coll_end = TRUE;
+                gNdsCollisionRuntimeDiagnostics.damage_floor_landings++;
+            }
+        }
+        else
+        {
+            mpProcessSetCollideFloor(coll_data);
+            if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)
+            {
+                mpProcessRunFloorEdgeAdjust(coll_data);
+                if ((coll_data->mask_prev & MAP_FLAG_FLOOR) == 0u)
+                {
+                    fp->status_vars.common.damage.coll_mask_ignore |=
+                        MAP_FLAG_FLOOR;
+                    fp->status_vars.common.damage.wall_collide_angle =
+                        coll_data->floor_angle;
+                }
+            }
+            else
+            {
+                mpProcessSetCollProjectFloorID(coll_data);
+            }
+        }
+    }
+    else
+    {
+        mpProcessSetCollProjectFloorID(coll_data);
+    }
+    if (is_collide != FALSE)
+    {
+        gNdsCollisionRuntimeDiagnostics.damage_last_line =
+            coll_data->floor_line_id;
+        gNdsCollisionRuntimeDiagnostics.damage_last_status = fp->status_id;
+        gNdsCollisionRuntimeDiagnostics.damage_last_root_y_before_milli =
+            ndsFloatToMilliSigned(root_y_before);
+        gNdsCollisionRuntimeDiagnostics.damage_last_root_y_after_milli =
+            ndsFloatToMilliSigned(coll_data->p_translate->y);
+        gNdsCollisionRuntimeDiagnostics.damage_last_pos_diff_y_milli =
+            ndsFloatToMilliSigned(coll_data->pos_diff.y);
+        gNdsCollisionRuntimeDiagnostics.damage_last_angle_y_milli =
+            ndsFloatToMilliSigned(coll_data->floor_angle.y);
+        gNdsCollisionRuntimeDiagnostics.damage_last_mask_curr =
+            coll_data->mask_curr;
+        gNdsCollisionRuntimeDiagnostics.damage_last_mask_stat =
+            coll_data->mask_stat;
+    }
+    return is_collide;
+}
+
 sb32 mpCommonCheckFighterDamageCollision(GObj *fighter_gobj)
 {
-    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageMapActive != FALSE))
@@ -8614,7 +8810,29 @@ sb32 mpCommonCheckFighterDamageCollision(GObj *fighter_gobj)
         sNdsFighterDashRunDamageFallMapNoCollisionCount++;
         return FALSE;
     }
-    (void)fp;
+    if (ndsBattlePlayableRuntimeEnabled() != FALSE)
+    {
+        sb32 result;
+
+        gNdsCollisionRuntimeDiagnostics.damage_check_calls++;
+        if ((fp == NULL) || (fp->coll_data.p_translate == NULL))
+        {
+            gNdsCollisionRuntimeDiagnostics.damage_invalid++;
+            return FALSE;
+        }
+        fp->status_vars.common.damage.coll_mask_prev =
+            fp->status_vars.common.damage.coll_mask_curr;
+        fp->status_vars.common.damage.coll_mask_curr = 0u;
+        fp->status_vars.common.damage.coll_mask_ignore = 0u;
+        result = mpProcessUpdateMain(&fp->coll_data,
+                                     ndsMPCommonProcFighterDamageFloorOnly,
+                                     fighter_gobj, MAP_PROC_TYPE_DEFAULT);
+        if (result != FALSE)
+        {
+            gNdsCollisionRuntimeDiagnostics.damage_results++;
+        }
+        return result;
+    }
     return FALSE;
 }
 
@@ -8961,6 +9179,9 @@ static sb32 ndsStageMPPassiveLoopRunNaturalFloorCollision(GObj *fighter_gobj,
     return FALSE;
 }
 
+static sb32 ndsMPCommonRunFighterCliffFloorCeilCollisions(
+    MPCollData *coll_data, GObj *fighter_gobj, u32 flags);
+
 sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj)
 {
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
@@ -9020,6 +9241,7 @@ sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj)
             return TRUE;
         }
         gNdsStageMPCliffWaitDamageLoopDamageFallNoCollisionCount++;
+        return FALSE;
     }
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
@@ -9038,7 +9260,21 @@ sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj)
         }
         return TRUE;
     }
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    {
+        FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+        if (fp != NULL)
+        {
+            return mpProcessUpdateMain(
+                &fp->coll_data,
+                ndsMPCommonRunFighterCliffFloorCeilCollisions,
+                fighter_gobj, MAP_PROC_TYPE_CLIFF);
+        }
+    }
+#else
     (void)fighter_gobj;
+#endif
     return FALSE;
 }
 
@@ -10986,48 +11222,7 @@ static sb32 (*sNdsMPCommonProcPass)(GObj *);
 static sb32 ndsMPProcessCheckTestFloorCollisionAdjNew(
     MPCollData *coll_data, sb32 (*proc_map)(GObj *), GObj *gobj)
 {
-    MPObjectColl *map_coll;
-    MPObjectColl *p_map_coll;
-    Vec3f *translate;
-    Vec3f sp4C;
-    Vec3f sp40;
-    sb32 hit;
-
-    if ((coll_data == NULL) || (coll_data->p_translate == NULL))
-    {
-        return FALSE;
-    }
-
-    map_coll = &coll_data->map_coll;
-    p_map_coll = (coll_data->p_map_coll != NULL) ? coll_data->p_map_coll :
-        map_coll;
-    translate = coll_data->p_translate;
-    coll_data->mask_stat &= (u16)~MAP_FLAG_FLOOR;
-
-    sp4C.x = coll_data->pos_prev.x;
-    sp4C.y = coll_data->pos_prev.y + p_map_coll->bottom;
-    sp4C.z = coll_data->pos_prev.z;
-    sp40.x = translate->x;
-    sp40.y = translate->y + map_coll->bottom;
-    sp40.z = translate->z;
-
-    hit = (coll_data->update_tic != gMPCollisionUpdateTic) ?
-        mpCollisionCheckFloorLineCollisionDiff(&sp4C, &sp40,
-            &coll_data->line_coll_dist, &coll_data->floor_line_id,
-            &coll_data->floor_flags, &coll_data->floor_angle) :
-        mpCollisionCheckFloorLineCollisionSame(&sp4C, &sp40,
-            &coll_data->line_coll_dist, &coll_data->floor_line_id,
-            &coll_data->floor_flags, &coll_data->floor_angle);
-
-    if ((hit != FALSE) &&
-        (((coll_data->floor_flags & MAP_VERTEX_COLL_PASS) == 0u) ||
-         (coll_data->floor_line_id != coll_data->ignore_line_id)) &&
-        ((proc_map == NULL) || (proc_map(gobj) != FALSE)))
-    {
-        coll_data->mask_curr |= MAP_FLAG_FLOOR;
-        return TRUE;
-    }
-    return FALSE;
+    return mpProcessCheckTestFloorCollisionAdjNew(coll_data, proc_map, gobj);
 }
 
 static sb32 ndsMPCommonRunFighterCliffFloorCeilCollisions(
@@ -12522,6 +12717,20 @@ void lbParticleDrawTextures(GObj *gobj)
 
 void mpCollisionInitGroundData(void)
 {
+    ndsMPCollisionInvalidateTopology();
+    gMPCollisionGroundData = NULL;
+    gMPCollisionGeometry = NULL;
+    gMPCollisionMapObjs = NULL;
+    if (gMPCollisionYakumonoDObjs != NULL)
+    {
+        memset(gMPCollisionYakumonoDObjs->dobjs, 0,
+               sizeof(gMPCollisionYakumonoDObjs->dobjs));
+    }
+    if (gMPCollisionSpeeds != NULL)
+    {
+        memset(gMPCollisionSpeeds, 0,
+               NDS_MP_YAKUMONO_DOBJ_SLOTS * sizeof(*gMPCollisionSpeeds));
+    }
     if ((gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->gkind == nGRKindPupupu))
     {
@@ -12809,10 +13018,9 @@ static void ndsMPBoundsInclude(MPBounds *bounds, f32 vx, f32 vy,
     }
 }
 
-static void ndsMPBoundsIncludeYakumonoLines(MPLineInfo *line_info, DObj *dobj,
-                                            MPBounds *bounds,
-                                            sb32 use_translate,
-                                            sb32 current_style)
+static void ndsMPBoundsIncludeYakumonoLines(
+    NDSMPO2RHalfwordView line_info, DObj *dobj, MPBounds *bounds,
+    sb32 use_translate, sb32 current_style)
 {
     MPVertexLinks *links = gMPCollisionGeometry->vertex_links;
     MPVertexArray *ids = gMPCollisionGeometry->vertex_id;
@@ -12881,7 +13089,7 @@ void mpCollisionInitYakumonoAll(void)
 
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
         DObj *yakumono_dobj;
 
@@ -12940,7 +13148,7 @@ void mpCollisionUpdateBoundsCurrent(void)
 
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
         DObj *yakumono_dobj;
 

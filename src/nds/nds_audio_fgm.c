@@ -24,6 +24,16 @@
 #define NDS_AUDIO_FGM_MASK_LOOP_PLAY (1u << 2)
 #define NDS_AUDIO_FGM_MASK_PHASE_COMPLETE (1u << 3)
 
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+#define NDS_AUDIO_FGM_ACK_RELEASE_PARAMS \
+    , u32 release_reason, u32 service_tick
+#define NDS_AUDIO_FGM_ACK_RELEASE_ARGS(reason, service_tick) \
+    , reason, service_tick
+#else
+#define NDS_AUDIO_FGM_ACK_RELEASE_PARAMS
+#define NDS_AUDIO_FGM_ACK_RELEASE_ARGS(reason, service_tick)
+#endif
+
 typedef struct NDSAudioFgmPackEntry {
     u16 id;
     u16 flags;
@@ -37,7 +47,7 @@ typedef struct NDSAudioFgmPackEntry {
     u16 source_sound_index;
     u32 envelope_offset;
     u16 envelope_count;
-    u16 reserved;
+    u16 loop_point_words;
 } NDSAudioFgmPackEntry;
 
 typedef struct NDSAudioFgmHandle {
@@ -95,6 +105,9 @@ volatile u32 gNdsAudioFgmHandleRecycleCount;
 volatile u32 gNdsAudioFgmHandleCapacity;
 volatile u32 gNdsAudioFgmEnvelopeStepCount;
 volatile u32 gNdsAudioFgmFidelityDebtMask;
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
+#endif
 
 static u8 sNdsAudioFgmPack[NDS_AUDIO_FGM_PACK_BYTES]
     __attribute__((aligned(4)));
@@ -104,6 +117,9 @@ static NDSAudioFgmHandle sNdsAudioFgmHandles[NDS_AUDIO_FGM_HANDLE_COUNT];
 static NDSAudioFgmHandle *sNdsAudioFgmChannelOwners[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmChannelGenerations[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmNextGeneration = 1u;
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+static u32 sNdsAudioFgmArm7AckSequence;
+#endif
 static u16 sNdsAudioFgmInstanceToken;
 
 _Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 336u,
@@ -116,6 +132,16 @@ _Static_assert(offsetof(alSoundEffect, sfx_id) == 0x26u,
                "BattleShip FGM instance-token field moved");
 _Static_assert(NDS_AUDIO_FGM_HANDLE_COUNT >= 3u,
                "FGM pool must support the source KO call burst");
+_Static_assert(NDS_AUDIO_FGM_CHANNEL_COUNT == SOUND_NUM_CHANNELS,
+               "FGM channel count must match the Calico mixer");
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+_Static_assert(sizeof(NDSAudioFgmArm7AckEvent) == 32u,
+               "FGM ARM7 ACK event layout changed");
+_Static_assert(offsetof(NDSAudioFgmArm7AckTrace, events) == 48u,
+               "FGM ARM7 ACK event array moved");
+_Static_assert(sizeof(NDSAudioFgmArm7AckTrace) == 144u,
+               "FGM ARM7 ACK trace layout changed");
+#endif
 
 static u16 ndsAudioFgmReadLe16(const u8 *data)
 {
@@ -211,8 +237,69 @@ static u16 ndsAudioFgmNextInstanceToken(void)
     return sNdsAudioFgmInstanceToken;
 }
 
-static void ndsAudioFgmReleaseHandle(NDSAudioFgmHandle *handle,
-                                     s32 kill_channel)
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+static s32 ndsAudioFgmIsArm7AckTarget(u16 fgm_id)
+{
+    return (fgm_id == nSYAudioVoicePublicExcited) ? TRUE : FALSE;
+}
+
+static void ndsAudioFgmArm7AckTraceBegin(
+    const NDSAudioFgmHandle *handle, const NDSAudioFgmPackEntry *entry)
+{
+    memset((void *)&gNdsAudioFgmArm7AckTrace, 0,
+           sizeof(gNdsAudioFgmArm7AckTrace));
+    if (++sNdsAudioFgmArm7AckSequence == 0u)
+    {
+        sNdsAudioFgmArm7AckSequence = 1u;
+    }
+    gNdsAudioFgmArm7AckTrace.sequence = sNdsAudioFgmArm7AckSequence;
+    gNdsAudioFgmArm7AckTrace.fgm_id = handle->fgm_id;
+    gNdsAudioFgmArm7AckTrace.generation = handle->generation;
+    gNdsAudioFgmArm7AckTrace.channel = (u32)handle->channel;
+    gNdsAudioFgmArm7AckTrace.instance_token = handle->effect.sfx_id;
+    gNdsAudioFgmArm7AckTrace.handle_start_tick = handle->start_tick;
+    gNdsAudioFgmArm7AckTrace.handle_end_tick = handle->end_tick;
+    gNdsAudioFgmArm7AckTrace.duration_ticks = entry->duration_ticks;
+    gNdsAudioFgmArm7AckTrace.envelope_count = entry->envelope_count;
+}
+
+static void ndsAudioFgmArm7AckTraceRecord(
+    const NDSAudioFgmHandle *handle, u32 kind, u32 source_tick, u32 value,
+    u32 service_tick, u32 command_tick, u32 command_return_tick,
+    u32 acknowledge_tick, u32 active_channels)
+{
+    volatile NDSAudioFgmArm7AckEvent *event;
+    u32 event_index = gNdsAudioFgmArm7AckTrace.event_count;
+
+    if ((gNdsAudioFgmArm7AckTrace.fgm_id != handle->fgm_id) ||
+        (gNdsAudioFgmArm7AckTrace.generation != handle->generation) ||
+        (gNdsAudioFgmArm7AckTrace.channel != (u32)handle->channel))
+    {
+        gNdsAudioFgmArm7AckTrace.mismatch_count++;
+        return;
+    }
+    if (event_index >= NDS_AUDIO_FGM_ARM7_ACK_EVENT_CAPACITY)
+    {
+        gNdsAudioFgmArm7AckTrace.overflow_count++;
+        return;
+    }
+
+    event = &gNdsAudioFgmArm7AckTrace.events[event_index];
+    event->kind = kind;
+    event->source_tick = source_tick;
+    event->value = value;
+    event->service_tick = service_tick;
+    event->command_tick = command_tick;
+    event->command_return_tick = command_return_tick;
+    event->acknowledge_tick = acknowledge_tick;
+    event->active_channels = active_channels;
+    gNdsAudioFgmArm7AckTrace.event_count = event_index + 1u;
+}
+#endif
+
+static void ndsAudioFgmReleaseHandle(
+    NDSAudioFgmHandle *handle, s32 kill_channel
+    NDS_AUDIO_FGM_ACK_RELEASE_PARAMS)
 {
     s32 channel = handle->channel;
 
@@ -227,7 +314,32 @@ static void ndsAudioFgmReleaseHandle(NDSAudioFgmHandle *handle,
     {
         if (kill_channel != FALSE)
         {
-            soundKill(channel);
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+            if ((release_reason == NDS_AUDIO_FGM_RELEASE_REASON_DURATION) &&
+                (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE))
+            {
+                u32 command_tick = cpuGetTiming();
+                u32 command_return_tick;
+                u32 active_channels;
+                u32 acknowledge_tick;
+
+                soundKill(channel);
+                command_return_tick = cpuGetTiming();
+                active_channels = (u32)soundGetActiveChannels();
+                acknowledge_tick = cpuGetTiming();
+                ndsAudioFgmArm7AckTraceRecord(
+                    handle, NDS_AUDIO_FGM_ARM7_ACK_KIND_STOP,
+                    gNdsAudioFgmArm7AckTrace.duration_ticks,
+                    release_reason, service_tick, command_tick,
+                    command_return_tick, acknowledge_tick, active_channels);
+            }
+            else
+            {
+#endif
+                soundKill(channel);
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+            }
+#endif
         }
         sNdsAudioFgmChannelOwners[channel] = NULL;
         sNdsAudioFgmChannelGenerations[channel] = 0u;
@@ -305,6 +417,7 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
     };
     NDSAudioFgmPackEntry *entry = &sNdsAudioFgmEntries[index];
     u32 expected_flags = (index == 0u) ? 1u : 0u;
+    u32 expected_loop_point_words = (index == 0u) ? 1u : 0u;
     u32 next_unique_data_offset = NDS_AUDIO_FGM_PACK_DATA_OFFSET;
     s32 is_duplicate = FALSE;
     u32 prior_index;
@@ -321,7 +434,7 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
     entry->source_sound_index = ndsAudioFgmReadLe16(&raw[22]);
     entry->envelope_offset = ndsAudioFgmReadLe32(&raw[24]);
     entry->envelope_count = ndsAudioFgmReadLe16(&raw[28]);
-    entry->reserved = ndsAudioFgmReadLe16(&raw[30]);
+    entry->loop_point_words = ndsAudioFgmReadLe16(&raw[30]);
 
     if ((entry->id != expected_ids[index]) ||
         (entry->flags != expected_flags) ||
@@ -333,8 +446,9 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
         (entry->data_bytes != expected_data_bytes[index]) ||
         (entry->sample_count != expected_sample_counts[index]) ||
         (entry->envelope_count != expected_envelope_counts[index]) ||
+        (entry->loop_point_words != expected_loop_point_words) ||
         ((entry->data_bytes & 3u) != 0u) || (entry->volume > 127u) ||
-        (entry->reserved != 0u) ||
+        (((u32)entry->loop_point_words * 4u) >= entry->data_bytes) ||
         (entry->data_offset < NDS_AUDIO_FGM_PACK_DATA_OFFSET) ||
         ((entry->data_offset & 3u) != 0u) ||
         (entry->data_offset > NDS_AUDIO_FGM_PACK_BYTES) ||
@@ -356,7 +470,8 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
         if (entry->data_offset == prior->data_offset)
         {
             if ((entry->data_bytes != prior->data_bytes) ||
-                (entry->sample_count != prior->sample_count))
+                (entry->sample_count != prior->sample_count) ||
+                (entry->loop_point_words != prior->loop_point_words))
             {
                 return FALSE;
             }
@@ -417,7 +532,10 @@ void ndsAudioFgmDiagnosticsReset(void)
     {
         if (sNdsAudioFgmHandles[i].live != FALSE)
         {
-            ndsAudioFgmReleaseHandle(&sNdsAudioFgmHandles[i], TRUE);
+            ndsAudioFgmReleaseHandle(
+                &sNdsAudioFgmHandles[i], TRUE
+                NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                    NDS_AUDIO_FGM_RELEASE_REASON_RESET, 0u));
         }
     }
     memset(sNdsAudioFgmHandles, 0, sizeof(sNdsAudioFgmHandles));
@@ -434,6 +552,11 @@ void ndsAudioFgmDiagnosticsReset(void)
     {
         sNdsAudioFgmNextGeneration = 1u;
     }
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    memset((void *)&gNdsAudioFgmArm7AckTrace, 0,
+           sizeof(gNdsAudioFgmArm7AckTrace));
+    sNdsAudioFgmArm7AckSequence = 0u;
+#endif
 
     gNdsAudioFgmResult = 0u;
     gNdsAudioFgmMask = 0u;
@@ -489,6 +612,11 @@ void ndsAudioFgmLoadFenced(void)
     u32 sample_end = NDS_AUDIO_FGM_PACK_DATA_OFFSET;
     u32 envelope_cursor;
 
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    /* Keep Calico's low-load manual mode for the three explicit, blocking
+     * ID-626 command acknowledgments in this diagnostic-only build. */
+    soundSetAutoUpdate(false);
+#endif
     if (gNdsAudioFgmLoaded != 0u)
     {
         return;
@@ -517,7 +645,7 @@ void ndsAudioFgmLoadFenced(void)
     fclose(file);
 
     if ((memcmp(header, "FGM1", 4) != 0) ||
-        (ndsAudioFgmReadLe16(&header[4]) != 2u) ||
+        (ndsAudioFgmReadLe16(&header[4]) != 3u) ||
         (ndsAudioFgmReadLe16(&header[6]) != NDS_AUDIO_FGM_ENTRY_COUNT) ||
         (ndsAudioFgmReadLe32(&header[8]) != NDS_AUDIO_FGM_PACK_BYTES) ||
         (ndsAudioFgmReadLe32(&header[12]) !=
@@ -621,17 +749,50 @@ void ndsAudioFgmUpdate(void)
                      handle->generation))
                 {
                     gNdsAudioFgmGenerationMismatchCount++;
-                    ndsAudioFgmReleaseHandle(handle, FALSE);
+                    ndsAudioFgmReleaseHandle(
+                        handle, FALSE
+                        NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                            NDS_AUDIO_FGM_RELEASE_REASON_GENERATION_LOST,
+                            now));
                     break;
                 }
-                soundSetVolume(handle->channel, point[2]);
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+                if ((ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE) &&
+                    (((u32)handle->envelope_index + 1u) ==
+                     (u32)handle->envelope_count))
+                {
+                    u32 command_tick = cpuGetTiming();
+                    u32 command_return_tick;
+                    u32 active_channels;
+                    u32 acknowledge_tick;
+
+                    soundSetVolume(handle->channel, point[2]);
+                    command_return_tick = cpuGetTiming();
+                    active_channels = (u32)soundGetActiveChannels();
+                    acknowledge_tick = cpuGetTiming();
+                    ndsAudioFgmArm7AckTraceRecord(
+                        handle, NDS_AUDIO_FGM_ARM7_ACK_KIND_ENVELOPE,
+                        point_tick, point[2], now, command_tick,
+                        command_return_tick, acknowledge_tick,
+                        active_channels);
+                }
+                else
+                {
+#endif
+                    soundSetVolume(handle->channel, point[2]);
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+                }
+#endif
                 handle->envelope_index++;
                 gNdsAudioFgmEnvelopeStepCount++;
             }
             if ((handle->live != FALSE) &&
                 ((s32)(now - handle->end_tick) >= 0))
             {
-                ndsAudioFgmReleaseHandle(handle, TRUE);
+                ndsAudioFgmReleaseHandle(
+                    handle, TRUE
+                    NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                        NDS_AUDIO_FGM_RELEASE_REASON_DURATION, now));
                 gNdsAudioFgmDurationStopCount++;
             }
         }
@@ -647,7 +808,10 @@ void ndsAudioFgmStopAll(void)
     {
         if (sNdsAudioFgmHandles[i].live != FALSE)
         {
-            ndsAudioFgmReleaseHandle(&sNdsAudioFgmHandles[i], TRUE);
+            ndsAudioFgmReleaseHandle(
+                &sNdsAudioFgmHandles[i], TRUE
+                NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                    NDS_AUDIO_FGM_RELEASE_REASON_STOP_ALL, 0u));
         }
     }
 }
@@ -668,7 +832,10 @@ void ndsAudioFgmStop(alSoundEffect *effect)
         gNdsAudioFgmStaleStopCount++;
         return;
     }
-    ndsAudioFgmReleaseHandle(handle, TRUE);
+    ndsAudioFgmReleaseHandle(
+        handle, TRUE
+        NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+            NDS_AUDIO_FGM_RELEASE_REASON_EXPLICIT, 0u));
 }
 
 alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
@@ -680,6 +847,10 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
     s32 channel;
     u32 i;
     u32 duration_cpu_ticks;
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    u32 play_command_tick = 0u;
+    u32 play_command_return_tick = 0u;
+#endif
 
     gNdsAudioFgmPlayCalls++;
     gNdsAudioFgmLastID = fgm_id;
@@ -721,10 +892,23 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
     }
 
     soundEnable();
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
+    {
+        play_command_tick = cpuGetTiming();
+    }
+#endif
     channel = soundPlaySample(
         &sNdsAudioFgmPack[entry->data_offset], SoundFormat_ADPCM,
-        entry->data_bytes, entry->frequency, entry->volume, entry->pan,
-        ((entry->flags & 1u) != 0u), 0u);
+        entry->data_bytes - ((u32)entry->loop_point_words * 4u),
+        entry->frequency, entry->volume, entry->pan,
+        ((entry->flags & 1u) != 0u), entry->loop_point_words);
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
+    {
+        play_command_return_tick = cpuGetTiming();
+    }
+#endif
     if ((channel < 0) || (channel >= (s32)NDS_AUDIO_FGM_CHANNEL_COUNT))
     {
         gNdsAudioFgmPlayFailCount++;
@@ -765,6 +949,22 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
     handle->live = TRUE;
     sNdsAudioFgmChannelOwners[channel] = handle;
     sNdsAudioFgmChannelGenerations[channel] = handle->generation;
+
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
+    {
+        u32 active_channels;
+        u32 acknowledge_tick;
+
+        ndsAudioFgmArm7AckTraceBegin(handle, entry);
+        active_channels = (u32)soundGetActiveChannels();
+        acknowledge_tick = cpuGetTiming();
+        ndsAudioFgmArm7AckTraceRecord(
+            handle, NDS_AUDIO_FGM_ARM7_ACK_KIND_PLAY, 0u, entry->volume,
+            handle->start_tick, play_command_tick, play_command_return_tick,
+            acknowledge_tick, active_channels);
+    }
+#endif
 
     gNdsAudioFgmSupportedPlayCount++;
     gNdsAudioFgmHandleAcquireCount++;

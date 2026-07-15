@@ -40,6 +40,9 @@
 /* dLBCommonFuncMatrixList is consumed as syMtxProcess pairs; kind 0x4B maps
  * to lbCommonFighterPartsFuncMatrix in BattleShip. */
 #define NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND 0x4Bu
+/* wpmariofireball.c specifies hexadecimal 0x47 (decimal 71), which maps to
+ * func_ovl0_800CA5C8 rather than enum nGCMatrixKind47 (decimal 47). */
+#define NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND 0x47u
 /* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
 
@@ -674,6 +677,11 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         break;
     case 2:
         return FALSE;
+    case NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND:
+        /* This source callback rewrites the current MVP rotation rows after
+         * the ordinary translation matrix. It is applied after world*camera
+         * composition, not multiplied as another affine local transform. */
+        return FALSE;
     case nGCMatrixKindTra:
         syMatrixTra(&mtx, dobj->translate.vec.f.x,
                     dobj->translate.vec.f.y,
@@ -892,6 +900,7 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
 {
     NDSRendererMatrix20p12 incoming;
     u32 valid = FALSE;
+    u32 has_mvp_recalc_rpy_0x47 = FALSE;
     u32 i;
 
     if ((dobj == NULL) || (out == NULL))
@@ -901,6 +910,13 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
 
     for (i = 0u; i < dobj->xobjs_num; i++)
     {
+        if ((dobj->xobjs[i] != NULL) &&
+            (dobj->xobjs[i]->kind ==
+                NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND))
+        {
+            has_mvp_recalc_rpy_0x47 = TRUE;
+            continue;
+        }
         if ((dobj->xobjs[i] != NULL) &&
             (ndsRendererAdapterBuildDObjXObjMatrix(
                  dobj, dobj->xobjs[i], &incoming) != FALSE))
@@ -913,10 +929,164 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
     {
         Mtx mtx;
 
-        ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
-        ndsRendererAdapterMtxFromN64(&mtx, out);
+        if (has_mvp_recalc_rpy_0x47 != FALSE)
+        {
+            /* The source special callback can legally follow the current
+             * parent/camera matrix without another local affine transform. */
+            ndsRendererAdapterMtxIdentity20p12(out);
+        }
+        else
+        {
+            ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+            ndsRendererAdapterMtxFromN64(&mtx, out);
+        }
     }
     return TRUE;
+}
+
+static DObj *ndsRendererAdapterFindDirectMvpRecalcRpy0x47(DObj *dobj)
+{
+    u32 i;
+
+    if (dobj == NULL)
+    {
+        return NULL;
+    }
+    for (i = 0u; i < dobj->xobjs_num; i++)
+    {
+        if ((dobj->xobjs[i] != NULL) &&
+            (dobj->xobjs[i]->kind ==
+                NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND))
+        {
+            return dobj;
+        }
+    }
+    return NULL;
+}
+
+static void ndsRendererAdapterApplyMvpRecalcRpy0x47(
+    DObj *dobj,
+    CObj *cobj,
+    NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 **projection_ptr,
+    NDSRendererMatrix20p12 *modelview,
+    const NDSRendererMatrix20p12 **modelview_ptr)
+{
+    Mtx rotation_mtx;
+    Mtx perspective_mtx;
+    NDSRendererMatrix20p12 rotation;
+    NDSRendererMatrix20p12 perspective;
+    NDSRendererMatrix20p12 source_orientation;
+    NDSRendererMatrix20p12 composed;
+    s32 translate[4];
+    u16 perspective_norm;
+    u32 has_battle_camera = FALSE;
+    u32 i;
+    u32 row;
+    u32 col;
+
+    if (dobj == NULL)
+    {
+        return;
+    }
+    gNdsRendererAdapterCustom47DetectedCount++;
+    gNdsRendererAdapterCustom47LastXObjsNum = dobj->xobjs_num;
+    gNdsRendererAdapterCustom47LastKinds =
+        ((dobj->xobjs_num > 0u) && (dobj->xobjs[0] != NULL) ?
+            (u32)dobj->xobjs[0]->kind : 0u) |
+        (((dobj->xobjs_num > 1u) && (dobj->xobjs[1] != NULL) ?
+            (u32)dobj->xobjs[1]->kind : 0u) << 8);
+    gNdsRendererAdapterCustom47LastRotateXBits =
+        ndsFloatBits(dobj->rotate.vec.f.x);
+    gNdsRendererAdapterCustom47LastRotateYBits =
+        ndsFloatBits(dobj->rotate.vec.f.y);
+
+    if ((cobj != NULL) && (cobj->xobjs_num > 0))
+    {
+        for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+        {
+            if ((cobj->xobjs[i] != NULL) &&
+                (cobj->xobjs[i]->kind ==
+                    NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND))
+            {
+                has_battle_camera = TRUE;
+                break;
+            }
+        }
+    }
+    if ((cobj == NULL) || (has_battle_camera == FALSE) ||
+        (projection == NULL) || (projection_ptr == NULL) ||
+        (modelview == NULL) || (modelview_ptr == NULL) ||
+        ((*projection_ptr == NULL) && (*modelview_ptr == NULL)))
+    {
+        gNdsRendererAdapterCustom47RejectCount++;
+        return;
+    }
+
+    if ((*modelview_ptr != NULL) && (*projection_ptr != NULL))
+    {
+        ndsRendererMtxMul20p12(
+            *modelview_ptr, *projection_ptr, &composed);
+    }
+    else if (*modelview_ptr != NULL)
+    {
+        composed = **modelview_ptr;
+    }
+    else
+    {
+        composed = **projection_ptr;
+    }
+    for (col = 0u; col < 4u; col++)
+    {
+        translate[col] = composed.m[3][col];
+    }
+
+    /* func_ovl0_800CA5C8 replaces all three orientation rows of the current
+     * MVP with RotRpyR(x, y, 0) * gGCMatrixPerspF.  The translation row from
+     * Tra * LookAt * Persp stays live.  The battle camera's adapter projection
+     * contains LookAt * Persp, so seed the renderer with the completed MVP to
+     * avoid applying LookAt a second time to the rewritten orientation. */
+    syMatrixRotRpyR(&rotation_mtx,
+                    dobj->rotate.vec.f.x,
+                    dobj->rotate.vec.f.y,
+                    0.0F);
+    ndsRendererAdapterMtxFromN64(&rotation_mtx, &rotation);
+    perspective_norm = cobj->projection.persp.norm;
+    syMatrixPerspFast(&perspective_mtx,
+                      &perspective_norm,
+                      cobj->projection.persp.fovy,
+                      cobj->projection.persp.aspect,
+                      cobj->projection.persp.near,
+                      cobj->projection.persp.far,
+                      cobj->projection.persp.scale);
+    ndsRendererAdapterMtxFromN64(&perspective_mtx, &perspective);
+    ndsRendererMtxMul20p12(
+        &rotation, &perspective, &source_orientation);
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            composed.m[row][col] = source_orientation.m[row][col];
+        }
+    }
+    for (col = 0u; col < 4u; col++)
+    {
+        if (composed.m[3][col] != translate[col])
+        {
+            gNdsRendererAdapterCustom47TranslationMismatchCount++;
+            composed.m[3][col] = translate[col];
+        }
+    }
+    *modelview = composed;
+    *modelview_ptr = modelview;
+    *projection_ptr = NULL;
+    gNdsRendererAdapterCustom47LastTranslateX20p12 =
+        (u32)modelview->m[3][0];
+    gNdsRendererAdapterCustom47LastTranslateY20p12 =
+        (u32)modelview->m[3][1];
+    gNdsRendererAdapterCustom47LastTranslateZ20p12 =
+        (u32)modelview->m[3][2];
+    gNdsRendererAdapterCustom47AppliedCount++;
 }
 
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1938,6 +2108,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     NDSRendererMatrix20p12 camera_projection;
     NDSRendererMatrix20p12 camera_modelview;
     NDSRendererMatrix20p12 dobj_world;
+    DObj *mvp_recalc_rpy_0x47;
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
     u32 dobj_world_valid = FALSE;
@@ -1948,6 +2119,8 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     }
     *projection_ptr = NULL;
     *modelview_ptr = NULL;
+    mvp_recalc_rpy_0x47 =
+        ndsRendererAdapterFindDirectMvpRecalcRpy0x47(dobj);
 
     if ((projection == NULL) || (modelview == NULL))
     {
@@ -2002,6 +2175,9 @@ static void ndsRendererAdapterPrepareInitialMatrices(
         *modelview = dobj_world;
         *modelview_ptr = modelview;
     }
+    ndsRendererAdapterApplyMvpRecalcRpy0x47(
+        mvp_recalc_rpy_0x47, cobj,
+        projection, projection_ptr, modelview, modelview_ptr);
 }
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)

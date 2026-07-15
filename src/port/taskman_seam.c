@@ -539,6 +539,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterProjectileProofDamageMax = 0;
     gNdsFighterProjectileProofLifetimeMax = 0;
     gNdsFighterProjectileProofMapMask = 0;
+    ndsCollisionRuntimeDiagnosticsReset();
     gNdsFighterReflectorProofResult = 0;
     gNdsFighterReflectorProofMask = 0;
     gNdsFighterReflectorProofFoxSlot = 0;

@@ -6,6 +6,7 @@
 #include <gr/ground.h>
 #include <it/item.h>
 #include <mp/map.h>
+#include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <string.h>
@@ -214,14 +215,7 @@ NDS_WPMANAGER_BRIDGE void mpProcessRunCeilEdgeAdjust(MPCollData *coll_data)
     (void)coll_data;
 }
 
-NDS_WPMANAGER_BRIDGE sb32 mpProcessRunFloorCollisionAdjNewNULL(
-    MPCollData *coll_data)
-{
-    (void)coll_data;
-    return FALSE;
-}
-
-NDS_WPMANAGER_BRIDGE void mpCommonRunWeaponCollisionDefault(
+void mpCommonRunWeaponCollisionDefault(
     GObj *weapon_gobj, Vec3f *pos, MPCollData *coll_data)
 {
     WPStruct *wp = wpGetStruct(weapon_gobj);
@@ -230,9 +224,11 @@ NDS_WPMANAGER_BRIDGE void mpCommonRunWeaponCollisionDefault(
     {
         return;
     }
-    wp->coll_data.pos_prev = *pos;
-    wp->coll_data.p_map_coll = &coll_data->map_coll;
-    wp->coll_data.update_tic = coll_data->update_tic;
+    gNdsCollisionRuntimeDiagnostics.default_weapon_calls++;
+    mpCommonCopyCollDataStats(&wp->coll_data, pos, coll_data);
+    mpCommonRunDefaultCollision(&wp->coll_data, weapon_gobj,
+                                MAP_PROC_TYPE_DEFAULT);
+    mpCommonResetCollDataStats(&wp->coll_data);
 }
 
 #undef NDS_WPMANAGER_BRIDGE

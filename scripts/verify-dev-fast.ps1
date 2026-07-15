@@ -16,6 +16,8 @@ if ($Build -and $NoBuild) {
 
 if ($List) {
     $steps = @(
+        [PSCustomObject]@{ Step = 'MP floor crossing fixtures'; Script = 'check-mp-floor-crossing-fixtures.ps1' },
+        [PSCustomObject]@{ Step = 'MP topology fixtures'; Script = 'check-mp-topology-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'GBI fixtures'; Script = 'check-gbi-decode-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'FT hit-status fixtures'; Script = 'check-ft-hitstatus-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'Audio ID fixtures'; Script = 'check-audio-id-fixtures.ps1' },
@@ -53,6 +55,8 @@ function Invoke-DevFastStep {
     }
 }
 
+Invoke-DevFastStep -Script 'check-mp-floor-crossing-fixtures.ps1'
+Invoke-DevFastStep -Script 'check-mp-topology-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-gbi-decode-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-ft-hitstatus-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-audio-id-fixtures.ps1'

@@ -87,6 +87,21 @@ typedef struct GRFileInfo
     uintptr_t *offset;
 } GRFileInfo;
 
+typedef struct MPVertexInfo
+{
+    u8 yakumono_id;
+    u8 line_type;
+    s16 coll_pos_next;
+    s16 coll_pos_prev;
+    s16 edge_next_line_id;
+    s16 edge_prev_line_id;
+} MPVertexInfo;
+
+typedef struct MPVertexInfoContainer
+{
+    MPVertexInfo vertex_info[1];
+} MPVertexInfoContainer;
+
 typedef struct MPVertexLinks
 {
     u16 vertex1;
@@ -324,6 +339,8 @@ extern GObj *gGRCommonLayerGObjs[4];
 extern GRStruct gGRCommonStruct;
 extern MPGroundData *gMPCollisionGroundData;
 extern MPGeometryData *gMPCollisionGeometry;
+extern MPVertexInfoContainer *gMPCollisionVertexInfo;
+extern s32 gMPCollisionLinesNum;
 extern MPMapObjContainer *gMPCollisionMapObjs;
 extern MPYakumonoDObj *gMPCollisionYakumonoDObjs;
 extern Vec3f *gMPCollisionSpeeds;
@@ -394,6 +411,12 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
 void mpCommonSetFighterProjectFloor(GObj *fighter_gobj);
 s32 mpCollisionGetEdgeUnderLLineID(s32 line_id);
 s32 mpCollisionGetEdgeUnderRLineID(s32 line_id);
+s32 mpCollisionGetEdgeUpperLLineID(s32 line_id);
+s32 mpCollisionGetEdgeUpperRLineID(s32 line_id);
+s32 mpCollisionGetEdgeRightULineID(s32 line_id);
+s32 mpCollisionGetEdgeRightDLineID(s32 line_id);
+s32 mpCollisionGetEdgeLeftULineID(s32 line_id);
+s32 mpCollisionGetEdgeLeftDLineID(s32 line_id);
 sb32 mpCollisionCheckExistLineID(s32 line_id);
 s32 mpCollisionGetVertexCountLineID(s32 line_id);
 void mpCollisionGetSpeedLineID(s32 line_id, Vec3f *vel);

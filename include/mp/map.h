@@ -16,6 +16,7 @@ typedef struct MPLineGroup {
 } MPLineGroup;
 
 extern MPLineGroup gMPCollisionLineGroups[nMPLineKindEnumCount];
+void ndsMPCollisionInvalidateTopology(void);
 
 #ifndef SSB64_NDS_MPOBJECTCOLL_DECLARED
 #define SSB64_NDS_MPOBJECTCOLL_DECLARED
@@ -114,6 +115,9 @@ void mpProcessSetCollideFloor(MPCollData *coll_data);
 sb32 mpProcessCheckTestCeilCollisionAdjNew(MPCollData *coll_data);
 void mpProcessRunCeilCollisionAdjNew(MPCollData *coll_data);
 void mpProcessRunCeilEdgeAdjust(MPCollData *coll_data);
+sb32 mpProcessCheckTestFloorCollisionAdjNew(MPCollData *coll_data,
+                                             sb32 (*proc_map)(GObj *),
+                                             GObj *gobj);
 sb32 mpProcessRunFloorCollisionAdjNewNULL(MPCollData *coll_data);
 sb32 mpProcessCheckFloorEdgeCollisionL(MPCollData *coll_data);
 void mpProcessFloorEdgeLAdjust(MPCollData *coll_data);
@@ -168,7 +172,9 @@ void mpCollisionGetCeilEdgeR(s32 line_id, Vec3f *object_pos);
 s32 mpCollisionGetEdgeUpperLLineID(s32 line_id);
 s32 mpCollisionGetEdgeUpperRLineID(s32 line_id);
 s32 mpCollisionGetEdgeLeftULineID(s32 line_id);
+s32 mpCollisionGetEdgeLeftDLineID(s32 line_id);
 s32 mpCollisionGetEdgeRightULineID(s32 line_id);
+s32 mpCollisionGetEdgeRightDLineID(s32 line_id);
 void mpCollisionGetLWallEdgeU(s32 line_id, Vec3f *object_pos);
 void mpCollisionGetRWallEdgeU(s32 line_id, Vec3f *object_pos);
 sb32 mpProcessUpdateMain(MPCollData *coll_data,
@@ -178,6 +184,11 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
 sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
                                       GObj *fighter_gobj,
                                       u32 flags);
+void mpCommonRunDefaultCollision(MPCollData *coll_data, GObj *gobj,
+                                 u32 flags);
+void mpCommonCopyCollDataStats(MPCollData *this_coll_data, Vec3f *pos,
+                               MPCollData *other_coll_data);
+void mpCommonResetCollDataStats(MPCollData *coll_data);
 void mpCommonRunWeaponCollisionDefault(GObj *weapon_gobj, Vec3f *pos,
                                        MPCollData *coll_data);
 u16 mpCollisionGetVertexFlagsLineID(s32 line_id);

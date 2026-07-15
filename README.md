@@ -21,7 +21,7 @@ scripted combat proof.
 
 Cut G renderer milestone 1 and the lower-screen text HUD are accepted. The
 remaining release blockers include renderer milestones 2–4, natural recovery
-coverage, fighter voices and Results music, a dated canonical
+coverage, fighter voices and audible Dream Land BGM, a dated canonical
 one-minute soak, Full Regression, and final exact-ROM qualification. Current
 acceptance state, lane ownership, dated gates, and evidence are maintained only
 in `docs/P1_EXECUTION_BOARD.md`.
@@ -30,8 +30,8 @@ Current verifier-covered user ROM:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,362,624 bytes
-SHA-256 57B85DDC6B2919D8962589188D6066F6CE6D0FD83B2F729175C9F339C8CCFAFD
+14,368,768 bytes
+SHA-256 F8EFEE10ED15457CD79A9B71B9766B5247BE870C332FB12316431F8301A0A94A
 ```
 
 Profile-1 and special benchmark ROMs are laboratory evidence and must never be

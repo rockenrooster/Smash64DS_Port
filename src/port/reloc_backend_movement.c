@@ -12808,6 +12808,10 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
     u32 triangle_delta;
     u32 texture_ready_delta;
     u32 texture_reject_delta;
+    u32 custom47_applied_before;
+    u32 custom47_reject_before;
+    u32 custom47_translation_mismatch_before;
+    u32 custom47_applied_delta;
     u32 initial_geometry_mode;
     u32 x_bits;
     u32 y_bits;
@@ -12848,6 +12852,12 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
         gNdsStageGCDrawAllLoopHardwareTextureReadyCount;
     texture_reject_before =
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
+    custom47_applied_before =
+        gNdsRendererAdapterCustom47AppliedCount;
+    custom47_reject_before =
+        gNdsRendererAdapterCustom47RejectCount;
+    custom47_translation_mismatch_before =
+        gNdsRendererAdapterCustom47TranslationMismatchCount;
     initial_geometry_mode = ndsStageGCDrawAllLoopInitialGeometryMode();
     if ((initial_geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u)
     {
@@ -12871,6 +12881,8 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
     texture_reject_delta =
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount -
         texture_reject_before;
+    custom47_applied_delta =
+        gNdsRendererAdapterCustom47AppliedCount - custom47_applied_before;
     gNdsWeaponRendererTriangleCount += triangle_delta;
     gNdsWeaponRendererTextureReadyCount += texture_ready_delta;
     gNdsWeaponRendererTextureRejectCount += texture_reject_delta;
@@ -12889,8 +12901,25 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
     wp = weapon_gobj->user_data.p;
     if ((wp != NULL) && (wp->kind == nWPKindFireball))
     {
+        if (gNdsWeaponRendererFireballSubmitCount == 0u)
+        {
+            gNdsWeaponRendererFireballFirstXBits = x_bits;
+            gNdsWeaponRendererFireballFirstYBits = y_bits;
+        }
+        gNdsWeaponRendererFireballLastXBits = x_bits;
+        gNdsWeaponRendererFireballLastYBits = y_bits;
         gNdsWeaponRendererFireballSubmitCount++;
         gNdsWeaponRendererFireballTriangleCount += triangle_delta;
+        gNdsWeaponRendererFireballCustom47AppliedCount +=
+            custom47_applied_delta;
+        if ((custom47_applied_delta != 1u) ||
+            (gNdsRendererAdapterCustom47RejectCount !=
+                custom47_reject_before) ||
+            (gNdsRendererAdapterCustom47TranslationMismatchCount !=
+                custom47_translation_mismatch_before))
+        {
+            gNdsWeaponRendererFireballCustom47MismatchCount++;
+        }
         if ((texture_ready_delta != 0u) && (texture_reject_delta == 0u))
         {
             gNdsWeaponRendererFireballVisibleDrawCount++;

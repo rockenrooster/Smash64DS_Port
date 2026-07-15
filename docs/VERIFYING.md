@@ -10,7 +10,7 @@ Use Windows PowerShell:
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
-make NDS_DEV_SCENE_HARNESS=normal -j24
+make NDS_DEV_SCENE_HARNESS=normal -j16
 ```
 
 Codex-owned single runs use melonDS GDB ARM9/ARM7 ports `4333/4334`; ports
@@ -18,10 +18,10 @@ Codex-owned single runs use melonDS GDB ARM9/ARM7 ports `4333/4334`; ports
 slots keep isolated mappings: FGM `3343/3344`, capture `3363/3364`, audio
 `3373/3374`, M4 `3413/3414`, and countdown `4463/4464`. Scripted launches
 normalize their selected TOML through the central profile. DevFast runs
-`check-melonds-policy.ps1`, which recursively checks every TOML under every
-registered worktree's `emulators/`, rejects unclassified configs and external
-executables, and fails profile drift. The all-worktree setter is creation/repair,
-not a recurring manual audit. Use scripted emulator/GDB/capture automation only.
+`check-melonds-policy.ps1` to validate that profile and reject external emulator
+paths without auditing mutable local TOMLs. Use `-AuditLocalConfigs` only for an
+explicit drift audit; the all-worktree setter is creation/repair, not a recurring
+check. Use scripted emulator/GDB/capture automation only.
 For subjective play behavior, build the verifier-covered ROM and ask the user
 to test it rather than controlling their desktop.
 Keep Codex-owned runner-slot emulator volume at `0`; this mutes only host
@@ -96,6 +96,12 @@ must identify the date, ROM/configuration, and synchronized frame window.
 `latest.png` and `previous.png` are stable aliases only, not substitutes for the
 dated evidence file.
 
+Every `verify-all` invocation of `battle_playable_realtime` uses that same exact
+438/439 `FastIteration` capture and calibrated 50% / 45 pairwise limits. This
+keeps Boundary/Regression decisions synchronized and repeatable. Invoke the
+realtime script directly without `-FastIteration` only for a separate long live-
+capture diagnostic; its host-delay pair is not canonical comparison evidence.
+
 The shipped/canonical target is renderer profile 0. Renderer changes also need
 the internal profile-2 correctness run; this is the same mode-163 scene and
 source configuration, not another harness mode:
@@ -118,9 +124,9 @@ must coexist with dynamic-list validation, and only profiles 0/1 may use the
 adjacent-TRI replay/derived-value fast paths. Profile 2 retains the independent
 generic interpreter, exact shade path, and old-C-division oracle.
 
-The fast capture tolerates camera-dependent left-shrub and pond variation at
-40% and 30%, versus the checkpoint path's 50% and 35%; their 16px and 60px
-flat-run caps remain unchanged. Fixed fighter-color crops are not gates because
+FastIteration gates left shrub/stage body/pond at `40%/32px`, `18%/112px`, and
+`20%/96px`; the normal path uses `45%/12px`, `18%/80px`, and `35%/80px`.
+Fixed fighter-color crops are not gates because
 the immediately preceding GDB verifier hard-proves both fighters' selected,
 submitted, and in-bounds display contracts.
 

@@ -4218,10 +4218,10 @@ Marker groups:
   Canonical cumulative accounting is exactly `42F + W` submits and
   `202F + 2W` triangles, where `F` is completed stage traversal count and `W`
   is source link-14 weapon-quad count. Unmarked setup traffic is rejected.
-- `WEAPON_RENDER`: source link-14 weapon display ledger. Its 17 fields are
+- `WEAPON_RENDER`: source link-14 weapon display ledger. Its 15 fields are
   capture, DObj draw, submit, visible, triangle, texture-ready/reject, kind mask,
-  callback kind, no-Z, moving, last X/Y bits, Fireball submit/triangle/visible,
-  and rejected-draw counts. Capture, draw, submit, and visible counts agree;
+  callback kind, no-Z, moving, Fireball submit/triangle/visible, and rejected-
+  draw counts. Capture, draw, submit, and visible counts agree;
   triangles and no-Z are `2*submit` and `submit`; active callback kind is
   `0x444c4831`; the kind mask is exact, texture-ready equals Fireball submit,
   and the complete ledger is zero when no weapon submits.
@@ -4232,6 +4232,14 @@ Marker groups:
   `q`; per-frame triangles/no-Z are `2q`/`q`, with exact Fireball subledger and
   zero rejects. Synchronized benchmark windows omit this cross-window delta and
   instead require `q=0` with the base no-Z count `126`.
+- `FIREBALL_TRANSFORM`: natural long-travel Fireball transform trace. Its 17
+  fields are weapon custom-`0x47` applied/mismatch;
+  adapter detected/applied/reject/translation-mismatch; XObj count; packed XObj
+  kinds; rotation X/Y float bits; preserved translated MVP X/Y/Z in 20.12; and
+  first/last weapon X/Y float bits. The focused gate requires 40/40 weapon
+  custom applications, zero mismatch/reject/translation drift, two XObjs,
+  kinds `0x4712`, finite rotations, and more than 500 source units of horizontal
+  travel. Current exact-ROM evidence is 40 draws / 80 triangles and 1,757 units.
 - `STAGE_COLLISION`: geometry-backed floor-collision result, safe result, proof
   mask, deferred mask, and selected fighter count. Current pass values are
   `0x4653434c`, `0x46534353`, mask `0xffff`, deferred mask `0xff`, and count
@@ -6339,3 +6347,16 @@ pool exhaustions; and generation mismatches. The one-minute gate accepts only
 the exact BattleShip side/down orders `439,292,154` / `370,289,154` or the
 source up-star orders `154,439,292` / `154,370,289`, with all four failure
 counters zero.
+
+`gNdsAudioFgmArm7AckTrace` is the 144-byte, compile-gated PublicExcited command
+trace in the dedicated nonpublishing crowd-ACK ROM; production/canonical builds
+force it off. Its header records sequence, event count, overflow/mismatch, FGM ID,
+generation, channel, instance token, start/end CPU ticks, source duration, and
+envelope count. Its exactly three events record kind, source tick, value,
+service tick, command/return/acknowledge CPU ticks, and Calico active-channel
+mask for PLAY, final-zero ENVELOPE, and natural DURATION-STOP. The focused gate
+requires sequence `1`, count `3`, zero overflow/mismatch, ID `626`, identical
+generation/ownership, target channel active for PLAY/final zero and inactive
+after STOP, one allocated/live handle before release, and none afterward. These
+blocking one-shot reads prove ARM7 command application with auto-update off;
+they do not prove the final mixed waveform or acoustic fidelity.

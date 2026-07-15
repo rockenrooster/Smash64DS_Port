@@ -16,6 +16,7 @@ $buildName = 'build-battle-playable-audio-fgm-hwtri-harness'
 $rom = Join-Path $root "$target.nds"
 $elf = Join-Path $root "$target.elf"
 $object = Join-Path $root "builds\$buildName\nds_audio_fgm.o"
+$buildConfig = Join-Path $root "builds\$buildName\nds_build_config.h"
 $metadataPath = Join-Path $root 'assets\audio\fgm_phase_pack_ima.json'
 $runnerExe = Join-Path $root "emulators\melonds-runners\slot$RunnerSlot\melonDS.exe"
 
@@ -43,18 +44,42 @@ if (-not $NoBuild) {
         NDS_DEBUG_HUD=0 `
         NDS_RENDERER_PROFILE_LEVEL=0 `
         NDS_SCENE_MIP_CACHE_LAB=1 `
+        NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS=0 `
         -j16
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
-foreach ($required in @($rom, $elf, $object)) {
+foreach ($required in @($rom, $elf, $object, $buildConfig)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Audio FGM build output not found: $required"
     }
+}
+$buildConfigText = Get-Content -LiteralPath $buildConfig -Raw
+if ($buildConfigText -notmatch
+    '(?m)^#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS 0\r?$') {
+    throw 'Production FGM verification must compile with ARM7 ACK diagnostics disabled.'
 }
 
 $sizeTool = Join-Path $env:DEVKITARM 'bin\arm-none-eabi-size.exe'
 if (-not (Test-Path -LiteralPath $sizeTool -PathType Leaf)) {
     throw "ARM size tool not found: $sizeTool"
+}
+$nmTool = Join-Path $env:DEVKITARM 'bin\arm-none-eabi-nm.exe'
+if (-not (Test-Path -LiteralPath $nmTool -PathType Leaf)) {
+    throw "ARM symbol tool not found: $nmTool"
+}
+$objectSymbols = @(& $nmTool $object)
+if ($LASTEXITCODE -ne 0) {
+    throw 'Could not inspect the production FGM backend symbols.'
+}
+foreach ($forbiddenSymbol in @(
+        'gNdsAudioFgmArm7AckTrace',
+        'sNdsAudioFgmArm7AckSequence',
+        'ndsAudioFgmArm7AckTraceRecord',
+        'soundGetActiveChannels',
+        'soundSetAutoUpdate')) {
+    if ($objectSymbols | Select-String -SimpleMatch $forbiddenSymbol) {
+        throw "Production FGM backend retained diagnostic symbol: $forbiddenSymbol"
+    }
 }
 $sectionTotals = @{
     text = 0L

@@ -32,11 +32,13 @@ NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
 NDS_DEBUG_HUD ?= 1
+NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
 ifeq ($(TARGET),smash64ds-battle-playable-canonical-hwtri)
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
 override NDS_SCENE_MIP_CACHE_LAB := 1
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)
 # This is the user-testable fast-iteration ROM, not a generic build alias.
@@ -1071,6 +1073,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \
+		echo '#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS $(NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTCOMPUTER $(NDS_IMPORT_BATTLESHIP_FTCOMPUTER)'; \

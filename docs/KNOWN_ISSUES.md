@@ -5,60 +5,78 @@
 | Blocker | Required closure |
 |---|---|
 | Renderer M2–M4 | Mario/Fox 170–250K, complete stage 150–250K, zero gameplay conversion, phase P95 path toward ~560K active ticks |
-| Gameplay collision/coverage | Graduate damage/throw map collision, one-way platforms, and Fireball rebound; cover natural Fox recovery and repeat hits |
-| Gameplay-critical audio | Phase/regular-KO FGM and winner→Results pass; close pitch/voice 685/24 unsupported calls and audible Dream Land BGM proof |
+| Gameplay collision/coverage | Obtain verified natural DamageFly/throw recovery, extend floor-first collision through walls/ceilings/edges, cover Fox recovery/repeat hits, and manually retest platforms/Fireball travel |
+| Gameplay-critical audio | Audibly retest repaired ID626 PNT=1 loop; close pitch/voice 685/24 calls and audible Dream Land BGM proof |
 | Full-match stability | Repeated canonical one-minute Time Up → Results soaks with memory reserve and guards intact |
 | Release evidence | Full Regression, clean canonical parity, dated captures, and exact-ROM manual user retest |
 
-Mario Fireball spawn/render/damage passes its dedicated natural gate; trajectory
-and floor rebound remain open. The authoritative state, lane, next gate, and
-integration decision for each row live in `P1_EXECUTION_BOARD.md`.
+Mario Fireball spawn/render/damage/rebound and one-way platform semantics pass
+focused mode-163 gates. The original platform-feel and long-distance Fireball
+reports remain open for exact-ROM manual retest. The authoritative state, lane,
+next gate, and integration decision live in `P1_EXECUTION_BOARD.md`.
 
 ## Current P1 And Tooling Notes
 
-- Fireball display/damage is closed by its visible, moving, textured natural
-  gate. Live weapon `mpProcessRunFloorCollisionAdjNewNULL` always returns false,
-  so upstream trajectory integration runs but source floor rebound cannot fire;
-  residual long-range visual drift needs separate post-fix evaluation. Fighter
-  damage collision returns false outside a bounded proof, while default throw
-  projection omits BattleShip's copy/run/reset map sequence. They share an
-  incomplete floor primitive but remain separate policy seams; graduate them and
-  one-way-platform semantics as one coordinated lane. Freeze, Up-B, and missing-
-  stage reports still need current reproduction; Fox recovery remains coverage debt.
+- Fireball display/damage/rebound passes with source=1/1, maps=18, floor=3,
+  speed `55→46.75`, 40 draws / 80 triangles, 1,757 units of travel, and reserve
+  222,736. This closes the source-MVP/rebound gate, not the manual visual report.
+- One-way platform semantics passes a 715-frame all-three-line gate: exact live
+  geometry, Mario-only mask `0x7`, three upward passes/zero accepts, nine
+  reversed-endpoint hits, nine landings, two side cycles, three source Pass
+  rejections, and clean returns to main-floor line 3. The capture is under
+  `artifacts/visibility`; the original user report remains open until retest.
+- Natural DamageFly recovery currently times out without a verified sample;
+  the 900-second input-only run advanced only 31 match seconds and reached no
+  damage. The throw/release verifier is candidate-only. Live damage/default
+  policies are floor-only; graduate original `mpprocess` wall/ceiling Run state
+  and damage/default `mpcommon` policy before claiming connected-floor recovery.
+- The live topology cache is validated for the current single battle scene, but
+  invalidation drops arena-backed cache pointers without reclaiming them. Prove
+  reuse or reclaim before repeated geometry rebuild/rematch qualification.
 - Tyler approved the lower text HUD. Mario→Fox damage was reopened after Fox
   could become permanently unhittable following an up/down-smash restore. The
   local `GMHitStatus` ABI and hit-status part shims now match BattleShip. An
   exact-ROM natural up-smash trace restores 11/11 active colliders with zero
-  mismatch and clears the no-damage flag; manual repeat-hit confirmation and a
-  continuous post-GO natural-hit observation remain open.
+  mismatch and clears the no-damage flag; Tyler confirms damage works. A
+  continuous post-GO natural-hit observation remains open.
 - Renderer milestone 2 remains a P1 performance blocker. The generated AOT
-  fighter owner costs about 431K combined against the 170–250K target. A
-  same-ROM split-matrix cut saved only 36,192 ticks and was removed; deleting
-  all generated-run preparation/emission still leaves a 331K measured floor,
-  so the next architecture must also cut the ~178K matrix-preparation wall.
-  Exact RGB15 parity demotes GX lighting (102/413 mismatches); synthesized t16
-  matrices remain eligible at 99/99, with lighting retained in the CPU sidecar.
-- Milestone 4's exact host corpus passes all 3,024,896 oracle pixels. Streaming
-  was rejected; exact current pair residency needs 232,004 compressed bytes
-  and 645,120 texture bytes, exceeding spendable reserve and texture VRAM.
+  fighter owner costs about 431K against 170–250K. Retained evidence supports
+  about 50–75K from the first hierarchy cut, below its unchanged ≥80K keep gate.
+  Proposed GX stores must use Mario slots 16–23 and Fox slots 16–17. Final
+  promotion still requires the full 170–250K gate and independent parity.
+- Milestone 3 permits one strict eight-callback whole-owner slab: exact
+  42/886/302/54/202 census, <=16 KiB resident, no new BSS/heap, >=300K paired
+  saving, and <=500K result; remove it if either performance threshold fails.
+- Milestone 4 can prewarm an estimated 69 static keys / 179,328 texture bytes;
+  two live water owners bring the estimate to 71 slots / 216,192 bytes, within
+  mapped texture VRAM but beyond the 48-entry cache. Generate the exact census
+  before resizing. Full water needs 903,168 exact-visible bytes versus 524,288
+  total texture VRAM, so a new 216-state representation remains mandatory.
 - Audio is not release-ready. All 144 local REGION_US IDs match BattleShip;
   fighter attribute IDs and recyclable FGM instance tokens are source-correct.
   Phase and regular-KO FGMs play naturally; Mario's first triplet is exact and
   all five KO IDs are observed. Fox winner 16 naturally transitions to Results
-  22. Pitch, voice 685, 24 observed calls, and enabled non-silent Dream Land
-  channel proof still need closure.
-- Current playtesting confirms upward passage through one-way platforms is
-  blocked. Mode 163's scripted down-pass and the bounded platform proofs do not
-  prove upward passage, downward landing, jumping from a platform, or intentional
-  drop-through during continuous play.
-- Source pause/camera updates are live and the straight-on Cut G capture passes;
-  fixed-angle containment of the reported pause-orbit geometry failure remains.
-- The rare `3 uploads / 40960 bytes` frame is two normal animated-water uploads
-  plus a source-valid 4 KiB Whispy texture miss. That cold miss still reaches
-  synchronous `glTexImage2D` during active display and can explain the reported
-  one-frame missing-stage flash. The bounded fix is a third VBlank record and a
-  second 4 KiB staging slot, followed by a 256-frame exercised zero-fallback
-  proof; ordinary `2 / 36864` frames remain clean.
+  22. An isolated diagnostic ROM proves exact one-play PublicExcited
+  PLAY→final-zero→duration-stop ARM7 ACKs with no retained channel or duplicate
+  handle; the production/user ROM contains no trace or blocking ACK waits. ID626 uses a no-growth AOT
+  PNT=1/LEN=3527 body. A stateful host model rejects missing restore/wrong
+  PNT/LEN; each cycle is 28,214 source plus two alignment-guard samples.
+  Runtime gates pass, but final mixed/acoustic fidelity still needs audible retest.
+  Pitch, voice 685, 24 calls, and audible Dream Land output remain open.
+- Source pause/camera updates are live and the straight-on Cut G capture passes.
+  Synchronized normal/front/±16.8°/±33.6° camera state passes and normal/±16.8°
+  images are clean. Both ±33.6° pause views reproduce the reported wide-view
+  occlusion: plus has 15.200% one-color concentration and minus only 0.602%
+  dominant green. The focused image thresholds fail deterministically as a
+  symptom gate, not proof of renderer corruption. Normal battle camera stays
+  inside BattleShip's ±17.5° envelope; compare an identical BattleShip/N64 view
+  before changing the renderer. This remains pause-only P2 parity debt unless
+  the same symptom is observed in normal gameplay.
+- The rare `3 uploads / 40960 bytes` frame is two animated-water uploads plus a
+  source-valid 4 KiB Whispy cold miss. The static M4 manifest must prewarm that
+  key before GO; animated water remains the separate representation blocker.
+  A 256-frame zero-static-miss proof is still required; ordinary `2 / 36864`
+  water frames are not M4 completion.
 - `P1Gate` is an additive shadow checkpoint, not a P1-completion claim. Its
   lifecycle leg uses the P1 one-minute rule on the original expiry/Results
   path; a dated canonical one-minute soak is still required. Boundary, Regression, and Full
@@ -115,6 +133,10 @@ integration decision for each row live in `P1_EXECUTION_BOARD.md`.
   local setting: the current machine is configured for one combined debug
   window, while other settings can expose separate debugger and emulator
   windows. `scripts/capture-nogba.ps1 -AllWindows` handles both layouts.
+- Scripted melonDS launches apply the shared window profile. Normal DevFast
+  policy checks do not audit mutable TOMLs; use
+  `check-melonds-policy.ps1 -AuditLocalConfigs` only for explicit drift repair,
+  and use the all-worktree setter only for creation/repair.
 - melonDS 1.1 previously started in this Codex desktop session as a live process
   with a hidden, untitled top-level window and no ARM9 GDB listener. Maintained
   Codex single runs now use `4333/4334`, leaving `3333/3334` for the user's
@@ -1419,7 +1441,8 @@ isolating the compatibility type that causes the warning.
   wall-clock performance symptoms. Do not repeatedly poll GDB for progress;
   repeated attach/detach has produced melonDS packet errors.
 - `scripts/capture-melonds.ps1` captures pixels from the visible desktop window.
-  Keep melonDS unobstructed; the default script path temporarily disables GDB.
+  Keep melonDS unobstructed; every generated screenshot must resolve under
+  `artifacts/visibility`. The default script path temporarily disables GDB.
   `-RendererFastRunMode` instead sets and verifies one bounded selector through
   GDB, detaches, then captures the live window. Windows focus policy and hidden-
   window launches can still affect captures in remote or locked sessions. The host OpenGL

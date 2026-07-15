@@ -10,6 +10,20 @@
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
 #define NDS_AUDIO_FGM_KO_TRACE_CAPACITY 8u
+#ifndef NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS 0
+#endif
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+#define NDS_AUDIO_FGM_ARM7_ACK_EVENT_CAPACITY 3u
+#define NDS_AUDIO_FGM_ARM7_ACK_KIND_PLAY 1u
+#define NDS_AUDIO_FGM_ARM7_ACK_KIND_ENVELOPE 2u
+#define NDS_AUDIO_FGM_ARM7_ACK_KIND_STOP 3u
+#define NDS_AUDIO_FGM_RELEASE_REASON_RESET 1u
+#define NDS_AUDIO_FGM_RELEASE_REASON_GENERATION_LOST 2u
+#define NDS_AUDIO_FGM_RELEASE_REASON_DURATION 3u
+#define NDS_AUDIO_FGM_RELEASE_REASON_STOP_ALL 4u
+#define NDS_AUDIO_FGM_RELEASE_REASON_EXPLICIT 5u
+#endif
 #define NDS_AUDIO_FGM_PACK_BYTES 64848u
 #define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x3c77e937u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
@@ -22,6 +36,36 @@
      NDS_AUDIO_FGM_FIDELITY_DEBT_ENVELOPE_QUANTIZATION | \
      NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION | \
      NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE)
+
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+typedef struct NDSAudioFgmArm7AckEvent {
+    u32 kind;
+    u32 source_tick;
+    u32 value;
+    u32 service_tick;
+    u32 command_tick;
+    u32 command_return_tick;
+    u32 acknowledge_tick;
+    u32 active_channels;
+} NDSAudioFgmArm7AckEvent;
+
+typedef struct NDSAudioFgmArm7AckTrace {
+    u32 sequence;
+    u32 event_count;
+    u32 overflow_count;
+    u32 mismatch_count;
+    u32 fgm_id;
+    u32 generation;
+    u32 channel;
+    u32 instance_token;
+    u32 handle_start_tick;
+    u32 handle_end_tick;
+    u32 duration_ticks;
+    u32 envelope_count;
+    NDSAudioFgmArm7AckEvent
+        events[NDS_AUDIO_FGM_ARM7_ACK_EVENT_CAPACITY];
+} NDSAudioFgmArm7AckTrace;
+#endif
 
 void ndsAudioFgmDiagnosticsReset(void);
 void ndsAudioFgmLoadFenced(void);
@@ -71,5 +115,8 @@ extern volatile u32 gNdsAudioFgmHandleRecycleCount;
 extern volatile u32 gNdsAudioFgmHandleCapacity;
 extern volatile u32 gNdsAudioFgmEnvelopeStepCount;
 extern volatile u32 gNdsAudioFgmFidelityDebtMask;
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+extern volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
+#endif
 
 #endif

@@ -20,13 +20,18 @@ from pathlib import Path
 
 
 PACK_MAGIC = b"FGM1"
-PACK_VERSION = 2
+PACK_VERSION = 3
 PACK_HEADER = struct.Struct("<4sHHII")
 PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
 MAX_RESIDENT_BYTES = 64 * 1024
+PUBLIC_EXCITED_IMA_PREDICTOR = -4553
+PUBLIC_EXCITED_IMA_INDEX = 65
+PUBLIC_EXCITED_GUARD_NIBBLES = (8, 9)
+PUBLIC_EXCITED_LOOP_POINT_WORDS = 1
+REPEAT_ORACLE_CYCLES = 3
 
 # These selectors are intentionally explicit.  Any upstream layout or program
 # change fails generation instead of silently selecting a different sound.
@@ -412,6 +417,225 @@ def ima_encode(samples: list[int]) -> bytes:
     return bytes(out)
 
 
+def ima_apply_nibble(predictor: int, index: int,
+                     code: int) -> tuple[int, int]:
+    if not 0 <= code <= 15:
+        raise ValueError(f"invalid IMA nibble: {code}")
+    step = IMA_STEP_TABLE[index]
+    diff = step >> 3
+    if code & 4:
+        diff += step
+    if code & 2:
+        diff += step >> 1
+    if code & 1:
+        diff += step >> 2
+    predictor += -diff if (code & 8) else diff
+    predictor = max(-32768, min(32767, predictor))
+    index += IMA_INDEX_TABLE[code]
+    index = max(0, min(88, index))
+    return predictor, index
+
+
+def ima_encode_loop_body(samples: list[int], predictor: int, index: int,
+                         guard_nibbles: tuple[int, ...]) -> bytes:
+    """Encode every loop sample as a nibble after one DS IMA state word."""
+    if not samples:
+        raise ValueError("cannot encode an empty IMA loop body")
+    if not -32768 <= predictor <= 32767 or not 0 <= index <= 88:
+        raise ValueError("invalid initial IMA loop state")
+
+    initial_predictor = predictor
+    initial_index = index
+    nibbles: list[int] = []
+    for sample in samples:
+        step = IMA_STEP_TABLE[index]
+        delta = int(sample) - predictor
+        code = 0
+        if delta < 0:
+            code = 8
+            delta = -delta
+        if delta >= step:
+            code |= 4
+            delta -= step
+        if delta >= (step >> 1):
+            code |= 2
+            delta -= step >> 1
+        if delta >= (step >> 2):
+            code |= 1
+        predictor, index = ima_apply_nibble(predictor, index, code)
+        nibbles.append(code)
+    if any(not 0 <= code <= 15 for code in guard_nibbles):
+        raise ValueError("invalid IMA loop guard nibble")
+    nibbles.extend(guard_nibbles)
+    if len(nibbles) & 1:
+        raise ValueError("IMA loop body plus guards must fill whole bytes")
+
+    out = bytearray(struct.pack("<hBB", initial_predictor,
+                                initial_index, 0))
+    for pos in range(0, len(nibbles), 2):
+        out.append(nibbles[pos] | (nibbles[pos + 1] << 4))
+    if len(out) & 3:
+        raise ValueError("IMA loop body plus guards must fill whole words")
+    return bytes(out)
+
+
+def ima_decode_nibbles(encoded: bytes, nibble_count: int,
+                       data_offset: int = 4) -> list[int]:
+    """Decode data nibbles from the state in an IMA header."""
+    if len(encoded) < 4 or nibble_count < 0 or data_offset < 4:
+        raise ValueError("invalid IMA nibble stream")
+    predictor, index, reserved = struct.unpack_from("<hBB", encoded, 0)
+    if index > 88 or reserved != 0:
+        raise ValueError("invalid IMA state header")
+    available = (len(encoded) - data_offset) * 2
+    if nibble_count > available:
+        raise ValueError("short IMA nibble stream")
+
+    out: list[int] = []
+    for value in encoded[data_offset:]:
+        for code in (value & 0x0F, value >> 4):
+            if len(out) >= nibble_count:
+                return out
+            predictor, index = ima_apply_nibble(predictor, index, code)
+            out.append(predictor)
+    return out
+
+
+def ima_ds_repeat_cycles(encoded: bytes, loop_point_words: int,
+                         loop_length_words: int, cycle_count: int,
+                         restore_loop_state: bool) -> dict:
+    """Model DS IMA PNT/LEN playback and its latched loop decoder state."""
+    if (len(encoded) < 4 or (len(encoded) & 3) or
+            loop_point_words < 1 or loop_length_words < 1 or
+            cycle_count < 1):
+        raise ValueError("invalid DS IMA repeat geometry")
+
+    loop_offset = loop_point_words * 4
+    loop_end = loop_offset + loop_length_words * 4
+    if loop_offset < 4 or loop_offset > len(encoded) or loop_end > len(encoded):
+        raise ValueError("DS IMA PNT/LEN exceeds the encoded stream")
+
+    # The channel reads the IMA state word once.  Any nibbles before PNT then
+    # advance the decoder to the state the DS latches for repeat playback.
+    predictor, index, reserved = struct.unpack_from("<hBB", encoded, 0)
+    if index > 88 or reserved != 0:
+        raise ValueError("invalid DS IMA state header")
+    for value in encoded[4:loop_offset]:
+        for code in (value & 0x0F, value >> 4):
+            predictor, index = ima_apply_nibble(predictor, index, code)
+    loop_state = (predictor, index)
+
+    cycle_pcm = []
+    cycle_end_states = []
+    for cycle in range(cycle_count):
+        if cycle > 0 and restore_loop_state:
+            predictor, index = loop_state
+        decoded = []
+        for value in encoded[loop_offset:loop_end]:
+            for code in (value & 0x0F, value >> 4):
+                predictor, index = ima_apply_nibble(predictor, index, code)
+                decoded.append(predictor)
+        cycle_pcm.append(decoded)
+        cycle_end_states.append((predictor, index))
+    return {
+        "loop_state": loop_state,
+        "cycle_pcm": cycle_pcm,
+        "cycle_end_states": cycle_end_states,
+    }
+
+
+def ima_pcm_sha256(samples: list[int]) -> str:
+    return sha256(struct.pack(f"<{len(samples)}h", *samples))
+
+
+def ima_repeat_oracle(encoded: bytes, loop_point_words: int,
+                      body_samples: int,
+                      guard_nibbles: tuple[int, ...]) -> dict:
+    """Prove the DS PNT/LEN state machine restores one stable loop cycle."""
+    loop_offset = loop_point_words * 4
+    loop_length_words = (len(encoded) // 4) - loop_point_words
+    cycle_samples = loop_length_words * 8
+    alignment_debt_samples = len(guard_nibbles)
+    if (loop_offset != 4 or
+            cycle_samples != body_samples + alignment_debt_samples or
+            loop_offset + loop_length_words * 4 != len(encoded)):
+        raise ValueError("IMA loop point/length fixture changed")
+
+    raw_nibbles = []
+    for value in encoded[loop_offset:]:
+        raw_nibbles.extend((value & 0x0F, value >> 4))
+    if tuple(raw_nibbles[body_samples:]) != guard_nibbles:
+        raise ValueError("IMA loop alignment guard nibbles changed")
+
+    repeated = ima_ds_repeat_cycles(
+        encoded, loop_point_words, loop_length_words,
+        REPEAT_ORACLE_CYCLES, True)
+    cycle_hashes = [ima_pcm_sha256(cycle)
+                    for cycle in repeated["cycle_pcm"]]
+    if len(set(cycle_hashes)) != 1:
+        raise ValueError("DS IMA restored repeat cycles drifted")
+
+    # A decoder that carries the end state into the next cycle must diverge.
+    # This negative control prevents a per-cycle header reset from masquerading
+    # as a DS loop-state proof.
+    carried = ima_ds_repeat_cycles(
+        encoded, loop_point_words, loop_length_words,
+        REPEAT_ORACLE_CYCLES, False)
+    carried_hashes = [ima_pcm_sha256(cycle)
+                      for cycle in carried["cycle_pcm"]]
+    missing_restore_detected = (
+        carried_hashes[0] == cycle_hashes[0] and
+        all(carried_hash != cycle_hashes[0]
+            for carried_hash in carried_hashes[1:]))
+    if not missing_restore_detected:
+        raise ValueError("DS IMA missing-loop-state negative control failed")
+
+    # Exercise the exact historical wiring failures: PNT pointing at the
+    # header, and LEN receiving the full buffer size instead of bytes after
+    # PNT.  Both must be rejected by the same state machine used above.
+    wrong_pnt_detected = False
+    try:
+        ima_ds_repeat_cycles(
+            encoded, loop_point_words - 1, loop_length_words,
+            REPEAT_ORACLE_CYCLES, True)
+    except ValueError:
+        wrong_pnt_detected = True
+    if not wrong_pnt_detected:
+        raise ValueError("DS IMA wrong-PNT negative control failed")
+
+    wrong_len_detected = False
+    try:
+        ima_ds_repeat_cycles(
+            encoded, loop_point_words,
+            loop_length_words + loop_point_words,
+            REPEAT_ORACLE_CYCLES, True)
+    except ValueError:
+        wrong_len_detected = True
+    if not wrong_len_detected:
+        raise ValueError("DS IMA wrong-LEN negative control failed")
+
+    loop_predictor, loop_index = repeated["loop_state"]
+    end_predictor, end_index = repeated["cycle_end_states"][0]
+    return {
+        "ds_repeat_oracle_model": "header_once_pnt_latch_len_restore",
+        "ds_repeat_oracle_cycles": REPEAT_ORACLE_CYCLES,
+        "ds_repeat_oracle_loop_predictor": loop_predictor,
+        "ds_repeat_oracle_loop_index": loop_index,
+        "ds_repeat_oracle_cycle_end_predictor": end_predictor,
+        "ds_repeat_oracle_cycle_end_index": end_index,
+        "ds_repeat_oracle_missing_restore_detected": (
+            missing_restore_detected),
+        "ds_repeat_oracle_missing_restore_cycle_2_pcm_sha256": (
+            carried_hashes[1]),
+        "ds_repeat_oracle_wrong_pnt_detected": wrong_pnt_detected,
+        "ds_repeat_oracle_wrong_len_detected": wrong_len_detected,
+        "ds_repeat_cycle_source_samples": body_samples,
+        "ds_repeat_cycle_alignment_debt_samples": alignment_debt_samples,
+        "ds_repeat_cycle_samples": cycle_samples,
+        "ds_repeat_cycle_pcm_sha256": cycle_hashes[0],
+    }
+
+
 def ima_decode(encoded: bytes, sample_count: int) -> list[int]:
     if len(encoded) < 4 or sample_count == 0:
         raise ValueError("invalid IMA stream")
@@ -568,19 +792,31 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             raise ValueError(f"FGM {selector['id']} invalid VADPCM extent")
         pcm = audio_codec.adpcm_decode(vadpcm, book["entries"],
                                        book["order"], book["npredictors"])
-        # The DS ADPCM channel loops a whole encoded stream cleanly.  Preserve
-        # BattleShip's infinite loop range by making that exact range the DS
-        # stream; the one-sample pre-roll cannot be represented as a separate
-        # ADPCM loop point and is explicitly recorded below instead of being
-        # silently replayed on every loop.
+        # Preserve every sample in BattleShip's infinite [1, 28215) range as
+        # the DS loop body.  A one-word IMA state prefix keeps the repeat point
+        # off the header.  Two decoded guard nibbles pay the unavoidable word-
+        # alignment debt at the end of every DS repeat cycle.
         if selector["loop"]:
             runtime_pcm = pcm[selector["loop_start"]:selector["loop_end"]]
-            loop_strategy = "full_stream_is_exact_source_loop_range"
+            loop_strategy = (
+                "state_word_then_source_loop_nibbles_plus_alignment_guards")
+            loop_point_words = PUBLIC_EXCITED_LOOP_POINT_WORDS
+            ima = ima_encode_loop_body(
+                runtime_pcm, PUBLIC_EXCITED_IMA_PREDICTOR,
+                PUBLIC_EXCITED_IMA_INDEX,
+                PUBLIC_EXCITED_GUARD_NIBBLES)
+            decoded_ima = ima_decode_nibbles(
+                ima, len(runtime_pcm), loop_point_words * 4)
+            repeat_oracle = ima_repeat_oracle(
+                ima, loop_point_words, len(runtime_pcm),
+                PUBLIC_EXCITED_GUARD_NIBBLES)
         else:
             runtime_pcm = pcm
             loop_strategy = "none"
-        ima = ima_encode(runtime_pcm)
-        decoded_ima = ima_decode(ima, len(runtime_pcm))
+            loop_point_words = 0
+            ima = ima_encode(runtime_pcm)
+            decoded_ima = ima_decode(ima, len(runtime_pcm))
+            repeat_oracle = {}
         metrics = audio_metrics(runtime_pcm, decoded_ima)
         if metrics["decoded_peak"] == 0 or metrics["decoded_rms"] <= 0:
             raise ValueError(f"FGM {selector['id']} decoded to silence")
@@ -606,6 +842,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "pan": 64,
             "sound": selector["sound"],
             "envelope": envelope[1:],
+            "loop_point_words": loop_point_words,
         })
         metadata_entries.append({
             "entry_index": entry_index,
@@ -642,6 +879,16 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "source_loop_end": selector["loop_end"],
             "source_loop_infinite": source_loop_infinite,
             "ds_loop_strategy": loop_strategy,
+            "ds_loop_point_words": loop_point_words,
+            "ds_loop_length_words": (
+                (len(ima) // 4) - loop_point_words),
+            "ds_ima_header_predictor": struct.unpack_from("<h", ima, 0)[0],
+            "ds_ima_header_index": ima[2],
+            "ds_ima_loop_body_nibbles": (
+                len(runtime_pcm) if selector["loop"] else 0),
+            "ds_ima_guard_nibbles": (
+                list(PUBLIC_EXCITED_GUARD_NIBBLES)
+                if selector["loop"] else []),
             "ds_initial_prefix_samples_dropped": (
                 selector["loop_start"] if selector["loop"] else 0),
             "ds_trailing_samples_dropped": (
@@ -664,6 +911,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "fidelity_debt", ())),
             "ima_adpcm_bytes": len(ima),
             "ima_adpcm_sha256": sha256(ima),
+            **repeat_oracle,
             **metrics,
         })
 
@@ -701,7 +949,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             len(record["ima"]),
             record["sample_count"], record["frequency"],
             record["duration_ticks"], record["volume"], record["pan"],
-            record["sound"], record["envelope_offset"], len(envelope), 0)
+            record["sound"], record["envelope_offset"], len(envelope),
+            record["loop_point_words"])
     pack_size = data_offset + len(sample_body) + len(envelope_body)
     pack = (PACK_HEADER.pack(PACK_MAGIC, PACK_VERSION, len(records),
                              pack_size, mapping_sha_lo) +
@@ -717,6 +966,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         "format_version": PACK_VERSION,
         "entry_count": len(records),
         "entry_bytes": PACK_ENTRY.size,
+        "entry_final_u16": "ds_loop_point_words",
         "envelope_point_bytes": PACK_ENVELOPE_POINT.size,
         "header_bytes": PACK_HEADER.size,
         "resident_bytes": len(pack),
@@ -729,9 +979,20 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         "runtime_conversion": False,
         "unique_sample_count": len(sample_offsets),
         "unique_sample_bytes": len(sample_body),
+        "non_loop_sample_sha256": sha256(b"".join(
+            record["ima"] for record in records
+            if record["flags"] == 0)),
+        "non_loop_envelope_sha256": sha256(b"".join(
+            PACK_ENVELOPE_POINT.pack(point["tick"], point["ds_volume"], 0)
+            for record in records if record["flags"] == 0
+            for point in record["envelope"])),
         "known_runtime_fidelity_debt": [
-            "PublicExcited drops its one-sample pre-roll so the DS ADPCM "
-            "stream can loop the exact BattleShip [1, 28215) range.",
+            "PublicExcited drops its one-sample pre-roll; its AOT IMA state "
+            "word and PNT=1 loop encode every sample in the exact "
+            "BattleShip [1, 28215) range as a data nibble. Each DS repeat "
+            "cycle then decodes two word-alignment guard samples, so the "
+            "28,216-sample cycle is not exclusively the 28,214-sample "
+            "BattleShip range.",
             "The AOT BattleShip volume envelope is scheduled from the "
             "60 Hz game update and uses DS step volume; N64 applied 5.75 ms "
             "ticks with a 5.75 ms synthesizer ramp.",

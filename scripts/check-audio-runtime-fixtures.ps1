@@ -272,6 +272,12 @@ foreach ($required in @(
 
 foreach ($required in @(
         'u16 fgm_id;',
+        'u16 loop_point_words;',
+        'entry->loop_point_words = ndsAudioFgmReadLe16(&raw[30]);',
+        '(ndsAudioFgmReadLe16(&header[4]) != 3u)',
+        '&sNdsAudioFgmPack[entry->data_offset], SoundFormat_ADPCM,',
+        'entry->data_bytes - ((u32)entry->loop_point_words * 4u)',
+        '((entry->flags & 1u) != 0u), entry->loop_point_words);',
         'handle->effect.sfx_id = ndsAudioFgmNextInstanceToken();',
         'handle->fgm_id = fgm_id;',
         'handle->effect.sfx_id = 0u;',
@@ -287,6 +293,9 @@ foreach ($required in @(
     }
 }
 foreach ($forbidden in @(
+        'u16 reserved;',
+        '(ndsAudioFgmReadLe16(&header[4]) != 2u)',
+        '((entry->flags & 1u) != 0u), 0u);',
         'handle->effect.sfx_id = fgm_id;',
         'handle->effect.sfx_max = fgm_id;',
         'NDS_AUDIO_FGM_NONREUSE_HANDLE_CAPACITY',
@@ -342,6 +351,6 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
     'mixed-u16 words each, exact Mario/Fox regular-KO call order, no ' +
-    'rebirth-audio claim, target layouts, source IDs, and recyclable ' +
-    'BattleShip FGM tokens.'
+    'rebirth-audio claim, target layouts, source IDs, persisted DS loop ' +
+    'point/length, and recyclable BattleShip FGM tokens.'
 )

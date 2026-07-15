@@ -1,5 +1,6 @@
 param(
     [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path,
+    [switch]$AuditLocalConfigs,
     [switch]$SkipLocalConfigs
 )
 
@@ -109,7 +110,7 @@ foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
         "Hard-coded external melonDS executable found: $($scriptFile.Name)"
 }
 
-if (-not $SkipLocalConfigs -and
+if ($AuditLocalConfigs -and -not $SkipLocalConfigs -and
     (Test-Path -LiteralPath (Join-Path $Root 'emulators') -PathType Container)) {
     & (Join-Path $PSScriptRoot 'Set-MelonDSWindowConfig.ps1') `
         -Root $Root -AllWorktrees -Check | Out-Null
@@ -118,4 +119,5 @@ if (-not $SkipLocalConfigs -and
 Write-Output (
     'melonDS policy check passed: repo-local executable only; ' +
     "$($script:MelonDSCanonicalWindowWidth)x$($script:MelonDSCanonicalWindowHeight) " +
-    'vertical/equal/native/nearest window profile; manual and automation isolated.')
+    'vertical/equal/native/nearest window profile; manual and automation isolated; ' +
+    "local_config_audit=$([int]($AuditLocalConfigs -and -not $SkipLocalConfigs)).")

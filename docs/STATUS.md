@@ -65,53 +65,65 @@ user-facing ROM only through the Makefile parity rule:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,362,624 bytes
-SHA-256 57B85DDC6B2919D8962589188D6066F6CE6D0FD83B2F729175C9F339C8CCFAFD
+14,368,768 bytes
+SHA-256 F8EFEE10ED15457CD79A9B71B9766B5247BE870C332FB12316431F8301A0A94A
 ```
 
 Completed frames 438/439 in the dated
-`artifacts/visibility/2026-07-14_canonical_fast_frame438-439_200444-1174022-p660.png`
+`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_035112-0572048-p44488.png`
 pair pass exact GO/timer/control/OAM state, visibility, detail, named regions,
 motion, and sky coverage; frame 438 is `latest.png`. Acceptance is melonDS-only.
+All generated screenshots belong under `artifacts/visibility`.
 
 ## P1 Release Matrix
 
 | Area | Current state |
 |---|---|
 | Natural one-minute battle and Results | Natural 3,600→0/Time Up/22→24 gate passes; exact canonical-duration qualification remains |
-| Gameplay | Fireball render/damage passes; damage/throw collision, one-way platforms, and Fireball rebound are current defects; recovery coverage open |
-| Renderer | M1 and native countdown pass; M2 active; M3 open; M4 device falsifier eligible; pause-orbit containment pending |
+| Gameplay | All-platform and 40-draw Fireball gates pass, but manual reports remain open; damage/default live policies are floor-only, DamageFly has no verified sample, and throw recovery is candidate-only |
+| Renderer | M1/native countdown pass; M2 active; M3 slab specified; M4 static prewarm is feasible but exact full-water residency needs a new representation; pause ±33.6° source parity is unresolved |
 | HUD/countdown | User-approved lower HUD and top countdown pass |
-| Audio | Phase/regular-KO FGMs and winner→Results streams pass naturally; remaining voices/pitch and audible Dream Land proof open |
-| Stability/memory | One full match passes with 171,916-byte conservative reserve and zero safety faults; repetition pending |
+| Audio | Production phase/KO and isolated crowd-ACK gates pass; the user ROM has no blocking trace; ID626 PNT=1/LEN=3527 model passes with 2 guard samples/cycle; audible qualification remains open |
+| Stability/memory | One full match passes with 172,024-byte conservative reserve and zero safety faults; repetition pending |
 | Release evidence | Cut G exact-frame capture passes; final dated qualification capture, Full Regression, and exact-ROM retest pending |
 
 Detailed owners, gates, blockers, and evidence live only on the execution board.
 
 ## Performance And Open Work
 
-Whole-frame presentation is about 10.3 FPS in the latest synchronized
-`laboratory-profile-1` M2 window, not a canonical phase baseline. Sampled lab
-gameplay
-still reports positive texture conversion and two uploads totaling 36,864
-bytes. Therefore:
+The latest focused profile-1 M2 A/B/A (`03950839...BEEF09B`, frames 600–607)
+measures about 10.1–10.2 FPS, not a canonical phase baseline. Sampled lab gameplay
+still reports positive texture conversion and two uploads totaling 36,864 bytes. Therefore:
 
-- Milestone 2 is in progress: Mario/Fox still cost about 431K combined versus
-  170–250K. The exact 17,704-byte transaction packet is tooling only; live
-  matrices/materials/lights, device cycles, and independent parity remain.
-- Milestone 3 is open: the ~801K stage owner needs whole-stage preflight and a
-  fused static-slab owner before the 150–250K target is credible.
-- Milestone 4 has an exact RGB256 host generator eligible for an eight-frame
-  device falsifier. Runtime palette mapping and zero gameplay preparation remain.
-- Whispy face, weapon detail, and some fighter lighting/facing remain
-  presentation debt. Damage/throw map collision, one-way platforms, and
-  Fireball floor rebound are gameplay blockers, not presentation debt.
+- Milestone 2 remains ~431K versus 170–250K. Retained evidence supports about
+  50–75K from the first hierarchy cut; the ≥80K keep gate remains unchanged.
+- Milestone 3's strict eight-callback slab must save >=300K, reach <=500K, stay
+  <=16 KiB resident, and add no BSS/heap; otherwise remove it.
+- Milestone 4 can prewarm static Dream Land/fighter/Fireball/effect misses, but
+  exact full-water residency is impossible in the retained layouts: the
+  smallest exact visible RGB256 corpus is 903,168 bytes versus 524,288 bytes of
+  total DS texture VRAM. M4 must reach an explicit representation checkpoint;
+  post-GO conversion/allocation/upload/I/O still remain hard failures.
+
+The 715-frame all-platform gate pins exact live geometry, Mario-only mask `0x7`,
+three upward passes/zero accepts, nine reverse hits/landings, two side cycles, and three source Pass rejections. Fireball now
+passes the BattleShip custom-`0x47` MVP path for 40/40 draws with zero mismatch,
+1,757 units of natural travel, source rebound `55→46.75`, 80 triangles, and
+222,736-byte reserve. Its dated capture is under `artifacts/visibility`. Both
+original manual reports remain open.
+The natural DamageFly gate currently times out without a verified sample, and
+throw/release remains candidate-only. ID626's no-growth AOT PNT=1/LEN=3527
+body passes a state-latch/restore model that rejects missing restore/wrong
+PNT/LEN and exposes two guard samples per cycle; audible proof remains open. Camera passes
+synchronized normal/front/±16.8°/±33.6° windows, but both ±33.6° screenshots
+reproduce the reported pause-only wide-view occlusion. Normal camera remains
+contained; identical BattleShip/N64 comparison is still needed before calling
+the wide view a renderer defect.
 
 A BattleShip ABI mismatch had made Fox's up/down-smash restore command disable
-his damage colliders. On exact ROM `57B85D...FAFD`, natural Fox up-smash now
-restores all 11 active colliders to
-Normal with zero mismatch and clears the no-damage flag. Repeated Mario→Fox
-contact still awaits manual confirmation and a continuous natural-hit gate.
+his damage colliders. The user confirms damage works on the repaired path;
+natural Fox up-smash restores all 11 active colliders to Normal with zero
+mismatch and clears the no-damage flag. Continuous natural-hit coverage remains.
 
 ## Verification
 
@@ -123,11 +135,14 @@ Passing checks for this checkpoint:
 .\scripts\check-harness-registry.ps1
 .\scripts\check-gbi-decode-fixtures.ps1
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
-.\scripts\verify-boundary.ps1 -DelaySeconds 3
+.\scripts\build-verify-profile.ps1 -Profile RegressionCore -VerifyStamp
+.\scripts\verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3 -RunnerSlot 0
+.\scripts\verify-boundary.ps1 -NoBuild -DelaySeconds 3 -RunnerSlot 0
 ```
 
-Focused profile-1 and canonical profile-0 pre/post-GO runs pass. The automated
-one-minute natural-runtime gate also passes logic=3892, timer=3600→0/3600,
-scene=22→24, safety=0, stale=0/0, and conservative reserve=171,916 bytes. Full
-Regression remains follow-up. Run the Lean snapshot only after all final checks
-and status inspection; run no project command after it.
+Focused profile-1 and canonical profile-0 pre/post-GO runs pass. The one-minute
+gate passes logic=3892, timer=3600→0/3600, scene=22→24, safety/stale=0, and
+reserve=172,024. Fresh RegressionCore prebuild/stamp/runtime and mode-163 Boundary
+pass; Full Regression follows. Platform/Fireball pass; DamageFly timed out,
+throw/camera remain candidate-only, and crowd command telemetry is not acoustic proof.
+Run the Lean snapshot only after all final checks and status inspection; run no project command after it.

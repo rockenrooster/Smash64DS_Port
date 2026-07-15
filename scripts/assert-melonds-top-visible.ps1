@@ -12,6 +12,7 @@ param(
     [double]$MinDifferentFraction = 0.01,
     [double]$MinDominantGreenFraction = -1.0,
     [double]$MinNonWhiteNonGreenFraction = -1.0,
+    [double]$MaxSingleColorFraction = -1.0,
     [int]$RequiredRegionX = -1,
     [int]$RequiredRegionY = -1,
     [int]$RequiredRegionWidth = 0,
@@ -228,9 +229,22 @@ try {
     $compareTotal = 0
     [long]$compareMaxDeltaSum = 0
     $total = $Width * $Height
+    $colorHistogram = if ($MaxSingleColorFraction -ge 0.0) {
+        @{}
+    } else {
+        $null
+    }
     for ($y = 0; $y -lt $Height; $y++) {
         for ($x = 0; $x -lt $Width; $x++) {
             $pixel = $bitmap.GetPixel($x, $y)
+            if ($null -ne $colorHistogram) {
+                $colorKey = $pixel.ToArgb()
+                if ($colorHistogram.ContainsKey($colorKey)) {
+                    $colorHistogram[$colorKey]++
+                } else {
+                    $colorHistogram[$colorKey] = 1
+                }
+            }
             if ((Test-ClearPixel $pixel) -eq $false) {
                 $different++
             }
@@ -308,6 +322,19 @@ try {
         Write-Output ("Top screen detail content: {0}/{1} non-white/non-green pixels ({2:P3})." -f
             $nonWhiteNonGreen, $total,
             ([double]$nonWhiteNonGreen / [double]$total))
+    }
+    if ($null -ne $colorHistogram) {
+        $largestColor = $colorHistogram.GetEnumerator() |
+            Sort-Object Value -Descending |
+            Select-Object -First 1
+        $largestColorFraction = [double]$largestColor.Value / [double]$total
+        if ($largestColorFraction -gt $MaxSingleColorFraction) {
+            throw ("Top screen single-color concentration is too large: {0}/{1} pixels ({2:P3}) above allowed {3:P3}." -f
+                $largestColor.Value, $total, $largestColorFraction,
+                $MaxSingleColorFraction)
+        }
+        Write-Output ("Top screen largest single-color concentration: {0}/{1} pixels ({2:P3})." -f
+            $largestColor.Value, $total, $largestColorFraction)
     }
     if (($MinRequiredRegionFraction -ge 0.0) -or
         ($MinRequiredRegionFighterFraction -ge 0.0)) {

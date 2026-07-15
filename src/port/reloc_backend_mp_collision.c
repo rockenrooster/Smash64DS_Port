@@ -1,7 +1,22 @@
 #include "nds_scene_harness_config.h"
+#include <nds/nds_mp_floor_crossing.h>
+#include <nds/nds_mp_topology.h>
 
 MPLineGroup gMPCollisionLineGroups[nMPLineKindEnumCount];
+MPVertexInfoContainer *gMPCollisionVertexInfo;
+s32 gMPCollisionLinesNum;
 static MPGeometryData *sNdsMPLineGroupGeometry;
+static MPGeometryData *sNdsMPTopologyGeometry;
+static MPGeometryData *sNdsMPLineGroupFailedGeometry;
+static MPGeometryData *sNdsMPTopologyFailedGeometry;
+static sb32 sNdsMPLineGroupsReady;
+
+_Static_assert(sizeof(MPVertexInfo) == 10u,
+               "BattleShip MPVertexInfo ABI must remain 10 bytes");
+_Static_assert(sizeof(MPLineInfo) == 18u,
+               "BattleShip MPLineInfo ABI must remain 18 bytes");
+
+static sb32 ndsMPBuildTopologyCache(void);
 
 static sb32 ndsStageCollisionLoopGeometryReady(void)
 {
@@ -16,11 +31,7 @@ static sb32 ndsStageCollisionLoopGeometryReady(void)
 
 static u16 ndsMPO2RReadU16(const void *base, u32 half_index)
 {
-    const u32 *words = base;
-    u32 word = words[half_index / 2u];
-
-    return (half_index & 1u) ? (u16)(word & 0xffffu) :
-        (u16)(word >> 16);
+    return (u16)ndsMPO2RReadU16Kernel(base, half_index);
 }
 
 static s16 ndsMPO2RReadS16(const void *base, u32 half_index)
@@ -95,24 +106,57 @@ static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y)
     return TRUE;
 }
 
-static MPLineInfo *ndsMPLineInfoAt(MPLineInfo *line_info, u32 index)
+static NDSMPO2RHalfwordView ndsMPLineInfoAt(MPLineInfo *line_info,
+                                             u32 index)
 {
-    return (MPLineInfo *)((u8 *)line_info + (index * sizeof(MPLineInfo)));
+    return ndsMPO2RLineInfoView(line_info, index);
 }
 
-static u32 ndsMPLineInfoYakumonoID(MPLineInfo *line_info)
+static u32 ndsMPLineInfoYakumonoID(NDSMPO2RHalfwordView line_info)
 {
-    return ndsMPO2RReadU16(line_info, 0u);
+    return ndsMPO2RLineInfoYakumonoID(line_info);
 }
 
-static u32 ndsMPLineInfoGroupID(MPLineInfo *line_info, u32 kind)
+static u32 ndsMPLineInfoGroupID(NDSMPO2RHalfwordView line_info, u32 kind)
 {
-    return ndsMPO2RReadU16(line_info, 1u + (kind * 2u));
+    return ndsMPO2RLineInfoGroupID(line_info, kind);
 }
 
-static u32 ndsMPLineInfoLineCount(MPLineInfo *line_info, u32 kind)
+static u32 ndsMPLineInfoLineCount(NDSMPO2RHalfwordView line_info, u32 kind)
 {
-    return ndsMPO2RReadU16(line_info, 2u + (kind * 2u));
+    return ndsMPO2RLineInfoLineCount(line_info, kind);
+}
+
+static void ndsMPCollisionClearTopologySnapshot(void)
+{
+    gNdsCollisionRuntimeDiagnostics.topology_lines = 0u;
+    gNdsCollisionRuntimeDiagnostics.topology_shared_directed = 0u;
+    gNdsCollisionRuntimeDiagnostics.topology_orphan_endpoints = 0u;
+    gNdsCollisionRuntimeDiagnostics.topology_reversed_lines = 0u;
+    gNdsCollisionRuntimeDiagnostics.topology_ambiguous_endpoints = 0u;
+    gNdsCollisionRuntimeDiagnostics.topology_hash = 0u;
+    gNdsCollisionRuntimeDiagnostics.topology_last_line = -1;
+    gNdsCollisionRuntimeDiagnostics.topology_last_prev = -1;
+    gNdsCollisionRuntimeDiagnostics.topology_last_next = -1;
+}
+
+void ndsMPCollisionInvalidateTopology(void)
+{
+    u32 kind;
+
+    sNdsMPLineGroupGeometry = NULL;
+    sNdsMPTopologyGeometry = NULL;
+    sNdsMPLineGroupFailedGeometry = NULL;
+    sNdsMPTopologyFailedGeometry = NULL;
+    sNdsMPLineGroupsReady = FALSE;
+    gMPCollisionVertexInfo = NULL;
+    gMPCollisionLinesNum = 0;
+    ndsMPCollisionClearTopologySnapshot();
+    for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+    {
+        gMPCollisionLineGroups[kind].line_count = 0u;
+        gMPCollisionLineGroups[kind].line_id = NULL;
+    }
 }
 
 void ndsMPCollisionEnsureLineGroups(void)
@@ -124,9 +168,27 @@ void ndsMPCollisionEnsureLineGroups(void)
     u32 i;
     u32 kind;
 
+    if (geometry != sNdsMPLineGroupGeometry)
+    {
+        ndsMPCollisionInvalidateTopology();
+    }
+    if (ndsStageCollisionLoopGeometryReady() == FALSE)
+    {
+        ndsMPCollisionInvalidateTopology();
+        return;
+    }
     if ((geometry == sNdsMPLineGroupGeometry) &&
-        ((geometry == NULL) ||
-         (gMPCollisionLineGroups[nMPLineKindFloor].line_id != NULL)))
+        (sNdsMPLineGroupsReady != FALSE))
+    {
+        if (((geometry != sNdsMPTopologyGeometry) ||
+             (gMPCollisionVertexInfo == NULL)) &&
+            (sNdsMPTopologyFailedGeometry != geometry))
+        {
+            (void)ndsMPBuildTopologyCache();
+        }
+        return;
+    }
+    if (sNdsMPLineGroupFailedGeometry == geometry)
     {
         return;
     }
@@ -136,18 +198,31 @@ void ndsMPCollisionEnsureLineGroups(void)
         gMPCollisionLineGroups[kind].line_id = NULL;
     }
     sNdsMPLineGroupGeometry = geometry;
-    if (ndsStageCollisionLoopGeometryReady() == FALSE)
+    yakumono_count = ndsMPGeometryYakumonoCount(geometry);
+    if (yakumono_count > 64u)
     {
+        sNdsMPLineGroupFailedGeometry = geometry;
+        gNdsCollisionRuntimeDiagnostics.topology_invalid++;
         return;
     }
-    yakumono_count = ndsMPGeometryYakumonoCount(geometry);
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(geometry->line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(geometry->line_info, i);
 
         for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
         {
-            line_counts[kind] += ndsMPLineInfoLineCount(info, kind);
+            u32 first = ndsMPLineInfoGroupID(info, kind);
+            u32 count = ndsMPLineInfoLineCount(info, kind);
+
+            if ((count > 4096u) || (first > 4096u) ||
+                ((first + count) > 4096u) ||
+                ((line_counts[kind] + count) > 4096u))
+            {
+                sNdsMPLineGroupFailedGeometry = geometry;
+                gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+                return;
+            }
+            line_counts[kind] += count;
         }
     }
     for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
@@ -157,11 +232,25 @@ void ndsMPCollisionEnsureLineGroups(void)
         {
             gMPCollisionLineGroups[kind].line_id =
                 syTaskmanMalloc(line_counts[kind] * sizeof(u16), 2u);
+            if (gMPCollisionLineGroups[kind].line_id == NULL)
+            {
+                u32 clear_kind;
+
+                for (clear_kind = 0u;
+                     clear_kind < nMPLineKindEnumCount; clear_kind++)
+                {
+                    gMPCollisionLineGroups[clear_kind].line_count = 0u;
+                    gMPCollisionLineGroups[clear_kind].line_id = NULL;
+                }
+                sNdsMPLineGroupFailedGeometry = geometry;
+                gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+                return;
+            }
         }
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(geometry->line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(geometry->line_info, i);
 
         for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
         {
@@ -176,6 +265,8 @@ void ndsMPCollisionEnsureLineGroups(void)
             }
         }
     }
+    sNdsMPLineGroupsReady = TRUE;
+    (void)ndsMPBuildTopologyCache();
 }
 
 static u32 ndsMPVertexLinkFirst(MPVertexLinks *links, u32 line_id)
@@ -275,7 +366,7 @@ static s32 ndsMPGetLineKindForLineID(s32 line_id)
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
 
         for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
         {
@@ -353,7 +444,7 @@ static void ndsStageCollisionLoopCountLines(void)
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
 
         for (j = 0u; j < nMPLineKindEnumCount; j++)
         {
@@ -429,7 +520,7 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
 
         for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
         {
@@ -542,7 +633,7 @@ static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
 
         for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
         {
@@ -621,7 +712,7 @@ static sb32 ndsStageCollisionLoopGetFloorSample(u32 slot, Vec3f *pos)
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 first = (s32)ndsMPLineInfoGroupID(info, nMPLineKindFloor);
         s32 count =
             (s32)ndsMPLineInfoLineCount(info, nMPLineKindFloor);
@@ -1027,96 +1118,303 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
     return FALSE;
 }
 
-static sb32 ndsStageMPEdgeFloorLoopPointMatch(const Vec3f *a,
-                                              const Vec3f *b)
-{
-    return ((a != NULL) && (b != NULL) &&
-            (fabsf(a->x - b->x) <= 1.0F) &&
-            (fabsf(a->y - b->y) <= 1.0F)) ? TRUE : FALSE;
-}
-
-static s32 ndsMPFindAdjacentWallForFloorEdge(s32 floor_line_id,
-                                             sb32 is_right_edge)
+static s32 ndsMPTopologyLineCount(void)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
-    MPLineInfo *line_info;
-    Vec3f floor_left;
-    Vec3f floor_right;
-    Vec3f target;
-    u32 kind_order[2];
     u32 yakumono_count;
-    u32 order;
+    u32 line_total = 0u;
     u32 i;
+    u32 kind;
 
-    if ((floor_line_id < 0) ||
-        (ndsMPLineIDIsFloor(floor_line_id) == FALSE) ||
-        (ndsMPFindLineEndpoints(floor_line_id, &floor_left, &floor_right,
-            NULL, NULL) == FALSE) ||
-        (ndsStageCollisionLoopGeometryReady() == FALSE))
+    if (ndsStageCollisionLoopGeometryReady() == FALSE)
     {
-        return -1;
+        return 0;
     }
-    target = (is_right_edge != FALSE) ? floor_right : floor_left;
-    if (is_right_edge != FALSE)
-    {
-        kind_order[0] = nMPLineKindRWall;
-        kind_order[1] = nMPLineKindLWall;
-    }
-    else
-    {
-        kind_order[0] = nMPLineKindLWall;
-        kind_order[1] = nMPLineKindRWall;
-    }
-    line_info = geometry->line_info;
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
     if (yakumono_count > 64u)
     {
-        yakumono_count = 64u;
+        return 0;
     }
-    for (order = 0u; order < ARRAY_COUNT(kind_order); order++)
+    for (i = 0u; i < yakumono_count; i++)
     {
-        u32 line_kind = kind_order[order];
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(geometry->line_info, i);
 
-        for (i = 0u; i < yakumono_count; i++)
+        for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
         {
-            MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
-            s32 first = (s32)ndsMPLineInfoGroupID(info, line_kind);
-            s32 count = (s32)ndsMPLineInfoLineCount(info, line_kind);
-            s32 end;
-            s32 line_id;
+            u32 first = ndsMPLineInfoGroupID(info, kind);
+            u32 count = ndsMPLineInfoLineCount(info, kind);
 
-            if (count <= 0)
+            if ((count > 4096u) || (first > 4096u) ||
+                ((first + count) > 4096u) ||
+                ((line_total + count) > 4096u))
             {
-                continue;
+                return 0;
             }
-            if (count > 4096)
-            {
-                count = 4096;
-            }
-            end = first + count;
-            for (line_id = first; line_id < end; line_id++)
-            {
-                Vec3f wall_a;
-                Vec3f wall_b;
-
-                if ((ndsMPFindLineEndpoints(line_id, &wall_a, &wall_b,
-                        NULL, NULL) != FALSE) &&
-                    ((ndsStageMPEdgeFloorLoopPointMatch(&target, &wall_a) !=
-                        FALSE) ||
-                     (ndsStageMPEdgeFloorLoopPointMatch(&target, &wall_b) !=
-                        FALSE)))
-                {
-                    return line_id;
-                }
-            }
+            line_total += count;
         }
     }
-    return -1;
+    return (s32)line_total;
+}
+
+static int ndsMPReadTopologyLine(void *context, int line_id,
+                                 NDSMPTopologyRawLine *line)
+{
+    MPGeometryData *geometry = gMPCollisionGeometry;
+    u32 first;
+    u32 count;
+    u32 first_vertex_id;
+    u32 last_vertex_id;
+    s32 kind;
+
+    (void)context;
+    if ((line == NULL) || (line_id < 0) ||
+        (ndsStageCollisionLoopGeometryReady() == FALSE))
+    {
+        return 0;
+    }
+    kind = ndsMPGetLineKindForLineID(line_id);
+    if ((kind < 0) || (kind >= nMPLineKindEnumCount))
+    {
+        return 0;
+    }
+    first = ndsMPVertexLinkFirst(geometry->vertex_links, (u32)line_id);
+    count = ndsMPVertexLinkCount(geometry->vertex_links, (u32)line_id);
+    if ((count < 2u) || (count > 128u))
+    {
+        return 0;
+    }
+    first_vertex_id = ndsMPVertexID(geometry->vertex_id, first);
+    last_vertex_id = ndsMPVertexID(geometry->vertex_id,
+                                  first + count - 1u);
+    line->kind = kind;
+    line->first_vertex_id = (int)first_vertex_id;
+    line->last_vertex_id = (int)last_vertex_id;
+    line->first_x = ndsMPVertexX(geometry->vertex_data, first_vertex_id);
+    line->first_y = ndsMPVertexY(geometry->vertex_data, first_vertex_id);
+    line->last_x = ndsMPVertexX(geometry->vertex_data, last_vertex_id);
+    line->last_y = ndsMPVertexY(geometry->vertex_data, last_vertex_id);
+    return 1;
+}
+
+static sb32 ndsMPTopologySourceLineIsActive(s32 line_id)
+{
+    u32 yakumono_id;
+    DObj *yakumono_dobj;
+
+    if ((ndsMPFindLineYakumonoID(line_id, &yakumono_id) == FALSE) ||
+        (gMPCollisionYakumonoDObjs == NULL) ||
+        (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+    {
+        return FALSE;
+    }
+    yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+    return ((yakumono_dobj != NULL) &&
+            (yakumono_dobj->user_data.s < nMPYakumonoStatusOff)) ?
+        TRUE : FALSE;
+}
+
+static sb32 ndsMPBuildTopologyCache(void)
+{
+    MPGeometryData *geometry = gMPCollisionGeometry;
+    MPGeometryData *previous_geometry = sNdsMPTopologyGeometry;
+    MPVertexInfoContainer *vertex_info;
+    s32 line_count = ndsMPTopologyLineCount();
+    u32 hash = 2166136261u;
+    u32 shared_directed = 0u;
+    u32 orphan_endpoints = 0u;
+    u32 reversed_lines = 0u;
+    u32 ambiguous_endpoints = 0u;
+    s32 line_id;
+
+    if ((geometry == sNdsMPTopologyGeometry) &&
+        (gMPCollisionVertexInfo != NULL) &&
+        (gMPCollisionLinesNum == line_count))
+    {
+        return TRUE;
+    }
+    if (sNdsMPTopologyFailedGeometry == geometry)
+    {
+        return FALSE;
+    }
+    gNdsCollisionRuntimeDiagnostics.topology_build_attempts++;
+    if ((previous_geometry != NULL) && (previous_geometry != geometry))
+    {
+        gNdsCollisionRuntimeDiagnostics.topology_rebuilds++;
+    }
+    gMPCollisionVertexInfo = NULL;
+    gMPCollisionLinesNum = 0;
+    sNdsMPTopologyGeometry = NULL;
+    ndsMPCollisionClearTopologySnapshot();
+    if ((geometry == NULL) || (line_count <= 0) ||
+        (line_count > 4096))
+    {
+        sNdsMPTopologyFailedGeometry = geometry;
+        gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+        return FALSE;
+    }
+    /* Validate the complete decoded graph before consuming task-arena space.
+     * The runtime is single-threaded, so the identical post-allocation reads
+     * cannot change underneath this pass. */
+    for (line_id = 0; line_id < line_count; line_id++)
+    {
+        NDSMPTopologyRawLine raw;
+        u32 yakumono_id;
+        int edge_prev;
+        int edge_next;
+        int prev_matches;
+        int next_matches;
+
+        if ((ndsMPReadTopologyLine(NULL, line_id, &raw) == 0) ||
+            (ndsMPFindLineYakumonoID(line_id, &yakumono_id) == FALSE) ||
+            (yakumono_id > 255u) ||
+            (ndsMPTopologyResolveEdgesKernel(NULL, line_count, line_id,
+                ndsMPReadTopologyLine, &edge_prev, &edge_next,
+                &prev_matches, &next_matches) == 0))
+        {
+            sNdsMPTopologyFailedGeometry = geometry;
+            gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+            return FALSE;
+        }
+    }
+    vertex_info = syTaskmanMalloc(
+        (u32)line_count * sizeof(MPVertexInfo), 8u);
+    if (vertex_info == NULL)
+    {
+        sNdsMPTopologyFailedGeometry = geometry;
+        gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+        return FALSE;
+    }
+    for (line_id = 0; line_id < line_count; line_id++)
+    {
+        NDSMPTopologyRawLine raw;
+        MPVertexInfo *info = &vertex_info->vertex_info[line_id];
+        u32 yakumono_id;
+        u32 first;
+        u32 count;
+        u32 vertex;
+        s32 coll_min;
+        s32 coll_max;
+
+        (void)ndsMPReadTopologyLine(NULL, line_id, &raw);
+        (void)ndsMPFindLineYakumonoID(line_id, &yakumono_id);
+        first = ndsMPVertexLinkFirst(geometry->vertex_links, (u32)line_id);
+        count = ndsMPVertexLinkCount(geometry->vertex_links, (u32)line_id);
+        coll_min = coll_max = (raw.kind < nMPLineKindRWall) ?
+            raw.first_y : raw.first_x;
+        for (vertex = 1u; vertex < count; vertex++)
+        {
+            u32 vertex_id = ndsMPVertexID(geometry->vertex_id,
+                                         first + vertex);
+            s32 coll_pos = (raw.kind < nMPLineKindRWall) ?
+                ndsMPVertexY(geometry->vertex_data, vertex_id) :
+                ndsMPVertexX(geometry->vertex_data, vertex_id);
+
+            if (coll_pos < coll_min)
+            {
+                coll_min = coll_pos;
+            }
+            if (coll_pos > coll_max)
+            {
+                coll_max = coll_pos;
+            }
+        }
+        info->yakumono_id = (u8)yakumono_id;
+        info->line_type = (u8)raw.kind;
+        info->coll_pos_next = (s16)coll_max;
+        info->coll_pos_prev = (s16)coll_min;
+        info->edge_next_line_id = -1;
+        info->edge_prev_line_id = -1;
+    }
+    for (line_id = 0; line_id < line_count; line_id++)
+    {
+        NDSMPTopologyRawLine raw;
+        MPVertexInfo *info = &vertex_info->vertex_info[line_id];
+        int edge_prev;
+        int edge_next;
+        int prev_matches;
+        int next_matches;
+
+        (void)ndsMPReadTopologyLine(NULL, line_id, &raw);
+        (void)ndsMPTopologyResolveEdgesKernel(NULL, line_count, line_id,
+            ndsMPReadTopologyLine, &edge_prev, &edge_next,
+            &prev_matches, &next_matches);
+        info->edge_prev_line_id = (s16)edge_prev;
+        info->edge_next_line_id = (s16)edge_next;
+        shared_directed += (u32)prev_matches + (u32)next_matches;
+        orphan_endpoints += (prev_matches == 0) ? 1u : 0u;
+        orphan_endpoints += (next_matches == 0) ? 1u : 0u;
+        ambiguous_endpoints += (prev_matches > 1) ? 1u : 0u;
+        ambiguous_endpoints += (next_matches > 1) ? 1u : 0u;
+        if (((raw.kind < nMPLineKindRWall) &&
+             (raw.last_x < raw.first_x)) ||
+            ((raw.kind >= nMPLineKindRWall) &&
+             (raw.last_y < raw.first_y)))
+        {
+            reversed_lines++;
+        }
+        hash = (hash ^ (u32)line_id) * 16777619u;
+        hash = (hash ^ (u32)(edge_prev + 2)) * 16777619u;
+        hash = (hash ^ (u32)(edge_next + 2)) * 16777619u;
+    }
+    gMPCollisionVertexInfo = vertex_info;
+    gMPCollisionLinesNum = line_count;
+    sNdsMPTopologyGeometry = geometry;
+    sNdsMPTopologyFailedGeometry = NULL;
+    gNdsCollisionRuntimeDiagnostics.topology_build_successes++;
+    gNdsCollisionRuntimeDiagnostics.topology_lines = (u32)line_count;
+    gNdsCollisionRuntimeDiagnostics.topology_shared_directed =
+        shared_directed;
+    gNdsCollisionRuntimeDiagnostics.topology_orphan_endpoints =
+        orphan_endpoints;
+    gNdsCollisionRuntimeDiagnostics.topology_reversed_lines = reversed_lines;
+    gNdsCollisionRuntimeDiagnostics.topology_ambiguous_endpoints =
+        ambiguous_endpoints;
+    gNdsCollisionRuntimeDiagnostics.topology_hash = hash;
+    return TRUE;
+}
+
+static s32 ndsMPGetTopologyEdgeLineID(s32 line_id, sb32 get_next)
+{
+    MPVertexInfo *info;
+    s32 result;
+
+    gNdsCollisionRuntimeDiagnostics.topology_getter_calls++;
+    ndsMPCollisionEnsureLineGroups();
+    if ((sNdsMPTopologyGeometry != gMPCollisionGeometry) ||
+        (sNdsMPTopologyFailedGeometry == gMPCollisionGeometry) ||
+        (gMPCollisionVertexInfo == NULL) || (line_id < 0) ||
+        (line_id >= gMPCollisionLinesNum))
+    {
+        gNdsCollisionRuntimeDiagnostics.topology_getter_invalid++;
+        return -1;
+    }
+    info = &gMPCollisionVertexInfo->vertex_info[line_id];
+    gNdsCollisionRuntimeDiagnostics.topology_last_line = line_id;
+    gNdsCollisionRuntimeDiagnostics.topology_last_prev =
+        info->edge_prev_line_id;
+    gNdsCollisionRuntimeDiagnostics.topology_last_next =
+        info->edge_next_line_id;
+    if (ndsMPTopologySourceLineIsActive(line_id) == FALSE)
+    {
+        gNdsCollisionRuntimeDiagnostics.topology_inactive++;
+        return -1;
+    }
+    result = (get_next != FALSE) ? info->edge_next_line_id :
+        info->edge_prev_line_id;
+    if (result >= 0)
+    {
+        gNdsCollisionRuntimeDiagnostics.topology_getter_hits++;
+    }
+    else
+    {
+        gNdsCollisionRuntimeDiagnostics.topology_getter_no_edge++;
+    }
+    return result;
 }
 
 s32 mpCollisionGetEdgeUnderLLineID(s32 line_id)
 {
-    s32 edge_under_line_id = -1;
+    s32 edge_under_line_id;
 
     if (ndsFighterMarioFoxStageFloorEdgeLoopProofEnabled() != FALSE)
     {
@@ -1131,8 +1429,12 @@ s32 mpCollisionGetEdgeUnderLLineID(s32 line_id)
             gNdsStageMPAdjustFloorLoopEdgeUnderDeferredCount++;
         }
     }
-    if ((ndsFighterMarioFoxStageMPEdgeFloorLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPLiveStaleFloorLoopProbeActive == FALSE))
+    if (sNdsStageMPLiveStaleFloorLoopProbeActive != FALSE)
+    {
+        return -1;
+    }
+    edge_under_line_id = ndsMPGetTopologyEdgeLineID(line_id, FALSE);
+    if (ndsFighterMarioFoxStageMPEdgeFloorLoopProofEnabled() != FALSE)
     {
         gNdsStageMPEdgeFloorLoopEdgeUnderLCallCount++;
         if ((gNdsStageMPEdgeFloorLoopSelectedFloorLineID < 0) &&
@@ -1140,8 +1442,6 @@ s32 mpCollisionGetEdgeUnderLLineID(s32 line_id)
         {
             gNdsStageMPEdgeFloorLoopSelectedFloorLineID = line_id;
         }
-        edge_under_line_id =
-            ndsMPFindAdjacentWallForFloorEdge(line_id, FALSE);
         if (edge_under_line_id >= 0)
         {
             gNdsStageMPEdgeFloorLoopEdgeUnderLHitCount++;
@@ -1153,14 +1453,13 @@ s32 mpCollisionGetEdgeUnderLLineID(s32 line_id)
         {
             gNdsStageMPEdgeFloorLoopEdgeUnderLMissCount++;
         }
-        return edge_under_line_id;
     }
-    return -1;
+    return edge_under_line_id;
 }
 
 s32 mpCollisionGetEdgeUnderRLineID(s32 line_id)
 {
-    s32 edge_under_line_id = -1;
+    s32 edge_under_line_id;
 
     if (ndsFighterMarioFoxStageFloorEdgeLoopProofEnabled() != FALSE)
     {
@@ -1175,8 +1474,12 @@ s32 mpCollisionGetEdgeUnderRLineID(s32 line_id)
             gNdsStageMPAdjustFloorLoopEdgeUnderDeferredCount++;
         }
     }
-    if ((ndsFighterMarioFoxStageMPEdgeFloorLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPLiveStaleFloorLoopProbeActive == FALSE))
+    if (sNdsStageMPLiveStaleFloorLoopProbeActive != FALSE)
+    {
+        return -1;
+    }
+    edge_under_line_id = ndsMPGetTopologyEdgeLineID(line_id, TRUE);
+    if (ndsFighterMarioFoxStageMPEdgeFloorLoopProofEnabled() != FALSE)
     {
         gNdsStageMPEdgeFloorLoopEdgeUnderRCallCount++;
         if ((gNdsStageMPEdgeFloorLoopSelectedFloorLineID < 0) &&
@@ -1184,8 +1487,6 @@ s32 mpCollisionGetEdgeUnderRLineID(s32 line_id)
         {
             gNdsStageMPEdgeFloorLoopSelectedFloorLineID = line_id;
         }
-        edge_under_line_id =
-            ndsMPFindAdjacentWallForFloorEdge(line_id, TRUE);
         if (edge_under_line_id >= 0)
         {
             gNdsStageMPEdgeFloorLoopEdgeUnderRHitCount++;
@@ -1197,9 +1498,8 @@ s32 mpCollisionGetEdgeUnderRLineID(s32 line_id)
         {
             gNdsStageMPEdgeFloorLoopEdgeUnderRMissCount++;
         }
-        return edge_under_line_id;
     }
-    return -1;
+    return edge_under_line_id;
 }
 
 void mpCollisionGetFloorEdgeL(s32 line_id, Vec3f *object_pos)
@@ -1276,26 +1576,32 @@ void mpCollisionGetCeilEdgeR(s32 line_id, Vec3f *object_pos)
 
 s32 mpCollisionGetEdgeUpperLLineID(s32 line_id)
 {
-    (void)line_id;
-    return -1;
+    return ndsMPGetTopologyEdgeLineID(line_id, FALSE);
 }
 
 s32 mpCollisionGetEdgeUpperRLineID(s32 line_id)
 {
-    (void)line_id;
-    return -1;
+    return ndsMPGetTopologyEdgeLineID(line_id, TRUE);
 }
 
 s32 mpCollisionGetEdgeLeftULineID(s32 line_id)
 {
-    (void)line_id;
-    return -1;
+    return ndsMPGetTopologyEdgeLineID(line_id, TRUE);
+}
+
+s32 mpCollisionGetEdgeLeftDLineID(s32 line_id)
+{
+    return ndsMPGetTopologyEdgeLineID(line_id, FALSE);
 }
 
 s32 mpCollisionGetEdgeRightULineID(s32 line_id)
 {
-    (void)line_id;
-    return -1;
+    return ndsMPGetTopologyEdgeLineID(line_id, TRUE);
+}
+
+s32 mpCollisionGetEdgeRightDLineID(s32 line_id)
+{
+    return ndsMPGetTopologyEdgeLineID(line_id, FALSE);
 }
 
 static sb32 ndsStageMPSegmentIntersection2D(const Vec3f *a0,
@@ -1357,6 +1663,23 @@ static sb32 ndsStageMPSegmentIntersection2D(const Vec3f *a0,
     return TRUE;
 }
 
+static sb32 ndsMPFloorSegmentCrossesDownward(const Vec3f *position,
+                                              const Vec3f *translate,
+                                              const Vec3f *v1,
+                                              const Vec3f *v2,
+                                              f32 *hit_x,
+                                              f32 *hit_y)
+{
+    if ((position == NULL) || (translate == NULL) || (v1 == NULL) ||
+        (v2 == NULL) || (hit_x == NULL) || (hit_y == NULL))
+    {
+        return FALSE;
+    }
+    return (ndsMPFloorSegmentCrossesDownwardKernel(
+        position->x, position->y, translate->x, translate->y,
+        v1->x, v1->y, v2->x, v2->y, hit_x, hit_y) != 0) ? TRUE : FALSE;
+}
+
 static sb32 ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
                                                Vec3f *translate,
                                                Vec3f *ga_last,
@@ -1392,7 +1715,7 @@ static sb32 ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 first = (s32)ndsMPLineInfoGroupID(info, line_kind);
         s32 count = (s32)ndsMPLineInfoLineCount(info, line_kind);
         s32 end;
@@ -1696,7 +2019,7 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 line_first =
             (s32)ndsMPLineInfoGroupID(info, nMPLineKindFloor);
         s32 line_count =
@@ -3685,6 +4008,9 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     u32 best_flags = 0u;
     u32 best_yakumono_id = 0u;
     sb32 best_is_dynamic = FALSE;
+    sb32 best_is_reverse_endpoint = FALSE;
+    sb32 best_is_flat_ascending = FALSE;
+    sb32 saw_flat_ascending_sweep = FALSE;
     Vec3f best_pos = { 0.0F, 0.0F, 0.0F };
     Vec3f best_angle = { 0.0F, 1.0F, 0.0F };
 
@@ -3693,6 +4019,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     {
         return FALSE;
     }
+    gNdsCollisionRuntimeDiagnostics.floor_sweep_calls++;
     line_info = geometry->line_info;
     links = geometry->vertex_links;
     ids = geometry->vertex_id;
@@ -3704,7 +4031,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 first = (s32)ndsMPLineInfoGroupID(info, nMPLineKindFloor);
         s32 count = (s32)ndsMPLineInfoLineCount(info, nMPLineKindFloor);
         u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
@@ -3787,27 +4114,33 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                              (f32)ndsMPVertexY(verts, v1_id), 0.0F };
                 Vec3f v2 = { (f32)ndsMPVertexX(verts, v2_id),
                              (f32)ndsMPVertexY(verts, v2_id), 0.0F };
-                f32 line_x = v2.x - v1.x;
-                f32 line_y = v2.y - v1.y;
-                f32 prev_side = (line_x * (sweep_position.y - v1.y)) -
-                    (line_y * (sweep_position.x - v1.x));
-                f32 curr_side = (line_x * (sweep_translate.y - v1.y)) -
-                    (line_y * (sweep_translate.x - v1.x));
                 f32 hit_x;
                 f32 hit_y;
                 f32 hit_dist;
+                sb32 is_flat_ascending = FALSE;
 
-                if ((prev_side < -0.001F) || (curr_side > 0.001F))
+                if ((v1.y == v2.y) &&
+                    (sweep_translate.y > sweep_position.y) &&
+                    (sweep_position.y <= v1.y) &&
+                    (sweep_translate.y >= v1.y) &&
+                    (((sweep_position.x < sweep_translate.x) ?
+                        sweep_position.x : sweep_translate.x) <=
+                        ((v1.x > v2.x) ? v1.x : v2.x)) &&
+                    (((sweep_position.x > sweep_translate.x) ?
+                        sweep_position.x : sweep_translate.x) >=
+                        ((v1.x < v2.x) ? v1.x : v2.x)))
+                {
+                    is_flat_ascending = TRUE;
+                    saw_flat_ascending_sweep = TRUE;
+                }
+
+                if (ndsMPFloorSegmentCrossesDownward(
+                        &sweep_position, &sweep_translate, &v1, &v2,
+                        &hit_x, &hit_y) == FALSE)
                 {
                     continue;
                 }
                 gNdsStageMPSweepFloorLoopLineSweepCandidateCount++;
-                if (ndsStageMPSegmentIntersection2D(&sweep_position,
-                        &sweep_translate, &v1, &v2, NULL, NULL, &hit_x,
-                        &hit_y) == FALSE)
-                {
-                    continue;
-                }
                 hit_dist = fabsf(hit_y - (sweep_position.y - speed_y));
                 if (hit_dist >= best_dist)
                 {
@@ -3818,6 +4151,8 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 best_flags = ndsMPVertexFlags(verts, v1_id);
                 best_yakumono_id = yakumono_id;
                 best_is_dynamic = is_dynamic;
+                best_is_reverse_endpoint = (v2.x < v1.x) ? TRUE : FALSE;
+                best_is_flat_ascending = is_flat_ascending;
                 best_pos.x = hit_x + vedge_x;
                 best_pos.y = hit_y + vedge_y;
                 best_pos.z = 0.0F;
@@ -3826,9 +4161,22 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             }
         }
     }
+    if (saw_flat_ascending_sweep != FALSE)
+    {
+        gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_sweeps++;
+    }
     if (best_line < 0)
     {
         return FALSE;
+    }
+    gNdsCollisionRuntimeDiagnostics.floor_sweep_hits++;
+    if (best_is_reverse_endpoint != FALSE)
+    {
+        gNdsCollisionRuntimeDiagnostics.floor_reverse_endpoint_hits++;
+    }
+    if (best_is_flat_ascending != FALSE)
+    {
+        gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_accepts++;
     }
     if (ga_last != NULL)
     {
@@ -3922,6 +4270,96 @@ sb32 mpCollisionCheckFloorLineCollisionDiff(Vec3f *position,
     return hit;
 }
 
+sb32 mpProcessCheckTestFloorCollisionAdjNew(
+    MPCollData *coll_data, sb32 (*proc_map)(GObj *), GObj *gobj)
+{
+    MPObjectColl *map_coll;
+    MPObjectColl *p_map_coll;
+    Vec3f *translate;
+    Vec3f position;
+    Vec3f current;
+    s32 line_id = -1;
+    f32 floor_dist;
+    sb32 hit;
+
+    if ((coll_data == NULL) || (coll_data->p_translate == NULL))
+    {
+        return FALSE;
+    }
+    gNdsCollisionRuntimeDiagnostics.floor_adj_calls++;
+    map_coll = &coll_data->map_coll;
+    p_map_coll = (coll_data->p_map_coll != NULL) ? coll_data->p_map_coll :
+        map_coll;
+    translate = coll_data->p_translate;
+    coll_data->mask_stat &= (u16)~MAP_FLAG_FLOOR;
+
+    position.x = coll_data->pos_prev.x;
+    position.y = coll_data->pos_prev.y + p_map_coll->bottom;
+    position.z = coll_data->pos_prev.z;
+    current.x = translate->x;
+    current.y = translate->y + map_coll->bottom;
+    current.z = translate->z;
+
+    hit = (coll_data->update_tic != gMPCollisionUpdateTic) ?
+        mpCollisionCheckFloorLineCollisionDiff(
+            &position, &current, &coll_data->line_coll_dist,
+            &coll_data->floor_line_id, &coll_data->floor_flags,
+            &coll_data->floor_angle) :
+        mpCollisionCheckFloorLineCollisionSame(
+            &position, &current, &coll_data->line_coll_dist,
+            &coll_data->floor_line_id, &coll_data->floor_flags,
+            &coll_data->floor_angle);
+
+    if ((hit != FALSE) &&
+        (((coll_data->floor_flags & MAP_VERTEX_COLL_PASS) == 0u) ||
+         (coll_data->floor_line_id != coll_data->ignore_line_id)) &&
+        ((proc_map == NULL) || (proc_map(gobj) != FALSE)))
+    {
+        coll_data->mask_curr |= MAP_FLAG_FLOOR;
+        gNdsCollisionRuntimeDiagnostics.floor_adj_direct_hits++;
+        return TRUE;
+    }
+    if ((hit != FALSE) &&
+        ((coll_data->floor_flags & MAP_VERTEX_COLL_PASS) != 0u) &&
+        (coll_data->floor_line_id == coll_data->ignore_line_id))
+    {
+        gNdsCollisionRuntimeDiagnostics.floor_adj_pass_rejects++;
+    }
+
+    if ((coll_data->mask_unk & MAP_FLAG_LWALL) != 0u)
+    {
+        line_id = mpCollisionGetEdgeRightDLineID(
+            coll_data->lwall_line_id);
+    }
+    else if ((coll_data->mask_unk & MAP_FLAG_RWALL) != 0u)
+    {
+        line_id = mpCollisionGetEdgeLeftDLineID(
+            coll_data->rwall_line_id);
+    }
+    if ((line_id >= 0) &&
+        (mpCollisionGetLineTypeID(line_id) == nMPLineKindFloor) &&
+        (mpCollisionGetFCCommonFloor(line_id, &current, &floor_dist,
+            &coll_data->floor_flags, &coll_data->floor_angle) != FALSE) &&
+        (floor_dist > 0.0F))
+    {
+        coll_data->floor_line_id = line_id;
+        if ((((coll_data->floor_flags & MAP_VERTEX_COLL_PASS) == 0u) ||
+             (line_id != coll_data->ignore_line_id)) &&
+            ((proc_map == NULL) || (proc_map(gobj) != FALSE)))
+        {
+            coll_data->mask_curr |= MAP_FLAG_FLOOR;
+            gNdsCollisionRuntimeDiagnostics.floor_adjacent_hits++;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+sb32 mpProcessRunFloorCollisionAdjNewNULL(MPCollData *coll_data)
+{
+    return mpProcessCheckTestFloorCollisionAdjNew(coll_data, NULL, NULL);
+}
+
 static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                                          Vec3f *translate,
                                          Vec3f *ga_last,
@@ -3953,7 +4391,7 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 first = (s32)ndsMPLineInfoGroupID(info, nMPLineKindCeil);
         s32 count = (s32)ndsMPLineInfoLineCount(info, nMPLineKindCeil);
         u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
@@ -8562,13 +9000,13 @@ static sb32 ndsStageMPWallHitScoutTryFloor(s32 floor_line_id)
     {
         u32 line_kind = (side == 0u) ? (u32)nMPLineKindLWall :
             (u32)nMPLineKindRWall;
-        s32 edge_under_line_id =
-            ndsMPFindAdjacentWallForFloorEdge(floor_line_id,
-                (side == 0u) ? FALSE : TRUE);
+        s32 edge_under_line_id = (side == 0u) ?
+            mpCollisionGetEdgeUnderLLineID(floor_line_id) :
+            mpCollisionGetEdgeUnderRLineID(floor_line_id);
 
         for (i = 0u; i < yakumono_count; i++)
         {
-            MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
             s32 first = (s32)ndsMPLineInfoGroupID(info, line_kind);
             s32 count = (s32)ndsMPLineInfoLineCount(info, line_kind);
             s32 end;
@@ -8623,7 +9061,7 @@ static void ndsStageMPWallHitScoutRunAllFloors(void)
 
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 first = (s32)ndsMPLineInfoGroupID(info, nMPLineKindFloor);
         s32 count = (s32)ndsMPLineInfoLineCount(info, nMPLineKindFloor);
         s32 end;
@@ -8918,13 +9356,13 @@ static sb32 ndsStageMPWallFloorLoopTryFloor(s32 floor_line_id)
     {
         u32 line_kind = (side == 0u) ? (u32)nMPLineKindLWall :
             (u32)nMPLineKindRWall;
-        s32 edge_under_line_id =
-            ndsMPFindAdjacentWallForFloorEdge(floor_line_id,
-                (side == 0u) ? FALSE : TRUE);
+        s32 edge_under_line_id = (side == 0u) ?
+            mpCollisionGetEdgeUnderLLineID(floor_line_id) :
+            mpCollisionGetEdgeUnderRLineID(floor_line_id);
 
         for (i = 0u; i < yakumono_count; i++)
         {
-            MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
             s32 first = (s32)ndsMPLineInfoGroupID(info, line_kind);
             s32 count = (s32)ndsMPLineInfoLineCount(info, line_kind);
             s32 end;
@@ -11216,7 +11654,7 @@ static sb32 ndsStageMPPlatformSpeedFloorLoopChooseCeilLine(u32 yakumono_id,
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 first;
         s32 count;
         s32 end;
@@ -11302,7 +11740,7 @@ static sb32 ndsStageMPPlatformSpeedFloorLoopChooseWallLine(u32 yakumono_id,
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         u32 kinds[2] = { (u32)nMPLineKindLWall, (u32)nMPLineKindRWall };
         u32 kind_index;
 
@@ -14801,7 +15239,7 @@ static sb32 ndsStageMPCeilFloorLoopChooseLine(s32 *line_id, f32 *sample_x,
     gNdsStageMPCeilFloorLoopCeilLineCount = 0u;
     for (i = 0u; i < yakumono_count; i++)
     {
-        MPLineInfo *info = ndsMPLineInfoAt(line_info, i);
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 first = (s32)ndsMPLineInfoGroupID(info, nMPLineKindCeil);
         s32 count = (s32)ndsMPLineInfoLineCount(info, nMPLineKindCeil);
         s32 end;

@@ -118,8 +118,8 @@ if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|Min
     ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
     Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'
 }
-if ($verifyAllText -notmatch '(?s)\(\$Profile -eq ''P1Gate''\).*?\(\$record\.Name -eq ''battle_playable_realtime''\).*?\$arguments \+= ''-FastIteration''') {
-    Fail-Check 'P1Gate does not select the one-capture canonical fast path'
+if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''battle_playable_realtime''\).*?\$arguments \+= ''-FastIteration''') {
+    Fail-Check 'verify-all does not select the one-capture canonical fast path for realtime records'
 }
 $compactExpectedMatch = [regex]::Match(
     $openingSkipText,
@@ -184,6 +184,17 @@ foreach ($name in $latestExpect.Keys) {
     if (-not $record) { Fail-Check "missing latest registry entry '$name'" }
     if ($record.Mode -ne $latestExpect[$name]) {
         Fail-Check "latest mode mismatch for '$name': registry=$($record.Mode), expected=$($latestExpect[$name])"
+    }
+}
+$latestRecords = @($registry | Where-Object { $_.Tags -contains 'latest' })
+$latestMode163 = @($latestRecords | Where-Object { $_.Mode -eq 163 })
+if (($latestMode163.Count -ne 1) -or ($latestMode163[0].Name -ne 'battle_playable_realtime')) {
+    Fail-Check "mode 163 latest metadata must name only battle_playable_realtime: $(@($latestMode163.Name) -join ', ')"
+}
+foreach ($diagnosticName in @('battle_mariofox_stage_mplivehit_status_loop', 'menu_chain_mariofox_stage_mplivehit_status_loop')) {
+    $record = $registry | Where-Object { $_.Name -eq $diagnosticName } | Select-Object -First 1
+    if ((-not $record) -or ($record.Tags -notcontains 'diagnostic') -or ($record.Tags -contains 'latest')) {
+        Fail-Check "legacy bounded record '$diagnosticName' must be diagnostic and not latest"
     }
 }
 Assert-ProfilePlan 'BoundaryDirect' @(
@@ -311,8 +322,7 @@ Assert-ProfilePlan 'Regression' @(
     'menu_chain_mariofox_stage_mppassive_recover_loop',
     'battle_mariofox_stage_mpdamage_recover_loop',
     'menu_chain_mariofox_stage_mpdamage_recover_loop',
-    'battle_mariofox_stage_mplivehit_status_loop',
-    'menu_chain_mariofox_stage_mplivehit_status_loop',
+    'battle_playable_realtime',
     'battle_playable',
     'battle_playable_match_lifecycle'
 )

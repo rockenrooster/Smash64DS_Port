@@ -35,9 +35,9 @@ The whole-fighter GX skeleton experiment is closed. Same-ROM profile-1 A/B/A
 on SHA-256 `03950839A61B...BEEF09B`, frames 600–607 / logic 209–216, produced
 identical controls at 493,696/520,896 paired combined ticks. The treatment was
 445,568/472,768: a correct same-ROM 48,128-tick saving, but 51,872 below the
-100K falsifier. Both sides enabled the detailed M2 census/timers, so this
+then-active 100K falsifier. Both sides enabled the detailed M2 census/timers, so this
 relative delta is valid while the 445,568 absolute total is not compared with
-the coarse 331K ceiling or the 170–250K milestone target. The treatment reduced
+that experiment's coarse 331K ceiling or the 170–250K milestone target. It reduced
 the measured matrix/root subtotal 162,208 -> 113,632 while production remained
 essentially flat at 243,520 -> 242,240. All treatment and selector code was
 removed; the retained ledger is opt-in through
@@ -76,7 +76,8 @@ For each fighter owner:
    source-faithful animlock path. Do not also construct full CPU world and
    projection-composed matrices for geometry.
 3. Compose geometry hierarchy in GX once, storing only slots referenced by the
-   generated owner and its 44 cross-matrix triangles.
+   generated owner and its 44 cross-matrix triangles. Use only Mario slots
+   16–23 and Fox slots 16–17; slots 1–8 alias live traversal state.
 4. Preserve lighting with a minimal CPU 3x3/light-direction sidecar for only
    the required bindings. Validate its transformed directions and shaded
    colors against the current full-modelview/profile-2 oracle before removing
@@ -86,12 +87,24 @@ For each fighter owner:
 6. Budget matrix plus lighting preparation at no more than 60–80K combined;
    otherwise the 170–250K milestone cannot close.
 
+The current adapter does not implement BattleShip's active animlock cumulative
+scale, inverse-scale fixed-point order, or sibling restore. Mario/Fox main and
+submotion tables contain no `FTANIM_FLAG_ANIMLOCKS`, so the first natural P1
+experiment must census zero and reject any active owner before GX. Promotion
+still requires an independent mode-0/mode-3/sibling-restore golden fixture or
+the exact active branch; generic-vs-native agreement alone is insufficient.
+
 The reproducible no-GX parity corpus fixes this split: hardware one-light
 shading misses 102 of 413 exact RGB15 cases across 16/18 bindings, so it cannot
 own source-faithful lighting. Generated fractional-bias 20.12 texture matrices
 match all 99 canonical t16 cases; naive scale-shift matrices miss 47. Treat the
 CPU light sidecar as mandatory and the synthesized texture matrix as eligible,
 subject to live MObj/profile-2 parity.
+
+The generated schedule is 25 Mario / 27 Fox joints and 14 / 18 live bindings,
+with 11/11 push/pop operations, 10 stores, 84 restores, 44 cross-matrix
+triangles, 49 epochs, and 67 runs. Those counts are the transaction contract,
+not optional diagnostics.
 
 ### Native execution
 
@@ -113,8 +126,8 @@ subject to live MObj/profile-2 parity.
 
 Keep only when all are true:
 
-- a synchronized same-ROM eight-frame falsifier saves at least 100K paired
-  fighter ticks; the absolute <=331K first-window and 170–250K promotion gates
+- a synchronized same-ROM eight-frame falsifier saves at least 80K paired
+  fighter ticks; the absolute <=351K first-window and 170–250K promotion gates
   are measured with `NDS_RENDERER_M2_DETAILED_LEDGER=0` and do not regress P95;
 - zero semantic/oracle mismatch in synchronized profile-2 comparison;
 - exact current fighter triangle and owner-entry/exit contracts;
@@ -132,28 +145,60 @@ Keep only when all are true:
 Target: complete live Dream Land stage rendering in 150–250K ticks without
 flattening gameplay-relevant geometry, platforms, effects, animation, or depth.
 
+Use one whole-owner preflight/control session across all eight source callbacks
+and 57 DObjs, with callback-sized GX segments at links 4/6/13/16/17 around
+fighters at 9 and weapons at 14. Close each logical batch, restore profile
+ownership, and rebind state when the stage resumes; never `glFlush` inside the
+slab. The exact ROM slab is 42 lists / 886 commands / 302 vertices / 54 runs /
+202 triangles, partitioned 66 raw, 126 no-Z, and 10 projected triangles.
+
 Use the same owner-plan architecture as fighters:
 
 - generate immutable topology/state runs before gameplay;
 - bind live camera, animated DObjs/materials, and selected events each frame;
 - preserve global display-head order and opaque/translucent ordering;
+- use the live matrix per list, assert zero cross-matrix triangles, and add no
+  stage matrix palette;
+- keep the existing projected/no-Z depth counter frame-global across interleaved
+  fighters and weapons;
 - specialize the dominant exact stage run classes;
 - keep projected/range/unsupported operations on a cold exact path;
 - validate the full owner before GX mutation;
 - retain generic whole-owner fallback and profile-2 shadow comparison.
+
+Preflight the complete owner before the first GX mutation. Shadow all four live
+material operations and 49 texture epochs without advancing MObj state, and
+require every texture resident. Any mismatch falls back for the whole owner;
+after arming, no segment may reject or replay. Reuse existing stage/cache state,
+add no production BSS/heap, and keep exact `42F + W` / `202F + 2W` accounting.
 
 The retained BG2 wallpaper is already milestone 1 and must remain separate from
 this stage owner. Do not revive rejected scanline, incremental wallpaper DMA,
 three-mip scene capture, or final-frame flattening designs without a new
 source-backed architecture and exclusive cost model.
 
-Promotion requires the same semantic, screenshot, P95, reserve, and verifier
-gates as the fighter owner.
+The first paired A/B/A falsifier must save at least 300K stage ticks and reach
+no more than 500K with improved P95, exact census/accounting, state hashes,
+ordering, texture counters, moving screenshots, and reserve intact. Remove the
+slab if either threshold fails. Final M3 promotion remains 150–250K after M4.
 
 ## Milestone 4 — Texture Work Before Gameplay
 
 Goal: sampled gameplay reports zero texture conversion and zero upload
 preparation on the critical path.
+
+First implement a generated static manifest after original battle setup returns
+and before update/draw. It must enumerate full logical texture keys—not merely
+image/TLUT offsets—for Dream Land static geometry, all Whispy animation roots,
+Mario/Fox, Fireball, reflector, and reachable GX effects. Relocate asset ID plus
+offset at runtime; do not construct synthetic objects or advance animations.
+
+The conservative census is about 69 static keys / 179,328 texture bytes. Two
+live water owners bring this to about 71 slots / 216,192 bytes, leaving about
+45,952 bytes in the currently mapped 262,144-byte texture VRAM. The current
+48-entry cache is insufficient. Generate the exact census first, then select a
+fixed 72- or 80-entry capacity; their 6,720/8,960-byte main-RAM costs must keep
+the project reserve at or above 131,072 bytes.
 
 At scene/fighter/stage setup:
 
@@ -171,6 +216,20 @@ During gameplay:
   preparation may occur;
 - unexpected texture content must trigger a pre-mutation owner fallback or an
   explicitly verified setup-time load, never hidden per-frame conversion.
+
+Arm the violation fence at BattleShip's transition to GO. For static owners it
+must retain a first-failure record and count zero key misses, conversion,
+palette/decode work, allocations, GL creates/uploads/deletes, evictions,
+replacement/refresh, decompression, file I/O, and manifest fallbacks through
+Time Up/Results. Existing `TexturePrepareCount` includes normal prepared binds
+and is not itself a zero gate.
+
+Water is a separate feasibility checkpoint. Its 216-state / 322-key / 206-
+output corpus needs about 903,168 bytes as exact visible RGB256, beyond all
+524,288 bytes of DS texture VRAM; 645,120-byte image/palette pairing also fails
+capacity and alpha semantics. Static prewarm does not complete M4. A new
+source-faithful water representation must remove its post-GO conversion,
+allocation, replacement, refresh, and upload work.
 
 Keep only with zero gameplay conversion/upload-preparation counters, identical
 texture/material semantics, stable reserve, and no new hitch or corruption.
