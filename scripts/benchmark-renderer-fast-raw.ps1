@@ -23,12 +23,19 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$target = if ($RendererProfileLevel -eq 2) {
+if (($FastRunMode -eq 9) -and ($RendererProfileLevel -ne 1)) {
+    throw 'Fast-run mode 9 requires renderer profile 1.'
+}
+$target = if ($FastRunMode -eq 9) {
+    'smash64ds-battle-playable-m3-stage-owner-lab'
+} elseif ($RendererProfileLevel -eq 2) {
     'smash64ds-battle-playable-forensic-hwtri'
 } else {
     'smash64ds-battle-playable-coarse-hwtri'
 }
-$build = if ($RendererProfileLevel -eq 2) {
+$build = if ($FastRunMode -eq 9) {
+    'builds/build-m3-stage-owner-lab'
+} elseif ($RendererProfileLevel -eq 2) {
     'build-battle-playable-forensic-hwtri-harness'
 } else {
     'build-battle-playable-coarse-hwtri-harness'
@@ -51,6 +58,7 @@ $build = if ($RendererProfileLevel -eq 2) {
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
     -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds `
+    -RendererBenchmarkOnly:($FastRunMode -eq 9) `
     -RendererBenchmarkScreenshot $RendererBenchmarkScreenshot `
     -RendererFastRunMode $FastRunMode `
     -StaticTextureAotMode $StaticTextureAotMode `
