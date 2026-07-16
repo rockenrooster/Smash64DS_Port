@@ -64,7 +64,11 @@ samples the battle ledger before Results reuses the globals.
 Close the Fireball's full 140-tick source lifetime on the current public ROM:
 retain the existing natural input route, add synchronized near/mid/far/event
 captures and an independent source-matrix/ROI gate, and do not change trajectory
-or collision unless the trace identifies a real mismatch.
+or collision unless the trace identifies a real mismatch. The focused gate now
+selects the shared countdown/Fox-off flag and passes in 9.5 seconds with
+`artifacts/visibility/2026-07-16_061816-9231474_fireball-long-travel-p18612.png`.
+Do not repeat conditional frame-complete polling for destruction; it exceeded
+90 seconds and was reverted.
 
 The one-way platform gate is now green on the current ROM. Its 715-frame route
 requires six ordered continued-ascent/strict-descent/downward-crossing flights,
