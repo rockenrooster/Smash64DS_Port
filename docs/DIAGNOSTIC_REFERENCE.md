@@ -31,6 +31,38 @@ Generated outputs:
 
 Do not edit generated output.
 
+## Freeze diagnostics on/off builds
+
+Build and verify the isolated release-equivalent pair with:
+
+```powershell
+.\scripts\build-freeze-diagnostics.ps1
+```
+
+The script emits both ROMs below `builds/` and proves that their generated
+configuration differs only by `NDS_FREEZE_DIAGNOSTICS`. The `on` ELF must
+contain the watchdog, exception handler, IRQ snapshot, and breadcrumb symbols;
+the `off` ELF must contain no `ndsFreezeDiagnostics` or
+`gNdsFreezeDiagnostics` symbol. Neither target publishes into the project root.
+
+The retained bottom-screen `STALL` fields are:
+
+| Field | Meaning |
+| --- | --- |
+| `PC`, `LR` | Interrupted ARM9 program counter and task link register captured before Calico IRQ dispatch. |
+| `CLASS` | Breadcrumb-based discriminator: `FGM COMMAND`, `GX/PRESENT`, `HIT/DAMAGE`, or `UNKNOWN`. |
+| `HB`, `LAST` | Last completed-frame heartbeat and latest four-character breadcrumb. |
+| `GX`, `POLY`, `VERT`, `SWAP` | GX status, polygon/vertex RAM use, and whether flush/VBlank presentation was pending. |
+| `IPC`, `SYNC` | ARM9 IPC FIFO control and IPC synchronization registers. |
+| `FGM ENTER`, `FGM RETURN`, `ID`, `CH`, `MASK` | Real `soundPlaySample` call/return counts and latest FGM/channel ownership state. These are command-return diagnostics, not a fabricated ARM7 ACK protocol. |
+| `FRAME`, `LOGIC` | Presented and source-update frame counters. |
+| `B0`-`B7` | The fixed breadcrumb ring, newest slot identified by the write counter. |
+
+The watchdog samples at 1 Hz and reports after two unchanged, armed heartbeat
+samples. It deliberately leaves the stall in place so the report remains
+photographable. `NDS_FREEZE_DIAGNOSTICS=0` preprocesses all hot-path call sites
+to no-ops and does not link the diagnostic implementation.
+
 ## Emulator Layout
 
 Local emulator binaries and configs live under `emulators/`:

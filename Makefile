@@ -47,6 +47,7 @@ NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT ?= 0
 NDS_IFCOMMON_HYBRID_OAM ?= 0
 NDS_DEBUG_HUD ?= 1
 NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
+NDS_FREEZE_DIAGNOSTICS ?= 0
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
 ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
 # This is the only published P1 battle ROM. Keep the complete realtime
@@ -63,6 +64,26 @@ override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+endif
+NDS_FREEZE_DIAGNOSTIC_TARGETS := \
+	smash64ds-battle-playable-freeze-diagnostics-on-hwtri \
+	smash64ds-battle-playable-freeze-diagnostics-off-hwtri
+ifneq ($(filter $(TARGET),$(NDS_FREEZE_DIAGNOSTIC_TARGETS)),)
+# These nonpublishing A/B targets are release-equivalent except for the
+# diagnostics switch. Their distinct target and build names prevent one ROM
+# from overwriting the other.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_FREEZE_DIAGNOSTICS := $(if $(filter %-on-hwtri,$(TARGET)),1,0)
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)
 # This is the user-testable fast-iteration ROM, not a generic build alias.
@@ -337,6 +358,10 @@ CFILES += battleship_grmodelsetup.c
 endif
 CPPFILES :=
 SFILES := coroutine_arm.s
+ifeq ($(NDS_FREEZE_DIAGNOSTICS),1)
+CFILES += nds_freeze_diagnostics.c
+SFILES += nds_freeze_diagnostics_irq.s
+endif
 
 export LD := $(CC)
 export OFILES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
@@ -781,6 +806,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \
 		echo '#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS $(NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS)'; \
+		echo '#define NDS_FREEZE_DIAGNOSTICS $(NDS_FREEZE_DIAGNOSTICS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE $(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)'; \

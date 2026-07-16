@@ -572,6 +572,67 @@ with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
 
 ---
 
+## TASK 7 — Freeze forensics kit + scripted repro (paste to codex)
+
+Added 2026-07-16. Tyler reports periodic random freezes; latest trigger:
+Mario down-air connecting on Fox while airborne. Hit events fire three
+freeze-shaped paths at once — FGM ARM7 ACK spin-wait, hit-effect poly spawn
+(GX poly/vertex RAM overflow -> permanent swap-buffer stall), and the
+board's open P0 damage/throw collision stall. DS freezes are usually stalls,
+not aborts, so the kit pairs an exception screen with a watchdog that
+reports the interrupted PC.
+
+```
+/task Freeze forensics: build the diagnostic kit for the periodic random
+freeze (latest repro: Mario down-air connecting on Fox while airborne),
+then attempt scripted reproduction. DIAGNOSTIC task first — do NOT fix
+anything until the kit names the stall; likely related to the board's open
+P0 "damage/throw map collision" stall. Own commit(s). Reconcile first (R0).
+
+KIT (all shipping in the canonical ROM; sub-screen output, near-zero
+steady-state cost):
+1. ARM9 exception handler rendering to the bottom debug console: fault type,
+   PC, LR, fault address, register dump, and the last breadcrumb. (Catches
+   aborts — necessary but not sufficient.)
+2. Watchdog: a hardware-timer IRQ (~2 s period) checks a main-loop heartbeat
+   counter. If unchanged, print a STALL report to the bottom screen from the
+   IRQ: interrupted PC and LR (from the IRQ return frame — this is the
+   smoking gun for any spin-wait), last N breadcrumbs, and the discriminator
+   state: GXSTAT (FIFO full/busy, box/pos/vec test busy), polygon and vertex
+   RAM counts, swap-buffer pending flag, IPC/FIFO queue state, audio FGM
+   command/ACK counters and the channel owner map, current update phase and
+   frame/update counters. The report must stay on screen (freeze persists) so
+   Tyler can photograph it.
+3. Breadcrumbs: a tiny fixed ring buffer of phase markers written at cheap
+   boundaries — update start, hit-search/damage entry, effect spawn, FGM
+   play/ACK wait entry+exit, draw start, flush, vblank wait, present done.
+   One u32 store each; no formatting in the hot path.
+4. Audit every unbounded spin-wait in the port (grep while-loops around: GX
+   FIFO status, swap buffer, FGM/ARM7 ACK (src/nds/nds_audio_fgm.c ACK
+   paths), IPC sends, vblank waits). Add a bounded-timeout counter to each:
+   on timeout, increment a named safety counter and emit the breadcrumb —
+   do NOT change behavior yet (no silent recovery); the goal is naming the
+   loop, not masking it.
+
+REPRO HARNESS: extend the scripted-input machinery into a soak: Mario
+repeatedly jumps and lands down-air on Fox (vary spacing/timing per
+iteration), full hit/effect/SFX path live, CPU-on, running until freeze or N
+thousand updates. Run it in melonDS with the GDB stub enabled; on watchdog
+STALL or hang, capture PC/backtrace via the stub and screenshot the
+sub-screen report. If it reproduces, publish: stuck PC, breadcrumb trail,
+GXSTAT/poly/vertex counts, FGM ACK state — then STOP and report the named
+root cause before any fix.
+
+Gates: kit adds zero measurable cost to the fast-loop A/B (publish the
+delta; heartbeat+breadcrumbs are plain stores); canonical ROM rebuilt with
+kit enabled; DevFast + Boundary green; existing safety counters unchanged;
+one-minute natural match still passes with zero watchdog trips in normal
+play. Ledger note (diagnostic class). Docs: DIAGNOSTIC_REFERENCE.md gains
+the STALL report field key so Tyler's photos are decodable. Snapshot last.
+```
+
+---
+
 ## Sequencing and interactions
 
 - TASK 1 before TASK 2, hard: the depth fix changes class-3 semantics and the

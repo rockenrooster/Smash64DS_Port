@@ -1,5 +1,6 @@
 /* NDS_NATURAL_COMBAT_ROUTED_EXTERNS */
 #include "nds_scene_harness_config.h"
+#include <nds/nds_freeze_diagnostics.h>
 #include <sys/vector.h>
 
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
@@ -6664,6 +6665,7 @@ void ftCommonDamageInitDamageVars(GObj *fighter_gobj, s32 status_id_replace,
                                   s32 damage_player_num, s32 arg9,
                                   sb32 unk_bool, sb32 is_public)
 {
+    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_DAMAGE_ENTER);
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageInitDamageVars(fighter_gobj, status_id_replace, damage, knockback, angle_start, damage_lr, damage_index, element, damage_player_num, arg9, unk_bool, is_public);
     return;
@@ -7495,6 +7497,7 @@ __attribute__((weak)) LBParticle *
 efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size,
                                      sb32 is_static)
 {
+    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
     (void)pos;
     (void)player;
     (void)size;
@@ -7505,6 +7508,7 @@ efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size,
 __attribute__((weak)) LBParticle *
 efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player, s32 size)
 {
+    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
     (void)pos;
     (void)player;
     (void)size;
@@ -12667,6 +12671,7 @@ __attribute__((weak)) GObj *efManagerQuakeMakeEffect(s32 id)
 __attribute__((weak)) GObj *
 efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
 {
+    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
     (void)pos;
     (void)index;
     (void)rotate;

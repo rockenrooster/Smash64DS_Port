@@ -5,6 +5,7 @@
 
 #include <nds/nds_boot.h>
 #include <nds/nds_controller.h>
+#include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
@@ -278,6 +279,7 @@ void ndsPlatformInit(void)
     vramSetBankH(VRAM_H_SUB_BG);
     consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 15, 0, false, true);
     iprintf("\x1b[?25l");
+    NDS_FREEZE_DIAGNOSTICS_INIT();
 
 #if NDS_DEBUG_HUD
     iprintf("Smash 64 DS Port\n");
@@ -1994,6 +1996,7 @@ static void ndsPlatformWaitForScheduledVBlank(void)
     u32 earliest = sEarliestPresentVBlank;
 
     sEarliestPresentVBlank = 0u;
+    NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT();
     do
     {
         swiWaitForVBlank();
@@ -2031,6 +2034,7 @@ void ndsPlatformEndFrame(void)
         gNdsRendererProfileGXControlBeforeFlush = GFX_CONTROL;
         profile_start = cpuGetTiming();
 #endif
+        NDS_FREEZE_DIAGNOSTICS_FLUSH();
         glFlush(GL_TRANS_MANUALSORT);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileFlushTicks = cpuGetTiming() - profile_start;

@@ -1,5 +1,7 @@
 #include "nds_scene_harness_config.h"
 
+#include <nds/nds_freeze_diagnostics.h>
+
 extern u32 sySchedulerGetTicCount(void);
 extern void sySchedulerSetTicCount(u32 tics);
 
@@ -4573,6 +4575,7 @@ static void ndsBattlePlayablePresentFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     phase_start = cpuGetTiming();
 #endif
+    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_DRAW_START);
     ndsPlatformBeginFrame();
     ndsSObjPreviewBeginFrame();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
@@ -4702,6 +4705,7 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsRendererProfileLoopWallTicks, known);
 #endif
     ndsBattlePlayableFrameCompleteMarker();
+    NDS_FREEZE_DIAGNOSTICS_HEARTBEAT();
 }
 
 static void ndsRunMarioFoxProcessPrerequisiteLoop(void)
@@ -7310,6 +7314,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
                     u32 input_start = cpuGetTiming();
 #endif
+                    NDS_FREEZE_DIAGNOSTICS_MARK(
+                        NDS_FREEZE_BREADCRUMB_UPDATE_START);
                     if (use_realtime_presentation != 0u)
                     {
                         (void)ndsPlatformReadInput();

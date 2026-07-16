@@ -7,6 +7,7 @@
 
 #include <gm/gmsound.h>
 #include <nds/nds_audio_fgm.h>
+#include <nds/nds_freeze_diagnostics.h>
 
 #define NDS_AUDIO_FGM_PATH "nitro:/audio/fgm_phase_pack_ima.bin"
 #define NDS_AUDIO_FGM_PACK_HEADER_BYTES 16u
@@ -872,6 +873,7 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
         return NULL;
     }
 
+    NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(fgm_id);
     soundEnable();
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
     if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
@@ -884,6 +886,7 @@ alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)
         entry->data_bytes - ((u32)entry->loop_point_words * 4u),
         entry->frequency, entry->volume, entry->pan,
         ((entry->flags & 1u) != 0u), entry->loop_point_words);
+    NDS_FREEZE_DIAGNOSTICS_FGM_RETURN(channel);
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
     if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
     {

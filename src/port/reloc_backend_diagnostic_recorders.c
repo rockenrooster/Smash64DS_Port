@@ -1,3 +1,5 @@
+#include <nds/nds_freeze_diagnostics.h>
+
 static void ndsFTMainApplyCommonStatusReset(FTStruct *fp, u32 flags)
 {
     if (fp == NULL)
@@ -5019,6 +5021,7 @@ void ftMainSearchGroundHit(GObj *fighter_gobj)
 
 void ftMainProcSearchHitAll(GObj *fighter_gobj)
 {
+    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_HIT_SEARCH);
     battleship_ftMainProcSearchHitAll(fighter_gobj);
 }
 
@@ -5953,6 +5956,7 @@ void ftMainProcSearchHitAll(GObj *fighter_gobj)
 {
     FTStruct *fp;
 
+    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_HIT_SEARCH);
     if (fighter_gobj == NULL)
     {
         return;
