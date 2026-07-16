@@ -21106,3 +21106,11 @@ remains skipped for the requested fast iteration cadence.
   90% DS visual rule.
 - Exact-ROM frames 1398–1405 and 3300–3307 keep 202 stage triangles, zero
   post-arm fallback, zero post-GO texture work, and zero premature teardown.
+
+## 2026-07-16 - Recorded the hard P1 frame-rate feasibility verdict
+
+- Four eight-frame CPU-on windows on one exact ROM measured active P95 between
+  1.415M and 1.618M ticks, versus roughly 560K for one VBlank.
+- The exhausted Jump A/C bounds cannot close that deficit by July 19. Requested
+  approval for stable 20 FPS while keeping 60 FPS explicitly unmet until Tyler
+  decides; correctness work continues without speculative optimization sweeps.

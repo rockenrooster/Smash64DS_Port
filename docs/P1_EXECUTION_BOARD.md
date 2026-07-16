@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 07:34 Central
+Updated: 2026-07-16 07:41 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -29,13 +29,16 @@ more accurate than recycling cross-build samples.
 
 | Match phase | Artifact class | ROM SHA-256 | Synchronized window | N | Active median / P95 | State |
 |---|---|---|---|---:|---:|---|
-| Countdown / GO | canonical-profile-0 | pending candidate republication | exact completed frames 438/439 | 2 | — / — | Prior gate passed; refresh on final candidate only |
-| Early combat | canonical-profile-0 | pending candidate republication | Pending post-GO window | — | — / — | Pending synchronized canonical baseline |
-| Late combat | canonical-profile-0 | pending candidate republication | Pending synchronized late window | — | — / — | Pending synchronized canonical baseline |
+| Countdown / GO | focused profile-1 | `426B821A...` | exact completed frames 438–445 | 8 | 1,435,424 / 1,441,088 | Same-ROM hard-checkpoint sample; 19.6 FPS |
+| Early combat | focused profile-1 | `426B821A...` | exact completed frames 600–607 | 8 | 1,415,424 / 1,416,064 | Same-ROM hard-checkpoint sample; 19.2 FPS |
+| Mid combat / Whispy change | focused profile-1 | `426B821A...` | exact completed frames 1398–1405 | 8 | 1,616,000 / 1,617,920 | Same-ROM M4 lifecycle sample; worst measured material phase |
+| Late combat | focused profile-1 | `426B821A...` | exact completed frames 3300–3307 | 8 | 1,240,832 / 1,414,912 | Same-ROM late sample; no M4 fallback |
 | KO / rebirth | canonical-profile-0 | pending candidate republication | Pending natural KO→rebirth window | — | — / — | Pending synchronized canonical baseline |
 | Time Up / Results | focused profile-0 | `C07617CA94010535A3B260F0B61A62E8E8ED4AFDDCB4C8968DEE9721642390A9` | natural one-minute expiry→Results | 1 lifecycle | state-only | Pass; realtime ticks pending |
 
-Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; they are not canonical phase baselines.
+Profile-1 hard-checkpoint windows are O2-equivalent feasibility evidence, not
+profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
+`PERF_LEDGER.md`.
 
 ## Lane Ownership
 
@@ -93,6 +96,14 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
   pursuing 60 FPS without claiming P1 complete; request approval for a lower
   stable presentation target; or deliver the best verifier-covered incomplete
   candidate. Do not silently redefine P1.
+
+Checkpoint verdict: the synchronized CPU-on ROM measures 1.415–1.618M active
+P95 ticks across four material combat phases, 2.53–2.89 times the one-VBlank
+budget. The exhausted M2/M3 bounds do not supply the missing 855K–1.058M ticks,
+so a credible 60 FPS path by July 19 is not established. Approval is requested
+for a stable 20 FPS presentation target; until then 60 FPS remains an explicit
+unmet P1 target. KO/rebirth and Results realtime samples remain evidence gaps,
+not reasons to delay this already-decisive feasibility verdict.
 
 ### July 17
 

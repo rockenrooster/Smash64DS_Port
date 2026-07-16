@@ -2620,3 +2620,38 @@ DECISION: KEEP
   approximation. Refresh the natural teardown once at release qualification;
   do not stack another verifier now.
 ```
+
+## 2026-07-16 - P1 hard feasibility phase packet
+
+```text
+IDEA ID: P1-PHASE-FEASIBILITY-20260716
+CLASS: decision gate, not an optimization
+QUESTION:
+  Does the current source-faithful CPU-on renderer have a credible path to one
+  VBlank (~560K ticks) in every material match phase by July 19?
+IDENTITY:
+  One exact profile-1 Mode-163 ROM, SHA-256
+  426B821A8AE3CE91F1DDB0BA79ABD6B0EFEC31D3A11D029BDE5A42F67DDC5791;
+  Mode 9 / static 1 / bitmap OAM / Fox CPU and countdown on. Eight synchronized
+  completed frames per window; no rebuild between windows.
+RESULT:
+  countdown 438..445: active P50/P95 1,435,424/1,441,088, 19.6 FPS
+  early 600..607:      active P50/P95 1,415,424/1,416,064, 19.2 FPS
+  mid 1398..1405:     active P50/P95 1,616,000/1,617,920
+  late 3300..3307:    active P50/P95 1,240,832/1,414,912
+  Exact geometry stays 121 runs / 828 triangles and M4 remains armed with zero
+  post-GO fence work in every sampled window.
+EVIDENCE:
+  artifacts/performance/20260716_p1-fixed-phase-countdown-frame438.json
+  artifacts/performance/20260716_p1-fixed-phase-early-frame600.json
+  artifacts/performance/20260716_m4-source-frame-freeze-frame1398.json
+  artifacts/performance/20260716_m4-source-frame-freeze-late3300.json
+  artifacts/visibility/20260716_p1-fixed-phase-countdown-frame438.png
+  artifacts/visibility/20260716_p1-fixed-phase-early-frame600.png
+  artifacts/visibility/20260716_m4-source-frame-freeze-frame1398.png
+  artifacts/visibility/20260716_m4-source-frame-freeze-late3300.png
+DECISION: STOP 60-FPS PROMOTION
+  P95 is 2.53-2.89 times the one-VBlank budget. The retained M2/M3 bounds do
+  not close the 855K-1.058M deficit, so request approval for a stable 20 FPS
+  presentation target. Do not silently claim P1 complete at a lower rate.
+```

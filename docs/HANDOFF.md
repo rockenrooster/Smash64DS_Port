@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 07:34 Central
+Updated: 2026-07-16 07:41 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -69,13 +69,13 @@ samples the battle ledger before Results reuses the globals.
 
 ## Next Packet
 
-Finish the July 16 feasibility packet without reopening the exhausted Jump A/C
-cuts. Collect only the missing synchronized KO/rebirth and Results phase P95
-active ticks on one exact CPU-on ROM, then state the explicit 60 FPS feasibility
-decision required by the board. The retained M3 path remains about 111K above
-its first gate and Jump C's complete eligible bound stopped 8,096 ticks short
-before code; another speculative renderer cache or compiler sweep is not a
-credible closing path.
+The July 16 feasibility decision is now explicit: four same-ROM CPU-on phases
+measure 1.415–1.618M active P95 ticks, so no credible 60 FPS path exists by the
+deadline from the exhausted Jump A/C bounds. Tyler must decide whether P1 may
+target stable 20 FPS or remains a best verifier-covered incomplete candidate.
+Do not block correctness work on that reply, and do not reopen speculative
+renderer caches or compiler sweeps. KO/rebirth and Results realtime ticks are
+still missing final-release evidence, but cannot change the feasibility verdict.
 
 The Fireball terminal observation remains a smaller independent gameplay task:
 break once on BattleShip `wpprocess.c:167-180` when the natural far-left shot
