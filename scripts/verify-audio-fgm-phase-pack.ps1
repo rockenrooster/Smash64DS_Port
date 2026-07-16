@@ -95,7 +95,7 @@ $sectionTotals = @{
     }
 }
 if (($sectionTotals.text -gt 3584) -or
-    ($sectionTotals.rodata -gt 256) -or
+    ($sectionTotals.rodata -gt 336) -or
     ($sectionTotals.data -gt 16) -or
     ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1536L)) -or
     ($sectionTotals.itcm -ne 0)) {
@@ -212,7 +212,7 @@ try {
         throw "FGM phase pack did not load cleanly.`n$gdbStdout"
     }
     if (-not $play.Success -or
-        [int]$play.Groups[2].Value -ne 5 -or
+        [int]$play.Groups[2].Value -ne 6 -or
         [int]$play.Groups[4].Value -ne 0 -or
         [int]$play.Groups[5].Value -ne 0 -or
         (Convert-MarkerUInt32 $play.Groups[6].Value) -ne 0x1f -or
@@ -236,9 +236,9 @@ try {
         Convert-MarkerUInt32 $pool.Groups[8].Value
     } else { [uint32]0 }
     if (-not $pool.Success -or
-        [int]$pool.Groups[1].Value -ne 5 -or
+        [int]$pool.Groups[1].Value -ne 6 -or
         [int]$pool.Groups[2].Value -ne 8 -or
-        [int]$pool.Groups[3].Value -ne 5 -or
+        [int]$pool.Groups[3].Value -ne 6 -or
         [int]$pool.Groups[4].Value -lt 1 -or
         [int]$pool.Groups[5].Value -ne 0 -or
         [int]$pool.Groups[6].Value -ne 0 -or

@@ -171,6 +171,18 @@ foreach ($sourceOffset in @(
     }
 }
 
+$marioMotionText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/relocData/202_MarioMainMotion.c') -Raw
+foreach ($required in @(
+        'ftMotionPlayFGM(nSYAudioFGMMarioLanding)',
+        'ftMotionPlayVoice(nSYAudioVoiceMarioSmash1)',
+        'ftMotionPlayVoice(nSYAudioVoiceMarioJump)'
+    )) {
+    if (-not $marioMotionText.Contains($required)) {
+        throw "BattleShip Mario motion audio trigger changed: $required"
+    }
+}
+
 $deadSourcePath = Join-Path $BattleShipRoot 'src/ft/ftcommon/ftcommondead.c'
 $deadSourceText = Get-Content -LiteralPath $deadSourcePath -Raw
 $deadInit = Get-SourceFunctionBlock -Source $deadSourceText `
@@ -350,7 +362,8 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
-    'mixed-u16 words each, exact Mario/Fox regular-KO call order, no ' +
+    'mixed-u16 words each, 3 Mario motion audio triggers, exact Mario/Fox ' +
+    'regular-KO call order, no ' +
     'rebirth-audio claim, target layouts, source IDs, persisted DS loop ' +
     'point/length, and recyclable BattleShip FGM tokens.'
 )
