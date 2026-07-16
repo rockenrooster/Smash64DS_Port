@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 05:27 Central
+Updated: 2026-07-16 05:35 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -61,11 +61,10 @@ samples the battle ledger before Results reuses the globals.
 
 ## Next Packet
 
-Qualify original level-3 Fox recovery selection and offstage return. The current
-natural CPU proof has not selected Recover. Read the BattleShip `ftcomputer`
-objective/behavior source first, reuse mode 163 and the current CPU-on switch,
-and add no synthetic offstage state. Stop if a natural exact-ROM route cannot
-produce the source objective inside one focused run.
+Qualify one natural Mario/Fox voice path with the existing audio pack/runtime.
+Use the audio-qualification skill, first identify the exact source event/ID from
+mode 163, and distinguish the reported 24 unsupported calls from unique IDs.
+Do not add a trigger, mixer, mode, or hand-authored waveform.
 
 The one-way platform gate is now green on the current ROM. Its 715-frame route
 requires six ordered continued-ascent/strict-descent/downward-crossing flights,
@@ -74,6 +73,9 @@ and 214,544-byte reserve. Evidence is
 `artifacts/visibility/2026-07-16_052652-7356809_platform-semantics-p984.png`.
 Throw-origin recovery remains open because the existing input driver did not
 reach its first natural Dash/Run transition; do not rerun it unchanged.
+Fox recovery is green: the current-ROM controller-only route produced 40 source
+Recover frames and an offstage-to-line-3 return without KO/rebirth. Evidence is
+`artifacts/visibility/2026-07-16_053441-3060146_fox-recovery.png`.
 
 ## Checkpoint
 

@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 05:27 Central
+Updated: 2026-07-16 05:35 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -67,7 +67,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Normal-play stage painter/depth order | FIXED / pixel + profile-2 pass | Renderer + QA | BattleShip layer modes classify 66 source-Z and 126 no-Z triangles; one full v16 step per no-Z triangle removes the grass/bush overlap, preserves 202 triangles, and reserves disjoint endpoint bands | Keep as correctness fix; final frame 438/501 captures and zero-collision trace are authoritative |
 | Pause-orbit geometry containment | FIXED / user confirmed | Renderer + QA | Clip-space near-plane containment removes screen-blocking triangles at the breaking orbit angles without changing normal-play profile-2 output | Keep focused angle gate; paused −33.6° is also the strongest Mario underside view |
 | Mario pant/underside visual | Candidate KEEP / user visual pending | Renderer + QA | Source root light preambles were missing; replay restores blue right pant and closed underside with unchanged 320-triangle census | Tyler eyeballs `20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png` before FIXED |
-| Natural Fox recovery | Coverage debt | Gameplay | Natural Recover objective/offstage return unobserved | No completion claim |
+| Natural Fox recovery | Pass | Gameplay | Current-ROM mode 163 used only external Mario input: Fox took 0→59 damage, selected BattleShip Recover for 40 frames at offstage x=2379.905, returned without KO/rebirth, and grounded on line 3 at x=1336.084 after 820 frames | Keep `verify-battle-playable-fox-recovery.ps1`; reserve 214,544 and screenshot `2026-07-16_053441-3060146_fox-recovery.png` |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Fail / Jump C stopped before code | Renderer | Current local builder is 53,824 ticks and lighting is already prepared-direction + exact shade LUT. Local + rejected ITCM gain bounds at 71,904, 8,096 short of the required first cut | Do not manufacture another lighting/cache path; require a new source-backed bound before coding |
 | M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Removing cold/Os from the 126-triangle no-Z emitter keeps exact pixels and improves stage 624,384 → 611,392. Dense reuse reached 563,296 but remained above 500K and was reverted; incremental matrix transport regressed | Keep only codegen commit `bbe8d3eee2`; require a new attributable ≥111,392-tick cut |

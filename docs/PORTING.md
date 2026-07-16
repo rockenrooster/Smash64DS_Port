@@ -21040,3 +21040,16 @@ remains skipped for the requested fast iteration cadence.
   continued-ascent/strict-descent/downward-crossing flights `0x3f`, two side
   cycles, three Pass crossings, nine landings, 214,544-byte reserve, and
   `artifacts/visibility/2026-07-16_052652-7356809_platform-semantics-p984.png`.
+
+## 2026-07-16 - Natural level-3 Fox recovery
+
+- Read BattleShip `ftcomputer.c:6164-6201,6535-6561,7599-7601`. Its CPU selects
+  Recover only after the live position leaves the stage recovery region, then
+  dispatches the ordinary jump/Up-B-aware recovery objective.
+- Added a focused mode-163 verifier that writes only player-0 controller input.
+  Natural Mario chase/A pulses raised Fox from 0% to 59%; no fighter, map,
+  position, status, objective, timer, or proof state is written.
+- On the current public ROM, Fox selected Recover for 40 frames at offstage
+  x=2379.905, returned without a KO/rebirth, and grounded on Pupupu line 3 at
+  x=1336.084 after 820 frames. Reserve was 214,544 bytes; evidence is
+  `artifacts/visibility/2026-07-16_053441-3060146_fox-recovery.png`.

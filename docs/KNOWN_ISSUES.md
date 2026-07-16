@@ -8,8 +8,8 @@ durable unresolved gaps.
 - Renderer M2 is visually correct but above 170-250K ticks.
 - Renderer M3 is source/semantic-correct but measures 611,392/611,584 stage
   ticks; a different attributable cut must reach <=500K before promotion.
-- Natural DamageFall-to-main-floor recovery now passes. Throw-origin coverage,
-  non-floor collision providers, and Fox recovery remain incomplete.
+- Natural DamageFall-to-main-floor and Fox offstage recovery now pass.
+  Throw-origin coverage and non-floor collision providers remain incomplete.
 - Mario Fireball early spawn/damage/rebound/draw passes, but full 140-tick
   collision, independent source-matrix parity, and long-distance visual capture
   remain open.
@@ -28,7 +28,7 @@ durable unresolved gaps.
   graduated live.
 - Natural attack-origin DamageFall-to-floor recovery has a sparse successful
   runtime trace; throw-origin and non-floor routes remain unproved.
-- Original `ftcomputer.c` is live. Its natural proof has not selected Recover.
+- Original `ftcomputer.c` is live; its natural attack/guard/Recover paths pass.
 - Inactive fighter statuses still use weak callbacks when they require unimported
   items, hazards, other fighters, or asset banks. Remove each stub only with its
   owning original TU and natural runtime proof.
