@@ -21204,3 +21204,11 @@ remains skipped for the requested fast iteration cadence.
   IEEE-754 fields and retains the original functions as the profile-2 shadow
   and unsupported-value fallback. Combined Mario/Fox rendering falls 402,560
   → 398,048 ticks with the complete owner census unchanged.
+
+## 2026-07-16 - Specialized the complete fighter raw corner loop
+
+- Mode 8 already supersedes the older partial KRAW coverage: its production
+  owner submits all 582 raw fighter triangles and 44 cross-matrix triangles.
+- Selecting raw/cross and textured/untextured once per run instead of once per
+  corner moves combined Mario/Fox time from 398,048 to 397,248 ticks. The native
+  top-screen image is byte-identical and ITCM remains within capacity.

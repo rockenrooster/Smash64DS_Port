@@ -2830,3 +2830,35 @@ DECISION: KEEP
   Accumulate the exact compute gain. Lighting has no eligible residual; move
   to the measured production emit/account path.
 ```
+
+## 2026-07-16 - M2 complete raw-emitter loop specialization
+
+```text
+IDEA ID: M2-RAW-EMITTER-SPECIALIZE-20260716
+RECONCILIATION:
+  Jump C's 246-Mario/234-Fox KRAW premise predates the Mode-8 production owner.
+  The current owner already submits all 582 raw fighter triangles plus 44
+  cross-matrix triangles. No coverage extension or new interpreter is needed.
+TREATMENT:
+  Select raw versus cross-matrix and textured versus untextured once per run,
+  outside the raw corner loop. Packed corners, dense vertices, colors, texture
+  coordinates, GX writes, cross-matrix path, and accounting remain unchanged.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 8, static 1, hybrid OAM 1, Fox/countdown iteration
+  switch off, frames 600..607. A/B ROM SHA-256 values are
+  ECDE537C0081B55A1A80474AC5A2B15FC339E01626AE69413311F4188EEC888C /
+  C808F40EB1F7240DF07B6B4867ED357F0FDD1F1DF4BB7E7554B15C0B49F5819B.
+RESULT P50/P95:
+  Combined Mario+Fox 398,048/398,144 -> 397,248/397,312, saving 800/832.
+CORRECTNESS / VISUALS:
+  Exact 70/686 and 60/320/306/29/0/0, zero fallback/texture fence, and zero
+  conservation error hold. The deterministic native 256x192 top-screen compare
+  is 0/49,152 changed pixels. ITCM grows 128 bytes to 25,512/32,768.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m2-jumpc-pow2-b.json
+  artifacts/performance/2026-07-16_m2-raw-emitter-specialize-b.json
+  artifacts/visibility/2026-07-16_m2-jumpc-pow2-b2.png
+  artifacts/visibility/2026-07-16_m2-raw-emitter-specialize-b.png
+DECISION: KEEP
+  Accumulate the exact gain under the user-approved no-discard policy.
+```

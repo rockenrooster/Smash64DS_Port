@@ -14039,6 +14039,54 @@ ndsRendererNativeEmitProductionRun(
     u32 active_palette_slot = current_palette_slot;
     u32 remaining = corner_count;
 
+    if (cross_matrix == 0u)
+    {
+        if (textured != 0u)
+        {
+            while (remaining-- != 0u)
+            {
+                u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
+                const NDSNativeDenseVertex *dense =
+                    &sNdsNativeFighterDenseVertices[dense_id];
+                const NDSNativePreparedDenseVertex *prepared =
+                    &sNdsNativeFighterPreparedDense[dense_id];
+
+                GFX_COLOR = prepared->packed_color;
+                GFX_TEX_COORD =
+                    (u32)(u16)prepared->s |
+                    ((u32)(u16)prepared->t << 16);
+                GFX_VERTEX16 =
+                    (u32)(u16)((s32)dense->x *
+                        (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
+                    ((u32)(u16)((s32)dense->y *
+                        (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
+                GFX_VERTEX16 = (u16)((s32)dense->z *
+                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+            }
+        }
+        else
+        {
+            while (remaining-- != 0u)
+            {
+                u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
+                const NDSNativeDenseVertex *dense =
+                    &sNdsNativeFighterDenseVertices[dense_id];
+                const NDSNativePreparedDenseVertex *prepared =
+                    &sNdsNativeFighterPreparedDense[dense_id];
+
+                GFX_COLOR = prepared->packed_color;
+                GFX_VERTEX16 =
+                    (u32)(u16)((s32)dense->x *
+                        (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
+                    ((u32)(u16)((s32)dense->y *
+                        (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
+                GFX_VERTEX16 = (u16)((s32)dense->z *
+                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+            }
+        }
+        return;
+    }
+
     while (remaining-- != 0u)
     {
         u32 packed = *corner++;

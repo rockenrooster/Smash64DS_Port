@@ -89,7 +89,10 @@ and lighting is 67,808/68,032. The source integer sine-table path was already
 live, but its power-of-two float-to-fixed boundaries still called ARM soft-float
 helpers. The retained exact conversion cut moves combined fighter time from
 402,560/402,624 to 398,048/398,144. Lighting is already the exact prepared-dot
-plus LUT path; continue against production emit/account work, not lighting.
+plus LUT path. The old 480-triangle KRAW extension is superseded: Mode 8 now
+owns all 582 raw fighter triangles. Hoisting its raw/textured decisions outside
+the corner loop moves combined fighter time again to 397,248/397,312. Continue
+against production emit/account work, not lighting.
 The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
 stable 20 FPS decision remains pending while performance work continues.
 
