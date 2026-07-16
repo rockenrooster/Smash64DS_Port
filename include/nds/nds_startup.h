@@ -4010,6 +4010,37 @@ extern volatile u32 gNdsRendererProfileGXStatusAfterFlush;
 extern volatile u32 gNdsRendererProfileGXControlBeforeFlush;
 extern volatile u32 gNdsRendererProfileGXStatusPostVBlank;
 extern volatile u32 gNdsRendererProfileGXControlPostVBlank;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+extern volatile u32 gNdsRendererPhase05WallpaperSetupTicks;
+extern volatile u32 gNdsRendererPhase05WallpaperXMapTicks;
+extern volatile u32 gNdsRendererPhase05WallpaperYMapTicks;
+extern volatile u32 gNdsRendererPhase05WallpaperWriteTicks;
+extern volatile u32 gNdsRendererPhase05WallpaperCommitTicks;
+extern volatile u32 gNdsRendererPhase05PresentHardwareTicks;
+extern volatile u32 gNdsRendererPhase05GCDrawAllTicks;
+extern volatile u32 gNdsRendererPhase05StageTransitionTicks;
+extern volatile u32 gNdsRendererPhase05FighterWrapperTicks;
+extern volatile u32 gNdsRendererPhase05FrameResetTicks;
+extern volatile u32 gNdsRendererPhase05PresentTailTicks;
+extern volatile u32 gNdsRendererPhase05ProfileBookkeepingTicks;
+extern volatile u32 gNdsRendererPhase05ProfilePublishTicks;
+extern volatile u32 gNdsRendererPhase05FlushPrepTicks;
+extern volatile u32 gNdsRendererPhase05TimerReadCount;
+extern volatile u32 gNdsRendererPhase05TimerSpanCount;
+extern volatile u32 gNdsRendererPhase05CalibrationTicks;
+extern volatile u32 gNdsRendererPhase05CalibrationIntervals;
+extern volatile u32 gNdsRendererPhase05WallpaperRowCount;
+extern volatile u32 gNdsRendererPhase05WallpaperPixelWriteCount;
+
+#define NDS_RENDERER_PHASE05_TICK() \
+    (gNdsRendererPhase05TimerReadCount++, cpuGetTiming())
+#define NDS_RENDERER_PHASE05_FINISH(bucket, start) \
+    do \
+    { \
+        (bucket) += NDS_RENDERER_PHASE05_TICK() - (start); \
+        gNdsRendererPhase05TimerSpanCount++; \
+    } while (0)
+#endif
 #endif
 extern volatile u32 gNdsRendererProfileStageAdapterTicks;
 extern volatile u32 gNdsRendererProfileMaterialTicks;

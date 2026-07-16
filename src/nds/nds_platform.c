@@ -2016,6 +2016,10 @@ void ndsPlatformEndFrame(void)
     gNdsRendererProfileGXStatusAfterFlush = GFX_STATUS;
     gNdsRendererProfileGXControlBeforeFlush = GFX_CONTROL;
 #endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 phase05_flush_prep_done = FALSE;
+    u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     u32 submitted = ndsRendererHardwareConsumeSubmittedFrame();
 
@@ -2032,6 +2036,11 @@ void ndsPlatformEndFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileGXStatusBeforeFlush = GFX_STATUS;
         gNdsRendererProfileGXControlBeforeFlush = GFX_CONTROL;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05FlushPrepTicks, phase05_start);
+        phase05_flush_prep_done = TRUE;
+#endif
         profile_start = cpuGetTiming();
 #endif
         NDS_FREEZE_DIAGNOSTICS_FLUSH();
@@ -2043,6 +2052,13 @@ void ndsPlatformEndFrame(void)
         gNdsHardwareRendererFlushCount++;
         sOriginalSpriteOverlayNeedsFlush = FALSE;
     }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    if (phase05_flush_prep_done == FALSE)
+    {
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05FlushPrepTicks, phase05_start);
+    }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     profile_start = cpuGetTiming();
 #endif

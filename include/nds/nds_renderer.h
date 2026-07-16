@@ -854,6 +854,26 @@ extern volatile u32 gNdsRendererM3Phase0CalibrationIntervals;
 extern volatile u32 gNdsRendererM3Phase0PreparedDenseCount;
 extern volatile u32 gNdsRendererM3Phase0NearTransformCount;
 extern volatile u32 gNdsRendererM3Phase0NoZMatrixCount;
+extern volatile u32 gNdsRendererPhase05WallpaperSetupTicks;
+extern volatile u32 gNdsRendererPhase05WallpaperXMapTicks;
+extern volatile u32 gNdsRendererPhase05WallpaperYMapTicks;
+extern volatile u32 gNdsRendererPhase05WallpaperWriteTicks;
+extern volatile u32 gNdsRendererPhase05WallpaperCommitTicks;
+extern volatile u32 gNdsRendererPhase05PresentHardwareTicks;
+extern volatile u32 gNdsRendererPhase05GCDrawAllTicks;
+extern volatile u32 gNdsRendererPhase05StageTransitionTicks;
+extern volatile u32 gNdsRendererPhase05FighterWrapperTicks;
+extern volatile u32 gNdsRendererPhase05FrameResetTicks;
+extern volatile u32 gNdsRendererPhase05PresentTailTicks;
+extern volatile u32 gNdsRendererPhase05ProfileBookkeepingTicks;
+extern volatile u32 gNdsRendererPhase05ProfilePublishTicks;
+extern volatile u32 gNdsRendererPhase05FlushPrepTicks;
+extern volatile u32 gNdsRendererPhase05TimerReadCount;
+extern volatile u32 gNdsRendererPhase05TimerSpanCount;
+extern volatile u32 gNdsRendererPhase05CalibrationTicks;
+extern volatile u32 gNdsRendererPhase05CalibrationIntervals;
+extern volatile u32 gNdsRendererPhase05WallpaperRowCount;
+extern volatile u32 gNdsRendererPhase05WallpaperPixelWriteCount;
 #endif
 #endif
 extern volatile u32 gNdsRendererBattleStaticTextureEnabled;

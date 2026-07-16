@@ -4241,6 +4241,46 @@ static u32 ndsBattlePlayableProfileResidual(u32 total, u64 known)
 }
 #endif
 
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+static void ndsRendererPhase05Reset(void)
+{
+    u32 calibration_tick;
+    u32 calibration_index;
+
+    gNdsRendererPhase05WallpaperSetupTicks = 0u;
+    gNdsRendererPhase05WallpaperXMapTicks = 0u;
+    gNdsRendererPhase05WallpaperYMapTicks = 0u;
+    gNdsRendererPhase05WallpaperWriteTicks = 0u;
+    gNdsRendererPhase05WallpaperCommitTicks = 0u;
+    gNdsRendererPhase05PresentHardwareTicks = 0u;
+    gNdsRendererPhase05GCDrawAllTicks = 0u;
+    gNdsRendererPhase05StageTransitionTicks = 0u;
+    gNdsRendererPhase05FighterWrapperTicks = 0u;
+    gNdsRendererPhase05FrameResetTicks = 0u;
+    gNdsRendererPhase05PresentTailTicks = 0u;
+    gNdsRendererPhase05ProfileBookkeepingTicks = 0u;
+    gNdsRendererPhase05ProfilePublishTicks = 0u;
+    gNdsRendererPhase05FlushPrepTicks = 0u;
+    gNdsRendererPhase05TimerReadCount = 0u;
+    gNdsRendererPhase05TimerSpanCount = 0u;
+    gNdsRendererPhase05CalibrationTicks = 0u;
+    gNdsRendererPhase05CalibrationIntervals = 16u;
+    gNdsRendererPhase05WallpaperRowCount = 0u;
+    gNdsRendererPhase05WallpaperPixelWriteCount = 0u;
+
+    calibration_tick = NDS_RENDERER_PHASE05_TICK();
+    for (calibration_index = 0u;
+         calibration_index < gNdsRendererPhase05CalibrationIntervals;
+         calibration_index++)
+    {
+        u32 next_tick = NDS_RENDERER_PHASE05_TICK();
+
+        gNdsRendererPhase05CalibrationTicks += next_tick - calibration_tick;
+        calibration_tick = next_tick;
+    }
+}
+#endif
+
 static void ndsBattlePlayableAdvanceFastLogicClock(void)
 {
 #if NDS_HARNESS_FAST_LOGIC
@@ -4442,7 +4482,14 @@ static void ndsBattlePlayablePresentFrame(void)
     u32 phase_start;
     u64 known;
 #endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 phase05_start;
+#endif
 
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsRendererPhase05Reset();
+    phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
     gNdsRendererProfileFrameCount++;
     ndsRendererProfileFrameBegin();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
@@ -4572,6 +4619,11 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileHWVertexSaturateCount = 0;
 #endif
 
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05FrameResetTicks, phase05_start);
+#endif
+
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     phase_start = cpuGetTiming();
 #endif
@@ -4611,9 +4663,19 @@ static void ndsBattlePlayablePresentFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileThreadTicks = cpuGetTiming() - phase_start;
 #endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
     gNdsFrameCounter++;
     gNdsBattlePlayablePacingPresentedFrames++;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05PresentTailTicks, phase05_start);
+#endif
     gNdsRendererProfilePresentTicks = cpuGetTiming() - start;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfilePresentActiveTicks =
         ndsBattlePlayableProfileResidual(
@@ -4645,7 +4707,16 @@ static void ndsBattlePlayablePresentFrame(void)
      * from glFlush(). */
     ndsPlatformProfileSampleFrameBoundaryGXState();
 #endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05ProfileBookkeepingTicks, phase05_start);
+    phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
     ndsRendererProfileFramePublish();
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05ProfilePublishTicks, phase05_start);
+#endif
     ndsBattlePlayablePacingUpdate();
 }
 

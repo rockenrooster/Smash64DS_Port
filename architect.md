@@ -1,4 +1,4 @@
-# Task 6 Combat Renderer Cut Architecture
+# Combat Renderer Cut Architecture
 
 ## Objective
 
@@ -54,3 +54,36 @@ only for no-Z vertices passed to `ndsRendererTransformVertex20p12`.
 - Final runtime gates: locked-30 realtime smoke and the natural one-minute
   CPU-on match, using only `smash64ds-battle-playable-hwtri.nds` for the
   published build.
+
+## Task 8 Phase 0.5 conservation
+
+The compile-gated `NDS_RENDERER_M3_PHASE0_PROFILE` lab extends the existing
+Phase-0 sample rather than creating another telemetry mode. Its synchronized
+draw equation is:
+
+```text
+draw = gcDrawAll shell + stage + Mario + Fox + fighter guard
+     + present shell + wallpaper + foreground + outer draw shell
+```
+
+The present and loop residuals are separately decomposed into frame reset,
+present tail, flush preparation, profile bookkeeping, sample publication, and
+their outer shells. Wallpaper timing covers setup, X-map, Y-map, physical pixel
+writes, and commit; it records exactly 192 visited rows. The non-incremental
+oracle must write exactly 49,152 pixels, while the retained production
+incremental path must write a positive subset no larger than 49,152.
+
+## Task 8 Cut E generation contract
+
+`ndsRendererAdapterPrepareNativeStageOwner` owns scene-generation topology.
+The first accepted frame of a reloc generation performs the complete asset,
+segment, display-link, DObj hierarchy, transform-kind, binding, display-list,
+and generated-packet validation. A cached frame may bypass only those immutable
+walks when every stamped identity still matches.
+
+Per-frame work remains live and mandatory: camera and DObj matrices, material
+snapshots and texture indices, colors, selection/visibility, animation state,
+texture resolution, alpha policy, near-plane classification, and prepared run
+state. A missing or mismatched stamp re-enters the complete validator before
+any GX mutation. The Phase-0 lab must include a one-shot stamped-byte fault that
+proves this slow path remains reachable and rejects or revalidates safely.

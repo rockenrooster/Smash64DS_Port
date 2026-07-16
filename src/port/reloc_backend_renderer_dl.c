@@ -11790,6 +11790,9 @@ static void ndsFighterDisplayContractSubmitStageFighters(void)
 {
     GObj *saved_camera = gGCCurrentCamera;
     u32 slot;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
 
     gGCCurrentCamera = ndsBattleCompatMainCameraGObj();
     for (slot = 0u; slot < 2u; slot++)
@@ -11804,6 +11807,10 @@ static void ndsFighterDisplayContractSubmitStageFighters(void)
         ndsFighterDisplayContractSubmit(fp->fighter_gobj);
     }
     gGCCurrentCamera = saved_camera;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05FighterWrapperTicks, phase05_start);
+#endif
 }
 #endif
 

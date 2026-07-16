@@ -2887,6 +2887,28 @@ volatile u32 gNdsRendererProfileGXStatusPostVBlank;
 volatile u32 gNdsRendererProfileGXControlPostVBlank;
 volatile NDSRendererOwnerProfile
     gNdsRendererProfileOwners[NDS_RENDERER_PROFILE_OWNER_COUNT];
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+volatile u32 gNdsRendererPhase05WallpaperSetupTicks;
+volatile u32 gNdsRendererPhase05WallpaperXMapTicks;
+volatile u32 gNdsRendererPhase05WallpaperYMapTicks;
+volatile u32 gNdsRendererPhase05WallpaperWriteTicks;
+volatile u32 gNdsRendererPhase05WallpaperCommitTicks;
+volatile u32 gNdsRendererPhase05PresentHardwareTicks;
+volatile u32 gNdsRendererPhase05GCDrawAllTicks;
+volatile u32 gNdsRendererPhase05StageTransitionTicks;
+volatile u32 gNdsRendererPhase05FighterWrapperTicks;
+volatile u32 gNdsRendererPhase05FrameResetTicks;
+volatile u32 gNdsRendererPhase05PresentTailTicks;
+volatile u32 gNdsRendererPhase05ProfileBookkeepingTicks;
+volatile u32 gNdsRendererPhase05ProfilePublishTicks;
+volatile u32 gNdsRendererPhase05FlushPrepTicks;
+volatile u32 gNdsRendererPhase05TimerReadCount;
+volatile u32 gNdsRendererPhase05TimerSpanCount;
+volatile u32 gNdsRendererPhase05CalibrationTicks;
+volatile u32 gNdsRendererPhase05CalibrationIntervals;
+volatile u32 gNdsRendererPhase05WallpaperRowCount;
+volatile u32 gNdsRendererPhase05WallpaperPixelWriteCount;
+#endif
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 volatile u32 gNdsRendererSemanticOutputHash;

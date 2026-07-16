@@ -13458,6 +13458,11 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     u32 owner_start;
     u32 profile_m3;
 #endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 owner_ticks;
+    u32 phase05_present_start;
+    u32 phase05_start;
+#endif
 
     if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
     {
@@ -13484,6 +13489,9 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     }
 #endif
 
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    phase05_present_start = NDS_RENDERER_PHASE05_TICK();
+#endif
     ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererAdapterResetDepthDiagnostics();
@@ -13504,12 +13512,26 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     if (profile_m3 != FALSE)
     {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        owner_ticks = cpuGetTiming() - owner_start;
+        gNdsRendererProfileOwners[
+            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks += owner_ticks;
+        gNdsRendererPhase05StageTransitionTicks += owner_ticks;
+#else
         gNdsRendererProfileOwners[
             NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
                 cpuGetTiming() - owner_start;
+#endif
     }
 #endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
     gcDrawAll();
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05GCDrawAllTicks, phase05_start);
+#endif
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
 #if NDS_RENDERER_PROFILE_LEVEL == 1
@@ -13517,9 +13539,16 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 #endif
         ndsRendererAdapterFinishNativeStageOwner();
 #if NDS_RENDERER_PROFILE_LEVEL == 1
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        owner_ticks = cpuGetTiming() - owner_start;
+        gNdsRendererProfileOwners[
+            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks += owner_ticks;
+        gNdsRendererPhase05StageTransitionTicks += owner_ticks;
+#else
         gNdsRendererProfileOwners[
             NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
                 cpuGetTiming() - owner_start;
+#endif
 #endif
         sNdsStageGCDrawAllLoopNativeStageArmed = FALSE;
     }
@@ -13528,6 +13557,10 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     ndsRendererHardwareSetNoOracle(FALSE);
 #endif
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05PresentHardwareTicks, phase05_present_start);
+#endif
 }
 #endif
 

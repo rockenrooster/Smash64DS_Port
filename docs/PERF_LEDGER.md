@@ -43,6 +43,59 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
+## 2026-07-16 - Task 8 Phase 0.5 complete draw conservation
+
+```text
+IDEA ID: TASK8-PHASE05-DRAW-CONSERVATION-20260716
+PURPOSE:
+  Name every draw/present/loop shell outside the stage and fighter owners before
+  selecting another cut. Extend the existing compile-gated M3 Phase-0 lab; do
+  not change profile-0 code or add a telemetry mode.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, fast mode 9, static AOT 1, live Fox, bitmap IFCommon,
+  frames 600..607, no JIT. Instrumented ROM SHA-256 is
+  B6C3EF22EF18781B4D9E379F6850A36915FEE6D1196DE436F358D5CDB7AA0714.
+  The retained production wallpaper arm uses selector 1; the full-raster oracle
+  arm uses selector 0 on the same ROM and window.
+PRODUCTION-PATH P50/P95 TICKS:
+  Draw+flush 1,289,856/1,327,936; stage 586,272/586,496; Mario
+  174,528/174,592; Fox 209,344/209,408; wallpaper 298,176/336,000;
+  true draw residual 21,568/21,696. The profiler overhead makes these unsuitable
+  as an uninstrumented speed baseline; they are conservation evidence.
+WALLPAPER SPLIT P50/P95:
+  Setup 2,816/2,816; X map 10,848/11,200; Y map 29,632/29,952; physical
+  write/raster 254,144/291,584; commit 256/256; residual 512/576. Subtracting
+  the measured 64-tick read calibration gives a 241,856/279,296 write bound and
+  a 272,928/310,720 complete named-wallpaper subtotal. All eight frames visit
+  192 rows and write 20,724..49,152 exact destination pixels.
+OTHER SHELLS P50/P95:
+  gcDrawAll shell 16,768/16,896; fighter duplicate guard 384/384; present shell
+  4,128/4,160; outer draw 320/384; reset 640/704; tail 64/64; flush prep
+  320/320; present outer 1,920/1,984; bookkeeping 224/256; publication 320/320;
+  loop outer 1,280/1,344. Every nested equation and conservation error is zero.
+CORRECTNESS:
+  Exact owner 121/828 and 202/320/306 partition; stage
+  8/255/57/42/54/202/49/4; cross 5/10/15; M4 22/131072; zero owner fallback,
+  post-GO fence work, and conservation error. The verifier initially rejected
+  incremental frame 600 because it incorrectly demanded 49,152 physical writes;
+  its durable contract now requires exactly 49,152 for selector 0 and a positive
+  bounded subset for selector 1. The rejected 27,904-write frame then passes.
+BOUND / NEXT CUT:
+  Wallpaper is the largest non-owner bucket, but production already retains the
+  exact dirty-map/DMA path and prior exact affine/correction alternatives are
+  decisively rejected. The next fresh owner lever is Cut E. Refreshed M3 Phase 0
+  measures preflight 284,960/284,992, prepare-runs 213,408/213,504, and the
+  preflight-minus-prepare shell 71,552/71,872; immutable validation may be
+  removed only behind scene-generation stamps while all live preparation stays.
+EVIDENCE:
+  artifacts/performance/2026-07-16_task8-phase05-fighter600.json
+  artifacts/performance/2026-07-16_task8-phase05-incremental-fighter600.json
+KEEP / REWORK / REVERT: KEEP (DIAGNOSTIC)
+  Retain the compile-gated conservation net. It adds no production behavior or
+  claimed speed gain and nominates generation-gated preflight without reopening
+  forbidden packet, order, polygon-ID, translucency, or gameplay-float work.
+```
+
 ## 2026-07-16 - Locked-30 fixed-two scheduler decision
 
 ```text

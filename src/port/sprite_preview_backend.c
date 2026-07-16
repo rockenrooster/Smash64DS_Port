@@ -880,6 +880,10 @@ ndsSObjDrawOpaqueWallpaperFinal(
     s32 dst_y_end;
     u32 x;
     u32 y;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 phase05_end;
+    u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
 
     if (out_pixel_write_count != NULL) { *out_pixel_write_count = 0u; }
     if ((cache_pixels == NULL) || (map_scratch == NULL) ||
@@ -888,6 +892,10 @@ ndsSObjDrawOpaqueWallpaperFinal(
         (overlay_height != NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT) ||
         (current_map_slot >= NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT))
     {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
         return FALSE;
     }
     previous_map_slot = current_map_slot ^ 1u;
@@ -921,6 +929,12 @@ ndsSObjDrawOpaqueWallpaperFinal(
     dst_y_end = origin_y +
         (s32)((((u64)height * scale_y_q16) + 0xffffu) >> 16);
 
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    phase05_end = NDS_RENDERER_PHASE05_TICK();
+    gNdsRendererPhase05WallpaperSetupTicks += phase05_end - phase05_start;
+    gNdsRendererPhase05TimerSpanCount++;
+    phase05_start = phase05_end;
+#endif
     for (x = 0u; x < overlay_width; x++)
     {
         u32 preview_x = preview_x_q16 >> 16;
@@ -984,6 +998,12 @@ ndsSObjDrawOpaqueWallpaperFinal(
         preview_x_q16 += step_x;
     }
 
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    phase05_end = NDS_RENDERER_PHASE05_TICK();
+    gNdsRendererPhase05WallpaperXMapTicks += phase05_end - phase05_start;
+    gNdsRendererPhase05TimerSpanCount++;
+    phase05_start = phase05_end;
+#endif
     packed_rows = ((source_x_map_complete != FALSE) &&
                    ((overlay_width & 1u) == 0u) &&
                    ((overlay_pitch & 1u) == 0u) &&
@@ -1051,6 +1071,13 @@ ndsSObjDrawOpaqueWallpaperFinal(
                     ((row_dma_enabled != FALSE) &&
                      (changed_x_count >= (overlay_width >> 1)))) ?
             TRUE : FALSE;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        phase05_end = NDS_RENDERER_PHASE05_TICK();
+        gNdsRendererPhase05WallpaperYMapTicks +=
+            phase05_end - phase05_start;
+        gNdsRendererPhase05TimerSpanCount++;
+        phase05_start = phase05_end;
+#endif
         if ((full_row != FALSE) && (row_dma_enabled != FALSE))
         {
             if ((expanded_row_valid == FALSE) ||
@@ -1170,6 +1197,14 @@ ndsSObjDrawOpaqueWallpaperFinal(
             }
             pixel_write_count += changed_x_count;
         }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        phase05_end = NDS_RENDERER_PHASE05_TICK();
+        gNdsRendererPhase05WallpaperWriteTicks +=
+            phase05_end - phase05_start;
+        gNdsRendererPhase05TimerSpanCount++;
+        phase05_start = phase05_end;
+        gNdsRendererPhase05WallpaperRowCount++;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         for (x = 0u; x < overlay_width; x++)
         {
@@ -1195,6 +1230,9 @@ ndsSObjDrawOpaqueWallpaperFinal(
     {
         *out_pixel_write_count = pixel_write_count;
     }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    gNdsRendererPhase05WallpaperPixelWriteCount += pixel_write_count;
+#endif
     return TRUE;
 }
 
@@ -1220,14 +1258,25 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     u32 pixel_count;
     s32 origin_x;
     s32 origin_y;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
 
     if ((sobj == NULL) || (combine_mode != 0u))
     {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
         return FALSE;
     }
     sprite = &sobj->sprite;
     if ((sprite->scalex < 0.0001F) || (sprite->scaley < 0.0001F))
     {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
         return FALSE;
     }
     overlay = ndsPlatformGetOriginalSpriteOverlayLayer(
@@ -1236,6 +1285,10 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     if ((overlay == NULL) || (overlay_width != 256u) ||
         (overlay_height != 192u) || (overlay_pitch < overlay_width))
     {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
         return FALSE;
     }
     loaded = ndsRelocFindLoadedFileContaining(
@@ -1245,6 +1298,10 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
             loaded, sprite->bitmap,
             sizeof(Bitmap) * (u32)(u16)sprite->nbitmaps) == FALSE)
     {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
         return FALSE;
     }
     if ((sprite->attr & SP_FASTCOPY) != 0u)
@@ -1262,6 +1319,10 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
             NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS,
             &cache_pixels, &cache_pitch) == FALSE)
     {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
         return FALSE;
     }
 
@@ -1276,6 +1337,10 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
         gNdsSObjWallpaperFinalSkipCount++;
         gNdsSObjWallpaperCacheFastDrawCount++;
         ndsSObjWallpaperPublishDrawTicks(draw_start);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
         return TRUE;
     }
 
@@ -1296,6 +1361,10 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     }
     map_scratch = &cache_pixels[
         sNdsSObjWallpaperDecodeCache.height * cache_pitch];
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
     if (ndsSObjDrawOpaqueWallpaperFinal(
             cache_pixels, cache_pitch, map_scratch,
             current_map_slot, incremental_valid,
@@ -1309,12 +1378,19 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
         ndsSObjWallpaperPublishDrawTicks(draw_start);
         return FALSE;
     }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
     committed_epoch = ndsPlatformCommitOriginalSpriteFinalLayer(
         FALSE, pixel_count);
     if (committed_epoch == 0u)
     {
         sNdsSObjWallpaperFinalCache.valid = FALSE;
         ndsSObjWallpaperPublishDrawTicks(draw_start);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        NDS_RENDERER_PHASE05_FINISH(
+            gNdsRendererPhase05WallpaperCommitTicks, phase05_start);
+#endif
         return FALSE;
     }
     ndsSObjWallpaperStoreFinalKey(
@@ -1325,6 +1401,10 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     gNdsSObjWallpaperFinalPixelWriteCount += pixel_count;
     gNdsSObjWallpaperCacheFastDrawCount++;
     ndsSObjWallpaperPublishDrawTicks(draw_start);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    NDS_RENDERER_PHASE05_FINISH(
+        gNdsRendererPhase05WallpaperCommitTicks, phase05_start);
+#endif
     return TRUE;
 }
 
@@ -1980,6 +2060,9 @@ static void ndsSObjPreviewCommitLayer(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             u32 wallpaper_start = cpuGetTiming();
 #endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
             SObj *wallpaper = sNdsSObjFramePendingWallpaper;
             u32 scale_x_q16 = 0u;
             u32 scale_y_q16 = 0u;
@@ -2009,15 +2092,30 @@ static void ndsSObjPreviewCommitLayer(void)
             if (retained_wallpaper != FALSE)
             {
                 final_wallpaper = TRUE;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+                NDS_RENDERER_PHASE05_FINISH(
+                    gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
             }
             else
             {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+                NDS_RENDERER_PHASE05_FINISH(
+                    gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
                 final_wallpaper = ndsSObjDrawCachedWallpaperFinal(
                     wallpaper, sNdsSObjFramePendingWallpaperCombine);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+                phase05_start = NDS_RENDERER_PHASE05_TICK();
+#endif
                 if (final_wallpaper != FALSE)
                 {
                     ndsPlatformSceneWallpaperConfirmRaster();
                 }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+                NDS_RENDERER_PHASE05_FINISH(
+                    gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
+#endif
             }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             gNdsRendererProfileWallpaperTicks +=
