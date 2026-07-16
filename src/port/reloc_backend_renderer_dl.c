@@ -10668,6 +10668,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     native_owner_hierarchy_mode =
         (gNdsRendererFastRunMode ==
          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ? TRUE : FALSE;
+    if ((native_owner_enabled != FALSE) &&
+        ((native_owner_production_mode != FALSE) ||
+         (native_owner_hierarchy_mode != FALSE)) &&
+        ((fp->is_use_animlocks != FALSE) || (fp->shuffle_tics != 0u)))
+    {
+        native_owner_enabled = FALSE;
+    }
 #endif
     ndsRendererProfileSetOwner(owner_id);
     if (native_owner_enabled != FALSE)

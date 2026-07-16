@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-15 20:56 Central
+Updated: 2026-07-15 21:13 Central
 
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
@@ -25,10 +25,11 @@ The executable fleet is now four registry records under `Latest`/`Boundary`;
 The unreachable source-side mode 1-162 lattice remains a separate ROM-parity
 cleanup, not part of the next renderer change.
 
-Boundary now waits for the natural M4 arm call before its next completed-frame
-sample. It passes the exact published M3 121/828 owner, frozen water 2/0/1,
-22/131072 static residency, full masks, positive pinned hits, zero post-GO
-fence work, and Cut G frames 438/439 under `artifacts/visibility`.
+Boundary passes at 19.7 FPS on published ROM
+`CE922B60EFFE16D3A05A18ED3B0FD54F0A73A70C8CE9076AF85A5A59D5B96478`.
+It retains exact M3 121/828 ownership, frozen water 2/0/1, 22/131072 static
+residency, 76 pinned hits, zero post-GO fence work, and Cut G frames 438/439 at
+`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_211246-5878396-p43792.png`.
 
 ## Rejected M3 Cut
 
@@ -60,24 +61,31 @@ normal M4 teardown with every post-GO fence counter zero. The DS taskman seam
 now matches BattleShip by breaking on `LoadScene` before drawing; the verifier
 samples the battle ledger before Results reuses the globals.
 
-## Next Packet
+## Rejected M2 Cut
 
-Take the bounded M2 Mode-8 ITCM experiment. Mode 8 already emits generated
-immutable arrays directly to GX; do not add another packet or mode. First add
-the missing pre-GX rejection for active animlocks/shuffle, then place only the
-existing lighting, run-prep, and owner executor in the native-fighter ITCM
-section. Reuse the existing checks:
+The Mode-8 ITCM-only experiment was exact but too small. Frames 600–607 measured
+416,576/416,704 → 398,496/398,592 combined fighter ticks, saving only 18,080
+versus the required 80K. Stage pixels were byte-identical; only 13 bottom-HUD
+pixels changed with live FPS text. The three placements/checker requirements
+were reverted. Evidence remains at:
 
-```powershell
-python .\scripts\check_nds_native_owner_packet.py
-python .\scripts\check_nds_native_owner_hierarchy.py
-.\scripts\compare-renderer-fast-raw.ps1 -FastRunMode 8 `
-  -RendererBenchmarkSamples 8 -RunnerSlot 3 -NoBuild
+```text
+artifacts/performance/2026-07-15_m2-itcm-a.json
+artifacts/performance/2026-07-15_m2-itcm-b.json
+artifacts/visibility/2026-07-15_m2-itcm-a-frame607.png
+artifacts/visibility/2026-07-15_m2-itcm-b-frame607.png
 ```
 
-KEEP only with at least 80K saved, combined fighter ticks at or below 337,472,
-matrix plus lighting at or below 120K, transport at or below 145K, exact
-32/49/67/626 semantics, matching screenshot/reserve, and zero fallback.
+The source-faithful pre-GX rejection for active animlocks/shuffle remains; it
+falls back to the ordinary BattleShip path before native preparation or GX.
+
+## Next Packet
+
+Stay in Mode 8. Before coding, bound the smallest no-copy direct-contract cut
+together with the measured 18K placement gain. Proceed only if attributable
+savings can reach 80K; then run the same eight-frame gate and require combined
+ticks <=336,576, exact 32/49/67/626 semantics, matching screenshot/reserve, and
+zero fallback. Do not add a mode, packet copy, DMA path, or per-root interpreter.
 
 ## Checkpoint
 

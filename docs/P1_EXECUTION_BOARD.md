@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-15 20:56 Central
+Updated: 2026-07-15 21:13 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -17,7 +17,7 @@ Current verifier-covered canonical/shipped pair:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,534,656 bytes
-SHA-256 4345CCEDF9315C239F5F29FD0DB18B7E18DE6F0E06114E7E88CCC92BF0E2A137
+SHA-256 CE922B60EFFE16D3A05A18ED3B0FD54F0A73A70C8CE9076AF85A5A59D5B96478
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -29,7 +29,7 @@ more accurate than recycling cross-build samples.
 
 | Match phase | Artifact class | ROM SHA-256 | Synchronized window | N | Active median / P95 | State |
 |---|---|---|---|---:|---:|---|
-| Countdown / GO | canonical-profile-0 | `4345CCEDF9315C239F5F29FD0DB18B7E18DE6F0E06114E7E88CCC92BF0E2A137` | exact completed frames 438/439 | 2 | — / — | GO state + screenshot + post-arm Boundary pass; phase ticks pending |
+| Countdown / GO | canonical-profile-0 | `CE922B60EFFE16D3A05A18ED3B0FD54F0A73A70C8CE9076AF85A5A59D5B96478` | exact completed frames 438/439 | 2 | — / — | GO state + screenshot + post-arm Boundary pass; phase ticks pending |
 | Early combat | canonical-profile-0 | same canonical SHA | Pending post-GO window | — | — / — | Pending synchronized canonical baseline |
 | Late combat | canonical-profile-0 | same canonical SHA | Pending synchronized late window | — | — / — | Pending synchronized canonical baseline |
 | KO / rebirth | canonical-profile-0 | same canonical SHA | Pending natural KO→rebirth window | — | — / — | Pending synchronized canonical baseline |
@@ -42,7 +42,7 @@ Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; th
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
 | Integration/release | CPU lifecycle pass / checkpoint | live tree | source-ordered LoadScene break, exact VSBattle ledger sample, commit | runner 2 |
-| Renderer implementation | M2 ITCM cut next | shared live tree / focused lab builds | add the missing pre-GX animlock/shuffle guard, then test three existing hot functions in ITCM | runner 3 |
+| Renderer implementation | M2 ITCM cut rejected; guard retained | shared live tree / focused lab builds | no-copy direct-contract candidate may combine with the measured 18K ITCM placement only if its pre-code bound reaches the 80K gate | no runner active |
 | Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
 | Performance research | M2 contract reconciled | shared live tree / read-only | no-copy Mode 8 buckets, gates, source stop rules, and rejected paths confirmed | no runner active |
 
@@ -67,7 +67,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Pause-orbit geometry containment | Reproduced wide-view symptom / P2 parity open | Renderer + QA | Normal source-envelope and front/±16.8° frames are clean; synchronized ±33.6° frames show foreground occlusion. Plus view has 15.200% one-color concentration; minus retains only 0.602% green | Keep the deterministic symptom gate; compare identical BattleShip/N64 view before changing renderer |
 | Natural Fox recovery | Coverage debt | Gameplay | Natural Recover objective/offstage return unobserved | No completion claim |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
-| M2 Mario/Fox AOT, 170–250K ticks | Fail / Mode 8 correct, Mode 7 rejected | Renderer | Latest detailed A0/A1 477,152/477,376; Mode 7 518,336/518,784 and blank fighters; direct-contract estimate 62–75K is unimplemented | Remove Mode 7; implement only the exact bounded direct-contract path, then require ≥80K saving and ≤337,472 first window |
+| M2 Mario/Fox AOT, 170–250K ticks | Fail / Mode 8 correct; ITCM-only cut rejected | Renderer | Ledger-off A/B at frames 600–607: 416,576/416,704 → 398,496/398,592, only 18,080 saved; exact stage/Mario/Fox 60/320/306 and screenshot stage pixels match | Keep the pre-GX animlock/shuffle guard; do not retry placement alone. Bound the no-copy direct-contract plus placement combination before coding and require ≥80K saved and ≤336,576 |
 | M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Baseline 664,544/664,640. The exact dense-reuse cut retained semantics and reached 555,584/555,776, saving only 108,960/108,864 versus the required 164,544; it was reverted | Do not retry dense-only preparation reuse. Re-profile the retained path and require a different attributable ≥164,544-tick cut before widening |
 | M4 zero gameplay conversion/preparation | Pass for current one-minute gate | Renderer | Natural CPU-on expiry proves prepare/arm/teardown `1/1/1`, 22 keys/131,072 bytes, zero ten-class post-GO fence work, and 163,312-byte audio-adjusted reserve | Keep; repeat in final published CPU-on qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |

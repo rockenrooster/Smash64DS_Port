@@ -2283,3 +2283,39 @@ DECISION: REJECT / REVERT
   The source and checker changes were fully reverted. Do not retry or widen
   dense-only preparation reuse; choose a different measured M3 bucket.
 ```
+
+## 2026-07-15 - M2 native-owner ITCM placement missed keep gate
+
+```text
+IDEA ID: M2-MODE8-ITCM-PLACEMENT
+TREATMENT:
+  Place the existing production lighting, run-preparation, and whole-owner
+  executor in native-fighter ITCM. No mode, packet, cache, or traversal was
+  added. Separately add the missing pre-GX active-animlock/shuffle rejection.
+IDENTITY / WINDOW:
+  Profile 1, Mode 8, ledger off, Fox paused, frames 600..607, runner 3.
+  A/B ROM SHA-256 values are
+  0D12911231D389E65A382210A215DBF3A95CB1C1852D4D409AEE216168AD813B /
+  9AAA43BFA26F04B15E3888EF352F4E2ADC41DE9445F61C167532A24323CB37AC.
+RESULT P50/P95:
+  Combined Mario+Fox 416,576/416,704 -> 398,496/398,592, saving only
+  18,080/18,112. It misses the required 80K saving by 61,920 and remains
+  61,024 above the effective <=336,576 first ceiling. Candidate ITCM was
+  25,292 bytes; link placement passed.
+CORRECTNESS / VISUALS:
+  Both arms preserve 70 runs / 686 triangles, stage/Mario/Fox 60/320/306,
+  fallback state/vertex/command 29/0/0, identical upload SHA, and zero
+  conservation error. Automated image analysis found 0/123,216 changed stage
+  pixels; 13/122,808 HUD pixels differ only in live FPS text.
+EVIDENCE:
+  artifacts/performance/2026-07-15_m2-itcm-a.json (SHA-256
+  847104F1C75038B1D520D6A68ABC1CA50DF1FF712AD9155CB81458798B3206CC)
+  artifacts/performance/2026-07-15_m2-itcm-b.json (SHA-256
+  88D42770A2743FCCC2CB126D03CF871C36DB0F9143EA3DA0F29B2D519F9F1753)
+  artifacts/visibility/2026-07-15_m2-itcm-a-frame607.png
+  artifacts/visibility/2026-07-15_m2-itcm-b-frame607.png
+DECISION: REJECT PLACEMENT / KEEP SOURCE GUARD
+  Revert all three attributes and their checker requirements. Do not retry
+  placement alone. Retain the active-animlock/shuffle fail-closed guard because
+  it restores the BattleShip matrix-state boundary before native prep/GX.
+```

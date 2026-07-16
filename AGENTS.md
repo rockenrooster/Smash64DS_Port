@@ -79,8 +79,12 @@ Current instead when normal/shared startup is affected. Do not stack DevFast,
 Boundary, and Current when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
-When work cleanly parallelizes, keep three helper agents on disjoint lanes; do
-not manufacture work merely to fill slots.
+Subagent switch: **OFF**.
+
+- `OFF`: let already-running subagents finish, but do not spawn, follow up, or
+  reassign one until the user explicitly switches this back to `ON`.
+- `ON`: when work cleanly parallelizes, keep up to three helper agents on
+  bounded, disjoint lanes; do not manufacture work merely to fill slots.
 
 Prefer deletion, existing helpers, fixed DS hardware paths, and the smallest
 source-backed implementation. Equivalent output from less code or fewer ticks
