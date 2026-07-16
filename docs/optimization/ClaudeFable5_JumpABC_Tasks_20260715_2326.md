@@ -633,6 +633,151 @@ the STALL report field key so Tyler's photos are decodable. Snapshot last.
 
 ---
 
+## TASK 8 — Combat draw cuts round 2: preflight, residual, CUT A carried (paste to codex)
+
+Added 2026-07-16 after TASK 6 closed with Cuts C+D banked (-51K) and a stop.
+Measured truth (TASK6-R0 Phase 0, window 600..607, live Fox): draw+flush
+1,245,664 P50; two-update batch 314,144 (~157K/update); full-speed locked-30
+needs draw+flush <=~800K -> gap ~445K. Where it lives: preflight 286,848;
+prepare 215,616 (calibrated attr bound 56,448 remains); no-Z inclusive
+98,816 (matrix 50,432) — CUT A never attempted; begin/bind 39,808; commit
+170,528; and ~370K of draw is UNATTRIBUTED outside the stage+fighter owners
+(stage 489K + fighters ~387K vs draw 1,245K). Fighter per-joint matrix
+construction remains soft-float (~50-70K; only F2L quantization landed).
+Update-path floats are source gameplay math — IEEE-exact, untouchable.
+
+```
+/task Combat draw cuts round 2, toward draw+flush <=~800K (current 1,245,664
+P50, window 600..607, live Fox). Governed by the no-discard override: bank
+every correctness-preserving gain, own ledger row each. Use TASK 6's fast
+iteration protocol verbatim (8-frame A/B + native 256x192 compare +
+-RequireLocked30Pacing smoke; full match only at the end). Forbidden
+unchanged: FIFO packet caching, new interpreters, run reordering, poly-ID/
+translucency changes, gameplay float conversion (update math stays
+IEEE-exact), decomp/ edits. Reconcile first (R0).
+
+PHASE 0.5 — profile the unowned draw residual FIRST (no code): stage 489K +
+fighters ~387K leave roughly 370K of draw+flush unattributed. Extend the
+Phase-0 stopwatch to cover everything outside the two owners: begin-frame,
+foreground/HUD submission, texture-state churn between owners, semantic/
+accounting shells, flush preparation, present residuals. Publish the table;
+the largest named bucket becomes a cut candidate with a pre-code bound.
+
+CUT E — generation-gated preflight (bound: large share of 286,848). The
+whole-owner preflight revalidates immutable topology every frame. Split it:
+validate immutable structures ONCE at arm/scene-setup and stamp a generation
+counter; per-frame preflight checks only live-bound state (matrices,
+materials, colors, selection, animlock) plus the generation stamps, and
+fails closed to the full validator on ANY mismatch. The fail-closed
+guarantee and every rejection path must remain provably reachable — add a
+lab-only fault-injection check that flips one stamped byte and confirms the
+full validator re-engages. Zero visual change; native compare 0/49,152.
+
+CUT A (carried from TASK 6, still open) — constant-depth GX submission for
+the no-Z painter class (bound: ~60-90K of the measured 98,816 inclusive;
+no-Z matrix bucket alone is 50,432). Mechanism unchanged from TASK 6: Z row
+= band_constant x W_row so post-divide depth is exactly the band constant;
+zero-tolerance depth proof via the stage depth trace; X/Y sub-pixel drift
+published + one Tyler eyeball; parity against current baseline including
+the known grass/bush defect; per-run fail-closed fallback; transport bound
+before coding (T2B rule).
+
+CUT F — fighter local-matrix construction in fixed point / source tables
+(Jump C CUT 1 proper; bound: re-measure, previously ~72,896, only the F2L
+quantization has landed). Route rotation through the BattleShip source's
+own u16-angle sin/cos tables (cite file:line; no hand-authored trig); do
+the concat in fixed point where the source already quantizes to 16.16.
+DISPLAY math only — the shadow float oracle stays compiled; gate bit-exact
+OR publish max per-element deviation for Tyler sign-off. Do not regress the
+fixed-W quantization boundary.
+
+CUT G2 — idempotent GX state elision in begin/bind (bound: share of
+39,808). Track last-written texture params, matrix mode, and poly state;
+skip writes whose value is unchanged. The final GX state per run must be
+provably identical — assert via the existing semantic/texture counters.
+
+CUT H (only if profile confirms it is real) — sub-screen console dirty
+updates: rewrite only changed characters per present instead of full lines.
+
+AUDIT (no-code deliverable): confirm zero draw-side derivation executes
+inside the update pair (recorder stubs, display prep) — anything found is
+per-present work running twice and gets its own bounded cut row.
+
+Per-cut gates: exact censuses (owner 121/828, stage 8/255/57/42/54/202/49/4,
+cross 5/10/15, M2 32/49/67/626, M4 22/131072), zero fallback/fence/
+conservation error, reserve >=128 KiB, native compare 0/49,152 for exact
+cuts, ledger row per cut incl. reverts. End of task: canonical rebuild,
+one-minute natural CPU-on match with per-phase updates/s + slip counts
+(combat updates/s vs the current baseline IS the user-visible result),
+Tyler playtest ROM, board/handoff updates, snapshot last.
+```
+
+---
+
+## TASK 9 — Bit-exact soft-float acceleration for gameplay updates (paste to codex)
+
+Added 2026-07-16. Fixed-point conversion of update math is forbidden
+(feedback-loop divergence + destroys the source-exactness oracle), but the
+same bits can be produced faster. Build facts: all code compiles -mthumb
+(correct for the 16-bit main-RAM bus); no custom float routines exist —
+every gameplay float op funnels through stock libgcc __aeabi_* in waitstated
+main RAM; ITCM is 25,824/32,768 (~6.9K free) and runs ARM code on a
+zero-wait 32-bit bus. Reference semantics for "exact" = current libgcc
+outputs (the established port-exact baseline all behavior gates verify).
+
+```
+/task Bit-exact soft-float acceleration for the gameplay update pair
+(baseline: two-update batch 314,144 P50, window 600..607, live Fox). The
+HARD RULE for this task: every gameplay float result stays bit-identical to
+the CURRENT libgcc soft-float outputs — that is the established port-exact
+reference all behavior gates already verify against. No -ffast-math, no
+flush-to-zero, no NaN/denormal/rounding semantic change, no libm
+replacement, no fixed-point conversion of update math. Governed by the
+no-discard override; own ledger row per phase. Reconcile first (R0).
+
+PHASE 0 — float-call census (lab only, no shipping change): count per-update
+calls to each __aeabi_* routine (fadd/fsub/fmul/fdiv/fcmp*/f2iz/i2f/f2d/
+d2f/d* doubles if any) via linker --wrap counting shims in a lab build, and
+record each routine's linked MODE (ARM vs Thumb, objdump the ELF) and
+section placement. Publish the table with a per-routine tick bound
+(count x measured routine cost). This names the Phase 1/2 targets and the
+honest ceiling.
+
+PHASE 1 — relocate hot libgcc float routines to ITCM, code unchanged
+(bit-identical by construction). Extract the relevant libgcc objects,
+rename their text sections into the ITCM region, link ahead of libgcc.
+Budget: current ITCM is 25,824/32,768 and the renderer owns what is placed
+— fit within free space, report exact bytes, and do NOT evict renderer
+ITCM; if contention, report instead of evicting. Measure the two-update
+batch A/B; bank whatever lands.
+
+PHASE 2 — optimized ARM-mode IEEE-754-single routines in ITCM for the
+census leaders (typically fmul/fadd/fcmp/f2iz/i2f). Reference = current
+libgcc bit behavior. Proof ladder, all required before shipping:
+1. Host-side: exhaustive comparison over all 2^32 inputs for every unary
+   routine; for binary routines, directed edge vectors (every rounding
+   boundary class, NaN payloads, +-0, denormals, infinities, overflow/
+   underflow) plus >=10^8 randomized vectors, against a libgcc golden.
+2. On-device supreme gate: the deterministic scripted match, thousands of
+   updates, per-update full game-state hash A/B against the baseline ROM —
+   ANY single-bit divergence at any update = revert, no exceptions.
+3. Every existing behavior verifier green (they assert source-exact values
+   and double as the regression net).
+
+ALSO (report-only): confirm the ARM9 stack lives in DTCM for the update
+path and that hot update frames do not spill to main RAM; note findings,
+no change in this task.
+
+Gates: state-hash identity A/B (the supreme gate), two-update batch P50
+delta published per phase, DevFast + Boundary green, censuses/fences/
+reserve unchanged, fast iteration protocol from TASK 6 for measurement,
+ledger row per phase incl. reverts. End: canonical rebuild, one-minute
+natural match with per-phase updates/s + slip counts, snapshot with
+New-Smash64DSSnapshot.ps1 -Mode Lean last.
+```
+
+---
+
 ## Sequencing and interactions
 
 - TASK 1 before TASK 2, hard: the depth fix changes class-3 semantics and the
