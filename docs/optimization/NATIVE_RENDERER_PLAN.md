@@ -84,11 +84,12 @@ the existing cache byte, removing the per-triangle search without growing the
 12,663-byte packet. Its same-ROM A/B moves stage P50/P95 from
 578,272/578,560 to 556,256/556,352. Routing the 118/146 exact zero-shift matrix
 loads through the existing raw builder then moves stage to 541,952/542,272 and
-draw to 962,816/962,880. The top gameplay screen is byte-identical. The 500K
+draw to 962,816/962,880. Exact bounded `s16` vertex rounding removes the generic
+64-bit shift sequences and moves the current same-ROM stage window from
+545,440/545,536 to 536,032/536,256 with a 0/49,152 native-pixel delta. The 500K
 point remains the next milestone target, not a discard gate; correct measured
-gains accumulate. Incremental no-Z matrix transport remains reverted
-because it regressed, and the signed-16 rounding treatment remains reverted
-because its visual packet was invalid. M3 remains REWORK.
+gains accumulate. Incremental no-Z matrix transport remains reverted because
+it regressed. M3 remains REWORK.
 
 ## M4 — Pre-GO Texture Residency
 

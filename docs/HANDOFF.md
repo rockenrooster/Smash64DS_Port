@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 10:08 Central
+Updated: 2026-07-16 10:19 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -22,10 +22,11 @@ configuration. Dream Land water is exact frame 0/fraction 114 on the original
 The executable fleet is four registry records under `Latest`/`Boundary`; the
 unreachable source-side mode 1-162 lattice is separate ROM-parity cleanup.
 The Boundary-verified user-facing candidate is 14,585,856 bytes, SHA-256
-`E781ED0D5B15FC85D23B2DD614D7A81B69678E7F87FDE6D062BEB21D4A3056BD`.
+`EB36E5CA4725A7196CE2F18EDD025AE5465F0E435F588AAAEA8B9845F80D11D5`.
 Stage painter depth and pause-orbit containment are fixed and user-confirmed.
-M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, and the
-zero-shift matrix builder at 541,952/542,272 ticks.
+M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, the
+zero-shift matrix builder, and exact bounded `s16` rounding at
+536,032/536,256 ticks.
 
 The M4 Whispy lifecycle repair is kept: later cosmetic mouth/eye images reuse
 an otherwise exact resident source-frame key, preventing the late fallback and
@@ -63,8 +64,9 @@ ITCM is 25,384/32,768. Evidence is under
 `artifacts/visibility/2026-07-16_m2-itcm-restore-{a,b}.png`.
 
 Jump A now retains no-Z codegen, dense prepare-once, AOT-packed coordinate
-shifts, and the exact zero-shift raw-matrix builder. The latest stage result is
-541,952/542,272 ticks. The constant-depth GX painter already made the old CPU
+shifts, the exact zero-shift raw-matrix builder, and bounded `s16` vertex
+rounding. The latest stage result is 536,032/536,256 ticks with a 0/49,152
+native-pixel delta. The constant-depth GX painter already made the old CPU
 divider cut obsolete; do not reopen it or the rejected matrix-position reuse.
 Jump C Phase 0 is refreshed: local matrix construction is 53,024/53,120 ticks
 and lighting is 67,808/68,032. The source integer sine-table path was already

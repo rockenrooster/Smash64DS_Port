@@ -4426,6 +4426,19 @@ static s32 ndsRendererRoundShiftS32Signed(s32 value, u32 shift)
     return (s32)ndsRendererRoundShiftS64(value, shift);
 }
 
+static s32 ndsRendererNativeStageVertexShift(s16 value, u32 shift)
+{
+    u32 magnitude;
+
+    if (shift == 0u)
+    {
+        return value;
+    }
+    magnitude = (value < 0) ? (u32)-(s32)value : (u32)value;
+    magnitude = (magnitude + (1u << (shift - 1u))) >> shift;
+    return (value < 0) ? -(s32)magnitude : (s32)magnitude;
+}
+
 static v16 ndsRendererHardwareCoordToV16(s16 value)
 {
     const u32 shift = 12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
@@ -16029,9 +16042,9 @@ static s32 ndsRendererNativeStagePrepareRun(
         if (run->submit_class ==
             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
         {
-            s32 x = ndsRendererRoundShiftS32Signed(dense->x, 1u);
-            s32 y = ndsRendererRoundShiftS32Signed(dense->y, 1u);
-            s32 z = ndsRendererRoundShiftS32Signed(dense->z, 1u);
+            s32 x = ndsRendererNativeStageVertexShift(dense->x, 1u);
+            s32 y = ndsRendererNativeStageVertexShift(dense->y, 1u);
+            s32 z = ndsRendererNativeStageVertexShift(dense->z, 1u);
 
             /* These source-Z vertices only exceed GX VTX_16 range slightly.
              * Submit half coordinates with a compensating matrix so GX clips
@@ -16228,12 +16241,12 @@ static inline void ndsRendererNativeStageEmitVertex(
     else
     {
         GFX_VERTEX16 =
-            (u32)(u16)(ndsRendererRoundShiftS32Signed(dense->x, 1u) *
+            (u32)(u16)(ndsRendererNativeStageVertexShift(dense->x, 1u) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
-            ((u32)(u16)(ndsRendererRoundShiftS32Signed(dense->y, 1u) *
+            ((u32)(u16)(ndsRendererNativeStageVertexShift(dense->y, 1u) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
         GFX_VERTEX16 =
-            (u16)(ndsRendererRoundShiftS32Signed(dense->z, 1u) *
+            (u16)(ndsRendererNativeStageVertexShift(dense->z, 1u) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
     }
 }
@@ -16284,9 +16297,9 @@ static void ndsRendererNativeStageEmitNoZVertex(
     const NDSNativeStagePreparedRun *run,
     u32 coordinate_shift)
 {
-    s32 x = ndsRendererRoundShiftS32Signed(dense->x, coordinate_shift);
-    s32 y = ndsRendererRoundShiftS32Signed(dense->y, coordinate_shift);
-    s32 z = ndsRendererRoundShiftS32Signed(dense->z, coordinate_shift);
+    s32 x = ndsRendererNativeStageVertexShift(dense->x, coordinate_shift);
+    s32 y = ndsRendererNativeStageVertexShift(dense->y, coordinate_shift);
+    s32 z = ndsRendererNativeStageVertexShift(dense->z, coordinate_shift);
 
     GFX_COLOR = prepared->packed_color;
     if (run->textured != 0u)

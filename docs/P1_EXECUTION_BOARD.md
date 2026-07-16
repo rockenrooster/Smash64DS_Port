@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 10:08 Central
+Updated: 2026-07-16 10:19 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -17,7 +17,7 @@ Boundary-verified user-facing candidate:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,585,856 bytes
-SHA-256 E781ED0D5B15FC85D23B2DD614D7A81B69678E7F87FDE6D062BEB21D4A3056BD
+SHA-256 EB36E5CA4725A7196CE2F18EDD025AE5465F0E435F588AAAEA8B9845F80D11D5
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -73,7 +73,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Natural Fox recovery | Pass | Gameplay | Current-ROM mode 163 used only external Mario input: Fox took 0→59 damage, selected BattleShip Recover for 40 frames at offstage x=2379.905, grounded on line 3 at x=1336.084, and took a later hit to 72 without KO/rebirth in 897 frames | Keep focused gate; reserve 202,256 and screenshot `20260716_fox-recovery-post-hit.png` |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Incremental compute KEEP at 384.0K | Renderer | Current Mode-8 A/B moves combined fighter P50/P95 386,880/386,944 → 384,000/384,000 by co-locating the prepared color/UV and immutable AOT GX words in one 16-byte output record. Exact 70/686 and 60/320/306/29/0/0 remain, conservation is zero, and the native top-screen image is byte-identical | Keep ITCM, exact quantization, raw-loop specialization, batched accounting, AOT GX coordinates, and the output-local record; lighting is already a bare exact LUT path. Continue the measured production emit path. The 170–250K milestone is directional, not an intermediate discard gate |
-| M3 complete stage AOT, 150–250K ticks | Semantic pass / accumulated KEEP at 542K | Renderer | Current bitmap-OAM A/B moves stage 556,256/556,352 → 541,952/542,272 by routing the 118/146 exact zero-shift no-Z matrix loads through the existing raw builder. Exact 121/828, 57/42/54/202/49/4, cross 5/10/15, zero fallback/fence, and a byte-identical top gameplay screen hold | Keep no-Z codegen, dense prepare-once, AOT shifts, and the zero-shift builder specialization; continue the measured no-Z path. 500K remains a target, not a discard gate |
+| M3 complete stage AOT, 150–250K ticks | Semantic pass / accumulated KEEP at 536K | Renderer | Current bitmap-OAM A/B moves stage 545,440/545,536 → 536,032/536,256 by using exact bounded `s16` rounding in the no-Z vertex path instead of the generic 64-bit helper. Exact 121/828, 57/42/54/202/49/4, cross 5/10/15, zero fallback/fence, and a 0/49,152 native top-screen delta hold | Keep no-Z codegen, dense prepare-once, AOT shifts, zero-shift matrices, and bounded vertex rounding; continue the measured no-Z path. 500K remains a target, not a discard gate |
 | M4 zero gameplay conversion/preparation | Focused lifecycle repair pass / final teardown refresh pending | Renderer | Exact CPU-on phase sampling exposed a missing Whispy mouth image at frame 1398: run 28 rejected, the owner aborted, and generic fallback converted 40 textures. The native owner now reuses the pre-GO resident first source image only when every other word of the 59-word key matches. Frames 1398–1405 and 3300–3307 retain 202 stage triangles, zero post-arm fallback, zero ten-class fence work, and zero premature teardown on exact ROM `426B821A...` | Keep the documented cosmetic source-frame approximation; repeat only the final natural teardown in release qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / bitmap OAM | Renderer + QA | Hybrid runtime submission was invisible despite valid counters; restored proven all-bitmap OBJ ownership shows the traffic light with 93,824 bytes prepared pregame and zero gameplay conversion/upload | Keep published bitmap path; hybrid remains lab-only |

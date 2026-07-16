@@ -21249,3 +21249,13 @@ remains skipped for the requested fast iteration cadence.
 - Combined Mario/Fox time falls 386,880 -> 384,000 ticks with an exact
   0 / 49,152 top-screen delta. Boundary passes on public ROM SHA-256
   `E781ED0D5B15FC85D23B2DD614D7A81B69678E7F87FDE6D062BEB21D4A3056BD`.
+
+## 2026-07-16 - Kept bounded stage vertex rounding
+
+- The no-Z owner now rounds its generated `s16` coordinates directly instead
+  of promoting every shift through the generic signed-64 helper. Exhaustive
+  host comparison covers all 65,536 inputs across the eight encoded shifts.
+- Stage time falls 545,440 -> 536,032 ticks, draw time falls 949,824 -> 936,704,
+  and the deterministic top-screen comparison changes 0 / 49,152 pixels.
+  Boundary passes on public ROM SHA-256
+  `EB36E5CA4725A7196CE2F18EDD025AE5465F0E435F588AAAEA8B9845F80D11D5`.

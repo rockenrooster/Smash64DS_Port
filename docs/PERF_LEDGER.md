@@ -2993,3 +2993,64 @@ EVIDENCE:
 KEEP / REWORK / REVERT: KEEP
   Accumulate the exact gain. A2 is not warranted.
 ```
+
+## 2026-07-16 - M3 bounded signed-16 rounding retake
+
+```text
+IDEA ID: M3-S16-ROUNDSHIFT-RETAKE-20260716
+RECONCILIATION:
+  The earlier treatment was reverted under the withdrawn <=500K discard gate
+  and a viewer-side screenshot false alarm. Tyler confirmed that PNG looked
+  normal; deterministic native-pixel comparison now owns the visual decision.
+SOURCE / BOUND:
+  Generated NDSNativeStageDenseVertex coordinates are signed 16-bit and encode
+  only shifts 0..7. Exhaustive host comparison proves the bounded formula
+  equals the generic signed-64 nearest-round result for all 65,536 values and
+  all eight shifts. BattleShip objdisplay.c:1557-1603 remains authoritative for
+  DObj/display-list order; no source-visible order or geometry changes.
+HOT SYMBOL / CALLERS:
+  ndsRendererNativeStageEmitNoZTriangle, once per 126 no-Z stage triangles,
+  reached by ndsRendererCommitNativeStageSegment across the eight exact stage
+  owners. The emitted vertex helper performs three coordinate shifts.
+BEFORE ADDRESS / SIZE / SECTION / STACK:
+  EmitNoZTriangle 0x0200FF08 / 0x2D4 / main RAM text / 64-byte saved-register
+  plus local frame. CommitNativeStageSegment is 0x8CC. Lab ELF SHA-256 is
+  5C0BFF706A8FC4BC0BA120688A0F29D0F8AEC687013E6CAF4DD4C9B89F50B2E5.
+BEFORE EXPENSIVE SEQUENCE:
+  Each signed-16 coordinate routes through ndsRendererRoundShiftS64, expanding
+  to multi-register 64-bit sign, add/borrow, shift, and merge sequences.
+ONE CHANGE:
+  Use one bounded signed-16 magnitude rounder at the three stage vertex seams.
+  Generic matrix and clip-space signed-32/64 rounding remains unchanged.
+AFTER ADDRESS / SIZE / SECTION / STACK:
+  EmitNoZTriangle 0x0201099C / 0x23C / main RAM text / unchanged stack.
+  CommitNativeStageSegment shrinks to 0x868. The helper is fully inlined and
+  the 64-bit sequences disappear. Renderer object SHA-256 is
+  78B64C5230E0644377B141A5D1853117612AB2043FCA9F6829F89FE88160ADDC;
+  lab ELF SHA-256 is
+  A4A852EE524122E04FC90F2FA6AE1ED8D403B31BE7A5CBA9E83FBF4764CC513A.
+MAP / TCM / ROM DELTA:
+  Main-RAM text shrinks; ITCM is untouched. The ELF shrinks 2,868 bytes and
+  the padded lab ROM remains 14,760,960 bytes.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 9, static 1, bitmap OAM, Fox/countdown iteration
+  switch off, exact-aspect window, frames 438..445. A/B ROM SHA-256 values are
+  E4E77B1E45DC4E9580C5DC6AC943B5FE41F54B146D88AFC40E733286BDEEF718 /
+  AF6303BCD0D7A8FBBD23EC92A14C96C11A4B24B15F19992317C51909A500D5F3.
+P50/P95 RESULT:
+  Stage 545,440/545,536 -> 536,032/536,256, saving 9,408/9,280.
+  Draw 949,824/949,824 -> 936,704/936,832, saving 13,120/12,992.
+  Active 954,560/954,624 -> 941,472/941,568, saving 13,088/13,056.
+EXACTNESS GATES:
+  Generated stage and host packet checks preserve 8/57/42/54/202/49/4 and
+  cross 5/10/15. Runtime preserves exact 121/828 and 202/320/306 with zero
+  fallback, fence, or conservation error. Native top-screen delta is
+  0/49,152 pixels.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m3-s16-retake-a.json
+  artifacts/performance/2026-07-16_m3-s16-retake-b.json
+  artifacts/visibility/2026-07-16_m3-s16-retake-a.png
+  artifacts/visibility/2026-07-16_m3-s16-retake-b.png
+KEEP / REWORK / REVERT: KEEP
+  The old visual rejection is superseded. A2 is not warranted.
+```
