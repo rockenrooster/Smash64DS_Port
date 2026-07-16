@@ -2536,6 +2536,39 @@ DECISION: REWORK / STOP BEFORE CODE
   retain the current exact source-table matrix and shade-LUT paths.
 ```
 
+## 2026-07-16 - User withdrew intermediate discard gates; M3 dense reuse kept
+
+```text
+IDEA ID: M3-DENSE-RESTORE-20260716
+POLICY:
+  The <=500K Jump A stack gate and >=80K / <=336,576 Jump C pre-code keep
+  gates are withdrawn. They remain milestone targets. Any repeatable
+  correctness-preserving gain now accumulates instead of being reverted solely
+  for missing an intermediate target.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, mode 9, static 1, bitmap OAM, Fox/countdown iteration
+  switch off, frames 438..445. A/B ROM SHA-256 values are
+  426B821A8AE3CE91F1DDB0BA79ABD6B0EFEC31D3A11D029BDE5A42F67DDC5791 /
+  C6EDC9B186A1B898E8672E82F4BAB70F9FB7A8D848E9785B17AD43E64ADB87D9.
+RESULT P50/P95:
+  Stage 619,744/619,904 -> 577,440/577,536, saving 42,304/42,368.
+  Draw 1,057,856/1,057,920 -> 1,013,760/1,013,824, saving 44,096/44,096.
+CORRECTNESS / VISUALS:
+  A 40-byte frame-stack bitset prepares 606 references as 312 unique dense
+  vertices. The host checker proves zero binding/epoch/class/policy/flags
+  conflicts and 408 projected references -> 246 unique. Exact 121/828 and
+  57/42/54/202/49/4 remain unchanged with zero fallback/fence work. The valid
+  B2 capture is exactly equal to A over all 120,000 top-screen pixels; the
+  first B capture was discarded as an offset/black window-capture failure.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m3-dense-restore-a.json
+  artifacts/performance/2026-07-16_m3-dense-restore-b2.json
+  artifacts/visibility/2026-07-16_m3-dense-restore-a.png
+  artifacts/visibility/2026-07-16_m3-dense-restore-b2.png
+DECISION: KEEP
+  Accumulate the 42.3K stage reduction and continue with Jump C.
+```
+
 ## 2026-07-16 - M3 signed-16 rounding codegen rejected
 
 ```text

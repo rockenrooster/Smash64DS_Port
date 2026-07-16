@@ -61,24 +61,22 @@ Retained owner contract:
   an unprepared post-GO Whispy material image reuses its first resident source
   frame only when every non-image word of the complete renderer key matches.
 
-The retained no-Z codegen correction moved the stage-exclusive P50/P95 from
-624,384/624,512 to 611,392/611,584 with exact pixels and semantics. A bounded
-dense-index prepare-once experiment on that base proved zero conflicts:
+The retained no-Z codegen correction and dense-index prepare-once path both
+keep exact pixels and semantics. The dense contract is:
 
 ```text
 606 corner references -> 312 dense vertices
 408 projected references -> 246 unique
 remove 294 repeated attribute preparations
-remove 162 repeated transforms and 486 projections
+remove 162 repeated transforms
 ```
 
-It measured 563,296/563,392, 48,096/48,192 better than the retained base but
-still above the <=500K P50 gate, so it was reverted. Incremental no-Z matrix
-transport then regressed 16,416/16,512 and was reverted. Replacing the hot
-signed-16 rounding expansion shrank the relevant ARM symbols but saved only
-2,048/1,984 ticks and produced an invalid visual packet, so it too was
-reverted. Do not retry these three cuts without a new attributable bound. M3
-remains REWORK at the same <=500K first gate.
+On the current bitmap-OAM configuration it moves stage P50/P95 from
+619,744/619,904 to 577,440/577,536, saving 42,304/42,368 ticks. The 500K point
+remains the next milestone target, not a discard gate; correct measured gains
+accumulate. Incremental no-Z matrix transport remains reverted because it
+regressed, and the signed-16 rounding treatment remains reverted because its
+visual packet was invalid. M3 remains REWORK.
 
 ## M4 — Pre-GO Texture Residency
 

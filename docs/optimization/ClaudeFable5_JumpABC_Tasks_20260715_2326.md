@@ -1,5 +1,12 @@
 # Jump A/B/C Task Blocks — 2026-07-15 23:26 (Claude Fable 5)
 
+## User override — 2026-07-16
+
+The Jump A `<=500K` stack keep gate and Jump C `>=80K` / `<=336,576`
+pre-code keep gates are withdrawn. Those numbers remain milestone targets, but
+every repeatable correctness-preserving gain is kept and accumulated. The task
+blocks below retain their historical wording; this override governs reruns.
+
 Supersedes the Jump A stack and Jump C blocks in
 `ClaudeFable5_JumpA_Stack_And_716_Decision_20260715_2140.md`. Written after
 verifying tonight's ledger rows and live code. Two corrections to the prior

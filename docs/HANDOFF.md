@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 08:00 Central
+Updated: 2026-07-16 08:35 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -34,11 +34,12 @@ and `artifacts/visibility/20260715-stage-depth-final-moving-frame501.png`.
 Clip-space near-plane containment now removes the pause-orbit corruption and
 Tyler confirmed the fix. Paused −33.6° is the preferred Mario underside view.
 
-The retained M3 path is now 611,392/611,584 stage ticks at frames 438–445 after
-removing erroneous cold/Os codegen from the 126-triangle no-Z emitter. Exact
-121/828 ownership, frozen water 2/0/1, 22/131072 static residency, zero post-GO
-texture work, and identical DS pixels remain intact. M3 is still REWORK,
-111,392 ticks above its first 500K gate.
+The retained M3 path now includes no-Z codegen plus dense prepare-once. On the
+current bitmap-OAM configuration, same-ROM frames 438–445 move stage
+619,744/619,904 → 577,440/577,536 and draw 1,057,856/1,057,920 →
+1,013,760/1,013,824. Exact 121/828 ownership, 57/42/54/202/49/4 stage state,
+zero fallback/fence work, and 0/120,000 changed top-screen pixels hold. The
+500K point is the next target, not a discard gate.
 The signed-16 rounding codegen lead was also exhausted: it shrank both hot ARM
 symbols but saved only 2,048 stage ticks, and its B screenshot was invalid. The
 treatment is fully reverted; do not rerun it without a new closing bound.
@@ -69,13 +70,12 @@ samples the battle ledger before Results reuses the globals.
 
 ## Next Packet
 
-The July 16 feasibility decision is now explicit: four same-ROM CPU-on phases
-measure 1.415–1.618M active P95 ticks, so no credible 60 FPS path exists by the
-deadline from the exhausted Jump A/C bounds. Tyler must decide whether P1 may
-target stable 20 FPS or remains a best verifier-covered incomplete candidate.
-Do not block correctness work on that reply, and do not reopen speculative
-renderer caches or compiler sweeps. KO/rebirth and Results realtime ticks are
-still missing final-release evidence, but cannot change the feasibility verdict.
+Tyler withdrew the Jump A/C all-or-nothing keep gates. Correct measured gains
+now accumulate even when they do not finish a milestone. Jump A dense reuse is
+kept; re-run Jump C next without its old 80K pre-code rejection gate. Do not
+reopen measured regressions or add speculative renderer caches. The current
+1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the stable 20 FPS
+decision remains pending while performance work continues.
 
 The Fireball terminal gate is closed. The earlier far-left theory was false:
 the same source-created weapon naturally crosses Pupupu's bottom bound at

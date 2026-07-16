@@ -15868,7 +15868,8 @@ static s32 ndsRendererNativeStagePrepareRun(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
-    u64 *epoch_mask)
+    u64 *epoch_mask,
+    u32 *prepared_dense_mask)
 {
     const NDSNativeStageRun *run = &sNdsNativeStageRuns[run_index];
     const NDSNativeStageTextureEpoch *epoch;
@@ -15973,6 +15974,13 @@ static s32 ndsRendererNativeStagePrepareRun(
         {
             return FALSE;
         }
+        if ((prepared_dense_mask[dense_index / 32u] &
+             ((u32)1u << (dense_index & 31u))) != 0u)
+        {
+            continue;
+        }
+        prepared_dense_mask[dense_index / 32u] |=
+            (u32)1u << (dense_index & 31u);
         prepared_dense->packed_color = ndsRendererHardwarePackedVertexColor(
             stats, &input, material_color, use_material_color,
             use_vertex_color, dense->rgba, TRUE);
@@ -16440,6 +16448,8 @@ s32 ndsRendererPrepareNativeStageOwner(
     u32 cross_runs = 0u;
     u32 cross_triangles = 0u;
     u32 cross_foreign_corners = 0u;
+    u32 prepared_dense_mask[
+        (NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT + 31u) / 32u];
     u32 segment_index;
     s32 accepted = FALSE;
 
@@ -16460,6 +16470,7 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
+    memset(prepared_dense_mask, 0, sizeof(prepared_dense_mask));
     if ((gNdsRendererFastRunMode !=
          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ||
         (frame == NULL) || (stats == NULL) ||
@@ -16559,7 +16570,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     (ndsRendererNativeStagePrepareRun(
                          run_index, frame,
                          &sNdsNativeStageOwnerExecution.preflight_stats,
-                         state, &epoch_mask) == FALSE))
+                         state, &epoch_mask, prepared_dense_mask) == FALSE))
                 {
                     goto done;
                 }

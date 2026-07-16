@@ -21156,3 +21156,12 @@ remains skipped for the requested fast iteration cadence.
   `artifacts/visibility/20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png`.
   The right pant leg is blue and the underside reads closed; the source root-light
   replay remains the kept fix with Mario's 320-triangle census unchanged.
+
+## 2026-07-16 - Kept the M3 dense preparation reduction
+
+- Tyler removed the all-or-nothing intermediate renderer keep gates. The
+  restored 40-byte stack bitset prepares each of 312 compatible stage dense
+  vertices once instead of repeating 294 attribute preparations and 162
+  transforms. Same-ROM stage time falls 619,744 → 577,440 ticks with exact
+  stage/owner counters and identical top-screen pixels. The 500K point remains
+  the next milestone target rather than a reason to discard this gain.

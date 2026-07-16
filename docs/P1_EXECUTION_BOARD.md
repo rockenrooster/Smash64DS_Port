@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 08:00 Central
+Updated: 2026-07-16 08:35 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -45,9 +45,9 @@ profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
 | Integration/release | CPU lifecycle pass / checkpoint | live tree | source-ordered LoadScene break, exact VSBattle ledger sample, commit | runner 2 |
-| Renderer implementation | M2/M3 feasibility cuts exhausted; exact guards retained | shared live tree / focused lab builds | M2 Jump C stopped 8,096 ticks short before code; M3 keeps only the 12.99K no-Z codegen gain | no runner active |
+| Renderer implementation | Incremental M2/M3 accumulation resumed | shared live tree / focused lab builds | M3 dense prepare-once is now kept; M2 Jump C rerun is next without the old all-or-nothing gate | no runner active |
 | Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
-| Performance research | Paused at measured boundary | shared live tree / read-only | Do not reopen rejected M2 ITCM or M3 dense/incremental-matrix/signed-16-rounding cuts without a new attributable bound | no runner active |
+| Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
 
 Runner/window/port policy lives in `VERIFYING.md`; scripted launches normalize
 the selected TOML and never touch the user's manual instance.
@@ -72,8 +72,8 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Mario pant/underside visual | FIXED / user confirmed | Renderer + QA | Source root light preambles were missing; replay restores blue right pant and closed underside with unchanged 320-triangle census | Tyler accepted `20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png` on 2026-07-16 |
 | Natural Fox recovery | Pass | Gameplay | Current-ROM mode 163 used only external Mario input: Fox took 0→59 damage, selected BattleShip Recover for 40 frames at offstage x=2379.905, grounded on line 3 at x=1336.084, and took a later hit to 72 without KO/rebirth in 897 frames | Keep focused gate; reserve 202,256 and screenshot `20260716_fox-recovery-post-hit.png` |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
-| M2 Mario/Fox AOT, 170–250K ticks | Fail / Jump C stopped before code | Renderer | Current local builder is 53,824 ticks and lighting is already prepared-direction + exact shade LUT. Local + rejected ITCM gain bounds at 71,904, 8,096 short of the required first cut | Do not manufacture another lighting/cache path; require a new source-backed bound before coding |
-| M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Removing cold/Os from the 126-triangle no-Z emitter keeps exact pixels and improves stage 624,384 → 611,392. Dense reuse reached 563,296 but remained above 500K; incremental matrix transport regressed; signed-16 rounding saved only 2,048 ticks and failed its visual packet. All three were reverted | Keep only codegen commit `bbe8d3eee2`; require a new attributable ≥111,392-tick cut |
+| M2 Mario/Fox AOT, 170–250K ticks | Fail / incremental cuts resumed | Renderer | Current local builder is 53,824 ticks and lighting is already prepared-direction + exact shade LUT. The old 80K pre-code discard gate is withdrawn | Re-run source-backed compute/placement cuts and keep each repeatable correct net gain; do not manufacture another lighting/cache path |
+| M3 complete stage AOT, 150–250K ticks | Semantic pass / dense KEEP at 577K | Renderer | Same-ROM bitmap-OAM A/B moves stage 619,744/619,904 → 577,440/577,536 and draw 1,057,856/1,057,920 → 1,013,760/1,013,824. Exact 121/828, 57/42/54/202/49/4, zero fallback/fence, and 0/120,000 changed top-screen pixels hold | Keep codegen plus dense prepare-once; 500K remains the next target, not a discard gate |
 | M4 zero gameplay conversion/preparation | Focused lifecycle repair pass / final teardown refresh pending | Renderer | Exact CPU-on phase sampling exposed a missing Whispy mouth image at frame 1398: run 28 rejected, the owner aborted, and generic fallback converted 40 textures. The native owner now reuses the pre-GO resident first source image only when every other word of the 59-word key matches. Frames 1398–1405 and 3300–3307 retain 202 stage triangles, zero post-arm fallback, zero ten-class fence work, and zero premature teardown on exact ROM `426B821A...` | Keep the documented cosmetic source-frame approximation; repeat only the final natural teardown in release qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / bitmap OAM | Renderer + QA | Hybrid runtime submission was invisible despite valid counters; restored proven all-bitmap OBJ ownership shows the traffic light with 93,824 bytes prepared pregame and zero gameplay conversion/upload | Keep published bitmap path; hybrid remains lab-only |
@@ -99,11 +99,11 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 
 Checkpoint verdict: the synchronized CPU-on ROM measures 1.415–1.618M active
 P95 ticks across four material combat phases, 2.53–2.89 times the one-VBlank
-budget. The exhausted M2/M3 bounds do not supply the missing 855K–1.058M ticks,
-so a credible 60 FPS path by July 19 is not established. Approval is requested
-for a stable 20 FPS presentation target; until then 60 FPS remains an explicit
-unmet P1 target. KO/rebirth and Results realtime samples remain evidence gaps,
-not reasons to delay this already-decisive feasibility verdict.
+budget, so a credible 60 FPS path by July 19 is not yet established. The prior
+all-or-nothing renderer cut gates are withdrawn and incremental gains now
+accumulate. Approval for a stable 20 FPS target remains pending; until then
+60 FPS is an explicit unmet P1 target. KO/rebirth and Results realtime samples
+remain final-release evidence gaps.
 
 ### July 17
 

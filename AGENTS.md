@@ -72,6 +72,8 @@ screenshot, and automated screenshot analysis; semantic/state/geometry counters
 are cheap correctness guards. Stop on a decisive KEEP or REVERT. Run a third A
 only when A/B is noisy, near its gate, surprising, or internally inconsistent.
 Do not require routine A/B/A, 32-frame, or 128-frame promotion runs.
+Milestone tick targets are directional, not per-cut discard gates: keep every
+repeatable correctness-preserving gain and accumulate it toward the target.
 
 Use the smallest focused checker or benchmark while editing. Run one widest
 relevant verifier for a kept checkpoint: Boundary for battle-only work, or

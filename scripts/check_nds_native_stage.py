@@ -269,6 +269,41 @@ def verify_packet(packet: generator.Packet) -> None:
         "submit-class triangle totals drifted",
     )
 
+    dense_contexts: dict[int, tuple[int, int, int, int, int]] = {}
+    dense_references = 0
+    projected_references = 0
+    projected_dense: set[int] = set()
+    for run in packet.runs:
+        context = (
+            run.binding_index,
+            run.texture_epoch,
+            run.submit_class,
+            run.state_policy,
+            run.flags,
+        )
+        for dense_index in packet.corners[
+            run.first_corner : run.first_corner + run.triangle_count * 3
+        ]:
+            dense_references += 1
+            previous = dense_contexts.setdefault(dense_index, context)
+            require(
+                previous == context,
+                f"dense vertex {dense_index}: preparation context conflicts",
+            )
+            if run.submit_class != generator.SUBMIT_RAW_CURRENT:
+                projected_references += 1
+                projected_dense.add(dense_index)
+    require(
+        (
+            dense_references,
+            len(dense_contexts),
+            projected_references,
+            len(projected_dense),
+        )
+        == (606, 312, 408, 246),
+        "dense prepare-once reference census drifted",
+    )
+
     # The DS cannot disable depth per polygon, so the no-Z callbacks use two
     # synthetic painter bands around the live source-Z layer.  Hash the exact
     # packet order with the submitted depths used by the profile-2 runtime
