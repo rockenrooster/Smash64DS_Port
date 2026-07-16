@@ -48,6 +48,8 @@ durable unresolved gaps.
 - M2 still performs too much per-frame fighter owner work.
 - M3 remains above its tick gate. The dense preparation-reuse experiment saved
   only about 109K and was reverted; do not retry that cut.
+- Pause-orbit geometry can still cross the CPU projection near plane and create
+  screen-blocking triangles; the prior scaled-raw range repair was incomplete.
 - Bitmap OAM has one-bit alpha, so nonzero partial-alpha GO pixels are opaque.
   This is accepted presentation debt under the 90% visual rule.
 - Do not publish the hybrid IFCommon OAM lab path: its counters and source

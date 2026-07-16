@@ -100,6 +100,8 @@ EXPECTED_RUN_CLASSES = (
     *(generator.SUBMIT_PROJECTED_NO_Z for _ in range(13)),
 )
 
+EXPECTED_STAGE_DEPTH_TRACE_HASH = 0x3BB26905
+
 EXPECTED_PROJECTED_CROSS_MATRIX_RUNS = (32, 34, 45, 47, 49)
 EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES = 10
 EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS = 15
@@ -265,6 +267,64 @@ def verify_packet(packet: generator.Packet) -> None:
             }
         ),
         "submit-class triangle totals drifted",
+    )
+
+    # The DS cannot disable depth per polygon, so the no-Z callbacks use two
+    # synthetic painter bands around the live source-Z layer.  Hash the exact
+    # packet order with the submitted depths used by the profile-2 runtime
+    # trace; every no-Z triangle must consume one distinct v16 value.
+    trace_hash = 2166136261
+    trace_index = 0
+    depth = 0x1000 * 6
+    source_z_seen = False
+    background_depths: list[int] = []
+    foreground_depths: list[int] = []
+    for segment in packet.segments:
+        for run_index in range(segment.first_run, segment.first_run + segment.run_count):
+            run = packet.runs[run_index]
+            for _triangle_index in range(run.triangle_count):
+                phase = 0
+                projected_z = 0
+                source_zbuffered = int(
+                    run.submit_class != generator.SUBMIT_PROJECTED_NO_Z
+                )
+                if source_zbuffered:
+                    if not source_z_seen:
+                        depth = (128 - 0x1000) * 6
+                        source_z_seen = True
+                else:
+                    depth -= 6
+                    projected_z = depth // 6
+                    phase = 2 if source_z_seen else 1
+                    (foreground_depths if phase == 2 else background_depths).append(
+                        projected_z
+                    )
+                trace_hash = generator.fnv1a_u32(
+                    (
+                        0x53445031,
+                        trace_index,
+                        run.submit_class,
+                        source_zbuffered,
+                        phase,
+                        projected_z,
+                        projected_z,
+                        projected_z,
+                    ),
+                    trace_hash,
+                )
+                trace_index += 1
+    require(trace_index == 202, "stage depth trace triangle count drifted")
+    require(
+        background_depths == list(range(4095, 4023, -1)),
+        "background no-Z painter depths are not strict/source-ordered",
+    )
+    require(
+        foreground_depths == list(range(-3969, -4023, -1)),
+        "foreground no-Z painter depths are not strict/source-ordered",
+    )
+    require(
+        trace_hash == EXPECTED_STAGE_DEPTH_TRACE_HASH,
+        f"stage depth trace hash 0x{trace_hash:08x} drifted",
     )
 
     expected_run_flags = tuple(

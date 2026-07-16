@@ -20952,3 +20952,18 @@ remains skipped for the requested fast iteration cadence.
 - DevFast/Boundary wrappers explicitly select flag `1`; this keeps their Cut-G
   and timer assertions source-valid while the published/manual default remains
   the user-requested fast mode.
+
+## 2026-07-15 - Strict Dream Land painter depth order
+
+- Read BattleShip `grdisplay.c:52-63,86-95,111-118,134-141`,
+  `grpupupu.c:637-690`, and the Pupupu file-2 layer descriptors before changing
+  the DS renderer. The generated stage packet already matched source layer and
+  render-mode classification: 66 source-Z, 126 no-Z, 10 range, 202 total.
+- Fixed the actual DS collision: the synthetic counter was scaled by six but
+  decremented by one, making each six successive no-Z triangles reuse a v16
+  depth. It now consumes one full submitted step per triangle and clamps real
+  perspective Z to a disjoint central band with 128 reserved endpoint values.
+- Profile 2 now retains the exact per-triangle class/depth order and fails on
+  collision, overflow, census, or hash drift. Final published-ROM frame 438 and
+  moving frame 501 captures under `artifacts/visibility` show correct grass,
+  bush, and stage-face occlusion; the memory reserve remains above 128 KiB.

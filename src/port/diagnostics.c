@@ -2887,6 +2887,19 @@ volatile u32 gNdsRendererSemanticPrefixHash[
     NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
 volatile u32 gNdsRendererSemanticPrefixHash2[
     NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
+volatile NDSRendererStageDepthTrace gNdsRendererStageDepthTrace[
+    NDS_RENDERER_STAGE_DEPTH_TRACE_CAPACITY];
+volatile u32 gNdsRendererStageDepthTraceCount;
+volatile u32 gNdsRendererStageDepthTraceOverflowCount;
+volatile u32 gNdsRendererStageDepthTraceHash;
+volatile u32 gNdsRendererStageDepthTraceClassCount[8];
+volatile u32 gNdsRendererStageDepthTraceNoZCollisionCount;
+volatile u32 gNdsRendererStageDepthTraceBackgroundCount;
+volatile s32 gNdsRendererStageDepthTraceBackgroundMin;
+volatile s32 gNdsRendererStageDepthTraceBackgroundMax;
+volatile u32 gNdsRendererStageDepthTraceForegroundCount;
+volatile s32 gNdsRendererStageDepthTraceForegroundMin;
+volatile s32 gNdsRendererStageDepthTraceForegroundMax;
 #endif
 volatile u32 gNdsRendererProfileStageAdapterTicks;
 volatile u32 gNdsRendererProfileMaterialTicks;

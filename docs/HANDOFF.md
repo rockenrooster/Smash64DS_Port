@@ -23,12 +23,14 @@ The executable fleet is four registry records under `Latest`/`Boundary`; the
 unreachable source-side mode 1-162 lattice is separate ROM-parity cleanup.
 Boundary passes at 19.7 FPS on published ROM
 `19C6CD229C205CD60F7625BED86625AADA5556AEE377CD4A4698154249F98D7E`.
-The all-bitmap pregame path restores the countdown light. Ten out-of-range stage
-triangles use scaled raw submission and DS near-plane clipping, removing the
-pause-orbit defect. Focused +33.6° evidence is at
-`artifacts/visibility/20260715-221450_slot3_p28976_mode163_camera_pause_plus33p6.png`.
-Exact Cut G frames 438/439 are at
-`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_221916-2735156-p38420.png`.
+The normal-play stage painter bug is fixed. BattleShip's 66 source-Z / 126
+no-Z classification was already correct; the DS counter advanced only one
+sixth of a submitted v16 step, so groups of six painter triangles collided.
+The final zero-collision profile-2 census is 202 triangles. Published-ROM pixel
+evidence is `artifacts/visibility/20260715-stage-depth-final-cutg-frame438.png`
+and `artifacts/visibility/20260715-stage-depth-final-moving-frame501.png`.
+Pause-orbit corruption is reopened: the earlier scaled-raw repair does not
+contain every CPU-projected near-plane crossing.
 
 The retained M3 path improved 664,544/664,640 → 645,248/645,440 stage ticks and
 1,183,104/1,183,168 → 1,102,656/1,102,720 draw ticks at frames 438–445. Exact

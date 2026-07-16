@@ -417,6 +417,9 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START \
     ((128 - 0x1000) * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
+#define NDS_RENDERER_HW_SOURCE_DEPTH_MIN (128 - 0x1000)
+#define NDS_RENDERER_HW_SOURCE_DEPTH_MAX (0x1000 - 129)
+#define NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z_CLASS 3u
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
 #define NDS_RENDERER_HW_ORACLE_EPSILON 0u
@@ -606,6 +609,9 @@ static u32 sNdsRendererSemanticEventCount;
 static u32 sNdsRendererSemanticOverflowCount;
 static u32 sNdsRendererSemanticLastTextureKeyHash;
 static u32 sNdsRendererSemanticLastTextureParams;
+static s32 sNdsRendererStageDepthTraceLastBackground;
+static s32 sNdsRendererStageDepthTraceLastForeground;
+static u32 sNdsRendererStageDepthTraceLastValidMask;
 
 typedef struct NDSRendererProfileOwnerHotLedger
 {
@@ -882,6 +888,106 @@ static void ndsRendererSemanticHashEvent(u32 *hash1,
 #undef NDS_RENDERER_SEMANTIC_EVENT_WORD
 }
 
+static void ndsRendererStageDepthTraceEvent(
+    const NDSRendererSemanticEvent *event)
+{
+    volatile NDSRendererStageDepthTrace *trace;
+    u32 trace_index;
+    u32 phase = 0u;
+    u32 hash;
+    u32 i;
+
+    if ((event == NULL) ||
+        (event->owner != NDS_RENDERER_PROFILE_OWNER_STAGE) ||
+        (event->outcome != NDS_RENDERER_SEMANTIC_EMITTED))
+    {
+        return;
+    }
+    trace_index = gNdsRendererStageDepthTraceCount;
+    if (trace_index >= NDS_RENDERER_STAGE_DEPTH_TRACE_CAPACITY)
+    {
+        gNdsRendererStageDepthTraceOverflowCount++;
+        return;
+    }
+    if (event->submit_class ==
+        NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z_CLASS)
+    {
+        s32 depth = event->projected_z[0];
+        u32 valid_bit;
+        volatile u32 *count;
+        volatile s32 *minimum;
+        volatile s32 *maximum;
+        s32 *last;
+
+        phase = (event->no_z_background_before != FALSE) ? 1u : 2u;
+        valid_bit = 1u << phase;
+        if (phase == 1u)
+        {
+            count = &gNdsRendererStageDepthTraceBackgroundCount;
+            minimum = &gNdsRendererStageDepthTraceBackgroundMin;
+            maximum = &gNdsRendererStageDepthTraceBackgroundMax;
+            last = &sNdsRendererStageDepthTraceLastBackground;
+        }
+        else
+        {
+            count = &gNdsRendererStageDepthTraceForegroundCount;
+            minimum = &gNdsRendererStageDepthTraceForegroundMin;
+            maximum = &gNdsRendererStageDepthTraceForegroundMax;
+            last = &sNdsRendererStageDepthTraceLastForeground;
+        }
+        if ((sNdsRendererStageDepthTraceLastValidMask & valid_bit) == 0u)
+        {
+            *minimum = depth;
+            *maximum = depth;
+            sNdsRendererStageDepthTraceLastValidMask |= valid_bit;
+        }
+        else
+        {
+            if (depth >= *last)
+            {
+                gNdsRendererStageDepthTraceNoZCollisionCount++;
+            }
+            if (depth < *minimum) { *minimum = depth; }
+            if (depth > *maximum) { *maximum = depth; }
+        }
+        *last = depth;
+        (*count)++;
+    }
+
+    trace = &gNdsRendererStageDepthTrace[trace_index];
+    trace->owner_occurrence = event->owner_occurrence;
+    trace->list_ordinal = event->list_ordinal;
+    trace->branch_path = event->branch_path;
+    trace->command_index = event->command_index;
+    for (i = 0u; i < 3u; i++)
+    {
+        trace->projected_z[i] = event->projected_z[i];
+        trace->submitted_z[i] = event->vertex[i].z;
+    }
+    trace->submit_class = (u8)event->submit_class;
+    trace->source_zbuffered = (u8)event->source_zbuffered;
+    trace->no_z_phase = (u8)phase;
+    trace->tri2_half = (u8)event->tri2_half;
+    if (event->submit_class < 8u)
+    {
+        gNdsRendererStageDepthTraceClassCount[event->submit_class]++;
+    }
+
+    hash = (trace_index == 0u) ?
+        2166136261u : gNdsRendererStageDepthTraceHash;
+    ndsRendererSemanticHash1Word(&hash, 0x53445031u);
+    ndsRendererSemanticHash1Word(&hash, trace_index);
+    ndsRendererSemanticHash1Word(&hash, event->submit_class);
+    ndsRendererSemanticHash1Word(&hash, event->source_zbuffered);
+    ndsRendererSemanticHash1Word(&hash, phase);
+    for (i = 0u; i < 3u; i++)
+    {
+        ndsRendererSemanticHash1Word(&hash, (u32)event->projected_z[i]);
+    }
+    gNdsRendererStageDepthTraceHash = hash;
+    gNdsRendererStageDepthTraceCount++;
+}
+
 static void ndsRendererSemanticCommitEvent(
     const NDSRendererSemanticEvent *event)
 {
@@ -897,6 +1003,7 @@ static void ndsRendererSemanticCommitEvent(
     {
         return;
     }
+    ndsRendererStageDepthTraceEvent(event);
     if (owner->semantic_event_count == 0u)
     {
         owner->semantic_first_owner_occurrence = event->owner_occurrence;
@@ -4402,6 +4509,26 @@ static inline v16 ndsRendererHardwareProjectToV16(
     }
 #endif
     return result;
+}
+
+static inline v16 ndsRendererHardwareSourceDepthToV16(
+    s64 numerator, s32 denominator)
+{
+    v16 depth = ndsRendererHardwareProjectToV16(numerator, denominator);
+
+    /* Reserve 128 strictly ordered v16 depths at each endpoint for no-Z
+     * painter primitives.  Canonical source Z is already inside this central
+     * range; the clamp only prevents camera extremes from entering a painter
+     * band in the DS's otherwise shared depth channel. */
+    if (depth < NDS_RENDERER_HW_SOURCE_DEPTH_MIN)
+    {
+        return (v16)NDS_RENDERER_HW_SOURCE_DEPTH_MIN;
+    }
+    if (depth > NDS_RENDERER_HW_SOURCE_DEPTH_MAX)
+    {
+        return (v16)NDS_RENDERER_HW_SOURCE_DEPTH_MAX;
+    }
+    return depth;
 }
 #endif
 
@@ -10401,7 +10528,12 @@ static void ndsRendererHardwareRunRawMatrixPosTests(void)
 
 static s32 ndsRendererHardwareNextProjectedDepth(void)
 {
-    sNdsRendererHardwareProjectedDepth--;
+    /* The stored counter is scaled by STEP so each painter primitive must
+     * consume one complete submitted-v16 depth value.  Subtracting one here
+     * made six consecutive no-Z triangles share a depth after division,
+     * allowing an earlier stage triangle to reject a later grass/bush draw. */
+    sNdsRendererHardwareProjectedDepth -=
+        NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
     return sNdsRendererHardwareProjectedDepth /
         NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
 }
@@ -10442,7 +10574,7 @@ static void ndsRendererHardwareClipVertex(
         (s64)vtx->x * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
     y = ndsRendererHardwareProjectToV16(
         (s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
-    out_z = ndsRendererHardwareProjectToV16(
+    out_z = ndsRendererHardwareSourceDepthToV16(
         (s64)z * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     if (semantic_vertex != NULL)
@@ -10762,7 +10894,7 @@ ndsRendererHardwareSubmitVertex(
             (clip_vtx->w != 0))
         {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-            s32 depth = ndsRendererHardwareProjectToV16(
+            s32 depth = ndsRendererHardwareSourceDepthToV16(
                 (s64)clip_vtx->z * NDS_RENDERER_HW_PROJECTED_VERTEX,
                 clip_vtx->w);
 
@@ -10833,7 +10965,7 @@ ndsRendererHardwareSubmitVertex(
                 }
                 else
                 {
-                    z = ndsRendererHardwareProjectToV16(
+                    z = ndsRendererHardwareSourceDepthToV16(
                         (s64)projected_z *
                             NDS_RENDERER_HW_PROJECTED_VERTEX,
                         clip_vtx->w);
@@ -14477,6 +14609,7 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
 }
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 typedef struct NDSNativeHierarchyTables
 {
     const NDSNativeRoot *roots;
@@ -15131,6 +15264,7 @@ static void ndsRendererNativeCommitHierarchyRoot(
         root->tail_sync_count, asset_base, stats, state);
     stats->end_command_count++;
 }
+#endif
 
 s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     u32 slot,
@@ -15628,7 +15762,7 @@ static s32 ndsRendererNativeStagePrepareRun(
                 (s64)clip.x * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
             prepared_dense->y = ndsRendererHardwareProjectToV16(
                 (s64)clip.y * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
-            prepared_dense->source_z = ndsRendererHardwareProjectToV16(
+            prepared_dense->source_z = ndsRendererHardwareSourceDepthToV16(
                 (s64)clip.z * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
         }
     }
@@ -17850,6 +17984,23 @@ void ndsRendererProfileFrameBegin(void)
     gNdsRendererSemanticOutputHash2 = 0u;
     gNdsRendererSemanticEventCount = 0u;
     gNdsRendererSemanticOverflowCount = 0u;
+    memset((void *)gNdsRendererStageDepthTrace, 0,
+           sizeof(gNdsRendererStageDepthTrace));
+    gNdsRendererStageDepthTraceCount = 0u;
+    gNdsRendererStageDepthTraceOverflowCount = 0u;
+    gNdsRendererStageDepthTraceHash = 0u;
+    memset((void *)gNdsRendererStageDepthTraceClassCount, 0,
+           sizeof(gNdsRendererStageDepthTraceClassCount));
+    gNdsRendererStageDepthTraceNoZCollisionCount = 0u;
+    gNdsRendererStageDepthTraceBackgroundCount = 0u;
+    gNdsRendererStageDepthTraceBackgroundMin = 0;
+    gNdsRendererStageDepthTraceBackgroundMax = 0;
+    gNdsRendererStageDepthTraceForegroundCount = 0u;
+    gNdsRendererStageDepthTraceForegroundMin = 0;
+    gNdsRendererStageDepthTraceForegroundMax = 0;
+    sNdsRendererStageDepthTraceLastBackground = 0;
+    sNdsRendererStageDepthTraceLastForeground = 0;
+    sNdsRendererStageDepthTraceLastValidMask = 0u;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileResetSubmitSummary();

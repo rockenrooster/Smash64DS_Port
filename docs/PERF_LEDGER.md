@@ -2352,3 +2352,20 @@ EVIDENCE:
 DECISION: KEEP CORRECTNESS FIX / M3 REMAINS REWORK
   The defect is removed and timing improves, but this is not an M3 close.
 ```
+
+## 2026-07-15 - Correctness note: strict stage painter depths
+
+This is not a performance row and records no timing claim. BattleShip
+`grdisplay.c:52-63,86-95,111-118,134-141` confirms no-Z/Z/no-Z/no-Z stage
+layers, and `grpupupu.c:637-690` preserves their construction order. The port's
+scaled painter counter decremented by one before dividing by six, so six
+successive no-Z triangles shared each submitted v16 depth. Decrementing by the
+full step restores strict order; 128 endpoint values are reserved on each side
+of the clamped real-Z range.
+
+Profile 2 passes the exact immutable 202-triangle order: classes 66 source-Z,
+126 no-Z, 10 range; background `4095..4024`, foreground `-3969..-4022`, real
+stage Z `3605..3728`, zero collisions/overflow, hash `3BB26905`. Published ROM
+SHA-256 `28492257B23E502AA8710C03CE22B0752D58CE3476A5DA86EBD819B1E6A78C4C`
+passes frame 438 and moving frame 501 pixel gates. This predates M3; commit
+`ef65ef541c` exposed the path but did not introduce the counter behavior.

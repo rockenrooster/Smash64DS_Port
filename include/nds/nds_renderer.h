@@ -285,6 +285,35 @@ extern volatile u32 gNdsRendererSemanticPrefixHash[
     NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
 extern volatile u32 gNdsRendererSemanticPrefixHash2[
     NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
+
+#define NDS_RENDERER_STAGE_DEPTH_TRACE_CAPACITY 202u
+typedef struct NDSRendererStageDepthTrace
+{
+    u32 owner_occurrence;
+    u32 list_ordinal;
+    u32 branch_path;
+    u32 command_index;
+    s32 projected_z[3];
+    s16 submitted_z[3];
+    u8 submit_class;
+    u8 source_zbuffered;
+    u8 no_z_phase;
+    u8 tri2_half;
+} NDSRendererStageDepthTrace;
+
+extern volatile NDSRendererStageDepthTrace gNdsRendererStageDepthTrace[
+    NDS_RENDERER_STAGE_DEPTH_TRACE_CAPACITY];
+extern volatile u32 gNdsRendererStageDepthTraceCount;
+extern volatile u32 gNdsRendererStageDepthTraceOverflowCount;
+extern volatile u32 gNdsRendererStageDepthTraceHash;
+extern volatile u32 gNdsRendererStageDepthTraceClassCount[8];
+extern volatile u32 gNdsRendererStageDepthTraceNoZCollisionCount;
+extern volatile u32 gNdsRendererStageDepthTraceBackgroundCount;
+extern volatile s32 gNdsRendererStageDepthTraceBackgroundMin;
+extern volatile s32 gNdsRendererStageDepthTraceBackgroundMax;
+extern volatile u32 gNdsRendererStageDepthTraceForegroundCount;
+extern volatile s32 gNdsRendererStageDepthTraceForegroundMin;
+extern volatile s32 gNdsRendererStageDepthTraceForegroundMax;
 #endif
 
 typedef struct NDSRendererCommand

@@ -908,6 +908,9 @@ try {
         if ($m4CandidateEvidence) {
             $hardwareCommands += 'printf "VRAM_BANKS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", *(volatile unsigned char *)0x04000240, *(volatile unsigned char *)0x04000241, *(volatile unsigned char *)0x04000242, *(volatile unsigned char *)0x04000243, *(volatile unsigned char *)0x04000244, *(volatile unsigned char *)0x04000245, *(volatile unsigned char *)0x04000246, *(volatile unsigned char *)0x04000248, gNdsRendererBattleStaticTextureFirstAddress, gNdsRendererBattleStaticTextureEndAddress, gNdsRendererBattleStaticTextureAllocationSpanBytes, gNdsRendererBattleStaticTextureBankMask'
         }
+        if ($RendererProfileLevel -ge 2) {
+            $hardwareCommands += 'printf "STAGE_DEPTH_TRACE=%u,%u,%#x,%u,%u,%d,%d,%u,%d,%d,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererStageDepthTraceCount, gNdsRendererStageDepthTraceOverflowCount, gNdsRendererStageDepthTraceHash, gNdsRendererStageDepthTraceNoZCollisionCount, gNdsRendererStageDepthTraceBackgroundCount, gNdsRendererStageDepthTraceBackgroundMin, gNdsRendererStageDepthTraceBackgroundMax, gNdsRendererStageDepthTraceForegroundCount, gNdsRendererStageDepthTraceForegroundMin, gNdsRendererStageDepthTraceForegroundMax, gNdsRendererStageDepthTraceClassCount[0], gNdsRendererStageDepthTraceClassCount[1], gNdsRendererStageDepthTraceClassCount[2], gNdsRendererStageDepthTraceClassCount[3], gNdsRendererStageDepthTraceClassCount[4], gNdsRendererStageDepthTraceClassCount[5], gNdsRendererStageDepthTraceClassCount[6], gNdsRendererStageDepthTraceClassCount[7]'
+        }
         if ($BattlePlayable -and $RealtimePresentation) {
             $hardwareCommands += 'printf "SOBJ_WALL_CACHE=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperCacheBuildCount, gNdsSObjWallpaperCacheHitCount, gNdsSObjWallpaperCacheFastDrawCount, gNdsSObjWallpaperCacheFallbackCount, gNdsSObjWallpaperCacheWidth, gNdsSObjWallpaperCacheHeight, gNdsSObjWallpaperCacheOpaquePixels, gNdsSObjWallpaperCacheBuildTicks, gNdsSObjWallpaperCacheDrawTicks'
             $hardwareCommands += 'printf "SOBJ_WALL_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperFinalDirectCount, gNdsSObjWallpaperFinalSkipCount, gNdsSObjWallpaperFinalKeyChangeCount, gNdsSObjWallpaperFinalPixelWriteCount, gNdsSObjBackgroundStagingClearBytes, gNdsSObjForegroundStagingClearBytes, gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes'
@@ -1189,6 +1192,7 @@ try {
     $renderLazy = [regex]::Match($gdbStdout, 'RENDER_LAZY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderVertex = [regex]::Match($gdbStdout, 'RENDER_VERTEX=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+)')
     $renderDepth = [regex]::Match($gdbStdout, 'RENDER_DEPTH=([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
+    $stageDepthTrace = [regex]::Match($gdbStdout, 'STAGE_DEPTH_TRACE=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderClip = [regex]::Match($gdbStdout, 'RENDER_CLIP=([0-9]+)')
     $renderTexture = [regex]::Match($gdbStdout, 'RENDER_TEXTURE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderTexel1 = [regex]::Match($gdbStdout, 'RENDER_TEXEL1=([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
@@ -2492,6 +2496,21 @@ try {
                     return
                 }
                 Assert-Condition ($rendererProfileMarker.Success -and [int64]$rendererProfileMarker.Groups[1].Value -eq $RendererProfileLevel) "Canonical realtime HW build did not report renderer profile level $RendererProfileLevel." $gdbStdout
+                if ($RendererProfileLevel -ge 2) {
+                    Assert-Condition $stageDepthTrace.Success 'Profile-2 renderer did not publish the exact stage depth-order trace.' $gdbStdout
+                    $sdt = Get-Ints $stageDepthTrace
+                    Assert-Condition (
+                        $sdt[0] -eq 202 -and $sdt[1] -eq 0 -and
+                        $sdt[2] -eq 0x3bb26905 -and $sdt[3] -eq 0 -and
+                        $sdt[4] -eq 72 -and $sdt[5] -eq 4024 -and
+                        $sdt[6] -eq 4095 -and $sdt[7] -eq 54 -and
+                        $sdt[8] -eq -4022 -and $sdt[9] -eq -3969 -and
+                        $sdt[10] -eq 66 -and $sdt[11] -eq 0 -and
+                        $sdt[12] -eq 0 -and $sdt[13] -eq 126 -and
+                        $sdt[14] -eq 0 -and $sdt[15] -eq 0 -and
+                        $sdt[16] -eq 10 -and $sdt[17] -eq 0) `
+                        'Profile-2 stage class/depth order diverged from BattleShip callback order or reused a synthetic painter depth.' $gdbStdout
+                }
                 Assert-Condition $renderTexHash.Success 'Canonical realtime HW build did not publish texture lookup accounting.' $gdbStdout
                 if ($RendererProfileLevel -lt 2) {
                     # The resident texture cache survives frame boundaries, so a
