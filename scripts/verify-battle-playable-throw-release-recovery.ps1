@@ -53,11 +53,10 @@ $elf = if ($customArtifacts) {
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
-$tempDir = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
 $stdout = Join-Path $logDir 'melonds.battle-playable-throw-release-recovery.stdout.log'
 $stderr = Join-Path $logDir 'melonds.battle-playable-throw-release-recovery.stderr.log'
 $scriptName = '_battle_playable_throw_release_recovery.gdb'
-$captureHelper = Join-Path $tempDir '_capture_throw_release_recovery.ps1'
+$captureScript = Join-Path $PSScriptRoot 'capture-running-melonds-window.ps1'
 $configState = $null
 $emulator = $null
 
@@ -125,93 +124,6 @@ function Resolve-VisibilityOutput {
     return $resolved
 }
 
-function Write-ExactCaptureHelper {
-    param([Parameter(Mandatory=$true)][string]$Path)
-
-    $helper = @'
-param(
-    [Parameter(Mandatory=$true)][int]$EmulatorProcessId,
-    [Parameter(Mandatory=$true)][string]$Output
-)
-$ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Drawing
-if ($null -eq ('Smash64DSThrowReleaseCapture' -as [type])) {
-    Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public static class Smash64DSThrowReleaseCapture
-{
-    [StructLayout(LayoutKind.Sequential)]
-    public struct Rect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
-    [DllImport("user32.dll")]
-    public static extern bool GetWindowRect(IntPtr window, out Rect rect);
-    [DllImport("user32.dll")]
-    public static extern bool SetForegroundWindow(IntPtr window);
-    [DllImport("user32.dll")]
-    public static extern bool ShowWindow(IntPtr window, int command);
-    [DllImport("user32.dll")]
-    public static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter,
-        int x, int y, int width, int height, uint flags);
-}
-"@
-}
-
-$process = Get-Process -Id $EmulatorProcessId -ErrorAction Stop
-$deadline = (Get-Date).AddSeconds(10)
-do {
-    $process.Refresh()
-    if ($process.HasExited) { throw 'melonDS exited before evidence capture.' }
-    if ($process.MainWindowHandle -ne [IntPtr]::Zero) { break }
-    Start-Sleep -Milliseconds 50
-} while ((Get-Date) -lt $deadline)
-$handle = $process.MainWindowHandle
-if ($handle -eq [IntPtr]::Zero) {
-    throw 'melonDS did not expose a window for evidence capture.'
-}
-
-# Match scripts/lib/melonds.ps1's canonical stacked-screen window.
-[void][Smash64DSThrowReleaseCapture]::ShowWindow($handle, 9)
-[void][Smash64DSThrowReleaseCapture]::SetWindowPos(
-    $handle, [IntPtr](-1), 24, 24, 488, 675, 0x40)
-[void][Smash64DSThrowReleaseCapture]::SetForegroundWindow($handle)
-Start-Sleep -Milliseconds 250
-
-$rect = New-Object Smash64DSThrowReleaseCapture+Rect
-if (-not [Smash64DSThrowReleaseCapture]::GetWindowRect(
-        $handle, [ref]$rect)) {
-    throw 'Could not read the melonDS evidence window bounds.'
-}
-$width = $rect.Right - $rect.Left
-$height = $rect.Bottom - $rect.Top
-if (($width -le 0) -or ($height -le 0)) {
-    throw ('Invalid melonDS evidence window bounds ' + $width + 'x' +
-        $height + '.')
-}
-
-New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Output) |
-    Out-Null
-$bitmap = New-Object System.Drawing.Bitmap $width, $height
-$graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-try {
-    $graphics.CopyFromScreen(
-        $rect.Left, $rect.Top, 0, 0, $bitmap.Size)
-    $bitmap.Save($Output, [System.Drawing.Imaging.ImageFormat]::Png)
-} finally {
-    $graphics.Dispose()
-    $bitmap.Dispose()
-    [void][Smash64DSThrowReleaseCapture]::SetWindowPos(
-        $handle, [IntPtr](-2), 0, 0, 0, 0, 0x43)
-}
-'@
-    Set-Content -LiteralPath $Path -Value $helper
-}
-
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $nm = Join-Path $env:DEVKITARM 'bin\arm-none-eabi-nm.exe'
@@ -247,12 +159,16 @@ Assert-Condition (Test-Path -LiteralPath $Gdb -PathType Leaf) (
     "GDB executable not found: $Gdb")
 Assert-Condition (Test-Path -LiteralPath $nm -PathType Leaf) (
     "ELF symbol tool not found: $nm")
+Assert-Condition (Test-Path -LiteralPath $captureScript -PathType Leaf) (
+    "melonDS capture helper not found: $captureScript")
 
 $requiredSymbols = @(
     'sControllerPlaybackPads',
     'sControllerPlaybackConnectedMask',
     'sControllerPlaybackEnabled',
     'ndsBattlePlayableFrameCompleteMarker',
+    'ftCommonWalkSetStatusParam',
+    'ndsBaseFTCommonDashSetStatus',
     'ndsBaseFTCommonRunSetStatus',
     'ndsBaseFTCommonCatchSetStatus',
     'ftCommonWaitSetStatus',
@@ -287,6 +203,8 @@ $playbackConnectedAddress =
 $playbackEnabledAddress = $symbolAddresses['sControllerPlaybackEnabled']
 $frameMarkerAddress =
     $symbolAddresses['ndsBattlePlayableFrameCompleteMarker']
+$walkSetAddress = $symbolAddresses['ftCommonWalkSetStatusParam']
+$dashSetAddress = $symbolAddresses['ndsBaseFTCommonDashSetStatus']
 $runSetAddress = $symbolAddresses['ndsBaseFTCommonRunSetStatus']
 $catchSetAddress = $symbolAddresses['ndsBaseFTCommonCatchSetStatus']
 $waitSetAddress = $symbolAddresses['ftCommonWaitSetStatus']
@@ -307,9 +225,8 @@ $downBounceAddress = $symbolAddresses['ftCommonDownBounceSetStatus']
 $timeUpAddress = $symbolAddresses['ifCommonAnnounceTimeUpInitInterface']
 
 $screenshotPath = Resolve-VisibilityOutput $Screenshot
-New-Item -ItemType Directory -Force -Path $logDir, $tempDir,
+New-Item -ItemType Directory -Force -Path $logDir,
     (Split-Path -Parent $screenshotPath) | Out-Null
-Write-ExactCaptureHelper -Path $captureHelper
 
 try {
     $configState = Enable-MelonDSGdbConfig -MelonDSPath $melonDsPath -GdbPort $verifierContext.GdbPort -Persistent:([bool]$verifierContext.PersistentConfig)
@@ -327,11 +244,11 @@ try {
     Wait-MelonDSGdbListener -Process $emulator -Port $verifierContext.GdbPort |
         Out-Null
 
-    $captureHelperGdb = $captureHelper.Replace('\', '/')
+    $captureScriptGdb = $captureScript.Replace('\', '/')
     $screenshotGdb = $screenshotPath.Replace('\', '/')
     $captureCommand =
         'shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}" -EmulatorProcessId {1} -Output "{2}"' -f
-        $captureHelperGdb, $emulator.Id, $screenshotGdb
+        $captureScriptGdb, $emulator.Id, $screenshotGdb
 
     $gdbCommands = @(
         'set pagination off',
@@ -370,7 +287,10 @@ try {
         'set $mroot = (DObj *)$mario->obj',
         'set $froot = (DObj *)$fox->obj',
         'set $outcome = 0',
+        'set $drive_phase = 1',
         'set $approach_count = 0',
+        'set $approach_route = 0',
+        'set $separation_milli = 0',
         'set $catch_attempts = 0',
         'set $catch_pull_count = 0',
         'set $capture_wait_count = 0',
@@ -434,56 +354,129 @@ try {
 
         # Each breakpoint below is a semantic source event. There is no
         # persistent completed-frame breakpoint driving the controller.
-        ('break *0x{0:x8}' -f $runSetAddress),
-        'commands',
+        ('break *0x{0:x8}' -f $walkSetAddress),
+        'set $walk_breakpoint = $bpnum',
+        'commands $walk_breakpoint',
         'silent',
-        'if (((GObj *)$r0 == $mario) && ($catch_pull_count == 0) && ($catch_attempts < 48))',
-        # The source Dash -> Run transition proves that Mario approached Fox
-        # through ordinary controller movement before this natural grab tap.
+        'if (((GObj *)$r0 == $mario) && ($drive_phase == 1) && ($catch_pull_count == 0) && ($catch_attempts < 48))',
         'set $approach_count = $approach_count + 1',
-        ('set {{unsigned short}}0x{0:x8} = 0xa000' -f
-            $playbackPadsAddress),
+        'set $approach_route = 1',
+        'set $drive_phase = 2',
         ('set {{signed char}}0x{0:x8} = 0' -f
             ($playbackPadsAddress + 2)),
-        ('set {{signed char}}0x{0:x8} = 0' -f
-            ($playbackPadsAddress + 3)),
+        'disable $walk_breakpoint',
+        'disable $dash_breakpoint',
+        'disable $run_breakpoint',
+        'enable $wait_breakpoint',
         'end',
         'continue',
         'end',
+        'disable $walk_breakpoint',
+
+        # One short source movement entry is enough. Releasing X lets
+        # BattleShip return Mario to Wait before distance is reevaluated.
+        ('break *0x{0:x8}' -f $dashSetAddress),
+        'set $dash_breakpoint = $bpnum',
+        'commands $dash_breakpoint',
+        'silent',
+        'if (((GObj *)$r0 == $mario) && ($drive_phase == 1) && ($catch_pull_count == 0) && ($catch_attempts < 48))',
+        'set $approach_count = $approach_count + 1',
+        'set $approach_route = 3',
+        'set $drive_phase = 2',
+        ('set {{signed char}}0x{0:x8} = 0' -f
+            ($playbackPadsAddress + 2)),
+        'disable $walk_breakpoint',
+        'disable $dash_breakpoint',
+        'disable $run_breakpoint',
+        'enable $wait_breakpoint',
+        'end',
+        'continue',
+        'end',
+        'disable $dash_breakpoint',
+
+        ('break *0x{0:x8}' -f $runSetAddress),
+        'set $run_breakpoint = $bpnum',
+        'commands $run_breakpoint',
+        'silent',
+        'if (((GObj *)$r0 == $mario) && ($drive_phase == 1) && ($catch_pull_count == 0) && ($catch_attempts < 48))',
+        'set $approach_count = $approach_count + 1',
+        'set $approach_route = 2',
+        'set $drive_phase = 2',
+        ('set {{signed char}}0x{0:x8} = 0' -f
+            ($playbackPadsAddress + 2)),
+        'disable $walk_breakpoint',
+        'disable $dash_breakpoint',
+        'disable $run_breakpoint',
+        'enable $wait_breakpoint',
+        'end',
+        'continue',
+        'end',
+        'disable $run_breakpoint',
 
         ('break *0x{0:x8}' -f $catchSetAddress),
         'commands',
         'silent',
         'if ((GObj *)$r0 == $mario)',
         'set $catch_attempts = $catch_attempts + 1',
+        'set $drive_phase = 2',
         ('set {{unsigned short}}0x{0:x8} = 0' -f
             $playbackPadsAddress),
         ('set {{signed char}}0x{0:x8} = 0' -f
             ($playbackPadsAddress + 2)),
+        'enable $wait_breakpoint',
         'end',
         'continue',
         'end',
 
         ('break *0x{0:x8}' -f $waitSetAddress),
-        'commands',
+        'set $wait_breakpoint = $bpnum',
+        'commands $wait_breakpoint',
         'silent',
-        'if (((GObj *)$r0 == $mario) && ($catch_pull_count == 0) && ($catch_attempts < 48))',
-        # Re-arm a natural approach only when BattleShip itself returns Mario
-        # to Wait. RunSet issues the grab after the source Dash -> Run path.
+        'if (((GObj *)$r0 == $mario) && ($drive_phase == 2) && ($catch_pull_count == 0) && ($catch_attempts < 48))',
+        'set $separation = $froot->translate.vec.f.x - $mroot->translate.vec.f.x',
+        'set $separation_milli = (int)($separation * 1000.0)',
         ('set {{unsigned short}}0x{0:x8} = 0' -f
             $playbackPadsAddress),
-        'if ($froot->translate.vec.f.x >= $mroot->translate.vec.f.x)',
+        ('set {{signed char}}0x{0:x8} = 0' -f
+            ($playbackPadsAddress + 2)),
+        ('set {{signed char}}0x{0:x8} = 0' -f
+            ($playbackPadsAddress + 3)),
+        'disable $wait_breakpoint',
+        # Mario's source Catch hitbox has size 290 (202_MarioMainMotion.c:878).
+        # The broad 450 approach window only times the external button tap;
+        # BattleShip's live collision remains the sole authority on a catch.
+        'if (($mfp->ga == 0) && ($mfp->coll_data.floor_line_id == 3) && ($ffp->ga == 0) && ($ffp->coll_data.floor_line_id == 3) && ($mroot->translate.vec.f.x >= -1800.0) && ($mroot->translate.vec.f.x <= 1800.0) && ($froot->translate.vec.f.x >= -1800.0) && ($froot->translate.vec.f.x <= 1800.0) && ($separation >= -450.0) && ($separation <= 450.0))',
+        'set $drive_phase = 3',
+        ('set {{unsigned short}}0x{0:x8} = 0xa000' -f
+            $playbackPadsAddress),
+        'else',
+        'set $drive_phase = 1',
+        'set $approach_route = 0',
+        'enable $walk_breakpoint',
+        'enable $dash_breakpoint',
+        'enable $run_breakpoint',
+        'if ($mroot->translate.vec.f.x >= 1800.0)',
+        ('set {{signed char}}0x{0:x8} = -80' -f
+            ($playbackPadsAddress + 2)),
+        'else',
+        'if ($mroot->translate.vec.f.x <= -1800.0)',
+        ('set {{signed char}}0x{0:x8} = 80' -f
+            ($playbackPadsAddress + 2)),
+        'else',
+        'if ($separation >= 0.0)',
         ('set {{signed char}}0x{0:x8} = 80' -f
             ($playbackPadsAddress + 2)),
         'else',
         ('set {{signed char}}0x{0:x8} = -80' -f
             ($playbackPadsAddress + 2)),
         'end',
-        ('set {{signed char}}0x{0:x8} = 0' -f
-            ($playbackPadsAddress + 3)),
+        'end',
+        'end',
+        'end',
         'end',
         'continue',
         'end',
+        'disable $wait_breakpoint',
 
         ('break *0x{0:x8}' -f $catchPullAddress),
         'commands',
@@ -665,8 +658,9 @@ try {
         'end',
         'end',
 
-        # Initial natural approach. The source Dash -> Run transition issues
-        # the first grab tap; misses repeat only after source WaitSet.
+        # Initial natural approach. Short source Walk/Dash/Run entries return
+        # naturally to Wait, where distance and both main-floor states are
+        # reevaluated before a fresh Z+A grab tap.
         ('set {{unsigned short}}0x{0:x8} = 0' -f
             $playbackPadsAddress),
         'if ($froot->translate.vec.f.x >= $mroot->translate.vec.f.x)',
@@ -682,6 +676,9 @@ try {
             $playbackConnectedAddress),
         ('set {{unsigned int}}0x{0:x8} = 1' -f
             $playbackEnabledAddress),
+        'enable $walk_breakpoint',
+        'enable $dash_breakpoint',
+        'enable $run_breakpoint',
         'continue',
 
         ('set {{unsigned short}}0x{0:x8} = 0' -f
@@ -691,7 +688,7 @@ try {
         ('set {{signed char}}0x{0:x8} = 0' -f
             ($playbackPadsAddress + 3)),
         'printf "THROW_RESULT=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $outcome, $catch_attempts, $catch_pull_count, $capture_wait_count, $catch_wait_count, $throw_set_count, $release_update_count, $lose_grip_count, $default_count, $damage_init_count',
-        'printf "THROW_APPROACH=%u\n", $approach_count',
+        'printf "THROW_APPROACH=%u,%u,%d\n", $approach_count, $approach_route, $separation_milli',
         'printf "THROW_ACTORS=%#x,%#x,%u,%u,%u,%u,%u,%u,%u\n", $mario, $fox, $mfp->fkind, $mfp->pkind, $mfp->player, $ffp->fkind, $ffp->pkind, $ffp->player, $ffp->level',
         'printf "THROW_LIFECYCLE=%d,%d,%d,%d,%d,%d,%d,%d,%u,%u,%u\n", $catch_status_before, $capture_status_seen, $catch_wait_status_before, $throw_status_before, $throw_status_release, $thrown_status_release, $release_script, $release_proc_status, $links_at_wait, $links_at_throw, $links_at_release',
         'printf "THROW_CAUSE=%d,%d,%#x,%#x,%d\n", $throw_is_forward, $throw_wait_before, $throw_button_tap, $throw_button_mask_a, $throw_capture_status',
@@ -727,7 +724,7 @@ try {
         $gdbStdout,
         'THROW_ACTORS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $approach = [regex]::Match(
-        $gdbStdout, 'THROW_APPROACH=([0-9]+)')
+        $gdbStdout, 'THROW_APPROACH=([0-9]+),([0-9]+),(-?[0-9]+)')
     $lifecycle = [regex]::Match(
         $gdbStdout,
         'THROW_LIFECYCLE=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -819,7 +816,7 @@ try {
         'Catch, throw, release, and source damage-init events were not exactly once.') $gdbStdout
     Assert-Condition ($approach.Success -and $approachv[0] -ge 1 -and
         $approachv[0] -ge $rv[1]) (
-        'Mario did not naturally approach Fox through source Dash -> Run before grabbing.') $gdbStdout
+        'Mario did not naturally approach Fox through short source Walk/Dash/Run steps before grabbing.') $gdbStdout
     Assert-Condition ($actors.Success -and $av[0] -ne 0 -and
         $av[1] -ne 0 -and $av[2] -eq 0 -and $av[3] -eq 0 -and
         $av[4] -eq 0 -and $av[5] -eq 1 -and $av[6] -eq 1 -and
@@ -876,9 +873,9 @@ try {
         'Throw recovery did not occur inside the original one-minute match.') $gdbStdout
     Assert-Condition ($input.Success -and $iv[0] -eq 1 -and
         (($iv[1] -band 1) -eq 1) -and $iv[2] -gt 0 -and
-        $iv[3] -gt 0 -and $iv[4] -eq 0 -and $iv[5] -eq 0 -and
+        $iv[3] -eq 0 -and $iv[4] -eq 0 -and $iv[5] -eq 0 -and
         $iv[6] -eq 0) (
-        'External player-0 controller playback was not consumed and released.') $gdbStdout
+        'Semantic player-0 input was not consumed or the final pad was not neutral.') $gdbStdout
     Assert-Condition ($memory.Success -and $mv[0] -eq 0x4d4c4544 -and
         $mv[1] -eq 22 -and $mv[2] -ge 131072) (
         'Throw-release recovery violated the P1 arena reserve.') $gdbStdout
@@ -899,5 +896,5 @@ try {
     }
     Restore-MelonDSGdbConfig -State $configState
     Remove-GdbMarkerTemps -Root $root -ScriptName $scriptName
-    Remove-Item $captureHelper, $stdout, $stderr -Force -ErrorAction SilentlyContinue
+    Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
 }

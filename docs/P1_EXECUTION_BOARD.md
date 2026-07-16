@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 06:00 Central
+Updated: 2026-07-16 06:36 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -61,7 +61,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Mario can damage Fox | Manual pass / continuous gate open | Gameplay | User confirmed damage works after the exact-ROM Fox trace restored 11/11 colliders, zero mismatch, and flag clear | Keep repair; add continuous natural-hit coverage before release |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |
 | Fireball trajectory and floor rebound | Early submission/rebound pass / full-lifetime visual OPEN | Gameplay | Current custom `0x47` submits 40/40 and first rebound is 55→46.75. The focused exact-ROM gate now skips countdown/Fox and finishes in 9.5 s with an unobstructed screenshot; GDB frame polling for destruction exceeded 90 s and was reverted | Add a non-polling 140-tick event observation, synchronized near/mid/far/event captures, and an independent source-matrix/ROI gate |
-| Damage/throw map collision | Natural floor recovery pass / non-floor providers open | Gameplay | Five source up-smashes produced two damage events; Fox entered status 54, crossed line 3, and completed one floor recovery with direct result `1/0` and zero invalid results | Keep sparse gate; repair moving-wall/project-floor and coherent `mpcommon` before default-live graduation |
+| Damage/throw map collision | Natural floor + throw recovery pass / non-floor providers open | Gameplay | Five source up-smashes proved DamageFall recovery. A separate external-input route then used nine short source Walk/Dash/Run steps for one Mario catch/forward throw: Fox took 0→12%, released status 169→186, swept/clamped to line 3, DownBounced once, cleared every catch link, and retained 202,256 bytes | Keep both sparse gates; throw evidence is `2026-07-16_063512-7696185_throw-release-recovery-p21764.png`; repair moving-wall/project-floor and coherent `mpcommon` before default-live graduation |
 | One-way platform semantics | Pass / hardened natural gate | Gameplay | Current-ROM mode 163 completed 715 natural frames: six ordered continued-ascent/strict-descent/downward-crossing flights (`0x3f`), all three platform masks `0x7`, two side cycles, three exact ignore-line Pass crossings, nine landings, and 214,544-byte reserve | Keep the focused gate; screenshot `2026-07-16_052652-7356809_platform-semantics-p984.png` |
 | Edge behavior and specials | Retest | Gameplay | Up-B was manually accepted; other edge behavior needs current-ROM qualification | No unrelated behavior change without reproduction |
 | Normal-play stage painter/depth order | FIXED / pixel + profile-2 pass | Renderer + QA | BattleShip layer modes classify 66 source-Z and 126 no-Z triangles; one full v16 step per no-Z triangle removes the grass/bush overlap, preserves 202 triangles, and reserves disjoint endpoint bands | Keep as correctness fix; final frame 438/501 captures and zero-collision trace are authoritative |
