@@ -29,9 +29,27 @@ EXPECTED_STATS = {
     "obj_span_bytes": 60416,
     "parity_pixels": 46912,
 }
+EXPECTED_SOURCE_ALPHA = (255,) * 16
+EXPECTED_BITMAP_ALPHA = (
+    (0, 0), (1, 1), (8, 1), (9, 1), (127, 7), (128, 8),
+    (246, 14), (247, 15), (255, 15),
+)
+EXPECTED_GO_SOURCE_ORIGINS = ((82, 93), (144, 93), (214, 93))
+EXPECTED_GO_DS_ORIGINS = ((66, 74), (115, 74), (171, 74))
+EXPECTED_GO_OAM_CELLS = (
+    ((60, 68), (63, 124), (88, 124)),
+    ((109, 68), (165, 71), (165, 96), (112, 124), (137, 124),
+     (165, 124)),
+    ((168, 68), (168, 124)),
+)
+EXPECTED_VISIBLE_PIXELS = (
+    3030, 2940, 1183, 229, 2950, 115, 115, 193, 109, 303, 828, 745,
+    1438, 2218, 2439, 2615,
+)
 OBJ_ALIGNMENT = 128
 OBJ_BANK_E_BYTES = 64 * 1024
 PALETTE_ENTRIES = 256
+SCREEN_SCALE_Q16 = 52429
 
 
 def fail(message: str) -> None:
@@ -114,6 +132,7 @@ def sprite_at(data: bytes, offset: int) -> dict[str, int]:
         "width": be_s16(data, offset + 4),
         "height": be_s16(data, offset + 6),
         "attr": struct.unpack_from(">H", data, offset + 20)[0],
+        "alpha": data[offset + 27],
         "nbitmaps": be_s16(data, offset + 40),
         "bmheight": be_s16(data, offset + 44),
         "format": data[offset + 48],
@@ -123,6 +142,16 @@ def sprite_at(data: bytes, offset: int) -> dict[str, int]:
     if sprite["nbitmaps"] <= 0 or not (sprite["attr"] & 0x0200):
         fail(f"Sprite at {offset:#x} is not the expected TEXSHUF manifest")
     return sprite
+
+
+def bitmap_obj_alpha(source_alpha: int) -> int:
+    if source_alpha == 0:
+        return 0
+    return max(1, ((source_alpha * 15) + 127) // 255)
+
+
+def round_q16_half_up(value: int) -> int:
+    return (value + 0x8000) >> 16
 
 
 def bitmap_at(data: bytes, sprite: dict[str, int], index: int) -> dict[str, int]:
@@ -186,10 +215,11 @@ def decode_pixel(
             offset = buffer + ((local_y * width_img + shuffled_x) * 4)
             rgba = struct.unpack_from(">I", data, offset)[0]
             return rgb15(rgba >> 24, (rgba >> 16) & 0xFF, (rgba >> 8) & 0xFF) \
-                if rgba & 0xFF else 0
+                if (rgba & 0xFF) >= 0x80 else 0
         if sprite["format"] == 3 and sprite["size"] == 1:
             value = data[buffer + (local_y * width_img) + shuffled_x]
-            return lerp_rgb15(prim, env, (value >> 4) * 17) if value & 0xF else 0
+            return lerp_rgb15(prim, env, (value >> 4) * 17) \
+                if (value & 0xF) >= 8 else 0
         if sprite["format"] == 4 and sprite["size"] == 1:
             value = data[buffer + (local_y * width_img) + shuffled_x]
             return rgb15(*prim) if value else 0
@@ -219,6 +249,12 @@ def check_runtime_contract(root: Path, source: str) -> None:
         "SpriteColorFormat_256Color",
         "NDS_IFCOMMON_OBJ_GFX_ALIGNMENT",
         "memcpy(SPRITE_PALETTE, palette_storage",
+        "ndsIFCommonBitmapAlpha(sobj->sprite.alpha)",
+        "(sobj->sprite.alpha != 255u)",
+        "ndsIFCommonRoundFloatHalfUp(",
+        "ndsIFCommonRoundQ16HalfUp(",
+        "(rgba & 0xffu) < 0x80u",
+        "((ia & 0x0fu) >= 8u)",
     ):
         if fragment not in source:
             fail(f"hybrid owner is missing runtime contract: {fragment}")
@@ -251,6 +287,55 @@ def verify(root: Path) -> None:
         "IFCommonGameStatus"
     )
     sprites = [sprite_at(data, int(asset["offset"])) for asset in assets]
+    source_alpha = tuple(sprite["alpha"] for sprite in sprites)
+    if source_alpha != EXPECTED_SOURCE_ALPHA:
+        fail(f"IFCommon source Sprite alpha changed: {source_alpha}")
+    mapped_alpha = tuple(
+        (source, bitmap_obj_alpha(source))
+        for source, _ in EXPECTED_BITMAP_ALPHA
+    )
+    if mapped_alpha != EXPECTED_BITMAP_ALPHA:
+        fail(f"bitmap OBJ alpha mapping changed: {mapped_alpha}")
+
+    go_origins = tuple(
+        (round_q16_half_up(x * SCREEN_SCALE_Q16),
+         round_q16_half_up(y * SCREEN_SCALE_Q16))
+        for x, y in EXPECTED_GO_SOURCE_ORIGINS
+    )
+    if go_origins != EXPECTED_GO_DS_ORIGINS:
+        fail(f"GO integer-aligned origins changed: {go_origins}")
+    go_cells = []
+    for origin, asset in zip(go_origins, assets[:3]):
+        cells = []
+        for source_x, source_y, _, _, cell_width, cell_height, pad_x, pad_y \
+                in asset["tiles"]:
+            local_center_x = source_x + (cell_width // 2) - pad_x
+            local_center_y = source_y + (cell_height // 2) - pad_y
+            cells.append((
+                origin[0] + round_q16_half_up(
+                    local_center_x * SCREEN_SCALE_Q16) - (cell_width // 2),
+                origin[1] + round_q16_half_up(
+                    local_center_y * SCREEN_SCALE_Q16) - (cell_height // 2),
+            ))
+        go_cells.append(tuple(cells))
+    if tuple(go_cells) != EXPECTED_GO_OAM_CELLS:
+        fail(f"GO integer-aligned OAM cells changed: {tuple(go_cells)}")
+
+    visible_pixels = []
+    for asset_index, asset in enumerate(assets):
+        count = 0
+        for source_x, source_y, width, height, *_ in asset["tiles"]:
+            count += sum(
+                decode_pixel(
+                    data, sprites[asset_index], asset["prim"], asset["env"],
+                    source_x + x, source_y + y,
+                ) != 0
+                for y in range(height)
+                for x in range(width)
+            )
+        visible_pixels.append(count)
+    if tuple(visible_pixels) != EXPECTED_VISIBLE_PIXELS:
+        fail(f"source-alpha visible pixels changed: {tuple(visible_pixels)}")
 
     palette = [0]
     palette_index = {0: 0}
@@ -347,6 +432,15 @@ def verify(root: Path) -> None:
     print(
         f"  standard OBJ palette: {len(palette)} used entries "
         f"({len(palette) - 1} visible), {PALETTE_ENTRIES * 2} upload bytes"
+    )
+    print(
+        f"  source alpha/bitmap alpha: {sorted(set(source_alpha))}/"
+        f"{bitmap_obj_alpha(source_alpha[0])}"
+    )
+    print(f"  GO origins/cells: {go_origins}/{tuple(go_cells)}")
+    print(
+        f"  threshold-visible pixels GO/all: {sum(visible_pixels[:3])}/"
+        f"{sum(visible_pixels)}"
     )
     print("  post-prepare conversion/upload: 0/0")
 

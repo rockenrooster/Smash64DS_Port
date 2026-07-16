@@ -286,7 +286,7 @@ static u16 ndsIFCommonLerp(u8 red, u8 green, u8 blue,
 
 static u16 ndsIFCommonConvertRgba32(u32 rgba)
 {
-    if ((rgba & 0xffu) == 0u)
+    if ((rgba & 0xffu) < 0x80u)
     {
         return 0u;
     }
@@ -401,7 +401,7 @@ static u16 ndsIFCommonDecodePixel(const Sprite *sprite,
             }
             source_index = ((size_t)local_y * row_bytes) + texshuf_x;
             ia = pixels[source_index ^ 3u];
-            color = ((ia & 0x0fu) != 0u) ?
+            color = ((ia & 0x0fu) >= 8u) ?
                 ndsIFCommonLerp(spec->red, spec->green, spec->blue,
                                 spec->env_red, spec->env_green,
                                 spec->env_blue,
@@ -900,6 +900,30 @@ static void ndsIFCommonRecordSemantic(const SObj *sobj, u32 asset_index)
     gNdsIFCommonNativeOamFrameSObjCount++;
 }
 
+static u32 ndsIFCommonBitmapAlpha(u8 source_alpha)
+{
+    u32 bitmap_alpha;
+
+    if (source_alpha == 0u)
+    {
+        return 0u;
+    }
+    bitmap_alpha = (((u32)source_alpha * 15u) + 127u) / 255u;
+    return (bitmap_alpha != 0u) ? bitmap_alpha : 1u;
+}
+
+static s32 ndsIFCommonRoundFloatHalfUp(f32 value)
+{
+    return (value >= 0.0F) ? (s32)(value + 0.5F) :
+                             (s32)(value - 0.5F);
+}
+
+static s32 ndsIFCommonRoundQ16HalfUp(s32 value)
+{
+    return (value >= 0) ? ((value + 0x8000) >> 16) :
+                          -(((-value) + 0x8000) >> 16);
+}
+
 static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
 {
     const NDSIFCommonNativeAsset *asset =
@@ -909,10 +933,21 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
     u16 inverse_x;
     u16 inverse_y;
     s32 matrix_index;
-    s32 origin_x_q16;
-    s32 origin_y_q16;
+    s32 origin_x;
+    s32 origin_y;
     u32 tile_index;
     s32 size_double;
+    u32 bitmap_alpha;
+
+    for (tile_index = 0u; tile_index < asset->tile_count; tile_index++)
+    {
+        if ((asset->tiles[tile_index].color_format !=
+             SpriteColorFormat_Bmp) && (sobj->sprite.alpha != 255u))
+        {
+            return FALSE;
+        }
+    }
+    bitmap_alpha = ndsIFCommonBitmapAlpha(sobj->sprite.alpha);
 
     scale_x_q16 = (u32)((sobj->sprite.scalex *
                          (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
@@ -936,10 +971,10 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
     {
         return FALSE;
     }
-    origin_x_q16 = (s32)(sobj->pos.x *
-                         (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16);
-    origin_y_q16 = (s32)(sobj->pos.y *
-                         (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16);
+    origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
+        sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+    origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
+        sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
     size_double = (scale_x_q16 > (1u << 16)) ? TRUE : FALSE;
 
     for (tile_index = 0u; tile_index < asset->tile_count; tile_index++)
@@ -950,19 +985,20 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
             ((s32)spec->cell_width / 2) - (s32)spec->pad_x;
         s32 local_center_y = (s32)spec->source_y +
             ((s32)spec->cell_height / 2) - (s32)spec->pad_y;
-        s32 center_x_q16 = origin_x_q16 +
-            (s32)((s64)local_center_x * (s64)scale_x_q16);
-        s32 center_y_q16 = origin_y_q16 +
-            (s32)((s64)local_center_y * (s64)scale_y_q16);
+        s32 center_x = origin_x + ndsIFCommonRoundQ16HalfUp(
+            (s32)((s64)local_center_x * (s64)scale_x_q16));
+        s32 center_y = origin_y + ndsIFCommonRoundQ16HalfUp(
+            (s32)((s64)local_center_y * (s64)scale_y_q16));
         s32 half_bounds_x = size_double ? spec->cell_width :
                                               (spec->cell_width / 2);
         s32 half_bounds_y = size_double ? spec->cell_height :
                                               (spec->cell_height / 2);
-        s32 x = (center_x_q16 >> 16) - half_bounds_x;
-        s32 y = (center_y_q16 >> 16) - half_bounds_y;
+        s32 x = center_x - half_bounds_x;
+        s32 y = center_y - half_bounds_y;
 
         oamSet(&oamMain, sNdsIFCommonNextOamID, x, y, 0,
-               (tile->color_format == SpriteColorFormat_Bmp) ? 15 : 0,
+               (tile->color_format == SpriteColorFormat_Bmp) ?
+                   (int)bitmap_alpha : 0,
                tile->size, (SpriteColorFormat)tile->color_format, tile->gfx,
                matrix_index, size_double, false, false, false, false);
         sNdsIFCommonNextOamID--;

@@ -231,7 +231,7 @@ function Invoke-IFCommonRun {
         'continue',
         "set variable gNdsIFCommonNativeOamEnabled = $NativeEnabled",
         'set variable gNdsIFCommonHUDLowerTextMode = 1',
-        'break ndsBattlePlayableFrameCompleteMarker if ((gNdsRendererProfileFrameCount >= 186 && gNdsRendererProfileFrameCount <= 194) || (gNdsRendererProfileFrameCount >= 490 && gNdsRendererProfileFrameCount <= 540) || gNdsRendererProfileFrameCount == 600)',
+        'break ndsBattlePlayableFrameCompleteMarker if ((gNdsRendererProfileFrameCount >= 186 && gNdsRendererProfileFrameCount <= 194) || (gNdsRendererProfileFrameCount >= 250 && gNdsRendererProfileFrameCount <= 300) || gNdsRendererProfileFrameCount == 600)',
         'commands',
         'silent',
         'if gNdsRendererProfileFrameCount == 186',
@@ -243,7 +243,7 @@ function Invoke-IFCommonRun {
         ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$gdbReady' -Value ready; while (-not (Test-Path -LiteralPath '$gdbGo')) { Start-Sleep -Milliseconds 25 }`""),
         'end',
         'end',
-        'if gNdsRendererProfileFrameCount >= 490 && gNdsRendererProfileFrameCount <= 540',
+        'if gNdsRendererProfileFrameCount >= 250 && gNdsRendererProfileFrameCount <= 300',
         ("printf `"$tailFormat\n`", $tailValues"),
         'end',
         'if gNdsRendererProfileFrameCount == 600',
@@ -522,7 +522,9 @@ try {
         $native.Text
     $lastActive = $nativeTail[$firstZero - 1]
     $finalClear = $nativeTail[$firstZero]
-    Assert-Condition ($finalClear[2] -gt 0 -and $finalClear[3] -eq 0 -and
+    Assert-Condition ($lastActive[1] -eq 255 -and
+        $finalClear[1] -eq 256 -and
+        $finalClear[2] -gt 0 -and $finalClear[3] -eq 0 -and
         $finalClear[4] -gt 0 -and $finalClear[5] -eq 1 -and
         $finalClear[6] -eq $lastActive[12] -and $finalClear[7] -eq 0 -and
         $finalClear[8] -eq 0 -and $finalClear[9] -eq 0 -and

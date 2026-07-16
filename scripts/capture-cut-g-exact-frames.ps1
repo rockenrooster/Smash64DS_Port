@@ -7,9 +7,9 @@ param(
     [Parameter(Mandatory=$true)][long]$WindowHandle,
     [Parameter(Mandatory=$true)][string]$Output,
     [Parameter(Mandatory=$true)][string]$SecondOutput,
-    [ValidateRange(1,1000000)][int]$FirstFrame = 438,
-    [ValidateRange(1,1000000)][int]$SecondFrame = 439,
-    [ValidateRange(-1,1)][int]$FoxCpuMode = -1,
+    [ValidateRange(1,1000000)][int]$FirstFrame = 200,
+    [ValidateRange(1,1000000)][int]$SecondFrame = 201,
+    [ValidateRange(0,1)][int]$FoxCpuMode = 1,
     [string]$TempDirectory = ''
 )
 
@@ -136,6 +136,8 @@ function Save-ExactFrameWindowCapture {
 
 Assert-Condition ($SecondFrame -eq ($FirstFrame + 1)) `
     "Cut G capture frames must be adjacent: $FirstFrame/$SecondFrame."
+Assert-Condition ($FoxCpuMode -eq 1) `
+    'Exact natural GO capture requires FoxCpuMode 1.'
 $gdbPath = (Resolve-Path -LiteralPath $Gdb).Path
 $elfPath = (Resolve-Path -LiteralPath $Elf).Path
 $outputPath = Resolve-VisibilityOutput $Output
@@ -255,7 +257,7 @@ try {
         Assert-Condition (
             $row[7] -eq 1 -and $row[8] -eq 2 -and $row[9] -eq 2 -and
             $row[10] -eq 0 -and $row[11] -eq 13 -and
-            $row[12] -ne 0x49464f41 -and $row[13] -gt 0 -and
+            $row[12] -ne 0x49464f41 -and $row[13] -eq 42 -and
             $row[14] -eq 0 -and $row[15] -eq 1 -and $row[16] -eq 0 -and
             $row[17] -eq 0 -and $row[18] -eq 0 -and $row[19] -eq 0) `
             "Exact frame $($expectedFrames[$i]) lost native-OAM GO recognition, drawing, or no-conversion state." `
