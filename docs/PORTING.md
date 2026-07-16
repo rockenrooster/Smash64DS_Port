@@ -20942,3 +20942,13 @@ remains skipped for the requested fast iteration cadence.
   `19C6CD229C205CD60F7625BED86625AADA5556AEE377CD4A4698154249F98D7E`.
   Exact Cut G frames 438/439 visibly retain the traffic light and GO overlay at
   `artifacts/visibility/2026-07-15_canonical_fast_frame438-439_221916-2735156-p38420.png`.
+
+## 2026-07-15 - Shared fast-iteration CPU/countdown switch
+
+- Mode 163 flag `gNdsBattlePlayableFoxCpuEnabled=0` now skips the opening
+  countdown, unlocks at GO, freezes the match timer, and leaves Fox decisions
+  disabled for fast manual renderer iteration. Flag `1` preserves BattleShip's
+  original Wait/countdown/GO/timer and level-3 Fox path.
+- DevFast/Boundary wrappers explicitly select flag `1`; this keeps their Cut-G
+  and timer assertions source-valid while the published/manual default remains
+  the user-requested fast mode.

@@ -52,8 +52,11 @@ Do not retry or widen that dense-only cut.
 
 ## One-Minute Gate
 
-Tyler authorized CPU-on automation while the published/manual default remains
-paused. The focused source-timer gate now passes:
+Tyler authorized CPU-on automation while the published/manual default keeps the
+shared fast-iteration flag at `0`: Fox CPU and countdown are skipped and the
+timer is frozen. DevFast/Boundary and lifecycle gates explicitly select flag
+`1`, restoring the original Wait → countdown → GO/timer path. The focused
+source-timer gate now passes:
 
 ```powershell
 .\scripts\check-one-minute-match-verifier.ps1

@@ -56,7 +56,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 
 | Acceptance condition | State | Lane | Blocker / evidence | Integration decision |
 |---|---|---|---|---|
-| Mario human versus original level-3 Fox CPU, Dream Land, one-minute Time match, items off | CPU-on lifecycle pass / temporary default pause | Gameplay + QA | Fox stays classified level-3 CPU; public/manual default pauses only decisions/inputs, while CPU/lifecycle proofs explicitly enable them | Wait for Tyler's re-enable request, then require final CPU-on canonical qualification |
+| Mario human versus original level-3 Fox CPU, Dream Land, one-minute Time match, items off | CPU-on lifecycle pass / temporary fast-iteration default | Gameplay + QA | Flag `0` skips CPU/countdown and freezes the timer; source gates explicitly select flag `1` and retain original Wait → GO timing | Wait for Tyler's re-enable request, then require final CPU-on canonical qualification |
 | Original Wait → countdown → GO control/timer gate | Pass | Integration | Automated synchronized source-state proof passes | Keep |
 | Mario can damage Fox | Manual pass / continuous gate open | Gameplay | User confirmed damage works after the exact-ROM Fox trace restored 11/11 colliders, zero mismatch, and flag clear | Keep repair; add continuous natural-hit coverage before release |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |

@@ -9,6 +9,7 @@ param(
     [Parameter(Mandatory=$true)][string]$SecondOutput,
     [ValidateRange(1,1000000)][int]$FirstFrame = 438,
     [ValidateRange(1,1000000)][int]$SecondFrame = 439,
+    [ValidateRange(-1,1)][int]$FoxCpuMode = -1,
     [string]$TempDirectory = ''
 )
 
@@ -176,11 +177,22 @@ $markerFormat =
     'CUTG_EXACT=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u'
 $markerValues =
     'gNdsRendererProfileFrameCount, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsIFCommonNativeOamEnabled, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsIFCommonNativeOamPreparePaletteBytes'
+$selectorCommands = @()
+if ($FoxCpuMode -ge 0) {
+    $selectorCommands = @(
+        'tbreak scVSBattleStartBattle',
+        'continue',
+        ('set variable gNdsBattlePlayableFoxCpuEnabled = {0}' -f $FoxCpuMode)
+    )
+}
 $commands = @(
     'set pagination off',
     'set confirm off',
     'set remotetimeout 10',
-    "target remote 127.0.0.1:$GdbPort",
+    "target remote 127.0.0.1:$GdbPort"
+)
+$commands += $selectorCommands
+$commands += @(
     "tbreak ndsBattlePlayableFrameCompleteMarker if gNdsRendererProfileFrameCount == $FirstFrame",
     'continue',
     ("printf `"$markerFormat\n`", $markerValues"),

@@ -19,6 +19,7 @@ param(
     [double]$MinScreenshotDetailFraction = 0.25,
     [ValidateRange(1,1000000)][int]$FastCaptureFirstFrame = 438,
     [ValidateRange(1,1000000)][int]$FastCaptureSecondFrame = 439,
+    [ValidateRange(0,1)][int]$FoxCpuMode = 1,
     [switch]$FastIteration
 )
 $ErrorActionPreference = 'Stop'
@@ -158,6 +159,7 @@ function Invoke-VisibleCaptureAssert {
         $exactCaptureArgs.GdbPort = $selectedGdbPort
         $exactCaptureArgs.ExactFirstFrame = $FastCaptureFirstFrame
         $exactCaptureArgs.ExactSecondFrame = $FastCaptureSecondFrame
+        $exactCaptureArgs.FoxCpuMode = $FoxCpuMode
     }
     & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
         -MelonDS $captureMelonDS `
@@ -252,7 +254,8 @@ $harnessArgs = @(
     '-RunnerSlot', "$RunnerSlot",
     '-DelaySeconds', "$smokeDelaySeconds",
     '-RealtimePresentation',
-    '-ImportBattleShipFTComputer'
+    '-ImportBattleShipFTComputer',
+    '-FoxCpuMode', "$FoxCpuMode"
 )
 if ($NoBuild) { $harnessArgs += '-NoBuild' }
 if ($RequireRealtime60Fps) { $harnessArgs += '-RequireRealtime60Fps' }

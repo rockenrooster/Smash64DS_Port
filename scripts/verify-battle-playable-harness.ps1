@@ -26,6 +26,7 @@ param(
     [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
+    [ValidateRange(0,1)][int]$FoxCpuMode = 1,
     [switch]$RequireZeroPostGoTextureFence,
     [switch]$RendererM2DetailedLedger,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
@@ -153,6 +154,7 @@ try {
     -RendererFastRunMode $RendererFastRunMode `
     -StaticTextureAotMode $StaticTextureAotMode `
     -IFCommonHybridOamMode $IFCommonHybridOamMode `
+    -FoxCpuMode $FoxCpuMode `
     -RequireZeroPostGoTextureFence:$RequireZeroPostGoTextureFence `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `

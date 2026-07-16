@@ -18,7 +18,8 @@ param(
     [int]$SecondDelaySeconds = 1,
     [int]$SecondDelayMilliseconds = 0,
     [ValidateRange(-1,1000000)][int]$ExactFirstFrame = -1,
-    [ValidateRange(-1,1000000)][int]$ExactSecondFrame = -1
+    [ValidateRange(-1,1000000)][int]$ExactSecondFrame = -1,
+    [ValidateRange(-1,1)][int]$FoxCpuMode = -1
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -309,7 +310,8 @@ try {
             -Output $Output `
             -SecondOutput $SecondOutput `
             -FirstFrame $ExactFirstFrame `
-            -SecondFrame $ExactSecondFrame
+            -SecondFrame $ExactSecondFrame `
+            -FoxCpuMode $FoxCpuMode
     } else {
         Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
         [void][Smash64DSWindowCapture]::SetForegroundWindow(

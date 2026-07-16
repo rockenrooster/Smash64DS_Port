@@ -66,7 +66,7 @@ $effectiveStaticTextureAotMode = if ($usesPublishedIntrinsicRendererDefaults) {
     $StaticTextureAotMode
 }
 $effectiveIFCommonHybridOamMode = if ($usesPublishedIntrinsicRendererDefaults) {
-    1
+    0
 } else {
     $IFCommonHybridOamMode
 }
@@ -800,10 +800,19 @@ try {
             } else {
                 @()
             }
+            $realtimeReadyCondition =
+                'gNdsBattlePlayablePacingResult != 0'
+            if ($foxCpuModeSelected -and ($FoxCpuMode -eq 1)) {
+                # Source countdown mode must advance through GO before its CPU
+                # path and timer assertions are meaningful.
+                $realtimeReadyCondition +=
+                    ' && gNdsFTComputerStickFrames != 0'
+            }
             $gdbCommands = @(
                 $gdbCommands[0..3]
                 $armWaitCommands
-                'tbreak ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingResult != 0'
+                ('tbreak ndsBattlePlayableFrameCompleteMarker if {0}' -f
+                 $realtimeReadyCondition)
                 'continue'
                 $weaponFrameCommands
                 $gdbCommands[4..($gdbCommands.Count - 1)]

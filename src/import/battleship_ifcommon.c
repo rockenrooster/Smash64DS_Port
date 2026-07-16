@@ -3,6 +3,7 @@
 #include <ft/fighter.h>
 #include <gm/generic.h>
 #include <gm/gmsound.h>
+#include <nds/nds_scene_harness.h>
 #include <nds/nds_startup.h>
 #include <sys/objhelper.h>
 #include <sys/objman.h>
@@ -77,7 +78,60 @@ extern sb32 ftCommonSleepCheckIgnorePauseMenu(GObj *fighter_gobj);
 extern void ftPublicDefeatedAddID(u16 sfx_id);
 extern void func_ovl65_8018F6DC(void);
 
+static sb32 ndsIFCommonFastIterationIsEnabled(void);
+static u32 ndsIFCommonGetTicCount(void);
+static void ndsIFCommonSetTicCount(u32 tics);
+
+#define ifCommonEntryAllMakeInterface ndsIFCommonEntryAllMakeInterfaceOriginal
+#define ifCommonBattleUpdateInterfaceAll ndsIFCommonBattleUpdateInterfaceAllOriginal
+#define sySchedulerGetTicCount ndsIFCommonGetTicCount
+#define sySchedulerSetTicCount ndsIFCommonSetTicCount
 #include "../../decomp/BattleShip-main/decomp/src/if/ifcommon.c"
+#undef sySchedulerSetTicCount
+#undef sySchedulerGetTicCount
+#undef ifCommonBattleUpdateInterfaceAll
+#undef ifCommonEntryAllMakeInterface
+
+static sb32 ndsIFCommonFastIterationIsEnabled(void)
+{
+    return (gNdsSceneHarnessMode ==
+            NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_REALTIME) &&
+           (gNdsBattlePlayableFoxCpuEnabled == 0u);
+}
+
+static u32 ndsIFCommonGetTicCount(void)
+{
+    return (ndsIFCommonFastIterationIsEnabled() != FALSE) ?
+           sIFCommonTimerStamp : sySchedulerGetTicCount();
+}
+
+static void ndsIFCommonSetTicCount(u32 tics)
+{
+    if (ndsIFCommonFastIterationIsEnabled() == FALSE)
+    {
+        sySchedulerSetTicCount(tics);
+    }
+}
+
+void ifCommonEntryAllMakeInterface(void)
+{
+    if (ndsIFCommonFastIterationIsEnabled() != FALSE)
+    {
+        ifCommonAnnounceGoSetStatus();
+        return;
+    }
+    ndsIFCommonEntryAllMakeInterfaceOriginal();
+}
+
+void ifCommonBattleUpdateInterfaceAll(void)
+{
+    ndsIFCommonBattleUpdateInterfaceAllOriginal();
+
+    if (ndsIFCommonFastIterationIsEnabled() != FALSE)
+    {
+        sIFCommonTimerIsStarted = FALSE;
+    }
+}
 
 static u32 ndsIFCommonPackDamageDigits(u32 player)
 {
