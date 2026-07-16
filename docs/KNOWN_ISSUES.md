@@ -13,11 +13,12 @@ durable unresolved gaps.
   MarioSmash2 ID430); remaining variants, exact pitch automation, and Tyler's
   voice ear check remain open. Dream Land BGM and the opening crowd are
   automation/user-confirmed.
-- Fox is still classified level-3 CPU, but the public ROM temporarily pauses his
-  decision/input. The focused CPU-on one-minute gate passes; final P1 still
-  needs Tyler's re-enable decision and a published CPU-on qualification.
-- Release needs the exact two-ROM build, focused verifier closure, dated captures
-  under `artifacts/visibility`, and manual user retest.
+- Fox remains the imported level-3 CPU in the public ROM. Automated visual
+  captures alone select the documented Fox/countdown-off fast-iteration switch;
+  final P1 still needs Tyler's CPU-on manual qualification.
+- The exact two-ROM build and Boundary checkpoint pass. Release still needs the
+  final complete-match dated capture under `artifacts/visibility` and manual
+  user retest.
 
 ## Gameplay And Source Boundaries
 

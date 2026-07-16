@@ -21230,3 +21230,13 @@ remains skipped for the requested fast iteration cadence.
 - Combined Mario/Fox time falls 395,264 -> 386,880 ticks, the emitter shrinks
   88 bytes, ITCM falls to 25,824 / 32,768, and the exact top-screen compare is
   unchanged at 0 / 49,152 pixels.
+
+## 2026-07-16 - Published the AOT-coordinate Boundary checkpoint
+
+- Boundary passes on `smash64ds-battle-playable-hwtri.nds` SHA-256
+  `B4E6EC10A50413A3E2AF5829A39F9971CD234A8CC90F4A5416ED1242165A3915`.
+  Mode 163, the two-ROM root contract, 25,824-byte ITCM placement, and the
+  exact-aspect visual gate pass.
+- Moved the untracked pause-orbit lab ROM from the publication root into
+  `builds/`. The canonical wallpaper region now uses the same DPI-aware native
+  crop as its neighboring capture gates; thresholds remain unchanged.

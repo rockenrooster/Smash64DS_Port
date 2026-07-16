@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 09:44 Central
+Updated: 2026-07-16 09:50 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -21,10 +21,8 @@ configuration. Dream Land water is exact frame 0/fraction 114 on the original
 
 The executable fleet is four registry records under `Latest`/`Boundary`; the
 unreachable source-side mode 1-162 lattice is separate ROM-parity cleanup.
-The current user-facing candidate is 14,574,592 bytes, SHA-256
-`A8371FA93E75338F8BABAC445FA4826663979FE48884E215F27630049B3B6C93`;
-its next Boundary republication is intentionally deferred to the release
-checkpoint.
+The Boundary-verified user-facing candidate is 14,578,688 bytes, SHA-256
+`B4E6EC10A50413A3E2AF5829A39F9971CD234A8CC90F4A5416ED1242165A3915`.
 Stage painter depth and pause-orbit containment are fixed and user-confirmed.
 M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, and the
 zero-shift matrix builder at 541,952/542,272 ticks.
@@ -85,6 +83,6 @@ stable 20 FPS decision remains pending while performance work continues.
 
 ## Checkpoint
 
-Run one widest relevant verifier only: Boundary for battle-only work, or Current
-instead if normal/shared startup changed. Finish docs and `git status`
-inspection, commit, then run the Lean snapshot as the final command.
+Boundary already passes for the current ROM; do not rerun it unchanged. Use
+Current instead only if normal/shared startup changes. Snapshot is the final
+project command.

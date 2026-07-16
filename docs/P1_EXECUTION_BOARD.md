@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 09:44 Central
+Updated: 2026-07-16 09:50 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -12,12 +12,12 @@ This is the only dynamic P1 queue. `HANDOFF.md` owns the restart surface,
 
 ## Artifact Identity
 
-Current user-facing candidate; Boundary republication is pending:
+Boundary-verified user-facing candidate:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,574,592 bytes
-SHA-256 A8371FA93E75338F8BABAC445FA4826663979FE48884E215F27630049B3B6C93
+14,578,688 bytes
+SHA-256 B4E6EC10A50413A3E2AF5829A39F9971CD234A8CC90F4A5416ED1242165A3915
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -44,7 +44,7 @@ profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | CPU lifecycle pass / checkpoint | live tree | source-ordered LoadScene break, exact VSBattle ledger sample, commit | runner 2 |
+| Integration/release | Boundary checkpoint pass | live tree | published mode-163 ROM, exact-aspect capture, two-ROM contract | runner 2 free |
 | Renderer implementation | Jump A accumulation active | shared live tree / focused lab builds | M3 dense prepare-once plus AOT coordinate shifts and M2 native-fighter ITCM placement are retained; continue the measured M3 no-Z path | no runner active |
 | Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -81,7 +81,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Required FGM and Mario/Fox voices | Crowd FIXED / one natural voice per fighter PASS | Audio | The 102,196-byte AOT pack adds source FoxSmash1 ID372 and MarioSmash2 ID430. The natural 820-frame recovery route triggered both, acquired/released two clean DS handles, reported zero play/load/stale/generation faults, and retained 202,256 bytes; ID626 remains user-confirmed | Keep the two representative cues; Tyler ear-checks them, while remaining variants and exact pitch automation stay open |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | Pass on current candidate | QA | Battle-only opening/static store is exactly bounded at 185,696 bytes; after adding two fighter cues, the natural CPU-on recovery route retains 202,256 bytes, still 71,184 above the 128 KiB floor | Keep exact harness lifetime bound; repeat only in final CPU-on lifecycle qualification |
-| Focused/checkpoint verification | Focused gates pass / Boundary refresh pending | QA | Current candidate has exact profile-2 fighter/stage census, pause-angle containment, source-derived audio asset checks, a natural two-fighter-voice channel gate, and synchronized M2/M3 measurements; no stacked full regression was run | Run one Boundary only at the next release checkpoint; Current only if original launch changes |
+| Focused/checkpoint verification | Boundary PASS | QA | Boundary passed on published ROM `B4E6EC10...`: mode-163 runtime smoke, ITCM 25,824/32,768, two-ROM contract, and exact-aspect capture with 100% top coverage and 63.028% required-region detail | Do not rerun for an unchanged ROM; Current only if original launch changes |
 | Cut G capture / final dated capture / manual retest | Current Cut G pass / final P1 pending | QA + user | Exact frames 438/439 pass on 2026-07-15 under `artifacts/visibility`; top coverage 100%, green 42.495%, detail 52.675%, meaningful delta 0.142% | Block release on final complete-match evidence and user qualification |
 
 ## Dated Gates
