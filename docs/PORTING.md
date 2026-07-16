@@ -21149,3 +21149,10 @@ remains skipped for the requested fast iteration cadence.
 - Moving-wall sweep, project-floor transforms, and coherent generic `mpcommon`
   remain real P2 port debt for later stages, but are not Dream Land P1 blockers.
   No runtime code or verification route changed.
+
+## 2026-07-16 - Accepted Mario pant and underside repair
+
+- Tyler accepted the paused −33.6° candidate
+  `artifacts/visibility/20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png`.
+  The right pant leg is blue and the underside reads closed; the source root-light
+  replay remains the kept fix with Mario's 320-triangle census unchanged.
