@@ -419,6 +419,7 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_STEP 6
 #define NDS_RENDERER_HW_SOURCE_DEPTH_MIN (128 - 0x1000)
 #define NDS_RENDERER_HW_SOURCE_DEPTH_MAX (0x1000 - 129)
+#define NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT 4u
 #define NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z_CLASS 3u
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
@@ -15810,8 +15811,11 @@ static void ndsRendererNativeStageBeginRun(
 {
     u32 poly_fmt = run->poly_fmt;
 
+    /* Dream Land's four static layer owners are closed front-facing stage
+     * surfaces.  Keep actor owners (Whispy and flowers) two-sided. */
     if ((submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) &&
-        (segment_owner < 4u))
+        (segment_owner < NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT) &&
+        ((poly_fmt & POLY_CULL_NONE) == POLY_CULL_NONE))
     {
         poly_fmt &= ~((u32)POLY_CULL_NONE);
         poly_fmt |= POLY_CULL_BACK;
@@ -16238,13 +16242,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                      NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
                         prepared->source_z : no_z;
 
-                if ((NDS_RENDERER_STAGE_CLASS_SKIP_MASK &
-                     ((u32)1u << run->submit_class)) == 0u)
-                {
-                    ndsRendererNativeStageEmitVertex(
-                        dense, prepared, prepared_run, run->submit_class,
-                        projected_z);
-                }
+                ndsRendererNativeStageEmitVertex(
+                    dense, prepared, prepared_run, run->submit_class,
+                    projected_z);
             }
             if (run->submit_class !=
                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
