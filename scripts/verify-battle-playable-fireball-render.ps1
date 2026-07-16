@@ -249,7 +249,7 @@ try {
         'set $fgm_acquire_base = gNdsAudioFgmHandleAcquireCount',
         'set $fgm_release_base = gNdsAudioFgmHandleReleaseCount',
         'set $fgm_active_base = gNdsAudioFgmActiveHandles',
-        'break ndsAudioFgmPlay',
+        'break ndsAudioFgmPlayAtPan',
         'commands',
         'silent',
         'if ((unsigned int)$r0 == 215)',

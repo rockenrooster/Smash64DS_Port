@@ -237,19 +237,28 @@ $attackMotionFixtures = @(
     @{
         Path = 'src/relocData/202_MarioMainMotion.c'
         Tokens = @(
+            'ftMotionPlayFGM(nSYAudioFGMCatch)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingL)',
             'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingM)',
             'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingS)',
             'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMMarioUnkSwing2)',
             'ftMotionPlayFGM(nSYAudioFGMMarioSpecialN)',
+            'ftMotionPlayFGM(nSYAudioFGMMarioSpecialHiJump)',
             'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMMarioUnkSwing1)'
         )
     },
     @{
         Path = 'src/relocData/208_FoxMainMotion.c'
         Tokens = @(
+            'ftMotionPlayFGM(nSYAudioFGMCatch)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingL)',
             'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingM)',
             'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingS)',
-            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMFoxAttackAirLw)'
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMFoxAttackAirLw)',
+            'ftMotionPlayFGM(nSYAudioFGMFoxSpecialN)',
+            'ftMotionPlayFGM(nSYAudioFGMFoxSpecialHiStart)',
+            'ftMotionPlayFGM(nSYAudioFGMFoxSpecialHiFly)',
+            'ftMotionPlayFGM(nSYAudioFGMFoxSpecialLwStart)'
         )
     }
 )
@@ -282,7 +291,26 @@ $attackIDs = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'attack'
     } | ForEach-Object { [int]$_.id })
 Assert-EqualList -Label 'Resident attack/activation ID set' `
-    -Actual $attackIDs -Expected ([int[]]@(42, 43, 190, 215, 218, 219))
+    -Actual $attackIDs -Expected ([int[]]@(215))
+$qualification = $metadata.attack_activation_qualification
+Assert-EqualList -Label 'Source-qualified attack/activation ID set' `
+    -Actual ([int[]]@($qualification.qualified_ids)) `
+    -Expected ([int[]]@(215))
+Assert-EqualList -Label 'Fail-closed attack/activation exclusion set' `
+    -Actual ([int[]]@($qualification.excluded_ids)) `
+    -Expected ([int[]]@(19, 41, 42, 43, 185, 186, 187, 189, 190,
+            217, 218, 219))
+if (($qualification.source_action_audit.sha256 -ne
+        'ae7690adc1d646e8c0a755510064a324c6ff59f4f578a2f6fdd719351744c601') -or
+    ($qualification.sha256 -ne
+        '8e520123996038b06edbd9cd2c3194734b9d7d08bde89159271ff3872a15e69e') -or
+    ($qualification.source_action_audit.region -ne 'REGION_US') -or
+    ([int]$qualification.source_action_audit.callsite_count -ne 60) -or
+    ([int]$qualification.source_action_audit.action_count -ne 66) -or
+    (@($qualification.source_action_audit.callsites).Count -ne 60) -or
+    (@($qualification.source_action_audit.actions).Count -ne 66)) {
+    throw 'Attack/activation action or source-program qualification changed.'
+}
 foreach ($entry in $metadata.entries | Where-Object {
         $_.entry_kind -eq 'ko'
     }) {

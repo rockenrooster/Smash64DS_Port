@@ -211,30 +211,11 @@ try {
         [int]$load.Groups[8].Value -ne 0) {
         throw "FGM phase pack did not load cleanly.`n$gdbStdout"
     }
-    $naturalKoCount = 0
-    if ($ko.Success) {
-        $koMask = Convert-MarkerUInt32 $ko.Groups[1].Value
-        $koCounts = @(2..6 | ForEach-Object { [int]$ko.Groups[$_].Value })
-        $koTraceCount = [int]$ko.Groups[7].Value
-        $koTrace = @(8..10 | ForEach-Object { [int]$ko.Groups[$_].Value })
-        if (($koMask -eq 0) -and (($koCounts -join ',') -eq '0,0,0,0,0') -and
-            ($koTraceCount -eq 0) -and (($koTrace -join ',') -eq '0,0,0')) {
-            $naturalKoCount = 0
-        } elseif (($koMask -eq 0x1c) -and
-            (($koCounts -join ',') -eq '0,0,1,1,1') -and
-            ($koTraceCount -eq 3) -and
-            (($koTrace -join ',') -eq '370,289,154')) {
-            $naturalKoCount = 3
-        } else {
-            throw "Natural regular-KO source order changed.`n$gdbStdout"
-        }
-    } else {
-        throw "Natural regular-KO diagnostics were absent.`n$gdbStdout"
-    }
-    $expectedSupportedPlays = 6 + $naturalKoCount
-    $expectedEnvelopeSteps = if ($naturalKoCount -eq 0) { 0 } else { 21 }
+    $supportedPlays = if ($play.Success) {
+        [int]$play.Groups[2].Value
+    } else { 0 }
     if (-not $play.Success -or
-        [int]$play.Groups[2].Value -lt 5 -or
+        $supportedPlays -lt 5 -or
         [int]$play.Groups[4].Value -ne 0 -or
         [int]$play.Groups[5].Value -ne 0 -or
         (Convert-MarkerUInt32 $play.Groups[6].Value) -ne 0x1f -or
@@ -247,44 +228,34 @@ try {
         (@(1..5 | ForEach-Object { [int]$phase.Groups[$_].Value }) -ne 1)) {
         throw "One or more natural phase IDs did not play exactly once.`n$gdbStdout"
     }
-    $koMask = if ($ko.Success) {
-        Convert-MarkerUInt32 $ko.Groups[1].Value
-    } else { [uint32]0 }
-    $koCounts = @(2..6 | ForEach-Object { [int]$ko.Groups[$_].Value })
-    $koExpectedMask = [uint32]0
-    for ($koIndex = 0; $koIndex -lt $koCounts.Count; $koIndex++) {
-        if ($koCounts[$koIndex] -gt 0) {
-            $koExpectedMask = $koExpectedMask -bor
-                ([uint32]1 -shl $koIndex)
-        }
+    if (-not $ko.Success) {
+        throw "Natural regular-KO diagnostics were absent.`n$gdbStdout"
     }
-    $koTraceCount = if ($ko.Success) { [int]$ko.Groups[7].Value } else { -1 }
-    $koTracePrefix = if ($ko.Success) {
-        @(8..10 | ForEach-Object { [int]$ko.Groups[$_].Value }) -join ','
-    } else { '' }
-    $koCountSum = ($koCounts | Measure-Object -Sum).Sum
-    if (-not $ko.Success -or $koMask -ne $koExpectedMask -or
-        $koTraceCount -ne $koCountSum -or $koTraceCount -gt 8 -or
-        (($koTraceCount -eq 0) -and ($koTracePrefix -ne '0,0,0')) -or
-        (($koTraceCount -gt 0) -and
-         ($koTracePrefix -notin '439,292,154', '370,289,154'))) {
-        throw "Natural regular-KO accounting was not a source trio.`n$gdbStdout"
+    $koValues = @(1..10 | ForEach-Object {
+            [int64](Convert-MarkerUInt32 $ko.Groups[$_].Value)
+        })
+    $koIsIdle = (($koValues -join ',') -eq '0,0,0,0,0,0,0,0,0,0')
+    $koIsExactFoxTrio = (($koValues -join ',') -eq
+        '28,0,0,1,1,1,3,370,289,154')
+    if (-not $koIsIdle -and -not $koIsExactFoxTrio) {
+        throw ('Natural regular-KO state was neither idle nor the exact Fox ' +
+            "voice/slam/explosion order.`n$gdbStdout")
     }
     $fgmChannelMask = if ($pool.Success) {
         Convert-MarkerUInt32 $pool.Groups[8].Value
     } else { [uint32]0 }
     if (-not $pool.Success -or
-        [int]$pool.Groups[1].Value -ne [int]$play.Groups[2].Value -or
+        [int]$pool.Groups[1].Value -ne $supportedPlays -or
         [int]$pool.Groups[2].Value -ne 8 -or
         [int]$pool.Groups[3].Value -gt [int]$pool.Groups[1].Value -or
-        [int]$pool.Groups[6].Value -ne
-            ([int]$pool.Groups[1].Value - [int]$pool.Groups[3].Value) -or
         [int]$pool.Groups[4].Value -lt 1 -or
         [int]$pool.Groups[5].Value -ne 0 -or
+        [int]$pool.Groups[6].Value -ne
+            ([int]$pool.Groups[1].Value - [int]$pool.Groups[3].Value) -or
         [int]$pool.Groups[7].Value -lt 1 -or
         $fgmChannelMask -eq 0 -or
         [int]$pool.Groups[9].Value -ge 16 -or
-        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 12) {
+        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 28) {
         throw "FGM recycle/channel/fidelity diagnostics failed.`n$gdbStdout"
     }
     if (-not $life.Success -or

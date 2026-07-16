@@ -27,15 +27,13 @@ if ($LASTEXITCODE -ne 0) {
 
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
 $expectedIDs = @(626, 470, 469, 467, 490, 74, 363, 364, 372, 430,
-    439, 292, 370, 289, 300, 154, 77,
-    42, 43, 190, 215, 218, 219, 40, 38, 37, 34, 32, 31,
-    216, 28, 2, 0)
+    439, 292, 370, 289, 300, 154, 77, 215)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
 }
-if (([int64]$metadata.resident_bytes -ne 164660) -or
-    ([int64]$metadata.resident_limit_bytes -ne 168960)) {
+if (([int64]$metadata.resident_bytes -ne 107536) -or
+    ([int64]$metadata.resident_limit_bytes -ne 108544)) {
     throw "FGM pack resident size changed: $($metadata.resident_bytes)"
 }
 
@@ -75,14 +73,14 @@ if (($movementIDs -join ',') -ne '74,300') {
 if (($marioIDs -join ',') -ne '77') {
     throw "Unexpected Mario movement subset: $($marioIDs -join ',')"
 }
-if (($attackIDs -join ',') -ne '42,43,190,215,218,219') {
+if (($attackIDs -join ',') -ne '215') {
     throw "Unexpected attack/activation subset: $($attackIDs -join ',')"
 }
-if (($hitIDs -join ',') -ne '40,38,37,34,32,31,216,28,2,0') {
+if ($hitIDs.Count -ne 0) {
     throw "Unexpected collision/contact subset: $($hitIDs -join ',')"
 }
-if (([int]$metadata.unique_sample_count -ne 21) -or
-    ([int]$metadata.unique_sample_bytes -ne 162984)) {
+if (([int]$metadata.unique_sample_count -ne 16) -or
+    ([int]$metadata.unique_sample_bytes -ne 106844)) {
     throw 'FGM sample deduplication fixture changed.'
 }
 if (([int]$metadata.format_version -ne 3) -or
@@ -92,15 +90,15 @@ if (([int]$metadata.format_version -ne 3) -or
     throw 'Unexpected FGM pack entry/envelope format.'
 }
 if (($metadata.source_region -ne 'REGION_US') -or
-    ($metadata.mapping_sha256_lo -ne '0x567eebad') -or
+    ($metadata.mapping_sha256_lo -ne '0x41eb6d66') -or
     ($metadata.pack_sha256 -ne
-        '56a8e31c8a14c190554f6eb64619237dab2777050f28ef9d1b4bb6262da7644e')) {
+        'ded32605b77bb177fe91f3e24b65ab7c135ca53279feba958b5ab02e9535e871')) {
     throw 'FGM pack mapping or binary hash changed.'
 }
 if (($metadata.non_loop_sample_sha256 -ne
-        'ae8fab72373ae26248be27e15a9040336be9b8d3a8a83cd9d647af94acc2a7ff') -or
+        'd5201be41b9120acc06a06a3069864aa156406b404100c95f7b84c0d334703c4') -or
     ($metadata.non_loop_envelope_sha256 -ne
-        '12ecb4dcb02ff439eb09291be453c4c0a5cb16001e7e13daddfe9171837e6f07')) {
+        'be63d27732858972ebed4ac99b30485e7fb9e8bc6479c261fb46ee2617339e9c')) {
     throw 'Non-loop FGM sample or packed-envelope bytes changed.'
 }
 if ([bool]$metadata.runtime_conversion) {
@@ -262,11 +260,11 @@ foreach ($id in $expectedNonLoopPhaseHashes.Keys) {
 
 $expectedFighterVoices = @(
     @{ ID = 363; Sound = 108; Frequency = 16000; Duration = 45;
-        Samples = 3760; Volume = 76; Envelope = 0; Hash =
-        'd632acb6b82b8b97798659791da4170c7c8a6b4a707ea3b37ecd582fbd5b3bc8' },
+        Samples = 3760; Volume = 46; Envelope = 0; Hash =
+        'ddbbc182a942902e0af8a9f83e5fc7240eaff0df7a5ac7b4d6f83f1ba757835c' },
     @{ ID = 364; Sound = 102; Frequency = 16000; Duration = 65;
-        Samples = 2912; Volume = 42; Envelope = 5; Hash =
-        '141b7c3cdd1fe13e491fd087daaacd63d34f36c07dc589562e29e056e39e36ae' },
+        Samples = 2912; Volume = 89; Envelope = 0; Hash =
+        '91a709f230f061152e96b1988f6f5a5b3c00820d9bbb7b6c06cce995edfa9dbf' },
     @{ ID = 372; Sound = 105; Frequency = 16000; Duration = 46;
         Samples = 1680; Volume = 108; Envelope = 0; Hash =
         'ac3948daf50a93899233040c52153d84e75417f112487cc33679e40623804fcf' },
@@ -300,17 +298,17 @@ if (($marioLanding.Count -ne 1) -or
     ([int]$marioLanding[0].ds_frequency_hz -ne 35919) -or
     ([int]$marioLanding[0].source_duration_ticks -ne 3) -or
     ([int]$marioLanding[0].ds_sample_count -ne 621) -or
-    ([int]$marioLanding[0].ds_volume -ne 21) -or
+    ([int]$marioLanding[0].ds_volume -ne 58) -or
     ([int]$marioLanding[0].ds_pan -ne 64) -or
     ([int]$marioLanding[0].ds_loop_point_words -ne 0) -or
-    ([int]$marioLanding[0].packed_envelope_count -ne 2) -or
+    ([int]$marioLanding[0].packed_envelope_count -ne 0) -or
     ((@($marioLanding[0].root_fork_programs) -join ',') -ne '72') -or
     ((@($marioLanding[0].source_volume_envelope | ForEach-Object {
                 [int]$_.tick }) -join ',') -ne '0,1,2') -or
     ((@($marioLanding[0].source_volume_envelope | ForEach-Object {
                 [int]$_.ds_volume }) -join ',') -ne '21,86,41') -or
     ($marioLanding[0].ima_adpcm_sha256 -ne
-        '92d03fe38eb5de34abb1568891b72c7082c052551b84391fd3af9e3bbcb30c1e')) {
+        '4a7080cf1d004179dce9f7c770b32e155c96c8f12e641f349b8b2ebebc378b75')) {
     throw 'Mario landing source fixture changed.'
 }
 if (@($marioLanding[0].runtime_fidelity_debt).Count -ne 0) {
@@ -324,32 +322,14 @@ foreach ($id in 430) {
     }
 }
 $expectedAttackSounds = @(
-    @{ ID = 42; Sound = 71; Frequency = 39170; Duration = 35;
-        Samples = 5184; Volume = 87; Debt = $false; Hash =
-        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' },
-    @{ ID = 43; Sound = 71; Frequency = 32938; Duration = 35;
-        Samples = 5184; Volume = 73; Debt = $false; Hash =
-        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' },
-    @{ ID = 190; Sound = 71; Frequency = 36971; Duration = 25;
-        Samples = 5184; Volume = 73; Debt = $true; Hash =
-        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' },
     @{ ID = 215; Sound = 19; Frequency = 32000; Duration = 15;
-        Samples = 2176; Volume = 121; Debt = $false; Hash =
-        '7ed82ac09a350207bb4107b598447567516fd03ad40324953d041507a234ef78' },
-    @{ ID = 218; Sound = 71; Frequency = 32938; Duration = 27;
-        Samples = 5184; Volume = 73; Debt = $true; Hash =
-        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' },
-    @{ ID = 219; Sound = 71; Frequency = 36971; Duration = 25;
-        Samples = 5184; Volume = 73; Debt = $true; Hash =
-        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' }
+        Samples = 2176; Volume = 121; Hash =
+        '7ed82ac09a350207bb4107b598447567516fd03ad40324953d041507a234ef78' }
 )
 foreach ($expected in $expectedAttackSounds) {
     $entry = @($metadata.entries | Where-Object {
             [int]$_.id -eq $expected.ID
         })
-    $hasPitchDebt = $entry.Count -eq 1 -and
-        (@($entry[0].runtime_fidelity_debt) -contains
-            'ucd_pitch_automation')
     if (($entry.Count -ne 1) -or
         ([int]$entry[0].source_sound_index -ne $expected.Sound) -or
         ([int]$entry[0].ds_frequency_hz -ne $expected.Frequency) -or
@@ -359,31 +339,192 @@ foreach ($expected in $expectedAttackSounds) {
         ([int]$entry[0].packed_envelope_count -ne 0) -or
         ([int]$entry[0].ds_loop_point_words -ne 0) -or
         ($entry[0].ima_adpcm_sha256 -ne $expected.Hash) -or
-        ($hasPitchDebt -ne $expected.Debt)) {
+        (@($entry[0].runtime_fidelity_debt).Count -ne 0)) {
         throw "Attack/activation FGM $($expected.ID) source fixture changed."
     }
 }
-$swingEntries = @($metadata.entries | Where-Object {
-        [int]$_.id -in 42, 43, 190, 218, 219
-    })
-if (($swingEntries.Count -ne 5) -or
-    (@($swingEntries.pack_data_offset | Sort-Object -Unique).Count -ne 1) -or
-    [bool]$swingEntries[0].sample_body_deduplicated -or
-    (@($swingEntries | Select-Object -Skip 1 | Where-Object {
-            -not [bool]$_.sample_body_deduplicated
-        }).Count -ne 0)) {
-    throw 'Shared light-swing sample-body deduplication changed.'
+
+$qualification = $metadata.attack_activation_qualification
+if (($qualification.sha256 -ne
+        '8e520123996038b06edbd9cd2c3194734b9d7d08bde89159271ff3872a15e69e') -or
+    ($qualification.source_action_audit.sha256 -ne
+        'ae7690adc1d646e8c0a755510064a324c6ff59f4f578a2f6fdd719351744c601') -or
+    ((@($qualification.qualified_ids | ForEach-Object { [int]$_ }) -join ',') -ne
+        '215') -or
+    ((@($qualification.excluded_ids | ForEach-Object { [int]$_ }) -join ',') -ne
+        '19,41,42,43,185,186,187,189,190,217,218,219') -or
+    (@($qualification.cues).Count -ne 13) -or
+    ([int]$qualification.source_action_audit.callsite_count -ne 60) -or
+    ([int]$qualification.source_action_audit.action_count -ne 66) -or
+    (@($qualification.source_action_audit.callsites).Count -ne 60) -or
+    (@($qualification.source_action_audit.actions).Count -ne 66)) {
+    throw 'Attack/activation source qualification set changed.'
+}
+$residentAttackIDs = @($attackIDs | ForEach-Object { [int]$_ })
+if (@($qualification.excluded_ids | Where-Object {
+            $residentAttackIDs -contains [int]$_
+        }).Count -ne 0) {
+    throw 'A source-incomplete attack cue leaked back into the resident pack.'
+}
+
+$expectedBlockers = @{
+    '19' = 'ucd_pitch_schedule,articulation_pitch_and_volume_schedule,resident_pack_cap'
+    '41' = 'source_custom_fx_bus,resident_pack_cap'
+    '42' = 'source_custom_fx_bus'
+    '43' = 'source_custom_fx_bus'
+    '185' = 'source_sample_loop,articulation_infinite_pitch_and_volume_loop,resident_pack_cap'
+    '186' = 'ucd_pitch_schedule,articulation_volume_schedule,resident_pack_cap'
+    '187' = 'simultaneous_fork_voice_0,ucd_pitch_schedule,fork_volume_schedule,fork_source_custom_fx_bus,resident_pack_cap'
+    '189' = 'ucd_t5_pitch_schedule,source_rate_above_u16,ucd_volume_schedule,source_custom_fx_bus'
+    '190' = 'ucd_pitch_schedule,source_rate_above_u16,source_custom_fx_bus'
+    '215' = ''
+    '217' = 'ucd_pitch_schedule,articulation_spawn_mod_47,resident_pack_cap'
+    '218' = 'ucd_pitch_schedule,aot_custom_fx_tail_exceeds_resident_pack_cap,source_overlap_exceeds_handle_capacity'
+    '219' = 'ucd_pitch_schedule,source_rate_above_u16,source_custom_fx_bus'
+}
+foreach ($cue in $qualification.cues) {
+    $id = ([int]$cue.id).ToString()
+    if (-not $expectedBlockers.ContainsKey($id) -or
+        ((@($cue.blockers) -join ',') -ne $expectedBlockers[$id]) -or
+        ([bool]$cue.qualified -ne ($id -eq '215')) -or
+        ([int]$cue.effective_fgm_pan -ne 64)) {
+        throw "Attack/activation FGM $id blocker audit changed."
+    }
+}
+
+$expectedDirectCounts = @{
+    '19' = 4; '41' = 17; '42' = 21; '43' = 11; '185' = 2;
+    '186' = 1; '187' = 2; '189' = 1; '190' = 7; '215' = 1;
+    '217' = 1; '218' = 2; '219' = 2
+}
+foreach ($id in $expectedDirectCounts.Keys) {
+    $property = $qualification.source_action_audit.direct_call_counts.PSObject.Properties[$id]
+    if (($null -eq $property) -or
+        ([int]$property.Value -ne $expectedDirectCounts[$id])) {
+        throw "REGION_US FGM $id direct motion-call count changed."
+    }
+}
+
+$actionFixtures = @(
+    @{ Name = 'dMarioMainMotion_FireballGround'; ID = 215; Ticks = '16';
+        Callsite = 'dMarioMainMotion_0x1688' },
+    @{ Name = 'dMarioMainMotion_FireballAir'; ID = 215; Ticks = '16';
+        Callsite = 'dMarioMainMotion_0x1688' },
+    @{ Name = 'dFoxMainMotion_ReadyingFireFoxGround'; ID = 186; Ticks = '0';
+        Callsite = 'dFoxMainMotion_FireFoxStartAerialBody' },
+    @{ Name = 'dFoxMainMotion_ReadyingFireFoxAir'; ID = 186; Ticks = '0';
+        Callsite = 'dFoxMainMotion_FireFoxStartAerialBody' },
+    @{ Name = 'dFoxMainMotion_AttackAirD'; ID = 190;
+        Ticks = '4,7,10,13,16,19,22'; Callsite = 'dFoxMainMotion_AttackAirD' },
+    @{ Name = 'dMarioMainMotion_AttackAirD'; ID = 219;
+        Ticks = '10,13,16,19,22,25,28,31';
+        Callsite = 'dMarioMainMotion_AttackAirD' },
+    @{ Name = 'dMarioMainMotion_MarioTornadoGround'; ID = 218;
+        Ticks = '4,7,10,13,16,19,22,25,28,31,34,37,40';
+        Callsite = 'dMarioMainMotion_MarioTornadoGround' }
+)
+foreach ($expected in $actionFixtures) {
+    $action = @($qualification.source_action_audit.actions | Where-Object {
+            $_.action -eq $expected.Name
+        })
+    $events = @($action.events | Where-Object {
+            [int]$_.fgm_id -eq $expected.ID
+        })
+    if (($action.Count -ne 1) -or
+        ((@($events.trigger_tick | ForEach-Object { [int]$_ }) -join ',') -ne
+            $expected.Ticks) -or
+        (@($events | Where-Object {
+                $_.callsite -ne $expected.Callsite
+            }).Count -ne 0)) {
+        throw "REGION_US action timing changed: $($expected.Name)"
+    }
+}
+
+$fireballAudit = $qualification.cues | Where-Object { [int]$_.id -eq 215 }
+$fireballSound = $fireballAudit.voice.articulation.triggered_sounds[0]
+if (([int]$fireballAudit.voice.duration_ticks -ne 15) -or
+    ((@($fireballAudit.voice.notes.initial_source_frequency_hz) -join ',') -ne
+        '32000,32000') -or
+    ([int]$fireballAudit.voice.articulation.articulation_index -ne 42) -or
+    ($fireballAudit.voice.articulation.program_sha256 -ne
+        '78e320e6ee2a2832cb2f3635016b5b46d13fa820dccf4651d7effcd36ee5c7dd') -or
+    ([int]$fireballSound.sound_index -ne 19) -or
+    ([int]$fireballSound.source_pcm_samples -ne 2176) -or
+    ([int]$fireballSound.ds_ima_bytes_if_resident -ne 1092) -or
+    ($fireballSound.ds_ima_sha256_if_resident -ne
+        '7ed82ac09a350207bb4107b598447567516fd03ad40324953d041507a234ef78') -or
+    ($null -ne $fireballSound.source_loop) -or
+    (@($fireballAudit.voice.forks).Count -ne 0)) {
+    throw 'FGM 215 exact source-behavior audit changed.'
+}
+$shineAudit = $qualification.cues | Where-Object { [int]$_.id -eq 189 }
+if (([int64]$shineAudit.voice.notes[6].initial_source_frequency_hz -ne 85430) -or
+    (-not [bool]$shineAudit.voice.notes[6].frequency_exceeds_u16)) {
+    throw 'Fox Shine source rate above u16 was lost or truncated.'
+}
+$fx = $qualification.source_custom_fx_bus_contract
+if (($fx.source_fx_type -ne 'AL_FX_CUSTOM') -or
+    ($fx.source_articulation_opcode -ne 'unk36') -or
+    ([int]$fx.source_default_voice_fx -ne 64) -or
+    ([int]$fx.source_effect_section_count -ne 14) -or
+    ([int]$fx.source_effect_delay_samples -ne 19200) -or
+    ([int]$fx.source_effect_latest_nonzero_gain_output_tap_samples -ne 17600) -or
+    ([int]$fx.source_effect_nonzero_feedback_sections -ne 14) -or
+    ($fx.source_effect_table_sha256 -ne
+        '79e344b1ae8576be2a32997c49fabc5a8c1dcb1d2a87e89ec2a4e6d5c6abd934') -or
+    ($fx.source_effect_state_scope -ne 'shared aux-bus circular delay') -or
+    ([int]$fx.ds_resident_pack_fx_fields -ne 0) -or
+    ($fx.ds_runtime_behavior -ne 'dry hardware channel')) {
+    throw 'BattleShip custom FX-bus exclusion contract changed.'
+}
+
+$fgm218 = $qualification.fgm_218_feasibility
+$fgm218Ticks = '4,7,10,13,16,19,22,25,28,31,34,37,40'
+if (($fgm218.decision -ne 'fail_closed') -or
+    [bool]$fgm218.qualified -or
+    ([int]$fgm218.id -ne 218) -or
+    (@($fgm218.source_actions).Count -ne 2) -or
+    ((@($fgm218.source_actions.action) -join ',') -ne
+        'dMarioMainMotion_MarioTornadoGround,dMarioMainMotion_0x1884') -or
+    (@($fgm218.source_actions | Where-Object {
+                (@($_.trigger_ticks) -join ',') -ne $fgm218Ticks
+            }).Count -ne 0) -or
+    ([int]$fgm218.source_calls_per_action -ne 13) -or
+    ([int]$fgm218.source_retrigger_period_ticks -ne 3) -or
+    ([int]$fgm218.source_voice_duration_ticks -ne 27) -or
+    ([int]$fgm218.source_max_live_voices -ne 9) -or
+    ([int]$fgm218.ds_handle_capacity -ne 8) -or
+    ([int]$fgm218.overlap_handle_shortfall -ne 1) -or
+    ([int]$fgm218.source_articulation_fx -ne 100) -or
+    ([int]$fgm218.source_inherited_voice_fx -ne 64) -or
+    ([int]$fgm218.source_effective_fx_mix -ne 25) -or
+    ([int]$fgm218.resident_bytes_before_candidate -ne 107536) -or
+    ([int]$fgm218.resident_limit_bytes -ne 108544) -or
+    ([int]$fgm218.resident_free_bytes_before_candidate -ne 1008) -or
+    ([int]$fgm218.aot_pack_entry_bytes -ne 32) -or
+    ([int]$fgm218.dry_aot_samples -ne 4968) -or
+    ([int]$fgm218.dry_aot_ima_bytes -ne 2488) -or
+    ([int]$fgm218.dry_projected_pack_bytes -ne 110056) -or
+    ([int]$fgm218.dry_projected_headroom_bytes -ne -1512) -or
+    ([int]$fgm218.minimum_wet_timeline_samples -ne 17601) -or
+    ([int]$fgm218.minimum_wet_ima_bytes -ne 8804) -or
+    ([int]$fgm218.minimum_wet_projected_pack_bytes -ne 116372) -or
+    ([int]$fgm218.minimum_wet_pack_overflow_bytes -ne 7828) -or
+    [bool]$fgm218.runtime_conversion_allowed -or
+    [bool]$fgm218.runtime_allocation_allowed -or
+    ((@($fgm218.blockers) -join ',') -ne $expectedBlockers['218'])) {
+    throw 'FGM 218 exact AOT feasibility boundary changed.'
 }
 
 $expectedFoxMovement = @(
     @{ ID = 74; Sound = 1; Frequency = 35919; Duration = 3;
-        Samples = 621; Volume = 21; Envelope = 2;
+        Samples = 621; Volume = 58; Envelope = 0;
         Root = 74; Render = 72; Hash =
-        '92d03fe38eb5de34abb1568891b72c7082c052551b84391fd3af9e3bbcb30c1e' },
+        '4a7080cf1d004179dce9f7c770b32e155c96c8f12e641f349b8b2ebebc378b75' },
     @{ ID = 300; Sound = 28; Frequency = 16000; Duration = 25;
-        Samples = 6688; Volume = 20; Envelope = 2;
+        Samples = 2301; Volume = 31; Envelope = 0;
         Root = 300; Render = 298; Hash =
-        'cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6' }
+        '020235d7fa1a69f813ba829ef481ea96651002d5e04b3566ba0633dcd731cf13' }
 )
 foreach ($expected in $expectedFoxMovement) {
     $entry = @($metadata.entries | Where-Object {
@@ -452,6 +593,182 @@ if (($excludedJump.reason -ne
     throw 'Excluded Mario Jump source behavior changed.'
 }
 
+$expectedFoxActions = @{
+    74 = [PSCustomObject]@{
+        File = 'decomp/src/relocData/208_FoxMainMotion.c'
+        Forks = '72'
+        Actions = @(
+            'dFoxMainMotion_LandingAirX_0x010C|0|ftMotionPlayFGM',
+            'dFoxMainMotion_LandingAirX_0x0124|0|ftMotionPlayFGM',
+            'dFoxMainMotion_LandingAirX_0x018C|0|ftMotionPlayFGM',
+            'dFoxMainMotion_LandingAirF|0|ftMotionPlayFGM',
+            'dFoxMainMotion_LandingAirB|0|ftMotionPlayFGM',
+            'dFoxMainMotion_LandingAirX_0x177C|0|ftMotionPlayFGM')
+    }
+    363 = [PSCustomObject]@{
+        File = 'decomp/src/relocData/208_FoxMainMotion.c'
+        Forks = ''
+        Actions = @('dFoxMainMotion_JumpAerialB|0|ftMotionPlayVoice')
+    }
+    364 = [PSCustomObject]@{
+        File = 'decomp/src/relocData/208_FoxMainMotion.c'
+        Forks = ''
+        Actions = @(
+            'dFoxMainMotion_TechB_0x418|4|ftMotionPlayVoice',
+            'dFoxMainMotion_RollB|4|ftMotionPlayVoice')
+    }
+    300 = [PSCustomObject]@{
+        File = 'decomp/src/ft/ftcommon/ftcommondownwaitbounce.c'
+        Forks = '298'
+        Actions = @(
+            'nFTCommonStatusDownBounceU|0|func_800269C0_275C0',
+            'nFTCommonStatusDownBounceD|0|func_800269C0_275C0')
+    }
+}
+foreach ($id in 74, 363, 364, 300) {
+    $entry = $metadata.entries | Where-Object { [int]$_.id -eq $id }
+    $expected = $expectedFoxActions[$id]
+    $actualActions = @($entry.source_actions | ForEach-Object {
+            '{0}|{1}|{2}' -f $_.action, $_.trigger_game_tick, $_.call
+        })
+    if (($entry.source_action_file -ne $expected.File) -or
+        (($actualActions -join ',') -ne ($expected.Actions -join ',')) -or
+        ((@($entry.root_fork_programs) -join ',') -ne $expected.Forks) -or
+        (@($entry.omitted_fork_programs).Count -ne 0) -or
+        (@($entry.runtime_fidelity_debt).Count -ne 0) -or
+        ([int]$entry.sound_sample_pan -ne 63) -or
+        ([int]$entry.ds_pan -ne 64) -or
+        [bool]$entry.source_loop_infinite) {
+        throw "Fox FGM $id source-action behavior audit changed."
+    }
+}
+$foxLanding = $metadata.entries | Where-Object { [int]$_.id -eq 74 }
+$foxJump = $metadata.entries | Where-Object { [int]$_.id -eq 363 }
+$foxEscape = $metadata.entries | Where-Object { [int]$_.id -eq 364 }
+if ((@($foxLanding.source_volume_envelope | ForEach-Object {
+                "$($_.tick):$($_.ds_volume)" }) -join ',') -ne
+        '0:21,1:86,2:41' -or
+    (@($foxJump.source_volume_envelope | ForEach-Object {
+                "$($_.tick):$($_.ds_volume)" }) -join ',') -ne '0:76' -or
+    (@($foxEscape.source_volume_envelope | ForEach-Object {
+                "$($_.tick):$($_.ds_volume)" }) -join ',') -ne
+        '0:42,5:84,10:106,25:84,40:67,45:0') {
+    throw 'Fox landing/jump/escape source volume schedules changed.'
+}
+
+$expectedSourceAot = @(
+    @{ ID = 74; Samples = 621; Frequency = 35919; Volume = 58;
+        Ticks = 3; ScheduleTicks = '0,1,2'; ArtVolumes = '30,125,60';
+        Schedule = '38f8d400b4422667e462c7b42a82878f18e4bcbc11a73ce9584e5f52583c0cc7';
+        Pcm = '5a1d8761715155f8bec55a5b2b8337ec153ac37f3834ecbe6403b7d8c7c2bd6c';
+        Negative = '4aea57033e87121cb0958dfe6465c02395907039a1f9f748902846d584921d7b' },
+    @{ ID = 77; Samples = 621; Frequency = 35919; Volume = 58;
+        Ticks = 3; ScheduleTicks = '0,1,2'; ArtVolumes = '30,125,60';
+        Schedule = '38f8d400b4422667e462c7b42a82878f18e4bcbc11a73ce9584e5f52583c0cc7';
+        Pcm = '5a1d8761715155f8bec55a5b2b8337ec153ac37f3834ecbe6403b7d8c7c2bd6c';
+        Negative = '4aea57033e87121cb0958dfe6465c02395907039a1f9f748902846d584921d7b' },
+    @{ ID = 363; Samples = 3760; Frequency = 16000; Volume = 46;
+        Ticks = 45; ScheduleTicks = '0'; ArtVolumes = '90';
+        Schedule = 'e514fee28bb66ec0cb1617b4006f1c3e2c894c41b610ea0ae1e7ce906d986446';
+        Pcm = '4c1c69a5a3819a914c59f4628f197b8c2f3eebfe5a2a032861703ea80f2c3f0a';
+        Negative = '704d9d0651a842dc360ad0d6937c05b46715049694195e7be738e7b628aa87e9' },
+    @{ ID = 364; Samples = 2912; Frequency = 16000; Volume = 89;
+        Ticks = 65; ScheduleTicks = '0,5,10,25,40,45';
+        ArtVolumes = '50,100,127,100,80,0';
+        Schedule = '16a887d08ee23c397052706cd111caf8fcf46e40648cef8ebe7b2c580823ca2c';
+        Pcm = '611f64f616ccf4798a60cc5efff85e3f6541c9e057c4825b50b6400f17f07dac';
+        Negative = 'a6b0fdf87fe374da6ad2bc8b3353cb06ee65c1dc67040b592e719c959f41912a' }
+)
+foreach ($expected in $expectedSourceAot) {
+    $entry = $metadata.entries | Where-Object { [int]$_.id -eq $expected.ID }
+    $oracle = $entry.acoustic_oracle
+    $schedule = @($oracle.source_effective_tick_schedule)
+    if (($entry.trim_strategy -ne
+            'source_articulation_pitch_volume_schedule_aot') -or
+        (-not [bool]$entry.trim_applied) -or
+        [bool]$entry.trim_retained_prefix_exact -or
+        ([int]$entry.trim_proven_reachable_samples -ne $expected.Samples) -or
+        ($oracle.aot_strategy -ne
+            'source_articulation_pitch_volume_schedule') -or
+        [bool]$oracle.aot_runtime_automation -or
+        ([int]$oracle.aot_output_samples -ne $expected.Samples) -or
+        ([int]$oracle.aot_output_frequency_hz -ne $expected.Frequency) -or
+        ([int]$oracle.aot_constant_hardware_volume -ne $expected.Volume) -or
+        ([int]$oracle.aot_full_tick_count -ne $expected.Ticks) -or
+        ($null -ne $oracle.aot_modulator) -or
+        ($oracle.aot_volume_model -ne
+            'source_quadratic_n_micro_184_sample_ramps') -or
+        ([int]$oracle.aot_ramp_output_rate_hz -ne 32000) -or
+        ([int]$oracle.aot_ramp_samples -ne 184) -or
+        ($oracle.aot_schedule_sha256 -ne $expected.Schedule) -or
+        ($oracle.aot_rendered_pcm_sha256 -ne $expected.Pcm) -or
+        (-not [bool]$oracle.aot_step_volume_negative_rejected) -or
+        ($oracle.aot_step_volume_negative_pcm_sha256 -ne
+            $expected.Negative) -or
+        ((@($schedule | ForEach-Object { $_.tick }) -join ',') -ne
+            $expected.ScheduleTicks) -or
+        ((@($schedule | ForEach-Object { $_.articulation_volume }) -join
+                ',') -ne $expected.ArtVolumes)) {
+        throw "FGM $($expected.ID) source articulation AOT proof changed."
+    }
+}
+
+$foxLandingBody = $metadata.entries | Where-Object { [int]$_.id -eq 74 }
+$marioLandingBody = $metadata.entries | Where-Object { [int]$_.id -eq 77 }
+if (([int]$foxLandingBody.pack_data_offset -ne
+        [int]$marioLandingBody.pack_data_offset) -or
+    ($foxLandingBody.ima_adpcm_sha256 -ne
+        $marioLandingBody.ima_adpcm_sha256) -or
+    (-not [bool]$marioLandingBody.sample_body_deduplicated) -or
+    (@($marioLandingBody.runtime_fidelity_debt).Count -ne 0)) {
+    throw 'Mario/Fox landing AOT sample-body reuse changed.'
+}
+
+$foxBounce = $metadata.entries | Where-Object { [int]$_.id -eq 300 }
+$bounceOracle = $foxBounce.acoustic_oracle
+$bounceSchedule = @($bounceOracle.source_effective_tick_schedule)
+if (($foxBounce.trim_strategy -ne
+        'source_articulation_pitch_volume_schedule_aot') -or
+    (-not [bool]$foxBounce.trim_applied) -or
+    [bool]$foxBounce.trim_retained_prefix_exact -or
+    ([int]$foxBounce.trim_proven_reachable_samples -ne 2301) -or
+    ([int]$bounceOracle.aot_output_samples -ne 2301) -or
+    ([int]$bounceOracle.aot_output_frequency_hz -ne 16000) -or
+    ([int]$bounceOracle.aot_constant_hardware_volume -ne 31) -or
+    ($bounceOracle.aot_strategy -ne
+        'source_articulation_pitch_volume_schedule') -or
+    ([int]$bounceOracle.aot_full_tick_count -ne 25) -or
+    [bool]$bounceOracle.aot_runtime_automation -or
+    ([int]$bounceOracle.aot_modulator_index -ne 22) -or
+    ([int]$bounceOracle.aot_modulator.shape -ne 0) -or
+    ([int]$bounceOracle.aot_modulator.target -ne 11) -or
+    ([int]$bounceOracle.aot_modulator.init_phase -ne 49) -or
+    ([double]$bounceOracle.aot_modulator.period -ne 100.0) -or
+    ([double]$bounceOracle.aot_modulator.amplitude -ne 50.0) -or
+    ([double]$bounceOracle.aot_modulator.offset -ne 50.0) -or
+    ($bounceOracle.aot_schedule_sha256 -ne
+        'afc23889a04c1cc57a7e2c561180a2e27c0f2082324ab77855cfd921f9b7f733') -or
+    ($bounceOracle.aot_rendered_pcm_sha256 -ne
+        '5ed13fa3154454b96c92de82488f6bc6dd6af4badb75f1a679bc4ad9e04991ae') -or
+    ($bounceOracle.aot_volume_model -ne
+        'source_quadratic_n_micro_184_sample_ramps') -or
+    ([int]$bounceOracle.aot_ramp_output_rate_hz -ne 32000) -or
+    ([int]$bounceOracle.aot_ramp_samples -ne 184) -or
+    (-not [bool]$bounceOracle.aot_step_volume_negative_rejected) -or
+    ($bounceOracle.aot_step_volume_negative_pcm_sha256 -ne
+        '4d23cd5c8ec8fc457c2a92a2571e1ef0d4bf8d1bbaae64bd2528928c0cb531de') -or
+    ($bounceSchedule.Count -ne 25) -or
+    ((@($bounceSchedule | ForEach-Object { $_.ds_volume }) -join ',') -ne
+        '56,63,63,63,61,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,47,63,63') -or
+    ((@($bounceSchedule | ForEach-Object { $_.frequency_hz }) -join ',') -ne
+        '16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,15545,15545,15545') -or
+    ($metadata.sources.fgm_unk.raw_sha256 -ne
+        'adcf2e1ae1a8e1756b2158139a9050511c7ced8dec276d52c44599e43f77ac40') -or
+    ($metadata.sources.source_sine_table.sha256 -ne
+        'bc184c0dbd76adecf7ff264d39cc58456546173beba727f189d2716dd8eabf16')) {
+    throw 'Fox DownBounce source LFO/pitch AOT proof changed.'
+}
+
 $expectedTrimProofs = @(
     @{ ID = 470; Source = 11248; Schedule = 9109; Current = 9109;
         Retained = 9109; Removed = 2139; Prefix =
@@ -465,48 +782,27 @@ $expectedTrimProofs = @(
     @{ ID = 490; Source = 15840; Schedule = 13801; Current = 13801;
         Retained = 13801; Removed = 2039; Prefix =
         '647566464d00d204664f6a13be5fd144194c9933ed7f011006faa80261435429' },
-    @{ ID = 74; Source = 5232; Schedule = 621; Current = 621;
-        Retained = 621; Removed = 4611; Prefix =
-        '53e9fcd9f8c3a4908dea144b2774cf839ce9f27a6872a53984fe0517b7ec83d7' },
-    @{ ID = 363; Source = 3760; Schedule = 4141; Current = 4141;
-        Retained = 3760; Removed = 0; Prefix =
-        '362ca3a2a7d4ba82775cef426ae1a1df528688edd014347322f2bc3de24e5270' },
-    @{ ID = 364; Source = 2912; Schedule = 5981; Current = 5981;
-        Retained = 2912; Removed = 0; Prefix =
-        'b03e298f9643eef58c3db9c44c53078557d84b555e8389fb515122d52844a499' },
     @{ ID = 372; Source = 1680; Schedule = 4233; Current = 4233;
         Retained = 1680; Removed = 0; Prefix =
         '95a4e1fe34793dd32060f5eb090ed4331b45893005f548a80b37e6b6d280e070' },
     @{ ID = 430; Source = 17232; Schedule = 19182; Current = 22093;
         Retained = 17232; Removed = 0; Prefix =
         'ccd7fc9b7add5f8527d0c9ae3c192c8500d5b603d63d8fc1f40b3c2a1a51ac0f' },
-    @{ ID = 77; Source = 5232; Schedule = 621; Current = 621;
-        Retained = 621; Removed = 4611; Prefix =
-        '53e9fcd9f8c3a4908dea144b2774cf839ce9f27a6872a53984fe0517b7ec83d7' },
-    @{ ID = 42; Source = 5184; Schedule = 7885; Current = 7884;
-        Retained = 5184; Removed = 0; Prefix =
-        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
-    @{ ID = 43; Source = 5184; Schedule = 6630; Current = 6630;
-        Retained = 5184; Removed = 0; Prefix =
-        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
-    @{ ID = 190; Source = 5184; Schedule = 5839; Current = 5316;
-        Retained = 5184; Removed = 0; Prefix =
-        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
     @{ ID = 215; Source = 2176; Schedule = 2761; Current = 2761;
         Retained = 2176; Removed = 0; Prefix =
         '8f6664be97363bc3e73916e0c177597ff99657c7bcece9632606109829952c68' },
-    @{ ID = 218; Source = 5184; Schedule = 6089; Current = 5115;
-        Retained = 5184; Removed = 0; Prefix =
-        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
-    @{ ID = 219; Source = 5184; Schedule = 5839; Current = 5316;
-        Retained = 5184; Removed = 0; Prefix =
-        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
     @{ ID = 439; Source = 9136; Schedule = 8634; Current = 8838;
         Retained = 8838; Removed = 298; Prefix =
         '21b2a92339ebff5a17bbd1c733d37e93f415e8d9ccd65d8d080c7b9cb68687ec' },
+    @{ ID = 292; Source = 6688; Schedule = 5168; Current = 5167;
+        Retained = 5168; Removed = 1520; Prefix =
+        '3ab193e4365f0742a7319a436e54a44c7a3901fdff10e8082fe6488b3a373715' },
     @{ ID = 370; Source = 9808; Schedule = 11041; Current = 11041;
         Retained = 9808; Removed = 0; Prefix =
         '981080097d24ccd16a8de1c417f409bb4a2a8b38d273ce57d8df60d16e1ba39d' },
+    @{ ID = 289; Source = 6688; Schedule = 5168; Current = 5167;
+        Retained = 5168; Removed = 1520; Prefix =
+        '3ab193e4365f0742a7319a436e54a44c7a3901fdff10e8082fe6488b3a373715' },
     @{ ID = 154; Source = 25280; Schedule = 14913; Current = 14623;
         Retained = 14913; Removed = 10367; Prefix =
         '95b15298900185a62667d5a7ae9b5df854d0284ff1f9cc1f92990ef5fe0df4bf' }
@@ -528,34 +824,23 @@ foreach ($expected in $expectedTrimProofs) {
         throw "FGM $($expected.ID) duration-derived trim proof changed."
     }
 }
-foreach ($id in 292, 289, 300) {
-    $entry = $metadata.entries | Where-Object { [int]$_.id -eq $id }
-    if (($entry.trim_strategy -ne
-            'untrimmed_articulation_pitch_modulation') -or
-        ([int]$entry.trim_source_samples_removed -ne 0) -or
-        ([int]$entry.trim_proven_reachable_samples -ne 6688) -or
-        (-not [bool]$entry.trim_retained_prefix_exact)) {
-        throw "Pitch-modulated FGM $id was trimmed without a source proof."
-    }
-}
-
 $expectedKo = @(
     @{ ID = 439; Sound = 183; Frequency = 16009; Duration = 96;
         Samples = 8838;
         Root = 439; Render = 439; Hash =
         'a71ef24f6f54df209e7b782f6322481aa73f7dda31128a6cb4151b70fc5a0f7f' },
     @{ ID = 292; Sound = 28; Frequency = 16951; Duration = 53;
-        Samples = 6688;
+        Samples = 5168;
         Root = 292; Render = 287; Hash =
-        'cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6' },
+        '445530cd55f889e36c2cb025cfddea47136d09d9a38c8a9489c42d306d586d41' },
     @{ ID = 370; Sound = 104; Frequency = 16000; Duration = 120;
         Samples = 9808;
         Root = 370; Render = 370; Hash =
         'e518d1106a41cf9c99eac91ab053304a515a04d6f5fc5a9c5ea845365518ea77' },
     @{ ID = 289; Sound = 28; Frequency = 16951; Duration = 53;
-        Samples = 6688;
+        Samples = 5168;
         Root = 289; Render = 287; Hash =
-        'cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6' },
+        '445530cd55f889e36c2cb025cfddea47136d09d9a38c8a9489c42d306d586d41' },
     @{ ID = 154; Sound = 0; Frequency = 8476; Duration = 300;
         Samples = 14913;
         Root = 154; Render = 154; Hash =
@@ -589,12 +874,12 @@ if ((@($marioSlam.root_fork_programs) -join ',') -ne '287' -or
     (@($foxBounce.root_fork_programs) -join ',') -ne '298' -or
     ([int]$marioSlam.pack_data_offset -ne
         [int]$foxSlam.pack_data_offset) -or
-    ([int]$marioSlam.pack_data_offset -ne
+    ([int]$marioSlam.pack_data_offset -eq
         [int]$foxBounce.pack_data_offset) -or
     [bool]$marioSlam.sample_body_deduplicated -or
     (-not [bool]$foxSlam.sample_body_deduplicated) -or
-    (-not [bool]$foxBounce.sample_body_deduplicated)) {
-    throw 'Mario/Fox slam/bounce resident sample dedup changed.'
+    [bool]$foxBounce.sample_body_deduplicated) {
+    throw 'Slam dedup or Fox DownBounce AOT sample ownership changed.'
 }
 $deadExplode = $metadata.entries | Where-Object { [int]$_.id -eq 154 }
 if ((@($deadExplode.root_fork_programs) -join ',') -ne '685' -or
@@ -607,107 +892,222 @@ $koDebt = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'ko'
     } | ForEach-Object { @($_.runtime_fidelity_debt) })
 if (-not ($koDebt -contains 'ucd_pitch_automation') -or
-    -not ($koDebt -contains 'articulation_pitch_modulation')) {
-    throw 'Regular-KO pitch-automation fidelity debt is no longer explicit.'
+    -not ($koDebt -contains 'articulation_pitch_automation') -or
+    -not ($koDebt -contains 'articulation_volume_modulation')) {
+    throw 'Regular-KO pitch/volume automation debt is no longer explicit.'
 }
 
-$expectedHits = @(
-    @{ ID = 40; Sound = 11; Frequency = 25398; Duration = 68;
-        Samples = 16416; Bytes = 8212; Volume = 72; Envelope = 4;
-        Hash = '38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053' },
-    @{ ID = 38; Sound = 11; Frequency = 34896; Duration = 111;
-        Samples = 16416; Bytes = 8212; Volume = 121; Envelope = 7;
-        Hash = '38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053' },
-    @{ ID = 37; Sound = 11; Frequency = 45255; Duration = 155;
-        Samples = 16416; Bytes = 8212; Volume = 124; Envelope = 8;
-        Hash = '38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053' },
-    @{ ID = 34; Sound = 16; Frequency = 12788; Duration = 70;
-        Samples = 11216; Bytes = 5612; Volume = 92; Envelope = 7;
-        Hash = '9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7' },
-    @{ ID = 32; Sound = 16; Frequency = 14254; Duration = 111;
-        Samples = 11216; Bytes = 5612; Volume = 111; Envelope = 8;
-        Hash = '9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7' },
-    @{ ID = 31; Sound = 16; Frequency = 16000; Duration = 151;
-        Samples = 11216; Bytes = 5612; Volume = 124; Envelope = 8;
-        Hash = '9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7' },
-    @{ ID = 216; Sound = 22; Frequency = 30204; Duration = 92;
-        Samples = 20458; Bytes = 10236; Volume = 82; Envelope = 11;
-        Hash = 'be33e0e365b534772558b69a35379c864325f38be16b22bc91c792c69db41fa1' },
-    @{ ID = 28; Sound = 27; Frequency = 32000; Duration = 160;
-        Samples = 29441; Bytes = 14724; Volume = 72; Envelope = 23;
-        Hash = '0bd0766e8bb94f9833b439f266babcb89fd74d1d5b156fe765c109983e6fea2a' },
-    @{ ID = 2; Sound = 4; Frequency = 50797; Duration = 190;
-        Samples = 30304; Bytes = 15156; Volume = 97; Envelope = 23;
-        Hash = 'b9494fab2cdf707c622105d1df10edc32a9a18768a90b5fc6010e172bbac71d6' },
-    @{ ID = 0; Sound = 4; Frequency = 21357; Duration = 135;
-        Samples = 30304; Bytes = 15156; Volume = 106; Envelope = 16;
-        Hash = 'b9494fab2cdf707c622105d1df10edc32a9a18768a90b5fc6010e172bbac71d6' }
+$excludedIDs = @(40, 38, 37, 34, 32, 31, 216, 28, 2, 0, 188)
+if (($metadata.strict_hit_contact_status -ne 'fail_closed') -or
+    ((@($metadata.runtime_excluded_hit_ids) -join ',') -ne
+        ($excludedIDs -join ','))) {
+    throw 'Collision/contact runtime exclusion contract changed.'
+}
+if (@($metadata.entries | Where-Object {
+            [int]$_.id -in $excludedIDs
+        }).Count -ne 0) {
+    throw 'A non-exact collision/contact cue entered the runtime pack.'
+}
+
+$excludedCues = @($metadata.excluded_hit_cues)
+if (($excludedCues.Count -ne $excludedIDs.Count) -or
+    ((@($excludedCues | ForEach-Object { [int]$_.id }) -join ',') -ne
+        ($excludedIDs -join ','))) {
+    throw 'Collision/contact source-audit inventory changed.'
+}
+if (([int]$metadata.source_custom_fx.parameter_count -ne 114) -or
+    ($metadata.source_custom_fx.parameters_sha256 -ne
+        '79e344b1ae8576be2a32997c49fabc5a8c1dcb1d2a87e89ec2a4e6d5c6abd934') -or
+    ($metadata.source_custom_fx.scene_selection -ne
+        'scmanager.c:syAudioSetFXType(AL_FX_CUSTOM)') -or
+    ([int]$metadata.source_custom_fx.parameters[0] -ne 14) -or
+    ([int]$metadata.source_custom_fx.parameters[1] -ne 19200) -or
+    ([int]$metadata.source_custom_fx.parameters[113] -ne 20480) -or
+    ([int]$metadata.source_custom_fx.output_rate_hz -ne 32000) -or
+    ([int]$metadata.source_custom_fx.parameter_ramp_microseconds -ne 5750) -or
+    ([int]$metadata.source_custom_fx.parameter_ramp_samples -ne 184) -or
+    ([int]$metadata.source_custom_fx.start_voice_attack_microseconds -ne 0) -or
+    ($metadata.source_custom_fx.volume_curve -ne
+        '(signed_volume * signed_volume) >> 15') -or
+    ($metadata.source_custom_fx.fx_mix_formula -ne
+        'articulation_unk36 * (root_unk2c >> 1) >> 7')) {
+    throw 'BattleShip AL_FX_CUSTOM source fixture changed.'
+}
+$feasibility = $metadata.hit_contact_feasibility_experiment
+if (([int]$feasibility.id -ne 34) -or
+    ($feasibility.decision -ne 'fail_closed') -or
+    ([int]$feasibility.source_root_program -ne 34) -or
+    ([int]$feasibility.source_fork_program -ne 658) -or
+    ([int]$feasibility.source_root_duration_ticks -ne 70) -or
+    ([int]$feasibility.source_fork_duration_ticks -ne 200) -or
+    ([int]$feasibility.fused_minimum_samples -ne 36800) -or
+    ([int]$feasibility.pack_headroom_bytes -ne 1008) -or
+    ([int]$feasibility.fused_minimum_add_bytes -ne 18436) -or
+    ([int]$feasibility.fused_minimum_total_bytes -ne 125972) -or
+    ([int]$feasibility.fused_minimum_over_limit_bytes -ne 17428) -or
+    ([int]$feasibility.paired_minimum_add_bytes -ne 24912) -or
+    ([int]$feasibility.paired_minimum_over_limit_bytes -ne 23904)) {
+    throw 'ID 34 bounded exact-AOT feasibility result changed.'
+}
+
+$expectedHitAudits = @(
+    @{ ID = 40; Programs = '40,655'; FX = '0,20';
+        Rates = '25398,25398|17959'; New = '1,1|1'; Loops = 'none|20868:25137';
+        VAD = '9542b04d27c18d27632db946510571724727e60521f25fcff30733901ce3042c|bfd7f004f6343ee5ef74a44fb5f686349416b8e7ade8a9ccfc3ce653f21d3025';
+        PCM = 'aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f|c07380218ffddc2ba5ef60c94d9330b3215627e075fd9db6026b8e3454284e10' },
+    @{ ID = 38; Programs = '38,654'; FX = '0,29';
+        Rates = '34896,32938,32938|18486'; New = '1,1,1|1'; Loops = 'none|20868:25137';
+        VAD = '9542b04d27c18d27632db946510571724727e60521f25fcff30733901ce3042c|bfd7f004f6343ee5ef74a44fb5f686349416b8e7ade8a9ccfc3ce653f21d3025';
+        PCM = 'aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f|c07380218ffddc2ba5ef60c94d9330b3215627e075fd9db6026b8e3454284e10' },
+    @{ ID = 37; Programs = '37,653'; FX = '29,37';
+        Rates = '45255,45255,42715,42715|15899,16844,18907,20031,21222'; New = '1,1,1,1|1,0,0,0,0'; Loops = 'none|20868:25137';
+        VAD = '9542b04d27c18d27632db946510571724727e60521f25fcff30733901ce3042c|bfd7f004f6343ee5ef74a44fb5f686349416b8e7ade8a9ccfc3ce653f21d3025';
+        PCM = 'aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f|c07380218ffddc2ba5ef60c94d9330b3215627e075fd9db6026b8e3454284e10' },
+    @{ ID = 34; Programs = '34,658'; FX = '6,20';
+        Rates = '12788,12788|17959'; New = '1,1|1'; Loops = 'none|20868:25137';
+        VAD = '2d153fa08a2b6c07c9ffe3365445741ff86853fcecc87582c0b88d3e946d58c1|bfd7f004f6343ee5ef74a44fb5f686349416b8e7ade8a9ccfc3ce653f21d3025';
+        PCM = '39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438|c07380218ffddc2ba5ef60c94d9330b3215627e075fd9db6026b8e3454284e10' },
+    @{ ID = 32; Programs = '32,657'; FX = '29,29';
+        Rates = '14254,14254,14254|18486'; New = '1,1,1|1'; Loops = 'none|20868:25137';
+        VAD = '2d153fa08a2b6c07c9ffe3365445741ff86853fcecc87582c0b88d3e946d58c1|bfd7f004f6343ee5ef74a44fb5f686349416b8e7ade8a9ccfc3ce653f21d3025';
+        PCM = '39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438|c07380218ffddc2ba5ef60c94d9330b3215627e075fd9db6026b8e3454284e10' },
+    @{ ID = 31; Programs = '31,656'; FX = '29,37';
+        Rates = '16000,16000,16000,16000|12619,13369,15006,15899,16844'; New = '1,1,1,1|1,0,0,0,0'; Loops = 'none|20868:25137';
+        VAD = '2d153fa08a2b6c07c9ffe3365445741ff86853fcecc87582c0b88d3e946d58c1|bfd7f004f6343ee5ef74a44fb5f686349416b8e7ade8a9ccfc3ce653f21d3025';
+        PCM = '39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438|c07380218ffddc2ba5ef60c94d9330b3215627e075fd9db6026b8e3454284e10' },
+    @{ ID = 216; Programs = '216,668'; FX = 'none,none';
+        Rates = '30204,15102,40317,40317|65875,36971'; New = '1,1,1,0|1,0'; Loops = '10:1625|none';
+        VAD = '894ee3f14b5533298e37ad014f6703bd0af28d57e8159e62b1b258b38e3db2e9|b8c5c059d805808963704a675ed60374830cca01690e53ec5bec0b4f2fa08dc3';
+        PCM = '1c0313ee3d0fd6ddca702fb7ae45641b880dd909cdcbc7875592956e036429c0|5fb5428b52610d9ca61bcb853cc57855d89032ef3960cc245f82b9e7ff57618c' },
+    @{ ID = 28; Programs = '28'; FX = 'none';
+        Rates = '32000,32000,32000'; New = '1,0,0'; Loops = '13840:27456';
+        VAD = 'b130e97986180605fc55a1607cf94423d1991fab2ac011687eac8879c2a98d55';
+        PCM = 'f675d07dc6ddabaf543672573a1e1bb1ce6b97266ddb07e882d755d51b82b27c' },
+    @{ ID = 2; Programs = '2'; FX = '25';
+        Rates = '50797,50797'; New = '1,0'; Loops = 'none';
+        VAD = '104533679b9fae954fa607b25c505ebed02ffb41754fd5dbeb4b58a37efc12a3';
+        PCM = 'cc12d0f5d5cdb3a33c7f1c8b55d5a57756305afbd23bf02ea8e197ebb4d636be' },
+    @{ ID = 0; Programs = '0'; FX = '25';
+        Rates = '21357,21357,21357'; New = '1,0,0'; Loops = 'none';
+        VAD = '104533679b9fae954fa607b25c505ebed02ffb41754fd5dbeb4b58a37efc12a3';
+        PCM = 'cc12d0f5d5cdb3a33c7f1c8b55d5a57756305afbd23bf02ea8e197ebb4d636be' },
+    @{ ID = 188; Programs = '188'; FX = '35';
+        Rates = '21357,23973,15102,17959,21357,17959,11986,11986,14254,16000,17959'; New = '1,0,0,0,0,0,0,0,0,0,0'; Loops = '100:7664';
+        VAD = '8b4a86a4ebcf8b5e99f620d977bcf14c1d793821ad1c20bf1db41d5c5092a8be';
+        PCM = 'ef6d2a36c61d89b242c96ee1369c7aa5f7c166d33fa1e7ccf94419731eb0a32d' }
 )
-foreach ($expected in $expectedHits) {
-    $entry = @($metadata.entries | Where-Object {
-            [int]$_.id -eq $expected.ID
-        })
-    if (($entry.Count -ne 1) -or
-        ($entry[0].entry_kind -ne 'hit') -or
-        ([int]$entry[0].source_sound_index -ne $expected.Sound) -or
-        ([int]$entry[0].ds_frequency_hz -ne $expected.Frequency) -or
-        ([int]$entry[0].source_duration_ticks -ne $expected.Duration) -or
-        ([int]$entry[0].ds_sample_count -ne $expected.Samples) -or
-        ([int]$entry[0].ima_adpcm_bytes -ne $expected.Bytes) -or
-        ([int]$entry[0].ds_volume -ne $expected.Volume) -or
-        ([int]$entry[0].packed_envelope_count -ne $expected.Envelope) -or
-        ($entry[0].ima_adpcm_sha256 -ne $expected.Hash)) {
-        throw "Collision/contact FGM $($expected.ID) source fixture changed."
+$expectedCuts = @{
+    40 = '1,1|0'; 38 = '1,1,1|0'; 37 = '1,1,1,1|0,0,0,0,0'
+    34 = '1,1|0'; 32 = '1,1,1|0'; 31 = '1,1,1,1|0,0,0,0,0'
+    216 = '1,1,0,0|0,0'; 28 = '0,0,0'; 2 = '0,0'; 0 = '0,0,0'
+    188 = '0,0,0,0,0,0,0,0,0,0,0'
+}
+$expectedReleaseTicks = @{
+    40 = '47,67|none'; 38 = '47,95,110|none'
+    37 = '44,89,134,154|none,none,none,none,none'
+    34 = '49,69|none'; 32 = '47,95,110|none'
+    31 = '43,88,133,150|none,none,none,none,none'
+    216 = '9,11,none,none|none,none'; 28 = 'none,none,none'
+    2 = 'none,none'; 0 = 'none,none,none'
+    188 = 'none,none,none,none,none,none,none,none,none,none,none'
+}
+foreach ($expected in $expectedHitAudits) {
+    $entry = @($excludedCues | Where-Object { [int]$_.id -eq $expected.ID })
+    if (($entry.Count -ne 1) -or [bool]$entry[0].runtime_included -or
+        ([string]::IsNullOrWhiteSpace($entry[0].action_contract)) -or
+        (@($entry[0].source_callsites).Count -eq 0) -or
+        (@($entry[0].runtime_excluded_reasons).Count -eq 0)) {
+        throw "Collision/contact FGM $($expected.ID) is not explicitly fail-closed."
+    }
+    $voices = @($entry[0].voices)
+    $programs = @($voices | ForEach-Object { [int]$_.program_id }) -join ','
+    $fx = @($voices | ForEach-Object {
+            $schedule = @($_.articulation_fx_mix_schedule)
+            if ($schedule.Count -eq 0) { 'none' }
+            else { [string][int]$schedule[0].effective_fx_mix }
+        }) -join ','
+    $rates = @($voices | ForEach-Object {
+            @($_.note_schedule | ForEach-Object {
+                    [int]$_.initial_frequency_hz
+                }) -join ','
+        }) -join '|'
+    $newVoices = @($voices | ForEach-Object {
+            @($_.note_schedule | ForEach-Object {
+                    [int][bool]$_.starts_new_voice
+                }) -join ','
+        }) -join '|'
+    $cuts = @($voices | ForEach-Object {
+            @($_.note_schedule | ForEach-Object {
+                    [int][bool]$_.cut_before_note_end
+                }) -join ','
+        }) -join '|'
+    $releaseTicks = @($voices | ForEach-Object {
+            @($_.note_schedule | ForEach-Object {
+                    if ($null -eq $_.release_ramp_start_tick) { 'none' }
+                    else { [string][int]$_.release_ramp_start_tick }
+                }) -join ','
+        }) -join '|'
+    $loops = @($voices | ForEach-Object {
+            if ($null -eq $_.source_loop) { 'none' }
+            else { '{0}:{1}' -f $_.source_loop.start, $_.source_loop.end }
+        }) -join '|'
+    $vad = @($voices | ForEach-Object { $_.source_vadpcm_sha256 }) -join '|'
+    $pcm = @($voices | ForEach-Object { $_.source_pcm_sha256 }) -join '|'
+    if (($programs -ne $expected.Programs) -or ($fx -ne $expected.FX) -or
+        ($rates -ne $expected.Rates) -or ($newVoices -ne $expected.New) -or
+        ($cuts -ne $expectedCuts[$expected.ID]) -or
+        ($releaseTicks -ne $expectedReleaseTicks[$expected.ID]) -or
+        ($loops -ne $expected.Loops) -or ($vad -ne $expected.VAD) -or
+        ($pcm -ne $expected.PCM)) {
+        throw "Collision/contact FGM $($expected.ID) source behavior changed."
+    }
+    foreach ($voice in $voices) {
+        if ((@($voice.ucd_program).Count -eq 0) -or
+            (@($voice.articulation_program).Count -eq 0) -or
+            ($voice.ucd_program_sha256.Length -ne 64) -or
+            ($voice.articulation_program_sha256.Length -ne 64) -or
+            ($voice.adpcm_book_sha256.Length -ne 64) -or
+            ([string]::IsNullOrWhiteSpace($voice.source_stop_retrigger_policy))) {
+            throw "Collision/contact FGM $($expected.ID) lost exact program evidence."
+        }
     }
 }
 
-$punch = @(40, 38, 37 | ForEach-Object {
-        $id = $_
-        $metadata.entries | Where-Object { [int]$_.id -eq $id }
-    })
-$kick = @(34, 32, 31 | ForEach-Object {
-        $id = $_
-        $metadata.entries | Where-Object { [int]$_.id -eq $id }
-    })
-$fire = @(2, 0 | ForEach-Object {
-        $id = $_
-        $metadata.entries | Where-Object { [int]$_.id -eq $id }
-    })
-if ((@($punch | ForEach-Object pack_data_offset | Sort-Object -Unique).Count -ne 1) -or
-    ((@($punch | ForEach-Object sample_body_deduplicated) -join ',') -ne
-        'False,True,True') -or
-    (@($kick | ForEach-Object pack_data_offset | Sort-Object -Unique).Count -ne 1) -or
-    ((@($kick | ForEach-Object sample_body_deduplicated) -join ',') -ne
-        'False,True,True') -or
-    (@($fire | ForEach-Object pack_data_offset | Sort-Object -Unique).Count -ne 1) -or
-    ((@($fire | ForEach-Object sample_body_deduplicated) -join ',') -ne
-        'False,True')) {
-    throw 'Collision/contact exact sample-body reuse changed.'
+$ftMainPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/ft/ftmain.c'
+$lbCommonPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/lb/lbcommon.c'
+$marioSpecialPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/relocData/204_MarioSpecial1.c'
+$foxSpecialPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/relocData/210_FoxSpecial1.c'
+$foxMotionPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/relocData/208_FoxMainMotion.c'
+$fireballPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/wp/wpmario/wpmariofireball.c'
+$ftMain = Get-Content -LiteralPath $ftMainPath -Raw
+$lbCommon = Get-Content -LiteralPath $lbCommonPath -Raw
+$marioSpecial = Get-Content -LiteralPath $marioSpecialPath -Raw
+$foxSpecial = Get-Content -LiteralPath $foxSpecialPath -Raw
+$foxMotion = Get-Content -LiteralPath $foxMotionPath -Raw
+$fireball = Get-Content -LiteralPath $fireballPath -Raw
+foreach ($fragment in @(
+        'nSYAudioFGMPunchS', 'nSYAudioFGMPunchM', 'nSYAudioFGMPunchL',
+        'nSYAudioFGMKickS', 'nSYAudioFGMKickM', 'nSYAudioFGMKickL',
+        'nSYAudioFGMMarioSpecialHiCoin',
+        'lbCommonMakePositionFGM(dFTMainHitCollisionFGMs[attack_coll->fgm_kind][attack_coll->fgm_level], fp->joints[nFTPartsJointTopN]->translate.vec.f.x);',
+        'func_800269C0_275C0(wp_attack_coll->fgm_id);')) {
+    if (-not $ftMain.Contains($fragment)) {
+        throw "BattleShip fighter/weapon hit callsite changed: $fragment"
+    }
 }
-
-$coin = $metadata.entries | Where-Object { [int]$_.id -eq 216 }
-$burn = $metadata.entries | Where-Object { [int]$_.id -eq 28 }
-$explode = $metadata.entries | Where-Object { [int]$_.id -eq 0 }
-if (($coin.ds_loop_strategy -ne 'finite_source_loop_aot') -or
-    ([int]$coin.finite_source_loop_replay_samples -ne 18833) -or
-    ($burn.ds_loop_strategy -ne 'finite_source_loop_aot') -or
-    ([int]$burn.finite_source_loop_replay_samples -ne 1985) -or
-    ([int]$burn.root_ucd_program_id -ne 28) -or
-    ([int]$explode.root_ucd_program_id -ne 0) -or
-    ([int]$explode.render_ucd_program_id -ne 0)) {
-    throw 'Coin/Fireball finite source-loop or direct ExplodeS program changed.'
+foreach ($fragment in @(
+        's32 balance = ((pos / 8000.0F) * 60.0F);',
+        'balance = 64 - balance;', 'snd->balance = balance;',
+        'func_800267F4_273F4(snd);')) {
+    if (-not $lbCommon.Contains($fragment)) {
+        throw "BattleShip positional FGM behavior changed: $fragment"
+    }
 }
-if (@($metadata.entries | Where-Object { [int]$_.id -eq 188 }).Count -ne 0) {
-    throw 'Fox reflector-hit ID 188 entered the pack without a natural mode-163 call.'
-}
-$hitDebt = @($metadata.entries | Where-Object {
-        $_.entry_kind -eq 'hit'
-    } | ForEach-Object { @($_.runtime_fidelity_debt) })
-if (-not ($hitDebt -contains 'ucd_pitch_automation') -or
-    -not ($hitDebt -contains 'ucd_volume_automation') -or
-    -not ($hitDebt -contains 'articulation_pitch_modulation') -or
-    -not ($hitDebt -contains 'omitted_fork_voice_668')) {
-    throw 'Collision/contact pitch, volume, or fork debt is no longer explicit.'
+if ((-not $marioSpecial.Contains('28,  /* sfx              : 10 */')) -or
+    (-not $foxSpecial.Contains('2,  /* sfx              : 10 */')) -or
+    (-not $fireball.Contains('func_800269C0_275C0(nSYAudioFGMExplodeS);')) -or
+    (-not $foxMotion.Contains('ftMotionPlayFGM(nSYAudioFGMFoxSpecialLwHit),'))) {
+    throw 'Mario fireball or Fox blaster/reflector hit action mapping changed.'
 }
 
 $shim = Get-Content -LiteralPath (
@@ -732,16 +1132,16 @@ if ((-not $fgmBackend.Contains(
 }
 
 Write-Output (
-    ('Audio FGM pack passed: {0} exact IDs ({1} fighter voices, ' +
-    '{2} Fox movement, {3} regular-KO, {4} attack/activation, ' +
-    '{5} collision/contact), {6} resident bytes, {7} unique samples, ' +
-    'mapping {8}, pack {9}.') -f
+    ('Audio FGM pack passed: {0} exact runtime IDs ({1} fighter voices, ' +
+    '{2} Fox movement, {3} regular-KO, {4} attack/activation), ' +
+    '{5} collision/contact cues fail-closed, {6} resident bytes, ' +
+    '{7} unique samples, mapping {8}, pack {9}.') -f
     $actualIDs.Count,
     $voiceIDs.Count,
     $movementIDs.Count,
     $koIDs.Count,
     $attackIDs.Count,
-    $hitIDs.Count,
+    $excludedIDs.Count,
     $metadata.resident_bytes,
     $metadata.unique_sample_count,
     $metadata.mapping_sha256_lo,
