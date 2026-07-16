@@ -26,6 +26,9 @@ gameplay semantics stay source-faithful. Screenshots belong under
 
 ## Work
 
+Run repository commands with PowerShell 7 (`pwsh`). Windows PowerShell 5.1 is
+not supported.
+
 ```powershell
 .\scripts\verify-all.ps1 -Profile Boundary -List
 git status --short

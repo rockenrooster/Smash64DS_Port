@@ -2809,6 +2809,16 @@ volatile u32 gNdsBattlePlayablePacingDrawCalls;
 volatile u32 gNdsBattlePlayablePacingTimerTicks;
 volatile u32 gNdsBattlePlayablePacingPresentFpsX10;
 volatile u32 gNdsBattlePlayablePacingLogicFpsX10;
+volatile u32 gNdsBattlePlayablePacingVBlankStart;
+volatile u32 gNdsBattlePlayablePacingVBlanks;
+volatile u32 gNdsBattlePlayablePacingRestartRequested;
+volatile u32 gNdsBattlePlayablePacingPresentIntervalMin;
+volatile u32 gNdsBattlePlayablePacingPresentIntervalMax;
+volatile u32 gNdsBattlePlayablePacingCadenceViolationCount;
+volatile u32 gNdsBattlePlayablePacingPhasePresentCount[
+    NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
+volatile u32 gNdsBattlePlayablePacingPhaseSlipCount[
+    NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
 #if (NDS_HARNESS_FAST_LOGIC == 0) && \
     (NDS_RENDERER_HW_TRIANGLES != 0) && \
     (NDS_DEV_LIVE_INPUT_PREVIEW != 0)

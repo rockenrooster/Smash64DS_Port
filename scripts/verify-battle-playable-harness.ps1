@@ -21,7 +21,7 @@ param(
     [switch]$CPUOpponentProof,
     [switch]$MatchLifecycleProof,
     [switch]$OneMinuteMatchProof,
-    [switch]$RequireRealtime60Fps,
+    [switch]$RequireLocked30Pacing,
     [int]$RendererProfileLevel = -1,
     [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
@@ -90,9 +90,8 @@ if ($RealtimePresentation) {
     $LiveInputPreview = $true
 }
 if ($RendererProfileLevel -lt 0) {
-    # The one-minute match is a state/memory gate. Keep renderer profiling off
-    # so the unthrottled full match reaches Results in a practical verifier
-    # window; the canonical realtime verifier owns renderer performance.
+    # Legacy non-realtime state labs keep profiling off. The dedicated one-
+    # minute release gate selects realtime profile 0 and fixed-two pacing.
     $RendererProfileLevel = if ($OneMinuteMatchProof) { 0 } else { 2 }
 }
 if (($target -eq 'smash64ds-battle-playable-hwtri') -and
@@ -149,7 +148,7 @@ try {
     -CPUOpponentProof:$CPUOpponentProof `
     -MatchLifecycleProof:$MatchLifecycleProof `
     -OneMinuteMatchProof:$OneMinuteMatchProof `
-    -RequireRealtime60Fps:$RequireRealtime60Fps `
+    -RequireLocked30Pacing:$RequireLocked30Pacing `
     -RendererProfileLevel $RendererProfileLevel `
     -RendererFastRunMode $RendererFastRunMode `
     -StaticTextureAotMode $StaticTextureAotMode `

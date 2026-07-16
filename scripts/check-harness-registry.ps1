@@ -94,6 +94,20 @@ if (($realtimeText -notmatch 'check-published-roms\.ps1') -or
     ($realtimeText -notmatch '\[switch\]\$FastIteration')) {
     Fail-Check 'published realtime verifier is missing fast iteration or the ROM contract'
 }
+if (($realtimeText -notmatch '(?s)if \(\$OneMinuteMatchProof\).*?RendererFastRunMode.*?StaticTextureAotMode.*?IFCommonHybridOamMode.*?RequireZeroPostGoTextureFence')) {
+    Fail-Check 'realtime one-minute gate no longer forwards the canonical renderer identity and strict post-GO fence'
+}
+if (($realtimeText -match 'RequireRealtime60Fps') -or
+    ($battleLoopText -match 'RequireRealtime60Fps|59\.3\.\.60\.3 presented') -or
+    ($battleLoopText -notmatch 'RequireLocked30Pacing') -or
+    ($battleLoopText -notmatch 'gNdsBattlePlayablePacingCadenceViolationCount') -or
+    ($battleLoopText -notmatch '\$bp\[2\] -eq \(2 \* \$bp\[3\]\)') -or
+    ($battleLoopText -notmatch '\$phaseRateX10 -ge 590') -or
+    ($battleLoopText -notmatch 'phaseUpdateRate=') -or
+    ($battleLoopText -notmatch '\$bp\[6\] -le 305') -or
+    ($battleLoopText -notmatch '\$bp\[9\] -ge 2')) {
+    Fail-Check 'canonical realtime verifier no longer owns the exact 2:1 update/present ratio and per-phase slowdown contract'
+}
 if (($ftComputerText -notmatch 'gNdsBattlePlayableFoxCpuEnabled\s*=\s*1u') -or
     ($realtimeText -notmatch '(?s)if \(\$FastIteration\).*?\$captureRuntimeArgs\.FoxCpuMode\s*=\s*0') -or
     ($captureText -notmatch '(?s)tbreak scVSBattleStartBattle.*?gNdsBattlePlayableFoxCpuEnabled')) {

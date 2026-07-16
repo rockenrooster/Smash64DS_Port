@@ -4,6 +4,9 @@ Use the least work that can falsify the change. Do not stack overlapping suites.
 
 ## Environment
 
+Run every repository command from PowerShell 7 (`pwsh`). Do not use Windows
+PowerShell 5.1.
+
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'

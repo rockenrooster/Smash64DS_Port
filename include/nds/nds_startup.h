@@ -177,6 +177,12 @@
 #define NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS 0x464e4d53u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PASS 0x42504c59u
 #define NDS_BATTLE_PLAYABLE_PACING_PASS 0x42505443u
+#define NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT 5u
+#define NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNTDOWN 0u
+#define NDS_BATTLE_PLAYABLE_PACING_PHASE_EARLY_COMBAT 1u
+#define NDS_BATTLE_PLAYABLE_PACING_PHASE_LATE_COMBAT 2u
+#define NDS_BATTLE_PLAYABLE_PACING_PHASE_KO_REBIRTH 3u
+#define NDS_BATTLE_PLAYABLE_PACING_PHASE_RESULTS 4u
 #define NDS_BUILD_MODE_CANO_WORD 0x43414e4fu
 #define NDS_BUILD_MODE_SHIP_WORD 0x53484950u
 #define NDS_BUILD_MODE_FAST_WORD 0x46415354u
@@ -3945,6 +3951,16 @@ extern volatile u32 gNdsBattlePlayablePacingDrawCalls;
 extern volatile u32 gNdsBattlePlayablePacingTimerTicks;
 extern volatile u32 gNdsBattlePlayablePacingPresentFpsX10;
 extern volatile u32 gNdsBattlePlayablePacingLogicFpsX10;
+extern volatile u32 gNdsBattlePlayablePacingVBlankStart;
+extern volatile u32 gNdsBattlePlayablePacingVBlanks;
+extern volatile u32 gNdsBattlePlayablePacingRestartRequested;
+extern volatile u32 gNdsBattlePlayablePacingPresentIntervalMin;
+extern volatile u32 gNdsBattlePlayablePacingPresentIntervalMax;
+extern volatile u32 gNdsBattlePlayablePacingCadenceViolationCount;
+extern volatile u32 gNdsBattlePlayablePacingPhasePresentCount[
+    NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
+extern volatile u32 gNdsBattlePlayablePacingPhaseSlipCount[
+    NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
 extern volatile u32 gNdsBuildModeCanonicalWord;
 extern volatile u32 gNdsBuildModeShippedWord;
 extern volatile u32 gNdsBuildModeFastWord;

@@ -5,7 +5,8 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [switch]$RequireRealtime60Fps,
+    [switch]$RequireLocked30Pacing,
+    [switch]$OneMinuteMatchProof,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
     [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
@@ -264,7 +265,17 @@ $harnessArgs = @(
     '-FoxCpuMode', "$FoxCpuMode"
 )
 if ($NoBuild) { $harnessArgs += '-NoBuild' }
-if ($RequireRealtime60Fps) { $harnessArgs += '-RequireRealtime60Fps' }
+if ($RequireLocked30Pacing) { $harnessArgs += '-RequireLocked30Pacing' }
+if ($OneMinuteMatchProof) {
+    $harnessArgs += @(
+        '-MatchLifecycleProof',
+        '-OneMinuteMatchProof',
+        '-RendererFastRunMode', '9',
+        '-StaticTextureAotMode', '1',
+        '-IFCommonHybridOamMode', '0',
+        '-RequireZeroPostGoTextureFence'
+    )
+}
 if ($RendererBenchmarkSamples -gt 0) {
     $harnessArgs += @('-RendererBenchmarkSamples', "$RendererBenchmarkSamples")
 }

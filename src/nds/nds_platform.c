@@ -57,6 +57,8 @@ static u32 sDrawFramebufferIndex;
 #endif
 static u32 sTicks;
 static u32 sHeldKeys;
+static volatile u32 sVBlankCount;
+static u32 sEarliestPresentVBlank;
 volatile u32 gNdsPlatformHeldKeys;
 static u32 sPerfSampleReady;
 static u32 sPerfLastTick;
@@ -68,7 +70,9 @@ static u32 sPerfLastPreviewCommitCount;
 static u32 sBattleFpsHudSampleReady;
 static u32 sBattleFpsHudLastTick;
 static u32 sBattleFpsHudLastPresentedFrames;
+static u32 sBattleFpsHudLastLogicFrames;
 static u32 sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
+static u32 sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
 #endif
@@ -190,11 +194,21 @@ volatile s32 gNdsSceneWallpaperAffineHdx;
 volatile s32 gNdsSceneWallpaperAffineVdy;
 volatile s32 gNdsSceneWallpaperAffineDx;
 volatile s32 gNdsSceneWallpaperAffineDy;
+
+static void ndsPlatformVBlankInterrupt(void)
+{
+    sVBlankCount++;
+}
+
 void ndsPlatformInit(void)
 {
     /* libultra time/count are sub-frame hardware counters. Reserve timers 0/1
      * for libnds' 32-bit CPU timing source before original code can sample it. */
     cpuStartTiming(0);
+    sVBlankCount = 0u;
+    sEarliestPresentVBlank = 0u;
+    irqSet(IRQ_VBLANK, ndsPlatformVBlankInterrupt);
+    irqEnable(IRQ_VBLANK);
 
 #if NDS_BATTLE_FPS_HUD_ENABLED
     gNdsIFCommonHUDLowerTextMode = 1u;
@@ -1349,9 +1363,12 @@ static void ndsPlatformRenderBattleFpsHud(void)
 {
     u32 now_tick = cpuGetTiming();
     u32 presented_frames = gNdsBattlePlayablePacingPresentedFrames;
+    u32 logic_frames = gNdsBattlePlayablePacingLogicFrames;
     u32 elapsed_ticks;
     u32 elapsed_frames;
+    u32 elapsed_logic_frames;
     u32 fps_x10;
+    u32 updates_x10;
 
     if ((sBattleFpsHudSampleReady == 0u) ||
         (presented_frames < sBattleFpsHudLastPresentedFrames))
@@ -1359,7 +1376,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
         sBattleFpsHudSampleReady = 1u;
         sBattleFpsHudLastTick = now_tick;
         sBattleFpsHudLastPresentedFrames = presented_frames;
+        sBattleFpsHudLastLogicFrames = logic_frames;
         sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
+        sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
         sBattleTextHudReady = FALSE;
         sBattleTextHudFingerprint = 0xffffffffu;
         gNdsBattlePlayableHudFpsX10 = 0u;
@@ -1367,7 +1386,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         gNdsBattlePlayableHudFpsFrameWindow = 0u;
         gNdsBattlePlayableHudFpsTickWindow = 0u;
         consoleClear();
-        ndsPlatformPrintDebugLine(0u, "FPS: --.-");
+        ndsPlatformPrintDebugLine(0u, "FPS --.-  UP --.-");
         return;
     }
 
@@ -1379,8 +1398,12 @@ static void ndsPlatformRenderBattleFpsHud(void)
 
     elapsed_frames =
         presented_frames - sBattleFpsHudLastPresentedFrames;
+    elapsed_logic_frames = logic_frames - sBattleFpsHudLastLogicFrames;
     fps_x10 = (elapsed_frames == 0u) ? 0u :
         (u32)((((u64)elapsed_frames * BUS_CLOCK * 10u) +
+               (elapsed_ticks / 2u)) / elapsed_ticks);
+    updates_x10 = (elapsed_logic_frames == 0u) ? 0u :
+        (u32)((((u64)elapsed_logic_frames * BUS_CLOCK * 10u) +
                (elapsed_ticks / 2u)) / elapsed_ticks);
     gNdsBattlePlayableHudFpsX10 = fps_x10;
     gNdsBattlePlayableHudFpsSampleCount++;
@@ -1388,15 +1411,20 @@ static void ndsPlatformRenderBattleFpsHud(void)
     gNdsBattlePlayableHudFpsTickWindow = elapsed_ticks;
     sBattleFpsHudLastTick = now_tick;
     sBattleFpsHudLastPresentedFrames = presented_frames;
+    sBattleFpsHudLastLogicFrames = logic_frames;
 
     /* sm64-nds also dedicates the lower console to FPS. Keep this port's
      * update change-driven so the counter does not clear or pulse the screen. */
-    if (fps_x10 != sBattleFpsHudPrintedFpsX10)
+    if ((fps_x10 != sBattleFpsHudPrintedFpsX10) ||
+        (updates_x10 != sBattleFpsHudPrintedUpdatesX10))
     {
         sBattleFpsHudPrintedFpsX10 = fps_x10;
-        ndsPlatformPrintDebugLine(0u, "FPS: %lu.%lu",
+        sBattleFpsHudPrintedUpdatesX10 = updates_x10;
+        ndsPlatformPrintDebugLine(0u, "FPS %lu.%lu  UP %lu.%lu",
                                   (unsigned long)(fps_x10 / 10u),
-                                  (unsigned long)(fps_x10 % 10u));
+                                   (unsigned long)(fps_x10 % 10u),
+                                   (unsigned long)(updates_x10 / 10u),
+                                   (unsigned long)(updates_x10 % 10u));
     }
 }
 #endif
@@ -1951,6 +1979,29 @@ void ndsPlatformRenderDebugHud(void)
                               (long)gNdsFighterBattlePlayableFinalXMilli);
 }
 
+u32 ndsPlatformVBlankCount(void)
+{
+    return sVBlankCount;
+}
+
+void ndsPlatformSchedulePresentAtVBlank(u32 vblank)
+{
+    sEarliestPresentVBlank = vblank;
+}
+
+static void ndsPlatformWaitForScheduledVBlank(void)
+{
+    u32 earliest = sEarliestPresentVBlank;
+
+    sEarliestPresentVBlank = 0u;
+    do
+    {
+        swiWaitForVBlank();
+    }
+    while ((earliest != 0u) &&
+           ((s32)(sVBlankCount - earliest) < 0));
+}
+
 void ndsPlatformEndFrame(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
@@ -1991,7 +2042,7 @@ void ndsPlatformEndFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     profile_start = cpuGetTiming();
 #endif
-    swiWaitForVBlank();
+    ndsPlatformWaitForScheduledVBlank();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();
@@ -2020,7 +2071,7 @@ void ndsPlatformEndFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     profile_start = cpuGetTiming();
 #endif
-    swiWaitForVBlank();
+    ndsPlatformWaitForScheduledVBlank();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();

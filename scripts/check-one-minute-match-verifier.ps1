@@ -5,6 +5,7 @@ $lifecyclePath = Join-Path $PSScriptRoot 'verify-battle-playable-match-lifecycle
 $battlePath = Join-Path $PSScriptRoot 'verify-battle-playable-harness.ps1'
 $ownerPath = Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1'
 $scenePath = Join-Path $root 'src\port\scene_harness.c'
+$taskmanPath = Join-Path $root 'src\port\taskman_seam.c'
 $melonPath = Join-Path $PSScriptRoot 'lib\melonds.ps1'
 $gdbPath = Join-Path $PSScriptRoot 'lib\gdb-markers.ps1'
 $makePath = Join-Path $root 'Makefile'
@@ -35,9 +36,22 @@ $lifecycle = Get-Content -LiteralPath $lifecyclePath -Raw
 $battle = Get-Content -LiteralPath $battlePath -Raw
 $owner = Get-Content -LiteralPath $ownerPath -Raw
 $scene = Get-Content -LiteralPath $scenePath -Raw
+$taskman = Get-Content -LiteralPath $taskmanPath -Raw
 $melon = Get-Content -LiteralPath $melonPath -Raw
 $gdb = Get-Content -LiteralPath $gdbPath -Raw
 $make = Get-Content -LiteralPath $makePath -Raw
+
+Assert-Text $taskman '#define NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT 2u' `
+    'Realtime scheduler no longer declares exactly two source updates per present.'
+Assert-Text $taskman 'updates_this_iteration =\s*NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT;' `
+    'Realtime scheduler no longer executes the exact fixed two-update batch.'
+Assert-Text $taskman '(?s)for \(update_in_iteration = 0u;.*?update_in_iteration < updates_this_iteration;.*?ndsPlatformReadInput\(\);.*?ndsBattlePlayableAdvanceRealtimeLogicClock\(\);.*?ndsRunMarioFoxProofUpdate\(.*?\);.*?if \(terminal_update != 0u\).*?ndsBattlePlayablePresentRealtimeFrame\(\);' `
+    'Realtime scheduler no longer performs input + one source tick + one source update twice before the sole draw/present.'
+Assert-Text $taskman 'gNdsBattlePlayablePacingLogicFrames \+=\s*NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT;' `
+    'Pacing telemetry no longer commits exactly two updates at the presentation boundary.'
+if ($taskman -match 'updates_owed|RealtimeUpdatesOwed|REALTIME_UPDATE_CAP|PacingDroppedUpdates|PacingUpdateCapHit') {
+    throw 'Realtime scheduler regained forbidden vblank-debt or catch-up accounting.'
+}
 
 Assert-Text $wrapper '-CPUOpponentProof\s+`\s*\r?\n\s*-MatchLifecycleProof\s+`\s*\r?\n\s*-OneMinuteMatchProof' `
     'One-minute wrapper does not select the existing CPU/lifecycle mode-163 path.'
@@ -47,10 +61,10 @@ Assert-Text $owner '(?s)if \(\$MatchLifecycleProof\) \{\s*\$CPUOpponentProof = \
     'CPU/lifecycle proof no longer forces the Fox CPU decision path on.'
 Assert-Text $owner '(?s)\$preBattleSelectorSelected =\s*\$staticTextureAotSelected -or \$foxCpuModeSelected.*?if \(\$preBattleSelectorSelected\) \{.*?''tbreak scVSBattleStartBattle''.*?if \(\$foxCpuModeSelected\) \{\s*\$preBattleSetupCommands \+=\s*\(''set variable gNdsBattlePlayableFoxCpuEnabled = \{0\}'' -f\s*\$FoxCpuMode\).*?\}.*?\$gdbCommands = @\(\s*\$gdbCommands\[0\.\.3\]\s*\$preBattleSetupCommands' `
     'Common verifier no longer sets the selected Fox CPU mode before battle setup.'
-Assert-Text $wrapper 'unthrottled state/memory only; realtime performance is not measured' `
-    'One-minute wrapper lost its explicit no-realtime-claim notice.'
-if ($wrapper -match 'RequireRealtime60Fps|capture-melonds|Screenshot|FiveMinute|five-minute|18000') {
-    throw 'One-minute wrapper must not claim realtime, capture a desktop screenshot, or retain a five-minute assumption.'
+Assert-Text $wrapper '(?s)-RealtimePresentation\s+`.*?-OneMinuteMatchProof\s+`.*?-RequireLocked30Pacing' `
+    'One-minute wrapper no longer selects the realtime exact-two-update scheduler gate.'
+if ($wrapper -match 'RequireRealtime60Fps|capture-melonds|Screenshot|FiveMinute|five-minute|18000|unthrottled state/memory') {
+    throw 'One-minute wrapper retained an obsolete 60-FPS, screenshot, five-minute, or unthrottled assumption.'
 }
 Assert-Text $lifecycle 'Get-MelonDSRunnerPort -RunnerSlot \$RunnerSlot -Cpu ARM9' `
     'Match-lifecycle wrapper no longer derives an isolated GDB port from RunnerSlot.'
@@ -103,14 +117,26 @@ Assert-Text $owner "(?s)439,292,154.*154,439,292.*370,289,154.*154,370,289" `
     'One-minute verifier lost the exact Mario/Fox regular/up-star KO call orders.'
 Assert-Text $owner '(?s)\$fgmKo\[10\] -eq 0.*\$fgmKo\[11\] -eq 0.*\$fgmKo\[12\] -eq 0.*\$fgmKo\[13\] -eq 0' `
     'One-minute verifier no longer requires clean included-KO playback.'
-Assert-Text $owner 'Where-Object \{ \$_ -ne 0 \}' `
-    'One-minute verifier no longer requires every safety counter to remain zero.'
+Assert-Text $owner '\$safety\[0\.\.15\] \| Where-Object \{ \$_ -ne 0 \}' `
+    'One-minute verifier no longer requires every true safety counter to remain zero.'
+Assert-Text $owner '\$fdc\[3\] -eq \$fdc\[0\]' `
+    'One-minute verifier no longer requires every selected fighter part to be submitted.'
+Assert-Text $owner '\(\$fdc\[7\] \+ \$fdc\[8\]\) -gt 0' `
+    'One-minute verifier no longer requires source visibility-bound decisions.'
+Assert-Text $owner '\$safety\[16\] -eq \$fdc\[8\]' `
+    'One-minute verifier no longer cross-checks natural visibility failures.'
+Assert-Text $owner '(?s)for \(\$phase = 0; \$phase -lt 5; \$phase\+\+\).*?\$phaseRateX10 -ge 590.*?\$phaseRateX10 -le 610' `
+    'One-minute lifecycle path no longer hard-gates held-30 phase update rates.'
 Assert-Text $owner '\(\$ma\[6\] - \$audioResidentBytes\) -ge 131072' `
     'One-minute verifier lost the conservative 128 KiB reserve gate.'
 Assert-Text $owner '\$expectedM4TeardownCount = if \(\$OneMinuteMatchProof\) \{ 1 \} else \{ 0 \}' `
     'One-minute verifier no longer requires exactly one M4 teardown.'
 Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq 22.*?\$m4FenceFinalValues\[5\] -eq 131072.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
     'One-minute verifier lost the exact M4 residency and zero post-GO work assertions.'
+Assert-Text $owner '\$bp\[2\] -eq \(2 \* \$bp\[3\]\)' `
+    'One-minute verifier lost the hard exact-two-updates-per-present ratio gate.'
+Assert-Text $owner 'gNdsBattlePlayablePacingRestartRequested = 1' `
+    'One-minute verifier no longer excludes its synchronized MATCH_START pause from natural pacing evidence.'
 Assert-Text $owner '-MuteAudio:\$OneMinuteMatchProof' `
     'One-minute match no longer requests host-emulator muting.'
 Assert-Text $melon "Section 'Instance0\.Audio' -Key 'Volume' -Value '0'" `
@@ -121,8 +147,8 @@ Assert-Text $gdb 'Kill\(\$true\)' `
     'GDB timeout no longer kills its child process tree.'
 Assert-Text $owner '(?s)finally \{.*Stop-Process -Id \$emulator\.Id -Force' `
     'melonDS is not guaranteed to stop on verifier exit.'
-Assert-Text $owner 'unthrottled state/memory only; realtime not measured' `
-    'One-minute verifier output can be mistaken for realtime evidence.'
+Assert-Text $owner 'phaseUpdateRate=' `
+    'One-minute verifier no longer publishes per-phase source update rates.'
 if (($owner -match 'FiveMinute|five-minute|5:00') -or ($battle -match 'FiveMinute|five-minute')) {
     throw 'One-minute verifier path retains a five-minute label or selector.'
 }

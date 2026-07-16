@@ -6,7 +6,8 @@ workflow, use `docs/VERIFYING.md`.
 
 ## Build Environment
 
-Use devkitPro/libnds. On this machine, the known-good PowerShell setup is:
+Use devkitPro/libnds. Run these commands from PowerShell 7 (`pwsh`), not
+Windows PowerShell 5.1:
 
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
@@ -806,8 +807,13 @@ Opening movie / Opening Portraits:
   light state; source visibility-bound pass/fail counts; and the latest
   Mario/Fox selected-part counts, first selected cycle type, and first selected
   render mode. Canonical HW requires selected/submitted parts for both fighters,
-  geometry `0x222005`, cycle `0x00100000`, render mode `0xc4112078`, nonzero
-  source light state, and no visibility-bound failures.
+  geometry `0x222005`, cycle `0x00100000`, render mode `0xc4112078`, and nonzero
+  source light state. Focused camera-containment windows require zero
+  visibility-bound failures. A natural full match instead requires equal
+  selected/submitted part counts, at least one visibility decision, and the
+  bounds-fail count to match `MATCH_SAFETY[16]`; legitimate KO/rebirth magnify
+  culling can leave the source camera envelope. Part counts and target-bounds
+  decisions intentionally have different granularities.
 - `FTR_LIGHT_SEED`: selected fighter material light seed marker. Fields are
   seed count, diffuse color, and ambient color. Canonical Mario/Fox requires
   nonzero seeds and source `MObjSub` values `0xffffff00/0x4c4c4c00`.
@@ -5582,9 +5588,11 @@ scheduling.
 - `MATCH_SAFETY`: relocation stale files/bytes; natural-motion unsafe,
   figatree-table, and figatree-animation failures; AObj/MObj normalization
   failures; stage/fighter external-fixup failures; BGM open/read/unsafe-write/
-  overrun failures; collision missing/out-of-range/bad-vertex failures; and
-  fighter-display bounds failures. All 17 fields must remain zero through the
-  complete one-minute match and Results setup.
+  overrun failures; collision missing/out-of-range/bad-vertex failures; and the
+  natural fighter-display out-of-visibility-envelope count. The first 16 true
+  safety fields must remain zero through the complete one-minute match and
+  Results setup. Field 17 is published and must equal the independently
+  accounted `FTR_DISPLAY_CONTRACT` fail count.
 
 ## Debugging Principle
 

@@ -107,6 +107,8 @@ extern volatile u32 gNdsHardwareRendererStatus;
 extern volatile u32 gNdsHardwareRendererControl;
 void ndsPlatformRenderDebugHud(void);
 void ndsPlatformClearBattleTextHud(void);
+u32 ndsPlatformVBlankCount(void);
+void ndsPlatformSchedulePresentAtVBlank(u32 vblank);
 void ndsPlatformEndFrame(void);
 void ndsPlatformProfileSampleFrameBoundaryGXState(void);
 u32 ndsPlatformTicks(void);

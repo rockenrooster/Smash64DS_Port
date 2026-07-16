@@ -182,10 +182,17 @@ $playbackConnectedAddress = Get-ElfSymbolAddress 'sControllerPlaybackConnectedMa
 $playbackEnabledAddress = Get-ElfSymbolAddress 'sControllerPlaybackEnabled'
 $terminalCallsiteAddress = Get-ElfCallsiteAddress `
     'wpProcessProcWeaponMain' 'wpMainDestroyWeapon'
+$tornadoEndCallsiteAddress = Get-ElfCallsiteAddress `
+    'ftMarioSpecialLwProcUpdate' 'ftAnimEndSetWait'
+$tornadoStickYAddress = '0x{0:x8}' -f ($playbackPadsAddress + 3)
+$tornadoPadAddress = '0x{0:x8}' -f $playbackPadsAddress
 $screenshotPath = Resolve-VisibilityOutput $Screenshot
 $terminalScreenshotPath = Join-Path (Split-Path -Parent $screenshotPath) `
     (([System.IO.Path]::GetFileNameWithoutExtension($screenshotPath)) +
     '-terminal.png')
+$tornadoScreenshotPath = Join-Path (Split-Path -Parent $screenshotPath) `
+    (([System.IO.Path]::GetFileNameWithoutExtension($screenshotPath)) +
+    '-tornado.png')
 New-Item -ItemType Directory -Path $logDir,
     (Split-Path -Parent $screenshotPath) -Force | Out-Null
 
@@ -194,8 +201,8 @@ try {
         -MelonDSPath $melonDsPath `
         -GdbPort $verifierContext.GdbPort `
         -Persistent:([bool]$verifierContext.PersistentConfig)
-    Remove-Item $stdout, $stderr, $screenshotPath, $terminalScreenshotPath -Force `
-        -ErrorAction SilentlyContinue
+    Remove-Item $stdout, $stderr, $screenshotPath, $terminalScreenshotPath,
+        $tornadoScreenshotPath -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath `
         -ArgumentList $rom `
         -WorkingDirectory $melonDsDir `
@@ -215,6 +222,10 @@ try {
         'shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}" -EmulatorProcessId {1} -Output "{2}"' -f
         $captureScriptGdb, $emulator.Id,
         $terminalScreenshotPath.Replace('\', '/')
+    $tornadoCaptureCommand =
+        'shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}" -EmulatorProcessId {1} -Output "{2}"' -f
+        $captureScriptGdb, $emulator.Id,
+        $tornadoScreenshotPath.Replace('\', '/')
     $gdbCommands = @(
         'set pagination off',
         'set confirm off',
@@ -338,6 +349,50 @@ try {
         'set $fb_terminal_frame_after = gNdsFrameCounter',
         'printf "FIREBALL_TERMINAL=%u,%#x,%#x,%#x,%d,%d,%d,%d,%d,%u,%u,%u,%u\n", $fb_terminal_hit, $fb_terminal_x_bits, $fb_terminal_y_bits, $fb_terminal_z_bits, $fb_terminal_bottom, $fb_terminal_right, $fb_terminal_left, $fb_terminal_top, $fb_terminal_lifetime, $fb_terminal_frame_before, $fb_terminal_frame_after, $fb_terminal_post_live, $fb_terminal_scan_overflow',
         $terminalCaptureCommand,
+        # Reuse the same external controller route for one current-ROM Down-B.
+        # BattleShip ftmariospeciallw.c:149-164 enters the source air status;
+        # :11-30 owns its attack/update lifetime and natural Wait return.
+        'set $tornado_mario = (GObj *)gGCCommonLinks[3]',
+        'set $tornado_fp = (FTStruct *)$tornado_mario->user_data.p',
+        ('set {{unsigned short}}0x{0:x8} = 0x4000' -f $playbackPadsAddress),
+        ('set {{signed char}}0x{0:x8} = -80' -f ($playbackPadsAddress + 3)),
+        'tbreak ftmariospeciallw.c:ftMarioSpecialLwSetStatus',
+        'continue',
+        ('set {{unsigned short}}0x{0:x8} = 0' -f $playbackPadsAddress),
+        ('set {{signed char}}0x{0:x8} = 0' -f ($playbackPadsAddress + 3)),
+        'tbreak ndsBattlePlayableFrameCompleteMarker',
+        'continue',
+        'set $tornado_start_frame = gNdsFrameCounter',
+        'set $tornado_start_status = $tornado_fp->status_id',
+        'set $tornado_start_motion = $tornado_fp->motion_id',
+        'set $tornado_frames = 0',
+        'set $tornado_attack_frames = 0',
+        'set $tornado_air_frames = 0',
+        'break ftMarioSpecialLwProcUpdate',
+        'commands',
+        'silent',
+        'if ((GObj *)$r0 == $tornado_mario)',
+        'set $tornado_frames = $tornado_frames + 1',
+        'if ($tornado_fp->is_attack_active != 0)',
+        'set $tornado_attack_frames = $tornado_attack_frames + 1',
+        'end',
+        'if ($tornado_fp->ga != 0)',
+        'set $tornado_air_frames = $tornado_air_frames + 1',
+        'end',
+        'end',
+        'continue',
+        'end',
+        ('tbreak *0x{0:x8} if ((GObj *)$r0 == $tornado_mario)' -f $tornadoEndCallsiteAddress),
+        'continue',
+        'set $tornado_end_frame = gNdsFrameCounter',
+        'set $tornado_end_anim_bits = *(unsigned int *)&$tornado_fp->joints[0]->anim_frame',
+        $tornadoCaptureCommand,
+        'delete breakpoints',
+        'tbreak ndsBattlePlayableFrameCompleteMarker',
+        'continue',
+        'set $tornado_final_status = $tornado_fp->status_id',
+        'set $tornado_final_ga = $tornado_fp->ga',
+        ('printf "MARIO_TORNADO=%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%#x,%d,%#x\n", ($tornado_start_status == nFTMarioStatusSpecialLw || $tornado_start_status == nFTMarioStatusSpecialAirLw), $tornado_start_status, $tornado_start_motion, $tornado_frames, $tornado_attack_frames, $tornado_air_frames, $tornado_start_frame, $tornado_end_frame, $tornado_end_anim_bits, ($tornado_final_status == nFTCommonStatusWait), $tornado_final_status, $tornado_final_ga, *(signed char *)' + $tornadoStickYAddress + ', *(unsigned short *)' + $tornadoPadAddress),
         'detach',
         'quit'
     )
@@ -361,6 +416,7 @@ try {
     $input = [regex]::Match($gdbStdout, 'INPUT=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $memory = [regex]::Match($gdbStdout, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $terminal = [regex]::Match($gdbStdout, 'FIREBALL_TERMINAL=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $tornado = [regex]::Match($gdbStdout, 'MARIO_TORNADO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0)')
     $hv = Get-Ints $harn
     $sv = Get-Ints $scene
     $fv = Get-Ints $source
@@ -372,6 +428,7 @@ try {
     $iv = Get-Ints $input
     $mv = Get-Ints $memory
     $term = Get-Ints $terminal
+    $torn = Get-Ints $tornado
 
     Assert-Condition $rebound.Success 'Fireball never reached a genuine source floor rebound.' $gdbStdout
     Assert-Condition $transform.Success 'Fireball never reached the natural long-travel transform marker.' $gdbStdout
@@ -398,7 +455,8 @@ try {
     $translateZ = [double](Convert-UInt32ToInt32 $xv[12]) / 4096.0
     $horizontalTravel = [Math]::Abs($lastX - $firstX)
 
-    foreach ($capturePath in @($screenshotPath, $terminalScreenshotPath)) {
+    foreach ($capturePath in @($screenshotPath, $terminalScreenshotPath,
+            $tornadoScreenshotPath)) {
         Assert-Condition (Test-Path -LiteralPath $capturePath -PathType Leaf) `
             "Fireball run did not produce its evidence screenshot: $capturePath" `
             $gdbStdout
@@ -430,6 +488,13 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
         -Image $terminalScreenshotPath `
+        -MinDifferentFraction 0.01 `
+        -MinDominantGreenFraction 0.03 `
+        -MinNonWhiteNonGreenFraction 0.20 `
+        -WindowScaledCapture
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+        -Image $tornadoScreenshotPath `
         -MinDifferentFraction 0.01 `
         -MinDominantGreenFraction 0.03 `
         -MinNonWhiteNonGreenFraction 0.20 `
@@ -477,8 +542,16 @@ try {
         'Fireball terminal was not the natural source bottom-bound destroy followed by one clean absent frame.' `
         $gdbStdout
     Assert-Condition ($input.Success -and $iv[0] -eq 1 -and (($iv[1] -band 3) -eq 3) -and $iv[3] -gt 0 -and $iv[4] -eq 0) 'Fireball verifier did not consume and release the real playback B input after status entry.' $gdbStdout
+    Assert-Condition ($tornado.Success -and $torn[0] -eq 1 -and
+        $torn[3] -ge 10 -and $torn[4] -gt 0 -and $torn[5] -gt 0 -and
+        $torn[6] -lt $torn[7] -and
+        (Convert-UInt32BitsToSingle $torn[8]) -le 0.0 -and
+        $torn[9] -eq 1 -and $torn[11] -eq 0 -and
+        $torn[12] -eq 0 -and $torn[13] -eq 0) `
+        'Natural current-ROM Mario Tornado did not enter its source status, expose an attack, return to grounded Wait, or release input.' `
+        $gdbStdout
     Assert-Condition ($memory.Success -and $mv[0] -eq 0x4d4c4544 -and $mv[1] -eq 22 -and $mv[2] -ge 131072) 'Fireball renderer violated the P1 arena reserve floor.' $gdbStdout
-    Write-Output ("battle_playable Fireball source-MVP render passed: source={0}/{1} maps={2} floor={3} speed={4:N2}->{5:N2} draw={6} travel={7:N1} terminalY={8:N1}<{9} roi={10}->{11} reserve={12} captures={13},{14}" -f $fv[0], $fv[1], $rv[0], $rv[6], [Math]::Sqrt($preSpeedSq), [Math]::Sqrt($postSpeedSq), $wv[2], $horizontalTravel, $terminalY, $term[4], $fireballRoiPixels, $terminalRoiPixels, $mv[2], $screenshotPath, $terminalScreenshotPath)
+    Write-Output ("battle_playable Fireball/Tornado passed: fireball={0}/{1} maps={2} floor={3} draw={4} travel={5:N1} terminalY={6:N1}<{7} roi={8}->{9} tornado={10}f/attack{11}/air{12} reserve={13} captures={14},{15},{16}" -f $fv[0], $fv[1], $rv[0], $rv[6], $wv[2], $horizontalTravel, $terminalY, $term[4], $fireballRoiPixels, $terminalRoiPixels, $torn[3], $torn[4], $torn[5], $mv[2], $screenshotPath, $terminalScreenshotPath, $tornadoScreenshotPath)
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

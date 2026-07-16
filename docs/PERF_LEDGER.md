@@ -43,6 +43,64 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
+## 2026-07-16 - Locked-30 fixed-two scheduler decision
+
+```text
+DECISION:
+  Mode 163 presents on a two-vblank boundary and runs exactly two unchanged
+  source updates per presented frame. Vblank-owed debt, catch-up updates, the
+  cap-4 path, and dropped-update accounting are removed.
+RATIONALE / BUDGET:
+  Two updates plus draw are about 1,081K ticks against the 1,120,380-tick
+  two-vblank budget. A catch-up third update makes a slipped slot about 1,360K,
+  which cannot return below the two-vblank boundary and can turn one transient
+  spike into a permanent ~20 FPS cadence. Fixed-two returns to the 30 FPS slot
+  on the next frame and avoids visible 2/3-update judder.
+SOURCE BEHAVIOR:
+  Smash 64 slows uniformly under load and does not run later logic catch-up.
+  Hardware-paced BGM can therefore advance ahead of gameplay during a slowdown
+  stretch; that is source-faithful behavior, not a scheduler defect. Crowd/fade
+  timing must be ear-checked against this final scheduler before more audio work.
+HARD GATES:
+  Updates equal exactly two times presents over every sampled window. Presents
+  never occur inside two vblanks. Any phase with zero slips must report
+  59.0..61.0 updates/s and 1 source-second of timer progress per wall second.
+  Other phases publish updates/s as their direct slowdown percentage.
+PHASE METRICS:
+  Countdown, early combat, late combat, KO/rebirth, and Results each publish
+  present count, vblank-slip count, and derived source updates/s.
+SEMANTICS RETAINED:
+  The LoadScene terminal update remains undrawn. Wait->GO still arms static
+  textures before the first GO draw. Each of the two updates retains its own
+  input read and one original scheduler tick.
+BASELINE COMPATIBILITY:
+  All one-update-per-present and debt/cap-4 A/B baselines are non-comparable.
+  Future baselines must identify fixed-two pacing and be resampled. Jump A
+  CUT 3-NEW remains the margin target where phase update rates show slowdown.
+VERIFIER AUDIT:
+  BPLAY_PACE drops all debt/cap/drop fields; the owner hard-checks the 2:1
+  ratio, draw/present equality, two-vblank minimum, zero cadence violations,
+  phase accounting, held-30 phase rates, terminal teardown, and zero M4 fence.
+  The synchronized MATCH_START debugger pause requests a clean pacing epoch at
+  the next iteration boundary so instrumentation is not labeled game slowdown.
+  The lifecycle branch runs these phase gates before returning. MATCH_SAFETY
+  keeps its first 16 corruption/safety fields hard-zero; its final field is the
+  source camera visibility predicate. Natural-match verification separately
+  requires selected parts = submitted parts, at least one target-bounds
+  decision, and MATCH_SAFETY[16] = bounds-fail; part submissions and target
+  checks intentionally have different granularities. The dedicated camera-
+  containment verifier retains the zero-failure envelope gate.
+STATUS:
+  Implemented and naturally qualified on canonical ROM SHA-256
+  8B949194C5EF02CCA2A59479F67F99E4A6D73A41E7972DBD95CD3CF78BCF1DAA.
+  The 3,600-tick match reached Results with 4,084 committed updates / 2,042
+  presents, 2..5-vblank intervals, zero early-present violations, exactly one
+  teardown, and zero post-GO M4 fence work. Phase presents were
+  194/900/900/0/48, slips 196/1050/931/0/3, and update rates
+  39.9/37.9/39.5/n.a./58.2 per second. Countdown and combat remain below the
+  two-vblank budget; Jump A CUT 3-NEW still owns that performance gap.
+```
+
 Profile 1 is the O2-equivalent low-frequency coarse observer. Profile 2 is the
 size-optimized forensic `-Os` observer; its timings are diagnostic and must not
 be compared with shipping or profile-1 timings.
@@ -433,7 +491,8 @@ ORACLE/COUNTER/GX RESULT:
 CAPTURE RESULT:
   None; the benchmark is nonvisual by contract.
 VERIFIER COMMANDS AND RESULTS:
-  GBI fixtures passed. ITCM placement passed under Windows PowerShell 5.1.
+  GBI fixtures passed. ITCM placement historically passed under Windows
+  PowerShell 5.1; current repository commands require PowerShell 7 (`pwsh`).
   benchmark-renderer-triangle-noop.ps1 -NoBuild -DelaySeconds 3
   -RendererBenchmarkSamples 128 passed frame/count/conservation gates.
 DECISION: KEEP

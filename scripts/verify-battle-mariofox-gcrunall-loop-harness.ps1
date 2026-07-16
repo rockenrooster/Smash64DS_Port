@@ -27,7 +27,7 @@ param(
     [switch]$CPUOpponentProof,
     [switch]$MatchLifecycleProof,
     [switch]$OneMinuteMatchProof,
-    [switch]$RequireRealtime60Fps,
+    [switch]$RequireLocked30Pacing,
     [switch]$RendererBenchmarkOnly,
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [switch]$RendererM2DetailedLedger,
@@ -76,8 +76,8 @@ $m4CandidateEvidence =
 if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
     throw 'OneMinuteMatchProof requires MatchLifecycleProof.'
 }
-if ($OneMinuteMatchProof -and ($RealtimePresentation -or $RequireRealtime60Fps)) {
-    throw 'OneMinuteMatchProof is an unthrottled state/memory gate, not a realtime-performance gate.'
+if ($OneMinuteMatchProof -and -not $RealtimePresentation) {
+    throw 'OneMinuteMatchProof requires realtime presentation so wall-clock pacing is hardware-vblank anchored.'
 }
 if ($RendererBenchmarkOnly -and ($RendererBenchmarkSamples -eq 0)) {
     throw 'RendererBenchmarkOnly requires RendererBenchmarkSamples greater than zero.'
@@ -656,6 +656,7 @@ try {
             'tbreak scVSBattleFuncUpdate if gSCManagerBattleState->time_limit == 1 && gSCManagerBattleState->time_remain == 3600 && gSCManagerBattleState->time_passed == 0',
             'continue',
             'printf "MATCH_START=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->game_status, gSCManagerBattleState->time_limit, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, sIFCommonTimerIsStarted, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsMemoryLedgerArenaHeadroom',
+            'set variable gNdsBattlePlayablePacingRestartRequested = 1',
             'tbreak ndsRendererHardwareDiscardBattleStaticTextures',
             'continue',
             'printf "VSB_MEMARENA=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerGeneration, gNdsMemoryLedgerArenaCapacity, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater, gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerDLBytes, gNdsMemoryLedgerGraphicsBytes, gNdsMemoryLedgerRdpBytes, gNdsMemoryLedgerFigatreeHeapSize',
@@ -950,7 +951,7 @@ try {
             'printf "BPLAY_FT=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ((FTStruct *)gGCCommonLinks[3]->user_data.p)->player, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->fkind, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->pkind, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_ghost, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->special_hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->star_hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->status_id, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->motion_id, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->percent_damage, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->player, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->fkind, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->pkind, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_ghost, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->special_hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->star_hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->status_id, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->motion_id, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->percent_damage',
             'printf "BPLAY_HURT=%u,%d,%u,%d,%u,%d,%u,%d,%u,%d,%u,%d\n", ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[0].hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[0].joint_id, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[1].hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[1].joint_id, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[2].hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[2].joint_id, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[0].hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[0].joint_id, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[1].hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[1].joint_id, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[2].hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[2].joint_id',
             'printf "BPLAY_ATTACK=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_attack_active, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->attack_colls[0].attack_state, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->attack_colls[1].attack_state, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->attack_colls[2].attack_state, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->attack_colls[3].attack_state, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_attack_active, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->attack_colls[0].attack_state, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->attack_colls[1].attack_state, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->attack_colls[2].attack_state, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->attack_colls[3].attack_state',
-            'printf "BPLAY_PACE=%#x,%u,%u,%u,%u,%u,%u,%u\n", gNdsBattlePlayablePacingResult, gNdsBattlePlayablePacingMode, gNdsBattlePlayablePacingLogicFrames, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingDrawCalls, gNdsBattlePlayablePacingTimerTicks, gNdsBattlePlayablePacingPresentFpsX10, gNdsBattlePlayablePacingLogicFpsX10',
+            'printf "BPLAY_PACE=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsBattlePlayablePacingResult, gNdsBattlePlayablePacingMode, gNdsBattlePlayablePacingLogicFrames, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingDrawCalls, gNdsBattlePlayablePacingTimerTicks, gNdsBattlePlayablePacingPresentFpsX10, gNdsBattlePlayablePacingLogicFpsX10, gNdsBattlePlayablePacingVBlanks, gNdsBattlePlayablePacingPresentIntervalMin, gNdsBattlePlayablePacingPresentIntervalMax, gNdsBattlePlayablePacingCadenceViolationCount, gNdsBattlePlayablePacingPhasePresentCount[0], gNdsBattlePlayablePacingPhasePresentCount[1], gNdsBattlePlayablePacingPhasePresentCount[2], gNdsBattlePlayablePacingPhasePresentCount[3], gNdsBattlePlayablePacingPhasePresentCount[4], gNdsBattlePlayablePacingPhaseSlipCount[0], gNdsBattlePlayablePacingPhaseSlipCount[1], gNdsBattlePlayablePacingPhaseSlipCount[2], gNdsBattlePlayablePacingPhaseSlipCount[3], gNdsBattlePlayablePacingPhaseSlipCount[4]',
             'printf "FPS_HUD=%u,%u,%u,%u\n", gNdsBattlePlayableHudFpsX10, gNdsBattlePlayableHudFpsSampleCount, gNdsBattlePlayableHudFpsFrameWindow, gNdsBattlePlayableHudFpsTickWindow',
             'printf "BATTLE_TEXT_HUD=%u,%u,%#x,%u,%u,%u,%u,%u,%#x,%#x\n", gNdsBattleTextHudRenderCount, gNdsBattleTextHudChangeCount, gNdsBattleTextHudFingerprint, gNdsBattleTextHudTimeSeconds, gNdsBattleTextHudP0Damage, gNdsBattleTextHudP1Damage, gNdsBattleTextHudP0Stock, gNdsBattleTextHudP1Stock, gNdsBattleTextHudActiveMask, gNdsBattleTextHudShowDamageMask',
             'printf "MEMARENA=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerGeneration, gNdsMemoryLedgerArenaCapacity, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater, gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerDLBytes, gNdsMemoryLedgerGraphicsBytes, gNdsMemoryLedgerRdpBytes, gNdsMemoryLedgerFigatreeHeapSize',
@@ -1060,7 +1061,7 @@ try {
     $naturalGuard = [regex]::Match($gdbStdout, 'NAT_GUARD=([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayableKO = [regex]::Match($gdbStdout, 'BPLAY_KO=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayableStatus = [regex]::Match($gdbStdout, 'BPLAY_STATUS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    $battlePlayablePacing = [regex]::Match($gdbStdout, 'BPLAY_PACE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $battlePlayablePacing = [regex]::Match($gdbStdout, 'BPLAY_PACE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayableFpsHud = [regex]::Match($gdbStdout, 'FPS_HUD=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battleTextHud = [regex]::Match($gdbStdout, 'BATTLE_TEXT_HUD=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $battlePlayableStart = [regex]::Match($gdbStdout, 'BPLAY_START=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1220,6 +1221,7 @@ try {
     $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     $m4FenceFinalSummary = ''
+    $expectedM4TeardownCount = if ($OneMinuteMatchProof) { 1 } else { 0 }
     if ($RequireZeroPostGoTextureFence) {
         Assert-Condition ($m4FenceFinal.Count -eq 1) `
             "M4 terminal texture fence captured $($m4FenceFinal.Count) records instead of one." `
@@ -1229,7 +1231,6 @@ try {
         foreach ($fenceCount in $m4FenceFinalValues[14..23]) {
             $m4FenceFinalCountSum += $fenceCount
         }
-        $expectedM4TeardownCount = if ($OneMinuteMatchProof) { 1 } else { 0 }
         Assert-Condition (
             $m4FenceFinalValues[1] -eq 1 -and
             $m4FenceFinalValues[2] -eq 1 -and
@@ -1295,7 +1296,7 @@ try {
             $publishedM4[4] -eq 22 -and
             $publishedM4[5] -eq 131072 -and
             $publishedM4[6] -eq 1 -and
-            $publishedM4[7] -eq 0 -and
+            $publishedM4[7] -eq $expectedM4TeardownCount -and
             $publishedM4[8] -eq 0x3fffff -and
             $publishedM4[9] -eq 0x7 -and
             $publishedM4[10] -eq 0 -and
@@ -1303,7 +1304,7 @@ try {
             $publishedM4[12] -eq 0 -and
             $publishedM4[13] -eq 0 -and
             $publishedFenceCountSum -eq 0
-        ) "Published ROM did not naturally preserve the complete pre-GO M4 residency and zero post-GO fence (actual=$($publishedM4 -join ','))." $gdbStdout
+        ) "Published ROM did not preserve the complete M4 residency lifecycle and zero post-GO fence (actual=$($publishedM4 -join ','))." $gdbStdout
         Assert-Condition (
             $vramBanks.Success -and
             $publishedBanks[0] -eq 0x83 -and
@@ -1356,6 +1357,7 @@ try {
         $results = Get-Ints $vsResults
         $resultsFighters = Get-Ints $vsResultsFighters
         $resultsDisplay = Get-Ints $vsResultsDisplay
+        $fdc = Get-Ints $fighterDisplayContract
         $ab = Get-Ints $audioBgm
         $fgmKo = Get-Ints $audioFgmKo
         $audioResidentBytes = if ($audioBgm.Success) { $ab[13] } else { 0 }
@@ -1372,11 +1374,33 @@ try {
             'One-minute match did not begin at the exact locked 1:00 Wait state.' `
             $gdbStdout
         Assert-Condition ($battlePlayablePacing.Success -and
-            $bp[0] -eq 0x42505443 -and $bp[1] -eq 1 -and
-            $bp[2] -ge 3600 -and $bp[3] -eq 0 -and $bp[4] -eq 0 -and
-            $bp[5] -gt 0) `
-            'One-minute match did not retain explicit unthrottled state-only pacing for the full source timer.' `
+            $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
+            $bp[2] -eq (2 * $bp[3]) -and $bp[3] -gt 0 -and
+            $bp[4] -eq $bp[3] -and $bp[5] -gt 0 -and
+            $bp[6] -gt 0 -and $bp[6] -le 305 -and
+            $bp[8] -gt 0 -and $bp[9] -ge 2 -and
+            $bp[10] -ge $bp[9] -and $bp[11] -eq 0 -and
+            (($bp[12] + $bp[13] + $bp[14] + $bp[15] + $bp[16]) -eq
+             $bp[3])) `
+            'One-minute match did not retain exactly two committed source updates per presented frame.' `
             $gdbStdout
+        $phaseRatesX10 = @()
+        for ($phase = 0; $phase -lt 5; $phase++) {
+            $phasePresents = [int64]$bp[12 + $phase]
+            $phaseVBlanks = (2 * $phasePresents) +
+                [int64]$bp[17 + $phase]
+            $phaseRateX10 = if ($phaseVBlanks -gt 0) {
+                [int64][Math]::Floor(((1200 * $phasePresents) +
+                    [Math]::Floor($phaseVBlanks / 2)) / $phaseVBlanks)
+            } else { 0 }
+            $phaseRatesX10 += $phaseRateX10
+            if (($phasePresents -gt 0) -and ($bp[17 + $phase] -eq 0)) {
+                Assert-Condition ($phaseRateX10 -ge 590 -and
+                    $phaseRateX10 -le 610) `
+                    "One-minute phase $phase held 30 presents/s but did not retain 59..61 source updates/s and 1x source-timer speed." `
+                    $gdbStdout
+            }
+        }
 
         # This gate intentionally proves CPU activity, not a scripted combat
         # outcome. ftcomputer.c owns the observed target/objective/input path.
@@ -1481,12 +1505,24 @@ try {
             'One-minute match reloc ledger found stale or missing resident groups.' `
             $gdbStdout
         Assert-Condition ($matchSafety.Success -and
-            @($safety | Where-Object { $_ -ne 0 }).Count -eq 0) `
-            'One-minute match observed a stale-reloc, normalization, fixup, audio-safety, collision-range, or display-bounds failure.' `
+            @($safety[0..15] | Where-Object { $_ -ne 0 }).Count -eq 0) `
+            'One-minute match observed a stale-reloc, normalization, fixup, audio-safety, or collision-range failure.' `
+            $gdbStdout
+        # gmCameraCheckTargetInBounds is the source magnify/culling predicate,
+        # not a memory-safety check. Natural KO/rebirth motion may leave that
+        # visibility envelope. Part selection/submission and target-bounds
+        # decisions have different granularities, so gate each domain without
+        # inventing a false equality between them. The focused camera-
+        # containment verifier retains its zero-failure gate.
+        Assert-Condition ($fighterDisplayContract.Success -and
+            $fdc[0] -gt 0 -and $fdc[3] -eq $fdc[0] -and
+            ($fdc[7] + $fdc[8]) -gt 0 -and
+            $safety[16] -eq $fdc[8]) `
+            'One-minute fighter part submission or source visibility-bound accounting was inconsistent.' `
             $gdbStdout
 
         if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
-        Write-Output ("$Label one-minute match passed (unthrottled state/memory only; realtime not measured): logic=$($bp[2]) timer=$($start[3])->$($life[5])/$($life[6]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])")
+        Write-Output ("$Label one-minute match lifecycle passed: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])")
         return
     }
     if ($ExpectedMode -eq 54) {
@@ -1510,8 +1546,34 @@ try {
         if ($BattlePlayable -and $RealtimePresentation) {
             $bp = Get-Ints $battlePlayablePacing
             $fpsHud = Get-Ints $battlePlayableFpsHud
-            $minPresentedFrames = if ($RequireRealtime60Fps) { 60 } else { 45 }
-            Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and (($bp[2] -eq $bp[3]) -or ($bp[2] -eq ($bp[3] + 1))) -and (($bp[4] -eq $bp[3]) -or ($bp[4] -eq ($bp[3] + 1))) -and $bp[3] -ge $minPresentedFrames -and $bp[5] -gt 0 -and $bp[6] -gt 0 -and $bp[7] -gt 0) 'battle_playable realtime pacing smoke did not present live frames or keep draw/update within one in-flight vblank.' $gdbStdout
+            $wallSeconds = [double]$bp[5] / 33513982.0
+            Assert-Condition (
+                $battlePlayablePacing.Success -and
+                $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
+                $bp[2] -eq (2 * $bp[3]) -and $bp[3] -ge 180 -and
+                $bp[4] -eq $bp[3] -and $bp[5] -gt 0 -and
+                $bp[6] -gt 0 -and $bp[6] -le 305 -and
+                $bp[8] -gt 0 -and $bp[9] -ge 2 -and
+                $bp[10] -ge $bp[9] -and $bp[11] -eq 0 -and
+                (($bp[12] + $bp[13] + $bp[14] + $bp[15] + $bp[16]) -eq
+                 $bp[3])
+            ) 'battle_playable locked-30 pacing failed the exact 2:1 update/present ratio, 30Hz present cap, draw count, cadence, or phase accounting contract.' $gdbStdout
+            $phaseRatesX10 = @()
+            for ($phase = 0; $phase -lt 5; $phase++) {
+                $phasePresents = [int64]$bp[12 + $phase]
+                $phaseVBlanks = (2 * $phasePresents) + [int64]$bp[17 + $phase]
+                $phaseRateX10 = if ($phaseVBlanks -gt 0) {
+                    [int64][Math]::Floor(((1200 * $phasePresents) +
+                        [Math]::Floor($phaseVBlanks / 2)) / $phaseVBlanks)
+                } else { 0 }
+                $phaseRatesX10 += $phaseRateX10
+                if (($phasePresents -gt 0) -and ($bp[17 + $phase] -eq 0)) {
+                    Assert-Condition ($phaseRateX10 -ge 590 -and
+                        $phaseRateX10 -le 610) `
+                        "battle_playable phase $phase held 30 presents/s but did not retain 59..61 source updates/s and 1x source-timer speed." `
+                        $gdbStdout
+                }
+            }
             if (-not $RendererBenchmarkOnly) {
                 $fpsHudExpected = if ($fpsHud[3] -gt 0) {
                     [int64][Math]::Floor(
@@ -1628,10 +1690,8 @@ try {
                     $postGoState
                 ) 'Cut G did not reach the source GO state with a running timer and both fighter controls unlocked.' $gdbStdout
             }
-            if ($RequireRealtime60Fps) {
-                Assert-Condition ($bp[6] -ge 593 -and $bp[6] -le 603 -and $bp[7] -ge 593 -and $bp[7] -le 603) 'battle_playable realtime pacing failed 59.3..60.3 presented/logic fps.' $gdbStdout
-            } elseif (($bp[6] -lt 593) -or ($bp[6] -gt 603) -or ($bp[7] -lt 593) -or ($bp[7] -gt 603)) {
-                Write-Warning ("$Label realtime HW textured perf below 60fps target: fps=$($bp[6])/$($bp[7]) x0.1; renderer-cache follow-up still required.")
+            if (($bp[6] -lt 295) -or ($bp[6] -gt 305)) {
+                Write-Warning ("$Label locked-30 presentation slipped below its target: present=$($bp[6]) x0.1 fps; holds-30 remains a published metric until renderer cuts fit every two-vblank phase budget.")
             }
             if ($HardwareTriangles) {
                 $hw = Get-Ints $platformHw
@@ -3095,7 +3155,29 @@ try {
             Assert-Condition ($memoryReloc.Success -and $mr[0] -gt 0 -and $mr[1] -gt 0 -and $mr[2] -gt 0 -and $mr[3] -gt 0 -and $interfaceBytesOk -and $mr[5] -eq 0 -and $mr[6] -eq 0 -and $mr[8] -eq 0 -and $mr[9] -eq 0) 'battle_playable reloc memory ledger found stale or missing resident groups.' $gdbStdout
             Assert-Condition ($memoryEvict.Success) 'battle_playable reloc eviction ledger was not printed.' $gdbStdout
             $battlePlayableSummary = " bplay=stock$($bpk[3])->$($bpk[4]) falls$($bpk[7])->$($bpk[8]) dead=$($bps[0]) rebirth=$($bps[1])/$($bps[2])/$($bps[3]) recover=$($bps[4])/$($bps[5])"
-            $battlePlayableSummary += " pace=fast logic$($bp[2]) draw$($bp[4])"
+            if ($RealtimePresentation) {
+                $wallSeconds = [double]$bp[5] / 33513982.0
+                $phaseRatesX10 = @()
+                for ($phase = 0; $phase -lt 5; $phase++) {
+                    $phasePresents = [int64]$bp[12 + $phase]
+                    $phaseVBlanks = (2 * $phasePresents) +
+                        [int64]$bp[17 + $phase]
+                    $phaseRatesX10 += if ($phaseVBlanks -gt 0) {
+                        [int64][Math]::Floor(((1200 * $phasePresents) +
+                            [Math]::Floor($phaseVBlanks / 2)) / $phaseVBlanks)
+                    } else { 0 }
+                }
+                $battlePlayableSummary += (' pace=locked30 logic={0} present={1} ratio=2:1 fps=logic{2}/present{3}x0.1 wall={4:F3}s interval={5}..{6} cadenceBad={7} phasePresent={8}/{9}/{10}/{11}/{12} phaseSlip={13}/{14}/{15}/{16}/{17} phaseUpdateRate={18}/{19}/{20}/{21}/{22}x0.1' -f
+                    $bp[2], $bp[3], $bp[7], $bp[6], $wallSeconds,
+                    $bp[9], $bp[10], $bp[11],
+                    $bp[12], $bp[13], $bp[14], $bp[15], $bp[16],
+                    $bp[17], $bp[18], $bp[19], $bp[20], $bp[21],
+                    $phaseRatesX10[0], $phaseRatesX10[1],
+                    $phaseRatesX10[2], $phaseRatesX10[3],
+                    $phaseRatesX10[4])
+            } else {
+                $battlePlayableSummary += " pace=fast logic$($bp[2]) draw$($bp[4])"
+            }
             $battlePlayableSummary += " mem=head$($ma[6]) reloc$($mr[1]) stage$($mr[2]) fighter$($mr[3]) if$($mr[4]) stale$($mr[8])/$($mr[9]) evict$($me[0])/$($me[1])"
             $battlePlayableSummary += $movesetSummary
             $battlePlayableSummary += $specialsSummary

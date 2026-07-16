@@ -1,11 +1,10 @@
 # Handoff
 
-Updated: 2026-07-16 10:19 Central
+Updated: 2026-07-16 12:17 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
 ## Restart
-
 Branch: `codex/wip-natural-combat-source-start-collision`
 
 Boundary: `battle_playable_realtime`, mode `163`.
@@ -19,10 +18,8 @@ Preserve the published intrinsic mode-9 / mip-0 / static-residency / bitmap-OAM
 configuration. Dream Land water is exact frame 0/fraction 114 on the original
 12 triangles; the animated replacement and its dead implementation are removed.
 
-The executable fleet is four registry records under `Latest`/`Boundary`; the
-unreachable source-side mode 1-162 lattice is separate ROM-parity cleanup.
-The Boundary-verified user-facing candidate is 14,585,856 bytes, SHA-256
-`EB36E5CA4725A7196CE2F18EDD025AE5465F0E435F588AAAEA8B9845F80D11D5`.
+The Boundary-verified fixed-two candidate is 14,586,880 bytes, SHA-256
+`8B949194C5EF02CCA2A59479F67F99E4A6D73A41E7972DBD95CD3CF78BCF1DAA`.
 Stage painter depth and pause-orbit containment are fixed and user-confirmed.
 M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, the
 zero-shift matrix builder, and exact bounded `s16` rounding at
@@ -35,6 +32,10 @@ windows; do not repeat them before final release qualification.
 
 ## One-Minute Gate
 
+Mode 163 uses locked-30 fixed-two pacing: exactly two source updates per present,
+with no vblank debt or catch-up. Slow frames uniformly slow gameplay; zero-slip
+phases must also hold 59.0..61.0 updates/s. Old baselines must be resampled.
+
 The published/manual ROM and source runtime gates retain flag `1`, preserving
 Fox CPU and the original Wait → countdown → GO/timer path. The separate
 `-FastIteration` screenshot launch selects `0` before battle, skipping the
@@ -46,11 +47,16 @@ source-timer gate passes:
 .\scripts\verify-battle-playable-one-minute-match.ps1 -RunnerSlot 2
 ```
 
-The run completed 3,891 logic updates, exercised imported level-3 Fox AI,
-reached Time Up and Results, retained 163,312 bytes after BGM, and reported one
-normal M4 teardown with every post-GO fence counter zero. The DS taskman seam
-now matches BattleShip by breaking on `LoadScene` before drawing; the verifier
-samples the battle ledger before Results reuses the globals.
+Canonical ROM SHA-256
+`8B949194C5EF02CCA2A59479F67F99E4A6D73A41E7972DBD95CD3CF78BCF1DAA`
+passes the natural fixed-two qualification: 4,084 committed updates / 2,042
+presents, interval 2..5 vblanks, zero early presents, phase rates
+39.9/37.9/39.5/n.a./58.2 updates/s, and phase slips 196/1050/931/0/3. It
+exercised imported level-3 Fox AI, expired at 3,600 source ticks, reached
+Results, retained 140,816 bytes after BGM, and reported exactly one normal M4
+teardown with every post-GO fence counter zero. The DS taskman seam matches
+BattleShip by breaking on `LoadScene` before drawing; the verifier samples the
+battle ledger before Results reuses the globals.
 
 ## Next Packet
 
@@ -82,11 +88,11 @@ the unchanged raw/cross accounting once per owner traversal moves it to
 prepared color/UV in one 16-byte output record then moves it to
 384,000/384,000 with a byte-identical top screen and unchanged total fighter-
 table RAM. Continue against production emit work, not lighting.
-The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
-stable 20 FPS decision remains pending while performance work continues.
+The current 1.415–1.618M CPU-on P95 predates fixed-two sampling. Locked 30 is
+the explicit presentation decision; 60 FPS is not claimed. Continue Jump A
+CUT 3-NEW where the new phase update-rate metrics expose slowdown.
 
 ## Checkpoint
-
 Boundary already passes for the current ROM; do not rerun it unchanged. Use
 Current instead only if normal/shared startup changes. Snapshot is the final
 project command.

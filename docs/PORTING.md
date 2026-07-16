@@ -21259,3 +21259,29 @@ remains skipped for the requested fast iteration cadence.
   and the deterministic top-screen comparison changes 0 / 49,152 pixels.
   Boundary passes on public ROM SHA-256
   `EB36E5CA4725A7196CE2F18EDD025AE5465F0E435F588AAAEA8B9845F80D11D5`.
+
+## 2026-07-16 - Selected fixed-two locked-30 scheduling
+
+- Replaced elapsed-vblank debt/catch-up and its cap-4 telemetry with exactly two
+  unchanged source updates per presented frame. Each update keeps its own input
+  read and scheduler tick; one draw/flush follows the pair and presents no
+  sooner than the two-vblank boundary.
+- A three-vblank slot is counted against its match phase and intentionally
+  slows game time rather than creating a third-update catch-up burst. This
+  matches source-console slowdown, preserves uniform motion, and lets the next
+  frame self-recover to the 30 FPS slot. Hardware-paced BGM continuing during
+  slowdown is source-faithful.
+- The verifier now hard-gates `updates == 2 * presents`, draw/present equality,
+  the two-vblank minimum, zero early-present violations, and 59.0..61.0
+  updates/s only for phases that hold 30. All phases publish update rate and
+  slip counts. The undrawn LoadScene terminal update and Wait->GO texture arm
+  remain unchanged.
+- Existing one-update-per-present and debt/cap-4 performance baselines are not
+  comparable; fixed-two A/B windows must be resampled before further decisions.
+- Canonical ROM SHA-256
+  `8B949194C5EF02CCA2A59479F67F99E4A6D73A41E7972DBD95CD3CF78BCF1DAA`
+  passed the natural one-minute lifecycle with 4,084 updates / 2,042 presents,
+  2..5-vblank intervals, zero early presents, and phase update rates
+  39.9/37.9/39.5/n.a./58.2 per second. The source timer expired at tick 3,600,
+  Results loaded, one texture teardown ran, all ten post-GO M4 fence counters
+  stayed zero, and the first 16 true MATCH_SAFETY counters stayed zero.

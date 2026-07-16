@@ -392,6 +392,95 @@ nds_renderer.c edits with the depth-fix lane (one-writer). Snapshot last.
 
 ---
 
+## TASK 5 — Locked-30 fixed-two source scheduler (completed)
+
+Added and completed 2026-07-16. Tyler's amended checkpoint decision selects a
+locked-30 cap with exactly two unchanged source updates per presented frame and
+no catch-up. A phase that fits two vblanks reaches 60 source updates/s; an
+overloaded phase slows uniformly like the source console while audio remains
+hardware-paced. Canonical natural qualification measured 4,084 updates / 2,042
+presents and phase rates 39.9/37.9/39.5/n.a./58.2 updates/s.
+
+```
+/task Implement the locked-30 scheduler: presentation is capped at a 2-vblank
+cadence and each presented frame owns exactly two source updates. Never repay
+a slipped slot. DECISION RECORD: this is Tyler's amended July-16 checkpoint
+outcome — target is locked 30 when the budget permits; 60 FPS presentation is
+not claimed, and source-faithful slowdown is accepted under load. Update the P1
+board explicitly (never silently). Reconcile first (R0).
+
+ORIGINAL FINDING: the realtime battle loop ran input -> source update -> draw
+once per presented frame. The amended owner now runs the input/tick/update path
+twice before one draw/present. Game speed is therefore exactly twice present
+rate, with no elapsed-vblank debt and no 2/3-update judder.
+
+ARCHITECTURE (behavior-sacred: each update remains the unmodified source
+60Hz tick — NO delta scaling, NO half-rate logic, NO skipped logic frames):
+1. Fixed source batching: each loop iteration runs exactly two source updates,
+   with no vblank-owed debt, catch-up, or cap-4 path. Run both source updates
+   back-to-back, EACH preceded by its own input
+   read (ndsPlatformReadInput + syControllerReadDeviceData/
+   syControllerUpdateGlobalData) so input sampling stays 60 Hz like the
+   original per-retrace read.
+2. Present cadence: one draw+flush per iteration, presented on a 2-vblank
+   boundary. Never present faster than every 2 vblanks (locked cap). If a
+   frame overruns its slot, present at the next vblank boundary (slip to 3
+   vblanks accepted and counted per phase). Never repay the missed wall-time
+   tick: uniform slowdown matches source-console lag behavior and the next
+   frame returns immediately to the fixed two-update batch.
+3. Preserve the existing terminal-update rule (LoadScene break — BattleShip
+   syTaskmanRunTask never draws the terminal update, keep the cited
+   comment), the Wait->GO texture-arm hook, and the mip-cache lab seeding
+   path. Fast-logic verifier mode is untouched.
+4. Audio: BGM refills stay hardware-timer paced (unchanged). FGM triggers
+   now fire at correct wall time as a side effect of correct update rate —
+   note in the ledger row that crowd/fade timing complaints must be
+   re-ear-checked AFTER this lands, before further audio work.
+5. Debug HUD (debug builds): show updates/s next to presented FPS.
+
+BUDGET DECISION (R2): two updates plus draw are about 1,081K ticks against the
+1,120,380-tick two-vblank budget. A catch-up third update makes a slipped slot
+about 1,360K and therefore cannot fit back under the two-vblank boundary; one
+transient spike can lock that design near 20 FPS. Fixed-two self-recovers on
+the next frame and keeps motion uniform rather than alternating 2/3 ticks.
+
+GATES (hardware-timer anchored, per the standing real-time rule):
+- HARD everywhere: updates equal exactly two times presents over every sampled
+  window. No debt/catch-up accounting is permitted.
+- HARD in phases that hold 30 presents/s: updates per wall-second 59.0-61.0 and
+  the in-game timer advances one source second per wall second.
+- Elsewhere publish per-phase updates/s; this is the direct slowdown percentage
+  (40/s = 67% speed) and identifies where Jump A CUT 3-NEW margin remains.
+- HARD immediately: presents never exceed one per 2 vblanks; per-phase slip
+  counts (countdown / early combat / late combat / KO / Results) published.
+- Per-phase "holds 30" gates start as PUBLISHED METRICS and are promoted to
+  hard gates as the Jump A / Jump C cuts bring each phase's
+  (updates+draw+flush) under the 1,120,380-tick 2-vblank budget. Publish
+  per-phase P50/P95 against that budget — this doubles as the board's
+  July-16 phase-evidence table.
+- Audit every mode-163 verifier expectation that assumed 1 update == 1
+  present (frame/update counters, fps assertions, the demoted 59.3-60.3
+  pacing gate) and retarget them to the locked-30 contract: 60 Hz updates +
+  exact 2:1 update/present ratio plus phase slowdown metrics, default-hard.
+  Pacing is port presentation policy — cite
+  this decision row for expectation changes; per-update source behavior is
+  unchanged and stays source-gated. Never weaken a semantic gate to pass.
+
+BOARD/DOCS: update P1_EXECUTION_BOARD July-16 checkpoint row with the
+explicit decision (locked-30 chosen; 60 not claimed); retarget acceptance
+rows referencing 60 FPS; PERF_LEDGER row records the new pacing mode and
+notes ALL future A/B baselines must state pacing mode and resample (present
+now includes multiple updates — old baselines are not comparable).
+
+Surfaces: taskman_seam.c, nds_platform.c, verifiers, docs — disjoint from
+nds_renderer.c, so this may run in a parallel lane to the stage-depth task
+with one-writer coordination. Rebuild the canonical ROM; Tyler playtest
+gate: correct game speed by feel/stopwatch, stable cadence. Separate
+commit(s); snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean last.
+```
+
+---
+
 ## Sequencing and interactions
 
 - TASK 1 before TASK 2, hard: the depth fix changes class-3 semantics and the

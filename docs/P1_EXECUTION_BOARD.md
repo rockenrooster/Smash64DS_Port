@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 10:19 Central
+Updated: 2026-07-16 12:17 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -16,8 +16,8 @@ Boundary-verified user-facing candidate:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,585,856 bytes
-SHA-256 EB36E5CA4725A7196CE2F18EDD025AE5465F0E435F588AAAEA8B9845F80D11D5
+14,586,880 bytes
+SHA-256 8B949194C5EF02CCA2A59479F67F99E4A6D73A41E7972DBD95CD3CF78BCF1DAA
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -34,7 +34,7 @@ more accurate than recycling cross-build samples.
 | Mid combat / Whispy change | focused profile-1 | `426B821A...` | exact completed frames 1398–1405 | 8 | 1,616,000 / 1,617,920 | Same-ROM M4 lifecycle sample; worst measured material phase |
 | Late combat | focused profile-1 | `426B821A...` | exact completed frames 3300–3307 | 8 | 1,240,832 / 1,414,912 | Same-ROM late sample; no M4 fallback |
 | KO / rebirth | canonical-profile-0 | pending candidate republication | Pending natural KO→rebirth window | — | — / — | Pending synchronized canonical baseline |
-| Time Up / Results | focused profile-0 | `C07617CA94010535A3B260F0B61A62E8E8ED4AFDDCB4C8968DEE9721642390A9` | natural one-minute expiry→Results | 1 lifecycle | state-only | Pass; realtime ticks pending |
+| Time Up / Results | canonical profile-0 | `8B949194...` | natural one-minute expiry→Results | 1 lifecycle | n/a / n/a | Pass: 4,084/2,042 exact 2:1, Results 58.2 updates/s, one teardown, zero M4 fence work |
 
 Profile-1 hard-checkpoint windows are O2-equivalent feasibility evidence, not
 profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
@@ -61,6 +61,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 |---|---|---|---|---|
 | Mario human versus original level-3 Fox CPU, Dream Land, one-minute Time match, items off | CPU-on public default / visible fast-iteration override | Gameplay + QA | The published ROM and source runtime gates retain flag `1`; the separate `-FastIteration` screenshot launch selects flag `0` before battle, skipping countdown/Fox and freezing `1:00` | Keep lifecycle gates on `1`; use the focused flag-`0` capture during routine visual iteration |
 | Original Wait → countdown → GO control/timer gate | Pass | Integration | Automated synchronized source-state proof passes | Keep |
+| Locked-30 scheduler | Pass / slowdown published | Integration | Canonical natural match: 4,084 updates / 2,042 presents, interval 2..5 vblanks, zero early presents; phase rates 39.9/37.9/39.5/n.a./58.2 updates/s and slips 196/1050/931/0/3. No vblank debt, catch-up, or cap-4 path | Keep exact 2:1 and conditional 59.0–61.0 gates; Jump A CUT 3-NEW owns remaining two-vblank margin |
 | Mario can damage Fox | Pass / continuous gate | Gameplay | User confirmed the repair manually. The focused current-ROM route now damages Fox 0→59, lets imported level-3 Recover return naturally to line 3, then damages Fox again 59→72 within 78 frames while all 11 damage colliders and global/special/star hit statuses remain normal | Keep the post-Recover assertion in `verify-battle-playable-fox-recovery.ps1` |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |
 | Fireball trajectory, floor rebound, and terminal | Pass | Gameplay | Current custom `0x47` submits 40/40 and first rebound is 55→46.75 at lifetime 122. The exact ELF destroy callsite then records the same weapon crossing Pupupu bottom −3500 at x/y/z −4650.5/−3504.8/−66.9 with lifetime 10; it is absent next frame. The deterministic source-MVP ROI changes 50→0 orange pixels | Keep the focused countdown/Fox-off gate and both `20260716_fireball-source-mvp-long-travel*.png` captures; the earlier far-left theory was false |
@@ -97,13 +98,14 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
   stable presentation target; or deliver the best verifier-covered incomplete
   candidate. Do not silently redefine P1.
 
-Checkpoint verdict: the synchronized CPU-on ROM measures 1.415–1.618M active
-P95 ticks across four material combat phases, 2.53–2.89 times the one-VBlank
-budget, so a credible 60 FPS path by July 19 is not yet established. The prior
-all-or-nothing renderer cut gates are withdrawn and incremental gains now
-accumulate. Approval for a stable 20 FPS target remains pending; until then
-60 FPS is an explicit unmet P1 target. KO/rebirth and Results realtime samples
-remain final-release evidence gaps.
+Checkpoint decision: presentation targets locked 30; 60 FPS is not claimed.
+The scheduler uses exactly two source updates per present and never catches up
+after a slip. This matches Smash 64's uniform slowdown under load, preserves
+real-time hardware-paced audio, avoids 2/3-tick motion judder, and self-recovers
+after one slow frame. Old one-update-per-present and debt/cap-4 samples are not
+comparable; all phase baselines require fixed-two resampling. The natural
+one-minute run closes the Results lifecycle gap; its KO/rebirth bucket had zero
+presents, so a focused synchronized KO/rebirth phase sample remains pending.
 
 ### July 17
 

@@ -685,6 +685,22 @@ void ndsResetStartupDiagnostics(void)
     gNdsBattlePlayablePacingTimerTicks = 0;
     gNdsBattlePlayablePacingPresentFpsX10 = 0;
     gNdsBattlePlayablePacingLogicFpsX10 = 0;
+    gNdsBattlePlayablePacingVBlankStart = 0;
+    gNdsBattlePlayablePacingVBlanks = 0;
+    gNdsBattlePlayablePacingRestartRequested = 0;
+    gNdsBattlePlayablePacingPresentIntervalMin = 0;
+    gNdsBattlePlayablePacingPresentIntervalMax = 0;
+    gNdsBattlePlayablePacingCadenceViolationCount = 0;
+    gNdsBattlePlayablePacingPhasePresentCount[0] = 0;
+    gNdsBattlePlayablePacingPhasePresentCount[1] = 0;
+    gNdsBattlePlayablePacingPhasePresentCount[2] = 0;
+    gNdsBattlePlayablePacingPhasePresentCount[3] = 0;
+    gNdsBattlePlayablePacingPhasePresentCount[4] = 0;
+    gNdsBattlePlayablePacingPhaseSlipCount[0] = 0;
+    gNdsBattlePlayablePacingPhaseSlipCount[1] = 0;
+    gNdsBattlePlayablePacingPhaseSlipCount[2] = 0;
+    gNdsBattlePlayablePacingPhaseSlipCount[3] = 0;
+    gNdsBattlePlayablePacingPhaseSlipCount[4] = 0;
 #if (NDS_HARNESS_FAST_LOGIC == 0) && \
     (NDS_RENDERER_HW_TRIANGLES != 0) && \
     (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
@@ -4200,8 +4216,14 @@ extern u32 ndsSceneMipCacheHoldLogic(void);
 #define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
 #define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
 #define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
+#define NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT 2u
+#define NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS 2u
+#define NDS_BATTLE_PLAYABLE_EARLY_COMBAT_TICKS 1800u
 
 static u32 sNdsBattlePlayablePacingStartTick;
+static u32 sNdsBattlePlayableLastPresentVBlank;
+static u32 sNdsBattlePlayableLastDeadFrames;
+static u32 sNdsBattlePlayableLastRebirthFrames;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 static u32 sNdsBattlePlayableProfileLoopStartTick;
 
@@ -4224,6 +4246,14 @@ static void ndsBattlePlayableAdvanceFastLogicClock(void)
      * verifier removes the wait, not that one-update/one-tic contract. */
     sySchedulerSetTicCount(sySchedulerGetTicCount() + 1u);
 #endif
+}
+
+static void ndsBattlePlayableAdvanceRealtimeLogicClock(void)
+{
+    /* The original scheduler advances this clock once per VI retrace before
+     * the corresponding 60 Hz source update. Mode 163 batches those updates,
+     * so preserve that exact one-tic/one-update contract here. */
+    sySchedulerSetTicCount(sySchedulerGetTicCount() + 1u);
 }
 
 static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
@@ -4279,6 +4309,9 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 
 static void ndsBattlePlayablePacingStart(u32 fast_logic)
 {
+    u32 phase;
+    u32 vblank = ndsPlatformVBlankCount();
+
     sNdsBattlePlayablePacingStartTick = cpuGetTiming();
     gNdsBattlePlayablePacingResult = 0;
     gNdsBattlePlayablePacingMode = fast_logic;
@@ -4299,6 +4332,25 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     gNdsBattlePlayablePacingTimerTicks = 0;
     gNdsBattlePlayablePacingPresentFpsX10 = 0;
     gNdsBattlePlayablePacingLogicFpsX10 = 0;
+    gNdsBattlePlayablePacingVBlankStart = vblank;
+    gNdsBattlePlayablePacingVBlanks = 0u;
+    gNdsBattlePlayablePacingPresentIntervalMin = 0xffffffffu;
+    gNdsBattlePlayablePacingPresentIntervalMax = 0u;
+    gNdsBattlePlayablePacingCadenceViolationCount = 0u;
+    for (phase = 0u;
+         phase < NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT;
+         phase++)
+    {
+        gNdsBattlePlayablePacingPhasePresentCount[phase] = 0u;
+        gNdsBattlePlayablePacingPhaseSlipCount[phase] = 0u;
+    }
+    sNdsBattlePlayableLastPresentVBlank = vblank;
+    sNdsBattlePlayableLastDeadFrames =
+        gNdsFighterBattlePlayableDeadFrames;
+    sNdsBattlePlayableLastRebirthFrames =
+        gNdsFighterBattlePlayableRebirthDownFrames +
+        gNdsFighterBattlePlayableRebirthStandFrames +
+        gNdsFighterBattlePlayableRebirthWaitFrames;
 #if NDS_RENDERER_HW_TRIANGLES
     if (fast_logic == 0u)
     {
@@ -4312,6 +4364,8 @@ static void ndsBattlePlayablePacingUpdate(void)
     u32 ticks = cpuGetTiming() - sNdsBattlePlayablePacingStartTick;
 
     gNdsBattlePlayablePacingTimerTicks = ticks;
+    gNdsBattlePlayablePacingVBlanks =
+        ndsPlatformVBlankCount() - gNdsBattlePlayablePacingVBlankStart;
     if (ticks != 0u)
     {
         gNdsBattlePlayablePacingPresentFpsX10 =
@@ -4321,7 +4375,10 @@ static void ndsBattlePlayablePacingUpdate(void)
             (u32)(((u64)gNdsBattlePlayablePacingLogicFrames *
                    BUS_CLOCK * 10u) / ticks);
     }
-    if ((gNdsBattlePlayablePacingPresentedFrames >= 45u) ||
+    /* Short samples still need enough completed presentations to distinguish
+     * sustained cadence from startup. Lifecycle verification resets this
+     * epoch after its synchronized MATCH_START debugger stop. */
+    if ((gNdsBattlePlayablePacingPresentedFrames >= 180u) ||
         (gNdsBattlePlayablePacingMode != 0u))
     {
         gNdsBattlePlayablePacingResult = NDS_BATTLE_PLAYABLE_PACING_PASS;
@@ -4331,7 +4388,41 @@ static void ndsBattlePlayablePacingUpdate(void)
 static void ndsBattlePlayablePacingFinish(void)
 {
     ndsBattlePlayablePacingUpdate();
+    if (gNdsBattlePlayablePacingPresentIntervalMin == 0xffffffffu)
+    {
+        gNdsBattlePlayablePacingPresentIntervalMin = 0u;
+    }
     gNdsBattlePlayablePacingResult = NDS_BATTLE_PLAYABLE_PACING_PASS;
+}
+
+static u32 ndsBattlePlayablePacingPhase(void)
+{
+    u32 rebirth_frames =
+        gNdsFighterBattlePlayableRebirthDownFrames +
+        gNdsFighterBattlePlayableRebirthStandFrames +
+        gNdsFighterBattlePlayableRebirthWaitFrames;
+
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->game_status == nSCBattleGameStatusWait))
+    {
+        return NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNTDOWN;
+    }
+    if (gSCManagerBattleState->game_status != nSCBattleGameStatusGo)
+    {
+        return NDS_BATTLE_PLAYABLE_PACING_PHASE_RESULTS;
+    }
+    if ((gNdsFighterBattlePlayableDeadFrames !=
+         sNdsBattlePlayableLastDeadFrames) ||
+        (rebirth_frames != sNdsBattlePlayableLastRebirthFrames))
+    {
+        return NDS_BATTLE_PLAYABLE_PACING_PHASE_KO_REBIRTH;
+    }
+    if (gSCManagerBattleState->time_passed <
+        NDS_BATTLE_PLAYABLE_EARLY_COMBAT_TICKS)
+    {
+        return NDS_BATTLE_PLAYABLE_PACING_PHASE_EARLY_COMBAT;
+    }
+    return NDS_BATTLE_PLAYABLE_PACING_PHASE_LATE_COMBAT;
 }
 
 void __attribute__((noinline, used)) ndsBattlePlayableFrameCompleteMarker(void)
@@ -4344,6 +4435,7 @@ static void ndsBattlePlayablePresentFrame(void)
     u32 start = cpuGetTiming();
     u32 draw_start;
     u32 hud_start;
+    u32 logic_tick;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     u32 phase_start;
     u64 known;
@@ -4502,12 +4594,17 @@ static void ndsBattlePlayablePresentFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     phase_start = cpuGetTiming();
 #endif
+    logic_tick = sySchedulerGetTicCount();
     ndsOsPostVBlank();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfilePostVBlankTicks += cpuGetTiming() - phase_start;
     phase_start = cpuGetTiming();
 #endif
     ndsOsRunThreads();
+    /* sySchedulerVRetrace performs required VI/client work but also increments
+     * the original shared tic. Realtime game time already advanced once per
+     * source update, so presentation must not add another logic tic. */
+    sySchedulerSetTicCount(logic_tick);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileThreadTicks = cpuGetTiming() - phase_start;
 #endif
@@ -4547,6 +4644,45 @@ static void ndsBattlePlayablePresentFrame(void)
 #endif
     ndsRendererProfileFramePublish();
     ndsBattlePlayablePacingUpdate();
+}
+
+static void ndsBattlePlayablePresentRealtimeFrame(void)
+{
+    u32 phase = ndsBattlePlayablePacingPhase();
+    u32 target = sNdsBattlePlayableLastPresentVBlank +
+                 NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS;
+    u32 actual;
+    u32 interval;
+
+    ndsPlatformSchedulePresentAtVBlank(target);
+    ndsBattlePlayablePresentFrame();
+    actual = ndsPlatformVBlankCount();
+    interval = actual - sNdsBattlePlayableLastPresentVBlank;
+    if (interval < NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS)
+    {
+        gNdsBattlePlayablePacingCadenceViolationCount++;
+    }
+    if (interval < gNdsBattlePlayablePacingPresentIntervalMin)
+    {
+        gNdsBattlePlayablePacingPresentIntervalMin = interval;
+    }
+    if (interval > gNdsBattlePlayablePacingPresentIntervalMax)
+    {
+        gNdsBattlePlayablePacingPresentIntervalMax = interval;
+    }
+    gNdsBattlePlayablePacingPhasePresentCount[phase]++;
+    if (interval > NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS)
+    {
+        gNdsBattlePlayablePacingPhaseSlipCount[phase] +=
+            interval - NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS;
+    }
+    sNdsBattlePlayableLastPresentVBlank = actual;
+    sNdsBattlePlayableLastDeadFrames =
+        gNdsFighterBattlePlayableDeadFrames;
+    sNdsBattlePlayableLastRebirthFrames =
+        gNdsFighterBattlePlayableRebirthDownFrames +
+        gNdsFighterBattlePlayableRebirthStandFrames +
+        gNdsFighterBattlePlayableRebirthWaitFrames;
 }
 
 static void ndsBattlePlayableFinalizePresentedIteration(void)
@@ -7128,123 +7264,181 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsBattlePlayablePacingStart(
                     (NDS_HARNESS_FAST_LOGIC != 0) ? 1u : 0u);
             }
-            for (i = 0u; i < update_max; i++)
+            for (i = 0u; i < update_max;)
             {
-                u32 battle_status_before =
-                    ((is_battle_playable != 0u) &&
-                     (gSCManagerBattleState != NULL)) ?
-                        (u32)gSCManagerBattleState->game_status : 0xffffffffu;
+                u32 updates_this_iteration = 1u;
+                u32 update_in_iteration;
+                u32 stop_after_iteration = 0u;
+                u32 terminal_update = 0u;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
-                u32 input_start;
+                u32 profile_input_ticks = 0u;
+                u32 profile_update_ticks = 0u;
+                u32 profile_source_update_ticks = 0u;
+                u32 profile_audio_update_ticks = 0u;
 
                 sNdsBattlePlayableProfileLoopStartTick = cpuGetTiming();
-                input_start = sNdsBattlePlayableProfileLoopStartTick;
 #endif
+                if ((use_realtime_presentation != 0u) &&
+                    (gNdsBattlePlayablePacingRestartRequested != 0u))
+                {
+                    /* The lifecycle verifier requests this only after its
+                     * synchronized MATCH_START stop. Reset at an iteration
+                     * boundary so debugger time is never reported as a game
+                     * slowdown while every natural slip remains visible. */
+                    ndsBattlePlayablePacingStart(0u);
+                    gNdsBattlePlayablePacingRestartRequested = 0u;
+                }
                 if (use_realtime_presentation != 0u)
                 {
-                    (void)ndsPlatformReadInput();
-                    if (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
-                    {
-                        syControllerReadDeviceData();
-                        syControllerUpdateGlobalData();
-                    }
+                    /* Smash 64 slows uniformly under load and never repays a
+                     * missed retrace with a later logic burst. Run exactly two
+                     * unchanged 60 Hz source ticks for each presented frame;
+                     * a three-VBlank draw is measured as slowdown, and the
+                     * next frame starts cleanly with two more ticks. */
+                    updates_this_iteration =
+                        NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT;
                 }
+                for (update_in_iteration = 0u;
+                     update_in_iteration < updates_this_iteration;
+                     update_in_iteration++)
+                {
+                    u32 battle_status_before =
+                        ((is_battle_playable != 0u) &&
+                         (gSCManagerBattleState != NULL)) ?
+                            (u32)gSCManagerBattleState->game_status :
+                            0xffffffffu;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
-                gNdsRendererProfileInputTicks =
-                    cpuGetTiming() - input_start;
+                    u32 input_start = cpuGetTiming();
 #endif
-                ndsRunMarioFoxProofUpdate(
-                    &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
-                if ((battle_status_before == nSCBattleGameStatusWait) &&
-                    (gSCManagerBattleState != NULL) &&
-                    (gSCManagerBattleState->game_status ==
-                     nSCBattleGameStatusGo))
-                {
-                    /* The imported countdown GObj performed the source
-                     * Wait->Go assignment. Arm before the first GO draw. */
-                    ndsRendererHardwareArmBattleStaticTextures();
-                }
-                /* BattleShip syTaskmanRunTask checks LoadScene immediately
-                 * after task_update and never draws the terminal update. */
-                if ((is_battle_playable != 0u) &&
-                    (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
-                {
-                    break;
-                }
-#if NDS_SCENE_MIP_CACHE_LAB
-                if ((is_battle_playable != 0u) &&
-                    (use_realtime_presentation != 0u) &&
-                    (i == 0u) &&
-                    (ndsSceneMipCacheHoldLogic() != FALSE))
-                {
-                    u32 seed_guard = 0u;
-
-                    /* Let BattleShip establish the real fighter/camera state
-                     * once, then seed without advancing logic or match time. */
-                    while ((ndsSceneMipCacheHoldLogic() != FALSE) &&
-                           (seed_guard < 4u))
-                    {
-                        ndsBattlePlayablePresentFrame();
-                        seed_guard++;
-                    }
-                    if (ndsSceneMipCacheHoldLogic() != FALSE)
-                    {
-                        ndsPlatformSceneMipCacheAbort();
-                    }
-                    ndsBattlePlayablePacingStart(0u);
-                }
-#endif
-                if ((is_battle_playable != 0u) &&
-                    (use_realtime_presentation == 0u))
-                {
-                    ndsBattlePlayableAdvanceFastLogicClock();
-                }
-                if (is_battle_playable != 0u)
-                {
-                    gNdsBattlePlayablePacingLogicFrames++;
                     if (use_realtime_presentation != 0u)
                     {
-                        ndsBattlePlayablePresentFrame();
-                    }
-                }
-
-                if (gNdsFighterNaturalMotionResult ==
-                    NDS_FIGHTER_NATURAL_MOTION_PASS)
-                {
-                    if ((is_battle_playable != 0u) &&
-                        (NDS_DEV_LIVE_INPUT_PREVIEW != 0))
-                    {
-                        if (use_realtime_presentation != 0u)
+                        (void)ndsPlatformReadInput();
+                        if (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
                         {
-                            ndsBattlePlayableFinalizePresentedIteration();
+                            syControllerReadDeviceData();
+                            syControllerUpdateGlobalData();
                         }
-                        continue;
+                        ndsBattlePlayableAdvanceRealtimeLogicClock();
                     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+                    profile_input_ticks += cpuGetTiming() - input_start;
+#endif
+                    ndsRunMarioFoxProofUpdate(
+                        &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+                    profile_update_ticks +=
+                        gNdsRendererProfileUpdateTicks;
+                    profile_source_update_ticks +=
+                        gNdsRendererProfileSourceUpdateTicks;
+                    profile_audio_update_ticks +=
+                        gNdsRendererProfileAudioUpdateTicks;
+#endif
+                    if ((battle_status_before ==
+                         nSCBattleGameStatusWait) &&
+                        (gSCManagerBattleState != NULL) &&
+                        (gSCManagerBattleState->game_status ==
+                         nSCBattleGameStatusGo))
+                    {
+                        /* The imported countdown GObj performed the source
+                         * Wait->Go assignment. Arm before the first GO draw. */
+                        ndsRendererHardwareArmBattleStaticTextures();
+                    }
+                    /* BattleShip syTaskmanRunTask checks LoadScene immediately
+                     * after task_update and never draws the terminal update. */
+                    if ((is_battle_playable != 0u) &&
+                        (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
+                    {
+                        terminal_update = 1u;
+                        break;
+                    }
+#if NDS_SCENE_MIP_CACHE_LAB
                     if ((is_battle_playable != 0u) &&
                         (use_realtime_presentation != 0u) &&
-                        ((i + 1u) < update_max))
+                        (i == 0u) &&
+                        (ndsSceneMipCacheHoldLogic() != FALSE))
                     {
-                        ndsBattlePlayableFinalizePresentedIteration();
-                        continue;
-                    }
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
-                    if ((is_battle_playable != 0u) &&
-                        (use_realtime_presentation == 0u) &&
-                        (gNdsAudioBgmElapsedFrames <
-                            NDS_AUDIO_BGM_RATE_GUARD_FRAMES))
-                    {
-                        continue;
+                        u32 seed_guard = 0u;
+
+                        /* Let BattleShip establish the real fighter/camera
+                         * state once, then seed without advancing logic or
+                         * match time. Seed draws obey the same locked cap. */
+                        while ((ndsSceneMipCacheHoldLogic() != FALSE) &&
+                               (seed_guard < 4u))
+                        {
+                            ndsBattlePlayablePresentRealtimeFrame();
+                            seed_guard++;
+                        }
+                        if (ndsSceneMipCacheHoldLogic() != FALSE)
+                        {
+                            ndsPlatformSceneMipCacheAbort();
+                        }
+                        ndsBattlePlayablePacingStart(0u);
                     }
 #endif
-                    if (use_realtime_presentation != 0u)
+                    if ((is_battle_playable != 0u) &&
+                        (use_realtime_presentation == 0u))
                     {
-                        ndsBattlePlayableFinalizePresentedIteration();
+                        ndsBattlePlayableAdvanceFastLogicClock();
                     }
+                    if ((is_battle_playable != 0u) &&
+                        (use_realtime_presentation == 0u))
+                    {
+                        gNdsBattlePlayablePacingLogicFrames++;
+                    }
+                    i++;
+
+                    if (gNdsFighterNaturalMotionResult ==
+                        NDS_FIGHTER_NATURAL_MOTION_PASS)
+                    {
+                        if ((is_battle_playable != 0u) &&
+                            (NDS_DEV_LIVE_INPUT_PREVIEW != 0))
+                        {
+                            continue;
+                        }
+                        if ((is_battle_playable != 0u) &&
+                            (use_realtime_presentation != 0u) &&
+                            (i < update_max))
+                        {
+                            continue;
+                        }
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+                        if ((is_battle_playable != 0u) &&
+                            (use_realtime_presentation == 0u) &&
+                            (gNdsAudioBgmElapsedFrames <
+                             NDS_AUDIO_BGM_RATE_GUARD_FRAMES))
+                        {
+                            continue;
+                        }
+#endif
+                        stop_after_iteration = 1u;
+                        break;
+                    }
+                }
+                if (terminal_update != 0u)
+                {
                     break;
                 }
                 if (use_realtime_presentation != 0u)
                 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+                    gNdsRendererProfileInputTicks = profile_input_ticks;
+                    gNdsRendererProfileUpdateTicks = profile_update_ticks;
+                    gNdsRendererProfileSourceUpdateTicks =
+                        profile_source_update_ticks;
+                    gNdsRendererProfileAudioUpdateTicks =
+                        profile_audio_update_ticks;
+#endif
+                    ndsBattlePlayablePresentRealtimeFrame();
+                    /* Count only updates committed to a presented frame. The
+                     * source-faithful LoadScene terminal update remains
+                     * undrawn and is proven by the lifecycle counters. */
+                    gNdsBattlePlayablePacingLogicFrames +=
+                        NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT;
                     ndsBattlePlayableFinalizePresentedIteration();
+                }
+                if (stop_after_iteration != 0u)
+                {
+                    break;
                 }
             }
             if (is_battle_playable != 0u)
