@@ -11052,6 +11052,7 @@ static s32 ndsRendererHardwareClipZWInsideNearPlane(s32 z, s32 w)
     return ((w > 0) && (((s64)z + (s64)w) >= 0)) ? TRUE : FALSE;
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 __attribute__((optimize("Os"))) ndsRendererHardwareClipLerpQ16(
     s32 from, s32 to, s32 ratio_q16)
 {
@@ -11148,6 +11149,7 @@ ndsRendererHardwareClipTriangleNearPlane(
     }
     return output_count;
 }
+#endif
 
 static s32 ndsRendererHardwareTriangleInsideNearPlane(
     const NDSRendererClipVertex20p12 *v0,
