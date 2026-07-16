@@ -16294,7 +16294,7 @@ ndsRendererNativeStageEmitNearClippedTriangle(
     return clipped_count - 2u;
 }
 
-static u32 __attribute__((noinline, cold, optimize("Os")))
+static u32 __attribute__((noinline))
 ndsRendererNativeStageEmitNoZTriangle(
     const NDSNativeStageRun *run,
     const NDSNativeStagePreparedRun *prepared_run,

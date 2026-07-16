@@ -2398,3 +2398,48 @@ KEEP pending Tyler's visual confirmation. The camera gate reports 128,528 bytes
 of arena headroom, but an isolated unmodified `7abdec43ef` baseline reports the
 same value; the 2,544-byte P1 reserve deficit is inherited and is not bundled
 into this correctness change.
+
+## 2026-07-16 - M3 no-Z ARM hot-path code generation
+
+```text
+IDEA ID: M3-NOZ-HOT-CODEGEN
+MEASURED LEAD:
+  A one-run Phase-0 bucket probe attributed 174,624/174,720 stage ticks to the
+  126-triangle no-Z emitter and counted 146 no-Z matrix loads per frame. The
+  emitter was incorrectly marked cold and size-optimized despite running every
+  stage frame. The temporary probe was removed before the A/B.
+TREATMENT:
+  Remove only cold/Os from ndsRendererNativeStageEmitNoZTriangle; retain
+  noinline. devkitARM then places the function in normal .text and inlines the
+  small vertex emitter. No renderer state, algorithm, packet, or data changes.
+IDENTITY / WINDOW:
+  Profile 1, Mode 9, static 1, hybrid OAM 1, Fox/countdown iteration switch off,
+  frames 438..445. A/B ROM SHA-256 values are
+  3075A41597394B74767D6F06B73E4D95062E24F784849E0BE7A2771F243ED186 /
+  A732A135CDBA433867B642025512F42480D7AD3694E960992A070C6DF3ED4546.
+RESULT P50/P95:
+  Stage 624,384/624,512 -> 611,392/611,584, saving 12,992/12,928.
+  Draw 1,062,944/1,063,040 -> 1,048,864/1,048,896, saving
+  14,080/14,144. FPS remains 19.5; the VBlank-inclusive present/loop window is
+  not used to judge this internal bucket.
+CODEGEN / SIZE:
+  Emitter moves from .text.unlikely to .text and grows 0x188 -> 0x2D8; the
+  separate 0x98-byte vertex helper is inlined. Linked ELF grows 4,212 bytes,
+  while the padded ROM size is unchanged; no ITCM placement changes.
+CORRECTNESS / VISUALS:
+  Both arms preserve exact 121/828 runs/triangles, stage/Mario/Fox
+  202/320/306, zero fallback, and identical fastRaw/M3 semantic arrays. All DS
+  screen pixels are identical; the only 35 screenshot differences are in the
+  melonDS title bar. M4 remains prepared at 22/131072 and intentionally
+  unarmed under the fast-iteration switch, with zero fences.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m3-phase0-buckets.json
+  artifacts/visibility/2026-07-16_m3-phase0-buckets-frame445.png
+  artifacts/performance/2026-07-16_m3-noz-cold-a.json
+  artifacts/performance/2026-07-16_m3-noz-cold-b.json
+  artifacts/visibility/2026-07-16_m3-noz-cold-a-frame445.png
+  artifacts/visibility/2026-07-16_m3-noz-cold-b-frame445.png
+DECISION: KEEP
+  This is one measured compiler-placement correction. M3 remains above its
+  <=500K first gate; continue with the already-measured exact dense-reuse stack.
+```
