@@ -46,7 +46,9 @@ raw/textured decisions out of the complete 582-triangle production corner loop
 moves it to 397,248/397,312. Aggregating raw/cross accounting once per owner
 traversal moves it to 395,264/395,328. AOT-packing the immutable GX `xy/z`
 words without growing the 16-byte dense record moves it to 386,880/386,944.
-ITCM is 25,824/32,768; the exact 70/686 fast owner and
+Co-locating the emitted AOT words with prepared color/UV in one power-of-two
+record moves it to 384,000/384,000 without changing total fighter-table RAM.
+ITCM is 25,864/32,768; the exact 70/686 fast owner and
 60/320/306/29/0/0 partition stay unchanged. Refreshed Phase 0 measures local matrices at 53,024/53,120 and
 lighting at 67,808/68,032. Lighting is already the exact prepared direction,
 signed normal dot, and LUT lookup, so continue against production emit/account

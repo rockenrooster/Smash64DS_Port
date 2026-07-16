@@ -2320,14 +2320,25 @@ typedef struct NDSNativeVertexAction
 
 typedef struct NDSNativeDenseVertex
 {
-    u32 gx_xy;
-    u16 gx_z;
+    u32 rgba;
     s16 s;
     s16 t;
     u8 matrix_binding;
     u8 cache_slot;
-    u32 rgba;
+    u16 reserved;
 } NDSNativeDenseVertex;
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+typedef struct NDSNativePreparedDenseVertex
+{
+    u32 gx_xy;
+    u32 shaded_rgba;
+    u16 gx_z;
+    u16 packed_color;
+    s16 s;
+    s16 t;
+} NDSNativePreparedDenseVertex;
+#endif
 
 typedef struct NDSNativeRun
 {
@@ -2376,8 +2387,12 @@ typedef struct NDSNativeDirectPolicy
 
 _Static_assert(sizeof(NDSNativeStateDelta) == 12u,
                "native state effect ABI must stay compact");
-_Static_assert(sizeof(NDSNativeDenseVertex) == 16u,
+_Static_assert(sizeof(NDSNativeDenseVertex) == 12u,
                "native dense vertex ABI must stay cache-line friendly");
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 16u,
+               "native prepared dense vertex ABI must stay power-of-two");
+#endif
 _Static_assert(sizeof(NDSNativeRun) == 8u,
                "native run ABI must stay compact");
 _Static_assert(sizeof(NDSNativeEpoch) == 16u,
@@ -2390,14 +2405,6 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "nds_native_stage_owner.generated.inc"
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-typedef struct NDSNativePreparedDenseVertex
-{
-    u32 shaded_rgba;
-    u16 packed_color;
-    s16 s;
-    s16 t;
-} NDSNativePreparedDenseVertex;
-
 #define NDS_NATIVE_FIGHTER_HIERARCHY_JOINT_MAX 27u
 #define NDS_NATIVE_FIGHTER_HIERARCHY_BINDING_MAX 18u
 #define NDS_NATIVE_FIGHTER_HIERARCHY_EPOCH_COUNT 49u
@@ -2493,8 +2500,6 @@ typedef struct NDSNativeStageOwnerExecution
 /* Stage segments straddle the fighter display links, so their accepted
  * preflight must survive the two complete fighter-owner submissions. */
 static NDSNativeFighterOwnerExecution sNdsNativeFighterOwnerExecution;
-static NDSNativePreparedDenseVertex sNdsNativeFighterPreparedDense[
-    NDS_NATIVE_DENSE_VERTEX_COUNT];
 static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
 static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
     NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
@@ -14045,8 +14050,6 @@ ndsRendererNativeEmitProductionRun(
             while (remaining-- != 0u)
             {
                 u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
-                const NDSNativeDenseVertex *dense =
-                    &sNdsNativeFighterDenseVertices[dense_id];
                 const NDSNativePreparedDenseVertex *prepared =
                     &sNdsNativeFighterPreparedDense[dense_id];
 
@@ -14054,8 +14057,8 @@ ndsRendererNativeEmitProductionRun(
                 GFX_TEX_COORD =
                     (u32)(u16)prepared->s |
                     ((u32)(u16)prepared->t << 16);
-                GFX_VERTEX16 = dense->gx_xy;
-                GFX_VERTEX16 = dense->gx_z;
+                GFX_VERTEX16 = prepared->gx_xy;
+                GFX_VERTEX16 = prepared->gx_z;
             }
         }
         else
@@ -14063,14 +14066,12 @@ ndsRendererNativeEmitProductionRun(
             while (remaining-- != 0u)
             {
                 u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
-                const NDSNativeDenseVertex *dense =
-                    &sNdsNativeFighterDenseVertices[dense_id];
                 const NDSNativePreparedDenseVertex *prepared =
                     &sNdsNativeFighterPreparedDense[dense_id];
 
                 GFX_COLOR = prepared->packed_color;
-                GFX_VERTEX16 = dense->gx_xy;
-                GFX_VERTEX16 = dense->gx_z;
+                GFX_VERTEX16 = prepared->gx_xy;
+                GFX_VERTEX16 = prepared->gx_z;
             }
         }
         return;
@@ -14117,8 +14118,8 @@ ndsRendererNativeEmitProductionRun(
                 (u32)(u16)prepared->s |
                 ((u32)(u16)prepared->t << 16);
         }
-        GFX_VERTEX16 = dense->gx_xy;
-        GFX_VERTEX16 = dense->gx_z;
+        GFX_VERTEX16 = prepared->gx_xy;
+        GFX_VERTEX16 = prepared->gx_z;
     }
     if ((cross_matrix != 0u) &&
         (active_palette_slot != current_palette_slot))
@@ -14295,29 +14296,35 @@ ndsRendererNativeEmitDenseRawRun(
     {
         while (remaining-- != 0u)
         {
+            u32 dense_id = *corner++;
             const NDSNativeDenseVertex *vertex =
-                &sNdsNativeFighterDenseVertices[*corner++];
+                &sNdsNativeFighterDenseVertices[dense_id];
+            const NDSNativePreparedDenseVertex *prepared =
+                &sNdsNativeFighterPreparedDense[dense_id];
             u32 slot = vertex->cache_slot;
 
             GFX_COLOR = state->prepared_vertex_colors[slot];
             GFX_TEX_COORD =
                 (u32)(u16)state->prepared_texcoord_s[slot] |
                 ((u32)(u16)state->prepared_texcoord_t[slot] << 16);
-            GFX_VERTEX16 = vertex->gx_xy;
-            GFX_VERTEX16 = vertex->gx_z;
+            GFX_VERTEX16 = prepared->gx_xy;
+            GFX_VERTEX16 = prepared->gx_z;
         }
     }
     else
     {
         while (remaining-- != 0u)
         {
+            u32 dense_id = *corner++;
             const NDSNativeDenseVertex *vertex =
-                &sNdsNativeFighterDenseVertices[*corner++];
+                &sNdsNativeFighterDenseVertices[dense_id];
+            const NDSNativePreparedDenseVertex *prepared =
+                &sNdsNativeFighterPreparedDense[dense_id];
             u32 slot = vertex->cache_slot;
 
             GFX_COLOR = state->prepared_vertex_colors[slot];
-            GFX_VERTEX16 = vertex->gx_xy;
-            GFX_VERTEX16 = vertex->gx_z;
+            GFX_VERTEX16 = prepared->gx_xy;
+            GFX_VERTEX16 = prepared->gx_z;
         }
     }
 }

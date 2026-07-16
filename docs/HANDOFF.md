@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 09:50 Central
+Updated: 2026-07-16 10:08 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -21,8 +21,8 @@ configuration. Dream Land water is exact frame 0/fraction 114 on the original
 
 The executable fleet is four registry records under `Latest`/`Boundary`; the
 unreachable source-side mode 1-162 lattice is separate ROM-parity cleanup.
-The Boundary-verified user-facing candidate is 14,578,688 bytes, SHA-256
-`B4E6EC10A50413A3E2AF5829A39F9971CD234A8CC90F4A5416ED1242165A3915`.
+The Boundary-verified user-facing candidate is 14,585,856 bytes, SHA-256
+`E781ED0D5B15FC85D23B2DD614D7A81B69678E7F87FDE6D062BEB21D4A3056BD`.
 Stage painter depth and pause-orbit containment are fixed and user-confirmed.
 M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, and the
 zero-shift matrix builder at 541,952/542,272 ticks.
@@ -76,8 +76,10 @@ owns all 582 raw fighter triangles. Hoisting its raw/textured decisions outside
 the corner loop moves combined fighter time again to 397,248/397,312. Batching
 the unchanged raw/cross accounting once per owner traversal moves it to
 395,264/395,328. AOT-packing the immutable DS `VERTEX16` words in the same
-16-byte dense record moves it to 386,880/386,944. Continue against production
-emit work, not lighting.
+16-byte dense record moves it to 386,880/386,944. Co-locating those words with
+prepared color/UV in one 16-byte output record then moves it to
+384,000/384,000 with a byte-identical top screen and unchanged total fighter-
+table RAM. Continue against production emit work, not lighting.
 The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
 stable 20 FPS decision remains pending while performance work continues.
 

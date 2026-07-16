@@ -1364,8 +1364,11 @@ def build_packed_fifo_owner_plan(
     }
 
 
-def emit_rows(type_name: str, name: str, rows: list[str]) -> list[str]:
-    result = [f"static const {type_name} {name}[{len(rows)}] =", "{"]
+def emit_rows(
+        type_name: str, name: str, rows: list[str],
+        const: bool = True) -> list[str]:
+    qualifier = "static const" if const else "static"
+    result = [f"{qualifier} {type_name} {name}[{len(rows)}] =", "{"]
     result.extend(f"    {row}," for row in rows)
     result.append("};")
     result.append("")
@@ -1526,13 +1529,21 @@ def generate(repo_root: Path | None = None) -> str:
     )
     lines += emit_rows(
         "NDSNativeDenseVertex", "sNdsNativeFighterDenseVertices",
-        ["{{ 0x{:08x}u, 0x{:04x}u, {}, {}, {}u, {}u, "
-         "0x{:08x}u }}".format(
-             *pack_fifo_vertex16(x, y, z, f"dense vertex {dense_id}"),
-             s, t, binding, cache_slot, rgba)
+        ["{{ 0x{:08x}u, {}, {}, {}u, {}u, 0u }}".format(
+             rgba, s, t, binding, cache_slot)
          for dense_id, (x, y, z, s, t, binding, cache_slot, rgba)
          in enumerate(dense_vertices)],
     )
+    lines += ["#if NDS_RENDERER_PROFILE_LEVEL < 2", ""]
+    lines += emit_rows(
+        "NDSNativePreparedDenseVertex", "sNdsNativeFighterPreparedDense",
+        ["{{ 0x{:08x}u, 0u, 0x{:04x}u, 0u, 0, 0 }}".format(
+             *pack_fifo_vertex16(x, y, z, f"dense vertex {dense_id}"))
+         for dense_id, (x, y, z, _s, _t, _binding, _cache_slot, _rgba)
+         in enumerate(dense_vertices)],
+        const=False,
+    )
+    lines += ["#endif", ""]
     lines += emit_rows(
         "u16", "sNdsNativeFighterActionDenseFirst",
         [f"{value}u" for value in action_dense_first],

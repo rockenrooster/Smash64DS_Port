@@ -2947,3 +2947,49 @@ EVIDENCE:
 KEEP / REWORK / REVERT: KEEP
   Accumulate the exact AOT representation gain. No A2 is warranted.
 ```
+
+## 2026-07-16 - M2 co-located GX output record
+
+```text
+IDEA ID: M2-HOT-OUTPUT-RECORD-20260716
+BOUND:
+  Source-proven write elision is not viable: only 63/1,878 consecutive corners
+  repeat color, and textured runs repeat UV only 20 times. A per-corner branch
+  would cost more than the removed FIFO writes.
+HOT SYMBOL / CALLERS:
+  ndsRendererNativeEmitProductionRun.constprop.0, called by the Mode-8 owner
+  for all 1,878 fighter corners each frame. The prior loop indexed separate
+  12-byte prepared and 16-byte immutable geometry records.
+ONE CHANGE:
+  Keep source metadata in a 12-byte record and generate one mutable 16-byte
+  output record containing the immutable AOT GX xy/z plus prepared color/UV.
+  The raw loops now calculate one power-of-two record address. Source order,
+  shading, texture coordinates, GX values, and the cross-matrix path remain
+  unchanged.
+CODEGEN / MEMORY:
+  Emitter 0x01FFBE7C/0x218 -> 0x01FFBE98/0x224 in ITCM; total ITCM
+  25,824 -> 25,864. Dense/prepared RAM remains exactly
+  6,492+8,656 = 15,148 bytes versus 8,656+6,492 = 15,148 before. The ROM grows
+  6,144 bytes because the AOT output record is initialized. Before/after ELF
+  SHA-256 values are 7A91E2BB... / 96A4DF59...; after renderer object SHA-256
+  is B16ED314596A4180D72C3EA038C2FA6E8F12E2C1492BDA2B808219F4CEE0931A.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 8, static 1, hybrid OAM 1, Fox/countdown iteration
+  switch off, exact-aspect 416x664 window, frames 600..607. A/B ROM SHA-256:
+  11048184FEF9390B0EE21608B39D4A38A5016E8318D244AADAA8636AAC61263D /
+  3360DA58F8D24D8A9575CE97BB5A81AC9D3686B3A4421F2A14DB130A19423A63.
+P50/P95 RESULT:
+  Combined Mario+Fox 386,880/386,944 -> 384,000/384,000, saving 2,880/2,944.
+  Draw 1,014,560/1,014,592 -> 1,011,904/1,012,032, saving 2,656/2,560.
+EXACTNESS GATES:
+  Generator and 32-root/49-epoch/67-run/626-triangle hierarchy checks pass.
+  Exact 70/686 and 60/320/306/29/0/0, zero fallback/texture fence, and zero
+  conservation error hold. Native top-screen delta is 0/49,152 pixels.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m2-hot-output-a.json
+  artifacts/performance/2026-07-16_m2-hot-output-b.json
+  artifacts/visibility/2026-07-16_m2-hot-output-a.png
+  artifacts/visibility/2026-07-16_m2-hot-output-b.png
+KEEP / REWORK / REVERT: KEEP
+  Accumulate the exact gain. A2 is not warranted.
+```

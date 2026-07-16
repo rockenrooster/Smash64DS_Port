@@ -21240,3 +21240,12 @@ remains skipped for the requested fast iteration cadence.
 - Moved the untracked pause-orbit lab ROM from the publication root into
   `builds/`. The canonical wallpaper region now uses the same DPI-aware native
   crop as its neighboring capture gates; thresholds remain unchanged.
+
+## 2026-07-16 - Co-located fighter GX output record
+
+- Split immutable fighter source metadata from the emitted GX fields and put
+  the AOT xy/z words beside prepared color/UV in one 16-byte output record.
+  Total fighter-table RAM remains 15,148 bytes.
+- Combined Mario/Fox time falls 386,880 -> 384,000 ticks with an exact
+  0 / 49,152 top-screen delta. Boundary passes on public ROM SHA-256
+  `E781ED0D5B15FC85D23B2DD614D7A81B69678E7F87FDE6D062BEB21D4A3056BD`.
