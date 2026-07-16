@@ -66,6 +66,33 @@ function Test-FiniteSingle {
         (-not [Single]::IsInfinity($Value))
 }
 
+function Measure-FireballRoi {
+    param([string]$Path)
+
+    Add-Type -AssemblyName System.Drawing
+    . (Join-Path $PSScriptRoot 'lib\melonds-screenshot.ps1')
+    $window = [System.Drawing.Bitmap]::FromFile($Path)
+    $top = $null
+    try {
+        $top = Convert-MelonDSWindowTopToNativeBitmap `
+            -Bitmap $window -WindowScaledCapture
+        $count = 0
+        for ($y = 118; $y -lt 134; $y++) {
+            for ($x = 48; $x -lt 65; $x++) {
+                $pixel = $top.GetPixel($x, $y)
+                if (($pixel.R -ge 220) -and ($pixel.G -ge 40) -and
+                    ($pixel.G -le 145) -and ($pixel.B -le 48)) {
+                    $count++
+                }
+            }
+        }
+        return $count
+    } finally {
+        if ($null -ne $top) { $top.Dispose() }
+        $window.Dispose()
+    }
+}
+
 function Convert-UInt32ToInt32 {
     param([int64]$Value)
     return [BitConverter]::ToInt32(
@@ -107,9 +134,24 @@ function Get-ElfSymbolAddress {
     return [uint32]([Convert]::ToUInt32($match.Groups[1].Value, 16))
 }
 
+function Get-ElfCallsiteAddress {
+    param([string]$Caller, [string]$Callee)
+
+    $line = @(& $objdump -d "--disassemble=$Caller" $elf) |
+        Where-Object {
+            $_ -match ("^\s*([0-9a-fA-F]+):.*\bblx?\b.*<" +
+                [regex]::Escape($Callee) + ">")
+        } |
+        Select-Object -First 1
+    if (-not $line) { throw "ELF callsite not found: $Caller -> $Callee" }
+    $match = [regex]::Match($line, '^\s*([0-9a-fA-F]+):')
+    return [uint32]([Convert]::ToUInt32($match.Groups[1].Value, 16))
+}
+
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $nm = Join-Path $env:DEVKITARM 'bin\arm-none-eabi-nm.exe'
+$objdump = Join-Path $env:DEVKITARM 'bin\arm-none-eabi-objdump.exe'
 if (-not $NoBuild) {
     & make -C $root `
         "TARGET=$target" `
@@ -131,13 +173,19 @@ if (-not (Test-Path $melonDsPath)) {
 }
 if (-not (Test-Path $Gdb)) { throw "GDB executable not found: $Gdb" }
 if (-not (Test-Path $nm)) { throw "ELF symbol tool not found: $nm" }
+if (-not (Test-Path $objdump)) { throw "ELF disassembler not found: $objdump" }
 if (-not (Test-Path $captureScript)) {
     throw "melonDS capture helper not found: $captureScript"
 }
 $playbackPadsAddress = Get-ElfSymbolAddress 'sControllerPlaybackPads'
 $playbackConnectedAddress = Get-ElfSymbolAddress 'sControllerPlaybackConnectedMask'
 $playbackEnabledAddress = Get-ElfSymbolAddress 'sControllerPlaybackEnabled'
+$terminalCallsiteAddress = Get-ElfCallsiteAddress `
+    'wpProcessProcWeaponMain' 'wpMainDestroyWeapon'
 $screenshotPath = Resolve-VisibilityOutput $Screenshot
+$terminalScreenshotPath = Join-Path (Split-Path -Parent $screenshotPath) `
+    (([System.IO.Path]::GetFileNameWithoutExtension($screenshotPath)) +
+    '-terminal.png')
 New-Item -ItemType Directory -Path $logDir,
     (Split-Path -Parent $screenshotPath) -Force | Out-Null
 
@@ -146,7 +194,7 @@ try {
         -MelonDSPath $melonDsPath `
         -GdbPort $verifierContext.GdbPort `
         -Persistent:([bool]$verifierContext.PersistentConfig)
-    Remove-Item $stdout, $stderr, $screenshotPath -Force `
+    Remove-Item $stdout, $stderr, $screenshotPath, $terminalScreenshotPath -Force `
         -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $melonDsPath `
         -ArgumentList $rom `
@@ -163,6 +211,10 @@ try {
     $captureCommand =
         'shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}" -EmulatorProcessId {1} -Output "{2}"' -f
         $captureScriptGdb, $emulator.Id, $screenshotGdb
+    $terminalCaptureCommand =
+        'shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}" -EmulatorProcessId {1} -Output "{2}"' -f
+        $captureScriptGdb, $emulator.Id,
+        $terminalScreenshotPath.Replace('\', '/')
     $gdbCommands = @(
         'set pagination off',
         'set confirm off',
@@ -251,6 +303,41 @@ try {
         ('printf "INPUT=%u,%#x,%u,%u,%#x\n", *(unsigned int*)0x{0:x8}, *(unsigned int*)0x{1:x8}, gNdsControllerPlaybackFrameCount, gNdsControllerPlaybackReadCount, *(unsigned short*)0x{2:x8}' -f $playbackEnabledAddress, $playbackConnectedAddress, $playbackPadsAddress),
         'printf "MEMARENA=%#x,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerArenaHeadroom',
         $captureCommand,
+        # BattleShip wpprocess.c:167-180 owns the natural map-bounds terminal
+        # path. Optimized line data folds line 179 into line 183, so resolve the
+        # exact shared destroy call from this ELF. The captured source state
+        # below discriminates the individual map-bound and lifetime paths.
+        ('tbreak *0x{0:x8} if ((GObj *)$r0 == $fb_weapon)' -f $terminalCallsiteAddress),
+        'continue',
+        'set $fb_terminal_hit = 1',
+        'set $fb_terminal_gobj = (GObj *)$r0',
+        'set $fb_terminal_dobj = (DObj *)$fb_terminal_gobj->obj',
+        'set $fb_terminal_wp = (WPStruct *)$fb_terminal_gobj->user_data.p',
+        'set $fb_terminal_x_bits = *(unsigned int *)&$fb_terminal_dobj->translate.vec.f.x',
+        'set $fb_terminal_y_bits = *(unsigned int *)&$fb_terminal_dobj->translate.vec.f.y',
+        'set $fb_terminal_z_bits = *(unsigned int *)&$fb_terminal_dobj->translate.vec.f.z',
+        'set $fb_terminal_bottom = gMPCollisionGroundData->map_bound_bottom',
+        'set $fb_terminal_right = gMPCollisionGroundData->map_bound_right',
+        'set $fb_terminal_left = gMPCollisionGroundData->map_bound_left',
+        'set $fb_terminal_top = gMPCollisionGroundData->map_bound_top',
+        'set $fb_terminal_lifetime = $fb_terminal_wp->lifetime',
+        'set $fb_terminal_frame_before = gNdsFrameCounter',
+        'tbreak ndsBattlePlayableFrameCompleteMarker',
+        'continue',
+        'set $fb_scan = (GObj *)gGCCommonLinks[5]',
+        'set $fb_scan_count = 0',
+        'set $fb_terminal_post_live = 0',
+        'while (($fb_scan != 0) && ($fb_scan_count < 32))',
+        'if ($fb_scan == $fb_weapon)',
+        'set $fb_terminal_post_live = 1',
+        'end',
+        'set $fb_scan = (GObj *)$fb_scan->link_next',
+        'set $fb_scan_count = $fb_scan_count + 1',
+        'end',
+        'set $fb_terminal_scan_overflow = ($fb_scan != 0)',
+        'set $fb_terminal_frame_after = gNdsFrameCounter',
+        'printf "FIREBALL_TERMINAL=%u,%#x,%#x,%#x,%d,%d,%d,%d,%d,%u,%u,%u,%u\n", $fb_terminal_hit, $fb_terminal_x_bits, $fb_terminal_y_bits, $fb_terminal_z_bits, $fb_terminal_bottom, $fb_terminal_right, $fb_terminal_left, $fb_terminal_top, $fb_terminal_lifetime, $fb_terminal_frame_before, $fb_terminal_frame_after, $fb_terminal_post_live, $fb_terminal_scan_overflow',
+        $terminalCaptureCommand,
         'detach',
         'quit'
     )
@@ -273,6 +360,7 @@ try {
     $floor = [regex]::Match($gdbStdout, 'MP_FLOOR=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $input = [regex]::Match($gdbStdout, 'INPUT=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $memory = [regex]::Match($gdbStdout, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+    $terminal = [regex]::Match($gdbStdout, 'FIREBALL_TERMINAL=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $hv = Get-Ints $harn
     $sv = Get-Ints $scene
     $fv = Get-Ints $source
@@ -283,6 +371,7 @@ try {
     $flv = Get-Ints $floor
     $iv = Get-Ints $input
     $mv = Get-Ints $memory
+    $term = Get-Ints $terminal
 
     Assert-Condition $rebound.Success 'Fireball never reached a genuine source floor rebound.' $gdbStdout
     Assert-Condition $transform.Success 'Fireball never reached the natural long-travel transform marker.' $gdbStdout
@@ -309,12 +398,14 @@ try {
     $translateZ = [double](Convert-UInt32ToInt32 $xv[12]) / 4096.0
     $horizontalTravel = [Math]::Abs($lastX - $firstX)
 
-    Assert-Condition (Test-Path -LiteralPath $screenshotPath -PathType Leaf) `
-        "Fireball run did not produce its evidence screenshot: $screenshotPath" `
-        $gdbStdout
-    Assert-Condition ((Get-Item -LiteralPath $screenshotPath).Length -gt 1024) `
-        "Fireball evidence screenshot is unexpectedly small: $screenshotPath" `
-        $gdbStdout
+    foreach ($capturePath in @($screenshotPath, $terminalScreenshotPath)) {
+        Assert-Condition (Test-Path -LiteralPath $capturePath -PathType Leaf) `
+            "Fireball run did not produce its evidence screenshot: $capturePath" `
+            $gdbStdout
+        Assert-Condition ((Get-Item -LiteralPath $capturePath).Length -gt 1024) `
+            "Fireball evidence screenshot is unexpectedly small: $capturePath" `
+            $gdbStdout
+    }
     Add-Type -AssemblyName System.Drawing
     $screenshotBitmap = [System.Drawing.Bitmap]::FromFile($screenshotPath)
     try {
@@ -337,6 +428,15 @@ try {
         -MinNonWhiteNonGreenFraction 0.20 `
         -WindowScaledCapture
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+        -Image $terminalScreenshotPath `
+        -MinDifferentFraction 0.01 `
+        -MinDominantGreenFraction 0.03 `
+        -MinNonWhiteNonGreenFraction 0.20 `
+        -WindowScaledCapture
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    $fireballRoiPixels = Measure-FireballRoi $screenshotPath
+    $terminalRoiPixels = Measure-FireballRoi $terminalScreenshotPath
 
     Assert-Condition ($harn.Success -and $hv[0] -eq 0x4841524e -and $hv[1] -eq 163 -and $hv[2] -eq 22 -and $hv[3] -eq 21 -and $hv[4] -eq 0) 'Fireball verifier did not run the registered battle_playable realtime scene.' $gdbStdout
     Assert-Condition ($scene.Success -and $sv[0] -eq 22 -and $sv[1] -eq 21 -and $sv[2] -eq 6 -and $sv[3] -eq 1 -and $sv[4] -eq 0 -and $sv[5] -eq 0) 'Fireball iteration did not select the documented countdown/Fox override on the exact published ROM.' $gdbStdout
@@ -357,9 +457,28 @@ try {
         $gdbStdout
     Assert-Condition ((Test-FiniteSingle ([single]$rotateX)) -and (Test-FiniteSingle ([single]$rotateY)) -and [Math]::Abs($rotateX) -gt 0.01 -and (Test-FiniteSingle ([single]$firstX)) -and (Test-FiniteSingle ([single]$firstY)) -and (Test-FiniteSingle ([single]$lastX)) -and (Test-FiniteSingle ([single]$lastY)) -and $horizontalTravel -gt 500.0) 'Fireball custom rotation or natural long-distance travel was invalid.' $gdbStdout
     Assert-Condition ([Math]::Abs($translateX) -lt 524288.0 -and [Math]::Abs($translateY) -lt 524288.0 -and [Math]::Abs($translateZ) -lt 524288.0) 'Fireball source MVP translation row overflowed DS 20.12 range.' $gdbStdout
+    Assert-Condition $terminal.Success 'Fireball never reached the BattleShip weapon-destroy callsite.' $gdbStdout
+    Assert-Condition ($fireballRoiPixels -ge 30 -and
+        $terminalRoiPixels -le 8) `
+        "Source-MVP Fireball ROI did not contain then release its orange cluster (long=$fireballRoiPixels terminal=$terminalRoiPixels)." `
+        $gdbStdout
+    $terminalX = [double](Convert-UInt32BitsToSingle $term[1])
+    $terminalY = [double](Convert-UInt32BitsToSingle $term[2])
+    $terminalZ = [double](Convert-UInt32BitsToSingle $term[3])
+    Assert-Condition ($term[0] -eq 1 -and
+        (Test-FiniteSingle ([single]$terminalX)) -and
+        (Test-FiniteSingle ([single]$terminalY)) -and
+        (Test-FiniteSingle ([single]$terminalZ)) -and
+        $terminalX -ge $term[6] -and $terminalX -le $term[5] -and
+        $terminalY -lt $term[4] -and
+        $terminalZ -ge -20000.0 -and $terminalZ -le 20000.0 -and
+        $term[8] -gt 0 -and $term[9] -lt $term[10] -and
+        $term[11] -eq 0 -and $term[12] -eq 0) `
+        'Fireball terminal was not the natural source bottom-bound destroy followed by one clean absent frame.' `
+        $gdbStdout
     Assert-Condition ($input.Success -and $iv[0] -eq 1 -and (($iv[1] -band 3) -eq 3) -and $iv[3] -gt 0 -and $iv[4] -eq 0) 'Fireball verifier did not consume and release the real playback B input after status entry.' $gdbStdout
     Assert-Condition ($memory.Success -and $mv[0] -eq 0x4d4c4544 -and $mv[1] -eq 22 -and $mv[2] -ge 131072) 'Fireball renderer violated the P1 arena reserve floor.' $gdbStdout
-    Write-Output ("battle_playable Fireball source-MVP render passed: source={0}/{1} maps={2} floor={3} speed={4:N2}->{5:N2} draw={6} travel={7:N1} reserve={8} capture={9}" -f $fv[0], $fv[1], $rv[0], $rv[6], [Math]::Sqrt($preSpeedSq), [Math]::Sqrt($postSpeedSq), $wv[2], $horizontalTravel, $mv[2], $screenshotPath)
+    Write-Output ("battle_playable Fireball source-MVP render passed: source={0}/{1} maps={2} floor={3} speed={4:N2}->{5:N2} draw={6} travel={7:N1} terminalY={8:N1}<{9} roi={10}->{11} reserve={12} captures={13},{14}" -f $fv[0], $fv[1], $rv[0], $rv[6], [Math]::Sqrt($preSpeedSq), [Math]::Sqrt($postSpeedSq), $wv[2], $horizontalTravel, $terminalY, $term[4], $fireballRoiPixels, $terminalRoiPixels, $mv[2], $screenshotPath, $terminalScreenshotPath)
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

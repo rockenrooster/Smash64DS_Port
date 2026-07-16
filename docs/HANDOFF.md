@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 07:41 Central
+Updated: 2026-07-16 07:54 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -77,11 +77,10 @@ Do not block correctness work on that reply, and do not reopen speculative
 renderer caches or compiler sweeps. KO/rebirth and Results realtime ticks are
 still missing final-release evidence, but cannot change the feasibility verdict.
 
-The Fireball terminal observation remains a smaller independent gameplay task:
-break once on BattleShip `wpprocess.c:167-180` when the natural far-left shot
-crosses Pupupu's map bound, then capture the next completed frame and add the
-source-matrix/ROI gate. Do not wait on lifetime zero or low-speed map destroy;
-those are not this shot's source path.
+The Fireball terminal gate is closed. The earlier far-left theory was false:
+the same source-created weapon naturally crosses Pupupu's bottom bound at
+lifetime 10, reaches the exact ELF destroy callsite, disappears by the next
+completed frame, and changes the deterministic orange ROI from 50 to 0 pixels.
 
 The one-way platform gate is now green on the current ROM. Its 715-frame route
 requires six ordered continued-ascent/strict-descent/downward-crossing flights,

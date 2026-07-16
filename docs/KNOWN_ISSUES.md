@@ -11,9 +11,6 @@ durable unresolved gaps.
 - Natural DamageFall-to-main-floor, throw-origin recovery, and Fox offstage
   recovery now pass. Moving-wall, project-floor, and other non-floor collision
   providers remain incomplete.
-- Mario Fireball spawn/damage/rebound/long-travel drawing passes. The natural
-  out-of-bounds destroy observation and independent source-matrix/ROI gate
-  remain open; 140 ticks is a maximum, not this ground shot's expected life.
 - One natural source voice per fighter now plays (FoxSmash1 ID372 and
   MarioSmash2 ID430); remaining variants, exact pitch automation, and Tyler's
   voice ear check remain open. Dream Land BGM and the opening crowd are

@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 07:41 Central
+Updated: 2026-07-16 07:54 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -63,7 +63,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Original Wait → countdown → GO control/timer gate | Pass | Integration | Automated synchronized source-state proof passes | Keep |
 | Mario can damage Fox | Manual pass / continuous gate open | Gameplay | User confirmed damage works after the exact-ROM Fox trace restored 11/11 colliders, zero mismatch, and flag clear | Keep repair; add continuous natural-hit coverage before release |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |
-| Fireball trajectory and floor rebound | Early submission/rebound pass / natural terminal visual OPEN | Gameplay | Current custom `0x47` submits 40/40 and first rebound is 55→46.75 at lifetime 122. The focused exact-ROM gate skips countdown/Fox and finishes in 9.5 s. The shot then leaves Pupupu's map bounds, so BattleShip `wpprocess.c:167-180` destroys it before either lifetime-zero or low-speed-map callback; probes waiting on those two wrong branches timed out and were reverted | Observe the source out-of-bounds destroy line once, then capture the next completed frame and add an independent source-matrix/ROI gate. Do not poll frames or require the unused 140-tick maximum |
+| Fireball trajectory, floor rebound, and terminal | Pass | Gameplay | Current custom `0x47` submits 40/40 and first rebound is 55→46.75 at lifetime 122. The exact ELF destroy callsite then records the same weapon crossing Pupupu bottom −3500 at x/y/z −4650.5/−3504.8/−66.9 with lifetime 10; it is absent next frame. The deterministic source-MVP ROI changes 50→0 orange pixels | Keep the focused countdown/Fox-off gate and both `20260716_fireball-source-mvp-long-travel*.png` captures; the earlier far-left theory was false |
 | Damage/throw map collision | Natural floor + throw recovery pass / non-floor providers open | Gameplay | Five source up-smashes proved DamageFall recovery. A separate external-input route then used nine short source Walk/Dash/Run steps for one Mario catch/forward throw: Fox took 0→12%, released status 169→186, swept/clamped to line 3, DownBounced once, cleared every catch link, and retained 202,256 bytes | Keep both sparse gates; throw evidence is `2026-07-16_063512-7696185_throw-release-recovery-p21764.png`; repair moving-wall/project-floor and coherent `mpcommon` before default-live graduation |
 | One-way platform semantics | Pass / hardened natural gate | Gameplay | Current-ROM mode 163 completed 715 natural frames: six ordered continued-ascent/strict-descent/downward-crossing flights (`0x3f`), all three platform masks `0x7`, two side cycles, three exact ignore-line Pass crossings, nine landings, and 214,544-byte reserve | Keep the focused gate; screenshot `2026-07-16_052652-7356809_platform-semantics-p984.png` |
 | Edge behavior and specials | Retest | Gameplay | Up-B was manually accepted; other edge behavior needs current-ROM qualification | No unrelated behavior change without reproduction |

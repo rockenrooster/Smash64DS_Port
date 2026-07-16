@@ -21114,3 +21114,13 @@ remains skipped for the requested fast iteration cadence.
 - The exhausted Jump A/C bounds cannot close that deficit by July 19. Requested
   approval for stable 20 FPS while keeping 60 FPS explicitly unmet until Tyler
   decides; correctness work continues without speculative optimization sweeps.
+
+## 2026-07-16 - Closed the natural Mario Fireball terminal gate
+
+- Resolved the shared `wpMainDestroyWeapon` callsite from the exact ELF because
+  optimized line data folds BattleShip `wpprocess.c:179` into a later line.
+- The same source-created Fireball reaches x/y/z −4650.5/−3504.8/−66.9 at
+  lifetime 10, crossing Pupupu's bottom −3500 bound—not the previously assumed
+  far-left bound—and is absent on the next completed frame.
+- The long-travel source-MVP screenshot contains 50 orange pixels in its
+  deterministic ROI; the post-destroy screenshot contains zero.
