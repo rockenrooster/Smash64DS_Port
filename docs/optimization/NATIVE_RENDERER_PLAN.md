@@ -59,9 +59,8 @@ Retained owner contract:
 - Whispy, flowers, draw flags, materials, effects, weapons, depth, and stage
   selection remain live; water pixels alone are frozen.
 
-Current stage-exclusive P50/P95 is 664,544/664,640. The bounded next cut prepares
-shared corners once by dense index inside `src/nds/nds_renderer.c` and adds only
-the zero-conflict invariant to `scripts/check_nds_native_stage.py`:
+Current stage-exclusive P50/P95 is 664,544/664,640. The bounded dense-index
+prepare-once experiment proved zero conflicts and retained exact semantics:
 
 ```text
 606 corner references -> 312 dense vertices
@@ -70,9 +69,10 @@ remove 294 repeated attribute preparations
 remove 162 repeated transforms and 486 projections
 ```
 
-Expected saving is 170-210K. KEEP only with at least 164,544 saved, <=500K P50,
-improved P95, exact owner/counter/semantic/fence state, and matching screenshot.
-Do not widen the cut if the eight-frame result misses.
+It measured 555,584/555,776, only 108,960/108,864 better than A. That missed the
+required 164,544 saving and <=500K P50 gate, so the source/checker change was
+reverted. Do not retry or widen dense-only preparation reuse. M3 remains REWORK;
+select a different measured internal bucket and retain the same gate.
 
 ## M4 — Pre-GO Texture Residency
 

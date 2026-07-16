@@ -2260,3 +2260,26 @@ DECISION: REWORK
   Preserve the semantic packet/evidence while selecting the largest measured
   internal bucket. Do not spend the next increment on cosmetic stage fidelity.
 ```
+
+## 2026-07-15 - M3 dense preparation reuse missed keep gate
+
+```text
+IDEA ID: M3-DENSE-PREPARE-ONCE
+IDENTITY:
+  Treatment ROM EAE5AD1AC6A054E237FE633AB8B96088DF0A2AEE757E8A0314C561D2975E0B7F,
+  frames 438-445, profile 1, static 1, hybrid OAM 1, Fox paused. JSON SHA-256:
+  263D147F90E8600EB2B858B172DCA2D0CE3F89657660EA6560E1FC4F252D3DE7.
+RESULT P50/P95:
+  A stage 664,544/664,640; B stage 555,584/555,776. Saving is
+  108,960/108,864, below the required 164,544, and B remains 55,584 above the
+  <=500K first gate. Exact 8/57/42/54/202, 121/828, M4 22/131072, zero
+  fallback/fence, and the screenshot remained correct.
+EVIDENCE:
+  artifacts/visibility/m3-dense-prepare-8frames.json
+  artifacts/visibility/m3-dense-prepare-frame438.png
+  Screenshot SHA-256:
+  2A54A1723DFA5C19D10AFA6AA75592E685A1963DE1E92586F7FDDB0F6AE0DE56
+DECISION: REJECT / REVERT
+  The source and checker changes were fully reverted. Do not retry or widen
+  dense-only preparation reuse; choose a different measured M3 bucket.
+```

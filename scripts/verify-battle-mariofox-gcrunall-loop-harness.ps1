@@ -787,8 +787,17 @@ try {
                 'continue'
                 'printf "WEAPON_FRAME=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsWeaponRendererCaptureCount - $weapon_capture_base, gNdsWeaponRendererDObjDrawCount - $weapon_dobj_base, gNdsWeaponRendererSubmitCount - $weapon_submit_base, gNdsWeaponRendererVisibleDrawCount - $weapon_visible_base, gNdsWeaponRendererTriangleCount - $weapon_triangle_base, gNdsWeaponRendererTextureReadyCount - $weapon_texture_ready_base, gNdsWeaponRendererTextureRejectCount - $weapon_texture_reject_base, gNdsWeaponRendererNoZCount - $weapon_noz_base, gNdsWeaponRendererFireballSubmitCount - $weapon_fireball_submit_base, gNdsWeaponRendererFireballTriangleCount - $weapon_fireball_triangle_base, gNdsWeaponRendererFireballVisibleDrawCount - $weapon_fireball_visible_base, gNdsWeaponRendererRejectedDrawCount - $weapon_rejected_base'
             )
+            $armWaitCommands = if ($usesPublishedIntrinsicRendererDefaults) {
+                @(
+                    'tbreak ndsRendererHardwareArmBattleStaticTextures'
+                    'continue'
+                )
+            } else {
+                @()
+            }
             $gdbCommands = @(
                 $gdbCommands[0..3]
+                $armWaitCommands
                 'tbreak ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingResult != 0'
                 'continue'
                 $weaponFrameCommands

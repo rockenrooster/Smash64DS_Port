@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-15 20:04 Central
+Updated: 2026-07-15 20:30 Central
 
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
@@ -25,37 +25,49 @@ The executable fleet is now four registry records under `Latest`/`Boundary`;
 The unreachable source-side mode 1-162 lattice remains a separate ROM-parity
 cleanup, not part of the next renderer change.
 
-The 20:01 rebuilt-ROM frames 438/439 capture passed visibility and detail gates
-under `artifacts/visibility`. Boundary itself is open: its smoke attached at
-battle frame 46 before M4 arm (`arm=0`, prepared=22/131072). Do not weaken that
-gate or call it a pass; align its sample with the natural post-GO window.
+Boundary now waits for the natural M4 arm call before its next completed-frame
+sample. It passes the exact published M3 121/828 owner, frozen water 2/0/1,
+22/131072 static residency, full masks, positive pinned hits, zero post-GO
+fence work, and Cut G frames 438/439 under `artifacts/visibility`.
+
+## Rejected M3 Cut
+
+The dense-index prepare-once experiment was exact but too small. Against the
+664,544/664,640 baseline it measured 555,584/555,776, saving only
+108,960/108,864 versus the required 164,544. The source/checker patch was fully
+reverted. Evidence remains at:
+
+```text
+artifacts/visibility/m3-dense-prepare-8frames.json
+artifacts/visibility/m3-dense-prepare-frame438.png
+```
+
+Do not retry or widen that dense-only cut.
 
 ## Next Packet
 
-M3 is device-semantic-correct but measures 664,544/664,640 stage ticks. Make one
-bounded change only:
-
-- `src/nds/nds_renderer.c`: prepare repeated stage corners once by dense index.
-- `scripts/check_nds_native_stage.py`: enforce zero preparation-tuple conflicts.
-- 606 references map to 312 vertices; projected work should fall 408 to 246.
-- Expected saving: 170-210K ticks.
-- KEEP only at <=500K P50 with at least 164,544 saved, improved P95, exact
-  8/57/42/54/202 ownership, zero fallback/fence, and matching screenshot.
-
-Use eight synchronized frames for A and B. Record ticks, FPS, screenshots under
-`artifacts/visibility`, and automated screenshot analysis. Run A2 only if A/B is
-near the gate, noisy, surprising, or inconsistent.
+Highest P1 gate is the existing CPU-on one-minute lifecycle/teardown soak; run
+it only after Tyler authorizes CPU-on automation while the published/manual
+default remains paused:
 
 ```powershell
-python .\scripts\check_nds_native_stage.py
-.\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 9 `
-  -StaticTextureAotMode 1 -IFCommonHybridOamMode 1 `
-  -RendererProfileLevel 1 -RendererM2DetailedLedger `
-  -RendererBenchmarkSamples 8 -RendererBenchmarkStartFrame 438 -RunnerSlot 3
+.\scripts\check-one-minute-match-verifier.ps1
+.\scripts\verify-battle-playable-one-minute-match.ps1 -RunnerSlot 2
 ```
 
-After M3 settles, root-cause the isolated one-minute M4 gate's missing terminal
-acceptance marker. Do not count the first nonzero invocation as M4 evidence.
+Pending that decision, take the bounded M2 no-copy direct-owner cut. Inspect
+BattleShip `ftdisplaymain.c` first, then reuse only the existing packet/checkers:
+
+```powershell
+python .\scripts\check_nds_native_owner_packet.py
+python .\scripts\check_nds_native_owner_hierarchy.py
+.\scripts\compare-renderer-fast-raw.ps1 -FastRunMode 8 `
+  -RendererBenchmarkSamples 8 -RunnerSlot 3
+```
+
+KEEP only with at least 80K saved, combined fighter ticks at or below 337,472,
+matrix plus lighting at or below 120K, transport at or below 145K, exact
+32/49/67/626 semantics, matching screenshot/reserve, and zero fallback.
 
 ## Checkpoint
 
