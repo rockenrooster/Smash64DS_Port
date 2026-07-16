@@ -4163,6 +4163,7 @@ extern volatile s32 gNdsRendererProfileHWVertexMaxY;
 extern volatile s32 gNdsRendererProfileHWVertexMinZ;
 extern volatile s32 gNdsRendererProfileHWVertexMaxZ;
 extern volatile u32 gNdsRendererProfileHWVertexSaturateCount;
+extern volatile u32 gNdsRendererProfileNearPlaneTriangleRejectCount;
 extern volatile u32 gNdsRendererDepthStageSamples;
 extern volatile s32 gNdsRendererDepthStageMin;
 extern volatile s32 gNdsRendererDepthStageMax;

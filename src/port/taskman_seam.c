@@ -779,6 +779,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileLitShadeCombineCount = 0;
     gNdsRendererProfileMaterialCombineCount = 0;
     gNdsRendererProfileProjectedSubmitFallbackCount = 0;
+    gNdsRendererProfileNearPlaneTriangleRejectCount = 0;
     gNdsRendererProfileLightColorCommands = 0;
     gNdsRendererProfileLightDirectionCommands = 0;
     gNdsRendererProfileLightFallbackCount = 0;

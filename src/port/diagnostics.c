@@ -2976,6 +2976,7 @@ volatile u32 gNdsRendererProfileCombineMode3W1;
 volatile u32 gNdsRendererProfileLitShadeCombineCount;
 volatile u32 gNdsRendererProfileMaterialCombineCount;
 volatile u32 gNdsRendererProfileProjectedSubmitFallbackCount;
+volatile u32 gNdsRendererProfileNearPlaneTriangleRejectCount;
 volatile u32 gNdsRendererProfileLightColorCommands;
 volatile u32 gNdsRendererProfileLightDirectionCommands;
 volatile u32 gNdsRendererProfileLightFallbackCount;

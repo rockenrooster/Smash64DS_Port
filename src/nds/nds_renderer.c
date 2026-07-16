@@ -1318,6 +1318,7 @@ typedef struct NDSRendererRuntimeFrameSummary
     u32 texture_prepare_reuse_count;
     u32 hardware_over_limit;
     u32 hardware_vertex_saturate_count;
+    u32 near_plane_triangle_reject_count;
     u32 raw_current_candidate_count;
     u32 raw_current_range_reject_count;
     u32 raw_cross_matrix_count;
@@ -1669,6 +1670,15 @@ static inline void ndsRendererProfileRecordVertexSaturate(void)
     gNdsRendererProfileHWVertexSaturateCount++;
 #else
     sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count++;
+#endif
+}
+
+static inline void ndsRendererProfileRecordNearPlaneTriangleReject(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileNearPlaneTriangleRejectCount++;
+#else
+    sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count++;
 #endif
 }
 
@@ -2446,6 +2456,8 @@ typedef struct NDSNativeStagePreparedDense
     s16 x;
     s16 y;
     s16 source_z;
+    s32 clip_z;
+    s32 clip_w;
 } NDSNativeStagePreparedDense;
 
 typedef struct NDSNativeStagePreparedRun
@@ -11030,6 +11042,26 @@ static s32 ndsRendererInputTriangleReady(
     return ((state->input_vertex_valid_mask & mask) == mask) ? TRUE : FALSE;
 }
 
+static s32 ndsRendererHardwareClipZWInsideNearPlane(s32 z, s32 w)
+{
+    return ((w > 0) && (((s64)z + (s64)w) >= 0)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererHardwareTriangleInsideNearPlane(
+    const NDSRendererClipVertex20p12 *v0,
+    const NDSRendererClipVertex20p12 *v1,
+    const NDSRendererClipVertex20p12 *v2)
+{
+    if ((v0 == NULL) || (v1 == NULL) || (v2 == NULL))
+    {
+        return FALSE;
+    }
+    return ((ndsRendererHardwareClipZWInsideNearPlane(v0->z, v0->w) != FALSE) &&
+            (ndsRendererHardwareClipZWInsideNearPlane(v1->z, v1->w) != FALSE) &&
+            (ndsRendererHardwareClipZWInsideNearPlane(v2->z, v2->w) != FALSE)) ?
+        TRUE : FALSE;
+}
+
 static s32 ndsRendererHardwareRawMatrixCompatible(
     const NDSRendererTraversalState *state)
 {
@@ -11307,6 +11339,31 @@ ndsRendererSubmitHardwareTriangle(
         stats->hardware_oracle_reject_count++;
         ndsRendererProfileRecordSubmitClass(
             NDS_RENDERER_HW_SUBMIT_REJECT);
+        return;
+    }
+    if ((raw_submit == FALSE) &&
+        (ndsRendererHardwareTriangleInsideNearPlane(
+             &state->vertices[i0], &state->vertices[i1],
+             &state->vertices[i2]) == FALSE))
+    {
+        /* The source RSP clips before perspective divide. Conservatively drop
+         * CPU-projected triangles that cross its near plane; emitting any of
+         * their post-divide vertices can create a screen-spanning primitive. */
+        if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+        {
+            (void)ndsRendererHardwareNextProjectedDepth();
+        }
+        if (source_zbuffered != FALSE)
+        {
+            ndsRendererHardwareEnterProjectedForeground();
+        }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        semantic_event.outcome = NDS_RENDERER_SEMANTIC_TRANSFORM_REJECT;
+        semantic_event.submit_class = NDS_RENDERER_HW_SUBMIT_REJECT;
+        ndsRendererSemanticCommitEvent(&semantic_event);
+#endif
+        ndsRendererProfileRecordNearPlaneTriangleReject();
+        ndsRendererProfileRecordSubmitClass(NDS_RENDERER_HW_SUBMIT_REJECT);
         return;
     }
     if (no_oracle == FALSE)
@@ -14126,6 +14183,7 @@ static s32 ndsRendererNativeSubmitRunDirect(
     }
     return TRUE;
 #elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+    u32 emitted_triangles = 0u;
     u32 run_index;
     u32 i;
 
@@ -14178,16 +14236,30 @@ static s32 ndsRendererNativeSubmitRunDirect(
 
             (void)ndsRendererNativeDecodeTriangle(
                 triangles[i], indices);
+            if (ndsRendererHardwareTriangleInsideNearPlane(
+                    &state->vertices[indices[0]],
+                    &state->vertices[indices[1]],
+                    &state->vertices[indices[2]]) == FALSE)
+            {
+                ndsRendererProfileRecordNearPlaneTriangleReject();
+                ndsRendererProfileRecordSubmitClass(
+                    NDS_RENDERER_HW_SUBMIT_REJECT);
+                continue;
+            }
             ndsRendererHardwareSubmitVertex(
                 stats, state, indices[0], 0);
             ndsRendererHardwareSubmitVertex(
                 stats, state, indices[1], 0);
             ndsRendererHardwareSubmitVertex(
                 stats, state, indices[2], 0);
+            emitted_triangles++;
         }
         ndsRendererHardwareEnterProjectedForeground();
-        ndsRendererNativeAccountProjectedCrossTriangle(
-            stats, run->triangle_count);
+        if (emitted_triangles != 0u)
+        {
+            ndsRendererNativeAccountProjectedCrossTriangle(
+                stats, emitted_triangles);
+        }
         return TRUE;
     }
 #else
@@ -14304,6 +14376,16 @@ static void ndsRendererNativeSubmitRun(
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             if (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
             {
+                if (ndsRendererHardwareTriangleInsideNearPlane(
+                        &state->vertices[indices[0]],
+                        &state->vertices[indices[1]],
+                        &state->vertices[indices[2]]) == FALSE)
+                {
+                    ndsRendererProfileRecordNearPlaneTriangleReject();
+                    ndsRendererProfileRecordSubmitClass(
+                        NDS_RENDERER_HW_SUBMIT_REJECT);
+                    continue;
+                }
                 ndsRendererHardwareSubmitVertex(
                     stats, state, indices[0], 0);
                 ndsRendererHardwareSubmitVertex(
@@ -15759,6 +15841,8 @@ static s32 ndsRendererNativeStagePrepareRun(
             {
                 return FALSE;
             }
+            prepared_dense->clip_z = clip.z;
+            prepared_dense->clip_w = clip.w;
             prepared_dense->x = ndsRendererHardwareProjectToV16(
                 (s64)clip.x * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
             prepared_dense->y = ndsRendererHardwareProjectToV16(
@@ -16215,6 +16299,7 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         const NDSNativeStageRun *run = &sNdsNativeStageRuns[run_index];
         const NDSNativeStagePreparedRun *prepared_run =
             &sNdsNativeStageOwnerExecution.runs[run_index];
+        u32 emitted_triangles = 0u;
         u32 triangle_offset;
 
         ndsRendererNativeStageBeginRun(
@@ -16227,6 +16312,32 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ?
                 ndsRendererHardwareNextProjectedDepth() : 0;
             u32 corner_offset;
+
+            if (run->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+            {
+                const NDSNativeStagePreparedDense *p0 =
+                    &sNdsNativeStagePreparedDense[sNdsNativeStageCorners[
+                        (u32)run->first_corner + triangle_offset * 3u]];
+                const NDSNativeStagePreparedDense *p1 =
+                    &sNdsNativeStagePreparedDense[sNdsNativeStageCorners[
+                        (u32)run->first_corner + triangle_offset * 3u + 1u]];
+                const NDSNativeStagePreparedDense *p2 =
+                    &sNdsNativeStagePreparedDense[sNdsNativeStageCorners[
+                        (u32)run->first_corner + triangle_offset * 3u + 2u]];
+
+                if ((ndsRendererHardwareClipZWInsideNearPlane(
+                         p0->clip_z, p0->clip_w) == FALSE) ||
+                    (ndsRendererHardwareClipZWInsideNearPlane(
+                         p1->clip_z, p1->clip_w) == FALSE) ||
+                    (ndsRendererHardwareClipZWInsideNearPlane(
+                         p2->clip_z, p2->clip_w) == FALSE))
+                {
+                    ndsRendererProfileRecordNearPlaneTriangleReject();
+                    ndsRendererProfileRecordSubmitClass(
+                        NDS_RENDERER_HW_SUBMIT_REJECT);
+                    continue;
+                }
+            }
 
             for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
             {
@@ -16246,6 +16357,7 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                     dense, prepared, prepared_run, run->submit_class,
                     projected_z);
             }
+            emitted_triangles++;
             if (run->submit_class !=
                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
             {
@@ -16259,7 +16371,7 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
              NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
                 NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX :
                 run->submit_class,
-            run->triangle_count);
+            emitted_triangles);
         stats->triangle_count += run->triangle_count;
         segment_triangles += run->triangle_count;
     }
@@ -17939,6 +18051,7 @@ void ndsRendererProfileFrameBegin(void)
            sizeof(sNdsRendererBenchmarkSinkOwnerWords));
 #endif
     gNdsRendererProfileLevel = NDS_RENDERER_PROFILE_LEVEL;
+    gNdsRendererProfileNearPlaneTriangleRejectCount = 0u;
     gNdsRendererProfileRawCurrentCandidateCount = 0u;
     gNdsRendererProfileRawCurrentRangeRejectCount = 0u;
     gNdsRendererProfileRawCrossMatrixCount = 0u;
@@ -18216,6 +18329,8 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererRuntimeFrameSummary.hardware_over_limit;
     gNdsRendererProfileHWVertexSaturateCount =
         sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count;
+    gNdsRendererProfileNearPlaneTriangleRejectCount =
+        sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count;
     gNdsRendererProfileRawCurrentCandidateCount =
         sNdsRendererRuntimeFrameSummary.raw_current_candidate_count;
     gNdsRendererProfileRawCurrentRangeRejectCount =
