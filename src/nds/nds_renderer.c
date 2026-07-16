@@ -2360,6 +2360,7 @@ typedef struct NDSNativeStageOwnerExecution
     NDSRendererStats preflight_stats;
     NDSNativeStagePreparedRun runs[NDS_NATIVE_STAGE_RUN_COUNT];
     NDSRendererMatrix20p12 raw_composed;
+    NDSRendererMatrix20p12 scaled_raw_modelview;
     NDSRendererStats *stats;
     u32 next_segment;
     u32 active;
@@ -9982,6 +9983,40 @@ static void ndsRendererBuildRawHardwareMatrix(
     }
 }
 
+static s32 ndsRendererBuildShiftedRawHardwareMatrix(
+    const NDSRendererMatrix20p12 *composed,
+    NDSRendererMatrix20p12 *hardware,
+    u32 coordinate_shift)
+{
+    u32 row;
+    u32 col;
+
+    if ((composed == NULL) || (hardware == NULL))
+    {
+        return FALSE;
+    }
+    *hardware = *composed;
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            s64 scaled = (s64)hardware->m[row][col] << coordinate_shift;
+
+            if ((scaled > INT_MAX) || (scaled < INT_MIN))
+            {
+                return FALSE;
+            }
+            hardware->m[row][col] = (s32)scaled;
+        }
+    }
+    for (col = 0u; col < 4u; col++)
+    {
+        hardware->m[3][col] = ndsRendererRoundShiftS32Signed(
+            hardware->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+    return TRUE;
+}
+
 static void ndsRendererLoadHardwareMatrixPair(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *modelview,
@@ -15552,8 +15587,28 @@ static s32 ndsRendererNativeStagePrepareRun(
                 dense->t, texture_scale_t, render_tile->ult,
                 texture_offset);
         }
-        if (run->submit_class !=
-            NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
+        if (run->submit_class ==
+            NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+        {
+            s32 x = ndsRendererRoundShiftS32Signed(dense->x, 1u);
+            s32 y = ndsRendererRoundShiftS32Signed(dense->y, 1u);
+            s32 z = ndsRendererRoundShiftS32Signed(dense->z, 1u);
+
+            /* These source-Z vertices only exceed GX VTX_16 range slightly.
+             * Submit half coordinates with a compensating matrix so GX clips
+             * them at the near plane instead of CPU-projecting an unclipped
+             * screen-covering triangle. */
+            if ((run->binding_index != 29u) ||
+                (dense->matrix_binding != run->binding_index) ||
+                (x < -2048) || (x > 2047) ||
+                (y < -2048) || (y > 2047) ||
+                (z < -2048) || (z > 2047))
+            {
+                return FALSE;
+            }
+        }
+        else if (run->submit_class !=
+                 NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
         {
             NDSRendererClipVertex20p12 clip;
 
@@ -15624,6 +15679,17 @@ static void ndsRendererNativeStageBeginRun(
         ndsRendererLoadHardwareRawComposedMatrix(
             &sNdsNativeStageOwnerExecution.raw_composed, 1u);
     }
+    else if (submit_class ==
+             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+    {
+        NDSRendererMatrix20p12 projection;
+
+        ndsRendererMtxIdentity20p12(&projection);
+        ndsRendererLoadHardwareMatrixPair(
+            &projection,
+            &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
+            NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED, 2u, TRUE);
+    }
     else
     {
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
@@ -15671,12 +15737,16 @@ static void ndsRendererNativeStageBeginRun(
     sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
     sNdsRendererHardwareTriangleBatchFogKey = 0u;
     sNdsRendererHardwareTriangleBatchMatrixMode =
-        (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
+        ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
+         (submit_class ==
+          NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)) ?
             NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED :
             NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY;
     sNdsRendererHardwareTriangleBatchMatrixGeneration =
         (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
-            1u : 0u;
+            1u :
+        (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+            2u : 0u;
 }
 
 static inline void ndsRendererNativeStageEmitVertex(
@@ -15701,6 +15771,18 @@ static inline void ndsRendererNativeStageEmitVertex(
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
         GFX_VERTEX16 = (u16)((s32)dense->z *
             (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+    }
+    else if (submit_class ==
+             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+    {
+        GFX_VERTEX16 =
+            (u32)(u16)(ndsRendererRoundShiftS32Signed(dense->x, 1u) *
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
+            ((u32)(u16)(ndsRendererRoundShiftS32Signed(dense->y, 1u) *
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
+        GFX_VERTEX16 =
+            (u16)(ndsRendererRoundShiftS32Signed(dense->z, 1u) *
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
     }
     else
     {
@@ -15918,6 +16000,13 @@ s32 ndsRendererPrepareNativeStageOwner(
 
     sNdsNativeStageOwnerExecution.raw_composed =
         frame->binding_composed[29u];
+    if (ndsRendererBuildShiftedRawHardwareMatrix(
+            &sNdsNativeStageOwnerExecution.raw_composed,
+            &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
+            1u) == FALSE)
+    {
+        goto done;
+    }
     ndsRendererInitStats(stats);
     stats->command_count = NDS_NATIVE_STAGE_SOURCE_COMMAND_COUNT;
     stats->vertex_count = NDS_NATIVE_STAGE_SOURCE_VERTEX_COUNT;
@@ -16017,7 +16106,12 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         }
         ndsRendererHardwareEndBatch();
         ndsRendererNativeStageAccountRun(
-            stats, run->submit_class, run->triangle_count);
+            stats,
+            (run->submit_class ==
+             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+                NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX :
+                run->submit_class,
+            run->triangle_count);
         stats->triangle_count += run->triangle_count;
         segment_triangles += run->triangle_count;
     }

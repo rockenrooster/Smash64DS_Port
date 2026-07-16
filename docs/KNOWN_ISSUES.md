@@ -48,11 +48,12 @@ durable unresolved gaps.
 - M2 still performs too much per-frame fighter owner work.
 - M3 remains above its tick gate. The dense preparation-reuse experiment saved
   only about 109K and was reverted; do not retry that cut.
-- Pause-orbit views near +/-33.6 degrees show foreground occlusion. Normal source
-  camera stays inside about +/-17.5 degrees; compare the identical N64 view before
-  changing gameplay rendering. Treat this as P2 unless normal play reproduces it.
 - Bitmap OAM has one-bit alpha, so nonzero partial-alpha GO pixels are opaque.
   This is accepted presentation debt under the 90% visual rule.
+- Do not publish the hybrid IFCommon OAM lab path: its counters and source
+  commits pass, but the countdown traffic-light objects are invisible at
+  runtime. The proven all-bitmap path prepares before gameplay with no hot
+  conversion/upload and is the published contract.
 - The animated tiled-water implementation is deleted. Do not restore it; frozen
   source frame 0 is the P1 contract.
 

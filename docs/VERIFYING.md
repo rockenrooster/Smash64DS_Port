@@ -41,7 +41,7 @@ Useful existing commands:
 
 # Mode-9 stage timing/capture arm
 .\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 9 `
-  -StaticTextureAotMode 1 -IFCommonHybridOamMode 1 `
+  -StaticTextureAotMode 1 -IFCommonHybridOamMode 0 `
   -RendererProfileLevel 1 -RendererBenchmarkSamples 8 `
   -RendererBenchmarkStartFrame 438 -RunnerSlot 3 `
   -RendererBenchmarkExportPath artifacts/performance/m3.json `

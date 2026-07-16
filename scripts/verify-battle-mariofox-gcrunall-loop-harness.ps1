@@ -1291,14 +1291,14 @@ try {
             $publishedBanks[2] -eq 0x81 -and
             $publishedBanks[3] -eq 0x89 -and
             $publishedBanks[4] -eq 0x82 -and
-            $publishedBanks[5] -eq 0x83 -and
-            $publishedBanks[6] -eq 0x8b -and
+            $publishedBanks[5] -eq 0x92 -and
+            $publishedBanks[6] -eq 0x9a -and
             $publishedBanks[7] -eq 0x81 -and
             $publishedBanks[8] -eq 0x06800000 -and
             $publishedBanks[9] -eq 0x06820000 -and
             $publishedBanks[10] -eq 131072 -and
             $publishedBanks[11] -eq 1
-        ) "Published ROM did not naturally preserve hybrid IFCommon banks and the exact bank-A static span (actual=$($publishedBanks -join ','))." $gdbStdout
+        ) "Published ROM did not naturally preserve bitmap IFCommon banks and the exact bank-A static span (actual=$($publishedBanks -join ','))." $gdbStdout
         $publishedRendererDefaultsSummary =
             " intrinsicM3=9/$($publishedFast[1])/$($publishedFast[2]) intrinsicM4=22/$($publishedM4[5])/hits$($publishedM4[11])/fence0 water=2/0/1"
     }
@@ -2430,7 +2430,9 @@ try {
                     Assert-Condition (($benchmarkMakeIdentity.RendererBenchmarkMode -gt 0) -or ($RendererFastRunMode -eq 9)) 'Benchmark-only verifier was not built with a renderer benchmark mode and did not select the complete-stage owner.' ($benchmarkMakeIdentity | Format-List | Out-String)
                     if ($m4CandidateEvidence) {
                         $banks = Get-Ints $vramBanks
-                        Assert-Condition ($vramBanks.Success -and $banks[0] -eq 0x83 -and $banks[1] -eq 0x8b -and $banks[2] -eq 0x81 -and $banks[3] -eq 0x89 -and $banks[4] -eq 0x82 -and $banks[5] -eq 0x83 -and $banks[6] -eq 0x8b -and $banks[7] -eq 0x81 -and $banks[8] -eq 0x06800000 -and $banks[9] -eq 0x06820000 -and $banks[10] -eq 131072 -and $banks[11] -eq 1) "M4 VRAM bank ownership or exact contiguous bank-A static span does not match the battle contract (actual=$($banks -join ','))." $gdbStdout
+                        $expectedBankF = if ($effectiveIFCommonHybridOamMode -eq 1) { 0x83 } else { 0x92 }
+                        $expectedBankG = if ($effectiveIFCommonHybridOamMode -eq 1) { 0x8b } else { 0x9a }
+                        Assert-Condition ($vramBanks.Success -and $banks[0] -eq 0x83 -and $banks[1] -eq 0x8b -and $banks[2] -eq 0x81 -and $banks[3] -eq 0x89 -and $banks[4] -eq 0x82 -and $banks[5] -eq $expectedBankF -and $banks[6] -eq $expectedBankG -and $banks[7] -eq 0x81 -and $banks[8] -eq 0x06800000 -and $banks[9] -eq 0x06820000 -and $banks[10] -eq 131072 -and $banks[11] -eq 1) "M4 VRAM bank ownership or exact contiguous bank-A static span does not match the battle contract (actual=$($banks -join ','))." $gdbStdout
                     }
                     if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                         $sinkProfile = Get-Ints $renderProfile
@@ -2744,10 +2746,10 @@ try {
                 $preCutoverProjectedDivisions = (9 * ($rs[0] + $rs[1] + $rs[2] + $rs[4] + $rs[5] + $rs[6])) + (6 * $rs[3])
                 $expectedProjectedFallbackCount = $rs[2] + $rs[4] + $rs[5] + $rs[6]
                 if ($RendererFastRunMode -eq 9) {
-                    # The complete-stage owner directly owns the stage's 136
-                    # projected triangles; generic submit-class exceptions no
-                    # longer describe this counter.
-                    $expectedProjectedFallbackCount = 136
+                    # The complete-stage owner keeps 126 projected exceptions;
+                    # its ten slightly out-of-range triangles now use a scaled
+                    # raw matrix so GX performs the required near-plane clip.
+                    $expectedProjectedFallbackCount = 126
                 }
                 if (($RendererProfileLevel -lt 2) -and
                     ($RendererFastRunMode -in @(7, 8))) {
@@ -2771,7 +2773,9 @@ try {
                     } else {
                         $rs[6] -eq $rrm[1]
                     })
-                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq 648 -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq 10 -and $rs[7] -eq 0 -and $rawMatrixPartitionValid -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
+                $expectedRawSubmitCount = if ($RendererFastRunMode -eq 9) { 658 } else { 648 }
+                $expectedRangeSubmitCount = if ($RendererFastRunMode -eq 9) { 0 } else { 10 }
+                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq $expectedRawSubmitCount -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq $expectedRangeSubmitCount -and $rs[7] -eq 0 -and $rawMatrixPartitionValid -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
                 Assert-Condition ($rs[8] -eq $expectedProjectedDivisions -and ($rs[8] * 4) -lt $preCutoverProjectedDivisions) 'Canonical realtime HW build did not sharply reduce and exactly account projected division demand.' $gdbStdout
                 $hardwareDivideEvaluations = $rhdiv[0] + $rhdiv[1] + $rhdiv[2]
                 Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Canonical realtime projected hardware divider reported a zero denominator or exact-result mismatch.' $gdbStdout

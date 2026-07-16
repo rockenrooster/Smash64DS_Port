@@ -48,8 +48,8 @@ if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
 }
 if ($OneMinuteMatchProof -and
     (($RendererFastRunMode -ne 9) -or ($StaticTextureAotMode -ne 1) -or
-     ($IFCommonHybridOamMode -ne 1) -or -not $RequireZeroPostGoTextureFence)) {
-    throw 'OneMinuteMatchProof requires the published-equivalent hardware renderer configuration: mode 9, mip 0, static textures 1, hybrid OAM 1, and the strict post-GO fence.'
+     ($IFCommonHybridOamMode -ne 0) -or -not $RequireZeroPostGoTextureFence)) {
+    throw 'OneMinuteMatchProof requires the published-equivalent hardware renderer configuration: mode 9, mip 0, static textures 1, bitmap OAM 0, and the strict post-GO fence.'
 }
 $ImportBattleShipNormalMoveset = $true
 $ImportBattleShipMarioFireball = $true

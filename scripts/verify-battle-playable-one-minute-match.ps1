@@ -19,7 +19,7 @@ $selectedGdbPort = if (($RunnerSlot -ge 0) -and
 # This release gate runs the canonical one-minute BattleShip timer from its
 # exact locked Wait state through Time Up and imported VS Results. Realtime
 # pacing and renderer profiling are disabled, while the hardware renderer keeps
-# the published 9/0/1 plus hybrid-OAM residency configuration. This remains a
+# the published 9/0/1 plus bitmap-OAM residency configuration. This remains a
 # state/lifecycle/safety/reserve gate, not a realtime or 60-FPS result.
 Write-Output 'Starting mode-163 one-minute match (unthrottled state/memory only; realtime performance is not measured).'
 & (Join-Path $PSScriptRoot 'verify-battle-playable-harness.ps1') `
@@ -35,6 +35,6 @@ Write-Output 'Starting mode-163 one-minute match (unthrottled state/memory only;
     -OneMinuteMatchProof `
     -RendererFastRunMode 9 `
     -StaticTextureAotMode 1 `
-    -IFCommonHybridOamMode 1 `
+    -IFCommonHybridOamMode 0 `
     -RequireZeroPostGoTextureFence
 exit $LASTEXITCODE

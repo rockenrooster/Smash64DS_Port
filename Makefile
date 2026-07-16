@@ -60,7 +60,7 @@ override NDS_RENDERER_PROFILE_LEVEL := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_IFCOMMON_HYBRID_OAM := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)

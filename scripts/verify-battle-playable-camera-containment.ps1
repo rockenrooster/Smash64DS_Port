@@ -6,7 +6,15 @@ param(
     [int]$RunnerSlot = -1,
     [ValidateRange(30, 1800)]
     [int]$TimeoutSeconds = 300,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [ValidateSet(
+        'normal_source_envelope',
+        'pause_front',
+        'pause_plus16p8',
+        'pause_minus16p8',
+        'pause_plus33p6',
+        'pause_minus33p6')]
+    [string]$CaseName = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -476,16 +484,21 @@ function Assert-CameraCase {
         $fighters[15] -eq 3 -and $fighters[24] -eq 2) `
         "$($case.Name) did not retain human Mario versus level-3 CPU Fox." $context
 
+    $genericStage = $render[3] -ge 42 -and $render[4] -ge 202 -and
+        ($render[4] - 202) -eq (2 * ($render[3] - 42))
+    # Mode 9 owns the exact 42-list/202-triangle stage packet before the
+    # generic stage counters, while the frame-total counter remains canonical.
+    $nativeStage = $render[3] -eq 0 -and $render[4] -eq 0
+    $stageTriangles = if ($nativeStage) { 202 } else { $render[4] }
     Assert-Condition ($render[1] -eq 1 -and $render[2] -eq 1 -and
-        $render[3] -ge 42 -and $render[4] -ge 202 -and
-        ($render[4] - 202) -eq (2 * ($render[3] - 42)) -and
+        ($genericStage -or $nativeStage) -and
         $render[5] -ge 1 -and $render[6] -gt 0 -and
         $render[7] -gt 0 -and $render[8] -gt 0 -and
         $render[9] -le 1 -and $render[10] -eq 0 -and
         $render[11] -eq 0) `
         "$($case.Name) did not preserve one complete source stage/fighter hardware traversal." $context
     Assert-Condition ($render[12] -eq 0 -and
-        $render[13] -eq ($render[4] + $render[6]) -and
+        $render[13] -eq ($stageTriangles + $render[6]) -and
         $render[14] -gt 0 -and $render[15] -eq 0 -and
         $render[16] -eq 0 -and $render[19] -gt 0 -and
         $render[20] -gt 0 -and $render[21] -ge 131072) `
@@ -826,6 +839,9 @@ $cases = @(
         ExpectedYawDegrees = -$expectedPauseWideYawDegrees
     }
 )
+if (-not [string]::IsNullOrWhiteSpace($CaseName)) {
+    $cases = @($cases | Where-Object { $_.Name -eq $CaseName })
+}
 
 $results = @()
 try {
@@ -839,6 +855,13 @@ try {
             -PlaybackPadsAddress $playbackPadsAddress `
             -PlaybackConnectedAddress $playbackConnectedAddress `
             -PlaybackEnabledAddress $playbackEnabledAddress
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($CaseName)) {
+        Write-Output (
+            'battle_playable focused camera containment passed: ' +
+            (($results | ForEach-Object { $_.Image }) -join ', '))
+        return
     }
 
     $pauseResults = @($results | Where-Object { $_.Case.Kind -eq 'pause' })

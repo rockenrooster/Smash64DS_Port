@@ -2319,3 +2319,36 @@ DECISION: REJECT PLACEMENT / KEEP SOURCE GUARD
   placement alone. Retain the active-animlock/shuffle fail-closed guard because
   it restores the BattleShip matrix-state boundary before native prep/GX.
 ```
+
+## 2026-07-15 - M3 scaled raw clipping fixes pause orbit and saves 19K
+
+```text
+IDEA ID: M3-SCALED-RAW-CLIP
+TREATMENT:
+  Keep the ten exact stage triangles whose coordinates only slightly exceed GX
+  VTX_16 range in the native owner. Submit signed-rounded half coordinates with
+  a compensating raw matrix so GX clips the near plane instead of submitting
+  CPU-projected, unclipped screen-covering triangles.
+IDENTITY / WINDOW:
+  Profile 1, Mode 9, static 1, hybrid OAM 1, Fox paused, frames 438..445,
+  runner 3. Treatment ROM SHA-256
+  03BB711844ECF546562934982E2BBB612FCD9D7783343F53B5135DEFBA1CB42B.
+RESULT P50/P95:
+  Stage 664,544/664,640 -> 645,248/645,440, saving 19,296/19,200.
+  Draw 1,183,104/1,183,168 -> 1,102,656/1,102,720, saving
+  80,448/80,448. M3 remains 145,248 above the <=500K first gate.
+CORRECTNESS / VISUALS:
+  Exact 121 runs / 828 triangles = stage 202 + Mario 320 + Fox 306, zero
+  fallback; M4 remains 22/131072 with every sampled post-GO fence class zero.
+  Normal/front/+33.6 degree focused captures pass, and Tyler accepted the
+  repaired view. The synchronized GO frame remains recognizable and intact.
+EVIDENCE:
+  artifacts/performance/2026-07-15_m3-scaled-raw-clip-b.json (SHA-256
+  A28A32E09D4676DC1DCA2C804424EE43B38BC2E047EF42794FE7635D8C6C4F83)
+  artifacts/visibility/2026-07-15_m3-scaled-raw-clip-b-frame438.png (SHA-256
+  DF967604D1AD4F3915D8612356AB5342791B522BCA0676FD3618535622C91FB2)
+  artifacts/visibility/20260715-221450_slot3_p28976_mode163_camera_pause_plus33p6.png
+  (SHA-256 8DB894DAB9677A56F1D5937C5E644ADE0712F53E2C84F53D8ADE327BCDFC22BE)
+DECISION: KEEP CORRECTNESS FIX / M3 REMAINS REWORK
+  The defect is removed and timing improves, but this is not an M3 close.
+```

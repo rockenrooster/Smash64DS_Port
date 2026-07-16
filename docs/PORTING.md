@@ -20923,3 +20923,22 @@ remains skipped for the requested fast iteration cadence.
 - Boundary then passed and republished the battle ROM at 14,534,656 bytes,
   SHA-256 `4345CCEDF9315C239F5F29FD0DB18B7E18DE6F0E06114E7E88CCC92BF0E2A137`;
   exact Cut G frames 438/439 remain under `artifacts/visibility`.
+
+## 2026-07-15 — pause-orbit clipping and countdown visibility repair
+
+- Reproduced the reported screen-covering pause-orbit geometry at +33.6°.
+  Exact stage runs 38–40 contain ten triangles just beyond DS VTX_16 range;
+  their former CPU-projected path lacked near-plane clipping. They now submit
+  half coordinates with a compensating raw matrix, keeping exact stage
+  ownership while letting GX clip naturally.
+- The focused +33.6° camera gate passes and the retained Mode-9 stage path
+  improves 664,544/664,640 → 645,248/645,440 P50/P95 ticks. Exact 121/828
+  ownership and M4 zero-gameplay-conversion counters remain unchanged.
+- The hybrid IFCommon OAM lab submitted the correct source objects and counters
+  but rendered the countdown light invisibly. Restored the proven all-bitmap
+  published configuration: 93,824 bytes prepare before gameplay, the traffic
+  light is visible again, and gameplay performs no conversion or upload.
+- Boundary passes at 19.7 FPS on the 14,534,656-byte published ROM, SHA-256
+  `19C6CD229C205CD60F7625BED86625AADA5556AEE377CD4A4698154249F98D7E`.
+  Exact Cut G frames 438/439 visibly retain the traffic light and GO overlay at
+  `artifacts/visibility/2026-07-15_canonical_fast_frame438-439_221916-2735156-p38420.png`.

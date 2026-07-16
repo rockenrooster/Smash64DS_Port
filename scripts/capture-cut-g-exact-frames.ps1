@@ -245,7 +245,7 @@ try {
             $row[10] -eq 0 -and $row[11] -eq 13 -and
             $row[12] -ne 0x49464f41 -and $row[13] -gt 0 -and
             $row[14] -eq 0 -and $row[15] -eq 1 -and $row[16] -eq 0 -and
-            $row[17] -eq 0 -and $row[18] -eq 0 -and $row[19] -eq 512) `
+            $row[17] -eq 0 -and $row[18] -eq 0 -and $row[19] -eq 0) `
             "Exact frame $($expectedFrames[$i]) lost native-OAM GO recognition, drawing, or no-conversion state." `
             $gdbText
     }

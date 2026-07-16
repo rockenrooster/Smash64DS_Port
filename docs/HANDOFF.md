@@ -1,7 +1,6 @@
 # Handoff
 
-Updated: 2026-07-15 21:13 Central
-
+Updated: 2026-07-15 22:15 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -16,20 +15,26 @@ Boundary: `battle_playable_realtime`, mode `163`.
 git status --short
 ```
 
-Preserve the published intrinsic mode-9 / mip-0 / static-residency / hybrid-OAM
+Preserve the published intrinsic mode-9 / mip-0 / static-residency / bitmap-OAM
 configuration. Dream Land water is exact frame 0/fraction 114 on the original
 12 triangles; the animated replacement and its dead implementation are removed.
 
-The executable fleet is now four registry records under `Latest`/`Boundary`;
-168 legacy verifier/manager scripts and their public mode mappings are deleted.
-The unreachable source-side mode 1-162 lattice remains a separate ROM-parity
-cleanup, not part of the next renderer change.
-
+The executable fleet is four registry records under `Latest`/`Boundary`; the
+unreachable source-side mode 1-162 lattice is separate ROM-parity cleanup.
 Boundary passes at 19.7 FPS on published ROM
-`CE922B60EFFE16D3A05A18ED3B0FD54F0A73A70C8CE9076AF85A5A59D5B96478`.
-It retains exact M3 121/828 ownership, frozen water 2/0/1, 22/131072 static
-residency, 76 pinned hits, zero post-GO fence work, and Cut G frames 438/439 at
-`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_211246-5878396-p43792.png`.
+`19C6CD229C205CD60F7625BED86625AADA5556AEE377CD4A4698154249F98D7E`.
+The all-bitmap pregame path restores the countdown light. Ten out-of-range stage
+triangles use scaled raw submission and DS near-plane clipping, removing the
+pause-orbit defect. Focused +33.6° evidence is at
+`artifacts/visibility/20260715-221450_slot3_p28976_mode163_camera_pause_plus33p6.png`.
+Exact Cut G frames 438/439 are at
+`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_221916-2735156-p38420.png`.
+
+The retained M3 path improved 664,544/664,640 → 645,248/645,440 stage ticks and
+1,183,104/1,183,168 → 1,102,656/1,102,720 draw ticks at frames 438–445. Exact
+121/828 ownership, frozen water 2/0/1, 22/131072 static residency, and zero
+post-GO texture work remain intact. M3 is still REWORK, 145,248 ticks above its
+first 500K gate.
 
 ## Rejected M3 Cut
 
@@ -91,5 +96,4 @@ zero fallback. Do not add a mode, packet copy, DMA path, or per-root interpreter
 
 Run one widest relevant verifier only: Boundary for battle-only work, or Current
 instead if normal/shared startup changed. Finish docs and `git status`
-inspection, then commit before the Lean snapshot; the snapshot is the final
-command.
+inspection, commit, then run the Lean snapshot as the final command.
