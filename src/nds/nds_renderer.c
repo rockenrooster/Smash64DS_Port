@@ -13619,7 +13619,8 @@ static s32 ndsRendererNativePreflightProductionOwner(
     return TRUE;
 }
 
-static s32 ndsRendererNativeShadeProductionActions(
+static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
+ndsRendererNativeShadeProductionActions(
     const NDSNativeEpoch *epoch,
     u32 epoch_policy,
     u32 packet_mode,
@@ -13768,7 +13769,7 @@ static s32 ndsRendererNativeShadeProductionActions(
     return TRUE;
 }
 
-static s32 NDS_RENDERER_FAST_RUN_CODE
+static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativePrepareProductionRun(
     u32 run_index,
     u32 epoch_policy,
@@ -16826,7 +16827,8 @@ void ndsRendererFinishNativeStageOwner(void)
 }
 #endif
 
-s32 ndsRendererExecuteNativeFighterOwnerProduction(
+s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
+ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
     const void *asset_base_ptr,
     const NDSRendererNativeFighterRoot *inputs,

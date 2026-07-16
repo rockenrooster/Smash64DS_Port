@@ -33,18 +33,19 @@ Retained production contract:
 - Preflight rejects active animlock or unsupported dynamic matrix/material state
   before GX output.
 
-Current Mode 8 is visually correct but over target. The next candidate must
-eliminate immutable per-frame command work without copying/patching a whole FIFO
-packet or adding another per-root interpreter.
+Current Mode 8 is visually correct but over target. Intermediate gains
+accumulate; 170-250K is the milestone target, not a per-cut discard gate. Keep
+each repeatable ledger-off reduction that preserves exact geometry, owner state,
+texture traffic, screenshot, reserve, and conservation without adding fallback
+or allocation.
 
-First keep gate:
-
-- save at least 80K combined fighter ticks and reach <=337,472;
-- matrix plus lighting <=120K and transport <=145K;
-- exact geometry, owner state, texture traffic, screenshot, and reserve;
-- no fallback, allocation, or ledger-on-only win.
-
-Final promotion remains 170-250K ledger-off.
+The retained native-fighter ITCM placement moves combined fighter P50/P95 from
+419,328/419,392 to 402,560/402,624 and draw P50/P95 from
+1,245,024/1,247,616 to 1,230,336/1,232,832. ITCM is 25,384/32,768; the exact
+70/686 fast owner and 60/320/306/29/0/0 partition remain unchanged, and the
+top-screen A/B is pixel-identical. Next address the measured 53,824-tick local
+matrix builder without copying/patching a whole FIFO packet, replacing the exact
+shade path, or adding another per-root interpreter.
 
 ## M3 — Complete Dream Land Owner
 

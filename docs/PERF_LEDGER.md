@@ -2688,3 +2688,38 @@ DECISION: STOP 60-FPS PROMOTION
   not close the 855K-1.058M deficit, so request approval for a stable 20 FPS
   presentation target. Do not silently claim P1 complete at a lower rate.
 ```
+
+## 2026-07-16 - M2 native-fighter ITCM gain restored and kept
+
+```text
+IDEA ID: M2-MODE8-ITCM-RESTORE-20260716
+POLICY:
+  The old 80K / <=336,576 intermediate discard gate is withdrawn. The final
+  170-250K milestone target remains; repeatable correct gains accumulate.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 8, static 0, bitmap OAM, Fox/countdown iteration
+  switch off, frames 600..607. A/B ROM SHA-256 values are
+  6F6AC367CB576A129CD4A17DA7E62C3CD011B3B53CE2F7163062A57F172CD780 /
+  0C22A7FC41C0D6997940D931B7B6E67758A7A4E499E8C9C59EF45D60F49D0553.
+TREATMENT:
+  Place the existing native-fighter shading, run-preparation, and production
+  executor functions in the existing ARM/O3 native-fighter ITCM section. No
+  packet, traversal, cache, mode, allocation, or renderer state changed.
+RESULT P50/P95:
+  Combined fighter 419,328/419,392 -> 402,560/402,624, saving 16,768/16,768.
+  Draw 1,245,024/1,247,616 -> 1,230,336/1,232,832, saving 14,688/14,784.
+  ITCM is 25,384/32,768 bytes; placement checker accounts 22,868 renderer bytes.
+CORRECTNESS / VISUALS:
+  Exact 70 runs / 686 triangles and 60/320/306/29/0/0 fast partition remain;
+  conservation is zero. All 120,000 top-screen pixels are identical. The
+  benchmark wrapper exported both full packets before its unrelated unarmed
+  TEXEL assertion; no verifier was weakened or new mode added.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m2-itcm-restore-a.json
+  artifacts/performance/2026-07-16_m2-itcm-restore-b.json
+  artifacts/visibility/2026-07-16_m2-itcm-restore-a.png
+  artifacts/visibility/2026-07-16_m2-itcm-restore-b.png
+DECISION: KEEP
+  Accumulate the gain. Next take one source-backed cut against the measured
+  53,824-tick local-matrix builder; do not require the removed 80K gate.
+```

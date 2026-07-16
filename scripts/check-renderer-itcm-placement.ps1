@@ -26,6 +26,11 @@ $requiredEmittedFunctions = if ($BenchmarkAblation) {
         'ndsRendererScanList'
     )
 }
+$nativeFighterFunctions = @(
+    'ndsRendererNativeShadeProductionActions',
+    'ndsRendererNativePrepareProductionRun',
+    'ndsRendererExecuteNativeFighterOwnerProduction'
+)
 
 if (-not (Test-Path -LiteralPath $Objdump -PathType Leaf)) {
     throw "arm-none-eabi-objdump was not found at '$Objdump'."
@@ -33,6 +38,8 @@ if (-not (Test-Path -LiteralPath $Objdump -PathType Leaf)) {
 
 foreach ($elfPath in $Elf) {
     $resolvedElf = (Resolve-Path -LiteralPath $elfPath).Path
+    $requiresNativeFighter = (Split-Path -Leaf $resolvedElf) -match
+        '^smash64ds-battle-playable-(?:hwtri|coarse-hwtri)\.elf$'
     $sectionLines = @(& $Objdump -h $resolvedElf)
     if ($LASTEXITCODE -ne 0) {
         throw "objdump section listing failed for '$resolvedElf'."
@@ -68,11 +75,17 @@ foreach ($elfPath in $Elf) {
 
     [uint32]$rendererItcmBytes = 0
     $emittedNames = [System.Collections.Generic.List[string]]::new()
-    foreach ($baseName in $hotFunctions) {
+    $functionsToCheck = @($hotFunctions)
+    if ($requiresNativeFighter) {
+        $functionsToCheck += $nativeFighterFunctions
+    }
+    foreach ($baseName in $functionsToCheck) {
         $matches = @($functionSymbols | Where-Object {
             ($_.Name -eq $baseName) -or $_.Name.StartsWith("$baseName.")
         })
-        if (($requiredEmittedFunctions -contains $baseName) -and
+        if ((($requiredEmittedFunctions -contains $baseName) -or
+            ($requiresNativeFighter -and
+                ($nativeFighterFunctions -contains $baseName))) -and
             ($matches.Count -eq 0)) {
             throw "Required hot renderer function '$baseName' was not emitted in '$resolvedElf'."
         }

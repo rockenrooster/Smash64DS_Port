@@ -21165,3 +21165,13 @@ remains skipped for the requested fast iteration cadence.
   transforms. Same-ROM stage time falls 619,744 → 577,440 ticks with exact
   stage/owner counters and identical top-screen pixels. The 500K point remains
   the next milestone target rather than a reason to discard this gain.
+
+## 2026-07-16 - Kept the restored M2 native-fighter ITCM reduction
+
+- The three existing Mode-8 shading, run-preparation, and production-executor
+  functions now share the established ARM/O3 native-fighter ITCM section.
+  Combined Mario/Fox rendering falls 419,328 → 402,560 ticks and draw time falls
+  1,245,024 → 1,230,336 ticks with exact owner counters and identical top-screen
+  pixels. ITCM remains within hardware capacity at 25,384 / 32,768 bytes.
+- This 16,768-tick gain is retained under the new accumulation policy even
+  though M2 is still above its final 170–250K target.

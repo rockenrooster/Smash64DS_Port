@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 08:35 Central
+Updated: 2026-07-16 08:52 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -45,7 +45,7 @@ profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
 | Integration/release | CPU lifecycle pass / checkpoint | live tree | source-ordered LoadScene break, exact VSBattle ledger sample, commit | runner 2 |
-| Renderer implementation | Incremental M2/M3 accumulation resumed | shared live tree / focused lab builds | M3 dense prepare-once is now kept; M2 Jump C rerun is next without the old all-or-nothing gate | no runner active |
+| Renderer implementation | Incremental M2/M3 gains kept | shared live tree / focused lab builds | M3 dense prepare-once and M2 native-fighter ITCM placement are retained; next M2 cut is the measured local-matrix builder | no runner active |
 | Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
 
@@ -72,7 +72,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Mario pant/underside visual | FIXED / user confirmed | Renderer + QA | Source root light preambles were missing; replay restores blue right pant and closed underside with unchanged 320-triangle census | Tyler accepted `20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png` on 2026-07-16 |
 | Natural Fox recovery | Pass | Gameplay | Current-ROM mode 163 used only external Mario input: Fox took 0→59 damage, selected BattleShip Recover for 40 frames at offstage x=2379.905, grounded on line 3 at x=1336.084, and took a later hit to 72 without KO/rebirth in 897 frames | Keep focused gate; reserve 202,256 and screenshot `20260716_fox-recovery-post-hit.png` |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
-| M2 Mario/Fox AOT, 170–250K ticks | Fail / incremental cuts resumed | Renderer | Current local builder is 53,824 ticks and lighting is already prepared-direction + exact shade LUT. The old 80K pre-code discard gate is withdrawn | Re-run source-backed compute/placement cuts and keep each repeatable correct net gain; do not manufacture another lighting/cache path |
+| M2 Mario/Fox AOT, 170–250K ticks | Incremental ITCM KEEP at 402.6K | Renderer | Current bitmap-OAM A/B moves combined fighter P50/P95 419,328/419,392 → 402,560/402,624 and draw 1,245,024/1,247,616 → 1,230,336/1,232,832. ITCM is 25,384/32,768; exact 70/686 and 60/320/306/29/0/0 remain, conservation is zero, and 0/120,000 top-screen pixels change | Keep placement; attack the measured 53,824-tick local builder next. The 170–250K milestone is directional, not an intermediate discard gate |
 | M3 complete stage AOT, 150–250K ticks | Semantic pass / dense KEEP at 577K | Renderer | Same-ROM bitmap-OAM A/B moves stage 619,744/619,904 → 577,440/577,536 and draw 1,057,856/1,057,920 → 1,013,760/1,013,824. Exact 121/828, 57/42/54/202/49/4, zero fallback/fence, and 0/120,000 changed top-screen pixels hold | Keep codegen plus dense prepare-once; 500K remains the next target, not a discard gate |
 | M4 zero gameplay conversion/preparation | Focused lifecycle repair pass / final teardown refresh pending | Renderer | Exact CPU-on phase sampling exposed a missing Whispy mouth image at frame 1398: run 28 rejected, the owner aborted, and generic fallback converted 40 textures. The native owner now reuses the pre-GO resident first source image only when every other word of the 59-word key matches. Frames 1398–1405 and 3300–3307 retain 202 stage triangles, zero post-arm fallback, zero ten-class fence work, and zero premature teardown on exact ROM `426B821A...` | Keep the documented cosmetic source-frame approximation; repeat only the final natural teardown in release qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |

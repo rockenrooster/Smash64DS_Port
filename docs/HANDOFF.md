@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 08:35 Central
+Updated: 2026-07-16 08:52 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -72,10 +72,19 @@ samples the battle ledger before Results reuses the globals.
 
 Tyler withdrew the Jump A/C all-or-nothing keep gates. Correct measured gains
 now accumulate even when they do not finish a milestone. Jump A dense reuse is
-kept; re-run Jump C next without its old 80K pre-code rejection gate. Do not
-reopen measured regressions or add speculative renderer caches. The current
-1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the stable 20 FPS
-decision remains pending while performance work continues.
+kept. Jump C native-fighter ITCM placement is also kept: combined fighter
+P50/P95 is 419,328/419,392 → 402,560/402,624, draw P50/P95 is
+1,245,024/1,247,616 → 1,230,336/1,232,832, and the top-screen A/B is exact.
+ITCM is 25,384/32,768. Evidence is under
+`artifacts/performance/2026-07-16_m2-itcm-restore-{a,b}.json` and
+`artifacts/visibility/2026-07-16_m2-itcm-restore-{a,b}.png`.
+
+Continue M2 with the already-measured 53,824-tick local-matrix builder at the
+BattleShip `syMatrixTraRotRpyR` / `syMatrixTraRotRpyRSca` seam. Make one small
+source-backed treatment and keep any repeatable exact net gain. Do not reopen
+measured regressions, add a speculative cache, or require the removed 80K gate.
+The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
+stable 20 FPS decision remains pending while performance work continues.
 
 The Fireball terminal gate is closed. The earlier far-left theory was false:
 the same source-created weapon naturally crosses Pupupu's bottom bound at
