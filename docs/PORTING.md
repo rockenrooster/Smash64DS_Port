@@ -20953,6 +20953,15 @@ remains skipped for the requested fast iteration cadence.
   and timer assertions source-valid while the published/manual default remains
   the user-requested fast mode.
 
+## 2026-07-15 - Corrected public versus iteration countdown switch
+
+- Reversed the shared Fox/countdown control to match the requested workflow:
+  the published battle ROM defaults to source-normal flag `1`, while
+  `-FastIteration` selects flag `0` at `scVSBattleStartBattle` for both the
+  runtime verifier and its separate screenshot emulator.
+- Routine iteration no longer spends frames on 3/2/1/GO or Fox decisions; the
+  one-minute lifecycle proof continues to select the unchanged source path.
+
 ## 2026-07-15 - Strict Dream Land painter depth order
 
 - Read BattleShip `grdisplay.c:52-63,86-95,111-118,134-141`,

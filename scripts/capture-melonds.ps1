@@ -43,7 +43,9 @@ $gdbPath = if ([System.IO.Path]::IsPathRooted($Gdb)) {
     Join-Path $root $Gdb
 }
 $elfPath = $null
-$gdbSelectionEnabled = ($RendererFastRunMode -ge 0)
+$rendererSelectionEnabled = ($RendererFastRunMode -ge 0)
+$foxSelectionEnabled = ($FoxCpuMode -ge 0)
+$gdbSelectionEnabled = $rendererSelectionEnabled -or $foxSelectionEnabled
 $exactFrameCaptureEnabled =
     (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0))
 if ($exactFrameCaptureEnabled) {
@@ -59,7 +61,7 @@ if ($exactFrameCaptureEnabled) {
     if (-not $SoftwareRenderer) {
         throw 'Exact Cut G frame capture requires -SoftwareRenderer.'
     }
-    if ($gdbSelectionEnabled) {
+    if ($rendererSelectionEnabled) {
         throw '-RendererFastRunMode cannot be combined with exact Cut G capture.'
     }
 }
@@ -194,11 +196,13 @@ function Set-MelonDSCaptureRuntimeMode {
         [Parameter(Mandatory=$true)][string]$GdbPath,
         [Parameter(Mandatory=$true)][string]$ElfPath,
         [Parameter(Mandatory=$true)][int]$Port,
-        [Parameter(Mandatory=$true)][int]$Mode
+        [Parameter(Mandatory=$true)][int]$Mode,
+        [Parameter(Mandatory=$true)][int]$FoxMode
     )
 
     $expected = @()
     if ($Mode -ge 0) { $expected += "CAPTURE_FAST_MODE=$Mode" }
+    if ($FoxMode -ge 0) { $expected += "CAPTURE_FOX_MODE=$FoxMode" }
     $lastOutput = ''
     for ($attempt = 1; $attempt -le 12; $attempt++) {
         $gdbArgs = @('-q', '-batch', $ElfPath,
@@ -207,6 +211,12 @@ function Set-MelonDSCaptureRuntimeMode {
             $gdbArgs += @('-ex', "set variable gNdsRendererFastRunMode = $Mode",
                           '-ex', 'printf "CAPTURE_FAST_MODE=%u\n", gNdsRendererFastRunMode')
         }
+        if ($FoxMode -ge 0) {
+            $gdbArgs += @('-ex', 'tbreak scVSBattleStartBattle',
+                          '-ex', 'continue',
+                          '-ex', "set variable gNdsBattlePlayableFoxCpuEnabled = $FoxMode",
+                          '-ex', 'printf "CAPTURE_FOX_MODE=%u\n", gNdsBattlePlayableFoxCpuEnabled')
+        }
         $gdbArgs += @('-ex', 'detach', '-ex', 'quit')
         $lastOutput = (& $GdbPath @gdbArgs 2>&1 | Out-String)
         $selected = ($LASTEXITCODE -eq 0)
@@ -214,7 +224,7 @@ function Set-MelonDSCaptureRuntimeMode {
             $selected = $selected -and $lastOutput.Contains($marker)
         }
         if ($selected) {
-            Write-Output "Selected renderer mode $Mode for capture."
+            Write-Output "Selected capture runtime modes renderer=$Mode fox=$FoxMode."
             return
         }
         Start-Sleep -Milliseconds 250
@@ -231,7 +241,8 @@ try {
                 -Section 'Instance0.Gdb' -Key 'Enable' -Value 'true'
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'Instance0.Gdb' -Key 'Enabled' -Value 'true'
-            $arm9BreakOnStartup = if ($exactFrameCaptureEnabled) {
+            $arm9BreakOnStartup = if ($exactFrameCaptureEnabled -or
+                $foxSelectionEnabled) {
                 'true'
             } else {
                 'false'
@@ -288,9 +299,9 @@ try {
     if ($emulator.HasExited -or $emulator.MainWindowHandle -eq [IntPtr]::Zero) {
         throw 'melonDS did not expose a capturable window.'
     }
-    if ($gdbSelectionEnabled) {
+    if ($gdbSelectionEnabled -and -not $exactFrameCaptureEnabled) {
         Set-MelonDSCaptureRuntimeMode -GdbPath $gdbPath -ElfPath $elfPath `
-            -Port $GdbPort -Mode $RendererFastRunMode
+            -Port $GdbPort -Mode $RendererFastRunMode -FoxMode $FoxCpuMode
     }
     if ($exactFrameCaptureEnabled) {
         # Establish geometry once while emulation is running. Moving or

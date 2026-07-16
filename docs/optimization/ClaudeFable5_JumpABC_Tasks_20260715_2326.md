@@ -1,0 +1,338 @@
+# Jump A/B/C Task Blocks — 2026-07-15 23:26 (Claude Fable 5)
+
+Supersedes the Jump A stack and Jump C blocks in
+`ClaudeFable5_JumpA_Stack_And_716_Decision_20260715_2140.md`. Written after
+verifying tonight's ledger rows and live code. Two corrections to the prior
+plan, both verified in-tree:
+
+1. **Old CUT 3 is already done.** The raw-Z current-matrix stage class already
+   loads `raw_composed` and submits raw vertices for hardware transform
+   (`ndsRendererNativeStageBeginRun`, src/nds/nds_renderer.c:15812-15816), and
+   the ten formerly range-rejected triangles now ride `scaled_raw_modelview`
+   (:15818-15827). Do not re-propose hardware T&L for the raw class.
+2. **Old CUT 2's premise was stale.** The projection divide already uses the
+   DS hardware divider (`div64`, src/nds/nds_renderer.c:4493). There is no
+   soft-float divide to remove in the stage projection path. The ">=150K from
+   this cut alone" estimate is withdrawn; the cut is redefined below and must
+   be bounded by a bucket profile before coding.
+
+The new dominant Jump A lever: extend the proven scaled-raw hardware path to
+the **no-Z painter classes** with a constant-Z matrix row (CUT 3-NEW below).
+
+Jump B (M4) is closed — no task. Its only obligations are re-proof on the
+final published CPU-on ROM (already on the board) and defending its >=128 KiB
+reserve against the crowd-audio bake (handled in the audio task).
+
+Task order: TASK 1 (depth-band fix landing) -> TASK 2 (Jump A stack v2) ->
+TASK 3 (Jump C v2). Task 1 changes no-Z depth semantics, so no A/B baseline
+for Task 2 may be sampled before Task 1 lands and Tyler signs off.
+
+---
+
+## TASK 1 — Land and verify the stage depth-band fix (paste to codex)
+
+```
+/task Finish, verify, and land the uncommitted stage depth-band work in
+src/nds/nds_renderer.c. This is a correctness task, not a perf task; it also
+re-baselines M3 for the next Jump A stack, so it must land first.
+
+The working tree already contains (do not revert; reconcile per
+OPTIMIZATION_ROADMAP R0 and finish it):
+- ndsRendererHardwareNextProjectedDepth now consumes one full
+  NDS_RENDERER_HW_PROJECTED_DEPTH_STEP per painter primitive instead of 1/6th
+  of a step (src/nds/nds_renderer.c:~10528). Root cause of the grass/bush
+  overlap: six consecutive no-Z triangles shared one post-division depth, so
+  an earlier stage triangle rejected a later grass/bush draw.
+- ndsRendererHardwareSourceDepthToV16 clamps real source Z to
+  [NDS_RENDERER_HW_SOURCE_DEPTH_MIN, NDS_RENDERER_HW_SOURCE_DEPTH_MAX],
+  reserving 128 strictly ordered painter depths at each v16 endpoint so
+  camera extremes cannot push perspective Z into a painter band (:~4514).
+- New stage depth-trace instrumentation hooked into the semantic event path
+  (ndsRendererStageDepthTraceEvent): per-class counts, background/foreground
+  painter min/max/count, a no-Z collision counter, and a running hash.
+
+Gates (all must pass before commit):
+1. Profile-2 lab build: gNdsRendererStageDepthTraceNoZCollisionCount == 0
+   across the 8-frame window; background and foreground painter bands strictly
+   monotonic and fully inside their reserved 128-depth endpoint bands; publish
+   the per-class triangle counts (this class census is also Phase 0 input for
+   the next task — save it).
+2. Exact semantics unchanged: 8 callbacks / mask 255 / 57 DObjs / 42 bindings
+   / 54 runs / 202 stage triangles / 49 epochs / 4 material commits, owner
+   121/828, zero fallback, M4 22/131072 with zero post-GO fence classes.
+3. Same-ROM A/B/A ticks vs the committed 645,248/645,440 stage baseline:
+   expected roughly neutral; publish the delta either way in the ledger row.
+   If the fix costs >10K stage P50, report before committing.
+4. Visual evidence for Tyler: frames 438/439 plus the pause-orbit camera set
+   (normal / front / +33.6 degrees, same deterministic gate as the clip fix)
+   showing (a) grass/bushes no longer overlapped by stage floor triangles and
+   (b) whether the "main floor path texture moving around" symptom under
+   camera motion is gone — the shared-depth collision was Z-fighting, which
+   reads as texture swimming, so this fix is the most likely cure. Do NOT
+   mark the PLAYTESTING_Review.md pause line FIXED yourself; Tyler confirms
+   by eyeball and marks it.
+
+Ledger row (correctness class) with ROM SHA, JSON, screenshots. Commit as its
+own change. Constraints: decomp/ read-only; no gate weakening; no unrelated
+edits; snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
+```
+
+---
+
+## TASK 1B — Grass/bush overlap persists after the painter fix (paste to codex)
+
+Added 2026-07-16 after Tyler's retest: commit 87e04fa5d3 landed with zero
+painter collisions, strict order, and source citations — and the visual
+overlap is UNCHANGED. The counter bug was real but was not this defect. This
+task replaces the old "Bug 1" block's diagnosis tree.
+
+```
+/task Stage grass/bush overlap persists after 87e04fa5d3 (strict painter
+depths, zero collisions, profile-2 order pass) — the painter counter was a
+real but different bug. Diagnose with one-variable isolation probes BEFORE
+proposing any fix. CORRECTNESS task, own commit, NOT perf-gated, no
+optimization bundled. Reconcile first (R0).
+
+PRIME SUSPECT — the cross-producer depth-scale seam. The depth buffer has two
+producers since the M3 owner landed (ef65ef541c): the 126 no-Z triangles
+submit CPU-packed v16 painter depths under identity matrices
+(ndsRendererLoadHardwareMatrices(NULL, FALSE)), while the 66 source-Z and 10
+range triangles get depths computed BY GX HARDWARE from raw_composed
+(src/nds/nds_renderer.c:15813-15814, built :16135-16139) and the scaled-raw
+matrix (:15818-15827). glFlush uses GL_TRANS_MANUALSORT Z-buffering
+(src/nds/nds_platform.c:1983). The ledger's "real stage Z 3605..3728" is the
+CPU ORACLE's projected value — nothing yet proves the HARDWARE's actual
+depth-buffer values for those 76 triangles land strictly BETWEEN the
+foreground painter band (-3969..-4022) and background band (4095..4024) in
+depth-buffer units. If hardware depths come out nearer than the foreground
+band, real geometry covers the grass/bush decals — exactly the symptom.
+Timeline fits: stage fidelity was accepted ~7/12 (all-CPU depth), M3 moved
+these triangles to hardware depth, overlap was reported 7/15. Also audit the
+scaled-raw compensation specifically: halved coordinates with a compensating
+matrix must not halve or rescale depth relative to the unscaled raw class.
+
+PHASE 1 — identify, do not guess (all probes are build-flag or config
+toggles, one variable each, screenshot per probe):
+1. Reproduce the offending composition. The existing frame 438/501 pixel
+   gates PASS while Tyler sees the defect, so the current gates look at the
+   wrong pixels. Capture the grass-top edge and side-bush regions at the
+   camera position matching Tyler's report; Claude reads the captures.
+2. Class isolation: render once with the 10 range triangles skipped, once
+   with the 66 source-Z skipped (or forced through the CPU-projected
+   fallback path the M3 contract guarantees), once with the 126 no-Z
+   skipped. Whichever toggle makes the overlap vanish names the offending
+   producer. Publish all captures.
+3. Pre-M3 A/B: run a pre-ef65ef541c ROM at the same view. If the overlap is
+   absent there, the M3 hardware-depth migration introduced it; if present,
+   the defect predates M3 and classification becomes the lead.
+
+PHASE 2 — root-cause per Phase 1 outcome:
+- If the hardware classes are the producer: derive the DS Z-buffering
+  depth-value formula (GBATEK; depth from z/w through the viewport mapping)
+  and compute the actual depth-buffer values raw_composed and the scaled-raw
+  matrix produce for the offending triangles vs the values the identity-
+  matrix CPU path produces for packed painter depths. Fix the normalization
+  so, in DEPTH-BUFFER UNITS, foreground band < every hardware source-Z depth
+  < background band across the match camera envelope. Then PROVE it: extend
+  the stage depth trace to record the derived hardware depth per raw/range
+  triangle alongside the CPU submitted_z, and gate foreground/background
+  band separation on those numbers.
+- If order/classification is the producer: verify the offending grass/bush
+  DObjs' class membership against the source layers (BattleShip
+  grdisplay.c:52-63,86-95,111-118,134-141 no-Z/Z/no-Z/no-Z and
+  grpupupu.c:637-690 construction order — read only, cite exact lines) and
+  correct the port classification to match.
+
+PHASE 3 — gates: new ROI pixel gate ON THE DEFECT REGION (grass-top edge +
+side bushes at the reproducing camera), kept as a permanent ratchet; Tyler
+eyeball confirms before the playtest line is marked FIXED; profile-2
+202-triangle order and class census unchanged (66/126/10); painter bands
+still strict/zero-collision; exact 121/828; M4 fence classes zero; DevFast +
+Boundary green. Ledger correctness row citing which hypothesis Phase 1
+confirmed and which it excluded. Separate commit; do not start Jump A stack
+work in this task — but note: the depth-scale derivation produced here is a
+PREREQUISITE artifact for Jump A CUT 3-NEW, so save the mapping math in the
+ledger row. Snapshot last.
+```
+
+Sequencing amendment: TASK 1B replaces TASK 1 as the blocker — the Jump A
+stack (TASK 2) must not baseline until 1B lands, because CUT 3-NEW moves the
+no-Z class onto hardware depth and would inherit a broken seam.
+
+---
+
+## TASK 2 — Jump A stack v2: stage owner 645K -> <=500K (paste to codex)
+
+```
+/task Jump A stack v2 on the M3 stage owner. Baseline is the post-depth-fix
+stage P50/P95 from the previous task (do not reuse 645,248 if the depth fix
+moved it). Target: stage P50 <=500K, then push toward 450K.
+
+TYLER'S AUTHORIZATION — ledger rule amendment: the PERF_LEDGER
+M3-DENSE-PREPARE-ONCE row's "do not retry or widen dense-only preparation
+reuse" is amended to: dense-index preparation reuse may be re-landed ONLY as
+the base of this measured stack, and the keep gate applies to the STACK TOTAL
+(combined <=500K), not to each component alone. Nothing below the stack gate
+ships. Record this amendment in the new ledger row and cite this task.
+
+Forbidden (proven dead, do not revive): whole-owner FIFO copy/patch/DMA
+packet; any new per-root interpreter; per-joint GX hierarchy matrices;
+widening dense reuse beyond the previously measured design. Cross-matrix
+stage classes (5/10/15) stay untouched. Reconcile first (R0).
+
+PHASE 0 — bucket profile before any cut (R2). On the new baseline, publish
+the stage owner's internal composition: per-submit-class triangle counts
+(from the depth trace census in the previous task), count of CPU projections
+per frame and their measured ticks, div64 call count, attribute-preparation
+ticks, and run/batch overhead. Give each cut below a pre-code bound from
+these numbers. If the bounds cannot jointly reach -145K, STOP and report
+instead of coding.
+
+CUT 1 — re-land dense-index prepare-once as the stack base.
+- Reconstruct the previously measured design exactly: 606 corner references
+  -> 312 dense vertices; 408 projected references -> 246 unique; removes 294
+  repeated attribute preparations, 162 repeated transforms, 486 projections.
+  Measured -108,960 P50 with exact semantics and zero conflicts
+  (PERF_LEDGER M3-DENSE-PREPARE-ONCE; artifacts/visibility/
+  m3-dense-prepare-8frames.json). It was hand-reverted, not git-reverted.
+- Gate: profile-2 semantic oracle zero-mismatch; same-ROM A/B/A reproduces
+  approximately -109K on the new baseline; exact 121/828; reserve >=128 KiB.
+
+CUT 2 (redefined) — no-Z projection overhead, bounded by Phase 0.
+- CORRECTION: the divide is already on the hardware divider (div64,
+  src/nds/nds_renderer.c:4493). Do not propose replacing a soft divide.
+- Remaining levers, in order of expected value: overlap divider latency by
+  issuing the x/y/z divides of a vertex (or the three vertices of a triangle)
+  back-to-back and doing clamp/attribute work while the divider runs, instead
+  of div64's blocking spin per call; hoist repeated s64 scaling
+  (NDS_RENDERER_HW_PROJECTED_VERTEX multiplies) where operands repeat after
+  CUT 1's dedup; flatten per-vertex call overhead in the class-3 path.
+- Exactness: quotients must remain bit-identical (same hardware divider, same
+  truncation) — this cut may not change any projected value, only its cost.
+  Profile-2 oracle zero-mismatch is the gate.
+- Bank only if the measured saving matches the Phase 0 pre-code bound within
+  reason; publish both numbers.
+
+CUT 3-NEW — move the no-Z painter classes onto GX with a constant-Z scaled
+raw matrix (the dominant lever; mechanism already proven in-tree).
+- Mechanism: the PROJECTED_RANGE_OR_MATRIX path already loads an identity
+  projection plus scaled_raw_modelview and lets GX transform and clip
+  (src/nds/nds_renderer.c:15818-15827, matrix at :2470). Extend it: for the
+  class-3 no-Z painter triangles, submit model-space vertices with a raw
+  composed matrix whose Z row is [0, 0, 0, band_constant] so hardware
+  transforms X/Y (and clips) while every vertex of the primitive lands on the
+  exact painter depth. The band constant comes from the SAME
+  ndsRendererHardwareNextProjectedDepth counter — painter ordering semantics
+  are unchanged by construction.
+- Transport bound (compute pre-code, publish): one raw 4x3 matrix reload per
+  painter step (~13 FIFO words); at ~126 painter triangles that is ~1.6K
+  words per frame — verify against measured FIFO headroom before coding. If
+  measured transport exceeds the CPU projection ticks it removes, STOP (this
+  is the T2B lesson; do not brute-force it).
+- Depth mapping proof: the hardware-produced depth for a band constant must
+  reproduce exactly the v16 painter band values the CPU path writes today.
+  Derive the viewport/depth mapping, then PROVE it with the stage depth
+  trace: submitted_z recorded per triangle must equal the CPU-path values for
+  the same frame. Zero tolerance on depth; the bands are the bug fix you just
+  landed.
+- X/Y drift: hardware transform may differ sub-pixel from CPU div64
+  projection. Presentation follows the 90% DS rule (NATIVE_RENDERER_PLAN
+  Shared Rules) — publish max per-vertex X/Y deviation and hold the captures
+  for Tyler's sign-off, exactly as the scaled-raw clip fix did. Fence-over-
+  floor layering across background/foreground phases must be visually intact
+  in the pause-orbit camera set.
+- Fallback: keep the CPU class-3 path compiled and selectable; any triangle
+  the mechanism cannot serve exactly falls back per-run, fail-closed.
+
+Stack gate and closeout: combined stage P50 <=500K on same-ROM A/B/A
+(8 frames, then 32/128 falsifier for keeps); exact 121/828 and all M3
+semantic counters; M4 fence classes zero on a one-minute natural CPU-on run
+with exactly one teardown; reserve >=128 KiB; screenshots + image analysis;
+one ledger row PER CUT including any reverts, plus a stack-total row. Then
+re-profile the whole mode-163 frame (update/audio/HUD/flush/VBlank/residual)
+and publish new draw/present/loop P50/P95. Land keeps as separate commits;
+snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
+```
+
+---
+
+## TASK 3 — Jump C v2: fighter compute cut, M2 416K -> <=336K (paste to codex)
+
+```
+/task Jump C v2 on the M2 fighter owner (Mode 8 production path). Baseline:
+combined Mario+Fox 416,576/416,704 P50/P95 (ledger M2-MODE8-ITCM-PLACEMENT
+A-arm). First gate per the board: >=80K combined saving AND <=336,576.
+
+Evidence framing: the ITCM placement experiment moved the same instructions
+to zero-wait memory and saved only 18,080 — the owner is compute-bound, not
+fetch-bound. The compute is the target: soft-float matrix construction and
+per-vertex work. Keep the pre-GX active-animlock/dynamic-matrix fail-closed
+guard (commit 6d6fba9685) exactly as is.
+
+Forbidden (proven dead): whole-owner FIFO copy/patch/DMA packet (+124K);
+per-joint GX hierarchy matrices (84 restores); DS hardware lighting (misses
+102/413 exact RGB15 cases); any new per-root interpreter; retrying ITCM
+placement ALONE. Combination rule from the board: the measured 18K ITCM
+placement may be re-added only combined with a compute cut whose pre-code
+bound plus 18K clears the 80K gate.
+
+PHASE 0 — bound before coding (R2). Publish the current matrix-construction
+and lighting bucket ticks on this baseline (prior measurements: matrix
+~72,896; lighting ~79,648 — re-measure, do not trust stale numbers). If
+matrix + eligible lighting residual + 18K ITCM cannot reach 80K, STOP and
+report; do not code a cut that cannot clear the gate.
+
+CUT 1 — fighter local-matrix construction in fixed point / source tables.
+- The per-joint locals are built in software float and quantized to 16.16 via
+  syMatrixF2LFixedW: syMatrixTraRotRpyRSca / syMatrixRotPyrR / syMatrixRotRpyR
+  / syMatrixTraRotPyrRSca at src/port/reloc_backend_renderer_dl.c:333,
+  504-519, 526, 544, 595, 764, 887; syMatrixF2LFixedW at :489, :589. ARM9
+  has no FPU; every f32 op is a library call.
+- If the builders reach libm sinf/cosf, route rotation through the BattleShip
+  source's own u16-angle sin/cos tables — read the source first and cite
+  file:line for the exact table and matrix functions; do not hand-author
+  trig. Where the source already quantizes to 16.16, do the arithmetic in
+  fixed point rather than float.
+- Exactness: the output contract is the composed 16.16 matrix the RSP-side
+  consumer sees. Gate: profile-2 matrix oracle bit-exact against the float
+  path, OR publish max per-element deviation and hold captures for Tyler's
+  sign-off (display math; sub-LSB drift is acceptable ONLY if gated and
+  signed off). Do not regress the fixed-W quantization boundary.
+- Keep the float path compiled as the shadow oracle during qualification.
+
+CUT 2 — fighter lighting: measure, then touch only if real residual exists.
+- The path already has prepared per-part light direction and a 2,096-byte
+  shade LUT cache (ndsRendererHardwareLitShadeColorLut nds_renderer.c:2041,
+  prepared_light_direction :2105, cache :2004-2010). If Phase 0 shows the
+  bucket is already a bare LUT lookup, record that and STOP — do not
+  manufacture a cut. Lighting stays CPU and source-exact.
+
+CUT 3 (only if time after 1+2) — extend the KRAW shared kernel to more
+fighter raw runs than it covers today (246 Mario + 234 Fox). Stacked, not a
+rewrite.
+
+Gates: combined fighter P50 <=336,576 with >=80K saved (ITCM combo counts
+only per the rule above); exact geometry, owner state, texture traffic,
+screenshot, reserve >=128 KiB; no fallback, no allocation, no ledger-on-only
+win; 32-root/49-epoch/67-run/626-triangle contract intact. Same-ROM A/B/A,
+8-frame falsifier then 32/128 for keeps. One ledger row per cut including
+reverts. Coordinate nds_renderer.c edits with the stage lane (one-writer).
+Snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
+```
+
+---
+
+## Sequencing and interactions
+
+- TASK 1 before TASK 2, hard: the depth fix changes class-3 semantics and the
+  painter bands that CUT 3-NEW must reproduce; its class census is TASK 2's
+  Phase 0 input.
+- TASK 3 is independent of TASK 1/2 surfaces except shared nds_renderer.c
+  edits — one-writer rule; run it after TASK 2 or in a coordinated lane.
+- The crowd-audio bake task (separate, already endorsed) threatens M4's
+  >=128 KiB reserve: audio-adjusted reserve is 163,312 and the full 6.9 s cue
+  adds ~38K. If TASK 2/3 qualification shows reserve below 131,072 after the
+  audio bake lands, the audio task trims (bake the audible ~6.18 s), not M4.
+- Against locked 30: present must reach <=~1,120K. TASK 2 fully landed is
+  roughly -145K to -195K from draw; the remainder must come from TASK 3.
+  Neither alone is sufficient.

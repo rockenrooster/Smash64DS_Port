@@ -4,9 +4,9 @@
 #include <nds/nds_startup.h>
 #include <string.h>
 
-/* Temporary iteration control: preserve the original CPU classification and
- * setup, but keep its per-frame decisions neutral until explicitly enabled. */
-volatile u32 gNdsBattlePlayableFoxCpuEnabled;
+/* The published ROM is source-normal. Automated fast iteration explicitly
+ * clears this at the pre-battle seam to skip CPU/countdown/timer work. */
+volatile u32 gNdsBattlePlayableFoxCpuEnabled = 1u;
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))

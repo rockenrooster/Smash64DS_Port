@@ -23,6 +23,9 @@ param(
     [switch]$FastIteration
 )
 $ErrorActionPreference = 'Stop'
+if ($FastIteration) {
+    $FoxCpuMode = 0
+}
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerShellExe = (Get-Process -Id $PID).Path
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -153,13 +156,18 @@ function Invoke-VisibleCaptureAssert {
     )
     $output = Join-Path $root "artifacts\visibility\${captureDate}_${Stem}_${captureStamp}.png"
     $nextOutput = Join-Path $root "artifacts\visibility\${captureDate}_${Stem}_${captureStamp}_next.png"
-    $exactCaptureArgs = @{}
+    $captureRuntimeArgs = @{}
+    if ($FastIteration) {
+        $captureRuntimeArgs.Gdb = $Gdb
+        $captureRuntimeArgs.GdbPort = $selectedGdbPort
+        $captureRuntimeArgs.FoxCpuMode = 0
+    }
     if ($ExactCutGFrames) {
-        $exactCaptureArgs.Gdb = $Gdb
-        $exactCaptureArgs.GdbPort = $selectedGdbPort
-        $exactCaptureArgs.ExactFirstFrame = $FastCaptureFirstFrame
-        $exactCaptureArgs.ExactSecondFrame = $FastCaptureSecondFrame
-        $exactCaptureArgs.FoxCpuMode = $FoxCpuMode
+        $captureRuntimeArgs.Gdb = $Gdb
+        $captureRuntimeArgs.GdbPort = $selectedGdbPort
+        $captureRuntimeArgs.ExactFirstFrame = $FastCaptureFirstFrame
+        $captureRuntimeArgs.ExactSecondFrame = $FastCaptureSecondFrame
+        $captureRuntimeArgs.FoxCpuMode = $FoxCpuMode
     }
     & (Join-Path $PSScriptRoot 'capture-melonds.ps1') `
         -MelonDS $captureMelonDS `
@@ -171,7 +179,7 @@ function Invoke-VisibleCaptureAssert {
         -SecondDelaySeconds $ScreenshotSecondDelaySeconds `
         -SecondDelayMilliseconds $ScreenshotSecondDelayMilliseconds `
         -DelaySeconds $Delay `
-        @exactCaptureArgs
+        @captureRuntimeArgs
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
@@ -295,13 +303,11 @@ if (-not $SkipScreenshot) {
     # visual gate fail merely by leaving its historical fixed crops.
     if ($FastIteration) {
         Invoke-VisibleCaptureAssert -Rom $battleRom `
-            -Stem ("canonical_fast_frame{0}-{1}" -f
-                $FastCaptureFirstFrame, $FastCaptureSecondFrame) `
+            -Stem 'canonical_fast' `
             -Delay $earlyScreenshotDelaySeconds `
             -MinDetailFraction $MinScreenshotDetailFraction `
             -RequireTextureDetail `
-            -PublishStableCapture `
-            -ExactCutGFrames
+            -PublishStableCapture
     } else {
         Invoke-VisibleCaptureAssert -Rom $battleRom `
             -Stem 'iter4_canonical_early' `

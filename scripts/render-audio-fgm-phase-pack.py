@@ -26,7 +26,11 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_RESIDENT_BYTES = 64 * 1024
+MAX_RESIDENT_BYTES = 96 * 1024
+PUBLIC_EXCITED_ID = 626
+PUBLIC_EXCITED_SAMPLE_COUNT = 104204
+PUBLIC_EXCITED_RAMP_SAMPLES = 184
+PUBLIC_EXCITED_MIXER_MINIMUM = 1
 PUBLIC_EXCITED_IMA_PREDICTOR = -4553
 PUBLIC_EXCITED_IMA_INDEX = 65
 PUBLIC_EXCITED_GUARD_NIBBLES = (8, 9)
@@ -50,6 +54,7 @@ SELECTED = (
         "wave_length": 15876,
         "loop_start": 1,
         "loop_end": 28215,
+        "expected_retained_samples": PUBLIC_EXCITED_SAMPLE_COUNT,
     },
     {
         "id": 470,
@@ -65,6 +70,7 @@ SELECTED = (
         "wave_length": 6328,
         "loop_start": 0,
         "loop_end": 0,
+        "expected_retained_samples": 9109,
     },
     {
         "id": 469,
@@ -80,6 +86,7 @@ SELECTED = (
         "wave_length": 6454,
         "loop_start": 0,
         "loop_end": 0,
+        "expected_retained_samples": 9201,
     },
     {
         "id": 467,
@@ -95,6 +102,7 @@ SELECTED = (
         "wave_length": 6102,
         "loop_start": 0,
         "loop_end": 0,
+        "expected_retained_samples": 7821,
     },
     {
         "id": 490,
@@ -110,6 +118,7 @@ SELECTED = (
         "wave_length": 8910,
         "loop_start": 0,
         "loop_end": 0,
+        "expected_retained_samples": 13801,
     },
     {
         "id": 439,
@@ -127,6 +136,7 @@ SELECTED = (
         "wave_length": 5140,
         "loop_start": 0,
         "loop_end": 0,
+        "expected_retained_samples": 8838,
         "root_fork_programs": (),
         "root_program_sha256":
             "fe49ea59dc5b1286afefa3db0b6b71958ba1ff398b0558e3d959877000109914",
@@ -152,6 +162,7 @@ SELECTED = (
         "wave_length": 3762,
         "loop_start": 0,
         "loop_end": 0,
+        "expected_retained_samples": 6688,
         "root_fork_programs": (287,),
         "root_program_sha256":
             "64523939186fd3d63f5440b5ec78784dac4e10c76456ebaa75671e4bfd9a85c2",
@@ -176,6 +187,7 @@ SELECTED = (
         "wave_length": 5518,
         "loop_start": 0,
         "loop_end": 0,
+        "expected_retained_samples": 9808,
         "root_fork_programs": (),
         "root_program_sha256":
             "9ff31a2c34193eb957a4c9c258e07f6b901bd2c70102f6c0078a30d6b00fc3e4",
@@ -201,6 +213,7 @@ SELECTED = (
         "wave_length": 3762,
         "loop_start": 0,
         "loop_end": 0,
+        "expected_retained_samples": 6688,
         "root_fork_programs": (287,),
         "root_program_sha256":
             "64523939186fd3d63f5440b5ec78784dac4e10c76456ebaa75671e4bfd9a85c2",
@@ -226,6 +239,7 @@ SELECTED = (
         "wave_length": 14220,
         "loop_start": 20868,
         "loop_end": 25137,
+        "expected_retained_samples": 14913,
         "root_fork_programs": (685,),
         "omitted_fork_programs": (685,),
         "root_program_sha256":
@@ -682,9 +696,19 @@ def audio_metrics(original: list[int], decoded: list[int]) -> dict:
 
 def ds_volume(ucd_volume: int, articulation_volume: int) -> int:
     """Map BattleShip's exact integer FGM gain product onto DS 0..127."""
-    ucd_player_volume = (ucd_volume * 127) >> 7
-    n64_volume = (articulation_volume * ucd_player_volume * 127) >> 7
+    n64_volume = source_volume_target(ucd_volume, articulation_volume)
     return min(127, (n64_volume * 127 + 16383) // 32767)
+
+
+def source_volume_target(ucd_volume: int, articulation_volume: int) -> int:
+    ucd_player_volume = (ucd_volume * 127) >> 7
+    return (articulation_volume * ucd_player_volume * 127) >> 7
+
+
+def source_quadratic_target(ucd_volume: int,
+                            articulation_volume: int) -> int:
+    target = source_volume_target(ucd_volume, articulation_volume)
+    return (target * target) >> 15
 
 
 def articulation_envelope(program: list[list], selector: dict) -> list[dict]:
@@ -697,6 +721,10 @@ def articulation_envelope(program: list[list], selector: dict) -> list[dict]:
                 points.append({
                     "tick": tick,
                     "articulation_volume": art_volume,
+                    "source_pre_mixer_target": source_volume_target(
+                        selector["ucd_volume"], art_volume),
+                    "source_quadratic_target": source_quadratic_target(
+                        selector["ucd_volume"], art_volume),
                     "ds_volume": ds_volume(selector["ucd_volume"],
                                            art_volume),
                 })
@@ -706,15 +734,235 @@ def articulation_envelope(program: list[list], selector: dict) -> list[dict]:
                 points.append({
                     "tick": tick,
                     "articulation_volume": 0,
+                    "source_pre_mixer_target": 0,
+                    "source_quadratic_target": 0,
                     "ds_volume": 0,
                 })
     if not points or points[0]["tick"] != 0:
         points.insert(0, {
             "tick": 0,
             "articulation_volume": 127,
+            "source_pre_mixer_target": source_volume_target(
+                selector["ucd_volume"], 127),
+            "source_quadratic_target": source_quadratic_target(
+                selector["ucd_volume"], 127),
             "ds_volume": ds_volume(selector["ucd_volume"], 127),
         })
     return points
+
+
+def round_div_signed(numerator: int, denominator: int) -> int:
+    if denominator <= 0:
+        raise ValueError("rounding denominator must be positive")
+    if numerator < 0:
+        return -((-numerator + denominator // 2) // denominator)
+    return (numerator + denominator // 2) // denominator
+
+
+def note_frequency_hz(articulation_pitch_cents: int,
+                      pitch_code: int) -> int:
+    note_pitch_cents = pitch_code * 100 - 1300
+    return round(FGM_OUTPUT_RATE * (2.0 ** (
+        (articulation_pitch_cents + note_pitch_cents) / 1200.0)))
+
+
+def trim_proof(selector: dict, program: list[list], pcm: list[int],
+               initial_frequency: int) -> tuple[list[int], dict]:
+    notes = [row for row in program if row[0] == "note"]
+    segments = []
+    schedule_samples = 0
+    for row in notes:
+        frequency = note_frequency_hz(
+            selector["articulation_pitch_cents"], int(row[1]))
+        duration_ticks = int(row[3])
+        numerator = duration_ticks * FGM_TIMER_MICROSECONDS * frequency
+        segment_samples = (numerator + 999999) // 1000000
+        schedule_samples += segment_samples
+        segments.append({
+            "pitch_code": int(row[1]),
+            "duration_ticks": duration_ticks,
+            "frequency_hz": frequency,
+            "ceiling_samples": segment_samples,
+        })
+    schedule_reach = schedule_samples + 1
+    current_numerator = (selector["duration_ticks"] *
+                         FGM_TIMER_MICROSECONDS * initial_frequency)
+    current_consumption = ((current_numerator + 999999) // 1000000) + 1
+    pitch_modulated = "articulation_pitch_modulation" in selector.get(
+        "fidelity_debt", ())
+    if pitch_modulated:
+        retained_samples = len(pcm)
+        strategy = "untrimmed_articulation_pitch_modulation"
+    else:
+        retained_samples = min(
+            len(pcm), max(schedule_reach, current_consumption))
+        strategy = (
+            "source_note_schedule_and_current_ds_consumption_"
+            "with_one_sample_ceiling")
+    if retained_samples != selector["expected_retained_samples"]:
+        raise ValueError(
+            f"FGM {selector['id']} retained-sample proof changed: "
+            f"{retained_samples}")
+    retained = pcm[:retained_samples]
+    return retained, {
+        "trim_strategy": strategy,
+        "trim_source_note_segments": segments,
+        "trim_source_schedule_samples_before_guard": schedule_samples,
+        "trim_source_schedule_reach_samples": schedule_reach,
+        "trim_current_ds_consumption_before_guard_samples":
+            current_consumption - 1,
+        "trim_current_ds_consumption_reach_samples": current_consumption,
+        "trim_one_sample_ceiling": 1,
+        "trim_proven_reachable_samples": retained_samples,
+        "trim_source_samples_removed": len(pcm) - retained_samples,
+        "trim_applied": retained_samples < len(pcm),
+        "trim_retained_source_prefix_pcm_sha256": ima_pcm_sha256(retained),
+        "trim_retained_prefix_exact": retained == pcm[:retained_samples],
+    }
+
+
+def public_excited_source_indices(selector: dict) -> list[int]:
+    loop_start = selector["loop_start"]
+    loop_end = selector["loop_end"]
+    loop_length = loop_end - loop_start
+    if loop_start != 1 or loop_length <= 0:
+        raise ValueError("PublicExcited source loop contract changed")
+    indices = [0]
+    while len(indices) < PUBLIC_EXCITED_SAMPLE_COUNT:
+        remaining = PUBLIC_EXCITED_SAMPLE_COUNT - len(indices)
+        indices.extend(range(loop_start, loop_start + min(loop_length,
+                                                          remaining)))
+    return indices
+
+
+def public_excited_gain_fraction(sample_index: int, frequency: int,
+                                 envelope: list[dict]) -> tuple[int, int]:
+    mixer_position_numerator = sample_index * FGM_OUTPUT_RATE
+    current_target = PUBLIC_EXCITED_MIXER_MINIMUM
+    for point in envelope:
+        command_position = (point["tick"] *
+                            PUBLIC_EXCITED_RAMP_SAMPLES * frequency)
+        if mixer_position_numerator < command_position:
+            break
+        target = point["source_quadratic_target"]
+        ramp_end = command_position + (
+            PUBLIC_EXCITED_RAMP_SAMPLES * frequency)
+        if mixer_position_numerator < ramp_end:
+            elapsed = mixer_position_numerator - command_position
+            denominator = PUBLIC_EXCITED_RAMP_SAMPLES * frequency
+            numerator = (current_target * denominator +
+                         (target - current_target) * elapsed)
+            return numerator, denominator
+        current_target = target
+    return current_target, 1
+
+
+def render_public_excited(pcm: list[int], selector: dict,
+                          frequency: int,
+                          envelope: list[dict]) -> tuple[list[int], dict]:
+    indices = public_excited_source_indices(selector)
+    maximum_target = max(point["source_quadratic_target"]
+                         for point in envelope)
+    hardware_volume = min(
+        127, (maximum_target * 127 + 16383) // 32767)
+    if hardware_volume == 0:
+        raise ValueError("PublicExcited hardware gain resolved to zero")
+    rendered = []
+    for sample_index, source_index in enumerate(indices):
+        gain_numerator, gain_denominator = public_excited_gain_fraction(
+            sample_index, frequency, envelope)
+        rendered_sample = round_div_signed(
+            int(pcm[source_index]) * gain_numerator * 127,
+            gain_denominator * 32767 * hardware_volume)
+        rendered.append(max(-32768, min(32767, rendered_sample)))
+
+    linear = []
+    for sample_index, source_index in enumerate(indices):
+        quadratic_numerator, quadratic_denominator = (
+            public_excited_gain_fraction(sample_index, frequency, envelope))
+        # The old defect used the pre-mixer target. Reconstruct the same ramp
+        # timing with those targets so the negative control differs only in law.
+        linear_envelope = [dict(point,
+                                source_quadratic_target=point[
+                                    "source_pre_mixer_target"])
+                           for point in envelope]
+        linear_numerator, linear_denominator = (
+            public_excited_gain_fraction(sample_index, frequency,
+                                         linear_envelope))
+        del quadratic_numerator, quadratic_denominator
+        linear.append(round_div_signed(
+            int(pcm[source_index]) * linear_numerator,
+            linear_denominator * 32767))
+
+    missing_preroll_indices = [
+        selector["loop_start"] +
+        (index % (selector["loop_end"] - selector["loop_start"]))
+        for index in range(PUBLIC_EXCITED_SAMPLE_COUNT)
+    ]
+    missing_preroll = []
+    for sample_index, source_index in enumerate(missing_preroll_indices):
+        gain_numerator, gain_denominator = public_excited_gain_fraction(
+            sample_index, frequency, envelope)
+        missing_preroll.append(round_div_signed(
+            int(pcm[source_index]) * gain_numerator * 127,
+            gain_denominator * 32767 * hardware_volume))
+
+    command_points = []
+    previous_target = PUBLIC_EXCITED_MIXER_MINIMUM
+    for point in envelope:
+        start_numerator = (point["tick"] *
+                           PUBLIC_EXCITED_RAMP_SAMPLES * frequency)
+        end_numerator = start_numerator + (
+            PUBLIC_EXCITED_RAMP_SAMPLES * frequency)
+        command_points.append({
+            "tick": point["tick"],
+            "start_sample_ceiling": ((start_numerator +
+                                       FGM_OUTPUT_RATE - 1) //
+                                      FGM_OUTPUT_RATE),
+            "end_sample_ceiling": ((end_numerator + FGM_OUTPUT_RATE - 1) //
+                                    FGM_OUTPUT_RATE),
+            "start_quadratic_target": previous_target,
+            "end_quadratic_target": point["source_quadratic_target"],
+        })
+        previous_target = point["source_quadratic_target"]
+    silent_tail_start = command_points[-1]["end_sample_ceiling"]
+    source_index_bytes = struct.pack(
+        f"<{len(indices)}I", *indices)
+    return rendered, {
+        "model": "source_loop_then_quadratic_n_micro_184_sample_ramps",
+        "sample_count": len(rendered),
+        "source_index_sha256": sha256(source_index_bytes),
+        "source_first_pass_samples": selector["loop_end"],
+        "source_loop_start": selector["loop_start"],
+        "source_loop_end": selector["loop_end"],
+        "source_loop_samples": selector["loop_end"] - selector["loop_start"],
+        "source_former_loop_boundary_starts": list(range(
+            selector["loop_end"], len(rendered),
+            selector["loop_end"] - selector["loop_start"])),
+        "source_pre_roll_present": indices[0] == 0,
+        "source_order_exact": all(
+            indices[index] == (0 if index == 0 else
+                               selector["loop_start"] +
+                               ((index - 1) % (selector["loop_end"] -
+                                               selector["loop_start"])))
+            for index in range(len(indices))),
+        "ramp_output_rate_hz": FGM_OUTPUT_RATE,
+        "ramp_samples": PUBLIC_EXCITED_RAMP_SAMPLES,
+        "ramp_microseconds": (PUBLIC_EXCITED_RAMP_SAMPLES * 1000000 //
+                              FGM_OUTPUT_RATE),
+        "command_points": command_points,
+        "maximum_quadratic_target": maximum_target,
+        "constant_hardware_volume": hardware_volume,
+        "constant_hardware_gain_numerator": hardware_volume,
+        "constant_hardware_gain_denominator": 127,
+        "silent_tail_start_sample": silent_tail_start,
+        "rendered_pcm_sha256": ima_pcm_sha256(rendered),
+        "linear_gain_negative_pcm_sha256": ima_pcm_sha256(linear),
+        "linear_gain_negative_rejected": linear != rendered,
+        "missing_preroll_negative_pcm_sha256": ima_pcm_sha256(
+            missing_preroll),
+        "missing_preroll_negative_rejected": missing_preroll != rendered,
+    }
 
 
 def build_pack(repo_root: Path) -> tuple[bytes, dict]:

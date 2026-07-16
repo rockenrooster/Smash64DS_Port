@@ -77,6 +77,7 @@ $realtimeText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle
 $verifyAllText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-all.ps1') -Raw
 $battleLoopText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
 $captureText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'capture-melonds.ps1') -Raw
+$ftComputerText = Get-Content -LiteralPath (Join-Path $root 'src\import\battleship_ftcomputer.c') -Raw
 $debugMelonText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'debug-melonds.ps1') -Raw
 $melonLibText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'lib\melonds.ps1') -Raw
 $publishedRomCheckPath = Join-Path $PSScriptRoot 'check-published-roms.ps1'
@@ -92,6 +93,11 @@ if (($devFastText -notmatch "'-FastIteration'") -or
 if (($realtimeText -notmatch 'check-published-roms\.ps1') -or
     ($realtimeText -notmatch '\[switch\]\$FastIteration')) {
     Fail-Check 'published realtime verifier is missing fast iteration or the ROM contract'
+}
+if (($ftComputerText -notmatch 'gNdsBattlePlayableFoxCpuEnabled\s*=\s*1u') -or
+    ($realtimeText -notmatch '(?s)if \(\$FastIteration\).*?\$FoxCpuMode\s*=\s*0') -or
+    ($captureText -notmatch '(?s)tbreak scVSBattleStartBattle.*?gNdsBattlePlayableFoxCpuEnabled')) {
+    Fail-Check 'published battle default must retain source countdown/CPU while fast iteration disables both before battle'
 }
 if (($realtimeText -notmatch 'Resolve-MelonDSRunnerSlot') -or
     ($realtimeText -notmatch '-MelonDS\s+\$captureMelonDS') -or

@@ -87,6 +87,13 @@ foreach ($entry in $metadata.entries) {
 }
 
 $publicExcited = $metadata.entries | Where-Object { [int]$_.id -eq 626 }
+if (($publicExcited.ds_loop_strategy -ne 'finite_source_loop_aot') -or
+    ([int]$publicExcited.ds_sample_count -ne 104204) -or
+    ([int]$publicExcited.ds_loop_point_words -ne 0) -or
+    ([int]$publicExcited.packed_envelope_count -ne 0)) {
+    throw ('PublicExcited still uses a hardware loop or runtime envelope ' +
+        'instead of the finite 104204-sample AOT cue.')
+}
 if ($publicExcited.ds_loop_strategy -ne
     'state_word_then_source_loop_nibbles_plus_alignment_guards') {
     throw 'PublicExcited DS loop-body/alignment strategy changed.'
