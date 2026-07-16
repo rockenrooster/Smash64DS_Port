@@ -21212,3 +21212,11 @@ remains skipped for the requested fast iteration cadence.
 - Selecting raw/cross and textured/untextured once per run instead of once per
   corner moves combined Mario/Fox time from 398,048 to 397,248 ticks. The native
   top-screen image is byte-identical and ITCM remains within capacity.
+
+## 2026-07-16 - Batched fighter production accounting
+
+- Mode 8 now accumulates the unchanged raw/cross triangle and reuse counters
+  during each complete fighter traversal, then applies each accounting class
+  once. Its fail-closed exit still records partial work before returning.
+- Combined Mario/Fox time falls 397,248 -> 395,264 ticks with a byte-identical
+  top screen, exact owner/class counters, and 25,972 / 32,768 bytes of ITCM.

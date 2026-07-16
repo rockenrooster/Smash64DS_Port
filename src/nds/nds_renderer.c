@@ -14144,11 +14144,9 @@ ndsRendererNativeEmitProductionRun(
 }
 static inline void ndsRendererNativeAccountGXCrossTriangles(
     NDSRendererStats *stats,
-    u32 triangle_count)
+    u32 triangle_count,
+    u32 reuse_count)
 {
-    u32 reuse_count = (triangle_count != 0u) ?
-        triangle_count - 1u : 0u;
-
     sNdsRendererHardwareSubmitClassCounts[
         NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX] += triangle_count;
     sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count += triangle_count;
@@ -14180,7 +14178,11 @@ static s32 ndsRendererNativeSubmitProductionRun(
     const u8 *binding_palette_slots,
     const NDSRendererConfig *config,
     NDSRendererStats *stats,
-    NDSRendererTraversalState *state)
+    NDSRendererTraversalState *state,
+    u32 *raw_triangle_count,
+    u32 *raw_reuse_count,
+    u32 *cross_triangle_count,
+    u32 *cross_reuse_count)
 {
     u32 run_index;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -14260,13 +14262,13 @@ static s32 ndsRendererNativeSubmitProductionRun(
     stats->triangle_count += run->triangle_count;
     if (run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT)
     {
-        ndsRendererFastAccountRawTriangles(
-            stats, run->triangle_count, run->triangle_count - 1u);
+        *raw_triangle_count += run->triangle_count;
+        *raw_reuse_count += run->triangle_count - 1u;
     }
     else if (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
     {
-        ndsRendererNativeAccountGXCrossTriangles(
-            stats, run->triangle_count);
+        *cross_triangle_count += run->triangle_count;
+        *cross_reuse_count += run->triangle_count - 1u;
     }
     else
     {
@@ -15558,7 +15560,8 @@ static void ndsRendererNativeCommitHierarchyRoot(
             else
             {
                 ndsRendererNativeAccountGXCrossTriangles(
-                    stats, run->triangle_count);
+                    stats, run->triangle_count,
+                    run->triangle_count - 1u);
             }
             (*run_count)++;
             *triangle_count += run->triangle_count;
@@ -16888,6 +16891,10 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     u32 root_index;
     u32 native_run_count = 0u;
     u32 native_triangle_count = 0u;
+    u32 raw_triangle_count = 0u;
+    u32 raw_reuse_count = 0u;
+    u32 cross_triangle_count = 0u;
+    u32 cross_reuse_count = 0u;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     volatile NDSRendererOwnerProfile *m2_owner;
@@ -17042,8 +17049,20 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                         sNdsNativeFighterEpochDirectPolicy[epoch_index],
                         palette_slot, binding_palette_slots,
                         input->config,
-                        stats, state) == FALSE)
+                        stats, state,
+                        &raw_triangle_count, &raw_reuse_count,
+                        &cross_triangle_count, &cross_reuse_count) == FALSE)
                 {
+                    if (raw_triangle_count != 0u)
+                    {
+                        ndsRendererFastAccountRawTriangles(
+                            stats, raw_triangle_count, raw_reuse_count);
+                    }
+                    if (cross_triangle_count != 0u)
+                    {
+                        ndsRendererNativeAccountGXCrossTriangles(
+                            stats, cross_triangle_count, cross_reuse_count);
+                    }
                     ndsRendererHardwareEndBatch();
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -17064,6 +17083,16 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             root->tail_sync_count,
             asset_base, stats, state);
         stats->end_command_count++;
+    }
+    if (raw_triangle_count != 0u)
+    {
+        ndsRendererFastAccountRawTriangles(
+            stats, raw_triangle_count, raw_reuse_count);
+    }
+    if (cross_triangle_count != 0u)
+    {
+        ndsRendererNativeAccountGXCrossTriangles(
+            stats, cross_triangle_count, cross_reuse_count);
     }
     ndsRendererHardwareEndBatch();
     sNdsRendererFastRunCount += native_run_count;

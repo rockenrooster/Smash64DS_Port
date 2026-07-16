@@ -2862,3 +2862,33 @@ EVIDENCE:
 DECISION: KEEP
   Accumulate the exact gain under the user-approved no-discard policy.
 ```
+
+## 2026-07-16 - M2 production-owner accounting batch
+
+```text
+IDEA ID: M2-PRODUCTION-ACCOUNT-BATCH-20260716
+TREATMENT:
+  Preserve every raw/cross triangle and reuse increment, but accumulate the
+  complete Mode-8 production-owner counts during traversal and apply each
+  accounting class once. The fail-closed exit flushes partial totals before
+  returning, so rejected-owner diagnostics retain their prior meaning.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 8, static 1, hybrid OAM 1, Fox/countdown iteration
+  switch off, frames 600..607. A/B ROM SHA-256 values are
+  C808F40EB1F7240DF07B6B4867ED357F0FDD1F1DF4BB7E7554B15C0B49F5819B /
+  B7E6A95300AA38431CA4C3444CCA2983CB62E1BBB265C04E359269D4463647B0.
+RESULT P50/P95:
+  Combined Mario+Fox 397,248/397,312 -> 395,264/395,328, saving 1,984/1,984.
+  Draw 1,025,152/1,025,216 -> 1,022,944/1,022,976, saving 2,208/2,240.
+CORRECTNESS / VISUALS:
+  Exact 70/686 and 60/320/306/29/0/0, zero fallback/texture fence, and zero
+  conservation error hold. The deterministic native 256x192 top-screen compare
+  is 0/49,152 changed pixels. ITCM is 25,972/32,768.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m2-raw-emitter-specialize-b.json
+  artifacts/performance/2026-07-16_m2-batched-account-b.json
+  artifacts/visibility/2026-07-16_m2-raw-emitter-specialize-b.png
+  artifacts/visibility/2026-07-16_m2-batched-account-b.png
+DECISION: KEEP
+  Accumulate the exact gain and continue against production emission.
+```

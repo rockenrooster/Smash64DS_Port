@@ -43,7 +43,8 @@ The retained native-fighter ITCM placement moves combined fighter P50/P95 from
 419,328/419,392 to 402,560/402,624. Exact power-of-two quantization in the
 source-backed local matrix seam then moves it to 398,048/398,144. Hoisting the
 raw/textured decisions out of the complete 582-triangle production corner loop
-moves it to 397,248/397,312. ITCM is 25,512/32,768; the exact 70/686 fast owner
+moves it to 397,248/397,312. Aggregating raw/cross accounting once per owner
+traversal moves it to 395,264/395,328. ITCM is 25,972/32,768; the exact 70/686 fast owner
 and 60/320/306/29/0/0 partition stay unchanged. Refreshed Phase 0 measures local matrices at 53,024/53,120 and
 lighting at 67,808/68,032. Lighting is already the exact prepared direction,
 signed normal dot, and LUT lookup, so continue against production emit/account
