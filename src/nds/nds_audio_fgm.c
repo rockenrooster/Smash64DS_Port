@@ -122,9 +122,9 @@ static u32 sNdsAudioFgmArm7AckSequence;
 #endif
 static u16 sNdsAudioFgmInstanceToken;
 
-_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 496u,
+_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 688u,
                "FGM pack header layout changed");
-_Static_assert(NDS_AUDIO_FGM_PACK_BYTES <= (104u * 1024u),
+_Static_assert(NDS_AUDIO_FGM_PACK_BYTES <= (160u * 1024u),
                "FGM pack exceeds its resident-memory gate");
 _Static_assert(offsetof(NDSAudioFgmHandle, effect) == 0u,
                "BattleShip audio handle must be the backend handle prefix");
@@ -173,6 +173,12 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMMarioLanding:
     case nSYAudioVoiceMarioSmash1:
     case nSYAudioVoiceMarioJump:
+    case nSYAudioFGMLightSwingM:
+    case nSYAudioFGMLightSwingS:
+    case nSYAudioFGMFoxAttackAirLw:
+    case nSYAudioFGMMarioSpecialN:
+    case nSYAudioFGMMarioUnkSwing1:
+    case nSYAudioFGMMarioUnkSwing2:
         return TRUE;
     default:
         return FALSE;
@@ -399,36 +405,49 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
         nSYAudioFGMDeadExplodeL,
         nSYAudioFGMMarioLanding,
         nSYAudioVoiceMarioSmash1,
-        nSYAudioVoiceMarioJump
+        nSYAudioVoiceMarioJump,
+        nSYAudioFGMLightSwingM,
+        nSYAudioFGMLightSwingS,
+        nSYAudioFGMFoxAttackAirLw,
+        nSYAudioFGMMarioSpecialN,
+        nSYAudioFGMMarioUnkSwing1,
+        nSYAudioFGMMarioUnkSwing2
     };
     static const u16 expected_frequencies[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         15102u, 16000u, 16000u, 16000u, 16000u, 16000u, 16280u,
         16009u, 16951u, 16000u, 16951u, 8476u,
-        35919u, 15111u, 15455u
+        35919u, 15111u, 15455u,
+        39170u, 32938u, 36971u, 32000u, 32938u, 36971u
     };
     static const u16 expected_durations[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         1200u, 99u, 100u, 85u, 150u, 46u, 236u,
-        96u, 53u, 120u, 53u, 300u, 3u, 96u, 96u
+        96u, 53u, 120u, 53u, 300u, 3u, 96u, 96u,
+        35u, 35u, 25u, 15u, 27u, 25u
     };
     static const u8 expected_volumes[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         92u, 106u, 106u, 111u, 124u, 108u, 86u,
-        95u, 30u, 114u, 30u, 124u, 21u, 95u, 84u
+        95u, 30u, 114u, 30u, 124u, 21u, 95u, 84u,
+        87u, 73u, 73u, 121u, 73u, 73u
     };
     static const u16 expected_sounds[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         320u, 208u, 209u, 210u, 211u, 105u, 174u,
-        183u, 28u, 104u, 28u, 0u, 1u, 173u, 179u
+        183u, 28u, 104u, 28u, 0u, 1u, 173u, 179u,
+        71u, 71u, 71u, 19u, 71u, 71u
     };
     static const u32 expected_data_bytes[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         52108u, 4560u, 4604u, 3916u, 6904u, 844u, 8620u,
-        4424u, 3348u, 4908u, 3348u, 7460u, 316u, 1828u, 1676u
+        4424u, 3348u, 4908u, 3348u, 7460u, 316u, 1828u, 1676u,
+        2596u, 2596u, 2596u, 1092u, 2596u, 2596u
     };
     static const u32 expected_sample_counts[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         104204u, 9109u, 9201u, 7821u, 13801u, 1680u, 17232u,
-        8838u, 6688u, 9808u, 6688u, 14913u, 621u, 3648u, 3344u
+        8838u, 6688u, 9808u, 6688u, 14913u, 621u, 3648u, 3344u,
+        5184u, 5184u, 5184u, 2176u, 5184u, 5184u
     };
     static const u16 expected_envelope_counts[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         0u, 0u, 0u, 0u, 0u, 0u, 1u, 0u, 3u, 5u, 3u, 13u,
-        2u, 0u, 3u
+        2u, 0u, 3u,
+        0u, 0u, 0u, 0u, 0u, 0u
     };
     NDSAudioFgmPackEntry *entry = &sNdsAudioFgmEntries[index];
     u32 expected_flags = 0u;

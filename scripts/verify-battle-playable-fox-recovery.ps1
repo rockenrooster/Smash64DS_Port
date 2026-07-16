@@ -331,7 +331,8 @@ try {
         ForEach-Object { [int]$_.Groups[1].Value })
     $fgmIDs = @($fgmEvents | Sort-Object -Unique)
     $includedIDs = @(626, 470, 469, 467, 490, 372, 430,
-        439, 292, 370, 289, 154, 77, 429, 435)
+        439, 292, 370, 289, 154, 77, 429, 435,
+        42, 43, 190, 215, 218, 219)
     $voiceIDs = @(372, 430)
     $supportedEvents = @($fgmEvents | Where-Object { $_ -in $includedIDs })
     $unsupportedEvents = @($fgmEvents | Where-Object { $_ -notin $includedIDs })
@@ -397,7 +398,7 @@ try {
         $gdbStdout
     Assert-Condition ($audioState.Success -and
         $asv[0] -eq 0x46474d31 -and $asv[1] -eq 1 -and
-        $asv[2] -eq 106132 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
+        $asv[2] -eq 110012 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
         $asv[5] -eq 0 -and $asv[6] -ne 0) `
         'Fighter-voice pack load/channel state is invalid.' $gdbStdout
     Assert-Condition ($bgm.Success -and

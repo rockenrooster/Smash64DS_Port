@@ -27,13 +27,14 @@ if ($LASTEXITCODE -ne 0) {
 
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
 $expectedIDs = @(626, 470, 469, 467, 490, 372, 430,
-    439, 292, 370, 289, 154, 77, 429, 435)
+    439, 292, 370, 289, 154, 77, 429, 435,
+    42, 43, 190, 215, 218, 219)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
 }
-if (([int64]$metadata.resident_bytes -ne 106132) -or
-    ([int64]$metadata.resident_limit_bytes -ne 106496)) {
+if (([int64]$metadata.resident_bytes -ne 110012) -or
+    ([int64]$metadata.resident_limit_bytes -ne 163840)) {
     throw "FGM pack resident size changed: $($metadata.resident_bytes)"
 }
 
@@ -49,6 +50,9 @@ $voiceIDs = @($metadata.entries | Where-Object {
 $marioIDs = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'mario'
     } | ForEach-Object { [int]$_.id })
+$attackIDs = @($metadata.entries | Where-Object {
+        $_.entry_kind -eq 'attack'
+    } | ForEach-Object { [int]$_.id })
 if (($phaseIDs -join ',') -ne '626,470,469,467,490') {
     throw "Unexpected FGM phase subset: $($phaseIDs -join ',')"
 }
@@ -61,8 +65,11 @@ if (($voiceIDs -join ',') -ne '372,430,429,435') {
 if (($marioIDs -join ',') -ne '77') {
     throw "Unexpected Mario movement subset: $($marioIDs -join ',')"
 }
-if (([int]$metadata.unique_sample_count -ne 14) -or
-    ([int]$metadata.unique_sample_bytes -ne 105516)) {
+if (($attackIDs -join ',') -ne '42,43,190,215,218,219') {
+    throw "Unexpected attack/activation subset: $($attackIDs -join ',')"
+}
+if (([int]$metadata.unique_sample_count -ne 16) -or
+    ([int]$metadata.unique_sample_bytes -ne 109204)) {
     throw 'Regular-KO sample deduplication fixture changed.'
 }
 if (([int]$metadata.format_version -ne 3) -or
@@ -71,13 +78,13 @@ if (([int]$metadata.format_version -ne 3) -or
     ([int]$metadata.envelope_point_bytes -ne 4)) {
     throw 'Unexpected FGM pack entry/envelope format.'
 }
-if (($metadata.mapping_sha256_lo -ne '0x1978e9ec') -or
+if (($metadata.mapping_sha256_lo -ne '0x0ad15661') -or
     ($metadata.pack_sha256 -ne
-        '4a39575ab2e290abfcb1be178ab9b4347d12c7e0b81966c25ab73dac5a3bac77')) {
+        'ac08a4924983374bcc57f5edfd3f9c49a40acca2238e1aff175f396d82f884af')) {
     throw 'FGM pack mapping or binary hash changed.'
 }
 if (($metadata.non_loop_sample_sha256 -ne
-        '4651e997557953daae5c69f25628a4da6f782f62e9b35383ff27c62f9934e7d8') -or
+        '2c018e1088a5f216555b637dd6febb4b53a597a30a0c1720b3779c90513ec9df') -or
     ($metadata.non_loop_envelope_sha256 -ne
         '78bea70f97480a6c74f99244a66a018450380a882a87ebdfe2391586df69c55f')) {
     throw 'Non-loop FGM sample or packed-envelope bytes changed.'
@@ -95,6 +102,7 @@ foreach ($entry in $metadata.entries) {
         throw "FGM $($entry.id) IMA SNR fell below 20 dB: $($entry.ima_snr_db)"
     }
     if (([int64]$entry.ds_frequency_hz -le 0) -or
+        ([int64]$entry.ds_frequency_hz -gt [uint16]::MaxValue) -or
         ([int64]$entry.source_duration_microseconds -le 0)) {
         throw "FGM $($entry.id) has invalid runtime timing metadata."
     }
@@ -294,6 +302,57 @@ foreach ($id in 429, 430, 435) {
         throw "Mario voice $id no longer records pitch-automation debt."
     }
 }
+$expectedAttackSounds = @(
+    @{ ID = 42; Sound = 71; Frequency = 39170; Duration = 35;
+        Samples = 5184; Volume = 87; Debt = $false; Hash =
+        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' },
+    @{ ID = 43; Sound = 71; Frequency = 32938; Duration = 35;
+        Samples = 5184; Volume = 73; Debt = $false; Hash =
+        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' },
+    @{ ID = 190; Sound = 71; Frequency = 36971; Duration = 25;
+        Samples = 5184; Volume = 73; Debt = $true; Hash =
+        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' },
+    @{ ID = 215; Sound = 19; Frequency = 32000; Duration = 15;
+        Samples = 2176; Volume = 121; Debt = $false; Hash =
+        '7ed82ac09a350207bb4107b598447567516fd03ad40324953d041507a234ef78' },
+    @{ ID = 218; Sound = 71; Frequency = 32938; Duration = 27;
+        Samples = 5184; Volume = 73; Debt = $true; Hash =
+        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' },
+    @{ ID = 219; Sound = 71; Frequency = 36971; Duration = 25;
+        Samples = 5184; Volume = 73; Debt = $true; Hash =
+        '32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1' }
+)
+foreach ($expected in $expectedAttackSounds) {
+    $entry = @($metadata.entries | Where-Object {
+            [int]$_.id -eq $expected.ID
+        })
+    $hasPitchDebt = $entry.Count -eq 1 -and
+        (@($entry[0].runtime_fidelity_debt) -contains
+            'ucd_pitch_automation')
+    if (($entry.Count -ne 1) -or
+        ([int]$entry[0].source_sound_index -ne $expected.Sound) -or
+        ([int]$entry[0].ds_frequency_hz -ne $expected.Frequency) -or
+        ([int]$entry[0].source_duration_ticks -ne $expected.Duration) -or
+        ([int]$entry[0].ds_sample_count -ne $expected.Samples) -or
+        ([int]$entry[0].ds_volume -ne $expected.Volume) -or
+        ([int]$entry[0].packed_envelope_count -ne 0) -or
+        ([int]$entry[0].ds_loop_point_words -ne 0) -or
+        ($entry[0].ima_adpcm_sha256 -ne $expected.Hash) -or
+        ($hasPitchDebt -ne $expected.Debt)) {
+        throw "Attack/activation FGM $($expected.ID) source fixture changed."
+    }
+}
+$swingEntries = @($metadata.entries | Where-Object {
+        [int]$_.id -in 42, 43, 190, 218, 219
+    })
+if (($swingEntries.Count -ne 5) -or
+    (@($swingEntries.pack_data_offset | Sort-Object -Unique).Count -ne 1) -or
+    [bool]$swingEntries[0].sample_body_deduplicated -or
+    (@($swingEntries | Select-Object -Skip 1 | Where-Object {
+            -not [bool]$_.sample_body_deduplicated
+        }).Count -ne 0)) {
+    throw 'Shared light-swing sample-body deduplication changed.'
+}
 
 $expectedTrimProofs = @(
     @{ ID = 470; Source = 11248; Schedule = 9109; Current = 9109;
@@ -323,6 +382,24 @@ $expectedTrimProofs = @(
     @{ ID = 435; Source = 3344; Schedule = 7969; Current = 8533;
         Retained = 3344; Removed = 0; Prefix =
         '96463bf05640fc47c336d50ec47f18c510d69d878c0ea1ec52a19c346f949e9c' },
+    @{ ID = 42; Source = 5184; Schedule = 7885; Current = 7884;
+        Retained = 5184; Removed = 0; Prefix =
+        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
+    @{ ID = 43; Source = 5184; Schedule = 6630; Current = 6630;
+        Retained = 5184; Removed = 0; Prefix =
+        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
+    @{ ID = 190; Source = 5184; Schedule = 5839; Current = 5316;
+        Retained = 5184; Removed = 0; Prefix =
+        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
+    @{ ID = 215; Source = 2176; Schedule = 2761; Current = 2761;
+        Retained = 2176; Removed = 0; Prefix =
+        '8f6664be97363bc3e73916e0c177597ff99657c7bcece9632606109829952c68' },
+    @{ ID = 218; Source = 5184; Schedule = 6089; Current = 5115;
+        Retained = 5184; Removed = 0; Prefix =
+        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
+    @{ ID = 219; Source = 5184; Schedule = 5839; Current = 5316;
+        Retained = 5184; Removed = 0; Prefix =
+        'a6a1dc0e7cce3e5d63c1740a8951f3d6119b9becba0a1120a07a000daf4d268f' },
     @{ ID = 439; Source = 9136; Schedule = 8634; Current = 8838;
         Retained = 8838; Removed = 298; Prefix =
         '21b2a92339ebff5a17bbd1c733d37e93f415e8d9ccd65d8d080c7b9cb68687ec' },
@@ -430,11 +507,12 @@ if (-not ($koDebt -contains 'ucd_pitch_automation') -or
 
 Write-Output (
     ('Audio FGM pack passed: {0} exact IDs ({1} fighter voices, ' +
-    '{2} regular-KO), {3} resident bytes, {4} unique samples, ' +
-    'mapping {5}, pack {6}.') -f
+    '{2} regular-KO, {3} attack/activation), {4} resident bytes, ' +
+    '{5} unique samples, mapping {6}, pack {7}.') -f
     $actualIDs.Count,
     $voiceIDs.Count,
     $koIDs.Count,
+    $attackIDs.Count,
     $metadata.resident_bytes,
     $metadata.unique_sample_count,
     $metadata.mapping_sha256_lo,

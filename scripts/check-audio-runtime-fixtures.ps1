@@ -217,6 +217,36 @@ foreach ($unexpected in @(
     }
 }
 
+$attackMotionFixtures = @(
+    @{
+        Path = 'src/relocData/202_MarioMainMotion.c'
+        Tokens = @(
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingM)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingS)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMMarioUnkSwing2)',
+            'ftMotionPlayFGM(nSYAudioFGMMarioSpecialN)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMMarioUnkSwing1)'
+        )
+    },
+    @{
+        Path = 'src/relocData/208_FoxMainMotion.c'
+        Tokens = @(
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingM)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingS)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMFoxAttackAirLw)'
+        )
+    }
+)
+foreach ($fixture in $attackMotionFixtures) {
+    $source = Get-Content -LiteralPath (
+        Join-Path $BattleShipRoot $fixture.Path) -Raw
+    foreach ($token in $fixture.Tokens) {
+        if (-not $source.Contains($token)) {
+            throw "BattleShip attack motion fixture is missing: $token"
+        }
+    }
+}
+
 $metadataPath = Join-Path $root 'assets/audio/fgm_phase_pack_ima.json'
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
 $koIDs = @($metadata.entries | Where-Object {
@@ -232,6 +262,11 @@ Assert-EqualList -Label 'Fox regular-KO source sequence' `
     -Actual $foxRegularKo -Expected ([int[]]@(370, 289, 154))
 Assert-EqualList -Label 'Resident regular-KO ID set' -Actual $koIDs `
     -Expected ([int[]]@(439, 292, 370, 289, 154))
+$attackIDs = @($metadata.entries | Where-Object {
+        $_.entry_kind -eq 'attack'
+    } | ForEach-Object { [int]$_.id })
+Assert-EqualList -Label 'Resident attack/activation ID set' `
+    -Actual $attackIDs -Expected ([int[]]@(42, 43, 190, 215, 218, 219))
 foreach ($entry in $metadata.entries | Where-Object {
         $_.entry_kind -eq 'ko'
     }) {
@@ -363,7 +398,8 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
     'mixed-u16 words each, 3 Mario motion audio triggers, exact Mario/Fox ' +
-    'regular-KO call order, no ' +
-    'rebirth-audio claim, target layouts, source IDs, persisted DS loop ' +
-    'point/length, and recyclable BattleShip FGM tokens.'
+    'regular-KO call order, no rebirth-audio claim, source attack-motion ' +
+    'callsites, target layouts, ' +
+    'source IDs, persisted DS loop point/length, and recyclable BattleShip ' +
+    'FGM tokens.'
 )

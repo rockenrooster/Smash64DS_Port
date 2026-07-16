@@ -26,7 +26,7 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_RESIDENT_BYTES = 104 * 1024
+MAX_RESIDENT_BYTES = 160 * 1024
 PUBLIC_EXCITED_ID = 626
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
 PUBLIC_EXCITED_RAMP_SAMPLES = 184
@@ -380,6 +380,159 @@ SELECTED = (
             "820e3ad7c1f3c07e61e0a3047e722314a89aac24ca934fd3c3dae8af1ef3e866",
         "articulation_program_sha256":
             "4fc9031eda94767f7e8f989a5cf9bf02f5ac1091519ac817bd22da87e6fc34d2",
+        "fidelity_debt": ("ucd_pitch_automation",),
+    },
+    {
+        "id": 42,
+        "name": "nSYAudioFGMLightSwingM",
+        "kind": "attack",
+        "articulation": 174,
+        "sound": 71,
+        "notes": ((11, 7, 15), (11, 7, 20)),
+        "duration_ticks": 35,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 691264,
+        "wave_length": 2916,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 5184,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "85fe213b07b57a985e1083326f460eb79543547f3481362555daa4341c8995a1",
+        "render_program_sha256":
+            "85fe213b07b57a985e1083326f460eb79543547f3481362555daa4341c8995a1",
+        "articulation_program_sha256":
+            "7a17a55c4ba3daec625c6334dcb9189080b82bfea648864c1042b1d861f4e69f",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 43,
+        "name": "nSYAudioFGMLightSwingS",
+        "kind": "attack",
+        "articulation": 174,
+        "sound": 71,
+        "notes": ((8, 7, 15), (8, 7, 20)),
+        "duration_ticks": 35,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 691264,
+        "wave_length": 2916,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 5184,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "56f323a51d99829631b90e5f4cec63a30068e017f22ec39ea135b3e07dae333e",
+        "render_program_sha256":
+            "56f323a51d99829631b90e5f4cec63a30068e017f22ec39ea135b3e07dae333e",
+        "articulation_program_sha256":
+            "7a17a55c4ba3daec625c6334dcb9189080b82bfea648864c1042b1d861f4e69f",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 190,
+        "name": "nSYAudioFGMFoxAttackAirLw",
+        "kind": "attack",
+        "articulation": 174,
+        "sound": 71,
+        "notes": ((10, 7, 3), (15, 7, 4), (20, 7, 4),
+                  (12, 7, 4), (5, 7, 10)),
+        "duration_ticks": 25,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 691264,
+        "wave_length": 2916,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 5184,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "84a6c9a138201870077c8f6d2461040e94494e28082790285687d58a9b27df40",
+        "render_program_sha256":
+            "84a6c9a138201870077c8f6d2461040e94494e28082790285687d58a9b27df40",
+        "articulation_program_sha256":
+            "7a17a55c4ba3daec625c6334dcb9189080b82bfea648864c1042b1d861f4e69f",
+        "fidelity_debt": ("ucd_pitch_automation",),
+    },
+    {
+        "id": 215,
+        "name": "nSYAudioFGMMarioSpecialN",
+        "kind": "attack",
+        "articulation": 42,
+        "sound": 19,
+        "notes": ((13, 7, 5), (13, 7, 10)),
+        "duration_ticks": 15,
+        "ucd_volume": 250,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 191464,
+        "wave_length": 1224,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2176,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "c9f584ac64297bfca52605e5bd01c3d42a31126f7d6e3e73cc4e65b9743cc6ac",
+        "render_program_sha256":
+            "c9f584ac64297bfca52605e5bd01c3d42a31126f7d6e3e73cc4e65b9743cc6ac",
+        "articulation_program_sha256":
+            "78e320e6ee2a2832cb2f3635016b5b46d13fa820dccf4651d7effcd36ee5c7dd",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 218,
+        "name": "nSYAudioFGMMarioUnkSwing1",
+        "kind": "attack",
+        "articulation": 174,
+        "sound": 71,
+        "notes": ((8, 7, 3), (13, 7, 4), (12, 7, 5),
+                  (15, 7, 5), (8, 7, 10)),
+        "duration_ticks": 27,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 691264,
+        "wave_length": 2916,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 5184,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "e599e2bf74db3900b0e653a72c5d29a7330cabd17e5e05a5b5f9f91392446f23",
+        "render_program_sha256":
+            "e599e2bf74db3900b0e653a72c5d29a7330cabd17e5e05a5b5f9f91392446f23",
+        "articulation_program_sha256":
+            "7a17a55c4ba3daec625c6334dcb9189080b82bfea648864c1042b1d861f4e69f",
+        "fidelity_debt": ("ucd_pitch_automation",),
+    },
+    {
+        "id": 219,
+        "name": "nSYAudioFGMMarioUnkSwing2",
+        "kind": "attack",
+        "articulation": 174,
+        "sound": 71,
+        "notes": ((10, 7, 3), (15, 7, 4), (20, 7, 4),
+                  (12, 7, 4), (5, 7, 10)),
+        "duration_ticks": 25,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 691264,
+        "wave_length": 2916,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 5184,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "84a6c9a138201870077c8f6d2461040e94494e28082790285687d58a9b27df40",
+        "render_program_sha256":
+            "84a6c9a138201870077c8f6d2461040e94494e28082790285687d58a9b27df40",
+        "articulation_program_sha256":
+            "7a17a55c4ba3daec625c6334dcb9189080b82bfea648864c1042b1d861f4e69f",
         "fidelity_debt": ("ucd_pitch_automation",),
     },
 )
@@ -1426,6 +1579,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "source pitch automation is not yet scheduled on DS channels.",
             "DeadExplodeL currently renders its primary UCD voice; forked "
             "source voice 685 remains explicit metadata fidelity debt.",
+            "Attack entries 190, 218, and 219 retain their exact source "
+            "wavetable, initial pitch, and duration; later UCD pitch changes "
+            "are not yet scheduled on DS channels.",
         ],
         "sources": {
             name: {

@@ -238,6 +238,25 @@ try {
         'tbreak scVSBattleStartBattle',
         'continue',
         'set gNdsBattlePlayableFoxCpuEnabled = 0',
+        'set $fireball_fgm_calls = 0',
+        'set $fgm_calls_base = gNdsAudioFgmPlayCalls',
+        'set $fgm_supported_base = gNdsAudioFgmSupportedPlayCount',
+        'set $fgm_lookup_fail_base = gNdsAudioFgmIncludedLookupFailCount',
+        'set $fgm_play_fail_base = gNdsAudioFgmPlayFailCount',
+        'set $fgm_pool_base = gNdsAudioFgmPoolExhaustCount',
+        'set $fgm_generation_base = gNdsAudioFgmGenerationMismatchCount',
+        'set $fgm_stale_base = gNdsAudioFgmStaleStopCount',
+        'set $fgm_acquire_base = gNdsAudioFgmHandleAcquireCount',
+        'set $fgm_release_base = gNdsAudioFgmHandleReleaseCount',
+        'set $fgm_active_base = gNdsAudioFgmActiveHandles',
+        'break ndsAudioFgmPlay',
+        'commands',
+        'silent',
+        'if ((unsigned int)$r0 == 215)',
+        'set $fireball_fgm_calls = $fireball_fgm_calls + 1',
+        'end',
+        'continue',
+        'end',
         # melonDS cannot safely execute inferior function calls across this
         # ARM/Thumb boundary. Resolve the private playback storage from this
         # exact ELF and write it directly; osContGetReadData still consumes it
@@ -308,6 +327,7 @@ try {
         'printf "SCENE=%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gNdsBattlePlayableFoxCpuEnabled',
         'printf "RENDER_PROFILE_LEVEL=%u\n", gNdsRendererProfileLevel',
         'printf "FIREBALL_SOURCE=%u,%u,%u,%u,%u,%#x\n", gNdsFighterProjectileProofSpawnCallCount, gNdsFighterProjectileProofSpawnSuccessCount, gNdsFighterProjectileProofDamageMax, gNdsFighterProjectileProofLifetimeMax, gNdsFighterProjectileProofWeaponCountMax, gNdsFighterProjectileProofKindMask',
+        'printf "FIREBALL_FGM=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $fireball_fgm_calls, gNdsAudioFgmPlayCalls - $fgm_calls_base, gNdsAudioFgmSupportedPlayCount - $fgm_supported_base, gNdsAudioFgmIncludedLookupFailCount - $fgm_lookup_fail_base, gNdsAudioFgmPlayFailCount - $fgm_play_fail_base, gNdsAudioFgmPoolExhaustCount - $fgm_pool_base, gNdsAudioFgmGenerationMismatchCount - $fgm_generation_base, gNdsAudioFgmStaleStopCount - $fgm_stale_base, gNdsAudioFgmHandleAcquireCount - $fgm_acquire_base, gNdsAudioFgmHandleReleaseCount - $fgm_release_base, $fgm_active_base, gNdsAudioFgmActiveHandles, gNdsFighterProjectileProofHitDestroyCount',
         'printf "WEAPON_RENDER=%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%u\n", gNdsWeaponRendererCaptureCount, gNdsWeaponRendererDObjDrawCount, gNdsWeaponRendererSubmitCount, gNdsWeaponRendererVisibleDrawCount, gNdsWeaponRendererTriangleCount, gNdsWeaponRendererTextureReadyCount, gNdsWeaponRendererTextureRejectCount, gNdsWeaponRendererKindMask, gNdsWeaponRendererCallbackKind, gNdsWeaponRendererNoZCount, gNdsWeaponRendererMovingDrawCount, gNdsWeaponRendererFireballSubmitCount, gNdsWeaponRendererFireballTriangleCount, gNdsWeaponRendererFireballVisibleDrawCount, gNdsWeaponRendererRejectedDrawCount',
         'printf "FIREBALL_TRANSFORM=%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsWeaponRendererFireballCustom47AppliedCount, gNdsWeaponRendererFireballCustom47MismatchCount, gNdsRendererAdapterCustom47DetectedCount, gNdsRendererAdapterCustom47AppliedCount, gNdsRendererAdapterCustom47RejectCount, gNdsRendererAdapterCustom47TranslationMismatchCount, gNdsRendererAdapterCustom47LastXObjsNum, gNdsRendererAdapterCustom47LastKinds, gNdsRendererAdapterCustom47LastRotateXBits, gNdsRendererAdapterCustom47LastRotateYBits, gNdsRendererAdapterCustom47LastTranslateX20p12, gNdsRendererAdapterCustom47LastTranslateY20p12, gNdsRendererAdapterCustom47LastTranslateZ20p12, gNdsWeaponRendererFireballFirstXBits, gNdsWeaponRendererFireballFirstYBits, gNdsWeaponRendererFireballLastXBits, gNdsWeaponRendererFireballLastYBits',
         'printf "VISUAL_EFFECT=%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsVisualEffectCreateCount, gNdsVisualEffectDestroyCount, gNdsVisualEffectDropCount, gNdsVisualEffectActiveCount, gNdsVisualEffectMaxActiveCount, gNdsVisualEffectKindMask, gNdsVisualEffectTemplateBytes, gNdsEffectRendererCaptureCount, gNdsEffectRendererDObjDrawCount, gNdsEffectRendererSubmitCount, gNdsEffectRendererTriangleCount, gNdsEffectRendererTextureReadyCount, gNdsEffectRendererTextureRejectCount, gNdsEffectRendererRejectedDrawCount',
@@ -416,6 +436,7 @@ try {
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $profile = [regex]::Match($gdbStdout, 'RENDER_PROFILE_LEVEL=([0-9]+)')
     $source = [regex]::Match($gdbStdout, 'FIREBALL_SOURCE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
+    $fgm = [regex]::Match($gdbStdout, 'FIREBALL_FGM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $weapon = [regex]::Match($gdbStdout, 'WEAPON_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $transform = [regex]::Match($gdbStdout, 'FIREBALL_TRANSFORM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $visual = [regex]::Match($gdbStdout, 'VISUAL_EFFECT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -429,6 +450,7 @@ try {
     $hv = Get-Ints $harn
     $sv = Get-Ints $scene
     $fv = Get-Ints $source
+    $fgmv = Get-Ints $fgm
     $wv = Get-Ints $weapon
     $xv = Get-Ints $transform
     $vv = Get-Ints $visual
@@ -574,6 +596,16 @@ try {
     Assert-Condition ($scene.Success -and $sv[0] -eq 22 -and $sv[1] -eq 21 -and $sv[2] -eq 6 -and $sv[3] -eq 1 -and $sv[4] -eq 0 -and $sv[5] -eq 0) 'Fireball iteration did not select the documented countdown/Fox override on the exact published ROM.' $gdbStdout
     Assert-Condition ($profile.Success -and [int64]$profile.Groups[1].Value -eq 0) 'Fireball verifier did not use the shipped renderer profile.' $gdbStdout
     Assert-Condition ($source.Success -and $fv[0] -eq 1 -and $fv[1] -eq 1 -and $fv[2] -eq 7 -and $fv[3] -eq 140 -and $fv[4] -eq 1 -and $fv[5] -eq 1) 'Original Mario Fireball source creation/attributes did not run exactly once from input.' $gdbStdout
+    Assert-Condition ($fgm.Success -and $fgmv[0] -eq 1 -and
+        $fgmv[1] -ge 1 -and $fgmv[2] -eq $fgmv[1] -and
+        $fgmv[3] -eq 0 -and $fgmv[4] -eq 0 -and
+        $fgmv[5] -eq 0 -and $fgmv[6] -eq 0 -and
+        $fgmv[7] -eq 0 -and $fgmv[8] -eq $fgmv[2] -and
+        $fgmv[9] -le ($fgmv[10] + $fgmv[8]) -and
+        $fgmv[11] -eq ($fgmv[10] + $fgmv[8] - $fgmv[9]) -and
+        $fgmv[12] -eq 0) `
+        'Natural collision-free Fireball activation did not play source FGM 215 through one clean DS handle.' `
+        $gdbStdout
     Assert-Condition ($rv[0] -ge 1 -and (($rv[1] -band 0x800) -eq 0) -and $rv[2] -eq 0 -and (($rv[3] -band 0x800) -ne 0) -and (($rv[4] -band 0x800) -ne 0) -and $rv[6] -ge 0) 'Fireball trace was not the first valid floor-mask rising edge.' $gdbStdout
     Assert-Condition ((Test-FiniteSingle ([single]$preVx)) -and (Test-FiniteSingle ([single]$preVy)) -and (Test-FiniteSingle ([single]$postVx)) -and (Test-FiniteSingle ([single]$postVy)) -and (Test-FiniteSingle ([single]$normalX)) -and (Test-FiniteSingle ([single]$normalY)) -and $preVy -lt 0.0 -and $postVy -gt 0.0) 'Fireball floor rebound velocities or normal were invalid.' $gdbStdout
     Assert-Condition ([Math]::Abs($normalSq - 1.0) -le 0.02 -and [Math]::Abs($postVx - $expectedPostVx) -le 0.05 -and [Math]::Abs($postVy - $expectedPostVy) -le 0.05) 'Fireball did not use the original reflected floor normal and 0.85 component scaling.' $gdbStdout
