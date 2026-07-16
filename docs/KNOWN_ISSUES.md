@@ -14,9 +14,9 @@ durable unresolved gaps.
   collision, independent source-matrix parity, and long-distance visual capture
   remain open.
 - One natural source voice per fighter now plays (FoxSmash1 ID372 and
-  MarioSmash2 ID430); remaining variants, exact pitch automation, Tyler's voice
-  ear check, and audible Dream Land BGM proof remain open. The opening crowd is
-  fixed and user-confirmed.
+  MarioSmash2 ID430); remaining variants, exact pitch automation, and Tyler's
+  voice ear check remain open. Dream Land BGM and the opening crowd are
+  automation/user-confirmed.
 - Fox is still classified level-3 CPU, but the public ROM temporarily pauses his
   decision/input. The focused CPU-on one-minute gate passes; final P1 still
   needs Tyler's re-enable decision and a published CPU-on qualification.
@@ -67,6 +67,9 @@ durable unresolved gaps.
   effects/voice variants unsupported on that route.
 - Existing ACK counters cannot prove the final acoustic mix. The ID626 AOT cue
   passed Tyler's exact-ROM ear check; retain user retests for remaining voices.
+- Dream Land BGM now has an exact nonzero initial-ring acoustic fixture and a
+  natural public-ROM ARM7-shared active-channel proof; do not reopen it without
+  a reproduced audible or stream-state regression.
 
 ## Memory And Lifetime
 

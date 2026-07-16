@@ -274,6 +274,7 @@ try {
         'printf "FOX_RECOVERY_MEMORY=%#x,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerArenaHeadroom',
         'printf "FOX_RECOVERY_AUDIO=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmPlayCalls - $fgm_calls_base, gNdsAudioFgmSupportedPlayCount - $fgm_supported_base, gNdsAudioFgmUnsupportedCallCount - $fgm_unsupported_base, gNdsAudioFgmIncludedLookupFailCount - $fgm_lookup_fail_base, gNdsAudioFgmPlayFailCount - $fgm_play_fail_base, gNdsAudioFgmPoolExhaustCount - $fgm_pool_base, gNdsAudioFgmGenerationMismatchCount - $fgm_generation_base, gNdsAudioFgmStaleStopCount - $fgm_stale_base, gNdsAudioFgmHandleAcquireCount - $fgm_acquire_base, gNdsAudioFgmHandleReleaseCount - $fgm_release_base, $fgm_active_base, gNdsAudioFgmActiveHandles, gNdsAudioFgmMaxActiveHandles',
         'printf "FOX_RECOVERY_AUDIO_STATE=%#x,%u,%u,%u,%u,%u,%#x\n", gNdsAudioFgmResult, gNdsAudioFgmLoaded, gNdsAudioFgmResidentBytes, gNdsAudioFgmOpenFailCount, gNdsAudioFgmReadFailCount, gNdsAudioFgmFormatFailCount, gNdsAudioFgmChannelMask',
+        'printf "FOX_RECOVERY_BGM=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%#x,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPupupuPlayCount, gNdsAudioBgmSoundActive, gNdsAudioBgmPlayFailCount, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsafeWriteCount, gNdsAudioBgmOverrunCount, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmExpectedBytesPerSecond, sNdsAudioBgmSoundID, s_soundAutoUpdate, *(unsigned short *)0x02ffff8c, gNdsAudioBgmResidentBytes, gNdsAudioBgmPlaybackBytes, gNdsAudioBgmRefillCount',
         $captureCommand,
         ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
         'detach',
@@ -295,6 +296,7 @@ try {
     $memory = [regex]::Match($gdbStdout, 'FOX_RECOVERY_MEMORY=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $audio = [regex]::Match($gdbStdout, 'FOX_RECOVERY_AUDIO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioState = [regex]::Match($gdbStdout, 'FOX_RECOVERY_AUDIO_STATE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
+    $bgm = [regex]::Match($gdbStdout, 'FOX_RECOVERY_BGM=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $fgmEvents = @([regex]::Matches(
         $gdbStdout, 'FOX_RECOVERY_FGM=([0-9]+)') |
         ForEach-Object { [int]$_.Groups[1].Value })
@@ -308,7 +310,7 @@ try {
     $rv = Get-Ints $result; $sv = Get-Ints $start; $tv = Get-Ints $return
     $cv = Get-Ints $cpu; $dv = Get-Ints $damage; $iv = Get-Ints $input
     $qv = Get-Ints $scene; $mv = Get-Ints $memory; $av = Get-Ints $audio
-    $asv = Get-Ints $audioState
+    $asv = Get-Ints $audioState; $bv = Get-Ints $bgm
 
     Assert-Condition (Test-Path -LiteralPath $screenshotPath -PathType Leaf) `
         'Fox recovery run did not produce a screenshot.' $gdbStdout
@@ -362,11 +364,26 @@ try {
         $asv[2] -eq 102196 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
         $asv[5] -eq 0 -and $asv[6] -ne 0) `
         'Fighter-voice pack load/channel state is invalid.' $gdbStdout
+    Assert-Condition ($bgm.Success -and
+        $bv[0] -eq 0x42474d31 -and $bv[1] -eq 1 -and $bv[2] -eq 0 -and
+        $bv[3] -eq 1 -and $bv[4] -eq 1 -and
+        $bv[5] -eq 0 -and $bv[6] -eq 0 -and $bv[7] -eq 0 -and
+        $bv[8] -eq 0 -and $bv[9] -eq 0 -and
+        $bv[10] -ge 42100 -and $bv[10] -le 46100 -and
+        $bv[11] -eq 44100 -and $bv[12] -ge 0 -and
+        $bv[13] -in 0,1 -and
+        (($bv[14] -band ([int64]1 -shl $bv[12])) -ne 0) -and
+        $bv[15] -eq 65536 -and $bv[16] -gt 0 -and $bv[17] -gt 0) `
+        'Natural Pupupu BGM lacked an active DS channel or clean stream state.' `
+        $gdbStdout
 
     Write-Output (('Fox recovery natural FGM IDs: all={0} supported={1} ' +
         'unsupported={2}') -f ($fgmIDs -join ','),
         (($supportedEvents | Sort-Object -Unique) -join ','),
         ($unsupportedIDs -join ','))
+    Write-Output (('Pupupu BGM natural: channel={0} active=0x{1:x} ' +
+        'auto={2} stream={3}/{4} refills={5}') -f
+        $bv[12], $bv[14], $bv[13], $bv[10], $bv[11], $bv[17])
     Write-Output ((
         'battle_playable Fox recovery passed: frames={0} recover={1} ' +
         'start=({2},{3}) return=({4},{5}) line={6} damage={7}->{8} ' +

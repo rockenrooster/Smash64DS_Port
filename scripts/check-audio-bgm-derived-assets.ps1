@@ -25,6 +25,8 @@ $tracks = @(
         Looping = $true; LoopStart = 34912; LoopStartTick = 779; LoopStartTickMin = 276
     }
 )
+$pupupuFirstRingPeak = 0
+$pupupuFirstRingRms = 0.0
 
 foreach ($track in $tracks) {
     $asset = Join-Path $Root "assets/audio/$($track.File)"
@@ -61,6 +63,34 @@ foreach ($track in $tracks) {
         $metadata.tool -ne 'scripts/render-audio-bgm-pupupu.py') {
         throw "$($track.Name) no longer records the exact BattleShip source/tool provenance."
     }
+    if ($track.Sequence -eq 0) {
+        $ring = New-Object byte[] 65536
+        $stream = [IO.File]::OpenRead($asset)
+        try {
+            if ($stream.Read($ring, 0, $ring.Length) -ne $ring.Length) {
+                throw 'Pupupu stream no longer fills the initial DS ring.'
+            }
+        } finally {
+            $stream.Dispose()
+        }
+        [double]$sumSquares = 0.0
+        for ($i = 0; $i -lt $ring.Length; $i += 2) {
+            $sample = [BitConverter]::ToInt16($ring, $i)
+            $magnitude = [Math]::Abs([int]$sample)
+            if ($magnitude -gt $pupupuFirstRingPeak) {
+                $pupupuFirstRingPeak = $magnitude
+            }
+            $sumSquares += [double]$sample * [double]$sample
+        }
+        $pupupuFirstRingRms = [Math]::Sqrt(
+            $sumSquares / ($ring.Length / 2))
+    }
+}
+
+if ($pupupuFirstRingPeak -ne 9928 -or
+    [Math]::Abs($pupupuFirstRingRms - 2283.623071) -gt 0.000001) {
+    throw ('Pupupu initial DS ring acoustic fixture changed: peak={0} rms={1:F6}' -f
+        $pupupuFirstRingPeak, $pupupuFirstRingRms)
 }
 
 $headerPath = Join-Path $Root 'include/nds/nds_audio_bgm.h'
@@ -80,4 +110,6 @@ foreach ($needle in $required) {
     }
 }
 
-Write-Output 'BattleShip-derived BGM assets passed: tracks=0/12/16/22 bytes=5125414 resident=65536.'
+Write-Output ('BattleShip-derived BGM assets passed: tracks=0/12/16/22 ' +
+    'bytes=5125414 resident=65536 pupupu_ring_peak={0} rms={1:F6}.' -f
+    $pupupuFirstRingPeak, $pupupuFirstRingRms)

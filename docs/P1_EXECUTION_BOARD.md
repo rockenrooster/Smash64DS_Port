@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 05:52 Central
+Updated: 2026-07-16 06:00 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -74,7 +74,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | M4 zero gameplay conversion/preparation | Pass for current one-minute gate | Renderer | Natural CPU-on expiry proves prepare/arm/teardown `1/1/1`, 22 keys/131,072 bytes, zero ten-class post-GO fence work, and 163,312-byte audio-adjusted reserve | Keep; repeat in final published CPU-on qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / bitmap OAM | Renderer + QA | Hybrid runtime submission was invisible despite valid counters; restored proven all-bitmap OBJ ownership shows the traffic light with 93,824 bytes prepared pregame and zero gameplay conversion/upload | Keep published bitmap path; hybrid remains lab-only |
-| Dream Land BGM | Partial | Audio | User reports the stage theme sounds normal; stream counters pass, but enabled DS channel and nonzero PCM peak remain unproved | Block audio completion |
+| Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
 | Required FGM and Mario/Fox voices | Crowd FIXED / one natural voice per fighter PASS | Audio | The 102,196-byte AOT pack adds source FoxSmash1 ID372 and MarioSmash2 ID430. The natural 820-frame recovery route triggered both, acquired/released two clean DS handles, reported zero play/load/stale/generation faults, and retained 202,256 bytes; ID626 remains user-confirmed | Keep the two representative cues; Tyler ear-checks them, while remaining variants and exact pitch automation stay open |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | Pass on current candidate | QA | Battle-only opening/static store is exactly bounded at 185,696 bytes; after adding two fighter cues, the natural CPU-on recovery route retains 202,256 bytes, still 71,184 above the 128 KiB floor | Keep exact harness lifetime bound; repeat only in final CPU-on lifecycle qualification |

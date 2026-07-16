@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 05:52 Central
+Updated: 2026-07-16 06:00 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -61,9 +61,10 @@ samples the battle ledger before Results reuses the globals.
 
 ## Next Packet
 
-Close the Dream Land BGM acoustic row with an enabled DS channel and nonzero PCM
-peak from a natural exact-ROM mode-163 event. Reuse the existing audio path and
-focused gate; do not add a mixer, mode, synthetic trigger, or marker-only proof.
+Close the Fireball's full 140-tick source lifetime on the current public ROM:
+retain the existing natural input route, add synchronized near/mid/far/event
+captures and an independent source-matrix/ROI gate, and do not change trajectory
+or collision unless the trace identifies a real mismatch.
 
 The one-way platform gate is now green on the current ROM. Its 715-frame route
 requires six ordered continued-ascent/strict-descent/downward-crossing flights,
@@ -78,6 +79,9 @@ Recover frames and an offstage-to-line-3 return without KO/rebirth. Evidence is
 naturally played source FoxSmash1 ID372 and MarioSmash2 ID430 through two clean
 DS handles with zero audio faults and 202,256-byte reserve. Tyler's audible
 fighter-voice check remains pending.
+Dream Land BGM is also green without a ROM change: its exact initial DS ring has
+peak 9,928 / RMS 2,283.623, and the natural route observes the live channel bit
+in Calico's ARM7-shared mask with clean 44.1 KB/s streaming.
 
 ## Checkpoint
 

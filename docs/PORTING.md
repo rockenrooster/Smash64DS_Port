@@ -21075,3 +21075,22 @@ remains skipped for the requested fast iteration cadence.
   `scripts/verify-battle-playable-fox-recovery.ps1`, and
   `artifacts/visibility/2026-07-16_055015-5167574_fox-recovery.png`. Acoustic
   completion still requires Tyler's audible fighter-voice check.
+
+## 2026-07-16 - Natural Dream Land BGM channel/acoustic proof
+
+- Extended the existing derived-asset checker to inspect the exact initial
+  65,536-byte PCM16 ring passed to the DS sound channel. Pupupu's source-derived
+  ring is non-silent at peak 9,928 and RMS 2,283.623071 while retaining its
+  existing 2,886,710-byte SHA-256 fixture.
+- Reused the exact public mode-163 recovery ROM and its natural BGM start. At
+  frame 820, the backend remained on Pupupu track 0 at the expected 44,100
+  bytes/second with nonzero playback/refill progress and zero open/read/play,
+  unsafe-write, or overrun faults.
+- Calico's `soundGetActiveChannels` reads the ARM7-shared channel mask at
+  `0x02FFFF8C`; the non-blocking shared-state observation contained the live BGM
+  channel bit. This closes the missing hardware-channel proof without adding a
+  production counter, mixer, synthetic trigger, or ROM change.
+- Tyler had already reported the Dream Land theme sounds normal. Evidence is
+  `scripts/check-audio-bgm-derived-assets.ps1`,
+  `scripts/verify-battle-playable-fox-recovery.ps1`, and
+  `artifacts/visibility/2026-07-16_055935-2694387_fox-recovery.png`.
