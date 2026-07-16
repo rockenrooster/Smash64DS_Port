@@ -15807,6 +15807,13 @@ static void ndsRendererNativeStageBeginRun(
     u32 submit_class,
     NDSRendererStats *stats)
 {
+    u32 poly_fmt = run->poly_fmt;
+
+    if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+    {
+        poly_fmt &= ~((u32)POLY_CULL_NONE);
+        poly_fmt |= POLY_CULL_BACK;
+    }
     ndsRendererHardwareEndBatch();
     if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
@@ -15861,13 +15868,13 @@ static void ndsRendererNativeStageBeginRun(
         glDisable(GL_ALPHA_TEST);
     }
     glDisable(GL_FOG);
-    glPolyFmt(run->poly_fmt);
+    glPolyFmt(poly_fmt);
     glBegin(GL_TRIANGLE);
     ndsRendererProfileRecordBatchBegin();
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
     sNdsRendererHardwareTriangleBatchTextured = run->textured;
     sNdsRendererHardwareTriangleBatchTextureName = run->texture_name;
-    sNdsRendererHardwareTriangleBatchPolyFmt = run->poly_fmt;
+    sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
     sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
     sNdsRendererHardwareTriangleBatchFogKey = 0u;
     sNdsRendererHardwareTriangleBatchMatrixMode =
@@ -16228,9 +16235,13 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                      NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
                         prepared->source_z : no_z;
 
-                ndsRendererNativeStageEmitVertex(
-                    dense, prepared, prepared_run, run->submit_class,
-                    projected_z);
+                if ((NDS_RENDERER_STAGE_CLASS_SKIP_MASK &
+                     ((u32)1u << run->submit_class)) == 0u)
+                {
+                    ndsRendererNativeStageEmitVertex(
+                        dense, prepared, prepared_run, run->submit_class,
+                        projected_z);
+                }
             }
             if (run->submit_class !=
                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
