@@ -64,8 +64,17 @@ function Get-ElfSymbolAddress {
 }
 
 if (-not $NoBuild) {
-    & make build-battle-playable-canonical-hwtri-harness
-    if ($LASTEXITCODE -ne 0) { throw 'Canonical battle build failed.' }
+    & make -C $root `
+        TARGET=smash64ds-battle-playable-hwtri `
+        BUILD=build-battle-playable-canonical-hwtri-harness `
+        NDS_DEV_SCENE_HARNESS=battle_playable_realtime `
+        NDS_DEV_LIVE_INPUT_PREVIEW=1 `
+        NDS_HARNESS_FAST_LOGIC=0 `
+        NDS_RENDERER_HW_TRIANGLES=1 `
+        NDS_RENDERER_PROFILE_LEVEL=0 `
+        NDS_DEBUG_HUD=0 `
+        -j16
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 foreach ($path in @($rom, $elf, $melonDsPath, $Gdb, $nm)) {
     Assert-Condition (Test-Path -LiteralPath $path -PathType Leaf) `
@@ -150,6 +159,17 @@ try {
         'set $objective_mask_base = gNdsFTComputerObjectiveMask',
         'set $input_reads_base = gNdsControllerPlaybackReadCount',
         'set $cpu_process_base = gNdsFTComputerProcessCount',
+        'set $fgm_calls_base = gNdsAudioFgmPlayCalls',
+        'set $fgm_supported_base = gNdsAudioFgmSupportedPlayCount',
+        'set $fgm_unsupported_base = gNdsAudioFgmUnsupportedCallCount',
+        'set $fgm_lookup_fail_base = gNdsAudioFgmIncludedLookupFailCount',
+        'set $fgm_play_fail_base = gNdsAudioFgmPlayFailCount',
+        'set $fgm_pool_base = gNdsAudioFgmPoolExhaustCount',
+        'set $fgm_generation_base = gNdsAudioFgmGenerationMismatchCount',
+        'set $fgm_stale_base = gNdsAudioFgmStaleStopCount',
+        'set $fgm_acquire_base = gNdsAudioFgmHandleAcquireCount',
+        'set $fgm_release_base = gNdsAudioFgmHandleReleaseCount',
+        'set $fgm_active_base = gNdsAudioFgmActiveHandles',
         'set $attack_frames = 0',
         'set $same_actor = 1',
         ('set {{unsigned short}}0x{0:x8} = 0' -f $pads),
@@ -157,6 +177,13 @@ try {
         ('set {{signed char}}0x{0:x8} = 0' -f ($pads + 3)),
         ('set {{unsigned int}}0x{0:x8} = 1' -f $connected),
         ('set {{unsigned int}}0x{0:x8} = 1' -f $enabled),
+
+        'break ndsAudioFgmPlay',
+        'commands',
+        'silent',
+        'printf "FOX_RECOVERY_FGM=%u\n", (unsigned int)$r0',
+        'continue',
+        'end',
 
         ('break *0x{0:x8}' -f $frameMarker),
         'set $frame_breakpoint = $bpnum',
@@ -245,6 +272,8 @@ try {
         ('printf "FOX_RECOVERY_INPUT=%u,%#x,%u,%#x,%d,%d\n", *(unsigned int *)0x{0:x8}, *(unsigned int *)0x{1:x8}, gNdsControllerPlaybackReadCount - $input_reads_base, *(unsigned short *)0x{2:x8}, *(signed char *)0x{3:x8}, *(signed char *)0x{4:x8}' -f $enabled, $connected, $pads, ($pads + 2), ($pads + 3)),
         'printf "FOX_RECOVERY_SCENE=%u,%u,%u,%u,%u,%u,%#x\n", gNdsSceneHarnessMode, gSCManagerSceneData.scene_curr, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, gNdsSceneHarnessReservedMask',
         'printf "FOX_RECOVERY_MEMORY=%#x,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerArenaHeadroom',
+        'printf "FOX_RECOVERY_AUDIO=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmPlayCalls - $fgm_calls_base, gNdsAudioFgmSupportedPlayCount - $fgm_supported_base, gNdsAudioFgmUnsupportedCallCount - $fgm_unsupported_base, gNdsAudioFgmIncludedLookupFailCount - $fgm_lookup_fail_base, gNdsAudioFgmPlayFailCount - $fgm_play_fail_base, gNdsAudioFgmPoolExhaustCount - $fgm_pool_base, gNdsAudioFgmGenerationMismatchCount - $fgm_generation_base, gNdsAudioFgmStaleStopCount - $fgm_stale_base, gNdsAudioFgmHandleAcquireCount - $fgm_acquire_base, gNdsAudioFgmHandleReleaseCount - $fgm_release_base, $fgm_active_base, gNdsAudioFgmActiveHandles, gNdsAudioFgmMaxActiveHandles',
+        'printf "FOX_RECOVERY_AUDIO_STATE=%#x,%u,%u,%u,%u,%u,%#x\n", gNdsAudioFgmResult, gNdsAudioFgmLoaded, gNdsAudioFgmResidentBytes, gNdsAudioFgmOpenFailCount, gNdsAudioFgmReadFailCount, gNdsAudioFgmFormatFailCount, gNdsAudioFgmChannelMask',
         $captureCommand,
         ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
         'detach',
@@ -264,9 +293,22 @@ try {
     $input = [regex]::Match($gdbStdout, 'FOX_RECOVERY_INPUT=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+)')
     $scene = [regex]::Match($gdbStdout, 'FOX_RECOVERY_SCENE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $memory = [regex]::Match($gdbStdout, 'FOX_RECOVERY_MEMORY=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+    $audio = [regex]::Match($gdbStdout, 'FOX_RECOVERY_AUDIO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $audioState = [regex]::Match($gdbStdout, 'FOX_RECOVERY_AUDIO_STATE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
+    $fgmEvents = @([regex]::Matches(
+        $gdbStdout, 'FOX_RECOVERY_FGM=([0-9]+)') |
+        ForEach-Object { [int]$_.Groups[1].Value })
+    $fgmIDs = @($fgmEvents | Sort-Object -Unique)
+    $includedIDs = @(626, 470, 469, 467, 490, 372, 430,
+        439, 292, 370, 289, 154)
+    $voiceIDs = @(372, 430)
+    $supportedEvents = @($fgmEvents | Where-Object { $_ -in $includedIDs })
+    $unsupportedEvents = @($fgmEvents | Where-Object { $_ -notin $includedIDs })
+    $unsupportedIDs = @($unsupportedEvents | Sort-Object -Unique)
     $rv = Get-Ints $result; $sv = Get-Ints $start; $tv = Get-Ints $return
     $cv = Get-Ints $cpu; $dv = Get-Ints $damage; $iv = Get-Ints $input
-    $qv = Get-Ints $scene; $mv = Get-Ints $memory
+    $qv = Get-Ints $scene; $mv = Get-Ints $memory; $av = Get-Ints $audio
+    $asv = Get-Ints $audioState
 
     Assert-Condition (Test-Path -LiteralPath $screenshotPath -PathType Leaf) `
         'Fox recovery run did not produce a screenshot.' $gdbStdout
@@ -301,7 +343,30 @@ try {
     Assert-Condition ($memory.Success -and $mv[0] -eq 0x4d4c4544 -and
         $mv[1] -eq 22 -and $mv[2] -ge 131072) `
         'Fox recovery violated the P1 arena reserve.' $gdbStdout
+    Assert-Condition (($voiceIDs | Where-Object { $_ -notin $fgmIDs }).Count -eq 0) `
+        'Natural recovery did not trigger both selected fighter voices.' $gdbStdout
+    Assert-Condition ($audio.Success -and
+        $av[0] -eq $fgmEvents.Count -and
+        $av[1] -eq $supportedEvents.Count -and
+        $av[2] -eq $unsupportedEvents.Count -and
+        $av[3] -eq 0 -and $av[4] -eq 0 -and $av[5] -eq 0 -and
+        $av[6] -eq 0 -and $av[7] -eq 0 -and
+        $av[8] -eq $supportedEvents.Count -and
+        $av[9] -le ($av[10] + $av[8]) -and
+        $av[11] -eq ($av[10] + $av[8] - $av[9]) -and
+        $av[12] -gt 0) `
+        'Selected fighter voices did not acquire clean DS handles/channels.' `
+        $gdbStdout
+    Assert-Condition ($audioState.Success -and
+        $asv[0] -eq 0x46474d31 -and $asv[1] -eq 1 -and
+        $asv[2] -eq 102196 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
+        $asv[5] -eq 0 -and $asv[6] -ne 0) `
+        'Fighter-voice pack load/channel state is invalid.' $gdbStdout
 
+    Write-Output (('Fox recovery natural FGM IDs: all={0} supported={1} ' +
+        'unsupported={2}') -f ($fgmIDs -join ','),
+        (($supportedEvents | Sort-Object -Unique) -join ','),
+        ($unsupportedIDs -join ','))
     Write-Output ((
         'battle_playable Fox recovery passed: frames={0} recover={1} ' +
         'start=({2},{3}) return=({4},{5}) line={6} damage={7}->{8} ' +

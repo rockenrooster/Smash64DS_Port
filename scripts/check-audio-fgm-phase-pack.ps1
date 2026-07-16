@@ -26,13 +26,14 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
-$expectedIDs = @(626, 470, 469, 467, 490, 439, 292, 370, 289, 154)
+$expectedIDs = @(626, 470, 469, 467, 490, 372, 430,
+    439, 292, 370, 289, 154)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
 }
-if (([int64]$metadata.resident_bytes -ne 92664) -or
-    ([int64]$metadata.resident_limit_bytes -ne 98304)) {
+if (([int64]$metadata.resident_bytes -ne 102196) -or
+    ([int64]$metadata.resident_limit_bytes -ne 106496)) {
     throw "FGM pack resident size changed: $($metadata.resident_bytes)"
 }
 
@@ -42,14 +43,20 @@ $phaseIDs = @($metadata.entries | Where-Object {
 $koIDs = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'ko'
     } | ForEach-Object { [int]$_.id })
+$voiceIDs = @($metadata.entries | Where-Object {
+        $_.entry_kind -eq 'voice'
+    } | ForEach-Object { [int]$_.id })
 if (($phaseIDs -join ',') -ne '626,470,469,467,490') {
     throw "Unexpected FGM phase subset: $($phaseIDs -join ',')"
 }
 if (($koIDs -join ',') -ne '439,292,370,289,154') {
     throw "Unexpected regular-KO subset: $($koIDs -join ',')"
 }
-if (([int]$metadata.unique_sample_count -ne 9) -or
-    ([int]$metadata.unique_sample_bytes -ne 92232)) {
+if (($voiceIDs -join ',') -ne '372,430') {
+    throw "Unexpected fighter-voice subset: $($voiceIDs -join ',')"
+}
+if (([int]$metadata.unique_sample_count -ne 11) -or
+    ([int]$metadata.unique_sample_bytes -ne 101696)) {
     throw 'Regular-KO sample deduplication fixture changed.'
 }
 if (([int]$metadata.format_version -ne 3) -or
@@ -58,15 +65,15 @@ if (([int]$metadata.format_version -ne 3) -or
     ([int]$metadata.envelope_point_bytes -ne 4)) {
     throw 'Unexpected FGM pack entry/envelope format.'
 }
-if (($metadata.mapping_sha256_lo -ne '0xb8fc8812') -or
+if (($metadata.mapping_sha256_lo -ne '0x9a9c3d4e') -or
     ($metadata.pack_sha256 -ne
-        'b30ed8c298b7e6d9e52b77a89effb3668e3de58e17d3520b91d9f819c46f9563')) {
+        'a45d66798e0daec9fb98c74e1459125d565559ee2d403f1d8cc7b8e6e4d7f213')) {
     throw 'FGM pack mapping or binary hash changed.'
 }
 if (($metadata.non_loop_sample_sha256 -ne
-        'ab270d55bfd3729b1bee8b92dbfb94ac332dce27d1994d2255fbc6a3c6f590b0') -or
+        'd9e8008d2a1ac12e11716ad5b51aa62518cbe8433d7449c4dd6a7e34521d9164') -or
     ($metadata.non_loop_envelope_sha256 -ne
-        '11c0720ad4a73e021cf216fd2ea4754b4c6e3e40e4c03f3b8d29b3ad04e537b1')) {
+        'be63d27732858972ebed4ac99b30485e7fb9e8bc6479c261fb46ee2617339e9c')) {
     throw 'Non-loop FGM sample or packed-envelope bytes changed.'
 }
 if ([bool]$metadata.runtime_conversion) {
@@ -223,6 +230,32 @@ foreach ($id in $expectedNonLoopPhaseHashes.Keys) {
         ([int]$entry[0].ds_loop_point_words -ne 0)) {
         throw "Non-loop phase FGM $id sample or loop point changed."
     }
+}
+
+$expectedFighterVoices = @(
+    @{ ID = 372; Sound = 105; Frequency = 16000; Duration = 46;
+        Samples = 1680; Volume = 108; Envelope = 0; Hash =
+        'ac3948daf50a93899233040c52153d84e75417f112487cc33679e40623804fcf' },
+    @{ ID = 430; Sound = 174; Frequency = 16280; Duration = 236;
+        Samples = 17232; Volume = 86; Envelope = 1; Hash =
+        '88ed6606f9199d787398a6d3b8563803cd4eddb4ccf7b9e4120e32d1f4292acd' }
+)
+foreach ($expected in $expectedFighterVoices) {
+    $entry = @($metadata.entries | Where-Object {
+            [int]$_.id -eq $expected.ID
+        })
+    if (($entry.Count -ne 1) -or
+        ([int]$entry[0].source_sound_index -ne $expected.Sound) -or
+        ([int]$entry[0].ds_frequency_hz -ne $expected.Frequency) -or
+        ([int]$entry[0].source_duration_ticks -ne $expected.Duration) -or
+        ([int]$entry[0].ds_sample_count -ne $expected.Samples) -or
+        ([int]$entry[0].ds_volume -ne $expected.Volume) -or
+        ([int]$entry[0].packed_envelope_count -ne $expected.Envelope) -or
+        ([int]$entry[0].ds_loop_point_words -ne 0) -or
+        ($entry[0].ima_adpcm_sha256 -ne $expected.Hash)) {
+        throw "Fighter voice $($expected.ID) source fixture changed."
+    }
+}
 
 $expectedTrimProofs = @(
     @{ ID = 470; Source = 11248; Schedule = 9109; Current = 9109;
@@ -237,6 +270,12 @@ $expectedTrimProofs = @(
     @{ ID = 490; Source = 15840; Schedule = 13801; Current = 13801;
         Retained = 13801; Removed = 2039; Prefix =
         '647566464d00d204664f6a13be5fd144194c9933ed7f011006faa80261435429' },
+    @{ ID = 372; Source = 1680; Schedule = 4233; Current = 4233;
+        Retained = 1680; Removed = 0; Prefix =
+        '95a4e1fe34793dd32060f5eb090ed4331b45893005f548a80b37e6b6d280e070' },
+    @{ ID = 430; Source = 17232; Schedule = 19182; Current = 22093;
+        Retained = 17232; Removed = 0; Prefix =
+        'ccd7fc9b7add5f8527d0c9ae3c192c8500d5b603d63d8fc1f40b3c2a1a51ac0f' },
     @{ ID = 439; Source = 9136; Schedule = 8634; Current = 8838;
         Retained = 8838; Removed = 298; Prefix =
         '21b2a92339ebff5a17bbd1c733d37e93f415e8d9ccd65d8d080c7b9cb68687ec' },
@@ -273,7 +312,6 @@ foreach ($id in 292, 289) {
         (-not [bool]$entry.trim_retained_prefix_exact)) {
         throw "Pitch-modulated FGM $id was trimmed without a source proof."
     }
-}
 }
 
 $expectedKo = @(
@@ -344,9 +382,11 @@ if (-not ($koDebt -contains 'ucd_pitch_automation') -or
 }
 
 Write-Output (
-    ('Audio FGM pack passed: {0} exact IDs ({1} regular-KO), {2} ' +
-    'resident bytes, {3} unique samples, mapping {4}, pack {5}.') -f
+    ('Audio FGM pack passed: {0} exact IDs ({1} fighter voices, ' +
+    '{2} regular-KO), {3} resident bytes, {4} unique samples, ' +
+    'mapping {5}, pack {6}.') -f
     $actualIDs.Count,
+    $voiceIDs.Count,
     $koIDs.Count,
     $metadata.resident_bytes,
     $metadata.unique_sample_count,

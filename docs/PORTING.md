@@ -21053,3 +21053,25 @@ remains skipped for the requested fast iteration cadence.
   x=2379.905, returned without a KO/rebirth, and grounded on Pupupu line 3 at
   x=1336.084 after 820 frames. Reserve was 214,544 bytes; evidence is
   `artifacts/visibility/2026-07-16_053441-3060146_fox-recovery.png`.
+
+## 2026-07-16 - Natural Mario/Fox fighter voices
+
+- BattleShip dispatches smash-motion voices through `ftmain.c:390-395` and
+  `ftparam.c:294-299`; the source fighter attributes select Mario's voice set in
+  `relocData/203_MarioMain.c:276-279` and Fox's in
+  `relocData/209_FoxMain.c:297-300`.
+- Extended the source-only FGM generator with FoxSmash1 ID372 and MarioSmash2
+  ID430. Both retain their exact UCD/articulation/wavetable inputs and are
+  pre-encoded as non-looping DS IMA ADPCM; no gameplay conversion, synthetic
+  trigger, or hand-authored waveform was added.
+- The pack is 102,196 bytes / 12 IDs / 11 unique samples. Its checker locks the
+  two source programs, durations, pitch schedules, retained PCM prefixes,
+  encoded hashes, nonzero decoded metrics, and 28.714/23.515 dB IMA SNR.
+- Reused the natural 820-frame Fox recovery route. Post-GO tracing identified
+  17 unique IDs; both selected cues fired naturally, acquired and released two
+  generation-backed DS handles, and left zero lookup/play/pool/stale/generation
+  faults. Arena reserve remained 202,256 bytes.
+- Evidence: `scripts/check-audio-fgm-phase-pack.ps1`,
+  `scripts/verify-battle-playable-fox-recovery.ps1`, and
+  `artifacts/visibility/2026-07-16_055015-5167574_fox-recovery.png`. Acoustic
+  completion still requires Tyler's audible fighter-voice check.

@@ -26,7 +26,7 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_RESIDENT_BYTES = 96 * 1024
+MAX_RESIDENT_BYTES = 104 * 1024
 PUBLIC_EXCITED_ID = 626
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
 PUBLIC_EXCITED_RAMP_SAMPLES = 184
@@ -119,6 +119,57 @@ SELECTED = (
         "loop_start": 0,
         "loop_end": 0,
         "expected_retained_samples": 13801,
+    },
+    {
+        "id": 372,
+        "name": "nSYAudioVoiceFoxSmash1",
+        "kind": "voice",
+        "articulation": 224,
+        "sound": 105,
+        "notes": ((13, 7, 46),),
+        "duration_ticks": 46,
+        "ucd_volume": 223,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 913944,
+        "wave_length": 946,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1680,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "a31ea9a2eab7861b43ed92cd237af6b19d19976aa34809f82aa3d56aad1d21d9",
+        "render_program_sha256":
+            "a31ea9a2eab7861b43ed92cd237af6b19d19976aa34809f82aa3d56aad1d21d9",
+        "articulation_program_sha256":
+            "df3b56b4f1866778aa5ebc10009959cc50f3e09d602ed8ae991d5fc091112224",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 430,
+        "name": "nSYAudioVoiceMarioSmash2",
+        "kind": "voice",
+        "articulation": 297,
+        "sound": 174,
+        "notes": ((13, 7, 4), (12, 7, 32), (11, 7, 50),
+                  (10, 7, 150)),
+        "duration_ticks": 236,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1170,
+        "loop": False,
+        "wave_base": 1432240,
+        "wave_length": 9694,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 17232,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "95e58d8f6340197445020e8239b623ff469056e6fffa35eaab5763bb9b2a1a11",
+        "render_program_sha256":
+            "95e58d8f6340197445020e8239b623ff469056e6fffa35eaab5763bb9b2a1a11",
+        "articulation_program_sha256":
+            "ce7ca7fb5d393e272ce037e6929cb3d29e221112ad53093429b8d0d5808221f1",
+        "fidelity_debt": ("ucd_pitch_automation",),
     },
     {
         "id": 439,
@@ -1263,7 +1314,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         raise AssertionError("pack size accounting mismatch")
     if len(pack) > MAX_RESIDENT_BYTES:
         raise ValueError(
-            f"FGM pack exceeds 96 KiB: {len(pack)} bytes")
+            f"FGM pack exceeds {MAX_RESIDENT_BYTES // 1024} KiB: "
+            f"{len(pack)} bytes")
 
     metadata = {
         "format": "BattleShip P1 FGM pack / Nintendo DS IMA ADPCM",

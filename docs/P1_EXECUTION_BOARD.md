@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 05:35 Central
+Updated: 2026-07-16 05:52 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -16,8 +16,8 @@ Current user-facing candidate; Boundary republication is pending:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,565,376 bytes
-SHA-256 593FBBA217D2AD7F9F87DE2013F38C82517A1DDDF1FE36CDF6110894C379C91E
+14,574,592 bytes
+SHA-256 A8371FA93E75338F8BABAC445FA4826663979FE48884E215F27630049B3B6C93
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -67,7 +67,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Normal-play stage painter/depth order | FIXED / pixel + profile-2 pass | Renderer + QA | BattleShip layer modes classify 66 source-Z and 126 no-Z triangles; one full v16 step per no-Z triangle removes the grass/bush overlap, preserves 202 triangles, and reserves disjoint endpoint bands | Keep as correctness fix; final frame 438/501 captures and zero-collision trace are authoritative |
 | Pause-orbit geometry containment | FIXED / user confirmed | Renderer + QA | Clip-space near-plane containment removes screen-blocking triangles at the breaking orbit angles without changing normal-play profile-2 output | Keep focused angle gate; paused −33.6° is also the strongest Mario underside view |
 | Mario pant/underside visual | Candidate KEEP / user visual pending | Renderer + QA | Source root light preambles were missing; replay restores blue right pant and closed underside with unchanged 320-triangle census | Tyler eyeballs `20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png` before FIXED |
-| Natural Fox recovery | Pass | Gameplay | Current-ROM mode 163 used only external Mario input: Fox took 0→59 damage, selected BattleShip Recover for 40 frames at offstage x=2379.905, returned without KO/rebirth, and grounded on line 3 at x=1336.084 after 820 frames | Keep `verify-battle-playable-fox-recovery.ps1`; reserve 214,544 and screenshot `2026-07-16_053441-3060146_fox-recovery.png` |
+| Natural Fox recovery | Pass | Gameplay | Current-ROM mode 163 used only external Mario input: Fox took 0→59 damage, selected BattleShip Recover for 40 frames at offstage x=2379.905, returned without KO/rebirth, and grounded on line 3 at x=1336.084 after 820 frames | Keep `verify-battle-playable-fox-recovery.ps1`; current reserve 202,256 and screenshot `2026-07-16_055015-5167574_fox-recovery.png` |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Fail / Jump C stopped before code | Renderer | Current local builder is 53,824 ticks and lighting is already prepared-direction + exact shade LUT. Local + rejected ITCM gain bounds at 71,904, 8,096 short of the required first cut | Do not manufacture another lighting/cache path; require a new source-backed bound before coding |
 | M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Removing cold/Os from the 126-triangle no-Z emitter keeps exact pixels and improves stage 624,384 → 611,392. Dense reuse reached 563,296 but remained above 500K and was reverted; incremental matrix transport regressed | Keep only codegen commit `bbe8d3eee2`; require a new attributable ≥111,392-tick cut |
@@ -75,10 +75,10 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / bitmap OAM | Renderer + QA | Hybrid runtime submission was invisible despite valid counters; restored proven all-bitmap OBJ ownership shows the traffic light with 93,824 bytes prepared pregame and zero gameplay conversion/upload | Keep published bitmap path; hybrid remains lab-only |
 | Dream Land BGM | Partial | Audio | User reports the stage theme sounds normal; stream counters pass, but enabled DS channel and nonzero PCM peak remain unproved | Block audio completion |
-| Required FGM and Mario/Fox voices | Crowd FIXED / fighter voices open | Audio | ID626 is one finite 104,204-sample source-loop-ordered AOT cue with quadratic source ramps and no DS hardware loop/runtime envelope; Tyler confirmed the audible fix | Keep crowd cue; qualify remaining natural Mario/Fox voice IDs and pitch behavior |
+| Required FGM and Mario/Fox voices | Crowd FIXED / one natural voice per fighter PASS | Audio | The 102,196-byte AOT pack adds source FoxSmash1 ID372 and MarioSmash2 ID430. The natural 820-frame recovery route triggered both, acquired/released two clean DS handles, reported zero play/load/stale/generation faults, and retained 202,256 bytes; ID626 remains user-confirmed | Keep the two representative cues; Tyler ear-checks them, while remaining variants and exact pitch automation stay open |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | Pass on current candidate | QA | Battle-only opening/static store is exactly bounded at 185,696 bytes instead of 270,000; the same natural DamageFall route now retains 214,544 bytes, up 86,016, with unchanged recovery markers | Keep exact harness lifetime bound; repeat only in final CPU-on lifecycle qualification |
-| Focused/checkpoint verification | Focused gates pass / Boundary refresh pending | QA | Current candidate has exact profile-2 fighter/stage census, pause-angle containment, audio cue checks, and synchronized M2/M3 measurements; no stacked full regression was run | Run one Boundary only at the next release checkpoint; Current only if original launch changes |
+| Stable reserve / no corruption | Pass on current candidate | QA | Battle-only opening/static store is exactly bounded at 185,696 bytes; after adding two fighter cues, the natural CPU-on recovery route retains 202,256 bytes, still 71,184 above the 128 KiB floor | Keep exact harness lifetime bound; repeat only in final CPU-on lifecycle qualification |
+| Focused/checkpoint verification | Focused gates pass / Boundary refresh pending | QA | Current candidate has exact profile-2 fighter/stage census, pause-angle containment, source-derived audio asset checks, a natural two-fighter-voice channel gate, and synchronized M2/M3 measurements; no stacked full regression was run | Run one Boundary only at the next release checkpoint; Current only if original launch changes |
 | Cut G capture / final dated capture / manual retest | Current Cut G pass / final P1 pending | QA + user | Exact frames 438/439 pass on 2026-07-15 under `artifacts/visibility`; top coverage 100%, green 42.495%, detail 52.675%, meaningful delta 0.142% | Block release on final complete-match evidence and user qualification |
 
 ## Dated Gates

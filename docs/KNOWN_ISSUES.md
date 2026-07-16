@@ -13,8 +13,10 @@ durable unresolved gaps.
 - Mario Fireball early spawn/damage/rebound/draw passes, but full 140-tick
   collision, independent source-matrix parity, and long-distance visual capture
   remain open.
-- Required fighter voices, pitch behavior, and audible Dream Land BGM proof
-  remain open. The opening crowd overlap/loop report is fixed and user-confirmed.
+- One natural source voice per fighter now plays (FoxSmash1 ID372 and
+  MarioSmash2 ID430); remaining variants, exact pitch automation, Tyler's voice
+  ear check, and audible Dream Land BGM proof remain open. The opening crowd is
+  fixed and user-confirmed.
 - Fox is still classified level-3 CPU, but the public ROM temporarily pauses his
   decision/input. The focused CPU-on one-minute gate passes; final P1 still
   needs Tyler's re-enable decision and a published CPU-on qualification.
@@ -59,9 +61,10 @@ durable unresolved gaps.
 ## Audio
 
 - The DS backend does not yet prove every reachable source pitch/voice event.
-- Voice 685 and ordinary Mario/Fox voices need natural audible coverage.
-- The reported 24 unsupported calls are event count, not 24 identified IDs;
-  capture natural ID/order before selecting assets.
+- Forked DeadExplode voice program 685 remains explicit fidelity debt. The
+  natural recovery trace resolved 17 unique post-GO IDs; source FoxSmash1 372
+  and MarioSmash2 430 are now packed and runtime-proved, leaving 15 unique
+  effects/voice variants unsupported on that route.
 - Existing ACK counters cannot prove the final acoustic mix. The ID626 AOT cue
   passed Tyler's exact-ROM ear check; retain user retests for remaining voices.
 
@@ -69,7 +72,7 @@ durable unresolved gaps.
 
 - The topology cache is validated for the current battle scene; repeated scene
   rebuild/rematch lifetime and reclamation still need proof.
-- Mode 163 currently retains 214,544 bytes after resident audio/renderer
+- Mode 163 currently retains 202,256 bytes after resident audio/renderer
   allocations; final CPU-on lifecycle qualification must preserve the floor.
 - N64 fixed framebuffer addresses and overlay assumptions are unsafe on DS.
 - Save/backup behavior remains stubbed; no persistent SRAM/flash behavior exists.
