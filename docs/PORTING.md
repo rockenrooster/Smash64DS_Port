@@ -21194,3 +21194,13 @@ remains skipped for the requested fast iteration cadence.
 - Stage time falls 556,256 → 541,952 ticks and draw time falls 975,360 →
   962,816 ticks. The gameplay screen and all owner, cross-matrix, and texture
   fence counters remain exact.
+
+## 2026-07-16 - Removed fighter power-of-two soft-float quantization
+
+- The live BattleShip fighter matrix builders already used the original sine
+  table and integer rotation products, but their 16.16 translation and cached
+  float-matrix boundaries still crossed ARM software float helpers.
+- The DS adapter now performs those exact power-of-two conversions from the
+  IEEE-754 fields and retains the original functions as the profile-2 shadow
+  and unsupported-value fallback. Combined Mario/Fox rendering falls 402,560
+  → 398,048 ticks with the complete owner census unchanged.

@@ -40,12 +40,13 @@ texture traffic, screenshot, reserve, and conservation without adding fallback
 or allocation.
 
 The retained native-fighter ITCM placement moves combined fighter P50/P95 from
-419,328/419,392 to 402,560/402,624 and draw P50/P95 from
-1,245,024/1,247,616 to 1,230,336/1,232,832. ITCM is 25,384/32,768; the exact
-70/686 fast owner and 60/320/306/29/0/0 partition remain unchanged, and the
-top-screen A/B is pixel-identical. Next address the measured 53,824-tick local
-matrix builder without copying/patching a whole FIFO packet, replacing the exact
-shade path, or adding another per-root interpreter.
+419,328/419,392 to 402,560/402,624. Exact power-of-two quantization in the
+source-backed local matrix seam then moves it to 398,048/398,144. ITCM remains
+25,384/32,768; the exact 70/686 fast owner and 60/320/306/29/0/0 partition stay
+unchanged. Refreshed Phase 0 measures local matrices at 53,024/53,120 and
+lighting at 67,808/68,032. Lighting is already the exact prepared direction,
+signed normal dot, and LUT lookup, so continue against production emit/account
+work without replacing lighting or adding another per-root interpreter.
 
 ## M3 — Complete Dream Land Owner
 

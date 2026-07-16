@@ -84,7 +84,12 @@ Jump A now retains no-Z codegen, dense prepare-once, AOT-packed coordinate
 shifts, and the exact zero-shift raw-matrix builder. The latest stage result is
 541,952/542,272 ticks. The constant-depth GX painter already made the old CPU
 divider cut obsolete; do not reopen it or the rejected matrix-position reuse.
-Tyler's next assigned work is Jump C on the Mode-8 fighter compute path.
+Jump C Phase 0 is refreshed: local matrix construction is 53,024/53,120 ticks
+and lighting is 67,808/68,032. The source integer sine-table path was already
+live, but its power-of-two float-to-fixed boundaries still called ARM soft-float
+helpers. The retained exact conversion cut moves combined fighter time from
+402,560/402,624 to 398,048/398,144. Lighting is already the exact prepared-dot
+plus LUT path; continue against production emit/account work, not lighting.
 The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
 stable 20 FPS decision remains pending while performance work continues.
 

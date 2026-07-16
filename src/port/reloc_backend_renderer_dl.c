@@ -323,6 +323,122 @@ static void ndsRendererAdapterMtxFromN64(
     ndsRendererMtxLoadN64ToDS20p12(src, dst);
 }
 
+static inline sb32 ndsRendererAdapterFloatPow2ToS32(
+    f32 value, u32 scale_bits, s32 *out)
+{
+    union
+    {
+        f32 f;
+        u32 u;
+    } bits = { value };
+    u32 exponent = (bits.u >> 23) & 0xffu;
+    u32 magnitude;
+    s32 shift;
+
+    if ((out == NULL) || (exponent == 0xffu))
+    {
+        return FALSE;
+    }
+    if (exponent == 0u)
+    {
+        *out = 0;
+        return TRUE;
+    }
+
+    magnitude = (bits.u & 0x7fffffu) | 0x800000u;
+    shift = (s32)exponent - 127 - 23 + (s32)scale_bits;
+    if (shift < 0)
+    {
+        magnitude = (shift <= -24) ? 0u : magnitude >> (u32)-shift;
+    }
+    else
+    {
+        if (shift > 8)
+        {
+            return FALSE;
+        }
+        magnitude <<= (u32)shift;
+        if (((bits.u & 0x80000000u) == 0u) &&
+            (magnitude > 0x7fffffffu))
+        {
+            return FALSE;
+        }
+    }
+
+    *out = ((bits.u & 0x80000000u) != 0u) ?
+        (s32)(0u - magnitude) : (s32)magnitude;
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterF2LFixedWExact(
+    const Mtx44f *src, Mtx *dst)
+{
+    s32 e1;
+    s32 e2;
+
+#define NDS_F2L_FIXED(value, output) \
+    do \
+    { \
+        if (ndsRendererAdapterFloatPow2ToS32((value), 16u, &(output)) == FALSE) \
+        { \
+            return FALSE; \
+        } \
+    } while (0)
+
+    NDS_F2L_FIXED((*src)[0][0], e1);
+    NDS_F2L_FIXED((*src)[0][1], e2);
+    dst->m[0][0] = COMBINE_INTEGRAL((u32)e1, (u32)e2);
+    dst->m[2][0] = COMBINE_FRACTIONAL((u32)e1, (u32)e2);
+    NDS_F2L_FIXED((*src)[0][2], e1);
+    dst->m[0][1] = COMBINE_INTEGRAL((u32)e1, 0u);
+    dst->m[2][1] = COMBINE_FRACTIONAL((u32)e1, 0u);
+    NDS_F2L_FIXED((*src)[1][0], e1);
+    NDS_F2L_FIXED((*src)[1][1], e2);
+    dst->m[0][2] = COMBINE_INTEGRAL((u32)e1, (u32)e2);
+    dst->m[2][2] = COMBINE_FRACTIONAL((u32)e1, (u32)e2);
+    NDS_F2L_FIXED((*src)[1][2], e1);
+    dst->m[0][3] = COMBINE_INTEGRAL((u32)e1, 0u);
+    dst->m[2][3] = COMBINE_FRACTIONAL((u32)e1, 0u);
+    NDS_F2L_FIXED((*src)[2][0], e1);
+    NDS_F2L_FIXED((*src)[2][1], e2);
+    dst->m[1][0] = COMBINE_INTEGRAL((u32)e1, (u32)e2);
+    dst->m[3][0] = COMBINE_FRACTIONAL((u32)e1, (u32)e2);
+    NDS_F2L_FIXED((*src)[2][2], e1);
+    dst->m[1][1] = COMBINE_INTEGRAL((u32)e1, 0u);
+    dst->m[3][1] = COMBINE_FRACTIONAL((u32)e1, 0u);
+    NDS_F2L_FIXED((*src)[3][0], e1);
+    NDS_F2L_FIXED((*src)[3][1], e2);
+    dst->m[1][2] = COMBINE_INTEGRAL((u32)e1, (u32)e2);
+    dst->m[3][2] = COMBINE_FRACTIONAL((u32)e1, (u32)e2);
+    NDS_F2L_FIXED((*src)[3][2], e1);
+    dst->m[1][3] = COMBINE_INTEGRAL((u32)e1, 0x00010000u);
+    dst->m[3][3] = COMBINE_FRACTIONAL((u32)e1, 0x00010000u);
+
+#undef NDS_F2L_FIXED
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterSetN64TranslationExact(
+    Mtx *mtx, f32 x, f32 y, f32 z)
+{
+    s32 fixed_x;
+    s32 fixed_y;
+    s32 fixed_z;
+
+    if ((ndsRendererAdapterFloatPow2ToS32(x, 16u, &fixed_x) == FALSE) ||
+        (ndsRendererAdapterFloatPow2ToS32(y, 16u, &fixed_y) == FALSE) ||
+        (ndsRendererAdapterFloatPow2ToS32(z, 16u, &fixed_z) == FALSE))
+    {
+        return FALSE;
+    }
+
+    mtx->m[1][2] = COMBINE_INTEGRAL((u32)fixed_x, (u32)fixed_y);
+    mtx->m[3][2] = COMBINE_FRACTIONAL((u32)fixed_x, (u32)fixed_y);
+    mtx->m[1][3] = COMBINE_INTEGRAL((u32)fixed_z, 0x00010000u);
+    mtx->m[3][3] = COMBINE_FRACTIONAL((u32)fixed_z, 0x00010000u);
+    return TRUE;
+}
+
 static void ndsRendererAdapterBuildDObjFallbackMtx(DObj *dobj, Mtx *mtx)
 {
     if ((dobj == NULL) || (mtx == NULL))
@@ -569,6 +685,10 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
 {
     FTParts *parts;
     Mtx mtx;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    Mtx oracle;
+    sb32 has_oracle = FALSE;
+#endif
 
     if ((dobj == NULL) || (out == NULL))
     {
@@ -586,7 +706,15 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
         /* BattleShip lbCommonFighterPartsFuncMatrix quantizes the complete
          * source float matrix through syMatrixF2LFixedW before the RSP sees
          * it. Preserve that 16.16 boundary, then convert to DS 20.12. */
-        syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, &mtx);
+        if (ndsRendererAdapterF2LFixedWExact(
+                &parts->unk_dobjtrans_0x10, &mtx) == FALSE)
+        {
+            syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, &mtx);
+        }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, &oracle);
+        has_oracle = TRUE;
+#endif
     }
     else if ((dobj->scale.vec.f.x != 1.0F) ||
              (dobj->scale.vec.f.y != 1.0F) ||
@@ -605,14 +733,40 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
     }
     else
     {
-        syMatrixTraRotRpyR(&mtx,
+        syMatrixRotRpyR(&mtx,
+                        dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z);
+        if (ndsRendererAdapterSetN64TranslationExact(
+                &mtx, dobj->translate.vec.f.x, dobj->translate.vec.f.y,
+                dobj->translate.vec.f.z) == FALSE)
+        {
+            syMatrixTraRotRpyR(&mtx,
+                               dobj->translate.vec.f.x,
+                               dobj->translate.vec.f.y,
+                               dobj->translate.vec.f.z,
+                               dobj->rotate.vec.f.x,
+                               dobj->rotate.vec.f.y,
+                               dobj->rotate.vec.f.z);
+        }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        syMatrixTraRotRpyR(&oracle,
                            dobj->translate.vec.f.x,
                            dobj->translate.vec.f.y,
                            dobj->translate.vec.f.z,
                            dobj->rotate.vec.f.x,
                            dobj->rotate.vec.f.y,
                            dobj->rotate.vec.f.z);
+        has_oracle = TRUE;
+#endif
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    if ((has_oracle != FALSE) &&
+        (memcmp(&mtx, &oracle, sizeof(mtx)) != 0))
+    {
+        gNdsRendererProfileOracleMismatches++;
+    }
+#endif
     ndsRendererAdapterMtxFromN64(&mtx, out);
     return TRUE;
 }

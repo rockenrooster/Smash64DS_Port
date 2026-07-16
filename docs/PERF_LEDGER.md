@@ -2789,3 +2789,44 @@ EVIDENCE:
 DECISION: KEEP
   Accumulate the exact gain. M3 remains above its final 150-250K target.
 ```
+
+## 2026-07-16 - M2 exact power-of-two matrix quantization
+
+```text
+IDEA ID: M2-JUMPC-POW2-QUANTIZE-20260716
+PHASE 0:
+  Mode 8, profile 1 detailed ledger, static 1, hybrid OAM 1, Fox/countdown
+  iteration switch off, frames 600..607. Local matrices are 53,024/53,120
+  ticks and lighting is 67,808/68,032. The owner performs 50 local builds.
+SOURCE / CODEGEN:
+  BattleShip matrix.c:966-1140 already uses gSYSinTable and integer rotation
+  products. Actual ARM code still calls __aeabi_fmul plus __aeabi_f2iz for
+  FTOFIX32 and power-of-two scale boundaries: syMatrixF2LFixedW is 0x134 bytes,
+  syMatrixRotRpyR 0x19c, syMatrixTraRotRpyR 0x1dc, and the scaled form 0x248.
+TREATMENT:
+  The fighter adapter preserves the exact source 16.16 Mtx layout while
+  converting finite power-of-two float scales from IEEE-754 fields directly.
+  Cached source float matrices avoid syMatrixF2LFixedW soft-float calls;
+  unscaled RPY matrices use the source rotation and exact translation pack.
+  Unsupported values fall back to the original source functions. Profile 2
+  retains the original functions as the shadow oracle.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 8, static 1, hybrid OAM 1, Fox/countdown iteration
+  switch off, frames 600..607. A ROM is
+  0C22A7FC41C0D6997940D931B7B6E67758A7A4E499E8C9C59EF45D60F49D0553;
+  B ROM is ECDE537C0081B55A1A80474AC5A2B15FC339E01626AE69413311F4188EEC888C.
+RESULT P50/P95:
+  Combined Mario+Fox 402,560/402,624 -> 398,048/398,144, saving 4,512/4,480.
+CORRECTNESS / VISUALS:
+  Exact 70/686 and 60/320/306/29/0/0, zero fallback/texture fence, and zero
+  conservation error hold. Tyler inspected the candidate PNG and confirmed it
+  is visually normal. No allocation, packet, or ITCM change is introduced.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m2-itcm-restore-b.json
+  artifacts/performance/2026-07-16_m2-jumpc-pow2-b.json
+  artifacts/visibility/2026-07-16_m2-itcm-restore-b.png
+  artifacts/visibility/2026-07-16_m2-jumpc-pow2-b2.png
+DECISION: KEEP
+  Accumulate the exact compute gain. Lighting has no eligible residual; move
+  to the measured production emit/account path.
+```
