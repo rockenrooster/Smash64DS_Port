@@ -16,6 +16,8 @@ Original BattleShip game code + Nintendo DS backend = playable port
 
 Never replace portable original gameplay with handwritten approximations, scripted behavior, or a DS-native Smash rewrite. Import and adapt the original source whenever possible. Keep DS-specific behavior in src/nds or src/port, compatibility declarations in include, and original TU imports in src/import.
 
+Gameplay semantics remain 1:1. Presentation targets roughly 90% overall visual likeness under Nintendo DS performance and memory constraints, not pixel identity. Give cosmetic exactness one measured focused attempt; if it misses the budget or threatens P1, retain the cheapest recognizable source-derived approximation and document its visible delta, measured reason, and dated screenshot under `artifacts/visibility`. This exception never permits approximating hitboxes, collision, physics, attack timing, gameplay telegraphs, camera meaning, rules, or state transitions.
+
 PRIORITIES
 
 P1 — PLAYABLE DEMO
@@ -80,7 +82,7 @@ evidence. Do not start P2 implementation while any required P1 row is red.
 
 Project-local build and verification improvements are encouraged when they measurably shorten iteration time without weakening coverage. Prefer caching, incremental builds, detached builds, profile reuse, and safe regression sharding. Never bypass, loosen, or delete a meaningful gate merely because it is slow.
 
-Use verify-dev-fast during iteration, Boundary for completed runtime slices, and the required RegressionCore/full Regression flow for shared-TU or architecture changes. Follow the current AGENTS.md and docs/HANDOFF.md commands if they differ from this summary.
+Use the smallest focused verifier during iteration, DevFast after it passes, Boundary for completed runtime slices, and Current only when normal launch or shared startup/runtime can be affected. `P1Gate`, `Regression*`, and `Full` are list-only inventories; never execute or prebuild them. Follow current AGENTS.md and docs/HANDOFF.md commands if they differ from this summary.
 
 BLOCKER POLICY
 

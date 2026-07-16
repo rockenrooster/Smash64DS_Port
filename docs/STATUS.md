@@ -6,9 +6,11 @@ history to `PORTING.md`.
 
 ## Direction
 
-The target remains a 1:1 playable Nintendo DS source port of BattleShip Smash
-64. Keep `decomp/` read-only, import coherent original TU groups, and graduate
-only source-backed behavior proven in continuous runtime and captures.
+The target remains a behaviorally 1:1 Nintendo DS source port of BattleShip
+Smash 64. Keep `decomp/` read-only and gameplay source-backed. Presentation now
+targets roughly 90% overall visual likeness: after one failed measured exact
+attempt, prefer a documented source-derived DS approximation. P1 Dream Land
+water therefore freezes exact source frame 0 on the original geometry.
 
 ## Current Boundary
 
@@ -64,19 +66,19 @@ sample proves Wait, 3,600 remaining, timer stopped, both fighters locked, and
 zero Fox CPU processing. The explicit CPU-on post-GO proof shows Go, remaining
 + passed = 3,600, timer running, both unlocked, and natural CPU activity.
 
-The canonical target enables the retained path at profile 0 and publishes the
-user-facing ROM only through the Makefile parity rule:
+The canonical target now publishes intrinsic Mode 9, mip 0, static residency 1,
+and hybrid OAM 1. The original launch target remains 0/0/0/0:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,368,768 bytes
-SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
+14,534,656 bytes
+SHA-256 3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38
 ```
 
 Completed frames 438/439 in the dated
-`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_044100-8463313-p20112.png`
+`artifacts/visibility/2026-07-15_canonical_fast_frame438-439_182430-9052820-p35520.png`
 pair pass exact GO/timer/control/OAM state, visibility, detail, named regions,
-motion, and sky coverage; frame 438 is `latest.png`. Acceptance is melonDS-only.
+motion, pond, and sky coverage; frame 438 is `latest.png`. Acceptance is melonDS-only.
 All generated screenshots belong under `artifacts/visibility`.
 
 ## P1 Release Matrix
@@ -85,28 +87,29 @@ All generated screenshots belong under `artifacts/visibility`.
 |---|---|
 | Natural one-minute battle and Results | CPU-on 3,600→0/Time Up/22→24 gate passes; public/manual default is temporarily CPU-paused, and final CPU-on qualification remains |
 | Gameplay | Fireball early submission/rebound automation passes but full-lifetime visuals and independent `0x47` parity remain open; the platform gate has a next-frame landing blind spot; isolated LIVE `mpprocess` closure passes after endpoint/common repair, but sparse DamageFall runtime, moving-wall/project-floor parity, and coherent `mpcommon` remain open |
-| Renderer | M1/native countdown pass; M2 Mode 8 is correct but above target and Mode 7 is rejected; M3 exact 12,663-byte core plus partial adapter compile; M4 exact 167,936-byte residency and 138-triangle draw packets await live integration; pause ±33.6° source parity is unresolved |
+| Renderer | M1/native countdown pass; M2 Mode 8 is correct but above target and Mode 7 is rejected; published M3 Mode 9 passes exact semantics but stage-exclusive 664,544/664,640 misses its ≤500K first gate; M4 frozen-water/static residency passes short Boundary, full-minute gate pending |
 | HUD/countdown | User-approved lower HUD and top countdown pass |
 | Audio | Production phase/KO and isolated crowd-ACK gates pass; the user ROM has no blocking trace; ID626 PNT=1/LEN=3527 model passes with 2 guard samples/cycle; audible qualification remains open |
-| Stability/memory | One full match passes with 172,024-byte conservative reserve and zero safety faults; repetition pending |
-| Release evidence | Cut G exact-frame capture passes; final dated capture, executable focused/DevFast/Boundary checks, and exact-ROM retest pending |
+| Stability/memory | Prior-ROM full match passed with 172,024-byte reserve and zero safety faults; current `3F3AC…` one-minute M4 fence/reserve gate is pending |
+| Release evidence | 2026-07-15 Cut G exact frames 438/439 and canonical Boundary pass on the published ROM; final P1 dated capture and exact-ROM user retest remain pending |
 
 ## Performance And Open Work
 
 The latest detailed-ledger Mode-8 A0/A1 is 477,152/477,376 ticks and renders
-both fighters correctly. Rejected Mode 7 is 518,336/518,784 and produces blank
-fighters; its runtime path must be removed. The ledger-off accepted reference
-remains about 413.5K. A direct-contract design may remove an estimated 62–75K,
-but it is not implemented or measured. The last control smoke window is about
-17.7 FPS, draw 1.646M, and loop 2.241M ticks. Therefore:
+both fighters correctly. Rejected Mode 7 is 518,336/518,784 and blank. The
+published Mode-9 Boundary now reaches 19.8 FPS with about 1.54M present and
+1.09M draw ticks, so the renderer remains the measured critical path. Therefore:
 
 - M2 has no accepted cut meeting its 170–250K target.
-- M3's exact 12,663-byte / 8-callback / 57-DObj / 42-binding packet and
-  renderer core compile. The partial adapter helpers compile, but display-loop
-  interception, link, timing, counters, and screenshot remain unfinished.
-- M4's exact one-pass residency is 167,936 bytes. Its 68-cell/138-triangle draw
-  helper has zero draw-time upload, I/O, or allocation in the ARM gate, but
-  live prepare/draw/teardown, reserve, and post-GO fence proof remain open.
+- M3's exact 12,663-byte complete-stage owner is linked and device-proven at
+  8 callbacks / 57 DObjs / 42 bindings / 54 runs / 202 triangles with zero
+  fallback. Stage-exclusive timing is 664,544/664,640 P50/P95, about 164.5K
+  above the first gate and only ~140K below the documented ~805K baseline: REWORK.
+- M4's exact animated-water path is retired under the DS visual policy. Freeze
+  exact frame 0/fraction 114 as two 36,864-byte prepared outputs on the original
+  12 triangles. The published short window proves 22 pinned keys, exact VRAM-A
+  ownership, successful screenshot, and zero gameplay work/fence; the one-minute
+  GO-to-teardown reserve/fence gate remains.
 
 Detailed renderer measurements and falsification gates live only in
 `OPTIMIZATION_ROADMAP.md`.
@@ -132,7 +135,6 @@ A BattleShip ABI mismatch had made Fox's up/down-smash restore command disable
 his damage colliders. The user confirms damage works on the repaired path;
 natural Fox up-smash restores all 11 active colliders to Normal with zero
 mismatch and clears the no-damage flag. Continuous natural-hit coverage remains.
-
 ## Verification
 
 ```powershell
@@ -144,5 +146,4 @@ mismatch and clears the no-damage flag. Continuous natural-hit coverage remains.
 .\scripts\verify-dev-fast.ps1 -Build -DelaySeconds 3
 .\scripts\verify-boundary.ps1 -NoBuild -DelaySeconds 3 -RunnerSlot 0
 ```
-
 `Full`, `Regression*`, and `P1Gate` are list-only; never run or prebuild them. Remaining blockers live on the execution board; run the Lean snapshot last.

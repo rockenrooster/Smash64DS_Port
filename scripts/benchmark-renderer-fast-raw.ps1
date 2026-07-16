@@ -26,6 +26,15 @@ $ErrorActionPreference = 'Stop'
 if (($FastRunMode -eq 9) -and ($RendererProfileLevel -ne 1)) {
     throw 'Fast-run mode 9 requires renderer profile 1.'
 }
+if ($M4WaterTiledAotMode -ne 0) {
+    throw 'M4WaterTiledAotMode is retired; frozen source water is part of StaticTextureAotMode 1.'
+}
+if (($FastRunMode -eq 9) -and
+    -not $PSBoundParameters.ContainsKey('RendererBenchmarkStartFrame')) {
+    # The complete-stage owner/M4 contract is meaningful only after GO and
+    # static residency are armed; frames 438-445 are the canonical first gate.
+    $RendererBenchmarkStartFrame = 438
+}
 $target = if ($FastRunMode -eq 9) {
     'smash64ds-battle-playable-m3-stage-owner-lab'
 } elseif ($RendererProfileLevel -eq 2) {
@@ -75,7 +84,7 @@ $build = if ($FastRunMode -eq 9) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) M4 water $M4WaterTiledAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode" `
+    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

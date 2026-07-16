@@ -8,9 +8,9 @@ renderer, and converts their CI4/RGBA5551 inputs to padded little-endian DS
 RGB5A1 bytes.  Exact metadata is emitted as C while pixels are emitted as one
 NitroFS-ready binary.  Generated pixels are checked with a separate slow oracle.
 
-Water, animated stage actors, fighters, weapons, effects, and shadows remain
-outside this static corpus.  Consequently this tool cannot claim M4 complete
-or prove zero gameplay conversion by itself.
+The two source-initial Pupupu water composites are included for the optional
+frame-0 freeze cut. Animated actors, fighters, weapons, effects, and shadows
+remain outside this corpus, so this tool cannot claim M4 complete by itself.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 import generate_battle_playable_texture_census as census
+import generate_pupupu_water_aot as water
 
 
 OUTPUT_RELATIVE = Path(
@@ -40,19 +41,19 @@ OWNER_SPECS = (
     ("pupupu_layer3", 0x2BF8, 5, 1 << 2),
 )
 
-EXPECTED_KEY_COUNT = 20
-EXPECTED_OUTPUT_COUNT = 19
-EXPECTED_RESIDENCY_BYTES = 94208
-EXPECTED_PAYLOAD_BYTES = 90112
-EXPECTED_ORACLE_PIXELS = 44032
+EXPECTED_KEY_COUNT = 22
+EXPECTED_OUTPUT_COUNT = 21
+EXPECTED_RESIDENCY_BYTES = 131072
+EXPECTED_PAYLOAD_BYTES = 126976
+EXPECTED_ORACLE_PIXELS = 62464
 EXPECTED_PAYLOAD_SHA256 = (
-    "a49d2172af5935438727ce673e87e7adcd8bd80d3cf936e2edc7d9c6c15b029c"
+    "f94b82c030f062f0641bdbbadbd547eae460158956f6f8af07485dfe7ccf15f1"
 )
 EXPECTED_METADATA_SHA256 = (
-    "49623b2f602cc791897e63a1a415fb8265731089707ffdadd2b60c5cfaa04965"
+    "beae3762e706ff0bc1ac3df064502fd7444a54dfdf2806da619a530806908573"
 )
 EXPECTED_INCLUDE_SHA256 = (
-    "b547956b9f71584d1b9e1ea9b3e9b79b02c3627c4f8039ef62b0e2b890cfe694"
+    "22ba02c9b7e9bd41cee2ed112741d8cb61ce2737a6787f0d79d582925206321b"
 )
 
 G_SETTIMG = 0xFD
@@ -695,6 +696,131 @@ def capture_record(
     )
 
 
+def build_water_records(repo_root: Path) -> list[PreparedRecord]:
+    """Build the two exact source-initial TEXEL0/TEXEL1 water keys."""
+    source = water.load_source_corpus(repo_root)
+    expected_keys = (
+        water.WaterKey(0, 0, 1, 769, 0, 1277, 508,
+                       769, 0, 1277, 508, 114),
+        water.WaterKey(1, 0, 1, 205, 0, 329, 252,
+                       205, 0, 329, 252, 114),
+    )
+    expected_hashes = (
+        "f3a908659547f360ec9d3b79f80aa4c5dca829cdb36975a5d3a59667d1fdf532",
+        "61b0bb44aa30033d0c8e07d924f6b38ddbafa23807692eb16aab194e57457efe",
+    )
+    records: list[PreparedRecord] = []
+    for owner, spec in enumerate(source.specs):
+        state = water.MaterialState(source.bank104.payload, spec)
+        state.tick()
+        frame_key = water.make_key(spec, state)
+        if frame_key != expected_keys[owner]:
+            raise falsify(f"{spec.name}: source-initial water key changed")
+        pixels = water.render_reference(source, spec, frame_key)
+        if sha256(pixels) != expected_hashes[owner]:
+            raise falsify(f"{spec.name}: source-initial water output changed")
+
+        render_w1 = 0x00094350 if owner == water.OWNER_LARGE else 0x00094250
+        scroll_w1 = 0x01094250
+        render_tile = TileState(
+            set_seen=True, size_seen=True, format=FMT_CI, size=SIZ_4B,
+            line=2, tmem=0, palette=0,
+            cmt=(render_w1 >> 18) & 3,
+            maskt=(render_w1 >> 14) & 15,
+            shiftt=(render_w1 >> 10) & 15,
+            cms=(render_w1 >> 8) & 3,
+            masks=(render_w1 >> 4) & 15,
+            shifts=render_w1 & 15,
+            uls=frame_key.tile0_uls, ult=frame_key.tile0_ult,
+            lrs=frame_key.tile0_lrs, lrt=frame_key.tile0_lrt,
+            width=spec.width, height=spec.height,
+        )
+        scroll_tile = TileState(
+            set_seen=True, size_seen=True, format=FMT_CI, size=SIZ_4B,
+            line=2, tmem=64, palette=0,
+            cmt=(scroll_w1 >> 18) & 3,
+            maskt=(scroll_w1 >> 14) & 15,
+            shiftt=(scroll_w1 >> 10) & 15,
+            cms=(scroll_w1 >> 8) & 3,
+            masks=(scroll_w1 >> 4) & 15,
+            shifts=scroll_w1 & 15,
+            uls=frame_key.tile1_uls, ult=frame_key.tile1_ult,
+            lrs=frame_key.tile1_lrs, lrt=frame_key.tile1_lrt,
+            width=spec.width, height=spec.height,
+        )
+        fields = {name: 0 for name in census.EXPECTED_KEY_FIELDS}
+        fields.update(
+            image=water.TEXTURE_OFFSETS[frame_key.texture0],
+            image_format=FMT_CI, image_size=SIZ_16B, image_width=1,
+            tlut_image=water.PALETTE_OFFSET, tlut_count=16,
+            data_layout=DATA_LAYOUT_O2R_WORD_SWAPPED,
+            format=FMT_CI, size=SIZ_4B,
+            width=spec.width, height=spec.height,
+            render_tile=0, render_tmem=0, render_palette=0,
+            render_tile_cms=render_tile.cms,
+            render_tile_cmt=render_tile.cmt,
+            render_tile_masks=render_tile.masks,
+            render_tile_maskt=render_tile.maskt,
+            render_tile_shifts=render_tile.shifts,
+            render_tile_shiftt=render_tile.shiftt,
+            load_tile=7, load_uls=0, load_ult=0,
+            load_lrs=255, load_dxt=1024, load_texels=256,
+            tile_uls=render_tile.uls, tile_ult=render_tile.ult,
+            tile_lrs=render_tile.lrs, tile_lrt=render_tile.lrt,
+            line=render_tile.line,
+            flags=(TILE_RENDER_SEEN | TILE_LOAD_SEEN |
+                   tile_flags(render_tile) | (LOAD_KIND_BLOCK << 8)),
+            texel1_image=water.TEXTURE_OFFSETS[frame_key.texture1],
+            texel1_image_format=FMT_CI,
+            texel1_image_size=SIZ_16B, texel1_image_width=1,
+            texel1_load_kind=LOAD_KIND_BLOCK,
+            texel1_render_tmem=scroll_tile.tmem,
+            texel1_render_line=scroll_tile.line,
+            texel1_render_palette=scroll_tile.palette,
+            texel1_render_tile_cms=scroll_tile.cms,
+            texel1_render_tile_cmt=scroll_tile.cmt,
+            texel1_render_tile_masks=scroll_tile.masks,
+            texel1_render_tile_maskt=scroll_tile.maskt,
+            texel1_render_tile_shifts=scroll_tile.shifts,
+            texel1_render_tile_shiftt=scroll_tile.shiftt,
+            texel1_load_tile=6, texel1_load_uls=0, texel1_load_ult=0,
+            texel1_load_lrs=255, texel1_load_dxt=1024,
+            texel1_load_texels=256,
+            texel1_tile_uls=scroll_tile.uls,
+            texel1_tile_ult=scroll_tile.ult,
+            texel1_tile_lrs=scroll_tile.lrs,
+            texel1_tile_lrt=scroll_tile.lrt,
+            prim_lod_fraction=frame_key.fraction,
+            combine_w0=water.COMBINE_W0,
+            combine_w1=water.COMBINE_W1,
+        )
+        words = tuple(int(fields[name]) for name in census.EXPECTED_KEY_FIELDS)
+        canonical_key = {
+            "image_asset_id": source.bank103.file_id,
+            "tlut_asset_id": source.bank103.file_id,
+            "texel1_asset_id": source.bank103.file_id,
+            "key_words": words,
+        }
+        records.append(
+            PreparedRecord(
+                owner_mask=1 << 2,
+                image=census.PointerRef(source.bank103.file_id, words[0]),
+                tlut_image=census.PointerRef(source.bank103.file_id, words[4]),
+                source_block=census.PointerRef(source.bank103.file_id, words[0]),
+                key_words=words,
+                logical_width=spec.width, logical_height=spec.height,
+                upload_width=spec.width, upload_height=spec.height,
+                pixels=pixels,
+                key_sha256=sha256(json.dumps(
+                    canonical_key, sort_keys=True, separators=(",", ":")
+                ).encode("ascii")),
+                sites={0x22C8 if owner == water.OWNER_LARGE else 0x2380},
+                output_sha256=sha256(pixels),
+            )
+        )
+    return records
+
+
 def walk_display_list(
     resource: census.O2RResource,
     images: census.O2RResource,
@@ -1003,6 +1129,15 @@ def generate(repo_root: Path) -> GeneratedArtifacts:
         raise falsify(
             f"static owner mask 0x{owner_union:x} != 0x{expected_owner_union:x}"
         )
+    records.extend(build_water_records(repo_root))
+    records.sort(
+        key=lambda record: (
+            record.image.asset_id,
+            record.image.offset,
+            record.tlut_image.offset,
+            record.key_words,
+        )
+    )
     payload, output_count = pack_payload(records)
     metadata_sha256 = sha256(metadata_payload(records))
     generated_include = build_include(

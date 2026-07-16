@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-15 15:46 Central
+Updated: 2026-07-15 18:26 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -17,8 +17,8 @@ Current verifier-covered canonical/shipped pair:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,368,768 bytes
-SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
+14,534,656 bytes
+SHA-256 3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -30,7 +30,7 @@ more accurate than recycling cross-build samples.
 
 | Match phase | Artifact class | ROM SHA-256 | Synchronized window | N | Active median / P95 | State |
 |---|---|---|---|---:|---:|---|
-| Countdown / GO | canonical-profile-0 | `E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F` | exact completed frames 438/439 | 2 | — / — | GO state + screenshot pass; phase ticks pending |
+| Countdown / GO | canonical-profile-0 | `3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38` | exact completed frames 438/439 | 2 | — / — | GO state + screenshot/Boundary pass; phase ticks pending |
 | Early combat | canonical-profile-0 | same canonical SHA | Pending post-GO window | — | — / — | Pending synchronized canonical baseline |
 | Late combat | canonical-profile-0 | same canonical SHA | Pending synchronized late window | — | — / — | Pending synchronized canonical baseline |
 | KO / rebirth | canonical-profile-0 | same canonical SHA | Pending natural KO→rebirth window | — | — / — | Pending synchronized canonical baseline |
@@ -42,10 +42,10 @@ Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; th
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Paused cleanly | live tree | M3/M4 integration, docs, ROM identity | no runner active |
-| Renderer implementation | Paused | shared live tree / disjoint files | M2 direct-contract design; rejected Mode-7 removal | no runner active |
+| Integration/release | Active checkpoint | live tree | docs, published identity, final Boundary/commit | runner 2 |
+| Renderer implementation | REWORK / bounded dense-prepare cut | shared live tree / `builds/build-m3-stage-owner-lab` | M3 stage owner measured 664.5K; de-duplicate the attributable prepare bucket by dense index | runner 3 |
 | Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
-| Performance research | Paused | shared live tree / disjoint files | M4 live residency/draw/fence integration | no runner active |
+| Performance research | Routed | shared live tree / read-only | M4 one-minute GO-to-teardown fence/reserve qualification | no runner active |
 
 Only `./emulators/melonds/melonDS.exe` (manual) and repo-owned
 `./emulators/melonds-runners/slotN/melonDS.exe` copies may launch. Every TOML
@@ -57,8 +57,7 @@ profile and repo-local launcher policy without auditing mutable TOMLs;
 `-AuditLocalConfigs` is opt-in and the all-worktree setter is creation/repair only.
 Workers edit only explicitly assigned disjoint surfaces; the integration lane
 owns current-truth docs, shared-file arbitration, commits, and publication.
-Keep all three subagent slots occupied while three independent P1 packets are
-available, and reassign a slot immediately when its packet completes.
+
 
 ## Acceptance Matrix
 
@@ -76,16 +75,16 @@ available, and reassign a slot immediately when its packet completes.
 | Natural Fox recovery | Coverage debt | Gameplay | Natural Recover objective/offstage return unobserved | No completion claim |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Fail / Mode 8 correct, Mode 7 rejected | Renderer | Latest detailed A0/A1 477,152/477,376; Mode 7 518,336/518,784 and blank fighters; direct-contract estimate 62–75K is unimplemented | Remove Mode 7; implement only the exact bounded direct-contract path, then require ≥80K saving and ≤337,472 first window |
-| M3 complete stage AOT, 150–250K ticks | Exact core + partial adapter compile | Renderer | 12,663 bytes / 8 callbacks / 57 DObjs / 42 bindings / 54 runs / 202 triangles / exact cross 5/10/15; renderer core and adapter helpers compile, interception/link/device proof pending | Wire ordered display interception; keep only ≥300K saving and ≤500K |
-| M4 zero gameplay conversion/preparation | Exact host/ARM packets / live integration pending | Renderer | One-pass payload 167,936 bytes; draw 68 cells/138 triangles/414 vertices, zero draw-time upload/I/O/alloc; draw_proven=0 | Integrate pre-GO residency + M3 water replacement + teardown, then measure reserve and require zero post-GO work |
+| M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Frames 438–445 retain exact 8/57/42/54/202 ownership and zero fence/fallback, but stage-exclusive P50/P95 is 664,544/664,640: ~140K saved vs ~805K, not ≥300K, and 164,544 above the ≤500K gate | Run the roadmap dense-prepare cut in `nds_renderer.c` + `check_nds_native_stage.py`; require ≥164,544 saved and ≤500K |
+| M4 zero gameplay conversion/preparation | Published short Boundary pass / full-minute gate pending | Renderer | Frozen frame 0/fraction 114; 22 keys, 21 outputs, 131,072 prepared bytes in VRAM A; zero upload/CI4/refresh/evict/fallback/fence and positive pinned hits | Prove the same zero-work fence and ≥128 KiB reserve from GO through one-minute battle teardown |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | Pass / native OAM | Renderer + QA | Source thread/assets live; 11,584/11,584 ticks, zero gameplay conversion/upload, clean teardown | Keep |
 | Dream Land BGM | Partial | Audio | User reports the stage theme sounds normal; stream counters pass, but enabled DS channel and nonzero PCM peak remain unproved | Block audio completion |
 | Required FGM and Mario/Fox voices | Production phase/KO + isolated crowd-command/loop-pack pass; audible pending | Audio | Source calls ID626 once for 6.9 s; its 1.868 s DS loop intentionally overlaps countdown/GO, but exact channel-mask/acoustic proof is absent | Add host acoustic oracle and tighten existing ACK masks; exact-ROM audible retest; voices remain open |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | One-match pass | QA | Conservative reserve 172,024 bytes after BGM; stale=0/0 and 17 safety counters zero; repetition pending | Keep gate; repeat for qualification |
-| Executable focused/DevFast/Boundary checks | Pending after integration | QA | Use the smallest registered runtime verifier for the accepted diff | `Full`, `Regression*`, and `P1Gate` stay list-only and are never executed/prebuilt |
-| Cut G capture / final dated capture / manual retest | Cut G pass / final pending | QA + user | Exact frame438/439 pair passes; final post-change ROM still needs dated capture and user qualification | Block release on final evidence |
+| Stable reserve / no corruption | Prior-ROM one-match pass / current gate pending | QA | Pre-M3/M4 baseline reserve was 172,024 bytes with stale=0/0 and 17 safety counters zero; current `3F3AC…` full-minute result is unmeasured | Repeat current published-equivalent one-minute gate |
+| Executable focused/DevFast/Boundary checks | Current Boundary pass | QA | Published intrinsic 9/0/1/hybrid1 target passes focused natural runtime and canonical Boundary | Keep smallest registered verifier; `Full`, `Regression*`, and `P1Gate` remain list-only |
+| Cut G capture / final dated capture / manual retest | Current Cut G pass / final P1 pending | QA + user | Published exact frames 438/439 pass on 2026-07-15 under `artifacts/visibility`; final complete-match capture/user qualification remains | Block release on final P1 evidence |
 
 ## Reconciled Blockers
 
@@ -118,8 +117,8 @@ available, and reassign a slot immediately when its packet completes.
   route has a next-frame landing blind spot and no longer
   counts as semantic closure; both manual symptoms remain open.
 - No retained M2 treatment passes the ≥80K / ≤337,472 first-window gate. M3's
-  slab and M4's tiled water remain host candidates, not device/runtime progress;
-  keep their falsification gates in `OPTIMIZATION_ROADMAP.md`.
+  owner and frozen-water static records are now live and device-semantic-proven,
+  but M3 timing and the full-minute M4 fence/reserve gates remain open.
 - Audio IDs/handles, phase FGMs, Mario regular-KO triplet, and Fox winner 16 →
   Results 22 pass naturally; pitch, voice 685, and other voices remain.
 - Exact canonical GO frames 438/439 pass runtime/OAM state and all screenshot
@@ -140,13 +139,13 @@ available, and reassign a slot immediately when its packet completes.
   fixtures, remove its runtime/temporary verifier allowance, and continue only
   with the bounded direct-contract design (estimated 62–75K, unmeasured).
 - M3's exact packet is now 12,663 bytes with five cross-matrix runs / ten
-  triangles / fifteen foreign corners. Renderer core and adapter helpers
-  compile; ordered display interception, link, device counters, timing, and
-  screenshot are the restart point.
-- M4's one-pass exact payload is 167,936 bytes. The ARM draw gate proves 68
-  cells / 138 triangles / 414 vertices and no runtime upload/I/O/allocation;
-  live pre-GO residency, M3 water replacement, teardown, reserve, and fence
-  remain open.
+  triangles / fifteen foreign corners. Its complete-stage owner is linked and
+  device-semantic-proven with zero fallback; 664,544/664,640 timing fails the
+  first gate, so the largest attributable prepare bucket is the restart point.
+- The exact animated tiled-water path (167,936 bytes, 138 triangles) is retired
+  from P1 under the DS visual-fidelity policy. Freeze source frame 0/fraction
+  114 as 36,864 DS-ready bytes and retain the original 12 triangles. Published
+  short-window preload/pinning/screenshot/fence pass; full-minute reserve remains.
 - Keep pause-angle symptom gate; isolated crowd command ACKs pass, but require the
   exact-ROM audible retest before closing the opening-crowd report.
 - Require one naturally triggered real FGM and one required voice event.

@@ -42,25 +42,26 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
   Finish docs, static checks, verifiers, and status inspection first; never run
   commands, probes, or status checks after the snapshot.
 
+## DS Visual Fidelity Policy
+
+Gameplay, collision, rules, state, camera meaning, and flow stay source-faithful.
+Presentation targets roughly 90% overall likeness, not pixel identity. Timebox
+cosmetic exactness to one measured experiment; on a tick/memory/P1 miss, keep
+the cheapest recognizable source-derived approximation and move on. Prefer
+still frames, reduced cadence, simpler layouts/geometry, and DS-native effects.
+Record source, visible delta, measured reason, and a screenshot under
+`artifacts/visibility`. Never approximate gameplay semantics or telegraphs, and
+never accept missing/corrupt presentation. Dream Land water is the explicit
+precedent: freeze exact frame 0 on original geometry and remove its animation.
+
 ## Start Here
 
-Use `.\scripts\verify-all.ps1 -Profile Boundary -List` as the authority for
-current Boundary/Latest membership, then read these human summaries:
-
-| Need | File |
-|---|---|
-| Only dynamic P1 queue, ownership, dated gates | `docs/P1_EXECUTION_BOARD.md` |
-| Active handoff and exact current commands | `docs/HANDOFF.md` |
-| Current boundary summary, latest proof, blockers | `docs/STATUS.md` |
-| Verification workflow | `docs/VERIFYING.md` |
-| Harness registry and naming rules | `docs/HARNESSES.md` |
-| Architecture and split plans | `docs/ARCHITECTURE.md` |
-| Known blockers and deferred work | `docs/KNOWN_ISSUES.md` |
-| Read-only upstream map | `docs/DECOMP_MAP.md` |
-| Full marker strings and diagnostics | `docs/DIAGNOSTIC_REFERENCE.md` |
-| Append-only history | `docs/PORTING.md` |
-
-`docs/PORTING.md` is history, not the planning surface.
+Use `.\scripts\verify-all.ps1 -Profile Boundary -List` as membership authority.
+Then read `P1_EXECUTION_BOARD.md`, `HANDOFF.md`, and `STATUS.md`. Workflow and
+naming live in `VERIFYING.md`/`HARNESSES.md`; design and blockers in
+`ARCHITECTURE.md`/`KNOWN_ISSUES.md`; upstream mapping in `DECOMP_MAP.md`; marker
+details in `DIAGNOSTIC_REFERENCE.md`. `PORTING.md` is append-only history, not
+the planning surface.
 
 ## Current Boundary
 
@@ -114,12 +115,6 @@ Select the highest-impact unowned red P1 row from `P1_EXECUTION_BOARD.md`.
 Gameplay progress moves by runtime-first subsystem groups: import original TUs,
 wire narrow seams, prove natural runtime/captures, then graduate live.
 
-Keep all three subagent slots active when three useful P1 packets exist and
-reassign completed slots. Agents share the live tree, so each lane claims a
-disjoint file set, build directory, and runner slot. Only integration/release edits
-central files/docs. Define a hypothesis, exclusive counters, and a
-keep/revert threshold; do not begin P2 while a required P1 row is red.
-
 Legacy bounded modes are migrate-or-delete when superseded. Mechanical splits
 and tooling may stay smaller when they do not claim gameplay progress.
 
@@ -134,9 +129,8 @@ stacks across active docs.
 
 ## Snapshot Policy
 
-Run a snapshot after successful verified progress, always as the final project
-action after docs, verification, static checks, and status inspection. Run no
-commands after it; only the final response may follow.
+After docs, verification, static checks, and status inspection, make the snapshot
+the final project action. Run no command after it; only the final response follows.
 
 ```powershell
 .\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean

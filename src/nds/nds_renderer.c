@@ -16,6 +16,10 @@
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #endif
 
+#ifndef NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT
+#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT 0
+#endif
+
 #ifndef NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
 #define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY 0
 #endif
@@ -1221,7 +1225,8 @@ static u32 sNdsRendererRuntimeCi4RepresentativePixelCount;
 static u32 sNdsRendererRuntimeCi4ReusePixelCount;
 #endif
 
-volatile u32 gNdsRendererBattleStaticTextureEnabled;
+volatile u32 gNdsRendererBattleStaticTextureEnabled =
+    NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT;
 volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
 volatile u32 gNdsRendererBattleStaticTexturePreparedCount;
@@ -1232,6 +1237,10 @@ volatile u32 gNdsRendererBattleStaticTextureSeenMask;
 volatile u32 gNdsRendererBattleStaticTextureOwnerMask;
 volatile u32 gNdsRendererBattleStaticTextureViolationCount;
 volatile u32 gNdsRendererBattleStaticTextureTeardownCount;
+volatile u32 gNdsRendererBattleStaticTextureFirstAddress;
+volatile u32 gNdsRendererBattleStaticTextureEndAddress;
+volatile u32 gNdsRendererBattleStaticTextureAllocationSpanBytes;
+volatile u32 gNdsRendererBattleStaticTextureBankMask;
 static u32 sNdsRendererBattleStaticTexturePrepared;
 static u32 sNdsRendererBattleStaticTextureArmed;
 volatile u32 gNdsRendererBattleTextureFenceCounts[
@@ -6955,10 +6964,14 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     gNdsRendererBattleStaticTextureOwnerMask = 0u;
     gNdsRendererBattleStaticTextureViolationCount = 0u;
     gNdsRendererBattleStaticTextureTeardownCount = 0u;
+    gNdsRendererBattleStaticTextureFirstAddress = 0u;
+    gNdsRendererBattleStaticTextureEndAddress = 0u;
+    gNdsRendererBattleStaticTextureAllocationSpanBytes = 0u;
+    gNdsRendererBattleStaticTextureBankMask = 0u;
     sNdsRendererBattleStaticTextureArmed = FALSE;
 
     /* A battle owns the cache from this point forward. Starting empty makes
-     * the 20-entry residency and its VRAM cost deterministic. */
+     * the 22-key residency and its one-bank VRAM cost deterministic. */
     ndsRendererHardwareDiscardTextureCache();
     file = ndsRendererHardwareFencedTextureFopen(
         NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_PAYLOAD_PATH, "rb");
@@ -6985,6 +6998,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
         const void *tlut_base;
         u32 image_size;
         u32 tlut_size;
+        u32 texel1_offset;
         NDSRendererHardwareTextureKey key;
         NDSRendererHardwareTextureCacheEntry *entry;
         u32 key_hash;
@@ -7029,8 +7043,11 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             (record->key_words[
                  NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] !=
              record->tlut_offset) ||
-            (record->key_words[
-                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD] != 0u))
+            ((texel1_offset = record->key_words[
+                  NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD]) != 0u &&
+             ((texel1_offset >= image_size) ||
+              ((uintptr_t)image_base >
+               (uintptr_t)(0xffffffffu - texel1_offset)))))
         {
             goto fail;
         }
@@ -7040,7 +7057,8 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                                      record->image_offset);
         key.tlut_image = (u32)(uintptr_t)((const u8 *)tlut_base +
                                           record->tlut_offset);
-        key.texel1_image = 0u;
+        key.texel1_image = (texel1_offset != 0u) ?
+            (u32)(uintptr_t)((const u8 *)image_base + texel1_offset) : 0u;
         if ((key.width != record->logical_width) ||
             (key.height != record->logical_height))
         {
@@ -7097,6 +7115,36 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             (void)ndsRendererHardwareReleaseTexture(entry);
             goto fail;
         }
+        {
+            uintptr_t first = (uintptr_t)glGetTexturePointer(entry->name);
+            uintptr_t end = first + record->payload_bytes;
+
+            if ((first == 0u) || (end <= first) ||
+                (end > (uintptr_t)0xffffffffu))
+            {
+                (void)ndsRendererHardwareReleaseTexture(entry);
+                goto fail;
+            }
+            if ((gNdsRendererBattleStaticTextureFirstAddress == 0u) ||
+                (first < gNdsRendererBattleStaticTextureFirstAddress))
+            {
+                gNdsRendererBattleStaticTextureFirstAddress = (u32)first;
+            }
+            if (end > gNdsRendererBattleStaticTextureEndAddress)
+            {
+                gNdsRendererBattleStaticTextureEndAddress = (u32)end;
+            }
+            if ((first < (uintptr_t)VRAM_B) &&
+                (end > (uintptr_t)VRAM_A))
+            {
+                gNdsRendererBattleStaticTextureBankMask |= 1u << 0;
+            }
+            if ((first < (uintptr_t)VRAM_C) &&
+                (end > (uintptr_t)VRAM_B))
+            {
+                gNdsRendererBattleStaticTextureBankMask |= 1u << 1;
+            }
+        }
 
         entry->key = key;
         sNdsRendererHardwareTextureKeyGeneration++;
@@ -7139,7 +7187,14 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     if ((gNdsRendererBattleStaticTexturePreparedCount !=
          ndsBattlePlayableStaticTextureKeyCount()) ||
         (gNdsRendererBattleStaticTexturePreparedBytes !=
-         ndsBattlePlayableStaticTexturePreparedBytes()))
+         ndsBattlePlayableStaticTexturePreparedBytes()) ||
+        ((gNdsRendererBattleStaticTextureAllocationSpanBytes =
+          gNdsRendererBattleStaticTextureEndAddress -
+          gNdsRendererBattleStaticTextureFirstAddress) !=
+         ndsBattlePlayableStaticTexturePreparedBytes()) ||
+        (gNdsRendererBattleStaticTextureFirstAddress != (u32)VRAM_A) ||
+        (gNdsRendererBattleStaticTextureEndAddress != (u32)VRAM_B) ||
+        (gNdsRendererBattleStaticTextureBankMask != 1u))
     {
         goto fail;
     }
@@ -7157,6 +7212,10 @@ fail:
     sNdsRendererBattleStaticTextureArmed = FALSE;
     gNdsRendererBattleStaticTexturePreparedCount = 0u;
     gNdsRendererBattleStaticTexturePreparedBytes = 0u;
+    gNdsRendererBattleStaticTextureFirstAddress = 0u;
+    gNdsRendererBattleStaticTextureEndAddress = 0u;
+    gNdsRendererBattleStaticTextureAllocationSpanBytes = 0u;
+    gNdsRendererBattleStaticTextureBankMask = 0u;
     gNdsRendererBattleStaticTexturePrepareFailCount++;
     return FALSE;
 #else
@@ -7191,6 +7250,23 @@ void ndsRendererHardwareDiscardBattleStaticTextures(void)
 
     sNdsRendererBattleStaticTexturePrepared = FALSE;
     sNdsRendererBattleStaticTextureArmed = FALSE;
+    ndsRendererHardwareDiscardTextureCache();
+    if (was_prepared != 0u)
+    {
+        gNdsRendererBattleStaticTextureTeardownCount++;
+    }
+#endif
+    sNdsRendererBattleStaticTexturePrepared = FALSE;
+    sNdsRendererBattleStaticTextureArmed = FALSE;
+}
+
+void ndsRendererHardwareAbortBattleStaticTextures(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 was_prepared = sNdsRendererBattleStaticTexturePrepared;
+
+    /* This deliberately retains the armed bit through every pinned delete.
+     * DiscardTextureCache records the violation and clears the bit last. */
     ndsRendererHardwareDiscardTextureCache();
     if (was_prepared != 0u)
     {

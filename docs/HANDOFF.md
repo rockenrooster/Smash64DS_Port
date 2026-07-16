@@ -1,49 +1,97 @@
 # Handoff
 
-Updated: 2026-07-15 15:46 Central
+Updated: 2026-07-15 18:26 Central
 
 This is the exact restart surface. `P1_EXECUTION_BOARD.md` owns the queue,
-`STATUS.md` owns short current truth, and `PORTING.md` is history.
+`STATUS.md` owns current truth, and `PORTING.md` is append-only history.
 
-## Graceful Pause Point
-
-All three subagent lanes were stopped before this checkpoint. No repo build or
-emulator process remains. The pre-existing user melonDS PID 36352 was left
-untouched. No Lean snapshot was made because this is an unfinished pause.
+## Current Checkpoint
 
 Branch: `codex/wip-natural-combat-source-start-collision`
 
-Checkpoint HEAD: `23c919cd27`
+Active Boundary: `battle_playable_realtime`, mode 163.
 
-The only dirty source file is
-`src/port/reloc_backend_renderer_dl.c`: 415 added M3 adapter-helper lines plus
-one compile correction. It collects the exact eight Dream Land owners, 57
-DObjs, 42 bindings, matrices, four material snapshots, and exposes prepare /
-ordered commit / finish helpers. It is intentionally not yet wired into the
-display loop.
+Preserve the live dirty tree. It contains the coherent M3 complete-stage owner,
+M4 frozen-water/static-residency integration, profile-1 M3 timing hooks, updated
+published defaults, verifier fixes, generated static assets, and documentation.
+Do not restore the retired animated/tiled-water path.
 
-The first compile found one forward-reference typo. It was corrected from
-`ndsFighterDLAllDrawResolveBranch` to the already-declared
-`ndsFighterDLDrawResolveBranch`. The corrected aggregate `scene_backend.o`
-compiled successfully (4,039,928 bytes, 15:43:24). The 90-second full lab
-command ended before link/publication, so there is no M3 lab ROM and no device
-claim. Resume by wiring prepare/commit/finish, then rerun the command below.
+The canonical published target is intrinsic mode 9 / mip 0 / static residency 1 /
+hybrid OAM 1. The original launch target remains 0 / 0 / 0 / 0.
+
+```text
+smash64ds-battle-playable-hwtri.nds
+14,534,656 bytes
+SHA-256 3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38
+```
+
+## Verified Evidence
+
+Canonical Boundary passed on runner slot 2 on 2026-07-15. The natural terminal
+frame reported 19.8 FPS, 828 total triangles, exact M3 ownership
+`121 runs / 202 stage / 320 Mario / 306 Fox`, zero fast fallbacks, no texture
+uploads, and M4 `22 keys / 131072 bytes / zero fence violations` with frozen
+water `2/0/1`.
+
+Exact completed GO frames 438/439 passed source timer/control/OAM state, full
+visibility, named-region/detail, motion, and pond gates:
+
+```text
+artifacts/visibility/2026-07-15_canonical_fast_frame438-439_182430-9052820-p35520.png
+  153,147 bytes; SHA-256 45DBCD24D2DAC91089A1AAD6AB430C05CB173BB4E3FCFFBACEBE9A323B040922
+artifacts/visibility/2026-07-15_canonical_fast_frame438-439_182430-9052820-p35520_next.png
+  153,186 bytes; SHA-256 2E12523F0C0EE55A71F2C6836B89F2BC336EC16EF9EF0DB41D402D34ED42670F
+```
+
+`artifacts/visibility/latest.png` is byte-identical to frame 438. The capture is
+a complete recognizable Dream Land GO scene with Mario, Fox, the frozen pond,
+and lower HUD intact; it has no blank or partial-frame corruption.
+
+## Milestone Truth
+
+- M1 is accepted: retained affine BG2 costs 1,856 ticks, below 35K.
+- M2 renders correctly in Mode 8 but remains over target at
+  477,152/477,376 ticks. Mode 7 is rejected. The 170–250K target remains open.
+- M3's complete-stage Mode-9 owner is now linked and device-semantic-proven:
+  8 callbacks, mask 255, 57 DObjs, 42 bindings, 54 runs, 202 triangles, 49
+  epochs, four material commits, cross `5/10/15`, and zero fallback. Frames
+  438–445 measure stage-exclusive 664,544/664,640 P50/P95, missing the <=500K
+  first gate by 164,544 and saving only about 140K versus the ~805K baseline.
+  M3 is REWORK; no 150–250K completion claim.
+- M4's generated corpus has 22 complete keys, 21 deduplicated outputs, a
+  126,976-byte payload, and 131,072 prepared bytes in VRAM A. The published
+  short Boundary window proves pinning and zero gameplay conversion, upload,
+  I/O, allocation, refresh, eviction, fallback, or fence violation. The full
+  one-minute GO-to-teardown fence/reserve qualification remains pending.
+  Its isolated hardware target now builds, but the first full invocation exited
+  nonzero without a terminal acceptance marker; do not count it as M4 evidence.
+
+Compilation alone does not close M2–M4.
+
+## DS Visual Decision Rule
+
+Gameplay, hitboxes, collision, physics, timing, rules, camera meaning, and state
+flow remain source-faithful. Presentation targets roughly 90% overall likeness.
+Give cosmetic pixel exactness one measured focused experiment; if it misses the
+DS tick/memory budget or threatens P1, keep the cheapest recognizable
+source-derived approximation, document its delta/reason, capture it under
+`artifacts/visibility`, and move on.
+
+Dream Land water is frozen at exact BattleShip frame 0, non-FRAC fraction 114,
+on original runs 42–43 and the original 12 triangles. Later water material
+animation is intentionally ignored. The retired 167,936-byte/138-triangle
+animated replacement is history, not an active option.
 
 ## Resume Order
 
-1. Reconcile Boundary membership and status; preserve the dirty M3 helper.
-2. Finish M3 interception in the existing BattleShip display order. Mode 9
-   must retain the accepted Mode-8 Mario/Fox owner and replace only the eight
-   Dream Land stage callbacks.
-3. Compile/link the isolated M3 lab; run host/ARM/static gates before emulator.
-4. Integrate M4 after M3 settles: prepare water residency before current static
-   allocations; reset it at battle teardown; replace M3 runs 42–43 / bindings
-   31–32 only, retaining run 41 / binding 30 and its shared parent matrix.
-5. Run one synchronized eight-frame same-ROM A/B/A, with screenshots only in
-   `artifacts/visibility`. Do not run Full, Regression*, or P1Gate.
-6. Remove rejected Mode-7 runtime code/temporary verifier allowance, refresh
-   the two root ROMs only after acceptance, update docs, commit, and make the
-   Lean snapshot the final project command.
+1. Enumerate Boundary and inspect status; preserve the dirty integration.
+2. Run the roadmap dense-prepare cut, touching only `nds_renderer.c` and
+   `check_nds_native_stage.py`. Expected saving is 170–210K; require at least
+   164,544 saved and <=500K. Do not reopen water animation or broad cosmetic parity.
+3. Run the newly routed one-minute M4 GO-to-teardown fence/reserve gate before calling M4
+   complete. Fox CPU remains default-paused until Tyler requests re-enable.
+4. Refresh the two root ROMs only after accepted source changes. Finish focused
+   checks, Boundary, docs, status, and commit before the Lean snapshot.
 
 ## Exact Commands
 
@@ -52,64 +100,16 @@ claim. Resume by wiring prepare/commit/finish, then rerun the command below.
 git status --short
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
-make TARGET=smash64ds-battle-playable-m3-stage-owner-lab `
-  BUILD=builds/build-m3-stage-owner-lab `
-  NDS_DEV_SCENE_HARNESS=battle_playable_realtime `
-  NDS_DEV_LIVE_INPUT_PREVIEW=1 NDS_HARNESS_FAST_LOGIC=0 `
-  NDS_RENDERER_HW_TRIANGLES=1 NDS_RENDERER_PROFILE_LEVEL=1 `
-  NDS_RENDERER_FAST_RUN_DEFAULT=9 -j16
-python .\scripts\check_nds_native_stage.py
-.\scripts\check_nds_native_stage_arm.ps1
-.\scripts\check-pupupu-water-tiled-aot.ps1 -Fast
-.\scripts\check-pupupu-water-residency-arm.ps1
-.\scripts\check-pupupu-water-draw-arm.ps1
+.\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 9 `
+  -StaticTextureAotMode 1 -IFCommonHybridOamMode 1 `
+  -RendererProfileLevel 1 -RendererM2DetailedLedger `
+  -RendererBenchmarkSamples 8 -RendererBenchmarkStartFrame 438 -RunnerSlot 2
+.\scripts\verify-battle-playable-one-minute-match.ps1 -RunnerSlot 3
+.\scripts\check-battle-playable-static-textures.ps1
+.\scripts\check-gbi-decode-fixtures.ps1
+.\scripts\verify-boundary.ps1 -NoBuild -DelaySeconds 3 -RunnerSlot 2
 ```
 
-The last completed focused outputs are:
-
-```text
-M3_NATIVE_STAGE_CHECK_OK callbacks=8 dobjs=57 bindings=42 runs=54
-  epochs=49 triangles=202 cross=5/10/15 slab_bytes=12663
-M3_NATIVE_STAGE_ARM_OK rodata_bytes=12663 production_linked=1
-M4_PUPUPU_WATER_RESIDENCY_ARM_OK payload_bytes=167936
-  runtime_upload/io/alloc=0/0/0 draw_proven=0
-M4_PUPUPU_WATER_DRAW_ARM_OK cells=68 triangles=138 vertices=414
-  text=840 max_stack=64 runtime_upload/io/alloc=0/0/0 draw_proven=0
-```
-
-## Milestone Truth
-
-- M1 is accepted: retained affine BG2 costs 1,856 ticks, below 35K.
-- M2 Mode 8 renders correctly. The latest detailed-ledger A0/A1 is
-  477,152/477,376 ticks. Mode 7 is rejected at 518,336/518,784 and produces
-  blank fighters. A read-only direct-contract design is structurally feasible,
-  with an estimated 62–75K net saving, but is unimplemented and unmeasured.
-- M3 has an exact 12,663-byte packet and compiled renderer core. Adapter helpers
-  compile; display interception, final link, device counters, timing, and
-  screenshot are unfinished. First keep gate: stage <=500K and >=300K saved.
-- M4 has an exact one-pass 167,936-byte pre-GO payload and exact 138-triangle
-  draw helper. Runtime prepare/draw/teardown integration, device reserve, and
-  zero-post-GO fence proof remain unfinished.
-
-The last control smoke window was about 17.7 FPS with draw about 1.646M and
-loop about 2.241M ticks. No accepted M2–M4 performance cut has replaced it yet.
-
-## Stable Project Rules
-
-Use only repo-local melonDS and scripted TOML/window configuration. Automated
-computer use only; Tyler manually tests built ROMs. Keep Fox decision/input off
-by default until Tyler asks to re-enable it; CPU-on lifecycle proofs remain
-required. The P1 source rule is one minute (`3600` ticks). Publish exactly
-`smash64ds.nds` and `smash64ds-battle-playable-hwtri.nds` at repo root; all lab
-outputs belong under `builds/`.
-
-The current published P1 ROM remains the previously verified artifact; this
-pause did not rebuild or replace it:
-
-```text
-smash64ds-battle-playable-hwtri.nds
-14,368,768 bytes
-SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
-```
-
-Compilation alone does not close M2–M4.
+Use only repo-local scripted melonDS. Screenshots belong only under
+`artifacts/visibility`. Never run or prebuild `Full`, `Regression*`, or `P1Gate`.
+The Lean snapshot is always the final project command, with no command after it.

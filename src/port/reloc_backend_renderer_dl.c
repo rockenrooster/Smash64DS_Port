@@ -5962,6 +5962,29 @@ static sb32 ndsRendererAdapterNativeStageGObjLinked(GObj *target, u32 link)
     return FALSE;
 }
 
+static sb32 ndsRendererAdapterNativeStageLayer0OrderMatches(
+    GObj *const *segments)
+{
+    GObj *gobj;
+    u32 next = 0u;
+    u32 guard = 0u;
+
+    if (segments == NULL)
+    {
+        return FALSE;
+    }
+    for (gobj = gGCCommonDLLinks[4];
+         (gobj != NULL) && (guard < 256u) && (next < 4u);
+         gobj = gobj->dl_link_next, guard++)
+    {
+        if (gobj == segments[next])
+        {
+            next++;
+        }
+    }
+    return (next == 4u) ? TRUE : FALSE;
+}
+
 static sb32 ndsRendererAdapterNativeStageTransformFlags(
     const DObj *dobj, u16 *out_flags)
 {
@@ -6149,10 +6172,14 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     u32 i;
 
     workspace->active = FALSE;
-    if ((gNdsRendererFastRunMode !=
-         NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) || (cobj == NULL))
+    if (gNdsRendererFastRunMode !=
+        NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)
     {
         return FALSE;
+    }
+    if (cobj == NULL)
+    {
+        goto reject;
     }
     bzero(workspace, sizeof(*workspace));
     for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
@@ -6162,7 +6189,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             (workspace->loaded[i]->data == NULL) ||
             (workspace->loaded[i]->data_size != asset_sizes[i]))
         {
-            return FALSE;
+            goto reject;
         }
         workspace->frame.asset_bases[i] = workspace->loaded[i]->data;
     }
@@ -6186,16 +6213,18 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
                  0xffffu, 0u, workspace) == FALSE) ||
             ((workspace->dobj_count - first_dobj) != dobj_counts[i]))
         {
-            return FALSE;
+            goto reject;
         }
     }
     if ((workspace->dobj_count != NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) ||
         (workspace->binding_count !=
          NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) ||
+        (ndsRendererAdapterNativeStageLayer0OrderMatches(
+             workspace->segments) == FALSE) ||
         (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE) ||
         (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE))
     {
-        return FALSE;
+        goto reject;
     }
 
     bzero(&workspace->resolver, sizeof(workspace->resolver));
@@ -6222,7 +6251,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     if (ndsRendererPrepareNativeStageOwner(
             &workspace->frame, &workspace->stats) == FALSE)
     {
-        return FALSE;
+        goto reject;
     }
     workspace->next_segment = 0u;
     workspace->active = TRUE;
@@ -6233,6 +6262,17 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
         NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT;
 #endif
     return TRUE;
+
+reject:
+    workspace->active = FALSE;
+    /* Before GO, a transient incomplete display graph falls back through the
+     * prepared pinned corpus without conversion.  Only a post-arm owner
+     * failure invalidates M4 residency and records the fence violation. */
+    if (gNdsRendererBattleStaticTextureArmCount != 0u)
+    {
+        ndsRendererHardwareAbortBattleStaticTextures();
+    }
+    return FALSE;
 }
 
 s32 ndsRendererAdapterCommitNativeStageDisplay(

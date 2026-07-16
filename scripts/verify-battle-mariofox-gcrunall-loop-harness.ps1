@@ -54,11 +54,29 @@ param(
     [string]$HarnessSelectMessage = 'Direct gcRunAll-loop harness did not select VSBattle from Maps.'
 )
 $ErrorActionPreference = 'Stop'
+$usesPublishedIntrinsicRendererDefaults =
+    ($Target -eq 'smash64ds-battle-playable-hwtri')
 $staticTextureAotSelected =
     $PSBoundParameters.ContainsKey('StaticTextureAotMode')
 $staticTextureAotSelected =
     $staticTextureAotSelected -or $RequireZeroPostGoTextureFence
 $foxCpuModeSelected = $PSBoundParameters.ContainsKey('FoxCpuMode')
+$effectiveStaticTextureAotMode = if ($usesPublishedIntrinsicRendererDefaults) {
+    1
+} else {
+    $StaticTextureAotMode
+}
+$effectiveIFCommonHybridOamMode = if ($usesPublishedIntrinsicRendererDefaults) {
+    1
+} else {
+    $IFCommonHybridOamMode
+}
+$m4CandidateEvidence =
+    ($effectiveStaticTextureAotMode -eq 1) -and
+    ($RendererFastRunMode -eq 9)
+if ($M4WaterTiledAotMode -ne 0) {
+    throw 'M4WaterTiledAotMode is retired; frozen source water is part of StaticTextureAotMode 1.'
+}
 if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
     throw 'OneMinuteMatchProof requires MatchLifecycleProof.'
 }
@@ -77,7 +95,7 @@ if ($RequireZeroPostGoTextureFence -and -not $HardwareTriangles) {
 if ($RequireZeroPostGoTextureFence -and -not $BattlePlayable) {
     throw 'RequireZeroPostGoTextureFence requires BattlePlayable.'
 }
-if ($RequireZeroPostGoTextureFence -and ($StaticTextureAotMode -ne 1)) {
+if ($RequireZeroPostGoTextureFence -and ($effectiveStaticTextureAotMode -ne 1)) {
     throw 'RequireZeroPostGoTextureFence requires StaticTextureAotMode 1.'
 }
 if ($RequireZeroPostGoTextureFence -and -not $OneMinuteMatchProof -and
@@ -133,8 +151,7 @@ $benchmarkElfIdentity = $null
 $benchmarkMelonIdentity = $null
 $benchmarkMelonConfigSha256 = $null
 $usesRetainedWallpaper =
-    (($Target -eq 'smash64ds-battle-playable-coarse-mipcache-hwtri') -or
-     ($Target -eq 'smash64ds-battle-playable-hwtri'))
+    ($Target -eq 'smash64ds-battle-playable-coarse-mipcache-hwtri')
 function Assert-Condition {
     param([bool]$Condition, [string]$Message, [string]$Context)
     if (-not $Condition) { throw "$Message`n$Context" }
@@ -328,7 +345,9 @@ function Get-BenchmarkMakeIdentity {
     }
     $required = @(
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
-        'RENDERER_BENCHMARK_MODE', 'M4_WATER_TILED_AOT',
+        'RENDERER_BENCHMARK_MODE', 'FAST_RUN_DEFAULT',
+        'SCENE_MIP_CACHE_LAB', 'BATTLE_STATIC_TEXTURE_DEFAULT',
+        'M4_WATER_TILED_AOT',
         'IFCOMMON_HYBRID_OAM',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
@@ -344,6 +363,10 @@ function Get-BenchmarkMakeIdentity {
         Profile = [int]$values.PROFILE
         M2DetailedLedger = [int]$values.M2_DETAILED_LEDGER
         RendererBenchmarkMode = [int]$values.RENDERER_BENCHMARK_MODE
+        FastRunDefault = [int]$values.FAST_RUN_DEFAULT
+        SceneMipCacheLab = [int]$values.SCENE_MIP_CACHE_LAB
+        BattleStaticTextureDefault =
+            [int]$values.BATTLE_STATIC_TEXTURE_DEFAULT
         M4WaterTiledAotMode = [int]$values.M4_WATER_TILED_AOT
         IFCommonHybridOamMode = [int]$values.IFCOMMON_HYBRID_OAM
         CommonCFlags = $values.CFLAGS_COMMON
@@ -450,9 +473,24 @@ if ($RendererBenchmarkSamples -gt 0) {
         $benchmarkMakeIdentity.M4WaterTiledAotMode -eq
             $M4WaterTiledAotMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
-            $IFCommonHybridOamMode) `
+            $effectiveIFCommonHybridOamMode) `
         'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/IFCommon configuration.' `
         ($benchmarkMakeIdentity | Format-List | Out-String)
+    if ($usesPublishedIntrinsicRendererDefaults) {
+        Assert-Condition (
+            $benchmarkMakeIdentity.FastRunDefault -eq 9 -and
+            $benchmarkMakeIdentity.SceneMipCacheLab -eq 0 -and
+            $benchmarkMakeIdentity.BattleStaticTextureDefault -eq 1
+        ) 'Published battle renderer build identity is not the intrinsic M3/M4 9/0/1 configuration.' `
+            ($benchmarkMakeIdentity | Format-List | Out-String)
+    }
+    if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
+        Assert-Condition (
+            $effectiveStaticTextureAotMode -eq 0 -and
+            $benchmarkMakeIdentity.BattleStaticTextureDefault -eq 0
+        ) 'WARM_NO_UPLOAD is a static-off animated-refresh ablation and cannot run with effective static residency.' `
+            ($benchmarkMakeIdentity | Format-List | Out-String)
+    }
     $benchmarkRomIdentity = Get-BenchmarkFileIdentity -Path $rom
     $benchmarkElfIdentity = Get-BenchmarkFileIdentity -Path $elf
     $melonItem = Get-Item -LiteralPath $melonDsPath
@@ -643,8 +681,8 @@ try {
                     ($RendererFastRunMode -eq 9)) {
                     $coarseBenchmarkCommands += 'printf "M3_STAGE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3PreflightAttemptCount, gNdsRendererM3PreflightSuccessCount, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3SegmentCount, gNdsRendererM3SegmentMask, gNdsRendererM3PostArmFailureCount, gNdsRendererM3DObjCount, gNdsRendererM3BindingCount, gNdsRendererM3RunCount, gNdsRendererM3TriangleCount, gNdsRendererM3ResidentEpochCount, gNdsRendererM3MaterialShadowCount, gNdsRendererM3MaterialCommitCount, gNdsRendererM3CrossRunCount, gNdsRendererM3CrossTriangleCount, gNdsRendererM3CrossForeignCornerCount'
                 }
-                if ($M4WaterTiledAotMode -eq 1) {
-                    $coarseBenchmarkCommands += 'printf "M4_WATER=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsPupupuWaterResidencyPrepared, gNdsPupupuWaterResidencyPrepareCount, gNdsPupupuWaterResidencyPrepareSuccessCount, gNdsPupupuWaterResidencyPrepareFailCount, gNdsPupupuWaterResidencyResetCount, gNdsPupupuWaterResidencyPayloadBytes, gNdsPupupuWaterResidencyTextureBytes, gNdsPupupuWaterResidencyPaletteBytes, gNdsPupupuWaterResidencyTextureCount, gNdsPupupuWaterResidencyPaletteCount, gNdsPupupuWaterResidencyScratchBytes, gNdsPupupuWaterResidencyPrimaryBindCount, gNdsPupupuWaterResidencySecondaryBindCount, gNdsPupupuWaterResidencyBindFailCount, gNdsPupupuWaterResidencyLastFailure, gNdsPupupuWaterDrawAttemptCount, gNdsPupupuWaterDrawSuccessCount, gNdsPupupuWaterDrawFailCount, gNdsPupupuWaterDrawPrimaryBatchCount, gNdsPupupuWaterDrawSecondaryBatchCount, gNdsPupupuWaterDrawCellCount, gNdsPupupuWaterDrawTriangleCount, gNdsPupupuWaterDrawVertexCount, gNdsPupupuWaterDrawLastFailure'
+                if ($m4CandidateEvidence) {
+                    $coarseBenchmarkCommands += 'printf "M4_WATER_STILL=%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsPupupuWaterStillFreezeCount, gNdsPupupuWaterStillFreezeFailCount, gNdsPupupuWaterStillFreezeResult'
                 }
                 $coarseBenchmarkCommands += 'printf "M4_STATIC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount'
                 $coarseBenchmarkCommands += 'printf "M4_FENCE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'
@@ -676,14 +714,28 @@ try {
                 'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, {0}, gNdsRendererProfileOracleSamples, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes' -f $benchmarkTriangleSymbol
             $benchmarkStartGateCommands = @()
             $benchmarkRuntimeControlCommands = @()
+            $benchmarkInitialControlCommands = @()
             $benchmarkWarmInitial = 0
+            if (-not $usesPublishedIntrinsicRendererDefaults) {
+                $benchmarkInitialControlCommands +=
+                    ('set variable gNdsRendererFastRunMode = {0}' -f
+                     $RendererFastRunMode)
+            }
+            $benchmarkInitialControlCommands +=
+                ('set variable gNdsSObjWallpaperIncrementalMode = {0}' -f
+                 $WallpaperIncrementalMode)
+            $benchmarkInitialControlCommands +=
+                ('set variable gNdsIFCommonHUDLowerTextMode = {0}' -f
+                 $LowerTextHudMode)
             if ($RendererBenchmarkStartFrame -gt 0) {
                 $benchmarkWarmInitial = 1
                 # Reapply these controls at the frame marker after C runtime
                 # initialization; an immediate GDB attach can precede .data.
-                $benchmarkRuntimeControlCommands +=
-                    ('set variable gNdsRendererFastRunMode = {0}' -f
-                     $RendererFastRunMode)
+                if (-not $usesPublishedIntrinsicRendererDefaults) {
+                    $benchmarkRuntimeControlCommands +=
+                        ('set variable gNdsRendererFastRunMode = {0}' -f
+                         $RendererFastRunMode)
+                }
                 $benchmarkRuntimeControlCommands +=
                     ('set variable gNdsSObjWallpaperIncrementalMode = {0}' -f
                      $WallpaperIncrementalMode)
@@ -698,9 +750,7 @@ try {
             }
             $gdbCommands = @(
                 $gdbCommands[0..3]
-                ('set variable gNdsRendererFastRunMode = {0}' -f $RendererFastRunMode)
-                ('set variable gNdsSObjWallpaperIncrementalMode = {0}' -f $WallpaperIncrementalMode)
-                ('set variable gNdsIFCommonHUDLowerTextMode = {0}' -f $LowerTextHudMode)
+                $benchmarkInitialControlCommands
                 'set $renderer_benchmark_samples = 0'
                 ('set $renderer_benchmark_warm = {0}' -f $benchmarkWarmInitial)
                 'break ndsBattlePlayableFrameCompleteMarker'
@@ -775,7 +825,8 @@ try {
             'tbreak scVSBattleStartBattle',
             'continue'
         )
-        if ($staticTextureAotSelected) {
+        if ($staticTextureAotSelected -and
+            -not $usesPublishedIntrinsicRendererDefaults) {
             $preBattleSetupCommands +=
                 ('set variable gNdsRendererBattleStaticTextureEnabled = {0}' -f
                  $StaticTextureAotMode)
@@ -837,8 +888,13 @@ try {
             'printf "RENDER_TEXLANE=%#x,%u,%u,%#x,%#x,%#x,%#x\n", gNdsRendererProfileTextureLaneLayoutMask, gNdsRendererProfileTextureLaneByteAccessCount, gNdsRendererProfileTextureLaneHalfwordAccessCount, gNdsRendererProfileTextureLaneByteFormatMask, gNdsRendererProfileTextureLaneHalfwordFormatMask, gNdsRendererProfileTextureLaneByteMap, gNdsRendererProfileTextureLaneHalfwordMap',
             'printf "RENDER_COMBINE=%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsRendererProfileCombineModeCount, gNdsRendererProfileCombineModeDistinctCount, gNdsRendererProfileLitShadeCombineCount, gNdsRendererProfileMaterialCombineCount, gNdsRendererProfileProjectedSubmitFallbackCount, gNdsRendererProfileCombineMode0W0, gNdsRendererProfileCombineMode0W1, gNdsRendererProfileCombineMode1W0, gNdsRendererProfileCombineMode1W1, gNdsRendererProfileCombineMode2W0, gNdsRendererProfileCombineMode2W1, gNdsRendererProfileCombineMode3W0, gNdsRendererProfileCombineMode3W1',
             'printf "RENDER_LIGHT=%u,%u,%u\n", gNdsRendererProfileLightColorCommands, gNdsRendererProfileLightDirectionCommands, gNdsRendererProfileLightFallbackCount',
-            'printf "M4_FENCE_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureTeardownCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'
+            'printf "M4_FENCE_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureTeardownCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]',
+            'printf "FAST_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]',
+            'printf "M4_WATER_STILL_FINAL=%u,%u,%u\n", gNdsPupupuWaterStillFreezeCount, gNdsPupupuWaterStillFreezeFailCount, gNdsPupupuWaterStillFreezeResult'
         )
+        if ($m4CandidateEvidence) {
+            $hardwareCommands += 'printf "VRAM_BANKS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", *(volatile unsigned char *)0x04000240, *(volatile unsigned char *)0x04000241, *(volatile unsigned char *)0x04000242, *(volatile unsigned char *)0x04000243, *(volatile unsigned char *)0x04000244, *(volatile unsigned char *)0x04000245, *(volatile unsigned char *)0x04000246, *(volatile unsigned char *)0x04000248, gNdsRendererBattleStaticTextureFirstAddress, gNdsRendererBattleStaticTextureEndAddress, gNdsRendererBattleStaticTextureAllocationSpanBytes, gNdsRendererBattleStaticTextureBankMask'
+        }
         if ($BattlePlayable -and $RealtimePresentation) {
             $hardwareCommands += 'printf "SOBJ_WALL_CACHE=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperCacheBuildCount, gNdsSObjWallpaperCacheHitCount, gNdsSObjWallpaperCacheFastDrawCount, gNdsSObjWallpaperCacheFallbackCount, gNdsSObjWallpaperCacheWidth, gNdsSObjWallpaperCacheHeight, gNdsSObjWallpaperCacheOpaquePixels, gNdsSObjWallpaperCacheBuildTicks, gNdsSObjWallpaperCacheDrawTicks'
             $hardwareCommands += 'printf "SOBJ_WALL_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperFinalDirectCount, gNdsSObjWallpaperFinalSkipCount, gNdsSObjWallpaperFinalKeyChangeCount, gNdsSObjWallpaperFinalPixelWriteCount, gNdsSObjBackgroundStagingClearBytes, gNdsSObjForegroundStagingClearBytes, gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes'
@@ -1047,13 +1103,17 @@ try {
     $texturePhaseBenchmark = @()
     $fastRunBenchmark = @()
     $m3StageBenchmark = @()
-    $m4WaterBenchmark = @()
+    $m4WaterStillBenchmark = @()
     $m4StaticBenchmark = @()
     $m4FenceBenchmark = @()
     $m2Benchmark = @()
     $rendererSemanticBenchmark = @()
     $m4FenceFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_FENCE_FINAL' -FieldCount 24)
+    $fastFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+        -Name 'FAST_FINAL' -FieldCount 9)
+    $m4WaterStillFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+        -Name 'M4_WATER_STILL_FINAL' -FieldCount 3)
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
         $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 24)
         $gxBoundaryBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'GX_BOUNDARY' -FieldCount 7)
@@ -1064,8 +1124,8 @@ try {
             ($RendererFastRunMode -eq 9)) {
             $m3StageBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_STAGE' -FieldCount 17)
         }
-        if ($M4WaterTiledAotMode -eq 1) {
-            $m4WaterBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_WATER' -FieldCount 25)
+        if ($m4CandidateEvidence) {
+            $m4WaterStillBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_WATER_STILL' -FieldCount 4)
         }
         $m4StaticBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_STATIC' -FieldCount 11)
         $m4FenceBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_FENCE' -FieldCount 13)
@@ -1099,6 +1159,7 @@ try {
     $ifCommonOam = [regex]::Match(
         $gdbStdout, ([regex]::Escape('IFCOMMON_OAM=') +
                      $ifCommonOamFieldPattern))
+    $vramBanks = [regex]::Match($gdbStdout, 'VRAM_BANKS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $sceneMipCache = [regex]::Match($gdbStdout, 'SCENE_MIP_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $sceneWallAffine = [regex]::Match($gdbStdout, 'SCENE_WALL_AFFINE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
@@ -1146,8 +1207,8 @@ try {
             $m4FenceFinalValues[1] -eq 1 -and
             $m4FenceFinalValues[2] -eq 1 -and
             $m4FenceFinalValues[3] -eq 0 -and
-            $m4FenceFinalValues[4] -eq 20 -and
-            $m4FenceFinalValues[5] -eq 94208 -and
+            $m4FenceFinalValues[4] -eq 22 -and
+            $m4FenceFinalValues[5] -eq 131072 -and
             $m4FenceFinalValues[6] -eq 1 -and
             $m4FenceFinalValues[7] -eq $expectedM4TeardownCount -and
             $m4FenceFinalValues[10] -eq 0 -and
@@ -1157,13 +1218,82 @@ try {
         ) "M4 terminal post-GO texture fence failed (actual=$($m4FenceFinalValues -join ','))." $gdbStdout
         if (-not $OneMinuteMatchProof -and ($RendererBenchmarkSamples -gt 0)) {
             Assert-Condition (
-                $m4FenceFinalValues[8] -eq 0xfffff -and
+                $m4FenceFinalValues[8] -eq 0x3fffff -and
                 $m4FenceFinalValues[9] -eq 0x7 -and
                 $m4FenceFinalValues[11] -gt 0
             ) 'M4 strict benchmark did not cover every prepared owner through pinned hits.' $gdbStdout
         }
         $m4FenceFinalSummary =
             "M4 terminal post-GO texture fence: teardown=$($m4FenceFinalValues[7]) first=0/0 counts=$($m4FenceFinalValues[14..23] -join ',')"
+    }
+    $publishedRendererDefaultsSummary = ''
+    if ($usesPublishedIntrinsicRendererDefaults) {
+        Assert-Condition ($fastFinal.Count -eq 1) `
+            "Published M3 terminal owner captured $($fastFinal.Count) records instead of one." `
+            $gdbStdout
+        Assert-Condition ($m4WaterStillFinal.Count -eq 1) `
+            "Published frozen-water state captured $($m4WaterStillFinal.Count) records instead of one." `
+            $gdbStdout
+        Assert-Condition ($m4FenceFinal.Count -eq 1) `
+            "Published M4 terminal texture fence captured $($m4FenceFinal.Count) records instead of one." `
+            $gdbStdout
+        $publishedFast = Get-Ints $fastFinal[0]
+        $publishedWater = Get-Ints $m4WaterStillFinal[0]
+        $publishedM4 = Get-Ints $m4FenceFinal[0]
+        $publishedBanks = Get-Ints $vramBanks
+        $publishedFenceCountSum = [int64]0
+        foreach ($fenceCount in $publishedM4[14..23]) {
+            $publishedFenceCountSum += $fenceCount
+        }
+        Assert-Condition (
+            $publishedFast[0] -eq 9 -and
+            $publishedFast[1] -eq 121 -and
+            $publishedFast[2] -eq 828 -and
+            $publishedFast[3] -eq 202 -and
+            $publishedFast[4] -eq 320 -and
+            $publishedFast[5] -eq 306 -and
+            $publishedFast[6] -eq 0 -and
+            $publishedFast[7] -eq 0 -and
+            $publishedFast[8] -eq 0
+        ) "Published ROM did not naturally execute the exact M3 121-run/828-triangle owner (actual=$($publishedFast -join ','))." $gdbStdout
+        Assert-Condition (
+            $publishedWater[0] -eq 2 -and
+            $publishedWater[1] -eq 0 -and
+            $publishedWater[2] -eq 1
+        ) "Published ROM did not retain the exact two-object frozen-water state (actual=$($publishedWater -join ','))." $gdbStdout
+        Assert-Condition (
+            $publishedM4[1] -eq 1 -and
+            $publishedM4[2] -eq 1 -and
+            $publishedM4[3] -eq 0 -and
+            $publishedM4[4] -eq 22 -and
+            $publishedM4[5] -eq 131072 -and
+            $publishedM4[6] -eq 1 -and
+            $publishedM4[7] -eq 0 -and
+            $publishedM4[8] -eq 0x3fffff -and
+            $publishedM4[9] -eq 0x7 -and
+            $publishedM4[10] -eq 0 -and
+            $publishedM4[11] -gt 0 -and
+            $publishedM4[12] -eq 0 -and
+            $publishedM4[13] -eq 0 -and
+            $publishedFenceCountSum -eq 0
+        ) "Published ROM did not naturally preserve the complete pre-GO M4 residency and zero post-GO fence (actual=$($publishedM4 -join ','))." $gdbStdout
+        Assert-Condition (
+            $vramBanks.Success -and
+            $publishedBanks[0] -eq 0x83 -and
+            $publishedBanks[1] -eq 0x8b -and
+            $publishedBanks[2] -eq 0x81 -and
+            $publishedBanks[3] -eq 0x89 -and
+            $publishedBanks[4] -eq 0x82 -and
+            $publishedBanks[5] -eq 0x83 -and
+            $publishedBanks[6] -eq 0x8b -and
+            $publishedBanks[7] -eq 0x81 -and
+            $publishedBanks[8] -eq 0x06800000 -and
+            $publishedBanks[9] -eq 0x06820000 -and
+            $publishedBanks[10] -eq 131072 -and
+            $publishedBanks[11] -eq 1
+        ) "Published ROM did not naturally preserve hybrid IFCommon banks and the exact bank-A static span (actual=$($publishedBanks -join ','))." $gdbStdout
+        $publishedRendererDefaultsSummary =
+            " intrinsicM3=9/$($publishedFast[1])/$($publishedFast[2]) intrinsicM4=22/$($publishedM4[5])/hits$($publishedM4[11])/fence0 water=2/0/1"
     }
     Assert-Condition ($aobj32.Success -and [int64]$aobj32.Groups[4].Value -eq 0) 'AObjEvent32 source-command normalization rejected a live script.' $gdbStdout
     $aobjSummary = " aobj32=$($aobj32.Groups[1].Value)/$($aobj32.Groups[2].Value)/reuse$($aobj32.Groups[3].Value)/fail0"
@@ -1355,20 +1485,22 @@ try {
             $fpsHud = Get-Ints $battlePlayableFpsHud
             $minPresentedFrames = if ($RequireRealtime60Fps) { 60 } else { 45 }
             Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and (($bp[2] -eq $bp[3]) -or ($bp[2] -eq ($bp[3] + 1))) -and (($bp[4] -eq $bp[3]) -or ($bp[4] -eq ($bp[3] + 1))) -and $bp[3] -ge $minPresentedFrames -and $bp[5] -gt 0 -and $bp[6] -gt 0 -and $bp[7] -gt 0) 'battle_playable realtime pacing smoke did not present live frames or keep draw/update within one in-flight vblank.' $gdbStdout
-            $fpsHudExpected = if ($fpsHud[3] -gt 0) {
-                [int64][Math]::Floor(
-                    (([int64]$fpsHud[2] * 33513982 * 10) +
-                     [Math]::Floor($fpsHud[3] / 2)) / $fpsHud[3])
-            } else {
-                0
+            if (-not $RendererBenchmarkOnly) {
+                $fpsHudExpected = if ($fpsHud[3] -gt 0) {
+                    [int64][Math]::Floor(
+                        (([int64]$fpsHud[2] * 33513982 * 10) +
+                         [Math]::Floor($fpsHud[3] / 2)) / $fpsHud[3])
+                } else {
+                    0
+                }
+                Assert-Condition ($battlePlayableFpsHud.Success -and
+                    $fpsHud[0] -gt 0 -and $fpsHud[0] -le 700 -and
+                    $fpsHud[1] -gt 0 -and $fpsHud[2] -gt 0 -and
+                    $fpsHud[3] -ge 16756991 -and
+                    $fpsHud[0] -eq $fpsHudExpected) `
+                    'battle_playable lower-screen rolling FPS counter did not sample actual presentation cadence.' $gdbStdout
             }
-            Assert-Condition ($battlePlayableFpsHud.Success -and
-                $fpsHud[0] -gt 0 -and $fpsHud[0] -le 700 -and
-                $fpsHud[1] -gt 0 -and $fpsHud[2] -gt 0 -and
-                $fpsHud[3] -ge 16756991 -and
-                $fpsHud[0] -eq $fpsHudExpected) `
-                'battle_playable lower-screen rolling FPS counter did not sample actual presentation cadence.' $gdbStdout
-            if ($ImportBattleShipIFCommon) {
+            if ($ImportBattleShipIFCommon -and -not $RendererBenchmarkOnly) {
                 $textHud = Get-Ints $battleTextHud
                 $sourceHud = Get-Ints $ifHud
                 $sourceLower = Get-Ints $ifHudLower
@@ -1494,6 +1626,8 @@ try {
                 $wo = Get-Ints $wallpaperOracle
                 if ($usesRetainedWallpaper) {
                     $ioam = Get-Ints $ifCommonOam
+                    $expectedIfCommonPrepareBytes = if ($effectiveIFCommonHybridOamMode -eq 1) { 60416 } else { 93824 }
+                    $expectedIfCommonPaletteBytes = if ($effectiveIFCommonHybridOamMode -eq 1) { 512 } else { 0 }
                     $smc = Get-Ints $sceneMipCache
                     $swa = Get-Ints $sceneWallAffine
                 }
@@ -1531,7 +1665,7 @@ try {
                 $texturePhaseMetricSummary = ''
                 $fastRunMetricSummary = ''
                 $m3StageMetricSummary = ''
-                $m4WaterMetricSummary = ''
+                $m4WaterStillMetricSummary = ''
                 $m4StaticMetricSummary = ''
                 $m4FenceMetricSummary = ''
                 $m2MetricSummary = ''
@@ -1596,7 +1730,7 @@ try {
                     $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                     $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                     $m3StageSamples = [System.Collections.Generic.List[object]]::new()
-                    $m4WaterSamples = [System.Collections.Generic.List[object]]::new()
+                    $m4WaterStillSamples = [System.Collections.Generic.List[object]]::new()
                     $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
                     $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
                     $semanticSamples = [System.Collections.Generic.List[object]]::new()
@@ -1631,7 +1765,7 @@ try {
                         $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                         $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                         $m3StageSamples = [System.Collections.Generic.List[object]]::new()
-                        $m4WaterSamples = [System.Collections.Generic.List[object]]::new()
+                        $m4WaterStillSamples = [System.Collections.Generic.List[object]]::new()
                         $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
                         $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
                         $semanticSamples = [System.Collections.Generic.List[object]]::new()
@@ -1660,8 +1794,8 @@ try {
                         if ($RendererFastRunMode -eq 9) {
                             Assert-Condition ($m3StageBenchmark.Count -eq $RendererBenchmarkSamples) "M3 stage benchmark captured $($m3StageBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
-                        if ($M4WaterTiledAotMode -eq 1) {
-                            Assert-Condition ($m4WaterBenchmark.Count -eq $RendererBenchmarkSamples) "M4 water benchmark captured $($m4WaterBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        if ($m4CandidateEvidence) {
+                            Assert-Condition ($m4WaterStillBenchmark.Count -eq $RendererBenchmarkSamples) "M4 still-water benchmark captured $($m4WaterStillBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         Assert-Condition ($m4StaticBenchmark.Count -eq $RendererBenchmarkSamples) "M4 static-texture benchmark captured $($m4StaticBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         Assert-Condition ($m4FenceBenchmark.Count -eq $RendererBenchmarkSamples) "M4 post-GO texture fence captured $($m4FenceBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -1716,7 +1850,13 @@ try {
                             Assert-Condition ($gxBoundary[0] -eq $frame -and $gxBoundary[4] -ne 0 -and $gxBoundary[5] -ne 0 -and $gxBoundary[6] -eq $coarse[16]) "GX boundary benchmark is not synchronized or lacks a post-VBlank completion sample at coarse frame $frame." $gdbStdout
                             $gxBoundarySamples.Add($gxBoundary)
                             $stage0 = Get-Ints $stage0Benchmark[$sampleIndex]
-                            Assert-Condition ($stage0[0] -eq $frame -and $stage0[1] -gt 0) "Stage layer-0 benchmark is not synchronized or measured at frame $frame." $gdbStdout
+                            Assert-Condition (
+                                $stage0[0] -eq $frame -and
+                                ((($RendererFastRunMode -eq 9) -and
+                                  ($stage0[1] -eq 0)) -or
+                                 (($RendererFastRunMode -ne 9) -and
+                                  ($stage0[1] -gt 0)))
+                            ) "Stage layer-0 benchmark did not match the selected owner at frame $frame (actual=$($stage0 -join ','))." $gdbStdout
                             $stage0Samples.Add($stage0)
                             if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                                 $sink = Get-Ints $sinkBenchmark[$sampleIndex]
@@ -1770,22 +1910,26 @@ try {
                                 Assert-Condition ($fastRun[2] -gt 0 -and $fastRun[3] -gt 0) "Selected laboratory fast mode executed no fast triangles at frame $frame." $gdbStdout
                             }
                             $fastRunSamples.Add($fastRun)
-                            if ($M4WaterTiledAotMode -eq 1) {
-                                $water = Get-Ints $m4WaterBenchmark[$sampleIndex]
-                                Assert-Condition ($water[0] -eq $frame -and $water[1] -eq 1 -and $water[2] -eq 1 -and $water[3] -eq 1 -and $water[4] -eq 0 -and $water[6] -eq 167936 -and $water[7] -eq 147456 -and $water[8] -eq 20480 -and $water[9] -eq 2 -and $water[10] -eq 40 -and $water[11] -eq 4096 -and $water[12] -ge $water[17] -and $water[13] -le $water[17] -and $water[14] -eq 0 -and $water[15] -eq 0 -and $water[16] -eq $water[17] -and $water[17] -gt 0 -and $water[18] -eq 0 -and $water[19] -eq $water[17] -and $water[20] -le $water[17] -and $water[21] -eq ($water[17] * 68) -and $water[22] -eq ($water[17] * 138) -and $water[23] -eq ($water[17] * 414) -and $water[24] -eq 0) "M4 tiled water was not prepared pre-GO and drawn from exact resident assets at frame $frame (actual=$($water -join ','))." $gdbStdout
-                                $m4WaterSamples.Add($water)
+                            if ($m4CandidateEvidence) {
+                                $waterStill = Get-Ints $m4WaterStillBenchmark[$sampleIndex]
+                                Assert-Condition ($waterStill[0] -eq $frame -and $waterStill[1] -eq 2 -and $waterStill[2] -eq 0 -and $waterStill[3] -eq 1) "M4 water did not freeze exactly two source-initial materials before gameplay at frame $frame (actual=$($waterStill -join ','))." $gdbStdout
+                                if ($sampleIndex -gt 0) {
+                                    $previousWaterStill = Get-Ints $m4WaterStillBenchmark[$sampleIndex - 1]
+                                    Assert-Condition ($waterStill[1] -eq $previousWaterStill[1] -and $waterStill[2] -eq $previousWaterStill[2] -and $waterStill[3] -eq $previousWaterStill[3]) "M4 still-water freeze state changed during gameplay at frame $frame." $gdbStdout
+                                }
+                                $m4WaterStillSamples.Add($waterStill)
                             }
                             $m4Static = Get-Ints $m4StaticBenchmark[$sampleIndex]
                             Assert-Condition ($m4Static[0] -eq $frame -and
-                                $m4Static[1] -eq $StaticTextureAotMode) "M4 static-texture accounting is not synchronized or in the selected mode at frame $frame." $gdbStdout
-                            if ($StaticTextureAotMode -eq 1) {
+                                $m4Static[1] -eq $effectiveStaticTextureAotMode) "M4 static-texture accounting is not synchronized or in the effective mode at frame $frame." $gdbStdout
+                            if ($effectiveStaticTextureAotMode -eq 1) {
                                 Assert-Condition (
                                     $m4Static[2] -eq 1 -and
                                     $m4Static[3] -eq 0 -and
-                                    $m4Static[4] -eq 20 -and
-                                    $m4Static[5] -eq 94208 -and
+                                    $m4Static[4] -eq 22 -and
+                                    $m4Static[5] -eq 131072 -and
                                     $m4Static[6] -eq 1 -and
-                                    $m4Static[7] -eq 0xfffff -and
+                                    $m4Static[7] -eq 0x3fffff -and
                                     $m4Static[8] -eq 0x7 -and
                                     $m4Static[9] -eq 0 -and
                                     $m4Static[10] -gt 0
@@ -2085,11 +2229,11 @@ try {
                             $m3Last = $m3StageSamples[-1]
                             $m3StageMetricSummary = "Renderer M3 stage owner: attempts/success/fallback=$($m3Last[1])/$($m3Last[2])/$($m3Last[3]) segments/mask=$($m3Last[4])/$($m3Last[5]) postArm=$($m3Last[6]) dobjs/bindings/runs/triangles/epochs=$($m3Last[7])/$($m3Last[8])/$($m3Last[9])/$($m3Last[10])/$($m3Last[11]) materials=$($m3Last[12])/$($m3Last[13]) cross=$($m3Last[14])/$($m3Last[15])/$($m3Last[16])"
                         }
-                        if ($M4WaterTiledAotMode -eq 1) {
-                            $waterLast = $m4WaterSamples[-1]
-                            $m4WaterMetricSummary = "Renderer M4 tiled water: prepared/prepare/success/fail=$($waterLast[1])/$($waterLast[2])/$($waterLast[3])/$($waterLast[4]) payload/texture/palette=$($waterLast[6])/$($waterLast[7])/$($waterLast[8]) textures/palettes/scratch=$($waterLast[9])/$($waterLast[10])/$($waterLast[11]) binds=$($waterLast[12])/$($waterLast[13])/$($waterLast[14]) draws=$($waterLast[16])/$($waterLast[17])/$($waterLast[18]) cells/triangles/vertices=$($waterLast[21])/$($waterLast[22])/$($waterLast[23])"
+                        if ($m4CandidateEvidence) {
+                            $waterStillLast = $m4WaterStillSamples[-1]
+                            $m4WaterStillMetricSummary = "Renderer M4 frozen water: frozen/fail/result=$($waterStillLast[1])/$($waterStillLast[2])/$($waterStillLast[3]) sourceTriangles=12 preparedBytes=36864"
                         }
-                        $m4StaticMetricSummary = "Renderer M4 static textures: mode=$StaticTextureAotMode samples=$RendererBenchmarkSamples prepare=$($m4StaticSamples[0][2]) fail=$($m4StaticSamples[0][3]) prepared=$($m4StaticSamples[0][4]) bytes=$($m4StaticSamples[0][5]) arm=$($m4StaticSamples[0][6]) seenMask=0x$('{0:x}' -f $m4StaticSamples[-1][7]) ownerMask=0x$('{0:x}' -f $m4StaticSamples[-1][8]) violation=$($m4StaticSamples[-1][9]) pinnedHits=$($m4StaticSamples[0][10])..$($m4StaticSamples[-1][10])"
+                        $m4StaticMetricSummary = "Renderer M4 static textures: mode=$effectiveStaticTextureAotMode samples=$RendererBenchmarkSamples prepare=$($m4StaticSamples[0][2]) fail=$($m4StaticSamples[0][3]) prepared=$($m4StaticSamples[0][4]) bytes=$($m4StaticSamples[0][5]) arm=$($m4StaticSamples[0][6]) seenMask=0x$('{0:x}' -f $m4StaticSamples[-1][7]) ownerMask=0x$('{0:x}' -f $m4StaticSamples[-1][8]) violation=$($m4StaticSamples[-1][9]) pinnedHits=$($m4StaticSamples[0][10])..$($m4StaticSamples[-1][10])"
                         $m4FenceLast = $m4FenceSamples[-1]
                         $m4FenceMetricSummary = "Renderer M4 post-GO texture fence: samples=$RendererBenchmarkSamples first=$($m4FenceLast[1])/$($m4FenceLast[2]) convert=$($m4FenceLast[3]) decode=$($m4FenceLast[4]) alloc=$($m4FenceLast[5]) fileIO=$($m4FenceLast[6]) glCreate=$($m4FenceLast[7]) glUpload=$($m4FenceLast[8]) glDelete=$($m4FenceLast[9]) evict=$($m4FenceLast[10]) refresh=$($m4FenceLast[11]) fallback=$($m4FenceLast[12])"
                         $texturePhaseMetricSummary = "Renderer texture phases: samples=$RendererBenchmarkSamples convert=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 1)) queue=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 2)) uploads=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 3))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 4)) pairOracle=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 5))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 6)) vblankQueued=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 7))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 8)) committed=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 9)) commitTicks=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 10)) outside/fallback=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 11))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 12)) lines=$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 13))/$(Get-MedianP95 (Get-SampleFieldValues $texturePhaseSamples 14))"
@@ -2158,11 +2302,21 @@ try {
                             [int]$rendererM2DetailedLedgerMarker.Groups[1].Value
                         rendererBenchmarkMode =
                             $benchmarkMakeIdentity.RendererBenchmarkMode
+                        rendererFastRunDefault =
+                            $benchmarkMakeIdentity.FastRunDefault
+                        sceneMipCacheLab =
+                            $benchmarkMakeIdentity.SceneMipCacheLab
+                        battleStaticTextureDefault =
+                            $benchmarkMakeIdentity.BattleStaticTextureDefault
                         staticTextureAotMode = $StaticTextureAotMode
+                        effectiveStaticTextureAotMode =
+                            $effectiveStaticTextureAotMode
                         m4WaterTiledAotMode =
                             $benchmarkMakeIdentity.M4WaterTiledAotMode
                         ifCommonHybridOamMode =
                             $benchmarkMakeIdentity.IFCommonHybridOamMode
+                        requestedIfCommonHybridOamMode =
+                            $IFCommonHybridOamMode
                         foxCpuMode = $FoxCpuMode
                         wallpaperIncrementalMode = $WallpaperIncrementalMode
                         lowerTextHudMode = $LowerTextHudMode
@@ -2233,7 +2387,8 @@ try {
                             fastRunMode = $RendererFastRunMode
                             staticTextureAotMode = $StaticTextureAotMode
                             m4WaterTiledAotMode = $M4WaterTiledAotMode
-                            ifCommonHybridOamMode = $IFCommonHybridOamMode
+                            ifCommonHybridOamMode =
+                                $effectiveIFCommonHybridOamMode
                             requireZeroPostGoTextureFence =
                                 [bool]$RequireZeroPostGoTextureFence
                             foxCpuMode = $FoxCpuMode
@@ -2247,7 +2402,7 @@ try {
                                 texturePhases = @($texturePhaseSamples)
                                 fastRaw = @($fastRunSamples)
                                 m3Stage = @($m3StageSamples)
-                                m4Water = @($m4WaterSamples)
+                                m4WaterStill = @($m4WaterStillSamples)
                                 m4Static = @($m4StaticSamples)
                                 m4Fence = @($m4FenceSamples)
                                 owners = @(
@@ -2269,6 +2424,10 @@ try {
                 }
                 if ($RendererBenchmarkOnly) {
                     Assert-Condition (($benchmarkMakeIdentity.RendererBenchmarkMode -gt 0) -or ($RendererFastRunMode -eq 9)) 'Benchmark-only verifier was not built with a renderer benchmark mode and did not select the complete-stage owner.' ($benchmarkMakeIdentity | Format-List | Out-String)
+                    if ($m4CandidateEvidence) {
+                        $banks = Get-Ints $vramBanks
+                        Assert-Condition ($vramBanks.Success -and $banks[0] -eq 0x83 -and $banks[1] -eq 0x8b -and $banks[2] -eq 0x81 -and $banks[3] -eq 0x89 -and $banks[4] -eq 0x82 -and $banks[5] -eq 0x83 -and $banks[6] -eq 0x8b -and $banks[7] -eq 0x81 -and $banks[8] -eq 0x06800000 -and $banks[9] -eq 0x06820000 -and $banks[10] -eq 131072 -and $banks[11] -eq 1) "M4 VRAM bank ownership or exact contiguous bank-A static span does not match the battle contract (actual=$($banks -join ','))." $gdbStdout
+                    }
                     if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                         $sinkProfile = Get-Ints $renderProfile
                         $sinkBatch = Get-Ints $renderBatch
@@ -2308,7 +2467,7 @@ try {
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
-                    if ($m4WaterMetricSummary) { Write-Output $m4WaterMetricSummary }
+                    if ($m4WaterStillMetricSummary) { Write-Output $m4WaterStillMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
                     if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
                     if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
@@ -2365,15 +2524,28 @@ try {
                 # weapons are additive two-triangle quads. Do not admit the old
                 # unmarked 22/44 setup traversal: aggregate tolerance could hide
                 # an equal loss in a later gameplay frame.
-                $stageBaseSubmitCount = $shw[0] - $wr[2]
-                $stageBaseTriangleCount = $shw[1] - $wr[4]
-                $stageStartupSubmitCount =
-                    $stageBaseSubmitCount - (42 * $stageFrameCount)
-                $stageStartupTriangleCount =
-                    $stageBaseTriangleCount - (202 * $stageFrameCount)
-                $stageStartupValid =
-                    $stageStartupSubmitCount -eq 0 -and
-                    $stageStartupTriangleCount -eq 0
+                if ($RendererFastRunMode -eq 9) {
+                    # The complete-stage owner bypasses these generic counters.
+                    # They retain one pre-arm 42/202 startup traversal plus the
+                    # lifetime source-weapon ledger.
+                    $stageBaseSubmitCount = $shw[0] - $wr[2]
+                    $stageBaseTriangleCount = $shw[1] - $wr[4]
+                    $stageStartupSubmitCount = 0
+                    $stageStartupTriangleCount = 0
+                    $stageStartupValid =
+                        $stageBaseSubmitCount -eq 42 -and
+                        $stageBaseTriangleCount -eq 202
+                } else {
+                    $stageBaseSubmitCount = $shw[0] - $wr[2]
+                    $stageBaseTriangleCount = $shw[1] - $wr[4]
+                    $stageStartupSubmitCount =
+                        $stageBaseSubmitCount - (42 * $stageFrameCount)
+                    $stageStartupTriangleCount =
+                        $stageBaseTriangleCount - (202 * $stageFrameCount)
+                    $stageStartupValid =
+                        $stageStartupSubmitCount -eq 0 -and
+                        $stageStartupTriangleCount -eq 0
+                }
                 Assert-Condition ($stageHardware.Success -and $stageStartupValid -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build drifted from the exact base + source-weapon stage contract or retained an unmarked setup traversal.' $gdbStdout
                 Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
                 if ($usesRetainedWallpaper) {
@@ -2430,15 +2602,20 @@ try {
                     $terminalWeaponQuadCount = $wframe[2]
                 }
                 Assert-Condition ($renderProfile.Success -and $terminalWeaponFrameValid -and $rp[15] -eq (2484 + (6 * $terminalWeaponQuadCount)) -and $rp[16] -eq (828 + (2 * $terminalWeaponQuadCount)) -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact base plus source-weapon renderer geometry contract.' $gdbStdout
-                Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13]) 'Realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
+                if ($effectiveStaticTextureAotMode -eq 1) {
+                    Assert-Condition ($rp[12] -eq 0 -and $rp[13] -eq 0) 'Static-resident realtime HW build performed a gameplay texture upload.' $gdbStdout
+                } else {
+                    Assert-Condition (Test-RendererUploadPair $rp[12] $rp[13]) 'Realtime HW build reported an invalid canonical texture upload count/byte pair.' $gdbStdout
+                }
                 $expectedBatchBegin = 121
                 $expectedBatchReuse = 707
                 $expectedBatchEnd = 121
                 if (($RendererProfileLevel -lt 2) -and
-                    ($RendererFastRunMode -in @(7, 8))) {
+                    ($RendererFastRunMode -in @(7, 8, 9))) {
                     # The production owner keeps identical policy epochs but
                     # carries 18 compatible fighter batches across old root
-                    # boundaries. Texture preparation remains unchanged.
+                    # boundaries. Mode 9 also halves stage texture-prepare
+                    # begins by owning the complete prepared stage packet.
                     $expectedBatchBegin = 103
                     $expectedBatchReuse = 725
                     $expectedBatchEnd = 103
@@ -2446,10 +2623,17 @@ try {
                 $expectedBatchBegin += $terminalWeaponQuadCount
                 $expectedBatchReuse += $terminalWeaponQuadCount
                 $expectedBatchEnd += $terminalWeaponQuadCount
-                $expectedTexturePrepareBegin = 98 + $terminalWeaponQuadCount
-                $expectedTexturePrepareReuse = 730 + $terminalWeaponQuadCount
+                $expectedTexturePrepareBegin =
+                    $(if ($RendererFastRunMode -eq 9) { 49 } else { 98 }) +
+                    $terminalWeaponQuadCount
+                $expectedTexturePrepareReuse =
+                    $(if ($RendererFastRunMode -eq 9) { 725 } else { 730 }) +
+                    $terminalWeaponQuadCount
                 Assert-Condition ($renderBatch.Success -and $rb[0] -eq $expectedBatchBegin -and $rb[1] -eq $expectedBatchReuse -and $rb[2] -eq $expectedBatchEnd -and $rb[3] -eq $expectedTexturePrepareBegin -and $rb[4] -eq $expectedTexturePrepareReuse) "Canonical realtime HW build drifted from exact source-weapon-aware batch and texture-prepare accounting." $gdbStdout
-                if ($RendererProfileLevel -lt 2) {
+                if ($effectiveStaticTextureAotMode -eq 1) {
+                    Assert-Condition ($renderCi4Lut.Success -and (($rci4lut | Measure-Object -Sum).Sum -eq 0)) 'Static-resident renderer unexpectedly rebuilt or reused live CI4 conversion tables.' $gdbStdout
+                    Assert-Condition ($renderCi4Map.Success -and (($rci4map | Measure-Object -Sum).Sum -eq 0)) 'Static-resident renderer unexpectedly resolved live water representative pixels.' $gdbStdout
+                } elseif ($RendererProfileLevel -lt 2) {
                     Assert-Condition ($renderCi4Lut.Success -and $rci4lut[2] -eq 2 -and $rci4lut[3] -gt $rci4lut[2]) 'Performance/coarse renderer did not build exactly two immutable CI4 source-index planes and reuse them across live water addressing.' $gdbStdout
                     Assert-Condition ($renderCi4Map.Success -and $rci4map[0] -gt 0 -and $rci4map[1] -ge $rci4map[0]) 'Performance/coarse renderer did not resolve live large-water pixels through exact representative address/phase classes.' $gdbStdout
                 } else {
@@ -2459,7 +2643,8 @@ try {
                 if ($RendererProfileLevel -ge 2) {
                     Assert-Condition ($renderTopology.Success -and $rtopo[0] -gt 0 -and $rtopo[1] -gt 0 -and $rtopo[2] -gt 0) 'Profiled renderer did not hoist immutable reloc-list validation while retaining dynamic-list fallback validation.' $gdbStdout
                     Assert-Condition ($renderCost.Success -and $rcost[0] -gt 0 -and $rcost[1] -gt 0 -and $rcost[0] -ge $rcost[1]) 'Profiled renderer did not report a coherent triangle/vertex submission cost split.' $gdbStdout
-                    if ($rp[12] -gt 0) {
+                    if (($effectiveStaticTextureAotMode -eq 0) -and
+                        ($rp[12] -gt 0)) {
                         Assert-Condition ($renderCi4Lut.Success -and ($rci4lut[0] + $rci4lut[1]) -gt 0) 'Profiled renderer uploaded animated textures without building or reusing the exact CI4 palette-pair LUT.' $gdbStdout
                     }
                 } elseif ($RendererProfileLevel -eq 1) {
@@ -2489,8 +2674,9 @@ try {
                         $ioam[0] -eq 1 -and
                         $ioam[1] -eq 1 -and $ioam[2] -eq 1 -and
                         $ioam[3] -eq 0 -and $ioam[4] -gt 0 -and
-                        $ioam[5] -eq 93824 -and $ioam[6] -eq 16 -and
-                        $ioam[7] -eq 59 -and $ioam[9] -eq 0 -and
+                        $ioam[5] -eq $expectedIfCommonPrepareBytes -and
+                        $ioam[6] -eq 16 -and $ioam[7] -eq 59 -and
+                        $ioam[9] -eq $expectedIfCommonPaletteBytes -and
                         $ioam[10] -eq 0 -and $ioam[11] -eq 0 -and
                         $ioam[12] -eq 0 -and $ioam[13] -eq 0 -and
                         $ioam[14] -eq 0 -and $ioam[15] -eq 0 -and
@@ -2539,18 +2725,26 @@ try {
                     Assert-Condition ($wallpaperOracle.Success -and $wo[0] -gt 0 -and $wo[1] -eq 0 -and $wo[2] -gt 0 -and $wo[3] -eq 0 -and $wo[4] -eq 0 -and $wo[5] -eq 0 -and $wo[6] -eq 0 -and $wo[7] -eq 0) 'Forensic wallpaper recurrence/pixel oracle found an exact-output mismatch.' $gdbStdout
                 }
                 Assert-Condition ($renderClip.Success -and $rclip[0] -eq $rv[12]) 'Canonical realtime HW build did not report a consistent clipping/saturation marker.' $gdbStdout
-                # The final sampled frame can legitimately reuse the resident
-                # TEXEL0/TEXEL1 composite, so its per-frame composite/load
-                # counts may both be zero.  The cumulative fraction-refresh
-                # count proves that the live animation was refreshed in the
-                # capture; current-frame rejects and cache evictions stay zero.
-                Assert-Condition ($renderTexel1.Success -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -gt 0 -and $rt1[10] -eq 0 -and $rt1[11] -gt 0) 'Canonical realtime HW build did not resolve, directly precompose, and refresh the source Dream Land TEXEL0/TEXEL1 water material without evicting resident textures.' $gdbStdout
+                if ($effectiveStaticTextureAotMode -eq 1) {
+                    Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0) 'Static-resident Dream Land water drifted from its two live frozen-water TEXEL0/TEXEL1 material matches or performed refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
+                } else {
+                    # Legacy static-off control: the terminal frame may reuse
+                    # its resident composite, while the scene-lifetime refresh
+                    # and direct-pixel counters prove the animated fallback.
+                    Assert-Condition ($renderTexel1.Success -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -gt 0 -and $rt1[10] -eq 0 -and $rt1[11] -gt 0) 'Static-off realtime HW control did not refresh the source Dream Land TEXEL0/TEXEL1 water material without eviction.' $gdbStdout
+                }
                 Assert-Condition ($mobjAttach.Success -and $ma[0] -ge 4 -and $ma[1] -eq 0 -and $ma[2] -eq 0 -and $ma[3] -eq 0x0200 -and $ma[4] -eq 0x006b) 'Canonical realtime HW build did not normalize the live water and Whispy mixed-width O2R MObjSub fields at the BattleShip attachment boundary.' $gdbStdout
                 Assert-Condition ($renderRawMatrix.Success -and $rrm[0] -gt 0) 'Canonical realtime HW build found no current-matrix ordinary-Z raw candidates.' $gdbStdout
                 $submitTotal = $rs[0] + $rs[1] + $rs[2] + $rs[3] + $rs[4] + $rs[5] + $rs[6]
                 $expectedProjectedDivisions = (6 * $rs[3]) + (9 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
                 $preCutoverProjectedDivisions = (9 * ($rs[0] + $rs[1] + $rs[2] + $rs[4] + $rs[5] + $rs[6])) + (6 * $rs[3])
                 $expectedProjectedFallbackCount = $rs[2] + $rs[4] + $rs[5] + $rs[6]
+                if ($RendererFastRunMode -eq 9) {
+                    # The complete-stage owner directly owns the stage's 136
+                    # projected triangles; generic submit-class exceptions no
+                    # longer describe this counter.
+                    $expectedProjectedFallbackCount = 136
+                }
                 if (($RendererProfileLevel -lt 2) -and
                     ($RendererFastRunMode -in @(7, 8))) {
                     # The production native-fighter owner keeps the canonical
@@ -2565,7 +2759,15 @@ try {
                     # stable canonical geometry contract.
                     $expectedProjectedFallbackCount *= $hw[0]
                 }
-                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq 648 -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq 10 -and $rs[7] -eq 0 -and $rs[0] -eq $rrm[0] -and $rs[2] -eq $rrm[2] -and $rs[6] -eq $rrm[1] -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
+                $rawMatrixPartitionValid =
+                    $rs[0] -eq $rrm[0] -and
+                    $rs[2] -eq $rrm[2] -and
+                    $(if ($RendererFastRunMode -eq 9) {
+                        $rrm[1] -eq 0
+                    } else {
+                        $rs[6] -eq $rrm[1]
+                    })
+                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq 648 -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq 10 -and $rs[7] -eq 0 -and $rawMatrixPartitionValid -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
                 Assert-Condition ($rs[8] -eq $expectedProjectedDivisions -and ($rs[8] * 4) -lt $preCutoverProjectedDivisions) 'Canonical realtime HW build did not sharply reduce and exactly account projected division demand.' $gdbStdout
                 $hardwareDivideEvaluations = $rhdiv[0] + $rhdiv[1] + $rhdiv[2]
                 Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Canonical realtime projected hardware divider reported a zero denominator or exact-result mismatch.' $gdbStdout
@@ -2575,7 +2777,11 @@ try {
                     $expectedHardwareDivideEvaluations = $rs[8] + (3 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
                     Assert-Condition ($rhdiv[0] -gt 0 -and $hardwareDivideEvaluations -eq $expectedHardwareDivideEvaluations) 'Forensic renderer did not compare every live DS hardware quotient with the former exact C result.' $gdbStdout
                 }
-                Assert-Condition ($renderLazy.Success -and $rlazy[0] -gt 0 -and $rlazy[3] -gt 0 -and $rlazy[4] -gt 0 -and $rlazy[5] -eq 0) 'Canonical realtime HW matrix snapshot table lacked natural load/create/reuse coverage or overflowed.' $gdbStdout
+                if ($RendererFastRunMode -eq 9) {
+                    Assert-Condition ($renderLazy.Success -and $rlazy[0] -gt 0 -and $rlazy[1] -eq 0 -and $rlazy[2] -eq 0 -and $rlazy[3] -eq 0 -and $rlazy[4] -eq 0 -and $rlazy[5] -eq 0) 'Complete-stage owner unexpectedly entered the generic transform or matrix-snapshot path.' $gdbStdout
+                } else {
+                    Assert-Condition ($renderLazy.Success -and $rlazy[0] -gt 0 -and $rlazy[3] -gt 0 -and $rlazy[4] -gt 0 -and $rlazy[5] -eq 0) 'Canonical realtime HW matrix snapshot table lacked natural load/create/reuse coverage or overflowed.' $gdbStdout
+                }
                 Assert-Condition ($renderCombine.Success -and $rc[4] -eq $expectedProjectedFallbackCount) 'Canonical realtime HW projected-fallback accounting does not match the exceptional source-Z classes.' $gdbStdout
                 Assert-Condition ($fighterLightSeed.Success -and $fls[0] -gt 0 -and $fls[1] -eq [Convert]::ToUInt32('ffffff00', 16) -and $fls[2] -eq [Convert]::ToUInt32('4c4c4c00', 16)) 'Canonical realtime HW build did not seed the fighter RSP light state from the selected source MObj material.' $gdbStdout
                 if ($RendererProfileLevel -ge 2) {
@@ -2588,7 +2794,7 @@ try {
                     Assert-Condition ($renderTexture.Success -and $rt[0] -gt 0 -and $rt[1] -gt 0 -and $rt[2] -gt 0 -and $rt[3] -gt 0 -and $rt[4] -gt 0 -and $rt[5] -gt 0 -and $rt[6] -gt 0 -and $rt[8] -lt $rt[9] -and $rt[10] -lt $rt[11]) 'Forensic realtime HW build did not prove Dream Land texture data and texcoords reached GX submission.' $gdbStdout
                     Assert-Condition ($rt1[3] -eq 0 -and $rt1[4] -le 0xff -and $rt1[5] -ne 0 -and $rt1[6] -ne 0 -and $rt1[5] -ne $rt1[6]) 'Forensic realtime HW build did not retain TEXEL0/TEXEL1 source-state diagnostics.' $gdbStdout
                     Assert-Condition ($renderTexUse.Success) 'Forensic realtime HW build did not report texture-use rejection classes.' $gdbStdout
-                    Assert-Condition ($renderTexFmt.Success -and $rtf[0] -ne 0 -and $rtf[1] -ne 0 -and $rtf[4] -eq 0) 'Forensic realtime HW build had unexplained texture bind failures by format.' $gdbStdout
+                    Assert-Condition ($renderTexFmt.Success -and ((($effectiveStaticTextureAotMode -eq 1) -and ($rtf[0] -eq 0)) -or (($effectiveStaticTextureAotMode -eq 0) -and ($rtf[0] -ne 0))) -and $rtf[1] -ne 0 -and $rtf[4] -eq 0) 'Forensic realtime HW texture format accounting did not match the selected static-residency mode.' $gdbStdout
                     Assert-Condition ($renderTexLane.Success -and (($rtl[0] -band 0x2) -ne 0) -and $rtl[1] -gt 0 -and $rtl[2] -gt 0 -and (($rtl[3] -band 0x100) -ne 0) -and $rtl[5] -eq 0x00010203 -and $rtl[6] -eq 0x02030001) 'Forensic realtime HW build did not prove O2R texture byte-lane decoding on the active CI4 path.' $gdbStdout
                     Assert-Condition ($rc[0] -gt 0 -and $rc[1] -gt 0) 'Forensic realtime HW build did not report source combine modes.' $gdbStdout
                     Assert-Condition ($renderLight.Success -and $rl[2] -eq 0) 'Forensic realtime HW build reported a source-light fallback.' $gdbStdout
@@ -2596,6 +2802,12 @@ try {
                     Assert-Condition ($renderStageWorldCache.Success -and $rswc[0] -gt 0 -and $rswc[3] -eq 0 -and $rswc[4] -gt 0 -and $rswc[5] -eq 0) 'Forensic persistent stage-world cache did not reuse exact source keys or its uncached matrix shadow mismatched.' $gdbStdout
                     Assert-Condition ($renderAffineMatrix.Success -and $ram[0] -gt 0 -and $ram[1] -eq 0 -and $ram[2] -eq 0) 'Forensic affine DObj matrix path drifted from the former exact generic multiply.' $gdbStdout
                     Assert-Condition ($rrm[3] -gt 0 -and $rrm[4] -eq 0 -and $rrm[5] -le 16 -and $rrm[6] -eq 0 -and $rrm[7] -eq 0 -and $rrm[8] -gt 0 -and $rrm[9] -eq 0) 'Forensic corrected composed GX matrix PosTest failed homogeneous, W-sign, clip, matrix-word, or capacity checks.' $gdbStdout
+                } elseif ($RendererFastRunMode -eq 9) {
+                    Assert-Condition ($rlazy[1] -eq 0 -and $rlazy[2] -eq 0) 'Complete-stage owner unexpectedly retained generic CPU transform or projected-cache work.' $gdbStdout
+                    Assert-Condition ($renderOracle.Success -and $ro[0] -eq 0 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Complete-stage owner still performed forensic oracle transforms.' $gdbStdout
+                    Assert-Condition ($rv[12] -eq 0) 'Complete-stage owner saturated a submitted DS vertex.' $gdbStdout
+                    Assert-Condition ($rt[0] -eq 0 -and $rt[3] -eq 0 -and $rt[4] -eq 0 -and $rc[0] -eq 0 -and $rc[1] -eq 0) 'Complete-stage owner still published per-vertex or per-command forensic diagnostics.' $gdbStdout
+                    Assert-Condition ($rrm[3] -eq 0 -and $rrm[4] -eq 0 -and $rrm[5] -eq 0 -and $rrm[6] -eq 0 -and $rrm[7] -eq 0 -and $rrm[8] -eq 0 -and $rrm[9] -eq 0) 'Complete-stage owner still ran the GX PosTest oracle.' $gdbStdout
                 } else {
                     Assert-Condition ($rlazy[1] -gt 0 -and (2 * $rlazy[1]) -lt $rlazy[0] -and $rlazy[2] -gt 0) 'Performance/coarse renderer did not defer a majority of CPU vertex transforms or reuse projected exceptions.' $gdbStdout
                     Assert-Condition ($renderOracle.Success -and $ro[0] -eq 0 -and $ro[1] -eq 0 -and $ro[2] -eq 0) 'Performance/coarse realtime HW build still performed forensic oracle transforms.' $gdbStdout
@@ -2605,6 +2817,7 @@ try {
                 }
                 $hardwareSummary = " rprof=$RendererProfileLevel$benchmarkSummary gxram=$($hw[2])/$($hw[3]) gxstat=0x{0:x}/ctrl=0x{1:x} ftrContract=$($fdc[0])/$($fdc[3])/geom0x{17:x}/cycle0x{18:x}/rm0x{19:x}/light$($fdc[5])/$($fdc[6])/bounds$($fdc[7])/$($fdc[8]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) batch=$($rb[0])/$($rb[1])/$($rb[2])/texprep$($rb[3])/$($rb[4]) wallCache=$($wc[0])/$($wc[1])/$($wc[2])/fb$($wc[3])/src$($wc[4])x$($wc[5])/$($wc[6])/ticks$($wc[7])/$($wc[8]) wallFinal=direct$($wf[0])/skip$($wf[1])/change$($wf[2])/px$($wf[3])/stage$($wf[4])/$($wf[5])/bg2$($wf[6])/$($wf[7])/$($wf[8])/bg3$($wf[9])/$($wf[10])/$($wf[11]) mtx=load$($rm[0])/scale$($rm[1])/p$($rm[2]),$($rm[3]),$($rm[4]),$($rm[5])/mv$($rm[6]),$($rm[7]),$($rm[8]),$($rm[9]),$($rm[10]),$($rm[11]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/dec$($rs[4])/prim$($rs[5])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/w$($rrm[6])/c$($rrm[7])/mw$($rrm[8])/drop$($rrm[9]) vraw=$($rv[0])..$($rv[1])/$($rv[2])..$($rv[3])/$($rv[4])..$($rv[5]) vhw=$($rv[6])..$($rv[7])/$($rv[8])..$($rv[9])/$($rv[10])..$($rv[11]) depth=stage$($rd[0]):$($rd[1])..$($rd[2])/p0$($rd[5]):$($rd[6])..$($rd[7])/p1$($rd[10]):$($rd[11]) clip=$($rclip[0]) texProof=$($rt[1])/$($rt[2])/$($rt[3]) sample=$($rt[5])/$($rt[6])/$($rt[4]) alias=$($rt[7]) st=$($rt[8])..$($rt[9])/$($rt[10])..$($rt[11]) texUse=$($rtu[0])/$($rtu[1])/$($rtu[2])/$($rtu[3])/$($rtu[4])/impl$($rtu[5])/first0x{7:x}/flags0x{8:x}/w0x{9:x}/w1x{10:x}/geom0x{11:x} texFmt=conv0x{2:x}/bind0x{3:x}/pal0x{4:x}/rej0x{5:x}/why0x{6:x} texLane=layout0x{12:x}/byte$($rtl[1])/half$($rtl[2])/bFmt0x{13:x}/hFmt0x{14:x}/bMap0x{15:x}/hMap0x{16:x} stageCarry=$($scarry[0])/$($scarry[1])/tex$($scarry[2])/tile$($scarry[3])/short$($scarry[4])/$($scarry[5])/seg$($scarry[6]) stageAcct=frames$stageFrameCount/boot$stageStartupSubmitCount,$stageStartupTriangleCount/weapon$($wr[2]),$($wr[4])/terminal$terminalWeaponQuadCount combine=$($rc[0])/$($rc[1])/lit$($rc[2])/mat$($rc[3])/proj$($rc[4]) light=$($rl[0])/$($rl[1])/$($rl[2]) profile=present$($rp[2])/draw$($rp[3])/stage$($rp[5])/mat$($rp[6])/dl$($rp[8])/tex$($rp[9])/conv$($rp[10])/upload$($rp[11]) texUploads=$($rp[12])/$($rp[13]) binds=$($rp[14]) vtx=$($rp[15]) tri=$($rp[16])" -f $hw[4], $hw[5], $rtf[0], $rtf[1], $rtf[2], $rtf[3], $rtf[4], $rtu[6], $rtu[7], $rtu[8], $rtu[9], $rtu[10], $rtl[0], $rtl[3], $rtl[4], $rtl[5], $rtl[6], $fdc[4], $fdc[13], $fdc[14]
                 $hardwareSummary += " texDirect=$($rt1[11])"
+                $hardwareSummary += $publishedRendererDefaultsSummary
                 if ($RendererProfileLevel -ge 2) {
                     $hardwareSummary += " wallOracle=$($wo[0])/$($wo[1])/$($wo[2])/$($wo[3])"
                     $hardwareSummary += " texel1state=0x{0:x}/0x{1:x}" -f $rt1[7], $rt1[8]
@@ -2687,7 +2900,7 @@ try {
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
-                    if ($m4WaterMetricSummary) { Write-Output $m4WaterMetricSummary }
+                    if ($m4WaterStillMetricSummary) { Write-Output $m4WaterStillMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
                     if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
                     if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }

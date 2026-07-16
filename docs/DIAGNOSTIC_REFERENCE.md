@@ -1343,12 +1343,12 @@ Opening movie / Opening Portraits:
   batch begins, reused triangle submissions, and batch ends. Canonical requires
   begin plus reuse to equal submitted hardware triangles, positive reuse, fewer
   begins than triangles, and ends equal begins at the completed-frame marker.
-- `RENDER_CI4LUT` / `RENDER_CI4MAP`: animated-water performance markers. The
-  first reports palette-pair LUT build/reuse and immutable source-index-plane
-  build/reuse. The second reports pixels evaluated at their first exact
-  TEXEL0/TEXEL1/ordered-phase representative and pixels expanded from one.
-  Profiles 0/1 require positive representative work with reuse at least as large;
-  profile 2 requires both map fields and both index-cache fields to remain zero.
+- `RENDER_CI4LUT` / `RENDER_CI4MAP`: legacy static-off water diagnostics. The
+  first reports palette-pair LUT and source-index-plane work; the second reports
+  representative/expanded pixels. Effective static residency requires every
+  field zero because P1 binds offline-prepared frame-0/fraction-114 water. Only
+  explicit static-off controls require positive animated work; these markers do
+  not create a P1 water-animation requirement.
 - `SOBJ_WALL_CACHE`: immutable Dream Land decode-cache marker. Fields are
   build/hit/fast-draw/fallback counts, source width/height/opaque pixels, and
   build/last-draw ticks. Retained-wallpaper canonical expects exactly
@@ -1449,18 +1449,18 @@ Opening movie / Opening Portraits:
   cache-alias avoidance count, and S/T min/max. The screenshot gate proves
   converted source texture content and sane submitted S/T without keeping a
   copied texel cache resident.
-- `RENDER_TEXEL1`: Dream Land DS water-composite marker. Fields are calls,
+- `RENDER_TEXEL1`: Dream Land DS two-texture material marker. Fields are calls,
   TMEM-load matches, rejects, reject-reason mask, last primitive LOD fraction,
   current/next images, packed TEXEL1/primary tile state, compatible animated-
-  state VRAM refreshes, and cache evictions. The last two are scene-lifetime.
-  Canonical requires positive matched/refreshed work, distinct images, and zero
-  rejects, reasons, or evictions. Exact mux recognition feeds an RGBA5551/A1
-  approximation; relative 10.2 phase still rounds to whole texels.
+  state VRAM refreshes, cache evictions, and direct-CI4 pixels. The last three
+  are scene-lifetime. Effective static residency requires exactly two live
+  frozen-water material matches, zero rejects, and zero refresh/eviction/direct
+  gameplay work. Positive refresh/direct work belongs only to static-off controls.
 - `RENDER_TEXFMT`: canonical HW texture-format trace marker. Fields are
   converted-format mask, bound-format mask, palette-bound-format mask,
-  rejected-format mask, and reject-reason mask. The canonical gate currently
-  requires converted/bound/palette masks to be nonzero and unexplained rejects
-  to be zero.
+  rejected-format mask, and reject-reason mask. Static-on forensic runs require
+  conversion mask zero, bound coverage, and no reject reason; static-off forensic
+  controls retain positive conversion/bind coverage and no reject reason.
 - `RENDER_TEXLANE`: canonical HW O2R texture-lane marker. Fields are source
   data-layout mask, byte-reader sample count, halfword-reader sample count,
   byte-format mask, halfword-format mask, byte physical-lane map, and halfword

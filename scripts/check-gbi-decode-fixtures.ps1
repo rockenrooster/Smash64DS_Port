@@ -1367,7 +1367,7 @@ $harnessScript = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gc
 $fireballVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-fireball-render.ps1') -Raw
 $rendererUploadPair = [regex]::Match(
     $harnessScript, '(?s)function Test-RendererUploadPair \{.*?\n\}').Value
-Assert-True (-not [string]::IsNullOrWhiteSpace($rendererUploadPair) -and $rendererUploadPair.Contains('$Count -eq 0 -and $Bytes -eq 0') -and $rendererUploadPair.Contains('$Count -eq 1 -and ($Bytes -eq 4096 -or $Bytes -eq 32768)') -and $rendererUploadPair.Contains('$Count -eq 2 -and $Bytes -eq 36864') -and -not $rendererUploadPair.Contains('ProfileLevel')) 'Renderer upload-pair gate no longer accepts every exact animated-water phase uniformly across profiles.'
+Assert-True (-not [string]::IsNullOrWhiteSpace($rendererUploadPair) -and $rendererUploadPair.Contains('$Count -eq 0 -and $Bytes -eq 0') -and $rendererUploadPair.Contains('$Count -eq 1 -and ($Bytes -eq 4096 -or $Bytes -eq 32768)') -and $rendererUploadPair.Contains('$Count -eq 2 -and $Bytes -eq 36864') -and -not $rendererUploadPair.Contains('ProfileLevel')) 'Static-off renderer upload fallback no longer accepts every exact animated-water phase uniformly across profiles.'
 Assert-True ($renderer.Contains('ndsRendererMtxCellS16p16')) 'Renderer matrix unpack helper is missing.'
 Assert-True ($relocRendererDL.Contains('ndsRendererAdapterGetFrameCameraMatrices')) 'Renderer adapter does not reuse immutable camera matrices within one BattleShip draw frame.'
 Assert-True ($relocRendererDL.Contains('sNdsRendererAdapterCameraCacheFrame != frame')) 'Renderer adapter camera cache is not bounded to one presented frame.'
@@ -1566,7 +1566,13 @@ Assert-True ($renderer.Contains('ndsRendererProfileRecordTextureCi4Direct(width 
 Assert-True ($renderer.Contains('u16 *destination = (compact_output != FALSE) ?') -and $renderer.Contains('sNdsRendererHardwareTextureRefreshLarge :') -and $renderer.Contains('if ((compact_row_output == FALSE)') -and $renderer.Contains('ndsRendererHardwareStageUniqueTextureRows(')) 'Renderer warm CI4 refresh no longer writes exact unique rows directly while retaining the full-scratch fallback.'
 Assert-True ($taskman.Contains('gNdsRendererProfileTextureCi4DirectPixels = 0;')) 'Renderer direct CI4 conversion coverage is not reset with the frame profile.'
 Assert-True ($taskman.Contains('gNdsRendererProfileCi4RepresentativePixelCount = 0;') -and $taskman.Contains('gNdsRendererProfileCi4ReusePixelCount = 0;')) 'Renderer CI4 representative coverage is not reset with the frame profile.'
-Assert-True ($harnessScript.Contains('gNdsRendererProfileTextureCi4DirectPixels')) 'Canonical renderer verifier does not require the direct CI4 water path.'
+Assert-True (
+    $harnessScript.Contains('$effectiveStaticTextureAotMode = if ($usesPublishedIntrinsicRendererDefaults) {') -and
+    $harnessScript.Contains('Assert-Condition ($rp[12] -eq 0 -and $rp[13] -eq 0)') -and
+    $harnessScript.Contains('Assert-Condition ($renderCi4Lut.Success -and (($rci4lut | Measure-Object -Sum).Sum -eq 0))') -and
+    $harnessScript.Contains('Assert-Condition ($renderCi4Map.Success -and (($rci4map | Measure-Object -Sum).Sum -eq 0))') -and
+    $harnessScript.Contains('Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0)')
+) 'Canonical renderer verifier no longer requires zero upload and live CI4/TEXEL1 gameplay work after exactly two pre-GO water composites.'
 Assert-True ($harnessScript.Contains('RENDER_ADAPTER_CACHE=') -and $harnessScript.Contains('gNdsRendererProfileDObjWorldCacheOverflowCount')) 'Forensic renderer verifier does not prove bounded frame-local matrix-cache reuse.'
 Assert-True ($harnessScript.Contains('RENDER_STAGE_WORLD_CACHE=') -and $harnessScript.Contains('gNdsRendererProfileStageWorldPersistentOracleMismatchCount')) 'Forensic renderer verifier does not prove exact persistent stage-world reuse.'
 Assert-True ($harnessScript.Contains('RENDER_AFFINE_MATRIX=') -and $harnessScript.Contains('gNdsRendererProfileAffineMatrixMismatches')) 'Forensic renderer verifier does not compare affine DObj composition with the former exact generic multiply.'
@@ -1576,7 +1582,7 @@ Assert-True ($renderer.Contains('use_texel1_ci4_lut != FALSE')) 'Renderer upload
 Assert-True ($renderer.Contains('if ((width != upload_width) || (height != upload_height))') -and $renderer.Contains('memset(sNdsRendererHardwareTextureScratch, 0, upload_bytes)')) 'Renderer texture conversion does not limit padding clears to non-exact upload extents.'
 Assert-True ($renderer.Contains('color, color1, stats->prim_lod_fraction')) 'Renderer retained generic TEXEL0/TEXEL1 fallback does not consume both source texels and the original fraction.'
 Assert-True ($renderer.Contains('preserve_transparent_rgb')) 'Renderer composite decode does not preserve transparent source RGB before color lerp.'
-Assert-True ($renderer.Contains('ndsRendererHardwareFindTexel1RefreshTexture')) 'Renderer does not retain one allocation across source water animation updates.'
+Assert-True ($renderer.Contains('ndsRendererHardwareFindTexel1RefreshTexture')) 'Static-off TEXEL1 fallback does not retain one allocation across source water animation updates.'
 Assert-True ($renderer.Contains('entry->last_used_frame !=')) 'Renderer does not prevent incompatible same-frame composite allocation reuse.'
 Assert-True ($renderer.Contains('glGetTexturePointer(entry->name)')) 'Renderer fraction refresh does not resolve the resident DS texture allocation.'
 Assert-True ($renderer.Contains('dmaCopyWords(0, texture, (u8 *)vram_address + offset,') -and $renderer.Contains('offset += staged_bytes')) 'Renderer fraction refresh does not update the complete resident texture VRAM span.'
@@ -1584,7 +1590,7 @@ Assert-True ($renderer.Contains('ndsRendererHardwareQueueTextureRefresh') -and $
 Assert-True ($renderer.Contains('ndsRendererHardwareStageUniqueTextureRows') -and $renderer.Contains('sNdsRendererHardwareTexel01Ci4RepresentativeRowsValid')) 'Renderer does not reuse the exact CI4 representative-row proof for compact VBlank staging.'
 Assert-True ($renderer.Contains('row_map[y] = row_map[representative];') -and $renderer.Contains('*staged_bytes = unique_rows * row_bytes;')) 'Renderer compact staging does not preserve the exact representative row map and byte span.'
 Assert-True ($renderer.Contains('(refresh->row_count != 0u) ? refresh->row_map : NULL') -and $renderer.Contains('(const u8 *)texture + (source_row * row_bytes)')) 'Renderer VBlank commit does not expand the exact staged row map into resident texture VRAM.'
-Assert-True ($renderer.Contains('glDeleteTextures(1, &entry->name)')) 'Renderer cache eviction does not release the old libnds texture allocation.'
+Assert-True ($renderer.Contains('ndsRendererHardwareFencedGlDeleteTextures(1, &entry->name)')) 'Renderer cache eviction does not release the old libnds texture allocation through the post-GO fence.'
 Assert-Equal ([regex]::Matches($taskman, 'gNdsRendererProfileTexel1FractionRefreshCount = 0;').Count) 1 'Renderer composite refresh proof is still cleared every presented frame.'
 Assert-Equal ([regex]::Matches($taskman, 'gNdsRendererProfileTextureCacheEvictCount = 0;').Count) 1 'Renderer texture-eviction proof is still cleared every presented frame.'
 Assert-True ($renderer.Contains('key.texel1_image_format = load->image_format')) 'Renderer composite cache key omits TEXEL1 image format.'
@@ -1775,7 +1781,7 @@ Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-cpu-prep-no-gx-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1.*?override NDS_RENDERER_BENCHMARK_MODE := 2') 'CPU_PREP_NO_GX cost-floor target is not a dedicated profile-1 build.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-warm-no-upload-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1.*?override NDS_RENDERER_BENCHMARK_MODE := 4') 'WARM_NO_UPLOAD cost-floor target is not a dedicated profile-1 build.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-hwtri\).*?override NDS_DEV_SCENE_HARNESS := battle_playable_realtime.*?override NDS_DEV_LIVE_INPUT_PREVIEW := 1.*?override NDS_HARNESS_FAST_LOGIC := 0.*?override NDS_RENDERER_HW_TRIANGLES := 1.*?override NDS_RENDERER_PROFILE_LEVEL := 0') 'Published battle renderer no longer forces the complete realtime hardware profile.'
-Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-hwtri\).*?override NDS_SCENE_MIP_CACHE_LAB := 1') 'Published battle renderer no longer enables the graduated retained-wallpaper path.'
+Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-hwtri\).*?override NDS_RENDERER_FAST_RUN_DEFAULT := 9.*?override NDS_SCENE_MIP_CACHE_LAB := 0.*?override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1.*?override NDS_IFCOMMON_HYBRID_OAM := 1') 'Published battle renderer no longer boots the M3 complete-stage owner with pre-GO static residency, hybrid IFCommon VRAM ownership, and the retired mip-cache path disabled.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-coarse-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 1') 'Internal coarse renderer target is not forced to profile 1.'
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-forensic-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 2') 'Internal forensic renderer target is not forced to profile 2.'
 Assert-True ([regex]::Matches($makefile, 'NDS_DEV_SCENE_HARNESS_ID := 163\r?\n(?:#[^\r\n]*\r?\n)*CFLAGS \+= -O2').Count -eq 1) 'Canonical mode 163 no longer retains the measured O2 latency policy.'

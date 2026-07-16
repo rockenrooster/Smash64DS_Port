@@ -20876,3 +20876,33 @@ remains skipped for the requested fast iteration cadence.
   provider or policy changed in this checkpoint. The planned live split is
   recorded in `ARCHITECTURE.md` and `P1_EXECUTION_BOARD.md`; it is not completed
   history.
+
+## 2026-07-15 — published M3/M4 semantic checkpoint and DS visual budget
+
+- Adopted a project-wide presentation rule: preserve exact BattleShip gameplay
+  semantics, but target roughly 90% overall visual likeness under DS limits.
+  Cosmetic exactness gets one measured focused attempt before the cheapest
+  recognizable source-derived approximation wins. Dream Land water is the first
+  explicit case: exact frame 0/non-FRAC fraction 114, original runs 42–43 and
+  original 12 triangles, with no later water animation.
+- Retired the 167,936-byte/138-triangle animated-water replacement. The generated
+  static corpus has 22 complete keys, 21 deduplicated outputs, 126,976 payload
+  bytes, and 131,072 prepared bytes pinned in VRAM A.
+- Published intrinsic Mode 9/mip 0/static 1/hybrid OAM 1. Natural Boundary passes
+  the exact M3 8-callback/57-DObj/42-binding/54-run/202-triangle owner with zero
+  fallback and M4 water `2/0/1`, positive pinned hits, zero texture uploads, and
+  zero post-GO fence violations. M3 timing and M4 one-minute teardown/reserve
+  qualification remain open.
+- Exact published GO frames 438/439 pass and live under `artifacts/visibility`;
+  the frame-438 SHA-256 is
+  `45DBCD24D2DAC91089A1AAD6AB430C05CB173BB4E3FCFFBACEBE9A323B040922`.
+
+## 2026-07-15 — first linked M3 exclusive timing
+
+- A synchronized profile-1 Mode-9 window at frames 438–445 preserves exact
+  M3/M4 counters and measures stage-exclusive 664,544/664,640 P50/P95. It saves
+  only about 140K against the documented ~805K baseline and misses the <=500K
+  first gate by 164,544, so the decision is REWORK rather than milestone close.
+- The accepted evidence JSON is
+  `artifacts/performance/2026-07-15_m3-stage-mode9-profile1-s8-slot3.json`,
+  SHA-256 `CAD1B8D7925B1C432000FBD3FB6B54F6405166890BE58C1DBF5A1AC6EBC3B159`.

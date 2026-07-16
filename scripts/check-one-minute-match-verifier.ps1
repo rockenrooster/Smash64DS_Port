@@ -41,6 +41,8 @@ $make = Get-Content -LiteralPath $makePath -Raw
 
 Assert-Text $wrapper '-CPUOpponentProof\s+`\s*\r?\n\s*-MatchLifecycleProof\s+`\s*\r?\n\s*-OneMinuteMatchProof' `
     'One-minute wrapper does not select the existing CPU/lifecycle mode-163 path.'
+Assert-Text $wrapper '(?s)-OneMinuteMatchProof\s+`.*?-RendererFastRunMode 9\s+`.*?-StaticTextureAotMode 1\s+`.*?-IFCommonHybridOamMode 1\s+`.*?-RequireZeroPostGoTextureFence' `
+    'One-minute wrapper does not select the published-equivalent M3/M4 renderer and strict post-GO fence.'
 Assert-Text $owner '(?s)if \(\$MatchLifecycleProof\) \{\s*\$CPUOpponentProof = \$true.*?\}\s*if \(\$CPUOpponentProof\) \{\s*\$FoxCpuMode = 1\s*\$foxCpuModeSelected = \$true\s*\}' `
     'CPU/lifecycle proof no longer forces the Fox CPU decision path on.'
 Assert-Text $owner '(?s)\$preBattleSelectorSelected =\s*\$staticTextureAotSelected -or \$foxCpuModeSelected.*?if \(\$preBattleSelectorSelected\) \{.*?''tbreak scVSBattleStartBattle''.*?if \(\$foxCpuModeSelected\) \{\s*\$preBattleSetupCommands \+=\s*\(''set variable gNdsBattlePlayableFoxCpuEnabled = \{0\}'' -f\s*\$FoxCpuMode\).*?\}.*?\$gdbCommands = @\(\s*\$gdbCommands\[0\.\.3\]\s*\$preBattleSetupCommands' `
@@ -59,14 +61,26 @@ Assert-Text $lifecycle '-Gdb \$Gdb' `
 Assert-Text $lifecycle '-GdbPort \$selectedGdbPort' `
     'Match-lifecycle wrapper no longer forwards its selected isolated GDB port.'
 
-Assert-Text $battle 'smash64ds-battle-playable-one-minute-match' `
+Assert-Text $battle '\$target = ''smash64ds-battle-playable-one-minute-match-hwtri''' `
     'One-minute verifier target is not artifact-isolated from the canonical ROM.'
-Assert-Text $battle 'build-battle-playable-one-minute-match-harness' `
+Assert-Text $battle '\$build = ''build-battle-playable-one-minute-match-hwtri-harness''' `
     'One-minute verifier build directory is not isolated.'
+Assert-Text $battle '(?s)if \(\$OneMinuteMatchProof -and.*?\$RendererFastRunMode -ne 9.*?\$StaticTextureAotMode -ne 1.*?\$IFCommonHybridOamMode -ne 1.*?-not \$RequireZeroPostGoTextureFence' `
+    'One-minute verifier no longer rejects a non-published-equivalent M3/M4 configuration.'
+Assert-Text $battle "(?s)NDS_RENDERER_FAST_RUN_DEFAULT = '9'.*NDS_SCENE_MIP_CACHE_LAB = '0'.*NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'.*NDS_DEBUG_HUD = '0'" `
+    'One-minute verifier no longer supplies the isolated target exact 9/0/1 release defaults.'
+Assert-Text $battle '-HardwareTriangles:\$hardwareTriangles' `
+    'One-minute verifier no longer forwards hardware rendering from its hwtri target.'
 Assert-Text $battle '\$RendererProfileLevel = if \(\$OneMinuteMatchProof\) \{ 0 \} else \{ 2 \}' `
     'One-minute verifier no longer disables verifier-only renderer profiling.'
 Assert-Text $battle '-OneMinuteMatchProof:\$OneMinuteMatchProof' `
     'One-minute selector is not forwarded to the natural-runtime owner.'
+Assert-Text $battle '-StaticTextureAotMode \$StaticTextureAotMode' `
+    'One-minute verifier no longer forwards static texture residency.'
+Assert-Text $battle '-IFCommonHybridOamMode \$IFCommonHybridOamMode' `
+    'One-minute verifier no longer forwards hybrid IFCommon OAM.'
+Assert-Text $battle '-RequireZeroPostGoTextureFence:\$RequireZeroPostGoTextureFence' `
+    'One-minute verifier no longer forwards the strict M4 texture fence.'
 
 Assert-Text $scene 'gSCManagerTransferBattleState\.game_rules = SCBATTLE_GAMERULE_TIME;\s*gSCManagerTransferBattleState\.time_limit = 1;' `
     'Canonical mode 163 is not configured for the one-minute timed rule.'
@@ -93,6 +107,10 @@ Assert-Text $owner 'Where-Object \{ \$_ -ne 0 \}' `
     'One-minute verifier no longer requires every safety counter to remain zero.'
 Assert-Text $owner '\(\$ma\[6\] - \$audioResidentBytes\) -ge 131072' `
     'One-minute verifier lost the conservative 128 KiB reserve gate.'
+Assert-Text $owner '\$expectedM4TeardownCount = if \(\$OneMinuteMatchProof\) \{ 1 \} else \{ 0 \}' `
+    'One-minute verifier no longer requires exactly one M4 teardown.'
+Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq 22.*?\$m4FenceFinalValues\[5\] -eq 131072.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
+    'One-minute verifier lost the exact M4 residency and zero post-GO work assertions.'
 Assert-Text $owner '-MuteAudio:\$OneMinuteMatchProof' `
     'One-minute match no longer requests host-emulator muting.'
 Assert-Text $melon "Section 'Instance0\.Audio' -Key 'Volume' -Value '0'" `

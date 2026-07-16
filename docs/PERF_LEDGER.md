@@ -2199,3 +2199,64 @@ DECISION: KEEP HOST / IMPLEMENT ONLY BEHIND SETUP-FAIL-CLOSED GATE
   palette DMA after GO, >=128 KiB measured reserve, >=16 KiB A+B headroom,
   moving screenshots, and >=100K owner/draw saving. No gameplay cutover yet.
 ```
+
+## 2026-07-15 - frozen-114 static residency supersedes animated water
+
+```text
+IDEA ID: M4-FROZEN114-STATIC-RESIDENCY
+SUPERSEDES: M4-PUPUPU-TILED-WATER-PRELOAD
+POLICY:
+  Under the project-wide DS visual rule, presentation targets roughly 90%
+  overall likeness. Cosmetic exactness gets one measured focused attempt; a
+  miss that threatens P1 is replaced by the cheapest recognizable source-
+  derived approximation. Gameplay semantics are never relaxed.
+HOST:
+  Freeze BattleShip frame 0, non-FRAC fraction 114, on original runs 42-43
+  and 12 triangles. The corpus has 22 keys, 21 deduplicated outputs, 126,976
+  payload bytes, and 131,072 prepared bytes. Large/small water SHA-256 values:
+  f3a908659547f360ec9d3b79f80aa4c5dca829cdb36975a5d3a59667d1fdf532
+  61b0bb44aa30033d0c8e07d924f6b38ddbafa23807692eb16aab194e57457efe
+PUBLISHED DEVICE:
+  ROM 3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38.
+  Canonical Boundary passes exact M3 8/57/42/54/202 ownership, water 2/0/1,
+  22 pinned keys, exact 131,072-byte VRAM-A span, positive pinned hits, zero
+  upload/CI4/refresh/evict/fallback/fence work, and exact GO frames 438/439.
+  Frame-438 screenshot:
+  artifacts/visibility/2026-07-15_canonical_fast_frame438-439_182430-9052820-p35520.png
+  SHA-256:
+  45DBCD24D2DAC91089A1AAD6AB430C05CB173BB4E3FCFFBACEBE9A323B040922
+PERFORMANCE:
+  Boundary is 19.8 FPS with about 1.54M present / 1.09M draw ticks. This is a
+  semantic/residency keep, not an M3 tick-target or full-match M4 claim.
+DECISION: KEEP FROZEN P1 PATH / RETIRE ANIMATED REPLACEMENT
+  Never reopen the 167,936-byte/138-triangle animated-water candidate without
+  a new user decision and a measured P1-critical regression. M4 still requires
+  one-minute GO-to-teardown zero-fence and >=128 KiB reserve qualification.
+```
+
+## 2026-07-15 - M3 complete-stage first linked timing gate
+
+```text
+IDEA ID: M3-COMPLETE-STAGE-MODE9-LINKED
+IDENTITY:
+  ROM 2D8B9FFD8FD7BCD9512AFAB5F63F8AF01B6E128D6330006447CB4E988BF0E786,
+  14,713,856 bytes. Frames 438-445, profile 1, detailed ledger, static 1,
+  hybrid OAM 1, Fox decision/input paused. JSON SHA-256:
+  CAD1B8D7925B1C432000FBD3FB6B54F6405166890BE58C1DBF5A1AC6EBC3B159
+  Screenshot:
+  artifacts/visibility/2026-07-15_m3-stage-mode9-profile1-s8-slot3.png
+SEMANTICS:
+  Exact 8 callbacks / mask 255 / 57 DObjs / 42 bindings / 54 runs / 202
+  triangles / 49 epochs / four material commits / cross 5/10/15. Fast owner
+  is 121/828 = 202+320+306 with zero fallback. M4 is 22/131072, armed, full
+  masks, positive pinned hits, water 2/0/1, and every sampled fence class zero.
+TIMING P50/P95:
+  M3 stage exclusive 664,544/664,640; draw 1,183,104/1,183,168; present
+  1,536,448/1,537,216; loop 1,680,448/1,680,512; FPS 19.6.
+GATE:
+  About 140K saved versus the documented ~805K stage baseline, not >=300K.
+  Misses the <=500K first gate by 164,544 and remains far above 150-250K.
+DECISION: REWORK
+  Preserve the semantic packet/evidence while selecting the largest measured
+  internal bucket. Do not spend the next increment on cosmetic stage fidelity.
+```

@@ -56,15 +56,18 @@ in `P1_EXECUTION_BOARD.md`.
   fixtures remain, but no runtime treatment passes A1=A0, ≥80K saving,
   ≤337,472 combined, matrix+light ≤120K, transport ≤145K, and independent
   semantic/visual/runtime parity.
-- Milestone 3's exact host packet is 10,076 bytes / 57 DObjs / 42 bindings /
-  54 runs / 202 triangles, but production linkage and Whispy/flower dynamic
-  invariance remain unproved. Any later <=16 KiB slab needs no BSS/heap, >=300K
-  paired saving, and <=500K result; remove it if either threshold fails.
-- Milestone 4 has exact static/water host candidates and an edit-ready pre-GO
-  residency plan, but production linkage is zero. Runtime provenance, pinned
-  borrowing, bank remap, reserve, device behavior, complete reachable-effect
-  closure, and the zero-post-GO conversion/upload/I/O/alloc/evict/palette-DMA
-  fence remain mandatory before it can alter the renderer.
+- Milestone 3's exact 12,663-byte complete-stage owner is linked/published and
+  passes device semantics at 8 callbacks / 57 DObjs / 42 bindings / 54 runs /
+  202 triangles with zero fallback. Profile-1 stage-exclusive timing is
+  664,544/664,640 P50/P95, missing <=500K by 164,544 and saving only ~140K
+  versus ~805K. Select the largest internal bucket; one-minute dynamic-state
+  sweep and the 150–250K promotion target remain.
+- Milestone 4's exact animated tiled-water candidate is retired from P1. Under
+  the project-wide DS visual-fidelity policy, water freezes exact source frame
+  0/fraction 114 as two DS-ready textures (36,864 bytes) on the original 12
+  triangles. Published short Boundary passes provenance, preload/pinning, exact
+  VRAM-A ownership, the device screenshot, and zero sampled post-GO work/fence.
+  Full-minute reserve, teardown, and reachable-state closure remain mandatory.
 - Audio is not release-ready. All 144 local REGION_US IDs match BattleShip;
   fighter attribute IDs and recyclable FGM instance tokens are source-correct.
   Phase and regular-KO FGMs play naturally; Mario's first triplet is exact and
@@ -91,16 +94,13 @@ in `P1_EXECUTION_BOARD.md`.
   inside BattleShip's ±17.5° envelope; compare an identical BattleShip/N64 view
   before changing the renderer. This remains pause-only P2 parity debt unless
   the same symptom is observed in normal gameplay.
-- The rare `3 uploads / 40960 bytes` frame is two animated-water uploads plus a
-  source-valid 4 KiB Whispy cold miss. The static M4 manifest must prewarm that
-  key before GO; animated water remains the separate representation blocker.
-  A 256-frame zero-static-miss proof is still required; ordinary `2 / 36864`
-  water frames are not M4 completion.
-- `P1Gate` is an additive shadow checkpoint, not a P1-completion claim. Its
-  lifecycle leg uses the P1 one-minute rule on the original expiry/Results
-  path; a dated canonical one-minute soak is still required. Boundary, Regression, and Full
-  profile memberships remain unchanged, and the historical harness fleet
-  remains diagnostic while unique assertions are migrated.
+- [retired-path] The rare `3 uploads / 40960 bytes` static-off frame was two
+  animated-water uploads plus a source-valid 4 KiB Whispy cold miss. Canonical
+  P1 preloads/pins the frozen pair and prewarms Whispy; the published short
+  window now proves zero upload/refresh/fence work. Full-minute proof remains.
+- `P1Gate`, `Regression*`, and `Full` are list-only legacy inventories while
+  their unique assertions migrate onto the two runtime ROMs. Do not execute or
+  prebuild them. A dated canonical one-minute soak is still required.
 - [coverage-reduced] `FastIteration` lowers the moving left-shrub/pond
   variation floors to `40%/20%` and broadens left/stage/pond flat-run caps to
   `32/112/96px`; normal canonical keeps `45%/35%` and `12/80/80px`. GDB still
@@ -117,31 +117,22 @@ in `P1_EXECUTION_BOARD.md`.
   historical fixed color crops during live combat. The preceding GDB pass still
   requires both selected/submitted display contracts, in-bounds geometry, and
   fighter triangles; scene/object/texture regions remain visual gates.
-- [coverage-reduced] P1Gate's compact opening leg omits the legacy exact symbol/
-  event stack and terminal `<279` tick bound. Current normal runs reach Title
-  with relocation symbol count `45` versus the untouched verifier's `43`, and
-  sometimes after the first asset event; use that exact verifier only to
-  localize the historical mismatch. Scene/taskman/reloc-failure/Title outcomes
-  remain hard gates.
-- Three user-facing persistent ROM filenames represent two unique configurations:
-  normal `smash64ds.nds`, and one canonical battle configuration copied to both
-  canonical and shipped names and checked by exact length/SHA-256 parity.
-  Realtime, supplemental scripted battle, and lifecycle mode-163 scenarios are
-  still compile-distinct builds; runtime scenario selection remains tooling
-  debt.
-- The Full verifier profile is large enough to time out under short command
-  limits. This is a workflow/runtime-cost issue, not a source-boundary failure.
-  Use `scripts/verify-dev-fast.ps1`, `scripts/verify-boundary.ps1`,
-  `RegressionCore`, and detached `scripts/build-verify-profile.ps1` prebuilds
-  with `-VerifyStamp` for normal iteration. Run or resume
-  `scripts/verify-all.ps1 -Profile Full` when change risk requires it, and
-  report timeouts honestly instead of claiming Full green.
-- Regression shared-slot switches rebuild 140 C objects because the raw harness
-  name lives in globally forced `nds_build_config.h`; only three objects consume
-  the scene config. Move the name to `nds_scene_harness_config.h` and retain a
-  semantic optimization/renderer-ISA policy token in the global header. Keep the
-  fix only when incremental outputs exactly match fresh builds across policy
-  classes; this is build-cost debt, not a runtime blocker.
+- [retired-inventory] P1Gate's compact opening entry omitted the legacy exact
+  symbol/event stack and terminal `<279` tick bound. Current normal runs reach
+  Title with relocation symbol count `45` versus the old verifier's `43`,
+  sometimes after the first asset event. Preserve the old record only to map
+  assertions onto an executable runtime-ROM check; do not run the inventory.
+- Exactly two user-facing root ROMs are published: normal `smash64ds.nds` and
+  canonical P1 `smash64ds-battle-playable-hwtri.nds`. Realtime diagnostic and
+  lifecycle scenario variants remain compile-distinct under `builds/`; runtime
+  scenario selection is tooling debt, not permission for another root ROM.
+- The legacy Full/Regression inventories are list-only. Use focused checks,
+  DevFast, Boundary, and Current when shared startup/runtime can be affected;
+  migrate any still-unique assertion before removing its inventory entry.
+- [retired-inventory] Regression slot switches rebuilt 140 C objects because
+  the raw harness name lived in globally forced `nds_build_config.h`; only three
+  objects consumed scene configuration. This is historical build-cost evidence,
+  not an executable verification route or a runtime blocker.
 - The private `mpprocess` OFF/ON verifier isolates object directories but its
   canonical target still publishes through shared root ELF/ROM names. Run it
   only with every other root build quiesced. Add an isolated output-root and
@@ -277,11 +268,14 @@ in `P1_EXECUTION_BOARD.md`.
   Native bitmap OAM now owns the live countdown/GO SObjs without gameplay-time
   conversion or upload. DS bitmap OBJ only preserves transparent versus
   nontransparent texels, so the GO art's partial-alpha edge texels are opaque;
-  exact N64 edge blending remains presentation debt.
+  this is an accepted DS visual approximation unless readability or the roughly
+  90% overall-likeness gate fails. Do not reopen pixel-edge parity without a
+  new measured regression.
   Original `mnvsresults.c`, `lbtransition.c`, and its subsystem fighter/data
   support now run by default with all eight source files and source Win/Lose
   statuses. The DS compositor preserves source 2D layers around the fighter
-  camera, but exact per-SObj RDP/camera interleave remains follow-up.
+  camera. Exact per-SObj RDP/camera interleave is subject to the same one-
+  experiment DS visual budget and is not P1 debt while the scene stays recognizable.
 - Imported `gr/grwallpaper.c` owns the live Pupupu wallpaper. Its 1P Training
   and Boss wallpaper-loader calls remain weak no-ops, and the Bonus3 fill DL
   initializer remains an unreachable zero placeholder, until those separate
@@ -1234,13 +1228,15 @@ in `P1_EXECUTION_BOARD.md`.
   row from BattleShip `gbi.h:3291,3309-3317`, independent of render-tile width;
   this fixes Fox's 8x8 CI4 tail reading every other zero-padding half-row.
   The large pond now recognizes its exact TEXEL0/TEXEL1 mux and runs a DS
-  RGBA5551/A1 precomposition approximation. Whispy material lanes now normalize
-  on the live path; Tyler accepts the corrected water. Final face-strip
-  comparison remains visual work. Ground flowers and the foreground fence are
+  RGBA5551/A1 precomposition approximation. P1 freezes that accepted pond at
+  exact frame 0/fraction 114; its relative phase and later animation are not
+  active debt. Whispy material lanes now normalize on the live path. Final face-
+  strip comparison remains visual work only if the 90%/recognizability gate fails.
+  Ground flowers and the foreground fence are
   no longer active issues: per-traversal RSP cache/ST carry restores all five
   flower groups, while two-phase no-Z ordering restores the fence over the
-  floor/path. Other texture debt
-  includes fractional relative tile-origin phase, nonzero shifts,
+  floor/path. Other texture debt excludes accepted frozen Dream Land water and
+  includes nonzero shifts,
   DXT-zero/pre-swizzled loads, other TEXEL1 formulas, unmasked POT padding, and
   camera-wide state ownership. Do not conflate mask, load, logical, or upload
   extents again.
@@ -1483,14 +1479,12 @@ isolating the compatibility type that causes the warning.
   regions black. Only Mode 0, Mode 8, and canonical HW-tri have working-looking
   screenshots; Modes 1-7 have no capture set, and screenshots cannot verify
   audio or hardware.
-- The intermittent stage-only flash was traced to current water refreshes
-  remapping texture VRAM during active scanout. The exact 4 KiB + 32 KiB
-  payloads now use compact exact-row staging in shipping/coarse profiles and
-  commit on VBlank lines `192..207`; 128 measured frames had zero outside-window
-  commits or fallbacks. The forensic profile retains its synchronous independent
-  oracle path without duplicate staging BSS. Continue a long visual
-  soak before closing the issue; a recurrence with fewer than 202 stage
-  triangles instead points to the camera/GObj/DObj selection path.
+- [retired-path] The intermittent stage-only flash came from animated water
+  refreshes remapping texture VRAM during active scanout. P1 now preloads/pins
+  exact frame-0/fraction-114 water and performs no post-GO refresh, so do not
+  harden or soak the retired animated remap route. Soak the frozen output and
+  zero-work fence instead. A recurrence with fewer than 202 stage triangles
+  points to the camera/GObj/DObj selection path, not water animation.
 - The current ledge action proofs clear `is_cliff_hold` and
   `is_jostle_ignore` through the bounded `ftMainSetStatus` seam, and the
   CliffClimb finish proof now verifies the broader current common-reset mask

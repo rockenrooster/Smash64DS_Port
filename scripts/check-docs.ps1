@@ -24,7 +24,6 @@ $requiredDocs = @(
     'docs/HANDOFF.md',
     'docs/HARNESSES.md',
     'docs/KNOWN_ISSUES.md',
-    'docs/NEXT_BOUNDARY_QUEUE.md',
     'docs/OPTIMIZATION_ROADMAP.md',
     'docs/optimization/NATIVE_RENDERER_PLAN.md',
     'docs/P1_EXECUTION_BOARD.md',
@@ -87,7 +86,6 @@ $handoff = Read-RepoText 'docs/HANDOFF.md'
 $p1Board = Read-RepoText 'docs/P1_EXECUTION_BOARD.md'
 $rootReadme = Read-RepoText 'README.md'
 $roadmap = Read-RepoText 'docs/ROADMAP.md'
-$nextBoundary = Read-RepoText 'docs/NEXT_BOUNDARY_QUEUE.md'
 $optimizationRoadmap = Read-RepoText 'docs/OPTIMIZATION_ROADMAP.md'
 $nativeRendererPlan = Read-RepoText 'docs/optimization/NATIVE_RENDERER_PLAN.md'
 $porting = Read-RepoText 'docs/PORTING.md'
@@ -170,11 +168,6 @@ foreach ($pair in @(
 if ($roadmap -match '(?i)`?battle_playable`?.{0,80}\bDeferred\b') {
     Fail-Docs 'docs/ROADMAP.md still presents battle_playable as deferred.'
 }
-$nextBoundaryLines = @($nextBoundary -split "`r?`n").Count
-if (($nextBoundaryLines -gt 24) -or
-    ($nextBoundary -match '(?i)compact current queue|current truth')) {
-    Fail-Docs 'docs/NEXT_BOUNDARY_QUEUE.md must remain a short historical redirect.'
-}
 if (($optimizationRoadmap -match '(?i)this is the active optimization plan') -or
     ($optimizationRoadmap -match '(?i)this file owns priority')) {
     Fail-Docs 'docs/OPTIMIZATION_ROADMAP.md must not claim active-queue authority.'
@@ -248,15 +241,13 @@ foreach ($staleIssuePattern in @(
     }
 }
 foreach ($requiredAgentToken in @(
-    'highest-impact unowned red P1 row',
-    'Agents share the live tree',
-    'runner slot',
-    'Only integration/release edits',
-    'keep/revert threshold',
-    'Do not begin P2'
+    'Presentation targets roughly 90% overall likeness',
+    'cosmetic exactness to one measured experiment',
+    'artifacts/visibility',
+    'Never approximate gameplay semantics'
 )) {
     if ((Get-Content -LiteralPath $agentsPath -Raw) -notmatch [regex]::Escape($requiredAgentToken)) {
-        Fail-Docs "AGENTS.md is missing concurrent-lane policy '$requiredAgentToken'."
+        Fail-Docs "AGENTS.md is missing visual-fidelity policy '$requiredAgentToken'."
     }
 }
 $boundary = @(Get-Smash64DSVerifyPlan -Profile Boundary)

@@ -16,6 +16,7 @@
 #include <if/interface.h>
 #include <it/item.h>
 #include <mn/menu.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -234,6 +235,104 @@ static void ndsGRPupupuRecordAfter(void)
     }
 }
 
+static void ndsGRPupupuFreezeSourceInitialWater(void)
+{
+    MObj *water[2] = { NULL, NULL };
+    DObj *dobj;
+    u32 count = 0u;
+    u32 shape_mask = 0u;
+    u32 i;
+
+    if (gNdsRendererBattleStaticTextureEnabled == 0u)
+    {
+        gNdsPupupuWaterStillFreezeCount = 0u;
+        gNdsPupupuWaterStillFreezeResult = FALSE;
+        return;
+    }
+
+    for (dobj = DObjGetStruct(gGRCommonLayerGObjs[2]);
+         dobj != NULL;
+         dobj = gcGetTreeDObjNext(dobj))
+    {
+        MObj *mobj;
+
+        for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
+        {
+            if ((mobj->sub.flags == 0x006bu) &&
+                (mobj->aobj != NULL) &&
+                (mobj->matanim_joint.event32 != NULL))
+            {
+                if (count < 2u)
+                {
+                    water[count] = mobj;
+                }
+                count++;
+            }
+        }
+    }
+    gNdsPupupuWaterStillFreezeCount = count;
+    if (count != 2u)
+    {
+        gNdsPupupuWaterStillFreezeFailCount++;
+        gNdsPupupuWaterStillFreezeResult = FALSE;
+        return;
+    }
+    for (i = 0u; i < 2u; i++)
+    {
+        MObj *mobj = water[i];
+        union { f32 f; u32 u; } lfrac = { mobj->lfrac };
+        union { f32 f; u32 u; } trau = { mobj->sub.trau };
+        union { f32 f; u32 u; } trav = { mobj->sub.trav };
+        union { f32 f; u32 u; } scau = { mobj->sub.scau };
+        union { f32 f; u32 u; } scav = { mobj->sub.scav };
+        union { f32 f; u32 u; } scrollu = { mobj->sub.scrollu };
+        union { f32 f; u32 u; } scrollv = { mobj->sub.scrollv };
+        union { f32 f; u32 u; } palette = { mobj->palette_id };
+        union { f32 f; u32 u; } anim_frame = { mobj->anim_frame };
+        union { f32 f; u32 u; } anim_wait = { mobj->anim_wait };
+        union { f32 f; u32 u; } anim_speed = { mobj->anim_speed };
+        u32 shape = 0u;
+
+        if ((mobj->sub.unk0C == 128u) && (mobj->sub.unk0E == 128u) &&
+            (scau.u == 0x40000000u) && (scav.u == 0x40800000u))
+        {
+            shape = 1u;
+        }
+        else if ((mobj->sub.unk0C == 32u) && (mobj->sub.unk0E == 64u) &&
+                 (scau.u == 0x3fa00000u) && (scav.u == 0x40000000u))
+        {
+            shape = 2u;
+        }
+        if ((shape == 0u) || ((shape_mask & shape) != 0u) ||
+            (mobj->texture_id_curr != 0u) ||
+            (mobj->texture_id_next != 1u) ||
+            (lfrac.u != 0x3ee66666u) ||
+            (((u32)(mobj->lfrac * 255.0F) & 0xffu) != 114u) ||
+            (trau.u != 0x3bd844d0u) || (trav.u != 0u) ||
+            (scrollu.u != 0x3bd844d0u) || (scrollv.u != 0u) ||
+            (palette.u != 0u) || (anim_frame.u != 0u) ||
+            (anim_wait.u != 0x41d80000u) ||
+            (anim_speed.u != 0x3f800000u))
+        {
+            gNdsPupupuWaterStillFreezeFailCount++;
+            gNdsPupupuWaterStillFreezeResult = FALSE;
+            return;
+        }
+        shape_mask |= shape;
+    }
+    if (shape_mask != 3u)
+    {
+        gNdsPupupuWaterStillFreezeFailCount++;
+        gNdsPupupuWaterStillFreezeResult = FALSE;
+        return;
+    }
+    for (i = 0u; i < 2u; i++)
+    {
+        water[i]->anim_speed = 0.0F;
+    }
+    gNdsPupupuWaterStillFreezeResult = TRUE;
+}
+
 static u32 ndsGRPupupuMapGObjMask(void)
 {
     u32 mask = 0;
@@ -393,6 +492,7 @@ void grCommonSetupInitAll(void)
     {
         ndsGRPupupuRecordBefore();
         ndsBaseGRCommonSetupInitAll();
+        ndsGRPupupuFreezeSourceInitialWater();
         ndsGRPupupuRecordAfter();
         return;
     }

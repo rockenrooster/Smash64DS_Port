@@ -4395,10 +4395,9 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileTexel1LastImage1 = 0;
     gNdsRendererProfileTexel1LastTileState = 0;
     gNdsRendererProfileTexel1LastPrimaryState = 0;
-    /* Refreshes and evictions are scene-lifetime cache health counters. A
-     * terminal verifier sample can land on a frame whose water keys are
-     * unchanged, so clearing them per present would erase the animation proof
-     * and could also hide an earlier resident-texture eviction. */
+    /* Refreshes and evictions are scene-lifetime cache health counters. The
+     * canonical frozen-water path expects both to stay zero; static-off labs
+     * retain them to diagnose the animated fallback and earlier evictions. */
     gNdsRendererProfileTextureCoordMinS = 32767;
     gNdsRendererProfileTextureCoordMaxS = -32768;
     gNdsRendererProfileTextureCoordMinT = 32767;

@@ -13151,7 +13151,18 @@ s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        u32 owner_start = cpuGetTiming();
+        s32 handled = ndsRendererAdapterCommitNativeStageDisplay(
+            display, link_id);
+
+        gNdsRendererProfileOwners[
+            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
+            cpuGetTiming() - owner_start;
+        return handled;
+#else
         return ndsRendererAdapterCommitNativeStageDisplay(display, link_id);
+#endif
     }
 #endif
     return FALSE;
@@ -13390,6 +13401,11 @@ u32 ndsSceneMipCacheHoldLogic(void)
 
 static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    u32 owner_start;
+    u32 profile_m3;
+#endif
+
     if ((sNdsStageGCDrawAllLoopHardwareSubmitCount != 0u) ||
         (gSCManagerSceneData.scene_curr != nSCKindVSBattle))
     {
@@ -13399,13 +13415,37 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
     ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererAdapterResetDepthDiagnostics();
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    profile_m3 = (gNdsRendererFastRunMode ==
+        NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ? TRUE : FALSE;
+    if (profile_m3 != FALSE)
+    {
+        owner_start = cpuGetTiming();
+    }
+#endif
     sNdsStageGCDrawAllLoopNativeStageArmed =
         ndsRendererAdapterPrepareNativeStageOwner(
             ndsBattleCompatMainCameraGObj());
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    if (profile_m3 != FALSE)
+    {
+        gNdsRendererProfileOwners[
+            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
+                cpuGetTiming() - owner_start;
+    }
+#endif
     gcDrawAll();
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        owner_start = cpuGetTiming();
+#endif
         ndsRendererAdapterFinishNativeStageOwner();
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererProfileOwners[
+            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
+                cpuGetTiming() - owner_start;
+#endif
         sNdsStageGCDrawAllLoopNativeStageArmed = FALSE;
     }
     ndsFighterDisplayContractSubmitStageFighters();
@@ -13414,6 +13454,11 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 
 static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    u32 owner_start;
+    u32 profile_m3;
+#endif
+
     if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
     {
         return;
@@ -13445,13 +13490,37 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareSetNoOracle(TRUE);
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    profile_m3 = (gNdsRendererFastRunMode ==
+        NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ? TRUE : FALSE;
+    if (profile_m3 != FALSE)
+    {
+        owner_start = cpuGetTiming();
+    }
+#endif
     sNdsStageGCDrawAllLoopNativeStageArmed =
         ndsRendererAdapterPrepareNativeStageOwner(
             ndsBattleCompatMainCameraGObj());
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    if (profile_m3 != FALSE)
+    {
+        gNdsRendererProfileOwners[
+            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
+                cpuGetTiming() - owner_start;
+    }
+#endif
     gcDrawAll();
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        owner_start = cpuGetTiming();
+#endif
         ndsRendererAdapterFinishNativeStageOwner();
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererProfileOwners[
+            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
+                cpuGetTiming() - owner_start;
+#endif
         sNdsStageGCDrawAllLoopNativeStageArmed = FALSE;
     }
     ndsFighterDisplayContractSubmitStageFighters();

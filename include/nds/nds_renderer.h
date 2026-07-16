@@ -747,6 +747,7 @@ void ndsRendererHardwareDiscardTextureCache(void);
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void);
 void ndsRendererHardwareArmBattleStaticTextures(void);
 void ndsRendererHardwareDiscardBattleStaticTextures(void);
+void ndsRendererHardwareAbortBattleStaticTextures(void);
 s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
                                              const u16 *mip1,
                                              const u16 *mip2);
@@ -803,6 +804,10 @@ extern volatile u32 gNdsRendererBattleStaticTextureSeenMask;
 extern volatile u32 gNdsRendererBattleStaticTextureOwnerMask;
 extern volatile u32 gNdsRendererBattleStaticTextureViolationCount;
 extern volatile u32 gNdsRendererBattleStaticTextureTeardownCount;
+extern volatile u32 gNdsRendererBattleStaticTextureFirstAddress;
+extern volatile u32 gNdsRendererBattleStaticTextureEndAddress;
+extern volatile u32 gNdsRendererBattleStaticTextureAllocationSpanBytes;
+extern volatile u32 gNdsRendererBattleStaticTextureBankMask;
 typedef enum NDSRendererBattleTextureFenceClass
 {
     NDS_RENDERER_BATTLE_TEXTURE_FENCE_CONVERT = 0,

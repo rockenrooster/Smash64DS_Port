@@ -23,7 +23,10 @@ param(
     [switch]$OneMinuteMatchProof,
     [switch]$RequireRealtime60Fps,
     [int]$RendererProfileLevel = -1,
-    [ValidateRange(0,8)][int]$RendererFastRunMode = 0,
+    [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
+    [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
+    [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
+    [switch]$RequireZeroPostGoTextureFence,
     [switch]$RendererM2DetailedLedger,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
@@ -42,6 +45,11 @@ if (($RendererProfileLevel -lt -1) -or ($RendererProfileLevel -gt 2)) {
 }
 if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
     throw 'OneMinuteMatchProof requires MatchLifecycleProof.'
+}
+if ($OneMinuteMatchProof -and
+    (($RendererFastRunMode -ne 9) -or ($StaticTextureAotMode -ne 1) -or
+     ($IFCommonHybridOamMode -ne 1) -or -not $RequireZeroPostGoTextureFence)) {
+    throw 'OneMinuteMatchProof requires the published-equivalent hardware renderer configuration: mode 9, mip 0, static textures 1, hybrid OAM 1, and the strict post-GO fence.'
 }
 $ImportBattleShipNormalMoveset = $true
 $ImportBattleShipMarioFireball = $true
@@ -70,10 +78,10 @@ if ($RealtimePresentation) {
     }
     $LiveInputPreview = $true
 } elseif ($OneMinuteMatchProof) {
-    # Keep the full-expiry release gate artifact-isolated from the canonical
-    # user ROM while exercising that ROM's same one-minute source rule.
-    $target = 'smash64ds-battle-playable-one-minute-match'
-    $build = 'build-battle-playable-one-minute-match-harness'
+    # Keep the full-expiry hardware gate artifact-isolated from the canonical
+    # user ROM while exercising its renderer residency and one-minute rule.
+    $target = 'smash64ds-battle-playable-one-minute-match-hwtri'
+    $build = 'build-battle-playable-one-minute-match-hwtri-harness'
     $LiveInputPreview = $true
 } elseif ($CPUOpponentProof) {
     $target = 'smash64ds-battle-playable-cpu-proof'
@@ -86,6 +94,10 @@ if ($RendererProfileLevel -lt 0) {
     # window; the canonical realtime verifier owns renderer performance.
     $RendererProfileLevel = if ($OneMinuteMatchProof) { 0 } else { 2 }
 }
+if (($target -eq 'smash64ds-battle-playable-hwtri') -and
+    -not $PSBoundParameters.ContainsKey('RendererFastRunMode')) {
+    $RendererFastRunMode = 9
+}
 if ($MatchLifecycleProof) {
     $harness = 'battle_playable_match_lifecycle'
 } elseif ($RealtimePresentation -and ($RendererProfileLevel -lt 2)) {
@@ -94,6 +106,22 @@ if ($MatchLifecycleProof) {
     $harness = 'battle_playable_realtime'
 }
 $hardwareTriangles = $target -like '*-hwtri'
+$rendererMakeEnvironment = if ($OneMinuteMatchProof) {
+    @{
+        NDS_RENDERER_FAST_RUN_DEFAULT = '9'
+        NDS_SCENE_MIP_CACHE_LAB = '0'
+        NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'
+        NDS_DEBUG_HUD = '0'
+    }
+} else { @{} }
+$previousRendererMakeEnvironment = @{}
+foreach ($name in $rendererMakeEnvironment.Keys) {
+    $previousRendererMakeEnvironment[$name] =
+        [Environment]::GetEnvironmentVariable($name, 'Process')
+    [Environment]::SetEnvironmentVariable(
+        $name, $rendererMakeEnvironment[$name], 'Process')
+}
+try {
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
@@ -123,6 +151,9 @@ $hardwareTriangles = $target -like '*-hwtri'
     -RequireRealtime60Fps:$RequireRealtime60Fps `
     -RendererProfileLevel $RendererProfileLevel `
     -RendererFastRunMode $RendererFastRunMode `
+    -StaticTextureAotMode $StaticTextureAotMode `
+    -IFCommonHybridOamMode $IFCommonHybridOamMode `
+    -RequireZeroPostGoTextureFence:$RequireZeroPostGoTextureFence `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
@@ -135,3 +166,15 @@ $hardwareTriangles = $target -like '*-hwtri'
     -ExpectedHarnessScenePrev 21 `
     -Label 'battle_playable Pupupu' `
     -HarnessSelectMessage 'battle_playable harness did not select Pupupu VSBattle from Maps.'
+$ownerExitCode = $LASTEXITCODE
+} finally {
+    foreach ($name in $rendererMakeEnvironment.Keys) {
+        if ($null -eq $previousRendererMakeEnvironment[$name]) {
+            Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+        } else {
+            [Environment]::SetEnvironmentVariable(
+                $name, $previousRendererMakeEnvironment[$name], 'Process')
+        }
+    }
+}
+if ($ownerExitCode -ne 0) { exit $ownerExitCode }

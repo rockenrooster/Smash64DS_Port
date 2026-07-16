@@ -21,7 +21,6 @@ queue is `P1_EXECUTION_BOARD.md`; current summaries stay in `STATUS.md` and
 | `KNOWN_ISSUES.md` | Maintained | Known blockers, stubs, and deferred systems. |
 | `MEMORY_OVERLAY_PLAN.md` | Maintained | Source-backed memory budget and reloc eviction plan. |
 | `MP_PASS_THROUGH_SCOUT.md` | Reference | Dated source-order pass-through floor/platform scout. |
-| `NEXT_BOUNDARY_QUEUE.md` | Historical redirect | Legacy bounded-proof queue redirect; never an active planning surface. |
 | `OPTIMIZATION_ROADMAP.md` | Reference | Concise renderer status and rejected-experiment synopsis; not a queue. |
 | `optimization/NATIVE_RENDERER_PLAN.md` | Technical contract | Exact source/semantic/performance gates for renderer milestones M2–M4. |
 | `P1_EXECUTION_BOARD.md` | Current truth | P1 acceptance matrix, lane ownership, dated gates, and integration decisions. |

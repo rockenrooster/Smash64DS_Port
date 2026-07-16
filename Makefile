@@ -42,8 +42,9 @@ NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
+NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT ?= 0
 NDS_RENDERER_M4_WATER_TILED_AOT ?= 0
-NDS_IFCOMMON_HYBRID_OAM ?= $(NDS_RENDERER_M4_WATER_TILED_AOT)
+NDS_IFCOMMON_HYBRID_OAM ?= 0
 NDS_DEBUG_HUD ?= 1
 NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
@@ -57,7 +58,11 @@ override NDS_HARNESS_FAST_LOGIC := 0
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
-override NDS_SCENE_MIP_CACHE_LAB := 1
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_RENDERER_M4_WATER_TILED_AOT := 0
+override NDS_IFCOMMON_HYBRID_OAM := 1
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)
@@ -602,10 +607,6 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downattack.c \
 	battleship_ftcommon_downforwardback.c \
 	battleship_ftcommon_downstand.c
-ifeq ($(NDS_RENDERER_M4_WATER_TILED_AOT),1)
-CFILES += pupupu_water_tiled_aot.c nds_pupupu_water_residency.c \
-	nds_pupupu_water_draw.c
-endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
 endif
@@ -1053,10 +1054,6 @@ ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)
 ifeq ($(NDS_RENDERER_HW_TRIANGLES),1)
 NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES := \
 	$(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin
-ifeq ($(NDS_RENDERER_M4_WATER_TILED_AOT),1)
-NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES += \
-	$(NITROFS_DIR)/renderer/pupupu_water_tiled_aot.bin
-endif
 endif
 endif
 
@@ -1119,6 +1116,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
+		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
 		echo '#define NDS_RENDERER_M4_WATER_TILED_AOT $(NDS_RENDERER_M4_WATER_TILED_AOT)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
@@ -1206,10 +1204,6 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(PROJECT_RO
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(NITROFS_DIR)/renderer/pupupu_water_tiled_aot.bin: $(PROJECT_ROOT)/assets/renderer/pupupu_water_tiled_aot.bin
-	@mkdir -p $(dir $@)
-	@cp $< $@
-
 $(NITROFS_DIR)/audio/%: $(BATTLESHIP_O2R)/audio/%
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -1237,6 +1231,9 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_PROFILE=$(NDS_RENDERER_PROFILE_LEVEL)'
 	@printf '%s\n' 'BENCH_MAKE_M2_DETAILED_LEDGER=$(NDS_RENDERER_M2_DETAILED_LEDGER)'
 	@printf '%s\n' 'BENCH_MAKE_RENDERER_BENCHMARK_MODE=$(NDS_RENDERER_BENCHMARK_MODE)'
+	@printf '%s\n' 'BENCH_MAKE_FAST_RUN_DEFAULT=$(NDS_RENDERER_FAST_RUN_DEFAULT)'
+	@printf '%s\n' 'BENCH_MAKE_SCENE_MIP_CACHE_LAB=$(NDS_SCENE_MIP_CACHE_LAB)'
+	@printf '%s\n' 'BENCH_MAKE_BATTLE_STATIC_TEXTURE_DEFAULT=$(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'
 	@printf '%s\n' 'BENCH_MAKE_M4_WATER_TILED_AOT=$(NDS_RENDERER_M4_WATER_TILED_AOT)'
 	@printf '%s\n' 'BENCH_MAKE_IFCOMMON_HYBRID_OAM=$(NDS_IFCOMMON_HYBRID_OAM)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'

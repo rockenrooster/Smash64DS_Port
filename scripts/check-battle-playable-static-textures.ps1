@@ -26,9 +26,9 @@ if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
 }
 $payloadFile = Get-Item -LiteralPath $payload
 $payloadHash = (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($fixture.key_count -ne 20 -or $fixture.unique_output_count -ne 19 -or
-    $fixture.residency_bytes -ne 94208 -or $fixture.payload_bytes -ne 90112 -or
-    $payloadFile.Length -ne 90112 -or $payloadHash -ne $fixture.payload_sha256) {
+if ($fixture.key_count -ne 22 -or $fixture.unique_output_count -ne 21 -or
+    $fixture.residency_bytes -ne 131072 -or $fixture.payload_bytes -ne 126976 -or
+    $payloadFile.Length -ne 126976 -or $payloadHash -ne $fixture.payload_sha256) {
     throw (
         'Unexpected generated static texture corpus: ' +
         "keys=$($fixture.key_count) outputs=$($fixture.unique_output_count) " +
@@ -130,11 +130,15 @@ static void make_key(
         ndsBattlePlayableStaticTextureRecordAt(index);
     u32 image_address = 0x02100000u + record->image_offset;
     u32 tlut_address = 0x02200000u + record->tlut_offset;
+    u32 texel1_offset = record->key_words[
+        NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD];
+    u32 texel1_address = (texel1_offset != 0u) ?
+        0x02100000u + texel1_offset : 0u;
 
     bytes_copy(words, record->key_words, (u32)sizeof(record->key_words));
     words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] = image_address;
     words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] = tlut_address;
-    words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD] = 0u;
+    words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD] = texel1_address;
     bytes_fill(key, 0u, (u32)sizeof(*key));
     key->words = words;
     key->word_count = NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT;
@@ -144,6 +148,9 @@ static void make_key(
     key->tlut.runtime_address = tlut_address;
     key->tlut.asset_id = record->tlut_asset_id;
     key->tlut.asset_offset = record->tlut_offset;
+    key->texel1.runtime_address = texel1_address;
+    key->texel1.asset_id = (texel1_offset != 0u) ? record->image_asset_id : 0u;
+    key->texel1.asset_offset = texel1_offset;
 }
 
 static int expect_result(
@@ -173,16 +180,16 @@ int main(void)
     u32 invalids = 0u;
     u32 prepared_bytes = 0u;
     u32 output_count = 0u;
-    u32 output_offsets[20];
-    u32 output_bytes[20];
+    u32 output_offsets[22];
+    u32 output_bytes[22];
 
-    if (ndsBattlePlayableStaticTextureKeyCount() != 20u ||
-        ndsBattlePlayableStaticTexturePayloadBytes() != 90112u ||
-        ndsBattlePlayableStaticTexturePreparedBytes() != 94208u)
+    if (ndsBattlePlayableStaticTextureKeyCount() != 22u ||
+        ndsBattlePlayableStaticTexturePayloadBytes() != 126976u ||
+        ndsBattlePlayableStaticTexturePreparedBytes() != 131072u)
     {
         return 10;
     }
-    if (ndsBattlePlayableStaticTextureRecordAt(20u) != NULL)
+    if (ndsBattlePlayableStaticTextureRecordAt(22u) != NULL)
     {
         return 11;
     }
@@ -211,8 +218,8 @@ int main(void)
             view.logical_height != record->logical_height ||
             view.upload_width != record->upload_width ||
             view.upload_height != record->upload_height ||
-            record->payload_offset > 90112u ||
-            record->payload_bytes > 90112u - record->payload_offset)
+            record->payload_offset > 126976u ||
+            record->payload_bytes > 126976u - record->payload_offset)
         {
             return 50 + (int)index;
         }
@@ -355,9 +362,9 @@ int main(void)
         explicit_misses++;
     }
 
-    if (hits != 20u || output_count != 19u || field_misses != 1120u ||
+    if (hits != 22u || output_count != 21u || field_misses != 1232u ||
         explicit_misses != 3u || invalids != 6u ||
-        prepared_bytes != 94208u)
+        prepared_bytes != 131072u)
     {
         return 170;
     }

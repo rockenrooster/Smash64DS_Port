@@ -30,6 +30,22 @@ Nintendo DS code replaces platform/backend systems only. It should not
 hand-author gameplay, approximate moves, recreate menus, or replace original
 systems when the BattleShip source can be ported through compatibility shims.
 
+Visual output has a deliberate DS exception. Gameplay semantics remain exact,
+but the backend may retain a source-derived approximation when exact N64
+presentation exceeds the DS performance or memory budget. The project targets
+roughly 90% overall visual likeness and recognizable correct characters/stages,
+not pixel identity. A retained approximation must not alter hitboxes, collision,
+physics, timing, gameplay telegraphs, camera meaning, or scene state; document
+its source, visible delta, measured reason, and dated screenshot under
+`artifacts/visibility`. Cosmetic
+exactness gets one focused measured attempt before taking the cheapest acceptable
+approximation.
+
+For P1 Dream Land water, freeze exact BattleShip frame 0 as two DS-ready
+textures on the original 12-triangle geometry. Water material animation is
+intentionally omitted; Whispy, platforms, collision, camera, and gameplay stay
+live.
+
 ## Source Ownership
 
 BattleShip source remains the source of truth for gameplay and game state:
@@ -94,27 +110,25 @@ so direct boundary tests still dispatch through original scene-manager logic.
 Default builds use `NDS_DEV_SCENE_HARNESS=normal`; non-normal harness builds
 must remain development/verifier targets only.
 
-Generated build outputs belong in `build/` and root `smash64ds.*` artifacts.
-Do not edit generated output directories.
+Generated and diagnostic build outputs belong under `builds/`. Publish exactly
+two root ROMs: `smash64ds.nds` for the original launch path and
+`smash64ds-battle-playable-hwtri.nds` for P1. Do not edit generated outputs.
 
 ## Development ROM Topology
 
-Three user-facing persistent filenames represent two unique configurations. `smash64ds.nds`
-is the normal opening/title build. The canonical realtime battle ROM and
-`smash64ds-battle-playable-hwtri.nds` shipped name are the same build bytes;
-the canonical target copies its output to the latter and the verifier requires
-equal length and SHA-256 rather than launching both.
+Exactly two user-facing root ROMs exist. `smash64ds.nds` is the normal
+opening/title build; `smash64ds-battle-playable-hwtri.nds` is the canonical P1
+realtime battle build. Scenario variants and intermediate targets stay under
+`builds/` and never add a persistent root filename.
 
 Mode `163` is one scene-level anchor, but its canonical realtime, deterministic
 scripted battle, and timer/Results scenarios still use compile-distinct targets.
 Moving those selections to runtime configuration on the same original gameplay
 path remains tooling debt; do not multiply persistent user-facing ROMs.
 
-The additive `P1Gate` composes a compact normal-opening smoke, canonical
-`FastIteration` capture, supplemental mode-163 battle, and one-minute lifecycle
-check. It changes neither runtime ownership nor Boundary/Regression/Full
-membership. It is a shadow checkpoint, not P1 completion or the required
-one-minute canonical soak; legacy harnesses remain diagnostic.
+`P1Gate`, `Regression*`, and `Full` remain list-only legacy inventories while
+their unique assertions migrate onto the two runtime ROMs. They are not
+executable checkpoints and must not be built or prebuilt.
 
 ## Include Strategy
 
@@ -1069,7 +1083,7 @@ equal-size dual-screen layout so a saved top-only emulator preference cannot
 hide the bottom engine or invalidate the native top-screen crop. Capture runs
 restore the prior local preference when they exit.
 
-Capture the real melonDS window to `artifacts/` with:
+Capture the real melonDS window to `artifacts/visibility/` with:
 
 ```powershell
 .\scripts\capture-melonds.ps1 -Build
@@ -1214,24 +1228,19 @@ the active water and Whispy records without mutating assets or hardcoding IDs.
 Dream Land water uses two textures in one source combiner, while DS hardware
 exposes one texture per polygon. `objdisplay.c:1225-1430` loads the next image
 through tile 6/TMEM `0x40`, the current image through tile 7/TMEM `0`, and
-writes the animated primitive LOD fraction. The renderer retains the two most
-recent load windows and resolves both render-tile TMEM bases independently. It
-recognizes the exact Pupupu `0xfc272c04/0x1f0c93ff` mux and CPU-precomposes its
-CI4 pair into DS RGBA5551; ordered 4x4 A1 coverage approximates blended source
-alpha. The exact CI4 path converts each source's 16 palette entries once and
-builds all 256 pair RGB/coverage values for the active fraction; pixels retain
-the same source addressing and Bayer A1 decision. The prior generic per-texel
-blend remains guarded for future eligibility expansion, but current preparation
-accepts only the proven CI4 pair. An exhaustive host oracle compares every pair
-at five fractions and all 16 Bayer positions. Other two-texture formulas remain
-unmodeled single-texture debt. TLUT pointer validation spans the higher end of
-both source palette banks. The cache key contains both sources, tile windows,
-and LOD fraction. Compatible
-animated-state changes reuse an allocation and DMA replacement pixels through
-the bundled sm64-nds bank-remap pattern; frame pinning prevents rewriting or
-evicting textures referenced by submitted polygons. Refresh/eviction health is
-scene-lifetime. Relative 10.2 tile-origin phase still rounds to whole texels,
-so smooth bilerp water motion remains fidelity/performance debt.
+writes the primitive LOD fraction. The retained static-off diagnostic recognizes
+the exact Pupupu `0xfc272c04/0x1f0c93ff` mux and can precompose its CI4 pair into
+DS RGBA5551 for format/oracle coverage. Its animated LUT, phase-plane, refresh,
+and eviction machinery is legacy fallback infrastructure, not the P1 milestone
+or an invitation to resume water-animation optimization.
+
+P1 follows the project-wide DS visual decision rule. The generated manifest
+fixes the water pair at exact BattleShip frame 0, non-FRAC fraction 114, and
+prepares 32,768 + 4,096 = 36,864 bytes before GO. The original runs 42–43 and
+all 12 `PROJECTED_NO_Z` triangles remain live; later material animation does not
+refresh or replace the prepared textures. The accepted visible delta is only
+the missing pond animation. Gameplay geometry, depth order, collision, and
+stage state remain source-faithful.
 
 Canonical HW uses a classified hybrid GX path. The renderer assigns a nonzero
 generation whenever projection, modelview, pop, or matrix-word state changes;
@@ -1365,20 +1374,12 @@ carried with the persistent RSP vertex cache; `G_MWO_POINT_ST` cannot change
 that result. An open TRI batch is proof that no intervening source opcode could
 mutate alpha/fog state, so adjacent triangles compare only the vertex-dependent
 polygon format plus texture and matrix ownership before reusing the batch.
-The animated CI4 pair LUT has a separate exact key over the two converted
-16-color palettes and blend fraction. A dynamic `glCallList`/FIFO arena was
-measured and rejected because 121 small source runs increased vertex cost; the
-direct GX submission path remains authoritative.
-
-Profiles 0/1 additionally decode each of the two immutable 32x32 packed CI4
-source planes into a bounded byte-index plane once. The two-entry key contains
-source pointer, proven logical texel count, and O2R byte-lane XOR; reloc scene
-reset invalidates it before loaded storage can reuse an address. Live tile
-origins, masks, row addressing, palettes, blend fraction, Bayer phase, and VRAM
-uploads remain outside the cache. Oversize/unknown sources use the old decoder,
-and profile 2 always uses that independent bytewise path. The cache occupies
-2,080 bytes and runtime proof reports build/reuse separately from the palette
-LUT.
+The static-off diagnostic's animated CI4 pair LUT has a separate exact key over
+the two converted 16-color palettes and blend fraction. It and the two packed
+CI4 source-index planes remain only for forensic fallback/non-P1 format coverage.
+Canonical Dream Land binds the offline-prepared frozen manifest and reports zero
+live CI4 LUT/map work. A dynamic `glCallList`/FIFO arena was measured and
+rejected; direct GX submission remains authoritative.
 
 Profiles 0/1 also reuse one live renderer state object across BattleShip's
 ordered stage heads or fighter-part lists. A null-callback traversal resets only
@@ -1439,19 +1440,13 @@ independent exact shade calculation. Its divider oracle is one size-optimized,
 non-inlined function, keeping the diagnostic arena above its reserve without
 changing production code. That earlier production-table increment raised net
 BSS 2,080 bytes.
-Animated CI4 phase planes remain an exact 8 KiB table, and texture preparation
-retains its mutation-keyed epoch. Profiles 0/1 decode two immutable CI4 index
-planes, then group a large output axis only when TEXEL0 address, TEXEL1 address,
-and 4x4 ordered-coverage phase all match. A half-full 256-slot, 1 KiB table
-preserves the first exact representative under collisions; rows expand forward
-from already-written representatives, then repeat rows copy bottom-to-top. A
-`>=4096`-pixel and at-least-50%-reuse gate leaves smaller or weakly repeating
-inputs on the direct loop; profile 2 omits both caches. The four maps are 512
-bytes; canonical profile-0 BSS is `1,857,736`. Canonical-O2/profile-1/profile-2
-renderer ITCM is `20,916/21,376/18,196` of 32,768 bytes.
+The static-off animated CI4 phase planes and representative maps remain exact
+diagnostic fallback data. Canonical P1 Dream Land does not exercise them after
+the frozen manifest arms.
 Cache-hit guards run before temporary GX matrix construction; the final matrix-
 state guard remains exact.
-The live pond upload remains direct RGBA5551. A measured 8-bit class texture plus
+Static-off pond refresh uses direct RGBA5551 only as a diagnostic control. The
+canonical frozen pair has no gameplay upload. A measured 8-bit class texture plus
 dynamic palette halved upload bytes but regressed draw and GX RAM, so it is absent.
 
 Profiles 0/1 index the resident 64-entry DS texture cache through a fixed
@@ -1459,8 +1454,8 @@ Profiles 0/1 index the resident 64-entry DS texture cache through a fixed
 tile, TEXEL1, fraction, and combine state, but every candidate still requires
 the complete 236-byte texture-key comparison. Profile 2 retains the independent
 linear lookup and legacy-alias diagnostic. Removal repairs and reinserts the
-rest of the linear-probe cluster instead of leaving tombstones, so the animated
-pond cannot degrade lookup cost over the complete one-minute match. Runtime accounting
+rest of the linear-probe cluster instead of leaving tombstones, so a static-off
+pond diagnostic cannot degrade lookup cost over the complete one-minute match. Runtime accounting
 requires active hits, table hits, exact active/table/miss conservation, and fewer
 than four probes per call. A warm frame may have zero misses because the resident
 cache crosses frame boundaries. A host fixture covers equal fingerprints,

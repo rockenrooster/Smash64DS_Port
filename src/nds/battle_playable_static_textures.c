@@ -5,13 +5,13 @@
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_WORDS ==
                    NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT,
                "generated/runtime texture key width mismatch");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 20u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 22u,
                "canonical static texture key count changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 19u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 21u,
                "canonical static texture output count changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 90112u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 126976u,
                "canonical static texture payload size changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 94208u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 131072u,
                "canonical static texture prepared size changed");
 
 static void ndsBattlePlayableStaticTextureClearView(
@@ -109,6 +109,7 @@ static s32 ndsBattlePlayableStaticTextureRecordMatches(
     const NDSBattlePlayableStaticTextureRecord *record,
     const NDSBattlePlayableStaticTextureLookupKey *key)
 {
+    u32 texel1_offset;
     u32 word;
 
     if ((record->image_asset_id != key->image.asset_id) ||
@@ -118,12 +119,16 @@ static s32 ndsBattlePlayableStaticTextureRecordMatches(
     {
         return FALSE;
     }
-    /* This first generated cut contains no TEXEL1 composite. A nonzero,
-     * internally consistent TEXEL1 provenance is a clean miss, never a
-     * partial match against primary-only pixels. */
-    if ((key->texel1.runtime_address != 0u) ||
-        (key->texel1.asset_id != 0u) ||
-        (key->texel1.asset_offset != 0u))
+    texel1_offset = record->key_words[
+        NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD];
+    if (((texel1_offset == 0u) &&
+         ((key->texel1.runtime_address != 0u) ||
+          (key->texel1.asset_id != 0u) ||
+          (key->texel1.asset_offset != 0u))) ||
+        ((texel1_offset != 0u) &&
+         ((key->texel1.runtime_address == 0u) ||
+          (key->texel1.asset_id != record->image_asset_id) ||
+          (key->texel1.asset_offset != texel1_offset))))
     {
         return FALSE;
     }

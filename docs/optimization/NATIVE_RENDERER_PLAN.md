@@ -23,6 +23,11 @@ cuts. `docs/P1_EXECUTION_BOARD.md` owns priority and integration decisions;
   heap allocation is allowed in the production owner path.
 - Compare identical ROM hashes and synchronized emulated logic windows with JIT
   disabled for correctness decisions.
+- Apply the project visual-fidelity exception only to presentation. P1 freezes
+  exact Dream Land water frame 0/fraction 114 on the original 12 triangles;
+  gameplay state, collision, camera, Whispy, and other stage animation stay live.
+- Store every generated screenshot and dated visual proof under
+  `artifacts/visibility`.
 
 ## Milestone 2 — AOT Mario/Fox Owner
 
@@ -137,13 +142,14 @@ Keep only when all are true:
 - canonical screenshots preserve recognizable Mario/Fox materials, animation,
   pose, facing, depth, and stage interaction;
 - memory reserve remains within project requirements;
-- DevFast, focused renderer forensic checks, P1Gate when relevant, and Boundary
-  remain green.
+- focused renderer forensic checks, DevFast, and Boundary remain green; add
+  Current only when normal launch or shared startup/runtime can be affected.
 
 ## Milestone 3 — AOT Complete Stage Owner
 
 Target: complete live Dream Land stage rendering in 150–250K ticks without
-flattening gameplay-relevant geometry, platforms, effects, animation, or depth.
+flattening gameplay-relevant geometry, platforms, effects, Whispy animation, or
+depth. The declared frozen-water presentation exception remains in force.
 
 Use one whole-owner preflight/control session across all eight source callbacks
 and 57 DObjs, with callback-sized GX segments at links 4/6/13/16/17 around
@@ -187,18 +193,19 @@ slab if either threshold fails. Final M3 promotion remains 150–250K after M4.
 Goal: sampled gameplay reports zero texture conversion and zero upload
 preparation on the critical path.
 
-First implement a generated static manifest after original battle setup returns
-and before update/draw. It must enumerate full logical texture keys—not merely
-image/TLUT offsets—for Dream Land static geometry, all Whispy animation roots,
-Mario/Fox, Fireball, reflector, and reachable GX effects. Relocate asset ID plus
-offset at runtime; do not construct synthetic objects or advance animations.
+Use the generated static manifest after original battle setup returns and before
+update/draw. It enumerates full logical texture keys—not merely image/TLUT
+offsets—and relocates asset ID plus offset at runtime without constructing
+synthetic objects or advancing animations.
 
-The conservative census is about 69 static keys / 179,328 texture bytes. Two
-live water owners bring this to about 71 slots / 216,192 bytes, leaving about
-45,952 bytes in the currently mapped 262,144-byte texture VRAM. The current
-48-entry cache is insufficient. Generate the exact census first, then select a
-fixed 72- or 80-entry capacity; their 6,720/8,960-byte main-RAM costs must keep
-the project reserve at or above 131,072 bytes.
+The accepted current-ROM corpus is 17 source blocks, 22 complete keys, 21
+deduplicated outputs, and 131,072 prepared bytes. It includes exact BattleShip
+water frame 0/fraction 114 as a 32,768-byte large output plus a 4,096-byte small
+output. Preload and pin that pair while retaining the original 12 water
+triangles. This corpus is bounded to the accepted P1 configuration; runtime
+provenance, reachable-effect closure, bank ownership, and the >=128 KiB reserve
+still require device proof. The retired 69/71-key animated-water census and its
+72/80-entry cache expansion are not an active implementation contract.
 
 At scene/fighter/stage setup:
 
@@ -221,18 +228,19 @@ Arm the violation fence at BattleShip's transition to GO. For static owners it
 must retain a first-failure record and count zero key misses, conversion,
 palette/decode work, allocations, GL creates/uploads/deletes, evictions,
 replacement/refresh, decompression, file I/O, and manifest fallbacks through
-Time Up/Results. Existing `TexturePrepareCount` includes normal prepared binds
+battle teardown. Results is a new setup boundary and must prewarm before a new
+fence if included. Existing `TexturePrepareCount` includes normal prepared binds
 and is not itself a zero gate.
 
-Water is a separate feasibility checkpoint. Its 216-state / 322-key / 206-
-output corpus needs about 903,168 bytes as exact visible RGB256, beyond all
-524,288 bytes of DS texture VRAM; 645,120-byte image/palette pairing also fails
-capacity and alpha semantics. Static prewarm does not complete M4. A new
-source-faithful water representation must remove its post-GO conversion,
-allocation, replacement, refresh, and upload work.
+The exact animated-water feasibility route is retired: its 216-state / 322-key /
+206-output corpus needed about 903,168 bytes as visible RGB256, beyond DS texture
+VRAM, while alternate pairing also failed capacity and alpha semantics. P1 uses
+the frozen pair above and ignores later water material animation; do not replace
+the original 12-triangle water geometry.
 
-Keep only with zero gameplay conversion/upload-preparation counters, identical
-texture/material semantics, stable reserve, and no new hitch or corruption.
+Keep only with zero gameplay conversion/upload-preparation counters, exact
+prepared pixels for the declared keys, the accepted frozen-water presentation,
+stable reserve, and no new hitch or corruption.
 
 ## Integrated Promotion
 

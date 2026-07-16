@@ -67,10 +67,8 @@ Use the wrapper profiles while iterating:
 ```powershell
 .\scripts\verify-dev-fast.ps1
 .\scripts\verify-battle-playable-one-minute-match.ps1 -RunnerSlot 3
-.\scripts\verify-p1-gate.ps1
 .\scripts\verify-boundary.ps1
 .\scripts\verify-current.ps1
-.\scripts\verify-regression.ps1
 ```
 
 `verify-current.ps1` is the Latest profile wrapper. Do not run both
@@ -96,9 +94,9 @@ must identify the date, ROM/configuration, and synchronized frame window.
 `latest.png` and `previous.png` are stable aliases only, not substitutes for the
 dated evidence file.
 
-Every `verify-all` invocation of `battle_playable_realtime` uses that same exact
-438/439 `FastIteration` capture and calibrated 50% / 45 pairwise limits. This
-keeps Boundary/Regression decisions synchronized and repeatable. Invoke the
+Every executable `verify-all` invocation of `battle_playable_realtime` uses that
+same exact 438/439 `FastIteration` capture and calibrated 50% / 45 pairwise
+limits. This keeps Boundary decisions synchronized and repeatable. Invoke the
 realtime script directly without `-FastIteration` only for a separate long live-
 capture diagnostic; its host-delay pair is not canonical comparison evidence.
 
@@ -130,19 +128,11 @@ Fixed fighter-color crops are not gates because
 the immediately preceding GDB verifier hard-proves both fighters' selected,
 submitted, and in-bounds display contracts.
 
-`P1Gate` is a shadow compact checkpoint with four legs: compact normal-opening
-smoke, canonical realtime `FastIteration`, supplemental deterministic/scripted
-mode-163 battle coverage, and the one-minute timer-to-Results lifecycle. It is
-additive: Boundary, Regression, and Full profile memberships remain unchanged,
-and legacy harnesses remain diagnostic. Passing it does not prove P1 completion
-or replace the required canonical one-minute full-match soak. Unless `-NoBuild`
-is passed, its wrapper incrementally prepares the normal opening ROM first;
-explicit `-Build` retains the existing forced-normal-rebuild behavior.
-
-Use DevFast for ordinary visual/renderer iteration, P1Gate for integrated
-scene checkpoints, and Boundary once before handoff. Keep the older registry
-fleet available for failure localization; do not run Full Regression merely to
-repeat assertions already owned by those integrated gates.
+`P1Gate`, `Regression*`, and `Full` are list-only legacy inventories until their
+unique checks migrate to the two runtime ROMs. Do not execute or prebuild them.
+Use the smallest focused verifier while iterating, DevFast after the focused
+gate passes, Boundary once before handoff, and Current only when normal launch
+or shared startup/runtime can be affected.
 
 After source changes that can affect normal boot/runtime, run:
 
@@ -152,24 +142,6 @@ After source changes that can affect normal boot/runtime, run:
 
 Without `-Build`, the runtime leg can sample a stale shared `smash64ds.nds`
 even when harness-specific targets were rebuilt.
-
-Use Full only for major risk:
-
-```powershell
-.\scripts\verify-all.ps1 -Profile Full
-```
-
-Full is appropriate when adding/removing harness modes, changing Makefile source
-lists, changing shared ABI or headers, changing taskman/object-manager/
-controller/reloc/display shared code, changing registry/checker behavior,
-preparing a major snapshot/release, or when explicitly requested.
-
-If Full or Regression times out, report the timeout and resume with `-From`
-through `verify-all.ps1`:
-
-```powershell
-.\scripts\verify-all.ps1 -Profile Regression -From battle_mariofox_stage_mpcliffwait_damage_loop
-```
 
 ## Harness Selection
 

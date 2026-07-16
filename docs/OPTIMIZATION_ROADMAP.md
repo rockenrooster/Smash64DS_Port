@@ -1,4 +1,4 @@
-# Optimization Roadmap — Cut G Accepted; M2–M4 Measured
+# Optimization Roadmap — Cut G/M4 Pass; M3 664.5K Rework
 
 Updated: 2026-07-15
 
@@ -11,6 +11,7 @@ P1 priority and lane decisions live only in `docs/P1_EXECUTION_BOARD.md`.
 Detailed measurements, including rejected experiments, belong in
 `docs/PERF_LEDGER.md`; the exact native-owner implementation contract belongs in
 `docs/optimization/NATIVE_RENDERER_PLAN.md`.
+All generated screenshots and visual evidence belong under `artifacts/visibility`.
 
 ## Current Truth
 
@@ -18,8 +19,8 @@ The current user-facing artifact is:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,368,768 bytes
-SHA-256 E08C6C9EA29F671EE5AA9D9D6491B1B12E80A1DBC348AF99468CA72BE072425F
+14,534,656 bytes
+SHA-256 3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38
 ```
 
 The canonical and shipped copies match byte-for-byte. Refresh this identity
@@ -37,8 +38,8 @@ figures, not canonical acceptance. The profile-0 ROM above remains unchanged.
 |---|---|---:|
 | M1 — simple hardware-affine BG2 | Complete | 1,856/1,856 ticks; beats the ≤35K ceiling |
 | M2 — AOT DS-native Mario/Fox | Mode 8 correct; FIFO and Mode 7 rejected | ledger-off ~413.5K; detailed 477,152; target 170–250K |
-| M3 — AOT DS-native complete stage | Exact 12,663-byte core; partial adapter compiles | baseline stage ~805K; first gate <=500K and >=300K saved; target 150–250K |
-| M4 — conversion off gameplay path | Exact 167,936-byte residency + 138-triangle draw packets; live hook pending | draw-time upload/I/O/alloc statically zero; gameplay target zero |
+| M3 — AOT DS-native complete stage | Semantic pass / performance REWORK | stage 664,544/664,640; misses <=500K by 164,544 and >=300K saving; target 150–250K |
+| M4 — conversion off gameplay path | Published short Boundary pass; full one-minute fence/reserve pending | 22 keys/21 outputs/131,072 prepared bytes; sampled gameplay work zero |
 
 The owner targets are active renderer ticks, not FPS estimates. Re-profile the
 whole frame after each accepted owner cut.
@@ -221,16 +222,34 @@ Use one strict whole-owner preflight/control session across the eight source
 stage callbacks, segmented at links 4/6/13/16/17 around fighters at 9 and
 weapons at 14. Each callback closes its logical GX batch, restores profile
 ownership, and rebinds state on resume; it must not flush. Preserve BattleShip
-display order, live state, animation, effects, depth, and translucency.
+display order, live gameplay state, effects, depth, and translucency.
+Presentation animation may use the documented DS visual-fidelity policy; P1
+water is intentionally frozen while the rest of the stage remains live.
 
 The current exact packet is 12,663 bytes: 8 callbacks, 57 DObjs, 42 bindings,
 886 commands, 54 runs, 49 texture epochs, and 202 triangles. It includes five
 projected cross-matrix runs / ten triangles / fifteen foreign corners and zero
 raw cross-matrix submissions. Twelve perturbations prove fail-closed behavior.
-The renderer core and the 415-line adapter helper compile; ordered display-loop
-prepare/commit/finish interception, final link, device counters, timing, and
-screenshot remain unfinished. Resident packet data stays below 16 KiB and any
+The complete-stage owner is linked into the published intrinsic Mode-9 target.
+Boundary and exact frames 438/439 prove ordered interception, mask 255, all
+8/57/42/54/202 ownership counters, 49 epochs, four material commits, cross
+5/10/15, and zero fallback. Resident packet data stays below 16 KiB and any
 mismatch must fall back before GX mutation.
+
+The synchronized profile-1 frames 438–445 now measure stage-exclusive
+664,544/664,640 P50/P95. Against the documented ~805K baseline this saves only
+about 140K, not >=300K, and misses the <=500K first gate by 164,544. The frame
+still holds exact semantic/M4 counters, draw 1,183,104/1,183,168, present
+1,536,448/1,537,216, loop 1,680,448/1,680,512, and 19.6 FPS. Decision: REWORK;
+attack the largest attributable internal bucket before any promotion claim.
+
+Next bounded cut: de-duplicate prepare work by dense index in
+`src/nds/nds_renderer.c`, with the zero-conflict preparation-tuple invariant in
+`scripts/check_nds_native_stage.py`. The 606 corner references map to 312 dense
+vertices; projected work falls from 408 to 246, removing 294 repeated
+color/UV/alpha preparations, 162 transforms, and 486 projections. Expected
+saving is 170–210K ticks. The first device falsifier must save >=164,544 and
+reach <=500K with exact counters, semantics, fence state, and improved P95.
 
 Whispy blink/turn/open/blow/stop, flower animation, live DObj flags, and segment
 E material/FRAC mutation can change draw selection or state after startup. The
@@ -305,49 +324,40 @@ The RGB256 generator reserves index 0 for transparency and uses opaque indices
 bytes with zero alpha/RGB/visible mismatch.
 
 M4 is split at an explicit feasibility checkpoint. The deterministic current-
-ROM static census now passes 16 source blocks, 20 complete keys, 19 deduplicated
-outputs, 44,032 pixels, 94,208 prepared bytes, and 90,112 deduplicated payload
-bytes. Host lookup hits all 20 keys and fails closed for 1,120 mutations. This
-is a bounded current-configuration corpus, not yet proof that every reachable
-P1 effect is closed; runtime provenance, pre-GO upload, pinning, and the
-post-GO fence remain unproved.
+ROM corpus, including the two frozen water outputs, passes 17 source blocks, 22
+complete keys, 21 deduplicated outputs, 62,464 pixels, 131,072 prepared bytes,
+and 126,976 payload bytes. Host lookup hits all 22 keys and fails closed for
+1,232 field mutations plus explicit invalid/miss cases. Published Boundary now
+proves pre-GO preparation/pinning, exact VRAM-A ownership, positive pinned hits,
+and zero sampled post-GO fence work. Full-minute reserve/teardown remains open.
 
-The smallest honest runtime checkpoint is `M4-static-256`: prewarm/pin the exact
-generated static set immediately after original battle setup returns, then arm
-at the source Wait→GO transition. For 256 synchronized post-GO frames, latch
-any static key miss, conversion, palette/decode work, allocation, eviction, GL
-create/upload/delete, refresh, texture-path decompression/I/O, or fallback;
-allow only the two current water refreshes / 36,864 bytes. Normal prepared-key
-binding is allowed. This proves static closure only, not M4 completion.
+The smallest honest runtime checkpoint prewarms/pins the exact generated static
+set, which includes the frozen 36,864-byte water pair, after original battle
+setup, then arms at Wait→GO. For synchronized post-GO frames, latch any static
+key miss, conversion, decode work, allocation, eviction, GL create/upload/delete,
+refresh, texture-path I/O, or fallback. Normal prepared-key binding is allowed;
+water refreshes are not. This proves current-scene static closure only.
 
 Scope the gameplay fence from GO through battle teardown. Results is a later
 setup/load boundary and may prewarm before rearming; a global no-I/O claim would
 instead require Results assets in the original census and reserve budget.
 
-Water now has a one-pass exact tiled representation. The NitroFS payload is
-167,936 bytes: 131,072-byte 512x256 primary RGB256 atlas, 16,384-byte 256x64
-secondary atlas, and forty 512-byte palettes. Metadata/state is 6,032 bytes.
-The host oracle covers 3,024,896 full and 2,139,356 clipped pixels with zero
-mismatch. The allocator-managed residency gate proves two textures + forty
-palettes, exact A:0/B:0 placement, and no gameplay upload/I/O/allocation.
+The exact animated tiled-water representation (167,936-byte residency and 138
+replacement triangles) is retired from P1. It consumed disproportionate time,
+VRAM, and semantic integration risk for cosmetic animation. The 2026-07-15 DS
+visual policy instead freezes exact BattleShip frame 0, fraction 114: large
+128x128 RGB5A1 is 32,768 bytes and small 32x64 is 4,096 bytes. Keep original
+runs 42–43 and their 12 `PROJECTED_NO_Z` triangles; preload/pin the two 36,864-
+byte outputs before GO and ignore later water material animation in the DS
+renderer. The source hashes are
+`f3a908659547f360ec9d3b79f80aa4c5dca829cdb36975a5d3a59667d1fdf532`
+and `61b0bb44aa30033d0c8e07d924f6b38ddbafa23807692eb16aab194e57457efe`.
 
-The additive draw helper emits 68 source-ordered cells, 138 triangles, and 414
-vertices in one primary plus an optional secondary batch. Its ARM object is
-840 bytes of text with 64-byte max stack and no division/float/indirect helper;
-draw-time upload/I/O/allocation calls are zero. It is not live yet
-(`draw_proven=0`). After M3 settles, retain stage run 41/binding 30 and replace
-only runs 42–43/bindings 31–32 with this helper under the same live parent
-matrix, source polygon state, white modulation, cycle frame, and fraction.
-
-The last measured 172,024-byte reserve is still only a pre-integration
-reference; new text, packet scratch, allocator metadata, and filesystem
-overhead require a fresh linked/runtime measurement. Production must prove
->=128 KiB reserve, exact bank ownership, and zero open/read/seek after the
-fence arms.
-Keep the design only after device upload/remap proof, correct moving-water
-screenshots, zero post-GO conversion/upload/I/O/alloc/eviction/palette DMA, and
-at least 100K owner/draw saving. Static-manifest success alone still claims only
-static closure.
+The last measured 172,024-byte reserve remains a pre-integration reference.
+Production still must prove >=128 KiB reserve and zero open/read/seek through
+one-minute teardown. Device bank ownership, recognizable still-water screenshots,
+and the short-window zero conversion/upload/I/O/alloc/refresh/eviction fence now
+pass. M4 completion still requires the full-minute fence/reserve plus M3 timing.
 
 ## Measurement And Correctness Rules
 
@@ -400,8 +410,8 @@ For a successful checkpoint:
 1. refresh the user-facing ROM through the canonical parity rule;
 2. update `STATUS.md`, `HANDOFF.md`, relevant known issues, diagnostic docs,
    the ledger, and append-only `PORTING.md`;
-3. run focused, static, DevFast, forensic, P1Gate/Boundary, and risk-
-   proportionate regression checks;
+3. run focused, static, DevFast, forensic, and Boundary checks; add Current only
+   when normal launch or shared startup/runtime can be affected;
 4. inspect the final status and commit only the coherent owned change set;
 5. run `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` as the final project
    action and run no command afterward.
