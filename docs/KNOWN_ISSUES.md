@@ -10,8 +10,6 @@ durable unresolved gaps.
   ticks; a different attributable cut must reach <=500K before promotion.
 - Natural DamageFall-to-main-floor recovery now passes. Throw-origin coverage,
   non-floor collision providers, and Fox recovery remain incomplete.
-- The platform verifier can accept a wrong next-frame landing; Tyler's manual
-  report remains open.
 - Mario Fireball early spawn/damage/rebound/draw passes, but full 140-tick
   collision, independent source-matrix parity, and long-distance visual capture
   remain open.

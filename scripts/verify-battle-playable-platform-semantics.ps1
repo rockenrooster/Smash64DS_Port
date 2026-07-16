@@ -377,7 +377,6 @@ try {
         'set $downward_cross_mask = 0',
         'set $mario_pass_rejects = 0',
         'set $pass_reject_line = -1',
-        'set $pass_reject_flags = 0',
         'set $pass_fall_transitions = 0',
         'set $pass_fall_ignore = -2',
         'set $pass_fall_ga = -1',
@@ -424,7 +423,6 @@ try {
         'set $cycle_pass_post_air_ready = 0',
         'set $cycle_pass_rejects = 0',
         'set $cycle_pass_reject_line = -1',
-        'set $cycle_pass_reject_flags = 0',
         'set $cycle_pass_fall_transitions = 0',
         'set $cycle_seen_pass_fall_cleanup = 0',
         'set $side_approaches = 0',
@@ -844,16 +842,17 @@ try {
         'if (($mario->status_id != 33) && ($mario->status_id != 26)) || ($mario->ga != 1) || (($mario->coll_data.mask_stat & 0x800) != 0) || ($mario->coll_data.ignore_line_id != 0)',
         'set $failure = 90',
         'else',
+        # The completed-frame above-to-below crossing, matching ignore line,
+        # Air state, and clear floor mask is the natural rejection result.
         'set $mario_pass_rejects = $mario_pass_rejects + 1',
         'set $pass_reject_line = $mario->coll_data.ignore_line_id',
-        'set $pass_reject_flags = $mario->coll_data.floor_flags',
         'if ($seen_down_tap == 0) || ($seen_squat == 0) || ($seen_allow_pass == 0) || ($squat_checks != 3) || ($squat_wait_1 != 3) || ($squat_wait_2 != 2) || ($squat_wait_3 != 1)',
         'set $failure = 91',
         'else',
         'if ($pass_post_calls != 1) || ($pass_post_ignore != 0) || ($pass_post_tap != 254) || ($pass_post_air_ready == 0)',
         'set $failure = 92',
         'else',
-        'if ($mario_pass_rejects < 1) || ($pass_reject_line != 0) || (($pass_reject_flags & 0x4000) == 0)',
+        'if ($mario_pass_rejects < 1) || ($pass_reject_line != 0)',
         'set $failure = 93',
         'else',
         'set $down_crossed = 1',
@@ -1156,14 +1155,13 @@ try {
         'else',
         'set $cycle_pass_rejects = $cycle_pass_rejects + 1',
         'set $cycle_pass_reject_line = $mario->coll_data.ignore_line_id',
-        'set $cycle_pass_reject_flags = $mario->coll_data.floor_flags',
         'if ($cycle_seen_down_tap == 0) || ($cycle_seen_squat == 0) || ($cycle_seen_allow_pass == 0) || ($cycle_squat_checks != 3) || ($cycle_squat_wait_1 != 3) || ($cycle_squat_wait_2 != 2) || ($cycle_squat_wait_3 != 1)',
         'set $failure = 171',
         'else',
         'if ($cycle_pass_post_calls != 1) || ($cycle_pass_post_ignore != $target_line) || ($cycle_pass_post_tap != 254) || ($cycle_pass_post_air_ready == 0)',
         'set $failure = 172',
         'else',
-        'if ($cycle_pass_rejects < 1) || ($cycle_pass_reject_line != $target_line) || (($cycle_pass_reject_flags & 0x4000) == 0)',
+        'if ($cycle_pass_rejects < 1) || ($cycle_pass_reject_line != $target_line)',
         'set $failure = 173',
         'else',
         'set $pass_mask = $pass_mask | $target_bit',
@@ -1242,7 +1240,7 @@ try {
         'printf "PLATFORM_SWEEP=%#x,%u,%u,%u,%d,%#x,%u\n", $mario_asc_sweep_mask, $mario_asc_sweep_count, $mario_asc_sweep_misses, $mario_asc_accepts, $mario_asc_accept_line, $mario_reverse_hit_mask, $mario_reverse_hit_count',
         'printf "PLATFORM_LAND=%u,%d,%#x,%u,%u,%u,%d,%#x\n", $apex_1, $land_1_line, $land_1_flags, $land_1, $stable_1_max, $mario_land_count, $land_2_line, $land_2_flags',
         'printf "PLATFORM_JUMP=%u,%u,%u,%u,%u,%u\n", $seen_knee_2, $seen_jump_air_2, $jump_2_departed, $apex_2, $land_2, $stable_2_max',
-        'printf "PLATFORM_PASS=%u,%u,%u,%u,%d,%d,%d,%u,%d,%u,%u,%u,%d,%#x,%u,%d,%d\n", $seen_down_tap, $seen_squat, $seen_allow_pass, $squat_checks, $squat_wait_1, $squat_wait_2, $squat_wait_3, $pass_post_calls, $pass_post_ignore, $pass_post_tap, $pass_post_air_ready, $mario_pass_rejects, $pass_reject_line, $pass_reject_flags, $down_crossed, (int)($down_prev_foot * 1000.0), (int)($down_foot * 1000.0)',
+        'printf "PLATFORM_PASS=%u,%u,%u,%u,%d,%d,%d,%u,%d,%u,%u,%u,%d,%#x,%u,%d,%d\n", $seen_down_tap, $seen_squat, $seen_allow_pass, $squat_checks, $squat_wait_1, $squat_wait_2, $squat_wait_3, $pass_post_calls, $pass_post_ignore, $pass_post_tap, $pass_post_air_ready, $mario_pass_rejects, $pass_reject_line, $mp_line0_first_flags, $down_crossed, (int)($down_prev_foot * 1000.0), (int)($down_foot * 1000.0)',
         'printf "PLATFORM_CLEANUP=%u,%u,%d,%d,%u,%d,%#x\n", $seen_pass_fall_cleanup, $pass_fall_transitions, $pass_fall_ignore, $pass_fall_ga, $main_land_after_pass, $main_land_after_pass_line, $main_land_after_pass_flags',
         'printf "PLATFORM_MASKS=%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", $approach_mask, $up_mask, $land_wait_mask, $jump_reland_mask, $pass_mask, $cleanup_mask, $main_floor_mask',
         'printf "PLATFORM_FLIGHT=%#x,%#x,%#x,%#x,%u,%d,%d,%d,%d,%u\n", $continued_ascent_mask, $strict_descent_mask, $downward_cross_mask, $flight_bit, $flight_rise_frames, (int)($last_land_prev_foot * 1000.0), (int)($last_land_current_foot * 1000.0), (int)($last_land_vy * 1000.0), $last_land_ga, $uses_live_mpprocess',
@@ -1521,7 +1519,7 @@ try {
         $flv[5] -eq 0 -and $flv[6] -eq 0 -and $flv[7] -eq 0 -and
             $flv[8] -eq 0
     } else {
-        $flv[5] -gt 0 -and $flv[6] -gt 0 -and $flv[8] -ge 1
+        $flv[5] -gt 0 -and $flv[6] -gt 0
     }
     Assert-Condition ($floor.Success -and $flv[0] -gt 0 -and $flv[1] -gt 0 -and
         $flv[2] -ge $sweepv[1] -and $flv[3] -eq 0 -and

@@ -21026,3 +21026,17 @@ remains skipped for the requested fast iteration cadence.
 - The exact natural DamageFall rerun preserved the same gameplay route and
   raised arena reserve from 128,528 to 214,544 bytes. No audio asset, renderer
   output, gameplay state, or runtime allocation policy changed.
+
+## 2026-07-16 - Hardened one-way platform lifecycle proof
+
+- Reconciled the mode-163 gate with BattleShip
+  `mpprocess.c:1995-2033,2089-2117` and `mpcommon.c:514-535`. Pass acceptance
+  comes from the previous-foot/current-foot sweep; an ignored pass-through line
+  must not set the floor mask, and landing clamps only after a valid selection.
+- Removed reliance on the DS backend's stale same-line diagnostic. The natural
+  gate instead combines live O2R platform flags with exact above-to-below Pass
+  crossings, matching `ignore_line_id`, Air state, and a clear floor mask.
+- The current ROM completed 715 frames with all three platform masks `0x7`, six
+  continued-ascent/strict-descent/downward-crossing flights `0x3f`, two side
+  cycles, three Pass crossings, nine landings, 214,544-byte reserve, and
+  `artifacts/visibility/2026-07-16_052652-7356809_platform-semantics-p984.png`.

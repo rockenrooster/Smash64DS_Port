@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 05:12 Central
+Updated: 2026-07-16 05:27 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -40,21 +40,6 @@ removing erroneous cold/Os codegen from the 126-triangle no-Z emitter. Exact
 texture work, and identical DS pixels remain intact. M3 is still REWORK,
 111,392 ticks above its first 500K gate.
 
-## Rejected M3 Stack
-
-The current dense prepare-once stack was exact but too small. Against the kept
-611,392 baseline it measured 563,296, still above 500K, so the stack-only rule
-required a full revert. Incremental no-Z matrix transport then regressed to
-579,712 and was also removed. Evidence remains at:
-
-```text
-artifacts/performance/2026-07-16_m3-dense-reuse-b.json
-artifacts/visibility/2026-07-16_m3-dense-reuse-b-frame445.png
-artifacts/performance/2026-07-16_m3-noz-projection-b.json
-```
-
-Do not retry either cut without a new attributable bound.
-
 ## One-Minute Gate
 
 The published/manual ROM and source runtime gates retain flag `1`, preserving
@@ -74,39 +59,21 @@ normal M4 teardown with every post-GO fence counter zero. The DS taskman seam
 now matches BattleShip by breaking on `LoadScene` before drawing; the verifier
 samples the battle ledger before Results reuses the globals.
 
-## Rejected M2 Cut
-
-The Mode-8 ITCM-only experiment was exact but too small. Frames 600–607 measured
-416,576/416,704 → 398,496/398,592 combined fighter ticks, saving only 18,080
-versus the required 80K. Stage pixels were byte-identical; only 13 bottom-HUD
-pixels changed with live FPS text. The three placements/checker requirements
-were reverted. Evidence remains at:
-
-```text
-artifacts/performance/2026-07-15_m2-itcm-a.json
-artifacts/performance/2026-07-15_m2-itcm-b.json
-artifacts/visibility/2026-07-15_m2-itcm-a-frame607.png
-artifacts/visibility/2026-07-15_m2-itcm-b-frame607.png
-```
-
-The source-faithful pre-GX rejection for active animlocks/shuffle remains; it
-falls back to the ordinary BattleShip path before native preparation or GX.
-
-Jump C also stopped before renderer code. Current Mode-8 local construction is
-53,824 ticks; the live RPY builders already use BattleShip's sine table and
-integer products. Lighting is already prepared-direction plus the exact shade
-LUT. Even deleting the complete local bucket and re-adding the rejected 18,080
-ITCM gain bounds at 71,904, 8,096 short of the first gate.
-
 ## Next Packet
 
-Qualify the throw-origin recovery route using the existing sparse mode-163 gate.
-The attack-origin DamageFall path is now green: five source up-smashes, two
-damage events, one status-54 DamageFall, one line-3 crossing, direct
-result/invalid `1/0`, and 214,544 bytes reserve. Evidence is
-`2026-07-16_050836-0416581_damagefall-recovery-p11728.png` under
-`artifacts/visibility`. Read the exact BattleShip catch/throw/release source,
-run the focused throw gate once, and change only its first reproduced seam.
+Qualify original level-3 Fox recovery selection and offstage return. The current
+natural CPU proof has not selected Recover. Read the BattleShip `ftcomputer`
+objective/behavior source first, reuse mode 163 and the current CPU-on switch,
+and add no synthetic offstage state. Stop if a natural exact-ROM route cannot
+produce the source objective inside one focused run.
+
+The one-way platform gate is now green on the current ROM. Its 715-frame route
+requires six ordered continued-ascent/strict-descent/downward-crossing flights,
+all three platform masks, exact ignore-line Pass crossings, two side cycles,
+and 214,544-byte reserve. Evidence is
+`artifacts/visibility/2026-07-16_052652-7356809_platform-semantics-p984.png`.
+Throw-origin recovery remains open because the existing input driver did not
+reach its first natural Dash/Run transition; do not rerun it unchanged.
 
 ## Checkpoint
 
