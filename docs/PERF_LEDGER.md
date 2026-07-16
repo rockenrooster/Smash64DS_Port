@@ -2759,3 +2759,33 @@ EVIDENCE:
 DECISION: KEEP
   Accumulate the gain and continue against the same measured no-Z path.
 ```
+
+## 2026-07-16 - M3 zero-shift matrix builder specialization
+
+```text
+IDEA ID: M3-ZERO-SHIFT-RAW-MATRIX-20260716
+TREATMENT:
+  Of 146 no-Z matrix loads, 118 use the exact zero coordinate shift. Route
+  those through the existing raw matrix builder; retain the shifted builder
+  unchanged for the remaining 28 loads. Geometry and packet data do not move.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 9, static 1, bitmap OAM, Fox/countdown iteration
+  switch off, frames 438..445. A is the committed AOT-shift baseline ROM
+  090680BAE84A9D8B425DE5F7B8942DD58E0FC8EDF2672CB2B54B7D59C92F4A34;
+  B is 84569EEF0EE5301FD72053CFACDC35C78B6C8B057A1E9D65B424C9FB67891E67.
+RESULT P50/P95:
+  Stage 556,256/556,352 -> 541,952/542,272, saving 14,304/14,080.
+  Draw 975,360/975,488 -> 962,816/962,880, saving 12,544/12,608.
+CORRECTNESS / VISUALS:
+  Exact 121/828, 57/42/54/202/49/4, cross 5/10/15, zero fallback,
+  conservation, and all M4 fence classes hold. The 120,000-pixel top gameplay
+  region is identical; the bottom content is identical except the final
+  eight-row emulator-window edge outside the DS HUD image.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m3-aot-shift-b.json
+  artifacts/performance/2026-07-16_m3-zero-shift-fast-b.json
+  artifacts/visibility/2026-07-16_m3-aot-shift-b.png
+  artifacts/visibility/2026-07-16_m3-zero-shift-fast-b.png
+DECISION: KEEP
+  Accumulate the exact gain. M3 remains above its final 150-250K target.
+```

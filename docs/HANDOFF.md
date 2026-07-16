@@ -80,12 +80,11 @@ ITCM is 25,384/32,768. Evidence is under
 `artifacts/performance/2026-07-16_m2-itcm-restore-{a,b}.json` and
 `artifacts/visibility/2026-07-16_m2-itcm-restore-{a,b}.png`.
 
-Finish Tyler's assigned Jump A work before returning to M2. The live tree
-already contains the requested constant-depth GX painter mechanism, so the old
-CPU-divider Cut 2 is obsolete. Continue only against its measured
-174,624/174,720 no-Z emitter and 146 matrix loads. Make one small source-backed
-treatment and keep any repeatable exact net gain. Do not reopen measured
-regressions, add a speculative cache, or require a removed aggregate gate.
+Jump A now retains no-Z codegen, dense prepare-once, AOT-packed coordinate
+shifts, and the exact zero-shift raw-matrix builder. The latest stage result is
+541,952/542,272 ticks. The constant-depth GX painter already made the old CPU
+divider cut obsolete; do not reopen it or the rejected matrix-position reuse.
+Tyler's next assigned work is Jump C on the Mode-8 fighter compute path.
 The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
 stable 20 FPS decision remains pending while performance work continues.
 

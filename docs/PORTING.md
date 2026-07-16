@@ -21185,3 +21185,12 @@ remains skipped for the requested fast iteration cadence.
 - Stage time falls 578,272 → 556,256 ticks and draw time falls
   997,440 → 975,360 ticks with both DS screens pixel-identical and all owner,
   cross-matrix, depth, and texture-fence counters unchanged.
+
+## 2026-07-16 - Specialized exact zero-shift Dream Land matrices
+
+- The 118/146 no-Z matrix loads whose generated coordinate shift is zero now
+  use the existing raw hardware-matrix builder; the other 28 keep the shifted
+  path unchanged.
+- Stage time falls 556,256 → 541,952 ticks and draw time falls 975,360 →
+  962,816 ticks. The gameplay screen and all owner, cross-matrix, and texture
+  fence counters remain exact.

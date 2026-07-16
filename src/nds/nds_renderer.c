@@ -16227,9 +16227,18 @@ static void ndsRendererNativeStageLoadNoZMatrix(
     NDSRendererMatrix20p12 matrix;
     m4x4 hardware;
 
-    (void)ndsRendererBuildShiftedRawHardwareMatrix(
-        &sNdsNativeStageOwnerExecution.binding_composed[binding_index],
-        &matrix, coordinate_shift);
+    if (coordinate_shift == 0u)
+    {
+        ndsRendererBuildRawHardwareMatrix(
+            &sNdsNativeStageOwnerExecution.binding_composed[binding_index],
+            &matrix);
+    }
+    else
+    {
+        (void)ndsRendererBuildShiftedRawHardwareMatrix(
+            &sNdsNativeStageOwnerExecution.binding_composed[binding_index],
+            &matrix, coordinate_shift);
+    }
     ndsRendererNativeStageSetNoZColumn(&matrix, projected_z);
     ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
     glLoadMatrix4x4(&hardware);
