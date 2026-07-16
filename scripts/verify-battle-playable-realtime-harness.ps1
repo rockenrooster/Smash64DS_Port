@@ -241,7 +241,8 @@ function Invoke-VisibleCaptureAssert {
         -RequiredRegionY 0 `
         -RequiredRegionWidth 80 `
         -RequiredRegionHeight 90 `
-        -MinRequiredRegionFraction 0.50
+        -MinRequiredRegionFraction 0.50 `
+        -WindowScaledCapture
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
