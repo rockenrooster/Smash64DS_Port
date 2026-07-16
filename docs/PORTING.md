@@ -21006,3 +21006,13 @@ remains skipped for the requested fast iteration cadence.
   uses the prepared direction plus exact shade LUT. The eligible 53,824-tick
   local bucket plus the rejected 18,080-tick ITCM gain can save at most 71,904,
   below the required 80K first cut.
+
+## 2026-07-16 - Natural DamageFall floor recovery
+
+- Corrected the existing sparse verifier's natural input route: up-smash now
+  waits for a 450-unit center separation, and a main-floor spawn no longer has
+  to fabricate an irrelevant side-platform pass.
+- The exact public candidate then produced two natural Mario-to-Fox damage
+  events, one Fox status-54 DamageFall, one main-floor crossing, and one source
+  floor recovery with zero invalid collision results. The gameplay path passed;
+  the run instead exposed a 128,528-byte reserve, 2,544 below the P1 floor.

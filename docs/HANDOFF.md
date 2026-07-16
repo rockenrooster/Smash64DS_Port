@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 05:00 Central
+Updated: 2026-07-16 05:08 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -100,11 +100,14 @@ ITCM gain bounds at 71,904, 8,096 short of the first gate.
 
 ## Next Packet
 
-Return to the highest red gameplay row: natural DamageFly/throw recovery and
-its map-collision providers. Read the exact BattleShip status/map source first,
-reuse the existing mode-163 sparse gate, and change only the first reproduced
-provider seam. One focused runtime result is enough for iteration; do not add a
-mode or stack broad regressions.
+Recover the current 2,544-byte reserve shortfall. The focused natural DamageFall
+run completed the source path before failing only its memory floor: five source
+up-smashes, two damage events, one status-54 DamageFall, one line-3 crossing,
+one floor recovery, direct result/invalid `1/0`, and `MEMARENA=0,22,128528`.
+Evidence is `2026-07-16_050047-2988777_damagefall-recovery-p15768.png` under
+`artifacts/visibility`. Measure live ownership first and remove only proven
+unreachable or duplicate resident bytes. Rerun this focused gate once; do not
+stack gameplay or Boundary verification.
 
 ## Checkpoint
 

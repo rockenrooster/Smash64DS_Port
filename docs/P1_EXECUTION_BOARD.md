@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 05:00 Central
+Updated: 2026-07-16 05:08 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -61,7 +61,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Mario can damage Fox | Manual pass / continuous gate open | Gameplay | User confirmed damage works after the exact-ROM Fox trace restored 11/11 colliders, zero mismatch, and flag clear | Keep repair; add continuous natural-hit coverage before release |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |
 | Fireball trajectory and floor rebound | Early submission/rebound pass / full-lifetime visual OPEN | Gameplay | Current custom `0x47` submits 40/40 and first rebound is 55→46.75, but the check is not an independent source matrix oracle and the screenshot does not ROI-gate the projectile | Trace all 140 ticks; synchronized near/mid/far/event captures; exact-ROM retest |
-| Damage/throw map collision | Confirmed manual defect (P0) / isolated LIVE static gate passes | Gameplay | Exact LIVE closure is exclusive after endpoint-world/common-local repair; first natural run stalled before attack, and moving-wall/project-floor plus coherent `mpcommon` remain open | Run sparse natural gate; repair remaining providers before any default-live graduation; require zero fallthrough |
+| Damage/throw map collision | Natural floor recovery pass / non-floor providers open | Gameplay | Five source up-smashes produced two damage events; Fox entered status 54, crossed line 3, and completed one floor recovery with direct result `1/0` and zero invalid results | Keep sparse gate; repair moving-wall/project-floor and coherent `mpcommon` before default-live graduation |
 | One-way platform semantics | Reopened / automation insufficient | Gameplay | Crossing frame rejects correctly, but the 715-frame route can accept a wrong next-frame landing without continued ascent or a descending crossing | Extend the same mode-163 gate; keep Tyler's report open |
 | Edge behavior and specials | Retest | Gameplay | Up-B was manually accepted; other edge behavior needs current-ROM qualification | No unrelated behavior change without reproduction |
 | Normal-play stage painter/depth order | FIXED / pixel + profile-2 pass | Renderer + QA | BattleShip layer modes classify 66 source-Z and 126 no-Z triangles; one full v16 step per no-Z triangle removes the grass/bush overlap, preserves 202 triangles, and reserves disjoint endpoint bands | Keep as correctness fix; final frame 438/501 captures and zero-collision trace are authoritative |
@@ -77,7 +77,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Dream Land BGM | Partial | Audio | User reports the stage theme sounds normal; stream counters pass, but enabled DS channel and nonzero PCM peak remain unproved | Block audio completion |
 | Required FGM and Mario/Fox voices | Crowd FIXED / fighter voices open | Audio | ID626 is one finite 104,204-sample source-loop-ordered AOT cue with quadratic source ramps and no DS hardware loop/runtime envelope; Tyler confirmed the audible fix | Keep crowd cue; qualify remaining natural Mario/Fox voice IDs and pitch behavior |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | Focused one-minute pass | QA | Current source tree reaches Results with 163,312 audio-adjusted bytes, stale=0/0, and 17 safety counters zero | Repeat on final published CPU-on ROM |
+| Stable reserve / no corruption | FAIL on current candidate | QA | Natural DamageFall run reports 128,528 bytes, 2,544 below the 131,072-byte floor; the older 163,312-byte result predates the current AOT/audio candidate | Recover at least 2,544 measured bytes without changing behavior, then rerun only the focused reserve-bearing gate |
 | Focused/checkpoint verification | Focused gates pass / Boundary refresh pending | QA | Current candidate has exact profile-2 fighter/stage census, pause-angle containment, audio cue checks, and synchronized M2/M3 measurements; no stacked full regression was run | Run one Boundary only at the next release checkpoint; Current only if original launch changes |
 | Cut G capture / final dated capture / manual retest | Current Cut G pass / final P1 pending | QA + user | Exact frames 438/439 pass on 2026-07-15 under `artifacts/visibility`; top coverage 100%, green 42.495%, detail 52.675%, meaningful delta 0.142% | Block release on final complete-match evidence and user qualification |
 

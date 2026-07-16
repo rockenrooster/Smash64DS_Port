@@ -517,7 +517,7 @@ try {
         'end',
         # BattleShip gates AttackHi4 on Mario's live Up+A input, not Fox's
         # kinetics or floor line. Let the original hitbox accept platform/air hits.
-        'if (($mfp->ga == 0) && ($mfp->coll_data.floor_line_id == 3) && ($approach_count >= 1) && ($wait_stop_count == $upsmash_attempts) && ($mroot->translate.vec.f.x >= -1800.0) && ($mroot->translate.vec.f.x <= 1800.0) && ($froot->translate.vec.f.x >= -1800.0) && ($froot->translate.vec.f.x <= 1800.0) && ($separation >= -650.0) && ($separation <= 650.0))',
+        'if (($mfp->ga == 0) && ($mfp->coll_data.floor_line_id == 3) && ($approach_count >= 1) && ($wait_stop_count == $upsmash_attempts) && ($mroot->translate.vec.f.x >= -1800.0) && ($mroot->translate.vec.f.x <= 1800.0) && ($froot->translate.vec.f.x >= -1800.0) && ($froot->translate.vec.f.x <= 1800.0) && ($separation >= -450.0) && ($separation <= 450.0))',
         # A fresh Up+A tap is consumed by the ordinary Wait interrupt on the
         # following frame; no status function is called from the verifier.
         'set $wait_stop_count = $wait_stop_count + 1',
@@ -996,11 +996,11 @@ try {
     }
 
     $knockback = [double](Convert-UInt32BitsToSingle $dv[3])
-    Assert-Condition ($driver.Success -and $uv[0] -ge 1 -and $uv[1] -ge 1 -and $uv[2] -ge 1 -and $uv[3] -eq $uv[2] -and $uv[1] -ge $uv[2] -and $uv[4] -ge 1 -and [Math]::Abs($uv[5]) -le 650000) 'Mario did not naturally approach through source Dash/Walk/Run steps, stop in Wait, and enter source up-smash close to Fox.' $gdbStdout
-    Assert-Condition ($drop.Success -and $ov[0] -ge 1 -and
-            $ov[1] -eq $ov[0] -and $ov[2] -ge 0 -and $ov[2] -ne 3 -and
-            $ov[3] -ge 1) `
-        'Mario did not naturally pass through a side platform and reach a main-floor Wait before attacking.' `
+    Assert-Condition ($driver.Success -and $uv[0] -ge 1 -and $uv[1] -ge 1 -and $uv[2] -ge 1 -and $uv[3] -eq $uv[2] -and $uv[1] -ge $uv[2] -and $uv[4] -ge 1 -and [Math]::Abs($uv[5]) -le 450000) 'Mario did not naturally approach through source Dash/Walk/Run steps, stop in Wait, and enter source up-smash close to Fox.' $gdbStdout
+    Assert-Condition ($drop.Success -and $ov[3] -ge 1 -and
+            (($ov[0] -eq 0 -and $ov[1] -eq 0 -and $ov[2] -eq -1) -or
+             ($ov[0] -ge 1 -and $ov[1] -eq $ov[0] -and $ov[2] -ge 0 -and $ov[2] -ne 3))) `
+        'Mario neither began on the main floor nor naturally passed through a side platform before attacking.' `
         $gdbStdout
     Assert-Condition ($phases.Success -and $qv[0] -ge 1 -and
             $qv[1] -ge 1 -and $qv[2] -eq 1 -and

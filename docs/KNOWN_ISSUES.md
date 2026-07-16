@@ -8,8 +8,10 @@ durable unresolved gaps.
 - Renderer M2 is visually correct but above 170-250K ticks.
 - Renderer M3 is source/semantic-correct but measures 611,392/611,584 stage
   ticks; a different attributable cut must reach <=500K before promotion.
-- Natural DamageFly/throw recovery, non-floor collision providers, Fox recovery,
-  and continuous Mario-to-Fox damage coverage remain incomplete.
+- Natural DamageFall-to-main-floor recovery now passes. Throw-origin coverage,
+  non-floor collision providers, and Fox recovery remain incomplete.
+- The current candidate retains 128,528 arena bytes, 2,544 below the 128 KiB
+  P1 floor.
 - The platform verifier can accept a wrong next-frame landing; Tyler's manual
   report remains open.
 - Mario Fireball early spawn/damage/rebound/draw passes, but full 140-tick
@@ -28,8 +30,8 @@ durable unresolved gaps.
 - Imported `mpprocess` has static symbol/ABI closure, but moving-wall sweep,
   project-floor transforms, non-floor providers, and coherent `mpcommon` are not
   graduated live.
-- Natural DamageFly/throw-to-floor recovery has no sparse successful runtime
-  trace yet.
+- Natural attack-origin DamageFall-to-floor recovery has a sparse successful
+  runtime trace; throw-origin and non-floor routes remain unproved.
 - Original `ftcomputer.c` is live. Its natural proof has not selected Recover.
 - Inactive fighter statuses still use weak callbacks when they require unimported
   items, hazards, other fighters, or asset banks. Remove each stub only with its
@@ -71,7 +73,8 @@ durable unresolved gaps.
 
 - The topology cache is validated for the current battle scene; repeated scene
   rebuild/rematch lifetime and reclamation still need proof.
-- Mode 163 requires >=128 KiB reserve after the 65,536-byte resident BGM buffer.
+- Mode 163 currently misses its >=128 KiB reserve floor by 2,544 bytes after
+  the resident audio/renderer allocations.
 - N64 fixed framebuffer addresses and overlay assumptions are unsafe on DS.
 - Save/backup behavior remains stubbed; no persistent SRAM/flash behavior exists.
 - Overlay loading remains a compatibility no-op pending a measured DS memory plan.
