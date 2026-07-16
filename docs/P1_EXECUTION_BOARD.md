@@ -56,7 +56,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 
 | Acceptance condition | State | Lane | Blocker / evidence | Integration decision |
 |---|---|---|---|---|
-| Mario human versus original level-3 Fox CPU, Dream Land, one-minute Time match, items off | CPU-on public default / fast-iteration override | Gameplay + QA | The published ROM defaults flag `1` for source Wait → GO, timer, and Fox CPU; `-FastIteration` explicitly selects flag `0` before battle for automated renderer iteration | Keep lifecycle proofs on `1`; keep routine iteration on `0` |
+| Mario human versus original level-3 Fox CPU, Dream Land, one-minute Time match, items off | CPU-on public default / visible fast-iteration override | Gameplay + QA | The published ROM and source runtime gates retain flag `1`; the separate `-FastIteration` screenshot launch selects flag `0` before battle, skipping countdown/Fox and freezing `1:00` | Keep lifecycle gates on `1`; use the focused flag-`0` capture during routine visual iteration |
 | Original Wait → countdown → GO control/timer gate | Pass | Integration | Automated synchronized source-state proof passes | Keep |
 | Mario can damage Fox | Manual pass / continuous gate open | Gameplay | User confirmed damage works after the exact-ROM Fox trace restored 11/11 colliders, zero mismatch, and flag clear | Keep repair; add continuous natural-hit coverage before release |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |

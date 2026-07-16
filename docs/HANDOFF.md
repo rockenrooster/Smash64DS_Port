@@ -54,11 +54,11 @@ Do not retry or widen that dense-only cut.
 
 ## One-Minute Gate
 
-The published/manual ROM defaults the shared switch to `1`, preserving the
-original Fox CPU and Wait → countdown → GO/timer path. DevFast/Boundary
-select `0` before battle so routine renderer iteration skips Fox decisions and
-countdown and freezes the timer. Lifecycle gates explicitly retain `1`. The
-focused source-timer gate passes:
+The published/manual ROM and source runtime gates retain flag `1`, preserving
+Fox CPU and the original Wait → countdown → GO/timer path. The separate
+`-FastIteration` screenshot launch selects `0` before battle, skipping the
+countdown and Fox decisions and freezing the timer at `1:00`. The focused
+source-timer gate passes:
 
 ```powershell
 .\scripts\check-one-minute-match-verifier.ps1

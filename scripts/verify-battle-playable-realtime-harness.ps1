@@ -23,9 +23,6 @@ param(
     [switch]$FastIteration
 )
 $ErrorActionPreference = 'Stop'
-if ($FastIteration) {
-    $FoxCpuMode = 0
-}
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerShellExe = (Get-Process -Id $PID).Path
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')

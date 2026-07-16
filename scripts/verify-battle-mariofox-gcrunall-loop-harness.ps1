@@ -800,12 +800,8 @@ try {
             } else {
                 @()
             }
-            $realtimeReadyCondition = if ($foxCpuModeSelected -and
-                ($FoxCpuMode -eq 0)) {
-                'gNdsBattlePlayablePacingPresentedFrames >= 12 && gNdsBattlePlayableHudFpsSampleCount != 0'
-            } else {
+            $realtimeReadyCondition =
                 'gNdsBattlePlayablePacingResult != 0'
-            }
             if ($foxCpuModeSelected -and ($FoxCpuMode -eq 1)) {
                 # Source countdown mode must advance through GO before its CPU
                 # path and timer assertions are meaningful.
@@ -1507,15 +1503,8 @@ try {
         if ($BattlePlayable -and $RealtimePresentation) {
             $bp = Get-Ints $battlePlayablePacing
             $fpsHud = Get-Ints $battlePlayableFpsHud
-            $minPresentedFrames = if ($RequireRealtime60Fps) {
-                60
-            } elseif ($FoxCpuMode -eq 0) {
-                12
-            } else {
-                45
-            }
-            $expectedPacingResult = if ($FoxCpuMode -eq 0) { 0 } else { 0x42505443 }
-            Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq $expectedPacingResult -and $bp[1] -eq 0 -and (($bp[2] -eq $bp[3]) -or ($bp[2] -eq ($bp[3] + 1))) -and (($bp[4] -eq $bp[3]) -or ($bp[4] -eq ($bp[3] + 1))) -and $bp[3] -ge $minPresentedFrames -and $bp[5] -gt 0 -and $bp[6] -gt 0 -and $bp[7] -gt 0) 'battle_playable realtime pacing smoke did not present live frames or keep draw/update within one in-flight vblank.' $gdbStdout
+            $minPresentedFrames = if ($RequireRealtime60Fps) { 60 } else { 45 }
+            Assert-Condition ($battlePlayablePacing.Success -and $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and (($bp[2] -eq $bp[3]) -or ($bp[2] -eq ($bp[3] + 1))) -and (($bp[4] -eq $bp[3]) -or ($bp[4] -eq ($bp[3] + 1))) -and $bp[3] -ge $minPresentedFrames -and $bp[5] -gt 0 -and $bp[6] -gt 0 -and $bp[7] -gt 0) 'battle_playable realtime pacing smoke did not present live frames or keep draw/update within one in-flight vblank.' $gdbStdout
             if (-not $RendererBenchmarkOnly) {
                 $fpsHudExpected = if ($fpsHud[3] -gt 0) {
                     [int64][Math]::Floor(
@@ -1554,12 +1543,7 @@ try {
                 } else {
                     $sourceRoute[0] -eq 0
                 }
-                $lowerTimerStateOk = if ($FoxCpuMode -eq 0) {
-                    $sourceLower[10] -eq 3600 -and
-                    $sourceLower[10] -eq $sourceLower[11] -and
-                    $sourceLower[12] -eq 0 -and
-                    $sourceLower[13] -eq 1
-                } elseif ($usesRetainedWallpaper) {
+                $lowerTimerStateOk = if ($usesRetainedWallpaper) {
                     $sourceLower[10] -gt 0 -and
                     $sourceLower[10] -lt $sourceLower[11] -and
                     $sourceLower[12] -eq 1 -and
@@ -1592,11 +1576,8 @@ try {
                     $routeOam[22] -eq 0 -and $routeOam[23] -eq 0 -and
                     $routeOam[24] -eq 0x49464f41 -and
                     $routeOam[25] -eq 0 -and $routeOam[26] -eq 0
-                $topPresentationRouteOk = if ($FoxCpuMode -eq 0) {
-                    $sourceRoute[3] -eq 0
-                } else {
+                $topPresentationRouteOk =
                     ($sourceRoute[3] -gt 0) -or $preCountdownNativeIdle
-                }
                 Assert-Condition (
                     $ifHudLower.Success -and $ifHudRoute.Success -and
                     $sourceLower[0] -eq 0x3 -and
@@ -1612,7 +1593,7 @@ try {
                     $lowerTimerStateOk -and
                     $sourceRoute[0] -eq $LowerTextHudMode -and
                     $lowerRoutingOk -and $topPresentationRouteOk
-                ) 'BattleShip timer/stock callbacks were not routed narrowly below, or the selected source/fast countdown state diverged.' $gdbStdout
+                ) 'BattleShip timer/stock callbacks were not routed narrowly below, or countdown/GO lacked top-interface evidence outside the exact pre-update-91 native-OAM idle window.' $gdbStdout
                 Assert-Condition (
                     $battleTextHud.Success -and
                     $textHud[0] -gt 0 -and $textHud[1] -gt 0 -and
@@ -1628,21 +1609,17 @@ try {
             }
             if ($usesRetainedWallpaper) {
                 $bs = Get-Ints $battlePlayableStart
-                $postGoState = if ($FoxCpuMode -eq 0) {
-                    $bs[0] -eq 1 -and $bs[1] -eq 1 -and
-                    $bs[2] -eq 3600 -and $bs[3] -eq 0 -and
-                    $bs[4] -eq 0 -and $bs[5] -eq 0 -and $bs[6] -eq 0
-                } else {
-                    $bs[0] -eq 1 -and $bs[1] -eq 1 -and
-                    $bs[2] -gt 0 -and $bs[3] -gt 0 -and
-                    ($bs[2] + $bs[3]) -eq 3600 -and
-                    $bs[4] -eq 1 -and $bs[5] -eq 0 -and $bs[6] -eq 0
-                }
+                $postGoState =
+                    ($bs[0] -eq 1 -and $bs[1] -eq 1 -and
+                     $bs[2] -gt 0 -and $bs[3] -gt 0 -and
+                     ($bs[2] + $bs[3]) -eq 3600 -and
+                     $bs[4] -eq 1 -and $bs[5] -eq 0 -and
+                     $bs[6] -eq 0)
                 Assert-Condition (
                     $battlePlayableStart.Success -and
                     ($bs[7] -eq $bp[2]) -and
                     $postGoState
-                ) 'Selected source/fast battle start state or fighter unlock diverged.' $gdbStdout
+                ) 'Cut G did not reach the source GO state with a running timer and both fighter controls unlocked.' $gdbStdout
             }
             if ($RequireRealtime60Fps) {
                 Assert-Condition ($bp[6] -ge 593 -and $bp[6] -le 603 -and $bp[7] -ge 593 -and $bp[7] -le 603) 'battle_playable realtime pacing failed 59.3..60.3 presented/logic fps.' $gdbStdout

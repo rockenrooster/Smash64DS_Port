@@ -95,9 +95,9 @@ if (($realtimeText -notmatch 'check-published-roms\.ps1') -or
     Fail-Check 'published realtime verifier is missing fast iteration or the ROM contract'
 }
 if (($ftComputerText -notmatch 'gNdsBattlePlayableFoxCpuEnabled\s*=\s*1u') -or
-    ($realtimeText -notmatch '(?s)if \(\$FastIteration\).*?\$FoxCpuMode\s*=\s*0') -or
+    ($realtimeText -notmatch '(?s)if \(\$FastIteration\).*?\$captureRuntimeArgs\.FoxCpuMode\s*=\s*0') -or
     ($captureText -notmatch '(?s)tbreak scVSBattleStartBattle.*?gNdsBattlePlayableFoxCpuEnabled')) {
-    Fail-Check 'published battle default must retain source countdown/CPU while fast iteration disables both before battle'
+    Fail-Check 'published battle default must retain source countdown/CPU while visible fast iteration disables both before battle'
 }
 if (($realtimeText -notmatch 'Resolve-MelonDSRunnerSlot') -or
     ($realtimeText -notmatch '-MelonDS\s+\$captureMelonDS') -or

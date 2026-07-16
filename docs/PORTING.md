@@ -20957,10 +20957,10 @@ remains skipped for the requested fast iteration cadence.
 
 - Reversed the shared Fox/countdown control to match the requested workflow:
   the published battle ROM defaults to source-normal flag `1`, while
-  `-FastIteration` selects flag `0` at `scVSBattleStartBattle` for both the
-  runtime verifier and its separate screenshot emulator.
-- Routine iteration no longer spends frames on 3/2/1/GO or Fox decisions; the
-  one-minute lifecycle proof continues to select the unchanged source path.
+  the visible `-FastIteration` capture selects flag `0` at
+  `scVSBattleStartBattle`. Source runtime/lifecycle gates retain flag `1`.
+- Routine visual iteration no longer waits on 3/2/1/GO or Fox decisions. The
+  accepted screenshot is `artifacts/visibility/20260716-fast-iteration-countdown-off.png`.
 
 ## 2026-07-15 - Strict Dream Land painter depth order
 
