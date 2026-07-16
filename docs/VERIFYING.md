@@ -27,6 +27,9 @@ Lab outputs stay under `builds/`; exactly two ROMs publish at the repo root.
 5. Run A2 only when A/B is near the gate, median and P95 disagree, host drift is
    plausible, or counters/screenshots disagree. A2 must reproduce A; B must beat
    both controls.
+6. When a finding exposes a repeatable mistake or inefficiency, improve the
+   existing shared helper, checker, or owning doc that prevents recurrence. If
+   that is not safe and in scope, record one concise actionable item there.
 
 Do not require routine A/B/A, 32-frame, or 128-frame promotion runs. Increase
 sample count only when the eight-frame decision is genuinely inconclusive.

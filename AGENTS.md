@@ -62,9 +62,8 @@ Then read `docs/P1_EXECUTION_BOARD.md` and `docs/HANDOFF.md`. The board is the
 only dynamic queue; handoff contains only the restart surface. Select its
 highest-impact unowned red P1 row.
 
-Preserve a known-good checkpoint before risky changes. On regression, identify
-the first bad change before layering another fix. Trace dependencies before
-changing shared renderer, object, animation, memory, or state code.
+Preserve a known-good checkpoint before risky changes. On regression, find the
+first bad change before layering fixes; trace shared dependencies before edits.
 
 For performance iteration, use one synchronized eight-frame A/B comparison on
 an identical ROM/configuration/window. Primary evidence is ticks, FPS, a dated
@@ -94,6 +93,13 @@ wins. Do not add speculative abstractions, selectors, caches, or tooling.
 
 Milestones cover natural initialization, gameplay, transitions, cleanup, and
 repeat execution; compilation or one good frame is not completion.
+
+## Continuous Improvement
+
+Every new finding, mistake, or inefficiency must improve the next cycle. Fix
+its root cause and update the existing shared code, helper, checker, or owning
+doc that prevents recurrence. If that is not safe and in scope, record one
+concise actionable item in the owning doc; do not detour into unrelated cleanup.
 
 ## Current Boundary
 

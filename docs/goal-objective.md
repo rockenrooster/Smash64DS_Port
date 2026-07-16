@@ -70,6 +70,12 @@ At the beginning of each work cycle:
 
 Work continuously through investigation, implementation, building, captures, verification, and root-cause fixes. Make reasonable in-scope decisions without asking for routine guidance. Provide compact checkpoint updates naming the current task, verified evidence, remaining work, and blockers.
 
+Treat every new finding, mistake, or inefficiency as feedback that must improve
+the next cycle. When safe and P1-relevant, fix the root cause and improve the
+existing shared code, helper, checker, or owning doc in the same checkpoint so
+later work does not repeat the waste. Otherwise record one concise actionable
+item in the owning doc and continue the highest-priority work.
+
 Do not spend time on unrelated cleanup, speculative abstractions, or tooling without a measured benefit to the P1 critical path.
 
 Parallel lanes must own disjoint files, builds, and runner slots. Do not start P2

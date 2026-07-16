@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 09:00 Central
+Updated: 2026-07-16 09:20 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -87,34 +87,6 @@ divider cut obsolete; do not reopen it or the rejected matrix-position reuse.
 Tyler's next assigned work is Jump C on the Mode-8 fighter compute path.
 The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
 stable 20 FPS decision remains pending while performance work continues.
-
-The Fireball terminal gate is closed. The earlier far-left theory was false:
-the same source-created weapon naturally crosses Pupupu's bottom bound at
-lifetime 10, reaches the exact ELF destroy callsite, disappears by the next
-completed frame, and changes the deterministic orange ROI from 50 to 0 pixels.
-
-The one-way platform gate is now green on the current ROM. Its 715-frame route
-requires six ordered continued-ascent/strict-descent/downward-crossing flights,
-all three platform masks, exact ignore-line Pass crossings, two side cycles,
-and 214,544-byte reserve. Evidence is
-`artifacts/visibility/2026-07-16_052652-7356809_platform-semantics-p984.png`.
-Throw-origin recovery is green. The verifier now accepts the source Walk path
-and uses nine short source Walk/Dash/Run entries with Wait reevaluation instead
-of holding through Run. One natural Mario catch/forward throw took Fox 0→12%,
-released statuses 169→186, swept/clamped and DownBounced once on line 3, cleared
-every catch link, and retained 202,256 bytes. Evidence is
-`artifacts/visibility/2026-07-16_063512-7696185_throw-release-recovery-p21764.png`.
-The duplicated capture helper was deleted in favor of the standard repo-local
-melonDS window capture; do not restore it.
-Fox recovery and continuous damage are green: after 40 source Recover frames
-and an offstage-to-line-3 return, Mario damages the same Fox again from 59% to
-72%. All 11 damage colliders and global/special/star hit statuses remain normal.
-Evidence is `artifacts/visibility/20260716_fox-recovery-post-hit.png`. The same
-route plays source FoxSmash1 ID372 and MarioSmash2 ID430 through clean DS
-handles with 202,256-byte reserve; Tyler's fighter-voice ear-check is pending.
-Dream Land BGM is also green without a ROM change: its exact initial DS ring has
-peak 9,928 / RMS 2,283.623, and the natural route observes the live channel bit
-in Calico's ARM7-shared mask with clean 44.1 KB/s streaming.
 
 ## Checkpoint
 
