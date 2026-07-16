@@ -126,6 +126,9 @@ if ($CPUOpponentProof) {
     $FoxCpuMode = 1
     $foxCpuModeSelected = $true
 }
+$fastIterationUnarmedM4 =
+    ($RendererFastRunMode -in @(7, 8, 9)) -and
+    $foxCpuModeSelected -and ($FoxCpuMode -eq 0)
 $preBattleSelectorSelected =
     $staticTextureAotSelected -or $foxCpuModeSelected
 $verifierContext = Initialize-MelonDSVerifierContext `
@@ -1947,9 +1950,7 @@ try {
                             Assert-Condition ($m4Static[0] -eq $frame -and
                                 $m4Static[1] -eq $effectiveStaticTextureAotMode) "M4 static-texture accounting is not synchronized or in the effective mode at frame $frame." $gdbStdout
                             if ($effectiveStaticTextureAotMode -eq 1) {
-                                if ($RendererBenchmarkOnly -and
-                                    $foxCpuModeSelected -and
-                                    ($FoxCpuMode -eq 0)) {
+                                if ($fastIterationUnarmedM4) {
                                     Assert-Condition (
                                         $m4Static[2] -eq 1 -and
                                         $m4Static[3] -eq 0 -and
@@ -2776,7 +2777,10 @@ try {
                     Assert-Condition ($wallpaperOracle.Success -and $wo[0] -gt 0 -and $wo[1] -eq 0 -and $wo[2] -gt 0 -and $wo[3] -eq 0 -and $wo[4] -eq 0 -and $wo[5] -eq 0 -and $wo[6] -eq 0 -and $wo[7] -eq 0) 'Forensic wallpaper recurrence/pixel oracle found an exact-output mismatch.' $gdbStdout
                 }
                 Assert-Condition ($renderClip.Success -and $rclip[0] -eq $rv[12]) 'Canonical realtime HW build did not report a consistent clipping/saturation marker.' $gdbStdout
-                if ($effectiveStaticTextureAotMode -eq 1) {
+                if ($fastIterationUnarmedM4) {
+                    Assert-Condition ($renderTexel1.Success -and
+                        @($rt1 | Where-Object { $_ -ne 0 }).Count -eq 0) 'Fast iteration did not leave the deliberately unarmed TEXEL0/TEXEL1 path idle.' $gdbStdout
+                } elseif ($effectiveStaticTextureAotMode -eq 1) {
                     Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0) 'Static-resident Dream Land water drifted from its two live frozen-water TEXEL0/TEXEL1 material matches or performed refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
                 } else {
                     # Legacy static-off control: the terminal frame may reuse

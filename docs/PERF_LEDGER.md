@@ -2493,3 +2493,45 @@ DECISION: REWORK / REVERT DENSE CANDIDATE
   gate. Keep only the independent 12.99K codegen correction from bbe8d3eee2.
   Move to the independent M2 fighter-compute lane instead of widening M3.
 ```
+
+## 2026-07-16 - M2 Jump C compute bound stopped before code
+
+```text
+IDEA ID: M2-JUMPC-COMPUTE-BOUND-20260716
+IDENTITY / WINDOW:
+  Profile 1, Mode 8 production owner, static 1, hybrid OAM 1, Fox/countdown
+  iteration switch off, frames 600..607. ROM SHA-256 is
+  49CEE7E87B709EFA49B8DC844467841525E941C14B70F6076815E42A37DC7846.
+PHASE-0 RESULT P50/P95:
+  Local matrix construction is 53,824/54,144 ticks; world-affine fixed-point
+  composition is a separate 22,464/22,720 bucket. Lighting is 80,384/80,640.
+  The locked ledger-off first-gate baseline remains 416,576/416,704.
+SOURCE / CODEGEN FINDING:
+  The Mode-8 fighter-parts path calls syMatrixTraRotRpyR or
+  syMatrixTraRotRpyRSca at reloc_backend_renderer_dl.c:584-616. BattleShip
+  matrix.c:966-1013 and 1023-1140 already implement their rotations with
+  gSYSinTable and integer products; the live path does not call the remaining
+  PYR sinf/cosf wrappers. The production lighting loop at nds_renderer.c:
+  13649-13703 already uses the prepared direction and 128-entry exact shade
+  LUT at 2159-2183. Its remaining work is the required signed normal dot
+  product, LUT index, and exact material packing, not an unconverted color
+  ramp.
+BOUND:
+  Even deleting the complete 53,824-tick eligible local-builder bucket and
+  re-adding the previously measured 18,080-tick ITCM gain saves at most 71,904
+  ticks, 8,096 short of the required 80,000. Lighting exposes no eligible
+  residual under CUT 2; replacing the exact dot product or adding another
+  speculative cache would manufacture a different lighting path. The fixed
+  20.12 world-affine multiply is outside this task's source-table conversion
+  cut and is not counted as hypothetical savings.
+ITERATION CHECKER:
+  Modes 7-9 now consistently accept the intentionally prepared-but-unarmed M4
+  corpus and idle TEXEL0/TEXEL1 markers when the shared Fox/countdown switch is
+  off. Strict M4 arming and texture-fence proof remain unchanged.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m2-jumpc-a.json
+  artifacts/visibility/2026-07-16_m2-jumpc-a-frame607.png
+DECISION: REWORK / STOP BEFORE CODE
+  No renderer candidate was built. The task's pre-code feasibility gate fails;
+  retain the current exact source-table matrix and shade-LUT paths.
+```
