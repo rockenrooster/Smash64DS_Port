@@ -26,6 +26,20 @@
 #error "NDS_RENDERER_M2_DETAILED_LEDGER requires profile level 1"
 #endif
 
+#ifndef NDS_RENDERER_M3_PHASE0_PROFILE
+#define NDS_RENDERER_M3_PHASE0_PROFILE 0
+#endif
+
+#if (NDS_RENDERER_M3_PHASE0_PROFILE != 0) && \
+    (NDS_RENDERER_M3_PHASE0_PROFILE != 1)
+#error "NDS_RENDERER_M3_PHASE0_PROFILE must be 0 or 1"
+#endif
+
+#if NDS_RENDERER_M3_PHASE0_PROFILE && \
+    (NDS_RENDERER_PROFILE_LEVEL != 1)
+#error "NDS_RENDERER_M3_PHASE0_PROFILE requires profile level 1"
+#endif
+
 #define NDS_RENDERER_BENCHMARK_NONE 0
 #define NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP 1
 #define NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX 2
@@ -821,6 +835,26 @@ extern volatile u32 gNdsRendererM3MaterialCommitCount;
 extern volatile u32 gNdsRendererM3CrossRunCount;
 extern volatile u32 gNdsRendererM3CrossTriangleCount;
 extern volatile u32 gNdsRendererM3CrossForeignCornerCount;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+extern volatile u32 gNdsRendererM3Phase0PreflightTicks;
+extern volatile u32 gNdsRendererM3Phase0PrepareRunTicks;
+extern volatile u32 gNdsRendererM3Phase0VertexPrepareTicks;
+extern volatile u32 gNdsRendererM3Phase0NearTransformTicks;
+extern volatile u32 gNdsRendererM3Phase0RunTransitionTicks;
+extern volatile u32 gNdsRendererM3Phase0RawEmitTicks;
+extern volatile u32 gNdsRendererM3Phase0RangeEmitTicks;
+extern volatile u32 gNdsRendererM3Phase0NoZEmitTicks;
+extern volatile u32 gNdsRendererM3Phase0NoZMatrixTicks;
+extern volatile u32 gNdsRendererM3Phase0AccountingTicks;
+extern volatile u32 gNdsRendererM3Phase0CommitTicks;
+extern volatile u32 gNdsRendererM3Phase0TimerReadCount;
+extern volatile u32 gNdsRendererM3Phase0TimerSpanCount;
+extern volatile u32 gNdsRendererM3Phase0CalibrationTicks;
+extern volatile u32 gNdsRendererM3Phase0CalibrationIntervals;
+extern volatile u32 gNdsRendererM3Phase0PreparedDenseCount;
+extern volatile u32 gNdsRendererM3Phase0NearTransformCount;
+extern volatile u32 gNdsRendererM3Phase0NoZMatrixCount;
+#endif
 #endif
 extern volatile u32 gNdsRendererBattleStaticTextureEnabled;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareCount;

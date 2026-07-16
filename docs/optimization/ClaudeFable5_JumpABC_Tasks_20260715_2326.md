@@ -481,6 +481,97 @@ commit(s); snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean last.
 
 ---
 
+## TASK 6 — Combat draw cut: CUT 3-NEW + dense re-land, fast-loop banked (paste to codex)
+
+Added 2026-07-16 after the locked-30 scheduler landed. Target arithmetic:
+combat slot = 2 updates + draw + flush <= 1,120,380 for locked-30 at full
+speed; measured combat runs ~20 presents/s (~2/3 speed). With CPU-on updates
+near ~165K each, draw+flush must reach ~<=790K; the measured windows show
+draw 936K-1,014K. Gap: roughly 225K, owned by the stage's remaining CPU
+projection work and continued accumulation. Governed by the user override:
+bank every repeatable correctness-preserving gain, own ledger row each.
+
+```
+/task Land combat draw cuts toward the locked-30 full-speed budget
+(draw+flush ~<=790K; publish the real number from Phase 0). Governed by the
+user no-discard override: every correctness-preserving gain is banked with
+its own ledger row. Reconcile first (R0). Forbidden: FIFO packet
+copy/patch/DMA caching, new interpreters, run reordering/merging (draw order
+is source-sacred), any poly-ID/translucency semantic change (that belongs to
+the open grass/bush investigation), decomp/ edits.
+
+FAST ITERATION PROTOCOL (use for every cut; full match only at the end):
+- A/B lab profile-1 ROM, synchronized 8-frame window (stage window 438..445
+  and fighter window 600..607 as applicable): stage/draw/active P50/P95.
+- Quick visual: the deterministic native 256x192 top-screen compare
+  (expect 0/49,152 changed pixels when exactness is claimed; publish any
+  nonzero with the exact-aspect capture for Tyler).
+- Fast FPS check: canonical smoke
+  verify-battle-playable-realtime-harness.ps1 -RequireLocked30Pacing
+  -SkipScreenshot -> presents/s + updates/s + cadence violations in ~1 min.
+- Only after the last banked cut: full one-minute natural CPU-on match
+  (phase updates/s + slip counts + fences + teardown + reserve) and one
+  30-second Tyler eyeball ROM. Snapshot last.
+
+PHASE 0 — current-HEAD bucket profile (no code): publish the stage owner's
+internal composition (per-class emit ticks: 66 raw / 10 range / 126 no-Z,
+projection+transform ticks, attribute prep, run-transition/texture-bind
+overhead, accounting) and the CPU-on combat numbers: per-update tick cost
+with live Fox AI and combat-phase draw P50. Give each cut below a pre-code
+bound from these numbers; report the bounds before coding.
+
+CUT A — constant-depth GX submission for the 126 no-Z painter triangles
+(Jump A CUT 3-NEW; the dominant lever).
+- Mechanism: submit their model-space vertices through the proven scaled-raw
+  hardware path (same X/Y transform as the range class, which already passes
+  pixel gates). Constant post-divide depth per primitive: build the per-
+  primitive matrix with its Z row set to band_constant x W_row, so
+  z_clip = c * w and z/w == band_constant exactly for every vertex. The band
+  constant comes from the SAME painter counter — order semantics unchanged
+  by construction.
+- Depth exactness (zero tolerance): derive the DS viewport depth mapping so
+  the hardware depth-buffer value for band_constant equals what the CPU path
+  writes today for the same packed v16 depth; prove per-triangle with the
+  stage depth trace (record the hardware-path depth beside the CPU
+  submitted_z; every band value must match). X/Y may drift sub-pixel under
+  the 90% presentation rule — publish the pixel delta; first CUT-A ROM gets
+  a Tyler eyeball including: grass/bush overlap UNCHANGED (known open bug —
+  parity against the current baseline, defect included), fence-over-floor
+  layering intact, water intact, pause-orbit set clean.
+- Transport bound pre-code: ~126 per-primitive Z-row matrix updates/frame
+  (MTX_LOAD_4x3 ~13 FIFO words -> ~1.6K words, negligible; a cheaper partial
+  load is fine if provably equivalent). If measured transport exceeds the
+  CPU work removed, STOP and record (T2B rule).
+- Predicted saving: the dense experiment measured 486 projections + 162
+  transforms + 294 preps = 108,960; CUT A removes the projection+transform
+  share for these triangles plus the remaining EmitNoZTriangle s64 work.
+  Publish the pre-code bound; bank whatever lands.
+- Fallback: per-run fail-closed to the CPU path; zero fallback in the final
+  banked state.
+
+CUT B — re-land dense-index prepare-once on the remaining CPU work (own
+row). The previously measured design (606->312 dense, 408->246 unique, zero
+conflicts, exact semantics) was reverted only for a now-withdrawn gate.
+After CUT A its saving shrinks (projection dedup overlaps) — expect mainly
+the repeated attribute-preparation share. Re-measure honestly; bank the
+remainder under the override.
+
+CUT C (only if Phase 0 shows it is real) — overlap hardware-divider latency
+for whatever CPU projections remain (cross-matrix classes), and/or the
+largest remaining Phase-0 bucket with a stated pre-code bound. Do not
+manufacture a cut; record and stop if the buckets are bare.
+
+Per-cut gates: exact stage census 8/57/42/54/202 + cross 5/10/15, owner
+121/828, zero fallback/fence/conservation error, M4 22/131072 intact,
+reserve >=128 KiB, ledger row per cut (KEEP or REVERT with numbers). End of
+task: canonical rebuild, one-minute natural match with per-phase updates/s
+and slip counts published (combat updates/s vs the 37.9-39.9 baseline IS the
+user-visible result), Tyler playtest ROM, board/handoff updates, snapshot
+with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
+```
+
+---
+
 ## Sequencing and interactions
 
 - TASK 1 before TASK 2, hard: the depth fix changes class-3 semantics and the

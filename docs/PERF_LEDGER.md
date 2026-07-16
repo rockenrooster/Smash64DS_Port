@@ -3113,3 +3113,165 @@ EVIDENCE:
 KEEP / REWORK / REVERT: KEEP
   The old visual rejection is superseded. A2 is not warranted.
 ```
+
+## 2026-07-16 - Task 6 R0 and M3 Phase-0 decomposition
+
+```text
+IDEA ID: TASK6-R0-M3-PHASE0-20260716
+RECONCILIATION:
+  The frozen uninstrumented profile-1 mode-9 baseline ROM is
+  58554D8361E77B6988F8F6C94F2BDB8A8F6FC81EE04D74B19FF08AC46E8E03B1.
+  It uses static residency 1, bitmap OAM, live level-3 Fox, and the original
+  countdown path. Generated stage topology is 312 dense vertices and 408
+  projected references resolving to 246 unique references: 226 no-Z plus 20
+  range, with 162 repeated references removed by the retained dense owner.
+REAL COMBAT BASELINE, FRAMES 600..607, P50/P95:
+  Two-update batch is 314,144/315,520 ticks. Draw is
+  1,296,992/1,297,920, flush is 64/64, stage is 539,616/539,904, and active is
+  1,301,728/1,302,720. The requested real draw+flush P50 is therefore
+  1,297,056 ticks, not the earlier 936K-1,014K cross-build estimate. It is
+  507,056 ticks above the approximate 790K full-speed target.
+INSTRUMENTED IDENTITY:
+  The default-off profile-1-only Phase-0 ROM is
+  228381E6E81971022CC37B6E1245A006E720C6146EAFB07D7318E7C8EFE1DB5D.
+  It records 1,319 timer reads and 651 nested spans per frame; 16 calibration
+  intervals measure 64/64 ticks per read. Stopwatch buckets below are not
+  additive because preflight, prepare, no-Z, and commit are nested.
+PHASE-0 BUCKETS, FRAMES 600..607, P50/P95 TICKS:
+  Preflight 327,296/327,360; prepare-runs 255,808/255,936; raw attribute-
+  exclusive 118,336/118,528; near transform 34,432/34,688; prepare residual
+  103,136/103,552; preflight residual 71,520/71,872; begin/bind
+  39,936/40,192; 66-raw emit 9,088/9,088; 10-range emit 2,112/2,112;
+  126-no-Z inclusive 98,816/99,008, including matrix 50,528/50,880 and
+  exclusive emission 48,384/49,088; accounting 7,840/8,064; commit
+  170,528/170,688 with residual 12,832/13,184.
+CALIBRATED BOUNDS:
+  Removing measured timer-read cost gives a 100,416-tick P50 upper bound for
+  attribute work and about 32,096 ticks for no-Z matrix work. These are bounds,
+  not promised savings. Counts are exactly 312 prepared dense vertices, 226
+  near transforms, and 146 no-Z matrix preparations.
+CORRECTNESS:
+  Both synchronized windows preserve owner 121/828, stage
+  8/255/57/42/54/202/49/4, cross 5/10/15, M4 22/131072, and zero fallback,
+  post-GO texture-fence work, or conservation error.
+EVIDENCE:
+  artifacts/performance/2026-07-16_task6-r0-fighter600.json
+  artifacts/performance/2026-07-16_task6-r0-stage438.json
+  artifacts/performance/2026-07-16_task6-phase0-fighter600.json
+  artifacts/performance/2026-07-16_task6-phase0-stage438.json
+DECISION: PROFILE / PROCEED
+  The calibrated attribute surface is real enough for a narrow source-backed
+  cut. No FIFO packet caching, new interpreter, ordering change, or polygon/
+  translucency change is authorized.
+```
+
+## 2026-07-16 - Task 6 Cut C first-use attribute preparation
+
+```text
+IDEA ID: TASK6-CUT-C-FIRST-USE-ATTRIBUTE-20260716
+BOUND:
+  Phase 0 places the calibrated attribute upper bound at 100,416 ticks P50.
+ONE CHANGE:
+  Classify run alpha once while retaining exact per-corner source-alpha checks
+  for vertex-alpha runs. Consult the 312-dense first-use mask before building
+  the full input record, so repeated projected references do not reconstruct
+  attributes. Generated packet data, source order, run boundaries, submit
+  classes, matrix transport, texture state, alpha, poly ID, and fallback are
+  unchanged.
+IDENTITY:
+  A/B ROM SHA-256 values are
+  58554D8361E77B6988F8F6C94F2BDB8A8F6FC81EE04D74B19FF08AC46E8E03B1 /
+  078AD28EED968E8E7355A8971D567887677A7F56BDE5FA935906B65B5588945F.
+COMBAT WINDOW 600..607, P50/P95:
+  Stage 539,616/539,904 -> 497,632/497,792, saving 41,984/42,112.
+  Draw 1,296,992/1,297,920 -> 1,257,440/1,258,304, saving 39,552/39,616.
+  Active 1,301,728/1,302,720 -> 1,262,208/1,263,040, saving 39,520/39,680.
+  Draw+flush P50 becomes 1,257,504 ticks.
+STAGE WINDOW 438..445, P50/P95:
+  Stage 539,520/539,712 -> 497,472/497,600, saving 42,048/42,112.
+  Draw 1,609,056/1,609,792 -> 1,568,160/1,569,024, saving 40,896/40,768.
+  Active 1,613,824/1,614,592 -> 1,572,896/1,573,760, saving 40,928/40,832.
+EXACTNESS GATES:
+  Both windows retain owner 121/828, stage 8/255/57/42/54/202/49/4, cross
+  5/10/15, M4 22/131072, and zero fallback, fence, or conservation error.
+  The deterministic native 256x192 top-screen A/B is raw 0/49,152 and
+  meaningful 0/49,152 changed pixels.
+EVIDENCE:
+  artifacts/performance/2026-07-16_task6-cut-c-fighter600.json
+  artifacts/performance/2026-07-16_task6-cut-c-stage438.json
+  artifacts/performance/2026-07-16_task6-cut-c-phase0-fighter600.json
+  artifacts/performance/2026-07-16_task6-cut-c-visual-{a,b}.json
+  artifacts/visibility/2026-07-16_task6-cut-c-{a,b}.png
+KEEP / REWORK / REVERT: KEEP
+  Bank the repeatable exact gain under the no-discard override.
+```
+
+## 2026-07-16 - Task 6 Cut D valid-color stage seam and stop
+
+```text
+IDEA ID: TASK6-CUT-D-VALID-COLOR-SEAM-20260716
+BOUND:
+  Cut C's refreshed profile leaves 75,456 raw attribute-exclusive ticks, or a
+  calibrated 57,536-tick P50 upper bound. Every stage dense vertex has valid
+  immutable RGBA, making only the generic invalid-vertex lighting fallback
+  unreachable at this owner boundary.
+ONE CHANGE:
+  Share the existing resolved-color tail between generic and stage callers.
+  The generic caller keeps invalid-vertex lighting fallback; the stage owner
+  passes valid dense RGBA directly and constructs an input record only for the
+  226 no-Z transforms that consume XYZ. Material-only, white, vertex/material
+  modulation, source alpha, texture, packet, ordering, matrix, poly ID, and
+  translucency behavior remain unchanged.
+IDENTITY / CODEGEN:
+  A/B ROM SHA-256 values are
+  078AD28EED968E8E7355A8971D567887677A7F56BDE5FA935906B65B5588945F /
+  2868DEC6573EB9FE2347FB4349AD2C70E54590AE8AD47A7C1523ABB62F508ECC.
+  The inlined prepare owner grows from 0xCB0 to 0xD70 bytes; measured end-to-
+  end timing, rather than symbol size, decides the cut.
+COMBAT WINDOW 600..607, P50/P95:
+  Stage 497,632/497,792 -> 489,184/489,536, saving 8,448/8,256.
+  Draw 1,257,440/1,258,304 -> 1,245,600/1,246,464, saving 11,840/11,840.
+  Active 1,262,208/1,263,040 -> 1,250,432/1,251,264, saving 11,776/11,776.
+  Draw+flush P50 becomes 1,245,664 ticks.
+STAGE WINDOW 438..445, P50/P95:
+  Stage 497,472/497,600 -> 488,992/489,344, saving 8,480/8,256.
+  Draw 1,568,160/1,569,024 -> 1,554,784/1,555,648, saving 13,376/13,376.
+  Active 1,572,896/1,573,760 -> 1,559,616/1,560,448, saving 13,280/13,312.
+EXACTNESS GATES:
+  Both windows retain owner 121/828, stage 8/255/57/42/54/202/49/4, cross
+  5/10/15, M4 22/131072, and zero fallback, fence, or conservation error.
+  Against Cut C, the deterministic native 256x192 top-screen comparison is
+  raw 0/49,152, meaningful 0/49,152, and mean channel delta 0.00.
+REFRESHED PROFILE / STOP:
+  Instrumented ROM SHA-256 is
+  85F455E29CCC1C131EF7AA6DF5D089971C4DBC635F094AA2A21075851E663E11.
+  Preflight is 286,848/286,912, prepare 215,616/215,936, raw attribute-
+  exclusive 74,368/75,264 (calibrated P50 upper bound 56,448), near transform
+  33,536/36,096, begin/bind 39,808/40,128, and no-Z matrix
+  50,432/50,880. The calibrated attribute bound moves only 1,088 ticks from
+  Cut C; the larger uninstrumented win came from code layout and avoided stack/
+  input work. Remaining measured work is required state validation, texture/
+  color preparation, transforms, matrix transport, and ordered GX emission.
+EVIDENCE:
+  artifacts/performance/2026-07-16_task6-cut-d-fighter600.json
+  artifacts/performance/2026-07-16_task6-cut-d-stage438.json
+  artifacts/performance/2026-07-16_task6-cut-d-phase0-fighter600.json
+  artifacts/performance/2026-07-16_task6-cut-d-visual.json
+  artifacts/visibility/2026-07-16_task6-cut-d.png
+KEEP / REWORK / REVERT: KEEP / STOP
+  Task 6 banks 51,392 draw+flush ticks P50 from R0, ending at 1,245,664.
+  That remains 455,664 ticks above the approximate 790K full-speed target.
+  Further speculative cutting would cross the forbidden packet transport,
+  interpreter, source-order, polygon-ID, or translucency boundaries, or chase
+  nested-profiler noise. Close optimization and qualify the canonical ROM.
+CANONICAL QUALIFICATION:
+  Published battle ROM SHA-256 is
+  7AB28684930899D5A4F5165E1CE85DDA7A93FC7F3CB06D44062283536507BFAD;
+  ITCM is 26,104/32,768. Locked-30 smoke passes at 19.5 presents/s and 38.9
+  updates/s. The no-build natural CPU-on match passes with 4,084 updates / 2,042
+  presents, phase rates 39.9/38.1/39.6/n.a./58.2 updates/s, phase slips
+  196/1036/925/0/3, Time Up -> Results, one normal M4 teardown, all ten post-GO
+  fence counts zero, and 140,816 bytes reserve after the 65,536-byte BGM ring.
+  The generic smash64ds.nds was not rebuilt and remains SHA-256
+  009211A8ACC4BCC8DD473A14327AFFF023EC9F33EADBA786B67E0735D7077AB7.
+```

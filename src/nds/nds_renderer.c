@@ -1096,6 +1096,75 @@ volatile u32 gNdsRendererM3MaterialCommitCount;
 volatile u32 gNdsRendererM3CrossRunCount;
 volatile u32 gNdsRendererM3CrossTriangleCount;
 volatile u32 gNdsRendererM3CrossForeignCornerCount;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+volatile u32 gNdsRendererM3Phase0PreflightTicks;
+volatile u32 gNdsRendererM3Phase0PrepareRunTicks;
+volatile u32 gNdsRendererM3Phase0VertexPrepareTicks;
+volatile u32 gNdsRendererM3Phase0NearTransformTicks;
+volatile u32 gNdsRendererM3Phase0RunTransitionTicks;
+volatile u32 gNdsRendererM3Phase0RawEmitTicks;
+volatile u32 gNdsRendererM3Phase0RangeEmitTicks;
+volatile u32 gNdsRendererM3Phase0NoZEmitTicks;
+volatile u32 gNdsRendererM3Phase0NoZMatrixTicks;
+volatile u32 gNdsRendererM3Phase0AccountingTicks;
+volatile u32 gNdsRendererM3Phase0CommitTicks;
+volatile u32 gNdsRendererM3Phase0TimerReadCount;
+volatile u32 gNdsRendererM3Phase0TimerSpanCount;
+volatile u32 gNdsRendererM3Phase0CalibrationTicks;
+volatile u32 gNdsRendererM3Phase0CalibrationIntervals;
+volatile u32 gNdsRendererM3Phase0PreparedDenseCount;
+volatile u32 gNdsRendererM3Phase0NearTransformCount;
+volatile u32 gNdsRendererM3Phase0NoZMatrixCount;
+
+static inline u32 ndsRendererM3Phase0Tick(void)
+{
+    gNdsRendererM3Phase0TimerReadCount++;
+    return cpuGetTiming();
+}
+
+static inline void ndsRendererM3Phase0FinishSpan(
+    volatile u32 *bucket, u32 start)
+{
+    *bucket += ndsRendererM3Phase0Tick() - start;
+    gNdsRendererM3Phase0TimerSpanCount++;
+}
+
+static void ndsRendererM3Phase0Reset(void)
+{
+    u32 calibration_tick;
+    u32 calibration_index;
+
+    gNdsRendererM3Phase0PreflightTicks = 0u;
+    gNdsRendererM3Phase0PrepareRunTicks = 0u;
+    gNdsRendererM3Phase0VertexPrepareTicks = 0u;
+    gNdsRendererM3Phase0NearTransformTicks = 0u;
+    gNdsRendererM3Phase0RunTransitionTicks = 0u;
+    gNdsRendererM3Phase0RawEmitTicks = 0u;
+    gNdsRendererM3Phase0RangeEmitTicks = 0u;
+    gNdsRendererM3Phase0NoZEmitTicks = 0u;
+    gNdsRendererM3Phase0NoZMatrixTicks = 0u;
+    gNdsRendererM3Phase0AccountingTicks = 0u;
+    gNdsRendererM3Phase0CommitTicks = 0u;
+    gNdsRendererM3Phase0TimerReadCount = 0u;
+    gNdsRendererM3Phase0TimerSpanCount = 0u;
+    gNdsRendererM3Phase0CalibrationTicks = 0u;
+    gNdsRendererM3Phase0CalibrationIntervals = 16u;
+    gNdsRendererM3Phase0PreparedDenseCount = 0u;
+    gNdsRendererM3Phase0NearTransformCount = 0u;
+    gNdsRendererM3Phase0NoZMatrixCount = 0u;
+
+    calibration_tick = ndsRendererM3Phase0Tick();
+    for (calibration_index = 0u;
+         calibration_index < gNdsRendererM3Phase0CalibrationIntervals;
+         calibration_index++)
+    {
+        u32 next_tick = ndsRendererM3Phase0Tick();
+
+        gNdsRendererM3Phase0CalibrationTicks += next_tick - calibration_tick;
+        calibration_tick = next_tick;
+    }
+}
+#endif
 #endif
 static NDSRendererProfileOwner sNdsRendererRuntimeOwner =
     NDS_RENDERER_PROFILE_OWNER_NONE;
@@ -5692,29 +5761,11 @@ static u32 ndsRendererHardwareLitShadeColor(
         stats, vtx, prepared_direction);
 }
 
-static u16 ndsRendererHardwarePackedVertexColor(
-    NDSRendererStats *stats,
-    const NDSRendererInputVertex *vtx,
+static inline u16 ndsRendererHardwarePackedResolvedColor(
+    u32 color,
     u32 material_color,
-    s32 use_material_color,
-    s32 use_vertex_color,
-    u32 vertex_color,
-    s32 vertex_color_valid)
+    s32 use_material_color)
 {
-    u32 color;
-
-    if ((use_material_color != FALSE) && (use_vertex_color == FALSE))
-    {
-        return RGB15((u8)((material_color >> 27) & 0x1fu),
-                     (u8)((material_color >> 19) & 0x1fu),
-                     (u8)((material_color >> 11) & 0x1fu));
-    }
-    if (use_vertex_color == FALSE)
-    {
-        return RGB15(31u, 31u, 31u);
-    }
-    color = (vertex_color_valid != FALSE) ? vertex_color :
-        ndsRendererHardwareLitShadeColor(stats, vtx, NULL);
     if (use_material_color != FALSE)
     {
         u32 r = ((ndsRendererHardwareColorByte(color, 24) *
@@ -5732,6 +5783,60 @@ static u16 ndsRendererHardwarePackedVertexColor(
     return RGB15((u8)((color >> 27) & 0x1fu),
                  (u8)((color >> 19) & 0x1fu),
                  (u8)((color >> 11) & 0x1fu));
+}
+
+static inline u16 ndsRendererHardwarePackedValidVertexColor(
+    u32 material_color,
+    s32 use_material_color,
+    s32 use_vertex_color,
+    u32 vertex_color)
+{
+    if ((use_material_color != FALSE) && (use_vertex_color == FALSE))
+    {
+        return RGB15((u8)((material_color >> 27) & 0x1fu),
+                     (u8)((material_color >> 19) & 0x1fu),
+                     (u8)((material_color >> 11) & 0x1fu));
+    }
+    if (use_vertex_color == FALSE)
+    {
+        return RGB15(31u, 31u, 31u);
+    }
+    return ndsRendererHardwarePackedResolvedColor(
+        vertex_color, material_color, use_material_color);
+}
+
+static u16 ndsRendererHardwarePackedVertexColor(
+    NDSRendererStats *stats,
+    const NDSRendererInputVertex *vtx,
+    u32 material_color,
+    s32 use_material_color,
+    s32 use_vertex_color,
+    u32 vertex_color,
+    s32 vertex_color_valid)
+{
+    u32 color;
+
+    if (vertex_color_valid != FALSE)
+    {
+        return ndsRendererHardwarePackedValidVertexColor(
+            material_color, use_material_color,
+            use_vertex_color, vertex_color);
+    }
+    if ((use_material_color != FALSE) && (use_vertex_color == FALSE))
+    {
+        return ndsRendererHardwarePackedValidVertexColor(
+            material_color, use_material_color,
+            use_vertex_color, vertex_color);
+    }
+    if (use_vertex_color == FALSE)
+    {
+        return ndsRendererHardwarePackedValidVertexColor(
+            material_color, use_material_color,
+            use_vertex_color, vertex_color);
+    }
+    color = ndsRendererHardwareLitShadeColor(stats, vtx, NULL);
+    return ndsRendererHardwarePackedResolvedColor(
+        color, material_color, use_material_color);
 }
 
 static const void *ndsRendererResolveTextureDataPointer(
@@ -15928,6 +16033,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 texture_scale_s;
     u32 texture_scale_t;
     u32 material_color;
+    s32 alpha_uses_vertex;
     s32 use_material_color;
     s32 use_vertex_color;
     s32 texture_offset;
@@ -15935,6 +16041,9 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 corner_offset;
     u32 alpha = UINT_MAX;
     u32 use_texture;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 vertex_prepare_start;
+#endif
 
     if ((run->binding_index >= NDS_NATIVE_STAGE_BINDING_COUNT) ||
         (run->texture_epoch >= NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) ||
@@ -15993,16 +16102,22 @@ static s32 ndsRendererNativeStagePrepareRun(
     prepared->alpha_ref = (u8)((stats->blend_color & 0xffu) >> 4);
 
     material_color = ndsRendererHardwareColorSource(stats);
+    alpha_uses_vertex = ndsRendererHardwareAlphaUsesVertex(stats);
     use_material_color = ndsRendererHardwareUseMaterialColor(stats);
     use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
+    if (alpha_uses_vertex == FALSE)
+    {
+        alpha = ndsRendererHardwareAlpha(stats, NULL);
+    }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    vertex_prepare_start = ndsRendererM3Phase0Tick();
+#endif
     for (corner_offset = 0u; corner_offset < corner_count; corner_offset++)
     {
         u32 dense_index = sNdsNativeStageCorners[
             (u32)run->first_corner + corner_offset];
         const NDSNativeStageDenseVertex *dense;
         NDSNativeStagePreparedDense *prepared_dense;
-        NDSRendererInputVertex input;
-        u32 vertex_alpha;
 
         if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
         {
@@ -16010,15 +16125,18 @@ static s32 ndsRendererNativeStagePrepareRun(
         }
         dense = &sNdsNativeStageVertices[dense_index];
         prepared_dense = &sNdsNativeStagePreparedDense[dense_index];
-        ndsRendererNativeStageInputVertex(dense, &input);
-        vertex_alpha = ndsRendererHardwareAlpha(stats, &input);
-        if (alpha == UINT_MAX)
+        if (alpha_uses_vertex != FALSE)
         {
-            alpha = vertex_alpha;
-        }
-        else if (alpha != vertex_alpha)
-        {
-            return FALSE;
+            u32 vertex_alpha = (dense->rgba & 0xffu) >> 3;
+
+            if (alpha == UINT_MAX)
+            {
+                alpha = vertex_alpha;
+            }
+            else if (alpha != vertex_alpha)
+            {
+                return FALSE;
+            }
         }
         if ((prepared_dense_mask[dense_index / 32u] &
              ((u32)1u << (dense_index & 31u))) != 0u)
@@ -16027,9 +16145,13 @@ static s32 ndsRendererNativeStagePrepareRun(
         }
         prepared_dense_mask[dense_index / 32u] |=
             (u32)1u << (dense_index & 31u);
-        prepared_dense->packed_color = ndsRendererHardwarePackedVertexColor(
-            stats, &input, material_color, use_material_color,
-            use_vertex_color, dense->rgba, TRUE);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        gNdsRendererM3Phase0PreparedDenseCount++;
+#endif
+        prepared_dense->packed_color =
+            ndsRendererHardwarePackedValidVertexColor(
+                material_color, use_material_color,
+                use_vertex_color, dense->rgba);
         if (use_texture != FALSE)
         {
             prepared_dense->s = ndsRendererHardwareTexCoord(
@@ -16062,7 +16184,13 @@ static s32 ndsRendererNativeStagePrepareRun(
         else if (run->submit_class ==
                  NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
         {
+            NDSRendererInputVertex input;
             NDSRendererClipVertex20p12 clip;
+
+            ndsRendererNativeStageInputVertex(dense, &input);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            u32 near_transform_start = ndsRendererM3Phase0Tick();
+#endif
 
             if (dense->matrix_binding >=
                 NDS_NATIVE_STAGE_BINDING_COUNT)
@@ -16072,6 +16200,12 @@ static s32 ndsRendererNativeStagePrepareRun(
             ndsRendererTransformVertex20p12(
                 &frame->binding_composed[dense->matrix_binding],
                 &input, &clip);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            ndsRendererM3Phase0FinishSpan(
+                &gNdsRendererM3Phase0NearTransformTicks,
+                near_transform_start);
+            gNdsRendererM3Phase0NearTransformCount++;
+#endif
             if (clip.w == 0)
             {
                 return FALSE;
@@ -16087,6 +16221,10 @@ static s32 ndsRendererNativeStagePrepareRun(
             }
         }
     }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsRendererM3Phase0FinishSpan(
+        &gNdsRendererM3Phase0VertexPrepareTicks, vertex_prepare_start);
+#endif
     if (alpha == UINT_MAX)
     {
         return FALSE;
@@ -16271,6 +16409,9 @@ static void ndsRendererNativeStageLoadNoZMatrix(
 {
     NDSRendererMatrix20p12 matrix;
     m4x4 hardware;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 matrix_start = ndsRendererM3Phase0Tick();
+#endif
 
     if (coordinate_shift == 0u)
     {
@@ -16289,6 +16430,11 @@ static void ndsRendererNativeStageLoadNoZMatrix(
     glLoadMatrix4x4(&hardware);
     ndsRendererProfileRecordMatrixLoad();
     sNdsRendererHardwareMatrixLoaded = FALSE;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsRendererM3Phase0FinishSpan(
+        &gNdsRendererM3Phase0NoZMatrixTicks, matrix_start);
+    gNdsRendererM3Phase0NoZMatrixCount++;
+#endif
 }
 
 static void ndsRendererNativeStageEmitNoZVertex(
@@ -16318,6 +16464,9 @@ static void ndsRendererNativeStageEmitClippedVertex(
 {
     NDSRendererMatrix20p12 matrix;
     m4x4 hardware;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 matrix_start = ndsRendererM3Phase0Tick();
+#endif
 
     memset(&matrix, 0, sizeof(matrix));
     matrix.m[3][0] = ndsRendererRoundShiftS32Signed(vertex->clip.x, 8u);
@@ -16328,6 +16477,11 @@ static void ndsRendererNativeStageEmitClippedVertex(
     glLoadMatrix4x4(&hardware);
     ndsRendererProfileRecordMatrixLoad();
     sNdsRendererHardwareMatrixLoaded = FALSE;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsRendererM3Phase0FinishSpan(
+        &gNdsRendererM3Phase0NoZMatrixTicks, matrix_start);
+    gNdsRendererM3Phase0NoZMatrixCount++;
+#endif
 
     GFX_COLOR = vertex->packed_color;
     if (run->textured != 0u)
@@ -16489,6 +16643,9 @@ s32 ndsRendererPrepareNativeStageOwner(
         (NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT + 31u) / 32u];
     u32 segment_index;
     s32 accepted = FALSE;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 phase0_preflight_start;
+#endif
 
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererM3PreflightAttemptCount++;
@@ -16504,6 +16661,10 @@ s32 ndsRendererPrepareNativeStageOwner(
     gNdsRendererM3CrossRunCount = 0u;
     gNdsRendererM3CrossTriangleCount = 0u;
     gNdsRendererM3CrossForeignCornerCount = 0u;
+#endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsRendererM3Phase0Reset();
+    phase0_preflight_start = ndsRendererM3Phase0Tick();
 #endif
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
@@ -16603,14 +16764,35 @@ s32 ndsRendererPrepareNativeStageOwner(
                     (ndsRendererNativeStageApplyStateSpan(
                          &sNdsNativeStageStateSpans[run_index], frame,
                          &sNdsNativeStageOwnerExecution.preflight_stats,
-                         state) == FALSE) ||
-                    (ndsRendererNativeStagePrepareRun(
-                         run_index, frame,
-                         &sNdsNativeStageOwnerExecution.preflight_stats,
-                         state, &epoch_mask, prepared_dense_mask) == FALSE))
+                         state) == FALSE))
                 {
                     goto done;
                 }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+                {
+                    u32 prepare_run_start = ndsRendererM3Phase0Tick();
+                    s32 prepare_run_result = ndsRendererNativeStagePrepareRun(
+                        run_index, frame,
+                        &sNdsNativeStageOwnerExecution.preflight_stats,
+                        state, &epoch_mask, prepared_dense_mask);
+
+                    ndsRendererM3Phase0FinishSpan(
+                        &gNdsRendererM3Phase0PrepareRunTicks,
+                        prepare_run_start);
+                    if (prepare_run_result == FALSE)
+                    {
+                        goto done;
+                    }
+                }
+#else
+                if (ndsRendererNativeStagePrepareRun(
+                        run_index, frame,
+                        &sNdsNativeStageOwnerExecution.preflight_stats,
+                        state, &epoch_mask, prepared_dense_mask) == FALSE)
+                {
+                    goto done;
+                }
+#endif
                 run = &sNdsNativeStageRuns[run_index];
                 if (run->submit_class ==
                     NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
@@ -16713,6 +16895,10 @@ s32 ndsRendererPrepareNativeStageOwner(
     accepted = TRUE;
 
 done:
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsRendererM3Phase0FinishSpan(
+        &gNdsRendererM3Phase0PreflightTicks, phase0_preflight_start);
+#endif
     if (accepted == FALSE)
     {
         sNdsNativeStageOwnerExecution.stats = NULL;
@@ -16732,6 +16918,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     const NDSNativeStageSegment *segment;
     u32 run_offset;
     u32 segment_triangles = 0u;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    u32 commit_start;
+#endif
 
     if (sNdsNativeStageOwnerExecution.active == FALSE)
     {
@@ -16748,6 +16937,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     }
     segment = &sNdsNativeStageSegments[segment_index];
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    commit_start = ndsRendererM3Phase0Tick();
+#endif
     for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
     {
         u32 run_index = (u32)segment->first_run + run_offset;
@@ -16756,9 +16948,17 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             &sNdsNativeStageOwnerExecution.runs[run_index];
         u32 emitted_triangles = 0u;
         u32 triangle_offset;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        u32 phase_start = ndsRendererM3Phase0Tick();
+#endif
 
         ndsRendererNativeStageBeginRun(
             prepared_run, run->submit_class, segment->owner, stats);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        ndsRendererM3Phase0FinishSpan(
+            &gNdsRendererM3Phase0RunTransitionTicks, phase_start);
+        phase_start = ndsRendererM3Phase0Tick();
+#endif
         for (triangle_offset = 0u;
              triangle_offset < run->triangle_count;
              triangle_offset++)
@@ -16794,6 +16994,26 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                 ndsRendererHardwareEnterProjectedForeground();
             }
         }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        if (run->submit_class ==
+            NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
+        {
+            ndsRendererM3Phase0FinishSpan(
+                &gNdsRendererM3Phase0RawEmitTicks, phase_start);
+        }
+        else if (run->submit_class ==
+                 NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+        {
+            ndsRendererM3Phase0FinishSpan(
+                &gNdsRendererM3Phase0RangeEmitTicks, phase_start);
+        }
+        else
+        {
+            ndsRendererM3Phase0FinishSpan(
+                &gNdsRendererM3Phase0NoZEmitTicks, phase_start);
+        }
+        phase_start = ndsRendererM3Phase0Tick();
+#endif
         ndsRendererHardwareEndBatch();
         ndsRendererNativeStageAccountRun(
             stats,
@@ -16804,6 +17024,10 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             emitted_triangles);
         stats->triangle_count += run->triangle_count;
         segment_triangles += run->triangle_count;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        ndsRendererM3Phase0FinishSpan(
+            &gNdsRendererM3Phase0AccountingTicks, phase_start);
+#endif
     }
     sNdsRendererFastRunCount += segment->run_count;
     sNdsRendererFastTriangleCount += segment_triangles;
@@ -16815,6 +17039,10 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     gNdsRendererM3SegmentMask |= (u32)1u << segment_index;
     gNdsRendererM3RunCount += segment->run_count;
     gNdsRendererM3TriangleCount += segment_triangles;
+#endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsRendererM3Phase0FinishSpan(
+        &gNdsRendererM3Phase0CommitTicks, commit_start);
 #endif
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
     return TRUE;

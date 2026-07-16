@@ -8,6 +8,7 @@ param(
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
     [ValidateRange(1,2)][int]$RendererProfileLevel = 1,
     [switch]$RendererM2DetailedLedger,
+    [switch]$RendererM3Phase0Profile,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$GdbPort = 4333,
@@ -25,6 +26,10 @@ $ErrorActionPreference = 'Stop'
 if (($FastRunMode -eq 9) -and ($RendererProfileLevel -ne 1)) {
     throw 'Fast-run mode 9 requires renderer profile 1.'
 }
+if ($RendererM3Phase0Profile -and
+    (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
+    throw 'RendererM3Phase0Profile requires fast-run mode 9 and renderer profile 1.'
+}
 if (($FastRunMode -eq 9) -and
     -not $PSBoundParameters.ContainsKey('RendererBenchmarkStartFrame')) {
     # The complete-stage owner/M4 contract is meaningful only after GO and
@@ -38,7 +43,9 @@ $target = if ($FastRunMode -eq 9) {
 } else {
     'smash64ds-battle-playable-coarse-hwtri'
 }
-$build = if ($FastRunMode -eq 9) {
+$build = if ($RendererM3Phase0Profile) {
+    'builds/build-m3-phase0-lab'
+} elseif ($FastRunMode -eq 9) {
     'builds/build-m3-stage-owner-lab'
 } elseif ($RendererProfileLevel -eq 2) {
     'build-battle-playable-forensic-hwtri-harness'
@@ -60,6 +67,7 @@ $build = if ($FastRunMode -eq 9) {
     -HardwareTriangles `
     -RendererProfileLevel $RendererProfileLevel `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
+    -RendererM3Phase0Profile:$RendererM3Phase0Profile `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
     -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds `
