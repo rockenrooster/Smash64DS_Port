@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 06:48 Central
+Updated: 2026-07-16 07:02 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -39,6 +39,9 @@ removing erroneous cold/Os codegen from the 126-triangle no-Z emitter. Exact
 121/828 ownership, frozen water 2/0/1, 22/131072 static residency, zero post-GO
 texture work, and identical DS pixels remain intact. M3 is still REWORK,
 111,392 ticks above its first 500K gate.
+The signed-16 rounding codegen lead was also exhausted: it shrank both hot ARM
+symbols but saved only 2,048 stage ticks, and its B screenshot was invalid. The
+treatment is fully reverted; do not rerun it without a new closing bound.
 
 ## One-Minute Gate
 

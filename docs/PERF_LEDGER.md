@@ -2535,3 +2535,44 @@ DECISION: REWORK / STOP BEFORE CODE
   No renderer candidate was built. The task's pre-code feasibility gate fails;
   retain the current exact source-table matrix and shade-LUT paths.
 ```
+
+## 2026-07-16 - M3 signed-16 rounding codegen rejected
+
+```text
+IDEA ID: M3-S16-ROUNDSHIFT-20260716
+MEASURED LEAD:
+  The retained no-Z triangle path expands signed-16 coordinate rounding through
+  the generic signed-64 helper. In the ARM object, NativeStageVertexShift was
+  0x15C bytes and NativeStageEmitNoZTriangle was 0x2D8 bytes.
+TREATMENT:
+  Use equivalent unsigned-magnitude 32-bit rounding only for the native-stage
+  signed-16 vertex-shift and emit calls. No packet, matrix, or renderer state
+  changed.
+IDENTITY / WINDOW:
+  Profile 1, Mode 9, static 1, hybrid OAM 0, Fox/countdown iteration switch
+  off, frames 438..445. A/B ROM SHA-256 values are
+  A982E5E9CC45BD3303EB363CBB6998EE4BCCE66C94161EC51CBC706FE463D8E6 /
+  CF4F0E7364391C7DDFD6681360742D81C2FA7B8BE079D096897119ED8BD045D4.
+RESULT P50/P95:
+  Stage 612,832/612,928 -> 610,784/610,944, saving 2,048/1,984. Draw saved
+  only 128 ticks while the whole loop changed by +32 ticks. The local result is
+  roughly 110.8K short of the <=500K first gate.
+CODEGEN / SIZE:
+  NativeStageVertexShift shrank 0x15C -> 0xD0 and
+  NativeStageEmitNoZTriangle shrank 0x2D8 -> 0x250. The lab ROM shrank 1,024
+  padded bytes. This confirms the wide-shift lead but not a useful runtime win.
+CORRECTNESS / VISUALS:
+  Both arms retained exact 121/828 runs/triangles, stage/Mario/Fox
+  202/320/306, zero fallback, and the complete M3 census. The B screenshot was
+  mostly black instead of matching A, so the visual packet was internally
+  inconsistent. No A2 was run because the measured saving already missed the
+  gate decisively.
+EVIDENCE:
+  artifacts/performance/20260716_m3-s32-roundshift-a.json
+  artifacts/performance/20260716_m3-s32-roundshift-b.json
+  artifacts/visibility/20260716_m3-s32-roundshift-a.png
+  artifacts/visibility/20260716_m3-s32-roundshift-b.png
+DECISION: REVERT
+  The source treatment is fully removed. Do not retry signed-16 round-shift
+  codegen without a new attributable bound large enough to close M3.
+```

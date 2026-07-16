@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 06:48 Central
+Updated: 2026-07-16 07:02 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -44,7 +44,7 @@ Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; th
 | Integration/release | CPU lifecycle pass / checkpoint | live tree | source-ordered LoadScene break, exact VSBattle ledger sample, commit | runner 2 |
 | Renderer implementation | M2/M3 feasibility cuts exhausted; exact guards retained | shared live tree / focused lab builds | M2 Jump C stopped 8,096 ticks short before code; M3 keeps only the 12.99K no-Z codegen gain | no runner active |
 | Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
-| Performance research | Paused at measured boundary | shared live tree / read-only | Do not reopen rejected M2 ITCM or M3 dense/incremental-matrix cuts without a new attributable bound | no runner active |
+| Performance research | Paused at measured boundary | shared live tree / read-only | Do not reopen rejected M2 ITCM or M3 dense/incremental-matrix/signed-16-rounding cuts without a new attributable bound | no runner active |
 
 Runner/window/port policy lives in `VERIFYING.md`; scripted launches normalize
 the selected TOML and never touch the user's manual instance.
@@ -70,7 +70,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Natural Fox recovery | Pass | Gameplay | Current-ROM mode 163 used only external Mario input: Fox took 0→59 damage, selected BattleShip Recover for 40 frames at offstage x=2379.905, returned without KO/rebirth, and grounded on line 3 at x=1336.084 after 820 frames | Keep `verify-battle-playable-fox-recovery.ps1`; current reserve 202,256 and screenshot `2026-07-16_055015-5167574_fox-recovery.png` |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Fail / Jump C stopped before code | Renderer | Current local builder is 53,824 ticks and lighting is already prepared-direction + exact shade LUT. Local + rejected ITCM gain bounds at 71,904, 8,096 short of the required first cut | Do not manufacture another lighting/cache path; require a new source-backed bound before coding |
-| M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Removing cold/Os from the 126-triangle no-Z emitter keeps exact pixels and improves stage 624,384 → 611,392. Dense reuse reached 563,296 but remained above 500K and was reverted; incremental matrix transport regressed | Keep only codegen commit `bbe8d3eee2`; require a new attributable ≥111,392-tick cut |
+| M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Removing cold/Os from the 126-triangle no-Z emitter keeps exact pixels and improves stage 624,384 → 611,392. Dense reuse reached 563,296 but remained above 500K; incremental matrix transport regressed; signed-16 rounding saved only 2,048 ticks and failed its visual packet. All three were reverted | Keep only codegen commit `bbe8d3eee2`; require a new attributable ≥111,392-tick cut |
 | M4 zero gameplay conversion/preparation | Pass for current one-minute gate | Renderer | Natural CPU-on expiry proves prepare/arm/teardown `1/1/1`, 22 keys/131,072 bytes, zero ten-class post-GO fence work, and 163,312-byte audio-adjusted reserve | Keep; repeat in final published CPU-on qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / bitmap OAM | Renderer + QA | Hybrid runtime submission was invisible despite valid counters; restored proven all-bitmap OBJ ownership shows the traffic light with 93,824 bytes prepared pregame and zero gameplay conversion/upload | Keep published bitmap path; hybrid remains lab-only |

@@ -59,8 +59,9 @@ Retained owner contract:
 - Whispy, flowers, draw flags, materials, effects, weapons, depth, and stage
   selection remain live; water pixels alone are frozen.
 
-Current stage-exclusive P50/P95 is 664,544/664,640. The bounded dense-index
-prepare-once experiment proved zero conflicts and retained exact semantics:
+The retained no-Z codegen correction moved the stage-exclusive P50/P95 from
+624,384/624,512 to 611,392/611,584 with exact pixels and semantics. A bounded
+dense-index prepare-once experiment on that base proved zero conflicts:
 
 ```text
 606 corner references -> 312 dense vertices
@@ -69,10 +70,13 @@ remove 294 repeated attribute preparations
 remove 162 repeated transforms and 486 projections
 ```
 
-It measured 555,584/555,776, only 108,960/108,864 better than A. That missed the
-required 164,544 saving and <=500K P50 gate, so the source/checker change was
-reverted. Do not retry or widen dense-only preparation reuse. M3 remains REWORK;
-select a different measured internal bucket and retain the same gate.
+It measured 563,296/563,392, 48,096/48,192 better than the retained base but
+still above the <=500K P50 gate, so it was reverted. Incremental no-Z matrix
+transport then regressed 16,416/16,512 and was reverted. Replacing the hot
+signed-16 rounding expansion shrank the relevant ARM symbols but saved only
+2,048/1,984 ticks and produced an invalid visual packet, so it too was
+reverted. Do not retry these three cuts without a new attributable bound. M3
+remains REWORK at the same <=500K first gate.
 
 ## M4 — Pre-GO Texture Residency
 
