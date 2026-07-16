@@ -1040,48 +1040,103 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             raise ValueError(f"FGM {selector['id']} invalid VADPCM extent")
         pcm = audio_codec.adpcm_decode(vadpcm, book["entries"],
                                        book["order"], book["npredictors"])
-        # Preserve every sample in BattleShip's infinite [1, 28215) range as
-        # the DS loop body.  A one-word IMA state prefix keeps the repeat point
-        # off the header.  Two decoded guard nibbles pay the unavoidable word-
-        # alignment debt at the end of every DS repeat cycle.
-        if selector["loop"]:
-            runtime_pcm = pcm[selector["loop_start"]:selector["loop_end"]]
-            loop_strategy = (
-                "state_word_then_source_loop_nibbles_plus_alignment_guards")
-            loop_point_words = PUBLIC_EXCITED_LOOP_POINT_WORDS
-            ima = ima_encode_loop_body(
-                runtime_pcm, PUBLIC_EXCITED_IMA_PREDICTOR,
-                PUBLIC_EXCITED_IMA_INDEX,
-                PUBLIC_EXCITED_GUARD_NIBBLES)
-            decoded_ima = ima_decode_nibbles(
-                ima, len(runtime_pcm), loop_point_words * 4)
-            repeat_oracle = ima_repeat_oracle(
-                ima, loop_point_words, len(runtime_pcm),
-                PUBLIC_EXCITED_GUARD_NIBBLES)
-        else:
-            runtime_pcm = pcm
-            loop_strategy = "none"
-            loop_point_words = 0
-            ima = ima_encode(runtime_pcm)
-            decoded_ima = ima_decode(ima, len(runtime_pcm))
-            repeat_oracle = {}
-        metrics = audio_metrics(runtime_pcm, decoded_ima)
-        if metrics["decoded_peak"] == 0 or metrics["decoded_rms"] <= 0:
-            raise ValueError(f"FGM {selector['id']} decoded to silence")
-
         first_pitch_code = (selector["notes"][0][0]
                             if "notes" in selector
                             else selector["pitch_code"])
         note_pitch_cents = first_pitch_code * 100 - 1300
         net_pitch_cents = (selector["articulation_pitch_cents"] +
                            note_pitch_cents)
-        frequency = round(FGM_OUTPUT_RATE * (2.0 **
-                                             (net_pitch_cents / 1200.0)))
+        frequency = note_frequency_hz(
+            selector["articulation_pitch_cents"], first_pitch_code)
         envelope = articulation_envelope(art_program, selector)
-        volume = envelope[0]["ds_volume"]
+        if selector["id"] == PUBLIC_EXCITED_ID:
+            runtime_pcm, acoustic_oracle = render_public_excited(
+                pcm, selector, frequency, envelope)
+            loop_strategy = "finite_source_loop_aot"
+            flags = 0
+            loop_point_words = 0
+            packed_envelope = []
+            volume = acoustic_oracle["constant_hardware_volume"]
+            trim = {
+                "trim_strategy": "finite_source_loop_duration_render",
+                "trim_source_samples_removed": 0,
+                "trim_applied": False,
+                "trim_retained_source_prefix_pcm_sha256": None,
+                "trim_retained_prefix_exact": True,
+                "trim_proven_reachable_samples": len(runtime_pcm),
+                "trim_one_sample_ceiling": 1,
+            }
+            old_loop_pcm = pcm[selector["loop_start"]:selector["loop_end"]]
+            old_loop_ima = ima_encode_loop_body(
+                old_loop_pcm, PUBLIC_EXCITED_IMA_PREDICTOR,
+                PUBLIC_EXCITED_IMA_INDEX, PUBLIC_EXCITED_GUARD_NIBBLES)
+            old_loop_decoded = ima_decode_nibbles(
+                old_loop_ima, len(old_loop_pcm),
+                PUBLIC_EXCITED_LOOP_POINT_WORDS * 4)
+            acoustic_oracle.update({
+                "old_hardware_loop_negative_ima_bytes": len(old_loop_ima),
+                "old_hardware_loop_negative_ima_sha256": sha256(old_loop_ima),
+                "old_hardware_loop_decoded_clipped_sample_count": sum(
+                    abs(value) >= 32767 for value in old_loop_decoded),
+            })
+        else:
+            runtime_pcm, trim = trim_proof(
+                selector, ucd_program, pcm, frequency)
+            acoustic_oracle = {}
+            loop_strategy = "none"
+            flags = 0
+            loop_point_words = 0
+            packed_envelope = envelope[1:]
+            volume = envelope[0]["ds_volume"]
+            old_loop_ima = b""
+        ima = ima_encode(runtime_pcm)
+        decoded_ima = ima_decode(ima, len(runtime_pcm))
+        metrics = audio_metrics(runtime_pcm, decoded_ima)
+        if metrics["decoded_peak"] == 0 or metrics["decoded_rms"] <= 0:
+            raise ValueError(f"FGM {selector['id']} decoded to silence")
+        if selector["id"] == PUBLIC_EXCITED_ID:
+            boundary_starts = acoustic_oracle[
+                "source_former_loop_boundary_starts"]
+            boundary_deltas = [
+                abs(decoded_ima[index] - decoded_ima[index - 1])
+                for index in boundary_starts
+            ]
+            adjacent_deltas = [
+                abs(right - left)
+                for left, right in zip(decoded_ima, decoded_ima[1:])
+            ]
+            silent_tail = decoded_ima[
+                acoustic_oracle["silent_tail_start_sample"]:]
+            tail_peak = max(abs(value) for value in silent_tail)
+            tail_rms = math.sqrt(sum(value * value for value in silent_tail) /
+                                 len(silent_tail))
+            acoustic_oracle.update({
+                "decoded_pcm_sha256": ima_pcm_sha256(decoded_ima),
+                "decoded_former_loop_boundary_deltas": boundary_deltas,
+                "decoded_former_loop_boundary_max_delta": max(
+                    boundary_deltas),
+                "decoded_adjacent_max_delta": max(adjacent_deltas),
+                "decoded_former_loop_boundaries_bounded": max(
+                    boundary_deltas) <= max(adjacent_deltas),
+                "decoded_clipped_sample_count": sum(
+                    abs(value) >= 32767 for value in decoded_ima),
+                "rendered_clipped_sample_count": sum(
+                    abs(value) >= 32767 for value in runtime_pcm),
+                "decoded_silent_tail_samples": len(silent_tail),
+                "decoded_silent_tail_peak": tail_peak,
+                "decoded_silent_tail_rms": round(tail_rms, 6),
+                "old_hardware_loop_negative_rejected": (
+                    old_loop_ima != ima and flags == 0 and
+                    loop_point_words == 0),
+            })
+            acoustic_oracle["decoded_clipping_not_regressed"] = (
+                acoustic_oracle["rendered_clipped_sample_count"] == 0 and
+                acoustic_oracle["decoded_clipped_sample_count"] <=
+                acoustic_oracle[
+                    "old_hardware_loop_decoded_clipped_sample_count"])
         records.append({
             "id": selector["id"],
-            "flags": 1 if selector["loop"] else 0,
+            "flags": flags,
             "ima": ima,
             "sample_count": len(runtime_pcm),
             "frequency": frequency,
@@ -1089,7 +1144,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "volume": volume,
             "pan": 64,
             "sound": selector["sound"],
-            "envelope": envelope[1:],
+            "envelope": packed_envelope,
             "loop_point_words": loop_point_words,
         })
         metadata_entries.append({
@@ -1127,20 +1182,16 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "source_loop_end": selector["loop_end"],
             "source_loop_infinite": source_loop_infinite,
             "ds_loop_strategy": loop_strategy,
+            "ds_loop_flag": flags,
             "ds_loop_point_words": loop_point_words,
             "ds_loop_length_words": (
                 (len(ima) // 4) - loop_point_words),
             "ds_ima_header_predictor": struct.unpack_from("<h", ima, 0)[0],
             "ds_ima_header_index": ima[2],
-            "ds_ima_loop_body_nibbles": (
-                len(runtime_pcm) if selector["loop"] else 0),
-            "ds_ima_guard_nibbles": (
-                list(PUBLIC_EXCITED_GUARD_NIBBLES)
-                if selector["loop"] else []),
-            "ds_initial_prefix_samples_dropped": (
-                selector["loop_start"] if selector["loop"] else 0),
-            "ds_trailing_samples_dropped": (
-                len(pcm) - selector["loop_end"] if selector["loop"] else 0),
+            "ds_ima_loop_body_nibbles": 0,
+            "ds_ima_guard_nibbles": [],
+            "ds_initial_prefix_samples_dropped": 0,
+            "ds_trailing_samples_dropped": 0,
             "ds_sample_count": len(runtime_pcm),
             "net_pitch_cents": net_pitch_cents,
             "ds_frequency_hz": frequency,
@@ -1150,16 +1201,21 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "ds_volume": volume,
             "ds_pan": 64,
             "ds_initial_volume": volume,
+            "packed_envelope_count": len(packed_envelope),
             "source_volume_envelope": envelope,
             "source_sound_gain_fields_used_by_fgm": False,
             "source_volume_mapping": (
-                "((articulation_volume * ((ucd_volume * 127) >> 7) * "
-                "127) >> 7) linearly mapped from 0..32767 to DS 0..127"),
+                "pre_mixer=((articulation_volume*((ucd_volume*127)>>7)*"
+                "127)>>7); mixer=(pre_mixer*pre_mixer)>>15; N_MICRO "
+                "linearly ramps each target over 184 samples"
+                if selector["id"] == PUBLIC_EXCITED_ID else
+                "pre_mixer target mapped from 0..32767 to DS 0..127"),
             "runtime_fidelity_debt": list(selector.get(
                 "fidelity_debt", ())),
             "ima_adpcm_bytes": len(ima),
             "ima_adpcm_sha256": sha256(ima),
-            **repeat_oracle,
+            "acoustic_oracle": acoustic_oracle,
+            **trim,
             **metrics,
         })
 
@@ -1207,7 +1263,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         raise AssertionError("pack size accounting mismatch")
     if len(pack) > MAX_RESIDENT_BYTES:
         raise ValueError(
-            f"FGM pack exceeds 64 KiB: {len(pack)} bytes")
+            f"FGM pack exceeds 96 KiB: {len(pack)} bytes")
 
     metadata = {
         "format": "BattleShip P1 FGM pack / Nintendo DS IMA ADPCM",
@@ -1235,18 +1291,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             for record in records if record["flags"] == 0
             for point in record["envelope"])),
         "known_runtime_fidelity_debt": [
-            "PublicExcited drops its one-sample pre-roll; its AOT IMA state "
-            "word and PNT=1 loop encode every sample in the exact "
-            "BattleShip [1, 28215) range as a data nibble. Each DS repeat "
-            "cycle then decodes two word-alignment guard samples, so the "
-            "28,216-sample cycle is not exclusively the 28,214-sample "
-            "BattleShip range.",
-            "The AOT BattleShip volume envelope is scheduled from the "
-            "60 Hz game update and uses DS step volume; N64 applied 5.75 ms "
-            "ticks with a 5.75 ms synthesizer ramp.",
             "The regular KO entries retain their exact source wavetable, "
-            "initial pitch, duration, and volume envelope; source pitch "
-            "automation is not yet scheduled on DS channels.",
+            "duration-proven prefix, initial pitch, and volume envelope; "
+            "source pitch automation is not yet scheduled on DS channels.",
             "DeadExplodeL currently renders its primary UCD voice; forked "
             "source voice 685 remains explicit metadata fidelity debt.",
         ],

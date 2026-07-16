@@ -1,6 +1,259 @@
 {
   "entries": [
     {
+      "acoustic_oracle": {
+        "command_points": [
+          {
+            "end_quadratic_target": 586,
+            "end_sample_ceiling": 87,
+            "start_quadratic_target": 1,
+            "start_sample_ceiling": 0,
+            "tick": 0
+          },
+          {
+            "end_quadratic_target": 1320,
+            "end_sample_ceiling": 261,
+            "start_quadratic_target": 586,
+            "start_sample_ceiling": 174,
+            "tick": 2
+          },
+          {
+            "end_quadratic_target": 2347,
+            "end_sample_ceiling": 435,
+            "start_quadratic_target": 1320,
+            "start_sample_ceiling": 348,
+            "tick": 4
+          },
+          {
+            "end_quadratic_target": 3667,
+            "end_sample_ceiling": 608,
+            "start_quadratic_target": 2347,
+            "start_sample_ceiling": 522,
+            "tick": 6
+          },
+          {
+            "end_quadratic_target": 5281,
+            "end_sample_ceiling": 869,
+            "start_quadratic_target": 3667,
+            "start_sample_ceiling": 782,
+            "tick": 9
+          },
+          {
+            "end_quadratic_target": 7189,
+            "end_sample_ceiling": 1129,
+            "start_quadratic_target": 5281,
+            "start_sample_ceiling": 1043,
+            "tick": 12
+          },
+          {
+            "end_quadratic_target": 9389,
+            "end_sample_ceiling": 1390,
+            "start_quadratic_target": 7189,
+            "start_sample_ceiling": 1303,
+            "tick": 15
+          },
+          {
+            "end_quadratic_target": 11884,
+            "end_sample_ceiling": 1650,
+            "start_quadratic_target": 9389,
+            "start_sample_ceiling": 1564,
+            "tick": 18
+          },
+          {
+            "end_quadratic_target": 14672,
+            "end_sample_ceiling": 1911,
+            "start_quadratic_target": 11884,
+            "start_sample_ceiling": 1824,
+            "tick": 21
+          },
+          {
+            "end_quadratic_target": 17754,
+            "end_sample_ceiling": 2258,
+            "start_quadratic_target": 14672,
+            "start_sample_ceiling": 2171,
+            "tick": 25
+          },
+          {
+            "end_quadratic_target": 21127,
+            "end_sample_ceiling": 3995,
+            "start_quadratic_target": 17754,
+            "start_sample_ceiling": 3908,
+            "tick": 45
+          },
+          {
+            "end_quadratic_target": 23665,
+            "end_sample_ceiling": 10942,
+            "start_quadratic_target": 21127,
+            "start_sample_ceiling": 10855,
+            "tick": 125
+          },
+          {
+            "end_quadratic_target": 21127,
+            "end_sample_ceiling": 16152,
+            "start_quadratic_target": 23665,
+            "start_sample_ceiling": 16065,
+            "tick": 185
+          },
+          {
+            "end_quadratic_target": 17754,
+            "end_sample_ceiling": 24836,
+            "start_quadratic_target": 21127,
+            "start_sample_ceiling": 24749,
+            "tick": 285
+          },
+          {
+            "end_quadratic_target": 16176,
+            "end_sample_ceiling": 33519,
+            "start_quadratic_target": 17754,
+            "start_sample_ceiling": 33433,
+            "tick": 385
+          },
+          {
+            "end_quadratic_target": 14672,
+            "end_sample_ceiling": 42203,
+            "start_quadratic_target": 16176,
+            "start_sample_ceiling": 42116,
+            "tick": 485
+          },
+          {
+            "end_quadratic_target": 13241,
+            "end_sample_ceiling": 50887,
+            "start_quadratic_target": 14672,
+            "start_sample_ceiling": 50800,
+            "tick": 585
+          },
+          {
+            "end_quadratic_target": 11884,
+            "end_sample_ceiling": 51755,
+            "start_quadratic_target": 13241,
+            "start_sample_ceiling": 51668,
+            "tick": 595
+          },
+          {
+            "end_quadratic_target": 10601,
+            "end_sample_ceiling": 59570,
+            "start_quadratic_target": 11884,
+            "start_sample_ceiling": 59484,
+            "tick": 685
+          },
+          {
+            "end_quadratic_target": 9389,
+            "end_sample_ceiling": 60439,
+            "start_quadratic_target": 10601,
+            "start_sample_ceiling": 60352,
+            "tick": 695
+          },
+          {
+            "end_quadratic_target": 8253,
+            "end_sample_ceiling": 67386,
+            "start_quadratic_target": 9389,
+            "start_sample_ceiling": 67299,
+            "tick": 775
+          },
+          {
+            "end_quadratic_target": 7189,
+            "end_sample_ceiling": 68254,
+            "start_quadratic_target": 8253,
+            "start_sample_ceiling": 68167,
+            "tick": 785
+          },
+          {
+            "end_quadratic_target": 6198,
+            "end_sample_ceiling": 72596,
+            "start_quadratic_target": 7189,
+            "start_sample_ceiling": 72509,
+            "tick": 835
+          },
+          {
+            "end_quadratic_target": 5281,
+            "end_sample_ceiling": 73464,
+            "start_quadratic_target": 6198,
+            "start_sample_ceiling": 73377,
+            "tick": 845
+          },
+          {
+            "end_quadratic_target": 4438,
+            "end_sample_ceiling": 77806,
+            "start_quadratic_target": 5281,
+            "start_sample_ceiling": 77719,
+            "tick": 895
+          },
+          {
+            "end_quadratic_target": 3667,
+            "end_sample_ceiling": 78674,
+            "start_quadratic_target": 4438,
+            "start_sample_ceiling": 78588,
+            "tick": 905
+          },
+          {
+            "end_quadratic_target": 2347,
+            "end_sample_ceiling": 83885,
+            "start_quadratic_target": 3667,
+            "start_sample_ceiling": 83798,
+            "tick": 965
+          },
+          {
+            "end_quadratic_target": 1320,
+            "end_sample_ceiling": 84753,
+            "start_quadratic_target": 2347,
+            "start_sample_ceiling": 84666,
+            "tick": 975
+          },
+          {
+            "end_quadratic_target": 0,
+            "end_sample_ceiling": 93437,
+            "start_quadratic_target": 1320,
+            "start_sample_ceiling": 93350,
+            "tick": 1075
+          }
+        ],
+        "constant_hardware_gain_denominator": 127,
+        "constant_hardware_gain_numerator": 92,
+        "constant_hardware_volume": 92,
+        "decoded_adjacent_max_delta": 28666,
+        "decoded_clipped_sample_count": 15,
+        "decoded_clipping_not_regressed": true,
+        "decoded_former_loop_boundaries_bounded": true,
+        "decoded_former_loop_boundary_deltas": [
+          3235,
+          2209,
+          436
+        ],
+        "decoded_former_loop_boundary_max_delta": 3235,
+        "decoded_pcm_sha256": "aecb7d2a15884b89a49b4ec2d746deb0658efdf3974c36537a3a4cd55741c3c7",
+        "decoded_silent_tail_peak": 5,
+        "decoded_silent_tail_rms": 0.111142,
+        "decoded_silent_tail_samples": 10767,
+        "linear_gain_negative_pcm_sha256": "c74436def9b134f329149a8fad2722df7ff02dec02cff427e212c43279311c81",
+        "linear_gain_negative_rejected": true,
+        "maximum_quadratic_target": 23665,
+        "missing_preroll_negative_pcm_sha256": "8183b613abab27c5246daeaaa42983e927b639c8b8ba20db13d4ffc27e68b19b",
+        "missing_preroll_negative_rejected": true,
+        "model": "source_loop_then_quadratic_n_micro_184_sample_ramps",
+        "old_hardware_loop_decoded_clipped_sample_count": 71,
+        "old_hardware_loop_negative_ima_bytes": 14112,
+        "old_hardware_loop_negative_ima_sha256": "efb072be5dd4409901c4490c6d150b7c9b79a41f5368a61f90c021565002628c",
+        "old_hardware_loop_negative_rejected": true,
+        "ramp_microseconds": 5750,
+        "ramp_output_rate_hz": 32000,
+        "ramp_samples": 184,
+        "rendered_clipped_sample_count": 0,
+        "rendered_pcm_sha256": "c48fd539c835330a4319be5f94345e281e65ad12f05a1cbc58d7d1f588604374",
+        "sample_count": 104204,
+        "silent_tail_start_sample": 93437,
+        "source_first_pass_samples": 28215,
+        "source_former_loop_boundary_starts": [
+          28215,
+          56429,
+          84643
+        ],
+        "source_index_sha256": "8c364955cb8dd8d7d639b7aad86141d23cf262c9d2efb10b48296952d6cecd01",
+        "source_loop_end": 28215,
+        "source_loop_samples": 28214,
+        "source_loop_start": 1,
+        "source_order_exact": true,
+        "source_pre_roll_present": true
+      },
       "articulation_index": 460,
       "articulation_program": [
         [
@@ -164,48 +417,33 @@
         ]
       ],
       "decoded_peak": 32768,
-      "decoded_rms": 12856.638,
+      "decoded_rms": 7546.684,
       "ds_frequency_hz": 15102,
-      "ds_ima_guard_nibbles": [
-        8,
-        9
-      ],
-      "ds_ima_header_index": 65,
-      "ds_ima_header_predictor": -4553,
-      "ds_ima_loop_body_nibbles": 28214,
-      "ds_initial_prefix_samples_dropped": 1,
-      "ds_initial_volume": 17,
-      "ds_loop_length_words": 3527,
-      "ds_loop_point_words": 1,
-      "ds_loop_strategy": "state_word_then_source_loop_nibbles_plus_alignment_guards",
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 0,
+      "ds_ima_header_predictor": 0,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 92,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 13027,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "finite_source_loop_aot",
       "ds_pan": 64,
-      "ds_repeat_cycle_alignment_debt_samples": 2,
-      "ds_repeat_cycle_pcm_sha256": "5a12ec9b957390cb025565f4774ab44ed5428f3af71b13752af0f84fdd21f8e8",
-      "ds_repeat_cycle_samples": 28216,
-      "ds_repeat_cycle_source_samples": 28214,
-      "ds_repeat_oracle_cycle_end_index": 75,
-      "ds_repeat_oracle_cycle_end_predictor": -4409,
-      "ds_repeat_oracle_cycles": 3,
-      "ds_repeat_oracle_loop_index": 65,
-      "ds_repeat_oracle_loop_predictor": -4553,
-      "ds_repeat_oracle_missing_restore_cycle_2_pcm_sha256": "afe23ae391f2cb8216d4a016d4b375851c63d91df412a1ecab87c7446d385c82",
-      "ds_repeat_oracle_missing_restore_detected": true,
-      "ds_repeat_oracle_model": "header_once_pnt_latch_len_restore",
-      "ds_repeat_oracle_wrong_len_detected": true,
-      "ds_repeat_oracle_wrong_pnt_detected": true,
-      "ds_sample_count": 28214,
-      "ds_trailing_samples_dropped": 9,
-      "ds_volume": 17,
+      "ds_sample_count": 104204,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 92,
       "entry_index": 0,
       "entry_kind": "phase",
       "id": 626,
-      "ima_adpcm_bytes": 14112,
-      "ima_adpcm_sha256": "efb072be5dd4409901c4490c6d150b7c9b79a41f5368a61f90c021565002628c",
-      "ima_snr_db": 23.117,
+      "ima_adpcm_bytes": 52108,
+      "ima_adpcm_sha256": "f1625186cf7b73e488bceb7dd65e6a697731f3160f1f59e91ff9d1de9b7cfb19",
+      "ima_snr_db": 23.099,
       "name": "nSYAudioVoicePublicExcited",
       "net_pitch_cents": -1300,
       "omitted_fork_programs": [],
       "pack_data_offset": 336,
+      "packed_envelope_count": 0,
       "phase_index": 0,
       "render_ucd_program_id": 626,
       "root_fork_programs": [],
@@ -271,150 +509,215 @@
         {
           "articulation_volume": 20,
           "ds_volume": 17,
+          "source_pre_mixer_target": 4385,
+          "source_quadratic_target": 586,
           "tick": 0
         },
         {
           "articulation_volume": 30,
           "ds_volume": 25,
+          "source_pre_mixer_target": 6578,
+          "source_quadratic_target": 1320,
           "tick": 2
         },
         {
           "articulation_volume": 40,
           "ds_volume": 34,
+          "source_pre_mixer_target": 8770,
+          "source_quadratic_target": 2347,
           "tick": 4
         },
         {
           "articulation_volume": 50,
           "ds_volume": 42,
+          "source_pre_mixer_target": 10963,
+          "source_quadratic_target": 3667,
           "tick": 6
         },
         {
           "articulation_volume": 60,
           "ds_volume": 51,
+          "source_pre_mixer_target": 13156,
+          "source_quadratic_target": 5281,
           "tick": 9
         },
         {
           "articulation_volume": 70,
           "ds_volume": 59,
+          "source_pre_mixer_target": 15349,
+          "source_quadratic_target": 7189,
           "tick": 12
         },
         {
           "articulation_volume": 80,
           "ds_volume": 68,
+          "source_pre_mixer_target": 17541,
+          "source_quadratic_target": 9389,
           "tick": 15
         },
         {
           "articulation_volume": 90,
           "ds_volume": 76,
+          "source_pre_mixer_target": 19734,
+          "source_quadratic_target": 11884,
           "tick": 18
         },
         {
           "articulation_volume": 100,
           "ds_volume": 85,
+          "source_pre_mixer_target": 21927,
+          "source_quadratic_target": 14672,
           "tick": 21
         },
         {
           "articulation_volume": 110,
           "ds_volume": 93,
+          "source_pre_mixer_target": 24120,
+          "source_quadratic_target": 17754,
           "tick": 25
         },
         {
           "articulation_volume": 120,
           "ds_volume": 102,
+          "source_pre_mixer_target": 26312,
+          "source_quadratic_target": 21127,
           "tick": 45
         },
         {
           "articulation_volume": 127,
           "ds_volume": 108,
+          "source_pre_mixer_target": 27847,
+          "source_quadratic_target": 23665,
           "tick": 125
         },
         {
           "articulation_volume": 120,
           "ds_volume": 102,
+          "source_pre_mixer_target": 26312,
+          "source_quadratic_target": 21127,
           "tick": 185
         },
         {
           "articulation_volume": 110,
           "ds_volume": 93,
+          "source_pre_mixer_target": 24120,
+          "source_quadratic_target": 17754,
           "tick": 285
         },
         {
           "articulation_volume": 105,
           "ds_volume": 89,
+          "source_pre_mixer_target": 23023,
+          "source_quadratic_target": 16176,
           "tick": 385
         },
         {
           "articulation_volume": 100,
           "ds_volume": 85,
+          "source_pre_mixer_target": 21927,
+          "source_quadratic_target": 14672,
           "tick": 485
         },
         {
           "articulation_volume": 95,
           "ds_volume": 81,
+          "source_pre_mixer_target": 20830,
+          "source_quadratic_target": 13241,
           "tick": 585
         },
         {
           "articulation_volume": 90,
           "ds_volume": 76,
+          "source_pre_mixer_target": 19734,
+          "source_quadratic_target": 11884,
           "tick": 595
         },
         {
           "articulation_volume": 85,
           "ds_volume": 72,
+          "source_pre_mixer_target": 18638,
+          "source_quadratic_target": 10601,
           "tick": 685
         },
         {
           "articulation_volume": 80,
           "ds_volume": 68,
+          "source_pre_mixer_target": 17541,
+          "source_quadratic_target": 9389,
           "tick": 695
         },
         {
           "articulation_volume": 75,
           "ds_volume": 64,
+          "source_pre_mixer_target": 16445,
+          "source_quadratic_target": 8253,
           "tick": 775
         },
         {
           "articulation_volume": 70,
           "ds_volume": 59,
+          "source_pre_mixer_target": 15349,
+          "source_quadratic_target": 7189,
           "tick": 785
         },
         {
           "articulation_volume": 65,
           "ds_volume": 55,
+          "source_pre_mixer_target": 14252,
+          "source_quadratic_target": 6198,
           "tick": 835
         },
         {
           "articulation_volume": 60,
           "ds_volume": 51,
+          "source_pre_mixer_target": 13156,
+          "source_quadratic_target": 5281,
           "tick": 845
         },
         {
           "articulation_volume": 55,
           "ds_volume": 47,
+          "source_pre_mixer_target": 12060,
+          "source_quadratic_target": 4438,
           "tick": 895
         },
         {
           "articulation_volume": 50,
           "ds_volume": 42,
+          "source_pre_mixer_target": 10963,
+          "source_quadratic_target": 3667,
           "tick": 905
         },
         {
           "articulation_volume": 40,
           "ds_volume": 34,
+          "source_pre_mixer_target": 8770,
+          "source_quadratic_target": 2347,
           "tick": 965
         },
         {
           "articulation_volume": 30,
           "ds_volume": 25,
+          "source_pre_mixer_target": 6578,
+          "source_quadratic_target": 1320,
           "tick": 975
         },
         {
           "articulation_volume": 0,
           "ds_volume": 0,
+          "source_pre_mixer_target": 0,
+          "source_quadratic_target": 0,
           "tick": 1075
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer=((articulation_volume*((ucd_volume*127)>>7)*127)>>7); mixer=(pre_mixer*pre_mixer)>>15; N_MICRO linearly ramps each target over 184 samples",
+      "trim_applied": false,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 104204,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": null,
+      "trim_source_samples_removed": 0,
+      "trim_strategy": "finite_source_loop_duration_render",
       "ucd_program": [
         [
           "set_unk2D",
@@ -457,6 +760,7 @@
       "wave_base": 2966600
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 331,
       "articulation_program": [
         [
@@ -485,7 +789,7 @@
         ]
       ],
       "decoded_peak": 32768,
-      "decoded_rms": 8855.318,
+      "decoded_rms": 9835.168,
       "ds_frequency_hz": 16000,
       "ds_ima_guard_nibbles": [],
       "ds_ima_header_index": 55,
@@ -493,23 +797,25 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 106,
-      "ds_loop_length_words": 1407,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 1140,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
       "ds_pan": 64,
-      "ds_sample_count": 11248,
+      "ds_sample_count": 9109,
       "ds_trailing_samples_dropped": 0,
       "ds_volume": 106,
       "entry_index": 1,
       "entry_kind": "phase",
       "id": 470,
-      "ima_adpcm_bytes": 5628,
-      "ima_adpcm_sha256": "668cade614e56e94bdd96454bf11e0cea8e86cc42bb28f887be67ec60ea453c6",
-      "ima_snr_db": 26.731,
+      "ima_adpcm_bytes": 4560,
+      "ima_adpcm_sha256": "da6ec8228ec6cdc90c7a68568fa2bb002b6f94601be6bfe08e6f459dcd3ac35c",
+      "ima_snr_db": 26.732,
       "name": "nSYAudioVoiceAnnounceThree",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 14448,
+      "pack_data_offset": 52444,
+      "packed_envelope_count": 0,
       "phase_index": 1,
       "render_ucd_program_id": 470,
       "root_fork_programs": [],
@@ -575,10 +881,31 @@
         {
           "articulation_volume": 127,
           "ds_volume": 106,
+          "source_pre_mixer_target": 27469,
+          "source_quadratic_target": 23026,
           "tick": 0
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": true,
+      "trim_current_ds_consumption_before_guard_samples": 9108,
+      "trim_current_ds_consumption_reach_samples": 9109,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 9109,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "801fa7c7cdb82e07dd4c481d6de97ab4a4d084b3e88bd811560aed8fb4fc9cf1",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 9108,
+          "duration_ticks": 99,
+          "frequency_hz": 16000,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 2139,
+      "trim_source_schedule_reach_samples": 9109,
+      "trim_source_schedule_samples_before_guard": 9108,
+      "trim_strategy": "source_note_schedule_and_current_ds_consumption_with_one_sample_ceiling",
       "ucd_program": [
         [
           "set_unk2D",
@@ -621,6 +948,7 @@
       "wave_base": 1757880
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 332,
       "articulation_program": [
         [
@@ -649,7 +977,7 @@
         ]
       ],
       "decoded_peak": 32009,
-      "decoded_rms": 8272.839,
+      "decoded_rms": 9222.448,
       "ds_frequency_hz": 16000,
       "ds_ima_guard_nibbles": [],
       "ds_ima_header_index": 0,
@@ -657,23 +985,25 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 106,
-      "ds_loop_length_words": 1435,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 1151,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
       "ds_pan": 64,
-      "ds_sample_count": 11472,
+      "ds_sample_count": 9201,
       "ds_trailing_samples_dropped": 0,
       "ds_volume": 106,
       "entry_index": 2,
       "entry_kind": "phase",
       "id": 469,
-      "ima_adpcm_bytes": 5740,
-      "ima_adpcm_sha256": "16a68f0bcc93f389677358f2040c7659f59b44844158b2db976f30fca1917f13",
-      "ima_snr_db": 25.254,
+      "ima_adpcm_bytes": 4604,
+      "ima_adpcm_sha256": "ceaec3acdbfc8321cd5c7149b87dd6fa895710514c74c2af95d345a992a1cf38",
+      "ima_snr_db": 25.241,
       "name": "nSYAudioVoiceAnnounceTwo",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 20076,
+      "pack_data_offset": 57004,
+      "packed_envelope_count": 0,
       "phase_index": 2,
       "render_ucd_program_id": 469,
       "root_fork_programs": [],
@@ -739,10 +1069,31 @@
         {
           "articulation_volume": 127,
           "ds_volume": 106,
+          "source_pre_mixer_target": 27469,
+          "source_quadratic_target": 23026,
           "tick": 0
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": true,
+      "trim_current_ds_consumption_before_guard_samples": 9200,
+      "trim_current_ds_consumption_reach_samples": 9201,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 9201,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "ab09e8e41568ec2c6f9f013eb28a240f293e6e187a200e022a0417af3fe7c41b",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 9200,
+          "duration_ticks": 100,
+          "frequency_hz": 16000,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 2271,
+      "trim_source_schedule_reach_samples": 9201,
+      "trim_source_schedule_samples_before_guard": 9200,
+      "trim_strategy": "source_note_schedule_and_current_ds_consumption_with_one_sample_ceiling",
       "ucd_program": [
         [
           "set_unk2D",
@@ -785,6 +1136,7 @@
       "wave_base": 1764208
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 333,
       "articulation_program": [
         [
@@ -813,7 +1165,7 @@
         ]
       ],
       "decoded_peak": 32768,
-      "decoded_rms": 7934.794,
+      "decoded_rms": 9335.295,
       "ds_frequency_hz": 16000,
       "ds_ima_guard_nibbles": [],
       "ds_ima_header_index": 22,
@@ -821,23 +1173,25 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 111,
-      "ds_loop_length_words": 1357,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 979,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
       "ds_pan": 64,
-      "ds_sample_count": 10848,
+      "ds_sample_count": 7821,
       "ds_trailing_samples_dropped": 0,
       "ds_volume": 111,
       "entry_index": 3,
       "entry_kind": "phase",
       "id": 467,
-      "ima_adpcm_bytes": 5428,
-      "ima_adpcm_sha256": "8f440486dd3ca8cffadbe6c5ec436f391a6385696ddf766113d05ca45c7720ee",
-      "ima_snr_db": 28.393,
+      "ima_adpcm_bytes": 3916,
+      "ima_adpcm_sha256": "5d690f3a6ad9f2b682e2ba8e383e4aaa43942d0fa729b73169721d99670e5862",
+      "ima_snr_db": 28.39,
       "name": "nSYAudioVoiceAnnounceOne",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 25816,
+      "pack_data_offset": 61608,
+      "packed_envelope_count": 0,
       "phase_index": 3,
       "render_ucd_program_id": 467,
       "root_fork_programs": [],
@@ -903,10 +1257,31 @@
         {
           "articulation_volume": 127,
           "ds_volume": 111,
+          "source_pre_mixer_target": 28729,
+          "source_quadratic_target": 25187,
           "tick": 0
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": true,
+      "trim_current_ds_consumption_before_guard_samples": 7820,
+      "trim_current_ds_consumption_reach_samples": 7821,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 7821,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "fbb5539fc312bf1f0e2be7f69c53792491f5ab2d4e672c75c525742b0b3452cd",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 7820,
+          "duration_ticks": 85,
+          "frequency_hz": 16000,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 3027,
+      "trim_source_schedule_reach_samples": 7821,
+      "trim_source_schedule_samples_before_guard": 7820,
+      "trim_strategy": "source_note_schedule_and_current_ds_consumption_with_one_sample_ceiling",
       "ucd_program": [
         [
           "set_unk2D",
@@ -949,6 +1324,7 @@
       "wave_base": 1770664
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 334,
       "articulation_program": [
         [
@@ -977,7 +1353,7 @@
         ]
       ],
       "decoded_peak": 32768,
-      "decoded_rms": 7690.527,
+      "decoded_rms": 8238.631,
       "ds_frequency_hz": 16000,
       "ds_ima_guard_nibbles": [],
       "ds_ima_header_index": 40,
@@ -985,23 +1361,25 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 124,
-      "ds_loop_length_words": 1981,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 1726,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
       "ds_pan": 64,
-      "ds_sample_count": 15840,
+      "ds_sample_count": 13801,
       "ds_trailing_samples_dropped": 0,
       "ds_volume": 124,
       "entry_index": 4,
       "entry_kind": "phase",
       "id": 490,
-      "ima_adpcm_bytes": 7924,
-      "ima_adpcm_sha256": "214bfa4c1964973bcf3efaa82a12e68c3b2b9d8489c8c0efea9bedddfd10927b",
+      "ima_adpcm_bytes": 6904,
+      "ima_adpcm_sha256": "f33b2eee06748d1984e89e9cef97606d9c1d8c644e104cbb3326e75999fcf37a",
       "ima_snr_db": 26.512,
       "name": "nSYAudioVoiceAnnounceGo",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 31244,
+      "pack_data_offset": 65524,
+      "packed_envelope_count": 0,
       "phase_index": 4,
       "render_ucd_program_id": 490,
       "root_fork_programs": [],
@@ -1067,10 +1445,31 @@
         {
           "articulation_volume": 127,
           "ds_volume": 124,
+          "source_pre_mixer_target": 31879,
+          "source_quadratic_target": 31014,
           "tick": 0
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": true,
+      "trim_current_ds_consumption_before_guard_samples": 13800,
+      "trim_current_ds_consumption_reach_samples": 13801,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 13801,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "647566464d00d204664f6a13be5fd144194c9933ed7f011006faa80261435429",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 13800,
+          "duration_ticks": 150,
+          "frequency_hz": 16000,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 2039,
+      "trim_source_schedule_reach_samples": 13801,
+      "trim_source_schedule_samples_before_guard": 13800,
+      "trim_strategy": "source_note_schedule_and_current_ds_consumption_with_one_sample_ceiling",
       "ucd_program": [
         [
           "set_unk2D",
@@ -1113,6 +1512,7 @@
       "wave_base": 1776768
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 306,
       "articulation_program": [
         [
@@ -1136,7 +1536,7 @@
         ]
       ],
       "decoded_peak": 29365,
-      "decoded_rms": 4394.008,
+      "decoded_rms": 4467.425,
       "ds_frequency_hz": 16009,
       "ds_ima_guard_nibbles": [],
       "ds_ima_header_index": 30,
@@ -1144,23 +1544,25 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 95,
-      "ds_loop_length_words": 1143,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 1106,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
       "ds_pan": 64,
-      "ds_sample_count": 9136,
+      "ds_sample_count": 8838,
       "ds_trailing_samples_dropped": 0,
       "ds_volume": 95,
       "entry_index": 5,
       "entry_kind": "ko",
       "id": 439,
-      "ima_adpcm_bytes": 4572,
-      "ima_adpcm_sha256": "e66ca536167618e8916f2c36d789742c785946e7f4793d8248cb584a90e23189",
+      "ima_adpcm_bytes": 4424,
+      "ima_adpcm_sha256": "a71ef24f6f54df209e7b782f6322481aa73f7dda31128a6cb4151b70fc5a0f7f",
       "ima_snr_db": 23.833,
       "name": "nSYAudioVoiceMarioDead",
       "net_pitch_cents": -1199,
       "omitted_fork_programs": [],
-      "pack_data_offset": 39168,
+      "pack_data_offset": 72428,
+      "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 439,
       "root_fork_programs": [],
@@ -1254,10 +1656,49 @@
         {
           "articulation_volume": 125,
           "ds_volume": 95,
+          "source_pre_mixer_target": 24556,
+          "source_quadratic_target": 18402,
           "tick": 0
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": true,
+      "trim_current_ds_consumption_before_guard_samples": 8837,
+      "trim_current_ds_consumption_reach_samples": 8838,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 8838,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "21b2a92339ebff5a17bbd1c733d37e93f415e8d9ccd65d8d080c7b9cb68687ec",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 553,
+          "duration_ticks": 6,
+          "frequency_hz": 16009,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 1842,
+          "duration_ticks": 20,
+          "frequency_hz": 16009,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 2762,
+          "duration_ticks": 30,
+          "frequency_hz": 16009,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 3476,
+          "duration_ticks": 40,
+          "frequency_hz": 15111,
+          "pitch_code": 12
+        }
+      ],
+      "trim_source_samples_removed": 298,
+      "trim_source_schedule_reach_samples": 8634,
+      "trim_source_schedule_samples_before_guard": 8633,
+      "trim_strategy": "source_note_schedule_and_current_ds_consumption_with_one_sample_ceiling",
       "ucd_program": [
         [
           "set_unk2D",
@@ -1326,6 +1767,7 @@
       "wave_base": 1502992
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 187,
       "articulation_program": [
         [
@@ -1393,6 +1835,7 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 30,
+      "ds_loop_flag": 0,
       "ds_loop_length_words": 837,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
@@ -1409,7 +1852,8 @@
       "name": "nSYAudioFGMMarioDeadSlam",
       "net_pitch_cents": -1100,
       "omitted_fork_programs": [],
-      "pack_data_offset": 43740,
+      "pack_data_offset": 76852,
+      "packed_envelope_count": 3,
       "phase_index": null,
       "render_ucd_program_id": 287,
       "root_fork_programs": [
@@ -1457,25 +1901,58 @@
         {
           "articulation_volume": 40,
           "ds_volume": 30,
+          "source_pre_mixer_target": 7858,
+          "source_quadratic_target": 1884,
           "tick": 0
         },
         {
           "articulation_volume": 50,
           "ds_volume": 38,
+          "source_pre_mixer_target": 9822,
+          "source_quadratic_target": 2944,
           "tick": 4
         },
         {
           "articulation_volume": 35,
           "ds_volume": 27,
+          "source_pre_mixer_target": 6875,
+          "source_quadratic_target": 1442,
           "tick": 22
         },
         {
           "articulation_volume": 5,
           "ds_volume": 4,
+          "source_pre_mixer_target": 982,
+          "source_quadratic_target": 29,
           "tick": 30
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 5166,
+      "trim_current_ds_consumption_reach_samples": 5167,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 6688,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "434726887015ed9b0501cffb2a5d173cf33bf993617333fa8d4679a3a75a2924",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 3217,
+          "duration_ticks": 33,
+          "frequency_hz": 16951,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 1950,
+          "duration_ticks": 20,
+          "frequency_hz": 16951,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 5168,
+      "trim_source_schedule_samples_before_guard": 5167,
+      "trim_strategy": "untrimmed_articulation_pitch_modulation",
       "ucd_program": [
         [
           "set_unk2D",
@@ -1524,6 +2001,7 @@
       "wave_base": 251360
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 223,
       "articulation_program": [
         [
@@ -1580,6 +2058,7 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 114,
+      "ds_loop_flag": 0,
       "ds_loop_length_words": 1227,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
@@ -1596,7 +2075,8 @@
       "name": "nSYAudioVoiceFoxDead",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 47088,
+      "pack_data_offset": 80200,
+      "packed_envelope_count": 5,
       "phase_index": null,
       "render_ucd_program_id": 370,
       "root_fork_programs": [],
@@ -1678,35 +2158,78 @@
         {
           "articulation_volume": 127,
           "ds_volume": 114,
+          "source_pre_mixer_target": 29359,
+          "source_quadratic_target": 26304,
           "tick": 0
         },
         {
           "articulation_volume": 120,
           "ds_volume": 108,
+          "source_pre_mixer_target": 27741,
+          "source_quadratic_target": 23485,
           "tick": 20
         },
         {
           "articulation_volume": 110,
           "ds_volume": 99,
+          "source_pre_mixer_target": 25429,
+          "source_quadratic_target": 19733,
           "tick": 40
         },
         {
           "articulation_volume": 100,
           "ds_volume": 90,
+          "source_pre_mixer_target": 23117,
+          "source_quadratic_target": 16308,
           "tick": 60
         },
         {
           "articulation_volume": 90,
           "ds_volume": 81,
+          "source_pre_mixer_target": 20806,
+          "source_quadratic_target": 13210,
           "tick": 80
         },
         {
           "articulation_volume": 80,
           "ds_volume": 72,
+          "source_pre_mixer_target": 18494,
+          "source_quadratic_target": 10437,
           "tick": 100
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 11040,
+      "trim_current_ds_consumption_reach_samples": 11041,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 9808,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "981080097d24ccd16a8de1c417f409bb4a2a8b38d273ce57d8df60d16e1ba39d",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 4600,
+          "duration_ticks": 50,
+          "frequency_hz": 16000,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 3680,
+          "duration_ticks": 40,
+          "frequency_hz": 16000,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 2760,
+          "duration_ticks": 30,
+          "frequency_hz": 16000,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 11041,
+      "trim_source_schedule_samples_before_guard": 11040,
+      "trim_strategy": "source_note_schedule_and_current_ds_consumption_with_one_sample_ceiling",
       "ucd_program": [
         [
           "set_unk2D",
@@ -1765,6 +2288,7 @@
       "wave_base": 908424
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 187,
       "articulation_program": [
         [
@@ -1832,6 +2356,7 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 30,
+      "ds_loop_flag": 0,
       "ds_loop_length_words": 837,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
@@ -1848,7 +2373,8 @@
       "name": "nSYAudioFGMFoxDeadSlam",
       "net_pitch_cents": -1100,
       "omitted_fork_programs": [],
-      "pack_data_offset": 43740,
+      "pack_data_offset": 76852,
+      "packed_envelope_count": 3,
       "phase_index": null,
       "render_ucd_program_id": 287,
       "root_fork_programs": [
@@ -1896,25 +2422,58 @@
         {
           "articulation_volume": 40,
           "ds_volume": 30,
+          "source_pre_mixer_target": 7858,
+          "source_quadratic_target": 1884,
           "tick": 0
         },
         {
           "articulation_volume": 50,
           "ds_volume": 38,
+          "source_pre_mixer_target": 9822,
+          "source_quadratic_target": 2944,
           "tick": 4
         },
         {
           "articulation_volume": 35,
           "ds_volume": 27,
+          "source_pre_mixer_target": 6875,
+          "source_quadratic_target": 1442,
           "tick": 22
         },
         {
           "articulation_volume": 5,
           "ds_volume": 4,
+          "source_pre_mixer_target": 982,
+          "source_quadratic_target": 29,
           "tick": 30
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 5166,
+      "trim_current_ds_consumption_reach_samples": 5167,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 6688,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "434726887015ed9b0501cffb2a5d173cf33bf993617333fa8d4679a3a75a2924",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 3217,
+          "duration_ticks": 33,
+          "frequency_hz": 16951,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 1950,
+          "duration_ticks": 20,
+          "frequency_hz": 16951,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 5168,
+      "trim_source_schedule_samples_before_guard": 5167,
+      "trim_strategy": "untrimmed_articulation_pitch_modulation",
       "ucd_program": [
         [
           "set_unk2D",
@@ -1963,6 +2522,7 @@
       "wave_base": 251360
     },
     {
+      "acoustic_oracle": {},
       "articulation_index": 163,
       "articulation_program": [
         [
@@ -2051,7 +2611,7 @@
         ]
       ],
       "decoded_peak": 32768,
-      "decoded_rms": 12170.238,
+      "decoded_rms": 13801.891,
       "ds_frequency_hz": 8476,
       "ds_ima_guard_nibbles": [],
       "ds_ima_header_index": 70,
@@ -2059,25 +2619,27 @@
       "ds_ima_loop_body_nibbles": 0,
       "ds_initial_prefix_samples_dropped": 0,
       "ds_initial_volume": 124,
-      "ds_loop_length_words": 3161,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 1865,
       "ds_loop_point_words": 0,
       "ds_loop_strategy": "none",
       "ds_pan": 64,
-      "ds_sample_count": 25280,
+      "ds_sample_count": 14913,
       "ds_trailing_samples_dropped": 0,
       "ds_volume": 124,
       "entry_index": 9,
       "entry_kind": "ko",
       "id": 154,
-      "ima_adpcm_bytes": 12644,
-      "ima_adpcm_sha256": "676ebc7efd26cea3e6c477c9756aff2fe3d1d20ebe460074cc75086399fe08b9",
-      "ima_snr_db": 26.028,
+      "ima_adpcm_bytes": 7460,
+      "ima_adpcm_sha256": "45cfe954355dd4edc22c3cc62a60dea59672b57a7f6ef1df21366ee012abc87c",
+      "ima_snr_db": 25.821,
       "name": "nSYAudioFGMDeadExplodeL",
       "net_pitch_cents": -2300,
       "omitted_fork_programs": [
         685
       ],
-      "pack_data_offset": 51996,
+      "pack_data_offset": 85108,
+      "packed_envelope_count": 13,
       "phase_index": null,
       "render_ucd_program_id": 154,
       "root_fork_programs": [
@@ -2158,75 +2720,128 @@
         {
           "articulation_volume": 127,
           "ds_volume": 124,
+          "source_pre_mixer_target": 31879,
+          "source_quadratic_target": 31014,
           "tick": 0
         },
         {
           "articulation_volume": 116,
           "ds_volume": 113,
+          "source_pre_mixer_target": 29118,
+          "source_quadratic_target": 25874,
           "tick": 25
         },
         {
           "articulation_volume": 110,
           "ds_volume": 107,
+          "source_pre_mixer_target": 27612,
+          "source_quadratic_target": 23267,
           "tick": 50
         },
         {
           "articulation_volume": 105,
           "ds_volume": 102,
+          "source_pre_mixer_target": 26357,
+          "source_quadratic_target": 21200,
           "tick": 75
         },
         {
           "articulation_volume": 100,
           "ds_volume": 97,
+          "source_pre_mixer_target": 25102,
+          "source_quadratic_target": 19229,
           "tick": 100
         },
         {
           "articulation_volume": 90,
           "ds_volume": 88,
+          "source_pre_mixer_target": 22592,
+          "source_quadratic_target": 15576,
           "tick": 120
         },
         {
           "articulation_volume": 80,
           "ds_volume": 78,
+          "source_pre_mixer_target": 20081,
+          "source_quadratic_target": 12306,
           "tick": 140
         },
         {
           "articulation_volume": 70,
           "ds_volume": 68,
+          "source_pre_mixer_target": 17571,
+          "source_quadratic_target": 9421,
           "tick": 158
         },
         {
           "articulation_volume": 60,
           "ds_volume": 58,
+          "source_pre_mixer_target": 15061,
+          "source_quadratic_target": 6922,
           "tick": 176
         },
         {
           "articulation_volume": 50,
           "ds_volume": 49,
+          "source_pre_mixer_target": 12551,
+          "source_quadratic_target": 4807,
           "tick": 194
         },
         {
           "articulation_volume": 40,
           "ds_volume": 39,
+          "source_pre_mixer_target": 10040,
+          "source_quadratic_target": 3076,
           "tick": 212
         },
         {
           "articulation_volume": 30,
           "ds_volume": 29,
+          "source_pre_mixer_target": 7530,
+          "source_quadratic_target": 1730,
           "tick": 232
         },
         {
           "articulation_volume": 7,
           "ds_volume": 7,
+          "source_pre_mixer_target": 1757,
+          "source_quadratic_target": 94,
           "tick": 252
         },
         {
           "articulation_volume": 0,
           "ds_volume": 0,
+          "source_pre_mixer_target": 0,
+          "source_quadratic_target": 0,
           "tick": 272
         }
       ],
-      "source_volume_mapping": "((articulation_volume * ((ucd_volume * 127) >> 7) * 127) >> 7) linearly mapped from 0..32767 to DS 0..127",
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": true,
+      "trim_current_ds_consumption_before_guard_samples": 14622,
+      "trim_current_ds_consumption_reach_samples": 14623,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 14913,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "95b15298900185a62667d5a7ae9b5df854d0284ff1f9cc1f92990ef5fe0df4bf",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 9748,
+          "duration_ticks": 200,
+          "frequency_hz": 8476,
+          "pitch_code": 2
+        },
+        {
+          "ceiling_samples": 5164,
+          "duration_ticks": 100,
+          "frequency_hz": 8980,
+          "pitch_code": 3
+        }
+      ],
+      "trim_source_samples_removed": 10367,
+      "trim_source_schedule_reach_samples": 14913,
+      "trim_source_schedule_samples_before_guard": 14912,
+      "trim_strategy": "source_note_schedule_and_current_ds_consumption_with_one_sample_ceiling",
       "ucd_program": [
         [
           "set_unk2D",
@@ -2287,18 +2902,16 @@
   "format_version": 3,
   "header_bytes": 16,
   "known_runtime_fidelity_debt": [
-    "PublicExcited drops its one-sample pre-roll; its AOT IMA state word and PNT=1 loop encode every sample in the exact BattleShip [1, 28215) range as a data nibble. Each DS repeat cycle then decodes two word-alignment guard samples, so the 28,216-sample cycle is not exclusively the 28,214-sample BattleShip range.",
-    "The AOT BattleShip volume envelope is scheduled from the 60 Hz game update and uses DS step volume; N64 applied 5.75 ms ticks with a 5.75 ms synthesizer ramp.",
-    "The regular KO entries retain their exact source wavetable, initial pitch, duration, and volume envelope; source pitch automation is not yet scheduled on DS channels.",
+    "The regular KO entries retain their exact source wavetable, duration-proven prefix, initial pitch, and volume envelope; source pitch automation is not yet scheduled on DS channels.",
     "DeadExplodeL currently renders its primary UCD voice; forked source voice 685 remains explicit metadata fidelity debt."
   ],
-  "mapping_sha256": "37e9773c757a05c5b6a34149a14e277aa5af7ff1eaf20d2ca462dd91e926b12c",
-  "mapping_sha256_lo": "0x3c77e937",
+  "mapping_sha256": "1288fcb8d6cf39e5645a8f4909124dbe4f542c51f164d7bd39e214f327807d3a",
+  "mapping_sha256_lo": "0xb8fc8812",
   "non_loop_envelope_sha256": "11c0720ad4a73e021cf216fd2ea4754b4c6e3e40e4c03f3b8d29b3ad04e537b1",
-  "non_loop_sample_sha256": "5485b291f399f7cdc4eb2beadcb6ff5b58f7caf5fd2a335f0cfd7ed1790a6786",
-  "pack_sha256": "c6d7136ef377b52f1b6ac97045da87ef7d04792dfbc2913543e584734e65c747",
-  "resident_bytes": 64848,
-  "resident_limit_bytes": 65536,
+  "non_loop_sample_sha256": "ab270d55bfd3729b1bee8b92dbfb94ac332dce27d1994d2255fbc6a3c6f590b0",
+  "pack_sha256": "b30ed8c298b7e6d9e52b77a89effb3668e3de58e17d3520b91d9f819c46f9563",
+  "resident_bytes": 92664,
+  "resident_limit_bytes": 98304,
   "runtime_conversion": false,
   "source_fgm_output_rate_hz": 32000,
   "source_fgm_timer_microseconds": 5750,
@@ -2324,6 +2937,6 @@
       "wrapped_sha256": "12b043e8db6572256cc15ce684e9fae4f56a4d076c2f47bce930d0ddeea6ab9c"
     }
   },
-  "unique_sample_bytes": 64304,
+  "unique_sample_bytes": 92232,
   "unique_sample_count": 9
 }

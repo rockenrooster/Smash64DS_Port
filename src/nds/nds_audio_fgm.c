@@ -124,7 +124,7 @@ static u16 sNdsAudioFgmInstanceToken;
 
 _Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 336u,
                "FGM pack header layout changed");
-_Static_assert(NDS_AUDIO_FGM_PACK_BYTES <= (64u * 1024u),
+_Static_assert(NDS_AUDIO_FGM_PACK_BYTES <= (96u * 1024u),
                "FGM pack exceeds its resident-memory gate");
 _Static_assert(offsetof(NDSAudioFgmHandle, effect) == 0u,
                "BattleShip audio handle must be the backend handle prefix");
@@ -139,7 +139,7 @@ _Static_assert(sizeof(NDSAudioFgmArm7AckEvent) == 32u,
                "FGM ARM7 ACK event layout changed");
 _Static_assert(offsetof(NDSAudioFgmArm7AckTrace, events) == 48u,
                "FGM ARM7 ACK event array moved");
-_Static_assert(sizeof(NDSAudioFgmArm7AckTrace) == 144u,
+_Static_assert(sizeof(NDSAudioFgmArm7AckTrace) == 112u,
                "FGM ARM7 ACK trace layout changed");
 #endif
 
@@ -399,25 +399,25 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
         1200u, 99u, 100u, 85u, 150u, 96u, 53u, 120u, 53u, 300u
     };
     static const u8 expected_volumes[NDS_AUDIO_FGM_ENTRY_COUNT] = {
-        17u, 106u, 106u, 111u, 124u, 95u, 30u, 114u, 30u, 124u
+        92u, 106u, 106u, 111u, 124u, 95u, 30u, 114u, 30u, 124u
     };
     static const u16 expected_sounds[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         320u, 208u, 209u, 210u, 211u, 183u, 28u, 104u, 28u, 0u
     };
     static const u32 expected_data_bytes[NDS_AUDIO_FGM_ENTRY_COUNT] = {
-        14112u, 5628u, 5740u, 5428u, 7924u,
-        4572u, 3348u, 4908u, 3348u, 12644u
+        52108u, 4560u, 4604u, 3916u, 6904u,
+        4424u, 3348u, 4908u, 3348u, 7460u
     };
     static const u32 expected_sample_counts[NDS_AUDIO_FGM_ENTRY_COUNT] = {
-        28214u, 11248u, 11472u, 10848u, 15840u,
-        9136u, 6688u, 9808u, 6688u, 25280u
+        104204u, 9109u, 9201u, 7821u, 13801u,
+        8838u, 6688u, 9808u, 6688u, 14913u
     };
     static const u16 expected_envelope_counts[NDS_AUDIO_FGM_ENTRY_COUNT] = {
-        28u, 0u, 0u, 0u, 0u, 0u, 3u, 5u, 3u, 13u
+        0u, 0u, 0u, 0u, 0u, 0u, 3u, 5u, 3u, 13u
     };
     NDSAudioFgmPackEntry *entry = &sNdsAudioFgmEntries[index];
-    u32 expected_flags = (index == 0u) ? 1u : 0u;
-    u32 expected_loop_point_words = (index == 0u) ? 1u : 0u;
+    u32 expected_flags = 0u;
+    u32 expected_loop_point_words = 0u;
     u32 next_unique_data_offset = NDS_AUDIO_FGM_PACK_DATA_OFFSET;
     s32 is_duplicate = FALSE;
     u32 prior_index;
@@ -613,7 +613,7 @@ void ndsAudioFgmLoadFenced(void)
     u32 envelope_cursor;
 
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    /* Keep Calico's low-load manual mode for the three explicit, blocking
+    /* Keep Calico's low-load manual mode for the two explicit, blocking
      * ID-626 command acknowledgments in this diagnostic-only build. */
     soundSetAutoUpdate(false);
 #endif
@@ -756,33 +756,7 @@ void ndsAudioFgmUpdate(void)
                             now));
                     break;
                 }
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-                if ((ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE) &&
-                    (((u32)handle->envelope_index + 1u) ==
-                     (u32)handle->envelope_count))
-                {
-                    u32 command_tick = cpuGetTiming();
-                    u32 command_return_tick;
-                    u32 active_channels;
-                    u32 acknowledge_tick;
-
-                    soundSetVolume(handle->channel, point[2]);
-                    command_return_tick = cpuGetTiming();
-                    active_channels = (u32)soundGetActiveChannels();
-                    acknowledge_tick = cpuGetTiming();
-                    ndsAudioFgmArm7AckTraceRecord(
-                        handle, NDS_AUDIO_FGM_ARM7_ACK_KIND_ENVELOPE,
-                        point_tick, point[2], now, command_tick,
-                        command_return_tick, acknowledge_tick,
-                        active_channels);
-                }
-                else
-                {
-#endif
-                    soundSetVolume(handle->channel, point[2]);
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-                }
-#endif
+                soundSetVolume(handle->channel, point[2]);
                 handle->envelope_index++;
                 gNdsAudioFgmEnvelopeStepCount++;
             }

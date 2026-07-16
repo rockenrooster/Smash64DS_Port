@@ -16,7 +16,7 @@ Original BattleShip game code + Nintendo DS backend = playable port
 
 Never replace portable original gameplay with handwritten approximations, scripted behavior, or a DS-native Smash rewrite. Import and adapt the original source whenever possible. Keep DS-specific behavior in src/nds or src/port, compatibility declarations in include, and original TU imports in src/import.
 
-Gameplay semantics remain 1:1. Presentation targets roughly 90% overall visual likeness under Nintendo DS performance and memory constraints, not pixel identity. Give cosmetic exactness one measured focused attempt; if it misses the budget or threatens P1, retain the cheapest recognizable source-derived approximation and document its visible delta, measured reason, and dated screenshot under `artifacts/visibility`. This exception never permits approximating hitboxes, collision, physics, attack timing, gameplay telegraphs, camera meaning, rules, or state transitions.
+Gameplay semantics remain 1:1. Presentation targets roughly 90% overall visual likeness under Nintendo DS performance and memory constraints, not pixel identity. Give cosmetic exactness one measured focused attempt (Native AOT preffered when applicable); if it misses the budget or threatens P1, retain the cheapest recognizable source-derived approximation and document its visible delta, measured reason, and dated screenshot under `artifacts/visibility`. This exception never permits approximating hitboxes, collision, physics, attack timing, gameplay telegraphs, camera meaning, rules, or state transitions.
 
 PRIORITIES
 

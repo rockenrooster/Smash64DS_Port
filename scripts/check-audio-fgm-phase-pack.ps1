@@ -31,7 +31,8 @@ $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
 }
-if ([int64]$metadata.resident_bytes -ne 64848) {
+if (([int64]$metadata.resident_bytes -ne 92664) -or
+    ([int64]$metadata.resident_limit_bytes -ne 98304)) {
     throw "FGM pack resident size changed: $($metadata.resident_bytes)"
 }
 
@@ -48,7 +49,7 @@ if (($koIDs -join ',') -ne '439,292,370,289,154') {
     throw "Unexpected regular-KO subset: $($koIDs -join ',')"
 }
 if (([int]$metadata.unique_sample_count -ne 9) -or
-    ([int]$metadata.unique_sample_bytes -ne 64304)) {
+    ([int]$metadata.unique_sample_bytes -ne 92232)) {
     throw 'Regular-KO sample deduplication fixture changed.'
 }
 if (([int]$metadata.format_version -ne 3) -or
@@ -57,13 +58,13 @@ if (([int]$metadata.format_version -ne 3) -or
     ([int]$metadata.envelope_point_bytes -ne 4)) {
     throw 'Unexpected FGM pack entry/envelope format.'
 }
-if (($metadata.mapping_sha256_lo -ne '0x3c77e937') -or
+if (($metadata.mapping_sha256_lo -ne '0xb8fc8812') -or
     ($metadata.pack_sha256 -ne
-        'c6d7136ef377b52f1b6ac97045da87ef7d04792dfbc2913543e584734e65c747')) {
+        'b30ed8c298b7e6d9e52b77a89effb3668e3de58e17d3520b91d9f819c46f9563')) {
     throw 'FGM pack mapping or binary hash changed.'
 }
 if (($metadata.non_loop_sample_sha256 -ne
-        '5485b291f399f7cdc4eb2beadcb6ff5b58f7caf5fd2a335f0cfd7ed1790a6786') -or
+        'ab270d55bfd3729b1bee8b92dbfb94ac332dce27d1994d2255fbc6a3c6f590b0') -or
     ($metadata.non_loop_envelope_sha256 -ne
         '11c0720ad4a73e021cf216fd2ea4754b4c6e3e40e4c03f3b8d29b3ad04e537b1')) {
     throw 'Non-loop FGM sample or packed-envelope bytes changed.'
@@ -89,14 +90,14 @@ foreach ($entry in $metadata.entries) {
 $publicExcited = $metadata.entries | Where-Object { [int]$_.id -eq 626 }
 if (($publicExcited.ds_loop_strategy -ne 'finite_source_loop_aot') -or
     ([int]$publicExcited.ds_sample_count -ne 104204) -or
+    ([int]$publicExcited.ds_frequency_hz -ne 15102) -or
+    ([int]$publicExcited.source_duration_ticks -ne 1200) -or
+    ([int64]$publicExcited.source_duration_microseconds -ne 6900000) -or
+    ([int]$publicExcited.ds_loop_flag -ne 0) -or
     ([int]$publicExcited.ds_loop_point_words -ne 0) -or
     ([int]$publicExcited.packed_envelope_count -ne 0)) {
     throw ('PublicExcited still uses a hardware loop or runtime envelope ' +
         'instead of the finite 104204-sample AOT cue.')
-}
-if ($publicExcited.ds_loop_strategy -ne
-    'state_word_then_source_loop_nibbles_plus_alignment_guards') {
-    throw 'PublicExcited DS loop-body/alignment strategy changed.'
 }
 if (([int]$publicExcited.source_loop_start -ne 1) -or
     ([int]$publicExcited.source_loop_end -ne 28215) -or
@@ -104,57 +105,115 @@ if (([int]$publicExcited.source_loop_start -ne 1) -or
     throw 'PublicExcited source loop fixture changed.'
 }
 if (($publicExcited.source_volume_envelope.Count -ne 29) -or
-    ([int]$publicExcited.ds_initial_volume -ne 17) -or
+    ([int]$publicExcited.ds_initial_volume -ne 92) -or
     ([int]$publicExcited.ds_pan -ne 64)) {
     throw 'PublicExcited AOT volume envelope fixture changed.'
 }
+$envelopeTicks = @($publicExcited.source_volume_envelope |
+    ForEach-Object { [int]$_.tick })
+$quadraticTargets = @($publicExcited.source_volume_envelope |
+    ForEach-Object { [int]$_.source_quadratic_target })
+if (($envelopeTicks -join ',') -ne
+        '0,2,4,6,9,12,15,18,21,25,45,125,185,285,385,485,585,595,685,695,775,785,835,845,895,905,965,975,1075' -or
+    ($quadraticTargets -join ',') -ne
+        '586,1320,2347,3667,5281,7189,9389,11884,14672,17754,21127,23665,21127,17754,16176,14672,13241,11884,10601,9389,8253,7189,6198,5281,4438,3667,2347,1320,0') {
+    throw 'PublicExcited source-derived quadratic target schedule changed.'
+}
+
+$oracle = $publicExcited.acoustic_oracle
+$firstCommand = $oracle.command_points[0]
+$peakCommand = $oracle.command_points[11]
+$formerLinearPoint = $oracle.command_points[27]
+$finalCommand = $oracle.command_points[28]
+if (($oracle.model -ne
+        'source_loop_then_quadratic_n_micro_184_sample_ramps') -or
+    ([int]$oracle.sample_count -ne 104204) -or
+    ([int]$oracle.source_first_pass_samples -ne 28215) -or
+    ([int]$oracle.source_loop_start -ne 1) -or
+    ([int]$oracle.source_loop_end -ne 28215) -or
+    ([int]$oracle.source_loop_samples -ne 28214) -or
+    ((@($oracle.source_former_loop_boundary_starts) -join ',') -ne
+        '28215,56429,84643') -or
+    (-not [bool]$oracle.source_pre_roll_present) -or
+    (-not [bool]$oracle.source_order_exact) -or
+    ($oracle.source_index_sha256 -ne
+        '8c364955cb8dd8d7d639b7aad86141d23cf262c9d2efb10b48296952d6cecd01')) {
+    throw 'PublicExcited finite source-loop ordering oracle changed.'
+}
+if (([int]$oracle.ramp_output_rate_hz -ne 32000) -or
+    ([int]$oracle.ramp_samples -ne 184) -or
+    ([int]$oracle.ramp_microseconds -ne 5750) -or
+    ([int]$oracle.command_points.Count -ne 29) -or
+    ([int]$firstCommand.tick -ne 0) -or
+    ([int]$firstCommand.start_quadratic_target -ne 1) -or
+    ([int]$firstCommand.end_quadratic_target -ne 586) -or
+    ([int]$firstCommand.start_sample_ceiling -ne 0) -or
+    ([int]$firstCommand.end_sample_ceiling -ne 87) -or
+    ([int]$peakCommand.tick -ne 125) -or
+    ([int]$peakCommand.end_quadratic_target -ne 23665) -or
+    ([int]$formerLinearPoint.tick -ne 975) -or
+    ([int]$formerLinearPoint.end_quadratic_target -ne 1320) -or
+    ([int]$finalCommand.tick -ne 1075) -or
+    ([int]$finalCommand.start_sample_ceiling -ne 93350) -or
+    ([int]$finalCommand.end_sample_ceiling -ne 93437) -or
+    ([int]$finalCommand.end_quadratic_target -ne 0)) {
+    throw 'PublicExcited N_MICRO quadratic ramp endpoint oracle changed.'
+}
+if (([int]$oracle.maximum_quadratic_target -ne 23665) -or
+    ([int]$oracle.constant_hardware_volume -ne 92) -or
+    ([int]$oracle.constant_hardware_gain_numerator -ne 92) -or
+    ([int]$oracle.constant_hardware_gain_denominator -ne 127) -or
+    ([int]$oracle.silent_tail_start_sample -ne 93437) -or
+    ([int]$oracle.decoded_silent_tail_samples -ne 10767) -or
+    ([int]$oracle.decoded_silent_tail_peak -gt 5) -or
+    ([double]$oracle.decoded_silent_tail_rms -gt 0.12)) {
+    throw 'PublicExcited constant hardware gain or silent-tail oracle changed.'
+}
 if (($publicExcited.ima_adpcm_sha256 -ne
+        'f1625186cf7b73e488bceb7dd65e6a697731f3160f1f59e91ff9d1de9b7cfb19') -or
+    ([int]$publicExcited.ima_adpcm_bytes -ne 52108) -or
+    ($oracle.rendered_pcm_sha256 -ne
+        'c48fd539c835330a4319be5f94345e281e65ad12f05a1cbc58d7d1f588604374') -or
+    ($oracle.decoded_pcm_sha256 -ne
+        'aecb7d2a15884b89a49b4ec2d746deb0658efdf3974c36537a3a4cd55741c3c7') -or
+    ([int]$oracle.rendered_clipped_sample_count -ne 0) -or
+    ([int]$oracle.decoded_clipped_sample_count -ne 15) -or
+    ([int]$oracle.old_hardware_loop_decoded_clipped_sample_count -ne 71) -or
+    (-not [bool]$oracle.decoded_clipping_not_regressed) -or
+    ([int]$publicExcited.decoded_peak -le 0) -or
+    ([double]$publicExcited.decoded_rms -le 0.0)) {
+    throw 'PublicExcited rendered/decoded acoustic metrics changed.'
+}
+if (((@($oracle.decoded_former_loop_boundary_deltas) -join ',') -ne
+        '3235,2209,436') -or
+    ([int]$oracle.decoded_former_loop_boundary_max_delta -ne 3235) -or
+    ([int]$oracle.decoded_adjacent_max_delta -ne 28666) -or
+    (-not [bool]$oracle.decoded_former_loop_boundaries_bounded)) {
+    throw 'PublicExcited former-loop-boundary continuity changed.'
+}
+if (($oracle.linear_gain_negative_pcm_sha256 -ne
+        'c74436def9b134f329149a8fad2722df7ff02dec02cff427e212c43279311c81') -or
+    (-not [bool]$oracle.linear_gain_negative_rejected) -or
+    ($oracle.missing_preroll_negative_pcm_sha256 -ne
+        '8183b613abab27c5246daeaaa42983e927b639c8b8ba20db13d4ffc27e68b19b') -or
+    (-not [bool]$oracle.missing_preroll_negative_rejected) -or
+    ([int]$oracle.old_hardware_loop_negative_ima_bytes -ne 14112) -or
+    ($oracle.old_hardware_loop_negative_ima_sha256 -ne
         'efb072be5dd4409901c4490c6d150b7c9b79a41f5368a61f90c021565002628c') -or
-    ([int]$publicExcited.ima_adpcm_bytes -ne 14112) -or
-    ([int]$publicExcited.ds_sample_count -ne 28214) -or
-    ([int]$publicExcited.ds_loop_point_words -ne 1) -or
-    ([int]$publicExcited.ds_loop_length_words -ne 3527) -or
-    ([int]$publicExcited.ds_ima_header_predictor -ne -4553) -or
-    ([int]$publicExcited.ds_ima_header_index -ne 65) -or
-    ([int]$publicExcited.ds_ima_loop_body_nibbles -ne 28214) -or
-    ((@($publicExcited.ds_ima_guard_nibbles) -join ',') -ne '8,9') -or
-    ($publicExcited.ds_repeat_oracle_model -ne
-        'header_once_pnt_latch_len_restore') -or
-    ([int]$publicExcited.ds_repeat_oracle_cycles -ne 3) -or
-    ([int]$publicExcited.ds_repeat_oracle_loop_predictor -ne -4553) -or
-    ([int]$publicExcited.ds_repeat_oracle_loop_index -ne 65) -or
-    ([int]$publicExcited.ds_repeat_oracle_cycle_end_predictor -ne -4409) -or
-    ([int]$publicExcited.ds_repeat_oracle_cycle_end_index -ne 75) -or
-    (-not [bool]$publicExcited.ds_repeat_oracle_missing_restore_detected) -or
-    ($publicExcited.ds_repeat_oracle_missing_restore_cycle_2_pcm_sha256 -ne
-        'afe23ae391f2cb8216d4a016d4b375851c63d91df412a1ecab87c7446d385c82') -or
-    (-not [bool]$publicExcited.ds_repeat_oracle_wrong_pnt_detected) -or
-    (-not [bool]$publicExcited.ds_repeat_oracle_wrong_len_detected) -or
-    ([int]$publicExcited.ds_repeat_cycle_source_samples -ne 28214) -or
-    ([int]$publicExcited.ds_repeat_cycle_alignment_debt_samples -ne 2) -or
-    ([int]$publicExcited.ds_repeat_cycle_samples -ne 28216) -or
-    ($publicExcited.ds_repeat_cycle_pcm_sha256 -ne
-        '5a12ec9b957390cb025565f4774ab44ed5428f3af71b13752af0f84fdd21f8e8')) {
-    throw 'PublicExcited DS IMA loop-state or repeat oracle changed.'
+    (-not [bool]$oracle.old_hardware_loop_negative_rejected)) {
+    throw 'PublicExcited acoustic negative control no longer rejects old behavior.'
 }
-if ($publicExcited.ds_repeat_oracle_missing_restore_cycle_2_pcm_sha256 -eq
-    $publicExcited.ds_repeat_cycle_pcm_sha256) {
-    throw 'PublicExcited carry-state negative control no longer diverges.'
-}
-$alignmentDebt = @($metadata.known_runtime_fidelity_debt | Where-Object {
-        $_ -match 'two word-alignment guard samples' -and
-        $_ -match '28,216-sample cycle' -and
-        $_ -match 'not exclusively'
-    })
-if ($alignmentDebt.Count -ne 1) {
-    throw 'PublicExcited per-cycle alignment debt is not explicit.'
+if (@($metadata.known_runtime_fidelity_debt | Where-Object {
+        $_ -match 'PublicExcited|pre-roll|guard samples|step volume'
+    }).Count -ne 0) {
+    throw 'Closed PublicExcited loop/envelope fidelity debt remains recorded.'
 }
 
 $expectedNonLoopPhaseHashes = @{
-    470 = '668cade614e56e94bdd96454bf11e0cea8e86cc42bb28f887be67ec60ea453c6'
-    469 = '16a68f0bcc93f389677358f2040c7659f59b44844158b2db976f30fca1917f13'
-    467 = '8f440486dd3ca8cffadbe6c5ec436f391a6385696ddf766113d05ca45c7720ee'
-    490 = '214bfa4c1964973bcf3efaa82a12e68c3b2b9d8489c8c0efea9bedddfd10927b'
+    470 = 'da6ec8228ec6cdc90c7a68568fa2bb002b6f94601be6bfe08e6f459dcd3ac35c'
+    469 = 'ceaec3acdbfc8321cd5c7149b87dd6fa895710514c74c2af95d345a992a1cf38'
+    467 = '5d690f3a6ad9f2b682e2ba8e383e4aaa43942d0fa729b73169721d99670e5862'
+    490 = 'f33b2eee06748d1984e89e9cef97606d9c1d8c644e104cbb3326e75999fcf37a'
 }
 foreach ($id in $expectedNonLoopPhaseHashes.Keys) {
     $entry = @($metadata.entries | Where-Object { [int]$_.id -eq $id })
@@ -164,24 +223,80 @@ foreach ($id in $expectedNonLoopPhaseHashes.Keys) {
         ([int]$entry[0].ds_loop_point_words -ne 0)) {
         throw "Non-loop phase FGM $id sample or loop point changed."
     }
+
+$expectedTrimProofs = @(
+    @{ ID = 470; Source = 11248; Schedule = 9109; Current = 9109;
+        Retained = 9109; Removed = 2139; Prefix =
+        '801fa7c7cdb82e07dd4c481d6de97ab4a4d084b3e88bd811560aed8fb4fc9cf1' },
+    @{ ID = 469; Source = 11472; Schedule = 9201; Current = 9201;
+        Retained = 9201; Removed = 2271; Prefix =
+        'ab09e8e41568ec2c6f9f013eb28a240f293e6e187a200e022a0417af3fe7c41b' },
+    @{ ID = 467; Source = 10848; Schedule = 7821; Current = 7821;
+        Retained = 7821; Removed = 3027; Prefix =
+        'fbb5539fc312bf1f0e2be7f69c53792491f5ab2d4e672c75c525742b0b3452cd' },
+    @{ ID = 490; Source = 15840; Schedule = 13801; Current = 13801;
+        Retained = 13801; Removed = 2039; Prefix =
+        '647566464d00d204664f6a13be5fd144194c9933ed7f011006faa80261435429' },
+    @{ ID = 439; Source = 9136; Schedule = 8634; Current = 8838;
+        Retained = 8838; Removed = 298; Prefix =
+        '21b2a92339ebff5a17bbd1c733d37e93f415e8d9ccd65d8d080c7b9cb68687ec' },
+    @{ ID = 370; Source = 9808; Schedule = 11041; Current = 11041;
+        Retained = 9808; Removed = 0; Prefix =
+        '981080097d24ccd16a8de1c417f409bb4a2a8b38d273ce57d8df60d16e1ba39d' },
+    @{ ID = 154; Source = 25280; Schedule = 14913; Current = 14623;
+        Retained = 14913; Removed = 10367; Prefix =
+        '95b15298900185a62667d5a7ae9b5df854d0284ff1f9cc1f92990ef5fe0df4bf' }
+)
+foreach ($expected in $expectedTrimProofs) {
+    $entry = $metadata.entries | Where-Object { [int]$_.id -eq $expected.ID }
+    if (($entry.trim_strategy -ne
+            'source_note_schedule_and_current_ds_consumption_with_one_sample_ceiling') -or
+        ([int]$entry.source_pcm_samples -ne $expected.Source) -or
+        ([int]$entry.trim_source_schedule_reach_samples -ne
+            $expected.Schedule) -or
+        ([int]$entry.trim_current_ds_consumption_reach_samples -ne
+            $expected.Current) -or
+        ([int]$entry.trim_proven_reachable_samples -ne $expected.Retained) -or
+        ([int]$entry.trim_source_samples_removed -ne $expected.Removed) -or
+        ([int]$entry.trim_one_sample_ceiling -ne 1) -or
+        (-not [bool]$entry.trim_retained_prefix_exact) -or
+        ($entry.trim_retained_source_prefix_pcm_sha256 -ne $expected.Prefix)) {
+        throw "FGM $($expected.ID) duration-derived trim proof changed."
+    }
+}
+foreach ($id in 292, 289) {
+    $entry = $metadata.entries | Where-Object { [int]$_.id -eq $id }
+    if (($entry.trim_strategy -ne
+            'untrimmed_articulation_pitch_modulation') -or
+        ([int]$entry.trim_source_samples_removed -ne 0) -or
+        ([int]$entry.trim_proven_reachable_samples -ne 6688) -or
+        (-not [bool]$entry.trim_retained_prefix_exact)) {
+        throw "Pitch-modulated FGM $id was trimmed without a source proof."
+    }
+}
 }
 
 $expectedKo = @(
     @{ ID = 439; Sound = 183; Frequency = 16009; Duration = 96;
+        Samples = 8838;
         Root = 439; Render = 439; Hash =
-        'e66ca536167618e8916f2c36d789742c785946e7f4793d8248cb584a90e23189' },
+        'a71ef24f6f54df209e7b782f6322481aa73f7dda31128a6cb4151b70fc5a0f7f' },
     @{ ID = 292; Sound = 28; Frequency = 16951; Duration = 53;
+        Samples = 6688;
         Root = 292; Render = 287; Hash =
         'cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6' },
     @{ ID = 370; Sound = 104; Frequency = 16000; Duration = 120;
+        Samples = 9808;
         Root = 370; Render = 370; Hash =
         'e518d1106a41cf9c99eac91ab053304a515a04d6f5fc5a9c5ea845365518ea77' },
     @{ ID = 289; Sound = 28; Frequency = 16951; Duration = 53;
+        Samples = 6688;
         Root = 289; Render = 287; Hash =
         'cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6' },
     @{ ID = 154; Sound = 0; Frequency = 8476; Duration = 300;
+        Samples = 14913;
         Root = 154; Render = 154; Hash =
-        '676ebc7efd26cea3e6c477c9756aff2fe3d1d20ebe460074cc75086399fe08b9' }
+        '45cfe954355dd4edc22c3cc62a60dea59672b57a7f6ef1df21366ee012abc87c' }
 )
 foreach ($expected in $expectedKo) {
     $entry = @($metadata.entries | Where-Object {
@@ -194,6 +309,7 @@ foreach ($expected in $expectedKo) {
     if (([int]$entry.source_sound_index -ne $expected.Sound) -or
         ([int]$entry.ds_frequency_hz -ne $expected.Frequency) -or
         ([int]$entry.source_duration_ticks -ne $expected.Duration) -or
+        ([int]$entry.ds_sample_count -ne $expected.Samples) -or
         ([int]$entry.root_ucd_program_id -ne $expected.Root) -or
         ([int]$entry.render_ucd_program_id -ne $expected.Render) -or
         ([int]$entry.ds_loop_point_words -ne 0) -or

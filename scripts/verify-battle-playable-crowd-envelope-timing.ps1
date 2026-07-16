@@ -250,27 +250,13 @@ Assert-Condition (
         'ifCommonTimerMakeInterface(ifCommonAnnounceTimeUpInitInterface);') `
     'BattleShip no longer starts the timer immediately after PublicExcited.'
 
-# Find semantic source lines instead of pinning the verifier to incidental C
-# line numbers. The duration line is restricted to ndsAudioFgmUpdate so the
-# explicit ndsAudioFgmStop path cannot satisfy this gate.
+# Restrict the duration line to ndsAudioFgmUpdate so the explicit stop path
+# cannot satisfy this natural-release gate.
 $audioLines = Get-Content -LiteralPath $audioSourcePath
 $updateStart = @(Select-String -LiteralPath $audioSourcePath `
     -Pattern '^void ndsAudioFgmUpdate\(void\)$')
 $stopAllStart = @(Select-String -LiteralPath $audioSourcePath `
     -Pattern '^void ndsAudioFgmStopAll\(void\)$')
-$zeroDispatch = @(Select-String -LiteralPath $audioSourcePath `
-    -SimpleMatch 'soundSetVolume(handle->channel, point[2]);' |
-    Where-Object {
-        ($_.LineNumber -lt $audioLines.Count) -and
-        ($audioLines[$_.LineNumber].Trim() -eq
-            'command_return_tick = cpuGetTiming();')
-    })
-$postEnvelopeDispatch = @(Select-String -LiteralPath $audioSourcePath `
-    -SimpleMatch 'if ((handle->live != FALSE) &&' |
-    Where-Object {
-        ($_.LineNumber -gt $updateStart[0].LineNumber) -and
-        ($_.LineNumber -lt $stopAllStart[0].LineNumber)
-    })
 $durationRelease = @(Select-String -LiteralPath $audioSourcePath `
     -SimpleMatch (
         'NDS_AUDIO_FGM_RELEASE_REASON_DURATION, now));') |
@@ -280,12 +266,8 @@ $durationRelease = @(Select-String -LiteralPath $audioSourcePath `
     })
 Assert-Condition (($updateStart.Count -eq 1) -and
     ($stopAllStart.Count -eq 1) -and
-    ($zeroDispatch.Count -eq 1) -and
-    ($postEnvelopeDispatch.Count -eq 1) -and
     ($durationRelease.Count -eq 1)) `
-    'Could not isolate the semantic FGM envelope and duration-release lines.'
-$zeroDispatchLine = $zeroDispatch[0].LineNumber
-$postEnvelopeDispatchLine = $postEnvelopeDispatch[0].LineNumber
+    'Could not isolate the semantic FGM duration-release line.'
 $durationReleaseLine = $durationRelease[0].LineNumber
 Assert-Condition (
     $audioLines[$durationReleaseLine].Trim() -eq
@@ -300,20 +282,20 @@ $autoUpdateEnableCalls = @(Select-String -LiteralPath $audioSourcePath `
     -Pattern 'soundSetAutoUpdate\s*\(\s*(true|TRUE|1)\s*\)')
 $audioHeaderText = Get-Content -LiteralPath $audioHeaderPath -Raw
 Assert-Condition (($manualModeCalls.Count -eq 1) -and
-    ($arm7AckCalls.Count -eq 3) -and
+    ($arm7AckCalls.Count -eq 2) -and
     ($autoUpdateEnableCalls.Count -eq 0)) `
     ('FGM ARM7 telemetry must keep Calico in manual mode and issue exactly ' +
-    'three target-gated channel acknowledgments.')
+    'two target-gated PLAY/STOP channel acknowledgments.')
 Assert-Condition (($audioHeaderText -match
         '#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS 0') -and
     ($audioHeaderText -match
         '#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS') -and
     ($audioHeaderText -match
-        '#define NDS_AUDIO_FGM_ARM7_ACK_EVENT_CAPACITY 3u') -and
+        '#define NDS_AUDIO_FGM_ARM7_ACK_EVENT_CAPACITY 2u') -and
     ($audioHeaderText -match
         '#define NDS_AUDIO_FGM_ARM7_ACK_KIND_PLAY 1u') -and
-    ($audioHeaderText -match
-        '#define NDS_AUDIO_FGM_ARM7_ACK_KIND_ENVELOPE 2u') -and
+    ($audioHeaderText -notmatch
+        'NDS_AUDIO_FGM_ARM7_ACK_KIND_ENVELOPE') -and
     ($audioHeaderText -match
         '#define NDS_AUDIO_FGM_ARM7_ACK_KIND_STOP 3u') -and
     ($audioHeaderText -match
@@ -330,29 +312,46 @@ Assert-Condition ($publicEntries.Count -eq 1) `
     'FGM metadata must contain exactly one PublicExcited ID 626 entry.'
 $publicEntry = $publicEntries[0]
 $sourceEnvelope = @($publicEntry.source_volume_envelope)
-$runtimeEnvelope = @($sourceEnvelope | Select-Object -Skip 1)
 Assert-Condition (($sourceEnvelope.Count -eq 29) -and
-    ($runtimeEnvelope.Count -eq 28) -and
     ([uint64]$sourceEnvelope[0].tick -eq 0UL) -and
-    ([int]$sourceEnvelope[0].ds_volume -eq 17)) `
-    ('PublicExcited must keep 29 source points while storing the tick-zero ' +
-    'volume in the pack entry and only 28 later runtime dispatch points.')
-$finalEnvelopePoint = $runtimeEnvelope[$runtimeEnvelope.Count - 1]
+    ([int]$publicEntry.packed_envelope_count -eq 0) -and
+    ([int]$publicEntry.ds_volume -eq 92)) `
+    ('PublicExcited must keep 29 source-derived points in metadata while ' +
+    'packing no runtime envelope commands and one constant hardware gain.')
+$finalEnvelopePoint = $sourceEnvelope[$sourceEnvelope.Count - 1]
 $sourceTickMicroseconds = [uint64]$metadata.source_fgm_timer_microseconds
 $sourceZeroMicroseconds =
     [uint64]$finalEnvelopePoint.tick * $sourceTickMicroseconds
+$silentTailStartSample =
+    [uint64]$publicEntry.acoustic_oracle.silent_tail_start_sample
+$silentTailStartMicroseconds = [uint64][math]::Ceiling(
+    ([double]$silentTailStartSample * 1000000.0) /
+    [double]$publicEntry.ds_frequency_hz)
 $sourceStopMicroseconds = [uint64]$publicEntry.source_duration_microseconds
 $sourceDurationTicks = [uint64]$publicEntry.source_duration_ticks
+$packedDataOffset = [uint64]$publicEntry.pack_data_offset
+$packedDataBytes = [uint64]$publicEntry.ima_adpcm_bytes
+$packedSampleCount = [uint64]$publicEntry.ds_sample_count
+$packedFrequencyHz = [uint64]$publicEntry.ds_frequency_hz
 Assert-Condition (([int]$publicEntry.entry_index -eq 0) -and
     ([string]$publicEntry.name -eq 'nSYAudioVoicePublicExcited') -and
     ([int]$publicEntry.phase_index -eq 0) -and
     ([bool]$publicEntry.source_loop_infinite) -and
+    ([int]$publicEntry.ds_loop_flag -eq 0) -and
+    ([int]$publicEntry.ds_loop_point_words -eq 0) -and
+    ([int]$publicEntry.ds_sample_count -eq 104204) -and
+    ([int]$publicEntry.ds_frequency_hz -eq 15102) -and
     ($sourceTickMicroseconds -eq 5750UL) -and
     ($sourceDurationTicks -eq 1200UL) -and
     ($sourceStopMicroseconds -eq 6900000UL) -and
     ([uint64]$finalEnvelopePoint.tick -eq 1075UL) -and
-    ([int]$finalEnvelopePoint.ds_volume -eq 0) -and
-    ($sourceZeroMicroseconds -eq 6181250UL)) `
+    ([int]$finalEnvelopePoint.source_quadratic_target -eq 0) -and
+    ($sourceZeroMicroseconds -eq 6181250UL) -and
+    ($silentTailStartSample -eq 93437UL) -and
+    ($silentTailStartMicroseconds -gt $sourceZeroMicroseconds) -and
+    ($silentTailStartMicroseconds -lt $sourceStopMicroseconds) -and
+    (($packedSampleCount * 1000000UL) -ge
+        ($sourceStopMicroseconds * $packedFrequencyHz))) `
     'PublicExcited source timing metadata no longer matches BattleShip ID 626.'
 
 $verifierContext = Initialize-MelonDSVerifierContext `
@@ -389,7 +388,7 @@ if (-not $NoBuild) {
         NDS_RENDERER_HW_TRIANGLES=1 `
         NDS_RENDERER_PROFILE_LEVEL=0 `
         NDS_DEBUG_HUD=0 `
-        NDS_SCENE_MIP_CACHE_LAB=1 `
+        NDS_SCENE_MIP_CACHE_LAB=0 `
         NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS=1 `
         -j16
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -468,7 +467,7 @@ $preflightOutput = @(& $Gdb -batch `
     -ex 'delete breakpoints' `
     -ex ("break scvsbattle.c:{0}" -f $upstreamCallLine) `
     -ex 'break ndsAudioFgmArm7AckTraceRecord' `
-    -ex 'condition 2 $r1 == 2' `
+    -ex 'condition 2 $r1 == 3' `
     -ex 'break ndsAudioFgmReleaseHandle' `
     -ex 'condition 3 $r2 == 3' `
     -ex 'break ndsBattlePlayableFrameCompleteMarker' `
@@ -480,7 +479,7 @@ if (($LASTEXITCODE -ne 0) -or
     throw (
         'Crowd ACK diagnostic ELF lacks the source-local rendezvous required ' +
         "for this gate.`n$preflightText`n" +
-        'Retain the dedicated three-event ID 626 ARM7 acknowledgment trace; ' +
+        'Retain the dedicated two-event ID 626 ARM7 acknowledgment trace; ' +
         'do not replace it with frame-count inference.')
 }
 
@@ -511,10 +510,9 @@ try {
         $captureHelperGdb, $emulator.Id, $screenshotGdb
 
     # These are semantic stops only: the upstream source call, the actual ID
-    # 626 play, its final zero-volume dispatch, its post-dispatch update point,
-    # duration release, and the immediately following completed frame. Calico
-    # acknowledgments are event-gated; there is no every-frame sound poll or
-    # persistent every-frame breakpoint in this verifier.
+    # 626 play, its natural duration release, and the immediately following
+    # completed frame. The live handle at release proves ownership persisted
+    # beyond the baked-silence threshold without a mid-tail volume command.
     $gdbCommands = @(
         'set pagination off',
         'set confirm off',
@@ -539,9 +537,6 @@ try {
         'set $public_start = (unsigned)$public_handle->start_tick',
         'set $public_end = (unsigned)$public_handle->end_tick',
         'set $public_entry = &sNdsAudioFgmEntries[0]',
-        ('set $public_last_point = &sNdsAudioFgmPack[' +
-            '$public_entry->envelope_offset + ' +
-            '(($public_entry->envelope_count - 1) * 4)]'),
         ('printf "CROWD_PLAY_HANDLE=%#x,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u\n", ' +
             '(unsigned)$public_handle, $public_handle->fgm_id, ' +
             '$public_handle->generation, $public_handle->start_tick, ' +
@@ -562,14 +557,13 @@ try {
             '(unsigned)sNdsAudioFgmChannelOwners[$public_channel], ' +
             'sNdsAudioFgmChannelGenerations[$public_channel], ' +
             '$public_handle->generation'),
-        ('printf "CROWD_ENTRY=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
+        ('printf "CROWD_ENTRY=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
             '$public_entry->id, $public_entry->flags, ' +
-            '$public_entry->duration_ticks, ' +
-            '$public_entry->envelope_offset, ' +
+            '$public_entry->data_offset, $public_entry->data_bytes, ' +
+            '$public_entry->sample_count, $public_entry->frequency, ' +
+            '$public_entry->duration_ticks, $public_entry->envelope_offset, ' +
             '$public_entry->envelope_count, $public_entry->volume, ' +
-            '$public_entry->pan, ' +
-            '*(unsigned short *)$public_last_point, ' +
-            '*(unsigned char *)($public_last_point + 2)'),
+            '$public_entry->pan, $public_entry->loop_point_words'),
         'set $public_scan_i = 0',
         'set $public_allocated_count = 0',
         'set $public_live_count = 0',
@@ -587,71 +581,13 @@ try {
         ('printf "CROWD_PLAY_DUP=%u,%u,%u\n", ' +
             'gNdsAudioFgmPhasePlayCounts[0], $public_allocated_count, ' +
             '$public_live_count'),
-        ('tbreak ndsAudioFgmArm7AckTraceRecord if ' +
-            '$r0 == $public_handle && $r1 == 2'),
-        'continue',
-        'set $public_zero_steps_before = gNdsAudioFgmEnvelopeStepCount',
-        # Canonical O2 optimizes the source-loop point local out of DWARF.
-        # Finish the event recorder, whose AAPCS arguments are stable at the
-        # rendezvous, before reading its event_count-last publication.
-        'finish',
-        ('printf "CROWD_ZERO=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
-            'gNdsAudioFgmArm7AckTrace.events[1].service_tick, ' +
-            '$public_handle->start_tick, $public_handle->end_tick, ' +
-            '(unsigned)(gNdsAudioFgmArm7AckTrace.events[1].service_tick - ' +
-            '$public_handle->start_tick), ' +
-            'gNdsAudioFgmArm7AckTrace.events[1].source_tick, ' +
-            'gNdsAudioFgmArm7AckTrace.events[1].source_tick, ' +
-            'gNdsAudioFgmArm7AckTrace.events[1].value, ' +
-            '$public_handle->envelope_index, ' +
-            '$public_handle->envelope_count, ' +
-            '$public_handle->generation, gNdsAudioFgmEnvelopeStepCount'),
-        ('printf "CROWD_ZERO_OWNER=%#x,%u,%d,%u\n", ' +
-            '(unsigned)sNdsAudioFgmChannelOwners[$public_channel], ' +
-            'sNdsAudioFgmChannelGenerations[$public_channel], ' +
-            '$public_channel, gNdsAudioFgmGenerationMismatchCount'),
-        'set $public_scan_i = 0',
-        'set $public_allocated_count = 0',
-        'set $public_live_count = 0',
-        'while $public_scan_i < gNdsAudioFgmHandleCapacity',
-        'if sNdsAudioFgmHandles[$public_scan_i].fgm_id == 626',
-        'if sNdsAudioFgmHandles[$public_scan_i].allocated != 0',
-        'set $public_allocated_count = $public_allocated_count + 1',
-        'end',
-        'if sNdsAudioFgmHandles[$public_scan_i].live != 0',
-        'set $public_live_count = $public_live_count + 1',
-        'end',
-        'end',
-        'set $public_scan_i = $public_scan_i + 1',
-        'end',
-        ('printf "CROWD_ZERO_DUP=%u,%u,%u\n", ' +
-            'gNdsAudioFgmPhasePlayCounts[0], $public_allocated_count, ' +
-            '$public_live_count'),
-        ('printf "CROWD_ZERO_SCENE=%u,%u,%u,%u,%u,%u\n", ' +
-            'gSCManagerSceneData.scene_curr, ' +
-            'gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, ' +
-            'gSCManagerBattleState->time_limit, ' +
-            'gSCManagerBattleState->time_remain, ' +
-            'gSCManagerBattleState->time_passed'),
-        'tbreak ndsBattlePlayableFrameCompleteMarker',
-        'continue',
-        ('printf "CROWD_ZERO_POST=%u,%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%#x,%u\n", ' +
-            'gNdsAudioFgmArm7AckTrace.events[1].service_tick, ' +
-            '$public_handle->envelope_index, ' +
-            '$public_handle->envelope_count, ' +
-            '$public_handle->generation, $public_handle->fgm_id, ' +
-            '$public_handle->channel, $public_handle->allocated, ' +
-            '$public_handle->live, $public_handle->effect.sfx_id, ' +
-            '$public_zero_steps_before, gNdsAudioFgmEnvelopeStepCount, ' +
-            '(unsigned)sNdsAudioFgmChannelOwners[$public_channel], ' +
-            'sNdsAudioFgmChannelGenerations[$public_channel]'),
         ('tbreak ndsAudioFgmReleaseHandle if ' +
             '$r0 == $public_handle && $r2 == 3'),
         'continue',
         'set $public_stop_now = (unsigned)$r3',
         'set $public_duration_stops_before = gNdsAudioFgmDurationStopCount',
         'set $public_releases_before = gNdsAudioFgmHandleReleaseCount',
-        ('printf "CROWD_STOP=%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u\n", ' +
+        ('printf "CROWD_STOP=%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%u\n", ' +
             '$public_stop_now, $public_handle->start_tick, ' +
             '$public_handle->end_tick, ' +
             '(unsigned)($public_stop_now - $public_handle->start_tick), ' +
@@ -659,13 +595,15 @@ try {
             '$public_handle->envelope_index, ' +
             '$public_handle->envelope_count, $public_handle->fgm_id, ' +
             '$public_handle->generation, $public_handle->channel, ' +
-            'gNdsAudioFgmDurationStopCount, $public_handle->live'),
-        ('printf "CROWD_STOP_STATE=%u,%u,%u,%u,%#x,%u\n", ' +
+            'gNdsAudioFgmDurationStopCount, $public_handle->live, ' +
+            '$public_handle->allocated, $public_handle->effect.sfx_id'),
+        ('printf "CROWD_STOP_STATE=%u,%u,%u,%u,%#x,%u,%u,%u\n", ' +
             'gNdsAudioFgmPhasePlayCounts[0], gNdsAudioFgmPlayFailCount, ' +
             'gNdsAudioFgmPoolExhaustCount, ' +
             'gNdsAudioFgmGenerationMismatchCount, ' +
             '(unsigned)sNdsAudioFgmChannelOwners[$public_channel], ' +
-            'sNdsAudioFgmChannelGenerations[$public_channel]'),
+            'sNdsAudioFgmChannelGenerations[$public_channel], ' +
+            'gNdsAudioFgmEnvelopeStepCount, gNdsAudioFgmLoopPlayCount'),
         'set $public_scan_i = 0',
         'set $public_allocated_count = 0',
         'set $public_live_count = 0',
@@ -746,7 +684,7 @@ try {
             'gNdsAudioFgmArm7AckTrace.events[0].command_return_tick, ' +
             'gNdsAudioFgmArm7AckTrace.events[0].acknowledge_tick, ' +
             'gNdsAudioFgmArm7AckTrace.events[0].active_channels'),
-        ('printf "CROWD_ACK_ZERO=%u,%u,%u,%u,%u,%u,%u,%#x\n", ' +
+        ('printf "CROWD_ACK_STOP=%u,%u,%u,%u,%u,%u,%u,%#x\n", ' +
             'gNdsAudioFgmArm7AckTrace.events[1].kind, ' +
             'gNdsAudioFgmArm7AckTrace.events[1].source_tick, ' +
             'gNdsAudioFgmArm7AckTrace.events[1].value, ' +
@@ -755,15 +693,6 @@ try {
             'gNdsAudioFgmArm7AckTrace.events[1].command_return_tick, ' +
             'gNdsAudioFgmArm7AckTrace.events[1].acknowledge_tick, ' +
             'gNdsAudioFgmArm7AckTrace.events[1].active_channels'),
-        ('printf "CROWD_ACK_STOP=%u,%u,%u,%u,%u,%u,%u,%#x\n", ' +
-            'gNdsAudioFgmArm7AckTrace.events[2].kind, ' +
-            'gNdsAudioFgmArm7AckTrace.events[2].source_tick, ' +
-            'gNdsAudioFgmArm7AckTrace.events[2].value, ' +
-            'gNdsAudioFgmArm7AckTrace.events[2].service_tick, ' +
-            'gNdsAudioFgmArm7AckTrace.events[2].command_tick, ' +
-            'gNdsAudioFgmArm7AckTrace.events[2].command_return_tick, ' +
-            'gNdsAudioFgmArm7AckTrace.events[2].acknowledge_tick, ' +
-            'gNdsAudioFgmArm7AckTrace.events[2].active_channels'),
         ('printf "CROWD_ERRORS=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
             'gNdsAudioFgmOpenFailCount, gNdsAudioFgmReadFailCount, ' +
             'gNdsAudioFgmFormatFailCount, ' +
@@ -795,15 +724,10 @@ try {
     $playHandle = Get-MarkerRow $gdbStdout 'CROWD_PLAY_HANDLE' 12
     $playState = Get-MarkerRow $gdbStdout 'CROWD_PLAY_STATE' 13
     $playOwner = Get-MarkerRow $gdbStdout 'CROWD_PLAY_OWNER' 3
-    $entry = Get-MarkerRow $gdbStdout 'CROWD_ENTRY' 9
+    $entry = Get-MarkerRow $gdbStdout 'CROWD_ENTRY' 12
     $playDuplicate = Get-MarkerRow $gdbStdout 'CROWD_PLAY_DUP' 3
-    $zero = Get-MarkerRow $gdbStdout 'CROWD_ZERO' 11
-    $zeroOwner = Get-MarkerRow $gdbStdout 'CROWD_ZERO_OWNER' 4
-    $zeroDuplicate = Get-MarkerRow $gdbStdout 'CROWD_ZERO_DUP' 3
-    $zeroScene = Get-MarkerRow $gdbStdout 'CROWD_ZERO_SCENE' 6
-    $zeroPost = Get-MarkerRow $gdbStdout 'CROWD_ZERO_POST' 13
-    $stop = Get-MarkerRow $gdbStdout 'CROWD_STOP' 12
-    $stopState = Get-MarkerRow $gdbStdout 'CROWD_STOP_STATE' 6
+    $stop = Get-MarkerRow $gdbStdout 'CROWD_STOP' 14
+    $stopState = Get-MarkerRow $gdbStdout 'CROWD_STOP_STATE' 8
     $stopDuplicate = Get-MarkerRow $gdbStdout 'CROWD_STOP_DUP' 3
     $stopScene = Get-MarkerRow $gdbStdout 'CROWD_STOP_SCENE' 6
     $release = Get-MarkerRow $gdbStdout 'CROWD_RELEASE' 14
@@ -811,7 +735,6 @@ try {
     $releaseScene = Get-MarkerRow $gdbStdout 'CROWD_RELEASE_SCENE' 6
     $ackTrace = Get-MarkerRow $gdbStdout 'CROWD_ACK_TRACE' 12
     $ackPlay = Get-MarkerRow $gdbStdout 'CROWD_ACK_PLAY' 8
-    $ackZero = Get-MarkerRow $gdbStdout 'CROWD_ACK_ZERO' 8
     $ackStop = Get-MarkerRow $gdbStdout 'CROWD_ACK_STOP' 8
     $errors = Get-MarkerRow $gdbStdout 'CROWD_ERRORS' 9
     $memory = Get-MarkerRow $gdbStdout 'CROWD_MEM' 3
@@ -834,8 +757,8 @@ try {
     Assert-Condition (($publicHandleAddress -ne 0) -and
         ($playHandle[1] -eq $publicExcitedID) -and
         ($publicGeneration -ne 0) -and
-        ($playHandle[5] -eq $entry[3]) -and
-        ($playHandle[6] -eq $runtimeEnvelope.Count) -and
+        ($playHandle[5] -eq $entry[7]) -and
+        ($playHandle[6] -eq 0) -and
         ($playHandle[7] -eq 0) -and
         ($publicChannel -ge 0) -and ($publicChannel -lt 16) -and
         ($playHandle[9] -eq 1) -and ($playHandle[10] -eq 1) -and
@@ -844,7 +767,7 @@ try {
         $gdbStdout
     Assert-Condition (($playState[0] -eq 1) -and
         ($playState[1] -eq 1) -and ($playState[2] -eq 1) -and
-        ($playState[3] -eq 1) -and
+        ($playState[3] -eq 0) -and
         ($playState[4] -eq $publicExcitedID) -and
         ($playState[5] -eq $publicGeneration) -and
         ($playState[6] -eq $playHandle[11]) -and
@@ -860,75 +783,21 @@ try {
         'PublicExcited channel ownership did not match its generation.' `
         $gdbStdout
     Assert-Condition (($entry[0] -eq $publicExcitedID) -and
-        (($entry[1] -band 1) -eq 1) -and
-        ($entry[2] -eq $sourceDurationTicks) -and
-        ($entry[4] -eq $runtimeEnvelope.Count) -and
-        ($entry[5] -eq [int]$sourceEnvelope[0].ds_volume) -and
-        ($entry[6] -eq 64) -and
-        ($entry[7] -eq [uint64]$finalEnvelopePoint.tick) -and
-        ($entry[8] -eq 0)) `
+        ($entry[1] -eq 0) -and
+        ($entry[2] -eq $packedDataOffset) -and
+        ($entry[3] -eq $packedDataBytes) -and
+        ($entry[4] -eq $packedSampleCount) -and
+        ($entry[5] -eq $packedFrequencyHz) -and
+        ($entry[6] -eq $sourceDurationTicks) -and
+        ($entry[7] -eq 0) -and ($entry[8] -eq 0) -and
+        ($entry[9] -eq [int]$publicEntry.ds_volume) -and
+        ($entry[10] -eq 64) -and ($entry[11] -eq 0)) `
         'Resident PublicExcited entry did not match its source metadata.' `
         $gdbStdout
     Assert-Condition (($playDuplicate[0] -eq 1) -and
         ($playDuplicate[1] -eq 1) -and ($playDuplicate[2] -eq 1)) `
         'PublicExcited acquired more than one allocated/live ID 626 handle.' `
         $gdbStdout
-
-    $zeroNow = [uint32]$zero[0]
-    $zeroElapsed = Get-UInt32Delta -Start $publicStart -End $zeroNow
-    $zeroDueTicks = Get-MinCpuTicksForMicroseconds $sourceZeroMicroseconds
-    Assert-Condition (($zero[1] -eq $publicStart) -and
-        ($zero[2] -eq $publicEnd) -and
-        ([uint64]$zero[3] -eq $zeroElapsed) -and
-        ($zero[4] -ge [uint64]$finalEnvelopePoint.tick) -and
-        ($zero[4] -lt $sourceDurationTicks) -and
-        ($zero[5] -eq [uint64]$finalEnvelopePoint.tick) -and
-        ($zero[6] -eq 0) -and
-        ($zero[7] -eq ($runtimeEnvelope.Count - 1)) -and
-        ($zero[8] -eq $runtimeEnvelope.Count) -and
-        ($zero[9] -eq $publicGeneration) -and
-        ($zero[10] -ge ($runtimeEnvelope.Count - 1))) `
-        'Final PublicExcited zero-volume dispatch was not source-semantic.' `
-        $gdbStdout
-    Assert-Condition (($zeroOwner[0] -eq $publicHandleAddress) -and
-        ($zeroOwner[1] -eq $publicGeneration) -and
-        ($zeroOwner[2] -eq $publicChannel) -and
-        ($zeroOwner[3] -eq 0)) `
-        'PublicExcited ownership changed before its final zero dispatch.' `
-        $gdbStdout
-    Assert-Condition (($zeroDuplicate[0] -eq 1) -and
-        ($zeroDuplicate[1] -eq 1) -and ($zeroDuplicate[2] -eq 1)) `
-        'PublicExcited duplicated before its final zero-volume dispatch.' `
-        $gdbStdout
-    Assert-Condition (($zeroScene[0] -eq $expectedBattleScene) -and
-        ($zeroScene[3] -eq 1) -and
-        (($zeroScene[4] + $zeroScene[5]) -eq $expectedMatchTicks) -and
-        ((($zeroScene[1] -eq 0) -and ($zeroScene[2] -eq 0) -and
-          ($zeroScene[4] -eq $expectedMatchTicks) -and
-          ($zeroScene[5] -eq 0)) -or
-         (($zeroScene[1] -eq 1) -and ($zeroScene[2] -eq 1) -and
-          ($zeroScene[4] -gt 0) -and ($zeroScene[5] -gt 0)))) `
-        ('PublicExcited final zero left the coherent BattleShip Wait/Go ' +
-        'one-minute timer state.') $gdbStdout
-    Assert-Condition (($zeroPost[0] -eq $zeroNow) -and
-        ($zeroPost[1] -eq $runtimeEnvelope.Count) -and
-        ($zeroPost[2] -eq $runtimeEnvelope.Count) -and
-        ($zeroPost[3] -eq $publicGeneration) -and
-        ($zeroPost[4] -eq $publicExcitedID) -and
-        ($zeroPost[5] -eq $publicChannel) -and
-        ($zeroPost[6] -eq 1) -and ($zeroPost[7] -eq 1) -and
-        ($zeroPost[8] -eq $playHandle[11]) -and
-        ($zeroPost[10] -eq ($zeroPost[9] + 1)) -and
-        ($zeroPost[11] -eq $publicHandleAddress) -and
-        ($zeroPost[12] -eq $publicGeneration)) `
-        ('PublicExcited final zero-volume ARM9 call did not return through ' +
-        'the expected envelope-index/accounting state.') $gdbStdout
-    Assert-Condition ($zeroElapsed -ge $zeroDueTicks) `
-        'PublicExcited final zero dispatch occurred before its source due point.' `
-        $gdbStdout
-    $zeroLatenessTicks = $zeroElapsed - $zeroDueTicks
-    $zeroLatenessMicroseconds =
-        Convert-CpuTicksToMicroseconds $zeroLatenessTicks
 
     $stopNow = [uint32]$stop[0]
     $stopElapsed = Get-UInt32Delta -Start $publicStart -End $stopNow
@@ -945,19 +814,20 @@ try {
         ($stop[2] -eq $publicEnd) -and
         ([uint64]$stop[3] -eq $stopElapsed) -and
         ($stop[4] -ge ($sourceDurationTicks - 1)) -and
-        ($stop[5] -eq $runtimeEnvelope.Count) -and
-        ($stop[6] -eq $runtimeEnvelope.Count) -and
+        ($stop[5] -eq 0) -and ($stop[6] -eq 0) -and
         ($stop[7] -eq $publicExcitedID) -and
         ($stop[8] -eq $publicGeneration) -and
         ($stop[9] -eq $publicChannel) -and
-        ($stop[11] -eq 1)) `
+        ($stop[11] -eq 1) -and ($stop[12] -eq 1) -and
+        ($stop[13] -eq $playHandle[11])) `
         'PublicExcited did not reach its natural duration-release branch.' `
         $gdbStdout
     Assert-Condition (($stopState[0] -eq 1) -and
         ($stopState[1] -eq 0) -and ($stopState[2] -eq 0) -and
         ($stopState[3] -eq 0) -and
         ($stopState[4] -eq $publicHandleAddress) -and
-        ($stopState[5] -eq $publicGeneration)) `
+        ($stopState[5] -eq $publicGeneration) -and
+        ($stopState[6] -eq 0) -and ($stopState[7] -eq 0)) `
         'PublicExcited generation/ownership was not intact at duration release.' `
         $gdbStdout
     Assert-Condition (($stopDuplicate[0] -eq 1) -and
@@ -976,13 +846,21 @@ try {
     Assert-Condition ($stopElapsed -ge $storedDurationTicks) `
         'PublicExcited duration release occurred before its source due point.' `
         $gdbStdout
+    $silentTailDueTicks =
+        Get-MinCpuTicksForMicroseconds $silentTailStartMicroseconds
+    Assert-Condition (($stopElapsed -ge $silentTailDueTicks) -and
+        (($packedSampleCount * 1000000UL) -ge
+            ($sourceStopMicroseconds * $packedFrequencyHz))) `
+        ('PublicExcited was not still generation-owned after its baked-silence ' +
+        'threshold with packed samples covering the natural source stop.') `
+        $gdbStdout
     $stopLatenessTicks = $stopElapsed - $storedDurationTicks
     $stopLatenessMicroseconds =
         Convert-CpuTicksToMicroseconds $stopLatenessTicks
 
     $targetChannelBit = [uint32](1 -shl $publicChannel)
     Assert-Condition (($ackTrace[0] -eq 1) -and
-        ($ackTrace[1] -eq 3) -and ($ackTrace[2] -eq 0) -and
+        ($ackTrace[1] -eq 2) -and ($ackTrace[2] -eq 0) -and
         ($ackTrace[3] -eq 0) -and
         ($ackTrace[4] -eq $publicExcitedID) -and
         ($ackTrace[5] -eq $publicGeneration) -and
@@ -991,23 +869,16 @@ try {
         ($ackTrace[8] -eq $publicStart) -and
         ($ackTrace[9] -eq $publicEnd) -and
         ($ackTrace[10] -eq $sourceDurationTicks) -and
-        ($ackTrace[11] -eq $runtimeEnvelope.Count)) `
+        ($ackTrace[11] -eq 0)) `
         ('PublicExcited ARM7 ACK trace identity, capacity, or source ' +
         'schedule metadata was not coherent.') $gdbStdout
     Assert-Condition (($ackPlay[0] -eq 1) -and
         ($ackPlay[1] -eq 0) -and
-        ($ackPlay[2] -eq [int]$sourceEnvelope[0].ds_volume) -and
+        ($ackPlay[2] -eq [int]$publicEntry.ds_volume) -and
         ($ackPlay[3] -eq $publicStart) -and
         (([uint32]$ackPlay[7] -band $targetChannelBit) -ne 0)) `
         ('Calico did not acknowledge the PublicExcited start command with ' +
         'its assigned hardware channel active.') $gdbStdout
-    Assert-Condition (($ackZero[0] -eq 2) -and
-        ($ackZero[1] -eq [uint64]$finalEnvelopePoint.tick) -and
-        ($ackZero[2] -eq [int]$finalEnvelopePoint.ds_volume) -and
-        ($ackZero[3] -eq $zeroNow) -and
-        (([uint32]$ackZero[7] -band $targetChannelBit) -ne 0)) `
-        ('Calico did not acknowledge the final PublicExcited zero-volume ' +
-        'command while its looping channel remained active.') $gdbStdout
     Assert-Condition (($ackStop[0] -eq 3) -and
         ($ackStop[1] -eq $sourceDurationTicks) -and
         ($ackStop[2] -eq $expectedDurationReleaseReason) -and
@@ -1022,36 +893,24 @@ try {
         -Start ([uint32]$ackPlay[5]) -End ([uint32]$ackPlay[3])
     $playAckTicks = Get-UInt32Delta `
         -Start ([uint32]$ackPlay[5]) -End ([uint32]$ackPlay[6])
-    $zeroServiceTicks = Get-UInt32Delta `
-        -Start ([uint32]$ackZero[3]) -End ([uint32]$ackZero[4])
-    $zeroCommandTicks = Get-UInt32Delta `
-        -Start ([uint32]$ackZero[4]) -End ([uint32]$ackZero[5])
-    $zeroAckTicks = Get-UInt32Delta `
-        -Start ([uint32]$ackZero[5]) -End ([uint32]$ackZero[6])
     $stopServiceTicks = Get-UInt32Delta `
         -Start ([uint32]$ackStop[3]) -End ([uint32]$ackStop[4])
     $stopCommandTicks = Get-UInt32Delta `
         -Start ([uint32]$ackStop[4]) -End ([uint32]$ackStop[5])
     $stopAckTicks = Get-UInt32Delta `
         -Start ([uint32]$ackStop[5]) -End ([uint32]$ackStop[6])
-    $zeroToStopTicks = Get-UInt32Delta `
-        -Start ([uint32]$ackZero[6]) -End ([uint32]$ackStop[3])
     foreach ($orderedDelta in @(
             $playCommandTicks, $playPublishTicks, $playAckTicks,
-            $zeroServiceTicks, $zeroCommandTicks, $zeroAckTicks,
-            $stopServiceTicks, $stopCommandTicks, $stopAckTicks,
-            $zeroToStopTicks)) {
+            $stopServiceTicks, $stopCommandTicks, $stopAckTicks)) {
         Assert-Condition ($orderedDelta -lt 0x80000000UL) `
             'ARM7 ACK trace CPU ticks were not in modular event order.' `
             $gdbStdout
     }
 
     $playAckWaitMicroseconds = Convert-CpuTicksToMicroseconds $playAckTicks
-    $zeroAckWaitMicroseconds = Convert-CpuTicksToMicroseconds $zeroAckTicks
     $stopAckWaitMicroseconds = Convert-CpuTicksToMicroseconds $stopAckTicks
     foreach ($ackWaitMicroseconds in @(
-            $playAckWaitMicroseconds, $zeroAckWaitMicroseconds,
-            $stopAckWaitMicroseconds)) {
+            $playAckWaitMicroseconds, $stopAckWaitMicroseconds)) {
         Assert-Condition (
             $ackWaitMicroseconds -le $MaxAckWaitMicroseconds) `
             ('Calico ARM7 command acknowledgment exceeded the ' +
@@ -1059,27 +918,18 @@ try {
             "$ackWaitMicroseconds us.") $gdbStdout
     }
 
-    $zeroAckElapsed = Get-UInt32Delta `
-        -Start $publicStart -End ([uint32]$ackZero[6])
     $stopAckElapsed = Get-UInt32Delta `
         -Start $publicStart -End ([uint32]$ackStop[6])
-    Assert-Condition (($zeroAckElapsed -ge $zeroDueTicks) -and
-        ($zeroAckElapsed -lt $storedDurationTicks)) `
-        ('Final PublicExcited zero-volume command was not acknowledged ' +
-        'inside its source-semantic timing window.') $gdbStdout
     Assert-Condition ($stopAckElapsed -ge $storedDurationTicks) `
         'PublicExcited stop was acknowledged before its source duration.' `
         $gdbStdout
-    $zeroAckLatenessMicroseconds = Convert-CpuTicksToMicroseconds `
-        ($zeroAckElapsed - $zeroDueTicks)
     $stopAckLatenessMicroseconds = Convert-CpuTicksToMicroseconds `
         ($stopAckElapsed - $storedDurationTicks)
 
     Assert-Condition (($release[0] -eq 0) -and ($release[1] -eq 0) -and
         ($release[2] -eq 0) -and ($release[3] -eq -1) -and
         ($release[4] -eq 0) -and ($release[5] -eq $publicGeneration) -and
-        ($release[6] -eq $runtimeEnvelope.Count) -and
-        ($release[7] -eq $runtimeEnvelope.Count) -and
+        ($release[6] -eq 0) -and ($release[7] -eq 0) -and
         ($release[8] -eq 0) -and ($release[9] -eq 0) -and
         ($release[11] -ge ($release[10] + 1)) -and
         ($release[12] -eq $stop[10]) -and
@@ -1121,19 +971,9 @@ try {
         "Crowd timing screenshot is unexpectedly small: $screenshotPath" `
         $gdbStdout
     Assert-Condition (
-        $zeroLatenessMicroseconds -le $MaxServiceLatenessMicroseconds) `
-        ('PublicExcited final-zero ARM9 gameplay-service dispatch was ' +
-        "$zeroLatenessMicroseconds us late (limit " +
-        "$MaxServiceLatenessMicroseconds us).") $gdbStdout
-    Assert-Condition (
         $stopLatenessMicroseconds -le $MaxServiceLatenessMicroseconds) `
         ('PublicExcited duration-release ARM9 gameplay-service dispatch was ' +
         "$stopLatenessMicroseconds us late (limit " +
-        "$MaxServiceLatenessMicroseconds us).") $gdbStdout
-    Assert-Condition (
-        $zeroAckLatenessMicroseconds -le $MaxServiceLatenessMicroseconds) `
-        ('PublicExcited final-zero ARM7 command acknowledgment was ' +
-        "$zeroAckLatenessMicroseconds us late (limit " +
         "$MaxServiceLatenessMicroseconds us).") $gdbStdout
     Assert-Condition (
         $stopAckLatenessMicroseconds -le $MaxServiceLatenessMicroseconds) `
@@ -1142,19 +982,16 @@ try {
         "$MaxServiceLatenessMicroseconds us).") $gdbStdout
 
     Write-Output (
-        ('Crowd envelope Calico ARM7 command-application timing passed: id={0} ' +
-        'generation={1} source/runtime_points={2}/{3} source_line={4} ' +
-        'zero_due={5}us zero_service/ack_late={6}/{7}us ' +
-        'stop_due={8}us stop_service/ack_late={9}/{10}us ' +
-        'ack_wait_play/zero/stop={11}/{12}/{13}us reserve={14} ' +
-        'screenshot={15}. Host audio was muted; channel-command ACKs do not ' +
+        ('Crowd AOT Calico PLAY/STOP timing passed: id={0} generation={1} ' +
+        'source_points={2} packed_points=0 source_line={3} ' +
+        'silent_tail_start={4}us stop_due={5}us ' +
+        'stop_service/ack_late={6}/{7}us ack_wait_play/stop={8}/{9}us ' +
+        'reserve={10} screenshot={11}. Host audio was muted; command ACKs do not ' +
         'prove the final mixed output or acoustic fidelity.') -f
         $publicExcitedID, $publicGeneration, $sourceEnvelope.Count,
-        $runtimeEnvelope.Count, $upstreamCallLine,
-        $sourceZeroMicroseconds, $zeroLatenessMicroseconds,
-        $zeroAckLatenessMicroseconds, $sourceStopMicroseconds,
-        $stopLatenessMicroseconds, $stopAckLatenessMicroseconds,
-        $playAckWaitMicroseconds, $zeroAckWaitMicroseconds,
+        $upstreamCallLine, $silentTailStartMicroseconds,
+        $sourceStopMicroseconds, $stopLatenessMicroseconds,
+        $stopAckLatenessMicroseconds, $playAckWaitMicroseconds,
         $stopAckWaitMicroseconds, $memory[2], $screenshotPath)
 } finally {
     if ($null -ne $emulator) {

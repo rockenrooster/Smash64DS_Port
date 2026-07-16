@@ -44,7 +44,7 @@ if (-not $NoBuild) {
         NDS_RENDERER_HW_TRIANGLES=1 `
         NDS_DEBUG_HUD=0 `
         NDS_RENDERER_PROFILE_LEVEL=0 `
-        NDS_SCENE_MIP_CACHE_LAB=1 `
+        NDS_SCENE_MIP_CACHE_LAB=0 `
         NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS=0 `
         -j16
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -216,8 +216,8 @@ try {
         [int]$play.Groups[4].Value -ne 0 -or
         [int]$play.Groups[5].Value -ne 0 -or
         (Convert-MarkerUInt32 $play.Groups[6].Value) -ne 0x1f -or
-        [int]$play.Groups[7].Value -ne 1 -or
-        [int]$play.Groups[8].Value -lt 1 -or
+        [int]$play.Groups[7].Value -ne 0 -or
+        [int]$play.Groups[8].Value -ne 0 -or
         ([int]$play.Groups[1].Value -ne
          ([int]$play.Groups[2].Value + [int]$play.Groups[3].Value))) {
         throw "Natural FGM play accounting failed.`n$gdbStdout"
@@ -234,7 +234,7 @@ try {
     }
     $fgmChannelMask = if ($pool.Success) {
         Convert-MarkerUInt32 $pool.Groups[8].Value
-    } else { 0u }
+    } else { [uint32]0 }
     if (-not $pool.Success -or
         [int]$pool.Groups[1].Value -ne 5 -or
         [int]$pool.Groups[2].Value -ne 8 -or
@@ -245,7 +245,7 @@ try {
         [int]$pool.Groups[7].Value -lt 1 -or
         $fgmChannelMask -eq 0 -or
         [int]$pool.Groups[9].Value -ge 16 -or
-        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 15) {
+        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 12) {
         throw "FGM recycle/channel/fidelity diagnostics failed.`n$gdbStdout"
     }
     if (-not $life.Success -or
@@ -261,7 +261,7 @@ try {
         [int]$bgm.Groups[3].Value -lt 1 -or
         [int]$bgm.Groups[4].Value -lt 65536 -or
         $bgmChannel -lt 0 -or $bgmChannel -ge 16 -or
-        (($fgmChannelMask -band (1u -shl $bgmChannel)) -ne 0)) {
+        (($fgmChannelMask -band ([uint32]1 -shl $bgmChannel)) -ne 0)) {
         throw "FGM playback did not coexist on channels distinct from BGM.`n$gdbStdout"
     }
     if (-not $memory.Success -or [uint64]$memory.Groups[1].Value -lt 131072) {
