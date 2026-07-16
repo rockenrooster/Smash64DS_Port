@@ -15805,11 +15805,13 @@ static void ndsRendererNativeStageAccountRun(
 static void ndsRendererNativeStageBeginRun(
     const NDSNativeStagePreparedRun *run,
     u32 submit_class,
+    u32 segment_owner,
     NDSRendererStats *stats)
 {
     u32 poly_fmt = run->poly_fmt;
 
-    if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+    if ((submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) &&
+        (segment_owner < 4u))
     {
         poly_fmt &= ~((u32)POLY_CULL_NONE);
         poly_fmt |= POLY_CULL_BACK;
@@ -16211,7 +16213,8 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             &sNdsNativeStageOwnerExecution.runs[run_index];
         u32 triangle_offset;
 
-        ndsRendererNativeStageBeginRun(prepared_run, run->submit_class, stats);
+        ndsRendererNativeStageBeginRun(
+            prepared_run, run->submit_class, segment->owner, stats);
         for (triangle_offset = 0u;
              triangle_offset < run->triangle_count;
              triangle_offset++)
