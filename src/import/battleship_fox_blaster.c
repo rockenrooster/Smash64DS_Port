@@ -2,6 +2,7 @@
 
 #include <ef/effect.h>
 #include <ft/fighter.h>
+#include <nds/nds_effects.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <wp/weapon.h>
@@ -42,10 +43,11 @@ sb32 wpFoxBlasterProcReflector(GObj *weapon_gobj);
 void ftFoxSpecialNSetStatus(GObj *fighter_gobj);
 void ftFoxSpecialAirNSetStatus(GObj *fighter_gobj);
 
-// ponytail: particle visuals stay stubbed until the effect-manager memory gate.
+/* Keep the source impact event while using the bounded untextured DS shape. */
 __attribute__((weak)) LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
 {
-    (void)pos;
+    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectHitElectric, pos,
+                                       0.55F, 1, NULL);
     return NULL;
 }
 

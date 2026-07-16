@@ -1,4 +1,5 @@
 #include "nds_scene_harness_config.h"
+#include <nds/nds_effects.h>
 
 #ifndef NDS_SCENE_MIP_CACHE_LAB
 #define NDS_SCENE_MIP_CACHE_LAB 0
@@ -12781,6 +12782,15 @@ static sb32 ndsStageGCDrawAllLoopIsWeaponDisplay(GObj *gobj, s32 link_id)
             (link_id == 14)) ? TRUE : FALSE;
 }
 
+static sb32 ndsStageGCDrawAllLoopIsEffectDisplay(GObj *gobj, s32 link_id)
+{
+    return ((gobj != NULL) &&
+            (gobj->id == nGCCommonKindEffect) &&
+            (gobj->dl_link_id == 18) &&
+            (link_id == 18) &&
+            (ndsEFManagerIsVisualEffectGObj(gobj) != FALSE)) ? TRUE : FALSE;
+}
+
 static void ndsStageGCDrawAllLoopRecordWeaponCapture(GObj *gobj,
                                                       s32 link_id)
 {
@@ -12795,6 +12805,15 @@ static void ndsStageGCDrawAllLoopRecordWeaponCapture(GObj *gobj,
     if ((wp != NULL) && (wp->kind >= 0) && (wp->kind < 32))
     {
         gNdsWeaponRendererKindMask |= 1u << (u32)wp->kind;
+    }
+}
+
+static void ndsStageGCDrawAllLoopRecordEffectCapture(GObj *gobj,
+                                                      s32 link_id)
+{
+    if (ndsStageGCDrawAllLoopIsEffectDisplay(gobj, link_id) != FALSE)
+    {
+        gNdsEffectRendererCaptureCount++;
     }
 }
 
@@ -12926,6 +12945,68 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
             gNdsWeaponRendererFireballVisibleDrawCount++;
         }
     }
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+}
+
+static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
+                                                  u32 callback_kind)
+{
+    DObj *root;
+    u32 triangle_before;
+    u32 texture_ready_before;
+    u32 texture_reject_before;
+    u32 triangle_delta;
+    u32 texture_ready_delta;
+    u32 texture_reject_delta;
+
+    if ((effect_gobj == NULL) ||
+        (effect_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
+        (ndsStageGCDrawAllLoopIsEffectDisplay(
+             effect_gobj,
+             sNdsStageGCDrawAllLoopCurrentDisplayLinkID) == FALSE))
+    {
+        return;
+    }
+    gNdsEffectRendererDObjDrawCount++;
+    root = DObjGetStruct(effect_gobj);
+    if ((root == NULL) || (root->dv == NULL) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
+    {
+        gNdsEffectRendererRejectedDrawCount++;
+        return;
+    }
+    triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
+    texture_ready_before =
+        gNdsStageGCDrawAllLoopHardwareTextureReadyCount;
+    texture_reject_before =
+        gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
+    ndsRendererAdapterBeginStageTraversal();
+    ndsRendererAdapterSubmitStageDObj(
+        root,
+        callback_kind,
+        sNdsStageGCDrawAllLoopCurrentCameraGObj,
+        ndsStageGCDrawAllLoopInitialGeometryMode());
+    ndsRendererAdapterEndStageTraversal();
+    triangle_delta =
+        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;
+    texture_ready_delta =
+        gNdsStageGCDrawAllLoopHardwareTextureReadyCount -
+        texture_ready_before;
+    texture_reject_delta =
+        gNdsStageGCDrawAllLoopHardwareTextureRejectCount -
+        texture_reject_before;
+    gNdsEffectRendererTriangleCount += triangle_delta;
+    gNdsEffectRendererTextureReadyCount += texture_ready_delta;
+    gNdsEffectRendererTextureRejectCount += texture_reject_delta;
+    if (triangle_delta == 0u)
+    {
+        gNdsEffectRendererRejectedDrawCount++;
+        return;
+    }
+    gNdsEffectRendererSubmitCount++;
     sNdsStageGCDrawAllLoopHardwareSubmitCount++;
     gNdsStageGCDrawAllLoopHardwareSubmitCount =
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
@@ -13127,6 +13208,7 @@ s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     sNdsStageGCDrawAllLoopCurrentDisplayLinkID = link_id;
 #if NDS_RENDERER_HW_TRIANGLES
     ndsStageGCDrawAllLoopRecordWeaponCapture(display, link_id);
+    ndsStageGCDrawAllLoopRecordEffectCapture(display, link_id);
 #endif
     if (ndsStageGCDrawAllLoopClassifyGObj(display, &mask,
                                           &is_layer) != FALSE)
@@ -13207,6 +13289,8 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
         if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
         {
             ndsStageGCDrawAllLoopSubmitWeaponDObj(stage_gobj,
+                                                  callback_kind);
+            ndsStageGCDrawAllLoopSubmitEffectDObj(stage_gobj,
                                                   callback_kind);
         }
 #endif

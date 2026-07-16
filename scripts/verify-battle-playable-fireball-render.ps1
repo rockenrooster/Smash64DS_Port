@@ -5,6 +5,7 @@ param(
     [int]$GdbPort = 4333,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
+    [switch]$VisualEffectsOnly,
     [ValidateRange(30,600)][int]$TimeoutSeconds = 180,
     [string]$Screenshot = ''
 )
@@ -298,10 +299,10 @@ try {
         'end',
         'set $fb_destroy_frame = gNdsFighterProjectileProofMapDestroyCount',
         'printf "FIREBALL_REBOUND=%u,%#x,%#x,%#x,%#x,%#x,%d,%#x,%#x,%#x,%#x,%#x,%#x,%d,%u,%u,%u,%u,%u,%d\n", $fb_map_entries, $fb_pre_mask_prev, $fb_pre_mask_curr, $fb_post_mask_curr, $fb_post_mask_stat, $fb_floor_flags, $fb_floor_line, $fb_pre_vx_bits, $fb_pre_vy_bits, $fb_post_vx_bits, $fb_post_vy_bits, $fb_angle_x_bits, $fb_angle_y_bits, $fb_lifetime_rebound, $fb_destroy_rebound, $fb_destroy_frame, $fb_live, $fb_scan_overflow, $fb_wp_match, $fb_lifetime_frame',
-        # Continue the same source-created object to its fortieth natural
-        # hardware submit. The existing post-submit line replaces a production-
-        # only marker while proving the custom 0x47 matrix at long travel.
-        'tbreak reloc_backend_movement.c:12928 if gNdsWeaponRendererFireballSubmitCount == 40',
+        # Stop when the exact source-created object has forty completed draws.
+        # Function entry is stable when renderer source lines move; the next
+        # capture is in flight but has not changed any completed-draw counters.
+        'tbreak ndsStageGCDrawAllLoopSubmitWeaponDObj if gNdsWeaponRendererFireballSubmitCount == 40 && ((GObj *)$r0 == $fb_weapon)',
         'continue',
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
         'printf "SCENE=%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gNdsBattlePlayableFoxCpuEnabled',
@@ -309,11 +310,17 @@ try {
         'printf "FIREBALL_SOURCE=%u,%u,%u,%u,%u,%#x\n", gNdsFighterProjectileProofSpawnCallCount, gNdsFighterProjectileProofSpawnSuccessCount, gNdsFighterProjectileProofDamageMax, gNdsFighterProjectileProofLifetimeMax, gNdsFighterProjectileProofWeaponCountMax, gNdsFighterProjectileProofKindMask',
         'printf "WEAPON_RENDER=%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%u\n", gNdsWeaponRendererCaptureCount, gNdsWeaponRendererDObjDrawCount, gNdsWeaponRendererSubmitCount, gNdsWeaponRendererVisibleDrawCount, gNdsWeaponRendererTriangleCount, gNdsWeaponRendererTextureReadyCount, gNdsWeaponRendererTextureRejectCount, gNdsWeaponRendererKindMask, gNdsWeaponRendererCallbackKind, gNdsWeaponRendererNoZCount, gNdsWeaponRendererMovingDrawCount, gNdsWeaponRendererFireballSubmitCount, gNdsWeaponRendererFireballTriangleCount, gNdsWeaponRendererFireballVisibleDrawCount, gNdsWeaponRendererRejectedDrawCount',
         'printf "FIREBALL_TRANSFORM=%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsWeaponRendererFireballCustom47AppliedCount, gNdsWeaponRendererFireballCustom47MismatchCount, gNdsRendererAdapterCustom47DetectedCount, gNdsRendererAdapterCustom47AppliedCount, gNdsRendererAdapterCustom47RejectCount, gNdsRendererAdapterCustom47TranslationMismatchCount, gNdsRendererAdapterCustom47LastXObjsNum, gNdsRendererAdapterCustom47LastKinds, gNdsRendererAdapterCustom47LastRotateXBits, gNdsRendererAdapterCustom47LastRotateYBits, gNdsRendererAdapterCustom47LastTranslateX20p12, gNdsRendererAdapterCustom47LastTranslateY20p12, gNdsRendererAdapterCustom47LastTranslateZ20p12, gNdsWeaponRendererFireballFirstXBits, gNdsWeaponRendererFireballFirstYBits, gNdsWeaponRendererFireballLastXBits, gNdsWeaponRendererFireballLastYBits',
+        'printf "VISUAL_EFFECT=%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsVisualEffectCreateCount, gNdsVisualEffectDestroyCount, gNdsVisualEffectDropCount, gNdsVisualEffectActiveCount, gNdsVisualEffectMaxActiveCount, gNdsVisualEffectKindMask, gNdsVisualEffectTemplateBytes, gNdsEffectRendererCaptureCount, gNdsEffectRendererDObjDrawCount, gNdsEffectRendererSubmitCount, gNdsEffectRendererTriangleCount, gNdsEffectRendererTextureReadyCount, gNdsEffectRendererTextureRejectCount, gNdsEffectRendererRejectedDrawCount',
         'printf "MP_TOPOLOGY=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x\n", gNdsCollisionRuntimeDiagnostics.topology_build_attempts, gNdsCollisionRuntimeDiagnostics.topology_build_successes, gNdsCollisionRuntimeDiagnostics.topology_rebuilds, gNdsCollisionRuntimeDiagnostics.topology_lines, gNdsCollisionRuntimeDiagnostics.topology_shared_directed, gNdsCollisionRuntimeDiagnostics.topology_orphan_endpoints, gNdsCollisionRuntimeDiagnostics.topology_reversed_lines, gNdsCollisionRuntimeDiagnostics.topology_ambiguous_endpoints, gNdsCollisionRuntimeDiagnostics.topology_invalid, gNdsCollisionRuntimeDiagnostics.topology_hash',
         'printf "MP_FLOOR=%u,%u,%u,%u,%u\n", gNdsCollisionRuntimeDiagnostics.floor_sweep_calls, gNdsCollisionRuntimeDiagnostics.floor_sweep_hits, gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_sweeps, gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_accepts, gNdsCollisionRuntimeDiagnostics.floor_adj_ambiguous',
         ('printf "INPUT=%u,%#x,%u,%u,%#x\n", *(unsigned int*)0x{0:x8}, *(unsigned int*)0x{1:x8}, gNdsControllerPlaybackFrameCount, gNdsControllerPlaybackReadCount, *(unsigned short*)0x{2:x8}' -f $playbackEnabledAddress, $playbackConnectedAddress, $playbackPadsAddress),
         'printf "MEMARENA=%#x,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerArenaHeadroom',
-        $captureCommand,
+        $captureCommand
+    )
+    if ($VisualEffectsOnly) {
+        $gdbCommands += @('detach', 'quit')
+    } else {
+        $gdbCommands += @(
         # BattleShip wpprocess.c:167-180 owns the natural map-bounds terminal
         # path. Optimized line data folds line 179 into line 183, so resolve the
         # exact shared destroy call from this ELF. The captured source state
@@ -395,7 +402,8 @@ try {
         ('printf "MARIO_TORNADO=%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%#x,%d,%#x\n", ($tornado_start_status == nFTMarioStatusSpecialLw || $tornado_start_status == nFTMarioStatusSpecialAirLw), $tornado_start_status, $tornado_start_motion, $tornado_frames, $tornado_attack_frames, $tornado_air_frames, $tornado_start_frame, $tornado_end_frame, $tornado_end_anim_bits, ($tornado_final_status == nFTCommonStatusWait), $tornado_final_status, $tornado_final_ga, *(signed char *)' + $tornadoStickYAddress + ', *(unsigned short *)' + $tornadoPadAddress),
         'detach',
         'quit'
-    )
+        )
+    }
     $gdbStdout = (Invoke-GdbMarkerScript `
         -Gdb $Gdb `
         -Elf $elf `
@@ -410,6 +418,7 @@ try {
     $source = [regex]::Match($gdbStdout, 'FIREBALL_SOURCE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $weapon = [regex]::Match($gdbStdout, 'WEAPON_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $transform = [regex]::Match($gdbStdout, 'FIREBALL_TRANSFORM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $visual = [regex]::Match($gdbStdout, 'VISUAL_EFFECT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $rebound = [regex]::Match($gdbStdout, 'FIREBALL_REBOUND=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
     $topology = [regex]::Match($gdbStdout, 'MP_TOPOLOGY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $floor = [regex]::Match($gdbStdout, 'MP_FLOOR=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -422,6 +431,7 @@ try {
     $fv = Get-Ints $source
     $wv = Get-Ints $weapon
     $xv = Get-Ints $transform
+    $vv = Get-Ints $visual
     $rv = Get-Ints $rebound
     $tv = Get-Ints $topology
     $flv = Get-Ints $floor
@@ -454,6 +464,63 @@ try {
     $translateY = [double](Convert-UInt32ToInt32 $xv[11]) / 4096.0
     $translateZ = [double](Convert-UInt32ToInt32 $xv[12]) / 4096.0
     $horizontalTravel = [Math]::Abs($lastX - $firstX)
+
+    if ($VisualEffectsOnly) {
+        Assert-Condition ($harn.Success -and $hv[0] -eq 0x4841524e -and
+            $hv[1] -eq 163 -and $hv[2] -eq 22 -and $hv[3] -eq 21 -and
+            $hv[4] -eq 0) `
+            'Visual-effect proof did not run canonical mode 163.' $gdbStdout
+        Assert-Condition ($scene.Success -and $sv[0] -eq 22 -and
+            $sv[1] -eq 21 -and $sv[2] -eq 6 -and $sv[3] -eq 1 -and
+            $sv[4] -eq 0 -and $sv[5] -eq 0) `
+            'Visual-effect proof did not retain the documented battle scene.' `
+            $gdbStdout
+        Assert-Condition ($source.Success -and $fv[0] -eq 1 -and
+            $fv[1] -eq 1 -and $fv[2] -eq 7 -and $fv[3] -eq 140 -and
+            $fv[4] -eq 1 -and $fv[5] -eq 1) `
+            'Original Mario Fireball source creation did not run once.' `
+            $gdbStdout
+        Assert-Condition ($rv[14] -eq $rv[15] -and $rv[16] -eq 1 -and
+            $rv[17] -eq 0 -and $rv[18] -eq 1 -and
+            $rv[19] -ge ($rv[13] - 1) -and $rv[19] -le $rv[13]) `
+            'The source Fireball did not remain live across its rebound.' `
+            $gdbStdout
+        Assert-Condition ($weapon.Success -and $wv[2] -eq 40 -and
+            $wv[0] -eq ($wv[2] + 1) -and $wv[1] -eq $wv[2] -and
+            $wv[3] -eq $wv[2] -and $wv[4] -eq (2 * $wv[2]) -and
+            $wv[5] -eq $wv[2] -and $wv[6] -eq 0 -and
+            $wv[11] -eq $wv[2] -and $wv[12] -eq (2 * $wv[11]) -and
+            $wv[13] -eq $wv[11] -and $wv[14] -eq 0) `
+            'Fireball did not reach forty rejection-free completed draws.' `
+            $gdbStdout
+        Assert-Condition ($transform.Success -and $xv[0] -eq 40 -and
+            $xv[1] -eq 0 -and $xv[4] -eq 0 -and $xv[5] -eq 0) `
+            'Fireball source transform was rejected or drifted.' $gdbStdout
+        Assert-Condition ($visual.Success -and $vv[0] -gt 0 -and
+            $vv[2] -eq 0 -and $vv[4] -gt 0 -and $vv[3] -le $vv[4] -and
+            (($vv[5] -band (1 -shl 2)) -ne 0) -and $vv[6] -eq 2816 -and
+            $vv[7] -gt 0 -and $vv[8] -eq $vv[7] -and
+            $vv[9] -eq $vv[8] -and $vv[10] -ge (6 * $vv[9]) -and
+            $vv[10] -le (16 * $vv[9]) -and $vv[11] -eq 0 -and
+            $vv[12] -eq 0 -and $vv[13] -eq 0) `
+            'Natural Fireball rebound did not render its bounded fire effect.' `
+            $gdbStdout
+        Assert-Condition ($memory.Success -and $mv[0] -eq 0x4d4c4544 -and
+            $mv[1] -eq 22 -and $mv[2] -ge 131072) `
+            'Visual effects violated the P1 arena reserve floor.' $gdbStdout
+        Assert-Condition (Test-Path -LiteralPath $screenshotPath -PathType Leaf) `
+            "Visual-effect proof did not capture $screenshotPath" $gdbStdout
+        & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+            -Image $screenshotPath `
+            -MinDifferentFraction 0.01 `
+            -MinDominantGreenFraction 0.03 `
+            -MinNonWhiteNonGreenFraction 0.20 `
+            -WindowScaledCapture
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Write-Output ("battle_playable visual effects passed: created={0} rendered={1} triangles={2} kinds={3:x} reserve={4} capture={5}" -f
+            $vv[0], $vv[9], $vv[10], $vv[5], $mv[2], $screenshotPath)
+        return
+    }
 
     foreach ($capturePath in @($screenshotPath, $terminalScreenshotPath,
             $tornadoScreenshotPath)) {
@@ -514,11 +581,20 @@ try {
     Assert-Condition ($rv[14] -eq $rv[15] -and $rv[16] -eq 1 -and $rv[17] -eq 0 -and $rv[18] -eq 1 -and $rv[19] -eq $rv[13]) 'The same Fireball object did not survive its source rebound callback.' $gdbStdout
     Assert-Condition ($topology.Success -and $tv[0] -eq 1 -and $tv[1] -eq 1 -and $tv[2] -eq 0 -and $tv[3] -eq 7 -and $tv[4] -eq 8 -and $tv[5] -eq 6 -and $tv[6] -eq 5 -and $tv[7] -eq 0 -and $tv[8] -eq 0 -and $tv[9] -eq 3903148810) 'Live Pupupu topology did not match BattleShip shared-vertex-ID construction.' $gdbStdout
     Assert-Condition ($floor.Success -and $flv[0] -gt 0 -and $flv[1] -gt 0 -and $flv[3] -eq 0 -and $flv[4] -eq 0) 'Live floor acquisition accepted an ascending/ambiguous collision or never hit.' $gdbStdout
-    Assert-Condition ($weapon.Success -and $wv[2] -eq 40 -and $wv[0] -eq $wv[2] -and $wv[1] -eq $wv[2] -and $wv[3] -eq $wv[2] -and $wv[4] -eq (2 * $wv[2]) -and $wv[5] -eq $wv[2] -and $wv[6] -eq 0 -and $wv[7] -eq 1 -and $wv[8] -eq 0x444c4831 -and $wv[9] -eq $wv[2] -and ($wv[10] + 1) -eq $wv[2] -and $wv[11] -eq $wv[2] -and $wv[12] -eq (2 * $wv[11]) -and $wv[13] -eq $wv[11] -and $wv[14] -eq 0) 'The forty captured Mario Fireball callbacks were not textured, rejection-free source DLHEAD1 no-Z two-triangle hardware draws with natural motion.' $gdbStdout
+    Assert-Condition ($weapon.Success -and $wv[2] -eq 40 -and $wv[0] -eq ($wv[2] + 1) -and $wv[1] -eq $wv[2] -and $wv[3] -eq $wv[2] -and $wv[4] -eq (2 * $wv[2]) -and $wv[5] -eq $wv[2] -and $wv[6] -eq 0 -and $wv[7] -eq 1 -and $wv[8] -eq 0x444c4831 -and $wv[9] -eq $wv[2] -and ($wv[10] + 1) -eq $wv[2] -and $wv[11] -eq $wv[2] -and $wv[12] -eq (2 * $wv[11]) -and $wv[13] -eq $wv[11] -and $wv[14] -eq 0) 'The forty completed Mario Fireball callbacks were not textured, rejection-free source DLHEAD1 no-Z two-triangle hardware draws with natural motion.' $gdbStdout
     Assert-Condition ($xv[0] -eq 40 -and $xv[1] -eq 0 -and
         $xv[2] -ge 40 -and $xv[3] -eq $xv[2] -and $xv[4] -eq 0 -and
         $xv[5] -eq 0 -and $xv[6] -eq 2 -and $xv[7] -eq 0x4712) `
         'The source 0x47 Fireball MVP callback was not applied exactly once per Fireball draw without rejection or translation drift.' `
+        $gdbStdout
+    Assert-Condition ($visual.Success -and $vv[0] -gt 0 -and
+        $vv[2] -eq 0 -and $vv[4] -gt 0 -and $vv[3] -le $vv[4] -and
+        (($vv[5] -band (1 -shl 2)) -ne 0) -and $vv[6] -eq 2816 -and
+        $vv[7] -gt 0 -and $vv[8] -eq $vv[7] -and
+        $vv[9] -eq $vv[8] -and $vv[10] -ge (6 * $vv[9]) -and
+        $vv[10] -le (16 * $vv[9]) -and $vv[11] -eq 0 -and
+        $vv[12] -eq 0 -and $vv[13] -eq 0) `
+        'Natural Fireball rebound did not create and render a rejection-free, textureless bounded fire effect.' `
         $gdbStdout
     Assert-Condition ((Test-FiniteSingle ([single]$rotateX)) -and (Test-FiniteSingle ([single]$rotateY)) -and [Math]::Abs($rotateX) -gt 0.01 -and (Test-FiniteSingle ([single]$firstX)) -and (Test-FiniteSingle ([single]$firstY)) -and (Test-FiniteSingle ([single]$lastX)) -and (Test-FiniteSingle ([single]$lastY)) -and $horizontalTravel -gt 500.0) 'Fireball custom rotation or natural long-distance travel was invalid.' $gdbStdout
     Assert-Condition ([Math]::Abs($translateX) -lt 524288.0 -and [Math]::Abs($translateY) -lt 524288.0 -and [Math]::Abs($translateZ) -lt 524288.0) 'Fireball source MVP translation row overflowed DS 20.12 range.' $gdbStdout
@@ -551,7 +627,7 @@ try {
         'Natural current-ROM Mario Tornado did not enter its source status, expose an attack, return to grounded Wait, or release input.' `
         $gdbStdout
     Assert-Condition ($memory.Success -and $mv[0] -eq 0x4d4c4544 -and $mv[1] -eq 22 -and $mv[2] -ge 131072) 'Fireball renderer violated the P1 arena reserve floor.' $gdbStdout
-    Write-Output ("battle_playable Fireball/Tornado passed: fireball={0}/{1} maps={2} floor={3} draw={4} travel={5:N1} terminalY={6:N1}<{7} roi={8}->{9} tornado={10}f/attack{11}/air{12} reserve={13} captures={14},{15},{16}" -f $fv[0], $fv[1], $rv[0], $rv[6], $wv[2], $horizontalTravel, $terminalY, $term[4], $fireballRoiPixels, $terminalRoiPixels, $torn[3], $torn[4], $torn[5], $mv[2], $screenshotPath, $terminalScreenshotPath, $tornadoScreenshotPath)
+    Write-Output ("battle_playable Fireball/Tornado passed: fireball={0}/{1} maps={2} floor={3} draw={4} effect={5}/{6} effect-tris={7} travel={8:N1} terminalY={9:N1}<{10} roi={11}->{12} tornado={13}f/attack{14}/air{15} reserve={16} captures={17},{18},{19}" -f $fv[0], $fv[1], $rv[0], $rv[6], $wv[2], $vv[0], $vv[9], $vv[10], $horizontalTravel, $terminalY, $term[4], $fireballRoiPixels, $terminalRoiPixels, $torn[3], $torn[4], $torn[5], $mv[2], $screenshotPath, $terminalScreenshotPath, $tornadoScreenshotPath)
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()
