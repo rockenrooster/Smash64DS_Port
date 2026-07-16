@@ -121,6 +121,83 @@ SELECTED = (
         "expected_retained_samples": 13801,
     },
     {
+        "id": 74,
+        "name": "nSYAudioFGMFoxLanding",
+        "kind": "movement",
+        "render_program": 72,
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((8, 7, 3),),
+        "duration_ticks": 3,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 621,
+        "root_fork_programs": (72,),
+        "root_program_sha256":
+            "c5fb3a31fc2383118516512dda33fdd0f670a91a490bfc333c27b21e66d6f4a0",
+        "render_program_sha256":
+            "9b37506dc57cc43b255fa175bfb1e9256fc4c955ae00e4bd600bf4ab123781cf",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 363,
+        "name": "nSYAudioVoiceFoxJumpAerial",
+        "kind": "voice",
+        "articulation": 227,
+        "sound": 108,
+        "notes": ((13, 7, 45),),
+        "duration_ticks": 45,
+        "ucd_volume": 222,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 922072,
+        "wave_length": 2116,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 3760,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "126427d6140813a00aadc14a7c4f51ec2cdeb013a1b030b7f2b9e29c08898b08",
+        "render_program_sha256":
+            "126427d6140813a00aadc14a7c4f51ec2cdeb013a1b030b7f2b9e29c08898b08",
+        "articulation_program_sha256":
+            "eff2f55d748352dca4be41a0377216dba9f6ab9a65b68438f09913a514f3a8e3",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 364,
+        "name": "nSYAudioVoiceFoxEscape",
+        "kind": "voice",
+        "articulation": 221,
+        "sound": 102,
+        "notes": ((13, 7, 20), (13, 7, 20), (13, 7, 20),
+                  (13, 7, 5)),
+        "duration_ticks": 65,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 903200,
+        "wave_length": 1638,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2912,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "9baa16746dc4d654749dce8e6dd786d13faa021e275593f654ec5ad92a14f89e",
+        "render_program_sha256":
+            "9baa16746dc4d654749dce8e6dd786d13faa021e275593f654ec5ad92a14f89e",
+        "articulation_program_sha256":
+            "fac513d6d196e7a9ea445e98c30dc7d837063108c99902c4a2a88a5e08b3d8d9",
+        "fidelity_debt": (),
+    },
+    {
         "id": 372,
         "name": "nSYAudioVoiceFoxSmash1",
         "kind": "voice",
@@ -270,6 +347,32 @@ SELECTED = (
             "64523939186fd3d63f5440b5ec78784dac4e10c76456ebaa75671e4bfd9a85c2",
         "render_program_sha256":
             "634c9b1217b933f51dde97353d62e908fa1082943114d6dbe72bb188a3f33776",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+        "fidelity_debt": ("articulation_pitch_modulation",),
+    },
+    {
+        "id": 300,
+        "name": "nSYAudioFGMFoxDownBounce",
+        "kind": "movement",
+        "render_program": 298,
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((12, 7, 10), (12, 7, 15)),
+        "duration_ticks": 25,
+        "ucd_volume": 130,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 6688,
+        "root_fork_programs": (298,),
+        "root_program_sha256":
+            "0a7645ae1249ff5140ddbf80859b52c127b73d2b80e0b97d90cc3b61b0c4b262",
+        "render_program_sha256":
+            "9ed69d587dab562768d6321d349477c4f522c0b65115fb7cb2c1f27d5b27c4c2",
         "articulation_program_sha256":
             "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
         "fidelity_debt": ("articulation_pitch_modulation",),
@@ -1574,9 +1677,10 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             for record in records if record["flags"] == 0
             for point in record["envelope"])),
         "known_runtime_fidelity_debt": [
-            "The regular KO entries retain their exact source wavetable, "
-            "duration-proven prefix, initial pitch, and volume envelope; "
-            "source pitch automation is not yet scheduled on DS channels.",
+            "The regular KO and Fox movement entries retain their exact "
+            "source wavetable, duration-proven prefix, initial pitch, and "
+            "volume envelope; source pitch automation is not yet scheduled "
+            "on DS channels.",
             "DeadExplodeL currently renders its primary UCD voice; forked "
             "source voice 685 remains explicit metadata fidelity debt.",
             "Attack entries 190, 218, and 219 retain their exact source "

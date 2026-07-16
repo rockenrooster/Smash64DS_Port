@@ -26,14 +26,14 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
-$expectedIDs = @(626, 470, 469, 467, 490, 372, 430,
-    439, 292, 370, 289, 154, 77, 429, 435,
+$expectedIDs = @(626, 470, 469, 467, 490, 74, 363, 364, 372, 430,
+    439, 292, 370, 289, 300, 154, 77, 429, 435,
     42, 43, 190, 215, 218, 219)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
 }
-if (([int64]$metadata.resident_bytes -ne 110012) -or
+if (([int64]$metadata.resident_bytes -ne 113520) -or
     ([int64]$metadata.resident_limit_bytes -ne 163840)) {
     throw "FGM pack resident size changed: $($metadata.resident_bytes)"
 }
@@ -53,14 +53,20 @@ $marioIDs = @($metadata.entries | Where-Object {
 $attackIDs = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'attack'
     } | ForEach-Object { [int]$_.id })
+$movementIDs = @($metadata.entries | Where-Object {
+        $_.entry_kind -eq 'movement'
+    } | ForEach-Object { [int]$_.id })
 if (($phaseIDs -join ',') -ne '626,470,469,467,490') {
     throw "Unexpected FGM phase subset: $($phaseIDs -join ',')"
 }
 if (($koIDs -join ',') -ne '439,292,370,289,154') {
     throw "Unexpected regular-KO subset: $($koIDs -join ',')"
 }
-if (($voiceIDs -join ',') -ne '372,430,429,435') {
+if (($voiceIDs -join ',') -ne '363,364,372,430,429,435') {
     throw "Unexpected fighter-voice subset: $($voiceIDs -join ',')"
+}
+if (($movementIDs -join ',') -ne '74,300') {
+    throw "Unexpected Fox-movement subset: $($movementIDs -join ',')"
 }
 if (($marioIDs -join ',') -ne '77') {
     throw "Unexpected Mario movement subset: $($marioIDs -join ',')"
@@ -68,8 +74,8 @@ if (($marioIDs -join ',') -ne '77') {
 if (($attackIDs -join ',') -ne '42,43,190,215,218,219') {
     throw "Unexpected attack/activation subset: $($attackIDs -join ',')"
 }
-if (([int]$metadata.unique_sample_count -ne 16) -or
-    ([int]$metadata.unique_sample_bytes -ne 109204)) {
+if (([int]$metadata.unique_sample_count -ne 18) -or
+    ([int]$metadata.unique_sample_bytes -ne 112548)) {
     throw 'Regular-KO sample deduplication fixture changed.'
 }
 if (([int]$metadata.format_version -ne 3) -or
@@ -78,15 +84,15 @@ if (([int]$metadata.format_version -ne 3) -or
     ([int]$metadata.envelope_point_bytes -ne 4)) {
     throw 'Unexpected FGM pack entry/envelope format.'
 }
-if (($metadata.mapping_sha256_lo -ne '0x0ad15661') -or
+if (($metadata.mapping_sha256_lo -ne '0x5ca0d1da') -or
     ($metadata.pack_sha256 -ne
-        'ac08a4924983374bcc57f5edfd3f9c49a40acca2238e1aff175f396d82f884af')) {
+        '002a79f9892c0871d1203468f868a51a4ed78e3255965015352cd429831086c9')) {
     throw 'FGM pack mapping or binary hash changed.'
 }
 if (($metadata.non_loop_sample_sha256 -ne
-        '2c018e1088a5f216555b637dd6febb4b53a597a30a0c1720b3779c90513ec9df') -or
+        'a7f808cd4ebd15bd880650b2193e12b7a339206dbf6281bde559d925dc069391') -or
     ($metadata.non_loop_envelope_sha256 -ne
-        '78bea70f97480a6c74f99244a66a018450380a882a87ebdfe2391586df69c55f')) {
+        '66cf83360848994062ef53174b5480233614e5682feab3f8ecafbc42160bced4')) {
     throw 'Non-loop FGM sample or packed-envelope bytes changed.'
 }
 if ([bool]$metadata.runtime_conversion) {
@@ -247,6 +253,12 @@ foreach ($id in $expectedNonLoopPhaseHashes.Keys) {
 }
 
 $expectedFighterVoices = @(
+    @{ ID = 363; Sound = 108; Frequency = 16000; Duration = 45;
+        Samples = 3760; Volume = 76; Envelope = 0; Hash =
+        'd632acb6b82b8b97798659791da4170c7c8a6b4a707ea3b37ecd582fbd5b3bc8' },
+    @{ ID = 364; Sound = 102; Frequency = 16000; Duration = 65;
+        Samples = 2912; Volume = 42; Envelope = 5; Hash =
+        '141b7c3cdd1fe13e491fd087daaacd63d34f36c07dc589562e29e056e39e36ae' },
     @{ ID = 372; Sound = 105; Frequency = 16000; Duration = 46;
         Samples = 1680; Volume = 108; Envelope = 0; Hash =
         'ac3948daf50a93899233040c52153d84e75417f112487cc33679e40623804fcf' },
@@ -354,6 +366,35 @@ if (($swingEntries.Count -ne 5) -or
     throw 'Shared light-swing sample-body deduplication changed.'
 }
 
+$expectedFoxMovement = @(
+    @{ ID = 74; Sound = 1; Frequency = 35919; Duration = 3;
+        Samples = 621; Volume = 21; Envelope = 2;
+        Root = 74; Render = 72; Hash =
+        '92d03fe38eb5de34abb1568891b72c7082c052551b84391fd3af9e3bbcb30c1e' },
+    @{ ID = 300; Sound = 28; Frequency = 16000; Duration = 25;
+        Samples = 6688; Volume = 20; Envelope = 2;
+        Root = 300; Render = 298; Hash =
+        'cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6' }
+)
+foreach ($expected in $expectedFoxMovement) {
+    $entry = @($metadata.entries | Where-Object {
+            [int]$_.id -eq $expected.ID
+        })
+    if (($entry.Count -ne 1) -or
+        ([int]$entry[0].source_sound_index -ne $expected.Sound) -or
+        ([int]$entry[0].ds_frequency_hz -ne $expected.Frequency) -or
+        ([int]$entry[0].source_duration_ticks -ne $expected.Duration) -or
+        ([int]$entry[0].ds_sample_count -ne $expected.Samples) -or
+        ([int]$entry[0].ds_volume -ne $expected.Volume) -or
+        ([int]$entry[0].packed_envelope_count -ne $expected.Envelope) -or
+        ([int]$entry[0].root_ucd_program_id -ne $expected.Root) -or
+        ([int]$entry[0].render_ucd_program_id -ne $expected.Render) -or
+        ([int]$entry[0].ds_loop_point_words -ne 0) -or
+        ($entry[0].ima_adpcm_sha256 -ne $expected.Hash)) {
+        throw "Fox movement FGM $($expected.ID) source fixture changed."
+    }
+}
+
 $expectedTrimProofs = @(
     @{ ID = 470; Source = 11248; Schedule = 9109; Current = 9109;
         Retained = 9109; Removed = 2139; Prefix =
@@ -367,6 +408,15 @@ $expectedTrimProofs = @(
     @{ ID = 490; Source = 15840; Schedule = 13801; Current = 13801;
         Retained = 13801; Removed = 2039; Prefix =
         '647566464d00d204664f6a13be5fd144194c9933ed7f011006faa80261435429' },
+    @{ ID = 74; Source = 5232; Schedule = 621; Current = 621;
+        Retained = 621; Removed = 4611; Prefix =
+        '53e9fcd9f8c3a4908dea144b2774cf839ce9f27a6872a53984fe0517b7ec83d7' },
+    @{ ID = 363; Source = 3760; Schedule = 4141; Current = 4141;
+        Retained = 3760; Removed = 0; Prefix =
+        '362ca3a2a7d4ba82775cef426ae1a1df528688edd014347322f2bc3de24e5270' },
+    @{ ID = 364; Source = 2912; Schedule = 5981; Current = 5981;
+        Retained = 2912; Removed = 0; Prefix =
+        'b03e298f9643eef58c3db9c44c53078557d84b555e8389fb515122d52844a499' },
     @{ ID = 372; Source = 1680; Schedule = 4233; Current = 4233;
         Retained = 1680; Removed = 0; Prefix =
         '95a4e1fe34793dd32060f5eb090ed4331b45893005f548a80b37e6b6d280e070' },
@@ -427,7 +477,7 @@ foreach ($expected in $expectedTrimProofs) {
         throw "FGM $($expected.ID) duration-derived trim proof changed."
     }
 }
-foreach ($id in 292, 289) {
+foreach ($id in 292, 289, 300) {
     $entry = $metadata.entries | Where-Object { [int]$_.id -eq $id }
     if (($entry.trim_strategy -ne
             'untrimmed_articulation_pitch_modulation') -or
@@ -482,13 +532,18 @@ foreach ($expected in $expectedKo) {
 
 $marioSlam = $metadata.entries | Where-Object { [int]$_.id -eq 292 }
 $foxSlam = $metadata.entries | Where-Object { [int]$_.id -eq 289 }
+$foxBounce = $metadata.entries | Where-Object { [int]$_.id -eq 300 }
 if ((@($marioSlam.root_fork_programs) -join ',') -ne '287' -or
     (@($foxSlam.root_fork_programs) -join ',') -ne '287' -or
+    (@($foxBounce.root_fork_programs) -join ',') -ne '298' -or
     ([int]$marioSlam.pack_data_offset -ne
         [int]$foxSlam.pack_data_offset) -or
+    ([int]$marioSlam.pack_data_offset -ne
+        [int]$foxBounce.pack_data_offset) -or
     [bool]$marioSlam.sample_body_deduplicated -or
-    (-not [bool]$foxSlam.sample_body_deduplicated)) {
-    throw 'Mario/Fox shared slam program or resident sample dedup changed.'
+    (-not [bool]$foxSlam.sample_body_deduplicated) -or
+    (-not [bool]$foxBounce.sample_body_deduplicated)) {
+    throw 'Mario/Fox slam/bounce resident sample dedup changed.'
 }
 $deadExplode = $metadata.entries | Where-Object { [int]$_.id -eq 154 }
 if ((@($deadExplode.root_fork_programs) -join ',') -ne '685' -or
@@ -507,10 +562,11 @@ if (-not ($koDebt -contains 'ucd_pitch_automation') -or
 
 Write-Output (
     ('Audio FGM pack passed: {0} exact IDs ({1} fighter voices, ' +
-    '{2} regular-KO, {3} attack/activation), {4} resident bytes, ' +
-    '{5} unique samples, mapping {6}, pack {7}.') -f
+    '{2} Fox movement, {3} regular-KO, {4} attack/activation), ' +
+    '{5} resident bytes, {6} unique samples, mapping {7}, pack {8}.') -f
     $actualIDs.Count,
     $voiceIDs.Count,
+    $movementIDs.Count,
     $koIDs.Count,
     $attackIDs.Count,
     $metadata.resident_bytes,

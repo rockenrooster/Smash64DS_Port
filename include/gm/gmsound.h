@@ -51,6 +51,7 @@ typedef enum gmFGMID
     nSYAudioFGMHarisenHit = 51,
     nSYAudioFGMBatHit = 52,
     nSYAudioFGMStarGet = 54,
+    nSYAudioFGMFoxLanding = 74,
     nSYAudioFGMMarioLanding = 77,
     nSYAudioFGMNessLanding = 78,
     nSYAudioFGMGroundGrind3 = 98,
@@ -95,7 +96,8 @@ typedef enum gmFGMID
     nSYAudioFGMPupupuWhispyWind = 0x11d,
     nSYAudioFGMFloorDamageFire = 286,
     nSYAudioFGMFoxDeadSlam = 289,
-    nSYAudioFGMMarioDeadSlam = 292
+    nSYAudioFGMMarioDeadSlam = 292,
+    nSYAudioFGMFoxDownBounce = 300
 } gmFGMID;
 
 typedef enum gmVoiceID
@@ -105,6 +107,8 @@ typedef enum gmVoiceID
     nSYAudioVoiceCaptainJumpAerial = 353,
     nSYAudioVoiceCaptainHeavyGet = 354,
     nSYAudioVoiceFoxDeadUp = 360,
+    nSYAudioVoiceFoxJumpAerial = 363,
+    nSYAudioVoiceFoxEscape = 364,
     nSYAudioVoiceFoxSelected = 365,
     nSYAudioVoiceFoxWin = 368,
     nSYAudioVoiceFoxDead = 370,

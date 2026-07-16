@@ -188,6 +188,9 @@ try {
         'commands',
         'silent',
         'printf "FOX_RECOVERY_FGM=%u\n", (unsigned int)$r0',
+        'if ($r0 == 74) || ($r0 == 300) || ($r0 == 363) || ($r0 == 364)',
+        'printf "FOX_RECOVERY_FOX_AUDIO=%u,%u,%u\n", (unsigned int)$r0, $frame, $ffp->status_id',
+        'end',
         'continue',
         'end',
 
@@ -330,8 +333,17 @@ try {
         $gdbStdout, 'FOX_RECOVERY_FGM=([0-9]+)') |
         ForEach-Object { [int]$_.Groups[1].Value })
     $fgmIDs = @($fgmEvents | Sort-Object -Unique)
-    $includedIDs = @(626, 470, 469, 467, 490, 372, 430,
-        439, 292, 370, 289, 154, 77, 429, 435,
+    $foxSliceEvents = @([regex]::Matches(
+        $gdbStdout, 'FOX_RECOVERY_FOX_AUDIO=([0-9]+),([0-9]+),([0-9]+)') |
+        ForEach-Object {
+            [pscustomobject]@{
+                ID = [int]$_.Groups[1].Value
+                Frame = [int]$_.Groups[2].Value
+                Status = [int]$_.Groups[3].Value
+            }
+        })
+    $includedIDs = @(626, 470, 469, 467, 490, 74, 363, 364, 372, 430,
+        439, 292, 370, 289, 300, 154, 77, 429, 435,
         42, 43, 190, 215, 218, 219)
     $voiceIDs = @(372, 430)
     $supportedEvents = @($fgmEvents | Where-Object { $_ -in $includedIDs })
@@ -398,7 +410,7 @@ try {
         $gdbStdout
     Assert-Condition ($audioState.Success -and
         $asv[0] -eq 0x46474d31 -and $asv[1] -eq 1 -and
-        $asv[2] -eq 110012 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
+        $asv[2] -eq 113520 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
         $asv[5] -eq 0 -and $asv[6] -ne 0) `
         'Fighter-voice pack load/channel state is invalid.' $gdbStdout
     Assert-Condition ($bgm.Success -and
@@ -418,6 +430,10 @@ try {
         'unsupported={2}') -f ($fgmIDs -join ','),
         (($supportedEvents | Sort-Object -Unique) -join ','),
         ($unsupportedIDs -join ','))
+    Write-Output ('Fox recovery slice events: {0}' -f
+        (($foxSliceEvents | ForEach-Object {
+            '{0}@{1}/status{2}' -f $_.ID, $_.Frame, $_.Status
+        }) -join ','))
     Write-Output (('Pupupu BGM natural: channel={0} active=0x{1:x} ' +
         'auto={2} stream={3}/{4} refills={5}') -f
         $bv[12], $bv[14], $bv[13], $bv[10], $bv[11], $bv[17])
