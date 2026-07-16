@@ -11,8 +11,9 @@ $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 
 Use only `emulators/melonds/melonDS.exe` for manual launch and repo-owned
 `emulators/melonds-runners/slotN/melonDS.exe` copies for automation. Every TOML
-uses the 488x675 vertical, equal-size, native-aspect, zero-gap, unswapped,
-unfiltered, OSD-off profile. Ports `3333/3334` are manual-only; slot 0 uses
+uses the 416x664 outer-window profile: its 400x600 content viewport is the exact
+2:3 aspect of two stacked 256x192 screens, with no capture bars, equal sizing,
+zero gap, no swap, nearest filtering, and OSD off. Ports `3333/3334` are manual-only; slot 0 uses
 `4323/4324`, phase-FGM slot 1 uses `3343/3344`, and slot 2 uses `4463/4464`.
 Lab outputs stay under `builds/`; exactly two ROMs publish at the repo root.
 

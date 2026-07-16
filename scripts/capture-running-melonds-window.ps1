@@ -111,7 +111,9 @@ if ($handle -eq [IntPtr]::Zero) {
 # Match scripts/lib/melonds.ps1's canonical stacked-screen window profile.
 [void][Smash64DSRunningMelonDSCapture]::ShowWindow($handle, 9)
 [void][Smash64DSRunningMelonDSCapture]::SetWindowPos(
-    $handle, [IntPtr](-1), 24, 24,
+    $handle, [IntPtr](-1),
+    $script:MelonDSCanonicalWindowX,
+    $script:MelonDSCanonicalWindowY,
     $script:MelonDSCanonicalWindowWidth,
     $script:MelonDSCanonicalWindowHeight,
     0x40)

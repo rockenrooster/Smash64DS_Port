@@ -37,6 +37,10 @@ foreach ($needle in $windowNeedles) {
 }
 Assert-Policy ((Set-MelonDSWindowProfile -Text $window) -ceq $window) `
     'Canonical melonDS window profile is not idempotent.'
+Assert-Policy (
+    (($script:MelonDSCanonicalWindowWidth - 16) * 3) -eq
+    (($script:MelonDSCanonicalWindowHeight - 64) * 2)) `
+    'Canonical melonDS viewport is not the exact 256x384 dual-screen aspect.'
 
 $manual = Set-MelonDSManualProfile -Text ''
 foreach ($needle in @(
@@ -119,5 +123,5 @@ if ($AuditLocalConfigs -and -not $SkipLocalConfigs -and
 Write-Output (
     'melonDS policy check passed: repo-local executable only; ' +
     "$($script:MelonDSCanonicalWindowWidth)x$($script:MelonDSCanonicalWindowHeight) " +
-    'vertical/equal/native/nearest window profile; manual and automation isolated; ' +
+    'vertical/equal/native/nearest no-bar window profile; manual and automation isolated; ' +
     "local_config_audit=$([int]($AuditLocalConfigs -and -not $SkipLocalConfigs)).")

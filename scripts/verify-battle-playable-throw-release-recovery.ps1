@@ -774,9 +774,10 @@ try {
     Add-Type -AssemblyName System.Drawing
     $screenshotBitmap = [System.Drawing.Bitmap]::FromFile($screenshotPath)
     try {
-        Assert-Condition ($screenshotBitmap.Width -eq 488 -and
-                $screenshotBitmap.Height -eq 675) (
-            "Throw-release evidence screenshot did not use the canonical 488x675 window: $screenshotPath") $gdbStdout
+        Assert-Condition (
+            $screenshotBitmap.Width -eq $script:MelonDSCanonicalWindowWidth -and
+            $screenshotBitmap.Height -eq $script:MelonDSCanonicalWindowHeight) (
+            "Throw-release evidence screenshot did not use the canonical $($script:MelonDSCanonicalWindowWidth)x$($script:MelonDSCanonicalWindowHeight) window: $screenshotPath") $gdbStdout
     } finally {
         $screenshotBitmap.Dispose()
     }

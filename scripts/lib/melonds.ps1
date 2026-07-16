@@ -1,9 +1,11 @@
 $ErrorActionPreference = 'Stop'
 
-$script:MelonDSCanonicalWindowWidth = 488
-$script:MelonDSCanonicalWindowHeight = 675
+$script:MelonDSCanonicalWindowX = 24
+$script:MelonDSCanonicalWindowY = 24
+$script:MelonDSCanonicalWindowWidth = 416
+$script:MelonDSCanonicalWindowHeight = 664
 $script:MelonDSCanonicalGeometry =
-    'AdnQywADAAAAAAeCAAACLwAACIEAAAPmAAAHggAAAk4AAAiBAAAD5gAAAAAAAAAACgAAAAeCAAACTgAACIEAAAPm'
+    'AdnQywADAAAAAAAgAAAAGAAAAa8AAAKnAAAAIAAAADcAAAGvAAACpwAAAAAAAAAACgAAAAAgAAAANwAAAa8AAAKn'
 
 function Get-ProjectRoot {
     param([string]$ScriptRoot)
@@ -238,8 +240,8 @@ function Set-MelonDSWindowProfile {
     )
 
     # Every repo-owned instance uses the same natural, equally sized vertical
-    # DS pair. Capture code establishes 488x675 before pausing emulation; this
-    # canonical Qt geometry keeps all checked-in-workspace TOMLs at one baseline.
+    # DS pair. The 416x664 outer window leaves an exact 400x600 viewport after
+    # the fixed 8px frame and 56px title/menu inset, so captures have no bars.
     foreach ($setting in @(
         @('Enabled', 'true'),
         @('ShowOSD', 'false'),

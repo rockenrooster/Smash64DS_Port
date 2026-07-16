@@ -166,9 +166,11 @@ function Set-WindowCapturePosition {
     param([System.IntPtr]$WindowHandle)
     [void][Smash64DSIFCommonCapture]::ShowWindow($WindowHandle, 9)
     [void][Smash64DSIFCommonCapture]::SetWindowPos(
-        $WindowHandle, [IntPtr](-1), 0, 0,
+        $WindowHandle, [IntPtr](-1),
+        $script:MelonDSCanonicalWindowX,
+        $script:MelonDSCanonicalWindowY,
         $script:MelonDSCanonicalWindowWidth,
-        $script:MelonDSCanonicalWindowHeight, 0x42)
+        $script:MelonDSCanonicalWindowHeight, 0x40)
     [void][Smash64DSIFCommonCapture]::SetForegroundWindow($WindowHandle)
     Start-Sleep -Milliseconds 100
 }

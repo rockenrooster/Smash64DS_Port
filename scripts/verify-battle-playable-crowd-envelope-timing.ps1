@@ -192,7 +192,11 @@ if ($handle -eq [IntPtr]::Zero) {
 # Match scripts/lib/melonds.ps1's canonical natural stacked-screen window.
 [void][Smash64DSCrowdEnvelopeCapture]::ShowWindow($handle, 9)
 [void][Smash64DSCrowdEnvelopeCapture]::SetWindowPos(
-    $handle, [IntPtr](-1), 24, 24, 488, 675, 0x40)
+    $handle, [IntPtr](-1),
+    $script:MelonDSCanonicalWindowX,
+    $script:MelonDSCanonicalWindowY,
+    $script:MelonDSCanonicalWindowWidth,
+    $script:MelonDSCanonicalWindowHeight, 0x40)
 [void][Smash64DSCrowdEnvelopeCapture]::SetForegroundWindow($handle)
 Start-Sleep -Milliseconds 250
 

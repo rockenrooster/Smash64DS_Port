@@ -185,11 +185,12 @@ function Set-MelonDSCaptureWindow {
     [void][Smash64DSWindowCapture]::ShowWindow($WindowHandle, 9)
     # Keep capture geometry stable between samples. melonDS can otherwise
     # auto-resize after the first frame and create a false pixel-delta failure.
-    # SWP_NOMOVE | SWP_SHOWWINDOW = 0x42.
     [void][Smash64DSWindowCapture]::SetWindowPos(
-        $WindowHandle, [IntPtr](-1), 0, 0,
+        $WindowHandle, [IntPtr](-1),
+        $script:MelonDSCanonicalWindowX,
+        $script:MelonDSCanonicalWindowY,
         $script:MelonDSCanonicalWindowWidth,
-        $script:MelonDSCanonicalWindowHeight, 0x42)
+        $script:MelonDSCanonicalWindowHeight, 0x40)
 }
 function Set-MelonDSCaptureRuntimeMode {
     param(

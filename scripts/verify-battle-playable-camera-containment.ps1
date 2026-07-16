@@ -239,9 +239,11 @@ function Set-CaptureWindow {
     [void][Smash64DSCameraContainmentCapture]::ShowWindow($Handle, 9)
     # The shared melonDS policy defines this exact natural vertical pair.
     [void][Smash64DSCameraContainmentCapture]::SetWindowPos(
-        $Handle, [IntPtr](-1), 0, 0,
+        $Handle, [IntPtr](-1),
+        $script:MelonDSCanonicalWindowX,
+        $script:MelonDSCanonicalWindowY,
         $script:MelonDSCanonicalWindowWidth,
-        $script:MelonDSCanonicalWindowHeight, 0x42)
+        $script:MelonDSCanonicalWindowHeight, 0x40)
     [void][Smash64DSCameraContainmentCapture]::SetForegroundWindow($Handle)
 }
 
