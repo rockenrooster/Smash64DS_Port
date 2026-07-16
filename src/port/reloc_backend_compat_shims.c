@@ -7454,12 +7454,21 @@ static void ndsFTParamGetVisualPosition(GObj *fighter_gobj, s32 joint_id,
     }
     if (effect_scatter != NULL)
     {
-        pos->x += (syUtilsRandFloat() - 0.5F) *
-                  (effect_scatter->x * 2.0F);
-        pos->y += (syUtilsRandFloat() - 0.5F) *
-                  (effect_scatter->y * 2.0F);
-        pos->z += (syUtilsRandFloat() - 0.5F) *
-                  (effect_scatter->z * 2.0F);
+        if (effect_scatter->x != 0.0F)
+        {
+            pos->x += (syUtilsRandFloat() - 0.5F) *
+                      (effect_scatter->x * 2.0F);
+        }
+        if (effect_scatter->y != 0.0F)
+        {
+            pos->y += (syUtilsRandFloat() - 0.5F) *
+                      (effect_scatter->y * 2.0F);
+        }
+        if (effect_scatter->z != 0.0F)
+        {
+            pos->z += (syUtilsRandFloat() - 0.5F) *
+                      (effect_scatter->z * 2.0F);
+        }
     }
     if ((is_scale_pos != FALSE) && (fp->attr != NULL) &&
         (fp->attr->size != 0.0F))
