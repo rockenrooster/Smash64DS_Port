@@ -3,15 +3,13 @@ param(
     [switch]$NoBuild,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
-    [ValidateSet('Full','Latest','LatestFast','BoundaryDirect','Boundary','P1Gate','Regression','RegressionCore','RegressionFast','Smoke','SmokeFast','Fighter','Direct','MenuChain')]
+    [ValidateSet('Latest','Boundary')]
     [string]$Profile = 'Boundary',
     [string[]]$Only,
     [string]$From,
     [switch]$List,
     [switch]$SkipRegistryCheck,
     [ValidateRange(0,3600)][int]$DelaySeconds = 5,
-    [ValidateRange(1,128)][int]$ShardCount = 1,
-    [ValidateRange(0,127)][int]$ShardIndex = 0,
     [ValidateRange(-1,127)][int]$RunnerSlot = -1,
     [ValidateRange(1,65535)][int]$GdbPort = 4333
 )
@@ -41,23 +39,6 @@ function Test-ScriptParameter {
     return @($ast.ParamBlock.Parameters | ForEach-Object {
         $_.Name.VariablePath.UserPath
     }) -contains $Name
-}
-function Select-VerifyPlanShard {
-    param(
-        [object[]]$Plan,
-        [int]$Count,
-        [int]$Index
-    )
-    if ($Index -ge $Count) {
-        throw "ShardIndex $Index must be less than ShardCount $Count."
-    }
-    $selected = @()
-    for ($i = 0; $i -lt $Plan.Count; $i++) {
-        if (($i % $Count) -eq $Index) {
-            $selected += $Plan[$i]
-        }
-    }
-    return @($selected)
 }
 function Test-TransportVerifierFailure {
     param([string]$Text)
@@ -137,20 +118,10 @@ function Invoke-VerifyScript {
 if ($Build -and $NoBuild) {
     throw 'Use either -Build or -NoBuild, not both.'
 }
-$legacyMultiRomProfiles = @(
-    'Full', 'P1Gate', 'Regression', 'RegressionCore', 'RegressionFast',
-    'Smoke', 'SmokeFast', 'Fighter', 'Direct', 'MenuChain'
-)
-if (-not $List -and ($legacyMultiRomProfiles -contains $Profile)) {
-    throw "Profile '$Profile' is registry-list-only while legacy harnesses are migrated to the two-ROM runtime model. Use Boundary, BoundaryDirect, Latest, or LatestFast."
-}
 $selectedGdbPort = if (($RunnerSlot -ge 0) -and -not $PSBoundParameters.ContainsKey('GdbPort')) {
     Get-MelonDSRunnerPort -RunnerSlot $RunnerSlot -Cpu ARM9
 } else {
     $GdbPort
-}
-if ($ShardCount -gt 1 -and $RunnerSlot -lt 0) {
-    Write-Warning 'Parallel shards require isolated runner slots. Use -RunnerSlot N or separate checkouts.'
 }
 $previousEnv = @{
     SMASH64DS_RUNNER_SLOT = $env:SMASH64DS_RUNNER_SLOT
@@ -166,7 +137,12 @@ try {
     } else {
         Remove-Item Env:\SMASH64DS_VERIFY_NO_BUILD -ErrorAction SilentlyContinue
     }
-    if ($RunnerSlot -ge 0 -and -not $List) {
+    $plan = @(Get-Smash64DSVerifyPlan -Profile $Profile -Only $Only -From $From)
+    if ($List) {
+        $plan | Select-Object Name, Mode, Harness, Script, Target, Build, @{Name='Tags';Expression={$_.Tags -join ','}} | Format-Table -AutoSize
+        exit 0
+    }
+    if ($RunnerSlot -ge 0) {
         Resolve-MelonDSRunnerSlot `
             -Root $root `
             -RunnerSlot $RunnerSlot `
@@ -174,22 +150,14 @@ try {
             -GdbPort $selectedGdbPort `
             -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') | Out-Null
     }
-    if ($ShardCount -gt 1 -and $RunnerSlot -gt 0 -and -not $List) {
-        $staggerSeconds = 3 * $RunnerSlot
-        Write-Output "Staggering shard startup by $staggerSeconds seconds for runner slot $RunnerSlot."
-        Start-Sleep -Seconds $staggerSeconds
-    }
-    if ($Build) {
+    $needsNormalBuild = @($plan | Where-Object {
+        [string]::IsNullOrWhiteSpace($_.Target) -or $_.Target -eq 'smash64ds'
+    }).Count -gt 0
+    if ($Build -and $needsNormalBuild) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
         & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B -j16
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    }
-    $plan = @(Get-Smash64DSVerifyPlan -Profile $Profile -Only $Only -From $From)
-    $plan = @(Select-VerifyPlanShard -Plan $plan -Count $ShardCount -Index $ShardIndex)
-    if ($List) {
-        $plan | Select-Object Name, Mode, Harness, Script, Target, Build, @{Name='Tags';Expression={$_.Tags -join ','}} | Format-Table -AutoSize
-        exit 0
     }
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
@@ -206,7 +174,7 @@ try {
             $rom = Join-Path $root "$targetName.nds"
             $elf = Join-Path $root "$targetName.elf"
             if (-not (Test-Path -LiteralPath $rom) -or -not (Test-Path -LiteralPath $elf)) {
-                throw "NoBuild requested, but verifier output is missing for '$($record.Name)'. Run .\scripts\build-verify-profile.ps1 -Profile $Profile first."
+                throw "NoBuild requested, but verifier output is missing for '$($record.Name)'. Build the retained ROM first."
             }
         }
         $scriptPath = Join-Path $PSScriptRoot $record.Script
@@ -223,16 +191,11 @@ try {
         if ($NoBuild -and (Test-ScriptParameter -ScriptPath $scriptPath -Name 'NoBuild')) {
             $arguments += '-NoBuild'
         }
-        if (($Profile -eq 'P1Gate') -and
-            ($record.Name -eq 'opening_skip') -and
-            (Test-ScriptParameter -ScriptPath $scriptPath -Name 'Compact')) {
-            $arguments += '-Compact'
-        }
         if (($record.Name -eq 'battle_playable_realtime') -and
             (Test-ScriptParameter -ScriptPath $scriptPath -Name 'FastIteration')) {
             $arguments += '-FastIteration'
             # Every profile compares the same completed Cut G frame pair. This
-            # removes host-delay/camera drift from Boundary/Regression decisions
+            # removes host-delay/camera drift from retained profile decisions
             # while both frames retain independent content/detail gates.
             if (Test-ScriptParameter -ScriptPath $scriptPath -Name 'MaxScreenshotChangedFraction') {
                 $arguments += @('-MaxScreenshotChangedFraction', '0.50')
@@ -243,23 +206,7 @@ try {
         }
         Invoke-VerifyScript -Script $scriptPath -Arguments $arguments -Label $record.Name -RetryTransport
     }
-    if ($Profile -eq 'Full' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
-        Write-Output 'Full verification passed.'
-    } elseif ($Profile -eq 'Latest' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
-        Write-Output 'Latest verification profile passed.'
-    } elseif ($Profile -eq 'BoundaryDirect' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
-        Write-Output 'BoundaryDirect verification profile passed.'
-    } elseif ($Profile -eq 'Boundary' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
-        Write-Output 'Boundary verification profile passed.'
-    } elseif ($Profile -eq 'P1Gate' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
-        Write-Output 'P1Gate verification profile passed.'
-    } elseif ($Profile -eq 'Regression' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
-        Write-Output 'Regression verification profile passed.'
-    } elseif ($Profile -eq 'RegressionCore' -and -not $Only -and -not $From -and $ShardCount -eq 1) {
-        Write-Output 'RegressionCore verification profile passed.'
-    } else {
-        Write-Output "Verification profile '$Profile' shard $ShardIndex/$ShardCount passed."
-    }
+    Write-Output "$Profile verification profile passed."
 } finally {
     foreach ($key in $previousEnv.Keys) {
         if ($null -eq $previousEnv[$key]) {

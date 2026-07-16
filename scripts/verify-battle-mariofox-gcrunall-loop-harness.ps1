@@ -36,7 +36,6 @@ param(
     [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
-    [ValidateRange(0,1)][int]$M4WaterTiledAotMode = 0,
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
     [switch]$RequireZeroPostGoTextureFence,
     [ValidateRange(0,1)][int]$FoxCpuMode = 0,
@@ -44,14 +43,14 @@ param(
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
     [string]$RendererBenchmarkExportPath = '',
     [string]$RendererBenchmarkScreenshot = '',
-    [string]$Harness = 'battle_mariofox_gcrunall_loop',
-    [string]$Target = 'smash64ds-battle-mariofox-gcrunall-loop',
-    [string]$Build = 'build-battle-mariofox-gcrunall-loop-harness',
-    [int]$ExpectedMode = 53,
-    [int]$ExpectedHarnessSceneCurr = 22,
-    [int]$ExpectedHarnessScenePrev = 21,
-    [string]$Label = 'Battle Mario/Fox gcRunAll-loop',
-    [string]$HarnessSelectMessage = 'Direct gcRunAll-loop harness did not select VSBattle from Maps.'
+    [Parameter(Mandatory = $true)][string]$Harness,
+    [Parameter(Mandatory = $true)][string]$Target,
+    [Parameter(Mandatory = $true)][string]$Build,
+    [Parameter(Mandatory = $true)][int]$ExpectedMode,
+    [Parameter(Mandatory = $true)][int]$ExpectedHarnessSceneCurr,
+    [Parameter(Mandatory = $true)][int]$ExpectedHarnessScenePrev,
+    [Parameter(Mandatory = $true)][string]$Label,
+    [Parameter(Mandatory = $true)][string]$HarnessSelectMessage
 )
 $ErrorActionPreference = 'Stop'
 $usesPublishedIntrinsicRendererDefaults =
@@ -74,9 +73,6 @@ $effectiveIFCommonHybridOamMode = if ($usesPublishedIntrinsicRendererDefaults) {
 $m4CandidateEvidence =
     ($effectiveStaticTextureAotMode -eq 1) -and
     ($RendererFastRunMode -eq 9)
-if ($M4WaterTiledAotMode -ne 0) {
-    throw 'M4WaterTiledAotMode is retired; frozen source water is part of StaticTextureAotMode 1.'
-}
 if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
     throw 'OneMinuteMatchProof requires MatchLifecycleProof.'
 }
@@ -150,8 +146,7 @@ $benchmarkRomIdentity = $null
 $benchmarkElfIdentity = $null
 $benchmarkMelonIdentity = $null
 $benchmarkMelonConfigSha256 = $null
-$usesRetainedWallpaper =
-    ($Target -eq 'smash64ds-battle-playable-coarse-mipcache-hwtri')
+$usesRetainedWallpaper = $false
 function Assert-Condition {
     param([bool]$Condition, [string]$Message, [string]$Context)
     if (-not $Condition) { throw "$Message`n$Context" }
@@ -347,7 +342,6 @@ function Get-BenchmarkMakeIdentity {
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
         'RENDERER_BENCHMARK_MODE', 'FAST_RUN_DEFAULT',
         'SCENE_MIP_CACHE_LAB', 'BATTLE_STATIC_TEXTURE_DEFAULT',
-        'M4_WATER_TILED_AOT',
         'IFCOMMON_HYBRID_OAM',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
@@ -367,7 +361,6 @@ function Get-BenchmarkMakeIdentity {
         SceneMipCacheLab = [int]$values.SCENE_MIP_CACHE_LAB
         BattleStaticTextureDefault =
             [int]$values.BATTLE_STATIC_TEXTURE_DEFAULT
-        M4WaterTiledAotMode = [int]$values.M4_WATER_TILED_AOT
         IFCommonHybridOamMode = [int]$values.IFCOMMON_HYBRID_OAM
         CommonCFlags = $values.CFLAGS_COMMON
         RendererCFlags = $values.CFLAGS_RENDERER
@@ -389,7 +382,6 @@ if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
 $makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
 $makeArgs += "NDS_RENDERER_M2_DETAILED_LEDGER=$([int]$RendererM2DetailedLedger.IsPresent)"
-$makeArgs += "NDS_RENDERER_M4_WATER_TILED_AOT=$M4WaterTiledAotMode"
 $makeArgs += "NDS_IFCOMMON_HYBRID_OAM=$IFCommonHybridOamMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
@@ -470,8 +462,6 @@ if ($RendererBenchmarkSamples -gt 0) {
         $benchmarkMakeIdentity.Profile -eq $RendererProfileLevel -and
         $benchmarkMakeIdentity.M2DetailedLedger -eq
             [int]$RendererM2DetailedLedger.IsPresent -and
-        $benchmarkMakeIdentity.M4WaterTiledAotMode -eq
-            $M4WaterTiledAotMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
         'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/IFCommon configuration.' `
@@ -2311,8 +2301,6 @@ try {
                         staticTextureAotMode = $StaticTextureAotMode
                         effectiveStaticTextureAotMode =
                             $effectiveStaticTextureAotMode
-                        m4WaterTiledAotMode =
-                            $benchmarkMakeIdentity.M4WaterTiledAotMode
                         ifCommonHybridOamMode =
                             $benchmarkMakeIdentity.IFCommonHybridOamMode
                         requestedIfCommonHybridOamMode =
@@ -2386,7 +2374,6 @@ try {
                             identity = $benchmarkIdentity
                             fastRunMode = $RendererFastRunMode
                             staticTextureAotMode = $StaticTextureAotMode
-                            m4WaterTiledAotMode = $M4WaterTiledAotMode
                             ifCommonHybridOamMode =
                                 $effectiveIFCommonHybridOamMode
                             requireZeroPostGoTextureFence =

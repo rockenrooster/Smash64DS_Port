@@ -43,7 +43,6 @@ NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
 NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT ?= 0
-NDS_RENDERER_M4_WATER_TILED_AOT ?= 0
 NDS_IFCOMMON_HYBRID_OAM ?= 0
 NDS_DEBUG_HUD ?= 1
 NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
@@ -61,7 +60,6 @@ override NDS_RENDERER_PROFILE_LEVEL := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_RENDERER_M4_WATER_TILED_AOT := 0
 override NDS_IFCOMMON_HYBRID_OAM := 1
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 endif
@@ -76,17 +74,6 @@ override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 8
-endif
-ifeq ($(TARGET),smash64ds-battle-playable-coarse-mipcache-hwtri)
-# Cut-G is a separate falsifier target. Keep the exact coarse ROM untouched.
-override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
-override NDS_DEV_LIVE_INPUT_PREVIEW := 1
-override NDS_HARNESS_FAST_LOGIC := 0
-override NDS_RENDERER_HW_TRIANGLES := 1
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 1
-override NDS_RENDERER_FAST_RUN_DEFAULT := 8
-override NDS_SCENE_MIP_CACHE_LAB := 1
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-forensic-hwtri)
 override NDS_DEBUG_HUD := 0
@@ -139,16 +126,7 @@ endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR),1)
 override NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER := 1
 endif
-NDS_INISHIE_SOURCE_SCALE_HARNESSES := \
-	battle_mariofox_stage_inishie_scale_loop \
-	menu_chain_mariofox_stage_inishie_scale_loop \
-	battle_mariofox_stage_mppassive_recover_loop \
-	menu_chain_mariofox_stage_mppassive_recover_loop \
-	battle_mariofox_stage_mpdamage_recover_loop \
-	menu_chain_mariofox_stage_mpdamage_recover_loop \
-	battle_mariofox_stage_mplivehit_status_loop \
-	menu_chain_mariofox_stage_mplivehit_status_loop
-NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP ?= $(if $(filter $(NDS_INISHIE_SOURCE_SCALE_HARNESSES),$(NDS_DEV_SCENE_HARNESS)),1,0)
+NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP ?= 0
 NITROFS_DIR := $(PROJECT_ROOT)/$(BUILD)/nitrofs
 NITRO_FILES := $(NITROFS_DIR)
 
@@ -186,326 +164,6 @@ CFLAGS := -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections \
 CFLAGS += -include $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
 ifeq ($(NDS_DEV_SCENE_HARNESS),normal)
 NDS_DEV_SCENE_HARNESS_ID := 0
-else ifeq ($(NDS_DEV_SCENE_HARNESS),title)
-NDS_DEV_SCENE_HARNESS_ID := 1
-else ifeq ($(NDS_DEV_SCENE_HARNESS),vs_setup)
-NDS_DEV_SCENE_HARNESS_ID := 2
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_fd)
-NDS_DEV_SCENE_HARNESS_ID := 3
-else ifeq ($(NDS_DEV_SCENE_HARNESS),vs_start_transition)
-NDS_DEV_SCENE_HARNESS_ID := 4
-else ifeq ($(NDS_DEV_SCENE_HARNESS),players_setup)
-NDS_DEV_SCENE_HARNESS_ID := 5
-else ifeq ($(NDS_DEV_SCENE_HARNESS),maps_setup)
-NDS_DEV_SCENE_HARNESS_ID := 6
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_vsbattle)
-NDS_DEV_SCENE_HARNESS_ID := 7
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_pupupu_stage)
-NDS_DEV_SCENE_HARNESS_ID := 8
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_pupupu_update)
-NDS_DEV_SCENE_HARNESS_ID := 9
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_pupupu_update)
-NDS_DEV_SCENE_HARNESS_ID := 10
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_model)
-NDS_DEV_SCENE_HARNESS_ID := 11
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_model)
-NDS_DEV_SCENE_HARNESS_ID := 12
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_struct)
-NDS_DEV_SCENE_HARNESS_ID := 13
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_struct)
-NDS_DEV_SCENE_HARNESS_ID := 14
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_init)
-NDS_DEV_SCENE_HARNESS_ID := 15
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_init)
-NDS_DEV_SCENE_HARNESS_ID := 16
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_wait)
-NDS_DEV_SCENE_HARNESS_ID := 17
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_wait)
-NDS_DEV_SCENE_HARNESS_ID := 18
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_wait_tick)
-NDS_DEV_SCENE_HARNESS_ID := 19
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_wait_tick)
-NDS_DEV_SCENE_HARNESS_ID := 20
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_wait_ground)
-NDS_DEV_SCENE_HARNESS_ID := 21
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_wait_ground)
-NDS_DEV_SCENE_HARNESS_ID := 22
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_display_probe)
-NDS_DEV_SCENE_HARNESS_ID := 23
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_display_probe)
-NDS_DEV_SCENE_HARNESS_ID := 24
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_dl_scan)
-NDS_DEV_SCENE_HARNESS_ID := 25
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_dl_scan)
-NDS_DEV_SCENE_HARNESS_ID := 26
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_dl_execute)
-NDS_DEV_SCENE_HARNESS_ID := 27
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_dl_execute)
-NDS_DEV_SCENE_HARNESS_ID := 28
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_dl_draw)
-NDS_DEV_SCENE_HARNESS_ID := 29
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_dl_draw)
-NDS_DEV_SCENE_HARNESS_ID := 30
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_dl_draw_multi)
-NDS_DEV_SCENE_HARNESS_ID := 31
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_dl_draw_multi)
-NDS_DEV_SCENE_HARNESS_ID := 32
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_dl_draw_all)
-NDS_DEV_SCENE_HARNESS_ID := 33
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_dl_draw_all)
-NDS_DEV_SCENE_HARNESS_ID := 34
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_walk_input)
-NDS_DEV_SCENE_HARNESS_ID := 35
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_walk_input)
-NDS_DEV_SCENE_HARNESS_ID := 36
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_walk_loop)
-NDS_DEV_SCENE_HARNESS_ID := 37
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_walk_loop)
-NDS_DEV_SCENE_HARNESS_ID := 38
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_dash_run)
-NDS_DEV_SCENE_HARNESS_ID := 39
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_dash_run)
-NDS_DEV_SCENE_HARNESS_ID := 40
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_jump_loop)
-NDS_DEV_SCENE_HARNESS_ID := 41
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_jump_loop)
-NDS_DEV_SCENE_HARNESS_ID := 42
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_landing_loop)
-NDS_DEV_SCENE_HARNESS_ID := 43
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_landing_loop)
-NDS_DEV_SCENE_HARNESS_ID := 44
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_process_loop)
-NDS_DEV_SCENE_HARNESS_ID := 45
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_process_loop)
-NDS_DEV_SCENE_HARNESS_ID := 46
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_scheduler_loop)
-NDS_DEV_SCENE_HARNESS_ID := 47
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_scheduler_loop)
-NDS_DEV_SCENE_HARNESS_ID := 48
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_controller_loop)
-NDS_DEV_SCENE_HARNESS_ID := 49
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_controller_loop)
-NDS_DEV_SCENE_HARNESS_ID := 50
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_preview_loop)
-NDS_DEV_SCENE_HARNESS_ID := 51
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_preview_loop)
-NDS_DEV_SCENE_HARNESS_ID := 52
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_gcrunall_loop)
-NDS_DEV_SCENE_HARNESS_ID := 53
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_gcrunall_loop)
-NDS_DEV_SCENE_HARNESS_ID := 54
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_live_preview)
-NDS_DEV_SCENE_HARNESS_ID := 55
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_live_preview)
-NDS_DEV_SCENE_HARNESS_ID := 56
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_gcdrawall_loop)
-NDS_DEV_SCENE_HARNESS_ID := 59
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_gcdrawall_loop)
-NDS_DEV_SCENE_HARNESS_ID := 60
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_collision_loop)
-NDS_DEV_SCENE_HARNESS_ID := 61
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_collision_loop)
-NDS_DEV_SCENE_HARNESS_ID := 62
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_floor_follow_loop)
-NDS_DEV_SCENE_HARNESS_ID := 63
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_floor_follow_loop)
-NDS_DEV_SCENE_HARNESS_ID := 64
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_floor_edge_loop)
-NDS_DEV_SCENE_HARNESS_ID := 65
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_floor_edge_loop)
-NDS_DEV_SCENE_HARNESS_ID := 66
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpprocess_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 67
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpprocess_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 68
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpupdate_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 69
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpupdate_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 70
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpsweep_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 71
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpsweep_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 72
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcross_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 73
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcross_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 74
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpadjust_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 75
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpadjust_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 76
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpedge_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 77
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpedge_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 78
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpwall_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 79
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpwall_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 80
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpstale_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 81
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpstale_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 82
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mplivestale_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 83
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mplivestale_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 84
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpmotionstale_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 85
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpmotionstale_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 86
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffstatus_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 87
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffstatus_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 88
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpclifftick_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 89
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpclifftick_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 90
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpfallmap_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 91
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpfallmap_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 92
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpfallland_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 93
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpfallland_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 94
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpceil_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 95
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpceil_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 96
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpceilstatus_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 97
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpceilstatus_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 98
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffcatch_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 99
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffcatch_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 100
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffwait_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 101
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffwait_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 102
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffattack_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 103
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffattack_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 104
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffattack_action_loop)
-NDS_DEV_SCENE_HARNESS_ID := 105
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffattack_action_loop)
-NDS_DEV_SCENE_HARNESS_ID := 106
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffcommon2_loop)
-NDS_DEV_SCENE_HARNESS_ID := 107
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffcommon2_loop)
-NDS_DEV_SCENE_HARNESS_ID := 108
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffescape_action_loop)
-NDS_DEV_SCENE_HARNESS_ID := 109
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffescape_action_loop)
-NDS_DEV_SCENE_HARNESS_ID := 110
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffescape_common2_loop)
-NDS_DEV_SCENE_HARNESS_ID := 111
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffescape_common2_loop)
-NDS_DEV_SCENE_HARNESS_ID := 112
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffclimb_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 113
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffclimb_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 114
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffclimb_action_loop)
-NDS_DEV_SCENE_HARNESS_ID := 115
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffclimb_action_loop)
-NDS_DEV_SCENE_HARNESS_ID := 116
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffclimb_common2_loop)
-NDS_DEV_SCENE_HARNESS_ID := 117
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffclimb_common2_loop)
-NDS_DEV_SCENE_HARNESS_ID := 118
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffclimb_finish_loop)
-NDS_DEV_SCENE_HARNESS_ID := 119
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffclimb_finish_loop)
-NDS_DEV_SCENE_HARNESS_ID := 120
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffwait_damage_loop)
-NDS_DEV_SCENE_HARNESS_ID := 121
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffwait_damage_loop)
-NDS_DEV_SCENE_HARNESS_ID := 122
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mppassive_loop)
-NDS_DEV_SCENE_HARNESS_ID := 123
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mppassive_loop)
-NDS_DEV_SCENE_HARNESS_ID := 124
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpdownwait_loop)
-NDS_DEV_SCENE_HARNESS_ID := 125
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpdownwait_loop)
-NDS_DEV_SCENE_HARNESS_ID := 126
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_turn_loop)
-NDS_DEV_SCENE_HARNESS_ID := 127
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_turn_loop)
-NDS_DEV_SCENE_HARNESS_ID := 128
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpdownrecover_loop)
-NDS_DEV_SCENE_HARNESS_ID := 129
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpdownrecover_loop)
-NDS_DEV_SCENE_HARNESS_ID := 130
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpcliffledge_loop)
-NDS_DEV_SCENE_HARNESS_ID := 131
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpcliffledge_loop)
-NDS_DEV_SCENE_HARNESS_ID := 132
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpclifflive_loop)
-NDS_DEV_SCENE_HARNESS_ID := 133
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpclifflive_loop)
-NDS_DEV_SCENE_HARNESS_ID := 134
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpwallhit_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 135
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpwallhit_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 136
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpwallcopy_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 137
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpwallcopy_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 138
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mppass_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 139
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mppass_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 140
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpplatform_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 141
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpplatform_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 142
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpplatform_active_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 143
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpplatform_active_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 144
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpplatform_tick_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 145
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpplatform_tick_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 146
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mppass_input_loop)
-NDS_DEV_SCENE_HARNESS_ID := 147
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mppass_input_loop)
-NDS_DEV_SCENE_HARNESS_ID := 148
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpplatform_pos_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 149
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpplatform_pos_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 150
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpplatform_speed_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 151
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpplatform_speed_floor_loop)
-NDS_DEV_SCENE_HARNESS_ID := 152
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_inishie_scale_loop)
-NDS_DEV_SCENE_HARNESS_ID := 153
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_inishie_scale_loop)
-NDS_DEV_SCENE_HARNESS_ID := 154
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mppassive_recover_loop)
-NDS_DEV_SCENE_HARNESS_ID := 155
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mppassive_recover_loop)
-NDS_DEV_SCENE_HARNESS_ID := 156
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mpdamage_recover_loop)
-NDS_DEV_SCENE_HARNESS_ID := 157
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mpdamage_recover_loop)
-NDS_DEV_SCENE_HARNESS_ID := 158
-else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_mariofox_stage_mplivehit_status_loop)
-NDS_DEV_SCENE_HARNESS_ID := 161
-# Mode 161 links the latest battle boundary plus inherited proof setup.
-CFLAGS += -Os
-else ifeq ($(NDS_DEV_SCENE_HARNESS),menu_chain_mariofox_stage_mplivehit_status_loop)
-NDS_DEV_SCENE_HARNESS_ID := 162
-# Mode 162 links the full menu chain plus the latest battle boundary.
-CFLAGS += -Os
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable)
 NDS_DEV_SCENE_HARNESS_ID := 163
 # The scripted profile-2 diagnostic ROM is substantially larger than the
@@ -520,7 +178,7 @@ NDS_DEV_SCENE_HARNESS_ID := 163
 # The fast-logic timer/Results diagnostic is a reserve proof, not a benchmark.
 CFLAGS += -Os
 else
-$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use a harness name from scripts/lib/harness-registry.ps1, including battle_mariofox_stage_mplivehit_status_loop or menu_chain_mariofox_stage_mplivehit_status_loop)
+$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal or a harness name from scripts/lib/harness-registry.ps1)
 endif
 
 # Profile 2 is an exact semantic oracle rather than a latency benchmark.  Its
@@ -1117,7 +775,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
-		echo '#define NDS_RENDERER_M4_WATER_TILED_AOT $(NDS_RENDERER_M4_WATER_TILED_AOT)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \
@@ -1234,7 +891,6 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_FAST_RUN_DEFAULT=$(NDS_RENDERER_FAST_RUN_DEFAULT)'
 	@printf '%s\n' 'BENCH_MAKE_SCENE_MIP_CACHE_LAB=$(NDS_SCENE_MIP_CACHE_LAB)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_STATIC_TEXTURE_DEFAULT=$(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'
-	@printf '%s\n' 'BENCH_MAKE_M4_WATER_TILED_AOT=$(NDS_RENDERER_M4_WATER_TILED_AOT)'
 	@printf '%s\n' 'BENCH_MAKE_IFCOMMON_HYBRID_OAM=$(NDS_IFCOMMON_HYBRID_OAM)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'

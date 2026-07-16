@@ -139,54 +139,45 @@ $hasCurrentBoundaryHarness = Test-AnyPath -Paths $paths -Predicate $isCurrentBou
 $hasSharedRuntimeBackend = Test-AnyPath -Paths $paths -Predicate $isSharedRuntimeBackendPath
 if ($hasVerifierPlumbing) {
     $recommendation = New-Recommendation `
-        -Name 'Full verifier-plumbing validation' `
-        -Profile 'Full' `
-        -Reason 'Harness registry, verifier wrapper, Makefile, or harness-mode plumbing changed; this can affect profile composition or build targets.' `
+        -Name 'Retained verifier-plumbing validation' `
+        -Profile 'Boundary' `
+        -Reason 'Harness registry, verifier wrapper, Makefile, or mode-163 plumbing changed.' `
         -Commands @(
             '.\scripts\check-harness-registry.ps1',
-            '.\scripts\verify-all.ps1 -Profile Full'
+            '.\scripts\verify-boundary.ps1'
         )
 } elseif ($hasAbiHeader) {
     $recommendation = New-Recommendation `
-        -Name 'Clean build plus Full profile' `
-        -Profile 'Full' `
-        -Reason 'Header or shared ABI changes can alter linker-visible contracts across imported BattleShip code and DS shims.' `
+        -Name 'Current two-ROM validation' `
+        -Profile 'Latest' `
+        -Reason 'Header or shared ABI changes can affect both published ROMs.' `
         -Commands @(
-            'make clean',
-            'make -j16',
-            '.\scripts\verify-all.ps1 -Profile Full'
+            '.\scripts\verify-current.ps1 -Build'
         )
 } elseif ($hasGbiRenderer) {
     $recommendation = New-Recommendation `
         -Name 'GBI/renderer focused verification' `
         -Profile 'Latest' `
-        -Reason 'GBI decode or renderer/display changes need fixture coverage plus the latest runtime and current boundary proof.' `
+        -Reason 'GBI decode or renderer/display changes need fixtures plus the canonical battle boundary.' `
         -Commands @(
             '.\scripts\check-gbi-decode-fixtures.ps1',
-            '.\scripts\verify-boundary.ps1',
-            '.\scripts\verify-current.ps1'
+            '.\scripts\verify-boundary.ps1'
         )
 } elseif ($hasSharedRuntimeBackend) {
     $recommendation = New-Recommendation `
-        -Name 'Shared runtime/backend regression' `
-        -Profile 'Regression' `
-        -Reason 'Shared runtime, backend, import, task/object/controller/reloc/display, or collision paths can affect many historical boundaries.' `
+        -Name 'Shared runtime/backend check' `
+        -Profile 'Latest' `
+        -Reason 'Shared runtime, backend, import, task/object/controller/reloc/display, or collision paths can affect both retained ROMs.' `
         -Commands @(
-            'make -j16',
-            '.\scripts\verify-boundary.ps1',
-            '.\scripts\verify-current.ps1',
-            '.\scripts\verify-regression.ps1'
+            '.\scripts\verify-current.ps1 -Build'
         )
 } elseif ($hasCurrentBoundaryHarness) {
     $recommendation = New-Recommendation `
         -Name 'Current boundary harness check' `
         -Profile 'Boundary' `
-        -Reason 'Only current boundary harness orchestration changed; prove the latest direct harness and paired menu-chain boundary.' `
+        -Reason 'Only canonical battle harness orchestration changed.' `
         -Commands @(
-            'make -j16',
-            '.\scripts\verify-dev-fast.ps1',
-            '.\scripts\verify-boundary.ps1',
-            '.\scripts\verify-current.ps1'
+            '.\scripts\verify-boundary.ps1'
         )
 } elseif ($allSnapshotHygiene) {
     $recommendation = New-Recommendation `

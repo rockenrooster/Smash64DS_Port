@@ -1,115 +1,65 @@
 # Handoff
 
-Updated: 2026-07-15 18:26 Central
+Updated: 2026-07-15 20:04 Central
 
-This is the exact restart surface. `P1_EXECUTION_BOARD.md` owns the queue,
-`STATUS.md` owns current truth, and `PORTING.md` is append-only history.
+`P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
+surface.
 
-## Current Checkpoint
+## Restart
 
 Branch: `codex/wip-natural-combat-source-start-collision`
 
-Active Boundary: `battle_playable_realtime`, mode 163.
-
-Preserve the live dirty tree. It contains the coherent M3 complete-stage owner,
-M4 frozen-water/static-residency integration, profile-1 M3 timing hooks, updated
-published defaults, verifier fixes, generated static assets, and documentation.
-Do not restore the retired animated/tiled-water path.
-
-The canonical published target is intrinsic mode 9 / mip 0 / static residency 1 /
-hybrid OAM 1. The original launch target remains 0 / 0 / 0 / 0.
-
-```text
-smash64ds-battle-playable-hwtri.nds
-14,534,656 bytes
-SHA-256 3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38
-```
-
-## Verified Evidence
-
-Canonical Boundary passed on runner slot 2 on 2026-07-15. The natural terminal
-frame reported 19.8 FPS, 828 total triangles, exact M3 ownership
-`121 runs / 202 stage / 320 Mario / 306 Fox`, zero fast fallbacks, no texture
-uploads, and M4 `22 keys / 131072 bytes / zero fence violations` with frozen
-water `2/0/1`.
-
-Exact completed GO frames 438/439 passed source timer/control/OAM state, full
-visibility, named-region/detail, motion, and pond gates:
-
-```text
-artifacts/visibility/2026-07-15_canonical_fast_frame438-439_182430-9052820-p35520.png
-  153,147 bytes; SHA-256 45DBCD24D2DAC91089A1AAD6AB430C05CB173BB4E3FCFFBACEBE9A323B040922
-artifacts/visibility/2026-07-15_canonical_fast_frame438-439_182430-9052820-p35520_next.png
-  153,186 bytes; SHA-256 2E12523F0C0EE55A71F2C6836B89F2BC336EC16EF9EF0DB41D402D34ED42670F
-```
-
-`artifacts/visibility/latest.png` is byte-identical to frame 438. The capture is
-a complete recognizable Dream Land GO scene with Mario, Fox, the frozen pond,
-and lower HUD intact; it has no blank or partial-frame corruption.
-
-## Milestone Truth
-
-- M1 is accepted: retained affine BG2 costs 1,856 ticks, below 35K.
-- M2 renders correctly in Mode 8 but remains over target at
-  477,152/477,376 ticks. Mode 7 is rejected. The 170–250K target remains open.
-- M3's complete-stage Mode-9 owner is now linked and device-semantic-proven:
-  8 callbacks, mask 255, 57 DObjs, 42 bindings, 54 runs, 202 triangles, 49
-  epochs, four material commits, cross `5/10/15`, and zero fallback. Frames
-  438–445 measure stage-exclusive 664,544/664,640 P50/P95, missing the <=500K
-  first gate by 164,544 and saving only about 140K versus the ~805K baseline.
-  M3 is REWORK; no 150–250K completion claim.
-- M4's generated corpus has 22 complete keys, 21 deduplicated outputs, a
-  126,976-byte payload, and 131,072 prepared bytes in VRAM A. The published
-  short Boundary window proves pinning and zero gameplay conversion, upload,
-  I/O, allocation, refresh, eviction, fallback, or fence violation. The full
-  one-minute GO-to-teardown fence/reserve qualification remains pending.
-  Its isolated hardware target now builds, but the first full invocation exited
-  nonzero without a terminal acceptance marker; do not count it as M4 evidence.
-
-Compilation alone does not close M2–M4.
-
-## DS Visual Decision Rule
-
-Gameplay, hitboxes, collision, physics, timing, rules, camera meaning, and state
-flow remain source-faithful. Presentation targets roughly 90% overall likeness.
-Give cosmetic pixel exactness one measured focused experiment; if it misses the
-DS tick/memory budget or threatens P1, keep the cheapest recognizable
-source-derived approximation, document its delta/reason, capture it under
-`artifacts/visibility`, and move on.
-
-Dream Land water is frozen at exact BattleShip frame 0, non-FRAC fraction 114,
-on original runs 42–43 and the original 12 triangles. Later water material
-animation is intentionally ignored. The retired 167,936-byte/138-triangle
-animated replacement is history, not an active option.
-
-## Resume Order
-
-1. Enumerate Boundary and inspect status; preserve the dirty integration.
-2. Run the roadmap dense-prepare cut, touching only `nds_renderer.c` and
-   `check_nds_native_stage.py`. Expected saving is 170–210K; require at least
-   164,544 saved and <=500K. Do not reopen water animation or broad cosmetic parity.
-3. Run the newly routed one-minute M4 GO-to-teardown fence/reserve gate before calling M4
-   complete. Fox CPU remains default-paused until Tyler requests re-enable.
-4. Refresh the two root ROMs only after accepted source changes. Finish focused
-   checks, Boundary, docs, status, and commit before the Lean snapshot.
-
-## Exact Commands
+Boundary: `battle_playable_realtime`, mode `163`.
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile Boundary -List
 git status --short
-$env:DEVKITPRO = 'C:/devkitPro'
-$env:DEVKITARM = 'C:/devkitPro/devkitARM'
+```
+
+Preserve the published intrinsic mode-9 / mip-0 / static-residency / hybrid-OAM
+configuration. Dream Land water is exact frame 0/fraction 114 on the original
+12 triangles; the animated replacement and its dead implementation are removed.
+
+The executable fleet is now four registry records under `Latest`/`Boundary`;
+168 legacy verifier/manager scripts and their public mode mappings are deleted.
+The unreachable source-side mode 1-162 lattice remains a separate ROM-parity
+cleanup, not part of the next renderer change.
+
+The 20:01 rebuilt-ROM frames 438/439 capture passed visibility and detail gates
+under `artifacts/visibility`. Boundary itself is open: its smoke attached at
+battle frame 46 before M4 arm (`arm=0`, prepared=22/131072). Do not weaken that
+gate or call it a pass; align its sample with the natural post-GO window.
+
+## Next Packet
+
+M3 is device-semantic-correct but measures 664,544/664,640 stage ticks. Make one
+bounded change only:
+
+- `src/nds/nds_renderer.c`: prepare repeated stage corners once by dense index.
+- `scripts/check_nds_native_stage.py`: enforce zero preparation-tuple conflicts.
+- 606 references map to 312 vertices; projected work should fall 408 to 246.
+- Expected saving: 170-210K ticks.
+- KEEP only at <=500K P50 with at least 164,544 saved, improved P95, exact
+  8/57/42/54/202 ownership, zero fallback/fence, and matching screenshot.
+
+Use eight synchronized frames for A and B. Record ticks, FPS, screenshots under
+`artifacts/visibility`, and automated screenshot analysis. Run A2 only if A/B is
+near the gate, noisy, surprising, or inconsistent.
+
+```powershell
+python .\scripts\check_nds_native_stage.py
 .\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 9 `
   -StaticTextureAotMode 1 -IFCommonHybridOamMode 1 `
   -RendererProfileLevel 1 -RendererM2DetailedLedger `
-  -RendererBenchmarkSamples 8 -RendererBenchmarkStartFrame 438 -RunnerSlot 2
-.\scripts\verify-battle-playable-one-minute-match.ps1 -RunnerSlot 3
-.\scripts\check-battle-playable-static-textures.ps1
-.\scripts\check-gbi-decode-fixtures.ps1
-.\scripts\verify-boundary.ps1 -NoBuild -DelaySeconds 3 -RunnerSlot 2
+  -RendererBenchmarkSamples 8 -RendererBenchmarkStartFrame 438 -RunnerSlot 3
 ```
 
-Use only repo-local scripted melonDS. Screenshots belong only under
-`artifacts/visibility`. Never run or prebuild `Full`, `Regression*`, or `P1Gate`.
-The Lean snapshot is always the final project command, with no command after it.
+After M3 settles, root-cause the isolated one-minute M4 gate's missing terminal
+acceptance marker. Do not count the first nonzero invocation as M4 evidence.
+
+## Checkpoint
+
+Run one widest relevant verifier only: Boundary for battle-only work, or Current
+instead if normal/shared startup changed. Finish docs and `git status`
+inspection, then commit before the Lean snapshot; the snapshot is the final
+command.

@@ -63,7 +63,7 @@ At the beginning of each work cycle:
 1. Read AGENTS.md.
 2. Run:
    .\scripts\verify-all.ps1 -Profile Boundary -List
-3. Read docs/P1_EXECUTION_BOARD.md, docs/HANDOFF.md, and docs/STATUS.md.
+3. Read docs/P1_EXECUTION_BOARD.md and docs/HANDOFF.md.
 4. Read the relevant architecture, verification, known-issue, diagnostic, and decomp-map documentation.
 5. Inspect repository status and preserve all pre-existing user changes.
 6. Select the highest-impact unowned red P1 packet that is not blocked.
@@ -72,17 +72,17 @@ Work continuously through investigation, implementation, building, captures, ver
 
 Do not spend time on unrelated cleanup, speculative abstractions, or tooling without a measured benefit to the P1 critical path.
 
-Concurrent lanes use separate Git worktrees, unique build directories, assigned
-runner slots, and explicit owned/forbidden files. Claim shared files before
-editing. Only the integration/release lead edits the Makefile, shared renderer
-registration, harness registry, ROM identity, and current-truth documentation.
-Each lane defines a hypothesis, exclusive counters, and a keep/revert stop gate
-before implementation, then returns a self-contained commit plus reproduction
-evidence. Do not start P2 implementation while any required P1 row is red.
+Parallel lanes must own disjoint files, builds, and runner slots. Do not start P2
+while any required P1 row is red.
 
-Project-local build and verification improvements are encouraged when they measurably shorten iteration time without weakening coverage. Prefer caching, incremental builds, detached builds, profile reuse, and safe regression sharding. Never bypass, loosen, or delete a meaningful gate merely because it is slow.
+Prefer incremental builds, existing helpers, and less code. Do not add tooling,
+caches, selectors, or abstractions without a measured P1 benefit.
 
-Use the smallest focused verifier during iteration, DevFast after it passes, Boundary for completed runtime slices, and Current only when normal launch or shared startup/runtime can be affected. `P1Gate`, `Regression*`, and `Full` are list-only inventories; never execute or prebuild them. Follow current AGENTS.md and docs/HANDOFF.md commands if they differ from this summary.
+Performance iteration uses synchronized eight-frame A/B ticks, FPS, screenshots,
+and screenshot analysis. Run a third A only when A/B is inconclusive. Use the
+smallest focused checker while editing and one widest relevant verifier at the
+checkpoint; Current replaces Boundary when normal/shared startup is affected.
+Only Latest and Boundary remain in the executable registry.
 
 BLOCKER POLICY
 
@@ -100,13 +100,16 @@ DOCUMENTATION
 Keep documentation current but lean:
 
 - docs/P1_EXECUTION_BOARD.md: the only dynamic queue, acceptance matrix, lane ownership, dated gates, and evidence decisions.
-- docs/STATUS.md: short current truth and latest verified state.
-- docs/HANDOFF.md: exact current commands and artifact handoff, not another queue.
+- docs/HANDOFF.md: exact restart command and next packet, not another queue.
+- docs/VERIFYING.md: the only verification and A/B workflow.
+- docs/optimization/NATIVE_RENDERER_PLAN.md: current renderer contract.
+- docs/PERF_LEDGER.md: measured and rejected renderer experiments.
 - docs/PORTING.md: append-only progress history.
 - docs/DIAGNOSTIC_REFERENCE.md: complete marker strings and diagnostics.
 - docs/KNOWN_ISSUES.md: confirmed blockers and deferred gaps.
 
-Keep STATUS.md and HANDOFF.md within their line limits. Do not duplicate historical marker stacks across active documents.
+Keep HANDOFF.md short. Do not duplicate hashes, command stacks, or historical
+marker records across active documents.
 
 DEADLINE POLICY
 

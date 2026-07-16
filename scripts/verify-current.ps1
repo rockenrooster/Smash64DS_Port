@@ -5,7 +5,7 @@ param(
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$DelaySeconds = 5,
     [int]$RunnerSlot = -1,
-    [int]$GdbPort = 3333,
+    [int]$GdbPort = 4333,
     [switch]$List,
     [switch]$SkipRegistryCheck
 )

@@ -8,7 +8,7 @@ renderer, and converts their CI4/RGBA5551 inputs to padded little-endian DS
 RGB5A1 bytes.  Exact metadata is emitted as C while pixels are emitted as one
 NitroFS-ready binary.  Generated pixels are checked with a separate slow oracle.
 
-The two source-initial Pupupu water composites are included for the optional
+The two source-initial Pupupu water composites are included for the retained
 frame-0 freeze cut. Animated actors, fighters, weapons, effects, and shadows
 remain outside this corpus, so this tool cannot claim M4 complete by itself.
 """

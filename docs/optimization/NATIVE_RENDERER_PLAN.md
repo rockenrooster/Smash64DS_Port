@@ -1,256 +1,100 @@
-# Native Renderer Plan — P1 Milestones 2–4
+# Native Renderer Implementation Contract
 
-This is the concise implementation contract for the remaining large renderer
-cuts. `docs/P1_EXECUTION_BOARD.md` owns priority and integration decisions;
-`docs/PERF_LEDGER.md` owns measured history, and
-`docs/OPTIMIZATION_ROADMAP.md` is a renderer status synopsis.
+`docs/P1_EXECUTION_BOARD.md` owns priority and current state;
+`docs/PERF_LEDGER.md` owns measurements and rejected experiments. This file owns
+only the retained M2-M4 implementation contract.
 
 ## Shared Rules
 
-- Preserve BattleShip event order, selected display lists, material progression,
-  matrix ownership, lighting, texture semantics, and the persistent RSP vertex
-  cache where source behavior depends on it.
-- Build immutable owner plans before gameplay or keep them in ROM/rodata. Do not
-  regenerate topology or decode immutable display-list structure every frame.
-- Bind only live state each frame: camera, DObj transforms, animation-selected
-  events, materials, colors, lights, texture identity, and other dynamic state.
-- Validate the entire owner before mutating GX state. Unsupported variants,
-  stale provenance, arena exhaustion, resolver failure, or contract mismatch
-  must fall back to the exact generic owner path before partial submission.
-- Keep profile 2 as the independent semantic/oracle path. A native path is not
-  accepted merely because it produces a plausible screenshot.
-- Use fixed-capacity workspaces and prove the memory-reserve delta. No per-frame
-  heap allocation is allowed in the production owner path.
-- Compare identical ROM hashes and synchronized emulated logic windows with JIT
-  disabled for correctness decisions.
-- Apply the project visual-fidelity exception only to presentation. P1 freezes
-  exact Dream Land water frame 0/fraction 114 on the original 12 triangles;
-  gameplay state, collision, camera, Whispy, and other stage animation stay live.
-- Store every generated screenshot and dated visual proof under
-  `artifacts/visibility`.
+- Preserve BattleShip draw order, selected display lists, material progression,
+  matrix ownership, lighting inputs, texture identity, depth, and live state.
+- Validate a whole owner before its first GX mutation. Unsupported state falls
+  back before partial submission.
+- Build immutable topology before gameplay; bind only live matrices, materials,
+  colors, lights, and selection state per frame.
+- Use fixed-capacity storage. No gameplay heap allocation, conversion, file I/O,
+  texture upload preparation, or speculative cache.
+- Keep profile 2 as the independent semantic oracle.
+- Presentation follows the 90% DS rule; gameplay-relevant geometry and state do
+  not. Dream Land water is exact frame 0/fraction 114 on its original triangles.
+- Use the eight-frame A/B/A2-if-needed policy in `docs/VERIFYING.md`.
 
-## Milestone 2 — AOT Mario/Fox Owner
+## M2 — Mario/Fox Owner
 
-Target: combined Mario/Fox rendering in 170–250K ticks while preserving the
-current exact fighter submission contract and recognizable output.
+Target: combined fighter rendering in 170-250K ticks.
 
-### Current measured bound
+Retained production contract:
 
-The whole-fighter GX skeleton experiment is closed. Same-ROM profile-1 A/B/A
-on SHA-256 `03950839A61B...BEEF09B`, frames 600–607 / logic 209–216, produced
-identical controls at 493,696/520,896 paired combined ticks. The treatment was
-445,568/472,768: a correct same-ROM 48,128-tick saving, but 51,872 below the
-then-active 100K falsifier. Both sides enabled the detailed M2 census/timers, so this
-relative delta is valid while the 445,568 absolute total is not compared with
-that experiment's coarse 331K ceiling or the 170–250K milestone target. It reduced
-the measured matrix/root subtotal 162,208 -> 113,632 while production remained
-essentially flat at 243,520 -> 242,240. All treatment and selector code was
-removed; the retained ledger is opt-in through
-`NDS_RENDERER_M2_DETAILED_LEDGER=1`.
+- 32 roots, 49 epochs, 67 runs, 626 triangles, 541 immutable vertices.
+- Mario/Fox ownership remains 320/306 triangles.
+- Persistent vertex-cache and cross-matrix semantics remain exact.
+- CPU lighting remains source-exact; hardware lighting is not eligible without
+  an independent exact oracle.
+- Preflight rejects active animlock or unsupported dynamic matrix/material state
+  before GX output.
 
-Do not retry CPU preorder, split projection/modelview, or a GX palette that
-retains parallel CPU world/composed geometry. Those cuts saved only about
-10.5K, 36.2K, and 48.1K respectively. The next cut must jointly reduce matrix,
-lighting, and production execution.
+Current Mode 8 is visually correct but over target. The next candidate must
+eliminate immutable per-frame command work without copying/patching a whole FIFO
+packet or adding another per-root interpreter.
 
-### Plan construction
+First keep gate:
 
-Create one static/generated plan per supported owner variant containing:
+- save at least 80K combined fighter ticks and reach <=337,472;
+- matrix plus lighting <=120K and transport <=145K;
+- exact geometry, owner state, texture traffic, screenshot, and reserve;
+- no fallback, allocation, or ledger-on-only win.
 
-- owner and topology signature;
-- source event order and immutable command spans;
-- material/state transitions;
-- matrix-binding descriptors;
-- predecoded vertex and triangle runs;
-- raw-current fast runs;
-- exact exception records for cross-matrix, projected, range, or unsupported
-  operations;
-- entry/exit state contract and fallback reason.
+Final promotion remains 170-250K ledger-off.
 
-Do not build this plan during gameplay. Unknown variants use the generic owner
-for the whole call.
+## M3 — Complete Dream Land Owner
 
-### Fused per-frame matrix and lighting contract
+Target: complete stage rendering in 150-250K ticks.
 
-For each fighter owner:
+Retained owner contract:
 
-1. Validate the corrected generated 25-joint Mario / 27-joint Fox preorder,
-   live parent pointers, selected events, and dynamic `matrix_dobj` bindings in
-   one fixed workspace before GX mutation.
-2. Build exact BattleShip locals from live 0x4B/parts state, including a
-   source-faithful animlock path. Do not also construct full CPU world and
-   projection-composed matrices for geometry.
-3. Compose geometry hierarchy in GX once, storing only slots referenced by the
-   generated owner and its 44 cross-matrix triangles. Use only Mario slots
-   16–23 and Fox slots 16–17; slots 1–8 alias live traversal state.
-4. Preserve lighting with a minimal CPU 3x3/light-direction sidecar for only
-   the required bindings. Validate its transformed directions and shaded
-   colors against the current full-modelview/profile-2 oracle before removing
-   any old CPU matrix work.
-5. Bind live materials, texture identities, and colors into the precompiled
-   owner stream without decoding immutable state or allocating during play.
-6. Budget matrix plus lighting preparation at no more than 60–80K combined;
-   otherwise the 170–250K milestone cannot close.
+- eight callbacks, mask 255, 57 DObjs, 42 bindings;
+- 54 runs, 202 triangles, 49 epochs, four material commits;
+- projected cross-matrix counts 5/10/15;
+- source links remain segmented around fighters and weapons;
+- Whispy, flowers, draw flags, materials, effects, weapons, depth, and stage
+  selection remain live; water pixels alone are frozen.
 
-The current adapter does not implement BattleShip's active animlock cumulative
-scale, inverse-scale fixed-point order, or sibling restore. Mario/Fox main and
-submotion tables contain no `FTANIM_FLAG_ANIMLOCKS`, so the first natural P1
-experiment must census zero and reject any active owner before GX. Promotion
-still requires an independent mode-0/mode-3/sibling-restore golden fixture or
-the exact active branch; generic-vs-native agreement alone is insufficient.
+Current stage-exclusive P50/P95 is 664,544/664,640. The bounded next cut prepares
+shared corners once by dense index inside `src/nds/nds_renderer.c` and adds only
+the zero-conflict invariant to `scripts/check_nds_native_stage.py`:
 
-The reproducible no-GX parity corpus fixes this split: hardware one-light
-shading misses 102 of 413 exact RGB15 cases across 16/18 bindings, so it cannot
-own source-faithful lighting. Generated fractional-bias 20.12 texture matrices
-match all 99 canonical t16 cases; naive scale-shift matrices miss 47. Treat the
-CPU light sidecar as mandatory and the synthesized texture matrix as eligible,
-subject to live MObj/profile-2 parity.
+```text
+606 corner references -> 312 dense vertices
+408 projected references -> 246 unique
+remove 294 repeated attribute preparations
+remove 162 repeated transforms and 486 projections
+```
 
-The generated schedule is 25 Mario / 27 Fox joints and 14 / 18 live bindings,
-with 11/11 push/pop operations, 10 stores, 84 restores, 44 cross-matrix
-triangles, 49 epochs, and 67 runs. Those counts are the transaction contract,
-not optional diagnostics.
+Expected saving is 170-210K. KEEP only with at least 164,544 saved, <=500K P50,
+improved P95, exact owner/counter/semantic/fence state, and matching screenshot.
+Do not widen the cut if the eight-frame result misses.
 
-### Native execution
+## M4 — Pre-GO Texture Residency
 
-- Preflight all signatures, pointers, plan bounds, resolver state, and texture
-  readiness before the first GX write.
-- Apply the exact owner preamble once.
-- Compile the immutable 49 epochs / 67 fighter runs into one coarse owner-scale
-  FIFO transport or DMA-capable command stream. Do not revive the rejected 121
-  small GX lists or preserve per-root/per-run dispatch overhead.
-- Patch only bounded live matrices, materials, colors, texture bindings, and
-  light-sidecar outputs, then advance them in original source order.
-- Preserve selected-event order and the shared vertex-cache semantics needed by
-  cross-joint triangles.
-- Route exceptional operations through an exact cold path without replaying or
-  partially submitting the owner.
-- Call the production owner exactly once per fighter.
+The current static corpus is the only P1 design:
 
-### Keep gate
+- 17 source blocks, 22 keys, 21 deduplicated outputs;
+- 126,976-byte payload and 131,072 prepared bytes in VRAM A;
+- frozen water contributes 36,864 bytes on original runs 42-43;
+- scene setup prepares and pins the set before GO;
+- gameplay binds resident records only.
 
-Keep only when all are true:
+The animated tiled-water implementation, asset, generator, draw path, residency
+path, checks, and build selector are deleted. Do not recreate them.
 
-- a synchronized same-ROM eight-frame falsifier saves at least 80K paired
-  fighter ticks; the absolute <=351K first-window and 170–250K promotion gates
-  are measured with `NDS_RENDERER_M2_DETAILED_LEDGER=0` and do not regress P95;
-- zero semantic/oracle mismatch in synchronized profile-2 comparison;
-- exact current fighter triangle and owner-entry/exit contracts;
-- no fallback or blocker in the accepted warm window;
-- matrix/light preparation is <=60–80K and production is <=100–120K, leaving a
-  credible whole-owner budget rather than optimizing either bucket alone;
-- canonical screenshots preserve recognizable Mario/Fox materials, animation,
-  pose, facing, depth, and stage interaction;
-- memory reserve remains within project requirements;
-- focused renderer forensic checks, DevFast, and Boundary remain green; add
-  Current only when normal launch or shared startup/runtime can be affected.
-
-## Milestone 3 — AOT Complete Stage Owner
-
-Target: complete live Dream Land stage rendering in 150–250K ticks without
-flattening gameplay-relevant geometry, platforms, effects, Whispy animation, or
-depth. The declared frozen-water presentation exception remains in force.
-
-Use one whole-owner preflight/control session across all eight source callbacks
-and 57 DObjs, with callback-sized GX segments at links 4/6/13/16/17 around
-fighters at 9 and weapons at 14. Close each logical batch, restore profile
-ownership, and rebind state when the stage resumes; never `glFlush` inside the
-slab. The exact ROM slab is 42 lists / 886 commands / 302 vertices / 54 runs /
-202 triangles, partitioned 66 raw, 126 no-Z, and 10 projected triangles.
-
-Use the same owner-plan architecture as fighters:
-
-- generate immutable topology/state runs before gameplay;
-- bind live camera, animated DObjs/materials, and selected events each frame;
-- preserve global display-head order and opaque/translucent ordering;
-- use the live matrix per list, assert zero cross-matrix triangles, and add no
-  stage matrix palette;
-- keep the existing projected/no-Z depth counter frame-global across interleaved
-  fighters and weapons;
-- specialize the dominant exact stage run classes;
-- keep projected/range/unsupported operations on a cold exact path;
-- validate the full owner before GX mutation;
-- retain generic whole-owner fallback and profile-2 shadow comparison.
-
-Preflight the complete owner before the first GX mutation. Shadow all four live
-material operations and 49 texture epochs without advancing MObj state, and
-require every texture resident. Any mismatch falls back for the whole owner;
-after arming, no segment may reject or replay. Reuse existing stage/cache state,
-add no production BSS/heap, and keep exact `42F + W` / `202F + 2W` accounting.
-
-The retained BG2 wallpaper is already milestone 1 and must remain separate from
-this stage owner. Do not revive rejected scanline, incremental wallpaper DMA,
-three-mip scene capture, or final-frame flattening designs without a new
-source-backed architecture and exclusive cost model.
-
-The first paired A/B/A falsifier must save at least 300K stage ticks and reach
-no more than 500K with improved P95, exact census/accounting, state hashes,
-ordering, texture counters, moving screenshots, and reserve intact. Remove the
-slab if either threshold fails. Final M3 promotion remains 150–250K after M4.
-
-## Milestone 4 — Texture Work Before Gameplay
-
-Goal: sampled gameplay reports zero texture conversion and zero upload
-preparation on the critical path.
-
-Use the generated static manifest after original battle setup returns and before
-update/draw. It enumerates full logical texture keys—not merely image/TLUT
-offsets—and relocates asset ID plus offset at runtime without constructing
-synthetic objects or advancing animations.
-
-The accepted current-ROM corpus is 17 source blocks, 22 complete keys, 21
-deduplicated outputs, and 131,072 prepared bytes. It includes exact BattleShip
-water frame 0/fraction 114 as a 32,768-byte large output plus a 4,096-byte small
-output. Preload and pin that pair while retaining the original 12 water
-triangles. This corpus is bounded to the accepted P1 configuration; runtime
-provenance, reachable-effect closure, bank ownership, and the >=128 KiB reserve
-still require device proof. The retired 69/71-key animated-water census and its
-72/80-entry cache expansion are not an active implementation contract.
-
-At scene/fighter/stage setup:
-
-1. Enumerate the exact textures and palettes required by the accepted match
-   configuration and supported owner variants.
-2. Convert source formats once into DS-ready texture/palette data.
-3. Assign stable cache keys and reserve VRAM with explicit lifetime ownership.
-4. Upload before the live match window begins.
-5. Record memory and VRAM totals plus fallback behavior.
-
-During gameplay:
-
-- texture lookup may select or bind already-prepared data;
-- no format conversion, palette conversion, allocation, decompression, or upload
-  preparation may occur;
-- unexpected texture content must trigger a pre-mutation owner fallback or an
-  explicitly verified setup-time load, never hidden per-frame conversion.
-
-Arm the violation fence at BattleShip's transition to GO. For static owners it
-must retain a first-failure record and count zero key misses, conversion,
-palette/decode work, allocations, GL creates/uploads/deletes, evictions,
-replacement/refresh, decompression, file I/O, and manifest fallbacks through
-battle teardown. Results is a new setup boundary and must prewarm before a new
-fence if included. Existing `TexturePrepareCount` includes normal prepared binds
-and is not itself a zero gate.
-
-The exact animated-water feasibility route is retired: its 216-state / 322-key /
-206-output corpus needed about 903,168 bytes as visible RGB256, beyond DS texture
-VRAM, while alternate pairing also failed capacity and alpha semantics. P1 uses
-the frozen pair above and ignores later water material animation; do not replace
-the original 12-triangle water geometry.
-
-Keep only with zero gameplay conversion/upload-preparation counters, exact
-prepared pixels for the declared keys, the accepted frozen-water presentation,
-stable reserve, and no new hitch or corruption.
+M4 promotion requires one natural GO-to-battle-teardown run with zero conversion,
+decode, allocation, file I/O, GL create/upload/delete, eviction, refresh,
+manifest fallback, or fence violation; exactly one teardown; and at least 128 KiB
+reserve. Results may prewarm at its own setup boundary.
 
 ## Integrated Promotion
 
-After milestones 2–4:
-
-1. Re-profile the complete mode-163 frame, including update, audio, HUD, flush,
-   VBlank wait, and residual work.
-2. Fix the highest measured remaining P1 blocker rather than polishing an
-   already-small bucket.
-3. Prove natural one-minute timer expiry and original Results transition in the
-   user-facing ROM.
-4. Run the required P1 verifier coverage and dated capture.
-5. Do not call P1 complete below real-time speed without explicit user approval.
+After an owner clears its local gate, profile the whole frame: update, audio,
+input/HUD, renderer owners, texture work, flush, VBlank wait, and residuals.
+Keep only changes whose ticks/FPS, semantic counters, runtime state, memory, and
+screenshot analysis agree. Compilation alone proves nothing.

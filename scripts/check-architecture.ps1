@@ -82,15 +82,6 @@ Get-ChildItem -LiteralPath (Join-Path $root 'src/import') -Filter '*.c' -File | 
     }
 }
 $registry = @(Get-Smash64DSHarnessRegistry)
-$names = @($registry | ForEach-Object { $_.Name })
-foreach ($record in $registry) {
-    if ($record.Name -match '^battle_mariofox_(.+)$') {
-        $pair = "menu_chain_mariofox_$($Matches[1])"
-        if ($names -notcontains $pair) {
-            Add-Failure "missing menu-chain pair for $($record.Name): expected $pair"
-        }
-    }
-}
 $architecture = Get-Content -LiteralPath (Join-Path $root 'docs/ARCHITECTURE.md') -Raw
 $hasLargeFilePlan = $architecture.Contains('## Large Backend File Split Plan')
 $largeFiles = @()
