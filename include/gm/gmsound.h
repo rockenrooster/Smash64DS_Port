@@ -122,7 +122,6 @@ typedef enum gmVoiceID
     nSYAudioVoiceMarioSmash2 = 430,
     nSYAudioVoiceMarioSmash3 = 431,
     nSYAudioVoiceMarioDeadUp = 433,
-    nSYAudioVoiceMarioJump = 435,
     nSYAudioVoiceMarioHeavyGet = 438,
     nSYAudioVoiceMarioDead = 439,
     nSYAudioVoiceMarioDamage = 440,

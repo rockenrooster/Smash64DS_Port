@@ -355,7 +355,7 @@ try {
             }
         })
     $includedIDs = @(626, 470, 469, 467, 490, 74, 363, 364, 372, 430,
-        439, 292, 370, 289, 300, 154, 77, 429, 435,
+        439, 292, 370, 289, 300, 154, 77,
         42, 43, 190, 215, 218, 219, 40, 38, 37, 34, 32, 31,
         216, 28, 2, 0)
     $voiceIDs = @(372, 430)
@@ -477,7 +477,7 @@ try {
         $gdbStdout
     Assert-Condition ($audioState.Success -and
         $asv[0] -eq 0x46474d31 -and $asv[1] -eq 1 -and
-        $asv[2] -eq 168240 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
+        $asv[2] -eq 164660 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
         $asv[5] -eq 0 -and $asv[6] -ne 0) `
         'Fighter-voice pack load/channel state is invalid.' $gdbStdout
     Assert-Condition ($bgm.Success -and

@@ -211,6 +211,28 @@ try {
         [int]$load.Groups[8].Value -ne 0) {
         throw "FGM phase pack did not load cleanly.`n$gdbStdout"
     }
+    $naturalKoCount = 0
+    if ($ko.Success) {
+        $koMask = Convert-MarkerUInt32 $ko.Groups[1].Value
+        $koCounts = @(2..6 | ForEach-Object { [int]$ko.Groups[$_].Value })
+        $koTraceCount = [int]$ko.Groups[7].Value
+        $koTrace = @(8..10 | ForEach-Object { [int]$ko.Groups[$_].Value })
+        if (($koMask -eq 0) -and (($koCounts -join ',') -eq '0,0,0,0,0') -and
+            ($koTraceCount -eq 0) -and (($koTrace -join ',') -eq '0,0,0')) {
+            $naturalKoCount = 0
+        } elseif (($koMask -eq 0x1c) -and
+            (($koCounts -join ',') -eq '0,0,1,1,1') -and
+            ($koTraceCount -eq 3) -and
+            (($koTrace -join ',') -eq '370,289,154')) {
+            $naturalKoCount = 3
+        } else {
+            throw "Natural regular-KO source order changed.`n$gdbStdout"
+        }
+    } else {
+        throw "Natural regular-KO diagnostics were absent.`n$gdbStdout"
+    }
+    $expectedSupportedPlays = 6 + $naturalKoCount
+    $expectedEnvelopeSteps = if ($naturalKoCount -eq 0) { 0 } else { 21 }
     if (-not $play.Success -or
         [int]$play.Groups[2].Value -lt 5 -or
         [int]$play.Groups[4].Value -ne 0 -or

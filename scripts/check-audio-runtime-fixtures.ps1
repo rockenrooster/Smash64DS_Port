@@ -173,14 +173,30 @@ foreach ($sourceOffset in @(
 
 $marioMotionText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
     'src/relocData/202_MarioMainMotion.c') -Raw
-foreach ($required in @(
-        'ftMotionPlayFGM(nSYAudioFGMMarioLanding)',
-        'ftMotionPlayVoice(nSYAudioVoiceMarioSmash1)',
-        'ftMotionPlayVoice(nSYAudioVoiceMarioJump)'
+foreach ($fixture in @(
+        @{ Call = 'ftMotionPlayFGM(nSYAudioFGMMarioLanding)'; Count = 7 },
+        @{ Call = 'ftMotionPlayVoice(nSYAudioVoiceMarioSmash1)'; Count = 4 },
+        @{ Call = 'ftMotionPlayVoice(nSYAudioVoiceMarioJump)'; Count = 3 }
     )) {
-    if (-not $marioMotionText.Contains($required)) {
-        throw "BattleShip Mario motion audio trigger changed: $required"
+    $count = [regex]::Matches(
+        $marioMotionText, [regex]::Escape($fixture.Call)).Count
+    if ($count -ne $fixture.Count) {
+        throw ("BattleShip Mario motion trigger count changed: {0} ({1})" -f
+            $fixture.Call, $count)
     }
+}
+
+$marioMainText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/relocData/203_MarioMain.c') -Raw
+if (-not $marioMainText.Contains(
+        '{ nSYAudioVoiceMarioSmash1, nSYAudioVoiceMarioSmash2, nSYAudioVoiceMarioSmash3 }, /* smash_sfx */')) {
+    throw 'BattleShip Mario random smash-voice table changed.'
+}
+$ftMainText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/ft/ftmain.c') -Raw
+if (-not $ftMainText.Contains(
+        'ftParamPlayVoice(fp, fp->attr->smash_sfx[syUtilsRandIntRange(ARRAY_COUNT(fp->attr->smash_sfx))]);')) {
+    throw 'BattleShip random smash-voice dispatch changed.'
 }
 
 $deadSourcePath = Join-Path $BattleShipRoot 'src/ft/ftcommon/ftcommondead.c'
@@ -397,7 +413,9 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
-    'mixed-u16 words each, 3 Mario motion audio triggers, exact Mario/Fox ' +
+    'mixed-u16 words each, 14 Mario motion callsites across 1 included and 2 ' +
+    'source-audited excluded cues plus the random smash table/dispatch, ' +
+    'exact Mario/Fox ' +
     'regular-KO call order, no rebirth-audio claim, source attack-motion ' +
     'callsites, target layouts, ' +
     'source IDs, persisted DS loop point/length, and recyclable BattleShip ' +

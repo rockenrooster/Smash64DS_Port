@@ -433,6 +433,12 @@ SELECTED = (
             "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
         "fidelity_debt": (),
     },
+)
+
+# These source cues are deliberately audited but not packed.  Both retune an
+# already-running voice after playback starts; the current DS entry format has
+# no frequency schedule, so first-note playback would be behaviorally wrong.
+EXCLUDED_SOURCE_CUES = (
     {
         "id": 429,
         "name": "nSYAudioVoiceMarioSmash1",
@@ -458,6 +464,8 @@ SELECTED = (
         "articulation_program_sha256":
             "213f87188a79bd2c5ac6c58d1162a54912cc95f33afaa742be3c35f71311c2a3",
         "fidelity_debt": ("ucd_pitch_automation",),
+        "exclusion_reason":
+            "continuous_voice_pitch_schedule_not_representable",
     },
     {
         "id": 435,
@@ -484,7 +492,12 @@ SELECTED = (
         "articulation_program_sha256":
             "4fc9031eda94767f7e8f989a5cf9bf02f5ac1091519ac817bd22da87e6fc34d2",
         "fidelity_debt": ("ucd_pitch_automation",),
+        "exclusion_reason":
+            "combined_ucd_and_articulation_pitch_schedule_not_representable",
     },
+)
+
+SELECTED += (
     {
         "id": 42,
         "name": "nSYAudioFGMLightSwingM",
@@ -1706,6 +1719,95 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         raise ValueError("unexpected B1_sounds2 instrument layout")
     instrument = ctl_by_offset[bank["instArray_offs"][0]]
 
+    excluded_entries = []
+    for selector in EXCLUDED_SOURCE_CUES:
+        root_program = ucd["entries"][selector["id"]]["program"]
+        render_program_id = selector.get("render_program", selector["id"])
+        ucd_program = ucd["entries"][render_program_id]["program"]
+        validate_ucd(root_program, ucd_program, selector)
+        art_program = articulations["entries"][
+            selector["articulation"]]["program"]
+        validate_articulation(art_program, selector)
+
+        sound_offset = instrument["soundArray_offs"][selector["sound"]]
+        sound = ctl_by_offset[sound_offset]
+        wave = ctl_by_offset[sound["wavetable_off"]]
+        book = ctl_by_offset[wave["book_off"]]
+        loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+        if (wave["type"] != 0 or wave["base"] != selector["wave_base"] or
+                wave["length"] != selector["wave_length"]):
+            raise ValueError(f"excluded FGM {selector['id']} wavetable changed")
+        actual_loop = (loop["start"], loop["end"]) if loop else (0, 0)
+        if actual_loop != (selector["loop_start"], selector["loop_end"]):
+            raise ValueError(
+                f"excluded FGM {selector['id']} loop changed: {actual_loop}")
+        vadpcm = source_raw["B1_sounds2_tbl"][
+            wave["base"]:wave["base"] + wave["length"]]
+        pcm = audio_codec.adpcm_decode(vadpcm, book["entries"],
+                                       book["order"], book["npredictors"])
+        if len(pcm) != selector["expected_retained_samples"]:
+            raise ValueError(
+                f"excluded FGM {selector['id']} sample count changed")
+
+        note_rows = [row for row in ucd_program if row[0] == "note"]
+        note_tick = 0
+        note_schedule = []
+        for row in note_rows:
+            note_schedule.append({
+                "tick": note_tick,
+                "pitch_code": int(row[1]),
+                "velocity": int(row[2]),
+                "duration_ticks": int(row[3]),
+            })
+            note_tick += int(row[3])
+        articulation_tick = 0
+        articulation_pitch = []
+        articulation_volume = []
+        for row in art_program:
+            if row[0] == "pitch":
+                articulation_pitch.append({
+                    "tick": articulation_tick,
+                    "cents": int(row[1]),
+                    "duration_ticks": int(row[2]),
+                })
+            elif row[0] == "vol":
+                articulation_volume.append({
+                    "tick": articulation_tick,
+                    "value": int(row[1]),
+                    "duration_ticks": int(row[2]),
+                })
+            articulation_tick += int(row[-1])
+        if len(note_schedule) <= 1 and len(articulation_pitch) <= 1:
+            raise ValueError(
+                f"excluded FGM {selector['id']} no longer needs scheduling")
+        excluded_entries.append({
+            "id": selector["id"],
+            "name": selector["name"],
+            "reason": selector["exclusion_reason"],
+            "root_ucd_program_id": selector["id"],
+            "render_ucd_program_id": render_program_id,
+            "root_ucd_program_sha256": json_sha256(root_program),
+            "render_ucd_program_sha256": json_sha256(ucd_program),
+            "articulation_index": selector["articulation"],
+            "articulation_program_sha256": json_sha256(art_program),
+            "source_sound_index": selector["sound"],
+            "source_sample_count": len(pcm),
+            "source_duration_ticks": note_tick,
+            "source_note_schedule": note_schedule,
+            "source_articulation_pitch_schedule": articulation_pitch,
+            "source_articulation_volume_schedule": articulation_volume,
+            "source_ucd_pan_ops": [row for row in ucd_program
+                                   if row[0] in ("set_pan", "pan_delta")],
+            "source_articulation_pan_ops": [row for row in art_program
+                                            if row[0] == "pan"],
+            "source_fork_programs": [int(row[1]) for row in root_program
+                                     if row[0] == "fork_voice"],
+            "source_spawn_mod_ops": [row for row in art_program
+                                     if row[0] == "spawn_mod"],
+            "source_loop_start": actual_loop[0],
+            "source_loop_end": actual_loop[1],
+        })
+
     mapping_source = [
         {key: value for key, value in selector.items()}
         for selector in SELECTED
@@ -1985,6 +2087,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
 
     metadata = {
         "format": "BattleShip P1 FGM pack / Nintendo DS IMA ADPCM",
+        "source_region": "REGION_US",
         "format_version": PACK_VERSION,
         "entry_count": len(records),
         "entry_bytes": PACK_ENTRY.size,
@@ -2033,6 +2136,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             }
             for name in source_raw
         },
+        "excluded_entries": excluded_entries,
         "entries": metadata_entries,
     }
     return pack, metadata
