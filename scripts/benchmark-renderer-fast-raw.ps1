@@ -84,3 +84,11 @@ $build = if ($FastRunMode -eq 9) {
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
+if (-not [string]::IsNullOrWhiteSpace($RendererBenchmarkScreenshot)) {
+    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+        -Image $RendererBenchmarkScreenshot `
+        -WindowScaledCapture `
+        -MinDominantGreenFraction 0.03 `
+        -MinNonWhiteNonGreenFraction 0.25 `
+        -MaxSingleColorFraction 0.20
+}
