@@ -2320,9 +2320,8 @@ typedef struct NDSNativeVertexAction
 
 typedef struct NDSNativeDenseVertex
 {
-    s16 x;
-    s16 y;
-    s16 z;
+    u32 gx_xy;
+    u16 gx_z;
     s16 s;
     s16 t;
     u8 matrix_binding;
@@ -14055,13 +14054,8 @@ ndsRendererNativeEmitProductionRun(
                 GFX_TEX_COORD =
                     (u32)(u16)prepared->s |
                     ((u32)(u16)prepared->t << 16);
-                GFX_VERTEX16 =
-                    (u32)(u16)((s32)dense->x *
-                        (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
-                    ((u32)(u16)((s32)dense->y *
-                        (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
-                GFX_VERTEX16 = (u16)((s32)dense->z *
-                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+                GFX_VERTEX16 = dense->gx_xy;
+                GFX_VERTEX16 = dense->gx_z;
             }
         }
         else
@@ -14075,13 +14069,8 @@ ndsRendererNativeEmitProductionRun(
                     &sNdsNativeFighterPreparedDense[dense_id];
 
                 GFX_COLOR = prepared->packed_color;
-                GFX_VERTEX16 =
-                    (u32)(u16)((s32)dense->x *
-                        (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
-                    ((u32)(u16)((s32)dense->y *
-                        (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
-                GFX_VERTEX16 = (u16)((s32)dense->z *
-                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+                GFX_VERTEX16 = dense->gx_xy;
+                GFX_VERTEX16 = dense->gx_z;
             }
         }
         return;
@@ -14128,13 +14117,8 @@ ndsRendererNativeEmitProductionRun(
                 (u32)(u16)prepared->s |
                 ((u32)(u16)prepared->t << 16);
         }
-        GFX_VERTEX16 =
-            (u32)(u16)((s32)dense->x *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
-            ((u32)(u16)((s32)dense->y *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
-        GFX_VERTEX16 = (u16)((s32)dense->z *
-            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+        GFX_VERTEX16 = dense->gx_xy;
+        GFX_VERTEX16 = dense->gx_z;
     }
     if ((cross_matrix != 0u) &&
         (active_palette_slot != current_palette_slot))
@@ -14319,13 +14303,8 @@ ndsRendererNativeEmitDenseRawRun(
             GFX_TEX_COORD =
                 (u32)(u16)state->prepared_texcoord_s[slot] |
                 ((u32)(u16)state->prepared_texcoord_t[slot] << 16);
-            GFX_VERTEX16 =
-                (u32)(u16)((s32)vertex->x *
-                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
-                ((u32)(u16)((s32)vertex->y *
-                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
-            GFX_VERTEX16 = (u16)((s32)vertex->z *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+            GFX_VERTEX16 = vertex->gx_xy;
+            GFX_VERTEX16 = vertex->gx_z;
         }
     }
     else
@@ -14337,13 +14316,8 @@ ndsRendererNativeEmitDenseRawRun(
             u32 slot = vertex->cache_slot;
 
             GFX_COLOR = state->prepared_vertex_colors[slot];
-            GFX_VERTEX16 =
-                (u32)(u16)((s32)vertex->x *
-                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
-                ((u32)(u16)((s32)vertex->y *
-                    (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
-            GFX_VERTEX16 = (u16)((s32)vertex->z *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+            GFX_VERTEX16 = vertex->gx_xy;
+            GFX_VERTEX16 = vertex->gx_z;
         }
     }
 }

@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 09:20 Central
+Updated: 2026-07-16 09:44 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -25,25 +25,9 @@ The current user-facing candidate is 14,574,592 bytes, SHA-256
 `A8371FA93E75338F8BABAC445FA4826663979FE48884E215F27630049B3B6C93`;
 its next Boundary republication is intentionally deferred to the release
 checkpoint.
-The normal-play stage painter bug is fixed. BattleShip's 66 source-Z / 126
-no-Z classification was already correct; the DS counter advanced only one
-sixth of a submitted v16 step, so groups of six painter triangles collided.
-The final zero-collision profile-2 census is 202 triangles. Published-ROM pixel
-evidence is `artifacts/visibility/20260715-stage-depth-final-cutg-frame438.png`
-and `artifacts/visibility/20260715-stage-depth-final-moving-frame501.png`.
-Clip-space near-plane containment now removes the pause-orbit corruption and
-Tyler confirmed the fix. Paused −33.6° is the preferred Mario underside view.
-
-The retained M3 path includes no-Z codegen, dense prepare-once, and AOT-packed
-GX coordinate shifts. Current bitmap-OAM frames 438–445 move stage
-578,272/578,560 → 556,256/556,352 and draw 997,440/997,504 →
-975,360/975,488 for the latest cut. Exact 121/828 ownership,
-57/42/54/202/49/4 stage state, cross 5/10/15, zero fallback/fence work, and
-0/240,000 changed DS-screen pixels hold. The 500K point is the next target,
-not a discard gate.
-The signed-16 rounding codegen lead was also exhausted: it shrank both hot ARM
-symbols but saved only 2,048 stage ticks, and its B screenshot was invalid. The
-treatment is fully reverted; do not rerun it without a new closing bound.
+Stage painter depth and pause-orbit containment are fixed and user-confirmed.
+M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, and the
+zero-shift matrix builder at 541,952/542,272 ticks.
 
 The M4 Whispy lifecycle repair is kept: later cosmetic mouth/eye images reuse
 an otherwise exact resident source-frame key, preventing the late fallback and
@@ -93,7 +77,9 @@ plus LUT path. The old 480-triangle KRAW extension is superseded: Mode 8 now
 owns all 582 raw fighter triangles. Hoisting its raw/textured decisions outside
 the corner loop moves combined fighter time again to 397,248/397,312. Batching
 the unchanged raw/cross accounting once per owner traversal moves it to
-395,264/395,328. Continue against production emit work, not lighting.
+395,264/395,328. AOT-packing the immutable DS `VERTEX16` words in the same
+16-byte dense record moves it to 386,880/386,944. Continue against production
+emit work, not lighting.
 The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
 stable 20 FPS decision remains pending while performance work continues.
 

@@ -5,9 +5,10 @@ durable unresolved gaps.
 
 ## P1 Release Blockers
 
-- Renderer M2 is visually correct but above 170-250K ticks.
-- Renderer M3 is source/semantic-correct but measures 611,392/611,584 stage
-  ticks; a different attributable cut must reach <=500K before promotion.
+- Renderer M2 is visually correct but remains above its 170-250K target at
+  386,880/386,944 ticks.
+- Renderer M3 is source/semantic-correct but remains above its 150-250K target
+  at 541,952/542,272 stage ticks.
 - One natural source voice per fighter now plays (FoxSmash1 ID372 and
   MarioSmash2 ID430); remaining variants, exact pitch automation, and Tyler's
   voice ear check remain open. Dream Land BGM and the opening crowd are
@@ -42,9 +43,9 @@ durable unresolved gaps.
 ## Renderer And Presentation
 
 - M2 still performs too much per-frame fighter owner work.
-- M3 remains above its tick gate. The current dense preparation-reuse stack
-  reached 563,296 but still missed 500K and was reverted; do not retry it or the
-  slower incremental-matrix transport cut.
+- M3 remains above its tick target. Dense preparation reuse, AOT coordinate
+  shifts, and the zero-shift matrix specialization are retained; do not retry
+  the slower incremental-matrix transport cut.
 - Bitmap OAM has one-bit alpha, so nonzero partial-alpha GO pixels are opaque.
   This is accepted presentation debt under the 90% visual rule.
 - Do not publish the hybrid IFCommon OAM lab path: its counters and source

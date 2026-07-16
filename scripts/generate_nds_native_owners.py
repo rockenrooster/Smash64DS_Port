@@ -1526,9 +1526,12 @@ def generate(repo_root: Path | None = None) -> str:
     )
     lines += emit_rows(
         "NDSNativeDenseVertex", "sNdsNativeFighterDenseVertices",
-        [f"{{ {x}, {y}, {z}, {s}, {t}, {binding}u, {cache_slot}u, "
-         f"0x{rgba:08x}u }}"
-         for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices],
+        ["{{ 0x{:08x}u, 0x{:04x}u, {}, {}, {}u, {}u, "
+         "0x{:08x}u }}".format(
+             *pack_fifo_vertex16(x, y, z, f"dense vertex {dense_id}"),
+             s, t, binding, cache_slot, rgba)
+         for dense_id, (x, y, z, s, t, binding, cache_slot, rgba)
+         in enumerate(dense_vertices)],
     )
     lines += emit_rows(
         "u16", "sNdsNativeFighterActionDenseFirst",

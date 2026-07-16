@@ -21220,3 +21220,13 @@ remains skipped for the requested fast iteration cadence.
   once. Its fail-closed exit still records partial work before returning.
 - Combined Mario/Fox time falls 397,248 -> 395,264 ticks with a byte-identical
   top screen, exact owner/class counters, and 25,972 / 32,768 bytes of ITCM.
+
+## 2026-07-16 - AOT-packed fighter GX coordinates
+
+- Reused the owner generator's existing signed-range oracle to store immutable
+  DS `VERTEX16` xy/z words in the same 16-byte dense vertex record. The live
+  emitter now loads those words directly instead of rebuilding them for all
+  1,878 fighter corners each frame.
+- Combined Mario/Fox time falls 395,264 -> 386,880 ticks, the emitter shrinks
+  88 bytes, ITCM falls to 25,824 / 32,768, and the exact top-screen compare is
+  unchanged at 0 / 49,152 pixels.

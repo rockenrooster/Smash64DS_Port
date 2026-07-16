@@ -2892,3 +2892,58 @@ EVIDENCE:
 DECISION: KEEP
   Accumulate the exact gain and continue against production emission.
 ```
+
+## 2026-07-16 - M2 AOT-packed GX vertex coordinates
+
+```text
+IDEA ID: M2-AOT-GX-VERTEX16-20260716
+SOURCE / REPRESENTATION:
+  BattleShip objdisplay.c:1560-1603 preserves DObj traversal and display-list
+  order; gbi.h:1802-1830 and :2018/:2170 define source vertex loads and
+  triangles. The DS backend reference submits native v16 coordinates directly
+  at decomp/sm64-nds/src/nds/nds_renderer.c:386-401. The existing owner
+  generator's pack_fifo_vertex16 oracle already range-checks and encodes the
+  exact GX words.
+HOT SYMBOL / CALLERS:
+  ndsRendererNativeEmitProductionRun.constprop.0, called by the Mode-8
+  production owner for 1,878 fighter corners per frame.
+BEFORE ADDRESS / SIZE / SECTION / STACK:
+  0x01FFBEB8 / 0x270 / ITCM / 32-byte saved-register frame. Executor is
+  0x9C8 with a 112-byte frame. Object/ELF SHA-256 values are
+  72C5F02F1D0294529E812FA46618477C06187C3E13325F65FE32E9C2EC2A6164 /
+  4279639E14EDA7E4109A543730DF31983E8238034D600C8797A9370422F97123.
+BEFORE EXPENSIVE SEQUENCE:
+  Every corner loaded raw s16 x/y/z, shifted each coordinate into v16, packed
+  x/y with ORR, then wrote the same two GX FIFO words.
+ONE CHANGE:
+  Replace the same six raw-coordinate bytes in NDSNativeDenseVertex with the
+  generator's exact u32 xy and u16 z words. Runtime performs two direct loads
+  and two FIFO stores. The record remains 16 bytes; no cache or second path.
+AFTER ADDRESS / SIZE / SECTION / STACK:
+  0x01FFBE7C / 0x218 / ITCM / unchanged 32-byte saved-register frame. Executor
+  remains 0x9C8/112 bytes. Object/ELF SHA-256 values are
+  E26CC6353C6324E03F69430A34F314C72E63C7342B4D647FF229D64B222941B8 /
+  7A91E2BB0DB9CA9459211F818C6DCD3700CE90BF0BC8366503E1F13B34C32C46.
+MAP / TCM / ROM DELTA:
+  Emitter shrinks 88 bytes; total ITCM falls 25,972 -> 25,824. The generated
+  dense slab and ROM byte size are unchanged.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 8, static 1, hybrid OAM 1, Fox/countdown iteration
+  switch off, exact-aspect 416x664 window, frames 600..607. A/B ROM SHA-256:
+  B7E6A95300AA38431CA4C3444CCA2983CB62E1BBB265C04E359269D4463647B0 /
+  11048184FEF9390B0EE21608B39D4A38A5016E8318D244AADAA8636AAC61263D.
+P50/P95 RESULT:
+  Combined Mario+Fox 395,264/395,328 -> 386,880/386,944, saving 8,384/8,384.
+  Draw 1,022,944/1,022,976 -> 1,014,560/1,014,592, saving 8,384/8,384.
+EXACTNESS GATES:
+  Generator and 32-root/49-epoch/67-run/626-triangle hierarchy checks pass.
+  Exact 70/686 and 60/320/306/29/0/0, zero fallback/texture fence, and zero
+  conservation error hold. Native top-screen delta is 0/49,152 pixels.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m2-aot-vertex16-a.json
+  artifacts/performance/2026-07-16_m2-aot-vertex16-b.json
+  artifacts/visibility/2026-07-16_m2-aot-vertex16-a.png
+  artifacts/visibility/2026-07-16_m2-aot-vertex16-b.png
+KEEP / REWORK / REVERT: KEEP
+  Accumulate the exact AOT representation gain. No A2 is warranted.
+```
