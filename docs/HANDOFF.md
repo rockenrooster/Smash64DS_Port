@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 06:36 Central
+Updated: 2026-07-16 06:48 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -61,10 +61,14 @@ samples the battle ledger before Results reuses the globals.
 
 ## Next Packet
 
-Close the Fireball's full 140-tick source lifetime on the current public ROM:
-retain the existing natural input route, add synchronized near/mid/far/event
-captures and an independent source-matrix/ROI gate, and do not change trajectory
-or collision unless the trace identifies a real mismatch. The focused gate now
+Close the Fireball's natural terminal path on the current public ROM: retain
+the existing natural input route, break once on BattleShip
+`wpprocess.c:167-180` when the far-left shot crosses Pupupu's map bound, then
+capture the next completed frame and add an independent source-matrix/ROI gate.
+The source lifetime `140` is a maximum, not this ground shot's expected
+duration: the out-of-bounds check runs after update/motion and before the map
+callback. Branch-only probes waiting for lifetime-zero or low-speed map destroy
+therefore timed out and were reverted; do not repeat them. The focused gate
 selects the shared countdown/Fox-off flag and passes in 9.5 seconds with
 `artifacts/visibility/2026-07-16_061816-9231474_fireball-long-travel-p18612.png`.
 Do not repeat conditional frame-complete polling for destruction; it exceeded
