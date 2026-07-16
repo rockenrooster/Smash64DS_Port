@@ -26,7 +26,7 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_RESIDENT_BYTES = 160 * 1024
+MAX_RESIDENT_BYTES = 165 * 1024
 PUBLIC_EXCITED_ID = 626
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
 PUBLIC_EXCITED_RAMP_SAMPLES = 184
@@ -638,6 +638,306 @@ SELECTED = (
             "7a17a55c4ba3daec625c6334dcb9189080b82bfea648864c1042b1d861f4e69f",
         "fidelity_debt": ("ucd_pitch_automation",),
     },
+    {
+        "id": 40,
+        "name": "nSYAudioFGMPunchS",
+        "kind": "hit",
+        "articulation": 31,
+        "sound": 11,
+        "notes": ((12, 7, 48), (12, 7, 20)),
+        "duration_ticks": 68,
+        "ucd_volume": 170,
+        "articulation_pitch_cents": -300,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 16416,
+        "root_fork_programs": (655,),
+        "omitted_fork_programs": (655,),
+        "root_program_sha256":
+            "28f536fe3e90955bbedb7cddaf62f405433d5e8eab4ea3c501988d4b56c5b4a3",
+        "render_program_sha256":
+            "28f536fe3e90955bbedb7cddaf62f405433d5e8eab4ea3c501988d4b56c5b4a3",
+        "omitted_fork_program_sha256": (
+            "75fe85b876585bbdd7b5688160d81e53d77fe6068fee46531d49641cd2540f40",
+        ),
+        "articulation_program_sha256":
+            "783c596ffcb39d9338e3e3ab7fb99db0cb7751cac24ecdf841b8e2b043417298",
+        "fidelity_debt": ("ucd_volume_automation",
+                          "omitted_fork_voice_655"),
+    },
+    {
+        "id": 38,
+        "name": "nSYAudioFGMPunchM",
+        "kind": "hit",
+        "articulation": 29,
+        "sound": 11,
+        "notes": ((14, 7, 48), (13, 7, 48), (13, 7, 15)),
+        "duration_ticks": 111,
+        "ucd_volume": 250,
+        "articulation_pitch_cents": 50,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 16416,
+        "root_fork_programs": (654,),
+        "omitted_fork_programs": (654,),
+        "root_program_sha256":
+            "d04ce6abe4111930deb668c4cfc78e8a1e82462f2935e6978eef88661e3d1639",
+        "render_program_sha256":
+            "d04ce6abe4111930deb668c4cfc78e8a1e82462f2935e6978eef88661e3d1639",
+        "omitted_fork_program_sha256": (
+            "a287c6195f269a6729a74db38a6aa2f3b707a19d44ffba4ef4f21750530daee5",
+        ),
+        "articulation_program_sha256":
+            "580678b358c9a14cd9879a965edbeb70009f96155be3e041b7d819cc882bcc63",
+        "fidelity_debt": ("ucd_pitch_automation", "ucd_volume_automation",
+                          "articulation_pitch_modulation",
+                          "omitted_fork_voice_654"),
+    },
+    {
+        "id": 37,
+        "name": "nSYAudioFGMPunchL",
+        "kind": "hit",
+        "articulation": 30,
+        "sound": 11,
+        "notes": ((16, 7, 45), (16, 7, 45), (15, 7, 45),
+                  (15, 7, 20)),
+        "duration_ticks": 155,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": 300,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 16416,
+        "root_fork_programs": (653,),
+        "omitted_fork_programs": (653,),
+        "root_program_sha256":
+            "80d72e74f0d4de80cb03e4a78f45907892bf5ebf1e464394917a7157337fd249",
+        "render_program_sha256":
+            "80d72e74f0d4de80cb03e4a78f45907892bf5ebf1e464394917a7157337fd249",
+        "omitted_fork_program_sha256": (
+            "450624587294d4be7b473cfba7223e1a5cbdfe3bfe45b630fe96bac4ce7a17ed",
+        ),
+        "articulation_program_sha256":
+            "4d3bbb2b0f80ef41f06f9c4812a795e6a12989855c7f5320fd1e5d7f957cfd27",
+        "fidelity_debt": ("ucd_pitch_automation", "ucd_volume_automation",
+                          "articulation_pitch_modulation",
+                          "omitted_fork_voice_653"),
+    },
+    {
+        "id": 34,
+        "name": "nSYAudioFGMKickS",
+        "kind": "hit",
+        "articulation": 34,
+        "sound": 16,
+        "notes": ((6, 7, 50), (6, 7, 20)),
+        "duration_ticks": 70,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": -888,
+        "loop": False,
+        "wave_base": 165960,
+        "wave_length": 6310,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 11216,
+        "root_fork_programs": (658,),
+        "omitted_fork_programs": (658,),
+        "root_program_sha256":
+            "9b0c4611ee9ce3034b129dd41cd3e88fa5bacf7fb7e797e6872aac0bc94fade5",
+        "render_program_sha256":
+            "9b0c4611ee9ce3034b129dd41cd3e88fa5bacf7fb7e797e6872aac0bc94fade5",
+        "omitted_fork_program_sha256": (
+            "75fe85b876585bbdd7b5688160d81e53d77fe6068fee46531d49641cd2540f40",
+        ),
+        "articulation_program_sha256":
+            "a83fb7f2cb1c8190e22fe4cd76afc24697de9041d7b0729b5ffc226d67a5bfcd",
+        "fidelity_debt": ("ucd_volume_automation",
+                          "omitted_fork_voice_658"),
+    },
+    {
+        "id": 32,
+        "name": "nSYAudioFGMKickM",
+        "kind": "hit",
+        "articulation": 35,
+        "sound": 16,
+        "notes": ((8, 7, 48), (8, 7, 48), (8, 7, 15)),
+        "duration_ticks": 111,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -900,
+        "loop": False,
+        "wave_base": 165960,
+        "wave_length": 6310,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 11216,
+        "root_fork_programs": (657,),
+        "omitted_fork_programs": (657,),
+        "root_program_sha256":
+            "420b243a1616819719fac1e41e538c938049be781dffaa397560811b07d2cf24",
+        "render_program_sha256":
+            "420b243a1616819719fac1e41e538c938049be781dffaa397560811b07d2cf24",
+        "omitted_fork_program_sha256": (
+            "91c40dab5937cf9d5e3e9c50bf838d662061e9ffe2e9f9a5a7fcb63a2978afaa",
+        ),
+        "articulation_program_sha256":
+            "1ee86a59e8fa37a8d78be0a286f908f67f2a44018dc39863444f52222cb47b9c",
+        "fidelity_debt": ("ucd_volume_automation",
+                          "omitted_fork_voice_657"),
+    },
+    {
+        "id": 31,
+        "name": "nSYAudioFGMKickL",
+        "kind": "hit",
+        "articulation": 33,
+        "sound": 16,
+        "notes": ((10, 7, 44), (10, 7, 45), (10, 7, 45),
+                  (10, 7, 17)),
+        "duration_ticks": 151,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -900,
+        "loop": False,
+        "wave_base": 165960,
+        "wave_length": 6310,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 11216,
+        "root_fork_programs": (656,),
+        "omitted_fork_programs": (656,),
+        "root_program_sha256":
+            "11c5a67bd6baa8730dace7c881508222177acb1d710670d4efeee4671a602c0c",
+        "render_program_sha256":
+            "11c5a67bd6baa8730dace7c881508222177acb1d710670d4efeee4671a602c0c",
+        "omitted_fork_program_sha256": (
+            "eee8f09b8d3cdc1b0a04eb7c2563b74039d51fe6fba2fd0d302a41da9f6cc272",
+        ),
+        "articulation_program_sha256":
+            "566a178f2e69b1e045900a590c78e4064780a57cca2864e5d83ceb0472f9c725",
+        "fidelity_debt": ("ucd_volume_automation",
+                          "omitted_fork_voice_656"),
+    },
+    {
+        "id": 216,
+        "name": "nSYAudioFGMMarioSpecialHiCoin",
+        "kind": "hit",
+        "articulation": 51,
+        "sound": 22,
+        "notes": ((12, 7, 10), (0, 7, 2), (17, 7, 40),
+                  (17, 7, 40)),
+        "duration_ticks": 92,
+        "ucd_volume": 170,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 199064,
+        "wave_length": 918,
+        "loop_start": 10,
+        "loop_end": 1625,
+        "render_source_loop": True,
+        "expected_retained_samples": 20458,
+        "root_fork_programs": (668,),
+        "omitted_fork_programs": (668,),
+        "root_program_sha256":
+            "27f9f2691fd4c5b25cfac411a75270e418990e5719788f71f7dd020ea8a7816f",
+        "render_program_sha256":
+            "27f9f2691fd4c5b25cfac411a75270e418990e5719788f71f7dd020ea8a7816f",
+        "omitted_fork_program_sha256": (
+            "ff46bd44f488c9b61ae7df69ab8a6706c8638e86a4d19739425de35f533efc82",
+        ),
+        "articulation_program_sha256":
+            "aaad5c2c434005ef3ce87adead9c89da0bbfdd883488b0e59594a8b145295e9f",
+        "fidelity_debt": ("ucd_pitch_automation",
+                          "omitted_fork_voice_668"),
+    },
+    {
+        "id": 28,
+        "name": "nSYAudioFGMBurnS",
+        "kind": "hit",
+        "articulation": 65,
+        "sound": 27,
+        "notes": ((13, 7, 50), (13, 7, 40), (13, 7, 70)),
+        "duration_ticks": 160,
+        "ucd_volume": 150,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 235736,
+        "wave_length": 15624,
+        "loop_start": 13840,
+        "loop_end": 27456,
+        "render_source_loop": True,
+        "expected_retained_samples": 29441,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "e2709974888dccc4920fcf1bd21bdb6171ffd8f38846b38f516f21aa4adfa298",
+        "render_program_sha256":
+            "e2709974888dccc4920fcf1bd21bdb6171ffd8f38846b38f516f21aa4adfa298",
+        "articulation_program_sha256":
+            "39cd6d6668a90146cdef1f14fcfd817aa715ee258af68599973edfe8b4d3e425",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 2,
+        "name": "nSYAudioFGMFireShoot1",
+        "kind": "hit",
+        "articulation": 7,
+        "sound": 4,
+        "notes": ((18, 7, 50), (18, 7, 140)),
+        "duration_ticks": 190,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": 300,
+        "loop": False,
+        "wave_base": 28560,
+        "wave_length": 17046,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 30304,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "a79a589363657a4069e95f2b5d8d1f1cb589f17aa4d87ba8021c2a16e0063746",
+        "render_program_sha256":
+            "a79a589363657a4069e95f2b5d8d1f1cb589f17aa4d87ba8021c2a16e0063746",
+        "articulation_program_sha256":
+            "25baf51195b0172ac10261cc3368f6fac20147a94e42f2ca777aab29ab13a6b3",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 0,
+        "name": "nSYAudioFGMExplodeS",
+        "kind": "hit",
+        "articulation": 7,
+        "sound": 4,
+        "notes": ((3, 7, 20), (3, 7, 30), (3, 7, 85)),
+        "duration_ticks": 135,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": 300,
+        "loop": False,
+        "wave_base": 28560,
+        "wave_length": 17046,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 30304,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "7874ec9371696e630f3e27f81fa10ff9661013ada5c1b880b5f3fdfe054d5a36",
+        "render_program_sha256":
+            "7874ec9371696e630f3e27f81fa10ff9661013ada5c1b880b5f3fdfe054d5a36",
+        "articulation_program_sha256":
+            "25baf51195b0172ac10261cc3368f6fac20147a94e42f2ca777aab29ab13a6b3",
+        "fidelity_debt": (),
+    },
 )
 
 IMA_INDEX_TABLE = (
@@ -726,7 +1026,8 @@ def validate_ucd(root_program: list[list], program: list[list],
                 f"{sorted(present & forbidden)}")
     if first_program_arg(program, "set_articulation") != selector["articulation"]:
         raise ValueError(f"FGM {selector['id']} articulation changed")
-    if first_program_arg(program, "set_volume") != selector["ucd_volume"]:
+    volumes = [int(row[1]) for row in program if row[0] == "set_volume"]
+    if not volumes or volumes[0] != selector["ucd_volume"]:
         raise ValueError(f"FGM {selector['id']} volume changed")
     notes = [row for row in program if row[0] == "note"]
     if "notes" in selector:
@@ -1151,6 +1452,17 @@ def note_frequency_hz(articulation_pitch_cents: int,
         (articulation_pitch_cents + note_pitch_cents) / 1200.0)))
 
 
+def render_source_loop(pcm: list[int], loop_start: int, loop_end: int,
+                       sample_count: int) -> list[int]:
+    if not (0 <= loop_start < loop_end <= len(pcm)):
+        raise ValueError("invalid finite source-loop extent")
+    rendered = list(pcm[:min(sample_count, loop_end)])
+    loop = pcm[loop_start:loop_end]
+    while len(rendered) < sample_count:
+        rendered.extend(loop[:sample_count - len(rendered)])
+    return rendered
+
+
 def trim_proof(selector: dict, program: list[list], pcm: list[int],
                initial_frequency: int) -> tuple[list[int], dict]:
     notes = [row for row in program if row[0] == "note"]
@@ -1175,9 +1487,15 @@ def trim_proof(selector: dict, program: list[list], pcm: list[int],
     current_consumption = ((current_numerator + 999999) // 1000000) + 1
     pitch_modulated = "articulation_pitch_modulation" in selector.get(
         "fidelity_debt", ())
-    if pitch_modulated:
+    if selector.get("render_source_loop", False):
+        retained_samples = max(schedule_reach, current_consumption)
+        strategy = "finite_source_loop_duration_render"
+    elif pitch_modulated:
         retained_samples = len(pcm)
         strategy = "untrimmed_articulation_pitch_modulation"
+    elif selector.get("retain_full_source", False):
+        retained_samples = len(pcm)
+        strategy = "untrimmed_shared_source_reuse"
     else:
         retained_samples = min(
             len(pcm), max(schedule_reach, current_consumption))
@@ -1188,7 +1506,14 @@ def trim_proof(selector: dict, program: list[list], pcm: list[int],
         raise ValueError(
             f"FGM {selector['id']} retained-sample proof changed: "
             f"{retained_samples}")
-    retained = pcm[:retained_samples]
+    if selector.get("render_source_loop", False):
+        retained = render_source_loop(
+            pcm, selector["loop_start"], selector["loop_end"],
+            retained_samples)
+        prefix_samples = min(retained_samples, selector["loop_end"])
+    else:
+        retained = pcm[:retained_samples]
+        prefix_samples = retained_samples
     return retained, {
         "trim_strategy": strategy,
         "trim_source_note_segments": segments,
@@ -1199,10 +1524,15 @@ def trim_proof(selector: dict, program: list[list], pcm: list[int],
         "trim_current_ds_consumption_reach_samples": current_consumption,
         "trim_one_sample_ceiling": 1,
         "trim_proven_reachable_samples": retained_samples,
-        "trim_source_samples_removed": len(pcm) - retained_samples,
+        "trim_source_samples_removed": max(
+            0, len(pcm) - retained_samples),
         "trim_applied": retained_samples < len(pcm),
         "trim_retained_source_prefix_pcm_sha256": ima_pcm_sha256(retained),
-        "trim_retained_prefix_exact": retained == pcm[:retained_samples],
+        "trim_retained_prefix_exact": (
+            retained[:prefix_samples] == pcm[:prefix_samples]),
+        "finite_source_loop_replay_samples": (
+            max(0, retained_samples - selector["loop_end"])
+            if selector.get("render_source_loop", False) else 0),
     }
 
 
@@ -1468,7 +1798,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             runtime_pcm, trim = trim_proof(
                 selector, ucd_program, pcm, frequency)
             acoustic_oracle = {}
-            loop_strategy = "none"
+            loop_strategy = (
+                "finite_source_loop_aot"
+                if selector.get("render_source_loop", False) else "none")
             flags = 0
             loop_point_words = 0
             packed_envelope = envelope[1:]
@@ -1686,6 +2018,12 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "Attack entries 190, 218, and 219 retain their exact source "
             "wavetable, initial pitch, and duration; later UCD pitch changes "
             "are not yet scheduled on DS channels.",
+            "Collision/contact entries retain exact source sample order, "
+            "finite reached loops, initial pitch, and articulation envelope; "
+            "root UCD pitch/volume automation and fork voices remain debt.",
+            "Coin fork 668 starts at 65875 Hz, above the DS u16 frequency "
+            "field; it remains omitted pending source-proven AOT rate "
+            "reduction rather than truncation.",
         ],
         "sources": {
             name: {

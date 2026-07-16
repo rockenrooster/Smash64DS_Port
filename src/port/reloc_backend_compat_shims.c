@@ -572,14 +572,15 @@ void func_80026738_27338(alSoundEffect *sfx)
 #endif
 }
 
-void *func_800269C0_275C0(u16 fgm_id)
+static void *ndsPlayFGMAtPan(u16 fgm_id, u8 pan)
 {
 #if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
     alSoundEffect *sound_effect;
 
-    sound_effect = ndsAudioFgmPlay(fgm_id);
+    sound_effect = ndsAudioFgmPlayAtPan(fgm_id, pan);
 #else
     sNdsStubSoundEffect.sfx_id = fgm_id;
+    sNdsStubSoundEffect.balance = pan;
 #endif
     gNdsSCVSBattleLastFGM = fgm_id;
     if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
@@ -613,6 +614,11 @@ void *func_800269C0_275C0(u16 fgm_id)
 #else
     return &sNdsStubSoundEffect;
 #endif
+}
+
+void *func_800269C0_275C0(u16 fgm_id)
+{
+    return ndsPlayFGMAtPan(fgm_id, 64u);
 }
 
 s32 syAudioCheckBGMPlaying(s32 sngplayer)
@@ -8254,8 +8260,17 @@ void ftCommonGuardSetOffSetStatus(GObj *fighter_gobj)
 
 alSoundEffect *lbCommonMakePositionFGM(u16 fgm, f32 pos)
 {
-    (void)pos;
-    return func_800269C0_275C0(fgm);
+    s32 balance = (s32)((pos / 8000.0F) * 60.0F);
+
+    if (balance > 60)
+    {
+        balance = 60;
+    }
+    if (balance < -60)
+    {
+        balance = -60;
+    }
+    return ndsPlayFGMAtPan(fgm, (u8)(64 - balance));
 }
 
 sb32 ftCommonCliffAttackCheckInterruptCommon(GObj *fighter_gobj)

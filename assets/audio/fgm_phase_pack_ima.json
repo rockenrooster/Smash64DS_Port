@@ -442,7 +442,7 @@
       "name": "nSYAudioVoicePublicExcited",
       "net_pitch_cents": -1300,
       "omitted_fork_programs": [],
-      "pack_data_offset": 816,
+      "pack_data_offset": 1136,
       "packed_envelope_count": 0,
       "phase_index": 0,
       "render_ucd_program_id": 626,
@@ -807,6 +807,7 @@
       "ds_volume": 106,
       "entry_index": 1,
       "entry_kind": "phase",
+      "finite_source_loop_replay_samples": 0,
       "id": 470,
       "ima_adpcm_bytes": 4560,
       "ima_adpcm_sha256": "da6ec8228ec6cdc90c7a68568fa2bb002b6f94601be6bfe08e6f459dcd3ac35c",
@@ -814,7 +815,7 @@
       "name": "nSYAudioVoiceAnnounceThree",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 52924,
+      "pack_data_offset": 53244,
       "packed_envelope_count": 0,
       "phase_index": 1,
       "render_ucd_program_id": 470,
@@ -995,6 +996,7 @@
       "ds_volume": 106,
       "entry_index": 2,
       "entry_kind": "phase",
+      "finite_source_loop_replay_samples": 0,
       "id": 469,
       "ima_adpcm_bytes": 4604,
       "ima_adpcm_sha256": "ceaec3acdbfc8321cd5c7149b87dd6fa895710514c74c2af95d345a992a1cf38",
@@ -1002,7 +1004,7 @@
       "name": "nSYAudioVoiceAnnounceTwo",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 57484,
+      "pack_data_offset": 57804,
       "packed_envelope_count": 0,
       "phase_index": 2,
       "render_ucd_program_id": 469,
@@ -1183,6 +1185,7 @@
       "ds_volume": 111,
       "entry_index": 3,
       "entry_kind": "phase",
+      "finite_source_loop_replay_samples": 0,
       "id": 467,
       "ima_adpcm_bytes": 3916,
       "ima_adpcm_sha256": "5d690f3a6ad9f2b682e2ba8e383e4aaa43942d0fa729b73169721d99670e5862",
@@ -1190,7 +1193,7 @@
       "name": "nSYAudioVoiceAnnounceOne",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 62088,
+      "pack_data_offset": 62408,
       "packed_envelope_count": 0,
       "phase_index": 3,
       "render_ucd_program_id": 467,
@@ -1371,6 +1374,7 @@
       "ds_volume": 124,
       "entry_index": 4,
       "entry_kind": "phase",
+      "finite_source_loop_replay_samples": 0,
       "id": 490,
       "ima_adpcm_bytes": 6904,
       "ima_adpcm_sha256": "f33b2eee06748d1984e89e9cef97606d9c1d8c644e104cbb3326e75999fcf37a",
@@ -1378,7 +1382,7 @@
       "name": "nSYAudioVoiceAnnounceGo",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 66004,
+      "pack_data_offset": 66324,
       "packed_envelope_count": 0,
       "phase_index": 4,
       "render_ucd_program_id": 490,
@@ -1569,6 +1573,7 @@
       "ds_volume": 21,
       "entry_index": 5,
       "entry_kind": "movement",
+      "finite_source_loop_replay_samples": 0,
       "id": 74,
       "ima_adpcm_bytes": 316,
       "ima_adpcm_sha256": "92d03fe38eb5de34abb1568891b72c7082c052551b84391fd3af9e3bbcb30c1e",
@@ -1576,7 +1581,7 @@
       "name": "nSYAudioFGMFoxLanding",
       "net_pitch_cents": 200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 72908,
+      "pack_data_offset": 73228,
       "packed_envelope_count": 2,
       "phase_index": null,
       "render_ucd_program_id": 72,
@@ -1742,6 +1747,7 @@
       "ds_volume": 76,
       "entry_index": 6,
       "entry_kind": "voice",
+      "finite_source_loop_replay_samples": 0,
       "id": 363,
       "ima_adpcm_bytes": 1884,
       "ima_adpcm_sha256": "d632acb6b82b8b97798659791da4170c7c8a6b4a707ea3b37ecd582fbd5b3bc8",
@@ -1749,7 +1755,7 @@
       "name": "nSYAudioVoiceFoxJumpAerial",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 73224,
+      "pack_data_offset": 73544,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 363,
@@ -1937,6 +1943,7 @@
       "ds_volume": 42,
       "entry_index": 7,
       "entry_kind": "voice",
+      "finite_source_loop_replay_samples": 0,
       "id": 364,
       "ima_adpcm_bytes": 1460,
       "ima_adpcm_sha256": "141b7c3cdd1fe13e491fd087daaacd63d34f36c07dc589562e29e056e39e36ae",
@@ -1944,7 +1951,7 @@
       "name": "nSYAudioVoiceFoxEscape",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 75108,
+      "pack_data_offset": 75428,
       "packed_envelope_count": 5,
       "phase_index": null,
       "render_ucd_program_id": 364,
@@ -2225,6 +2232,7 @@
       "ds_volume": 108,
       "entry_index": 8,
       "entry_kind": "voice",
+      "finite_source_loop_replay_samples": 0,
       "id": 372,
       "ima_adpcm_bytes": 844,
       "ima_adpcm_sha256": "ac3948daf50a93899233040c52153d84e75417f112487cc33679e40623804fcf",
@@ -2232,7 +2240,7 @@
       "name": "nSYAudioVoiceFoxSmash1",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 76568,
+      "pack_data_offset": 76888,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 372,
@@ -2400,6 +2408,7 @@
       "ds_volume": 86,
       "entry_index": 9,
       "entry_kind": "voice",
+      "finite_source_loop_replay_samples": 0,
       "id": 430,
       "ima_adpcm_bytes": 8620,
       "ima_adpcm_sha256": "88ed6606f9199d787398a6d3b8563803cd4eddb4ccf7b9e4120e32d1f4292acd",
@@ -2407,7 +2416,7 @@
       "name": "nSYAudioVoiceMarioSmash2",
       "net_pitch_cents": -1170,
       "omitted_fork_programs": [],
-      "pack_data_offset": 77412,
+      "pack_data_offset": 77732,
       "packed_envelope_count": 1,
       "phase_index": null,
       "render_ucd_program_id": 430,
@@ -2662,6 +2671,7 @@
       "ds_volume": 95,
       "entry_index": 10,
       "entry_kind": "ko",
+      "finite_source_loop_replay_samples": 0,
       "id": 439,
       "ima_adpcm_bytes": 4424,
       "ima_adpcm_sha256": "a71ef24f6f54df209e7b782f6322481aa73f7dda31128a6cb4151b70fc5a0f7f",
@@ -2669,7 +2679,7 @@
       "name": "nSYAudioVoiceMarioDead",
       "net_pitch_cents": -1199,
       "omitted_fork_programs": [],
-      "pack_data_offset": 86032,
+      "pack_data_offset": 86352,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 439,
@@ -2953,6 +2963,7 @@
       "ds_volume": 30,
       "entry_index": 11,
       "entry_kind": "ko",
+      "finite_source_loop_replay_samples": 0,
       "id": 292,
       "ima_adpcm_bytes": 3348,
       "ima_adpcm_sha256": "cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6",
@@ -2960,7 +2971,7 @@
       "name": "nSYAudioFGMMarioDeadSlam",
       "net_pitch_cents": -1100,
       "omitted_fork_programs": [],
-      "pack_data_offset": 90456,
+      "pack_data_offset": 90776,
       "packed_envelope_count": 3,
       "phase_index": null,
       "render_ucd_program_id": 287,
@@ -3176,6 +3187,7 @@
       "ds_volume": 114,
       "entry_index": 12,
       "entry_kind": "ko",
+      "finite_source_loop_replay_samples": 0,
       "id": 370,
       "ima_adpcm_bytes": 4908,
       "ima_adpcm_sha256": "e518d1106a41cf9c99eac91ab053304a515a04d6f5fc5a9c5ea845365518ea77",
@@ -3183,7 +3195,7 @@
       "name": "nSYAudioVoiceFoxDead",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 93804,
+      "pack_data_offset": 94124,
       "packed_envelope_count": 5,
       "phase_index": null,
       "render_ucd_program_id": 370,
@@ -3474,6 +3486,7 @@
       "ds_volume": 30,
       "entry_index": 13,
       "entry_kind": "ko",
+      "finite_source_loop_replay_samples": 0,
       "id": 289,
       "ima_adpcm_bytes": 3348,
       "ima_adpcm_sha256": "cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6",
@@ -3481,7 +3494,7 @@
       "name": "nSYAudioFGMFoxDeadSlam",
       "net_pitch_cents": -1100,
       "omitted_fork_programs": [],
-      "pack_data_offset": 90456,
+      "pack_data_offset": 90776,
       "packed_envelope_count": 3,
       "phase_index": null,
       "render_ucd_program_id": 287,
@@ -3708,6 +3721,7 @@
       "ds_volume": 20,
       "entry_index": 14,
       "entry_kind": "movement",
+      "finite_source_loop_replay_samples": 0,
       "id": 300,
       "ima_adpcm_bytes": 3348,
       "ima_adpcm_sha256": "cf4ca538127d5175198077f877b390b19df27a3314eb0b6c8d5eb8e2b202cbf6",
@@ -3715,7 +3729,7 @@
       "name": "nSYAudioFGMFoxDownBounce",
       "net_pitch_cents": -1200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 90456,
+      "pack_data_offset": 90776,
       "packed_envelope_count": 2,
       "phase_index": null,
       "render_ucd_program_id": 298,
@@ -3968,6 +3982,7 @@
       "ds_volume": 124,
       "entry_index": 15,
       "entry_kind": "ko",
+      "finite_source_loop_replay_samples": 0,
       "id": 154,
       "ima_adpcm_bytes": 7460,
       "ima_adpcm_sha256": "45cfe954355dd4edc22c3cc62a60dea59672b57a7f6ef1df21366ee012abc87c",
@@ -3977,7 +3992,7 @@
       "omitted_fork_programs": [
         685
       ],
-      "pack_data_offset": 98712,
+      "pack_data_offset": 99032,
       "packed_envelope_count": 13,
       "phase_index": null,
       "render_ucd_program_id": 154,
@@ -4290,6 +4305,7 @@
       "ds_volume": 21,
       "entry_index": 16,
       "entry_kind": "mario",
+      "finite_source_loop_replay_samples": 0,
       "id": 77,
       "ima_adpcm_bytes": 316,
       "ima_adpcm_sha256": "92d03fe38eb5de34abb1568891b72c7082c052551b84391fd3af9e3bbcb30c1e",
@@ -4297,7 +4313,7 @@
       "name": "nSYAudioFGMMarioLanding",
       "net_pitch_cents": 200,
       "omitted_fork_programs": [],
-      "pack_data_offset": 72908,
+      "pack_data_offset": 73228,
       "packed_envelope_count": 2,
       "phase_index": null,
       "render_ucd_program_id": 72,
@@ -4463,6 +4479,7 @@
       "ds_volume": 95,
       "entry_index": 17,
       "entry_kind": "voice",
+      "finite_source_loop_replay_samples": 0,
       "id": 429,
       "ima_adpcm_bytes": 1828,
       "ima_adpcm_sha256": "5fad36ccee66dcc3c6519a85ed9612df4f5aacb29529e7943ba666734edc13f1",
@@ -4470,7 +4487,7 @@
       "name": "nSYAudioVoiceMarioSmash1",
       "net_pitch_cents": -1299,
       "omitted_fork_programs": [],
-      "pack_data_offset": 106172,
+      "pack_data_offset": 106492,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 429,
@@ -4733,6 +4750,7 @@
       "ds_volume": 84,
       "entry_index": 18,
       "entry_kind": "voice",
+      "finite_source_loop_replay_samples": 0,
       "id": 435,
       "ima_adpcm_bytes": 1676,
       "ima_adpcm_sha256": "b7e6bb1473bcea4766255482f01a7740a40896665027031a13ba0e5007676a1b",
@@ -4740,7 +4758,7 @@
       "name": "nSYAudioVoiceMarioJump",
       "net_pitch_cents": -1260,
       "omitted_fork_programs": [],
-      "pack_data_offset": 108000,
+      "pack_data_offset": 108320,
       "packed_envelope_count": 3,
       "phase_index": null,
       "render_ucd_program_id": 435,
@@ -5014,6 +5032,7 @@
       "ds_volume": 87,
       "entry_index": 19,
       "entry_kind": "attack",
+      "finite_source_loop_replay_samples": 0,
       "id": 42,
       "ima_adpcm_bytes": 2596,
       "ima_adpcm_sha256": "32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1",
@@ -5021,7 +5040,7 @@
       "name": "nSYAudioFGMLightSwingM",
       "net_pitch_cents": 350,
       "omitted_fork_programs": [],
-      "pack_data_offset": 109676,
+      "pack_data_offset": 109996,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 42,
@@ -5220,6 +5239,7 @@
       "ds_volume": 73,
       "entry_index": 20,
       "entry_kind": "attack",
+      "finite_source_loop_replay_samples": 0,
       "id": 43,
       "ima_adpcm_bytes": 2596,
       "ima_adpcm_sha256": "32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1",
@@ -5227,7 +5247,7 @@
       "name": "nSYAudioFGMLightSwingS",
       "net_pitch_cents": 50,
       "omitted_fork_programs": [],
-      "pack_data_offset": 109676,
+      "pack_data_offset": 109996,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 43,
@@ -5426,6 +5446,7 @@
       "ds_volume": 73,
       "entry_index": 21,
       "entry_kind": "attack",
+      "finite_source_loop_replay_samples": 0,
       "id": 190,
       "ima_adpcm_bytes": 2596,
       "ima_adpcm_sha256": "32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1",
@@ -5433,7 +5454,7 @@
       "name": "nSYAudioFGMFoxAttackAirLw",
       "net_pitch_cents": 250,
       "omitted_fork_programs": [],
-      "pack_data_offset": 109676,
+      "pack_data_offset": 109996,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 190,
@@ -5683,6 +5704,7 @@
       "ds_volume": 121,
       "entry_index": 22,
       "entry_kind": "attack",
+      "finite_source_loop_replay_samples": 0,
       "id": 215,
       "ima_adpcm_bytes": 1092,
       "ima_adpcm_sha256": "7ed82ac09a350207bb4107b598447567516fd03ad40324953d041507a234ef78",
@@ -5690,7 +5712,7 @@
       "name": "nSYAudioFGMMarioSpecialN",
       "net_pitch_cents": 0,
       "omitted_fork_programs": [],
-      "pack_data_offset": 112272,
+      "pack_data_offset": 112592,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 215,
@@ -5889,6 +5911,7 @@
       "ds_volume": 73,
       "entry_index": 23,
       "entry_kind": "attack",
+      "finite_source_loop_replay_samples": 0,
       "id": 218,
       "ima_adpcm_bytes": 2596,
       "ima_adpcm_sha256": "32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1",
@@ -5896,7 +5919,7 @@
       "name": "nSYAudioFGMMarioUnkSwing1",
       "net_pitch_cents": 50,
       "omitted_fork_programs": [],
-      "pack_data_offset": 109676,
+      "pack_data_offset": 109996,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 218,
@@ -6151,6 +6174,7 @@
       "ds_volume": 73,
       "entry_index": 24,
       "entry_kind": "attack",
+      "finite_source_loop_replay_samples": 0,
       "id": 219,
       "ima_adpcm_bytes": 2596,
       "ima_adpcm_sha256": "32b143ee0f4d276d44b0f685c85ce82f5ff6c260a65c2d3cf39743e692e63ab1",
@@ -6158,7 +6182,7 @@
       "name": "nSYAudioFGMMarioUnkSwing2",
       "net_pitch_cents": 250,
       "omitted_fork_programs": [],
-      "pack_data_offset": 109676,
+      "pack_data_offset": 109996,
       "packed_envelope_count": 0,
       "phase_index": null,
       "render_ucd_program_id": 219,
@@ -6364,10 +6388,3947 @@
         ]
       ],
       "wave_base": 691264
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 31,
+      "articulation_program": [
+        [
+          "trigger",
+          11,
+          0
+        ],
+        [
+          "pitch",
+          -300,
+          0
+        ],
+        [
+          "unk36",
+          0,
+          0
+        ],
+        [
+          "vol",
+          111,
+          1
+        ],
+        [
+          "vol",
+          127,
+          16
+        ],
+        [
+          "vol",
+          111,
+          10
+        ],
+        [
+          "vol",
+          100,
+          15
+        ],
+        [
+          "vol",
+          90,
+          35
+        ],
+        [
+          "vol",
+          80,
+          15
+        ],
+        [
+          "vol",
+          70,
+          10
+        ],
+        [
+          "vol",
+          60,
+          60
+        ],
+        [
+          "vol",
+          50,
+          10
+        ],
+        [
+          "vol",
+          40,
+          10
+        ],
+        [
+          "vol",
+          30,
+          10
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 8569.772,
+      "ds_frequency_hz": 25398,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 44,
+      "ds_ima_header_predictor": 0,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 72,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 2053,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 16416,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 72,
+      "entry_index": 25,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 0,
+      "id": 40,
+      "ima_adpcm_bytes": 8212,
+      "ima_adpcm_sha256": "38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053",
+      "ima_snr_db": 34.901,
+      "name": "nSYAudioFGMPunchS",
+      "net_pitch_cents": -400,
+      "omitted_fork_programs": [
+        655
+      ],
+      "pack_data_offset": 113684,
+      "packed_envelope_count": 4,
+      "phase_index": null,
+      "render_ucd_program_id": 40,
+      "root_fork_programs": [
+        655
+      ],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          31
+        ],
+        [
+          "fork_voice",
+          655
+        ],
+        [
+          "set_unk2C",
+          0
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_volume",
+          170
+        ],
+        [
+          "note",
+          12,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          72
+        ],
+        [
+          "note",
+          12,
+          7,
+          20
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 40,
+      "runtime_fidelity_debt": [
+        "ucd_volume_automation",
+        "omitted_fork_voice_655"
+      ],
+      "sample_body_deduplicated": false,
+      "sound_offset": 59440,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 391000,
+      "source_duration_ticks": 68,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 16416,
+      "source_pcm_sha256": "aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 11,
+      "source_vadpcm_bytes": 9234,
+      "source_vadpcm_frame_bytes": 9234,
+      "source_vadpcm_sha256": "9542b04d27c18d27632db946510571724727e60521f25fcff30733901ce3042c",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 111,
+          "ds_volume": 72,
+          "source_pre_mixer_target": 18502,
+          "source_quadratic_target": 10446,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 127,
+          "ds_volume": 82,
+          "source_pre_mixer_target": 21169,
+          "source_quadratic_target": 13675,
+          "tick": 1
+        },
+        {
+          "articulation_volume": 111,
+          "ds_volume": 72,
+          "source_pre_mixer_target": 18502,
+          "source_quadratic_target": 10446,
+          "tick": 17
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 65,
+          "source_pre_mixer_target": 16668,
+          "source_quadratic_target": 8478,
+          "tick": 27
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 58,
+          "source_pre_mixer_target": 15001,
+          "source_quadratic_target": 6867,
+          "tick": 42
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 9931,
+      "trim_current_ds_consumption_reach_samples": 9932,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 16416,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 7010,
+          "duration_ticks": 48,
+          "frequency_hz": 25398,
+          "pitch_code": 12
+        },
+        {
+          "ceiling_samples": 2921,
+          "duration_ticks": 20,
+          "frequency_hz": 25398,
+          "pitch_code": 12
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 9932,
+      "trim_source_schedule_samples_before_guard": 9931,
+      "trim_strategy": "untrimmed_shared_source_reuse",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          31
+        ],
+        [
+          "fork_voice",
+          655
+        ],
+        [
+          "set_unk2C",
+          0
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_volume",
+          170
+        ],
+        [
+          "note",
+          12,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          72
+        ],
+        [
+          "note",
+          12,
+          7,
+          20
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 120848
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 29,
+      "articulation_program": [
+        [
+          "trigger",
+          11,
+          0
+        ],
+        [
+          "pitch",
+          50,
+          0
+        ],
+        [
+          "unk36",
+          0,
+          0
+        ],
+        [
+          "vol",
+          127,
+          3
+        ],
+        [
+          "pitch",
+          -400,
+          0
+        ],
+        [
+          "vol",
+          127,
+          12
+        ],
+        [
+          "vol",
+          111,
+          10
+        ],
+        [
+          "vol",
+          100,
+          15
+        ],
+        [
+          "vol",
+          90,
+          35
+        ],
+        [
+          "vol",
+          80,
+          15
+        ],
+        [
+          "vol",
+          70,
+          10
+        ],
+        [
+          "vol",
+          60,
+          60
+        ],
+        [
+          "vol",
+          50,
+          10
+        ],
+        [
+          "vol",
+          40,
+          10
+        ],
+        [
+          "vol",
+          30,
+          10
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 8569.772,
+      "ds_frequency_hz": 34896,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 44,
+      "ds_ima_header_predictor": 0,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 121,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 2053,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 16416,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 121,
+      "entry_index": 26,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 0,
+      "id": 38,
+      "ima_adpcm_bytes": 8212,
+      "ima_adpcm_sha256": "38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053",
+      "ima_snr_db": 34.901,
+      "name": "nSYAudioFGMPunchM",
+      "net_pitch_cents": 150,
+      "omitted_fork_programs": [
+        654
+      ],
+      "pack_data_offset": 113684,
+      "packed_envelope_count": 7,
+      "phase_index": null,
+      "render_ucd_program_id": 38,
+      "root_fork_programs": [
+        654
+      ],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          29
+        ],
+        [
+          "fork_voice",
+          654
+        ],
+        [
+          "set_unk2C",
+          33
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_volume",
+          250
+        ],
+        [
+          "note",
+          14,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          116
+        ],
+        [
+          "note",
+          13,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          75
+        ],
+        [
+          "note",
+          13,
+          7,
+          15
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 38,
+      "runtime_fidelity_debt": [
+        "ucd_pitch_automation",
+        "ucd_volume_automation",
+        "articulation_pitch_modulation",
+        "omitted_fork_voice_654"
+      ],
+      "sample_body_deduplicated": true,
+      "sound_offset": 59440,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 638250,
+      "source_duration_ticks": 111,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 16416,
+      "source_pcm_sha256": "aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 11,
+      "source_vadpcm_bytes": 9234,
+      "source_vadpcm_frame_bytes": 9234,
+      "source_vadpcm_sha256": "9542b04d27c18d27632db946510571724727e60521f25fcff30733901ce3042c",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 121,
+          "source_pre_mixer_target": 31249,
+          "source_quadratic_target": 29800,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 127,
+          "ds_volume": 121,
+          "source_pre_mixer_target": 31249,
+          "source_quadratic_target": 29800,
+          "tick": 3
+        },
+        {
+          "articulation_volume": 111,
+          "ds_volume": 106,
+          "source_pre_mixer_target": 27312,
+          "source_quadratic_target": 22764,
+          "tick": 15
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 95,
+          "source_pre_mixer_target": 24606,
+          "source_quadratic_target": 18477,
+          "tick": 25
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 86,
+          "source_pre_mixer_target": 22145,
+          "source_quadratic_target": 14965,
+          "tick": 40
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 76,
+          "source_pre_mixer_target": 19685,
+          "source_quadratic_target": 11825,
+          "tick": 75
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 67,
+          "source_pre_mixer_target": 17224,
+          "source_quadratic_target": 9053,
+          "tick": 90
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 57,
+          "source_pre_mixer_target": 14763,
+          "source_quadratic_target": 6651,
+          "tick": 100
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 22273,
+      "trim_current_ds_consumption_reach_samples": 22274,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 16416,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 9632,
+          "duration_ticks": 48,
+          "frequency_hz": 34896,
+          "pitch_code": 14
+        },
+        {
+          "ceiling_samples": 9091,
+          "duration_ticks": 48,
+          "frequency_hz": 32938,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 2841,
+          "duration_ticks": 15,
+          "frequency_hz": 32938,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 21565,
+      "trim_source_schedule_samples_before_guard": 21564,
+      "trim_strategy": "untrimmed_articulation_pitch_modulation",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          29
+        ],
+        [
+          "fork_voice",
+          654
+        ],
+        [
+          "set_unk2C",
+          33
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_volume",
+          250
+        ],
+        [
+          "note",
+          14,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          116
+        ],
+        [
+          "note",
+          13,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          75
+        ],
+        [
+          "note",
+          13,
+          7,
+          15
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 120848
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 30,
+      "articulation_program": [
+        [
+          "trigger",
+          11,
+          0
+        ],
+        [
+          "pitch",
+          300,
+          0
+        ],
+        [
+          "unk36",
+          127,
+          0
+        ],
+        [
+          "vol",
+          127,
+          3
+        ],
+        [
+          "pitch",
+          -999,
+          0
+        ],
+        [
+          "vol",
+          127,
+          1
+        ],
+        [
+          "pitch",
+          -400,
+          0
+        ],
+        [
+          "vol",
+          127,
+          12
+        ],
+        [
+          "vol",
+          111,
+          10
+        ],
+        [
+          "vol",
+          100,
+          15
+        ],
+        [
+          "vol",
+          90,
+          35
+        ],
+        [
+          "vol",
+          80,
+          15
+        ],
+        [
+          "vol",
+          70,
+          10
+        ],
+        [
+          "vol",
+          60,
+          60
+        ],
+        [
+          "vol",
+          50,
+          10
+        ],
+        [
+          "vol",
+          40,
+          10
+        ],
+        [
+          "vol",
+          30,
+          10
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 8569.772,
+      "ds_frequency_hz": 45255,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 44,
+      "ds_ima_header_predictor": 0,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 124,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 2053,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 16416,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 124,
+      "entry_index": 27,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 0,
+      "id": 37,
+      "ima_adpcm_bytes": 8212,
+      "ima_adpcm_sha256": "38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053",
+      "ima_snr_db": 34.901,
+      "name": "nSYAudioFGMPunchL",
+      "net_pitch_cents": 600,
+      "omitted_fork_programs": [
+        653
+      ],
+      "pack_data_offset": 113684,
+      "packed_envelope_count": 8,
+      "phase_index": null,
+      "render_ucd_program_id": 37,
+      "root_fork_programs": [
+        653
+      ],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          30
+        ],
+        [
+          "fork_voice",
+          653
+        ],
+        [
+          "set_unk2C",
+          60
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          163
+        ],
+        [
+          "set_volume",
+          255
+        ],
+        [
+          "note",
+          16,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          145
+        ],
+        [
+          "note",
+          16,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          105
+        ],
+        [
+          "note",
+          15,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          74
+        ],
+        [
+          "note",
+          15,
+          7,
+          20
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 37,
+      "runtime_fidelity_debt": [
+        "ucd_pitch_automation",
+        "ucd_volume_automation",
+        "articulation_pitch_modulation",
+        "omitted_fork_voice_653"
+      ],
+      "sample_body_deduplicated": true,
+      "sound_offset": 59440,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 891250,
+      "source_duration_ticks": 155,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 16416,
+      "source_pcm_sha256": "aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 11,
+      "source_vadpcm_bytes": 9234,
+      "source_vadpcm_frame_bytes": 9234,
+      "source_vadpcm_sha256": "9542b04d27c18d27632db946510571724727e60521f25fcff30733901ce3042c",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 124,
+          "source_pre_mixer_target": 31879,
+          "source_quadratic_target": 31014,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 127,
+          "ds_volume": 124,
+          "source_pre_mixer_target": 31879,
+          "source_quadratic_target": 31014,
+          "tick": 3
+        },
+        {
+          "articulation_volume": 127,
+          "ds_volume": 124,
+          "source_pre_mixer_target": 31879,
+          "source_quadratic_target": 31014,
+          "tick": 4
+        },
+        {
+          "articulation_volume": 111,
+          "ds_volume": 108,
+          "source_pre_mixer_target": 27863,
+          "source_quadratic_target": 23692,
+          "tick": 16
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 97,
+          "source_pre_mixer_target": 25102,
+          "source_quadratic_target": 19229,
+          "tick": 26
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 88,
+          "source_pre_mixer_target": 22592,
+          "source_quadratic_target": 15576,
+          "tick": 41
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 78,
+          "source_pre_mixer_target": 20081,
+          "source_quadratic_target": 12306,
+          "tick": 76
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 68,
+          "source_pre_mixer_target": 17571,
+          "source_quadratic_target": 9421,
+          "tick": 91
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 58,
+          "source_pre_mixer_target": 15061,
+          "source_quadratic_target": 6922,
+          "tick": 101
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 40334,
+      "trim_current_ds_consumption_reach_samples": 40335,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 16416,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "aeaa1a24ade3d329567fa7097dafe302548f17660da5110d88fafb5e496b3a4f",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 11710,
+          "duration_ticks": 45,
+          "frequency_hz": 45255,
+          "pitch_code": 16
+        },
+        {
+          "ceiling_samples": 11710,
+          "duration_ticks": 45,
+          "frequency_hz": 45255,
+          "pitch_code": 16
+        },
+        {
+          "ceiling_samples": 11053,
+          "duration_ticks": 45,
+          "frequency_hz": 42715,
+          "pitch_code": 15
+        },
+        {
+          "ceiling_samples": 4913,
+          "duration_ticks": 20,
+          "frequency_hz": 42715,
+          "pitch_code": 15
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 39387,
+      "trim_source_schedule_samples_before_guard": 39386,
+      "trim_strategy": "untrimmed_articulation_pitch_modulation",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          30
+        ],
+        [
+          "fork_voice",
+          653
+        ],
+        [
+          "set_unk2C",
+          60
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          163
+        ],
+        [
+          "set_volume",
+          255
+        ],
+        [
+          "note",
+          16,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          145
+        ],
+        [
+          "note",
+          16,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          105
+        ],
+        [
+          "note",
+          15,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          74
+        ],
+        [
+          "note",
+          15,
+          7,
+          20
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 120848
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 34,
+      "articulation_program": [
+        [
+          "trigger",
+          16,
+          0
+        ],
+        [
+          "pitch",
+          -888,
+          0
+        ],
+        [
+          "unk36",
+          127,
+          0
+        ],
+        [
+          "vol",
+          127,
+          12
+        ],
+        [
+          "vol",
+          110,
+          3
+        ],
+        [
+          "vol",
+          100,
+          3
+        ],
+        [
+          "vol",
+          90,
+          3
+        ],
+        [
+          "vol",
+          80,
+          3
+        ],
+        [
+          "vol",
+          70,
+          5
+        ],
+        [
+          "vol",
+          60,
+          16
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 9271.588,
+      "ds_frequency_hz": 12788,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 70,
+      "ds_ima_header_predictor": 0,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 92,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 1403,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 11216,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 92,
+      "entry_index": 28,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 0,
+      "id": 34,
+      "ima_adpcm_bytes": 5612,
+      "ima_adpcm_sha256": "9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7",
+      "ima_snr_db": 25.507,
+      "name": "nSYAudioFGMKickS",
+      "net_pitch_cents": -1588,
+      "omitted_fork_programs": [
+        658
+      ],
+      "pack_data_offset": 121896,
+      "packed_envelope_count": 7,
+      "phase_index": null,
+      "render_ucd_program_id": 34,
+      "root_fork_programs": [
+        658
+      ],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          34
+        ],
+        [
+          "fork_voice",
+          658
+        ],
+        [
+          "set_unk2C",
+          15
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          171
+        ],
+        [
+          "set_volume",
+          190
+        ],
+        [
+          "note",
+          6,
+          7,
+          50
+        ],
+        [
+          "set_volume",
+          50
+        ],
+        [
+          "note",
+          6,
+          7,
+          20
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 34,
+      "runtime_fidelity_debt": [
+        "ucd_volume_automation",
+        "omitted_fork_voice_658"
+      ],
+      "sample_body_deduplicated": false,
+      "sound_offset": 59520,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 402500,
+      "source_duration_ticks": 70,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 11216,
+      "source_pcm_sha256": "39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 16,
+      "source_vadpcm_bytes": 6310,
+      "source_vadpcm_frame_bytes": 6309,
+      "source_vadpcm_sha256": "2d153fa08a2b6c07c9ffe3365445741ff86853fcecc87582c0b88d3e946d58c1",
+      "source_vadpcm_trailing_bytes": 1,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 92,
+          "source_pre_mixer_target": 23689,
+          "source_quadratic_target": 17125,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 110,
+          "ds_volume": 80,
+          "source_pre_mixer_target": 20518,
+          "source_quadratic_target": 12847,
+          "tick": 12
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 72,
+          "source_pre_mixer_target": 18653,
+          "source_quadratic_target": 10618,
+          "tick": 15
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 65,
+          "source_pre_mixer_target": 16787,
+          "source_quadratic_target": 8599,
+          "tick": 18
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 58,
+          "source_pre_mixer_target": 14922,
+          "source_quadratic_target": 6795,
+          "tick": 21
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 51,
+          "source_pre_mixer_target": 13057,
+          "source_quadratic_target": 5202,
+          "tick": 24
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 43,
+          "source_pre_mixer_target": 11191,
+          "source_quadratic_target": 3821,
+          "tick": 29
+        },
+        {
+          "articulation_volume": 0,
+          "ds_volume": 0,
+          "source_pre_mixer_target": 0,
+          "source_quadratic_target": 0,
+          "tick": 45
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 5148,
+      "trim_current_ds_consumption_reach_samples": 5149,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 11216,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 3677,
+          "duration_ticks": 50,
+          "frequency_hz": 12788,
+          "pitch_code": 6
+        },
+        {
+          "ceiling_samples": 1471,
+          "duration_ticks": 20,
+          "frequency_hz": 12788,
+          "pitch_code": 6
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 5149,
+      "trim_source_schedule_samples_before_guard": 5148,
+      "trim_strategy": "untrimmed_shared_source_reuse",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          34
+        ],
+        [
+          "fork_voice",
+          658
+        ],
+        [
+          "set_unk2C",
+          15
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          171
+        ],
+        [
+          "set_volume",
+          190
+        ],
+        [
+          "note",
+          6,
+          7,
+          50
+        ],
+        [
+          "set_volume",
+          50
+        ],
+        [
+          "note",
+          6,
+          7,
+          20
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 165960
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 35,
+      "articulation_program": [
+        [
+          "trigger",
+          16,
+          0
+        ],
+        [
+          "pitch",
+          -900,
+          0
+        ],
+        [
+          "unk36",
+          127,
+          0
+        ],
+        [
+          "vol",
+          127,
+          2
+        ],
+        [
+          "vol",
+          111,
+          2
+        ],
+        [
+          "vol",
+          103,
+          2
+        ],
+        [
+          "vol",
+          95,
+          11
+        ],
+        [
+          "vol",
+          85,
+          15
+        ],
+        [
+          "vol",
+          75,
+          15
+        ],
+        [
+          "vol",
+          70,
+          12
+        ],
+        [
+          "vol",
+          65,
+          12
+        ],
+        [
+          "vol",
+          60,
+          40
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 9271.588,
+      "ds_frequency_hz": 14254,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 70,
+      "ds_ima_header_predictor": 0,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 111,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 1403,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 11216,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 111,
+      "entry_index": 29,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 0,
+      "id": 32,
+      "ima_adpcm_bytes": 5612,
+      "ima_adpcm_sha256": "9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7",
+      "ima_snr_db": 25.507,
+      "name": "nSYAudioFGMKickM",
+      "net_pitch_cents": -1400,
+      "omitted_fork_programs": [
+        657
+      ],
+      "pack_data_offset": 121896,
+      "packed_envelope_count": 8,
+      "phase_index": null,
+      "render_ucd_program_id": 32,
+      "root_fork_programs": [
+        657
+      ],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          35
+        ],
+        [
+          "fork_voice",
+          657
+        ],
+        [
+          "set_unk2C",
+          60
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          171
+        ],
+        [
+          "set_volume",
+          230
+        ],
+        [
+          "note",
+          8,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          85
+        ],
+        [
+          "note",
+          8,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          40
+        ],
+        [
+          "note",
+          8,
+          7,
+          15
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 32,
+      "runtime_fidelity_debt": [
+        "ucd_volume_automation",
+        "omitted_fork_voice_657"
+      ],
+      "sample_body_deduplicated": true,
+      "sound_offset": 59520,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 638250,
+      "source_duration_ticks": 111,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 11216,
+      "source_pcm_sha256": "39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 16,
+      "source_vadpcm_bytes": 6310,
+      "source_vadpcm_frame_bytes": 6309,
+      "source_vadpcm_sha256": "2d153fa08a2b6c07c9ffe3365445741ff86853fcecc87582c0b88d3e946d58c1",
+      "source_vadpcm_trailing_bytes": 1,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 111,
+          "source_pre_mixer_target": 28729,
+          "source_quadratic_target": 25187,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 111,
+          "ds_volume": 97,
+          "source_pre_mixer_target": 25110,
+          "source_quadratic_target": 19241,
+          "tick": 2
+        },
+        {
+          "articulation_volume": 103,
+          "ds_volume": 90,
+          "source_pre_mixer_target": 23300,
+          "source_quadratic_target": 16567,
+          "tick": 4
+        },
+        {
+          "articulation_volume": 95,
+          "ds_volume": 83,
+          "source_pre_mixer_target": 21490,
+          "source_quadratic_target": 14093,
+          "tick": 6
+        },
+        {
+          "articulation_volume": 85,
+          "ds_volume": 75,
+          "source_pre_mixer_target": 19228,
+          "source_quadratic_target": 11282,
+          "tick": 17
+        },
+        {
+          "articulation_volume": 75,
+          "ds_volume": 66,
+          "source_pre_mixer_target": 16966,
+          "source_quadratic_target": 8784,
+          "tick": 32
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 61,
+          "source_pre_mixer_target": 15835,
+          "source_quadratic_target": 7652,
+          "tick": 47
+        },
+        {
+          "articulation_volume": 65,
+          "ds_volume": 57,
+          "source_pre_mixer_target": 14704,
+          "source_quadratic_target": 6598,
+          "tick": 59
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 53,
+          "source_pre_mixer_target": 13573,
+          "source_quadratic_target": 5622,
+          "tick": 71
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 9098,
+      "trim_current_ds_consumption_reach_samples": 9099,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 11216,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 3935,
+          "duration_ticks": 48,
+          "frequency_hz": 14254,
+          "pitch_code": 8
+        },
+        {
+          "ceiling_samples": 3935,
+          "duration_ticks": 48,
+          "frequency_hz": 14254,
+          "pitch_code": 8
+        },
+        {
+          "ceiling_samples": 1230,
+          "duration_ticks": 15,
+          "frequency_hz": 14254,
+          "pitch_code": 8
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 9101,
+      "trim_source_schedule_samples_before_guard": 9100,
+      "trim_strategy": "untrimmed_shared_source_reuse",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          35
+        ],
+        [
+          "fork_voice",
+          657
+        ],
+        [
+          "set_unk2C",
+          60
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          171
+        ],
+        [
+          "set_volume",
+          230
+        ],
+        [
+          "note",
+          8,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          85
+        ],
+        [
+          "note",
+          8,
+          7,
+          48
+        ],
+        [
+          "set_volume",
+          40
+        ],
+        [
+          "note",
+          8,
+          7,
+          15
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 165960
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 33,
+      "articulation_program": [
+        [
+          "trigger",
+          16,
+          0
+        ],
+        [
+          "pitch",
+          -900,
+          0
+        ],
+        [
+          "unk36",
+          127,
+          0
+        ],
+        [
+          "vol",
+          127,
+          10
+        ],
+        [
+          "vol",
+          115,
+          10
+        ],
+        [
+          "vol",
+          110,
+          10
+        ],
+        [
+          "vol",
+          105,
+          15
+        ],
+        [
+          "vol",
+          100,
+          15
+        ],
+        [
+          "vol",
+          95,
+          10
+        ],
+        [
+          "vol",
+          80,
+          10
+        ],
+        [
+          "vol",
+          70,
+          50
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 9271.588,
+      "ds_frequency_hz": 16000,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 70,
+      "ds_ima_header_predictor": 0,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 124,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 1403,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 11216,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 124,
+      "entry_index": 30,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 0,
+      "id": 31,
+      "ima_adpcm_bytes": 5612,
+      "ima_adpcm_sha256": "9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7",
+      "ima_snr_db": 25.507,
+      "name": "nSYAudioFGMKickL",
+      "net_pitch_cents": -1200,
+      "omitted_fork_programs": [
+        656
+      ],
+      "pack_data_offset": 121896,
+      "packed_envelope_count": 8,
+      "phase_index": null,
+      "render_ucd_program_id": 31,
+      "root_fork_programs": [
+        656
+      ],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          33
+        ],
+        [
+          "fork_voice",
+          656
+        ],
+        [
+          "set_unk2C",
+          60
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          169
+        ],
+        [
+          "set_volume",
+          255
+        ],
+        [
+          "note",
+          10,
+          7,
+          44
+        ],
+        [
+          "set_volume",
+          153
+        ],
+        [
+          "note",
+          10,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          105
+        ],
+        [
+          "note",
+          10,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          70
+        ],
+        [
+          "note",
+          10,
+          7,
+          17
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 31,
+      "runtime_fidelity_debt": [
+        "ucd_volume_automation",
+        "omitted_fork_voice_656"
+      ],
+      "sample_body_deduplicated": true,
+      "sound_offset": 59520,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 868250,
+      "source_duration_ticks": 151,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 11216,
+      "source_pcm_sha256": "39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 16,
+      "source_vadpcm_bytes": 6310,
+      "source_vadpcm_frame_bytes": 6309,
+      "source_vadpcm_sha256": "2d153fa08a2b6c07c9ffe3365445741ff86853fcecc87582c0b88d3e946d58c1",
+      "source_vadpcm_trailing_bytes": 1,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 124,
+          "source_pre_mixer_target": 31879,
+          "source_quadratic_target": 31014,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 115,
+          "ds_volume": 112,
+          "source_pre_mixer_target": 28867,
+          "source_quadratic_target": 25430,
+          "tick": 10
+        },
+        {
+          "articulation_volume": 110,
+          "ds_volume": 107,
+          "source_pre_mixer_target": 27612,
+          "source_quadratic_target": 23267,
+          "tick": 20
+        },
+        {
+          "articulation_volume": 105,
+          "ds_volume": 102,
+          "source_pre_mixer_target": 26357,
+          "source_quadratic_target": 21200,
+          "tick": 30
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 97,
+          "source_pre_mixer_target": 25102,
+          "source_quadratic_target": 19229,
+          "tick": 45
+        },
+        {
+          "articulation_volume": 95,
+          "ds_volume": 92,
+          "source_pre_mixer_target": 23847,
+          "source_quadratic_target": 17354,
+          "tick": 60
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 78,
+          "source_pre_mixer_target": 20081,
+          "source_quadratic_target": 12306,
+          "tick": 70
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 68,
+          "source_pre_mixer_target": 17571,
+          "source_quadratic_target": 9421,
+          "tick": 80
+        },
+        {
+          "articulation_volume": 0,
+          "ds_volume": 0,
+          "source_pre_mixer_target": 0,
+          "source_quadratic_target": 0,
+          "tick": 130
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 13892,
+      "trim_current_ds_consumption_reach_samples": 13893,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 11216,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "39e32eef9f5ffff46c80140586c5d5b103f76c065257d4ccef1aa2856e85e438",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 4048,
+          "duration_ticks": 44,
+          "frequency_hz": 16000,
+          "pitch_code": 10
+        },
+        {
+          "ceiling_samples": 4140,
+          "duration_ticks": 45,
+          "frequency_hz": 16000,
+          "pitch_code": 10
+        },
+        {
+          "ceiling_samples": 4140,
+          "duration_ticks": 45,
+          "frequency_hz": 16000,
+          "pitch_code": 10
+        },
+        {
+          "ceiling_samples": 1564,
+          "duration_ticks": 17,
+          "frequency_hz": 16000,
+          "pitch_code": 10
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 13893,
+      "trim_source_schedule_samples_before_guard": 13892,
+      "trim_strategy": "untrimmed_shared_source_reuse",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          33
+        ],
+        [
+          "fork_voice",
+          656
+        ],
+        [
+          "set_unk2C",
+          60
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          55
+        ],
+        [
+          "set_unk1E",
+          169
+        ],
+        [
+          "set_volume",
+          255
+        ],
+        [
+          "note",
+          10,
+          7,
+          44
+        ],
+        [
+          "set_volume",
+          153
+        ],
+        [
+          "note",
+          10,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          105
+        ],
+        [
+          "note",
+          10,
+          7,
+          45
+        ],
+        [
+          "set_volume",
+          70
+        ],
+        [
+          "note",
+          10,
+          7,
+          17
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 165960
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 51,
+      "articulation_program": [
+        [
+          "trigger",
+          22,
+          0
+        ],
+        [
+          "pitch",
+          0,
+          0
+        ],
+        [
+          "vol",
+          127,
+          7
+        ],
+        [
+          "vol",
+          115,
+          7
+        ],
+        [
+          "vol",
+          100,
+          7
+        ],
+        [
+          "vol",
+          90,
+          7
+        ],
+        [
+          "vol",
+          80,
+          7
+        ],
+        [
+          "vol",
+          70,
+          7
+        ],
+        [
+          "vol",
+          60,
+          7
+        ],
+        [
+          "vol",
+          50,
+          7
+        ],
+        [
+          "vol",
+          40,
+          7
+        ],
+        [
+          "vol",
+          30,
+          7
+        ],
+        [
+          "vol",
+          20,
+          7
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 16826.088,
+      "ds_frequency_hz": 30204,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 59,
+      "ds_ima_header_predictor": 0,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 82,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 2559,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "finite_source_loop_aot",
+      "ds_pan": 64,
+      "ds_sample_count": 20458,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 82,
+      "entry_index": 31,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 18833,
+      "id": 216,
+      "ima_adpcm_bytes": 10236,
+      "ima_adpcm_sha256": "be33e0e365b534772558b69a35379c864325f38be16b22bc91c792c69db41fa1",
+      "ima_snr_db": 25.584,
+      "name": "nSYAudioFGMMarioSpecialHiCoin",
+      "net_pitch_cents": -100,
+      "omitted_fork_programs": [
+        668
+      ],
+      "pack_data_offset": 127508,
+      "packed_envelope_count": 11,
+      "phase_index": null,
+      "render_ucd_program_id": 216,
+      "root_fork_programs": [
+        668
+      ],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          51
+        ],
+        [
+          "set_unk2C",
+          20
+        ],
+        [
+          "fork_voice",
+          668
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          40
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_volume",
+          170
+        ],
+        [
+          "note",
+          12,
+          7,
+          10
+        ],
+        [
+          "note",
+          0,
+          7,
+          2
+        ],
+        [
+          "set_unk1E",
+          36
+        ],
+        [
+          "note",
+          17,
+          7,
+          40
+        ],
+        [
+          "set_unk1F",
+          2
+        ],
+        [
+          "note",
+          17,
+          7,
+          40
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 216,
+      "runtime_fidelity_debt": [
+        "ucd_pitch_automation",
+        "omitted_fork_voice_668"
+      ],
+      "sample_body_deduplicated": false,
+      "sound_offset": 59616,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 529000,
+      "source_duration_ticks": 92,
+      "source_loop_end": 1625,
+      "source_loop_infinite": true,
+      "source_loop_start": 10,
+      "source_pcm_samples": 1632,
+      "source_pcm_sha256": "1c0313ee3d0fd6ddca702fb7ae45641b880dd909cdcbc7875592956e036429c0",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 22,
+      "source_vadpcm_bytes": 918,
+      "source_vadpcm_frame_bytes": 918,
+      "source_vadpcm_sha256": "894ee3f14b5533298e37ad014f6703bd0af28d57e8159e62b1b258b38e3db2e9",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 82,
+          "source_pre_mixer_target": 21169,
+          "source_quadratic_target": 13675,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 115,
+          "ds_volume": 74,
+          "source_pre_mixer_target": 19169,
+          "source_quadratic_target": 11213,
+          "tick": 7
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 65,
+          "source_pre_mixer_target": 16668,
+          "source_quadratic_target": 8478,
+          "tick": 14
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 58,
+          "source_pre_mixer_target": 15001,
+          "source_quadratic_target": 6867,
+          "tick": 21
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 52,
+          "source_pre_mixer_target": 13335,
+          "source_quadratic_target": 5426,
+          "tick": 28
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 45,
+          "source_pre_mixer_target": 11668,
+          "source_quadratic_target": 4154,
+          "tick": 35
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 39,
+          "source_pre_mixer_target": 10001,
+          "source_quadratic_target": 3052,
+          "tick": 42
+        },
+        {
+          "articulation_volume": 50,
+          "ds_volume": 32,
+          "source_pre_mixer_target": 8334,
+          "source_quadratic_target": 2119,
+          "tick": 49
+        },
+        {
+          "articulation_volume": 40,
+          "ds_volume": 26,
+          "source_pre_mixer_target": 6667,
+          "source_quadratic_target": 1356,
+          "tick": 56
+        },
+        {
+          "articulation_volume": 30,
+          "ds_volume": 19,
+          "source_pre_mixer_target": 5000,
+          "source_quadratic_target": 762,
+          "tick": 63
+        },
+        {
+          "articulation_volume": 20,
+          "ds_volume": 13,
+          "source_pre_mixer_target": 3333,
+          "source_quadratic_target": 339,
+          "tick": 70
+        },
+        {
+          "articulation_volume": 0,
+          "ds_volume": 0,
+          "source_pre_mixer_target": 0,
+          "source_quadratic_target": 0,
+          "tick": 77
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 15978,
+      "trim_current_ds_consumption_reach_samples": 15979,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 20458,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "cfc6adf0a37baf52e7c6a1cee0838f43ed63415f3a933fb8b55e585d1fca0b25",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 1737,
+          "duration_ticks": 10,
+          "frequency_hz": 30204,
+          "pitch_code": 12
+        },
+        {
+          "ceiling_samples": 174,
+          "duration_ticks": 2,
+          "frequency_hz": 15102,
+          "pitch_code": 0
+        },
+        {
+          "ceiling_samples": 9273,
+          "duration_ticks": 40,
+          "frequency_hz": 40317,
+          "pitch_code": 17
+        },
+        {
+          "ceiling_samples": 9273,
+          "duration_ticks": 40,
+          "frequency_hz": 40317,
+          "pitch_code": 17
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 20458,
+      "trim_source_schedule_samples_before_guard": 20457,
+      "trim_strategy": "finite_source_loop_duration_render",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          51
+        ],
+        [
+          "set_unk2C",
+          20
+        ],
+        [
+          "fork_voice",
+          668
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          40
+        ],
+        [
+          "set_unk1E",
+          164
+        ],
+        [
+          "set_volume",
+          170
+        ],
+        [
+          "note",
+          12,
+          7,
+          10
+        ],
+        [
+          "note",
+          0,
+          7,
+          2
+        ],
+        [
+          "set_unk1E",
+          36
+        ],
+        [
+          "note",
+          17,
+          7,
+          40
+        ],
+        [
+          "set_unk1F",
+          2
+        ],
+        [
+          "note",
+          17,
+          7,
+          40
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 199064
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 65,
+      "articulation_program": [
+        [
+          "trigger",
+          27,
+          0
+        ],
+        [
+          "pitch",
+          0,
+          0
+        ],
+        [
+          "vol",
+          127,
+          7
+        ],
+        [
+          "vol",
+          122,
+          7
+        ],
+        [
+          "vol",
+          115,
+          7
+        ],
+        [
+          "vol",
+          110,
+          7
+        ],
+        [
+          "vol",
+          105,
+          7
+        ],
+        [
+          "vol",
+          100,
+          7
+        ],
+        [
+          "vol",
+          95,
+          7
+        ],
+        [
+          "vol",
+          90,
+          7
+        ],
+        [
+          "vol",
+          85,
+          7
+        ],
+        [
+          "vol",
+          80,
+          7
+        ],
+        [
+          "vol",
+          75,
+          7
+        ],
+        [
+          "vol",
+          70,
+          6
+        ],
+        [
+          "vol",
+          65,
+          6
+        ],
+        [
+          "vol",
+          60,
+          6
+        ],
+        [
+          "vol",
+          55,
+          6
+        ],
+        [
+          "vol",
+          50,
+          6
+        ],
+        [
+          "vol",
+          45,
+          6
+        ],
+        [
+          "vol",
+          40,
+          6
+        ],
+        [
+          "vol",
+          35,
+          6
+        ],
+        [
+          "vol",
+          30,
+          6
+        ],
+        [
+          "vol",
+          25,
+          6
+        ],
+        [
+          "vol",
+          20,
+          6
+        ],
+        [
+          "vol",
+          15,
+          6
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32768,
+      "decoded_rms": 7910.564,
+      "ds_frequency_hz": 32000,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 64,
+      "ds_ima_header_predictor": 6144,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 72,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 3681,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "finite_source_loop_aot",
+      "ds_pan": 64,
+      "ds_sample_count": 29441,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 72,
+      "entry_index": 32,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 1985,
+      "id": 28,
+      "ima_adpcm_bytes": 14724,
+      "ima_adpcm_sha256": "0bd0766e8bb94f9833b439f266babcb89fd74d1d5b156fe765c109983e6fea2a",
+      "ima_snr_db": 36.393,
+      "name": "nSYAudioFGMBurnS",
+      "net_pitch_cents": 0,
+      "omitted_fork_programs": [],
+      "pack_data_offset": 137744,
+      "packed_envelope_count": 23,
+      "phase_index": null,
+      "render_ucd_program_id": 28,
+      "root_fork_programs": [],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          65
+        ],
+        [
+          "set_unk2C",
+          20
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1E",
+          36
+        ],
+        [
+          "set_volume",
+          150
+        ],
+        [
+          "set_unk1F",
+          30
+        ],
+        [
+          "note",
+          13,
+          7,
+          50
+        ],
+        [
+          "set_unk1F",
+          1
+        ],
+        [
+          "note",
+          13,
+          7,
+          40
+        ],
+        [
+          "note",
+          13,
+          7,
+          70
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 28,
+      "runtime_fidelity_debt": [],
+      "sample_body_deduplicated": false,
+      "sound_offset": 59696,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 920000,
+      "source_duration_ticks": 160,
+      "source_loop_end": 27456,
+      "source_loop_infinite": true,
+      "source_loop_start": 13840,
+      "source_pcm_samples": 27776,
+      "source_pcm_sha256": "f675d07dc6ddabaf543672573a1e1bb1ce6b97266ddb07e882d755d51b82b27c",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 27,
+      "source_vadpcm_bytes": 15624,
+      "source_vadpcm_frame_bytes": 15624,
+      "source_vadpcm_sha256": "b130e97986180605fc55a1607cf94423d1991fab2ac011687eac8879c2a98d55",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 72,
+          "source_pre_mixer_target": 18649,
+          "source_quadratic_target": 10613,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 122,
+          "ds_volume": 69,
+          "source_pre_mixer_target": 17914,
+          "source_quadratic_target": 9793,
+          "tick": 7
+        },
+        {
+          "articulation_volume": 115,
+          "ds_volume": 65,
+          "source_pre_mixer_target": 16887,
+          "source_quadratic_target": 8702,
+          "tick": 14
+        },
+        {
+          "articulation_volume": 110,
+          "ds_volume": 63,
+          "source_pre_mixer_target": 16152,
+          "source_quadratic_target": 7961,
+          "tick": 21
+        },
+        {
+          "articulation_volume": 105,
+          "ds_volume": 60,
+          "source_pre_mixer_target": 15418,
+          "source_quadratic_target": 7254,
+          "tick": 28
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 57,
+          "source_pre_mixer_target": 14684,
+          "source_quadratic_target": 6580,
+          "tick": 35
+        },
+        {
+          "articulation_volume": 95,
+          "ds_volume": 54,
+          "source_pre_mixer_target": 13950,
+          "source_quadratic_target": 5938,
+          "tick": 42
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 51,
+          "source_pre_mixer_target": 13215,
+          "source_quadratic_target": 5329,
+          "tick": 49
+        },
+        {
+          "articulation_volume": 85,
+          "ds_volume": 48,
+          "source_pre_mixer_target": 12481,
+          "source_quadratic_target": 4753,
+          "tick": 56
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 46,
+          "source_pre_mixer_target": 11747,
+          "source_quadratic_target": 4211,
+          "tick": 63
+        },
+        {
+          "articulation_volume": 75,
+          "ds_volume": 43,
+          "source_pre_mixer_target": 11013,
+          "source_quadratic_target": 3701,
+          "tick": 70
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 40,
+          "source_pre_mixer_target": 10279,
+          "source_quadratic_target": 3224,
+          "tick": 77
+        },
+        {
+          "articulation_volume": 65,
+          "ds_volume": 37,
+          "source_pre_mixer_target": 9544,
+          "source_quadratic_target": 2779,
+          "tick": 83
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 34,
+          "source_pre_mixer_target": 8810,
+          "source_quadratic_target": 2368,
+          "tick": 89
+        },
+        {
+          "articulation_volume": 55,
+          "ds_volume": 31,
+          "source_pre_mixer_target": 8076,
+          "source_quadratic_target": 1990,
+          "tick": 95
+        },
+        {
+          "articulation_volume": 50,
+          "ds_volume": 28,
+          "source_pre_mixer_target": 7342,
+          "source_quadratic_target": 1645,
+          "tick": 101
+        },
+        {
+          "articulation_volume": 45,
+          "ds_volume": 26,
+          "source_pre_mixer_target": 6607,
+          "source_quadratic_target": 1332,
+          "tick": 107
+        },
+        {
+          "articulation_volume": 40,
+          "ds_volume": 23,
+          "source_pre_mixer_target": 5873,
+          "source_quadratic_target": 1052,
+          "tick": 113
+        },
+        {
+          "articulation_volume": 35,
+          "ds_volume": 20,
+          "source_pre_mixer_target": 5139,
+          "source_quadratic_target": 805,
+          "tick": 119
+        },
+        {
+          "articulation_volume": 30,
+          "ds_volume": 17,
+          "source_pre_mixer_target": 4405,
+          "source_quadratic_target": 592,
+          "tick": 125
+        },
+        {
+          "articulation_volume": 25,
+          "ds_volume": 14,
+          "source_pre_mixer_target": 3671,
+          "source_quadratic_target": 411,
+          "tick": 131
+        },
+        {
+          "articulation_volume": 20,
+          "ds_volume": 11,
+          "source_pre_mixer_target": 2936,
+          "source_quadratic_target": 263,
+          "tick": 137
+        },
+        {
+          "articulation_volume": 15,
+          "ds_volume": 9,
+          "source_pre_mixer_target": 2202,
+          "source_quadratic_target": 147,
+          "tick": 143
+        },
+        {
+          "articulation_volume": 0,
+          "ds_volume": 0,
+          "source_pre_mixer_target": 0,
+          "source_quadratic_target": 0,
+          "tick": 149
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 29440,
+      "trim_current_ds_consumption_reach_samples": 29441,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 29441,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "f2d36284064b6f77735afe98e796931314bd6122e9aec2381dff2e4e42a5c6e8",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 9200,
+          "duration_ticks": 50,
+          "frequency_hz": 32000,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 7360,
+          "duration_ticks": 40,
+          "frequency_hz": 32000,
+          "pitch_code": 13
+        },
+        {
+          "ceiling_samples": 12880,
+          "duration_ticks": 70,
+          "frequency_hz": 32000,
+          "pitch_code": 13
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 29441,
+      "trim_source_schedule_samples_before_guard": 29440,
+      "trim_strategy": "finite_source_loop_duration_render",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          65
+        ],
+        [
+          "set_unk2C",
+          20
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1E",
+          36
+        ],
+        [
+          "set_volume",
+          150
+        ],
+        [
+          "set_unk1F",
+          30
+        ],
+        [
+          "note",
+          13,
+          7,
+          50
+        ],
+        [
+          "set_unk1F",
+          1
+        ],
+        [
+          "note",
+          13,
+          7,
+          40
+        ],
+        [
+          "note",
+          13,
+          7,
+          70
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 235736
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 7,
+      "articulation_program": [
+        [
+          "trigger",
+          4,
+          0
+        ],
+        [
+          "pitch",
+          300,
+          0
+        ],
+        [
+          "unk36",
+          100,
+          0
+        ],
+        [
+          "vol",
+          127,
+          8
+        ],
+        [
+          "vol",
+          122,
+          8
+        ],
+        [
+          "vol",
+          115,
+          8
+        ],
+        [
+          "vol",
+          110,
+          8
+        ],
+        [
+          "vol",
+          105,
+          8
+        ],
+        [
+          "vol",
+          100,
+          8
+        ],
+        [
+          "vol",
+          95,
+          8
+        ],
+        [
+          "vol",
+          90,
+          8
+        ],
+        [
+          "vol",
+          85,
+          8
+        ],
+        [
+          "vol",
+          80,
+          8
+        ],
+        [
+          "vol",
+          75,
+          8
+        ],
+        [
+          "vol",
+          70,
+          8
+        ],
+        [
+          "vol",
+          65,
+          8
+        ],
+        [
+          "vol",
+          60,
+          8
+        ],
+        [
+          "vol",
+          55,
+          8
+        ],
+        [
+          "vol",
+          50,
+          8
+        ],
+        [
+          "vol",
+          45,
+          8
+        ],
+        [
+          "vol",
+          40,
+          8
+        ],
+        [
+          "vol",
+          35,
+          8
+        ],
+        [
+          "vol",
+          30,
+          8
+        ],
+        [
+          "vol",
+          25,
+          8
+        ],
+        [
+          "vol",
+          20,
+          8
+        ],
+        [
+          "vol",
+          15,
+          8
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32376,
+      "decoded_rms": 6534.226,
+      "ds_frequency_hz": 50797,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 44,
+      "ds_ima_header_predictor": 3072,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 97,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 3789,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 30304,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 97,
+      "entry_index": 33,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 0,
+      "id": 2,
+      "ima_adpcm_bytes": 15156,
+      "ima_adpcm_sha256": "b9494fab2cdf707c622105d1df10edc32a9a18768a90b5fc6010e172bbac71d6",
+      "ima_snr_db": 28.609,
+      "name": "nSYAudioFGMFireShoot1",
+      "net_pitch_cents": 800,
+      "omitted_fork_programs": [],
+      "pack_data_offset": 152468,
+      "packed_envelope_count": 23,
+      "phase_index": null,
+      "render_ucd_program_id": 2,
+      "root_fork_programs": [],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          7
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          60
+        ],
+        [
+          "set_unk1E",
+          36
+        ],
+        [
+          "set_volume",
+          200
+        ],
+        [
+          "note",
+          18,
+          7,
+          50
+        ],
+        [
+          "set_unk1F",
+          20
+        ],
+        [
+          "note",
+          18,
+          7,
+          140
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 2,
+      "runtime_fidelity_debt": [],
+      "sample_body_deduplicated": false,
+      "sound_offset": 59328,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 1092500,
+      "source_duration_ticks": 190,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 30304,
+      "source_pcm_sha256": "cc12d0f5d5cdb3a33c7f1c8b55d5a57756305afbd23bf02ea8e197ebb4d636be",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 4,
+      "source_vadpcm_bytes": 17046,
+      "source_vadpcm_frame_bytes": 17046,
+      "source_vadpcm_sha256": "104533679b9fae954fa607b25c505ebed02ffb41754fd5dbeb4b58a37efc12a3",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 97,
+          "source_pre_mixer_target": 24949,
+          "source_quadratic_target": 18995,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 122,
+          "ds_volume": 93,
+          "source_pre_mixer_target": 23967,
+          "source_quadratic_target": 17529,
+          "tick": 8
+        },
+        {
+          "articulation_volume": 115,
+          "ds_volume": 88,
+          "source_pre_mixer_target": 22592,
+          "source_quadratic_target": 15576,
+          "tick": 16
+        },
+        {
+          "articulation_volume": 110,
+          "ds_volume": 84,
+          "source_pre_mixer_target": 21609,
+          "source_quadratic_target": 14250,
+          "tick": 24
+        },
+        {
+          "articulation_volume": 105,
+          "ds_volume": 80,
+          "source_pre_mixer_target": 20627,
+          "source_quadratic_target": 12984,
+          "tick": 32
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 76,
+          "source_pre_mixer_target": 19645,
+          "source_quadratic_target": 11777,
+          "tick": 40
+        },
+        {
+          "articulation_volume": 95,
+          "ds_volume": 72,
+          "source_pre_mixer_target": 18663,
+          "source_quadratic_target": 10629,
+          "tick": 48
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 69,
+          "source_pre_mixer_target": 17680,
+          "source_quadratic_target": 9539,
+          "tick": 56
+        },
+        {
+          "articulation_volume": 85,
+          "ds_volume": 65,
+          "source_pre_mixer_target": 16698,
+          "source_quadratic_target": 8509,
+          "tick": 64
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 61,
+          "source_pre_mixer_target": 15716,
+          "source_quadratic_target": 7537,
+          "tick": 72
+        },
+        {
+          "articulation_volume": 75,
+          "ds_volume": 57,
+          "source_pre_mixer_target": 14733,
+          "source_quadratic_target": 6624,
+          "tick": 80
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 53,
+          "source_pre_mixer_target": 13751,
+          "source_quadratic_target": 5770,
+          "tick": 88
+        },
+        {
+          "articulation_volume": 65,
+          "ds_volume": 49,
+          "source_pre_mixer_target": 12769,
+          "source_quadratic_target": 4975,
+          "tick": 96
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 46,
+          "source_pre_mixer_target": 11787,
+          "source_quadratic_target": 4239,
+          "tick": 104
+        },
+        {
+          "articulation_volume": 55,
+          "ds_volume": 42,
+          "source_pre_mixer_target": 10804,
+          "source_quadratic_target": 3562,
+          "tick": 112
+        },
+        {
+          "articulation_volume": 50,
+          "ds_volume": 38,
+          "source_pre_mixer_target": 9822,
+          "source_quadratic_target": 2944,
+          "tick": 120
+        },
+        {
+          "articulation_volume": 45,
+          "ds_volume": 34,
+          "source_pre_mixer_target": 8840,
+          "source_quadratic_target": 2384,
+          "tick": 128
+        },
+        {
+          "articulation_volume": 40,
+          "ds_volume": 30,
+          "source_pre_mixer_target": 7858,
+          "source_quadratic_target": 1884,
+          "tick": 136
+        },
+        {
+          "articulation_volume": 35,
+          "ds_volume": 27,
+          "source_pre_mixer_target": 6875,
+          "source_quadratic_target": 1442,
+          "tick": 144
+        },
+        {
+          "articulation_volume": 30,
+          "ds_volume": 23,
+          "source_pre_mixer_target": 5893,
+          "source_quadratic_target": 1059,
+          "tick": 152
+        },
+        {
+          "articulation_volume": 25,
+          "ds_volume": 19,
+          "source_pre_mixer_target": 4911,
+          "source_quadratic_target": 736,
+          "tick": 160
+        },
+        {
+          "articulation_volume": 20,
+          "ds_volume": 15,
+          "source_pre_mixer_target": 3929,
+          "source_quadratic_target": 471,
+          "tick": 168
+        },
+        {
+          "articulation_volume": 15,
+          "ds_volume": 11,
+          "source_pre_mixer_target": 2946,
+          "source_quadratic_target": 264,
+          "tick": 176
+        },
+        {
+          "articulation_volume": 0,
+          "ds_volume": 0,
+          "source_pre_mixer_target": 0,
+          "source_quadratic_target": 0,
+          "tick": 184
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 55496,
+      "trim_current_ds_consumption_reach_samples": 55497,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 30304,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "cc12d0f5d5cdb3a33c7f1c8b55d5a57756305afbd23bf02ea8e197ebb4d636be",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 14605,
+          "duration_ticks": 50,
+          "frequency_hz": 50797,
+          "pitch_code": 18
+        },
+        {
+          "ceiling_samples": 40892,
+          "duration_ticks": 140,
+          "frequency_hz": 50797,
+          "pitch_code": 18
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 55498,
+      "trim_source_schedule_samples_before_guard": 55497,
+      "trim_strategy": "untrimmed_shared_source_reuse",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          7
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          60
+        ],
+        [
+          "set_unk1E",
+          36
+        ],
+        [
+          "set_volume",
+          200
+        ],
+        [
+          "note",
+          18,
+          7,
+          50
+        ],
+        [
+          "set_unk1F",
+          20
+        ],
+        [
+          "note",
+          18,
+          7,
+          140
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 28560
+    },
+    {
+      "acoustic_oracle": {},
+      "articulation_index": 7,
+      "articulation_program": [
+        [
+          "trigger",
+          4,
+          0
+        ],
+        [
+          "pitch",
+          300,
+          0
+        ],
+        [
+          "unk36",
+          100,
+          0
+        ],
+        [
+          "vol",
+          127,
+          8
+        ],
+        [
+          "vol",
+          122,
+          8
+        ],
+        [
+          "vol",
+          115,
+          8
+        ],
+        [
+          "vol",
+          110,
+          8
+        ],
+        [
+          "vol",
+          105,
+          8
+        ],
+        [
+          "vol",
+          100,
+          8
+        ],
+        [
+          "vol",
+          95,
+          8
+        ],
+        [
+          "vol",
+          90,
+          8
+        ],
+        [
+          "vol",
+          85,
+          8
+        ],
+        [
+          "vol",
+          80,
+          8
+        ],
+        [
+          "vol",
+          75,
+          8
+        ],
+        [
+          "vol",
+          70,
+          8
+        ],
+        [
+          "vol",
+          65,
+          8
+        ],
+        [
+          "vol",
+          60,
+          8
+        ],
+        [
+          "vol",
+          55,
+          8
+        ],
+        [
+          "vol",
+          50,
+          8
+        ],
+        [
+          "vol",
+          45,
+          8
+        ],
+        [
+          "vol",
+          40,
+          8
+        ],
+        [
+          "vol",
+          35,
+          8
+        ],
+        [
+          "vol",
+          30,
+          8
+        ],
+        [
+          "vol",
+          25,
+          8
+        ],
+        [
+          "vol",
+          20,
+          8
+        ],
+        [
+          "vol",
+          15,
+          8
+        ],
+        [
+          "end",
+          0
+        ]
+      ],
+      "decoded_peak": 32376,
+      "decoded_rms": 6534.226,
+      "ds_frequency_hz": 21357,
+      "ds_ima_guard_nibbles": [],
+      "ds_ima_header_index": 44,
+      "ds_ima_header_predictor": 3072,
+      "ds_ima_loop_body_nibbles": 0,
+      "ds_initial_prefix_samples_dropped": 0,
+      "ds_initial_volume": 106,
+      "ds_loop_flag": 0,
+      "ds_loop_length_words": 3789,
+      "ds_loop_point_words": 0,
+      "ds_loop_strategy": "none",
+      "ds_pan": 64,
+      "ds_sample_count": 30304,
+      "ds_trailing_samples_dropped": 0,
+      "ds_volume": 106,
+      "entry_index": 34,
+      "entry_kind": "hit",
+      "finite_source_loop_replay_samples": 0,
+      "id": 0,
+      "ima_adpcm_bytes": 15156,
+      "ima_adpcm_sha256": "b9494fab2cdf707c622105d1df10edc32a9a18768a90b5fc6010e172bbac71d6",
+      "ima_snr_db": 28.609,
+      "name": "nSYAudioFGMExplodeS",
+      "net_pitch_cents": -700,
+      "omitted_fork_programs": [],
+      "pack_data_offset": 152468,
+      "packed_envelope_count": 16,
+      "phase_index": null,
+      "render_ucd_program_id": 0,
+      "root_fork_programs": [],
+      "root_ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          7
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          68
+        ],
+        [
+          "set_unk1E",
+          33
+        ],
+        [
+          "set_volume",
+          220
+        ],
+        [
+          "note",
+          3,
+          7,
+          20
+        ],
+        [
+          "set_unk1F",
+          50
+        ],
+        [
+          "note",
+          3,
+          7,
+          30
+        ],
+        [
+          "set_unk1F",
+          20
+        ],
+        [
+          "note",
+          3,
+          7,
+          85
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "root_ucd_program_id": 0,
+      "runtime_fidelity_debt": [],
+      "sample_body_deduplicated": true,
+      "sound_offset": 59328,
+      "sound_sample_pan": 63,
+      "sound_sample_volume": 126,
+      "source_duration_microseconds": 776250,
+      "source_duration_ticks": 135,
+      "source_loop_end": 0,
+      "source_loop_infinite": false,
+      "source_loop_start": 0,
+      "source_pcm_samples": 30304,
+      "source_pcm_sha256": "cc12d0f5d5cdb3a33c7f1c8b55d5a57756305afbd23bf02ea8e197ebb4d636be",
+      "source_sound_gain_fields_used_by_fgm": false,
+      "source_sound_index": 4,
+      "source_vadpcm_bytes": 17046,
+      "source_vadpcm_frame_bytes": 17046,
+      "source_vadpcm_sha256": "104533679b9fae954fa607b25c505ebed02ffb41754fd5dbeb4b58a37efc12a3",
+      "source_vadpcm_trailing_bytes": 0,
+      "source_volume_envelope": [
+        {
+          "articulation_volume": 127,
+          "ds_volume": 106,
+          "source_pre_mixer_target": 27469,
+          "source_quadratic_target": 23026,
+          "tick": 0
+        },
+        {
+          "articulation_volume": 122,
+          "ds_volume": 102,
+          "source_pre_mixer_target": 26388,
+          "source_quadratic_target": 21250,
+          "tick": 8
+        },
+        {
+          "articulation_volume": 115,
+          "ds_volume": 96,
+          "source_pre_mixer_target": 24874,
+          "source_quadratic_target": 18881,
+          "tick": 16
+        },
+        {
+          "articulation_volume": 110,
+          "ds_volume": 92,
+          "source_pre_mixer_target": 23792,
+          "source_quadratic_target": 17274,
+          "tick": 24
+        },
+        {
+          "articulation_volume": 105,
+          "ds_volume": 88,
+          "source_pre_mixer_target": 22711,
+          "source_quadratic_target": 15740,
+          "tick": 32
+        },
+        {
+          "articulation_volume": 100,
+          "ds_volume": 84,
+          "source_pre_mixer_target": 21629,
+          "source_quadratic_target": 14276,
+          "tick": 40
+        },
+        {
+          "articulation_volume": 95,
+          "ds_volume": 80,
+          "source_pre_mixer_target": 20548,
+          "source_quadratic_target": 12885,
+          "tick": 48
+        },
+        {
+          "articulation_volume": 90,
+          "ds_volume": 75,
+          "source_pre_mixer_target": 19466,
+          "source_quadratic_target": 11563,
+          "tick": 56
+        },
+        {
+          "articulation_volume": 85,
+          "ds_volume": 71,
+          "source_pre_mixer_target": 18385,
+          "source_quadratic_target": 10315,
+          "tick": 64
+        },
+        {
+          "articulation_volume": 80,
+          "ds_volume": 67,
+          "source_pre_mixer_target": 17303,
+          "source_quadratic_target": 9136,
+          "tick": 72
+        },
+        {
+          "articulation_volume": 75,
+          "ds_volume": 63,
+          "source_pre_mixer_target": 16222,
+          "source_quadratic_target": 8030,
+          "tick": 80
+        },
+        {
+          "articulation_volume": 70,
+          "ds_volume": 59,
+          "source_pre_mixer_target": 15140,
+          "source_quadratic_target": 6995,
+          "tick": 88
+        },
+        {
+          "articulation_volume": 65,
+          "ds_volume": 54,
+          "source_pre_mixer_target": 14059,
+          "source_quadratic_target": 6031,
+          "tick": 96
+        },
+        {
+          "articulation_volume": 60,
+          "ds_volume": 50,
+          "source_pre_mixer_target": 12977,
+          "source_quadratic_target": 5139,
+          "tick": 104
+        },
+        {
+          "articulation_volume": 55,
+          "ds_volume": 46,
+          "source_pre_mixer_target": 11896,
+          "source_quadratic_target": 4318,
+          "tick": 112
+        },
+        {
+          "articulation_volume": 50,
+          "ds_volume": 42,
+          "source_pre_mixer_target": 10814,
+          "source_quadratic_target": 3568,
+          "tick": 120
+        },
+        {
+          "articulation_volume": 45,
+          "ds_volume": 38,
+          "source_pre_mixer_target": 9733,
+          "source_quadratic_target": 2890,
+          "tick": 128
+        }
+      ],
+      "source_volume_mapping": "pre_mixer target mapped from 0..32767 to DS 0..127",
+      "trim_applied": false,
+      "trim_current_ds_consumption_before_guard_samples": 16579,
+      "trim_current_ds_consumption_reach_samples": 16580,
+      "trim_one_sample_ceiling": 1,
+      "trim_proven_reachable_samples": 30304,
+      "trim_retained_prefix_exact": true,
+      "trim_retained_source_prefix_pcm_sha256": "cc12d0f5d5cdb3a33c7f1c8b55d5a57756305afbd23bf02ea8e197ebb4d636be",
+      "trim_source_note_segments": [
+        {
+          "ceiling_samples": 2457,
+          "duration_ticks": 20,
+          "frequency_hz": 21357,
+          "pitch_code": 3
+        },
+        {
+          "ceiling_samples": 3685,
+          "duration_ticks": 30,
+          "frequency_hz": 21357,
+          "pitch_code": 3
+        },
+        {
+          "ceiling_samples": 10439,
+          "duration_ticks": 85,
+          "frequency_hz": 21357,
+          "pitch_code": 3
+        }
+      ],
+      "trim_source_samples_removed": 0,
+      "trim_source_schedule_reach_samples": 16582,
+      "trim_source_schedule_samples_before_guard": 16581,
+      "trim_strategy": "untrimmed_shared_source_reuse",
+      "ucd_program": [
+        [
+          "set_unk2D",
+          0
+        ],
+        [
+          "set_articulation",
+          7
+        ],
+        [
+          "set_unk1E",
+          255
+        ],
+        [
+          "set_unk1F",
+          68
+        ],
+        [
+          "set_unk1E",
+          33
+        ],
+        [
+          "set_volume",
+          220
+        ],
+        [
+          "note",
+          3,
+          7,
+          20
+        ],
+        [
+          "set_unk1F",
+          50
+        ],
+        [
+          "note",
+          3,
+          7,
+          30
+        ],
+        [
+          "set_unk1F",
+          20
+        ],
+        [
+          "note",
+          3,
+          7,
+          85
+        ],
+        [
+          "stop_voice"
+        ]
+      ],
+      "wave_base": 28560
     }
   ],
   "entry_bytes": 32,
-  "entry_count": 25,
+  "entry_count": 35,
   "entry_final_u16": "ds_loop_point_words",
   "envelope_point_bytes": 4,
   "format": "BattleShip P1 FGM pack / Nintendo DS IMA ADPCM",
@@ -6376,15 +10337,17 @@
   "known_runtime_fidelity_debt": [
     "The regular KO and Fox movement entries retain their exact source wavetable, duration-proven prefix, initial pitch, and volume envelope; source pitch automation is not yet scheduled on DS channels.",
     "DeadExplodeL currently renders its primary UCD voice; forked source voice 685 remains explicit metadata fidelity debt.",
-    "Attack entries 190, 218, and 219 retain their exact source wavetable, initial pitch, and duration; later UCD pitch changes are not yet scheduled on DS channels."
+    "Attack entries 190, 218, and 219 retain their exact source wavetable, initial pitch, and duration; later UCD pitch changes are not yet scheduled on DS channels.",
+    "Collision/contact entries retain exact source sample order, finite reached loops, initial pitch, and articulation envelope; root UCD pitch/volume automation and fork voices remain debt.",
+    "Coin fork 668 starts at 65875 Hz, above the DS u16 frequency field; it remains omitted pending source-proven AOT rate reduction rather than truncation."
   ],
-  "mapping_sha256": "dad1a05c52631c38db6e100450a393e901f95fd6e519d7847b4dcb51466aeb98",
-  "mapping_sha256_lo": "0x5ca0d1da",
-  "non_loop_envelope_sha256": "66cf83360848994062ef53174b5480233614e5682feab3f8ecafbc42160bced4",
-  "non_loop_sample_sha256": "a7f808cd4ebd15bd880650b2193e12b7a339206dbf6281bde559d925dc069391",
-  "pack_sha256": "002a79f9892c0871d1203468f868a51a4ed78e3255965015352cd429831086c9",
-  "resident_bytes": 113520,
-  "resident_limit_bytes": 163840,
+  "mapping_sha256": "6a6ea71028413a863c372013b5bc968dd4159eedb5efc85fe3526682f2fad0e9",
+  "mapping_sha256_lo": "0x10a76e6a",
+  "non_loop_envelope_sha256": "7907ebd91cf7d97517464db834e355e30930e8cf36438d9286dbdde63ec585c3",
+  "non_loop_sample_sha256": "66284762f1d7974dc0a4e9ef3661478ee6f81e6080812a4307b791dd8ae5f69a",
+  "pack_sha256": "d178dd23702a3e391427916773271a4c098a3579f848fc9a7e6c507eddbf0c63",
+  "resident_bytes": 168240,
+  "resident_limit_bytes": 168960,
   "runtime_conversion": false,
   "source_fgm_output_rate_hz": 32000,
   "source_fgm_timer_microseconds": 5750,
@@ -6410,6 +10373,6 @@
       "wrapped_sha256": "12b043e8db6572256cc15ce684e9fae4f56a4d076c2f47bce930d0ddeea6ab9c"
     }
   },
-  "unique_sample_bytes": 112548,
-  "unique_sample_count": 18
+  "unique_sample_bytes": 166488,
+  "unique_sample_count": 23
 }

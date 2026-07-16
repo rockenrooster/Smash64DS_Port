@@ -28,13 +28,14 @@ if ($LASTEXITCODE -ne 0) {
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
 $expectedIDs = @(626, 470, 469, 467, 490, 74, 363, 364, 372, 430,
     439, 292, 370, 289, 300, 154, 77, 429, 435,
-    42, 43, 190, 215, 218, 219)
+    42, 43, 190, 215, 218, 219, 40, 38, 37, 34, 32, 31,
+    216, 28, 2, 0)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
 }
-if (([int64]$metadata.resident_bytes -ne 113520) -or
-    ([int64]$metadata.resident_limit_bytes -ne 163840)) {
+if (([int64]$metadata.resident_bytes -ne 168240) -or
+    ([int64]$metadata.resident_limit_bytes -ne 168960)) {
     throw "FGM pack resident size changed: $($metadata.resident_bytes)"
 }
 
@@ -56,6 +57,9 @@ $attackIDs = @($metadata.entries | Where-Object {
 $movementIDs = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'movement'
     } | ForEach-Object { [int]$_.id })
+$hitIDs = @($metadata.entries | Where-Object {
+        $_.entry_kind -eq 'hit'
+    } | ForEach-Object { [int]$_.id })
 if (($phaseIDs -join ',') -ne '626,470,469,467,490') {
     throw "Unexpected FGM phase subset: $($phaseIDs -join ',')"
 }
@@ -74,9 +78,12 @@ if (($marioIDs -join ',') -ne '77') {
 if (($attackIDs -join ',') -ne '42,43,190,215,218,219') {
     throw "Unexpected attack/activation subset: $($attackIDs -join ',')"
 }
-if (([int]$metadata.unique_sample_count -ne 18) -or
-    ([int]$metadata.unique_sample_bytes -ne 112548)) {
-    throw 'Regular-KO sample deduplication fixture changed.'
+if (($hitIDs -join ',') -ne '40,38,37,34,32,31,216,28,2,0') {
+    throw "Unexpected collision/contact subset: $($hitIDs -join ',')"
+}
+if (([int]$metadata.unique_sample_count -ne 23) -or
+    ([int]$metadata.unique_sample_bytes -ne 166488)) {
+    throw 'FGM sample deduplication fixture changed.'
 }
 if (([int]$metadata.format_version -ne 3) -or
     ([int]$metadata.entry_bytes -ne 32) -or
@@ -84,15 +91,15 @@ if (([int]$metadata.format_version -ne 3) -or
     ([int]$metadata.envelope_point_bytes -ne 4)) {
     throw 'Unexpected FGM pack entry/envelope format.'
 }
-if (($metadata.mapping_sha256_lo -ne '0x5ca0d1da') -or
+if (($metadata.mapping_sha256_lo -ne '0x10a76e6a') -or
     ($metadata.pack_sha256 -ne
-        '002a79f9892c0871d1203468f868a51a4ed78e3255965015352cd429831086c9')) {
+        'd178dd23702a3e391427916773271a4c098a3579f848fc9a7e6c507eddbf0c63')) {
     throw 'FGM pack mapping or binary hash changed.'
 }
 if (($metadata.non_loop_sample_sha256 -ne
-        'a7f808cd4ebd15bd880650b2193e12b7a339206dbf6281bde559d925dc069391') -or
+        '66284762f1d7974dc0a4e9ef3661478ee6f81e6080812a4307b791dd8ae5f69a') -or
     ($metadata.non_loop_envelope_sha256 -ne
-        '66cf83360848994062ef53174b5480233614e5682feab3f8ecafbc42160bced4')) {
+        '7907ebd91cf7d97517464db834e355e30930e8cf36438d9286dbdde63ec585c3')) {
     throw 'Non-loop FGM sample or packed-envelope bytes changed.'
 }
 if ([bool]$metadata.runtime_conversion) {
@@ -560,15 +567,137 @@ if (-not ($koDebt -contains 'ucd_pitch_automation') -or
     throw 'Regular-KO pitch-automation fidelity debt is no longer explicit.'
 }
 
+$expectedHits = @(
+    @{ ID = 40; Sound = 11; Frequency = 25398; Duration = 68;
+        Samples = 16416; Bytes = 8212; Volume = 72; Envelope = 4;
+        Hash = '38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053' },
+    @{ ID = 38; Sound = 11; Frequency = 34896; Duration = 111;
+        Samples = 16416; Bytes = 8212; Volume = 121; Envelope = 7;
+        Hash = '38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053' },
+    @{ ID = 37; Sound = 11; Frequency = 45255; Duration = 155;
+        Samples = 16416; Bytes = 8212; Volume = 124; Envelope = 8;
+        Hash = '38d0b65d29a4ff3c75a8508e15940bd41d9d3ed3ecb7f10381f4c565a8a40053' },
+    @{ ID = 34; Sound = 16; Frequency = 12788; Duration = 70;
+        Samples = 11216; Bytes = 5612; Volume = 92; Envelope = 7;
+        Hash = '9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7' },
+    @{ ID = 32; Sound = 16; Frequency = 14254; Duration = 111;
+        Samples = 11216; Bytes = 5612; Volume = 111; Envelope = 8;
+        Hash = '9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7' },
+    @{ ID = 31; Sound = 16; Frequency = 16000; Duration = 151;
+        Samples = 11216; Bytes = 5612; Volume = 124; Envelope = 8;
+        Hash = '9af7a90e3e4f0b175e36c0bd53e4bd21342fa4f535eea89e316eeb64e51894a7' },
+    @{ ID = 216; Sound = 22; Frequency = 30204; Duration = 92;
+        Samples = 20458; Bytes = 10236; Volume = 82; Envelope = 11;
+        Hash = 'be33e0e365b534772558b69a35379c864325f38be16b22bc91c792c69db41fa1' },
+    @{ ID = 28; Sound = 27; Frequency = 32000; Duration = 160;
+        Samples = 29441; Bytes = 14724; Volume = 72; Envelope = 23;
+        Hash = '0bd0766e8bb94f9833b439f266babcb89fd74d1d5b156fe765c109983e6fea2a' },
+    @{ ID = 2; Sound = 4; Frequency = 50797; Duration = 190;
+        Samples = 30304; Bytes = 15156; Volume = 97; Envelope = 23;
+        Hash = 'b9494fab2cdf707c622105d1df10edc32a9a18768a90b5fc6010e172bbac71d6' },
+    @{ ID = 0; Sound = 4; Frequency = 21357; Duration = 135;
+        Samples = 30304; Bytes = 15156; Volume = 106; Envelope = 16;
+        Hash = 'b9494fab2cdf707c622105d1df10edc32a9a18768a90b5fc6010e172bbac71d6' }
+)
+foreach ($expected in $expectedHits) {
+    $entry = @($metadata.entries | Where-Object {
+            [int]$_.id -eq $expected.ID
+        })
+    if (($entry.Count -ne 1) -or
+        ($entry[0].entry_kind -ne 'hit') -or
+        ([int]$entry[0].source_sound_index -ne $expected.Sound) -or
+        ([int]$entry[0].ds_frequency_hz -ne $expected.Frequency) -or
+        ([int]$entry[0].source_duration_ticks -ne $expected.Duration) -or
+        ([int]$entry[0].ds_sample_count -ne $expected.Samples) -or
+        ([int]$entry[0].ima_adpcm_bytes -ne $expected.Bytes) -or
+        ([int]$entry[0].ds_volume -ne $expected.Volume) -or
+        ([int]$entry[0].packed_envelope_count -ne $expected.Envelope) -or
+        ($entry[0].ima_adpcm_sha256 -ne $expected.Hash)) {
+        throw "Collision/contact FGM $($expected.ID) source fixture changed."
+    }
+}
+
+$punch = @(40, 38, 37 | ForEach-Object {
+        $id = $_
+        $metadata.entries | Where-Object { [int]$_.id -eq $id }
+    })
+$kick = @(34, 32, 31 | ForEach-Object {
+        $id = $_
+        $metadata.entries | Where-Object { [int]$_.id -eq $id }
+    })
+$fire = @(2, 0 | ForEach-Object {
+        $id = $_
+        $metadata.entries | Where-Object { [int]$_.id -eq $id }
+    })
+if ((@($punch | ForEach-Object pack_data_offset | Sort-Object -Unique).Count -ne 1) -or
+    ((@($punch | ForEach-Object sample_body_deduplicated) -join ',') -ne
+        'False,True,True') -or
+    (@($kick | ForEach-Object pack_data_offset | Sort-Object -Unique).Count -ne 1) -or
+    ((@($kick | ForEach-Object sample_body_deduplicated) -join ',') -ne
+        'False,True,True') -or
+    (@($fire | ForEach-Object pack_data_offset | Sort-Object -Unique).Count -ne 1) -or
+    ((@($fire | ForEach-Object sample_body_deduplicated) -join ',') -ne
+        'False,True')) {
+    throw 'Collision/contact exact sample-body reuse changed.'
+}
+
+$coin = $metadata.entries | Where-Object { [int]$_.id -eq 216 }
+$burn = $metadata.entries | Where-Object { [int]$_.id -eq 28 }
+$explode = $metadata.entries | Where-Object { [int]$_.id -eq 0 }
+if (($coin.ds_loop_strategy -ne 'finite_source_loop_aot') -or
+    ([int]$coin.finite_source_loop_replay_samples -ne 18833) -or
+    ($burn.ds_loop_strategy -ne 'finite_source_loop_aot') -or
+    ([int]$burn.finite_source_loop_replay_samples -ne 1985) -or
+    ([int]$burn.root_ucd_program_id -ne 28) -or
+    ([int]$explode.root_ucd_program_id -ne 0) -or
+    ([int]$explode.render_ucd_program_id -ne 0)) {
+    throw 'Coin/Fireball finite source-loop or direct ExplodeS program changed.'
+}
+if (@($metadata.entries | Where-Object { [int]$_.id -eq 188 }).Count -ne 0) {
+    throw 'Fox reflector-hit ID 188 entered the pack without a natural mode-163 call.'
+}
+$hitDebt = @($metadata.entries | Where-Object {
+        $_.entry_kind -eq 'hit'
+    } | ForEach-Object { @($_.runtime_fidelity_debt) })
+if (-not ($hitDebt -contains 'ucd_pitch_automation') -or
+    -not ($hitDebt -contains 'ucd_volume_automation') -or
+    -not ($hitDebt -contains 'articulation_pitch_modulation') -or
+    -not ($hitDebt -contains 'omitted_fork_voice_668')) {
+    throw 'Collision/contact pitch, volume, or fork debt is no longer explicit.'
+}
+
+$shim = Get-Content -LiteralPath (
+    Join-Path $root 'src/port/reloc_backend_compat_shims.c') -Raw
+$fgmBackend = Get-Content -LiteralPath (
+    Join-Path $root 'src/nds/nds_audio_fgm.c') -Raw
+foreach ($fragment in @(
+        's32 balance = (s32)((pos / 8000.0F) * 60.0F);',
+        'balance = 60;',
+        'balance = -60;',
+        'return ndsPlayFGMAtPan(fgm, (u8)(64 - balance));')) {
+    if (-not $shim.Contains($fragment)) {
+        throw "Source positional-pan seam changed: $fragment"
+    }
+}
+if ((-not $fgmBackend.Contains(
+        'alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)')) -or
+    (-not $fgmBackend.Contains(
+        'entry->frequency, entry->volume, pan,')) -or
+    (-not $fgmBackend.Contains('handle->effect.balance = pan;'))) {
+    throw 'Source positional pan is not reaching the DS channel and handle.'
+}
+
 Write-Output (
     ('Audio FGM pack passed: {0} exact IDs ({1} fighter voices, ' +
-    '{2} Fox movement, {3} regular-KO, {4} attack/activation), ' +
-    '{5} resident bytes, {6} unique samples, mapping {7}, pack {8}.') -f
+    '{2} Fox movement, {3} regular-KO, {4} attack/activation, ' +
+    '{5} collision/contact), {6} resident bytes, {7} unique samples, ' +
+    'mapping {8}, pack {9}.') -f
     $actualIDs.Count,
     $voiceIDs.Count,
     $movementIDs.Count,
     $koIDs.Count,
     $attackIDs.Count,
+    $hitIDs.Count,
     $metadata.resident_bytes,
     $metadata.unique_sample_count,
     $metadata.mapping_sha256_lo,
