@@ -102,6 +102,10 @@ if ($RequireZeroPostGoTextureFence -and
     ($RendererBenchmarkSamples -gt 0) -and ($RendererProfileLevel -lt 1)) {
     throw 'RequireZeroPostGoTextureFence sampled windows require RendererProfileLevel 1 or 2.'
 }
+if ($RequireZeroPostGoTextureFence -and $foxCpuModeSelected -and
+    ($FoxCpuMode -eq 0)) {
+    throw 'RequireZeroPostGoTextureFence requires the CPU/countdown path; fast iteration deliberately does not arm M4.'
+}
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
@@ -1943,17 +1947,30 @@ try {
                             Assert-Condition ($m4Static[0] -eq $frame -and
                                 $m4Static[1] -eq $effectiveStaticTextureAotMode) "M4 static-texture accounting is not synchronized or in the effective mode at frame $frame." $gdbStdout
                             if ($effectiveStaticTextureAotMode -eq 1) {
-                                Assert-Condition (
-                                    $m4Static[2] -eq 1 -and
-                                    $m4Static[3] -eq 0 -and
-                                    $m4Static[4] -eq 22 -and
-                                    $m4Static[5] -eq 131072 -and
-                                    $m4Static[6] -eq 1 -and
-                                    $m4Static[7] -eq 0x3fffff -and
-                                    $m4Static[8] -eq 0x7 -and
-                                    $m4Static[9] -eq 0 -and
-                                    $m4Static[10] -gt 0
-                                ) "M4 static-texture AOT corpus was not fully prepared, armed, covered, and pinned at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
+                                if ($RendererBenchmarkOnly -and
+                                    $foxCpuModeSelected -and
+                                    ($FoxCpuMode -eq 0)) {
+                                    Assert-Condition (
+                                        $m4Static[2] -eq 1 -and
+                                        $m4Static[3] -eq 0 -and
+                                        $m4Static[4] -eq 22 -and
+                                        $m4Static[5] -eq 131072 -and
+                                        @($m4Static[6..10] |
+                                            Where-Object { $_ -ne 0 }).Count -eq 0
+                                    ) "Fast iteration did not preserve the prepared, deliberately unarmed M4 corpus at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
+                                } else {
+                                    Assert-Condition (
+                                        $m4Static[2] -eq 1 -and
+                                        $m4Static[3] -eq 0 -and
+                                        $m4Static[4] -eq 22 -and
+                                        $m4Static[5] -eq 131072 -and
+                                        $m4Static[6] -eq 1 -and
+                                        $m4Static[7] -eq 0x3fffff -and
+                                        $m4Static[8] -eq 0x7 -and
+                                        $m4Static[9] -eq 0 -and
+                                        $m4Static[10] -gt 0
+                                    ) "M4 static-texture AOT corpus was not fully prepared, armed, covered, and pinned at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
+                                }
                             } else {
                                 Assert-Condition (
                                     @($m4Static[2..10] |
