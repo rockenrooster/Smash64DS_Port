@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-15 21:13 Central
+Updated: 2026-07-16 05:00 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -12,12 +12,12 @@ This is the only dynamic P1 queue. `HANDOFF.md` owns the restart surface,
 
 ## Artifact Identity
 
-Current verifier-covered canonical/shipped pair:
+Current user-facing candidate; Boundary republication is pending:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,534,656 bytes
-SHA-256 CE922B60EFFE16D3A05A18ED3B0FD54F0A73A70C8CE9076AF85A5A59D5B96478
+14,564,352 bytes
+SHA-256 6265772AB02446A1247DB8444129A3040835BDDDBC968A090DA2AA289423ED24
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -29,10 +29,10 @@ more accurate than recycling cross-build samples.
 
 | Match phase | Artifact class | ROM SHA-256 | Synchronized window | N | Active median / P95 | State |
 |---|---|---|---|---:|---:|---|
-| Countdown / GO | canonical-profile-0 | `CE922B60EFFE16D3A05A18ED3B0FD54F0A73A70C8CE9076AF85A5A59D5B96478` | exact completed frames 438/439 | 2 | — / — | GO state + screenshot + post-arm Boundary pass; phase ticks pending |
-| Early combat | canonical-profile-0 | same canonical SHA | Pending post-GO window | — | — / — | Pending synchronized canonical baseline |
-| Late combat | canonical-profile-0 | same canonical SHA | Pending synchronized late window | — | — / — | Pending synchronized canonical baseline |
-| KO / rebirth | canonical-profile-0 | same canonical SHA | Pending natural KO→rebirth window | — | — / — | Pending synchronized canonical baseline |
+| Countdown / GO | canonical-profile-0 | pending candidate republication | exact completed frames 438/439 | 2 | — / — | Prior gate passed; refresh on final candidate only |
+| Early combat | canonical-profile-0 | pending candidate republication | Pending post-GO window | — | — / — | Pending synchronized canonical baseline |
+| Late combat | canonical-profile-0 | pending candidate republication | Pending synchronized late window | — | — / — | Pending synchronized canonical baseline |
+| KO / rebirth | canonical-profile-0 | pending candidate republication | Pending natural KO→rebirth window | — | — / — | Pending synchronized canonical baseline |
 | Time Up / Results | focused profile-0 | `C07617CA94010535A3B260F0B61A62E8E8ED4AFDDCB4C8968DEE9721642390A9` | natural one-minute expiry→Results | 1 lifecycle | state-only | Pass; realtime ticks pending |
 
 Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; they are not canonical phase baselines.
@@ -42,9 +42,9 @@ Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; th
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
 | Integration/release | CPU lifecycle pass / checkpoint | live tree | source-ordered LoadScene break, exact VSBattle ledger sample, commit | runner 2 |
-| Renderer implementation | M2 ITCM cut rejected; guard retained | shared live tree / focused lab builds | no-copy direct-contract candidate may combine with the measured 18K ITCM placement only if its pre-code bound reaches the 80K gate | no runner active |
+| Renderer implementation | M2/M3 feasibility cuts exhausted; exact guards retained | shared live tree / focused lab builds | M2 Jump C stopped 8,096 ticks short before code; M3 keeps only the 12.99K no-Z codegen gain | no runner active |
 | Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
-| Performance research | M2 contract reconciled | shared live tree / read-only | no-copy Mode 8 buckets, gates, source stop rules, and rejected paths confirmed | no runner active |
+| Performance research | Paused at measured boundary | shared live tree / read-only | Do not reopen rejected M2 ITCM or M3 dense/incremental-matrix cuts without a new attributable bound | no runner active |
 
 Runner/window/port policy lives in `VERIFYING.md`; scripted launches normalize
 the selected TOML and never touch the user's manual instance.
@@ -65,19 +65,20 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | One-way platform semantics | Reopened / automation insufficient | Gameplay | Crossing frame rejects correctly, but the 715-frame route can accept a wrong next-frame landing without continued ascent or a descending crossing | Extend the same mode-163 gate; keep Tyler's report open |
 | Edge behavior and specials | Retest | Gameplay | Up-B was manually accepted; other edge behavior needs current-ROM qualification | No unrelated behavior change without reproduction |
 | Normal-play stage painter/depth order | FIXED / pixel + profile-2 pass | Renderer + QA | BattleShip layer modes classify 66 source-Z and 126 no-Z triangles; one full v16 step per no-Z triangle removes the grass/bush overlap, preserves 202 triangles, and reserves disjoint endpoint bands | Keep as correctness fix; final frame 438/501 captures and zero-collision trace are authoritative |
-| Pause-orbit geometry containment | REOPENED / user-confirmed defect | Renderer + QA | The scaled-raw repair covered ten range triangles, but Tyler still sees screen-blocking geometry at extreme pause angles; CPU-projected near-plane crossings remain uncontained | Add clip-space near-plane containment and rerun normal/profile-2/+33.6° gates |
+| Pause-orbit geometry containment | FIXED / user confirmed | Renderer + QA | Clip-space near-plane containment removes screen-blocking triangles at the breaking orbit angles without changing normal-play profile-2 output | Keep focused angle gate; paused −33.6° is also the strongest Mario underside view |
+| Mario pant/underside visual | Candidate KEEP / user visual pending | Renderer + QA | Source root light preambles were missing; replay restores blue right pant and closed underside with unchanged 320-triangle census | Tyler eyeballs `20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png` before FIXED |
 | Natural Fox recovery | Coverage debt | Gameplay | Natural Recover objective/offstage return unobserved | No completion claim |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
-| M2 Mario/Fox AOT, 170–250K ticks | Fail / Mode 8 correct; ITCM-only cut rejected | Renderer | Ledger-off A/B at frames 600–607: 416,576/416,704 → 398,496/398,592, only 18,080 saved; exact stage/Mario/Fox 60/320/306 and screenshot stage pixels match | Keep the pre-GX animlock/shuffle guard; do not retry placement alone. Bound the no-copy direct-contract plus placement combination before coding and require ≥80K saved and ≤336,576 |
-| M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Scaled raw clipping fixes the pause-orbit defect and improves the retained stage path 664,544/664,640 → 645,248/645,440, but it remains 145,248 above the first 500K gate. Exact ownership stays 121/828 | Keep clipping fix; do not retry rejected dense-only reuse. Require a different attributable ≥145,248-tick cut before widening |
+| M2 Mario/Fox AOT, 170–250K ticks | Fail / Jump C stopped before code | Renderer | Current local builder is 53,824 ticks and lighting is already prepared-direction + exact shade LUT. Local + rejected ITCM gain bounds at 71,904, 8,096 short of the required first cut | Do not manufacture another lighting/cache path; require a new source-backed bound before coding |
+| M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Removing cold/Os from the 126-triangle no-Z emitter keeps exact pixels and improves stage 624,384 → 611,392. Dense reuse reached 563,296 but remained above 500K and was reverted; incremental matrix transport regressed | Keep only codegen commit `bbe8d3eee2`; require a new attributable ≥111,392-tick cut |
 | M4 zero gameplay conversion/preparation | Pass for current one-minute gate | Renderer | Natural CPU-on expiry proves prepare/arm/teardown `1/1/1`, 22 keys/131,072 bytes, zero ten-class post-GO fence work, and 163,312-byte audio-adjusted reserve | Keep; repeat in final published CPU-on qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / bitmap OAM | Renderer + QA | Hybrid runtime submission was invisible despite valid counters; restored proven all-bitmap OBJ ownership shows the traffic light with 93,824 bytes prepared pregame and zero gameplay conversion/upload | Keep published bitmap path; hybrid remains lab-only |
 | Dream Land BGM | Partial | Audio | User reports the stage theme sounds normal; stream counters pass, but enabled DS channel and nonzero PCM peak remain unproved | Block audio completion |
-| Required FGM and Mario/Fox voices | Production phase/KO + isolated crowd-command/loop-pack pass; audible pending | Audio | Source calls ID626 once for 6.9 s; its 1.868 s DS loop intentionally overlaps countdown/GO, but exact channel-mask/acoustic proof is absent | Add host acoustic oracle and tighten existing ACK masks; exact-ROM audible retest; voices remain open |
+| Required FGM and Mario/Fox voices | Crowd FIXED / fighter voices open | Audio | ID626 is one finite 104,204-sample source-loop-ordered AOT cue with quadratic source ramps and no DS hardware loop/runtime envelope; Tyler confirmed the audible fix | Keep crowd cue; qualify remaining natural Mario/Fox voice IDs and pitch behavior |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | Focused one-minute pass | QA | Current source tree reaches Results with 163,312 audio-adjusted bytes, stale=0/0, and 17 safety counters zero | Repeat on final published CPU-on ROM |
-| Focused/checkpoint verification | Boundary pass | QA | Current ROM 19C6CD… passes registry/GBI/ITCM, exact 658/44/126/0 classes, M3/M4 state, published pair, and visible exact-frame Cut G capture | Keep only Latest and Boundary; run Current only when the original launch path changes |
+| Focused/checkpoint verification | Focused gates pass / Boundary refresh pending | QA | Current candidate has exact profile-2 fighter/stage census, pause-angle containment, audio cue checks, and synchronized M2/M3 measurements; no stacked full regression was run | Run one Boundary only at the next release checkpoint; Current only if original launch changes |
 | Cut G capture / final dated capture / manual retest | Current Cut G pass / final P1 pending | QA + user | Exact frames 438/439 pass on 2026-07-15 under `artifacts/visibility`; top coverage 100%, green 42.495%, detail 52.675%, meaningful delta 0.142% | Block release on final complete-match evidence and user qualification |
 
 ## Dated Gates

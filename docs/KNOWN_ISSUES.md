@@ -6,7 +6,7 @@ durable unresolved gaps.
 ## P1 Release Blockers
 
 - Renderer M2 is visually correct but above 170-250K ticks.
-- Renderer M3 is source/semantic-correct but measures 664,544/664,640 stage
+- Renderer M3 is source/semantic-correct but measures 611,392/611,584 stage
   ticks; a different attributable cut must reach <=500K before promotion.
 - Natural DamageFly/throw recovery, non-floor collision providers, Fox recovery,
   and continuous Mario-to-Fox damage coverage remain incomplete.
@@ -15,8 +15,8 @@ durable unresolved gaps.
 - Mario Fireball early spawn/damage/rebound/draw passes, but full 140-tick
   collision, independent source-matrix parity, and long-distance visual capture
   remain open.
-- Required fighter voices, pitch behavior, audible Dream Land BGM proof, and the
-  opening crowd overlap/loop report remain open.
+- Required fighter voices, pitch behavior, and audible Dream Land BGM proof
+  remain open. The opening crowd overlap/loop report is fixed and user-confirmed.
 - Fox is still classified level-3 CPU, but the public ROM temporarily pauses his
   decision/input. The focused CPU-on one-minute gate passes; final P1 still
   needs Tyler's re-enable decision and a published CPU-on qualification.
@@ -46,10 +46,9 @@ durable unresolved gaps.
 ## Renderer And Presentation
 
 - M2 still performs too much per-frame fighter owner work.
-- M3 remains above its tick gate. The dense preparation-reuse experiment saved
-  only about 109K and was reverted; do not retry that cut.
-- Pause-orbit geometry can still cross the CPU projection near plane and create
-  screen-blocking triangles; the prior scaled-raw range repair was incomplete.
+- M3 remains above its tick gate. The current dense preparation-reuse stack
+  reached 563,296 but still missed 500K and was reverted; do not retry it or the
+  slower incremental-matrix transport cut.
 - Bitmap OAM has one-bit alpha, so nonzero partial-alpha GO pixels are opaque.
   This is accepted presentation debt under the 90% visual rule.
 - Do not publish the hybrid IFCommon OAM lab path: its counters and source
@@ -65,8 +64,8 @@ durable unresolved gaps.
 - Voice 685 and ordinary Mario/Fox voices need natural audible coverage.
 - The reported 24 unsupported calls are event count, not 24 identified IDs;
   capture natural ID/order before selecting assets.
-- Existing ACK counters cannot prove the final acoustic mix. Use an exact-ROM
-  user retest for subjective overlap/loop behavior.
+- Existing ACK counters cannot prove the final acoustic mix. The ID626 AOT cue
+  passed Tyler's exact-ROM ear check; retain user retests for remaining voices.
 
 ## Memory And Lifetime
 

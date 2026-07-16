@@ -20976,3 +20976,33 @@ remains skipped for the requested fast iteration cadence.
   collision, overflow, census, or hash drift. Final published-ROM frame 438 and
   moving frame 501 captures under `artifacts/visibility` show correct grass,
   bush, and stage-face occlusion; the memory reserve remains above 128 KiB.
+
+## 2026-07-16 - Closed crowd and pause-orbit playtest defects
+
+- Replaced PublicExcited ID626's short DS hardware loop and frame-stepped fade
+  with one generated 104,204-sample, 15,102 Hz IMA cue. The generator preserves
+  source sample 0, repeats exact source range `[1,28215)`, bakes BattleShip's
+  quadratic gain law and 5.75 ms ramps, then carries the silent tail through the
+  natural 6.9 s stop. Runtime loop/envelope commands are gone. The acoustic
+  oracle and natural single-handle timing gate pass, and Tyler confirmed the
+  opening no longer sounds doubled, seamful, or too long.
+- Added clip-space near-plane containment before the CPU perspective divide.
+  Previously breaking pause-orbit angles no longer fling saturated triangles
+  across the screen, while normal profile-2 frames retain their exact geometry.
+  Tyler confirmed the pause-orbit repair.
+- Replayed the source fighter root light preambles omitted by the generated
+  native IR. The exact Mario 320-triangle census is unchanged; the paused
+  −33.6° candidate shows both pant legs blue and a closed underside. Final
+  visual acceptance remains with Tyler, so this item is not yet marked FIXED.
+
+## 2026-07-16 - Stopped Jump A/C at measured renderer boundaries
+
+- Kept one M3 ARM codegen correction: the 126-triangle no-Z emitter is no
+  longer marked cold/Os. Exact pixels hold and stage time improves from 624,384
+  to 611,392 ticks. The exact dense stack reached 563,296 but missed its 500K
+  gate; incremental matrix transport regressed to 579,712. Both were reverted.
+- M2 Jump C stopped before code. The live fighter RPY builders already use
+  BattleShip's sine table and integer rotation products, and lighting already
+  uses the prepared direction plus exact shade LUT. The eligible 53,824-tick
+  local bucket plus the rejected 18,080-tick ITCM gain can save at most 71,904,
+  below the required 80K first cut.

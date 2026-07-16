@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-15 22:15 Central
+Updated: 2026-07-16 05:00 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -21,36 +21,39 @@ configuration. Dream Land water is exact frame 0/fraction 114 on the original
 
 The executable fleet is four registry records under `Latest`/`Boundary`; the
 unreachable source-side mode 1-162 lattice is separate ROM-parity cleanup.
-Boundary passes at 19.7 FPS on published ROM
-`19C6CD229C205CD60F7625BED86625AADA5556AEE377CD4A4698154249F98D7E`.
+The current user-facing candidate is 14,564,352 bytes, SHA-256
+`6265772AB02446A1247DB8444129A3040835BDDDBC968A090DA2AA289423ED24`;
+its next Boundary republication is intentionally deferred to the release
+checkpoint.
 The normal-play stage painter bug is fixed. BattleShip's 66 source-Z / 126
 no-Z classification was already correct; the DS counter advanced only one
 sixth of a submitted v16 step, so groups of six painter triangles collided.
 The final zero-collision profile-2 census is 202 triangles. Published-ROM pixel
 evidence is `artifacts/visibility/20260715-stage-depth-final-cutg-frame438.png`
 and `artifacts/visibility/20260715-stage-depth-final-moving-frame501.png`.
-Pause-orbit corruption is reopened: the earlier scaled-raw repair does not
-contain every CPU-projected near-plane crossing.
+Clip-space near-plane containment now removes the pause-orbit corruption and
+Tyler confirmed the fix. Paused −33.6° is the preferred Mario underside view.
 
-The retained M3 path improved 664,544/664,640 → 645,248/645,440 stage ticks and
-1,183,104/1,183,168 → 1,102,656/1,102,720 draw ticks at frames 438–445. Exact
-121/828 ownership, frozen water 2/0/1, 22/131072 static residency, and zero
-post-GO texture work remain intact. M3 is still REWORK, 145,248 ticks above its
-first 500K gate.
+The retained M3 path is now 611,392/611,584 stage ticks at frames 438–445 after
+removing erroneous cold/Os codegen from the 126-triangle no-Z emitter. Exact
+121/828 ownership, frozen water 2/0/1, 22/131072 static residency, zero post-GO
+texture work, and identical DS pixels remain intact. M3 is still REWORK,
+111,392 ticks above its first 500K gate.
 
-## Rejected M3 Cut
+## Rejected M3 Stack
 
-The dense-index prepare-once experiment was exact but too small. Against the
-664,544/664,640 baseline it measured 555,584/555,776, saving only
-108,960/108,864 versus the required 164,544. The source/checker patch was fully
-reverted. Evidence remains at:
+The current dense prepare-once stack was exact but too small. Against the kept
+611,392 baseline it measured 563,296, still above 500K, so the stack-only rule
+required a full revert. Incremental no-Z matrix transport then regressed to
+579,712 and was also removed. Evidence remains at:
 
 ```text
-artifacts/visibility/m3-dense-prepare-8frames.json
-artifacts/visibility/m3-dense-prepare-frame438.png
+artifacts/performance/2026-07-16_m3-dense-reuse-b.json
+artifacts/visibility/2026-07-16_m3-dense-reuse-b-frame445.png
+artifacts/performance/2026-07-16_m3-noz-projection-b.json
 ```
 
-Do not retry or widen that dense-only cut.
+Do not retry either cut without a new attributable bound.
 
 ## One-Minute Gate
 
@@ -89,13 +92,19 @@ artifacts/visibility/2026-07-15_m2-itcm-b-frame607.png
 The source-faithful pre-GX rejection for active animlocks/shuffle remains; it
 falls back to the ordinary BattleShip path before native preparation or GX.
 
+Jump C also stopped before renderer code. Current Mode-8 local construction is
+53,824 ticks; the live RPY builders already use BattleShip's sine table and
+integer products. Lighting is already prepared-direction plus the exact shade
+LUT. Even deleting the complete local bucket and re-adding the rejected 18,080
+ITCM gain bounds at 71,904, 8,096 short of the first gate.
+
 ## Next Packet
 
-Stay in Mode 8. Before coding, bound the smallest no-copy direct-contract cut
-together with the measured 18K placement gain. Proceed only if attributable
-savings can reach 80K; then run the same eight-frame gate and require combined
-ticks <=336,576, exact 32/49/67/626 semantics, matching screenshot/reserve, and
-zero fallback. Do not add a mode, packet copy, DMA path, or per-root interpreter.
+Return to the highest red gameplay row: natural DamageFly/throw recovery and
+its map-collision providers. Read the exact BattleShip status/map source first,
+reuse the existing mode-163 sparse gate, and change only the first reproduced
+provider seam. One focused runtime result is enough for iteration; do not add a
+mode or stack broad regressions.
 
 ## Checkpoint
 
