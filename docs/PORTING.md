@@ -21016,3 +21016,13 @@ remains skipped for the requested fast iteration cadence.
   events, one Fox status-54 DamageFall, one main-floor crossing, and one source
   floor recovery with zero invalid collision results. The gameplay path passed;
   the run instead exposed a 128,528-byte reserve, 2,544 below the P1 floor.
+
+## 2026-07-16 - Battle-only scene-store lifetime bound
+
+- The 270,000-byte opening/title file store remained resident in mode 163 even
+  though harness builds cannot enter those scenes. Its only harness users are
+  the two aligned static assets selected by `ndsRelocStaticBufferForAsset`,
+  totaling exactly 185,696 bytes; normal startup retains the full store.
+- The exact natural DamageFall rerun preserved the same gameplay route and
+  raised arena reserve from 128,528 to 214,544 bytes. No audio asset, renderer
+  output, gameplay state, or runtime allocation policy changed.

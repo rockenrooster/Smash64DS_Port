@@ -10,8 +10,6 @@ durable unresolved gaps.
   ticks; a different attributable cut must reach <=500K before promotion.
 - Natural DamageFall-to-main-floor recovery now passes. Throw-origin coverage,
   non-floor collision providers, and Fox recovery remain incomplete.
-- The current candidate retains 128,528 arena bytes, 2,544 below the 128 KiB
-  P1 floor.
 - The platform verifier can accept a wrong next-frame landing; Tyler's manual
   report remains open.
 - Mario Fireball early spawn/damage/rebound/draw passes, but full 140-tick
@@ -73,8 +71,8 @@ durable unresolved gaps.
 
 - The topology cache is validated for the current battle scene; repeated scene
   rebuild/rematch lifetime and reclamation still need proof.
-- Mode 163 currently misses its >=128 KiB reserve floor by 2,544 bytes after
-  the resident audio/renderer allocations.
+- Mode 163 currently retains 214,544 bytes after resident audio/renderer
+  allocations; final CPU-on lifecycle qualification must preserve the floor.
 - N64 fixed framebuffer addresses and overlay assumptions are unsafe on DS.
 - Save/backup behavior remains stubbed; no persistent SRAM/flash behavior exists.
 - Overlay loading remains a compatibility no-op pending a measured DS memory plan.

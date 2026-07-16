@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 05:08 Central
+Updated: 2026-07-16 05:12 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -21,8 +21,8 @@ configuration. Dream Land water is exact frame 0/fraction 114 on the original
 
 The executable fleet is four registry records under `Latest`/`Boundary`; the
 unreachable source-side mode 1-162 lattice is separate ROM-parity cleanup.
-The current user-facing candidate is 14,564,352 bytes, SHA-256
-`6265772AB02446A1247DB8444129A3040835BDDDBC968A090DA2AA289423ED24`;
+The current user-facing candidate is 14,565,376 bytes, SHA-256
+`593FBBA217D2AD7F9F87DE2013F38C82517A1DDDF1FE36CDF6110894C379C91E`;
 its next Boundary republication is intentionally deferred to the release
 checkpoint.
 The normal-play stage painter bug is fixed. BattleShip's 66 source-Z / 126
@@ -100,14 +100,13 @@ ITCM gain bounds at 71,904, 8,096 short of the first gate.
 
 ## Next Packet
 
-Recover the current 2,544-byte reserve shortfall. The focused natural DamageFall
-run completed the source path before failing only its memory floor: five source
-up-smashes, two damage events, one status-54 DamageFall, one line-3 crossing,
-one floor recovery, direct result/invalid `1/0`, and `MEMARENA=0,22,128528`.
-Evidence is `2026-07-16_050047-2988777_damagefall-recovery-p15768.png` under
-`artifacts/visibility`. Measure live ownership first and remove only proven
-unreachable or duplicate resident bytes. Rerun this focused gate once; do not
-stack gameplay or Boundary verification.
+Qualify the throw-origin recovery route using the existing sparse mode-163 gate.
+The attack-origin DamageFall path is now green: five source up-smashes, two
+damage events, one status-54 DamageFall, one line-3 crossing, direct
+result/invalid `1/0`, and 214,544 bytes reserve. Evidence is
+`2026-07-16_050836-0416581_damagefall-recovery-p11728.png` under
+`artifacts/visibility`. Read the exact BattleShip catch/throw/release source,
+run the focused throw gate once, and change only its first reproduced seam.
 
 ## Checkpoint
 

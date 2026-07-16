@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 05:08 Central
+Updated: 2026-07-16 05:12 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -16,8 +16,8 @@ Current user-facing candidate; Boundary republication is pending:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,564,352 bytes
-SHA-256 6265772AB02446A1247DB8444129A3040835BDDDBC968A090DA2AA289423ED24
+14,565,376 bytes
+SHA-256 593FBBA217D2AD7F9F87DE2013F38C82517A1DDDF1FE36CDF6110894C379C91E
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -77,7 +77,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Dream Land BGM | Partial | Audio | User reports the stage theme sounds normal; stream counters pass, but enabled DS channel and nonzero PCM peak remain unproved | Block audio completion |
 | Required FGM and Mario/Fox voices | Crowd FIXED / fighter voices open | Audio | ID626 is one finite 104,204-sample source-loop-ordered AOT cue with quadratic source ramps and no DS hardware loop/runtime envelope; Tyler confirmed the audible fix | Keep crowd cue; qualify remaining natural Mario/Fox voice IDs and pitch behavior |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | FAIL on current candidate | QA | Natural DamageFall run reports 128,528 bytes, 2,544 below the 131,072-byte floor; the older 163,312-byte result predates the current AOT/audio candidate | Recover at least 2,544 measured bytes without changing behavior, then rerun only the focused reserve-bearing gate |
+| Stable reserve / no corruption | Pass on current candidate | QA | Battle-only opening/static store is exactly bounded at 185,696 bytes instead of 270,000; the same natural DamageFall route now retains 214,544 bytes, up 86,016, with unchanged recovery markers | Keep exact harness lifetime bound; repeat only in final CPU-on lifecycle qualification |
 | Focused/checkpoint verification | Focused gates pass / Boundary refresh pending | QA | Current candidate has exact profile-2 fighter/stage census, pause-angle containment, audio cue checks, and synchronized M2/M3 measurements; no stacked full regression was run | Run one Boundary only at the next release checkpoint; Current only if original launch changes |
 | Cut G capture / final dated capture / manual retest | Current Cut G pass / final P1 pending | QA + user | Exact frames 438/439 pass on 2026-07-15 under `artifacts/visibility`; top coverage 100%, green 42.495%, detail 52.675%, meaningful delta 0.142% | Block release on final complete-match evidence and user qualification |
 

@@ -345,11 +345,20 @@
 #define NDS_TITLE_MAX_WIDTH 320u
 #define NDS_TITLE_MAX_HEIGHT 240u
 #define NDS_TITLE_FILE_BUFFER_SIZE 176000u
+#define NDS_RELOC_ALIGN(value) (((value) + 0xFu) & ~0xFu)
+#define NDS_RELOC_STAGE_CASTLE_STATIC_SIZE NDS_RELOC_ALIGN(0x26cd0u)
+#define NDS_RELOC_EXTERN_DATA_BANK_113_STATIC_SIZE NDS_RELOC_ALIGN(0x6890u)
 #define NDS_OPENING_ACTION_PREVIEW_MAX_WIDTH 320u
 #define NDS_OPENING_ACTION_PREVIEW_MAX_HEIGHT 264u
 #define NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH 320u
 #define NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT 240u
+#if NDS_DEV_SCENE_HARNESS != 0
+#define NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE \
+    (NDS_RELOC_STAGE_CASTLE_STATIC_SIZE + \
+     NDS_RELOC_EXTERN_DATA_BANK_113_STATIC_SIZE)
+#else
 #define NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE 270000u
+#endif
 #if (NDS_DEV_SCENE_HARNESS >= 11)
 #define NDS_OPENING_ACTION_PREVIEW_CACHE_COUNT 1u
 #else
@@ -375,7 +384,6 @@
      NDS_OPENING_ROOM_FIRST_EVENT_DATA_ANIM_TABLE_READY | \
      NDS_OPENING_ROOM_FIRST_EVENT_DATA_ANIM_OPCODE_READY)
 
-#define NDS_RELOC_ALIGN(value) (((value) + 0xFu) & ~0xFu)
 #define NDS_FIGHTER_DL_SCAN_ASSET_ARENA 0xfffffffeu
 #define NDS_FIGHTER_DL_OP_NOOP 0x00u
 #define NDS_FIGHTER_DL_OP_VTX 0x01u
@@ -610,9 +618,6 @@ typedef struct NDSOpeningActionPreviewCache {
                NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT];
 } NDSOpeningActionPreviewCache;
 
-#define NDS_RELOC_STAGE_CASTLE_STATIC_SIZE NDS_RELOC_ALIGN(0x26cd0u)
-#define NDS_RELOC_EXTERN_DATA_BANK_113_STATIC_SIZE NDS_RELOC_ALIGN(0x6890u)
-
 static NDSRelocLoadedFile sNdsRelocLoadedFiles[NDS_RELOC_LOADED_FILE_CAPACITY];
 static u32 sNdsRelocLoadedFileCount;
 static NDSRelocNormalizedMObjSub
@@ -634,10 +639,10 @@ typedef union NDSRelocSceneFileBuffer
 } NDSRelocSceneFileBuffer;
 
 /* BattleShip's scene manager serializes the opening-movie and title scenes.
- * The opening buffer also backs dev-harness static assets, but no such asset
- * remains live while the title preview is loaded: both paths reset the reloc
- * ledger at their scene boundary.  Reuse the larger file store instead of
- * permanently reserving both buffers in ARM9 main memory. */
+ * Harness builds cannot enter either scene; their only users of this store are
+ * the two exactly bounded static assets in ndsRelocStaticBufferForAsset.
+ * Normal startup keeps the full opening extent. Reuse the larger store instead
+ * of permanently reserving both buffers in ARM9 main memory. */
 static NDSRelocSceneFileBuffer sNdsRelocSceneFileBuffer
     __attribute__((aligned(16)));
 #define sNdsTitleFileBuffer sNdsRelocSceneFileBuffer.title
