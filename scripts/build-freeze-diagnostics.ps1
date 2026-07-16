@@ -37,12 +37,14 @@ $builds = @(
         Mode = 'on'
         Value = 1
         Target = 'smash64ds-battle-playable-freeze-diagnostics-on-hwtri'
+        OutputName = 'smash64ds-battle-playable-freeze-diagnostics-on-hwtri'
         Build = 'build-freeze-diagnostics-on-hwtri'
     },
     [pscustomobject]@{
         Mode = 'off'
         Value = 0
         Target = 'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
+        OutputName = 'smash64ds-battle-playable-hwtri'
         Build = 'build-freeze-diagnostics-off-hwtri'
     }
 )
@@ -72,9 +74,9 @@ foreach ($record in $builds) {
     $record | Add-Member NoteProperty BuildPath (
         Join-Path $root (Join-Path 'builds' $record.Build))
     $record | Add-Member NoteProperty Rom (
-        Join-Path $record.BuildPath "$($record.Target).nds")
+        Join-Path $record.BuildPath "$($record.OutputName).nds")
     $record | Add-Member NoteProperty Elf (
-        Join-Path $record.BuildPath "$($record.Target).elf")
+        Join-Path $record.BuildPath "$($record.OutputName).elf")
     $record | Add-Member NoteProperty Config (
         Join-Path $record.BuildPath 'nds_build_config.h')
 

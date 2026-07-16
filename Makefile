@@ -19,6 +19,7 @@ GAME_SUBTITLE2 := Built with devkitPro/libnds
 PROJECT_ROOT ?= $(CURDIR)
 TARGET := smash64ds
 BUILD := build
+NDS_OUTPUT_BASENAME ?= $(TARGET)
 BUILD_OUTPUT_ROOT ?= builds
 ifeq ($(BUILD),$(notdir $(BUILD)))
 ifneq ($(filter build%,$(BUILD)),)
@@ -84,6 +85,10 @@ override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 override NDS_FREEZE_DIAGNOSTICS := $(if $(filter %-on-hwtri,$(TARGET)),1,0)
+endif
+ifeq ($(TARGET),smash64ds-battle-playable-freeze-diagnostics-off-hwtri)
+# The off build is the canonical release payload in an isolated build tree.
+override NDS_OUTPUT_BASENAME := smash64ds-battle-playable-hwtri
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)
 # This is the user-testable fast-iteration ROM, not a generic build alias.
@@ -221,7 +226,7 @@ LIBDIRS := $(LIBNDS)
 
 ifneq ($(abspath $(PROJECT_ROOT)/$(BUILD)),$(abspath $(CURDIR)))
 
-export OUTPUT := $(NDS_OUTPUT_ROOT)/$(TARGET)
+export OUTPUT := $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME)
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
 
@@ -751,7 +756,7 @@ $(BUILD):
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(NDS_OUTPUT_ROOT)/$(TARGET).elf $(NDS_OUTPUT_ROOT)/$(TARGET).nds $(NDS_OUTPUT_ROOT)/$(TARGET).ds.gba
+	@rm -fr $(BUILD) $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME).elf $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME).nds $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME).ds.gba
 
 clean-generated:
 	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-generated.ps1 -Force
@@ -759,7 +764,7 @@ clean-generated:
 distclean: clean-generated
 
 run: $(BUILD)
-	@echo "ROM ready: $(NDS_OUTPUT_ROOT)/$(TARGET).nds"
+	@echo "ROM ready: $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME).nds"
 
 else
 
