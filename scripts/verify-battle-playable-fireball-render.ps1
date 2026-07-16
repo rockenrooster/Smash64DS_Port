@@ -168,11 +168,12 @@ try {
         'set confirm off',
         'set remotetimeout 5',
         ("target remote 127.0.0.1:{0}" -f (Get-MelonDSActiveGdbPort)),
-        # ifcommon.c:3167-3179 is the original BattleShip transition that
-        # starts the match timer. Breaking on the assignment avoids a slow
-        # debugger-side condition at every countdown frame.
-        'tbreak ifcommon.c:3175',
+        # This is a focused iteration, so select the documented shared
+        # countdown/Fox override before BattleShip creates the interface.
+        # The exact published ROM and lifecycle gates retain flag 1.
+        'tbreak scVSBattleStartBattle',
         'continue',
+        'set gNdsBattlePlayableFoxCpuEnabled = 0',
         # melonDS cannot safely execute inferior function calls across this
         # ARM/Thumb boundary. Resolve the private playback storage from this
         # exact ELF and write it directly; osContGetReadData still consumes it
@@ -240,7 +241,7 @@ try {
         'tbreak reloc_backend_movement.c:12928 if gNdsWeaponRendererFireballSubmitCount == 40',
         'continue',
         'printf "HARN=%#x,%u,%u,%u,%#x\n", gNdsSceneHarnessResult, gNdsSceneHarnessMode, gNdsSceneHarnessSceneCurr, gNdsSceneHarnessScenePrev, gNdsSceneHarnessReservedMask',
-        'printf "SCENE=%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted',
+        'printf "SCENE=%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gSCManagerSceneData.gkind, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gNdsBattlePlayableFoxCpuEnabled',
         'printf "RENDER_PROFILE_LEVEL=%u\n", gNdsRendererProfileLevel',
         'printf "FIREBALL_SOURCE=%u,%u,%u,%u,%u,%#x\n", gNdsFighterProjectileProofSpawnCallCount, gNdsFighterProjectileProofSpawnSuccessCount, gNdsFighterProjectileProofDamageMax, gNdsFighterProjectileProofLifetimeMax, gNdsFighterProjectileProofWeaponCountMax, gNdsFighterProjectileProofKindMask',
         'printf "WEAPON_RENDER=%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%u\n", gNdsWeaponRendererCaptureCount, gNdsWeaponRendererDObjDrawCount, gNdsWeaponRendererSubmitCount, gNdsWeaponRendererVisibleDrawCount, gNdsWeaponRendererTriangleCount, gNdsWeaponRendererTextureReadyCount, gNdsWeaponRendererTextureRejectCount, gNdsWeaponRendererKindMask, gNdsWeaponRendererCallbackKind, gNdsWeaponRendererNoZCount, gNdsWeaponRendererMovingDrawCount, gNdsWeaponRendererFireballSubmitCount, gNdsWeaponRendererFireballTriangleCount, gNdsWeaponRendererFireballVisibleDrawCount, gNdsWeaponRendererRejectedDrawCount',
@@ -262,7 +263,7 @@ try {
         -TimeoutSeconds $TimeoutSeconds).Stdout
 
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
-    $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $profile = [regex]::Match($gdbStdout, 'RENDER_PROFILE_LEVEL=([0-9]+)')
     $source = [regex]::Match($gdbStdout, 'FIREBALL_SOURCE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $weapon = [regex]::Match($gdbStdout, 'WEAPON_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -338,7 +339,7 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     Assert-Condition ($harn.Success -and $hv[0] -eq 0x4841524e -and $hv[1] -eq 163 -and $hv[2] -eq 22 -and $hv[3] -eq 21 -and $hv[4] -eq 0) 'Fireball verifier did not run the registered battle_playable realtime scene.' $gdbStdout
-    Assert-Condition ($scene.Success -and $sv[0] -eq 22 -and $sv[1] -eq 21 -and $sv[2] -eq 6 -and $sv[3] -eq 1 -and $sv[4] -eq 1) 'Fireball input did not occur naturally after GO with the original timer running.' $gdbStdout
+    Assert-Condition ($scene.Success -and $sv[0] -eq 22 -and $sv[1] -eq 21 -and $sv[2] -eq 6 -and $sv[3] -eq 1 -and $sv[4] -eq 0 -and $sv[5] -eq 0) 'Fireball iteration did not select the documented countdown/Fox override on the exact published ROM.' $gdbStdout
     Assert-Condition ($profile.Success -and [int64]$profile.Groups[1].Value -eq 0) 'Fireball verifier did not use the shipped renderer profile.' $gdbStdout
     Assert-Condition ($source.Success -and $fv[0] -eq 1 -and $fv[1] -eq 1 -and $fv[2] -eq 7 -and $fv[3] -eq 140 -and $fv[4] -eq 1 -and $fv[5] -eq 1) 'Original Mario Fireball source creation/attributes did not run exactly once from input.' $gdbStdout
     Assert-Condition ($rv[0] -ge 1 -and (($rv[1] -band 0x800) -eq 0) -and $rv[2] -eq 0 -and (($rv[3] -band 0x800) -ne 0) -and (($rv[4] -band 0x800) -ne 0) -and $rv[6] -ge 0) 'Fireball trace was not the first valid floor-mask rising edge.' $gdbStdout
