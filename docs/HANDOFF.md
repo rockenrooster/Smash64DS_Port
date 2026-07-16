@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 08:52 Central
+Updated: 2026-07-16 09:00 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -34,12 +34,13 @@ and `artifacts/visibility/20260715-stage-depth-final-moving-frame501.png`.
 Clip-space near-plane containment now removes the pause-orbit corruption and
 Tyler confirmed the fix. Paused −33.6° is the preferred Mario underside view.
 
-The retained M3 path now includes no-Z codegen plus dense prepare-once. On the
-current bitmap-OAM configuration, same-ROM frames 438–445 move stage
-619,744/619,904 → 577,440/577,536 and draw 1,057,856/1,057,920 →
-1,013,760/1,013,824. Exact 121/828 ownership, 57/42/54/202/49/4 stage state,
-zero fallback/fence work, and 0/120,000 changed top-screen pixels hold. The
-500K point is the next target, not a discard gate.
+The retained M3 path includes no-Z codegen, dense prepare-once, and AOT-packed
+GX coordinate shifts. Current bitmap-OAM frames 438–445 move stage
+578,272/578,560 → 556,256/556,352 and draw 997,440/997,504 →
+975,360/975,488 for the latest cut. Exact 121/828 ownership,
+57/42/54/202/49/4 stage state, cross 5/10/15, zero fallback/fence work, and
+0/240,000 changed DS-screen pixels hold. The 500K point is the next target,
+not a discard gate.
 The signed-16 rounding codegen lead was also exhausted: it shrank both hot ARM
 symbols but saved only 2,048 stage ticks, and its B screenshot was invalid. The
 treatment is fully reverted; do not rerun it without a new closing bound.
@@ -79,10 +80,12 @@ ITCM is 25,384/32,768. Evidence is under
 `artifacts/performance/2026-07-16_m2-itcm-restore-{a,b}.json` and
 `artifacts/visibility/2026-07-16_m2-itcm-restore-{a,b}.png`.
 
-Continue M2 with the already-measured 53,824-tick local-matrix builder at the
-BattleShip `syMatrixTraRotRpyR` / `syMatrixTraRotRpyRSca` seam. Make one small
-source-backed treatment and keep any repeatable exact net gain. Do not reopen
-measured regressions, add a speculative cache, or require the removed 80K gate.
+Finish Tyler's assigned Jump A work before returning to M2. The live tree
+already contains the requested constant-depth GX painter mechanism, so the old
+CPU-divider Cut 2 is obsolete. Continue only against its measured
+174,624/174,720 no-Z emitter and 146 matrix loads. Make one small source-backed
+treatment and keep any repeatable exact net gain. Do not reopen measured
+regressions, add a speculative cache, or require a removed aggregate gate.
 The current 1.415–1.618M CPU-on P95 still leaves 60 FPS explicitly unmet; the
 stable 20 FPS decision remains pending while performance work continues.
 

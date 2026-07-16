@@ -21175,3 +21175,13 @@ remains skipped for the requested fast iteration cadence.
   pixels. ITCM remains within hardware capacity at 25,384 / 32,768 bytes.
 - This 16,768-tick gain is retained under the new accumulation policy even
   though M2 is still above its final 170–250K target.
+
+## 2026-07-16 - AOT-packed Dream Land GX coordinate shifts
+
+- The live no-Z stage path already uses the requested constant-depth GX painter
+  matrices. Its generated packet now packs each immutable vertex's exact
+  coordinate shift into unused source-cache bits, deleting the runtime search
+  without growing the packet or RAM.
+- Stage time falls 578,272 → 556,256 ticks and draw time falls
+  997,440 → 975,360 ticks with both DS screens pixel-identical and all owner,
+  cross-matrix, depth, and texture-fence counters unchanged.

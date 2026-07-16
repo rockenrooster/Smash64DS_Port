@@ -16206,27 +16206,6 @@ static inline void ndsRendererNativeStageEmitVertex(
     }
 }
 
-static u32 ndsRendererNativeStageVertexShift(
-    const NDSNativeStageDenseVertex *vertex)
-{
-    u32 shift;
-
-    for (shift = 0u; shift <= 5u; shift++)
-    {
-        s32 x = ndsRendererRoundShiftS32Signed(vertex->x, shift);
-        s32 y = ndsRendererRoundShiftS32Signed(vertex->y, shift);
-        s32 z = ndsRendererRoundShiftS32Signed(vertex->z, shift);
-
-        if ((x >= -2048) && (x <= 2047) &&
-            (y >= -2048) && (y <= 2047) &&
-            (z >= -2048) && (z <= 2047))
-        {
-            return shift;
-        }
-    }
-    return 6u;
-}
-
 static void ndsRendererNativeStageSetNoZColumn(
     NDSRendererMatrix20p12 *matrix,
     s16 projected_z)
@@ -16399,7 +16378,8 @@ ndsRendererNativeStageEmitNoZTriangle(
         u32 dense_index = sNdsNativeStageCorners[first_corner + corner_offset];
         const NDSNativeStageDenseVertex *dense =
             &sNdsNativeStageVertices[dense_index];
-        u32 vertex_shift = ndsRendererNativeStageVertexShift(dense);
+        u32 vertex_shift = dense->packed_cache_shift >>
+            NDS_NATIVE_STAGE_COORDINATE_SHIFT;
 
         if (dense->matrix_binding != binding_index)
         {
@@ -16423,7 +16403,9 @@ ndsRendererNativeStageEmitNoZTriangle(
         const NDSNativeStagePreparedDense *prepared =
             &sNdsNativeStagePreparedDense[dense_index];
         u32 vertex_shift = (one_binding != FALSE) ?
-            coordinate_shift : ndsRendererNativeStageVertexShift(dense);
+            coordinate_shift :
+            (dense->packed_cache_shift >>
+             NDS_NATIVE_STAGE_COORDINATE_SHIFT);
 
         if (one_binding == FALSE)
         {

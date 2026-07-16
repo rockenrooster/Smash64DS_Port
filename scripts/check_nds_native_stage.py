@@ -303,6 +303,14 @@ def verify_packet(packet: generator.Packet) -> None:
         == (606, 312, 408, 246),
         "dense prepare-once reference census drifted",
     )
+    require(
+        Counter(
+            generator.stage_vertex_coordinate_shift(vertex)
+            for vertex in packet.vertices
+        )
+        == Counter({0: 257, 1: 55}),
+        "AOT stage coordinate-shift census drifted",
+    )
 
     # The DS cannot disable depth per polygon, so the no-Z callbacks use two
     # synthetic painter bands around the live source-Z layer.  Hash the exact

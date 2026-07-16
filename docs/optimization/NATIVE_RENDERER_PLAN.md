@@ -72,12 +72,16 @@ remove 294 repeated attribute preparations
 remove 162 repeated transforms
 ```
 
-On the current bitmap-OAM configuration it moves stage P50/P95 from
-619,744/619,904 to 577,440/577,536, saving 42,304/42,368 ticks. The 500K point
-remains the next milestone target, not a discard gate; correct measured gains
-accumulate. Incremental no-Z matrix transport remains reverted because it
-regressed, and the signed-16 rounding treatment remains reverted because its
-visual packet was invalid. M3 remains REWORK.
+The current bitmap-OAM path also AOT-packs the immutable GX coordinate shift in
+the existing cache byte, removing the per-triangle search without growing the
+12,663-byte packet. Its same-ROM A/B moves stage P50/P95 from
+578,272/578,560 to 556,256/556,352 and draw from 997,440/997,504 to
+975,360/975,488 with both DS screens pixel-identical. The 500K point remains
+the next milestone target, not a discard gate; correct measured gains
+accumulate. Continue only against the measured 174,624/174,720 no-Z emitter
+and 146 matrix loads. Incremental no-Z matrix transport remains reverted
+because it regressed, and the signed-16 rounding treatment remains reverted
+because its visual packet was invalid. M3 remains REWORK.
 
 ## M4 — Pre-GO Texture Residency
 

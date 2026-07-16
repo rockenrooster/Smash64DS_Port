@@ -2723,3 +2723,39 @@ DECISION: KEEP
   Accumulate the gain. Next take one source-backed cut against the measured
   53,824-tick local-matrix builder; do not require the removed 80K gate.
 ```
+
+## 2026-07-16 - M3 AOT coordinate shift removed runtime search
+
+```text
+IDEA ID: M3-AOT-COORDINATE-SHIFT-20260716
+RECONCILIATION:
+  Tyler's Jump A Cut 3 constant-depth GX painter mechanism already landed with
+  the pause/depth work. Its normal M3 path no longer calls the old CPU div64
+  projector, so duplicating Cut 2 or Cut 3 would be incorrect. The retained
+  Phase-0 bucket is 174,624/174,720 no-Z emitter ticks and 146 matrix loads.
+TREATMENT:
+  The generator packs each immutable source vertex's exact GX coordinate shift
+  into unused high bits of its source cache byte. The emitter reads that value
+  directly instead of searching shifts 0..5 for every triangle. Cache-slot low
+  bits, matrix binding, geometry, painter depth, and the 12,663-byte slab stay
+  unchanged. Shift census is 257 at zero and 55 at one.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, Mode 9, static 1, bitmap OAM, Fox/countdown iteration
+  switch off, frames 438..445. A/B ROM SHA-256 values are
+  C4FBEEE4A478832E24E1D0E4C107AE61FB92238E68E8BCE0D349622AB002AC87 /
+  090680BAE84A9D8B425DE5F7B8942DD58E0FC8EDF2672CB2B54B7D59C92F4A34.
+RESULT P50/P95:
+  Stage 578,272/578,560 -> 556,256/556,352, saving 22,016/22,208.
+  Draw 997,440/997,504 -> 975,360/975,488, saving 22,080/22,016.
+CORRECTNESS / VISUALS:
+  Exact 121/828, 57/42/54/202/49/4, cross 5/10/15, zero fallback,
+  conservation, and all M4 fence classes hold. Both 120,000-pixel DS screen
+  regions are identical. Generated slab size and runtime RAM are unchanged.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m3-aot-shift-a.json
+  artifacts/performance/2026-07-16_m3-aot-shift-b.json
+  artifacts/visibility/2026-07-16_m3-aot-shift-a.png
+  artifacts/visibility/2026-07-16_m3-aot-shift-b.png
+DECISION: KEEP
+  Accumulate the gain and continue against the same measured no-Z path.
+```

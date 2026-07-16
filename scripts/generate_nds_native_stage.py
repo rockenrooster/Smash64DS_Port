@@ -56,7 +56,7 @@ PRODUCTION_SYMBOL_BYTES = 4
 
 # Filled after the first independently checked generation.  Keeping the
 # packet hash outside the generated file avoids a self-referential checksum.
-EXPECTED_INCLUDE_SHA256 = "249fae872c7fad05e958f41908956ceb9fae2eea2d4d0c04a569579bff923f65"
+EXPECTED_INCLUDE_SHA256 = "053444f8474b4e7a80e0ad7f8f68272af9d7cb7089036e665574abf3dee95ec7"
 
 INVALID_U8 = 0xFF
 INVALID_U16 = 0xFFFF
@@ -1794,6 +1794,23 @@ def c_u8(value: int) -> str:
     return f"{value}u"
 
 
+def round_shift_signed(value: int, shift: int) -> int:
+    if shift == 0:
+        return value
+    bias = 1 << (shift - 1)
+    return -(((-value) + bias) >> shift) if value < 0 else (value + bias) >> shift
+
+
+def stage_vertex_coordinate_shift(vertex: DenseVertex) -> int:
+    for shift in range(6):
+        if all(
+            -2048 <= round_shift_signed(value, shift) <= 2047
+            for value in (vertex.x, vertex.y, vertex.z)
+        ):
+            return shift
+    return 6
+
+
 def c_u16(value: int) -> str:
     return f"0x{value:04x}u"
 
@@ -1838,6 +1855,7 @@ def render_include(packet: Packet) -> bytes:
         f"#define NDS_NATIVE_STAGE_SLAB_BYTES {packet.slab_bytes()}u",
         f"#define NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI {c_u32(PRODUCTION_PACKET_ABI)}",
         "#define NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX (1u << 0)",
+        "#define NDS_NATIVE_STAGE_COORDINATE_SHIFT 5u",
         "",
         "typedef struct NDSNativeStageAsset {",
         "    u32 asset_id;",
@@ -1902,7 +1920,7 @@ def render_include(packet: Packet) -> bytes:
         "    s16 s;",
         "    s16 t;",
         "    u8 matrix_binding;",
-        "    u8 cache_slot;",
+        "    u8 packed_cache_shift;",
         "    u32 rgba;",
         "} NDSNativeStageDenseVertex;",
         "",
@@ -2094,7 +2112,10 @@ def render_include(packet: Packet) -> bytes:
                         str(row.s),
                         str(row.t),
                         c_u8(row.matrix_binding),
-                        c_u8(row.cache_slot),
+                        c_u8(
+                            row.cache_slot
+                            | (stage_vertex_coordinate_shift(row) << 5)
+                        ),
                         c_u32(row.rgba),
                     )
                 )
