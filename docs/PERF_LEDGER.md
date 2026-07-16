@@ -2443,3 +2443,53 @@ DECISION: KEEP
   This is one measured compiler-placement correction. M3 remains above its
   <=500K first gate; continue with the already-measured exact dense-reuse stack.
 ```
+
+## 2026-07-16 - M3 dense stack rework on hardware no-Z baseline
+
+```text
+IDEA ID: M3-DENSE-STACK-20260716
+AUTHORIZATION:
+  ClaudeFable5_JumpABC_Tasks_20260715_2326.md permits the previously rejected
+  dense-index preparation reuse only as a stack base and forbids shipping it
+  unless the combined stage P50 reaches <=500K.
+CUT 1 - DENSE PREPARE ONCE:
+  A 40-byte stack bitset reuses the existing prepared slot for 606 corner
+  references -> 312 exact dense vertices. Every reuse fail-closes unless its
+  binding, texture epoch, submit class, policy, and flags match the first use.
+  No persistent allocation or prepared-struct growth is added.
+IDENTITY / WINDOW:
+  Profile 1, Mode 9, static 1, hybrid OAM 1, Fox/countdown iteration switch
+  off, frames 438..445. A/B ROM SHA-256 values are
+  A732A135CDBA433867B642025512F42480D7AD3694E960992A070C6DF3ED4546 /
+  98757813F61F8DA935E0192B41786653D244DEA3FB5ABE4BD1BB802FD9B9BC2D.
+RESULT P50/P95:
+  Stage 611,392/611,584 -> 563,296/563,392, saving 48,096/48,192.
+  The smaller result than the old 108,960-tick experiment is expected: the
+  current constant-Z GX path has already removed the old 486 CPU projections.
+  Exact 121/828 and M3 8/255/57/42/54/202/49/4 remain unchanged; all DS-screen
+  pixels are identical and only the melonDS title bar differs.
+CUT 2 - INCREMENTAL NO-Z PROJECTION TRANSLATION:
+  Tested the only bounded remaining transport reduction: keep painter Z in the
+  projection matrix, preserve the existing rounded Z column with an exact
+  one-LSB position correction, and reuse position matrices within a run. GBATEK
+  and melonDS 1.1 both define the signed 20.12 multiply as a final >>12.
+  Treatment ROM SHA-256
+  9360EFA1E464F82008BF0222949F3CBA97D358E1BBD289B198BF665D3976CFEE.
+  Stage regressed 563,296/563,392 -> 579,712/579,904, costing
+  16,416/16,512. Exact counters and every DS-screen pixel remain unchanged.
+  The treatment was removed.
+STACK TOTAL / GATE:
+  From the pre-codegen baseline, the kept codegen plus dense candidate reaches
+  624,384 -> 563,296, saving 61,088, but remains 63,296 above <=500K. The task's
+  bounded cuts are exhausted: there are zero CPU projection divides left, and
+  incremental matrix transport is a measured regression.
+EVIDENCE:
+  artifacts/performance/2026-07-16_m3-dense-reuse-b.json
+  artifacts/visibility/2026-07-16_m3-dense-reuse-b-frame445.png
+  artifacts/performance/2026-07-16_m3-noz-projection-b.json
+  artifacts/visibility/2026-07-16_m3-noz-projection-b-frame445.png
+DECISION: REWORK / REVERT DENSE CANDIDATE
+  Honor the stack-only rule: do not ship the 48K dense cut below the combined
+  gate. Keep only the independent 12.99K codegen correction from bbe8d3eee2.
+  Move to the independent M2 fighter-compute lane instead of widening M3.
+```
