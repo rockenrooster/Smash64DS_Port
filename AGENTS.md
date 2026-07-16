@@ -22,6 +22,12 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
   one-bit proof masks, or permanent seed/restore wrappers.
 - Migrate or delete obsolete bounded modes when natural runtime replaces them.
 - New harness modes are only for scene-level capabilities.
+- Fix root causes at the shared seam. Do not hide symptoms with arbitrary
+  offsets/constants, duplicated state, frame checks, or asset-specific hacks.
+- Treat flashes, corruption, nondeterminism, hangs, and unexplained state
+  differences as failures.
+- Respect DS CPU, RAM, VRAM, bandwidth, alignment, fixed-point, and graphics
+  limits.
 - Treat generated outputs and emulator payloads as generated; never hand-edit them.
 - Publish exactly `smash64ds.nds` and
   `smash64ds-battle-playable-hwtri.nds`; all lab outputs stay in `builds/`.
@@ -56,6 +62,10 @@ Then read `docs/P1_EXECUTION_BOARD.md` and `docs/HANDOFF.md`. The board is the
 only dynamic queue; handoff contains only the restart surface. Select its
 highest-impact unowned red P1 row.
 
+Preserve a known-good checkpoint before risky changes. On regression, identify
+the first bad change before layering another fix. Trace dependencies before
+changing shared renderer, object, animation, memory, or state code.
+
 For performance iteration, use one synchronized eight-frame A/B comparison on
 an identical ROM/configuration/window. Primary evidence is ticks, FPS, a dated
 screenshot, and automated screenshot analysis; semantic/state/geometry counters
@@ -75,6 +85,9 @@ not manufacture work merely to fill slots.
 Prefer deletion, existing helpers, fixed DS hardware paths, and the smallest
 source-backed implementation. Equivalent output from less code or fewer ticks
 wins. Do not add speculative abstractions, selectors, caches, or tooling.
+
+Milestones cover natural initialization, gameplay, transitions, cleanup, and
+repeat execution; compilation or one good frame is not completion.
 
 ## Current Boundary
 
@@ -103,5 +116,7 @@ active docs. Put screenshots only under `artifacts/visibility`.
 
 - Use `apply_patch` for manual source and documentation edits.
 - Preserve user changes and unrelated dirty-tree work.
+- Prefer focused edits over whole-file replacement. Trace unfamiliar code or
+  assets before deleting them.
 - Remove temporary probes before handoff; keep only verified diagnostics.
 - Do not add broad compatibility headers or call a stub a completed subsystem.
