@@ -649,6 +649,11 @@ try {
             'tbreak scVSBattleFuncUpdate if gSCManagerBattleState->time_limit == 1 && gSCManagerBattleState->time_remain == 3600 && gSCManagerBattleState->time_passed == 0',
             'continue',
             'printf "MATCH_START=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->game_status, gSCManagerBattleState->time_limit, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, sIFCommonTimerIsStarted, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsMemoryLedgerArenaHeadroom',
+            'tbreak ndsRendererHardwareDiscardBattleStaticTextures',
+            'continue',
+            'printf "VSB_MEMARENA=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerGeneration, gNdsMemoryLedgerArenaCapacity, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater, gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerDLBytes, gNdsMemoryLedgerGraphicsBytes, gNdsMemoryLedgerRdpBytes, gNdsMemoryLedgerFigatreeHeapSize',
+            'printf "VSB_MEMRELOC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerRelocFiles, gNdsMemoryLedgerRelocBytes, gNdsMemoryLedgerRelocStageBytes, gNdsMemoryLedgerRelocFighterBytes, gNdsMemoryLedgerRelocInterfaceBytes, gNdsMemoryLedgerRelocMenuBytes, gNdsMemoryLedgerRelocOpeningBytes, gNdsMemoryLedgerRelocOtherBytes, gNdsMemoryLedgerRelocStaleFiles, gNdsMemoryLedgerRelocStaleBytes',
+            'printf "VSB_MEMEVICT=%u,%u\n", gNdsMemoryLedgerEvictedFiles, gNdsMemoryLedgerEvictedBytes',
             'tbreak ndsMNVSResultsRecordFrame if gNdsVSResultsResult == 0x56535231',
             'continue'
         )
@@ -1053,6 +1058,9 @@ try {
     $memoryArena = [regex]::Match($gdbStdout, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryReloc = [regex]::Match($gdbStdout, 'MEMRELOC=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryEvict = [regex]::Match($gdbStdout, 'MEMEVICT=([0-9]+),([0-9]+)')
+    $vsbMemoryArena = [regex]::Match($gdbStdout, 'VSB_MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $vsbMemoryReloc = [regex]::Match($gdbStdout, 'VSB_MEMRELOC=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $vsbMemoryEvict = [regex]::Match($gdbStdout, 'VSB_MEMEVICT=([0-9]+),([0-9]+)')
     $computerConfig = [regex]::Match($gdbStdout, 'CPU_CONFIG=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $computerAI = [regex]::Match($gdbStdout, 'CPU_AI=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $battleLifecycle = [regex]::Match($gdbStdout, 'VSB_END=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1320,9 +1328,9 @@ try {
         $safety = Get-Ints $matchSafety
         $df = Get-Ints $damageFloor
         $bp = Get-Ints $battlePlayablePacing
-        $ma = Get-Ints $memoryArena
-        $mr = Get-Ints $memoryReloc
-        $me = Get-Ints $memoryEvict
+        $ma = Get-Ints $vsbMemoryArena
+        $mr = Get-Ints $vsbMemoryReloc
+        $me = Get-Ints $vsbMemoryEvict
         $cpu = Get-Ints $computerAI
         $life = Get-Ints $battleLifecycle
         $results = Get-Ints $vsResults
@@ -1437,7 +1445,7 @@ try {
         Assert-Condition ($audioBgm.Success -and $audioResidentBytes -eq 65536) `
             'One-minute match did not report the resident BGM allocation used by the reserve gate.' `
             $gdbStdout
-        Assert-Condition ($memoryArena.Success -and
+        Assert-Condition ($vsbMemoryArena.Success -and
             $ma[0] -eq 0x4d4c4544 -and $ma[1] -eq 22 -and
             $ma[3] -ge 0x130000 -and $ma[5] -le $ma[3] -and
             $ma[6] -eq ($ma[3] - $ma[5]) -and
@@ -1446,10 +1454,10 @@ try {
             $ma[8] -eq 106496 -and $ma[9] -eq 49152 -and $ma[10] -gt 0) `
             'One-minute match did not preserve the 128 KiB battle arena reserve.' `
             $gdbStdout
-        Assert-Condition ($memoryReloc.Success -and $mr[0] -gt 0 -and
+        Assert-Condition ($vsbMemoryReloc.Success -and $mr[0] -gt 0 -and
             $mr[1] -gt 0 -and $mr[2] -gt 0 -and $mr[3] -gt 0 -and
             $mr[4] -gt 0 -and $mr[5] -eq 0 -and $mr[6] -eq 0 -and
-            $mr[8] -eq 0 -and $mr[9] -eq 0 -and $memoryEvict.Success) `
+            $mr[8] -eq 0 -and $mr[9] -eq 0 -and $vsbMemoryEvict.Success) `
             'One-minute match reloc ledger found stale or missing resident groups.' `
             $gdbStdout
         Assert-Condition ($matchSafety.Success -and

@@ -7,10 +7,7 @@ durable unresolved gaps.
 
 - Renderer M2 is visually correct but above 170-250K ticks.
 - Renderer M3 is source/semantic-correct but measures 664,544/664,640 stage
-  ticks; the next dense-index cut must reach <=500K before promotion.
-- M4 post-GO device-window residency passes, but Boundary currently attaches at
-  battle frame 46 before arm. Its aligned GO-to-teardown zero-work, one-teardown,
-  and >=128 KiB reserve evidence is missing.
+  ticks; a different attributable cut must reach <=500K before promotion.
 - Natural DamageFly/throw recovery, non-floor collision providers, Fox recovery,
   and continuous Mario-to-Fox damage coverage remain incomplete.
 - The platform verifier can accept a wrong next-frame landing; Tyler's manual
@@ -21,7 +18,8 @@ durable unresolved gaps.
 - Required fighter voices, pitch behavior, audible Dream Land BGM proof, and the
   opening crowd overlap/loop report remain open.
 - Fox is still classified level-3 CPU, but the public ROM temporarily pauses his
-  decision/input. Final P1 needs Tyler's re-enable decision and a CPU-on match.
+  decision/input. The focused CPU-on one-minute gate passes; final P1 still
+  needs Tyler's re-enable decision and a published CPU-on qualification.
 - Release needs the exact two-ROM build, focused verifier closure, dated captures
   under `artifacts/visibility`, and manual user retest.
 
@@ -48,11 +46,8 @@ durable unresolved gaps.
 ## Renderer And Presentation
 
 - M2 still performs too much per-frame fighter owner work.
-- M3 repeats dense stage-corner preparation; the bounded next cut is documented
-  in `optimization/NATIVE_RENDERER_PLAN.md`.
-- The current Boundary smoke sees all 22 static keys and 131,072 prepared bytes
-  at frame 46, but arm is still zero. This is not a pass; align the sample with
-  natural post-GO execution before diagnosing residency semantics.
+- M3 remains above its tick gate. The dense preparation-reuse experiment saved
+  only about 109K and was reverted; do not retry that cut.
 - Pause-orbit views near +/-33.6 degrees show foreground occlusion. Normal source
   camera stays inside about +/-17.5 degrees; compare the identical N64 view before
   changing gameplay rendering. Treat this as P2 unless normal play reproduces it.

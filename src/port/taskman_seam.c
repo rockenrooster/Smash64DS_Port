@@ -7163,6 +7163,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                      * Wait->Go assignment. Arm before the first GO draw. */
                     ndsRendererHardwareArmBattleStaticTextures();
                 }
+                /* BattleShip syTaskmanRunTask checks LoadScene immediately
+                 * after task_update and never draws the terminal update. */
+                if ((is_battle_playable != 0u) &&
+                    (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
+                {
+                    break;
+                }
 #if NDS_SCENE_MIP_CACHE_LAB
                 if ((is_battle_playable != 0u) &&
                     (use_realtime_presentation != 0u) &&
@@ -7198,16 +7205,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     {
                         ndsBattlePlayablePresentFrame();
                     }
-                }
-
-                if ((is_battle_playable != 0u) &&
-                    (sSYTaskmanStatus == nSYTaskmanStatusLoadScene))
-                {
-                    if (use_realtime_presentation != 0u)
-                    {
-                        ndsBattlePlayableFinalizePresentedIteration();
-                    }
-                    break;
                 }
 
                 if (gNdsFighterNaturalMotionResult ==
@@ -7394,7 +7391,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE))
             if ((NDS_DEV_SCENE_HARNESS !=
                     NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE) ||
-                (NDS_HARNESS_FAST_LOGIC != 0))
+                ((NDS_HARNESS_FAST_LOGIC != 0) &&
+                 (sSYTaskmanStatus != nSYTaskmanStatusLoadScene)))
             {
                 ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
             }

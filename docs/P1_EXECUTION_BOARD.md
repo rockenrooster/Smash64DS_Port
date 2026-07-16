@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-15 20:30 Central
+Updated: 2026-07-15 20:56 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -17,7 +17,7 @@ Current verifier-covered canonical/shipped pair:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,534,656 bytes
-SHA-256 3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38
+SHA-256 4345CCEDF9315C239F5F29FD0DB18B7E18DE6F0E06114E7E88CCC92BF0E2A137
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -29,11 +29,11 @@ more accurate than recycling cross-build samples.
 
 | Match phase | Artifact class | ROM SHA-256 | Synchronized window | N | Active median / P95 | State |
 |---|---|---|---|---:|---:|---|
-| Countdown / GO | canonical-profile-0 | `3F3AC2E1A20F7D93B0E92419BA642FD5D97A275454ABEC0D1C96EF7742E6BB38` | exact completed frames 438/439 | 2 | — / — | GO state + screenshot + post-arm Boundary pass; phase ticks pending |
+| Countdown / GO | canonical-profile-0 | `4345CCEDF9315C239F5F29FD0DB18B7E18DE6F0E06114E7E88CCC92BF0E2A137` | exact completed frames 438/439 | 2 | — / — | GO state + screenshot + post-arm Boundary pass; phase ticks pending |
 | Early combat | canonical-profile-0 | same canonical SHA | Pending post-GO window | — | — / — | Pending synchronized canonical baseline |
 | Late combat | canonical-profile-0 | same canonical SHA | Pending synchronized late window | — | — / — | Pending synchronized canonical baseline |
 | KO / rebirth | canonical-profile-0 | same canonical SHA | Pending natural KO→rebirth window | — | — / — | Pending synchronized canonical baseline |
-| Time Up / Results | canonical-profile-0 | same canonical SHA | Pending natural expiry→Results window | — | — / — | Pending one-minute soak |
+| Time Up / Results | focused profile-0 | `C07617CA94010535A3B260F0B61A62E8E8ED4AFDDCB4C8968DEE9721642390A9` | natural one-minute expiry→Results | 1 lifecycle | state-only | Pass; realtime ticks pending |
 
 Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; they are not canonical phase baselines.
 
@@ -41,10 +41,10 @@ Profile-1 M2 samples and profile-2 forensic samples stay in `PERF_LEDGER.md`; th
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Boundary pass / checkpoint | live tree | post-arm M4 sampling, four-record verifier fleet, published identity, commit | runner 2 |
-| Renderer implementation | M3 dense cut rejected / M2 next | shared live tree / focused lab builds | M3 dense reuse saved only 109K and was reverted; take the bounded no-copy M2 owner cut next | runner 3 |
+| Integration/release | CPU lifecycle pass / checkpoint | live tree | source-ordered LoadScene break, exact VSBattle ledger sample, commit | runner 2 |
+| Renderer implementation | M2 ITCM cut next | shared live tree / focused lab builds | add the missing pre-GX animlock/shuffle guard, then test three existing hot functions in ITCM | runner 3 |
 | Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
-| Performance research | Boundary closed / soak pending | shared live tree / read-only | M4 one-minute GO-to-teardown fence/reserve qualification | no runner active |
+| Performance research | M2 contract reconciled | shared live tree / read-only | no-copy Mode 8 buckets, gates, source stop rules, and rejected paths confirmed | no runner active |
 
 Runner/window/port policy lives in `VERIFYING.md`; scripted launches normalize
 the selected TOML and never touch the user's manual instance.
@@ -69,13 +69,13 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Fail / Mode 8 correct, Mode 7 rejected | Renderer | Latest detailed A0/A1 477,152/477,376; Mode 7 518,336/518,784 and blank fighters; direct-contract estimate 62–75K is unimplemented | Remove Mode 7; implement only the exact bounded direct-contract path, then require ≥80K saving and ≤337,472 first window |
 | M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Baseline 664,544/664,640. The exact dense-reuse cut retained semantics and reached 555,584/555,776, saving only 108,960/108,864 versus the required 164,544; it was reverted | Do not retry dense-only preparation reuse. Re-profile the retained path and require a different attributable ≥164,544-tick cut before widening |
-| M4 zero gameplay conversion/preparation | Boundary pass / full-minute gate pending | Renderer | Post-arm Boundary naturally proves frozen water 2/0/1, M3 121/828, 22 keys, 131,072 bytes, full masks, pinned hits, and every post-GO fence counter zero | Run the existing one-minute CPU-on lifecycle gate with ≥128 KiB reserve and teardown=1 after user authorization |
+| M4 zero gameplay conversion/preparation | Pass for current one-minute gate | Renderer | Natural CPU-on expiry proves prepare/arm/teardown `1/1/1`, 22 keys/131,072 bytes, zero ten-class post-GO fence work, and 163,312-byte audio-adjusted reserve | Keep; repeat in final published CPU-on qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | Pass / native OAM | Renderer + QA | Source thread/assets live; 11,584/11,584 ticks, zero gameplay conversion/upload, clean teardown | Keep |
 | Dream Land BGM | Partial | Audio | User reports the stage theme sounds normal; stream counters pass, but enabled DS channel and nonzero PCM peak remain unproved | Block audio completion |
 | Required FGM and Mario/Fox voices | Production phase/KO + isolated crowd-command/loop-pack pass; audible pending | Audio | Source calls ID626 once for 6.9 s; its 1.868 s DS loop intentionally overlaps countdown/GO, but exact channel-mask/acoustic proof is absent | Add host acoustic oracle and tighten existing ACK masks; exact-ROM audible retest; voices remain open |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | Prior-ROM one-match pass / current gate pending | QA | Pre-M3/M4 baseline reserve was 172,024 bytes with stale=0/0 and 17 safety counters zero; current `3F3AC…` full-minute result is unmeasured | Repeat current published-equivalent one-minute gate |
+| Stable reserve / no corruption | Focused one-minute pass | QA | Current source tree reaches Results with 163,312 audio-adjusted bytes, stale=0/0, and 17 safety counters zero | Repeat on final published CPU-on ROM |
 | Focused/checkpoint verification | Boundary pass | QA | Registry/GBI/ITCM checks, published pair, natural post-arm M3/M4 state, and exact-frame Cut G capture pass | Keep only Latest and Boundary; run Current only when the original launch path changes |
 | Cut G capture / final dated capture / manual retest | Current Cut G pass / final P1 pending | QA + user | Exact frames 438/439 pass on 2026-07-15 under `artifacts/visibility`; top coverage 100%, green 42.495%, detail 52.675%, meaningful delta 0.142% | Block release on final complete-match evidence and user qualification |
 

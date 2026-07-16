@@ -20906,3 +20906,20 @@ remains skipped for the requested fast iteration cadence.
 - The accepted evidence JSON is
   `artifacts/performance/2026-07-15_m3-stage-mode9-profile1-s8-slot3.json`,
   SHA-256 `CAD1B8D7925B1C432000FBD3FB6B54F6405166890BE58C1DBF5A1AC6EBC3B159`.
+
+## 2026-07-15 — source-ordered one-minute teardown gate
+
+- The first CPU-on one-minute run reached natural Time Up and Results but
+  exposed 31 fenced texture deletes. The fast DS proof submitted one hardware
+  frame after BattleShip had set `LoadScene`; upstream `syTaskmanRunTask` checks
+  for that status immediately after update and does not draw the terminal frame.
+- Restored that source order in the DS seam and suppressed the fast proof's
+  terminal submit. The verifier now samples the VSBattle memory ledger at the
+  normal static-texture discard boundary before Results reuses the live ledger.
+- The rebuilt focused ROM completes 3,891 logic updates with imported level-3
+  Fox AI, Time Up -> Results, zero safety/stale faults, 163,312 audio-adjusted
+  reserve bytes, one normal M4 teardown, and zero work in all ten post-GO
+  texture-fence classes.
+- Boundary then passed and republished the battle ROM at 14,534,656 bytes,
+  SHA-256 `4345CCEDF9315C239F5F29FD0DB18B7E18DE6F0E06114E7E88CCC92BF0E2A137`;
+  exact Cut G frames 438/439 remain under `artifacts/visibility`.

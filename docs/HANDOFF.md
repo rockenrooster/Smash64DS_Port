@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-15 20:30 Central
+Updated: 2026-07-15 20:56 Central
 
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
@@ -44,25 +44,35 @@ artifacts/visibility/m3-dense-prepare-frame438.png
 
 Do not retry or widen that dense-only cut.
 
-## Next Packet
+## One-Minute Gate
 
-Highest P1 gate is the existing CPU-on one-minute lifecycle/teardown soak; run
-it only after Tyler authorizes CPU-on automation while the published/manual
-default remains paused:
+Tyler authorized CPU-on automation while the published/manual default remains
+paused. The focused source-timer gate now passes:
 
 ```powershell
 .\scripts\check-one-minute-match-verifier.ps1
 .\scripts\verify-battle-playable-one-minute-match.ps1 -RunnerSlot 2
 ```
 
-Pending that decision, take the bounded M2 no-copy direct-owner cut. Inspect
-BattleShip `ftdisplaymain.c` first, then reuse only the existing packet/checkers:
+The run completed 3,891 logic updates, exercised imported level-3 Fox AI,
+reached Time Up and Results, retained 163,312 bytes after BGM, and reported one
+normal M4 teardown with every post-GO fence counter zero. The DS taskman seam
+now matches BattleShip by breaking on `LoadScene` before drawing; the verifier
+samples the battle ledger before Results reuses the globals.
+
+## Next Packet
+
+Take the bounded M2 Mode-8 ITCM experiment. Mode 8 already emits generated
+immutable arrays directly to GX; do not add another packet or mode. First add
+the missing pre-GX rejection for active animlocks/shuffle, then place only the
+existing lighting, run-prep, and owner executor in the native-fighter ITCM
+section. Reuse the existing checks:
 
 ```powershell
 python .\scripts\check_nds_native_owner_packet.py
 python .\scripts\check_nds_native_owner_hierarchy.py
 .\scripts\compare-renderer-fast-raw.ps1 -FastRunMode 8 `
-  -RendererBenchmarkSamples 8 -RunnerSlot 3
+  -RendererBenchmarkSamples 8 -RunnerSlot 3 -NoBuild
 ```
 
 KEEP only with at least 80K saved, combined fighter ticks at or below 337,472,
