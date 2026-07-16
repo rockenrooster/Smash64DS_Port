@@ -2369,3 +2369,32 @@ stage Z `3605..3728`, zero collisions/overflow, hash `3BB26905`. Published ROM
 SHA-256 `28492257B23E502AA8710C03CE22B0752D58CE3476A5DA86EBD819B1E6A78C4C`
 passes frame 438 and moving frame 501 pixel gates. This predates M3; commit
 `ef65ef541c` exposed the path but did not introduce the counter behavior.
+
+## 2026-07-16 - Correctness note: fighter root light preambles
+
+This is not a performance row. BattleShip applies fighter display-list state in
+`ftdisplaymain.c:753-945,1164-1228`, establishes the model lights in
+`ftdisplaylights.c:10-26`, and emits each MObj display list through the material
+path in `objdisplay.c:1289-1296`. The generated native fighter IR preserved all
+320 Mario triangles and all 306 Fox triangles, but omitted the four leading
+`G_MW_LIGHTCOL` commands on each affected root. The right upper pant therefore
+inherited the preceding shoe root's dark light state; its blue polygons rendered
+nearly black and made the closed underside look incomplete.
+
+The generator now decodes the exact source light prefixes from the hashed O2R
+payload and stores a compact per-root selector in the previously reserved byte.
+The renderer replays that state at every native-root entry, including hierarchy
+preflight and commit. Owner ON/OFF A/B excluded the Mode-8 owner itself; the raw
+source census remains symmetric at roots 8/11 (15 triangles), 9/12 (15), and
+10/13 (18). Profile 2 preserves 828 total stage/fighter triangles, Mario raw /
+cross-matrix classes `284/36`, Fox `298/8`, and zero fallback or M4 fence work.
+
+Candidate ROM SHA-256
+`6265772AB02446A1247DB8444129A3040835BDDDBC968A090DA2AA289423ED24`;
+pause-orbit evidence is
+`artifacts/visibility/20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png`.
+Both pant legs render blue and the underside is closed in that view. Decision:
+KEEP pending Tyler's visual confirmation. The camera gate reports 128,528 bytes
+of arena headroom, but an isolated unmodified `7abdec43ef` baseline reports the
+same value; the 2,544-byte P1 reserve deficit is inherited and is not bundled
+into this correctness change.

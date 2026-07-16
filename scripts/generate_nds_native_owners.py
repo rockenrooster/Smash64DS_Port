@@ -143,6 +143,9 @@ GX_CAMERA_SEED_SLOT = 0
 GX_HIERARCHY_SLOT_LIMIT = 16
 JOINT_SCHEDULE_PUSH_BEFORE = 1 << 15
 DOBJ_DESC_SIZE = 44
+SOURCE_G_MOVEWORD = 0xdb
+SOURCE_G_MW_LIGHTCOL = 0x0a
+SOURCE_LIGHTCOL_OFFSETS = (0x00, 0x04, 0x18, 0x1c)
 
 # Nintendo DS packed geometry FIFO command IDs.  These are REG2ID(register)
 # values from libnds videoGL.h/video.h.  Keep the generator independent of a
@@ -238,6 +241,47 @@ def load_o2r_payload(repo_root: Path, owner_name: str) -> bytes:
             f"file ends at 0x{len(source):x}"
         )
     return source[data_offset:data_end]
+
+
+def decode_root_light_preambles(
+        payload: bytes, owner_name: str, roots, epochs):
+    """Recover the source G_MW_LIGHTCOL prefix omitted by the recorded IR."""
+    result = []
+    for root_index, root in enumerate(roots):
+        if root[7] != 0:
+            raise ValueError(
+                f"{owner_name} root {root_index}: reserved byte is not free"
+            )
+        first_epoch = epochs[root[1]]
+        first_triangle_command = first_epoch[11]
+        colors = {}
+        for command_index in range(first_triangle_command):
+            w0, w1 = struct.unpack_from(
+                ">II", payload, root[0] + command_index * 8
+            )
+            if ((w0 >> 24) != SOURCE_G_MOVEWORD or
+                    ((w0 >> 16) & 0xff) != SOURCE_G_MW_LIGHTCOL):
+                continue
+            offset = w0 & 0xffff
+            if offset not in SOURCE_LIGHTCOL_OFFSETS:
+                raise ValueError(
+                    f"{owner_name} root {root_index}: unsupported "
+                    f"G_MW_LIGHTCOL offset 0x{offset:x}"
+                )
+            colors[offset] = w1
+        if not colors:
+            result.append(None)
+            continue
+        if set(colors) != set(SOURCE_LIGHTCOL_OFFSETS):
+            raise ValueError(
+                f"{owner_name} root {root_index}: incomplete light prefix"
+            )
+        if colors[0x00] != colors[0x04] or colors[0x18] != colors[0x1c]:
+            raise ValueError(
+                f"{owner_name} root {root_index}: split light color pair"
+            )
+        result.append((colors[0x00], colors[0x18]))
+    return result
 
 
 def decode_source_vertex(payload: bytes, source_offset: int):
@@ -1355,10 +1399,27 @@ def generate(repo_root: Path | None = None) -> str:
     direct_epoch_policies = build_direct_epoch_policies(len(epochs))
     owner_roots = (("mario", mario_roots), ("fox", fox_roots))
     owner_topologies = []
+    light_preambles = [(0, 0)]
+    owner_light_preamble_indices = {}
     for owner_name, roots in owner_roots:
         payload = load_o2r_payload(repo_root, owner_name)
         owner_topologies.append(
             decode_joint_topology(payload, owner_name, roots)
+        )
+        indices = []
+        for preamble in decode_root_light_preambles(
+                payload, owner_name, roots, epochs):
+            if preamble is None:
+                indices.append(0)
+                continue
+            if preamble not in light_preambles:
+                light_preambles.append(preamble)
+            indices.append(light_preambles.index(preamble))
+        owner_light_preamble_indices[owner_name] = indices
+    if (len(light_preambles) != 3 or
+            light_preambles[1][0] != light_preambles[2][0]):
+        raise ValueError(
+            "native-owner root light prefixes no longer fit the compact ABI"
         )
     (
         dense_vertices,
@@ -1624,16 +1685,26 @@ def generate(repo_root: Path | None = None) -> str:
         ["{{ {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}".format(*row)
          for row in epochs],
     )
+    lines += [
+        f"#define NDS_NATIVE_ROOT_LIGHT1 0x{light_preambles[1][0]:08x}u",
+        f"#define NDS_NATIVE_ROOT_LIGHT2_1 0x{light_preambles[1][1]:08x}u",
+        f"#define NDS_NATIVE_ROOT_LIGHT2_2 0x{light_preambles[2][1]:08x}u",
+        "",
+    ]
     root_format = (
         "{{ 0x{:08x}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}"
     )
     lines += emit_rows(
         "NDSNativeRoot", "sNdsNativeMarioRoots",
-        [root_format.format(*row) for row in mario_roots],
+        [root_format.format(*row[:7], light_preamble)
+         for row, light_preamble in zip(
+             mario_roots, owner_light_preamble_indices["mario"])],
     )
     lines += emit_rows(
         "NDSNativeRoot", "sNdsNativeFoxRoots",
-        [root_format.format(*row) for row in fox_roots],
+        [root_format.format(*row[:7], light_preamble)
+         for row, light_preamble in zip(
+             fox_roots, owner_light_preamble_indices["fox"])],
     )
     return "\n".join(lines)
 

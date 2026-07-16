@@ -2363,7 +2363,7 @@ typedef struct NDSNativeRoot
     u8 epoch_count;
     u8 tail_state_count;
     u8 tail_sync_count;
-    u8 reserved;
+    u8 light_preamble;
 } NDSNativeRoot;
 
 typedef struct NDSNativeDirectPolicy
@@ -12868,6 +12868,26 @@ static s32 ndsRendererNativePrepareDirectRun(
     return ndsRendererFastRawStateEligible(state);
 }
 
+static void __attribute__((noinline, optimize("Os")))
+ndsRendererNativeApplyRootLightPreamble(
+    const NDSNativeRoot *root, NDSRendererStats *stats)
+{
+    if (root->light_preamble == 0u)
+    {
+        return;
+    }
+    /* Each source gSPLightColor expands to its A/B G_MW_LIGHTCOL pair. */
+    stats->light_color_1 = NDS_NATIVE_ROOT_LIGHT1;
+    stats->light_color_2 = (root->light_preamble == 1u) ?
+        NDS_NATIVE_ROOT_LIGHT2_1 : NDS_NATIVE_ROOT_LIGHT2_2;
+    stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_1_MASK |
+        NDS_RENDERER_LIGHT_COLOR_2_MASK;
+    stats->light_color_command_count += 4u;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileLightColorCommands += 4u;
+#endif
+}
+
 static void ndsRendererNativeApplyStateDelta(
     const NDSNativeStateDelta *delta,
     const u8 *asset_base,
@@ -14692,6 +14712,7 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
         stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
     }
     stats->command_count += root->source_command_count;
+    ndsRendererNativeApplyRootLightPreamble(root, stats);
 
     for (epoch_index = 0u; epoch_index < root->epoch_count; epoch_index++)
     {
@@ -15039,6 +15060,7 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
                 tables->binding_joints[root_index]],
             &light_modelview);
         ndsRendererNativeApplyProductionPreamble(&input->preamble, scratch);
+        ndsRendererNativeApplyRootLightPreamble(root, scratch);
         state->vertex_valid_mask = 0u;
         state->input_vertex_valid_mask = 0u;
         state->vertex_color_valid_mask = 0u;
@@ -15340,6 +15362,7 @@ static void ndsRendererNativeCommitHierarchyRoot(
         stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
     }
     stats->command_count += root->source_command_count;
+    ndsRendererNativeApplyRootLightPreamble(root, stats);
 
     for (epoch_offset = 0u;
          epoch_offset < root->epoch_count;
@@ -16856,6 +16879,7 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
             stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
         }
         stats->command_count += root->source_command_count;
+        ndsRendererNativeApplyRootLightPreamble(root, stats);
 
         for (epoch_offset = 0u;
              epoch_offset < root->epoch_count;
