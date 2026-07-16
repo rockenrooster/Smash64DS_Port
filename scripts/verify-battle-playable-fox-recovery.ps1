@@ -152,6 +152,12 @@ try {
         'set $return_y = 0',
         'set $return_line = -2',
         'set $return_status = -1',
+        'set $return_ga = -1',
+        'set $return_objective = -1',
+        'set $return_seen = 0',
+        'set $return_percent = 0',
+        'set $return_wait = 0',
+        'set $post_return_percent = 0',
         'set $start_percent = $ffp->percent_damage',
         'set $max_percent = $ffp->percent_damage',
         'set $start_falls = gSCManagerBattleState->players[1].falls',
@@ -199,7 +205,7 @@ try {
         'end',
         ('set {{unsigned short}}0x{0:x8} = 0' -f $pads),
         ('set {{signed char}}0x{0:x8} = 0' -f ($pads + 3)),
-        'if ($recover_seen == 0) && ($outcome == 0)',
+        'if (($recover_seen == 0) || ($return_seen != 0)) && ($outcome == 0)',
         # Follow Fox with ordinary run/dash input, but keep Mario inside the
         # main-floor edges. One-frame A pulses produce natural attacks.
         'if $mroot->translate.vec.f.x < -1850.0',
@@ -235,12 +241,25 @@ try {
         'end',
         'set $recover_frames = $recover_frames + 1',
         'end',
-        'if ($recover_seen != 0) && ($ffp->ga == 0) && ($ffp->coll_data.floor_line_id >= 0) && ($ffp->computer.objective != 4)',
+        'if ($recover_seen != 0) && ($return_seen == 0) && ($ffp->ga == 0) && ($ffp->coll_data.floor_line_id >= 0) && ($ffp->computer.objective != 4)',
         'set $return_x = (int)($froot->translate.vec.f.x * 1000.0)',
         'set $return_y = (int)($froot->translate.vec.f.y * 1000.0)',
         'set $return_line = $ffp->coll_data.floor_line_id',
         'set $return_status = $ffp->status_id',
+        'set $return_ga = $ffp->ga',
+        'set $return_objective = $ffp->computer.objective',
+        'set $return_percent = $ffp->percent_damage',
+        'set $return_seen = 1',
+        'end',
+        'if ($return_seen != 0) && ($outcome == 0)',
+        'set $return_wait = $return_wait + 1',
+        'if $ffp->percent_damage > $return_percent',
+        'set $post_return_percent = $ffp->percent_damage',
         'set $outcome = 1',
+        'end',
+        'if ($return_wait >= 300) && ($outcome == 0)',
+        'set $outcome = 4',
+        'end',
         'end',
         'if $outcome != 0',
         'disable $frame_breakpoint',
@@ -265,8 +284,17 @@ try {
         ('set {{signed char}}0x{0:x8} = 0' -f ($pads + 2)),
         ('set {{signed char}}0x{0:x8} = 0' -f ($pads + 3)),
         'printf "FOX_RECOVERY_RESULT=%u,%u,%u,%u,%u,%u\n", $outcome, $frame, $recover_seen, $recover_frames, $attack_frames, $same_actor',
+        'set $normal_damage_colls = 0',
+        'set $damage_coll_i = 0',
+        'while $damage_coll_i < 11',
+        'if ($ffp->damage_colls[$damage_coll_i].hitstatus == nGMHitStatusNormal) && ($ffp->damage_colls[$damage_coll_i].joint != 0)',
+        'set $normal_damage_colls = $normal_damage_colls + 1',
+        'end',
+        'set $damage_coll_i = $damage_coll_i + 1',
+        'end',
+        'printf "FOX_RECOVERY_POST_DAMAGE=%u,%u,%u,%u,%u,%u,%u,%u\n", $return_seen, $return_percent, $post_return_percent, $return_wait, $normal_damage_colls, $ffp->hitstatus, $ffp->special_hitstatus, $ffp->star_hitstatus',
         'printf "FOX_RECOVERY_START=%d,%d,%d,%d,%d,%d\n", $recover_start_x, $recover_start_y, $recover_start_ga, $recover_start_line, $recover_start_status, $recover_start_input',
-        'printf "FOX_RECOVERY_RETURN=%d,%d,%d,%d,%d,%d\n", $return_x, $return_y, $ffp->ga, $return_line, $return_status, $ffp->computer.objective',
+        'printf "FOX_RECOVERY_RETURN=%d,%d,%d,%d,%d,%d\n", $return_x, $return_y, $return_ga, $return_line, $return_status, $return_objective',
         'printf "FOX_RECOVERY_CPU=%u,%#x,%u,%u,%u,%u\n", gNdsFTComputerProcessCount - $cpu_process_base, gNdsFTComputerObjectiveMask, gNdsFTComputerRecoveryFrames - $recover_counter_base, gNdsFTComputerInputChangeCount, gNdsFTComputerButtonBFrames, gNdsFTComputerStatusChangeCount',
         'printf "FOX_RECOVERY_DAMAGE=%u,%u,%d,%d\n", $start_percent, $max_percent, $start_falls, gSCManagerBattleState->players[1].falls',
         ('printf "FOX_RECOVERY_INPUT=%u,%#x,%u,%#x,%d,%d\n", *(unsigned int *)0x{0:x8}, *(unsigned int *)0x{1:x8}, gNdsControllerPlaybackReadCount - $input_reads_base, *(unsigned short *)0x{2:x8}, *(signed char *)0x{3:x8}, *(signed char *)0x{4:x8}' -f $enabled, $connected, $pads, ($pads + 2), ($pads + 3)),
@@ -287,6 +315,7 @@ try {
         -TimeoutSeconds $TimeoutSeconds).Stdout
 
     $result = [regex]::Match($gdbStdout, 'FOX_RECOVERY_RESULT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $postDamage = [regex]::Match($gdbStdout, 'FOX_RECOVERY_POST_DAMAGE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $start = [regex]::Match($gdbStdout, 'FOX_RECOVERY_START=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $return = [regex]::Match($gdbStdout, 'FOX_RECOVERY_RETURN=(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $cpu = [regex]::Match($gdbStdout, 'FOX_RECOVERY_CPU=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -308,6 +337,7 @@ try {
     $unsupportedEvents = @($fgmEvents | Where-Object { $_ -notin $includedIDs })
     $unsupportedIDs = @($unsupportedEvents | Sort-Object -Unique)
     $rv = Get-Ints $result; $sv = Get-Ints $start; $tv = Get-Ints $return
+    $pv = Get-Ints $postDamage
     $cv = Get-Ints $cpu; $dv = Get-Ints $damage; $iv = Get-Ints $input
     $qv = Get-Ints $scene; $mv = Get-Ints $memory; $av = Get-Ints $audio
     $asv = Get-Ints $audioState; $bv = Get-Ints $bgm
@@ -332,6 +362,12 @@ try {
     Assert-Condition ($damage.Success -and $dv[1] -gt $dv[0] -and
         $dv[2] -eq $dv[3]) `
         'The route lacked natural Mario damage or crossed a Fox KO/rebirth.' $gdbStdout
+    Assert-Condition ($postDamage.Success -and $pv[0] -eq 1 -and
+        $pv[2] -gt $pv[1] -and $pv[3] -gt 0 -and $pv[3] -lt 300 -and
+        $pv[4] -eq 11 -and $pv[5] -eq 1 -and $pv[6] -eq 1 -and
+        $pv[7] -eq 1) `
+        'Fox did not retain all 11 normal damage colliders and take a later natural Mario hit after Recover.' `
+        $gdbStdout
     Assert-Condition ($input.Success -and $iv[0] -eq 1 -and
         (($iv[1] -band 1) -eq 1) -and $iv[2] -gt 0 -and
         $iv[3] -eq 0 -and $iv[4] -eq 0 -and $iv[5] -eq 0) `
@@ -386,10 +422,10 @@ try {
         $bv[12], $bv[14], $bv[13], $bv[10], $bv[11], $bv[17])
     Write-Output ((
         'battle_playable Fox recovery passed: frames={0} recover={1} ' +
-        'start=({2},{3}) return=({4},{5}) line={6} damage={7}->{8} ' +
-        'reserve={9} screenshot={10}') -f
+        'start=({2},{3}) return=({4},{5}) line={6} damage={7}->{8}->{9} ' +
+        'colliders={10} reserve={11} screenshot={12}') -f
         $rv[1], $rv[3], $sv[0], $sv[1], $tv[0], $tv[1], $tv[3],
-        $dv[0], $dv[1], $mv[2], $screenshotPath)
+        $dv[0], $pv[1], $pv[2], $pv[4], $mv[2], $screenshotPath)
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

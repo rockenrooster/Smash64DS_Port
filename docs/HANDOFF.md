@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 07:54 Central
+Updated: 2026-07-16 08:00 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -95,12 +95,12 @@ every catch link, and retained 202,256 bytes. Evidence is
 `artifacts/visibility/2026-07-16_063512-7696185_throw-release-recovery-p21764.png`.
 The duplicated capture helper was deleted in favor of the standard repo-local
 melonDS window capture; do not restore it.
-Fox recovery is green: the current-ROM controller-only route produced 40 source
-Recover frames and an offstage-to-line-3 return without KO/rebirth. Evidence is
-`artifacts/visibility/2026-07-16_055015-5167574_fox-recovery.png`. The same run
-naturally played source FoxSmash1 ID372 and MarioSmash2 ID430 through two clean
-DS handles with zero audio faults and 202,256-byte reserve. Tyler's audible
-fighter-voice check remains pending.
+Fox recovery and continuous damage are green: after 40 source Recover frames
+and an offstage-to-line-3 return, Mario damages the same Fox again from 59% to
+72%. All 11 damage colliders and global/special/star hit statuses remain normal.
+Evidence is `artifacts/visibility/20260716_fox-recovery-post-hit.png`. The same
+route plays source FoxSmash1 ID372 and MarioSmash2 ID430 through clean DS
+handles with 202,256-byte reserve; Tyler's fighter-voice ear-check is pending.
 Dream Land BGM is also green without a ROM change: its exact initial DS ring has
 peak 9,928 / RMS 2,283.623, and the natural route observes the live channel bit
 in Calico's ARM7-shared mask with clean 44.1 KB/s streaming.

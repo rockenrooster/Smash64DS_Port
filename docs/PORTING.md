@@ -21124,3 +21124,13 @@ remains skipped for the requested fast iteration cadence.
   far-left bound—and is absent on the next completed frame.
 - The long-travel source-MVP screenshot contains 50 orange pixels in its
   deterministic ROI; the post-destroy screenshot contains zero.
+
+## 2026-07-16 - Added continuous post-Recover Fox damage coverage
+
+- Extended the existing natural Fox recovery route instead of adding a harness.
+  Mario damages Fox 0→59, waits through imported level-3 Recover and a source
+  line-3 landing, then applies a later natural hit to 72 within 78 frames.
+- The final gate requires the same Fox actor, no KO/rebirth, all 11 damage
+  colliders present and normal, normal global/special/star hit statuses, and
+  202,256 bytes reserve. Evidence is
+  `artifacts/visibility/20260716_fox-recovery-post-hit.png`.
