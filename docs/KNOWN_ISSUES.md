@@ -8,9 +8,6 @@ durable unresolved gaps.
 - Renderer M2 is visually correct but above 170-250K ticks.
 - Renderer M3 is source/semantic-correct but measures 611,392/611,584 stage
   ticks; a different attributable cut must reach <=500K before promotion.
-- Natural DamageFall-to-main-floor, throw-origin recovery, and Fox offstage
-  recovery now pass. Moving-wall, project-floor, and other non-floor collision
-  providers remain incomplete.
 - One natural source voice per fighter now plays (FoxSmash1 ID372 and
   MarioSmash2 ID430); remaining variants, exact pitch automation, and Tyler's
   voice ear check remain open. Dream Land BGM and the opening crowd are
@@ -23,11 +20,12 @@ durable unresolved gaps.
 
 ## Gameplay And Source Boundaries
 
-- Imported `mpprocess` has static symbol/ABI closure, but moving-wall sweep,
-  project-floor transforms, non-floor providers, and coherent `mpcommon` are not
-  graduated live.
+- Imported `mpprocess` has static symbol/ABI closure. Moving-wall sweep,
+  project-floor transforms, and coherent `mpcommon` remain P2 work for stages
+  that use them. Dream Land has one unanimated collision group, so those generic
+  providers are outside the P1 stage boundary.
 - Natural attack-origin DamageFall and throw-origin floor recovery have focused
-  runtime traces; non-floor routes remain unproved.
+  runtime traces on Dream Land's 4-floor/1-ceiling/2-wall source topology.
 - Original `ftcomputer.c` is live; its natural attack/guard/Recover paths pass.
 - Inactive fighter statuses still use weak callbacks when they require unimported
   items, hazards, other fighters, or asset banks. Remove each stub only with its

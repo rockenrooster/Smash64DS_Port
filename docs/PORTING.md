@@ -21134,3 +21134,18 @@ remains skipped for the requested fast iteration cadence.
   colliders present and normal, normal global/special/star hit statuses, and
   202,256 bytes reserve. Evidence is
   `artifacts/visibility/20260716_fox-recovery-post-hit.png`.
+
+## 2026-07-16 - Removed unused moving-stage collision work from P1
+
+- Read BattleShip Dream Land's exact map data before changing the queue.
+  `relocData/104_StagePupupuFile2.c:479-590` defines 19 vertices, seven lines,
+  one collision group, and line counts 4/1/1/1 for floor/ceiling/right/left;
+  `relocData/255_GRPupupuMap.c:23-61` binds that geometry to Dream Land with no
+  collision animation joint.
+- BattleShip `mpcollision.c:3961-4002` loads that source geometry directly and
+  allocates collision DObjs from its layer-1 descriptor. The existing natural
+  DamageFall, platform, throw, and Fox-recovery gates therefore cover the
+  static collision providers used by P1.
+- Moving-wall sweep, project-floor transforms, and coherent generic `mpcommon`
+  remain real P2 port debt for later stages, but are not Dream Land P1 blockers.
+  No runtime code or verification route changed.
