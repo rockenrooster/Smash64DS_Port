@@ -8,11 +8,12 @@ durable unresolved gaps.
 - Renderer M2 is visually correct but above 170-250K ticks.
 - Renderer M3 is source/semantic-correct but measures 611,392/611,584 stage
   ticks; a different attributable cut must reach <=500K before promotion.
-- Natural DamageFall-to-main-floor and Fox offstage recovery now pass.
-  Throw-origin coverage and non-floor collision providers remain incomplete.
-- Mario Fireball early spawn/damage/rebound/draw passes, but full 140-tick
-  collision, independent source-matrix parity, and long-distance visual capture
-  remain open.
+- Natural DamageFall-to-main-floor, throw-origin recovery, and Fox offstage
+  recovery now pass. Moving-wall, project-floor, and other non-floor collision
+  providers remain incomplete.
+- Mario Fireball spawn/damage/rebound/long-travel drawing passes. The natural
+  out-of-bounds destroy observation and independent source-matrix/ROI gate
+  remain open; 140 ticks is a maximum, not this ground shot's expected life.
 - One natural source voice per fighter now plays (FoxSmash1 ID372 and
   MarioSmash2 ID430); remaining variants, exact pitch automation, and Tyler's
   voice ear check remain open. Dream Land BGM and the opening crowd are
@@ -28,8 +29,8 @@ durable unresolved gaps.
 - Imported `mpprocess` has static symbol/ABI closure, but moving-wall sweep,
   project-floor transforms, non-floor providers, and coherent `mpcommon` are not
   graduated live.
-- Natural attack-origin DamageFall-to-floor recovery has a sparse successful
-  runtime trace; throw-origin and non-floor routes remain unproved.
+- Natural attack-origin DamageFall and throw-origin floor recovery have focused
+  runtime traces; non-floor routes remain unproved.
 - Original `ftcomputer.c` is live; its natural attack/guard/Recover paths pass.
 - Inactive fighter statuses still use weak callbacks when they require unimported
   items, hazards, other fighters, or asset banks. Remove each stub only with its
@@ -57,6 +58,10 @@ durable unresolved gaps.
   conversion/upload and is the published contract.
 - The animated tiled-water implementation is deleted. Do not restore it; frozen
   source frame 0 is the P1 contract.
+- Whispy material state and geometry remain live, but an unprepared post-GO
+  mouth/eye image reuses the first pre-GO resident source frame when every other
+  renderer-key word matches. This accepted P1 visual debt prevents gameplay
+  conversion; complete dynamic actor texture variants remain P2 fidelity work.
 
 ## Audio
 

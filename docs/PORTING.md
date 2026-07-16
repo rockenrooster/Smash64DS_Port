@@ -21094,3 +21094,15 @@ remains skipped for the requested fast iteration cadence.
   `scripts/check-audio-bgm-derived-assets.ps1`,
   `scripts/verify-battle-playable-fox-recovery.ps1`, and
   `artifacts/visibility/2026-07-16_055935-2694387_fox-recovery.png`.
+
+## 2026-07-16 - Kept M4 resident through Whispy material changes
+
+- A CPU-on late-phase sample found native-stage run 28 selecting a Whispy mouth
+  image absent from the pre-GO corpus, aborting M4 and forcing 40 gameplay
+  texture conversions.
+- Native-stage preflight now reuses the first resident source image only when
+  the other 58 renderer-key words match. BattleShip animation, geometry, timing,
+  and gameplay state stay live; the image-frame deviation is accepted under the
+  90% DS visual rule.
+- Exact-ROM frames 1398–1405 and 3300–3307 keep 202 stage triangles, zero
+  post-arm fallback, zero post-GO texture work, and zero premature teardown.

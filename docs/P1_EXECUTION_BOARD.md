@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 07:02 Central
+Updated: 2026-07-16 07:34 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -71,7 +71,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Fail / Jump C stopped before code | Renderer | Current local builder is 53,824 ticks and lighting is already prepared-direction + exact shade LUT. Local + rejected ITCM gain bounds at 71,904, 8,096 short of the required first cut | Do not manufacture another lighting/cache path; require a new source-backed bound before coding |
 | M3 complete stage AOT, 150–250K ticks | Semantic pass / performance REWORK | Renderer | Removing cold/Os from the 126-triangle no-Z emitter keeps exact pixels and improves stage 624,384 → 611,392. Dense reuse reached 563,296 but remained above 500K; incremental matrix transport regressed; signed-16 rounding saved only 2,048 ticks and failed its visual packet. All three were reverted | Keep only codegen commit `bbe8d3eee2`; require a new attributable ≥111,392-tick cut |
-| M4 zero gameplay conversion/preparation | Pass for current one-minute gate | Renderer | Natural CPU-on expiry proves prepare/arm/teardown `1/1/1`, 22 keys/131,072 bytes, zero ten-class post-GO fence work, and 163,312-byte audio-adjusted reserve | Keep; repeat in final published CPU-on qualification |
+| M4 zero gameplay conversion/preparation | Focused lifecycle repair pass / final teardown refresh pending | Renderer | Exact CPU-on phase sampling exposed a missing Whispy mouth image at frame 1398: run 28 rejected, the owner aborted, and generic fallback converted 40 textures. The native owner now reuses the pre-GO resident first source image only when every other word of the 59-word key matches. Frames 1398–1405 and 3300–3307 retain 202 stage triangles, zero post-arm fallback, zero ten-class fence work, and zero premature teardown on exact ROM `426B821A...` | Keep the documented cosmetic source-frame approximation; repeat only the final natural teardown in release qualification |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / bitmap OAM | Renderer + QA | Hybrid runtime submission was invisible despite valid counters; restored proven all-bitmap OBJ ownership shows the traffic light with 93,824 bytes prepared pregame and zero gameplay conversion/upload | Keep published bitmap path; hybrid remains lab-only |
 | Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |

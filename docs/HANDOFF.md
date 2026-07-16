@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 07:02 Central
+Updated: 2026-07-16 07:34 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -43,6 +43,11 @@ The signed-16 rounding codegen lead was also exhausted: it shrank both hot ARM
 symbols but saved only 2,048 stage ticks, and its B screenshot was invalid. The
 treatment is fully reverted; do not rerun it without a new closing bound.
 
+The M4 Whispy lifecycle repair is kept: later cosmetic mouth/eye images reuse
+an otherwise exact resident source-frame key, preventing the late fallback and
+40 gameplay conversions. See the board and `PERF_LEDGER.md` for the exact-ROM
+windows; do not repeat them before final release qualification.
+
 ## One-Minute Gate
 
 The published/manual ROM and source runtime gates retain flag `1`, preserving
@@ -64,18 +69,19 @@ samples the battle ledger before Results reuses the globals.
 
 ## Next Packet
 
-Close the Fireball's natural terminal path on the current public ROM: retain
-the existing natural input route, break once on BattleShip
-`wpprocess.c:167-180` when the far-left shot crosses Pupupu's map bound, then
-capture the next completed frame and add an independent source-matrix/ROI gate.
-The source lifetime `140` is a maximum, not this ground shot's expected
-duration: the out-of-bounds check runs after update/motion and before the map
-callback. Branch-only probes waiting for lifetime-zero or low-speed map destroy
-therefore timed out and were reverted; do not repeat them. The focused gate
-selects the shared countdown/Fox-off flag and passes in 9.5 seconds with
-`artifacts/visibility/2026-07-16_061816-9231474_fireball-long-travel-p18612.png`.
-Do not repeat conditional frame-complete polling for destruction; it exceeded
-90 seconds and was reverted.
+Finish the July 16 feasibility packet without reopening the exhausted Jump A/C
+cuts. Collect only the missing synchronized KO/rebirth and Results phase P95
+active ticks on one exact CPU-on ROM, then state the explicit 60 FPS feasibility
+decision required by the board. The retained M3 path remains about 111K above
+its first gate and Jump C's complete eligible bound stopped 8,096 ticks short
+before code; another speculative renderer cache or compiler sweep is not a
+credible closing path.
+
+The Fireball terminal observation remains a smaller independent gameplay task:
+break once on BattleShip `wpprocess.c:167-180` when the natural far-left shot
+crosses Pupupu's map bound, then capture the next completed frame and add the
+source-matrix/ROI gate. Do not wait on lifetime zero or low-speed map destroy;
+those are not this shot's source path.
 
 The one-way platform gate is now green on the current ROM. Its 715-frame route
 requires six ordered continued-ascent/strict-descent/downward-crossing flights,

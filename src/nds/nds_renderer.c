@@ -6037,6 +6037,36 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
 }
 
 static NDSRendererHardwareTextureCacheEntry *
+ndsRendererHardwareFindStageSourceFrameTexture(
+    const NDSRendererHardwareTextureKey *key)
+{
+    u32 i;
+
+    if (key == NULL)
+    {
+        return NULL;
+    }
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+        NDSRendererHardwareTextureKey source_frame;
+
+        if ((entry->ready == 0u) || (entry->pinned != 0u))
+        {
+            continue;
+        }
+        source_frame = entry->key;
+        source_frame.image = key->image;
+        if (ndsRendererHardwareTextureKeyEqual(&source_frame, key) != FALSE)
+        {
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+static NDSRendererHardwareTextureCacheEntry *
 ndsRendererHardwareFindTexel1RefreshTexture(
     const NDSRendererHardwareTextureKey *key)
 {
@@ -9065,7 +9095,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
     NDSRendererTraversalState *state,
-    NDSRendererHardwareResolvedTexture *resolved)
+    NDSRendererHardwareResolvedTexture *resolved,
+    s32 allow_stage_source_frame)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 texture_start = cpuGetTiming();
@@ -9509,6 +9540,14 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     entry = ndsRendererHardwareFindTexture(&key, key_hash);
     params = ndsRendererHardwareTextureParams(stats, render_tile,
                                                upload_width, upload_height);
+    if ((entry == NULL) && (allow_stage_source_frame != FALSE) &&
+        (sNdsRendererBattleStaticTextureArmed != 0u))
+    {
+        /* Dynamic Pupupu materials keep their source animation and geometry,
+         * but reuse the first resident source image when a later image was not
+         * prepared before GO. Every other renderer-key word must still match. */
+        entry = ndsRendererHardwareFindStageSourceFrameTexture(&key);
+    }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererSemanticLastTextureKeyHash =
         ndsRendererProfileTextureKeyHashFull(&key);
@@ -10065,7 +10104,7 @@ static s32 ndsRendererHardwareBindTexture(
     NDSRendererTraversalState *state)
 {
     return ndsRendererHardwareResolveOrBindTexture(
-        stats, config, state, NULL);
+        stats, config, state, NULL, FALSE);
 }
 
 static s32 ndsRendererHardwareResolveResidentTexture(
@@ -10080,7 +10119,22 @@ static s32 ndsRendererHardwareResolveResidentTexture(
     }
     memset(resolved, 0, sizeof(*resolved));
     return ndsRendererHardwareResolveOrBindTexture(
-        stats, config, state, resolved);
+        stats, config, state, resolved, FALSE);
+}
+
+static s32 ndsRendererHardwareResolveStageSourceFrameTexture(
+    NDSRendererStats *stats,
+    const NDSRendererConfig *config,
+    NDSRendererTraversalState *state,
+    NDSRendererHardwareResolvedTexture *resolved)
+{
+    if (resolved == NULL)
+    {
+        return FALSE;
+    }
+    memset(resolved, 0, sizeof(*resolved));
+    return ndsRendererHardwareResolveOrBindTexture(
+        stats, config, state, resolved, TRUE);
 }
 
 static void ndsRendererHardwareEndBatch(void);
@@ -15861,7 +15915,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
     if ((use_texture != FALSE) &&
-        (ndsRendererHardwareResolveResidentTexture(
+        (ndsRendererHardwareResolveStageSourceFrameTexture(
              stats, frame->config, state, &resolved) == FALSE))
     {
         return FALSE;

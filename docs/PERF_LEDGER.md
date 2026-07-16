@@ -2576,3 +2576,47 @@ DECISION: REVERT
   The source treatment is fully removed. Do not retry signed-16 round-shift
   codegen without a new attributable bound large enough to close M3.
 ```
+
+## 2026-07-16 - M4 Whispy source-frame residency repair
+
+```text
+IDEA ID: M4-WHISPY-SOURCE-FRAME-REUSE-20260716
+CLASS: correctness / critical-path residency, not an M3 optimization
+ROOT CAUSE:
+  Exact CPU-on phase sampling reached frame 1398 and falsified the prior
+  one-minute M4 claim. Native-stage run 28, binding 22, root 0x1630, MObj
+  0x13D8 selected a new Whispy mouth source image. The 22-key AOT pack excludes
+  animated actors; the resident lookup rejected, M3 aborted, GL_DELETE became
+  the first fence class, and generic fallback converted/uploaded 40 textures.
+SOURCE:
+  BattleShip grpupupu.c:250-347 drives Whispy wind state, :565-623 applies the
+  live mouth/eye animations and texture selections, and :663-669 constructs
+  the four map GObjs. StagePupupuFile3.c:463-483 defines mouth MObj 0x13D8 and
+  :521-543 binds display-list root 0x1630.
+TREATMENT:
+  Native-stage resident preflight may reuse an unpinned pre-GO source-frame
+  texture only when the primary image pointer is the sole difference in the
+  complete 59-word renderer key. All state, geometry, timing, palette, combine,
+  tile, dimensions, and sampling fields remain exact. Any other difference
+  still fails closed. No asset, conversion, upload, or gameplay state changed.
+IDENTITY / WINDOWS:
+  Profile 1, Mode 9, static 1, hybrid OAM 0, CPU/countdown on. ROM SHA-256
+  426B821A8AE3CE91F1DDB0BA79ABD6B0EFEC31D3A11D029BDE5A42F67DDC5791.
+  Exact frames 1398..1405 and same-ROM late frames 3300..3307.
+RESULT:
+  Both windows retain 121/828 runs/triangles, stage/Mario/Fox 202/320/306,
+  M3 57/42/54/202/49/4, zero post-arm fallback, and all ten post-GO texture
+  fence classes zero. The late window also keeps zero premature teardown.
+  Frame-1398 stage P50/P95 is 628,512/628,672; late stage is
+  621,056/621,120. This repairs the multi-million-tick conversion cliff but is
+  not credited as an M3 target win.
+EVIDENCE:
+  artifacts/performance/20260716_m4-source-frame-freeze-frame1398.json
+  artifacts/performance/20260716_m4-source-frame-freeze-late3300.json
+  artifacts/visibility/20260716_m4-source-frame-freeze-frame1398.png
+  artifacts/visibility/20260716_m4-source-frame-freeze-late3300.png
+DECISION: KEEP
+  Accept the first-source-frame image as the smallest recognizable DS visual
+  approximation. Refresh the natural teardown once at release qualification;
+  do not stack another verifier now.
+```

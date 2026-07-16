@@ -56,8 +56,10 @@ Retained owner contract:
 - 54 runs, 202 triangles, 49 epochs, four material commits;
 - projected cross-matrix counts 5/10/15;
 - source links remain segmented around fighters and weapons;
-- Whispy, flowers, draw flags, materials, effects, weapons, depth, and stage
-  selection remain live; water pixels alone are frozen.
+- Whispy, flowers, draw flags, material state, effects, weapons, depth, and
+  stage selection remain live. Water pixels are frozen at source frame 0, and
+  an unprepared post-GO Whispy material image reuses its first resident source
+  frame only when every non-image word of the complete renderer key matches.
 
 The retained no-Z codegen correction moved the stage-exclusive P50/P95 from
 624,384/624,512 to 611,392/611,584 with exact pixels and semantics. A bounded
@@ -87,6 +89,15 @@ The current static corpus is the only P1 design:
 - frozen water contributes 36,864 bytes on original runs 42-43;
 - scene setup prepares and pins the set before GO;
 - gameplay binds resident records only.
+
+BattleShip changes Whispy's mouth and eye material image IDs during the match
+(`grpupupu.c:565-623`). Those cosmetic frames are not part of the pinned
+22-key corpus. The DS representation therefore reuses the already-resident
+pre-GO source image when the primary image pointer is the sole difference in
+the exact 59-word key. It never changes gameplay state, animation timing,
+geometry, texture dimensions, palette, combine mode, tile state, or sampling.
+If any other key field differs, the owner still fails closed. This is the
+accepted 90% visual approximation; do not replace it with gameplay conversion.
 
 The animated tiled-water implementation, asset, generator, draw path, residency
 path, checks, and build selector are deleted. Do not recreate them.
