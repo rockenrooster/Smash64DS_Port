@@ -2453,12 +2453,16 @@ typedef struct NDSNativeStagePreparedDense
     u16 packed_color;
     s16 s;
     s16 t;
-    s16 x;
-    s16 y;
-    s16 source_z;
-    s32 clip_z;
-    s32 clip_w;
+    s16 near_inside;
 } NDSNativeStagePreparedDense;
+
+typedef struct NDSRendererProjectedClipVertex
+{
+    NDSRendererClipVertex20p12 clip;
+    s32 s;
+    s32 t;
+    u16 packed_color;
+} NDSRendererProjectedClipVertex;
 
 typedef struct NDSNativeStagePreparedRun
 {
@@ -2479,6 +2483,7 @@ typedef struct NDSNativeStageOwnerExecution
     NDSRendererTraversalState traversal;
     NDSRendererStats preflight_stats;
     NDSNativeStagePreparedRun runs[NDS_NATIVE_STAGE_RUN_COUNT];
+    const NDSRendererMatrix20p12 *binding_composed;
     NDSRendererMatrix20p12 raw_composed;
     NDSRendererMatrix20p12 scaled_raw_modelview;
     NDSRendererStats *stats;
@@ -11047,6 +11052,103 @@ static s32 ndsRendererHardwareClipZWInsideNearPlane(s32 z, s32 w)
     return ((w > 0) && (((s64)z + (s64)w) >= 0)) ? TRUE : FALSE;
 }
 
+static s32 __attribute__((optimize("Os"))) ndsRendererHardwareClipLerpQ16(
+    s32 from, s32 to, s32 ratio_q16)
+{
+    s64 delta = (s64)to - (s64)from;
+
+    return (s32)((s64)from + ((delta * ratio_q16) >> 16));
+}
+
+static u16 __attribute__((optimize("Os")))
+ndsRendererHardwareClipLerpColorQ16(
+    u16 from, u16 to, s32 ratio_q16)
+{
+    u32 r = (u32)ndsRendererHardwareClipLerpQ16(
+        from & 31u, to & 31u, ratio_q16);
+    u32 g = (u32)ndsRendererHardwareClipLerpQ16(
+        (from >> 5) & 31u, (to >> 5) & 31u, ratio_q16);
+    u32 b = (u32)ndsRendererHardwareClipLerpQ16(
+        (from >> 10) & 31u, (to >> 10) & 31u, ratio_q16);
+
+    return (u16)(r | (g << 5) | (b << 10));
+}
+
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsRendererHardwareClipNearIntersection(
+    const NDSRendererProjectedClipVertex *from,
+    const NDSRendererProjectedClipVertex *to,
+    NDSRendererProjectedClipVertex *out)
+{
+    s32 from_distance = (s32)(
+        ((s64)from->clip.z + (s64)from->clip.w) / 4);
+    s32 to_distance = (s32)(
+        ((s64)to->clip.z + (s64)to->clip.w) / 4);
+    s32 denominator = from_distance - to_distance;
+    s32 ratio_q16;
+
+    if (denominator == 0)
+    {
+        *out = *from;
+        return;
+    }
+#if defined(__arm__)
+    ratio_q16 = (s32)div64((s64)from_distance * 65536, denominator);
+#else
+    ratio_q16 = (s32)(((s64)from_distance * 65536) / denominator);
+#endif
+    out->clip.x = ndsRendererHardwareClipLerpQ16(
+        from->clip.x, to->clip.x, ratio_q16);
+    out->clip.y = ndsRendererHardwareClipLerpQ16(
+        from->clip.y, to->clip.y, ratio_q16);
+    out->clip.w = ndsRendererHardwareClipLerpQ16(
+        from->clip.w, to->clip.w, ratio_q16);
+    out->clip.z = -out->clip.w;
+    out->s = ndsRendererHardwareClipLerpQ16(
+        from->s, to->s, ratio_q16);
+    out->t = ndsRendererHardwareClipLerpQ16(
+        from->t, to->t, ratio_q16);
+    out->packed_color = ndsRendererHardwareClipLerpColorQ16(
+        from->packed_color, to->packed_color, ratio_q16);
+}
+
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererHardwareClipTriangleNearPlane(
+    const NDSRendererProjectedClipVertex input[3],
+    NDSRendererProjectedClipVertex output[4])
+{
+    const NDSRendererProjectedClipVertex *previous = &input[2];
+    s32 previous_inside = ndsRendererHardwareClipZWInsideNearPlane(
+        previous->clip.z, previous->clip.w);
+    u32 input_index;
+    u32 output_count = 0u;
+
+    for (input_index = 0u; input_index < 3u; input_index++)
+    {
+        const NDSRendererProjectedClipVertex *current = &input[input_index];
+        s32 current_inside = ndsRendererHardwareClipZWInsideNearPlane(
+            current->clip.z, current->clip.w);
+
+        if (current_inside != FALSE)
+        {
+            if (previous_inside == FALSE)
+            {
+                ndsRendererHardwareClipNearIntersection(
+                    previous, current, &output[output_count++]);
+            }
+            output[output_count++] = *current;
+        }
+        else if (previous_inside != FALSE)
+        {
+            ndsRendererHardwareClipNearIntersection(
+                previous, current, &output[output_count++]);
+        }
+        previous = current;
+        previous_inside = current_inside;
+    }
+    return output_count;
+}
+
 static s32 ndsRendererHardwareTriangleInsideNearPlane(
     const NDSRendererClipVertex20p12 *v0,
     const NDSRendererClipVertex20p12 *v1,
@@ -15824,8 +15926,8 @@ static s32 ndsRendererNativeStagePrepareRun(
                 return FALSE;
             }
         }
-        else if (run->submit_class !=
-                 NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
+        else if (run->submit_class ==
+                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
         {
             NDSRendererClipVertex20p12 clip;
 
@@ -15841,14 +15943,15 @@ static s32 ndsRendererNativeStagePrepareRun(
             {
                 return FALSE;
             }
-            prepared_dense->clip_z = clip.z;
-            prepared_dense->clip_w = clip.w;
-            prepared_dense->x = ndsRendererHardwareProjectToV16(
-                (s64)clip.x * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
-            prepared_dense->y = ndsRendererHardwareProjectToV16(
-                (s64)clip.y * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
-            prepared_dense->source_z = ndsRendererHardwareSourceDepthToV16(
-                (s64)clip.z * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
+            if (ndsRendererHardwareClipZWInsideNearPlane(
+                    clip.z, clip.w) != FALSE)
+            {
+                prepared_dense->near_inside = TRUE;
+            }
+            else
+            {
+                prepared_dense->near_inside = FALSE;
+            }
         }
     }
     if (alpha == UINT_MAX)
@@ -15984,8 +16087,7 @@ static inline void ndsRendererNativeStageEmitVertex(
     const NDSNativeStageDenseVertex *dense,
     const NDSNativeStagePreparedDense *prepared,
     const NDSNativeStagePreparedRun *run,
-    u32 submit_class,
-    s16 projected_z)
+    u32 submit_class)
 {
     GFX_COLOR = prepared->packed_color;
     if (run->textured != 0u)
@@ -16003,8 +16105,7 @@ static inline void ndsRendererNativeStageEmitVertex(
         GFX_VERTEX16 = (u16)((s32)dense->z *
             (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
     }
-    else if (submit_class ==
-             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+    else
     {
         GFX_VERTEX16 =
             (u32)(u16)(ndsRendererRoundShiftS32Signed(dense->x, 1u) *
@@ -16015,12 +16116,236 @@ static inline void ndsRendererNativeStageEmitVertex(
             (u16)(ndsRendererRoundShiftS32Signed(dense->z, 1u) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
     }
-    else
+}
+
+static u32 ndsRendererNativeStageVertexShift(
+    const NDSNativeStageDenseVertex *vertex)
+{
+    u32 shift;
+
+    for (shift = 0u; shift <= 5u; shift++)
     {
-        GFX_VERTEX16 = (u32)(u16)prepared->x |
-            ((u32)(u16)prepared->y << 16);
-        GFX_VERTEX16 = (u16)projected_z;
+        s32 x = ndsRendererRoundShiftS32Signed(vertex->x, shift);
+        s32 y = ndsRendererRoundShiftS32Signed(vertex->y, shift);
+        s32 z = ndsRendererRoundShiftS32Signed(vertex->z, shift);
+
+        if ((x >= -2048) && (x <= 2047) &&
+            (y >= -2048) && (y <= 2047) &&
+            (z >= -2048) && (z <= 2047))
+        {
+            return shift;
+        }
     }
+    return 6u;
+}
+
+static void ndsRendererNativeStageSetNoZColumn(
+    NDSRendererMatrix20p12 *matrix,
+    s16 projected_z)
+{
+    u32 row;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        matrix->m[row][2] = (s32)ndsRendererRoundShiftS64(
+            (s64)matrix->m[row][3] * projected_z, 12u);
+    }
+}
+
+static void ndsRendererNativeStageLoadNoZMatrix(
+    u32 binding_index,
+    u32 coordinate_shift,
+    s16 projected_z)
+{
+    NDSRendererMatrix20p12 matrix;
+    m4x4 hardware;
+
+    (void)ndsRendererBuildShiftedRawHardwareMatrix(
+        &sNdsNativeStageOwnerExecution.binding_composed[binding_index],
+        &matrix, coordinate_shift);
+    ndsRendererNativeStageSetNoZColumn(&matrix, projected_z);
+    ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
+    glLoadMatrix4x4(&hardware);
+    ndsRendererProfileRecordMatrixLoad();
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+}
+
+static void ndsRendererNativeStageEmitNoZVertex(
+    const NDSNativeStageDenseVertex *dense,
+    const NDSNativeStagePreparedDense *prepared,
+    const NDSNativeStagePreparedRun *run,
+    u32 coordinate_shift)
+{
+    s32 x = ndsRendererRoundShiftS32Signed(dense->x, coordinate_shift);
+    s32 y = ndsRendererRoundShiftS32Signed(dense->y, coordinate_shift);
+    s32 z = ndsRendererRoundShiftS32Signed(dense->z, coordinate_shift);
+
+    GFX_COLOR = prepared->packed_color;
+    if (run->textured != 0u)
+    {
+        GFX_TEX_COORD = (u32)(u16)prepared->s |
+            ((u32)(u16)prepared->t << 16);
+    }
+    GFX_VERTEX16 = (u32)(u16)(x * 16) | ((u32)(u16)(y * 16) << 16);
+    GFX_VERTEX16 = (u16)(z * 16);
+}
+
+static void ndsRendererNativeStageEmitClippedVertex(
+    const NDSRendererProjectedClipVertex *vertex,
+    const NDSNativeStagePreparedRun *run,
+    s16 projected_z)
+{
+    NDSRendererMatrix20p12 matrix;
+    m4x4 hardware;
+
+    memset(&matrix, 0, sizeof(matrix));
+    matrix.m[3][0] = ndsRendererRoundShiftS32Signed(vertex->clip.x, 8u);
+    matrix.m[3][1] = ndsRendererRoundShiftS32Signed(vertex->clip.y, 8u);
+    matrix.m[3][3] = ndsRendererRoundShiftS32Signed(vertex->clip.w, 8u);
+    ndsRendererNativeStageSetNoZColumn(&matrix, projected_z);
+    ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
+    glLoadMatrix4x4(&hardware);
+    ndsRendererProfileRecordMatrixLoad();
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+
+    GFX_COLOR = vertex->packed_color;
+    if (run->textured != 0u)
+    {
+        GFX_TEX_COORD = (u32)(u16)vertex->s |
+            ((u32)(u16)vertex->t << 16);
+    }
+    GFX_VERTEX16 = 0u;
+    GFX_VERTEX16 = 0u;
+}
+
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererNativeStageEmitNearClippedTriangle(
+    const NDSNativeStageRun *run,
+    const NDSNativeStagePreparedRun *prepared_run,
+    u32 triangle_offset,
+    s16 projected_z)
+{
+    NDSRendererProjectedClipVertex input[3];
+    NDSRendererProjectedClipVertex clipped[4];
+    u32 corner_offset;
+    u32 clipped_count;
+    u32 fan_index;
+
+    for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+    {
+        u32 dense_index = sNdsNativeStageCorners[
+            (u32)run->first_corner + triangle_offset * 3u + corner_offset];
+        const NDSNativeStageDenseVertex *dense =
+            &sNdsNativeStageVertices[dense_index];
+        const NDSNativeStagePreparedDense *prepared =
+            &sNdsNativeStagePreparedDense[dense_index];
+        NDSRendererInputVertex source;
+
+        ndsRendererNativeStageInputVertex(dense, &source);
+        ndsRendererTransformVertex20p12(
+            &sNdsNativeStageOwnerExecution.binding_composed[
+                dense->matrix_binding],
+            &source, &input[corner_offset].clip);
+        input[corner_offset].s = prepared->s;
+        input[corner_offset].t = prepared->t;
+        input[corner_offset].packed_color = prepared->packed_color;
+    }
+    clipped_count = ndsRendererHardwareClipTriangleNearPlane(input, clipped);
+    if (clipped_count < 3u)
+    {
+        ndsRendererProfileRecordNearPlaneTriangleReject();
+        ndsRendererProfileRecordSubmitClass(NDS_RENDERER_HW_SUBMIT_REJECT);
+        return 0u;
+    }
+    for (fan_index = 1u; fan_index + 1u < clipped_count; fan_index++)
+    {
+        ndsRendererNativeStageEmitClippedVertex(
+            &clipped[0], prepared_run, projected_z);
+        ndsRendererNativeStageEmitClippedVertex(
+            &clipped[fan_index], prepared_run, projected_z);
+        ndsRendererNativeStageEmitClippedVertex(
+            &clipped[fan_index + 1u], prepared_run, projected_z);
+    }
+    return clipped_count - 2u;
+}
+
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererNativeStageEmitNoZTriangle(
+    const NDSNativeStageRun *run,
+    const NDSNativeStagePreparedRun *prepared_run,
+    u32 triangle_offset,
+    s16 projected_z)
+{
+    u32 first_corner = (u32)run->first_corner + triangle_offset * 3u;
+    u32 inside_count = 0u;
+    u32 corner_offset;
+    u32 first_dense_index;
+    u32 binding_index;
+    u32 coordinate_shift = 0u;
+    s32 one_binding = TRUE;
+
+    for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+    {
+        u32 dense_index = sNdsNativeStageCorners[first_corner + corner_offset];
+
+        inside_count +=
+            (sNdsNativeStagePreparedDense[dense_index].near_inside != FALSE) ?
+                1u : 0u;
+    }
+    if (inside_count == 0u)
+    {
+        ndsRendererProfileRecordNearPlaneTriangleReject();
+        ndsRendererProfileRecordSubmitClass(NDS_RENDERER_HW_SUBMIT_REJECT);
+        return 0u;
+    }
+    if (inside_count != 3u)
+    {
+        return ndsRendererNativeStageEmitNearClippedTriangle(
+            run, prepared_run, triangle_offset, projected_z);
+    }
+
+    first_dense_index = sNdsNativeStageCorners[first_corner];
+    binding_index = sNdsNativeStageVertices[first_dense_index].matrix_binding;
+    for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+    {
+        u32 dense_index = sNdsNativeStageCorners[first_corner + corner_offset];
+        const NDSNativeStageDenseVertex *dense =
+            &sNdsNativeStageVertices[dense_index];
+        u32 vertex_shift = ndsRendererNativeStageVertexShift(dense);
+
+        if (dense->matrix_binding != binding_index)
+        {
+            one_binding = FALSE;
+        }
+        if (vertex_shift > coordinate_shift)
+        {
+            coordinate_shift = vertex_shift;
+        }
+    }
+    if (one_binding != FALSE)
+    {
+        ndsRendererNativeStageLoadNoZMatrix(
+            binding_index, coordinate_shift, projected_z);
+    }
+    for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+    {
+        u32 dense_index = sNdsNativeStageCorners[first_corner + corner_offset];
+        const NDSNativeStageDenseVertex *dense =
+            &sNdsNativeStageVertices[dense_index];
+        const NDSNativeStagePreparedDense *prepared =
+            &sNdsNativeStagePreparedDense[dense_index];
+        u32 vertex_shift = (one_binding != FALSE) ?
+            coordinate_shift : ndsRendererNativeStageVertexShift(dense);
+
+        if (one_binding == FALSE)
+        {
+            ndsRendererNativeStageLoadNoZMatrix(
+                dense->matrix_binding, vertex_shift, projected_z);
+        }
+        ndsRendererNativeStageEmitNoZVertex(
+            dense, prepared, prepared_run, vertex_shift);
+    }
+    return 1u;
 }
 
 s32 ndsRendererPrepareNativeStageOwner(
@@ -16055,6 +16380,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     gNdsRendererM3CrossForeignCornerCount = 0u;
 #endif
     sNdsNativeStageOwnerExecution.active = FALSE;
+    sNdsNativeStageOwnerExecution.binding_composed = NULL;
     if ((gNdsRendererFastRunMode !=
          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ||
         (frame == NULL) || (stats == NULL) ||
@@ -16231,6 +16557,7 @@ s32 ndsRendererPrepareNativeStageOwner(
 
     sNdsNativeStageOwnerExecution.raw_composed =
         frame->binding_composed[29u];
+    sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
     if (ndsRendererBuildShiftedRawHardwareMatrix(
             &sNdsNativeStageOwnerExecution.raw_composed,
             &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
@@ -16262,6 +16589,7 @@ done:
     if (accepted == FALSE)
     {
         sNdsNativeStageOwnerExecution.stats = NULL;
+        sNdsNativeStageOwnerExecution.binding_composed = NULL;
         sNdsNativeStageOwnerExecution.next_segment = 0u;
         sNdsNativeStageOwnerExecution.active = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
@@ -16315,28 +16643,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 
             if (run->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
             {
-                const NDSNativeStagePreparedDense *p0 =
-                    &sNdsNativeStagePreparedDense[sNdsNativeStageCorners[
-                        (u32)run->first_corner + triangle_offset * 3u]];
-                const NDSNativeStagePreparedDense *p1 =
-                    &sNdsNativeStagePreparedDense[sNdsNativeStageCorners[
-                        (u32)run->first_corner + triangle_offset * 3u + 1u]];
-                const NDSNativeStagePreparedDense *p2 =
-                    &sNdsNativeStagePreparedDense[sNdsNativeStageCorners[
-                        (u32)run->first_corner + triangle_offset * 3u + 2u]];
-
-                if ((ndsRendererHardwareClipZWInsideNearPlane(
-                         p0->clip_z, p0->clip_w) == FALSE) ||
-                    (ndsRendererHardwareClipZWInsideNearPlane(
-                         p1->clip_z, p1->clip_w) == FALSE) ||
-                    (ndsRendererHardwareClipZWInsideNearPlane(
-                         p2->clip_z, p2->clip_w) == FALSE))
-                {
-                    ndsRendererProfileRecordNearPlaneTriangleReject();
-                    ndsRendererProfileRecordSubmitClass(
-                        NDS_RENDERER_HW_SUBMIT_REJECT);
-                    continue;
-                }
+                emitted_triangles += ndsRendererNativeStageEmitNoZTriangle(
+                    run, prepared_run, triangle_offset, no_z);
+                continue;
             }
 
             for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
@@ -16348,14 +16657,8 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                     &sNdsNativeStageVertices[dense_index];
                 const NDSNativeStagePreparedDense *prepared =
                     &sNdsNativeStagePreparedDense[dense_index];
-                s16 projected_z =
-                    (run->submit_class ==
-                     NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
-                        prepared->source_z : no_z;
-
                 ndsRendererNativeStageEmitVertex(
-                    dense, prepared, prepared_run, run->submit_class,
-                    projected_z);
+                    dense, prepared, prepared_run, run->submit_class);
             }
             emitted_triangles++;
             if (run->submit_class !=
@@ -16407,6 +16710,7 @@ void ndsRendererFinishNativeStageOwner(void)
         }
     }
     sNdsNativeStageOwnerExecution.stats = NULL;
+    sNdsNativeStageOwnerExecution.binding_composed = NULL;
     sNdsNativeStageOwnerExecution.next_segment = 0u;
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;

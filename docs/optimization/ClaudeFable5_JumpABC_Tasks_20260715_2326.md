@@ -322,6 +322,69 @@ Snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
 
 ---
 
+## TASK 4 — Mario black right pant leg + missing underside polys (paste to codex)
+
+Added 2026-07-16. Tyler confirmed against the original: the underside is
+closed and blue on N64 — both symptoms are port defects, no source-accurate
+branch. Reference: Tyler's melonDS capture, Mario airborne from behind/below.
+
+```
+/task Mario fighter visual defect, two co-located symptoms: (1) right pant
+leg renders black (left is correct blue); (2) underside/crotch is missing
+one or two polygons. Tyler verified the original: underside is CLOSED and
+BLUE — both are port defects. Longstanding and stable ("for a while"),
+likely the documented "Mario facing/light A/B" visual-debt item.
+CORRECTNESS task, own commit, NOT perf-gated, no optimization bundled, no
+hand-authored geometry. Reconcile first (R0).
+
+PRIME SUSPECT — a mishandled cross-matrix run at the hip. Both symptoms
+sit where cross-part vertex-cache sharing concentrates (persistent vertex
+cache + cross-matrix semantics in the M2 contract; the fighter cross-matrix
+triangles live at joints like the pelvis). ONE bad cross-matrix run there
+explains BOTH at once: lit colors/normals evaluated under the wrong part
+state render black, and positions read from a stale or overwritten cache
+slot produce degenerate (invisible) triangles. Runner-up suspect: a
+run->epoch binding off-by-one hitting exactly one part's material/light
+state.
+
+PHASE 1 — locate, then discriminate (one A/B, no fix yet):
+1. Map the defect to runs: use the profile-2 oracle's projected vertices to
+   identify which root/part/run owns the black screen region and which
+   source triangles cover the underside. Check FIRST whether those runs are
+   cross-matrix class. Do not guess the part index.
+2. Owner A/B: build one ROM with the Mode-8 native fighter owner disabled
+   (source-driven fallback path), same scene, scripted-jump deterministic
+   airborne capture, both ROMs to Tyler / captures for Claude.
+   - Defect only with owner ON -> owner bug: dump the offending runs'
+     vertex-cache epochs and run->epoch->material/light bindings vs the
+     recorded contract; fix the binding/cache handling, not the lighting
+     math.
+   - Defect in BOTH -> shared decode bug predating the owner: dump the
+     part's light direction/color/ambient and shade-LUT inputs
+     (ndsRendererHardwareLitShadeColorLut nds_renderer.c:2041,
+     prepared_light_direction :2105) and compare against the BattleShip
+     fighter display/lighting source for that DObj (read-only, cite
+     file:line; suspects: normal-transform matrix for that part,
+     G_MW_LIGHTCOL decode, per-part G_LIGHTING geometry-mode toggle,
+     G_CULL_BACK mapping for the underside triangles).
+3. Missing-poly census check: count the source DL triangles for the
+   affected parts against the owner's recorded runs — the owner census is
+   self-referential (it verifies what was RECORDED, not that recording
+   captured every source triangle). If the recorder missed triangles,
+   re-record/extend the contract; census and checker numbers update ONLY
+   together with the source citation justifying the new count.
+
+Gates: side-by-side captures (owner on/off/fixed) — Tyler eyeballs leg
+color AND closed blue underside before any FIXED claim; M2 contract counts
+unchanged unless a recorder gap is proven with source citation; stage owner
+untouched; M4 fence classes zero; exact vertex-cache/cross-matrix semantics
+preserved; DevFast + Boundary green. Ledger correctness row stating which
+hypothesis was confirmed/excluded. Separate commit; coordinate
+nds_renderer.c edits with the depth-fix lane (one-writer). Snapshot last.
+```
+
+---
+
 ## Sequencing and interactions
 
 - TASK 1 before TASK 2, hard: the depth fix changes class-3 semantics and the
