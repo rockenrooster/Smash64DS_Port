@@ -19,6 +19,8 @@ param(
     [int]$DelaySeconds = 5,
     [ValidateRange(8,256)][int]$RendererBenchmarkSamples = 8,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
+    [ValidateSet('None','KO','Rebirth')]
+    [string]$RendererBenchmarkStartEvent = 'None',
     [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [string]$RendererBenchmarkExportPath = '',
     [string]$RendererBenchmarkScreenshot = ''
@@ -33,6 +35,7 @@ if ($RendererM3Phase0Profile -and
     throw 'RendererM3Phase0Profile requires fast-run mode 9 and renderer profile 1.'
 }
 if (($FastRunMode -eq 9) -and
+    ($RendererBenchmarkStartEvent -eq 'None') -and
     -not $PSBoundParameters.ContainsKey('RendererBenchmarkStartFrame')) {
     # The complete-stage owner/M4 contract is meaningful only after GO and
     # static residency are armed; frames 438-445 are the canonical first gate.
@@ -78,6 +81,7 @@ $build = if ($Task9FloatCensusMode -eq 1) {
     -Task9FloatItcmMode $Task9FloatItcmMode `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
+    -RendererBenchmarkStartEvent $RendererBenchmarkStartEvent `
     -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds `
     -RendererBenchmarkOnly:($FastRunMode -eq 9) `
     -RendererBenchmarkScreenshot $RendererBenchmarkScreenshot `

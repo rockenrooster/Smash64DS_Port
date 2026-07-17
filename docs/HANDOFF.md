@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-17 Central
+Updated: 2026-07-17 07:02 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -85,8 +85,13 @@ Report-only: gameplay uses a 16 KiB main-RAM coroutine stack, not DTCM; the
 measured update-600 high-water used 8,100 bytes with 8,284 bytes headroom.
 Do not merge this branch into main without Tyler's instruction.
 
+Natural KO/rebirth timing now uses profile-1 ROM `32C957AD...`, the real KO FGM
+trace, and BattleShip's `ftCommonRebirthDownSetStatus`, never scripted combat.
+KO is 1,261,344/1,524,864 active ticks; rebirth is 1,110,528/1,112,256. Both
+keep exact stage/M4/fence contracts; evidence is `20260717-*-natural-profile1`.
+
 ## Checkpoint
-Countdown source/host/runtime, focused visual-effects, full FGM phase-pack,
-Task 9 DevFast/Current/state identity, and the natural one-minute lifecycle all
-pass. Release qualification now only needs Tyler's exact-ROM visual/acoustic
-eyeball. Take a Lean snapshot as the final project command.
+Countdown, effects, FGM, Task 9 identity, one-minute lifecycle, and natural
+KO/rebirth timing pass. P1 is incomplete: full-speed, edge retest, audio debt,
+and Tyler's exact-ROM eyeball remain. Next: measured M2 fighter emit; do not
+reopen rejected wallpaper/stage designs. The Lean snapshot closes this packet.

@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-17 05:36 Central
+Updated: 2026-07-17 07:02 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -33,7 +33,7 @@ more accurate than recycling cross-build samples.
 | Early combat | focused profile-1 | `2868DEC6...` | exact completed frames 600–607 | 8 | 1,250,432 / 1,251,264 | Task 6 Cut D sample; draw+flush P50 1,245,664 |
 | Mid combat / Whispy change | focused profile-1 | `426B821A...` | exact completed frames 1398–1405 | 8 | 1,616,000 / 1,617,920 | Same-ROM M4 lifecycle sample; worst measured material phase |
 | Late combat | focused profile-1 | `426B821A...` | exact completed frames 3300–3307 | 8 | 1,240,832 / 1,414,912 | Same-ROM late sample; no M4 fallback |
-| KO / rebirth | canonical-profile-0 | pending candidate republication | Pending natural KO→rebirth window | — | — / — | Pending synchronized canonical baseline |
+| KO / rebirth | focused profile-1 | `32C957AD...` | natural KO frames 708–715; rebirth cross-check 730–737 | 8 + 8 | 1,261,344 / 1,524,864; rebirth 1,110,528 / 1,112,256 | Exact source-event gates; additive 16-triangle effect, stage/M4, and zero-fence contracts pass |
 | Time Up / Results | isolated published-equivalent profile-0 | `9C35F4B3...` | natural one-minute expiry→Results | 1 lifecycle | n/a / n/a | Pass: 4,084/2,042 exact 2:1, Results 58.2 updates/s, one teardown, zero M4 fence work |
 
 Profile-1 hard-checkpoint windows are O2-equivalent feasibility evidence, not
@@ -61,7 +61,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 |---|---|---|---|---|
 | Mario human versus original level-3 Fox CPU, Dream Land, one-minute Time match, items off | CPU-on public default / visible fast-iteration override | Gameplay + QA | The published ROM and source runtime gates retain flag `1`; the separate `-FastIteration` screenshot launch selects flag `0` before battle, skipping countdown/Fox and freezing `1:00` | Keep lifecycle gates on `1`; use the focused flag-`0` capture during routine visual iteration |
 | Original Wait → countdown → GO control/timer gate | Pass | Integration | Automated synchronized source-state proof passes | Keep |
-| Locked-30 scheduler | Pass / slowdown published | Integration | Task 9 natural match: 4,084 updates / 2,042 presents, exact fixed-two pacing; phase rates 39.9/37.4/39.3/n.a./58.2 updates/s and slips 196/1088/946/0/3 | Keep exact 2:1 and conditional 59.0–61.0 gates; full-speed locked 30 remains unmet |
+| Locked-30 scheduler | Pass / slowdown published | Integration | Task 9 natural match: 4,084 updates / 2,042 presents, exact fixed-two pacing; phase rates 39.9/37.4/39.3/n.a./58.2 updates/s and slips 196/1088/946/0/3. Focused natural KO/rebirth active P95 is 1,524,864/1,112,256 ticks | Keep exact 2:1 and conditional 59.0–61.0 gates; full-speed locked 30 remains unmet |
 | Mario can damage Fox | Pass / continuous gate | Gameplay | User confirmed the repair manually. The focused current-ROM route now damages Fox 0→59, lets imported level-3 Recover return naturally to line 3, then damages Fox again 59→72 within 78 frames while all 11 damage colliders and global/special/star hit statuses remain normal | Keep the post-Recover assertion in `verify-battle-playable-fox-recovery.ps1` |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |
 | Common visual effects | Focused pass | Renderer + Gameplay | Natural Fireball rebound created 3 bounded source effects; 13 hardware submissions emitted 96 triangles with kind mask `0x45`, zero texture/reject faults, and 176,464-byte reserve | Keep the imported effect manager and focused `-VisualEffectsOnly` gate |
@@ -106,8 +106,13 @@ after a slip. This matches Smash 64's uniform slowdown under load, preserves
 real-time hardware-paced audio, avoids 2/3-tick motion judder, and self-recovers
 after one slow frame. Old one-update-per-present and debt/cap-4 samples are not
 comparable; all phase baselines require fixed-two resampling. The natural
-one-minute run closes the Results lifecycle gap; its KO/rebirth bucket had zero
-presents, so a focused synchronized KO/rebirth phase sample remains pending.
+one-minute run closes the Results lifecycle gap. Its older pacing classifier
+watched proof-route counters and therefore reported zero KO/rebirth presents
+despite a real KO FGM triplet. The focused profile-1 sampler now gates on
+BattleShip's natural KO trace and `ftCommonRebirthDownSetStatus`: KO frames
+708–715 are the worse 1,261,344/1,524,864-tick active window, while rebirth
+frames 730–737 measure 1,110,528/1,112,256. This closes the missing phase
+baseline, not the full-speed requirement.
 
 ### July 17
 

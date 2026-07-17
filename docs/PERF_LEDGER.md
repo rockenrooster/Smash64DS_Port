@@ -43,6 +43,45 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
+## 2026-07-17 - natural KO and rebirth phase baseline
+
+```text
+IDEA ID: NATURAL-KO-REBIRTH-PHASE-20260717
+PURPOSE:
+  Close the missing material-phase timing row without scripted combat, a new
+  harness mode, or gameplay mutation. Extend the existing renderer sampler with
+  exact BattleShip event gates and dynamic transient-geometry conservation.
+IDENTITY / SOURCE GATES:
+  Mode 163, profile 1, fast mode 9, static AOT 1, imported level-3 Fox enabled,
+  fixed-two presentation, no JIT. ROM/ELF SHA-256:
+    32C957ADBB0D61F031DC9FF743BE4983175CCBBAE84924788C48FA67C8ECB154
+    638778926805CBFD38140C8CB4C897C17C3BADAAD4B68E472A26AB823F53C511
+  KO starts on the populated exact KO FGM trace; rebirth starts on
+  ftCommonRebirthDownSetStatus. Both then sample eight contiguous presents.
+KO FRAMES 708..715, LOGIC 1024..1038, P50/P95 TICKS:
+  active 1,261,344/1,524,864; draw 1,256,544/1,258,112; update
+  170,304/447,168; wallpaper 547,584/547,648; stage 477,504/478,784.
+REBIRTH FRAMES 730..737, LOGIC 1068..1082, P50/P95 TICKS:
+  active 1,110,528/1,112,256; draw 1,105,760/1,107,456; update
+  179,040/835,968; wallpaper 359,616/361,472; stage 481,600/481,792.
+CORRECTNESS:
+  Every frame keeps the exact 202-triangle stage owner, one source-visible
+  320-triangle fighter, the exact additive 16-triangle death/rebirth effect,
+  zero owner fallback/rejects, M4 22/131072, zero hot conversion/upload, and
+  zero post-GO fence work.
+  Screenshots pass top-screen content analysis.
+DECISION: KEEP (EVIDENCE / TOOLING), NO RUNTIME CUT.
+  KO is the worse active window. Its dominant wallpaper and stage buckets are
+  already measured owners whose exact affine/correction and remaining stage
+  alternatives are rejected or stopped. Do not improvise another cosmetic or
+  packet shortcut from this phase; return to the measured M2 fighter emit path.
+EVIDENCE:
+  artifacts/performance/20260717-ko-natural-profile1.json
+  artifacts/performance/20260717-rebirth-natural-profile1.json
+  artifacts/visibility/20260717-ko-natural-profile1.png
+  artifacts/visibility/20260717-rebirth-natural-profile1.png
+```
+
 ## 2026-07-16 - Task 8 Phase 0.5 complete draw conservation
 
 ```text

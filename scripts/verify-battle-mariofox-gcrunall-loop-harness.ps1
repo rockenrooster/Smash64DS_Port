@@ -38,6 +38,8 @@ param(
     [string]$Task9StateHashExportPath = '',
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
+    [ValidateSet('None','KO','Rebirth')]
+    [string]$RendererBenchmarkStartEvent = 'None',
     [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
@@ -99,6 +101,14 @@ if ($Task9StateHashExportPath -and ($Task9StateHashMode -ne 1)) {
 }
 if ($RendererBenchmarkOnly -and ($RendererBenchmarkSamples -eq 0)) {
     throw 'RendererBenchmarkOnly requires RendererBenchmarkSamples greater than zero.'
+}
+if (($RendererBenchmarkStartEvent -ne 'None') -and
+    ($RendererBenchmarkStartFrame -ne 0)) {
+    throw 'RendererBenchmarkStartEvent and RendererBenchmarkStartFrame are mutually exclusive.'
+}
+if (($RendererBenchmarkStartEvent -ne 'None') -and
+    -not $RendererBenchmarkOnly) {
+    throw 'RendererBenchmarkStartEvent requires RendererBenchmarkOnly.'
 }
 if ($RendererM2DetailedLedger -and ($RendererProfileLevel -ne 1)) {
     throw 'RendererM2DetailedLedger requires RendererProfileLevel 1.'
@@ -683,7 +693,8 @@ try {
         # Runtime selectors must be installed after C initialization but
         # before VSBattle setup consumes them.
         0
-    } elseif ($RendererBenchmarkStartFrame -gt 0) {
+    } elseif (($RendererBenchmarkStartFrame -gt 0) -or
+              ($RendererBenchmarkStartEvent -ne 'None')) {
         # An exact frame gate is the warmup. Attach before the scene starts so
         # a caller delay cannot race past the requested synchronized window.
         0
@@ -708,7 +719,8 @@ try {
         15
     }
     $effectiveDelaySeconds = if ($preBattleSelectorSelected -or
-                                 ($RendererBenchmarkStartFrame -gt 0)) {
+                                 ($RendererBenchmarkStartFrame -gt 0) -or
+                                 ($RendererBenchmarkStartEvent -ne 'None')) {
         0
     } else {
         [Math]::Max($DelaySeconds, $minimumDelay)
@@ -886,6 +898,7 @@ try {
             $rendererBenchmarkCommand =
                 'printf "RENDER_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileLevel, gNdsRendererProfileFrameCount, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTriangleSubmitTicks, gNdsRendererProfileVertexSubmitTicks, {0}, gNdsRendererProfileOracleSamples, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes' -f $benchmarkTriangleSymbol
             $benchmarkStartGateCommands = @()
+            $benchmarkEventBreakpointCommands = @()
             $benchmarkRuntimeControlCommands = @()
             $benchmarkInitialControlCommands = @()
             $benchmarkWarmInitial = 0
@@ -921,11 +934,48 @@ try {
                 $benchmarkStartGateCommands += 'continue'
                 $benchmarkStartGateCommands += 'end'
             }
+            elseif ($RendererBenchmarkStartEvent -eq 'KO') {
+                # The FGM trace is populated by the imported common-death
+                # source path. Gate the first sample on the natural KO event,
+                # not on a guessed frame number or scripted combat state.
+                $benchmarkWarmInitial = 1
+                $benchmarkStartGateCommands +=
+                    'if gNdsAudioFgmKoTraceCount == 0'
+                $benchmarkStartGateCommands += 'continue'
+                $benchmarkStartGateCommands += 'end'
+                $benchmarkStartGateCommands +=
+                    'set $renderer_benchmark_event = 1'
+            }
+            elseif ($RendererBenchmarkStartEvent -eq 'Rebirth') {
+                # BattleShip enters every normal respawn through this exact
+                # source transition before the first rebirth frame is drawn.
+                $benchmarkWarmInitial = 1
+                $benchmarkEventBreakpointCommands = @(
+                    'break ftCommonRebirthDownSetStatus'
+                    'commands'
+                    'silent'
+                    'set $renderer_benchmark_event = 1'
+                    'continue'
+                    'end'
+                )
+                $benchmarkStartGateCommands +=
+                    'if $renderer_benchmark_event == 0'
+                $benchmarkStartGateCommands += 'continue'
+                $benchmarkStartGateCommands += 'end'
+            }
+            $benchmarkEventSampleCommands = if (
+                $RendererBenchmarkStartEvent -ne 'None') {
+                @('printf "RENDER_EVENT=%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsAudioFgmKoTraceCount, $renderer_benchmark_event')
+            } else {
+                @()
+            }
             $gdbCommands = @(
                 $gdbCommands[0..3]
                 $benchmarkInitialControlCommands
                 'set $renderer_benchmark_samples = 0'
                 ('set $renderer_benchmark_warm = {0}' -f $benchmarkWarmInitial)
+                'set $renderer_benchmark_event = 0'
+                $benchmarkEventBreakpointCommands
                 'break ndsBattlePlayableFrameCompleteMarker'
                 'commands'
                 'silent'
@@ -937,6 +987,7 @@ try {
                 'if gNdsBattlePlayablePacingResult != 0'
                 $rendererBenchmarkCommand
                 $coarseBenchmarkCommands
+                $benchmarkEventSampleCommands
                 $benchmarkScreenshotCommands
                 'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
                 'end'
@@ -1314,6 +1365,9 @@ try {
     $fighterDisplayContract = [regex]::Match($gdbStdout, 'FTR_DISPLAY_CONTRACT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderProfile = [regex]::Match($gdbStdout, 'RENDER_PROFILE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $rendererBenchmark = [regex]::Matches($gdbStdout, 'RENDER_BENCH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $rendererBenchmarkEvent = [regex]::Matches(
+        $gdbStdout,
+        'RENDER_EVENT=([0-9]+),([0-9]+),([0-9]+)')
     $coarseBenchmark = @()
     $ownerBenchmark = @()
     $gxBoundaryBenchmark = @()
@@ -2000,6 +2054,19 @@ try {
                                  $RendererBenchmarkSamples - 1)
                         ) "Renderer benchmark missed requested exact frame window $RendererBenchmarkStartFrame..$($RendererBenchmarkStartFrame + $RendererBenchmarkSamples - 1); captured $($benchFrames[0])..$($benchFrames[-1])." $gdbStdout
                     }
+                    if ($RendererBenchmarkStartEvent -ne 'None') {
+                        Assert-Condition (
+                            $rendererBenchmarkEvent.Count -eq
+                                $RendererBenchmarkSamples
+                        ) "Renderer event benchmark captured $($rendererBenchmarkEvent.Count) of $RendererBenchmarkSamples event markers." $gdbStdout
+                        $firstEvent = Get-Ints $rendererBenchmarkEvent[0]
+                        Assert-Condition (
+                            $firstEvent[0] -eq $benchFrames[0] -and
+                            $firstEvent[2] -eq 1 -and
+                            (($RendererBenchmarkStartEvent -ne 'KO') -or
+                             ($firstEvent[1] -gt 0))
+                        ) "Renderer benchmark did not start on the requested natural $RendererBenchmarkStartEvent event." $gdbStdout
+                    }
                     $benchPresent = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[3].Value })
                     $benchDraw = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[4].Value })
                     $benchStage = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[5].Value })
@@ -2025,7 +2092,8 @@ try {
                         $sampleUploadCount = [int64]$sample.Groups[14].Value
                         $sampleUploadBytes = [int64]$sample.Groups[15].Value
                         $sampleTriangleContract =
-                            if ($m3StageOnlyBenchmarkWindow) {
+                            if ($m3StageOnlyBenchmarkWindow -or
+                                ($RendererBenchmarkStartEvent -ne 'None')) {
                                 $sampleTriangles -ge 202
                             } else {
                                 $sampleTriangles -eq 828
@@ -2237,7 +2305,22 @@ try {
                                 Assert-Condition ($fastRun[2] -eq 70 -and $fastRun[3] -eq 686 -and $fastRun[4] -eq 60 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 29 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "Production native fighter owner did not preserve exact 70-run/686-triangle accounting, 60/320/306 owner partition, and 29/0/0 fallback partition at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
                             } elseif (($RendererProfileLevel -eq 1) -and
                                       ($RendererFastRunMode -eq 9)) {
-                                if ($m3StageOnlyBenchmarkWindow) {
+                                if ($RendererBenchmarkStartEvent -ne 'None') {
+                                    $eventFighterTrianglesValid =
+                                        ($fastRun[5] -in @(0, 320)) -and
+                                        ($fastRun[6] -in @(0, 306)) -and
+                                        (($fastRun[5] + $fastRun[6]) -ge 306)
+                                    Assert-Condition (
+                                        $fastRun[2] -gt 0 -and
+                                        $fastRun[3] -ge 508 -and
+                                        $fastRun[4] -eq 202 -and
+                                        $eventFighterTrianglesValid -and
+                                        ($render[11] - $fastRun[3]) -eq 16 -and
+                                        $fastRun[7] -eq 0 -and
+                                        $fastRun[8] -eq 0 -and
+                                        $fastRun[9] -eq 0
+                                    ) "M3 natural-event window lost the exact stage/fighter owners, 16-triangle death/rebirth effect, or zero-fallback accounting at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
+                                } elseif ($m3StageOnlyBenchmarkWindow) {
                                     Assert-Condition ($fastRun[2] -ge 54 -and $fastRun[3] -ge 202 -and $fastRun[4] -eq 202 -and $fastRun[7] -eq 0 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "M3 countdown-stage window did not preserve the exact 202-triangle stage owner, positive transient fast-owner census, and zero fallbacks at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
                                 } else {
                                     Assert-Condition ($fastRun[2] -eq 121 -and $fastRun[3] -eq 828 -and $fastRun[4] -eq 202 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 0 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "M3 complete-stage owner did not preserve exact 121-run/828-triangle accounting, 202/320/306 owner partition, and zero fallbacks at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
@@ -2837,6 +2920,7 @@ try {
                             warmupFrames = [Math]::Max(0, ([int64]$benchFrames[0] - 1))
                             samples = $RendererBenchmarkSamples
                             requestedStartFrame = $RendererBenchmarkStartFrame
+                            requestedStartEvent = $RendererBenchmarkStartEvent
                             frameStart = [int64]$benchFrames[0]
                             frameEnd = [int64]$benchFrames[-1]
                             logicTickStart = $logicTickStart
@@ -3054,7 +3138,12 @@ try {
                 }
                 Assert-Condition ($stageHardware.Success -and $stageStartupValid -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build drifted from the exact base + source-weapon stage contract or retained an unmarked setup traversal.' $gdbStdout
                 Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
-                if ($usesRetainedWallpaper) {
+                if ($RendererBenchmarkStartEvent -ne 'None') {
+                    Assert-Condition (
+                        $stageHardwareFighter.Success -and
+                        $shwf[0] -gt 0 -and $shwf[1] -gt 0
+                    ) 'Natural-event renderer window did not retain live source fighter ownership.' $gdbStdout
+                } elseif ($usesRetainedWallpaper) {
                     Assert-Condition (
                         $sceneMipCache.Success -and
                         $smc[0] -eq 2 -and
@@ -3085,7 +3174,10 @@ try {
                 # Source link-14 weapons use BattleShip wpDisplayDrawNormal's
                 # no-Z path. The adjacent completed-frame delta above supplies
                 # an independent owner census for this terminal geometry.
-                if ($RendererBenchmarkSamples -gt 0) {
+                if ($RendererBenchmarkStartEvent -ne 'None') {
+                    $terminalWeaponQuadCount = 0
+                    $terminalWeaponFrameValid = $rs[7] -eq 0
+                } elseif ($RendererBenchmarkSamples -gt 0) {
                     # Synchronized benchmark windows already require exact base
                     # geometry on every sampled frame and deliberately reject a
                     # terminal weapon rather than inventing a cross-window delta.
@@ -3107,7 +3199,19 @@ try {
                         $wframe[11] -eq 0
                     $terminalWeaponQuadCount = $wframe[2]
                 }
-                Assert-Condition ($renderProfile.Success -and $terminalWeaponFrameValid -and $rp[15] -eq (2484 + (6 * $terminalWeaponQuadCount)) -and $rp[16] -eq (828 + (2 * $terminalWeaponQuadCount)) -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact base plus source-weapon renderer geometry contract.' $gdbStdout
+                if ($RendererBenchmarkStartEvent -ne 'None') {
+                    $lastBenchmarkTriangles =
+                        [int64]$rendererBenchmark[$rendererBenchmark.Count - 1].Groups[12].Value
+                    Assert-Condition (
+                        $renderProfile.Success -and
+                        $terminalWeaponFrameValid -and
+                        $rp[15] -eq (3 * $rp[16]) -and
+                        $rp[16] -eq $lastBenchmarkTriangles -and
+                        $rp[16] -ge 202 -and $rp[17] -eq 0
+                    ) 'Natural-event terminal frame lost triangle/vertex conservation or renderer synchronization.' $gdbStdout
+                } else {
+                    Assert-Condition ($renderProfile.Success -and $terminalWeaponFrameValid -and $rp[15] -eq (2484 + (6 * $terminalWeaponQuadCount)) -and $rp[16] -eq (828 + (2 * $terminalWeaponQuadCount)) -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact base plus source-weapon renderer geometry contract.' $gdbStdout
+                }
                 if ($effectiveStaticTextureAotMode -eq 1) {
                     Assert-Condition ($rp[12] -eq 0 -and $rp[13] -eq 0) 'Static-resident realtime HW build performed a gameplay texture upload.' $gdbStdout
                 } else {
@@ -3135,7 +3239,16 @@ try {
                 $expectedTexturePrepareReuse =
                     $(if ($RendererFastRunMode -eq 9) { 725 } else { 730 }) +
                     $terminalWeaponQuadCount
-                Assert-Condition ($renderBatch.Success -and $rb[0] -eq $expectedBatchBegin -and $rb[1] -eq $expectedBatchReuse -and $rb[2] -eq $expectedBatchEnd -and $rb[3] -eq $expectedTexturePrepareBegin -and $rb[4] -eq $expectedTexturePrepareReuse) "Canonical realtime HW build drifted from exact source-weapon-aware batch and texture-prepare accounting." $gdbStdout
+                if ($RendererBenchmarkStartEvent -ne 'None') {
+                    Assert-Condition (
+                        $renderBatch.Success -and
+                        $rb[0] -gt 0 -and $rb[0] -eq $rb[2] -and
+                        $rb[1] -ge $rb[0] -and
+                        $rb[3] -gt 0 -and $rb[4] -ge $rb[3]
+                    ) 'Natural-event terminal frame published incoherent batch or texture-prepare accounting.' $gdbStdout
+                } else {
+                    Assert-Condition ($renderBatch.Success -and $rb[0] -eq $expectedBatchBegin -and $rb[1] -eq $expectedBatchReuse -and $rb[2] -eq $expectedBatchEnd -and $rb[3] -eq $expectedTexturePrepareBegin -and $rb[4] -eq $expectedTexturePrepareReuse) "Canonical realtime HW build drifted from exact source-weapon-aware batch and texture-prepare accounting." $gdbStdout
+                }
                 if ($effectiveStaticTextureAotMode -eq 1) {
                     Assert-Condition ($renderCi4Lut.Success -and (($rci4lut | Measure-Object -Sum).Sum -eq 0)) 'Static-resident renderer unexpectedly rebuilt or reused live CI4 conversion tables.' $gdbStdout
                     Assert-Condition ($renderCi4Map.Success -and (($rci4map | Measure-Object -Sum).Sum -eq 0)) 'Static-resident renderer unexpectedly resolved live water representative pixels.' $gdbStdout
@@ -3278,7 +3391,19 @@ try {
                     })
                 $expectedRawSubmitCount = if ($RendererFastRunMode -eq 9) { 658 } else { 648 }
                 $expectedRangeSubmitCount = if ($RendererFastRunMode -eq 9) { 0 } else { 10 }
-                Assert-Condition ($renderSubmit.Success -and $rs[0] -eq $expectedRawSubmitCount -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq $expectedRangeSubmitCount -and $rs[7] -eq 0 -and $rawMatrixPartitionValid -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
+                if ($RendererBenchmarkStartEvent -ne 'None') {
+                    Assert-Condition (
+                        $renderSubmit.Success -and
+                        $rs[0] -gt 0 -and $rs[1] -eq 0 -and
+                        $rs[2] -ge 0 -and $rs[3] -ge 126 -and
+                        $rs[4] -eq 0 -and $rs[5] -eq 0 -and
+                        $rs[6] -eq 0 -and $rs[7] -eq 0 -and
+                        $rawMatrixPartitionValid -and
+                        $submitTotal -eq $rp[16]
+                    ) 'Natural-event terminal frame lost hybrid submit-class conservation or reported a rejected triangle.' $gdbStdout
+                } else {
+                    Assert-Condition ($renderSubmit.Success -and $rs[0] -eq $expectedRawSubmitCount -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq $expectedRangeSubmitCount -and $rs[7] -eq 0 -and $rawMatrixPartitionValid -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
+                }
                 Assert-Condition ($rs[8] -eq $expectedProjectedDivisions -and ($rs[8] * 4) -lt $preCutoverProjectedDivisions) 'Canonical realtime HW build did not sharply reduce and exactly account projected division demand.' $gdbStdout
                 $hardwareDivideEvaluations = $rhdiv[0] + $rhdiv[1] + $rhdiv[2]
                 Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Canonical realtime projected hardware divider reported a zero denominator or exact-result mismatch.' $gdbStdout

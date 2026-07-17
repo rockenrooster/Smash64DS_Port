@@ -53,6 +53,12 @@ Useful existing commands:
   -RendererBenchmarkStartFrame 438 -RunnerSlot 3 `
   -RendererBenchmarkExportPath artifacts/performance/m3.json `
   -RendererBenchmarkScreenshot artifacts/visibility/m3.png
+
+# Natural source-event timing (run once with KO, once with Rebirth)
+.\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 9 `
+  -StaticTextureAotMode 1 -FoxCpuMode 1 -RendererProfileLevel 1 `
+  -RendererBenchmarkSamples 8 -RendererBenchmarkStartEvent KO `
+  -RendererBenchmarkTimeoutSeconds 300 -RunnerSlot 3
 ```
 
 All screenshots go under `artifacts/visibility`. A screenshot is evidence only
