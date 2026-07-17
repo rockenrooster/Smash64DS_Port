@@ -1,5 +1,7 @@
 #include <sys/matrix.h>
 
+#include <nds/nds_fighter_matrix_index.h>
+
 #ifndef NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_HW_TRIANGLES 0
 #endif
@@ -45,6 +47,14 @@
 #define NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND 0x47u
 /* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
+
+#if defined(__arm__)
+#define NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE \
+    __attribute__((noinline, optimize("O3"), target("arm")))
+#else
+#define NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE \
+    __attribute__((noinline, optimize("O3")))
+#endif
 
 static const Gfx sNdsRendererAdapterEmptySegmentEDL[1] = {
     { { NDS_FIGHTER_DL_OP_ENDDL << 24, 0u } }
@@ -421,19 +431,92 @@ static sb32 ndsRendererAdapterF2LFixedWExact(
     return TRUE;
 }
 
-static sb32 ndsRendererAdapterSetN64TranslationExact(
-    Mtx *mtx, f32 x, f32 y, f32 z)
+static inline s32 ndsRendererAdapterFighterSinFromIndex(s32 index)
 {
+    u32 id = (u32)index & 0xfffu;
+    s32 value = (s32)gSYSinTable[id & 0x7ffu];
+
+    return ((id & 0x800u) != 0u) ? -value : value;
+}
+
+static inline s32 ndsRendererAdapterFighterCosFromIndex(s32 index)
+{
+    return ndsRendererAdapterFighterSinFromIndex(index + 0x400);
+}
+
+static NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE sb32
+ndsRendererAdapterBuildFighterTraRotRpyExact(
+    Mtx *mtx,
+    f32 tx,
+    f32 ty,
+    f32 tz,
+    f32 r,
+    f32 p,
+    f32 y)
+{
+    s32 indexr;
+    s32 indexp;
+    s32 indexy;
+    s32 sinr;
+    s32 sinp;
+    s32 siny;
+    s32 cosr;
+    s32 cosp;
+    s32 cosy;
     s32 fixed_x;
     s32 fixed_y;
     s32 fixed_z;
+    u32 e1;
+    u32 e2;
 
-    if ((ndsRendererAdapterFloatPow2ToS32(x, 16u, &fixed_x) == FALSE) ||
-        (ndsRendererAdapterFloatPow2ToS32(y, 16u, &fixed_y) == FALSE) ||
-        (ndsRendererAdapterFloatPow2ToS32(z, 16u, &fixed_z) == FALSE))
+    if ((mtx == NULL) ||
+        (ndsFighterMatrixAngleToIndexExact(r, &indexr) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(p, &indexp) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(y, &indexy) == 0) ||
+        (ndsRendererAdapterFloatPow2ToS32(tx, 16u, &fixed_x) == FALSE) ||
+        (ndsRendererAdapterFloatPow2ToS32(ty, 16u, &fixed_y) == FALSE) ||
+        (ndsRendererAdapterFloatPow2ToS32(tz, 16u, &fixed_z) == FALSE))
     {
         return FALSE;
     }
+
+    sinr = ndsRendererAdapterFighterSinFromIndex(indexr);
+    cosr = ndsRendererAdapterFighterCosFromIndex(indexr);
+    sinp = ndsRendererAdapterFighterSinFromIndex(indexp);
+    cosp = ndsRendererAdapterFighterCosFromIndex(indexp);
+    siny = ndsRendererAdapterFighterSinFromIndex(indexy);
+    cosy = ndsRendererAdapterFighterCosFromIndex(indexy);
+
+    e1 = (u32)((cosp * cosy) >> 14);
+    e2 = (u32)((cosp * siny) >> 14);
+    mtx->m[0][0] = COMBINE_INTEGRAL(e1, e2);
+    mtx->m[2][0] = COMBINE_FRACTIONAL(e1, e2);
+
+    e1 = (u32)(-sinp * 2);
+    mtx->m[0][1] = COMBINE_INTEGRAL(e1, 0u);
+    mtx->m[2][1] = COMBINE_FRACTIONAL(e1, 0u);
+
+    e1 = (u32)((((sinr * sinp) >> 15) * cosy) >> 14) -
+         (u32)((cosr * siny) >> 14);
+    e2 = (u32)((((sinr * sinp) >> 15) * siny) >> 14) +
+         (u32)((cosr * cosy) >> 14);
+    mtx->m[0][2] = COMBINE_INTEGRAL(e1, e2);
+    mtx->m[2][2] = COMBINE_FRACTIONAL(e1, e2);
+
+    e1 = (u32)((sinr * cosp) >> 14);
+    mtx->m[0][3] = COMBINE_INTEGRAL(e1, 0u);
+    mtx->m[2][3] = COMBINE_FRACTIONAL(e1, 0u);
+
+    e1 = (u32)((((cosr * sinp) >> 15) * cosy) >> 14) +
+         (u32)((sinr * siny) >> 14);
+    e2 = (u32)((((cosr * sinp) >> 15) * siny) >> 14) -
+         (u32)((sinr * cosy) >> 14);
+    mtx->m[1][0] = COMBINE_INTEGRAL(e1, e2);
+    mtx->m[3][0] = COMBINE_FRACTIONAL(e1, e2);
+
+    e1 = (u32)((cosr * cosp) >> 14);
+    mtx->m[1][1] = COMBINE_INTEGRAL(e1, 0u);
+    mtx->m[3][1] = COMBINE_FRACTIONAL(e1, 0u);
 
     mtx->m[1][2] = COMBINE_INTEGRAL((u32)fixed_x, (u32)fixed_y);
     mtx->m[3][2] = COMBINE_FRACTIONAL((u32)fixed_x, (u32)fixed_y);
@@ -736,13 +819,14 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
     }
     else
     {
-        syMatrixRotRpyR(&mtx,
-                        dobj->rotate.vec.f.x,
-                        dobj->rotate.vec.f.y,
-                        dobj->rotate.vec.f.z);
-        if (ndsRendererAdapterSetN64TranslationExact(
-                &mtx, dobj->translate.vec.f.x, dobj->translate.vec.f.y,
-                dobj->translate.vec.f.z) == FALSE)
+        if (ndsRendererAdapterBuildFighterTraRotRpyExact(
+                &mtx,
+                dobj->translate.vec.f.x,
+                dobj->translate.vec.f.y,
+                dobj->translate.vec.f.z,
+                dobj->rotate.vec.f.x,
+                dobj->rotate.vec.f.y,
+                dobj->rotate.vec.f.z) == FALSE)
         {
             syMatrixTraRotRpyR(&mtx,
                                dobj->translate.vec.f.x,

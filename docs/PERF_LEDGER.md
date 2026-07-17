@@ -3389,3 +3389,67 @@ CANONICAL QUALIFICATION:
   The generic smash64ds.nds was not rebuilt and remains SHA-256
   009211A8ACC4BCC8DD473A14327AFFF023EC9F33EADBA786B67E0735D7077AB7.
 ```
+
+## 2026-07-17 - Task 8 Cut F exact fighter RPY matrices
+
+```text
+IDEA ID: TASK8-CUT-F-FIGHTER-RPY-EXACT-20260717
+BOUND / CENSUS:
+  The detailed M2 window records 40 eligible unscaled mode-0 fighter local
+  matrices per frame. Their owner bucket is 50,272/50,624 ticks P50/P95 before
+  this cut. Cached and scaled matrix paths are not candidates.
+SOURCE AUTHORITY:
+  BattleShip macros.h:28 defines the radians-to-table-index multiply/truncate.
+  BattleShip sys/matrix.c:966-1012 defines the gSYSinTable lookup, RPY integer
+  products, shifts, packing, and fixed-W matrix layout. No decomp source changed.
+ONE CHANGE:
+  At the display adapter's unscaled fighter seam, replace the original source
+  call with one ARM-state exact builder. It reproduces the source binary32 index,
+  uses the imported source table and integer formulas, and packs translation
+  with the existing exact 16.16 converter. Unsupported values fail closed to
+  syMatrixTraRotRpyR before use. Gameplay, cached, scaled, generic fallback,
+  matrix layout, and source files remain unchanged.
+HOST / CODEGEN PROOF:
+  scripts/check-fighter-matrix-angle-index.ps1 compares 234,881,492 binary32
+  inputs against the literal source float multiply and truncation. It exhausts
+  both signs and every mantissa for the nontrivial exponent classes 117..130;
+  lower accepted classes are covered by signed zero/subnormal endpoints and the
+  proven product-magnitude-below-one bound. It passes with zero mismatches. Both rebuilt
+  profile-1 and profile-2 builders are ARM symbols with three UMULL instructions
+  and zero __aeabi_* calls. DevFast now owns this regression.
+IDENTITY / WINDOW:
+  Mode 163, profile 1, detailed M2 ledger, Mode 9, static AOT 1, strict post-GO
+  fence, bitmap OAM, live Fox, incremental wallpaper, frames 600..607.
+  Cut E / Cut F ROM SHA-256 values are
+  5E7E56D401665F0EA259F04C812EF057A5BFDABE5AD7AC698E7C223C702027B9 /
+  5784EE4F7C3C213557E1A3AEEE43549794F465F7C831BB70CB0F2639A969A725.
+P50/P95 RESULT:
+  Combined fighter local-matrix ticks 50,272/50,624 -> 49,344/49,472, saving
+  928/1,152. This is a local owner gain, not a locked-30 claim.
+EXACTNESS / RUNTIME GATES:
+  Profile 2 shadows each eligible matrix with BattleShip syMatrixTraRotRpyR and
+  byte-compares the full Mtx before conversion. The canonical static-off live-
+  Fox run passes frames 600..607 with RENDER_ORACLE=2484/0/0, stable 121/828
+  owner census, 202/320/306 stage/Mario/Fox triangles, zero clipping, and a
+  normal content/detail-gated frame 607. The rebuilt profile-2 ROM remains
+  byte-identical to the exercised ROM at SHA-256
+  796765A83CD796AB065B0FC634CE177C333FC649FF2C43A603ED1DD09BCF9CD0.
+  The 2,484 sample field belongs to the vertex oracle; fighter matrix shadows
+  share its zero mismatch counter but do not inflate that sample field. A
+  static-on exploratory profile-2 run also reached 2484/0/0 but failed an
+  existing texture-format accounting assertion; it is not used as the full
+  forensic gate. The supported static-off forensic identity passed end to end.
+  GBI fixtures, renderer ITCM placement, and both profile builds pass. Removing
+  the now-unused predecessor translation helper leaves both exercised ROM
+  payloads byte-identical; only ELF debug identities change.
+EVIDENCE:
+  artifacts/performance/2026-07-17_task8-cut-e-m2-fighter600.json
+  artifacts/performance/2026-07-17_task8-cut-f-candidate-fighter600.json
+  artifacts/performance/2026-07-17_task8-cut-f-forensic-static-off-fighter600.json
+  artifacts/visibility/2026-07-17_task8-cut-f-candidate-frame607.png
+  artifacts/visibility/2026-07-17_task8-cut-f-forensic-static-off-frame607.png
+  .tura/task8-cut-f-candidate-runtime.log
+  .tura/task8-cut-f-forensic-static-off-runtime.log
+KEEP / REWORK / REVERT: KEEP
+  Bank the exact 928-tick P50 owner-local gain under the no-discard rule.
+```

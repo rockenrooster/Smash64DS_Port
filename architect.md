@@ -107,3 +107,34 @@ changed pixels. The final-source lab ROM
 reports two full validations, 605 hits, and exactly one mismatch, injection, and
 successful revalidation. The explicit pacing smoke preserves fixed-two cadence
 but reaches only 19.0 presents/s; Cut E is a banked gain, not a locked-30 claim.
+
+## Task 8 Cut F fighter-matrix contract
+
+`ndsRendererAdapterBuildFighterTraRotRpyExact` owns only the display adapter's
+unscaled mode-0 fighter matrix seam. BattleShip's `SINTABLE_RAD_TO_ID` macro and
+`syMatrixRotRpyR` remain authoritative for binary32 angle conversion, source
+table lookup, integer products and shifts, matrix packing, and fixed W. The
+adapter reproduces that conversion with integer operations, uses the imported
+`gSYSinTable`, and reuses the existing exact 16.16 translation conversion.
+
+The complete builder is one ARM-state function because the adapter translation
+unit is otherwise Thumb and would lower its 64-bit multiplies to a libgcc call.
+Any unsupported angle or translation fails closed to `syMatrixTraRotRpyR` before
+the matrix is consumed. Cached matrices, scaled transforms, generic fallback,
+gameplay callers, matrix layout, and BattleShip source remain unchanged.
+
+The backward-compatibility framework has three independent layers:
+
+- `scripts/check-fighter-matrix-angle-index.ps1` executes 234,881,492 source
+  comparisons, exhausting both signs and every mantissa in the nontrivial
+  exponent classes 117..130; lower accepted classes are covered by endpoint
+  checks and the product-magnitude-below-one proof. It also requires ARM UMULL
+  code generation with no `__aeabi_*` helper call and is part of DevFast.
+- Profile 2 rebuilds every eligible matrix with BattleShip's original function
+  and byte-compares the complete `Mtx`. Matrix comparisons share the renderer
+  oracle mismatch counter; the reported 2,484 sample field counts vertex-oracle
+  samples, not fighter matrices. The live-Fox frames 600..607 gate is zero
+  mismatch with 40 eligible matrices in the detailed profile-1 census.
+- The accepted profile-1 and forensic ROM SHA-256 identities are respectively
+  `5784EE4F7C3C213557E1A3AEEE43549794F465F7C831BB70CB0F2639A969A725`
+  and `796765A83CD796AB065B0FC634CE177C333FC649FF2C43A603ED1DD09BCF9CD0`.
