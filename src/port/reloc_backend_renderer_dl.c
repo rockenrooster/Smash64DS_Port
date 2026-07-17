@@ -5669,8 +5669,8 @@ static void ndsRendererAdapterEmitMoveWord(Gfx *cmd,
     }
     cmd->words.w0 =
         (NDS_FIGHTER_DL_OP_MOVEWORD << 24) |
-        ((offset & 0xffffu) << 8) |
-        (index & 0xffu);
+        ((index & 0xffu) << 16) |
+        (offset & 0xffffu);
     cmd->words.w1 = data;
 }
 
@@ -9736,12 +9736,24 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     Mtx camera_mtx;
     u32 i;
 
-    bzero(&sNdsFighterDisplayContract, sizeof(sNdsFighterDisplayContract));
+    /* Every consumed event field and scratch command is overwritten before
+     * use. Reset only the live capture state instead of clearing the 6,240-byte
+     * event/scratch arena for each fighter every frame. */
+    sNdsFighterDisplayContract.current_dobj = NULL;
+    sNdsFighterDisplayContract.material_dobj = NULL;
+    sNdsFighterDisplayContract.event_count = 0u;
     sNdsFighterDisplayContract.pending_event = -1;
+    sNdsFighterDisplayContract.geometry_mode = 0u;
+    sNdsFighterDisplayContract.cycle_type = 0u;
+    sNdsFighterDisplayContract.render_mode = 0u;
     sNdsFighterDisplayContract.prim_color = 0xffffffffu;
     sNdsFighterDisplayContract.env_color = 0xffffffffu;
     sNdsFighterDisplayContract.light_count =
         sNdsFighterDisplayCurrentLightCount;
+    sNdsFighterDisplayContract.light = (Light){ 0 };
+    sNdsFighterDisplayContract.light_valid = FALSE;
+    sNdsFighterDisplayContract.matrix_ready = FALSE;
+    sNdsFighterDisplayContract.material_ready = FALSE;
     if (sNdsFighterDisplayCurrentLightValid != 0u)
     {
         sNdsFighterDisplayContract.light = sNdsFighterDisplayCurrentLight;

@@ -3740,3 +3740,240 @@ EVIDENCE:
   artifacts/performance/2026-07-17_task9-state-{r0,phase1-itcm}.json
 KEEP / REWORK / REVERT: KEEP PHASE 1 / SKIP PHASE 2
 ```
+
+## 2026-07-17 - M2 production emitter run-class split
+
+```text
+IDEA ID: M2-PRODUCTION-EMITTER-RUN-SPLIT-20260717
+MEASUREMENT IDENTITY:
+  Mode 163 battle_playable_realtime, profile 1, detailed M2 ledger, Mode 8,
+  static AOT 1, hybrid OAM 1, Fox decisions paused, frames 600..607. A and A2
+  are byte-identical: ROM/ELF
+  5F7C2A53FA6B931B21CDE8F0669DDD51D3CD859F44A2771FC0194620345F6D48 /
+  08589A0AADEA17A18090FA5DDDE7F6C285705D88558F011E412DE852DFFB2151.
+  Their renderer object is
+  DBBCC6D7524BC6C97128F43063F62091DC4FFE16FE4F70B17B19A27B9E35F42C.
+
+HOT SYMBOL / FREQUENCY / BEFORE CODEGEN:
+  ndsRendererNativeEmitProductionRun is the measured 48,000/48,192-tick
+  emit/account child of the 212,416/212,480 production bucket. The frame has
+  67 calls: 54 raw and 13 cross, spanning 626 triangles / 1,878 corners, of
+  which 381 corners are textured. Before: object 0xFC/0x224, ELF
+  0x01FFC728/0x224, and push/pop {r4-r9,lr}, seven saved registers on the
+  malloc-backed main-RAM coroutine stack. The production owner is
+  0x01FFDD70/0xE28 with a 116-byte frame.
+
+HYPOTHESIS:
+  The already-proved run class is invariant for each call. Separate raw and
+  cross callees can remove cross-only arguments/register pressure from the 54
+  common raw calls without changing an emitted GX word.
+
+REJECTED FULL INLINE:
+  always_inline removes the 0x224 callee and locally moves production to
+  211,584/211,648, but grows the owner 0xE28 -> 0x1028, its frame 116 -> 124,
+  and regresses draw 1,061,888/1,061,952 -> 1,061,984/1,062,080 and active
+  1,066,208/1,066,816 -> 1,066,304/1,066,880. REVERT.
+
+RETAINED CHANGE / AFTER CODEGEN:
+  Call sites dispatch directly to one raw or cross function. Raw is
+  0x01FFC62C/0xD0 and saves {r4-r7,lr}; cross is
+  0x01FFC7F8/0x164 and saves {r4-r9,sl,lr}. The 54 raw calls save two words on
+  both entry and exit while 13 cross calls add one, eliminating 190 stack word
+  transfers per frame. Candidate object/ELF are
+  3753EE91FA98D05EC0FD5208D800601CA66FB47D6E2260DEBF8953EB4336F53C /
+  5D12AA2381958ED0271DF11883C445BFDEEC4CFD02A2FB039184495518D8921A.
+
+SYNCHRONIZED A/A2/B P50/P95:
+  Combined fighter  433,472/433,536 -> 432,384/432,448  (-1,088/-1,088)
+  Production        212,416/212,480 -> 211,328/211,392  (-1,088/-1,088)
+  Emit/account       48,000/48,192  ->  47,456/47,616    (-544/-576)
+  Draw            1,061,888/1,061,952 -> 1,060,928/1,060,992 (-960/-960)
+  Active          1,066,208/1,066,816 -> 1,065,280/1,065,856 (-928/-960)
+
+TAIL-DISPATCH FALSIFIER:
+  A shared noinline dispatcher reclaims 648 detailed-build ITCM bytes, but
+  gives back 864 of the 960 draw ticks: draw becomes
+  1,061,792/1,061,824 and production 212,288/212,352. REVERT; direct dispatch
+  wins under the measured P1 performance priority.
+
+EXACTNESS / MEMORY / CHECKPOINT:
+  A/A2/B preserve 70/686 and 60/320/306/29/0/0, all fence/conservation fields,
+  and change 0/120,000 pixels in the 400x300 gameplay viewport. Owner packet,
+  hierarchy, GBI fixtures, ITCM placement, two-ROM publication, and Boundary
+  pass. Canonical ITCM is 28,608/32,768 with 24,104 renderer bytes, up
+  480/464 from the Task-9 checkpoint; public ROM is 14,613,504 bytes,
+  SHA-256 B54D16DB43844C63D88F8CD3E635A5A53DB0818CDC5F4517724BA577EF621753.
+  A fresh ledger-off window is 372,096/372,160 combined fighter ticks.
+
+EVIDENCE:
+  artifacts/performance/2026-07-17_m2-emit-{a,a2,inline-b,split-b,
+    tail-dispatch-c,split-ledger-off}.json
+  artifacts/visibility/2026-07-17_m2-emit-{a,a2,split-b}-frame607.png
+  builds/m2-emit-split-candidate/{nds_renderer.o,
+    smash64ds-battle-playable-coarse-hwtri.elf}
+KEEP / REWORK / REVERT: KEEP DIRECT SPLIT / REVERT INLINE AND TAIL DISPATCH
+```
+
+## 2026-07-17 - Mario generic/fast forensic parity is red
+
+```text
+IDEA ID: PROFILE2-MARIO-GENERIC-FAST-PARITY-RED-20260717
+FINDING:
+  The first 30-second attempt timed out in the slow generic forensic arm. The
+  comparison wrapper now forwards RendererBenchmarkTimeoutSeconds; the
+  documented 120-second run captured generic and Mode 8 at identical frames
+  180..187 from ROM 7ABCAD1B6D3321062F50E6F2FDFBE42F21D16471A78976D386413BB256A6A73D.
+
+RESULT:
+  Stage, Fox, owner counts, geometry, and upload provenance match. Mario does
+  not: all eight rows differ in exit vertex-cache and semantic hashes, and its
+  light signature is generic 3347397109 versus fast 2758001273. This is a real
+  red gate, not a timeout waiver.
+
+OWNERSHIP / FIRST-BAD BOUND:
+  artifacts/performance/2026-07-17_task8-cut-f-forensic-static-off-fighter600.json
+  already has the generic 3347397109 signature. The older
+  artifacts/performance/2026-07-16_mario-light-prefix-profile2.json already has
+  the fast 2758001273 signature. The forensic ELF contains no production
+  emitter or native production/hierarchy owner symbol, so the new emitter split
+  cannot cause this divergence. Repair the shared Mario matrix/light seam
+  before another M2 experiment.
+
+EVIDENCE:
+  artifacts/performance/2026-07-17_m2-forensic-generic-profile2.json
+    SHA-256 2DD5FC378ABE1ACFDDF2EAE3628F51C38856BFDFB49898110EFED520D4DFA8CF
+  artifacts/performance/2026-07-17_m2-forensic-fast-mode8-profile2.json
+    SHA-256 7E2D559DA1139FFF6DE246DAD66AACE2AD32671D4AF9848C3B952B0139D096EF
+KEEP / REWORK / REVERT: RED / REWORK SHARED MARIO MATRIX-LIGHT PARITY
+```
+
+## 2026-07-17 - Restored exact fighter light parity
+
+```text
+IDEA ID: PROFILE2-FIGHTER-LIGHT-PARITY-RESTORE-20260717
+ROOT CAUSE:
+  The shared F3DEX2 G_MOVEWORD decoder used the wrong field layout, and the
+  live material emitter encoded that same wrong layout. The owner generator's
+  exact O2R scan found 148 static fighter G_MW_LIGHTCOL commands: 120 are the
+  already-compact root prefixes, while 28 are source-significant intra-root
+  changes that the generated state sequence had omitted.
+
+RETAINED CHANGE / RECURRENCE GATE:
+  Decode and emit index bits 16..23 and offset bits 0..15 while preserving the
+  separate SPECIAL_1 layout. Keep the 120 root prefixes compact and add only
+  the 28 intra-root changes to epoch state spans. The generated tables contain
+  70 state deltas and 196 state-sequence entries; the owner remains 32 roots,
+  49 epochs, 67 runs, 626 triangles, and the hierarchy remains 49 bindings /
+  1,878 corners. Generator checks now census exact command identity, ordering,
+  and material boundaries. Native-state validation accepts effect 14 only for
+  an exact G_MW_LIGHTCOL opcode/index/offset tuple.
+
+PROFILE-2 EXACTNESS:
+  A fresh synchronized generic/Mode-8 comparison on forensic ROM
+  940F1A8D14776F6127AE644AAC6AA0E01E51D30274D6B08CDEDD1EC107B3EC26
+  covers frames 180..187. All eight frames have zero semantic, owner, and
+  geometry mismatches and both arms retain 686 triangles. These are forensic
+  builds, so their timing is not a production performance claim.
+
+BOUNDARY CHECKPOINT:
+  Public ROM A7E607BB03550E7D7379EE3114040E86A823B300F708839C0A946D86302DDBEB
+  is 14,613,504 bytes and passes Boundary with 121 runs / 828 triangles, zero
+  fallback, 22 resident textures / 131,072 bytes, 646 cache hits, and zero
+  post-GO fence work. Canonical ITCM is 28,040/32,768; renderer ownership is
+  23,536 bytes. Locked-30 full-speed remains unmet and needs a separate
+  production measurement.
+
+EVIDENCE:
+  artifacts/performance/2026-07-17_m2-forensic-light-parity-generic-profile2.json
+    SHA-256 2E9F2CA40038271EB08898849BE56DDA4F2244F6087B8C39B1675B2E42F82757
+  artifacts/performance/2026-07-17_m2-forensic-light-parity-fast-mode8-profile2.json
+    SHA-256 60F10268CA3A4BBF241246EE184112E506ED19AC77A85983E96A68DFE6651F7F
+KEEP / REWORK / REVERT: KEEP EXACT LIGHT STATE / RESUME MEASURED M2 WORK
+```
+
+## 2026-07-17 - Reused the fully overwritten fighter capture arena
+
+```text
+IDEA ID: M2-DISPLAY-CONTRACT-SCALAR-RESET-20260717
+MEASUREMENT IDENTITY:
+  Mode 163 battle_playable_realtime, profile 1, detailed M2 ledger, Mode 8,
+  static AOT 1, hybrid OAM 1, Fox decisions paused, frames 600..607. Control
+  ROM/ELF are
+  3C5B83FC1C1B2DB80E8D954733F3B9A19A939AD087AE7F84BDAE15CBA14CB997 /
+  51B164559149288AAF60918161F327F7313E4CA3BAF3F57B3625705C18719A1B;
+  candidate ROM/ELF are
+  6783F4B2F7C47A54499A5A2CB924B2483F907DAF6AA9039A54BF4EC43FCEDAEB /
+  8100515035F671BCDD5E2C887573736F1C8566BEBA7A56EE5D34388A189BE581.
+
+HOT SYMBOL / CALLERS:
+  ndsFighterDisplayContractCapture is inlined into
+  ndsFighterDisplayContractSubmit. The unchanged source callback remains
+  ndsBaseFTDisplayMainProcDisplay, translated from BattleShip
+  ft/ftdisplaymain.c.
+DYNAMIC FREQUENCY:
+  Two captures per presented frame: one Mario and one Fox.
+BEFORE ADDRESS / SIZE / SECTION / STACK:
+  Submit is 0x02044C04/0x298 in Thumb .main with a 128-byte maximum frame.
+  scene_backend.o is 4,134,116 bytes, SHA-256
+  D229F48DCE4C86CEC0ABE75A5D60E35CF1C29C710C8854C87935CF290E488269.
+BEFORE EXPENSIVE SEQUENCE:
+  At 0x02044C82 the inlined capture loads 6,240 and calls main-RAM memset at
+  0x0209CEA4, clearing the complete contract before every fighter traversal.
+
+CAUSAL HYPOTHESIS:
+  Selection overwrites every consumed event field, playback visits only
+  event_count entries, and the source display-list macros rewrite scratch from
+  reset heads. Clearing stale event/scratch bytes therefore cannot affect live
+  output; only scalar guards and current light/material state need reset.
+ONE CHANGE:
+  Replace the full-struct clear with explicit live-state resets. Preserve the
+  16-byte Light zero initialization and all source callback/event selection.
+  The GBI fixture checker forbids restoration of the broad clear and requires
+  the complete scalar reset sequence.
+AFTER ADDRESS / SIZE / SECTION / STACK:
+  Submit remains at 0x02044C04 in Thumb .main, grows to 0x2D8, and retains the
+  128-byte frame. scene_backend.o is 4,134,324 bytes, SHA-256
+  7F4739D0A6FEA20C6B6FF48053952C79C44D2F743F59119AA941280E165314FF.
+AFTER SEQUENCE:
+  The 6,240-byte memset is gone. One 16-byte memset remains for exact Light
+  zeroing; event and scratch storage are reused without being read stale.
+MAP / TCM / ROM DELTA:
+  .main grows 64 bytes; object/ELF grow 208/188 bytes. Detailed-build ITCM is
+  unchanged at 29,384/32,768. Both ROMs remain 14,621,696 bytes. Candidate map
+  SHA-256 is
+  3BA36BB628426093E47A04EF11FA9DD198E31CC08E884BCEF8E5C873E1790619.
+
+SYNCHRONIZED A/B P50/P95:
+  Capture              47,296/47,360     -> 41,152/41,152     (-6,144/-6,208)
+  Combined fighter    452,640/455,808    -> 446,464/449,600   (-6,176/-6,208)
+  Production          232,768/235,968    -> 232,736/235,840      (-32/-128)
+  Draw              1,077,568/1,080,832  -> 1,071,488/1,074,816 (-6,080/-6,016)
+  Active            1,081,824/1,094,144  -> 1,075,872/1,079,040 (-5,952/-15,104)
+
+EXACTNESS GATES:
+  All eight frames preserve 70/686 and 60/320/306/29/0/0, renderer geometry,
+  M2 state/conservation, static texture and fence fields, and 0/49,152 changed
+  top-screen pixels. Current profile-2 generic/Mode-8 ROM A4D84254... is exact
+  on all eight frames 180..187 for semantic hashes, provenance, owner state,
+  geometry, and upload sequence; both arms retain 686 triangles. Boundary
+  passes on public ROM
+  36218F25F3C69929CEBF4F62B8E2BEBFFCCC13739DBBE5B5D28376352677A686
+  with canonical ITCM 28,040/32,768 and a dated capture. Current source-light-
+  exact ledger-off combined fighter timing is 386,016/389,184; profile-0 smoke
+  is 22.3 FPS, so stable locked 30 remains unmet.
+
+TOOLING / RECURRENCE:
+  compare-renderer-fast-raw.ps1 now forwards its capture timeout, parses both
+  integer-array and space-delimited JSON rows, and fails closed on missing
+  projected fields. A transient runner disconnect was rerun on another repo
+  slot; no disconnected sample was admitted.
+
+EVIDENCE:
+  artifacts/performance/2026-07-17_m2-contract-reset-{a,b}.json
+  artifacts/performance/2026-07-17_m2-contract-reset-ledger-off.json
+  artifacts/performance/2026-07-17_m2-contract-reset-{generic,fast}-profile2.json
+  artifacts/visibility/2026-07-17_m2-contract-reset-{a,b}-frame607.png
+  artifacts/visibility/2026-07-17_m2-contract-reset-ledger-off-frame607.png
+  builds/m2-contract-reset-{control,candidate}/
+KEEP / REWORK / REVERT: KEEP SCALAR RESET / CONTINUE M2 FULL-SPEED WORK
+```

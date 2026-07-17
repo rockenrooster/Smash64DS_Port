@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """Generate the canonical Mario/Fox native-owner IR include.
 
-The canonical bytes were recovered once from the exact profile-2 experiment
-recorded by logs/native-fighter-cut/native-dead-state-profile2.json.  That ROM
-was built from nds_renderer.o SHA256
-00ada7d880c732a177d041b37b4642e95464af9c2dd73f70e3289287cd5565ba.
-The old runtime executor is deliberately not recovered: it re-entered generic
-state/triangle machinery and failed the big-jump performance gate.  These
-hashed data sections retain only the source-derived owner IR needed by the new
-direct renderer.
+The hashed profile-2 export supplies the geometry and baseline state IR.  The
+generator validates the exact Mario/Fox O2R payloads, preserves their compact
+root light prefixes, and restores omitted intra-root G_MW_LIGHTCOL changes in
+source order.  The old runtime executor remains excluded because it re-entered
+generic state/triangle machinery and failed the big-jump performance gate.
 """
 
 from __future__ import annotations
@@ -146,6 +143,9 @@ DOBJ_DESC_SIZE = 44
 SOURCE_G_MOVEWORD = 0xdb
 SOURCE_G_MW_LIGHTCOL = 0x0a
 SOURCE_LIGHTCOL_OFFSETS = (0x00, 0x04, 0x18, 0x1c)
+SOURCE_G_DL = 0xde
+SOURCE_SEGMENT_E = 0x0e
+NATIVE_STATE_LIGHT_COLOR = 14
 
 # Nintendo DS packed geometry FIFO command IDs.  These are REG2ID(register)
 # values from libnds videoGL.h/video.h.  Keep the generator independent of a
@@ -243,19 +243,24 @@ def load_o2r_payload(repo_root: Path, owner_name: str) -> bytes:
     return source[data_offset:data_end]
 
 
-def decode_root_light_preambles(
+def decode_epoch_light_color_state(
         payload: bytes, owner_name: str, roots, epochs):
-    """Recover the source G_MW_LIGHTCOL prefix omitted by the recorded IR."""
-    result = []
+    """Recover compact root-prefix and exact intra-root light state."""
+    result = {index: ([], []) for index in range(len(epochs))}
+    preambles = []
+    prefix_command_count = 0
+    intra_root_command_count = 0
     for root_index, root in enumerate(roots):
         if root[7] != 0:
             raise ValueError(
                 f"{owner_name} root {root_index}: reserved byte is not free"
             )
-        first_epoch = epochs[root[1]]
-        first_triangle_command = first_epoch[11]
-        colors = {}
-        for command_index in range(first_triangle_command):
+        if root[0] + root[3] * 8 > len(payload):
+            raise ValueError(
+                f"{owner_name} root {root_index}: source command span is truncated"
+            )
+        light_commands = []
+        for command_index in range(root[3]):
             w0, w1 = struct.unpack_from(
                 ">II", payload, root[0] + command_index * 8
             )
@@ -268,20 +273,150 @@ def decode_root_light_preambles(
                     f"{owner_name} root {root_index}: unsupported "
                     f"G_MW_LIGHTCOL offset 0x{offset:x}"
                 )
-            colors[offset] = w1
-        if not colors:
-            result.append(None)
-            continue
-        if set(colors) != set(SOURCE_LIGHTCOL_OFFSETS):
+            light_commands.append((command_index, w0, w1))
+        for pair_index in range(0, len(light_commands), 2):
+            pair = light_commands[pair_index:pair_index + 2]
+            if (len(pair) != 2 or
+                    (pair[0][1] & 0xffff) not in (0x00, 0x18) or
+                    (pair[1][1] & 0xffff) !=
+                    ((pair[0][1] & 0xffff) + 4) or
+                    pair[0][2] != pair[1][2]):
+                raise ValueError(
+                    f"{owner_name} root {root_index}: split light color pair"
+                )
+
+        first_root_triangle = epochs[root[1]][11]
+        prefix_lights = [command for command in light_commands
+                         if command[0] < first_root_triangle]
+        if not prefix_lights:
+            preambles.append(None)
+        else:
+            prefix_offsets = [w0 & 0xffff for _index, w0, _w1
+                              in prefix_lights]
+            if prefix_offsets != [0x00, 0x04, 0x18, 0x1c]:
+                raise ValueError(
+                    f"{owner_name} root {root_index}: light prefix is not "
+                    "the compact two-pair layout"
+                )
+            preambles.append((prefix_lights[0][2], prefix_lights[2][2]))
+        prefix_command_count += len(prefix_lights)
+
+        previous_triangle = -1
+        consumed_lights = 0
+        for epoch_index in range(root[1], root[1] + root[4]):
+            epoch = epochs[epoch_index]
+            first_triangle = epoch[11]
+            if (first_triangle <= previous_triangle or
+                    first_triangle >= root[3]):
+                raise ValueError(
+                    f"{owner_name} root {root_index}: invalid epoch triangle "
+                    f"index {first_triangle}"
+                )
+            material_calls = []
+            epoch_lights = []
+            for command_index in range(previous_triangle + 1, first_triangle):
+                w0, w1 = struct.unpack_from(
+                    ">II", payload, root[0] + command_index * 8
+                )
+                if ((w0 >> 24) == SOURCE_G_MOVEWORD and
+                        ((w0 >> 16) & 0xff) == SOURCE_G_MW_LIGHTCOL):
+                    epoch_lights.append((command_index, w0, w1))
+                if ((w0 >> 24) == SOURCE_G_DL and
+                        (w1 >> 24) == SOURCE_SEGMENT_E):
+                    material_calls.append((command_index, w1 & 0xffffff))
+
+            material_slot = epoch[10]
+            if material_slot == INVALID_U8:
+                if material_calls:
+                    raise ValueError(
+                        f"{owner_name} root {root_index} epoch {epoch_index}: "
+                        "unexpected material call"
+                    )
+                material_command = None
+            else:
+                expected_segment = material_slot * 8
+                matches = [index for index, segment in material_calls
+                           if segment == expected_segment]
+                if len(matches) != 1 or len(material_calls) != 1:
+                    raise ValueError(
+                        f"{owner_name} root {root_index} epoch {epoch_index}: "
+                        f"material slot {material_slot} does not own one "
+                        "segment-E call"
+                    )
+                material_command = matches[0]
+
+            before, after = result[epoch_index]
+            for command_index, w0, w1 in epoch_lights:
+                if command_index < first_root_triangle:
+                    continue
+                target = (before if material_command is None or
+                          command_index < material_command else after)
+                target.append((w0, w1, NATIVE_STATE_LIGHT_COLOR))
+                intra_root_command_count += 1
+            consumed_lights += len(epoch_lights)
+            previous_triangle = first_triangle
+
+        tail_lights = [index for index, _w0, _w1 in light_commands
+                       if index > previous_triangle]
+        if tail_lights:
             raise ValueError(
-                f"{owner_name} root {root_index}: incomplete light prefix"
+                f"{owner_name} root {root_index}: light commands after the "
+                f"final triangle epoch at {tail_lights}"
             )
-        if colors[0x00] != colors[0x04] or colors[0x18] != colors[0x1c]:
+        if consumed_lights != len(light_commands):
             raise ValueError(
-                f"{owner_name} root {root_index}: split light color pair"
+                f"{owner_name} root {root_index}: recovered "
+                f"{consumed_lights}/{len(light_commands)} light commands"
             )
-        result.append((colors[0x00], colors[0x18]))
-    return result
+    return (result, preambles, prefix_command_count,
+            intra_root_command_count)
+
+
+def restore_epoch_light_color_state(
+        state, sequence, epochs, root_groups, additions):
+    """Fold recovered light words into the existing before/after state ABI."""
+    state = list(state)
+    rebuilt_sequence = []
+    rebuilt_epochs = []
+    for epoch_index, epoch in enumerate(epochs):
+        before = (list(sequence[epoch[0]:epoch[0] + epoch[4]])
+                  if epoch[4] else [])
+        after = (list(sequence[epoch[1]:epoch[1] + epoch[5]])
+                 if epoch[5] else [])
+        for target, recovered in zip((before, after), additions[epoch_index]):
+            for delta in recovered:
+                if delta not in state:
+                    state.append(delta)
+                target.append(state.index(delta))
+        if len(before) > 0xff or len(after) > 0xff:
+            raise ValueError(f"epoch {epoch_index}: state span exceeds u8")
+        row = list(epoch)
+        row[0] = len(rebuilt_sequence) if before else 0xffff
+        rebuilt_sequence.extend(before)
+        row[1] = len(rebuilt_sequence) if after else 0xffff
+        rebuilt_sequence.extend(after)
+        row[4] = len(before)
+        row[5] = len(after)
+        rebuilt_epochs.append(tuple(row))
+    rebuilt_root_groups = []
+    for roots in root_groups:
+        rebuilt_roots = []
+        for root in roots:
+            tail = (list(sequence[root[2]:root[2] + root[5]])
+                    if root[5] else [])
+            row = list(root)
+            row[2] = len(rebuilt_sequence) if tail else 0xffff
+            rebuilt_sequence.extend(tail)
+            rebuilt_roots.append(tuple(row))
+        rebuilt_root_groups.append(rebuilt_roots)
+    if len(state) > 0x100 or len(rebuilt_sequence) > 0xffff:
+        raise ValueError("recovered light state exceeds the compact state ABI")
+    if len(rebuilt_sequence) != len(sequence) + 28:
+        raise ValueError(
+            "recovered light state sequence changed size: "
+            f"{len(rebuilt_sequence)} != {len(sequence) + 28}"
+        )
+    return state, rebuilt_sequence, rebuilt_epochs, rebuilt_root_groups
 
 
 def decode_source_vertex(payload: bytes, source_offset: int):
@@ -1402,16 +1537,25 @@ def generate(repo_root: Path | None = None) -> str:
     direct_epoch_policies = build_direct_epoch_policies(len(epochs))
     owner_roots = (("mario", mario_roots), ("fox", fox_roots))
     owner_topologies = []
+    light_state_additions = {index: ([], []) for index in range(len(epochs))}
     light_preambles = [(0, 0)]
     owner_light_preamble_indices = {}
+    root_prefix_light_command_count = 0
+    intra_root_light_command_count = 0
     for owner_name, roots in owner_roots:
         payload = load_o2r_payload(repo_root, owner_name)
         owner_topologies.append(
             decode_joint_topology(payload, owner_name, roots)
         )
+        (owner_light_state, owner_light_preambles,
+         owner_prefix_command_count, owner_intra_command_count) = \
+            decode_epoch_light_color_state(
+                payload, owner_name, roots, epochs)
+        for epoch_index, (before, after) in owner_light_state.items():
+            light_state_additions[epoch_index][0].extend(before)
+            light_state_additions[epoch_index][1].extend(after)
         indices = []
-        for preamble in decode_root_light_preambles(
-                payload, owner_name, roots, epochs):
+        for preamble in owner_light_preambles:
             if preamble is None:
                 indices.append(0)
                 continue
@@ -1419,11 +1563,26 @@ def generate(repo_root: Path | None = None) -> str:
                 light_preambles.append(preamble)
             indices.append(light_preambles.index(preamble))
         owner_light_preamble_indices[owner_name] = indices
+        root_prefix_light_command_count += owner_prefix_command_count
+        intra_root_light_command_count += owner_intra_command_count
+    if (root_prefix_light_command_count, intra_root_light_command_count) != \
+            (120, 28):
+        raise ValueError(
+            "native-owner source light command census changed: "
+            f"prefix={root_prefix_light_command_count}, "
+            f"intra-root={intra_root_light_command_count} != 120,28"
+        )
     if (len(light_preambles) != 3 or
             light_preambles[1][0] != light_preambles[2][0]):
         raise ValueError(
             "native-owner root light prefixes no longer fit the compact ABI"
         )
+    state, sequence, epochs, rebuilt_root_groups = \
+        restore_epoch_light_color_state(
+            state, sequence, epochs, (mario_roots, fox_roots),
+            light_state_additions)
+    mario_roots, fox_roots = rebuilt_root_groups
+    owner_roots = (("mario", mario_roots), ("fox", fox_roots))
     (
         dense_vertices,
         dense_color_sources,
@@ -1476,6 +1635,7 @@ def generate(repo_root: Path | None = None) -> str:
         "/* Generated by scripts/generate_nds_native_owners.py. */",
         "/* Canonical export: 32 roots, 49 epochs, 67 runs, 626 triangles. */",
         "/* Dense geometry: 541 immutable vertices, 1878 indexed corners. */",
+        "/* Exact O2R state: 120 root-prefix and 28 intra-root light commands. */",
         "",
     ]
     lines += emit_rows(

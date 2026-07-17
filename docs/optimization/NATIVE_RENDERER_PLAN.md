@@ -48,11 +48,33 @@ traversal moves it to 395,264/395,328. AOT-packing the immutable GX `xy/z`
 words without growing the 16-byte dense record moves it to 386,880/386,944.
 Co-locating the emitted AOT words with prepared color/UV in one power-of-two
 record moves it to 384,000/384,000 without changing total fighter-table RAM.
-ITCM is 25,864/32,768; the exact 70/686 fast owner and
-60/320/306/29/0/0 partition stay unchanged. Refreshed Phase 0 measures local matrices at 53,024/53,120 and
-lighting at 67,808/68,032. Lighting is already the exact prepared direction,
-signed normal dot, and LUT lookup, so continue against production emit/account
-work without replacing lighting or adding another per-root interpreter.
+The pre-light-repair post-Task-9 ledger-off sample was 372,096/372,160 and is
+no longer current. Splitting the production
+emitter by its already-proved raw/cross run class reduces the synchronized
+detailed combined-fighter window 433,472/433,536 -> 432,384/432,448 and draw
+1,061,888/1,061,952 -> 1,060,928/1,060,992. Raw runs now save two registers
+per entry/exit; the rarer cross runs add one, eliminating 190 main-RAM stack
+word transfers per frame. Canonical ITCM is 28,040/32,768 after Task 9 and the
+source-light repair; the exact 70/686 fast owner and 60/320/306/29/0/0
+partition stay unchanged. Full inlining and a shared tail dispatcher are
+measured regressions.
+
+The current source-light-exact ledger-off checkpoint is 386,016/389,184.
+Capture now resets only live scalar state because every consumed event field
+and scratch command is overwritten before use; it no longer clears the
+6,240-byte arena twice per frame. Detailed capture moves 47,296/47,360 ->
+41,152/41,152, combined fighter 452,640/455,808 -> 446,464/449,600, and draw
+1,077,568/1,080,832 -> 1,071,488/1,074,816. The change adds 64 bytes of main
+code, no ITCM, and preserves exact pixels, geometry, owner state, texture
+traffic, and conservation.
+
+The generic/fast profile-2 oracle is exact again. F3DEX2 `G_MOVEWORD` uses
+index bits 16..23 and offset bits 0..15. The generated owner retains all 148
+static fighter `G_MW_LIGHTCOL` commands as 120 compact root preambles plus 28
+intra-root epoch-state changes, and validation admits that state effect only
+for an exact light-color opcode/index/offset tuple. Fresh frames 180..187 have
+zero semantic, owner, or geometry mismatches and 686 triangles in both arms.
+The next M2 change must be another measured production cut from this contract.
 
 ## M3 — Complete Dream Land Owner
 

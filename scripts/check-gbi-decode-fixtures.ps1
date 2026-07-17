@@ -1085,6 +1085,8 @@ foreach ($file in $files) {
 }
 $renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
+$nativeOwnerGenerator = Get-Content (Join-Path $root 'scripts/generate_nds_native_owners.py') -Raw
+$nativeOwnerGenerated = Get-Content (Join-Path $root 'src/nds/nds_native_fighter_owner.generated.inc') -Raw
 $relocAssets = Get-Content (Join-Path $root 'src/port/reloc_backend_assets.c') -Raw
 $relocRendererDL = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 $relocMPCollision = Get-Content (Join-Path $root 'src/port/reloc_backend_mp_collision.c') -Raw
@@ -1472,6 +1474,18 @@ Assert-True ($renderer.Contains('ndsRendererApplyMvpRecalcCommand')) 'Renderer G
 Assert-True ($renderer.Contains('ndsRendererApplyMatrixMoveWordCommand')) 'Renderer G_MOVEWORD matrix traversal state handler is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_OP_SPECIAL_1 0xd5u')) 'Renderer G_SPECIAL_1 opcode support is missing.'
 Assert-True ($renderer.Contains('NDS_RENDERER_MOVEWORD_MATRIX')) 'Renderer G_MOVEWORD matrix target support is missing.'
+Assert-True ($renderer.Contains('NDS_RENDERER_MOVEWORD_INDEX_SHIFT 16u')) 'Renderer G_MOVEWORD no longer decodes the F3DEX2 index from bits 16..23.'
+Assert-True ($renderer -match '(?s)index = \(w0 >> NDS_RENDERER_MOVEWORD_INDEX_SHIFT\) &\s*NDS_RENDERER_MOVEWORD_INDEX_MASK;\s*offset = w0 & NDS_RENDERER_MOVEWORD_OFFSET_MASK;') 'Renderer G_MOVEWORD index/offset extraction drifted from the F3DEX2 command layout.'
+Assert-True ($renderer.Contains('ndsRendererNativeApplyRootLightPreamble')) 'Production native fighter paths lost the compact exact root-light prefix replay.'
+Assert-True ($nativeOwnerGenerator -match '(?s)root_prefix_light_command_count.*?intra_root_light_command_count.*?\(120, 28\)') 'Native-owner generator no longer guards the exact 120-prefix/28-intra-root light census.'
+Assert-True ($nativeOwnerGenerated.Contains('Exact O2R state: 120 root-prefix and 28 intra-root light commands.')) 'Generated native-owner light provenance no longer identifies the compact prefix and exact intra-root split.'
+Assert-True ($renderer -match '(?s)static s32 ndsRendererValidateNativeStateSpan.*?case NDS_NATIVE_STATE_LIGHT_COLOR:.*?index != NDS_RENDERER_MOVEWORD_LIGHTCOL.*?NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_1_A.*?NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_2_B') 'Production native-owner validation does not accept only exact generated G_MW_LIGHTCOL state commands.'
+$lightColorMoveWord = [Convert]::ToUInt32('db0a0018', 16)
+Assert-Equal (($lightColorMoveWord -shr 16) -band 0xff) 0x0a 'F3DEX2 G_MW_LIGHTCOL fixture did not decode index 0x0A.'
+Assert-Equal ($lightColorMoveWord -band 0xffff) 0x0018 'F3DEX2 G_MW_LIGHTCOL fixture did not decode light-2 offset 0x0018.'
+Assert-True ($relocRendererDL -match '(?s)ndsRendererAdapterEmitMoveWord.*?\(\(index & 0xffu\) << 16\).*?\(offset & 0xffffu\)') 'Fighter material G_MOVEWORD emitter drifted from the F3DEX2 index/offset layout.'
+Assert-True (-not $relocRendererDL.Contains('bzero(&sNdsFighterDisplayContract, sizeof(sNdsFighterDisplayContract));')) 'Fighter display capture regressed to clearing its complete event/scratch arena every fighter frame.'
+Assert-True ($relocRendererDL -match '(?s)static void ndsFighterDisplayContractCapture.*?event_count = 0u;.*?pending_event = -1;.*?geometry_mode = 0u;.*?light = \(Light\)\{ 0 \};.*?matrix_ready = FALSE;.*?material_ready = FALSE;.*?saved_graphics_heap_ptr') 'Fighter display capture no longer resets the complete live scalar state before reusing its event/scratch arena.'
 Assert-True ($renderer.Contains('modelview_stack')) 'Renderer modelview stack state is missing.'
 Assert-True ($renderer.Contains('ndsRendererDecodeInputVertex')) 'Renderer Vtx payload decode helper is missing.'
 Assert-True ($renderer.Contains('ndsRendererRecordTransformedTriangle')) 'Renderer transformed triangle readiness handler is missing.'
@@ -1911,6 +1925,7 @@ $rendererVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox
 $rendererBenchmarkWrapper = Get-Content (Join-Path $root 'scripts/benchmark-renderer-fast-raw.ps1') -Raw
 Assert-True ($rendererVerifier.Contains('RENDER_PROFILE_LEVEL=%u')) 'Realtime verifier does not identify the compiled renderer profile.'
 Assert-True ($rendererBenchmarkWrapper.Contains("'builds/build-m3-phase0-lab'") -and $rendererBenchmarkWrapper.Contains('-RendererM3Phase0Profile:$RendererM3Phase0Profile')) 'M3 Phase-0 benchmark is not isolated in its dedicated lab build.'
+Assert-True ($rendererVerifier -match '(?s)if \(\$fastIterationUnarmedM4 -and\s*\(\$effectiveStaticTextureAotMode -eq 1\)\).*?Fast iteration did not leave the deliberately unarmed TEXEL0/TEXEL1 path idle') 'Realtime verifier incorrectly requires an idle TEXEL0/TEXEL1 path when the static-off control must exercise its live water composite.'
 Assert-True ($rendererVerifier.Contains('RENDER_BENCH=%u')) 'Realtime verifier lacks the optional warm-frame renderer sampler.'
 Assert-True ($rendererVerifier.Contains('COARSE_BENCH=%u') -and $rendererVerifier.Contains('OWNER_BENCH=%u') -and $rendererVerifier.Contains('GX_BOUNDARY=%u') -and $rendererVerifier.Contains('STAGE0_BENCH=%u')) 'Realtime verifier does not sample synchronized coarse phases, owner census records, GX flush boundaries, and stage layer-0 wall time.'
 Assert-True ($rendererVerifier.Contains('RENDER_SEMANTIC={0}') -and $rendererVerifier.Contains('$format = ((1..38') -and $rendererVerifier.Contains('$coarseBenchmarkCommands += Get-RendererSemanticBenchmarkCommand')) 'Forensic benchmark lacks its exact 38-field synchronized semantic trace marker.'

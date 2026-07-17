@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-17 07:02 Central
+Updated: 2026-07-17 11:28 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -18,8 +18,8 @@ Preserve the published intrinsic mode-9 / mip-0 / static-residency / source-coun
 configuration. Dream Land water is exact frame 0/fraction 114 on the original
 12 triangles; the animated replacement and its dead implementation are removed.
 
-The integrated fixed-two candidate is 14,612,480 bytes, SHA-256
-`A89F143B447F7511D80AAB12D423BF8B70EDA4844E4396750F6CEAABF6F295DC`.
+The integrated fixed-two candidate is 14,613,504 bytes, SHA-256
+`36218F25F3C69929CEBF4F62B8E2BEBFFCCC13739DBBE5B5D28376352677A686`.
 Stage painter depth and pause-orbit containment are fixed and user-confirmed.
 M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, the
 zero-shift matrix builder, exact bounded `s16` rounding, Task 6 first-use
@@ -74,24 +74,31 @@ battle ledger before Results reuses the globals.
   zero hot conversion/upload, and zero post-GO fence work. The full current
   one-minute lifecycle passes through Results and teardown.
 
-Task 9 is complete. Six unchanged GCC 15.2.0 Thumb-multilib objects (1,952 code
-bytes) now link from ITCM ahead of libgcc. The frames-600..607 two-update source
-owner moved 311,744/312,960 -> 260,192/261,312 ticks P50/P95, a
-51,552/51,648-tick (16.54%/16.50%) KEEP. The supreme gate matched all 3,892
-per-update state rows exactly; Current and the natural one-minute gate pass.
-Canonical ITCM is 28,128/32,768 with the renderer's 23,640 bytes unchanged.
-Phase 2 was skipped because unchanged libgcc already produced a decisive gain.
-Report-only: gameplay uses a 16 KiB main-RAM coroutine stack, not DTCM; the
-measured update-600 high-water used 8,100 bytes with 8,284 bytes headroom.
+Task 9's unchanged-libgcc ITCM KEEP moves the source owner
+311,744/312,960 -> 260,192/261,312 and matches all 3,892 state rows. Current
+ITCM after the emitter split and source-light repair is 28,040/32,768;
+gameplay's 16 KiB main-RAM stack has 8,284 bytes measured headroom. Phase 2
+stays skipped.
 Do not merge this branch into main without Tyler's instruction.
 
-Natural KO/rebirth timing now uses profile-1 ROM `32C957AD...`, the real KO FGM
-trace, and BattleShip's `ftCommonRebirthDownSetStatus`, never scripted combat.
-KO is 1,261,344/1,524,864 active ticks; rebirth is 1,110,528/1,112,256. Both
-keep exact stage/M4/fence contracts; evidence is `20260717-*-natural-profile1`.
+The M2 raw/cross emitter split remains retained. The next measured cut reuses
+the fully overwritten capture arena instead of clearing 6,240 bytes per fighter:
+detailed capture falls 47,296/47,360 -> 41,152/41,152, combined fighter falls
+452,640/455,808 -> 446,464/449,600, and draw falls
+1,077,568/1,080,832 -> 1,071,488/1,074,816 with exact pixels and non-timing
+state. Current post-light-repair ledger-off is 386,016/389,184; the older
+372.1K sample is retired. Generic/fast profile 2 remains exact on frames
+180..187 with 686 triangles. Boundary passes on `36218F25...`; current
+profile-0 smoke is 22.3 FPS, so full-speed remains red.
+
+Natural KO/rebirth uses real source events and measures 1,261,344/1,524,864 and
+1,110,528/1,112,256 active ticks with exact stage/M4/fence contracts.
 
 ## Checkpoint
-Countdown, effects, FGM, Task 9 identity, one-minute lifecycle, and natural
-KO/rebirth timing pass. P1 is incomplete: full-speed, edge retest, audio debt,
-and Tyler's exact-ROM eyeball remain. Next: measured M2 fighter emit; do not
-reopen rejected wallpaper/stage designs. The Lean snapshot closes this packet.
+Countdown, effects, FGM, Task 9 identity, one-minute lifecycle, natural
+KO/rebirth timing, the M2 split, source-exact light parity, the capture-reset
+cut, and Boundary pass.
+P1 is incomplete: full-speed, edge retest, audio debt, and Tyler's exact-ROM
+eyeball remain. Next: resume one measured M2/full-speed cut from this verified
+checkpoint; do not reopen rejected wallpaper/stage designs. The Lean snapshot
+closes this packet.

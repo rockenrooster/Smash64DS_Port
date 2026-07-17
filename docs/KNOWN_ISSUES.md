@@ -6,9 +6,10 @@ durable unresolved gaps.
 ## P1 Release Blockers
 
 - Renderer M2 is visually correct but remains above its 170-250K target at
-  386,880/386,944 ticks.
+  386,016/389,184 ticks after source-exact light restoration and the retained
+  display-capture reset cut.
 - Renderer M3 is source/semantic-correct but remains above its 150-250K target
-  at 541,952/542,272 stage ticks.
+  at 489,184/489,536 stage ticks.
 - One natural source voice per fighter now plays (FoxSmash1 ID372 and
   MarioSmash2 ID430); remaining variants, exact pitch automation, and Tyler's
   voice ear check remain open. Dream Land BGM and the opening crowd are
@@ -16,9 +17,9 @@ durable unresolved gaps.
 - Fox remains the imported level-3 CPU in the public ROM. Automated visual
   captures alone select the documented Fox/countdown-off fast-iteration switch;
   final P1 still needs Tyler's CPU-on manual qualification.
-- The exact two-ROM build and Boundary checkpoint pass. Release still needs the
-  final complete-match dated capture under `artifacts/visibility` and manual
-  user retest.
+- The exact two-ROM build and Boundary checkpoint pass with a dated
+  fast-iteration capture. Release still needs the final CPU-on complete-match
+  capture under `artifacts/visibility` and manual user retest.
 
 ## Gameplay And Source Boundaries
 

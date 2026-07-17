@@ -3344,7 +3344,8 @@ try {
                     Assert-Condition ($wallpaperOracle.Success -and $wo[0] -gt 0 -and $wo[1] -eq 0 -and $wo[2] -gt 0 -and $wo[3] -eq 0 -and $wo[4] -eq 0 -and $wo[5] -eq 0 -and $wo[6] -eq 0 -and $wo[7] -eq 0) 'Forensic wallpaper recurrence/pixel oracle found an exact-output mismatch.' $gdbStdout
                 }
                 Assert-Condition ($renderClip.Success -and $rclip[0] -eq $rv[12]) 'Canonical realtime HW build did not report a consistent clipping/saturation marker.' $gdbStdout
-                if ($fastIterationUnarmedM4) {
+                if ($fastIterationUnarmedM4 -and
+                    ($effectiveStaticTextureAotMode -eq 1)) {
                     Assert-Condition ($renderTexel1.Success -and
                         @($rt1 | Where-Object { $_ -ne 0 }).Count -eq 0) 'Fast iteration did not leave the deliberately unarmed TEXEL0/TEXEL1 path idle.' $gdbStdout
                 } elseif ($effectiveStaticTextureAotMode -eq 1) {

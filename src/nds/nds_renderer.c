@@ -335,9 +335,12 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_1_B 0x04u
 #define NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_2_A 0x18u
 #define NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_2_B 0x1cu
-#define NDS_RENDERER_MOVEWORD_OFFSET_SHIFT 8u
+#define NDS_RENDERER_MOVEWORD_INDEX_SHIFT 16u
 #define NDS_RENDERER_MOVEWORD_OFFSET_MASK 0xffffu
 #define NDS_RENDERER_MOVEWORD_INDEX_MASK 0xffu
+#define NDS_RENDERER_SPECIAL_1_OFFSET_SHIFT 8u
+#define NDS_RENDERER_SPECIAL_1_OFFSET_MASK 0xffffu
+#define NDS_RENDERER_SPECIAL_1_INDEX_MASK 0xffu
 #define NDS_RENDERER_MWO_POINT_ST 0x14u
 #define NDS_RENDERER_MOVEMEM_LIGHT 10u
 #define NDS_RENDERER_MOVEMEM_OFFSET_SHIFT 8u
@@ -2463,6 +2466,7 @@ typedef struct NDSRendererTraversalState
 #define NDS_NATIVE_STATE_PRIM 11u
 #define NDS_NATIVE_STATE_BLEND 12u
 #define NDS_NATIVE_STATE_MATERIAL 13u
+#define NDS_NATIVE_STATE_LIGHT_COLOR 14u
 #define NDS_NATIVE_STATE_NONE 0xffffu
 #define NDS_NATIVE_MATERIAL_NONE 0xffu
 #define NDS_NATIVE_VERTEX_BLOCK 0u
@@ -4093,9 +4097,9 @@ static void ndsRendererApplyMvpRecalcCommand(
     }
 
     NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
-    if ((((w0 >> NDS_RENDERER_MOVEWORD_OFFSET_SHIFT) &
-          NDS_RENDERER_MOVEWORD_OFFSET_MASK) != 0u) ||
-        ((w0 & NDS_RENDERER_MOVEWORD_INDEX_MASK) != 1u) ||
+    if ((((w0 >> NDS_RENDERER_SPECIAL_1_OFFSET_SHIFT) &
+          NDS_RENDERER_SPECIAL_1_OFFSET_MASK) != 0u) ||
+        ((w0 & NDS_RENDERER_SPECIAL_1_INDEX_MASK) != 1u) ||
         (w1 != 0u))
     {
         ndsRendererRecordUnsupported(stats, NDS_RENDERER_OP_SPECIAL_1);
@@ -4275,9 +4279,9 @@ static void ndsRendererApplyMatrixMoveWordCommand(
     }
 
     NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
-    index = w0 & NDS_RENDERER_MOVEWORD_INDEX_MASK;
-    offset = (w0 >> NDS_RENDERER_MOVEWORD_OFFSET_SHIFT) &
-        NDS_RENDERER_MOVEWORD_OFFSET_MASK;
+    index = (w0 >> NDS_RENDERER_MOVEWORD_INDEX_SHIFT) &
+        NDS_RENDERER_MOVEWORD_INDEX_MASK;
+    offset = w0 & NDS_RENDERER_MOVEWORD_OFFSET_MASK;
     if ((index == NDS_RENDERER_MOVEWORD_FOG) &&
         (offset == NDS_RENDERER_MOVEWORD_FOG_OFFSET))
     {
@@ -11038,8 +11042,9 @@ static void ndsRendererHardwareQueueMatrixWordPosTestFixture(void)
         {
             ndsRendererApplyMatrixMoveWordCommand(
                 &stats, &state,
-                (i * NDS_RENDERER_MATRIX_WORD_BYTES) <<
-                    NDS_RENDERER_MOVEWORD_OFFSET_SHIFT,
+                (NDS_RENDERER_MOVEWORD_MATRIX <<
+                 NDS_RENDERER_MOVEWORD_INDEX_SHIFT) |
+                    (i * NDS_RENDERER_MATRIX_WORD_BYTES),
                 target_words[i]);
             current_words = (u32 *)&state.matrix_word_raw.m[0][0];
         }
@@ -13581,6 +13586,10 @@ static void ndsRendererNativeApplyStateDelta(
         stats->prim_lod_fraction = delta->w0 & 0xffu;
         stats->color_command_count++;
         break;
+    case NDS_NATIVE_STATE_LIGHT_COLOR:
+        ndsRendererApplyMatrixMoveWordCommand(
+            stats, state, delta->w0, delta->w1);
+        break;
     default:
         break;
     }
@@ -14602,11 +14611,52 @@ ndsRendererNativePrepareProductionRun(
 
 
 static void NDS_RENDERER_NATIVE_FIGHTER_CODE
-ndsRendererNativeEmitProductionRun(
+ndsRendererNativeEmitProductionRawRun(
+    u32 run_index,
+    u32 corner_count,
+    u32 textured)
+{
+    const u16 *corner =
+        &sNdsNativeFighterPackedCorners[
+            sNdsNativeFighterRunFirstCorner[run_index]];
+    u32 remaining = corner_count;
+
+    if (textured != 0u)
+    {
+        while (remaining-- != 0u)
+        {
+            u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
+            const NDSNativePreparedDenseVertex *prepared =
+                &sNdsNativeFighterPreparedDense[dense_id];
+
+            GFX_COLOR = prepared->packed_color;
+            GFX_TEX_COORD =
+                (u32)(u16)prepared->s |
+                ((u32)(u16)prepared->t << 16);
+            GFX_VERTEX16 = prepared->gx_xy;
+            GFX_VERTEX16 = prepared->gx_z;
+        }
+    }
+    else
+    {
+        while (remaining-- != 0u)
+        {
+            u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
+            const NDSNativePreparedDenseVertex *prepared =
+                &sNdsNativeFighterPreparedDense[dense_id];
+
+            GFX_COLOR = prepared->packed_color;
+            GFX_VERTEX16 = prepared->gx_xy;
+            GFX_VERTEX16 = prepared->gx_z;
+        }
+    }
+}
+
+static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+ndsRendererNativeEmitProductionCrossRun(
     u32 run_index,
     u32 corner_count,
     u32 textured,
-    u32 cross_matrix,
     u32 current_palette_slot,
     const u8 *binding_palette_slots)
 {
@@ -14616,40 +14666,6 @@ ndsRendererNativeEmitProductionRun(
     u32 active_palette_slot = current_palette_slot;
     u32 remaining = corner_count;
 
-    if (cross_matrix == 0u)
-    {
-        if (textured != 0u)
-        {
-            while (remaining-- != 0u)
-            {
-                u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
-                const NDSNativePreparedDenseVertex *prepared =
-                    &sNdsNativeFighterPreparedDense[dense_id];
-
-                GFX_COLOR = prepared->packed_color;
-                GFX_TEX_COORD =
-                    (u32)(u16)prepared->s |
-                    ((u32)(u16)prepared->t << 16);
-                GFX_VERTEX16 = prepared->gx_xy;
-                GFX_VERTEX16 = prepared->gx_z;
-            }
-        }
-        else
-        {
-            while (remaining-- != 0u)
-            {
-                u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
-                const NDSNativePreparedDenseVertex *prepared =
-                    &sNdsNativeFighterPreparedDense[dense_id];
-
-                GFX_COLOR = prepared->packed_color;
-                GFX_VERTEX16 = prepared->gx_xy;
-                GFX_VERTEX16 = prepared->gx_z;
-            }
-        }
-        return;
-    }
-
     while (remaining-- != 0u)
     {
         u32 packed = *corner++;
@@ -14658,31 +14674,25 @@ ndsRendererNativeEmitProductionRun(
             &sNdsNativeFighterDenseVertices[dense_id];
         const NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterPreparedDense[dense_id];
+        u32 palette_slot;
 
-        if (cross_matrix != 0u)
+        if (binding_palette_slots != NULL)
         {
-            u32 palette_slot;
-
-            if (binding_palette_slots != NULL)
-            {
-                palette_slot =
-                    binding_palette_slots[dense->matrix_binding];
-            }
-            else
-            {
-                palette_slot =
-                    packed >> NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT;
-            }
-
-            if (palette_slot == NDS_NATIVE_GX_MATRIX_CURRENT)
-            {
-                palette_slot = current_palette_slot;
-            }
-            if (palette_slot != active_palette_slot)
-            {
-                glRestoreMatrix((int)palette_slot);
-                active_palette_slot = palette_slot;
-            }
+            palette_slot = binding_palette_slots[dense->matrix_binding];
+        }
+        else
+        {
+            palette_slot =
+                packed >> NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT;
+        }
+        if (palette_slot == NDS_NATIVE_GX_MATRIX_CURRENT)
+        {
+            palette_slot = current_palette_slot;
+        }
+        if (palette_slot != active_palette_slot)
+        {
+            glRestoreMatrix((int)palette_slot);
+            active_palette_slot = palette_slot;
         }
         GFX_COLOR = prepared->packed_color;
         if (textured != 0u)
@@ -14694,12 +14704,12 @@ ndsRendererNativeEmitProductionRun(
         GFX_VERTEX16 = prepared->gx_xy;
         GFX_VERTEX16 = prepared->gx_z;
     }
-    if ((cross_matrix != 0u) &&
-        (active_palette_slot != current_palette_slot))
+    if (active_palette_slot != current_palette_slot)
     {
         glRestoreMatrix((int)current_palette_slot);
     }
 }
+
 static inline void ndsRendererNativeAccountGXCrossTriangles(
     NDSRendererStats *stats,
     u32 triangle_count,
@@ -14804,11 +14814,19 @@ static s32 ndsRendererNativeSubmitProductionRun(
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_phase_start = cpuGetTiming();
 #endif
-    ndsRendererNativeEmitProductionRun(
-        run_index, (u32)run->triangle_count * 3u,
-        state->texture_prepare_enabled,
-        (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) ? TRUE : FALSE,
-        current_palette_slot, binding_palette_slots);
+    if (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
+    {
+        ndsRendererNativeEmitProductionCrossRun(
+            run_index, (u32)run->triangle_count * 3u,
+            state->texture_prepare_enabled,
+            current_palette_slot, binding_palette_slots);
+    }
+    else
+    {
+        ndsRendererNativeEmitProductionRawRun(
+            run_index, (u32)run->triangle_count * 3u,
+            state->texture_prepare_enabled);
+    }
 #else
     (void)epoch_policy;
     (void)current_palette_slot;
@@ -15372,7 +15390,6 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
     }
     stats->command_count += root->source_command_count;
     ndsRendererNativeApplyRootLightPreamble(root, stats);
-
     for (epoch_index = 0u; epoch_index < root->epoch_count; epoch_index++)
     {
         const NDSNativeEpoch *epoch =
@@ -16022,7 +16039,6 @@ static void ndsRendererNativeCommitHierarchyRoot(
     }
     stats->command_count += root->source_command_count;
     ndsRendererNativeApplyRootLightPreamble(root, stats);
-
     for (epoch_offset = 0u;
          epoch_offset < root->epoch_count;
          epoch_offset++)
@@ -16097,12 +16113,18 @@ static void ndsRendererNativeCommitHierarchyRoot(
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
             ndsRendererNativeBeginHierarchyBatch(
                 stats, prepared_run, matrix_generation);
-            ndsRendererNativeEmitProductionRun(
-                run_index, (u32)run->triangle_count * 3u,
-                prepared_run->textured,
-                (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) ?
-                    TRUE : FALSE,
-                current_palette_slot, NULL);
+            if (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
+            {
+                ndsRendererNativeEmitProductionCrossRun(
+                    run_index, (u32)run->triangle_count * 3u,
+                    prepared_run->textured, current_palette_slot, NULL);
+            }
+            else
+            {
+                ndsRendererNativeEmitProductionRawRun(
+                    run_index, (u32)run->triangle_count * 3u,
+                    prepared_run->textured);
+            }
 #endif
             stats->triangle_count += run->triangle_count;
             if (run->submit_class == NDS_NATIVE_RUN_RAW_CURRENT)
@@ -18205,6 +18227,24 @@ static s32 ndsRendererValidateNativeStateSpan(
                 return FALSE;
             }
             break;
+        case NDS_NATIVE_STATE_LIGHT_COLOR:
+        {
+            u32 index =
+                (delta->w0 >> NDS_RENDERER_MOVEWORD_INDEX_SHIFT) &
+                NDS_RENDERER_MOVEWORD_INDEX_MASK;
+            u32 offset = delta->w0 & NDS_RENDERER_MOVEWORD_OFFSET_MASK;
+
+            if (((delta->w0 >> 24) != NDS_RENDERER_OP_MOVEWORD) ||
+                (index != NDS_RENDERER_MOVEWORD_LIGHTCOL) ||
+                ((offset != NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_1_A) &&
+                 (offset != NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_1_B) &&
+                 (offset != NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_2_A) &&
+                 (offset != NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_2_B)))
+            {
+                return FALSE;
+            }
+            break;
+        }
         default:
             return FALSE;
         }

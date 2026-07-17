@@ -21285,3 +21285,47 @@ remains skipped for the requested fast iteration cadence.
   39.9/37.9/39.5/n.a./58.2 per second. The source timer expired at tick 3,600,
   Results loaded, one texture teardown ran, all ten post-GO M4 fence counters
   stayed zero, and the first 16 true MATCH_SAFETY counters stayed zero.
+
+## 2026-07-17 - Split the measured fighter production emitter
+
+- Separated the already-proved raw and cross run classes at the two production
+  call sites. The 54 raw calls now save five registers instead of seven; the 13
+  cross calls save eight, removing 190 main-RAM stack word transfers per frame.
+- Detailed A/A2/B moves combined fighter 433,472 -> 432,384 ticks and draw
+  1,061,888 -> 1,060,928 with an exact 0 / 120,000 gameplay-viewport pixel
+  delta. Full inlining and a shared tail dispatcher were slower and reverted.
+- Boundary passes on 14,613,504-byte public ROM SHA-256
+  `B54D16DB43844C63D88F8CD3E635A5A53DB0818CDC5F4517724BA577EF621753`;
+  canonical ITCM is 28,608 / 32,768 bytes.
+- A separately refreshed generic/fast profile-2 comparison exposed a
+  pre-existing Mario matrix/light parity failure. The production emitter is not
+  linked into that ELF; the shared seam is the next packet and remains red.
+
+## 2026-07-17 - Restored source-exact fighter light state
+
+- Corrected the shared F3DEX2 `G_MOVEWORD` index/offset layout in decoding and
+  live emission. An exact O2R census found 148 static fighter light commands:
+  120 compact root preambles and 28 intra-root changes now carried by epoch
+  state spans.
+- Hardened generation and native-state validation so effect 14 is accepted
+  only for exact `G_MW_LIGHTCOL` command fields. Fresh generic/Mode-8 profile-2
+  frames 180..187 match semantically and geometrically with 686 triangles in
+  both arms.
+- Boundary passes on the 14,613,504-byte public ROM SHA-256
+  `A7E607BB03550E7D7379EE3114040E86A823B300F708839C0A946D86302DDBEB`;
+  canonical ITCM is 28,040 / 32,768 bytes.
+
+## 2026-07-17 - Reused the fighter display-capture arena
+
+- Replaced the per-fighter 6,240-byte contract clear with resets of only live
+  scalar state. Every consumed event field and scratch command is already
+  overwritten before use; the exact source display callback and 16-byte Light
+  initialization remain unchanged.
+- Synchronized frames 600..607 move capture 47,296 -> 41,152 ticks, combined
+  fighter 452,640 -> 446,464, and draw 1,077,568 -> 1,071,488. The top screen,
+  owner/geometry state, 70 runs, and 686 triangles are exact.
+- Current source-light-exact ledger-off M2 is 386,016/389,184. Profile-2
+  generic/Mode-8 remains exact, and Boundary passes on 14,613,504-byte public
+  ROM SHA-256
+  `36218F25F3C69929CEBF4F62B8E2BEBFFCCC13739DBBE5B5D28376352677A686`.
+  Profile-0 smoke is 22.3 FPS, so P1 full-speed remains open.

@@ -44,7 +44,8 @@ Useful existing commands:
 ```powershell
 # Retained Mode-8 fighter-owner comparison
 .\scripts\compare-renderer-fast-raw.ps1 -FastRunMode 8 `
-  -RendererBenchmarkSamples 8 -RunnerSlot 3
+  -RendererBenchmarkSamples 8 -RendererBenchmarkTimeoutSeconds 120 `
+  -RunnerSlot 3
 
 # Mode-9 stage timing/capture arm
 .\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 9 `
@@ -60,6 +61,9 @@ Useful existing commands:
   -RendererBenchmarkSamples 8 -RendererBenchmarkStartEvent KO `
   -RendererBenchmarkTimeoutSeconds 300 -RunnerSlot 3
 ```
+
+The Mode-8 comparator accepts integer-array or space-delimited exported rows
+and fails closed when a projected semantic field is missing.
 
 All screenshots go under `artifacts/visibility`. A screenshot is evidence only
 when the matching runtime counters and image-analysis gates pass.
