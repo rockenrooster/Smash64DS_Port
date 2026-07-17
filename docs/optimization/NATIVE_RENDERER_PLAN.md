@@ -54,12 +54,13 @@ emitter by its already-proved raw/cross run class reduces the synchronized
 detailed combined-fighter window 433,472/433,536 -> 432,384/432,448 and draw
 1,061,888/1,061,952 -> 1,060,928/1,060,992. Raw runs now save two registers
 per entry/exit; the rarer cross runs add one, eliminating 190 main-RAM stack
-word transfers per frame. Canonical ITCM is 28,040/32,768 after Task 9 and the
-source-light repair; the exact 70/686 fast owner and 60/320/306/29/0/0
+word transfers per frame. Canonical ITCM is 28,020/32,768 after Task 9, the
+source-light repair, and the raw-corner cut; the exact 70/686 fast owner and
+60/320/306/29/0/0
 partition stay unchanged. Full inlining and a shared tail dispatcher are
 measured regressions.
 
-The current source-light-exact ledger-off checkpoint is 386,016/389,184.
+The current source-light-exact ledger-off checkpoint is 385,088/388,224.
 Capture now resets only live scalar state because every consumed event field
 and scratch command is overwritten before use; it no longer clears the
 6,240-byte arena twice per frame. Detailed capture moves 47,296/47,360 ->
@@ -67,6 +68,13 @@ and scratch command is overwritten before use; it no longer clears the
 1,077,568/1,080,832 -> 1,071,488/1,074,816. The change adds 64 bytes of main
 code, no ITCM, and preserves exact pixels, geometry, owner state, texture
 traffic, and conservation.
+
+Raw production corners now store only their already-proved 10-bit dense vertex
+ID; only the 132 cross-run corners retain a packed matrix slot. This removes
+1,746 dynamic masks plus one saved register at each of 54 raw-run entries and
+exits. The raw emitter shrinks 0xD0 -> 0xBC bytes, cross remains 0x164, and the
+synchronized ledger-off window improves 386,016/389,184 -> 385,088/388,224
+without changing pixels, geometry, owner state, or texture traffic.
 
 The generic/fast profile-2 oracle is exact again. F3DEX2 `G_MOVEWORD` uses
 index bits 16..23 and offset bits 0..15. The generated owner retains all 148

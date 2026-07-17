@@ -1029,7 +1029,7 @@ def build_direct_dense_tables(
                     raise ValueError(
                         f"raw run {run_index}: non-current binding {binding}"
                     )
-                palette_slot = PACKED_GX_SLOT_CURRENT
+                palette_slot = 0
             else:
                 if binding == root_binding:
                     palette_slot = PACKED_GX_SLOT_CURRENT
@@ -1655,9 +1655,9 @@ def generate(repo_root: Path | None = None) -> str:
     lines += ["#if NDS_RENDERER_HW_TRIANGLES", ""]
     lines += [
         "/* Direct policy: low two epoch bits select a family; bit 0x80 */",
-        "/* suppresses culling. Packed dense IDs occupy bits 0..9 and */",
-        "/* packed GX slots occupy bits 10..14; slot 31=logical current */",
-        "/* root, restored through that binding's real palette slot. */",
+        "/* suppresses culling. Raw corners are plain 10-bit dense IDs. */",
+        "/* Cross corners pack GX slots in bits 10..14; slot 31 means */",
+        "/* logical current root, restored through its real palette slot. */",
         "/* ActionDenseSpans pack first dense in bits 0..9 and count in */",
         "/* bits 10..14. DenseColorSource preserves MODIFY_ST shading. */",
         "/* JointSchedule packs parent joint, logical binding, and physical */",

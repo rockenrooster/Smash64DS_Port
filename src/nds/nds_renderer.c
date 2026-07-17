@@ -14625,7 +14625,7 @@ ndsRendererNativeEmitProductionRawRun(
     {
         while (remaining-- != 0u)
         {
-            u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
+            u32 dense_id = *corner++;
             const NDSNativePreparedDenseVertex *prepared =
                 &sNdsNativeFighterPreparedDense[dense_id];
 
@@ -14641,7 +14641,7 @@ ndsRendererNativeEmitProductionRawRun(
     {
         while (remaining-- != 0u)
         {
-            u32 dense_id = *corner++ & NDS_NATIVE_DENSE_ID_MASK;
+            u32 dense_id = *corner++;
             const NDSNativePreparedDenseVertex *prepared =
                 &sNdsNativeFighterPreparedDense[dense_id];
 

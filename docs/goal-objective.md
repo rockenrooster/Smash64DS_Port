@@ -34,19 +34,19 @@ Required match:
 - Original defaults for unspecified match settings.
 - Direct verified boot into this configured battle is acceptable for P1; complete menu flow belongs to P2.
 
-P1 is complete only when the user-facing ROM naturally supports an entire match from start through the timer expiring and the original match-end/result transition, including:
+P1 is complete only when the user-facing ROM naturally supports an entire match from start through the timer expiring and the original match-end/result transition, including in order by priority:
 
-- Correct assets are used for hit sounds, hit visuals, and all other audio and visual effects
+- Correct assets are used for all hit sounds, all hit visuals, and all other audio and visual effects.
 - CPU stalls and game freezes are fixed.
+- Real-time playable performance, targeting stable 30 FPS. Do not mark P1 complete below real-time speed without explicit user approval.
 - Live Mario movement, attacks, aerials, specials, shield, grab, throws, damage, knockback, KO, and rebirth.
 - Fox level-3 CPU movement, targeting, attacks, defense, recovery, and specials through imported original AI/runtime code.
+- Native DS rendering for 3D and 2D (or most efficient path considering DS contraints, least amount of CPU ticks)
 - Source-backed fighter state, animation, collision, camera, match rules, scoring, timer, and HUD.
 - Recognizable and correctly assembled Mario and Fox rendering with required materials and textures.
 - Dream Land geometry, background composition, collision, platforms, and battle-relevant stage behavior.
 - Battle BGM plus gameplay-critical effects and voices.
 - Stable memory use with the project’s required reserve.
-- Native DS rendering for 3D and 2D (or most efficient path considering DS contraints, least amount of CPU ticks)
-- Real-time playable performance, targeting stable 30 FPS. Do not mark P1 complete below real-time speed without explicit user approval.
 - No synthetic proof-only state, harness-controlled combat, crashes, hangs, or known save/data corruption.
 - A verifier-covered user-facing ROM and dated capture demonstrating the result.
 

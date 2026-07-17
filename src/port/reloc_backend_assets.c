@@ -139,12 +139,7 @@
 #define NDS_RELOC_ASSET_FOX_ANIM_CATCH 0x2dcu
 #define NDS_RELOC_ASSET_FOX_ANIM_THROW_B 0x2dfu
 #define NDS_RELOC_ASSET_FOX_ANIM_JAB1 0x2efu
-#define NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH 0x2f2u
-#define NDS_RELOC_ASSET_FOX_ANIM_FTILT_LOW 0x2f6u
-#define NDS_RELOC_ASSET_FOX_ANIM_UTILT 0x2f7u
-#define NDS_RELOC_ASSET_FOX_ANIM_DTILT 0x2f8u
-#define NDS_RELOC_ASSET_FOX_ANIM_FSMASH 0x2f9u
-#define NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_N 0x2fcu
+#define NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_D 0x303u
 #define NDS_RELOC_ASSET_FOX_ANIM_LASER 0x30bu
 #define NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL 0x30cu
 #define NDS_RELOC_ASSET_FOX_ANIM_FIREFOX_START_GROUND 0x30du
@@ -1423,9 +1418,8 @@ static s32 ndsRelocIsMarioFoxNaturalCombatAnimID(u32 asset_id)
              (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B)) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_CATCH) &&
              (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_THROW_B)) ||
-            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_JAB1) ||
-            ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH) &&
-             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_N)) ||
+            ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JAB1) &&
+             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_D)) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_FIREFOX_START_GROUND) &&
@@ -1602,6 +1596,51 @@ static u32 ndsRelocMarioBattleAnimAssetIDForToken(u32 token)
     return NDS_RELOC_ASSET_INVALID;
 }
 
+/* BattleShip files 751..771 are one contiguous Fox combat bank.  Keep the
+ * imported symbol order beside its exact O2R base so a motion cannot silently
+ * drift onto an adjacent Jab, tilt, smash, or aerial payload. */
+static const uintptr_t *const sNdsRelocFoxCombatAnimFileIDs[] =
+{
+    &llFTFoxAnimJab1FileID, /* 751 */
+    &llFTFoxAnimJab2FileID, /* 752 */
+    &llFTFoxAnimJabLoopStartFileID, /* 753 */
+    &llFTFoxAnimJabLoopFileID, /* 754 */
+    &llFTFoxAnimJabLoopEndFileID, /* 755 */
+    &llFTFoxAnimDashAttackFileID, /* 756 */
+    &llFTFoxAnimFTiltHighFileID, /* 757 */
+    &llFTFoxAnimFTiltMidHighFileID, /* 758 */
+    &llFTFoxAnimFTiltFileID, /* 759 */
+    &llFTFoxAnimFTiltMidLowFileID, /* 760 */
+    &llFTFoxAnimFTiltLowFileID, /* 761 */
+    &llFTFoxAnimUTiltFileID, /* 762 */
+    &llFTFoxAnimDTiltFileID, /* 763 */
+    &llFTFoxAnimFSmashFileID, /* 764 */
+    &llFTFoxAnimUSmashFileID, /* 765 */
+    &llFTFoxAnimDSmashFileID, /* 766 */
+    &llFTFoxAnimAttackAirNFileID, /* 767 */
+    &llFTFoxAnimAttackAirFFileID, /* 768 */
+    &llFTFoxAnimAttackAirBFileID, /* 769 */
+    &llFTFoxAnimAttackAirUFileID, /* 770 */
+    &llFTFoxAnimAttackAirDFileID, /* 771 */
+};
+
+static u32 ndsRelocFoxCombatAnimAssetIDForToken(u32 token)
+{
+    u32 i;
+
+    for (i = 0u;
+         i < (sizeof(sNdsRelocFoxCombatAnimFileIDs) /
+              sizeof(sNdsRelocFoxCombatAnimFileIDs[0]));
+         i++)
+    {
+        if (token == ndsRelocFileID(sNdsRelocFoxCombatAnimFileIDs[i]))
+        {
+            return NDS_RELOC_ASSET_FOX_ANIM_JAB1 + i;
+        }
+    }
+    return NDS_RELOC_ASSET_INVALID;
+}
+
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
@@ -1737,18 +1776,15 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llFTFoxAnimCatchPullFileID)) return NDS_RELOC_ASSET_FOX_ANIM_CATCH + 1u;
     if (token == ndsRelocFileID(&llFTFoxAnimThrowFFileID)) return NDS_RELOC_ASSET_FOX_ANIM_CATCH + 2u;
     if (token == ndsRelocFileID(&llFTFoxAnimThrowBFileID)) return NDS_RELOC_ASSET_FOX_ANIM_THROW_B;
-    if (token == ndsRelocFileID(&llFTFoxAnimJab1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_JAB1;
-    if (token == ndsRelocFileID(&llFTFoxAnimFTiltHighFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH;
-    if (token == ndsRelocFileID(&llFTFoxAnimFTiltMidHighFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH + 1u;
-    if (token == ndsRelocFileID(&llFTFoxAnimFTiltFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH + 2u;
-    if (token == ndsRelocFileID(&llFTFoxAnimFTiltMidLowFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH + 3u;
-    if (token == ndsRelocFileID(&llFTFoxAnimFTiltLowFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FTILT_LOW;
-    if (token == ndsRelocFileID(&llFTFoxAnimUTiltFileID)) return NDS_RELOC_ASSET_FOX_ANIM_UTILT;
-    if (token == ndsRelocFileID(&llFTFoxAnimDTiltFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DTILT;
-    if (token == ndsRelocFileID(&llFTFoxAnimFSmashFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FSMASH;
-    if (token == ndsRelocFileID(&llFTFoxAnimUSmashFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FSMASH + 1u;
-    if (token == ndsRelocFileID(&llFTFoxAnimDSmashFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FSMASH + 2u;
-    if (token == ndsRelocFileID(&llFTFoxAnimAttackAirNFileID)) return NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_N;
+    {
+        u32 fox_combat_anim_asset_id =
+            ndsRelocFoxCombatAnimAssetIDForToken(token);
+
+        if (fox_combat_anim_asset_id != NDS_RELOC_ASSET_INVALID)
+        {
+            return fox_combat_anim_asset_id;
+        }
+    }
     if (token == ndsRelocFileID(&llFTFoxAnimLaserFileID)) return NDS_RELOC_ASSET_FOX_ANIM_LASER;
     if (token == ndsRelocFileID(&llFTFoxAnimLaserAerialFileID)) return NDS_RELOC_ASSET_FOX_ANIM_LASER_AERIAL;
     if (token == ndsRelocFileID(&llFTFoxAnimFireFoxStartGroundFileID)) return NDS_RELOC_ASSET_FOX_ANIM_FIREFOX_START_GROUND;
@@ -1918,8 +1954,8 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
          (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JAB1)) ||
         ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JUMP_F) &&
          (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B)) ||
-        ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_FTILT_HIGH) &&
-         (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_N)) ||
+        ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JAB1) &&
+         (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_D)) ||
         (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND) ||
         (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_AIR) ||
         ((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_SUPER_JUMP_PUNCH) &&

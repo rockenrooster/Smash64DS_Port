@@ -6,8 +6,8 @@ durable unresolved gaps.
 ## P1 Release Blockers
 
 - Renderer M2 is visually correct but remains above its 170-250K target at
-  386,016/389,184 ticks after source-exact light restoration and the retained
-  display-capture reset cut.
+  385,088/388,224 ticks after source-exact light restoration, the retained
+  display-capture reset, and the raw-corner dense-ID cut.
 - Renderer M3 is source/semantic-correct but remains above its 150-250K target
   at 489,184/489,536 stage ticks.
 - One natural source voice per fighter now plays (FoxSmash1 ID372 and
@@ -20,6 +20,15 @@ durable unresolved gaps.
 - The exact two-ROM build and Boundary checkpoint pass with a dated
   fast-iteration capture. Release still needs the final CPU-on complete-match
   capture under `artifacts/visibility` and manual user retest.
+- The tiny `GO` inside the countdown traffic-light housing remains unreadable
+  in the current 0.8x A3I5 runtime capture. This is separate from the accepted
+  large RGB555+A1 `GO!` announcement.
+- Playtesting reports a CPU stall during Down+A aerials. A stopped update loop
+  is not yet proven. The shifted Fox combat-asset seam is corrected through the
+  exact Down-Air `FTFoxAnim129` / `0x303`, and Mario status 213 / motion 188 now
+  passes eight live updates. The verifier-only human-P2 Fox arm reaches natural
+  KneeBend with controller input but still needs Down-Air heartbeat proof plus a
+  canonical CPU-on Current regression gate before closure.
 
 ## Gameplay And Source Boundaries
 

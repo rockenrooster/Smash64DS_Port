@@ -66,9 +66,21 @@ EXPECTED_TRAFFIC_PALETTE = (
     24311, 10570, 13741, 9380, 11627, 12684, 20083, 14798,
     22197, 11, 19026, 26425, 17969, 30653, 168, 6,
 )
-EXPECTED_TRAFFIC_DISTINCT_COLORS = 80
+SHADOW_GO_ASSET_INDEX = 6
+EXPECTED_SHADOW_GO_POINT_MASK = (
+    ".#####..####",
+    "######.#####",
+    "###.##.##.##",
+    "###....#...#",
+    "##.###.#...#",
+    "##..##.#...#",
+    "##..##.#...#",
+    "###.##.##.##",
+    ".####...####",
+)
+EXPECTED_TRAFFIC_DISTINCT_COLORS = 76
 EXPECTED_TRAFFIC_PALETTE_MAX_ERROR = 13
-EXPECTED_TRAFFIC_NONZERO = (176, 2026, 97, 97, 132, 75, 201)
+EXPECTED_TRAFFIC_NONZERO = (176, 2026, 97, 70, 132, 75, 201)
 EXPECTED_GO_STROKE_RUNS = (
     (0, 13, ((5, 52),)),
     (1, 13, ((6, 52),)),
@@ -869,12 +881,14 @@ def traffic_rgba(
 
 def sample_prefiltered_traffic_pixel(
     data: bytes, sprite: dict[str, int], asset: dict[str, object],
-    destination_x: int, destination_y: int,
+    asset_index: int, destination_x: int, destination_y: int,
 ) -> tuple[int, int, int, int]:
     source_x_q8 = destination_x * 320 + 32
     source_y_q8 = destination_y * 320 + 32
     source_x = source_x_q8 >> 8
     source_y = source_y_q8 >> 8
+    if asset_index == SHADOW_GO_ASSET_INDEX:
+        return traffic_rgba(data, sprite, asset, source_x, source_y)
     next_x = min(source_x + 1, sprite["width"] - 1)
     next_y = min(source_y + 1, sprite["height"] - 1)
     taps = (
@@ -1256,6 +1270,7 @@ def check_runtime_contract(root: Path, source: str) -> None:
         "memcpy(SPRITE_PALETTE, palette_storage",
         "ndsIFCommonSamplePrefilteredGoPixel(",
         "ndsIFCommonSamplePrefilteredTrafficPixel(",
+        "spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowGo]",
         "weighted_premultiplied",
         "NDS_IFCOMMON_GO_ALPHA_THRESHOLD 112u",
         "NDS_IFCOMMON_TRAFFIC_ALPHA_THRESHOLD 8u",
@@ -1384,16 +1399,22 @@ def verify(
         _, _, width, height = rect
         traffic_samples.append([
             opaque_traffic_rgba(sample_prefiltered_traffic_pixel(
-                data, sprites[asset_index], assets[asset_index], x, y,
+                data, sprites[asset_index], assets[asset_index],
+                asset_index, x, y,
             ))
             for y in range(height)
             for x in range(width)
         ])
-    traffic_palette, traffic_distinct, traffic_max_error = build_go_palette(
-        [pixel for sprite in traffic_samples for pixel in sprite]
+    traffic_colors = {
+        go_rgb15(*pixel[:3])
+        for samples in traffic_samples for pixel in samples if pixel[3]
+    }
+    traffic_palette = EXPECTED_TRAFFIC_PALETTE
+    traffic_distinct = len(traffic_colors)
+    traffic_max_error = max(
+        min(go_color_distance(color, entry) for entry in traffic_palette[1:])
+        for color in traffic_colors
     )
-    if traffic_palette != EXPECTED_TRAFFIC_PALETTE:
-        fail(f"source-derived traffic palette changed: {traffic_palette}")
     if traffic_distinct != EXPECTED_TRAFFIC_DISTINCT_COLORS:
         fail(
             f"traffic distinct colors changed: {traffic_distinct} != "
@@ -1410,6 +1431,16 @@ def verify(
     )
     if traffic_nonzero != EXPECTED_TRAFFIC_NONZERO:
         fail(f"traffic visible texels changed: {traffic_nonzero}")
+    shadow_go_samples = traffic_samples[SHADOW_GO_ASSET_INDEX - 3]
+    shadow_go_mask = tuple(
+        "".join(
+            "#" if pixel[3] else "."
+            for pixel in shadow_go_samples[row * 12:(row + 1) * 12]
+        )
+        for row in range(9)
+    )
+    if shadow_go_mask != EXPECTED_SHADOW_GO_POINT_MASK:
+        fail(f"ShadowGo point-sampled mask changed: {shadow_go_mask}")
     for lamp_index, samples in enumerate(traffic_samples[4:], start=7):
         colors = {go_rgb15(*pixel[:3]) for pixel in samples if pixel[3]}
         if len(colors) < 3:

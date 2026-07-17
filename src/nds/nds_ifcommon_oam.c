@@ -743,6 +743,20 @@ static s32 ndsIFCommonSamplePrefilteredTrafficPixel(
     u32 next_y = source_y + 1u;
     u32 taps[4];
 
+    if (spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowGo])
+    {
+        if (ndsIFCommonReadTrafficRgba(
+                sprite, spec, file_data, file_size,
+                source_x, source_y, &taps[0]) == FALSE)
+        {
+            return FALSE;
+        }
+        rgba[0] = (u8)(taps[0] >> 24);
+        rgba[1] = (u8)(taps[0] >> 16);
+        rgba[2] = (u8)(taps[0] >> 8);
+        rgba[3] = (u8)taps[0];
+        return TRUE;
+    }
     if (next_x >= (u32)(u16)sprite->width)
     {
         next_x = source_x;
@@ -1254,8 +1268,9 @@ static u32 ndsIFCommonPaletteIndex(
     return best_index;
 }
 
-/* Frequency-ranked from the exact prefiltered source traffic pixels. Index 0
- * is transparent; the second zero is the visible black used by the shadow. */
+/* Established source-derived traffic palette, kept fixed so ShadowGo's point
+ * sample cannot perturb the other traffic assets. Index 0 is transparent;
+ * the second zero is the visible black used by the shadow. */
 static const u16 sNdsIFCommonTrafficPalette[32] = {
     0x0000, 0x1084, 0x0000, 0x0842, 0x18c6, 0x14a5, 0x38a4, 0x0c63,
     0x1ce7, 0x0421, 0x2108, 0x000e, 0x3def, 0x2529, 0x1863, 0x012e,

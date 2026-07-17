@@ -3977,3 +3977,65 @@ EVIDENCE:
   builds/m2-contract-reset-{control,candidate}/
 KEEP / REWORK / REVERT: KEEP SCALAR RESET / CONTINUE M2 FULL-SPEED WORK
 ```
+
+## 2026-07-17 - Plain dense IDs remove raw-corner masks
+
+```text
+IDEA ID: M2-RAW-CORNER-PLAIN-DENSE-ID-20260717
+MEASUREMENT IDENTITY:
+  Mode 163 battle_playable_realtime, profile 1, ledger off, Mode 8, static AOT
+  1, hybrid OAM 1, Fox decisions paused, exact frames 600..607. Control ROM/ELF
+  are E24E7D12FC0EA46811BE277C82A496CAA7C82D72E29958C2A35DE2866549BFBF /
+  7BCE5EB2143674CECD442FE7C08FCF016F903B4D4C38698239C6AD0455A31B87;
+  candidate ROM/ELF are
+  2ADB8879272642547FDFFD4E0DB76698CDB29409FBE69BD6AF719D39355BB57D /
+  22F311112915CB9F60CA6DA3533B1E8554523C229158F98DAB82FCFC82F670A5.
+
+HOT SYMBOL / EXACT CHANGE:
+  ndsRendererNativeEmitProductionRawRun is called for 54 raw runs per frame.
+  The immutable owner contains 1,878 u16 corners: 1,746 raw corners whose
+  binding is already fixed by the run root, and 132 cross-run corners that need
+  their packed GX slot. Emit raw corners as plain 10-bit dense IDs, retain the
+  packed cross ABI, and load raw IDs without & 0x3FF.
+
+ARM CODEGEN:
+  The ARMv5TE ITCM raw emitter shrinks 0xD0 -> 0xBC. Both dynamic AND sites and
+  the 0x000003FF literal disappear; the selected raw loop executes 1,746 fewer
+  ALU instructions per frame and saves one register at each raw-run entry/exit.
+  Cross remains 0x164. Canonical ITCM moves 28,040 -> 28,020 / 32,768 while
+  renderer ownership remains 23,536 bytes.
+
+SYNCHRONIZED A/B P50/P95:
+  Mario             173,600/175,168   -> 173,152/174,720   (-448/-448)
+  Fox               213,632/214,016   -> 213,152/213,504   (-480/-512)
+  Combined fighter  386,016/389,184   -> 385,088/388,224   (-928/-960)
+  Draw            1,011,648/1,014,976 -> 1,010,688/1,014,016 (-960/-960)
+  Active          1,015,776/1,018,944 -> 1,014,848/1,017,984 (-928/-960)
+  Present         1,680,448/1,680,512 -> 1,680,448/1,680,512 (unchanged)
+
+EXACTNESS / RECURRENCE GATES:
+  All eight frames retain 70/686 and 60/320/306/29/0/0, zero conservation
+  error, unchanged texture/fence state, and 0/49,152 changed top-screen pixels.
+  The hierarchy checker rejects any raw corner with high slot bits and still
+  proves the exact cross binding map. Packet, GBI, parity-corpus, and fresh
+  generic/Mode-8 profile-2 frames 180..187 pass with zero semantic, owner, or
+  geometry mismatch and 686 fast triangles.
+
+REJECTED PRECEDING EXPERIMENT:
+  Restoring BattleShip camera kind 0x4C at gcPrepCameraMatrix and deleting the
+  two capture-local gmCameraLookAtFuncMatrix calls built and passed its host
+  source contract, but two identical 120-second runtime attempts timed out
+  after scVSBattleStartBattle while still in NitroFS reads. No timing sample
+  was admitted and the change was fully reverted. Do not retry that hoist
+  without first proving the startup/runtime ownership fault.
+
+EVIDENCE:
+  artifacts/performance/2026-07-17_m2-camera-prep-a.json
+  artifacts/performance/2026-07-17_m2-raw-corner-b.json
+  artifacts/performance/2026-07-17_m2-raw-corner-{generic,fast}-profile2.json
+  artifacts/visibility/2026-07-17_m2-{camera-prep-a,raw-corner-b}-frame607.png
+  Boundary publishes FE0C8893C37F43934DB4BEEB8169F52BB0AADEB97C5C4BA07B69416A37B743A9
+  at 14,613,504 bytes with ITCM 28,020/32,768 and capture
+  artifacts/visibility/2026-07-17_canonical_fast_125115-2819034-p54940.png
+KEEP / REWORK / REVERT: KEEP RAW DENSE IDs / REVERT SHARED CAMERA HOIST
+```

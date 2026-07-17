@@ -63,13 +63,21 @@ def build_direct_trace(owner_name: str, context: dict, cross_slots: list[int]):
                 for packed in context["packed_corners"][
                         corner_first:corner_first + triangle_count * 3]:
                     dense_id = packed & (native.PACKED_DENSE_ID_LIMIT - 1)
-                    palette_slot = packed >> native.PACKED_DENSE_ID_BITS
-                    binding = (
-                        root_index if palette_slot == native.PACKED_GX_SLOT_CURRENT
-                        else slot_bindings.get(palette_slot, -1)
-                    )
+                    if submit_class == 0:
+                        require(
+                            packed < native.PACKED_DENSE_ID_LIMIT,
+                            f"{owner_name}: raw corner retains packed slot bits",
+                        )
+                        binding = root_index
+                    else:
+                        palette_slot = packed >> native.PACKED_DENSE_ID_BITS
+                        binding = (
+                            root_index
+                            if palette_slot == native.PACKED_GX_SLOT_CURRENT
+                            else slot_bindings.get(palette_slot, -1)
+                        )
                     require(binding >= 0,
-                            f"{owner_name}: unmapped corner slot {palette_slot}")
+                            f"{owner_name}: unmapped cross-corner slot")
                     x, y, z = context["dense_vertices"][dense_id][:3]
                     xy, z_word = native.pack_fifo_vertex16(
                         x, y, z, f"{owner_name} direct corner {len(corners)}"
